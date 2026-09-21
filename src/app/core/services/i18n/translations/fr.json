@@ -33,7 +33,7 @@
     "copiedUntitled": "Note sans titre copiée dans le presse-papier.",
     "untitled": "Sans titre",
     "pinnedState": "Note épinglée",
-    "deleteArmed": "Suppr. à nouveau pour supprimer",
+    "deleteArmed": "Suppr. à nouveau · Échap pour annuler",
     "loading": "Chargement des notes…",
     "noResults": "Aucune note ne correspond à cette recherche.",
     "searchMatched": "{count, plural, =0 {aucun résultat} one {# résultat} other {# résultats}}",
@@ -461,7 +461,7 @@
       "extendWithClick": "Étendre la sélection au clic",
       "trash": "Mettre à la corbeille, en deux fois",
       "undo": "Annuler la dernière suppression",
-      "clearSelection": "Annuler la suppression en attente, la sélection, les filtres, puis sortir du dossier"
+      "stepBack": "Annuler la suppression en attente, la sélection, les filtres, puis sortir du dossier"
     },
     "editor": {
       "close": "Fermer l'éditeur en enregistrant",
