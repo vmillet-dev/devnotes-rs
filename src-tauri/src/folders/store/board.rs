@@ -213,15 +213,19 @@ pub fn geometry<S: std::hash::BuildHasher>(
             .collect();
 
         if !unplaced.is_empty() {
-            let top = board::loose_top(&stored_frames.values().copied().collect::<Vec<_>>());
-            let points = board::arrange_loose(loose_ids.len(), top);
+            let zones: Vec<BoardFrame> = stored_frames.values().copied().collect();
+            let top = board::loose_top(&zones);
+            // ⚠️ The first seat nothing is standing on, and never the seat the note's
+            // index in the list gives it: a note created now is the most recently updated,
+            // so it arrives at index 0 and used to be written on top of whichever card was
+            // laid out there on the board's very first read.
+            let mut standing: Vec<BoardPoint> = stored_positions.values().copied().collect();
 
-            for (id, point) in loose_ids.iter().zip(points) {
-                if stored_positions.contains_key(id) {
-                    continue;
-                }
+            for id in unplaced {
+                let point = board::free_slot(top, &standing, &zones);
                 set_position(connection, id, point)?;
                 stored_positions.insert(id.clone(), point);
+                standing.push(point);
             }
         }
 

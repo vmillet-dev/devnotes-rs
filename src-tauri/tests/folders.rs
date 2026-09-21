@@ -803,6 +803,60 @@ mod board {
         );
     }
 
+    /// ⚠️ The report: a note captured from the clipboard was written under a card that was
+    /// already on the board, and had to be dragged off to be found. A note created now is
+    /// the most recently updated, so it arrives first in the list and used to be handed the
+    /// seat its index gave it — seat zero, where the board's first read had put another.
+    #[test]
+    fn a_note_created_later_is_placed_beside_the_cards_rather_than_on_one() {
+        let mut connection = open_in_memory().unwrap();
+        let sql = space(&mut connection, "SQL");
+        titled(&mut connection, &sql, "Dump nocturne");
+        let already_there = view(&mut connection, &request(&sql)).loose[0].position;
+
+        create_note(
+            &mut connection,
+            NoteDraft {
+                title: "Collé du presse-papiers".to_string(),
+                ..draft(&sql)
+            },
+            t1(),
+        )
+        .unwrap();
+
+        let board = view(&mut connection, &request(&sql));
+        let places: Vec<_> = board.loose.iter().map(|entry| entry.position).collect();
+
+        assert_eq!(places.len(), 2);
+        assert!(
+            places.contains(&already_there),
+            "the card already there did not move"
+        );
+        assert_ne!(places[0], places[1], "two cards were written to one place");
+    }
+
+    /// Every unplaced card in the same pass, not just the first one.
+    #[test]
+    fn a_first_read_of_several_loose_notes_gives_each_its_own_place() {
+        let mut connection = open_in_memory().unwrap();
+        let sql = space(&mut connection, "SQL");
+        for title in ["Un", "Deux", "Trois", "Quatre", "Cinq"] {
+            titled(&mut connection, &sql, title);
+        }
+
+        let board = view(&mut connection, &request(&sql));
+        let mut places: Vec<_> = board
+            .loose
+            .iter()
+            .map(|entry| entry.position.expect("a loose card is always placed"))
+            .map(|at| (at.x, at.y))
+            .collect();
+        places.sort_unstable();
+        places.dedup();
+
+        assert_eq!(places.len(), 5);
+    }
+
     #[test]
     fn the_surface_grows_to_hold_whatever_is_furthest_out() {
         let mut connection = open_in_memory().unwrap();
