@@ -14,35 +14,51 @@
   letter-spacing: 0.4px;
 }
 
-// Six hues for thirteen languages, shared by family: the label names the language, the
+// Six hues for nineteen languages, shared by family: the label names the language, the
 // colour only groups it at a glance.
+//
+// ⚠️ Every member of `Language` needs a rule here, or its badge is bare text — no fill, no
+// hairline, and the label in whatever colour surrounds it. Six had accumulated without one
+// while this comment still said "thirteen". `scripts/language-hues.test.mjs` holds it now.
 
+// Typed, and read by something before it runs.
 .lang-json,
 .lang-ts,
-.lang-xml {
+.lang-xml,
+.lang-java,
+.lang-cs {
   @include hue-badge(var(--blue));
 }
 
+// What a page runs, and what answers it.
 .lang-js,
-.lang-html {
+.lang-html,
+.lang-php {
   @include hue-badge(var(--amber));
 }
 
+// What a machine runs, from a prompt or from a binary.
 .lang-py,
-.lang-sh {
+.lang-sh,
+.lang-rs,
+.lang-go,
+.lang-c {
   @include hue-badge(var(--green));
 }
 
+// Data, and the language written to shape it.
 .lang-sql,
 .lang-css {
   @include hue-badge(var(--purple));
 }
 
+// Configuration.
 .lang-yml,
 .lang-toml {
   @include hue-badge(var(--red));
 }
 
+// Prose, which is the absence of a language.
 .lang-txt,
 .lang-md {
   @include hue-badge(var(--text-1));
