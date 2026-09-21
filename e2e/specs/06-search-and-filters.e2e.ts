@@ -204,18 +204,41 @@ describe('Search, filters and facets', () => {
       expect(resting).not.toBeNull();
       expect(selected).not.toBe(resting);
     });
+    /**
+     * ⚠️ Its own button in the row, shown whenever any of the three is on. The way out
+     * used to be the count inside the field, which looks like a count and reads like a
+     * cross, and did neither.
+     */
     it('drops the search, the tag and the language in one click', async () => {
       await canvas.search('Docker');
       await canvas.toggleTag('ops');
       await canvas.toggleLanguage('sh');
 
-      await $(testid('search-matched')).click();
+      await $(testid('clear-filters')).click();
       await canvas.open();
 
       expect(await $(testid('search-input')).getValue()).toBe('');
-      expect(await $(testid('search-matched')).isExisting()).toBe(false);
+      expect(await $(testid('clear-filters')).isExisting()).toBe(false);
       expect(await canvas.tagPill('ops').getAttribute('aria-pressed')).toBe('false');
       expect(await canvas.languageChip('sh').getAttribute('aria-pressed')).toBe('false');
+    });
+
+    /**
+     * ⚠️ The cross in the field empties the field. It used to drop the tags and the
+     * languages with it, which is not what a cross in a search box means anywhere.
+     */
+    it('empties the field alone from the cross inside it', async () => {
+      await canvas.search('Docker');
+      await canvas.toggleTag('ops');
+
+      await $(testid('search-clear')).click();
+      await waitForCanvas();
+
+      expect(await $(testid('search-input')).getValue()).toBe('');
+      expect(await canvas.tagPill('ops').getAttribute('aria-pressed')).toBe('true');
+
+      await canvas.toggleTag('ops');
+      await waitForCanvas();
     });
 
     it('does the same on Escape, once there is no selection to clear', async () => {

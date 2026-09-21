@@ -36,7 +36,8 @@
     "loading": "Chargement des notes…",
     "noResults": "Aucune note ne correspond à cette recherche.",
     "searchMatched": "{count, plural, =0 {aucun résultat} one {# résultat} other {# résultats}}",
-    "clearFilters": "Tout afficher",
+    "clearFilters": "Effacer les filtres",
+    "clearSearch": "Effacer la recherche",
     "attachmentsCount": "{count, plural, =0 {aucune pièce jointe} one {# pièce jointe} other {# pièces jointes}}",
     "placeholdersCount": "{count, plural, =0 {aucun champ à remplir} one {# champ à remplir} other {# champs à remplir}}",
     "selectNote": "Sélectionner la note {{title}}",
@@ -83,8 +84,7 @@
         "snippets": "Snippets",
         "startHere": "Prise en main"
       }
-    },
-    "clearFiltersFromEmpty": "Effacer les filtres"
+    }
   },
   "filters": {
     "groupLabel": "Filtrer les notes",
