@@ -25,7 +25,7 @@
 
 .lang-js,
 .lang-html {
-  @include hue-badge(var(--amber));
+  @include hue-badge(var(--amber-text));
 }
 
 .lang-py,

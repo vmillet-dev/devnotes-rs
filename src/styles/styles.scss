@@ -16,8 +16,13 @@
   --text-0: #eef0f4;
   --text-1: #aab0c0;
   --text-2: #9298ac;
-  --amber: #e8a33d;
-  --amber-dim: #8a662a;
+  // The accent, in the three jobs it does. ⚠️ On a dark surface one colour does all
+  // three, which is why the other two are declared as itself here — the light theme is
+  // where they part company, and it is the only block that redefines them.
+  --amber-fill: #e8a33d; // a surface: a solid button, a tick, a tint
+  --amber-edge: var(--amber-fill); // a hairline or a focus ring
+  --amber-text: var(--amber-fill); // a label
+  --amber-dim: #8a662a; // the softer hairline, for a hover
   --amber-ink: #1a1508; // text on solid amber (the "new note" button, say)
   --green: #6fbf8b;
   --blue: #6f9bd1;
@@ -25,6 +30,7 @@
   --purple: #a98fd1;
 
   // RGB triplets of the colours above, so no hex is duplicated behind an opacity.
+  // ⚠️ The **fill**: a tint is a wash of the surface colour, never of the label one.
   --text-1-rgb: 170, 176, 192;
   --amber-rgb: 232, 163, 61;
   --green-rgb: 111, 191, 139;
@@ -64,9 +70,13 @@
 
 /*
  * ⚠️ The `:root` block above stays the dark base, which avoids a white flash at launch:
- * the preference lives in a file nothing can read before Angular starts. The dark theme's
- * amber falls to 2:1 on white, so the light accent is a hue of its own and `--amber-ink`
- * flips with it.
+ * the preference lives in a file nothing can read before Angular starts.
+ *
+ * ⚠️ `--amber-fill` is **not** redefined here, deliberately: #e8a33d is the accent in both
+ * themes, and a light surface is where it works — dark text on it reads at 7.8:1. What it
+ * cannot be on a light background is a *line* or a *word*: on white it falls to 2.16:1,
+ * where a hairline asks 3 and a label asks 4.5. So those two step down, and only those
+ * two. Drawing the whole accent at the label's darkness is what read as mustard.
  */
 :root[data-theme='light'] {
   --bg-0: #eceef2;
@@ -78,16 +88,15 @@
   --text-0: #1a1d24;
   --text-1: #4a5163;
   --text-2: #636a7c;
-  --amber: #8f5b0d;
-  --amber-dim: #d9b070;
-  --amber-ink: #fff8ec;
+  --amber-edge: #cf6a08; // 3.10:1 on white — a focus ring has to be findable
+  --amber-text: #a8500f; // 4.65:1 on white, which is the ceiling for a warm hue
+  --amber-dim: #dda882;
   --green: #297044;
   --blue: #2a5d99;
   --red: #b03a39;
   --purple: #6a4aa6;
 
   --text-1-rgb: 74, 81, 99;
-  --amber-rgb: 143, 91, 13;
   --green-rgb: 41, 112, 68;
   --blue-rgb: 42, 93, 153;
   --red-rgb: 176, 58, 57;

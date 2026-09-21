@@ -43,10 +43,10 @@
 
 .tag-rail-manage:hover {
   border-color: var(--amber-dim);
-  color: var(--amber);
+  color: var(--amber-text);
 }
 
 .tag-rail-manage:focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--amber-edge);
   outline-offset: 2px;
 }

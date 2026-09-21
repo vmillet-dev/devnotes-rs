@@ -22,7 +22,7 @@
 // the caret is here. And unlike a button, a field pointed at with the mouse is one being
 // typed into — the ring belongs there whichever way the caret arrived.
 .search-bar:focus-within {
-  border-color: var(--amber);
+  border-color: var(--amber-edge);
 }
 
 .search-bar input {
@@ -31,6 +31,13 @@
   color: var(--text-0);
   font-family: var(--font-sans);
   font-size: 13px;
+}
+
+// ⚠️ Chromium draws its own cross for `type="search"`, and `all: unset` does not reach a
+// pseudo-element: the field showed two of them. Ours is the one that stays, because it
+// carries a name, a hit target and a focus ring.
+.search-bar input::-webkit-search-cancel-button {
+  display: none;
 }
 
 .search-bar input::placeholder {
@@ -71,5 +78,5 @@
 }
 
 .clear-text:hover {
-  color: var(--amber);
+  color: var(--amber-text);
 }

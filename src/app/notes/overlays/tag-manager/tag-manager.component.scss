@@ -88,9 +88,9 @@ app-dialog {
   display: grid;
   gap: 0.6rem;
   padding: 0.75rem;
-  border: 1px solid var(--amber);
+  border: 1px solid var(--amber-edge);
   border-radius: 6px;
-  background: color-mix(in srgb, var(--amber) 8%, transparent);
+  background: color-mix(in srgb, var(--amber-fill) 8%, transparent);
 }
 
 .tags-confirm-text {
@@ -151,6 +151,6 @@ app-dialog {
 }
 
 .tags-panel :focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--amber-edge);
   outline-offset: 2px;
 }

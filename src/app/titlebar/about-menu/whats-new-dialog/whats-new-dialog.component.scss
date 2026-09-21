@@ -54,7 +54,7 @@ app-dialog {
   font-family: var(--font-mono), serif;
   font-size: 13px;
   font-weight: 600;
-  color: var(--amber);
+  color: var(--amber-text);
 }
 
 .news-date {
@@ -113,7 +113,7 @@ app-dialog {
 }
 
 .news-link:focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--amber-edge);
   outline-offset: 2px;
 }
 

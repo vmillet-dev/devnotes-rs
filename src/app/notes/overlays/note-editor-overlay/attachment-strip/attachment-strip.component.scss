@@ -33,7 +33,7 @@
 }
 
 .strip-item.previewing {
-  @include accent-state(var(--amber), var(--amber-dim));
+  @include accent-state(var(--amber-text), var(--amber-dim));
 }
 
 .strip-name {
@@ -78,7 +78,7 @@ button.strip-name {
 
 .strip-icon:hover,
 .strip-icon[aria-pressed='true'] {
-  color: var(--amber);
+  color: var(--amber-text);
 }
 
 .strip-remove {
@@ -148,6 +148,6 @@ button.strip-name {
 
 .strip :focus-visible,
 .strip-preview :focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--amber-edge);
   outline-offset: 2px;
 }

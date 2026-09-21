@@ -16,7 +16,7 @@ app-dialog {
 }
 
 .update-icon {
-  color: var(--amber);
+  color: var(--amber-text);
 }
 
 .update-summary {
@@ -36,7 +36,7 @@ app-dialog {
 }
 
 .update-notes summary:focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--amber-edge);
   outline-offset: 2px;
 }
 
@@ -79,11 +79,11 @@ app-dialog {
   }
 
   &::-webkit-progress-value {
-    background: var(--amber);
+    background: var(--amber-fill);
   }
 
   &::-moz-progress-bar {
-    background: var(--amber);
+    background: var(--amber-fill);
   }
 }
 
@@ -106,20 +106,20 @@ app-dialog {
   }
 
   &:focus-visible {
-    outline: 2px solid var(--amber);
+    outline: 2px solid var(--amber-edge);
     outline-offset: 1px;
   }
 }
 
 .update-btn.primary {
-  background: var(--amber);
-  border-color: var(--amber);
+  background: var(--amber-fill);
+  border-color: var(--amber-edge);
   color: var(--amber-ink);
   font-weight: 600;
 
   &:hover {
-    background: var(--amber);
-    border-color: var(--amber);
+    background: var(--amber-fill);
+    border-color: var(--amber-edge);
     color: var(--amber-ink);
   }
 }
@@ -135,11 +135,11 @@ app-dialog {
 
 .update-skip-box {
   flex: none;
-  accent-color: var(--amber);
+  accent-color: var(--amber-fill);
   cursor: pointer;
 }
 
 .update-skip-box:focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--amber-edge);
   outline-offset: 2px;
 }
