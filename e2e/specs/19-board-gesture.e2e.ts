@@ -20,6 +20,13 @@ import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /** `folders::board::CARD_HEIGHT`, which `scripts/board-geometry.test.mjs` holds to the CSS. */
 const CARD_HEIGHT = 150;
+
+/**
+ * `folders::board::ZONE_HEADER`. ⚠️ The one number in that module the sweep cannot read:
+ * the header is its padding plus wherever the text lands, and no stylesheet states it. So it
+ * is measured here instead, against the assembled application.
+ */
+const ZONE_HEADER = 38;
 describe('Arranging the board', () => {
   let homeId = '';
   let spaceId = '';
@@ -300,8 +307,12 @@ describe('Arranging the board', () => {
       'the zone to open far enough for what was filed into it',
     );
 
-    // Two cards still fit across at this width, so three of them are two rows.
+    // Two cards still fit across at this width, so three of them are two rows of 2 and 1.
     expect(shaved?.width).toBeGreaterThan(0);
+    expect(await board.zoneRows(rapports)).toEqual([2, 1]);
     expect(await board.zoneSlack(rapports)).toBeLessThan(CARD_HEIGHT);
+    // ⚠️ Guessed in Rust, so it has to be checked where it is drawn: one pixel over and
+    // the body is short of its own rows, which costs a scrollbar and then a column.
+    expect(await board.zoneHeaderHeight(rapports)).toBeLessThanOrEqual(ZONE_HEADER);
   });
 });

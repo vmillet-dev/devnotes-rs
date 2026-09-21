@@ -100,6 +100,19 @@ describe('the board is measured the same on both sides', () => {
     assert.ok(two - 1 - chrome < card * 2 + gap, 'one pixel less must not');
   });
 
+  /**
+   * ⚠️ And to the height, which is the half that bites hardest: `.zone-body` is the box
+   * that scrolls, so a zone one pixel short of its rows shows a vertical scrollbar, the
+   * scrollbar takes a slice of the row, and the row wraps. Two across become one.
+   */
+  it('pays for the hairlines in the height as well as the width', () => {
+    assert.match(
+      read(BOARD_RS),
+      /pub fn zone_height\([^)]*\)[^}]*ZONE_BORDER \* 2/s,
+      "zone_height no longer leaves room for the zone's own hairlines",
+    );
+  });
+
   /** ⚠️ The dotted lattice every gesture snaps to: drift and a snapped board stops looking it. */
   it('snaps to the grid it draws', () => {
     const drawn = inBlock(BOARD_SCSS, '.board', /background-size:\s*(\d+)px/);

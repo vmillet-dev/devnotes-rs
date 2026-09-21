@@ -47,6 +47,11 @@ pub const LOOSE_COLUMNS: i32 = 4;
 /// this allowance two cards plus their gap come to *exactly* the inner width, the second
 /// wraps, the wrap causes the scrollbar, and the scrollbar keeps it wrapped — a zone that
 /// says "2" and shows one.
+///
+/// ⚠️ It is only ever added to [`default_zone_width`], never taken off a count: what fits
+/// is what [`columns_in`] answers, and a zone [`zone_height`] sized correctly shows no
+/// scrollbar at all. The measured slice in this `WebView` is 9px — this stays generous on
+/// purpose, since it costs a few pixels of board and the alternative costs a column.
 pub const SCROLLBAR: i32 = 18;
 
 #[derive(Debug, Clone, Deserialize, Type)]
@@ -158,8 +163,8 @@ pub fn clamp_point(point: BoardPoint) -> BoardPoint {
 
 /// A zone must stay big enough to hold the header and one card, or it becomes a target
 /// nothing can be dropped into.
-pub const MIN_ZONE_WIDTH: i32 = ZONE_PADDING * 2 + CARD_WIDTH;
-pub const MIN_ZONE_HEIGHT: i32 = ZONE_HEADER + ZONE_PADDING * 2 + CARD_HEIGHT;
+pub const MIN_ZONE_WIDTH: i32 = ZONE_BORDER * 2 + ZONE_PADDING * 2 + CARD_WIDTH;
+pub const MIN_ZONE_HEIGHT: i32 = ZONE_BORDER * 2 + ZONE_HEADER + ZONE_PADDING * 2 + CARD_HEIGHT;
 /// Far enough for any board, near enough that a runaway drag cannot make the surface
 /// unusable.
 pub const MAX_SIDE: i32 = 100_000;
@@ -208,6 +213,14 @@ pub fn columns_in(width: i32) -> i32 {
 
 /// Tall enough for that many notes flowing that many across, and never shorter than one
 /// row — an empty zone is still somewhere to drop a card.
+///
+/// ⚠️ The hairlines are in it, exactly as they are in [`columns_in`], and for a reason
+/// that bites harder: `.zone-body` is the box that scrolls, so a zone one pixel short of
+/// its own cards shows a **vertical** scrollbar, the scrollbar takes a slice of the row,
+/// and the row it takes it from wraps — two cards across become one, two rows become three,
+/// and nothing gets it back because the taller content keeps the scrollbar. Measured in the
+/// assembled application: a 374px zone left its body 335px of client height where two rows
+/// need 336, and the cards came out in a single column (#284).
 #[must_use]
 pub fn zone_height(note_count: usize, columns: i32) -> i32 {
     let columns = columns.max(1);
@@ -215,7 +228,12 @@ pub fn zone_height(note_count: usize, columns: i32) -> i32 {
     let rows = notes.div_euclid(columns) + i32::from(notes.rem_euclid(columns) != 0);
 
     let rows = rows.max(MIN_ZONE_ROWS);
-    ZONE_HEADER + ZONE_PADDING + rows * CARD_HEIGHT + (rows - 1) * GAP + ZONE_PADDING
+    ZONE_BORDER * 2
+        + ZONE_HEADER
+        + ZONE_PADDING
+        + rows * CARD_HEIGHT
+        + (rows - 1) * GAP
+        + ZONE_PADDING
 }
 
 /// The height a zone gets on its first layout, at [`ZONE_COLUMNS`] cards across.
@@ -515,6 +533,22 @@ mod tests {
 
         assert_eq!(two_rows - one_row, CARD_HEIGHT + GAP);
         assert_eq!(default_zone_height(4), two_rows);
+    }
+
+    /// ⚠️ Measured in the assembled application, and the reason the fix above was not
+    /// enough on its own: `.zone-body` is the box that scrolls, and the two hairlines came
+    /// off its height as well. A 374px zone gave it 335px of client height where two rows of
+    /// cards need 336 — one pixel — so a vertical scrollbar appeared, took 9px off the row,
+    /// and the second card wrapped. Three cards in one column, in a zone sized for two.
+    #[test]
+    fn a_zone_is_tall_enough_for_its_rows_once_its_own_hairlines_are_paid_for() {
+        let body = zone_height(3, 2) - ZONE_BORDER * 2 - ZONE_HEADER;
+
+        assert!(
+            body >= ZONE_PADDING * 2 + CARD_HEIGHT * 2 + GAP,
+            "{body}px of body for two rows that need {}",
+            ZONE_PADDING * 2 + CARD_HEIGHT * 2 + GAP
+        );
     }
 
     /// ⚠️ The report: a zone dragged 14px narrower than nominal still flows two cards

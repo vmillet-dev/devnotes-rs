@@ -909,7 +909,19 @@ and `scripts/board-geometry.test.mjs` reads them out of the stylesheets and out 
 and fails when one moves alone, because nothing else would: both sides are valid on their
 own and the symptom is a band of empty board. It pins `GRID_PX` against the dotted
 background it snaps to for the same reason. ⚠️ `ZONE_HEADER` is **not** in it and cannot be:
-the header’s height is its padding plus wherever the text lands, and no stylesheet says so.
+the header’s height is its padding plus wherever the text lands, and no stylesheet says so —
+so `19-board-gesture` measures the drawn header against the constant instead.
+
+⚠️ **The hairlines cost height as well as width, and that half bites harder.** `.zone-body`
+is the box that scrolls, so a zone one pixel short of its own rows shows a **vertical**
+scrollbar, the scrollbar takes a slice off the row, the row wraps, and the taller content
+keeps the scrollbar: two cards across become one and nothing gets them back. Measured in the
+assembled application, a 374px zone gave its body 335px of client height where two rows need
+336 — one pixel, and three cards came out in a single column. `zone_height` and
+`MIN_ZONE_HEIGHT` pay for the two hairlines now, and the sweep checks both halves. The same
+measurement put the scrollbar at **9px**, not the 18 `SCROLLBAR` reserves; that constant only
+ever widens `default_zone_width`, and staying generous there costs a few pixels of board
+where being exact would cost a column.
 
 ⚠️ The "no folder · N" label is a chip anchored to the board's **corner**, outside the surface
 that pans and the box that scrolls. It used to be drawn above whichever loose card was
