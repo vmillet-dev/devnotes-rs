@@ -633,4 +633,36 @@ describe('NoteCardComponent', () => {
       expect(fixture.nativeElement.querySelector('.card-snippet')).toBeNull();
     });
   });
+
+  /**
+   * ⚠️ The card is rebuilt whenever its section changes, and the first character typed
+   * into the search field switches the canvas to one flat `results` section — so the
+   * effect that follows the canvas cursor runs while somebody is typing somewhere else.
+   */
+  describe('following the canvas cursor', () => {
+    beforeEach(async () => {
+      fixture.componentRef.setInput('note', createNote({ id: 'note-42' }));
+      await fixture.whenStable();
+      (document.activeElement as HTMLElement | null)?.blur();
+    });
+
+    it('takes the keyboard when nothing else is holding it', async () => {
+      TestBed.inject(NoteSelectionStore).focusNote('note-42');
+      await fixture.whenStable();
+
+      expect(document.activeElement).toBe(fixture.nativeElement.querySelector('.card-open'));
+    });
+
+    it('leaves a field that is being typed in alone', async () => {
+      const field = document.createElement('input');
+      document.body.append(field);
+      field.focus();
+
+      TestBed.inject(NoteSelectionStore).focusNote('note-42');
+      await fixture.whenStable();
+
+      expect(document.activeElement).toBe(field);
+      field.remove();
+    });
+  });
 });

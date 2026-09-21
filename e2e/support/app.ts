@@ -332,6 +332,11 @@ export async function blurField(): Promise<void> {
   await browser.execute(() => (document.activeElement as HTMLElement | null)?.blur());
 }
 
+/** Which control really holds the keyboard, by its test id — `null` for anything else. */
+export async function activeTestId(): Promise<string | null> {
+  return browser.execute(() => document.activeElement?.getAttribute('data-testid') ?? null);
+}
+
 export async function reloadCanvas(): Promise<void> {
   await browser.refresh();
   await waitForCanvas();
