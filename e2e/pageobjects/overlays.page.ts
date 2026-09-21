@@ -245,6 +245,69 @@ export const board = {
   },
 
   /** Whether every card in a zone is drawn inside the zone's own box, none cut off. */
+  /**
+   * How the browser actually flowed a zone: one entry per row, each the number of cards
+   * on it. ⚠️ The claim Rust makes when it sizes a zone, read back off the screen — a
+   * zone one pixel short of its rows shows a scrollbar, the scrollbar takes a slice of the
+   * row, and two cards across silently become one (#284).
+   */
+  async zoneRows(folderId: string): Promise<number[]> {
+    const tops = await browser.execute(
+      (zoneSelector: string, cardSelector: string) => {
+        const zone = document.querySelector(zoneSelector);
+        if (!zone) throw new Error('no zone at ' + zoneSelector);
+
+        return [...zone.querySelectorAll(cardSelector)].map((card) =>
+          Math.round(card.getBoundingClientRect().top),
+        );
+      },
+      `${testid('board-zone')}[data-folder-id="${folderId}"]`,
+      testid('note-card'),
+    );
+
+    const rows = new Map<number, number>();
+    for (const top of tops) {
+      rows.set(top, (rows.get(top) ?? 0) + 1);
+    }
+    return [...rows.entries()].sort(([a], [b]) => a - b).map(([, count]) => count);
+  },
+
+  /** The header, whose height is the one number `board.rs` guesses rather than reads. */
+  zoneHeaderHeight(folderId: string): Promise<number> {
+    return browser.execute(
+      (zoneSelector: string) => {
+        const head = document.querySelector(zoneSelector)?.querySelector('.zone-head');
+        if (!head) throw new Error('no zone head at ' + zoneSelector);
+
+        return Math.ceil(head.getBoundingClientRect().height);
+      },
+      `${testid('board-zone')}[data-folder-id="${folderId}"]`,
+    );
+  },
+
+  /**
+   * The empty board left under the lowest card in a zone. ⚠️ A whole card’s worth of it
+   * is the symptom of the count and the flow disagreeing: Rust made room for a row the
+   * browser never used (#284).
+   */
+  zoneSlack(folderId: string): Promise<number> {
+    return browser.execute(
+      (zoneSelector: string, cardSelector: string) => {
+        const zone = document.querySelector(zoneSelector);
+        if (!zone) throw new Error('no zone at ' + zoneSelector);
+
+        const box = zone.getBoundingClientRect();
+        const lowest = [...zone.querySelectorAll(cardSelector)].reduce(
+          (bottom, card) => Math.max(bottom, card.getBoundingClientRect().bottom),
+          box.top,
+        );
+        return Math.round(box.bottom - lowest);
+      },
+      `${testid('board-zone')}[data-folder-id="${folderId}"]`,
+      testid('note-card'),
+    );
+  },
+
   zoneHoldsItsCards(folderId: string): Promise<boolean> {
     return browser.execute(
       (zoneSelector: string, cardSelector: string) => {
