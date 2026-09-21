@@ -1,4 +1,9 @@
-import { ChangelogRelease } from '@core/services/app-info/changelog.service';
+import { ChangelogRelease, ChangelogSpan } from '@core/services/app-info/changelog.service';
+
+/** An entry as it usually is: one plain run. */
+function plain(text: string): ChangelogSpan[] {
+  return [{ kind: 'plain', text }];
+}
 
 /** The real one needs the Tauri bridge and the `opener` plugin, neither of which jsdom has. */
 export class FakeChangelog {
@@ -6,12 +11,24 @@ export class FakeChangelog {
     {
       version: '0.2.0',
       date: '2026-09-11',
-      sections: [{ title: 'Added', items: ['Sample notes on first launch.'] }],
+      sections: [
+        {
+          title: 'Added',
+          items: [
+            [
+              { kind: 'strong', text: 'Sample notes.' },
+              { kind: 'plain', text: ' On first launch, in ' },
+              { kind: 'code', text: 'their own space' },
+              { kind: 'plain', text: '.' },
+            ],
+          ],
+        },
+      ],
     },
     {
       version: '0.1.0',
       date: null,
-      sections: [{ title: '', items: ['Shipped at last.'] }],
+      sections: [{ title: '', items: [plain('Shipped at last.')] }],
     },
   ];
 

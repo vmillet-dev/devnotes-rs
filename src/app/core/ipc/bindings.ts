@@ -285,7 +285,12 @@ export type ChangelogRelease = {
 export type ChangelogSection = {
 	/**  Empty for that anonymous category: the front then renders no heading. */
 	title: string,
-	items: string[],
+	items: ChangelogSpan[][],
+};
+
+export type ChangelogSpan = {
+	kind: SpanKind,
+	text: string,
 };
 
 /**
@@ -659,6 +664,8 @@ export type Space = {
 export type SpaceDraft = {
 	name: string,
 };
+
+export type SpanKind = "plain" | "strong" | "code";
 
 export type TagUsage = {
 	tag: string,

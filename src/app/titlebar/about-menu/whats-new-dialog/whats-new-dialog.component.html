@@ -34,7 +34,24 @@
             }
             <ul class="news-items">
               @for (item of section.items; track $index) {
-                <li>{{ item }}</li>
+                <!-- ⚠️ Three spans over a switch and never `innerHTML`: the file is baked
+                     into the binary, but a renderer that interprets markup is one the CSP
+                     cannot help with the day it reads something else. -->
+                <li>
+                  @for (span of item; track $index) {
+                    @switch (span.kind) {
+                      @case ('strong') {
+                        <strong>{{ span.text }}</strong>
+                      }
+                      @case ('code') {
+                        <code>{{ span.text }}</code>
+                      }
+                      @default {
+                        <span>{{ span.text }}</span>
+                      }
+                    }
+                  }
+                </li>
               }
             </ul>
           }

@@ -48,7 +48,22 @@ describe('WhatsNewDialogComponent', () => {
     );
     expect(versions).toEqual(['0.2.0', '0.1.0']);
     expect(text('.news-date')).toBe('2026-09-11');
-    expect(items()).toEqual(['Sample notes on first launch.', 'Shipped at last.']);
+    expect(items()).toEqual(['Sample notes. On first launch, in their own space.', 'Shipped at last.']);
+  });
+
+  /**
+   * ⚠️ The hand-written sections of `CHANGELOG.md` open on `**Todo-list notes.**` and
+   * carry backticks, and all of it used to land on screen as punctuation. Rendered as
+   * elements over a switch, never through `innerHTML`.
+   */
+  it('draws the runs an entry was cut into rather than their markers', async () => {
+    await mount();
+
+    const entry = fixture.nativeElement.querySelector('.news-items li') as HTMLElement;
+
+    expect(entry.querySelector('strong')?.textContent).toBe('Sample notes.');
+    expect(entry.querySelector('code')?.textContent).toBe('their own space');
+    expect(entry.textContent).not.toContain('**');
   });
 
   it('marks the release the running binary is', async () => {
