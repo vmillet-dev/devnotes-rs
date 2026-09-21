@@ -62,8 +62,9 @@ async function exportEverything(
   harness: Harness,
   spaceId: string | null = null,
   given: PassphraseAnswer = IN_THE_CLEAR,
+  now: Date = NOW,
 ): Promise<void> {
-  const done = harness.store.export(spaceId, NOW);
+  const done = harness.store.export(spaceId, now);
   await answer(harness, given);
   await done;
 }
@@ -277,12 +278,30 @@ describe('LibraryStore', () => {
   });
 
   describe('export', () => {
-    it('proposes a dated file name', async () => {
+    /**
+     * ⚠️ Down to the minute: two exports on the same day were offered the same name, and
+     * replacing the first was one Enter away. The expectation is derived through
+     * `sv-SE`, which formats local time ISO-style — a literal would pin the runner's
+     * timezone, and the point is that the name is **not** the UTC day.
+     */
+    it('proposes a name stamped with the local day and minute', async () => {
       harness.dialog.savePath = 'C:/out.json';
+      const local = NOW.toLocaleString('sv-SE');
+      const expected = `devnotes-${local.slice(0, 10)}-${local.slice(11, 13)}${local.slice(14, 16)}.devnotes`;
 
       await exportEverything(harness);
 
-      expect(harness.dialog.saveCalls[0].defaultPath).toBe('devnotes-2026-08-27.devnotes');
+      expect(harness.dialog.saveCalls[0].defaultPath).toBe(expected);
+    });
+
+    it('offers a second name a minute later, rather than the first one again', async () => {
+      harness.dialog.savePath = 'C:/out.json';
+      await exportEverything(harness);
+
+      await exportEverything(harness, null, IN_THE_CLEAR, new Date(NOW.getTime() + 60_000));
+
+      const [first, second] = harness.dialog.saveCalls;
+      expect(second?.defaultPath).not.toBe(first?.defaultPath);
     });
 
     it('passes the active space through, or null for everything', async () => {

@@ -8,9 +8,20 @@ import { hasErrorCode } from '@core/ipc/ipc.error';
 import { TransferRepository } from '../data/transfer.repository';
 import { NotesRevision } from './notes-revision';
 
-/** Dated, so two exports do not overlap. */
+function pad(value: number): string {
+  return String(value).padStart(2, '0');
+}
+
+/**
+ * Stamped to the minute, so two exports on the same day are two names — the second was
+ * offered the first one's, and replacing it was one Enter away.
+ *
+ * ⚠️ Local time, not `toISOString`: the name is read by whoever wrote it, and an export
+ * taken at 23:30 in Paris was dated the next day.
+ */
 function defaultFileName(now: Date): string {
-  return `devnotes-${now.toISOString().slice(0, 10)}.devnotes`;
+  const day = [now.getFullYear(), pad(now.getMonth() + 1), pad(now.getDate())].join('-');
+  return `devnotes-${day}-${pad(now.getHours())}${pad(now.getMinutes())}.devnotes`;
 }
 
 /**
