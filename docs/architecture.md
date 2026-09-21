@@ -1027,7 +1027,7 @@ with `X`, then "Ranger dans" in the selection bar — the same batch command the
 so the two cannot drift. The gesture adds to it; it does not replace it.
 
 **A right-button drag sweeps a selection band; the left one still draws a folder.** The
-existing gesture does not move — it is the one that *creates* something, and it had the
+existing gesture does not move — it is the one that _creates_ something, and it had the
 background first. ⚠️ Two things that settles and one it opened:
 
 - **Zones are not selectable.** A band picks up cards only, so "delete the selection"
@@ -1037,12 +1037,12 @@ background first. ⚠️ Two things that settles and one it opened:
   for free, and `Ctrl+click` already added to a selection on both views.
 - ⚠️ **The application has no context menu anywhere**, so `contextmenu` is simply
   suppressed on the surface — without that, the browser's own menu opens at the end of
-  every sweep, right where the pointer was lifted. A right *click* that never travels does
+  every sweep, right where the pointer was lifted. A right _click_ that never travels does
   nothing, as it did before.
 
 ⚠️ The band is the one gesture that runs while `editable` is false: it writes nothing to
 the board, it only ticks what is already drawn. And ⚠️ which cards it swept is **measured
-off the screen**, not computed — a card filed into a zone *flows* and has no coordinates of
+off the screen**, not computed — a card filed into a zone _flows_ and has no coordinates of
 its own, so there is nothing in the model to test a rectangle against. `overlaps` is the
 arithmetic, half-open on the far edges like `contains`, and touching is enough.
 
