@@ -1,5 +1,6 @@
 import { Provider } from '@angular/core';
 import { CLIPBOARD_ADAPTER } from '@core/services/clipboard/clipboard.service';
+import { DESKTOP_NOTIFICATION_ADAPTER } from '@core/services/notifications/desktop-notifier.service';
 import { FILE_DIALOG_ADAPTER } from '@core/services/dialogs/file-dialog.service';
 import { APP_WINDOW_ADAPTER } from '@core/services/window/app-window.service';
 import { AttachmentsRepository } from '@core/data/attachments.repository';
@@ -19,6 +20,7 @@ import { FakeAppWindow } from './fake-app-window';
 import { FakeAttachmentsRepository } from './fake-attachments-repository';
 import { FakeBoardRepository } from './fake-board-repository';
 import { FakeClipboard } from './fake-clipboard';
+import { FakeDesktopNotifications } from './fake-desktop-notifications';
 import { FakeFileDialog } from './fake-file-dialog';
 import { FakeFoldersRepository } from './fake-folders-repository';
 import { FakeNotesRepository } from './fake-notes-repository';
@@ -43,6 +45,7 @@ interface DataDoubles {
   readonly updater?: FakeUpdater;
   readonly appInfo?: FakeAppInfo;
   readonly clipboard?: FakeClipboard;
+  readonly desktopNotifications?: FakeDesktopNotifications;
   readonly fileDialog?: FakeFileDialog;
   readonly appWindow?: FakeAppWindow;
 }
@@ -83,6 +86,10 @@ export function provideAppTesting(doubles: DataDoubles = {}): Provider[] {
     { provide: UpdaterService, useValue: doubles.updater ?? new FakeUpdater() },
     { provide: AppInfoService, useValue: doubles.appInfo ?? new FakeAppInfo() },
     { provide: CLIPBOARD_ADAPTER, useValue: doubles.clipboard ?? new FakeClipboard() },
+    {
+      provide: DESKTOP_NOTIFICATION_ADAPTER,
+      useValue: doubles.desktopNotifications ?? new FakeDesktopNotifications(),
+    },
     { provide: FILE_DIALOG_ADAPTER, useValue: doubles.fileDialog ?? new FakeFileDialog() },
     // Never the real one: `exit()` would take the test runner down with it.
     { provide: APP_WINDOW_ADAPTER, useValue: doubles.appWindow ?? new FakeAppWindow() },

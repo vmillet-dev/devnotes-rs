@@ -1,5 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { ClipboardService } from '@core/services/clipboard/clipboard.service';
+import { DesktopNotifier } from '@core/services/notifications/desktop-notifier.service';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { SEARCH_DEBOUNCE_MS, debounced } from '@core/services/time/debounce';
@@ -23,6 +24,7 @@ export class PaletteStore {
   private readonly clock = inject(ClockService);
   private readonly window = inject(AppWindowService);
   private readonly notifier = inject(ErrorNotifier);
+  private readonly desktop = inject(DesktopNotifier);
   private readonly settings = inject(SettingsStore);
 
   private readonly _isOpen = signal(false);
@@ -104,10 +106,16 @@ export class PaletteStore {
     }
 
     // A todo list has no content: without this the palette would copy an empty string.
-    await this.copyAndDismiss(noteCopyText(note));
+    await this.copyAndDismiss(noteCopyText(note), note.title);
   }
 
-  async copyAndDismiss(content: string): Promise<void> {
+  /**
+   * ⚠️ The toast is sent **after** the window has gone, and it is the only
+   * acknowledgement this path can have: `StatusNotifier` draws under the titlebar, and
+   * the titlebar is what is being taken away. Without it the window simply vanished, and
+   * it read as the application crashing on a copy that had in fact worked (#285).
+   */
+  async copyAndDismiss(content: string, title: string): Promise<void> {
     if (!(await this.clipboard.copy(content))) {
       this.notifier.notify({ ref: { key: 'errors.copyFailed' } });
       return;
@@ -116,6 +124,11 @@ export class PaletteStore {
     this.close();
     // The window disappears: the user goes back to paste where they were.
     await this.window.hide();
+
+    await this.desktop.notify(
+      { key: 'palette.copiedTitle' },
+      title ? { key: 'palette.copiedNote', params: { title } } : { key: 'palette.copiedUntitled' },
+    );
   }
 
   cancelFill(): void {

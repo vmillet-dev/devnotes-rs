@@ -354,7 +354,10 @@
     "hint": "↑↓ naviguer · Entrée ou clic ouvrir · Ctrl+C copier · Échap fermer",
     "copyLabel": "Copier « {{title}} »",
     "close": "Fermer la palette",
-    "createNote": "+ Créer une note « {{query}} »"
+    "createNote": "+ Créer une note « {{query}} »",
+    "copiedTitle": "Copié",
+    "copiedNote": "« {{title}} » est dans le presse-papiers",
+    "copiedUntitled": "La note est dans le presse-papiers"
   },
   "placeholders": {
     "title": "Remplir les champs",

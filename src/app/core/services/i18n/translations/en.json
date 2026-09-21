@@ -354,7 +354,10 @@
     "hint": "↑↓ move · Enter or click to open · Ctrl+C copy · Esc close",
     "copyLabel": "Copy “{{title}}”",
     "close": "Close the palette",
-    "createNote": "+ Create a note “{{query}}”"
+    "createNote": "+ Create a note “{{query}}”",
+    "copiedTitle": "Copied",
+    "copiedNote": "“{{title}}” is on the clipboard",
+    "copiedUntitled": "The note is on the clipboard"
   },
   "placeholders": {
     "title": "Fill the fields",

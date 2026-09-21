@@ -101,6 +101,25 @@ describe('The quick-paste palette', () => {
   });
 
   /**
+   * ⚠️ The toast itself is out of reach — it is drawn by the operating system, after the
+   * window has gone, and this run shares one window with every file after it. What the suite
+   * can prove is the half that fails silently: a capability missing from
+   * `capabilities/default.json` makes the plugin refuse at runtime and nothing else says so
+   * (#285).
+   */
+  it('is allowed to ask the desktop whether it may speak', async () => {
+    const answer = (await browser.executeAsync((done: (value: unknown) => void) => {
+      const tauri = (window as unknown as Record<string, any>)['__TAURI__'];
+      tauri.core
+        .invoke('plugin:notification|is_permission_granted')
+        .then((value: unknown) => done({ ok: value }))
+        .catch((error: unknown) => done({ err: String(error) }));
+    })) as { ok?: unknown; err?: string };
+
+    expect(answer.err).toBeUndefined();
+  });
+
+  /**
    * ⚠️ Asked of a snippet with fields on purpose: the copy path proper ends in
    * `window.hide()`, and this run shares one window with every file after it. The form is
    * where `Ctrl+C` lands for this note, which proves the binding reaches the copy without
