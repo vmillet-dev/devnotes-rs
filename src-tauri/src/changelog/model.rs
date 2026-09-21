@@ -15,7 +15,7 @@ pub struct ChangelogRelease {
     pub sections: Vec<ChangelogSection>,
 }
 
-/// One `### ` heading, or the anonymous one a release with no category gets.
+/// One `### ` heading, or the anonymous one a release with no category gets.       
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ChangelogSection {

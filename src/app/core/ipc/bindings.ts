@@ -281,7 +281,7 @@ export type ChangelogRelease = {
 	sections: ChangelogSection[],
 };
 
-/**  One `### ` heading, or the anonymous one a release with no category gets. */
+/**  One `### ` heading, or the anonymous one a release with no category gets.        */
 export type ChangelogSection = {
 	/**  Empty for that anonymous category: the front then renders no heading. */
 	title: string,
