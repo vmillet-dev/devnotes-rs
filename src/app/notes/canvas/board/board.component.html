@@ -1,5 +1,20 @@
 @let drawnBand = band();
 
+<!-- ⚠️ On the board rather than in the topbar: it acts on this space's geometry and on
+     nothing else, and the topbar is already the widest row in the window. -->
+@if (editable()) {
+  <button
+    type="button"
+    class="board-tidy"
+    data-testid="board-tidy"
+    [attr.title]="'board.tidyHint' | transloco"
+    (click)="tidyRequested.emit()"
+  >
+    <span aria-hidden="true">⇲</span>
+    {{ 'board.tidy' | transloco }}
+  </button>
+}
+
 <div class="board" data-testid="board">
   <!-- Sized by the back end from what is actually on it: the surface is what is panned.
        ⚠️ The move and up handlers sit here and not on each draggable: the pointer is

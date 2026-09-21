@@ -9,7 +9,9 @@ use diesel::prelude::*;
 use crate::db::Library;
 use crate::db::schema::{folders, note_positions, notes};
 use crate::error::StorageError;
-use crate::folders::board::{self, BoardFrame, BoardPoint, CardPlacement, ZonePlacement};
+use crate::folders::board::{
+    self, BoardFrame, BoardLayout, BoardPoint, CardPlacement, ZonePlacement,
+};
 
 /// What a board read resolves before anything can be drawn: where each zone sits, and
 /// where each loose card does.
@@ -288,5 +290,121 @@ pub fn geometry<S: std::hash::BuildHasher>(
         }
 
         Ok((stored_frames, stored_positions))
+    })
+}
+
+/// Every folder of the space in reading order, and how many live notes each one holds.
+///
+/// ⚠️ Ids and counts rather than [`crate::folders::store::list`] and
+/// [`crate::notes::store::fetch`]: a tidy-up needs no name and no body, and those two
+/// would decrypt the whole space to answer a count.
+fn folder_counts(
+    connection: &mut SqliteConnection,
+    space_id: &str,
+) -> Result<Vec<(String, usize)>, StorageError> {
+    let ids = folders::table
+        .filter(folders::space_id.eq(space_id))
+        .order((folders::created_at.asc(), folders::id.asc()))
+        .select(folders::id)
+        .load::<String>(connection)?;
+
+    let filed = notes::table
+        .filter(notes::space_id.eq(space_id))
+        .filter(notes::deleted_at.is_null())
+        .filter(notes::folder_id.is_not_null())
+        .select(notes::folder_id)
+        .load::<Option<String>>(connection)?;
+
+    let mut counts: HashMap<String, usize> = HashMap::new();
+    for folder_id in filed.into_iter().flatten() {
+        *counts.entry(folder_id).or_default() += 1;
+    }
+
+    Ok(ids
+        .into_iter()
+        .map(|id| {
+            let count = counts.get(&id).copied().unwrap_or(0);
+            (id, count)
+        })
+        .collect())
+}
+
+/// The unfiled notes, in the order the board draws them — pinned first, then by when they
+/// last moved, exactly as `notes::store::fetch` hands them over.
+fn loose_ids(
+    connection: &mut SqliteConnection,
+    space_id: &str,
+) -> Result<Vec<String>, StorageError> {
+    Ok(notes::table
+        .filter(notes::space_id.eq(space_id))
+        .filter(notes::deleted_at.is_null())
+        .filter(notes::folder_id.is_null())
+        .order((
+            notes::pinned.desc(),
+            notes::updated_at.desc(),
+            notes::id.asc(),
+        ))
+        .select(notes::id)
+        .load::<String>(connection)?)
+}
+
+/// Rewrites the whole geometry of one space, and answers what it was.
+///
+/// ⚠️ The **previous** layout and not the new one: the new one arrives with the reload the
+/// front end does anyway, where this is the only moment the old one still exists. A
+/// tidy-up overwrites sizes chosen by hand, so it is the one board gesture that cannot be
+/// walked back by dragging.
+///
+/// ⚠️ Only what actually had a place is reported back. A zone the board had never laid out
+/// had nothing to restore, and writing a frame for it on the undo would invent a position
+/// the user never chose.
+pub fn arrange(connection: &mut Library, space_id: &str) -> Result<BoardLayout, StorageError> {
+    connection.transaction(|connection, _vault| {
+        let counts = folder_counts(connection, space_id)?;
+        let loose = loose_ids(connection, space_id)?;
+
+        let before = frames(connection, space_id)?;
+        let places = positions(connection, space_id)?;
+
+        let next = board::arrange(&counts, &loose);
+        for placement in &next.zones {
+            set_frame(
+                connection,
+                &placement.folder_id,
+                board::clamp(placement.frame),
+            )?;
+        }
+        for placement in &next.cards {
+            set_position(
+                connection,
+                &placement.note_id,
+                board::clamp_point(placement.position),
+            )?;
+        }
+
+        Ok(BoardLayout {
+            zones: next
+                .zones
+                .iter()
+                .filter_map(|placement| {
+                    before.get(&placement.folder_id).map(|frame| ZonePlacement {
+                        folder_id: placement.folder_id.clone(),
+                        frame: *frame,
+                    })
+                })
+                .collect(),
+            cards: next
+                .cards
+                .iter()
+                .filter_map(|placement| {
+                    places
+                        .get(&placement.note_id)
+                        .map(|position| CardPlacement {
+                            note_id: placement.note_id.clone(),
+                            position: *position,
+                        })
+                })
+                .collect(),
+        })
     })
 }

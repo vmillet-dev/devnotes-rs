@@ -8,7 +8,7 @@ import { Folder } from './folder.model';
 import { Note, NoteFilter } from './note.model';
 import { LanguageTag } from './language.model';
 
-export type { BoardFrame, BoardPoint, CardPlacement, ZonePlacement } from '@core/ipc/bindings';
+export type { BoardFrame, BoardLayout, BoardPoint, CardPlacement, ZonePlacement } from '@core/ipc/bindings';
 
 /** Kept out of `Note`: where a card sits is local, and must never travel with an export. */
 export interface BoardNote {

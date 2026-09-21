@@ -1026,6 +1026,32 @@ means "this note is loose", and writing one back would undo what `file_many` jus
 with `X`, then "Ranger dans" in the selection bar — the same batch command the drop uses,
 so the two cannot drift. The gesture adds to it; it does not replace it.
 
+**Tidying up is the same two rules, run again.** `arrange_board` rewrites the whole
+geometry of one space from `arrange_zones` and `arrange_loose` — the functions
+`geometry` runs once and never again — so after an afternoon of dragging there is a way
+back to a board that lines up. Zones come back in `created_at` order, which is what makes
+the same board tidied twice the same board.
+
+⚠️ It **repositions and resizes**: a zone is given the height its contents need, at the
+nominal width. An arrangement that leaves a zone too small for what is in it has not
+arranged anything — and that is exactly what makes the undo non-optional, since it
+overwrites sizes chosen by hand and no amount of dragging walks that back.
+
+⚠️ The command answers the layout it **replaced**, not the one it wrote: the new one arrives
+with the reload the front end does anyway, and this is the only moment the old one still
+exists. `restore_board_layout` is `save_layout` under another name, and the record is the
+fourth branch of `Reversible` — `arrange`, carrying the whole `BoardLayout`. A zone the
+board had never laid out is left out of the answer: it had no place to go back to, and
+inventing one on the undo would put it somewhere nobody chose.
+
+⚠️ `BoardStore.arrange` drops both staged maps rather than letting them expire. Every place
+a gesture had staged has just been overwritten, and keeping the overlay would draw the cards
+back where the drag left them until a view happened to agree. The trigger lives on the board
+itself (`.board-tidy`, the host's top-right corner) and not in the topbar: it acts on this
+space's geometry alone, and the topbar is already the widest row in the window. The undo
+window is opened by `NotesStore`, which injects `BoardStore` — the dependency runs one
+way, so the board cannot reach the undo itself.
+
 ### Descending into a folder
 
 A space shows its folders; a folder shows its notes. **Choosing a folder is opening it** —

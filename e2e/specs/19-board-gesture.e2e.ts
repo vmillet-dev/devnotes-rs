@@ -1,7 +1,7 @@
 import { browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
-import { board, selectionBar, spaces } from '../pageobjects/overlays.page.js';
+import { board, selectionBar, spaces, undoBar } from '../pageobjects/overlays.page.js';
 import { eventually, reloadCanvas, waitForCanvas } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
@@ -345,5 +345,45 @@ describe('Arranging the board', () => {
     // ⚠️ Guessed in Rust, so it has to be checked where it is drawn: one pixel over and
     // the body is short of its own rows, which costs a scrollbar and then a column.
     expect(await board.zoneHeaderHeight(rapports)).toBeLessThanOrEqual(ZONE_HEADER);
+  });
+
+  /**
+   * ⚠️ Last in the file: it rewrites every frame and every seat of the space, so any
+   * scenario asserting a place of its own has to have run already.
+   */
+  describe('tidying it up', () => {
+    it('brings a zone dragged off into the distance back to its seat', async () => {
+      await openBoard();
+      await board.drag(board.zoneGrip(perfId), { dx: 340, dy: 420 });
+      const dragged = await eventually(
+        () => storedFrame(perfId),
+        (frame) => frame !== null && frame.x > 300,
+        'the dragged zone to reach the database',
+      );
+
+      await board.tidy();
+
+      const tidied = await eventually(
+        () => storedFrame(perfId),
+        (frame) => frame !== null && frame.x < dragged!.x,
+        'the tidy-up to reach the database',
+      );
+      expect(tidied?.y).toBe(16);
+    });
+
+    /** ⚠️ Non-optional: it overwrites sizes chosen by hand, which dragging cannot undo. */
+    it('offers the previous arrangement back, and puts it back', async () => {
+      const tidied = await storedFrame(perfId);
+      await undoBar.bar().waitForExist({ timeout: 5_000 });
+
+      await undoBar.restore();
+
+      const restored = await eventually(
+        () => storedFrame(perfId),
+        (frame) => frame !== null && frame.x !== tidied!.x,
+        'the previous arrangement to come back',
+      );
+      expect(restored!.x).toBeGreaterThan(tidied!.x);
+    });
   });
 });

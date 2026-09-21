@@ -82,6 +82,18 @@ export const commands = {
 	 *  changed so the undo can put it back.
 	 */
 	saveBoardLayout: (zones: ZonePlacement[], cards: CardPlacement[]) => typedError<null, AppError>(__TAURI_INVOKE("save_board_layout", { zones, cards })),
+	/**
+	 *  Puts one space's board back in order: zones in reading order, each at the height its
+	 *  contents need, the loose cards flowing underneath.
+	 * 
+	 *  ⚠️ It answers the layout it **replaced**, not the one it wrote. The new one arrives
+	 *  with the reload the front end does anyway; this is the only moment the old one still
+	 *  exists, and a tidy-up overwrites sizes chosen by hand — the one board gesture that
+	 *  cannot be walked back by dragging.
+	 */
+	arrangeBoard: (spaceId: string) => typedError<BoardLayout, AppError>(__TAURI_INVOKE("arrange_board", { spaceId })),
+	/**  The undo of [`arrange_board`]: every zone and every loose card back where it was. */
+	restoreBoardLayout: (layout: BoardLayout) => typedError<null, AppError>(__TAURI_INVOKE("restore_board_layout", { layout })),
 	createFolder: (draft: FolderDraft) => typedError<Folder, AppError>(__TAURI_INVOKE("create_folder", { draft })),
 	renameFolder: (id: string, name: string) => typedError<Folder, AppError>(__TAURI_INVOKE("rename_folder", { id, name })),
 	recolourFolder: (id: string, colour: FolderColour) => typedError<Folder, AppError>(__TAURI_INVOKE("recolour_folder", { id, colour })),
@@ -210,6 +222,16 @@ export type BoardFrame = {
 	y: number,
 	width: number,
 	height: number,
+};
+
+/**
+ *  A whole board's geometry in one value: every zone's frame and every loose card's
+ *  place. It says what a tidy-up is about to write, and — read back before the write —
+ *  what it has to be able to put back.
+ */
+export type BoardLayout = {
+	zones: ZonePlacement[],
+	cards: CardPlacement[],
 };
 
 /**  `flatten`: the front end draws this with the same card component the canvas uses. */

@@ -467,6 +467,68 @@ describe('BoardStore', () => {
     });
   });
 
+  describe('tidying up', () => {
+    it('answers the layout it replaced, so the caller can offer it back', async () => {
+      const harness = await createStore();
+      await onBoard(harness);
+      harness.repository.previousLayout = {
+        zones: [{ folderId: 'perf', frame: { x: 900, y: 640, width: 900, height: 700 } }],
+        cards: [{ noteId: 'a', position: { x: 300, y: 300 } }],
+      };
+
+      const previous = await harness.store.arrange();
+
+      expect(harness.repository.arranged).toEqual(['sql']);
+      expect(previous).toEqual(harness.repository.previousLayout);
+    });
+
+    it('does nothing on all spaces, where there is no board to tidy', async () => {
+      const harness = await createStore();
+      harness.spaces.selectSpace(null);
+
+      expect(await harness.store.arrange()).toBeNull();
+      expect(harness.repository.arranged).toEqual([]);
+    });
+
+    /** ⚠️ Every staged place has just been overwritten; kept, the overlay would draw the
+     *  cards back where the drag left them. */
+    it('lets go of what a gesture had staged', async () => {
+      const harness = await createStore(
+        new FakeBoardRepository({
+          zones: [fakeZone({ folder: PERF, frame: { x: 16, y: 16, width: 516, height: 200 } })],
+        }),
+      );
+      await onBoard(harness);
+
+      harness.store.moveZone('perf', { x: 640, y: 480, width: 516, height: 200 });
+      expect(harness.store.zones()[0]?.frame.x).toBe(640);
+
+      await harness.store.arrange();
+
+      expect(harness.store.zones()[0]?.frame.x).toBe(16);
+    });
+
+    it('puts the previous layout back, and says how much it moved', async () => {
+      const harness = await createStore();
+      await onBoard(harness);
+      const layout = {
+        zones: [{ folderId: 'perf', frame: { x: 900, y: 640, width: 900, height: 700 } }],
+        cards: [{ noteId: 'a', position: { x: 300, y: 300 } }],
+      };
+
+      expect(await harness.store.restoreLayout(layout)).toBe(2);
+      expect(harness.repository.restored).toEqual([layout]);
+    });
+
+    it('reports a refused tidy-up rather than pretending it happened', async () => {
+      const harness = await createStore();
+      await onBoard(harness);
+      harness.repository.failNext = new Error('locked');
+
+      expect(await harness.store.arrange()).toBeNull();
+    });
+  });
+
   it('reports a failed load and draws nothing', async () => {
     const repository = new FakeBoardRepository();
     repository.failNext = new Error('locked');

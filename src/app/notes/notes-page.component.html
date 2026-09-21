@@ -164,6 +164,7 @@
             (folderRenamed)="onFolderRenamed($event)"
             (folderRecoloured)="onFolderRecoloured($event)"
             (folderDeleted)="onFolderDeleted($event)"
+            (tidyRequested)="store.arrangeBoard()"
           />
         }
       } @else {

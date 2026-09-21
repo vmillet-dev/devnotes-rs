@@ -18,6 +18,7 @@ import { debounced } from '@core/services/time/debounce';
 import { LanguageTag } from '../model/language.model';
 import {
   BoardFrame,
+  BoardLayout,
   BoardNote,
   BoardPoint,
   BoardQuery,
@@ -453,5 +454,40 @@ export class BoardStore {
     if (written === null) return;
 
     this.reload();
+  }
+
+  /**
+   * Puts the whole space back in order: zones in reading order, each at the height its
+   * contents need, the loose cards flowing underneath.
+   *
+   * ⚠️ It answers the layout it **replaced**, and the caller is what offers that back. A
+   * tidy-up overwrites sizes chosen by hand, which is the one board gesture no amount of
+   * dragging walks back.
+   */
+  async arrange(): Promise<BoardLayout | null> {
+    const spaceId = this.spaces.activeSpaceId();
+    if (spaceId === null) return null;
+
+    const previous = await this.notifier.attempt('errors.boardArrangeFailed', () =>
+      this.repository.arrange(spaceId),
+    );
+    if (previous === null) return null;
+
+    // ⚠️ Dropped rather than left to expire: the overlay covers places a gesture staged,
+    // and every one of them has just been overwritten. Kept, it would draw the cards back
+    // where the drag left them until a view happened to agree.
+    this.stagedFrames.set(new Map());
+    this.stagedCards.set(new Map());
+    this.reload();
+    return previous;
+  }
+
+  /** The undo of `arrange`, and the count is what the banner needs back. */
+  async restoreLayout(layout: BoardLayout): Promise<number> {
+    await this.repository.restoreLayout(layout);
+    this.stagedFrames.set(new Map());
+    this.stagedCards.set(new Map());
+    this.reload();
+    return layout.zones.length + layout.cards.length;
   }
 }

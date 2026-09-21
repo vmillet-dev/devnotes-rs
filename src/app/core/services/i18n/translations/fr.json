@@ -137,7 +137,9 @@
     "dropHere": "Déposer ici",
     "nameTheZone": "Nommer ce dossier",
     "nameTheZoneHint": "La couleur est attribuée ; changez-la depuis le menu du dossier.",
-    "dragHint": "Glisser une note dans une zone la range ; la lâcher sur le fond l’en sort."
+    "dragHint": "Glisser une note dans une zone la range ; la lâcher sur le fond l’en sort.",
+    "tidy": "Ranger",
+    "tidyHint": "Replace les dossiers et les notes en ordre de lecture. Annulable."
   },
   "sections": {
     "pinned": "Épinglées",
@@ -245,7 +247,8 @@
     "folderNameTaken": "Un dossier « {{name}} » existe déjà dans cet espace.",
     "boardLoadFailed": "Le tableau n’a pas pu être chargé.",
     "boardSaveFailed": "La disposition du tableau n’a pas pu être enregistrée.",
-    "fileFailed": "La note n’a pas pu être rangée."
+    "fileFailed": "La note n’a pas pu être rangée.",
+    "boardArrangeFailed": "Le tableau n’a pas pu être rangé."
   },
   "tray": {
     "open": "Ouvrir {{app}}",
@@ -399,7 +402,8 @@
     "moved": "{count, plural, one {# note déplacée} other {# notes déplacées}}",
     "tagged": "{count, plural, one {# note étiquetée} other {# notes étiquetées}}",
     "filed": "{count, plural, one {# note rangée} other {# notes rangées}}",
-    "restoreKey": "Échap"
+    "restoreKey": "Échap",
+    "arranged": "Tableau rangé"
   },
   "file": {
     "menuLabel": "Fichier",

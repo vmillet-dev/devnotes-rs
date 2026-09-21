@@ -514,6 +514,51 @@ pub fn build<S: std::hash::BuildHasher>(
     }
 }
 
+/// A whole board's geometry in one value: every zone's frame and every loose card's
+/// place. It says what a tidy-up is about to write, and — read back before the write —
+/// what it has to be able to put back.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct BoardLayout {
+    pub zones: Vec<ZonePlacement>,
+    pub cards: Vec<CardPlacement>,
+}
+
+/// Puts a whole space back in order: zones in reading order three across, each at the
+/// height its contents need, and the loose cards flowing underneath.
+///
+/// ⚠️ It **resizes** as well as repositions, which is the whole point — an arrangement
+/// that leaves a zone too small for what is in it has not arranged anything — and it is
+/// therefore the one board gesture that overwrites a size chosen by hand. That is what
+/// makes its undo non-optional.
+///
+/// `folder_counts` arrives in `created_at` order, as [`arrange_zones`] needs it: the same
+/// board tidied twice has to be the same board.
+#[must_use]
+pub fn arrange(folder_counts: &[(String, usize)], loose_ids: &[String]) -> BoardLayout {
+    let counts: Vec<usize> = folder_counts.iter().map(|(_, count)| *count).collect();
+    let frames = arrange_zones(&counts);
+    let top = loose_top(&frames);
+
+    BoardLayout {
+        zones: folder_counts
+            .iter()
+            .zip(frames)
+            .map(|((folder_id, _), frame)| ZonePlacement {
+                folder_id: folder_id.clone(),
+                frame,
+            })
+            .collect(),
+        cards: loose_ids
+            .iter()
+            .zip(arrange_loose(loose_ids.len(), top))
+            .map(|(note_id, position)| CardPlacement {
+                note_id: note_id.clone(),
+                position,
+            })
+            .collect(),
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -758,5 +803,57 @@ mod tests {
 
         assert!(width >= 960);
         assert!(height >= 540);
+    }
+
+    #[test]
+    fn tidying_up_puts_every_zone_back_in_reading_order() {
+        let counts = vec![("a".into(), 1), ("b".into(), 2), ("c".into(), 3)];
+
+        let layout = arrange(&counts, &[]);
+
+        let xs: Vec<i32> = layout.zones.iter().map(|zone| zone.frame.x).collect();
+        assert_eq!(xs[0], BOARD_MARGIN);
+        assert!(xs[1] > xs[0] && xs[2] > xs[1]);
+        assert!(layout.zones.iter().all(|zone| zone.frame.y == BOARD_MARGIN));
+    }
+
+    /// ⚠️ The half that makes it a tidy-up rather than a reshuffle: a zone stretched or
+    /// squashed by hand comes back at the height its contents need.
+    #[test]
+    fn tidying_up_resizes_a_zone_to_what_it_holds() {
+        let layout = arrange(&[("a".into(), 5)], &[]);
+
+        assert_eq!(layout.zones[0].frame.height, default_zone_height(5));
+        assert_eq!(layout.zones[0].frame.width, default_zone_width());
+    }
+
+    #[test]
+    fn tidied_loose_cards_flow_under_the_zones() {
+        let layout = arrange(&[("a".into(), 2)], &["n1".into(), "n2".into()]);
+
+        let zone = layout.zones[0].frame;
+        assert!(
+            layout
+                .cards
+                .iter()
+                .all(|card| card.position.y > zone.y + zone.height)
+        );
+        assert_eq!(layout.cards[0].position.x, BOARD_MARGIN);
+        assert!(layout.cards[1].position.x > layout.cards[0].position.x);
+    }
+
+    #[test]
+    fn the_same_board_tidied_twice_is_the_same_board() {
+        let counts = vec![("a".into(), 4), ("b".into(), 1)];
+        let loose = vec!["n1".to_string(), "n2".to_string()];
+
+        assert_eq!(arrange(&counts, &loose), arrange(&counts, &loose));
+    }
+
+    #[test]
+    fn tidying_an_empty_space_writes_nothing() {
+        let layout = arrange(&[], &[]);
+
+        assert!(layout.zones.is_empty() && layout.cards.is_empty());
     }
 }

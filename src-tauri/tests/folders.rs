@@ -1360,3 +1360,156 @@ fn a_card_inside_an_opened_folder_carries_no_chip() {
         Some("Perf")
     );
 }
+
+/// The one board gesture that cannot be walked back by dragging: it moves everything at
+/// once and overwrites sizes chosen by hand.
+mod tidy_up {
+    use super::*;
+
+    use devnotes_lib::folders::board::{
+        BoardFrame, BoardPoint, CardPlacement, ZonePlacement, default_zone_height,
+        default_zone_width,
+    };
+    use devnotes_lib::folders::store::board as geometry;
+
+    fn frames(connection: &mut Library, space_id: &str) -> HashMap<String, BoardFrame> {
+        connection
+            .transaction(|connection, _vault| geometry::frames(connection, space_id))
+            .unwrap()
+    }
+
+    fn positions(connection: &mut Library, space_id: &str) -> HashMap<String, BoardPoint> {
+        connection
+            .transaction(|connection, _vault| geometry::positions(connection, space_id))
+            .unwrap()
+    }
+
+    #[test]
+    fn a_zone_dragged_away_comes_back_to_its_seat() {
+        let mut connection = open_in_memory().unwrap();
+        let sql = space(&mut connection, "SQL");
+        let perf = create(&mut connection, &sql, "Perf", t0()).unwrap();
+
+        geometry::save_layout(
+            &mut connection,
+            &[ZonePlacement {
+                folder_id: perf.id.clone(),
+                frame: BoardFrame {
+                    x: 900,
+                    y: 640,
+                    width: 900,
+                    height: 700,
+                },
+            }],
+            &[],
+        )
+        .unwrap();
+
+        geometry::arrange(&mut connection, &sql).unwrap();
+
+        let frame = *frames(&mut connection, &sql).get(&perf.id).unwrap();
+        assert_eq!(frame.x, 16);
+        assert_eq!(frame.y, 16);
+        assert_eq!(frame.width, default_zone_width());
+        assert_eq!(frame.height, default_zone_height(0));
+    }
+
+    /// The half that makes it a tidy-up: a zone too small for what it holds is reopened.
+    #[test]
+    fn a_zone_is_resized_to_what_it_actually_holds() {
+        let mut connection = open_in_memory().unwrap();
+        let sql = space(&mut connection, "SQL");
+        let perf = create(&mut connection, &sql, "Perf", t0()).unwrap();
+        let notes: Vec<String> = (0..5).map(|_| note_in(&mut connection, &sql).id).collect();
+        file_many(&mut connection, &notes, Some(&perf.id), t1()).unwrap();
+
+        geometry::arrange(&mut connection, &sql).unwrap();
+
+        let frame = *frames(&mut connection, &sql).get(&perf.id).unwrap();
+        assert_eq!(frame.height, default_zone_height(5));
+    }
+
+    #[test]
+    fn the_loose_cards_flow_under_the_zones() {
+        let mut connection = open_in_memory().unwrap();
+        let sql = space(&mut connection, "SQL");
+        let perf = create(&mut connection, &sql, "Perf", t0()).unwrap();
+        let filed = note_in(&mut connection, &sql).id;
+        file_many(&mut connection, &[filed], Some(&perf.id), t1()).unwrap();
+        let loose = note_in(&mut connection, &sql).id;
+
+        geometry::arrange(&mut connection, &sql).unwrap();
+
+        let zone = *frames(&mut connection, &sql).get(&perf.id).unwrap();
+        let at = *positions(&mut connection, &sql).get(&loose).unwrap();
+        assert!(at.y > zone.y + zone.height);
+    }
+
+    /// ⚠️ What the undo reads. Restoring the answer has to put the board back exactly as
+    /// it was, or the tidy-up is a one-way gesture.
+    #[test]
+    fn it_answers_the_layout_it_replaced() {
+        let mut connection = open_in_memory().unwrap();
+        let sql = space(&mut connection, "SQL");
+        let perf = create(&mut connection, &sql, "Perf", t0()).unwrap();
+        let note = note_in(&mut connection, &sql);
+
+        let chosen = BoardFrame {
+            x: 700,
+            y: 480,
+            width: 640,
+            height: 520,
+        };
+        let seat = BoardPoint { x: 96, y: 900 };
+        geometry::save_layout(
+            &mut connection,
+            &[ZonePlacement {
+                folder_id: perf.id.clone(),
+                frame: chosen,
+            }],
+            &[CardPlacement {
+                note_id: note.id.clone(),
+                position: seat,
+            }],
+        )
+        .unwrap();
+
+        let before = geometry::arrange(&mut connection, &sql).unwrap();
+        geometry::save_layout(&mut connection, &before.zones, &before.cards).unwrap();
+
+        assert_eq!(frames(&mut connection, &sql).get(&perf.id), Some(&chosen));
+        assert_eq!(positions(&mut connection, &sql).get(&note.id), Some(&seat));
+    }
+
+    /// ⚠️ A folder the board has never drawn had no place to go back to, and inventing one
+    /// on the undo would leave it somewhere nobody chose.
+    #[test]
+    fn a_zone_that_never_had_a_place_is_not_offered_back() {
+        let mut connection = open_in_memory().unwrap();
+        let sql = space(&mut connection, "SQL");
+        create(&mut connection, &sql, "Perf", t0()).unwrap();
+        note_in(&mut connection, &sql);
+
+        let before = geometry::arrange(&mut connection, &sql).unwrap();
+
+        assert!(before.zones.is_empty());
+        assert!(before.cards.is_empty());
+    }
+
+    #[test]
+    fn a_trashed_note_takes_no_room_in_the_zone_it_was_in() {
+        use devnotes_lib::notes::store::trash::trash_many;
+
+        let mut connection = open_in_memory().unwrap();
+        let sql = space(&mut connection, "SQL");
+        let perf = create(&mut connection, &sql, "Perf", t0()).unwrap();
+        let notes: Vec<String> = (0..4).map(|_| note_in(&mut connection, &sql).id).collect();
+        file_many(&mut connection, &notes, Some(&perf.id), t1()).unwrap();
+        trash_many(&mut connection, &notes[..3], t1()).unwrap();
+
+        geometry::arrange(&mut connection, &sql).unwrap();
+
+        let frame = *frames(&mut connection, &sql).get(&perf.id).unwrap();
+        assert_eq!(frame.height, default_zone_height(1));
+    }
+}

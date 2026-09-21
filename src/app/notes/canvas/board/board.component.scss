@@ -88,3 +88,28 @@
   border-radius: 10px;
   pointer-events: none;
 }
+
+// ⚠️ The **bottom** right and not the top: the host is `relative`, so this floats over
+// whatever the board has scrolled under it — and the top right is where a zone in the last
+// visible column keeps its ⋯ trigger. Zones are laid out from the top down, so the bottom
+// corner is the one that is empty ground most of the time. The offsets clear `.board`'s own
+// 24px margin and the scrollbars inside its border.
+.board-tidy {
+  @include unstyled-control;
+  @include hit-target;
+  @include surface;
+  @include focus-ring;
+  position: absolute;
+  bottom: 42px;
+  right: 40px;
+  z-index: 2;
+  gap: 5px;
+  padding: 6px 11px;
+  font-size: 12px;
+  color: var(--text-1);
+  cursor: pointer;
+
+  &:hover {
+    @include accent-state;
+  }
+}

@@ -573,6 +573,9 @@ export const board = {
     await browser.pause(800);
   },
 
+  /** Puts the whole space back in order — the one gesture no drag walks back. */
+  tidy: () => $(testid('board-tidy')).click(),
+
   /** ⚠️ Dimmed, never dropped: the card is still there, it has only stopped shouting. */
   isDimmed(title: string): Promise<boolean> {
     return browser.execute(

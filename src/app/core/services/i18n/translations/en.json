@@ -137,7 +137,9 @@
     "dropHere": "Drop here",
     "nameTheZone": "Name this folder",
     "nameTheZoneHint": "The colour is assigned; change it from the folder menu.",
-    "dragHint": "Dragging a note into a zone files it; dropping it on the background takes it out."
+    "dragHint": "Dragging a note into a zone files it; dropping it on the background takes it out.",
+    "tidy": "Tidy up",
+    "tidyHint": "Puts folders and notes back in reading order. Undoable."
   },
   "sections": {
     "pinned": "Pinned",
@@ -245,7 +247,8 @@
     "folderNameTaken": "A folder named “{{name}}” already exists in this space.",
     "boardLoadFailed": "The board could not be loaded.",
     "boardSaveFailed": "The board layout could not be saved.",
-    "fileFailed": "The note could not be filed."
+    "fileFailed": "The note could not be filed.",
+    "boardArrangeFailed": "The board could not be tidied up."
   },
   "tray": {
     "open": "Open {{app}}",
@@ -399,7 +402,8 @@
     "moved": "{count, plural, one {# note} other {# notes}} moved",
     "tagged": "{count, plural, one {# note} other {# notes}} tagged",
     "filed": "{count, plural, one {# note} other {# notes}} filed",
-    "restoreKey": "Esc"
+    "restoreKey": "Esc",
+    "arranged": "Board tidied up"
   },
   "file": {
     "menuLabel": "File",
