@@ -45,11 +45,11 @@
 }
 
 .language-chip.on {
-  --badge-ring: var(--amber);
+  --badge-ring: var(--amber-edge);
   --badge-surface: var(--bg-2);
 }
 
 .language-chip:focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--amber-edge);
   outline-offset: 1px;
 }

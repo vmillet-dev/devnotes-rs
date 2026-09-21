@@ -22,7 +22,7 @@
 // the caret is here. And unlike a button, a field pointed at with the mouse is one being
 // typed into — the ring belongs there whichever way the caret arrived.
 .search-bar:focus-within {
-  border-color: var(--amber);
+  border-color: var(--amber-edge);
 }
 
 .search-bar input {
@@ -64,11 +64,11 @@
 
 .count:hover,
 .count:focus-visible {
-  color: var(--amber);
+  color: var(--amber-text);
 }
 
 .count:focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--amber-edge);
   outline-offset: 2px;
   border-radius: 4px;
 }

@@ -49,13 +49,13 @@ app-dialog {
 }
 
 .settings-rail-option.active {
-  color: var(--amber);
+  color: var(--amber-text);
   background: rgba(var(--amber-rgb), 0.12);
 }
 
 .settings-rail-option:focus-visible,
 .settings-close:focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--amber-edge);
   outline-offset: 1px;
 }
 

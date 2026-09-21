@@ -42,7 +42,7 @@
 }
 
 .editor-pin.on {
-  color: var(--amber);
+  color: var(--amber-text);
 }
 
 .editor-form {
@@ -114,6 +114,6 @@
 .editor-pin:focus-visible,
 .editor-input:focus-visible,
 .editor-action:focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--amber-edge);
   outline-offset: 2px;
 }

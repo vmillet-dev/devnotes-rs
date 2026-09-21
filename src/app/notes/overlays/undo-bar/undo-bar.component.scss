@@ -25,12 +25,12 @@
   padding: 4px 10px;
   @include surface($radius: 6px);
   font-size: 12px;
-  color: var(--amber);
+  color: var(--amber-text);
   cursor: pointer;
 }
 
 .undo-action:hover {
-  @include accent-state(var(--text-0), var(--amber));
+  @include accent-state(var(--text-0), var(--amber-edge));
 }
 
 .undo-dismiss {
@@ -47,6 +47,6 @@
 
 .undo-action:focus-visible,
 .undo-dismiss:focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--amber-edge);
   outline-offset: 2px;
 }

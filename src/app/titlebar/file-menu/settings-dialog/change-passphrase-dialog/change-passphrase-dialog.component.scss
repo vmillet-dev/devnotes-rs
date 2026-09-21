@@ -91,12 +91,12 @@ app-dialog {
 }
 
 .action.primary {
-  background: var(--amber);
-  border-color: var(--amber);
+  background: var(--amber-fill);
+  border-color: var(--amber-edge);
   color: var(--amber-ink);
 }
 
 .change :focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--amber-edge);
   outline-offset: 2px;
 }

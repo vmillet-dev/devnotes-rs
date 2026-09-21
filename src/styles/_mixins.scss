@@ -59,7 +59,7 @@
 }
 
 // The "accent" state (hover, active, selected): amber border, amber text.
-@mixin accent-state($color: var(--amber), $border: var(--amber-dim)) {
+@mixin accent-state($color: var(--amber-text), $border: var(--amber-dim)) {
   border-color: $border;
   color: $color;
 }
@@ -70,7 +70,7 @@
 // ⚠️ `:focus-visible` and not `:focus`: a pointer must not leave a ring behind it.
 @mixin focus-ring($offset: 2px) {
   &:focus-visible {
-    outline: 2px solid var(--amber);
+    outline: 2px solid var(--amber-edge);
     outline-offset: $offset;
   }
 }
@@ -111,7 +111,7 @@
   cursor: pointer;
 
   &:focus-visible {
-    outline: 2px solid var(--amber);
+    outline: 2px solid var(--amber-edge);
     outline-offset: 1px;
   }
 }
@@ -154,11 +154,11 @@
 
   &:checked::after {
     transform: translateX(16px);
-    background: var(--amber);
+    background: var(--amber-fill);
   }
 
   &:focus-visible {
-    outline: 2px solid var(--amber);
+    outline: 2px solid var(--amber-edge);
     outline-offset: 2px;
   }
 }
@@ -270,7 +270,7 @@
   }
 
   &:focus-visible {
-    outline: 2px solid var(--amber);
+    outline: 2px solid var(--amber-edge);
     outline-offset: 2px;
   }
 }
@@ -302,7 +302,7 @@
   --folder-hue: var(--blue);
 
   &.is-amber {
-    --folder-hue: var(--amber);
+    --folder-hue: var(--amber-text);
   }
 
   &.is-purple {

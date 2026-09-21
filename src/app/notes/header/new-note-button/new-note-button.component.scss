@@ -8,7 +8,7 @@
 .new-note-btn,
 .new-note-caret {
   @include unstyled-control;
-  background: var(--amber);
+  background: var(--amber-fill);
   color: var(--amber-ink);
   cursor: pointer;
   font-weight: 700;
@@ -35,7 +35,7 @@
 
 .new-note-btn:focus-visible,
 .new-note-caret:focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--amber-edge);
   outline-offset: 2px;
 }
 
@@ -69,6 +69,6 @@
 }
 
 .new-note-option:focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--amber-edge);
   outline-offset: 2px;
 }
