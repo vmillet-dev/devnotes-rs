@@ -53,6 +53,25 @@ describe('the translation files', () => {
   });
 
   /**
+   * ⚠️ Both keys, in every locale. Escape disarms and always has; the banner named only
+   * the key that finishes the job, so the way out was invisible and the one people found
+   * was a mouse target (#281).
+   */
+  it.each([
+    ['fr', fr, ['Suppr', 'Échap']],
+    ['en', en, ['Del', 'Esc']],
+  ])(
+    'names the key that calls an armed deletion off as well as the one that fires it (%s)',
+    (_locale, translations, keys) => {
+      const banner = (translations as { notes: { deleteArmed: string } }).notes.deleteArmed;
+
+      for (const key of keys as string[]) {
+        expect(banner).toContain(key);
+      }
+    },
+  );
+
+  /**
    * ⚠️ "(s)" is not a plural, it is a refusal to choose one — and French does not agree
    * with English about zero, or about where the mark goes on a past participle. Counting
    * is the transpiler's job now.

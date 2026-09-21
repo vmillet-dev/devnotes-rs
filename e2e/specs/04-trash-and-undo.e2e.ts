@@ -65,6 +65,31 @@ describe('Deleting a note, and taking it back', () => {
     await undoBar.dismiss();
   });
 
+  /**
+   * ⚠️ Escape has always disarmed — it is the first rung of the fall-through — and the
+   * banner named only the key that goes through, so the only way out a user could see was
+   * the cancel entry in the card's own menu, which is a mouse target (#281).
+   */
+  it('lets Escape call the armed deletion off', async () => {
+    await seed('Armed then called off');
+    await canvas.openNote('Armed then called off');
+    await editor.close();
+
+    await press('Delete');
+    const card = await canvas.cardWithTitle('Armed then called off');
+    expect(await card.$(testid('note-card-arming')).isExisting()).toBe(true);
+
+    await press('Escape');
+    await card.$(testid('note-card-arming')).waitForExist({ reverse: true });
+
+    // Back to zero, not to one: the next Delete arms again rather than trashing.
+    await press('Delete');
+    expect(await card.$(testid('note-card-arming')).isExisting()).toBe(true);
+    expect((await bridge.queryNotes(query({ search: 'Armed then called off' }))).matched).toBe(1);
+
+    await press('Escape');
+  });
+
   it('moves the note to the trash rather than dropping it', async () => {
     await seed('Delete me once');
     await canvas.deleteNote('Delete me once');
