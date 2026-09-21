@@ -130,7 +130,6 @@
     "dateView": "Date",
     "boardView": "Board",
     "needsASpace": "Pick a space to see its board.",
-    "loose": "No folder · {{count}}",
     "emptyZone": "No note here.",
     "empty": "Nothing to arrange yet.",
     "moveZone": "Move the folder {{name}}",

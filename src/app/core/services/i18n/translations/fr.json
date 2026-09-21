@@ -130,7 +130,6 @@
     "dateView": "Date",
     "boardView": "Tableau",
     "needsASpace": "Choisissez un espace pour voir son tableau.",
-    "loose": "Hors dossier · {{count}}",
     "emptyZone": "Aucune note ici.",
     "empty": "Rien à disposer pour le moment.",
     "moveZone": "Déplacer le dossier {{name}}",

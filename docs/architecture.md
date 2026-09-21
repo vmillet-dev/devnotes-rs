@@ -923,10 +923,17 @@ measurement put the scrollbar at **9px**, not the 18 `SCROLLBAR` reserves; that 
 ever widens `default_zone_width`, and staying generous there costs a few pixels of board
 where being exact would cost a column.
 
-⚠️ The "no folder · N" label is a chip anchored to the board's **corner**, outside the surface
-that pans and the box that scrolls. It used to be drawn above whichever loose card was
-highest, which put it over a zone as soon as one was dragged up. Loose cards stopped being a
-band the day they could be placed anywhere; what is left of the label is the count.
+⚠️ **There is no "no folder · N" count any more, and its history is why.** It was drawn
+above whichever loose card was highest, and climbed over the zones as soon as one was dragged
+up — off the top of the board when the offset went negative. Pinning it to the board's own
+corner cured that and bought the opposite: a chip anchored to the corner of a surface that
+**pans** sits over whatever the surface puts there, and `arrange_zones` lays the first zone at
+`BOARD_MARGIN` — in exactly that corner, so its title read "…s · 2" (#295). Pushing the layout
+aside does not hold either: a zone dragged to `x=0` takes the corner back. Moving it into the
+header would have worked, and it was built that way first; what the third look said is that a
+marker nobody can find a place for is a marker nobody needs — the loose cards **are** the
+count, sitting on the background where a filed one cannot be. Deleted rather than relocated
+a third time.
 
 ⚠️ `apply_folders` deliberately does **not** run for the board: a chip naming the zone a
 card already sits in is noise, and a loose card has no folder to name. The card component is
