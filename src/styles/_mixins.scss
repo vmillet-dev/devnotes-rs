@@ -64,6 +64,17 @@
   color: $color;
 }
 
+// Where the keyboard is. The declaration was written out in fifteen stylesheets and
+// missing from four controls, the tag rail among them — the keyboard walked it invisibly.
+//
+// ⚠️ `:focus-visible` and not `:focus`: a pointer must not leave a ring behind it.
+@mixin focus-ring($offset: 2px) {
+  &:focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: $offset;
+  }
+}
+
 // --- Preferences panel ---
 //
 // Shared rather than written inside the dialog: a component's SCSS is out of reach of its

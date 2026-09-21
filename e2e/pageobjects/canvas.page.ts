@@ -223,6 +223,14 @@ export const canvas = {
       language,
     );
   },
+  /** The colour the search box draws around itself, which says whether it has the caret. */
+  searchBorderColour(): Promise<string> {
+    return browser.execute(
+      (sel: string) => getComputedStyle(document.querySelector(sel) as HTMLElement).borderTopColor,
+      '.search-bar',
+    );
+  },
+
   async waitForCard(title: string): Promise<void> {
     await browser.waitUntil(async () => (await canvas.titles()).includes(title), {
       timeout: 15_000,

@@ -13,6 +13,8 @@
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
+
+  @include focus-ring;
 }
 
 .tag-pill:hover,

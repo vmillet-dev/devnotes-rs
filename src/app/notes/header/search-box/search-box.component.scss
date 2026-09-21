@@ -17,6 +17,14 @@
   cursor: text;
 }
 
+// ⚠️ `:focus-within` on the box and not `:focus-visible` on the field: the input is
+// borderless inside the <label>, so the <label> is the only thing on screen that can say
+// the caret is here. And unlike a button, a field pointed at with the mouse is one being
+// typed into — the ring belongs there whichever way the caret arrived.
+.search-bar:focus-within {
+  border-color: var(--amber);
+}
+
 .search-bar input {
   @include text-field;
   flex: 1;

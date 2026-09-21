@@ -42,6 +42,19 @@ describe('Search, filters and facets', () => {
     expect(await cursorOf('.search-bar')).toBe('text');
   });
 
+  /**
+   * ⚠️ The field is borderless inside the <label> that draws the box, so the box is the
+   * only thing on screen that can say the caret is here. It said nothing at all.
+   */
+  it('says it has the caret, on the box the field sits in', async () => {
+    const resting = await canvas.searchBorderColour();
+
+    await canvas.search('Docker');
+
+    expect(await canvas.searchBorderColour()).not.toBe(resting);
+    await canvas.clearSearch();
+  });
+
   it('matches on the title, past the debounce', async () => {
     await canvas.search('Docker');
     expect(await canvas.titles()).toEqual(['Docker compose']);
