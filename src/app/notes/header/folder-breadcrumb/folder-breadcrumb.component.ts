@@ -25,16 +25,24 @@ export class FolderBreadcrumbComponent {
   readonly folder = input.required<Folder>();
   /** `null` while the user is on every space, which the breadcrumb then leaves out. */
   readonly spaceName = input<string | null>(null);
+  /** How many of the folder's notes are on screen; the whole view is its contents. */
+  readonly selectableCount = input<number | null>(null);
 
   readonly closed = output<void>();
   readonly renamed = output<FolderRenaming>();
   readonly recoloured = output<FolderRecolouring>();
   readonly deleted = output<string>();
+  readonly selectRequested = output<string>();
 
   protected readonly menu = inject(MenuTriggerDirective);
 
   constructor() {
     this.menu.escaped.subscribe(() => this.menu.close());
+  }
+
+  protected onSelectRequested(folderId: string): void {
+    this.selectRequested.emit(folderId);
+    this.menu.close();
   }
 
   protected onRenamed(renaming: FolderRenaming): void {

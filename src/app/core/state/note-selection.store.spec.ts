@@ -2,7 +2,12 @@ import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { createNote } from '@testing/note.fixture';
+import { FakeBoardRepository, fakeBoardNote, fakeZone } from '@testing/fake-board-repository';
+import { provideAppTesting } from '@testing/testing.providers';
 import { NotesHarness, awaitQuery, createNotesHarness, visibleIds } from '@testing/notes-harness';
+import { BoardStore } from './board.store';
+import { NoteSelectionStore } from './note-selection.store';
+import { SpacesStore } from './spaces.store';
 
 describe('NoteSelectionStore', () => {
   beforeEach(() => {
@@ -256,6 +261,118 @@ describe('NoteSelectionStore', () => {
 
       expect(notifier.notice()?.ref.key).toBe('errors.bulkActionFailed');
       expect(selection.checkedCount()).toBe(1);
+    });
+  });
+
+  /** Eleven cards in a zone was eleven clicks, and the zone already knows what it holds. */
+  describe('selecting a whole folder', () => {
+    async function withFiledNotes(): Promise<NotesHarness> {
+      return createNotesHarness([
+        createNote({ id: 'a', folderId: 'perf' }),
+        createNote({ id: 'b', folderId: 'perf' }),
+        createNote({ id: 'c', folderId: 'migrations' }),
+        createNote({ id: 'd', folderId: null }),
+      ]);
+    }
+
+    it('ticks every note filed there, and nothing else', async () => {
+      const { selection } = await withFiledNotes();
+
+      selection.checkFolder('perf');
+
+      expect(selection.checkedNotes().map((note) => note.id)).toEqual(['a', 'b']);
+    });
+
+    it('adds to what was already ticked rather than replacing it', async () => {
+      const { selection } = await withFiledNotes();
+      selection.toggleChecked('c');
+
+      selection.checkFolder('perf');
+
+      expect(
+        selection
+          .checkedNotes()
+          .map((note) => note.id)
+          .sort(),
+      ).toEqual(['a', 'b', 'c']);
+    });
+
+    it('leaves the selection alone for a folder holding nothing on screen', async () => {
+      const { selection } = await withFiledNotes();
+      selection.toggleChecked('d');
+
+      selection.checkFolder('archives');
+
+      expect(selection.checkedNotes().map((note) => note.id)).toEqual(['d']);
+    });
+  });
+
+  /**
+   * ⚠️ The board **dims** where the canvas **narrows**. A card the search filtered out of
+   * the date view is still drawn on the board and still in its folder — resolved against
+   * the canvas it left the selection the instant it was ticked, and the bar said nothing
+   * was selected.
+   */
+  describe('on the board, where nothing is narrowed away', () => {
+    async function onBoard(): Promise<{ selection: NoteSelectionStore; board: BoardStore }> {
+      const boardRepository = new FakeBoardRepository({
+        zones: [
+          fakeZone({
+            folder: {
+              id: 'perf',
+              spaceId: 'sql',
+              name: 'Perf',
+              colour: 'amber',
+              createdAt: new Date('2026-01-01T10:00:00Z'),
+            },
+            notes: [
+              fakeBoardNote(createNote({ id: 'shown', spaceId: 'sql', folderId: 'perf' })),
+              fakeBoardNote(createNote({ id: 'dimmed', spaceId: 'sql', folderId: 'perf' }), {
+                matches: false,
+              }),
+            ],
+          }),
+        ],
+      });
+      TestBed.configureTestingModule({
+        providers: [
+          provideAppTesting({
+            notes: [createNote({ id: 'shown', spaceId: 'sql', folderId: 'perf' })],
+            spaces: [{ id: 'sql', name: 'SQL', pinned: false }],
+            boardRepository,
+          }),
+        ],
+      });
+
+      const spaces = TestBed.inject(SpacesStore);
+      const board = TestBed.inject(BoardStore);
+      await vi.waitFor(() => expect(spaces.spaces()).toHaveLength(1));
+      spaces.selectSpace('sql');
+      board.setMode('board');
+      await vi.waitFor(() => expect(board.visibleNotes()).toHaveLength(2));
+
+      return { selection: TestBed.inject(NoteSelectionStore), board };
+    }
+
+    it('keeps a dimmed card in the selection the canvas has filtered out', async () => {
+      const { selection } = await onBoard();
+
+      selection.toggleChecked('dimmed');
+
+      expect(selection.checkedNotes().map((note) => note.id)).toEqual(['dimmed']);
+    });
+
+    it('ticks a whole zone, dimmed cards included', async () => {
+      const { selection } = await onBoard();
+
+      selection.checkFolder('perf');
+
+      expect(
+        selection
+          .checkedNotes()
+          .map((note) => note.id)
+          .sort(),
+      ).toEqual(['dimmed', 'shown']);
     });
   });
 

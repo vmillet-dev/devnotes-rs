@@ -37,10 +37,12 @@
         <app-folder-breadcrumb
           [folder]="openFolder"
           [spaceName]="spaces.activeSpace()?.name ?? null"
+          [selectableCount]="canvas.visibleNotes().length"
           (closed)="folders.selectFolder(null)"
           (renamed)="onFolderRenamed($event)"
           (recoloured)="onFolderRecoloured($event)"
           (deleted)="onFolderDeleted($event)"
+          (selectRequested)="selection.checkFolder($event)"
         />
       } @else {
         <!-- ⚠️ Not while the rail is showing: two places to change space is how a tree and a
@@ -137,7 +139,7 @@
       data-testid="canvas"
       [attr.aria-busy]="board.isBoard() ? board.isLoading() : canvas.isLoading()"
     >
-      @if (board.isBoard() && folders.activeFolder() === null) {
+      @if (board.isShowing()) {
         @let boardError = board.loadError();
 
         @if (boardError) {
@@ -166,6 +168,7 @@
             (folderRenamed)="onFolderRenamed($event)"
             (folderRecoloured)="onFolderRecoloured($event)"
             (folderDeleted)="onFolderDeleted($event)"
+            (folderNotesSelected)="selection.checkFolder($event)"
             (tidyRequested)="store.arrangeBoard($event)"
           />
         }

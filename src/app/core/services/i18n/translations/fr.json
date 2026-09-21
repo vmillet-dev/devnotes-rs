@@ -115,7 +115,8 @@
     "delete": "Supprimer le dossier",
     "deleteConfirm": "Confirmer ?",
     "deleteKeepsNotes": "Les notes restent, simplement sans dossier.",
-    "breadcrumbLabel": "Fil d’Ariane du dossier"
+    "breadcrumbLabel": "Fil d’Ariane du dossier",
+    "selectNotes": "Sélectionner {count, plural, one {la note} other {les # notes}}"
   },
   "sidebar": {
     "library": "Bibliothèque",

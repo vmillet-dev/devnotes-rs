@@ -86,6 +86,7 @@ export class BoardComponent {
   readonly folderRenamed = output<FolderRenaming>();
   readonly folderRecoloured = output<FolderRecolouring>();
   readonly folderDeleted = output<string>();
+  readonly folderNotesSelected = output<string>();
   readonly tidyRequested = output<BoardScope>();
 
   protected readonly gesture = signal<Gesture | null>(null);

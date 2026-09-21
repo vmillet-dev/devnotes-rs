@@ -33,9 +33,11 @@
     <div appMenuPanel class="crumb-dropdown" data-testid="folder-breadcrumb-panel">
       <app-folder-editor
         [folder]="folder()"
+        [selectableCount]="selectableCount()"
         (renamed)="onRenamed($event)"
         (recoloured)="recoloured.emit($event)"
         (deleted)="onDeleted($event)"
+        (selectRequested)="onSelectRequested($event)"
       />
     </div>
   }

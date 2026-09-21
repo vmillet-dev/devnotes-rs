@@ -116,8 +116,7 @@ const CANVAS_KEYS: readonly CanvasKey[] = [
     keys: ['A'],
     labelKey: 'shortcuts.canvas.align',
     on: ['a', 'A'],
-    run: ({ board, folders, notes }) =>
-      when(board.isBoard() && folders.activeFolderId() === null, () => void notes.arrangeBoard('looseCards')),
+    run: ({ board, notes }) => when(board.isShowing(), () => void notes.arrangeBoard('looseCards')),
   },
   { keys: ['Ctrl'], labelKey: 'shortcuts.canvas.checkWithClick' },
   { keys: ['Shift'], labelKey: 'shortcuts.canvas.extendWithClick' },

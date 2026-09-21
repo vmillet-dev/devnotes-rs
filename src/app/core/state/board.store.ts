@@ -29,6 +29,7 @@ import {
   NotesViewMode,
 } from '../model/board.model';
 import { Note, NoteFilter } from '../model/note.model';
+import { FoldersStore } from './folders.store';
 import { NotesQueryStore } from './notes-query.store';
 import { NotesRevision } from './notes-revision';
 import { SpacesStore } from './spaces.store';
@@ -171,6 +172,7 @@ export class BoardStore {
   private readonly clock = inject(ClockService);
   private readonly spaces = inject(SpacesStore);
   private readonly canvas = inject(NotesQueryStore);
+  private readonly openFolder = inject(FoldersStore);
   private readonly revision = inject(NotesRevision);
 
   /** What the user asked for; `mode` is what they actually get. */
@@ -181,6 +183,15 @@ export class BoardStore {
   readonly mode = computed<NotesViewMode>(() => (this.canShowBoard() ? this.wanted() : 'date'));
 
   readonly isBoard = computed(() => this.mode() === 'board');
+
+  /**
+   * Whether the board is actually the thing on screen, which is not the same question.
+   *
+   * ⚠️ The inside of a folder is a **flat grid**, not a board, so an open folder takes the
+   * canvas back whatever the switch says. Spelled here once rather than in the page, the
+   * canvas keyboard and the selection: three copies of one predicate is how they drift.
+   */
+  readonly isShowing = computed(() => this.isBoard() && this.openFolder.activeFolderId() === null);
 
   constructor() {
     // Restores the switch as the space changes: it is remembered per space.
@@ -311,6 +322,19 @@ export class BoardStore {
         return position ? { ...entry, position } : entry;
       });
   });
+  /**
+   * Every card the board draws, zones first and then the background — dimmed ones
+   * **included**.
+   *
+   * ⚠️ The board dims where the canvas narrows, so a card the search filtered out of the
+   * date view is still a card on screen and still in its folder. Anything resolving a
+   * selection or a focus against the canvas's list silently drops it.
+   */
+  readonly visibleNotes = computed<readonly Note[]>(() => [
+    ...this.zones().flatMap((zone) => zone.notes.map((entry) => entry.note)),
+    ...this.loose().map((entry) => entry.note),
+  ]);
+
   readonly isFiltering = computed(() => this.view()?.isFiltering ?? false);
   readonly width = computed(() => this.view()?.width ?? 0);
   readonly height = computed(() => this.view()?.height ?? 0);

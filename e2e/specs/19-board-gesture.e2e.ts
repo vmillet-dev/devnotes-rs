@@ -349,6 +349,55 @@ describe('Arranging the board', () => {
   });
 
   /**
+   * Eleven cards in a zone was eleven clicks, and the zone already knows what it holds.
+   *
+   * ⚠️ It ticks what the zone is **showing**, dimmed cards included: the board dims rather
+   * than narrowing, so a card the search filtered out of the date view is still filed here.
+   */
+  describe('selecting a whole folder', () => {
+    it('ticks every card of a zone in one gesture', async () => {
+      await openBoard();
+      const held = (await bridge.queryNotes(query({ spaceId, folderId: perfId }))).matched;
+      expect(held).toBeGreaterThan(1);
+
+      await board.selectZoneNotes(perfId);
+
+      expect(
+        await eventually(
+          () => selectionBar.count(),
+          (count) => count.includes(String(held)),
+          'the selection bar to name what the zone holds',
+        ),
+      ).toContain(String(held));
+      await selectionBar.clear();
+    });
+
+    it('keeps a card the search has dimmed, because it is still in the folder', async () => {
+      await canvas.search('Index manquant');
+      const dimmed = await eventually(
+        () => board.isDimmed('Vacuum nocturne'),
+        (yes) => yes,
+        'a card of the zone to be dimmed by the search',
+      );
+      expect(dimmed).toBe(true);
+
+      await board.selectZoneNotes(perfId);
+
+      const held = (await bridge.queryNotes(query({ spaceId, folderId: perfId }))).matched;
+      expect(
+        await eventually(
+          () => selectionBar.count(),
+          (count) => count.includes(String(held)),
+          'the dimmed cards to be selected along with the rest',
+        ),
+      ).toContain(String(held));
+
+      await selectionBar.clear();
+      await canvas.clearSearch();
+    });
+  });
+
+  /**
    * ⚠️ Last in the file: it rewrites every frame and every seat of the space, so any
    * scenario asserting a place of its own has to have run already.
    */
