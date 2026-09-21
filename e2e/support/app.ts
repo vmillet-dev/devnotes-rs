@@ -332,6 +332,17 @@ export async function blurField(): Promise<void> {
   await browser.execute(() => (document.activeElement as HTMLElement | null)?.blur());
 }
 
+/** Where a box is on screen, rounded — enough to say whether it moved. */
+export async function boxOf(selector: string): Promise<{ left: number; top: number }> {
+  return browser.execute((sel: string) => {
+    const element = document.querySelector(sel);
+    if (!element) throw new Error('no element at ' + sel);
+
+    const box = element.getBoundingClientRect();
+    return { left: Math.round(box.left), top: Math.round(box.top) };
+  }, selector);
+}
+
 /** How far a box stops short of the bottom of the window — negative when it runs past. */
 export async function bottomGapOf(selector: string): Promise<number> {
   return browser.execute((sel: string) => {
