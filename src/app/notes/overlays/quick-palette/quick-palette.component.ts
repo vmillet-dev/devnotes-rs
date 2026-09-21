@@ -31,7 +31,8 @@ export class QuickPaletteComponent {
   readonly highlightMoved = output<number>();
   readonly highlightSet = output<number>();
   readonly chosen = output<void>();
-  readonly openRequested = output<string>();
+  /** The note itself: the canvas filters may hide it, and then nobody can look it up. */
+  readonly openRequested = output<Note>();
   readonly closed = output<void>();
 
   protected snippetOf(note: Note): string {
@@ -85,7 +86,7 @@ export class QuickPaletteComponent {
         event.preventDefault();
         const note = this.highlightedNote();
         if (note) {
-          this.openRequested.emit(note.id);
+          this.openRequested.emit(note);
         } else {
           this.chosen.emit();
         }

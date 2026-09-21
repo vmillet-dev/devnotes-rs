@@ -115,7 +115,7 @@ export class PlaceholderFillStore {
     const note = this.palette.pendingFill();
     if (!note) return;
 
-    await this.palette.copyAndDismiss(await this.notes.fillPlaceholders(note.content, values));
+    await this.palette.copyAndDismiss(await this.notes.fillPlaceholders(note.content, values), note.title);
     await this.notes.setPlaceholderValues(note.id, values);
   }
 }

@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { Note } from '@core/model/note.model';
 import { createNote } from '@testing/note.fixture';
 import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
 import { QuickPaletteComponent } from './quick-palette.component';
@@ -70,16 +71,16 @@ describe('QuickPaletteComponent', () => {
    * the note and Enter opens everywhere else in the application.
    */
   it('opens the highlighted note on Enter, as a click on it does', async () => {
-    let opened: string | undefined;
+    let opened: Note | undefined;
     let chosen = 0;
-    fixture.componentInstance.openRequested.subscribe((id) => (opened = id));
+    fixture.componentInstance.openRequested.subscribe((note) => (opened = note));
     fixture.componentInstance.chosen.subscribe(() => (chosen += 1));
     fixture.componentRef.setInput('highlighted', 1);
     await fixture.whenStable();
 
     await press('Enter');
 
-    expect(opened).toBe('note-2');
+    expect(opened?.id).toBe('note-2');
     expect(chosen).toBe(0);
   });
 
@@ -165,17 +166,17 @@ describe('QuickPaletteComponent', () => {
    */
   it('opens the note that was clicked, without copying it', async () => {
     let index: number | undefined;
-    let opened: string | undefined;
+    let opened: Note | undefined;
     let chosen = 0;
     fixture.componentInstance.highlightSet.subscribe((value) => (index = value));
-    fixture.componentInstance.openRequested.subscribe((id) => (opened = id));
+    fixture.componentInstance.openRequested.subscribe((note) => (opened = note));
     fixture.componentInstance.chosen.subscribe(() => (chosen += 1));
 
     (options()[1].querySelector('.palette-option-button') as HTMLButtonElement).click();
     await fixture.whenStable();
 
     expect(index).toBe(1);
-    expect(opened).toBe(RESULTS[1].id);
+    expect(opened?.id).toBe(RESULTS[1].id);
     expect(chosen).toBe(0);
   });
 

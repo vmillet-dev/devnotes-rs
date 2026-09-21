@@ -209,12 +209,25 @@ export class NotesStore {
    */
   private materialisedNote: Note | null = null;
 
-  openNote(id: string): void {
+  /**
+   * ⚠️ A `Note` and not only an id, for the palette. It queries every space and ignores
+   * the canvas filters — deliberately — so `find`, whose last rung is the canvas view and
+   * the board view, has nothing that can resolve one of its results: a note the filters
+   * hide used to open onto `null`, which is the editor not opening at all and nothing on
+   * screen saying why (#280). The row is handed over rather than read again; a
+   * `find_note` on the bridge would be a second source for what the caller already holds.
+   */
+  openNote(wanted: Note | string): void {
+    const note = typeof wanted === 'string' ? this.find(wanted) : wanted;
+
     this.materialisedNote = null;
     this.discardDraft();
     this._editorSession.update((session) => session + 1);
-    this._selectedNote.set(this.find(id));
-    this.selection.focusNote(id);
+    this._selectedNote.set(note);
+    // Nothing resolved is nothing to point at: the ring stays where the user left it.
+    if (note) {
+      this.selection.focusNote(note.id);
+    }
   }
 
   /** A draft still empty on close is abandoned, not saved. */

@@ -136,7 +136,9 @@ const CANVAS_KEYS: readonly CanvasKey[] = [
   },
   {
     keys: ['Escape'],
-    labelKey: 'shortcuts.canvas.clearSelection',
+    // ⚠️ Not `clearSelection`, which is what it was called when the selection was the
+    // only thing it undid. The card's own banner names this key for the same reason.
+    labelKey: 'shortcuts.canvas.stepBack',
     on: ['Escape'],
     // Falls through: the armed note first, then the selection, then the search and the
     // facets, and only then out of the folder — leaving it is the biggest, so it is last.

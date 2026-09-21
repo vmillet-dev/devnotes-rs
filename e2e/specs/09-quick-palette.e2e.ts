@@ -76,12 +76,56 @@ describe('The quick-paste palette', () => {
   });
 
   /**
+   * ⚠️ The palette queries every space and ignores the canvas filters, deliberately — and
+   * opening one of its results used to go back through the canvas view to resolve the id.
+   * With a filter on, that resolved to nothing: the palette closed onto an editor that
+   * never opened, and nothing said why (#280).
+   */
+  it('opens a result the canvas filters are hiding', async () => {
+    await press('Escape');
+    await canvas.search('Unrelated note');
+    await canvas.waitForNoCard('Reset the dev database');
+
+    await emitGlobalAction('palette');
+    await palette.input().waitForExist({ timeout: 10_000 });
+    await palette.type('reset');
+    await press('Enter');
+
+    expect(await editor.isOpen()).toBe(true);
+    expect(await editor.title()).toBe('Reset the dev database');
+
+    await editor.close();
+    // The filter is the user's and the palette does not touch it.
+    expect(await canvas.searchQuery()).toBe('Unrelated note');
+    await canvas.clearSearch();
+  });
+
+  /**
+   * ⚠️ The toast itself is out of reach — it is drawn by the operating system, after the
+   * window has gone, and this run shares one window with every file after it. What the suite
+   * can prove is the half that fails silently: a capability missing from
+   * `capabilities/default.json` makes the plugin refuse at runtime and nothing else says so
+   * (#285).
+   */
+  it('is allowed to ask the desktop whether it may speak', async () => {
+    const answer = (await browser.executeAsync((done: (value: unknown) => void) => {
+      const tauri = (window as unknown as Record<string, any>)['__TAURI__'];
+      tauri.core
+        .invoke('plugin:notification|is_permission_granted')
+        .then((value: unknown) => done({ ok: value }))
+        .catch((error: unknown) => done({ err: String(error) }));
+    })) as { ok?: unknown; err?: string };
+
+    expect(answer.err).toBeUndefined();
+  });
+
+  /**
    * ⚠️ Tab used to be released to the DOM, and it walked the rows' buttons — which draw no
    * ring — while the highlight stayed where the arrows had left it. Two notions of "the
    * current row", one of them invisible (#283).
    */
   it('walks the results with Tab, without letting the field lose the keyboard', async () => {
-    // The scenario above ends in the editor, which closed the palette behind it.
+    // Nothing above it leaves the palette open, so this one opens its own.
     await emitGlobalAction('palette');
     await palette.input().waitForExist({ timeout: 10_000 });
     await palette.type('');

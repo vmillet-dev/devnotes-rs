@@ -357,6 +357,95 @@ describe('BoardStore', () => {
       expect(harness.repository.saved.at(-1)?.cards).toEqual([{ noteId: 'a', position: { x: 320, y: 480 } }]);
     });
 
+    /**
+     * ⚠️ The overlay covered places and not **membership**, so the ghost the drag drew
+     * vanished on `pointerup` and the card was drawn back in `loose`, at the place the
+     * last view gave it, until the round trip landed. Two frames of flashback (#282).
+     */
+    it('draws a card inside the zone it was dropped into, before any view says so', async () => {
+      const harness = await createStore(
+        new FakeBoardRepository({
+          zones: [fakeZone({ folder: PERF })],
+          loose: [fakeBoardNote(createNote({ id: 'a' }), { position: { x: 16, y: 400 } })],
+        }),
+      );
+      await onBoard(harness);
+
+      await harness.store.dropCard('a', 'perf', { x: 40, y: 40 });
+
+      // The view still answers it loose, and the board does not.
+      expect(harness.store.zones()[0]?.notes.map((entry) => entry.note.id)).toEqual(['a']);
+      expect(harness.store.loose()).toEqual([]);
+      expect(harness.store.noteCount()).toBe(1);
+    });
+
+    it('draws a card dropped on the background out of its zone at once', async () => {
+      const harness = await createStore(
+        new FakeBoardRepository({
+          zones: [fakeZone({ folder: PERF, notes: [fakeBoardNote(createNote({ id: 'a' }))] })],
+        }),
+      );
+      await onBoard(harness);
+
+      await harness.store.dropCard('a', null, { x: 320, y: 480 });
+
+      expect(harness.store.zones()[0]?.notes).toEqual([]);
+      expect(harness.store.loose().map((entry) => entry.note.id)).toEqual(['a']);
+      // And where it was let go of, which is the place overlay doing its own half.
+      expect(harness.store.loose()[0]?.position).toEqual({ x: 320, y: 480 });
+    });
+
+    /**
+     * ⚠️ The opposite of what a refused **place** does. A place the server would not take
+     * is worth leaving on screen with a banner beside it; a membership it would not take
+     * is a lie about which folder the note is in.
+     */
+    it('puts the card back in its zone when the file is refused', async () => {
+      const harness = await createStore(
+        new FakeBoardRepository({
+          zones: [fakeZone({ folder: PERF, notes: [fakeBoardNote(createNote({ id: 'a' }))] })],
+        }),
+      );
+      await onBoard(harness);
+      harness.folders.failNext = new Error('gone');
+
+      expect(await harness.store.dropCard('a', null, { x: 320, y: 480 })).toBe(false);
+
+      expect(harness.store.zones()[0]?.notes.map((entry) => entry.note.id)).toEqual(['a']);
+      expect(harness.store.loose()).toEqual([]);
+    });
+
+    it('lets go of the drop once a view carries the new folder', async () => {
+      const harness = await createStore(
+        new FakeBoardRepository({
+          zones: [fakeZone({ folder: PERF })],
+          loose: [fakeBoardNote(createNote({ id: 'a' }), { position: { x: 16, y: 400 } })],
+        }),
+      );
+      await onBoard(harness);
+
+      // ⚠️ The width is what says the reload has landed: the zone holds the card either
+      // way while the overlay is still up, so asserting on it would prove nothing.
+      harness.repository.setView({
+        zones: [fakeZone({ folder: PERF, notes: [fakeBoardNote(createNote({ id: 'a' }))] })],
+        loose: [],
+        width: 1234,
+      });
+      await harness.store.dropCard('a', 'perf', { x: 40, y: 40 });
+      await vi.waitFor(() => expect(harness.store.width()).toBe(1234));
+
+      // Nothing is covering the view any more: it takes the card back out and so does the
+      // board, which is what lets a later drag move the same card again.
+      harness.repository.setView({
+        zones: [fakeZone({ folder: PERF })],
+        loose: [fakeBoardNote(createNote({ id: 'a' }), { position: { x: 16, y: 400 } })],
+      });
+      harness.store.reload();
+
+      await vi.waitFor(() => expect(harness.store.loose()).toHaveLength(1));
+      expect(harness.store.zones()[0]?.notes).toEqual([]);
+    });
+
     it('creates a folder from a drawn band, at the frame it was drawn', async () => {
       const harness = await createStore();
       await onBoard(harness);

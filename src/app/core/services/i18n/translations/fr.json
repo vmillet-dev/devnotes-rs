@@ -33,7 +33,7 @@
     "copiedUntitled": "Note sans titre copiée dans le presse-papier.",
     "untitled": "Sans titre",
     "pinnedState": "Note épinglée",
-    "deleteArmed": "Suppr. à nouveau pour supprimer",
+    "deleteArmed": "Suppr. à nouveau · Échap pour annuler",
     "loading": "Chargement des notes…",
     "noResults": "Aucune note ne correspond à cette recherche.",
     "searchMatched": "{count, plural, =0 {aucun résultat} one {# résultat} other {# résultats}}",
@@ -354,7 +354,10 @@
     "hint": "↑↓ ou Tab naviguer · Entrée ou clic ouvrir · Ctrl+C copier · Échap fermer",
     "copyLabel": "Copier « {{title}} »",
     "close": "Fermer la palette",
-    "createNote": "+ Créer une note « {{query}} »"
+    "createNote": "+ Créer une note « {{query}} »",
+    "copiedTitle": "Copié",
+    "copiedNote": "« {{title}} » est dans le presse-papiers",
+    "copiedUntitled": "La note est dans le presse-papiers"
   },
   "placeholders": {
     "title": "Remplir les champs",
@@ -461,7 +464,7 @@
       "extendWithClick": "Étendre la sélection au clic",
       "trash": "Mettre à la corbeille, en deux fois",
       "undo": "Annuler la dernière suppression",
-      "clearSelection": "Annuler la suppression en attente, la sélection, les filtres, puis sortir du dossier"
+      "stepBack": "Annuler la suppression en attente, la sélection, les filtres, puis sortir du dossier"
     },
     "editor": {
       "close": "Fermer l'éditeur en enregistrant",
