@@ -194,6 +194,78 @@ describe('BoardComponent', () => {
       surface().getBoundingClientRect = () => ({ left: 0, top: 0 }) as DOMRect;
     });
 
+    /**
+     * ⚠️ The right button, because the left one is taken: dragging the background draws a
+     * folder, and that gesture does not move. A zone is never in the result — "delete the
+     * selection" cannot mean two different things.
+     */
+    describe('the selection band', () => {
+      /** jsdom lays nothing out, so each card has to say where it is. */
+      function place(selector: string, box: { x: number; y: number }): void {
+        const element = root().querySelector<HTMLElement>(selector)!;
+        element.getBoundingClientRect = () =>
+          ({ left: box.x, top: box.y, width: 240, height: 150 }) as DOMRect;
+      }
+
+      it('ticks every card it sweeps over, whichever button-free ground it started on', async () => {
+        const banded: string[][] = [];
+        fixture.componentInstance.notesBanded.subscribe((ids) => banded.push([...ids]));
+        place('[data-testid="board-loose-card"]', { x: 400, y: 400 });
+
+        pointer(surface(), 'pointerdown', 380, 380, 2);
+        pointer(surface(), 'pointermove', 700, 700, 2);
+        pointer(surface(), 'pointerup', 700, 700, 2);
+
+        expect(banded).toEqual([['loose-1']]);
+      });
+
+      it('leaves a card the band stopped short of', async () => {
+        const banded: string[][] = [];
+        fixture.componentInstance.notesBanded.subscribe((ids) => banded.push([...ids]));
+        place('[data-testid="board-loose-card"]', { x: 800, y: 800 });
+
+        pointer(surface(), 'pointerdown', 20, 20, 2);
+        pointer(surface(), 'pointermove', 200, 200, 2);
+        pointer(surface(), 'pointerup', 200, 200, 2);
+
+        expect(banded).toEqual([]);
+      });
+
+      /** ⚠️ Still the folder gesture, untouched: the existing one does not move. */
+      it('leaves the left button drawing a folder', async () => {
+        const drawn: unknown[] = [];
+        const banded: unknown[] = [];
+        fixture.componentInstance.zoneDrawn.subscribe((frame) => drawn.push(frame));
+        fixture.componentInstance.notesBanded.subscribe((ids) => banded.push(ids));
+
+        pointer(surface(), 'pointerdown', 400, 400, 0);
+        pointer(surface(), 'pointermove', 700, 700, 0);
+        pointer(surface(), 'pointerup', 700, 700, 0);
+
+        expect(drawn).toHaveLength(1);
+        expect(banded).toEqual([]);
+      });
+
+      /** ⚠️ Or the browser's own menu opens at the end of every selection. */
+      it('refuses the context menu on the surface', () => {
+        const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+        surface().dispatchEvent(event);
+
+        expect(event.defaultPrevented).toBe(true);
+      });
+
+      it('writes nothing when the right button never travelled', async () => {
+        const banded: unknown[] = [];
+        fixture.componentInstance.notesBanded.subscribe((ids) => banded.push(ids));
+        place('[data-testid="board-loose-card"]', { x: 400, y: 400 });
+
+        pointer(surface(), 'pointerdown', 400, 400, 2);
+        pointer(surface(), 'pointerup', 401, 401, 2);
+
+        expect(banded).toEqual([]);
+      });
+    });
+
     /** ⚠️ The card itself: the whole of it is the handle, there is no grip any more. */
     function grip(): HTMLElement {
       return root().querySelector<HTMLElement>('[data-testid="board-loose-card"] .card-title')!;

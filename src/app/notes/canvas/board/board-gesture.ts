@@ -34,7 +34,7 @@ export const MIN_ZONE_HEIGHT = 212;
 /** A zone drawn smaller than this was a click on the background, not a gesture. */
 export const MIN_DRAWN_ZONE = 40;
 
-export type GestureKind = 'card' | 'move-zone' | 'resize-zone' | 'draw-zone';
+export type GestureKind = 'card' | 'move-zone' | 'resize-zone' | 'draw-zone' | 'select-band';
 
 export interface Gesture {
   readonly kind: GestureKind;
@@ -118,6 +118,22 @@ export function drawnTo(origin: BoardPoint, at: BoardPoint): BoardFrame {
 /** A band barely dragged was a click on the background, and creates nothing. */
 export function isWorthDrawing(frame: BoardFrame): boolean {
   return frame.width >= MIN_DRAWN_ZONE && frame.height >= MIN_DRAWN_ZONE;
+}
+
+/**
+ * Whether a band and a card box overlap at all — **touching** is enough, as every rubber
+ * band anyone has used works, and as `free_slot` already tests a seat.
+ *
+ * ⚠️ Half-open on the far edges, like [`contains`]: a band whose right edge lands exactly
+ * on a card's left edge is beside it, not on it.
+ */
+export function overlaps(band: BoardFrame, card: BoardFrame): boolean {
+  return (
+    band.x < card.x + card.width &&
+    card.x < band.x + band.width &&
+    band.y < card.y + card.height &&
+    card.y < band.y + band.height
+  );
 }
 
 /** What a drawn band becomes once it is a zone: never too small to drop a card into. */

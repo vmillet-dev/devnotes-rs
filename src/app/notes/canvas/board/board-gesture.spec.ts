@@ -13,6 +13,7 @@ import {
   hasTravelled,
   isWorthDrawing,
   movedTo,
+  overlaps,
   resizedTo,
   snap,
   zoneAt,
@@ -181,5 +182,29 @@ describe('board gesture geometry', () => {
     it('drops a card where the grab offset puts it, not under the cursor', () => {
       expect(cardPosition(gesture(), { x: 300, y: 300 })).toEqual({ x: 300, y: 280 });
     });
+  });
+});
+
+describe('the selection band', () => {
+  const band = { x: 100, y: 100, width: 200, height: 200 };
+
+  it('takes a card it merely touches', () => {
+    expect(overlaps(band, { x: 280, y: 280, width: 240, height: 150 })).toBe(true);
+  });
+
+  it('leaves a card it stops exactly short of', () => {
+    expect(overlaps(band, { x: 300, y: 100, width: 240, height: 150 })).toBe(false);
+  });
+
+  it('takes a card it covers whole', () => {
+    expect(overlaps(band, { x: 120, y: 120, width: 40, height: 40 })).toBe(true);
+  });
+
+  it('takes a card that covers it whole', () => {
+    expect(overlaps(band, { x: 0, y: 0, width: 600, height: 600 })).toBe(true);
+  });
+
+  it('leaves a card beside it on one axis only', () => {
+    expect(overlaps(band, { x: 150, y: 400, width: 240, height: 150 })).toBe(false);
   });
 });

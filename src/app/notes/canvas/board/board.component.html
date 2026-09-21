@@ -24,6 +24,7 @@
     [style.width.px]="width()"
     [style.height.px]="height()"
     (pointerdown)="startDraw($event)"
+    (contextmenu)="onContextMenu($event)"
     (pointermove)="onPointerMove($event)"
     (pointerup)="onPointerUp($event)"
     (pointercancel)="onPointerCancel($event)"
@@ -84,6 +85,19 @@
       >
         <app-note-card [note]="entry.note" />
       </div>
+    }
+
+    @if (selectionBand(); as swept) {
+      <!-- Decorative: what it selects is announced by the selection bar it fills. -->
+      <div
+        class="select-band"
+        data-testid="board-select-band"
+        aria-hidden="true"
+        [style.left.px]="swept.x"
+        [style.top.px]="swept.y"
+        [style.width.px]="swept.width"
+        [style.height.px]="swept.height"
+      ></div>
     }
 
     @if (drawnBand) {
