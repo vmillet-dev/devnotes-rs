@@ -126,18 +126,6 @@
 }
 
 // Beside the chips, because what it clears is the row it sits in.
-// Beside the view switch rather than on the board: a chip anchored to the corner of a
-// surface that pans ends up over whatever the surface puts there.
-.loose-count {
-  margin: 0;
-  padding: 3px 9px;
-  @include surface($radius: 999px);
-  font-size: 11px;
-  color: var(--text-2);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
 .clear-filters {
   @include unstyled-control;
   @include surface($bg: transparent, $radius: 7px);

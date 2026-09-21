@@ -2,7 +2,7 @@ import { browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { board, selectionBar, spaces } from '../pageobjects/overlays.page.js';
-import { boxOf, eventually, reloadCanvas, testid, waitForCanvas } from '../support/app.js';
+import { eventually, reloadCanvas, waitForCanvas } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
@@ -109,24 +109,6 @@ describe('Arranging the board', () => {
     expect(view.sections.flatMap((section) => section.notes).map((note) => note.title)).not.toContain(
       'Dump nocturne',
     );
-  });
-
-  /**
-   * ⚠️ The count was drawn above whichever loose card happened to be highest, so it
-   * climbed over the zones as soon as one was dragged up. Pinning it to the board’s own
-   * corner cured that and bought the opposite: it floated over whatever the surface put
-   * underneath, and `arrange_zones` lays the first zone in exactly that corner, so the
-   * title read "…s · 2" (#295). It is out of the board entirely now, which is the only
-   * placement a pan or a drag cannot defeat.
-   */
-  it('draws the no-folder count clear of the board, where nothing can pass under it', async () => {
-    expect(await board.countIsClearOfTheBoard()).toBe(true);
-
-    const before = await boxOf(testid('board-loose-label'));
-
-    await board.drag(board.cardGrip(looseId), { dx: 40, dy: -80 });
-
-    expect(await boxOf(testid('board-loose-label'))).toEqual(before);
   });
 
   it('remembers where the card was dropped across a restart of the front end', async () => {

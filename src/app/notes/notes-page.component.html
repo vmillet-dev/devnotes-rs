@@ -61,14 +61,6 @@
           [boardAvailable]="board.canShowBoard()"
           (modeChanged)="board.setMode($event)"
         />
-        <!-- ⚠️ Here and not on the board: anchored to the board's own corner it floated
-             over whatever the surface put underneath, and the first zone is laid out in
-             exactly that corner (#295). Nothing that pans can reach the header. -->
-        @if (board.isBoard() && board.loose().length > 0) {
-          <p class="loose-count" data-testid="board-loose-label">
-            {{ 'board.loose' | transloco: { count: board.loose().length } }}
-          </p>
-        }
       }
       <app-search-box
         [query]="canvas.searchQuery()"

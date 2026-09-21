@@ -1,8 +1,8 @@
 @use 'mixins' as *;
 
 // The host is the flex child; `.board` is what actually scrolls. ⚠️ `relative` for
-// `.board-empty`, which centres against it. The no-folder count needed it too, and being
-// anchored here is exactly what put it over the first zone's title (#295).
+// `.board-empty`, which centres against it, and for nothing else since the no-folder
+// count went (#295).
 :host {
   display: flex;
   flex-direction: column;
