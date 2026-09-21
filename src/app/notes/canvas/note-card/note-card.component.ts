@@ -83,6 +83,8 @@ export class NoteCardComponent {
   /** The note keyboard navigation points at — distinct from the selection. */
   protected readonly focused = computed(() => this.selection.focusedNoteId() === this.note().id);
   protected readonly checked = computed(() => this.selection.checkedIds().has(this.note().id));
+  /** One more Delete would trash it. The keyboard's half of the menu's two clicks. */
+  protected readonly armed = computed(() => this.selection.armedForDeletion() === this.note().id);
 
   private readonly cardButton = viewChild.required<ElementRef<HTMLButtonElement>>('cardButton');
 

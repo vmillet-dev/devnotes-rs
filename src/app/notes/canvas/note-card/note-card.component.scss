@@ -46,6 +46,32 @@
   background: var(--bg-2);
 }
 
+// Red at rest and not on hover, like every other destructive control: a warning that
+// arrives under the pointer plays no part in choosing.
+.card.armed {
+  border-color: var(--red);
+}
+
+// ⚠️ Over the footer, which is the line that matters least at that moment, rather than
+// inside the card: it is a fixed 150px and a band in the flow would push a row of the
+// todo list out of sight. Transparent to the pointer — the card underneath still opens.
+.card-arming {
+  position: absolute;
+  z-index: 2;
+  left: var(--space-card);
+  right: var(--space-card);
+  bottom: var(--space-card);
+  margin: 0;
+  padding: 3px 8px;
+  border: 1px solid var(--red);
+  border-radius: 6px;
+  background: var(--bg-3);
+  color: var(--red);
+  font-size: 10.5px;
+  text-align: center;
+  pointer-events: none;
+}
+
 .card.selected {
   border-color: var(--amber-dim);
   box-shadow: 0 0 0 1px var(--amber-dim);

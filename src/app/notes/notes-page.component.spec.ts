@@ -693,17 +693,49 @@ describe('NotesPageComponent', () => {
       await vi.waitFor(() => expect(canvas.visibleNotes().find((n) => n.id === 'n1')?.pinned).toBe(true));
     });
 
-    it('trashes the focused note on Delete, offering to take it back', async () => {
+    /**
+     * ⚠️ Two presses, the way the card's own menu asks for two clicks. One used to trash
+     * whichever card the ring was on, and the ring can be on a card scrolled out of view.
+     */
+    it('trashes the focused note on a second Delete, offering to take it back', async () => {
       selection.focusNote('n1');
+
+      press('Delete');
+      expect(selection.armedForDeletion()).toBe('n1');
+      expect(canvas.visibleNotes().map((note) => note.id)).toContain('n1');
 
       press('Delete');
 
       await vi.waitFor(() => expect(store.lastAction()).toEqual({ kind: 'deletion', ids: ['n1'], count: 1 }));
       expect(canvas.visibleNotes().map((note) => note.id)).not.toContain('n1');
+      expect(selection.armedForDeletion()).toBeNull();
+    });
+
+    it('calls the pending deletion off on Escape, before anything else', () => {
+      selection.focusNote('n1');
+      selection.toggleChecked('n1');
+      press('Delete');
+
+      press('Escape');
+
+      expect(selection.armedForDeletion()).toBeNull();
+      // The selection is the next rung down, and one Escape only goes down one.
+      expect(selection.hasSelection()).toBe(true);
+    });
+
+    /** Pointing somewhere else is answering the question the armed note was asking. */
+    it('calls it off when the focus moves', () => {
+      selection.focusNote('n1');
+      press('Delete');
+
+      selection.focusNote('n2');
+
+      expect(selection.armedForDeletion()).toBeNull();
     });
 
     it('takes back the last deletion on Ctrl+Z', async () => {
       selection.focusNote('n1');
+      press('Backspace');
       press('Backspace');
       await vi.waitFor(() => expect(store.lastAction()).not.toBeNull());
 

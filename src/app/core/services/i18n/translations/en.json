@@ -33,6 +33,7 @@
     "copiedUntitled": "Untitled note copied to the clipboard.",
     "untitled": "Untitled",
     "pinnedState": "Pinned note",
+    "deleteArmed": "Press Del again to delete",
     "loading": "Loading notes…",
     "noResults": "No note matches this search.",
     "searchMatched": "{count, plural, =0 {no results} one {# result} other {# results}}",
@@ -458,9 +459,9 @@
       "check": "Check the card for a bulk action",
       "checkWithClick": "Check a card with a click",
       "extendWithClick": "Extend the selection with a click",
-      "trash": "Send to the trash",
+      "trash": "Send to the trash, in two presses",
       "undo": "Undo the last deletion",
-      "clearSelection": "Clear the selection, then the filters, then leave the folder"
+      "clearSelection": "Call off a pending deletion, then the selection, then the filters, then leave the folder"
     },
     "editor": {
       "close": "Close the editor, saving",

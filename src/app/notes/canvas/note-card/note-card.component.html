@@ -7,6 +7,13 @@
   [class.checked]="checked()"
   [class.checklist]="isChecklist()"
 >
+  <!-- ⚠️ `role="status"` and real words: the red border alone says something is wrong,
+       not that one more press trashes the note. -->
+  @if (armed()) {
+    <p class="card-arming" data-testid="note-card-arming" role="status">
+      {{ 'notes.deleteArmed' | transloco }}
+    </p>
+  }
   <!-- ⚠️ The click surface is a layer **under** the card, not the card itself: a `<button>`
        cannot contain the buttons the header carries, and that is what used to push them
        into absolute positions floating over the text, each a few pixels off the line. The
@@ -20,7 +27,7 @@
     (click)="onOpen($event)"
   ></button>
 
-  <div class="card" [class.pinned]="note().pinned" [class.selected]="selected()">
+  <div class="card" [class.pinned]="note().pinned" [class.selected]="selected()" [class.armed]="armed()">
     <!-- ⚠️ What the note *is*, and only that: the actions hang outside the card, so a todo
          list with nothing to mark draws no band at all and its title starts at the top. -->
     @if (!isChecklist() || hasMarks()) {
