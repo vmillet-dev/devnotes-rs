@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { StatusNotifier } from '@core/services/notifications/status.service';
+import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
 import { DialogStack } from '@shared/layout/dialog/dialog-stack';
 import { dialogRung } from '@shared/layout/dialog/dialog.model';
 import { NotesHarness, awaitQuery, createNotesHarness } from '@testing/notes-harness';
@@ -82,11 +84,70 @@ describe('CanvasKeyboardDirective', () => {
       expect(harness.store.selectedNoteId()).toBe('note-1');
     });
 
+    /** ⚠️ The ring may be on a card scrolled out of view: "copied" alone is no answer. */
+    it('says which note it copied', async () => {
+      press('c');
+      await fixture.whenStable();
+
+      expect(TestBed.inject(StatusNotifier).status()).toEqual({
+        key: 'notes.copiedNote',
+        params: { title: 'First' },
+      });
+    });
+
     it('takes the uppercase letter too, for a caps-locked keyboard', async () => {
       press('C');
       await fixture.whenStable();
 
       expect(harness.clipboard.content).toBe('first body');
+    });
+  });
+
+  /** What the key copies is what the card's own control copies, and nothing less. */
+  describe('what copying a card means', () => {
+    async function focusing(note: Parameters<typeof createNote>[0]): Promise<void> {
+      TestBed.resetTestingModule();
+      harness = await createNotesHarness([createNote({ id: 'note-1', ...note })]);
+      fixture = TestBed.createComponent(CanvasKeyboardHostComponent);
+      fixture.autoDetectChanges();
+      await fixture.whenStable();
+      harness.selection.focusNote('note-1');
+    }
+
+    /**
+     * ⚠️ A todo list has no `content` at all, so the key used to put an empty string on
+     * the clipboard while the card's own button handed over the Markdown.
+     */
+    it('gives a todo list as its Markdown', async () => {
+      await focusing({
+        kind: 'checklist',
+        content: '',
+        items: [
+          { text: 'Relire', done: true },
+          { text: 'Déployer', done: false },
+        ],
+      });
+
+      press('c');
+      await fixture.whenStable();
+
+      expect(harness.clipboard.content).toBe(
+        ['- [x] Relire', '- [ ] Déployer'].join(String.fromCharCode(10)),
+      );
+    });
+
+    /** The form the card's ⚡ opens, which the key went straight past. */
+    it('asks for the fields rather than pasting the tokens', async () => {
+      await focusing({
+        content: 'psql -h {{host}}',
+        placeholders: [{ name: 'host', defaultValue: '', value: '' }],
+      });
+
+      press('c');
+      await fixture.whenStable();
+
+      expect(TestBed.inject(PlaceholderFillStore).target()?.id).toBe('note-1');
+      expect(harness.clipboard.content).toBe('');
     });
   });
 

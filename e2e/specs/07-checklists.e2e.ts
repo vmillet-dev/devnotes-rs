@@ -2,7 +2,8 @@ import { browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
-import { clipboardText, eventually, reloadCanvas, testid } from '../support/app.js';
+import { banners } from '../pageobjects/titlebar.page.js';
+import { clipboardText, eventually, press, reloadCanvas, testid } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
@@ -115,6 +116,35 @@ describe('Todo lists', () => {
     );
     expect(copyText).toContain('- [x] Write the changelog');
     expect(copyText).toContain('- [ ] Tag the release');
+  });
+
+  /**
+   * ⚠️ `C` used to copy `note.content`, and a todo list has none — it put an empty
+   * string on the clipboard while the card's own button handed over the Markdown.
+   * Opening the note and closing it is what leaves the canvas cursor on that card.
+   */
+  it('copies that same Markdown from the keyboard, and says which note', async function () {
+    await canvas.openNote(title);
+    await editor.close();
+
+    await press('c');
+
+    // The toast is the keyboard's only feedback: the card paints no tick for it.
+    await banners.status().waitForExist({ timeout: 10_000 });
+    expect(await banners.status().getText()).toContain(title);
+
+    // ⚠️ An unreadable clipboard answers null at once, so only the readable case waits.
+    const copied = await eventually(
+      () => clipboardText(),
+      (text) => text === null || text.includes('- ['),
+      'the keyboard copy to reach the clipboard',
+    );
+    if (copied === null) {
+      // No readable clipboard on this runner; see `clipboardText`.
+      this.skip();
+      return;
+    }
+    expect(copied).toContain('Tag the release');
   });
 
   it('puts that same Markdown on the clipboard', async function () {
