@@ -81,6 +81,9 @@ describe('The quick-paste palette', () => {
    * current row", one of them invisible (#283).
    */
   it('walks the results with Tab, without letting the field lose the keyboard', async () => {
+    // The scenario above ends in the editor, which closed the palette behind it.
+    await emitGlobalAction('palette');
+    await palette.input().waitForExist({ timeout: 10_000 });
     await palette.type('');
     expect(await palette.options().length).toBeGreaterThan(1);
 
