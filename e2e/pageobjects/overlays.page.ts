@@ -610,8 +610,14 @@ export const palette = {
   titles: (): Promise<string[]> => readEach(testid('palette-option'), 'text'),
 
   /** A click on the row opens the note; the ⧉ beside it is the paste path. */
-  openRow: (index = 0) => $$(testid('palette-open'))[index],
-  copyRow: (index = 0) => $$(testid('palette-copy'))[index],
+  openRow: (index = 0) => $(testid('palette-open'))[index],
+  copyRow: (index = 0) => $(testid('palette-copy'))[index],
+
+  /** Which row is current, read the way assistive technology reads it. */
+  current: () => $(testid('palette-input')).getAttribute('aria-activedescendant'),
+
+  /** What the keyboard is on — the field, and only ever the field. */
+  focused: () => browser.execute(() => document.activeElement?.getAttribute('data-testid') ?? null),
 
   async type(text: string): Promise<void> {
     await $(testid('palette-input')).setValue(text);

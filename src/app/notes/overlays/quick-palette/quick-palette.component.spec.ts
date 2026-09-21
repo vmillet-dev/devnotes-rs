@@ -25,8 +25,8 @@ describe('QuickPaletteComponent', () => {
     return [...fixture.nativeElement.querySelectorAll('.palette-option')];
   }
 
-  async function press(key: string, ctrlKey = false): Promise<void> {
-    input().dispatchEvent(new KeyboardEvent('keydown', { key, ctrlKey, bubbles: true }));
+  async function press(key: string, ctrlKey = false, shiftKey = false): Promise<void> {
+    input().dispatchEvent(new KeyboardEvent('keydown', { key, ctrlKey, shiftKey, bubbles: true }));
     await fixture.whenStable();
   }
 
@@ -107,15 +107,30 @@ describe('QuickPaletteComponent', () => {
     expect(chosen).toBe(0);
   });
 
-  it('leaves Tab to the focus, now that Enter opens', async () => {
+  /**
+   * ⚠️ Released to the DOM, Tab walked stops nothing drew a ring on while the highlight
+   * stayed where the arrows had left it. One current row, and it is the highlighted one.
+   */
+  it('walks the list with Tab too, and opens nothing on the way', async () => {
+    const moves: number[] = [];
     let opened = 0;
+    fixture.componentInstance.highlightMoved.subscribe((step) => moves.push(step));
     fixture.componentInstance.openRequested.subscribe(() => (opened += 1));
-    fixture.componentRef.setInput('highlighted', 1);
-    await fixture.whenStable();
 
     await press('Tab');
+    await press('Tab', false, true);
 
+    expect(moves).toEqual([1, -1]);
     expect(opened).toBe(0);
+    expect(document.activeElement).toBe(input());
+  });
+
+  /** The other half: a stop Tab cannot reach is a stop that cannot steal the typing. */
+  it('keeps every row out of the tab order', () => {
+    const buttons = [...fixture.nativeElement.querySelectorAll('.palette-option button')];
+
+    expect(buttons.length).toBeGreaterThan(0);
+    expect(buttons.map((button: HTMLElement) => button.tabIndex)).toEqual(buttons.map(() => -1));
   });
 
   it('closes on Escape', async () => {
