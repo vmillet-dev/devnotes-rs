@@ -33,8 +33,8 @@ export class SearchBoxComponent {
   /** Takes the shortcut hint's place: the hint is needed before a search, the count after. */
   readonly matched = input<number | null>(null);
 
-  /** Asked for from the count, which is the only thing on screen that says it is on. */
-  readonly cleared = output<void>();
+  /** The cross inside the field: the typed text, and nothing else. */
+  readonly textCleared = output<void>();
 
   protected readonly shortcutHint = platformShortcutHint();
 
@@ -50,12 +50,12 @@ export class SearchBoxComponent {
   }
 
   /**
-   * ⚠️ The field is inside the `<label>`, so a click here would focus it and hand the
-   * user a cursor in a field they just emptied.
+   * ⚠️ `preventDefault` because the field is inside the `<label>`: without it the click
+   * focuses the field as well, and a caret arrives in a box that has just been emptied.
    */
-  protected onClear(event: MouseEvent): void {
+  protected onClearText(event: MouseEvent): void {
     event.preventDefault();
-    this.cleared.emit();
+    this.textCleared.emit();
   }
 
   protected onInput(value: string): void {
