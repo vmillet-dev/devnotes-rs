@@ -67,6 +67,11 @@
  * the preference lives in a file nothing can read before Angular starts. The dark theme's
  * amber falls to 2:1 on white, so the light accent is a hue of its own and `--amber-ink`
  * flips with it.
+ *
+ * ⚠️ That accent is a burnt **orange** and not a dark yellow. It has to be this dark —
+ * everything drawn in it is text, and `scripts/palette.test.mjs` holds text to 4.5:1 on
+ * all four surfaces — but at the dark theme's own hue that darkness reads as mustard,
+ * which is what got reported. The hue moves; the darkness cannot.
  */
 :root[data-theme='light'] {
   --bg-0: #eceef2;
@@ -78,8 +83,8 @@
   --text-0: #1a1d24;
   --text-1: #4a5163;
   --text-2: #636a7c;
-  --amber: #8f5b0d;
-  --amber-dim: #d9b070;
+  --amber: #a8500f;
+  --amber-dim: #dda882;
   --amber-ink: #fff8ec;
   --green: #297044;
   --blue: #2a5d99;
@@ -87,7 +92,7 @@
   --purple: #6a4aa6;
 
   --text-1-rgb: 74, 81, 99;
-  --amber-rgb: 143, 91, 13;
+  --amber-rgb: 168, 80, 15;
   --green-rgb: 41, 112, 68;
   --blue-rgb: 42, 93, 153;
   --red-rgb: 176, 58, 57;
