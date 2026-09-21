@@ -71,6 +71,19 @@ describe('Opening a folder', () => {
     expect(await crumb.swatchClass()).toContain('is-blue');
   });
 
+  /**
+   * ⚠️ The flat view a folder produces had `show_create_ghost: false` like any other, so
+   * the one place where creating a note files it had nothing to create from.
+   */
+  it('keeps the slot a note is created from, and drops it while searching', async () => {
+    expect(await browser.$(testid('create-ghost')).isExisting()).toBe(true);
+
+    await canvas.search('EXPLAIN');
+    expect(await browser.$(testid('create-ghost')).isExisting()).toBe(false);
+
+    await canvas.clearSearch();
+  });
+
   it('searches without leaving the folder', async () => {
     await canvas.search('EXPLAIN');
     expect(await canvas.titles()).toEqual(['EXPLAIN lent sur join']);
