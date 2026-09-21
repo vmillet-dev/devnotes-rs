@@ -399,7 +399,8 @@
     "dismiss": "Masquer",
     "moved": "{count, plural, one {# note déplacée} other {# notes déplacées}}",
     "tagged": "{count, plural, one {# note étiquetée} other {# notes étiquetées}}",
-    "filed": "{count, plural, one {# note rangée} other {# notes rangées}}"
+    "filed": "{count, plural, one {# note rangée} other {# notes rangées}}",
+    "restoreKey": "Échap"
   },
   "file": {
     "menuLabel": "Fichier",
@@ -464,7 +465,7 @@
       "extendWithClick": "Étendre la sélection au clic",
       "trash": "Mettre à la corbeille, en deux fois",
       "undo": "Annuler la dernière suppression",
-      "stepBack": "Annuler la suppression en attente, la sélection, les filtres, puis sortir du dossier"
+      "stepBack": "Reprendre la note, annuler la suppression en attente, la sélection, les filtres, puis sortir du dossier"
     },
     "editor": {
       "close": "Fermer l'éditeur en enregistrant",

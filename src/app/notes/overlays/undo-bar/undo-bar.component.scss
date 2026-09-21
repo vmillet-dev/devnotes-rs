@@ -20,6 +20,17 @@
   color: var(--text-1);
 }
 
+// Quiet beside the word it belongs to: the label is the target, the cap only says how.
+.undo-key {
+  margin-left: 6px;
+  padding: 1px 5px;
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  font-family: var(--font-mono), serif;
+  font-size: 10px;
+  color: var(--text-2);
+}
+
 .undo-action {
   @include unstyled-control;
   padding: 4px 10px;

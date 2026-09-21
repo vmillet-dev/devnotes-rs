@@ -1227,6 +1227,16 @@ dismisses the banner by hand, which _is_ an explicit refusal.
 `Ctrl+Z` is handled by the page's keydown, ahead of the modifier guard that stops every other
 canvas shortcut: it is the one gesture people make without looking at the screen.
 
+⚠️ **Escape takes it back too, and only while the bar is up.** That difference is the whole
+reason the two signals exist apart: the rung reads `undoBanner()`, so the key answers while
+the offer is on screen and goes back to its other duties — the selection, the filters, the
+folder — the moment it is not. It is the one rung of that chain that **writes**, and the
+guard against a mis-press is that a banner is saying so at the time. The report it comes
+from is worth keeping: the armed card names Escape, the second `Delete` sends the note to
+the trash, and one keystroke later the key the card had just taught meant nothing at all
+(#293). So the bar names it as well — each state says the key that undoes it, or teaching
+the first one was worse than teaching neither.
+
 ### Keyboard navigation of the canvas
 
 `CanvasKeyboardDirective` (`notes/`) drives the canvas from the keyboard whenever

@@ -72,6 +72,20 @@ describe('the translation files', () => {
   );
 
   /**
+   * ⚠️ The same key, on both surfaces. The card teaches Escape while the note is armed;
+   * the bar that offers it back one keystroke later used to name nothing at all, so the
+   * lesson expired immediately (#293).
+   */
+  it.each([
+    ['fr', fr, 'Échap'],
+    ['en', en, 'Esc'],
+  ])('names that same key on the bar that offers the note back (%s)', (_locale, translations, key) => {
+    const bar = (translations as { undo: { restoreKey: string } }).undo.restoreKey;
+
+    expect(bar).toBe(key);
+  });
+
+  /**
    * ⚠️ "(s)" is not a plural, it is a refusal to choose one — and French does not agree
    * with English about zero, or about where the mark goes on a past participle. Counting
    * is the transpiler's job now.
