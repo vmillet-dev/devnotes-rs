@@ -247,7 +247,7 @@
     <app-placeholder-form
       [placeholders]="note.placeholders"
       (submitted)="fill.submitForPalette($event)"
-      (rawRequested)="palette.copyAndDismiss(note.content)"
+      (rawRequested)="palette.copyAndDismiss(note.content, note.title)"
       (cancelled)="palette.cancelFill()"
     />
   }

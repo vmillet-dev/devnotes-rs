@@ -1354,6 +1354,22 @@ The palette is an overlay in the main window rather than a second Tauri window: 
 already warm behind the global shortcut, and a second one would mean a second Angular
 bootstrap, its own CSP and its own lifecycle for the same result.
 
+⚠️ **A copy from the palette is acknowledged on the desktop, not in the window**, because
+the window is what the gesture takes away: `copyAndDismiss` copies, closes, hides, and only
+then asks `DesktopNotifier` to say which note it took. Every other copy path in the
+application answers through `StatusNotifier`, which draws under the titlebar — correct and
+invisible here. Without a word from the desktop the window simply vanished, and it read as
+the application crashing on a copy that had in fact worked (#285).
+
+`DesktopNotifier` (`core/services/notifications/`) wraps `tauri-plugin-notification` behind a
+token and an adapter, like `ClipboardService` and for the same reasons. ⚠️ It is **never
+load-bearing**: whatever it is asked to say has already happened, so a refused permission, a
+plugin that is not there and a desktop that drops the toast all come to the same thing —
+`false`, and nothing thrown. It is also the one place that **translates imperatively**:
+everywhere else code hands a `TranslationRef` to the `transloco` pipe, and there is no
+template on the other side of this one. Permission is asked for **once** and remembered; a
+prompt on every copy would be worse than no acknowledgement at all.
+
 The field keeps the focus from start to finish and the list is walked with
 `aria-activedescendant`; moving the real focus onto an option would lose the query being
 typed. The dialog shell's focus trap only ever intervenes on Tab, which the palette handles

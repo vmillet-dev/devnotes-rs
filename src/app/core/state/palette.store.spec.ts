@@ -1,7 +1,10 @@
 import { TestBed } from '@angular/core/testing';
+import { TranslocoService } from '@jsverse/transloco';
+import { firstValueFrom } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeAppWindow } from '@testing/fake-app-window';
 import { FakeClipboard } from '@testing/fake-clipboard';
+import { FakeDesktopNotifications } from '@testing/fake-desktop-notifications';
 import { FakeNotesRepository } from '@testing/fake-notes-repository';
 import { createNote } from '@testing/note.fixture';
 import { provideAppTesting } from '@testing/testing.providers';
@@ -13,6 +16,7 @@ interface Harness {
   readonly repository: FakeNotesRepository;
   readonly clipboard: FakeClipboard;
   readonly window: FakeAppWindow;
+  readonly desktop: FakeDesktopNotifications;
 }
 
 function createStore(): Harness {
@@ -28,11 +32,25 @@ function createStore(): Harness {
   ]);
   const clipboard = new FakeClipboard();
   const appWindow = new FakeAppWindow();
+  const desktop = new FakeDesktopNotifications();
   TestBed.configureTestingModule({
-    providers: [provideAppTesting({ notesRepository: repository, clipboard, appWindow })],
+    providers: [
+      provideAppTesting({
+        notesRepository: repository,
+        clipboard,
+        appWindow,
+        desktopNotifications: desktop,
+      }),
+    ],
   });
 
-  return { store: TestBed.inject(PaletteStore), repository, clipboard, window: appWindow };
+  return {
+    store: TestBed.inject(PaletteStore),
+    repository,
+    clipboard,
+    window: appWindow,
+    desktop,
+  };
 }
 
 describe('PaletteStore', () => {
@@ -43,6 +61,9 @@ describe('PaletteStore', () => {
     // zoneless scheduler.
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     harness = createStore();
+    // ⚠️ Loaded, not merely configured: the desktop toast is a **translated string**,
+    // and `translate` hands back the key itself until the language is in.
+    await firstValueFrom(TestBed.inject(TranslocoService).load('fr'));
     await harness.store.open();
   });
 
@@ -114,6 +135,37 @@ describe('PaletteStore', () => {
 
     expect(harness.store.isOpen()).toBe(true);
     expect(harness.window.hidden).toBe(0);
+  });
+
+  /**
+   * ⚠️ The window is what every other acknowledgement is drawn on, and this path takes
+   * it away. Without a word from the desktop the application simply vanished, which reads
+   * as a crash on a copy that worked (#285).
+   */
+  it('says on the desktop which note it took, once the window has gone', async () => {
+    await harness.store.chooseHighlighted();
+
+    expect(harness.desktop.sent).toHaveLength(1);
+    expect(harness.desktop.sent[0]?.body).toContain('First');
+  });
+
+  it('says nothing when the copy did not happen', async () => {
+    harness.clipboard.failNext = new Error('no clipboard');
+
+    await harness.store.chooseHighlighted();
+
+    expect(harness.desktop.sent).toEqual([]);
+  });
+
+  /** A desktop that will not show it is not a copy that failed. */
+  it('copies and hides all the same when the toast is refused', async () => {
+    harness.desktop.permission = 'denied';
+
+    await harness.store.chooseHighlighted();
+
+    expect(harness.clipboard.content).toBe('plain body');
+    expect(harness.window.hidden).toBe(1);
+    expect(harness.desktop.sent).toEqual([]);
   });
   describe('creating from what was typed', () => {
     it('offers nothing to create on an empty query', () => {
