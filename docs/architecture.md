@@ -974,6 +974,18 @@ anything else stays; a place the view says nothing about is **kept**, since a ca
 moment ago is exactly what the overlay is for. A failed write keeps the overlay too —
 dropping it would snap every card back with nothing on screen saying why.
 
+**There are three of those maps, and the third was the one missing.** A frame, a place —
+and a **membership**: which folder a drop decided a card is in. Without it a card dropped
+into a zone was drawn again in `loose`, at the place the last view gave it, until
+`file_notes` returned and the reload landed; one dropped out snapped back into its zone for
+exactly as long. `zones()` and `loose()` therefore repartition every card the view carries
+rather than reading the view’s own two lists, and `sittingIn` asks `has` and not `??`,
+because `null` is a value here — it is the background, and a staged `null` coalesced away is
+a card that never leaves its zone. ⚠️ One difference from the other two, deliberate: a
+**refused** file is dropped where a refused place is kept. A place the server would not take
+is worth leaving on screen with a banner beside it; a membership it would not take is a lie
+about which folder a note is in.
+
 ⚠️ `save_board_layout` skips a card that has been filed since the drag: a position row
 means "this note is loose", and writing one back would undo what `file_many` just did.
 

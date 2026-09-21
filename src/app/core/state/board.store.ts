@@ -103,6 +103,35 @@ function placesOf(view: BoardView | null): ReadonlyMap<string, BoardPoint> {
   );
 }
 
+/** Every card the view carries, each with the folder the view puts it in. */
+function cardsOf(view: BoardView | null): readonly { entry: BoardNote; folderId: string | null }[] {
+  return [
+    ...(view?.zones ?? []).flatMap((zone) =>
+      zone.notes.map((entry) => ({ entry, folderId: zone.folder.id })),
+    ),
+    ...(view?.loose ?? []).map((entry) => ({ entry, folderId: null })),
+  ];
+}
+
+/** The same, as the map the overlay is compared against. */
+function membershipOf(view: BoardView | null): ReadonlyMap<string, string | null> {
+  return new Map(cardsOf(view).map(({ entry, folderId }) => [entry.note.id, folderId]));
+}
+
+/**
+ * Where a card sits once the overlay has had its say.
+ *
+ * ⚠️ `has` and not `??`: `null` is a value here — it is the background — and a staged
+ * `null` coalesced away is a card dropped out of a zone that never leaves it.
+ */
+function sittingIn(
+  staged: ReadonlyMap<string, string | null>,
+  id: string,
+  inTheView: string | null,
+): string | null {
+  return staged.has(id) ? (staged.get(id) ?? null) : inTheView;
+}
+
 /** Exhaustive by construction, like the canvas's: a new field stops this compiling. */
 const SAME: { readonly [K in keyof BoardParams]: (a: BoardParams[K], b: BoardParams[K]) => boolean } = {
   spaceId: Object.is,
@@ -238,20 +267,46 @@ export class BoardStore {
     computation: (view, previous) => stillCovering(previous?.value ?? new Map(), placesOf(view), samePoint),
   });
 
+  /**
+   * Which folder a drop has decided a card is in, before any view says so. ⚠️ The third
+   * overlay, and the one that was missing: a place was staged and a **membership** was
+   * not, so a card dropped into a zone was drawn back where it came from until the round
+   * trip landed, and one dropped out snapped back into its zone for just as long (#282).
+   *
+   * Released on the same rule as the other two — when a view agrees, never when the write
+   * returns. The difference is the failure: see `dropCard`.
+   */
+  private readonly stagedFiling = linkedSignal<BoardView | null, ReadonlyMap<string, string | null>>({
+    source: () => this.view(),
+    computation: (view, previous) =>
+      stillCovering(previous?.value ?? new Map(), membershipOf(view), Object.is),
+  });
+
   readonly zones = computed<readonly BoardZone[]>(() => {
-    const staged = this.stagedFrames();
+    const frames = this.stagedFrames();
+    const filed = this.stagedFiling();
+    const cards = cardsOf(this.view());
+
     return (this.view()?.zones ?? []).map((zone) => {
-      const frame = staged.get(zone.folder.id);
-      return frame ? { ...zone, frame } : zone;
+      const frame = frames.get(zone.folder.id) ?? zone.frame;
+      const notes = cards
+        .filter(({ entry, folderId }) => sittingIn(filed, entry.note.id, folderId) === zone.folder.id)
+        .map(({ entry }) => entry);
+
+      return { ...zone, frame, notes };
     });
   });
 
   readonly loose = computed<readonly BoardNote[]>(() => {
-    const staged = this.stagedCards();
-    return (this.view()?.loose ?? []).map((entry) => {
-      const position = staged.get(entry.note.id);
-      return position ? { ...entry, position } : entry;
-    });
+    const places = this.stagedCards();
+    const filed = this.stagedFiling();
+
+    return cardsOf(this.view())
+      .filter(({ entry, folderId }) => sittingIn(filed, entry.note.id, folderId) === null)
+      .map(({ entry }) => {
+        const position = places.get(entry.note.id);
+        return position ? { ...entry, position } : entry;
+      });
   });
   readonly isFiltering = computed(() => this.view()?.isFiltering ?? false);
   readonly width = computed(() => this.view()?.width ?? 0);
@@ -324,16 +379,34 @@ export class BoardStore {
     if (folderId === null) {
       this.moveCard(noteId, position);
     }
+    this.stagedFiling.update((staged) => new Map(staged).set(noteId, folderId));
 
     const filed = await this.notifier.attempt('errors.fileFailed', () =>
       this.folders.fileMany([noteId], folderId),
     );
-    if (filed === null) return false;
+
+    // ⚠️ Dropped on failure, where a refused **place** is kept. A place the server would
+    // not take is worth leaving on screen with a banner beside it; a membership it would
+    // not take is a lie about which folder the note is in.
+    if (filed === null) {
+      this.unstageFiling(noteId);
+      return false;
+    }
 
     if (filed.length > 0) {
       this.revision.bump();
     }
     return true;
+  }
+
+  private unstageFiling(noteId: string): void {
+    this.stagedFiling.update((staged) => {
+      if (!staged.has(noteId)) return staged;
+
+      const next = new Map(staged);
+      next.delete(noteId);
+      return next;
+    });
   }
 
   /** Drawing a band on empty canvas creates a folder, placed where it was drawn. */

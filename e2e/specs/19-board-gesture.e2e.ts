@@ -206,6 +206,44 @@ describe('Arranging the board', () => {
    * ⚠️ A frame is computed once, on the board's first read, and never again — so a card
    * filed into a zone that was already full flowed out of sight behind its scrollbar.
    */
+  /**
+   * ⚠️ Membership was the one thing no overlay covered. The ghost the drag drew vanished
+   * on `pointerup` and the card was drawn again where the last view had it — inside its
+   * old zone, or loose at its old place — until the round trip landed (#282).
+   */
+  it('draws a card in its new home the moment it is let go of', async () => {
+    const moving = (await bridge.createNote(draft({ spaceId, title: 'Bascule instantanee' }))).id;
+    await openBoard();
+    await eventually(
+      () => board.holderOf(moving),
+      (holder) => holder === null,
+      'the new card to reach the background',
+    );
+
+    // ⚠️ No settling: this reads the board the frame after the drop, which is where the
+    // card used to be drawn back at its old place. The unit specs are what pin it with
+    // the view held still; here a fast round trip could answer the same thing honestly.
+    await board.dropCardInto(moving, migrationsId);
+    expect(await board.holderOf(moving)).toBe(migrationsId);
+
+    // ⚠️ Let it land before the opposite gesture, or the two files race each other.
+    await eventually(
+      () => bridge.queryNotes(query({ spaceId, folderId: migrationsId })),
+      (view) => view.sections.flatMap((section) => section.notes).some((note) => note.id === moving),
+      'the filing to reach the database',
+    );
+
+    await board.drag(board.cardGrip(moving), { dx: 120, dy: 620 });
+    expect(await board.holderOf(moving)).toBeNull();
+    expect(
+      await eventually(
+        () => bridge.queryNotes(query({ spaceId, folderId: migrationsId })),
+        (view) => !view.sections.flatMap((section) => section.notes).some((note) => note.id === moving),
+        'the unfiling to reach the database',
+      ),
+    ).toBeTruthy();
+  });
+
   it('makes room in a zone for the card filed into it', async () => {
     for (const title of ['Index manquant', 'Vacuum nocturne', 'Plan de requête']) {
       await bridge.fileNotes([(await bridge.createNote(draft({ spaceId, title }))).id], perfId);
