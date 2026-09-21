@@ -87,7 +87,7 @@ describe('SearchBoxComponent', () => {
       fixture.componentRef.setInput('matched', 12);
       await fixture.whenStable();
 
-      expect(matchedText()).toBe('12 résultats ✕');
+      expect(matchedText()).toBe('12 résultats');
       expect(fixture.nativeElement.querySelector('.kbd')).toBeNull();
     });
 
@@ -96,7 +96,7 @@ describe('SearchBoxComponent', () => {
       fixture.componentRef.setInput('matched', 0);
       await fixture.whenStable();
 
-      expect(matchedText()).toBe('aucun résultat ✕');
+      expect(matchedText()).toBe('aucun résultat');
     });
 
     it('shows the hint again when nothing is being filtered', async () => {
@@ -108,31 +108,54 @@ describe('SearchBoxComponent', () => {
     });
 
     /**
-     * The count doubles as the way out. ⚠️ `preventDefault` matters: the field is inside
-     * the `<label>`, so the click would otherwise focus it and hand the user a cursor in
-     * a field they had just emptied.
+     * ⚠️ It used to be a button whose click dropped the tags and the languages with the
+     * text, which is not what a count says and not what a cross in a field means.
      */
-    it('asks for the filters to be dropped, without focusing the field it emptied', async () => {
+    it('is a count and not a control', async () => {
       fixture.componentRef.setInput('matched', 12);
       await fixture.whenStable();
+
+      expect(fixture.nativeElement.querySelector('[data-testid="search-matched"]').tagName).toBe('SPAN');
+    });
+  });
+
+  describe('the cross inside the field', () => {
+    const cross = () => fixture.nativeElement.querySelector('[data-testid="search-clear"]');
+
+    it('is absent while there is nothing to clear', () => {
+      expect(cross()).toBeNull();
+    });
+
+    it('appears once something has been typed', async () => {
+      fixture.componentRef.setInput('query', 'docker');
+      await fixture.whenStable();
+
+      expect(cross()).not.toBeNull();
+    });
+
+    /**
+     * ⚠️ `preventDefault` matters: the field is inside the `<label>`, so the click would
+     * otherwise focus it and hand the user a caret in a box they had just emptied.
+     */
+    it('asks for the text to go, without focusing the field it emptied', async () => {
+      fixture.componentRef.setInput('query', 'docker');
+      await fixture.whenStable();
       let asked = 0;
-      fixture.componentInstance.cleared.subscribe(() => (asked += 1));
+      fixture.componentInstance.textCleared.subscribe(() => (asked += 1));
 
       const event = new MouseEvent('click', { bubbles: true, cancelable: true });
-      fixture.nativeElement.querySelector('[data-testid="search-matched"]').dispatchEvent(event);
+      cross().dispatchEvent(event);
       await fixture.whenStable();
 
       expect(asked).toBe(1);
       expect(event.defaultPrevented).toBe(true);
     });
 
-    it('names the gesture for a screen reader, the count alone reading as a label', async () => {
-      fixture.componentRef.setInput('matched', 12);
+    it('names what it clears, the glyph alone saying nothing', async () => {
+      fixture.componentRef.setInput('query', 'docker');
       await fixture.whenStable();
 
-      const button = fixture.nativeElement.querySelector('[data-testid="search-matched"]');
-      expect(button.tagName).toBe('BUTTON');
-      expect(button.getAttribute('aria-label')).toBe('Tout afficher');
+      expect(cross().getAttribute('aria-label')).toBe('Effacer la recherche');
     });
   });
 

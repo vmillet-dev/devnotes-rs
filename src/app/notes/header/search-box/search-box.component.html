@@ -14,20 +14,26 @@
     [value]="query()"
     (input)="onInput(searchInput.value)"
   />
-  <!-- `!== null` and not a truthiness check: zero results is the answer that matters most. -->
-  @if (matched() !== null) {
-    <!-- The count doubles as the way out: it is the one thing on screen that appears
-         exactly when the canvas is narrowed. -->
+  <!-- ⚠️ Empties the field and nothing else. It used to be a cross on the count, whose
+       click dropped the tags and the languages with it — which is not what a cross in a
+       search field means anywhere. Clearing every filter has its own button in the row. -->
+  @if (query()) {
     <button
       type="button"
-      class="count"
-      data-testid="search-matched"
-      [attr.aria-label]="'notes.clearFilters' | transloco"
-      (click)="onClear($event)"
+      class="clear-text"
+      data-testid="search-clear"
+      [attr.aria-label]="'notes.clearSearch' | transloco"
+      [attr.title]="'notes.clearSearch' | transloco"
+      (click)="onClearText($event)"
     >
-      {{ 'notes.searchMatched' | transloco: { count: matched() } }}
-      <span class="count-clear" aria-hidden="true">✕</span>
+      <span aria-hidden="true">✕</span>
     </button>
+  }
+  <!-- `!== null` and not a truthiness check: zero results is the answer that matters most. -->
+  @if (matched() !== null) {
+    <span class="count" data-testid="search-matched">
+      {{ 'notes.searchMatched' | transloco: { count: matched() } }}
+    </span>
   } @else {
     <span class="kbd" aria-hidden="true">{{ shortcutHint }}</span>
   }

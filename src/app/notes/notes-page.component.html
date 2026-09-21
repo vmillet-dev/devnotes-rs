@@ -66,10 +66,24 @@
         [query]="canvas.searchQuery()"
         [shortcutEnabled]="searchShortcutEnabled()"
         [matched]="board.isBoard() ? board.matched() : canvas.matched()"
-        (cleared)="canvas.clearFilters()"
+        (textCleared)="canvas.setSearchQuery('')"
         (queryChange)="canvas.setSearchQuery($event)"
       />
       <app-filter-chips [active]="canvas.activeFilter()" (filterChanged)="canvas.setFilter($event)" />
+      <!-- ⚠️ Shown whenever any of the three is on, not only on an empty canvas. The way
+           out used to be the count in the field, which reads as a count and clears the
+           tags and the languages with the text. -->
+      @if (canvas.hasUserFilters()) {
+        <button
+          type="button"
+          class="clear-filters"
+          data-testid="clear-filters"
+          (click)="canvas.clearFilters()"
+        >
+          <span aria-hidden="true">✕</span>
+          {{ 'notes.clearFilters' | transloco }}
+        </button>
+      }
       @if (folders.activeFolder() === null && !settings.showLibraryRail()) {
         <app-folder-switcher
           [folders]="folders.folders()"
@@ -183,7 +197,7 @@
                   data-testid="canvas-clear-filters"
                   (click)="canvas.clearFilters()"
                 >
-                  {{ 'notes.clearFiltersFromEmpty' | transloco }}
+                  {{ 'notes.clearFilters' | transloco }}
                 </button>
               }
             </div>

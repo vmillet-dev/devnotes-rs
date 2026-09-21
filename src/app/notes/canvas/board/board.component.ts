@@ -26,9 +26,6 @@ import {
   zoneAt,
 } from './board-gesture';
 
-/** What `folders::board::LOOSE_LABEL` leaves clear above the first loose card. */
-const LABEL_OFFSET = 26;
-
 const NOWHERE: BoardFrame = { x: 0, y: 0, width: 0, height: 0 };
 
 /** What a drop asks the page to do. */
@@ -83,12 +80,6 @@ export class BoardComponent {
   readonly folderDeleted = output<string>();
 
   protected readonly gesture = signal<Gesture | null>(null);
-
-  /** Just above the highest loose card, which is where the back end left room for it. */
-  protected readonly looseLabelTop = computed(() => {
-    const tops = this.loose().map((entry) => entry.position?.y ?? 0);
-    return (tops.length > 0 ? Math.min(...tops) : 0) - LABEL_OFFSET;
-  });
 
   /** The zone a drop would land in right now, so it can say so before the pointer lifts. */
   protected readonly hoveredZone = computed<string | null>(() => {

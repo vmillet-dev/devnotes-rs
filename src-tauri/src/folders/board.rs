@@ -40,8 +40,6 @@ pub const BOARD_COLUMNS: i32 = 3;
 pub const BOARD_MARGIN: i32 = 16;
 /// How many loose cards sit side by side under the zones.
 pub const LOOSE_COLUMNS: i32 = 4;
-/// Room for the "no folder · N" label above the loose cards.
-pub const LOOSE_LABEL: i32 = 34;
 /// ⚠️ The zone body scrolls, so a vertical scrollbar can take a slice of the row. Without
 /// this allowance two cards plus their gap come to *exactly* the inner width, the second
 /// wraps, the wrap causes the scrollbar, and the scrollbar keeps it wrapped — a zone that
@@ -249,7 +247,11 @@ pub fn arrange_zones(note_counts: &[usize]) -> Vec<BoardFrame> {
     frames
 }
 
-/// Where the loose cards start: under the lowest zone, with room for their label.
+/// Where the loose cards start: clear of the lowest zone.
+///
+/// ⚠️ It used to reserve a band above them for the "no folder · N" label. The label is
+/// now a chip in the board's own corner — loose cards stopped being a band the day they
+/// could be placed anywhere.
 #[must_use]
 pub fn loose_top(frames: &[BoardFrame]) -> i32 {
     frames
@@ -257,7 +259,6 @@ pub fn loose_top(frames: &[BoardFrame]) -> i32 {
         .map(|frame| frame.y + frame.height)
         .max()
         .map_or(BOARD_MARGIN, |bottom| bottom + GAP * 2)
-        + LOOSE_LABEL
 }
 
 /// The `index`-th seat of the flow grid, left to right, wrapping every [`LOOSE_COLUMNS`].
@@ -583,7 +584,7 @@ mod tests {
 
     #[test]
     fn an_empty_board_still_puts_its_loose_cards_somewhere() {
-        assert_eq!(loose_top(&[]), BOARD_MARGIN + LOOSE_LABEL);
+        assert_eq!(loose_top(&[]), BOARD_MARGIN);
     }
 
     /// ⚠️ The report: a note captured from the clipboard was written under a card that was

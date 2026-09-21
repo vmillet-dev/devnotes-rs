@@ -36,7 +36,8 @@
     "loading": "Loading notes…",
     "noResults": "No note matches this search.",
     "searchMatched": "{count, plural, =0 {no results} one {# result} other {# results}}",
-    "clearFilters": "Show everything",
+    "clearFilters": "Clear the filters",
+    "clearSearch": "Clear the search",
     "attachmentsCount": "{count, plural, =0 {no attachments} one {# attachment} other {# attachments}}",
     "placeholdersCount": "{count, plural, =0 {no fields to fill} one {# field to fill} other {# fields to fill}}",
     "selectNote": "Select note {{title}}",
@@ -83,8 +84,7 @@
         "snippets": "Snippets",
         "startHere": "Start here"
       }
-    },
-    "clearFiltersFromEmpty": "Clear the filters"
+    }
   },
   "filters": {
     "groupLabel": "Filter notes",

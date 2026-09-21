@@ -33,6 +33,13 @@
   font-size: 13px;
 }
 
+// ⚠️ Chromium draws its own cross for `type="search"`, and `all: unset` does not reach a
+// pseudo-element: the field showed two of them. Ours is the one that stays, because it
+// carries a name, a hit target and a focus ring.
+.search-bar input::-webkit-search-cancel-button {
+  display: none;
+}
+
 .search-bar input::placeholder {
   color: var(--text-2);
 }
@@ -48,31 +55,28 @@
   margin-left: auto;
 }
 
-// Takes the shortcut hint's place, and its alignment with it.
+// Takes the shortcut hint's place, and its alignment with it. A count and not a control:
+// what it says is how many, and it used to answer a click by dropping every filter.
 .count {
-  all: unset;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  gap: 5px;
   margin-left: auto;
   white-space: nowrap;
   font-size: 11px;
   color: var(--text-2);
+}
+
+// Sits before the count, inside the field's own box.
+.clear-text {
+  @include unstyled-control;
+  @include hit-target;
+  @include focus-ring(1px);
+
+  justify-content: center;
+  font-size: 10px;
+  color: var(--text-2);
   cursor: pointer;
-}
-
-.count:hover,
-.count:focus-visible {
-  color: var(--amber-text);
-}
-
-.count:focus-visible {
-  outline: 2px solid var(--amber-edge);
-  outline-offset: 2px;
   border-radius: 4px;
 }
 
-.count-clear {
-  font-size: 10px;
+.clear-text:hover {
+  color: var(--amber-text);
 }
