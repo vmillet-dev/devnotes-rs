@@ -247,17 +247,75 @@ pub fn loose_top(frames: &[BoardFrame]) -> i32 {
         + LOOSE_LABEL
 }
 
+/// The `index`-th seat of the flow grid, left to right, wrapping every [`LOOSE_COLUMNS`].
+fn slot(index: usize, top: i32) -> BoardPoint {
+    let columns = usize::try_from(LOOSE_COLUMNS).unwrap_or(1).max(1);
+
+    BoardPoint {
+        x: BOARD_MARGIN + i32::try_from(index % columns).unwrap_or(0) * (CARD_WIDTH + GAP),
+        y: top + i32::try_from(index / columns).unwrap_or(0) * (CARD_HEIGHT + GAP),
+    }
+}
+
 /// Flows loose cards left to right under the zones, wrapping every [`LOOSE_COLUMNS`].
 #[must_use]
 pub fn arrange_loose(count: usize, top: i32) -> Vec<BoardPoint> {
-    let columns = usize::try_from(LOOSE_COLUMNS).unwrap_or(1).max(1);
+    (0..count).map(|index| slot(index, top)).collect()
+}
 
-    (0..count)
-        .map(|index| BoardPoint {
-            x: BOARD_MARGIN + i32::try_from(index % columns).unwrap_or(0) * (CARD_WIDTH + GAP),
-            y: top + i32::try_from(index / columns).unwrap_or(0) * (CARD_HEIGHT + GAP),
+fn overlaps(at: BoardPoint, frame: BoardFrame) -> bool {
+    at.x < frame.x + frame.width
+        && frame.x < at.x + CARD_WIDTH
+        && at.y < frame.y + frame.height
+        && frame.y < at.y + CARD_HEIGHT
+}
+
+fn card_frame(at: BoardPoint) -> BoardFrame {
+    BoardFrame {
+        x: at.x,
+        y: at.y,
+        width: CARD_WIDTH,
+        height: CARD_HEIGHT,
+    }
+}
+
+/// Below everything already on the board — where a seat goes when the grid has none free.
+fn under_everything(taken: &[BoardPoint], zones: &[BoardFrame]) -> BoardPoint {
+    let bottom = taken
+        .iter()
+        .map(|at| at.y + CARD_HEIGHT)
+        .chain(zones.iter().map(|frame| frame.y + frame.height))
+        .max()
+        .unwrap_or(BOARD_MARGIN);
+
+    BoardPoint {
+        x: BOARD_MARGIN,
+        y: bottom + GAP,
+    }
+}
+
+/// Where a card that has never been placed goes: the first seat of the flow grid nothing
+/// is standing on, neither a card that already has a place nor a zone.
+///
+/// ⚠️ Not the seat its index in the list gives it. A new note is the most recently
+/// updated, so it arrives at index 0 and was handed seat 0 — which whichever card was laid
+/// out there on the very first read of the board is still sitting on. Two cards, one place.
+///
+/// ⚠️ A rectangle test and not an equality one: a card dragged by hand almost never sits
+/// exactly on a seat, and a card half over one still hides what lands there.
+#[must_use]
+pub fn free_slot(top: i32, taken: &[BoardPoint], zones: &[BoardFrame]) -> BoardPoint {
+    // Each occupant blocks at most the four seats its box can straddle; past that the
+    // board is arranged in a way the grid cannot answer, and the card goes under it all.
+    let limit = (taken.len() + zones.len()) * 4;
+
+    (0..=limit)
+        .map(|index| slot(index, top))
+        .find(|at| {
+            !taken.iter().any(|other| overlaps(*at, card_frame(*other)))
+                && !zones.iter().any(|frame| overlaps(*at, *frame))
         })
-        .collect()
+        .unwrap_or_else(|| under_everything(taken, zones))
 }
 
 /// The surface to pan over: whatever the furthest zone or card reaches, plus a margin, and
@@ -382,12 +440,14 @@ pub fn build<S: std::hash::BuildHasher>(
         .collect();
 
     // A loose note with no stored place is one the geometry pass has not seen yet — it is
-    // put somewhere legible rather than stacked at the origin.
-    let mut spare = 0usize;
+    // put on free ground rather than on top of a card that has one. Same rule as
+    // `store::board::geometry`, which is what will write the place down.
+    let mut standing: Vec<BoardPoint> = loose.iter().filter_map(|entry| entry.position).collect();
     for entry in &mut loose {
         if entry.position.is_none() {
-            entry.position = arrange_loose(spare + 1, fallback_top).pop();
-            spare += 1;
+            let at = free_slot(fallback_top, &standing, &placed);
+            entry.position = Some(at);
+            standing.push(at);
         }
     }
 
@@ -492,6 +552,76 @@ mod tests {
     #[test]
     fn an_empty_board_still_puts_its_loose_cards_somewhere() {
         assert_eq!(loose_top(&[]), BOARD_MARGIN + LOOSE_LABEL);
+    }
+
+    /// ⚠️ The report: a note captured from the clipboard was written under a card that was
+    /// already there, and had to be dragged off to be found.
+    #[test]
+    fn a_card_with_no_place_never_takes_one_that_is_occupied() {
+        let top = loose_top(&[]);
+        let first = slot(0, top);
+
+        assert_eq!(free_slot(top, &[], &[]), first);
+        assert_eq!(free_slot(top, &[first], &[]), slot(1, top));
+    }
+
+    /// A card dragged by hand almost never sits exactly on a seat, and it hides the two it
+    /// straddles just as well as the one it would have sat on.
+    #[test]
+    fn a_seat_half_covered_is_a_seat_taken() {
+        let top = loose_top(&[]);
+        let nudged = BoardPoint {
+            x: BOARD_MARGIN + 20,
+            y: top + 20,
+        };
+
+        let at = free_slot(top, &[nudged], &[]);
+
+        assert!(!overlaps(at, card_frame(nudged)));
+        assert_eq!(at, slot(2, top));
+    }
+
+    #[test]
+    fn a_zone_standing_on_a_seat_takes_it_too() {
+        let top = loose_top(&[]);
+        let over = BoardFrame {
+            x: BOARD_MARGIN,
+            y: top,
+            width: CARD_WIDTH,
+            height: CARD_HEIGHT,
+        };
+
+        assert_eq!(
+            free_slot(top, &[], std::slice::from_ref(&over)),
+            slot(1, top)
+        );
+    }
+
+    /// Holes are filled rather than skipped: the board stays as tight as it was arranged.
+    #[test]
+    fn a_seat_freed_in_the_middle_is_the_next_one_given() {
+        let top = loose_top(&[]);
+        let taken = [slot(0, top), slot(2, top)];
+
+        assert_eq!(free_slot(top, &taken, &[]), slot(1, top));
+    }
+
+    /// With every seat the scan can reach standing on something, the card goes under it all
+    /// rather than on top of one.
+    #[test]
+    fn a_card_with_nowhere_to_sit_goes_below_everything() {
+        let top = loose_top(&[]);
+        let wall = BoardFrame {
+            x: 0,
+            y: top,
+            width: MAX_SIDE,
+            height: MAX_SIDE,
+        };
+
+        let at = free_slot(top, &[], std::slice::from_ref(&wall));
+
+        assert_eq!(at.x, BOARD_MARGIN);
+        assert!(at.y >= wall.y + wall.height);
     }
 
     #[test]

@@ -188,4 +188,37 @@ describe('Arranging the board', () => {
       'EXPLAIN lent sur join',
     );
   });
+
+  /**
+   * ⚠️ The report: a note captured from the clipboard was written under a card that was
+   * already on the board. A note created now is the most recently updated, so it arrives
+   * first in the list and used to be handed the seat its index gave it — seat zero, where
+   * the board's first read had already put another card.
+   */
+  it('puts a note it has never placed on free ground', async () => {
+    await bridge.createNote(draft({ spaceId, title: 'Collé du presse-papiers' }));
+    await openBoard();
+
+    const boxes = await eventually(
+      () => board.looseBoxes(),
+      (loose) => loose.some((card) => card.title === 'Collé du presse-papiers'),
+      'the new card to reach the board',
+    );
+
+    const overlapping = boxes.flatMap((card, index) =>
+      boxes
+        .slice(index + 1)
+        .filter(
+          (other) =>
+            card.left < other.right &&
+            other.left < card.right &&
+            card.top < other.bottom &&
+            other.top < card.bottom,
+        )
+        .map((other) => [card.title, other.title]),
+    );
+
+    expect(boxes.length).toBeGreaterThan(1);
+    expect(overlapping).toEqual([]);
+  });
 });

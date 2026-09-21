@@ -247,6 +247,25 @@ export const board = {
   looseTitles: (): Promise<string[]> =>
     readEach(testid('board-loose-card'), 'text', testid('note-card-title')),
 
+  /** Where the loose cards actually are, so a spec can say whether two share a place. */
+  looseBoxes(): Promise<{ title: string; left: number; top: number; right: number; bottom: number }[]> {
+    return browser.execute(
+      (selector: string, titleSelector: string) =>
+        [...document.querySelectorAll<HTMLElement>(selector)].map((card) => {
+          const box = card.getBoundingClientRect();
+          return {
+            title: (card.querySelector(titleSelector)?.textContent ?? '').trim(),
+            left: box.left,
+            top: box.top,
+            right: box.right,
+            bottom: box.bottom,
+          };
+        }),
+      testid('board-loose-card'),
+      testid('note-card-title'),
+    );
+  },
+
   async zoneCard(folderName: string, title: string) {
     const zone = $(`${testid('board-zone')}[data-folder-id="${await board.folderId(folderName)}"]`);
     const id = await browser.execute(
