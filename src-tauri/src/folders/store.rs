@@ -293,8 +293,25 @@ pub fn file_many(
             ))
             .execute(connection)?;
 
+        // The gesture that filled the zone is the one that should make room in it.
+        if let Some(folder_id) = folder_id {
+            let held = count_filed(connection, folder_id)?;
+            board::grow_to_fit(connection, folder_id, held)?;
+        }
+
         Ok(filed)
     })
+}
+
+/// How many live notes a folder holds, which is what its zone has to be tall enough for.
+fn count_filed(connection: &mut SqliteConnection, folder_id: &str) -> Result<usize, StorageError> {
+    let count: i64 = notes::table
+        .filter(notes::folder_id.eq(folder_id))
+        .filter(notes::deleted_at.is_null())
+        .count()
+        .get_result(connection)?;
+
+    Ok(usize::try_from(count).unwrap_or(0))
 }
 
 /// Puts filed notes back where they were.
@@ -327,6 +344,16 @@ pub fn restore_filings(
             )
             .set(notes::folder_id.eq(filing.folder_id.as_deref()))
             .execute(connection)?;
+        }
+
+        // Undoing puts notes back into zones that may no longer be tall enough for them.
+        for folder_id in filings
+            .iter()
+            .filter_map(|filing| filing.folder_id.as_deref())
+            .collect::<std::collections::BTreeSet<_>>()
+        {
+            let held = count_filed(connection, folder_id)?;
+            board::grow_to_fit(connection, folder_id, held)?;
         }
 
         Ok(restored)
