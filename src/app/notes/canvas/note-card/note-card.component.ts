@@ -36,6 +36,23 @@ const SNIPPET_LINES = 4;
 const MAX_VISIBLE_TAGS = 2;
 const MAX_VISIBLE_ITEMS = 2;
 
+/**
+ * ⚠️ The effect below runs when the card is *rebuilt* too, and a card is rebuilt on every
+ * section change — the first character typed into the search field switches the canvas to
+ * one flat `results` section. Without this guard the card took the keyboard off the field
+ * mid-word.
+ *
+ * The canvas may take the keyboard when it already has it — a card, or any of the controls
+ * one carries — or when nobody does: a destroyed card leaves focus on `<body>`, where
+ * somebody typing leaves it on their field.
+ */
+function canTakeFocus(card: HTMLElement): boolean {
+  const active = document.activeElement;
+  if (active === card) return false;
+
+  return active === null || active === document.body || active.closest('.card-shell') !== null;
+}
+
 @Component({
   selector: 'app-note-card',
   imports: [
@@ -73,7 +90,7 @@ export class NoteCardComponent {
     // Real focus follows the state, or arrow navigation moves an outline without
     // taking the keyboard with it.
     effect(() => {
-      if (this.focused() && document.activeElement !== this.cardButton().nativeElement) {
+      if (this.focused() && canTakeFocus(this.cardButton().nativeElement)) {
         this.cardButton().nativeElement.focus({ preventScroll: false });
       }
     });

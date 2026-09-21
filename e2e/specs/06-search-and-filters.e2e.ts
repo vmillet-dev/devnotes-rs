@@ -1,7 +1,8 @@
 import { $, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
-import { blur, cursorOf, press, reloadCanvas, testid, waitForCanvas } from '../support/app.js';
+import { editor } from '../pageobjects/editor.page.js';
+import { activeTestId, blur, cursorOf, press, reloadCanvas, testid, waitForCanvas } from '../support/app.js';
 import { bridge, draft, homeSpaceId } from '../support/bridge.js';
 
 /**
@@ -66,6 +67,22 @@ describe('Search, filters and facets', () => {
     // Symmetric, because the needle goes through the same fold as the haystack.
     await canvas.search('Dôcker');
     expect(await canvas.titles()).toEqual(['Docker compose']);
+  });
+
+  /**
+   * ⚠️ Opening a note is what arms this: it sets the canvas cursor, and the cards follow
+   * that cursor with the real focus. The first character typed switches the canvas to one
+   * flat section, every card is rebuilt, and the rebuilt one used to grab the keyboard
+   * back out of the field mid-word.
+   */
+  it('keeps the keyboard in the field once a note has been opened', async () => {
+    await canvas.openNote('Docker compose');
+    await editor.close();
+
+    await canvas.search('Docker');
+
+    expect(await activeTestId()).toBe('search-input');
+    await canvas.clearSearch();
   });
 
   it('collapses to a single flat results section while searching', async () => {
