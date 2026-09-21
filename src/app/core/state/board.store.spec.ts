@@ -275,6 +275,51 @@ describe('BoardStore', () => {
       expect(harness.store.zones()[0]?.frame.x).toBe(400);
     });
 
+    /**
+     * ⚠️ The overlay used to be dropped when the **write** returned, and  only
+     * asks: the view still on screen is the one read before the drag, so for a whole round
+     * trip the card was drawn where it came from. It flashed back, then settled.
+     */
+    it('holds the drop until a view comes back carrying it', async () => {
+      const harness = await createStore(
+        new FakeBoardRepository({
+          zones: [fakeZone({ folder: PERF, frame: { x: 16, y: 16, width: 516, height: 200 } })],
+        }),
+      );
+      await onBoard(harness);
+
+      harness.store.moveZone('perf', { x: 400, y: 300, width: 516, height: 200 });
+      await vi.waitFor(() => expect(harness.repository.saved).toHaveLength(1), {
+        timeout: LAYOUT_SAVE_DEBOUNCE_MS * 6,
+      });
+
+      // The write has returned and the reload is still in flight.
+      expect(harness.store.zones()[0]?.frame.x).toBe(400);
+    });
+
+    it('lets go of the drop once the view carries it', async () => {
+      const resting = { x: 16, y: 16, width: 516, height: 200 };
+      const moved = { x: 400, y: 300, width: 516, height: 200 };
+      const harness = await createStore(
+        new FakeBoardRepository({ zones: [fakeZone({ folder: PERF, frame: resting })] }),
+      );
+      await onBoard(harness);
+
+      // ⚠️ The width is what says the reload has actually landed: the frame reads the same
+      // either way while the overlay is still up, so asserting on it would prove nothing.
+      harness.repository.setView({ zones: [fakeZone({ folder: PERF, frame: moved })], width: 1234 });
+      harness.store.moveZone('perf', moved);
+      await vi.waitFor(() => expect(harness.store.width()).toBe(1234), {
+        timeout: LAYOUT_SAVE_DEBOUNCE_MS * 6,
+      });
+
+      // Nothing is covering the view any more: it puts the zone back and the board follows.
+      harness.repository.setView({ zones: [fakeZone({ folder: PERF, frame: resting })] });
+      harness.store.reload();
+
+      await vi.waitFor(() => expect(harness.store.zones()[0]?.frame.x).toBe(16));
+    });
+
     it('keeps the overlay when the write fails, rather than snapping back silently', async () => {
       const harness = await createStore(new FakeBoardRepository({ zones: [fakeZone({ folder: PERF })] }));
       await onBoard(harness);

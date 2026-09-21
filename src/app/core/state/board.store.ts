@@ -58,6 +58,51 @@ function sameStrings(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((value, index) => value === b[index]);
 }
 
+function sameFrame(a: BoardFrame, b: BoardFrame): boolean {
+  return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+}
+
+function samePoint(a: BoardPoint, b: BoardPoint): boolean {
+  return a.x === b.x && a.y === b.y;
+}
+
+/**
+ * What the overlay still has to cover once a view has arrived: a place the view does not
+ * carry yet. One it agrees with is redundant, and letting go of it is what lets the view
+ * move that card again.
+ *
+ * ⚠️ A place the view says nothing about is **kept**. The view a reload answers with is
+ * the board as it was read, and a card it has never heard of — one dropped a moment ago —
+ * is exactly the case the overlay exists for.
+ */
+function stillCovering<T>(
+  staged: ReadonlyMap<string, T>,
+  arrived: ReadonlyMap<string, T>,
+  same: (a: T, b: T) => boolean,
+): ReadonlyMap<string, T> {
+  const next = new Map(staged);
+  for (const [id, value] of staged) {
+    const landed = arrived.get(id);
+    if (landed !== undefined && same(landed, value)) {
+      next.delete(id);
+    }
+  }
+  return next.size === staged.size ? staged : next;
+}
+
+function framesOf(view: BoardView | null): ReadonlyMap<string, BoardFrame> {
+  return new Map((view?.zones ?? []).map((zone) => [zone.folder.id, zone.frame]));
+}
+
+/** Only the loose cards: a filed one flows inside its zone and has no place of its own. */
+function placesOf(view: BoardView | null): ReadonlyMap<string, BoardPoint> {
+  return new Map(
+    (view?.loose ?? []).flatMap((entry) =>
+      entry.position ? [[entry.note.id, entry.position] as const] : [],
+    ),
+  );
+}
+
 /** Exhaustive by construction, like the canvas's: a new field stops this compiling. */
 const SAME: { readonly [K in keyof BoardParams]: (a: BoardParams[K], b: BoardParams[K]) => boolean } = {
   spaceId: Object.is,
@@ -174,12 +219,24 @@ export class BoardStore {
   });
 
   /**
-   * What a gesture has moved but not yet written. ⚠️ Laid over the view rather than
-   * written into it: without this the card snaps back to where the server last saw it for
-   * as long as the save is in flight.
+   * What a gesture has moved and no view has come back with yet. ⚠️ Laid over the view
+   * rather than written into it: without this the card snaps back to where the server last
+   * saw it for as long as the save is in flight.
+   *
+   * ⚠️ And it is let go of when a **view** carries the place, never when the write
+   * returns. `reload()` only asks: the view still being drawn is the one read before the
+   * drag, so clearing on the write uncovered it for a whole round trip — the card flashed
+   * back to where it came from and then settled.
    */
-  private readonly stagedFrames = signal<ReadonlyMap<string, BoardFrame>>(new Map());
-  private readonly stagedCards = signal<ReadonlyMap<string, BoardPoint>>(new Map());
+  private readonly stagedFrames = linkedSignal<BoardView | null, ReadonlyMap<string, BoardFrame>>({
+    source: () => this.view(),
+    computation: (view, previous) => stillCovering(previous?.value ?? new Map(), framesOf(view), sameFrame),
+  });
+
+  private readonly stagedCards = linkedSignal<BoardView | null, ReadonlyMap<string, BoardPoint>>({
+    source: () => this.view(),
+    computation: (view, previous) => stillCovering(previous?.value ?? new Map(), placesOf(view), samePoint),
+  });
 
   readonly zones = computed<readonly BoardZone[]>(() => {
     const staged = this.stagedFrames();
@@ -317,12 +374,11 @@ export class BoardStore {
       this.repository.saveLayout(zones, cards),
     );
 
-    // ⚠️ Cleared only once it is stored: dropping the overlay on a failure would snap
-    // every card back with nothing on screen saying why.
-    if (written !== null) {
-      this.stagedFrames.set(new Map());
-      this.stagedCards.set(new Map());
-      this.reload();
-    }
+    // ⚠️ The overlay is dropped on neither outcome. A failure has to keep it, or every
+    // card snaps back with nothing on screen saying why; a success has to keep it until
+    // the reload lands, which is the whole of this fix.
+    if (written === null) return;
+
+    this.reload();
   }
 }
