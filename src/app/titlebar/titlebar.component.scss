@@ -68,6 +68,8 @@
   color: var(--text-2);
   cursor: pointer;
   letter-spacing: 0.3px;
+
+  @include focus-ring;
 }
 
 .locale-option:hover {

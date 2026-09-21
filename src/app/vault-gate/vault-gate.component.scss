@@ -78,6 +78,8 @@
   text-align: center;
   cursor: pointer;
 
+  @include focus-ring;
+
   &:disabled {
     opacity: 0.5;
     cursor: default;
