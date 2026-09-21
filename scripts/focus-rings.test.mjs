@@ -52,3 +52,83 @@ describe('every control says where the keyboard is', () => {
     });
   }
 });
+
+/**
+ * The other half of the same omission. A ring nobody drew and a ring nobody left room for
+ * look the same to the keyboard, and both are valid CSS.
+ *
+ * ⚠️ A box that scrolls on one axis scrolls on the other: `overflow-x: auto` makes the
+ * used value of `overflow-y` `auto` too — there is no scrolling sideways while
+ * overflowing upwards — so a horizontal rail of pills clips their rings flat against its
+ * own edges. The tag rail did exactly that (#279).
+ */
+const ROOM = Number(
+  /@mixin ring-room\(\$room: (\d+)px\)/.exec(readFileSync('src/styles/_mixins.scss', 'utf8'))?.[1],
+);
+
+/** The `{ … }` the declaration at `at` sits in, nested blocks and all. */
+function blockAround(source, at) {
+  let depth = 0;
+  let open = -1;
+  for (let index = at; index >= 0; index -= 1) {
+    if (source[index] === '}') depth += 1;
+    else if (source[index] === '{') {
+      if (depth === 0) {
+        open = index;
+        break;
+      }
+      depth -= 1;
+    }
+  }
+  if (open < 0) return '';
+
+  depth = 0;
+  for (let index = open; index < source.length; index += 1) {
+    if (source[index] === '{') depth += 1;
+    else if (source[index] === '}') {
+      depth -= 1;
+      if (depth === 0) return source.slice(open, index);
+    }
+  }
+  return source.slice(open);
+}
+
+/** Block-axis padding: the longhand if there is one, else the shorthand's first value. */
+function blockPadding(block) {
+  const longhand = /padding-(?:block|top):\s*(\d+(?:\.\d+)?)px/.exec(block);
+  if (longhand) return Number(longhand[1]);
+
+  const shorthand = /padding:\s*([^;]+);/.exec(block);
+  if (!shorthand) return 0;
+
+  const values = shorthand[1].trim().split(/\s+/);
+  const top = /^(\d+(?:\.\d+)?)px$/.exec(values[0] ?? '');
+  return top ? Number(top[1]) : 0;
+}
+
+describe('a row that scrolls leaves room for the ring', () => {
+  const scrollers = stylesheets(ROOT).flatMap((path) => {
+    const source = readFileSync(path, 'utf8');
+    return [...source.matchAll(/overflow-x:\s*(?:auto|scroll)/g)].map((match) => ({
+      path,
+      block: blockAround(source, match.index),
+    }));
+  });
+
+  it('reads the room out of the mixin', () => {
+    assert.ok(ROOM >= 4, `ring-room defaults to ${ROOM}px, which is thinner than the ring itself`);
+  });
+
+  it('finds the rows that scroll', () => {
+    assert.ok(scrollers.length >= 2, `only ${scrollers.length} rows scroll sideways`);
+  });
+
+  for (const { path, block } of scrollers) {
+    it(path, () => {
+      assert.ok(
+        block.includes('@include ring-room') || blockPadding(block) >= ROOM,
+        `${path} scrolls sideways and clips the focus ring of whatever is in it: add \`@include ring-room;\``,
+      );
+    });
+  }
+});

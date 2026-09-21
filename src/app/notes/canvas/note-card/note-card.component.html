@@ -7,8 +7,9 @@
   [class.checked]="checked()"
   [class.checklist]="isChecklist()"
 >
-  <!-- ⚠️ `role="status"` and real words: the red border alone says something is wrong,
-       not that one more press trashes the note. -->
+  <!-- ⚠️ `role="status"` and real words, and **both** keys: the border says something
+       is wrong, the first half says what finishes it, and the second half is the way out —
+       which was there from the start and which nothing on screen mentioned (#281). -->
   @if (armed()) {
     <p class="card-arming" data-testid="note-card-arming" role="status">
       {{ 'notes.deleteArmed' | transloco }}

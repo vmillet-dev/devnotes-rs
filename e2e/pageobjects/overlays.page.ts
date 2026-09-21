@@ -339,8 +339,19 @@ export const board = {
    * WebDriver actions. So this proves the wiring — grip to store to command to database —
    * and not the WebView's own pointer capture, which the unit specs cover instead.
    */
-  /** Drags a loose card until it lands inside the given zone. */
+  /** Drags a loose card into a zone and waits for the write to have landed. */
   async dragCardInto(noteId: string, folderId: string): Promise<void> {
+    await board.dropCardInto(noteId, folderId);
+    // ⚠️ A duration, deliberately: what the callers of this one go on to read is the
+    // database, and no condition in the page says the debounced write has reached it.
+    await browser.pause(1200);
+  },
+
+  /**
+   * The gesture alone. ⚠️ Nothing is waited on: a spec using this is asking what the
+   * board draws **before** the round trip, which is what the staged overlay is for.
+   */
+  async dropCardInto(noteId: string, folderId: string): Promise<void> {
     await browser.execute(
       (cardSelector: string, zoneSelector: string, gripSelector: string) => {
         const card = document.querySelector(cardSelector);
@@ -377,7 +388,18 @@ export const board = {
       `${testid('board-zone')}[data-folder-id="${folderId}"]`,
       board.cardGrip(noteId),
     );
-    await browser.pause(1200);
+  },
+
+  /** Which zone a card is drawn in right now, or `null` for the free background. */
+  holderOf(noteId: string): Promise<string | null> {
+    return browser.execute(
+      (cardSelector: string, zoneSelector: string) => {
+        const card = document.querySelector(cardSelector);
+        return card === null ? null : (card.closest(zoneSelector)?.getAttribute('data-folder-id') ?? null);
+      },
+      `${testid('note-card')}[data-note-id="${noteId}"]`,
+      testid('board-zone'),
+    );
   },
 
   async drag(gripSelector: string, to: { dx: number; dy: number }): Promise<void> {

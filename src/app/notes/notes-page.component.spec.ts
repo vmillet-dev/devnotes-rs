@@ -1074,11 +1074,30 @@ describe('NotesPageComponent', () => {
     });
 
     it('opens the highlighted note in the editor instead, closing the palette', async () => {
-      child(QuickPaletteComponent).openRequested.emit('note-42');
+      const note = canvas.visibleNotes()[0];
+
+      child(QuickPaletteComponent).openRequested.emit(note);
       await fixture.whenStable();
 
       expect(palette.isOpen()).toBe(false);
-      expect(store.selectedNoteId()).toBe('note-42');
+      expect(store.selectedNoteId()).toBe(note.id);
+    });
+
+    /**
+     * ⚠️ The palette queries every space and ignores the canvas filters, so its results
+     * routinely name a note no view holds. The page used to hand over the id, `find`
+     * ended at the canvas view and the board view, and the editor opened onto `null`:
+     * the palette closed and nothing happened (#280).
+     */
+    it('opens one no view is holding, which is what a filter makes of a result', async () => {
+      const hidden = createNote({ id: 'hidden-note', title: 'Hidden by a filter' });
+      expect(canvas.visibleNotes().map((note) => note.id)).not.toContain('hidden-note');
+
+      child(QuickPaletteComponent).openRequested.emit(hidden);
+      await fixture.whenStable();
+
+      expect(store.selectedNoteId()).toBe('hidden-note');
+      expect(store.selectedNote()?.title).toBe('Hidden by a filter');
     });
 
     it('sends a snippet with fields through the form before copying it', async () => {

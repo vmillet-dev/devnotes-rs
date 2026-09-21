@@ -76,6 +76,31 @@ describe('The quick-paste palette', () => {
   });
 
   /**
+   * ⚠️ The palette queries every space and ignores the canvas filters, deliberately — and
+   * opening one of its results used to go back through the canvas view to resolve the id.
+   * With a filter on, that resolved to nothing: the palette closed onto an editor that
+   * never opened, and nothing said why (#280).
+   */
+  it('opens a result the canvas filters are hiding', async () => {
+    await press('Escape');
+    await canvas.search('Unrelated note');
+    await canvas.waitForNoCard('Reset the dev database');
+
+    await emitGlobalAction('palette');
+    await palette.input().waitForExist({ timeout: 10_000 });
+    await palette.type('reset');
+    await press('Enter');
+
+    expect(await editor.isOpen()).toBe(true);
+    expect(await editor.title()).toBe('Reset the dev database');
+
+    await editor.close();
+    // The filter is the user's and the palette does not touch it.
+    expect(await canvas.searchQuery()).toBe('Unrelated note');
+    await canvas.clearSearch();
+  });
+
+  /**
    * ⚠️ The toast itself is out of reach — it is drawn by the operating system, after the
    * window has gone, and this run shares one window with every file after it. What the suite
    * can prove is the half that fails silently: a capability missing from

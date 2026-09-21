@@ -1,3 +1,5 @@
+@use 'mixins' as *;
+
 .tag-rail {
   display: flex;
   align-items: center;
@@ -11,6 +13,8 @@
 // `margin-left: auto` had no free space left to claim once the tags overflowed, and it
 // followed them out of the viewport.
 .tag-rail-scroll {
+  @include ring-room;
+
   display: flex;
   align-items: center;
   gap: 7px;
