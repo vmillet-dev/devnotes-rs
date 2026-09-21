@@ -203,6 +203,25 @@ describe('Arranging the board', () => {
   });
 
   /**
+   * ⚠️ A frame is computed once, on the board's first read, and never again — so a card
+   * filed into a zone that was already full flowed out of sight behind its scrollbar.
+   */
+  it('makes room in a zone for the card filed into it', async () => {
+    for (const title of ['Index manquant', 'Vacuum nocturne', 'Plan de requête']) {
+      await bridge.fileNotes([(await bridge.createNote(draft({ spaceId, title }))).id], perfId);
+    }
+    await openBoard();
+
+    expect(
+      await eventually(
+        () => board.zoneHoldsItsCards(perfId),
+        (holds) => holds,
+        'the zone to open far enough for what was filed into it',
+      ),
+    ).toBe(true);
+  });
+
+  /**
    * ⚠️ The report: a note captured from the clipboard was written under a card that was
    * already on the board. A note created now is the most recently updated, so it arrives
    * first in the list and used to be handed the seat its index gave it — seat zero, where

@@ -2,7 +2,16 @@ import { $, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
-import { activeTestId, blur, cursorOf, press, reloadCanvas, testid, waitForCanvas } from '../support/app.js';
+import {
+  activeTestId,
+  blur,
+  cursorOf,
+  placeholderFitsAtItsFloor,
+  press,
+  reloadCanvas,
+  testid,
+  waitForCanvas,
+} from '../support/app.js';
 import { bridge, draft, homeSpaceId } from '../support/bridge.js';
 
 /**
@@ -53,6 +62,11 @@ describe('Search, filters and facets', () => {
 
     expect(await canvas.searchBorderColour()).not.toBe(resting);
     await canvas.clearSearch();
+  });
+
+  /** ⚠️ At the floor, which is the width a wrapping toolbar leaves it most of the time. */
+  it('says what it searches without being cut off', async () => {
+    expect(await placeholderFitsAtItsFloor(testid('search-input'), '.search-bar')).toBe(true);
   });
 
   it('matches on the title, past the debounce', async () => {

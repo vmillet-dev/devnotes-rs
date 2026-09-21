@@ -343,6 +343,40 @@ export async function boxOf(selector: string): Promise<{ left: number; top: numb
   }, selector);
 }
 
+/**
+ * Whether a field's placeholder fits at the narrowest its box can get — its `min-width`,
+ * which is what a wrapping toolbar leaves it most of the time. A runner with a wide window
+ * would otherwise measure a width nobody has.
+ *
+ * ⚠️ Measured by putting the placeholder in as a value and reading the scroll width: there
+ * is no other way to ask a browser how wide a placeholder renders. Everything touched is
+ * put back, and no event is dispatched, so the component never hears about it.
+ */
+export async function placeholderFitsAtItsFloor(field: string, box: string): Promise<boolean> {
+  return browser.execute(
+    (fieldSelector: string, boxSelector: string) => {
+      const input = document.querySelector(fieldSelector) as HTMLInputElement | null;
+      const around = document.querySelector(boxSelector) as HTMLElement | null;
+      if (!input || !around) throw new Error('nothing to measure');
+
+      const floor = getComputedStyle(around).minWidth;
+      const held = { value: input.value, width: around.style.width, max: around.style.maxWidth };
+
+      around.style.width = floor;
+      around.style.maxWidth = floor;
+      input.value = input.placeholder;
+      const fits = input.scrollWidth <= input.clientWidth;
+
+      input.value = held.value;
+      around.style.width = held.width;
+      around.style.maxWidth = held.max;
+      return fits;
+    },
+    field,
+    box,
+  );
+}
+
 /** How far a box stops short of the bottom of the window — negative when it runs past. */
 export async function bottomGapOf(selector: string): Promise<number> {
   return browser.execute((sel: string) => {

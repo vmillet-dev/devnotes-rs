@@ -244,6 +244,23 @@ export const board = {
     );
   },
 
+  /** Whether every card in a zone is drawn inside the zone's own box, none cut off. */
+  zoneHoldsItsCards(folderId: string): Promise<boolean> {
+    return browser.execute(
+      (zoneSelector: string, cardSelector: string) => {
+        const zone = document.querySelector(zoneSelector);
+        if (!zone) throw new Error('no zone at ' + zoneSelector);
+
+        const box = zone.getBoundingClientRect();
+        return [...zone.querySelectorAll(cardSelector)].every(
+          (card) => card.getBoundingClientRect().bottom <= box.bottom + 1,
+        );
+      },
+      `${testid('board-zone')}[data-folder-id="${folderId}"]`,
+      testid('note-card'),
+    );
+  },
+
   looseTitles: (): Promise<string[]> =>
     readEach(testid('board-loose-card'), 'text', testid('note-card-title')),
 
