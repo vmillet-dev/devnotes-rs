@@ -3,8 +3,13 @@
  * dialog Escape reaches, and no stylesheet carries a modal `z-index`. The banners of
  * `layout/` sit at 80 and must stay above every modal — they are triggered from inside
  * one — hence the base well below it.
+ *
+ * ⚠️ `app` is the About menu's four help panels, and it sits **under** the editor. A
+ * help panel covers the whole page, so nothing on the canvas can be reached while one is
+ * up — except through a global shortcut, which comes from outside the application
+ * altogether. Opening a note from the palette then drew it behind the help.
  */
-const LAYERS = ['editor', 'app', 'settings', 'update', 'palette', 'fields', 'zoom', 'passphrase'] as const;
+const LAYERS = ['app', 'editor', 'settings', 'update', 'palette', 'fields', 'zoom', 'passphrase'] as const;
 
 export type DialogLayer = (typeof LAYERS)[number];
 

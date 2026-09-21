@@ -366,6 +366,31 @@ export async function placeholderFitsAtItsFloor(field: string, box: string): Pro
   );
 }
 
+/** How far a box stops short of the bottom of the window — negative when it runs past. */
+export async function bottomGapOf(selector: string): Promise<number> {
+  return browser.execute((sel: string) => {
+    const element = document.querySelector(sel);
+    if (!element) throw new Error('no element at ' + sel);
+    return Math.round(window.innerHeight - element.getBoundingClientRect().bottom);
+  }, selector);
+}
+
+/**
+ * Whether what is drawn at the middle of a box is that box, rather than something over
+ * it. ⚠️ Asked of the painting and not of a `z-index`: stacking contexts make the number
+ * on its own say nothing.
+ */
+export async function isInFront(selector: string): Promise<boolean> {
+  return browser.execute((sel: string) => {
+    const element = document.querySelector(sel);
+    if (!element) throw new Error('no element at ' + sel);
+
+    const box = element.getBoundingClientRect();
+    const painted = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+    return painted !== null && element.contains(painted);
+  }, selector);
+}
+
 /** Which control really holds the keyboard, by its test id — `null` for anything else. */
 export async function activeTestId(): Promise<string | null> {
   return browser.execute(() => document.activeElement?.getAttribute('data-testid') ?? null);

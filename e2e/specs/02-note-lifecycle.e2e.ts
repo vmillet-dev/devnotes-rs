@@ -2,7 +2,7 @@ import { expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
-import { reopenSession } from '../support/app.js';
+import { bottomGapOf, reopenSession, testid } from '../support/app.js';
 import { bridge, query } from '../support/bridge.js';
 
 /**
@@ -73,6 +73,15 @@ describe('Creating a note, and finding it again', () => {
     expect(await editor.isOpen()).toBe(true);
     await editor.close();
     expect((await bridge.queryNotes(query())).matched).toBe(corpusBefore + 1);
+  });
+
+  /**
+   * ⚠️ It used to be the last child of the scrolling canvas, so with a handful of notes
+   * it floated in the middle of the window and with hundreds it was off the end of the
+   * scroll. A legend belongs on the edge.
+   */
+  it('keeps the keyboard legend on the bottom edge whatever is above it', async () => {
+    expect(await bottomGapOf(testid('canvas-keyboard-hint'))).toBeLessThanOrEqual(1);
   });
 
   it('reads the note back from the database on a fresh front end', async () => {
