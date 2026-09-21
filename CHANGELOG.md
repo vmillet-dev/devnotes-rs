@@ -12,6 +12,27 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [0.3.3] - 2026-09-21
+
+### 🔧 Changed
+
+- Say on the desktop that the palette copied something (#292)
+
+### 🐛 Fixed
+
+- Remove the no-folder count rather than move it again (#296)
+- Let Escape take the note back while the bar is still offering (#294)
+- Make Tab an arrow in the palette, and hold the focus in the field (#288)
+- Count the columns a zone actually flows (#291)
+- Stage which folder a drop put a card in, not only where (#290)
+- Open a palette result the canvas is not holding (#289)
+- Say on the card how to call an armed deletion off (#287)
+- Leave the focus ring room inside the rail that scrolls (#286)
+
+### 🧰 Under the hood
+
+- Adding a language is five edits, and one of them no type catches (#278)
+
 ## [0.3.2] - 2026-09-21
 
 ### 🐛 Fixed
