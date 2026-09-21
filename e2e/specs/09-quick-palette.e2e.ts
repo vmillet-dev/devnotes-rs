@@ -3,7 +3,8 @@ import { browser, expect } from '@wdio/globals';
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
 import { fieldsForm, palette } from '../pageobjects/overlays.page.js';
-import { emitGlobalAction, press, reloadCanvas } from '../support/app.js';
+import { aboutMenu } from '../pageobjects/titlebar.page.js';
+import { emitGlobalAction, isInFront, press, reloadCanvas, testid } from '../support/app.js';
 import { bridge, draft, homeSpaceId } from '../support/bridge.js';
 
 /**
@@ -106,6 +107,27 @@ describe('The quick-paste palette', () => {
     expect(await editor.isOpen()).toBe(true);
     expect(await editor.title()).toBe('Reset the dev database');
     await editor.close();
+  });
+
+  /**
+   * ⚠️ The one way to a note while a help panel is up: the panel covers the whole page,
+   * and a global shortcut comes from outside the application. The note used to open
+   * behind it — `editor` was the bottom rung and `app` the one above.
+   */
+  it('opens a note in front of a help panel that was left open', async () => {
+    await aboutMenu.openGettingStarted();
+
+    await emitGlobalAction('palette');
+    await palette.input().waitForExist({ timeout: 10_000 });
+    await palette.type('reset');
+    await press('Enter');
+
+    await editor.title();
+    expect(await isInFront(testid('editor-title'))).toBe(true);
+
+    await editor.close();
+    await browser.keys(['Escape']);
+    await aboutMenu.gettingStarted().waitForExist({ reverse: true, timeout: 10_000 });
   });
 
   it('closes on Escape', async () => {
