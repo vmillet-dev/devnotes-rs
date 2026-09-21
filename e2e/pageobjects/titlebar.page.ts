@@ -126,6 +126,17 @@ export const variables = {
   },
 };
 
+/** The "À propos" menu in the titlebar, and the help panel it opens. */
+export const aboutMenu = {
+  async openGettingStarted(): Promise<void> {
+    await $(testid('about-open')).click();
+    await $(testid('about-getting-started')).click();
+    await $(testid('getting-started')).waitForExist({ timeout: 10_000 });
+  },
+
+  gettingStarted: () => $(testid('getting-started')),
+};
+
 export const banners = {
   status: () => $(testid('status-toast')),
   error: () => $(testid('error-banner')),

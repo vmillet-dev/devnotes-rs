@@ -3,6 +3,7 @@
     appMenuAnchor
     type="button"
     class="about-trigger"
+    data-testid="about-open"
     aria-haspopup="menu"
     [attr.aria-expanded]="menu.open()"
     (click)="menu.toggle()"
@@ -57,6 +58,7 @@
         type="button"
         role="menuitem"
         class="about-option"
+        data-testid="about-getting-started"
         (click)="openPanel('gettingStarted')"
       >
         {{ 'about.gettingStarted' | transloco }}
