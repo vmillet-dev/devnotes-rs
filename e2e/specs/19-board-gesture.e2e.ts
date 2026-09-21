@@ -17,6 +17,9 @@ import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
  * ⚠️ A space of its own: eighteen files run before this one and leave notes in the home
  * space, so "the loose cards are exactly these" would be a claim about the whole corpus.
  */
+
+/** `folders::board::CARD_HEIGHT`, which `scripts/board-geometry.test.mjs` holds to the CSS. */
+const CARD_HEIGHT = 150;
 describe('Arranging the board', () => {
   let homeId = '';
   let spaceId = '';
@@ -24,6 +27,19 @@ describe('Arranging the board', () => {
   let migrationsId = '';
   let looseId = '';
   let filedId = '';
+
+  /** The frame as the database holds it, which is not what an overlay is drawing. */
+  async function storedFrame(folderId: string) {
+    const view = await bridge.boardView({
+      spaceId,
+      search: '',
+      filter: 'all',
+      tags: [],
+      languages: [],
+      now: new Date().toISOString(),
+    });
+    return view.zones.find((zone) => zone.folder.id === folderId)?.frame ?? null;
+  }
 
   async function openBoard(): Promise<void> {
     await reloadCanvas();
@@ -252,5 +268,40 @@ describe('Arranging the board', () => {
 
     expect(boxes.length).toBeGreaterThan(1);
     expect(overlapping).toEqual([]);
+  });
+
+  /**
+   * ⚠️ `columns_in` used to take a scrollbar off the width that `.zone-body` was not
+   * showing. A zone dragged a little narrower than nominal still flowed two cards across
+   * and was told it held one, so the next card filed in bought a whole extra row — a band
+   * of empty board under the cards, which is what was reported (#284).
+   */
+  it('adds one row and not two to a zone dragged narrower than nominal', async () => {
+    const rapports = (await bridge.createFolder({ spaceId, name: 'Rapports' })).id;
+    for (const title of ['Coûts mensuels', 'Taux de conversion']) {
+      await bridge.fileNotes([(await bridge.createNote(draft({ spaceId, title }))).id], rapports);
+    }
+    await openBoard();
+
+    const nominal = Number.parseInt((await board.frameOf(rapports)).width, 10);
+    await board.drag(board.zoneResize(rapports), { dx: -14, dy: 0 });
+    const shaved = await eventually(
+      () => storedFrame(rapports),
+      (frame) => frame !== null && frame.width < nominal,
+      'the narrower zone to reach the database',
+    );
+
+    const third = (await bridge.createNote(draft({ spaceId, title: 'Panier moyen' }))).id;
+    await bridge.fileNotes([third], rapports);
+    await openBoard();
+    await eventually(
+      () => board.zoneHoldsItsCards(rapports),
+      (holds) => holds,
+      'the zone to open far enough for what was filed into it',
+    );
+
+    // Two cards still fit across at this width, so three of them are two rows.
+    expect(shaved?.width).toBeGreaterThan(0);
+    expect(await board.zoneSlack(rapports)).toBeLessThan(CARD_HEIGHT);
   });
 });

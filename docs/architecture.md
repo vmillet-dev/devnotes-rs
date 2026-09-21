@@ -897,6 +897,20 @@ ended up out of sight behind its scrollbar. Rows are counted against the zone's 
 Shrinking was refused: it would move the board under the pointer every time a card is taken
 out, and a zone somebody stretched is a zone they chose the size of.
 
+⚠️ **`columns_in` predicts the browser, so it measures the zone the browser’s way**: the
+hairline off, the padding off, the `SCROLLBAR` allowance **not** off. That allowance belongs
+to `default_zone_width`, which reserves it so the nominal zone still shows two cards across
+when it is too short for them; subtracted from the count as well it made Rust disagree with
+the flow. A zone dragged 14px narrower than nominal was told it held one column while
+`.zone-body` kept flowing two, and the next card filed in bought a second, empty row — 162px
+of dotted board under the cards (#284). Four numbers now live on both sides of that
+prediction — the card’s width and height, the gap, the zone’s padding and its hairline —
+and `scripts/board-geometry.test.mjs` reads them out of the stylesheets and out of `board.rs`
+and fails when one moves alone, because nothing else would: both sides are valid on their
+own and the symptom is a band of empty board. It pins `GRID_PX` against the dotted
+background it snaps to for the same reason. ⚠️ `ZONE_HEADER` is **not** in it and cannot be:
+the header’s height is its padding plus wherever the text lands, and no stylesheet says so.
+
 ⚠️ The "no folder · N" label is a chip anchored to the board's **corner**, outside the surface
 that pans and the box that scrolls. It used to be drawn above whichever loose card was
 highest, which put it over a zone as soon as one was dragged up. Loose cards stopped being a

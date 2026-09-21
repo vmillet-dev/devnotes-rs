@@ -29,6 +29,9 @@ pub const CARD_WIDTH: i32 = 240;
 pub const CARD_HEIGHT: i32 = 150;
 pub const GAP: i32 = 12;
 pub const ZONE_PADDING: i32 = 12;
+/// The zone's own hairline. ⚠️ `box-sizing` is `border-box`, so it comes off the width
+/// before anything flows inside — which is what [`columns_in`] got wrong.
+pub const ZONE_BORDER: i32 = 1;
 /// The title, the count and the ⋯ trigger.
 pub const ZONE_HEADER: i32 = 38;
 /// How many cards a freshly drawn zone is wide.
@@ -181,16 +184,25 @@ pub fn zone_at(frames: &[(String, BoardFrame)], point: BoardPoint) -> Option<Str
         .map(|(id, _)| id.clone())
 }
 
-/// The width every zone gets on its first layout: [`ZONE_COLUMNS`] cards and the gaps.
+/// The width every zone gets on its first layout: [`ZONE_COLUMNS`] cards, the gaps, and
+/// room for the scrollbar that a zone too short for its cards will show.
 #[must_use]
 pub fn default_zone_width() -> i32 {
     ZONE_PADDING * 2 + ZONE_COLUMNS * CARD_WIDTH + (ZONE_COLUMNS - 1) * GAP + SCROLLBAR
 }
 
 /// How many cards fit across a zone of this width — one at the very least.
+///
+/// ⚠️ Exactly what `.zone-body` will do with that width, and nothing more cautious: the
+/// hairline and the padding come off, the [`SCROLLBAR`] allowance does **not**. That
+/// allowance belongs to [`default_zone_width`], which reserves it so the nominal zone still
+/// shows two cards across when it is too short for them. Subtracted here it made the count
+/// disagree with the flow: a zone shaved 14px narrower than nominal still laid two cards
+/// across and was told it held one, so the next card filed into it bought a whole extra row
+/// and left 162px of empty board under the cards (#284).
 #[must_use]
 pub fn columns_in(width: i32) -> i32 {
-    let inner = width - ZONE_PADDING * 2 - SCROLLBAR;
+    let inner = width - ZONE_BORDER * 2 - ZONE_PADDING * 2;
     ((inner + GAP) / (CARD_WIDTH + GAP)).max(1)
 }
 
@@ -503,6 +515,29 @@ mod tests {
 
         assert_eq!(two_rows - one_row, CARD_HEIGHT + GAP);
         assert_eq!(default_zone_height(4), two_rows);
+    }
+
+    /// ⚠️ The report: a zone dragged 14px narrower than nominal still flows two cards
+    /// across — `box-sizing` is `border-box`, and no scrollbar is showing once the zone is
+    /// tall enough — and the count said one, so a third note bought a second empty row.
+    #[test]
+    fn a_zone_shaved_narrower_than_nominal_still_fits_two_across() {
+        let shaved = default_zone_width() - 14;
+
+        assert_eq!(columns_in(shaved), 2);
+        assert_eq!(
+            zone_height(3, columns_in(shaved)),
+            zone_height(3, ZONE_COLUMNS)
+        );
+    }
+
+    /// The narrowest width that still flows two, and the widest that does not.
+    #[test]
+    fn the_count_turns_over_where_the_flow_does() {
+        let two = ZONE_BORDER * 2 + ZONE_PADDING * 2 + CARD_WIDTH * 2 + GAP;
+
+        assert_eq!(columns_in(two), 2);
+        assert_eq!(columns_in(two - 1), 1);
     }
 
     /// ⚠️ A zone widened by hand fits more across, and growing it by the nominal two

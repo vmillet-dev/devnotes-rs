@@ -678,6 +678,42 @@ mod board {
         assert_eq!(after.width, before.width, "the width must not move");
     }
 
+    /// ⚠️ The report, measured in the reporter's own library: a zone dragged 14px
+    /// narrower than nominal, two notes in it, 536px tall — which is three rows of one card.
+    /// `columns_in` subtracted a scrollbar that was not there, halved the count, and the next
+    /// card filed in bought a second empty row while the browser kept flowing two across.
+    #[test]
+    fn filing_into_a_zone_shaved_narrower_than_nominal_adds_one_row_and_not_two() {
+        let mut connection = open_in_memory().unwrap();
+        let sql = space(&mut connection, "SQL");
+        let perf = create(&mut connection, &sql, "Perf", t0()).unwrap();
+        view(&mut connection, &request(&sql));
+
+        let shaved = BoardFrame {
+            x: 0,
+            y: 40,
+            width: board::default_zone_width() - 14,
+            height: board::zone_height(2, 2),
+        };
+        connection
+            .transaction(|connection, _vault| geometry::set_frame(connection, &perf.id, shaved))
+            .unwrap();
+
+        let notes: Vec<String> = ["a", "b", "c"]
+            .iter()
+            .map(|title| titled(&mut connection, &sql, title).id)
+            .collect();
+        file_many(&mut connection, &notes, Some(&perf.id), t1()).unwrap();
+
+        let after = view(&mut connection, &request(&sql)).zones[0].frame;
+        assert_eq!(after.width, shaved.width, "the width must not move");
+        assert_eq!(
+            after.height,
+            board::zone_height(3, 2),
+            "three cards two across are two rows, not three"
+        );
+    }
+
     /// ⚠️ Grow only: shrinking would move the board under the pointer every time a card
     /// is taken out, and a zone somebody stretched is a zone they chose the size of.
     #[test]

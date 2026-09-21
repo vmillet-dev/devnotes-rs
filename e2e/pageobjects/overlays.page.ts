@@ -245,6 +245,29 @@ export const board = {
   },
 
   /** Whether every card in a zone is drawn inside the zone's own box, none cut off. */
+  /**
+   * The empty board left under the lowest card in a zone. ⚠️ A whole card’s worth of it
+   * is the symptom of the count and the flow disagreeing: Rust made room for a row the
+   * browser never used (#284).
+   */
+  zoneSlack(folderId: string): Promise<number> {
+    return browser.execute(
+      (zoneSelector: string, cardSelector: string) => {
+        const zone = document.querySelector(zoneSelector);
+        if (!zone) throw new Error('no zone at ' + zoneSelector);
+
+        const box = zone.getBoundingClientRect();
+        const lowest = [...zone.querySelectorAll(cardSelector)].reduce(
+          (bottom, card) => Math.max(bottom, card.getBoundingClientRect().bottom),
+          box.top,
+        );
+        return Math.round(box.bottom - lowest);
+      },
+      `${testid('board-zone')}[data-folder-id="${folderId}"]`,
+      testid('note-card'),
+    );
+  },
+
   zoneHoldsItsCards(folderId: string): Promise<boolean> {
     return browser.execute(
       (zoneSelector: string, cardSelector: string) => {
