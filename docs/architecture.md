@@ -360,12 +360,16 @@ that imports highlight.js.
   to colour, so it is only escaped. The discipline is what keeps the cost legible: the six
   compiled languages added in v0.1.4 weigh 5.9 kB over the wire, all of it in the lazy
   notes-page chunk, which is where the viewer already lived.
-- **Adding a language is four edits and no migration.** A variant in `closed_enum!`
-  (`notes/language.rs`), a grammar in `GRAMMARS`, a label in `LANGUAGE_LABELS`, and
-  `npm run bindings`. The column stores the literal and carries no `CHECK`, so nothing on
-  disk changes. Three `Record<LanguageTag, …>` tables — the grammars, the labels and the
-  highlighter spec's samples — are exhaustive by type, so a variant added in Rust stops the
-  front end compiling until each has an answer for it. A detection heuristic in
+- **Adding a language is five edits and no migration.** A variant in `closed_enum!`
+  (`notes/language.rs`), a grammar in `GRAMMARS`, a label in `LANGUAGE_LABELS`, a
+  `.lang-*` rule in `language-badge.component.scss`, and `npm run bindings`. The column
+  stores the literal and carries no `CHECK`, so nothing on disk changes. Three
+  `Record<LanguageTag, …>` tables — the grammars, the labels and the highlighter spec's
+  samples — are exhaustive by type, so a variant added in Rust stops the front end compiling
+  until each has an answer for it. ⚠️ The badge rule is the one edit **no type can catch**: a
+  format with no `.lang-*` is valid CSS and simply draws bare text, which is how six of the
+  nineteen ended up with no badge at all. `scripts/language-hues.test.mjs` is what catches it
+  now, by reading the enum and the stylesheet off disk. A detection heuristic in
   `language::from_content` is optional, but the **order** is not: the compiled languages are
   tried before TypeScript and JavaScript, which claim `=>` and `const` and would otherwise
   take a Rust match arm or a C# lambda for their own; PHP is tried before the markup check,
@@ -1858,7 +1862,8 @@ variant added in Rust breaks the assignment at compile time instead of throwing 
 The known list is `notes/language.rs` (`Language`), aliased by `core/model/language.model.ts`
 (`LanguageTag` + `LANGUAGE_LABELS`). Adding a language means editing both, plus a `.lang-*`
 rule in `language-badge.component.scss` and, if it should be coloured, an entry in `GRAMMARS`.
-Nothing compares the two lists, so a drift only surfaces at runtime as a fallback to `txt`.
+The typed tables drift no further than the next build; the stylesheet is the one that can, and
+`scripts/language-hues.test.mjs` compares it against the enum for exactly that reason.
 
 **The language is detected, not asked for.** `notes/language.rs` reads the content and returns
 one of `LANGUAGES`; without it every note is born `txt` and the format rail only serves people
