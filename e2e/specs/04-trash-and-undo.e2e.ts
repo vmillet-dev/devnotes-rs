@@ -90,6 +90,26 @@ describe('Deleting a note, and taking it back', () => {
     await press('Escape');
   });
 
+  /**
+   * ⚠️ The report: the card says "Suppr. à nouveau · Échap pour annuler", the second
+   * Suppr sends the note to the trash, and the key the card had just taught meant nothing
+   * one keystroke later — the reversal was a button and a shortcut nothing named (#293).
+   */
+  it('takes the note back on Escape while the bar is still offering', async () => {
+    await seed('Taken back with Escape');
+    await canvas.openNote('Taken back with Escape');
+    await editor.close();
+
+    await press('Delete');
+    await press('Delete');
+    await undoBar.bar().waitForExist({ timeout: 10_000 });
+
+    await press('Escape');
+
+    await canvas.waitForCard('Taken back with Escape');
+    expect((await bridge.listTrash()).map((row) => row.title)).not.toContain('Taken back with Escape');
+  });
+
   it('moves the note to the trash rather than dropping it', async () => {
     await seed('Delete me once');
     await canvas.deleteNote('Delete me once');

@@ -140,10 +140,19 @@ const CANVAS_KEYS: readonly CanvasKey[] = [
     // only thing it undid. The card's own banner names this key for the same reason.
     labelKey: 'shortcuts.canvas.stepBack',
     on: ['Escape'],
-    // Falls through: the armed note first, then the selection, then the search and the
-    // facets, and only then out of the folder — leaving it is the biggest, so it is last.
-    run: ({ selection, canvas, folders }) =>
+    // Falls through: the armed note first, then whatever the undo bar is offering, then
+    // the selection, then the search and the facets, and only then out of the folder —
+    // leaving it is the biggest, so it is last.
+    //
+    // ⚠️ The second rung is the only one that **writes**, and it reads `undoBanner()`
+    // rather than `lastAction()` on purpose: the two differ by design, the banner being
+    // what the 8s timer clears while the record survives for `Ctrl+Z`. Escape answers
+    // only while the offer is on screen — outside it, this key has other rungs to serve
+    // and must not quietly rewrite the corpus. The card taught it and one keystroke later
+    // it meant nothing (#293).
+    run: ({ selection, canvas, folders, notes }) =>
       when(selection.armedForDeletion() !== null, () => selection.disarm()) ||
+      when(notes.undoBanner() !== null, () => void notes.undoLastAction()) ||
       when(selection.hasSelection(), () => selection.clearSelection()) ||
       when(canvas.hasUserFilters(), () => canvas.clearFilters()) ||
       when(folders.activeFolderId() !== null, () => folders.selectFolder(null)),

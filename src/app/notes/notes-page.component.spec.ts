@@ -733,6 +733,54 @@ describe('NotesPageComponent', () => {
       expect(selection.armedForDeletion()).toBeNull();
     });
 
+    /**
+     * ⚠️ The report, with the probe’s own output: the card says "Suppr. à nouveau · Échap
+     * pour annuler", the second Suppr sends the note to the trash, and the key the card
+     * had just taught meant nothing one keystroke later (#293).
+     */
+    it('takes the note back on Escape while the bar is still offering', async () => {
+      selection.focusNote('n1');
+      press('Delete');
+      press('Delete');
+      await vi.waitFor(() => expect(store.undoBanner()).not.toBeNull());
+      expect(canvas.visibleNotes().map((note) => note.id)).not.toContain('n1');
+
+      press('Escape');
+
+      await vi.waitFor(() => expect(canvas.visibleNotes().map((note) => note.id)).toContain('n1'));
+      expect(store.undoBanner()).toBeNull();
+    });
+
+    /** ⚠️ Only while the offer is on screen: outside it Escape has other rungs to serve. */
+    it('leaves the corpus alone on Escape once the bar has gone', async () => {
+      selection.focusNote('n1');
+      press('Delete');
+      press('Delete');
+      await vi.waitFor(() => expect(store.undoBanner()).not.toBeNull());
+      store.dismissUndo();
+
+      press('Escape');
+
+      expect(canvas.visibleNotes().map((note) => note.id)).not.toContain('n1');
+    });
+
+    /** Disarming stays the most local thing Escape can do, so it stays the first rung. */
+    it('disarms a freshly armed card before it takes anything back', async () => {
+      selection.focusNote('n1');
+      press('Delete');
+      press('Delete');
+      await vi.waitFor(() => expect(store.undoBanner()).not.toBeNull());
+      selection.focusNote('n2');
+      press('Delete');
+      expect(selection.armedForDeletion()).toBe('n2');
+
+      press('Escape');
+
+      expect(selection.armedForDeletion()).toBeNull();
+      // The offer is still standing: one Escape only goes down one rung.
+      expect(store.undoBanner()).not.toBeNull();
+    });
+
     it('takes back the last deletion on Ctrl+Z', async () => {
       selection.focusNote('n1');
       press('Backspace');

@@ -399,7 +399,8 @@
     "dismiss": "Dismiss",
     "moved": "{count, plural, one {# note} other {# notes}} moved",
     "tagged": "{count, plural, one {# note} other {# notes}} tagged",
-    "filed": "{count, plural, one {# note} other {# notes}} filed"
+    "filed": "{count, plural, one {# note} other {# notes}} filed",
+    "restoreKey": "Esc"
   },
   "file": {
     "menuLabel": "File",
@@ -464,7 +465,7 @@
       "extendWithClick": "Extend the selection with a click",
       "trash": "Send to the trash, in two presses",
       "undo": "Undo the last deletion",
-      "stepBack": "Call off a pending deletion, then the selection, then the filters, then leave the folder"
+      "stepBack": "Take the note back, call off a pending deletion, then the selection, then the filters, then leave the folder"
     },
     "editor": {
       "close": "Close the editor, saving",
