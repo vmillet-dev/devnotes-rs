@@ -1,10 +1,10 @@
 import { Injectable } from '@angular/core';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { commands } from '@core/ipc/bindings';
-import type { ChangelogRelease, ChangelogSection } from '@core/ipc/bindings';
+import type { ChangelogRelease, ChangelogSection, ChangelogSpan } from '@core/ipc/bindings';
 import { APP_INFO } from './app-info.service';
 
-export type { ChangelogRelease, ChangelogSection };
+export type { ChangelogRelease, ChangelogSection, ChangelogSpan };
 
 /**
  * ⚠️ Must stay covered by the scope declared for `opener:allow-open-url` in
