@@ -645,6 +645,126 @@ mod board {
     }
 
     /// A frame the user moved is theirs; a later read must not lay it out again.
+    /// ⚠️ The report: a card filed into a zone that was already full flowed out of sight,
+    /// because a frame is computed once and never again. The gesture that filled it is the
+    /// one that should have made room.
+    #[test]
+    fn filing_a_card_into_a_full_zone_makes_room_for_it() {
+        let mut connection = open_in_memory().unwrap();
+        let sql = space(&mut connection, "SQL");
+        let perf = create(&mut connection, &sql, "Perf", t0()).unwrap();
+        let filled: Vec<String> = ["a", "b"]
+            .iter()
+            .map(|title| titled(&mut connection, &sql, title).id)
+            .collect();
+        file_many(&mut connection, &filled, Some(&perf.id), t1()).unwrap();
+        let before = view(&mut connection, &request(&sql)).zones[0].frame;
+
+        let extra = titled(&mut connection, &sql, "c");
+        file_many(
+            &mut connection,
+            std::slice::from_ref(&extra.id),
+            Some(&perf.id),
+            t1(),
+        )
+        .unwrap();
+
+        let after = view(&mut connection, &request(&sql)).zones[0].frame;
+        assert!(
+            after.height > before.height,
+            "the zone stayed {}px tall for three cards",
+            before.height
+        );
+        assert_eq!(after.width, before.width, "the width must not move");
+    }
+
+    /// ⚠️ Grow only: shrinking would move the board under the pointer every time a card
+    /// is taken out, and a zone somebody stretched is a zone they chose the size of.
+    #[test]
+    fn a_zone_made_bigger_by_hand_keeps_its_size() {
+        let mut connection = open_in_memory().unwrap();
+        let sql = space(&mut connection, "SQL");
+        let perf = create(&mut connection, &sql, "Perf", t0()).unwrap();
+        view(&mut connection, &request(&sql));
+
+        let stretched = BoardFrame {
+            x: 40,
+            y: 40,
+            width: 600,
+            height: 900,
+        };
+        connection
+            .transaction(|connection, _vault| geometry::set_frame(connection, &perf.id, stretched))
+            .unwrap();
+
+        let note = titled(&mut connection, &sql, "a");
+        file_many(
+            &mut connection,
+            std::slice::from_ref(&note.id),
+            Some(&perf.id),
+            t1(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            view(&mut connection, &request(&sql)).zones[0].frame,
+            stretched
+        );
+    }
+
+    /// Taking a card out leaves the room it needed: the board must not move on its own.
+    #[test]
+    fn unfiling_a_card_does_not_close_the_zone_again() {
+        let mut connection = open_in_memory().unwrap();
+        let sql = space(&mut connection, "SQL");
+        let perf = create(&mut connection, &sql, "Perf", t0()).unwrap();
+        let notes: Vec<String> = ["a", "b", "c"]
+            .iter()
+            .map(|title| titled(&mut connection, &sql, title).id)
+            .collect();
+        file_many(&mut connection, &notes, Some(&perf.id), t1()).unwrap();
+        let grown = view(&mut connection, &request(&sql)).zones[0].frame;
+
+        file_many(&mut connection, &notes[..1], None, t1()).unwrap();
+
+        assert_eq!(view(&mut connection, &request(&sql)).zones[0].frame, grown);
+    }
+
+    /// Undoing puts notes back into a zone that may no longer be tall enough for them.
+    #[test]
+    fn undoing_a_filing_makes_room_for_what_comes_back() {
+        let mut connection = open_in_memory().unwrap();
+        let sql = space(&mut connection, "SQL");
+        let perf = create(&mut connection, &sql, "Perf", t0()).unwrap();
+        let notes: Vec<String> = ["a", "b", "c"]
+            .iter()
+            .map(|title| titled(&mut connection, &sql, title).id)
+            .collect();
+        file_many(&mut connection, &notes, Some(&perf.id), t1()).unwrap();
+        let grown = view(&mut connection, &request(&sql)).zones[0].frame;
+
+        // Squashed back down behind the zone's back, as a resize would.
+        connection
+            .transaction(|connection, _vault| {
+                geometry::set_frame(
+                    connection,
+                    &perf.id,
+                    BoardFrame {
+                        height: 212,
+                        ..grown
+                    },
+                )
+            })
+            .unwrap();
+        let left = file_many(&mut connection, &notes[..1], None, t1()).unwrap();
+        restore_filings(&mut connection, &left).unwrap();
+
+        assert_eq!(
+            view(&mut connection, &request(&sql)).zones[0].frame.height,
+            grown.height
+        );
+    }
+
     #[test]
     fn a_stored_frame_survives_the_next_read() {
         let mut connection = open_in_memory().unwrap();

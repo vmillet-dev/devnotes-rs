@@ -41,6 +41,64 @@ pub fn frames(
         .collect())
 }
 
+/// One zone's frame, or `None` for a folder that has never been laid out.
+pub fn frame_of(
+    connection: &mut SqliteConnection,
+    folder_id: &str,
+) -> Result<Option<BoardFrame>, StorageError> {
+    let row = folders::table
+        .find(folder_id)
+        .select((folders::x, folders::y, folders::w, folders::h))
+        .first::<(Option<i32>, Option<i32>, Option<i32>, Option<i32>)>(connection)
+        .optional()?;
+
+    // All four columns move together: a half-laid-out folder is not a state.
+    Ok(row.and_then(|(x, y, width, height)| {
+        Some(BoardFrame {
+            x: x?,
+            y: y?,
+            width: width?,
+            height: height?,
+        })
+    }))
+}
+
+/// Opens a zone far enough to show everything filed into it, and never closes it again.
+///
+/// ⚠️ Grow only. A zone somebody stretched keeps its size; one they made too small for
+/// what is now in it is reopened by the drop — where shrinking would move the board under
+/// the pointer every time a card is taken out.
+///
+/// ⚠️ Rows counted against the zone's **own** width, not the nominal two columns: a zone
+/// widened by hand fits more across, and growing it by the default would leave a band of
+/// nothing under the cards.
+///
+/// A folder with no frame yet is left alone: `geometry` computes its first one from the
+/// same count, on the next read.
+pub fn grow_to_fit(
+    connection: &mut SqliteConnection,
+    folder_id: &str,
+    note_count: usize,
+) -> Result<(), StorageError> {
+    let Some(frame) = frame_of(connection, folder_id)? else {
+        return Ok(());
+    };
+
+    let needed = board::zone_height(note_count, board::columns_in(frame.width));
+    if frame.height >= needed {
+        return Ok(());
+    }
+
+    set_frame(
+        connection,
+        folder_id,
+        board::clamp(BoardFrame {
+            height: needed,
+            ..frame
+        }),
+    )
+}
+
 pub fn set_frame(
     connection: &mut SqliteConnection,
     folder_id: &str,

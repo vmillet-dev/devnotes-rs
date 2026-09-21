@@ -189,16 +189,29 @@ pub fn default_zone_width() -> i32 {
     ZONE_PADDING * 2 + ZONE_COLUMNS * CARD_WIDTH + (ZONE_COLUMNS - 1) * GAP + SCROLLBAR
 }
 
-/// Tall enough for the notes it already holds, and never shorter than one row — an empty
-/// zone is still somewhere to drop a card.
+/// How many cards fit across a zone of this width — one at the very least.
 #[must_use]
-pub fn default_zone_height(note_count: usize) -> i32 {
-    let columns = ZONE_COLUMNS.max(1);
+pub fn columns_in(width: i32) -> i32 {
+    let inner = width - ZONE_PADDING * 2 - SCROLLBAR;
+    ((inner + GAP) / (CARD_WIDTH + GAP)).max(1)
+}
+
+/// Tall enough for that many notes flowing that many across, and never shorter than one
+/// row — an empty zone is still somewhere to drop a card.
+#[must_use]
+pub fn zone_height(note_count: usize, columns: i32) -> i32 {
+    let columns = columns.max(1);
     let notes = i32::try_from(note_count).unwrap_or(i32::MAX);
     let rows = notes.div_euclid(columns) + i32::from(notes.rem_euclid(columns) != 0);
 
     let rows = rows.max(MIN_ZONE_ROWS);
     ZONE_HEADER + ZONE_PADDING + rows * CARD_HEIGHT + (rows - 1) * GAP + ZONE_PADDING
+}
+
+/// The height a zone gets on its first layout, at [`ZONE_COLUMNS`] cards across.
+#[must_use]
+pub fn default_zone_height(note_count: usize) -> i32 {
+    zone_height(note_count, ZONE_COLUMNS)
 }
 
 /// Lays zones out in reading order, wrapping every [`BOARD_COLUMNS`].
@@ -489,6 +502,25 @@ mod tests {
 
         assert_eq!(two_rows - one_row, CARD_HEIGHT + GAP);
         assert_eq!(default_zone_height(4), two_rows);
+    }
+
+    /// ⚠️ A zone widened by hand fits more across, and growing it by the nominal two
+    /// columns would leave a band of nothing under the cards.
+    #[test]
+    fn a_wider_zone_needs_fewer_rows_for_the_same_notes() {
+        let nominal = default_zone_width();
+        let wider = nominal + CARD_WIDTH + GAP;
+
+        assert_eq!(columns_in(nominal), ZONE_COLUMNS);
+        assert_eq!(columns_in(wider), ZONE_COLUMNS + 1);
+        assert!(zone_height(6, columns_in(wider)) < zone_height(6, columns_in(nominal)));
+    }
+
+    /// Below one card across, the flow still has to have a column.
+    #[test]
+    fn a_zone_squashed_narrow_still_counts_one_column() {
+        assert_eq!(columns_in(0), 1);
+        assert_eq!(columns_in(MIN_ZONE_WIDTH), 1);
     }
 
     /// A zone with nothing in it is still a target to drop a card into.
