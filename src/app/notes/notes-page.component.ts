@@ -98,6 +98,18 @@ export class NotesPageComponent {
   /** Asked of `DialogStack` rather than of each store in turn. */
   protected readonly searchShortcutEnabled = computed(() => !this.dialogs.hasOpenDialog());
 
+  /**
+   * The legend names keys that act on cards, so it stands down whenever the region holds
+   * something else — loading, an error, or the empty state, which already owns the screen
+   * and offers the one thing to do from there.
+   */
+  protected readonly showsKeyboardHint = computed(() => {
+    if (this.board.isBoard() && this.folders.activeFolder() === null) {
+      return !this.board.isLoading() && this.board.loadError() === undefined;
+    }
+    return !this.canvas.isLoading() && this.canvas.loadError() === undefined && !this.canvas.hasNoResults();
+  });
+
   constructor() {
     const events = inject(AppEventsService);
     const destroyRef = inject(DestroyRef);

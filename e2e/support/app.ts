@@ -332,6 +332,15 @@ export async function blurField(): Promise<void> {
   await browser.execute(() => (document.activeElement as HTMLElement | null)?.blur());
 }
 
+/** How far a box stops short of the bottom of the window — negative when it runs past. */
+export async function bottomGapOf(selector: string): Promise<number> {
+  return browser.execute((sel: string) => {
+    const element = document.querySelector(sel);
+    if (!element) throw new Error('no element at ' + sel);
+    return Math.round(window.innerHeight - element.getBoundingClientRect().bottom);
+  }, selector);
+}
+
 /** Which control really holds the keyboard, by its test id — `null` for anything else. */
 export async function activeTestId(): Promise<string | null> {
   return browser.execute(() => document.activeElement?.getAttribute('data-testid') ?? null);

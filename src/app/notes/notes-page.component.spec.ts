@@ -444,6 +444,35 @@ describe('NotesPageComponent', () => {
     });
   });
 
+  /**
+   * ⚠️ A footer of the workspace, outside the scrolling canvas: with three notes on screen
+   * the legend sat a third of the way down, and with three hundred it was only reachable
+   * by scrolling to the end.
+   */
+  describe('the keyboard legend', () => {
+    const hint = () => fixture.nativeElement.querySelector('[data-testid="canvas-keyboard-hint"]');
+
+    it('sits outside the region the cards scroll in', async () => {
+      repository.setView({ sections: [createSection('week', [createNote({ id: 'note-42' })])] });
+      canvas.reload();
+      await vi.waitFor(() => expect(hint()).not.toBeNull());
+
+      expect(fixture.nativeElement.querySelector('.canvas-region').contains(hint())).toBe(false);
+      expect(fixture.nativeElement.querySelector('.workspace').contains(hint())).toBe(true);
+    });
+
+    /** The empty state already owns the screen, and offers the one thing to do from it. */
+    it('stands down while the canvas has nothing to show', async () => {
+      repository.setView({ sections: [], isFiltering: true, matched: 0 });
+      canvas.setFilter('pinned');
+      await vi.waitFor(() =>
+        expect(fixture.nativeElement.textContent).toContain('Aucune note ne correspond'),
+      );
+
+      expect(hint()).toBeNull();
+    });
+  });
+
   describe('canvas states', () => {
     it('shows a loading message instead of the sections while loading', async () => {
       TestBed.resetTestingModule();

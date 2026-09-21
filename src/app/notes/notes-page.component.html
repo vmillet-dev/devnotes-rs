@@ -191,11 +191,20 @@
             @for (section of canvas.sections(); track section.key) {
               <app-note-section [section]="section" (noteActivated)="onNoteActivated($event)" />
             }
-            <p class="canvas-keyboard-hint">{{ 'notes.keyboardHint' | transloco }}</p>
           }
         </div>
       }
     </div>
+
+    <!-- ⚠️ A footer of the workspace and not the last child of the scrolling canvas: with
+         three notes on screen it sat a third of the way down, and with three hundred it
+         was only reachable by scrolling to the end. It goes for both views — every key it
+         names is bound page-wide — and stands down while a canvas state owns the screen. -->
+    @if (showsKeyboardHint()) {
+      <p class="keyboard-hint" data-testid="canvas-keyboard-hint">
+        {{ 'notes.keyboardHint' | transloco }}
+      </p>
+    }
   </div>
 </div>
 
