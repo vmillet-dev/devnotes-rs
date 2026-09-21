@@ -1,6 +1,12 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { Note } from '../model/note.model';
 import { NotesQueryStore } from './notes-query.store';
+
+/**
+ * How long a note stays armed. ⚠️ Long enough to press the key twice on purpose, short
+ * enough that a note armed and walked away from is not still armed on the way back.
+ */
+export const ARM_TTL_MS = 4000;
 
 /** Both are positions in the visible list, and neither survives a note leaving the view. */
 @Injectable({ providedIn: 'root' })
@@ -9,9 +15,25 @@ export class NoteSelectionStore {
 
   private readonly _focusedNoteId = signal<string | null>(null);
   private readonly _checkedIds = signal<ReadonlySet<string>>(new Set());
+  private readonly _armedForDeletion = signal<string | null>(null);
 
   readonly focusedNoteId = this._focusedNoteId.asReadonly();
   readonly checkedIds = this._checkedIds.asReadonly();
+
+  /**
+   * The note one more Delete would trash, which the card draws in red.
+   *
+   * ⚠️ Here and not on the card: the ring can move and a reload can rebuild the card, and
+   * neither is a reason to forget what the first press said. It is the keyboard's half of
+   * the two clicks the card's own menu asks for.
+   */
+  readonly armedForDeletion = this._armedForDeletion.asReadonly();
+
+  private armTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.cancelArmTimeout());
+  }
 
   /** Derived from what is visible: an id ticked then gone must not reach a bulk action. */
   readonly checkedNotes = computed<readonly Note[]>(() => {
@@ -26,7 +48,30 @@ export class NoteSelectionStore {
 
   /** `null` takes focus off the canvas — when a modal opens, for instance. */
   focusNote(id: string | null): void {
+    // Pointing somewhere else is answering the question the armed note was asking.
+    this.disarm();
     this._focusedNoteId.set(id);
+  }
+
+  armForDeletion(id: string): void {
+    this.cancelArmTimeout();
+    this._armedForDeletion.set(id);
+    this.armTimeout = setTimeout(() => {
+      this.armTimeout = null;
+      this._armedForDeletion.set(null);
+    }, ARM_TTL_MS);
+  }
+
+  disarm(): void {
+    this.cancelArmTimeout();
+    this._armedForDeletion.set(null);
+  }
+
+  private cancelArmTimeout(): void {
+    if (this.armTimeout !== null) {
+      clearTimeout(this.armTimeout);
+      this.armTimeout = null;
+    }
   }
 
   focusedIndex(): number {

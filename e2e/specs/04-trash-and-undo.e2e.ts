@@ -1,8 +1,9 @@
 import { browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
+import { editor } from '../pageobjects/editor.page.js';
 import { trash, undoBar } from '../pageobjects/overlays.page.js';
-import { eventually, press, reloadCanvas } from '../support/app.js';
+import { eventually, press, reloadCanvas, testid } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
@@ -35,6 +36,33 @@ describe('Deleting a note, and taking it back', () => {
 
     // Leave nothing armed for the next test.
     await press('Escape');
+  });
+
+  /**
+   * ⚠️ The keyboard asks twice too. One press used to trash whichever card the ring was
+   * on — and after opening a note and scrolling, that card can be nowhere on screen.
+   */
+  it('needs the second Delete too, and says so on the card', async () => {
+    await seed('Armed from the keyboard');
+    await canvas.openNote('Armed from the keyboard');
+    await editor.close();
+
+    await press('Delete');
+
+    const card = await canvas.cardWithTitle('Armed from the keyboard');
+    expect(await card.$(testid('note-card-arming')).isExisting()).toBe(true);
+    expect((await bridge.queryNotes(query({ search: 'Armed from the keyboard' }))).matched).toBe(1);
+
+    await press('Delete');
+
+    expect(
+      await eventually(
+        () => bridge.queryNotes(query({ search: 'Armed from the keyboard' })),
+        (view) => view.matched === 0,
+        'the second press to reach the trash',
+      ),
+    ).toBeTruthy();
+    await undoBar.dismiss();
   });
 
   it('moves the note to the trash rather than dropping it', async () => {

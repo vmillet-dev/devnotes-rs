@@ -113,7 +113,18 @@ const CANVAS_KEYS: readonly CanvasKey[] = [
     keys: ['Delete'],
     labelKey: 'shortcuts.canvas.trash',
     on: ['Delete', 'Backspace'],
-    run: ({ focused, notes }) => given(focused, (note) => void notes.deleteNote(note.id)),
+    // ⚠️ Twice, the way the card's own menu asks for two clicks. One press used to trash
+    // whichever card the ring was on, and the ring can be on a card that is scrolled away.
+    run: ({ focused, notes, selection }) =>
+      given(focused, (note) => {
+        if (selection.armedForDeletion() !== note.id) {
+          selection.armForDeletion(note.id);
+          return;
+        }
+
+        selection.disarm();
+        void notes.deleteNote(note.id);
+      }),
   },
   {
     keys: ['Ctrl', 'Z'],
@@ -127,9 +138,10 @@ const CANVAS_KEYS: readonly CanvasKey[] = [
     keys: ['Escape'],
     labelKey: 'shortcuts.canvas.clearSelection',
     on: ['Escape'],
-    // Falls through: the selection first, then the search and the facets, and only then
-    // out of the folder — leaving it is the biggest of the three, so it goes last.
+    // Falls through: the armed note first, then the selection, then the search and the
+    // facets, and only then out of the folder — leaving it is the biggest, so it is last.
     run: ({ selection, canvas, folders }) =>
+      when(selection.armedForDeletion() !== null, () => selection.disarm()) ||
       when(selection.hasSelection(), () => selection.clearSelection()) ||
       when(canvas.hasUserFilters(), () => canvas.clearFilters()) ||
       when(folders.activeFolderId() !== null, () => folders.selectFolder(null)),

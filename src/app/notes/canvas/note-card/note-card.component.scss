@@ -20,7 +20,7 @@
 // Transparent, so the ring is the only thing it ever draws — over the card, not under it.
 .card-open:focus-visible {
   z-index: 2;
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--amber-edge);
   outline-offset: 2px;
 }
 
@@ -44,6 +44,32 @@
 .card-shell:hover .card {
   border-color: var(--line);
   background: var(--bg-2);
+}
+
+// Red at rest and not on hover, like every other destructive control: a warning that
+// arrives under the pointer plays no part in choosing.
+.card.armed {
+  border-color: var(--red);
+}
+
+// ⚠️ Over the footer, which is the line that matters least at that moment, rather than
+// inside the card: it is a fixed 150px and a band in the flow would push a row of the
+// todo list out of sight. Transparent to the pointer — the card underneath still opens.
+.card-arming {
+  position: absolute;
+  z-index: 2;
+  left: var(--space-card);
+  right: var(--space-card);
+  bottom: var(--space-card);
+  margin: 0;
+  padding: 3px 8px;
+  border: 1px solid var(--red);
+  border-radius: 6px;
+  background: var(--bg-3);
+  color: var(--red);
+  font-size: 10.5px;
+  text-align: center;
+  pointer-events: none;
 }
 
 .card.selected {
@@ -76,7 +102,7 @@
 }
 
 .card-fields {
-  color: var(--amber);
+  color: var(--amber-text);
 }
 
 // ⚠️ Outside the card, over its top edge: inside, they were a band of their own above the
@@ -133,11 +159,11 @@ app-copy-button {
 }
 
 .card-check.checked {
-  color: var(--amber);
+  color: var(--amber-text);
 }
 
 .card-action:focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--amber-edge);
   outline-offset: 1px;
 }
 
@@ -242,7 +268,7 @@ app-copy-button {
   display: block;
   height: 100%;
   border-radius: 3px;
-  background: var(--amber);
+  background: var(--amber-fill);
 }
 
 .progress-count {
@@ -284,7 +310,7 @@ app-copy-button {
 }
 
 .card-item[aria-checked='true'] .item-box {
-  color: var(--amber);
+  color: var(--amber-text);
 }
 
 .item-box {
@@ -305,7 +331,7 @@ app-copy-button {
 }
 
 .card-item:focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--amber-edge);
   outline-offset: 1px;
   border-radius: 4px;
 }

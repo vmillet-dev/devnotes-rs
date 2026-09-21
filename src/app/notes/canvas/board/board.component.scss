@@ -96,7 +96,7 @@
 .draw-band {
   position: absolute;
   z-index: 15;
-  border: 1px dashed var(--amber);
+  border: 1px dashed var(--amber-edge);
   background: rgb(var(--amber-rgb) / 8%);
   border-radius: 10px;
   pointer-events: none;

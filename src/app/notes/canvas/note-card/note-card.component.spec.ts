@@ -635,6 +635,40 @@ describe('NoteCardComponent', () => {
   });
 
   /**
+   * ⚠️ Real words and not only a red border: the border says something is wrong, not that
+   * one more press trashes the note. `role="status"` is what announces it.
+   */
+  describe('armed for deletion', () => {
+    const band = () => fixture.nativeElement.querySelector('[data-testid="note-card-arming"]');
+
+    beforeEach(async () => {
+      fixture.componentRef.setInput('note', createNote({ id: 'note-42' }));
+      await fixture.whenStable();
+    });
+
+    it('says nothing until the first Delete', () => {
+      expect(band()).toBeNull();
+      expect(fixture.debugElement.query(By.css('.card')).classes['armed']).toBeFalsy();
+    });
+
+    it('says what one more press would do, and draws the card in red', async () => {
+      TestBed.inject(NoteSelectionStore).armForDeletion('note-42');
+      await fixture.whenStable();
+
+      expect(band()?.textContent).toContain('Suppr');
+      expect(band()?.getAttribute('role')).toBe('status');
+      expect(fixture.debugElement.query(By.css('.card')).classes['armed']).toBe(true);
+    });
+
+    it('leaves the other cards alone', async () => {
+      TestBed.inject(NoteSelectionStore).armForDeletion('another-note');
+      await fixture.whenStable();
+
+      expect(band()).toBeNull();
+    });
+  });
+
+  /**
    * ⚠️ The card is rebuilt whenever its section changes, and the first character typed
    * into the search field switches the canvas to one flat `results` section — so the
    * effect that follows the canvas cursor runs while somebody is typing somewhere else.

@@ -20,12 +20,12 @@
 }
 
 .copy-btn:focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--amber-edge);
   outline-offset: 2px;
 }
 
 .copy-btn.copied {
-  color: var(--amber);
+  color: var(--amber-text);
 }
 
 .copy-btn.with-label {

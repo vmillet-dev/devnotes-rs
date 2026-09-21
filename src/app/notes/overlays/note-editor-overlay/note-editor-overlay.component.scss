@@ -109,7 +109,7 @@ app-dialog {
 }
 
 .overlay-expiry-input:focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--amber-edge);
   outline-offset: 2px;
 }
 
@@ -236,7 +236,7 @@ app-dialog {
 .tag-add-input:focus-visible,
 .tag-remove:focus-visible,
 .icon-btn:focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--amber-edge);
   outline-offset: -2px;
 }
 

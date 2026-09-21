@@ -45,7 +45,7 @@
   @include setting-field(130px);
   font-family: var(--font-mono), serif;
   text-align: center;
-  color: var(--amber);
+  color: var(--amber-text);
   cursor: pointer;
 }
 
@@ -69,14 +69,14 @@
 }
 
 .setting-shortcut-reset:focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--amber-edge);
   outline-offset: 1px;
 }
 
 // Inside the note, not beside it: what it undoes is named in the sentence before it.
 .setting-inline-btn {
   @include unstyled-control;
-  color: var(--amber);
+  color: var(--amber-text);
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -87,6 +87,6 @@
 }
 
 .setting-inline-btn:focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--amber-edge);
   outline-offset: 2px;
 }

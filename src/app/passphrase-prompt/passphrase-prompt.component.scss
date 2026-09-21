@@ -27,7 +27,7 @@ app-dialog {
 
 // ⚠️ Amber rather than red: an export in the clear is a choice, not a failure.
 .warning {
-  color: var(--amber);
+  color: var(--amber-text);
 }
 
 // Keeps its line whether or not it says anything, so the buttons do not move under the
@@ -90,12 +90,12 @@ app-dialog {
 }
 
 .action.primary {
-  background: var(--amber);
-  border-color: var(--amber);
+  background: var(--amber-fill);
+  border-color: var(--amber-edge);
   color: var(--amber-ink);
 }
 
 .prompt :focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--amber-edge);
   outline-offset: 2px;
 }

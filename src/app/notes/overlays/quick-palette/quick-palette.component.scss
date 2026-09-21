@@ -18,7 +18,7 @@ app-dialog {
 }
 
 .palette-input:focus-visible {
-  @include accent-state(var(--text-0), var(--amber));
+  @include accent-state(var(--text-0), var(--amber-edge));
   outline: none;
 }
 
@@ -79,11 +79,11 @@ app-dialog {
 
 .palette-option-copy:hover {
   background: var(--bg-3);
-  color: var(--amber);
+  color: var(--amber-text);
 }
 
 .palette-option-copy:focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--amber-edge);
   outline-offset: -2px;
 }
 
@@ -105,7 +105,7 @@ app-dialog {
   margin-left: auto;
   flex-shrink: 0;
   font-size: 10.5px;
-  color: var(--amber);
+  color: var(--amber-text);
 }
 
 .palette-option-snippet {
@@ -138,5 +138,5 @@ app-dialog {
 }
 
 .palette-create .palette-option-title {
-  color: var(--amber);
+  color: var(--amber-text);
 }
