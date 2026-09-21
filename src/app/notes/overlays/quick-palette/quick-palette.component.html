@@ -42,7 +42,7 @@
           type="button"
           class="palette-option-button"
           data-testid="palette-open"
-          (click)="highlightSet.emit(index); openRequested.emit(note.id)"
+          (click)="highlightSet.emit(index); openRequested.emit(note)"
         >
           <span class="palette-option-head">
             <app-language-badge [language]="note.language" />

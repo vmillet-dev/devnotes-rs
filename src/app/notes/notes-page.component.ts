@@ -20,6 +20,7 @@ import { TrashStore } from '@core/state/trash.store';
 import { CanvasKeyboardDirective } from '@shared/directives/canvas-keyboard.directive';
 import { BoardFrame } from '@core/model/board.model';
 import { Folder } from '@core/model/folder.model';
+import { Note } from '@core/model/note.model';
 import { BoardComponent, CardDrop } from './canvas/board/board.component';
 import { LibraryTreeComponent } from './sidebar/library-tree/library-tree.component';
 import { FolderNamePromptComponent } from './overlays/folder-name-prompt/folder-name-prompt.component';
@@ -239,9 +240,10 @@ export class NotesPageComponent {
     void this.tags.proposeDelete();
   }
 
-  protected onPaletteOpen(noteId: string): void {
+  /** ⚠️ The note and not its id: the canvas filters may hide it, and often do (#280). */
+  protected onPaletteOpen(note: Note): void {
     this.palette.close();
-    this.store.openNote(noteId);
+    this.store.openNote(note);
   }
 
   /** `PaletteStore` does not know `NotesStore`; the other way round would be a cycle. */
