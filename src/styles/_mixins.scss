@@ -75,6 +75,15 @@
   }
 }
 
+// The room that ring needs inside a row that scrolls. ⚠️ A box that is `auto` on one axis
+// is `auto` on the other too — there is no scrolling sideways while overflowing upwards —
+// so a horizontal rail cuts its pills' rings flat. The padding is the room; the negative
+// margin hands it back to the layout, so the rail is no taller than it was.
+@mixin ring-room($room: 4px) {
+  padding-block: $room;
+  margin-block: -$room;
+}
+
 // --- Preferences panel ---
 //
 // Shared rather than written inside the dialog: a component's SCSS is out of reach of its
