@@ -242,6 +242,12 @@ describe('Arranging the board', () => {
         'the unfiling to reach the database',
       ),
     ).toBeTruthy();
+
+    // ⚠️ Taken off the board again. This card was let go of at the place the scenario
+    // above drops its own, and the last scenario in this file asserts that no loose card
+    // covers another — a claim about the whole background, which this one would break.
+    await bridge.deleteNote(moving);
+    await openBoard();
   });
 
   it('makes room in a zone for the card filed into it', async () => {
