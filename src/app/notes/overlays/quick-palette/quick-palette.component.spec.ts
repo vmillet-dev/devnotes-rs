@@ -25,8 +25,8 @@ describe('QuickPaletteComponent', () => {
     return [...fixture.nativeElement.querySelectorAll('.palette-option')];
   }
 
-  async function press(key: string): Promise<void> {
-    input().dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+  async function press(key: string, ctrlKey = false): Promise<void> {
+    input().dispatchEvent(new KeyboardEvent('keydown', { key, ctrlKey, bubbles: true }));
     await fixture.whenStable();
   }
 
@@ -65,24 +65,57 @@ describe('QuickPaletteComponent', () => {
     expect(moves).toEqual([1, -1]);
   });
 
-  it('copies on Enter', async () => {
+  /**
+   * ⚠️ Enter used to copy and put the window away, where a click on the same row opened
+   * the note and Enter opens everywhere else in the application.
+   */
+  it('opens the highlighted note on Enter, as a click on it does', async () => {
+    let opened: string | undefined;
     let chosen = 0;
+    fixture.componentInstance.openRequested.subscribe((id) => (opened = id));
     fixture.componentInstance.chosen.subscribe(() => (chosen += 1));
+    fixture.componentRef.setInput('highlighted', 1);
+    await fixture.whenStable();
 
     await press('Enter');
 
-    expect(chosen).toBe(1);
+    expect(opened).toBe('note-2');
+    expect(chosen).toBe(0);
   });
 
-  it('opens the highlighted note on Tab instead of copying it', async () => {
-    let opened: string | undefined;
-    fixture.componentInstance.openRequested.subscribe((id) => (opened = id));
+  it('copies and closes on Ctrl+C, which is what the canvas copies with', async () => {
+    let chosen = 0;
+    let opened = 0;
+    fixture.componentInstance.chosen.subscribe(() => (chosen += 1));
+    fixture.componentInstance.openRequested.subscribe(() => (opened += 1));
+
+    await press('c', true);
+
+    expect(chosen).toBe(1);
+    expect(opened).toBe(0);
+  });
+
+  /** ⚠️ The field is a search field: a selection in it is what Ctrl+C means there. */
+  it('leaves Ctrl+C to the field while text is selected in it', async () => {
+    let chosen = 0;
+    fixture.componentInstance.chosen.subscribe(() => (chosen += 1));
+    input().value = 'psql';
+    input().setSelectionRange(0, 4);
+
+    await press('c', true);
+
+    expect(chosen).toBe(0);
+  });
+
+  it('leaves Tab to the focus, now that Enter opens', async () => {
+    let opened = 0;
+    fixture.componentInstance.openRequested.subscribe(() => (opened += 1));
     fixture.componentRef.setInput('highlighted', 1);
     await fixture.whenStable();
 
     await press('Tab');
 
-    expect(opened).toBe('note-2');
+    expect(opened).toBe(0);
   });
 
   it('closes on Escape', async () => {
@@ -186,16 +219,20 @@ describe('QuickPaletteComponent', () => {
       expect(chosen).toBe(1);
     });
 
-    it('has no note to open on Tab', async () => {
+    /** Nothing to open: Enter falls back on creating, which is what the row is for. */
+    it('is created by Enter rather than opened', async () => {
       await offerCreation('migrer la base');
       fixture.componentRef.setInput('highlighted', 2);
       await fixture.whenStable();
       let opened = 0;
+      let chosen = 0;
       fixture.componentInstance.openRequested.subscribe(() => (opened += 1));
+      fixture.componentInstance.chosen.subscribe(() => (chosen += 1));
 
-      await press('Tab');
+      await press('Enter');
 
       expect(opened).toBe(0);
+      expect(chosen).toBe(1);
     });
   });
 });

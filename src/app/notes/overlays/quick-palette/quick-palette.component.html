@@ -34,10 +34,10 @@
         [class.highlighted]="index === highlighted()"
         [attr.aria-selected]="index === highlighted()"
       >
-        <!-- ⚠️ A click **opens** the note: that is what a click on a note means everywhere
-             else, and nobody clicked their way here from another application. Copying has
-             its own control beside it, and Enter is still the fast path. The keyboard goes
-             through the field, which never loses focus. -->
+        <!-- ⚠️ A click **opens** the note, and so does Enter: that is what both mean
+             everywhere else in the application. Copying has its own control beside it, and
+             Ctrl+C on the keyboard. The keyboard goes through the field, which never loses
+             focus. -->
         <button
           type="button"
           class="palette-option-button"
@@ -59,7 +59,7 @@
         </button>
 
         <!-- The paste path with a mouse: copies and puts the window away, which is what
-             Enter does. A snippet with fields still goes through the form first. -->
+             Ctrl+C does. A snippet with fields still goes through the form first. -->
         <button
           type="button"
           class="palette-option-copy"

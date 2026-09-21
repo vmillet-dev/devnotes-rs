@@ -2,7 +2,7 @@ import { browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
-import { palette } from '../pageobjects/overlays.page.js';
+import { fieldsForm, palette } from '../pageobjects/overlays.page.js';
 import { emitGlobalAction, press, reloadCanvas } from '../support/app.js';
 import { bridge, draft, homeSpaceId } from '../support/bridge.js';
 
@@ -29,6 +29,9 @@ describe('The quick-paste palette', () => {
       draft({ spaceId, title: 'Reset the dev database', content: 'cargo run -- reset', language: 'sh' }),
     );
     await bridge.createNote(draft({ spaceId, title: 'Unrelated note', content: 'nothing to see' }));
+    await bridge.createNote(
+      draft({ spaceId, title: 'Templated connection', content: 'psql -h {{host}}', language: 'sh' }),
+    );
     await reloadCanvas();
   });
 
@@ -58,14 +61,35 @@ describe('The quick-paste palette', () => {
     expect(await palette.options().length).toBeGreaterThan(0);
   });
 
-  it('opens the highlighted note in the editor on Tab', async () => {
+  /**
+   * ⚠️ Enter used to copy and put the window away, where a click on the same row opened
+   * the note — the first thing anyone does having found a result is press Enter.
+   */
+  it('opens the highlighted note in the editor on Enter', async () => {
     await palette.type('reset');
-    // Tab is the palette's own shortcut here, not a way out of a field.
-    await press('Tab');
+    await press('Enter');
 
     expect(await editor.isOpen()).toBe(true);
     expect(await editor.title()).toBe('Reset the dev database');
     await editor.close();
+  });
+
+  /**
+   * ⚠️ Asked of a snippet with fields on purpose: the copy path proper ends in
+   * `window.hide()`, and this run shares one window with every file after it. The form is
+   * where `Ctrl+C` lands for this note, which proves the binding reaches the copy without
+   * putting the window away.
+   */
+  it('asks for the fields on Ctrl+C, which is the copy path', async () => {
+    await emitGlobalAction('palette');
+    await palette.input().waitForExist({ timeout: 10_000 });
+    await palette.type('Templated');
+
+    await press('c', ['Control']);
+
+    await fieldsForm.form().waitForExist({ timeout: 10_000 });
+    await fieldsForm.cancel();
+    expect(await editor.isOpen()).toBe(false);
   });
 
   /**

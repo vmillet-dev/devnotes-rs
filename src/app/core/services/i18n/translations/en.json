@@ -347,7 +347,7 @@
     "searchLabel": "Search a snippet to paste",
     "resultsLabel": "Matching snippets",
     "empty": "No snippet matches.",
-    "hint": "↑↓ move · Enter copy · Tab or click to open · Esc close",
+    "hint": "↑↓ move · Enter or click to open · Ctrl+C copy · Esc close",
     "copyLabel": "Copy “{{title}}”",
     "close": "Close the palette",
     "createNote": "+ Create a note “{{query}}”"
@@ -468,7 +468,7 @@
     "palette": {
       "navigate": "Walk the results",
       "paste": "Copy the note and close",
-      "open": "Open the note instead of copying it",
+      "open": "Open the note",
       "close": "Close the palette"
     }
   },
