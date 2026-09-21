@@ -304,7 +304,7 @@ click; a dialog projects its content into it and says which rung it sits on:
 
 | Input                  | Decides                                                                           |
 | ---------------------- | --------------------------------------------------------------------------------- |
-| `layer` (required)     | the rung: `editor`, `app`, `settings`, `update`, `palette`, `fields`, `zoom`      |
+| `layer` (required)     | the rung: `app`, `editor`, `settings`, `update`, `palette`, `fields`, `zoom`      |
 | `variant`              | `fitted` (height follows the content), `framed` (fixed, scrolling middle), `bare` |
 | `fullscreen`           | fills the window — the editor's toggle                                            |
 | `dismissible`          | `false` refuses Escape and the backdrop click (an update being installed)         |
@@ -325,6 +325,12 @@ whatever it shows, an image the panel only bounds.
 `LAYERS` in back-to-front order, and its index _is_ both the `z-index` and the priority
 Escape follows. No stylesheet carries a modal `z-index` any more, and adding a rung is one
 entry in that array.
+
+⚠️ `app` — the About menu's four help panels — sits **under** `editor`. A help panel covers
+the whole page, so the only way to a note while one is up is a global shortcut, which comes
+from outside the application altogether; the other way round drew the note behind the help.
+Nothing is lost by it: an About panel can only be opened from the titlebar, and the titlebar
+is under the scrim while the editor, the trash panel or the tag manager is up.
 
 `DialogStack` is what makes Escape reach **one** dialog. Every open modal listens on
 `document`, so without it they all answer the same keystroke — which used to be patched case
@@ -518,10 +524,17 @@ unreachable in the UI, search included. An unparseable `created_at` lands in `ol
 than disappearing. The `week` section is always present because it hosts the "paste or
 create" ghost card.
 
-As soon as a search query or a tag selection is active, the view collapses into a single flat
-`results` section. Spreading search results across date sections dilutes them and hides
-matches at the bottom of the page. A quick filter (`pinned` / `untriaged`) does **not**
-trigger this: it narrows a view that stays chronological.
+As soon as a search query, a tag selection or an opened folder is active, the view collapses
+into a single flat `results` section. Spreading search results across date sections dilutes
+them and hides matches at the bottom of the page. A quick filter (`pinned` / `untriaged`)
+does **not** trigger this: it narrows a view that stays chronological.
+
+⚠️ `build_sections` takes `Option<bool>` rather than a bare `is_filtering`: `None` is the
+chronological sections, `Some(ghost)` the flat list, and `ghost` says whether it is somewhere
+a note can be **created**. The inside of a folder is — a note made there arrives filed, and it
+is the one place where creating one files it — so the flat view keeps the ghost when the
+folder is the whole reason it is flat. A result list is a list of what already matched, not a
+place, so a search or a facet takes it away.
 
 Day boundaries are **local**, so the query carries `tzOffsetMinutes` alongside `now`. Without
 it a note created at 23:00 would be filed under the wrong day. Beware the sign: JavaScript's
@@ -865,6 +878,26 @@ The layout rules live in `folders/board.rs`, which imports neither Diesel nor Ta
 from whatever reaches furthest. **Pan only, no zoom** — a zoom is a second thing to persist
 and to reset, and full-size cards are what makes panning worth having.
 
+⚠️ A card that has never been placed takes `free_slot` — the first seat of that flow nothing
+is standing on — and never the seat its index in the list would give it. A note created now
+is the most recently updated, so it arrives first and used to be written on top of whichever
+card the board's very first read had put there. "Standing on" is a rectangle test against the
+placed cards _and_ the zones, not an equality one: a card dragged by hand almost never sits
+exactly on a seat, and one half over a seat hides what lands there just as well.
+
+⚠️ **A zone grows to fit and never shrinks.** `store::board::grow_to_fit` runs from
+`file_many` and from `restore_filings`, so both ways in are covered and so is the undo. A
+frame is otherwise computed once and never again, which is how a card filed into a full zone
+ended up out of sight behind its scrollbar. Rows are counted against the zone's **own** width
+(`columns_in`), not the nominal two columns — a zone widened by hand fits more across.
+Shrinking was refused: it would move the board under the pointer every time a card is taken
+out, and a zone somebody stretched is a zone they chose the size of.
+
+⚠️ The "no folder · N" label is a chip anchored to the board's **corner**, outside the surface
+that pans and the box that scrolls. It used to be drawn above whichever loose card was
+highest, which put it over a zone as soon as one was dragged up. Loose cards stopped being a
+band the day they could be placed anywhere; what is left of the label is the count.
+
 ⚠️ `apply_folders` deliberately does **not** run for the board: a chip naming the zone a
 card already sits in is noise, and a loose card has no folder to name. The card component is
 the same one the canvas draws, so it renders no chip simply because `folder` is `None`.
@@ -928,9 +961,14 @@ directions, and from nothing else.**
 
 **One write per gesture.** `BoardStore` stages what moved and writes it behind a 400 ms
 debounce as a single `save_board_layout`, one transaction. ⚠️ The staged geometry is laid
-_over_ the view rather than written into it, and it is cleared only once the write
-succeeded — dropping the overlay on a failure would snap every card back with nothing on
-screen saying why.
+_over_ the view rather than written into it, and it is let go of when **a view comes back
+carrying it** — never when the write returns. `reload()` only _asks_: the view still on
+screen is the one read before the drag, so clearing on the write uncovered it for a whole
+round trip and the card was drawn back where it came from before settling. The two staged
+maps are `linkedSignal`s sourced on the view, so a place the view agrees with is dropped and
+anything else stays; a place the view says nothing about is **kept**, since a card dropped a
+moment ago is exactly what the overlay is for. A failed write keeps the overlay too —
+dropping it would snap every card back with nothing on screen saying why.
 
 ⚠️ `save_board_layout` skips a card that has been filed since the drag: a position row
 means "this note is loose", and writing one back would undo what `file_many` just did.
@@ -1154,6 +1192,18 @@ the focus is neither in a field nor behind a modal (`DialogStack.hasOpenDialog()
 disables the `Ctrl+K` search shortcut). Arrows move, `Enter` opens, `C` copies, `P` pins, `X`
 checks, `Delete` trashes, `Escape` clears the selection. The keys are deliberately bare
 letters: they only ever fire where no typing is happening.
+
+⚠️ **`C` copies what the card's own control copies**, which is not `note.content`: a todo list
+has none, and a snippet with `{{fields}}` asks for them first.
+`PlaceholderFillStore.copyNote` holds that rule for both, and announces which note it took —
+the card paints a tick on itself, the keyboard has no such surface, and the ring may be on a
+card that is scrolled away.
+
+⚠️ **`Delete` asks twice**, the way the card's menu asks for two clicks. The first press arms
+the focused note, which the card then draws in red with words saying what one more press
+would do; Escape, moving the focus or four seconds call it off. The armed note lives in
+`NoteSelectionStore` and not on the card: the ring can move and a reload can rebuild the card,
+and neither is a reason to forget what the first press said.
 
 It is applied as a **host directive** of `NotesPageComponent`, so its element is the canvas
 itself — which is how it measures the card grid without the page handing it a list of
@@ -1494,7 +1544,15 @@ the loser keeps the keyboard.
   pull in, no `innerHTML`, nothing for the CSP to forbid. The grammar is deliberately thin —
   `## ` a release, `### ` a category, `- ` an entry, an indented line continues the one above —
   and the file is written to match it; a shipped file that no longer parses fails a test rather
-  than emptying the panel in silence. The newest section is **generated** by the release
+  than emptying the panel in silence.
+  An entry is not a string but a list of **typed runs** (`ChangelogSpan`: plain, strong, code),
+  which the panel draws with a `switch` and three elements — still no `innerHTML`. That grammar
+  is two markers, `**` and a backtick, paired and on one line, and an unclosed one is text, so
+  an entry about `5 * 3` stays readable. ⚠️ A continuation line is re-cut with the line it
+  continues, or a marker opened on the first would never find its close. The trailing `(#123)`
+  a squashed pull request leaves behind is dropped when the entry is **read**, never when the
+  file is written: the number is what makes the release on github.com navigable, and noise on
+  a panel with no links in it. The newest section is **generated** by the release
   workflow from the pull requests merged since the last tag (see "Releasing"), which is also
   where a category's icon comes from: `### ✨ Added` is the heading in the file, so nothing on
   the front end decides what a category looks like and a new one needs no code. The changelog
@@ -2494,10 +2552,18 @@ Those variables **must** stay in the global stylesheet. Angular's emulated encap
 rewrites a `:root` selector written inside a `*.component.scss` into a form that never
 matches `<html>`, silently invalidating every variable.
 
-Recurring style patterns (unstyled control, card surface, accent state, tinted badge) are
-SCSS mixins in `src/styles/_mixins.scss`, imported as `@use 'mixins' as *;` — resolved via
-`stylePreprocessorOptions.includePaths` in `angular.json`. Colors needing translucency are
-also exposed as RGB triplets (e.g. `--amber-rgb`) so `rgba()` never hard-codes a hex value.
+Recurring style patterns (unstyled control, card surface, accent state, focus ring, tinted
+badge) are SCSS mixins in `src/styles/_mixins.scss`, imported as `@use 'mixins' as *;` —
+resolved via `stylePreprocessorOptions.includePaths` in `angular.json`. Colors needing
+translucency are also exposed as RGB triplets (e.g. `--amber-rgb`, which is the **fill**) so
+`rgba()` never hard-codes a hex value.
+
+**Three sweeps read the shipped files**, all `node --test` rather than `*.spec.ts` because the
+Angular builder compiles its specs for a browser, where `node:fs` does not exist:
+`palette.test.mjs` for contrast, `focus-rings.test.mjs` for a control styled with no
+`:focus-visible` — the linter cannot see a missing one, and four had accumulated — and
+`language-hues.test.mjs` for a `Language` variant with no `.lang-*` rule, whose badge is then
+bare text. ⚠️ Each is named in `test:scripts` one by one; Node 24 will not expand a directory.
 
 `styles.scss` also carries the `.visually-hidden` utility and a `prefers-reduced-motion`
 block.
@@ -2506,10 +2572,28 @@ block.
 colours only — fonts, shadows and spacing are shared. Dark stays the base on purpose: the
 preference lives in a file nothing can read before Angular has booted, so any other order would
 flash white at launch. `color-scheme` switches with the palette, which is what repaints the
-native `<select>`s, scrollbars and autofill. The accent is a **separate hue** in light mode:
-the dark `--amber` (#e8a33d) falls to 2:1 on white, and `--amber-ink` — the text laid on a
-solid amber button — flips with it. The syntax-highlighting theme needs nothing: it only ever
-consumed these variables.
+native `<select>`s, scrollbars and autofill. The syntax-highlighting theme needs nothing: it
+only ever consumed these variables.
+
+**The accent is three variables, one per job.** `#e8a33d` on white is 2.16:1, and what that
+rules out depends entirely on what it is being used for — a surface only has to carry the ink
+drawn on it, a hairline has to be found against the page, and a label has to be read.
+
+|                | job                            | bar                   | dark                | light                    |
+| -------------- | ------------------------------ | --------------------- | ------------------- | ------------------------ |
+| `--amber-fill` | a solid button, a tick, a tint | 3:1 for the ink on it | `#e8a33d`           | **the same declaration** |
+| `--amber-edge` | a border, a focus ring         | 3:1 on the surface    | `var(--amber-fill)` | `#cf6a08`                |
+| `--amber-text` | a label                        | 4.5:1 on the surface  | `var(--amber-fill)` | `#a8500f`                |
+
+⚠️ `--amber-fill` is declared **once**, in the dark base, and the light block does not
+redefine it — which is what makes the dark theme provably unmoved by the split, and what lets
+the light theme show the same amber everywhere it is a surface. Only the line and the word step
+down. One token doing all three meant drawing the whole accent at the _label's_ darkness, which
+is where a warm hue lands at 4.5:1 on white, and which read as mustard.
+
+`--amber-dim` is the softer hairline a hover draws, and `--amber-ink` the text laid on the
+fill; with the same fill in both themes there is one of each. `scripts/palette.test.mjs` holds
+each of the three to its own bar, in both themes, and fails if the fill is ever declared twice.
 
 **Density.** `:root[data-density='compact']` tightens four variables — `--space-card`,
 `--space-grid`, `--space-section`, `--space-canvas` — and nothing else. Typography is
