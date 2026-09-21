@@ -6,7 +6,14 @@ import { Note } from '@core/model/note.model';
 
 const SNIPPET_LINES = 2;
 
-/** ⚠️ `aria-activedescendant` and not a moved focus, which would lose what is being typed. */
+/**
+ * ⚠️ `aria-activedescendant` and not a moved focus, which would lose what is being typed
+ * — and the rows are out of the tab order so that it stays true. Tab was released to the
+ * DOM when Enter took over opening, and it walked a list of stops nothing drew a ring on
+ * while the highlight stayed where the arrows had left it: two notions of "the current
+ * row", one of them invisible (#283). Tab is a slower arrow now, and the copy control is
+ * reached with `Ctrl+C` rather than by walking to it.
+ */
 @Component({
   selector: 'app-quick-palette',
   imports: [DialogComponent, LanguageBadgeComponent, TranslocoPipe],
@@ -66,6 +73,12 @@ export class QuickPaletteComponent {
       case 'ArrowUp':
         event.preventDefault();
         this.highlightMoved.emit(-1);
+        break;
+      // The focus never leaves the field, so Tab has nowhere useful to go; taken here it
+      // is the same move as the arrows, which is what a hand already on Tab expects.
+      case 'Tab':
+        event.preventDefault();
+        this.highlightMoved.emit(event.shiftKey ? -1 : 1);
         break;
       // Opens, as a click on the row does and as Enter does everywhere else in the
       // application. The create row has nothing to open, so it is still `chosen`.

@@ -14,6 +14,7 @@ import { FocusTrapDirective } from './focus-trap.directive';
         <button type="button" id="first">first</button>
         <button type="button" id="middle" disabled>disabled</button>
         <button type="button" id="last">last</button>
+        <button type="button" id="untabbable" tabindex="-1">out of the order</button>
       </div>
     }
   `,
@@ -92,6 +93,34 @@ describe('FocusTrapDirective', () => {
     const event = pressTab(false);
 
     expect(event.defaultPrevented).toBe(false);
+  });
+
+  /**
+   * ⚠️ `tabindex="-1"` takes an element out of the tab order whatever it is made of, and
+   * the trap used to read only a bare `[tabindex]` that way. The palette's rows are
+   * buttons, and Shift+Tab in its field landed on the last one's copy control (#283).
+   */
+  it('treats an untabbable control as out of the trap, button or not', async () => {
+    fixture.componentInstance.open.set(true);
+    await fixture.whenStable();
+    element('first').focus();
+
+    pressTab(true);
+
+    expect(document.activeElement).toBe(element('last'));
+  });
+
+  /** Something inside answered for the key; wrapping on top of that undoes it. */
+  it('leaves a Tab a descendant has already handled alone', async () => {
+    fixture.componentInstance.open.set(true);
+    await fixture.whenStable();
+    element('last').focus();
+
+    const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    event.preventDefault();
+    element('last').dispatchEvent(event);
+
+    expect(document.activeElement).toBe(element('last'));
   });
 
   it('restores focus to the previously focused element when destroyed', async () => {

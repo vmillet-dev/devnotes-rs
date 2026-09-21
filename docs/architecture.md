@@ -1410,8 +1410,18 @@ prompt on every copy would be worse than no acknowledgement at all.
 
 The field keeps the focus from start to finish and the list is walked with
 `aria-activedescendant`; moving the real focus onto an option would lose the query being
-typed. The dialog shell's focus trap only ever intervenes on Tab, which the palette handles
-itself — Tab opens the highlighted note rather than copying it.
+typed. ⚠️ **Tab is an arrow here**, and every row button carries `tabindex="-1"` so that
+the field is the only stop in the panel. Released to the DOM it walked a list of stops
+nothing drew a ring on while the highlight stayed where the arrows had left it — two notions
+of "the current row", one of them invisible (#283). The copy control is then out of reach of
+the keyboard, and that is the accepted cost: `Ctrl+C` copies the current row.
+
+⚠️ Taking the rows out of the order was not enough on its own. `FocusTrapDirective`'s
+selector excluded `tabindex="-1"` on the bare `[tabindex]` clause only, so a
+`<button tabindex="-1">` was still focusable as far as the trap was concerned and Shift+Tab
+in the field wrapped onto the last row's copy control. The exclusion is on every candidate
+now, and the trap leaves alone a Tab whose default a descendant has already prevented — the
+same `defaultPrevented` guard `CanvasKeyboardDirective` carries, for the same reason.
 
 ### Global tag management
 

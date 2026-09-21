@@ -42,6 +42,7 @@
           type="button"
           class="palette-option-button"
           data-testid="palette-open"
+          tabindex="-1"
           (click)="highlightSet.emit(index); openRequested.emit(note)"
         >
           <span class="palette-option-head">
@@ -64,6 +65,7 @@
           type="button"
           class="palette-option-copy"
           data-testid="palette-copy"
+          tabindex="-1"
           [attr.aria-label]="
             'palette.copyLabel' | transloco: { title: note.title || ('notes.untitled' | transloco) }
           "
@@ -90,6 +92,7 @@
         <button
           type="button"
           class="palette-option-button"
+          tabindex="-1"
           (click)="highlightSet.emit(results().length); chosen.emit()"
         >
           <span class="palette-option-title">

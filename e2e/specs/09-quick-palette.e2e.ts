@@ -120,6 +120,29 @@ describe('The quick-paste palette', () => {
   });
 
   /**
+   * ⚠️ Tab used to be released to the DOM, and it walked the rows' buttons — which draw no
+   * ring — while the highlight stayed where the arrows had left it. Two notions of "the
+   * current row", one of them invisible (#283).
+   */
+  it('walks the results with Tab, without letting the field lose the keyboard', async () => {
+    // Nothing above it leaves the palette open, so this one opens its own.
+    await emitGlobalAction('palette');
+    await palette.input().waitForExist({ timeout: 10_000 });
+    await palette.type('');
+    expect(await palette.options().length).toBeGreaterThan(1);
+
+    const first = await palette.current();
+
+    await press('Tab');
+    const second = await palette.current();
+    await press('Tab', ['Shift']);
+
+    expect(second).not.toBe(first);
+    expect(await palette.current()).toBe(first);
+    expect(await palette.focused()).toBe('palette-input');
+  });
+
+  /**
    * ⚠️ Asked of a snippet with fields on purpose: the copy path proper ends in
    * `window.hide()`, and this run shares one window with every file after it. The form is
    * where `Ctrl+C` lands for this note, which proves the binding reaches the copy without

@@ -698,6 +698,12 @@ export const palette = {
   openRow: (index = 0) => $$(testid('palette-open'))[index],
   copyRow: (index = 0) => $$(testid('palette-copy'))[index],
 
+  /** Which row is current, read the way assistive technology reads it. */
+  current: () => $(testid('palette-input')).getAttribute('aria-activedescendant'),
+
+  /** What the keyboard is on — the field, and only ever the field. */
+  focused: () => browser.execute(() => document.activeElement?.getAttribute('data-testid') ?? null),
+
   async type(text: string): Promise<void> {
     await $(testid('palette-input')).setValue(text);
     await browser.pause(400);
