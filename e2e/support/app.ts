@@ -332,6 +332,17 @@ export async function blurField(): Promise<void> {
   await browser.execute(() => (document.activeElement as HTMLElement | null)?.blur());
 }
 
+/** Where a box is on screen, rounded — enough to say whether it moved. */
+export async function boxOf(selector: string): Promise<{ left: number; top: number }> {
+  return browser.execute((sel: string) => {
+    const element = document.querySelector(sel);
+    if (!element) throw new Error('no element at ' + sel);
+
+    const box = element.getBoundingClientRect();
+    return { left: Math.round(box.left), top: Math.round(box.top) };
+  }, selector);
+}
+
 /**
  * Whether a field's placeholder fits at the narrowest its box can get — its `min-width`,
  * which is what a wrapping toolbar leaves it most of the time. A runner with a wide window

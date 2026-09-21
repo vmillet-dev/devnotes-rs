@@ -1,11 +1,13 @@
 @use 'mixins' as *;
 
-// The host is the flex child; `.board` is what actually scrolls.
+// The host is the flex child; `.board` is what actually scrolls. ⚠️ `relative` for the
+// count in the corner, which must not scroll with the surface it counts.
 :host {
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  position: relative;
 }
 
 // The dotted ground, and the only thing that scrolls: a pan, never a zoom.
@@ -27,11 +29,18 @@
   position: relative;
 }
 
-.loose-label {
+// Anchored to the board's own corner: it says how many cards sit in no folder, and that
+// is not a place on the surface.
+.loose-count {
   position: absolute;
+  top: 26px;
+  left: 34px;
   margin: 0;
-  font-size: 11.5px;
+  padding: 2px 8px;
+  @include surface($radius: 999px);
+  font-size: 11px;
   color: var(--text-2);
+  pointer-events: none;
 }
 
 // Dimmed in place: the card keeps its seat, it just stops asking for attention.

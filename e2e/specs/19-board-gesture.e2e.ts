@@ -2,7 +2,7 @@ import { browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { board, selectionBar, spaces } from '../pageobjects/overlays.page.js';
-import { eventually, reloadCanvas, waitForCanvas } from '../support/app.js';
+import { boxOf, eventually, reloadCanvas, testid, waitForCanvas } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
@@ -86,6 +86,19 @@ describe('Arranging the board', () => {
     expect(view.sections.flatMap((section) => section.notes).map((note) => note.title)).not.toContain(
       'Dump nocturne',
     );
+  });
+
+  /**
+   * ⚠️ The count used to be drawn above whichever loose card happened to be highest, so
+   * it climbed over the zones as soon as one was dragged up — and off the top of the
+   * board when the offset took it negative.
+   */
+  it('keeps the no-folder count in the corner while a card is dragged', async () => {
+    const before = await boxOf(testid('board-loose-label'));
+
+    await board.drag(board.cardGrip(looseId), { dx: 40, dy: -80 });
+
+    expect(await boxOf(testid('board-loose-label'))).toEqual(before);
   });
 
   it('remembers where the card was dropped across a restart of the front end', async () => {
