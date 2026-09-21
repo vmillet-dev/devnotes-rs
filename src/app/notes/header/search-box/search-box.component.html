@@ -1,4 +1,7 @@
-<label class="search-bar">
+<!-- ⚠️ The long form is a tooltip and not the placeholder. The row wraps before the
+     window is narrow, so the field spends most of its life at its 220px floor and the
+     sentence was cut mid-word; a wider field only makes the row wrap sooner. -->
+<label class="search-bar" [attr.title]="'notes.searchHint' | transloco">
   <!-- Hidden from assistive technology: a <label> aggregates all its text content, and
        the field's accessible name would become "🔍 Ctrl+K". -->
   <span aria-hidden="true">🔍</span>

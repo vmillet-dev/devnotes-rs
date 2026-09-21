@@ -2,7 +2,8 @@
   "notes": {
     "newNote": "+ New note",
     "searchLabel": "Search notes",
-    "searchPlaceholder": "Search a note, a tag, some code...",
+    "searchPlaceholder": "Search…",
+    "searchHint": "Search a note, a tag, some code",
     "spaceSwitcherLabel": "Switch space",
     "allSpaces": "All spaces",
     "newSpace": "New space",

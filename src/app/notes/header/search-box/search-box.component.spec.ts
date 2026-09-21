@@ -28,6 +28,28 @@ describe('SearchBoxComponent', () => {
     fixture.nativeElement.remove();
   });
 
+  /**
+   * ⚠️ The row wraps before the window is narrow, so the field spends most of its life at
+   * its floor — the long form was cut mid-word and said less than nothing.
+   */
+  it('keeps the long form as a tooltip and a short one in the field', () => {
+    const box: HTMLElement = fixture.nativeElement.querySelector('.search-bar');
+
+    expect(box.getAttribute('title')).toBe('Rechercher une note, un tag, du code');
+    expect(input().placeholder).toBe('Rechercher…');
+  });
+
+  /**
+   * ⚠️ The row wraps before the window is narrow, so the field spends most of its life at
+   * its floor — the long form was cut mid-word and said less than nothing.
+   */
+  it('keeps the long form as a tooltip and a short one in the field', () => {
+    const box: HTMLElement = fixture.nativeElement.querySelector('.search-bar');
+
+    expect(box.getAttribute('title')).toBe('Rechercher une note, un tag, du code');
+    expect(input().placeholder).toBe('Rechercher…');
+  });
+
   it('renders the provided query in the input', async () => {
     fixture.componentRef.setInput('query', 'hello');
     await fixture.whenStable();
