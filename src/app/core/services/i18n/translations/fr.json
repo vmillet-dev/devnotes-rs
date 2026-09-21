@@ -347,7 +347,7 @@
     "searchLabel": "Rechercher un snippet à coller",
     "resultsLabel": "Snippets trouvés",
     "empty": "Aucun snippet ne correspond.",
-    "hint": "↑↓ naviguer · Entrée copier · Tab ou clic ouvrir · Échap fermer",
+    "hint": "↑↓ naviguer · Entrée ou clic ouvrir · Ctrl+C copier · Échap fermer",
     "copyLabel": "Copier « {{title}} »",
     "close": "Fermer la palette",
     "createNote": "+ Créer une note « {{query}} »"
@@ -468,7 +468,7 @@
     "palette": {
       "navigate": "Parcourir les résultats",
       "paste": "Copier la note et fermer",
-      "open": "Ouvrir la note plutôt que la copier",
+      "open": "Ouvrir la note",
       "close": "Fermer la palette"
     }
   },

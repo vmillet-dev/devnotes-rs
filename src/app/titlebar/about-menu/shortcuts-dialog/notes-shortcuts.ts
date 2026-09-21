@@ -22,8 +22,8 @@ export const NOTES_SHORTCUT_GROUPS: readonly ShortcutGroup[] = [
     labelKey: 'shortcuts.groups.palette',
     shortcuts: [
       { keys: ['↑ ↓'], labelKey: 'shortcuts.palette.navigate' },
-      { keys: ['Enter'], labelKey: 'shortcuts.palette.paste' },
-      { keys: ['Tab'], labelKey: 'shortcuts.palette.open' },
+      { keys: ['Enter'], labelKey: 'shortcuts.palette.open' },
+      { keys: ['Ctrl', 'C'], labelKey: 'shortcuts.palette.paste' },
       { keys: ['Escape'], labelKey: 'shortcuts.palette.close' },
     ],
   },

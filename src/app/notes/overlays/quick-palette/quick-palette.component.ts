@@ -35,7 +35,28 @@ export class QuickPaletteComponent {
     return `palette-option-${index}`;
   }
 
+  /** `null` on the create row, which sits past the results and is not a note to open. */
+  private highlightedNote(): Note | null {
+    return this.results()[this.highlighted()] ?? null;
+  }
+
+  /** ⚠️ A field with a selection in it: `Ctrl+C` there means the selected text. */
+  private hasSelectedText(event: KeyboardEvent): boolean {
+    const field = event.target;
+    return field instanceof HTMLInputElement && field.selectionStart !== field.selectionEnd;
+  }
+
   protected onKeydown(event: KeyboardEvent): void {
+    // ⚠️ `Ctrl+C` and not a bare `c`, which the field would simply type. It is the letter
+    // the canvas already copies with, and the only modifier a text field leaves free.
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'c') {
+      if (this.hasSelectedText(event)) return;
+
+      event.preventDefault();
+      this.chosen.emit();
+      return;
+    }
+
     switch (event.key) {
       case 'ArrowDown':
         event.preventDefault();
@@ -45,16 +66,15 @@ export class QuickPaletteComponent {
         event.preventDefault();
         this.highlightMoved.emit(-1);
         break;
-      case 'Enter':
+      // Opens, as a click on the row does and as Enter does everywhere else in the
+      // application. The create row has nothing to open, so it is still `chosen`.
+      case 'Enter': {
         event.preventDefault();
-        this.chosen.emit();
-        break;
-      case 'Tab': {
-        // Open rather than copy: the palette also serves to find a note to edit.
-        const note = this.results()[this.highlighted()];
+        const note = this.highlightedNote();
         if (note) {
-          event.preventDefault();
           this.openRequested.emit(note.id);
+        } else {
+          this.chosen.emit();
         }
         break;
       }
