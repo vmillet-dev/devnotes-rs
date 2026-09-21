@@ -115,7 +115,8 @@
     "delete": "Delete folder",
     "deleteConfirm": "Confirm?",
     "deleteKeepsNotes": "The notes stay, simply without a folder.",
-    "breadcrumbLabel": "Folder breadcrumb"
+    "breadcrumbLabel": "Folder breadcrumb",
+    "selectNotes": "Select {count, plural, one {the note} other {all # notes}}"
   },
   "sidebar": {
     "library": "Library",

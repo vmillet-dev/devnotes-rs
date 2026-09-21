@@ -105,7 +105,7 @@ export class NotesPageComponent {
    * and offers the one thing to do from there.
    */
   protected readonly showsKeyboardHint = computed(() => {
-    if (this.board.isBoard() && this.folders.activeFolder() === null) {
+    if (this.board.isShowing()) {
       return !this.board.isLoading() && this.board.loadError() === undefined;
     }
     return !this.canvas.isLoading() && this.canvas.loadError() === undefined && !this.canvas.hasNoResults();

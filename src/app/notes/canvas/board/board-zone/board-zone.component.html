@@ -62,11 +62,15 @@
 
   @if (menuOpen()) {
     <div class="zone-dropdown" data-testid="board-zone-panel">
+      <!-- The count is the zone's own, dimmed cards included: the board dims rather than
+           narrows, and a filtered-out card is still filed here. -->
       <app-folder-editor
         [folder]="folder"
+        [selectableCount]="zone().notes.length"
         (renamed)="onRenamed($event)"
         (recoloured)="recoloured.emit($event)"
         (deleted)="onDeleted($event)"
+        (selectRequested)="onSelectRequested($event)"
       />
     </div>
   }

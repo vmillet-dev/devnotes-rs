@@ -37,9 +37,20 @@ const COLOURS: readonly FolderColour[] = ['blue', 'amber', 'purple', 'green', 'r
 export class FolderEditorComponent {
   readonly folder = input.required<Folder>();
 
+  /**
+   * How many of this folder's notes are on screen, or `null` where selecting them makes
+   * no sense.
+   *
+   * ⚠️ Opt-in rather than always drawn: the switcher lists folders you are **not** in, and
+   * "select all the notes of that one over there" is a gesture with no visible result. The
+   * zone menu and the breadcrumb are the two that are looking at the notes.
+   */
+  readonly selectableCount = input<number | null>(null);
+
   readonly renamed = output<FolderRenaming>();
   readonly recoloured = output<FolderRecolouring>();
   readonly deleted = output<string>();
+  readonly selectRequested = output<string>();
 
   protected readonly colours = COLOURS;
 
@@ -57,6 +68,10 @@ export class FolderEditorComponent {
     if (!name.trim()) return;
 
     this.renamed.emit({ id: this.folder().id, name });
+  }
+
+  protected selectNotes(): void {
+    this.selectRequested.emit(this.folder().id);
   }
 
   protected pickColour(colour: FolderColour): void {

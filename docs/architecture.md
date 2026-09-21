@@ -1026,6 +1026,27 @@ means "this note is loose", and writing one back would undo what `file_many` jus
 with `X`, then "Ranger dans" in the selection bar — the same batch command the drop uses,
 so the two cannot drift. The gesture adds to it; it does not replace it.
 
+**A selection is resolved against whichever view is drawing the cards.**
+`NoteSelectionStore.onScreen` reads `BoardStore.visibleNotes` while the board is showing
+and `NotesQueryStore.visibleNotes` otherwise, and the ticks, the range and the keyboard
+focus all go through it. ⚠️ The board **dims** where the canvas **narrows**, so a card the
+search filtered out of the date view is still drawn on the board and still filed in its
+folder — resolved against the canvas it left the selection the instant it was ticked, and
+the bar said nothing was selected.
+
+`checkFolder(folderId)` ticks every note on screen filed there, which is one rule serving
+both surfaces: on the board it is the zone's cards, dimmed ones included; inside an opened
+folder the whole view is that folder's contents anyway. It is offered by `folder-editor`,
+so it lives once beside rename, recolour and delete — ⚠️ behind `selectableCount`, which
+the zone menu and the breadcrumb pass and the **switcher** does not: the switcher lists
+folders you are not in, and selecting the notes of one of those is a gesture with no visible
+result. The entry names its count rather than saying "all".
+
+⚠️ `BoardStore.isShowing` is `isBoard() && no folder open`, and it is the one place that
+predicate is written. The inside of a folder is a flat grid, not a board, so an open folder
+takes the canvas back whatever the switch says — and that condition had already been copied
+into the page template, the page class and the canvas keyboard.
+
 **Tidying up is the same two rules, run again — and it is two gestures, not one.**
 `arrange_board` takes a `BoardScope`, because a single control confused two very different
 things. What goes to pieces on a board is the cards **outside** the zones, and they cost

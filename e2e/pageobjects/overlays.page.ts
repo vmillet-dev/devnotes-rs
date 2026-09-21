@@ -573,6 +573,12 @@ export const board = {
     await browser.pause(800);
   },
 
+  /** Ticks every card of a zone, dimmed ones included: the board dims, it does not narrow. */
+  async selectZoneNotes(folderId: string): Promise<void> {
+    await $(`${testid('board-zone')}[data-folder-id="${folderId}"] ${testid('board-zone-menu')}`).click();
+    await $(testid('folder-select-notes')).click();
+  },
+
   /** The corner click: the loose cards alone, nothing anybody sized by hand. */
   align: () => $(testid('board-tidy')).click(),
 

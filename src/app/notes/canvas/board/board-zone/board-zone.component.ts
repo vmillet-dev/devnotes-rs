@@ -51,11 +51,17 @@ export class BoardZoneComponent {
   readonly renamed = output<FolderRenaming>();
   readonly recoloured = output<FolderRecolouring>();
   readonly deleted = output<string>();
+  readonly selectRequested = output<string>();
 
   /** The same three actions the breadcrumb and the switcher offer, in the same panel. */
   protected readonly menuOpen = signal(false);
 
   protected readonly headingId = computed(() => `board-zone-${this.zone().folder.id}`);
+
+  protected onSelectRequested(folderId: string): void {
+    this.menuOpen.set(false);
+    this.selectRequested.emit(folderId);
+  }
 
   protected onRenamed(renaming: FolderRenaming): void {
     this.menuOpen.set(false);
