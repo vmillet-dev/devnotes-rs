@@ -1,8 +1,9 @@
 import { browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
-import { board, selectionBar, spaces } from '../pageobjects/overlays.page.js';
-import { eventually, reloadCanvas, waitForCanvas } from '../support/app.js';
+import { board, selectionBar, spaces, undoBar } from '../pageobjects/overlays.page.js';
+
+import { eventually, reloadCanvas, testid, waitForCanvas } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
@@ -345,5 +346,108 @@ describe('Arranging the board', () => {
     // ⚠️ Guessed in Rust, so it has to be checked where it is drawn: one pixel over and
     // the body is short of its own rows, which costs a scrollbar and then a column.
     expect(await board.zoneHeaderHeight(rapports)).toBeLessThanOrEqual(ZONE_HEADER);
+  });
+
+  /**
+   * ⚠️ Last in the file: it rewrites every frame and every seat of the space, so any
+   * scenario asserting a place of its own has to have run already.
+   */
+  describe('tidying it up', () => {
+    /** ⚠️ The half worth a corner click: a zone sized by hand is the only manual work a
+     *  board holds, and the frequent gesture must not be what overwrites it. */
+    it('aligns the loose cards without touching a single zone', async () => {
+      await openBoard();
+      await board.drag(board.zoneGrip(perfId), { dx: 340, dy: 420 });
+      const dragged = await eventually(
+        () => storedFrame(perfId),
+        (frame) => frame !== null && frame.x > 300,
+        'the dragged zone to reach the database',
+      );
+
+      await board.align();
+
+      // ⚠️ An assertion that nothing happened, so there is no condition to wait on: the
+      // pause is deliberately a duration.
+      await browser.pause(1500);
+      expect(await storedFrame(perfId)).toEqual(dragged);
+    });
+
+    it('names what it will touch rather than warning about it', async () => {
+      await $(testid('board-tidy-more')).click();
+
+      expect(await board.reorganiseLabel()).toMatch(/d/);
+      await browser.keys('Escape');
+    });
+
+    it('brings a zone dragged off into the distance back to its seat', async () => {
+      await board.reorganise();
+
+      const tidied = await eventually(
+        () => storedFrame(perfId),
+        (frame) => frame !== null && frame.x < 300,
+        'the reorganisation to reach the database',
+      );
+      expect(tidied?.y).toBe(16);
+    });
+
+    /**
+     * ⚠️ The result happens off screen otherwise. The pan is a native scroll nothing else
+     * resets, so a board panned to the right lands everything at the top left and leaves
+     * empty ground under a banner announcing success.
+     */
+    it('pans back to what it just wrote', async () => {
+      await openBoard();
+      await board.panTo(600, 200);
+      await eventually(
+        () => board.pan(),
+        (at) => at.x > 0,
+        'the board to be panned away from its origin',
+      );
+
+      await board.reorganise();
+
+      expect(
+        await eventually(
+          () => board.pan(),
+          (at) => at.x === 0 && at.y === 0,
+          'the board to pan back to what the arrangement wrote',
+        ),
+      ).toEqual({ x: 0, y: 0 });
+    });
+
+    /**
+     * ⚠️ Non-optional: it overwrites sizes chosen by hand, which dragging cannot undo.
+     *
+     * ⚠️ It drags a zone away first rather than leaning on the scenario above. The count
+     * is computed on what actually **moved**, so reorganising a board already in order
+     * opens no undo window at all — which is the point, and which made this read as a
+     * missing bar when it was a correct refusal.
+     */
+    it('offers the previous arrangement back, and puts it back', async () => {
+      await openBoard();
+      await board.drag(board.zoneGrip(perfId), { dx: 300, dy: 380 });
+      const dragged = await eventually(
+        () => storedFrame(perfId),
+        (frame) => frame !== null && frame.x > 300,
+        'the dragged zone to reach the database',
+      );
+
+      await board.reorganise();
+      await eventually(
+        () => storedFrame(perfId),
+        (frame) => frame !== null && frame.x < 300,
+        'the reorganisation to reach the database',
+      );
+
+      await undoBar.bar().waitForExist({ timeout: 5_000 });
+      await undoBar.restore();
+
+      const restored = await eventually(
+        () => storedFrame(perfId),
+        (frame) => frame !== null && frame.x === dragged!.x,
+        'the previous arrangement to come back',
+      );
+      expect(restored).toEqual(dragged);
+    });
   });
 });

@@ -15,6 +15,7 @@ import {
   NoteTag,
 } from '../model/note.model';
 import { NoteFiling } from '../model/folder.model';
+import { BoardLayout, BoardScope } from '../model/board.model';
 import { ClockService } from '@core/services/time/clock.service';
 import { debounced } from '@core/services/time/debounce';
 import { NoteSelectionStore } from './note-selection.store';
@@ -37,7 +38,8 @@ export type Reversible =
   | { readonly kind: 'deletion'; readonly ids: readonly string[]; readonly count: number }
   | { readonly kind: 'move'; readonly previous: readonly NotePlacement[]; readonly count: number }
   | { readonly kind: 'tag'; readonly added: readonly NoteTag[]; readonly count: number }
-  | { readonly kind: 'file'; readonly previous: readonly NoteFiling[]; readonly count: number };
+  | { readonly kind: 'file'; readonly previous: readonly NoteFiling[]; readonly count: number }
+  | { readonly kind: 'arrange'; readonly layout: BoardLayout; readonly count: number };
 
 /** The note being created, not written until it is worth keeping. */
 export const DRAFT_ID = '__draft__';
@@ -389,7 +391,25 @@ export class NotesStore {
         return this.repository.untagMany(action.added);
       case 'file':
         return this.folders.fileBack(action.previous);
+      case 'arrange':
+        return this.board.restoreLayout(action.layout);
     }
+  }
+
+  /**
+   * Puts the board back in order, and offers the previous arrangement back.
+   *
+   * ⚠️ Here rather than on `BoardStore`, which cannot reach the undo: this store injects
+   * the board, so the dependency only runs one way.
+   *
+   * ⚠️ The count is what actually **moved**, which the back end works out: a board already
+   * in order opens no undo window, because `openUndoWindow` refuses a count of zero.
+   */
+  async arrangeBoard(scope: BoardScope): Promise<void> {
+    const done = await this.board.arrange(scope);
+    if (!done) return;
+
+    this.openUndoWindow({ kind: 'arrange', layout: done.previous, count: done.moved });
   }
 
   /** Outside `edit()`: filling a field is not editing the note, so `updatedAt` stays put. */

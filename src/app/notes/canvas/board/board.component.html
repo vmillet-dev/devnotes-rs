@@ -1,5 +1,18 @@
 @let drawnBand = band();
 
+<!-- ⚠️ On the board rather than in the topbar: it acts on this space's geometry and on
+     nothing else, and the topbar is already the widest row in the window. Bottom and not
+     top: zones are laid out downward, so a control in the top-right corner covers the ⋯ of
+     whichever zone is in the last visible column. -->
+@if (editable()) {
+  <app-board-tidy
+    class="board-tidy"
+    [zoneCount]="zones().length"
+    [looseCount]="loose().length"
+    (requested)="tidyRequested.emit($event)"
+  />
+}
+
 <div class="board" data-testid="board">
   <!-- Sized by the back end from what is actually on it: the surface is what is panned.
        ⚠️ The move and up handlers sit here and not on each draggable: the pointer is

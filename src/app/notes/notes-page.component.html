@@ -156,6 +156,8 @@
             [loose]="board.loose()"
             [width]="board.width()"
             [height]="board.height()"
+            [arrangements]="board.arrangements()"
+            [restorations]="board.restorations()"
             (noteActivated)="onNoteActivated($event)"
             (folderOpened)="folders.selectFolder($event)"
             (cardDropped)="onCardDropped($event)"
@@ -164,6 +166,7 @@
             (folderRenamed)="onFolderRenamed($event)"
             (folderRecoloured)="onFolderRecoloured($event)"
             (folderDeleted)="onFolderDeleted($event)"
+            (tidyRequested)="store.arrangeBoard($event)"
           />
         }
       } @else {

@@ -40,6 +40,62 @@ describe('BoardComponent', () => {
     fixture.autoDetectChanges();
   });
 
+  /**
+   * ⚠️ The result of a whole-board arrangement happens **off screen** otherwise. The pan is
+   * a native scroll on `.board` that nothing else resets, so an arrangement lands
+   * everything at the top left while the user is looking somewhere else entirely — empty
+   * dotted ground under a banner announcing success.
+   */
+  describe('panning home after an arrangement', () => {
+    /** jsdom has no `scrollTo`, so the spec supplies the one the component calls. */
+    function watchScrolling(): { x: number; y: number }[] {
+      const board = root().querySelector<HTMLElement>('.board');
+      const seen: { x: number; y: number }[] = [];
+      board!.scrollTo = ((x: number, y: number) => {
+        seen.push({ x, y });
+        Object.defineProperty(board!, 'scrollLeft', { value: x, configurable: true });
+        Object.defineProperty(board!, 'scrollTop', { value: y, configurable: true });
+      }) as HTMLElement['scrollTo'];
+      return seen;
+    }
+
+    it('pans back to the origin the arrangement wrote to', async () => {
+      const seen = watchScrolling();
+
+      fixture.componentRef.setInput('arrangements', 1);
+      await fixture.whenStable();
+
+      expect(seen).toEqual([{ x: 0, y: 0 }]);
+    });
+
+    it('puts the pan back where it was when the arrangement is undone', async () => {
+      const board = root().querySelector<HTMLElement>('.board');
+      Object.defineProperty(board!, 'scrollLeft', { value: 840, configurable: true });
+      Object.defineProperty(board!, 'scrollTop', { value: 300, configurable: true });
+      const seen = watchScrolling();
+
+      fixture.componentRef.setInput('arrangements', 1);
+      await fixture.whenStable();
+      fixture.componentRef.setInput('restorations', 1);
+      await fixture.whenStable();
+
+      expect(seen).toEqual([
+        { x: 0, y: 0 },
+        { x: 840, y: 300 },
+      ]);
+    });
+
+    /** Nothing has been sent home, so there is nowhere to come back from. */
+    it('leaves the pan alone on an undo it never panned for', async () => {
+      const seen = watchScrolling();
+
+      fixture.componentRef.setInput('restorations', 1);
+      await fixture.whenStable();
+
+      expect(seen).toEqual([]);
+    });
+  });
+
   it('sizes the surface from what the back end says is on it', () => {
     const surface = root().querySelector<HTMLElement>('.board-surface');
 

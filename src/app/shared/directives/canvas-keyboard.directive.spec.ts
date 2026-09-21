@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { StatusNotifier } from '@core/services/notifications/status.service';
 import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
+import { BoardStore } from '@core/state/board.store';
 import { DialogStack } from '@shared/layout/dialog/dialog-stack';
 import { dialogRung } from '@shared/layout/dialog/dialog.model';
 import { NotesHarness, awaitQuery, createNotesHarness } from '@testing/notes-harness';
@@ -148,6 +149,32 @@ describe('CanvasKeyboardDirective', () => {
 
       expect(TestBed.inject(PlaceholderFillStore).target()?.id).toBe('note-1');
       expect(harness.clipboard.content).toBe('');
+    });
+  });
+
+  /**
+   * ⚠️ The key is what puts the gesture in the shortcuts sheet at all: the sheet is derived
+   * from this table, so an action with no key is an action nobody discovers. Only the light
+   * half gets one — reorganising the zones overwrites sizes chosen by hand, and a keystroke
+   * is the one address that cannot ask first.
+   */
+  describe('aligning the loose cards', () => {
+    it('does nothing on the date view, where there is no board', () => {
+      const board = TestBed.inject(BoardStore);
+      const before = board.arrangements();
+
+      const event = press('a');
+
+      expect(board.arrangements()).toBe(before);
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('is documented in the sheet the same table builds', () => {
+      const listed = CANVAS_SHORTCUT_GROUP.shortcuts.find(
+        (shortcut) => shortcut.labelKey === 'shortcuts.canvas.align',
+      );
+
+      expect(listed?.keys).toEqual(['A']);
     });
   });
 

@@ -8,6 +8,7 @@ const MESSAGES: Record<Reversible['kind'], string> = {
   move: 'undo.moved',
   tag: 'undo.tagged',
   file: 'undo.filed',
+  arrange: 'undo.arranged',
 };
 
 /** `role="status"` and not `alert`: a screen reader must not interrupt for this. */

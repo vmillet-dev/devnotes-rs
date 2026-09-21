@@ -88,3 +88,13 @@
   border-radius: 10px;
   pointer-events: none;
 }
+
+// ⚠️ Placed here, drawn by `board-tidy`. The host is `relative`, so this floats over
+// whatever the board has scrolled under it; the offsets clear `.board`'s own 24px margin
+// and the scrollbars inside its border.
+.board-tidy {
+  position: absolute;
+  bottom: 42px;
+  right: 40px;
+  z-index: 2;
+}

@@ -573,6 +573,35 @@ export const board = {
     await browser.pause(800);
   },
 
+  /** The corner click: the loose cards alone, nothing anybody sized by hand. */
+  align: () => $(testid('board-tidy')).click(),
+
+  /** A notch further: the zones as well, which is why it is behind the chevron. */
+  async reorganise(): Promise<void> {
+    await $(testid('board-tidy-more')).click();
+    await $(testid('board-tidy-everything')).click();
+  },
+
+  /** What the label offers to touch, which is the count and not a warning. */
+  reorganiseLabel: () => $(testid('board-tidy-everything')).getText(),
+
+  /** ⚠️ Where the board is panned to. An arrangement that lands its result outside this
+   *  is indistinguishable from an erasure. */
+  pan: (): Promise<{ x: number; y: number }> =>
+    browser.execute(() => {
+      const board = document.querySelector('.board');
+      return { x: board?.scrollLeft ?? 0, y: board?.scrollTop ?? 0 };
+    }),
+
+  panTo: (x: number, y: number): Promise<void> =>
+    browser.execute(
+      (left: number, top: number) => {
+        document.querySelector('.board')?.scrollTo(left, top);
+      },
+      x,
+      y,
+    ),
+
   /** ⚠️ Dimmed, never dropped: the card is still there, it has only stopped shouting. */
   isDimmed(title: string): Promise<boolean> {
     return browser.execute(

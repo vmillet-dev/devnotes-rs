@@ -137,7 +137,12 @@
     "dropHere": "Drop here",
     "nameTheZone": "Name this folder",
     "nameTheZoneHint": "The colour is assigned; change it from the folder menu.",
-    "dragHint": "Dragging a note into a zone files it; dropping it on the background takes it out."
+    "dragHint": "Dragging a note into a zone files it; dropping it on the background takes it out.",
+    "align": "Align",
+    "alignHint": "Aligns {cards, plural, =0 {no loose card} one {# loose card} other {# loose cards}} under the folders, leaving those alone.",
+    "tidyMoreLabel": "Other arrangements",
+    "reorganise": "Reorganise {zones, plural, =0 {no folder} one {# folder} other {# folders}} and {cards, plural, =0 {no card} one {# card} other {# cards}}",
+    "reorganiseHint": "Repositions and resizes the folders. Overwrites sizes chosen by hand; undoable."
   },
   "sections": {
     "pinned": "Pinned",
@@ -245,7 +250,8 @@
     "folderNameTaken": "A folder named “{{name}}” already exists in this space.",
     "boardLoadFailed": "The board could not be loaded.",
     "boardSaveFailed": "The board layout could not be saved.",
-    "fileFailed": "The note could not be filed."
+    "fileFailed": "The note could not be filed.",
+    "boardArrangeFailed": "The board could not be tidied up."
   },
   "tray": {
     "open": "Open {{app}}",
@@ -399,7 +405,8 @@
     "moved": "{count, plural, one {# note} other {# notes}} moved",
     "tagged": "{count, plural, one {# note} other {# notes}} tagged",
     "filed": "{count, plural, one {# note} other {# notes}} filed",
-    "restoreKey": "Esc"
+    "restoreKey": "Esc",
+    "arranged": "Board reorganised"
   },
   "file": {
     "menuLabel": "File",
@@ -464,7 +471,8 @@
       "extendWithClick": "Extend the selection with a click",
       "trash": "Send to the trash, in two presses",
       "undo": "Undo the last deletion",
-      "stepBack": "Take the note back, call off a pending deletion, then the selection, then the filters, then leave the folder"
+      "stepBack": "Take the note back, call off a pending deletion, then the selection, then the filters, then leave the folder",
+      "align": "Align the loose cards (board)"
     },
     "editor": {
       "close": "Close the editor, saving",

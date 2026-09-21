@@ -29,8 +29,8 @@ use attachments::{
 use changelog::app_changelog;
 use desktop::{set_global_shortcuts, set_window_behavior, sync_tray};
 use folders::{
-    board_view, create_folder, delete_folder, file_notes, file_notes_back, list_folders,
-    recolour_folder, rename_folder, save_board_layout,
+    arrange_board, board_view, create_folder, delete_folder, file_notes, file_notes_back,
+    list_folders, recolour_folder, rename_folder, restore_board_layout, save_board_layout,
 };
 use notes::{
     count_notes_tagged, create_note, delete_note, delete_notes, delete_tags, empty_trash,
@@ -88,6 +88,8 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             list_folders,
             board_view,
             save_board_layout,
+            arrange_board,
+            restore_board_layout,
             create_folder,
             rename_folder,
             recolour_folder,

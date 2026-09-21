@@ -7,9 +7,12 @@ import type {
   BoardZone as WireBoardZone,
 } from '@core/ipc/bindings';
 import {
+  BoardArrangement,
+  BoardLayout,
   BoardNote,
   BoardQuery,
   BoardView,
+  BoardScope,
   BoardZone,
   CardPlacement,
   ZonePlacement,
@@ -51,5 +54,14 @@ export class BoardRepository {
   /** One command for the whole gesture: a board half written is a board nobody arranged. */
   async saveLayout(zones: readonly ZonePlacement[], cards: readonly CardPlacement[]): Promise<void> {
     unwrap('save_board_layout', await commands.saveBoardLayout([...zones], [...cards]));
+  }
+
+  /** Answers what moved and the layout it replaced, which is what puts it back. */
+  async arrange(spaceId: string, scope: BoardScope): Promise<BoardArrangement> {
+    return unwrap('arrange_board', await commands.arrangeBoard(spaceId, scope));
+  }
+
+  async restoreLayout(layout: BoardLayout): Promise<void> {
+    unwrap('restore_board_layout', await commands.restoreBoardLayout(layout));
   }
 }

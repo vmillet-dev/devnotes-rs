@@ -6,10 +6,14 @@ use std::collections::HashMap;
 
 use diesel::prelude::*;
 
+use crate::count::saturating_u32;
 use crate::db::Library;
 use crate::db::schema::{folders, note_positions, notes};
 use crate::error::StorageError;
-use crate::folders::board::{self, BoardFrame, BoardPoint, CardPlacement, ZonePlacement};
+use crate::folders::board::{
+    self, BoardArrangement, BoardFrame, BoardLayout, BoardPoint, BoardScope, CardPlacement,
+    ZonePlacement,
+};
 
 /// What a board read resolves before anything can be drawn: where each zone sits, and
 /// where each loose card does.
@@ -288,5 +292,152 @@ pub fn geometry<S: std::hash::BuildHasher>(
         }
 
         Ok((stored_frames, stored_positions))
+    })
+}
+
+/// Every folder of the space in reading order, and how many live notes each one holds.
+///
+/// ⚠️ Ids and counts rather than [`crate::folders::store::list`] and
+/// [`crate::notes::store::fetch`]: a tidy-up needs no name and no body, and those two
+/// would decrypt the whole space to answer a count.
+fn folder_counts(
+    connection: &mut SqliteConnection,
+    space_id: &str,
+) -> Result<Vec<(String, usize)>, StorageError> {
+    let ids = folders::table
+        .filter(folders::space_id.eq(space_id))
+        .order((folders::created_at.asc(), folders::id.asc()))
+        .select(folders::id)
+        .load::<String>(connection)?;
+
+    let filed = notes::table
+        .filter(notes::space_id.eq(space_id))
+        .filter(notes::deleted_at.is_null())
+        .filter(notes::folder_id.is_not_null())
+        .select(notes::folder_id)
+        .load::<Option<String>>(connection)?;
+
+    let mut counts: HashMap<String, usize> = HashMap::new();
+    for folder_id in filed.into_iter().flatten() {
+        *counts.entry(folder_id).or_default() += 1;
+    }
+
+    Ok(ids
+        .into_iter()
+        .map(|id| {
+            let count = counts.get(&id).copied().unwrap_or(0);
+            (id, count)
+        })
+        .collect())
+}
+
+/// The unfiled notes, in the order the board draws them — pinned first, then by when they
+/// last moved, exactly as `notes::store::fetch` hands them over.
+fn loose_ids(
+    connection: &mut SqliteConnection,
+    space_id: &str,
+) -> Result<Vec<String>, StorageError> {
+    Ok(notes::table
+        .filter(notes::space_id.eq(space_id))
+        .filter(notes::deleted_at.is_null())
+        .filter(notes::folder_id.is_null())
+        .order((
+            notes::pinned.desc(),
+            notes::updated_at.desc(),
+            notes::id.asc(),
+        ))
+        .select(notes::id)
+        .load::<String>(connection)?)
+}
+
+/// Rewrites one space's geometry as far as `scope` allows, and answers what it was.
+///
+/// ⚠️ The **previous** layout and not the new one: the new one arrives with the reload the
+/// front end does anyway, where this is the only moment the old one still exists.
+///
+/// ⚠️ Only what actually had a place is reported back. A zone the board had never laid out
+/// had nothing to restore, and writing a frame for it on the undo would invent a position
+/// the user never chose. `moved` is narrower still — it counts what came out somewhere
+/// other than where it went in, so a board already in order opens no undo window at all.
+pub fn arrange(
+    connection: &mut Library,
+    space_id: &str,
+    scope: BoardScope,
+) -> Result<BoardArrangement, StorageError> {
+    connection.transaction(|connection, _vault| {
+        let loose = loose_ids(connection, space_id)?;
+        let before = frames(connection, space_id)?;
+        let places = positions(connection, space_id)?;
+
+        let next = match scope {
+            BoardScope::Everything => {
+                board::arrange_everything(&folder_counts(connection, space_id)?, &loose)
+            }
+            BoardScope::LooseCards => {
+                let standing: Vec<BoardFrame> = before.values().copied().collect();
+                board::arrange_loose_cards(&standing, &loose)
+            }
+        };
+
+        for placement in &next.zones {
+            set_frame(
+                connection,
+                &placement.folder_id,
+                board::clamp(placement.frame),
+            )?;
+        }
+        for placement in &next.cards {
+            set_position(
+                connection,
+                &placement.note_id,
+                board::clamp_point(placement.position),
+            )?;
+        }
+
+        let zones: Vec<ZonePlacement> = next
+            .zones
+            .iter()
+            .filter_map(|placement| {
+                before.get(&placement.folder_id).map(|frame| ZonePlacement {
+                    folder_id: placement.folder_id.clone(),
+                    frame: *frame,
+                })
+            })
+            .collect();
+        let cards: Vec<CardPlacement> = next
+            .cards
+            .iter()
+            .filter_map(|placement| {
+                places
+                    .get(&placement.note_id)
+                    .map(|position| CardPlacement {
+                        note_id: placement.note_id.clone(),
+                        position: *position,
+                    })
+            })
+            .collect();
+
+        let moved = zones
+            .iter()
+            .filter(|was| {
+                next.zones.iter().any(|now| {
+                    now.folder_id == was.folder_id && board::clamp(now.frame) != was.frame
+                })
+            })
+            .count()
+            + cards
+                .iter()
+                .filter(|was| {
+                    next.cards.iter().any(|now| {
+                        now.note_id == was.note_id
+                            && board::clamp_point(now.position) != was.position
+                    })
+                })
+                .count();
+
+        Ok(BoardArrangement {
+            moved: saturating_u32(moved),
+            previous: BoardLayout { zones, cards },
+        })
     })
 }

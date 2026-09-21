@@ -8,6 +8,7 @@ import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
 import { NoteSelectionStore } from '@core/state/note-selection.store';
 import { NotesQueryStore } from '@core/state/notes-query.store';
 import { NotesStore } from '@core/state/notes.store';
+import { BoardStore } from '@core/state/board.store';
 import { CardBox, FocusDirection, nextFocusIndex } from '@core/utils/grid-navigation.util';
 
 /** A card as it is on screen: where it is, and which note it is. */
@@ -18,6 +19,7 @@ interface MeasuredCard extends CardBox {
 interface CanvasContext {
   readonly focused: Note | null;
   readonly notes: NotesStore;
+  readonly board: BoardStore;
   readonly canvas: NotesQueryStore;
   readonly folders: FoldersStore;
   readonly selection: NoteSelectionStore;
@@ -107,6 +109,16 @@ const CANVAS_KEYS: readonly CanvasKey[] = [
     on: ['x', 'X'],
     run: ({ focused, selection }) => given(focused, (note) => selection.toggleChecked(note.id)),
   },
+  {
+    // ⚠️ The light half only. Reorganising the zones overwrites sizes chosen by hand, and
+    // a key is the one address that cannot ask first — it stays a notch further away, in
+    // the control's own menu.
+    keys: ['A'],
+    labelKey: 'shortcuts.canvas.align',
+    on: ['a', 'A'],
+    run: ({ board, folders, notes }) =>
+      when(board.isBoard() && folders.activeFolderId() === null, () => void notes.arrangeBoard('looseCards')),
+  },
   { keys: ['Ctrl'], labelKey: 'shortcuts.canvas.checkWithClick' },
   { keys: ['Shift'], labelKey: 'shortcuts.canvas.extendWithClick' },
   {
@@ -186,6 +198,7 @@ export class CanvasKeyboardDirective {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly selection = inject(NoteSelectionStore);
   private readonly notes = inject(NotesStore);
+  private readonly board = inject(BoardStore);
   private readonly canvas = inject(NotesQueryStore);
   private readonly folders = inject(FoldersStore);
   private readonly fill = inject(PlaceholderFillStore);
@@ -217,6 +230,7 @@ export class CanvasKeyboardDirective {
     return {
       focused: this.selection.focusedNote(),
       notes: this.notes,
+      board: this.board,
       canvas: this.canvas,
       folders: this.folders,
       selection: this.selection,

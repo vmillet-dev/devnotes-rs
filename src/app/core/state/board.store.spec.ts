@@ -467,6 +467,101 @@ describe('BoardStore', () => {
     });
   });
 
+  describe('tidying up', () => {
+    const DRAGGED = {
+      zones: [{ folderId: 'perf', frame: { x: 900, y: 640, width: 900, height: 700 } }],
+      cards: [{ noteId: 'a', position: { x: 300, y: 300 } }],
+    };
+
+    it('answers what moved and the layout it replaced, so the caller can offer it back', async () => {
+      const harness = await createStore();
+      await onBoard(harness);
+      harness.repository.arrangement = { moved: 2, previous: DRAGGED };
+
+      const done = await harness.store.arrange('everything');
+
+      expect(harness.repository.arranged).toEqual([{ spaceId: 'sql', scope: 'everything' }]);
+      expect(done).toEqual({ moved: 2, previous: DRAGGED });
+    });
+
+    /** ⚠️ The split is the feature: a zone sized by hand is the only manual work a board
+     *  holds, and the frequent gesture must not be the one that overwrites it. */
+    it('asks for the loose cards alone when that is the scope', async () => {
+      const harness = await createStore();
+      await onBoard(harness);
+
+      await harness.store.arrange('looseCards');
+
+      expect(harness.repository.arranged).toEqual([{ spaceId: 'sql', scope: 'looseCards' }]);
+    });
+
+    it('does nothing on all spaces, where there is no board to tidy', async () => {
+      const harness = await createStore();
+      harness.spaces.selectSpace(null);
+
+      expect(await harness.store.arrange('everything')).toBeNull();
+      expect(harness.repository.arranged).toEqual([]);
+    });
+
+    /** ⚠️ Every staged place has just been overwritten; kept, the overlay would draw the
+     *  cards back where the drag left them. */
+    it('lets go of what a gesture had staged', async () => {
+      const harness = await createStore(
+        new FakeBoardRepository({
+          zones: [fakeZone({ folder: PERF, frame: { x: 16, y: 16, width: 516, height: 200 } })],
+        }),
+      );
+      await onBoard(harness);
+
+      harness.store.moveZone('perf', { x: 640, y: 480, width: 516, height: 200 });
+      expect(harness.store.zones()[0]?.frame.x).toBe(640);
+
+      await harness.store.arrange('everything');
+
+      expect(harness.store.zones()[0]?.frame.x).toBe(16);
+    });
+
+    /**
+     * ⚠️ What the board watches to pan home. The arrangement puts everything back at the
+     * top left, and the pan is a native scroll nothing else resets — so a board panned
+     * elsewhere produces its result off screen, which reads as an erasure.
+     */
+    it('says an arrangement happened, so the board can pan back to it', async () => {
+      const harness = await createStore();
+      await onBoard(harness);
+      expect(harness.store.arrangements()).toBe(0);
+
+      await harness.store.arrange('everything');
+
+      expect(harness.store.arrangements()).toBe(1);
+    });
+
+    it('says a restoration happened too, so the pan can go back where it was', async () => {
+      const harness = await createStore();
+      await onBoard(harness);
+
+      await harness.store.restoreLayout(DRAGGED);
+
+      expect(harness.store.restorations()).toBe(1);
+    });
+
+    it('puts the previous layout back, and says how much it moved', async () => {
+      const harness = await createStore();
+      await onBoard(harness);
+
+      expect(await harness.store.restoreLayout(DRAGGED)).toBe(2);
+      expect(harness.repository.restored).toEqual([DRAGGED]);
+    });
+
+    it('reports a refused tidy-up rather than pretending it happened', async () => {
+      const harness = await createStore();
+      await onBoard(harness);
+      harness.repository.failNext = new Error('locked');
+
+      expect(await harness.store.arrange('everything')).toBeNull();
+    });
+  });
+
   it('reports a failed load and draws nothing', async () => {
     const repository = new FakeBoardRepository();
     repository.failNext = new Error('locked');
