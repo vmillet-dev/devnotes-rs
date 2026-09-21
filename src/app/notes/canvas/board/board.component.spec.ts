@@ -78,7 +78,8 @@ describe('BoardComponent', () => {
     expect(card?.style.top).toBe('');
   });
 
-  it('places a loose card at its own position, under a counted label', async () => {
+  /** ⚠️ The count is the page’s now: on the board it was drawn over the first zone (#295). */
+  it('places a loose card at its own position, and counts nothing itself', async () => {
     fixture.componentRef.setInput('loose', [
       fakeBoardNote(createNote({ id: 'b' }), { position: { x: 276, y: 426 } }),
     ]);
@@ -87,7 +88,7 @@ describe('BoardComponent', () => {
     const card = root().querySelector<HTMLElement>('[data-testid="board-loose-card"]');
     expect(card?.style.left).toBe('276px');
     expect(card?.style.top).toBe('426px');
-    expect(root().querySelector('[data-testid="board-loose-label"]')?.textContent).toContain('1');
+    expect(root().querySelector('[data-testid="board-loose-label"]')).toBeNull();
   });
 
   /** ⚠️ Dimmed in place: a reflow throws away the only thing the board has. */

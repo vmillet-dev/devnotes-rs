@@ -96,8 +96,3 @@
      soon as one was dragged up — and off the top of the board when the offset took it
      negative. Loose cards stopped being a band the day they could be placed; what is left
      of the label is the count. -->
-@if (loose().length > 0) {
-  <p class="loose-count" data-testid="board-loose-label">
-    {{ 'board.loose' | transloco: { count: loose().length } }}
-  </p>
-}

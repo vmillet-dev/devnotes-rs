@@ -112,11 +112,16 @@ describe('Arranging the board', () => {
   });
 
   /**
-   * ⚠️ The count used to be drawn above whichever loose card happened to be highest, so
-   * it climbed over the zones as soon as one was dragged up — and off the top of the
-   * board when the offset took it negative.
+   * ⚠️ The count was drawn above whichever loose card happened to be highest, so it
+   * climbed over the zones as soon as one was dragged up. Pinning it to the board’s own
+   * corner cured that and bought the opposite: it floated over whatever the surface put
+   * underneath, and `arrange_zones` lays the first zone in exactly that corner, so the
+   * title read "…s · 2" (#295). It is out of the board entirely now, which is the only
+   * placement a pan or a drag cannot defeat.
    */
-  it('keeps the no-folder count in the corner while a card is dragged', async () => {
+  it('draws the no-folder count clear of the board, where nothing can pass under it', async () => {
+    expect(await board.countIsClearOfTheBoard()).toBe(true);
+
     const before = await boxOf(testid('board-loose-label'));
 
     await board.drag(board.cardGrip(looseId), { dx: 40, dy: -80 });

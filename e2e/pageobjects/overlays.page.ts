@@ -453,6 +453,32 @@ export const board = {
     );
   },
 
+  /**
+   * Whether the no-folder count is drawn clear of the board altogether. ⚠️ The claim
+   * that matters: anchored **inside** it, the chip floated over whatever the surface put
+   * underneath — and the first zone is laid out in exactly that corner (#295).
+   */
+  countIsClearOfTheBoard(): Promise<boolean> {
+    return browser.execute(
+      (labelSelector: string, boardSelector: string) => {
+        const label = document.querySelector(labelSelector);
+        const board = document.querySelector(boardSelector);
+        if (!label || !board) throw new Error('no count, or no board');
+
+        const one = label.getBoundingClientRect();
+        const other = board.getBoundingClientRect();
+        return (
+          one.bottom <= other.top ||
+          one.top >= other.bottom ||
+          one.right <= other.left ||
+          one.left >= other.right
+        );
+      },
+      testid('board-loose-label'),
+      testid('board'),
+    );
+  },
+
   /** Which zone a card is drawn in right now, or `null` for the free background. */
   holderOf(noteId: string): Promise<string | null> {
     return browser.execute(
