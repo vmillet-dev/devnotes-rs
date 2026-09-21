@@ -1330,7 +1330,7 @@ mod gesture {
     mod tidy_up {
         use super::*;
 
-        use devnotes_lib::folders::board::{default_zone_height, default_zone_width};
+        use devnotes_lib::folders::board::{BoardScope, default_zone_height, default_zone_width};
 
         const DRAGGED: BoardFrame = BoardFrame {
             x: 900,
@@ -1346,7 +1346,7 @@ mod gesture {
             let perf = create(&mut connection, &sql, "Perf", t0()).unwrap();
             place(&mut connection, &[zone_at_frame(&perf.id, DRAGGED)], &[]);
 
-            geometry::arrange(&mut connection, &sql).unwrap();
+            geometry::arrange(&mut connection, &sql, BoardScope::Everything).unwrap();
 
             let frame = *frames(&mut connection, &sql).get(&perf.id).unwrap();
             assert_eq!(frame.x, 16);
@@ -1364,7 +1364,7 @@ mod gesture {
             let notes: Vec<String> = (0..5).map(|_| note_in(&mut connection, &sql).id).collect();
             file_many(&mut connection, &notes, Some(&perf.id), t1()).unwrap();
 
-            geometry::arrange(&mut connection, &sql).unwrap();
+            geometry::arrange(&mut connection, &sql, BoardScope::Everything).unwrap();
 
             let frame = *frames(&mut connection, &sql).get(&perf.id).unwrap();
             assert_eq!(frame.height, default_zone_height(5));
@@ -1379,7 +1379,7 @@ mod gesture {
             file_many(&mut connection, &[filed], Some(&perf.id), t1()).unwrap();
             let loose = note_in(&mut connection, &sql).id;
 
-            geometry::arrange(&mut connection, &sql).unwrap();
+            geometry::arrange(&mut connection, &sql, BoardScope::Everything).unwrap();
 
             let zone = *frames(&mut connection, &sql).get(&perf.id).unwrap();
             let at = *positions(&mut connection, &sql).get(&loose).unwrap();
@@ -1401,7 +1401,9 @@ mod gesture {
                 &[card_at(&note.id, seat)],
             );
 
-            let before = geometry::arrange(&mut connection, &sql).unwrap();
+            let before = geometry::arrange(&mut connection, &sql, BoardScope::Everything)
+                .unwrap()
+                .previous;
             place(&mut connection, &before.zones, &before.cards);
 
             assert_eq!(frames(&mut connection, &sql).get(&perf.id), Some(&DRAGGED));
@@ -1417,10 +1419,62 @@ mod gesture {
             create(&mut connection, &sql, "Perf", t0()).unwrap();
             note_in(&mut connection, &sql);
 
-            let before = geometry::arrange(&mut connection, &sql).unwrap();
+            let before = geometry::arrange(&mut connection, &sql, BoardScope::Everything).unwrap();
 
-            assert!(before.zones.is_empty());
-            assert!(before.cards.is_empty());
+            assert!(before.previous.zones.is_empty());
+            assert!(before.previous.cards.is_empty());
+        }
+
+        /// ⚠️ The half worth a single click: what goes to pieces is the cards outside the
+        /// zones, and a zone somebody sized by hand is the only manual work the board holds.
+        #[test]
+        fn aligning_the_loose_cards_leaves_every_zone_exactly_where_it_was() {
+            let mut connection = open_in_memory().unwrap();
+            let sql = space(&mut connection, "SQL");
+            let perf = create(&mut connection, &sql, "Perf", t0()).unwrap();
+            let note = note_in(&mut connection, &sql);
+            place(
+                &mut connection,
+                &[zone_at_frame(&perf.id, DRAGGED)],
+                &[card_at(&note.id, BoardPoint { x: 640, y: 1200 })],
+            );
+
+            let done = geometry::arrange(&mut connection, &sql, BoardScope::LooseCards).unwrap();
+
+            assert_eq!(frames(&mut connection, &sql).get(&perf.id), Some(&DRAGGED));
+            assert!(done.previous.zones.is_empty());
+            assert_eq!(done.moved, 1);
+        }
+
+        /// The cards flow under the zones **as they stand**, not under where a full
+        /// reorganisation would have put them.
+        #[test]
+        fn the_aligned_cards_clear_the_zones_where_they_actually_are() {
+            let mut connection = open_in_memory().unwrap();
+            let sql = space(&mut connection, "SQL");
+            let perf = create(&mut connection, &sql, "Perf", t0()).unwrap();
+            let note = note_in(&mut connection, &sql);
+            place(&mut connection, &[zone_at_frame(&perf.id, DRAGGED)], &[]);
+
+            geometry::arrange(&mut connection, &sql, BoardScope::LooseCards).unwrap();
+
+            let at = *positions(&mut connection, &sql).get(&note.id).unwrap();
+            assert!(at.y > DRAGGED.y + DRAGGED.height);
+        }
+
+        /// ⚠️ What the undo bar reads. A board nobody disturbed must open no undo window,
+        /// or the bar offers to put back an arrangement that never changed.
+        #[test]
+        fn a_board_already_in_order_reports_nothing_moved() {
+            let mut connection = open_in_memory().unwrap();
+            let sql = space(&mut connection, "SQL");
+            create(&mut connection, &sql, "Perf", t0()).unwrap();
+            note_in(&mut connection, &sql);
+            geometry::arrange(&mut connection, &sql, BoardScope::Everything).unwrap();
+
+            let again = geometry::arrange(&mut connection, &sql, BoardScope::Everything).unwrap();
+
+            assert_eq!(again.moved, 0);
         }
 
         #[test]
@@ -1434,7 +1488,7 @@ mod gesture {
             file_many(&mut connection, &notes, Some(&perf.id), t1()).unwrap();
             trash_many(&mut connection, &notes[..3], t1()).unwrap();
 
-            geometry::arrange(&mut connection, &sql).unwrap();
+            geometry::arrange(&mut connection, &sql, BoardScope::Everything).unwrap();
 
             let frame = *frames(&mut connection, &sql).get(&perf.id).unwrap();
             assert_eq!(frame.height, default_zone_height(1));

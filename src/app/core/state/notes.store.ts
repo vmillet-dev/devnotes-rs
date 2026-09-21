@@ -15,7 +15,7 @@ import {
   NoteTag,
 } from '../model/note.model';
 import { NoteFiling } from '../model/folder.model';
-import { BoardLayout } from '../model/board.model';
+import { BoardLayout, BoardScope } from '../model/board.model';
 import { ClockService } from '@core/services/time/clock.service';
 import { debounced } from '@core/services/time/debounce';
 import { NoteSelectionStore } from './note-selection.store';
@@ -401,16 +401,15 @@ export class NotesStore {
    *
    * ⚠️ Here rather than on `BoardStore`, which cannot reach the undo: this store injects
    * the board, so the dependency only runs one way.
+   *
+   * ⚠️ The count is what actually **moved**, which the back end works out: a board already
+   * in order opens no undo window, because `openUndoWindow` refuses a count of zero.
    */
-  async arrangeBoard(): Promise<void> {
-    const previous = await this.board.arrange();
-    if (!previous) return;
+  async arrangeBoard(scope: BoardScope): Promise<void> {
+    const done = await this.board.arrange(scope);
+    if (!done) return;
 
-    this.openUndoWindow({
-      kind: 'arrange',
-      layout: previous,
-      count: previous.zones.length + previous.cards.length,
-    });
+    this.openUndoWindow({ kind: 'arrange', layout: done.previous, count: done.moved });
   }
 
   /** Outside `edit()`: filling a field is not editing the note, so `updatedAt` stays put. */

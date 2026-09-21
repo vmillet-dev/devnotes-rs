@@ -6,11 +6,13 @@ use std::collections::HashMap;
 
 use diesel::prelude::*;
 
+use crate::count::saturating_u32;
 use crate::db::Library;
 use crate::db::schema::{folders, note_positions, notes};
 use crate::error::StorageError;
 use crate::folders::board::{
-    self, BoardFrame, BoardLayout, BoardPoint, CardPlacement, ZonePlacement,
+    self, BoardArrangement, BoardFrame, BoardLayout, BoardPoint, BoardScope, CardPlacement,
+    ZonePlacement,
 };
 
 /// What a board read resolves before anything can be drawn: where each zone sits, and
@@ -348,25 +350,35 @@ fn loose_ids(
         .load::<String>(connection)?)
 }
 
-/// Rewrites the whole geometry of one space, and answers what it was.
+/// Rewrites one space's geometry as far as `scope` allows, and answers what it was.
 ///
 /// ⚠️ The **previous** layout and not the new one: the new one arrives with the reload the
-/// front end does anyway, where this is the only moment the old one still exists. A
-/// tidy-up overwrites sizes chosen by hand, so it is the one board gesture that cannot be
-/// walked back by dragging.
+/// front end does anyway, where this is the only moment the old one still exists.
 ///
 /// ⚠️ Only what actually had a place is reported back. A zone the board had never laid out
 /// had nothing to restore, and writing a frame for it on the undo would invent a position
-/// the user never chose.
-pub fn arrange(connection: &mut Library, space_id: &str) -> Result<BoardLayout, StorageError> {
+/// the user never chose. `moved` is narrower still — it counts what came out somewhere
+/// other than where it went in, so a board already in order opens no undo window at all.
+pub fn arrange(
+    connection: &mut Library,
+    space_id: &str,
+    scope: BoardScope,
+) -> Result<BoardArrangement, StorageError> {
     connection.transaction(|connection, _vault| {
-        let counts = folder_counts(connection, space_id)?;
         let loose = loose_ids(connection, space_id)?;
-
         let before = frames(connection, space_id)?;
         let places = positions(connection, space_id)?;
 
-        let next = board::arrange(&counts, &loose);
+        let next = match scope {
+            BoardScope::Everything => {
+                board::arrange_everything(&folder_counts(connection, space_id)?, &loose)
+            }
+            BoardScope::LooseCards => {
+                let standing: Vec<BoardFrame> = before.values().copied().collect();
+                board::arrange_loose_cards(&standing, &loose)
+            }
+        };
+
         for placement in &next.zones {
             set_frame(
                 connection,
@@ -382,29 +394,50 @@ pub fn arrange(connection: &mut Library, space_id: &str) -> Result<BoardLayout, 
             )?;
         }
 
-        Ok(BoardLayout {
-            zones: next
-                .zones
+        let zones: Vec<ZonePlacement> = next
+            .zones
+            .iter()
+            .filter_map(|placement| {
+                before.get(&placement.folder_id).map(|frame| ZonePlacement {
+                    folder_id: placement.folder_id.clone(),
+                    frame: *frame,
+                })
+            })
+            .collect();
+        let cards: Vec<CardPlacement> = next
+            .cards
+            .iter()
+            .filter_map(|placement| {
+                places
+                    .get(&placement.note_id)
+                    .map(|position| CardPlacement {
+                        note_id: placement.note_id.clone(),
+                        position: *position,
+                    })
+            })
+            .collect();
+
+        let moved = zones
+            .iter()
+            .filter(|was| {
+                next.zones.iter().any(|now| {
+                    now.folder_id == was.folder_id && board::clamp(now.frame) != was.frame
+                })
+            })
+            .count()
+            + cards
                 .iter()
-                .filter_map(|placement| {
-                    before.get(&placement.folder_id).map(|frame| ZonePlacement {
-                        folder_id: placement.folder_id.clone(),
-                        frame: *frame,
+                .filter(|was| {
+                    next.cards.iter().any(|now| {
+                        now.note_id == was.note_id
+                            && board::clamp_point(now.position) != was.position
                     })
                 })
-                .collect(),
-            cards: next
-                .cards
-                .iter()
-                .filter_map(|placement| {
-                    places
-                        .get(&placement.note_id)
-                        .map(|position| CardPlacement {
-                            note_id: placement.note_id.clone(),
-                            position: *position,
-                        })
-                })
-                .collect(),
+                .count();
+
+        Ok(BoardArrangement {
+            moved: saturating_u32(moved),
+            previous: BoardLayout { zones, cards },
         })
     })
 }

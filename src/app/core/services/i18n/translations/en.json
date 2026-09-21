@@ -138,8 +138,11 @@
     "nameTheZone": "Name this folder",
     "nameTheZoneHint": "The colour is assigned; change it from the folder menu.",
     "dragHint": "Dragging a note into a zone files it; dropping it on the background takes it out.",
-    "tidy": "Tidy up",
-    "tidyHint": "Puts folders and notes back in reading order. Undoable."
+    "align": "Align",
+    "alignHint": "Aligns {cards, plural, =0 {no loose card} one {# loose card} other {# loose cards}} under the folders, leaving those alone.",
+    "tidyMoreLabel": "Other arrangements",
+    "reorganise": "Reorganise {zones, plural, =0 {no folder} one {# folder} other {# folders}} and {cards, plural, =0 {no card} one {# card} other {# cards}}",
+    "reorganiseHint": "Repositions and resizes the folders. Overwrites sizes chosen by hand; undoable."
   },
   "sections": {
     "pinned": "Pinned",
@@ -403,7 +406,7 @@
     "tagged": "{count, plural, one {# note} other {# notes}} tagged",
     "filed": "{count, plural, one {# note} other {# notes}} filed",
     "restoreKey": "Esc",
-    "arranged": "Board tidied up"
+    "arranged": "Board reorganised"
   },
   "file": {
     "menuLabel": "File",
@@ -468,7 +471,8 @@
       "extendWithClick": "Extend the selection with a click",
       "trash": "Send to the trash, in two presses",
       "undo": "Undo the last deletion",
-      "stepBack": "Take the note back, call off a pending deletion, then the selection, then the filters, then leave the folder"
+      "stepBack": "Take the note back, call off a pending deletion, then the selection, then the filters, then leave the folder",
+      "align": "Align the loose cards (board)"
     },
     "editor": {
       "close": "Close the editor, saving",

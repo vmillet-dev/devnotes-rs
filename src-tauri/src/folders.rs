@@ -14,7 +14,9 @@ use crate::db::{Db, lock};
 use crate::error::AppError;
 use crate::notes::view::{NoteFilter, NotesQuery};
 use crate::{attachments, notes};
-use board::{BoardLayout, BoardQuery, BoardView, CardPlacement, ZonePlacement};
+use board::{
+    BoardArrangement, BoardLayout, BoardQuery, BoardScope, BoardView, CardPlacement, ZonePlacement,
+};
 use model::{Folder, FolderColour, FolderDraft, NoteFiling};
 
 /// The second way to look at a space: folders as zones, their notes inside them, the
@@ -189,19 +191,23 @@ pub fn file_notes_back(filings: Vec<NoteFiling>, db: State<'_, Db>) -> Result<u3
     Ok(count(store::restore_filings(&mut connection, &filings)?))
 }
 
-/// Puts one space's board back in order: zones in reading order, each at the height its
-/// contents need, the loose cards flowing underneath.
+/// Puts one space's board back in order, as far as `scope` allows: the loose cards alone,
+/// or the zones with them.
 ///
 /// ⚠️ It answers the layout it **replaced**, not the one it wrote. The new one arrives
 /// with the reload the front end does anyway; this is the only moment the old one still
-/// exists, and a tidy-up overwrites sizes chosen by hand — the one board gesture that
-/// cannot be walked back by dragging.
+/// exists, and [`board::BoardScope::Everything`] overwrites sizes chosen by hand — the one
+/// board gesture that cannot be walked back by dragging.
 #[tauri::command(async)]
 #[specta::specta]
-pub fn arrange_board(space_id: String, db: State<'_, Db>) -> Result<BoardLayout, AppError> {
+pub fn arrange_board(
+    space_id: String,
+    scope: BoardScope,
+    db: State<'_, Db>,
+) -> Result<BoardArrangement, AppError> {
     let mut connection = lock(&db)?;
 
-    Ok(store::board::arrange(&mut connection, &space_id)?)
+    Ok(store::board::arrange(&mut connection, &space_id, scope)?)
 }
 
 /// The undo of [`arrange_board`]: every zone and every loose card back where it was.

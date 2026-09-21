@@ -1,10 +1,12 @@
 import { guard } from './fail-next';
 import { BoardRepository } from '@core/data/board.repository';
 import {
+  BoardArrangement,
   BoardLayout,
   BoardNote,
   BoardQuery,
   BoardView,
+  BoardScope,
   BoardZone,
   CardPlacement,
   ZonePlacement,
@@ -31,10 +33,10 @@ export class FakeBoardRepository implements Pick<BoardRepository, keyof BoardRep
   /** Every batch it was handed, so a spec can assert one gesture wrote once. */
   readonly saved: { zones: readonly ZonePlacement[]; cards: readonly CardPlacement[] }[] = [];
 
-  /** Which spaces were tidied up, and what each one was answered with. */
-  readonly arranged: string[] = [];
+  /** Each tidy-up it was asked for, and what it answers with. */
+  readonly arranged: { spaceId: string; scope: BoardScope }[] = [];
   readonly restored: BoardLayout[] = [];
-  previousLayout: BoardLayout = { zones: [], cards: [] };
+  arrangement: BoardArrangement = { moved: 0, previous: { zones: [], cards: [] } };
 
   /** When set, the next call to any method rejects with this error, then clears. */
   failNext: Error | null = null;
@@ -61,10 +63,10 @@ export class FakeBoardRepository implements Pick<BoardRepository, keyof BoardRep
     });
   }
 
-  arrange(spaceId: string): Promise<BoardLayout> {
+  arrange(spaceId: string, scope: BoardScope): Promise<BoardArrangement> {
     return guard(this, () => {
-      this.arranged.push(spaceId);
-      return this.previousLayout;
+      this.arranged.push({ spaceId, scope });
+      return this.arrangement;
     });
   }
 

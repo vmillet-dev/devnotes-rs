@@ -17,11 +17,13 @@ import { BoardRepository } from '../data/board.repository';
 import { debounced } from '@core/services/time/debounce';
 import { LanguageTag } from '../model/language.model';
 import {
+  BoardArrangement,
   BoardFrame,
   BoardLayout,
   BoardNote,
   BoardPoint,
   BoardQuery,
+  BoardScope,
   BoardView,
   BoardZone,
   NotesViewMode,
@@ -457,36 +459,56 @@ export class BoardStore {
   }
 
   /**
-   * Puts the whole space back in order: zones in reading order, each at the height its
-   * contents need, the loose cards flowing underneath.
-   *
-   * ⚠️ It answers the layout it **replaced**, and the caller is what offers that back. A
-   * tidy-up overwrites sizes chosen by hand, which is the one board gesture no amount of
-   * dragging walks back.
+   * ⚠️ Bumped by anything that moves the whole board at once. The pan is a native scroll
+   * on `.board` and nothing resets it, so an arrangement that lands everything back at the
+   * top left while the user is panned elsewhere produces its result **off screen**: empty
+   * dotted ground and a banner announcing success, which is indistinguishable from an
+   * erasure. The board watches this and pans home.
    */
-  async arrange(): Promise<BoardLayout | null> {
+  private readonly _arrangements = signal(0);
+  readonly arrangements = this._arrangements.asReadonly();
+
+  /**
+   * Puts the space back in order, as far as `scope` allows.
+   *
+   * ⚠️ It answers what moved and the layout it **replaced**, and the caller is what offers
+   * that back. `everything` overwrites sizes chosen by hand, which is the one board gesture
+   * no amount of dragging walks back.
+   */
+  async arrange(scope: BoardScope): Promise<BoardArrangement | null> {
     const spaceId = this.spaces.activeSpaceId();
     if (spaceId === null) return null;
 
-    const previous = await this.notifier.attempt('errors.boardArrangeFailed', () =>
-      this.repository.arrange(spaceId),
+    const done = await this.notifier.attempt('errors.boardArrangeFailed', () =>
+      this.repository.arrange(spaceId, scope),
     );
-    if (previous === null) return null;
+    if (done === null) return null;
 
     // ⚠️ Dropped rather than left to expire: the overlay covers places a gesture staged,
     // and every one of them has just been overwritten. Kept, it would draw the cards back
     // where the drag left them until a view happened to agree.
     this.stagedFrames.set(new Map());
     this.stagedCards.set(new Map());
+    this._arrangements.update((count) => count + 1);
     this.reload();
-    return previous;
+    return done;
   }
+
+  /**
+   * ⚠️ The same defect seen from the other end. Undoing puts the board back at the
+   * coordinates it was dragged to, while the pan is now at the origin `arrange` sent it
+   * to — so the undo would land its own result off screen. The board watches this and pans
+   * back to where it was before it was sent home.
+   */
+  private readonly _restorations = signal(0);
+  readonly restorations = this._restorations.asReadonly();
 
   /** The undo of `arrange`, and the count is what the banner needs back. */
   async restoreLayout(layout: BoardLayout): Promise<number> {
     await this.repository.restoreLayout(layout);
     this.stagedFrames.set(new Map());
     this.stagedCards.set(new Map());
+    this._restorations.update((count) => count + 1);
     this.reload();
     return layout.zones.length + layout.cards.length;
   }

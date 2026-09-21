@@ -1,0 +1,46 @@
+@let labels = counts();
+
+<div class="tidy">
+  <button
+    type="button"
+    class="tidy-btn"
+    data-testid="board-tidy"
+    [attr.title]="'board.alignHint' | transloco: labels"
+    (click)="ask('looseCards')"
+  >
+    <span aria-hidden="true">▦</span>
+    {{ 'board.align' | transloco }}
+  </button>
+
+  <!-- The chevron carries `appMenuAnchor`: it opened the menu, so focus returns to it. -->
+  <button
+    appMenuAnchor
+    type="button"
+    class="tidy-caret"
+    data-testid="board-tidy-more"
+    aria-haspopup="menu"
+    [attr.aria-expanded]="menu.open()"
+    [attr.aria-label]="'board.tidyMoreLabel' | transloco"
+    [attr.title]="'board.tidyMoreLabel' | transloco"
+    (click)="menu.toggle()"
+  >
+    <span aria-hidden="true">▾</span>
+  </button>
+
+  @if (menu.open()) {
+    <div appMenuPanel class="tidy-menu">
+      <!-- ⚠️ A notch further than the corner click, and it says what it will touch: it is
+           the only thing on the board that overwrites a frame set by hand. -->
+      <button
+        appMenuItem
+        type="button"
+        class="tidy-option"
+        data-testid="board-tidy-everything"
+        (click)="ask('everything')"
+      >
+        {{ 'board.reorganise' | transloco: labels }}
+      </button>
+      <p class="tidy-note">{{ 'board.reorganiseHint' | transloco }}</p>
+    </div>
+  }
+</div>

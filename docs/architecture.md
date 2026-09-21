@@ -1026,31 +1026,49 @@ means "this note is loose", and writing one back would undo what `file_many` jus
 with `X`, then "Ranger dans" in the selection bar — the same batch command the drop uses,
 so the two cannot drift. The gesture adds to it; it does not replace it.
 
-**Tidying up is the same two rules, run again.** `arrange_board` rewrites the whole
-geometry of one space from `arrange_zones` and `arrange_loose` — the functions
-`geometry` runs once and never again — so after an afternoon of dragging there is a way
-back to a board that lines up. Zones come back in `created_at` order, which is what makes
-the same board tidied twice the same board.
+**Tidying up is the same two rules, run again — and it is two gestures, not one.**
+`arrange_board` takes a `BoardScope`, because a single control confused two very different
+things. What goes to pieces on a board is the cards **outside** the zones, and they cost
+nothing to redo; a zone somebody positioned and sized by hand is the only manual work the
+board holds. One button did both, so the click that repaired the cheap half destroyed the
+expensive one — which is what stops anyone pressing it a second time.
 
-⚠️ It **repositions and resizes**: a zone is given the height its contents need, at the
-nominal width. An arrangement that leaves a zone too small for what is in it has not
-arranged anything — and that is exactly what makes the undo non-optional, since it
-overwrites sizes chosen by hand and no amount of dragging walks that back.
+- `looseCards` flows the unfiled cards under the zones **as they stand**
+  (`arrange_loose_cards`, whose `zones` comes back empty). Often, and nothing anybody
+  chose is lost — so it is the corner click, and the one with a key (`A`, in
+  `CANVAS_KEYS`, which is also what puts it in the shortcuts sheet).
+- `everything` adds `arrange_zones`: zones back in `created_at` order, three across,
+  each at the height its contents need. Rarely, and it overwrites every frame set by hand —
+  so it sits a notch further, behind the control's chevron, labelled with what it will
+  touch (`Réorganiser 2 dossiers et 2 cartes`) rather than with a warning. That is the
+  shape the tag manager and emptying the trash already use: name what you touch before
+  touching it. A ghost preview on hover was refused — a second layout engine on the front
+  for a tooltip.
 
-⚠️ The command answers the layout it **replaced**, not the one it wrote: the new one arrives
-with the reload the front end does anyway, and this is the only moment the old one still
-exists. `restore_board_layout` is `save_layout` under another name, and the record is the
-fourth branch of `Reversible` — `arrange`, carrying the whole `BoardLayout`. A zone the
-board had never laid out is left out of the answer: it had no place to go back to, and
-inventing one on the undo would put it somewhere nobody chose.
+⚠️ The command answers a `BoardArrangement`: `moved`, and the layout it **replaced**. The
+new one arrives with the reload the front end does anyway, and this is the only moment the
+old one still exists. `restore_board_layout` puts it back, and the record is the fourth
+branch of `Reversible`. ⚠️ `moved` counts what came out somewhere other than where it
+went in, never what was placed: a board already in order opens no undo window, because
+`openUndoWindow` refuses a count of zero. A zone the board had never laid out is left out
+of `previous` entirely — it had no place to go back to, and inventing one on the undo would
+put it somewhere nobody chose.
 
-⚠️ `BoardStore.arrange` drops both staged maps rather than letting them expire. Every place
-a gesture had staged has just been overwritten, and keeping the overlay would draw the cards
-back where the drag left them until a view happened to agree. The trigger lives on the board
-itself (`.board-tidy`, the host's top-right corner) and not in the topbar: it acts on this
-space's geometry alone, and the topbar is already the widest row in the window. The undo
-window is opened by `NotesStore`, which injects `BoardStore` — the dependency runs one
-way, so the board cannot reach the undo itself.
+⚠️ **The board pans home afterwards, and that is not a nicety.** The pan is a native scroll
+on `.board` and nothing else resets it, so an arrangement that lands everything back at
+the top left while the user is panned to the right produces its result **off screen**: empty
+dotted ground under a banner announcing success, which is indistinguishable from an erasure.
+`BoardStore` bumps `arrangements`, the component watches it and scrolls to the origin —
+remembering where it was, because undoing puts the board back at the coordinates it was
+dragged to while the pan is now at that origin, which is the same defect from the other end
+(`restorations` is the counter for that half). Counters and not booleans: two arrangements
+running have to pan twice.
+
+⚠️ `BoardStore.arrange` also drops both staged maps rather than letting them expire. Every
+place a gesture had staged has just been overwritten, and keeping the overlay would draw the
+cards back where the drag left them until a view happened to agree. The undo window is
+opened by `NotesStore`, which injects `BoardStore` — the dependency runs one way, so the
+board cannot reach the undo itself.
 
 ### Descending into a folder
 

@@ -83,15 +83,15 @@ export const commands = {
 	 */
 	saveBoardLayout: (zones: ZonePlacement[], cards: CardPlacement[]) => typedError<null, AppError>(__TAURI_INVOKE("save_board_layout", { zones, cards })),
 	/**
-	 *  Puts one space's board back in order: zones in reading order, each at the height its
-	 *  contents need, the loose cards flowing underneath.
+	 *  Puts one space's board back in order, as far as `scope` allows: the loose cards alone,
+	 *  or the zones with them.
 	 * 
 	 *  ⚠️ It answers the layout it **replaced**, not the one it wrote. The new one arrives
 	 *  with the reload the front end does anyway; this is the only moment the old one still
-	 *  exists, and a tidy-up overwrites sizes chosen by hand — the one board gesture that
-	 *  cannot be walked back by dragging.
+	 *  exists, and [`board::BoardScope::Everything`] overwrites sizes chosen by hand — the one
+	 *  board gesture that cannot be walked back by dragging.
 	 */
-	arrangeBoard: (spaceId: string) => typedError<BoardLayout, AppError>(__TAURI_INVOKE("arrange_board", { spaceId })),
+	arrangeBoard: (spaceId: string, scope: BoardScope) => typedError<BoardArrangement, AppError>(__TAURI_INVOKE("arrange_board", { spaceId, scope })),
 	/**  The undo of [`arrange_board`]: every zone and every loose card back where it was. */
 	restoreBoardLayout: (layout: BoardLayout) => typedError<null, AppError>(__TAURI_INVOKE("restore_board_layout", { layout })),
 	createFolder: (draft: FolderDraft) => typedError<Folder, AppError>(__TAURI_INVOKE("create_folder", { draft })),
@@ -217,6 +217,16 @@ export type Attachment = {
 	createdAt: string,
 };
 
+/**  What a tidy-up did, and what it takes to walk it back. */
+export type BoardArrangement = {
+	/**
+	 *  ⚠️ What actually **moved**, not what was placed. A board already in order moves
+	 *  nothing, and an undo bar offering to put back a board nobody disturbed is noise.
+	 */
+	moved: number,
+	previous: BoardLayout,
+};
+
 export type BoardFrame = {
 	x: number,
 	y: number,
@@ -262,6 +272,26 @@ export type BoardQuery = {
 	languages: Language[],
 	now: string,
 };
+
+/**
+ *  How much of a board a tidy-up is allowed to move.
+ * 
+ *  ⚠️ Two, and not one with a warning on it. What goes to pieces on a board is the cards
+ *  **outside** the zones; a zone somebody positioned and sized by hand is the only manual
+ *  work the board holds. One button did both, so the click that repaired the cheap half
+ *  destroyed the expensive one — which is what stops anyone pressing it twice.
+ */
+export type BoardScope = 
+/**
+ *  The loose cards alone, flowed under the zones **as they stand**. Often, and nothing
+ *  anybody chose is lost.
+ */
+"looseCards" | 
+/**
+ *  The zones as well: back in reading order, at the size their contents need. Rarely,
+ *  and it overwrites every frame that was set by hand.
+ */
+"everything";
 
 export type BoardView = {
 	zones: BoardZone[],

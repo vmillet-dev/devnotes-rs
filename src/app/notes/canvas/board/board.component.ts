@@ -3,15 +3,17 @@ import {
   Component,
   ElementRef,
   computed,
+  effect,
   inject,
   input,
   output,
   signal,
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { BoardFrame, BoardNote, BoardPoint, BoardZone } from '@core/model/board.model';
+import { BoardFrame, BoardNote, BoardPoint, BoardScope, BoardZone } from '@core/model/board.model';
 import { NoteActivation, NoteCardComponent } from '@notes/canvas/note-card/note-card.component';
 import { FolderRecolouring, FolderRenaming } from '@notes/header/folder-editor/folder-editor.component';
+import { BoardTidyComponent } from './board-tidy/board-tidy.component';
 import { BoardZoneComponent } from './board-zone/board-zone.component';
 import {
   Gesture,
@@ -55,7 +57,7 @@ export interface ZoneMove {
  */
 @Component({
   selector: 'app-board',
-  imports: [BoardZoneComponent, NoteCardComponent, TranslocoPipe],
+  imports: [BoardTidyComponent, BoardZoneComponent, NoteCardComponent, TranslocoPipe],
   templateUrl: './board.component.html',
   styleUrl: './board.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -69,6 +71,12 @@ export class BoardComponent {
   readonly height = input.required<number>();
   /** Nothing can be drawn or dropped without a space to file it into. */
   readonly editable = input(true);
+  /**
+   * ⚠️ Two counters, not two booleans: what matters is that the value **changed**, and a
+   * board arranged twice running has to pan twice. See `panTo` for what they are for.
+   */
+  readonly arrangements = input(0);
+  readonly restorations = input(0);
 
   readonly noteActivated = output<NoteActivation>();
   readonly folderOpened = output<string>();
@@ -78,9 +86,48 @@ export class BoardComponent {
   readonly folderRenamed = output<FolderRenaming>();
   readonly folderRecoloured = output<FolderRecolouring>();
   readonly folderDeleted = output<string>();
-  readonly tidyRequested = output<void>();
+  readonly tidyRequested = output<BoardScope>();
 
   protected readonly gesture = signal<Gesture | null>(null);
+
+  /** Where the pan was before an arrangement sent it home, so the undo can put it back. */
+  private pannedFrom: BoardPoint | null = null;
+
+  constructor() {
+    // ⚠️ The result of a whole-board arrangement happens **off screen** otherwise. The pan
+    // is a native scroll on `.board` and nothing resets it, so on a wide board panned to
+    // the right, "Réorganiser" lands everything back at the top left and leaves the user
+    // looking at empty dotted ground with a banner announcing success — indistinguishable
+    // from an erasure, and the reason nobody presses it a second time.
+    effect(() => {
+      if (this.arrangements() === 0) return;
+      this.pannedFrom = this.scrollOffset();
+      this.panTo({ x: 0, y: 0 });
+    });
+
+    // ⚠️ The same defect from the other end: undoing puts the board back where it was
+    // dragged to, while the pan is at the origin the arrangement sent it to.
+    effect(() => {
+      if (this.restorations() === 0) return;
+      const back = this.pannedFrom;
+      this.pannedFrom = null;
+      if (back) this.panTo(back);
+    });
+  }
+
+  private board(): HTMLElement | null {
+    return this.host.nativeElement.querySelector<HTMLElement>('.board');
+  }
+
+  private scrollOffset(): BoardPoint {
+    const board = this.board();
+    return { x: board?.scrollLeft ?? 0, y: board?.scrollTop ?? 0 };
+  }
+
+  /** Optional-chained because jsdom has no `scrollTo` and must not fail the arrangement. */
+  private panTo(at: BoardPoint): void {
+    this.board()?.scrollTo?.(at.x, at.y);
+  }
 
   /** The zone a drop would land in right now, so it can say so before the pointer lifts. */
   protected readonly hoveredZone = computed<string | null>(() => {

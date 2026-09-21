@@ -138,8 +138,11 @@
     "nameTheZone": "Nommer ce dossier",
     "nameTheZoneHint": "La couleur est attribuée ; changez-la depuis le menu du dossier.",
     "dragHint": "Glisser une note dans une zone la range ; la lâcher sur le fond l’en sort.",
-    "tidy": "Ranger",
-    "tidyHint": "Replace les dossiers et les notes en ordre de lecture. Annulable."
+    "align": "Aligner",
+    "alignHint": "Aligne {cards, plural, =0 {aucune carte libre} one {# carte libre} other {# cartes libres}} sous les dossiers, sans y toucher.",
+    "tidyMoreLabel": "Autres rangements",
+    "reorganise": "Réorganiser {zones, plural, =0 {aucun dossier} one {# dossier} other {# dossiers}} et {cards, plural, =0 {aucune carte} one {# carte} other {# cartes}}",
+    "reorganiseHint": "Replace et redimensionne les dossiers. Écrase les tailles choisies à la main ; annulable."
   },
   "sections": {
     "pinned": "Épinglées",
@@ -403,7 +406,7 @@
     "tagged": "{count, plural, one {# note étiquetée} other {# notes étiquetées}}",
     "filed": "{count, plural, one {# note rangée} other {# notes rangées}}",
     "restoreKey": "Échap",
-    "arranged": "Tableau rangé"
+    "arranged": "Tableau réorganisé"
   },
   "file": {
     "menuLabel": "Fichier",
@@ -468,7 +471,8 @@
       "extendWithClick": "Étendre la sélection au clic",
       "trash": "Mettre à la corbeille, en deux fois",
       "undo": "Annuler la dernière suppression",
-      "stepBack": "Reprendre la note, annuler la suppression en attente, la sélection, les filtres, puis sortir du dossier"
+      "stepBack": "Reprendre la note, annuler la suppression en attente, la sélection, les filtres, puis sortir du dossier",
+      "align": "Aligner les cartes libres (tableau)"
     },
     "editor": {
       "close": "Fermer l'éditeur en enregistrant",
