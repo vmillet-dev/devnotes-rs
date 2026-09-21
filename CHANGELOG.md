@@ -12,6 +12,37 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [0.3.2] - 2026-09-21
+
+### 🐛 Fixed
+
+- Give every format a badge, and a sweep that says when one has none (#275)
+- Split the accent into a surface, a line and a label (#271)
+- Ask twice before the Delete key trashes a note (#273)
+- Anchor the no-folder count to the board's corner (#270)
+- Give the search field a cross that empties it, and the filters a button (#272)
+- Open a zone far enough for the card filed into it (#269)
+- Make the search placeholder fit, and keep the long form as a tooltip (#266)
+- Read an entry's emphasis in Nouveautés instead of printing it (#268)
+- Draw a note opened from the palette in front of a help panel (#267)
+- Put the keyboard legend on the bottom edge (#265)
+- Keep the create slot inside an opened folder (#264)
+- Stamp an export name with the local day and minute (#263)
+- Hold a dropped card until a view comes back carrying it (#262)
+- Say where the keyboard is, on the four controls that did not (#261)
+- Make the copy key copy what the card copies, and say which note (#260)
+- Open on Enter in the palette, copy on Ctrl+C (#259)
+- Give a card with no place a seat nothing is standing on (#258)
+- Leave the keyboard where it is when a card is rebuilt (#257)
+
+### 🧰 Under the hood
+
+- Bring the reference in line with what v0.3.2 changed (#276)
+- Implement SonarQube scans in CI workflow (#228)
+- Implement SonarQube scans in CI workflow (#227)
+- Implement SonarQube scans in CI workflow (#226)
+- Implement SonarQube scans in CI workflow (#225)
+
 ## [0.3.1] - 2026-09-18
 
 ### ✨ Added
