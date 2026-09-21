@@ -4,7 +4,7 @@ import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
 import { fieldsForm } from '../pageobjects/overlays.page.js';
 import { settings, variables } from '../pageobjects/titlebar.page.js';
-import { clipboardText, eventually, reloadCanvas } from '../support/app.js';
+import { clipboardText, eventually, press, reloadCanvas } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
@@ -38,6 +38,20 @@ describe('{{fields}} in a snippet', () => {
     const card = await canvas.cardWithTitle(title);
     expect(await card.$('[data-testid="note-card-fields"]').isExisting()).toBe(true);
     expect(await card.$('[data-testid="note-card-fill"]').isExisting()).toBe(true);
+  });
+
+  /**
+   * ⚠️ The keyboard went straight past the form and pasted the tokens. Opening the note
+   * and closing it is what leaves the canvas cursor on that card.
+   */
+  it('asks for the fields when the copy comes from the keyboard too', async () => {
+    await canvas.openNote(title);
+    await editor.close();
+
+    await press('c');
+
+    await fieldsForm.form().waitForExist({ timeout: 10_000 });
+    await fieldsForm.cancel();
   });
 
   it('carries the default written in the text, as a suggestion', async () => {

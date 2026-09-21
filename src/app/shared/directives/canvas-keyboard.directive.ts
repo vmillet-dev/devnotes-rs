@@ -4,7 +4,7 @@ import { ShortcutGroup } from '@core/services/shortcuts/shortcut.model';
 import { DialogStack } from '@shared/layout/dialog/dialog-stack';
 import { FoldersStore } from '@core/state/folders.store';
 import { Note } from '@core/model/note.model';
-import { NoteCopyService } from '@core/state/note-copy.service';
+import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
 import { NoteSelectionStore } from '@core/state/note-selection.store';
 import { NotesQueryStore } from '@core/state/notes-query.store';
 import { NotesStore } from '@core/state/notes.store';
@@ -22,7 +22,8 @@ interface CanvasContext {
   readonly folders: FoldersStore;
   readonly selection: NoteSelectionStore;
   readonly settings: SettingsStore;
-  readonly copy: (content: string) => void;
+  /** The whole rule — the fields form, a todo list's Markdown — lives in the store. */
+  readonly copy: (note: Note) => void;
   readonly move: (direction: FocusDirection) => void;
 }
 
@@ -92,7 +93,7 @@ const CANVAS_KEYS: readonly CanvasKey[] = [
     keys: ['C'],
     labelKey: 'shortcuts.canvas.copy',
     on: ['c', 'C'],
-    run: ({ focused, copy }) => given(focused, (note) => copy(note.content)),
+    run: ({ focused, copy }) => given(focused, copy),
   },
   {
     keys: ['P'],
@@ -164,7 +165,7 @@ export class CanvasKeyboardDirective {
   private readonly notes = inject(NotesStore);
   private readonly canvas = inject(NotesQueryStore);
   private readonly folders = inject(FoldersStore);
-  private readonly copier = inject(NoteCopyService);
+  private readonly fill = inject(PlaceholderFillStore);
   private readonly dialogs = inject(DialogStack);
   private readonly settings = inject(SettingsStore);
 
@@ -197,7 +198,7 @@ export class CanvasKeyboardDirective {
       folders: this.folders,
       selection: this.selection,
       settings: this.settings,
-      copy: (content) => void this.copier.copy(content),
+      copy: (note) => void this.fill.copyNote(note),
       move: (direction) => this.moveFocus(direction),
     };
   }

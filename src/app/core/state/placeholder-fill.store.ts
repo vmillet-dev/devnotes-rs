@@ -1,5 +1,6 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { StatusNotifier } from '@core/services/notifications/status.service';
+import { noteCopyText } from '../model/checklist.model';
 import { Note } from '../model/note.model';
 import { NoteCopyService } from './note-copy.service';
 import { NotesQueryStore } from './notes-query.store';
@@ -45,6 +46,29 @@ export class PlaceholderFillStore {
 
   openFor(noteId: string): void {
     this._target.set(this.canvas.visibleNotes().find((note) => note.id === noteId) ?? null);
+  }
+
+  /**
+   * What copying a note means when nothing is pointing at a particular control: a snippet
+   * with fields asks for them first, a todo list gives its Markdown — it has no `content`
+   * at all — and anything else goes as it is.
+   *
+   * ⚠️ It says which note it took. The card's own button paints a tick on itself; the
+   * keyboard has no such surface, and the ring may be on a card that is scrolled away.
+   */
+  async copyNote(note: Note): Promise<void> {
+    if (note.placeholders.length > 0) {
+      this.openFor(note.id);
+      return;
+    }
+
+    if (!(await this.copier.copy(noteCopyText(note)))) return;
+
+    this.status.notify(
+      note.title
+        ? { key: 'notes.copiedNote', params: { title: note.title } }
+        : { key: 'notes.copiedUntitled' },
+    );
   }
 
   cancel(): void {
