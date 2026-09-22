@@ -770,16 +770,18 @@ written, bullets and all.
 
 The theme and the language are the same kind of choice, and they sat three gestures apart:
 the language in the titlebar, the theme behind File → Préférences → Apparence. There is a
-theme control beside it now: **one button that cycles**, in `THEME_CHOICES` order. Three
-buttons side by side was two-thirds of a control saying nothing — the theme has three values
-and only one of them is ever true, so the glyph on the one control **is** the state.
+theme control beside it now, and it is a **toggle between light and dark**. It used to cycle
+through the three `THEME_CHOICES`, and a click on "system" usually changed nothing on screen
+— the one thing a click there is expected to do (#323). Following the system is chosen in
+the panel, which keeps its three rows.
 
-⚠️ It writes `SettingsStore.theme`, the **same signal** the preferences panel writes, so
-the two cannot disagree; and the panel keeps its row, because a setting that exists only in
-a corner of the titlebar is a setting nobody finds twice. ⚠️ A glyph rather than a word: the
-language beside it is two letters, and a label would be the widest thing in a bar whose
-middle is the application's name. The word reaches a screen reader through the accessible
-label, and it has to — the glyph carries the whole of the state.
+⚠️ The control reads `resolvedTheme`, **what is on screen**, not the setting: on "system" it
+shows what the machine resolved, and a press writes the explicit opposite. It writes
+`SettingsStore.theme`, the **same signal** the panel writes, so the two cannot disagree.
+⚠️ Icon and label both name the **action** — a moon on a light screen, "Passer au thème
+sombre" — the convention a toggle follows. An icon rather than a word: the language beside
+it is two letters, and a label would be the widest thing in a bar whose middle is the
+application's name.
 
 ⚠️ Both switches sit in **one** group. `.titlebar` is `space-between` and the title takes
 no part in that row, being absolutely positioned, so two loose groups put the theme in the

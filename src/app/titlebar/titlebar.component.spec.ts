@@ -96,47 +96,60 @@ describe('TitlebarComponent', () => {
   });
 
   /**
-   * ⚠️ One button that cycles, not three sitting side by side: the theme has three values
-   * and only one is ever true. It writes the same signal the preferences panel writes, so
-   * the two cannot disagree — and the panel keeps its row.
+   * ⚠️ Light or dark, never "system": a click is expected to change what is on screen, and
+   * "system" usually looks exactly like what was already there. The panel keeps the three.
    */
   describe('the theme, beside the language', () => {
     function control(): HTMLButtonElement {
-      return fixture.nativeElement.querySelector('[data-testid="theme-cycle"]');
+      return fixture.nativeElement.querySelector('[data-testid="theme-toggle"]');
     }
 
-    it('is one control, showing the theme in force', async () => {
+    async function press(): Promise<void> {
+      control().click();
+      await fixture.whenStable();
+    }
+
+    it('is one control, showing the theme on screen', async () => {
+      TestBed.inject(SettingsStore).setTheme('dark');
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.querySelectorAll('[data-testid="theme-toggle"]')).toHaveLength(1);
+      expect(control().getAttribute('data-theme-shown')).toBe('dark');
+    });
+
+    it('toggles between light and dark', async () => {
       const settings = TestBed.inject(SettingsStore);
       settings.setTheme('light');
       await fixture.whenStable();
 
-      expect(fixture.nativeElement.querySelectorAll('[data-testid="theme-cycle"]')).toHaveLength(1);
-      expect(control().getAttribute('data-theme-choice')).toBe('light');
-    });
-
-    /** ⚠️ In `THEME_CHOICES` order, which is the preferences panel's. */
-    it('walks the three and comes back round', async () => {
-      const settings = TestBed.inject(SettingsStore);
-      settings.setTheme('system');
-      await fixture.whenStable();
-
       const walked: string[] = [];
       for (let step = 0; step < 3; step += 1) {
-        control().click();
-        await fixture.whenStable();
+        await press();
         walked.push(settings.theme());
       }
 
-      expect(walked).toEqual(['dark', 'light', 'system']);
+      expect(walked).toEqual(['dark', 'light', 'dark']);
     });
 
-    /** ⚠️ The glyph is decorative and carries the whole state: the word has to be said. */
-    it('names the theme in words, which the glyph does not', async () => {
+    /** jsdom's system resolves to light, so the opposite of the screen is dark. */
+    it('leaves "system" for the explicit opposite of what it resolved to', async () => {
       const settings = TestBed.inject(SettingsStore);
-      settings.setTheme('dark');
+      settings.setTheme('system');
+      await fixture.whenStable();
+      expect(control().getAttribute('data-theme-shown')).toBe('light');
+
+      await press();
+
+      expect(settings.theme()).toBe('dark');
+    });
+
+    /** ⚠️ The icon is decorative: the label says what a press will do. */
+    it('names the action in words, which the icon does not', async () => {
+      TestBed.inject(SettingsStore).setTheme('dark');
       await fixture.whenStable();
 
-      expect(control().getAttribute('aria-label')).toContain('Sombre');
+      expect(control().getAttribute('aria-label')).toContain('clair');
+      expect(control().querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
     });
   });
 });

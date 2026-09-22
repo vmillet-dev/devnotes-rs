@@ -520,7 +520,8 @@
       "system": "Système",
       "dark": "Sombre",
       "light": "Clair",
-      "current": "Thème : {{theme}}"
+      "toDark": "Passer au thème sombre",
+      "toLight": "Passer au thème clair"
     },
     "density": {
       "comfortable": "Confortable",
