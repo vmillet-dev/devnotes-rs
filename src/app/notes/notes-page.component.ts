@@ -46,6 +46,7 @@ import {
   Segment,
   SegmentedChoiceComponent,
 } from '@shared/controls/segmented-choice/segmented-choice.component';
+import { IconComponent } from '@shared/icon/icon.component';
 import { TrashPanelComponent } from './overlays/trash-panel/trash-panel.component';
 import { UndoBarComponent } from './overlays/undo-bar/undo-bar.component';
 
@@ -56,6 +57,7 @@ import { UndoBarComponent } from './overlays/undo-bar/undo-bar.component';
     SearchBoxComponent,
     FacetsPanelComponent,
     SegmentedChoiceComponent,
+    IconComponent,
     FolderSwitcherComponent,
     FolderBreadcrumbComponent,
     LibraryTreeComponent,

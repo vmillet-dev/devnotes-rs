@@ -3322,6 +3322,13 @@ Treated as part of the definition of done, and partly enforced by
 
 - **Decorative pictograms carry `aria-hidden="true"`.** The app uses emoji as icons; unmuted,
   each one is announced ("pushpin", "hourglass").
+- **An icon-only control draws an `<app-icon>`, not a glyph** (`shared/icon/`: a handful of
+  Lucide paths, ISC, stroked in `currentColor` at 16 px). `🗑` is drawn by the system's
+  colour font and looks different on every machine, `▤` barely renders, neither follows
+  the theme's `color` — and `⚙` opened the **filters**, the one thing a gear is never for
+  (#322). The icon is `aria-hidden` by construction: the control names itself, through
+  `aria-label` and `title`. A glyph beside a word, as in the editor's toolbar, reads fine
+  and stays.
 - **Information conveyed only graphically is duplicated as text.** A pinned card renders a
   `.visually-hidden` label, because the pin itself is a CSS pseudo-element.
 - **Toggles expose `aria-pressed`**, not just a CSS class: tag pills, filter chips, the pin

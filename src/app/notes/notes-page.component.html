@@ -31,7 +31,7 @@
         [attr.title]="'sidebar.toggle' | transloco"
         (click)="toggleLibraryRail()"
       >
-        <span aria-hidden="true">▤</span>
+        <app-icon name="sidebar" />
       </button>
       <!-- ⚠️ Away from the filters *and* from the primary action: it is a view on the
            notes rather than a filter, and it used to sit six pixels from "Nouvelle note". -->
@@ -43,7 +43,7 @@
         [attr.title]="'notes.trash' | transloco"
         (click)="trash.open()"
       >
-        <span aria-hidden="true">🗑</span>
+        <app-icon name="trash" />
       </button>
       @if (folders.activeFolder(); as openFolder) {
         <app-folder-breadcrumb
@@ -106,7 +106,7 @@
         [attr.title]="'filters.facetsLabel' | transloco"
         (click)="facetsExpanded.set(!facetsExpanded())"
       >
-        <span aria-hidden="true">⚙</span>
+        <app-icon name="filter" />
         @if (facetCount(); as count) {
           <span class="facets-count" data-testid="facets-count">{{ count }}</span>
         }
