@@ -5,6 +5,7 @@ import {
   checkedSegment,
   choiceLabel,
   clickToAddRow,
+  eventually,
   pickChoice,
   pickSegment,
   readEach,
@@ -25,18 +26,22 @@ export const titlebar = {
   /** One of the few untranslated labels, so a scenario can pin the language it asserts in. */
   setLocale: (locale: 'fr' | 'en') => $(`${testid('locale-option')}[data-locale="${locale}"]`).click(),
 
+  /** The theme on screen, which on "system" is whatever the machine resolved it to. */
+  shownTheme: () => $(testid('theme-toggle')).getAttribute('data-theme-shown'),
+
   /**
-   * ⚠️ One button that cycles rather than three: pressing it walks `THEME_CHOICES`, so
-   * reaching a given theme means pressing it until the control says so.
+   * ⚠️ Light or dark only: the button toggles between the two, and "system" is the
+   * preferences panel's to choose. One press at most.
    */
-  async setTheme(theme: string): Promise<void> {
-    const control = $(testid('theme-cycle'));
-    for (let press = 0; press < 3; press += 1) {
-      if ((await control.getAttribute('data-theme-choice')) === theme) return;
-      await control.click();
-      await browser.pause(150);
-    }
-    throw new Error(`the titlebar never reached the ${theme} theme`);
+  async setTheme(theme: 'light' | 'dark'): Promise<void> {
+    if ((await titlebar.shownTheme()) === theme) return;
+
+    await $(testid('theme-toggle')).click();
+    await eventually(
+      () => titlebar.shownTheme(),
+      (shown) => shown === theme,
+      `the ${theme} theme on screen`,
+    );
   },
 
   /** One call: two reads leave a window in which the pressed option can change. */

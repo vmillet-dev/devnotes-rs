@@ -227,11 +227,11 @@ describe('Preferences', () => {
    * finds twice. The theme was three gestures away where the language was one.
    */
   describe('the theme, from the titlebar', () => {
-    /** ⚠️ One button that cycles, in `THEME_CHOICES` order: system, dark, light. */
-    const cycle = () => $(testid('theme-cycle'));
-
+    /** ⚠️ "System" is not the titlebar's to set any more: back through the panel. */
     after(async () => {
-      await titlebar.setTheme('system');
+      await fileMenu.openPreferences();
+      await settings.setTheme('system');
+      await settings.close();
     });
 
     it('repaints the window without opening anything', async () => {
@@ -247,13 +247,48 @@ describe('Preferences', () => {
     });
 
     it('shows the theme in force on the one control there is', async () => {
-      expect(await cycle().getAttribute('data-theme-choice')).toBe('light');
+      expect(await titlebar.shownTheme()).toBe('light');
     });
 
     it('is the same choice the panel shows', async () => {
       await fileMenu.openPreferences();
 
       expect(await settings.theme()).toBe('light');
+      await settings.close();
+    });
+
+    /**
+     * ⚠️ From "system", one press lands on the explicit **opposite of what is on screen** —
+     * never on "system" again, which usually looks exactly like what was already there
+     * (#323). What "system" resolves to is the runner's, so it is read, not assumed.
+     */
+    it('toggles between light and dark, never through system', async () => {
+      await fileMenu.openPreferences();
+      await settings.setTheme('system');
+      await settings.close();
+      const resolved = await titlebar.shownTheme();
+      const opposite = resolved === 'dark' ? 'light' : 'dark';
+
+      await $(testid('theme-toggle')).click();
+      expect(
+        await eventually(
+          () => titlebar.shownTheme(),
+          (shown) => shown === opposite,
+          'the opposite theme',
+        ),
+      ).toBe(opposite);
+
+      await $(testid('theme-toggle')).click();
+      expect(
+        await eventually(
+          () => titlebar.shownTheme(),
+          (shown) => shown === resolved,
+          'back to where it was',
+        ),
+      ).toBe(resolved);
+
+      await fileMenu.openPreferences();
+      expect(await settings.theme()).toBe(resolved);
       await settings.close();
     });
   });

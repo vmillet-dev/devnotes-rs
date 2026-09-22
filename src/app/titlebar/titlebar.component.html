@@ -19,23 +19,21 @@
   <!-- ⚠️ One group, or `space-between` puts the theme in the middle of the bar: the title
        is absolutely positioned and takes no part in the flex row. -->
   <div class="titlebar-choices">
-    <!-- ⚠️ One button that cycles, not three sitting side by side: the theme has three
-         values and only one of them is ever true, so the other two were two-thirds of a
-         control saying nothing. The glyph **is** the state, which is why the word has to
-         reach a screen reader through the label.
-         ⚠️ It writes `SettingsStore.theme`, the signal the preferences panel writes, so the
-         two cannot disagree — and the panel keeps its row, because a setting that only
-         exists in a corner of the titlebar is a setting nobody finds twice. -->
+    <!-- ⚠️ Light or dark, never "system": a click is expected to change what is on screen,
+         and "system" usually looks exactly like what was already there. Following the
+         system is chosen in the preferences panel, which keeps its three rows — and writes
+         the same `SettingsStore.theme`, so the two cannot disagree.
+         Icon and label both name the **action**: a moon on a light screen. -->
     <button
       type="button"
-      class="titlebar-option theme-cycle"
-      data-testid="theme-cycle"
-      [attr.data-theme-choice]="settings.theme()"
-      [attr.aria-label]="'settings.theme.current' | transloco: { theme: themeName() }"
-      [attr.title]="'settings.theme.current' | transloco: { theme: themeName() }"
-      (click)="cycleTheme()"
+      class="titlebar-option theme-toggle"
+      data-testid="theme-toggle"
+      [attr.data-theme-shown]="settings.resolvedTheme()"
+      [attr.aria-label]="switchLabel() | transloco"
+      [attr.title]="switchLabel() | transloco"
+      (click)="toggleTheme()"
     >
-      <span aria-hidden="true">{{ glyphs[settings.theme()] }}</span>
+      <app-icon [name]="switchesTo() === 'dark' ? 'moon' : 'sun'" />
     </button>
 
     <div

@@ -83,6 +83,13 @@
   letter-spacing: 0.3px;
 }
 
+// The icon at the height of the two letters beside it.
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  --icon-size: 13px;
+}
+
 .titlebar-option:hover {
   color: var(--text-1);
 }
