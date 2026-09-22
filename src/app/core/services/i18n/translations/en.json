@@ -95,7 +95,8 @@
     "groupLabel": "Filter notes",
     "all": "All",
     "pinned": "Pinned",
-    "untriaged": "Untriaged"
+    "untriaged": "Untriaged",
+    "facetsLabel": "Tags and formats"
   },
   "folders": {
     "switcherLabel": "Filter by folder",

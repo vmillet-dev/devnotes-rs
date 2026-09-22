@@ -706,6 +706,39 @@ Ticking from the card matters more than it looks: crossing tasks off is the gest
 list exists for, and routing it through the editor would put a modal between the user and a
 one-click action.
 
+### One row, and the first card in the top half
+
+Measured on the assembled application at 1100x720, fresh install, library rail open: the
+titlebar, **two** rows of topbar, the tag rail, the language rail — and the first card at
+**284px**, 39% of the way down. `+ Nouvelle note`, the primary action, sat on the second
+row, and the search was squeezed below its own placeholder. Ticking a card inserted the
+selection bar as a further band and pushed everything down 85px, so the canvas jumped on
+every tick.
+
+It is **151px** now, and the topbar does not wrap: `flex-wrap: nowrap`, with the search as
+the only thing that gives way — it is the one control here that can be narrow and still be
+itself. Four changes got it there:
+
+- **The two facet rails went behind a disclosure** (`facets-panel/`). They were two
+  permanent 44px bands, the single biggest saving. ⚠️ The disclosure is forced open
+  whenever a facet is selected and **refuses to fold** while one is: a filter nobody can see
+  is a filter nobody can undo, and a canvas silently showing a third of the corpus is worse
+  than the bands were. Its trigger is in the topbar and the panel below it, so `notes-page`
+  owns the state — a component cannot be in two rows at once.
+- **The quick filters became one segmented control.** Three states of one thing, where four
+  chips read as four filters that could be combined and took the width of four.
+- **The trash left the filter chips**, and the six pixels it sat from the primary action. It
+  is a **view** on the notes rather than a filter, so it is icon-only beside the rail toggle
+  — still not in the File menu, for the reason it never was.
+- **The selection bar floats** over the canvas region rather than being inserted above it.
+  ⚠️ It has to be a child of `.canvas-region`, which is the only positioned ancestor: left
+  where it was, it hung against the window and covered the search field.
+
+⚠️ **The measurement is the spec**, in `06-search-and-filters`: at 1100x720 with the rail
+open, every topbar child shares a row, the row does not overflow, the first card is in the
+top half, and ticking one moves nothing. That is the thing that will regress, and the only
+way to catch it is to measure the assembled application.
+
 ### Nothing wears the operating system's chrome, except one popup
 
 The application draws every one of its own surfaces, and then **eight** controls came from

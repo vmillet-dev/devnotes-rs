@@ -1,0 +1,27 @@
+@use 'mixins' as *;
+
+// ⚠️ A band only while it is open, where the two rails were a band always. It enters from
+// the top, which is where it comes from.
+.facets-panel {
+  @include enters;
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.facets-clear {
+  @include unstyled-control;
+  @include hit-target;
+  @include focus-ring;
+  @include eases(color);
+  align-self: flex-start;
+  gap: 5px;
+  margin: 0 24px 8px;
+  font-size: 11.5px;
+  color: var(--text-2);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--amber-text);
+  }
+}
