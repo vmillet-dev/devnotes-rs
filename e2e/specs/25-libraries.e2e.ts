@@ -1,6 +1,8 @@
 import { $, $$, expect } from '@wdio/globals';
 
-import { PASSPHRASE, eventually, setField, testid } from '../support/app.js';
+import { board, spaces } from '../pageobjects/overlays.page.js';
+import { PASSPHRASE, eventually, setField, testid, waitForCanvas } from '../support/app.js';
+import { bridge, draft } from '../support/bridge.js';
 
 /**
  * Several libraries, and switching between them.
@@ -12,6 +14,9 @@ import { PASSPHRASE, eventually, setField, testid } from '../support/app.js';
  */
 describe('Several libraries', () => {
   const OTHER = 'Boulot';
+  /** Only the first library holds it, which is what tells the two rails apart. */
+  const HOME = 'Maison';
+  const HOME_NOTE = 'Chez moi';
 
   const rows = () => $$(testid('library-row'));
 
@@ -39,6 +44,15 @@ describe('Several libraries', () => {
       'the gate left by the archive in 24-forgotten-passphrase',
     );
     await passTheGate();
+
+    // ⚠️ After the seeding, which only runs on a library holding no space at all.
+    await eventually(
+      () => bridge.listSpaces(),
+      (all) => all.length > 0,
+      'the samples of a first launch',
+    );
+    const home = await bridge.createSpace({ name: HOME });
+    await bridge.createNote(draft({ spaceId: home.id, title: HOME_NOTE }));
   });
 
   it('lists the one that is open, and says so', async () => {
@@ -74,6 +88,8 @@ describe('Several libraries', () => {
     const titles = await $$(testid('note-card-title')).map((card) => card.getText());
 
     expect(titles.length).toBeGreaterThan(0);
+    await spaces.open();
+    expect(await spaces.names()).not.toContain(HOME);
     await openPanel();
     expect(await rows().length).toBe(2);
   });
@@ -95,6 +111,33 @@ describe('Several libraries', () => {
     // The badge moved: the one that was open is not the one that is open now.
     const open = await $(testid('library-open')).getText();
     expect(open.length).toBeGreaterThan(0);
+    await $(testid('libraries-close')).click();
+    await $(testid('library-row')).waitForExist({ reverse: true, timeout: 10_000 });
+  });
+
+  /**
+   * ⚠️ Back to a library that was **already seeded**, which is what the scenario above
+   * never did: the stores outlived the switch, the rail listed the other library's spaces,
+   * and the board asked this database about a space it had never held (#318).
+   */
+  it('draws the spaces and the board of the library it came back to', async () => {
+    await spaces.open();
+    expect(
+      await eventually(
+        () => spaces.names(),
+        (names) => names.includes(HOME),
+        'the rail to list this library own spaces',
+      ),
+    ).toContain(HOME);
+
+    const home = (await bridge.listSpaces()).find((space) => space.name === HOME);
+    await spaces.option(home?.id ?? '').click();
+    await waitForCanvas();
+    await board.show('board');
+
+    expect(await board.looseTitles()).toEqual([HOME_NOTE]);
+
+    await board.show('date');
   });
 
   /**
@@ -102,6 +145,7 @@ describe('Several libraries', () => {
    * fired it — the treatment emptying the trash gets, because it takes everything at once.
    */
   it('names what a deletion would take before it takes it', async () => {
+    await openPanel();
     await $(testid('library-delete')).click();
 
     expect(await $(testid('library-confirm')).isExisting()).toBe(true);

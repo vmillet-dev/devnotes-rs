@@ -1,23 +1,23 @@
 import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
+import { IpcError } from '@core/ipc/ipc.error';
+import { FakeAppWindow } from '@testing/fake-app-window';
 import { FakeLibrariesRepository } from '@testing/fake-libraries-repository';
-import { FakeVaultRepository } from '@testing/fake-vault-repository';
 import { provideAppTesting } from '@testing/testing.providers';
 import { LibrariesStore } from './libraries.store';
-import { VaultStore } from './vault.store';
 
 describe('LibrariesStore', () => {
   let store: LibrariesStore;
   let repository: FakeLibrariesRepository;
-  let vault: FakeVaultRepository;
+  let appWindow: FakeAppWindow;
 
   function configure(names: readonly string[]): void {
     TestBed.resetTestingModule();
     repository = new FakeLibrariesRepository(names);
-    vault = new FakeVaultRepository();
+    appWindow = new FakeAppWindow();
     TestBed.configureTestingModule({
-      providers: [provideAppTesting({ librariesRepository: repository, vaultRepository: vault })],
+      providers: [provideAppTesting({ librariesRepository: repository, appWindow })],
     });
     store = TestBed.inject(LibrariesStore);
   }
@@ -59,25 +59,21 @@ describe('LibrariesStore', () => {
     const created = await store.create('Boulot');
 
     expect(created?.name).toBe('Boulot');
-    expect(store.open()?.name).toBe('Boulot');
+    expect((await repository.list()).open).toBe(created?.id);
+    expect(appWindow.reloaded).toBe(1);
   });
 
   /**
-   * ⚠️ The connection closes, every command answers `Locked`, and the shell goes back to
-   * the gate: the other library has its own passphrase, and asking for it is the only
-   * proof the right one is open.
+   * ⚠️ A reload, not a gate over the same stores: they are `providedIn: 'root'`, and the
+   * spaces of the library just left were what the board then asked this one about.
    */
-  it('sends the shell back to the gate on a switch', async () => {
-    const vaultStore = TestBed.inject(VaultStore);
-    await vaultStore.load();
-    expect(vaultStore.isUnlocked()).toBe(true);
+  it('rebuilds the front end on a switch, once the registry points at the other one', async () => {
     await store.load();
-    vault.answer = 'locked';
 
     await store.openLibrary('lib-1');
 
-    expect(store.open()?.name).toBe('Perso');
-    expect(vaultStore.isUnlocked()).toBe(false);
+    expect((await repository.list()).open).toBe('lib-1');
+    expect(appWindow.reloaded).toBe(1);
   });
 
   it('does nothing when asked for the library already open', async () => {
@@ -86,6 +82,17 @@ describe('LibrariesStore', () => {
     await store.openLibrary('lib-0');
 
     expect(store.open()?.name).toBe('Notes');
+    expect(appWindow.reloaded).toBe(0);
+  });
+
+  /** A switch the command refused leaves the page where it is, with a banner. */
+  it('stays put when the switch is refused', async () => {
+    await store.load();
+    repository.failNext = new IpcError('open_library', 'disk');
+
+    await store.openLibrary('lib-1');
+
+    expect(appWindow.reloaded).toBe(0);
   });
 
   it('renames one without touching which is open', async () => {
