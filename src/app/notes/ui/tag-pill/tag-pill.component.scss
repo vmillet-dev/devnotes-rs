@@ -1,6 +1,7 @@
 @use 'mixins' as *;
 
 .tag-pill {
+  @include eases(background, border-color, color);
   @include hit-target;
 
   justify-content: center;

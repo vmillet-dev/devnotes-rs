@@ -41,6 +41,7 @@
 // the room is, and caps its height to what is left. Past a handful of spaces this wants the
 // command palette rather than a longer list.
 .card-menu {
+  @include enters;
   position: fixed;
   min-width: 160px;
   overflow-y: auto;

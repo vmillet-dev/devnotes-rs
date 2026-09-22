@@ -35,6 +35,7 @@
 }
 
 .placement-menu {
+  @include enters;
   @include surface(var(--bg-2), 8px);
   position: absolute;
   top: calc(100% + 4px);

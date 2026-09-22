@@ -41,6 +41,7 @@
 
 // Right-aligned: at the end of the bar, a left-aligned panel would overflow the window.
 .new-note-menu {
+  @include enters;
   position: absolute;
   top: calc(100% + 6px);
   right: 0;

@@ -1,6 +1,7 @@
 @use 'mixins' as *;
 
 .selection-bar {
+  @include enters(enter-rise);
   display: flex;
   align-items: center;
   gap: 10px;

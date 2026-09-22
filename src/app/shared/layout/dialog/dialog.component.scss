@@ -6,6 +6,7 @@
 }
 
 .dialog-backdrop {
+  @include enters(enter-fade);
   position: fixed;
   inset: 0;
   background: rgba(var(--backdrop-rgb), var(--dialog-scrim, 0.6));
@@ -23,6 +24,7 @@
 }
 
 .dialog-panel {
+  @include enters(enter-lift);
   display: flex;
   flex-direction: column;
   gap: var(--dialog-gap, 12px);
