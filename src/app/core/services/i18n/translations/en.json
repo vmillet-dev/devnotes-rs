@@ -163,6 +163,7 @@
     "contentLabel": "Note content",
     "emptyBody": "Start writing…",
     "languageLabel": "Content format",
+    "placementLabel": "Location",
     "sourceLabel": "Note context",
     "sourcePlaceholder": "Context…",
     "addTagLabel": "Add a tag",

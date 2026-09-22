@@ -67,6 +67,27 @@ app-dialog {
   flex-shrink: 0;
 }
 
+// The 20px under the header rule is this band's now, which the attachments used to carry.
+.overlay-placement {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 16px 20px 0;
+  flex-shrink: 0;
+}
+
+.placement-label {
+  margin-right: 2px;
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+.placement-separator {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
 .overlay-source-input {
   @include text-field;
   width: 160px;

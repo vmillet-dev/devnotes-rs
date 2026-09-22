@@ -5,11 +5,11 @@
 // opens under it — so the whole band's padding sits on the host: put on either rule
 // alone, the other slides out from under it.
 //
-// The top carries the 20px the code viewer insets its own first line by, so the label
-// reads as sitting between the header rule and the body rather than glued to the header.
+// ⚠️ The gap under the header rule belongs to the location band above, which is always
+// there: a note always has a space.
 :host {
   display: block;
-  padding: 20px 20px 6px;
+  padding: 10px 20px 6px;
 }
 
 .strip {

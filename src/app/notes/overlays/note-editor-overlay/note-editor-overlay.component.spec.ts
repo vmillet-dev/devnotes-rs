@@ -700,6 +700,28 @@ describe('NoteEditorOverlayComponent', () => {
     });
   });
 
+  /**
+   * ⚠️ A band of its own between the header and the attachments: wedged in the meta row,
+   * between the tags and the deadline, the two choices stacked and read as neither (#324).
+   */
+  describe('where the note lives', () => {
+    it('is a band after the meta row and before the attachments, both choices inside it', async () => {
+      fixture.componentRef.setInput('note', createNote());
+      await fixture.whenStable();
+
+      const root = fixture.nativeElement as HTMLElement;
+      const band = root.querySelector('[data-testid="editor-placement"]')!;
+      const metaRow = root.querySelector('.overlay-meta-row')!;
+      const strip = root.querySelector('app-attachment-strip')!;
+
+      expect(band.querySelector('[data-testid="choice-space"]')).not.toBeNull();
+      expect(band.querySelector('[data-testid="choice-folder"]')).not.toBeNull();
+      expect(metaRow.querySelector('[data-testid="choice-space"]')).toBeNull();
+      expect(metaRow.compareDocumentPosition(band) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(band.compareDocumentPosition(strip) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+  });
+
   describe('fullscreen', () => {
     function panel(): HTMLElement {
       return fixture.nativeElement.querySelector('.dialog-panel');

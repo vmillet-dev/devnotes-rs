@@ -163,6 +163,7 @@
     "contentLabel": "Contenu de la note",
     "emptyBody": "Commencer à écrire…",
     "languageLabel": "Format du contenu",
+    "placementLabel": "Emplacement",
     "sourceLabel": "Contexte de la note",
     "sourcePlaceholder": "Contexte…",
     "addTagLabel": "Ajouter un tag",

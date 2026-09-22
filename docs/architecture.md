@@ -1507,7 +1507,13 @@ Deletion is a two-step confirm in the toolbar rather than a native `confirm()`, 
 freeze the whole WebView. The fullscreen toggle expands the panel to fill the backdrop and
 persists through `PreferencesService`.
 
-The attachment strip sits between the meta row and the body. It is fed by inputs and emits
+Where the note lives — its space, then its folder — is a **band of its own** under the meta
+row, labelled like the attachments below it. It used to sit inside the meta row, between the
+tags and the deadline, with the two choices stacked on two lines: neither metadata nor
+header (#324). The two stay together, because moving the space clears the folder
+(`NotePatch::apply`) and a folder control on its own would lie about that.
+
+The attachment strip sits between that band and the body. It is fed by inputs and emits
 outputs like everything else here: `AttachmentsStore` owns the state and follows the open note
 itself, through an effect on `NotesStore.persistedNoteId()`. Attachments deliberately do
 **not** travel inside `Note` — they have their own write cycle, and routing them through the
