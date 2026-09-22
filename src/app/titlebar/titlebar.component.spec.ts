@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { SettingsStore } from '@core/services/settings/settings.store';
 import { By } from '@angular/platform-browser';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { LocaleService } from '@core/services/i18n/locale.service';
@@ -92,5 +93,54 @@ describe('TitlebarComponent', () => {
     expect(localeService.activeLocale()).toBe('en');
     expect(localeOptions()[1].classList.contains('active')).toBe(true);
     expect(localeOptions()[0].classList.contains('active')).toBe(false);
+  });
+
+  /**
+   * ⚠️ The same signal the preferences panel writes, so the two cannot disagree — and the
+   * panel keeps its row: a setting that only exists in a corner of the titlebar is a
+   * setting nobody finds twice.
+   */
+  describe('the theme, beside the language', () => {
+    function options(): HTMLButtonElement[] {
+      return [...fixture.nativeElement.querySelectorAll('[data-testid="theme-option"]')];
+    }
+
+    it('offers the three the panel offers', () => {
+      expect(options().map((option) => option.getAttribute('data-theme-choice'))).toEqual([
+        'system',
+        'dark',
+        'light',
+      ]);
+    });
+
+    it('marks the one in force', async () => {
+      const settings = TestBed.inject(SettingsStore);
+      settings.setTheme('light');
+      await fixture.whenStable();
+
+      const pressed = options().filter((option) => option.getAttribute('aria-pressed') === 'true');
+      expect(pressed).toHaveLength(1);
+      expect(pressed[0].getAttribute('data-theme-choice')).toBe('light');
+    });
+
+    it('writes through to the store the panel reads', async () => {
+      const settings = TestBed.inject(SettingsStore);
+
+      options()
+        .find((option) => option.getAttribute('data-theme-choice') === 'dark')!
+        .click();
+      await fixture.whenStable();
+
+      expect(settings.theme()).toBe('dark');
+    });
+
+    /** ⚠️ A glyph is decorative: the word has to reach a screen reader some other way. */
+    it('names each one in words, which the glyph does not', () => {
+      expect(options().map((option) => option.getAttribute('aria-label'))).toEqual([
+        'Système',
+        'Sombre',
+        'Clair',
+      ]);
+    });
   });
 });

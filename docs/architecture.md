@@ -706,6 +706,24 @@ Ticking from the card matters more than it looks: crossing tasks off is the gest
 list exists for, and routing it through the editor would put a modal between the user and a
 one-click action.
 
+### The theme is one gesture, where it was three
+
+The theme and the language are the same kind of choice, and they sat three gestures apart:
+the language in the titlebar, the theme behind File → Préférences → Apparence. There is a
+theme control beside it now, in the same shape — three quiet buttons, the one in force
+carrying the accent — because a second idiom in that corner would say the two are different
+kinds of thing.
+
+⚠️ It writes `SettingsStore.theme`, the **same signal** the preferences panel writes, so
+the two cannot disagree; and the panel keeps its row, because a setting that exists only in
+a corner of the titlebar is a setting nobody finds twice. ⚠️ Glyphs rather than words: the
+language beside it is two letters, and three labels would be the widest thing in a bar whose
+middle is the application's name — the word is on the accessible label and the tooltip.
+
+⚠️ Both switches sit in **one** group. `.titlebar` is `space-between` and the title takes
+no part in that row, being absolutely positioned, so two loose groups put the theme in the
+middle of the bar beside the application's name.
+
 ### One row, and the first card in the top half
 
 Measured on the assembled application at 1100x720, fresh install, library rail open: the

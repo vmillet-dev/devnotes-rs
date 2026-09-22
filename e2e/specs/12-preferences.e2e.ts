@@ -1,8 +1,8 @@
-import { browser, expect } from '@wdio/globals';
+import { $, browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { fileMenu, settings, titlebar } from '../pageobjects/titlebar.page.js';
-import { cursorOf, eventually, press, reopenSession } from '../support/app.js';
+import { cursorOf, eventually, press, reopenSession, testid } from '../support/app.js';
 
 /**
  * A preference applies as it is typed, one key at a time.
@@ -85,5 +85,35 @@ describe('Preferences', () => {
 
     expect(await settings.locale()).toContain('Français');
     await settings.close();
+  });
+
+  /**
+   * ⚠️ The same signal the panel writes, so the two cannot disagree — and the panel keeps
+   * its row: a setting that only exists in a corner of the titlebar is a setting nobody
+   * finds twice. The theme was three gestures away where the language was one.
+   */
+  describe('the theme, from the titlebar', () => {
+    after(async () => {
+      await $(`${testid('theme-option')}[data-theme-choice="system"]`).click();
+    });
+
+    it('repaints the window without opening anything', async () => {
+      await $(`${testid('theme-option')}[data-theme-choice="light"]`).click();
+
+      expect(
+        await eventually(
+          () => browser.execute(() => document.documentElement.getAttribute('data-theme')),
+          (theme) => theme === 'light',
+          'the titlebar control to repaint the window',
+        ),
+      ).toBe('light');
+    });
+
+    it('is the same choice the panel shows', async () => {
+      await fileMenu.openPreferences();
+
+      expect(await settings.theme()).toBe('light');
+      await settings.close();
+    });
   });
 });

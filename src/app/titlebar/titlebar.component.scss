@@ -54,13 +54,26 @@
   letter-spacing: 0.3px;
 }
 
-.locale-switch {
+// ⚠️ One group at the right end. `.titlebar` is `space-between` and the title takes no
+// part in it — being absolutely positioned — so two loose groups put the theme in the
+// middle of the bar, beside the application's name.
+.titlebar-choices {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+// ⚠️ One shape for both: the theme and the language are the same kind of choice, and a
+// second idiom in the same corner would say they are not.
+.titlebar-switch {
   display: flex;
   gap: 4px;
 }
 
-.locale-option {
+.titlebar-option {
   @include unstyled-control;
+  @include focus-ring;
+  @include eases(background, border-color, color);
   font-family: var(--font-mono), serif;
   font-size: 10px;
   padding: 3px 7px;
@@ -68,15 +81,13 @@
   color: var(--text-2);
   cursor: pointer;
   letter-spacing: 0.3px;
-
-  @include focus-ring;
 }
 
-.locale-option:hover {
+.titlebar-option:hover {
   color: var(--text-1);
 }
 
-.locale-option.active {
+.titlebar-option.active {
   @include accent-state;
   background: rgba(var(--amber-rgb), 0.1);
 }
