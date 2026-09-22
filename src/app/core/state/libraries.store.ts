@@ -3,7 +3,7 @@ import { LibrariesRepository, LibraryEntry } from '@core/data/libraries.reposito
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
 import { StatusNotifier } from '@core/services/notifications/status.service';
-import { VaultStore } from './vault.store';
+import { AppWindowService } from '@core/services/window/app-window.service';
 
 /** What a deletion would take, named before it runs. */
 export interface PendingLibraryDeletion {
@@ -13,9 +13,9 @@ export interface PendingLibraryDeletion {
 /**
  * The libraries, and which one is open.
  *
- * ⚠️ Switching is a full teardown: the command empties the connection, every other one
- * then answers `Locked`, and the shell goes back to the gate. The other library has its
- * own passphrase, and asking for it is the only proof the right one is open.
+ * ⚠️ Switching is a full teardown: the command empties the connection and the front end
+ * reloads onto the gate. The other library has its own passphrase, and asking for it is
+ * the only proof the right one is open.
  */
 @Injectable({ providedIn: 'root' })
 export class LibrariesStore {
@@ -23,7 +23,7 @@ export class LibrariesStore {
   private readonly notifier = inject(ErrorNotifier);
   private readonly status = inject(StatusNotifier);
   private readonly preferences = inject(LibraryPreferencesService);
-  private readonly vault = inject(VaultStore);
+  private readonly window = inject(AppWindowService);
 
   private readonly _libraries = signal<readonly LibraryEntry[]>([]);
   private readonly _openId = signal<string | null>(null);
@@ -75,26 +75,23 @@ export class LibrariesStore {
     return this.attempt(async () => {
       const entry = await this.repository.create(name);
       await this.repository.open(entry.id);
-      await this.load();
-      this.status.notify({ key: 'libraries.created', params: { name: entry.name } });
-      await this.vault.load();
+      this.window.reload();
 
       return entry;
     });
   }
 
   /**
-   * ⚠️ `vault.load()` last, and it is what destroys the outlet: the canvas is never
-   * mounted over a library nobody has unlocked, so no store carries a "wrong library"
-   * branch.
+   * ⚠️ A reload, not a `vault.load()`: every store is `providedIn: 'root'` and would carry
+   * the other library's spaces, board and undo record past the gate. The vault state lives
+   * in Rust, so the page comes back on the gate of the library just opened.
    */
   async openLibrary(id: string): Promise<void> {
     if (id === this._openId()) return;
 
     await this.attempt(async () => {
       await this.repository.open(id);
-      await this.load();
-      await this.vault.load();
+      this.window.reload();
     });
   }
 

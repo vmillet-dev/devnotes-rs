@@ -710,7 +710,6 @@
     "namePlaceholder": "Library name",
     "close": "Close",
     "cancel": "Cancel",
-    "created": "Library \"{{name}}\" created. Choose a passphrase for it.",
     "deleted": "Library \"{{name}}\" deleted.",
     "confirmDelete": "Delete \"{{name}}\": its notes, its attachments and its backups go with it, for good.",
     "confirmDeleteAction": "Delete the library",

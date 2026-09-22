@@ -29,6 +29,13 @@ describe('AppWindowService', () => {
     expect(adapter.exitedWith).toBe(0);
   });
 
+  it('rebuilds the front end without touching the process', () => {
+    service.reload();
+
+    expect(adapter.reloaded).toBe(1);
+    expect(adapter.exitedWith).toBeNull();
+  });
+
   it('swallows a failure rather than surfacing one nothing can act on', async () => {
     adapter.throwOnHide = new Error('no bridge');
     adapter.throwOnExit = new Error('no bridge');

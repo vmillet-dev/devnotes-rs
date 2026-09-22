@@ -710,7 +710,6 @@
     "namePlaceholder": "Nom de la bibliothèque",
     "close": "Fermer",
     "cancel": "Annuler",
-    "created": "Bibliothèque « {{name}} » créée. Choisissez une phrase de passe pour elle.",
     "deleted": "Bibliothèque « {{name}} » supprimée.",
     "confirmDelete": "Supprimer « {{name}} » : ses notes, ses pièces jointes et ses copies de sauvegarde partent avec elle, définitivement.",
     "confirmDeleteAction": "Supprimer la bibliothèque",

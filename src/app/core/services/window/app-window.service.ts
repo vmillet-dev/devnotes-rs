@@ -6,6 +6,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 export interface AppWindowAdapter {
   hide(): Promise<void>;
   exit(code: number): Promise<void>;
+  reload(): void;
 }
 
 export const APP_WINDOW_ADAPTER = new InjectionToken<AppWindowAdapter>('APP_WINDOW_ADAPTER', {
@@ -13,6 +14,7 @@ export const APP_WINDOW_ADAPTER = new InjectionToken<AppWindowAdapter>('APP_WIND
   factory: () => ({
     hide: () => getCurrentWindow().hide(),
     exit: (code: number) => exit(code),
+    reload: () => window.location.reload(),
   }),
 });
 
@@ -31,6 +33,15 @@ export class AppWindowService {
     } catch {
       // Outside Tauri, or the window is already hidden: nothing to recover.
     }
+  }
+
+  /**
+   * Rebuilds the front end from nothing, over the same process. ⚠️ What a library switch
+   * needs: every store is `providedIn: 'root'` and would otherwise carry the other
+   * library's spaces, selection and undo record into this one.
+   */
+  reload(): void {
+    this.adapter.reload();
   }
 
   async quit(): Promise<void> {

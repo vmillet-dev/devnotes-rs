@@ -2846,11 +2846,20 @@ whatever is open. The one that stayed is `open/`, the decrypted attachment copie
 are ephemeral and swept wholesale, and one directory means one sweep catches every
 library's leftovers.
 
-**Switching is a full teardown.** `open_library` empties the connection `Mutex` under the
-same lock every other command takes; every one of them then answers `Locked`,
-`VaultStore.load()` sees it, and the outlet is destroyed — with the File menu, which is
-gated on the same signal. ⚠️ The other library has its own passphrase, and asking for it is
-the only proof the right one is open.
+**Switching is a full teardown, and the front end is reloaded for it.** `open_library`
+empties the connection `Mutex` under the same lock every other command takes, then
+`LibrariesStore` reloads the page (`AppWindowService.reload()`). The vault state lives in
+Rust, so the front end comes back on the gate of the library just opened. ⚠️ The other
+library has its own passphrase, and asking for it is the only proof the right one is open.
+
+⚠️ **A reload, not a gate over the same stores.** Destroying the outlet is not enough: every
+store is `providedIn: 'root'` and outlives it. `SpacesStore` loads once and nothing
+reloaded it on a switch, so going back to a library that was already seeded left the rail
+listing the other library's spaces and the board asking this database about a space it had
+never held (#318) — with the selection, the retained views and the undo record behind them.
+Resetting each store by hand was the alternative and was refused: a dozen stores to wire,
+and the next one to forget brings the bug back. The cost is the reload itself, and the dark
+base showing for as long as it does at every launch.
 
 ⚠️ **Creating opens.** One gesture rather than two: you have just named it, so you want to
 be in it, and the gate then asks for a phrase exactly as a first launch does. The surprise
