@@ -257,7 +257,9 @@
     "boardLoadFailed": "Le tableau n’a pas pu être chargé.",
     "boardSaveFailed": "La disposition du tableau n’a pas pu être enregistrée.",
     "fileFailed": "La note n’a pas pu être rangée.",
-    "boardArrangeFailed": "Le tableau n’a pas pu être rangé."
+    "boardArrangeFailed": "Le tableau n’a pas pu être rangé.",
+    "backupsListFailed": "Impossible de lire les copies de sauvegarde.",
+    "backupRestoreFailed": "Impossible de restaurer cette copie. La bibliothèque est restée en place."
   },
   "tray": {
     "open": "Ouvrir {{app}}",
@@ -548,7 +550,8 @@
       "changedSomeLeft": "Phrase de passe changée, mais {{count}} copies n'ont pas pu être réenveloppées : elles s'ouvrent encore avec l'ancienne phrase.",
       "copiesNote": "Les copies gardées à côté de la bibliothèque sont réenveloppées avec elle. Un fichier de clé que vous auriez copié ailleurs, lui, s'ouvrira toujours avec l'ancienne phrase.",
       "backups": "Copies de sauvegarde",
-      "access": "Accès"
+      "access": "Accès",
+      "backupsLimit": "Une copie emporte les notes et la clé qui les ouvre, pas les pièces jointes."
     },
     "notifications": {
       "title": "Notifications",
@@ -666,5 +669,16 @@
     "damagedNote": "⚠️ La base endommagée et ses pièces jointes sont déplacées dans un dossier à part, et ce qui reste lisible est récupéré à côté. Votre phrase de passe ne change pas. {{app}} ouvre ensuite une bibliothèque vide.",
     "setAside": "Bibliothèque mise de côté dans {{path}}. Saisissez votre phrase de passe pour repartir à neuf.",
     "creating": "Protection de la bibliothèque…"
+  },
+  "backups": {
+    "loading": "Lecture des copies…",
+    "none": "Aucune copie pour l'instant. La première est prise au prochain lancement.",
+    "restore": "Restaurer…",
+    "unopenable": "Sans clé : illisible",
+    "confirm": "Remplacer la bibliothèque entière par la copie du {{when}}. Tout ce qui a été écrit depuis quitte la bibliothèque — rien n’est supprimé, l’actuelle est mise de côté dans « replaced ». Il faudra ressaisir la phrase de passe.",
+    "cancel": "Annuler",
+    "confirmRestore": "Remplacer la bibliothèque",
+    "restoring": "Remplacement…",
+    "restored": "Bibliothèque restaurée. La précédente est dans {{path}}."
   }
 }

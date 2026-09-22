@@ -1,3 +1,92 @@
 @use 'mixins' as *;
 
 @include settings-page;
+
+.backup-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 10px;
+}
+
+.backup-row {
+  @include setting-row;
+  align-items: baseline;
+}
+
+.backup-when {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12.5px;
+  color: var(--text-1);
+}
+
+.backup-detail {
+  font-family: var(--font-mono), serif;
+  font-size: 10.5px;
+  color: var(--text-2);
+}
+
+// A copy with no key file opens for nobody: it is listed, never offered.
+.backup-unopenable {
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+// ⚠️ Text and a hairline, never a fill: one red block beside the single amber accent
+// reads as a second accent.
+.backup-confirm {
+  @include surface($bg: var(--bg-2), $border-color: rgba(var(--red-rgb), 0.4));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 6px 0 10px;
+  padding: 9px 11px;
+}
+
+.backup-warning {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--red);
+}
+
+.backup-answers {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.backup-cancel,
+.backup-go {
+  @include unstyled-control;
+  @include surface($radius: 6px);
+  @include hit-target;
+  padding: 5px 10px;
+  font-size: 11.5px;
+  color: var(--text-1);
+  cursor: pointer;
+}
+
+.backup-cancel:hover {
+  @include accent-state(var(--text-0), var(--amber-dim));
+}
+
+// ⚠️ Red at rest, not on hover: a warning that arrives under the pointer plays no part
+// in choosing.
+.backup-go {
+  @include destructive;
+}
+
+.backup-go:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.backup-cancel:focus-visible,
+.backup-go:focus-visible {
+  outline: 2px solid var(--amber-edge);
+  outline-offset: 1px;
+}

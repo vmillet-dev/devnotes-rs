@@ -10,18 +10,24 @@
 
 use std::path::{Path, PathBuf};
 
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, State};
 
 use chrono::{DateTime, TimeDelta, Utc};
 use diesel::prelude::*;
 use diesel::sql_types::Text;
 
-use crate::db::{DB_FILE_NAME, Library};
-use crate::error::StorageError;
+use crate::db::{DB_FILE_NAME, Db, Library};
+use crate::error::{AppError, StorageError};
 use crate::vault::file::FILE_NAME as VAULT_FILE_NAME;
 use crate::vault::key::{Cost, Vault};
 
 pub(crate) const DIRECTORY: &str = "backups";
+
+/// Where the library a restore replaces goes, so the gesture can be undone by hand.
+pub(crate) const REPLACED: &str = "replaced";
+
+/// What SQLite leaves beside the database; they belong to it and must travel with it.
+const SIDECARS: [&str; 2] = ["devnotes.sqlite3-wal", "devnotes.sqlite3-shm"];
 
 /// Where the front end writes its preferences, and the key it writes this one under.
 const PREFERENCES: &str = "preferences.json";
@@ -113,6 +119,113 @@ pub(crate) fn rotate(
     }
 
     Ok(Some(target))
+}
+
+/// One copy, as the interface lists it.
+///
+/// ⚠️ `bytes` is `f64` rather than `u64`: specta refuses the integer types JSON cannot
+/// carry without losing precision, and a size is the one field where a float says the
+/// same thing.
+#[derive(Debug, Clone, serde::Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct Backup {
+    /// The folder's name, which is its stamp — and what a restore is asked for by.
+    pub id: String,
+    pub taken_at: DateTime<Utc>,
+    pub bytes: f64,
+    /// ⚠️ Whether the key file travelled with it. Without one, the copy is a file nobody
+    /// can open, and offering to restore it would be offering to lose the library.
+    pub openable: bool,
+}
+
+#[allow(clippy::cast_precision_loss)]
+fn describe(copy: &Path) -> Option<Backup> {
+    let at = taken_at(copy)?;
+    let database = copy.join(DB_FILE_NAME);
+    let bytes = std::fs::metadata(&database).map_or(0, |meta| meta.len());
+
+    Some(Backup {
+        id: copy.file_name()?.to_str()?.to_string(),
+        taken_at: at,
+        bytes: bytes as f64,
+        openable: database.is_file() && copy.join(VAULT_FILE_NAME).is_file(),
+    })
+}
+
+/// The copies that exist, newest first.
+pub(crate) fn list(library: &Path) -> Vec<Backup> {
+    existing(&library.join(DIRECTORY))
+        .iter()
+        .filter_map(|copy| describe(copy))
+        .collect()
+}
+
+/// Puts a copy back in place of the live library, and answers where the live one went.
+///
+/// ⚠️ The library being replaced is **moved aside, never deleted**. This is the one
+/// gesture in the application that can lose a whole corpus, and a folder with a date on
+/// it is the difference between a mistake and a loss.
+///
+/// ⚠️ `vault.json` moves with it, unlike the damaged case: the copy brings its own key
+/// file, and the two must not be mixed — a database from one wrapping and a key from
+/// another opens nothing.
+///
+/// ⚠️ `attachments/` stays where it is. The copies do not carry it — it is the bulk of a
+/// profile — so moving it aside would point every restored record at a file that left.
+/// The next launch's orphan sweep then collects whatever the restored library no longer
+/// names, which is the right answer: those files belong to notes it does not have.
+pub(crate) fn replace(
+    library: &Path,
+    id: &str,
+    now: DateTime<Utc>,
+) -> Result<PathBuf, StorageError> {
+    // ⚠️ Matched against the listing rather than joined onto the directory: an id comes
+    // from the front end, and `../2026-01-01_00-00-00` joins to a path outside
+    // `backups/` whose file name still parses as a stamp. A name from outside has no
+    // business deciding which directory this reads.
+    let copy = existing(&library.join(DIRECTORY))
+        .into_iter()
+        .find(|path| path.file_name().and_then(std::ffi::OsStr::to_str) == Some(id))
+        .ok_or_else(|| StorageError::File(format!("{id}: no such copy")))?;
+
+    if !copy.join(DB_FILE_NAME).is_file() || !copy.join(VAULT_FILE_NAME).is_file() {
+        return Err(StorageError::File(format!(
+            "{id}: not a copy that can be opened"
+        )));
+    }
+
+    let aside = library.join(REPLACED).join(stamp(now));
+    std::fs::create_dir_all(&aside)
+        .map_err(|error| StorageError::File(format!("{}: {error}", aside.display())))?;
+
+    let mut moved: Vec<(PathBuf, PathBuf)> = Vec::new();
+    for name in [DB_FILE_NAME, VAULT_FILE_NAME] {
+        let from = library.join(name);
+        let to = aside.join(name);
+        std::fs::rename(&from, &to)
+            .map_err(|error| StorageError::File(format!("{}: {error}", from.display())))?;
+        moved.push((from, to));
+    }
+    for sidecar in SIDECARS {
+        // Absent is the ordinary case: a clean shutdown leaves neither.
+        let _ = std::fs::rename(library.join(sidecar), aside.join(sidecar));
+    }
+
+    for name in [DB_FILE_NAME, VAULT_FILE_NAME] {
+        if let Err(error) = std::fs::copy(copy.join(name), library.join(name)) {
+            // ⚠️ Back where they were, or a failed restore leaves no library at all —
+            // which is the exact outcome this whole function exists to avoid.
+            for (from, to) in &moved {
+                let _ = std::fs::remove_file(from);
+                let _ = std::fs::rename(to, from);
+            }
+            let _ = std::fs::remove_dir_all(&aside);
+
+            return Err(StorageError::File(format!("{name}: {error}")));
+        }
+    }
+
+    Ok(aside)
 }
 
 /// What [`rewrap`] managed. ⚠️ `left` is not a failure to report as one: refusing to
@@ -209,6 +322,43 @@ pub(crate) fn take(app: &AppHandle, db: &crate::db::Db) {
         Ok(None) => {}
         Err(error) => log::warn!("No backup taken: {error}"),
     }
+}
+
+fn library_directory(app: &AppHandle) -> Result<PathBuf, StorageError> {
+    app.path()
+        .app_data_dir()
+        .map_err(|error| StorageError::File(error.to_string()))
+}
+
+/// The copies that exist, newest first, for the panel that lists them.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+#[specta::specta]
+pub fn list_backups(app: AppHandle) -> Result<Vec<Backup>, AppError> {
+    Ok(list(&library_directory(&app)?))
+}
+
+/// Puts a copy back, and answers where the library it replaced was moved to.
+///
+/// ⚠️ It **closes the library** first, under the same lock that guards every other
+/// command: renaming a database file out from under a live connection is how a working
+/// library becomes a lost one. Every command answers `Locked` afterwards, which is what
+/// sends the interface back to the gate — the restored copy needs a passphrase, and
+/// asking for it is the only proof the right file is in place.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+#[specta::specta]
+pub fn restore_backup(id: String, app: AppHandle, db: State<'_, Db>) -> Result<String, AppError> {
+    let directory = library_directory(&app)?;
+
+    let mut open = db.lock().map_err(|_| StorageError::Unavailable)?;
+    // Dropped before a single file moves, and held for the whole swap so nothing can
+    // reopen it halfway through.
+    *open = None;
+
+    let aside = replace(&directory, &id, Utc::now())?;
+
+    Ok(aside.to_string_lossy().to_string())
 }
 
 #[cfg(test)]
@@ -447,6 +597,156 @@ mod tests {
 
         assert_eq!(tally, Rewrapped { done: 0, left: 0 });
         std::fs::remove_dir_all(&directory).ok();
+    }
+
+    mod restoring {
+        use super::*;
+
+        /// Reads the one note's title straight out of a library on disk.
+        fn title_in(directory: &Path, passphrase: &str) -> String {
+            let vault = crate::vault::file::unlock(directory, passphrase).unwrap();
+            let mut connection = db::open(&directory.join(DB_FILE_NAME), vault).unwrap();
+
+            notes::all(&mut connection, None).unwrap()[0].title.clone()
+        }
+
+        fn retitle(connection: &mut Library, id: &str, title: &str) {
+            notes::update(
+                connection,
+                id,
+                &crate::notes::model::NotePatch {
+                    title: Some(title.to_string()),
+                    ..Default::default()
+                },
+                at(1),
+            )
+            .unwrap();
+        }
+
+        /// ⚠️ The whole point: the copy is what opens afterwards, not the live file.
+        #[test]
+        fn the_copy_takes_the_place_of_the_live_library() {
+            let directory = scratch();
+            let (mut connection, note) = library(&directory);
+            let copy = rotate(&directory, &mut connection, at(0)).unwrap().unwrap();
+            let id = copy.file_name().unwrap().to_str().unwrap().to_string();
+            retitle(&mut connection, &note, "écrit après la copie");
+            drop(connection);
+
+            replace(&directory, &id, at(30)).unwrap();
+
+            assert_eq!(title_in(&directory, "a passphrase"), "À sauvegarder");
+            std::fs::remove_dir_all(&directory).ok();
+        }
+
+        /// ⚠️ Moved aside, never deleted: this is the one gesture that can lose a corpus.
+        #[test]
+        fn the_library_it_replaced_is_still_readable_where_it_was_put() {
+            let directory = scratch();
+            let (mut connection, note) = library(&directory);
+            let copy = rotate(&directory, &mut connection, at(0)).unwrap().unwrap();
+            let id = copy.file_name().unwrap().to_str().unwrap().to_string();
+            retitle(&mut connection, &note, "écrit après la copie");
+            drop(connection);
+
+            let aside = replace(&directory, &id, at(30)).unwrap();
+
+            assert!(aside.starts_with(directory.join(REPLACED)));
+            assert_eq!(title_in(&aside, "a passphrase"), "écrit après la copie");
+            std::fs::remove_dir_all(&directory).ok();
+        }
+
+        /// ⚠️ A database from one wrapping and a key file from another opens nothing.
+        #[test]
+        fn the_key_file_goes_one_way_and_comes_back_the_other() {
+            let directory = scratch();
+            let (mut connection, _) = library(&directory);
+            let copy = rotate(&directory, &mut connection, at(0)).unwrap().unwrap();
+            let id = copy.file_name().unwrap().to_str().unwrap().to_string();
+            drop(connection);
+
+            let aside = replace(&directory, &id, at(30)).unwrap();
+
+            assert!(directory.join(VAULT_FILE_NAME).is_file());
+            assert!(aside.join(VAULT_FILE_NAME).is_file());
+            std::fs::remove_dir_all(&directory).ok();
+        }
+
+        /// ⚠️ They are not in the copies, so moving them aside would point every restored
+        /// record at a file that left.
+        #[test]
+        fn the_attachments_stay_where_they_are() {
+            let directory = scratch();
+            let (mut connection, _) = library(&directory);
+            let copy = rotate(&directory, &mut connection, at(0)).unwrap().unwrap();
+            let id = copy.file_name().unwrap().to_str().unwrap().to_string();
+            drop(connection);
+            std::fs::create_dir_all(directory.join("attachments")).unwrap();
+            std::fs::write(directory.join("attachments").join("a-1.png"), b"\x89PNG").unwrap();
+
+            replace(&directory, &id, at(30)).unwrap();
+
+            assert!(directory.join("attachments").join("a-1.png").is_file());
+            std::fs::remove_dir_all(&directory).ok();
+        }
+
+        /// ⚠️ An id comes from the front end: `../…` joins to a path outside `backups/`
+        /// whose file name still parses as a stamp.
+        #[test]
+        fn an_id_cannot_name_a_directory_outside_the_copies() {
+            let directory = scratch();
+            let (mut connection, _) = library(&directory);
+            rotate(&directory, &mut connection, at(0)).unwrap();
+            drop(connection);
+            let outside = directory.join("2026-07-25_09-00-00");
+            std::fs::create_dir_all(&outside).unwrap();
+            std::fs::write(outside.join(DB_FILE_NAME), b"not a library").unwrap();
+            std::fs::write(outside.join(VAULT_FILE_NAME), b"{}").unwrap();
+
+            let refused = replace(&directory, "../2026-07-25_09-00-00", at(30));
+
+            assert!(refused.is_err());
+            assert!(
+                directory.join(DB_FILE_NAME).is_file(),
+                "the library is still there"
+            );
+            std::fs::remove_dir_all(&directory).ok();
+        }
+
+        /// ⚠️ Offering to restore it would be offering to lose the library for nothing.
+        #[test]
+        fn a_copy_with_no_key_file_is_refused_rather_than_swapped_in() {
+            let directory = scratch();
+            let (mut connection, _) = library(&directory);
+            let copy = rotate(&directory, &mut connection, at(0)).unwrap().unwrap();
+            let id = copy.file_name().unwrap().to_str().unwrap().to_string();
+            drop(connection);
+            std::fs::remove_file(copy.join(VAULT_FILE_NAME)).unwrap();
+
+            let refused = replace(&directory, &id, at(30));
+
+            assert!(refused.is_err());
+            assert!(directory.join(DB_FILE_NAME).is_file());
+            assert!(!directory.join(REPLACED).exists(), "nothing was set aside");
+            std::fs::remove_dir_all(&directory).ok();
+        }
+
+        #[test]
+        fn a_listing_says_when_each_copy_was_taken_and_whether_it_opens() {
+            let directory = scratch();
+            let (mut connection, _) = library(&directory);
+            rotate(&directory, &mut connection, at(0)).unwrap();
+            rotate(&directory, &mut connection, at(25)).unwrap();
+
+            let copies = list(&directory);
+
+            assert_eq!(copies.len(), 2);
+            // Newest first, which is the order the panel wants and the pruning uses.
+            assert_eq!(copies[0].taken_at, at(25));
+            assert!(copies[0].bytes > 0.0);
+            assert!(copies.iter().all(|copy| copy.openable));
+            std::fs::remove_dir_all(&directory).ok();
+        }
     }
 
     /// A directory somebody dropped in there is not a backup, and must not hold the
