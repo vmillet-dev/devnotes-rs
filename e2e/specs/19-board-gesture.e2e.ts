@@ -403,6 +403,15 @@ describe('Arranging the board', () => {
       expect(await board.contextMenuRefused()).toBe(true);
     });
 
+    /**
+     * ⚠️ The menu opens on whatever is under the pointer when the button comes up, and a
+     * sweep that overshoots ends over the header (#321). Refused there once, and only once:
+     * the search field's own menu must still open afterwards.
+     */
+    it('refuses it where a sweep ends off the board, and only that once', async () => {
+      expect(await board.menusAfterSweep(testid('search-input'))).toEqual([true, false]);
+    });
+
     /** ⚠️ The existing gesture does not move: the left button still draws a folder. */
     it('leaves the left button drawing a folder', async () => {
       const before = (await bridge.listFolders(spaceId)).length;

@@ -246,12 +246,46 @@ describe('BoardComponent', () => {
         expect(banded).toEqual([]);
       });
 
+      function menuOn(target: EventTarget): MouseEvent {
+        const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+        target.dispatchEvent(event);
+        return event;
+      }
+
       /** ⚠️ Or the browser's own menu opens at the end of every selection. */
       it('refuses the context menu on the surface', () => {
-        const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
-        surface().dispatchEvent(event);
+        expect(menuOn(surface()).defaultPrevented).toBe(true);
+      });
 
-        expect(event.defaultPrevented).toBe(true);
+      /** The ground past the surface's edge and the tidy control are the board too. */
+      it('refuses it anywhere on the board, not only on the surface', () => {
+        expect(menuOn(root().querySelector('.board')!).defaultPrevented).toBe(true);
+        expect(menuOn(root().querySelector('app-board-tidy')!).defaultPrevented).toBe(true);
+      });
+
+      /**
+       * ⚠️ The menu opens on whatever is under the pointer when the button comes up, and a
+       * sweep that overshoots ends over the header or off the board altogether (#321).
+       */
+      it('swallows the menu where a sweep ends, even off the board — once', () => {
+        pointer(surface(), 'pointerdown', 20, 20, 2);
+        pointer(surface(), 'pointermove', 200, 200, 2);
+        pointer(surface(), 'pointerup', 200, 200, 2);
+
+        expect(menuOn(document.body).defaultPrevented).toBe(true);
+        expect(menuOn(document.body).defaultPrevented).toBe(false);
+      });
+
+      it('stands down at the next press, so a later menu elsewhere still opens', () => {
+        pointer(surface(), 'pointerdown', 20, 20, 2);
+        pointer(surface(), 'pointerup', 20, 20, 2);
+        document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+
+        expect(menuOn(document.body).defaultPrevented).toBe(false);
+      });
+
+      it('leaves every menu outside the board alone when no sweep ran', () => {
+        expect(menuOn(document.body).defaultPrevented).toBe(false);
       });
 
       it('writes nothing when the right button never travelled', async () => {

@@ -1266,10 +1266,15 @@ background first. ⚠️ Two things that settles and one it opened:
   menu — and selecting a whole folder's notes is `checkFolder`'s job, from that menu.
 - The existing selection bar acts on the result, so move / file / tag / copy / delete come
   for free, and `Ctrl+click` already added to a selection on both views.
-- ⚠️ **The application has no context menu anywhere**, so `contextmenu` is simply
-  suppressed on the surface — without that, the browser's own menu opens at the end of
-  every sweep, right where the pointer was lifted. A right _click_ that never travels does
-  nothing, as it did before.
+- ⚠️ **The application has no context menu anywhere**, so `contextmenu` is suppressed on
+  the **whole board** — without that, the browser's own menu opens at the end of every
+  sweep, right where the pointer was lifted. The surface alone was not enough: the event
+  goes to whatever is under the pointer when the button comes up, and pointer capture does
+  not retarget it, so a sweep ending past the surface, over the tidy control or over the
+  header opened it anyway (#321). A right-button press therefore arms a one-shot guard on
+  `document`, released by the menu it swallows or by the next press anywhere — so a text
+  field's own menu still opens afterwards. A right _click_ that never travels does nothing,
+  as it did before.
 
 ⚠️ The band is the one gesture that runs while `editable` is false: it writes nothing to
 the board, it only ticks what is already drawn. And ⚠️ which cards it swept is **measured

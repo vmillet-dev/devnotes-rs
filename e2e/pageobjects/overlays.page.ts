@@ -540,6 +540,39 @@ export const board = {
       return event.defaultPrevented;
     }),
 
+  /**
+   * Sweeps a band over empty ground, then asks for a menu **off the board**, twice: what
+   * the page answers each time, in order. ⚠️ One call, so nothing can press in between.
+   */
+  menusAfterSweep: (offBoard: string): Promise<boolean[]> =>
+    browser.execute((selector: string) => {
+      const surface = document.querySelector('[data-testid="board-surface"]');
+      const outside = document.querySelector(selector);
+      if (!surface || !outside) throw new Error('no board surface, or nothing at ' + selector);
+
+      const box = surface.getBoundingClientRect();
+      const send = (type: string, cx: number, cy: number) =>
+        surface.dispatchEvent(
+          new PointerEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            clientX: cx,
+            clientY: cy,
+            button: 2,
+            pointerId: 1,
+          }),
+        );
+      send('pointerdown', box.left + 20, box.top + 3000);
+      send('pointermove', box.left + 220, box.top + 3200);
+      send('pointerup', box.left + 220, box.top + 3200);
+
+      return [0, 1].map(() => {
+        const menu = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+        outside.dispatchEvent(menu);
+        return menu.defaultPrevented;
+      });
+    }, offBoard),
+
   /** Draws a band on the empty background, in surface coordinates. */
   async drawZone(at: { x: number; y: number; width: number; height: number }): Promise<void> {
     await browser.execute(
