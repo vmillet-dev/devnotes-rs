@@ -162,7 +162,7 @@
 
 .node-name.active {
   color: var(--amber-text);
-  background: rgb(var(--amber-rgb) / 8%);
+  background: rgba(var(--amber-rgb), 0.08);
 }
 
 .node-icon,

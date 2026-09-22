@@ -92,7 +92,7 @@
   position: absolute;
   z-index: 15;
   border: 1px dashed var(--amber-edge);
-  background: rgb(var(--amber-rgb) / 8%);
+  background: rgba(var(--amber-rgb), 0.08);
   border-radius: 10px;
   pointer-events: none;
 }
@@ -104,7 +104,7 @@
   position: absolute;
   z-index: 1;
   pointer-events: none;
-  background: rgb(var(--amber-rgb) / 12%);
+  background: rgba(var(--amber-rgb), 0.12);
   border: 1px solid var(--amber-dim);
   border-radius: 4px;
 }
