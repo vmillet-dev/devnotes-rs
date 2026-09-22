@@ -1,6 +1,8 @@
+import { DOCUMENT } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
   computed,
   effect,
@@ -62,12 +64,16 @@ export interface ZoneMove {
 @Component({
   selector: 'app-board',
   imports: [BoardTidyComponent, BoardZoneComponent, NoteCardComponent, TranslocoPipe],
+  // ⚠️ The whole board, not the surface alone: the tidy control and the ground past the
+  // surface's edge are the board too, and a sweep can end over either.
+  host: { '(contextmenu)': 'onContextMenu($event)' },
   templateUrl: './board.component.html',
   styleUrl: './board.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BoardComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly document = inject(DOCUMENT);
 
   readonly zones = input.required<readonly BoardZone[]>();
   readonly loose = input.required<readonly BoardNote[]>();
@@ -102,6 +108,8 @@ export class BoardComponent {
   private pannedFrom: BoardPoint | null = null;
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => this.disarmMenuGuard());
+
     // ⚠️ The result of a whole-board arrangement happens **off screen** otherwise. The pan
     // is a native scroll on `.board` and nothing resets it, so on a wide board panned to
     // the right, "Réorganiser" lands everything back at the top left and leaves the user
@@ -341,8 +349,35 @@ export class BoardComponent {
     // Optional-chained because jsdom lacks it and must not fail the drag.
     (event.target as HTMLElement).setPointerCapture?.(event.pointerId);
 
+    if (banding) this.armMenuGuard();
+
     const origin = this.surfacePoint(event);
     this.gesture.set({ kind, id, origin, from, to: from, moved: false });
+  }
+
+  private disarmMenuGuard: () => void = () => undefined;
+
+  /**
+   * ⚠️ The menu opens on whatever is under the pointer when the button comes up, and a
+   * sweep can end anywhere — over the header, off the board. So this one band swallows the
+   * next menu wherever it lands, and the next press anywhere stands the guard down.
+   */
+  private armMenuGuard(): void {
+    this.disarmMenuGuard();
+
+    const swallow = (event: Event): void => {
+      event.preventDefault();
+      this.disarmMenuGuard();
+    };
+    const standDown = (): void => this.disarmMenuGuard();
+
+    this.document.addEventListener('contextmenu', swallow, true);
+    this.document.addEventListener('pointerdown', standDown, true);
+    this.disarmMenuGuard = () => {
+      this.document.removeEventListener('contextmenu', swallow, true);
+      this.document.removeEventListener('pointerdown', standDown, true);
+      this.disarmMenuGuard = () => undefined;
+    };
   }
 
   private release(event: PointerEvent): void {
