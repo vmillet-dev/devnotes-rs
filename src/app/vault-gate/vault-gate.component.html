@@ -19,6 +19,35 @@
         {{ (vault.isWorking() ? 'vault.working' : 'vault.damagedAction') | transloco }}
       </button>
     </section>
+  } @else if (isConfirmingArchive()) {
+    <!--
+      ⚠️ Instead of the form, never beside it. This recovers nothing — the notes leave
+      sealed, under the phrase nobody remembers — so it has to read as giving up, not as
+      a shortcut past a field that is merely in the way.
+    -->
+    <section class="panel" data-testid="vault-archive">
+      <h1 class="title">{{ 'vault.forgottenTitle' | transloco }}</h1>
+      <p class="lead">{{ 'vault.forgottenLead' | transloco }}</p>
+      <p class="warning" role="note">{{ 'vault.forgottenNote' | transloco }}</p>
+
+      <div class="choices">
+        <button class="secondary" type="button" data-testid="vault-keep-trying" (click)="keepTrying()">
+          {{ 'vault.forgottenBack' | transloco }}
+        </button>
+        <!-- ⚠️ Red text and a hairline, never the amber fill. The fill is the button you
+             are meant to press, and this one loses the notes: the panel's whole job is to
+             slow the hand down. -->
+        <button
+          class="give-up"
+          type="button"
+          [disabled]="vault.isWorking()"
+          data-testid="vault-archive-confirm"
+          (click)="archive()"
+        >
+          {{ (vault.isWorking() ? 'vault.working' : 'vault.forgottenAction') | transloco }}
+        </button>
+      </div>
+    </section>
   } @else {
     <form class="panel" (submit)="submit($event)">
       <h1 class="title">
@@ -82,6 +111,15 @@
           {{ (isCreating() ? 'vault.createAction' : 'vault.unlockAction') | transloco }}
         }
       </button>
+
+      <!-- ⚠️ Only on a library that exists: a fresh one has no phrase to have forgotten.
+           Kept well away from the field and drawn as the small thing it should be —
+           somewhere to go, not somewhere to click by accident. -->
+      @if (!isCreating()) {
+        <button class="forgotten" type="button" data-testid="vault-forgotten" (click)="askToArchive()">
+          {{ 'vault.forgottenLink' | transloco }}
+        </button>
+      }
     </form>
   }
 </main>

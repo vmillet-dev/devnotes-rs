@@ -2943,6 +2943,39 @@ colour, created_at)` and `notes.folder_id` points into it. ⚠️ The column was
   `set_aside_damaged_library` refuses while the library is open — moving the file under a live
   connection is how a damaged database becomes a lost one — and answers the folder it wrote,
   because "set aside" is only true if the user can be told where.
+- **A forgotten passphrase is final, and the gate now says so with something to do about
+  it.** It used to offer nothing but the field: the phrase wraps the library's key,
+  opening `vault.json` is the only check there is, and the only way past was finding the
+  profile directory in `%APPDATA%` and moving files by hand. `recovery::Reason` is what
+  splits the two cases, because ⚠️ **the answers are opposite and getting either wrong
+  loses the library for good**:
+
+  |             | `vault.json`                                                                 | rescue                                                                  | goes to                 |
+  | ----------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------- |
+  | `Damaged`   | **stays** — the phrase still works and the rescued copy needs that exact key | `VACUUM INTO`, best effort                                              | `damaged/<timestamp>/`  |
+  | `Forgotten` | **travels** — it is the only thing that phrase would ever open again         | none: the file is sealed and SQLite has nothing to give without the key | `archived/<timestamp>/` |
+
+  `attachments/` goes along either way, for the same reason as before. `archive_locked_library`
+  refuses on an open library like its neighbour, and answers where it wrote.
+
+  ⚠️ With the key file gone, `vault_state` answers `absent` rather than `locked`, which is
+  what turns the gate into the one that asks for a **new** phrase — a gate still asking for
+  the old one would be the same dead end with extra steps. `VaultStore.moveAside` re-reads
+  the state rather than assuming it, and forgets `devnotes.notes.samplesSeeded` so the fresh
+  library seeds.
+
+  On screen it is a small, quiet link under the unlock button, ⚠️ shown only on a library
+  that exists — a fresh one has no phrase to have forgotten. It opens a panel **instead of**
+  the form, never beside it: the field is the one thing that cannot help, and an offer to
+  give up standing next to it reads as a shortcut. The panel names what is lost — the notes
+  are not recovered, they leave sealed and unreadable — and ⚠️ its confirm is `destructive`
+  rather than the amber fill, which is the button you are _meant_ to press.
+
+  ⚠️ `23-forgotten-passphrase.e2e.ts` runs **after `22-backups`** and depends on it: that
+  one ends by restoring a copy, which closes the library and leaves the gate on screen.
+  There is no other way to meet a locked gate inside one run — the unlocked state lives in
+  the process, and the process outlives every page reload. Nothing may be filed after it.
+
 - **Ordering is the back-end's call.** `notes::store::fetch` orders by `updated_at DESC, id`;
   the front-end preserves the order it receives, so this one query decides what the user sees
   first. Note the deliberate asymmetry: the order is by `updated_at` while sections group by

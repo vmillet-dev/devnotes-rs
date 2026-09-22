@@ -58,9 +58,36 @@ export class VaultGateComponent {
     afterNextRender(() => this.passphraseField()?.nativeElement.focus());
   }
 
+  /**
+   * ⚠️ Shown instead of the form, not beside it. The field is the one thing that cannot
+   * help here, and an offer to give up standing next to it would be read as a shortcut.
+   */
+  protected readonly isConfirmingArchive = signal(false);
+
   /** The way out of a damaged library; the store says where everything went. */
   protected async setAside(): Promise<void> {
     await this.vault.setAsideDamagedLibrary();
+  }
+
+  protected askToArchive(): void {
+    this.passphrase.set('');
+    this.isConfirmingArchive.set(true);
+  }
+
+  protected keepTrying(): void {
+    this.isConfirmingArchive.set(false);
+  }
+
+  /**
+   * ⚠️ Recovers nothing, and the sentence above it says so: the notes leave **sealed**,
+   * under the phrase nobody remembers. The store re-reads the state afterwards, and with
+   * the key file gone the gate comes back asking for a new phrase rather than one nobody
+   * has.
+   */
+  protected async archive(): Promise<void> {
+    if (await this.vault.archiveLockedLibrary()) {
+      this.isConfirmingArchive.set(false);
+    }
   }
 
   protected onPassphrase(value: string): void {

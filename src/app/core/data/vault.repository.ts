@@ -26,6 +26,15 @@ export class VaultRepository {
     return unwrap('set_aside_damaged_library', await commands.setAsideDamagedLibrary());
   }
 
+  /**
+   * The same move for a library nobody can open any more. ⚠️ Nothing is recovered: the
+   * notes leave sealed, and the key file goes with them so the day the phrase comes back
+   * there is still something to try it on.
+   */
+  async archiveLockedLibrary(): Promise<string> {
+    return unwrap('archive_locked_library', await commands.archiveLockedLibrary());
+  }
+
   /** Answers what the change reached, which the interface has to say out loud. */
   async changePassphrase(current: string, next: string): Promise<PassphraseChange> {
     return unwrap('change_passphrase', await commands.changePassphrase(current, next));

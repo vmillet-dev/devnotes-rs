@@ -177,6 +177,15 @@ export const commands = {
 	 *  "set aside" is only true if the user can be told where.
 	 */
 	setAsideDamagedLibrary: () => typedError<string, AppError>(__TAURI_INVOKE("set_aside_damaged_library")),
+	/**
+	 *  Archives a library whose passphrase was forgotten, so a fresh one can be started.
+	 * 
+	 *  ⚠️ Nothing is recovered and nothing is meant to be: the notes leave **sealed**, under
+	 *  the phrase nobody remembers. What this buys is a way out of the gate that does not
+	 *  require knowing where `%APPDATA%` is — and a copy still standing on the day the phrase
+	 *  comes back, which is why `vault.json` goes with it.
+	 */
+	archiveLockedLibrary: () => typedError<string, AppError>(__TAURI_INVOKE("archive_locked_library")),
 	/**  The copies that exist, newest first, for the panel that lists them. */
 	listBackups: () => typedError<Backup[], AppError>(__TAURI_INVOKE("list_backups")),
 	/**
