@@ -334,6 +334,8 @@ jobs:
         env:
           TAG: ${{ needs.prepare.outputs.tag }}
           REPO: ${{ github.repository }}
+          # The section the step above extracted, which the prompt shows without a click.
+          NOTES_FILE: ${{ runner.temp }}/release-notes.md
         run: |
           node <<'EOF'
           const fs = require('fs');
@@ -397,9 +399,23 @@ jobs:
 
           // Without the "v": the updater compares the value as semver, and a prefix would
           // make it unreadable — no update would ever be offered.
+          // The prompt has rendered `update.notes` since it was written, and the manifest
+          // has never carried the key — so the block was dead markup that looked like a
+          // shipped feature. The text already exists at this point in the job: it is what
+          // the release body is built from.
+          //
+          // ⚠️ This file is the changelog section alone. The release **page** gets a copy
+          // with a compare link appended; the manifest gets this one, because a link in a
+          // `<pre>` inside the update prompt is noise nobody can click.
+          const notes = fs.readFileSync(process.env.NOTES_FILE, 'utf8').trim();
+          if (!notes) {
+            throw new Error(`no release notes at ${process.env.NOTES_FILE}`);
+          }
+
           const manifest = {
             version: TAG.replace(/^v/, ''),
             pub_date: new Date().toISOString(),
+            notes,
             platforms,
           };
           fs.writeFileSync(`${dir}/latest.json`, `${JSON.stringify(manifest, null, 2)}\n`);
@@ -412,15 +428,39 @@ jobs:
           sha256sum * > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
+      # ⚠️ The page's body is the changelog section **plus a compare link**, and not the
+      # extracted file itself: that one is what the manifest carries, and a link in a `<pre>`
+      # inside the update prompt is noise nobody can click.
+      - name: Body for the release page
+        env:
+          TAG: ${{ needs.prepare.outputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          cp "$RUNNER_TEMP/release-notes.md" "$RUNNER_TEMP/release-body.md"
+          # ⚠️ From the tag's own parent, not from the workflow's idea of the last release:
+          # the tag exists by now, so `$TAG^` is the commit it was cut from.
+          previous=$(git describe --tags --abbrev=0 "$TAG^" 2>/dev/null || true)
+          if [ -n "$previous" ]; then
+            {
+              echo
+              echo "**Diff** : https://github.com/$REPO/compare/$previous...$TAG"
+            } >> "$RUNNER_TEMP/release-body.md"
+          fi
+          cat "$RUNNER_TEMP/release-body.md"
+
       # `tag_name` is mandatory here: without it the action falls back on `github.ref`, which
       # is `refs/heads/main` on a `workflow_dispatch`.
       #
-      # `generate_release_notes` stays on and comes **after** the body: the API puts our text
-      # first, then the raw pull-request list, the new contributors and the comparison link.
+      # ⚠️ `generate_release_notes` is **off**. It appends the raw pull-request list — and
+      # `scripts/release-notes.mjs` builds the section above from *those same* merged pull
+      # requests, sorted into the changelog's categories. Leaving it on listed every change
+      # twice on one page, once grouped and once flat. What it also gave was the new
+      # contributors, which says nothing on a repository with one author, and the comparison
+      # link, which the step above writes in one line.
       - uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.prepare.outputs.tag }}
           name: ${{ needs.prepare.outputs.tag }}
-          body_path: ${{ runner.temp }}/release-notes.md
-          generate_release_notes: true
+          body_path: ${{ runner.temp }}/release-body.md
+          generate_release_notes: false
           files: release/*

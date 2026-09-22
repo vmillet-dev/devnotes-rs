@@ -9,11 +9,19 @@
       {{ 'update.summary' | transloco: { version: update.version, current: update.currentVersion } }}
     </p>
 
+    <!-- ⚠️ Open, and not behind a `<details>`. Closed by default meant installing without
+         reading; worse, opening it **changed the dialog's height** — the body is bounded at
+         160px but the collapsed summary is one line, so the panel grew under the cursor and
+         moved "Install now" out from under the mouse. A fixed block is what makes the
+         geometry independent of a two-line release versus a forty-line one.
+
+         ⚠️ Untranslated, like `CHANGELOG.md` and the "Nouveautés" panel that reads it: a
+         release note in one language beats no release note. -->
     @if (update.notes) {
-      <details class="update-notes">
-        <summary>{{ 'update.notesLabel' | transloco }}</summary>
+      <section class="update-notes">
+        <h3 class="update-notes-label">{{ 'update.notesLabel' | transloco }}</h3>
         <pre class="update-notes-body">{{ update.notes }}</pre>
-      </details>
+      </section>
     }
 
     @if (busy()) {

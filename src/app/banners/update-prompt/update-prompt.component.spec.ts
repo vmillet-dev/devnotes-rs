@@ -64,6 +64,20 @@ describe('UpdatePromptComponent', () => {
     );
   });
 
+  /**
+   * ⚠️ Closed by default meant installing without reading — and worse, opening it changed
+   * the dialog's height: the body is bounded but the collapsed summary is one line, so the
+   * panel grew under the cursor and moved "Install now" out from under the mouse.
+   */
+  it('shows them without a click, and behind nothing that can be folded', async () => {
+    await offerUpdate('Corrige le rail de tags');
+
+    expect(fixture.debugElement.query(By.css('.update-notes details'))).toBeNull();
+    expect(fixture.debugElement.query(By.css('.update-notes summary'))).toBeNull();
+    const body = fixture.nativeElement.querySelector('.update-notes-body') as HTMLElement;
+    expect(body.closest('details')).toBeNull();
+  });
+
   describe('the skip checkbox', () => {
     const box = (): HTMLInputElement => fixture.nativeElement.querySelector('[data-testid="update-skip"]');
 
