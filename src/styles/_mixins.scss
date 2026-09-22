@@ -51,6 +51,21 @@
   min-height: $size;
 }
 
+// What a panel does when it arrives. ⚠️ An animation rather than a transition: these are
+// `@if`-rendered, so there is no previous state to transition *from* — the element simply
+// did not exist a frame ago.
+@mixin enters($keyframes: enter-rise) {
+  animation: $keyframes var(--motion) ease-out;
+}
+
+// What a control does under the pointer. ⚠️ Named properties, never `all`: `all` catches
+// layout properties too, and a transition on one of those is what makes a list feel heavy.
+@mixin eases($properties...) {
+  transition-property: $properties;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: ease-out;
+}
+
 // The "card" surface: background, border, radius.
 @mixin surface($bg: var(--bg-2), $radius: 8px, $border-color: var(--line-soft)) {
   background: $bg;
@@ -138,9 +153,7 @@
   background: var(--bg-3);
   border: 1px solid var(--line);
   cursor: pointer;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease;
+  @include eases(background, border-color);
 
   &::after {
     content: '';
@@ -151,9 +164,7 @@
     height: 12px;
     border-radius: 50%;
     background: var(--text-2);
-    transition:
-      transform 0.15s ease,
-      background 0.15s ease;
+    @include eases(transform, background);
   }
 
   &:checked {

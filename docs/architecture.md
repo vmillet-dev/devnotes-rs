@@ -706,6 +706,41 @@ Ticking from the card matters more than it looks: crossing tasks off is the gest
 list exists for, and routing it through the editor would put a modal between the user and a
 one-click action.
 
+### Motion, and the one block that stops it
+
+There were **four** `transition` declarations in the whole of `src/`, across roughly 225
+style rules, and three of them had already drifted to three different durations. Nothing on
+a card's hover moved, no menu or dialog opened, no transient bar arrived — every state
+change was a hard cut. That is not a defect; it is the difference a reader registers between
+"quick" and "finished".
+
+**Two durations, and they are variables.** `--motion-fast` (120ms) is what follows the
+pointer — hover fills, chip states, the card's action pill. `--motion` (160ms) is what
+**enters**: a menu, a dialog, the selection bar, the undo banner, the status toast.
+
+⚠️ **`transform` and `opacity` only.** A transition on `height`, `width` or a colour over
+a list of cards is what makes a canvas feel heavy, and this canvas renders every note with
+no virtualisation. `@mixin eases` therefore names its properties and never takes `all`.
+
+⚠️ **An animation, not a transition, for what arrives.** Menus, dialogs and the bars are
+`@if`-rendered: there is no previous state to transition _from_, because the element did
+not exist a frame ago. `@mixin enters` picks one of three shared `@keyframes`
+(`enter-rise`, `enter-lift`, `enter-fade`), which live in `styles.scss` because keyframe
+names are global whatever the component encapsulation says.
+
+⚠️ **`prefers-reduced-motion` is one block, and it has to stay the only one.** It reduces
+every duration and every animation without naming any of them, which is the whole reason
+the durations are variables and the entrances are three shared keyframes: motion added
+later is turned off by it for free. `scripts/motion.test.mjs` holds all three rules
+against the shipped stylesheets — no duration written out in a component, no
+`transition: all`, and exactly one reduced-motion block.
+
+⚠️ The card's action pill keeps its entrance to **opacity**. `note-card.component.spec.ts`
+and two e2e scenarios read its box while it is at `opacity: 0`, which works because opacity
+does not affect layout; a `transform` there would move what they measure. And ⚠️ its
+`opacity` pair has to stay **after** `unstyled-control` wherever it is written — that mixin
+expands to `all: unset`, which resets both.
+
 ### Reordering, and why not drag & drop
 
 ⚠️ **HTML5 drag & drop does not work in this WebView.** `dragDropEnabled` is Tauri's default

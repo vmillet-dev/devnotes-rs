@@ -120,6 +120,7 @@
 }
 
 .node-row {
+  @include eases(background, border-color, color);
   display: flex;
   align-items: center;
   gap: 2px;

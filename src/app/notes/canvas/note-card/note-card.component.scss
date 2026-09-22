@@ -131,8 +131,11 @@
   background: var(--bg-2);
   border: 1px solid var(--line-soft);
   box-shadow: var(--shadow-dropdown);
-  // Quiet at rest, never absent: `display: none` takes it out of the tab order.
+  // ⚠️ Quiet at rest, never absent: `display: none` takes it out of the tab order. And
+  // ⚠️ the `opacity` pair has to stay **after** `unstyled-control` wherever it is written —
+  // that mixin expands to `all: unset`, which resets both.
   opacity: 0;
+  @include eases(opacity);
 }
 
 // ⚠️ Anything setting `opacity` here would have to come after `unstyled-control`, whose
@@ -180,6 +183,8 @@ app-copy-button {
 // what covered the marks, and a selection affordance that only exists under the pointer is
 // one nobody finds. Quiet at rest, amber once it is ticked.
 .card-check {
+  @include eases(opacity, color);
+
   flex-shrink: 0;
   margin: -2px 0 0 -3px;
   padding: 2px 3px;

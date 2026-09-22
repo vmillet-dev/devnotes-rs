@@ -51,6 +51,13 @@
   --shadow-dropdown: 0 10px 30px rgba(var(--black-rgb), 0.35);
   --shadow-overlay: 0 30px 60px rgba(var(--black-rgb), 0.5);
 
+  /* Two durations and nothing else. ⚠️ `--motion-fast` is what follows the pointer —
+     hover fills, chip states, a control appearing under the cursor. `--motion` is what
+     *enters*: a menu, a dialog, a transient bar. Anything slower reads as lag on a tool
+     that is used in bursts. */
+  --motion-fast: 120ms;
+  --motion: 160ms;
+
   // The four gaps density tightens; everything else stays fixed.
   --space-card: 14px;
   --space-grid: 12px;
@@ -173,7 +180,32 @@ body {
   border: 0;
 }
 
-// The application animates little, but what it animates must be stoppable.
+/* What enters: a short rise and a fade, never a size. ⚠️ `transform` and `opacity` only —
+   a transition on `height`, `width` or a colour is what makes a canvas feel heavy, and the
+   canvas draws every note with no virtualisation. */
+@keyframes enter-rise {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes enter-lift {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@keyframes enter-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ⚠️ One block, and it has to stay the only one. Every duration above is reduced here, so
+   motion added anywhere else is turned off by this without being named — which is the whole
+   reason the durations are variables and the entrances are three shared keyframes. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

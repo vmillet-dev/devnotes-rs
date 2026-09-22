@@ -22,6 +22,7 @@
 // Tinting the badge amber when active would erase the very clue it is recognised by,
 // so the ring is what says "selected".
 .language-chip {
+  @include eases(background, border-color, color);
   @include unstyled-control;
   display: flex;
   padding: 2px;
