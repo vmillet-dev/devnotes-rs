@@ -3,7 +3,9 @@ import { ChangeDetectionStrategy, Component, Type, computed, output, signal } fr
 import { TranslocoPipe } from '@jsverse/transloco';
 import { VariablesPageComponent } from '@titlebar/file-menu/settings-dialog/variables-page/variables-page.component';
 import { DialogComponent } from '@shared/layout/dialog/dialog.component';
+import { SecurityPageComponent } from './security-page/security-page.component';
 import { SettingsPageComponent } from './settings-page/settings-page.component';
+import { ShortcutsPageComponent } from './shortcuts-page/shortcuts-page.component';
 
 /** `component` is rendered through `NgComponentOutlet`: the rail is one list, the pages
  * are components the panel only hosts. */
@@ -19,9 +21,14 @@ const GENERAL_PAGE: SettingsPage = {
   component: SettingsPageComponent,
 };
 
-/** The order on screen is the order here. */
+/**
+ * The order on screen is the order here: what the application looks like, then the keys
+ * that reach it, then what protects the library, then the corpus's own variables.
+ */
 const PAGES: readonly SettingsPage[] = [
   GENERAL_PAGE,
+  { id: 'shortcuts', labelKey: 'settings.pages.shortcuts', component: ShortcutsPageComponent },
+  { id: 'security', labelKey: 'settings.pages.security', component: SecurityPageComponent },
   { id: 'notes.variables', labelKey: 'settings.pages.variables', component: VariablesPageComponent },
 ];
 

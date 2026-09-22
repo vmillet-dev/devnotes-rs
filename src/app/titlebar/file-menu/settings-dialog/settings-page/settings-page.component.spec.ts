@@ -11,16 +11,6 @@ describe('SettingsPageComponent', () => {
     return fixture.nativeElement.querySelector(`#${id}`);
   }
 
-  function shortcutField(): HTMLInputElement {
-    return fixture.nativeElement.querySelector('#setting-shortcut');
-  }
-
-  function press(init: KeyboardEventInit): KeyboardEvent {
-    const event = new KeyboardEvent('keydown', { ...init, bubbles: true, cancelable: true });
-    shortcutField().dispatchEvent(event);
-    return event;
-  }
-
   beforeEach(async () => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
@@ -33,27 +23,12 @@ describe('SettingsPageComponent', () => {
     await fixture.whenStable();
   });
 
-  it('shows the five groups the panel is made of', () => {
+  it('shows the four groups left once the keys and the library have pages of their own', () => {
     const titles = [...fixture.nativeElement.querySelectorAll('.setting-group-title')].map(
       (title: HTMLElement) => title.textContent?.trim(),
     );
 
-    expect(titles).toEqual(['Apparence', 'Comportement', 'Collage rapide', 'Sécurité', 'Notifications']);
-  });
-
-  /** The dialog is opened from here and nowhere else; what it does is its own spec. */
-  it('opens the passphrase dialog from the security group, and only on demand', async () => {
-    const opener = (): HTMLButtonElement =>
-      fixture.nativeElement.querySelector('[data-testid="setting-change-passphrase"]');
-    const dialog = (): HTMLElement | null =>
-      fixture.nativeElement.querySelector('[data-testid="change-passphrase"]');
-
-    expect(dialog()).toBeNull();
-
-    opener().click();
-    await fixture.whenStable();
-
-    expect(dialog()).not.toBeNull();
+    expect(titles).toEqual(['Apparence', 'Comportement', 'Collage rapide', 'Notifications']);
   });
 
   /**
@@ -126,25 +101,11 @@ describe('SettingsPageComponent', () => {
     toggle('setting-close-to-tray').click();
     toggle('setting-pinned-first').click();
     toggle('setting-copy-confirmation').click();
-    toggle('setting-automatic-backups').click();
     await fixture.whenStable();
 
     expect(settings.closeToTray()).toBe(false);
     expect(settings.showPinnedFirst()).toBe(false);
     expect(settings.copyConfirmation()).toBe(false);
-    expect(settings.automaticBackups()).toBe(false);
-  });
-
-  /** ⚠️ Rust reads this at launch, before the front end exists — turning it off has to
-   *  reach the preferences file, which is the only thing the back end sees. */
-  it('shows the copies as on, and writes the choice through', async () => {
-    expect(toggle('setting-automatic-backups').checked).toBe(true);
-
-    toggle('setting-automatic-backups').click();
-    await fixture.whenStable();
-
-    expect(settings.automaticBackups()).toBe(false);
-    expect(toggle('setting-automatic-backups').checked).toBe(false);
   });
 
   describe('the update entry', () => {
@@ -186,32 +147,5 @@ describe('SettingsPageComponent', () => {
       expect(settings.updateNotifications()).toBe(true);
       expect(settings.skippedUpdate()).toBe('');
     });
-  });
-
-  it('records a shortcut from the keystroke rather than from typed text', async () => {
-    press({ code: 'KeyK', ctrlKey: true, shiftKey: true });
-    await fixture.whenStable();
-
-    expect(settings.paletteShortcut()).toBe('Ctrl+Shift+K');
-    expect(shortcutField().value).toBe('Ctrl+Shift+K');
-  });
-
-  it('lets a bare keystroke through, which is what keeps Tab and Escape working', () => {
-    const event = press({ code: 'Tab' });
-
-    expect(event.defaultPrevented).toBe(false);
-    expect(settings.paletteShortcut()).toBe('Ctrl+Alt+P');
-  });
-
-  it('offers to restore the original combination, and only once it changed', async () => {
-    const reset = (): HTMLButtonElement => fixture.nativeElement.querySelector('.setting-shortcut-reset');
-    expect(reset().disabled).toBe(true);
-
-    press({ code: 'KeyK', ctrlKey: true, shiftKey: true });
-    await fixture.whenStable();
-    reset().click();
-    await fixture.whenStable();
-
-    expect(settings.paletteShortcut()).toBe('Ctrl+Alt+P');
   });
 });

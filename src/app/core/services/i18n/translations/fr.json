@@ -452,7 +452,7 @@
     "unavailable": "{count, plural, one {Raccourci global indisponible} other {Raccourcis globaux indisponibles}} : {{list}}. Une autre application {count, plural, one {l’utilise} other {les utilise}} déjà.",
     "title": "Raccourcis clavier",
     "subtitle": "Les touches actives selon l'endroit où vous êtes. Les lettres nues n'agissent que sur le canevas, jamais pendant une saisie.",
-    "editHint": "Le raccourci de collage rapide se règle dans Fichier → Préférences.",
+    "editHint": "Les raccourcis se règlent dans Fichier → Préférences → Raccourcis.",
     "close": "Fermer",
     "groups": {
       "global": "Globaux (même fenêtre fermée)",
@@ -497,8 +497,10 @@
     "title": "Préférences",
     "pagesLabel": "Sections des préférences",
     "pages": {
-      "general": "Paramètres",
-      "variables": "Variables"
+      "general": "Général",
+      "variables": "Variables",
+      "shortcuts": "Raccourcis",
+      "security": "Sécurité"
     },
     "close": "Fermer",
     "appliedImmediately": "Les modifications s'appliquent immédiatement.",
@@ -528,9 +530,6 @@
     },
     "quickPaste": {
       "title": "Collage rapide",
-      "shortcut": "Raccourci global",
-      "shortcutHint": "Cliquez dans le champ puis composez la combinaison. Un raccourci déjà pris par une autre application est signalé au démarrage.",
-      "shortcutReset": "Rétablir",
       "showPinnedFirst": "Épinglées en premier"
     },
     "security": {
@@ -549,7 +548,9 @@
       "backupsNote": "Au plus une copie par jour, les trois dernières gardées à côté de la bibliothèque — de quoi couvrir une corbeille vidée ou une mise à jour ratée. Pas une protection contre un disque mort : pour ça, exportez ailleurs.",
       "changedOneLeft": "Phrase de passe changée, mais une copie n'a pas pu être réenveloppée : elle s'ouvre encore avec l'ancienne phrase.",
       "changedSomeLeft": "Phrase de passe changée, mais {{count}} copies n'ont pas pu être réenveloppées : elles s'ouvrent encore avec l'ancienne phrase.",
-      "copiesNote": "Les copies gardées à côté de la bibliothèque sont réenveloppées avec elle. Un fichier de clé que vous auriez copié ailleurs, lui, s'ouvrira toujours avec l'ancienne phrase."
+      "copiesNote": "Les copies gardées à côté de la bibliothèque sont réenveloppées avec elle. Un fichier de clé que vous auriez copié ailleurs, lui, s'ouvrira toujours avec l'ancienne phrase.",
+      "backups": "Copies de sauvegarde",
+      "access": "Accès"
     },
     "notifications": {
       "title": "Notifications",
@@ -569,6 +570,16 @@
       "empty": "Aucune variable pour l'instant.",
       "duplicate": "Nom en double : {{names}}. Seule la dernière ligne sera gardée.",
       "nameRule": "Un nom se limite aux lettres, chiffres, tirets et soulignés."
+    },
+    "shortcuts": {
+      "reset": "Rétablir",
+      "globalNote": "Ces trois-là agissent partout, fenêtre fermée comprise : ils demandent donc au moins un modificateur, sans quoi la touche serait avalée dans toutes vos applications. Un raccourci déjà pris par une autre application est signalé au démarrage.",
+      "canvasNote": "Ceux-ci n'agissent que sur le canevas, jamais pendant une saisie : une lettre nue suffit. Cliquez dans le champ puis composez la combinaison.",
+      "fixedNote": "Les flèches, Échap, Tab et les clics avec Ctrl ou Maj ne se déplacent pas : ce sont la navigation, la sortie et la sélection, et une bibliothèque où l'on ne peut plus reculer serait pire qu'une touche mal placée.",
+      "taken": "{{accelerator}} est déjà pris par « {{action}} ».",
+      "needsModifier": "Un raccourci global demande au moins Ctrl, Alt, Maj ou Super.",
+      "reserved": "Cette touche est réservée à la navigation.",
+      "conflict": "{{accelerator}} répond à plusieurs actions : {{actions}}. Une seule agira."
     }
   },
   "gettingStarted": {

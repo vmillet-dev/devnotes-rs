@@ -2,7 +2,7 @@ import { Injectable, Injector, effect, inject } from '@angular/core';
 import { commands } from '@core/ipc/bindings';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { SettingsStore } from '@core/services/settings/settings.store';
-import { DEFAULT_SHORTCUTS, ShortcutBindings } from './shortcut.model';
+import { ShortcutBindings } from './shortcut.model';
 
 /**
  * ⚠️ A global shortcut is first-come, first-served across the machine and the loser gets
@@ -19,7 +19,11 @@ export class GlobalShortcutsService {
   start(): void {
     effect(
       () => {
-        void this.apply({ ...DEFAULT_SHORTCUTS, palette: this.settings.paletteShortcut() });
+        void this.apply({
+          palette: this.settings.paletteShortcut(),
+          capture: this.settings.captureShortcut(),
+          newNote: this.settings.newNoteShortcut(),
+        });
       },
       { injector: this.injector },
     );

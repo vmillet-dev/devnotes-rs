@@ -1,13 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, inject, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { SettingsStore } from '@core/services/settings/settings.store';
-import { DEFAULT_SHORTCUTS, ShortcutGroup, acceleratorKeys } from '@core/services/shortcuts/shortcut.model';
+import { ShortcutBindingsStore } from '@core/services/shortcuts/shortcut-bindings.store';
+import { GLOBAL_ACTIONS, ShortcutGroup, acceleratorKeys } from '@core/services/shortcuts/shortcut.model';
 import { NOTES_SHORTCUT_GROUPS } from '@titlebar/about-menu/shortcuts-dialog/notes-shortcuts';
 import { DialogComponent } from '@shared/layout/dialog/dialog.component';
 
 /**
- * The global group reads `SettingsStore`, which is what makes the sheet show the key
- * that is really bound rather than the one that shipped.
+ * ⚠️ Every row that can be moved is resolved through `ShortcutBindingsStore`, so the
+ * sheet shows the key that is really bound rather than the one that shipped — the rest
+ * are drawn as declared, being the ones nothing can move.
  */
 @Component({
   selector: 'app-shortcuts-dialog',
@@ -17,24 +18,29 @@ import { DialogComponent } from '@shared/layout/dialog/dialog.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ShortcutsDialogComponent {
-  private readonly settings = inject(SettingsStore);
+  private readonly bindings = inject(ShortcutBindingsStore);
 
   readonly closed = output<void>();
 
-  protected readonly groups = computed<readonly ShortcutGroup[]>(() => [
-    {
-      id: 'global',
-      labelKey: 'shortcuts.groups.global',
-      // First: these keys work with the window closed.
-      shortcuts: [
-        {
-          keys: acceleratorKeys(this.settings.paletteShortcut()),
-          labelKey: 'shortcuts.global.palette',
-        },
-        { keys: acceleratorKeys(DEFAULT_SHORTCUTS.capture), labelKey: 'shortcuts.global.capture' },
-        { keys: acceleratorKeys(DEFAULT_SHORTCUTS.newNote), labelKey: 'shortcuts.global.newNote' },
-      ],
-    },
-    ...NOTES_SHORTCUT_GROUPS,
-  ]);
+  protected readonly groups = computed<readonly ShortcutGroup[]>(() =>
+    [
+      {
+        id: 'global',
+        labelKey: 'shortcuts.groups.global',
+        // First: these keys work with the window closed.
+        shortcuts: GLOBAL_ACTIONS.map((action) => ({
+          keys: acceleratorKeys(action.fallback),
+          labelKey: action.labelKey,
+          action,
+        })),
+      },
+      ...NOTES_SHORTCUT_GROUPS,
+    ].map((group) => ({
+      ...group,
+      shortcuts: group.shortcuts.map((entry) => ({
+        ...entry,
+        keys: entry.action ? acceleratorKeys(this.bindings.binding(entry.action)) : entry.keys,
+      })),
+    })),
+  );
 }

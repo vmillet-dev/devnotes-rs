@@ -1,6 +1,12 @@
 import { Directive, ElementRef, inject } from '@angular/core';
 import { SettingsStore } from '@core/services/settings/settings.store';
-import { ShortcutGroup } from '@core/services/shortcuts/shortcut.model';
+import { ShortcutBindingsStore } from '@core/services/shortcuts/shortcut-bindings.store';
+import {
+  Rebindable,
+  ShortcutGroup,
+  acceleratorKeys,
+  canvasKeystrokeFromEvent,
+} from '@core/services/shortcuts/shortcut.model';
 import { DialogStack } from '@shared/layout/dialog/dialog-stack';
 import { FoldersStore } from '@core/state/folders.store';
 import { Note } from '@core/model/note.model';
@@ -29,14 +35,29 @@ interface CanvasContext {
   readonly move: (direction: FocusDirection) => void;
 }
 
-/** Documenting a key and binding it are the same act: the sheet is derived from this. */
+/**
+ * Documenting a key, binding it and letting it be moved are the same act: the sheet and
+ * the preferences panel are both derived from this.
+ *
+ * ⚠️ Two shapes. A **rebindable** entry declares `id` and `accelerator`, and its caps are
+ * derived from the second — so the key is spelled once. A **fixed** one declares `keys`
+ * for the sheet and `on` for the match: the arrows are the grid's own navigation and
+ * Escape is the way out of everything on screen, so neither may be moved.
+ */
 interface CanvasKey {
-  readonly keys: readonly string[];
   readonly labelKey: string;
-  /** Absent means the key is only documented here and handled elsewhere. */
+  /** Rebindable: what the binding is stored under, and the accelerator it ships with. */
+  readonly id?: string;
+  readonly accelerator?: string;
+  /**
+   * ⚠️ Fires the action whatever it is bound to. Backspace has trashed a note since
+   * before the key could be moved, and making it movable is no reason to take that away.
+   */
+  readonly aliases?: readonly string[];
+  /** Fixed: the caps the sheet draws, and the `event.key`s that fire it. */
+  readonly keys?: readonly string[];
+  /** Absent on both shapes means the key is documented here and handled elsewhere. */
   readonly on?: readonly string[];
-  /** Ctrl (or ⌘) must be held. Without it, no modifier may be. */
-  readonly ctrl?: boolean;
   /** Answers whether it acted: only then is the browser's own behaviour cancelled. */
   readonly run?: (context: CanvasContext, key: string) => boolean;
 }
@@ -70,10 +91,9 @@ function when(condition: boolean, action: () => void): boolean {
 const CANVAS_KEYS: readonly CanvasKey[] = [
   { keys: ['Ctrl', 'K'], labelKey: 'shortcuts.canvas.search' },
   {
-    keys: ['Ctrl', 'B'],
+    id: 'canvas.library',
+    accelerator: 'Ctrl+B',
     labelKey: 'shortcuts.canvas.library',
-    on: ['b', 'B'],
-    ctrl: true,
     run: ({ settings }) => {
       settings.showLibraryRail.write(!settings.showLibraryRail());
       return true;
@@ -86,44 +106,45 @@ const CANVAS_KEYS: readonly CanvasKey[] = [
     run: ({ move }, key) => given(DIRECTIONS[key], move),
   },
   {
-    keys: ['Enter'],
+    id: 'canvas.open',
+    accelerator: 'Enter',
     labelKey: 'shortcuts.canvas.open',
-    on: ['Enter'],
     run: ({ focused, notes }) => given(focused, (note) => notes.openNote(note.id)),
   },
   {
-    keys: ['C'],
+    id: 'canvas.copy',
+    accelerator: 'C',
     labelKey: 'shortcuts.canvas.copy',
-    on: ['c', 'C'],
     run: ({ focused, copy }) => given(focused, copy),
   },
   {
-    keys: ['P'],
+    id: 'canvas.pin',
+    accelerator: 'P',
     labelKey: 'shortcuts.canvas.pin',
-    on: ['p', 'P'],
     run: ({ focused, notes }) => given(focused, (note) => void notes.togglePinned(note.id)),
   },
   {
-    keys: [CHECK_KEY],
+    id: 'canvas.check',
+    accelerator: CHECK_KEY,
     labelKey: 'shortcuts.canvas.check',
-    on: ['x', 'X'],
     run: ({ focused, selection }) => given(focused, (note) => selection.toggleChecked(note.id)),
   },
   {
     // ⚠️ The light half only. Reorganising the zones overwrites sizes chosen by hand, and
     // a key is the one address that cannot ask first — it stays a notch further away, in
     // the control's own menu.
-    keys: ['A'],
+    id: 'canvas.align',
+    accelerator: 'A',
     labelKey: 'shortcuts.canvas.align',
-    on: ['a', 'A'],
     run: ({ board, notes }) => when(board.isShowing(), () => void notes.arrangeBoard('looseCards')),
   },
   { keys: ['Ctrl'], labelKey: 'shortcuts.canvas.checkWithClick' },
   { keys: ['Shift'], labelKey: 'shortcuts.canvas.extendWithClick' },
   {
-    keys: ['Delete'],
+    id: 'canvas.trash',
+    accelerator: 'Delete',
+    aliases: ['Backspace'],
     labelKey: 'shortcuts.canvas.trash',
-    on: ['Delete', 'Backspace'],
     // ⚠️ Twice, the way the card's own menu asks for two clicks. One press used to trash
     // whichever card the ring was on, and the ring can be on a card that is scrolled away.
     run: ({ focused, notes, selection }) =>
@@ -138,10 +159,9 @@ const CANVAS_KEYS: readonly CanvasKey[] = [
       }),
   },
   {
-    keys: ['Ctrl', 'Z'],
+    id: 'canvas.undo',
+    accelerator: 'Ctrl+Z',
     labelKey: 'shortcuts.canvas.undo',
-    on: ['z', 'Z'],
-    ctrl: true,
     // Even after the banner is gone: it is the gesture one makes without looking.
     run: ({ notes }) => when(notes.lastAction() !== null, () => void notes.undoLastAction()),
   },
@@ -170,11 +190,23 @@ const CANVAS_KEYS: readonly CanvasKey[] = [
   },
 ];
 
+/** The same entry seen as something that can be moved, when it can. */
+function rebindable({ id, accelerator, labelKey }: CanvasKey): Rebindable | undefined {
+  return id !== undefined && accelerator !== undefined ? { id, labelKey, fallback: accelerator } : undefined;
+}
+
+/** What the preferences panel edits. Derived, so this table stays the only declaration. */
+export const CANVAS_ACTIONS: readonly Rebindable[] = CANVAS_KEYS.flatMap((key) => rebindable(key) ?? []);
+
 /** The sheet's canvas group, built from the table that binds the same keys. */
 export const CANVAS_SHORTCUT_GROUP: ShortcutGroup = {
   id: 'notes.canvas',
   labelKey: 'shortcuts.groups.canvas',
-  shortcuts: CANVAS_KEYS.map(({ keys, labelKey }) => ({ keys, labelKey })),
+  shortcuts: CANVAS_KEYS.map((key) => ({
+    labelKey: key.labelKey,
+    keys: key.accelerator ? acceleratorKeys(key.accelerator) : (key.keys ?? []),
+    action: rebindable(key),
+  })),
 };
 
 function isTypingTarget(target: EventTarget | null): boolean {
@@ -203,6 +235,7 @@ export class CanvasKeyboardDirective {
   private readonly fill = inject(PlaceholderFillStore);
   private readonly dialogs = inject(DialogStack);
   private readonly settings = inject(SettingsStore);
+  private readonly bindings = inject(ShortcutBindingsStore);
 
   protected onKeydown(event: KeyboardEvent): void {
     // ⚠️ `defaultPrevented` too: this listens on the document, so a control that has
@@ -210,19 +243,27 @@ export class CanvasKeyboardDirective {
     // as well, and the arrows would move the card focus while the rail is being widened.
     if (this.dialogs.hasOpenDialog() || isTypingTarget(event.target) || event.defaultPrevented) return;
 
-    const withCtrl = event.ctrlKey || event.metaKey;
-    const entry = CANVAS_KEYS.find(
-      (candidate) =>
-        candidate.on?.includes(event.key) === true &&
-        (candidate.ctrl ?? false) === withCtrl &&
-        // A bare key stays bare: Alt is a different gesture entirely.
-        (candidate.ctrl === true || !event.altKey),
-    );
+    const chord = canvasKeystrokeFromEvent(event);
+    const entry = CANVAS_KEYS.find((candidate) => this.answersTo(candidate, event, chord));
     if (!entry?.run) return;
 
     if (entry.run(this.context(), event.key)) {
       event.preventDefault();
     }
+  }
+
+  /** A rebindable entry answers to whatever it is bound to; a fixed one to its own keys. */
+  private answersTo(candidate: CanvasKey, event: KeyboardEvent, chord: string | null): boolean {
+    const action = rebindable(candidate);
+    if (action) {
+      return (
+        chord !== null &&
+        (this.bindings.binding(action) === chord || candidate.aliases?.includes(chord) === true)
+      );
+    }
+
+    // A bare key stays bare: Ctrl, ⌘ and Alt are different gestures entirely.
+    return candidate.on?.includes(event.key) === true && !event.ctrlKey && !event.metaKey && !event.altKey;
   }
 
   private context(): CanvasContext {

@@ -1,6 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { TranslocoService, TranslocoPipe } from '@jsverse/transloco';
-import { ChangePassphraseDialogComponent } from '../change-passphrase-dialog/change-passphrase-dialog.component';
 import {
   DENSITIES,
   Density,
@@ -10,7 +9,6 @@ import {
   ThemeChoice,
 } from '@core/services/settings/app-settings.model';
 import { SettingsStore } from '@core/services/settings/settings.store';
-import { DEFAULT_SHORTCUTS, acceleratorFromEvent } from '@core/services/shortcuts/shortcut.model';
 import { ChoiceMenuComponent, ChoiceOption } from '@notes/ui/choice-menu/choice-menu.component';
 import {
   Segment,
@@ -21,20 +19,19 @@ function checkedValue(event: Event): boolean {
   return (event.target as HTMLInputElement).checked;
 }
 
+/**
+ * What is left once the keys and the library's own protection have pages of their own:
+ * how the application looks, how it behaves, and what it says.
+ */
 @Component({
   selector: 'app-settings-page',
-  imports: [TranslocoPipe, ChangePassphraseDialogComponent, ChoiceMenuComponent, SegmentedChoiceComponent],
+  imports: [TranslocoPipe, ChoiceMenuComponent, SegmentedChoiceComponent],
   templateUrl: './settings-page.component.html',
   styleUrl: './settings-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SettingsPageComponent {
   protected readonly settings = inject(SettingsStore);
-
-  protected readonly locales = LOCALE_CHOICES;
-  protected readonly themes = THEME_CHOICES;
-  protected readonly densities = DENSITIES;
-  protected readonly defaultShortcut = DEFAULT_SHORTCUTS.palette;
 
   private readonly transloco = inject(TranslocoService);
 
@@ -55,16 +52,6 @@ export class SettingsPageComponent {
       label: this.transloco.translate(`settings.density.${choice}`),
     })),
   );
-
-  protected readonly isChangingPassphrase = signal(false);
-
-  protected openPassphraseChange(): void {
-    this.isChangingPassphrase.set(true);
-  }
-
-  protected closePassphraseChange(): void {
-    this.isChangingPassphrase.set(false);
-  }
 
   protected onUpdateNotifications(event: Event): void {
     this.settings.setUpdateNotifications(checkedValue(event));
@@ -102,28 +89,7 @@ export class SettingsPageComponent {
     this.settings.setShowPinnedFirst(checkedValue(event));
   }
 
-  protected onAutomaticBackups(event: Event): void {
-    this.settings.setAutomaticBackups(checkedValue(event));
-  }
-
   protected onCopyConfirmation(event: Event): void {
     this.settings.setCopyConfirmation(checkedValue(event));
-  }
-
-  /**
-   * The field listens for a keystroke rather than accepting text, which would let through
-   * combinations the native side cannot read back. A keystroke with no modifier goes back
-   * to the dialog, which is what leaves Tab and Escape working inside the field.
-   */
-  protected onShortcutKeydown(event: KeyboardEvent): void {
-    const accelerator = acceleratorFromEvent(event);
-    if (!accelerator) return;
-
-    event.preventDefault();
-    this.settings.setPaletteShortcut(accelerator);
-  }
-
-  protected resetShortcut(): void {
-    this.settings.setPaletteShortcut(this.defaultShortcut);
   }
 }
