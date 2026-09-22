@@ -706,6 +706,29 @@ Ticking from the card matters more than it looks: crossing tasks off is the gest
 list exists for, and routing it through the editor would put a modal between the user and a
 one-click action.
 
+### The update prompt shows the release's notes
+
+`update-prompt` has rendered `update.notes` since it was written, and `latest.json` never
+carried the key — so the block was dead markup that looked like a shipped feature, and
+`update.body` was `undefined` at every release.
+
+The text already exists at that point in the release job: `scripts/release-notes.mjs extract`
+writes it to `$RUNNER_TEMP/release-notes.md` for the GitHub release body, and the manifest
+step reads the same file. ⚠️ `generate_release_notes` appends the raw pull-request list
+inside `action-gh-release` and does not touch that file, so the manifest carries the
+hand-written section alone.
+
+⚠️ **Shown open, at a fixed height.** Behind a `<details>` it was installed without being
+read — and worse, opening it _changed the dialog's height_: the body is bounded at 160px but
+a collapsed summary is one line, so the panel grew under the cursor and moved "Install now"
+out from under the mouse. The prompt is a `fitted` dialog, sized by its content, so a
+**fixed** block is precisely what makes its geometry independent of a two-line release versus
+a forty-line one. It scrolls inside.
+
+It stays untranslated, like `CHANGELOG.md` and the "Nouveautés" panel that reads it: a
+release note in one language beats no release note. The `<pre>` shows the section as
+written, bullets and all.
+
 ### The theme is one gesture, where it was three
 
 The theme and the language are the same kind of choice, and they sat three gestures apart:

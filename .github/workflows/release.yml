@@ -334,6 +334,8 @@ jobs:
         env:
           TAG: ${{ needs.prepare.outputs.tag }}
           REPO: ${{ github.repository }}
+          # The section the step above extracted, which the prompt shows without a click.
+          NOTES_FILE: ${{ runner.temp }}/release-notes.md
         run: |
           node <<'EOF'
           const fs = require('fs');
@@ -397,9 +399,23 @@ jobs:
 
           // Without the "v": the updater compares the value as semver, and a prefix would
           // make it unreadable — no update would ever be offered.
+          // The prompt has rendered `update.notes` since it was written, and the manifest
+          // has never carried the key — so the block was dead markup that looked like a
+          // shipped feature. The text already exists at this point in the job: it is what
+          // the release body is built from.
+          //
+          // `generate_release_notes` appends the raw PR list inside `action-gh-release`
+          // and does not touch this file, so the manifest carries the hand-written section
+          // alone, which is what we want.
+          const notes = fs.readFileSync(process.env.NOTES_FILE, 'utf8').trim();
+          if (!notes) {
+            throw new Error(`no release notes at ${process.env.NOTES_FILE}`);
+          }
+
           const manifest = {
             version: TAG.replace(/^v/, ''),
             pub_date: new Date().toISOString(),
+            notes,
             platforms,
           };
           fs.writeFileSync(`${dir}/latest.json`, `${JSON.stringify(manifest, null, 2)}\n`);
