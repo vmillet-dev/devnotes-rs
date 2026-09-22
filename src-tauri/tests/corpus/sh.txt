@@ -1,0 +1,4 @@
+cd /srv/app
+git pull --ff-only
+docker compose build --pull
+docker compose up -d

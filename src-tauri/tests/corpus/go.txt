@@ -1,0 +1,14 @@
+package main
+
+import (
+	"fmt"
+	"os"
+)
+
+func main() {
+	host, err := os.Hostname()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(host)
+}

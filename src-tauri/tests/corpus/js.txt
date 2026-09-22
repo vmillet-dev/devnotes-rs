@@ -1,0 +1,7 @@
+const express = require('express');
+const app = express();
+
+app.get('/health', (req, res) => {
+  console.log('ping');
+  res.json({ ok: true });
+});

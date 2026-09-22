@@ -1,0 +1,6 @@
+<?php
+
+$notes = ['a' => 1, 'b' => 2];
+foreach ($notes as $key => $value) {
+    echo $key . ': ' . $value . "\n";
+}

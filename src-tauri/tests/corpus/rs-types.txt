@@ -1,0 +1,8 @@
+pub struct Folder {
+    pub id: String,
+    pub name: String,
+}
+
+pub trait Named {
+    fn name(&self) -> &str;
+}

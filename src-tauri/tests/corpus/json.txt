@@ -1,0 +1,6 @@
+{
+  "name": "devnotes",
+  "version": "0.3.3",
+  "private": true,
+  "scripts": { "build": "ng build" }
+}

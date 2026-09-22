@@ -1,0 +1,6 @@
+SELECT n.id, n.title, count(t.tag) AS tags
+FROM notes n
+LEFT JOIN note_tags t ON t.note_id = n.id
+WHERE n.deleted_at IS NULL
+GROUP BY n.id
+ORDER BY n.updated_at DESC;
