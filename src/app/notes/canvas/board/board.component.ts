@@ -24,11 +24,15 @@ import {
   isCardControl,
   isWorthDrawing,
   movedTo,
+  overlaps,
   resizedTo,
   zoneAt,
 } from './board-gesture';
 
 const NOWHERE: BoardFrame = { x: 0, y: 0, width: 0, height: 0 };
+
+/** ⚠️ `PointerEvent.button`, where 2 is the right one — not `buttons`, which is a mask. */
+const RIGHT_BUTTON = 2;
 
 /** What a drop asks the page to do. */
 export interface CardDrop {
@@ -87,6 +91,8 @@ export class BoardComponent {
   readonly folderRecoloured = output<FolderRecolouring>();
   readonly folderDeleted = output<string>();
   readonly folderNotesSelected = output<string>();
+  /** Every card a right-drag swept over; the page decides what selecting means. */
+  readonly notesBanded = output<readonly string[]>();
   readonly tidyRequested = output<BoardScope>();
 
   protected readonly gesture = signal<Gesture | null>(null);
@@ -169,6 +175,12 @@ export class BoardComponent {
     return drag?.kind === 'draw-zone' && drag.moved ? drag.to : null;
   });
 
+  /** The same rectangle, when the right button is drawing it to select rather than to file. */
+  protected readonly selectionBand = computed<BoardFrame | null>(() => {
+    const drag = this.gesture();
+    return drag?.kind === 'select-band' && drag.moved ? drag.to : null;
+  });
+
   /** Where the frames say the zones are *right now*, drag included. */
   private readonly zoneFrames = computed(() =>
     this.zones().map((zone) => ({ id: zone.folder.id, frame: this.frameOf(zone) })),
@@ -227,12 +239,29 @@ export class BoardComponent {
     this.begin(event, 'resize-zone', zone.folder.id, this.frameOf(zone));
   }
 
-  /** ⚠️ Only on the background itself: a pointerdown that bubbled up from a zone or a
-   *  card would start drawing a band under whatever the user actually grabbed. */
+  /**
+   * ⚠️ Only on the background itself: a pointerdown that bubbled up from a zone or a card
+   * would start drawing a band under whatever the user actually grabbed. The **right**
+   * button is exempt — it has no other meaning anywhere on the board, so a selection band
+   * can start on a card as readily as on empty ground.
+   */
   protected startDraw(event: PointerEvent): void {
+    if (event.button === RIGHT_BUTTON) {
+      this.begin(event, 'select-band', '', NOWHERE);
+      return;
+    }
     if (!this.editable() || event.button !== 0 || event.target !== event.currentTarget) return;
 
     this.begin(event, 'draw-zone', '', NOWHERE);
+  }
+
+  /**
+   * ⚠️ Or the browser's own menu opens at the end of every selection, right where the
+   * pointer was lifted. The application has no context menu of its own anywhere, so
+   * nothing is being taken away.
+   */
+  protected onContextMenu(event: Event): void {
+    event.preventDefault();
   }
 
   protected onPointerMove(event: PointerEvent): void {
@@ -282,6 +311,14 @@ export class BoardComponent {
         }
         break;
       }
+      case 'select-band': {
+        const band = drawnTo(drag.origin, at);
+        const swept = this.cardsUnder(band);
+        if (swept.length > 0) {
+          this.notesBanded.emit(swept);
+        }
+        break;
+      }
     }
   }
 
@@ -293,7 +330,10 @@ export class BoardComponent {
 
   private begin(event: PointerEvent, kind: Gesture['kind'], id: string, from: BoardFrame): void {
     this.travelled = false;
-    if (!this.editable() || event.button !== 0) return;
+    // ⚠️ The band is the one gesture that runs while nothing can be filed: it writes
+    // nothing to the board, it only ticks what is already drawn.
+    const banding = kind === 'select-band';
+    if ((!this.editable() && !banding) || event.button !== (banding ? RIGHT_BUTTON : 0)) return;
 
     event.preventDefault();
     event.stopPropagation();
@@ -318,8 +358,35 @@ export class BoardComponent {
       case 'resize-zone':
         return resizedTo(drag, at);
       case 'draw-zone':
+      case 'select-band':
         return drawnTo(drag.origin, at);
     }
+  }
+
+  /**
+   * Which cards a band swept over, measured off the screen.
+   *
+   * ⚠️ Measured and not computed: a card **filed into a zone flows** and has no
+   * coordinates of its own, so there is nothing in the model to test a rectangle against.
+   * The DOM is the only place a zone's cards have a position at all.
+   */
+  private cardsUnder(band: BoardFrame): readonly string[] {
+    const surface = this.host.nativeElement.querySelector('.board-surface');
+    const origin = surface?.getBoundingClientRect();
+    if (!origin) return [];
+
+    return Array.from(this.host.nativeElement.querySelectorAll<HTMLElement>('[data-note-id]'))
+      .filter((element) => {
+        const box = element.getBoundingClientRect();
+        return overlaps(band, {
+          x: Math.round(box.left - origin.left),
+          y: Math.round(box.top - origin.top),
+          width: Math.round(box.width),
+          height: Math.round(box.height),
+        });
+      })
+      .map((element) => element.dataset['noteId'] ?? '')
+      .filter((id) => id !== '');
   }
 
   /**

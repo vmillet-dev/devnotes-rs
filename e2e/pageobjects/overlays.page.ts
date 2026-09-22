@@ -498,6 +498,52 @@ export const board = {
     await browser.pause(1200);
   },
 
+  /**
+   * Sweeps a selection band with the **right** button, in surface coordinates.
+   *
+   * ⚠️ The right one because the left is taken: dragging the background draws a folder,
+   * and that gesture does not move.
+   */
+  async bandSelect(at: { x: number; y: number; width: number; height: number }): Promise<void> {
+    await browser.execute(
+      (x: number, y: number, width: number, height: number) => {
+        const surface = document.querySelector('[data-testid="board-surface"]');
+        if (!surface) throw new Error('no board surface');
+
+        const box = surface.getBoundingClientRect();
+        const send = (type: string, cx: number, cy: number) =>
+          surface.dispatchEvent(
+            new PointerEvent(type, {
+              bubbles: true,
+              cancelable: true,
+              clientX: cx,
+              clientY: cy,
+              button: 2,
+              pointerId: 1,
+            }),
+          );
+
+        send('pointerdown', box.left + x, box.top + y);
+        send('pointermove', box.left + x + width, box.top + y + height);
+        send('pointerup', box.left + x + width, box.top + y + height);
+      },
+      at.x,
+      at.y,
+      at.width,
+      at.height,
+    );
+  },
+
+  /** Whether the browser's own menu would have opened where a sweep ends. */
+  contextMenuRefused: (): Promise<boolean> =>
+    browser.execute(() => {
+      const surface = document.querySelector('[data-testid="board-surface"]');
+      if (!surface) throw new Error('no board surface');
+      const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+      surface.dispatchEvent(event);
+      return event.defaultPrevented;
+    }),
+
   /** Draws a band on the empty background, in surface coordinates. */
   async drawZone(at: { x: number; y: number; width: number; height: number }): Promise<void> {
     await browser.execute(

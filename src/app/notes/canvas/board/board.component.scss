@@ -89,6 +89,18 @@
   pointer-events: none;
 }
 
+// ⚠️ Visibly not the folder band: the left button draws a region that will **exist**, the
+// right one sweeps a selection that will not. Amber is the application's one accent, so the
+// selection reads as a highlight rather than as a second kind of zone.
+.select-band {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  background: rgb(var(--amber-rgb) / 12%);
+  border: 1px solid var(--amber-dim);
+  border-radius: 4px;
+}
+
 // ⚠️ Placed here, drawn by `board-tidy`. The host is `relative`, so this floats over
 // whatever the board has scrolled under it; the offsets clear `.board`'s own 24px margin
 // and the scrollbars inside its border.

@@ -129,6 +129,27 @@ export class NoteSelectionStore {
   }
 
   /**
+   * Ticks a set of notes at once — what a band swept over.
+   *
+   * ⚠️ It **adds**, like every other way of ticking here: a band drawn over a second group
+   * of cards extends the selection rather than replacing it, which is the only behaviour
+   * that lets two sweeps build one selection.
+   */
+  checkMany(ids: readonly string[]): void {
+    const onScreen = new Set(this.onScreen().map((note) => note.id));
+    const wanted = ids.filter((id) => onScreen.has(id));
+    if (wanted.length === 0) return;
+
+    this._checkedIds.update((checked) => {
+      const next = new Set(checked);
+      for (const id of wanted) {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  /**
    * Ticks every note of one folder in one gesture — eleven cards in a zone was eleven
    * clicks.
    *
@@ -138,16 +159,11 @@ export class NoteSelectionStore {
    * folder the whole view is that folder's contents anyway.
    */
   checkFolder(folderId: string): void {
-    const inFolder = this.onScreen().filter((note) => note.folderId === folderId);
-    if (inFolder.length === 0) return;
-
-    this._checkedIds.update((checked) => {
-      const next = new Set(checked);
-      for (const note of inFolder) {
-        next.add(note.id);
-      }
-      return next;
-    });
+    this.checkMany(
+      this.onScreen()
+        .filter((note) => note.folderId === folderId)
+        .map((note) => note.id),
+    );
   }
 
   clearSelection(): void {

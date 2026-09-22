@@ -349,6 +349,77 @@ describe('Arranging the board', () => {
   });
 
   /**
+   * ⚠️ The right button, because the left one is taken: dragging the background draws a
+   * folder, and that gesture does not move. Zones are **not** selectable — a band picks up
+   * cards only, so "delete the selection" cannot mean two different things.
+   */
+  describe('sweeping a selection band', () => {
+    it('ticks the cards it sweeps over', async () => {
+      await openBoard();
+
+      await board.bandSelect({ x: 0, y: 0, width: 1400, height: 1400 });
+
+      const count = await eventually(
+        () => selectionBar.count(),
+        (text) => /[1-9]/.test(text),
+        'the band to fill the selection bar',
+      );
+      expect(count).toMatch(/d/);
+      await selectionBar.clear();
+    });
+
+    it('takes cards out of a zone as readily as off the background', async () => {
+      const filed = (await bridge.queryNotes(query({ spaceId, folderId: perfId }))).matched;
+      expect(filed).toBeGreaterThan(0);
+      const zone = await board.frameOf(perfId);
+
+      await board.bandSelect({
+        x: Number.parseInt(zone.left, 10) + 4,
+        y: Number.parseInt(zone.top, 10) + 4,
+        width: Number.parseInt(zone.width, 10) - 8,
+        height: Number.parseInt(zone.height, 10) - 8,
+      });
+
+      const count = await eventually(
+        () => selectionBar.count(),
+        (text) => /[1-9]/.test(text),
+        'the band to take the zone’s cards',
+      );
+      expect(count).toMatch(/d/);
+      await selectionBar.clear();
+    });
+
+    it('sweeps nothing where there is nothing, and opens no bar', async () => {
+      await board.bandSelect({ x: 20, y: 3000, width: 200, height: 200 });
+
+      // ⚠️ An assertion that nothing happened, so there is no condition to wait on: the
+      // pause is deliberately a duration.
+      await browser.pause(800);
+      expect(await selectionBar.bar().isExisting()).toBe(false);
+    });
+
+    /** ⚠️ Or the browser's own menu opens at the end of every selection. */
+    it('refuses the browser’s own menu on the surface', async () => {
+      expect(await board.contextMenuRefused()).toBe(true);
+    });
+
+    /** ⚠️ The existing gesture does not move: the left button still draws a folder. */
+    it('leaves the left button drawing a folder', async () => {
+      const before = (await bridge.listFolders(spaceId)).length;
+
+      await board.drawZone({ x: 60, y: 1500, width: 420, height: 320 });
+      await board.nameZone('Bande');
+
+      const after = await eventually(
+        () => bridge.listFolders(spaceId),
+        (folders) => folders.length > before,
+        'the left-button band to still make a folder',
+      );
+      expect(after.some((folder) => folder.name === 'Bande')).toBe(true);
+    });
+  });
+
+  /**
    * Eleven cards in a zone was eleven clicks, and the zone already knows what it holds.
    *
    * ⚠️ It ticks what the zone is **showing**, dimmed cards included: the board dims rather
