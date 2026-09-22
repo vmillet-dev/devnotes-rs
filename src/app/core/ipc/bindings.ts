@@ -219,13 +219,7 @@ export const commands = {
 	restoreBackup: (id: string) => typedError<string, AppError>(__TAURI_INVOKE("restore_backup", { id })),
 	/**  The libraries, and which one is open. */
 	listLibraries: () => typedError<Registry, AppError>(__TAURI_INVOKE("list_libraries")),
-	/**
-	 *  Adds one, and leaves it closed: opening it is a second, deliberate gesture.
-	 * 
-	 *  ⚠️ Nothing is created on disk here beyond the directory. A library is born when its
-	 *  passphrase is chosen — `create_vault` writes the key file and the database — which is
-	 *  the same path a first launch takes, and the only one that has ever been exercised.
-	 */
+	/**  Adds one, and leaves it closed: opening it is a second, deliberate gesture. */
 	createLibrary: (name: string) => typedError<LibraryEntry, AppError>(__TAURI_INVOKE("create_library", { name })),
 	/**
 	 *  Closes whatever is open and points the registry at another one.
@@ -240,18 +234,9 @@ export const commands = {
 	/**
 	 *  Erases a library and everything in it.
 	 * 
-	 *  ⚠️ Irreversible, and the only thing in the application that erases a corpus outright —
-	 *  the interface gives it the treatment emptying the trash gets: a sentence naming what
-	 *  goes, and a confirm somewhere other than the button that fired it.
-	 * 
-	 *  ⚠️ The **adopted** library cannot be deleted. Its directory is the profile itself, so
-	 *  erasing it would take the registry, the application's preferences and every other
-	 *  library with it. Refused here rather than hidden in the interface, because a command
-	 *  is reachable from more than the interface.
-	 * 
-	 *  ⚠️ The open one cannot be deleted either: the front end switches first, which is what
-	 *  closes the connection. Deleting the files under a live one is how a library that was
-	 *  merely unwanted takes the process down with it.
+	 *  ⚠️ Refused on the open one: the front end switches first, which is what closes the
+	 *  connection. Deleting the files under a live one is how a library that was merely
+	 *  unwanted takes the process down with it.
 	 */
 	deleteLibrary: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("delete_library", { id })),
 	appChangelog: () => __TAURI_INVOKE<ChangelogRelease[]>("app_changelog"),

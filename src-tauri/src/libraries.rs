@@ -150,33 +150,29 @@ fn write(profile: &Path, registry: &Registry) -> Result<(), StorageError> {
 
 /// The registry as it stands, adopting what is already on disk the first time.
 ///
-/// ⚠️ The adoption is the migration, and it is why the first library never moves: an
-/// installed copy finds its notes exactly where it left them, and gains a registry naming
-/// the directory they are already in.
-pub(crate) fn registry(app: &AppHandle) -> Result<Registry, StorageError> {
-    let profile = profile(app)?;
-    let mut registry = read(&profile);
+/// ⚠️ The adoption is the migration: a library that predates the registry is gathered into
+/// a directory of its own, and the registry then names where it went.
+///
+/// ⚠️ Takes a path rather than an `AppHandle`, like every rule below it. That is what
+/// makes this module testable at all — a Tauri handle cannot be built in a unit test, and
+/// the rules would otherwise only ever be exercised through the interface.
+fn registry_in(profile: &Path) -> Registry {
+    let mut registry = read(profile);
 
     if registry.libraries.is_empty() {
-        let id = uuid::Uuid::new_v4().to_string();
-        let entry = LibraryEntry {
-            directory: format!("{LIBRARIES}/{id}"),
-            id,
-            name: String::new(),
-            created_at: Utc::now(),
-        };
+        let entry = fresh(String::new());
+        let directory = directory_of(profile, &entry);
 
-        let directory = directory_of(&profile, &entry);
         if std::fs::create_dir_all(&directory).is_ok() {
             // ⚠️ Only when something is there to gather: a virgin profile has nothing to
             // move, and the first launch creates its library in the new place directly.
-            if holds_a_library(&profile) {
-                gather(&profile, &directory);
+            if holds_a_library(profile) {
+                gather(profile, &directory);
             }
 
             registry.open = Some(entry.id.clone());
             registry.libraries.push(entry);
-            let _ = write(&profile, &registry);
+            let _ = write(profile, &registry);
         }
     }
 
@@ -184,7 +180,36 @@ pub(crate) fn registry(app: &AppHandle) -> Result<Registry, StorageError> {
         registry.open = registry.libraries.first().map(|entry| entry.id.clone());
     }
 
-    Ok(registry)
+    registry
+}
+
+pub(crate) fn registry(app: &AppHandle) -> Result<Registry, StorageError> {
+    Ok(registry_in(&profile(app)?))
+}
+
+/// A library in a directory of its own, named after nothing but a fresh id.
+fn fresh(name: String) -> LibraryEntry {
+    let id = uuid::Uuid::new_v4().to_string();
+
+    LibraryEntry {
+        directory: format!("{LIBRARIES}/{id}"),
+        id,
+        name,
+        created_at: Utc::now(),
+    }
+}
+
+fn open_directory_in(profile: &Path) -> Result<PathBuf, StorageError> {
+    let registry = registry_in(profile);
+    let Some(entry) = registry.opened() else {
+        return Ok(profile.to_path_buf());
+    };
+
+    let directory = directory_of(profile, entry);
+    std::fs::create_dir_all(&directory)
+        .map_err(|error| StorageError::File(format!("{}: {error}", directory.display())))?;
+
+    Ok(directory)
 }
 
 /// The directory every other module reads and writes in.
@@ -193,17 +218,81 @@ pub(crate) fn registry(app: &AppHandle) -> Result<Registry, StorageError> {
 /// reaches for the profile directly writes into whichever library happens to be first,
 /// whatever is open.
 pub(crate) fn open_directory(app: &AppHandle) -> Result<PathBuf, StorageError> {
-    let profile = profile(app)?;
-    let registry = registry(app)?;
-    let Some(entry) = registry.opened() else {
-        return Ok(profile);
-    };
+    open_directory_in(&profile(app)?)
+}
 
-    let directory = directory_of(&profile, entry);
+/// Adds one to the registry, with a directory of its own.
+///
+/// ⚠️ Nothing is created on disk beyond that directory. A library is born when its
+/// passphrase is chosen — `create_vault` writes the key file and the database — which is
+/// the same path a first launch takes, and the only one that has ever been exercised.
+fn create_in(profile: &Path, name: &str) -> Result<LibraryEntry, StorageError> {
+    let mut registry = registry_in(profile);
+    let entry = fresh(name.trim().to_string());
+
+    let directory = directory_of(profile, &entry);
     std::fs::create_dir_all(&directory)
         .map_err(|error| StorageError::File(format!("{}: {error}", directory.display())))?;
 
-    Ok(directory)
+    registry.libraries.push(entry.clone());
+    write(profile, &registry)?;
+
+    Ok(entry)
+}
+
+fn unknown(id: &str) -> StorageError {
+    StorageError::File(format!("{id}: no such library"))
+}
+
+/// Points the registry at another library. Closing the connection is the command's part.
+fn point_at(profile: &Path, id: &str) -> Result<(), StorageError> {
+    let mut registry = registry_in(profile);
+    if registry.entry(id).is_none() {
+        return Err(unknown(id));
+    }
+
+    registry.open = Some(id.to_string());
+    write(profile, &registry)
+}
+
+fn rename_in(profile: &Path, id: &str, name: &str) -> Result<(), StorageError> {
+    let mut registry = registry_in(profile);
+    let Some(entry) = registry.libraries.iter_mut().find(|entry| entry.id == id) else {
+        return Err(unknown(id));
+    };
+
+    entry.name = name.trim().to_string();
+    write(profile, &registry)
+}
+
+/// Erases a library and everything in it.
+///
+/// ⚠️ Never the last one. A profile with no library at all would have the gate offering
+/// nothing — and the next read of the registry would adopt the empty root as a library
+/// nobody asked for, which is not an error anybody can act on.
+///
+/// ⚠️ The registry is written **first**: a directory that resists deletion must not stay
+/// listed and openable, where a listing that lost an entry leaves files nobody points at —
+/// which is the same thing as a library moved by hand, and harmless.
+fn delete_in(profile: &Path, id: &str) -> Result<(), StorageError> {
+    let mut registry = registry_in(profile);
+    let Some(entry) = registry.entry(id).cloned() else {
+        return Err(unknown(id));
+    };
+    if registry.libraries.len() <= 1 {
+        return Err(StorageError::File(
+            "the last library cannot be deleted".to_string(),
+        ));
+    }
+
+    registry.libraries.retain(|each| each.id != id);
+    if registry.open.as_deref() == Some(id) {
+        registry.open = registry.libraries.first().map(|first| first.id.clone());
+    }
+    write(profile, &registry)?;
+
+    std::fs::remove_dir_all(directory_of(profile, &entry))
+        .map_err(|error| StorageError::File(format!("{id}: {error}")))
 }
 
 /// The libraries, and which one is open.
@@ -214,32 +303,10 @@ pub fn list_libraries(app: AppHandle) -> Result<Registry, AppError> {
 }
 
 /// Adds one, and leaves it closed: opening it is a second, deliberate gesture.
-///
-/// ⚠️ Nothing is created on disk here beyond the directory. A library is born when its
-/// passphrase is chosen — `create_vault` writes the key file and the database — which is
-/// the same path a first launch takes, and the only one that has ever been exercised.
 #[tauri::command(async)]
 #[specta::specta]
 pub fn create_library(name: String, app: AppHandle) -> Result<LibraryEntry, AppError> {
-    let profile = profile(&app)?;
-    let mut registry = registry(&app)?;
-
-    let id = uuid::Uuid::new_v4().to_string();
-    let entry = LibraryEntry {
-        directory: format!("{LIBRARIES}/{id}"),
-        id,
-        name: name.trim().to_string(),
-        created_at: Utc::now(),
-    };
-
-    let directory = directory_of(&profile, &entry);
-    std::fs::create_dir_all(&directory)
-        .map_err(|error| StorageError::File(format!("{}: {error}", directory.display())))?;
-
-    registry.libraries.push(entry.clone());
-    write(&profile, &registry)?;
-
-    Ok(entry)
+    Ok(create_in(&profile(&app)?, &name)?)
 }
 
 /// Closes whatever is open and points the registry at another one.
@@ -252,83 +319,35 @@ pub fn create_library(name: String, app: AppHandle) -> Result<LibraryEntry, AppE
 #[specta::specta]
 pub fn open_library(id: String, app: AppHandle, db: State<'_, Db>) -> Result<(), AppError> {
     let profile = profile(&app)?;
-    let mut registry = registry(&app)?;
-    if registry.entry(&id).is_none() {
-        return Err(StorageError::File(format!("{id}: no such library")).into());
-    }
 
     let mut open = db.lock().map_err(|_| StorageError::Unavailable)?;
     *open = None;
 
-    registry.open = Some(id);
-    write(&profile, &registry)?;
-
-    Ok(())
+    Ok(point_at(&profile, &id)?)
 }
 
 #[tauri::command(async)]
 #[specta::specta]
 pub fn rename_library(id: String, name: String, app: AppHandle) -> Result<(), AppError> {
-    let profile = profile(&app)?;
-    let mut registry = registry(&app)?;
-    let Some(entry) = registry.libraries.iter_mut().find(|entry| entry.id == id) else {
-        return Err(StorageError::File(format!("{id}: no such library")).into());
-    };
-
-    entry.name = name.trim().to_string();
-    write(&profile, &registry)?;
-
-    Ok(())
+    Ok(rename_in(&profile(&app)?, &id, &name)?)
 }
 
 /// Erases a library and everything in it.
 ///
-/// ⚠️ Irreversible, and the only thing in the application that erases a corpus outright —
-/// the interface gives it the treatment emptying the trash gets: a sentence naming what
-/// goes, and a confirm somewhere other than the button that fired it.
-///
-/// ⚠️ The **adopted** library cannot be deleted. Its directory is the profile itself, so
-/// erasing it would take the registry, the application's preferences and every other
-/// library with it. Refused here rather than hidden in the interface, because a command
-/// is reachable from more than the interface.
-///
-/// ⚠️ The open one cannot be deleted either: the front end switches first, which is what
-/// closes the connection. Deleting the files under a live one is how a library that was
-/// merely unwanted takes the process down with it.
+/// ⚠️ Refused on the open one: the front end switches first, which is what closes the
+/// connection. Deleting the files under a live one is how a library that was merely
+/// unwanted takes the process down with it.
 #[tauri::command(async)]
 #[specta::specta]
 pub fn delete_library(id: String, app: AppHandle, db: State<'_, Db>) -> Result<(), AppError> {
     let profile = profile(&app)?;
-    let mut registry = registry(&app)?;
-
-    let Some(entry) = registry.entry(&id).cloned() else {
-        return Err(StorageError::File(format!("{id}: no such library")).into());
-    };
-    // ⚠️ Never the last one. A profile with no library at all would have the gate
-    // offering nothing — and the registry would adopt the empty root on the next read,
-    // which is a library nobody asked for rather than an error anybody can act on.
-    if registry.libraries.len() <= 1 {
-        return Err(StorageError::File("the last library cannot be deleted".to_string()).into());
-    }
-    if registry.open.as_deref() == Some(id.as_str())
+    if registry_in(&profile).open.as_deref() == Some(id.as_str())
         && db.lock().map_err(|_| StorageError::Unavailable)?.is_some()
     {
         return Err(StorageError::File("the library is open".to_string()).into());
     }
 
-    // ⚠️ The registry first: a directory that resists deletion must not stay listed and
-    // openable, where a listing that lost an entry leaves files nobody points at — which
-    // is the same thing as a library moved by hand, and harmless.
-    registry.libraries.retain(|each| each.id != id);
-    if registry.open.as_deref() == Some(id.as_str()) {
-        registry.open = registry.libraries.first().map(|first| first.id.clone());
-    }
-    write(&profile, &registry)?;
-
-    std::fs::remove_dir_all(directory_of(&profile, &entry))
-        .map_err(|error| StorageError::File(format!("{id}: {error}")))?;
-
-    Ok(())
+    Ok(delete_in(&profile, &id)?)
 }
 
 #[cfg(test)]
@@ -466,5 +485,167 @@ mod tests {
         };
 
         assert_eq!(registry.opened().map(|entry| entry.id.as_str()), Some("a"));
+    }
+
+    /// ⚠️ The migration, end to end: an installed copy finds its notes, and the registry
+    /// names the directory they were moved into.
+    #[test]
+    fn a_profile_from_before_the_registry_is_adopted_and_gathered() {
+        let profile = scratch();
+        std::fs::write(profile.join(DB_FILE_NAME), b"a database").unwrap();
+        std::fs::write(profile.join(VAULT_FILE_NAME), b"{}").unwrap();
+
+        let registry = registry_in(&profile);
+
+        assert_eq!(registry.libraries.len(), 1);
+        let into = directory_of(&profile, &registry.libraries[0]);
+        assert!(into.join(DB_FILE_NAME).is_file());
+        assert!(!profile.join(DB_FILE_NAME).exists());
+        assert_eq!(
+            registry.open.as_deref(),
+            Some(registry.libraries[0].id.as_str())
+        );
+        std::fs::remove_dir_all(&profile).ok();
+    }
+
+    /// A first launch has nothing to gather, and still gets a library of its own.
+    #[test]
+    fn a_virgin_profile_gets_one_library_and_no_files_moved() {
+        let profile = scratch();
+
+        let registry = registry_in(&profile);
+
+        assert_eq!(registry.libraries.len(), 1);
+        assert!(directory_of(&profile, &registry.libraries[0]).is_dir());
+        std::fs::remove_dir_all(&profile).ok();
+    }
+
+    /// ⚠️ Read twice must not adopt twice: the second read finds the registry it wrote.
+    #[test]
+    fn adopting_happens_once() {
+        let profile = scratch();
+        let first = registry_in(&profile);
+
+        let second = registry_in(&profile);
+
+        assert_eq!(second.libraries.len(), 1);
+        assert_eq!(second.libraries[0].id, first.libraries[0].id);
+        std::fs::remove_dir_all(&profile).ok();
+    }
+
+    #[test]
+    fn the_open_directory_is_the_one_the_registry_points_at() {
+        let profile = scratch();
+        let created = create_in(&profile, "Boulot").unwrap();
+        point_at(&profile, &created.id).unwrap();
+
+        let directory = open_directory_in(&profile).unwrap();
+
+        assert_eq!(directory, directory_of(&profile, &created));
+        std::fs::remove_dir_all(&profile).ok();
+    }
+
+    /// ⚠️ A library is born when its passphrase is chosen, not here: only the directory.
+    #[test]
+    fn creating_one_adds_it_to_the_registry_and_leaves_it_closed() {
+        let profile = scratch();
+        let first = registry_in(&profile).open;
+
+        let created = create_in(&profile, "  Boulot  ").unwrap();
+
+        let registry = registry_in(&profile);
+        assert_eq!(registry.libraries.len(), 2);
+        assert_eq!(created.name, "Boulot", "the name is trimmed");
+        assert_eq!(registry.open, first, "creating does not open");
+        assert!(directory_of(&profile, &created).is_dir());
+        assert!(!directory_of(&profile, &created).join(DB_FILE_NAME).exists());
+        std::fs::remove_dir_all(&profile).ok();
+    }
+
+    #[test]
+    fn pointing_at_one_that_does_not_exist_says_so() {
+        let profile = scratch();
+        registry_in(&profile);
+
+        assert!(point_at(&profile, "nothing").is_err());
+        std::fs::remove_dir_all(&profile).ok();
+    }
+
+    #[test]
+    fn renaming_touches_the_name_and_nothing_else() {
+        let profile = scratch();
+        let created = create_in(&profile, "Boulot").unwrap();
+        let open = registry_in(&profile).open;
+
+        rename_in(&profile, &created.id, "  Archives ").unwrap();
+
+        let registry = registry_in(&profile);
+        let renamed = registry.entry(&created.id).unwrap();
+        assert_eq!(renamed.name, "Archives");
+        assert_eq!(renamed.directory, created.directory);
+        assert_eq!(registry.open, open);
+        std::fs::remove_dir_all(&profile).ok();
+    }
+
+    #[test]
+    fn renaming_one_that_does_not_exist_says_so() {
+        let profile = scratch();
+        registry_in(&profile);
+
+        assert!(rename_in(&profile, "nothing", "Archives").is_err());
+        std::fs::remove_dir_all(&profile).ok();
+    }
+
+    #[test]
+    fn deleting_takes_the_entry_and_the_files() {
+        let profile = scratch();
+        let created = create_in(&profile, "Boulot").unwrap();
+        std::fs::write(directory_of(&profile, &created).join(DB_FILE_NAME), b"x").unwrap();
+
+        delete_in(&profile, &created.id).unwrap();
+
+        assert_eq!(registry_in(&profile).libraries.len(), 1);
+        assert!(!directory_of(&profile, &created).exists());
+        std::fs::remove_dir_all(&profile).ok();
+    }
+
+    /// ⚠️ The gate would have nothing to offer, and the next read would adopt the empty
+    /// root as a library nobody asked for.
+    #[test]
+    fn the_last_library_cannot_be_deleted() {
+        let profile = scratch();
+        let only = registry_in(&profile).libraries[0].clone();
+
+        assert!(delete_in(&profile, &only.id).is_err());
+        assert_eq!(registry_in(&profile).libraries.len(), 1);
+        std::fs::remove_dir_all(&profile).ok();
+    }
+
+    /// Deleting the open one leaves the registry pointing at what is left, never at a
+    /// library that is gone.
+    #[test]
+    fn deleting_the_open_one_moves_the_mark_to_what_remains() {
+        let profile = scratch();
+        let created = create_in(&profile, "Boulot").unwrap();
+        point_at(&profile, &created.id).unwrap();
+
+        delete_in(&profile, &created.id).unwrap();
+
+        let registry = registry_in(&profile);
+        assert_eq!(registry.libraries.len(), 1);
+        assert_eq!(
+            registry.open.as_deref(),
+            Some(registry.libraries[0].id.as_str())
+        );
+        std::fs::remove_dir_all(&profile).ok();
+    }
+
+    #[test]
+    fn deleting_one_that_does_not_exist_says_so() {
+        let profile = scratch();
+        create_in(&profile, "Boulot").unwrap();
+
+        assert!(delete_in(&profile, "nothing").is_err());
+        std::fs::remove_dir_all(&profile).ok();
     }
 }
