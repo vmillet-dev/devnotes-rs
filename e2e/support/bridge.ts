@@ -18,6 +18,7 @@ import type {
   NotePatch,
   NotesQuery,
   NotesView,
+  Registry,
   Space,
   SpaceDraft,
   TagUsage,
@@ -52,6 +53,8 @@ async function invoke<T>(command: string, args: Record<string, unknown> = {}): P
 }
 
 export const bridge = {
+  /** ⚠️ Answers while locked: the registry is beside the libraries, not inside one. */
+  listLibraries: () => invoke<Registry>('list_libraries'),
   listSpaces: () => invoke<Space[]>('list_spaces'),
   createSpace: (draft: SpaceDraft) => invoke<Space>('create_space', { draft }),
   renameSpace: (id: string, draft: SpaceDraft) => invoke<Space>('rename_space', { id, draft }),

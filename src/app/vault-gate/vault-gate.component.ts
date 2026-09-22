@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -8,9 +9,12 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { MINIMUM_PASSPHRASE_LENGTH } from '@core/model/vault.model';
+import { LibrariesStore } from '@core/state/libraries.store';
 import { VaultStore } from '@core/state/vault.store';
+import { ChoiceMenuComponent, ChoiceOption } from '../notes/ui/choice-menu/choice-menu.component';
 
 /**
  * The screen that stands in front of everything until the library is open.
@@ -21,13 +25,25 @@ import { VaultStore } from '@core/state/vault.store';
  */
 @Component({
   selector: 'app-vault-gate',
-  imports: [TranslocoPipe],
+  imports: [ChoiceMenuComponent, NgTemplateOutlet, TranslocoPipe],
   templateUrl: './vault-gate.component.html',
   styleUrl: './vault-gate.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class VaultGateComponent {
   protected readonly vault = inject(VaultStore);
+  protected readonly libraries = inject(LibrariesStore);
+
+  private readonly unnamed = toSignal(inject(TranslocoService).selectTranslate<string>('libraries.unnamed'), {
+    initialValue: '',
+  });
+
+  protected readonly libraryOptions = computed<readonly ChoiceOption[]>(() =>
+    this.libraries.libraries().map((entry) => ({ id: entry.id, name: entry.name.trim() || this.unnamed() })),
+  );
+
+  /** ⚠️ Empty for the one library that predates names: "Library: Library" says nothing. */
+  protected readonly libraryName = computed(() => this.libraries.open()?.name.trim() ?? '');
 
   protected readonly passphrase = signal('');
   protected readonly confirmation = signal('');
@@ -88,6 +104,18 @@ export class VaultGateComponent {
     if (await this.vault.archiveLockedLibrary()) {
       this.isConfirmingArchive.set(false);
     }
+  }
+
+  /**
+   * ⚠️ From here, because the File menu does not exist until a library is open — and the
+   * gate was asking for a phrase the user may not have for this one.
+   */
+  protected async switchLibrary(id: string | null): Promise<void> {
+    if (id === null) return;
+
+    this.passphrase.set('');
+    this.confirmation.set('');
+    await this.libraries.openLibrary(id);
   }
 
   protected onPassphrase(value: string): void {

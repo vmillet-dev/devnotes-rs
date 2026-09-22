@@ -655,6 +655,8 @@
     "close": "Close"
   },
   "vault": {
+    "library": "Library",
+    "switchLibrary": "Open another library",
     "createTitle": "Protect this library",
     "createLead": "Choose a passphrase. {{app}} will ask for it once at every launch.",
     "noRecovery": "⚠️ This passphrase cannot be recovered. Lose it and the library goes with it — a plaintext export is the only copy that does not depend on it.",

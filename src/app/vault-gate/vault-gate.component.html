@@ -1,3 +1,25 @@
+<!-- ⚠️ At the head of every panel, not only the form: archiving or setting aside "the
+     library" without naming which is the worst place to be vague. -->
+<ng-template #library>
+  @if (libraries.hasSeveral()) {
+    <div class="library" data-testid="vault-library">
+      <span class="library-label">{{ 'vault.library' | transloco }}</span>
+      <app-choice-menu
+        [kind]="'vault-library'"
+        [label]="'vault.switchLibrary' | transloco"
+        [options]="libraryOptions()"
+        [currentId]="libraries.open()?.id ?? null"
+        (chosen)="switchLibrary($event)"
+      />
+    </div>
+  } @else if (libraryName()) {
+    <div class="library" data-testid="vault-library">
+      <span class="library-label">{{ 'vault.library' | transloco }}</span>
+      <span class="library-name">{{ libraryName() }}</span>
+    </div>
+  }
+</ng-template>
+
 <main class="gate">
   @if (vault.damaged()) {
     <!--
@@ -5,6 +27,7 @@
       would be an invitation to do the one thing that will not work.
     -->
     <section class="panel" data-testid="vault-damaged">
+      <ng-container [ngTemplateOutlet]="library" />
       <h1 class="title">{{ 'vault.damagedTitle' | transloco }}</h1>
       <p class="lead">{{ 'vault.damagedLead' | transloco }}</p>
       <p class="warning" role="note">{{ 'vault.damagedNote' | transloco }}</p>
@@ -26,6 +49,7 @@
       a shortcut past a field that is merely in the way.
     -->
     <section class="panel" data-testid="vault-archive">
+      <ng-container [ngTemplateOutlet]="library" />
       <h1 class="title">{{ 'vault.forgottenTitle' | transloco }}</h1>
       <p class="lead">{{ 'vault.forgottenLead' | transloco }}</p>
       <p class="warning" role="note">{{ 'vault.forgottenNote' | transloco }}</p>
@@ -50,6 +74,7 @@
     </section>
   } @else {
     <form class="panel" (submit)="submit($event)">
+      <ng-container [ngTemplateOutlet]="library" />
       <h1 class="title">
         {{ (isCreating() ? 'vault.createTitle' : 'vault.unlockTitle') | transloco }}
       </h1>

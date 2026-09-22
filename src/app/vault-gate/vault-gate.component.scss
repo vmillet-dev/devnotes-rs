@@ -17,6 +17,22 @@
   padding: 28px;
 }
 
+// Which library the panel is about, above what it asks: several can be asked for here.
+.library {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 0.8rem;
+  color: var(--text-2);
+}
+
+.library-name {
+  color: var(--text-0);
+  font-weight: 600;
+}
+
 .title {
   margin: 0;
   font-size: 1.15rem;

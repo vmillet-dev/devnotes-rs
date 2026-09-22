@@ -1,7 +1,7 @@
 import { $, $$, expect } from '@wdio/globals';
 
 import { board, spaces } from '../pageobjects/overlays.page.js';
-import { PASSPHRASE, eventually, setField, testid, waitForCanvas } from '../support/app.js';
+import { PASSPHRASE, eventually, pickChoice, setField, testid, waitForCanvas } from '../support/app.js';
 import { bridge, draft } from '../support/bridge.js';
 
 /**
@@ -26,6 +26,9 @@ describe('Several libraries', () => {
     await $(testid('file-libraries')).click();
     await $(testid('library-row')).waitForExist({ timeout: 10_000 });
   }
+
+  /** What the gate says it is asking for — the name, or the menu holding it. */
+  const gateLibrary = () => $(testid('vault-library')).getText();
 
   async function passTheGate(): Promise<void> {
     await setField(testid('vault-passphrase'), PASSPHRASE);
@@ -79,6 +82,8 @@ describe('Several libraries', () => {
     ).toBe(true);
     // A library with no key file yet asks twice, like a first launch.
     expect(await $(testid('vault-confirmation')).isExisting()).toBe(true);
+    // ⚠️ And says which one: there are two now, each with a phrase of its own.
+    expect(await gateLibrary()).toContain(OTHER);
 
     await passTheGate();
   });
@@ -94,7 +99,7 @@ describe('Several libraries', () => {
     expect(await rows().length).toBe(2);
   });
 
-  it('switches back through the gate, and finds what was left there', async () => {
+  it('switches back through the gate', async () => {
     await $(`${testid('library-switch')}`).click();
 
     expect(
@@ -104,7 +109,31 @@ describe('Several libraries', () => {
         'the gate to ask for the other library passphrase',
       ),
     ).toBe(true);
+  });
 
+  /**
+   * ⚠️ The File menu does not exist until a library is open, so the gate is the only place
+   * someone holding several can say which one they have the phrase for.
+   */
+  it('goes to another library from the gate itself, and back', async () => {
+    const { libraries } = await bridge.listLibraries();
+    const other = libraries.find((entry) => entry.name === OTHER);
+    const first = libraries.find((entry) => entry.name !== OTHER);
+
+    expect(await gateLibrary()).not.toContain(OTHER);
+
+    await pickChoice('vault-library', other?.id ?? '');
+    expect(
+      await eventually(gateLibrary, (text) => text.includes(OTHER), 'the gate to ask for the other library'),
+    ).toContain(OTHER);
+
+    await pickChoice('vault-library', first?.id ?? '');
+    expect(
+      await eventually(gateLibrary, (text) => !text.includes(OTHER), 'the gate to come back to the first'),
+    ).not.toContain(OTHER);
+  });
+
+  it('finds what was left there', async () => {
     await passTheGate();
     await openPanel();
 
