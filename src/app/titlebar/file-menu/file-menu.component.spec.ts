@@ -102,6 +102,7 @@ describe('FileMenuComponent', () => {
       "Exporter l'espace actif…",
       'Exporter la sélection…',
       'Copier la sélection en Markdown',
+      'Bibliothèques…',
       'Préférences…',
       'Quitter DevNotes',
     ]);

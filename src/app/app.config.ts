@@ -17,6 +17,7 @@ import { PluralTranspiler } from '@core/services/i18n/plural-transpiler';
 import { AppTranslocoLoader } from '@core/services/i18n/transloco-loader';
 import { AutostartService } from '@core/services/autostart/autostart.service';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
+import { LibrariesStore } from '@core/state/libraries.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { GlobalShortcutsService } from '@core/services/shortcuts/global-shortcuts.service';
 import { TrayService } from '@core/services/tray/tray.service';
@@ -66,6 +67,7 @@ export const appConfig: ApplicationConfig = {
       const windowBehavior = inject(WindowBehaviorService);
       const autostart = inject(AutostartService);
       const vault = inject(VaultStore);
+      const libraries = inject(LibrariesStore);
 
       await preferences.hydrate();
       // ⚠️ Before the first render, and before `locale.restore()`, which reads the
@@ -75,6 +77,12 @@ export const appConfig: ApplicationConfig = {
       // ⚠️ After `restore()`: the front creates the tray by giving it its labels, and
       // earlier would push the default language and a setting the user had changed.
       tray.start();
+
+      // ⚠️ Before the vault and before the first render: it says which library is open,
+      // and opens that library's own preference file. The samples marker and the view
+      // each space was left on are read out of it, and reading the wrong one seeds a
+      // library that is full or opens another library's board.
+      await libraries.load();
 
       // ⚠️ Before the first render: the shell renders nothing at all until this answers,
       // rather than flashing a canvas it is about to replace with an unlock screen.

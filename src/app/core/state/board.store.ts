@@ -10,7 +10,7 @@ import {
   untracked,
 } from '@angular/core';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
-import { PreferencesService } from '@core/services/preferences/preferences.service';
+import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
 import { ClockService } from '@core/services/time/clock.service';
 import { FoldersRepository } from '../data/folders.repository';
 import { BoardRepository } from '../data/board.repository';
@@ -168,7 +168,7 @@ export class BoardStore {
   private readonly repository = inject(BoardRepository);
   private readonly folders = inject(FoldersRepository);
   private readonly notifier = inject(ErrorNotifier);
-  private readonly preferences = inject(PreferencesService);
+  private readonly preferences = inject(LibraryPreferencesService);
   private readonly clock = inject(ClockService);
   private readonly spaces = inject(SpacesStore);
   private readonly canvas = inject(NotesQueryStore);

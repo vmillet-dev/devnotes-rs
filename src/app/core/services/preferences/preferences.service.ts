@@ -1,17 +1,9 @@
-import { InjectionToken, Injectable, inject } from '@angular/core';
-import { load } from '@tauri-apps/plugin-store';
-import type { Store, StoreOptions } from '@tauri-apps/plugin-store';
+import { Injectable } from '@angular/core';
+import { KeyValueStore, PREFERENCES_STORE_LOADER } from './key-value-store';
 
-/**
- * ⚠️ A token rather than a direct call to `load`: the Angular builder bundles the modules
- * before Vitest sees them, and `vi.mock` then intercepts only half the time.
- */
-type PreferencesStoreLoader = (path: string, options: StoreOptions) => Promise<Store>;
-
-export const PREFERENCES_STORE_LOADER = new InjectionToken<PreferencesStoreLoader>(
-  'PREFERENCES_STORE_LOADER',
-  { providedIn: 'root', factory: () => load },
-);
+// Re-exported from where it was, so the dozen specs that substitute the plugin keep one
+// import to reach for.
+export { PREFERENCES_STORE_LOADER };
 
 /**
  * ⚠️ `app_data_dir()`, not `app_config_dir()`: `tauri-plugin-store` resolves a relative
@@ -20,52 +12,38 @@ export const PREFERENCES_STORE_LOADER = new InjectionToken<PreferencesStoreLoade
  */
 const STORE_FILE = 'preferences.json';
 
-const AUTO_SAVE_MS = 300;
-
 /**
- * ⚠️ The API stays synchronous where the plugin's is not: a preference is read when a
- * component is constructed, and an async `read` would show the interface in one state
- * then the other. Outside Tauri it degrades to a memory cache.
+ * ⚠️ Everything a key can be **except** what belongs to one library's notes. Which
+ * library is open changes nothing here: the theme, the language, the keys, the tray and
+ * the window geometry follow the person, not the corpus.
+ *
+ * ⚠️ The line is one prefix. `devnotes.notes.*` is the library's — see
+ * `LibraryPreferencesService` — and everything else is this file's. `automaticBackups`
+ * stays here deliberately: "copy my libraries at launch" is a habit rather than a
+ * property of one corpus, and it is the one key Rust reads out of this file before the
+ * front end has booted (`backup::wanted`).
  */
+export const LIBRARY_KEY_PREFIX = 'devnotes.notes.';
+
 @Injectable({ providedIn: 'root' })
-export class PreferencesService {
-  private readonly load = inject(PREFERENCES_STORE_LOADER);
-  private readonly cache = new Map<string, string>();
-  private store: Store | null = null;
-
-  /** ⚠️ Call before the first read, which would otherwise answer `null`. */
+export class PreferencesService extends KeyValueStore {
   async hydrate(): Promise<void> {
-    try {
-      const store = await this.load(STORE_FILE, { autoSave: AUTO_SAVE_MS });
-      for (const [key, value] of await store.entries<unknown>()) {
-        if (typeof value === 'string') {
-          this.cache.set(key, value);
-        }
-      }
-      this.store = store;
-      this.adoptLegacyValues();
-    } catch {
-      // Plugin unavailable: the memory cache runs the session, which will not survive
-      // a restart.
-    }
-  }
-
-  read(key: string): string | null {
-    return this.cache.get(key) ?? null;
-  }
-
-  write(key: string, value: string): void {
-    this.cache.set(key, value);
-    void this.store?.set(key, value).catch(() => undefined);
+    await this.open(STORE_FILE);
+    this.adoptLegacyValues();
   }
 
   /**
-   * ⚠️ Removed, not emptied: a guard that reads "has this key" — the samples marker —
-   * would take an empty string for an answer.
+   * The library-scoped keys this file used to hold, so they can be moved into the library
+   * that owns them.
+   *
+   * ⚠️ Every install before the registry kept both scopes in one file. Without this, the
+   * first launch after the upgrade reads no samples marker and re-seeds a library that is
+   * full, and forgets which view each space was left on.
    */
-  forget(key: string): void {
-    this.cache.delete(key);
-    void this.store?.delete(key).catch(() => undefined);
+  libraryScoped(): readonly [string, string][] {
+    return this.keys()
+      .filter((key) => key.startsWith(LIBRARY_KEY_PREFIX))
+      .map((key) => [key, this.read(key) ?? ''] as [string, string]);
   }
 
   private adoptLegacyValues(): void {
@@ -74,13 +52,12 @@ export class PreferencesService {
       for (let index = 0; index < localStorage.length; index++) {
         const key = localStorage.key(index);
         // Our keys only: dumping everything would pollute the preferences file for good.
-        if (!key?.startsWith('devnotes.') || this.cache.has(key)) continue;
+        if (!key?.startsWith('devnotes.') || this.read(key) !== null) continue;
 
         const value = localStorage.getItem(key);
         if (value === null) continue;
 
-        this.cache.set(key, value);
-        void this.store?.set(key, value).catch(() => undefined);
+        this.write(key, value);
         adopted.push(key);
       }
     } catch {

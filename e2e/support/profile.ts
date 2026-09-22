@@ -1,4 +1,4 @@
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -39,9 +39,34 @@ export function preferencesPath(): string {
   return join(e2eDataDir(), 'preferences.json');
 }
 
+/**
+ * Where the open library's files sit.
+ *
+ * ⚠️ Read out of the registry rather than assumed. A library is no longer the profile
+ * root: it lives under `libraries/<id>/`, and which one is open is a thing the
+ * application decides — a helper that guessed would read the wrong `vault.json` the
+ * moment a spec switches library.
+ */
+export function openLibraryDir(): string {
+  const profile = e2eDataDir();
+  try {
+    const registry = JSON.parse(readFileSync(join(profile, 'libraries.json'), 'utf8')) as {
+      libraries?: { id: string; directory: string }[];
+      open?: string | null;
+    };
+    const entries = registry.libraries ?? [];
+    const entry = entries.find((each) => each.id === registry.open) ?? entries[0];
+
+    return entry ? join(profile, ...entry.directory.split('/')) : profile;
+  } catch {
+    // No registry yet: the very first launch has not written one.
+    return profile;
+  }
+}
+
 /** The key file, beside the database — what a passphrase change rewrites. */
 export function vaultPath(): string {
-  return join(e2eDataDir(), 'vault.json');
+  return join(openLibraryDir(), 'vault.json');
 }
 
 /**

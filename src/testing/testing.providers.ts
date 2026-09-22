@@ -5,6 +5,7 @@ import { FILE_DIALOG_ADAPTER } from '@core/services/dialogs/file-dialog.service'
 import { APP_WINDOW_ADAPTER } from '@core/services/window/app-window.service';
 import { AttachmentsRepository } from '@core/data/attachments.repository';
 import { BackupsRepository } from '@core/data/backups.repository';
+import { LibrariesRepository } from '@core/data/libraries.repository';
 import { BoardRepository } from '@core/data/board.repository';
 import { FoldersRepository } from '@core/data/folders.repository';
 import { NotesRepository } from '@core/data/notes.repository';
@@ -20,6 +21,7 @@ import { FakeAppInfo } from './fake-app-info';
 import { FakeAppWindow } from './fake-app-window';
 import { FakeAttachmentsRepository } from './fake-attachments-repository';
 import { FakeBackupsRepository } from './fake-backups-repository';
+import { FakeLibrariesRepository } from './fake-libraries-repository';
 import { FakeBoardRepository } from './fake-board-repository';
 import { FakeClipboard } from './fake-clipboard';
 import { FakeDesktopNotifications } from './fake-desktop-notifications';
@@ -45,6 +47,7 @@ interface DataDoubles {
   readonly transferRepository?: FakeTransferRepository;
   readonly vaultRepository?: FakeVaultRepository;
   readonly backupsRepository?: FakeBackupsRepository;
+  readonly librariesRepository?: FakeLibrariesRepository;
   readonly updater?: FakeUpdater;
   readonly appInfo?: FakeAppInfo;
   readonly clipboard?: FakeClipboard;
@@ -56,6 +59,10 @@ interface DataDoubles {
 /** Bundled so a new data seam is not added to a dozen spec files one by one. */
 export function provideAppTesting(doubles: DataDoubles = {}): Provider[] {
   return [
+    {
+      provide: LibrariesRepository,
+      useValue: doubles.librariesRepository ?? new FakeLibrariesRepository(),
+    },
     {
       provide: BackupsRepository,
       useValue: doubles.backupsRepository ?? new FakeBackupsRepository(),

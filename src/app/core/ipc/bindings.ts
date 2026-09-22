@@ -217,6 +217,43 @@ export const commands = {
 	 *  asking for it is the only proof the right file is in place.
 	 */
 	restoreBackup: (id: string) => typedError<string, AppError>(__TAURI_INVOKE("restore_backup", { id })),
+	/**  The libraries, and which one is open. */
+	listLibraries: () => typedError<Registry, AppError>(__TAURI_INVOKE("list_libraries")),
+	/**
+	 *  Adds one, and leaves it closed: opening it is a second, deliberate gesture.
+	 * 
+	 *  ⚠️ Nothing is created on disk here beyond the directory. A library is born when its
+	 *  passphrase is chosen — `create_vault` writes the key file and the database — which is
+	 *  the same path a first launch takes, and the only one that has ever been exercised.
+	 */
+	createLibrary: (name: string) => typedError<LibraryEntry, AppError>(__TAURI_INVOKE("create_library", { name })),
+	/**
+	 *  Closes whatever is open and points the registry at another one.
+	 * 
+	 *  ⚠️ The connection `Mutex` is emptied under the same lock every other command takes:
+	 *  every one of them then answers `Locked`, which is what sends the interface back to the
+	 *  gate. The new library has its own passphrase, and asking for it is the only proof the
+	 *  right one is open.
+	 */
+	openLibrary: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("open_library", { id })),
+	renameLibrary: (id: string, name: string) => typedError<null, AppError>(__TAURI_INVOKE("rename_library", { id, name })),
+	/**
+	 *  Erases a library and everything in it.
+	 * 
+	 *  ⚠️ Irreversible, and the only thing in the application that erases a corpus outright —
+	 *  the interface gives it the treatment emptying the trash gets: a sentence naming what
+	 *  goes, and a confirm somewhere other than the button that fired it.
+	 * 
+	 *  ⚠️ The **adopted** library cannot be deleted. Its directory is the profile itself, so
+	 *  erasing it would take the registry, the application's preferences and every other
+	 *  library with it. Refused here rather than hidden in the interface, because a command
+	 *  is reachable from more than the interface.
+	 * 
+	 *  ⚠️ The open one cannot be deleted either: the front end switches first, which is what
+	 *  closes the connection. Deleting the files under a live one is how a library that was
+	 *  merely unwanted takes the process down with it.
+	 */
+	deleteLibrary: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("delete_library", { id })),
 	appChangelog: () => __TAURI_INVOKE<ChangelogRelease[]>("app_changelog"),
 	/**
 	 *  Replaces only the menu when the tray already exists, so a language change does not
@@ -237,6 +274,8 @@ export const DEFAULT_SHORTCUTS = {"capture":"Ctrl+Alt+V","newNote":"Ctrl+Alt+N",
 export const FIELD_NAME_PATTERN = "^[A-Za-z0-9_-]+$" as const;
 
 export const GLOBAL_ACTION_EVENT = "devnotes:action" as const;
+
+export const LIBRARY_PREFERENCES_FILE = "preferences.json" as const;
 
 /* Types */
 export type AppError = {
@@ -542,6 +581,15 @@ export type Language = "json" | "js" | "ts" | "py" | "rs" | "go" | "java" | "cs"
 /**  Default, and the signal that the front end chose nothing. */
 "txt";
 
+/**  One library, as the interface lists it. */
+export type LibraryEntry = {
+	id: string,
+	name: string,
+	/**  ⚠️ Relative to the profile, so a profile copied to another machine still resolves. */
+	directory: string,
+	createdAt: string,
+};
+
 export type Note = {
 	id: string,
 	spaceId: string,
@@ -726,6 +774,12 @@ export type Placeholder = {
 	 *  being erased.
 	 */
 	value: string,
+};
+
+/**  What the File menu draws: the libraries, and which of them is open. */
+export type Registry = {
+	libraries: LibraryEntry[],
+	open: string | null,
 };
 
 /**

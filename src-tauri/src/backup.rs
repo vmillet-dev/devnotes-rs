@@ -10,7 +10,7 @@
 
 use std::path::{Path, PathBuf};
 
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, State};
 
 use chrono::{DateTime, TimeDelta, Utc};
 use diesel::prelude::*;
@@ -305,7 +305,7 @@ pub(crate) fn take(app: &AppHandle, db: &crate::db::Db) {
         return;
     }
 
-    let Ok(directory) = app.path().app_data_dir() else {
+    let Ok(directory) = crate::libraries::open_directory(app) else {
         return;
     };
 
@@ -325,9 +325,7 @@ pub(crate) fn take(app: &AppHandle, db: &crate::db::Db) {
 }
 
 fn library_directory(app: &AppHandle) -> Result<PathBuf, StorageError> {
-    app.path()
-        .app_data_dir()
-        .map_err(|error| StorageError::File(error.to_string()))
+    crate::libraries::open_directory(app)
 }
 
 /// The copies that exist, newest first, for the panel that lists them.

@@ -1,0 +1,174 @@
+@use 'mixins' as *;
+
+// ⚠️ `fitted` and not `framed`: the panel sizes to the list it holds, where a fixed
+// height would show one library in a box the height of the screen. The padding goes to
+// zero because the three sections below carry their own, with the rules between them.
+app-dialog {
+  --dialog-width: 560px;
+  --dialog-padding: 0;
+}
+
+.libraries-header {
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.libraries-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-0);
+}
+
+.libraries-lead {
+  margin: 6px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+// Sized to what it holds rather than stretched: one library in a panel the height of
+// the screen reads as something missing.
+.libraries-body {
+  padding: 8px 20px;
+  overflow-y: auto;
+  min-height: 0;
+  max-height: 50vh;
+}
+
+.library-row {
+  @include setting-row;
+  gap: 12px;
+}
+
+.library-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--text-1);
+}
+
+// ⚠️ The hue *is* the information here, so the label keeps it and the fill goes neutral.
+.library-open {
+  @include hue-badge(var(--amber-text));
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.library-rename,
+.library-new {
+  @include setting-field(220px);
+  cursor: text;
+}
+
+.library-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+
+.library-action {
+  @include unstyled-control;
+  @include focus-ring($offset: 1px);
+  @include hit-target;
+
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  color: var(--text-2);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    color: var(--text-0);
+    background: var(--bg-2);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+
+// ⚠️ Red at rest, not on hover: a warning that arrives under the pointer plays no part
+// in choosing.
+.library-action.destructive {
+  color: var(--red);
+}
+
+// ⚠️ Text and a hairline, never a fill: one red block beside the single amber accent
+// reads as a second accent.
+.library-confirm {
+  @include surface($bg: var(--bg-2), $border-color: rgba(var(--red-rgb), 0.4));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 4px 0 10px;
+  padding: 9px 11px;
+}
+
+.library-warning {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--red);
+}
+
+.library-answers {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.library-cancel,
+.library-go,
+.library-add,
+.libraries-close {
+  @include unstyled-control;
+  @include surface($radius: 6px);
+  @include hit-target;
+  @include focus-ring($offset: 1px);
+
+  padding: 5px 10px;
+  font-size: 11.5px;
+  color: var(--text-1);
+  cursor: pointer;
+}
+
+.library-cancel:hover,
+.library-add:hover:not(:disabled),
+.libraries-close:hover {
+  @include accent-state(var(--text-0), var(--amber-dim));
+}
+
+.library-go {
+  @include destructive;
+}
+
+.library-go:disabled,
+.library-add:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.libraries-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--line-soft);
+  background: var(--bg-0);
+}
+
+.libraries-create {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

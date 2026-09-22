@@ -1,0 +1,132 @@
+<app-dialog
+  [layer]="'settings'"
+  [variant]="'fitted'"
+  labelledBy="libraries-dialog-title"
+  (closed)="closed.emit()"
+>
+  <div class="libraries-header">
+    <h2 id="libraries-dialog-title" class="libraries-title">{{ 'libraries.title' | transloco }}</h2>
+    <p class="libraries-lead">{{ 'libraries.lead' | transloco }}</p>
+  </div>
+
+  <div class="libraries-body">
+    @for (row of rows(); track row.entry.id) {
+      <div class="library-row" data-testid="library-row" [attr.data-library]="row.entry.id">
+        @if (renaming() === row.entry.id) {
+          <input
+            class="library-rename"
+            type="text"
+            data-testid="library-rename"
+            [value]="renamedTo()"
+            [attr.aria-label]="'libraries.rename' | transloco"
+            (input)="renamedTo.set($any($event.target).value)"
+            (blur)="commitRename()"
+            (keydown.enter)="commitRename()"
+            (keydown.escape)="cancelRename()"
+          />
+        } @else {
+          <span class="library-name">
+            {{ name(row.entry) || ('libraries.unnamed' | transloco) }}
+            @if (row.isOpen) {
+              <span class="library-open" data-testid="library-open">{{ 'libraries.open' | transloco }}</span>
+            }
+          </span>
+        }
+
+        <div class="library-actions">
+          @if (!row.isOpen) {
+            <button
+              type="button"
+              class="library-action"
+              data-testid="library-switch"
+              [attr.data-library]="row.entry.id"
+              [disabled]="store.isWorking()"
+              (click)="openLibrary(row.entry)"
+            >
+              {{ 'libraries.switch' | transloco }}
+            </button>
+          }
+          <button
+            type="button"
+            class="library-action"
+            data-testid="library-start-rename"
+            (click)="startRenaming(row.entry)"
+          >
+            {{ 'libraries.rename' | transloco }}
+          </button>
+          <!-- ⚠️ Neither the open one nor the last: deleting the files under a live
+               connection is how a library that was merely unwanted takes the process down
+               with it, and the last one leaves the gate with nothing to offer. -->
+          @if (!row.isOnlyOne && !row.isOpen) {
+            <button
+              type="button"
+              class="library-action destructive"
+              data-testid="library-delete"
+              [attr.data-library]="row.entry.id"
+              (click)="store.askToDelete(row.entry)"
+            >
+              {{ 'libraries.delete' | transloco }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- ⚠️ The trigger is replaced by a sentence naming what goes, and the confirm sits
+           somewhere else — the treatment emptying the trash gets, for the same reason:
+           it is irreversible and it takes everything at once. -->
+      @if (store.pendingDeletion()?.entry?.id === row.entry.id) {
+        <div class="library-confirm" role="alert" data-testid="library-confirm">
+          <p class="library-warning">
+            {{ 'libraries.confirmDelete' | transloco: { name: name(row.entry) } }}
+          </p>
+          <div class="library-answers">
+            <button
+              type="button"
+              class="library-cancel"
+              data-testid="library-cancel-delete"
+              (click)="store.dismissDeletion()"
+            >
+              {{ 'libraries.cancel' | transloco }}
+            </button>
+            <button
+              type="button"
+              class="library-go"
+              data-testid="library-confirm-delete"
+              [disabled]="store.isWorking()"
+              (click)="store.confirmDeletion()"
+            >
+              {{ 'libraries.confirmDeleteAction' | transloco }}
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </div>
+
+  <div class="libraries-actions">
+    <div class="libraries-create">
+      <input
+        class="library-new"
+        type="text"
+        data-testid="library-new-name"
+        [value]="newName()"
+        [placeholder]="'libraries.namePlaceholder' | transloco"
+        [attr.aria-label]="'libraries.create' | transloco"
+        (input)="newName.set($any($event.target).value)"
+        (keydown.enter)="create()"
+      />
+      <button
+        type="button"
+        class="library-add"
+        data-testid="library-create"
+        [disabled]="newName().trim() === '' || store.isWorking()"
+        (click)="create()"
+      >
+        {{ 'libraries.create' | transloco }}
+      </button>
+    </div>
+    <button type="button" class="libraries-close" data-testid="libraries-close" (click)="closed.emit()">
+      {{ 'libraries.close' | transloco }}
+    </button>
+  </div>
+</app-dialog>
