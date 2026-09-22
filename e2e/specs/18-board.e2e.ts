@@ -241,4 +241,50 @@ describe('The board', () => {
     expect(await folders.names()).toContain('Perf');
     await folders.close();
   });
+
+  /**
+   * ⚠️ Hit-tested, not dispatched: `board.drawZone` fires its events on the surface itself,
+   * so it draws wherever it is told to. What the user met was the pointer landing on the
+   * dotted ground **beside** a surface the back end had sized to its content (#320).
+   */
+  describe('on a window larger than what it holds', () => {
+    let restore = { width: 1100, height: 720 };
+
+    before(async () => {
+      restore = await browser.getWindowSize();
+      await browser.setWindowSize(1600, 1000);
+      await reloadInSpace();
+      await board.show('board');
+    });
+
+    after(async () => {
+      await browser.setWindowSize(restore.width, restore.height);
+      await reloadInSpace();
+    });
+
+    it('takes the pointer on the whole of the dotted ground', async () => {
+      const missed = await browser.execute(
+        (groundSelector: string, surfaceSelector: string) => {
+          const ground = document.querySelector(groundSelector)?.getBoundingClientRect();
+          const surface = document.querySelector(surfaceSelector);
+          if (!ground || !surface) throw new Error('no board');
+
+          // Far right, far down and the far corner — clear of the scrollbars and of the
+          // tidy control floating in the bottom-right.
+          const points = [
+            [ground.left + ground.width * 0.92, ground.top + ground.height * 0.4],
+            [ground.left + ground.width * 0.4, ground.top + ground.height * 0.92],
+            [ground.left + ground.width * 0.7, ground.top + ground.height * 0.8],
+          ];
+          return points
+            .filter(([x, y]) => !surface.contains(document.elementFromPoint(x, y)))
+            .map(([x, y]) => `${Math.round(x)},${Math.round(y)}`);
+        },
+        testid('board'),
+        testid('board-surface'),
+      );
+
+      expect(missed).toEqual([]);
+    });
+  });
 });

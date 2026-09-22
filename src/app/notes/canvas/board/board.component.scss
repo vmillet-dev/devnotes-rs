@@ -26,8 +26,12 @@
   overflow: auto;
 }
 
+// ⚠️ At least the visible ground, whatever size the back end gave it: the gestures listen
+// here, and `folders::board::surface` stops at the content or at 960 × 540.
 .board-surface {
   position: relative;
+  min-width: 100%;
+  min-height: 100%;
 }
 
 // Dimmed in place: the card keeps its seat, it just stops asking for attention.
