@@ -12,6 +12,32 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [0.4.0] - 2026-09-22
+
+### ✨ Added
+
+- Hold several libraries, with a registry beside them (#315)
+- Keep the body an edit replaced, so a snippet that worked comes back (#314)
+- Give a forgotten passphrase a way out of the gate (#313)
+- Show the backup copies, and let one be put back (#312)
+- Apply the preferences on a button, not as they are typed (#311)
+- Split the preferences into three pages, and make the keys movable (#310)
+- Turn the guide into a walk with a picture at each step (#309)
+- Put the release's notes in the update prompt, and show them (#307)
+- Score the language instead of ordering the guesses (#308)
+- Put the theme beside the language, where it belongs (#306)
+- Let the interface move, in two durations and one off switch (#303)
+- Make the card's menu complete, and let the editor move a note (#302)
+- Give the card's first line back to the note (#301)
+- Sweep a selection band with the right button (#300)
+- Tick a whole folder from the menu that already knows what it holds (#299)
+- Split the board's tidy-up in two, and pan back to what it wrote (#298)
+
+### 🔧 Changed
+
+- Get the header down to one row, and the first card into the top half (#305)
+- Take the operating system's chrome out of the window (#304)
+
 ## [0.3.3] - 2026-09-21
 
 ### 🔧 Changed
