@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoService, TranslocoPipe } from '@jsverse/transloco';
 import { AppEventsService, GlobalAction } from '@core/ipc/app-events.service';
 import { DialogStack } from '@shared/layout/dialog/dialog-stack';
 import { AttachmentsStore } from '@core/state/attachments.store';
@@ -9,7 +9,7 @@ import { BoardStore } from '@core/state/board.store';
 import { FoldersStore } from '@core/state/folders.store';
 import { NotesQueryStore } from '@core/state/notes-query.store';
 import { NotesRevision } from '@core/state/notes-revision';
-import { NotesStore } from '@core/state/notes.store';
+import { NoteFilter, NotesStore } from '@core/state/notes.store';
 import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
 import { SampleNotesService } from '@core/state/sample-notes.service';
 import { SettingsStore } from '@core/services/settings/settings.store';
@@ -24,11 +24,10 @@ import { Note } from '@core/model/note.model';
 import { BoardComponent, CardDrop } from './canvas/board/board.component';
 import { LibraryTreeComponent } from './sidebar/library-tree/library-tree.component';
 import { FolderNamePromptComponent } from './overlays/folder-name-prompt/folder-name-prompt.component';
-import { FilterChipsComponent } from './header/filter-chips/filter-chips.component';
+import { FacetsPanelComponent } from './header/facets-panel/facets-panel.component';
 import { FolderRecolouring, FolderRenaming } from './header/folder-editor/folder-editor.component';
 import { FolderBreadcrumbComponent } from './header/folder-breadcrumb/folder-breadcrumb.component';
 import { FolderSwitcherComponent } from './header/folder-switcher/folder-switcher.component';
-import { LanguageRailComponent } from './header/language-rail/language-rail.component';
 import { NewNoteButtonComponent } from './header/new-note-button/new-note-button.component';
 import { NoteActivation } from './canvas/note-card/note-card.component';
 import { NoteEditorOverlayComponent } from './overlays/note-editor-overlay/note-editor-overlay.component';
@@ -41,8 +40,11 @@ import { SelectionBarComponent } from './header/selection-bar/selection-bar.comp
 import { SpaceDeletion, SpaceRenaming } from './header/space-editor/space-editor.component';
 import { SpaceSwitcherComponent } from './header/space-switcher/space-switcher.component';
 import { TagManagerComponent } from './overlays/tag-manager/tag-manager.component';
-import { TagRailComponent } from './header/tag-rail/tag-rail.component';
 import { ViewSwitchComponent } from './header/view-switch/view-switch.component';
+import {
+  Segment,
+  SegmentedChoiceComponent,
+} from '@shared/controls/segmented-choice/segmented-choice.component';
 import { TrashPanelComponent } from './overlays/trash-panel/trash-panel.component';
 import { UndoBarComponent } from './overlays/undo-bar/undo-bar.component';
 
@@ -51,7 +53,8 @@ import { UndoBarComponent } from './overlays/undo-bar/undo-bar.component';
   imports: [
     SpaceSwitcherComponent,
     SearchBoxComponent,
-    FilterChipsComponent,
+    FacetsPanelComponent,
+    SegmentedChoiceComponent,
     FolderSwitcherComponent,
     FolderBreadcrumbComponent,
     LibraryTreeComponent,
@@ -60,8 +63,6 @@ import { UndoBarComponent } from './overlays/undo-bar/undo-bar.component';
     FolderNamePromptComponent,
     NewNoteButtonComponent,
     SelectionBarComponent,
-    TagRailComponent,
-    LanguageRailComponent,
     NoteSectionComponent,
     NoteEditorOverlayComponent,
     QuickPaletteComponent,
@@ -91,6 +92,34 @@ export class NotesPageComponent {
   protected readonly attachments = inject(AttachmentsStore);
   protected readonly fill = inject(PlaceholderFillStore);
   protected readonly settings = inject(SettingsStore);
+
+  private readonly transloco = inject(TranslocoService);
+
+  /**
+   * ⚠️ The disclosure is the page's and not the panel's: the trigger lives in the topbar
+   * and the panel below it, and a component cannot be in two rows at once.
+   */
+  protected readonly facetsExpanded = signal(false);
+
+  protected readonly facetCount = computed(
+    () => this.canvas.selectedTags().size + this.canvas.selectedLanguages().size,
+  );
+
+  /** ⚠️ Forced open by a selection: a filter nobody can see is a filter nobody can undo. */
+  protected readonly facetsOpen = computed(() => this.facetsExpanded() || this.facetCount() > 0);
+
+  /** Three states of one thing, so one control rather than four chips. */
+  protected readonly quickFilters = computed<readonly Segment[]>(() =>
+    (['all', 'pinned', 'untriaged'] as const).map((key) => ({
+      id: key,
+      label: this.transloco.translate(`filters.${key}`),
+    })),
+  );
+
+  /** The segmented control speaks in strings; the store speaks in `NoteFilter`. */
+  protected onQuickFilter(key: string): void {
+    this.canvas.setFilter(key as NoteFilter);
+  }
 
   private readonly samples = inject(SampleNotesService);
   private readonly revision = inject(NotesRevision);

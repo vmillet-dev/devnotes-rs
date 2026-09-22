@@ -125,7 +125,11 @@ export const canvas = {
    * rendered boxes and not from the stylesheet: padding, line-height and the mixin compose,
    * and it is the composition that has to clear 24px.
    */
-  controlSizes(): Promise<Record<string, { width: number; height: number }[]>> {
+  async controlSizes(): Promise<Record<string, { width: number; height: number }[]>> {
+    // ⚠️ The tag pill is one of the controls measured here, and the tag rail moved behind
+    // the facets disclosure in #181: without this it is simply not in the DOM.
+    await canvas.openFacets();
+
     return browser.execute(
       (itemSelector: string, pillSelector: string) => {
         const boxes = (selector: string) =>
@@ -330,7 +334,9 @@ export const canvas = {
     await waitForCanvas();
   },
 
-  filter: (key: 'all' | 'pinned' | 'untriaged') => $(`${testid('filter-chip')}[data-filter="${key}"]`),
+  /** ⚠️ One segmented control now, where four chips read as four combinable filters. */
+  filter: (key: 'all' | 'pinned' | 'untriaged') =>
+    $(`${testid('segmented-quick-filter')} [data-segment-id="${key}"]`),
   tagPill: (tag: string) => $(`${testid('tag-pill')}[data-tag="${tag}"]`),
   languageChip: (language: string) => $(`${testid('language-chip')}[data-language="${language}"]`),
 
@@ -340,12 +346,25 @@ export const canvas = {
     await waitForCanvas();
   },
 
+  /**
+   * ⚠️ The two facet rails live behind a disclosure since #181 — they were two permanent
+   * 44px bands. Opening it is idempotent: it refuses to fold while a facet is selected.
+   */
+  async openFacets(): Promise<void> {
+    if (await $(testid('facets-panel')).isExisting()) return;
+
+    await $(testid('facets-toggle')).click();
+    await $(testid('facets-panel')).waitForExist({ timeout: 5_000 });
+  },
+
   async toggleTag(tag: string): Promise<void> {
+    await canvas.openFacets();
     await canvas.tagPill(tag).click();
     await waitForCanvas();
   },
 
   async toggleLanguage(language: string): Promise<void> {
+    await canvas.openFacets();
     await canvas.languageChip(language).click();
     await waitForCanvas();
   },
@@ -355,10 +374,28 @@ export const canvas = {
 
   noResults: () => $(testid('canvas-no-results')),
 
+  /** Where the canvas actually starts, which is what #181 was about. */
+  async firstCardTop(): Promise<number> {
+    const top = await browser.execute(() => {
+      const card = document.querySelector('[data-testid="note-card"]');
+      return card ? Math.round(card.getBoundingClientRect().top) : null;
+    });
+    if (top === null) throw new Error('no card on the canvas to measure');
+    return top;
+  },
+
+  async firstCardTitle(): Promise<string> {
+    const [first] = await canvas.titles();
+    if (first === undefined) throw new Error('no card on the canvas');
+    return first;
+  },
+
   /** What the search field says instead of its shortcut hint while filtering. */
   matchedCount: () => $(testid('search-matched')).getText(),
 
+  /** ⚠️ "Gérer" sits at the end of the tag rail, which is behind the disclosure now. */
   async openTagManager(): Promise<void> {
+    await canvas.openFacets();
     await $(testid('tag-manage')).click();
     await $(testid('tag-manager-close')).waitForExist({ timeout: 10_000 });
   },

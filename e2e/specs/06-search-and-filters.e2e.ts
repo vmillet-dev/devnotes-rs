@@ -1,6 +1,7 @@
-import { $, expect } from '@wdio/globals';
+import { $, browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
+import { selectionBar } from '../pageobjects/overlays.page.js';
 import { editor } from '../pageobjects/editor.page.js';
 import {
   activeTestId,
@@ -324,5 +325,69 @@ describe('Search, filters and facets', () => {
     // A quick filter keeps the chronological shape; only a search or a facet flattens it.
     expect(await canvas.sectionKeys()).not.toContain('results');
     await canvas.applyFilter('all');
+  });
+
+  /**
+   * ⚠️ The measurement the header has to hold, at the size the application ships with. It
+   * used to wrap here — not in a narrow edge case, on first launch: the primary action was
+   * pushed onto a second row and the search was squeezed below its own placeholder. With
+   * the two facet rails and the topbar's second row gone, the first card came up from 284px
+   * to about 150.
+   */
+  describe('the header, at the window the application ships with', () => {
+    let restore = { width: 1100, height: 720 };
+
+    before(async () => {
+      restore = await browser.getWindowSize();
+      await browser.setWindowSize(1100, 720);
+      await reloadCanvas();
+      await waitForCanvas();
+    });
+
+    after(async () => {
+      await browser.setWindowSize(restore.width, restore.height);
+      await reloadCanvas();
+      await waitForCanvas();
+    });
+
+    it('fits on one row, with the library rail open', async () => {
+      const rows = await browser.execute(() => {
+        const topbar = document.querySelector('.topbar');
+        const rail = document.querySelector('app-library-tree');
+        if (!topbar) return null;
+        const tops = [...topbar.children].map((child) => Math.round(child.getBoundingClientRect().top));
+        return {
+          railShowing: rail !== null,
+          spread: tops.length > 0 ? Math.max(...tops) - Math.min(...tops) : 0,
+          overflowing: Math.round(topbar.scrollWidth) > Math.round(topbar.clientWidth),
+        };
+      });
+
+      expect(rows?.railShowing).toBe(true);
+      // One row: every control shares a baseline, give or take its own height.
+      expect(rows?.spread).toBeLessThan(12);
+      expect(rows?.overflowing).toBe(false);
+    });
+
+    it('puts the first card in the top half of the window', async () => {
+      const top = await browser.execute(() => {
+        const card = document.querySelector('[data-testid="note-card"]');
+        return card ? Math.round(card.getBoundingClientRect().top) : null;
+      });
+
+      expect(top).not.toBeNull();
+      expect(top!).toBeLessThan(360);
+    });
+
+    /** ⚠️ The bar floats over the canvas: inserted, it pushed everything down 85px. */
+    it('moves nothing when a card is ticked', async () => {
+      const before = await canvas.firstCardTop();
+
+      await canvas.check(await canvas.firstCardTitle());
+
+      const after = await canvas.firstCardTop();
+      expect(Math.abs(after - before)).toBeLessThanOrEqual(2);
+      await selectionBar.clear();
+    });
   });
 });

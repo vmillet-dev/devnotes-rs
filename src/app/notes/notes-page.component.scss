@@ -25,25 +25,45 @@
   min-height: 0;
 }
 
-// ⚠️ It wraps. The row was already at the window edge in French before the view switch
-// joined it, and without this the whole page scrolls sideways rather than the header
-// reflowing — the first thing a new user sees, cut off at the right.
+// ⚠️ **One row, and it does not wrap.** It used to, and the wrap was never an edge case: at
+// the shipped 1100px window with the library rail open it wrapped on first launch, pushing
+// the primary action onto a second line and squeezing the search below its own placeholder.
+// The search is what gives way instead — it is the only thing here that can be narrow and
+// still be itself — and an e2e scenario measures the row at that width.
 .topbar {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 10px 14px;
-  padding: 14px 24px;
+  gap: 10px;
+  padding: 12px 24px;
   border-bottom: 1px solid var(--line-soft);
   flex-shrink: 0;
+  // ⚠️ Without this a flex child's content width wins and the row overflows anyway.
+  min-width: 0;
 }
 
 // The address on screen, whichever of the two views is filling it.
+// ⚠️ Relative, because the selection bar floats over it rather than being inserted above.
 .canvas-region {
+  position: relative;
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: 0;
+}
+
+// ⚠️ It used to be a band in the flow, and ticking a card pushed everything below it down
+// 85px — the canvas jumped on every tick. Floating costs the canvas nothing and moves
+// nothing; the lift is what says it is above the surface rather than part of it.
+.floating-selection {
+  position: absolute;
+  z-index: 5;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  box-shadow: var(--shadow-dropdown);
+  border-radius: 10px;
 }
 
 .canvas {
@@ -125,34 +145,19 @@
   outline-offset: 2px;
 }
 
-// Beside the chips, because what it clears is the row it sits in.
-.clear-filters {
-  @include unstyled-control;
-  @include surface($bg: transparent, $radius: 7px);
-  @include focus-ring;
-
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 6px 11px;
-  font-size: 11.5px;
-  color: var(--text-2);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.clear-filters:hover {
-  @include accent-state(var(--text-0), var(--line));
-}
-
-// Next to the filters and not in the "File" menu: the trash is a view on the notes.
+// ⚠️ Icon-only, and beside the rail toggle: it is a **view** on the notes rather than a
+// filter, so it left the filter chips it was never a member of — and it used to sit six
+// pixels from the primary action. Its name is on the tooltip and on the accessible label.
 .trash-btn {
   all: unset;
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 7px 12px;
+  justify-content: center;
+  min-width: 24px;
+  min-height: 24px;
+  flex-shrink: 0;
+  padding: 6px 8px;
   background: var(--bg-2);
   border: 1px solid var(--line-soft);
   border-radius: 8px;
@@ -169,4 +174,40 @@
 .trash-btn:focus-visible {
   outline: 2px solid var(--amber-edge);
   outline-offset: 2px;
+}
+
+// ⚠️ The disclosure that replaced two permanent bands. Amber while it is holding a facet,
+// and refusing to fold then — see the template.
+.facets-toggle {
+  @include unstyled-control;
+  @include hit-target;
+  @include surface(var(--bg-2), 7px);
+  @include focus-ring;
+  @include eases(background, border-color, color);
+  justify-content: center;
+  flex-shrink: 0;
+  gap: 4px;
+  padding: 5px 8px;
+  font-size: 12px;
+  color: var(--text-2);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    @include accent-state;
+  }
+
+  &.on {
+    @include accent-state;
+  }
+
+  // Not hidden and not greyed out: a control that vanishes while it is doing something
+  // reads as a bug, and this one is refusing to hide what is filtering.
+  &:disabled {
+    cursor: default;
+  }
+}
+
+.facets-count {
+  font-family: var(--font-mono), serif;
+  font-size: 10px;
 }

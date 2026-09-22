@@ -33,6 +33,18 @@
       >
         <span aria-hidden="true">▤</span>
       </button>
+      <!-- ⚠️ Away from the filters *and* from the primary action: it is a view on the
+           notes rather than a filter, and it used to sit six pixels from "Nouvelle note". -->
+      <button
+        type="button"
+        class="trash-btn"
+        data-testid="trash-open"
+        [attr.aria-label]="'notes.trash' | transloco"
+        [attr.title]="'notes.trash' | transloco"
+        (click)="trash.open()"
+      >
+        <span aria-hidden="true">🗑</span>
+      </button>
       @if (folders.activeFolder(); as openFolder) {
         <app-folder-breadcrumb
           [folder]="openFolder"
@@ -71,21 +83,34 @@
         (textCleared)="canvas.setSearchQuery('')"
         (queryChange)="canvas.setSearchQuery($event)"
       />
-      <app-filter-chips [active]="canvas.activeFilter()" (filterChanged)="canvas.setFilter($event)" />
-      <!-- ⚠️ Shown whenever any of the three is on, not only on an empty canvas. The way
-           out used to be the count in the field, which reads as a count and clears the
-           tags and the languages with the text. -->
-      @if (canvas.hasUserFilters()) {
-        <button
-          type="button"
-          class="clear-filters"
-          data-testid="clear-filters"
-          (click)="canvas.clearFilters()"
-        >
-          <span aria-hidden="true">✕</span>
-          {{ 'notes.clearFilters' | transloco }}
-        </button>
-      }
+      <!-- ⚠️ Three states of one thing, so one control: four chips read as four filters
+           that could be combined, and took the width of four. -->
+      <app-segmented-choice
+        [kind]="'quick-filter'"
+        [label]="'filters.groupLabel' | transloco"
+        [segments]="quickFilters()"
+        [currentId]="canvas.activeFilter()"
+        (chosen)="onQuickFilter($event)"
+      />
+      <!-- ⚠️ Forced open by a selection, and it refuses to fold while one is on: a filter
+           nobody can see is a filter nobody can undo. -->
+      <button
+        type="button"
+        class="facets-toggle"
+        data-testid="facets-toggle"
+        [class.on]="facetsOpen()"
+        [disabled]="facetsOpen() && facetCount() > 0"
+        [attr.aria-expanded]="facetsOpen()"
+        aria-controls="facets-panel"
+        [attr.aria-label]="'filters.facetsLabel' | transloco"
+        [attr.title]="'filters.facetsLabel' | transloco"
+        (click)="facetsExpanded.set(!facetsExpanded())"
+      >
+        <span aria-hidden="true">⚙</span>
+        @if (facetCount(); as count) {
+          <span class="facets-count" data-testid="facets-count">{{ count }}</span>
+        }
+      </button>
       @if (folders.activeFolder() === null && !settings.showLibraryRail()) {
         <app-folder-switcher
           [folders]="folders.folders()"
@@ -98,37 +123,20 @@
           (folderDeleted)="folders.deleteFolder($event)"
         />
       }
-      <button type="button" class="trash-btn" data-testid="trash-open" (click)="trash.open()">
-        <span aria-hidden="true">🗑</span>
-        {{ 'notes.trash' | transloco }}
-      </button>
       <app-new-note-button (created)="store.createNote($event)" />
     </div>
 
-    <app-tag-rail
-      [tags]="canvas.allTags()"
-      [activeTags]="canvas.selectedTags()"
-      (tagToggled)="canvas.toggleTag($event)"
-      (manageRequested)="tags.open()"
-    />
-
-    <app-language-rail
-      [languages]="canvas.allLanguages()"
-      [activeLanguages]="canvas.selectedLanguages()"
-      (languageToggled)="canvas.toggleLanguage($event)"
-    />
-
-    @if (selection.hasSelection()) {
-      <app-selection-bar
-        [count]="selection.checkedCount()"
-        [spaces]="spaces.spaces()"
-        [folders]="folders.folders()"
-        (moveRequested)="store.moveSelection($event)"
-        (fileRequested)="store.fileSelection($event)"
-        (tagRequested)="store.tagSelection($event)"
-        (copyRequested)="onCopySelection()"
-        (deleteRequested)="store.deleteSelection()"
-        (cleared)="selection.clearSelection()"
+    @if (facetsOpen()) {
+      <app-facets-panel
+        [tags]="canvas.allTags()"
+        [languages]="canvas.allLanguages()"
+        [activeTags]="canvas.selectedTags()"
+        [activeLanguages]="canvas.selectedLanguages()"
+        [canClear]="canvas.hasUserFilters()"
+        (tagToggled)="canvas.toggleTag($event)"
+        (languageToggled)="canvas.toggleLanguage($event)"
+        (manageRequested)="tags.open()"
+        (clearRequested)="canvas.clearFilters()"
       />
     }
 
@@ -139,6 +147,23 @@
       data-testid="canvas"
       [attr.aria-busy]="board.isBoard() ? board.isLoading() : canvas.isLoading()"
     >
+      <!-- ⚠️ Over the canvas, not in the flow: inserted, it pushed everything below it down
+       85px, so the canvas jumped on every tick — and it wrapped too. -->
+      @if (selection.hasSelection()) {
+        <app-selection-bar
+          class="floating-selection"
+          [count]="selection.checkedCount()"
+          [spaces]="spaces.spaces()"
+          [folders]="folders.folders()"
+          (moveRequested)="store.moveSelection($event)"
+          (fileRequested)="store.fileSelection($event)"
+          (tagRequested)="store.tagSelection($event)"
+          (copyRequested)="onCopySelection()"
+          (deleteRequested)="store.deleteSelection()"
+          (cleared)="selection.clearSelection()"
+        />
+      }
+
       @if (board.isShowing()) {
         @let boardError = board.loadError();
 

@@ -95,7 +95,8 @@
     "groupLabel": "Filtrer les notes",
     "all": "Tout",
     "pinned": "Épinglées",
-    "untriaged": "À trier"
+    "untriaged": "À trier",
+    "facetsLabel": "Tags et formats"
   },
   "folders": {
     "switcherLabel": "Filtrer par dossier",

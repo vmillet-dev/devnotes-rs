@@ -30,7 +30,7 @@ import { FakeTransferRepository } from '@testing/fake-transfer-repository';
 import { createNote } from '@testing/note.fixture';
 import { createSection } from '@testing/section.fixture';
 import { provideAppTesting } from '@testing/testing.providers';
-import { FilterChipsComponent } from './header/filter-chips/filter-chips.component';
+import { FacetsPanelComponent } from './header/facets-panel/facets-panel.component';
 import { FolderBreadcrumbComponent } from './header/folder-breadcrumb/folder-breadcrumb.component';
 import { FolderSwitcherComponent } from './header/folder-switcher/folder-switcher.component';
 import { ImageLightboxComponent } from './overlays/image-lightbox/image-lightbox.component';
@@ -39,11 +39,11 @@ import { NoteSectionComponent } from './canvas/note-section/note-section.compone
 import { PlaceholderFormComponent } from './overlays/placeholder-form/placeholder-form.component';
 import { QuickPaletteComponent } from './overlays/quick-palette/quick-palette.component';
 import { SearchBoxComponent } from './header/search-box/search-box.component';
+import { SegmentedChoiceComponent } from '@shared/controls/segmented-choice/segmented-choice.component';
 import { SelectionBarComponent } from './header/selection-bar/selection-bar.component';
 import { SpaceSwitcherComponent } from './header/space-switcher/space-switcher.component';
 import { LibraryTreeComponent } from './sidebar/library-tree/library-tree.component';
 import { TagManagerComponent } from './overlays/tag-manager/tag-manager.component';
-import { TagRailComponent } from './header/tag-rail/tag-rail.component';
 import { TrashPanelComponent } from './overlays/trash-panel/trash-panel.component';
 import { NotesPageComponent } from './notes-page.component';
 
@@ -170,7 +170,7 @@ describe('NotesPageComponent', () => {
     expect(child(LibraryTreeComponent).spaces()).toEqual(SPACES);
     expect(child(LibraryTreeComponent).activeSpaceId()).toBe('work');
     expect(child(SearchBoxComponent).query()).toBe('hello');
-    expect(child(FilterChipsComponent).active()).toBe('pinned');
+    expect(child(SegmentedChoiceComponent).currentId()).toBe('pinned');
   });
 
   it('starts on "all spaces"', async () => {
@@ -289,7 +289,7 @@ describe('NotesPageComponent', () => {
     const createNoteSpy = vi.spyOn(store, 'createNote').mockResolvedValue();
 
     child(SearchBoxComponent).query.set('term');
-    child(FilterChipsComponent).filterChanged.emit('untriaged');
+    child(SegmentedChoiceComponent).chosen.emit('untriaged');
     fixture.debugElement.query(By.css('.new-note-btn')).triggerEventHandler('click');
 
     expect(setSearchQuery).toHaveBeenCalledWith('term');
@@ -306,12 +306,52 @@ describe('NotesPageComponent', () => {
     expect(child(SearchBoxComponent).shortcutEnabled()).toBe(false);
   });
 
-  it('delegates tag toggling from the tag rail to the store', () => {
-    const toggleTag = vi.spyOn(canvas, 'toggleTag');
+  /**
+   * ⚠️ The two facet rails were permanent 44px bands and are a disclosure now — the single
+   * biggest saving of the six the header had. They are not in the DOM until it is open.
+   */
+  describe('the facets, behind their disclosure', () => {
+    function toggle(): HTMLButtonElement {
+      return fixture.nativeElement.querySelector('[data-testid="facets-toggle"]');
+    }
 
-    child(TagRailComponent).tagToggled.emit('urgent');
+    it('draws neither rail until the disclosure is opened', () => {
+      expect(maybeChild(FacetsPanelComponent)).toBeNull();
+    });
 
-    expect(toggleTag).toHaveBeenCalledWith('urgent');
+    it('opens on the toggle, and delegates a tag from the rail inside it', async () => {
+      const toggleTag = vi.spyOn(canvas, 'toggleTag');
+      toggle().click();
+      await fixture.whenStable();
+
+      child(FacetsPanelComponent).tagToggled.emit('urgent');
+
+      expect(toggleTag).toHaveBeenCalledWith('urgent');
+    });
+
+    /** ⚠️ A filter nobody can see is a filter nobody can undo. */
+    it('opens itself when a facet is selected, and refuses to fold while one is', async () => {
+      canvas.toggleTag('urgent');
+      await fixture.whenStable();
+
+      expect(maybeChild(FacetsPanelComponent)).not.toBeNull();
+      expect(toggle().disabled).toBe(true);
+
+      toggle().click();
+      await fixture.whenStable();
+
+      expect(maybeChild(FacetsPanelComponent)).not.toBeNull();
+    });
+
+    it('counts what is selected on the trigger', async () => {
+      canvas.toggleTag('urgent');
+      canvas.toggleLanguage('sql');
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.querySelector('[data-testid="facets-count"]').textContent.trim()).toBe(
+        '2',
+      );
+    });
   });
 
   describe('descending into a folder', () => {
