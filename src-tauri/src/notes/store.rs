@@ -1,4 +1,5 @@
 pub mod related;
+pub mod revisions;
 pub mod trash;
 
 use std::collections::BTreeMap;
@@ -428,6 +429,23 @@ pub fn update(
         let before = note.clone();
         patch.apply(&mut note, now);
 
+        // ⚠️ Before the update and inside the same transaction: what is worth keeping is
+        // the body as it **was**. Snippets only — a checklist's items live in
+        // `note_items`, a second table to snapshot and a two-step restore, deliberately
+        // out of this first version.
+        //
+        // ⚠️ And never an empty one. Creating a note writes nothing until the first change
+        // worth keeping, and that write is the **title**: the body arrives as a second
+        // update, replacing the empty string the row was born with. Without this, every
+        // note came out of its first editing session already carrying a revision of
+        // nothing.
+        if before.kind == crate::notes::checklist::NoteKind::Snippet
+            && note.content != before.content
+            && !before.content.is_empty()
+        {
+            revisions::record(connection, vault, &note.id, &before.content, now)?;
+        }
+
         let row = NoteRow::seal(&note, vault)?;
         let moved = |changed: bool, value: &String| changed.then(|| value.clone());
         let lifecycle_moved = note.lifecycle != before.lifecycle;
@@ -456,6 +474,40 @@ pub fn update(
         if patch.items.is_some() {
             related::replace_items(connection, vault, &note.id, &note.items)?;
         }
+
+        Ok(note)
+    })
+}
+
+/// Puts a kept body back, keeping the one it replaces.
+///
+/// ⚠️ `updated_at` is not touched: putting something back is not editing it, and the
+/// canvas sorts on that column — the same line `restore`, `restore_placements` and
+/// `untag_many` already hold.
+pub fn restore_revision(
+    connection: &mut Library,
+    id: &str,
+    revision_id: &str,
+    now: DateTime<Utc>,
+) -> Result<Note, StorageError> {
+    connection.transaction(|connection, vault| {
+        let Some(mut note) = find(connection, vault, id)? else {
+            return Err(StorageError::NoteNotFound(id.to_string()));
+        };
+
+        let Some(content) = revisions::content_of(connection, vault, id, revision_id)? else {
+            return Err(StorageError::NoteNotFound(revision_id.to_string()));
+        };
+
+        // ⚠️ The body being replaced is kept first, so a restore is as undoable as the
+        // edit that made it necessary.
+        revisions::record(connection, vault, id, &note.content, now)?;
+
+        diesel::update(notes::table.find(id))
+            .set(notes::content.eq(vault.seal(&content)?))
+            .execute(connection)?;
+
+        note.content = content;
 
         Ok(note)
     })

@@ -259,7 +259,9 @@
     "fileFailed": "The note could not be filed.",
     "boardArrangeFailed": "The board could not be tidied up.",
     "backupsListFailed": "The backup copies could not be read.",
-    "backupRestoreFailed": "That copy could not be restored. The library was left in place."
+    "backupRestoreFailed": "That copy could not be restored. The library was left in place.",
+    "revisionsListFailed": "The history of this note could not be read.",
+    "revisionRestoreFailed": "That version could not be restored."
   },
   "tray": {
     "open": "Open {{app}}",
@@ -687,5 +689,11 @@
     "confirmRestore": "Replace the library",
     "restoring": "Replacing…",
     "restored": "Library restored. The previous one is in {{path}}."
+  },
+  "revisions": {
+    "title": "{count, plural, one {History (# version)} other {History (# versions)}}",
+    "characters": "{count, plural, one {# character} other {# characters}}",
+    "restore": "Restore",
+    "note": "Restoring keeps the body it replaces first, so you can go back. Only a snippet’s body is kept, the last twenty, and it does not travel with an export."
   }
 }

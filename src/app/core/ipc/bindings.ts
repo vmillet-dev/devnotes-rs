@@ -20,6 +20,25 @@ export const commands = {
 	seedSamples: (spaceName: string, folders: string[], notes: SampleNote[]) => typedError<Space, AppError>(__TAURI_INVOKE("seed_samples", { spaceName, folders, notes })),
 	updateNote: (id: string, patch: NotePatch) => typedError<DisplayNote, AppError>(__TAURI_INVOKE("update_note", { id, patch })),
 	/**
+	 *  The bodies kept beside a note, newest first.
+	 * 
+	 *  ⚠️ Metadata only: instants and sizes, never the bodies themselves. Twenty of them is
+	 *  what makes this table big, and a list that carried them would send the whole history
+	 *  across to draw twenty dates.
+	 */
+	listRevisions: (id: string) => typedError<Revision[], AppError>(__TAURI_INVOKE("list_revisions", { id })),
+	/**
+	 *  Puts a kept body back on the note.
+	 * 
+	 *  ⚠️ `updated_at` is **not** touched. Putting something back is not editing it — the
+	 *  same line `restore_notes`, `move_notes_back`, `untag_notes` and
+	 *  `set_placeholder_values` already hold — and the canvas sorts on that column.
+	 * 
+	 *  ⚠️ The body being replaced is itself kept first, so a restore is as undoable as the
+	 *  edit that made it necessary.
+	 */
+	restoreRevision: (id: string, revisionId: string) => typedError<DisplayNote, AppError>(__TAURI_INVOKE("restore_revision", { id, revisionId })),
+	/**
 	 *  Moves to the trash: the note comes back through [`restore_notes`] for
 	 *  [`trash::RETENTION`].
 	 */
@@ -707,6 +726,19 @@ export type Placeholder = {
 	 *  being erased.
 	 */
 	value: string,
+};
+
+/**
+ *  One kept body, as the panel lists it.
+ * 
+ *  ⚠️ Metadata only. The bodies are what makes this table big, and a list that carried
+ *  twenty of them would send the whole history across to draw twenty dates.
+ */
+export type Revision = {
+	id: string,
+	takenAt: string,
+	/**  So a row can say how much a version held without carrying it. */
+	characters: number,
 };
 
 /**

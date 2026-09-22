@@ -259,7 +259,9 @@
     "fileFailed": "La note n’a pas pu être rangée.",
     "boardArrangeFailed": "Le tableau n’a pas pu être rangé.",
     "backupsListFailed": "Impossible de lire les copies de sauvegarde.",
-    "backupRestoreFailed": "Impossible de restaurer cette copie. La bibliothèque est restée en place."
+    "backupRestoreFailed": "Impossible de restaurer cette copie. La bibliothèque est restée en place.",
+    "revisionsListFailed": "Impossible de lire l'historique de cette note.",
+    "revisionRestoreFailed": "Impossible de rétablir cette version."
   },
   "tray": {
     "open": "Ouvrir {{app}}",
@@ -687,5 +689,11 @@
     "confirmRestore": "Remplacer la bibliothèque",
     "restoring": "Remplacement…",
     "restored": "Bibliothèque restaurée. La précédente est dans {{path}}."
+  },
+  "revisions": {
+    "title": "{count, plural, one {Historique (# version)} other {Historique (# versions)}}",
+    "characters": "{count, plural, one {# caractère} other {# caractères}}",
+    "restore": "Rétablir",
+    "note": "Rétablir garde d'abord le corps qu'il remplace : vous pouvez revenir en arrière. Seul le corps des snippets est gardé, les vingt derniers, et il ne part pas dans les exports."
   }
 }

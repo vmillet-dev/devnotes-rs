@@ -1,5 +1,6 @@
 import { guard } from './fail-next';
 import { NotesRepository } from '@core/data/notes.repository';
+import { Revision } from '@core/model/revision.model';
 import {
   Note,
   NoteDraft,
@@ -136,9 +137,50 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
       if (!existing) {
         throw new Error(`Unknown note: ${id}`);
       }
+      // ⚠️ The body **before** the edit, like the real one: the version that worked —
+      // and never an empty one, which is what a note is born with.
+      if (patch.content !== undefined && patch.content !== existing.content && existing.content !== '') {
+        this.history.set(id, [
+          { id: `r-${++this.nextRevision}`, takenAt: new Date(), characters: existing.content.length },
+          ...(this.history.get(id) ?? []),
+        ]);
+        this.bodies.set(`r-${this.nextRevision}`, existing.content);
+      }
       const updated: Note = { ...existing, ...patch, updatedAt: new Date() };
       this.notes = this.notes.map((note) => (note.id === id ? updated : note));
       return updated;
+    });
+  }
+
+  private readonly history = new Map<string, readonly Revision[]>();
+  private readonly bodies = new Map<string, string>();
+  private nextRevision = 0;
+
+  listRevisions(id: string): Promise<readonly Revision[]> {
+    return guard(this, () => this.history.get(id) ?? []);
+  }
+
+  /** ⚠️ `updatedAt` is left alone, like the real one: putting back is not editing. */
+  restoreRevision(id: string, revisionId: string): Promise<Note> {
+    return guard(this, () => {
+      const existing = this.notes.find((note) => note.id === id);
+      if (!existing) {
+        throw new Error(`Unknown note: ${id}`);
+      }
+      const content = this.bodies.get(revisionId);
+      if (content === undefined) {
+        throw new Error(`Unknown revision: ${revisionId}`);
+      }
+
+      this.history.set(id, [
+        { id: `r-${++this.nextRevision}`, takenAt: new Date(), characters: existing.content.length },
+        ...(this.history.get(id) ?? []),
+      ]);
+      this.bodies.set(`r-${this.nextRevision}`, existing.content);
+
+      const restored: Note = { ...existing, content };
+      this.notes = this.notes.map((note) => (note.id === id ? restored : note));
+      return restored;
     });
   }
 

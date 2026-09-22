@@ -232,6 +232,20 @@ export class NotesStore {
     }
   }
 
+  /**
+   * Takes the row a write elsewhere produced, when it is the one on screen.
+   *
+   * ⚠️ The editor's body draft is re-seeded from `selectedNote`, so putting a revision
+   * back has to reach here: without it the field went on showing the version that had
+   * just been replaced, and the commit on close wrote it straight back. The restore undid
+   * itself.
+   */
+  adoptRestored(note: Note): void {
+    if (this._selectedNote()?.id !== note.id) return;
+
+    this._selectedNote.set(note);
+  }
+
   /** A draft still empty on close is abandoned, not saved. */
   closeOverlay(): void {
     this.discardDraft();
