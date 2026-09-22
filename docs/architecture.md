@@ -370,10 +370,47 @@ that imports highlight.js.
   format with no `.lang-*` is valid CSS and simply draws bare text, which is how six of the
   nineteen ended up with no badge at all. `scripts/language-hues.test.mjs` is what catches it
   now, by reading the enum and the stylesheet off disk. A detection heuristic in
-  `language::from_content` is optional, but the **order** is not: the compiled languages are
-  tried before TypeScript and JavaScript, which claim `=>` and `const` and would otherwise
-  take a Rust match arm or a C# lambda for their own; PHP is tried before the markup check,
-  which reads `<?php` as a processing instruction.
+  `language::from_content` is optional, and it is **weights** now rather than an order —
+  see below.
+
+**Detection scores, and can say it does not know.** `from_content` guessed by _first match
+wins_, down a hand-ordered chain of `if`s, and the order **was** the priority: a Rust
+snippet carrying a match arm came back `js`, because `is_javascript` matched `=>` anywhere
+in the text and sat near the end of the chain — which made JavaScript the default answer
+rather than an answer. Fixing that meant finding the right slot in a list, and the next
+language would need someone to find one again.
+
+Every language scores itself and the highest score wins. Three weights and no more:
+`SIGNATURE` (nothing else writes it), `STRONG` (strongly associated, occasionally shared),
+`WEAK` (many languages write it). A scale with ten steps would be the same invisible
+ordering written differently — the point is that a marker declares how much it _proves_.
+
+⚠️ The two facts the old order encoded are weights rather than positions now: `<?php` is a
+signature, so it outscores the markup shape its `<` also earns; and Rust's `println!` is a
+signature where JavaScript's `=>` is the weakest marker in the file.
+
+⚠️ **It can abstain, and that is a behaviour change.** Below `MIN_CONFIDENCE` — one weak
+marker — or on a **tie**, the answer is `txt`. `class Note { }` used to come back `js` and
+is left alone now: it is written the same way in six of these languages, and a wrong answer
+costs more than none, since it colours the body, badges the card and files the note under a
+facet in the rail. Some notes that were coloured before are not any more.
+
+⚠️ `score_typescript` deliberately does **not** inherit JavaScript's markers: inheriting
+them would make TypeScript score at least as much as JavaScript on every file, and a tie is
+no answer.
+
+⚠️ **`src-tauri/tests/corpus/` is what says whether this is better rather than differently
+wrong.** One file per case, named `<language>[-<variant>].txt`, read from disk and asserted
+in bulk — adding a case is adding a file. It earned its keep immediately: CSS's "a selector
+and a declaration" scored a signature on `export interface Note {` with `id: string;` inside
+it, **and** on PHP's `foreach (…) {` with an `echo …;` inside it, so both tied at six and
+came back as prose. That shape is strong evidence now, not proof; a unit or a custom property
+is what makes it a stylesheet.
+
+⚠️ The languages still absent — C++, Kotlin, Swift, Ruby, Dockerfile, PowerShell and the
+rest — were deliberately **not** added in the same pass. Each is five edits of its own, and
+the whole point of the change is that adding one is no longer a slot to find by hand.
+
 - **`ignoreIllegals` is on.** A note is free text, often a fragment that does not parse end to
   end; without it a truncated JSON snippet would throw instead of rendering.
 - **Output is re-split into lines** by `splitHighlightedLines`. highlight.js colours the whole
