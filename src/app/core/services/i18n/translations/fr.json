@@ -85,7 +85,11 @@
         "snippets": "Snippets",
         "startHere": "Prise en main"
       }
-    }
+    },
+    "openNote": "Ouvrir",
+    "copy": "Copier",
+    "fileInto": "Ranger dans",
+    "noFolder": "Aucun dossier"
   },
   "filters": {
     "groupLabel": "Filtrer les notes",

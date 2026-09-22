@@ -15,6 +15,7 @@ import { Note } from '@core/model/note.model';
 import { NoteSelectionStore } from '@core/state/note-selection.store';
 import { NotesStore } from '@core/state/notes.store';
 import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
+import { FoldersStore } from '@core/state/folders.store';
 import { SpacesStore } from '@core/state/spaces.store';
 import { TranslationRef } from '@core/services/i18n/translation-ref.model';
 import { ClockService } from '@core/services/time/clock.service';
@@ -73,6 +74,13 @@ export class NoteCardComponent {
   private readonly fill = inject(PlaceholderFillStore);
 
   protected readonly spaces = inject(SpacesStore);
+  private readonly folders = inject(FoldersStore);
+
+  /** ⚠️ The note's **own** space, not the active one: a card on "all spaces" belongs to a
+   *  space of its own, and offering another one's folders would file it nowhere. */
+  protected readonly foldersOfSpace = computed(() =>
+    this.folders.allFolders().filter((folder) => folder.spaceId === this.note().spaceId),
+  );
 
   readonly note = input.required<Note>();
 
@@ -230,6 +238,25 @@ export class NoteCardComponent {
 
   protected onMove(spaceId: string): void {
     void this.notes.moveNote(this.note().id, spaceId);
+  }
+
+  /** ⚠️ A batch of one, through the same command the selection bar takes. */
+  protected onFile(folderId: string | null): void {
+    void this.notes.fileNote(this.note().id, folderId);
+  }
+
+  protected onTogglePin(): void {
+    void this.notes.togglePinned(this.note().id);
+  }
+
+  /** The whole rule — the fields form, a todo list's Markdown — lives in the store. */
+  protected onCopy(): void {
+    void this.fill.copyNote(this.note());
+  }
+
+  /** ⚠️ Through the same activation the click surface emits, so the page arbitrates once. */
+  protected onOpenFromMenu(): void {
+    this.opened.emit({ noteId: this.note().id, toggleChecked: false, extendRange: false });
   }
 
   protected onDelete(): void {

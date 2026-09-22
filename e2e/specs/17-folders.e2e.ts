@@ -1,6 +1,7 @@
-import { expect } from '@wdio/globals';
+import { browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
+import { editor } from '../pageobjects/editor.page.js';
 import { crumb, folders, selectionBar, spaces } from '../pageobjects/overlays.page.js';
 import { eventually, reloadCanvas, testid, waitForCanvas } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
@@ -247,5 +248,136 @@ describe('Folders', () => {
     expect(view.sections[0]?.notes[0]?.spaceId).toBe(homeId);
 
     await reloadInHomeSpace();
+  });
+
+  /**
+   * A note's properties used to be spread over four surfaces, and none of them was
+   * complete: filing one from the date view took three clicks through the selection bar,
+   * and pinning with the mouse took a full-screen modal for a boolean with its own chip in
+   * the header.
+   */
+  describe('the two surfaces about one note', () => {
+    let folderId = '';
+    const title = 'Sauvegarde nocturne';
+
+    before(async () => {
+      folderId = (await bridge.createFolder({ spaceId: homeId, name: 'Exploitation' })).id;
+      await bridge.createNote(draft({ spaceId: homeId, title }));
+      await reloadInHomeSpace();
+      await canvas.waitForCard(title);
+    });
+
+    it('offers everything a note can be told to do, from the card', async () => {
+      const entries = await canvas.cardMenuEntries(title);
+      await browser.keys('Escape');
+
+      expect(entries).toEqual(
+        expect.arrayContaining([
+          'note-card-open',
+          'note-card-pin',
+          'note-card-copy',
+          'note-card-file',
+          'note-card-move',
+          'note-card-delete',
+        ]),
+      );
+    });
+
+    /** ⚠️ One gesture, where the selection bar took three clicks and a fourth to clear. */
+    it('files a note into a folder from the card, in one gesture', async () => {
+      await canvas.fileNote(title, folderId);
+
+      const view = await eventually(
+        () => bridge.queryNotes(query({ search: title })),
+        (found) => found.sections[0]?.notes[0]?.folderId === folderId,
+        'the filing to reach the database',
+      );
+      expect(view.sections[0]?.notes[0]?.folderId).toBe(folderId);
+    });
+
+    it('takes it back out from the same menu', async () => {
+      await canvas.fileNote(title, null);
+
+      const view = await eventually(
+        () => bridge.queryNotes(query({ search: title })),
+        (found) => (found.sections[0]?.notes[0]?.folderId ?? null) === null,
+        'the unfiling to reach the database',
+      );
+      expect(view.sections[0]?.notes[0]?.folderId ?? null).toBeNull();
+    });
+
+    /** ⚠️ Three clicks and a full-screen modal, for a boolean, until now. */
+    it('pins with the mouse without opening anything', async () => {
+      await canvas.pinFromCardMenu(title);
+
+      const view = await eventually(
+        () => bridge.queryNotes(query({ search: title })),
+        (found) => found.sections[0]?.notes[0]?.pinned === true,
+        'the pin to reach the database',
+      );
+      expect(view.sections[0]?.notes[0]?.pinned).toBe(true);
+      await canvas.pinFromCardMenu(title);
+    });
+
+    /**
+     * ⚠️ The editor was the one surface about a single note that could not move it. A
+     * folder belongs to one space, so the two controls are shown together: moving the
+     * space clears the folder, and a folder control alone would lie about it.
+     */
+    it('files from the editor too, which could not move a note at all', async () => {
+      await canvas.openNote(title);
+      const before = await editor.placementLabel('folder');
+
+      await editor.place('folder', folderId);
+
+      const view = await eventually(
+        () => bridge.queryNotes(query({ search: title })),
+        (found) => found.sections[0]?.notes[0]?.folderId === folderId,
+        'the editor filing to reach the database',
+      );
+      expect(view.sections[0]?.notes[0]?.folderId).toBe(folderId);
+      // ⚠️ The name, not a translated "no folder": the suite switches language partway.
+      expect(before).not.toContain('Exploitation');
+      expect(await editor.placementLabel('folder')).toContain('Exploitation');
+      await editor.close();
+    });
+
+    /**
+     * ⚠️ This menu lives inside a dialog, unlike every other one in the application: the
+     * trigger lets Escape bubble on purpose, and the next listener up is the editor's own.
+     * One Escape closed the note along with the menu.
+     */
+    it('folds the placement menu on Escape without closing the note', async () => {
+      await canvas.openNote(title);
+      await $(testid('editor-placement-folder')).click();
+      await $(testid('editor-placement-option')).waitForExist({ timeout: 5_000 });
+
+      await browser.keys('Escape');
+
+      await $(testid('editor-placement-option')).waitForExist({ reverse: true, timeout: 5_000 });
+      expect(await editor.isOpen()).toBe(true);
+      await editor.close();
+    });
+
+    it('moves the note to another space from the editor, which clears its folder', async () => {
+      const elsewhere = await bridge.createSpace({ name: 'Ailleurs' });
+      // ⚠️ The bridge writes straight to the database, so the front end has never heard of
+      // that space: without this the menu it offers has no such entry to click.
+      await reloadInHomeSpace();
+      await canvas.openNote(title);
+
+      await editor.place('space', elsewhere.id);
+
+      const view = await eventually(
+        () => bridge.queryNotes(query({ search: title })),
+        (found) => found.sections[0]?.notes[0]?.spaceId === elsewhere.id,
+        'the move to reach the database',
+      );
+      expect(view.sections[0]?.notes[0]?.folderId ?? null).toBeNull();
+
+      await editor.close();
+      await bridge.deleteSpace(elsewhere.id, homeId);
+      await reloadInHomeSpace();
+    });
   });
 });

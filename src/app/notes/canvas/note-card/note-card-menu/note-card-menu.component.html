@@ -13,7 +13,80 @@
 </button>
 
 @if (menu.open()) {
-  <div appMenuPanel class="card-menu" data-testid="note-card-menu-panel">
+  <!-- ⚠️ The complete one. A note's properties used to be spread over four surfaces with
+       none of them complete: filing one from the date view took three clicks through the
+       selection bar, and pinning with the mouse took a full-screen modal for a boolean
+       that has its own filter chip in the header. -->
+  <div appMenuPanel class="card-menu" data-testid="note-card-menu-panel" [style]="panelStyle()">
+    <button
+      appMenuItem
+      type="button"
+      role="menuitem"
+      class="card-menu-item"
+      data-testid="note-card-open"
+      (click)="run(opened)"
+    >
+      <span aria-hidden="true">↗</span>
+      {{ 'notes.openNote' | transloco }}
+    </button>
+    <button
+      appMenuItem
+      type="button"
+      role="menuitem"
+      class="card-menu-item"
+      data-testid="note-card-pin"
+      (click)="run(pinToggled)"
+    >
+      <span aria-hidden="true">📌</span>
+      {{ (pinned() ? 'editor.pinned' : 'editor.pin') | transloco }}
+    </button>
+    <button
+      appMenuItem
+      type="button"
+      role="menuitem"
+      class="card-menu-item"
+      data-testid="note-card-copy"
+      (click)="run(copyRequested)"
+    >
+      <span aria-hidden="true">⧉</span>
+      {{ 'notes.copy' | transloco }}
+    </button>
+
+    <!-- ⚠️ A folder belongs to one space, so this list is the **current** space's and
+         moving the note elsewhere clears its folder. The two sections are shown together
+         for that reason: the second would otherwise lie about what the first just did. -->
+    @if (folders().length > 0 || currentFolderId() !== null) {
+      <p class="card-menu-title">{{ 'notes.fileInto' | transloco }}</p>
+      @if (currentFolderId() !== null) {
+        <button
+          appMenuItem
+          type="button"
+          role="menuitem"
+          class="card-menu-item"
+          data-testid="note-card-unfile"
+          (click)="file(null)"
+        >
+          {{ 'notes.noFolder' | transloco }}
+        </button>
+      }
+      @for (folder of fileTargets(); track folder.id) {
+        <button
+          appMenuItem
+          type="button"
+          role="menuitem"
+          class="card-menu-item"
+          data-testid="note-card-file"
+          [attr.data-folder-id]="folder.id"
+          (click)="file(folder.id)"
+        >
+          <i [class]="'menu-swatch is-' + folder.colour" aria-hidden="true"></i>
+          {{ folder.name }}
+        </button>
+      }
+    }
+
+    <!-- ⚠️ Flat, and it grows with the library: past a handful of spaces this wants the
+         command palette rather than a longer menu. -->
     @if (moveTargets().length > 0) {
       <p class="card-menu-title">{{ 'notes.moveToSpace' | transloco }}</p>
       @for (target of moveTargets(); track target.id) {
@@ -30,6 +103,7 @@
         </button>
       }
     }
+
     <button
       appMenuItem
       type="button"

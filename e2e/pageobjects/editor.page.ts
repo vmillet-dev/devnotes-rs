@@ -33,6 +33,18 @@ async function rowAt(selector: string, index: number) {
 }
 
 export const editor = {
+  /** Where the note is kept, which the editor could not change at all until #182. */
+  async place(kind: 'space' | 'folder', optionId: string | null): Promise<void> {
+    await $(testid(`editor-placement-${kind}`)).click();
+    const entry =
+      optionId === null
+        ? $(testid('editor-placement-none'))
+        : $(`${testid('editor-placement-option')}[data-option-id="${optionId}"]`);
+    await entry.click();
+  },
+
+  placementLabel: (kind: 'space' | 'folder') => $(testid(`editor-placement-${kind}`)).getText(),
+
   isOpen: () => $(testid('editor-title')).isExisting(),
 
   setTitle: (text: string) => typeAndCommit(testid('editor-title'), text),

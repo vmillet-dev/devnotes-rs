@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { Folder } from '@core/model/folder.model';
 import { Space } from '@core/model/space.model';
 import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
 import { NoteCardMenuComponent } from './note-card-menu.component';
@@ -8,6 +9,17 @@ const SPACES: readonly Space[] = [
   { id: 'work', name: 'Work', pinned: false },
   { id: 'personal', name: 'Personal', pinned: false },
   { id: 'archive', name: 'Archive', pinned: false },
+];
+
+const FOLDERS: readonly Folder[] = [
+  { id: 'perf', spaceId: 'work', name: 'Perf', colour: 'amber', createdAt: new Date('2026-01-01') },
+  {
+    id: 'migrations',
+    spaceId: 'work',
+    name: 'Migrations',
+    colour: 'blue',
+    createdAt: new Date('2026-01-02'),
+  },
 ];
 
 describe('NoteCardMenuComponent', () => {
@@ -22,7 +34,11 @@ describe('NoteCardMenuComponent', () => {
   }
 
   function moveItems(): HTMLButtonElement[] {
-    return items().filter((item) => !item.classList.contains('card-menu-delete'));
+    return [...fixture.nativeElement.querySelectorAll('[data-testid="note-card-move"]')];
+  }
+
+  function fileItems(): HTMLButtonElement[] {
+    return [...fixture.nativeElement.querySelectorAll('[data-testid="note-card-file"]')];
   }
 
   function deleteItem(): HTMLButtonElement {
@@ -92,6 +108,83 @@ describe('NoteCardMenuComponent', () => {
     expect(moveItems()).toHaveLength(0);
     expect(fixture.nativeElement.querySelector('.card-menu-title')).toBeNull();
     expect(deleteItem()).not.toBeNull();
+  });
+
+  /**
+   * ⚠️ The complete menu, which is the point: a note's properties used to be spread over
+   * four surfaces and none of them could do everything. Filing one from the date view took
+   * three clicks through the selection bar; pinning took a full-screen modal.
+   */
+  describe('the entries that used to be somewhere else', () => {
+    it('opens, pins and copies from here too', async () => {
+      const fired: string[] = [];
+      fixture.componentInstance.opened.subscribe(() => fired.push('open'));
+      fixture.componentInstance.pinToggled.subscribe(() => fired.push('pin'));
+      fixture.componentInstance.copyRequested.subscribe(() => fired.push('copy'));
+      await open();
+
+      for (const id of ['note-card-open', 'note-card-pin', 'note-card-copy']) {
+        fixture.nativeElement.querySelector(`[data-testid="${id}"]`).click();
+        await fixture.whenStable();
+        await open();
+      }
+
+      expect(fired).toEqual(['open', 'pin', 'copy']);
+    });
+
+    it('names the pin by what pressing it would do', async () => {
+      fixture.componentRef.setInput('pinned', true);
+      await open();
+
+      expect(fixture.nativeElement.querySelector('[data-testid="note-card-pin"]').textContent).toContain(
+        'Épinglée',
+      );
+    });
+
+    it('offers every folder of the space except the one it is in', async () => {
+      fixture.componentRef.setInput('folders', FOLDERS);
+      fixture.componentRef.setInput('currentFolderId', 'perf');
+      await open();
+
+      expect(fileItems().map((item) => item.textContent?.trim())).toEqual(['Migrations']);
+    });
+
+    /** ⚠️ Filing is a batch command of its own, so `null` is a real answer, not an absence. */
+    it('offers a way out of the folder only when there is one to leave', async () => {
+      fixture.componentRef.setInput('folders', FOLDERS);
+      await open();
+      expect(fixture.nativeElement.querySelector('[data-testid="note-card-unfile"]')).toBeNull();
+
+      await pressKey('Escape');
+      fixture.componentRef.setInput('currentFolderId', 'perf');
+      await open();
+
+      const filings: (string | null)[] = [];
+      fixture.componentInstance.fileRequested.subscribe((id) => filings.push(id));
+      fixture.nativeElement.querySelector('[data-testid="note-card-unfile"]').click();
+      await fixture.whenStable();
+
+      expect(filings).toEqual([null]);
+    });
+
+    it('emits the folder it was asked to file into, and closes', async () => {
+      fixture.componentRef.setInput('folders', FOLDERS);
+      const filings: (string | null)[] = [];
+      fixture.componentInstance.fileRequested.subscribe((id) => filings.push(id));
+      await open();
+
+      fileItems()[0].click();
+      await fixture.whenStable();
+
+      expect(filings).toEqual(['perf']);
+      expect(items()).toHaveLength(0);
+    });
+
+    it('draws no filing group at all for a space with no folder', async () => {
+      await open();
+
+      expect(fileItems()).toHaveLength(0);
+    });
   });
 
   it('asks for confirmation before emitting a deletion', async () => {

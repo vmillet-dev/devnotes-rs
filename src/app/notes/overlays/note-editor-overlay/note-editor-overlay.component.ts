@@ -16,6 +16,8 @@ import { FALLBACK_LANGUAGE, LANGUAGE_LABELS, LanguageTag, isLanguageTag } from '
 import { checklistProgress } from '@core/model/checklist.model';
 import { Note, NotePatch } from '@core/model/note.model';
 import { AttachmentsStore } from '@core/state/attachments.store';
+import { FoldersStore } from '@core/state/folders.store';
+import { SpacesStore } from '@core/state/spaces.store';
 import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
 import { ClockService } from '@core/services/time/clock.service';
@@ -27,6 +29,7 @@ import { ChecklistEditorComponent } from './checklist-editor/checklist-editor.co
 import { CopyButtonComponent } from '@notes/ui/copy-button/copy-button.component';
 import { LifecycleBadgeComponent } from './lifecycle-badge/lifecycle-badge.component';
 import { PlaceholderPanelComponent } from './placeholder-panel/placeholder-panel.component';
+import { PlacementMenuComponent, PlacementOption } from './placement-menu/placement-menu.component';
 import { TagPillComponent } from '@notes/ui/tag-pill/tag-pill.component';
 
 const TEXT_ENCODER = new TextEncoder();
@@ -72,6 +75,7 @@ function toDateInputValue(date: Date): string {
     TagPillComponent,
     LifecycleBadgeComponent,
     PlaceholderPanelComponent,
+    PlacementMenuComponent,
     CodeViewerComponent,
     TranslocoPipe,
   ],
@@ -85,6 +89,8 @@ export class NoteEditorOverlayComponent {
 
   /** Attachments and `{{field}}` filling have a write cycle of their own. */
   protected readonly attachments = inject(AttachmentsStore);
+  private readonly spaces = inject(SpacesStore);
+  private readonly folders = inject(FoldersStore);
   protected readonly fill = inject(PlaceholderFillStore);
 
   readonly note = input<Note | null>(null);
@@ -94,10 +100,31 @@ export class NoteEditorOverlayComponent {
   readonly closed = output<void>();
   /** One output for every field: whether a value moved is `NotesStore`'s call. */
   readonly patchRequested = output<NotePatch>();
+  /** ⚠️ Not a patch: filing goes through `file_notes`, which answers what it changed. */
+  readonly fileRequested = output<string | null>();
   readonly deleteRequested = output<void>();
   readonly placeholderValuesChanged = output<Record<string, string>>();
 
   protected readonly languageOptions = LANGUAGE_OPTIONS;
+
+  protected readonly spaceOptions = computed<readonly PlacementOption[]>(() =>
+    this.spaces.spaces().map((space) => ({ id: space.id, name: space.name })),
+  );
+
+  /** ⚠️ The note's **own** space, not the active one: a note open from "all spaces"
+   *  belongs to a space of its own, and another one's folders would file it nowhere. */
+  protected onSpaceChosen(spaceId: string | null): void {
+    // A note always has a space: the menu carries no "none" entry, so this cannot be null.
+    if (spaceId !== null) this.patchRequested.emit({ spaceId });
+  }
+
+  protected readonly folderOptions = computed<readonly PlacementOption[]>(() => {
+    const spaceId = this.note()?.spaceId;
+    return this.folders
+      .allFolders()
+      .filter((folder) => folder.spaceId === spaceId)
+      .map((folder) => ({ id: folder.id, name: folder.name, colour: folder.colour }));
+  });
 
   /**
    * ⚠️ The session, not the note's id. Committing the first field of a new note

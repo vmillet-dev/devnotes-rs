@@ -1,0 +1,81 @@
+@use 'mixins' as *;
+
+:host {
+  position: relative;
+  display: inline-flex;
+}
+
+.placement-trigger {
+  @include unstyled-control;
+  @include hit-target;
+  @include surface(var(--bg-2), 7px);
+  @include focus-ring;
+  gap: 5px;
+  max-width: 190px;
+  padding: 4px 8px;
+  font-size: 11.5px;
+  color: var(--text-1);
+  cursor: pointer;
+
+  &:hover {
+    @include accent-state;
+  }
+}
+
+.placement-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.placement-caret {
+  flex-shrink: 0;
+  font-size: 9px;
+  color: var(--text-2);
+}
+
+.placement-menu {
+  @include surface(var(--bg-2), 8px);
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 10;
+  min-width: 180px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 4px;
+  box-shadow: var(--shadow-dropdown);
+}
+
+.placement-item {
+  @include unstyled-control;
+  @include hit-target;
+  @include focus-ring(-2px);
+  gap: 6px;
+  width: 100%;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-1);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--bg-3);
+    color: var(--text-0);
+  }
+
+  &.on {
+    color: var(--amber-text);
+  }
+}
+
+// The same square swatch the card's folder chip carries.
+.placement-swatch {
+  @include folder-hues;
+
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--folder-hue);
+}
