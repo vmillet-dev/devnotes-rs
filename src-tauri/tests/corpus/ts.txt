@@ -1,0 +1,9 @@
+export interface Note {
+  id: string;
+  title: string;
+  pinned: boolean;
+}
+
+export function untitled(note: Note): string {
+  return note.title || 'Sans titre';
+}

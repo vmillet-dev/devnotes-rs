@@ -1,0 +1,6 @@
+# Runbook
+
+## Avant de commencer
+
+- Vérifier les [sauvegardes](https://example.test/backups)
+- Prévenir le support

@@ -1,0 +1,4 @@
+<configuration>
+  <appender name="console"/>
+  <root level="info"/>
+</configuration>

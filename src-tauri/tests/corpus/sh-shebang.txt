@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+rsync -a ./dist/ deploy@host:/srv/app/

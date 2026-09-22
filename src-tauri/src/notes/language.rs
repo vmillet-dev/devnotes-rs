@@ -57,114 +57,169 @@ pub fn after_patch(before: &Note, patch: &NotePatch) -> Option<Language> {
     Some(from_content(content))
 }
 
-/// ⚠️ The order of attempts runs from the most discriminating signal to the vaguest.
-pub fn from_content(content: &str) -> Language {
-    let trimmed = content.trim();
-    if trimmed.is_empty() {
-        return Language::default();
-    }
+/// What one marker is worth.
+///
+/// ⚠️ Three tiers and no more. The weights are what replaced a hand-ordered chain of `if`s,
+/// and a scale with ten steps would be the same invisible ordering written differently —
+/// the point is that a marker declares how much it proves, not where it sits in a list.
+const SIGNATURE: u32 = 6;
+const STRONG: u32 = 3;
+const WEAK: u32 = 1;
 
-    if trimmed.starts_with("#!") {
-        return Language::Sh;
-    }
-    if is_json(trimmed) {
-        return Language::Json;
-    }
+/// Below this, the highest score is not an answer.
+///
+/// ⚠️ **One weak marker is not an answer; two are.** Detection could not abstain before:
+/// every snippet got a language, and a wrong one is worse than none — it colours the body,
+/// puts a badge on the card and files the note under a facet in the rail. `txt` says
+/// nothing, which is honest. ⚠️ A tie is no answer either: two languages that prove
+/// themselves equally have proved nothing.
+const MIN_CONFIDENCE: u32 = 2;
 
-    let lower = trimmed.to_lowercase();
-    // ⚠️ Before the markup check, which reads `<?php` as an XML processing instruction.
-    if lower.starts_with("<?php") {
-        return Language::Php;
-    }
-    if let Some(markup) = markup_kind(&lower) {
-        return markup;
-    }
-    if is_sql(&lower) {
-        return Language::Sql;
-    }
-    if is_toml(trimmed) {
-        return Language::Toml;
-    }
-    if is_python(trimmed) {
-        return Language::Py;
-    }
-    // ⚠️ All five before TypeScript and JavaScript, which claim `=>` and `const`.
-    if is_go(trimmed) {
-        return Language::Go;
-    }
-    if is_rust(trimmed) {
-        return Language::Rs;
-    }
-    if is_java(trimmed) {
-        return Language::Java;
-    }
-    if is_csharp(trimmed) {
-        return Language::Cs;
-    }
-    if is_c(trimmed) {
-        return Language::C;
-    }
-    if is_typescript(trimmed) {
-        return Language::Ts;
-    }
-    if is_javascript(trimmed) {
-        return Language::Js;
-    }
-    if is_css(trimmed) {
-        return Language::Css;
-    }
-    if is_yaml(trimmed) {
-        return Language::Yml;
-    }
-    if is_markdown(trimmed) {
-        return Language::Md;
-    }
-    if is_shell(trimmed) {
-        return Language::Sh;
-    }
-
-    Language::default()
+/// The content in the shapes the markers read it in, computed once: `to_lowercase` inside
+/// every predicate was the same allocation eighteen times over.
+struct Sample<'a> {
+    trimmed: &'a str,
+    lower: String,
+    lines: Vec<&'a str>,
 }
 
-fn any_line(content: &str, predicate: impl Fn(&str) -> bool) -> bool {
-    content.lines().map(str::trim).any(predicate)
+impl<'a> Sample<'a> {
+    fn of(content: &'a str) -> Self {
+        let trimmed = content.trim();
+        Self {
+            trimmed,
+            lower: trimmed.to_lowercase(),
+            lines: trimmed.lines().map(str::trim).collect(),
+        }
+    }
+
+    fn has(&self, needle: &str) -> bool {
+        self.trimmed.contains(needle)
+    }
+
+    fn any_line(&self, predicate: impl Fn(&str) -> bool) -> bool {
+        self.lines.iter().copied().any(predicate)
+    }
+
+    fn line_starts_with_any(&self, prefixes: &[&str]) -> bool {
+        self.any_line(|line| starts_with_any(line, prefixes))
+    }
+}
+
+/// Adds a weight when a marker is present, which is the whole of the arithmetic.
+fn worth(weight: u32, present: bool) -> u32 {
+    if present { weight } else { 0 }
+}
+
+/// How much one language believes a sample is its own.
+type Scorer = fn(&Sample<'_>) -> u32;
+
+/// Every language that can be guessed at, each scoring itself.
+///
+/// ⚠️ The order of this table means nothing, which is the point of the rewrite: a language
+/// added to it needs no slot found by hand, only markers with honest weights.
+const SCORERS: [(Language, Scorer); 18] = [
+    (Language::Json, score_json),
+    (Language::Php, score_php),
+    (Language::Xml, score_xml),
+    (Language::Html, score_html),
+    (Language::Sql, score_sql),
+    (Language::Toml, score_toml),
+    (Language::Py, score_python),
+    (Language::Go, score_go),
+    (Language::Rs, score_rust),
+    (Language::Java, score_java),
+    (Language::Cs, score_csharp),
+    (Language::C, score_c),
+    (Language::Ts, score_typescript),
+    (Language::Js, score_javascript),
+    (Language::Css, score_css),
+    (Language::Yml, score_yaml),
+    (Language::Md, score_markdown),
+    (Language::Sh, score_shell),
+];
+
+/// The best-scoring language, or `txt` when nothing proved itself.
+///
+/// ⚠️ It **scores** where it used to try predicates in a hand-written order, and that order
+/// *was* the priority: a Rust snippet carrying a match arm came back `js`, because
+/// `is_javascript` matched `=>` anywhere in the text. The two facts the order encoded are
+/// weights now rather than positions — `<?php` outweighs the `<` that made it look like an
+/// XML processing instruction, and Rust's `println!` outweighs JavaScript's `=>`.
+pub fn from_content(content: &str) -> Language {
+    let sample = Sample::of(content);
+    if sample.trimmed.is_empty() {
+        return Language::default();
+    }
+    // A shebang settles the question on its own, whatever follows it.
+    if sample.trimmed.starts_with("#!") {
+        return Language::Sh;
+    }
+
+    let mut best = (Language::default(), 0);
+    let mut runner_up = 0;
+    for (language, score) in SCORERS {
+        let scored = score(&sample);
+        if scored > best.1 {
+            runner_up = best.1;
+            best = (language, scored);
+        } else if scored > runner_up {
+            runner_up = scored;
+        }
+    }
+
+    if best.1 < MIN_CONFIDENCE || best.1 == runner_up {
+        return Language::default();
+    }
+    best.0
 }
 
 fn starts_with_any(line: &str, prefixes: &[&str]) -> bool {
     prefixes.iter().any(|prefix| line.starts_with(prefix))
 }
 
-/// The quote rules out a code block whose brace is a function body's.
-fn is_json(content: &str) -> bool {
+/// ⚠️ Structural, and worth a signature: nothing else here is a quoted object or an array
+/// from its first character to its last.
+fn score_json(sample: &Sample<'_>) -> u32 {
+    let content = sample.trimmed;
     let wrapped = (content.starts_with('{') && content.ends_with('}'))
         || (content.starts_with('[') && content.ends_with(']'));
 
-    wrapped && (content.contains('"') || content.starts_with('['))
+    worth(
+        SIGNATURE,
+        wrapped && (content.contains('"') || content.starts_with('[')),
+    )
 }
 
-fn markup_kind(lower: &str) -> Option<Language> {
-    const HTML_TAGS: [&str; 8] = [
+/// ⚠️ A signature, which is what keeps it ahead of the markup score its `<` also earns.
+/// Ordering used to do that job, and a position in a list is not a reason.
+fn score_php(sample: &Sample<'_>) -> u32 {
+    worth(SIGNATURE, sample.lower.starts_with("<?php")) + worth(WEAK, sample.has("->"))
+}
+
+/// ⚠️ **The generic shape is XML's alone**, and HTML scores only what is its own. Sharing it
+/// made the two tie on every plain document — and a tie is `txt`, so a perfectly ordinary
+/// `<config>…</config>` came back as prose.
+fn score_xml(sample: &Sample<'_>) -> u32 {
+    let looks_like_markup =
+        sample.lower.starts_with('<') && sample.trimmed.ends_with('>') && sample.has("</");
+
+    worth(STRONG, looks_like_markup) + worth(SIGNATURE, sample.lower.starts_with("<?xml"))
+}
+
+/// ⚠️ Its tags are a **signature**: nothing else in this file writes `<div` or `<table`,
+/// and they have to outweigh the markup shape XML earns on the very same document.
+fn score_html(sample: &Sample<'_>) -> u32 {
+    const TAGS: [&str; 8] = [
         "<div", "<span", "<p>", "<body", "<head", "<a ", "<ul", "<table",
     ];
 
-    if !lower.starts_with('<') {
-        return None;
-    }
-    if lower.starts_with("<?xml") {
-        return Some(Language::Xml);
-    }
-    if lower.starts_with("<!doctype html") || lower.starts_with("<html") {
-        return Some(Language::Html);
-    }
+    let doctype = sample.lower.starts_with("<!doctype html") || sample.lower.starts_with("<html");
 
-    if HTML_TAGS.iter().any(|tag| lower.contains(tag)) {
-        Some(Language::Html)
-    } else {
-        Some(Language::Xml)
-    }
+    worth(SIGNATURE, doctype) + worth(SIGNATURE, TAGS.iter().any(|tag| sample.lower.contains(tag)))
 }
 
-fn is_sql(lower: &str) -> bool {
+fn score_sql(sample: &Sample<'_>) -> u32 {
     const STATEMENTS: [&str; 8] = [
         "select ",
         "insert into",
@@ -176,12 +231,19 @@ fn is_sql(lower: &str) -> bool {
         "with ",
     ];
 
-    starts_with_any(lower, &STATEMENTS)
+    worth(STRONG, starts_with_any(&sample.lower, &STATEMENTS))
+        + worth(
+            WEAK,
+            sample.lower.contains(" from ") || sample.lower.contains(" where "),
+        )
 }
 
 /// A section and an assignment: `[…]` alone could be an array on its own line.
-fn is_toml(content: &str) -> bool {
-    any_line(content, is_toml_section) && any_line(content, is_assignment)
+fn score_toml(sample: &Sample<'_>) -> u32 {
+    worth(
+        SIGNATURE,
+        sample.any_line(is_toml_section) && sample.any_line(is_assignment),
+    )
 }
 
 fn is_toml_section(line: &str) -> bool {
@@ -205,67 +267,110 @@ fn is_identifier_char(c: char) -> bool {
 }
 
 /// `class` needs its trailing colon: without it, this is TypeScript's.
-fn is_python(content: &str) -> bool {
-    content.contains("__name__")
-        || any_line(content, |line| {
-            starts_with_any(line, &["def ", "async def ", "elif "])
-                || (line.starts_with("class ") && line.ends_with(':'))
-                || (line.starts_with("from ") && line.contains(" import "))
-        })
+fn score_python(sample: &Sample<'_>) -> u32 {
+    worth(SIGNATURE, sample.has("__name__"))
+        + worth(
+            STRONG,
+            sample.line_starts_with_any(&["def ", "async def ", "elif "]),
+        )
+        + worth(
+            STRONG,
+            sample.any_line(|line| line.starts_with("class ") && line.ends_with(':')),
+        )
+        + worth(
+            STRONG,
+            sample.any_line(|line| line.starts_with("from ") && line.contains(" import ")),
+        )
+        + worth(WEAK, sample.has("self."))
 }
 
-/// `func` and `package main` are Go's alone; `import (` is its grouped form.
-fn is_go(content: &str) -> bool {
-    content.contains("fmt.Print")
-        || any_line(content, |line| {
-            starts_with_any(line, &["func ", "package main", "import ("])
-        })
+/// `fmt.Print` and `package main` are Go's alone; `import (` is its grouped form.
+fn score_go(sample: &Sample<'_>) -> u32 {
+    worth(SIGNATURE, sample.has("fmt.Print"))
+        + worth(
+            STRONG,
+            sample.line_starts_with_any(&["func ", "package main", "import ("]),
+        )
+        + worth(WEAK, sample.has(":=") || sample.has("err != nil"))
 }
 
-/// Deliberately narrow: `enum`, `struct` and `trait` are shared with languages checked
-/// after this one, so only what Rust does not lend counts.
-fn is_rust(content: &str) -> bool {
-    content.contains("println!")
-        || content.contains("let mut ")
-        || any_line(content, |line| {
-            let line = line.strip_prefix("pub ").unwrap_or(line);
-            starts_with_any(line, &["fn ", "async fn ", "impl "])
-                || (line.starts_with("use ") && line.contains("::"))
-        })
+/// ⚠️ `struct`, `trait` and `enum` count now. They were deliberately given up when the chain
+/// decided by position — a heuristic weakened to protect the one after it — and weights are
+/// what stop that: a marker Rust shares with TypeScript is worth little, not nothing.
+fn score_rust(sample: &Sample<'_>) -> u32 {
+    worth(SIGNATURE, sample.has("println!") || sample.has("let mut "))
+        + worth(
+            STRONG,
+            sample.any_line(|line| {
+                let line = line.strip_prefix("pub ").unwrap_or(line);
+                starts_with_any(line, &["fn ", "async fn ", "impl "])
+            }),
+        )
+        + worth(
+            STRONG,
+            sample.any_line(|line| line.starts_with("use ") && line.contains("::")),
+        )
+        + worth(
+            WEAK,
+            sample.any_line(|line| {
+                let line = line.strip_prefix("pub ").unwrap_or(line);
+                starts_with_any(line, &["struct ", "trait ", "enum "])
+            }),
+        )
+        + worth(
+            WEAK,
+            sample.has("&str") || sample.has("Vec<") || sample.has("Option<"),
+        )
 }
 
 /// `public class` is left to neither this nor C#: both write it.
-fn is_java(content: &str) -> bool {
-    content.contains("System.out.print")
-        || content.contains("public static void main")
-        || any_line(content, |line| line.starts_with("import java"))
+fn score_java(sample: &Sample<'_>) -> u32 {
+    worth(
+        SIGNATURE,
+        sample.has("System.out.print") || sample.has("public static void main"),
+    ) + worth(
+        STRONG,
+        sample.any_line(|line| line.starts_with("import java")),
+    )
 }
 
-fn is_csharp(content: &str) -> bool {
-    content.contains("Console.Write")
-        || any_line(content, |line| {
-            starts_with_any(line, &["using System", "namespace "])
-        })
+fn score_csharp(sample: &Sample<'_>) -> u32 {
+    worth(SIGNATURE, sample.has("Console.Write"))
+        + worth(
+            STRONG,
+            sample.line_starts_with_any(&["using System", "namespace "]),
+        )
 }
 
 /// `#include` is the one marker nothing else here writes.
-fn is_c(content: &str) -> bool {
-    any_line(content, |line| line.starts_with("#include"))
-        || (content.contains("int main(") && content.contains("printf("))
+fn score_c(sample: &Sample<'_>) -> u32 {
+    worth(
+        SIGNATURE,
+        sample.any_line(|line| line.starts_with("#include")),
+    ) + worth(STRONG, sample.has("int main(") && sample.has("printf("))
 }
 
-fn is_typescript(content: &str) -> bool {
+/// ⚠️ Its own markers only, never JavaScript's. Inheriting them would make TypeScript score
+/// at least as much as JavaScript on every file, and a tie is no answer.
+fn score_typescript(sample: &Sample<'_>) -> u32 {
     const ANNOTATIONS: [&str; 4] = [": string", ": number", ": boolean", "implements "];
     const DECLARATIONS: [&str; 4] = ["interface ", "type ", "enum ", "declare "];
 
-    ANNOTATIONS.iter().any(|marker| content.contains(marker))
-        || any_line(content, |line| {
-            let line = line.strip_prefix("export ").unwrap_or(line);
-            starts_with_any(line, &DECLARATIONS)
-        })
+    worth(STRONG, ANNOTATIONS.iter().any(|marker| sample.has(marker)))
+        + worth(
+            STRONG,
+            sample.any_line(|line| {
+                let line = line.strip_prefix("export ").unwrap_or(line);
+                starts_with_any(line, &DECLARATIONS)
+            }),
+        )
 }
 
-fn is_javascript(content: &str) -> bool {
+/// ⚠️ `=>` is the greediest marker in this file — C++, Kotlin, Swift, Scala, Dart and
+/// anything with a lambda write it — so it is worth the least. It used to sit near the end
+/// of the chain for that reason, which made JavaScript the *default* answer rather than an
+/// answer.
+fn score_javascript(sample: &Sample<'_>) -> u32 {
     const KEYWORDS: [&str; 7] = [
         "function ",
         "const ",
@@ -276,42 +381,54 @@ fn is_javascript(content: &str) -> bool {
         "class ",
     ];
 
-    content.contains("=>")
-        || content.contains("console.log")
-        || content.contains("require(")
-        || any_line(content, |line| starts_with_any(line, &KEYWORDS))
+    worth(
+        SIGNATURE,
+        sample.has("console.log") || sample.has("require("),
+    ) + worth(WEAK, sample.has("=>"))
+        + worth(WEAK, sample.line_starts_with_any(&KEYWORDS))
 }
 
-/// A selector and a declaration: the brace alone would not tell a stylesheet from a
-/// function body.
-fn is_css(content: &str) -> bool {
-    if !content.contains('{') || !content.contains('}') {
-        return false;
+/// A selector and a declaration, plus something only a stylesheet writes.
+///
+/// ⚠️ The pair used to be worth a signature, and the corpus is what caught what that cost:
+/// `export interface Note {` is a "selector" ending in a brace, and `id: string;` is a
+/// "declaration" with a colon before a semicolon — so CSS scored six on TypeScript, and on
+/// PHP's `foreach (…) {` with an `echo …;` inside it. Two sixes are a tie, and a tie is
+/// `txt`: both came back as prose. The shape is strong evidence, not proof; a unit or a
+/// custom property is what makes it a stylesheet.
+fn score_css(sample: &Sample<'_>) -> u32 {
+    if !sample.has("{") || !sample.has("}") {
+        return 0;
     }
 
-    let has_declaration = any_line(content, |line| {
+    let has_declaration = sample.any_line(|line| {
         line.find(':')
             .zip(line.find(';'))
             .is_some_and(|(colon, semicolon)| colon < semicolon)
     });
-    let has_selector = any_line(content, |line| {
+    let has_selector = sample.any_line(|line| {
         line.ends_with('{')
             && line.chars().next().is_some_and(|c| {
                 c.is_ascii_alphabetic() || matches!(c, '.' | '#' | '@' | ':' | '*')
             })
     });
+    let stylesheet_only = sample.has("--")
+        || ["px;", "rem;", "%;", "px ", "em;", "vh;", "vw;", "fr;"]
+            .iter()
+            .any(|unit| sample.has(unit));
 
-    has_declaration && has_selector
+    worth(STRONG, has_declaration && has_selector) + worth(WEAK, stylesheet_only)
 }
 
-fn is_yaml(content: &str) -> bool {
-    // These belong to languages already ruled out above.
-    if content.contains(';') || content.contains('{') {
-        return false;
+fn score_yaml(sample: &Sample<'_>) -> u32 {
+    // These belong to languages that score on them instead.
+    if sample.has(";") || sample.has("{") {
+        return 0;
     }
 
-    content.starts_with("---")
-        || any_line(content, |line| line.starts_with("- ") || is_mapping(line))
+    worth(SIGNATURE, sample.trimmed.starts_with("---"))
+        + worth(STRONG, sample.any_line(is_mapping))
+        + worth(WEAK, sample.any_line(|line| line.starts_with("- ")))
 }
 
 /// The space required after the colon rules out a URL, whose `http://…` would otherwise
@@ -326,21 +443,26 @@ fn is_mapping(line: &str) -> bool {
         && (value.is_empty() || value.starts_with(' '))
 }
 
-fn is_markdown(content: &str) -> bool {
+fn score_markdown(sample: &Sample<'_>) -> u32 {
     const LINE_MARKERS: [&str; 5] = ["# ", "## ", "### ", "* ", "> "];
 
-    content.contains("```")
-        || content.contains("](")
-        || any_line(content, |line| starts_with_any(line, &LINE_MARKERS))
+    worth(SIGNATURE, sample.has("```"))
+        + worth(STRONG, sample.has("]("))
+        + worth(STRONG, sample.line_starts_with_any(&LINE_MARKERS))
 }
 
 /// Deliberately thin: a wide list would catch prose.
-fn is_shell(content: &str) -> bool {
+fn score_shell(sample: &Sample<'_>) -> u32 {
     const COMMANDS: [&str; 10] = [
         "echo ", "cd ", "ls ", "cat ", "grep ", "sudo ", "npm ", "git ", "docker ", "curl ",
     ];
 
-    any_line(content, |line| starts_with_any(line, &COMMANDS))
+    worth(STRONG, sample.line_starts_with_any(&COMMANDS))
+        + worth(
+            WEAK,
+            sample.any_line(|line| line.starts_with('$') || line.starts_with("./")),
+        )
+        + worth(WEAK, sample.has(" | ") || sample.has(" && "))
 }
 
 #[cfg(test)]
@@ -568,7 +690,15 @@ mod tests {
         assert_eq!(from_content("def run():\n    return 1"), Language::Py);
         assert_eq!(from_content("class Note:\n    pass"), Language::Py);
         assert_eq!(from_content("from os import path"), Language::Py);
-        assert_eq!(from_content("class Note { }"), Language::Js);
+    }
+
+    /// ⚠️ It used to answer `js`, and that was the whole complaint: `class Note { }` is
+    /// written the same way in Java, C#, PHP, Dart, TypeScript and JavaScript, so one weak
+    /// marker is not an answer. `txt` says nothing, which is what is true here.
+    #[test]
+    fn one_weak_marker_is_not_an_answer() {
+        assert_eq!(from_content("class Note { }"), Language::Txt);
+        assert_eq!(from_content("x => x + 1"), Language::Txt);
     }
 
     /// The five compiled languages are tried before TypeScript and JavaScript, which

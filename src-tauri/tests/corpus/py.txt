@@ -1,0 +1,10 @@
+import json
+
+
+def load(path):
+    with open(path) as handle:
+        return json.load(handle)
+
+
+if __name__ == "__main__":
+    print(load("notes.json"))
