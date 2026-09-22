@@ -573,6 +573,45 @@ export const board = {
       });
     }, offBoard),
 
+  /**
+   * The computed fill of the band a button draws, read **while** it is drawn, then thrown
+   * away with `pointercancel` so nothing is written. ⚠️ Computed, not the class: a
+   * declaration the browser dropped as invalid leaves the class on and the band empty.
+   */
+  bandFill: (button: 0 | 2): Promise<string> =>
+    browser.execute((pressed: number) => {
+      const surface = document.querySelector('[data-testid="board-surface"]');
+      if (!surface) throw new Error('no board surface');
+
+      const box = surface.getBoundingClientRect();
+      const send = (type: string, x: number, y: number) =>
+        surface.dispatchEvent(
+          new PointerEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            clientX: x,
+            clientY: y,
+            button: pressed,
+            pointerId: 1,
+          }),
+        );
+      send('pointerdown', box.left + 40, box.top + 3000);
+      send('pointermove', box.left + 300, box.top + 3200);
+
+      // ⚠️ Zoneless: the band is drawn on the next change detection, not by the dispatch.
+      return new Promise<string>((resolve) => {
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            const band = document.querySelector(
+              pressed === 2 ? '[data-testid="board-select-band"]' : '[data-testid="board-draw-band"]',
+            );
+            resolve(band ? getComputedStyle(band).backgroundColor : 'no band');
+            send('pointercancel', box.left + 300, box.top + 3200);
+          }),
+        );
+      });
+    }, button),
+
   /** Draws a band on the empty background, in surface coordinates. */
   async drawZone(at: { x: number; y: number; width: number; height: number }): Promise<void> {
     await browser.execute(

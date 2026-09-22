@@ -364,7 +364,7 @@ describe('Arranging the board', () => {
         (text) => /[1-9]/.test(text),
         'the band to fill the selection bar',
       );
-      expect(count).toMatch(/d/);
+      expect(count).toMatch(/\d/);
       await selectionBar.clear();
     });
 
@@ -385,7 +385,7 @@ describe('Arranging the board', () => {
         (text) => /[1-9]/.test(text),
         'the band to take the zone’s cards',
       );
-      expect(count).toMatch(/d/);
+      expect(count).toMatch(/\d/);
       await selectionBar.clear();
     });
 
@@ -396,6 +396,15 @@ describe('Arranging the board', () => {
       // pause is deliberately a duration.
       await browser.pause(800);
       expect(await selectionBar.bar().isExisting()).toBe(false);
+    });
+
+    /**
+     * ⚠️ `rgb(var(--amber-rgb) / 12%)` over a comma-separated variable is invalid, and the
+     * browser dropped it without a word: both bands were drawn as bare hairlines (#329).
+     */
+    it('fills both bands with the accent while they are drawn', async () => {
+      expect(await board.bandFill(2)).toMatch(/^rgba\(\d+, \d+, \d+, 0\.12\)$/);
+      expect(await board.bandFill(0)).toMatch(/^rgba\(\d+, \d+, \d+, 0\.08\)$/);
     });
 
     /** ⚠️ Or the browser's own menu opens at the end of every selection. */
@@ -504,7 +513,7 @@ describe('Arranging the board', () => {
     it('names what it will touch rather than warning about it', async () => {
       await $(testid('board-tidy-more')).click();
 
-      expect(await board.reorganiseLabel()).toMatch(/d/);
+      expect(await board.reorganiseLabel()).toMatch(/\d/);
       await browser.keys('Escape');
     });
 
