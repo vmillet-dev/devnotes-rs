@@ -349,12 +349,12 @@ describe('Folders', () => {
      */
     it('folds the placement menu on Escape without closing the note', async () => {
       await canvas.openNote(title);
-      await $(testid('editor-placement-folder')).click();
-      await $(testid('editor-placement-option')).waitForExist({ timeout: 5_000 });
+      await $(testid('choice-folder')).click();
+      await $(testid('choice-option')).waitForExist({ timeout: 5_000 });
 
       await browser.keys('Escape');
 
-      await $(testid('editor-placement-option')).waitForExist({ reverse: true, timeout: 5_000 });
+      await $(testid('choice-option')).waitForExist({ reverse: true, timeout: 5_000 });
       expect(await editor.isOpen()).toBe(true);
       await editor.close();
     });

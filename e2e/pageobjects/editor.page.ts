@@ -9,6 +9,8 @@ import {
   setField,
   toggleAndWait,
   waitForCanvas,
+  choiceLabel,
+  pickChoice,
   setNativeValue,
   submitFormOf,
   testid,
@@ -34,16 +36,9 @@ async function rowAt(selector: string, index: number) {
 
 export const editor = {
   /** Where the note is kept, which the editor could not change at all until #182. */
-  async place(kind: 'space' | 'folder', optionId: string | null): Promise<void> {
-    await $(testid(`editor-placement-${kind}`)).click();
-    const entry =
-      optionId === null
-        ? $(testid('editor-placement-none'))
-        : $(`${testid('editor-placement-option')}[data-option-id="${optionId}"]`);
-    await entry.click();
-  },
+  place: (kind: 'space' | 'folder', optionId: string | null) => pickChoice(kind, optionId),
 
-  placementLabel: (kind: 'space' | 'folder') => $(testid(`editor-placement-${kind}`)).getText(),
+  placementLabel: (kind: 'space' | 'folder') => choiceLabel(kind),
 
   isOpen: () => $(testid('editor-title')).isExisting(),
 
@@ -54,7 +49,7 @@ export const editor = {
   title: () => $(testid('editor-title')).getValue(),
   body: () => $(testid('editor-body')).getValue(),
 
-  setLanguage: (language: string) => setNativeValue(testid('editor-language'), language),
+  setLanguage: (language: string) => pickChoice('language', language),
 
   /** `yyyy-MM-dd`, which the editor converts to the end of the local day. */
   setDeadline: (isoDay: string) => setNativeValue(testid('editor-deadline'), isoDay),

@@ -20,7 +20,7 @@ describe('Preferences', () => {
   });
 
   it('applies the theme as it is chosen, with no confirmation step', async () => {
-    await settings.select(settings.control.theme, 'light');
+    await settings.setTheme('light');
 
     // Dark is the base because the preference lives in a file nothing can read before
     // Angular boots.
@@ -28,12 +28,12 @@ describe('Preferences', () => {
   });
 
   it('applies the density the same way', async () => {
-    await settings.select(settings.control.density, 'compact');
+    await settings.setDensity('compact');
     expect(await browser.$('html').getAttribute('data-density')).toBe('compact');
   });
 
   it('switches the interface language from the panel', async () => {
-    await settings.select(settings.control.locale, 'en');
+    await settings.setLocale('en');
     expect(await titlebar.activeLocale()).toBe('en');
   });
 
@@ -83,7 +83,7 @@ describe('Preferences', () => {
     );
     await fileMenu.openPreferences();
 
-    expect(await settings.locale().getValue()).toBe('fr');
+    expect(await settings.locale()).toContain('Français');
     await settings.close();
   });
 });

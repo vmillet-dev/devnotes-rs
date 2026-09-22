@@ -8,35 +8,28 @@
     'selection.count' | transloco: { count: count() }
   }}</span>
 
+  <!-- ⚠️ Menus, not fields. These are **commands**: they reset their own value after every
+       `change`, so a screen reader announced a combobox whose current value was "Ranger
+       dans" — a listbox where the rest of the application gives a menu. `naming: 'label'`
+       is what says a control names what it does rather than what is chosen. -->
   @if (spaces().length > 0) {
-    <select
-      #moveSelect
-      class="selection-move"
-      data-testid="selection-move"
-      [attr.aria-label]="'selection.moveTo' | transloco"
-      (change)="onMove(moveSelect.value); moveSelect.value = ''"
-    >
-      <option value="">{{ 'selection.moveTo' | transloco }}</option>
-      @for (space of spaces(); track space.id) {
-        <option [value]="space.id">{{ space.name }}</option>
-      }
-    </select>
+    <app-choice-menu
+      [kind]="'selection-move'"
+      [naming]="'label'"
+      [label]="'selection.moveTo' | transloco"
+      [options]="spaceChoices()"
+      (chosen)="onMove($event)"
+    />
   }
 
   @if (folders().length > 0) {
-    <select
-      #fileSelect
-      class="selection-move"
-      data-testid="selection-file"
-      [attr.aria-label]="'selection.fileInto' | transloco"
-      (change)="onFile(fileSelect.value); fileSelect.value = ''"
-    >
-      <option value="">{{ 'selection.fileInto' | transloco }}</option>
-      @for (folder of folders(); track folder.id) {
-        <option [value]="folder.id">{{ folder.name }}</option>
-      }
-      <option value="__unfile__">{{ 'selection.unfile' | transloco }}</option>
-    </select>
+    <app-choice-menu
+      [kind]="'selection-file'"
+      [naming]="'label'"
+      [label]="'selection.fileInto' | transloco"
+      [options]="folderChoices()"
+      (chosen)="onFile($event)"
+    />
   }
 
   <form class="selection-tag-form" (submit)="submitTag($event)">

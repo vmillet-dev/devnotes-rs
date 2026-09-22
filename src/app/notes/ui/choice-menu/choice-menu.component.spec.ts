@@ -1,22 +1,22 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
-import { PlacementMenuComponent, PlacementOption } from './placement-menu.component';
+import { ChoiceMenuComponent, ChoiceOption } from './choice-menu.component';
 
-const FOLDERS: readonly PlacementOption[] = [
+const FOLDERS: readonly ChoiceOption[] = [
   { id: 'perf', name: 'Perf', colour: 'amber' },
   { id: 'migrations', name: 'Migrations', colour: 'blue' },
 ];
 
-describe('PlacementMenuComponent', () => {
-  let fixture: ComponentFixture<PlacementMenuComponent>;
+describe('ChoiceMenuComponent', () => {
+  let fixture: ComponentFixture<ChoiceMenuComponent>;
 
   function trigger(): HTMLButtonElement {
-    return fixture.nativeElement.querySelector('.placement-trigger');
+    return fixture.nativeElement.querySelector('.choice-trigger');
   }
 
   function options(): HTMLButtonElement[] {
-    return [...fixture.nativeElement.querySelectorAll('[data-testid="editor-placement-option"]')];
+    return [...fixture.nativeElement.querySelectorAll('[data-testid="choice-option"]')];
   }
 
   async function open(): Promise<void> {
@@ -26,10 +26,10 @@ describe('PlacementMenuComponent', () => {
 
   beforeEach(async () => {
     TestBed.configureTestingModule({
-      imports: [PlacementMenuComponent],
+      imports: [ChoiceMenuComponent],
       providers: [provideTranslocoTesting()],
     });
-    fixture = TestBed.createComponent(PlacementMenuComponent);
+    fixture = TestBed.createComponent(ChoiceMenuComponent);
     fixture.componentRef.setInput('kind', 'folder');
     fixture.componentRef.setInput('label', 'Ranger dans');
     fixture.componentRef.setInput('options', FOLDERS);
@@ -51,7 +51,7 @@ describe('PlacementMenuComponent', () => {
 
   it('emits the option it was asked for and folds away', async () => {
     const chosen: (string | null)[] = [];
-    fixture.componentInstance.chosen.subscribe((id) => chosen.push(id));
+    fixture.componentInstance.chosen.subscribe((id: string | null) => chosen.push(id));
     await open();
 
     options()[1].click();
@@ -65,7 +65,7 @@ describe('PlacementMenuComponent', () => {
   it('says nothing when the note is already there', async () => {
     fixture.componentRef.setInput('currentId', 'perf');
     const chosen: (string | null)[] = [];
-    fixture.componentInstance.chosen.subscribe((id) => chosen.push(id));
+    fixture.componentInstance.chosen.subscribe((id: string | null) => chosen.push(id));
     await open();
 
     options()[0].click();
@@ -77,14 +77,14 @@ describe('PlacementMenuComponent', () => {
   it('offers the way out only where there is one', async () => {
     fixture.componentRef.setInput('currentId', 'perf');
     await open();
-    expect(fixture.nativeElement.querySelector('[data-testid="editor-placement-none"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="choice-none"]')).toBeNull();
 
     fixture.componentRef.setInput('noneLabel', 'Aucun dossier');
     await fixture.whenStable();
 
     const chosen: (string | null)[] = [];
-    fixture.componentInstance.chosen.subscribe((id) => chosen.push(id));
-    fixture.nativeElement.querySelector('[data-testid="editor-placement-none"]').click();
+    fixture.componentInstance.chosen.subscribe((id: string | null) => chosen.push(id));
+    fixture.nativeElement.querySelector('[data-testid="choice-none"]').click();
     await fixture.whenStable();
 
     expect(chosen).toEqual([null]);
@@ -118,5 +118,48 @@ describe('PlacementMenuComponent', () => {
     parent.removeEventListener('keydown', listen);
 
     expect(reachedTheDialog).toEqual(['Escape']);
+  });
+
+  /**
+   * ⚠️ `naming: 'label'` is what tells a **command** from a field. The selection bar's two
+   * controls reset their own value after every `change`, so a screen reader announced a
+   * combobox whose current value was "Ranger dans".
+   */
+  describe('as a command rather than a field', () => {
+    beforeEach(async () => {
+      fixture.componentRef.setInput('naming', 'label');
+      fixture.componentRef.setInput('currentId', 'perf');
+      await fixture.whenStable();
+    });
+
+    it('names what it does, never what is chosen', () => {
+      expect(trigger().textContent).toContain('Ranger dans');
+      expect(trigger().textContent).not.toContain('Perf');
+    });
+
+    it('asks again for the option it is already on, which a field would not', async () => {
+      const chosen: (string | null)[] = [];
+      fixture.componentInstance.chosen.subscribe((id: string | null) => chosen.push(id));
+      await open();
+
+      options()[0].click();
+      await fixture.whenStable();
+
+      expect(chosen).toEqual(['perf']);
+    });
+
+    it('marks nothing as current, having none', async () => {
+      await open();
+
+      expect(options().some((option) => option.classList.contains('on'))).toBe(false);
+    });
+
+    /** Nothing to leave: a command's own entries are the only answers it takes. */
+    it('offers no way out even when one is named', async () => {
+      fixture.componentRef.setInput('noneLabel', 'Aucun dossier');
+      await open();
+
+      expect(fixture.nativeElement.querySelector('[data-testid="choice-none"]')).toBeNull();
+    });
   });
 });

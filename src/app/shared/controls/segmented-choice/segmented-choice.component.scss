@@ -1,0 +1,32 @@
+@use 'mixins' as *;
+
+.segmented {
+  display: inline-flex;
+  border-radius: 7px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-soft);
+}
+
+.segment {
+  @include unstyled-control;
+  @include hit-target;
+  @include focus-ring(-2px);
+  @include eases(background, color);
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  color: var(--text-2);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text-0);
+  }
+
+  // ⚠️ The fill is the state and the label goes bright with it: an amber label on an amber
+  // tint is the trade `tint-badge` refuses, and this one is read at 11.5px.
+  &.on {
+    background: var(--bg-3);
+    color: var(--text-0);
+  }
+}

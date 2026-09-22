@@ -1,14 +1,22 @@
 import { $, $$, browser } from '@wdio/globals';
 
-import { blur, clickToAddRow, readEach, setNativeValue, testid } from '../support/app.js';
+import {
+  blur,
+  checkedSegment,
+  choiceLabel,
+  clickToAddRow,
+  pickChoice,
+  pickSegment,
+  readEach,
+  testid,
+} from '../support/app.js';
 import { bridge } from '../support/bridge.js';
 
-/** The controls' `id`s, in one place: `select` needs the selector, the getters the element. */
-const CONTROL = {
-  theme: '#setting-theme',
-  density: '#setting-density',
-  locale: '#setting-locale',
-} as const;
+/**
+ * ⚠️ Not `<select>`s any more: the language is a menu and the other two are segmented
+ * controls, so there is no value to assign — the labels are what addresses them.
+ */
+const SEGMENTED = { theme: 'Thème', density: 'Densité' } as const;
 
 export const titlebar = {
   title: () => $(testid('titlebar-title')).getText(),
@@ -51,21 +59,30 @@ export const settings = {
   page: (id: string) => $(`${testid('settings-page')}[data-page="${id}"]`),
   close: () => $(testid('settings-close')).click(),
 
-  /**
-   * Addressed by their `id`, which is the `for` target of their own `<label>` and cannot
-   * be renamed without breaking the association.
-   */
-  control: CONTROL,
-
-  locale: () => $(CONTROL.locale),
   shortcut: () => $('#setting-shortcut'),
   resetShortcut: () => $('.setting-shortcut-reset').click(),
 
-  /** Takes the selector and not the element: `setNativeValue` assigns and dispatches. */
-  async select(selector: string, value: string): Promise<void> {
-    await setNativeValue(selector, value);
+  /** What the language menu names, which is the only one of the three that has a trigger. */
+  locale: () => choiceLabel('setting-locale'),
+
+  async setLocale(locale: string): Promise<void> {
+    await pickChoice('setting-locale', locale);
     await browser.pause(200);
   },
+
+  /** ⚠️ The label addresses the group: a segmented control has no `id` to assign to. */
+  async setTheme(theme: string): Promise<void> {
+    await pickSegment(SEGMENTED.theme, theme);
+    await browser.pause(200);
+  },
+
+  async setDensity(density: string): Promise<void> {
+    await pickSegment(SEGMENTED.density, density);
+    await browser.pause(200);
+  },
+
+  theme: () => checkedSegment(SEGMENTED.theme),
+  density: () => checkedSegment(SEGMENTED.density),
 };
 
 export const variables = {

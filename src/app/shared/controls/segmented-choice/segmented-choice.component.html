@@ -1,0 +1,16 @@
+<div class="segmented" role="radiogroup" [attr.aria-label]="label()">
+  @for (segment of segments(); track segment.id) {
+    <button
+      type="button"
+      role="radio"
+      class="segment"
+      data-testid="segment"
+      [attr.data-segment-id]="segment.id"
+      [class.on]="segment.id === currentId()"
+      [attr.aria-checked]="segment.id === currentId()"
+      (click)="pick(segment.id)"
+    >
+      {{ segment.label }}
+    </button>
+  }
+</div>

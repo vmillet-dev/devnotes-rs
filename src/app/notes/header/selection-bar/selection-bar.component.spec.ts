@@ -41,79 +41,85 @@ describe('SelectionBarComponent', () => {
     expect(fixture.nativeElement.querySelector('.selection-count').textContent).toContain('3');
   });
 
-  it('offers every space as a move target', () => {
-    const options = [...fixture.nativeElement.querySelectorAll('.selection-move option')];
+  /**
+   * ⚠️ Menus, not fields. Both are **commands** — they reset their own value after every
+   * change — so a `<select>` announced a combobox whose current value was "Ranger dans".
+   */
+  function entries(kind: string): string[] {
+    return [...fixture.nativeElement.querySelectorAll(`[data-testid="choice-panel-${kind}"] button`)].map(
+      (option) => (option as HTMLElement).textContent?.trim() ?? '',
+    );
+  }
 
-    expect(options.map((option) => (option as HTMLOptionElement).textContent?.trim())).toEqual([
-      'Déplacer vers',
-      'Perso',
-      'Boulot',
-    ]);
+  async function openMenu(kind: string): Promise<void> {
+    fixture.nativeElement.querySelector(`[data-testid="choice-${kind}"]`).click();
+    await fixture.whenStable();
+  }
+
+  async function pick(kind: string, optionId: string): Promise<void> {
+    await openMenu(kind);
+    fixture.nativeElement
+      .querySelector(`[data-testid="choice-panel-${kind}"] [data-option-id="${optionId}"]`)
+      .click();
+    await fixture.whenStable();
+  }
+
+  it('offers every space as a move target', async () => {
+    await openMenu('selection-move');
+
+    expect(entries('selection-move')).toEqual(['Perso', 'Boulot']);
   });
 
-  it('emits the chosen space and resets the picker', async () => {
+  /** It names what it does, never where the selection is: it has no current value at all. */
+  it('names the command on the trigger', () => {
+    const trigger = fixture.nativeElement.querySelector('[data-testid="choice-selection-move"]');
+
+    expect(trigger.textContent).toContain('Déplacer vers');
+  });
+
+  it('emits the chosen space', async () => {
     let emitted: string | undefined;
     fixture.componentInstance.moveRequested.subscribe((id) => (emitted = id));
-    const select: HTMLSelectElement = fixture.nativeElement.querySelector('.selection-move');
 
-    select.value = 'space-2';
-    select.dispatchEvent(new Event('change'));
-    await fixture.whenStable();
+    await pick('selection-move', 'space-2');
 
     expect(emitted).toBe('space-2');
-    expect(select.value).toBe('');
   });
 
   it('hides the move picker when there is nowhere to move to', async () => {
     fixture.componentRef.setInput('spaces', []);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('.selection-move')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="choice-selection-move"]')).toBeNull();
   });
 
   describe('filing into a folder', () => {
-    function filePicker(): HTMLSelectElement {
-      return fixture.nativeElement.querySelector('[data-testid="selection-file"]');
-    }
-
     beforeEach(async () => {
       fixture.componentRef.setInput('folders', FOLDERS);
       await fixture.whenStable();
     });
 
     /** ⚠️ Both directions are one control: unfiling is as much a filing as any other. */
-    it('offers every folder and a way back out of one', () => {
-      const options = [...filePicker().querySelectorAll('option')];
+    it('offers every folder and a way back out of one', async () => {
+      await openMenu('selection-file');
 
-      expect(options.map((option) => option.textContent?.trim())).toEqual([
-        'Ranger dans',
-        'Perf',
-        'Migrations',
-        'Sortir du dossier',
-      ]);
+      expect(entries('selection-file')).toEqual(['Perf', 'Migrations', 'Sortir du dossier']);
     });
 
-    it('emits the chosen folder and resets the picker', async () => {
+    it('emits the chosen folder', async () => {
       let emitted: string | null | undefined;
       fixture.componentInstance.fileRequested.subscribe((id) => (emitted = id));
-      const select = filePicker();
 
-      select.value = 'migr';
-      select.dispatchEvent(new Event('change'));
-      await fixture.whenStable();
+      await pick('selection-file', 'migr');
 
       expect(emitted).toBe('migr');
-      expect(select.value).toBe('');
     });
 
     it('emits null to take the selection out of its folder', async () => {
       let emitted: string | null | undefined = 'untouched';
       fixture.componentInstance.fileRequested.subscribe((id) => (emitted = id));
-      const select = filePicker();
 
-      select.value = '__unfile__';
-      select.dispatchEvent(new Event('change'));
-      await fixture.whenStable();
+      await pick('selection-file', '__unfile__');
 
       expect(emitted).toBeNull();
     });
@@ -122,7 +128,7 @@ describe('SelectionBarComponent', () => {
       fixture.componentRef.setInput('folders', []);
       await fixture.whenStable();
 
-      expect(filePicker()).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="choice-selection-file"]')).toBeNull();
     });
   });
 

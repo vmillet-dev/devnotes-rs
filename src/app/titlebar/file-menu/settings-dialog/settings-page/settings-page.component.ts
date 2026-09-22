@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { TranslocoService, TranslocoPipe } from '@jsverse/transloco';
 import { ChangePassphraseDialogComponent } from '../change-passphrase-dialog/change-passphrase-dialog.component';
 import {
   DENSITIES,
@@ -11,11 +11,11 @@ import {
 } from '@core/services/settings/app-settings.model';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { DEFAULT_SHORTCUTS, acceleratorFromEvent } from '@core/services/shortcuts/shortcut.model';
-
-/** A native control's `value`, without an `$any` in the template. */
-function selectedValue(event: Event): string {
-  return (event.target as HTMLSelectElement).value;
-}
+import { ChoiceMenuComponent, ChoiceOption } from '@notes/ui/choice-menu/choice-menu.component';
+import {
+  Segment,
+  SegmentedChoiceComponent,
+} from '@shared/controls/segmented-choice/segmented-choice.component';
 
 function checkedValue(event: Event): boolean {
   return (event.target as HTMLInputElement).checked;
@@ -23,7 +23,7 @@ function checkedValue(event: Event): boolean {
 
 @Component({
   selector: 'app-settings-page',
-  imports: [TranslocoPipe, ChangePassphraseDialogComponent],
+  imports: [TranslocoPipe, ChangePassphraseDialogComponent, ChoiceMenuComponent, SegmentedChoiceComponent],
   templateUrl: './settings-page.component.html',
   styleUrl: './settings-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,6 +35,26 @@ export class SettingsPageComponent {
   protected readonly themes = THEME_CHOICES;
   protected readonly densities = DENSITIES;
   protected readonly defaultShortcut = DEFAULT_SHORTCUTS.palette;
+
+  private readonly transloco = inject(TranslocoService);
+
+  protected readonly localeChoices = computed<readonly ChoiceOption[]>(() =>
+    LOCALE_CHOICES.map((choice) => ({ id: choice, name: this.transloco.translate(`locale.${choice}`) })),
+  );
+
+  protected readonly themeSegments = computed<readonly Segment[]>(() =>
+    THEME_CHOICES.map((choice) => ({
+      id: choice,
+      label: this.transloco.translate(`settings.theme.${choice}`),
+    })),
+  );
+
+  protected readonly densitySegments = computed<readonly Segment[]>(() =>
+    DENSITIES.map((choice) => ({
+      id: choice,
+      label: this.transloco.translate(`settings.density.${choice}`),
+    })),
+  );
 
   protected readonly isChangingPassphrase = signal(false);
 
@@ -54,16 +74,16 @@ export class SettingsPageComponent {
     this.settings.setSkippedUpdate('');
   }
 
-  protected onLocale(event: Event): void {
-    this.settings.setLocale(selectedValue(event) as LocaleChoice);
+  protected onLocale(locale: string | null): void {
+    if (locale) this.settings.setLocale(locale as LocaleChoice);
   }
 
-  protected onTheme(event: Event): void {
-    this.settings.setTheme(selectedValue(event) as ThemeChoice);
+  protected onTheme(theme: string): void {
+    this.settings.setTheme(theme as ThemeChoice);
   }
 
-  protected onDensity(event: Event): void {
-    this.settings.setDensity(selectedValue(event) as Density);
+  protected onDensity(density: string): void {
+    this.settings.setDensity(density as Density);
   }
 
   protected onStartWithSystem(event: Event): void {

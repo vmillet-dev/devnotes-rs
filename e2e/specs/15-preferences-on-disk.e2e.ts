@@ -43,7 +43,7 @@ describe('Preferences reach the disk', () => {
   it('writes the file at all, next to the database', async () => {
     // A spec file establishes its own preconditions: one profile serves the whole run.
     await fileMenu.openPreferences();
-    await settings.select(settings.control.theme, 'dark');
+    await settings.setTheme('dark');
     await settings.close();
     await settled('devnotes.theme', 'dark');
 
@@ -52,7 +52,7 @@ describe('Preferences reach the disk', () => {
 
   it('writes one key per setting, never one serialised object', async () => {
     await fileMenu.openPreferences();
-    await settings.select(settings.control.density, 'comfortable');
+    await settings.setDensity('comfortable');
     await settings.close();
 
     const file = await settled('devnotes.density', 'comfortable');
@@ -64,7 +64,7 @@ describe('Preferences reach the disk', () => {
 
   it('rewrites the key as the value is changed, with no confirmation step', async () => {
     await fileMenu.openPreferences();
-    await settings.select(settings.control.theme, 'light');
+    await settings.setTheme('light');
     await settings.close();
 
     // There is no OK anywhere in the panel: closing it is not what saves.

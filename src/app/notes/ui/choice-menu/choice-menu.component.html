@@ -1,0 +1,53 @@
+@let here = current();
+
+<button
+  appMenuAnchor
+  type="button"
+  class="choice-trigger"
+  [attr.data-testid]="'choice-' + kind()"
+  aria-haspopup="menu"
+  [attr.aria-expanded]="menu.open()"
+  [attr.aria-label]="label()"
+  [attr.title]="label()"
+  (click)="menu.toggle()"
+>
+  @if (naming() === 'value' && here?.colour; as colour) {
+    <i [class]="'choice-swatch is-' + colour" aria-hidden="true"></i>
+  }
+  <span class="choice-name">{{ triggerText() }}</span>
+  <span class="choice-caret" aria-hidden="true">▾</span>
+</button>
+
+@if (menu.open()) {
+  <div appMenuPanel class="choice-menu" [attr.data-testid]="'choice-panel-' + kind()">
+    @if (showsNone()) {
+      <button
+        appMenuItem
+        type="button"
+        role="menuitem"
+        class="choice-item"
+        data-testid="choice-none"
+        (click)="pick(null)"
+      >
+        {{ noneLabel() }}
+      </button>
+    }
+    @for (option of options(); track option.id) {
+      <button
+        appMenuItem
+        type="button"
+        role="menuitem"
+        class="choice-item"
+        data-testid="choice-option"
+        [attr.data-option-id]="option.id"
+        [class.on]="naming() === 'value' && option.id === currentId()"
+        (click)="pick(option.id)"
+      >
+        @if (option.colour; as colour) {
+          <i [class]="'choice-swatch is-' + colour" aria-hidden="true"></i>
+        }
+        {{ option.name }}
+      </button>
+    }
+  </div>
+}

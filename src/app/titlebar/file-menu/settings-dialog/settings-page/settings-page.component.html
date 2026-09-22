@@ -2,43 +2,38 @@
   <section class="setting-group">
     <h4 class="setting-group-title">{{ 'settings.appearance.title' | transloco }}</h4>
 
+    <!-- ⚠️ A menu where the list can grow, a segmented control where it is three: hiding
+         two of three choices behind a click buys nothing, and a native `<select>` brings
+         the operating system's border, arrow, focus ring and — on Windows — its font. -->
     <div class="setting-row">
-      <label class="setting-label" for="setting-locale">
-        {{ 'settings.appearance.language' | transloco }}
-      </label>
-      <select id="setting-locale" class="setting-select" (change)="onLocale($event)">
-        @for (choice of locales; track choice) {
-          <option [value]="choice" [selected]="choice === settings.locale()">
-            {{ 'locale.' + choice | transloco }}
-          </option>
-        }
-      </select>
+      <span class="setting-label">{{ 'settings.appearance.language' | transloco }}</span>
+      <app-choice-menu
+        [kind]="'setting-locale'"
+        [label]="'settings.appearance.language' | transloco"
+        [options]="localeChoices()"
+        [currentId]="settings.locale()"
+        (chosen)="onLocale($event)"
+      />
     </div>
 
     <div class="setting-row">
-      <label class="setting-label" for="setting-theme">
-        {{ 'settings.appearance.theme' | transloco }}
-      </label>
-      <select id="setting-theme" class="setting-select" (change)="onTheme($event)">
-        @for (choice of themes; track choice) {
-          <option [value]="choice" [selected]="choice === settings.theme()">
-            {{ 'settings.theme.' + choice | transloco }}
-          </option>
-        }
-      </select>
+      <span class="setting-label">{{ 'settings.appearance.theme' | transloco }}</span>
+      <app-segmented-choice
+        [label]="'settings.appearance.theme' | transloco"
+        [segments]="themeSegments()"
+        [currentId]="settings.theme()"
+        (chosen)="onTheme($event)"
+      />
     </div>
 
     <div class="setting-row">
-      <label class="setting-label" for="setting-density">
-        {{ 'settings.appearance.density' | transloco }}
-      </label>
-      <select id="setting-density" class="setting-select" (change)="onDensity($event)">
-        @for (choice of densities; track choice) {
-          <option [value]="choice" [selected]="choice === settings.density()">
-            {{ 'settings.density.' + choice | transloco }}
-          </option>
-        }
-      </select>
+      <span class="setting-label">{{ 'settings.appearance.density' | transloco }}</span>
+      <app-segmented-choice
+        [label]="'settings.appearance.density' | transloco"
+        [segments]="densitySegments()"
+        [currentId]="settings.density()"
+        (chosen)="onDensity($event)"
+      />
     </div>
   </section>
 

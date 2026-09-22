@@ -197,7 +197,12 @@ describe('LibraryTreeComponent', () => {
   it('offers every other space as a refuge when a space is being deleted', async () => {
     await click('[data-testid="space-edit"][data-space-id="sql"]');
 
-    const targets = [...root().querySelectorAll<HTMLOptionElement>('#space-move-target option')];
-    expect(targets.map((option) => option.value)).toEqual(['rust']);
+    root().querySelector<HTMLElement>('[data-testid="choice-space-move-target"]')!.click();
+    await fixture.whenStable();
+
+    const targets = [
+      ...root().querySelectorAll('[data-testid="choice-panel-space-move-target"] [data-option-id]'),
+    ];
+    expect(targets.map((option) => option.getAttribute('data-option-id'))).toEqual(['rust']);
   });
 });
