@@ -88,37 +88,6 @@
     <h4 class="setting-group-title">{{ 'settings.quickPaste.title' | transloco }}</h4>
 
     <div class="setting-row">
-      <label class="setting-label" for="setting-shortcut">
-        {{ 'settings.quickPaste.shortcut' | transloco }}
-      </label>
-      <div class="setting-shortcut">
-        <!-- `readonly` and not `disabled`: the field must stay focusable, since it is what
-             listens for the keystroke. -->
-        <input
-          id="setting-shortcut"
-          class="setting-shortcut-input"
-          type="text"
-          readonly
-          [value]="settings.paletteShortcut()"
-          [attr.aria-describedby]="'setting-shortcut-hint'"
-          (keydown)="onShortcutKeydown($event)"
-        />
-        <button
-          type="button"
-          class="setting-shortcut-reset"
-          [disabled]="settings.paletteShortcut() === defaultShortcut"
-          (click)="resetShortcut()"
-        >
-          {{ 'settings.quickPaste.shortcutReset' | transloco }}
-        </button>
-      </div>
-    </div>
-
-    <p id="setting-shortcut-hint" class="setting-note">
-      {{ 'settings.quickPaste.shortcutHint' | transloco }}
-    </p>
-
-    <div class="setting-row">
       <label class="setting-label" for="setting-pinned-first">
         {{ 'settings.quickPaste.showPinnedFirst' | transloco }}
       </label>
@@ -130,40 +99,6 @@
         (change)="onShowPinnedFirst($event)"
       />
     </div>
-  </section>
-
-  <section class="setting-group">
-    <h4 class="setting-group-title">{{ 'settings.security.title' | transloco }}</h4>
-
-    <div class="setting-row">
-      <span class="setting-label">{{ 'settings.security.passphrase' | transloco }}</span>
-      <button
-        type="button"
-        class="setting-inline-btn"
-        data-testid="setting-change-passphrase"
-        (click)="openPassphraseChange()"
-      >
-        {{ 'settings.security.change' | transloco }}
-      </button>
-    </div>
-
-    <p class="setting-note">{{ 'settings.security.note' | transloco }}</p>
-
-    <div class="setting-row">
-      <label class="setting-label" for="setting-automatic-backups">
-        {{ 'settings.security.automaticBackups' | transloco }}
-      </label>
-      <input
-        id="setting-automatic-backups"
-        class="setting-switch"
-        type="checkbox"
-        data-testid="setting-automatic-backups"
-        [checked]="settings.automaticBackups()"
-        (change)="onAutomaticBackups($event)"
-      />
-    </div>
-
-    <p class="setting-note">{{ 'settings.security.backupsNote' | transloco }}</p>
   </section>
 
   <section class="setting-group">
@@ -208,7 +143,3 @@
     }
   </section>
 </div>
-
-@if (isChangingPassphrase()) {
-  <app-change-passphrase-dialog (closed)="closePassphraseChange()" />
-}

@@ -41,13 +41,18 @@ describe('SettingsDialogComponent', () => {
   it('lists its pages in the order it declares them', async () => {
     await render();
 
-    expect(railOptions().map((option) => option.textContent?.trim())).toEqual(['Paramètres', 'Variables']);
+    expect(railOptions().map((option) => option.textContent?.trim())).toEqual([
+      'Général',
+      'Raccourcis',
+      'Sécurité',
+      'Variables',
+    ]);
   });
 
-  it('opens on the settings page, which is what the menu entry promised', async () => {
+  it('opens on the general page, which is what the menu entry promised', async () => {
     await render();
 
-    expect(optionLabelled('Paramètres').getAttribute('aria-current')).toBe('page');
+    expect(optionLabelled('Général').getAttribute('aria-current')).toBe('page');
     expect(fixture.nativeElement.querySelector('app-variables-page')).toBeNull();
   });
 

@@ -78,6 +78,8 @@ export class SettingsStore {
   readonly minimizeToTray = this.setting('minimizeToTray', asBoolean);
   readonly closeToTray = this.setting('closeToTray', asBoolean);
   readonly paletteShortcut = this.setting('paletteShortcut', asAccelerator);
+  readonly captureShortcut = this.setting('captureShortcut', asAccelerator);
+  readonly newNoteShortcut = this.setting('newNoteShortcut', asAccelerator);
   readonly showLibraryRail = this.setting('showLibraryRail', asBoolean);
   readonly libraryRailWidth = this.setting('libraryRailWidth', asPixels(RAIL_WIDTH));
   readonly showPinnedFirst = this.setting('showPinnedFirst', asBoolean);

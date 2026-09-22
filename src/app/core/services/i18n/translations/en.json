@@ -452,7 +452,7 @@
     "unavailable": "{count, plural, one {Global shortcut unavailable} other {Global shortcuts unavailable}}: {{list}}. Another application already holds {count, plural, one {it} other {them}}.",
     "title": "Keyboard shortcuts",
     "subtitle": "The keys that are live depending on where you are. Bare letters only act on the canvas, never while you are typing.",
-    "editHint": "The quick-paste shortcut is set in File → Preferences.",
+    "editHint": "Shortcuts are set in File → Preferences → Shortcuts.",
     "close": "Close",
     "groups": {
       "global": "Global (even with the window closed)",
@@ -497,8 +497,10 @@
     "title": "Preferences",
     "pagesLabel": "Preference sections",
     "pages": {
-      "general": "Settings",
-      "variables": "Variables"
+      "general": "General",
+      "variables": "Variables",
+      "shortcuts": "Shortcuts",
+      "security": "Security"
     },
     "close": "Close",
     "appliedImmediately": "Changes apply immediately.",
@@ -528,9 +530,6 @@
     },
     "quickPaste": {
       "title": "Quick paste",
-      "shortcut": "Global shortcut",
-      "shortcutHint": "Click the field, then press the combination. A shortcut another application already holds is reported at startup.",
-      "shortcutReset": "Reset",
       "showPinnedFirst": "Show pinned first"
     },
     "security": {
@@ -549,7 +548,9 @@
       "backupsNote": "At most one copy a day, the last three kept beside the library — enough for an emptied trash or an update gone wrong. Not a defence against a dead disk: export somewhere else for that.",
       "changedOneLeft": "Passphrase changed, but one copy could not be rewrapped: it still opens with the old phrase.",
       "changedSomeLeft": "Passphrase changed, but {{count}} copies could not be rewrapped: they still open with the old phrase.",
-      "copiesNote": "The copies kept beside the library are rewrapped with it. A key file you copied somewhere else will still open with the old phrase."
+      "copiesNote": "The copies kept beside the library are rewrapped with it. A key file you copied somewhere else will still open with the old phrase.",
+      "backups": "Backups",
+      "access": "Access"
     },
     "notifications": {
       "title": "Notifications",
@@ -569,6 +570,16 @@
       "empty": "No variables yet.",
       "duplicate": "Duplicate name: {{names}}. Only the last row will be kept.",
       "nameRule": "A name is limited to letters, digits, dashes and underscores."
+    },
+    "shortcuts": {
+      "reset": "Reset",
+      "globalNote": "These three work everywhere, window closed included, so each needs at least one modifier — without one the key would be swallowed in every application you use. A shortcut another application already holds is reported at startup.",
+      "canvasNote": "These only act on the canvas, never while typing, so a bare letter is enough. Click the field, then press the combination.",
+      "fixedNote": "The arrows, Escape, Tab and the Ctrl or Shift clicks do not move: they are the navigation, the way out and the selection, and a library you cannot step back through would be worse than a badly placed key.",
+      "taken": "{{accelerator}} is already held by \"{{action}}\".",
+      "needsModifier": "A global shortcut needs at least Ctrl, Alt, Shift or Super.",
+      "reserved": "That key is reserved for navigation.",
+      "conflict": "{{accelerator}} answers several actions: {{actions}}. Only one will act."
     }
   },
   "gettingStarted": {

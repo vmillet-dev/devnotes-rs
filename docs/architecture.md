@@ -1868,10 +1868,22 @@ interface follows on the spot. That is already the idiom everywhere else in the 
 editor commits on blur, the locale switch flips on click — and a theme you only see after
 validating is not chosen, it is guessed.
 
-**The pages are a list in the panel**: the general settings and "Variables", each in its own
-folder beside the dialog, rendered through `NgComponentOutlet` so the rail stays one loop over
-one array. The order on screen is the order
-of the list.
+**The pages are a list in the panel**: "Général", "Raccourcis", "Sécurité" and "Variables",
+each in its own folder beside the dialog, rendered through `NgComponentOutlet` so the rail
+stays one loop over one array. The order on screen is the order of the list.
+
+The split is the shape of the subject rather than of the file it came from. "Général" keeps
+what the application looks like and how it behaves; the keys moved out because there are
+eleven of them and they needed room; and "Sécurité" holds the two things that decide who can
+read the library — the passphrase that unwraps its key, and whether a copy is taken at launch.
+⚠️ Those two belong on **one** page: the copies are wrapped under the phrase too, so a page
+carrying only one of them would let someone change the phrase without meeting what the change
+reaches.
+
+⚠️ Each page's stylesheet is `@include settings-page;` and its own extras. A component's SCSS
+is out of reach of its neighbours, so the groups, their titles and the four things a row is
+made of live in a mixin — otherwise the three pages would carry the same thirty lines three
+times, which is also what the duplication gate would have said.
 
 `SettingsStore` holds one signal per setting — the interface language, the theme, the density,
 the tray behaviour, the palette accelerator — backed by `PreferencesService`: one key per
@@ -1917,15 +1929,62 @@ turning the entry off from the task manager has to uncheck the box, not see DevN
   behaviour and stays the default; both tray settings are still refused when there is no tray
   (`desktop::hides_on_close` / `hides_on_minimize`), since hiding a window nothing can call
   back is worse than closing it.
-- **Quick paste** — the palette's accelerator, captured from a **keystroke** rather than typed
-  (`acceleratorFromEvent` reads `KeyboardEvent.code`, so a combination set on AZERTY stays in
-  the same place on QWERTY, and a combination the native parser could not read is refused
-  before it is stored). And "show pinned first", the only consumer of `NotesQuery.pinnedFirst`
-  that ever sends `false`.
+- **Quick paste** — "show pinned first", the only consumer of `NotesQuery.pinnedFirst` that
+  ever sends `false`. The palette's accelerator used to sit here and now lives on the
+  Shortcuts page, with the ten others.
 - **Copy confirmation** — the acknowledgement lives in `ClipboardService` itself rather than in
   its five callers, four of which show nothing today: copying from the canvas with `Ctrl+C`
   said not a word. Callers with something better to say — "3 notes copied as Markdown" — speak
   after, and the banner keeps the last message.
+
+### Shortcuts: two vocabularies, two storage paths
+
+Eleven actions can be moved: the three **global** ones registered with the operating system,
+and the eight **canvas** keys. Everything else on the read-only sheet is documented and fixed —
+the arrows are the grid's own navigation, Escape is the way out of every other thing on
+screen, Tab is how the window is crossed, and the Ctrl/Shift clicks are not keys at all.
+`isCanvasAccelerator` refuses those by name, which is what keeps a library you can still get
+out of.
+
+**A canvas key is declared where it is bound.** `CANVAS_KEYS` in `CanvasKeyboardDirective`
+grew an `id` and an `accelerator` on the entries that can move; the caps the sheet draws are
+derived from that accelerator, so a key is spelled once. Two constants come out of the same
+table — `CANVAS_SHORTCUT_GROUP` for the sheet, `CANVAS_ACTIONS` for the panel — and a key
+cannot be documented, bound or made movable without the other two following.
+
+**`ShortcutBindingsStore` (`core/services/shortcuts/`) reads both paths as one table.** The
+global three live in `AppSettings`, because the native command takes them as a block; a canvas
+key is one preference of its own, `devnotes.shortcut.<id>`. ⚠️ The store holds **no list**: a
+`Rebindable` carries its own fallback, so nothing has to register and there is no third place
+to add a key to. Reading both halves together is also what makes a collision _between_ them
+something the panel can say out loud.
+
+⚠️ **The two halves read the keyboard differently, and it is a deliberate fork.**
+
+|        | reads                                   | may be bare | why                                                                                                                                     |
+| ------ | --------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| global | `event.code` — the key's **position**   | no          | the native parser reads it back by position, and a shortcut with no modifier would swallow that key in every application on the machine |
+| canvas | `event.key` — the **printed** character | yes         | `C` is read off the keycap by someone looking at this window, and the key answers only while the canvas has the keyboard                |
+
+On AZERTY the position `KeyA` is the key labelled `Q`. Capturing both halves the same way puts
+one of the two on the wrong key the moment the layout is not QWERTY — which is why
+`acceleratorFromEvent` and `canvasKeystrokeFromEvent` are two functions and the panel picks
+per row. `canvasKeystrokeFromEvent` upper-cases a single character, so a caps-locked keyboard
+answers the same key as a bare one, and folds the Command key into `Ctrl`: `Super` means
+something of its own only where a shortcut leaves the window.
+
+**A refusal is a reason, not a boolean.** `rebind` answers `null`, `{ kind: 'illegal' }` or
+`{ kind: 'taken', by }`, and the page turns that into the sentence under the field. Deciding it
+twice — once in the store, once in the panel — is how the two drift. `conflicts(among)` exists
+for what `rebind` cannot refuse: a preferences file edited by hand, and a shipped default
+landing on a key someone had already taken.
+
+⚠️ `aliases` on an entry fire it whatever it is bound to. Backspace has trashed a note since
+before the key could be moved, and making the key movable is no reason to take that away.
+
+The read-only sheet in the About menu keeps existing — it is the one reachable with the
+keyboard while working — and every row that can be moved now resolves its caps through the
+store, so it shows what is bound rather than what shipped.
 
 ### Help: what's new, getting started, shortcuts
 

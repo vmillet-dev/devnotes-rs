@@ -1,0 +1,44 @@
+<div class="setting-groups">
+  <section class="setting-group">
+    <h4 class="setting-group-title">{{ 'settings.security.access' | transloco }}</h4>
+
+    <div class="setting-row">
+      <span class="setting-label">{{ 'settings.security.passphrase' | transloco }}</span>
+      <button
+        type="button"
+        class="setting-inline-btn"
+        data-testid="setting-change-passphrase"
+        (click)="openPassphraseChange()"
+      >
+        {{ 'settings.security.change' | transloco }}
+      </button>
+    </div>
+
+    <p class="setting-note">{{ 'settings.security.note' | transloco }}</p>
+    <p class="setting-note">{{ 'settings.security.copiesNote' | transloco }}</p>
+  </section>
+
+  <section class="setting-group">
+    <h4 class="setting-group-title">{{ 'settings.security.backups' | transloco }}</h4>
+
+    <div class="setting-row">
+      <label class="setting-label" for="setting-automatic-backups">
+        {{ 'settings.security.automaticBackups' | transloco }}
+      </label>
+      <input
+        id="setting-automatic-backups"
+        class="setting-switch"
+        type="checkbox"
+        data-testid="setting-automatic-backups"
+        [checked]="settings.automaticBackups()"
+        (change)="onAutomaticBackups($event)"
+      />
+    </div>
+
+    <p class="setting-note">{{ 'settings.security.backupsNote' | transloco }}</p>
+  </section>
+</div>
+
+@if (isChangingPassphrase()) {
+  <app-change-passphrase-dialog (closed)="closePassphraseChange()" />
+}

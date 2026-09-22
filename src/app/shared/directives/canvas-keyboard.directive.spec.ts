@@ -8,7 +8,8 @@ import { DialogStack } from '@shared/layout/dialog/dialog-stack';
 import { dialogRung } from '@shared/layout/dialog/dialog.model';
 import { NotesHarness, awaitQuery, createNotesHarness } from '@testing/notes-harness';
 import { createNote } from '@testing/note.fixture';
-import { CANVAS_SHORTCUT_GROUP, CanvasKeyboardDirective } from './canvas-keyboard.directive';
+import { ShortcutBindingsStore } from '@core/services/shortcuts/shortcut-bindings.store';
+import { CANVAS_ACTIONS, CANVAS_SHORTCUT_GROUP, CanvasKeyboardDirective } from './canvas-keyboard.directive';
 
 @Component({
   selector: 'app-canvas-keyboard-host',
@@ -55,6 +56,51 @@ describe('CanvasKeyboardDirective', () => {
     expect(CANVAS_SHORTCUT_GROUP.id).toBe('notes.canvas');
     expect(CANVAS_SHORTCUT_GROUP.shortcuts[0].keys).toEqual(['Ctrl', 'K']);
     expect(CANVAS_SHORTCUT_GROUP.shortcuts.every((shortcut) => shortcut.labelKey.length > 0)).toBe(true);
+  });
+
+  /**
+   * ⚠️ The table is also what the preferences panel edits, so a key that can be documented
+   * without being movable has to stay one the grid could not do without.
+   */
+  it('offers every letter key to the panel, and none of the fixed ones', () => {
+    const ids = CANVAS_ACTIONS.map((action) => action.id);
+
+    expect(ids).toContain('canvas.copy');
+    expect(ids).not.toContain('canvas.move');
+    expect(CANVAS_ACTIONS.every((action) => action.fallback.length > 0)).toBe(true);
+  });
+
+  describe('a key that was moved', () => {
+    let bindings: ShortcutBindingsStore;
+
+    beforeEach(() => {
+      bindings = TestBed.inject(ShortcutBindingsStore);
+    });
+
+    it('answers where it was put, and no longer where it shipped', async () => {
+      const copy = CANVAS_ACTIONS.find((action) => action.id === 'canvas.copy')!;
+      bindings.rebind(copy, 'Y', CANVAS_ACTIONS);
+
+      press('y');
+      await fixture.whenStable();
+      expect(harness.clipboard.content).toBe('first body');
+
+      harness.clipboard.content = '';
+      press('c');
+      await fixture.whenStable();
+
+      expect(harness.clipboard.content).toBe('');
+    });
+
+    /** ⚠️ Backspace has trashed a note since before the key could be moved. */
+    it('keeps the alias its action shipped with', () => {
+      const trash = CANVAS_ACTIONS.find((action) => action.id === 'canvas.trash')!;
+      bindings.rebind(trash, 'Ctrl+Delete', CANVAS_ACTIONS);
+
+      press('Backspace');
+
+      expect(harness.selection.armedForDeletion()).toBe('note-1');
+    });
   });
 
   describe('acting on the focused note', () => {

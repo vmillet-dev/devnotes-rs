@@ -1,0 +1,62 @@
+@use 'mixins' as *;
+
+@include settings-page;
+
+.setting-shortcut {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.setting-shortcut-input {
+  @include setting-field(148px);
+  font-family: var(--font-mono), serif;
+  text-align: center;
+  color: var(--amber-text);
+  cursor: pointer;
+}
+
+.setting-shortcut-input[aria-invalid='true'] {
+  border-color: var(--red);
+}
+
+.setting-shortcut-reset {
+  @include unstyled-control;
+  padding: 5px 9px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.setting-shortcut-reset:hover:not(:disabled) {
+  color: var(--text-0);
+  background: var(--bg-2);
+}
+
+.setting-shortcut-reset:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.setting-shortcut-reset:focus-visible {
+  outline: 2px solid var(--amber-edge);
+  outline-offset: 1px;
+}
+
+// Under the row it belongs to, not in the group's note: it names one field's refusal.
+.shortcut-error,
+.shortcut-conflict {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--red);
+}
+
+// ⚠️ Text and a hairline, never a solid fill: one red block beside the single amber
+// accent reads as a second accent.
+.shortcut-conflict {
+  @include surface($bg: var(--bg-2), $border-color: rgba(var(--red-rgb), 0.4));
+  margin: 0;
+  padding: 7px 10px;
+}

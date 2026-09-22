@@ -47,31 +47,85 @@ describe('Preferences', () => {
     expect(await titlebar.activeLocale()).toBe('en');
   });
 
-  it('captures a shortcut from the keyboard, and refuses one with no modifier', async () => {
-    await fileMenu.openPreferences();
-    const field = settings.shortcut();
-    const before = await field.getValue();
+  describe('the keys', () => {
+    beforeEach(async () => {
+      await fileMenu.openPreferences();
+      await settings.open('shortcuts');
+    });
 
-    // ⚠️ A global accelerator without a modifier would swallow that key in every
-    // application on the machine — which is also what leaves Tab and Escape working here.
-    await field.click();
-    await press('p');
-    expect(await field.getValue()).toBe(before);
+    afterEach(settings.close);
 
-    // `KeyboardEvent.code`, so a combination set on AZERTY stays put on QWERTY.
-    await press('j', ['Control', 'Alt']);
-    expect(await field.getValue()).toBe('Ctrl+Alt+J');
+    it('captures a global shortcut from the keyboard, and refuses one with no modifier', async () => {
+      const field = settings.shortcut('palette');
+      const before = await field.getValue();
 
-    await settings.resetShortcut();
-    expect(await field.getValue()).toBe(before);
-    await settings.close();
-  });
+      // ⚠️ A global accelerator without a modifier would swallow that key in every
+      // application on the machine — which is also what leaves Tab and Escape working here.
+      await field.click();
+      await press('p');
+      expect(await field.getValue()).toBe(before);
+      expect(await settings.shortcutError('palette').isExisting()).toBe(true);
 
-  // Readonly: a text cursor would promise the wrong interaction.
-  it('leaves the shortcut field a cursor that does not invite typing', async () => {
-    await fileMenu.openPreferences();
-    expect(await cursorOf('#setting-shortcut')).not.toBe('text');
-    await settings.close();
+      // `KeyboardEvent.code`, so a combination set on AZERTY stays put on QWERTY.
+      await press('j', ['Control', 'Alt']);
+      expect(await field.getValue()).toBe('Ctrl+Alt+J');
+
+      await settings.resetShortcut('palette');
+      expect(await field.getValue()).toBe(before);
+    });
+
+    /**
+     * ⚠️ The whole of #254: three keys out of twenty could be moved. A canvas key takes a
+     * bare letter, where a global one may not — it answers only while the canvas has the
+     * keyboard, so nothing outside the window is taken.
+     */
+    it('takes a bare letter on a canvas key, and the canvas then answers to it', async () => {
+      const field = settings.shortcut('canvas.check');
+      await field.click();
+      await press('j');
+      expect(await field.getValue()).toBe('J');
+      await settings.close();
+
+      // Walked to a known end rather than started from wherever: these files share one
+      // session, so what holds the focus here is whatever ran before.
+      const titles = await canvas.titles();
+      for (const _ of titles) {
+        await press('ArrowLeft');
+      }
+      const focused = await canvas.focusedCardTitle();
+      expect(focused).not.toBeNull();
+
+      await press('j');
+      expect(
+        await eventually(
+          () => canvas.isChecked(focused!),
+          (checked) => checked,
+          'the moved key to tick the focused card',
+        ),
+      ).toBe(true);
+
+      // Put back, so the files after this one meet the keys they were written against.
+      await press('j');
+      await fileMenu.openPreferences();
+      await settings.open('shortcuts');
+      await settings.resetShortcut('canvas.check');
+      expect(await settings.shortcut('canvas.check').getValue()).toBe('X');
+    });
+
+    /** ⚠️ The second action would be unreachable, and nothing would say which. */
+    it('refuses a keystroke another action already answers to', async () => {
+      const field = settings.shortcut('canvas.pin');
+      await field.click();
+      await press('c');
+
+      expect(await field.getValue()).toBe('P');
+      expect(await settings.shortcutError('canvas.pin').getText()).toContain('C');
+    });
+
+    // Readonly: a text cursor would promise the wrong interaction.
+    it('leaves a capture field a cursor that does not invite typing', async () => {
+      expect(await cursorOf('[data-testid="shortcut-field"][data-action="palette"]')).not.toBe('text');
+    });
   });
 
   it('keeps the titlebar switch and the panel in agreement', async () => {

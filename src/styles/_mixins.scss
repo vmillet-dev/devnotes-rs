@@ -191,6 +191,56 @@
   color: var(--text-2);
 }
 
+// The skeleton the preferences pages share: their groups, their titles, and the four
+// things every row is made of. ⚠️ A page's SCSS is out of reach of its neighbours, so
+// without this the three of them carry the same thirty lines three times over.
+@mixin settings-page {
+  .setting-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .setting-group-title {
+    margin: 0 0 4px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-2);
+  }
+
+  .setting-row {
+    @include setting-row;
+  }
+
+  .setting-label {
+    @include setting-label;
+  }
+
+  .setting-switch {
+    @include setting-switch;
+  }
+
+  .setting-note {
+    @include setting-note;
+  }
+
+  // Inside the note, not beside it: what it undoes is named in the sentence before it.
+  .setting-inline-btn {
+    @include unstyled-control;
+    @include focus-ring;
+    color: var(--amber-text);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+
+    &:hover {
+      color: var(--text-0);
+    }
+  }
+}
+
 // A state said with a translucent fill in one hue, from an RGB variable so no colour is
 // duplicated in hex.
 //

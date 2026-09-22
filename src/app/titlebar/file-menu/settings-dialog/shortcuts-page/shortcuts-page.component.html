@@ -1,0 +1,63 @@
+<div class="setting-groups">
+  <!-- ⚠️ A key taken twice cannot happen through the fields — they refuse it — so this
+       answers for what they cannot refuse: a preferences file edited by hand, and a
+       shipped default that lands on a key someone had already moved something onto. -->
+  @for (conflict of conflicts(); track conflict.accelerator) {
+    <p class="shortcut-conflict" role="alert" data-testid="shortcut-conflict">
+      {{
+        'settings.shortcuts.conflict'
+          | transloco: { accelerator: conflict.accelerator, actions: conflict.names }
+      }}
+    </p>
+  }
+
+  @for (section of sections; track section.id) {
+    <section class="setting-group">
+      <h4 class="setting-group-title">{{ section.labelKey | transloco }}</h4>
+
+      @for (action of section.actions; track action.id) {
+        <div class="setting-row">
+          <label class="setting-label" [for]="'shortcut-' + action.id">
+            {{ action.labelKey | transloco }}
+          </label>
+          <div class="setting-shortcut">
+            <!-- `readonly` and not `disabled`: the field must stay focusable, since it is
+                 what listens for the keystroke. -->
+            <input
+              class="setting-shortcut-input"
+              type="text"
+              readonly
+              [id]="'shortcut-' + action.id"
+              [attr.data-testid]="'shortcut-field'"
+              [attr.data-action]="action.id"
+              [value]="bindings.binding(action)"
+              [attr.aria-invalid]="refusalFor(action.id) ? 'true' : null"
+              [attr.aria-describedby]="refusalFor(action.id) ? 'shortcut-error-' + action.id : null"
+              (keydown)="onCapture(action, $event)"
+            />
+            <button
+              type="button"
+              class="setting-shortcut-reset"
+              [attr.data-testid]="'shortcut-reset'"
+              [attr.data-action]="action.id"
+              [disabled]="bindings.isDefault(action)"
+              (click)="reset(action)"
+            >
+              {{ 'settings.shortcuts.reset' | transloco }}
+            </button>
+          </div>
+        </div>
+
+        @if (refusalFor(action.id); as refusal) {
+          <p class="shortcut-error" role="alert" [id]="'shortcut-error-' + action.id">
+            {{ refusal.key | transloco: refusal.params }}
+          </p>
+        }
+      }
+
+      <p class="setting-note">{{ section.noteKey | transloco }}</p>
+    </section>
+  }
+
+  <p class="setting-note">{{ 'settings.shortcuts.fixedNote' | transloco }}</p>
+</div>

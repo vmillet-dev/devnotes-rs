@@ -72,10 +72,14 @@ export const fileMenu = {
 
 export const settings = {
   page: (id: string) => $(`${testid('settings-page')}[data-page="${id}"]`),
+  open: (id: string) => settings.page(id).click(),
   close: () => $(testid('settings-close')).click(),
 
-  shortcut: () => $('#setting-shortcut'),
-  resetShortcut: () => $('.setting-shortcut-reset').click(),
+  /** ⚠️ Addressed by its action, never by position: the page holds eleven of them. */
+  shortcut: (action: string) => $(`${testid('shortcut-field')}[data-action="${action}"]`),
+  resetShortcut: (action: string) => $(`${testid('shortcut-reset')}[data-action="${action}"]`).click(),
+  /** ⚠️ An id holding a dot, so an attribute selector rather than `#`. */
+  shortcutError: (action: string) => $(`[id="shortcut-error-${action}"]`),
 
   /** What the language menu names, which is the only one of the three that has a trigger. */
   locale: () => choiceLabel('setting-locale'),

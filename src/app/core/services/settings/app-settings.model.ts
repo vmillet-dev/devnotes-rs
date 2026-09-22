@@ -33,7 +33,14 @@ export interface AppSettings {
   readonly startWithSystem: boolean;
   readonly minimizeToTray: boolean;
   readonly closeToTray: boolean;
+  /**
+   * ⚠️ The three **global** accelerators, stored here because the native side takes them
+   * as a block. The canvas keys are one preference each and belong to
+   * `ShortcutBindingsStore`, which is what reads both paths as one table.
+   */
   readonly paletteShortcut: string;
+  readonly captureShortcut: string;
+  readonly newNoteShortcut: string;
   /** The library rail, remembered like the window's own geometry rather than reset on launch. */
   readonly showLibraryRail: boolean;
   /** Its width, dragged from its edge and clamped on the way in and out. */
@@ -59,6 +66,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   minimizeToTray: false,
   closeToTray: true,
   paletteShortcut: DEFAULT_SHORTCUTS.palette,
+  captureShortcut: DEFAULT_SHORTCUTS.capture,
+  newNoteShortcut: DEFAULT_SHORTCUTS.newNote,
   showLibraryRail: true,
   libraryRailWidth: RAIL_WIDTH.default,
   showPinnedFirst: true,
