@@ -3,7 +3,10 @@ import { By } from '@angular/platform-browser';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { IpcError } from '@core/ipc/ipc.error';
 import { VaultRepository } from '@core/data/vault.repository';
+import { LibrariesStore } from '@core/state/libraries.store';
 import { VaultStore } from '@core/state/vault.store';
+import { FakeAppWindow } from '@testing/fake-app-window';
+import { FakeLibrariesRepository } from '@testing/fake-libraries-repository';
 import { FakeVaultRepository } from '@testing/fake-vault-repository';
 import { provideAppTesting } from '@testing/testing.providers';
 import { VaultGateComponent } from './vault-gate.component';
@@ -286,6 +289,79 @@ describe('VaultGateComponent', () => {
 
       expect(panel()).not.toBeNull();
       expect(store.needsCreating()).toBe(false);
+    });
+  });
+
+  /**
+   * ⚠️ The File menu, where the libraries live, does not exist until one is open: the gate
+   * is the only place a user holding several can say which one they have the phrase for.
+   */
+  describe('which library it asks for', () => {
+    async function withLibraries(names: readonly string[]): Promise<FakeLibrariesRepository> {
+      const libraries = new FakeLibrariesRepository(names);
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [VaultGateComponent],
+        providers: [provideAppTesting({ librariesRepository: libraries, appWindow })],
+      });
+      repository = TestBed.inject(VaultRepository) as unknown as FakeVaultRepository;
+      store = TestBed.inject(VaultStore);
+      await TestBed.inject(LibrariesStore).load();
+      fixture = TestBed.createComponent(VaultGateComponent);
+      fixture.autoDetectChanges();
+      await open('locked');
+
+      return libraries;
+    }
+
+    let appWindow: FakeAppWindow;
+
+    function line(): HTMLElement | null {
+      return fixture.debugElement.query(By.css('[data-testid="vault-library"]'))?.nativeElement ?? null;
+    }
+
+    beforeEach(() => {
+      appWindow = new FakeAppWindow();
+    });
+
+    it('names the one it opens', async () => {
+      await withLibraries(['Boulot']);
+
+      expect(line()?.textContent).toContain('Boulot');
+      expect(field('choice-vault-library')).toBeNull();
+    });
+
+    /** "Library: Library" would be a line that says nothing. */
+    it('says nothing about the one library that was never named', async () => {
+      await withLibraries(['']);
+
+      expect(line()).toBeNull();
+    });
+
+    it('offers the others when there are several, and opens the one chosen', async () => {
+      const libraries = await withLibraries(['Notes', 'Boulot']);
+
+      (field('choice-vault-library') as unknown as HTMLButtonElement).click();
+      await fixture.whenStable();
+      const other = fixture.debugElement.query(By.css('[data-option-id="lib-1"]'))
+        .nativeElement as HTMLElement;
+      other.click();
+      await fixture.whenStable();
+
+      expect((await libraries.list()).open).toBe('lib-1');
+      expect(appWindow.reloaded).toBe(1);
+    });
+
+    /** ⚠️ Archiving "the library" without naming which is the worst place to be vague. */
+    it('names it on the way out too', async () => {
+      await withLibraries(['Boulot']);
+
+      (field('vault-forgotten') as unknown as HTMLButtonElement).click();
+      await fixture.whenStable();
+
+      const archive = fixture.debugElement.query(By.css('[data-testid="vault-archive"]'))
+        .nativeElement as HTMLElement;
+      expect(archive.textContent).toContain('Boulot');
     });
   });
 });

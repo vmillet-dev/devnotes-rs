@@ -655,6 +655,8 @@
     "close": "Fermer"
   },
   "vault": {
+    "library": "Bibliothèque",
+    "switchLibrary": "Ouvrir une autre bibliothèque",
     "createTitle": "Protéger cette bibliothèque",
     "createLead": "Choisissez une phrase de passe. Elle sera demandée à chaque lancement de {{app}}, une seule fois.",
     "noRecovery": "⚠️ Cette phrase ne peut pas être récupérée. Perdue, la bibliothèque l’est aussi — un export en clair est la seule copie qui n’en dépend pas.",

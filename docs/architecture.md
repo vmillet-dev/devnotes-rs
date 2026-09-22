@@ -2861,6 +2861,13 @@ Resetting each store by hand was the alternative and was refused: a dozen stores
 and the next one to forget brings the bug back. The cost is the reload itself, and the dark
 base showing for as long as it does at every launch.
 
+⚠️ **The gate says which library it asks for, and offers the others.** The File menu is
+gated on an open library, so before this the gate asked for _a_ phrase and the only way to
+another library was to open the wrong one first. A line at the head of every panel — form,
+forgotten phrase, damaged file — names it; with several, that line is a choice menu calling
+`openLibrary`, which reloads like any other switch. The one library that predates names
+gets no line: "Library: Library" says nothing.
+
 ⚠️ **Creating opens.** One gesture rather than two: you have just named it, so you want to
 be in it, and the gate then asks for a phrase exactly as a first launch does. The surprise
 would be staying where you were.
