@@ -133,27 +133,6 @@
           />
         </form>
       </div>
-      <!-- ⚠️ Shown **together**: a folder belongs to one space, so moving the space clears
-           the folder — `NotePatch::apply` does it — and a folder control on its own would
-           lie about what the space control just did. The editor was the one surface about a
-           single note that could not move it. -->
-      <span class="overlay-placement">
-        <app-choice-menu
-          [kind]="'space'"
-          [label]="'notes.moveToSpace' | transloco"
-          [options]="spaceOptions()"
-          [currentId]="note.spaceId"
-          (chosen)="onSpaceChosen($event)"
-        />
-        <app-choice-menu
-          [kind]="'folder'"
-          [label]="'notes.fileInto' | transloco"
-          [options]="folderOptions()"
-          [currentId]="note.folderId"
-          [noneLabel]="'notes.noFolder' | transloco"
-          (chosen)="fileRequested.emit($event)"
-        />
-      </span>
       <!-- Clearing the field makes the note permanent; a date puts it in "untriaged". -->
       <span class="overlay-expiry">
         <app-lifecycle-badge [lifecycle]="note.lifecycle" [expiringSoon]="note.expiringSoon" />
@@ -167,6 +146,30 @@
           (change)="onExpiryChange(expiryInput.value)"
         />
       </span>
+    </div>
+
+    <!-- ⚠️ A band of its own, like the attachments below it: where a note lives is neither
+         a tag nor a date, and wedged between the two it read as neither. Shown **together**:
+         a folder belongs to one space, so moving the space clears the folder
+         (`NotePatch::apply`), and a folder control on its own would lie about that. -->
+    <div class="overlay-placement" data-testid="editor-placement">
+      <span class="placement-label">{{ 'editor.placementLabel' | transloco }}</span>
+      <app-choice-menu
+        [kind]="'space'"
+        [label]="'notes.moveToSpace' | transloco"
+        [options]="spaceOptions()"
+        [currentId]="note.spaceId"
+        (chosen)="onSpaceChosen($event)"
+      />
+      <span class="placement-separator" aria-hidden="true">›</span>
+      <app-choice-menu
+        [kind]="'folder'"
+        [label]="'notes.fileInto' | transloco"
+        [options]="folderOptions()"
+        [currentId]="note.folderId"
+        [noneLabel]="'notes.noFolder' | transloco"
+        (chosen)="fileRequested.emit($event)"
+      />
     </div>
 
     <app-attachment-strip
