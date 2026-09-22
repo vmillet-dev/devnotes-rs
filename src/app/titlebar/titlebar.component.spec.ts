@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { SettingsStore } from '@core/services/settings/settings.store';
 import { By } from '@angular/platform-browser';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { LocaleService } from '@core/services/i18n/locale.service';
@@ -92,5 +93,50 @@ describe('TitlebarComponent', () => {
     expect(localeService.activeLocale()).toBe('en');
     expect(localeOptions()[1].classList.contains('active')).toBe(true);
     expect(localeOptions()[0].classList.contains('active')).toBe(false);
+  });
+
+  /**
+   * ⚠️ One button that cycles, not three sitting side by side: the theme has three values
+   * and only one is ever true. It writes the same signal the preferences panel writes, so
+   * the two cannot disagree — and the panel keeps its row.
+   */
+  describe('the theme, beside the language', () => {
+    function control(): HTMLButtonElement {
+      return fixture.nativeElement.querySelector('[data-testid="theme-cycle"]');
+    }
+
+    it('is one control, showing the theme in force', async () => {
+      const settings = TestBed.inject(SettingsStore);
+      settings.setTheme('light');
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.querySelectorAll('[data-testid="theme-cycle"]')).toHaveLength(1);
+      expect(control().getAttribute('data-theme-choice')).toBe('light');
+    });
+
+    /** ⚠️ In `THEME_CHOICES` order, which is the preferences panel's. */
+    it('walks the three and comes back round', async () => {
+      const settings = TestBed.inject(SettingsStore);
+      settings.setTheme('system');
+      await fixture.whenStable();
+
+      const walked: string[] = [];
+      for (let step = 0; step < 3; step += 1) {
+        control().click();
+        await fixture.whenStable();
+        walked.push(settings.theme());
+      }
+
+      expect(walked).toEqual(['dark', 'light', 'system']);
+    });
+
+    /** ⚠️ The glyph is decorative and carries the whole state: the word has to be said. */
+    it('names the theme in words, which the glyph does not', async () => {
+      const settings = TestBed.inject(SettingsStore);
+      settings.setTheme('dark');
+      await fixture.whenStable();
+
+      expect(control().getAttribute('aria-label')).toContain('Sombre');
+    });
   });
 });
