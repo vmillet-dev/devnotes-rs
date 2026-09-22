@@ -1,3 +1,5 @@
+@let here = chapter();
+
 <app-dialog [layer]="'app'" [variant]="'framed'" labelledBy="getting-started-title" (closed)="closed.emit()">
   <div class="guide-header" data-testid="getting-started">
     <h2 id="getting-started-title" class="guide-title">{{ 'gettingStarted.title' | transloco }}</h2>
@@ -5,26 +7,65 @@
   </div>
 
   <div class="guide-body">
-    @for (chapter of chapters; track chapter; let index = $index) {
-      <section class="guide-chapter">
-        <!-- The number is decoration: the heading below already orders the chapters. -->
-        <span class="guide-step" aria-hidden="true">{{ index + 1 }}</span>
-        <div class="guide-chapter-text">
-          <h3 class="guide-chapter-title">
-            {{ 'gettingStarted.chapters.' + chapter + '.title' | transloco }}
-          </h3>
-          <p class="guide-chapter-body">
-            {{ 'gettingStarted.chapters.' + chapter + '.body' | transloco: keys() }}
-          </p>
-        </div>
-      </section>
+    <!-- ⚠️ Decorative: the text beside it says the same thing, so nothing is lost by not
+         seeing it — and inline SVG is what survives a CSP with nothing remote in it. -->
+    <app-guide-figure class="guide-figure" [chapter]="here" />
+
+    <section class="guide-chapter" data-testid="guide-chapter" [attr.data-chapter]="here">
+      <p class="guide-step" aria-hidden="true">{{ at() + 1 }} / {{ chapters.length }}</p>
+      <h3 class="guide-chapter-title">
+        {{ 'gettingStarted.chapters.' + here + '.title' | transloco }}
+      </h3>
+      <p class="guide-chapter-body">
+        {{ 'gettingStarted.chapters.' + here + '.body' | transloco: keys() }}
+      </p>
+    </section>
+  </div>
+
+  <!-- Ten dots rather than a list of names: the walk is the navigation, and a reader who
+       knows which chapter they want can still land on it. -->
+  <div class="guide-dots" role="tablist" [attr.aria-label]="'gettingStarted.chaptersLabel' | transloco">
+    @for (name of chapters; track name; let index = $index) {
+      <button
+        type="button"
+        role="tab"
+        class="guide-dot"
+        data-testid="guide-dot"
+        [attr.data-chapter]="name"
+        [class.on]="index === at()"
+        [attr.aria-selected]="index === at()"
+        [attr.aria-label]="'gettingStarted.chapters.' + name + '.title' | transloco"
+        [attr.title]="'gettingStarted.chapters.' + name + '.title' | transloco"
+        (click)="jumpTo(index)"
+      ></button>
     }
   </div>
 
+  <!-- ⚠️ "Fermer" is on every chapter, not only the last: a walk you can only leave by
+       finishing it is a wall with extra steps. -->
   <div class="guide-actions">
-    <p class="guide-hint">{{ 'gettingStarted.hint' | transloco }}</p>
-    <button type="button" class="guide-close" (click)="closed.emit()">
-      {{ 'gettingStarted.close' | transloco }}
+    <button
+      type="button"
+      class="guide-step-btn"
+      data-testid="guide-previous"
+      [disabled]="isFirst()"
+      (click)="go(-1)"
+    >
+      <span aria-hidden="true">‹</span>
+      {{ 'gettingStarted.previous' | transloco }}
     </button>
+
+    <span class="guide-end">
+      <button type="button" class="guide-close" data-testid="guide-close" (click)="closed.emit()">
+        {{ 'gettingStarted.close' | transloco }}
+      </button>
+
+      @if (!isLast()) {
+        <button type="button" class="guide-next" data-testid="guide-next" (click)="go(1)">
+          {{ 'gettingStarted.next' | transloco }}
+          <span aria-hidden="true">›</span>
+        </button>
+      }
+    </span>
   </div>
 </app-dialog>

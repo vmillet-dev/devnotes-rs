@@ -16,28 +16,29 @@ app-dialog {
   @include help-subtitle;
 }
 
+// ⚠️ A fixed height for the whole band, figure and words together: the panel is sized by
+// its content, and a chapter two lines shorter than the last one would make the dialog jump
+// under the cursor on every step — the same trap the update prompt's notes block had.
 .guide-body {
   @include help-body;
-  gap: 16px;
+  gap: 18px;
+  min-height: 232px;
+}
+
+.guide-figure {
+  flex-shrink: 0;
 }
 
 .guide-chapter {
-  display: grid;
-  grid-template-columns: 24px 1fr;
-  gap: 12px;
-  align-items: start;
+  min-height: 84px;
 }
 
 .guide-step {
-  @include tint-badge('--amber-rgb', 0.14);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
+  margin: 0 0 6px;
   font-family: var(--font-mono), serif;
-  font-size: 11px;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: var(--text-2);
 }
 
 .guide-chapter-title {
@@ -54,14 +55,82 @@ app-dialog {
   color: var(--text-1);
 }
 
-.guide-actions {
-  @include help-actions;
+// The walk, as ten dots: a reader who knows which chapter they want can still land on it.
+.guide-dots {
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 20px 4px;
 }
 
-.guide-hint {
-  @include help-hint;
+.guide-dot {
+  @include unstyled-control;
+  @include focus-ring;
+  @include eases(background, transform);
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--bg-3);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--text-2);
+  }
+
+  &.on {
+    background: var(--amber-fill);
+  }
+}
+
+.guide-actions {
+  @include help-actions;
+  justify-content: space-between;
+}
+
+.guide-step-btn {
+  @include unstyled-control;
+  @include hit-target;
+  @include focus-ring;
+  @include eases(color);
+  gap: 4px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--text-2);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    color: var(--text-0);
+  }
+
+  // Not hidden: a control that vanishes at the first chapter moves the one beside it.
+  &:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+}
+
+.guide-end {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .guide-close {
+  @include unstyled-control;
+  @include hit-target;
+  @include focus-ring;
+  @include eases(color);
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--text-2);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text-0);
+  }
+}
+
+// The walk's own button: the one that carries the weight while there is a next chapter.
+.guide-next {
   @include help-close;
 }

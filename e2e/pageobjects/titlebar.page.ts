@@ -167,6 +167,15 @@ export const aboutMenu = {
   },
 
   gettingStarted: () => $(testid('getting-started')),
+
+  /** ⚠️ One chapter at a time since #256: this is the chapter on screen, not all ten. */
+  chapter: () => $(testid('guide-chapter')).getAttribute('data-chapter'),
+
+  next: () => $(testid('guide-next')).click(),
+
+  jumpTo: (chapter: string) => $(`${testid('guide-dot')}[data-chapter="${chapter}"]`).click(),
+
+  close: () => $(testid('guide-close')).click(),
 };
 
 export const banners = {

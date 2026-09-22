@@ -574,50 +574,53 @@
   "gettingStarted": {
     "title": "Prise en main",
     "subtitle": "Ce que {{app}} sait faire, dans l'ordre où on le rencontre.",
-    "hint": "Les notes d'exemple du premier lancement montrent tout cela pour de vrai.",
     "close": "Fermer",
     "chapters": {
       "notes": {
         "title": "Des notes et des snippets",
-        "body": "Une note porte un titre, un corps coloré selon son langage, une source et des tags. Cliquez une carte pour l'ouvrir, ou copiez son contenu sans l'ouvrir depuis le bouton de la carte. Rien n'est enregistré tant que la note est vide : une note ouverte puis abandonnée ne laisse aucune trace."
+        "body": "Une note porte un titre, un corps coloré selon son langage, une source et des tags. Cliquez une carte pour l'ouvrir — ou copiez-la sans l'ouvrir, depuis son propre bouton."
       },
       "spaces": {
         "title": "Des espaces pour ranger",
-        "body": "Chaque note vit dans un espace — « Perso », « Boulot », ce que vous voulez. Le sélecteur en haut à gauche filtre le canevas, et « Tous les espaces » les montre ensemble. Supprimer un espace demande toujours où ses notes doivent aller : elles ne disparaissent jamais avec lui."
+        "body": "Chaque note vit dans un espace : « Perso », « Boulot », ce que vous voulez. Supprimer un espace demande toujours où ses notes doivent aller — elles ne partent jamais avec lui."
       },
       "folders": {
         "title": "Des dossiers, et un tableau",
-        "body": "Un espace reste un tas rangé par date, ce qui répond très bien à « qu'est-ce que j'écrivais hier » et pas du tout à « où est mon SQL sur les index ». Un dossier découpe un espace en régions nommées et colorées : la pastille carrée sur une carte dit où elle vit, et une carte sans pastille n'est rangée nulle part — ce qui est un état parfaitement valable.\n\nLe commutateur « Date / Tableau » ouvre la seconde vue du même espace. Une zone se déplace par sa poignée, se redimensionne par son coin, et se trace à la souris sur le fond vide. Glisser une note dans une zone la range ; la lâcher sur le fond l'en sort. Déplacer une zone emmène ses notes, la redimensionner n'en attrape aucune. Sans souris : {{check}} pour cocher des cartes, puis « Ranger dans » dans la barre de sélection.\n\nCliquer le titre d'une zone descend dedans : une grille ordinaire, une recherche qui ne sort pas du dossier, et une note créée là arrive déjà rangée. Supprimer un dossier ne supprime jamais ses notes — elles redeviennent simplement libres."
+        "body": "Un dossier découpe un espace en régions nommées et colorées, et la vue « Tableau » les montre comme telles : on y range une carte en la glissant, on l'en sort en la lâchant sur le fond. Sans souris : {{check}} pour cocher, puis « Ranger dans »."
       },
       "organise": {
         "title": "Retrouver : recherche, tags, filtres",
-        "body": "La recherche traverse les titres, les corps, les sources et les items des listes, accents compris. Le rail de gauche filtre par tag et par langage, et les filtres rapides isolent les épinglées ou celles qui portent une échéance. Le tri, le regroupement par date et les sections sont calculés par le moteur, pas par l'interface."
+        "body": "La recherche traverse les titres, les corps, les sources et les items, accents compris. Les filtres rapides isolent les épinglées ou celles qui portent une échéance ; les tags et les langages sont derrière le bouton à côté."
       },
       "fields": {
         "title": "Des champs à remplir",
-        "body": "Écrivez un champ entre doubles accolades dans un snippet — nom seul, ou nom et valeur par défaut — et {{app}} vous le demande au moment de copier. Ce que vous saisissez est conservé avec la note, et les variables globales (Fichier → Préférences → Variables) proposent une valeur pour tout le corpus, affichée en gris tant que vous ne la remplacez pas."
+        "body": "Écrivez un champ entre doubles accolades dans un snippet et sa valeur vous sera demandée au moment de copier. Ce que vous saisissez reste avec la note, et une variable globale en propose une pour tout le corpus."
       },
       "checklists": {
         "title": "Des listes à cocher",
-        "body": "Une note est soit un snippet, soit une todolist : une suite d'items ordonnés, cochables depuis la carte sans l'ouvrir. Dans l'éditeur, Entrée ajoute un item, et Alt avec une flèche — ou un glisser au pointeur — le déplace dans la liste."
+        "body": "Une note est soit un snippet, soit une liste à cocher — et une liste se coche depuis la carte, sans l'ouvrir. Dans l'éditeur, Entrée ajoute un item et Alt avec une flèche le déplace."
       },
       "palette": {
         "title": "Coller sans quitter ce que vous faites",
-        "body": "{{palette}} ouvre la palette de collage rapide par-dessus n'importe quelle application : tapez, choisissez, le contenu part dans le presse-papier. {{capture}} fait l'inverse et range le presse-papier dans une note neuve, {{newNote}} en ouvre une vide. Ces trois touches marchent fenêtre fermée, {{app}} restant dans la barre système."
+        "body": "{{palette}} ouvre la palette de collage par-dessus n'importe quelle application : tapez, choisissez, c'est dans le presse-papier. {{capture}} fait l'inverse et {{newNote}} ouvre une note vide, fenêtre fermée comprise."
       },
       "attachments": {
         "title": "Des pièces jointes",
-        "body": "Déposez un fichier sur la fenêtre pendant qu'une note est ouverte, ou collez une image depuis le presse-papier : elle est copiée à côté de la base et rattachée à la note. La carte en affiche le compte, et un aperçu s'agrandit au clic."
+        "body": "Déposez un fichier sur la fenêtre pendant qu'une note est ouverte, ou collez une image : elle est copiée à côté de la base et rattachée à la note. La carte en affiche le compte, et l'aperçu s'agrandit au clic."
       },
       "trash": {
         "title": "Une corbeille, et Ctrl+Z",
-        "body": "Supprimer une note l'envoie à la corbeille, où elle reste trente jours avant de partir pour de bon. Le bandeau qui suit la suppression propose de revenir en arrière, et Ctrl+Z le fait encore après sa disparition. La corbeille s'ouvre depuis les filtres rapides."
+        "body": "Une note supprimée part à la corbeille et y reste trente jours. Le bandeau qui suit propose de revenir en arrière, et Ctrl+Z le fait encore après sa disparition."
       },
       "transfer": {
         "title": "Entrer et sortir",
-        "body": "Le menu Fichier exporte tout, un espace ou la sélection dans un fichier relisible par {{app}}, et réimporte sans jamais créer de doublon. « Copier en Markdown » met la sélection dans le presse-papier, prête à coller dans un ticket ou un message."
+        "body": "Le menu Fichier exporte tout, un espace ou la sélection dans un fichier relisible, et le réimporte sans jamais créer de doublon. « Copier en Markdown » met la sélection dans le presse-papier."
       }
-    }
+    },
+    "chaptersLabel": "Chapitres du guide",
+    "previous": "Précédent",
+    "next": "Suivant",
+    "openChapter": "Comment ça marche"
   },
   "whatsNew": {
     "title": "Nouveautés",

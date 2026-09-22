@@ -77,12 +77,12 @@
   }
 </div>
 
-@switch (panel()) {
+@switch (showing()) {
   @case ('whatsNew') {
     <app-whats-new-dialog (closed)="closePanel()" />
   }
   @case ('gettingStarted') {
-    <app-getting-started-dialog (closed)="closePanel()" />
+    <app-getting-started-dialog [startAt]="help.chapter() ?? 'notes'" (closed)="closePanel()" />
   }
   @case ('shortcuts') {
     <app-shortcuts-dialog (closed)="closePanel()" />

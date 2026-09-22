@@ -1,7 +1,7 @@
-import { $, browser, expect } from '@wdio/globals';
+import { $, $$, browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
-import { fileMenu, settings, titlebar } from '../pageobjects/titlebar.page.js';
+import { aboutMenu, fileMenu, settings, titlebar } from '../pageobjects/titlebar.page.js';
 import { cursorOf, eventually, press, reopenSession, testid } from '../support/app.js';
 
 /**
@@ -121,6 +121,46 @@ describe('Preferences', () => {
 
       expect(await settings.theme()).toBe('light');
       await settings.close();
+    });
+  });
+
+  /**
+   * ⚠️ Ten chapters of prose in one scrolling panel was roughly 3 400 characters, all of it
+   * true and none of it looked at — the worst return a help surface can have.
+   */
+  describe('the written guide', () => {
+    after(async () => {
+      await aboutMenu.close();
+    });
+
+    it('opens on one chapter, with a schematic of the screen it is about', async () => {
+      await aboutMenu.openGettingStarted();
+
+      expect(await aboutMenu.chapter()).toBe('notes');
+      expect(await $$(testid('guide-chapter')).length).toBe(1);
+      expect(await $('app-guide-figure svg').isExisting()).toBe(true);
+    });
+
+    it('walks to the next one', async () => {
+      await aboutMenu.next();
+
+      expect(await aboutMenu.chapter()).toBe('spaces');
+    });
+
+    /** A reader who knows which chapter they want must still land on it. */
+    it('jumps straight to a chapter from its dot', async () => {
+      await aboutMenu.jumpTo('transfer');
+
+      expect(await aboutMenu.chapter()).toBe('transfer');
+    });
+
+    /** ⚠️ A walk you can only leave by finishing it is a wall with extra steps. */
+    it('closes from any chapter', async () => {
+      await aboutMenu.jumpTo('fields');
+      await aboutMenu.close();
+
+      expect(await aboutMenu.gettingStarted().isExisting()).toBe(false);
+      await aboutMenu.openGettingStarted();
     });
   });
 });
