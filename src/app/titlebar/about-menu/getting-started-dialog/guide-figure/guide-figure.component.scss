@@ -1,0 +1,42 @@
+@use 'mixins' as *;
+
+// ⚠️ Decorative: every chapter says in words what its figure shows, so the SVG is
+// `aria-hidden` and nothing is lost by not seeing it.
+:host {
+  display: block;
+}
+
+svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+// The three inks every figure is drawn with, so a new one needs no palette of its own.
+.paper {
+  fill: var(--bg-0);
+}
+
+.panel {
+  fill: var(--bg-2);
+}
+
+.line {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.ink {
+  fill: var(--text-2);
+}
+
+.accent {
+  fill: var(--amber-fill);
+}
+
+.accent-line {
+  fill: none;
+  stroke: var(--amber-dim);
+  stroke-width: 1.5;
+}

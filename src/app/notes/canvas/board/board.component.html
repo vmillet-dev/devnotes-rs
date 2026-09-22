@@ -114,7 +114,13 @@
     }
 
     @if (zones().length === 0 && loose().length === 0) {
-      <p class="board-empty" data-testid="board-empty">{{ 'board.empty' | transloco }}</p>
+      <div class="board-empty" data-testid="board-empty">
+        <p>{{ 'board.empty' | transloco }}</p>
+        <!-- ⚠️ The chapter about folders and the board, not the top of the guide. -->
+        <button type="button" class="board-guide" data-testid="board-guide" (click)="guideRequested.emit()">
+          {{ 'gettingStarted.openChapter' | transloco }}
+        </button>
+      </div>
     }
   </div>
 </div>

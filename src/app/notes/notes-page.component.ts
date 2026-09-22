@@ -12,6 +12,7 @@ import { NotesRevision } from '@core/state/notes-revision';
 import { NoteFilter, NotesStore } from '@core/state/notes.store';
 import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
 import { SampleNotesService } from '@core/state/sample-notes.service';
+import { HelpStore } from '@core/services/help/help.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { PaletteStore } from '@core/state/palette.store';
 import { SpacesStore } from '@core/state/spaces.store';
@@ -92,6 +93,8 @@ export class NotesPageComponent {
   protected readonly attachments = inject(AttachmentsStore);
   protected readonly fill = inject(PlaceholderFillStore);
   protected readonly settings = inject(SettingsStore);
+  /** The guide, opened at the chapter about whatever is empty on screen. */
+  protected readonly help = inject(HelpStore);
 
   private readonly transloco = inject(TranslocoService);
 

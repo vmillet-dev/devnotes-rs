@@ -1929,6 +1929,31 @@ turning the entry off from the task manager has to uncheck the box, not see DevN
 
 ### Help: what's new, getting started, shortcuts
 
+**The written guide is a walk, not a wall.** It was ten chapters of prose in one scrolling
+panel — roughly 3 400 characters, all of it true and none of it looked at, which is the
+worst return a help surface can have. One chapter is on screen at a time now: a schematic of
+the screen it is about, and two sentences beside it. The bodies came down to about 2 000
+characters in total, because the figure carries the arrangement and the words only have to
+say what it is _for_.
+
+⚠️ **Inline SVG and not an image.** The CSP is `script-src 'self'` with nothing remote, and
+a PNG would need one file per theme; the figures are drawn from the palette's own custom
+properties, so they follow the theme for free. ⚠️ Schematic on purpose — boxes where the
+cards are, a bar where the rail is: a screenshot would be a fourth thing to keep in step
+with the interface, and it is the _arrangement_ they have to show. They are `aria-hidden`,
+and every chapter says in words what its figure shows.
+
+⚠️ **It opens at a chapter**, and that is what `core/services/help/` exists for. An empty
+canvas offers the chapter about notes and an empty board the one about folders — reaching
+help from the thing it explains, neither of which is anywhere near the titlebar. `HelpStore`
+holds which chapter is open, the About menu reads it, and `GUIDE_CHAPTERS` is the one list
+of ids so a link cannot point at nothing.
+
+⚠️ "Fermer" is on **every** chapter, not only the last: a walk you can only leave by
+finishing it is a wall with extra steps. ⚠️ The figure band is a fixed height, or a chapter
+two lines shorter than the last would make the dialog jump under the cursor on every step —
+the same trap the update prompt's notes block had.
+
 The titlebar's **"À propos" menu** carries the update check, three help panels and the card
 itself, separated into those three groups. They share one signal (`AboutMenuComponent.panel`)
 rather than a boolean each: they sit on the same backdrop rung (55), only one is ever wanted at

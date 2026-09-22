@@ -196,6 +196,7 @@
             (folderNotesSelected)="selection.checkFolder($event)"
             (notesBanded)="selection.checkMany($event)"
             (tidyRequested)="store.arrangeBoard($event)"
+            (guideRequested)="help.open('folders')"
           />
         }
       } @else {
@@ -230,6 +231,17 @@
                   (click)="canvas.clearFilters()"
                 >
                   {{ 'notes.clearFilters' | transloco }}
+                </button>
+              } @else {
+                <!-- ⚠️ The chapter that explains *this* screen, not the top of the guide:
+                     reaching help from the thing it is about is the whole point of #256. -->
+                <button
+                  type="button"
+                  class="canvas-retry"
+                  data-testid="canvas-guide"
+                  (click)="help.open('notes')"
+                >
+                  {{ 'gettingStarted.openChapter' | transloco }}
                 </button>
               }
             </div>

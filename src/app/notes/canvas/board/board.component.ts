@@ -94,6 +94,7 @@ export class BoardComponent {
   /** Every card a right-drag swept over; the page decides what selecting means. */
   readonly notesBanded = output<readonly string[]>();
   readonly tidyRequested = output<BoardScope>();
+  readonly guideRequested = output<void>();
 
   protected readonly gesture = signal<Gesture | null>(null);
 

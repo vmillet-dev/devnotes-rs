@@ -574,50 +574,53 @@
   "gettingStarted": {
     "title": "Getting started",
     "subtitle": "What {{app}} can do, in the order you meet it.",
-    "hint": "The sample notes from the first launch show all of this for real.",
     "close": "Close",
     "chapters": {
       "notes": {
         "title": "Notes and snippets",
-        "body": "A note carries a title, a body coloured according to its language, a source and tags. Click a card to open it, or copy its content without opening it from the card's button. Nothing is saved while a note is empty: a note opened and then abandoned leaves no trace."
+        "body": "A note carries a title, a body coloured by its language, a source and tags. Click a card to open it — or copy it without opening, from its own button."
       },
       "spaces": {
         "title": "Spaces to file things in",
-        "body": "Every note lives in a space — \"Personal\", \"Work\", whatever you like. The switcher at the top left filters the canvas, and \"All spaces\" shows them together. Deleting a space always asks where its notes should go: they never disappear with it."
+        "body": "Every note lives in a space: “Personal”, “Work”, whatever you like. Deleting one always asks where its notes should go — they never leave with it."
       },
       "folders": {
         "title": "Folders, and a board",
-        "body": "A space stays one pile ordered by date, which answers \"what was I doing yesterday\" very well and \"where do I keep my SQL about indexing\" not at all. A folder cuts a space into named, coloured regions: the square chip on a card says where it lives, and a card with no chip is filed nowhere — which is a perfectly good state to be in.\n\nThe \"Date / Board\" switch opens the second view of the same space. A zone moves by its grip, resizes from its corner, and is drawn with the mouse on the empty background. Dragging a note into a zone files it; dropping it on the background takes it out. Moving a zone carries its notes, resizing one catches none. Without a mouse: {{check}} to tick cards, then \"File into\" in the selection bar.\n\nClicking a zone's title goes inside it: an ordinary grid, a search that does not leave the folder, and a note created there arrives already filed. Deleting a folder never deletes its notes — they simply become loose again."
+        "body": "A folder cuts a space into named, coloured regions, and the “Board” view shows them as such: drag a card in to file it, drop it on the background to take it out. Without a mouse: {{check}} to tick, then “File into”."
       },
       "organise": {
         "title": "Finding things: search, tags, filters",
-        "body": "The search runs through titles, bodies, sources and checklist items, accents included. The left rail filters by tag and by language, and the quick filters isolate the pinned ones or those carrying a deadline. Sorting, grouping by date and the sections are computed by the engine, not by the interface."
+        "body": "Search runs through titles, bodies, sources and list items, accents included. The quick filters isolate the pinned ones or the ones carrying a deadline; tags and formats sit behind the button beside them."
       },
       "fields": {
         "title": "Fields to fill in",
-        "body": "Write a field between double braces in a snippet — a name alone, or a name and a default value — and {{app}} asks you for it when you copy. What you type is kept with the note, and global variables (File → Preferences → Variables) propose a value for the whole corpus, shown in grey until you replace it."
+        "body": "Write a field in double braces inside a snippet and its value will be asked for at the moment you copy. What you type stays with the note, and a global variable proposes one for the whole library."
       },
       "checklists": {
         "title": "Lists to tick",
-        "body": "A note is either a snippet or a todo list: an ordered run of items, tickable from the card without opening it. In the editor, Enter adds an item, and Alt with an arrow — or a pointer drag — moves it within the list."
+        "body": "A note is either a snippet or a todo list — and a list is ticked from the card, without opening it. In the editor, Enter adds an item and Alt with an arrow moves it."
       },
       "palette": {
         "title": "Pasting without leaving what you are doing",
-        "body": "{{palette}} opens the quick-paste palette over any application: type, choose, and the content lands in the clipboard. {{capture}} does the opposite and files the clipboard into a fresh note, {{newNote}} opens an empty one. All three work with the window closed, {{app}} staying in the system tray."
+        "body": "{{palette}} opens the paste palette over any application: type, choose, it is on the clipboard. {{capture}} does the reverse and {{newNote}} opens an empty note, closed window included."
       },
       "attachments": {
         "title": "Attachments",
-        "body": "Drop a file on the window while a note is open, or paste an image from the clipboard: it is copied next to the database and attached to the note. The card shows the count, and a preview grows on click."
+        "body": "Drop a file on the window while a note is open, or paste an image: it is copied beside the database and attached to the note. The card shows the count, and the preview grows on a click."
       },
       "trash": {
         "title": "A trash, and Ctrl+Z",
-        "body": "Deleting a note sends it to the trash, where it stays thirty days before going for good. The banner that follows a deletion offers to take it back, and Ctrl+Z still does after the banner is gone. The trash opens from the quick filters."
+        "body": "A deleted note goes to the trash and stays there for thirty days. The banner that follows offers to undo, and Ctrl+Z still does it once the banner is gone."
       },
       "transfer": {
         "title": "In and out",
-        "body": "The File menu exports everything, one space or the selection into a file {{app}} can read back, and imports without ever creating a duplicate. \"Copy as Markdown\" puts the selection in the clipboard, ready to paste into a ticket or a message."
+        "body": "The File menu exports everything, one space or the selection to a file it can read back, and re-imports it without ever making a duplicate. “Copy as Markdown” puts the selection on the clipboard."
       }
-    }
+    },
+    "chaptersLabel": "Guide chapters",
+    "previous": "Previous",
+    "next": "Next",
+    "openChapter": "How this works"
   },
   "whatsNew": {
     "title": "What's new",
