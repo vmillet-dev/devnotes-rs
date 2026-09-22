@@ -89,12 +89,38 @@ export class VaultStore {
    * come back working and unusable.
    */
   async setAsideDamagedLibrary(): Promise<boolean> {
+    return this.moveAside(() => this.repository.setAsideDamagedLibrary(), 'vault.setAside');
+  }
+
+  /**
+   * Archives a library whose phrase was forgotten, and starts over.
+   *
+   * ⚠️ It recovers nothing, and must not look as though it does: the notes leave sealed,
+   * under the phrase nobody remembers. What it buys is a way past the gate that does not
+   * require knowing where the profile directory is — and a copy still standing, which is
+   * why the report says where it went.
+   */
+  async archiveLockedLibrary(): Promise<boolean> {
+    return this.moveAside(() => this.repository.archiveLockedLibrary(), 'vault.archived');
+  }
+
+  /**
+   * ⚠️ The samples marker goes with the library, whichever reason moved it. Without that,
+   * the fresh one opens on a canvas with no space — and a note cannot be created without
+   * one, so the application would come back working and unusable.
+   *
+   * ⚠️ The state is re-read rather than assumed: a damaged library leaves its key file
+   * behind and comes back `locked`, an archived one takes it and comes back `absent`.
+   */
+  private async moveAside(move: () => Promise<string>, reportKey: string): Promise<boolean> {
     this._isWorking.set(true);
     try {
-      const target = await this.repository.setAsideDamagedLibrary();
+      const target = await move();
       this.preferences.forget(SEEDED_KEY);
       this._damaged.set(false);
-      this.status.notify({ key: 'vault.setAside', params: { path: target } });
+      this._refused.set(false);
+      this.status.notify({ key: reportKey, params: { path: target } });
+      await this.load();
 
       return true;
     } catch (error) {

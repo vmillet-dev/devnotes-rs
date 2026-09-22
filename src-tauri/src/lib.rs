@@ -39,7 +39,7 @@ use notes::{
     move_notes_back, purge_notes, query_notes, rename_tag, restore_notes, seed_samples,
     set_global_placeholders, set_placeholder_values, tag_notes, untag_notes, update_note,
 };
-use recovery::set_aside_damaged_library;
+use recovery::{archive_locked_library, set_aside_damaged_library};
 use spaces::{create_space, delete_space, list_spaces, pin_space, rename_space};
 use transfer::{export_is_protected, export_notes, export_selection, import_notes, share_notes};
 use vault::{change_passphrase, create_vault, unlock_vault, vault_state};
@@ -119,6 +119,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             unlock_vault,
             change_passphrase,
             set_aside_damaged_library,
+            archive_locked_library,
             list_backups,
             restore_backup,
             app_changelog,

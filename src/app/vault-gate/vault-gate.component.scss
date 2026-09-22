@@ -85,3 +85,65 @@
     cursor: default;
   }
 }
+
+// Two answers side by side, where every other panel here has one.
+.choices {
+  display: flex;
+  gap: 10px;
+
+  > * {
+    flex: 1;
+  }
+}
+
+.secondary {
+  @include unstyled-control;
+  @include surface($radius: 8px);
+  @include focus-ring;
+
+  padding: 10px;
+  color: var(--text-1);
+  text-align: center;
+  cursor: pointer;
+
+  &:hover {
+    @include accent-state(var(--text-0), var(--amber-dim));
+  }
+}
+
+// ⚠️ Deliberately small and quiet, below the button and away from the field: somewhere to
+// go once the phrase will not come, never somewhere to land by accident.
+.forgotten {
+  @include unstyled-control;
+  @include focus-ring;
+
+  align-self: center;
+  margin-top: 2px;
+  padding: 4px 6px;
+  font-size: 11.5px;
+  color: var(--text-2);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text-1);
+  }
+}
+
+// ⚠️ Red at rest, not on hover: a warning that arrives under the pointer plays no part
+// in choosing. Text and a hairline, never a fill — one red block beside the single amber
+// accent reads as a second accent.
+.give-up {
+  @include unstyled-control;
+  @include surface($radius: 8px);
+  @include destructive;
+  @include focus-ring;
+
+  padding: 10px;
+  text-align: center;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}

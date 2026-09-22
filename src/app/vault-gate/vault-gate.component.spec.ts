@@ -204,4 +204,88 @@ describe('VaultGateComponent', () => {
       expect(warning.nativeElement.textContent.trim()).not.toBe('');
     });
   });
+  /**
+   * ⚠️ A forgotten passphrase is final by design, and the gate used to offer nothing but
+   * the field: the only way past was finding the profile directory and moving files by
+   * hand, which is not something an application should require anyone to know.
+   */
+  describe('a passphrase nobody remembers', () => {
+    const click = async (hook: string): Promise<void> => {
+      (
+        fixture.debugElement.query(By.css(`[data-testid="${hook}"]`)).nativeElement as HTMLButtonElement
+      ).click();
+      await fixture.whenStable();
+    };
+
+    const panel = (): HTMLElement | null =>
+      fixture.debugElement.query(By.css('[data-testid="vault-archive"]'))?.nativeElement ?? null;
+
+    beforeEach(async () => {
+      repository.answer = 'locked';
+      await store.load();
+      await fixture.whenStable();
+    });
+
+    /** ⚠️ A fresh library has no phrase to have forgotten. */
+    it('offers the way out only on a library that already exists', async () => {
+      expect(fixture.debugElement.query(By.css('[data-testid="vault-forgotten"]'))).not.toBeNull();
+
+      repository.answer = 'absent';
+      await store.load();
+      await fixture.whenStable();
+
+      expect(fixture.debugElement.query(By.css('[data-testid="vault-forgotten"]'))).toBeNull();
+    });
+
+    /** ⚠️ Instead of the form, never beside it: this reads as giving up, not a shortcut. */
+    it('replaces the field with what would be lost, rather than acting', async () => {
+      await click('vault-forgotten');
+
+      expect(panel()).not.toBeNull();
+      expect(field('vault-passphrase')).toBeNull();
+      expect(repository.archived).toEqual([]);
+    });
+
+    it('names what leaves and what does not come back', async () => {
+      await click('vault-forgotten');
+
+      const text = panel()!.textContent ?? '';
+      expect(text).toContain('pas récupérées');
+      expect(text).toContain('scellées');
+    });
+
+    it('goes back to the field without touching anything', async () => {
+      await click('vault-forgotten');
+
+      await click('vault-keep-trying');
+
+      expect(panel()).toBeNull();
+      expect(field('vault-passphrase')).not.toBeNull();
+      expect(repository.archived).toEqual([]);
+    });
+
+    /**
+     * ⚠️ The key file travels, so what is left has no library at all — `absent`, not
+     * `locked`, which is what turns the gate into the one that asks for a new phrase.
+     */
+    it('archives the library and comes back asking for a new phrase', async () => {
+      await click('vault-forgotten');
+
+      await click('vault-archive-confirm');
+
+      expect(repository.archived).toHaveLength(1);
+      expect(store.needsCreating()).toBe(true);
+      expect(field('vault-confirmation')).not.toBeNull();
+    });
+
+    it('stays on the panel when the move was refused', async () => {
+      await click('vault-forgotten');
+      repository.failNext = new IpcError('archive_locked_library', new Error('locked file'));
+
+      await click('vault-archive-confirm');
+
+      expect(panel()).not.toBeNull();
+      expect(store.needsCreating()).toBe(false);
+    });
+  });
 });

@@ -668,7 +668,14 @@
     "damagedAction": "La mettre de côté et repartir à neuf",
     "damagedNote": "⚠️ La base endommagée et ses pièces jointes sont déplacées dans un dossier à part, et ce qui reste lisible est récupéré à côté. Votre phrase de passe ne change pas. {{app}} ouvre ensuite une bibliothèque vide.",
     "setAside": "Bibliothèque mise de côté dans {{path}}. Saisissez votre phrase de passe pour repartir à neuf.",
-    "creating": "Protection de la bibliothèque…"
+    "creating": "Protection de la bibliothèque…",
+    "forgottenLink": "Phrase de passe oubliée ?",
+    "forgottenTitle": "Phrase de passe oubliée",
+    "forgottenLead": "Il n'y a pas de récupération : la phrase enveloppe la clé qui scelle les notes, et rien d'autre ne l'ouvre. Ce que {{app}} peut faire, c'est archiver la bibliothèque telle quelle et vous en ouvrir une neuve.",
+    "forgottenNote": "Vos notes ne sont pas récupérées : elles partent scellées et illisibles, dans un dossier daté à côté de la bibliothèque. Le fichier de clé part avec elles — si la phrase vous revient un jour, la copie sera toujours là. La nouvelle bibliothèque démarre vide, avec une phrase de votre choix.",
+    "forgottenBack": "Réessayer la phrase",
+    "forgottenAction": "Archiver et recommencer",
+    "archived": "Bibliothèque archivée, scellée, dans {{path}}. Choisissez une phrase pour la nouvelle."
   },
   "backups": {
     "loading": "Lecture des copies…",

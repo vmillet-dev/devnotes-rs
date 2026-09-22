@@ -48,6 +48,23 @@ export class FakeVaultRepository implements Pick<VaultRepository, keyof VaultRep
     return target;
   }
 
+  /** Where an archived library was moved, and how many times it was asked for. */
+  archived: string[] = [];
+
+  /** ⚠️ The key file travels, so what is left has no library at all: `absent`, not
+   *  `locked`, which is what makes the gate ask for a new phrase. */
+  async archiveLockedLibrary(): Promise<string> {
+    const failure = this.failNext;
+    this.failNext = null;
+    if (failure !== null) throw failure;
+
+    const target = `/data/archived/${this.archived.length + 1}`;
+    this.archived.push(target);
+    this.answer = 'absent';
+
+    return target;
+  }
+
   /** What the next change answers, so a spec can drive the report it produces. */
   rewrapped: PassphraseChange = { backupsRewrapped: 0, backupsLeft: 0 };
 

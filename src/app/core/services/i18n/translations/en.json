@@ -668,7 +668,14 @@
     "damagedAction": "Set it aside and start fresh",
     "damagedNote": "⚠️ The damaged database and its attachments are moved into a folder of their own, and what can still be read is rescued beside them. Your passphrase does not change. {{app}} then opens on an empty library.",
     "setAside": "Library set aside in {{path}}. Enter your passphrase to start on a fresh one.",
-    "creating": "Protecting the library…"
+    "creating": "Protecting the library…",
+    "forgottenLink": "Forgotten your passphrase?",
+    "forgottenTitle": "Forgotten passphrase",
+    "forgottenLead": "There is no recovery: the phrase wraps the key that seals the notes, and nothing else opens it. What {{app}} can do is archive the library as it stands and open a fresh one for you.",
+    "forgottenNote": "Your notes are not recovered: they leave sealed and unreadable, in a dated folder beside the library. The key file goes with them — if the phrase comes back to you one day, the copy will still be there. The new library starts empty, with a phrase of your choosing.",
+    "forgottenBack": "Try the phrase again",
+    "forgottenAction": "Archive and start over",
+    "archived": "Library archived, sealed, in {{path}}. Choose a phrase for the new one."
   },
   "backups": {
     "loading": "Reading the copies…",
