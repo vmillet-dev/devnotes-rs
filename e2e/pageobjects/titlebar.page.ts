@@ -25,6 +25,20 @@ export const titlebar = {
   /** One of the few untranslated labels, so a scenario can pin the language it asserts in. */
   setLocale: (locale: 'fr' | 'en') => $(`${testid('locale-option')}[data-locale="${locale}"]`).click(),
 
+  /**
+   * ⚠️ One button that cycles rather than three: pressing it walks `THEME_CHOICES`, so
+   * reaching a given theme means pressing it until the control says so.
+   */
+  async setTheme(theme: string): Promise<void> {
+    const control = $(testid('theme-cycle'));
+    for (let press = 0; press < 3; press += 1) {
+      if ((await control.getAttribute('data-theme-choice')) === theme) return;
+      await control.click();
+      await browser.pause(150);
+    }
+    throw new Error(`the titlebar never reached the ${theme} theme`);
+  },
+
   /** One call: two reads leave a window in which the pressed option can change. */
   activeLocale: async (): Promise<string> =>
     (

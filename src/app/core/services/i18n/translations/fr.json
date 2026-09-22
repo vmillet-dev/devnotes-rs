@@ -512,7 +512,8 @@
     "theme": {
       "system": "Système",
       "dark": "Sombre",
-      "light": "Clair"
+      "light": "Clair",
+      "current": "Thème : {{theme}}"
     },
     "density": {
       "comfortable": "Confortable",

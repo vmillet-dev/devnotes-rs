@@ -93,12 +93,15 @@ describe('Preferences', () => {
    * finds twice. The theme was three gestures away where the language was one.
    */
   describe('the theme, from the titlebar', () => {
+    /** ⚠️ One button that cycles, in `THEME_CHOICES` order: system, dark, light. */
+    const cycle = () => $(testid('theme-cycle'));
+
     after(async () => {
-      await $(`${testid('theme-option')}[data-theme-choice="system"]`).click();
+      await titlebar.setTheme('system');
     });
 
     it('repaints the window without opening anything', async () => {
-      await $(`${testid('theme-option')}[data-theme-choice="light"]`).click();
+      await titlebar.setTheme('light');
 
       expect(
         await eventually(
@@ -107,6 +110,10 @@ describe('Preferences', () => {
           'the titlebar control to repaint the window',
         ),
       ).toBe('light');
+    });
+
+    it('shows the theme in force on the one control there is', async () => {
+      expect(await cycle().getAttribute('data-theme-choice')).toBe('light');
     });
 
     it('is the same choice the panel shows', async () => {

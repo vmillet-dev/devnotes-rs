@@ -96,51 +96,47 @@ describe('TitlebarComponent', () => {
   });
 
   /**
-   * ⚠️ The same signal the preferences panel writes, so the two cannot disagree — and the
-   * panel keeps its row: a setting that only exists in a corner of the titlebar is a
-   * setting nobody finds twice.
+   * ⚠️ One button that cycles, not three sitting side by side: the theme has three values
+   * and only one is ever true. It writes the same signal the preferences panel writes, so
+   * the two cannot disagree — and the panel keeps its row.
    */
   describe('the theme, beside the language', () => {
-    function options(): HTMLButtonElement[] {
-      return [...fixture.nativeElement.querySelectorAll('[data-testid="theme-option"]')];
+    function control(): HTMLButtonElement {
+      return fixture.nativeElement.querySelector('[data-testid="theme-cycle"]');
     }
 
-    it('offers the three the panel offers', () => {
-      expect(options().map((option) => option.getAttribute('data-theme-choice'))).toEqual([
-        'system',
-        'dark',
-        'light',
-      ]);
-    });
-
-    it('marks the one in force', async () => {
+    it('is one control, showing the theme in force', async () => {
       const settings = TestBed.inject(SettingsStore);
       settings.setTheme('light');
       await fixture.whenStable();
 
-      const pressed = options().filter((option) => option.getAttribute('aria-pressed') === 'true');
-      expect(pressed).toHaveLength(1);
-      expect(pressed[0].getAttribute('data-theme-choice')).toBe('light');
+      expect(fixture.nativeElement.querySelectorAll('[data-testid="theme-cycle"]')).toHaveLength(1);
+      expect(control().getAttribute('data-theme-choice')).toBe('light');
     });
 
-    it('writes through to the store the panel reads', async () => {
+    /** ⚠️ In `THEME_CHOICES` order, which is the preferences panel's. */
+    it('walks the three and comes back round', async () => {
       const settings = TestBed.inject(SettingsStore);
-
-      options()
-        .find((option) => option.getAttribute('data-theme-choice') === 'dark')!
-        .click();
+      settings.setTheme('system');
       await fixture.whenStable();
 
-      expect(settings.theme()).toBe('dark');
+      const walked: string[] = [];
+      for (let step = 0; step < 3; step += 1) {
+        control().click();
+        await fixture.whenStable();
+        walked.push(settings.theme());
+      }
+
+      expect(walked).toEqual(['dark', 'light', 'system']);
     });
 
-    /** ⚠️ A glyph is decorative: the word has to reach a screen reader some other way. */
-    it('names each one in words, which the glyph does not', () => {
-      expect(options().map((option) => option.getAttribute('aria-label'))).toEqual([
-        'Système',
-        'Sombre',
-        'Clair',
-      ]);
+    /** ⚠️ The glyph is decorative and carries the whole state: the word has to be said. */
+    it('names the theme in words, which the glyph does not', async () => {
+      const settings = TestBed.inject(SettingsStore);
+      settings.setTheme('dark');
+      await fixture.whenStable();
+
+      expect(control().getAttribute('aria-label')).toContain('Sombre');
     });
   });
 });

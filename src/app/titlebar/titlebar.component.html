@@ -19,29 +19,24 @@
   <!-- ⚠️ One group, or `space-between` puts the theme in the middle of the bar: the title
        is absolutely positioned and takes no part in the flex row. -->
   <div class="titlebar-choices">
-    <!-- ⚠️ The same shape as the language beside it rather than a second idiom in the same
-       corner: the theme and the language are the same kind of choice, and one was one click
-       away while the other was three and a page. ⚠️ It writes `SettingsStore.theme`, the
-       signal the preferences panel writes, so the two cannot disagree — and the panel keeps
-       its row, because a setting that only exists in a corner of the titlebar is a setting
-       nobody finds twice. -->
-    <div class="titlebar-switch" role="group" [attr.aria-label]="'settings.appearance.theme' | transloco">
-      @for (choice of themes; track choice) {
-        <button
-          type="button"
-          class="titlebar-option"
-          data-testid="theme-option"
-          [attr.data-theme-choice]="choice"
-          [class.active]="choice === settings.theme()"
-          [attr.aria-pressed]="choice === settings.theme()"
-          [attr.aria-label]="'settings.theme.' + choice | transloco"
-          [attr.title]="'settings.theme.' + choice | transloco"
-          (click)="settings.setTheme(choice)"
-        >
-          <span aria-hidden="true">{{ glyphs[choice] }}</span>
-        </button>
-      }
-    </div>
+    <!-- ⚠️ One button that cycles, not three sitting side by side: the theme has three
+         values and only one of them is ever true, so the other two were two-thirds of a
+         control saying nothing. The glyph **is** the state, which is why the word has to
+         reach a screen reader through the label.
+         ⚠️ It writes `SettingsStore.theme`, the signal the preferences panel writes, so the
+         two cannot disagree — and the panel keeps its row, because a setting that only
+         exists in a corner of the titlebar is a setting nobody finds twice. -->
+    <button
+      type="button"
+      class="titlebar-option theme-cycle"
+      data-testid="theme-cycle"
+      [attr.data-theme-choice]="settings.theme()"
+      [attr.aria-label]="'settings.theme.current' | transloco: { theme: themeName() }"
+      [attr.title]="'settings.theme.current' | transloco: { theme: themeName() }"
+      (click)="cycleTheme()"
+    >
+      <span aria-hidden="true">{{ glyphs[settings.theme()] }}</span>
+    </button>
 
     <div
       class="titlebar-switch locale-switch"
