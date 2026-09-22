@@ -4,6 +4,7 @@ pub mod checklist;
 pub mod language;
 pub mod model;
 pub mod placeholder;
+pub mod revision;
 pub mod store;
 pub mod trash;
 pub mod view;
@@ -60,6 +61,7 @@ use crate::error::{AppError, StorageError};
 use crate::folders;
 use crate::spaces::model::SpaceDraft;
 use model::{DisplayNote, NoteDraft, NotePatch, SampleNote, TagUsage};
+use revision::Revision;
 use trash::TrashedNote;
 use view::{NotesQuery, NotesView};
 
@@ -139,6 +141,42 @@ pub fn update_note(
 ) -> Result<DisplayNote, AppError> {
     let mut connection = lock(&db)?;
     let note = store::update(&mut connection, &id, &patch, Utc::now())?;
+
+    Ok(display(&mut connection, note)?)
+}
+
+/// The bodies kept beside a note, newest first.
+///
+/// ⚠️ Metadata only: instants and sizes, never the bodies themselves. Twenty of them is
+/// what makes this table big, and a list that carried them would send the whole history
+/// across to draw twenty dates.
+#[tauri::command(async)]
+#[specta::specta]
+pub fn list_revisions(id: String, db: State<'_, Db>) -> Result<Vec<Revision>, AppError> {
+    let mut connection = lock(&db)?;
+
+    let (connection, vault) = connection.split();
+
+    Ok(store::revisions::list(connection, vault, &id)?)
+}
+
+/// Puts a kept body back on the note.
+///
+/// ⚠️ `updated_at` is **not** touched. Putting something back is not editing it — the
+/// same line `restore_notes`, `move_notes_back`, `untag_notes` and
+/// `set_placeholder_values` already hold — and the canvas sorts on that column.
+///
+/// ⚠️ The body being replaced is itself kept first, so a restore is as undoable as the
+/// edit that made it necessary.
+#[tauri::command(async)]
+#[specta::specta]
+pub fn restore_revision(
+    id: String,
+    revision_id: String,
+    db: State<'_, Db>,
+) -> Result<DisplayNote, AppError> {
+    let mut connection = lock(&db)?;
+    let note = store::restore_revision(&mut connection, &id, &revision_id, Utc::now())?;
 
     Ok(display(&mut connection, note)?)
 }

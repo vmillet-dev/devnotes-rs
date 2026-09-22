@@ -3,6 +3,7 @@ import {
   Component,
   ElementRef,
   computed,
+  effect,
   inject,
   input,
   linkedSignal,
@@ -18,6 +19,7 @@ import { Note, NotePatch } from '@core/model/note.model';
 import { AttachmentsStore } from '@core/state/attachments.store';
 import { FoldersStore } from '@core/state/folders.store';
 import { SpacesStore } from '@core/state/spaces.store';
+import { NoteRevisionsStore } from '@core/state/note-revisions.store';
 import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
 import { ClockService } from '@core/services/time/clock.service';
@@ -29,6 +31,7 @@ import { ChecklistEditorComponent } from './checklist-editor/checklist-editor.co
 import { CopyButtonComponent } from '@notes/ui/copy-button/copy-button.component';
 import { LifecycleBadgeComponent } from './lifecycle-badge/lifecycle-badge.component';
 import { PlaceholderPanelComponent } from './placeholder-panel/placeholder-panel.component';
+import { RevisionPanelComponent } from './revision-panel/revision-panel.component';
 import { ChoiceMenuComponent, ChoiceOption } from '@notes/ui/choice-menu/choice-menu.component';
 import { TagPillComponent } from '@notes/ui/tag-pill/tag-pill.component';
 
@@ -75,6 +78,7 @@ function toDateInputValue(date: Date): string {
     TagPillComponent,
     LifecycleBadgeComponent,
     PlaceholderPanelComponent,
+    RevisionPanelComponent,
     ChoiceMenuComponent,
     CodeViewerComponent,
     TranslocoPipe,
@@ -89,6 +93,7 @@ export class NoteEditorOverlayComponent {
 
   /** Attachments and `{{field}}` filling have a write cycle of their own. */
   protected readonly attachments = inject(AttachmentsStore);
+  protected readonly revisions = inject(NoteRevisionsStore);
   private readonly spaces = inject(SpacesStore);
   private readonly folders = inject(FoldersStore);
   protected readonly fill = inject(PlaceholderFillStore);
@@ -143,8 +148,13 @@ export class NoteEditorOverlayComponent {
     computation: () => untracked(() => this.note()?.title ?? ''),
   });
 
+  /**
+   * ⚠️ Keyed on the restore counter as well as the id: putting a body back does not
+   * change the note's id, so the field went on showing the version that had just been
+   * replaced — and the commit on close wrote it straight back. The restore undid itself.
+   */
   protected readonly draftContent = linkedSignal({
-    source: this.noteId,
+    source: () => [this.noteId(), this.revisions.restored()] as const,
     computation: () => untracked(() => this.note()?.content ?? ''),
   });
 
@@ -174,6 +184,16 @@ export class NoteEditorOverlayComponent {
   private readonly fieldsPanel = viewChild(PlaceholderPanelComponent);
 
   protected readonly isChecklist = computed(() => this.note()?.kind === 'checklist');
+
+  /**
+   * ⚠️ A snippet's history only. A checklist's items live in `note_items`, a second table
+   * to snapshot and a two-step restore — deliberately out of this first version, and said
+   * so rather than shipped as a panel that is always empty for half the note kinds.
+   */
+  protected readonly historyOf = effect(() => {
+    const note = this.note();
+    void this.revisions.openFor(note && note.kind === 'snippet' ? note.id : null);
+  });
   protected readonly checklistStats = computed(() => checklistProgress(this.note()?.items ?? []));
 
   /** The draft, so copying before leaving the field yields what is on screen. */

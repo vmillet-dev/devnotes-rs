@@ -5,7 +5,7 @@ import { eventually, testid } from '../support/app.js';
 /**
  * The way out of a library nobody can open any more.
  *
- * ⚠️ This file runs **after `22-backups`** and depends on it: that one ends by restoring
+ * ⚠️ This file runs **after `23-backups`** and depends on it: that one ends by restoring
  * a copy, which closes the library and leaves the gate on screen. There is no other way
  * to meet a locked gate inside one run — the unlocked state lives in the process, and the
  * process outlives every page reload. Nothing may be filed after this one either: it

@@ -72,6 +72,17 @@ diesel::table! {
     }
 }
 
+// ⚠️ `content` is sealed, like the column it copies: a history of every body in plaintext
+// beside a sealed library would undo the encryption entirely.
+diesel::table! {
+    note_revisions (id) {
+        id -> Text,
+        note_id -> Text,
+        content -> Text,
+        taken_at -> Text,
+    }
+}
+
 // ⚠️ Case-sensitive where `note_tags` folds case: `{{Host}}` is not `{{host}}`.
 diesel::table! {
     note_placeholders (note_id, name) {
@@ -106,6 +117,7 @@ diesel::joinable!(notes -> spaces (space_id));
 diesel::joinable!(note_positions -> notes (note_id));
 diesel::joinable!(note_tags -> notes (note_id));
 diesel::joinable!(note_items -> notes (note_id));
+diesel::joinable!(note_revisions -> notes (note_id));
 diesel::joinable!(note_placeholders -> notes (note_id));
 diesel::joinable!(attachments -> notes (note_id));
 
@@ -116,6 +128,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     note_positions,
     note_tags,
     note_items,
+    note_revisions,
     note_placeholders,
     global_placeholders,
     attachments

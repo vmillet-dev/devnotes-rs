@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { commands } from '@core/ipc/bindings';
 import { unwrap } from '@core/ipc/ipc.error';
+import { Revision } from '../model/revision.model';
 import { Space } from '../model/space.model';
 import {
   Note,
@@ -58,6 +59,22 @@ export class NotesRepository {
 
   async update(id: string, patch: NotePatch): Promise<Note> {
     return toNote(unwrap('update_note', await commands.updateNote(id, toWireNotePatch(patch))));
+  }
+
+  /** The bodies kept beside a note, newest first. */
+  async listRevisions(id: string): Promise<readonly Revision[]> {
+    return unwrap('list_revisions', await commands.listRevisions(id)).map((wire) => ({
+      ...wire,
+      takenAt: new Date(wire.takenAt),
+    }));
+  }
+
+  /**
+   * Puts a kept body back. ⚠️ Does not refresh `updated_at` — putting something back is
+   * not editing it — so the canvas does not float the note to the top for it.
+   */
+  async restoreRevision(id: string, revisionId: string): Promise<Note> {
+    return toNote(unwrap('restore_revision', await commands.restoreRevision(id, revisionId)));
   }
 
   /** Moves to the trash: the note is recoverable for 30 days. */

@@ -35,9 +35,10 @@ use folders::{
 };
 use notes::{
     count_notes_tagged, create_note, delete_note, delete_notes, delete_tags, empty_trash,
-    fill_placeholders, list_global_placeholders, list_tags, list_trash, merge_tags, move_notes,
-    move_notes_back, purge_notes, query_notes, rename_tag, restore_notes, seed_samples,
-    set_global_placeholders, set_placeholder_values, tag_notes, untag_notes, update_note,
+    fill_placeholders, list_global_placeholders, list_revisions, list_tags, list_trash, merge_tags,
+    move_notes, move_notes_back, purge_notes, query_notes, rename_tag, restore_notes,
+    restore_revision, seed_samples, set_global_placeholders, set_placeholder_values, tag_notes,
+    untag_notes, update_note,
 };
 use recovery::{archive_locked_library, set_aside_damaged_library};
 use spaces::{create_space, delete_space, list_spaces, pin_space, rename_space};
@@ -67,6 +68,8 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             create_note,
             seed_samples,
             update_note,
+            list_revisions,
+            restore_revision,
             delete_note,
             delete_notes,
             restore_notes,

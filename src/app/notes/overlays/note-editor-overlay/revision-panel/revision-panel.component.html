@@ -1,0 +1,45 @@
+<!-- Nothing for a note nobody has edited yet: a panel always there and always empty
+     would be a feature nobody uses, and this editor is already dense. -->
+@if (store.hasHistory()) {
+  <section class="revisions" [class.open]="store.isOpen()">
+    <button
+      type="button"
+      class="revisions-toggle"
+      data-testid="revisions-toggle"
+      [attr.aria-expanded]="store.isOpen()"
+      (click)="store.toggle()"
+    >
+      <span class="revisions-chevron" aria-hidden="true">{{ store.isOpen() ? '▾' : '▸' }}</span>
+      {{ 'revisions.title' | transloco: { count: rows().length } }}
+    </button>
+
+    @if (store.isOpen()) {
+      <ul class="revisions-list" data-testid="revisions-list">
+        @for (row of rows(); track row.revision.id) {
+          <li class="revision-row" data-testid="revision-row">
+            <span class="revision-when">
+              {{ row.when.key | transloco: row.when.params }}
+              <span class="revision-size">
+                {{ 'revisions.characters' | transloco: { count: row.revision.characters } }}
+              </span>
+            </span>
+            <button
+              type="button"
+              class="revision-restore"
+              data-testid="revision-restore"
+              [attr.data-revision]="row.revision.id"
+              [disabled]="store.isWorking()"
+              (click)="store.restore(row.revision.id)"
+            >
+              {{ 'revisions.restore' | transloco }}
+            </button>
+          </li>
+        }
+      </ul>
+
+      <!-- ⚠️ Said rather than guarded: the body a restore replaces is kept first, so this
+           is one of the few destructive-looking gestures that needs no confirmation. -->
+      <p class="revisions-note">{{ 'revisions.note' | transloco }}</p>
+    }
+  </section>
+}

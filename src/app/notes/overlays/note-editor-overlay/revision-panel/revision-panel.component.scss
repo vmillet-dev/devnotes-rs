@@ -1,0 +1,94 @@
+@use 'mixins' as *;
+
+.revisions {
+  border-top: 1px solid var(--line-soft);
+  padding-top: 8px;
+}
+
+.revisions-toggle {
+  @include unstyled-control;
+  @include focus-ring($offset: 1px);
+  @include hit-target;
+
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+  font-size: 11.5px;
+  color: var(--text-2);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text-1);
+  }
+}
+
+// At 9px the glyph read as a full stop rather than as a chevron.
+.revisions-chevron {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.revisions-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  // ⚠️ Capped and scrolling: twenty rows would push the editor's own footer off screen.
+  max-height: 168px;
+  overflow-y: auto;
+}
+
+.revision-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 4px;
+  border-bottom: 1px solid var(--line-soft);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+.revision-when {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-1);
+}
+
+.revision-size {
+  font-family: var(--font-mono), serif;
+  font-size: 10.5px;
+  color: var(--text-2);
+}
+
+.revision-restore {
+  @include unstyled-control;
+  @include focus-ring($offset: 1px);
+  @include hit-target;
+
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  color: var(--amber-text);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--bg-2);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+
+.revisions-note {
+  margin: 6px 0 0;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--text-2);
+}

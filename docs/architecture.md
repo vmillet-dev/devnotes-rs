@@ -2747,6 +2747,70 @@ so a set-aside library has no wrapping of its own to retire and opens under the 
 like the live one. And the dialog says the part the application cannot act on — a key file
 the user copied elsewhere still opens with the old phrase, and only the user knows about it.
 
+### Revisions: the body before the edit
+
+The trash protects a deletion and nothing protected an edit. You adjust a command that
+worked, it stops working, and the version that worked is gone. ⚠️ The point is not the
+restoring — it is the **ease**: a text you know is recoverable is a text you edit freely,
+and touching a snippet that works stops costing nerve every time.
+
+`note_revisions` (migration 12) follows `notes::trash`'s shape rather than inventing one:
+a retention constant, a prune that runs on write, and a table the cascade takes with the
+note.
+
+**What is kept, and what is deliberately not.**
+
+|                      |         | why                                                                                                                                          |
+| -------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| the **body**         | kept    | the 90% case and by far the cheapest; title, tags and language are almost never what anyone wants back                                       |
+| **snippets** only    | kept    | a checklist's items live in `note_items` — a second table to snapshot and a two-step restore                                                 |
+| the last `KEEP` (20) | kept    | ⚠️ a **count**, not a time window: a body runs to tens of kilobytes, so a cap is the only bound that is predictable for storage              |
+| exports              | **out** | revisions in the bundle would inflate it by a factor of the cap; a note restored elsewhere arriving without its history is the accepted cost |
+
+⚠️ Both omissions are held by a test rather than left to be noticed —
+`a_checklist_keeps_nothing_yet` and `a_bundle_carries_no_history_of_the_bodies_it_holds`.
+Half the note kinds get nothing from this first version, and that is said out loud rather
+than shipped silently.
+
+**When one is taken.** Inside `notes::store::update`, in the same transaction, **before**
+the row moves: what is worth keeping is the body as it _was_. `update` already computes
+`before` for its own change detection, so the signal costs nothing.
+
+⚠️ `record` skips the write when the newest kept body already holds that exact text. The
+editor commits on blur _and_ on every closing path, so one editing session produces
+several writes of the same body — without the skip, each of them would push a duplicate
+and rotate a genuinely different version out of the cap.
+
+⚠️ `content` is **sealed**, like the column it copies. A history of every body in
+plaintext beside a sealed library would undo the encryption entirely, and
+`a_kept_body_is_not_readable_in_the_column_it_sits_in` holds that against the raw column.
+
+⚠️ The listing orders by **`rowid`**, not by `taken_at`. The editor commits the title, the
+source and the body back to back, so two revisions can share a millisecond — and the
+tiebreak was a random UUID, which put the older one first about half the time. Insertion
+order is what "newest" means here, and `rowid` _is_ insertion order. (The same trap the
+seeding met, from the other end.)
+
+**Restoring.** ⚠️ `restore_revision` does **not** touch `updated_at`. Putting something
+back is not editing it — the fifth place in the codebase holding that line, after
+`restore_many`, `restore_placements`, `untag_many` and `set_placeholder_values` — and the
+canvas sorts on that column.
+
+⚠️ The body being replaced is itself kept first, which is why the panel asks for **no
+confirmation**: a restore is as undoable as the edit that made it necessary, and a guard
+in front of a reversible gesture is how a safety net becomes a nuisance. Every other
+content-replacing gesture in the application confirms; this one earns its exemption.
+
+⚠️ `content_of` narrows on the **note id as well as** the revision id: an id comes from
+the front end, and one note's history must not be reachable through another note.
+
+**On screen**, a fold-away under the editor's body, shown only when there is something to
+show — "a header always present and always empty would be a feature nobody uses" is the
+editor's own rule, applied again. ⚠️ `NoteRevisionsStore.openFor` reloads even for the
+note it is already on, and must: the editor is **destroyed** when it closes, so nothing
+ever calls it with `null` on the way out. Skipping the work for a matching id left the
+panel showing what the _first_ open found — an empty history that never came back.
+
 ### The copies, and putting one back
 
 `backup::rotate` takes one at unlock, before the sweeps, into `backups/<stamp>/`: a
@@ -2799,7 +2863,7 @@ what writes. The trigger is replaced by that sentence and the confirm sits somew
 strip scrolls itself into view, because it replaces a trigger further down a panel that
 scrolls and would otherwise appear below the fold.
 
-⚠️ `22-backups.e2e.ts` is **last on purpose**: its final scenario really replaces the
+⚠️ `23-backups.e2e.ts` runs **second to last**: its final scenario really replaces the
 library and leaves it locked, which every other file would meet as a gate it was not
 written for. The numeric prefix is the run order, and nothing may be filed after it.
 
@@ -2971,7 +3035,7 @@ colour, created_at)` and `notes.folder_id` points into it. ⚠️ The column was
   are not recovered, they leave sealed and unreadable — and ⚠️ its confirm is `destructive`
   rather than the amber fill, which is the button you are _meant_ to press.
 
-  ⚠️ `23-forgotten-passphrase.e2e.ts` runs **after `22-backups`** and depends on it: that
+  ⚠️ `24-forgotten-passphrase.e2e.ts` runs **after `23-backups`** and depends on it: that
   one ends by restoring a copy, which closes the library and leaves the gate on screen.
   There is no other way to meet a locked gate inside one run — the unlocked state lives in
   the process, and the process outlives every page reload. Nothing may be filed after it.

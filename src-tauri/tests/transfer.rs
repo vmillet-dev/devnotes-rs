@@ -694,3 +694,32 @@ mod folders_travelling {
         assert_eq!(kept.get(&loose.id), Some(&BoardPoint { x: 640, y: 480 }));
     }
 }
+
+/// ⚠️ A deliberate omission, held by a test rather than left to be noticed: revisions in
+/// the bundle would inflate it by a factor of the cap, and a note restored elsewhere
+/// arriving without its history is the accepted cost (#39).
+#[test]
+fn a_bundle_carries_no_history_of_the_bodies_it_holds() {
+    let mut connection = open_in_memory().unwrap();
+    let space_id = spaces::create(&mut connection, "Personal").unwrap().id;
+    let id = notes::create(&mut connection, draft(&space_id, "Requête"), t0())
+        .unwrap()
+        .id;
+    notes::update(
+        &mut connection,
+        &id,
+        &devnotes_lib::notes::model::NotePatch {
+            content: Some("select 2".to_string()),
+            ..Default::default()
+        },
+        t0(),
+    )
+    .unwrap();
+
+    let bundle = exported(&mut connection);
+    let written = serde_json::to_string(&bundle).unwrap();
+
+    // The current body travels; the one it replaced does not.
+    assert!(written.contains("select 2"));
+    assert!(!written.contains("select 1"));
+}
