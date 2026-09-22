@@ -60,6 +60,18 @@ describe('Preferences', () => {
    */
   it('holds the language until it is applied', async () => {
     await fileMenu.openPreferences();
+
+    // ⚠️ Established, never assumed: the locale ships as "system", which resolves to the
+    // machine's own — and the runner this suite lives on is not in French. Asserting "fr"
+    // here passed on a French desktop and went red on CI (#311).
+    await settings.setLocale('fr');
+    await settings.apply();
+    await eventually(
+      () => titlebar.activeLocale(),
+      (locale) => locale === 'fr',
+      'the panel to settle on the locale this scenario starts from',
+    );
+
     await settings.setLocale('en');
     expect(await titlebar.activeLocale()).toBe('fr');
 
