@@ -2,28 +2,51 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { SettingsDraftStore } from '@core/services/settings/settings-draft.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
-import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
+import { Backup } from '@core/model/backup.model';
+import { FakeBackupsRepository } from '@testing/fake-backups-repository';
+import { provideAppTesting } from '@testing/testing.providers';
 import { SecurityPageComponent } from './security-page.component';
+
+/** Two copies, as a profile really holds them: one taken today, one the day before. */
+const TAKEN: readonly Backup[] = [
+  {
+    id: '2026-07-25_09-00-00',
+    takenAt: new Date('2026-07-25T09:00:00.000Z'),
+    bytes: 2_500_000,
+    openable: true,
+  },
+  {
+    id: '2026-07-24_09-00-00',
+    takenAt: new Date('2026-07-24T09:00:00.000Z'),
+    bytes: 2_400_000,
+    openable: false,
+  },
+];
 
 describe('SecurityPageComponent', () => {
   let fixture: ComponentFixture<SecurityPageComponent>;
   let settings: SettingsStore;
   let draft: SettingsDraftStore;
+  let copies: FakeBackupsRepository;
 
   const backups = (): HTMLInputElement =>
     fixture.nativeElement.querySelector('[data-testid="setting-automatic-backups"]');
 
   beforeEach(async () => {
     TestBed.resetTestingModule();
+    copies = new FakeBackupsRepository(TAKEN);
     TestBed.configureTestingModule({
       imports: [SecurityPageComponent],
-      providers: [provideTranslocoTesting()],
+      providers: [provideAppTesting({ backupsRepository: copies })],
     });
     settings = TestBed.inject(SettingsStore);
     draft = TestBed.inject(SettingsDraftStore);
     draft.cancel();
     fixture = TestBed.createComponent(SecurityPageComponent);
     fixture.autoDetectChanges();
+    // The page reads the copies in its constructor, so the round trip has to settle
+    // before the DOM says anything about them.
+    await fixture.whenStable();
     await fixture.whenStable();
   });
 
@@ -73,5 +96,70 @@ describe('SecurityPageComponent', () => {
     );
 
     expect(titles).toEqual(['Accès', 'Copies de sauvegarde']);
+  });
+  const rows = (): HTMLElement[] => [...fixture.nativeElement.querySelectorAll('[data-testid="backup-row"]')];
+
+  const restoreButton = (id: string): HTMLButtonElement | null =>
+    fixture.nativeElement.querySelector(`[data-testid="backup-restore"][data-backup="${id}"]`);
+
+  const confirmStrip = (): HTMLElement | null =>
+    fixture.nativeElement.querySelector('[data-testid="backup-confirm"]');
+
+  /**
+   * ⚠️ The whole of #251: the copies were taken at unlock, kept beside the library and
+   * pruned to three, and none of it said anywhere the application could be read from.
+   */
+  describe('the copies it lists', () => {
+    it('shows one row per copy, with when it was taken and how big it is', () => {
+      expect(rows()).toHaveLength(2);
+      expect(rows()[0].textContent).toContain('2026-07-25_09-00-00');
+      expect(rows()[0].textContent).toContain('2.4 Mo');
+    });
+
+    /** ⚠️ Listed, never offered: it opens for nobody. */
+    it('offers no restore on a copy whose key file did not travel with it', () => {
+      expect(restoreButton('2026-07-25_09-00-00')).not.toBeNull();
+      expect(restoreButton('2026-07-24_09-00-00')).toBeNull();
+      expect(rows()[1].textContent).toContain('illisible');
+    });
+
+    /**
+     * ⚠️ The trigger is replaced by a sentence naming what will happen, and the confirm
+     * sits somewhere else: a second click on the button that fired it is the guard a
+     * double click defeats.
+     */
+    it('names what a restore would do before it runs one', async () => {
+      expect(confirmStrip()).toBeNull();
+
+      restoreButton('2026-07-25_09-00-00')!.click();
+      await fixture.whenStable();
+
+      expect(confirmStrip()?.textContent).toContain('2026-07-25_09-00-00');
+      expect(restoreButton('2026-07-25_09-00-00')).toBeNull();
+      expect(copies.restored).toEqual([]);
+    });
+
+    it('runs it only from the button that is not the one that was clicked', async () => {
+      restoreButton('2026-07-25_09-00-00')!.click();
+      await fixture.whenStable();
+
+      (
+        fixture.nativeElement.querySelector('[data-testid="backup-confirm-restore"]') as HTMLButtonElement
+      ).click();
+      await fixture.whenStable();
+
+      expect(copies.restored).toEqual(['2026-07-25_09-00-00']);
+    });
+
+    it('gives up on it without running anything', async () => {
+      restoreButton('2026-07-25_09-00-00')!.click();
+      await fixture.whenStable();
+
+      (fixture.nativeElement.querySelector('[data-testid="backup-cancel"]') as HTMLButtonElement).click();
+      await fixture.whenStable();
+
+      expect(confirmStrip()).toBeNull();
+      expect(copies.restored).toEqual([]);
+    });
   });
 });

@@ -2747,6 +2747,62 @@ so a set-aside library has no wrapping of its own to retire and opens under the 
 like the live one. And the dialog says the part the application cannot act on — a key file
 the user copied elsewhere still opens with the old phrase, and only the user knows about it.
 
+### The copies, and putting one back
+
+`backup::rotate` takes one at unlock, before the sweeps, into `backups/<stamp>/`: a
+`VACUUM INTO` of the database plus its key file, at most one a day, the last `KEEP` kept.
+None of that used to be visible. There was no list, no date, no size, no way to put one
+back, and the switch that controls it stood with nothing beside it — a safety net nobody
+can see is one nobody trusts, and one nobody can use.
+
+The **Sécurité** page now says it where the application can be read from: what the copies
+are, where they live, how many are kept, and what they do **not** cover — a copy inside
+the profile answers an emptied trash, a botched update or a slip of the hand, not a dead
+disk, and it carries the notes and the key but **not the attached files**.
+
+`list_backups` answers `Backup { id, takenAt, bytes, openable }`, newest first. ⚠️
+`openable` is the key file: a copy without one opens for nobody, so it is **listed and
+never offered** — proposing it would be proposing to lose the library for nothing. ⚠️
+`bytes` crosses as `f64`, which specta types as nullable because JSON cannot carry `NaN`;
+`backups.repository.ts` puts that back, alongside the ISO instant.
+
+**Restoring is the one gesture in the application that replaces a whole corpus**, and it
+is built like it.
+
+- ⚠️ `restore_backup` empties the connection `Mutex` **before a single file moves**, under
+  the same lock every other command takes. Renaming a database out from under a live
+  connection is how a working library becomes a lost one.
+- ⚠️ `backup::replace` moves the live database **and** `vault.json` into
+  `replaced/<timestamp>/` before copying the chosen pair in, and moves them back if the
+  copy fails. A failed restore must never leave no library at all. Nothing is deleted: a
+  folder with a date on it is the difference between a mistake and a loss.
+- ⚠️ `vault.json` travels, unlike `recovery::set_aside` where it deliberately stays. The
+  copy brings its own wrapping, and a database from one wrapping with a key from another
+  opens nothing.
+- ⚠️ `attachments/` **stays**, also unlike `set_aside`. The copies do not carry it — it is
+  the bulk of a profile — so moving it aside would point every restored record at a file
+  that left. The next launch's orphan sweep collects whatever the restored library no
+  longer names, which is right: those files belong to notes it does not have.
+- ⚠️ The id is matched against the listing rather than joined onto `backups/`. It comes
+  from the front end, and `../2026-01-01_00-00-00` joins to a path outside the directory
+  whose file name still parses as a stamp.
+
+Afterwards every command answers `Locked`, `VaultStore.load()` sees it, and the outlet is
+destroyed — with the File menu the panel was opened from, which is gated on the same
+signal. The restored copy needs a passphrase, and asking for it is the only proof the
+right file is in place.
+
+⚠️ `BackupsStore` follows the shape the tag manager and the trash already use: `ask()`
+only **proposes**, `pending()` names which copy and what it would cost, and `confirm()` is
+what writes. The trigger is replaced by that sentence and the confirm sits somewhere else
+— a second click on the button that fired it is the guard a double click defeats. The
+strip scrolls itself into view, because it replaces a trigger further down a panel that
+scrolls and would otherwise appear below the fold.
+
+⚠️ `22-backups.e2e.ts` is **last on purpose**: its final scenario really replaces the
+library and leaves it locked, which every other file would meet as a gate it was not
+written for. The numeric prefix is the run order, and nothing may be filed after it.
+
 ### Attachments, and the one plaintext copy
 
 The bytes are sealed on the way in (`attachments::copy_within_limit`) and opened in memory

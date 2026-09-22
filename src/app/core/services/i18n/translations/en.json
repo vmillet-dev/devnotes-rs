@@ -257,7 +257,9 @@
     "boardLoadFailed": "The board could not be loaded.",
     "boardSaveFailed": "The board layout could not be saved.",
     "fileFailed": "The note could not be filed.",
-    "boardArrangeFailed": "The board could not be tidied up."
+    "boardArrangeFailed": "The board could not be tidied up.",
+    "backupsListFailed": "The backup copies could not be read.",
+    "backupRestoreFailed": "That copy could not be restored. The library was left in place."
   },
   "tray": {
     "open": "Open {{app}}",
@@ -548,7 +550,8 @@
       "changedSomeLeft": "Passphrase changed, but {{count}} copies could not be rewrapped: they still open with the old phrase.",
       "copiesNote": "The copies kept beside the library are rewrapped with it. A key file you copied somewhere else will still open with the old phrase.",
       "backups": "Backups",
-      "access": "Access"
+      "access": "Access",
+      "backupsLimit": "A copy carries the notes and the key that opens them, not the attached files."
     },
     "notifications": {
       "title": "Notifications",
@@ -666,5 +669,16 @@
     "damagedNote": "⚠️ The damaged database and its attachments are moved into a folder of their own, and what can still be read is rescued beside them. Your passphrase does not change. {{app}} then opens on an empty library.",
     "setAside": "Library set aside in {{path}}. Enter your passphrase to start on a fresh one.",
     "creating": "Protecting the library…"
+  },
+  "backups": {
+    "loading": "Reading the copies…",
+    "none": "No copy yet. The first one is taken at the next launch.",
+    "restore": "Restore…",
+    "unopenable": "No key: unreadable",
+    "confirm": "Replace the whole library with the copy from {{when}}. Everything written since leaves the library — nothing is deleted, the current one is set aside in \"replaced\". You will have to type the passphrase again.",
+    "cancel": "Cancel",
+    "confirmRestore": "Replace the library",
+    "restoring": "Replacing…",
+    "restored": "Library restored. The previous one is in {{path}}."
   }
 }

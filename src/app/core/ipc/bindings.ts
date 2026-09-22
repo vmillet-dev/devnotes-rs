@@ -177,6 +177,18 @@ export const commands = {
 	 *  "set aside" is only true if the user can be told where.
 	 */
 	setAsideDamagedLibrary: () => typedError<string, AppError>(__TAURI_INVOKE("set_aside_damaged_library")),
+	/**  The copies that exist, newest first, for the panel that lists them. */
+	listBackups: () => typedError<Backup[], AppError>(__TAURI_INVOKE("list_backups")),
+	/**
+	 *  Puts a copy back, and answers where the library it replaced was moved to.
+	 * 
+	 *  ⚠️ It **closes the library** first, under the same lock that guards every other
+	 *  command: renaming a database file out from under a live connection is how a working
+	 *  library becomes a lost one. Every command answers `Locked` afterwards, which is what
+	 *  sends the interface back to the gate — the restored copy needs a passphrase, and
+	 *  asking for it is the only proof the right file is in place.
+	 */
+	restoreBackup: (id: string) => typedError<string, AppError>(__TAURI_INVOKE("restore_backup", { id })),
 	appChangelog: () => __TAURI_INVOKE<ChangelogRelease[]>("app_changelog"),
 	/**
 	 *  Replaces only the menu when the tray already exists, so a language change does not
@@ -215,6 +227,25 @@ export type Attachment = {
 	/**  `u32` and not `u64`: Specta refuses what JSON cannot carry without loss. */
 	byteSize: number,
 	createdAt: string,
+};
+
+/**
+ *  One copy, as the interface lists it.
+ * 
+ *  ⚠️ `bytes` is `f64` rather than `u64`: specta refuses the integer types JSON cannot
+ *  carry without losing precision, and a size is the one field where a float says the
+ *  same thing.
+ */
+export type Backup = {
+	/**  The folder's name, which is its stamp — and what a restore is asked for by. */
+	id: string,
+	takenAt: string,
+	bytes: number | null,
+	/**
+	 *  ⚠️ Whether the key file travelled with it. Without one, the copy is a file nobody
+	 *  can open, and offering to restore it would be offering to lose the library.
+	 */
+	openable: boolean,
 };
 
 /**  What a tidy-up did, and what it takes to walk it back. */

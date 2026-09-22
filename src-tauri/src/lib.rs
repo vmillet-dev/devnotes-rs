@@ -2,7 +2,7 @@
 // from the crate root, and `tests/` is a separate crate. Everything else is `pub(crate)`,
 // which is what gives `unreachable_pub` and `dead_code` something to say.
 pub mod attachments;
-mod backup;
+pub mod backup;
 pub mod changelog;
 pub mod db;
 pub mod desktop;
@@ -26,6 +26,7 @@ use attachments::{
     attach_clipboard_image, attach_file, delete_attachment, list_attachments, open_attachment,
     read_attachment, save_attachment,
 };
+use backup::{list_backups, restore_backup};
 use changelog::app_changelog;
 use desktop::{set_global_shortcuts, set_window_behavior, sync_tray};
 use folders::{
@@ -118,6 +119,8 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             unlock_vault,
             change_passphrase,
             set_aside_damaged_library,
+            list_backups,
+            restore_backup,
             app_changelog,
             sync_tray,
             set_global_shortcuts,
