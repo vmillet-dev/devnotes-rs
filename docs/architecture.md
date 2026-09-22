@@ -1107,7 +1107,10 @@ only the missing frames are written.
 The layout rules live in `folders/board.rs`, which imports neither Diesel nor Tauri:
 `arrange_zones` flows zones three across, each row clearing the tallest zone above it;
 `arrange_loose` flows loose cards four across underneath; `surface` sizes the pannable area
-from whatever reaches furthest. **Pan only, no zoom** — a zoom is a second thing to persist
+from whatever reaches furthest, never under 960 × 540. ⚠️ That is how far the board **pans**, not how
+much of it takes the pointer: `.board-surface` is `min-width` / `min-height: 100%` of the
+visible ground, or every gesture stops at the content's edge on a large window while the
+dotted ground beyond it looks exactly the same (#320). **Pan only, no zoom** — a zoom is a second thing to persist
 and to reset, and full-size cards are what makes panning worth having.
 
 ⚠️ A card that has never been placed takes `free_slot` — the first seat of that flow nothing
