@@ -113,20 +113,14 @@ app-dialog {
   outline-offset: 2px;
 }
 
-// The native date picker icon is white on a dark ground: without this filter it
-// vanishes entirely against the theme.
+// ⚠️ The one native control that stays, and deliberately: an `<input type="date">` brings a
+// free calendar, a localised format and keyboard entry that a hand-rolled picker has to
+// earn back. Its **box** is the application's, and only its popup is the system's.
+//
+// ⚠️ Its picker icon is themed from `src/styles/styles.scss` and not from here: the rule
+// has to open on `:root`, and Angular's emulated encapsulation rewrites a `:root` written
+// in a component stylesheet into a form that never matches `<html>`.
 .overlay-expiry-input::-webkit-calendar-picker-indicator {
-  filter: invert(0.7);
-  cursor: pointer;
-}
-
-.overlay-language-select {
-  @include unstyled-control;
-  @include surface($radius: 7px);
-  color: var(--text-1);
-  padding: 6px 9px;
-  font-size: 12px;
-  font-family: var(--font-mono), serif;
   cursor: pointer;
 }
 

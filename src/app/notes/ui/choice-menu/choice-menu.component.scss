@@ -5,7 +5,7 @@
   display: inline-flex;
 }
 
-.placement-trigger {
+.choice-trigger {
   @include unstyled-control;
   @include hit-target;
   @include surface(var(--bg-2), 7px);
@@ -22,19 +22,19 @@
   }
 }
 
-.placement-name {
+.choice-name {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.placement-caret {
+.choice-caret {
   flex-shrink: 0;
   font-size: 9px;
   color: var(--text-2);
 }
 
-.placement-menu {
+.choice-menu {
   @include enters;
   @include surface(var(--bg-2), 8px);
   position: absolute;
@@ -48,7 +48,7 @@
   box-shadow: var(--shadow-dropdown);
 }
 
-.placement-item {
+.choice-item {
   @include unstyled-control;
   @include hit-target;
   @include focus-ring(-2px);
@@ -71,7 +71,7 @@
 }
 
 // The same square swatch the card's folder chip carries.
-.placement-swatch {
+.choice-swatch {
   @include folder-hues;
 
   flex-shrink: 0;

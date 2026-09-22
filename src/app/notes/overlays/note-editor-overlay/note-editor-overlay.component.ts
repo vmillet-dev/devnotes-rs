@@ -29,7 +29,7 @@ import { ChecklistEditorComponent } from './checklist-editor/checklist-editor.co
 import { CopyButtonComponent } from '@notes/ui/copy-button/copy-button.component';
 import { LifecycleBadgeComponent } from './lifecycle-badge/lifecycle-badge.component';
 import { PlaceholderPanelComponent } from './placeholder-panel/placeholder-panel.component';
-import { PlacementMenuComponent, PlacementOption } from './placement-menu/placement-menu.component';
+import { ChoiceMenuComponent, ChoiceOption } from '@notes/ui/choice-menu/choice-menu.component';
 import { TagPillComponent } from '@notes/ui/tag-pill/tag-pill.component';
 
 const TEXT_ENCODER = new TextEncoder();
@@ -75,7 +75,7 @@ function toDateInputValue(date: Date): string {
     TagPillComponent,
     LifecycleBadgeComponent,
     PlaceholderPanelComponent,
-    PlacementMenuComponent,
+    ChoiceMenuComponent,
     CodeViewerComponent,
     TranslocoPipe,
   ],
@@ -107,7 +107,12 @@ export class NoteEditorOverlayComponent {
 
   protected readonly languageOptions = LANGUAGE_OPTIONS;
 
-  protected readonly spaceOptions = computed<readonly PlacementOption[]>(() =>
+  protected readonly languageChoices: readonly ChoiceOption[] = LANGUAGE_OPTIONS.map((option) => ({
+    id: option.value,
+    name: option.label,
+  }));
+
+  protected readonly spaceOptions = computed<readonly ChoiceOption[]>(() =>
     this.spaces.spaces().map((space) => ({ id: space.id, name: space.name })),
   );
 
@@ -118,7 +123,7 @@ export class NoteEditorOverlayComponent {
     if (spaceId !== null) this.patchRequested.emit({ spaceId });
   }
 
-  protected readonly folderOptions = computed<readonly PlacementOption[]>(() => {
+  protected readonly folderOptions = computed<readonly ChoiceOption[]>(() => {
     const spaceId = this.note()?.spaceId;
     return this.folders
       .allFolders()

@@ -285,6 +285,43 @@ export async function press(key: string, modifiers: Modifier[] = []): Promise<vo
  * and a date input accepts keystrokes in the display format, which follows the WebView's
  * locale. This skips the browser's own parsing; every handler downstream still runs.
  */
+/**
+ * Picks one entry of an `app-choice-menu`, which replaced every `<select>` but the date.
+ *
+ * ⚠️ Two clicks, not an assignment: these are menus, so there is no value to set — which is
+ * the whole point of #179. A screen reader used to be told the selection bar held a combobox
+ * whose current value was "Ranger dans".
+ */
+export async function pickChoice(kind: string, optionId: string | null): Promise<void> {
+  await $(testid(`choice-${kind}`)).click();
+  await $(testid(`choice-panel-${kind}`)).waitForExist({ timeout: 5_000 });
+  const entry =
+    optionId === null
+      ? $(`${testid('choice-panel-' + kind)} ${testid('choice-none')}`)
+      : $(`${testid('choice-panel-' + kind)} [data-option-id="${optionId}"]`);
+  await entry.click();
+}
+
+/** Which entry a choice menu names on its trigger. */
+export function choiceLabel(kind: string): Promise<string> {
+  return $(testid(`choice-${kind}`)).getText();
+}
+
+/**
+ * Picks one of the few options a segmented control shows all at once.
+ *
+ * ⚠️ Addressed by `data-testid` and never by its `aria-label`: the suite switches the
+ * interface language partway through, so a selector naming "Thème" passes or fails
+ * depending on which spec file ran before — which is exactly how this shipped red.
+ */
+export async function pickSegment(kind: string, segmentId: string): Promise<void> {
+  await $(`${testid('segmented-' + kind)} [data-segment-id="${segmentId}"]`).click();
+}
+
+export function checkedSegment(kind: string): Promise<string | null> {
+  return $(`${testid('segmented-' + kind)} [aria-checked="true"]`).getAttribute('data-segment-id');
+}
+
 export async function setNativeValue(selector: string, value: string): Promise<void> {
   await $(selector).waitForExist({ timeout: 10_000 });
   await browser.execute(

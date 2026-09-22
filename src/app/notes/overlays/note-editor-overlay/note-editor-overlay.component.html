@@ -23,20 +23,13 @@
 
       <!-- No format for a todo list: a picker with no effect is worth less than none. -->
       @if (!isChecklist()) {
-        <select
-          #languageSelect
-          class="overlay-language-select"
-          data-testid="editor-language"
-          [attr.aria-label]="'editor.languageLabel' | transloco"
-          [value]="note.language"
-          (change)="onLanguageChange(languageSelect.value)"
-        >
-          @for (option of languageOptions; track option.value) {
-            <option [value]="option.value" [selected]="option.value === note.language">
-              {{ option.label }}
-            </option>
-          }
-        </select>
+        <app-choice-menu
+          [kind]="'language'"
+          [label]="'editor.languageLabel' | transloco"
+          [options]="languageChoices"
+          [currentId]="note.language"
+          (chosen)="onLanguageChange($event ?? note.language)"
+        />
       }
 
       <button
@@ -145,14 +138,14 @@
            lie about what the space control just did. The editor was the one surface about a
            single note that could not move it. -->
       <span class="overlay-placement">
-        <app-placement-menu
+        <app-choice-menu
           [kind]="'space'"
           [label]="'notes.moveToSpace' | transloco"
           [options]="spaceOptions()"
           [currentId]="note.spaceId"
           (chosen)="onSpaceChosen($event)"
         />
-        <app-placement-menu
+        <app-choice-menu
           [kind]="'folder'"
           [label]="'notes.fileInto' | transloco"
           [options]="folderOptions()"

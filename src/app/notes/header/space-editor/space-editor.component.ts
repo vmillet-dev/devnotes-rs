@@ -2,13 +2,16 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  computed,
   input,
+  linkedSignal,
   output,
   signal,
   viewChild,
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Space } from '@core/model/space.model';
+import { ChoiceMenuComponent, ChoiceOption } from '@notes/ui/choice-menu/choice-menu.component';
 
 export interface SpaceRenaming {
   readonly id: string;
@@ -27,7 +30,7 @@ export interface SpaceDeletion {
  */
 @Component({
   selector: 'app-space-editor',
-  imports: [TranslocoPipe],
+  imports: [TranslocoPipe, ChoiceMenuComponent],
   templateUrl: './space-editor.component.html',
   styleUrl: './space-editor.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -40,6 +43,23 @@ export class SpaceEditorComponent {
   readonly renamed = output<SpaceRenaming>();
   readonly pinRequested = output<string>();
   readonly deleted = output<SpaceDeletion>();
+
+  protected readonly targetChoices = computed<readonly ChoiceOption[]>(() =>
+    this.moveTargets().map((target) => ({ id: target.id, name: target.name })),
+  );
+
+  /**
+   * ⚠️ The refuge is state now, where the `<select>` held it: a menu writes what it was
+   * asked for and has nothing to read back. Keyed on the list, so a space appearing or
+   * disappearing lands on the first one rather than on an id that no longer exists.
+   */
+  protected readonly refuge = linkedSignal<readonly ChoiceOption[], string | null>({
+    source: this.targetChoices,
+    computation: (targets, previous) => {
+      const kept = targets.find((target) => target.id === previous?.value);
+      return (kept ?? targets[0])?.id ?? null;
+    },
+  });
 
   /** Two steps: the WebView blocks on a native `confirm()`. */
   protected readonly confirmingDelete = signal(false);

@@ -496,14 +496,27 @@ describe('NoteEditorOverlayComponent', () => {
   });
 
   describe('language', () => {
-    it('lists every known language and selects the note one', async () => {
+    /** ⚠️ A menu now, not a `<select>`: nothing in the window wears the OS's chrome. */
+    async function openLanguageMenu(): Promise<HTMLElement[]> {
+      fixture.nativeElement.querySelector('[data-testid="choice-language"]').click();
+      await fixture.whenStable();
+      return [
+        ...fixture.nativeElement.querySelectorAll('[data-testid="choice-panel-language"] [data-option-id]'),
+      ];
+    }
+
+    it('lists every known language and names the note one', async () => {
       fixture.componentRef.setInput('note', createNote({ language: 'sql' }));
       await fixture.whenStable();
 
-      const select = fixture.nativeElement.querySelector('.overlay-language-select') as HTMLSelectElement;
+      expect(fixture.nativeElement.querySelector('[data-testid="choice-language"]').textContent).toContain(
+        LANGUAGE_LABELS['sql'],
+      );
       // Against the label table rather than a copy of it.
-      expect([...select.options].map((option) => option.value)).toEqual(Object.keys(LANGUAGE_LABELS));
-      expect(select.value).toBe('sql');
+      const options = await openLanguageMenu();
+      expect(options.map((option) => option.getAttribute('data-option-id'))).toEqual(
+        Object.keys(LANGUAGE_LABELS),
+      );
     });
 
     it('emits the picked language', async () => {
@@ -511,9 +524,9 @@ describe('NoteEditorOverlayComponent', () => {
       await fixture.whenStable();
       const emitted = patched('language');
 
-      const select = fixture.nativeElement.querySelector('.overlay-language-select') as HTMLSelectElement;
-      select.value = 'json';
-      select.dispatchEvent(new Event('change'));
+      const options = await openLanguageMenu();
+      options.find((option) => option.getAttribute('data-option-id') === 'json')!.click();
+      await fixture.whenStable();
 
       expect(emitted).toEqual(['json']);
     });

@@ -706,6 +706,38 @@ Ticking from the card matters more than it looks: crossing tasks off is the gest
 list exists for, and routing it through the editor would put a modal between the user and a
 one-click action.
 
+### Nothing wears the operating system's chrome, except one popup
+
+The application draws every one of its own surfaces, and then **eight** controls came from
+the operating system and brought its chrome with them: a different border, a different
+radius, a different arrow, a different focus ring and, on Windows, a different font.
+
+Two of them were worse than a mismatch — the selection bar's "Déplacer vers" and "Ranger
+dans" were a `<select>` doing a **command's** job, resetting their own value to `''` after
+every `change`. A screen reader announced a combobox whose current value was "Ranger dans",
+and a keyboard user got a listbox where the rest of the application gives a menu.
+
+**`notes/ui/choice-menu/` replaced seven of the eight**, on the existing menu directives:
+the two selection-bar commands, the editor's language, the editor's space and folder, the
+space editor's refuge and the preferences' language. ⚠️ `naming` is what tells the two
+shapes apart — `'value'` names what is chosen and refuses to re-emit it, `'label'` names
+what the control _does_ and has no current value at all. It lives in `notes/ui/` beside
+`copy-button` because it crosses two zones of `notes/`, and it is the one menu that
+**swallows Escape**: it is used inside dialogs, where the next listener up is the dialog's
+own.
+
+**Three options get a segmented control instead** (`shared/controls/segmented-choice/`):
+Thème and Densité. Hiding two of three choices behind a click buys nothing, and
+`role="radiogroup"` is what says exactly one of them is chosen at all times.
+
+⚠️ **The date input stays native, deliberately.** An `<input type="date">` brings a
+calendar, a localised format and keyboard entry that a hand-rolled picker has to earn back —
+so its **box** is the application's and only its popup is the system's. Its picker icon is
+painted by the engine and follows `color-scheme`, which `:root` sets per theme; the invert
+filter is therefore dark-only, and it lives in `styles.scss` rather than in the editor's own
+stylesheet because the rule has to open on `:root`, which emulated encapsulation rewrites
+into a form that never matches `<html>`.
+
 ### Motion, and the one block that stops it
 
 There were **four** `transition` declarations in the whole of `src/`, across roughly 225

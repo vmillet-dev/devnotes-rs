@@ -180,6 +180,19 @@ body {
   border: 0;
 }
 
+/* ⚠️ The one native control the application keeps — an `<input type="date">`, for the
+   calendar and the localised format a hand-rolled picker would have to earn back. Its icon
+   is painted by the engine and follows `color-scheme`, which is set per theme above, so the
+   filter is **dark only**: inverting it on the light theme hides it against the white it is
+   drawn on.
+
+   ⚠️ Here and not in the editor's own stylesheet, where it belongs by subject: the rule has
+   to open on `:root`, and Angular's emulated encapsulation rewrites a `:root` written in a
+   component stylesheet into a form that never matches `<html>`. */
+:root:not([data-theme='light']) .overlay-expiry-input::-webkit-calendar-picker-indicator {
+  filter: invert(0.7);
+}
+
 /* What enters: a short rise and a fade, never a size. ⚠️ `transform` and `opacity` only —
    a transition on `height`, `width` or a colour is what makes a canvas feel heavy, and the
    canvas draws every note with no virtualisation. */

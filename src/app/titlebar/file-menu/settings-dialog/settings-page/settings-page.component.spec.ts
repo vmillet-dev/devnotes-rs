@@ -7,11 +7,6 @@ import { SettingsPageComponent } from './settings-page.component';
 describe('SettingsPageComponent', () => {
   let fixture: ComponentFixture<SettingsPageComponent>;
   let settings: SettingsStore;
-
-  function select(id: string): HTMLSelectElement {
-    return fixture.nativeElement.querySelector(`#${id}`);
-  }
-
   function toggle(id: string): HTMLInputElement {
     return fixture.nativeElement.querySelector(`#${id}`);
   }
@@ -61,31 +56,70 @@ describe('SettingsPageComponent', () => {
     expect(dialog()).not.toBeNull();
   });
 
-  it('offers the language alongside the titlebar buttons, system included', () => {
-    const options = [...select('setting-locale').options].map((option) => option.value);
+  /**
+   * ⚠️ A menu where the list can grow and a segmented control where it is three. A native
+   * `<select>` brought the operating system's border, arrow, focus ring and — on Windows —
+   * its font into the middle of an application that draws all of its own surfaces.
+   */
+  async function openLocaleMenu(): Promise<HTMLElement[]> {
+    fixture.nativeElement.querySelector('[data-testid="choice-setting-locale"]').click();
+    await fixture.whenStable();
+    return [
+      ...fixture.nativeElement.querySelectorAll(
+        '[data-testid="choice-panel-setting-locale"] [data-option-id]',
+      ),
+    ];
+  }
 
-    expect(options).toEqual(['system', 'fr', 'en']);
-    expect(select('setting-locale').value).toBe('system');
+  /** ⚠️ By `data-testid`, never by the translated `aria-label`. */
+  function segments(kind: string): HTMLElement[] {
+    const root = fixture.nativeElement as HTMLElement;
+    return [
+      ...root.querySelectorAll<HTMLElement>(`[data-testid="segmented-${kind}"] [data-testid="segment"]`),
+    ];
+  }
+
+  it('offers the language alongside the titlebar buttons, system included', async () => {
+    const options = await openLocaleMenu();
+
+    expect(options.map((option) => option.getAttribute('data-option-id'))).toEqual(['system', 'fr', 'en']);
   });
 
   it('writes a chosen language straight through', async () => {
-    select('setting-locale').value = 'en';
-    select('setting-locale').dispatchEvent(new Event('change'));
+    const options = await openLocaleMenu();
+
+    options.find((option) => option.getAttribute('data-option-id') === 'en')!.click();
     await fixture.whenStable();
 
     expect(settings.locale()).toBe('en');
   });
 
-  it('shows the active theme as the selected option', () => {
-    expect(select('setting-theme').value).toBe('system');
+  /** ⚠️ Exactly one is chosen at all times, which is what `aria-checked` has to say. */
+  it('shows the active theme as the checked segment', () => {
+    const checked = segments('setting-theme').filter(
+      (segment) => segment.getAttribute('aria-checked') === 'true',
+    );
+
+    expect(checked).toHaveLength(1);
+    expect(checked[0].getAttribute('data-segment-id')).toBe('system');
   });
 
   it('writes a chosen theme straight through, with nothing to validate', async () => {
-    select('setting-theme').value = 'light';
-    select('setting-theme').dispatchEvent(new Event('change'));
+    segments('setting-theme')
+      .find((segment) => segment.getAttribute('data-segment-id') === 'light')!
+      .click();
     await fixture.whenStable();
 
     expect(settings.theme()).toBe('light');
+  });
+
+  it('writes a chosen density the same way', async () => {
+    segments('setting-density')
+      .find((segment) => segment.getAttribute('data-segment-id') === 'compact')!
+      .click();
+    await fixture.whenStable();
+
+    expect(settings.density()).toBe('compact');
   });
 
   it('binds every toggle to its setting', async () => {

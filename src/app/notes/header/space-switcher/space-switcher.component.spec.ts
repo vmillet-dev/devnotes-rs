@@ -278,8 +278,19 @@ describe('SpaceSwitcherComponent', () => {
       return fixture.nativeElement.querySelector('.editor-panel form');
     }
 
-    function targetSelect(): HTMLSelectElement | null {
-      return fixture.nativeElement.querySelector('#space-move-target');
+    /** ⚠️ A menu now, not a `<select>`: the refuge is chosen, not typed. */
+    function targetTrigger(): HTMLElement | null {
+      return fixture.nativeElement.querySelector('[data-testid="choice-space-move-target"]');
+    }
+
+    async function targetOptions(): Promise<string[]> {
+      targetTrigger()!.click();
+      await fixture.whenStable();
+      return [
+        ...fixture.nativeElement.querySelectorAll(
+          '[data-testid="choice-panel-space-move-target"] [data-option-id]',
+        ),
+      ].map((option) => (option as HTMLElement).getAttribute('data-option-id') ?? '');
     }
 
     function deleteButton(): HTMLButtonElement | null {
@@ -337,8 +348,7 @@ describe('SpaceSwitcherComponent', () => {
     it('offers every other space as a refuge for the notes', async () => {
       await edit(0);
 
-      const targets = [...targetSelect()!.options].map((option) => option.value);
-      expect(targets).toEqual(['personal']);
+      expect(await targetOptions()).toEqual(['personal']);
     });
 
     it('requires two clicks and emits the chosen refuge', async () => {
@@ -364,7 +374,7 @@ describe('SpaceSwitcherComponent', () => {
       await edit(0);
 
       expect(deleteButton()).toBeNull();
-      expect(targetSelect()).toBeNull();
+      expect(targetTrigger()).toBeNull();
       expect(fixture.nativeElement.querySelector('[data-testid="space-delete-blocked"]')).not.toBeNull();
     });
 

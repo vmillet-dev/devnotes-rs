@@ -29,23 +29,23 @@
 
   @if (moveTargets().length > 0) {
     <div class="editor-delete-group">
-      <label class="editor-note" [attr.for]="'space-move-target'">
-        {{ 'notes.moveNotesTo' | transloco }}
-      </label>
+      <p class="editor-note">{{ 'notes.moveNotesTo' | transloco }}</p>
       <div class="editor-delete-row">
-        <!-- The target is mandatory: the space leaves with its notes (ON DELETE CASCADE)
-             if nobody takes them in. -->
-        <select #targetSelect id="space-move-target" data-testid="space-move-target" class="editor-input">
-          @for (target of moveTargets(); track target.id) {
-            <option [value]="target.id">{{ target.name }}</option>
-          }
-        </select>
+        <!-- The refuge is mandatory: the space leaves with its notes (ON DELETE CASCADE)
+             if nobody takes them in — so this one names what is chosen, not what it does. -->
+        <app-choice-menu
+          [kind]="'space-move-target'"
+          [label]="'notes.moveNotesTo' | transloco"
+          [options]="targetChoices()"
+          [currentId]="refuge()"
+          (chosen)="refuge.set($event)"
+        />
         <button
           type="button"
           class="editor-action editor-delete"
           data-testid="space-delete"
           [class.confirming]="confirmingDelete()"
-          (click)="onDeleteClick(targetSelect.value)"
+          (click)="onDeleteClick(refuge() ?? '')"
         >
           {{ (confirmingDelete() ? 'notes.deleteSpaceConfirm' : 'notes.deleteSpace') | transloco }}
         </button>

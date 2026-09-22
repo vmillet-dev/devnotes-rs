@@ -4,7 +4,7 @@ import {
   confirmTwice,
   readEach,
   setField,
-  setNativeValue,
+  pickChoice,
   submitFormOf,
   testid,
   waitForCanvas,
@@ -130,14 +130,10 @@ export const spaces = {
     await spaces.close();
   },
 
-  /**
-   * ⚠️ `setNativeValue` and not `selectByAttribute`, like every other `<select>` here: it
-   * works either way today, but the day the control becomes signal-bound the driver's
-   * missing `change` would silently delete with the wrong refuge.
-   */
+  /** ⚠️ The refuge is mandatory: the space leaves with its notes if nobody takes them in. */
   async remove(id: string, refugeId: string): Promise<void> {
     await $(`${testid('space-edit')}[data-space-id="${id}"]`).click();
-    await setNativeValue(testid('space-move-target'), refugeId);
+    await pickChoice('space-move-target', refugeId);
     await confirmTwice($(testid('space-delete')));
   },
 
@@ -858,10 +854,10 @@ export const selectionBar = {
   clear: () => $(testid('selection-clear')).click(),
   copy: () => $(testid('selection-copy')).click(),
 
-  moveTo: (spaceId: string) => setNativeValue(testid('selection-move'), spaceId),
+  moveTo: (spaceId: string) => pickChoice('selection-move', spaceId),
 
-  /** The same control both ways: `null` picks the "take out of folder" entry. */
-  fileInto: (folderId: string | null) => setNativeValue(testid('selection-file'), folderId ?? '__unfile__'),
+  /** The same control both ways: the way out is an entry of the same menu. */
+  fileInto: (folderId: string | null) => pickChoice('selection-file', folderId ?? '__unfile__'),
 
   async tag(tag: string): Promise<void> {
     const field = $(testid('selection-tag'));
