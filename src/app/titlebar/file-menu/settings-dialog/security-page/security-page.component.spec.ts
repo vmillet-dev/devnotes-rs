@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { SettingsDraftStore } from '@core/services/settings/settings-draft.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
 import { SecurityPageComponent } from './security-page.component';
@@ -7,6 +8,7 @@ import { SecurityPageComponent } from './security-page.component';
 describe('SecurityPageComponent', () => {
   let fixture: ComponentFixture<SecurityPageComponent>;
   let settings: SettingsStore;
+  let draft: SettingsDraftStore;
 
   const backups = (): HTMLInputElement =>
     fixture.nativeElement.querySelector('[data-testid="setting-automatic-backups"]');
@@ -18,6 +20,8 @@ describe('SecurityPageComponent', () => {
       providers: [provideTranslocoTesting()],
     });
     settings = TestBed.inject(SettingsStore);
+    draft = TestBed.inject(SettingsDraftStore);
+    draft.cancel();
     fixture = TestBed.createComponent(SecurityPageComponent);
     fixture.autoDetectChanges();
     await fixture.whenStable();
@@ -38,16 +42,24 @@ describe('SecurityPageComponent', () => {
     expect(dialog()).not.toBeNull();
   });
 
-  /** ⚠️ Rust reads this at launch, before the front end exists — turning it off has to
-   *  reach the preferences file, which is the only thing the back end sees. */
-  it('shows the copies as on, and writes the choice through', async () => {
+  /**
+   * ⚠️ Rust reads this at launch, before the front end exists — turning it off has to
+   * reach the preferences file, which is the only thing the back end sees. Which is
+   * exactly why it waits for Appliquer: until then the switch is a draft.
+   */
+  it('shows the copies as on, and stages the choice until it is applied', async () => {
     expect(backups().checked).toBe(true);
 
     backups().click();
     await fixture.whenStable();
 
-    expect(settings.automaticBackups()).toBe(false);
     expect(backups().checked).toBe(false);
+    expect(draft.value('automaticBackups')).toBe(false);
+    expect(settings.automaticBackups()).toBe(true);
+
+    draft.apply();
+
+    expect(settings.automaticBackups()).toBe(false);
   });
 
   /**

@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { SettingsStore } from '@core/services/settings/settings.store';
+import { SettingsDraftStore } from '@core/services/settings/settings-draft.store';
 import { ChangePassphraseDialogComponent } from '../change-passphrase-dialog/change-passphrase-dialog.component';
 
 /**
@@ -15,7 +15,7 @@ import { ChangePassphraseDialogComponent } from '../change-passphrase-dialog/cha
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SecurityPageComponent {
-  protected readonly settings = inject(SettingsStore);
+  protected readonly draft = inject(SettingsDraftStore);
 
   protected readonly isChangingPassphrase = signal(false);
 
@@ -28,6 +28,6 @@ export class SecurityPageComponent {
   }
 
   protected onAutomaticBackups(event: Event): void {
-    this.settings.setAutomaticBackups((event.target as HTMLInputElement).checked);
+    this.draft.set('automaticBackups', (event.target as HTMLInputElement).checked);
   }
 }

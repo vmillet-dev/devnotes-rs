@@ -60,16 +60,23 @@ function asOneOf<T extends string>(values: readonly T[]): SettingCodec<T> {
 export type SettingSignal<T> = Signal<T> & { write(value: T): void };
 
 /**
- * Writes apply immediately — there is no "OK / Cancel" anywhere in the panel. This
- * store talks to nobody: the native services read these signals and push to Rust,
- * which is what keeps it readable outside Tauri.
+ * A write here is final: it reaches `PreferencesService` and the services that push to
+ * the native side read these signals. The preferences panel therefore edits
+ * `SettingsDraftStore` and writes through this one on Appliquer or OK.
+ *
+ * This store talks to nobody, which is what keeps it readable outside Tauri.
  */
 @Injectable({ providedIn: 'root' })
 export class SettingsStore {
   private readonly preferences = inject(PreferencesService);
 
-  /** ⚠️ Declared before the settings below: class fields initialise in order. */
+  /** ⚠️ Both declared before the settings below: class fields initialise in order. */
   private readonly restorers: (() => void)[] = [];
+  /**
+   * ⚠️ Widened in the map and narrowed back by the two accessors below: eighteen signals
+   * of eighteen types share no member type, and `key` is what proves each one.
+   */
+  private readonly byKey = new Map<keyof AppSettings, SettingSignal<AppSettings[keyof AppSettings]>>();
 
   readonly locale = this.setting('locale', asOneOf(LOCALE_CHOICES));
   readonly theme = this.setting('theme', asOneOf(THEME_CHOICES));
@@ -91,8 +98,22 @@ export class SettingsStore {
   /** Followed live: a "system" theme must switch without a restart. */
   private readonly systemPrefersDark = signal(false);
 
+  /**
+   * ⚠️ A preview is **not** a write. Nobody picks a theme without seeing it, so the panel
+   * shows the one being chosen while nothing has reached the file yet — and Annuler puts
+   * the previous appearance back by clearing this, with nothing to roll back.
+   */
+  private readonly previewed = signal<{
+    readonly theme: ThemeChoice | null;
+    readonly density: Density | null;
+  }>({ theme: null, density: null });
+
+  /** What is on screen, which is the preview where there is one and the setting otherwise. */
+  readonly shownTheme = computed<ThemeChoice>(() => this.previewed().theme ?? this.theme());
+  readonly shownDensity = computed<Density>(() => this.previewed().density ?? this.density());
+
   readonly resolvedTheme: Signal<ResolvedTheme> = computed(() => {
-    const choice = this.theme();
+    const choice = this.shownTheme();
 
     return choice === 'system' ? (this.systemPrefersDark() ? 'dark' : 'light') : choice;
   });
@@ -105,8 +126,29 @@ export class SettingsStore {
     effect(() => {
       const root = document.documentElement;
       root.dataset['theme'] = this.resolvedTheme();
-      root.dataset['density'] = this.density();
+      root.dataset['density'] = this.shownDensity();
     });
+  }
+
+  /**
+   * ⚠️ Only these two. Everything else a draft can hold has no preview that means
+   * anything, and a half-captured global shortcut being live across the whole machine is
+   * one of the arguments for not applying as you type in the first place.
+   */
+  preview(draft: Partial<AppSettings>): void {
+    this.previewed.set({ theme: draft.theme ?? null, density: draft.density ?? null });
+  }
+
+  /**
+   * ⚠️ Addressed by key, so the draft reads and writes any setting without a switch over
+   * eighteen of them — and so adding a setting stays the one line it is below.
+   */
+  read<K extends keyof AppSettings>(key: K): AppSettings[K] {
+    return (this.byKey.get(key) as SettingSignal<AppSettings[K]>)();
+  }
+
+  write<K extends keyof AppSettings>(key: K, value: AppSettings[K]): void {
+    (this.byKey.get(key) as SettingSignal<AppSettings[K]>).write(value);
   }
 
   /** ⚠️ Called after `PreferencesService.hydrate()`: before it, every read yields a default. */
@@ -132,24 +174,12 @@ export class SettingsStore {
     this.startWithSystem.write(enabled);
   }
 
-  setMinimizeToTray(enabled: boolean): void {
-    this.minimizeToTray.write(enabled);
-  }
-
   setCloseToTray(enabled: boolean): void {
     this.closeToTray.write(enabled);
   }
 
   setPaletteShortcut(accelerator: string): void {
     this.paletteShortcut.write(accelerator);
-  }
-
-  setShowPinnedFirst(enabled: boolean): void {
-    this.showPinnedFirst.write(enabled);
-  }
-
-  setAutomaticBackups(enabled: boolean): void {
-    this.automaticBackups.write(enabled);
   }
 
   setCopyConfirmation(enabled: boolean): void {
@@ -195,7 +225,10 @@ export class SettingsStore {
       this.preferences.write(SETTINGS_KEYS[key], codec.format(accepted));
     };
 
-    return Object.assign(current.asReadonly(), { write });
+    const setting = Object.assign(current.asReadonly(), { write });
+    this.byKey.set(key, setting);
+
+    return setting;
   }
 
   private watchSystemTheme(): void {

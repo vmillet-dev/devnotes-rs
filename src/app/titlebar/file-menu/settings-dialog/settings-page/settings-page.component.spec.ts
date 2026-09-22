@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { SettingsDraftStore } from '@core/services/settings/settings-draft.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
 import { SettingsPageComponent } from './settings-page.component';
@@ -7,6 +8,7 @@ import { SettingsPageComponent } from './settings-page.component';
 describe('SettingsPageComponent', () => {
   let fixture: ComponentFixture<SettingsPageComponent>;
   let settings: SettingsStore;
+  let draft: SettingsDraftStore;
   function toggle(id: string): HTMLInputElement {
     return fixture.nativeElement.querySelector(`#${id}`);
   }
@@ -18,6 +20,8 @@ describe('SettingsPageComponent', () => {
       providers: [provideTranslocoTesting()],
     });
     settings = TestBed.inject(SettingsStore);
+    draft = TestBed.inject(SettingsDraftStore);
+    draft.cancel();
     fixture = TestBed.createComponent(SettingsPageComponent);
     fixture.autoDetectChanges();
     await fixture.whenStable();
@@ -60,13 +64,14 @@ describe('SettingsPageComponent', () => {
     expect(options.map((option) => option.getAttribute('data-option-id'))).toEqual(['system', 'fr', 'en']);
   });
 
-  it('writes a chosen language straight through', async () => {
+  /** ⚠️ Into the draft, not the file: nothing is written before Appliquer or OK. */
+  it('stages a chosen language rather than writing it', async () => {
     const options = await openLocaleMenu();
 
     options.find((option) => option.getAttribute('data-option-id') === 'en')!.click();
     await fixture.whenStable();
 
-    expect(settings.locale()).toBe('en');
+    expect(draft.value('locale')).toBe('en');
   });
 
   /** ⚠️ Exactly one is chosen at all times, which is what `aria-checked` has to say. */
@@ -79,22 +84,22 @@ describe('SettingsPageComponent', () => {
     expect(checked[0].getAttribute('data-segment-id')).toBe('system');
   });
 
-  it('writes a chosen theme straight through, with nothing to validate', async () => {
+  it('stages a chosen theme, with nothing to validate', async () => {
     segments('setting-theme')
       .find((segment) => segment.getAttribute('data-segment-id') === 'light')!
       .click();
     await fixture.whenStable();
 
-    expect(settings.theme()).toBe('light');
+    expect(draft.value('theme')).toBe('light');
   });
 
-  it('writes a chosen density the same way', async () => {
+  it('stages a chosen density the same way', async () => {
     segments('setting-density')
       .find((segment) => segment.getAttribute('data-segment-id') === 'compact')!
       .click();
     await fixture.whenStable();
 
-    expect(settings.density()).toBe('compact');
+    expect(draft.value('density')).toBe('compact');
   });
 
   it('binds every toggle to its setting', async () => {
@@ -103,9 +108,9 @@ describe('SettingsPageComponent', () => {
     toggle('setting-copy-confirmation').click();
     await fixture.whenStable();
 
-    expect(settings.closeToTray()).toBe(false);
-    expect(settings.showPinnedFirst()).toBe(false);
-    expect(settings.copyConfirmation()).toBe(false);
+    expect(draft.value('closeToTray')).toBe(false);
+    expect(draft.value('showPinnedFirst')).toBe(false);
+    expect(draft.value('copyConfirmation')).toBe(false);
   });
 
   describe('the update entry', () => {
@@ -130,7 +135,7 @@ describe('SettingsPageComponent', () => {
       note()?.querySelector('button')?.click();
       await fixture.whenStable();
 
-      expect(settings.skippedUpdate()).toBe('');
+      expect(draft.value('skippedUpdate')).toBe('');
       expect(note()).toBeNull();
     });
 
@@ -139,13 +144,13 @@ describe('SettingsPageComponent', () => {
       settings.setSkippedUpdate('0.1.5');
       toggle('setting-update-notifications').click();
       await fixture.whenStable();
-      expect(settings.updateNotifications()).toBe(false);
+      expect(draft.value('updateNotifications')).toBe(false);
 
       toggle('setting-update-notifications').click();
       await fixture.whenStable();
 
-      expect(settings.updateNotifications()).toBe(true);
-      expect(settings.skippedUpdate()).toBe('');
+      expect(draft.value('updateNotifications')).toBe(true);
+      expect(draft.value('skippedUpdate')).toBe('');
     });
   });
 });

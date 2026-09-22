@@ -1861,12 +1861,51 @@ not operations on a file:
 ### Preferences
 
 "Préférences…" opens `SettingsDialogComponent` (`titlebar/file-menu/settings-dialog/`): a rail of pages on
-the left, the chosen page on the right, one "Fermer" at the bottom.
+the left, the chosen page on the right, and Annuler / Appliquer / OK at the bottom.
 
-**No "OK / Cancel / Apply".** Every control writes straight into `SettingsStore`, and the
-interface follows on the spot. That is already the idiom everywhere else in the app — the
-editor commits on blur, the locale switch flips on click — and a theme you only see after
-validating is not chosen, it is guessed.
+**Appliquer, Annuler, OK — and a draft under them.** Every control used to write straight
+into `SettingsStore`, which was written down as a decision rather than an oversight. The
+counter-argument turned out to be stronger: a shortcut is _captured_, not typed, so a
+half-entered one was registered with the operating system for as long as it took to
+finish; a theme flipped under the cursor; and there was no way back from a change other
+than remembering what it was.
+
+So the panel edits `SettingsDraftStore` (`core/services/settings/`), and Appliquer or OK
+writes it through. ⚠️ It stages **both paths a preference can take**, because the panel
+edits both: an `AppSettings` key, and a shortcut binding. A draft covering only the first
+would make OK mean two different things on two pages.
+
+⚠️ **The three services that push to the native side read `SettingsStore`, never the
+draft.** That is the point of the layer: nothing reaches `set_global_shortcuts`,
+`set_window_behavior` or the autostart plugin until the button is pressed.
+
+**What "immediately" was buying is kept where it means something.** The theme and the
+density show on screen while they are being chosen — nobody picks a theme without seeing
+it — through `SettingsStore.preview`, which feeds `shownTheme` / `shownDensity` and
+therefore the `data-theme` / `data-density` attributes. ⚠️ A preview is **not** a write:
+nothing reaches `preferences.json`, and Annuler clears it with nothing to roll back.
+Everything else waits for the button, because nothing else has a preview that means
+anything.
+
+⚠️ **Closing with unapplied changes has to say so**, or Escape and the backdrop become a
+silent Annuler — the one outcome nobody would have chosen on purpose. Neither produces a
+click, so the footer swaps its buttons for a sentence naming how many changes are waiting
+and two answers: "Fermer sans appliquer" and "Appliquer et fermer". Every way out of the
+panel passes through `finish()` after an apply or a cancel, so the draft is always empty
+when it reopens.
+
+⚠️ **The variables page is corpus data, and it is under the same footer anyway.**
+`VariablesStore` writes through the IPC bridge rather than through `PreferencesService`,
+so the draft does not hold it — `SettingsDialogComponent` does, reading
+`VariablesStore.isDirty()` beside `SettingsDraftStore.isDirty()` and committing both.
+A panel where one page wrote on blur and three waited for a button would be worse than
+either rule on its own. The store's `load()` refuses to run over edits in hand, because
+the page is recreated every time the rail changes section.
+
+⚠️ **One rule, two readers.** `refuseBinding` and `conflictsAmong` (in
+`shortcut-bindings.store.ts`) take a `BindingReader`, so the store answers from what is
+stored and the draft from what is staged. A check living in only one of them would let
+the panel offer a key the store is about to refuse.
 
 **The pages are a list in the panel**: "Général", "Raccourcis", "Sécurité" and "Variables",
 each in its own folder beside the dialog, rendered through `NgComponentOutlet` so the rail
@@ -1886,7 +1925,7 @@ made of live in a mixin — otherwise the three pages would carry the same thirt
 times, which is also what the duplication gate would have said.
 
 `SettingsStore` holds one signal per setting — the interface language, the theme, the density,
-the tray behaviour, the palette accelerator — backed by `PreferencesService`: one key per
+the tray behaviour, the three global accelerators — backed by `PreferencesService`: one key per
 setting, not one serialised object, so a setting added later cannot make a file written by the
 previous version unreadable. `restore()` runs from the app initializer, after
 `PreferencesService.hydrate()` and before the first render.

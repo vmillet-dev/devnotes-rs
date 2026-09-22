@@ -8,12 +8,16 @@ import {
   THEME_CHOICES,
   ThemeChoice,
 } from '@core/services/settings/app-settings.model';
-import { SettingsStore } from '@core/services/settings/settings.store';
+import { SettingsDraftStore } from '@core/services/settings/settings-draft.store';
 import { ChoiceMenuComponent, ChoiceOption } from '@notes/ui/choice-menu/choice-menu.component';
 import {
   Segment,
   SegmentedChoiceComponent,
 } from '@shared/controls/segmented-choice/segmented-choice.component';
+
+/** The switches, which differ only by the key they write. */
+type BooleanSetting =
+  'startWithSystem' | 'minimizeToTray' | 'closeToTray' | 'showPinnedFirst' | 'copyConfirmation';
 
 function checkedValue(event: Event): boolean {
   return (event.target as HTMLInputElement).checked;
@@ -31,7 +35,7 @@ function checkedValue(event: Event): boolean {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SettingsPageComponent {
-  protected readonly settings = inject(SettingsStore);
+  protected readonly draft = inject(SettingsDraftStore);
 
   private readonly transloco = inject(TranslocoService);
 
@@ -54,42 +58,29 @@ export class SettingsPageComponent {
   );
 
   protected onUpdateNotifications(event: Event): void {
-    this.settings.setUpdateNotifications(checkedValue(event));
+    const wanted = checkedValue(event);
+    this.draft.set('updateNotifications', wanted);
+    // Asking to be told about updates is exactly what taking a skip back means.
+    if (wanted) this.draft.set('skippedUpdate', '');
   }
 
   protected forgetSkippedUpdate(): void {
-    this.settings.setSkippedUpdate('');
+    this.draft.set('skippedUpdate', '');
   }
 
   protected onLocale(locale: string | null): void {
-    if (locale) this.settings.setLocale(locale as LocaleChoice);
+    if (locale) this.draft.set('locale', locale as LocaleChoice);
   }
 
   protected onTheme(theme: string): void {
-    this.settings.setTheme(theme as ThemeChoice);
+    this.draft.set('theme', theme as ThemeChoice);
   }
 
   protected onDensity(density: string): void {
-    this.settings.setDensity(density as Density);
+    this.draft.set('density', density as Density);
   }
 
-  protected onStartWithSystem(event: Event): void {
-    this.settings.setStartWithSystem(checkedValue(event));
-  }
-
-  protected onMinimizeToTray(event: Event): void {
-    this.settings.setMinimizeToTray(checkedValue(event));
-  }
-
-  protected onCloseToTray(event: Event): void {
-    this.settings.setCloseToTray(checkedValue(event));
-  }
-
-  protected onShowPinnedFirst(event: Event): void {
-    this.settings.setShowPinnedFirst(checkedValue(event));
-  }
-
-  protected onCopyConfirmation(event: Event): void {
-    this.settings.setCopyConfirmation(checkedValue(event));
+  protected onToggle(key: BooleanSetting, event: Event): void {
+    this.draft.set(key, checkedValue(event));
   }
 }

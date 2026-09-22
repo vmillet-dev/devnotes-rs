@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
+import { SettingsDraftStore } from '@core/services/settings/settings-draft.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
 import { ShortcutsPageComponent } from './shortcuts-page.component';
@@ -9,6 +10,7 @@ describe('ShortcutsPageComponent', () => {
   let fixture: ComponentFixture<ShortcutsPageComponent>;
   let settings: SettingsStore;
   let preferences: PreferencesService;
+  let draft: SettingsDraftStore;
 
   const field = (id: string): HTMLInputElement =>
     fixture.nativeElement.querySelector(`[data-testid="shortcut-field"][data-action="${id}"]`);
@@ -33,6 +35,8 @@ describe('ShortcutsPageComponent', () => {
     });
     settings = TestBed.inject(SettingsStore);
     preferences = TestBed.inject(PreferencesService);
+    draft = TestBed.inject(SettingsDraftStore);
+    draft.cancel();
     fixture = TestBed.createComponent(ShortcutsPageComponent);
     fixture.autoDetectChanges();
     await fixture.whenStable();
@@ -50,12 +54,21 @@ describe('ShortcutsPageComponent', () => {
     expect(field('canvas.copy').value).toBe('C');
   });
 
-  it('records a global shortcut from the keystroke rather than from typed text', async () => {
+  /**
+   * ⚠️ Staged, not registered. A global shortcut is taken from the whole machine, and a
+   * half-captured one being live for as long as it takes to finish is the argument #255
+   * was written on.
+   */
+  it('records a global shortcut from the keystroke, and holds it until it is applied', async () => {
     press('palette', { code: 'KeyK', ctrlKey: true, shiftKey: true });
     await fixture.whenStable();
 
-    expect(settings.paletteShortcut()).toBe('Ctrl+Shift+K');
     expect(field('palette').value).toBe('Ctrl+Shift+K');
+    expect(settings.paletteShortcut()).toBe('Ctrl+Alt+P');
+
+    draft.apply();
+
+    expect(settings.paletteShortcut()).toBe('Ctrl+Shift+K');
   });
 
   /**
@@ -68,6 +81,10 @@ describe('ShortcutsPageComponent', () => {
     await fixture.whenStable();
 
     expect(field('canvas.copy').value).toBe('Y');
+    expect(preferences.read('devnotes.shortcut.canvas.copy')).toBeNull();
+
+    draft.apply();
+
     expect(preferences.read('devnotes.shortcut.canvas.copy')).toBe('Y');
   });
 
@@ -85,7 +102,7 @@ describe('ShortcutsPageComponent', () => {
     press('palette', { key: 'j', code: 'KeyJ' });
     await fixture.whenStable();
 
-    expect(settings.paletteShortcut()).toBe('Ctrl+Alt+P');
+    expect(field('palette').value).toBe('Ctrl+Alt+P');
     expect(error('palette')).toContain('Ctrl, Alt, Maj');
   });
 
@@ -112,7 +129,7 @@ describe('ShortcutsPageComponent', () => {
     press('palette', { code: 'KeyB', ctrlKey: true });
     await fixture.whenStable();
 
-    expect(settings.paletteShortcut()).toBe('Ctrl+Alt+P');
+    expect(field('palette').value).toBe('Ctrl+Alt+P');
     expect(error('palette')).toContain('Ctrl+B');
   });
 
@@ -125,6 +142,7 @@ describe('ShortcutsPageComponent', () => {
 
     reset('canvas.copy').click();
     await fixture.whenStable();
+    draft.apply();
 
     expect(field('canvas.copy').value).toBe('C');
     expect(preferences.read('devnotes.shortcut.canvas.copy')).toBeNull();

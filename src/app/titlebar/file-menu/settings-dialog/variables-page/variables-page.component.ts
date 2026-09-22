@@ -35,11 +35,7 @@ export class VariablesPageComponent {
     this.store.setValue(index, typedValue(event));
   }
 
-  protected commit(): void {
-    void this.store.commit();
-  }
-
   protected remove(index: number): void {
-    void this.store.remove(index);
+    this.store.remove(index);
   }
 }

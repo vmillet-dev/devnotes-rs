@@ -1,4 +1,4 @@
-import { expect } from '@wdio/globals';
+import { browser, expect } from '@wdio/globals';
 import { existsSync, readFileSync } from 'node:fs';
 
 import { canvas } from '../pageobjects/canvas.page.js';
@@ -62,12 +62,18 @@ describe('Preferences reach the disk', () => {
     expect(file['devnotes.density']).toBe('comfortable');
   });
 
-  it('rewrites the key as the value is changed, with no confirmation step', async () => {
+  /** ⚠️ The panel edits a draft: the appearance shows straight away, the file waits. */
+  it('leaves the file alone until the draft is applied', async () => {
     await fileMenu.openPreferences();
     await settings.setTheme('light');
+
+    // ⚠️ A wait, and deliberately one: this asserts a write did **not** happen, and the
+    // store's autosave is debounced by 300ms — reading straight away would pass either way.
+    await browser.pause(600);
+    expect(stored()['devnotes.theme']).toBe('dark');
+
     await settings.close();
 
-    // There is no OK anywhere in the panel: closing it is not what saves.
     expect((await settled('devnotes.theme', 'light'))['devnotes.theme']).toBe('light');
   });
 

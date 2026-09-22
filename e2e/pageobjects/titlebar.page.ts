@@ -73,7 +73,14 @@ export const fileMenu = {
 export const settings = {
   page: (id: string) => $(`${testid('settings-page')}[data-page="${id}"]`),
   open: (id: string) => settings.page(id).click(),
+
+  /** ⚠️ The button marked OK: it writes the draft **and** closes. */
   close: () => $(testid('settings-close')).click(),
+  apply: () => $(testid('settings-apply')).click(),
+  cancel: () => $(testid('settings-cancel')).click(),
+  /** The strip that replaces the buttons once a close was attempted with work in hand. */
+  unapplied: () => $(testid('settings-unapplied')),
+  discard: () => $(testid('settings-discard')).click(),
 
   /** ⚠️ Addressed by its action, never by position: the page holds eleven of them. */
   shortcut: (action: string) => $(`${testid('shortcut-field')}[data-action="${action}"]`),
@@ -116,13 +123,14 @@ export const variables = {
 
   /**
    * ⚠️ Waits for the value to reach the back end, not for a plausible number of
-   * milliseconds: the panel commits on blur and the write crosses the bridge.
+   * milliseconds: the panel commits on Appliquer and the write crosses the bridge.
    */
   async add(name: string, value: string): Promise<void> {
     const last = await clickToAddRow(testid('variable-add'), testid('variable-row'));
     await last.$(testid('variable-name')).setValue(name);
     await last.$(testid('variable-value')).setValue(value);
     await blur();
+    await settings.apply();
 
     await browser.waitUntil(async () => (await bridge.listGlobalPlaceholders())[name] === value, {
       timeout: 10_000,
@@ -145,6 +153,7 @@ export const variables = {
       if (row) {
         await row.$(testid('variable-remove')).click();
         await blur();
+        await settings.apply();
         await browser.waitUntil(async () => !(await variables.names()).includes(name), {
           timeout: 10_000,
           timeoutMsg: `the variable "${name}" is still listed`,

@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { TranslationRef } from '@core/services/i18n/translation-ref.model';
-import { Refused, ShortcutBindingsStore } from '@core/services/shortcuts/shortcut-bindings.store';
+import { Refused } from '@core/services/shortcuts/shortcut-bindings.store';
+import { SettingsDraftStore } from '@core/services/settings/settings-draft.store';
 import {
   GLOBAL_ACTIONS,
   Rebindable,
@@ -54,7 +55,7 @@ const EVERY_ACTION = SECTIONS.flatMap((section) => section.actions);
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ShortcutsPageComponent {
-  protected readonly bindings = inject(ShortcutBindingsStore);
+  protected readonly draft = inject(SettingsDraftStore);
   private readonly transloco = inject(TranslocoService);
 
   protected readonly sections = SECTIONS;
@@ -62,7 +63,7 @@ export class ShortcutsPageComponent {
   private readonly refusal = signal<Refusal | null>(null);
 
   protected readonly conflicts = computed(() =>
-    this.bindings.conflicts(EVERY_ACTION).map((conflict) => ({
+    this.draft.conflicts(EVERY_ACTION).map((conflict) => ({
       accelerator: conflict.accelerator,
       names: conflict.actions.map((action) => this.transloco.translate(action.labelKey)).join(', '),
     })),
@@ -100,12 +101,12 @@ export class ShortcutsPageComponent {
 
     event.preventDefault();
 
-    const refused = this.bindings.rebind(action, keystroke, EVERY_ACTION);
+    const refused = this.draft.rebind(action, keystroke, EVERY_ACTION);
     this.refusal.set(refused === null ? null : this.explain(action, keystroke, refused));
   }
 
   protected reset(action: Rebindable): void {
-    this.bindings.reset(action);
+    this.draft.resetBinding(action);
     this.refusal.set(null);
   }
 

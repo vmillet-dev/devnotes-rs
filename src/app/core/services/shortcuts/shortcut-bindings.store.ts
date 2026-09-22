@@ -28,6 +28,51 @@ export interface ShortcutConflict {
  */
 export type Refused = { readonly kind: 'illegal' } | { readonly kind: 'taken'; readonly by: Rebindable };
 
+/** How an action's current keystroke is read — from what is stored, or from what is staged. */
+export type BindingReader = (action: Rebindable) => string;
+
+/**
+ * Whether a keystroke can be taken, and why not.
+ *
+ * ⚠️ One rule, two readers: this store answers from what is stored and
+ * `SettingsDraftStore` from what is staged, and a check living in only one of them would
+ * let the panel offer a key the store is about to refuse.
+ */
+export function refuseBinding(
+  action: Rebindable,
+  accelerator: string,
+  among: readonly Rebindable[],
+  bindingOf: BindingReader,
+): Refused | null {
+  const legal = isGlobal(action.id) ? isAccelerator(accelerator) : isCanvasAccelerator(accelerator);
+  if (!legal) return { kind: 'illegal' };
+
+  const by = among.find((other) => other.id !== action.id && bindingOf(other) === accelerator);
+
+  return by ? { kind: 'taken', by } : null;
+}
+
+/**
+ * Every keystroke claimed more than once.
+ *
+ * ⚠️ `refuseBinding` stops one being made, so this answers for what nothing can refuse: a
+ * preferences file edited by hand, and a shipped default that lands on a taken key.
+ */
+export function conflictsAmong(
+  among: readonly Rebindable[],
+  bindingOf: BindingReader,
+): readonly ShortcutConflict[] {
+  const claims = new Map<string, Rebindable[]>();
+  for (const action of among) {
+    const accelerator = bindingOf(action);
+    claims.set(accelerator, [...(claims.get(accelerator) ?? []), action]);
+  }
+
+  return [...claims]
+    .filter(([, actions]) => actions.length > 1)
+    .map(([accelerator, actions]) => ({ accelerator, actions }));
+}
+
 /**
  * Which accelerator each rebindable action answers to.
  *
@@ -66,25 +111,26 @@ export class ShortcutBindingsStore {
   /**
    * Moves an action onto a keystroke, or says why it could not.
    *
-   * ⚠️ Refused when another action already answers to it: the second one would be
-   * unreachable and nothing on screen would say which. `among` is the whole table the
-   * panel shows — **both** storage paths, or a key could be taken twice across them.
+   * ⚠️ `among` is the whole table the panel shows — **both** storage paths, or a key
+   * could be taken twice across them.
    */
   rebind(action: Rebindable, accelerator: string, among: readonly Rebindable[]): Refused | null {
-    const legal = isGlobal(action.id) ? isAccelerator(accelerator) : isCanvasAccelerator(accelerator);
-    if (!legal) return { kind: 'illegal' };
+    const refused = refuseBinding(action, accelerator, among, (other) => this.binding(other));
+    if (refused) return refused;
 
-    const by = this.claimedBy(accelerator, action, among);
-    if (by) return { kind: 'taken', by };
+    this.store(action, accelerator);
+    return null;
+  }
 
+  /** Writes what `rebind` accepted, or what the draft staged and Appliquer let through. */
+  store(action: Rebindable, accelerator: string): void {
     if (isGlobal(action.id)) {
       this.setGlobal(action.id, accelerator);
-      return null;
+      return;
     }
 
     this.preferences.write(preferenceKey(action.id), accelerator);
     this.revision.update((count) => count + 1);
-    return null;
   }
 
   reset(action: Rebindable): void {
@@ -98,31 +144,8 @@ export class ShortcutBindingsStore {
     this.revision.update((count) => count + 1);
   }
 
-  private claimedBy(
-    accelerator: string,
-    except: Rebindable,
-    among: readonly Rebindable[],
-  ): Rebindable | null {
-    return among.find((other) => other.id !== except.id && this.binding(other) === accelerator) ?? null;
-  }
-
-  /**
-   * Every keystroke claimed more than once.
-   *
-   * ⚠️ `rebind` refuses to make one, so this answers for what it cannot refuse: a
-   * preferences file edited by hand, and a shipped default that moves onto a key the
-   * user had already taken.
-   */
   conflicts(among: readonly Rebindable[]): readonly ShortcutConflict[] {
-    const claims = new Map<string, Rebindable[]>();
-    for (const action of among) {
-      const accelerator = this.binding(action);
-      claims.set(accelerator, [...(claims.get(accelerator) ?? []), action]);
-    }
-
-    return [...claims]
-      .filter(([, actions]) => actions.length > 1)
-      .map(([accelerator, actions]) => ({ accelerator, actions }));
+    return conflictsAmong(among, (action) => this.binding(action));
   }
 
   private globalBinding(id: GlobalId): string {

@@ -53,12 +53,6 @@ app-dialog {
   background: rgba(var(--amber-rgb), 0.12);
 }
 
-.settings-rail-option:focus-visible,
-.settings-close:focus-visible {
-  outline: 2px solid var(--amber-edge);
-  outline-offset: 1px;
-}
-
 .settings-content {
   padding: 16px 20px 20px;
   overflow-y: auto;
@@ -88,7 +82,14 @@ app-dialog {
   color: var(--text-2);
 }
 
-.settings-close {
+.settings-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.settings-btn {
   @include unstyled-control;
   @include surface($radius: 7px);
   padding: 7px 14px;
@@ -97,6 +98,47 @@ app-dialog {
   cursor: pointer;
 }
 
-.settings-close:hover {
+.settings-btn:hover:not(:disabled) {
   @include accent-state(var(--text-0), var(--amber-dim));
+}
+
+.settings-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+// The one that closes on a write: solid amber, the same weight as "Nouvelle note".
+.settings-btn.primary {
+  background: var(--amber-fill);
+  border-color: var(--amber-fill);
+  color: var(--amber-ink);
+  font-weight: 600;
+}
+
+.settings-btn.primary:hover {
+  background: var(--amber-text);
+  border-color: var(--amber-text);
+  color: var(--amber-ink);
+}
+
+// ⚠️ Text and a hairline, never a fill: one red button beside the single amber accent
+// reads as a second accent.
+.settings-btn.discard {
+  @include destructive;
+}
+
+.settings-rail-option:focus-visible,
+.settings-btn:focus-visible {
+  outline: 2px solid var(--amber-edge);
+  outline-offset: 1px;
+}
+
+.settings-actions.confirming {
+  border-top-color: rgba(var(--red-rgb), 0.35);
+}
+
+.settings-warning {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--red);
 }

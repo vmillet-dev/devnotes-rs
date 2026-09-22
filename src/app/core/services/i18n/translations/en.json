@@ -502,8 +502,6 @@
       "shortcuts": "Shortcuts",
       "security": "Security"
     },
-    "close": "Close",
-    "appliedImmediately": "Changes apply immediately.",
     "copied": "Copied to the clipboard.",
     "appearance": {
       "title": "Appearance",
@@ -580,7 +578,14 @@
       "needsModifier": "A global shortcut needs at least Ctrl, Alt, Shift or Super.",
       "reserved": "That key is reserved for navigation.",
       "conflict": "{{accelerator}} answers several actions: {{actions}}. Only one will act."
-    }
+    },
+    "cancel": "Cancel",
+    "apply": "Apply",
+    "ok": "OK",
+    "previewHint": "The theme and the density show while you choose; nothing is saved before Apply or OK.",
+    "unapplied": "{count, plural, one {One change has not been applied} other {# changes have not been applied}}.",
+    "closeWithout": "Close without applying",
+    "applyAndClose": "Apply and close"
   },
   "gettingStarted": {
     "title": "Getting started",
