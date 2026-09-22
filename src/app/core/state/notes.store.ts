@@ -255,6 +255,50 @@ export class NotesStore {
     return this.applyPatch(id, { spaceId });
   }
 
+  /**
+   * Files one note, which is a **batch of one**.
+   *
+   * ⚠️ Not a `NotePatch` field, and deliberately not a command of its own either: filing
+   * goes through `file_notes`, which answers the placements it actually changed — that
+   * answer is what the undo puts back, and a second path would drift from the selection
+   * bar's. A draft is materialised first: a note with no row cannot be filed.
+   */
+  async fileNote(id: string, folderId: string | null): Promise<void> {
+    const resolved = await this.resolve(id);
+    const target = resolved === DRAFT_ID ? await this.materialiseDraft() : resolved;
+    if (!target) return;
+
+    const previous = await this.notifier.attempt('errors.fileFailed', () =>
+      this.folders.fileMany([target], folderId),
+    );
+    if (previous === null) return;
+
+    this.adoptFiling(target, folderId);
+    this.revision.bump();
+    this.openUndoWindow({ kind: 'file', previous, count: previous.length });
+  }
+
+  /**
+   * ⚠️ The one write that has no note to adopt. `file_notes` answers the placements it
+   * changed, not the rows — so the open note kept the folder it had, and the editor's own
+   * control went on naming it until the note was closed and reopened.
+   *
+   * It is not a guess: the filing is exactly what was asked for and accepted, and the
+   * folder is resolved from the same list the control offered. The canvas still reloads,
+   * which is what refreshes the card's chip.
+   */
+  private adoptFiling(id: string, folderId: string | null): void {
+    const open = this._selectedNote();
+    if (open?.id !== id) return;
+
+    const folder = this.openFolder.allFolders().find((each) => each.id === folderId);
+    this._selectedNote.set({
+      ...open,
+      folderId,
+      folder: folder ? { id: folder.id, name: folder.name, colour: folder.colour } : null,
+    });
+  }
+
   /** Replaces the whole list: an item has no identity beyond its position. */
   setChecklist(id: string, items: readonly ChecklistItem[]): Promise<void> {
     return this.applyPatch(id, { items });

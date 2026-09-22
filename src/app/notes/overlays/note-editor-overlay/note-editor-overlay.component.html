@@ -140,6 +140,27 @@
           />
         </form>
       </div>
+      <!-- ⚠️ Shown **together**: a folder belongs to one space, so moving the space clears
+           the folder — `NotePatch::apply` does it — and a folder control on its own would
+           lie about what the space control just did. The editor was the one surface about a
+           single note that could not move it. -->
+      <span class="overlay-placement">
+        <app-placement-menu
+          [kind]="'space'"
+          [label]="'notes.moveToSpace' | transloco"
+          [options]="spaceOptions()"
+          [currentId]="note.spaceId"
+          (chosen)="onSpaceChosen($event)"
+        />
+        <app-placement-menu
+          [kind]="'folder'"
+          [label]="'notes.fileInto' | transloco"
+          [options]="folderOptions()"
+          [currentId]="note.folderId"
+          [noneLabel]="'notes.noFolder' | transloco"
+          (chosen)="fileRequested.emit($event)"
+        />
+      </span>
       <!-- Clearing the field makes the note permanent; a date puts it in "untriaged". -->
       <span class="overlay-expiry">
         <app-lifecycle-badge [lifecycle]="note.lifecycle" [expiringSoon]="note.expiringSoon" />

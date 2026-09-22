@@ -237,6 +237,7 @@
     [session]="store.editorSession()"
     (closed)="store.closeOverlay()"
     (patchRequested)="store.applyPatch(note.id, $event)"
+    (fileRequested)="store.fileNote(note.id, $event)"
     (deleteRequested)="store.deleteNote(note.id)"
     (placeholderValuesChanged)="store.setPlaceholderValues(note.id, $event)"
   />

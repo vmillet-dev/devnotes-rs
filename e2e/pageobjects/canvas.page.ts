@@ -396,4 +396,38 @@ export const canvas = {
     const card = await canvas.openCardMenu(title);
     await card.$(`${testid('note-card-move')}[data-space-id="${spaceId}"]`).click();
   },
+
+  /** ⚠️ A batch of one, through the command the selection bar already takes. */
+  async fileNote(title: string, folderId: string | null): Promise<void> {
+    const card = await canvas.openCardMenu(title);
+    const entry =
+      folderId === null
+        ? card.$(testid('note-card-unfile'))
+        : card.$(`${testid('note-card-file')}[data-folder-id="${folderId}"]`);
+    await entry.click();
+  },
+
+  async pinFromCardMenu(title: string): Promise<void> {
+    const card = await canvas.openCardMenu(title);
+    await card.$(testid('note-card-pin')).click();
+  },
+
+  /**
+   * Which entries the menu offers, by `data-testid` rather than by label.
+   *
+   * ⚠️ Not the text: the suite switches the interface language partway through, so an
+   * assertion on "Épingler" passes or fails depending on which spec file ran before this
+   * one. ⚠️ Read in one call — a round trip per entry leaves a window in which the menu
+   * can close.
+   */
+  async cardMenuEntries(title: string): Promise<string[]> {
+    await canvas.openCardMenu(title);
+    return browser.execute(
+      (panelSelector: string) =>
+        [...document.querySelectorAll(`${panelSelector} button`)].map(
+          (item) => item.getAttribute('data-testid') ?? '',
+        ),
+      testid('note-card-menu-panel'),
+    );
+  },
 };

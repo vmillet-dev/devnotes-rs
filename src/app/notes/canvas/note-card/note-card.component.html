@@ -190,6 +190,13 @@
       [noteTitle]="menuTitle"
       [spaces]="spaces.spaces()"
       [currentSpaceId]="note().spaceId"
+      [folders]="foldersOfSpace()"
+      [currentFolderId]="note().folderId"
+      [pinned]="note().pinned"
+      (opened)="onOpenFromMenu()"
+      (pinToggled)="onTogglePin()"
+      (copyRequested)="onCopy()"
+      (fileRequested)="onFile($event)"
       (moveRequested)="onMove($event)"
       (deleteRequested)="onDelete()"
     />

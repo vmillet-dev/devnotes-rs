@@ -85,7 +85,11 @@
         "snippets": "Snippets",
         "startHere": "Start here"
       }
-    }
+    },
+    "openNote": "Open",
+    "copy": "Copy",
+    "fileInto": "File into",
+    "noFolder": "No folder"
   },
   "filters": {
     "groupLabel": "Filter notes",

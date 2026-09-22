@@ -658,6 +658,39 @@ precisely where the marks now are: anything floating there sits on top of them, 
 collision is what decided this layout. A selection affordance that exists only under the
 pointer is also one nobody finds.
 
+**The card's ⋯ menu is the complete one.** Open, pin, copy, file into…, move to…, delete —
+a note's properties used to be spread over four surfaces with none of them complete: filing
+one from the date view took three clicks through the selection bar plus a fourth to clear
+it, and pinning with the mouse took a full-screen modal for a boolean that has its own
+filter chip in the header. The editor gained the two placements it was missing, as
+`placement-menu` used twice.
+
+⚠️ **The two placement controls are shown together**, and that is not decoration: a folder
+belongs to one space, so `NotePatch::apply` clears `folder_id` whenever `space_id` moves.
+A folder control without the space control beside it would go on naming a folder the space
+switcher can no longer reach.
+
+⚠️ **Filing is not a `NotePatch` field.** `NotesStore.fileNote` is a **batch of one**
+through `file_notes`, the same command the selection bar takes, because that command
+answers the placements it actually changed and that answer is what the undo puts back. It
+is also the one write with no note to adopt — `adoptFiling` refreshes the open note from
+the filing that was accepted and the folder list the control offered, or the editor's own
+control goes on naming the folder the note just left until it is closed and reopened.
+
+⚠️ **The card's menu is `position: fixed`**, placed by the component from the trigger's own
+box and flipped above it when that is where the room is. The card sits inside the canvas,
+which scrolls, so an absolutely placed panel is clipped by it — and the menu became tall
+enough for that to matter the day it became the complete one: it lost its last entry, the
+delete. ⚠️ The move-to-space list is flat and grows with the library; past a handful of
+spaces this wants the command palette rather than a longer menu.
+
+⚠️ `placement-menu` swallows Escape while it is open, and it is the **only** menu in the
+application that has to: it lives inside a dialog. `MenuTriggerDirective` lets Escape
+bubble on purpose — a multi-level menu folds its panel before closing — but here the next
+listener up is the editor's own, so one Escape closed the note along with the menu. It also
+closes itself from that handler rather than from `escaped`, so the decision does not depend
+on which listener was registered first.
+
 ⚠️ **The two actions hang outside the card**, in a pill over its **bottom**-right corner,
 shown on hover and on focus. Outside rather than in the flow, so they cost the card no room
 at all; at the bottom, because the top belongs to the marks. `.card-arming` — the red

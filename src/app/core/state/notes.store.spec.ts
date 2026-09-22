@@ -846,3 +846,62 @@ describe('NotesStore', () => {
     });
   });
 });
+
+describe('NotesStore filing one note', () => {
+  beforeEach(() => {
+    TestBed.resetTestingModule();
+    vi.restoreAllMocks();
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  });
+
+  /** ⚠️ A batch of one, through the command the selection bar already takes. */
+  it('files through the batch command and offers the filing back', async () => {
+    const harness = await createNotesHarness(
+      [createNote({ id: 'a', spaceId: 'space-1' })],
+      undefined,
+      undefined,
+      [{ id: 'perf', spaceId: 'space-1', name: 'Perf', colour: 'amber', createdAt: new Date('2026-01-01') }],
+    );
+
+    await harness.store.fileNote('a', 'perf');
+
+    expect(harness.folders.filings.get('a')).toBe('perf');
+    expect(harness.store.undoBanner()).toMatchObject({ kind: 'file', count: 1 });
+  });
+
+  /**
+   * ⚠️ `file_notes` answers the placements it changed, not the rows — so the open note
+   * kept the folder it had, and the editor's own control went on naming it.
+   */
+  it('refreshes the open note, which the filing command does not answer with', async () => {
+    const harness = await createNotesHarness(
+      [createNote({ id: 'a', spaceId: 'space-1' })],
+      undefined,
+      undefined,
+      [{ id: 'perf', spaceId: 'space-1', name: 'Perf', colour: 'amber', createdAt: new Date('2026-01-01') }],
+    );
+    harness.store.openNote('a');
+    await vi.waitFor(() => expect(harness.store.selectedNote()?.id).toBe('a'));
+
+    await harness.store.fileNote('a', 'perf');
+
+    expect(harness.store.selectedNote()?.folderId).toBe('perf');
+    expect(harness.store.selectedNote()?.folder?.name).toBe('Perf');
+  });
+
+  it('takes it back out, and forgets the folder with it', async () => {
+    const harness = await createNotesHarness(
+      [createNote({ id: 'a', spaceId: 'space-1', folderId: 'perf' })],
+      undefined,
+      undefined,
+      [{ id: 'perf', spaceId: 'space-1', name: 'Perf', colour: 'amber', createdAt: new Date('2026-01-01') }],
+    );
+    harness.store.openNote('a');
+    await vi.waitFor(() => expect(harness.store.selectedNote()?.id).toBe('a'));
+
+    await harness.store.fileNote('a', null);
+
+    expect(harness.store.selectedNote()?.folderId).toBeNull();
+    expect(harness.store.selectedNote()?.folder).toBeNull();
+  });
+});
