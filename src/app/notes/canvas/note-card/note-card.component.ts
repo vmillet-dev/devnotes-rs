@@ -32,7 +32,7 @@ export interface NoteActivation {
   readonly extendRange: boolean;
 }
 
-const SNIPPET_LINES = 4;
+const SNIPPET_LINES = 5;
 const MAX_VISIBLE_TAGS = 2;
 const MAX_VISIBLE_ITEMS = 2;
 

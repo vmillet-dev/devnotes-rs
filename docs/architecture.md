@@ -638,17 +638,33 @@ top of a card read as scattered glyphs rather than a toolbar.
 So the card is **not** the button. `.card-open` is an empty `<button>` at `inset: 0`
 underneath, carrying the click surface, the keyboard focus the canvas moves around and the
 card's accessible name; `.card` is a `<div>` above it in `pointer-events: none`, and each
-control takes its own events back. The header is then the marks and nothing else — a badge, a pin, a ⚡, a 📎 — and the
-checklist's tickable items are simply in the flow instead of a floating layer of their own.
+control takes its own events back. The checklist's tickable items are simply in the flow
+instead of a floating layer of their own.
 
-⚠️ **The actions hang outside the card**, in a pill over its top-right corner, shown under
-the pointer. Inside, they were a band of their own above the title, and on a card with
-nothing to mark — a todo list — that band was 26px of nothing between the top of the card and
-its first word. Outside, the band is simply not drawn, and three glyphs floating over the
-canvas need a pill to read as one group of controls. The pill also shows while the card is
-ticked: it is where the tick lives, and a selected card with nothing on it saying so is worse
-than a visible control. ⚠️ `.zone-body` scrolls, so it clips — its top padding is what keeps
-the first row of cards from losing their pill on the board.
+**One row holds the tick, the title and the marks.** The marks — a pin, a format badge, a ⚡,
+a 📎 — used to have a band of their own above the title: a line that says nothing about the
+note, on a card that is a fixed 150px. They are right-aligned on the title's row now, the
+title gives way to them (`flex: 1` plus `min-width: 0`, without which a long title pushes
+them off the card instead of clamping), and the body is what got the line back —
+`SNIPPET_LINES` went from four to five.
+
+⚠️ `MAX_VISIBLE_ITEMS` deliberately did **not** move. A todo list with nothing to mark never
+drew that band, so it gave nothing up; and 21px recovered is less than the 24px a row needs
+now that every row clears the hit target.
+
+⚠️ **The tick is in the flow**, at the head of that row, and always drawn — quiet at rest,
+amber once ticked. It used to float in a pill over the card's top-right corner, which is
+precisely where the marks now are: anything floating there sits on top of them, and that
+collision is what decided this layout. A selection affordance that exists only under the
+pointer is also one nobody finds.
+
+⚠️ **The two actions hang outside the card**, in a pill over its **bottom**-right corner,
+shown on hover and on focus. Outside rather than in the flow, so they cost the card no room
+at all; at the bottom, because the top belongs to the marks. `.card-arming` — the red
+"delete again?" band — owns the footer line inside the card, and the pill stands down while
+it is asking: a copy button and a ⋯ beside that question are noise, and `:focus-within`
+keeps the keyboard's way in. ⚠️ `.zone-body` scrolls, so it clips — its bottom padding is
+what keeps the last row of cards from losing their pill on the board.
 
 It is the same trick the editor uses for its body, where the code viewer sits under the
 textarea; the card had it already, for its items alone.

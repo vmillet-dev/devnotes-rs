@@ -78,6 +78,9 @@ describe('Deleting a note, and taking it back', () => {
     await press('Delete');
     const card = await canvas.cardWithTitle('Armed then called off');
     expect(await card.$(testid('note-card-arming')).isExisting()).toBe(true);
+    // ⚠️ The hover pill hangs right under that question. A copy button and a ⋯ beside
+    // "delete again?" are noise, so it stands down until the card disarms.
+    expect(await canvas.actionsOpacity('Armed then called off')).toBe('0');
 
     await press('Escape');
     await card.$(testid('note-card-arming')).waitForExist({ reverse: true });
