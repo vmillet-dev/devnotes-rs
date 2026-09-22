@@ -61,10 +61,11 @@ export const canvas = {
    * so their boxes are readable without hovering, which is the only way this is not flaky.
    */
   cardHeadLayout(title: string): Promise<{
-    actionsAboveTop: boolean;
-    offset: number;
-    titleWidth: number;
-    snippetWidth: number;
+    actionsBelowBottom: boolean;
+    titleRowOffset: number;
+    marksRightAligned: boolean;
+    titleTop: number;
+    snippetTop: number;
   } | null> {
     return browser.execute(
       (cardSelector: string, titleSelector: string, wanted: string) => {
@@ -72,21 +73,46 @@ export const canvas = {
           (each) => (each.querySelector(titleSelector)?.textContent ?? '').trim() === wanted,
         );
         const card = shell?.querySelector('.card')?.getBoundingClientRect();
+        const row = shell?.querySelector('.card-title-row')?.getBoundingClientRect();
         const titleBox = shell?.querySelector('.card-title')?.getBoundingClientRect();
+        const marks = shell?.querySelector('.card-marks')?.getBoundingClientRect();
         const snippet = shell?.querySelector('.card-snippet')?.getBoundingClientRect();
         const actions = shell?.querySelector('.card-actions')?.getBoundingClientRect();
-        if (!card || !titleBox || !snippet || !actions) return null;
+        if (!card || !row || !titleBox || !marks || !snippet || !actions) return null;
 
         return {
-          // The pill hangs over the card's top edge instead of being laid out inside it,
-          // which is what stops it costing the title a band of its own.
-          actionsAboveTop: actions.top < card.top,
-          // It starts at the card's own edge, exactly like the snippet under it.
-          offset: Math.round(titleBox.left - snippet.left),
-          // And it has the whole width to lay itself out in, both lines.
-          titleWidth: Math.round(titleBox.width),
-          snippetWidth: Math.round(snippet.width),
+          // The pill hangs over the card's bottom edge instead of being laid out inside
+          // it, which is what stops it costing the card a band of its own — and it is the
+          // bottom, because the top right belongs to the marks now.
+          actionsBelowBottom: actions.bottom > card.bottom && actions.top > titleBox.bottom,
+          // The row starts at the card's own edge, exactly like the snippet under it.
+          titleRowOffset: Math.round(row.left - snippet.left),
+          // The marks end where the row ends, and the title is what gives way to them.
+          marksRightAligned: Math.round(marks.right) <= Math.round(row.right) && marks.left >= titleBox.right,
+          // And the body starts right after that one row: there is no band above it.
+          titleTop: Math.round(titleBox.top - card.top),
+          snippetTop: Math.round(snippet.top - row.bottom),
         };
+      },
+      testid('note-card'),
+      testid('note-card-title'),
+      title,
+    );
+  },
+
+  /**
+   * How visible the hover pill is on one card. ⚠️ Read from the computed style: the pill
+   * hangs under the card's bottom edge, right where the arming band is asking its question,
+   * and it stands down rather than crowding it.
+   */
+  actionsOpacity(title: string): Promise<string | null> {
+    return browser.execute(
+      (cardSelector: string, titleSelector: string, wanted: string) => {
+        const shell = [...document.querySelectorAll(cardSelector)].find(
+          (each) => (each.querySelector(titleSelector)?.textContent ?? '').trim() === wanted,
+        );
+        const actions = shell?.querySelector('.card-actions');
+        return actions ? getComputedStyle(actions).opacity : null;
       },
       testid('note-card'),
       testid('note-card-title'),
@@ -147,7 +173,7 @@ export const canvas = {
    */
   badgeBoxes(): Promise<{ cutByBand: number; outlines: number } | null> {
     return browser.execute(() => {
-      const band = document.querySelector('.card-head');
+      const band = document.querySelector('.card-marks');
       const onCard = band?.querySelector('.lang-tag');
       const chip = document.querySelector('.language-chip.on');
       const inChip = chip?.querySelector('.lang-tag');

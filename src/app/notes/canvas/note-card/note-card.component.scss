@@ -82,15 +82,25 @@
   background: rgba(var(--amber-rgb), 0.06);
 }
 
-// The marks and nothing else: a badge, a pin, a ⚡, a 📎. The actions hang outside the card,
-// so this band simply is not drawn when there is nothing to put in it.
-.card-head {
+// ⚠️ One row for the tick, the title and the marks, where the marks used to have a band of
+// their own above the title: 21px of a fixed 150px card spent on a line that says nothing
+// about the note. The body is what got it back.
+.card-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 8px;
+  min-width: 0;
+}
+
+// Right-aligned, and never squeezed: the title is what gives way.
+.card-marks {
   display: flex;
   align-items: center;
   gap: 5px;
-  margin-bottom: 5px;
-  min-width: 0;
-  overflow: hidden;
+  flex-shrink: 0;
+  // The badge sits on the first line of the title, not on the middle of two.
+  padding-top: 1px;
 }
 
 .card-pin,
@@ -105,12 +115,12 @@
   color: var(--amber-text);
 }
 
-// ⚠️ Outside the card, over its top edge: inside, they were a band of their own above the
-// title, and on a card with no marks that band was 26px of nothing. A pill rather than
-// three loose glyphs — over the canvas they have to read as one group of controls.
+// ⚠️ Outside the card, over its **bottom** edge. The top right belongs to the marks now,
+// and a pill floating there sat on top of them — which is the collision that decided this
+// layout. Outside rather than in the flow, so it still costs the card no room at all.
 .card-actions {
   position: absolute;
-  top: -9px;
+  bottom: -9px;
   right: 6px;
   z-index: 3;
   display: flex;
@@ -145,17 +155,42 @@ app-copy-button {
   pointer-events: auto;
 }
 
-// ⚠️ And when the card is ticked: the pill is where the tick lives, so hiding it would
-// leave a selected card with nothing on it saying which control did that.
 .card-shell:hover .card-actions,
-.card-actions:focus-within,
-.card-shell.checked .card-actions {
+.card-actions:focus-within {
+  opacity: 1;
+}
+
+// ⚠️ The arming band owns the bottom of the card while it is asking, and the pill hangs
+// right below it. Standing the pill down for those four seconds keeps the question legible;
+// the keyboard still reaches it, which is what `:focus-within` is doing here.
+.card-shell.armed .card-actions {
+  opacity: 0;
+}
+
+.card-shell.armed .card-actions:focus-within {
   opacity: 1;
 }
 
 .card-action:hover {
   background: var(--bg-3);
   color: var(--text-0);
+}
+
+// ⚠️ In the flow and always drawn, unlike the pill it left: floating it over a corner is
+// what covered the marks, and a selection affordance that only exists under the pointer is
+// one nobody finds. Quiet at rest, amber once it is ticked.
+.card-check {
+  flex-shrink: 0;
+  margin: -2px 0 0 -3px;
+  padding: 2px 3px;
+  color: var(--text-2);
+  opacity: 0.55;
+}
+
+.card-shell:hover .card-check,
+.card-check:focus-visible,
+.card-check.checked {
+  opacity: 1;
 }
 
 .card-check.checked {
@@ -167,14 +202,16 @@ app-copy-button {
   outline-offset: 1px;
 }
 
-// ⚠️ Full width, both lines, starting at the card's own edge: inline after the badge and
-// the marks, the title began in the middle of the card and what was left of it wrapped.
+// ⚠️ It takes the room the row has left and gives way to the marks, never the other way
+// round: `min-width: 0` is what lets a flex child actually shrink, and without it a long
+// title pushes the marks off the card instead of clamping.
 .card-title {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  margin-bottom: 8px;
+  flex: 1;
+  min-width: 0;
   font-size: 13px;
   line-height: 1.3;
   font-weight: 600;

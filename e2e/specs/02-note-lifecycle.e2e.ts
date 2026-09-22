@@ -35,21 +35,25 @@ describe('Creating a note, and finding it again', () => {
   });
 
   /**
-   * ⚠️ Measured, not asserted on a class: the title used to run inline after the badge and
-   * the marks, so it started in the middle of the card and what was left of it wrapped —
-   * and every attempt at reserving a band for the buttons cost the title a line of its own.
+   * ⚠️ Measured, not asserted on a class: the marks used to have a band of their own above
+   * the title — a line that says nothing about the note, on a card that is a fixed 150px.
+   * They share the title's row now, and the body is what got that line back.
    */
-  it('gives the title the whole width, under the badge rather than beside it', async () => {
+  it('puts the title and the marks on one row, with the body right under it', async () => {
     const layout = await canvas.cardHeadLayout(title);
 
     expect(layout).not.toBeNull();
-    // It starts at the card's own edge, exactly like the snippet under it…
-    expect(layout!.offset).toBe(0);
-    // …and it has as much room as the snippet, which nothing floats over.
-    expect(layout!.titleWidth).toBe(layout!.snippetWidth);
-    // …because the copy and ⋯ buttons hang over the card's top edge instead of taking a
-    // band above it, which on a todo list with no marks held nothing else at all.
-    expect(layout!.actionsAboveTop).toBe(true);
+    // The row starts at the card's own edge, exactly like the snippet under it…
+    expect(layout!.titleRowOffset).toBe(0);
+    // …the marks sit at its right end and the title is what gives way to them…
+    expect(layout!.marksRightAligned).toBe(true);
+    // …that row is the first thing in the card, with no band above it…
+    expect(layout!.titleTop).toBeLessThanOrEqual(16);
+    // …and the body starts immediately after it.
+    expect(layout!.snippetTop).toBeLessThanOrEqual(10);
+    // …because the copy and ⋯ buttons hang under the card's bottom edge rather than over
+    // the marks, which is the corner they used to cover.
+    expect(layout!.actionsBelowBottom).toBe(true);
   });
 
   it('materialises the draft exactly once, not once per committed field', async () => {

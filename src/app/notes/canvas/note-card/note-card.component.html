@@ -29,10 +29,37 @@
   ></button>
 
   <div class="card" [class.pinned]="note().pinned" [class.selected]="selected()" [class.armed]="armed()">
-    <!-- ⚠️ What the note *is*, and only that: the actions hang outside the card, so a todo
-         list with nothing to mark draws no band at all and its title starts at the top. -->
-    @if (!isChecklist() || hasMarks()) {
-      <div class="card-head">
+    <!-- ⚠️ One line, not two. The marks used to have a band of their own above the title —
+         a line that says nothing about the note, and 21px of a card that is a fixed 150.
+         The tick is **in the flow** at the head of this row rather than floating over the
+         card's corner: anything floating there sits on top of the marks, which is the
+         collision that decided this layout. -->
+    <div class="card-title-row">
+      <!-- `aria-pressed` rather than an `<input type=checkbox>`, which would inherit the
+           card's own styles. -->
+      <button
+        type="button"
+        class="card-action card-check"
+        data-testid="note-card-check"
+        [class.checked]="checked()"
+        [attr.aria-pressed]="checked()"
+        [attr.aria-label]="'notes.selectNote' | transloco: { title: menuTitle }"
+        [attr.title]="'notes.selectNote' | transloco: { title: menuTitle }"
+        (click)="onCheck($event)"
+      >
+        <span aria-hidden="true">{{ checked() ? '☑' : '☐' }}</span>
+      </button>
+
+      <span class="card-title" data-testid="note-card-title">
+        @if (note().title) {
+          {{ note().title }}
+        } @else {
+          {{ 'notes.untitled' | transloco }}
+        }
+      </span>
+
+      <!-- What the note *is*, right-aligned: a pin, a format, a ⚡, a 📎. -->
+      <span class="card-marks">
         @if (note().pinned) {
           <span class="card-pin" data-testid="note-card-pin" aria-hidden="true">📌</span>
           <!-- Decorative: without this text twin, a screen reader gets nothing. -->
@@ -58,16 +85,8 @@
             {{ 'notes.attachmentsCount' | transloco: { count: note().attachmentCount } }}
           </span>
         }
-      </div>
-    }
-
-    <span class="card-title" data-testid="note-card-title">
-      @if (note().title) {
-        {{ note().title }}
-      } @else {
-        {{ 'notes.untitled' | transloco }}
-      }
-    </span>
+      </span>
+    </div>
 
     @if (isChecklist()) {
       <!-- Decorative: the count beside it carries the same information as text. -->
@@ -145,25 +164,11 @@
     </span>
   </div>
 
-  <!-- ⚠️ Outside the card and over its top edge, shown under the pointer: inside, they were
-       a band of their own above the title — 26px of mostly nothing on a todo list with no
-       marks. A pill, so three glyphs over the canvas read as one group of controls. -->
+  <!-- ⚠️ Outside the card and over its **bottom** edge, shown under the pointer. The top
+       right belongs to the marks now, and a pill floating there covered them; down here it
+       is clear of the arming band inside the card, which owns the footer line. Still
+       outside rather than in the flow, so it costs the card no room at all. -->
   <div class="card-actions">
-    <!-- `aria-pressed` rather than an `<input type=checkbox>`, which would inherit the
-         card's own styles. -->
-    <button
-      type="button"
-      class="card-action card-check"
-      data-testid="note-card-check"
-      [class.checked]="checked()"
-      [attr.aria-pressed]="checked()"
-      [attr.aria-label]="'notes.selectNote' | transloco: { title: menuTitle }"
-      [attr.title]="'notes.selectNote' | transloco: { title: menuTitle }"
-      (click)="onCheck($event)"
-    >
-      <span aria-hidden="true">{{ checked() ? '☑' : '☐' }}</span>
-    </button>
-
     <!-- ⚠️ One copy, two behaviours: a snippet with fields cannot be copied as it is, so
          this asks for the values first. The ⚡ among the marks is what says so. -->
     @if (hasPlaceholders()) {

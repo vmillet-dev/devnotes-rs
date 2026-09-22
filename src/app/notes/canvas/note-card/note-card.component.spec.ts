@@ -61,15 +61,18 @@ describe('NoteCardComponent', () => {
    * inline after the badge and the marks it began in the middle of the card, and what was
    * left of it wrapped.
    */
-  it('keeps the title out of the band the badge and the marks sit on', async () => {
+  /** ⚠️ One row, not two: the marks used to have a band above the title, and it said
+   *  nothing about the note that the marks themselves do not. */
+  it('puts the title, the tick and the marks on one row', async () => {
     fixture.componentRef.setInput('note', createNote({ title: 'My note', attachmentCount: 2 }));
     await fixture.whenStable();
 
-    const head = fixture.nativeElement.querySelector('.card-head');
-    expect(head.querySelector('app-language-badge')).not.toBeNull();
-    expect(head.querySelector('[data-testid="note-card-clip"]')).not.toBeNull();
-    expect(head.querySelector('[data-testid="note-card-title"]')).toBeNull();
-    expect(fixture.nativeElement.querySelector('[data-testid="note-card-title"]')).not.toBeNull();
+    const row = fixture.nativeElement.querySelector('.card-title-row');
+    expect(row.querySelector('[data-testid="note-card-title"]')).not.toBeNull();
+    expect(row.querySelector('[data-testid="note-card-check"]')).not.toBeNull();
+    expect(row.querySelector('.card-marks app-language-badge')).not.toBeNull();
+    expect(row.querySelector('.card-marks [data-testid="note-card-clip"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.card-head')).toBeNull();
   });
 
   /**
@@ -94,9 +97,9 @@ describe('NoteCardComponent', () => {
 
     const pin = fixture.nativeElement.querySelector('[data-testid="note-card-pin"]');
     expect(pin).not.toBeNull();
-    expect(pin.closest('.card-head')).not.toBeNull();
+    expect(pin.closest('.card-marks')).not.toBeNull();
     // The glyph is decorative, so the state reaches a screen reader as text beside it.
-    expect(fixture.nativeElement.querySelector('.card-head .visually-hidden').textContent).toBe(
+    expect(fixture.nativeElement.querySelector('.card-marks .visually-hidden').textContent).toBe(
       'Note épinglée',
     );
   });
@@ -138,12 +141,19 @@ describe('NoteCardComponent', () => {
     expect(text('.card-title')).toBe('Sans titre');
   });
 
-  it('shows only the first 4 lines of content as a snippet', async () => {
-    fixture.componentRef.setInput('note', createNote({ content: 'one\ntwo\nthree\nfour\nfive' }));
+  /** Five, where it was four: the marks' own band is what the body got back. */
+  it('shows only the first 5 lines of content as a snippet', async () => {
+    fixture.componentRef.setInput('note', createNote({ content: 'one\ntwo\nthree\nfour\nfive\nsix' }));
     await fixture.whenStable();
 
     const lines = fixture.debugElement.queryAll(By.css('.card-snippet .line-content'));
-    expect(lines.map((line) => line.nativeElement.textContent)).toEqual(['one', 'two', 'three', 'four']);
+    expect(lines.map((line) => line.nativeElement.textContent)).toEqual([
+      'one',
+      'two',
+      'three',
+      'four',
+      'five',
+    ]);
   });
 
   describe('what a search put it here for', () => {
