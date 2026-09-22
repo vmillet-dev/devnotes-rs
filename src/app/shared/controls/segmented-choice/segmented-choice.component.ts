@@ -25,6 +25,8 @@ export interface Segment {
 })
 export class SegmentedChoiceComponent {
   readonly label = input.required<string>();
+  /** ⚠️ Stable, unlike `label`, which is translated: this is what the tests address. */
+  readonly kind = input.required<string>();
   readonly segments = input.required<readonly Segment[]>();
   readonly currentId = input.required<string>();
 

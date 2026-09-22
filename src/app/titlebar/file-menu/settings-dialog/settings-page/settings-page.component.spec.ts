@@ -71,11 +71,12 @@ describe('SettingsPageComponent', () => {
     ];
   }
 
-  function segments(label: string): HTMLElement[] {
-    const group = [...fixture.nativeElement.querySelectorAll('[role="radiogroup"]')].find(
-      (each) => (each as HTMLElement).getAttribute('aria-label') === label,
-    );
-    return [...(group as HTMLElement).querySelectorAll<HTMLElement>('[data-testid="segment"]')];
+  /** ⚠️ By `data-testid`, never by the translated `aria-label`. */
+  function segments(kind: string): HTMLElement[] {
+    const root = fixture.nativeElement as HTMLElement;
+    return [
+      ...root.querySelectorAll<HTMLElement>(`[data-testid="segmented-${kind}"] [data-testid="segment"]`),
+    ];
   }
 
   it('offers the language alongside the titlebar buttons, system included', async () => {
@@ -95,14 +96,16 @@ describe('SettingsPageComponent', () => {
 
   /** ⚠️ Exactly one is chosen at all times, which is what `aria-checked` has to say. */
   it('shows the active theme as the checked segment', () => {
-    const checked = segments('Thème').filter((segment) => segment.getAttribute('aria-checked') === 'true');
+    const checked = segments('setting-theme').filter(
+      (segment) => segment.getAttribute('aria-checked') === 'true',
+    );
 
     expect(checked).toHaveLength(1);
     expect(checked[0].getAttribute('data-segment-id')).toBe('system');
   });
 
   it('writes a chosen theme straight through, with nothing to validate', async () => {
-    segments('Thème')
+    segments('setting-theme')
       .find((segment) => segment.getAttribute('data-segment-id') === 'light')!
       .click();
     await fixture.whenStable();
@@ -111,7 +114,7 @@ describe('SettingsPageComponent', () => {
   });
 
   it('writes a chosen density the same way', async () => {
-    segments('Densité')
+    segments('setting-density')
       .find((segment) => segment.getAttribute('data-segment-id') === 'compact')!
       .click();
     await fixture.whenStable();

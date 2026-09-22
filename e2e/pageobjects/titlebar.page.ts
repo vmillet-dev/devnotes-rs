@@ -14,9 +14,10 @@ import { bridge } from '../support/bridge.js';
 
 /**
  * ⚠️ Not `<select>`s any more: the language is a menu and the other two are segmented
- * controls, so there is no value to assign — the labels are what addresses them.
+ * controls, so there is no value to assign. ⚠️ Addressed by `data-testid` and never by
+ * their translated label — the suite switches the interface language partway through.
  */
-const SEGMENTED = { theme: 'Thème', density: 'Densité' } as const;
+const SEGMENTED = { theme: 'setting-theme', density: 'setting-density' } as const;
 
 export const titlebar = {
   title: () => $(testid('titlebar-title')).getText(),

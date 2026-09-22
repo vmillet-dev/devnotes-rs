@@ -307,15 +307,19 @@ export function choiceLabel(kind: string): Promise<string> {
   return $(testid(`choice-${kind}`)).getText();
 }
 
-/** Picks one of the few options a segmented control shows all at once. */
-export async function pickSegment(label: string, segmentId: string): Promise<void> {
-  await $(`[role="radiogroup"][aria-label="${label}"] [data-segment-id="${segmentId}"]`).click();
+/**
+ * Picks one of the few options a segmented control shows all at once.
+ *
+ * ⚠️ Addressed by `data-testid` and never by its `aria-label`: the suite switches the
+ * interface language partway through, so a selector naming "Thème" passes or fails
+ * depending on which spec file ran before — which is exactly how this shipped red.
+ */
+export async function pickSegment(kind: string, segmentId: string): Promise<void> {
+  await $(`${testid('segmented-' + kind)} [data-segment-id="${segmentId}"]`).click();
 }
 
-export function checkedSegment(label: string): Promise<string | null> {
-  return $(`[role="radiogroup"][aria-label="${label}"] [aria-checked="true"]`).getAttribute(
-    'data-segment-id',
-  );
+export function checkedSegment(kind: string): Promise<string | null> {
+  return $(`${testid('segmented-' + kind)} [aria-checked="true"]`).getAttribute('data-segment-id');
 }
 
 export async function setNativeValue(selector: string, value: string): Promise<void> {

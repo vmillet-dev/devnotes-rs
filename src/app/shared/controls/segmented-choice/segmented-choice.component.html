@@ -1,4 +1,9 @@
-<div class="segmented" role="radiogroup" [attr.aria-label]="label()">
+<div
+  class="segmented"
+  role="radiogroup"
+  [attr.data-testid]="'segmented-' + kind()"
+  [attr.aria-label]="label()"
+>
   @for (segment of segments(); track segment.id) {
     <button
       type="button"

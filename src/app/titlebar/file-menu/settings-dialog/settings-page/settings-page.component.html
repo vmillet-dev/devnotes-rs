@@ -19,6 +19,7 @@
     <div class="setting-row">
       <span class="setting-label">{{ 'settings.appearance.theme' | transloco }}</span>
       <app-segmented-choice
+        [kind]="'setting-theme'"
         [label]="'settings.appearance.theme' | transloco"
         [segments]="themeSegments()"
         [currentId]="settings.theme()"
@@ -29,6 +30,7 @@
     <div class="setting-row">
       <span class="setting-label">{{ 'settings.appearance.density' | transloco }}</span>
       <app-segmented-choice
+        [kind]="'setting-density'"
         [label]="'settings.appearance.density' | transloco"
         [segments]="densitySegments()"
         [currentId]="settings.density()"
