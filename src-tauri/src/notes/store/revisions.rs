@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 
 use crate::db::iso8601;
-use crate::db::schema::note_revisions;
+use crate::db::schema::{note_revisions, notes};
 use crate::error::StorageError;
 use crate::notes::revision::{KEEP, Revision, describe};
 use crate::vault::key::Vault;
@@ -78,6 +78,54 @@ pub fn content_of(
     };
 
     Ok(Some(vault.open(&row.content)?))
+}
+
+/// The note's current body and one of its kept ones, opened, for the preview to compare.
+/// `None` when either is missing, or the revision is another note's.
+pub fn compare(
+    connection: &mut SqliteConnection,
+    vault: &Vault,
+    note_id: &str,
+    revision_id: &str,
+) -> Result<Option<(String, String)>, StorageError> {
+    let Some(current) = notes::table
+        .find(note_id)
+        .filter(notes::deleted_at.is_null())
+        .select(notes::content)
+        .first::<String>(connection)
+        .optional()?
+    else {
+        return Ok(None);
+    };
+    let Some(version) = content_of(connection, vault, note_id, revision_id)? else {
+        return Ok(None);
+    };
+
+    Ok(Some((vault.open(&current)?, version)))
+}
+
+/// Forgets `revision_id` and every body kept after it: what going back to it means.
+///
+/// ⚠️ Insertion order, like the listing: two revisions can share a millisecond.
+pub fn discard_from(
+    connection: &mut SqliteConnection,
+    note_id: &str,
+    revision_id: &str,
+) -> Result<(), StorageError> {
+    let kept = rows(connection, note_id)?;
+    let Some(at) = kept.iter().position(|row| row.id == revision_id) else {
+        return Ok(());
+    };
+    let newer: Vec<&String> = kept[..=at].iter().map(|row| &row.id).collect();
+
+    diesel::delete(
+        note_revisions::table
+            .filter(note_revisions::note_id.eq(note_id))
+            .filter(note_revisions::id.eq_any(newer)),
+    )
+    .execute(connection)?;
+
+    Ok(())
 }
 
 /// Keeps `content` beside the note, unless the newest kept body already is it.

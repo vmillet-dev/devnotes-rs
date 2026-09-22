@@ -1,6 +1,6 @@
 import { guard } from './fail-next';
 import { NotesRepository } from '@core/data/notes.repository';
-import { Revision } from '@core/model/revision.model';
+import { DiffLine, Revision } from '@core/model/revision.model';
 import {
   Note,
   NoteDraft,
@@ -160,7 +160,28 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
     return guard(this, () => this.history.get(id) ?? []);
   }
 
-  /** ⚠️ `updatedAt` is left alone, like the real one: putting back is not editing. */
+  /** Not a real diff: the whole current text goes, the whole version comes back. */
+  revisionDiff(id: string, revisionId: string): Promise<readonly DiffLine[]> {
+    return guard(this, () => {
+      const current = this.notes.find((note) => note.id === id)?.content;
+      const version = this.bodies.get(revisionId);
+      if (current === undefined || version === undefined) {
+        throw new Error(`Unknown revision: ${revisionId}`);
+      }
+
+      return current === version
+        ? []
+        : [
+            { kind: 'dropped', text: current },
+            { kind: 'restored', text: version },
+          ];
+    });
+  }
+
+  /**
+   * Going back, like the real one: the version and every newer one leave the history, and
+   * nothing is kept of the text replaced. ⚠️ `updatedAt` is left alone.
+   */
   restoreRevision(id: string, revisionId: string): Promise<Note> {
     return guard(this, () => {
       const existing = this.notes.find((note) => note.id === id);
@@ -172,11 +193,9 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
         throw new Error(`Unknown revision: ${revisionId}`);
       }
 
-      this.history.set(id, [
-        { id: `r-${++this.nextRevision}`, takenAt: new Date(), characters: existing.content.length },
-        ...(this.history.get(id) ?? []),
-      ]);
-      this.bodies.set(`r-${this.nextRevision}`, existing.content);
+      const kept = this.history.get(id) ?? [];
+      const at = kept.findIndex((revision) => revision.id === revisionId);
+      this.history.set(id, kept.slice(at + 1));
 
       const restored: Note = { ...existing, content };
       this.notes = this.notes.map((note) => (note.id === id ? restored : note));
@@ -247,6 +266,10 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
   /** What the double actually holds, so a spec can assert an undo really put it back. */
   spaceOf(id: string): string | undefined {
     return this.notes.find((note) => note.id === id)?.spaceId;
+  }
+
+  contentOf(id: string): string | undefined {
+    return this.notes.find((note) => note.id === id)?.content;
   }
 
   tagsOf(id: string): readonly string[] | undefined {

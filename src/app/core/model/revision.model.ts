@@ -1,3 +1,6 @@
+/** A line of the preview: what going back to a version would keep, bring back or take away. */
+export type { DiffLine } from '@core/ipc/bindings';
+
 /**
  * A body kept beside a note, before an edit replaced it.
  *

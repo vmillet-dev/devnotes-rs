@@ -2812,10 +2812,20 @@ back is not editing it — the fifth place in the codebase holding that line, af
 `restore_many`, `restore_placements`, `untag_many` and `set_placeholder_values` — and the
 canvas sorts on that column.
 
-⚠️ The body being replaced is itself kept first, which is why the panel asks for **no
-confirmation**: a restore is as undoable as the edit that made it necessary, and a guard
-in front of a reversible gesture is how a safety net becomes a nuisance. Every other
-content-replacing gesture in the application confirms; this one earns its exemption.
+⚠️ **Restoring is going back to that point, and it is irreversible.** The note takes the
+kept body, and that body **and every one kept after it** leave the history
+(`revisions::discard_from`, by `rowid` like the listing); nothing is kept of the text it
+replaced. A → B → C, back to B, and C is gone. It used to keep the replaced body first, so
+a restore added a row — and the panel then showed two, one of them identical to the text
+on screen, with nothing to say what either meant (#325).
+
+⚠️ So **a row opens a preview**, and only the preview restores. `revision_diff` answers the
+kept body against the current text as `DiffLine`s — `kept`, `restored`, `dropped`, and
+`skipped` for unchanged runs folded to a count, three lines of context either side —
+computed in Rust with the `similar` crate (Myers, a 300 ms deadline past which it
+approximates). The preview says what goes ("the current text and N newer versions") and
+carries the restore button, drawn destructive: opening the preview is the first step,
+which a double click on a row cannot defeat — the shape emptying the trash has.
 
 ⚠️ `content_of` narrows on the **note id as well as** the revision id: an id comes from
 the front end, and one note's history must not be reachable through another note.
