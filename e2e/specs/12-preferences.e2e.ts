@@ -19,22 +19,90 @@ describe('Preferences', () => {
     expect(await settings.page('general').isExisting()).toBe(true);
   });
 
-  it('applies the theme as it is chosen, with no confirmation step', async () => {
+  it('applies the theme as it is chosen, before anything is written', async () => {
     await settings.setTheme('light');
 
-    // Dark is the base because the preference lives in a file nothing can read before
-    // Angular boots.
+    // ⚠️ A preview, not a write: nobody picks a theme without seeing it. Dark is the base
+    // because the preference lives in a file nothing can read before Angular boots.
     expect(await browser.$('html').getAttribute('data-theme')).toBe('light');
   });
 
-  it('applies the density the same way', async () => {
+  it('previews the density the same way', async () => {
     await settings.setDensity('compact');
     expect(await browser.$('html').getAttribute('data-density')).toBe('compact');
   });
 
-  it('switches the interface language from the panel', async () => {
+  /** ⚠️ A preview Annuler undoes is not the same thing as a write. */
+  it('puts the previous appearance back on Annuler', async () => {
+    // Applied first, so what Annuler falls back to is a theme this file chose rather than
+    // whatever the machine resolves "system" to.
+    await settings.setTheme('light');
+    await settings.apply();
+
+    await settings.setTheme('dark');
+    expect(await browser.$('html').getAttribute('data-theme')).toBe('dark');
+
+    await settings.cancel();
+
+    expect(
+      await eventually(
+        () => browser.execute(() => document.documentElement.getAttribute('data-theme')),
+        (theme) => theme === 'light',
+        'Annuler to put the previous theme back',
+      ),
+    ).toBe('light');
+  });
+
+  /**
+   * ⚠️ Everything but the appearance waits for the button. A half-captured global
+   * shortcut live across the whole machine is the argument this panel was changed on,
+   * and the language is in the same half.
+   */
+  it('holds the language until it is applied', async () => {
+    await fileMenu.openPreferences();
     await settings.setLocale('en');
-    expect(await titlebar.activeLocale()).toBe('en');
+    expect(await titlebar.activeLocale()).toBe('fr');
+
+    await settings.apply();
+
+    expect(
+      await eventually(
+        () => titlebar.activeLocale(),
+        (locale) => locale === 'en',
+        'Appliquer to switch the interface language',
+      ),
+    ).toBe('en');
+  });
+
+  /**
+   * ⚠️ Escape and the backdrop produce no click, so without this guard either one is a
+   * silent Annuler — the one outcome nobody would have chosen on purpose.
+   */
+  describe('closing with work in hand', () => {
+    beforeEach(async () => {
+      await fileMenu.openPreferences();
+      await settings.setDensity('comfortable');
+    });
+
+    it('says what is waiting instead of closing on Escape', async () => {
+      await press('Escape');
+
+      expect(await settings.unapplied().isExisting()).toBe(true);
+      expect(await settings.page('general').isExisting()).toBe(true);
+    });
+
+    it('drops the draft when told to close without applying', async () => {
+      await press('Escape');
+      await settings.discard();
+
+      expect(
+        await eventually(
+          () => browser.execute(() => document.documentElement.getAttribute('data-density')),
+          (density) => density === 'compact',
+          'the discarded draft to leave the stored density alone',
+        ),
+      ).toBe('compact');
+    });
   });
 
   it('rebuilds all three from the store rather than from a signal it was holding', async () => {

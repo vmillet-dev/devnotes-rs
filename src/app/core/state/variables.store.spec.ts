@@ -53,16 +53,47 @@ describe('VariablesStore', () => {
     expect(store.variables()).toHaveLength(2);
   });
 
-  it('removing a row is a write, not a local change', async () => {
+  /**
+   * ⚠️ Staged like every other change in the panel: removing a row used to write on the
+   * spot, which is the one gesture here that cannot be taken back.
+   */
+  it('removing a row waits for the commit, like the rest', async () => {
     store.add();
     store.rename(0, 'host');
     store.setValue(0, 'db.internal');
     await store.commit();
 
-    await store.remove(0);
+    store.remove(0);
 
     expect(store.variables()).toEqual([]);
+    expect(store.isDirty()).toBe(true);
+    expect(await repository.loadVariables()).toEqual({ host: 'db.internal' });
+
+    await store.commit();
+
     expect(await repository.loadVariables()).toEqual({});
+  });
+
+  it('reads the corpus again on discard, dropping what was typed', async () => {
+    await repository.saveVariables({ host: 'db.internal' });
+    await store.load();
+    store.setValue(0, 'somewhere.else');
+
+    await store.discard();
+
+    expect(store.variables()).toEqual([{ name: 'host', value: 'db.internal' }]);
+    expect(store.isDirty()).toBe(false);
+  });
+
+  /** ⚠️ The page is recreated every time the rail changes section. */
+  it('refuses to reload over edits in hand', async () => {
+    await repository.saveVariables({ host: 'db.internal' });
+    await store.load();
+    store.setValue(0, 'somewhere.else');
+
+    await store.load();
+
+    expect(store.variables()).toEqual([{ name: 'host', value: 'somewhere.else' }]);
   });
 
   it('trims a name, which would otherwise never match a token', () => {

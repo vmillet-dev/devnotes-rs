@@ -2,7 +2,7 @@
   [layer]="'settings'"
   [variant]="'framed'"
   labelledBy="settings-dialog-title"
-  (closed)="closed.emit()"
+  (closed)="requestClose()"
 >
   <div class="settings-header">
     <h2 id="settings-dialog-title" class="settings-title">{{ 'settings.title' | transloco }}</h2>
@@ -33,10 +33,58 @@
     </section>
   </div>
 
-  <div class="settings-actions">
-    <p class="settings-hint">{{ 'settings.appliedImmediately' | transloco }}</p>
-    <button type="button" class="settings-close" data-testid="settings-close" (click)="closed.emit()">
-      {{ 'settings.close' | transloco }}
-    </button>
-  </div>
+  <!-- ⚠️ The guard replaces the buttons rather than sitting beside them: Escape and the
+       backdrop produce no click, so a sentence nobody has to answer would leave the
+       panel exactly as silent as it was. -->
+  @if (confirmingClose()) {
+    <div class="settings-actions confirming" data-testid="settings-unapplied">
+      <p class="settings-warning" role="alert">
+        {{ 'settings.unapplied' | transloco: { count: pendingCount() } }}
+      </p>
+      <div class="settings-buttons">
+        <button
+          type="button"
+          class="settings-btn discard"
+          data-testid="settings-discard"
+          (click)="discardAndClose()"
+        >
+          {{ 'settings.closeWithout' | transloco }}
+        </button>
+        <button
+          type="button"
+          class="settings-btn primary"
+          data-testid="settings-apply-close"
+          (click)="applyAndClose()"
+        >
+          {{ 'settings.applyAndClose' | transloco }}
+        </button>
+      </div>
+    </div>
+  } @else {
+    <div class="settings-actions">
+      <p class="settings-hint">{{ 'settings.previewHint' | transloco }}</p>
+      <div class="settings-buttons">
+        <button type="button" class="settings-btn" data-testid="settings-cancel" (click)="discardAndClose()">
+          {{ 'settings.cancel' | transloco }}
+        </button>
+        <button
+          type="button"
+          class="settings-btn"
+          data-testid="settings-apply"
+          [disabled]="!hasPending()"
+          (click)="apply()"
+        >
+          {{ 'settings.apply' | transloco }}
+        </button>
+        <button
+          type="button"
+          class="settings-btn primary"
+          data-testid="settings-close"
+          (click)="applyAndClose()"
+        >
+          {{ 'settings.ok' | transloco }}
+        </button>
+      </div>
+    </div>
+  }
 </app-dialog>

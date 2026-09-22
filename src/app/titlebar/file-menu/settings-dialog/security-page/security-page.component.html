@@ -30,7 +30,7 @@
         class="setting-switch"
         type="checkbox"
         data-testid="setting-automatic-backups"
-        [checked]="settings.automaticBackups()"
+        [checked]="draft.value('automaticBackups')"
         (change)="onAutomaticBackups($event)"
       />
     </div>

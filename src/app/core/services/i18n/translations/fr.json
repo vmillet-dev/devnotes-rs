@@ -502,8 +502,6 @@
       "shortcuts": "Raccourcis",
       "security": "Sécurité"
     },
-    "close": "Fermer",
-    "appliedImmediately": "Les modifications s'appliquent immédiatement.",
     "copied": "Copié dans le presse-papier.",
     "appearance": {
       "title": "Apparence",
@@ -580,7 +578,14 @@
       "needsModifier": "Un raccourci global demande au moins Ctrl, Alt, Maj ou Super.",
       "reserved": "Cette touche est réservée à la navigation.",
       "conflict": "{{accelerator}} répond à plusieurs actions : {{actions}}. Une seule agira."
-    }
+    },
+    "cancel": "Annuler",
+    "apply": "Appliquer",
+    "ok": "OK",
+    "previewHint": "Le thème et la densité se montrent pendant que vous choisissez ; rien n’est enregistré avant Appliquer ou OK.",
+    "unapplied": "{count, plural, one {Une modification n’est pas appliquée} other {# modifications ne sont pas appliquées}}.",
+    "closeWithout": "Fermer sans appliquer",
+    "applyAndClose": "Appliquer et fermer"
   },
   "gettingStarted": {
     "title": "Prise en main",

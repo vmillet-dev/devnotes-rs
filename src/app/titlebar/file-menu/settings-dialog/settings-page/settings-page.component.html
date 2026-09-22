@@ -11,7 +11,7 @@
         [kind]="'setting-locale'"
         [label]="'settings.appearance.language' | transloco"
         [options]="localeChoices()"
-        [currentId]="settings.locale()"
+        [currentId]="draft.value('locale')"
         (chosen)="onLocale($event)"
       />
     </div>
@@ -22,7 +22,7 @@
         [kind]="'setting-theme'"
         [label]="'settings.appearance.theme' | transloco"
         [segments]="themeSegments()"
-        [currentId]="settings.theme()"
+        [currentId]="draft.value('theme')"
         (chosen)="onTheme($event)"
       />
     </div>
@@ -33,7 +33,7 @@
         [kind]="'setting-density'"
         [label]="'settings.appearance.density' | transloco"
         [segments]="densitySegments()"
-        [currentId]="settings.density()"
+        [currentId]="draft.value('density')"
         (chosen)="onDensity($event)"
       />
     </div>
@@ -50,8 +50,8 @@
         id="setting-autostart"
         class="setting-switch"
         type="checkbox"
-        [checked]="settings.startWithSystem()"
-        (change)="onStartWithSystem($event)"
+        [checked]="draft.value('startWithSystem')"
+        (change)="onToggle('startWithSystem', $event)"
       />
     </div>
 
@@ -63,8 +63,8 @@
         id="setting-minimize-to-tray"
         class="setting-switch"
         type="checkbox"
-        [checked]="settings.minimizeToTray()"
-        (change)="onMinimizeToTray($event)"
+        [checked]="draft.value('minimizeToTray')"
+        (change)="onToggle('minimizeToTray', $event)"
       />
     </div>
 
@@ -76,8 +76,8 @@
         id="setting-close-to-tray"
         class="setting-switch"
         type="checkbox"
-        [checked]="settings.closeToTray()"
-        (change)="onCloseToTray($event)"
+        [checked]="draft.value('closeToTray')"
+        (change)="onToggle('closeToTray', $event)"
       />
     </div>
 
@@ -95,8 +95,8 @@
         id="setting-pinned-first"
         class="setting-switch"
         type="checkbox"
-        [checked]="settings.showPinnedFirst()"
-        (change)="onShowPinnedFirst($event)"
+        [checked]="draft.value('showPinnedFirst')"
+        (change)="onToggle('showPinnedFirst', $event)"
       />
     </div>
   </section>
@@ -112,8 +112,8 @@
         id="setting-copy-confirmation"
         class="setting-switch"
         type="checkbox"
-        [checked]="settings.copyConfirmation()"
-        (change)="onCopyConfirmation($event)"
+        [checked]="draft.value('copyConfirmation')"
+        (change)="onToggle('copyConfirmation', $event)"
       />
     </div>
 
@@ -126,14 +126,14 @@
         class="setting-switch"
         type="checkbox"
         data-testid="setting-update-notifications"
-        [checked]="settings.updateNotifications()"
+        [checked]="draft.value('updateNotifications')"
         (change)="onUpdateNotifications($event)"
       />
     </div>
 
     <!-- Only when there is something to take back: a row saying "nothing is silenced"
          would be a control with no subject. -->
-    @if (settings.skippedUpdate(); as skipped) {
+    @if (draft.value('skippedUpdate'); as skipped) {
       <p class="setting-note" data-testid="setting-skipped-update">
         {{ 'settings.notifications.updateSkipped' | transloco: { version: skipped } }}
         <button type="button" class="setting-inline-btn" (click)="forgetSkippedUpdate()">

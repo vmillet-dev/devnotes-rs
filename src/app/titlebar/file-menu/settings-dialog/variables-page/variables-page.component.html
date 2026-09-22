@@ -28,7 +28,6 @@
             [placeholder]="'settings.variables.namePlaceholder' | transloco"
             [value]="variable.name"
             (input)="onName($index, $event)"
-            (blur)="commit()"
           />
           <span class="variable-brace" aria-hidden="true">&#125;&#125;</span>
         </span>
@@ -43,7 +42,6 @@
           [placeholder]="'settings.variables.valuePlaceholder' | transloco"
           [value]="variable.value"
           (input)="onValue($index, $event)"
-          (blur)="commit()"
         />
 
         <button

@@ -1,12 +1,14 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { FakeNotesRepository } from '@testing/fake-notes-repository';
+import { VariablesStore } from '@core/state/variables.store';
 import { provideAppTesting } from '@testing/testing.providers';
 import { VariablesPageComponent } from './variables-page.component';
 
 describe('VariablesPageComponent', () => {
   let fixture: ComponentFixture<VariablesPageComponent>;
   let repository: FakeNotesRepository;
+  let store: VariablesStore;
 
   function rows(): HTMLElement[] {
     return [...fixture.nativeElement.querySelectorAll('.variable-row')];
@@ -40,6 +42,7 @@ describe('VariablesPageComponent', () => {
       imports: [VariablesPageComponent],
       providers: [provideAppTesting({ notesRepository: repository })],
     });
+    store = TestBed.inject(VariablesStore);
   });
 
   it('lists what is already stored', async () => {
@@ -58,18 +61,21 @@ describe('VariablesPageComponent', () => {
     expect(rows()).toHaveLength(0);
   });
 
-  it('writes on blur, not on every keystroke', async () => {
+  /** ⚠️ Nothing here reaches the corpus before the panel's own button says so. */
+  it('holds what was typed until the panel commits it', async () => {
     await render();
     fixture.nativeElement.querySelector('.variables-add').click();
     await fixture.whenStable();
 
     type(nameInput(0), 'host');
     type(valueInput(0), 'db.internal');
-    await fixture.whenStable();
-    expect(await repository.loadVariables()).toEqual({});
-
     valueInput(0).dispatchEvent(new Event('blur'));
     await fixture.whenStable();
+
+    expect(store.isDirty()).toBe(true);
+    expect(await repository.loadVariables()).toEqual({});
+
+    await store.commit();
 
     expect(await repository.loadVariables()).toEqual({ host: 'db.internal' });
   });
@@ -107,7 +113,7 @@ describe('VariablesPageComponent', () => {
     expect(fixture.nativeElement.querySelector('.variables-warning').textContent).toContain('host');
   });
 
-  it('removes a row and writes the set without it', async () => {
+  it('removes a row from the list, and from the corpus once it is committed', async () => {
     await repository.saveVariables({ host: 'db.internal' });
     await render();
 
@@ -115,6 +121,10 @@ describe('VariablesPageComponent', () => {
     await fixture.whenStable();
 
     expect(rows()).toHaveLength(0);
+    expect(await repository.loadVariables()).toEqual({ host: 'db.internal' });
+
+    await store.commit();
+
     expect(await repository.loadVariables()).toEqual({});
   });
 });

@@ -30,7 +30,7 @@
               [id]="'shortcut-' + action.id"
               [attr.data-testid]="'shortcut-field'"
               [attr.data-action]="action.id"
-              [value]="bindings.binding(action)"
+              [value]="draft.binding(action)"
               [attr.aria-invalid]="refusalFor(action.id) ? 'true' : null"
               [attr.aria-describedby]="refusalFor(action.id) ? 'shortcut-error-' + action.id : null"
               (keydown)="onCapture(action, $event)"
@@ -40,7 +40,7 @@
               class="setting-shortcut-reset"
               [attr.data-testid]="'shortcut-reset'"
               [attr.data-action]="action.id"
-              [disabled]="bindings.isDefault(action)"
+              [disabled]="draft.isDefaultBinding(action)"
               (click)="reset(action)"
             >
               {{ 'settings.shortcuts.reset' | transloco }}
