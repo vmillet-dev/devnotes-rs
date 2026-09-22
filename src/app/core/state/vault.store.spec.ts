@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { IpcError } from '@core/ipc/ipc.error';
 import { VaultRepository } from '@core/data/vault.repository';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
-import { PreferencesService } from '@core/services/preferences/preferences.service';
+import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
 import { SEEDED_KEY } from './sample-notes.service';
 import { StatusNotifier } from '@core/services/notifications/status.service';
 import { FakeVaultRepository } from '@testing/fake-vault-repository';
@@ -191,7 +191,7 @@ describe('VaultStore', () => {
      * cannot be created without one, so the application comes back working and unusable.
      */
     it('forgets the samples marker, so the fresh library seeds like a first launch', async () => {
-      const preferences = TestBed.inject(PreferencesService);
+      const preferences = TestBed.inject(LibraryPreferencesService);
       preferences.write(SEEDED_KEY, 'true');
 
       await store.setAsideDamagedLibrary();

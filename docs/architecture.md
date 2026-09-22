@@ -2811,6 +2811,100 @@ note it is already on, and must: the editor is **destroyed** when it closes, so 
 ever calls it with `null` on the way out. Skipping the work for a matching id left the
 panel showing what the _first_ open found — an empty history that never came back.
 
+### Several libraries, and the registry beside them
+
+There used to be exactly one library and its address was compiled in. `app_data_dir()` for
+the directory, `devnotes.sqlite3` for the database, `attachments/` and `backups/` beside
+it — four names that are the **address of a library** rather than decoration.
+
+```
+data_dir()/com.devnotes.app/
+  libraries.json          ← the registry: the list, and which one is open
+  preferences.json        ← the application's preferences
+  open/                   ← decrypted attachment copies, every library's
+  libraries/
+    <id>/
+      devnotes.sqlite3    vault.json      preferences.json
+      attachments/  backups/  damaged/  archived/  replaced/
+```
+
+⚠️ **The registry is beside the libraries and no library owns it.** One that is deleted,
+moved by hand or sealed under a forgotten passphrase takes nothing else with it — which is
+exactly the situation #252 is about, seen from the other end.
+
+⚠️ **Every library has the same shape**, including the one that was already there:
+`libraries::gather` moves it — database, sidecars, key file, attachments and the four
+directories a library accumulates — into `libraries/<id>/` the first time the registry is
+read. That move is best effort and never fatal, and the same move runs again over whatever
+is left, so a half-finished one is picked up by the next launch. Uniformity is what makes
+the first library deletable like any other and keeps the profile root down to two files.
+
+**`libraries::open_directory(app)` replaced `app.path().app_data_dir()` at a dozen call
+sites** — the vault's five, the backups' two, the attachments, the recovery. ⚠️ A module
+that reaches for the profile directly writes into whichever library happens to be first,
+whatever is open. The one that stayed is `open/`, the decrypted attachment copies: they
+are ephemeral and swept wholesale, and one directory means one sweep catches every
+library's leftovers.
+
+**Switching is a full teardown.** `open_library` empties the connection `Mutex` under the
+same lock every other command takes; every one of them then answers `Locked`,
+`VaultStore.load()` sees it, and the outlet is destroyed — with the File menu, which is
+gated on the same signal. ⚠️ The other library has its own passphrase, and asking for it is
+the only proof the right one is open.
+
+⚠️ **Creating opens.** One gesture rather than two: you have just named it, so you want to
+be in it, and the gate then asks for a phrase exactly as a first launch does. The surprise
+would be staying where you were.
+
+⚠️ **Neither the open library nor the last one can be deleted**, refused in Rust _and_ in
+the store — a command is reachable from more than the interface. Deleting files under a
+live connection is how a library that was merely unwanted takes the process down; deleting
+the last leaves the gate with nothing to offer, and the next read of the registry would
+adopt an empty profile as a library nobody asked for. The deletion itself gets the
+treatment emptying the trash gets: a sentence naming what goes, and a confirm somewhere
+other than the button that fired it.
+
+⚠️ The registry is **staged and renamed**, like an export file. `fs::write` truncates
+first, so a disk that fills mid-write would leave a registry naming no libraries at all,
+with every one of them still on disk and nothing pointing at them.
+
+### Two scopes of preference, one prefix apart
+
+A preference belongs to the **application** or to the **library**, and the line is one
+prefix: ⚠️ **`devnotes.notes.*` is the library's, everything else is the application's.**
+
+|                             | file                                        | holds                                                                                   |
+| --------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `PreferencesService`        | `preferences.json`, at the profile root     | theme, language, density, the keys, the tray, autostart, the window, `automaticBackups` |
+| `LibraryPreferencesService` | `preferences.json`, inside the open library | the samples marker, and which view each space was left on                               |
+
+Both extend `KeyValueStore`, which holds the synchronous cache and the plugin's own
+loading — the API stays synchronous where the plugin's is not, because a preference is read
+when a component is constructed and an async read would show the interface in one state
+then the other.
+
+⚠️ `automaticBackups` stays with the application deliberately: "copy my libraries at
+launch" is a habit rather than a property of one corpus, and it is the one key Rust reads
+out of that file before the front end has booted (`backup::wanted`).
+
+⚠️ `LibraryPreferencesService` is re-opened on **every** switch, where the application's is
+opened once. A space id means nothing in another library, and a samples marker carried
+across would leave a fresh library empty with no way to create a note — a note needs a
+space.
+
+⚠️ It also **adopts** the library-scoped keys out of the application's file, once. Every
+install before the registry kept both scopes in one, and without the adoption the first
+launch after the upgrade re-seeds a library that is full.
+
+⚠️ The word "library" was already taken on screen: the sidebar rail was labelled
+_Bibliothèque_ while listing **spaces**. It now says _Espaces_, which is what it lists, and
+the name is free for what the whole codebase already calls a library — the database, the
+vault, "the library is locked".
+
+⚠️ `25-libraries.e2e.ts` is **last**, after `24-forgotten-passphrase`: that one archives
+the library and leaves the gate asking for a phrase on a fresh one, which is the state this
+file needs. It ends on a gate too, so nothing may be filed after it.
+
 ### The copies, and putting one back
 
 `backup::rotate` takes one at unlock, before the sweeps, into `backups/<stamp>/`: a

@@ -12,7 +12,7 @@ pub mod migrate;
 
 use serde::Serialize;
 use specta::Type;
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, State};
 
 use zeroize::Zeroize;
 
@@ -46,7 +46,7 @@ pub fn vault_state(app: AppHandle, db: State<'_, Db>) -> Result<VaultState, AppE
         return Ok(VaultState::Unlocked);
     }
 
-    let directory = app.path().app_data_dir().map_err(storage)?;
+    let directory = crate::libraries::open_directory(&app)?;
 
     Ok(if file::exists(&directory) {
         VaultState::Locked
@@ -76,7 +76,7 @@ pub fn create_vault(
 fn create_with(passphrase: &str, app: &AppHandle, db: &State<'_, Db>) -> Result<(), AppError> {
     validate(passphrase)?;
 
-    let directory = app.path().app_data_dir().map_err(storage)?;
+    let directory = crate::libraries::open_directory(app)?;
     // ⚠️ The directory, not just the cause: this is the first thing a full disk or a
     // permissions problem reaches, and the user has never opened that folder.
     std::fs::create_dir_all(&directory)
@@ -157,7 +157,7 @@ pub fn unlock_vault(
 }
 
 fn unlock_with(passphrase: &str, app: &AppHandle, db: &State<'_, Db>) -> Result<(), AppError> {
-    let directory = app.path().app_data_dir().map_err(storage)?;
+    let directory = crate::libraries::open_directory(app)?;
     let vault = file::unlock(&directory, passphrase)?;
 
     open_library(app, db, vault)?;
@@ -213,7 +213,7 @@ fn change_with(
         return Err(StorageError::Locked.into());
     }
 
-    let directory = app.path().app_data_dir().map_err(storage)?;
+    let directory = crate::libraries::open_directory(app)?;
     // ⚠️ The live file first, and the whole change fails here if it cannot be written: it
     // is the only one whose loss is fatal. The copies follow, and a copy that resists is
     // counted rather than fatal — see `backup::rewrap`.
@@ -229,7 +229,7 @@ fn change_with(
 /// Opens the library under the key and hands it to the rest of the application. The
 /// sweeps are the caller's to run, because a first launch has to seal what is there first.
 fn open_library(app: &AppHandle, db: &State<'_, Db>, vault: key::Vault) -> Result<(), AppError> {
-    let directory = app.path().app_data_dir().map_err(storage)?;
+    let directory = crate::libraries::open_directory(app)?;
     let library = db::open(&directory.join(db::DB_FILE_NAME), vault)?;
 
     {
@@ -255,10 +255,6 @@ fn validate(passphrase: &str) -> Result<(), ValidationError> {
     }
 
     Ok(())
-}
-
-fn storage(error: tauri::Error) -> StorageError {
-    StorageError::Vault(error.to_string())
 }
 
 fn storage_msg(detail: &str) -> StorageError {

@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use diesel::sql_types::Text;
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, State};
 
 use crate::db::{DB_FILE_NAME, Db};
 use crate::error::{AppError, StorageError};
@@ -142,10 +142,7 @@ fn set_aside_closed(
         return Err(StorageError::File("the library is open".to_string()).into());
     }
 
-    let directory = app
-        .path()
-        .app_data_dir()
-        .map_err(|error| StorageError::File(error.to_string()))?;
+    let directory = crate::libraries::open_directory(app)?;
 
     let target = set_aside(&directory, reason, Utc::now())?;
 

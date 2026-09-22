@@ -7,6 +7,7 @@ import { NoteSelectionStore } from '@core/state/note-selection.store';
 import { SpacesStore } from '@core/state/spaces.store';
 import { MenuPanelDirective } from '@shared/directives/menu-panel.directive';
 import { MenuTriggerDirective } from '@shared/directives/menu-trigger.directive';
+import { LibrariesDialogComponent } from '@titlebar/file-menu/libraries-dialog/libraries-dialog.component';
 import { SettingsDialogComponent } from '@titlebar/file-menu/settings-dialog/settings-dialog.component';
 
 /** `disabled` is a signal: a value frozen at construction would stop matching the screen. */
@@ -19,7 +20,7 @@ interface FileMenuEntry {
 
 @Component({
   selector: 'app-file-menu',
-  imports: [TranslocoPipe, MenuPanelDirective, SettingsDialogComponent],
+  imports: [TranslocoPipe, MenuPanelDirective, LibrariesDialogComponent, SettingsDialogComponent],
   hostDirectives: [MenuTriggerDirective],
   templateUrl: './file-menu.component.html',
   styleUrl: './file-menu.component.scss',
@@ -38,6 +39,7 @@ export class FileMenuComponent {
   protected readonly confirmingQuit = signal(false);
 
   protected readonly settingsOpen = signal(false);
+  protected readonly librariesOpen = signal(false);
 
   private readonly nothingChecked = computed(() => !this.selection.hasSelection());
 
@@ -82,6 +84,17 @@ export class FileMenuComponent {
   }
 
   /** The preferences act on the application and not a tool, so the menu always offers them. */
+  protected openLibraries(): void {
+    this.librariesOpen.set(true);
+    // No focus restored: the modal opening takes it itself.
+    this.menu.close(false);
+  }
+
+  protected closeLibraries(): void {
+    this.librariesOpen.set(false);
+    this.menu.focusAnchor();
+  }
+
   protected openSettings(): void {
     this.settingsOpen.set(true);
     // No focus restored: the modal opening takes it itself.

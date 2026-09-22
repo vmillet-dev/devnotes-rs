@@ -68,6 +68,11 @@ pub fn seal_in_place(vault: &Vault, path: &Path) -> Result<(), StorageError> {
 /// one: that is a namespace shared with every account on the machine, where the copy would
 /// be readable by all of them and where a directory somebody else created first would be
 /// theirs rather than ours. This one sits inside the user's profile.
+///
+/// ⚠️ The **profile**, not the open library, which is the one path here that stayed put.
+/// These copies are ephemeral and swept wholesale; one directory means one sweep catches
+/// every library's leftovers, where a directory per library would leave the ones nobody
+/// opened again untouched for good.
 pub fn plaintext_directory(app: &AppHandle) -> Result<PathBuf, StorageError> {
     Ok(app
         .path()

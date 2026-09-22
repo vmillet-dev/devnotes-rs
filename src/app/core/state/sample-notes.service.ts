@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 import { ClockService } from '@core/services/time/clock.service';
-import { PreferencesService } from '@core/services/preferences/preferences.service';
+import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
 import { NotesRepository } from '../data/notes.repository';
 import { SpacesRepository } from '../data/spaces.repository';
 import { NoteDraft, SampleNote } from '../model/note.model';
@@ -70,7 +70,7 @@ type SampleTexts = Record<keyof typeof KEYS, string>;
 export class SampleNotesService {
   private readonly notes = inject(NotesRepository);
   private readonly spaces = inject(SpacesRepository);
-  private readonly preferences = inject(PreferencesService);
+  private readonly preferences = inject(LibraryPreferencesService);
   private readonly transloco = inject(TranslocoService);
   private readonly clock = inject(ClockService);
 

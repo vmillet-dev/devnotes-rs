@@ -124,12 +124,12 @@
     "selectNotes": "Sélectionner {count, plural, one {la note} other {les # notes}}"
   },
   "sidebar": {
-    "library": "Bibliothèque",
-    "toggle": "Afficher ou masquer la bibliothèque",
+    "library": "Espaces",
+    "toggle": "Afficher ou masquer les espaces",
     "expand": "Ouvrir l'espace {{name}}",
     "collapse": "Replier l'espace {{name}}",
     "noFolders": "Aucun dossier",
-    "resize": "Largeur de la bibliothèque"
+    "resize": "Largeur du rail des espaces"
   },
   "board": {
     "viewSwitchLabel": "Choisir la vue",
@@ -261,7 +261,9 @@
     "backupsListFailed": "Impossible de lire les copies de sauvegarde.",
     "backupRestoreFailed": "Impossible de restaurer cette copie. La bibliothèque est restée en place.",
     "revisionsListFailed": "Impossible de lire l'historique de cette note.",
-    "revisionRestoreFailed": "Impossible de rétablir cette version."
+    "revisionRestoreFailed": "Impossible de rétablir cette version.",
+    "librariesListFailed": "Impossible de lire la liste des bibliothèques.",
+    "libraryActionFailed": "L'opération sur la bibliothèque a échoué."
   },
   "tray": {
     "open": "Ouvrir {{app}}",
@@ -695,5 +697,23 @@
     "characters": "{count, plural, one {# caractère} other {# caractères}}",
     "restore": "Rétablir",
     "note": "Rétablir garde d'abord le corps qu'il remplace : vous pouvez revenir en arrière. Seul le corps des snippets est gardé, les vingt derniers, et il ne part pas dans les exports."
+  },
+  "libraries": {
+    "title": "Bibliothèques",
+    "lead": "Chaque bibliothèque a sa propre base, ses pièces jointes, ses copies de sauvegarde et sa propre phrase de passe. Rien ne passe de l'une à l'autre.",
+    "open": "Ouverte",
+    "unnamed": "Bibliothèque",
+    "switch": "Ouvrir",
+    "rename": "Renommer",
+    "delete": "Supprimer",
+    "create": "Créer",
+    "namePlaceholder": "Nom de la bibliothèque",
+    "close": "Fermer",
+    "cancel": "Annuler",
+    "created": "Bibliothèque « {{name}} » créée. Choisissez une phrase de passe pour elle.",
+    "deleted": "Bibliothèque « {{name}} » supprimée.",
+    "confirmDelete": "Supprimer « {{name}} » : ses notes, ses pièces jointes et ses copies de sauvegarde partent avec elle, définitivement.",
+    "confirmDeleteAction": "Supprimer la bibliothèque",
+    "menuEntry": "Bibliothèques…"
   }
 }

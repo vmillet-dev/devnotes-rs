@@ -36,6 +36,17 @@
         type="button"
         role="menuitem"
         class="file-option"
+        data-testid="file-libraries"
+        (click)="openLibraries()"
+      >
+        {{ 'libraries.menuEntry' | transloco }}
+      </button>
+
+      <button
+        appMenuItem
+        type="button"
+        role="menuitem"
+        class="file-option"
         data-testid="file-preferences"
         (click)="openSettings()"
       >
@@ -56,6 +67,10 @@
     </div>
   }
 </div>
+
+@if (librariesOpen()) {
+  <app-libraries-dialog (closed)="closeLibraries()" />
+}
 
 @if (settingsOpen()) {
   <app-settings-dialog (closed)="closeSettings()" />

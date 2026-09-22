@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { type MockInstance, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PreferencesService } from '@core/services/preferences/preferences.service';
+import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
 import { NotesRepository } from '@core/data/notes.repository';
 import { SpacesRepository } from '@core/data/spaces.repository';
 import { NoteDraft } from '@core/model/note.model';
@@ -15,7 +15,7 @@ describe('SampleNotesService', () => {
   let spaces: FakeSpacesRepository;
   let created: MockInstance<FakeNotesRepository['create']>;
   let service: SampleNotesService;
-  let preferences: PreferencesService;
+  let preferences: LibraryPreferencesService;
 
   /** The drafts handed to the repository, in the order they were written. */
   const drafts = (): NoteDraft[] => created.mock.calls.map(([draft]) => draft);
@@ -33,7 +33,7 @@ describe('SampleNotesService', () => {
       ],
     });
     service = TestBed.inject(SampleNotesService);
-    preferences = TestBed.inject(PreferencesService);
+    preferences = TestBed.inject(LibraryPreferencesService);
   }
 
   beforeEach(() => {

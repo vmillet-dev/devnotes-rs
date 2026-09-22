@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { PreferencesService } from '@core/services/preferences/preferences.service';
+import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
 import { createNote } from '@testing/note.fixture';
 import { FakeBoardRepository, fakeBoardNote, fakeZone } from '@testing/fake-board-repository';
 import { FakeSpacesRepository } from '@testing/fake-spaces-repository';
@@ -31,7 +31,7 @@ interface Harness {
   readonly canvas: NotesQueryStore;
   readonly repository: FakeBoardRepository;
   readonly folders: FakeFoldersRepository;
-  readonly preferences: PreferencesService;
+  readonly preferences: LibraryPreferencesService;
 }
 
 async function createStore(repository = new FakeBoardRepository()): Promise<Harness> {
@@ -55,7 +55,7 @@ async function createStore(repository = new FakeBoardRepository()): Promise<Harn
     canvas: TestBed.inject(NotesQueryStore),
     repository,
     folders,
-    preferences: TestBed.inject(PreferencesService),
+    preferences: TestBed.inject(LibraryPreferencesService),
   };
 }
 

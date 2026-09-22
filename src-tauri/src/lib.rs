@@ -8,6 +8,7 @@ pub mod db;
 pub mod desktop;
 pub mod error;
 pub mod folders;
+pub mod libraries;
 pub mod notes;
 pub mod recovery;
 pub mod spaces;
@@ -33,6 +34,7 @@ use folders::{
     arrange_board, board_view, create_folder, delete_folder, file_notes, file_notes_back,
     list_folders, recolour_folder, rename_folder, restore_board_layout, save_board_layout,
 };
+use libraries::{create_library, delete_library, list_libraries, open_library, rename_library};
 use notes::{
     count_notes_tagged, create_note, delete_note, delete_notes, delete_tags, empty_trash,
     fill_placeholders, list_global_placeholders, list_revisions, list_tags, list_trash, merge_tags,
@@ -125,6 +127,11 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             archive_locked_library,
             list_backups,
             restore_backup,
+            list_libraries,
+            create_library,
+            open_library,
+            rename_library,
+            delete_library,
             app_changelog,
             sync_tray,
             set_global_shortcuts,
@@ -141,6 +148,10 @@ fn ipc_builder() -> Builder<tauri::Wry> {
         .constant("DEFAULT_SHORTCUTS", desktop::ShortcutBindings::defaults())
         // The `{{field}}` rule, so the form refuses in the same terms the back end does.
         .constant("FIELD_NAME_PATTERN", notes::placeholder::FIELD_NAME_PATTERN)
+        // ⚠️ The name of a library's own preference file. Rust decides where a library
+        // lives, so it decides this too — the front end opens the store, and a second
+        // spelling of the name would open a second file.
+        .constant("LIBRARY_PREFERENCES_FILE", libraries::LIBRARY_PREFERENCES)
 }
 
 /// ⚠️ Not the plugin's default `all()`, which carries `VISIBLE`: quitting from the tray

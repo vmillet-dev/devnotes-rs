@@ -217,6 +217,28 @@ export const commands = {
 	 *  asking for it is the only proof the right file is in place.
 	 */
 	restoreBackup: (id: string) => typedError<string, AppError>(__TAURI_INVOKE("restore_backup", { id })),
+	/**  The libraries, and which one is open. */
+	listLibraries: () => typedError<Registry, AppError>(__TAURI_INVOKE("list_libraries")),
+	/**  Adds one, and leaves it closed: opening it is a second, deliberate gesture. */
+	createLibrary: (name: string) => typedError<LibraryEntry, AppError>(__TAURI_INVOKE("create_library", { name })),
+	/**
+	 *  Closes whatever is open and points the registry at another one.
+	 * 
+	 *  ⚠️ The connection `Mutex` is emptied under the same lock every other command takes:
+	 *  every one of them then answers `Locked`, which is what sends the interface back to the
+	 *  gate. The new library has its own passphrase, and asking for it is the only proof the
+	 *  right one is open.
+	 */
+	openLibrary: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("open_library", { id })),
+	renameLibrary: (id: string, name: string) => typedError<null, AppError>(__TAURI_INVOKE("rename_library", { id, name })),
+	/**
+	 *  Erases a library and everything in it.
+	 * 
+	 *  ⚠️ Refused on the open one: the front end switches first, which is what closes the
+	 *  connection. Deleting the files under a live one is how a library that was merely
+	 *  unwanted takes the process down with it.
+	 */
+	deleteLibrary: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("delete_library", { id })),
 	appChangelog: () => __TAURI_INVOKE<ChangelogRelease[]>("app_changelog"),
 	/**
 	 *  Replaces only the menu when the tray already exists, so a language change does not
@@ -237,6 +259,8 @@ export const DEFAULT_SHORTCUTS = {"capture":"Ctrl+Alt+V","newNote":"Ctrl+Alt+N",
 export const FIELD_NAME_PATTERN = "^[A-Za-z0-9_-]+$" as const;
 
 export const GLOBAL_ACTION_EVENT = "devnotes:action" as const;
+
+export const LIBRARY_PREFERENCES_FILE = "preferences.json" as const;
 
 /* Types */
 export type AppError = {
@@ -542,6 +566,15 @@ export type Language = "json" | "js" | "ts" | "py" | "rs" | "go" | "java" | "cs"
 /**  Default, and the signal that the front end chose nothing. */
 "txt";
 
+/**  One library, as the interface lists it. */
+export type LibraryEntry = {
+	id: string,
+	name: string,
+	/**  ⚠️ Relative to the profile, so a profile copied to another machine still resolves. */
+	directory: string,
+	createdAt: string,
+};
+
 export type Note = {
 	id: string,
 	spaceId: string,
@@ -726,6 +759,12 @@ export type Placeholder = {
 	 *  being erased.
 	 */
 	value: string,
+};
+
+/**  What the File menu draws: the libraries, and which of them is open. */
+export type Registry = {
+	libraries: LibraryEntry[],
+	open: string | null,
 };
 
 /**

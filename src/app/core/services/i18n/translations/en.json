@@ -124,12 +124,12 @@
     "selectNotes": "Select {count, plural, one {the note} other {all # notes}}"
   },
   "sidebar": {
-    "library": "Library",
-    "toggle": "Show or hide the library",
+    "library": "Spaces",
+    "toggle": "Show or hide the spaces",
     "expand": "Expand space {{name}}",
     "collapse": "Collapse space {{name}}",
     "noFolders": "No folder",
-    "resize": "Library width"
+    "resize": "Width of the spaces rail"
   },
   "board": {
     "viewSwitchLabel": "Choose the view",
@@ -261,7 +261,9 @@
     "backupsListFailed": "The backup copies could not be read.",
     "backupRestoreFailed": "That copy could not be restored. The library was left in place.",
     "revisionsListFailed": "The history of this note could not be read.",
-    "revisionRestoreFailed": "That version could not be restored."
+    "revisionRestoreFailed": "That version could not be restored.",
+    "librariesListFailed": "The list of libraries could not be read.",
+    "libraryActionFailed": "That library operation failed."
   },
   "tray": {
     "open": "Open {{app}}",
@@ -695,5 +697,23 @@
     "characters": "{count, plural, one {# character} other {# characters}}",
     "restore": "Restore",
     "note": "Restoring keeps the body it replaces first, so you can go back. Only a snippet’s body is kept, the last twenty, and it does not travel with an export."
+  },
+  "libraries": {
+    "title": "Libraries",
+    "lead": "Each library has its own database, attachments, backups and passphrase. Nothing crosses from one to another.",
+    "open": "Open",
+    "unnamed": "Library",
+    "switch": "Open",
+    "rename": "Rename",
+    "delete": "Delete",
+    "create": "Create",
+    "namePlaceholder": "Library name",
+    "close": "Close",
+    "cancel": "Cancel",
+    "created": "Library \"{{name}}\" created. Choose a passphrase for it.",
+    "deleted": "Library \"{{name}}\" deleted.",
+    "confirmDelete": "Delete \"{{name}}\": its notes, its attachments and its backups go with it, for good.",
+    "confirmDeleteAction": "Delete the library",
+    "menuEntry": "Libraries…"
   }
 }

@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
-import { PreferencesService } from '@core/services/preferences/preferences.service';
+import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
 import { StatusNotifier } from '@core/services/notifications/status.service';
 import { hasErrorCode } from '@core/ipc/ipc.error';
 import { PassphraseChange } from '@core/ipc/bindings';
@@ -19,7 +19,7 @@ export class VaultStore {
   private readonly repository = inject(VaultRepository);
   private readonly notifier = inject(ErrorNotifier);
   private readonly status = inject(StatusNotifier);
-  private readonly preferences = inject(PreferencesService);
+  private readonly preferences = inject(LibraryPreferencesService);
 
   private readonly _state = signal<VaultState | null>(null);
   private readonly _isWorking = signal(false);
