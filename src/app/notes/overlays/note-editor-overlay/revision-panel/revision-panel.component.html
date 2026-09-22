@@ -14,32 +14,103 @@
     </button>
 
     @if (store.isOpen()) {
-      <ul class="revisions-list" data-testid="revisions-list">
-        @for (row of rows(); track row.revision.id) {
-          <li class="revision-row" data-testid="revision-row">
-            <span class="revision-when">
-              {{ row.when.key | transloco: row.when.params }}
-              <span class="revision-size">
-                {{ 'revisions.characters' | transloco: { count: row.revision.characters } }}
-              </span>
-            </span>
+      @if (preview(); as shown) {
+        <!-- ⚠️ Instead of the list, never beside it: going back is irreversible, and this is
+             the step that stands between a row and the text it would erase. -->
+        <div class="revision-preview" data-testid="revision-preview">
+          <p class="preview-head">
+            {{ 'revisions.previewOf' | transloco }}
+            <span class="preview-when">{{ shown.when.key | transloco: shown.when.params }}</span>
+          </p>
+
+          @if (shown.lines.length === 0) {
+            <p class="preview-same" data-testid="revision-identical">
+              {{ 'revisions.identical' | transloco }}
+            </p>
+          } @else {
+            <p class="preview-legend" aria-hidden="true">
+              <span class="restored">+ {{ 'revisions.restoredLegend' | transloco }}</span>
+              <span class="dropped">− {{ 'revisions.droppedLegend' | transloco }}</span>
+            </p>
+            <div class="diff" data-testid="revision-diff">
+              @for (line of shown.lines; track $index) {
+                @switch (line.kind) {
+                  @case ('skipped') {
+                    <div class="diff-line skipped">
+                      {{ 'revisions.skipped' | transloco: { count: line.count } }}
+                    </div>
+                  }
+                  @case ('restored') {
+                    <div class="diff-line restored" data-testid="diff-restored">
+                      <span class="visually-hidden">{{ 'revisions.restoredLine' | transloco }}</span>
+                      <span class="diff-sign" aria-hidden="true">+</span>{{ line.text }}
+                    </div>
+                  }
+                  @case ('dropped') {
+                    <div class="diff-line dropped" data-testid="diff-dropped">
+                      <span class="visually-hidden">{{ 'revisions.droppedLine' | transloco }}</span>
+                      <span class="diff-sign" aria-hidden="true">−</span>{{ line.text }}
+                    </div>
+                  }
+                  @case ('kept') {
+                    <div class="diff-line">
+                      <span class="diff-sign" aria-hidden="true"> </span>{{ line.text }}
+                    </div>
+                  }
+                }
+              }
+            </div>
+          }
+
+          <p class="preview-warning" role="note" data-testid="revision-consequence">
+            {{ 'revisions.consequence' | transloco: { count: shown.newer } }}
+          </p>
+
+          <div class="preview-actions">
             <button
               type="button"
-              class="revision-restore"
+              class="preview-back"
+              data-testid="revision-back"
+              (click)="store.closePreview()"
+            >
+              {{ 'revisions.back' | transloco }}
+            </button>
+            <button
+              type="button"
+              class="preview-restore"
               data-testid="revision-restore"
-              [attr.data-revision]="row.revision.id"
               [disabled]="store.isWorking()"
-              (click)="store.restore(row.revision.id)"
+              (click)="store.restore()"
             >
               {{ 'revisions.restore' | transloco }}
             </button>
-          </li>
-        }
-      </ul>
+          </div>
+        </div>
+      } @else {
+        <ul class="revisions-list" data-testid="revisions-list">
+          @for (row of rows(); track row.revision.id) {
+            <li class="revision-row" data-testid="revision-row">
+              <button
+                type="button"
+                class="revision-open"
+                data-testid="revision-open"
+                [attr.data-revision]="row.revision.id"
+                (click)="store.openPreview(row.revision.id)"
+              >
+                <span class="revision-when">
+                  {{ row.when.key | transloco: row.when.params }}
+                  <span class="revision-size">
+                    {{ 'revisions.characters' | transloco: { count: row.revision.characters } }}
+                  </span>
+                </span>
+                <span class="revision-look">{{ 'revisions.look' | transloco }}</span>
+              </button>
+            </li>
+          }
+        </ul>
 
-      <!-- ⚠️ Said rather than guarded: the body a restore replaces is kept first, so this
-           is one of the few destructive-looking gestures that needs no confirmation. -->
-      <p class="revisions-note">{{ 'revisions.note' | transloco }}</p>
+        <p class="revisions-note">{{ 'revisions.note' | transloco }}</p>
+      }
     }
   </section>
 }

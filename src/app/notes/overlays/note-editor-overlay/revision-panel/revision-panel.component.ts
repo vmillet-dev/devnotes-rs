@@ -5,7 +5,7 @@ import { NoteRevisionsStore } from '@core/state/note-revisions.store';
 import { relativeTimeRef } from '@core/utils/relative-time.util';
 
 /**
- * The bodies kept beside this note, and the one click that puts one back.
+ * The bodies kept beside this note: a row opens a preview, and the preview goes back.
  *
  * ⚠️ The trash protects a deletion; nothing protected an edit. The point is not the
  * restoring — it is the **ease**: a text you know is recoverable is a text you edit
@@ -30,4 +30,9 @@ export class RevisionPanelComponent {
       when: relativeTimeRef(revision.takenAt, this.clock.now()),
     })),
   );
+
+  protected readonly preview = computed(() => {
+    const shown = this.store.preview();
+    return shown && { ...shown, when: relativeTimeRef(shown.revision.takenAt, this.clock.now()) };
+  });
 }

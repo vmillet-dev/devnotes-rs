@@ -2212,7 +2212,7 @@ mod revisions {
     use super::*;
     use devnotes_lib::notes::revision::{KEEP, Revision};
     use devnotes_lib::notes::store::restore_revision;
-    use devnotes_lib::notes::store::revisions::{content_of, list};
+    use devnotes_lib::notes::store::revisions::{compare, content_of, list};
 
     fn body(content: &str) -> NotePatch {
         NotePatch {
@@ -2345,7 +2345,7 @@ mod revisions {
         update(&mut connection, &id, &body("casse"), t1()).unwrap();
         let history = kept(&mut connection, &id);
 
-        let note = restore_revision(&mut connection, &id, &history[0].id, t1()).unwrap();
+        let note = restore_revision(&mut connection, &id, &history[0].id).unwrap();
 
         assert_eq!(note.content, "Contenu");
         assert_eq!(
@@ -2364,13 +2364,7 @@ mod revisions {
         let before = by_ids(&mut connection, std::slice::from_ref(&id)).unwrap()[0].updated_at;
         let history = kept(&mut connection, &id);
 
-        restore_revision(
-            &mut connection,
-            &id,
-            &history[0].id,
-            at("2026-07-26T09:00:00.000Z"),
-        )
-        .unwrap();
+        restore_revision(&mut connection, &id, &history[0].id).unwrap();
 
         assert_eq!(
             by_ids(&mut connection, &[id]).unwrap()[0].updated_at,
@@ -2378,19 +2372,82 @@ mod revisions {
         );
     }
 
-    /// A restore is as undoable as the edit that made it necessary.
+    /// ⚠️ Going back, not adding a row: the body a restore replaced was a second line in
+    /// the panel, beside one identical to the text on screen (#325).
     #[test]
-    fn the_body_a_restore_replaced_is_kept_too() {
+    fn a_restore_keeps_nothing_of_what_it_replaced() {
         let mut connection = open_in_memory().unwrap();
         let id = snippet(&mut connection);
         update(&mut connection, &id, &body("casse"), t1()).unwrap();
         let history = kept(&mut connection, &id);
 
-        restore_revision(&mut connection, &id, &history[0].id, t1()).unwrap();
+        restore_revision(&mut connection, &id, &history[0].id).unwrap();
 
+        assert!(kept(&mut connection, &id).is_empty());
+    }
+
+    /// The reporter's own case: A → B → C, back to B, and C no longer exists — nor does B
+    /// in the list, since it is the text now.
+    #[test]
+    fn going_back_drops_the_version_and_everything_newer() {
+        let mut connection = open_in_memory().unwrap();
+        let id = snippet(&mut connection);
+        update(&mut connection, &id, &body("B"), t1()).unwrap();
+        update(&mut connection, &id, &body("C"), t1()).unwrap();
+        let history = kept(&mut connection, &id);
+        assert_eq!(opened(&mut connection, &id, &history[0].id), "B");
+
+        let note = restore_revision(&mut connection, &id, &history[0].id).unwrap();
+
+        assert_eq!(note.content, "B");
         let after = kept(&mut connection, &id);
-        assert_eq!(after.len(), 2);
-        assert_eq!(opened(&mut connection, &id, &after[0].id), "casse");
+        assert_eq!(after.len(), 1);
+        assert_eq!(opened(&mut connection, &id, &after[0].id), "Contenu");
+    }
+
+    /// Going back further takes the newer ones with it, and leaves the older ones.
+    #[test]
+    fn going_back_to_the_oldest_leaves_nothing_newer() {
+        let mut connection = open_in_memory().unwrap();
+        let id = snippet(&mut connection);
+        update(&mut connection, &id, &body("B"), t1()).unwrap();
+        update(&mut connection, &id, &body("C"), t1()).unwrap();
+        let history = kept(&mut connection, &id);
+
+        restore_revision(&mut connection, &id, &history[1].id).unwrap();
+
+        assert!(kept(&mut connection, &id).is_empty());
+        assert_eq!(
+            by_ids(&mut connection, &[id]).unwrap()[0].content,
+            "Contenu"
+        );
+    }
+
+    /// The preview compares the kept body with the text it would replace.
+    #[test]
+    fn the_preview_compares_the_version_with_the_current_text() {
+        let mut connection = open_in_memory().unwrap();
+        let id = snippet(&mut connection);
+        update(&mut connection, &id, &body("casse"), t1()).unwrap();
+        let history = kept(&mut connection, &id);
+
+        let (db, vault) = connection.split();
+        let pair = compare(db, vault, &id, &history[0].id).unwrap();
+
+        assert_eq!(pair, Some(("casse".to_string(), "Contenu".to_string())));
+    }
+
+    #[test]
+    fn a_revision_of_another_note_cannot_be_previewed() {
+        let mut connection = open_in_memory().unwrap();
+        let space_id = space(&mut connection, "Personal");
+        let mine = create(&mut connection, draft(&space_id), t0()).unwrap().id;
+        let theirs = create(&mut connection, draft(&space_id), t0()).unwrap().id;
+        update(&mut connection, &theirs, &body("le leur"), t1()).unwrap();
+        let history = kept(&mut connection, &theirs);
+
+        let (db, vault) = connection.split();
+        assert_eq!(compare(db, vault, &mine, &history[0].id).unwrap(), None);
     }
 
     /// ⚠️ An id comes from the front end: one note's history must not be reachable
@@ -2404,7 +2461,7 @@ mod revisions {
         update(&mut connection, &theirs, &body("le leur"), t1()).unwrap();
         let history = kept(&mut connection, &theirs);
 
-        let refused = restore_revision(&mut connection, &mine, &history[0].id, t1());
+        let refused = restore_revision(&mut connection, &mine, &history[0].id);
 
         assert!(matches!(refused, Err(StorageError::NoteNotFound(_))));
     }

@@ -1,17 +1,24 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { NotesRepository } from '@core/data/notes.repository';
-import { Revision } from '@core/model/revision.model';
+import { DiffLine, Revision } from '@core/model/revision.model';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { NotesRevision } from './notes-revision';
 import { NotesStore } from './notes.store';
 
+/** A kept body opened for a look, against the text going back to it would replace. */
+export interface RevisionPreview {
+  readonly revision: Revision;
+  /** How many kept bodies are newer than this one — they go, with the current text. */
+  readonly newer: number;
+  readonly lines: readonly DiffLine[];
+}
+
 /**
  * The bodies kept beside the open note.
  *
- * ⚠️ Restoring one needs no confirmation, unlike every other thing in this application
- * that replaces content: the body it replaces is kept **first**, so a restore is as
- * undoable as the edit that made it necessary. Putting a guard in front of a reversible
- * gesture is how a safety net becomes a nuisance.
+ * ⚠️ Going back to one is **irreversible**: the current text and every newer version go
+ * (A → B → C, back to B, and C is gone). So a row opens a preview, and only the preview
+ * restores — opening it is the first step, which a double click cannot defeat.
  */
 @Injectable({ providedIn: 'root' })
 export class NoteRevisionsStore {
@@ -25,10 +32,12 @@ export class NoteRevisionsStore {
   private readonly _isOpen = signal(false);
   private readonly _isWorking = signal(false);
   private readonly _restored = signal(0);
+  private readonly _preview = signal<RevisionPreview | null>(null);
 
   readonly revisions = this._revisions.asReadonly();
   readonly isOpen = this._isOpen.asReadonly();
   readonly isWorking = this._isWorking.asReadonly();
+  readonly preview = this._preview.asReadonly();
 
   /**
    * Bumped by every restore, and the editor's body draft keys on it.
@@ -61,6 +70,7 @@ export class NoteRevisionsStore {
       this._revisions.set([]);
       this._isOpen.set(false);
     }
+    this._preview.set(null);
 
     if (noteId === null) return;
 
@@ -69,17 +79,42 @@ export class NoteRevisionsStore {
 
   toggle(): void {
     this._isOpen.update((open) => !open);
+    this._preview.set(null);
   }
 
-  async restore(revisionId: string): Promise<void> {
+  async openPreview(revisionId: string): Promise<void> {
     const noteId = this._noteId();
-    if (noteId === null || this._isWorking()) return;
+    const newer = this._revisions().findIndex((revision) => revision.id === revisionId);
+    const revision = this._revisions()[newer];
+    if (noteId === null || revision === undefined) return;
+
+    try {
+      const lines = await this.repository.revisionDiff(noteId, revisionId);
+      // ⚠️ The editor may have moved to another note while the comparison was out.
+      if (this._noteId() !== noteId) return;
+
+      this._preview.set({ revision, newer, lines });
+    } catch (error) {
+      this.notifier.reportFailure('errors.revisionDiffFailed', error);
+    }
+  }
+
+  closePreview(): void {
+    this._preview.set(null);
+  }
+
+  /** Goes back to the version being previewed, and to nothing else. */
+  async restore(): Promise<void> {
+    const noteId = this._noteId();
+    const preview = this._preview();
+    if (noteId === null || preview === null || this._isWorking()) return;
 
     this._isWorking.set(true);
     try {
       // ⚠️ Adopted before the counter bumps: the editor re-seeds its body draft from the
       // open note, and a counter that moved first would re-seed it from the stale row.
-      this.notes.adoptRestored(await this.repository.restoreRevision(noteId, revisionId));
+      this.notes.adoptRestored(await this.repository.restoreRevision(noteId, preview.revision.id));
+      this._preview.set(null);
       this._restored.update((count) => count + 1);
       // ⚠️ Bumped rather than reloaded by hand: the canvas and the board both read this,
       // and a body put back has to reach whichever one is on screen.

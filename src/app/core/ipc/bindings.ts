@@ -27,15 +27,14 @@ export const commands = {
 	 *  across to draw twenty dates.
 	 */
 	listRevisions: (id: string) => typedError<Revision[], AppError>(__TAURI_INVOKE("list_revisions", { id })),
+	/**  What going back to a kept body would change, line by line, against the current text. */
+	revisionDiff: (id: string, revisionId: string) => typedError<DiffLine[], AppError>(__TAURI_INVOKE("revision_diff", { id, revisionId })),
 	/**
-	 *  Puts a kept body back on the note.
+	 *  Goes back to a kept body, dropping it and every body kept after it from the history.
 	 * 
 	 *  ⚠️ `updated_at` is **not** touched. Putting something back is not editing it — the
 	 *  same line `restore_notes`, `move_notes_back`, `untag_notes` and
 	 *  `set_placeholder_values` already hold — and the canvas sorts on that column.
-	 * 
-	 *  ⚠️ The body being replaced is itself kept first, so a restore is as undoable as the
-	 *  edit that made it necessary.
 	 */
 	restoreRevision: (id: string, revisionId: string) => typedError<DisplayNote, AppError>(__TAURI_INVOKE("restore_revision", { id, revisionId })),
 	/**
@@ -436,6 +435,17 @@ export type ChecklistItem = {
 	text: string,
 	done: boolean,
 };
+
+/**  One line of a kept body, compared with the text restoring it would replace. */
+export type DiffLine = 
+/**  In both: restoring leaves it where it is. */
+{ kind: "kept"; text: string } | 
+/**  Only in the kept body: restoring brings it back. */
+{ kind: "restored"; text: string } | 
+/**  Only in the current text: restoring takes it away. */
+{ kind: "dropped"; text: string } | 
+/**  Unchanged lines too far from any change to be worth reading. */
+{ kind: "skipped"; count: number };
 
 /**  `flatten`: the front end has a single note type. */
 export type DisplayNote = {

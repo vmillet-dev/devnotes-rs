@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { commands } from '@core/ipc/bindings';
 import { unwrap } from '@core/ipc/ipc.error';
-import { Revision } from '../model/revision.model';
+import { DiffLine, Revision } from '../model/revision.model';
 import { Space } from '../model/space.model';
 import {
   Note,
@@ -69,9 +69,14 @@ export class NotesRepository {
     }));
   }
 
+  /** What going back to a kept body would change, against the current text. */
+  async revisionDiff(id: string, revisionId: string): Promise<readonly DiffLine[]> {
+    return unwrap('revision_diff', await commands.revisionDiff(id, revisionId));
+  }
+
   /**
-   * Puts a kept body back. ⚠️ Does not refresh `updated_at` — putting something back is
-   * not editing it — so the canvas does not float the note to the top for it.
+   * Goes back to a kept body; it and every body kept after it leave the history. ⚠️ Does
+   * not refresh `updated_at` — putting something back is not editing it.
    */
   async restoreRevision(id: string, revisionId: string): Promise<Note> {
     return toNote(unwrap('restore_revision', await commands.restoreRevision(id, revisionId)));

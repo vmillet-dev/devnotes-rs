@@ -263,6 +263,7 @@
     "backupRestoreFailed": "That copy could not be restored. The library was left in place.",
     "revisionsListFailed": "The history of this note could not be read.",
     "revisionRestoreFailed": "That version could not be restored.",
+    "revisionDiffFailed": "This version could not be compared with the current text.",
     "librariesListFailed": "The list of libraries could not be read.",
     "libraryActionFailed": "That library operation failed."
   },
@@ -699,8 +700,18 @@
   "revisions": {
     "title": "{count, plural, one {History (# version)} other {History (# versions)}}",
     "characters": "{count, plural, one {# character} other {# characters}}",
-    "restore": "Restore",
-    "note": "Restoring keeps the body it replaces first, so you can go back. Only a snippet’s body is kept, the last twenty, and it does not travel with an export."
+    "look": "View",
+    "previewOf": "Version kept",
+    "identical": "This version is the same as the current text.",
+    "restoredLegend": "comes back",
+    "droppedLegend": "goes",
+    "restoredLine": "Comes back:",
+    "droppedLine": "Goes:",
+    "skipped": "{count, plural, one {… # unchanged line} other {… # unchanged lines}}",
+    "consequence": "{count, plural, =0 {The current text will be replaced, and not kept.} one {The current text and the newer version will be erased.} other {The current text and the # newer versions will be erased.}}",
+    "back": "Back to the list",
+    "restore": "Go back to this version",
+    "note": "Choose a version to see what would change. Only a snippet’s body is kept, the last twenty, and it does not travel with an export."
   },
   "libraries": {
     "title": "Libraries",

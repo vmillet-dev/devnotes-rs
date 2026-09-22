@@ -263,6 +263,7 @@
     "backupRestoreFailed": "Impossible de restaurer cette copie. La bibliothèque est restée en place.",
     "revisionsListFailed": "Impossible de lire l'historique de cette note.",
     "revisionRestoreFailed": "Impossible de rétablir cette version.",
+    "revisionDiffFailed": "Impossible de comparer cette version au texte actuel.",
     "librariesListFailed": "Impossible de lire la liste des bibliothèques.",
     "libraryActionFailed": "L'opération sur la bibliothèque a échoué."
   },
@@ -699,8 +700,18 @@
   "revisions": {
     "title": "{count, plural, one {Historique (# version)} other {Historique (# versions)}}",
     "characters": "{count, plural, one {# caractère} other {# caractères}}",
-    "restore": "Rétablir",
-    "note": "Rétablir garde d'abord le corps qu'il remplace : vous pouvez revenir en arrière. Seul le corps des snippets est gardé, les vingt derniers, et il ne part pas dans les exports."
+    "look": "Voir",
+    "previewOf": "Version gardée",
+    "identical": "Cette version est identique au texte actuel.",
+    "restoredLegend": "revient",
+    "droppedLegend": "part",
+    "restoredLine": "Revient :",
+    "droppedLine": "Part :",
+    "skipped": "{count, plural, one {… # ligne identique} other {… # lignes identiques}}",
+    "consequence": "{count, plural, =0 {Le texte actuel sera remplacé, sans être gardé.} one {Le texte actuel et la version plus récente seront effacés.} other {Le texte actuel et les # versions plus récentes seront effacés.}}",
+    "back": "Retour à la liste",
+    "restore": "Revenir à cette version",
+    "note": "Choisissez une version pour voir ce qui changerait. Seul le corps des snippets est gardé, les vingt derniers, et il ne part pas dans les exports."
   },
   "libraries": {
     "title": "Bibliothèques",

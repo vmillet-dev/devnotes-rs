@@ -67,27 +67,75 @@ describe('RevisionPanelComponent', () => {
     expect(rows()[0].textContent).toContain('caractères');
   });
 
-  /**
-   * ⚠️ No confirmation, deliberately: the body a restore replaces is kept first, so it is
-   * as undoable as the edit that made it necessary. A guard in front of a reversible
-   * gesture is how a safety net becomes a nuisance.
-   */
-  it('puts a body back on one click', async () => {
-    await repository.update('note-1', { content: 'select 2' });
+  function click(hook: string, index = 0): void {
+    (fixture.nativeElement.querySelectorAll(`[data-testid="${hook}"]`)[index] as HTMLButtonElement).click();
+  }
+
+  function text(hook: string): string {
+    return fixture.nativeElement.querySelector(`[data-testid="${hook}"]`)?.textContent ?? '';
+  }
+
+  async function openHistory(...bodies: string[]): Promise<void> {
+    for (const body of bodies) {
+      await repository.update('note-1', { content: body });
+    }
     await store.openFor('note-1');
     await fixture.whenStable();
     toggle()!.click();
     await fixture.whenStable();
+  }
 
-    (fixture.nativeElement.querySelector('[data-testid="revision-restore"]') as HTMLButtonElement).click();
+  const current = (): string | undefined => repository.contentOf('note-1');
+
+  /**
+   * ⚠️ Going back is irreversible — the current text and every newer version go — so a
+   * row opens a preview and never restores on its own (#325).
+   */
+  it('opens a preview on a click, and changes nothing yet', async () => {
+    await openHistory('select 2');
+
+    click('revision-open');
     await fixture.whenStable();
 
-    // Read back through the history rather than through the note, which the fake keeps
-    // to itself: the newest kept body is now the one the restore replaced, which is only
-    // true if the older one went back onto the note.
-    expect(store.revisions()).toHaveLength(2);
-    const replaced = await repository.restoreRevision('note-1', store.revisions()[0].id);
-    expect(replaced.content).toBe('select 2');
+    expect(fixture.nativeElement.querySelector('[data-testid="revision-preview"]')).not.toBeNull();
+    expect(rows()).toHaveLength(0);
+    expect(text('revision-diff')).toContain('select 1');
+    expect(current()).toBe('select 2');
+  });
+
+  it('says what going back would erase before it does', async () => {
+    await openHistory('select 2', 'select 3');
+
+    click('revision-open', 1);
+    await fixture.whenStable();
+
+    expect(text('revision-consequence')).toContain('la version plus récente');
+  });
+
+  /** The reporter's case: A → B → C, back to B, and C no longer exists. */
+  it('goes back from the preview, and the history loses that version and every newer one', async () => {
+    await openHistory('select 2', 'select 3');
+
+    click('revision-open', 0);
+    await fixture.whenStable();
+    click('revision-restore');
+    await fixture.whenStable();
+
+    expect(current()).toBe('select 2');
+    expect(store.revisions()).toHaveLength(1);
+    expect(fixture.nativeElement.querySelector('[data-testid="revision-preview"]')).toBeNull();
+  });
+
+  it('goes back to the list without touching anything', async () => {
+    await openHistory('select 2');
+    click('revision-open');
+    await fixture.whenStable();
+
+    click('revision-back');
+    await fixture.whenStable();
+
+    expect(rows()).toHaveLength(1);
+    expect(current()).toBe('select 2');
   });
 
   /**
@@ -101,13 +149,12 @@ describe('RevisionPanelComponent', () => {
     const notes = TestBed.inject(NotesStore);
     await repository.update('note-1', { content: 'select 2' });
     notes.openNote(createNote({ id: 'note-1', content: 'select 2' }));
-    await store.openFor('note-1');
-    await fixture.whenStable();
-    toggle()!.click();
-    await fixture.whenStable();
+    await openHistory();
     const before = store.restored();
 
-    (fixture.nativeElement.querySelector('[data-testid="revision-restore"]') as HTMLButtonElement).click();
+    click('revision-open');
+    await fixture.whenStable();
+    click('revision-restore');
     await fixture.whenStable();
 
     expect(notes.selectedNote()?.content).toBe('select 1');

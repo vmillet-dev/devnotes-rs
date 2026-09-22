@@ -479,7 +479,11 @@ pub fn update(
     })
 }
 
-/// Puts a kept body back, keeping the one it replaces.
+/// Goes back to a kept body: the note takes it, and it leaves the history along with every
+/// body kept after it.
+///
+/// ⚠️ Nothing is kept of the text it replaces — A → B → C, back to B, and C is gone. The
+/// preview is the guard, not an undo.
 ///
 /// ⚠️ `updated_at` is not touched: putting something back is not editing it, and the
 /// canvas sorts on that column — the same line `restore`, `restore_placements` and
@@ -488,7 +492,6 @@ pub fn restore_revision(
     connection: &mut Library,
     id: &str,
     revision_id: &str,
-    now: DateTime<Utc>,
 ) -> Result<Note, StorageError> {
     connection.transaction(|connection, vault| {
         let Some(mut note) = find(connection, vault, id)? else {
@@ -499,9 +502,7 @@ pub fn restore_revision(
             return Err(StorageError::NoteNotFound(revision_id.to_string()));
         };
 
-        // ⚠️ The body being replaced is kept first, so a restore is as undoable as the
-        // edit that made it necessary.
-        revisions::record(connection, vault, id, &note.content, now)?;
+        revisions::discard_from(connection, id, revision_id)?;
 
         diesel::update(notes::table.find(id))
             .set(notes::content.eq(vault.seal(&content)?))

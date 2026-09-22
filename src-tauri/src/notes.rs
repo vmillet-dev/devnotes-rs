@@ -61,7 +61,7 @@ use crate::error::{AppError, StorageError};
 use crate::folders;
 use crate::spaces::model::SpaceDraft;
 use model::{DisplayNote, NoteDraft, NotePatch, SampleNote, TagUsage};
-use revision::Revision;
+use revision::{DiffLine, Revision};
 use trash::TrashedNote;
 use view::{NotesQuery, NotesView};
 
@@ -160,14 +160,30 @@ pub fn list_revisions(id: String, db: State<'_, Db>) -> Result<Vec<Revision>, Ap
     Ok(store::revisions::list(connection, vault, &id)?)
 }
 
-/// Puts a kept body back on the note.
+/// What going back to a kept body would change, line by line, against the current text.
+#[tauri::command(async)]
+#[specta::specta]
+pub fn revision_diff(
+    id: String,
+    revision_id: String,
+    db: State<'_, Db>,
+) -> Result<Vec<DiffLine>, AppError> {
+    let mut connection = lock(&db)?;
+    let (connection, vault) = connection.split();
+
+    let Some((current, version)) = store::revisions::compare(connection, vault, &id, &revision_id)?
+    else {
+        return Err(StorageError::NoteNotFound(revision_id).into());
+    };
+
+    Ok(revision::diff(&current, &version))
+}
+
+/// Goes back to a kept body, dropping it and every body kept after it from the history.
 ///
 /// ⚠️ `updated_at` is **not** touched. Putting something back is not editing it — the
 /// same line `restore_notes`, `move_notes_back`, `untag_notes` and
 /// `set_placeholder_values` already hold — and the canvas sorts on that column.
-///
-/// ⚠️ The body being replaced is itself kept first, so a restore is as undoable as the
-/// edit that made it necessary.
 #[tauri::command(async)]
 #[specta::specta]
 pub fn restore_revision(
@@ -176,7 +192,7 @@ pub fn restore_revision(
     db: State<'_, Db>,
 ) -> Result<DisplayNote, AppError> {
     let mut connection = lock(&db)?;
-    let note = store::restore_revision(&mut connection, &id, &revision_id, Utc::now())?;
+    let note = store::restore_revision(&mut connection, &id, &revision_id)?;
 
     Ok(display(&mut connection, note)?)
 }
