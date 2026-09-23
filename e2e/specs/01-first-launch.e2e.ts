@@ -1,7 +1,7 @@
 import { browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
-import { board } from '../pageobjects/overlays.page.js';
+import { board } from '../pageobjects/board.page.js';
 import { banners, fileMenu, titlebar } from '../pageobjects/titlebar.page.js';
 import { passTheGate } from '../support/app.js';
 import { bridge, homeSpaceId, query } from '../support/bridge.js';

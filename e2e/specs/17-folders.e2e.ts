@@ -2,7 +2,8 @@ import { browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
-import { crumb, folders, selectionBar, spaces } from '../pageobjects/overlays.page.js';
+import { crumb, selectionBar } from '../pageobjects/header.page.js';
+import { folders, spaces } from '../pageobjects/sidebar.page.js';
 import { eventually, reloadCanvas, testid, waitForCanvas } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 

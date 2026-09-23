@@ -1,6 +1,7 @@
 import { $, $$, expect } from '@wdio/globals';
 
-import { board, spaces } from '../pageobjects/overlays.page.js';
+import { board } from '../pageobjects/board.page.js';
+import { spaces } from '../pageobjects/sidebar.page.js';
 import { PASSPHRASE, eventually, pickChoice, setField, testid, waitForCanvas } from '../support/app.js';
 import { bridge, draft } from '../support/bridge.js';
 

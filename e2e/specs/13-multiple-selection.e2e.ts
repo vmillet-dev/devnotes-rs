@@ -1,7 +1,8 @@
 import { expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
-import { selectionBar, undoBar } from '../pageobjects/overlays.page.js';
+import { selectionBar } from '../pageobjects/header.page.js';
+import { undoBar } from '../pageobjects/overlays.page.js';
 import { banners } from '../pageobjects/titlebar.page.js';
 import { clipboardText, eventually, reloadCanvas } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';

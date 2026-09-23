@@ -2,7 +2,9 @@ import { browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
-import { board, crumb, spaces } from '../pageobjects/overlays.page.js';
+import { board } from '../pageobjects/board.page.js';
+import { crumb } from '../pageobjects/header.page.js';
+import { spaces } from '../pageobjects/sidebar.page.js';
 import { blurField, eventually, press, reloadCanvas, testid, waitForCanvas } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 

@@ -1,7 +1,11 @@
 import { browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
-import { board, selectionBar, spaces, undoBar } from '../pageobjects/overlays.page.js';
+import { board } from '../pageobjects/board.page.js';
+import { gestures } from '../pageobjects/board-gestures.page.js';
+import { selectionBar } from '../pageobjects/header.page.js';
+import { undoBar } from '../pageobjects/overlays.page.js';
+import { spaces } from '../pageobjects/sidebar.page.js';
 
 import { eventually, reloadCanvas, testid, waitForCanvas } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
@@ -84,7 +88,7 @@ describe('Arranging the board', () => {
 
   /** Membership comes from the drop, and from nothing else. */
   it('files a card dragged into a zone', async () => {
-    await board.dragCardInto(looseId, migrationsId);
+    await gestures.dragCardInto(looseId, migrationsId);
 
     const view = await bridge.queryNotes(query({ spaceId, folderId: migrationsId }));
     expect(view.sections.flatMap((section) => section.notes).map((note) => note.title)).toContain(
@@ -104,7 +108,7 @@ describe('Arranging the board', () => {
 
   /** The other direction of the same gesture: a drop on the background unfiles. */
   it('takes a card back out when it is dropped on the background', async () => {
-    await board.drag(board.cardGrip(looseId), { dx: 120, dy: 620 });
+    await gestures.drag(gestures.cardGrip(looseId), { dx: 120, dy: 620 });
 
     const view = await bridge.queryNotes(query({ spaceId, folderId: migrationsId }));
     expect(view.sections.flatMap((section) => section.notes).map((note) => note.title)).not.toContain(
@@ -123,7 +127,7 @@ describe('Arranging the board', () => {
 
   it('moves a zone and keeps it there', async () => {
     const before = await board.frameOf(perfId);
-    await board.drag(board.zoneGrip(perfId), { dx: 90, dy: 140 });
+    await gestures.drag(gestures.zoneGrip(perfId), { dx: 90, dy: 140 });
 
     const moved = await board.frameOf(perfId);
     expect(moved.left).not.toBe(before.left);
@@ -147,7 +151,7 @@ describe('Arranging the board', () => {
     const before = await board.frameOf(perfId);
     const looseBefore = (await bridge.queryNotes(query({ spaceId, folderId: perfId }))).matched;
 
-    await board.drag(board.zoneResize(perfId), { dx: 260, dy: 200 });
+    await gestures.drag(gestures.zoneResize(perfId), { dx: 260, dy: 200 });
 
     const resized = await board.frameOf(perfId);
     expect(Number.parseInt(resized.width, 10)).toBeGreaterThan(Number.parseInt(before.width, 10));
@@ -156,7 +160,7 @@ describe('Arranging the board', () => {
   });
 
   it('creates a folder from a band drawn on the background', async () => {
-    await board.drawZone({ x: 60, y: 900, width: 420, height: 320 });
+    await gestures.drawZone({ x: 60, y: 900, width: 420, height: 320 });
     await board.nameZone('Reporting');
 
     const made = await eventually(
@@ -234,7 +238,7 @@ describe('Arranging the board', () => {
     // ⚠️ No settling: this reads the board the frame after the drop, which is where the
     // card used to be drawn back at its old place. The unit specs are what pin it with
     // the view held still; here a fast round trip could answer the same thing honestly.
-    await board.dropCardInto(moving, migrationsId);
+    await gestures.dropCardInto(moving, migrationsId);
     expect(await board.holderOf(moving)).toBe(migrationsId);
 
     // ⚠️ Let it land before the opposite gesture, or the two files race each other.
@@ -244,7 +248,7 @@ describe('Arranging the board', () => {
       'the filing to reach the database',
     );
 
-    await board.drag(board.cardGrip(moving), { dx: 120, dy: 620 });
+    await gestures.drag(gestures.cardGrip(moving), { dx: 120, dy: 620 });
     expect(await board.holderOf(moving)).toBeNull();
     expect(
       await eventually(
@@ -323,7 +327,7 @@ describe('Arranging the board', () => {
     await openBoard();
 
     const nominal = Number.parseInt((await board.frameOf(rapports)).width, 10);
-    await board.drag(board.zoneResize(rapports), { dx: -14, dy: 0 });
+    await gestures.drag(gestures.zoneResize(rapports), { dx: -14, dy: 0 });
     const shaved = await eventually(
       () => storedFrame(rapports),
       (frame) => frame !== null && frame.width < nominal,
@@ -357,7 +361,7 @@ describe('Arranging the board', () => {
     it('ticks the cards it sweeps over', async () => {
       await openBoard();
 
-      await board.bandSelect({ x: 0, y: 0, width: 1400, height: 1400 });
+      await gestures.bandSelect({ x: 0, y: 0, width: 1400, height: 1400 });
 
       const count = await eventually(
         () => selectionBar.count(),
@@ -373,7 +377,7 @@ describe('Arranging the board', () => {
       expect(filed).toBeGreaterThan(0);
       const zone = await board.frameOf(perfId);
 
-      await board.bandSelect({
+      await gestures.bandSelect({
         x: Number.parseInt(zone.left, 10) + 4,
         y: Number.parseInt(zone.top, 10) + 4,
         width: Number.parseInt(zone.width, 10) - 8,
@@ -390,7 +394,7 @@ describe('Arranging the board', () => {
     });
 
     it('sweeps nothing where there is nothing, and opens no bar', async () => {
-      await board.bandSelect({ x: 20, y: 3000, width: 200, height: 200 });
+      await gestures.bandSelect({ x: 20, y: 3000, width: 200, height: 200 });
 
       // ⚠️ An assertion that nothing happened, so there is no condition to wait on: the
       // pause is deliberately a duration.
@@ -403,13 +407,13 @@ describe('Arranging the board', () => {
      * browser dropped it without a word: both bands were drawn as bare hairlines (#329).
      */
     it('fills both bands with the accent while they are drawn', async () => {
-      expect(await board.bandFill(2)).toMatch(/^rgba\(\d+, \d+, \d+, 0\.12\)$/);
-      expect(await board.bandFill(0)).toMatch(/^rgba\(\d+, \d+, \d+, 0\.08\)$/);
+      expect(await gestures.bandFill(2)).toMatch(/^rgba\(\d+, \d+, \d+, 0\.12\)$/);
+      expect(await gestures.bandFill(0)).toMatch(/^rgba\(\d+, \d+, \d+, 0\.08\)$/);
     });
 
     /** ⚠️ Or the browser's own menu opens at the end of every selection. */
     it('refuses the browser’s own menu on the surface', async () => {
-      expect(await board.contextMenuRefused()).toBe(true);
+      expect(await gestures.contextMenuRefused()).toBe(true);
     });
 
     /**
@@ -418,14 +422,14 @@ describe('Arranging the board', () => {
      * the search field's own menu must still open afterwards.
      */
     it('refuses it where a sweep ends off the board, and only that once', async () => {
-      expect(await board.menusAfterSweep(testid('search-input'))).toEqual([true, false]);
+      expect(await gestures.menusAfterSweep(testid('search-input'))).toEqual([true, false]);
     });
 
     /** ⚠️ The existing gesture does not move: the left button still draws a folder. */
     it('leaves the left button drawing a folder', async () => {
       const before = (await bridge.listFolders(spaceId)).length;
 
-      await board.drawZone({ x: 60, y: 1500, width: 420, height: 320 });
+      await gestures.drawZone({ x: 60, y: 1500, width: 420, height: 320 });
       await board.nameZone('Bande');
 
       const after = await eventually(
@@ -495,7 +499,7 @@ describe('Arranging the board', () => {
      *  board holds, and the frequent gesture must not be what overwrites it. */
     it('aligns the loose cards without touching a single zone', async () => {
       await openBoard();
-      await board.drag(board.zoneGrip(perfId), { dx: 340, dy: 420 });
+      await gestures.drag(gestures.zoneGrip(perfId), { dx: 340, dy: 420 });
       const dragged = await eventually(
         () => storedFrame(perfId),
         (frame) => frame !== null && frame.x > 300,
@@ -563,7 +567,7 @@ describe('Arranging the board', () => {
      */
     it('offers the previous arrangement back, and puts it back', async () => {
       await openBoard();
-      await board.drag(board.zoneGrip(perfId), { dx: 300, dy: 380 });
+      await gestures.drag(gestures.zoneGrip(perfId), { dx: 300, dy: 380 });
       const dragged = await eventually(
         () => storedFrame(perfId),
         (frame) => frame !== null && frame.x > 300,

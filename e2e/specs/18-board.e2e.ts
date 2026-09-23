@@ -1,7 +1,8 @@
 import { browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
-import { board, folders, spaces } from '../pageobjects/overlays.page.js';
+import { board } from '../pageobjects/board.page.js';
+import { folders, spaces } from '../pageobjects/sidebar.page.js';
 import { eventually, press, reloadCanvas, testid, waitForCanvas } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
@@ -243,7 +244,7 @@ describe('The board', () => {
   });
 
   /**
-   * ⚠️ Hit-tested, not dispatched: `board.drawZone` fires its events on the surface itself,
+   * ⚠️ Hit-tested, not dispatched: `gestures.drawZone` fires its events on the surface itself,
    * so it draws wherever it is told to. What the user met was the pointer landing on the
    * dotted ground **beside** a surface the back end had sized to its content (#320).
    */

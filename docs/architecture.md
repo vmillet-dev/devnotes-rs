@@ -3761,8 +3761,10 @@ what it should not, or a front end that fails to boot at all — none of which i
 jsdom or to `open_in_memory()`.
 
 The runner is WebdriverIO with `@wdio/tauri-service`, configured in `e2e/wdio.conf.ts`. Specs
-live in `e2e/specs/`, one file per scenario; every selector is held in `e2e/pageobjects/`, and
-`e2e/support/` holds the bridge helper, the application helpers and the profile paths.
+live in `e2e/specs/`, one file per scenario; every selector is held in `e2e/pageobjects/`, one
+file per area of the screen as `src/app/` draws it (`sidebar`, `header`, `canvas`, `board` and
+`board-gestures`, `editor`, `overlays`, `titlebar`), and `e2e/support/` holds the bridge helper,
+the application helpers and the profile paths.
 
 **Nothing of the harness ships.** Three seams keep it out of the release binary, and each one
 is checkable:
