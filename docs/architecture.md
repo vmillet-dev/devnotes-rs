@@ -1797,10 +1797,14 @@ selection, so a mis-click reaches them easily. `TagsStore` turns every one of th
 `PendingTagChange` first — the kind, the tags, the target, and the number of notes — and only
 `confirm()` writes.
 
-⚠️ That number is counted by the back end (`count_notes_tagged`, a `COUNT(DISTINCT note_id)`
-over live notes), not summed from the per-tag counts already on screen: a note carrying two of
-the selected tags is one note, and a confirmation that overstates its blast radius teaches
-people to dismiss it. If the count cannot be read, nothing is proposed and nothing runs —
+⚠️ That number is counted by the back end (`count_notes_tagged`, a `COUNT(DISTINCT note_id)`),
+not summed from the per-tag counts already on screen: a note carrying two of the selected tags
+is one note, and a confirmation that overstates its blast radius teaches people to dismiss it.
+⚠️ It counts **trashed notes too**, like the rename and the deletion it announces: a note
+restored after a rename comes back under the name the rail shows, and `rename_tags` and
+`delete_tags` answer the same count the confirmation gave — a test holds each pair together.
+Renaming one tag and merging several are one command, `rename_tags`; the store keeps the two
+kinds apart only to say which of them cannot be undone. If the count cannot be read, nothing is proposed and nothing runs —
 a blast radius that cannot be shown is not a reason to go ahead blind.
 
 ⚠️ The confirmation replaces the actions rather than sitting beside them: the click that asked
@@ -2264,8 +2268,8 @@ keeps the method list in sync by construction. Rename a method on the real class
 
 The notes contract is `query` / `create` / `update` / `delete`, plus the batch and trash
 operations (`deleteMany`, `restore`, `loadTrash`, `purge`, `emptyTrash`, `moveMany`,
-`tagMany`), the corpus-wide tag operations (`loadTags`, `renameTag`, `mergeTags`,
-`deleteTag`) and `fillPlaceholders`. Spaces expose `loadAll` / `create` / `rename` / `delete`.
+`tagMany`), the corpus-wide tag operations (`loadTags`, `countNotesTagged`, `renameTags`,
+`deleteTags`) and `fillPlaceholders`. Spaces expose `loadAll` / `create` / `rename` / `delete`.
 `AttachmentsRepository` covers `loadFor` / `attach` / `read` / `delete`, and
 `TransferRepository` covers `export` / `import` / `share`.
 
@@ -2579,13 +2583,13 @@ default; minimising to the tray is the same idea, off by default. Tauri emits no
 
 The commands, grouped by the feature that owns them:
 
-| Feature       | Commands                                                                                                                                                                                                                                                                 |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `notes`       | `query_notes`, `create_note`, `update_note`, `delete_note`, `delete_notes`, `restore_notes`, `list_trash`, `purge_notes`, `empty_trash`, `move_notes`, `tag_notes`, `list_tags`, `rename_tag`, `merge_tags`, `delete_tag`, `fill_placeholders`, `set_placeholder_values` |
-| `spaces`      | `list_spaces`, `create_space`, `rename_space`, `pin_space`, `delete_space`                                                                                                                                                                                               |
-| `attachments` | `attach_file`, `attach_clipboard_image`, `list_attachments`, `read_attachment`, `open_attachment`, `save_attachment`, `delete_attachment`                                                                                                                                |
-| `transfer`    | `export_notes`, `export_selection`, `import_notes`, `share_notes`                                                                                                                                                                                                        |
-| `desktop`     | `sync_tray`, `unavailable_shortcuts`                                                                                                                                                                                                                                     |
+| Feature       | Commands                                                                                                                                                                                                                                                                           |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `notes`       | `query_notes`, `create_note`, `update_note`, `delete_note`, `delete_notes`, `restore_notes`, `list_trash`, `purge_notes`, `empty_trash`, `move_notes`, `tag_notes`, `list_tags`, `count_notes_tagged`, `rename_tags`, `delete_tags`, `fill_placeholders`, `set_placeholder_values` |
+| `spaces`      | `list_spaces`, `create_space`, `rename_space`, `pin_space`, `delete_space`                                                                                                                                                                                                         |
+| `attachments` | `attach_file`, `attach_clipboard_image`, `list_attachments`, `read_attachment`, `open_attachment`, `save_attachment`, `delete_attachment`                                                                                                                                          |
+| `transfer`    | `export_notes`, `export_selection`, `import_notes`, `share_notes`                                                                                                                                                                                                                  |
+| `desktop`     | `sync_tray`, `unavailable_shortcuts`                                                                                                                                                                                                                                               |
 
 The guarantees the front-end relies on (persisted value returned, `Err` on an unknown id,
 "absent field means unchanged" for patches) are implemented in each feature, and tested there.
@@ -3647,7 +3651,7 @@ in the corpus or worse.
 | `export_notes` / `import_notes`                | 377 ms / 98 ms  | ×14.1 / ×11.8 |
 | `list_tags`                                    | 37.9 ms         | **×64**       |
 | `delete_notes` then `restore_notes`, 100 notes | 10.4 ms         | ×1.2          |
-| `rename_tag` across the corpus                 | 8.2 ms          | ×2.2          |
+| `rename_tags` across the corpus                | 8.2 ms          | ×2.2          |
 | `move_notes` / `tag_notes`, 100 notes          | 5.1 ms / 4.2 ms | ×1.9 / ×1.8   |
 | `list_trash`                                   | 4.5 ms          | ×10.5         |
 | `update_note`                                  | 1.5 ms          | ×1.0          |

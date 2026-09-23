@@ -95,19 +95,12 @@ export class TagsStore {
     if (!change) return false;
 
     this._pending.set(null);
-    const [only] = change.tags;
 
-    return this.run(() => {
-      switch (change.kind) {
-        case 'rename':
-          // `only` is defined: a rename is a selection of exactly one.
-          return this.repository.renameTag(only ?? '', change.into);
-        case 'merge':
-          return this.repository.mergeTags(change.tags, change.into);
-        case 'delete':
-          return this.repository.deleteTags(change.tags);
-      }
-    });
+    return this.run(() =>
+      change.kind === 'delete'
+        ? this.repository.deleteTags(change.tags)
+        : this.repository.renameTags(change.tags, change.into),
+    );
   }
 
   /** ⚠️ A blast radius that cannot be read leaves nothing pending, so nothing runs. */

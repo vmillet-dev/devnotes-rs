@@ -156,7 +156,7 @@ fn corpus_rewrite(c: &mut Criterion) {
     let mut corpus = build();
     let mut group = c.benchmark_group("corpus-wide rewrite");
 
-    group.bench_function("rename_tag", |b| {
+    group.bench_function("rename_tags", |b| {
         let mut at = 0u32;
         b.iter(|| {
             at += 1;

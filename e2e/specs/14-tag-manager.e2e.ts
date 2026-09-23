@@ -145,7 +145,7 @@ describe('Managing the tags of the whole corpus', () => {
     const before = (await bridge.queryNotes(query({ search: 'Tagged alpha' }))).sections[0]?.notes[0]
       ?.updatedAt;
 
-    await bridge.renameTag('Recette', 'production');
+    await bridge.renameTags(['Recette'], 'production');
 
     const after = await eventually(
       async () => (await bridge.queryNotes(query({ search: 'Tagged alpha' }))).sections[0]?.notes[0],

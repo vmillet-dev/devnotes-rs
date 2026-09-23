@@ -84,7 +84,7 @@ export const bridge = {
 
   listTrash: () => invoke<TrashedNote[]>('list_trash'),
   listTags: () => invoke<TagUsage[]>('list_tags'),
-  renameTag: (tag: string, into: string) => invoke<number>('rename_tag', { tag, into }),
+  renameTags: (tags: string[], into: string) => invoke<number>('rename_tags', { tags, into }),
   listAttachments: (noteId: string) => invoke<Attachment[]>('list_attachments', { noteId }),
   listGlobalPlaceholders: () => invoke<Record<string, string>>('list_global_placeholders'),
   setGlobalPlaceholders: (values: Record<string, string>) =>

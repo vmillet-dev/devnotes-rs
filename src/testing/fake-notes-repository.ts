@@ -341,11 +341,14 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
     });
   }
 
+  /** Trashed notes included, like the back end: a rename reaches them too. */
   countNotesTagged(tags: readonly string[]): Promise<number> {
     return guard(
       this,
       () =>
-        this.notes.filter((note) => note.tags.some((held) => tags.some((tag) => sameTag(held, tag)))).length,
+        [...this.notes, ...this.trashed].filter((note) =>
+          note.tags.some((held) => tags.some((tag) => sameTag(held, tag))),
+        ).length,
     );
   }
 
@@ -363,11 +366,7 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
     });
   }
 
-  renameTag(tag: string, into: string): Promise<number> {
-    return this.mergeTags([tag], into);
-  }
-
-  mergeTags(tags: readonly string[], into: string): Promise<number> {
+  renameTags(tags: readonly string[], into: string): Promise<number> {
     return guard(this, () => {
       this.retagged = { tags, into };
       this.notes = this.notes.map((note) => ({

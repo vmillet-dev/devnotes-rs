@@ -308,31 +308,25 @@ pub fn list_tags(db: State<'_, Db>) -> Result<Vec<TagUsage>, AppError> {
         .collect())
 }
 
-/// Renaming onto an existing tag is a merge: a note cannot carry one twice.
+/// Renames one tag or merges several: renaming onto an existing tag is a merge anyway,
+/// since a note cannot carry one twice.
 #[tauri::command(async)]
 #[specta::specta]
-pub fn rename_tag(tag: String, into: String, db: State<'_, Db>) -> Result<u32, AppError> {
+pub fn rename_tags(tags: Vec<String>, into: String, db: State<'_, Db>) -> Result<u32, AppError> {
     let target = model::validated_tag(&into)?;
+    let sources = model::normalize_tags(&tags);
 
     let mut connection = lock(&db)?;
 
-    Ok(count(store::retag(&mut connection, &[tag], &target)?))
-}
-
-#[tauri::command(async)]
-#[specta::specta]
-pub fn merge_tags(tags: Vec<String>, into: String, db: State<'_, Db>) -> Result<u32, AppError> {
-    let target = model::validated_tag(&into)?;
-
-    let mut connection = lock(&db)?;
-
-    Ok(count(store::retag(&mut connection, &tags, &target)?))
+    Ok(count(store::retag(&mut connection, &sources, &target)?))
 }
 
 /// A list rather than one tag at a time: one round trip per tag is one lock per tag.
 #[tauri::command(async)]
 #[specta::specta]
 pub fn delete_tags(tags: Vec<String>, db: State<'_, Db>) -> Result<u32, AppError> {
+    let tags = model::normalize_tags(&tags);
+
     let mut connection = lock(&db)?;
 
     Ok(count(store::drop_tags(&mut connection, &tags)?))
