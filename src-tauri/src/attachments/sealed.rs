@@ -36,24 +36,6 @@ pub fn read_sealed(vault: &Vault, path: &Path) -> Result<Vec<u8>, StorageError> 
     vault.open_bytes(&sealed)
 }
 
-/// Seals a file that is still in the clear, for a library that predates the passphrase.
-///
-/// ⚠️ Staged then renamed: a file half-rewritten is an attachment lost, where a rename is
-/// atomic. And ⚠️ it is **not** idempotent — sealing twice gives a file that opens into
-/// ciphertext. It runs once, on the launch that creates the key file.
-pub fn seal_in_place(vault: &Vault, path: &Path) -> Result<(), StorageError> {
-    let plain = std::fs::read(path)
-        .map_err(|error| StorageError::File(format!("{}: {error}", path.display())))?;
-
-    let staged = path.with_extension("sealing");
-    write_sealed(vault, &staged, &plain)?;
-
-    std::fs::rename(&staged, path).map_err(|error| {
-        let _ = std::fs::remove_file(&staged);
-        StorageError::File(format!("{}: {error}", path.display()))
-    })
-}
-
 /// Where a decrypted copy goes so the desktop can open it.
 ///
 /// ⚠️ The application's own data directory, deliberately, and **not** the OS temporary

@@ -2699,10 +2699,10 @@ in this process’s memory for the length of the session, and there is no idle r
   passphrase answers a phrase somebody **learned**, never a key somebody **took**. Whoever
   got hold of the unwrapped key keeps it, exactly as with LUKS or KeePass.
 
-- **`vault/migrate.rs`** — `seal_existing`, one transaction that seals a library written
-  before any of this. ⚠️ It runs from `create_vault` **after** the library is open and
-  **before** the startup sweeps: the orphan-attachment sweep reads stored file names and
-  would meet them in the clear if it ran first.
+- **`create_vault` refuses a database it finds without a key file.** That is a library
+  that lost its key — or one written in the clear before 0.2.0, which is no longer sealed in
+  place (see "How far back an upgrade reaches"). A new key over it would open nothing it
+  holds, so it answers `LibraryDamaged`, which the gate offers to set aside.
 - **`db.rs`** — `Library` carries the `SqliteConnection` **and** the `Vault`, and derefs to
   the connection so the store functions did not have to grow an argument. `split()` hands
   the two fields over separately where the borrow checker needs both at once, and
@@ -3070,12 +3070,9 @@ installed or shipped alongside the executable. The database file lives in Tauri'
   Evolving the model means adding a `YYYY-MM-DD-HHMMSS_name/` directory — never editing a
   shipped migration, it has already run on user machines. Each migration is atomic. A database
   carrying a migration this binary does not know is refused rather than misread.
-- **The legacy `PRAGMA user_version` history is adopted, not replayed.** The schema used to be
-  versioned by that pragma (values 1 to 3). `db::migration::adopt_legacy_history` marks the matching
-  embedded migrations as already applied and zeroes the pragma, so an existing install neither
-  re-runs `CREATE TABLE spaces` nor keeps a second, drifting source of truth. A pre-Diesel
-  binary reopening such a database now fails loudly at startup instead of writing into a schema
-  it believes it understands.
+- **A schema versioned by `PRAGMA user_version` is refused by name.** That is 0.1.0's, before
+  the Diesel migrations; replaying them over it would fail on the first `CREATE TABLE`. The
+  error says to open the library with 0.4 first, which still adopts that history.
 - **The board geometry is columns nothing else reads.** `folders.x/y/w/h` are nullable and
   move together — `NULL` means "never laid out", which every folder made before the board
   existed is. `note_positions` is keyed on `note_id` alone and holds a row only for an
@@ -3543,6 +3540,18 @@ release that replayed it would pay for it twice.
 - **`prepare` is deliberately not idempotent.** After a failure, use "Re-run failed jobs":
   successful jobs are not replayed and their outputs survive. "Re-run all jobs" will stop on
   the "tag already exists" guard — safe, but surprising.
+
+### How far back an upgrade reaches
+
+**A release opens in place the libraries of 0.2.0 and later.** Code that exists only to carry
+an older install forward is removed once it falls outside that line, and the release notes
+say so. An older library goes through an intermediate version — 0.4 still adopts every older
+shape — or through an export and an import.
+
+What 0.5.0 dropped: the adoption of 0.1.0's `PRAGMA user_version` history, and the migration
+that sealed a 0.1.x library written in the clear. What it keeps: gathering a pre-registry
+library into `libraries/<id>/`, and moving the library-scoped preferences out of the
+application's file — both serve 0.3.x, the release before the one that introduced them.
 
 ## Tauri configuration
 
