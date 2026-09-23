@@ -246,6 +246,20 @@ impl std::ops::Deref for DisplayNote {
     }
 }
 
+impl Note {
+    /// Brought to the rules every draft and patch applies. An import is the one path that
+    /// inserts a whole note without going through either.
+    #[must_use]
+    pub fn normalized(mut self) -> Self {
+        self.tags = normalize_tags(&self.tags);
+        self.items = checklist::normalize_items(&self.items);
+        self.placeholder_values =
+            placeholder::normalize_values(std::mem::take(&mut self.placeholder_values));
+
+        self
+    }
+}
+
 pub fn decorate(note: Note, now: DateTime<Utc>) -> DisplayNote {
     DisplayNote {
         footer: footer_of(&note),
@@ -398,6 +412,22 @@ mod tests {
 
     fn at(iso: &str) -> DateTime<Utc> {
         crate::db::iso8601::parse(iso).unwrap()
+    }
+
+    #[test]
+    fn an_imported_note_is_brought_to_the_rules_of_a_write() {
+        let imported = Note {
+            tags: vec!["#auth".to_string(), "Auth".to_string(), " ".to_string()],
+            placeholder_values: BTreeMap::from([
+                ("host".to_string(), "db".to_string()),
+                ("not a field".to_string(), "x".to_string()),
+            ]),
+            ..sample()
+        }
+        .normalized();
+
+        assert_eq!(imported.tags, ["auth"]);
+        assert_eq!(imported.placeholder_values.len(), 1);
     }
 
     fn normalized(tags: &[&str]) -> Vec<String> {

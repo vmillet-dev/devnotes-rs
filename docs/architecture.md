@@ -108,13 +108,14 @@ is the destructive one, and it is restricted to rows already in the trash.
 
 What is left at the root is what belongs to no single feature:
 
-| Module        | Holds                                                                                          |
-| ------------- | ---------------------------------------------------------------------------------------------- |
-| `error.rs`    | `ValidationError`, `StorageError`, and the `AppError` that crosses the bridge                  |
-| `db.rs`       | the connection and its `Mutex`, `open`/`open_in_memory`, plus `db::schema` and `db::migration` |
-| `db::iso8601` | the stored-instant format — millisecond-exact, because the canvas sorts on a TEXT column       |
-| `desktop.rs`  | tray and global shortcuts, including the `sync_tray` command that feeds the tray its labels    |
-| `app_info.rs` | what the application says about itself, read from `Cargo.toml` at compile time by `build.rs`   |
+| Module        | Holds                                                                                             |
+| ------------- | ------------------------------------------------------------------------------------------------- |
+| `error.rs`    | `ValidationError`, `StorageError`, and the `AppError` that crosses the bridge                     |
+| `db.rs`       | the connection and its `Mutex`, `open`/`open_in_memory`, plus `db::schema` and `db::migration`    |
+| `db::iso8601` | the stored-instant format — millisecond-exact, because the canvas sorts on a TEXT column          |
+| `desktop.rs`  | tray and global shortcuts, including the `sync_tray` command that feeds the tray its labels       |
+| `app_info.rs` | what the application says about itself, read from `Cargo.toml` at compile time by `build.rs`      |
+| `name.rs`     | what a space and a folder share about their names: trimmed, never blank, unique whatever the case |
 
 This replaces an earlier split into three technical layers (`commands/ → domain/ ← storage/`),
 which cost three files and three modules per subject and a `check-layers.sh` script in CI to
@@ -3074,7 +3075,14 @@ installed or shipped alongside the executable. The database file lives in Tauri'
   `&mut SqliteConnection`; the `#[tauri::command]`s sit on top. That is what makes persistence
   testable against `SqliteConnection::establish(":memory:")` without launching Tauri. A store
   holds **no business rule** — it reads and writes the model defined in its sibling
-  `model.rs`, which it depends on.
+  `model.rs`, which it depends on. What a write needs decided is asked of the model:
+  `revision::worth_keeping` for a kept body, `Note::normalized` for an imported note,
+  `NotesQuery::selected_tags` for a query, `name::is_taken` for a duplicate name. No
+  `store.rs` calls a `normalize_*` function.
+- **One row type per table, opened in one place.** `NoteRow`, `SpaceRow` and `FolderRow`
+  each carry an `open(vault)`, and a write that answers the entity reads it back with the
+  same `find` — which is also what answers an id that matched nothing, so no store checks
+  `exists` before updating.
 - **`db/schema.rs` is the typed mirror of the schema**, written by hand rather than
   produced by `diesel print-schema`, which would make `cargo check` depend on an up-to-date
   database sitting outside the repository. What it deliberately does not model — `CHECK`

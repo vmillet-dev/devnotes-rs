@@ -172,6 +172,11 @@ pub enum NoteSectionKey {
 }
 
 impl NotesQuery {
+    /// The same normalisation as on write, or a typed `#urgent` misses `urgent`.
+    pub(crate) fn selected_tags(&self) -> Vec<String> {
+        model::normalize_tags(&self.tags)
+    }
+
     /// Not inside an opened folder: every card would name the folder the breadcrumb
     /// already names.
     pub fn shows_folder_chips(&self) -> bool {

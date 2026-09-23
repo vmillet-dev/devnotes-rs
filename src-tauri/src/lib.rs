@@ -19,6 +19,7 @@ pub(crate) mod app_info;
 pub(crate) mod closed_enum;
 pub(crate) mod count;
 pub(crate) mod layout;
+pub(crate) mod name;
 
 use tauri::Manager;
 use tauri_plugin_window_state::StateFlags;

@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 
 use crate::error::ValidationError;
+use crate::name;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
@@ -24,18 +25,8 @@ pub struct SpaceDraft {
 }
 
 impl SpaceDraft {
-    /// ⚠️ Trimming is not cosmetic: `COLLATE NOCASE` does not collapse spaces, so
-    /// "Personal" and " Personal " would coexist, identical on screen.
     pub fn validated_name(&self) -> Result<String, ValidationError> {
-        let trimmed = self.name.trim();
-        if trimmed.is_empty() {
-            return Err(ValidationError::new(
-                "name",
-                "a space must have a readable name",
-            ));
-        }
-
-        Ok(trimmed.to_string())
+        name::readable(&self.name, "space")
     }
 }
 
@@ -65,14 +56,6 @@ mod tests {
     #[test]
     fn a_name_is_trimmed_before_being_stored() {
         assert_eq!(draft("  Personal  ").validated_name().unwrap(), "Personal");
-    }
-
-    #[test]
-    fn a_blank_name_is_refused_with_its_field() {
-        for blank in ["", "   ", "\t\n"] {
-            let error = draft(blank).validated_name().unwrap_err();
-            assert_eq!(error.field, "name");
-        }
     }
 
     #[test]
