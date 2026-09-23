@@ -18,18 +18,13 @@ use tauri::{AppHandle, State};
 use uuid::Uuid;
 
 use crate::db::{Db, lock};
-use crate::error::{AppError, StorageError};
-use crate::vault::key::Vault;
+use crate::error::{AppError, FileContext, StorageError};
 use model::Attachment;
-
-fn file_error(context: &str, error: &std::io::Error) -> StorageError {
-    StorageError::File(format!("{context}: {error}"))
-}
 
 /// Created on demand, so an installation that never attached anything has none.
 pub(crate) fn directory(app: &AppHandle) -> Result<PathBuf, StorageError> {
     let path = crate::libraries::open_directory(app)?.join(crate::layout::ATTACHMENTS);
-    std::fs::create_dir_all(&path).map_err(|error| file_error("attachments directory", &error))?;
+    std::fs::create_dir_all(&path).context("attachments directory")?;
 
     Ok(path)
 }
@@ -46,23 +41,52 @@ pub(crate) fn remove_files(directory: &Path, stored_names: &[String]) {
     }
 }
 
-/// ⚠️ The limit is enforced by the copy itself: reading `metadata().len()` first leaves
-/// the two free to disagree, and a file growing between them lands whole.
-/// ⚠️ The limit is still enforced by the read rather than by `metadata`: a file growing
-/// between the two would land whole, whatever the limit said. What changed is that the
-/// bytes are sealed before they touch the destination, so nothing readable is ever
-/// written — not even briefly.
-fn copy_within_limit(vault: &Vault, source: &str, destination: &Path) -> Result<u32, AppError> {
-    let mut reader = std::fs::File::open(source).map_err(|error| file_error(source, &error))?;
+/// ⚠️ The limit is enforced by the read rather than by `metadata`: a file growing between
+/// the two would land whole, whatever the limit said. One byte past it is enough to refuse.
+fn read_within_limit(source: &str) -> Result<Vec<u8>, StorageError> {
+    let reader = std::fs::File::open(source).context(source)?;
 
-    let mut plain = Vec::new();
-    std::io::copy(&mut reader.by_ref().take(model::MAX_BYTES + 1), &mut plain)
-        .map_err(|error| file_error(source, &error))?;
+    let mut bytes = Vec::new();
+    std::io::copy(&mut reader.take(model::MAX_BYTES + 1), &mut bytes).context(source)?;
 
-    let size = model::validate_size(plain.len() as u64)?;
-    sealed::write_sealed(vault, destination, &plain)?;
+    Ok(bytes)
+}
 
-    Ok(size)
+fn new_attachment(note_id: String, file_name: String, byte_size: u32) -> Attachment {
+    Attachment {
+        id: Uuid::new_v4().to_string(),
+        note_id,
+        mime_type: model::mime_of(&file_name),
+        file_name,
+        byte_size,
+        created_at: Utc::now(),
+    }
+}
+
+/// Seals `bytes` beside the library, then records them.
+///
+/// ⚠️ The file before the record, and the file removed again when the record cannot be
+/// written: a record without a file shows a broken thumbnail, where a file without a record
+/// is swept at startup. Sealed on the way in, so nothing readable is ever written.
+fn store_new(
+    attachment: &Attachment,
+    bytes: &[u8],
+    app: &AppHandle,
+    db: &Db,
+) -> Result<(), StorageError> {
+    let directory = directory(app)?;
+    let destination = directory.join(attachment.stored_name());
+
+    let mut connection = lock(db)?;
+    let (db, vault) = connection.split();
+
+    let stored = sealed::write_sealed(vault, &destination, bytes)
+        .and_then(|_| store::create(db, vault, attachment));
+    if stored.is_err() {
+        remove_files(&directory, &[attachment.stored_name()]);
+    }
+
+    stored
 }
 
 #[tauri::command(async)]
@@ -74,43 +98,21 @@ pub fn attach_file(
     db: State<'_, Db>,
 ) -> Result<Attachment, AppError> {
     let file_name = model::display_name(&path)?;
-
-    let mut attachment = Attachment {
-        id: Uuid::new_v4().to_string(),
+    let bytes = read_within_limit(&path)?;
+    let attachment = new_attachment(
         note_id,
-        mime_type: model::mime_of(&file_name),
         file_name,
-        byte_size: 0,
-        created_at: Utc::now(),
-    };
+        model::validate_size(bytes.len() as u64)?,
+    );
 
-    let directory = directory(&app)?;
-    let destination = directory.join(attachment.stored_name());
-
-    let mut connection = lock(&db)?;
-    let (db, vault) = connection.split();
-
-    // ⚠️ Seal and copy before the database write: a record without a file shows a broken
-    // thumbnail, where a file without a record is swept at startup.
-    match copy_within_limit(vault, &path, &destination) {
-        Ok(byte_size) => attachment.byte_size = byte_size,
-        Err(error) => {
-            remove_files(&directory, &[attachment.stored_name()]);
-            return Err(error);
-        }
-    }
-
-    if let Err(error) = store::create(db, vault, &attachment) {
-        remove_files(&directory, &[attachment.stored_name()]);
-        return Err(error.into());
-    }
+    store_new(&attachment, &bytes, &app, &db)?;
 
     Ok(attachment)
 }
 
 /// ⚠️ Checks the record exists first: opening a file nothing refers to would be a leak
 /// out of the directory.
-fn locate(id: &str, app: &AppHandle, db: &Db) -> Result<PathBuf, AppError> {
+fn locate(id: &str, app: &AppHandle, db: &Db) -> Result<PathBuf, StorageError> {
     let stored_name = {
         let mut connection = lock(db)?;
         store::find(&mut connection, id)?
@@ -119,42 +121,6 @@ fn locate(id: &str, app: &AppHandle, db: &Db) -> Result<PathBuf, AppError> {
     };
 
     Ok(directory(app)?.join(stored_name))
-}
-
-fn write_attachment(
-    note_id: String,
-    file_name: String,
-    bytes: Vec<u8>,
-    app: &AppHandle,
-    db: &Db,
-) -> Result<Attachment, AppError> {
-    let byte_size = model::validate_size(bytes.len() as u64)?;
-
-    let attachment = Attachment {
-        id: Uuid::new_v4().to_string(),
-        note_id,
-        mime_type: model::mime_of(&file_name),
-        file_name,
-        byte_size,
-        created_at: Utc::now(),
-    };
-
-    let directory = directory(app)?;
-    let destination = directory.join(attachment.stored_name());
-
-    let mut connection = lock(db)?;
-    let (db, vault) = connection.split();
-
-    // Sealed on the way in, like a copied file: a pasted screenshot of a credentials page
-    // has no business being the one attachment left readable.
-    sealed::write_sealed(vault, &destination, &bytes)?;
-
-    if let Err(error) = store::create(db, vault, &attachment) {
-        remove_files(&directory, &[attachment.stored_name()]);
-        return Err(error.into());
-    }
-
-    Ok(attachment)
 }
 
 #[tauri::command(async)]
@@ -212,17 +178,16 @@ pub fn open_attachment(id: String, app: AppHandle, db: State<'_, Db>) -> Result<
     };
 
     let directory = sealed::plaintext_directory(&app)?;
-    std::fs::create_dir_all(&directory)
-        .map_err(|error| file_error("a directory for decrypted copies", &error))?;
+    std::fs::create_dir_all(&directory).context("a directory for decrypted copies")?;
 
     // Named after the record, not after what the user called it: two `capture.png` must
     // not overwrite each other here either.
     let copy = directory.join(attachment.stored_name());
-    std::fs::write(&copy, &bytes).map_err(|error| file_error(&attachment.file_name, &error))?;
+    std::fs::write(&copy, &bytes).context(attachment.file_name)?;
 
     tauri_plugin_opener::OpenerExt::opener(&app)
         .open_path(copy.to_string_lossy(), None::<&str>)
-        .map_err(|error| StorageError::File(format!("open: {error}")))?;
+        .context("open")?;
 
     Ok(())
 }
@@ -244,7 +209,7 @@ pub fn save_attachment(
 
     // In the clear, where the user chose: that is what "save as" means, and it is an
     // explicit gesture rather than something the application does behind them.
-    std::fs::write(&path, &bytes).map_err(|error| file_error(&path, &error))?;
+    std::fs::write(&path, &bytes).context(path)?;
 
     Ok(())
 }
@@ -260,11 +225,18 @@ pub fn attach_clipboard_image(
 ) -> Result<Attachment, AppError> {
     let image = tauri_plugin_clipboard_manager::ClipboardExt::clipboard(&app)
         .read_image()
-        .map_err(|error| StorageError::File(format!("clipboard image: {error}")))?;
+        .context("clipboard image")?;
 
     let png = model::encode_png(image.width(), image.height(), image.rgba())?;
+    let attachment = new_attachment(
+        note_id,
+        model::png_name(&file_name),
+        model::validate_size(png.len() as u64)?,
+    );
 
-    write_attachment(note_id, model::png_name(&file_name), png, &app, &db)
+    store_new(&attachment, &png, &app, &db)?;
+
+    Ok(attachment)
 }
 
 #[tauri::command(async)]
@@ -294,8 +266,7 @@ pub fn sweep_orphan_files(app: &AppHandle, db: &Db) -> Result<usize, StorageErro
         store::all_stored_names(&mut connection)?
     };
 
-    let entries =
-        std::fs::read_dir(&directory).map_err(|error| file_error("attachments sweep", &error))?;
+    let entries = std::fs::read_dir(&directory).context("attachments sweep")?;
 
     let orphans: Vec<String> = entries
         .filter_map(Result::ok)
@@ -312,11 +283,6 @@ pub fn sweep_orphan_files(app: &AppHandle, db: &Db) -> Result<usize, StorageErro
 mod tests {
     use super::*;
 
-    fn test_vault() -> Vault {
-        crate::db::test_vault().expect("a key")
-    }
-    use crate::error::ErrorCode;
-
     fn scratch() -> PathBuf {
         let directory = std::env::temp_dir().join(format!("devnotes-{}", Uuid::new_v4()));
         std::fs::create_dir_all(&directory).unwrap();
@@ -325,67 +291,40 @@ mod tests {
     }
 
     #[test]
-    fn a_file_within_the_limit_is_copied_whole() {
+    fn a_file_within_the_limit_is_read_whole() {
         let directory = scratch();
         let source = directory.join("capture.png");
         std::fs::write(&source, vec![7u8; 2048]).unwrap();
-        let destination = directory.join("a-1.png");
 
-        let vault = test_vault();
-        let copied = copy_within_limit(&vault, &source.to_string_lossy(), &destination).unwrap();
+        let bytes = read_within_limit(&source.to_string_lossy()).unwrap();
 
-        // The size reported is the plaintext's: it is what the interface shows.
-        assert_eq!(copied, 2048);
-
-        let written = std::fs::read(&destination).unwrap();
-        assert!(written.len() > 2048, "the file carries a nonce and a tag");
-        assert_ne!(
-            written[..2048],
-            [7u8; 2048],
-            "and none of the bytes as given"
-        );
-        assert_eq!(
-            sealed::read_sealed(&vault, &destination).unwrap(),
-            vec![7u8; 2048]
-        );
+        assert_eq!(bytes, vec![7u8; 2048]);
         std::fs::remove_dir_all(&directory).ok();
     }
 
-    /// The limit is applied by the copy, so a file that grew past it is still refused.
+    /// The limit is applied by the read, so a file that grew past it is still refused — and
+    /// no more than one byte past it is ever held.
     #[test]
-    fn a_file_over_the_limit_is_refused_and_leaves_nothing_behind() {
+    fn a_file_over_the_limit_is_read_one_byte_past_it_and_refused() {
         let directory = scratch();
         let source = directory.join("huge.bin");
-        std::fs::write(
-            &source,
-            vec![0u8; usize::try_from(model::MAX_BYTES).unwrap() + 1],
-        )
-        .unwrap();
-        let destination = directory.join("a-1.bin");
+        let limit = usize::try_from(model::MAX_BYTES).unwrap();
+        std::fs::write(&source, vec![0u8; limit + 10]).unwrap();
 
-        let error =
-            copy_within_limit(&test_vault(), &source.to_string_lossy(), &destination).unwrap_err();
+        let bytes = read_within_limit(&source.to_string_lossy()).unwrap();
 
-        assert!(matches!(error.code, ErrorCode::InvalidInput));
+        assert_eq!(bytes.len(), limit + 1);
         assert_eq!(
-            error.params.get("field").map(String::as_str),
-            Some("byteSize")
+            model::validate_size(bytes.len() as u64).unwrap_err().field,
+            "byteSize"
         );
         std::fs::remove_dir_all(&directory).ok();
     }
 
     #[test]
     fn a_missing_source_is_reported_rather_than_panicking() {
-        let directory = scratch();
+        let error = read_within_limit("no-such-file.png").unwrap_err();
 
-        let error = copy_within_limit(
-            &test_vault(),
-            "no-such-file.png",
-            &directory.join("a-1.png"),
-        )
-        .unwrap_err();
-
-        assert!(matches!(error.code, ErrorCode::FileAccess));
-        std::fs::remove_dir_all(&directory).ok();
+        assert!(matches!(error, StorageError::File(_)), "{error}");
     }
 }

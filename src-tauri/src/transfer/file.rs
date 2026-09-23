@@ -25,7 +25,7 @@ use super::model::{Bundle, ExportReport, IncomingBundle};
 use super::protect::{self, Recipe};
 use crate::attachments::model::Attachment;
 use crate::count::saturating_u32;
-use crate::error::{AppError, StorageError};
+use crate::error::{FileContext, StorageError};
 use crate::vault::key::Vault;
 
 const BUNDLE_ENTRY: &str = "bundle.json";
@@ -43,10 +43,6 @@ const RECIPE_ENTRY: &str = "recipe.json";
 /// What a zip opens with. An export written before the archive existed is plain JSON and
 /// is still read: a new DevNotes reads an old file, an old DevNotes does not read a new one.
 const ZIP_MAGIC: [u8; 4] = [b'P', b'K', 0x03, 0x04];
-
-fn file_error(what: &str, error: &std::io::Error) -> StorageError {
-    StorageError::File(format!("{what}: {error}"))
-}
 
 fn zip_error(error: &zip::result::ZipError) -> StorageError {
     StorageError::File(error.to_string())
@@ -72,7 +68,7 @@ pub fn write(
     attachments: &Path,
     library: &Vault,
     passphrase: Option<&str>,
-) -> Result<ExportReport, AppError> {
+) -> Result<ExportReport, StorageError> {
     let json = serde_json::to_string_pretty(bundle)
         .map_err(|error| StorageError::File(error.to_string()))?;
 
@@ -90,13 +86,13 @@ pub fn write(
         Ok(stored) => stored,
         Err(error) => {
             let _ = std::fs::remove_file(&staged);
-            return Err(error.into());
+            return Err(error);
         }
     };
 
     if let Err(error) = std::fs::rename(&staged, path) {
         let _ = std::fs::remove_file(&staged);
-        return Err(StorageError::File(format!("{path}: {error}")).into());
+        return Err(StorageError::File(format!("{path}: {error}")));
     }
 
     Ok(ExportReport {
@@ -116,8 +112,7 @@ fn archive(
     library: &Vault,
     protection: Option<&(Vault, Recipe)>,
 ) -> Result<u32, StorageError> {
-    let target =
-        File::create(staged).map_err(|error| file_error(&staged.display().to_string(), &error))?;
+    let target = File::create(staged).context(staged.display().to_string())?;
     let mut writer = ZipWriter::new(target);
 
     // The recipe goes in first and in the clear: a reader has to know how to derive the
@@ -128,9 +123,7 @@ fn archive(
         writer
             .start_file(RECIPE_ENTRY, deflated())
             .map_err(|error| zip_error(&error))?;
-        writer
-            .write_all(written.as_bytes())
-            .map_err(|error| file_error(RECIPE_ENTRY, &error))?;
+        writer.write_all(written.as_bytes()).context(RECIPE_ENTRY)?;
     }
 
     if let Some((vault, _)) = protection {
@@ -139,14 +132,12 @@ fn archive(
             .map_err(|error| zip_error(&error))?;
         writer
             .write_all(&vault.seal_bytes(json.as_bytes())?)
-            .map_err(|error| file_error(SEALED_ENTRY, &error))?;
+            .context(SEALED_ENTRY)?;
     } else {
         writer
             .start_file(BUNDLE_ENTRY, deflated())
             .map_err(|error| zip_error(&error))?;
-        writer
-            .write_all(json.as_bytes())
-            .map_err(|error| file_error(BUNDLE_ENTRY, &error))?;
+        writer.write_all(json.as_bytes()).context(BUNDLE_ENTRY)?;
     }
 
     let mut stored = 0;
@@ -169,9 +160,7 @@ fn archive(
         writer
             .start_file(format!("{ATTACHMENTS_ENTRY}/{name}"), stored_as_is())
             .map_err(|error| zip_error(&error))?;
-        writer
-            .write_all(&bytes)
-            .map_err(|error| file_error(&name, &error))?;
+        writer.write_all(&bytes).context(name)?;
         stored += 1;
     }
 
@@ -185,9 +174,12 @@ fn archive(
 /// ⚠️ Answers [`StorageError::PassphraseRequired`] on a protected file offered without
 /// one: nothing can tell a protected archive from an ordinary one until it has looked
 /// inside, so looking is this function's job rather than the interface's.
-pub fn read(path: &str, passphrase: Option<&str>) -> Result<(IncomingBundle, Payload), AppError> {
+pub fn read(
+    path: &str,
+    passphrase: Option<&str>,
+) -> Result<(IncomingBundle, Payload), StorageError> {
     let Some(mut archive) = open_archive(path)? else {
-        let json = std::fs::read_to_string(path).map_err(|error| file_error(path, &error))?;
+        let json = std::fs::read_to_string(path).context(path)?;
         return Ok((super::model::read_bundle(&json)?, Payload::Empty));
     };
 
@@ -206,7 +198,7 @@ pub fn read(path: &str, passphrase: Option<&str>) -> Result<(IncomingBundle, Pay
     };
 
     let Some(passphrase) = passphrase else {
-        return Err(StorageError::PassphraseRequired.into());
+        return Err(StorageError::PassphraseRequired);
     };
 
     let vault = protect::open_with(passphrase, &recipe)?;
@@ -234,7 +226,7 @@ pub fn read(path: &str, passphrase: Option<&str>) -> Result<(IncomingBundle, Pay
 /// ⚠️ The recipe and nothing else. Answering this through [`read`] would parse the whole
 /// bundle — a hundred megabytes on a large library — and then throw it away, for the import
 /// to parse it again a moment later.
-pub fn is_protected(path: &str) -> Result<bool, AppError> {
+pub fn is_protected(path: &str) -> Result<bool, StorageError> {
     let Some(mut archive) = open_archive(path)? else {
         return Ok(false);
     };
@@ -244,13 +236,12 @@ pub fn is_protected(path: &str) -> Result<bool, AppError> {
 
 /// `None` for a file that is not a zip: a `.json` export written before the archive, which
 /// carries no attachments and cannot be protected.
-fn open_archive(path: &str) -> Result<Option<ZipArchive<File>>, AppError> {
-    let mut file = File::open(path).map_err(|error| file_error(path, &error))?;
+fn open_archive(path: &str) -> Result<Option<ZipArchive<File>>, StorageError> {
+    let mut file = File::open(path).context(path)?;
 
     let mut magic = [0u8; 4];
     let zipped = file.read_exact(&mut magic).is_ok() && magic == ZIP_MAGIC;
-    file.seek(SeekFrom::Start(0))
-        .map_err(|error| file_error(path, &error))?;
+    file.seek(SeekFrom::Start(0)).context(path)?;
 
     if !zipped {
         return Ok(None);
@@ -279,9 +270,7 @@ fn entry(archive: &mut ZipArchive<File>, name: &str) -> Result<Vec<u8>, StorageE
         .map_err(|_| StorageError::ImportFormat(format!("no {name} in the archive")))?;
 
     let mut bytes = Vec::new();
-    entry
-        .read_to_end(&mut bytes)
-        .map_err(|error| file_error(name, &error))?;
+    entry.read_to_end(&mut bytes).context(name)?;
 
     Ok(bytes)
 }
@@ -487,7 +476,7 @@ mod tests {
         )
         .unwrap_err();
 
-        assert!(matches!(error.code, crate::error::ErrorCode::FileAccess));
+        assert!(matches!(error, StorageError::File(_)), "{error}");
         std::fs::remove_dir_all(&directory).ok();
     }
 
@@ -657,7 +646,7 @@ mod tests {
         .unwrap();
 
         let error = read(&target.to_string_lossy(), None).unwrap_err();
-        assert_eq!(error.code, crate::error::ErrorCode::PassphraseRequired);
+        assert!(matches!(error, StorageError::PassphraseRequired), "{error}");
         assert!(is_protected(&target.to_string_lossy()).unwrap());
 
         std::fs::remove_dir_all(&directory).ok();
@@ -679,7 +668,7 @@ mod tests {
 
         let error = read(&target.to_string_lossy(), Some("the wrong one")).unwrap_err();
 
-        assert_eq!(error.code, crate::error::ErrorCode::WrongPassphrase);
+        assert!(matches!(error, StorageError::WrongPassphrase), "{error}");
         std::fs::remove_dir_all(&directory).ok();
     }
 

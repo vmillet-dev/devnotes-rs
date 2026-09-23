@@ -19,7 +19,7 @@ use zeroize::{Zeroize, Zeroizing};
 
 use crate::count::saturating_u32;
 use crate::db::{self, Db};
-use crate::error::{AppError, StorageError, ValidationError};
+use crate::error::{AppError, FileContext, StorageError, ValidationError};
 use key::Cost;
 
 /// Short enough to be typed at every launch, long enough to be worth deriving from.
@@ -69,28 +69,18 @@ pub fn vault_state(app: AppHandle, db: State<'_, Db>) -> Result<VaultState, AppE
 /// replacing it: that file is the only way into the notes beside it.
 #[tauri::command(async)]
 #[specta::specta]
-pub fn create_vault(
-    mut passphrase: String,
-    app: AppHandle,
-    db: State<'_, Db>,
-) -> Result<(), AppError> {
-    // ⚠️ Wiped before this returns, whatever it returns. The string arrives owned from the
-    // IPC payload, so this is the last reference to it — and a passphrase left in freed
-    // memory is a passphrase in a crash dump.
-    let result = create_with(&passphrase, &app, &db);
-    passphrase.zeroize();
+pub fn create_vault(passphrase: String, app: AppHandle, db: State<'_, Db>) -> Result<(), AppError> {
+    let passphrase = secret(passphrase);
+    validate(&passphrase)?;
 
-    result
+    Ok(create(&passphrase, &app, &db)?)
 }
 
-fn create_with(passphrase: &str, app: &AppHandle, db: &State<'_, Db>) -> Result<(), AppError> {
-    validate(passphrase)?;
-
+fn create(passphrase: &str, app: &AppHandle, db: &Db) -> Result<(), StorageError> {
     let directory = crate::libraries::open_directory(app)?;
     // ⚠️ The directory, not just the cause: this is the first thing a full disk or a
     // permissions problem reaches, and the user has never opened that folder.
-    std::fs::create_dir_all(&directory)
-        .map_err(|error| storage_msg(&format!("{}: {error}", directory.display())))?;
+    std::fs::create_dir_all(&directory).context(directory.display())?;
     refuse_a_database_without_its_key(&directory)?;
 
     let vault = file::create(&directory, passphrase, Cost::default())?;
@@ -121,19 +111,11 @@ fn refuse_a_database_without_its_key(directory: &Path) -> Result<(), StorageErro
 /// main thread would freeze the window over every attempt.
 #[tauri::command(async)]
 #[specta::specta]
-pub fn unlock_vault(
-    mut passphrase: String,
-    app: AppHandle,
-    db: State<'_, Db>,
-) -> Result<(), AppError> {
-    // ⚠️ Wiped before this returns, whatever it returns — see `create_vault`.
-    let result = unlock_with(&passphrase, &app, &db);
-    passphrase.zeroize();
-
-    result
+pub fn unlock_vault(passphrase: String, app: AppHandle, db: State<'_, Db>) -> Result<(), AppError> {
+    Ok(unlock(&secret(passphrase), &app, &db)?)
 }
 
-fn unlock_with(passphrase: &str, app: &AppHandle, db: &State<'_, Db>) -> Result<(), AppError> {
+fn unlock(passphrase: &str, app: &AppHandle, db: &Db) -> Result<(), StorageError> {
     let directory = crate::libraries::open_directory(app)?;
     let vault = file::unlock(&directory, passphrase)?;
 
@@ -162,32 +144,28 @@ pub struct PassphraseChange {
 #[tauri::command(async)]
 #[specta::specta]
 pub fn change_passphrase(
-    mut current: String,
-    mut next: String,
+    current: String,
+    next: String,
     app: AppHandle,
     db: State<'_, Db>,
 ) -> Result<PassphraseChange, AppError> {
-    // ⚠️ Wiped before this returns, whatever it returns — see `create_vault`.
-    let result = change_with(&current, &next, &app, &db);
-    current.zeroize();
-    next.zeroize();
+    let (current, next) = (secret(current), secret(next));
+    validate(&next)?;
 
-    result
+    Ok(change(&current, &next, &app, &db)?)
 }
 
-fn change_with(
+fn change(
     current: &str,
     next: &str,
     app: &AppHandle,
-    db: &State<'_, Db>,
-) -> Result<PassphraseChange, AppError> {
-    validate(next)?;
-
+    db: &Db,
+) -> Result<PassphraseChange, StorageError> {
     // ⚠️ Asked and released rather than held: the derivations below cost tens of
     // milliseconds each, and keeping the connection for them would freeze every other
     // command.
     if db.lock().map_err(|_| StorageError::Unavailable)?.is_none() {
-        return Err(StorageError::Locked.into());
+        return Err(StorageError::Locked);
     }
 
     let directory = crate::libraries::open_directory(app)?;
@@ -205,7 +183,7 @@ fn change_with(
 
 /// Opens the library under the key and hands it to the rest of the application. The
 /// sweeps are the caller's to run, because a first launch has to seal what is there first.
-fn open_library(app: &AppHandle, db: &State<'_, Db>, vault: key::Vault) -> Result<(), AppError> {
+fn open_library(app: &AppHandle, db: &Db, vault: key::Vault) -> Result<(), StorageError> {
     let directory = crate::libraries::open_directory(app)?;
     let library = db::open(&directory.join(crate::layout::DATABASE), vault)?;
 
@@ -232,10 +210,6 @@ fn validate(passphrase: &str) -> Result<(), ValidationError> {
     }
 
     Ok(())
-}
-
-fn storage_msg(detail: &str) -> StorageError {
-    StorageError::Vault(detail.to_string())
 }
 
 #[cfg(test)]

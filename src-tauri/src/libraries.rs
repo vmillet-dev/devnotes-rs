@@ -27,7 +27,7 @@ use specta::Type;
 use tauri::{AppHandle, Manager, State};
 
 use crate::db::Db;
-use crate::error::{AppError, StorageError};
+use crate::error::{AppError, FileContext, StorageError};
 use crate::layout::{DATABASE, KEY_FILE, LIBRARIES, LIBRARY_DIRECTORIES, LIBRARY_FILES, REGISTRY};
 
 /// One library, as the interface lists it.
@@ -66,9 +66,7 @@ impl Registry {
 }
 
 fn profile(app: &AppHandle) -> Result<PathBuf, StorageError> {
-    app.path()
-        .app_data_dir()
-        .map_err(|error| StorageError::File(format!("app_data_dir: {error}")))
+    app.path().app_data_dir().context("app_data_dir")
 }
 
 fn directory_of(profile: &Path, entry: &LibraryEntry) -> PathBuf {
@@ -116,13 +114,10 @@ fn read(profile: &Path) -> Registry {
 fn write(profile: &Path, registry: &Registry) -> Result<(), StorageError> {
     let target = profile.join(REGISTRY);
     let staged = profile.join(format!("{REGISTRY}.writing"));
-    let raw = serde_json::to_string_pretty(registry)
-        .map_err(|error| StorageError::File(format!("{REGISTRY}: {error}")))?;
+    let raw = serde_json::to_string_pretty(registry).context(REGISTRY)?;
 
-    std::fs::write(&staged, raw)
-        .map_err(|error| StorageError::File(format!("{}: {error}", staged.display())))?;
-    std::fs::rename(&staged, &target)
-        .map_err(|error| StorageError::File(format!("{}: {error}", target.display())))?;
+    std::fs::write(&staged, raw).context(staged.display())?;
+    std::fs::rename(&staged, &target).context(target.display())?;
 
     Ok(())
 }
@@ -185,8 +180,7 @@ fn open_directory_in(profile: &Path) -> Result<PathBuf, StorageError> {
     };
 
     let directory = directory_of(profile, entry);
-    std::fs::create_dir_all(&directory)
-        .map_err(|error| StorageError::File(format!("{}: {error}", directory.display())))?;
+    std::fs::create_dir_all(&directory).context(directory.display())?;
 
     Ok(directory)
 }
@@ -210,8 +204,7 @@ fn create_in(profile: &Path, name: &str) -> Result<LibraryEntry, StorageError> {
     let entry = fresh(name.trim().to_string());
 
     let directory = directory_of(profile, &entry);
-    std::fs::create_dir_all(&directory)
-        .map_err(|error| StorageError::File(format!("{}: {error}", directory.display())))?;
+    std::fs::create_dir_all(&directory).context(directory.display())?;
 
     registry.libraries.push(entry.clone());
     write(profile, &registry)?;
@@ -270,8 +263,7 @@ fn delete_in(profile: &Path, id: &str) -> Result<(), StorageError> {
     }
     write(profile, &registry)?;
 
-    std::fs::remove_dir_all(directory_of(profile, &entry))
-        .map_err(|error| StorageError::File(format!("{id}: {error}")))
+    std::fs::remove_dir_all(directory_of(profile, &entry)).context(id)
 }
 
 /// The libraries, and which one is open.

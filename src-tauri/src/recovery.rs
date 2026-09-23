@@ -15,7 +15,7 @@ use diesel::sql_types::Text;
 use tauri::{AppHandle, State};
 
 use crate::db::Db;
-use crate::error::{AppError, StorageError};
+use crate::error::{AppError, FileContext, StorageError};
 use crate::layout::{self, ARCHIVED, ATTACHMENTS, DAMAGED, DATABASE, DATABASE_SIDECARS, KEY_FILE};
 
 /// Why a library is being set aside, which is what decides what travels with it.
@@ -81,16 +81,14 @@ pub(crate) fn set_aside(
     }
 
     let target = directory.join(reason.directory()).join(layout::stamp(now));
-    std::fs::create_dir_all(&target)
-        .map_err(|error| StorageError::File(format!("{}: {error}", target.display())))?;
+    std::fs::create_dir_all(&target).context(target.display())?;
 
     if reason == Reason::Damaged {
         // Before the move, while the file is still where SQLite expects its sidecars.
         rescue(&database, &target);
     }
 
-    std::fs::rename(&database, target.join(DATABASE))
-        .map_err(|error| StorageError::File(format!("{}: {error}", database.display())))?;
+    std::fs::rename(&database, target.join(DATABASE)).context(database.display())?;
 
     for sidecar in DATABASE_SIDECARS {
         // Absent is the ordinary case: a clean shutdown leaves neither.
@@ -98,14 +96,12 @@ pub(crate) fn set_aside(
     }
 
     if reason == Reason::Forgotten {
-        std::fs::rename(directory.join(KEY_FILE), target.join(KEY_FILE))
-            .map_err(|error| StorageError::File(format!("{KEY_FILE}: {error}")))?;
+        std::fs::rename(directory.join(KEY_FILE), target.join(KEY_FILE)).context(KEY_FILE)?;
     }
 
     let attachments = directory.join(ATTACHMENTS);
     if attachments.is_dir() {
-        std::fs::rename(&attachments, target.join(ATTACHMENTS))
-            .map_err(|error| StorageError::File(format!("{}: {error}", attachments.display())))?;
+        std::fs::rename(&attachments, target.join(ATTACHMENTS)).context(attachments.display())?;
     }
 
     Ok(target)
@@ -118,9 +114,9 @@ fn set_aside_closed(
     app: &AppHandle,
     db: &State<'_, Db>,
     reason: Reason,
-) -> Result<String, AppError> {
+) -> Result<String, StorageError> {
     if db.lock().map_err(|_| StorageError::Unavailable)?.is_some() {
-        return Err(StorageError::File("the library is open".to_string()).into());
+        return Err(StorageError::File("the library is open".to_string()));
     }
 
     let directory = crate::libraries::open_directory(app)?;
@@ -137,7 +133,7 @@ fn set_aside_closed(
 #[tauri::command(async)]
 #[specta::specta]
 pub fn set_aside_damaged_library(app: AppHandle, db: State<'_, Db>) -> Result<String, AppError> {
-    set_aside_closed(&app, &db, Reason::Damaged)
+    Ok(set_aside_closed(&app, &db, Reason::Damaged)?)
 }
 
 /// Archives a library whose passphrase was forgotten, so a fresh one can be started.
@@ -149,7 +145,7 @@ pub fn set_aside_damaged_library(app: AppHandle, db: State<'_, Db>) -> Result<St
 #[tauri::command(async)]
 #[specta::specta]
 pub fn archive_locked_library(app: AppHandle, db: State<'_, Db>) -> Result<String, AppError> {
-    set_aside_closed(&app, &db, Reason::Forgotten)
+    Ok(set_aside_closed(&app, &db, Reason::Forgotten)?)
 }
 
 #[cfg(test)]

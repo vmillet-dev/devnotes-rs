@@ -31,13 +31,13 @@ pub fn export_notes(
     let notes = notes::all(&mut connection, space_id.as_deref())?;
     let exported = bundle::collect(&mut connection, notes)?;
 
-    file::write(
+    Ok(file::write(
         &path,
         &exported,
         &attachments::directory(&app)?,
         connection.vault(),
         passphrase.as_deref(),
-    )
+    )?)
 }
 
 #[tauri::command(async)]
@@ -56,13 +56,13 @@ pub fn export_selection(
     let notes = notes::by_ids(&mut connection, &ids)?;
     let exported = bundle::collect(&mut connection, notes)?;
 
-    file::write(
+    Ok(file::write(
         &path,
         &exported,
         &attachments::directory(&app)?,
         connection.vault(),
         passphrase.as_deref(),
-    )
+    )?)
 }
 
 /// ⚠️ The file is read before the lock is taken: parsing a large export while holding the
@@ -96,7 +96,7 @@ pub fn import_notes(
 pub fn export_is_protected(path: String) -> Result<bool, AppError> {
     model::validate_path(&path)?;
 
-    file::is_protected(&path)
+    Ok(file::is_protected(&path)?)
 }
 
 /// Nothing is sent anywhere: "share" stops at the clipboard.

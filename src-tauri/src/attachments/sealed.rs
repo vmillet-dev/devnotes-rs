@@ -9,20 +9,18 @@ use std::path::{Path, PathBuf};
 
 use tauri::{AppHandle, Manager};
 
-use crate::error::StorageError;
+use crate::error::{FileContext, StorageError};
 use crate::vault::key::Vault;
 
 pub fn seal_into(vault: &Vault, source: &Path, destination: &Path) -> Result<u64, StorageError> {
-    let plain = std::fs::read(source)
-        .map_err(|error| StorageError::File(format!("{}: {error}", source.display())))?;
+    let plain = std::fs::read(source).context(source.display())?;
 
     write_sealed(vault, destination, &plain)
 }
 
 pub fn write_sealed(vault: &Vault, destination: &Path, bytes: &[u8]) -> Result<u64, StorageError> {
     let sealed = vault.seal_bytes(bytes)?;
-    std::fs::write(destination, &sealed)
-        .map_err(|error| StorageError::File(format!("{}: {error}", destination.display())))?;
+    std::fs::write(destination, &sealed).context(destination.display())?;
 
     // ⚠️ The plaintext length, not the file's: the record is what the interface shows, and
     // a size inflated by the nonce and the tag would be a lie the user could measure.
@@ -30,8 +28,7 @@ pub fn write_sealed(vault: &Vault, destination: &Path, bytes: &[u8]) -> Result<u
 }
 
 pub fn read_sealed(vault: &Vault, path: &Path) -> Result<Vec<u8>, StorageError> {
-    let sealed = std::fs::read(path)
-        .map_err(|error| StorageError::File(format!("{}: {error}", path.display())))?;
+    let sealed = std::fs::read(path).context(path.display())?;
 
     vault.open_bytes(&sealed)
 }
@@ -51,7 +48,7 @@ pub fn plaintext_directory(app: &AppHandle) -> Result<PathBuf, StorageError> {
     Ok(app
         .path()
         .app_data_dir()
-        .map_err(|error| StorageError::File(format!("app_data_dir: {error}")))?
+        .context("app_data_dir")?
         .join(crate::layout::PLAINTEXT_COPIES))
 }
 
