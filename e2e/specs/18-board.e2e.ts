@@ -272,7 +272,7 @@ describe('The board', () => {
 
           // Far right, far down and the far corner — clear of the scrollbars and of the
           // tidy control floating in the bottom-right.
-          const points = [
+          const points: [number, number][] = [
             [ground.left + ground.width * 0.92, ground.top + ground.height * 0.4],
             [ground.left + ground.width * 0.4, ground.top + ground.height * 0.92],
             [ground.left + ground.width * 0.7, ground.top + ground.height * 0.8],

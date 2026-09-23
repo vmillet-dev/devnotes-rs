@@ -62,7 +62,7 @@ describe('The history of a note', () => {
 
     expect(await rows().length).toBe(1);
     // The stamp of a size, which no translation touches: "select 1" is eight characters.
-    expect(await rows()[0].getText()).toContain('8');
+    expect(await rows()[0]!.getText()).toContain('8');
   });
 
   /** A → B → C: "select 1", then "select 2", now "select 3" on screen. */
@@ -86,7 +86,7 @@ describe('The history of a note', () => {
    * — and the preview shows what would change, which a date and a size never did (#325).
    */
   it('opens a preview on a click, showing what going back would change', async () => {
-    await $$(testid('revision-open'))[0].click();
+    await $$(testid('revision-open'))[0]!.click();
 
     const diff = await eventually(
       () => $(testid('revision-diff')).getText(),
@@ -118,7 +118,7 @@ describe('The history of a note', () => {
         'the history to keep only what came before',
       ),
     ).toBe(1);
-    expect(await rows()[0].getText()).toContain('8');
+    expect(await rows()[0]!.getText()).toContain('8');
 
     await editor.close();
   });

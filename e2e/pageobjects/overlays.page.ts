@@ -75,7 +75,7 @@ export const palette = {
   titles: (): Promise<string[]> => readEach(testid('palette-option'), 'text'),
 
   /** A click on the row opens the note; the ⧉ beside it is the paste path. */
-  openRow: (index = 0) => $$(testid('palette-open'))[index],
+  openRow: (index = 0) => $$(testid('palette-open'))[index]!,
   copyRow: (index = 0) => $$(testid('palette-copy'))[index],
 
   /** Which row is current, read the way assistive technology reads it. */
