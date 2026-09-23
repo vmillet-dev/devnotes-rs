@@ -194,9 +194,6 @@ export class NoteCardComponent {
 
   protected readonly hasPlaceholders = computed(() => this.note().placeholders.length > 0);
 
-  /** Without either, a todo list has no band to draw and the title starts at the top. */
-  protected readonly hasMarks = computed(() => this.hasPlaceholders() || this.note().attachmentCount > 0);
-
   /** The back end decides what to show; the dated variants are formatted here so they age. */
   protected readonly footerLabel = computed<FooterLabel>(() => {
     const footer = this.note().footer;

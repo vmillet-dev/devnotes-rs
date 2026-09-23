@@ -143,7 +143,6 @@
     "dropHere": "Drop here",
     "nameTheZone": "Name this folder",
     "nameTheZoneHint": "The colour is assigned; change it from the folder menu.",
-    "dragHint": "Dragging a note into a zone files it; dropping it on the background takes it out.",
     "align": "Align",
     "alignHint": "Aligns {cards, plural, =0 {no loose card} one {# loose card} other {# loose cards}} under the folders, leaving those alone.",
     "tidyMoreLabel": "Other arrangements",
@@ -372,7 +371,6 @@
     "empty": "No snippet matches.",
     "hint": "↑↓ or Tab to move · Enter or click to open · Ctrl+C copy · Esc close",
     "copyLabel": "Copy “{{title}}”",
-    "close": "Close the palette",
     "createNote": "+ Create a note “{{query}}”",
     "copiedTitle": "Copied",
     "copiedNote": "“{{title}}” is on the clipboard",
@@ -540,7 +538,6 @@
       "showPinnedFirst": "Show pinned first"
     },
     "security": {
-      "title": "Security",
       "passphrase": "Passphrase",
       "change": "Change…",
       "changing": "Changing…",

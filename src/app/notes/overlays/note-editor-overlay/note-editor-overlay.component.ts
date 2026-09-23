@@ -13,7 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { FALLBACK_LANGUAGE, LANGUAGE_LABELS, LanguageTag, isLanguageTag } from '@core/model/language.model';
+import { FALLBACK_LANGUAGE, LANGUAGE_LABELS, isLanguageTag } from '@core/model/language.model';
 import { checklistProgress } from '@core/model/checklist.model';
 import { Note, NotePatch } from '@core/model/note.model';
 import { AttachmentsStore } from '@core/state/attachments.store';
@@ -41,9 +41,9 @@ const FULLSCREEN_STORAGE_KEY = 'devnotes.editorFullscreen';
 
 const FIELDS_PANEL_STORAGE_KEY = 'devnotes.editorFieldsPanel';
 
-const LANGUAGE_OPTIONS = Object.entries(LANGUAGE_LABELS).map(([value, label]) => ({
-  value: value as LanguageTag,
-  label,
+const LANGUAGE_CHOICES: readonly ChoiceOption[] = Object.entries(LANGUAGE_LABELS).map(([id, name]) => ({
+  id,
+  name,
 }));
 
 /**
@@ -110,12 +110,7 @@ export class NoteEditorOverlayComponent {
   readonly deleteRequested = output<void>();
   readonly placeholderValuesChanged = output<Record<string, string>>();
 
-  protected readonly languageOptions = LANGUAGE_OPTIONS;
-
-  protected readonly languageChoices: readonly ChoiceOption[] = LANGUAGE_OPTIONS.map((option) => ({
-    id: option.value,
-    name: option.label,
-  }));
+  protected readonly languageChoices = LANGUAGE_CHOICES;
 
   protected readonly spaceOptions = computed<readonly ChoiceOption[]>(() =>
     this.spaces.spaces().map((space) => ({ id: space.id, name: space.name })),
