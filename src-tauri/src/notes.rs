@@ -12,7 +12,7 @@ pub mod view;
 use std::collections::BTreeMap;
 
 use chrono::Utc;
-use tauri::{AppHandle, State};
+use tauri::State;
 
 use crate::attachments;
 use crate::count::saturating_u32 as count;
@@ -191,8 +191,8 @@ pub fn restore_notes(ids: Vec<String>, db: State<'_, Db>) -> Result<u32, AppErro
 /// Purges first: the trash must never show a note a restart would erase.
 #[tauri::command(async)]
 #[specta::specta]
-pub fn list_trash(app: AppHandle, db: State<'_, Db>) -> Result<Vec<TrashedNote>, AppError> {
-    trash::purge_expired(&app, &db)?;
+pub fn list_trash(db: State<'_, Db>) -> Result<Vec<TrashedNote>, AppError> {
+    trash::purge_expired(&db)?;
 
     let mut connection = lock(&db)?;
 
@@ -204,19 +204,19 @@ pub fn list_trash(app: AppHandle, db: State<'_, Db>) -> Result<Vec<TrashedNote>,
 
 #[tauri::command(async)]
 #[specta::specta]
-pub fn purge_notes(ids: Vec<String>, app: AppHandle, db: State<'_, Db>) -> Result<u32, AppError> {
-    Ok(count(trash::purge(&app, &db, ids)?))
+pub fn purge_notes(ids: Vec<String>, db: State<'_, Db>) -> Result<u32, AppError> {
+    Ok(count(trash::purge(&db, ids)?))
 }
 
 #[tauri::command(async)]
 #[specta::specta]
-pub fn empty_trash(app: AppHandle, db: State<'_, Db>) -> Result<u32, AppError> {
+pub fn empty_trash(db: State<'_, Db>) -> Result<u32, AppError> {
     let ids = {
         let mut connection = lock(&db)?;
         store::trash::trashed_ids(&mut connection)?
     };
 
-    Ok(count(trash::purge(&app, &db, ids)?))
+    Ok(count(trash::purge(&db, ids)?))
 }
 
 #[tauri::command(async)]

@@ -1,7 +1,6 @@
 use chrono::{DateTime, TimeDelta, Utc};
 use serde::Serialize;
 use specta::Type;
-use tauri::AppHandle;
 
 use super::model::Note;
 use super::store;
@@ -41,14 +40,13 @@ pub fn trashed(note: Note, deleted_at: DateTime<Utc>) -> TrashedNote {
 /// ⚠️ The attachment file names are collected before the `DELETE`: afterwards the cascade
 /// has taken the records that carried them, and the files are orphaned until the next
 /// startup sweep.
-pub fn purge(app: &AppHandle, db: &Db, ids: Vec<String>) -> Result<usize, StorageError> {
+pub fn purge(db: &Db, ids: Vec<String>) -> Result<usize, StorageError> {
     if ids.is_empty() {
         return Ok(0);
     }
 
-    let directory = attachments::directory(app)?;
-
     let mut connection = lock(db)?;
+    let directory = attachments::directory(&connection);
     let files = attachments::store::stored_names_of(&mut connection, &ids)?;
     let purged = store::trash::purge(&mut connection, &ids)?;
     drop(connection);
@@ -58,20 +56,20 @@ pub fn purge(app: &AppHandle, db: &Db, ids: Vec<String>) -> Result<usize, Storag
     Ok(purged)
 }
 
-pub fn purge_expired(app: &AppHandle, db: &Db) -> Result<(), StorageError> {
+pub fn purge_expired(db: &Db) -> Result<(), StorageError> {
     let expired = {
         let mut connection = lock(db)?;
         store::trash::expired_ids(&mut connection, Utc::now())?
     };
 
-    purge(app, db, expired)?;
+    purge(db, expired)?;
 
     Ok(())
 }
 
 /// What makes retention hold even if nobody opens the trash. Never fatal.
-pub fn sweep_at_startup(app: &AppHandle, db: &Db) {
-    if let Err(error) = purge_expired(app, db) {
+pub fn sweep_at_startup(db: &Db) {
+    if let Err(error) = purge_expired(db) {
         log::warn!("Expired trash not purged: {error}");
     }
 }

@@ -2,7 +2,7 @@ pub mod migration;
 pub mod schema;
 
 use std::ops::{Deref, DerefMut};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard};
 
 use diesel::connection::SimpleConnection;
@@ -20,6 +20,7 @@ use crate::vault::key::Vault;
 pub struct Library {
     connection: SqliteConnection,
     vault: Vault,
+    directory: PathBuf,
 }
 
 impl Library {
@@ -40,6 +41,12 @@ impl Library {
         &self.vault
     }
 
+    /// Where the database file sits, and everything that travels with it. ⚠️ Asked of the
+    /// open library rather than of the registry, which is a file read per call.
+    pub fn directory(&self) -> &Path {
+        &self.directory
+    }
+
     /// ⚠️ Hands the closure the connection **and** the key. `SqliteConnection::transaction`
     /// alone gives back a bare connection, which would leave a caller unable to seal
     /// anything inside the transaction it just opened.
@@ -49,7 +56,9 @@ impl Library {
     {
         // Split borrows: the connection mutably, the key shared, and they are disjoint
         // fields — which is the whole reason this is destructured rather than chained.
-        let Self { connection, vault } = self;
+        let Self {
+            connection, vault, ..
+        } = self;
         connection.transaction(|connection| f(connection, vault))
     }
 }
@@ -155,7 +164,11 @@ pub fn open(path: &Path, vault: Vault) -> Result<Library, StorageError> {
 
     migration::run(&mut connection).map_err(|error| named(&error))?;
 
-    Ok(Library { connection, vault })
+    Ok(Library {
+        connection,
+        vault,
+        directory: path.parent().map(Path::to_path_buf).unwrap_or_default(),
+    })
 }
 
 /// Public for the integration tests, which see nothing of the crate but its API.
@@ -168,6 +181,10 @@ pub fn open_in_memory() -> Result<Library, StorageError> {
     Ok(Library {
         connection,
         vault: test_vault()?,
+        // ⚠️ Named, never created: a test that writes beside the library fails on a
+        // missing directory rather than writing into whatever the working directory is.
+        directory: std::env::temp_dir()
+            .join(format!("devnotes-in-memory-{}", uuid::Uuid::new_v4())),
     })
 }
 

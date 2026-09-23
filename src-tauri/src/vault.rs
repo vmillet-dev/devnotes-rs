@@ -146,35 +146,35 @@ pub struct PassphraseChange {
 pub fn change_passphrase(
     current: String,
     next: String,
-    app: AppHandle,
     db: State<'_, Db>,
 ) -> Result<PassphraseChange, AppError> {
     let (current, next) = (secret(current), secret(next));
     validate(&next)?;
 
-    let directory = crate::libraries::open_directory(&app)?;
-    Ok(change(&current, &next, &directory, &db, Cost::default())?)
+    Ok(change(&current, &next, &db, Cost::default())?)
 }
 
 fn change(
     current: &str,
     next: &str,
-    directory: &Path,
     db: &Db,
     cost: Cost,
 ) -> Result<PassphraseChange, StorageError> {
     // ⚠️ Asked and released rather than held: the derivations below cost tens of
     // milliseconds each, and keeping the connection for them would freeze every other
     // command.
-    if db.lock().map_err(|_| StorageError::Unavailable)?.is_none() {
-        return Err(StorageError::Locked);
-    }
-
+    let directory = db
+        .lock()
+        .map_err(|_| StorageError::Unavailable)?
+        .as_ref()
+        .ok_or(StorageError::Locked)?
+        .directory()
+        .to_path_buf();
     // ⚠️ The live file first, and the whole change fails here if it cannot be written: it
     // is the only one whose loss is fatal. The copies follow, and a copy that resists is
     // counted rather than fatal — see `backup::rewrap`.
-    let vault = file::change_passphrase(directory, current, next, cost)?;
-    let copies = crate::backup::rewrap(directory, &vault, next, cost);
+    let vault = file::change_passphrase(&directory, current, next, cost)?;
+    let copies = crate::backup::rewrap(&directory, &vault, next, cost);
 
     Ok(PassphraseChange {
         backups_rewrapped: saturating_u32(copies.done),
@@ -184,8 +184,13 @@ fn change(
 
 /// Opens the library under the key and hands it to the rest of the application. The
 /// sweeps are the caller's to run, because a first launch has to seal what is there first.
+///
+/// ⚠️ `attachments/` is created here, once, and nowhere else: every writer and the
+/// startup sweep assume it is there.
 fn open_library(directory: &Path, db: &Db, vault: key::Vault) -> Result<(), StorageError> {
     let library = db::open(&directory.join(crate::layout::DATABASE), vault)?;
+    let attachments = crate::attachments::directory(&library);
+    std::fs::create_dir_all(&attachments).context(attachments.display())?;
 
     {
         let mut held = db.lock().map_err(|_| StorageError::Unavailable)?;
@@ -298,7 +303,7 @@ mod tests {
         let db: Db = std::sync::Mutex::new(None);
         create("a passphrase", &directory, &db, cheap()).unwrap();
 
-        let changed = change("a passphrase", "another phrase", &directory, &db, cheap()).unwrap();
+        let changed = change("a passphrase", "another phrase", &db, cheap()).unwrap();
         close(&db);
 
         assert_eq!(changed.backups_left, 0);
@@ -313,7 +318,7 @@ mod tests {
     fn a_phrase_is_not_changed_on_a_library_nobody_opened() {
         let db: Db = std::sync::Mutex::new(None);
 
-        let refused = change("a passphrase", "another phrase", &scratch(), &db, cheap());
+        let refused = change("a passphrase", "another phrase", &db, cheap());
 
         assert!(matches!(refused, Err(StorageError::Locked)));
     }

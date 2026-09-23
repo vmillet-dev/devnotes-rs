@@ -16,7 +16,7 @@ use chrono::{DateTime, TimeDelta, Utc};
 use diesel::prelude::*;
 use diesel::sql_types::Text;
 
-use crate::db::{Db, Library};
+use crate::db::{Db, Library, lock};
 use crate::error::{AppError, FileContext, StorageError};
 use crate::layout::{self, BACKUPS, DATABASE_SIDECARS, KEY_FILE, REPLACED};
 use crate::vault::key::{Cost, Vault};
@@ -281,10 +281,6 @@ pub(crate) fn take(app: &AppHandle, db: &crate::db::Db) {
         return;
     }
 
-    let Ok(directory) = crate::libraries::open_directory(app) else {
-        return;
-    };
-
     let mut connection = match crate::db::lock(db) {
         Ok(connection) => connection,
         Err(error) => {
@@ -292,6 +288,7 @@ pub(crate) fn take(app: &AppHandle, db: &crate::db::Db) {
             return;
         }
     };
+    let directory = connection.directory().to_path_buf();
 
     match rotate(&directory, &mut connection, Utc::now()) {
         Ok(Some(target)) => log::info!("Library copied to {}", target.display()),
@@ -300,16 +297,14 @@ pub(crate) fn take(app: &AppHandle, db: &crate::db::Db) {
     }
 }
 
-fn library_directory(app: &AppHandle) -> Result<PathBuf, StorageError> {
-    crate::libraries::open_directory(app)
-}
-
 /// The copies that exist, newest first, for the panel that lists them.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
 #[specta::specta]
-pub fn list_backups(app: AppHandle) -> Result<Vec<Backup>, AppError> {
-    Ok(list(&library_directory(&app)?))
+pub fn list_backups(db: State<'_, Db>) -> Result<Vec<Backup>, AppError> {
+    let directory = lock(&db)?.directory().to_path_buf();
+
+    Ok(list(&directory))
 }
 
 /// Puts a copy back, and answers where the library it replaced was moved to.
@@ -322,10 +317,13 @@ pub fn list_backups(app: AppHandle) -> Result<Vec<Backup>, AppError> {
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
 #[specta::specta]
-pub fn restore_backup(id: String, app: AppHandle, db: State<'_, Db>) -> Result<String, AppError> {
-    let directory = library_directory(&app)?;
-
+pub fn restore_backup(id: String, db: State<'_, Db>) -> Result<String, AppError> {
     let mut open = db.lock().map_err(|_| StorageError::Unavailable)?;
+    let directory = open
+        .as_ref()
+        .ok_or(StorageError::Locked)?
+        .directory()
+        .to_path_buf();
     // Dropped before a single file moves, and held for the whole swap so nothing can
     // reopen it halfway through.
     *open = None;

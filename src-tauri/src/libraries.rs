@@ -173,7 +173,8 @@ fn fresh(name: String) -> LibraryEntry {
     }
 }
 
-fn open_directory_in(profile: &Path) -> Result<PathBuf, StorageError> {
+/// Public for the benchmark that says what an open library saves by not calling it.
+pub fn open_directory_in(profile: &Path) -> Result<PathBuf, StorageError> {
     let registry = registry_in(profile);
     let Some(entry) = registry.opened() else {
         return Ok(profile.to_path_buf());
@@ -185,11 +186,12 @@ fn open_directory_in(profile: &Path) -> Result<PathBuf, StorageError> {
     Ok(directory)
 }
 
-/// The directory every other module reads and writes in.
+/// The directory of the library the registry points at, for what runs while none is open:
+/// the gate, the first launch, the recovery commands.
 ///
-/// ⚠️ This replaced `app.path().app_data_dir()` at a dozen call sites. A module that
-/// reaches for the profile directly writes into whichever library happens to be first,
-/// whatever is open.
+/// ⚠️ An open library answers `Library::directory` instead: this reads the registry off
+/// disk on every call. And never `app_data_dir()` directly — that is the profile, which
+/// holds no library of its own.
 pub(crate) fn open_directory(app: &AppHandle) -> Result<PathBuf, StorageError> {
     open_directory_in(&profile(app)?)
 }

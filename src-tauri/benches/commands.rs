@@ -16,6 +16,8 @@ use std::hint::black_box;
 
 use criterion::{Criterion, criterion_group, criterion_main};
 
+use devnotes_lib::attachments::{self, model::Attachment, sealed};
+use devnotes_lib::libraries;
 use devnotes_lib::notes::model::NotePatch;
 use devnotes_lib::notes::store;
 use devnotes_lib::notes::view::{NoteFilter, NotesQuery};
@@ -216,6 +218,58 @@ fn disk(c: &mut Criterion) {
     let _ = std::fs::remove_file(&path);
 }
 
+/// One thumbnail, as the editor asks for it — once per attachment on the note it opens.
+///
+/// ⚠️ The second function is not a command: it is the registry lookup every one of these
+/// paid before the open library carried its directory (#343), kept to say what that cost.
+fn attachment(c: &mut Criterion) {
+    let mut corpus = build();
+    let mut group = c.benchmark_group("attachment");
+
+    let directory = attachments::directory(&corpus.connection);
+    std::fs::create_dir_all(&directory).expect("a writable temporary directory");
+    let screenshot = Attachment {
+        id: "a-screenshot".to_string(),
+        note_id: corpus.note_ids[0].clone(),
+        file_name: "capture.png".to_string(),
+        mime_type: "image/png".to_string(),
+        byte_size: 256 * 1024,
+        created_at: now(),
+    };
+    let (db, vault) = corpus.connection.split();
+    sealed::write_sealed(
+        vault,
+        &directory.join(screenshot.stored_name()),
+        &vec![7u8; 256 * 1024],
+    )
+    .expect("a sealed file");
+    attachments::store::create(db, vault, &screenshot).expect("a record");
+
+    group.bench_function("read_attachment, 256 kB", |b| {
+        b.iter(|| {
+            black_box(
+                attachments::read_plain(&mut corpus.connection, "a-screenshot").expect("the bytes"),
+            )
+        });
+    });
+
+    let profile =
+        std::env::temp_dir().join(format!("devnotes-bench-profile-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&profile).expect("a writable temporary directory");
+    libraries::open_directory_in(&profile).expect("a registry");
+
+    group.bench_function("the registry lookup it no longer pays", |b| {
+        b.iter(|| {
+            let library = libraries::open_directory_in(&profile).expect("a directory");
+            std::fs::create_dir_all(library.join("attachments")).expect("a directory");
+            black_box(library)
+        });
+    });
+
+    group.finish();
+    let _ = std::fs::remove_dir_all(&profile);
+}
+
 /// ⚠️ The one number in this codebase that had been measured in the wrong profile, and
 /// the reason it lives here now: criterion builds in release, so it cannot be read off a
 /// debug run by accident. What `Cost::default` costs is what an attacker pays per guess
@@ -251,6 +305,7 @@ criterion_group!(
     aggregation,
     corpus_rewrite,
     disk,
+    attachment,
     unlock
 );
 criterion_main!(benches);

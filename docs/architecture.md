@@ -2876,12 +2876,17 @@ read. That move is best effort and never fatal, and the same move runs again ove
 is left, so a half-finished one is picked up by the next launch. Uniformity is what makes
 the first library deletable like any other and keeps the profile root down to two files.
 
-**`libraries::open_directory(app)` replaced `app.path().app_data_dir()` at a dozen call
-sites** — the vault's five, the backups' two, the attachments, the recovery. ⚠️ A module
-that reaches for the profile directly writes into whichever library happens to be first,
-whatever is open. The one that stayed is `open/`, the decrypted attachment copies: they
-are ephemeral and swept wholesale, and one directory means one sweep catches every
-library's leftovers.
+**An open library carries its own directory.** `db::open` receives the database path, so
+`Library::directory()` is its parent, and every command behind the gate — attachments,
+export and import, the trash purge, the backups, the passphrase change — asks the library it
+already locked. ⚠️ `libraries::open_directory(app)` reads and parses `libraries.json` on
+every call, so it is kept for what runs while **no** library is open: `vault_state`,
+`create_vault`, `unlock_vault` and the recovery commands. Reading the thumbnail of a
+screenshot used to pay that lookup plus two `create_dir_all`; `attachments/` is now created
+once, by `vault::open_library`. A module that reaches for `app_data_dir()` directly writes
+into the profile, which holds no library. The one directory that lives there on purpose is
+`open/`, the decrypted attachment copies: they are ephemeral and swept wholesale, and one
+directory means one sweep catches every library's leftovers.
 
 **Switching is a full teardown, and the front end is reloaded for it.** `open_library`
 empties the connection `Mutex` under the same lock every other command takes, then
@@ -3660,6 +3665,18 @@ every argument about the margin rested on it. Criterion builds in release, so a 
 cannot be read off the wrong profile by accident, which a hand-run measurement could. The
 parameters were left where they are: 64 MiB is three times OWASP's floor and it is the memory,
 not the time, that bounds an attacker with a GPU.
+
+The `attachment` group measures one thumbnail, which the editor asks for once per attachment
+on the note it opens:
+
+| Bench                                                                | Cost       |
+| -------------------------------------------------------------------- | ---------- |
+| `read_attachment`, 256 kB                                            | **109 µs** |
+| the registry lookup it paid before the library carried its directory | 102 µs     |
+
+The second row is not a command: it is `libraries::open_directory_in` plus the
+`create_dir_all` of `attachments/`, which every read paid on top of the first until the open
+`Library` carried its directory — nearly half of what a thumbnail cost.
 
 Three things worth reading off the first table.
 
