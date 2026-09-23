@@ -7,7 +7,6 @@ import {
   inject,
   input,
   linkedSignal,
-  output,
   signal,
   untracked,
   viewChild,
@@ -18,11 +17,13 @@ import { checklistProgress } from '@core/model/checklist.model';
 import { Note, NotePatch } from '@core/model/note.model';
 import { AttachmentsStore } from '@core/state/attachments.store';
 import { FoldersStore } from '@core/state/folders.store';
+import { NotesStore } from '@core/state/notes.store';
 import { SpacesStore } from '@core/state/spaces.store';
 import { NoteRevisionsStore } from '@core/state/note-revisions.store';
 import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
 import { ClockService } from '@core/services/time/clock.service';
+import { endOfLocalDay, toDateInputValue } from '@core/utils/local-day.util';
 import { relativeTimeRef } from '@core/utils/relative-time.util';
 import { DialogComponent } from '@shared/layout/dialog/dialog.component';
 import { CodeViewerComponent } from '@notes/ui/code-viewer/code-viewer.component';
@@ -47,26 +48,10 @@ const LANGUAGE_CHOICES: readonly ChoiceOption[] = Object.entries(LANGUAGE_LABELS
 }));
 
 /**
- * ⚠️ End of the local day, not midnight: a note dated today would otherwise be
- * expired the moment it is typed. Built explicitly because `new Date(value)` reads
- * as UTC, and west of Greenwich the deadline would slip back a day.
- */
-function endOfLocalDay(value: string): Date | null {
-  const [year, month, day] = value.split('-').map(Number);
-  if (!year || !month || !day) return null;
-
-  return new Date(year, month - 1, day, 23, 59, 59, 999);
-}
-
-function toDateInputValue(date: Date): string {
-  const pad = (value: number): string => String(value).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
-/**
- * Mutates nothing: it emits, `NotesStore` persists. Title and body are local drafts
- * — one round trip per keystroke otherwise — committed on blur and on every closing
- * path, none of which produces a `blur`.
+ * Talks to stores, like every other editor: `NotesStore` persists the note, and the
+ * attachments, the history and the `{{field}}` filling each have a store of their own.
+ * Title and body are local drafts — one round trip per keystroke otherwise — committed on
+ * blur and on every closing path, none of which produces a `blur`.
  */
 @Component({
   selector: 'app-note-editor-overlay',
@@ -90,8 +75,7 @@ function toDateInputValue(date: Date): string {
 export class NoteEditorOverlayComponent {
   private readonly clock = inject(ClockService);
   private readonly preferences = inject(PreferencesService);
-
-  /** Attachments and `{{field}}` filling have a write cycle of their own. */
+  private readonly store = inject(NotesStore);
   protected readonly attachments = inject(AttachmentsStore);
   protected readonly revisions = inject(NoteRevisionsStore);
   private readonly spaces = inject(SpacesStore);
@@ -100,15 +84,12 @@ export class NoteEditorOverlayComponent {
 
   readonly note = input<Note | null>(null);
 
+  /**
+   * ⚠️ What the drafts are keyed on, rather than the note's id: committing the first field
+   * of a new note materialises it, which changes its id — and drafts keyed on the id were
+   * then replayed from a note whose body was not written yet, emptying it.
+   */
   readonly session = input(0);
-
-  readonly closed = output<void>();
-  /** One output for every field: whether a value moved is `NotesStore`'s call. */
-  readonly patchRequested = output<NotePatch>();
-  /** ⚠️ Not a patch: filing goes through `file_notes`, which answers what it changed. */
-  readonly fileRequested = output<string | null>();
-  readonly deleteRequested = output<void>();
-  readonly placeholderValuesChanged = output<Record<string, string>>();
 
   protected readonly languageChoices = LANGUAGE_CHOICES;
 
@@ -120,7 +101,7 @@ export class NoteEditorOverlayComponent {
    *  belongs to a space of its own, and another one's folders would file it nowhere. */
   protected onSpaceChosen(spaceId: string | null): void {
     // A note always has a space: the menu carries no "none" entry, so this cannot be null.
-    if (spaceId !== null) this.patchRequested.emit({ spaceId });
+    if (spaceId !== null) this.requestPatch({ spaceId });
   }
 
   protected readonly folderOptions = computed<readonly ChoiceOption[]>(() => {
@@ -131,15 +112,8 @@ export class NoteEditorOverlayComponent {
       .map((folder) => ({ id: folder.id, name: folder.name, colour: folder.colour }));
   });
 
-  /**
-   * ⚠️ The session, not the note's id. Committing the first field of a new note
-   * materialises it, which changes its id — and drafts keyed on the id are then
-   * replayed from a note whose content is not written yet, emptying the body.
-   */
-  private readonly noteId = computed(() => this.session());
-
   protected readonly draftTitle = linkedSignal({
-    source: this.noteId,
+    source: this.session,
     computation: () => untracked(() => this.note()?.title ?? ''),
   });
 
@@ -149,17 +123,17 @@ export class NoteEditorOverlayComponent {
    * replaced — and the commit on close wrote it straight back. The restore undid itself.
    */
   protected readonly draftContent = linkedSignal({
-    source: () => [this.noteId(), this.revisions.restored()] as const,
+    source: () => [this.session(), this.revisions.restored()] as const,
     computation: () => untracked(() => this.note()?.content ?? ''),
   });
 
   protected readonly draftSource = linkedSignal({
-    source: this.noteId,
+    source: this.session,
     computation: () => untracked(() => this.note()?.source ?? ''),
   });
 
   /** Two steps rather than a native `confirm()`, which blocks the whole WebView. */
-  protected readonly confirmingDelete = linkedSignal({ source: this.noteId, computation: () => false });
+  protected readonly confirmingDelete = linkedSignal({ source: this.session, computation: () => false });
 
   protected readonly tagInputValue = signal('');
 
@@ -170,7 +144,7 @@ export class NoteEditorOverlayComponent {
   protected readonly fieldsPanelOpen = signal(this.preferences.read(FIELDS_PANEL_STORAGE_KEY) !== 'false');
 
   protected readonly previewingFilled = linkedSignal({
-    source: this.noteId,
+    source: this.session,
     computation: () => false,
   });
 
@@ -179,16 +153,6 @@ export class NoteEditorOverlayComponent {
   private readonly fieldsPanel = viewChild(PlaceholderPanelComponent);
 
   protected readonly isChecklist = computed(() => this.note()?.kind === 'checklist');
-
-  /**
-   * ⚠️ A snippet's history only. A checklist's items live in `note_items`, a second table
-   * to snapshot and a two-step restore — deliberately out of this first version, and said
-   * so rather than shipped as a panel that is always empty for half the note kinds.
-   */
-  protected readonly historyOf = effect(() => {
-    const note = this.note();
-    void this.revisions.openFor(note && note.kind === 'snippet' ? note.id : null);
-  });
   protected readonly checklistStats = computed(() => checklistProgress(this.note()?.items ?? []));
 
   /** The draft, so copying before leaving the field yields what is on screen. */
@@ -215,6 +179,15 @@ export class NoteEditorOverlayComponent {
     const lifecycle = this.note()?.lifecycle;
     return lifecycle?.kind === 'expires' ? toDateInputValue(lifecycle.at) : '';
   });
+
+  constructor() {
+    // A snippet's history only: a checklist's items live in `note_items`, a second table
+    // to snapshot, and a panel always empty for half the note kinds says nothing.
+    effect(() => {
+      const note = this.note();
+      void this.revisions.openFor(note && note.kind === 'snippet' ? note.id : null);
+    });
+  }
 
   /** Folding closes the preview: a read-only body without the button that caused it is a trap. */
   protected toggleFieldsPanel(): void {
@@ -296,9 +269,26 @@ export class NoteEditorOverlayComponent {
     void this.attachments.addPastedImage();
   }
 
+  /** Every field goes through here: whether a value moved is `NotesStore`'s call. */
   protected requestPatch(patch: NotePatch): void {
-    if (this.note()) {
-      this.patchRequested.emit(patch);
+    const note = this.note();
+    if (note) {
+      void this.store.applyPatch(note.id, patch);
+    }
+  }
+
+  /** ⚠️ Not a patch: filing goes through `file_notes`, which answers what it changed. */
+  protected fileInto(folderId: string | null): void {
+    const note = this.note();
+    if (note) {
+      void this.store.fileNote(note.id, folderId);
+    }
+  }
+
+  protected saveFieldValues(values: Record<string, string>): void {
+    const note = this.note();
+    if (note) {
+      void this.store.setPlaceholderValues(note.id, values);
     }
   }
 
@@ -360,8 +350,9 @@ export class NoteEditorOverlayComponent {
   }
 
   protected onDeleteClick(): void {
-    if (this.confirmingDelete()) {
-      this.deleteRequested.emit();
+    const note = this.note();
+    if (note && this.confirmingDelete()) {
+      void this.store.deleteNote(note.id);
       return;
     }
     this.confirmingDelete.set(true);
@@ -390,6 +381,6 @@ export class NoteEditorOverlayComponent {
     this.commitContent();
     this.checklistEditor()?.commit();
     this.fieldsPanel()?.commit();
-    this.closed.emit();
+    this.store.closeOverlay();
   }
 }

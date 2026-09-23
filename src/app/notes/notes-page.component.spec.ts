@@ -575,41 +575,41 @@ describe('NotesPageComponent', () => {
       expect(maybeChild(NoteEditorOverlayComponent)).toBeNull();
     });
 
-    it('closes the overlay via the store when the editor overlay reports closed', async () => {
+    function overlay(): HTMLElement {
+      return fixture.debugElement.query(By.directive(NoteEditorOverlayComponent)).nativeElement;
+    }
+
+    it('goes away once the editor is closed', async () => {
       store.openNote('note-42');
       await fixture.whenStable();
-      const closeOverlay = vi.spyOn(store, 'closeOverlay');
 
-      child(NoteEditorOverlayComponent).closed.emit();
+      overlay().querySelector<HTMLElement>('.close-btn')?.click();
+      await fixture.whenStable();
 
-      expect(closeOverlay).toHaveBeenCalled();
+      expect(maybeChild(NoteEditorOverlayComponent)).toBeNull();
     });
 
-    /** The page names no field: the editor says what changed, the page on which note. */
-    it('hands every editor change to the store as a patch on the open note', async () => {
+    it('writes what the editor commits onto the open note', async () => {
       store.openNote('note-42');
       await fixture.whenStable();
       const applyPatch = vi.spyOn(store, 'applyPatch').mockResolvedValue();
-      const overlay = child(NoteEditorOverlayComponent);
-      const deadline = { kind: 'expires', at: new Date('2026-03-01T22:59:59.999Z') } as const;
 
-      overlay.patchRequested.emit({ title: 'New title' });
-      overlay.patchRequested.emit({ content: 'new body', language: 'json' });
-      overlay.patchRequested.emit({ lifecycle: deadline, tags: ['urgent'] });
+      const title = overlay().querySelector<HTMLInputElement>('.overlay-title-input');
+      if (title) title.value = 'New title';
+      title?.dispatchEvent(new Event('input'));
+      title?.dispatchEvent(new Event('blur'));
 
-      expect(applyPatch.mock.calls).toEqual([
-        ['note-42', { title: 'New title' }],
-        ['note-42', { content: 'new body', language: 'json' }],
-        ['note-42', { lifecycle: deadline, tags: ['urgent'] }],
-      ]);
+      expect(applyPatch).toHaveBeenCalledWith('note-42', { title: 'New title' });
     });
 
-    it('deletes the selected note when the overlay asks', async () => {
+    it('deletes the open note on the second click of the editor button', async () => {
       store.openNote('note-42');
       await fixture.whenStable();
       const deleteNote = vi.spyOn(store, 'deleteNote').mockResolvedValue();
 
-      child(NoteEditorOverlayComponent).deleteRequested.emit();
+      overlay().querySelector<HTMLElement>('.delete-btn')?.click();
+      await fixture.whenStable();
+      overlay().querySelector<HTMLElement>('.delete-btn')?.click();
 
       expect(deleteNote).toHaveBeenCalledWith('note-42');
     });
@@ -1064,7 +1064,11 @@ describe('NotesPageComponent', () => {
       store.openNote('snippet');
       await fixture.whenStable();
 
-      child(NoteEditorOverlayComponent).placeholderValuesChanged.emit({ host: 'db.internal' });
+      const panel = fixture.debugElement.query(By.directive(NoteEditorOverlayComponent)).nativeElement;
+      const field = panel.querySelector('.field-input') as HTMLInputElement;
+      field.value = 'db.internal';
+      field.dispatchEvent(new Event('input'));
+      panel.querySelector('.panel-body')?.dispatchEvent(new Event('focusout', { bubbles: true }));
 
       await vi.waitFor(() => expect(store.selectedNote()?.placeholders[0].value).toBe('db.internal'));
     });

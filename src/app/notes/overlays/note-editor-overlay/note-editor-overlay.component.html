@@ -168,7 +168,7 @@
         [options]="folderOptions()"
         [currentId]="note.folderId"
         [noneLabel]="'notes.noFolder' | transloco"
-        (chosen)="fileRequested.emit($event)"
+        (chosen)="fileInto($event)"
       />
     </div>
 
@@ -197,7 +197,7 @@
         (toggled)="toggleFieldsPanel()"
         (previewToggled)="togglePreview()"
         (valuesChanged)="onPlaceholderValuesChanged()"
-        (valuesCommitted)="placeholderValuesChanged.emit($event)"
+        (valuesCommitted)="saveFieldValues($event)"
       />
     }
 

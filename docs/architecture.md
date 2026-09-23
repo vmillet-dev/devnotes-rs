@@ -1469,15 +1469,16 @@ the table that binds it and the chapter that names it read the same constant.
 ### Editing a note
 
 The editor overlay is where every note mutation starts (title, body, language, tags, pin,
-deletion). It stays presentational — it emits, the store persists — but it holds **local
-drafts** for the title and the body, because persisting on every keystroke means one IPC
-round-trip per character.
+filing, deletion). It talks to stores like every other editor — `NotesStore` for the note,
+and the attachments, the history and the `{{field}}` filling each through their own — and
+holds **local drafts** for the title and the body, because persisting on every keystroke
+means one IPC round-trip per character.
 
-**It emits one output for all of them**, `patchRequested = output<NotePatch>()`, and the page
-answers it with `store.applyPatch(note.id, $event)`. There were nine outputs, each wired to a
-store method of its own, so adding a field to the editor meant editing four files. Whether a
-value actually moved is not the editor's call either: the store holds what is stored, and it
-is the one that drops an unchanged field. Drafts are confirmed on blur, and, crucially, on every closing path:
+**Every field goes through one method**, `requestPatch`, which calls
+`NotesStore.applyPatch(note.id, patch)`; the page binds nothing on the overlay but the note
+and the session. Whether a value actually moved is not the editor's call: the store holds what
+is stored, and it is the one that drops an unchanged field. The overlay's spec records what it
+asks of `NotesStore` rather than listening to outputs. Drafts are confirmed on blur, and, crucially, on every closing path:
 Escape, the backdrop and the close button all skip `blur`, so closing goes through a single
 `requestClose()` that commits first.
 
