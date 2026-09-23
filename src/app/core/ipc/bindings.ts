@@ -14,6 +14,7 @@ export const commands = {
 	 *  a space with nothing in it reads as "already seeded" to both of the front end's
 	 *  guards, and the canvas stays empty for the life of that install. The strings stay on
 	 *  the front end, where the translations are — only the atomicity comes from here.
+	 * 
 	 *  Answers the space it made: with exactly one, "all spaces" is a distinction without a
 	 *  difference, and the front end opens on it rather than on a board it cannot show.
 	 */

@@ -39,10 +39,10 @@ pub const ZONE_COLUMNS: i32 = 2;
 /// A zone with no note is still a target to drop one into.
 pub const MIN_ZONE_ROWS: i32 = 1;
 /// How many zones sit side by side before the first layout wraps.
-pub const BOARD_COLUMNS: i32 = 3;
+pub const BOARD_COLUMNS: usize = 3;
 pub const BOARD_MARGIN: i32 = 16;
 /// How many loose cards sit side by side under the zones.
-pub const LOOSE_COLUMNS: i32 = 4;
+pub const LOOSE_COLUMNS: usize = 4;
 /// ⚠️ The zone body scrolls, so a vertical scrollbar can take a slice of the row. Without
 /// this allowance two cards plus their gap come to *exactly* the inner width, the second
 /// wraps, the wrap causes the scrollbar, and the scrollbar keeps it wrapped — a zone that
@@ -138,6 +138,12 @@ pub struct CardPlacement {
     pub position: BoardPoint,
 }
 
+/// A count of cards or columns, as a multiplier of pixels. Saturated: a board of two
+/// billion cards is not one to lay out exactly.
+fn px(count: usize) -> i32 {
+    i32::try_from(count).unwrap_or(i32::MAX)
+}
+
 /// Refuses a frame nothing could be dropped into, and keeps a zone on the board.
 ///
 /// ⚠️ Clamped rather than rejected: a resize that ends at a silly size is a slip, and
@@ -224,7 +230,7 @@ pub fn columns_in(width: i32) -> i32 {
 #[must_use]
 pub fn zone_height(note_count: usize, columns: i32) -> i32 {
     let columns = columns.max(1);
-    let notes = i32::try_from(note_count).unwrap_or(i32::MAX);
+    let notes = px(note_count);
     let rows = notes.div_euclid(columns) + i32::from(notes.rem_euclid(columns) != 0);
 
     let rows = rows.max(MIN_ZONE_ROWS);
@@ -250,14 +256,13 @@ pub fn default_zone_height(note_count: usize) -> i32 {
 #[must_use]
 pub fn arrange_zones(note_counts: &[usize]) -> Vec<BoardFrame> {
     let width = default_zone_width();
-    let columns = usize::try_from(BOARD_COLUMNS).unwrap_or(1).max(1);
 
     let mut frames: Vec<BoardFrame> = Vec::with_capacity(note_counts.len());
     let mut row_top = BOARD_MARGIN;
     let mut row_height = 0;
 
     for (index, count) in note_counts.iter().enumerate() {
-        let column = index % columns;
+        let column = index % BOARD_COLUMNS;
         if column == 0 && index > 0 {
             row_top += row_height + GAP;
             row_height = 0;
@@ -267,7 +272,7 @@ pub fn arrange_zones(note_counts: &[usize]) -> Vec<BoardFrame> {
         row_height = row_height.max(height);
 
         frames.push(BoardFrame {
-            x: BOARD_MARGIN + i32::try_from(column).unwrap_or(0) * (width + GAP),
+            x: BOARD_MARGIN + px(column) * (width + GAP),
             y: row_top,
             width,
             height,
@@ -293,11 +298,9 @@ pub fn loose_top(frames: &[BoardFrame]) -> i32 {
 
 /// The `index`-th seat of the flow grid, left to right, wrapping every [`LOOSE_COLUMNS`].
 fn slot(index: usize, top: i32) -> BoardPoint {
-    let columns = usize::try_from(LOOSE_COLUMNS).unwrap_or(1).max(1);
-
     BoardPoint {
-        x: BOARD_MARGIN + i32::try_from(index % columns).unwrap_or(0) * (CARD_WIDTH + GAP),
-        y: top + i32::try_from(index / columns).unwrap_or(0) * (CARD_HEIGHT + GAP),
+        x: BOARD_MARGIN + px(index % LOOSE_COLUMNS) * (CARD_WIDTH + GAP),
+        y: top + px(index / LOOSE_COLUMNS) * (CARD_HEIGHT + GAP),
     }
 }
 

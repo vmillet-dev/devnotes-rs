@@ -34,14 +34,11 @@ pub struct Revision {
     pub characters: u32,
 }
 
-#[allow(clippy::cast_possible_truncation)]
 pub(crate) fn describe(id: String, taken_at: DateTime<Utc>, content: &str) -> Revision {
     Revision {
         id,
         taken_at,
-        // Saturated rather than wrapped: a body of four billion characters is not a body,
-        // and the count is a label on a row.
-        characters: content.chars().count().min(u32::MAX as usize) as u32,
+        characters: saturating_u32(content.chars().count()),
     }
 }
 

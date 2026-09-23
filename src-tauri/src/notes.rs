@@ -9,46 +9,6 @@ pub mod store;
 pub mod trash;
 pub mod view;
 
-/// Reference note for the feature tests: a field added to [`model::Note`] is declared
-/// here rather than in every module that builds one.
-#[cfg(test)]
-pub(crate) mod fixtures {
-    use std::collections::BTreeMap;
-
-    use chrono::{DateTime, Utc};
-
-    use super::checklist::NoteKind;
-    use super::language::Language;
-    use super::model::{Note, NoteLifecycle};
-    use crate::db::iso8601;
-
-    pub(crate) const NOW: &str = "2026-07-25T09:00:00.000Z";
-
-    pub(crate) fn at(iso: &str) -> DateTime<Utc> {
-        iso8601::parse(iso).expect("tests write valid instants")
-    }
-
-    pub(crate) fn note() -> Note {
-        Note {
-            id: "n-1".to_string(),
-            space_id: "s-1".to_string(),
-            folder_id: None,
-            title: "Title".to_string(),
-            language: Language::Txt,
-            content: "Content".to_string(),
-            source: String::new(),
-            tags: vec!["auth".to_string()],
-            pinned: false,
-            created_at: at(NOW),
-            updated_at: at(NOW),
-            lifecycle: NoteLifecycle::Permanent,
-            kind: NoteKind::Snippet,
-            items: Vec::new(),
-            placeholder_values: BTreeMap::new(),
-        }
-    }
-}
-
 use std::collections::BTreeMap;
 
 use chrono::Utc;
@@ -105,10 +65,11 @@ pub fn create_note(draft: NoteDraft, db: State<'_, Db>) -> Result<DisplayNote, A
 /// a space with nothing in it reads as "already seeded" to both of the front end's
 /// guards, and the canvas stays empty for the life of that install. The strings stay on
 /// the front end, where the translations are — only the atomicity comes from here.
-#[tauri::command(async)]
-#[specta::specta]
+///
 /// Answers the space it made: with exactly one, "all spaces" is a distinction without a
 /// difference, and the front end opens on it rather than on a board it cannot show.
+#[tauri::command(async)]
+#[specta::specta]
 pub fn seed_samples(
     space_name: String,
     folders: Vec<String>,
@@ -446,4 +407,44 @@ fn display(connection: &mut Library, note: model::Note) -> Result<DisplayNote, S
     );
 
     Ok(decorated)
+}
+
+/// Reference note for the feature tests: a field added to [`model::Note`] is declared
+/// here rather than in every module that builds one.
+#[cfg(test)]
+pub(crate) mod fixtures {
+    use std::collections::BTreeMap;
+
+    use chrono::{DateTime, Utc};
+
+    use super::checklist::NoteKind;
+    use super::language::Language;
+    use super::model::{Note, NoteLifecycle};
+    use crate::db::iso8601;
+
+    pub(crate) const NOW: &str = "2026-07-25T09:00:00.000Z";
+
+    pub(crate) fn at(iso: &str) -> DateTime<Utc> {
+        iso8601::parse(iso).expect("tests write valid instants")
+    }
+
+    pub(crate) fn note() -> Note {
+        Note {
+            id: "n-1".to_string(),
+            space_id: "s-1".to_string(),
+            folder_id: None,
+            title: "Title".to_string(),
+            language: Language::Txt,
+            content: "Content".to_string(),
+            source: String::new(),
+            tags: vec!["auth".to_string()],
+            pinned: false,
+            created_at: at(NOW),
+            updated_at: at(NOW),
+            lifecycle: NoteLifecycle::Permanent,
+            kind: NoteKind::Snippet,
+            items: Vec::new(),
+            placeholder_values: BTreeMap::new(),
+        }
+    }
 }

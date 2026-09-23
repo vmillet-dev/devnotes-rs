@@ -239,8 +239,6 @@ pub fn geometry<S: std::hash::BuildHasher>(
     note_counts: &HashMap<String, usize, S>,
     loose_ids: &[String],
 ) -> Result<Geometry, StorageError> {
-    use crate::folders::board;
-
     connection.transaction(|connection, _vault| {
         let mut stored_frames = frames(connection, space_id)?;
         let mut stored_positions = positions(connection, space_id)?;
