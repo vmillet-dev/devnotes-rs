@@ -171,6 +171,14 @@ pub enum NoteSectionKey {
     Results,
 }
 
+impl NotesQuery {
+    /// Not inside an opened folder: every card would name the folder the breadcrumb
+    /// already names.
+    pub fn shows_folder_chips(&self) -> bool {
+        self.folder_id.is_none()
+    }
+}
+
 impl NotesView {
     /// Every note of every section, for the passes that decorate them after [`build`].
     pub fn notes_mut(&mut self) -> impl Iterator<Item = &mut DisplayNote> {
@@ -180,38 +188,28 @@ impl NotesView {
     }
 }
 
-/// Separate from [`build`], which reads no database.
-pub fn apply_attachment_counts<S: std::hash::BuildHasher>(
-    view: &mut NotesView,
-    counts: &HashMap<String, u32, S>,
-) {
-    for note in view.notes_mut() {
-        note.attachment_count = counts.get(&note.id).copied().unwrap_or(0);
-    }
+/// What a card carries beside its note, read from other tables — which is why it is
+/// separate from [`build`], which reads no database. The canvas, the board and a single note
+/// all go through [`Decorations::apply`].
+#[derive(Debug, Default)]
+pub struct Decorations {
+    pub attachment_counts: HashMap<String, u32>,
+    /// Empty where no chip is wanted: on the board, and inside an opened folder.
+    pub folders: HashMap<String, NoteFolder>,
+    pub globals: BTreeMap<String, String>,
 }
 
-/// Separate from [`build`] for the same reason as [`apply_attachment_counts`].
-pub fn apply_folders<S: std::hash::BuildHasher>(
-    view: &mut NotesView,
-    folders: &HashMap<String, NoteFolder, S>,
-) {
-    for note in view.notes_mut() {
-        note.folder = note
-            .folder_id
-            .as_ref()
-            .and_then(|id| folders.get(id))
-            .cloned();
-    }
-}
-
-/// Separate from [`build`] for the same reason as [`apply_attachment_counts`].
-pub fn apply_global_defaults(view: &mut NotesView, globals: &BTreeMap<String, String>) {
-    if globals.is_empty() {
-        return;
-    }
-
-    for note in view.notes_mut() {
-        model::apply_global_defaults(note, globals);
+impl Decorations {
+    pub fn apply<'a>(&self, notes: impl IntoIterator<Item = &'a mut DisplayNote>) {
+        for note in notes {
+            note.attachment_count = self.attachment_counts.get(&note.id).copied().unwrap_or(0);
+            note.folder = note
+                .folder_id
+                .as_ref()
+                .and_then(|id| self.folders.get(id))
+                .cloned();
+            model::apply_global_defaults(note, &self.globals);
+        }
     }
 }
 
@@ -522,6 +520,50 @@ mod tests {
 
     fn keys(view: &NotesView) -> Vec<NoteSectionKey> {
         view.sections.iter().map(|section| section.key).collect()
+    }
+
+    #[test]
+    fn a_decoration_fills_the_counter_the_chip_and_the_proposed_values() {
+        let mut filed = model::decorate(
+            Note {
+                folder_id: Some("f-1".to_string()),
+                content: "ssh {{host}}".to_string(),
+                ..note("n-1", "Deploy")
+            },
+            at(NOW),
+        );
+        let decorations = Decorations {
+            attachment_counts: HashMap::from([("n-1".to_string(), 2)]),
+            folders: HashMap::from([(
+                "f-1".to_string(),
+                NoteFolder {
+                    id: "f-1".to_string(),
+                    name: "Ops".to_string(),
+                    colour: crate::folders::model::FolderColour::nth(0),
+                },
+            )]),
+            globals: BTreeMap::from([("host".to_string(), "db.internal".to_string())]),
+        };
+
+        decorations.apply([&mut filed]);
+
+        assert_eq!(filed.attachment_count, 2);
+        assert_eq!(
+            filed.folder.map(|folder| folder.name),
+            Some("Ops".to_string())
+        );
+        assert_eq!(filed.placeholders[0].default_value, "db.internal");
+    }
+
+    #[test]
+    fn no_chip_is_drawn_inside_an_opened_folder() {
+        let inside = NotesQuery {
+            folder_id: Some("f-1".to_string()),
+            ..request()
+        };
+
+        assert!(request().shows_folder_chips());
+        assert!(!inside.shows_folder_chips());
     }
 
     #[test]

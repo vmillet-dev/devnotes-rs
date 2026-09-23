@@ -12,14 +12,15 @@ use crate::db::{Db, lock};
 use crate::error::AppError;
 use crate::notes::store as notes;
 use crate::vault::secret;
-use model::{ExportReport, ImportReport};
+use model::{ExportReport, ExportScope, ImportReport};
 
-/// The spaces travel with the notes, or an import holds an id with nowhere to file it.
+/// ⚠️ A `None` passphrase writes the file in the clear: the library's key protects what is
+/// on this machine, never what leaves it.
 #[tauri::command(async)]
 #[specta::specta]
 pub fn export_notes(
     path: String,
-    space_id: Option<String>,
+    scope: ExportScope,
     passphrase: Option<String>,
     db: State<'_, Db>,
 ) -> Result<ExportReport, AppError> {
@@ -27,32 +28,7 @@ pub fn export_notes(
     model::validate_path(&path)?;
 
     let mut connection = lock(&db)?;
-    let notes = notes::all(&mut connection, space_id.as_deref())?;
-    let exported = bundle::collect(&mut connection, notes)?;
-
-    Ok(file::write(
-        &path,
-        &exported,
-        &attachments::directory(&connection),
-        connection.vault(),
-        passphrase.as_deref(),
-    )?)
-}
-
-#[tauri::command(async)]
-#[specta::specta]
-pub fn export_selection(
-    path: String,
-    ids: Vec<String>,
-    passphrase: Option<String>,
-    db: State<'_, Db>,
-) -> Result<ExportReport, AppError> {
-    let passphrase = secret(passphrase);
-    model::validate_path(&path)?;
-
-    let mut connection = lock(&db)?;
-    let notes = notes::by_ids(&mut connection, &ids)?;
-    let exported = bundle::collect(&mut connection, notes)?;
+    let exported = bundle::of(&mut connection, &scope)?;
 
     Ok(file::write(
         &path,

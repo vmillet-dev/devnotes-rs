@@ -33,7 +33,7 @@ use changelog::app_changelog;
 use desktop::{set_global_shortcuts, set_window_behavior, sync_tray};
 use folders::{
     arrange_board, board_view, create_folder, delete_folder, file_notes, file_notes_back,
-    list_folders, recolour_folder, rename_folder, restore_board_layout, save_board_layout,
+    list_folders, recolour_folder, rename_folder, save_board_layout,
 };
 use libraries::{create_library, delete_library, list_libraries, open_library, rename_library};
 use notes::{
@@ -45,7 +45,7 @@ use notes::{
 };
 use recovery::{archive_locked_library, set_aside_damaged_library};
 use spaces::{create_space, delete_space, list_spaces, pin_space, rename_space};
-use transfer::{export_is_protected, export_notes, export_selection, import_notes, share_notes};
+use transfer::{export_is_protected, export_notes, import_notes, share_notes};
 use vault::{change_passphrase, create_vault, unlock_vault, vault_state};
 
 /// ⚠️ Resolved from the manifest: a relative path writes the file next to whatever the
@@ -96,7 +96,6 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             board_view,
             save_board_layout,
             arrange_board,
-            restore_board_layout,
             create_folder,
             rename_folder,
             recolour_folder,
@@ -116,7 +115,6 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             save_attachment,
             delete_attachment,
             export_notes,
-            export_selection,
             import_notes,
             share_notes,
             export_is_protected,

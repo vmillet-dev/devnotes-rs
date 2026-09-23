@@ -1,7 +1,7 @@
 import { guard } from './fail-next';
 import { TransferRepository } from '@core/data/transfer.repository';
 import { IpcError } from '@core/ipc/ipc.error';
-import { ExportReport, ImportReport } from '@core/model/note.model';
+import { ExportReport, ExportScope, ImportReport } from '@core/model/note.model';
 
 /** Records the arguments and hands back the report the spec asked for. */
 export class FakeTransferRepository implements Pick<TransferRepository, keyof TransferRepository> {
@@ -33,18 +33,14 @@ export class FakeTransferRepository implements Pick<TransferRepository, keyof Tr
   };
   markdown = '## Shared\n\n```txt\nbody\n```\n';
 
-  export(path: string, spaceId: string | null, passphrase: string | null): Promise<ExportReport> {
+  export(path: string, scope: ExportScope, passphrase: string | null): Promise<ExportReport> {
     return guard(this, () => {
-      this.exportedTo = { path, spaceId, passphrase };
-      return { ...this.exportReport, protected: passphrase !== null };
-    });
-  }
+      this.exportedTo = { path, spaceId: scope.kind === 'space' ? scope.spaceId : null, passphrase };
+      const protectedFile = passphrase !== null;
+      if (scope.kind !== 'notes') return { ...this.exportReport, protected: protectedFile };
 
-  exportSelection(path: string, ids: readonly string[], passphrase: string | null): Promise<ExportReport> {
-    return guard(this, () => {
-      this.exportedTo = { path, spaceId: null, passphrase };
-      this.exportedIds = ids;
-      return { ...this.exportReport, notes: ids.length, protected: passphrase !== null };
+      this.exportedIds = scope.ids;
+      return { ...this.exportReport, notes: scope.ids.length, protected: protectedFile };
     });
   }
 

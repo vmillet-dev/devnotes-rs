@@ -14,7 +14,6 @@ use std::collections::BTreeMap;
 use chrono::Utc;
 use tauri::State;
 
-use crate::attachments;
 use crate::count::saturating_u32 as count;
 use crate::db::{Db, Library, lock};
 use crate::error::{AppError, StorageError};
@@ -31,21 +30,14 @@ use view::{NotesQuery, NotesView};
 pub fn query_notes(query: NotesQuery, db: State<'_, Db>) -> Result<NotesView, AppError> {
     let mut connection = lock(&db)?;
     let (notes, facets) = store::fetch(&mut connection, &query)?;
-    let counts = attachments::store::counts(&mut connection)?;
 
-    let globals = store::global_placeholder_values(&mut connection)?;
-
-    let mut view = view::build(notes, facets, &query);
-    view::apply_attachment_counts(&mut view, &counts);
-
-    // ⚠️ Not inside an opened folder: a chip naming the folder every card is already in is
-    // noise, and the breadcrumb above says it once. Same reason the board resolves none.
-    if query.folder_id.is_none() {
-        let folders = folders::store::by_id(&mut connection, query.space_id.as_deref())?;
-        view::apply_folders(&mut view, &folders);
+    let mut decorations = store::decorations(&mut connection)?;
+    if query.shows_folder_chips() {
+        decorations.folders = folders::store::by_id(&mut connection, query.space_id.as_deref())?;
     }
 
-    view::apply_global_defaults(&mut view, &globals);
+    let mut view = view::build(notes, facets, &query);
+    decorations.apply(view.notes_mut());
 
     Ok(view)
 }
@@ -393,11 +385,7 @@ pub fn set_global_placeholders(
 /// lives in [`model::decorate`].
 fn display(connection: &mut Library, note: model::Note) -> Result<DisplayNote, StorageError> {
     let mut decorated = model::decorate_now(note);
-    decorated.attachment_count = attachments::store::count_for(connection, &decorated.id)?;
-    model::apply_global_defaults(
-        &mut decorated,
-        &store::global_placeholder_values(connection)?,
-    );
+    store::decorations(connection)?.apply([&mut decorated]);
 
     Ok(decorated)
 }

@@ -533,22 +533,12 @@ mod board {
         )
         .unwrap();
 
-        let mut counts: HashMap<String, usize> = HashMap::new();
-        let mut loose_ids: Vec<String> = Vec::new();
-        for note in &notes {
-            match &note.folder_id {
-                Some(id) => *counts.entry(id.clone()).or_default() += 1,
-                None => loose_ids.push(note.id.clone()),
-            }
-        }
-
         let folder_ids: Vec<String> = folders.iter().map(|folder| folder.id.clone()).collect();
         let (frames, positions) = geometry::geometry(
             connection,
             &query.space_id,
             &folder_ids,
-            &counts,
-            &loose_ids,
+            &board::Occupancy::of(&notes),
         )
         .unwrap();
 
@@ -1611,7 +1601,11 @@ fn a_card_inside_an_opened_folder_carries_no_chip() {
     let folders = by_id(&mut connection, Some(&sql)).unwrap();
     let (notes, facets) = devnotes_lib::notes::store::fetch(&mut connection, &wide).unwrap();
     let mut outside = view::build(notes, facets, &wide);
-    view::apply_folders(&mut outside, &folders);
+    view::Decorations {
+        folders,
+        ..view::Decorations::default()
+    }
+    .apply(outside.notes_mut());
     assert_eq!(
         outside.sections[0].notes[0]
             .folder

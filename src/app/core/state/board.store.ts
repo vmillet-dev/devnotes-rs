@@ -510,7 +510,7 @@ export class BoardStore {
 
   /** The undo of `arrange`, and the count is what the banner needs back. */
   async restoreLayout(layout: BoardLayout): Promise<number> {
-    await this.repository.restoreLayout(layout);
+    await this.repository.saveLayout(layout.zones, layout.cards);
     this.stagedFrames.set(new Map());
     this.stagedCards.set(new Map());
     this._restorations.update((count) => count + 1);

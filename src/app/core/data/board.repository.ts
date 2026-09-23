@@ -8,7 +8,6 @@ import type {
 } from '@core/ipc/bindings';
 import {
   BoardArrangement,
-  BoardLayout,
   BoardNote,
   BoardQuery,
   BoardView,
@@ -59,9 +58,5 @@ export class BoardRepository {
   /** Answers what moved and the layout it replaced, which is what puts it back. */
   async arrange(spaceId: string, scope: BoardScope): Promise<BoardArrangement> {
     return unwrap('arrange_board', await commands.arrangeBoard(spaceId, scope));
-  }
-
-  async restoreLayout(layout: BoardLayout): Promise<void> {
-    unwrap('restore_board_layout', await commands.restoreBoardLayout(layout));
   }
 }

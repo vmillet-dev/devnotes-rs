@@ -3,7 +3,7 @@ import { ClipboardService } from '@core/services/clipboard/clipboard.service';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { FileDialogService } from '@core/services/dialogs/file-dialog.service';
 import { StatusNotifier } from '@core/services/notifications/status.service';
-import { ExportReport, ImportReport } from '@core/model/note.model';
+import { ExportReport, ExportScope, ImportReport } from '@core/model/note.model';
 import { hasErrorCode } from '@core/ipc/ipc.error';
 import { TransferRepository } from '../data/transfer.repository';
 import { NotesRevision } from './notes-revision';
@@ -128,13 +128,15 @@ export class LibraryStore {
 
   /** A `null` `spaceId` exports the whole corpus. */
   async export(spaceId: string | null, now: Date): Promise<void> {
-    await this.write((path, passphrase) => this.repository.export(path, spaceId, passphrase), now);
+    const scope: ExportScope = spaceId === null ? { kind: 'library' } : { kind: 'space', spaceId };
+    await this.write((path, passphrase) => this.repository.export(path, scope, passphrase), now);
   }
 
   async exportSelection(ids: readonly string[], now: Date): Promise<void> {
     if (!this.requireSelection(ids)) return;
 
-    await this.write((path, passphrase) => this.repository.exportSelection(path, ids, passphrase), now);
+    const scope: ExportScope = { kind: 'notes', ids: [...ids] };
+    await this.write((path, passphrase) => this.repository.export(path, scope, passphrase), now);
   }
 
   /** Sharing stops at the clipboard: nothing is sent anywhere. */

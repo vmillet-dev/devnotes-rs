@@ -575,7 +575,7 @@ describe('BoardStore', () => {
       await onBoard(harness);
 
       expect(await harness.store.restoreLayout(DRAGGED)).toBe(2);
-      expect(harness.repository.restored).toEqual([DRAGGED]);
+      expect(harness.repository.saved).toEqual([DRAGGED]);
     });
 
     it('reports a refused tidy-up rather than pretending it happened', async () => {

@@ -12,7 +12,7 @@ use crate::db::schema::{folders, note_positions, notes};
 use crate::error::StorageError;
 use crate::folders::board::{
     self, BoardArrangement, BoardFrame, BoardLayout, BoardPoint, BoardScope, CardPlacement,
-    ZonePlacement,
+    Occupancy, ZonePlacement,
 };
 
 /// What a board read resolves before anything can be drawn: where each zone sits, and
@@ -232,12 +232,11 @@ pub fn save_layout(
 /// position, and computing one on the fly without storing it would let the very first drag
 /// land next to cards that have no stored place of their own. It is idempotent — the
 /// second board read of a space writes nothing.
-pub fn geometry<S: std::hash::BuildHasher>(
+pub fn geometry(
     connection: &mut Library,
     space_id: &str,
     folder_ids: &[String],
-    note_counts: &HashMap<String, usize, S>,
-    loose_ids: &[String],
+    occupancy: &Occupancy,
 ) -> Result<Geometry, StorageError> {
     connection.transaction(|connection, _vault| {
         let mut stored_frames = frames(connection, space_id)?;
@@ -254,7 +253,7 @@ pub fn geometry<S: std::hash::BuildHasher>(
             // the first zone.
             let counts: Vec<usize> = folder_ids
                 .iter()
-                .map(|id| note_counts.get(id).copied().unwrap_or(0))
+                .map(|id| occupancy.per_folder.get(id).copied().unwrap_or(0))
                 .collect();
             let arranged = board::arrange_zones(&counts);
 
@@ -267,7 +266,8 @@ pub fn geometry<S: std::hash::BuildHasher>(
             }
         }
 
-        let unplaced: Vec<&String> = loose_ids
+        let unplaced: Vec<&String> = occupancy
+            .loose
             .iter()
             .filter(|id| !stored_positions.contains_key(*id))
             .collect();

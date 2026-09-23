@@ -1,4 +1,4 @@
-import type { ExportReport, ImportReport, SearchHit } from '@core/ipc/bindings';
+import type { ExportReport, ExportScope, ImportReport, SearchHit } from '@core/ipc/bindings';
 import { LanguageTag } from '@core/model/language.model';
 import { ChecklistItem, NoteKind } from './checklist.model';
 import type { NoteFolder } from './folder.model';
@@ -160,4 +160,4 @@ export interface Attachment {
   readonly createdAt: Date;
 }
 
-export type { ExportReport, ImportReport };
+export type { ExportReport, ExportScope, ImportReport };

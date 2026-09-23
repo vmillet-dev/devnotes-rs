@@ -18,7 +18,7 @@ use super::model::Folder;
 use crate::count::saturating_u32;
 use crate::notes::language::Language;
 use crate::notes::model::{self, DisplayNote, Note};
-use crate::notes::view::{Criteria, Facets, NoteFilter};
+use crate::notes::view::{Criteria, Facets, NoteFilter, NotesQuery};
 
 /// The card is the same card as on the canvas — full size, with its language tag, its
 /// snippet, its footer and its tags. The consequence is accepted: the board is large, and
@@ -65,6 +65,45 @@ pub struct BoardQuery {
     pub tags: Vec<String>,
     pub languages: Vec<Language>,
     pub now: DateTime<Utc>,
+}
+
+impl BoardQuery {
+    /// Everything neutral but the space: the board decides what matches on the whole space,
+    /// because it dims rather than narrows.
+    pub fn whole_space(&self) -> NotesQuery {
+        NotesQuery {
+            space_id: Some(self.space_id.clone()),
+            folder_id: None,
+            search: String::new(),
+            filter: NoteFilter::All,
+            tags: Vec::new(),
+            languages: Vec::new(),
+            now: self.now,
+            tz_offset_minutes: 0,
+            pinned_first: true,
+        }
+    }
+}
+
+/// How many notes each folder holds and which are loose: what a first layout is sized from.
+#[derive(Debug, Default, PartialEq, Eq)]
+pub struct Occupancy {
+    pub per_folder: HashMap<String, usize>,
+    pub loose: Vec<String>,
+}
+
+impl Occupancy {
+    pub fn of(notes: &[Note]) -> Self {
+        let mut occupancy = Self::default();
+        for note in notes {
+            match &note.folder_id {
+                Some(id) => *occupancy.per_folder.entry(id.clone()).or_default() += 1,
+                None => occupancy.loose.push(note.id.clone()),
+            }
+        }
+
+        occupancy
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -118,6 +157,16 @@ pub struct BoardView {
     /// The surface to pan over, so the front end sizes it from what is actually on it.
     pub width: i32,
     pub height: i32,
+}
+
+impl BoardView {
+    pub fn notes_mut(&mut self) -> impl Iterator<Item = &mut DisplayNote> {
+        self.zones
+            .iter_mut()
+            .flat_map(|zone| &mut zone.notes)
+            .chain(&mut self.loose)
+            .map(|entry| &mut entry.note)
+    }
 }
 
 /// One zone that moved. A batch of these is what a gesture eventually writes.
@@ -589,6 +638,27 @@ fn flowed(loose_ids: &[String], top: i32) -> Vec<CardPlacement> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::notes::fixtures::note;
+
+    #[test]
+    fn the_occupancy_counts_each_folder_and_lists_the_loose_notes() {
+        let filed = |id: &str, folder: Option<&str>| Note {
+            id: id.to_string(),
+            folder_id: folder.map(str::to_string),
+            ..note()
+        };
+
+        let occupancy = Occupancy::of(&[
+            filed("a", Some("f-1")),
+            filed("b", Some("f-1")),
+            filed("c", None),
+            filed("d", Some("f-2")),
+        ]);
+
+        assert_eq!(occupancy.per_folder.get("f-1"), Some(&2));
+        assert_eq!(occupancy.per_folder.get("f-2"), Some(&1));
+        assert_eq!(occupancy.loose, ["c"]);
+    }
 
     /// ⚠️ Two cards *and* room for the scrollbar: at exactly the inner width the second
     /// card wraps, which is what causes the scrollbar that keeps it wrapped.
