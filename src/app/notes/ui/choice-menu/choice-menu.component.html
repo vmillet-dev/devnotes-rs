@@ -14,7 +14,13 @@
   @if (naming() === 'value' && here?.colour; as colour) {
     <i [class]="'choice-swatch is-' + colour" aria-hidden="true"></i>
   }
-  <span class="choice-name">{{ triggerText() }}</span>
+  <span class="choice-name">
+    @if (shown(); as option) {
+      {{ option.nameIsKey ? (option.name | transloco) : option.name }}
+    } @else {
+      {{ fallbackText() }}
+    }
+  </span>
   <span class="choice-caret" aria-hidden="true">▾</span>
 </button>
 
@@ -46,7 +52,7 @@
         @if (option.colour; as colour) {
           <i [class]="'choice-swatch is-' + colour" aria-hidden="true"></i>
         }
-        {{ option.name }}
+        {{ option.nameIsKey ? (option.name | transloco) : option.name }}
       </button>
     }
   </div>

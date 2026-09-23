@@ -88,7 +88,7 @@
       <app-segmented-choice
         [kind]="'quick-filter'"
         [label]="'filters.groupLabel' | transloco"
-        [segments]="quickFilters()"
+        [segments]="quickFilters"
         [currentId]="canvas.activeFilter()"
         (chosen)="onQuickFilter($event)"
       />

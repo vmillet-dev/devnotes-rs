@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { FolderColour } from '@core/model/folder.model';
 import { MenuPanelDirective } from '@shared/directives/menu-panel.directive';
 import { MenuTriggerDirective } from '@shared/directives/menu-trigger.directive';
@@ -7,6 +8,11 @@ import { MenuTriggerDirective } from '@shared/directives/menu-trigger.directive'
 export interface ChoiceOption {
   readonly id: string;
   readonly name: string;
+  /**
+   * `name` is a translation key rather than user data. ⚠️ Translated in the template, so
+   * it follows a change of language.
+   */
+  readonly nameIsKey?: boolean;
   /** Only a folder has one, and it is the same swatch the card's chip draws. */
   readonly colour?: FolderColour;
 }
@@ -25,7 +31,7 @@ export interface ChoiceOption {
  */
 @Component({
   selector: 'app-choice-menu',
-  imports: [MenuPanelDirective],
+  imports: [MenuPanelDirective, TranslocoPipe],
   hostDirectives: [MenuTriggerDirective],
   // ⚠️ This one is used **inside dialogs**, unlike every other menu in the application.
   // The trigger directive lets Escape bubble on purpose — a multi-level menu folds its
@@ -55,8 +61,11 @@ export class ChoiceMenuComponent {
     () => this.options().find((option) => option.id === this.currentId()) ?? null,
   );
 
-  protected readonly triggerText = computed(() =>
-    this.naming() === 'label' ? this.label() : (this.current()?.name ?? this.noneLabel() ?? this.label()),
+  /** A command names what it does; a field names what is chosen, or its "none" entry. */
+  protected readonly shown = computed(() => (this.naming() === 'label' ? null : this.current()));
+
+  protected readonly fallbackText = computed(() =>
+    this.naming() === 'label' ? this.label() : (this.noneLabel() ?? this.label()),
   );
 
   /** A command has no current entry to mark, and nothing to leave. */

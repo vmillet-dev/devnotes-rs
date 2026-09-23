@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
-import { TranslocoService, TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { AppEventsService, GlobalAction } from '@core/ipc/app-events.service';
 import { DialogStack } from '@shared/layout/dialog/dialog-stack';
 import { AttachmentsStore } from '@core/state/attachments.store';
@@ -50,6 +50,12 @@ import { IconComponent } from '@shared/icon/icon.component';
 import { TrashPanelComponent } from './overlays/trash-panel/trash-panel.component';
 import { UndoBarComponent } from './overlays/undo-bar/undo-bar.component';
 
+/** Three states of one thing, so one control rather than three chips. */
+const QUICK_FILTERS: readonly Segment[] = (['all', 'pinned', 'untriaged'] as const).map((key) => ({
+  id: key,
+  labelKey: `filters.${key}`,
+}));
+
 @Component({
   selector: 'app-notes-page',
   imports: [
@@ -98,8 +104,6 @@ export class NotesPageComponent {
   /** The guide, opened at the chapter about whatever is empty on screen. */
   protected readonly help = inject(HelpStore);
 
-  private readonly transloco = inject(TranslocoService);
-
   /**
    * ⚠️ The disclosure is the page's and not the panel's: the trigger lives in the topbar
    * and the panel below it, and a component cannot be in two rows at once.
@@ -113,13 +117,7 @@ export class NotesPageComponent {
   /** ⚠️ Forced open by a selection: a filter nobody can see is a filter nobody can undo. */
   protected readonly facetsOpen = computed(() => this.facetsExpanded() || this.facetCount() > 0);
 
-  /** Three states of one thing, so one control rather than four chips. */
-  protected readonly quickFilters = computed<readonly Segment[]>(() =>
-    (['all', 'pinned', 'untriaged'] as const).map((key) => ({
-      id: key,
-      label: this.transloco.translate(`filters.${key}`),
-    })),
-  );
+  protected readonly quickFilters = QUICK_FILTERS;
 
   /** The segmented control speaks in strings; the store speaks in `NoteFilter`. */
   protected onQuickFilter(key: string): void {

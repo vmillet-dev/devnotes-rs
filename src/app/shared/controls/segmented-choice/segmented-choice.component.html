@@ -15,7 +15,7 @@
       [attr.aria-checked]="segment.id === currentId()"
       (click)="pick(segment.id)"
     >
-      {{ segment.label }}
+      {{ segment.labelKey | transloco }}
     </button>
   }
 </div>
