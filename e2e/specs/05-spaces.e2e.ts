@@ -2,7 +2,7 @@ import { browser, expect } from '@wdio/globals';
 
 import { RAIL_WIDTH } from '@core/services/settings/app-settings.model';
 import { canvas } from '../pageobjects/canvas.page.js';
-import { rail, spaces } from '../pageobjects/overlays.page.js';
+import { rail, spaces } from '../pageobjects/sidebar.page.js';
 import { eventually, press, reloadCanvas, testid } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 

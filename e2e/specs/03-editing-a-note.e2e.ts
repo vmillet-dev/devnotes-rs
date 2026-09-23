@@ -2,7 +2,7 @@ import { expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
-import { spaces } from '../pageobjects/overlays.page.js';
+import { spaces } from '../pageobjects/sidebar.page.js';
 import { eventually, reloadCanvas, viewportSize } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 

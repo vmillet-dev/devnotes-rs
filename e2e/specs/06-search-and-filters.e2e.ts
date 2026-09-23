@@ -1,7 +1,7 @@
 import { $, browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
-import { selectionBar } from '../pageobjects/overlays.page.js';
+import { selectionBar } from '../pageobjects/header.page.js';
 import { editor } from '../pageobjects/editor.page.js';
 import {
   activeTestId,
