@@ -17,7 +17,9 @@ import {
 } from '@testing/notes-harness';
 import { NoteSelectionStore } from './note-selection.store';
 import { NotesQueryStore, SEARCH_DEBOUNCE_MS } from './notes-query.store';
+import { NoteBatchStore } from './note-batch.store';
 import { NotesStore } from './notes.store';
+import { UndoStore } from './undo.store';
 import { SpacesStore } from './spaces.store';
 
 describe('NotesQueryStore', () => {
@@ -151,6 +153,8 @@ describe('NotesQueryStore', () => {
 
       return {
         store: TestBed.inject(NotesStore),
+        batch: TestBed.inject(NoteBatchStore),
+        undo: TestBed.inject(UndoStore),
         canvas,
         selection: TestBed.inject(NoteSelectionStore),
         repository,

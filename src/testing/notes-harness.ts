@@ -5,7 +5,9 @@ import { Note } from '@core/model/note.model';
 import { Space } from '@core/model/space.model';
 import { NoteSelectionStore } from '@core/state/note-selection.store';
 import { NotesQueryStore } from '@core/state/notes-query.store';
+import { NoteBatchStore } from '@core/state/note-batch.store';
 import { NotesStore } from '@core/state/notes.store';
+import { UndoStore } from '@core/state/undo.store';
 import { SpacesStore } from '@core/state/spaces.store';
 import { FakeClipboard } from './fake-clipboard';
 import { FakeFoldersRepository } from './fake-folders-repository';
@@ -15,6 +17,8 @@ import { provideAppTesting } from './testing.providers';
 /** The three notes stores are one object graph: testing one alone means faking two. */
 export interface NotesHarness {
   readonly store: NotesStore;
+  readonly batch: NoteBatchStore;
+  readonly undo: UndoStore;
   readonly canvas: NotesQueryStore;
   readonly selection: NoteSelectionStore;
   readonly repository: FakeNotesRepository;
@@ -48,6 +52,8 @@ export async function createNotesHarness(
 
   return {
     store: TestBed.inject(NotesStore),
+    batch: TestBed.inject(NoteBatchStore),
+    undo: TestBed.inject(UndoStore),
     canvas,
     selection: TestBed.inject(NoteSelectionStore),
     repository,

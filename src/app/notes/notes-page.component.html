@@ -155,11 +155,11 @@
           [count]="selection.checkedCount()"
           [spaces]="spaces.spaces()"
           [folders]="folders.folders()"
-          (moveRequested)="store.moveSelection($event)"
-          (fileRequested)="store.fileSelection($event)"
-          (tagRequested)="store.tagSelection($event)"
+          (moveRequested)="batch.moveSelection($event)"
+          (fileRequested)="batch.fileSelection($event)"
+          (tagRequested)="batch.tagSelection($event)"
           (copyRequested)="onCopySelection()"
-          (deleteRequested)="store.deleteSelection()"
+          (deleteRequested)="batch.deleteSelection()"
           (cleared)="selection.clearSelection()"
         />
       }
@@ -195,7 +195,7 @@
             (folderDeleted)="onFolderDeleted($event)"
             (folderNotesSelected)="selection.checkFolder($event)"
             (notesBanded)="selection.checkMany($event)"
-            (tidyRequested)="store.arrangeBoard($event)"
+            (tidyRequested)="batch.arrangeBoard($event)"
             (guideRequested)="help.open('folders')"
           />
         }
@@ -349,6 +349,6 @@
   <app-folder-name-prompt (submitted)="onZoneNamed(frame, $event)" (cancelled)="pendingZone.set(null)" />
 }
 
-@if (store.undoBanner(); as action) {
-  <app-undo-bar [action]="action" (undone)="store.undoLastAction()" (dismissed)="store.dismissUndo()" />
+@if (undo.banner(); as action) {
+  <app-undo-bar [action]="action" (undone)="undo.revert()" (dismissed)="undo.dismiss()" />
 }

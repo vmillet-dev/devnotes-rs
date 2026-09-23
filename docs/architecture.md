@@ -442,10 +442,12 @@ it is _about_:
 | `NotesQueryStore`    | which notes the canvas shows                    | `SpacesStore`, the clock |
 | `NoteSelectionStore` | which one it is pointing at, and what is ticked | `NotesQueryStore`        |
 | `NotesStore`         | the open note: creating, writing, deleting      | both of the above        |
+| `NoteBatchStore`     | writes over the selection, or the whole board   | the selection, the board |
+| `UndoStore`          | the last write that can be put back             | the board                |
 
 The dependency runs one way only, which is what makes each of them readable on its own. The
-notes page injects all three under names that say which is which (`canvas`, `selection`,
-`store`).
+notes page injects them under names that say which is which (`canvas`, `selection`,
+`store`, `batch`, `undo`).
 
 `NotesQueryStore` holds the **query state** — search text, active filter, selected tags,
 selected languages — and the view the back-end returned for it. It does no filtering, sorting
@@ -493,8 +495,9 @@ visible list** — and a range selection spans from one to the other:
   flattened in display order. Both the arrow keys and the Shift-range selection reason in
   **indexes** into that list, the only reference that survives a note being renamed.
 
-`NotesStore` is left with the note itself: the open one, its unsaved draft, every write to it,
-its deletion and the undo window. **One method writes a note's fields**, `applyPatch(id,
+`NotesStore` is left with the note itself: the open one, its unsaved draft, every write to it
+and its deletion. The writes that act on many notes at once live in `NoteBatchStore`, and
+every undoable write — single or batch — hands what it changed to `UndoStore`. **One method writes a note's fields**, `applyPatch(id,
 patch)`, and a table of per-field comparators (`UNCHANGED`) decides what actually moved — so
 closing the editor on an untouched note makes no round trip. There used to be nine setters,
 each restating that comparison, and a new field meant editing four files.
@@ -521,8 +524,8 @@ hold. There are **two** views of the same notes: `NotesQueryStore.queryParams` a
 `BoardStore.queryParams` both read `NotesRevision`, and a write that reloaded only the first
 one is exactly what left a todo list ticked on the board still showing unticked until the view
 was switched. The same trap in the other direction: `NotesStore.find` resolves a note through
-`NotesQueryStore.findVisible` **and** `BoardStore.findVisible`, because the board _dims_ where
-the canvas _narrows_ — a card there can be ticked, moved or deleted while its note is nowhere
+`NoteSelectionStore.noteOnScreen`, which reads the board whenever the board is showing, because
+the board _dims_ where the canvas _narrows_ — a card there can be ticked, moved or deleted while its note is nowhere
 in the canvas view, and an unresolved note is a gesture that writes nothing, silently.
 
 `TrashStore` and `TagsStore` load **on opening** rather than through a permanent `resource`:
@@ -1346,8 +1349,8 @@ running have to pan twice.
 ⚠️ `BoardStore.arrange` also drops both staged maps rather than letting them expire. Every
 place a gesture had staged has just been overwritten, and keeping the overlay would draw the
 cards back where the drag left them until a view happened to agree. The undo window is
-opened by `NotesStore`, which injects `BoardStore` — the dependency runs one way, so the
-board cannot reach the undo itself.
+opened by `NoteBatchStore.arrangeBoard`: `UndoStore` injects `BoardStore` to put an
+arrangement back, so the board cannot reach the undo itself.
 
 ### Descending into a folder
 
@@ -1542,8 +1545,8 @@ deadline frozen in the database would not follow.
 On the front, a reversible action records what it changed and shows `UndoBarComponent` for
 `UNDO_WINDOW_MS` (8 s).
 
-`Reversible` is a three-branch union — a deletion, a move, a tagging — and `NotesStore.reverse`
-switches over it exhaustively, so a fourth kind of undoable action stops the front compiling
+`Reversible` is a union — a deletion, a move, a tagging, a filing, an arrangement — and
+`UndoStore.reverse` switches over it exhaustively, so a fourth kind of undoable action stops the front compiling
 until it says how to put itself back. ⚠️ Each branch carries **what the back end answered**,
 never what the front end guessed: `move_notes` returns the placements it actually changed and
 `tag_notes` the `(note, tag)` pairs it actually added. Recomputing either from the selection
@@ -1555,8 +1558,8 @@ sentence.
 A batch that changed nothing opens no window at all. A bar offering to undo zero notes is
 noise, not a safety net.
 
-⚠️ The banner and the record are **two different things**: `undoBanner()` is what the timer
-clears, `lastAction()` is what `Ctrl+Z` reads, and it survives. Hiding a suggestion is not
+⚠️ The banner and the record are **two different things**: `UndoStore.banner()` is what the
+timer clears, `UndoStore.last()` is what `Ctrl+Z` reads, and it survives. Hiding a suggestion is not
 withdrawing it — the action stays undoable until another one replaces it or the user
 dismisses the banner by hand, which _is_ an explicit refusal.
 
@@ -1564,7 +1567,7 @@ dismisses the banner by hand, which _is_ an explicit refusal.
 canvas shortcut: it is the one gesture people make without looking at the screen.
 
 ⚠️ **Escape takes it back too, and only while the bar is up.** That difference is the whole
-reason the two signals exist apart: the rung reads `undoBanner()`, so the key answers while
+reason the two signals exist apart: the rung reads `undo.banner()`, so the key answers while
 the offer is on screen and goes back to its other duties — the selection, the filters, the
 folder — the moment it is not. It is the one rung of that chain that **writes**, and the
 guard against a mis-press is that a banner is saying so at the time. The report it comes

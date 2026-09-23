@@ -13,7 +13,9 @@ import { Note } from '@core/model/note.model';
 import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
 import { NoteSelectionStore } from '@core/state/note-selection.store';
 import { NotesQueryStore } from '@core/state/notes-query.store';
+import { NoteBatchStore } from '@core/state/note-batch.store';
 import { NotesStore } from '@core/state/notes.store';
+import { UndoStore } from '@core/state/undo.store';
 import { BoardStore } from '@core/state/board.store';
 import { CardBox, FocusDirection, nextFocusIndex } from '@core/utils/grid-navigation.util';
 
@@ -25,6 +27,8 @@ interface MeasuredCard extends CardBox {
 interface CanvasContext {
   readonly focused: Note | null;
   readonly notes: NotesStore;
+  readonly batch: NoteBatchStore;
+  readonly undo: UndoStore;
   readonly board: BoardStore;
   readonly canvas: NotesQueryStore;
   readonly folders: FoldersStore;
@@ -136,7 +140,7 @@ const CANVAS_KEYS: readonly CanvasKey[] = [
     id: 'canvas.align',
     accelerator: 'A',
     labelKey: 'shortcuts.canvas.align',
-    run: ({ board, notes }) => when(board.isShowing(), () => void notes.arrangeBoard('looseCards')),
+    run: ({ board, batch }) => when(board.isShowing(), () => void batch.arrangeBoard('looseCards')),
   },
   { keys: ['Ctrl'], labelKey: 'shortcuts.canvas.checkWithClick' },
   { keys: ['Shift'], labelKey: 'shortcuts.canvas.extendWithClick' },
@@ -163,7 +167,7 @@ const CANVAS_KEYS: readonly CanvasKey[] = [
     accelerator: 'Ctrl+Z',
     labelKey: 'shortcuts.canvas.undo',
     // Even after the banner is gone: it is the gesture one makes without looking.
-    run: ({ notes }) => when(notes.lastAction() !== null, () => void notes.undoLastAction()),
+    run: ({ undo }) => when(undo.last() !== null, () => void undo.revert()),
   },
   {
     keys: ['Escape'],
@@ -175,15 +179,15 @@ const CANVAS_KEYS: readonly CanvasKey[] = [
     // the selection, then the search and the facets, and only then out of the folder —
     // leaving it is the biggest, so it is last.
     //
-    // ⚠️ The second rung is the only one that **writes**, and it reads `undoBanner()`
-    // rather than `lastAction()` on purpose: the two differ by design, the banner being
+    // ⚠️ The second rung is the only one that **writes**, and it reads `undo.banner()`
+    // rather than `undo.last()` on purpose: the two differ by design, the banner being
     // what the 8s timer clears while the record survives for `Ctrl+Z`. Escape answers
     // only while the offer is on screen — outside it, this key has other rungs to serve
     // and must not quietly rewrite the corpus. The card taught it and one keystroke later
     // it meant nothing (#293).
-    run: ({ selection, canvas, folders, notes }) =>
+    run: ({ selection, canvas, folders, undo }) =>
       when(selection.armedForDeletion() !== null, () => selection.disarm()) ||
-      when(notes.undoBanner() !== null, () => void notes.undoLastAction()) ||
+      when(undo.banner() !== null, () => void undo.revert()) ||
       when(selection.hasSelection(), () => selection.clearSelection()) ||
       when(canvas.hasUserFilters(), () => canvas.clearFilters()) ||
       when(folders.activeFolderId() !== null, () => folders.selectFolder(null)),
@@ -229,6 +233,8 @@ export class CanvasKeyboardDirective {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly selection = inject(NoteSelectionStore);
   private readonly notes = inject(NotesStore);
+  private readonly batch = inject(NoteBatchStore);
+  private readonly undo = inject(UndoStore);
   private readonly board = inject(BoardStore);
   private readonly canvas = inject(NotesQueryStore);
   private readonly folders = inject(FoldersStore);
@@ -270,6 +276,8 @@ export class CanvasKeyboardDirective {
     return {
       focused: this.selection.focusedNote(),
       notes: this.notes,
+      batch: this.batch,
+      undo: this.undo,
       board: this.board,
       canvas: this.canvas,
       folders: this.folders,

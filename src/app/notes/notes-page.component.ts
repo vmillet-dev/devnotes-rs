@@ -9,7 +9,9 @@ import { BoardStore } from '@core/state/board.store';
 import { FoldersStore } from '@core/state/folders.store';
 import { NotesQueryStore } from '@core/state/notes-query.store';
 import { NotesRevision } from '@core/state/notes-revision';
+import { NoteBatchStore } from '@core/state/note-batch.store';
 import { NoteFilter, NotesStore } from '@core/state/notes.store';
+import { UndoStore } from '@core/state/undo.store';
 import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
 import { SampleNotesService } from '@core/state/sample-notes.service';
 import { HelpStore } from '@core/services/help/help.store';
@@ -91,6 +93,8 @@ export class NotesPageComponent {
   protected readonly canvas = inject(NotesQueryStore);
   protected readonly selection = inject(NoteSelectionStore);
   protected readonly store = inject(NotesStore);
+  protected readonly batch = inject(NoteBatchStore);
+  protected readonly undo = inject(UndoStore);
   protected readonly spaces = inject(SpacesStore);
   protected readonly folders = inject(FoldersStore);
   protected readonly board = inject(BoardStore);
