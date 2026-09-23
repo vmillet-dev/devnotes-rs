@@ -35,7 +35,7 @@ describe('The backup copies', () => {
     );
     expect(listed).toBeGreaterThan(0);
 
-    const text = await rows()[0].getText();
+    const text = await rows()[0]!.getText();
     // The stamp is the folder's own name, so it is the one label no translation touches.
     expect(text).toMatch(/\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}/);
     expect(text).toMatch(/\d+(\.\d+)? [KM]o/);

@@ -178,8 +178,9 @@ export const gestures = {
    * away with `pointercancel` so nothing is written. ⚠️ Computed, not the class: a
    * declaration the browser dropped as invalid leaves the class on and the band empty.
    */
-  bandFill: (button: 0 | 2): Promise<string> =>
-    browser.execute((pressed: number) => {
+  // `await` flattens what `execute` types as a promise of the page's own promise.
+  bandFill: async (button: 0 | 2): Promise<string> =>
+    await browser.execute((pressed: number) => {
       const surface = document.querySelector('[data-testid="board-surface"]');
       if (!surface) throw new Error('no board surface');
 
