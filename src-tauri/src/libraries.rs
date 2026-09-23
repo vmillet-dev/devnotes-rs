@@ -26,30 +26,9 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 use tauri::{AppHandle, Manager, State};
 
-use crate::db::{DB_FILE_NAME, Db};
+use crate::db::Db;
 use crate::error::{AppError, StorageError};
-use crate::vault::file::FILE_NAME as VAULT_FILE_NAME;
-
-/// The registry, beside the libraries rather than inside one of them.
-const REGISTRY: &str = "libraries.json";
-
-/// Where a library created after the first one goes.
-const LIBRARIES: &str = "libraries";
-
-/// A library's own preferences, beside its database. ⚠️ The same name the application's
-/// file has, and that is fine: they are told apart by their directory, which only works
-/// because no library lives at the profile root any more.
-pub(crate) const LIBRARY_PREFERENCES: &str = "preferences.json";
-
-/// What a library is made of, for the move that gathers an old one up.
-const LIBRARY_FILES: [&str; 4] = [
-    DB_FILE_NAME,
-    "devnotes.sqlite3-wal",
-    "devnotes.sqlite3-shm",
-    VAULT_FILE_NAME,
-];
-const LIBRARY_DIRECTORIES: [&str; 5] =
-    ["attachments", "backups", "damaged", "archived", "replaced"];
+use crate::layout::{DATABASE, KEY_FILE, LIBRARIES, LIBRARY_DIRECTORIES, LIBRARY_FILES, REGISTRY};
 
 /// One library, as the interface lists it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -98,7 +77,7 @@ fn directory_of(profile: &Path, entry: &LibraryEntry) -> PathBuf {
 
 /// Whether a library has ever been written to this directory.
 fn holds_a_library(directory: &Path) -> bool {
-    directory.join(DB_FILE_NAME).is_file() || directory.join(VAULT_FILE_NAME).is_file()
+    directory.join(DATABASE).is_file() || directory.join(KEY_FILE).is_file()
 }
 
 /// Moves a library that predates the registry into a directory of its own.
@@ -390,8 +369,8 @@ mod tests {
     #[test]
     fn gathering_takes_the_key_and_the_attachments_with_the_database() {
         let profile = scratch();
-        std::fs::write(profile.join(DB_FILE_NAME), b"a database").unwrap();
-        std::fs::write(profile.join(VAULT_FILE_NAME), b"{}").unwrap();
+        std::fs::write(profile.join(DATABASE), b"a database").unwrap();
+        std::fs::write(profile.join(KEY_FILE), b"{}").unwrap();
         std::fs::create_dir_all(profile.join("attachments")).unwrap();
         std::fs::write(profile.join("attachments").join("a-1.png"), b"\x89PNG").unwrap();
         std::fs::create_dir_all(profile.join("backups")).unwrap();
@@ -400,12 +379,35 @@ mod tests {
 
         gather(&profile, &into);
 
-        assert!(into.join(DB_FILE_NAME).is_file());
-        assert!(into.join(VAULT_FILE_NAME).is_file());
+        assert!(into.join(DATABASE).is_file());
+        assert!(into.join(KEY_FILE).is_file());
         assert!(into.join("attachments").join("a-1.png").is_file());
         assert!(into.join("backups").is_dir());
-        assert!(!profile.join(DB_FILE_NAME).exists());
+        assert!(!profile.join(DATABASE).exists());
         assert!(!profile.join("attachments").exists());
+        std::fs::remove_dir_all(&profile).ok();
+    }
+
+    /// A directory a library gains has to be declared in `layout` to travel, and this is
+    /// what notices one that was not moved.
+    #[test]
+    fn gathering_moves_every_entry_the_layout_declares() {
+        let profile = scratch();
+        for name in LIBRARY_FILES {
+            std::fs::write(profile.join(name), b"x").unwrap();
+        }
+        for name in LIBRARY_DIRECTORIES {
+            std::fs::create_dir_all(profile.join(name)).unwrap();
+        }
+        let into = profile.join(LIBRARIES).join("x");
+        std::fs::create_dir_all(&into).unwrap();
+
+        gather(&profile, &into);
+
+        for name in LIBRARY_FILES.iter().chain(LIBRARY_DIRECTORIES.iter()) {
+            assert!(into.join(name).exists(), "{name} did not arrive");
+            assert!(!profile.join(name).exists(), "{name} stayed behind");
+        }
         std::fs::remove_dir_all(&profile).ok();
     }
 
@@ -414,7 +416,7 @@ mod tests {
     #[test]
     fn gathering_leaves_the_application_preferences_where_they_are() {
         let profile = scratch();
-        std::fs::write(profile.join(DB_FILE_NAME), b"a database").unwrap();
+        std::fs::write(profile.join(DATABASE), b"a database").unwrap();
         std::fs::write(profile.join("preferences.json"), b"{}").unwrap();
         let into = profile.join("libraries").join("x");
         std::fs::create_dir_all(&into).unwrap();
@@ -432,7 +434,7 @@ mod tests {
         let profile = scratch();
         assert!(!holds_a_library(&profile));
 
-        std::fs::write(profile.join(VAULT_FILE_NAME), b"{}").unwrap();
+        std::fs::write(profile.join(KEY_FILE), b"{}").unwrap();
 
         assert!(holds_a_library(&profile));
         std::fs::remove_dir_all(&profile).ok();
@@ -492,15 +494,15 @@ mod tests {
     #[test]
     fn a_profile_from_before_the_registry_is_adopted_and_gathered() {
         let profile = scratch();
-        std::fs::write(profile.join(DB_FILE_NAME), b"a database").unwrap();
-        std::fs::write(profile.join(VAULT_FILE_NAME), b"{}").unwrap();
+        std::fs::write(profile.join(DATABASE), b"a database").unwrap();
+        std::fs::write(profile.join(KEY_FILE), b"{}").unwrap();
 
         let registry = registry_in(&profile);
 
         assert_eq!(registry.libraries.len(), 1);
         let into = directory_of(&profile, &registry.libraries[0]);
-        assert!(into.join(DB_FILE_NAME).is_file());
-        assert!(!profile.join(DB_FILE_NAME).exists());
+        assert!(into.join(DATABASE).is_file());
+        assert!(!profile.join(DATABASE).exists());
         assert_eq!(
             registry.open.as_deref(),
             Some(registry.libraries[0].id.as_str())
@@ -558,7 +560,7 @@ mod tests {
         assert_eq!(created.name, "Boulot", "the name is trimmed");
         assert_eq!(registry.open, first, "creating does not open");
         assert!(directory_of(&profile, &created).is_dir());
-        assert!(!directory_of(&profile, &created).join(DB_FILE_NAME).exists());
+        assert!(!directory_of(&profile, &created).join(DATABASE).exists());
         std::fs::remove_dir_all(&profile).ok();
     }
 
@@ -600,7 +602,7 @@ mod tests {
     fn deleting_takes_the_entry_and_the_files() {
         let profile = scratch();
         let created = create_in(&profile, "Boulot").unwrap();
-        std::fs::write(directory_of(&profile, &created).join(DB_FILE_NAME), b"x").unwrap();
+        std::fs::write(directory_of(&profile, &created).join(DATABASE), b"x").unwrap();
 
         delete_in(&profile, &created.id).unwrap();
 

@@ -11,8 +11,6 @@ use diesel::prelude::*;
 use crate::error::StorageError;
 use crate::vault::key::Vault;
 
-pub const DB_FILE_NAME: &str = "devnotes.sqlite3";
-
 /// The connection, and the key everything it holds is sealed with.
 ///
 /// ⚠️ It derefs to the connection, so a caller keeps writing `&mut connection`. What it
@@ -302,7 +300,7 @@ mod tests {
         let directory =
             std::env::temp_dir().join(format!("devnotes-damaged-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&directory).unwrap();
-        let path = directory.join(DB_FILE_NAME);
+        let path = directory.join(crate::layout::DATABASE);
 
         // A real library, with enough in it to fill more than the first page.
         {

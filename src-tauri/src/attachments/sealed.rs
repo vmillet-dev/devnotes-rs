@@ -12,14 +12,6 @@ use tauri::{AppHandle, Manager};
 use crate::error::StorageError;
 use crate::vault::key::Vault;
 
-/// What [`plaintext_directory`] is called, beside the attachments themselves.
-///
-/// ⚠️ A decrypted copy lands here whenever an attachment is opened with the application
-/// the desktop chose for it — there is no other way to hand a file to another program.
-/// [`sweep_plaintext`] empties it on the way out and at every launch, so the copy outlives
-/// the session at worst, and the README says so plainly.
-const PLAINTEXT_DIRECTORY: &str = "open";
-
 pub fn seal_into(vault: &Vault, source: &Path, destination: &Path) -> Result<u64, StorageError> {
     let plain = std::fs::read(source)
         .map_err(|error| StorageError::File(format!("{}: {error}", source.display())))?;
@@ -78,7 +70,7 @@ pub fn plaintext_directory(app: &AppHandle) -> Result<PathBuf, StorageError> {
         .path()
         .app_data_dir()
         .map_err(|error| StorageError::File(format!("app_data_dir: {error}")))?
-        .join(PLAINTEXT_DIRECTORY))
+        .join(crate::layout::PLAINTEXT_COPIES))
 }
 
 /// ⚠️ Run on the way out *and* at every launch. A copy handed to another application

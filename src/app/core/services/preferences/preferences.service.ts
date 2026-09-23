@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { PREFERENCES_FILE } from '@core/ipc/bindings';
 import { KeyValueStore, PREFERENCES_STORE_LOADER } from './key-value-store';
 
 // Re-exported from where it was, so the dozen specs that substitute the plugin keep one
@@ -10,7 +11,7 @@ export { PREFERENCES_STORE_LOADER };
  * path against `BaseDirectory::AppData`. The two are the same directory on Windows and
  * only Linux splits them.
  */
-const STORE_FILE = 'preferences.json';
+const STORE_FILE = PREFERENCES_FILE;
 
 /**
  * ⚠️ Everything a key can be **except** what belongs to one library's notes. Which

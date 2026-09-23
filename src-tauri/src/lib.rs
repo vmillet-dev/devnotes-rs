@@ -18,6 +18,7 @@ pub mod vault;
 pub(crate) mod app_info;
 pub(crate) mod closed_enum;
 pub(crate) mod count;
+pub(crate) mod layout;
 
 use tauri::Manager;
 use tauri_plugin_window_state::StateFlags;
@@ -149,10 +150,11 @@ fn ipc_builder() -> Builder<tauri::Wry> {
         .constant("DEFAULT_SHORTCUTS", desktop::ShortcutBindings::defaults())
         // The `{{field}}` rule, so the form refuses in the same terms the back end does.
         .constant("FIELD_NAME_PATTERN", notes::placeholder::FIELD_NAME_PATTERN)
-        // ⚠️ The name of a library's own preference file. Rust decides where a library
-        // lives, so it decides this too — the front end opens the store, and a second
-        // spelling of the name would open a second file.
-        .constant("LIBRARY_PREFERENCES_FILE", libraries::LIBRARY_PREFERENCES)
+        // ⚠️ Rust decides where a library lives, so it names the preference files too — a
+        // second spelling on the front would open a second file.
+        .constant("PREFERENCES_FILE", layout::PREFERENCES)
+        // Read by Rust out of the application's file before the front end has booted.
+        .constant("AUTOMATIC_BACKUPS_KEY", backup::AUTOMATIC_BACKUPS_KEY)
 }
 
 /// ⚠️ Not the plugin's default `all()`, which carries `VISIBLE`: quitting from the tray

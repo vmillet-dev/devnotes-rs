@@ -16,22 +16,13 @@ use chrono::{DateTime, TimeDelta, Utc};
 use diesel::prelude::*;
 use diesel::sql_types::Text;
 
-use crate::db::{DB_FILE_NAME, Db, Library};
+use crate::db::{Db, Library};
 use crate::error::{AppError, StorageError};
-use crate::vault::file::FILE_NAME as VAULT_FILE_NAME;
+use crate::layout::{self, BACKUPS, DATABASE_SIDECARS, KEY_FILE, REPLACED};
 use crate::vault::key::{Cost, Vault};
 
-pub(crate) const DIRECTORY: &str = "backups";
-
-/// Where the library a restore replaces goes, so the gesture can be undone by hand.
-pub(crate) const REPLACED: &str = "replaced";
-
-/// What SQLite leaves beside the database; they belong to it and must travel with it.
-const SIDECARS: [&str; 2] = ["devnotes.sqlite3-wal", "devnotes.sqlite3-shm"];
-
-/// Where the front end writes its preferences, and the key it writes this one under.
-const PREFERENCES: &str = "preferences.json";
-const SETTING: &str = "devnotes.automaticBackups";
+/// The key the front end writes this setting under, in the application's preferences.
+pub(crate) const AUTOMATIC_BACKUPS_KEY: &str = "devnotes.automaticBackups";
 
 /// How many are kept. Enough to reach past the launch that went wrong without turning the
 /// data directory into a second library.
@@ -41,16 +32,8 @@ pub(crate) const KEEP: usize = 3;
 /// rotate every older copy out, which is exactly the history a backup is for.
 const MIN_AGE: TimeDelta = TimeDelta::hours(24);
 
-/// ⚠️ Colons are legal in an instant and not in a Windows path.
-fn stamp(now: DateTime<Utc>) -> String {
-    now.format("%Y-%m-%d_%H-%M-%S").to_string()
-}
-
 fn taken_at(entry: &Path) -> Option<DateTime<Utc>> {
-    let name = entry.file_name()?.to_str()?;
-    let parsed = chrono::NaiveDateTime::parse_from_str(name, "%Y-%m-%d_%H-%M-%S").ok()?;
-
-    Some(parsed.and_utc())
+    layout::parse_stamp(entry.file_name()?.to_str()?)
 }
 
 /// The copies on disk, newest first.
@@ -81,7 +64,7 @@ pub(crate) fn rotate(
     connection: &mut Library,
     now: DateTime<Utc>,
 ) -> Result<Option<PathBuf>, StorageError> {
-    let directory = library.join(DIRECTORY);
+    let directory = library.join(BACKUPS);
     let taken = existing(&directory);
 
     if let Some(newest) = taken.first()
@@ -91,11 +74,11 @@ pub(crate) fn rotate(
         return Ok(None);
     }
 
-    let target = directory.join(stamp(now));
+    let target = directory.join(layout::stamp(now));
     std::fs::create_dir_all(&target)
         .map_err(|error| StorageError::File(format!("{}: {error}", target.display())))?;
 
-    let copy = target.join(DB_FILE_NAME);
+    let copy = target.join(layout::DATABASE);
     diesel::sql_query("VACUUM INTO ?")
         .bind::<Text, _>(copy.to_string_lossy().to_string())
         .execute(connection.db())
@@ -106,12 +89,10 @@ pub(crate) fn rotate(
             StorageError::File(format!("{}: {error}", copy.display()))
         })?;
 
-    std::fs::copy(library.join(VAULT_FILE_NAME), target.join(VAULT_FILE_NAME)).map_err(
-        |error| {
-            let _ = std::fs::remove_dir_all(&target);
-            StorageError::File(format!("{VAULT_FILE_NAME}: {error}"))
-        },
-    )?;
+    std::fs::copy(library.join(KEY_FILE), target.join(KEY_FILE)).map_err(|error| {
+        let _ = std::fs::remove_dir_all(&target);
+        StorageError::File(format!("{KEY_FILE}: {error}"))
+    })?;
 
     for old in existing(&directory).into_iter().skip(KEEP) {
         // Best effort: a copy that resists deletion is not worth failing a launch over.
@@ -141,20 +122,20 @@ pub struct Backup {
 #[allow(clippy::cast_precision_loss)]
 fn describe(copy: &Path) -> Option<Backup> {
     let at = taken_at(copy)?;
-    let database = copy.join(DB_FILE_NAME);
+    let database = copy.join(layout::DATABASE);
     let bytes = std::fs::metadata(&database).map_or(0, |meta| meta.len());
 
     Some(Backup {
         id: copy.file_name()?.to_str()?.to_string(),
         taken_at: at,
         bytes: bytes as f64,
-        openable: database.is_file() && copy.join(VAULT_FILE_NAME).is_file(),
+        openable: database.is_file() && copy.join(KEY_FILE).is_file(),
     })
 }
 
 /// The copies that exist, newest first.
 pub(crate) fn list(library: &Path) -> Vec<Backup> {
-    existing(&library.join(DIRECTORY))
+    existing(&library.join(BACKUPS))
         .iter()
         .filter_map(|copy| describe(copy))
         .collect()
@@ -183,35 +164,35 @@ pub(crate) fn replace(
     // from the front end, and `../2026-01-01_00-00-00` joins to a path outside
     // `backups/` whose file name still parses as a stamp. A name from outside has no
     // business deciding which directory this reads.
-    let copy = existing(&library.join(DIRECTORY))
+    let copy = existing(&library.join(BACKUPS))
         .into_iter()
         .find(|path| path.file_name().and_then(std::ffi::OsStr::to_str) == Some(id))
         .ok_or_else(|| StorageError::File(format!("{id}: no such copy")))?;
 
-    if !copy.join(DB_FILE_NAME).is_file() || !copy.join(VAULT_FILE_NAME).is_file() {
+    if !copy.join(layout::DATABASE).is_file() || !copy.join(KEY_FILE).is_file() {
         return Err(StorageError::File(format!(
             "{id}: not a copy that can be opened"
         )));
     }
 
-    let aside = library.join(REPLACED).join(stamp(now));
+    let aside = library.join(REPLACED).join(layout::stamp(now));
     std::fs::create_dir_all(&aside)
         .map_err(|error| StorageError::File(format!("{}: {error}", aside.display())))?;
 
     let mut moved: Vec<(PathBuf, PathBuf)> = Vec::new();
-    for name in [DB_FILE_NAME, VAULT_FILE_NAME] {
+    for name in [layout::DATABASE, KEY_FILE] {
         let from = library.join(name);
         let to = aside.join(name);
         std::fs::rename(&from, &to)
             .map_err(|error| StorageError::File(format!("{}: {error}", from.display())))?;
         moved.push((from, to));
     }
-    for sidecar in SIDECARS {
+    for sidecar in DATABASE_SIDECARS {
         // Absent is the ordinary case: a clean shutdown leaves neither.
         let _ = std::fs::rename(library.join(sidecar), aside.join(sidecar));
     }
 
-    for name in [DB_FILE_NAME, VAULT_FILE_NAME] {
+    for name in [layout::DATABASE, KEY_FILE] {
         if let Err(error) = std::fs::copy(copy.join(name), library.join(name)) {
             // ⚠️ Back where they were, or a failed restore leaves no library at all —
             // which is the exact outcome this whole function exists to avoid.
@@ -254,8 +235,8 @@ pub(crate) struct Rewrapped {
 pub(crate) fn rewrap(library: &Path, vault: &Vault, passphrase: &str, cost: Cost) -> Rewrapped {
     let mut tally = Rewrapped::default();
 
-    for copy in existing(&library.join(DIRECTORY)) {
-        let path = copy.join(VAULT_FILE_NAME);
+    for copy in existing(&library.join(BACKUPS)) {
+        let path = copy.join(KEY_FILE);
         if !path.is_file() {
             continue;
         }
@@ -290,9 +271,9 @@ fn wanted_by_preference(app: &AppHandle) -> bool {
     use tauri_plugin_store::StoreExt;
 
     let stored = app
-        .store(PREFERENCES)
+        .store(layout::PREFERENCES)
         .ok()
-        .and_then(|store| store.get(SETTING))
+        .and_then(|store| store.get(AUTOMATIC_BACKUPS_KEY))
         .and_then(|value| value.as_str().map(str::to_owned));
 
     wanted(stored.as_deref())
@@ -400,7 +381,7 @@ mod tests {
         )
         .unwrap();
 
-        let mut connection = db::open(&directory.join(DB_FILE_NAME), vault).unwrap();
+        let mut connection = db::open(&directory.join(layout::DATABASE), vault).unwrap();
         let space = spaces::create(&mut connection, "Perso").unwrap().id;
         let note = notes::create(
             &mut connection,
@@ -434,7 +415,7 @@ mod tests {
         let target = rotate(&directory, &mut connection, at(0)).unwrap().unwrap();
 
         let reopened = crate::vault::file::unlock(&target, "a passphrase").unwrap();
-        let mut copy = db::open(&target.join(DB_FILE_NAME), reopened).unwrap();
+        let mut copy = db::open(&target.join(layout::DATABASE), reopened).unwrap();
         let written = notes::all(&mut copy, None).unwrap();
 
         assert_eq!(written.len(), 1);
@@ -451,8 +432,8 @@ mod tests {
 
         let target = rotate(&directory, &mut connection, at(0)).unwrap().unwrap();
 
-        assert!(target.join(VAULT_FILE_NAME).is_file());
-        assert!(target.join(DB_FILE_NAME).is_file());
+        assert!(target.join(KEY_FILE).is_file());
+        assert!(target.join(layout::DATABASE).is_file());
         std::fs::remove_dir_all(&directory).ok();
     }
 
@@ -466,7 +447,7 @@ mod tests {
         let again = rotate(&directory, &mut connection, at(3)).unwrap();
 
         assert!(again.is_none());
-        assert_eq!(existing(&directory.join(DIRECTORY)).len(), 1);
+        assert_eq!(existing(&directory.join(BACKUPS)).len(), 1);
         std::fs::remove_dir_all(&directory).ok();
     }
 
@@ -480,7 +461,7 @@ mod tests {
             .unwrap()
             .unwrap();
 
-        assert_eq!(existing(&directory.join(DIRECTORY)).len(), 2);
+        assert_eq!(existing(&directory.join(BACKUPS)).len(), 2);
         std::fs::remove_dir_all(&directory).ok();
     }
 
@@ -493,7 +474,7 @@ mod tests {
             rotate(&directory, &mut connection, at(day * 25)).unwrap();
         }
 
-        let kept = existing(&directory.join(DIRECTORY));
+        let kept = existing(&directory.join(BACKUPS));
         assert_eq!(kept.len(), KEEP);
         // The newest survive, not the first ones taken.
         assert_eq!(taken_at(&kept[0]).unwrap(), at(5 * 25));
@@ -560,13 +541,8 @@ mod tests {
         let second = rotate(&directory, &mut connection, at(25))
             .unwrap()
             .unwrap();
-        crate::vault::file::write_wrapped(
-            &second.join(VAULT_FILE_NAME),
-            &vault,
-            "the second",
-            cheap(),
-        )
-        .unwrap();
+        crate::vault::file::write_wrapped(&second.join(KEY_FILE), &vault, "the second", cheap())
+            .unwrap();
 
         let vault =
             crate::vault::file::change_passphrase(&directory, "the second", "the third", cheap())
@@ -588,7 +564,7 @@ mod tests {
         let directory = scratch();
         let (mut connection, _) = library(&directory);
         let target = rotate(&directory, &mut connection, at(0)).unwrap().unwrap();
-        std::fs::remove_file(target.join(VAULT_FILE_NAME)).unwrap();
+        std::fs::remove_file(target.join(KEY_FILE)).unwrap();
 
         let vault = crate::vault::file::unlock(&directory, "a passphrase").unwrap();
         let tally = rewrap(&directory, &vault, "a new one", cheap());
@@ -603,7 +579,7 @@ mod tests {
         /// Reads the one note's title straight out of a library on disk.
         fn title_in(directory: &Path, passphrase: &str) -> String {
             let vault = crate::vault::file::unlock(directory, passphrase).unwrap();
-            let mut connection = db::open(&directory.join(DB_FILE_NAME), vault).unwrap();
+            let mut connection = db::open(&directory.join(layout::DATABASE), vault).unwrap();
 
             notes::all(&mut connection, None).unwrap()[0].title.clone()
         }
@@ -665,8 +641,8 @@ mod tests {
 
             let aside = replace(&directory, &id, at(30)).unwrap();
 
-            assert!(directory.join(VAULT_FILE_NAME).is_file());
-            assert!(aside.join(VAULT_FILE_NAME).is_file());
+            assert!(directory.join(KEY_FILE).is_file());
+            assert!(aside.join(KEY_FILE).is_file());
             std::fs::remove_dir_all(&directory).ok();
         }
 
@@ -698,14 +674,14 @@ mod tests {
             drop(connection);
             let outside = directory.join("2026-07-25_09-00-00");
             std::fs::create_dir_all(&outside).unwrap();
-            std::fs::write(outside.join(DB_FILE_NAME), b"not a library").unwrap();
-            std::fs::write(outside.join(VAULT_FILE_NAME), b"{}").unwrap();
+            std::fs::write(outside.join(layout::DATABASE), b"not a library").unwrap();
+            std::fs::write(outside.join(KEY_FILE), b"{}").unwrap();
 
             let refused = replace(&directory, "../2026-07-25_09-00-00", at(30));
 
             assert!(refused.is_err());
             assert!(
-                directory.join(DB_FILE_NAME).is_file(),
+                directory.join(layout::DATABASE).is_file(),
                 "the library is still there"
             );
             std::fs::remove_dir_all(&directory).ok();
@@ -719,12 +695,12 @@ mod tests {
             let copy = rotate(&directory, &mut connection, at(0)).unwrap().unwrap();
             let id = copy.file_name().unwrap().to_str().unwrap().to_string();
             drop(connection);
-            std::fs::remove_file(copy.join(VAULT_FILE_NAME)).unwrap();
+            std::fs::remove_file(copy.join(KEY_FILE)).unwrap();
 
             let refused = replace(&directory, &id, at(30));
 
             assert!(refused.is_err());
-            assert!(directory.join(DB_FILE_NAME).is_file());
+            assert!(directory.join(layout::DATABASE).is_file());
             assert!(!directory.join(REPLACED).exists(), "nothing was set aside");
             std::fs::remove_dir_all(&directory).ok();
         }
@@ -753,7 +729,7 @@ mod tests {
     fn something_that_is_not_a_copy_is_ignored() {
         let directory = scratch();
         let (mut connection, _) = library(&directory);
-        std::fs::create_dir_all(directory.join(DIRECTORY).join("notes de Valentin")).unwrap();
+        std::fs::create_dir_all(directory.join(BACKUPS).join("notes de Valentin")).unwrap();
 
         let target = rotate(&directory, &mut connection, at(0)).unwrap();
 

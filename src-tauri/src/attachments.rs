@@ -22,15 +22,13 @@ use crate::error::{AppError, StorageError};
 use crate::vault::key::Vault;
 use model::Attachment;
 
-const DIRECTORY: &str = "attachments";
-
 fn file_error(context: &str, error: &std::io::Error) -> StorageError {
     StorageError::File(format!("{context}: {error}"))
 }
 
 /// Created on demand, so an installation that never attached anything has none.
 pub(crate) fn directory(app: &AppHandle) -> Result<PathBuf, StorageError> {
-    let path = crate::libraries::open_directory(app)?.join(DIRECTORY);
+    let path = crate::libraries::open_directory(app)?.join(crate::layout::ATTACHMENTS);
     std::fs::create_dir_all(&path).map_err(|error| file_error("attachments directory", &error))?;
 
     Ok(path)
