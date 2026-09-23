@@ -44,9 +44,6 @@ describe('SecurityPageComponent', () => {
     draft.cancel();
     fixture = TestBed.createComponent(SecurityPageComponent);
     fixture.autoDetectChanges();
-    // The page reads the copies in its constructor, so the round trip has to settle
-    // before the DOM says anything about them.
-    await fixture.whenStable();
     await fixture.whenStable();
   });
 

@@ -55,15 +55,13 @@ export class LibrariesStore {
    * whichever library was open last.
    */
   async load(): Promise<void> {
-    try {
+    await this.notifier.attempt('errors.librariesListFailed', async () => {
       const registry = await this.repository.list();
       this._libraries.set(registry.libraries);
       this._openId.set(registry.open);
 
       await this.preferences.hydrate(this.open()?.directory ?? '');
-    } catch (error) {
-      this.notifier.reportFailure('errors.librariesListFailed', error);
-    }
+    });
   }
 
   /**
@@ -135,14 +133,6 @@ export class LibrariesStore {
   private async attempt<T>(action: () => Promise<T>): Promise<T | null> {
     if (this._isWorking()) return null;
 
-    this._isWorking.set(true);
-    try {
-      return await action();
-    } catch (error) {
-      this.notifier.reportFailure('errors.libraryActionFailed', error);
-      return null;
-    } finally {
-      this._isWorking.set(false);
-    }
+    return this.notifier.attemptWhile(this._isWorking, 'errors.libraryActionFailed', action);
   }
 }

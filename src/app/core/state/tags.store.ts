@@ -53,15 +53,10 @@ export class TagsStore {
   }
 
   async load(): Promise<void> {
-    this._isLoading.set(true);
-    try {
-      this._tags.set(await this.repository.loadTags());
-    } catch (error) {
-      this.notifier.reportFailure('errors.tagsLoadFailed', error);
-    } finally {
-      // See `TrashStore.load`: a bracketing flag wants `finally`.
-      this._isLoading.set(false);
-    }
+    const tags = await this.notifier.attemptWhile(this._isLoading, 'errors.tagsLoadFailed', () =>
+      this.repository.loadTags(),
+    );
+    if (tags !== null) this._tags.set(tags);
   }
 
   toggle(tag: string): void {

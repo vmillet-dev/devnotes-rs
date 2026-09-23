@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  PendingTasks,
   computed,
   effect,
   inject,
@@ -58,7 +59,8 @@ export class SecurityPageComponent {
   private readonly confirmStrip = viewChild<ElementRef<HTMLElement>>('confirmStrip');
 
   constructor() {
-    void this.backups.load();
+    // A pending task, so `whenStable` waits for the read rather than for a guess at it.
+    void inject(PendingTasks).run(() => this.backups.load());
 
     // ⚠️ The strip replaces the trigger further down a panel that scrolls, so without
     // this the click reads as having done nothing at all. `?.` on the call because jsdom

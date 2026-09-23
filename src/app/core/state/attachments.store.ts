@@ -129,17 +129,8 @@ export class AttachmentsStore {
     const noteId = this._noteId();
     if (noteId === null || this._isBusy()) return false;
 
-    this._isBusy.set(true);
-    let added;
-    try {
-      added = await action(noteId);
-    } catch (error) {
-      this.notifier.reportFailure('errors.attachFailed', error);
-      return false;
-    } finally {
-      // Bracketing flag: see `TrashStore.load`.
-      this._isBusy.set(false);
-    }
+    const added = await this.notifier.attemptWhile(this._isBusy, 'errors.attachFailed', () => action(noteId));
+    if (added === null) return false;
 
     await this.load(noteId);
     this.status.notify({ key: 'attachments.added', params: { name: added.fileName } });
@@ -205,15 +196,14 @@ export class AttachmentsStore {
 
     this._previewId.set(id);
     this._previewData.set(null);
-    try {
-      const data = await this.repository.read(id);
-      // The note may have changed during the read: show only what is still asked for.
-      if (this._previewId() === id) {
-        this._previewData.set(data);
-      }
-    } catch (error) {
+    const data = await this.notifier.attempt('errors.attachmentReadFailed', () => this.repository.read(id));
+    if (data === null) {
       this.closePreview();
-      this.notifier.reportFailure('errors.attachmentReadFailed', error);
+      return;
+    }
+    // The note may have changed during the read: show only what is still asked for.
+    if (this._previewId() === id) {
+      this._previewData.set(data);
     }
   }
 

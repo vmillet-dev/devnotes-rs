@@ -1,4 +1,4 @@
-import { Injectable, Signal, signal } from '@angular/core';
+import { Injectable, Signal, WritableSignal, signal } from '@angular/core';
 import { TranslationRef } from '../i18n/translation-ref.model';
 import { IpcError, IpcErrorCode } from '@core/ipc/ipc.error';
 
@@ -73,13 +73,37 @@ export class ErrorNotifier {
     this.notify(ipcNotice(error, { key }, params));
   }
 
-  /** A thunk rather than a promise, so a synchronous throw is caught too. */
+  /**
+   * Runs `action` and reports its failure under `key`; `null` means it failed. A thunk
+   * rather than a promise, so a synchronous throw is caught too.
+   */
   attempt<T>(key: string, action: () => Promise<T>, params?: Record<string, string>): Promise<T | null> {
-    // ⚠️ `.catch` rather than `async`/`await`: wrapping adds two microtask hops between
-    // the call and its answer, enough to change when a rendered view settles.
-    return action().catch((error: unknown) => {
+    const report = (error: unknown): null => {
       this.reportFailure(key, error, params);
       return null;
-    });
+    };
+
+    // ⚠️ `.catch` rather than `async`/`await`: wrapping adds two microtask hops between
+    // the call and its answer, enough to change when a rendered view settles.
+    try {
+      return action().catch(report);
+    } catch (error) {
+      return Promise.resolve(report(error));
+    }
+  }
+
+  /** `attempt`, with `flag` raised for exactly the length of the call, failure included. */
+  async attemptWhile<T>(
+    flag: WritableSignal<boolean>,
+    key: string,
+    action: () => Promise<T>,
+    params?: Record<string, string>,
+  ): Promise<T | null> {
+    flag.set(true);
+    try {
+      return await this.attempt(key, action, params);
+    } finally {
+      flag.set(false);
+    }
   }
 }

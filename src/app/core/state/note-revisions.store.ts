@@ -88,15 +88,13 @@ export class NoteRevisionsStore {
     const revision = this._revisions()[newer];
     if (noteId === null || revision === undefined) return;
 
-    try {
-      const lines = await this.repository.revisionDiff(noteId, revisionId);
-      // ⚠️ The editor may have moved to another note while the comparison was out.
-      if (this._noteId() !== noteId) return;
+    const lines = await this.notifier.attempt('errors.revisionDiffFailed', () =>
+      this.repository.revisionDiff(noteId, revisionId),
+    );
+    // ⚠️ The editor may have moved to another note while the comparison was out.
+    if (lines === null || this._noteId() !== noteId) return;
 
-      this._preview.set({ revision, newer, lines });
-    } catch (error) {
-      this.notifier.reportFailure('errors.revisionDiffFailed', error);
-    }
+    this._preview.set({ revision, newer, lines });
   }
 
   closePreview(): void {
@@ -109,8 +107,7 @@ export class NoteRevisionsStore {
     const preview = this._preview();
     if (noteId === null || preview === null || this._isWorking()) return;
 
-    this._isWorking.set(true);
-    try {
+    await this.notifier.attemptWhile(this._isWorking, 'errors.revisionRestoreFailed', async () => {
       // ⚠️ Adopted before the counter bumps: the editor re-seeds its body draft from the
       // open note, and a counter that moved first would re-seed it from the stale row.
       this.notes.adoptRestored(await this.repository.restoreRevision(noteId, preview.revision.id));
@@ -120,21 +117,16 @@ export class NoteRevisionsStore {
       // and a body put back has to reach whichever one is on screen.
       this.revision.bump();
       await this.reload();
-    } catch (error) {
-      this.notifier.reportFailure('errors.revisionRestoreFailed', error);
-    } finally {
-      this._isWorking.set(false);
-    }
+    });
   }
 
   private async reload(): Promise<void> {
     const noteId = this._noteId();
     if (noteId === null) return;
 
-    try {
-      this._revisions.set(await this.repository.listRevisions(noteId));
-    } catch (error) {
-      this.notifier.reportFailure('errors.revisionsListFailed', error);
-    }
+    const revisions = await this.notifier.attempt('errors.revisionsListFailed', () =>
+      this.repository.listRevisions(noteId),
+    );
+    if (revisions !== null) this._revisions.set(revisions);
   }
 }

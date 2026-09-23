@@ -280,14 +280,6 @@ export class LibraryStore {
   }
 
   private async run(action: () => Promise<boolean>, failureKey: string): Promise<boolean> {
-    this._isBusy.set(true);
-    try {
-      return await action();
-    } catch (error) {
-      this.notifier.reportFailure(failureKey, error);
-      return false;
-    } finally {
-      this._isBusy.set(false);
-    }
+    return (await this.notifier.attemptWhile(this._isBusy, failureKey, action)) ?? false;
   }
 }

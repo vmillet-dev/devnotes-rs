@@ -32,14 +32,10 @@ export class BackupsStore {
   readonly isRestoring = this._isRestoring.asReadonly();
 
   async load(): Promise<void> {
-    this._isLoading.set(true);
-    try {
-      this._backups.set(await this.repository.list());
-    } catch (error) {
-      this.notifier.reportFailure('errors.backupsListFailed', error);
-    } finally {
-      this._isLoading.set(false);
-    }
+    const backups = await this.notifier.attemptWhile(this._isLoading, 'errors.backupsListFailed', () =>
+      this.repository.list(),
+    );
+    if (backups !== null) this._backups.set(backups);
   }
 
   /** ⚠️ Proposes only. A copy with no key file opens for nobody and is never offered. */
@@ -63,16 +59,11 @@ export class BackupsStore {
     const backup = this._pending();
     if (backup === null || this._isRestoring()) return;
 
-    this._isRestoring.set(true);
-    try {
+    await this.notifier.attemptWhile(this._isRestoring, 'errors.backupRestoreFailed', async () => {
       const aside = await this.repository.restore(backup.id);
       this._pending.set(null);
       this.status.notify({ key: 'backups.restored', params: { path: aside } });
       await this.vault.load();
-    } catch (error) {
-      this.notifier.reportFailure('errors.backupRestoreFailed', error);
-    } finally {
-      this._isRestoring.set(false);
-    }
+    });
   }
 }

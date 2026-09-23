@@ -43,11 +43,8 @@ export class VaultStore {
   readonly needsCreating = computed(() => this._state() === 'absent');
 
   async load(): Promise<void> {
-    try {
-      this._state.set(await this.repository.state());
-    } catch (error) {
-      this.notifier.reportFailure('errors.vaultStateFailed', error);
-    }
+    const state = await this.notifier.attempt('errors.vaultStateFailed', () => this.repository.state());
+    if (state !== null) this._state.set(state);
   }
 
   /** The first launch of a library that has never been encrypted. */
@@ -113,22 +110,16 @@ export class VaultStore {
    * behind and comes back `locked`, an archived one takes it and comes back `absent`.
    */
   private async moveAside(move: () => Promise<string>, reportKey: string): Promise<boolean> {
-    this._isWorking.set(true);
-    try {
+    const moved = await this.notifier.attemptWhile(this._isWorking, 'errors.setAsideFailed', async () => {
       const target = await move();
       this.preferences.forget(SEEDED_KEY);
       this._damaged.set(false);
       this._refused.set(false);
       this.status.notify({ key: reportKey, params: { path: target } });
       await this.load();
+    });
 
-      return true;
-    } catch (error) {
-      this.notifier.reportFailure('errors.setAsideFailed', error);
-      return false;
-    } finally {
-      this._isWorking.set(false);
-    }
+    return moved !== null;
   }
 
   /**
