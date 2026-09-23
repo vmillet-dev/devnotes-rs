@@ -71,10 +71,9 @@ fn new_attachment(note_id: String, file_name: String, byte_size: u32) -> Attachm
 fn store_new(
     attachment: &Attachment,
     bytes: &[u8],
-    app: &AppHandle,
+    directory: &Path,
     db: &Db,
 ) -> Result<(), StorageError> {
-    let directory = directory(app)?;
     let destination = directory.join(attachment.stored_name());
 
     let mut connection = lock(db)?;
@@ -83,7 +82,7 @@ fn store_new(
     let stored = sealed::write_sealed(vault, &destination, bytes)
         .and_then(|_| store::create(db, vault, attachment));
     if stored.is_err() {
-        remove_files(&directory, &[attachment.stored_name()]);
+        remove_files(directory, &[attachment.stored_name()]);
     }
 
     stored
@@ -105,7 +104,7 @@ pub fn attach_file(
         model::validate_size(bytes.len() as u64)?,
     );
 
-    store_new(&attachment, &bytes, &app, &db)?;
+    store_new(&attachment, &bytes, &directory(&app)?, &db)?;
 
     Ok(attachment)
 }
@@ -234,7 +233,7 @@ pub fn attach_clipboard_image(
         model::validate_size(png.len() as u64)?,
     );
 
-    store_new(&attachment, &png, &app, &db)?;
+    store_new(&attachment, &png, &directory(&app)?, &db)?;
 
     Ok(attachment)
 }
@@ -288,6 +287,62 @@ mod tests {
         std::fs::create_dir_all(&directory).unwrap();
 
         directory
+    }
+
+    fn a_library_with_a_note() -> (Db, String) {
+        use crate::notes::model::NoteDraft;
+
+        let mut library = crate::db::open_in_memory().unwrap();
+        let space = crate::spaces::store::create(&mut library, "Personal").unwrap();
+        let note = crate::notes::store::create(
+            &mut library,
+            NoteDraft {
+                space_id: space.id,
+                folder_id: None,
+                title: "T".to_string(),
+                language: crate::notes::language::Language::Txt,
+                content: String::new(),
+                source: String::new(),
+                tags: Vec::new(),
+                pinned: false,
+                lifecycle: crate::notes::model::NoteLifecycle::Permanent,
+                kind: crate::notes::checklist::NoteKind::Snippet,
+                items: Vec::new(),
+            },
+            Utc::now(),
+        )
+        .unwrap();
+
+        (std::sync::Mutex::new(Some(library)), note.id)
+    }
+
+    #[test]
+    fn a_new_attachment_is_sealed_beside_the_library_then_recorded() {
+        let directory = scratch();
+        let (db, note_id) = a_library_with_a_note();
+        let attachment = new_attachment(note_id.clone(), "capture.png".to_string(), 3);
+
+        store_new(&attachment, b"png", &directory, &db).unwrap();
+
+        let written = std::fs::read(directory.join(attachment.stored_name())).unwrap();
+        assert_ne!(written, b"png");
+        let listed = store::list(&mut lock(&db).unwrap(), &note_id).unwrap();
+        assert_eq!(listed[0].mime_type, "image/png");
+        std::fs::remove_dir_all(&directory).ok();
+    }
+
+    /// A file without a record would sit there until the next launch's sweep.
+    #[test]
+    fn an_attachment_that_cannot_be_recorded_leaves_no_file_behind() {
+        let directory = scratch();
+        let (db, _) = a_library_with_a_note();
+        let orphan = new_attachment("ghost".to_string(), "capture.png".to_string(), 3);
+
+        let refused = store_new(&orphan, b"png", &directory, &db);
+
+        assert!(matches!(refused, Err(StorageError::NoteNotFound(_))));
+        assert!(!directory.join(orphan.stored_name()).exists());
+        std::fs::remove_dir_all(&directory).ok();
     }
 
     #[test]
