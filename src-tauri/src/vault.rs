@@ -8,7 +8,8 @@
 
 pub mod file;
 pub mod key;
-pub mod migrate;
+
+use std::path::Path;
 
 use serde::Serialize;
 use specta::Type;
@@ -90,59 +91,26 @@ fn create_with(passphrase: &str, app: &AppHandle, db: &State<'_, Db>) -> Result<
     // permissions problem reaches, and the user has never opened that folder.
     std::fs::create_dir_all(&directory)
         .map_err(|error| storage_msg(&format!("{}: {error}", directory.display())))?;
+    refuse_a_database_without_its_key(&directory)?;
 
     let vault = file::create(&directory, passphrase, Cost::default())?;
 
     open_library(app, db, vault)?;
-
-    // ⚠️ Between opening and sweeping, never after. The orphan-file sweep reads attachment
-    // records, and on a library that predates the passphrase those are still in the clear —
-    // it would fail to open every one of them and log a warning for nothing.
-    seal_what_was_there(app, db)?;
-
     crate::sweep(app);
 
     Ok(())
 }
 
-/// ⚠️ The rows first, in one transaction, and the files after it commits. A file write
-/// does not roll back — a file left readable is recoverable, a row sealed twice is not.
-fn seal_what_was_there(app: &AppHandle, db: &State<'_, Db>) -> Result<(), AppError> {
-    let stored_names = {
-        let mut connection = crate::db::lock(db)?;
-        let done = {
-            let (connection, vault) = connection.split();
-            migrate::seal_existing(connection, vault)?
-        };
-
-        if done.is_empty() {
-            return Ok(());
-        }
-
-        log::info!(
-            "Sealed an existing library: {} note(s), {} space(s), {} item(s), {} value(s), {} attachment record(s)",
-            done.notes,
-            done.spaces,
-            done.items,
-            done.values,
-            done.attachments
-        );
-
-        crate::attachments::store::all_stored_names(&mut connection)?
-    };
-
-    let directory = crate::attachments::directory(app)?;
-    let connection = crate::db::lock(db)?;
-    let vault = connection.vault();
-
-    for name in stored_names {
-        let path = directory.join(&name);
-        // ⚠️ Best effort, one file at a time, and never fatal: a library whose notes are
-        // sealed is worth keeping even if one screenshot resisted. The alternative is
-        // refusing to start over a file nobody may ever open.
-        if let Err(error) = crate::attachments::sealed::seal_in_place(vault, &path) {
-            log::warn!("Attachment {name} left as it was: {error}");
-        }
+/// ⚠️ A database already here without a key file is a library that lost its key — or one
+/// written in the clear before 0.2.0, which this version no longer seals in place. A new key
+/// over it would open nothing it holds, so it is answered as damaged, which the gate offers
+/// to set aside.
+fn refuse_a_database_without_its_key(directory: &Path) -> Result<(), StorageError> {
+    if directory.join(crate::layout::DATABASE).exists() {
+        return Err(StorageError::Damaged(format!(
+            "{}: a library is here without its key file",
+            directory.display()
+        )));
     }
 
     Ok(())
@@ -315,6 +283,23 @@ mod tests {
 
         assert!(unwound.is_err());
         assert!(wiped.get());
+    }
+
+    /// A key written over a database it did not seal would open nothing that database holds.
+    #[test]
+    fn a_database_left_without_its_key_is_answered_as_damaged() {
+        let directory =
+            std::env::temp_dir().join(format!("devnotes-keyless-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&directory).unwrap();
+        assert!(refuse_a_database_without_its_key(&directory).is_ok());
+
+        std::fs::write(directory.join(crate::layout::DATABASE), b"a sealed library").unwrap();
+
+        assert!(matches!(
+            refuse_a_database_without_its_key(&directory),
+            Err(StorageError::Damaged(_))
+        ));
+        std::fs::remove_dir_all(&directory).ok();
     }
 
     #[test]
