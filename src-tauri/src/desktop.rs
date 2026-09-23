@@ -1,3 +1,6 @@
+//! Its three commands are synchronous on purpose: the tray and the global shortcuts want
+//! the main thread.
+
 use std::str::FromStr;
 use std::sync::Mutex;
 
