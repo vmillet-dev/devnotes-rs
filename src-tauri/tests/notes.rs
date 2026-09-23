@@ -2463,7 +2463,7 @@ mod revisions {
 
         let refused = restore_revision(&mut connection, &mine, &history[0].id);
 
-        assert!(matches!(refused, Err(StorageError::NoteNotFound(_))));
+        assert!(matches!(refused, Err(StorageError::RevisionNotFound(_))));
     }
 
     /// ⚠️ Said out loud rather than shipped silently: a checklist's items live in

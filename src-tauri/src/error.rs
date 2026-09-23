@@ -41,6 +41,23 @@ pub enum StorageError {
     DuplicateFolderName(String),
     #[error("Attachment not found: {0}")]
     AttachmentNotFound(String),
+    #[error("Revision not found: {0}")]
+    RevisionNotFound(String),
+    #[error("Library not found: {0}")]
+    LibraryNotFound(String),
+    /// Refused on a library that is open: deleting it or setting it aside would move files
+    /// out from under a live connection.
+    #[error("The library is open")]
+    LibraryOpen,
+    #[error("The last library cannot be deleted")]
+    LastLibrary,
+    #[error("Nothing to set aside at {0}")]
+    NothingToSetAside(String),
+    #[error("Backup not found: {0}")]
+    BackupNotFound(String),
+    /// A copy whose key file did not travel with it: it opens for nobody.
+    #[error("Backup {0} cannot be opened: its key file is missing")]
+    BackupUnopenable(String),
     #[error("File error: {0}")]
     File(String),
     #[error("Unreadable export file: {0}")]
@@ -101,6 +118,13 @@ pub enum ErrorCode {
     FolderNotFound,
     DuplicateFolderName,
     AttachmentNotFound,
+    RevisionNotFound,
+    LibraryNotFound,
+    LibraryOpen,
+    LastLibrary,
+    NothingToSetAside,
+    BackupNotFound,
+    BackupUnopenable,
     FileAccess,
     ImportFormat,
     /// The `field` parameter names the offending field.
@@ -185,6 +209,23 @@ impl From<StorageError> for AppError {
             }
             StorageError::AttachmentNotFound(id) => {
                 Self::with(ErrorCode::AttachmentNotFound, detail, "id", &id)
+            }
+            StorageError::RevisionNotFound(id) => {
+                Self::with(ErrorCode::RevisionNotFound, detail, "id", &id)
+            }
+            StorageError::LibraryNotFound(id) => {
+                Self::with(ErrorCode::LibraryNotFound, detail, "id", &id)
+            }
+            StorageError::LibraryOpen => Self::new(ErrorCode::LibraryOpen, detail),
+            StorageError::LastLibrary => Self::new(ErrorCode::LastLibrary, detail),
+            StorageError::NothingToSetAside(path) => {
+                Self::with(ErrorCode::NothingToSetAside, detail, "path", &path)
+            }
+            StorageError::BackupNotFound(id) => {
+                Self::with(ErrorCode::BackupNotFound, detail, "id", &id)
+            }
+            StorageError::BackupUnopenable(id) => {
+                Self::with(ErrorCode::BackupUnopenable, detail, "id", &id)
             }
             StorageError::Unavailable => Self::new(ErrorCode::StorageUnavailable, detail),
             StorageError::WrongPassphrase => Self::new(ErrorCode::WrongPassphrase, detail),

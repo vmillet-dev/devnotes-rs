@@ -212,15 +212,11 @@ fn create_in(profile: &Path, name: &str) -> Result<LibraryEntry, StorageError> {
     Ok(entry)
 }
 
-fn unknown(id: &str) -> StorageError {
-    StorageError::File(format!("{id}: no such library"))
-}
-
 /// Points the registry at another library. Closing the connection is the command's part.
 fn point_at(profile: &Path, id: &str) -> Result<(), StorageError> {
     let mut registry = registry_in(profile);
     if registry.entry(id).is_none() {
-        return Err(unknown(id));
+        return Err(StorageError::LibraryNotFound(id.to_string()));
     }
 
     registry.open = Some(id.to_string());
@@ -230,7 +226,7 @@ fn point_at(profile: &Path, id: &str) -> Result<(), StorageError> {
 fn rename_in(profile: &Path, id: &str, name: &str) -> Result<(), StorageError> {
     let mut registry = registry_in(profile);
     let Some(entry) = registry.libraries.iter_mut().find(|entry| entry.id == id) else {
-        return Err(unknown(id));
+        return Err(StorageError::LibraryNotFound(id.to_string()));
     };
 
     entry.name = name.trim().to_string();
@@ -249,12 +245,10 @@ fn rename_in(profile: &Path, id: &str, name: &str) -> Result<(), StorageError> {
 fn delete_in(profile: &Path, id: &str) -> Result<(), StorageError> {
     let mut registry = registry_in(profile);
     let Some(entry) = registry.entry(id).cloned() else {
-        return Err(unknown(id));
+        return Err(StorageError::LibraryNotFound(id.to_string()));
     };
     if registry.libraries.len() <= 1 {
-        return Err(StorageError::File(
-            "the last library cannot be deleted".to_string(),
-        ));
+        return Err(StorageError::LastLibrary);
     }
 
     registry.libraries.retain(|each| each.id != id);
@@ -315,7 +309,7 @@ pub fn delete_library(id: String, app: AppHandle, db: State<'_, Db>) -> Result<(
     if registry_in(&profile).open.as_deref() == Some(id.as_str())
         && db.lock().map_err(|_| StorageError::Unavailable)?.is_some()
     {
-        return Err(StorageError::File("the library is open".to_string()).into());
+        return Err(StorageError::LibraryOpen.into());
     }
 
     Ok(delete_in(&profile, &id)?)
@@ -561,7 +555,10 @@ mod tests {
         let profile = scratch();
         registry_in(&profile);
 
-        assert!(point_at(&profile, "nothing").is_err());
+        assert!(matches!(
+            point_at(&profile, "nothing"),
+            Err(StorageError::LibraryNotFound(_))
+        ));
         std::fs::remove_dir_all(&profile).ok();
     }
 
@@ -586,7 +583,10 @@ mod tests {
         let profile = scratch();
         registry_in(&profile);
 
-        assert!(rename_in(&profile, "nothing", "Archives").is_err());
+        assert!(matches!(
+            rename_in(&profile, "nothing", "Archives"),
+            Err(StorageError::LibraryNotFound(_))
+        ));
         std::fs::remove_dir_all(&profile).ok();
     }
 
@@ -610,7 +610,10 @@ mod tests {
         let profile = scratch();
         let only = registry_in(&profile).libraries[0].clone();
 
-        assert!(delete_in(&profile, &only.id).is_err());
+        assert!(matches!(
+            delete_in(&profile, &only.id),
+            Err(StorageError::LastLibrary)
+        ));
         assert_eq!(registry_in(&profile).libraries.len(), 1);
         std::fs::remove_dir_all(&profile).ok();
     }
@@ -639,7 +642,10 @@ mod tests {
         let profile = scratch();
         create_in(&profile, "Boulot").unwrap();
 
-        assert!(delete_in(&profile, "nothing").is_err());
+        assert!(matches!(
+            delete_in(&profile, "nothing"),
+            Err(StorageError::LibraryNotFound(_))
+        ));
         std::fs::remove_dir_all(&profile).ok();
     }
 }

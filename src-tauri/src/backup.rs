@@ -166,12 +166,10 @@ pub(crate) fn replace(
     let copy = existing(&library.join(BACKUPS))
         .into_iter()
         .find(|path| path.file_name().and_then(std::ffi::OsStr::to_str) == Some(id))
-        .ok_or_else(|| StorageError::File(format!("{id}: no such copy")))?;
+        .ok_or_else(|| StorageError::BackupNotFound(id.to_string()))?;
 
     if !copy.join(layout::DATABASE).is_file() || !copy.join(KEY_FILE).is_file() {
-        return Err(StorageError::File(format!(
-            "{id}: not a copy that can be opened"
-        )));
+        return Err(StorageError::BackupUnopenable(id.to_string()));
     }
 
     let aside = library.join(REPLACED).join(layout::stamp(now));

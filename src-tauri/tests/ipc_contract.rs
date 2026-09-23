@@ -550,6 +550,28 @@ fn every_error_code_crosses_as_a_camel_case_string() {
         ),
         (StorageError::File("disk".to_string()), "fileAccess"),
         (
+            StorageError::RevisionNotFound("r-1".to_string()),
+            "revisionNotFound",
+        ),
+        (
+            StorageError::LibraryNotFound("l-1".to_string()),
+            "libraryNotFound",
+        ),
+        (StorageError::LibraryOpen, "libraryOpen"),
+        (StorageError::LastLibrary, "lastLibrary"),
+        (
+            StorageError::NothingToSetAside("here".to_string()),
+            "nothingToSetAside",
+        ),
+        (
+            StorageError::BackupNotFound("2026-07-25_09-00-00".to_string()),
+            "backupNotFound",
+        ),
+        (
+            StorageError::BackupUnopenable("2026-07-25_09-00-00".to_string()),
+            "backupUnopenable",
+        ),
+        (
             StorageError::ImportFormat("nope".to_string()),
             "importFormat",
         ),

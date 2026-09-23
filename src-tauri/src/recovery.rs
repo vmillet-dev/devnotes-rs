@@ -74,10 +74,9 @@ pub(crate) fn set_aside(
 ) -> Result<PathBuf, StorageError> {
     let database = directory.join(DATABASE);
     if !database.exists() {
-        return Err(StorageError::File(format!(
-            "{}: nothing to set aside",
-            database.display()
-        )));
+        return Err(StorageError::NothingToSetAside(
+            database.display().to_string(),
+        ));
     }
 
     let target = directory.join(reason.directory()).join(layout::stamp(now));
@@ -112,7 +111,7 @@ pub(crate) fn set_aside(
 /// that was merely shut becomes a lost one.
 fn set_aside_closed(directory: &Path, db: &Db, reason: Reason) -> Result<String, StorageError> {
     if db.lock().map_err(|_| StorageError::Unavailable)?.is_some() {
-        return Err(StorageError::File("the library is open".to_string()));
+        return Err(StorageError::LibraryOpen);
     }
 
     let target = set_aside(directory, reason, Utc::now())?;
