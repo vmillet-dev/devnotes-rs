@@ -30,8 +30,6 @@ describe('VariablesPageComponent', () => {
   async function render(): Promise<void> {
     fixture = TestBed.createComponent(VariablesPageComponent);
     fixture.autoDetectChanges();
-    // The page loads in its constructor, so the read has to settle before the DOM check.
-    await fixture.whenStable();
     await fixture.whenStable();
   }
 

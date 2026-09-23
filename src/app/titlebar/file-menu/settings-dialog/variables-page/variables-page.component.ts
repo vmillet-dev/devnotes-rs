@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, PendingTasks, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { VariablesStore } from '@core/state/variables.store';
 import { Variable, isVariableName } from '@core/model/variable.model';
@@ -19,7 +19,8 @@ export class VariablesPageComponent {
   protected readonly store = inject(VariablesStore);
 
   constructor() {
-    void this.store.load();
+    // A pending task, so `whenStable` waits for the read rather than for a guess at it.
+    void inject(PendingTasks).run(() => this.store.load());
   }
 
   /** Empty until something is typed: a new row is not a mistake. */

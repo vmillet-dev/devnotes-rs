@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { signal } from '@angular/core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { IpcError } from '@core/ipc/ipc.error';
-import { ipcNotice } from './error-notifier.service';
+import { ErrorNotifier, ipcNotice } from './error-notifier.service';
 
 const FALLBACK = { key: 'errors.noteSaveFailed' };
 
@@ -64,5 +65,50 @@ describe('ipcNotice', () => {
     const notice = ipcNotice(failure('quantumFluctuation'), FALLBACK);
 
     expect(notice.ref.key).toBe('errors.noteSaveFailed');
+  });
+});
+
+describe('ErrorNotifier', () => {
+  let notifier: ErrorNotifier;
+
+  beforeEach(() => {
+    notifier = new ErrorNotifier();
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  });
+
+  it('answers what the action answered', async () => {
+    await expect(notifier.attempt('errors.noteSaveFailed', async () => 42)).resolves.toBe(42);
+    expect(notifier.notice()).toBeNull();
+  });
+
+  it('reports a rejection and answers null', async () => {
+    const answer = await notifier.attempt('errors.noteSaveFailed', () => Promise.reject(new Error('boom')));
+
+    expect(answer).toBeNull();
+    expect(notifier.notice()?.ref.key).toBe('errors.noteSaveFailed');
+  });
+
+  /** A thunk that throws before it has a promise to return, like a mapper refusing a date. */
+  it('reports a synchronous throw as a failure rather than letting it escape', async () => {
+    const answer = await notifier.attempt('errors.noteSaveFailed', () => {
+      throw new Error('before any promise');
+    });
+
+    expect(answer).toBeNull();
+    expect(notifier.notice()?.detail).toBe('before any promise');
+  });
+
+  it('raises the flag for the length of the call, and lowers it on failure too', async () => {
+    const busy = signal(false);
+    const seen: boolean[] = [];
+
+    await notifier.attemptWhile(busy, 'errors.noteSaveFailed', async () => seen.push(busy()));
+    await notifier.attemptWhile(busy, 'errors.noteSaveFailed', () => {
+      seen.push(busy());
+      return Promise.reject(new Error('boom'));
+    });
+
+    expect(seen).toEqual([true, true]);
+    expect(busy()).toBe(false);
   });
 });

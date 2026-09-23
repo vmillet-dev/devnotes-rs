@@ -138,8 +138,8 @@ export class PaletteStore {
   private async search(query: string): Promise<void> {
     const now = this.clock.now();
 
-    try {
-      const view = await this.repository.query({
+    const view = await this.notifier.attempt('errors.notesLoadFailed', () =>
+      this.repository.query({
         spaceId: null,
         folderId: null,
         search: query.trim(),
@@ -150,12 +150,11 @@ export class PaletteStore {
         tzOffsetMinutes: now.getTimezoneOffset(),
         // The one place the pinned hoist is a setting.
         pinnedFirst: this.settings.showPinnedFirst(),
-      });
+      }),
+    );
 
-      this._results.set(view.sections.flatMap((section) => [...section.notes]).slice(0, MAX_RESULTS));
-    } catch (error) {
-      this.notifier.reportFailure('errors.notesLoadFailed', error);
-      this._results.set([]);
-    }
+    this._results.set(
+      view ? view.sections.flatMap((section) => [...section.notes]).slice(0, MAX_RESULTS) : [],
+    );
   }
 }

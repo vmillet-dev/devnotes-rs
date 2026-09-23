@@ -37,16 +37,13 @@ export class VariablesStore {
   async load(): Promise<void> {
     if (this._isDirty()) return;
 
-    this._isLoading.set(true);
-    try {
-      const stored = await this.repository.loadVariables();
-      this._variables.set(Object.entries(stored).map(([name, value]) => ({ name, value })));
-      this._isDirty.set(false);
-    } catch (error) {
-      this.notifier.reportFailure('errors.variablesLoadFailed', error);
-    } finally {
-      this._isLoading.set(false);
-    }
+    const stored = await this.notifier.attemptWhile(this._isLoading, 'errors.variablesLoadFailed', () =>
+      this.repository.loadVariables(),
+    );
+    if (stored === null) return;
+
+    this._variables.set(Object.entries(stored).map(([name, value]) => ({ name, value })));
+    this._isDirty.set(false);
   }
 
   add(): void {

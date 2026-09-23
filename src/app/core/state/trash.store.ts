@@ -31,16 +31,10 @@ export class TrashStore {
 
   /** The back end purges what retention has caught up with before answering. */
   async load(): Promise<void> {
-    this._isLoading.set(true);
-    try {
-      this._notes.set(await this.repository.loadTrash());
-    } catch (error) {
-      this.notifier.reportFailure('errors.trashLoadFailed', error);
-    } finally {
-      // ⚠️ `finally` rather than `attempt`: the flag brackets the call and must be
-      // cleared even when what follows the await throws.
-      this._isLoading.set(false);
-    }
+    const notes = await this.notifier.attemptWhile(this._isLoading, 'errors.trashLoadFailed', () =>
+      this.repository.loadTrash(),
+    );
+    if (notes !== null) this._notes.set(notes);
   }
 
   /** `true` when a note came back, which is what bumps the canvas revision. */
