@@ -4,43 +4,16 @@ import { NotesRepository } from '../data/notes.repository';
 import { ClipboardService } from '@core/services/clipboard/clipboard.service';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { FALLBACK_LANGUAGE } from '@core/model/language.model';
-import {
-  ChecklistItem,
-  Note,
-  NoteDraft,
-  NoteKind,
-  NoteLifecycle,
-  NotePatch,
-  NotePlacement,
-  NoteTag,
-} from '../model/note.model';
-import { NoteFiling } from '../model/folder.model';
-import { BoardLayout, BoardScope } from '../model/board.model';
+import { ChecklistItem, Note, NoteDraft, NoteKind, NoteLifecycle, NotePatch } from '../model/note.model';
 import { ClockService } from '@core/services/time/clock.service';
-import { debounced } from '@core/services/time/debounce';
 import { sameArray } from '@core/utils/equality.util';
 import { NoteSelectionStore } from './note-selection.store';
 import { FoldersStore } from './folders.store';
-import { BoardStore } from './board.store';
-import { NotesQueryStore } from './notes-query.store';
 import { NotesRevision } from './notes-revision';
 import { SpacesStore } from './spaces.store';
+import { UndoStore } from './undo.store';
 
 export type { NoteFilter, NoteKind } from '../model/note.model';
-
-/** The note is not lost after that: it stays in the trash for 30 days. */
-export const UNDO_WINDOW_MS = 8000;
-
-/**
- * ⚠️ Each variant carries what the back end answered, never what the front end guessed.
- * Rebuilding the pairs from the selection would undo a tag the note already carried.
- */
-export type Reversible =
-  | { readonly kind: 'deletion'; readonly ids: readonly string[]; readonly count: number }
-  | { readonly kind: 'move'; readonly previous: readonly NotePlacement[]; readonly count: number }
-  | { readonly kind: 'tag'; readonly added: readonly NoteTag[]; readonly count: number }
-  | { readonly kind: 'file'; readonly previous: readonly NoteFiling[]; readonly count: number }
-  | { readonly kind: 'arrange'; readonly layout: BoardLayout; readonly count: number };
 
 /** The note being created, not written until it is worth keeping. */
 export const DRAFT_ID = '__draft__';
@@ -158,10 +131,9 @@ export class NotesStore {
   private readonly clock = inject(ClockService);
   private readonly notifier = inject(ErrorNotifier);
   private readonly spaces = inject(SpacesStore);
-  private readonly notes = inject(NotesQueryStore);
-  private readonly board = inject(BoardStore);
   private readonly revision = inject(NotesRevision);
   private readonly selection = inject(NoteSelectionStore);
+  private readonly undo = inject(UndoStore);
 
   private readonly _selectedNote = signal<Note | null>(null);
   private readonly _draftNote = signal<Note | null>(null);
@@ -172,8 +144,6 @@ export class NotesStore {
    * changes the id of the *same* note, and stale drafts would be replayed over it.
    */
   private readonly _editorSession = signal(0);
-  private readonly _lastAction = signal<Reversible | null>(null);
-  private readonly _undoVisible = signal(false);
 
   /** The draft wins: while it exists, it is what the editor shows. */
   readonly selectedNote = computed<Note | null>(() => this._draftNote() ?? this._selectedNote());
@@ -183,11 +153,6 @@ export class NotesStore {
 
   /** The id actually in the database, or `null` while the open note is only a draft. */
   readonly persistedNoteId = computed<string | null>(() => this._selectedNote()?.id ?? null);
-  readonly lastAction = this._lastAction.asReadonly();
-
-  readonly undoBanner = computed<Reversible | null>(() => (this._undoVisible() ? this._lastAction() : null));
-
-  private readonly hideUndoBanner = debounced<void>(() => this._undoVisible.set(false), UNDO_WINDOW_MS);
 
   /**
    * ⚠️ The **promise**, not the id it will yield. `requestClose()` fires three commits
@@ -283,7 +248,7 @@ export class NotesStore {
 
     this.adoptFiling(target, folderId);
     this.revision.bump();
-    this.openUndoWindow({ kind: 'file', previous, count: previous.length });
+    this.undo.record({ kind: 'file', previous, count: previous.length });
   }
 
   /**
@@ -312,8 +277,9 @@ export class NotesStore {
     return this.applyPatch(id, { items });
   }
 
-  /** Opens the editor on a local draft; a note with no space at all is refused. */
   /**
+   * Opens the editor on a local draft; a note with no space at all is refused.
+   *
    * ⚠️ A note made while a folder is open arrives already filed. That and a drop on the
    * board are the only two places that file a new one: the quick-paste palette
    * deliberately does not, because it is used mid-task from another application and a
@@ -373,95 +339,8 @@ export class NotesStore {
     if (this.selectedNoteId() === resolved) {
       this.closeOverlay();
     }
-    this.openUndoWindow({ kind: 'deletion', ids: [resolved], count: 1 });
+    this.undo.record({ kind: 'deletion', ids: [resolved], count: 1 });
     this.revision.bump();
-  }
-
-  async moveSelection(spaceId: string): Promise<void> {
-    const previous = await this.runOnSelection((ids) => this.repository.moveMany(ids, spaceId));
-    if (previous === null) return;
-
-    this.openUndoWindow({ kind: 'move', previous, count: previous.length });
-  }
-
-  /** `folderId` of `null` takes the selection out of whatever folder it was in. */
-  async fileSelection(folderId: string | null): Promise<void> {
-    const previous = await this.runOnSelection((ids) => this.folders.fileMany(ids, folderId));
-    if (previous === null) return;
-
-    this.openUndoWindow({ kind: 'file', previous, count: previous.length });
-  }
-
-  async tagSelection(tag: string): Promise<void> {
-    if (!tag.trim()) return;
-
-    // No normalisation here: `notes::model::normalize_tags` is its only keeper.
-    const added = await this.runOnSelection((ids) => this.repository.tagMany(ids, [tag]));
-    if (added === null) return;
-
-    this.openUndoWindow({ kind: 'tag', added, count: added.length });
-  }
-
-  async deleteSelection(): Promise<void> {
-    const ids = this.selection.checkedNoteIds();
-    if (ids.length === 0) return;
-
-    const count = await this.notifier.attempt('errors.bulkActionFailed', () =>
-      this.repository.deleteMany(ids),
-    );
-    if (count === null) return;
-
-    this.selection.clearSelection();
-    this.openUndoWindow({ kind: 'deletion', ids, count });
-    this.revision.bump();
-  }
-
-  async undoLastAction(): Promise<void> {
-    const action = this._lastAction();
-    if (!action) return;
-
-    this.dismissUndo();
-    const undone = await this.notifier.attempt('errors.undoFailed', () => this.reverse(action));
-    if (undone !== null) this.revision.bump();
-  }
-
-  /** Hiding the banner gives up the undo, unlike the timer running out. */
-  dismissUndo(): void {
-    this.hideUndoBanner.cancel();
-    this._undoVisible.set(false);
-    this._lastAction.set(null);
-  }
-
-  /** Exhaustive by construction: a new kind of undo stops this compiling. */
-  private reverse(action: Reversible): Promise<number> {
-    switch (action.kind) {
-      case 'deletion':
-        return this.repository.restore(action.ids);
-      case 'move':
-        return this.repository.moveBack(action.previous);
-      case 'tag':
-        return this.repository.untagMany(action.added);
-      case 'file':
-        return this.folders.fileBack(action.previous);
-      case 'arrange':
-        return this.board.restoreLayout(action.layout);
-    }
-  }
-
-  /**
-   * Puts the board back in order, and offers the previous arrangement back.
-   *
-   * ⚠️ Here rather than on `BoardStore`, which cannot reach the undo: this store injects
-   * the board, so the dependency only runs one way.
-   *
-   * ⚠️ The count is what actually **moved**, which the back end works out: a board already
-   * in order opens no undo window, because `openUndoWindow` refuses a count of zero.
-   */
-  async arrangeBoard(scope: BoardScope): Promise<void> {
-    const done = await this.board.arrange(scope);
-    if (!done) return;
-
-    this.openUndoWindow({ kind: 'arrange', layout: done.previous, count: done.moved });
   }
 
   /** Outside `edit()`: filling a field is not editing the note, so `updatedAt` stays put. */
@@ -543,27 +422,6 @@ export class NotesStore {
     this.draftMaterialisation = null;
   }
 
-  /** `null` when there was nothing to act on, or when the batch failed. */
-  private async runOnSelection<T>(action: (ids: readonly string[]) => Promise<T>): Promise<T | null> {
-    const ids = this.selection.checkedNoteIds();
-    if (ids.length === 0) return null;
-
-    const done = await this.notifier.attempt('errors.bulkActionFailed', () => action(ids));
-    if (done !== null) this.revision.bump();
-
-    return done;
-  }
-
-  /** ⚠️ The banner fades, the action stays undoable: `Ctrl+Z` still works once it is gone. */
-  private openUndoWindow(action: Reversible): void {
-    // Nothing moved is nothing to offer: a bar saying "0 notes" is noise, not an undo.
-    if (action.count === 0) return;
-
-    this._lastAction.set(action);
-    this._undoVisible.set(true);
-    this.hideUndoBanner();
-  }
-
   /** `changes` answers `null` when nothing moved: a no-op edit makes no round trip. */
   private async edit(id: string, changes: (note: Note) => NotePatch | null): Promise<void> {
     const resolved = await this.resolve(id);
@@ -638,9 +496,6 @@ export class NotesStore {
     const materialised = this.materialisedNote;
     if (materialised?.id === id) return materialised;
 
-    // ⚠️ The board too, and not the canvas alone: it **dims** where the canvas **narrows**,
-    // so a card there can be ticked, moved or deleted while its note is nowhere in the
-    // canvas view — and an unresolved note is a gesture that writes nothing, silently.
-    return this.notes.findVisible(id) ?? this.board.findVisible(id);
+    return this.selection.noteOnScreen(id);
   }
 }

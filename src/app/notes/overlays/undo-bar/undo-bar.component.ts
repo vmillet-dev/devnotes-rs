@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { Reversible } from '@core/state/notes.store';
+import { Reversible } from '@core/state/undo.store';
 
 /** One key per kind: "3 notes deleted" and "3 notes moved" are not the same sentence. */
 const MESSAGES: Record<Reversible['kind'], string> = {

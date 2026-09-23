@@ -6,9 +6,9 @@ import { FakeClipboard } from '@testing/fake-clipboard';
 import { FakeNotesRepository } from '@testing/fake-notes-repository';
 import { createNote } from '@testing/note.fixture';
 import { HARNESS_SPACES, awaitQuery, createNotesHarness, visibleIds } from '@testing/notes-harness';
-import { BoardStore } from './board.store';
 import { NotesRevision } from './notes-revision';
-import { DRAFT_ID, UNDO_WINDOW_MS } from './notes.store';
+import { DRAFT_ID } from './notes.store';
+import { UNDO_WINDOW_MS } from './undo.store';
 
 describe('NotesStore', () => {
   beforeEach(() => {
@@ -308,9 +308,9 @@ describe('NotesStore', () => {
      */
     it('ticks a card the canvas has filtered out but the board is showing', async () => {
       const note = createNote({ id: 'a', kind: 'checklist', items });
-      const { store, repository } = await createNotesHarness([]);
+      const { store, selection, repository } = await createNotesHarness([]);
       const update = vi.spyOn(repository, 'update');
-      vi.spyOn(TestBed.inject(BoardStore), 'findVisible').mockReturnValue(note);
+      vi.spyOn(selection, 'noteOnScreen').mockReturnValue(note);
 
       await store.setChecklist('a', [{ text: 'Relire', done: true }]);
 
@@ -660,7 +660,7 @@ describe('NotesStore', () => {
     });
 
     it('throws nothing away and offers no undo when a draft is deleted', async () => {
-      const { store, repository } = await createNotesHarness([]);
+      const { store, repository, undo } = await createNotesHarness([]);
       const remove = vi.spyOn(repository, 'delete');
       store.createNote();
 
@@ -668,7 +668,7 @@ describe('NotesStore', () => {
 
       expect(remove).not.toHaveBeenCalled();
       expect(store.selectedNote()).toBeNull();
-      expect(store.lastAction()).toBeNull();
+      expect(undo.last()).toBeNull();
     });
 
     it('materialises the draft on demand, for what needs a real note', async () => {
@@ -734,63 +734,66 @@ describe('NotesStore', () => {
 
   describe('trash and undo', () => {
     it('offers to undo what a deletion took away', async () => {
-      const { store } = await createNotesHarness([createNote({ id: 'a' })]);
+      const { store, undo } = await createNotesHarness([createNote({ id: 'a' })]);
 
       await store.deleteNote('a');
 
-      expect(store.lastAction()).toEqual({ kind: 'deletion', ids: ['a'], count: 1 });
+      expect(undo.last()).toEqual({ kind: 'deletion', ids: ['a'], count: 1 });
     });
 
     it('brings a deleted note back', async () => {
-      const { store, canvas } = await createNotesHarness([createNote({ id: 'a' }), createNote({ id: 'b' })]);
+      const { store, canvas, undo } = await createNotesHarness([
+        createNote({ id: 'a' }),
+        createNote({ id: 'b' }),
+      ]);
       await store.deleteNote('a');
 
-      await store.undoLastAction();
+      await undo.revert();
       await vi.waitFor(() => expect(visibleIds(canvas)).toContain('a'));
 
-      expect(store.lastAction()).toBeNull();
+      expect(undo.last()).toBeNull();
     });
 
     it('clears the selection once it is in the trash', async () => {
-      const { store, selection } = await createNotesHarness([
+      const { selection, batch, undo } = await createNotesHarness([
         createNote({ id: 'a' }),
         createNote({ id: 'b' }),
       ]);
       selection.toggleChecked('a');
       selection.toggleChecked('b');
 
-      await store.deleteSelection();
+      await batch.deleteSelection();
 
       expect(selection.hasSelection()).toBe(false);
-      expect(store.lastAction()?.count).toBe(2);
+      expect(undo.last()?.count).toBe(2);
     });
 
     it('hides the banner after its window but stays undoable', async () => {
-      const { store } = await createNotesHarness([createNote({ id: 'a' })]);
+      const { store, undo } = await createNotesHarness([createNote({ id: 'a' })]);
       // ⚠️ The timers are faked after the store is built: `waitFor` needs them to await
       // the first view.
       vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
       try {
         await store.deleteNote('a');
-        expect(store.undoBanner()).not.toBeNull();
+        expect(undo.banner()).not.toBeNull();
 
         await vi.advanceTimersByTimeAsync(UNDO_WINDOW_MS);
 
-        expect(store.undoBanner()).toBeNull();
-        expect(store.lastAction()).toEqual({ kind: 'deletion', ids: ['a'], count: 1 });
+        expect(undo.banner()).toBeNull();
+        expect(undo.last()).toEqual({ kind: 'deletion', ids: ['a'], count: 1 });
       } finally {
         vi.useRealTimers();
       }
     });
 
     it('drops the offer when dismissed', async () => {
-      const { store } = await createNotesHarness([createNote({ id: 'a' })]);
+      const { store, undo } = await createNotesHarness([createNote({ id: 'a' })]);
       await store.deleteNote('a');
 
-      store.dismissUndo();
+      undo.dismiss();
 
-      expect(store.undoBanner()).toBeNull();
-      expect(store.lastAction()).toBeNull();
+      expect(undo.banner()).toBeNull();
+      expect(undo.last()).toBeNull();
     });
   });
 
@@ -866,7 +869,7 @@ describe('NotesStore filing one note', () => {
     await harness.store.fileNote('a', 'perf');
 
     expect(harness.folders.filings.get('a')).toBe('perf');
-    expect(harness.store.undoBanner()).toMatchObject({ kind: 'file', count: 1 });
+    expect(harness.undo.banner()).toMatchObject({ kind: 'file', count: 1 });
   });
 
   /**

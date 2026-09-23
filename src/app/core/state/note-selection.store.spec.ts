@@ -70,30 +70,30 @@ describe('NoteSelectionStore', () => {
     });
 
     it('moves the whole selection in one call', async () => {
-      const { store, selection, repository } = await withThreeNotes();
+      const { selection, repository, batch } = await withThreeNotes();
       selection.toggleChecked('a');
       selection.toggleChecked('c');
 
-      await store.moveSelection('space-2');
+      await batch.moveSelection('space-2');
 
       expect(repository.movedTo).toEqual({ ids: ['a', 'c'], spaceId: 'space-2' });
     });
 
     it('sends the typed tag through untouched', async () => {
-      const { store, selection, repository } = await withThreeNotes();
+      const { selection, repository, batch } = await withThreeNotes();
       selection.toggleChecked('a');
 
-      await store.tagSelection('#Urgent');
+      await batch.tagSelection('#Urgent');
 
       expect(repository.taggedWith).toEqual({ ids: ['a'], tags: ['#Urgent'] });
     });
 
     it('files the whole selection in one call', async () => {
-      const { store, selection, folders } = await withThreeNotes();
+      const { selection, folders, batch } = await withThreeNotes();
       selection.toggleChecked('a');
       selection.toggleChecked('c');
 
-      await store.fileSelection('perf');
+      await batch.fileSelection('perf');
 
       expect([...folders.filings]).toEqual([
         ['a', 'perf'],
@@ -103,11 +103,11 @@ describe('NoteSelectionStore', () => {
 
     /** Both directions are one action: taking a note out is a filing with no folder. */
     it('takes the selection out of its folder with the same call', async () => {
-      const { store, selection, folders } = await withThreeNotes();
+      const { selection, folders, batch } = await withThreeNotes();
       selection.toggleChecked('a');
-      await store.fileSelection('perf');
+      await batch.fileSelection('perf');
 
-      await store.fileSelection(null);
+      await batch.fileSelection(null);
 
       expect(folders.filings.get('a')).toBeNull();
     });
@@ -117,14 +117,14 @@ describe('NoteSelectionStore', () => {
      * rebuilding it from the selection would unfile a note the batch never touched.
      */
     it('offers to put a filing back, folder by folder', async () => {
-      const { store, selection, folders } = await withThreeNotes();
+      const { selection, folders, batch, undo } = await withThreeNotes();
       selection.toggleChecked('a');
-      await store.fileSelection('migrations');
+      await batch.fileSelection('migrations');
       selection.toggleChecked('c');
 
-      await store.fileSelection('perf');
+      await batch.fileSelection('perf');
 
-      expect(store.undoBanner()).toEqual({
+      expect(undo.banner()).toEqual({
         kind: 'file',
         previous: [
           { noteId: 'a', folderId: 'migrations' },
@@ -133,7 +133,7 @@ describe('NoteSelectionStore', () => {
         count: 2,
       });
 
-      await store.undoLastAction();
+      await undo.revert();
 
       expect(folders.filings.get('a')).toBe('migrations');
       expect(folders.filings.get('c')).toBeNull();
@@ -141,31 +141,31 @@ describe('NoteSelectionStore', () => {
 
     /** A bar offering to undo zero notes is noise. */
     it('opens no undo window when the selection was already in that folder', async () => {
-      const { store, selection } = await withThreeNotes();
+      const { selection, batch, undo } = await withThreeNotes();
       selection.toggleChecked('a');
-      await store.fileSelection('perf');
-      store.dismissUndo();
+      await batch.fileSelection('perf');
+      undo.dismiss();
 
-      await store.fileSelection('perf');
+      await batch.fileSelection('perf');
 
-      expect(store.undoBanner()).toBeNull();
+      expect(undo.banner()).toBeNull();
     });
 
     it('ignores a blank tag rather than sending it', async () => {
-      const { store, selection, repository } = await withThreeNotes();
+      const { selection, repository, batch } = await withThreeNotes();
       selection.toggleChecked('a');
 
-      await store.tagSelection('   ');
+      await batch.tagSelection('   ');
 
       expect(repository.taggedWith).toBeNull();
     });
 
     it('does nothing at all without a selection', async () => {
-      const { store, canvas, repository } = await withThreeNotes();
+      const { canvas, repository, batch } = await withThreeNotes();
 
-      await store.moveSelection('space-2');
-      await store.tagSelection('urgent');
-      await store.deleteSelection();
+      await batch.moveSelection('space-2');
+      await batch.tagSelection('urgent');
+      await batch.deleteSelection();
 
       expect(repository.movedTo).toBeNull();
       expect(repository.taggedWith).toBeNull();
@@ -178,16 +178,16 @@ describe('NoteSelectionStore', () => {
      * which thirty, and which space each one came from.
      */
     it('offers to put a move back, space by space', async () => {
-      const { store, selection, repository } = await createNotesHarness([
+      const { selection, repository, batch, undo } = await createNotesHarness([
         createNote({ id: 'a', spaceId: 'space-1' }),
         createNote({ id: 'b', spaceId: 'space-2' }),
       ]);
       selection.toggleChecked('a');
       selection.toggleChecked('b');
 
-      await store.moveSelection('space-3');
+      await batch.moveSelection('space-3');
 
-      expect(store.undoBanner()).toEqual({
+      expect(undo.banner()).toEqual({
         kind: 'move',
         previous: [
           { noteId: 'a', spaceId: 'space-1' },
@@ -197,7 +197,7 @@ describe('NoteSelectionStore', () => {
       });
 
       const queries = repository.queryCount;
-      await store.undoLastAction();
+      await undo.revert();
       await awaitQuery(repository, queries);
 
       expect(repository.spaceOf('a')).toBe('space-1');
@@ -205,15 +205,17 @@ describe('NoteSelectionStore', () => {
     });
 
     it('offers to put a tagging back', async () => {
-      const { store, selection, repository } = await createNotesHarness([createNote({ id: 'a', tags: [] })]);
+      const { selection, repository, batch, undo } = await createNotesHarness([
+        createNote({ id: 'a', tags: [] }),
+      ]);
       selection.toggleChecked('a');
 
-      await store.tagSelection('urgent');
+      await batch.tagSelection('urgent');
 
-      expect(store.undoBanner()?.kind).toBe('tag');
+      expect(undo.banner()?.kind).toBe('tag');
 
       const queries = repository.queryCount;
-      await store.undoLastAction();
+      await undo.revert();
       await awaitQuery(repository, queries);
 
       expect(repository.tagsOf('a')).toEqual([]);
@@ -224,16 +226,16 @@ describe('NoteSelectionStore', () => {
      * carried the tag gained nothing, so the undo must not take it away.
      */
     it('undoing a tagging leaves the tag on the note that already carried it', async () => {
-      const { store, selection, repository } = await createNotesHarness([
+      const { selection, repository, batch, undo } = await createNotesHarness([
         createNote({ id: 'a', tags: ['Urgent'] }),
         createNote({ id: 'b', tags: [] }),
       ]);
       selection.toggleChecked('a');
       selection.toggleChecked('b');
 
-      await store.tagSelection('urgent');
+      await batch.tagSelection('urgent');
       const queries = repository.queryCount;
-      await store.undoLastAction();
+      await undo.revert();
       await awaitQuery(repository, queries);
 
       expect(repository.tagsOf('a')).toEqual(['Urgent']);
@@ -242,22 +244,24 @@ describe('NoteSelectionStore', () => {
 
     /** A bar offering to undo nothing is noise, not a safety net. */
     it('offers no undo when the batch changed nothing', async () => {
-      const { store, selection } = await createNotesHarness([createNote({ id: 'a', spaceId: 'space-1' })]);
+      const { selection, batch, undo } = await createNotesHarness([
+        createNote({ id: 'a', spaceId: 'space-1' }),
+      ]);
       selection.toggleChecked('a');
 
-      await store.moveSelection('space-1');
+      await batch.moveSelection('space-1');
 
-      expect(store.undoBanner()).toBeNull();
-      expect(store.lastAction()).toBeNull();
+      expect(undo.banner()).toBeNull();
+      expect(undo.last()).toBeNull();
     });
 
     it('reports a failed bulk action without clearing the selection', async () => {
-      const { store, selection, repository } = await withThreeNotes();
+      const { selection, repository, batch } = await withThreeNotes();
       const notifier = TestBed.inject(ErrorNotifier);
       selection.toggleChecked('a');
       repository.failNext = new Error('boom');
 
-      await store.moveSelection('space-2');
+      await batch.moveSelection('space-2');
 
       expect(notifier.notice()?.ref.key).toBe('errors.bulkActionFailed');
       expect(selection.checkedCount()).toBe(1);
@@ -353,6 +357,13 @@ describe('NoteSelectionStore', () => {
 
       return { selection: TestBed.inject(NoteSelectionStore), board };
     }
+
+    it('resolves a dimmed card the canvas has filtered out', async () => {
+      const { selection } = await onBoard();
+
+      expect(selection.noteOnScreen('dimmed')?.id).toBe('dimmed');
+      expect(selection.noteOnScreen('elsewhere')).toBeNull();
+    });
 
     it('keeps a dimmed card in the selection the canvas has filtered out', async () => {
       const { selection } = await onBoard();

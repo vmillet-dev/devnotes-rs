@@ -14,6 +14,7 @@ import { AttachmentsStore } from '@core/state/attachments.store';
 import { NoteSelectionStore } from '@core/state/note-selection.store';
 import { NotesQueryStore } from '@core/state/notes-query.store';
 import { NotesStore } from '@core/state/notes.store';
+import { UndoStore } from '@core/state/undo.store';
 import { PaletteStore } from '@core/state/palette.store';
 import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
 import { FoldersStore } from '@core/state/folders.store';
@@ -63,6 +64,7 @@ const PERF: Folder = {
 describe('NotesPageComponent', () => {
   let fixture: ComponentFixture<NotesPageComponent>;
   let store: NotesStore;
+  let undo: UndoStore;
   let canvas: NotesQueryStore;
   let selection: NoteSelectionStore;
   let spaces: SpacesStore;
@@ -147,6 +149,7 @@ describe('NotesPageComponent', () => {
     TestBed.configureTestingModule({ imports: [NotesPageComponent], providers });
     fixture = TestBed.createComponent(NotesPageComponent);
     store = TestBed.inject(NotesStore);
+    undo = TestBed.inject(UndoStore);
     canvas = TestBed.inject(NotesQueryStore);
     selection = TestBed.inject(NoteSelectionStore);
     spaces = TestBed.inject(SpacesStore);
@@ -755,7 +758,7 @@ describe('NotesPageComponent', () => {
 
       press('Delete');
 
-      await vi.waitFor(() => expect(store.lastAction()).toEqual({ kind: 'deletion', ids: ['n1'], count: 1 }));
+      await vi.waitFor(() => expect(undo.last()).toEqual({ kind: 'deletion', ids: ['n1'], count: 1 }));
       expect(canvas.visibleNotes().map((note) => note.id)).not.toContain('n1');
       expect(selection.armedForDeletion()).toBeNull();
     });
@@ -791,13 +794,13 @@ describe('NotesPageComponent', () => {
       selection.focusNote('n1');
       press('Delete');
       press('Delete');
-      await vi.waitFor(() => expect(store.undoBanner()).not.toBeNull());
+      await vi.waitFor(() => expect(undo.banner()).not.toBeNull());
       expect(canvas.visibleNotes().map((note) => note.id)).not.toContain('n1');
 
       press('Escape');
 
       await vi.waitFor(() => expect(canvas.visibleNotes().map((note) => note.id)).toContain('n1'));
-      expect(store.undoBanner()).toBeNull();
+      expect(undo.banner()).toBeNull();
     });
 
     /** ⚠️ Only while the offer is on screen: outside it Escape has other rungs to serve. */
@@ -805,8 +808,8 @@ describe('NotesPageComponent', () => {
       selection.focusNote('n1');
       press('Delete');
       press('Delete');
-      await vi.waitFor(() => expect(store.undoBanner()).not.toBeNull());
-      store.dismissUndo();
+      await vi.waitFor(() => expect(undo.banner()).not.toBeNull());
+      undo.dismiss();
 
       press('Escape');
 
@@ -818,7 +821,7 @@ describe('NotesPageComponent', () => {
       selection.focusNote('n1');
       press('Delete');
       press('Delete');
-      await vi.waitFor(() => expect(store.undoBanner()).not.toBeNull());
+      await vi.waitFor(() => expect(undo.banner()).not.toBeNull());
       selection.focusNote('n2');
       press('Delete');
       expect(selection.armedForDeletion()).toBe('n2');
@@ -827,19 +830,19 @@ describe('NotesPageComponent', () => {
 
       expect(selection.armedForDeletion()).toBeNull();
       // The offer is still standing: one Escape only goes down one rung.
-      expect(store.undoBanner()).not.toBeNull();
+      expect(undo.banner()).not.toBeNull();
     });
 
     it('takes back the last deletion on Ctrl+Z', async () => {
       selection.focusNote('n1');
       press('Backspace');
       press('Backspace');
-      await vi.waitFor(() => expect(store.lastAction()).not.toBeNull());
+      await vi.waitFor(() => expect(undo.last()).not.toBeNull());
 
       press('z', { ctrlKey: true });
 
       await vi.waitFor(() => expect(canvas.visibleNotes().map((note) => note.id)).toContain('n1'));
-      expect(store.lastAction()).toBeNull();
+      expect(undo.last()).toBeNull();
     });
 
     it('leaves Ctrl+Z alone when nothing was deleted', () => {

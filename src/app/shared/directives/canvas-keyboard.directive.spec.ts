@@ -264,7 +264,7 @@ describe('CanvasKeyboardDirective', () => {
 
     it('ignores a bare key that wants Ctrl, and the other way round', () => {
       press('z');
-      expect(harness.store.lastAction()).toBeNull();
+      expect(harness.undo.last()).toBeNull();
 
       const withCtrl = press('c', { ctrlKey: true });
       expect(withCtrl.defaultPrevented).toBe(false);
