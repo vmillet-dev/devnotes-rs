@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { TranslocoService, TranslocoPipe } from '@jsverse/transloco';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import {
   DENSITIES,
   Density,
@@ -37,25 +37,21 @@ function checkedValue(event: Event): boolean {
 export class SettingsPageComponent {
   protected readonly draft = inject(SettingsDraftStore);
 
-  private readonly transloco = inject(TranslocoService);
+  protected readonly localeChoices: readonly ChoiceOption[] = LOCALE_CHOICES.map((choice) => ({
+    id: choice,
+    name: `locale.${choice}`,
+    nameIsKey: true,
+  }));
 
-  protected readonly localeChoices = computed<readonly ChoiceOption[]>(() =>
-    LOCALE_CHOICES.map((choice) => ({ id: choice, name: this.transloco.translate(`locale.${choice}`) })),
-  );
+  protected readonly themeSegments: readonly Segment[] = THEME_CHOICES.map((choice) => ({
+    id: choice,
+    labelKey: `settings.theme.${choice}`,
+  }));
 
-  protected readonly themeSegments = computed<readonly Segment[]>(() =>
-    THEME_CHOICES.map((choice) => ({
-      id: choice,
-      label: this.transloco.translate(`settings.theme.${choice}`),
-    })),
-  );
-
-  protected readonly densitySegments = computed<readonly Segment[]>(() =>
-    DENSITIES.map((choice) => ({
-      id: choice,
-      label: this.transloco.translate(`settings.density.${choice}`),
-    })),
-  );
+  protected readonly densitySegments: readonly Segment[] = DENSITIES.map((choice) => ({
+    id: choice,
+    labelKey: `settings.density.${choice}`,
+  }));
 
   protected onUpdateNotifications(event: Event): void {
     const wanted = checkedValue(event);

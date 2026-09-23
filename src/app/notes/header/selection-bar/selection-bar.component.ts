@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
-import { TranslocoService, TranslocoPipe } from '@jsverse/transloco';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { Folder } from '@core/model/folder.model';
 import { Space } from '@core/model/space.model';
 import { ChoiceMenuComponent, ChoiceOption } from '@notes/ui/choice-menu/choice-menu.component';
@@ -28,8 +28,6 @@ export class SelectionBarComponent {
   readonly deleteRequested = output<void>();
   readonly cleared = output<void>();
 
-  private readonly transloco = inject(TranslocoService);
-
   protected readonly spaceChoices = computed<readonly ChoiceOption[]>(() =>
     this.spaces().map((space) => ({ id: space.id, name: space.name })),
   );
@@ -46,7 +44,7 @@ export class SelectionBarComponent {
       name: folder.name,
       colour: folder.colour,
     })),
-    { id: UNFILE, name: this.transloco.translate('selection.unfile') },
+    { id: UNFILE, name: 'selection.unfile', nameIsKey: true },
   ]);
 
   protected readonly tagDraft = signal('');

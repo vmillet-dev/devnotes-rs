@@ -1,9 +1,13 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 
-/** One of the few options, already translated by whoever knows what they mean. */
+/**
+ * One of the few options. ⚠️ A key, translated in the template: a label translated by the
+ * caller is frozen in the language it was built in.
+ */
 export interface Segment {
   readonly id: string;
-  readonly label: string;
+  readonly labelKey: string;
 }
 
 /**
@@ -19,6 +23,7 @@ export interface Segment {
  */
 @Component({
   selector: 'app-segmented-choice',
+  imports: [TranslocoPipe],
   templateUrl: './segmented-choice.component.html',
   styleUrl: './segmented-choice.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

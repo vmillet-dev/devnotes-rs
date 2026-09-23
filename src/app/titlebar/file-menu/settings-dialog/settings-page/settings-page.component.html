@@ -10,7 +10,7 @@
       <app-choice-menu
         [kind]="'setting-locale'"
         [label]="'settings.appearance.language' | transloco"
-        [options]="localeChoices()"
+        [options]="localeChoices"
         [currentId]="draft.value('locale')"
         (chosen)="onLocale($event)"
       />
@@ -21,7 +21,7 @@
       <app-segmented-choice
         [kind]="'setting-theme'"
         [label]="'settings.appearance.theme' | transloco"
-        [segments]="themeSegments()"
+        [segments]="themeSegments"
         [currentId]="draft.value('theme')"
         (chosen)="onTheme($event)"
       />
@@ -32,7 +32,7 @@
       <app-segmented-choice
         [kind]="'setting-density'"
         [label]="'settings.appearance.density' | transloco"
-        [segments]="densitySegments()"
+        [segments]="densitySegments"
         [currentId]="draft.value('density')"
         (chosen)="onDensity($event)"
       />

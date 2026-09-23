@@ -173,6 +173,15 @@ describe('NotesPageComponent', () => {
     expect(child(SegmentedChoiceComponent).currentId()).toBe('pinned');
   });
 
+  /** A key, not a label: one translated here would stay in the language it was built in. */
+  it('hands the quick filters over as keys', () => {
+    expect(
+      child(SegmentedChoiceComponent)
+        .segments()
+        .map((segment) => segment.labelKey),
+    ).toEqual(['filters.all', 'filters.pinned', 'filters.untriaged']);
+  });
+
   it('starts on "all spaces"', async () => {
     await fixture.whenStable();
 

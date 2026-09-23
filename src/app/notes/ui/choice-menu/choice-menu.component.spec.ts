@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TranslocoService } from '@jsverse/transloco';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
 import { ChoiceMenuComponent, ChoiceOption } from './choice-menu.component';
@@ -47,6 +48,24 @@ describe('ChoiceMenuComponent', () => {
     await fixture.whenStable();
 
     expect(trigger().textContent).toContain('Perf');
+  });
+
+  it('translates an option named by a key, and follows a change of language', async () => {
+    fixture.componentRef.setInput('options', [
+      ...FOLDERS,
+      { id: 'out', name: 'selection.unfile', nameIsKey: true },
+    ]);
+    fixture.componentRef.setInput('currentId', 'out');
+    await open();
+    expect(trigger().querySelector('.choice-name')?.textContent?.trim()).toBe('Sortir du dossier');
+    expect(options()[2].textContent?.trim()).toBe('Sortir du dossier');
+
+    TestBed.inject(TranslocoService).setActiveLang('en');
+    await fixture.whenStable();
+
+    expect(trigger().querySelector('.choice-name')?.textContent?.trim()).toBe('Take out of folder');
+    expect(options()[2].textContent?.trim()).toBe('Take out of folder');
+    expect(options()[0].textContent?.trim()).toBe('Perf');
   });
 
   it('emits the option it was asked for and folds away', async () => {

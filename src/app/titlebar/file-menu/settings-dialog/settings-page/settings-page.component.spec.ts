@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TranslocoService } from '@jsverse/transloco';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { SettingsDraftStore } from '@core/services/settings/settings-draft.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
@@ -82,6 +83,23 @@ describe('SettingsPageComponent', () => {
 
     expect(checked).toHaveLength(1);
     expect(checked[0].getAttribute('data-segment-id')).toBe('system');
+  });
+
+  /** The language is changed from this very panel, which stays open when it applies. */
+  it('redraws its choices in a language applied while it is open', async () => {
+    const locale = (): string =>
+      fixture.nativeElement
+        .querySelector('[data-testid="choice-setting-locale"] .choice-name')
+        .textContent.trim();
+    const themes = (): string[] => segments('setting-theme').map((segment) => segment.textContent!.trim());
+    expect(locale()).toBe('Système');
+    expect(themes()).toEqual(['Système', 'Sombre', 'Clair']);
+
+    TestBed.inject(TranslocoService).setActiveLang('en');
+    await fixture.whenStable();
+
+    expect(locale()).toBe('System');
+    expect(themes()).toEqual(['System', 'Dark', 'Light']);
   });
 
   it('stages a chosen theme, with nothing to validate', async () => {
