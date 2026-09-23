@@ -110,6 +110,14 @@ pub struct Facets {
     pub languages: Vec<Language>,
 }
 
+/// Dated sections, or one flat list — which offers the create card only when it is a place
+/// to create in rather than a list of what matched.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Layout {
+    Chronological,
+    Flat { create_ghost: bool },
+}
+
 #[derive(Debug, Clone, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct NotesView {
@@ -163,15 +171,22 @@ pub enum NoteSectionKey {
     Results,
 }
 
+impl NotesView {
+    /// Every note of every section, for the passes that decorate them after [`build`].
+    pub fn notes_mut(&mut self) -> impl Iterator<Item = &mut DisplayNote> {
+        self.sections
+            .iter_mut()
+            .flat_map(|section| section.notes.iter_mut())
+    }
+}
+
 /// Separate from [`build`], which reads no database.
 pub fn apply_attachment_counts<S: std::hash::BuildHasher>(
     view: &mut NotesView,
     counts: &HashMap<String, u32, S>,
 ) {
-    for section in &mut view.sections {
-        for note in &mut section.notes {
-            note.attachment_count = counts.get(&note.id).copied().unwrap_or(0);
-        }
+    for note in view.notes_mut() {
+        note.attachment_count = counts.get(&note.id).copied().unwrap_or(0);
     }
 }
 
@@ -180,14 +195,12 @@ pub fn apply_folders<S: std::hash::BuildHasher>(
     view: &mut NotesView,
     folders: &HashMap<String, NoteFolder, S>,
 ) {
-    for section in &mut view.sections {
-        for note in &mut section.notes {
-            note.folder = note
-                .folder_id
-                .as_ref()
-                .and_then(|id| folders.get(id))
-                .cloned();
-        }
+    for note in view.notes_mut() {
+        note.folder = note
+            .folder_id
+            .as_ref()
+            .and_then(|id| folders.get(id))
+            .cloned();
     }
 }
 
@@ -197,10 +210,8 @@ pub fn apply_global_defaults(view: &mut NotesView, globals: &BTreeMap<String, St
         return;
     }
 
-    for section in &mut view.sections {
-        for note in &mut section.notes {
-            model::apply_global_defaults(note, globals);
-        }
+    for note in view.notes_mut() {
+        model::apply_global_defaults(note, globals);
     }
 }
 
@@ -233,13 +244,19 @@ pub fn build(mut notes: Vec<Note>, facets: Facets, request: &NotesQuery) -> Note
     // ⚠️ The inside of a folder is a place to create in — a note made there arrives filed
     // — where a result list is a list of what already matched. So the ghost rides on the
     // flat view only when the folder is the *whole* reason it is flat.
-    let flat = is_filtering.then_some(!criteria.narrows());
+    let layout = if is_filtering {
+        Layout::Flat {
+            create_ghost: !criteria.narrows(),
+        }
+    } else {
+        Layout::Chronological
+    };
     let matched = saturating_u32(notes.len());
 
     let offset = offset_from_minutes(request.tz_offset_minutes);
 
     let mut view = NotesView {
-        sections: build_sections(notes, flat, request.pinned_first, request.now, offset),
+        sections: build_sections(notes, layout, request.pinned_first, request.now, offset),
         available_tags: facets.tags,
         available_languages: facets.languages,
         is_filtering,
@@ -258,10 +275,8 @@ fn apply_search_hits(view: &mut NotesView, hits: &mut HashMap<String, SearchHit>
         return;
     }
 
-    for section in &mut view.sections {
-        for note in &mut section.notes {
-            note.search_hit = hits.remove(&note.id);
-        }
+    for note in view.notes_mut() {
+        note.search_hit = hits.remove(&note.id);
     }
 }
 
@@ -423,17 +438,15 @@ fn results(
     vec![section(NoteSectionKey::Results, notes, create_ghost, now)]
 }
 
-/// `flat` is `None` for the chronological sections and `Some(ghost)` for the single
-/// `Results` list, `ghost` saying whether it is somewhere a note can be created.
 fn build_sections(
     notes: Vec<Note>,
-    flat: Option<bool>,
+    layout: Layout,
     pinned_first: bool,
     now: DateTime<Utc>,
     offset: FixedOffset,
 ) -> Vec<NoteSection> {
     let local_now = now.with_timezone(&offset);
-    if let Some(create_ghost) = flat {
+    if let Layout::Flat { create_ghost } = layout {
         return results(notes, pinned_first, create_ghost, now);
     }
 
@@ -964,7 +977,8 @@ mod tests {
                 note("older", "2020-01-01T08:00:00.000Z"),
             ];
 
-            let sections = build_sections(notes, None, true, now_at(offset), offset);
+            let sections =
+                build_sections(notes, Layout::Chronological, true, now_at(offset), offset);
 
             let placed: Vec<String> = sections
                 .iter()
@@ -980,7 +994,13 @@ mod tests {
         fn the_week_section_is_present_even_when_empty() {
             let offset = utc();
 
-            let sections = build_sections(Vec::new(), None, true, now_at(offset), offset);
+            let sections = build_sections(
+                Vec::new(),
+                Layout::Chronological,
+                true,
+                now_at(offset),
+                offset,
+            );
 
             assert_eq!(keys(&sections), [NoteSectionKey::Week]);
             assert!(sections[0].show_create_ghost);
@@ -994,7 +1014,8 @@ mod tests {
                 note("older", "2020-01-01T08:00:00.000Z"),
             ];
 
-            let sections = build_sections(notes, None, true, now_at(offset), offset);
+            let sections =
+                build_sections(notes, Layout::Chronological, true, now_at(offset), offset);
 
             let with_ghost: Vec<NoteSectionKey> = sections
                 .iter()
@@ -1010,7 +1031,13 @@ mod tests {
             let mut pinned = note("pinned", "2026-07-25T08:00:00.000Z");
             pinned.pinned = true;
 
-            let sections = build_sections(vec![pinned], None, true, now_at(offset), offset);
+            let sections = build_sections(
+                vec![pinned],
+                Layout::Chronological,
+                true,
+                now_at(offset),
+                offset,
+            );
 
             assert_eq!(ids_in(&sections, NoteSectionKey::Pinned), ["pinned"]);
             assert!(ids_in(&sections, NoteSectionKey::Today).is_empty());
@@ -1022,7 +1049,13 @@ mod tests {
             let mut pinned = note("pinned", "2026-07-25T08:00:00.000Z");
             pinned.pinned = true;
 
-            let sections = build_sections(vec![pinned], None, false, now_at(offset), offset);
+            let sections = build_sections(
+                vec![pinned],
+                Layout::Chronological,
+                false,
+                now_at(offset),
+                offset,
+            );
 
             assert!(!keys(&sections).contains(&NoteSectionKey::Pinned));
             assert_eq!(ids_in(&sections, NoteSectionKey::Today), ["pinned"]);
@@ -1035,8 +1068,24 @@ mod tests {
             pinned.pinned = true;
             let notes = vec![note("recent", "2026-07-25T08:00:00.000Z"), pinned];
 
-            let hoisted = build_sections(notes.clone(), Some(false), true, now_at(offset), offset);
-            let untouched = build_sections(notes, Some(false), false, now_at(offset), offset);
+            let hoisted = build_sections(
+                notes.clone(),
+                Layout::Flat {
+                    create_ghost: false,
+                },
+                true,
+                now_at(offset),
+                offset,
+            );
+            let untouched = build_sections(
+                notes,
+                Layout::Flat {
+                    create_ghost: false,
+                },
+                false,
+                now_at(offset),
+                offset,
+            );
 
             assert_eq!(
                 ids_in(&hoisted, NoteSectionKey::Results),
@@ -1054,7 +1103,7 @@ mod tests {
 
             let sections = build_sections(
                 vec![note("today", "2026-07-25T08:00:00.000Z")],
-                None,
+                Layout::Chronological,
                 true,
                 now_at(offset),
                 offset,
@@ -1073,7 +1122,15 @@ mod tests {
             pinned.pinned = true;
             let notes = vec![pinned, note("ancient", "2019-05-05T08:00:00.000Z")];
 
-            let sections = build_sections(notes, Some(false), true, now_at(offset), offset);
+            let sections = build_sections(
+                notes,
+                Layout::Flat {
+                    create_ghost: false,
+                },
+                true,
+                now_at(offset),
+                offset,
+            );
 
             assert_eq!(keys(&sections), [NoteSectionKey::Results]);
             assert_eq!(sections[0].notes.len(), 2);
@@ -1090,7 +1147,7 @@ mod tests {
 
             let sections = build_sections(
                 vec![expiring, note("plain", "2026-07-25T08:00:00.000Z")],
-                None,
+                Layout::Chronological,
                 true,
                 now_at(offset),
                 offset,
@@ -1116,7 +1173,13 @@ mod tests {
                 at: at("2027-01-01T00:00:00.000Z"),
             };
 
-            let sections = build_sections(vec![expiring], None, true, now_at(offset), offset);
+            let sections = build_sections(
+                vec![expiring],
+                Layout::Chronological,
+                true,
+                now_at(offset),
+                offset,
+            );
 
             let today = sections
                 .iter()
@@ -1132,7 +1195,7 @@ mod tests {
 
             let sections = build_sections(
                 vec![note("local-today", "2026-07-25T20:00:00.000Z")],
-                None,
+                Layout::Chronological,
                 true,
                 now,
                 paris,
@@ -1148,7 +1211,7 @@ mod tests {
 
             let sections = build_sections(
                 vec![note("after-midnight", "2026-07-25T22:10:00.000Z")],
-                None,
+                Layout::Chronological,
                 true,
                 now,
                 paris,
@@ -1163,7 +1226,7 @@ mod tests {
 
             let sections = build_sections(
                 vec![note("future", "2030-01-01T00:00:00.000Z")],
-                None,
+                Layout::Chronological,
                 true,
                 now_at(offset),
                 offset,
@@ -1180,7 +1243,8 @@ mod tests {
                 note("second", "2026-07-25T07:00:00.000Z"),
             ];
 
-            let sections = build_sections(notes, None, true, now_at(offset), offset);
+            let sections =
+                build_sections(notes, Layout::Chronological, true, now_at(offset), offset);
 
             assert_eq!(
                 ids_in(&sections, NoteSectionKey::Today),
