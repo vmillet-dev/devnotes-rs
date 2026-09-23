@@ -39,7 +39,7 @@ pub enum VaultState {
     Unlocked,
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 #[specta::specta]
 pub fn vault_state(app: AppHandle, db: State<'_, Db>) -> Result<VaultState, AppError> {
     if db.lock().map_err(|_| StorageError::Unavailable)?.is_some() {
