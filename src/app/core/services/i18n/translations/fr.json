@@ -143,7 +143,6 @@
     "dropHere": "Déposer ici",
     "nameTheZone": "Nommer ce dossier",
     "nameTheZoneHint": "La couleur est attribuée ; changez-la depuis le menu du dossier.",
-    "dragHint": "Glisser une note dans une zone la range ; la lâcher sur le fond l’en sort.",
     "align": "Aligner",
     "alignHint": "Aligne {cards, plural, =0 {aucune carte libre} one {# carte libre} other {# cartes libres}} sous les dossiers, sans y toucher.",
     "tidyMoreLabel": "Autres rangements",
@@ -372,7 +371,6 @@
     "empty": "Aucun snippet ne correspond.",
     "hint": "↑↓ ou Tab naviguer · Entrée ou clic ouvrir · Ctrl+C copier · Échap fermer",
     "copyLabel": "Copier « {{title}} »",
-    "close": "Fermer la palette",
     "createNote": "+ Créer une note « {{query}} »",
     "copiedTitle": "Copié",
     "copiedNote": "« {{title}} » est dans le presse-papiers",
@@ -540,7 +538,6 @@
       "showPinnedFirst": "Épinglées en premier"
     },
     "security": {
-      "title": "Sécurité",
       "passphrase": "Phrase de passe",
       "change": "Changer…",
       "changing": "Changement…",

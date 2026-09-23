@@ -11,7 +11,8 @@ export type IpcResult<T> = { status: 'ok'; data: T } | { status: 'error'; error:
 
 /**
  * ⚠️ A runtime guard despite the typing: `bindings.ts` declares an `AppError` where
- * Tauri may have rejected with something else (see `IpcError`).
+ * Tauri may have rejected with something else (see `IpcError`). A `Record` over the
+ * generated union, so it cannot fall behind a variant added in Rust.
  */
 const IPC_ERROR_CODES: Record<IpcErrorCode, true> = {
   noteNotFound: true,

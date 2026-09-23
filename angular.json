@@ -27,13 +27,6 @@
             "stylePreprocessorOptions": {
               "includePaths": ["src/styles"]
             },
-            "assets": [
-              {
-                "glob": "**/*",
-                "input": "src/assets",
-                "output": "assets"
-              }
-            ],
             "styles": [
               "@fontsource/inter/400.css",
               "@fontsource/inter/500.css",
