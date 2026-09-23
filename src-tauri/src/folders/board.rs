@@ -17,8 +17,8 @@ use specta::Type;
 use super::model::Folder;
 use crate::count::saturating_u32;
 use crate::notes::language::Language;
-use crate::notes::model::{self, DisplayNote, Note, NoteLifecycle};
-use crate::notes::view::{self, Facets, NoteFilter};
+use crate::notes::model::{self, DisplayNote, Note};
+use crate::notes::view::{Criteria, Facets, NoteFilter};
 
 /// The card is the same card as on the canvas — full size, with its language tag, its
 /// snippet, its footer and its tags. The consequence is accepted: the board is large, and
@@ -387,34 +387,6 @@ pub fn surface(zones: &[BoardZone], loose: &[BoardNote]) -> (i32, i32) {
     (right + BOARD_MARGIN, bottom + BOARD_MARGIN)
 }
 
-/// What a board is showing, and what it is merely dimming.
-///
-/// ⚠️ Nothing is dropped: the quick filter, the tag rail, the language rail and the search
-/// all decide  rather than membership. Reflowing the survivors into a list would
-/// throw away the spatial memory the board exists for.
-#[must_use]
-pub fn matches(note: &Note, needle: &str, request: &BoardQuery) -> bool {
-    let passes_filter = match request.filter {
-        NoteFilter::All => true,
-        NoteFilter::Pinned => note.pinned,
-        NoteFilter::Untriaged => matches!(note.lifecycle, NoteLifecycle::Expires { .. }),
-    };
-
-    let passes_tags = request.tags.is_empty()
-        || request.tags.iter().any(|wanted| {
-            note.tags
-                .iter()
-                .any(|carried| carried.to_lowercase() == wanted.to_lowercase())
-        });
-
-    let passes_languages =
-        request.languages.is_empty() || request.languages.contains(&note.language);
-
-    let passes_search = needle.is_empty() || view::matches_search(note, needle);
-
-    passes_filter && passes_tags && passes_languages && passes_search
-}
-
 /// Pinned first, then by when they last moved — the order the canvas gives them, kept so a
 /// note does not sit in one place on one view and another on the other.
 fn in_zone_order(notes: &mut [BoardNote]) {
@@ -432,14 +404,22 @@ pub fn build<S: std::hash::BuildHasher>(
     facets: Facets,
     request: &BoardQuery,
 ) -> BoardView {
-    let needle = view::fold(request.search.trim());
+    // ⚠️ Nothing is dropped: every criterion decides what is dimmed, never what is drawn.
+    // Reflowing the survivors into a list would throw away the spatial memory the board
+    // exists for.
+    let criteria = Criteria::new(
+        &request.search,
+        request.filter,
+        &request.tags,
+        &request.languages,
+    );
 
     let mut by_folder: HashMap<String, Vec<BoardNote>> = HashMap::new();
     let mut loose: Vec<BoardNote> = Vec::new();
     let mut matched = 0usize;
 
     for note in notes {
-        let hit = matches(&note, &needle, request);
+        let hit = criteria.passes(&note);
         matched += usize::from(hit);
 
         let folder_id = note.folder_id.clone();
@@ -495,10 +475,9 @@ pub fn build<S: std::hash::BuildHasher>(
         }
     }
 
-    let is_filtering = !needle.is_empty()
-        || request.filter != NoteFilter::All
-        || !request.tags.is_empty()
-        || !request.languages.is_empty();
+    // The quick filter counts here and not on the date view, deliberately: the board dims on
+    // it, where the date view keeps its sections.
+    let is_filtering = criteria.narrows() || request.filter != NoteFilter::All;
 
     let (width, height) = surface(&zones, &loose);
 

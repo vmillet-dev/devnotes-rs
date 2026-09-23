@@ -913,6 +913,77 @@ mod board {
         assert_eq!(board.matched, 1);
     }
 
+    /// The two views answer the same question, and must not answer it differently. Tags
+    /// are compared as the column compares them — ASCII case only, `#` stripped — and a
+    /// tag that normalises to nothing asks for nothing.
+    #[test]
+    fn the_board_and_the_date_view_agree_on_what_matches() {
+        let mut connection = open_in_memory().unwrap();
+        let sql = space(&mut connection, "SQL");
+        for (title, tags) in [
+            ("accented", vec!["étape"]),
+            ("capital", vec!["Étape"]),
+            ("urgent", vec!["URGENT"]),
+            ("plain", Vec::new()),
+        ] {
+            create_note(
+                &mut connection,
+                NoteDraft {
+                    title: title.to_string(),
+                    tags: tags.into_iter().map(ToString::to_string).collect(),
+                    ..draft(&sql)
+                },
+                t0(),
+            )
+            .unwrap();
+        }
+
+        for asked in [vec!["étape"], vec!["#urgent"], vec![" # "], Vec::new()] {
+            let tags: Vec<String> = asked.iter().map(ToString::to_string).collect();
+
+            let query = NotesQuery {
+                space_id: Some(sql.clone()),
+                folder_id: None,
+                search: String::new(),
+                filter: NoteFilter::All,
+                tags: tags.clone(),
+                languages: Vec::new(),
+                now: t1(),
+                tz_offset_minutes: 0,
+                pinned_first: true,
+            };
+            let (notes, facets) = fetch(&mut connection, &query).unwrap();
+            let dated = devnotes_lib::notes::view::build(notes, facets, &query);
+            let mut on_the_date_view: Vec<String> = dated
+                .sections
+                .iter()
+                .flat_map(|section| section.notes.iter().map(|note| note.title.clone()))
+                .collect();
+
+            let board = view(
+                &mut connection,
+                &BoardQuery {
+                    tags,
+                    ..request(&sql)
+                },
+            );
+            let mut lit_on_the_board: Vec<String> = board
+                .loose
+                .iter()
+                .filter(|entry| entry.matches)
+                .map(|entry| entry.note.title.clone())
+                .collect();
+
+            on_the_date_view.sort();
+            lit_on_the_board.sort();
+            assert_eq!(on_the_date_view, lit_on_the_board, "asked for {asked:?}");
+            assert_eq!(
+                dated.is_filtering, board.is_filtering,
+                "asked for {asked:?}"
+            );
+        }
+    }
+
     /// Filing a card into a zone drops the place it had on the background.
     #[test]
     fn filing_a_loose_note_forgets_where_it_sat() {

@@ -6,7 +6,7 @@ use specta::Type;
 use unicode_normalization::char::{decompose_canonical, is_combining_mark};
 
 use super::language::Language;
-use super::model::{self, DisplayNote, Note};
+use super::model::{self, DisplayNote, Note, NoteLifecycle};
 use crate::count::saturating_u32;
 use crate::folders::model::NoteFolder;
 
@@ -41,6 +41,67 @@ pub enum NoteFilter {
     All,
     Pinned,
     Untriaged,
+}
+
+/// What the search, the quick filter and the two rails ask of a note, normalised once.
+///
+/// ⚠️ The date view narrows on these in SQL and the board dims on them in Rust. This is the
+/// rule both are held to, so the two views cannot disagree on which notes match.
+#[derive(Debug, Clone)]
+pub struct Criteria {
+    needle: String,
+    filter: NoteFilter,
+    tags: Vec<String>,
+    languages: Vec<Language>,
+}
+
+impl Criteria {
+    pub fn new(search: &str, filter: NoteFilter, tags: &[String], languages: &[Language]) -> Self {
+        Self {
+            needle: fold(search.trim()),
+            filter,
+            tags: model::normalize_tags(tags),
+            languages: languages.to_vec(),
+        }
+    }
+
+    /// The search, trimmed and folded; empty when nothing is searched.
+    pub fn needle(&self) -> &str {
+        &self.needle
+    }
+
+    /// Whether the search or a rail narrows the notes. The quick filter is not counted: the
+    /// date view keeps its sections under it.
+    pub fn narrows(&self) -> bool {
+        !self.needle.is_empty() || !self.tags.is_empty() || !self.languages.is_empty()
+    }
+
+    pub fn passes(&self, note: &Note) -> bool {
+        let filter = match self.filter {
+            NoteFilter::All => true,
+            NoteFilter::Pinned => note.pinned,
+            NoteFilter::Untriaged => matches!(note.lifecycle, NoteLifecycle::Expires { .. }),
+        };
+
+        // ASCII only, like the `COLLATE NOCASE` the date view filters with in SQL.
+        let tags = self.tags.is_empty()
+            || self.tags.iter().any(|wanted| {
+                note.tags
+                    .iter()
+                    .any(|carried| carried.eq_ignore_ascii_case(wanted))
+            });
+
+        let languages = self.languages.is_empty() || self.languages.contains(&note.language);
+        let search = self.needle.is_empty() || matches_search(note, &self.needle);
+
+        filter && tags && languages && search
+    }
+}
+
+impl From<&NotesQuery> for Criteria {
+    fn from(query: &NotesQuery) -> Self {
+        Self::new(&query.search, query.filter, &query.tags, &query.languages)
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -144,11 +205,12 @@ pub fn apply_global_defaults(view: &mut NotesView, globals: &BTreeMap<String, St
 }
 
 pub fn build(mut notes: Vec<Note>, facets: Facets, request: &NotesQuery) -> NotesView {
-    let needle = fold(request.search.trim());
+    let criteria = Criteria::from(request);
+    let needle = criteria.needle();
     // Collected while filtering: finding the same match twice is paid for twice.
     let mut hits: HashMap<String, SearchHit> = HashMap::new();
     if !needle.is_empty() {
-        notes.retain(|note| match find_match(note, &needle) {
+        notes.retain(|note| match find_match(note, needle) {
             None => false,
             Some(SearchMatch::Title) => true,
             Some(SearchMatch::Elsewhere(hit)) => {
@@ -165,20 +227,13 @@ pub fn build(mut notes: Vec<Note>, facets: Facets, request: &NotesQuery) -> Note
     // inside of a folder is already sorted by the fact of being there, so dating it again
     // would be classifying twice. The date view's own sections are untouched — nothing
     // sends a `folder_id` unless a folder has actually been opened.
-    let searching = !needle.is_empty();
     let inside_folder = request.folder_id.is_some();
-    let by_tag = request
-        .tags
-        .iter()
-        .any(|tag| model::normalize_tag(tag).is_some());
-    let by_language = !request.languages.is_empty();
-
-    let is_filtering = searching || inside_folder || by_tag || by_language;
+    let is_filtering = criteria.narrows() || inside_folder;
 
     // ⚠️ The inside of a folder is a place to create in — a note made there arrives filed
     // — where a result list is a list of what already matched. So the ghost rides on the
     // flat view only when the folder is the *whole* reason it is flat.
-    let flat = is_filtering.then_some(inside_folder && !searching && !by_tag && !by_language);
+    let flat = is_filtering.then_some(!criteria.narrows());
     let matched = saturating_u32(notes.len());
 
     let offset = offset_from_minutes(request.tz_offset_minutes);
@@ -1131,6 +1186,69 @@ mod tests {
                 ids_in(&sections, NoteSectionKey::Today),
                 ["first", "second"]
             );
+        }
+    }
+
+    mod criteria {
+        use super::*;
+
+        fn tagged(id: &str, tags: &[&str]) -> Note {
+            Note {
+                id: id.to_string(),
+                tags: tags.iter().map(ToString::to_string).collect(),
+                ..sample()
+            }
+        }
+
+        fn wanting(tags: &[&str]) -> Criteria {
+            let tags: Vec<String> = tags.iter().map(ToString::to_string).collect();
+            Criteria::new("", NoteFilter::All, &tags, &[])
+        }
+
+        /// `note_tags.tag` is `COLLATE NOCASE`, which folds ASCII and nothing else.
+        #[test]
+        fn a_tag_is_matched_the_way_the_column_compares_it() {
+            let criteria = wanting(&["étape"]);
+
+            assert!(criteria.passes(&tagged("a", &["étape"])));
+            assert!(!criteria.passes(&tagged("c", &["Étape"])));
+            assert!(wanting(&["urgent"]).passes(&tagged("d", &["URGENT"])));
+        }
+
+        #[test]
+        fn a_tag_asked_for_with_its_hash_finds_the_stored_one() {
+            assert!(wanting(&["#urgent"]).passes(&tagged("a", &["urgent"])));
+        }
+
+        #[test]
+        fn a_tag_that_normalises_to_nothing_narrows_nothing() {
+            let criteria = wanting(&[" # "]);
+
+            assert!(!criteria.narrows());
+            assert!(criteria.passes(&tagged("a", &[])));
+        }
+
+        #[test]
+        fn the_quick_filter_decides_a_match_without_counting_as_narrowing() {
+            let criteria = Criteria::new("", NoteFilter::Pinned, &[], &[]);
+
+            assert!(!criteria.narrows());
+            assert!(!criteria.passes(&sample()));
+            assert!(criteria.passes(&Note {
+                pinned: true,
+                ..sample()
+            }));
+        }
+
+        #[test]
+        fn the_search_is_trimmed_and_folded_before_it_is_compared() {
+            let criteria = Criteria::new("  ÉTAPE ", NoteFilter::All, &[], &[]);
+
+            assert_eq!(criteria.needle(), "etape");
+            assert!(criteria.passes(&Note {
+                title: "Étape suivante".to_string(),
+                ..sample()
+            }));
         }
     }
 }
