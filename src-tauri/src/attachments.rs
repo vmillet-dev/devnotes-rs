@@ -17,6 +17,7 @@ use chrono::Utc;
 use tauri::{AppHandle, State};
 use uuid::Uuid;
 
+use crate::count::saturating_u32;
 use crate::db::{Db, lock};
 use crate::error::{AppError, FileContext, StorageError};
 use model::Attachment;
@@ -52,40 +53,39 @@ fn read_within_limit(source: &str) -> Result<Vec<u8>, StorageError> {
     Ok(bytes)
 }
 
-fn new_attachment(note_id: String, file_name: String, byte_size: u32) -> Attachment {
-    Attachment {
-        id: Uuid::new_v4().to_string(),
-        note_id,
-        mime_type: model::mime_of(&file_name),
-        file_name,
-        byte_size,
-        created_at: Utc::now(),
-    }
-}
-
-/// Seals `bytes` beside the library, then records them.
+/// A new attachment of `note_id`: `bytes` sealed beside the library, then recorded. Their
+/// size is the caller's to have validated.
 ///
 /// ⚠️ The file before the record, and the file removed again when the record cannot be
 /// written: a record without a file shows a broken thumbnail, where a file without a record
 /// is swept at startup. Sealed on the way in, so nothing readable is ever written.
 fn store_new(
-    attachment: &Attachment,
+    note_id: String,
+    file_name: String,
     bytes: &[u8],
     directory: &Path,
     db: &Db,
-) -> Result<(), StorageError> {
+) -> Result<Attachment, StorageError> {
+    let attachment = Attachment {
+        id: Uuid::new_v4().to_string(),
+        note_id,
+        mime_type: model::mime_of(&file_name),
+        file_name,
+        byte_size: saturating_u32(bytes.len()),
+        created_at: Utc::now(),
+    };
     let destination = directory.join(attachment.stored_name());
 
     let mut connection = lock(db)?;
     let (db, vault) = connection.split();
 
     let stored = sealed::write_sealed(vault, &destination, bytes)
-        .and_then(|_| store::create(db, vault, attachment));
+        .and_then(|_| store::create(db, vault, &attachment));
     if stored.is_err() {
         remove_files(directory, &[attachment.stored_name()]);
     }
 
-    stored
+    stored.map(|()| attachment)
 }
 
 #[tauri::command(async)]
@@ -98,15 +98,10 @@ pub fn attach_file(
 ) -> Result<Attachment, AppError> {
     let file_name = model::display_name(&path)?;
     let bytes = read_within_limit(&path)?;
-    let attachment = new_attachment(
-        note_id,
-        file_name,
-        model::validate_size(bytes.len() as u64)?,
-    );
+    model::validate_size(bytes.len() as u64)?;
+    let directory = directory(&app)?;
 
-    store_new(&attachment, &bytes, &directory(&app)?, &db)?;
-
-    Ok(attachment)
+    Ok(store_new(note_id, file_name, &bytes, &directory, &db)?)
 }
 
 /// ⚠️ Checks the record exists first: opening a file nothing refers to would be a leak
@@ -227,15 +222,10 @@ pub fn attach_clipboard_image(
         .context("clipboard image")?;
 
     let png = model::encode_png(image.width(), image.height(), image.rgba())?;
-    let attachment = new_attachment(
-        note_id,
-        model::png_name(&file_name),
-        model::validate_size(png.len() as u64)?,
-    );
+    model::validate_size(png.len() as u64)?;
+    let (file_name, directory) = (model::png_name(&file_name), directory(&app)?);
 
-    store_new(&attachment, &png, &directory(&app)?, &db)?;
-
-    Ok(attachment)
+    Ok(store_new(note_id, file_name, &png, &directory, &db)?)
 }
 
 #[tauri::command(async)]
@@ -320,9 +310,14 @@ mod tests {
     fn a_new_attachment_is_sealed_beside_the_library_then_recorded() {
         let directory = scratch();
         let (db, note_id) = a_library_with_a_note();
-        let attachment = new_attachment(note_id.clone(), "capture.png".to_string(), 3);
-
-        store_new(&attachment, b"png", &directory, &db).unwrap();
+        let attachment = store_new(
+            note_id.clone(),
+            "capture.png".to_string(),
+            b"png",
+            &directory,
+            &db,
+        )
+        .unwrap();
 
         let written = std::fs::read(directory.join(attachment.stored_name())).unwrap();
         assert_ne!(written, b"png");
@@ -336,12 +331,16 @@ mod tests {
     fn an_attachment_that_cannot_be_recorded_leaves_no_file_behind() {
         let directory = scratch();
         let (db, _) = a_library_with_a_note();
-        let orphan = new_attachment("ghost".to_string(), "capture.png".to_string(), 3);
-
-        let refused = store_new(&orphan, b"png", &directory, &db);
+        let refused = store_new(
+            "ghost".to_string(),
+            "capture.png".to_string(),
+            b"png",
+            &directory,
+            &db,
+        );
 
         assert!(matches!(refused, Err(StorageError::NoteNotFound(_))));
-        assert!(!directory.join(orphan.stored_name()).exists());
+        assert_eq!(std::fs::read_dir(&directory).unwrap().count(), 0);
         std::fs::remove_dir_all(&directory).ok();
     }
 

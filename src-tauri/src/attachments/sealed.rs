@@ -12,12 +12,6 @@ use tauri::{AppHandle, Manager};
 use crate::error::{FileContext, StorageError};
 use crate::vault::key::Vault;
 
-pub fn seal_into(vault: &Vault, source: &Path, destination: &Path) -> Result<u64, StorageError> {
-    let plain = std::fs::read(source).context(source.display())?;
-
-    write_sealed(vault, destination, &plain)
-}
-
 pub fn write_sealed(vault: &Vault, destination: &Path, bytes: &[u8]) -> Result<u64, StorageError> {
     let sealed = vault.seal_bytes(bytes)?;
     std::fs::write(destination, &sealed).context(destination.display())?;
