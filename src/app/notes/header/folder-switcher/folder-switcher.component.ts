@@ -11,11 +11,7 @@ import {
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Folder } from '@core/model/folder.model';
-import {
-  FolderEditorComponent,
-  FolderRecolouring,
-  FolderRenaming,
-} from '@notes/header/folder-editor/folder-editor.component';
+import { FolderEditorComponent } from '@notes/header/folder-editor/folder-editor.component';
 import { MenuPanelDirective } from '@shared/directives/menu-panel.directive';
 import { MenuTriggerDirective } from '@shared/directives/menu-trigger.directive';
 
@@ -43,9 +39,6 @@ export class FolderSwitcherComponent {
 
   readonly folderChanged = output<string | null>();
   readonly folderCreated = output<string>();
-  readonly folderRenamed = output<FolderRenaming>();
-  readonly folderRecoloured = output<FolderRecolouring>();
-  readonly folderDeleted = output<string>();
 
   protected readonly menu = inject(MenuTriggerDirective);
 
@@ -95,16 +88,6 @@ export class FolderSwitcherComponent {
     if (!name.trim()) return;
 
     this.folderCreated.emit(name);
-    this.menu.close();
-  }
-
-  protected onRenamed(renaming: FolderRenaming): void {
-    this.folderRenamed.emit(renaming);
-    this.menu.close();
-  }
-
-  protected onDeleted(id: string): void {
-    this.folderDeleted.emit(id);
     this.menu.close();
   }
 

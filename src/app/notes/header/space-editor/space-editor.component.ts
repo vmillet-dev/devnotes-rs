@@ -3,6 +3,7 @@ import {
   Component,
   ElementRef,
   computed,
+  inject,
   input,
   linkedSignal,
   output,
@@ -11,22 +12,13 @@ import {
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Space } from '@core/model/space.model';
+import { SpacesStore } from '@core/state/spaces.store';
 import { ChoiceMenuComponent, ChoiceOption } from '@notes/ui/choice-menu/choice-menu.component';
-
-export interface SpaceRenaming {
-  readonly id: string;
-  readonly name: string;
-}
-
-export interface SpaceDeletion {
-  readonly id: string;
-  /** The space that takes in the deleted one's notes. */
-  readonly targetSpaceId: string;
-}
 
 /**
  * Pin, rename, delete — the three things a space can be told to do, in one panel so the
- * switcher and the library rail cannot drift apart. `folder-editor` is its twin.
+ * switcher and the library rail cannot drift apart. `folder-editor` is its twin: it acts
+ * itself, and its host only hears `finished`.
  */
 @Component({
   selector: 'app-space-editor',
@@ -40,9 +32,10 @@ export class SpaceEditorComponent {
   /** ⚠️ A space cannot be its own refuge: the cascade would take the notes after the move. */
   readonly moveTargets = input.required<readonly Space[]>();
 
-  readonly renamed = output<SpaceRenaming>();
-  readonly pinRequested = output<string>();
-  readonly deleted = output<SpaceDeletion>();
+  /** After a rename or a deletion; pinning leaves the panel where it is. */
+  readonly finished = output<void>();
+
+  private readonly spaces = inject(SpacesStore);
 
   protected readonly targetChoices = computed<readonly ChoiceOption[]>(() =>
     this.moveTargets().map((target) => ({ id: target.id, name: target.name })),
@@ -74,7 +67,12 @@ export class SpaceEditorComponent {
     event.preventDefault();
     if (!name.trim()) return;
 
-    this.renamed.emit({ id: this.space().id, name });
+    void this.spaces.renameSpace(this.space().id, name);
+    this.finished.emit();
+  }
+
+  protected togglePinned(): void {
+    void this.spaces.togglePinned(this.space().id);
   }
 
   protected onDeleteClick(targetSpaceId: string): void {
@@ -84,6 +82,7 @@ export class SpaceEditorComponent {
       this.confirmingDelete.set(true);
       return;
     }
-    this.deleted.emit({ id: this.space().id, targetSpaceId });
+    void this.spaces.deleteSpace(this.space().id, targetSpaceId);
+    this.finished.emit();
   }
 }

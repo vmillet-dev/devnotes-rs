@@ -9,14 +9,8 @@
       (widthChanged)="settings.libraryRailWidth.write($event)"
       (spaceChanged)="onSpaceChosen($event)"
       (spaceCreated)="spaces.createSpace($event)"
-      (spaceRenamed)="onSpaceRenamed($event)"
-      (pinRequested)="spaces.togglePinned($event)"
-      (spaceDeleted)="onSpaceDeleted($event)"
       (folderOpened)="onFolderOpened($event)"
       (folderCreated)="folders.createFolder($event)"
-      (folderRenamed)="onFolderRenamed($event)"
-      (folderRecoloured)="onFolderRecoloured($event)"
-      (folderDeleted)="onFolderDeleted($event)"
     />
   }
 
@@ -51,9 +45,6 @@
           [spaceName]="spaces.activeSpace()?.name ?? null"
           [selectableCount]="canvas.visibleNotes().length"
           (closed)="folders.selectFolder(null)"
-          (renamed)="onFolderRenamed($event)"
-          (recoloured)="onFolderRecoloured($event)"
-          (deleted)="onFolderDeleted($event)"
           (selectRequested)="selection.checkFolder($event)"
         />
       } @else {
@@ -65,9 +56,6 @@
             [activeSpace]="spaces.activeSpace()"
             (spaceChanged)="spaces.selectSpace($event)"
             (spaceCreated)="spaces.createSpace($event)"
-            (spaceRenamed)="onSpaceRenamed($event)"
-            (pinRequested)="spaces.togglePinned($event)"
-            (spaceDeleted)="onSpaceDeleted($event)"
           />
         }
         <app-view-switch
@@ -118,9 +106,6 @@
           [canCreate]="spaces.activeSpaceId() !== null"
           (folderChanged)="folders.selectFolder($event)"
           (folderCreated)="folders.createFolder($event)"
-          (folderRenamed)="onFolderRenamed($event)"
-          (folderRecoloured)="onFolderRecoloured($event)"
-          (folderDeleted)="folders.deleteFolder($event)"
         />
       }
       <app-new-note-button (created)="store.createNote($event)" />
@@ -190,9 +175,6 @@
             (cardDropped)="onCardDropped($event)"
             (zoneMoved)="board.moveZone($event.folderId, $event.frame)"
             (zoneDrawn)="onZoneDrawn($event)"
-            (folderRenamed)="onFolderRenamed($event)"
-            (folderRecoloured)="onFolderRecoloured($event)"
-            (folderDeleted)="onFolderDeleted($event)"
             (folderNotesSelected)="selection.checkFolder($event)"
             (notesBanded)="selection.checkMany($event)"
             (tidyRequested)="batch.arrangeBoard($event)"

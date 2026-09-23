@@ -34,9 +34,7 @@
       <app-folder-editor
         [folder]="folder()"
         [selectableCount]="selectableCount()"
-        (renamed)="onRenamed($event)"
-        (recoloured)="recoloured.emit($event)"
-        (deleted)="onDeleted($event)"
+        (finished)="menu.close()"
         (selectRequested)="onSelectRequested($event)"
       />
     </div>

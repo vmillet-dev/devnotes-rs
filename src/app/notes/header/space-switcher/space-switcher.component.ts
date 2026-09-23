@@ -12,11 +12,7 @@ import {
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Space } from '@core/model/space.model';
-import {
-  SpaceDeletion,
-  SpaceEditorComponent,
-  SpaceRenaming,
-} from '@notes/header/space-editor/space-editor.component';
+import { SpaceEditorComponent } from '@notes/header/space-editor/space-editor.component';
 import { MenuPanelDirective } from '@shared/directives/menu-panel.directive';
 import { MenuTriggerDirective } from '@shared/directives/menu-trigger.directive';
 
@@ -35,9 +31,6 @@ export class SpaceSwitcherComponent {
 
   readonly spaceChanged = output<string | null>();
   readonly spaceCreated = output<string>();
-  readonly spaceRenamed = output<SpaceRenaming>();
-  readonly pinRequested = output<string>();
-  readonly spaceDeleted = output<SpaceDeletion>();
 
   protected readonly menu = inject(MenuTriggerDirective);
 
@@ -93,16 +86,6 @@ export class SpaceSwitcherComponent {
     if (!name.trim()) return;
 
     this.spaceCreated.emit(name);
-    this.menu.close();
-  }
-
-  protected onRenamed(renaming: SpaceRenaming): void {
-    this.spaceRenamed.emit(renaming);
-    this.menu.close();
-  }
-
-  protected onDeleted(deletion: SpaceDeletion): void {
-    this.spaceDeleted.emit(deletion);
     this.menu.close();
   }
 

@@ -1,11 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Folder } from '@core/model/folder.model';
-import {
-  FolderEditorComponent,
-  FolderRecolouring,
-  FolderRenaming,
-} from '@notes/header/folder-editor/folder-editor.component';
+import { FolderEditorComponent } from '@notes/header/folder-editor/folder-editor.component';
 import { MenuPanelDirective } from '@shared/directives/menu-panel.directive';
 import { MenuTriggerDirective } from '@shared/directives/menu-trigger.directive';
 
@@ -29,9 +25,6 @@ export class FolderBreadcrumbComponent {
   readonly selectableCount = input<number | null>(null);
 
   readonly closed = output<void>();
-  readonly renamed = output<FolderRenaming>();
-  readonly recoloured = output<FolderRecolouring>();
-  readonly deleted = output<string>();
   readonly selectRequested = output<string>();
 
   protected readonly menu = inject(MenuTriggerDirective);
@@ -42,17 +35,6 @@ export class FolderBreadcrumbComponent {
 
   protected onSelectRequested(folderId: string): void {
     this.selectRequested.emit(folderId);
-    this.menu.close();
-  }
-
-  protected onRenamed(renaming: FolderRenaming): void {
-    this.renamed.emit(renaming);
-    this.menu.close();
-  }
-
-  /** Deleting from here goes back to the board, with the notes now loose on it. */
-  protected onDeleted(id: string): void {
-    this.deleted.emit(id);
     this.menu.close();
   }
 }

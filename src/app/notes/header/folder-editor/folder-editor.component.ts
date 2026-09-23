@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  inject,
   input,
   output,
   signal,
@@ -9,23 +10,15 @@ import {
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Folder, FolderColour } from '@core/model/folder.model';
-
-export interface FolderRenaming {
-  readonly id: string;
-  readonly name: string;
-}
-
-export interface FolderRecolouring {
-  readonly id: string;
-  readonly colour: FolderColour;
-}
+import { FoldersStore } from '@core/state/folders.store';
 
 /** The palette the back end assigns from; the order is `FolderColour::ALL`. */
 const COLOURS: readonly FolderColour[] = ['blue', 'amber', 'purple', 'green', 'red'];
 
 /**
  * Rename, recolour, delete — the three things a folder can be told to do, in one panel so
- * the switcher, the breadcrumb and the zone menu on the board cannot drift apart.
+ * the switcher, the breadcrumb, the rail and the zone menu cannot drift apart. It performs
+ * them itself; its host only hears `finished`, to close whatever it was opened from.
  */
 @Component({
   selector: 'app-folder-editor',
@@ -47,10 +40,11 @@ export class FolderEditorComponent {
    */
   readonly selectableCount = input<number | null>(null);
 
-  readonly renamed = output<FolderRenaming>();
-  readonly recoloured = output<FolderRecolouring>();
-  readonly deleted = output<string>();
+  /** After a rename or a deletion; a recolour leaves the panel open on the new swatch. */
+  readonly finished = output<void>();
   readonly selectRequested = output<string>();
+
+  private readonly folders = inject(FoldersStore);
 
   protected readonly colours = COLOURS;
 
@@ -67,7 +61,8 @@ export class FolderEditorComponent {
     event.preventDefault();
     if (!name.trim()) return;
 
-    this.renamed.emit({ id: this.folder().id, name });
+    void this.folders.renameFolder(this.folder().id, name);
+    this.finished.emit();
   }
 
   protected selectNotes(): void {
@@ -77,7 +72,7 @@ export class FolderEditorComponent {
   protected pickColour(colour: FolderColour): void {
     if (this.folder().colour === colour) return;
 
-    this.recoloured.emit({ id: this.folder().id, colour });
+    void this.folders.recolourFolder(this.folder().id, colour);
   }
 
   /** ⚠️ No refuge to choose, unlike a space: the notes come out loose. */
@@ -86,6 +81,7 @@ export class FolderEditorComponent {
       this.confirmingDelete.set(true);
       return;
     }
-    this.deleted.emit(this.folder().id);
+    void this.folders.deleteFolder(this.folder().id);
+    this.finished.emit();
   }
 }

@@ -7,7 +7,7 @@
     data-testid="space-pin"
     [class.on]="space().pinned"
     [attr.aria-pressed]="space().pinned"
-    (click)="pinRequested.emit(space().id)"
+    (click)="togglePinned()"
   >
     <span aria-hidden="true">📌</span>
     {{ (space().pinned ? 'notes.unpinSpace' : 'notes.pinSpace') | transloco }}

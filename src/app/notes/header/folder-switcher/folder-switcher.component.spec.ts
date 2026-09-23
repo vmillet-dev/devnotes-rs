@@ -2,6 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Folder } from '@core/model/folder.model';
+import { FoldersStore } from '@core/state/folders.store';
+import { RecordingFolderActions } from '@testing/recording-actions';
 import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
 import { FolderSwitcherComponent } from './folder-switcher.component';
 
@@ -13,6 +15,7 @@ const FOLDERS: readonly Folder[] = [folder('perf', 'Perf', 'amber'), folder('mig
 
 describe('FolderSwitcherComponent', () => {
   let fixture: ComponentFixture<FolderSwitcherComponent>;
+  let actions: RecordingFolderActions;
 
   function root(): HTMLElement {
     return fixture.nativeElement;
@@ -38,9 +41,10 @@ describe('FolderSwitcherComponent', () => {
   }
 
   beforeEach(async () => {
+    actions = new RecordingFolderActions();
     TestBed.configureTestingModule({
       imports: [FolderSwitcherComponent],
-      providers: [provideTranslocoTesting()],
+      providers: [provideTranslocoTesting(), { provide: FoldersStore, useValue: actions }],
     });
     fixture = TestBed.createComponent(FolderSwitcherComponent);
     fixture.componentRef.setInput('folders', FOLDERS);
@@ -125,9 +129,6 @@ describe('FolderSwitcherComponent', () => {
   });
 
   it('renames the folder being edited', async () => {
-    const seen: { id: string; name: string }[] = [];
-    fixture.componentInstance.folderRenamed.subscribe((renaming) => seen.push(renaming));
-
     await open();
     await click('[data-testid="folder-edit"]');
     const input = root().querySelector<HTMLInputElement>('[data-testid="folder-rename-input"]');
@@ -135,13 +136,10 @@ describe('FolderSwitcherComponent', () => {
     root().querySelector('form')?.dispatchEvent(new Event('submit'));
     await fixture.whenStable();
 
-    expect(seen).toEqual([{ id: 'perf', name: 'Performance' }]);
+    expect(actions.renamed).toEqual([{ id: 'perf', name: 'Performance' }]);
   });
 
-  it('offers the five colours and emits the one picked', async () => {
-    const seen: { id: string; colour: string }[] = [];
-    fixture.componentInstance.folderRecoloured.subscribe((change) => seen.push(change));
-
+  it('offers the five colours and applies the one picked', async () => {
     await open();
     await click('[data-testid="folder-edit"]');
     const swatches = [...root().querySelectorAll<HTMLElement>('[data-testid="folder-colour"]')];
@@ -149,7 +147,7 @@ describe('FolderSwitcherComponent', () => {
     swatches[4].click();
     await fixture.whenStable();
 
-    expect(seen).toEqual([{ id: 'perf', colour: 'red' }]);
+    expect(actions.recoloured).toEqual([{ id: 'perf', colour: 'red' }]);
   });
 
   it('marks the colour the folder already carries', async () => {
@@ -162,18 +160,15 @@ describe('FolderSwitcherComponent', () => {
 
   /** Two steps: the WebView blocks on a native `confirm()`. */
   it('asks once before deleting, and says the notes stay', async () => {
-    const seen: string[] = [];
-    fixture.componentInstance.folderDeleted.subscribe((id) => seen.push(id));
-
     await open();
     await click('[data-testid="folder-edit"]');
     expect(root().querySelector('.editor-note')?.textContent).toContain('Les notes restent');
 
     await click('[data-testid="folder-delete"]');
-    expect(seen).toEqual([]);
+    expect(actions.deleted).toEqual([]);
 
     await click('[data-testid="folder-delete"]');
-    expect(seen).toEqual(['perf']);
+    expect(actions.deleted).toEqual(['perf']);
   });
 
   /** ⚠️ Unlike a space, which cannot go without one: its cascade would take the notes. */

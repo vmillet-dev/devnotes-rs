@@ -67,9 +67,7 @@
       <app-folder-editor
         [folder]="folder"
         [selectableCount]="zone().notes.length"
-        (renamed)="onRenamed($event)"
-        (recoloured)="recoloured.emit($event)"
-        (deleted)="onDeleted($event)"
+        (finished)="menuOpen.set(false)"
         (selectRequested)="onSelectRequested($event)"
       />
     </div>
