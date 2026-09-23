@@ -14,7 +14,7 @@ use serde::Serialize;
 use specta::Type;
 use tauri::{AppHandle, State};
 
-use zeroize::Zeroize;
+use zeroize::{Zeroize, Zeroizing};
 
 use crate::count::saturating_u32;
 use crate::db::{self, Db};
@@ -23,6 +23,15 @@ use key::Cost;
 
 /// Short enough to be typed at every launch, long enough to be worth deriving from.
 const MINIMUM_LENGTH: usize = 8;
+
+/// Holds a passphrase for the rest of a command, and wipes it when the command returns —
+/// whatever it returns, a panic included.
+///
+/// ⚠️ A passphrase arrives owned from the IPC payload, so the command holds the last copy —
+/// and one left in freed memory is one in a crash dump.
+pub(crate) fn secret<S: Zeroize>(value: S) -> Zeroizing<S> {
+    Zeroizing::new(value)
+}
 
 /// What the front end renders before it renders anything else.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
@@ -263,7 +272,50 @@ fn storage_msg(detail: &str) -> StorageError {
 
 #[cfg(test)]
 mod tests {
+    use std::cell::Cell;
+    use std::rc::Rc;
+
     use super::*;
+
+    /// Records being wiped, which a `String` in freed memory cannot be asked about.
+    struct Witness(Rc<Cell<bool>>);
+
+    impl Zeroize for Witness {
+        fn zeroize(&mut self) {
+            self.0.set(true);
+        }
+    }
+
+    #[test]
+    fn a_secret_is_wiped_when_the_command_returns_and_not_before() {
+        let wiped = Rc::new(Cell::new(false));
+
+        {
+            let held = secret(Witness(Rc::clone(&wiped)));
+            assert!(!held.0.get(), "wiped before it was used");
+        }
+
+        assert!(wiped.get());
+    }
+
+    /// The hand-written `zeroize()` this replaced ran on the way out of a normal return
+    /// only; a command that panicked halfway left the phrase where it was.
+    #[test]
+    fn a_secret_is_wiped_when_the_command_panics_too() {
+        let wiped = Rc::new(Cell::new(false));
+        let witness = Witness(Rc::clone(&wiped));
+
+        let hook = std::panic::take_hook();
+        std::panic::set_hook(Box::new(|_| {}));
+        let unwound = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _held = secret(witness);
+            panic!("a command that failed halfway");
+        }));
+        std::panic::set_hook(hook);
+
+        assert!(unwound.is_err());
+        assert!(wiped.get());
+    }
 
     #[test]
     fn a_passphrase_too_short_to_be_worth_deriving_is_refused() {

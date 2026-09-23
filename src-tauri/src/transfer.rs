@@ -11,6 +11,7 @@ use crate::attachments;
 use crate::db::{Db, lock};
 use crate::error::AppError;
 use crate::notes::store as notes;
+use crate::vault::secret;
 use model::{ExportReport, ImportReport};
 
 /// The spaces travel with the notes, or an import holds an id with nowhere to file it.
@@ -23,6 +24,7 @@ pub fn export_notes(
     app: AppHandle,
     db: State<'_, Db>,
 ) -> Result<ExportReport, AppError> {
+    let passphrase = secret(passphrase);
     model::validate_path(&path)?;
 
     let mut connection = lock(&db)?;
@@ -47,6 +49,7 @@ pub fn export_selection(
     app: AppHandle,
     db: State<'_, Db>,
 ) -> Result<ExportReport, AppError> {
+    let passphrase = secret(passphrase);
     model::validate_path(&path)?;
 
     let mut connection = lock(&db)?;
@@ -74,7 +77,7 @@ pub fn import_notes(
 ) -> Result<ImportReport, AppError> {
     model::validate_path(&path)?;
 
-    let (imported, mut payload) = file::read(&path, passphrase.as_deref())?;
+    let (imported, mut payload) = file::read(&path, secret(passphrase).as_deref())?;
     let directory = attachments::directory(&app)?;
 
     let mut connection = lock(&db)?;
