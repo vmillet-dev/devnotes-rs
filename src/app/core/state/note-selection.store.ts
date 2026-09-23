@@ -1,4 +1,5 @@
-import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { debounced } from '@core/services/time/debounce';
 import { Note } from '../model/note.model';
 import { BoardStore } from './board.store';
 import { NotesQueryStore } from './notes-query.store';
@@ -31,11 +32,7 @@ export class NoteSelectionStore {
    */
   readonly armedForDeletion = this._armedForDeletion.asReadonly();
 
-  private armTimeout: ReturnType<typeof setTimeout> | null = null;
-
-  constructor() {
-    inject(DestroyRef).onDestroy(() => this.cancelArmTimeout());
-  }
+  private readonly disarmLater = debounced<void>(() => this._armedForDeletion.set(null), ARM_TTL_MS);
 
   /**
    * The cards actually on screen, whichever view is drawing them.
@@ -68,24 +65,13 @@ export class NoteSelectionStore {
   }
 
   armForDeletion(id: string): void {
-    this.cancelArmTimeout();
     this._armedForDeletion.set(id);
-    this.armTimeout = setTimeout(() => {
-      this.armTimeout = null;
-      this._armedForDeletion.set(null);
-    }, ARM_TTL_MS);
+    this.disarmLater();
   }
 
   disarm(): void {
-    this.cancelArmTimeout();
+    this.disarmLater.cancel();
     this._armedForDeletion.set(null);
-  }
-
-  private cancelArmTimeout(): void {
-    if (this.armTimeout !== null) {
-      clearTimeout(this.armTimeout);
-      this.armTimeout = null;
-    }
   }
 
   focusedIndex(): number {
