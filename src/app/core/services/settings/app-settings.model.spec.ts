@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { AUTOMATIC_BACKUPS_KEY } from '@core/ipc/bindings';
 import { DEFAULT_SHORTCUTS } from '@core/services/shortcuts/shortcut.model';
 import {
   AppSettings,
@@ -22,6 +23,11 @@ describe('app settings model', () => {
     for (const field of fields) {
       expect(SETTINGS_KEYS[field]).toBe(`devnotes.${field}`);
     }
+  });
+
+  /** Rust reads this one out of the file itself, before the front end has booted. */
+  it('writes the backups switch under the key Rust reads it by', () => {
+    expect(SETTINGS_KEYS.automaticBackups).toBe(AUTOMATIC_BACKUPS_KEY);
   });
 
   it('namespaces every key, since the store is shared with everything else', () => {

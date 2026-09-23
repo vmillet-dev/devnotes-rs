@@ -17,8 +17,7 @@ use uuid::Uuid;
 
 use super::key::{Cost, SALT_BYTES, Vault, fresh_salt};
 use crate::error::StorageError;
-
-pub const FILE_NAME: &str = "vault.json";
+use crate::layout::KEY_FILE;
 
 /// Bumped when a file written today would stop being readable. 2 wraps the library key
 /// under the phrase where 1 derived the library key from it — which is what lets the
@@ -47,7 +46,7 @@ struct Kdf {
 }
 
 pub fn path_in(directory: &Path) -> PathBuf {
-    directory.join(FILE_NAME)
+    directory.join(KEY_FILE)
 }
 
 pub fn exists(directory: &Path) -> bool {
@@ -168,7 +167,7 @@ fn write_atomically(path: &Path, file: &KeyFile) -> Result<(), StorageError> {
     let json = serde_json::to_string_pretty(file)
         .map_err(|error| StorageError::Vault(error.to_string()))?;
 
-    let staged = path.with_file_name(format!(".{FILE_NAME}.{}.tmp", Uuid::new_v4()));
+    let staged = path.with_file_name(format!(".{KEY_FILE}.{}.tmp", Uuid::new_v4()));
     std::fs::write(&staged, json)
         .map_err(|error| StorageError::Vault(format!("{}: {error}", staged.display())))?;
 
@@ -409,7 +408,7 @@ mod tests {
             .map(|entry| entry.file_name())
             .collect();
 
-        assert_eq!(left, [FILE_NAME]);
+        assert_eq!(left, [KEY_FILE]);
         std::fs::remove_dir_all(&directory).ok();
     }
 }

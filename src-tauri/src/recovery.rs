@@ -14,15 +14,9 @@ use diesel::prelude::*;
 use diesel::sql_types::Text;
 use tauri::{AppHandle, State};
 
-use crate::db::{DB_FILE_NAME, Db};
+use crate::db::Db;
 use crate::error::{AppError, StorageError};
-use crate::vault::file::FILE_NAME as VAULT_FILE_NAME;
-
-/// Where a library that would not open goes.
-pub(crate) const DIRECTORY: &str = "damaged";
-
-/// Where a library nobody can open any more goes.
-pub(crate) const ARCHIVED: &str = "archived";
+use crate::layout::{self, ARCHIVED, ATTACHMENTS, DAMAGED, DATABASE, DATABASE_SIDECARS, KEY_FILE};
 
 /// Why a library is being set aside, which is what decides what travels with it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -41,24 +35,14 @@ pub(crate) enum Reason {
 impl Reason {
     fn directory(self) -> &'static str {
         match self {
-            Self::Damaged => DIRECTORY,
+            Self::Damaged => DAMAGED,
             Self::Forgotten => ARCHIVED,
         }
     }
 }
 
-/// The attachments directory, moved with the database it belongs to.
-const ATTACHMENTS: &str = "attachments";
-
-/// What SQLite leaves beside the database; they belong to it and must travel with it.
-const SIDECARS: [&str; 2] = ["devnotes.sqlite3-wal", "devnotes.sqlite3-shm"];
-
 /// The name the rescued copy takes, beside the file it was rescued from.
 const RESCUED: &str = "rescued.sqlite3";
-
-fn stamp(now: DateTime<Utc>) -> String {
-    now.format("%Y-%m-%d_%H-%M-%S").to_string()
-}
 
 /// ⚠️ Best effort and deliberately so: `VACUUM INTO` on a partly readable database often
 /// rescues most of it, and when it cannot, the damaged original is still set aside. A
@@ -88,7 +72,7 @@ pub(crate) fn set_aside(
     reason: Reason,
     now: DateTime<Utc>,
 ) -> Result<PathBuf, StorageError> {
-    let database = directory.join(DB_FILE_NAME);
+    let database = directory.join(DATABASE);
     if !database.exists() {
         return Err(StorageError::File(format!(
             "{}: nothing to set aside",
@@ -96,7 +80,7 @@ pub(crate) fn set_aside(
         )));
     }
 
-    let target = directory.join(reason.directory()).join(stamp(now));
+    let target = directory.join(reason.directory()).join(layout::stamp(now));
     std::fs::create_dir_all(&target)
         .map_err(|error| StorageError::File(format!("{}: {error}", target.display())))?;
 
@@ -105,20 +89,17 @@ pub(crate) fn set_aside(
         rescue(&database, &target);
     }
 
-    std::fs::rename(&database, target.join(DB_FILE_NAME))
+    std::fs::rename(&database, target.join(DATABASE))
         .map_err(|error| StorageError::File(format!("{}: {error}", database.display())))?;
 
-    for sidecar in SIDECARS {
+    for sidecar in DATABASE_SIDECARS {
         // Absent is the ordinary case: a clean shutdown leaves neither.
         let _ = std::fs::rename(directory.join(sidecar), target.join(sidecar));
     }
 
     if reason == Reason::Forgotten {
-        std::fs::rename(
-            directory.join(VAULT_FILE_NAME),
-            target.join(VAULT_FILE_NAME),
-        )
-        .map_err(|error| StorageError::File(format!("{VAULT_FILE_NAME}: {error}")))?;
+        std::fs::rename(directory.join(KEY_FILE), target.join(KEY_FILE))
+            .map_err(|error| StorageError::File(format!("{KEY_FILE}: {error}")))?;
     }
 
     let attachments = directory.join(ATTACHMENTS);
@@ -201,7 +182,7 @@ mod tests {
         )
         .unwrap();
 
-        let mut connection = db::open(&directory.join(DB_FILE_NAME), vault).unwrap();
+        let mut connection = db::open(&directory.join(DATABASE), vault).unwrap();
         let space = crate::spaces::store::create(&mut connection, "Perso")
             .unwrap()
             .id;
@@ -219,8 +200,8 @@ mod tests {
 
         let target = set_aside(&directory, Reason::Damaged, at()).unwrap();
 
-        assert!(!directory.join(DB_FILE_NAME).exists());
-        assert!(target.join(DB_FILE_NAME).is_file());
+        assert!(!directory.join(DATABASE).exists());
+        assert!(target.join(DATABASE).is_file());
         std::fs::remove_dir_all(&directory).ok();
     }
 
@@ -246,7 +227,7 @@ mod tests {
 
         set_aside(&directory, Reason::Damaged, at()).unwrap();
 
-        assert!(directory.join(VAULT_FILE_NAME).is_file());
+        assert!(directory.join(KEY_FILE).is_file());
         std::fs::remove_dir_all(&directory).ok();
     }
 
@@ -274,7 +255,7 @@ mod tests {
         set_aside(&directory, Reason::Damaged, at()).unwrap();
 
         let vault = crate::vault::file::unlock(&directory, "a passphrase").unwrap();
-        let mut fresh = db::open(&directory.join(DB_FILE_NAME), vault).unwrap();
+        let mut fresh = db::open(&directory.join(DATABASE), vault).unwrap();
 
         assert!(crate::spaces::store::list(&mut fresh).unwrap().is_empty());
         std::fs::remove_dir_all(&directory).ok();
@@ -300,8 +281,8 @@ mod tests {
 
             let target = set_aside(&directory, Reason::Forgotten, at()).unwrap();
 
-            assert!(target.join(VAULT_FILE_NAME).is_file());
-            assert!(!directory.join(VAULT_FILE_NAME).exists());
+            assert!(target.join(KEY_FILE).is_file());
+            assert!(!directory.join(KEY_FILE).exists());
             std::fs::remove_dir_all(&directory).ok();
         }
 
@@ -314,8 +295,8 @@ mod tests {
 
             set_aside(&directory, Reason::Forgotten, at()).unwrap();
 
-            assert!(!directory.join(DB_FILE_NAME).exists());
-            assert!(!directory.join(VAULT_FILE_NAME).exists());
+            assert!(!directory.join(DATABASE).exists());
+            assert!(!directory.join(KEY_FILE).exists());
             std::fs::remove_dir_all(&directory).ok();
         }
 
@@ -328,7 +309,7 @@ mod tests {
             let target = set_aside(&directory, Reason::Forgotten, at()).unwrap();
 
             let vault = crate::vault::file::unlock(&target, "a passphrase").unwrap();
-            let mut archived = db::open(&target.join(DB_FILE_NAME), vault).unwrap();
+            let mut archived = db::open(&target.join(DATABASE), vault).unwrap();
             let spaces = crate::spaces::store::list(&mut archived).unwrap();
 
             assert_eq!(spaces.len(), 1);
@@ -358,7 +339,7 @@ mod tests {
             let target = set_aside(&directory, Reason::Forgotten, at()).unwrap();
 
             assert!(target.starts_with(directory.join(ARCHIVED)));
-            assert!(!directory.join(DIRECTORY).exists());
+            assert!(!directory.join(DAMAGED).exists());
             std::fs::remove_dir_all(&directory).ok();
         }
 

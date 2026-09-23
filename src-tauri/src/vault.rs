@@ -230,7 +230,7 @@ fn change_with(
 /// sweeps are the caller's to run, because a first launch has to seal what is there first.
 fn open_library(app: &AppHandle, db: &State<'_, Db>, vault: key::Vault) -> Result<(), AppError> {
     let directory = crate::libraries::open_directory(app)?;
-    let library = db::open(&directory.join(db::DB_FILE_NAME), vault)?;
+    let library = db::open(&directory.join(crate::layout::DATABASE), vault)?;
 
     {
         let mut held = db.lock().map_err(|_| StorageError::Unavailable)?;

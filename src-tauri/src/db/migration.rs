@@ -100,8 +100,9 @@ mod tests {
     use diesel::sql_types::BigInt;
 
     use super::*;
-    use crate::db::{DB_FILE_NAME, configure, open, open_in_memory, schema};
+    use crate::db::{configure, open, open_in_memory, schema};
     use crate::error::StorageError;
+    use crate::layout::DATABASE;
 
     /// The initial migration exactly as it shipped: replayed by hand it builds a legacy
     /// database — schema in place, `user_version` set, nothing Diesel-side.
@@ -146,7 +147,7 @@ mod tests {
     fn opening_twice_is_idempotent() {
         let directory = std::env::temp_dir().join(format!("devnotes-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&directory).unwrap();
-        let path = directory.join(DB_FILE_NAME);
+        let path = directory.join(DATABASE);
 
         open(&path, crate::db::test_vault().unwrap()).unwrap();
         let mut connection = open(&path, crate::db::test_vault().unwrap()).unwrap();

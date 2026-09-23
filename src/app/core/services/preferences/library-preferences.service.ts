@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { LIBRARY_PREFERENCES_FILE } from '@core/ipc/bindings';
+import { PREFERENCES_FILE } from '@core/ipc/bindings';
 import { KeyValueStore } from './key-value-store';
 import { PreferencesService } from './preferences.service';
 
@@ -12,21 +12,16 @@ import { PreferencesService } from './preferences.service';
  * samples marker carried across would leave a fresh library empty with no way to create
  * a note, since a note needs a space.
  *
- * ⚠️ The file is named by Rust (`LIBRARY_PREFERENCES_FILE`) and not spelled here. Rust
- * decides where a library lives, so it decides this too — and ⚠️ it is **not**
- * `preferences.json`: the first library's directory *is* the profile root, where the
- * application's own file already sits.
+ * The file is named by Rust (`PREFERENCES_FILE`), which decides where a library lives. It
+ * shares its name with the application's file and is told apart by its directory.
  */
 @Injectable({ providedIn: 'root' })
 export class LibraryPreferencesService extends KeyValueStore {
   private readonly application = inject(PreferencesService);
 
-  /**
-   * @param directory the open library's path relative to the profile — empty for the
-   * first one, which lives at the root.
-   */
+  /** @param directory the open library's path, relative to the profile. */
   async hydrate(directory: string): Promise<void> {
-    await this.open(directory ? `${directory}/${LIBRARY_PREFERENCES_FILE}` : LIBRARY_PREFERENCES_FILE);
+    await this.open(directory ? `${directory}/${PREFERENCES_FILE}` : PREFERENCES_FILE);
     this.adoptFromApplication();
   }
 
