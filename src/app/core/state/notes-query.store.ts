@@ -3,6 +3,7 @@ import { Injectable, signal } from '@angular/core';
 import { LanguageTag } from '@core/model/language.model';
 import { ClockService } from '@core/services/time/clock.service';
 import { SEARCH_DEBOUNCE_MS, debounced } from '@core/services/time/debounce';
+import { byCodeUnit } from '@core/utils/order.util';
 import { NotesRepository } from '../data/notes.repository';
 import { Note, NoteFilter, NoteSection, NotesQuery, NotesView } from '../model/note.model';
 import { FoldersStore } from './folders.store';
@@ -112,8 +113,8 @@ export class NotesQueryStore {
       folderId: this.folders.activeFolderId(),
       search: this._debouncedSearch().trim(),
       filter: this._activeFilter(),
-      tags: [...this._selectedTags()].sort(),
-      languages: [...this._selectedLanguages()].sort(),
+      tags: [...this._selectedTags()].sort(byCodeUnit),
+      languages: [...this._selectedLanguages()].sort(byCodeUnit),
       day: localDayKey(this.clock.now()),
       revision: this.revision.current(),
     }),

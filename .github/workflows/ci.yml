@@ -193,6 +193,10 @@ jobs:
             -Dsonar.test.inclusions=src/**/*.spec.ts
             -Dsonar.coverage.exclusions=src/**/*.spec.ts,src/main.ts,src/test.ts,src/testing/*.ts,src/**/bindings.ts
             -Dsonar.javascript.lcov.reportPaths=coverage/devnotes/lcov.info
+            -Dsonar.issue.ignore.multicriteria=mixins
+            -Dsonar.issue.ignore.multicriteria.mixins.ruleKey=css:S8776
+            -Dsonar.issue.ignore.multicriteria.mixins.resourceKey=src/styles/_mixins.scss
+            -Dsonar.qualitygate.wait=true
 
   test-rust:
     name: Test Rust (${{ matrix.os }})

@@ -15,6 +15,7 @@ import { ClockService } from '@core/services/time/clock.service';
 import { FoldersRepository } from '../data/folders.repository';
 import { BoardRepository } from '../data/board.repository';
 import { debounced } from '@core/services/time/debounce';
+import { byCodeUnit } from '@core/utils/order.util';
 import { LanguageTag } from '../model/language.model';
 import {
   BoardArrangement,
@@ -226,8 +227,8 @@ export class BoardStore {
         spaceId,
         search: this.canvas.debouncedSearch().trim(),
         filter: this.canvas.activeFilter(),
-        tags: [...this.canvas.selectedTags()].sort(),
-        languages: [...this.canvas.selectedLanguages()].sort(),
+        tags: [...this.canvas.selectedTags()].sort(byCodeUnit),
+        languages: [...this.canvas.selectedLanguages()].sort(byCodeUnit),
         revision: this.revision.current(),
       };
     },

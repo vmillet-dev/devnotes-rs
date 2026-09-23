@@ -56,10 +56,16 @@ export function nextFocusIndex(
   const targetRow = rows[rowIndex + (direction === 'down' ? 1 : -1)];
   if (!targetRow) return current;
 
-  const nearest = targetRow.cards.reduce((closest, candidate) =>
-    Math.abs(candidate.box.left - currentBox.left) < Math.abs(closest.box.left - currentBox.left)
-      ? candidate
-      : closest,
+  // A row exists because a card is in it, so `first` is always there.
+  const [first, ...others] = targetRow.cards;
+  if (!first) return current;
+
+  const nearest = others.reduce(
+    (closest, candidate) =>
+      Math.abs(candidate.box.left - currentBox.left) < Math.abs(closest.box.left - currentBox.left)
+        ? candidate
+        : closest,
+    first,
   );
 
   return nearest.index;

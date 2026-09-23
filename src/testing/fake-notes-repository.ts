@@ -13,6 +13,7 @@ import {
 } from '@core/model/note.model';
 import { NotesQuery, NotesView } from '@core/model/note.model';
 import { Space } from '@core/model/space.model';
+import { byCodeUnit } from '@core/utils/order.util';
 import { checklistMarkdown } from './note.fixture';
 
 /** Mirrors `notes::trash::RETENTION`, so the double's `purgeAt` is plausible. */
@@ -470,8 +471,8 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
           showCreateGhost: true,
         },
       ],
-      availableTags: [...new Set(this.notes.flatMap((note) => note.tags))].sort(),
-      availableLanguages: [...new Set(this.notes.map((note) => note.language))].sort(),
+      availableTags: [...new Set(this.notes.flatMap((note) => note.tags))].sort(byCodeUnit),
+      availableLanguages: [...new Set(this.notes.map((note) => note.language))].sort(byCodeUnit),
       isFiltering:
         (query?.search.trim().length ?? 0) > 0 ||
         (query?.tags.length ?? 0) > 0 ||
