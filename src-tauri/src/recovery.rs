@@ -110,18 +110,12 @@ pub(crate) fn set_aside(
 /// ⚠️ Refused on an open library, for both commands below: they only answer the case
 /// where opening failed, and moving a database under a live connection is how a library
 /// that was merely shut becomes a lost one.
-fn set_aside_closed(
-    app: &AppHandle,
-    db: &State<'_, Db>,
-    reason: Reason,
-) -> Result<String, StorageError> {
+fn set_aside_closed(directory: &Path, db: &Db, reason: Reason) -> Result<String, StorageError> {
     if db.lock().map_err(|_| StorageError::Unavailable)?.is_some() {
         return Err(StorageError::File("the library is open".to_string()));
     }
 
-    let directory = crate::libraries::open_directory(app)?;
-
-    let target = set_aside(&directory, reason, Utc::now())?;
+    let target = set_aside(directory, reason, Utc::now())?;
 
     Ok(target.to_string_lossy().to_string())
 }
@@ -133,7 +127,9 @@ fn set_aside_closed(
 #[tauri::command(async)]
 #[specta::specta]
 pub fn set_aside_damaged_library(app: AppHandle, db: State<'_, Db>) -> Result<String, AppError> {
-    Ok(set_aside_closed(&app, &db, Reason::Damaged)?)
+    let directory = crate::libraries::open_directory(&app)?;
+
+    Ok(set_aside_closed(&directory, &db, Reason::Damaged)?)
 }
 
 /// Archives a library whose passphrase was forgotten, so a fresh one can be started.
@@ -145,7 +141,9 @@ pub fn set_aside_damaged_library(app: AppHandle, db: State<'_, Db>) -> Result<St
 #[tauri::command(async)]
 #[specta::specta]
 pub fn archive_locked_library(app: AppHandle, db: State<'_, Db>) -> Result<String, AppError> {
-    Ok(set_aside_closed(&app, &db, Reason::Forgotten)?)
+    let directory = crate::libraries::open_directory(&app)?;
+
+    Ok(set_aside_closed(&directory, &db, Reason::Forgotten)?)
 }
 
 #[cfg(test)]
@@ -159,6 +157,33 @@ mod tests {
         std::fs::create_dir_all(&directory).unwrap();
 
         directory
+    }
+
+    #[test]
+    fn nothing_is_set_aside_under_an_open_library() {
+        let directory = scratch();
+        std::fs::write(directory.join(DATABASE), b"a library").unwrap();
+        let db: Db = std::sync::Mutex::new(Some(db::open_in_memory().unwrap()));
+
+        let refused = set_aside_closed(&directory, &db, Reason::Forgotten);
+
+        assert!(refused.is_err());
+        assert!(directory.join(DATABASE).exists());
+        std::fs::remove_dir_all(&directory).ok();
+    }
+
+    #[test]
+    fn a_closed_library_is_set_aside_and_the_answer_says_where() {
+        let directory = scratch();
+        std::fs::write(directory.join(DATABASE), b"a sealed library").unwrap();
+        std::fs::write(directory.join(KEY_FILE), b"its key").unwrap();
+        let db: Db = std::sync::Mutex::new(None);
+
+        let target = set_aside_closed(&directory, &db, Reason::Forgotten).unwrap();
+
+        assert!(Path::new(&target).join(DATABASE).exists());
+        assert!(!directory.join(DATABASE).exists());
+        std::fs::remove_dir_all(&directory).ok();
     }
 
     fn at() -> DateTime<Utc> {
