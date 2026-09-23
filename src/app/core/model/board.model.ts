@@ -1,5 +1,6 @@
 import type {
   BoardFrame,
+  BoardPoint,
   BoardNote as WireBoardNote,
   BoardView as WireBoardView,
   BoardZone as WireBoardZone,
@@ -7,6 +8,14 @@ import type {
 import { Folder } from './folder.model';
 import { Note, NoteFilter } from './note.model';
 import { LanguageTag } from './language.model';
+
+export function samePoint(a: BoardPoint, b: BoardPoint): boolean {
+  return a.x === b.x && a.y === b.y;
+}
+
+export function sameFrame(a: BoardFrame, b: BoardFrame): boolean {
+  return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+}
 
 export type {
   BoardArrangement,

@@ -1,4 +1,5 @@
-import { DestroyRef, Injectable, Signal, inject, signal } from '@angular/core';
+import { Injectable, Signal, signal } from '@angular/core';
+import { debounced } from '../time/debounce';
 import { TranslationRef } from '../i18n/translation-ref.model';
 
 /** Long enough to be read, short enough not to sit across the screen. */
@@ -11,30 +12,15 @@ export class StatusNotifier {
 
   readonly status: Signal<TranslationRef | null> = this._status.asReadonly();
 
-  private timeout: ReturnType<typeof setTimeout> | null = null;
-
-  constructor() {
-    inject(DestroyRef).onDestroy(() => this.cancel());
-  }
+  private readonly expire = debounced<void>(() => this._status.set(null), STATUS_TTL_MS);
 
   notify(ref: TranslationRef): void {
-    this.cancel();
     this._status.set(ref);
-    this.timeout = setTimeout(() => {
-      this.timeout = null;
-      this._status.set(null);
-    }, STATUS_TTL_MS);
+    this.expire();
   }
 
   dismiss(): void {
-    this.cancel();
+    this.expire.cancel();
     this._status.set(null);
-  }
-
-  private cancel(): void {
-    if (this.timeout !== null) {
-      clearTimeout(this.timeout);
-      this.timeout = null;
-    }
   }
 }

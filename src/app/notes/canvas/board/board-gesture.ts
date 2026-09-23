@@ -59,14 +59,6 @@ export function isCardControl(target: EventTarget | null): boolean {
   return target instanceof Element && target.closest(CARD_CONTROLS) !== null;
 }
 
-export function samePoint(a: BoardPoint, b: BoardPoint): boolean {
-  return a.x === b.x && a.y === b.y;
-}
-
-export function sameFrame(a: BoardFrame, b: BoardFrame): boolean {
-  return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
-}
-
 export function hasTravelled(origin: BoardPoint, at: BoardPoint): boolean {
   return Math.abs(at.x - origin.x) >= DRAG_THRESHOLD_PX || Math.abs(at.y - origin.y) >= DRAG_THRESHOLD_PX;
 }

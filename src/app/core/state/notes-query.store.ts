@@ -1,9 +1,10 @@
-import { Signal, computed, inject, linkedSignal, resource, untracked } from '@angular/core';
-import { Injectable, signal } from '@angular/core';
+import { Injectable, Signal, computed, inject, resource, signal, untracked } from '@angular/core';
 import { LanguageTag } from '@core/model/language.model';
 import { ClockService } from '@core/services/time/clock.service';
 import { SEARCH_DEBOUNCE_MS, debounced } from '@core/services/time/debounce';
+import { sameArray, sameBy } from '@core/utils/equality.util';
 import { byCodeUnit } from '@core/utils/order.util';
+import { retained } from '@core/utils/retained.util';
 import { NotesRepository } from '../data/notes.repository';
 import { Note, NoteFilter, NoteSection, NotesQuery, NotesView } from '../model/note.model';
 import { FoldersStore } from './folders.store';
@@ -19,54 +20,43 @@ function localDayKey(now: Date): string {
   return `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
 }
 
-interface QueryParams {
-  readonly spaceId: string | null;
-  readonly folderId: string | null;
+/** What the search, the quick filter and the two rails ask for — the canvas and the board alike. */
+export interface Criteria {
   readonly search: string;
   readonly filter: NoteFilter;
+  /** Sorted, so a selection compares equal however it was ticked. */
   readonly tags: readonly string[];
   readonly languages: readonly LanguageTag[];
+}
+
+const sameCriteria = sameBy<Criteria>({
+  search: Object.is,
+  filter: Object.is,
+  tags: sameArray,
+  languages: sameArray,
+});
+
+interface QueryParams {
+  readonly criteria: Criteria;
+  readonly spaceId: string | null;
+  readonly folderId: string | null;
   readonly day: string;
   /** Bumped by whoever wrote notes from outside this store. */
   readonly revision: number;
 }
 
-function sameStrings(a: readonly string[], b: readonly string[]): boolean {
-  return a.length === b.length && a.every((value, index) => value === b[index]);
-}
-
 /**
- * Exhaustive by construction, like `UNCHANGED` in `notes.store.ts`: a new
- * `QueryParams` field stops this compiling until it says how it compares.
- *
- * ⚠️ A hand-written chain of `&&` was the same table with a hole waiting to happen, and
- * the hole is silent: the forgotten field changes, the comparator answers "same", the
- * `resource` does not re-run, and the retained view keeps the interface looking right
- * while it ignores the filter.
+ * ⚠️ `resource` compares its params by identity: without this, the fresh literal built on
+ * every clock tick fires a full query every 30 s. `criteria` compares by identity because
+ * its own `computed` keeps the same object for as long as it compares equal.
  */
-const SAME: {
-  readonly [K in keyof QueryParams]: (a: QueryParams[K], b: QueryParams[K]) => boolean;
-} = {
+const sameQueryParams = sameBy<QueryParams>({
+  criteria: Object.is,
   spaceId: Object.is,
   folderId: Object.is,
-  search: Object.is,
-  filter: Object.is,
   day: Object.is,
   revision: Object.is,
-  tags: sameStrings,
-  languages: sameStrings,
-};
-
-/**
- * ⚠️ `resource` compares its params by identity: without this comparator, the fresh
- * literal `queryParams` builds on every clock tick fires a full query every 30 s.
- */
-function sameQueryParams(a: QueryParams, b: QueryParams): boolean {
-  return (Object.keys(SAME) as (keyof QueryParams)[]).every((key) => {
-    const same = SAME[key] as (a: unknown, b: unknown) => boolean;
-    return same(a[key], b[key]);
-  });
-}
+});
 
 function toggled<T>(selection: ReadonlySet<T>, value: T): ReadonlySet<T> {
   const next = new Set(selection);
@@ -96,8 +86,6 @@ export class NotesQueryStore {
 
   /** Follows the typing without waiting: this is what the field shows. */
   readonly searchQuery = this._searchQuery.asReadonly();
-  /** What actually crosses the bridge — the board queries on the same settled value. */
-  readonly debouncedSearch = this._debouncedSearch.asReadonly();
   readonly activeFilter = this._activeFilter.asReadonly();
   readonly selectedTags = this._selectedTags.asReadonly();
   readonly selectedLanguages = this._selectedLanguages.asReadonly();
@@ -107,14 +95,22 @@ export class NotesQueryStore {
     SEARCH_DEBOUNCE_MS,
   );
 
-  private readonly queryParams = computed<QueryParams>(
+  /** The settled search, not the field: the board queries on the same criteria. */
+  readonly criteria = computed<Criteria>(
     () => ({
-      spaceId: this.spaces.activeSpaceId(),
-      folderId: this.folders.activeFolderId(),
       search: this._debouncedSearch().trim(),
       filter: this._activeFilter(),
       tags: [...this._selectedTags()].sort(byCodeUnit),
       languages: [...this._selectedLanguages()].sort(byCodeUnit),
+    }),
+    { equal: sameCriteria },
+  );
+
+  private readonly queryParams = computed<QueryParams>(
+    () => ({
+      criteria: this.criteria(),
+      spaceId: this.spaces.activeSpaceId(),
+      folderId: this.folders.activeFolderId(),
       day: localDayKey(this.clock.now()),
       revision: this.revision.current(),
     }),
@@ -127,12 +123,9 @@ export class NotesQueryStore {
       // Untracked: the current instant, without the query re-running on every tick.
       const now = untracked(() => this.clock.now());
       const query: NotesQuery = {
+        ...params.criteria,
         spaceId: params.spaceId,
         folderId: params.folderId,
-        search: params.search,
-        filter: params.filter,
-        tags: params.tags,
-        languages: params.languages,
         now,
         tzOffsetMinutes: now.getTimezoneOffset(),
         pinnedFirst: true,
@@ -141,15 +134,7 @@ export class NotesQueryStore {
     },
   });
 
-  /**
-   * Kept during reloads, or every keystroke would blank the canvas. ⚠️ A `linkedSignal`
-   * only retains what it has seen go past, so everything this store exposes must read
-   * `view()`, with no short-circuit (see `isLoading`).
-   */
-  private readonly view = linkedSignal<NotesView | undefined, NotesView | null>({
-    source: () => (this.viewResource.hasValue() ? this.viewResource.value() : undefined),
-    computation: (fresh, previous) => fresh ?? previous?.value ?? null,
-  });
+  private readonly view = retained(this.viewResource);
 
   readonly sections = computed<readonly NoteSection[]>(() => this.view()?.sections ?? []);
   readonly allTags = computed<readonly string[]>(() => this.view()?.availableTags ?? []);

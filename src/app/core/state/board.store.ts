@@ -15,8 +15,8 @@ import { ClockService } from '@core/services/time/clock.service';
 import { FoldersRepository } from '../data/folders.repository';
 import { BoardRepository } from '../data/board.repository';
 import { debounced } from '@core/services/time/debounce';
-import { byCodeUnit } from '@core/utils/order.util';
-import { LanguageTag } from '../model/language.model';
+import { sameBy } from '@core/utils/equality.util';
+import { retained } from '@core/utils/retained.util';
 import {
   BoardArrangement,
   BoardFrame,
@@ -28,10 +28,12 @@ import {
   BoardView,
   BoardZone,
   NotesViewMode,
+  sameFrame,
+  samePoint,
 } from '../model/board.model';
-import { Note, NoteFilter } from '../model/note.model';
+import { Note } from '../model/note.model';
 import { FoldersStore } from './folders.store';
-import { NotesQueryStore } from './notes-query.store';
+import { Criteria, NotesQueryStore } from './notes-query.store';
 import { NotesRevision } from './notes-revision';
 import { SpacesStore } from './spaces.store';
 
@@ -51,25 +53,17 @@ export const LAYOUT_SAVE_DEBOUNCE_MS = 400;
 
 interface BoardParams {
   readonly spaceId: string;
-  readonly search: string;
-  readonly filter: NoteFilter;
-  readonly tags: readonly string[];
-  readonly languages: readonly LanguageTag[];
+  readonly criteria: Criteria;
   /** Bumped by whoever wrote notes from outside: the board re-reads on its own. */
   readonly revision: number;
 }
 
-function sameStrings(a: readonly string[], b: readonly string[]): boolean {
-  return a.length === b.length && a.every((value, index) => value === b[index]);
-}
-
-function sameFrame(a: BoardFrame, b: BoardFrame): boolean {
-  return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
-}
-
-function samePoint(a: BoardPoint, b: BoardPoint): boolean {
-  return a.x === b.x && a.y === b.y;
-}
+/** `criteria` by identity: its own `computed` keeps the object while it compares equal. */
+const sameParams = sameBy<BoardParams>({
+  spaceId: Object.is,
+  criteria: Object.is,
+  revision: Object.is,
+});
 
 /**
  * What the overlay still has to cover once a view has arrived: a place the view does not
@@ -137,24 +131,11 @@ function sittingIn(
   return staged.has(id) ? (staged.get(id) ?? null) : inTheView;
 }
 
-/** Exhaustive by construction, like the canvas's: a new field stops this compiling. */
-const SAME: { readonly [K in keyof BoardParams]: (a: BoardParams[K], b: BoardParams[K]) => boolean } = {
-  spaceId: Object.is,
-  search: Object.is,
-  filter: Object.is,
-  revision: Object.is,
-  tags: sameStrings,
-  languages: sameStrings,
-};
-
 /** `undefined` on either side is "do not ask", and only equal to itself. */
 function sameBoardParams(a: BoardParams | undefined, b: BoardParams | undefined): boolean {
   if (a === undefined || b === undefined) return a === b;
 
-  return (Object.keys(SAME) as (keyof BoardParams)[]).every((key) => {
-    const same = SAME[key] as (a: unknown, b: unknown) => boolean;
-    return same(a[key], b[key]);
-  });
+  return sameParams(a, b);
 }
 
 /**
@@ -223,14 +204,7 @@ export class BoardStore {
       const spaceId = this.spaces.activeSpaceId();
       if (spaceId === null || !this.isBoard()) return undefined;
 
-      return {
-        spaceId,
-        search: this.canvas.debouncedSearch().trim(),
-        filter: this.canvas.activeFilter(),
-        tags: [...this.canvas.selectedTags()].sort(byCodeUnit),
-        languages: [...this.canvas.selectedLanguages()].sort(byCodeUnit),
-        revision: this.revision.current(),
-      };
+      return { spaceId, criteria: this.canvas.criteria(), revision: this.revision.current() };
     },
     { equal: sameBoardParams },
   );
@@ -239,11 +213,8 @@ export class BoardStore {
     params: () => this.queryParams(),
     loader: ({ params }): Promise<BoardView> => {
       const query: BoardQuery = {
+        ...params.criteria,
         spaceId: params.spaceId,
-        search: params.search,
-        filter: params.filter,
-        tags: params.tags,
-        languages: params.languages,
         // Untracked: the current instant, without the query re-running on every tick.
         now: untracked(() => this.clock.now()),
       };
@@ -251,16 +222,7 @@ export class BoardStore {
     },
   });
 
-  /**
-   * ⚠️ Kept during a reload, like `NotesQueryStore.view` — and it really is kept now: a
-   * `computed` reading `hasValue()` answers `null` for the whole round trip, so the board
-   * went blank on every reload. Harmless while only a filter reloaded it; not harmless now
-   * that a note write does, which is a card disappearing under the pointer that ticked it.
-   */
-  private readonly view = linkedSignal<BoardView | undefined, BoardView | null>({
-    source: () => (this.viewResource.hasValue() ? this.viewResource.value() : undefined),
-    computation: (fresh, previous) => fresh ?? previous?.value ?? null,
-  });
+  private readonly view = retained(this.viewResource);
 
   /**
    * What a gesture has moved and no view has come back with yet. ⚠️ Laid over the view
@@ -387,13 +349,13 @@ export class BoardStore {
    */
   moveZone(folderId: string, frame: BoardFrame): void {
     this.stagedFrames.update((staged) => new Map(staged).set(folderId, frame));
-    this.flushLayout();
+    this.writeLayout();
   }
 
   /** Only ever called for a loose card: a filed one flows inside its zone. */
   moveCard(noteId: string, position: BoardPoint): void {
     this.stagedCards.update((staged) => new Map(staged).set(noteId, position));
-    this.flushLayout();
+    this.writeLayout();
   }
 
   /**
@@ -460,11 +422,7 @@ export class BoardStore {
   }
 
   /** ⚠️ Every staged move, or a batch interrupted halfway leaves half a board. */
-  private readonly writeLayout = debounced(() => void this.persistLayout(), LAYOUT_SAVE_DEBOUNCE_MS);
-
-  private flushLayout(): void {
-    this.writeLayout(undefined);
-  }
+  private readonly writeLayout = debounced<void>(() => void this.persistLayout(), LAYOUT_SAVE_DEBOUNCE_MS);
 
   private async persistLayout(): Promise<void> {
     const zones = [...this.stagedFrames()].map(([folderId, frame]) => ({ folderId, frame }));

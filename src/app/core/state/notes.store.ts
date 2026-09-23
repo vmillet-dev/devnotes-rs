@@ -18,6 +18,7 @@ import { NoteFiling } from '../model/folder.model';
 import { BoardLayout, BoardScope } from '../model/board.model';
 import { ClockService } from '@core/services/time/clock.service';
 import { debounced } from '@core/services/time/debounce';
+import { sameArray } from '@core/utils/equality.util';
 import { NoteSelectionStore } from './note-selection.store';
 import { FoldersStore } from './folders.store';
 import { BoardStore } from './board.store';
@@ -105,15 +106,8 @@ function toDraftPayload(note: Note): NoteDraft {
   };
 }
 
-function sameStrings(a: readonly string[], b: readonly string[]): boolean {
-  return a.length === b.length && a.every((value, index) => value === b[index]);
-}
-
-function sameItems(a: readonly ChecklistItem[], b: readonly ChecklistItem[]): boolean {
-  return (
-    a.length === b.length &&
-    a.every((item, index) => item.text === b[index]?.text && item.done === b[index]?.done)
-  );
+function sameItem(a: ChecklistItem, b: ChecklistItem): boolean {
+  return a.text === b.text && a.done === b.done;
 }
 
 /** By value: `Date` compares by identity, so the same deadline would read as a change. */
@@ -133,8 +127,8 @@ const UNCHANGED: {
   source: Object.is,
   pinned: Object.is,
   kind: Object.is,
-  tags: sameStrings,
-  items: sameItems,
+  tags: sameArray,
+  items: (a, b) => sameArray(a, b, sameItem),
   lifecycle: sameLifecycle,
 };
 
@@ -193,7 +187,7 @@ export class NotesStore {
 
   readonly undoBanner = computed<Reversible | null>(() => (this._undoVisible() ? this._lastAction() : null));
 
-  private readonly hideUndoBanner = debounced(() => this._undoVisible.set(false), UNDO_WINDOW_MS);
+  private readonly hideUndoBanner = debounced<void>(() => this._undoVisible.set(false), UNDO_WINDOW_MS);
 
   /**
    * ⚠️ The **promise**, not the id it will yield. `requestClose()` fires three commits
@@ -567,7 +561,7 @@ export class NotesStore {
 
     this._lastAction.set(action);
     this._undoVisible.set(true);
-    this.hideUndoBanner(undefined);
+    this.hideUndoBanner();
   }
 
   /** `changes` answers `null` when nothing moved: a no-op edit makes no round trip. */
