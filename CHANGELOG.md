@@ -12,6 +12,26 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [0.4.1] - 2026-09-23
+
+### ✨ Added
+
+- Name the library on the gate, and offer the others there (#327)
+
+### 🔧 Changed
+
+- Go back to a version rather than adding one, and show it first (#335)
+- Toggle the titlebar's theme between light and dark (#334)
+- Draw the header's icons as paths, and the filters as a funnel (#333)
+- Give the editor's space and folder a band of their own (#332)
+
+### 🐛 Fixed
+
+- Tint the board's bands with a colour the browser accepts (#331)
+- Swallow the context menu wherever a right-button sweep ends (#330)
+- Stretch the board surface to the whole of the dotted ground (#328)
+- Reload the front end when switching libraries (#326)
+
 ## [0.4.0] - 2026-09-22
 
 ### ✨ Added
