@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, InjectionToken, inject } from '@angular/core';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { Update, check } from '@tauri-apps/plugin-updater';
 
@@ -12,6 +12,12 @@ export interface AvailableUpdate {
 /** Progress between 0 and 1, or `null` when the total size is unknown. */
 export type DownloadProgress = number | null;
 
+/** The plugin's `check`, behind a token so a spec can hand the service an update. */
+export const UPDATE_CHECK = new InjectionToken<() => Promise<Update | null>>('UPDATE_CHECK', {
+  providedIn: 'root',
+  factory: () => check,
+});
+
 /**
  * ⚠️ The `Update` the plugin returns is a native resource: it holds an identifier on the
  * Rust side and must be closed when it is not installed. Kept here rather than handed
@@ -19,13 +25,14 @@ export type DownloadProgress = number | null;
  */
 @Injectable({ providedIn: 'root' })
 export class UpdaterService {
+  private readonly checkForUpdate = inject(UPDATE_CHECK);
   private pending: Update | null = null;
 
   /** `null` when the application is already up to date. */
   async check(): Promise<AvailableUpdate | null> {
     await this.discard();
 
-    const update = await check();
+    const update = await this.checkForUpdate();
     if (!update) return null;
 
     this.pending = update;
