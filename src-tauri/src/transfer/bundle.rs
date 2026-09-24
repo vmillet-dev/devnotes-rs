@@ -10,9 +10,11 @@ use uuid::Uuid;
 use super::file::Payload;
 use super::model::{self, Bundle, ExportScope, ImportReport, IncomingBundle};
 use crate::attachments::model::Attachment;
+use crate::attachments::sealed;
 use crate::attachments::store as attachments;
+use crate::count::saturating_u32;
 use crate::db::Library;
-use crate::error::{FileContext, StorageError};
+use crate::error::StorageError;
 use crate::folders::model::Folder;
 use crate::folders::store as folders;
 use crate::notes::model::Note;
@@ -193,14 +195,15 @@ fn restore_attachments(
         };
 
         // ⚠️ Remapped like a space or a folder: this id came from a file someone was sent, and it
-        // is half of the name joined onto the attachments directory below.
+        // is half of the name joined onto the attachments directory below. The size is what
+        // arrived, never what the file claimed.
         let record = Attachment {
             id: Uuid::new_v4().to_string(),
+            byte_size: saturating_u32(bytes.len()),
             ..record
         };
 
-        std::fs::write(directory.join(record.stored_name()), &bytes)
-            .context(record.stored_name())?;
+        sealed::write_sealed(vault, &directory.join(record.stored_name()), &bytes)?;
         attachments::create(connection, vault, &record)?;
         report.attachments_imported += 1;
     }

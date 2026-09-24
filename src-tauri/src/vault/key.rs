@@ -15,6 +15,8 @@ use crate::error::StorageError;
 
 /// 96 bits, what GCM is specified around.
 const NONCE_BYTES: usize = 12;
+/// What sealing adds to a value: the nonce in front, the GCM tag behind.
+pub(crate) const SEALED_OVERHEAD: usize = NONCE_BYTES + 16;
 /// 128 bits: the salt only has to be unique per library, never secret.
 pub(crate) const SALT_BYTES: usize = 16;
 
