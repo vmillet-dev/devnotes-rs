@@ -1,7 +1,7 @@
 import { Injectable, Signal, computed, effect, inject, linkedSignal, resource, signal } from '@angular/core';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
-import { FoldersRepository } from '../data/folders.repository';
-import { Folder, FolderColour } from '../model/folder.model';
+import { FoldersRepository } from '@core/data/folders.repository';
+import { Folder, FolderColour } from '@core/model/folder.model';
 import { NotesRevision } from './notes-revision';
 import { SpacesStore } from './spaces.store';
 
@@ -52,10 +52,6 @@ export class FoldersStore {
     return spaceId === null ? this.allFolders() : this.foldersOf(spaceId);
   });
 
-  foldersOf(spaceId: string): readonly Folder[] {
-    return this.allFolders().filter((folder) => folder.spaceId === spaceId);
-  }
-
   readonly isLoading = this.foldersResource.isLoading;
   readonly loadError: Signal<Error | undefined> = this.foldersResource.error;
 
@@ -77,6 +73,10 @@ export class FoldersStore {
         this.notifier.notify({ ref: { key: 'errors.foldersLoadFailed' }, detail: error.message });
       }
     });
+  }
+
+  foldersOf(spaceId: string): readonly Folder[] {
+    return this.allFolders().filter((folder) => folder.spaceId === spaceId);
   }
 
   reload(): void {

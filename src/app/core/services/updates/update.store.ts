@@ -1,6 +1,6 @@
 import { Injectable, Signal, computed, inject, signal } from '@angular/core';
-import { ErrorNotifier } from '../errors/error-notifier.service';
-import { SettingsStore } from '../settings/settings.store';
+import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
+import { SettingsStore } from '@core/services/settings/settings.store';
 import { AvailableUpdate, DownloadProgress, UpdaterService } from './updater.service';
 
 export type UpdateStatus = 'idle' | 'available' | 'installing' | 'installed';

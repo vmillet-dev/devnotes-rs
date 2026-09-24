@@ -55,7 +55,7 @@ Run all commands from the repo root (`package.json` there wraps both Angular and
 - `npm run tauri build` — full production build; native executable/installer lands in `src-tauri/target/release`.
 - Rust-only iteration: `cargo build` / `cargo check` from `src-tauri/` (faster than a full `tauri build` when just checking Rust compile errors).
 - `npm test` — Angular unit tests via the `@angular/build:unit-test` builder with **Vitest** (jsdom, no browser required). `npm run test:watch` re-runs on change; `npm run test:coverage` adds a v8 coverage report with 80% thresholds.
-- `npm run lint` — ESLint (with `angular-eslint`, including its template accessibility rules), a Prettier format check, and `tsc` over `e2e/` — the scenarios run through `tsx`, which strips types without checking them. `npm run lint:fix` fixes what it can; `npm run format` runs Prettier alone.
+- `npm run lint` — ESLint (with `angular-eslint`, including its template accessibility rules, member order and one import style), a Prettier format check, and `tsc` over `e2e/` — the scenarios run through `tsx`, which strips types without checking them. `npm run lint:fix` fixes what it can; `npm run format` runs Prettier alone.
 
 - `cargo test` from `src-tauri/` — unit tests are inline `#[cfg(test)] mod tests` blocks at the bottom of the file they cover; `src-tauri/tests/` holds the integration binaries (`notes`, `spaces`, `folders`, `transfer`, `ipc_contract`), which see only the crate's public API. No extra setup: they run against an in-memory SQLite database.
 

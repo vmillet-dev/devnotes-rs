@@ -6,12 +6,13 @@ import {
   NoteDraft,
   NotePatch,
   NotePlacement,
+  NotesQuery,
+  NotesView,
   NoteTag,
   SampleNote,
   TagUsage,
   TrashedNote,
 } from '@core/model/note.model';
-import { NotesQuery, NotesView } from '@core/model/note.model';
 import { Space } from '@core/model/space.model';
 import { byCodeUnit } from '@core/utils/order.util';
 import { checklistMarkdown } from './note.fixture';
@@ -61,6 +62,17 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
 
   private gate: Promise<void> | null = null;
   private openGate: (() => void) | null = null;
+
+  /** Records what the first launch asked for, and files the notes into the space it names. */
+  seededSamples: {
+    spaceName: string;
+    folders: readonly string[];
+    notes: readonly SampleNote[];
+  } | null = null;
+
+  private readonly history = new Map<string, readonly Revision[]>();
+  private readonly bodies = new Map<string, string>();
+  private nextRevision = 0;
 
   constructor(notes: readonly Note[] = []) {
     this.notes = notes;
@@ -112,13 +124,6 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
     });
   }
 
-  /** Records what the first launch asked for, and files the notes into the space it names. */
-  seededSamples: {
-    spaceName: string;
-    folders: readonly string[];
-    notes: readonly SampleNote[];
-  } | null = null;
-
   seedSamples(spaceName: string, folders: readonly string[], notes: readonly SampleNote[]): Promise<Space> {
     return guard(this, () => {
       const spaceId = `fake-space-${++this.nextId}`;
@@ -152,10 +157,6 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
       return updated;
     });
   }
-
-  private readonly history = new Map<string, readonly Revision[]>();
-  private readonly bodies = new Map<string, string>();
-  private nextRevision = 0;
 
   listRevisions(id: string): Promise<readonly Revision[]> {
     return guard(this, () => this.history.get(id) ?? []);

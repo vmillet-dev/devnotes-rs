@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { debounced } from '@core/services/time/debounce';
-import { Note } from '../model/note.model';
+import { Note } from '@core/model/note.model';
 import { BoardStore } from './board.store';
 import { NotesQueryStore } from './notes-query.store';
 
@@ -46,11 +46,6 @@ export class NoteSelectionStore {
     this.board.isShowing() ? this.board.visibleNotes() : this.notes.visibleNotes(),
   );
 
-  /** The note a card on screen is showing, in whichever view is drawing it. */
-  noteOnScreen(id: string): Note | null {
-    return this.onScreen().find((note) => note.id === id) ?? null;
-  }
-
   /** Derived from what is visible: an id ticked then gone must not reach a bulk action. */
   readonly checkedNotes = computed<readonly Note[]>(() => {
     const checked = this._checkedIds();
@@ -61,6 +56,11 @@ export class NoteSelectionStore {
   readonly hasSelection = computed(() => this.checkedCount() > 0);
 
   readonly checkedNoteIds = computed<readonly string[]>(() => this.checkedNotes().map((note) => note.id));
+
+  /** The note a card on screen is showing, in whichever view is drawing it. */
+  noteOnScreen(id: string): Note | null {
+    return this.onScreen().find((note) => note.id === id) ?? null;
+  }
 
   /** `null` takes focus off the canvas — when a modal opens, for instance. */
   focusNote(id: string | null): void {

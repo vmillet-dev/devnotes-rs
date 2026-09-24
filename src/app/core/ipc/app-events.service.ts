@@ -1,6 +1,6 @@
 import { InjectionToken, Injectable, inject } from '@angular/core';
 import { listen } from '@tauri-apps/api/event';
-import { Unlisten, subscribeCancellable } from '../utils/subscription.util';
+import { Unlisten, subscribeCancellable } from '@core/utils/subscription.util';
 import { GLOBAL_ACTION_EVENT, GlobalAction } from './bindings';
 
 export type { GlobalAction };

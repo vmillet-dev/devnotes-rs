@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { commands } from '@core/ipc/bindings';
 import { unwrap } from '@core/ipc/ipc.error';
-import { Attachment } from '../model/note.model';
+import { Attachment } from '@core/model/note.model';
 import { toAttachment } from './note.mapper';
 
 /**

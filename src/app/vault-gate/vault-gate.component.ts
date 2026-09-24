@@ -68,17 +68,17 @@ export class VaultGateComponent {
 
   private readonly passphraseField = viewChild<ElementRef<HTMLInputElement>>('passphraseField');
 
-  constructor() {
-    // ⚠️ Not the `autofocus` attribute, which the linter refuses: this screen is the only
-    // thing there is, and the user opened the application to type into this field.
-    afterNextRender(() => this.passphraseField()?.nativeElement.focus());
-  }
-
   /**
    * ⚠️ Shown instead of the form, not beside it. The field is the one thing that cannot
    * help here, and an offer to give up standing next to it would be read as a shortcut.
    */
   protected readonly isConfirmingArchive = signal(false);
+
+  constructor() {
+    // ⚠️ Not the `autofocus` attribute, which the linter refuses: this screen is the only
+    // thing there is, and the user opened the application to type into this field.
+    afterNextRender(() => this.passphraseField()?.nativeElement.focus());
+  }
 
   /** The way out of a damaged library; the store says where everything went. */
   protected async setAside(): Promise<void> {

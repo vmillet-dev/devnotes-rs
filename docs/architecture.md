@@ -220,6 +220,14 @@ front, and that knowledge cannot be handed down an `input()` from twelve callers
 `@shared/*` and `@testing/*` (declared in `tsconfig.json`, and nowhere else). An import says
 which part of the interface it reaches into before it says which file.
 
+The linter holds three conventions that used to be kept by taste: two `../` are refused
+everywhere, **one** is refused inside `core/` (a neighbour folder there is `@core/…` too),
+and a module is imported once per file (`no-duplicate-imports`). A class lists its fields,
+then its constructor, then its methods (`@typescript-eslint/member-ordering`) — a field
+holding a function counts as a method, as the rule sees it. Field initialisers run in
+declaration order whatever the constructor's position, so moving one above another it reads
+is the only way to break a class by reordering it.
+
 The rule is **relative when a single `../` reaches the target, alias otherwise** — so
 `core/state/notes.store.ts` reads `../data/notes.repository`, while
 `notes/canvas/note-section/note-card/` reaches the model through `@core/model/note.model`. There is

@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { commands } from '@core/ipc/bindings';
 import type { Backup as WireBackup } from '@core/ipc/bindings';
 import { unwrap } from '@core/ipc/ipc.error';
-import { Backup } from '../model/backup.model';
+import { Backup } from '@core/model/backup.model';
 
 /**
  * ⚠️ Two wire shapes to put back. JSON has no date type, so `takenAt` crosses as an ISO

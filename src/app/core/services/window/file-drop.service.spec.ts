@@ -14,6 +14,8 @@ class FakeDrops {
 
   private settle: (() => void) | null = null;
 
+  holdBack = false;
+
   readonly subscribe = (handler: (paths: readonly string[]) => void): Promise<Unlisten> => {
     return new Promise<Unlisten>((resolve) => {
       const land = (): void => {
@@ -31,8 +33,6 @@ class FakeDrops {
       }
     });
   };
-
-  holdBack = false;
 
   /** Lets a held-back subscription finish arriving. */
   async land(): Promise<void> {

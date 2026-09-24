@@ -12,8 +12,8 @@ import {
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
 import { ClockService } from '@core/services/time/clock.service';
-import { FoldersRepository } from '../data/folders.repository';
-import { BoardRepository } from '../data/board.repository';
+import { FoldersRepository } from '@core/data/folders.repository';
+import { BoardRepository } from '@core/data/board.repository';
 import { debounced } from '@core/services/time/debounce';
 import { sameBy } from '@core/utils/equality.util';
 import { retained } from '@core/utils/retained.util';
@@ -30,8 +30,8 @@ import {
   NotesViewMode,
   sameFrame,
   samePoint,
-} from '../model/board.model';
-import { Note } from '../model/note.model';
+} from '@core/model/board.model';
+import { Note } from '@core/model/note.model';
 import { FoldersStore } from './folders.store';
 import { Criteria, NotesQueryStore } from './notes-query.store';
 import { NotesRevision } from './notes-revision';
@@ -175,25 +175,6 @@ export class BoardStore {
    */
   readonly isShowing = computed(() => this.isBoard() && this.openFolder.activeFolderId() === null);
 
-  constructor() {
-    // Restores the switch as the space changes: it is remembered per space.
-    effect(() => {
-      const spaceId = this.spaces.activeSpaceId();
-      untracked(() => {
-        this.wanted.set(
-          spaceId !== null && this.preferences.read(preferenceKey(spaceId)) === 'board' ? 'board' : 'date',
-        );
-      });
-    });
-
-    effect(() => {
-      const error = this.loadError();
-      if (error) {
-        this.notifier.notify({ ref: { key: 'errors.boardLoadFailed' }, detail: error.message });
-      }
-    });
-  }
-
   /**
    * ⚠️ `undefined` means "do not ask", which is what keeps the board idle on the date
    * view, and an `equal` comparator is what keeps the fresh literal from firing a query
@@ -315,6 +296,51 @@ export class BoardStore {
     () => this.zones().reduce((total, zone) => total + zone.notes.length, 0) + this.loose().length,
   );
 
+  private readonly _pendingZone = signal<BoardFrame | null>(null);
+  /** Where a band was drawn, held until it has been given a name. */
+  readonly pendingZone = this._pendingZone.asReadonly();
+
+  /** ⚠️ Every staged move, or a batch interrupted halfway leaves half a board. */
+  private readonly writeLayout = debounced<void>(() => void this.persistLayout(), LAYOUT_SAVE_DEBOUNCE_MS);
+
+  /**
+   * ⚠️ Bumped by anything that moves the whole board at once. The pan is a native scroll
+   * on `.board` and nothing resets it, so an arrangement that lands everything back at the
+   * top left while the user is panned elsewhere produces its result **off screen**: empty
+   * dotted ground and a banner announcing success, which is indistinguishable from an
+   * erasure. The board watches this and pans home.
+   */
+  private readonly _arrangements = signal(0);
+  readonly arrangements = this._arrangements.asReadonly();
+
+  /**
+   * ⚠️ The same defect seen from the other end. Undoing puts the board back at the
+   * coordinates it was dragged to, while the pan is now at the origin `arrange` sent it
+   * to — so the undo would land its own result off screen. The board watches this and pans
+   * back to where it was before it was sent home.
+   */
+  private readonly _restorations = signal(0);
+  readonly restorations = this._restorations.asReadonly();
+
+  constructor() {
+    // Restores the switch as the space changes: it is remembered per space.
+    effect(() => {
+      const spaceId = this.spaces.activeSpaceId();
+      untracked(() => {
+        this.wanted.set(
+          spaceId !== null && this.preferences.read(preferenceKey(spaceId)) === 'board' ? 'board' : 'date',
+        );
+      });
+    });
+
+    effect(() => {
+      const error = this.loadError();
+      if (error) {
+        this.notifier.notify({ ref: { key: 'errors.boardLoadFailed' }, detail: error.message });
+      }
+    });
+  }
+
   setMode(mode: NotesViewMode): void {
     this.wanted.set(mode);
 
@@ -399,10 +425,6 @@ export class BoardStore {
     });
   }
 
-  private readonly _pendingZone = signal<BoardFrame | null>(null);
-  /** Where a band was drawn, held until it has been given a name. */
-  readonly pendingZone = this._pendingZone.asReadonly();
-
   proposeZone(frame: BoardFrame): void {
     this._pendingZone.set(frame);
   }
@@ -443,9 +465,6 @@ export class BoardStore {
     return true;
   }
 
-  /** ⚠️ Every staged move, or a batch interrupted halfway leaves half a board. */
-  private readonly writeLayout = debounced<void>(() => void this.persistLayout(), LAYOUT_SAVE_DEBOUNCE_MS);
-
   private async persistLayout(): Promise<void> {
     const zones = [...this.stagedFrames()].map(([folderId, frame]) => ({ folderId, frame }));
     const cards = [...this.stagedCards()].map(([noteId, position]) => ({ noteId, position }));
@@ -462,16 +481,6 @@ export class BoardStore {
 
     this.reload();
   }
-
-  /**
-   * ⚠️ Bumped by anything that moves the whole board at once. The pan is a native scroll
-   * on `.board` and nothing resets it, so an arrangement that lands everything back at the
-   * top left while the user is panned elsewhere produces its result **off screen**: empty
-   * dotted ground and a banner announcing success, which is indistinguishable from an
-   * erasure. The board watches this and pans home.
-   */
-  private readonly _arrangements = signal(0);
-  readonly arrangements = this._arrangements.asReadonly();
 
   /**
    * Puts the space back in order, as far as `scope` allows.
@@ -498,15 +507,6 @@ export class BoardStore {
     this.reload();
     return done;
   }
-
-  /**
-   * ⚠️ The same defect seen from the other end. Undoing puts the board back at the
-   * coordinates it was dragged to, while the pan is now at the origin `arrange` sent it
-   * to — so the undo would land its own result off screen. The board watches this and pans
-   * back to where it was before it was sent home.
-   */
-  private readonly _restorations = signal(0);
-  readonly restorations = this._restorations.asReadonly();
 
   /** The undo of `arrange`, and the count is what the banner needs back. */
   async restoreLayout(layout: BoardLayout): Promise<number> {

@@ -6,9 +6,9 @@ import { SettingsStore } from '@core/services/settings/settings.store';
 import { SEARCH_DEBOUNCE_MS, debounced } from '@core/services/time/debounce';
 import { ClockService } from '@core/services/time/clock.service';
 import { AppWindowService } from '@core/services/window/app-window.service';
-import { NotesRepository } from '../data/notes.repository';
-import { noteCopyText } from '../model/checklist.model';
-import { Note } from '../model/note.model';
+import { NotesRepository } from '@core/data/notes.repository';
+import { noteCopyText } from '@core/model/checklist.model';
+import { Note } from '@core/model/note.model';
 
 /** Beyond this the list no longer fits on screen and the keyboard loses it. */
 const MAX_RESULTS = 8;

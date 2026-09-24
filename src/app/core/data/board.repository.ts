@@ -15,7 +15,7 @@ import {
   BoardZone,
   CardPlacement,
   ZonePlacement,
-} from '../model/board.model';
+} from '@core/model/board.model';
 import { toIsoString, toNote } from './note.mapper';
 
 /**

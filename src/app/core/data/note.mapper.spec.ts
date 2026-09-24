@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DisplayNote as WireNote } from '@core/ipc/bindings';
-import { Note, NoteDraft } from '../model/note.model';
+import { Note, NoteDraft } from '@core/model/note.model';
 import {
   ContractError,
   toAttachment,

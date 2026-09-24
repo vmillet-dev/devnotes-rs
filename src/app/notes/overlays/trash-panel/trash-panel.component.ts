@@ -53,15 +53,6 @@ export class TrashPanelComponent {
     }));
   });
 
-  protected onPurgeClick(id: string): void {
-    if (this.confirmingPurge() !== id) {
-      this.confirmingPurge.set(id);
-      return;
-    }
-    this.confirmingPurge.set(null);
-    this.purgeRequested.emit(id);
-  }
-
   /**
    * ⚠️ Two strings and not one with a count: French keeps the singular at one where English
    * does not, and this sentence is the last thing said before the notes stop existing.
@@ -73,6 +64,15 @@ export class TrashPanelComponent {
       ? { key: 'trash.emptyTrashWarningOne' }
       : { key: 'trash.emptyTrashWarning', params: { count } };
   });
+
+  protected onPurgeClick(id: string): void {
+    if (this.confirmingPurge() !== id) {
+      this.confirmingPurge.set(id);
+      return;
+    }
+    this.confirmingPurge.set(null);
+    this.purgeRequested.emit(id);
+  }
 
   protected confirmEmpty(): void {
     this.confirmingEmpty.set(false);

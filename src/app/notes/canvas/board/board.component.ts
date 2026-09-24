@@ -103,44 +103,6 @@ export class BoardComponent {
   /** Where the pan was before an arrangement sent it home, so the undo can put it back. */
   private pannedFrom: BoardPoint | null = null;
 
-  constructor() {
-    inject(DestroyRef).onDestroy(() => this.disarmMenuGuard());
-
-    // ⚠️ The result of a whole-board arrangement happens **off screen** otherwise. The pan
-    // is a native scroll on `.board` and nothing resets it, so on a wide board panned to
-    // the right, "Réorganiser" lands everything back at the top left and leaves the user
-    // looking at empty dotted ground with a banner announcing success — indistinguishable
-    // from an erasure, and the reason nobody presses it a second time.
-    effect(() => {
-      if (this.arrangements() === 0) return;
-      this.pannedFrom = this.scrollOffset();
-      this.panTo({ x: 0, y: 0 });
-    });
-
-    // ⚠️ The same defect from the other end: undoing puts the board back where it was
-    // dragged to, while the pan is at the origin the arrangement sent it to.
-    effect(() => {
-      if (this.restorations() === 0) return;
-      const back = this.pannedFrom;
-      this.pannedFrom = null;
-      if (back) this.panTo(back);
-    });
-  }
-
-  private board(): HTMLElement | null {
-    return this.host.nativeElement.querySelector<HTMLElement>('.board');
-  }
-
-  private scrollOffset(): BoardPoint {
-    const board = this.board();
-    return { x: board?.scrollLeft ?? 0, y: board?.scrollTop ?? 0 };
-  }
-
-  /** Optional-chained because jsdom has no `scrollTo` and must not fail the arrangement. */
-  private panTo(at: BoardPoint): void {
-    this.board()?.scrollTo?.(at.x, at.y);
-  }
-
   /** The zone a drop would land in right now, so it can say so before the pointer lifts. */
   protected readonly hoveredZone = computed<string | null>(() => {
     const drag = this.gesture();
@@ -191,6 +153,46 @@ export class BoardComponent {
     this.zones().map((zone) => ({ id: zone.folder.id, frame: this.frameOf(zone) })),
   );
 
+  private travelled = false;
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.disarmMenuGuard());
+
+    // ⚠️ The result of a whole-board arrangement happens **off screen** otherwise. The pan
+    // is a native scroll on `.board` and nothing resets it, so on a wide board panned to
+    // the right, "Réorganiser" lands everything back at the top left and leaves the user
+    // looking at empty dotted ground with a banner announcing success — indistinguishable
+    // from an erasure, and the reason nobody presses it a second time.
+    effect(() => {
+      if (this.arrangements() === 0) return;
+      this.pannedFrom = this.scrollOffset();
+      this.panTo({ x: 0, y: 0 });
+    });
+
+    // ⚠️ The same defect from the other end: undoing puts the board back where it was
+    // dragged to, while the pan is at the origin the arrangement sent it to.
+    effect(() => {
+      if (this.restorations() === 0) return;
+      const back = this.pannedFrom;
+      this.pannedFrom = null;
+      if (back) this.panTo(back);
+    });
+  }
+
+  private board(): HTMLElement | null {
+    return this.host.nativeElement.querySelector<HTMLElement>('.board');
+  }
+
+  private scrollOffset(): BoardPoint {
+    const board = this.board();
+    return { x: board?.scrollLeft ?? 0, y: board?.scrollTop ?? 0 };
+  }
+
+  /** Optional-chained because jsdom has no `scrollTo` and must not fail the arrangement. */
+  private panTo(at: BoardPoint): void {
+    this.board()?.scrollTo?.(at.x, at.y);
+  }
+
   protected frameOf(zone: BoardZone): BoardFrame {
     const drag = this.gesture();
     const moving = drag?.moved && drag.id === zone.folder.id;
@@ -233,8 +235,6 @@ export class BoardComponent {
     }
     this.noteActivated.emit(activation);
   }
-
-  private travelled = false;
 
   protected startZoneMove(event: PointerEvent, zone: BoardZone): void {
     this.begin(event, 'move-zone', zone.folder.id, this.frameOf(zone));

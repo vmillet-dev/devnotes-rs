@@ -5,7 +5,7 @@ import { FileDialogService } from '@core/services/dialogs/file-dialog.service';
 import { StatusNotifier } from '@core/services/notifications/status.service';
 import { ExportReport, ExportScope, ImportReport } from '@core/model/note.model';
 import { hasErrorCode } from '@core/ipc/ipc.error';
-import { TransferRepository } from '../data/transfer.repository';
+import { TransferRepository } from '@core/data/transfer.repository';
 import { NotesRevision } from './notes-revision';
 
 function pad(value: number): string {

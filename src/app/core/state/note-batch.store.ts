@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
-import { FoldersRepository } from '../data/folders.repository';
-import { NotesRepository } from '../data/notes.repository';
-import { BoardScope } from '../model/board.model';
+import { FoldersRepository } from '@core/data/folders.repository';
+import { NotesRepository } from '@core/data/notes.repository';
+import { BoardScope } from '@core/model/board.model';
 import { BoardStore } from './board.store';
 import { NoteSelectionStore } from './note-selection.store';
 import { NotesRevision } from './notes-revision';

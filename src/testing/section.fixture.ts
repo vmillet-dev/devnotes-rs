@@ -1,5 +1,4 @@
-import { NoteSection, NoteSectionKey } from '@core/model/note.model';
-import { Note } from '@core/model/note.model';
+import { Note, NoteSection, NoteSectionKey } from '@core/model/note.model';
 
 export function createSection(
   key: NoteSectionKey,

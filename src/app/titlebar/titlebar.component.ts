@@ -30,10 +30,10 @@ export class TitlebarComponent {
     this.switchesTo() === 'dark' ? 'settings.theme.toDark' : 'settings.theme.toLight',
   );
 
+  protected readonly localeService = inject(LocaleService);
+  protected readonly vault = inject(VaultStore);
+
   protected toggleTheme(): void {
     this.settings.setTheme(this.switchesTo());
   }
-
-  protected readonly localeService = inject(LocaleService);
-  protected readonly vault = inject(VaultStore);
 }

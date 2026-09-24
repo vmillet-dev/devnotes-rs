@@ -1,7 +1,7 @@
 import { InjectionToken, Injectable, inject } from '@angular/core';
 import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
 import { TranslocoService } from '@jsverse/transloco';
-import { TranslationRef } from '../i18n/translation-ref.model';
+import { TranslationRef } from '@core/services/i18n/translation-ref.model';
 
 /** A token rather than a direct call, for the same reason as `CLIPBOARD_ADAPTER`. */
 export interface DesktopNotificationAdapter {

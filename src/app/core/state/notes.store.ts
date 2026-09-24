@@ -1,10 +1,10 @@
 import { Injectable, Signal, computed, inject, signal } from '@angular/core';
-import { FoldersRepository } from '../data/folders.repository';
-import { NotesRepository } from '../data/notes.repository';
+import { FoldersRepository } from '@core/data/folders.repository';
+import { NotesRepository } from '@core/data/notes.repository';
 import { ClipboardService } from '@core/services/clipboard/clipboard.service';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { FALLBACK_LANGUAGE } from '@core/model/language.model';
-import { ChecklistItem, Note, NoteDraft, NoteKind, NoteLifecycle, NotePatch } from '../model/note.model';
+import { ChecklistItem, Note, NoteDraft, NoteKind, NoteLifecycle, NotePatch } from '@core/model/note.model';
 import { ClockService } from '@core/services/time/clock.service';
 import { sameArray } from '@core/utils/equality.util';
 import { NoteSelectionStore } from './note-selection.store';
@@ -13,7 +13,7 @@ import { NotesRevision } from './notes-revision';
 import { SpacesStore } from './spaces.store';
 import { UndoStore } from './undo.store';
 
-export type { NoteFilter, NoteKind } from '../model/note.model';
+export type { NoteFilter, NoteKind } from '@core/model/note.model';
 
 /** The note being created, not written until it is worth keeping. */
 export const DRAFT_ID = '__draft__';

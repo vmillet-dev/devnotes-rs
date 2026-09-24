@@ -5,13 +5,13 @@ import { SEARCH_DEBOUNCE_MS, debounced } from '@core/services/time/debounce';
 import { sameArray, sameBy } from '@core/utils/equality.util';
 import { byCodeUnit } from '@core/utils/order.util';
 import { retained } from '@core/utils/retained.util';
-import { NotesRepository } from '../data/notes.repository';
-import { Note, NoteFilter, NoteSection, NotesQuery, NotesView } from '../model/note.model';
+import { NotesRepository } from '@core/data/notes.repository';
+import { Note, NoteFilter, NoteSection, NotesQuery, NotesView } from '@core/model/note.model';
 import { FoldersStore } from './folders.store';
 import { NotesRevision } from './notes-revision';
 import { SpacesStore } from './spaces.store';
 
-export type { NoteFilter } from '../model/note.model';
+export type { NoteFilter } from '@core/model/note.model';
 
 export { SEARCH_DEBOUNCE_MS };
 

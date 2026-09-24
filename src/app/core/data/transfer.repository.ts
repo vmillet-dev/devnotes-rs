@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { commands } from '@core/ipc/bindings';
 import { unwrap } from '@core/ipc/ipc.error';
-import { ExportReport, ExportScope, ImportReport } from '../model/note.model';
+import { ExportReport, ExportScope, ImportReport } from '@core/model/note.model';
 
 /** The file is written and read back on the Rust side; the front only picks a path. */
 @Injectable({ providedIn: 'root' })

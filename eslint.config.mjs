@@ -73,6 +73,32 @@ export default tseslint.config(
       // A `switch` over a generated union must stay exhaustive: a variant added
       // in Rust has to break the build, not fall through to a default.
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
+
+      // A class's state in one place: fields, then the constructor, then methods. Field
+      // initialisers run in declaration order, so a field that reads another stays below it.
+      '@typescript-eslint/member-ordering': [
+        'error',
+        { default: ['signature', 'field', 'static-initialization', 'constructor', 'method'] },
+      ],
+      'no-duplicate-imports': ['error', { allowSeparateTypeImports: true }],
+    },
+  },
+  {
+    // Inside `core/` a neighbour folder is reached by its alias too: one style, where
+    // `../data/…` and `@core/services/…` used to sit side by side in one file.
+    files: ['src/app/core/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['../*'],
+              message: 'Inside core/, reach a neighbour folder with @core/…, not with ../',
+            },
+          ],
+        },
+      ],
     },
   },
   {

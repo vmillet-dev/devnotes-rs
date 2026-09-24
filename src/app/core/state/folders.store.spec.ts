@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { Folder } from '../model/folder.model';
-import { Space } from '../model/space.model';
+import { Folder } from '@core/model/folder.model';
+import { Space } from '@core/model/space.model';
 import { FakeFoldersRepository } from '@testing/fake-folders-repository';
 import { FakeSpacesRepository } from '@testing/fake-spaces-repository';
 import { provideAppTesting } from '@testing/testing.providers';

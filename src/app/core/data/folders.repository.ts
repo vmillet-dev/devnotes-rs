@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { commands } from '@core/ipc/bindings';
 import { unwrap } from '@core/ipc/ipc.error';
 import type { Folder as WireFolder } from '@core/ipc/bindings';
-import { Folder, FolderColour, FolderDraft, NoteFiling } from '../model/folder.model';
+import { Folder, FolderColour, FolderDraft, NoteFiling } from '@core/model/folder.model';
 
 /** The two seams the wire shape has: an optional `colour`, and `createdAt` as an ISO string. */
 function toFolder(dto: WireFolder): Folder {
