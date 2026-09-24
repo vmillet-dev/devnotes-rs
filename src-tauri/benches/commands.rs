@@ -87,6 +87,60 @@ fn single_write(c: &mut Criterion) {
     group.finish();
 }
 
+/// Two writes that paid for work they never used: a body save read and opened the whole
+/// kept history to compare with one entry, and a pin toggle sealed the title, the body and
+/// the source to write a boolean.
+fn body_writes(c: &mut Criterion) {
+    let mut corpus = build();
+    let mut group = c.benchmark_group("body writes");
+    let id = corpus.note_ids[NOTES / 3].clone();
+    let body = store::by_ids(&mut corpus.connection, std::slice::from_ref(&id))
+        .expect("the note")
+        .remove(0)
+        .content;
+
+    // A full history, so every save below also rotates the oldest body out.
+    for kept in 0..=devnotes_lib::notes::revision::KEEP {
+        let patch = NotePatch {
+            content: Some(format!(
+                "{body}
+-- {kept}"
+            )),
+            ..NotePatch::default()
+        };
+        store::update(&mut corpus.connection, &id, &patch, now()).expect("a write");
+    }
+
+    group.bench_function("update_note, body, full history", |b| {
+        let mut at = 0u32;
+        b.iter(|| {
+            at += 1;
+            let patch = NotePatch {
+                content: Some(format!(
+                    "{body}
+-- saved {at}"
+                )),
+                ..NotePatch::default()
+            };
+            black_box(store::update(&mut corpus.connection, &id, &patch, now()).expect("a write"));
+        });
+    });
+
+    group.bench_function("update_note, pin toggled", |b| {
+        let mut pinned = false;
+        b.iter(|| {
+            pinned = !pinned;
+            let patch = NotePatch {
+                pinned: Some(pinned),
+                ..NotePatch::default()
+            };
+            black_box(store::update(&mut corpus.connection, &id, &patch, now()).expect("a write"));
+        });
+    });
+
+    group.finish();
+}
+
 /// One lock, N rows. The selection bar's actions.
 fn bulk(c: &mut Criterion) {
     let mut corpus = build();
@@ -301,6 +355,7 @@ criterion_group!(
     benches,
     whole_corpus_read,
     single_write,
+    body_writes,
     bulk,
     aggregation,
     corpus_rewrite,

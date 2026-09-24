@@ -197,17 +197,20 @@ pub fn save_layout(
             )?;
         }
 
+        // ⚠️ Only a loose note has a place of its own. A card filed between the drag and the
+        // save flows inside its zone, and writing a position for it would put a row back
+        // that `file_many` had just dropped.
+        let moved: Vec<&String> = cards.iter().map(|placement| &placement.note_id).collect();
+        let filed: std::collections::HashSet<String> = notes::table
+            .filter(notes::id.eq_any(moved))
+            .filter(notes::folder_id.is_not_null())
+            .select(notes::id)
+            .load::<String>(connection)?
+            .into_iter()
+            .collect();
+
         for placement in cards {
-            // ⚠️ Only a loose note has a place of its own. A card filed between the drag
-            // and the save flows inside its zone, and writing a position for it would put
-            // a row back that `file_many` had just dropped.
-            let filed: Option<String> = notes::table
-                .find(&placement.note_id)
-                .select(notes::folder_id)
-                .first::<Option<String>>(connection)
-                .optional()?
-                .flatten();
-            if filed.is_some() {
+            if filed.contains(&placement.note_id) {
                 continue;
             }
 

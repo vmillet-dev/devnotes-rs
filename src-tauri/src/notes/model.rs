@@ -373,24 +373,13 @@ pub fn normalize_tag(tag: &str) -> Option<&str> {
 /// stored `urgent`. De-duplication is case-insensitive and keeps the first spelling,
 /// like the `COLLATE NOCASE` on the column.
 pub fn normalize_tags(tags: &[String]) -> Vec<String> {
-    let mut seen: Vec<String> = Vec::new();
-    let mut normalized: Vec<String> = Vec::new();
+    let mut seen = std::collections::HashSet::new();
 
-    for tag in tags {
-        let Some(cleaned) = normalize_tag(tag) else {
-            continue;
-        };
-
-        let folded = cleaned.to_lowercase();
-        if seen.contains(&folded) {
-            continue;
-        }
-
-        seen.push(folded);
-        normalized.push(cleaned.to_string());
-    }
-
-    normalized
+    tags.iter()
+        .filter_map(|tag| normalize_tag(tag))
+        .filter(|cleaned| seen.insert(cleaned.to_lowercase()))
+        .map(str::to_string)
+        .collect()
 }
 
 #[cfg(test)]

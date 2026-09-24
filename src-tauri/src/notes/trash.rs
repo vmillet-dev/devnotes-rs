@@ -26,7 +26,12 @@ pub fn purge_at(deleted_at: DateTime<Utc>) -> DateTime<Utc> {
 }
 
 pub fn is_expired(deleted_at: DateTime<Utc>, now: DateTime<Utc>) -> bool {
-    purge_at(deleted_at) <= now
+    deleted_at <= expiry_cutoff(now)
+}
+
+/// A note deleted at or before this instant has outlived `RETENTION` by `now`.
+pub fn expiry_cutoff(now: DateTime<Utc>) -> DateTime<Utc> {
+    now - RETENTION
 }
 
 pub fn trashed(note: Note, deleted_at: DateTime<Utc>) -> TrashedNote {
