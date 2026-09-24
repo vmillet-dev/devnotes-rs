@@ -104,9 +104,6 @@
         <p class="warning" role="note">{{ 'vault.noRecovery' | transloco }}</p>
       }
 
-      <!-- ⚠️ Not `off`: the library cannot be recovered, so the phrase should be long and random,
-           which is what a password manager makes and keeps. The new/current pair also stops one
-           offering to save the wrong field. -->
       <div class="field">
         <div class="field-head">
           <label class="label" for="vault-passphrase">{{ 'vault.passphrase' | transloco }}</label>
@@ -124,7 +121,7 @@
           id="vault-passphrase"
           class="input"
           [type]="isRevealed() ? 'text' : 'password'"
-          [attr.autocomplete]="isCreating() ? 'new-password' : 'current-password'"
+          autocomplete="off"
           spellcheck="false"
           [value]="passphrase()"
           [attr.aria-invalid]="vault.refused() || tooShort() ? 'true' : null"
@@ -147,7 +144,7 @@
             id="vault-confirmation"
             class="input"
             [type]="isRevealed() ? 'text' : 'password'"
-            autocomplete="new-password"
+            autocomplete="off"
             spellcheck="false"
             [value]="confirmation()"
             (input)="onConfirmation($any($event.target).value)"

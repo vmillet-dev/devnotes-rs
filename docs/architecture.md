@@ -2866,13 +2866,9 @@ instead: put a copy of `vault.json` back, or set the library aside (`set_aside_d
 which leaves the key file alone and so comes back `absent`). `vault::create` refuses the same
 case on its own, a command being reachable from more than the gate.
 
-**The form is built for a password manager.** `autocomplete` is `new-password` on creation
-(both fields) and `current-password` on unlock, the same pair as in the change dialog. ⚠️ It
-was `off`, which read as protection and was the opposite: the library cannot be recovered,
-so its phrase should be long and random, and a manager is where such a phrase is made and
-kept. The pair is also what stops one offering to save the confirmation, or the wrong field.
-The export prompt stays `off` on purpose: it shares the gate's origin, and a manager keeping
-a file's phrase would offer it at the gate. One "Afficher" toggle (`aria-pressed`, the
+Every passphrase field is `autocomplete="off"`: a WebView carries no password manager to fill
+or save one — they are browser extensions — so `new-password` / `current-password` would
+promise what nothing delivers. A phrase kept in a manager is pasted. One "Afficher" toggle (`aria-pressed`, the
 input's `type` flipped rather than a second plain-text field) shows both fields at once, and
 on creation the minimum is the field's description from the start rather than a complaint
 after the first character.
