@@ -12,7 +12,7 @@
   flex-wrap: nowrap;
   align-items: center;
   gap: 10px;
-  padding: 12px 24px;
+  padding: var(--space-grid) var(--space-canvas);
   border-bottom: 1px solid var(--line-soft);
   flex-shrink: 0;
   // Without this a flex child's content width wins and the row overflows anyway.

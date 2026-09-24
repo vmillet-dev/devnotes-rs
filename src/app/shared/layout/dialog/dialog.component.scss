@@ -27,7 +27,7 @@
   @include enters(enter-lift);
   display: flex;
   flex-direction: column;
-  gap: var(--dialog-gap, 12px);
+  gap: var(--dialog-gap, var(--space-grid));
   max-width: 92vw;
   max-height: 92vh;
 }
@@ -42,7 +42,7 @@
 }
 
 .dialog-panel.fitted {
-  padding: var(--dialog-padding, 22px 24px);
+  padding: var(--dialog-padding, calc(var(--space-canvas) - 2px) var(--space-canvas));
   max-height: 88vh;
 }
 

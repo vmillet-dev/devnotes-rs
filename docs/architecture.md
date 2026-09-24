@@ -3592,9 +3592,15 @@ sits at 1.1:1 against the light theme's surfaces and a neutral fill alone left b
 **Density.** `:root[data-density='compact']` tightens four variables — `--space-card`,
 `--space-grid`, `--space-section`, `--space-canvas` — and nothing else. Typography is
 untouched: shrinking the text would be a zoom, not a density. Four named gaps rather than a
-global factor, because these four are what decide how many cards fit on screen; everywhere else
-the spacing stays hard-coded, since compressing all of it would cost legibility without buying
-a line.
+global factor, because these four are what decide how many cards fit on screen.
+
+They reach past the canvas where a surface claims them: the topbar's padding, the library rail's
+own padding and its rows, and a dialog's default padding and gap are written in terms of the four,
+so "Compact" tightens the whole window. ⚠️ Written so the comfortable values come out identical
+to the numbers they replaced — `calc(var(--space-grid) / 4 + 2px)` is a rail row's 5px, 4px
+compact, which keeps a row above the 24px target. The board's surface stays out of it: its
+geometry is computed in Rust, and a padding there would offset every gesture. A dialog that sets
+its own `--dialog-padding` keeps it.
 
 Fonts are self-hosted through the `@fontsource` packages listed in `angular.json`'s `styles`
 array. They used to come from Google Fonts, which on a desktop app meant degraded typography

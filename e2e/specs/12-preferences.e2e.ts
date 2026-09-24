@@ -5,7 +5,7 @@ import { aboutMenu, fileMenu, settings, titlebar } from '../pageobjects/titlebar
 import { cursorOf, eventually, press, reopenSession, testid } from '../support/app.js';
 
 /**
- * A preference applies as it is typed, one key at a time.
+ * A preference applies on a button; only the theme and the density show while chosen.
  *
  * What this file does not prove is that any of it reached the disk: `reopenSession()`
  * opens a new session against the same living process, so the store plugin's in-memory
@@ -30,6 +30,29 @@ describe('Preferences', () => {
   it('previews the density the same way', async () => {
     await settings.setDensity('compact');
     expect(await browser.$('html').getAttribute('data-density')).toBe('compact');
+  });
+
+  /** Compact tightens the whole window, not the canvas alone: the topbar and the rail too. */
+  it('tightens the topbar and the library rail, not only the cards', async () => {
+    const paddings = () =>
+      browser.execute(() => {
+        const top = (selector: string) => {
+          const element = document.querySelector(selector);
+          return element ? getComputedStyle(element).paddingTop : null;
+        };
+        return { bar: top('.topbar'), row: top('.node-name') };
+      });
+
+    await settings.setDensity('comfortable');
+    const comfortable = await eventually(paddings, ({ bar }) => bar === '12px', 'the comfortable topbar');
+    await settings.setDensity('compact');
+    const compact = await eventually(paddings, ({ bar }) => bar === '8px', 'the compact topbar');
+
+    // The rail may have been hidden by an earlier file: the processes are shared.
+    if (compact.row !== null) {
+      expect(comfortable.row).toBe('5px');
+      expect(compact.row).toBe('4px');
+    }
   });
 
   /** A preview Annuler undoes is not the same thing as a write. */
