@@ -49,7 +49,9 @@ export class FakeVaultRepository implements Pick<VaultRepository, keyof VaultRep
 
     const target = `/data/damaged/${this.setAside.length + 1}`;
     this.setAside.push(target);
-    this.answer = 'locked';
+    // `vault.json` stays where it was: a library that had one comes back locked, one that had
+    // lost it comes back with none.
+    this.answer = this.answer === 'keyMissing' ? 'absent' : 'locked';
 
     return target;
   }

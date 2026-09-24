@@ -34,6 +34,8 @@ export class VaultStore {
 
   readonly isUnlocked = computed(() => this._state() === 'unlocked');
   readonly needsCreating = computed(() => this._state() === 'absent');
+  /** A database without its key file: no phrase can open it, and a new one would open nothing. */
+  readonly keyMissing = computed(() => this._state() === 'keyMissing');
 
   async load(): Promise<void> {
     const state = await this.notifier.attempt('errors.vaultStateFailed', () => this.repository.state());

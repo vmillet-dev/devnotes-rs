@@ -42,6 +42,9 @@ pub enum VaultState {
     /// Held in Rust, not in the front end: a page reload must not ask again for a library
     /// this process has open.
     Unlocked,
+    /// ⚠️ A database is here and its key file is not. Not `Absent`: a new key over it would
+    /// open nothing it holds, and asking for a new phrase would be the first step towards that.
+    KeyMissing,
 }
 
 #[tauri::command(async)]
@@ -53,11 +56,17 @@ pub fn vault_state(app: AppHandle, db: State<'_, Db>) -> Result<VaultState, AppE
 
     let directory = crate::libraries::open_directory(&app)?;
 
-    Ok(if file::exists(&directory) {
+    Ok(state_of(&directory))
+}
+
+fn state_of(directory: &Path) -> VaultState {
+    if file::exists(directory) {
         VaultState::Locked
+    } else if directory.join(crate::layout::DATABASE).exists() {
+        VaultState::KeyMissing
     } else {
         VaultState::Absent
-    })
+    }
 }
 
 /// The first launch. Refuses a library that already has a key file: that file is the only
@@ -312,6 +321,20 @@ mod tests {
     fn a_passphrase_too_short_to_be_worth_deriving_is_refused() {
         assert!(validate("short").is_err());
         assert!(validate("1234567").is_err());
+    }
+
+    /// A database left without its key file is neither new nor locked.
+    #[test]
+    fn a_database_without_its_key_file_is_named_as_such() {
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
+        assert_eq!(state_of(&directory), VaultState::Absent);
+
+        std::fs::write(directory.join(crate::layout::DATABASE), b"a sealed library").unwrap();
+        assert_eq!(state_of(&directory), VaultState::KeyMissing);
+
+        file::create(&directory, "a passphrase", Cost::FOR_TESTS).unwrap();
+        assert_eq!(state_of(&directory), VaultState::Locked);
     }
 
     #[test]
