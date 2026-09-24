@@ -217,7 +217,7 @@ the notes' key groups — neither moves those files into `titlebar/`, because th
 them. And **deletion became local**: the trash is one folder, where it used to be a panel in
 `ui/` and a store adrift among twenty-four others in `state/`.
 
-There is **one** exception, and it is deliberate: `DialogComponent` (`shared/dialog/`)
+There is **one** exception, and it is deliberate: `DialogComponent` (`shared/layout/dialog/`)
 injects `DialogStack`, its own neighbour in the same folder. What the rule forbids is a shared
 component knowing a feature or an application store; a modal has to know which modal is in
 front, and that knowledge cannot be handed down an `input()` from twelve callers.
@@ -330,7 +330,7 @@ Escape, and the template no longer declares a bare `(click)` for the linter to f
 
 #### The modal frame
 
-The twelve modals do **not** each carry a frame. `DialogComponent` (`shared/dialog/`) owns
+The twelve modals do **not** each carry a frame. `DialogComponent` (`shared/layout/dialog/`) owns
 the scrim, the panel, `role="dialog"`, `aria-modal`, the focus trap, Escape and the backdrop
 click; a dialog projects its content into it and says which rung it sits on:
 
@@ -1076,6 +1076,15 @@ The delete control only appears when another space exists to receive the notes; 
 space the panel explains why rather than offering a button that could only fail. Each space
 row is a `role="none"` wrapper holding the select button and the `⋯` trigger, so the menu
 keeps its direct menuitem children. Arrow-key navigation stays on the select buttons only.
+
+**A space can be pinned, and that is the only order there is to choose.** `spaces.pinned`
+(migration 9) hoists it to the head of `list_spaces`, which then orders by name, case aside —
+in Rust, since the names are sealed. A `position` column was the alternative and was refused: an
+order the user maintains is a second thing to keep consistent on every insert and delete, where
+pinning is a boolean and a gesture the application already has. `Space.pinned` carries
+`#[serde(default)]`, so an export file written before the column stays readable, and specta
+turns that into an optional key — `SpacesRepository` is where it becomes the boolean the model
+requires.
 
 ### Folders inside a space
 
@@ -1884,7 +1893,7 @@ knows which note carried which.
 ### Attachments
 
 An attachment is a file **next to** a note: the database keeps a record, the bytes live in
-`app_data_dir()/attachments/` under a name derived from the record's id — two screenshots both
+the library's `attachments/` (`libraries/<id>/attachments/`) under a name derived from the record's id — two screenshots both
 called `capture.png` must not overwrite each other, and a name coming from outside has no
 business deciding a write path.
 
@@ -1968,6 +1977,12 @@ So the panel edits `SettingsDraftStore` (`core/services/settings/`), and Appliqu
 writes it through. ⚠️ It stages **both paths a preference can take**, because the panel
 edits both: an `AppSettings` key, and a shortcut binding. A draft covering only the first
 would make OK mean two different things on two pages.
+
+**A setting is one line.** `SettingsStore.setting(key, codec)` builds the signal, its restore
+step and its write-through together, and `SETTINGS_KEYS` is derived from `keyof AppSettings`
+(`devnotes.${key}`). Adding a setting is a field on `AppSettings` plus that line; one key per
+setting, never one serialised object, so a setting added later cannot make an older file
+unreadable.
 
 ⚠️ **The three services that push to the native side read `SettingsStore`, never the
 draft.** That is the point of the layer: nothing reaches `set_global_shortcuts`,
@@ -2310,10 +2325,12 @@ blank note per opening turns the canvas into a pile of things to tidy up. The dr
 persisted on the first change that makes it worth keeping — a title, a body, a tag, a pin, a
 deadline (`isWorthSaving`) — and closing it untouched simply drops it.
 
-⚠️ `draftMaterialisedAs` is not optional. Closing the editor commits the title **then** the
-content with no change detection in between, so the second call still carries `DRAFT_ID` while
-the note already exists; `resolve()` redirects it. Without that, the second commit would write
-into nothing.
+⚠️ `draftMaterialisation` holds the **promise** of the write, not the id it will yield. Closing
+the editor commits the title, the source **then** the content back to back, with no change
+detection and no `await` between them: the second starts while the first is still writing the
+row. An id — which exists only once the write returns — left that window answering "still a
+draft", and one close created two notes. Installed before the write leaves, the promise makes
+the later commits wait on it, and `resolve()` redirects them to the row the first one created.
 
 Attaching a file needs a real row, so `materialiseDraft()` saves the draft first — a note you
 attach a file to is not empty either.
@@ -2651,13 +2668,19 @@ default; minimising to the tray is the same idea, off by default. Tauri emits no
 
 The commands, grouped by the feature that owns them:
 
-| Feature       | Commands                                                                                                                                                                                                                                                                           |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `notes`       | `query_notes`, `create_note`, `update_note`, `delete_note`, `delete_notes`, `restore_notes`, `list_trash`, `purge_notes`, `empty_trash`, `move_notes`, `tag_notes`, `list_tags`, `count_notes_tagged`, `rename_tags`, `delete_tags`, `fill_placeholders`, `set_placeholder_values` |
-| `spaces`      | `list_spaces`, `create_space`, `rename_space`, `pin_space`, `delete_space`                                                                                                                                                                                                         |
-| `attachments` | `attach_file`, `attach_clipboard_image`, `list_attachments`, `read_attachment`, `open_attachment`, `save_attachment`, `delete_attachment`                                                                                                                                          |
-| `transfer`    | `export_notes` (over an `ExportScope`: the library, a space or a selection), `import_notes`, `share_notes`                                                                                                                                                                         |
-| `desktop`     | `sync_tray`, `unavailable_shortcuts`                                                                                                                                                                                                                                               |
+| Feature       | Commands                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `notes`       | `count_notes_tagged`, `create_note`, `delete_note`, `delete_notes`, `delete_tags`, `empty_trash`, `fill_placeholders`, `get_note`, `list_global_placeholders`, `list_revisions`, `list_tags`, `list_trash`, `move_notes`, `move_notes_back`, `purge_notes`, `query_notes`, `rename_tags`, `restore_notes`, `restore_revision`, `revision_diff`, `seed_samples`, `set_global_placeholders`, `set_placeholder_values`, `tag_notes`, `untag_notes`, `update_note` |
+| `spaces`      | `create_space`, `delete_space`, `list_spaces`, `pin_space`, `rename_space`                                                                                                                                                                                                                                                                                                                                                                                     |
+| `folders`     | `arrange_board`, `board_view`, `create_folder`, `delete_folder`, `file_notes`, `file_notes_back`, `list_folders`, `recolour_folder`, `rename_folder`, `save_board_layout`                                                                                                                                                                                                                                                                                      |
+| `attachments` | `attach_clipboard_image`, `attach_file`, `delete_attachment`, `list_attachments`, `open_attachment`, `read_attachment`, `save_attachment`                                                                                                                                                                                                                                                                                                                      |
+| `transfer`    | `export_is_protected`, `export_notes` (over an `ExportScope`: the library, a space or a selection), `import_notes`, `share_notes`                                                                                                                                                                                                                                                                                                                              |
+| `vault`       | `change_passphrase`, `create_vault`, `unlock_vault`, `vault_state`                                                                                                                                                                                                                                                                                                                                                                                             |
+| `libraries`   | `create_library`, `delete_library`, `list_libraries`, `open_library`, `rename_library`                                                                                                                                                                                                                                                                                                                                                                         |
+| `backup`      | `list_backups`, `restore_backup`                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `recovery`    | `archive_locked_library`, `set_aside_damaged_library`                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `changelog`   | `app_changelog`                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `desktop`     | `set_global_shortcuts`, `set_window_behavior`, `sync_tray`                                                                                                                                                                                                                                                                                                                                                                                                     |
 
 The guarantees the front-end relies on (persisted value returned, `Err` on an unknown id,
 "absent field means unchanged" for patches) are implemented in each feature, and tested there.
@@ -3129,7 +3152,8 @@ installed or shipped alongside the executable. The database file lives in Tauri'
   produced by `diesel print-schema`, which would make `cargo check` depend on an up-to-date
   database sitting outside the repository. What it deliberately does not model — `CHECK`
   constraints, `ON DELETE CASCADE`, and the `NOCASE` collation on `note_tags.tag` — stays in
-  the migration SQL. Diesel obeys those; it does not own them.
+  the migration SQL. Diesel obeys those; it does not own them. Adding a column means editing **both** the migration and this file; `check_for_backend` on
+  `NoteRow` turns a divergence into a compile error.
 - **Concurrency.** A `SqliteConnection` is not `Sync`, and Diesel takes it exclusively for
   every query, reads included. A single connection is shared as `tauri::State<Db>`
   (`Db = Mutex<Option<Library>>`, the connection and the key together), registered with
@@ -3319,7 +3343,7 @@ colour, created_at)` and `notes.folder_id` points into it. ⚠️ The column was
   on `deleted_at IS NULL`. See [The trash](#the-trash-and-undoing-a-deletion) for what that
   costs and buys.
 - **Attachment bytes are not in the database.** The `attachments` table holds a record; the
-  file sits in `app_data_dir()/attachments/`. A base growing by 10 MB per screenshot would
+  file sits in the library's `attachments/`. A base growing by 10 MB per screenshot would
   make every note read slower, for data no query ever looks inside.
 - **`updated_at` is not touched by operations the user did not aim at a note.** Deleting a
   space moves its notes, a global retag rewrites their tags, restoring pulls one back out of
@@ -3384,7 +3408,7 @@ colour, created_at)` and `notes.folder_id` points into it. ⚠️ The column was
 
 ## i18n
 
-UI strings live in `src/app/core/i18n/translations/{fr,en}.json` and render through
+UI strings live in `src/app/core/services/i18n/translations/{fr,en}.json` and render through
 Transloco's `transloco` pipe. French is the fallback locale.
 
 - Translations are `import`ed and bundled at build time rather than fetched over HTTP — a
@@ -3416,6 +3440,21 @@ Transloco's `transloco` pipe. French is the fallback locale.
   needed. It costs one line in the loader, no call site passes a parameter, and a string that
   carries parameters of its own (`{{palette}}`, `{{version}}`) still resolves both. A spec on
   the shipped locale files refuses a string that spells the name out.
+- **A count is an ICU plural, read by a transpiler of our own** (`plural-transpiler.ts`, about
+  sixty lines over `Intl.PluralRules`). ⚠️ Not `@jsverse/transloco-messageformat`: it compiles
+  each message with `new Function`, the CSP is `script-src 'self'`, and the application boots
+  onto an error banner and seeds nothing — which the unit suite cannot see, jsdom having no
+  policy to violate. The grammar is deliberately tiny: `plural`, exact `=N`, the categories
+  `Intl.PluralRules` answers, and `#`; no `select`, no `selectordinal`, no nesting. Plain
+  `{{name}}` stays `DefaultTranspiler`'s, which is what keeps the `{{app}}` sibling key working.
+  `TranslocoService` asks for the transpiler in its own constructor, so the service is resolved
+  on the first render rather than injected. `=0` is written out wherever zero reads badly —
+  French calls zero `one` — and two specs on the shipped files refuse "(s)" and any brace that is
+  neither an interpolation nor a plural.
+- ⚠️ **Transloco replaces an unknown `{{name}}` with the empty string**, so no translated string
+  can carry a snippet's `{{fields}}`: the sample snippet bodies are hard-coded in
+  `core/services/samples/sample-notes.service.ts`, and a guide chapter that names a key receives
+  it as an interpolation parameter.
 - A new string means adding it to **both** locale files.
 - Nothing user-visible is hard-coded in the Rust back-end. A new note is created with an
   empty title and source, and the UI renders translated placeholders — storing
@@ -3442,7 +3481,7 @@ Treated as part of the definition of done, and partly enforced by
   announcing a button would advertise an action that does not exist.
 - **Every modal is a real dialog**: `role="dialog"`, `aria-modal`, `aria-labelledby` and a
   focus trap that confines Tab and restores focus on close. All of it comes from
-  `DialogComponent` (`shared/dialog/`), written once — an accessibility fix here used to be
+  `DialogComponent` (`shared/layout/dialog/`), written once — an accessibility fix here used to be
   a twelve-file change. Written by hand rather than pulling in `@angular/cdk` for it.
 - **The space switcher is a real menu**: `aria-expanded`, `aria-haspopup`, focus moved into
   the menu on open, arrow/Home/End navigation, Escape closing and restoring focus. Creating a
@@ -3454,6 +3493,18 @@ Treated as part of the definition of done, and partly enforced by
   field would be announced as "🔍 Ctrl+K".
 - A `<button>` contains only phrasing content — nested `<div>` is invalid HTML with
   undefined accessibility behaviour.
+- **A control's target is 24×24 of box** (`@include hit-target`), never a bigger glyph: growing
+  the type would be a density change. `min-*` rather than `height`, so a taller control still
+  grows. ⚠️ On a card that box is not free — the card is a fixed 150px and `.card-items` is
+  `overflow: hidden` — so `MAX_VISIBLE_ITEMS` and the "+N autres" badge have to agree with what
+  is drawn, which `07-checklists` measures.
+- **A destructive control looks like one at rest** (`@include destructive`): red text and a
+  hairline, not on `:hover` — a warning that arrives under the pointer plays no part in
+  choosing. Never a solid fill, which beside the single amber accent reads as a second accent,
+  and the pressed state fills with `--bg-3`, since red text on a tint of itself falls under AA.
+- **What the linter cannot see is held elsewhere**: contrast by `scripts/palette.test.mjs`
+  (every colour drawn as text clears 4.5:1 on all four surfaces), a missing `:focus-visible` by
+  `scripts/focus-rings.test.mjs`.
 
 ## Theming
 
@@ -3468,7 +3519,9 @@ Recurring style patterns (unstyled control, card surface, accent state, focus ri
 badge) are SCSS mixins in `src/styles/_mixins.scss`, imported as `@use 'mixins' as *;` —
 resolved via `stylePreprocessorOptions.includePaths` in `angular.json`. Colors needing
 translucency are also exposed as RGB triplets (e.g. `--amber-rgb`, which is the **fill**) so
-`rgba()` never hard-codes a hex value.
+`rgba()` never hard-codes a hex value. ⚠️ The triplets are **comma-separated**: write `rgba(var(--amber-rgb), 0.1)`, never
+`rgb(var(--amber-rgb) / 10%)` — the slash over commas is invalid, and the browser drops the whole
+declaration without a word.
 
 **Three sweeps read the shipped files**, all `node --test` rather than `*.spec.ts` because the
 Angular builder compiles its specs for a browser, where `node:fs` does not exist:
@@ -3506,6 +3559,14 @@ is where a warm hue lands at 4.5:1 on white, and which read as mustard.
 `--amber-dim` is the softer hairline a hover draws, and `--amber-ink` the text laid on the
 fill; with the same fill in both themes there is one of each. `scripts/palette.test.mjs` holds
 each of the three to its own bar, in both themes, and fails if the fill is ever declared twice.
+
+**Two badge mixins, with opposite trades.** A tint moves the background toward the colour it is
+made of, so a hue drawn on a tint of itself loses about a point of contrast. `tint-badge` keeps
+the tinted fill and makes the label neutral — for a **state**: active, pinned, expiring.
+`hue-badge` keeps the hue in the label and goes neutral behind it — for a badge whose **hue is
+the information**, as on a language badge — and carries a hairline in the hue, because `--bg-3`
+sits at 1.1:1 against the light theme's surfaces and a neutral fill alone left bare text there.
+`palette.test.mjs` measures the composite a badge is drawn on, not only the plain surface.
 
 **Density.** `:root[data-density='compact']` tightens four variables — `--space-card`,
 `--space-grid`, `--space-section`, `--space-canvas` — and nothing else. Typography is
@@ -3960,7 +4021,7 @@ never sees `window.wdioTauri` and hangs before opening a session; with the polyf
 crates the front end invokes `plugin:wdio|…` commands nothing answers, and the error banner
 comes up on launch.
 
-#### One application, fifteen spec files
+#### One application, every spec file
 
 **⚠️ `driverProvider: 'embedded'`, and that decides the shape of every scenario.** The
 WebDriver server lives _inside_ the application, reached through
@@ -3999,7 +4060,7 @@ The numeric prefix on each file is therefore load-bearing: it is the run order.
 that resolves the seeded space — `homeSpaceId()` records it while exactly one exists and writes
 it to a marker file, because WebdriverIO gives each spec file its own worker process and a
 module-level cache would be empty again in the next one. ⚠️ It cannot be `listSpaces()[0]`:
-`list_spaces` orders pinned first and then by `name COLLATE NOCASE`, so after another file
+`list_spaces` orders pinned first and then by name, case aside — in Rust, the names being sealed — so after another file
 creates `Ops` — or pins anything — the first row is no longer the seeded space.
 
 **⚠️ There is no restart, and no spec may claim one.** `reopenSession()` is a
@@ -4042,6 +4103,15 @@ Three things the embedded WebDriver server will not do, each with a helper in `s
   locale.
 - **Implicit form submission.** Enter in a text input submits its form natively, and the
   browser reserves that for real user input. `submitFormOf()` calls `requestSubmit()`.
+
+**A scenario waits on a condition, never on a duration.** `eventually(read, matches, what)` in
+`support/app.ts` hands the value back, so the assertion reads what it waited for. A
+`browser.pause` before an `expect` is a guess at a round trip on a runner sharing a CPU with a
+WebView, and it is how one scenario went red on Windows and green on a re-run of the same commit.
+The one exception is an assertion that nothing happened, which no condition can wait on: those
+keep their pause, with a comment above it saying the wait is `deliberately` one.
+`scripts/e2e-waits.test.mjs` holds that: it fails on a `browser.pause` followed within four
+lines by a read or an assertion, unless that comment is there.
 
 **What the suite deliberately does not cover**, because a WebView cannot reach it. In each
 case the control is asserted on — it exists, it is labelled — and never clicked:
