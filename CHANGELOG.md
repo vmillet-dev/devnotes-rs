@@ -12,6 +12,35 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [0.5.1] - 2026-09-24
+
+### 🔧 Changed
+
+- Let the gate be read and filled, and take the dead controls off the titlebar (#416)
+- Raise the passphrase floor to twelve (#414)
+
+### 🐛 Fixed
+
+- Carry the attachments in the launch copy, unless told not to (#413)
+- Write what is still behind a debounce before quitting (#412)
+- Name a library that lost its key file, and bound the cost it asks for (#409)
+- Seal, measure and bound what an import brings in (#407)
+
+### 🔒 Security
+
+- Say what a stolen file gives away, and what the heap holds (#415)
+- Say what keeps attach_file harmless, where it will be read (#410)
+
+### 🧰 Under the hood
+
+- Bump the version to 0.5.1 (#427)
+- Keep the docs a description of the code, not its history (#426)
+- Make the Compact e2e step assert the library rail every time (#425)
+- Put autocomplete back to off on the passphrase fields (#424)
+- Take QuitGuard back out (#423)
+- Hard-link the attachments into the launch copy (#418)
+- Let Compact reach the topbar, the library rail and the dialogs (#411)
+
 ## [0.5.0] - 2026-09-24
 
 ### ✨ Added
