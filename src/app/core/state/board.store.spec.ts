@@ -465,6 +465,31 @@ describe('BoardStore', () => {
       expect(await harness.store.createZone('   ', { x: 0, y: 0, width: 400, height: 300 })).toBe(false);
       expect(await harness.folders.loadAll('sql')).toHaveLength(0);
     });
+
+    it('holds a drawn band until it is named, then files it where it was drawn', async () => {
+      const harness = await createStore();
+      await onBoard(harness);
+      const frame = { x: 700, y: 120, width: 400, height: 300 };
+
+      harness.store.proposeZone(frame);
+      expect(harness.store.pendingZone()).toEqual(frame);
+
+      expect(await harness.store.namePendingZone('Reporting')).toBe(true);
+      expect(harness.store.pendingZone()).toBeNull();
+      expect((await harness.folders.loadAll('sql'))[0]?.name).toBe('Reporting');
+    });
+
+    it('forgets a band dismissed without a name', async () => {
+      const harness = await createStore();
+      await onBoard(harness);
+
+      harness.store.proposeZone({ x: 0, y: 0, width: 400, height: 300 });
+      harness.store.dismissZone();
+
+      expect(harness.store.pendingZone()).toBeNull();
+      expect(await harness.store.namePendingZone('Reporting')).toBe(false);
+      expect(await harness.folders.loadAll('sql')).toHaveLength(0);
+    });
   });
 
   describe('tidying up', () => {

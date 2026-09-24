@@ -1,0 +1,113 @@
+@use 'mixins' as *;
+
+:host {
+  display: contents;
+}
+
+// ⚠️ **One row, and it does not wrap.** It used to, and the wrap was never an edge case: at
+// the shipped 1100px window with the library rail open it wrapped on first launch, pushing
+// the primary action onto a second line and squeezing the search below its own placeholder.
+// The search is what gives way instead — it is the only thing here that can be narrow and
+// still be itself — and an e2e scenario measures the row at that width.
+.topbar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--line-soft);
+  flex-shrink: 0;
+  // ⚠️ Without this a flex child's content width wins and the row overflows anyway.
+  min-width: 0;
+}
+
+// First in the row, where the space switcher used to be: the rail is what replaced it.
+.rail-toggle {
+  @include unstyled-control;
+  @include surface(var(--bg-2), 8px);
+  cursor: pointer;
+}
+
+.rail-toggle[aria-pressed='true'] {
+  color: var(--amber-text);
+}
+
+.rail-toggle:hover {
+  border-color: var(--amber-dim);
+  color: var(--text-0);
+}
+
+.rail-toggle:focus-visible {
+  outline: 2px solid var(--amber-edge);
+  outline-offset: 2px;
+}
+
+// ⚠️ Icon-only, and beside the rail toggle: it is a **view** on the notes rather than a
+// filter, so it left the filter chips it was never a member of — and it used to sit six
+// pixels from the primary action. Its name is on the tooltip and on the accessible label.
+.trash-btn {
+  all: unset;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  background: var(--bg-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.trash-btn:hover {
+  border-color: var(--amber-dim);
+  color: var(--text-0);
+}
+
+.trash-btn:focus-visible {
+  outline: 2px solid var(--amber-edge);
+  outline-offset: 2px;
+}
+
+// ⚠️ The disclosure that replaced two permanent bands. Amber while it is holding a facet,
+// and refusing to fold then — see the template.
+.facets-toggle {
+  @include unstyled-control;
+  @include hit-target;
+  @include surface(var(--bg-2), 7px);
+  @include focus-ring;
+  @include eases(background, border-color, color);
+  flex-shrink: 0;
+  gap: 4px;
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    @include accent-state;
+  }
+
+  &.on {
+    @include accent-state;
+  }
+
+  // Not hidden and not greyed out: a control that vanishes while it is doing something
+  // reads as a bug, and this one is refusing to hide what is filtering.
+  &:disabled {
+    cursor: default;
+  }
+}
+
+// ⚠️ One box for the three icon buttons, as tall as the row around them: they were 24, 28
+// and 30 px of three different glyph sizes, and the icon was the smallest thing in each.
+.rail-toggle,
+.trash-btn,
+.facets-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0 7px;
+  color: var(--text-1);
+}
+
+.facets-count {
+  font-family: var(--font-mono), serif;
+  font-size: 10px;
+}

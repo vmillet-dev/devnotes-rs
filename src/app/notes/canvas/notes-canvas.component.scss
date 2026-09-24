@@ -1,0 +1,83 @@
+@use 'mixins' as *;
+
+:host {
+  display: contents;
+}
+
+// The address on screen, whichever of the two views is filling it.
+// ⚠️ Relative, because the selection bar floats over it rather than being inserted above.
+.canvas-region {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+// ⚠️ It used to be a band in the flow, and ticking a card pushed everything below it down
+// 85px — the canvas jumped on every tick. Floating costs the canvas nothing and moves
+// nothing; the lift is what says it is above the surface rather than part of it.
+.floating-selection {
+  position: absolute;
+  z-index: 5;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  box-shadow: var(--shadow-dropdown);
+  border-radius: 10px;
+}
+
+.canvas {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-canvas);
+}
+
+.canvas-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.canvas-state-text {
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.canvas-state-detail {
+  font-family: var(--font-mono), serif;
+  font-size: 11px;
+  color: var(--text-2);
+  word-break: break-word;
+}
+
+.canvas-retry {
+  @include unstyled-control;
+  @include surface(var(--bg-2), 7px);
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-1);
+
+  &:hover {
+    @include accent-state;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--amber-edge);
+    outline-offset: 2px;
+  }
+}
+
+// On the bottom edge, whatever is above it and however much of it there is.
+.keyboard-hint {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 7px 24px;
+  border-top: 1px solid var(--line-soft);
+  font-size: 10.5px;
+  color: var(--text-2);
+  text-align: center;
+}

@@ -399,6 +399,28 @@ export class BoardStore {
     });
   }
 
+  private readonly _pendingZone = signal<BoardFrame | null>(null);
+  /** Where a band was drawn, held until it has been given a name. */
+  readonly pendingZone = this._pendingZone.asReadonly();
+
+  proposeZone(frame: BoardFrame): void {
+    this._pendingZone.set(frame);
+  }
+
+  dismissZone(): void {
+    this._pendingZone.set(null);
+  }
+
+  /** Names the band drawn last: a folder, placed where it was drawn. */
+  async namePendingZone(name: string): Promise<boolean> {
+    const frame = this._pendingZone();
+    this._pendingZone.set(null);
+    if (!frame || !(await this.createZone(name, frame))) return false;
+
+    this.openFolder.reload();
+    return true;
+  }
+
   /** Drawing a band on empty canvas creates a folder, placed where it was drawn. */
   async createZone(name: string, frame: BoardFrame): Promise<boolean> {
     const trimmed = name.trim();

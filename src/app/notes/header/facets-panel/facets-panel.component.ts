@@ -12,7 +12,7 @@ import { TagRailComponent } from '@notes/header/tag-rail/tag-rail.component';
  * are **facets**: worth reaching, not worth a band each.
  *
  * ⚠️ Its trigger lives in the topbar and not here: the two sit in different rows, and a
- * component cannot be in two places. `notes-page` owns the disclosure state for that
+ * component cannot be in two places. `notes-header` owns the disclosure state for that
  * reason, and forces it open whenever a facet is selected — a filter you cannot see is a
  * filter you cannot undo.
  */

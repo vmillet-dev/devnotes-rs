@@ -1,0 +1,78 @@
+<!-- The id comes from the store and never from an editor emission: it may be a draft
+     with no row yet, which the editor does not tell apart. -->
+@if (store.selectedNote(); as note) {
+  <app-note-editor-overlay [note]="note" [session]="store.editorSession()" />
+}
+
+@if (attachments.zoomed() && attachments.previewed(); as attachment) {
+  @if (attachments.previewData(); as data) {
+    <app-image-lightbox [source]="data" [fileName]="attachment.fileName" (closed)="attachments.closeZoom()" />
+  }
+}
+
+@if (palette.isOpen()) {
+  <!-- The fields form sits **in front of** the palette, which stays underneath. -->
+  @if (palette.pendingFill(); as note) {
+    <app-placeholder-form
+      [placeholders]="note.placeholders"
+      (submitted)="fill.submitForPalette($event)"
+      (rawRequested)="palette.copyAndDismiss(note.content, note.title)"
+      (cancelled)="palette.cancelFill()"
+    />
+  }
+  <app-quick-palette
+    [query]="palette.query()"
+    [results]="palette.results()"
+    [highlighted]="palette.highlighted()"
+    (queryChanged)="palette.setQuery($event)"
+    (highlightMoved)="palette.moveHighlight($event)"
+    (highlightSet)="palette.highlight($event)"
+    [canCreate]="palette.canCreate()"
+    (chosen)="onPaletteChosen()"
+    (openRequested)="onPaletteOpen($event)"
+    (closed)="palette.close()"
+  />
+}
+
+@if (fill.target()) {
+  <app-placeholder-form
+    [placeholders]="fill.placeholders()"
+    (submitted)="fill.submit($event)"
+    (rawRequested)="fill.copyRaw()"
+    (cancelled)="fill.cancel()"
+  />
+}
+
+@if (trash.isOpen()) {
+  <app-trash-panel
+    [notes]="trash.notes()"
+    [isLoading]="trash.isLoading()"
+    (closed)="trash.close()"
+    (restoreRequested)="onRestore($event)"
+    (purgeRequested)="trash.purge($event)"
+    (emptyRequested)="trash.emptyTrash()"
+  />
+}
+
+@if (tags.isOpen()) {
+  <app-tag-manager
+    [tags]="tags.tags()"
+    [selected]="tags.selected()"
+    [isLoading]="tags.isLoading()"
+    [pending]="tags.pending()"
+    (closed)="tags.close()"
+    (toggled)="tags.toggle($event)"
+    (renameRequested)="onRenameTag($event)"
+    (deleteRequested)="onDeleteTags()"
+    (confirmed)="tags.confirm()"
+    (cancelled)="tags.cancel()"
+  />
+}
+
+@if (board.pendingZone()) {
+  <app-folder-name-prompt (submitted)="board.namePendingZone($event)" (cancelled)="board.dismissZone()" />
+}
+
+@if (undo.banner(); as action) {
+  <app-undo-bar [action]="action" (undone)="undo.revert()" (dismissed)="undo.dismiss()" />
+}
