@@ -51,6 +51,10 @@ What is sealed on disk: note titles, bodies and sources, checklist items, space 
 | **Encryption**     | AES-256-GCM, a fresh nonce per write; the authentication tag refuses a tampered value rather than decrypting it into nonsense                                                                                          |
 | **Not sealed**     | tags, dates, ids and the links between rows — what the database filters, sorts and joins on. Sealing them would mean loading the whole library to answer a query, and tag names are the visible cost of that trade     |
 
+A passphrase is at least **twelve characters**, and that is what the protection rests on:
+Argon2id makes each guess slow, but only the length makes the guesses many. Several unrelated
+words hold far better than one clever word with a digit in it.
+
 ⚠️ **There is no recovery.** No account, no escrow, no reset: a lost passphrase is a lost
 library. An export written in the clear is the only copy that does not depend on it.
 

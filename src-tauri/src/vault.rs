@@ -21,8 +21,9 @@ use crate::db::{self, Db};
 use crate::error::{AppError, FileContext, StorageError, ValidationError};
 use key::Cost;
 
-/// Short enough to be typed at every launch, long enough to be worth deriving from.
-const MINIMUM_LENGTH: usize = 8;
+/// In characters. A human-chosen eight carries 25–30 bits, which Argon2id at 64 MiB stretches
+/// to days on one GPU, not years. `u32` because it crosses as `MINIMUM_PASSPHRASE_LENGTH`.
+pub(crate) const MINIMUM_LENGTH: u32 = 12;
 
 /// Wipes a passphrase when the command returns, a panic included. It arrives owned from the
 /// IPC payload, so the command holds the last copy, and freed memory ends up in crash dumps.
@@ -196,13 +197,18 @@ fn install(directory: &Path, db: &Db, vault: key::Vault) -> Result<(), StorageEr
     Ok(())
 }
 
+/// An export written in the clear has no phrase to hold to anything.
+pub(crate) fn validate_protection(passphrase: Option<&str>) -> Result<(), ValidationError> {
+    passphrase.map_or(Ok(()), validate)
+}
+
 /// A length and nothing else: rules about digits and symbols push people towards one
-/// memorable pattern, and Argon2id carries the cost of guessing.
+/// memorable pattern.
 fn validate(passphrase: &str) -> Result<(), ValidationError> {
-    if passphrase.chars().count() < MINIMUM_LENGTH {
+    if passphrase.chars().count() < MINIMUM_LENGTH as usize {
         return Err(ValidationError::new(
             "passphrase",
-            "a passphrase of at least 8 characters",
+            format!("a passphrase of at least {MINIMUM_LENGTH} characters"),
         ));
     }
 
@@ -276,6 +282,14 @@ mod tests {
         close(&db);
     }
 
+    /// An export is the one file meant to travel, so its phrase meets the same floor.
+    #[test]
+    fn an_export_phrase_meets_the_floor_and_no_phrase_is_no_protection() {
+        assert!(validate_protection(Some("eleven char")).is_err());
+        assert!(validate_protection(Some("twelve chars")).is_ok());
+        assert!(validate_protection(None).is_ok());
+    }
+
     #[test]
     fn a_changed_phrase_opens_the_library_and_the_old_one_no_longer_does() {
         let scratch = tempfile::tempdir().unwrap();
@@ -339,13 +353,14 @@ mod tests {
 
     #[test]
     fn a_passphrase_of_the_minimum_length_is_accepted() {
-        assert!(validate("12345678").is_ok());
+        assert!(validate("123456789012").is_ok());
+        assert!(validate("12345678901").is_err());
     }
 
-    /// "clé-privée" is ten characters and twelve bytes: a byte count would let an accent pass.
+    /// Six accented letters are twelve bytes: a byte count would let them pass.
     #[test]
     fn the_length_is_counted_in_characters() {
-        assert!(validate("éàèùçâêîô").is_ok());
-        assert!(validate("éàèùç").is_err());
+        assert!(validate("éàèùçâêîôûëï").is_ok());
+        assert!(validate("éàèùçâ").is_err());
     }
 }

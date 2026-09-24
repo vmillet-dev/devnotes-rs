@@ -2858,6 +2858,25 @@ case on its own, a command being reachable from more than the gate.
 1 GiB, 16 passes, 16 lanes). It is the one input an attacker can write, and read unbounded it is
 a multi-gigabyte allocation or an hour of hashing at every unlock.
 
+### The floor
+
+**Twelve characters, for a phrase being chosen.** `vault::MINIMUM_LENGTH` crosses as
+`MINIMUM_PASSPHRASE_LENGTH`, and `vault::validate` holds it in Rust for a new library, a
+changed phrase and a protected export — the export being the one file meant to travel, it faces
+the same offline guessing. A length and nothing else: composition rules push people towards one
+memorable pattern, and a strength meter is a dependency and a chunk of bundle.
+
+**Not at unlock.** The gate and the import prompt check nothing but emptiness: a wrong phrase
+is the key file's to refuse whatever its length, and a length hint on a phrase the user already
+has is noise.
+
+⚠️ **Raising the floor did not raise `Cost`.** Argon2id makes each guess expensive; only the length
+makes the guesses many, and only the second grows exponentially. At 64 MiB a GPU runs about
+VRAM ÷ 64 MiB guesses in parallel — on the order of a thousand a second on one consumer card, an
+estimate from memory bandwidth rather than a measurement — against the 25–30 bits a human-chosen
+eight characters really carries: days, not years. The parameters travel in the key file so that
+they can be raised later; re-keying is a different job.
+
 ### Changing the passphrase
 
 `change_passphrase` (from Préférences → Sécurité) unlocks with the current phrase, then

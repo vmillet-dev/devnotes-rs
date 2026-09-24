@@ -232,6 +232,8 @@ export const FIELD_NAME_PATTERN = "^[A-Za-z0-9_-]+$" as const;
 
 export const GLOBAL_ACTION_EVENT = "devnotes:action" as const;
 
+export const MINIMUM_PASSPHRASE_LENGTH = 12 as const;
+
 export const PREFERENCES_FILE = "preferences.json" as const;
 
 /* Types */

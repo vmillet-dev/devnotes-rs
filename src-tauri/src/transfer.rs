@@ -26,6 +26,7 @@ pub fn export_notes(
 ) -> Result<ExportReport, AppError> {
     let passphrase = secret(passphrase);
     model::validate_path(&path)?;
+    crate::vault::validate_protection(passphrase.as_deref())?;
 
     let mut connection = lock(&db)?;
     let exported = bundle::of(&mut connection, &scope)?;
