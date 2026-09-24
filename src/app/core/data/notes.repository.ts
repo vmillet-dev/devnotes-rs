@@ -134,12 +134,9 @@ export class NotesRepository {
     return unwrap('list_tags', await commands.listTags());
   }
 
-  async renameTag(tag: string, into: string): Promise<number> {
-    return unwrap('rename_tag', await commands.renameTag(tag, into));
-  }
-
-  async mergeTags(tags: readonly string[], into: string): Promise<number> {
-    return unwrap('merge_tags', await commands.mergeTags([...tags], into));
+  /** One tag or several: renaming onto an existing tag is a merge anyway. */
+  async renameTags(tags: readonly string[], into: string): Promise<number> {
+    return unwrap('rename_tags', await commands.renameTags([...tags], into));
   }
 
   async deleteTags(tags: readonly string[]): Promise<number> {

@@ -59,9 +59,11 @@ export const commands = {
 	/**  What a corpus-wide tag action is about to touch, asked before it runs. */
 	countNotesTagged: (tags: string[]) => typedError<number, AppError>(__TAURI_INVOKE("count_notes_tagged", { tags })),
 	listTags: () => typedError<TagUsage[], AppError>(__TAURI_INVOKE("list_tags")),
-	/**  Renaming onto an existing tag is a merge: a note cannot carry one twice. */
-	renameTag: (tag: string, into: string) => typedError<number, AppError>(__TAURI_INVOKE("rename_tag", { tag, into })),
-	mergeTags: (tags: string[], into: string) => typedError<number, AppError>(__TAURI_INVOKE("merge_tags", { tags, into })),
+	/**
+	 *  Renames one tag or merges several: renaming onto an existing tag is a merge anyway,
+	 *  since a note cannot carry one twice.
+	 */
+	renameTags: (tags: string[], into: string) => typedError<number, AppError>(__TAURI_INVOKE("rename_tags", { tags, into })),
 	/**  A list rather than one tag at a time: one round trip per tag is one lock per tag. */
 	deleteTags: (tags: string[]) => typedError<number, AppError>(__TAURI_INVOKE("delete_tags", { tags })),
 	/**

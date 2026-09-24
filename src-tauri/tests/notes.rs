@@ -1291,9 +1291,9 @@ fn the_blast_radius_counts_a_note_carrying_two_of_the_tags_once() {
     assert_eq!(counted, 1);
 }
 
-/// A trashed note is not part of any blast radius: it is not in the corpus any more.
+/// A rename reaches the trash too, so the count that announces it has to.
 #[test]
-fn the_blast_radius_leaves_out_what_is_in_the_trash() {
+fn the_blast_radius_counts_what_is_in_the_trash() {
     let mut connection = open_in_memory().unwrap();
     let space_id = space(&mut connection, "Personal");
     let note = create(&mut connection, draft(&space_id), t0()).unwrap();
@@ -1302,8 +1302,49 @@ fn the_blast_radius_leaves_out_what_is_in_the_trash() {
 
     assert_eq!(
         count_notes_tagged(&mut connection, &["auth".to_string()]).unwrap(),
-        1
+        2
     );
+}
+
+#[test]
+fn the_count_confirmed_is_the_count_renamed() {
+    let mut connection = open_in_memory().unwrap();
+    let space_id = space(&mut connection, "Personal");
+    let thrown = create(&mut connection, draft(&space_id), t0()).unwrap();
+    create(&mut connection, draft(&space_id), t0()).unwrap();
+    trash(&mut connection, &thrown.id, t1()).unwrap();
+    let tags = ["api".to_string(), "auth".to_string()];
+
+    let confirmed = count_notes_tagged(&mut connection, &tags).unwrap();
+
+    assert_eq!(retag(&mut connection, &tags, "backend").unwrap(), confirmed);
+}
+
+#[test]
+fn the_count_confirmed_is_the_count_deleted() {
+    let mut connection = open_in_memory().unwrap();
+    let space_id = space(&mut connection, "Personal");
+    let thrown = create(&mut connection, draft(&space_id), t0()).unwrap();
+    create(&mut connection, draft(&space_id), t0()).unwrap();
+    trash(&mut connection, &thrown.id, t1()).unwrap();
+    let tags = ["api".to_string(), "auth".to_string()];
+
+    let confirmed = count_notes_tagged(&mut connection, &tags).unwrap();
+
+    assert_eq!(drop_tags(&mut connection, &tags).unwrap(), confirmed);
+}
+
+#[test]
+fn a_note_restored_after_a_rename_comes_back_under_the_new_name() {
+    let mut connection = open_in_memory().unwrap();
+    let space_id = space(&mut connection, "Personal");
+    let thrown = create(&mut connection, draft(&space_id), t0()).unwrap();
+    trash(&mut connection, &thrown.id, t1()).unwrap();
+
+    retag(&mut connection, &["auth".to_string()], "identity").unwrap();
+    restore_many(&mut connection, std::slice::from_ref(&thrown.id)).unwrap();
+
+    assert_eq!(list(&mut connection).unwrap()[0].tags, ["api", "identity"]);
 }
 
 #[test]

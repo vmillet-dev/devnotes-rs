@@ -724,14 +724,7 @@ pub fn count_notes_tagged(
         return Ok(0);
     }
 
-    let counted: i64 = note_tags::table
-        .inner_join(notes::table)
-        .filter(note_tags::tag.eq_any(tags))
-        .filter(notes::deleted_at.is_null())
-        .select(diesel::dsl::count(note_tags::note_id).aggregate_distinct())
-        .first(connection.db())?;
-
-    Ok(usize::try_from(counted).unwrap_or(0))
+    carrying(connection.db(), tags)
 }
 
 pub fn tag_usage(connection: &mut Library) -> Result<Vec<(String, i64)>, StorageError> {
@@ -791,15 +784,30 @@ pub fn retag(
     })
 }
 
+/// Answers the number of notes, like the confirmation that preceded it — not the number of
+/// rows, which counts a note carrying two of the tags twice.
 pub fn drop_tags(connection: &mut Library, tags: &[String]) -> Result<usize, StorageError> {
     if tags.is_empty() {
         return Ok(0);
     }
 
-    Ok(
-        diesel::delete(note_tags::table.filter(note_tags::tag.eq_any(tags)))
-            .execute(connection.db())?,
-    )
+    connection.transaction(|connection, _vault| {
+        let holders = carrying(connection, tags)?;
+        diesel::delete(note_tags::table.filter(note_tags::tag.eq_any(tags))).execute(connection)?;
+
+        Ok(holders)
+    })
+}
+
+/// ⚠️ Trashed notes included, in all three tag operations: a note restored after a rename
+/// must come back under the name the rail shows.
+fn carrying(connection: &mut SqliteConnection, tags: &[String]) -> Result<usize, StorageError> {
+    let counted: i64 = note_tags::table
+        .filter(note_tags::tag.eq_any(tags))
+        .select(diesel::dsl::count(note_tags::note_id).aggregate_distinct())
+        .first(connection)?;
+
+    Ok(usize::try_from(counted).unwrap_or(0))
 }
 
 /// Export only: no command hands this list to the front, which would re-filter it.

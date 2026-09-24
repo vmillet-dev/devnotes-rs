@@ -340,6 +340,15 @@ pub fn validated_tag(raw: &str) -> Result<String, crate::error::ValidationError>
         .ok_or_else(|| crate::error::ValidationError::new("tag", "a tag must have a readable name"))
 }
 
+/// A rename's two halves, brought to the rules every tag write applies: the sources
+/// normalised, the target refused when nothing readable is left of it.
+pub fn retagging(
+    sources: &[String],
+    into: &str,
+) -> Result<(Vec<String>, String), crate::error::ValidationError> {
+    Ok((normalize_tags(sources), validated_tag(into)?))
+}
+
 pub fn normalize_tag(tag: &str) -> Option<&str> {
     let cleaned = tag.trim().trim_start_matches('#').trim();
 
@@ -376,6 +385,16 @@ mod tests {
     use crate::notes::fixtures::note as sample;
 
     const NOW: &str = "2026-07-25T09:00:00.000Z";
+
+    #[test]
+    fn a_rename_normalises_its_sources_and_refuses_a_blank_target() {
+        let (sources, target) =
+            retagging(&["#Auth".to_string(), "auth".to_string()], " #identity ").unwrap();
+
+        assert_eq!(sources, ["Auth"]);
+        assert_eq!(target, "identity");
+        assert_eq!(retagging(&sources, " # ").unwrap_err().field, "tag");
+    }
 
     fn at(iso: &str) -> DateTime<Utc> {
         crate::db::iso8601::parse(iso).unwrap()
