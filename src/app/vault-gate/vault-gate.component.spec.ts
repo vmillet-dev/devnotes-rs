@@ -132,8 +132,7 @@ describe('VaultGateComponent', () => {
      * Said before the round trip: deriving takes 224 ms, and answering "too short"
      * after it reads as the application thinking about it.
      */
-    /** A library created under the older floor of eight must still open: Rust warns, it never refuses. */
-    it('hands over a phrase shorter than the floor for a new one', async () => {
+    it('leaves a phrase typed to unlock to the key file, whatever its length', async () => {
       await type('vault-passphrase', 'eight ch');
 
       expect(problem()).toBe('');

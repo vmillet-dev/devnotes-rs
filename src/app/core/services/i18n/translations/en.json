@@ -673,7 +673,6 @@
     "passphrase": "Passphrase",
     "confirmation": "Confirmation",
     "tooShort": "At least {{length}} characters.",
-    "belowMinimum": "This library's passphrase is shorter than {{length}} characters. It still opens it — change it in File → Preferences → Security.",
     "mismatched": "The two entries differ.",
     "createAction": "Protect and continue",
     "unlockAction": "Unlock",

@@ -53,8 +53,7 @@ What is sealed on disk: note titles, bodies and sources, checklist items, space 
 
 A passphrase is at least **twelve characters**, and that is what the protection rests on:
 Argon2id makes each guess slow, but only the length makes the guesses many. Several unrelated
-words hold far better than one clever word with a digit in it. A library created when the floor
-was eight still opens, and says so at every launch until you change its phrase.
+words hold far better than one clever word with a digit in it.
 
 ⚠️ **There is no recovery.** No account, no escrow, no reset: a lost passphrase is a lost
 library. An export written in the clear is the only copy that does not depend on it.

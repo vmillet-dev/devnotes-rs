@@ -50,7 +50,7 @@ export class VaultGateComponent {
 
   protected readonly isCreating = computed(() => this.vault.needsCreating());
 
-  /** ⚠️ Only for a phrase being chosen: one set under an older, lower floor still has to be typed here. */
+  /** Not while unlocking: a wrong phrase is the key file's to refuse, whatever its length. */
   protected readonly tooShort = computed(
     () =>
       this.isCreating() &&

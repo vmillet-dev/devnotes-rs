@@ -122,8 +122,6 @@ pub fn unlock_vault(passphrase: String, app: AppHandle, db: State<'_, Db>) -> Re
     Ok(())
 }
 
-/// ⚠️ No floor here: a phrase chosen under an older, lower one still opens, and refusing it
-/// would lock someone out of their own notes. The front end says so instead.
 fn unlock(passphrase: &str, directory: &Path, db: &Db) -> Result<(), StorageError> {
     let vault = file::unlock(directory, passphrase)?;
 
@@ -281,21 +279,6 @@ mod tests {
         unlock("a passphrase", &directory, &db).unwrap();
         assert!(db.lock().unwrap().is_some());
 
-        close(&db);
-    }
-
-    /// Chosen when the floor was eight: refusing it would lock the library for good.
-    #[test]
-    fn a_phrase_under_the_floor_still_opens() {
-        let scratch = tempfile::tempdir().unwrap();
-        let directory = scratch.path().to_path_buf();
-        let db: Db = std::sync::Mutex::new(None);
-        create("eight ch", &directory, &db, Cost::FOR_TESTS).unwrap();
-        close(&db);
-
-        unlock("eight ch", &directory, &db).unwrap();
-
-        assert!(db.lock().unwrap().is_some());
         close(&db);
     }
 
