@@ -6,13 +6,30 @@ import { CodeViewerComponent } from '@notes/ui/code-viewer/code-viewer.component
 import { LifecycleBadgeComponent } from './lifecycle-badge/lifecycle-badge.component';
 import { TagPillComponent } from '@notes/ui/tag-pill/tag-pill.component';
 import { LANGUAGE_LABELS } from '@core/model/language.model';
+import { Folder } from '@core/model/folder.model';
 import { NotePatch } from '@core/model/note.model';
+import { Space } from '@core/model/space.model';
 import { AttachmentsStore } from '@core/state/attachments.store';
 import { NotesStore } from '@core/state/notes.store';
 import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
 import { createNote } from '@testing/note.fixture';
 import { provideAppTesting } from '@testing/testing.providers';
 import { NoteEditorOverlayComponent } from './note-editor-overlay.component';
+
+const SPACES: readonly Space[] = [
+  { id: 'space-1', name: 'Perso', pinned: false },
+  { id: 'work', name: 'Work', pinned: false },
+];
+
+const FOLDERS: readonly Folder[] = [
+  {
+    id: 'perf',
+    spaceId: 'space-1',
+    name: 'Perf',
+    colour: 'amber',
+    createdAt: new Date('2026-01-01T10:00:00Z'),
+  },
+];
 
 describe('NoteEditorOverlayComponent', () => {
   let fixture: ComponentFixture<NoteEditorOverlayComponent>;
@@ -25,11 +42,12 @@ describe('NoteEditorOverlayComponent', () => {
     patches: ((patch: NotePatch) => void)[];
     closes: number;
     deletions: number;
+    filings: (string | null)[];
     values: Record<string, string>[];
   };
 
   function listenToTheStore(): void {
-    asked = { patches: [], closes: 0, deletions: 0, values: [] };
+    asked = { patches: [], closes: 0, deletions: 0, filings: [], values: [] };
     const store = TestBed.inject(NotesStore);
     vi.spyOn(store, 'applyPatch').mockImplementation(async (_id, patch) => {
       for (const listener of asked.patches) listener(patch);
@@ -39,6 +57,9 @@ describe('NoteEditorOverlayComponent', () => {
     });
     vi.spyOn(store, 'deleteNote').mockImplementation(async () => {
       asked.deletions += 1;
+    });
+    vi.spyOn(store, 'fileNote').mockImplementation(async (_id, folderId) => {
+      asked.filings.push(folderId);
     });
     vi.spyOn(store, 'setPlaceholderValues').mockImplementation(async (_id, values) => {
       asked.values.push(values);
@@ -110,7 +131,7 @@ describe('NoteEditorOverlayComponent', () => {
 
     TestBed.configureTestingModule({
       imports: [NoteEditorOverlayComponent],
-      providers: [provideAppTesting()],
+      providers: [provideAppTesting({ spaces: SPACES, folders: FOLDERS })],
     });
     listenToTheStore();
     createOverlay();
@@ -534,6 +555,43 @@ describe('NoteEditorOverlayComponent', () => {
       await fixture.whenStable();
 
       expect(emitted).toEqual(['json']);
+    });
+  });
+
+  describe('placement', () => {
+    /** Opens one of the two placement menus and picks an option once the store has it. */
+    async function pick(kind: 'space' | 'folder', id: string): Promise<void> {
+      fixture.nativeElement.querySelector(`[data-testid="choice-${kind}"]`).click();
+      await fixture.whenStable();
+      const option = await vi.waitFor(() => {
+        const found = fixture.nativeElement.querySelector(
+          `[data-testid="choice-panel-${kind}"] [data-option-id="${id}"]`,
+        );
+        if (!found) throw new Error(`no option ${id} yet`);
+        return found as HTMLElement;
+      });
+      option.click();
+      await fixture.whenStable();
+    }
+
+    it('moves the note to the space picked', async () => {
+      fixture.componentRef.setInput('note', createNote());
+      await fixture.whenStable();
+      const emitted = patched('spaceId');
+
+      await pick('space', 'work');
+
+      expect(emitted).toEqual(['work']);
+    });
+
+    /** ⚠️ Not a patch: filing answers what it changed, which the undo needs. */
+    it('files the note into the folder picked, among those of its space', async () => {
+      fixture.componentRef.setInput('note', createNote());
+      await fixture.whenStable();
+
+      await pick('folder', 'perf');
+
+      expect(asked.filings).toEqual(['perf']);
     });
   });
 
