@@ -12,6 +12,65 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [0.5.0] - 2026-09-24
+
+### ✨ Added
+
+- Record who holds the lock, and keep the one there is (#403)
+- Send previews in the lists, and read a note whole by id (#402)
+- Read a filtered query's side tables for the notes it fetched (#398)
+- Do the write paths' work once, in SQL where it can be (#395)
+- Let an open library carry its directory (#386)
+
+### 🔧 Changed
+
+- Rename tags with one command, and count the trash the way it is touched (#388)
+- Give a refused library operation a code of its own (#385)
+
+### 🐛 Fixed
+
+- Clear the five reliability issues holding the front's gate on main (#390)
+- Translate choice labels where they are drawn (#368)
+- Hold the board and the date view to one matching rule (#370)
+- Report a failure one way, synchronous throws included (#369)
+- Run vault_state off the main thread (#367)
+
+### 🗑️ Removed
+
+- Open libraries from 0.2.0 on, and refuse a keyless database (#377)
+- Remove what nothing uses (#378)
+
+### 🔒 Security
+
+- Wipe an export's passphrase like the library's (#371)
+
+### 🧰 Under the hood
+
+- Bump the version to 0.5.0 (#406)
+- Keep one short line per trap in CLAUDE.md, and the detail in architecture (#408)
+- Keep the reason in the front's comments and drop the story (#405)
+- Keep the reason in the crate's comments and drop the story (#404)
+- Share the Rust test fixtures once, and let tempfile clean up (#401)
+- Let "library" mean one thing on each side (#400)
+- Put the Sonar marker on the try, where S4822 reports (#399)
+- Give the stores and dialogs with logic a spec of their own (#396)
+- Mark the synchronous-throw try as deliberate for Sonar (#397)
+- Say each store move once, and ask the model for the rules (#394)
+- Let the linter hold member order and one import style (#393)
+- Decorate a card once, and fold the paired commands (#392)
+- File the front-end by what it is, and close menus on Escape by default (#391)
+- Lay the notes page out as four zones (#387)
+- Let the note editor talk to its stores, one way (#384)
+- Let the folder and space editors act for themselves (#383)
+- Name file errors in one place, and keep AppError to the commands (#382)
+- Take the undo and the batch writes out of NotesStore (#381)
+- Say more with the Rust types, and repeat less (#380)
+- Typecheck the e2e suite as part of the lint (#379)
+- Write the stores' signal plumbing once (#376)
+- File the e2e page objects by area of the screen (#374)
+- Spell every name a library is made of once (#373)
+- Fail the pull request when the front quality gate fails (#372)
+
 ## [0.4.1] - 2026-09-23
 
 ### ✨ Added
