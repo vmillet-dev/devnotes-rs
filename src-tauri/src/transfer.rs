@@ -14,7 +14,7 @@ use crate::notes::store as notes;
 use crate::vault::secret;
 use model::{ExportReport, ExportScope, ImportReport};
 
-/// ⚠️ A `None` passphrase writes the file in the clear: the library's key protects what is
+/// A `None` passphrase writes the file in the clear: the library's key protects what is
 /// on this machine, never what leaves it.
 #[tauri::command(async)]
 #[specta::specta]
@@ -39,7 +39,7 @@ pub fn export_notes(
     )?)
 }
 
-/// ⚠️ The file is read before the lock is taken: parsing a large export while holding the
+/// The file is read before the lock is taken: parsing a large export while holding the
 /// connection would block every other command for the length of it.
 #[tauri::command(async)]
 #[specta::specta]

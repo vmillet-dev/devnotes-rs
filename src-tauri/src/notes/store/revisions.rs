@@ -1,5 +1,5 @@
-//! The bodies kept beside a note. The retention itself lives in `notes::revision` —
-//! this module only knows how to write one, read one, and prune the rest.
+//! The bodies kept beside a note: write one, read one, prune the rest. The retention rules
+//! live in `notes::revision`.
 
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
@@ -21,9 +21,8 @@ struct RevisionRow {
     taken_at: String,
 }
 
-/// ⚠️ Newest first by `rowid`, not by `taken_at`: the editor commits the title, the
-/// source and the body back to back, so two revisions can share a millisecond. `rowid` *is*
-/// insertion order.
+/// ⚠️ Newest first by `rowid`, not `taken_at`: two revisions can share a millisecond, and
+/// `rowid` is insertion order.
 fn newest_first() -> diesel::expression::SqlLiteral<diesel::sql_types::Bool> {
     diesel::dsl::sql::<diesel::sql_types::Bool>("rowid DESC")
 }
@@ -78,8 +77,8 @@ pub fn content_of(
 ) -> Result<Option<String>, StorageError> {
     let Some(row) = note_revisions::table
         .filter(note_revisions::id.eq(revision_id))
-        // ⚠️ Narrowed to the note as well as the id: an id comes from the front end, and
-        // one revision must not be reachable through another note's history.
+        // Narrowed to the note as well: the id comes from the front end, and one note's
+        // history must not reach another's revision.
         .filter(note_revisions::note_id.eq(note_id))
         .select(RevisionRow::as_select())
         .first(connection)
@@ -115,9 +114,7 @@ pub fn compare(
     Ok(Some((vault.open(&current)?, version)))
 }
 
-/// Forgets `revision_id` and every body kept after it: what going back to it means.
-///
-/// ⚠️ Insertion order, like the listing: two revisions can share a millisecond.
+/// Forgets `revision_id` and every body kept after it, in insertion order.
 pub fn discard_from(
     connection: &mut SqliteConnection,
     note_id: &str,
@@ -139,15 +136,9 @@ pub fn discard_from(
     Ok(())
 }
 
-/// Keeps `content` beside the note, unless the newest kept body already is it.
-///
-/// ⚠️ It is the body **before** the edit that is worth keeping: the version that worked.
-/// Callers pass what the row holds, not what the patch carries.
-///
-/// ⚠️ Skipped when the newest revision already holds this exact text. The editor commits
-/// on blur *and* on every closing path, so an editing session produces several writes of
-/// the same body — without this, every one of them would push a duplicate and rotate a
-/// genuinely different version out of the cap.
+/// Keeps `content` — the body as it was before the edit — unless the newest kept body already
+/// is it: the editor commits the same body on blur and on every closing path, and each copy
+/// would rotate a different version out of the cap.
 pub fn record(
     connection: &mut SqliteConnection,
     vault: &Vault,
@@ -182,8 +173,7 @@ pub fn record(
     Ok(())
 }
 
-/// ⚠️ The **oldest** go. `kept` is what was there before the insert, newest first, so
-/// everything from `KEEP - 1` on is what the new one pushes past the cap.
+/// The oldest go: `kept` is newest first, so everything from `KEEP - 1` on is past the cap.
 fn prune(
     connection: &mut SqliteConnection,
     note_id: &str,

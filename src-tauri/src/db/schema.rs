@@ -2,8 +2,8 @@
 //! `cargo check` depend on an up-to-date database outside the repository. Adding a column
 //! means editing both the migration SQL and this file.
 //!
-//! The `CHECK`s, the `ON DELETE CASCADE`s and the `NOCASE` collations do not appear here:
-//! Diesel does not model them, it simply obeys them.
+//! The `CHECK`s, the `ON DELETE CASCADE`s and the `NOCASE` collations are not modelled here:
+//! Diesel obeys them without knowing them.
 
 diesel::table! {
     spaces (id) {
@@ -46,7 +46,7 @@ diesel::table! {
     }
 }
 
-// ⚠️ A row only ever exists for a loose note: a filed one flows inside its zone.
+// A row only ever exists for a loose note: a filed one flows inside its zone.
 diesel::table! {
     note_positions (note_id) {
         note_id -> Text,
@@ -72,8 +72,7 @@ diesel::table! {
     }
 }
 
-// ⚠️ `content` is sealed, like the column it copies: a history of every body in plaintext
-// beside a sealed library would undo the encryption entirely.
+// `content` is sealed like the column it copies, or the history would undo the encryption.
 diesel::table! {
     note_revisions (id) {
         id -> Text,
@@ -83,7 +82,7 @@ diesel::table! {
     }
 }
 
-// ⚠️ Case-sensitive where `note_tags` folds case: `{{Host}}` is not `{{host}}`.
+// Case-sensitive where `note_tags` folds case: `{{Host}}` is not `{{host}}`.
 diesel::table! {
     note_placeholders (note_id, name) {
         note_id -> Text,

@@ -1,13 +1,10 @@
 //! What detection actually answers, against real snippets rather than one line each.
 //!
-//! ⚠️ A corpus and not examples. The inline tests are useful cases written from memory of
-//! what their author was fixing at the time; they say nothing about what a change to one
-//! marker broke somewhere else. This is the file that does — and it is the only way to know
-//! whether scoring is better than the hand-ordered chain it replaced, rather than
-//! differently wrong.
+//! A corpus and not examples: the inline tests are cases written from memory, and say nothing
+//! about what a change to one marker broke elsewhere. This file does.
 //!
 //! One file per case, named `<language>[-<variant>].txt`, so adding a case is adding a file.
-//! ⚠️ Read from disk rather than `include_str!`: the point is that nobody has to edit a
+//! Read from disk rather than `include_str!`: the point is that nobody has to edit a
 //! table to add a snippet.
 
 use std::fs;
@@ -47,7 +44,7 @@ fn cases() -> Vec<(String, String)> {
     found
 }
 
-/// ⚠️ Asserted in bulk and reported in bulk: one failing snippet must not hide the other
+/// Asserted in bulk and reported in bulk: one failing snippet must not hide the other
 /// nineteen, because what a change to a marker breaks is exactly what this file is for.
 #[test]
 fn every_snippet_is_recognised_as_what_it_is() {
@@ -81,9 +78,7 @@ fn every_detectable_language_has_at_least_one_snippet() {
     assert!(missing.is_empty(), "no snippet for: {}", missing.join(", "));
 }
 
-/// ⚠️ The case the ticket was filed for: a Rust snippet carrying a match arm came back
-/// `js`, because the old chain matched `=>` anywhere in the text and JavaScript sat near
-/// its end — which made it the default answer rather than an answer.
+/// A Rust snippet carrying a match arm is Rust, whatever `=>` suggests.
 #[test]
 fn a_lambda_arrow_no_longer_decides_the_language() {
     let rust = fs::read_to_string(corpus().join("rs-match-arm.txt")).unwrap();
@@ -91,10 +86,8 @@ fn a_lambda_arrow_no_longer_decides_the_language() {
     assert_eq!(from_content(&rust), Language::Rs);
 }
 
-/// ⚠️ A behaviour change, said out loud: some notes that were coloured before are not any
-/// more. `class Note { }` is written the same way in six of these languages, and a wrong
-/// answer costs more than none — it colours the body, badges the card and files the note
-/// under a facet in the rail.
+/// `class Note { }` is written the same way in six of these languages, and a wrong answer
+/// costs more than none.
 #[test]
 fn a_snippet_that_could_be_anything_is_left_alone() {
     for name in ["txt-ambiguous.txt", "txt-lambda.txt", "txt-prose.txt"] {

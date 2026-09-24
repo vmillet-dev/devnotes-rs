@@ -1,5 +1,5 @@
-//! The format reuses the domain types rather than duplicating them: a field added to
-//! `Note` is exported without anyone thinking about it.
+//! The format reuses the domain types: a field added to `Note` is exported without anyone
+//! thinking about it.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{Display, Write};
@@ -17,11 +17,9 @@ use crate::notes::language::Language;
 use crate::notes::model::Note;
 use crate::spaces::model::Space;
 
-/// Bumped when a file written today would stop being readable.
-///
-/// ⚠️ An added enum variant does not bump this: the file still parses, and
-/// [`read_bundle`] brings the unknown value down to the default. Bumping would refuse a
-/// 500-note file over one note's unknown `language`.
+/// Bumped when a file written today would stop being readable. An added enum variant does not
+/// bump it: the file still parses, and [`read_bundle`] brings the unknown value down to the
+/// default rather than refusing a whole file over one note.
 pub const FORMAT_VERSION: u32 = 1;
 
 /// What an export takes.
@@ -45,18 +43,14 @@ pub struct Bundle {
     pub version: u32,
     pub exported_at: DateTime<Utc>,
     pub spaces: Vec<Space>,
-    /// The folders actually cited, for the same reason only the cited spaces travel.
-    /// ⚠️ `default` so an export written before folders stays readable — and no
-    /// `FORMAT_VERSION` bump, because such a file still parses.
-    ///
-    /// ⚠️ No geometry: `Folder` carries none. Where a zone sits is columns only the board
-    /// query reads, so a board received from elsewhere cannot land on top of yours.
+    /// The folders actually cited, like the spaces. `default`, so a file from before folders
+    /// still reads without a version bump. No geometry: `Folder` carries none, so a board from
+    /// elsewhere cannot land on top of yours.
     #[serde(default)]
     pub folders: Vec<Folder>,
     pub notes: Vec<Note>,
-    /// The records only — the bytes are entries of the archive, keyed by
-    /// [`crate::attachments::model::stored_name`]. ⚠️ `default` so a `.json` export written
-    /// before the archive existed still parses.
+    /// The records only: the bytes are entries of the archive, keyed by
+    /// [`crate::attachments::model::stored_name`]. `default` for a `.json` export.
     #[serde(default)]
     pub attachments: Vec<Attachment>,
 }
@@ -67,33 +61,27 @@ pub struct ExportReport {
     pub notes: u32,
     pub spaces: u32,
     pub folders: u32,
-    /// What actually went into the archive. A record whose file has gone missing is left
-    /// out rather than failing the export.
+    /// What went into the archive; a record whose file is missing is left out.
     pub attachments: u32,
-    /// ⚠️ `false` means the file is readable by anyone who has it — every note, every
-    /// screenshot. The interface says which of the two it wrote, because the file is the
-    /// one thing here most likely to leave the machine.
+    /// `false` means readable by anyone who has the file: the interface says which it wrote.
     pub protected: bool,
 }
 
-/// `skipped`: notes already present or whose space is missing from the file — an import
-/// has to be replayable without duplicating.
+/// `skipped`: notes already present or whose space is missing, so an import can be replayed.
 #[derive(Debug, Clone, Copy, Default, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ImportReport {
     pub spaces_created: u32,
-    /// Matched by name inside the destination space, and created when absent — the rule
-    /// spaces already follow. Every library operation reports, including when it changed
-    /// nothing.
+    /// Matched by name inside the destination space, created when absent.
     pub folders_created: u32,
     pub notes_imported: u32,
     pub notes_skipped: u32,
-    /// Imported with a `language` or `kind` this build does not know brought down to the
-    /// default. Counted so the loss is said rather than discovered.
+    /// Brought down to the default for a `language` or `kind` this build does not know, and
+    /// counted so the loss is said.
     pub notes_degraded: u32,
     pub attachments_imported: u32,
-    /// Records the archive named but did not carry. Counted rather than swallowed: the
-    /// note arrives with a thumbnail that will never load, and only this says why.
+    /// Records the archive named but did not carry: the only thing that says why a thumbnail
+    /// will never load.
     pub attachments_missing: u32,
 }
 
@@ -104,8 +92,7 @@ pub struct IncomingBundle {
     pub degraded: BTreeSet<String>,
 }
 
-/// ⚠️ The version is read off the raw JSON, before the bundle is built: a file from a
-/// future format may not deserialise at all, and the designed message beats serde's.
+/// The version is read off the raw JSON first: a future format may not deserialise at all.
 pub fn read_bundle(json: &str) -> Result<IncomingBundle, StorageError> {
     let mut value: serde_json::Value = serde_json::from_str(json)
         .map_err(|error| StorageError::ImportFormat(error.to_string()))?;
@@ -130,11 +117,8 @@ pub fn read_bundle(json: &str) -> Result<IncomingBundle, StorageError> {
 }
 
 /// `Note` deserialises `language` and `kind` as closed enums, so one value from a newer
-/// DevNotes would fail the whole import. This degrades instead, like the database read
-/// already does (`notes::store`, `TryFrom<NoteRow>`) — the title, body, tags and deadline
-/// all still arrive, and the report says how many were touched.
-///
-/// ⚠️ What stays strict is the bridge: a value the front end cannot name is never written.
+/// DevNotes would fail the whole import. This degrades it instead, as the database read does
+/// (`NoteRow::open`); only the bridge stays strict.
 fn degrade_unknown_values(bundle: &mut serde_json::Value) -> BTreeSet<String> {
     let mut degraded = BTreeSet::new();
 
@@ -159,8 +143,7 @@ fn degrade_unknown_values(bundle: &mut serde_json::Value) -> BTreeSet<String> {
     degraded
 }
 
-/// A field that is absent, or holds something other than a string, is left for serde to
-/// judge: a malformed file is malformed, not a file from a newer version.
+/// A field absent or not a string is left for serde: malformed is not newer.
 fn degrade_field<T: FromStr + Default + Display>(
     note: &mut serde_json::Value,
     field: &str,
@@ -185,8 +168,8 @@ pub fn validate_path(path: &str) -> Result<(), ValidationError> {
     Ok(())
 }
 
-/// Longer than the longest run of backticks in the content, or a note that already holds
-/// a Markdown block would cut its own in two.
+/// Longer than the longest run of backticks in the content, or a note holding a Markdown block
+/// would cut its own in two.
 fn fence_for(content: &str) -> String {
     let longest = content.split(|c| c != '`').map(str::len).max().unwrap_or(0);
 
@@ -313,8 +296,7 @@ mod tests {
 
     #[test]
     fn a_bundle_from_a_newer_version_is_refused_rather_than_half_read() {
-        // The version is read off the raw JSON first, so the answer names the version
-        // and not a serde field.
+        // Read off the raw JSON first, so the answer names the version and not a serde field.
         let json = serde_json::json!({
             "version": FORMAT_VERSION + 1,
             "exportedAt": "2026-07-25T09:00:00.000Z",

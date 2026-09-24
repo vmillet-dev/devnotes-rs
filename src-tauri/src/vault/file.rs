@@ -1,12 +1,8 @@
 //! The key file, beside the database.
 //!
-//! ⚠️ Outside the library on purpose: it carries what is needed to derive the key that
-//! opens it, so it has to be readable before anything else can be. What it holds is a
-//! salt, the cost, and the library's own key **sealed under the phrase** — never a key in
-//! the clear, and no separate check value: opening the wrapped key is the check.
-//!
-//! ⚠️ Losing this file loses the library, exactly as losing the passphrase does. An export
-//! is the only copy that does not depend on it.
+//! Readable before the library is: it holds the salt, the cost, and the library's key sealed
+//! under the phrase. Never a key in the clear, and no check value — opening the wrapped key is
+//! the check. Losing this file loses the library, as losing the passphrase does.
 
 use std::path::{Path, PathBuf};
 
@@ -19,9 +15,8 @@ use super::key::{Cost, SALT_BYTES, Vault, fresh_salt};
 use crate::error::StorageError;
 use crate::layout::KEY_FILE;
 
-/// Bumped when a file written today would stop being readable. 2 wraps the library key
-/// under the phrase where 1 derived the library key from it — which is what lets the
-/// phrase change without touching a single note.
+/// Bumped when a file written today would stop being readable. Version 2 wraps the library's
+/// key under the phrase, which is what lets the phrase change without touching a note.
 const FORMAT_VERSION: u32 = 2;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -29,9 +24,8 @@ const FORMAT_VERSION: u32 = 2;
 struct KeyFile {
     version: u32,
     kdf: Kdf,
-    /// ⚠️ The library's key, sealed under the one derived from the passphrase. A wrong
-    /// phrase fails to open it, which is what stops an unlock from succeeding on a key
-    /// nobody can reproduce and sealing real notes under it.
+    /// The library's key, sealed under the one derived from the passphrase: a wrong phrase
+    /// fails to open it rather than unlocking onto a key nobody can reproduce.
     key: String,
 }
 
@@ -53,8 +47,8 @@ pub fn exists(directory: &Path) -> bool {
     path_in(directory).is_file()
 }
 
-/// A library that has never been encrypted. ⚠️ Refuses to overwrite: the file that is
-/// there is the only way into the notes beside it.
+/// A library that has never been encrypted. Refuses to overwrite: the file there is the only
+/// way into the notes beside it.
 pub fn create(directory: &Path, passphrase: &str, cost: Cost) -> Result<Vault, StorageError> {
     let path = path_in(directory);
     if path.exists() {
@@ -69,14 +63,11 @@ pub fn create(directory: &Path, passphrase: &str, cost: Cost) -> Result<Vault, S
     Ok(vault)
 }
 
-/// A new phrase over the same library. ⚠️ Nothing is re-encrypted: the key the notes are
-/// sealed with does not change, only what wraps it — so this cannot half-succeed and
-/// leave some notes unreadable, and it costs one derivation rather than a full rewrite.
+/// A new phrase over the same library: only the wrapping changes, so this cannot half-succeed.
 ///
-/// ⚠️ Answers the library's key because the caller is not finished: every retained backup
-/// holds a key file of its own, still wrapped under the phrase being retired, and a change
-/// that leaves those revokes nothing (#157). `backup::rewrap` is the other half, and
-/// `vault::change_with` is the one place that has both.
+/// ⚠️ Answers the key because the caller is not done: every retained backup holds a key file
+/// still wrapped under the retired phrase. `backup::rewrap` is the other half, and
+/// `vault::change` the one place that does both.
 pub fn change_passphrase(
     directory: &Path,
     current: &str,
@@ -89,8 +80,7 @@ pub fn change_passphrase(
     Ok(vault)
 }
 
-/// ⚠️ A fresh salt every time, change included: two phrases must not share a derivation,
-/// or knowing one would say something about the other.
+/// A fresh salt every time: two phrases must not share a derivation.
 pub(crate) fn write_wrapped(
     path: &Path,
     vault: &Vault,
@@ -116,8 +106,7 @@ pub(crate) fn write_wrapped(
     )
 }
 
-/// ⚠️ Answers [`StorageError::WrongPassphrase`] and nothing more detailed: which of the
-/// two the caller got wrong is not something to help with.
+/// Answers [`StorageError::WrongPassphrase`] and nothing more detailed.
 pub fn unlock(directory: &Path, passphrase: &str) -> Result<Vault, StorageError> {
     let path = path_in(directory);
     let json = std::fs::read_to_string(&path)
@@ -161,8 +150,8 @@ pub fn unlock(directory: &Path, passphrase: &str) -> Result<Vault, StorageError>
     Vault::unwrapped_with(&wrapping, &wrapped).map_err(|_| StorageError::WrongPassphrase)
 }
 
-/// ⚠️ Staged then renamed. A key file half-written is a library nobody opens again, and
-/// a plain write truncates before it fills.
+/// Staged then renamed: a plain write truncates first, and a half-written key file is a
+/// library nobody opens again.
 fn write_atomically(path: &Path, file: &KeyFile) -> Result<(), StorageError> {
     let json = serde_json::to_string_pretty(file)
         .map_err(|error| StorageError::Vault(error.to_string()))?;
@@ -183,8 +172,6 @@ fn write_atomically(path: &Path, file: &KeyFile) -> Result<(), StorageError> {
 mod tests {
     use super::*;
 
-    /// ⚠️ Cheap parameters: the real ones cost about a second a derivation, and these tests derive
-    /// a dozen times. What they assert on is the file, not Argon2id's strength.
     #[test]
     fn a_created_vault_opens_again_with_the_same_passphrase() {
         let scratch = tempfile::tempdir().unwrap();
@@ -197,8 +184,7 @@ mod tests {
         assert_eq!(reopened.open(&sealed).unwrap(), "a note");
     }
 
-    /// ⚠️ Without the wrapped key to open, this would succeed and every later write
-    /// would seal real notes under a key nobody can reproduce.
+    /// Otherwise every later write would seal notes under a key nobody can reproduce.
     #[test]
     fn a_wrong_passphrase_is_refused_rather_than_accepted_quietly() {
         let scratch = tempfile::tempdir().unwrap();
@@ -235,8 +221,7 @@ mod tests {
         );
     }
 
-    /// ⚠️ The point of wrapping a random key rather than deriving one: the notes stay
-    /// sealed exactly as they were, and a change cannot half-rewrite a library.
+    /// The notes stay sealed exactly as they were.
     #[test]
     fn a_changed_passphrase_opens_the_notes_the_old_one_sealed() {
         let scratch = tempfile::tempdir().unwrap();
@@ -278,8 +263,7 @@ mod tests {
         ));
     }
 
-    /// ⚠️ Refused *before* anything is written: a change that took a wrong current phrase
-    /// on trust would lock the library behind a phrase nobody chose.
+    /// Refused before anything is written, or the library would end up behind a phrase nobody chose.
     #[test]
     fn a_change_that_cannot_name_the_current_passphrase_writes_nothing() {
         let scratch = tempfile::tempdir().unwrap();
@@ -321,8 +305,7 @@ mod tests {
         assert_ne!(before["key"], after["key"]);
     }
 
-    /// The cost travels with the file, so raising the default later does not lock an
-    /// existing library out.
+    /// Raising the default cost later must not lock an existing library out.
     #[test]
     fn a_library_reopens_at_the_cost_it_was_written_with() {
         let scratch = tempfile::tempdir().unwrap();
@@ -334,11 +317,9 @@ mod tests {
         };
         create(&directory, "correct horse", odd).unwrap();
 
-        // `unlock` reads the parameters rather than assuming today's defaults.
         assert!(unlock(&directory, "correct horse").is_ok());
     }
 
-    /// ⚠️ Overwriting would throw away the only way into the notes sitting beside it.
     #[test]
     fn creating_over_an_existing_key_file_is_refused() {
         let scratch = tempfile::tempdir().unwrap();

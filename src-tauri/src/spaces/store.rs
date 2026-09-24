@@ -1,4 +1,4 @@
-//! ⚠️ `spaces.name` is sealed, and that moves two things out of SQL: the order, and the
+//! `spaces.name` is sealed, and that moves two things out of SQL: the order, and the
 //! uniqueness check. Ciphertext sorts at random and two seals of the same name differ, so
 //! `ORDER BY name COLLATE NOCASE` and `WHERE name = ? COLLATE NOCASE` both stopped
 //! meaning anything. A library holds a handful of spaces, so both are cheap in Rust — the

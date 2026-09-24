@@ -1,12 +1,8 @@
 //! A rolling copy of the library, taken at launch.
 //!
-//! ⚠️ The trash protects a note from being deleted; nothing protected the **file**. A
-//! dead disk, a botched migration or an emptied trash took the library with it, and an
-//! export only helps the person who remembered to make one.
-//!
-//! ⚠️ `VACUUM INTO` rather than a file copy: under WAL the database file on its own is
-//! not a consistent snapshot — the committed pages may still be in the write-ahead log —
-//! so copying it can produce something that opens short of what was written.
+//! The trash protects a note, not the file: this covers an emptied trash or a botched
+//! update, not a dead disk. ⚠️ `VACUUM INTO` rather than a file copy: under WAL the database
+//! file alone is not a consistent snapshot, and a copy can open short of what was written.
 
 use std::path::{Path, PathBuf};
 
@@ -24,12 +20,10 @@ use crate::vault::key::{Cost, Vault};
 /// The key the front end writes this setting under, in the application's preferences.
 pub(crate) const AUTOMATIC_BACKUPS_KEY: &str = "devnotes.automaticBackups";
 
-/// How many are kept. Enough to reach past the launch that went wrong without turning the
-/// data directory into a second library.
+/// Enough to reach past the launch that went wrong without becoming a second library.
 pub(crate) const KEEP: usize = 3;
 
-/// ⚠️ At most one a day, not one per launch: five launches in an hour would otherwise
-/// rotate every older copy out, which is exactly the history a backup is for.
+/// At most one a day: five launches in an hour would rotate every older copy out.
 const MIN_AGE: TimeDelta = TimeDelta::hours(24);
 
 fn taken_at(entry: &Path) -> Option<DateTime<Utc>> {
@@ -49,7 +43,6 @@ fn existing(directory: &Path) -> Vec<PathBuf> {
         .filter_map(|path| taken_at(&path).map(|at| (at, path)))
         .collect();
 
-    // Newest first, which is the order both the age check and the pruning want.
     taken.sort_by_key(|(at, _)| std::cmp::Reverse(*at));
 
     taken.into_iter().map(|(_, path)| path).collect()
@@ -57,8 +50,8 @@ fn existing(directory: &Path) -> Vec<PathBuf> {
 
 /// Takes one if the newest is older than a day, then prunes to [`KEEP`].
 ///
-/// ⚠️ The key file travels with the database, and must: the library is sealed, and a
-/// copy of it without `vault.json` is a file nobody can ever open again.
+/// ⚠️ The key file travels with the database: without `vault.json` the copy is a sealed file
+/// nobody can ever open.
 pub(crate) fn rotate(
     library: &Path,
     connection: &mut Library,
@@ -82,8 +75,7 @@ pub(crate) fn rotate(
         .bind::<Text, _>(copy.to_string_lossy().to_string())
         .execute(connection.db())
         .map_err(|error| {
-            // A half-written copy is worse than none: it would be the newest, and would
-            // hold the next day's rotation off.
+            // A half-written copy would be the newest, and hold the next rotation off.
             let _ = std::fs::remove_dir_all(&target);
             StorageError::File(format!("{}: {error}", copy.display()))
         })?;
@@ -101,20 +93,16 @@ pub(crate) fn rotate(
     Ok(Some(target))
 }
 
-/// One copy, as the interface lists it.
-///
-/// ⚠️ `bytes` is `f64` rather than `u64`: specta refuses the integer types JSON cannot
-/// carry without losing precision, and a size is the one field where a float says the
-/// same thing.
+/// One copy, as the interface lists it. `bytes` is `f64` because specta refuses the integer
+/// types JSON cannot carry exactly.
 #[derive(Debug, Clone, serde::Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct Backup {
-    /// The folder's name, which is its stamp — and what a restore is asked for by.
+    /// The folder's name, which is its stamp, and what a restore asks for.
     pub id: String,
     pub taken_at: DateTime<Utc>,
     pub bytes: f64,
-    /// ⚠️ Whether the key file travelled with it. Without one, the copy is a file nobody
-    /// can open, and offering to restore it would be offering to lose the library.
+    /// Whether the key file travelled with it: without one, restoring loses the library.
     pub openable: bool,
 }
 
@@ -142,27 +130,16 @@ pub(crate) fn list(library: &Path) -> Vec<Backup> {
 
 /// Puts a copy back in place of the live library, and answers where the live one went.
 ///
-/// ⚠️ The library being replaced is **moved aside, never deleted**. This is the one
-/// gesture in the application that can lose a whole corpus, and a folder with a date on
-/// it is the difference between a mistake and a loss.
-///
-/// ⚠️ `vault.json` moves with it, unlike the damaged case: the copy brings its own key
-/// file, and the two must not be mixed — a database from one wrapping and a key from
-/// another opens nothing.
-///
-/// ⚠️ `attachments/` stays where it is. The copies do not carry it — it is the bulk of a
-/// profile — so moving it aside would point every restored record at a file that left.
-/// The next launch's orphan sweep then collects whatever the restored library no longer
-/// names, which is the right answer: those files belong to notes it does not have.
+/// Moved aside into `replaced/`, never deleted, and `vault.json` with it: the copy brings its
+/// own, and a database and a key from two wrappings open nothing. `attachments/` stays: the
+/// copies do not carry it, and the next launch's orphan sweep collects what they no longer name.
 pub(crate) fn replace(
     library: &Path,
     id: &str,
     now: DateTime<Utc>,
 ) -> Result<PathBuf, StorageError> {
-    // ⚠️ Matched against the listing rather than joined onto the directory: an id comes
-    // from the front end, and `../2026-01-01_00-00-00` joins to a path outside
-    // `backups/` whose file name still parses as a stamp. A name from outside has no
-    // business deciding which directory this reads.
+    // ⚠️ Matched against the listing, never joined: the id comes from the front end, and
+    // `../2026-01-01_00-00-00` joins to a path outside `backups/` that still parses as a stamp.
     let copy = existing(&library.join(BACKUPS))
         .into_iter()
         .find(|path| path.file_name().and_then(std::ffi::OsStr::to_str) == Some(id))
@@ -189,8 +166,7 @@ pub(crate) fn replace(
 
     for name in [layout::DATABASE, KEY_FILE] {
         if let Err(error) = std::fs::copy(copy.join(name), library.join(name)) {
-            // ⚠️ Back where they were, or a failed restore leaves no library at all —
-            // which is the exact outcome this whole function exists to avoid.
+            // Back where they were: a failed restore must never leave no library at all.
             for (from, to) in &moved {
                 let _ = std::fs::remove_file(from);
                 let _ = std::fs::rename(to, from);
@@ -204,9 +180,8 @@ pub(crate) fn replace(
     Ok(aside)
 }
 
-/// What [`rewrap`] managed. ⚠️ `left` is not a failure to report as one: refusing to
-/// rotate the phrase because a backup's file is locked would block the revocation at the
-/// moment it is asked for.
+/// What [`rewrap`] managed. `left` is counted rather than failed: a locked backup must not
+/// block the revocation at the moment it is asked for.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub(crate) struct Rewrapped {
     pub(crate) done: usize,
@@ -215,18 +190,10 @@ pub(crate) struct Rewrapped {
 
 /// Rewraps every retained copy's key file under the new phrase.
 ///
-/// ⚠️ This is what makes changing the passphrase revoke anything. `backups/` sits **inside
-/// the profile it copies**, so whoever copies the profile copies every phrase the user has
-/// ever retired — and the envelope means one master key for the life of the library, so any
-/// key file ever written is a permanent escrow for it (#157).
-///
-/// ⚠️ It writes the key it is **given** rather than opening each copy with the old phrase:
-/// a backup's file wraps that same master key whatever phrase was current when it was
-/// taken, so this revokes *every* retired phrase rather than only the last one. A copy
-/// with no key file predates the library being sealed and is left alone.
-///
-/// `damaged/` is deliberately absent: `recovery::set_aside` leaves `vault.json` where it
-/// is, so a set-aside library has no wrapping of its own to retire.
+/// ⚠️ What makes a new passphrase revoke anything: `backups/` sits inside the profile, and each
+/// copy's key file still wraps the one master key under a retired phrase. Written from the key
+/// it is given, so every retired phrase goes, not only the last. `damaged/` has no key file of
+/// its own (`recovery::set_aside` leaves `vault.json` in place).
 pub(crate) fn rewrap(library: &Path, vault: &Vault, passphrase: &str, cost: Cost) -> Rewrapped {
     let mut tally = Rewrapped::default();
 
@@ -236,7 +203,7 @@ pub(crate) fn rewrap(library: &Path, vault: &Vault, passphrase: &str, cost: Cost
             continue;
         }
 
-        // Staged and renamed by `write_wrapped`: a key file half written is a backup lost.
+        // Staged and renamed by `write_wrapped`: a half-written key file is a backup lost.
         match crate::vault::file::write_wrapped(&path, vault, passphrase, cost) {
             Ok(()) => tally.done += 1,
             Err(error) => {
@@ -252,16 +219,14 @@ pub(crate) fn rewrap(library: &Path, vault: &Vault, passphrase: &str, cost: Cost
     tally
 }
 
-/// ⚠️ Anything but a plain `"false"` keeps the copies. A preferences file that is
-/// missing, truncated, or written by a version that spells this differently must not
-/// silently switch a safety net off — the only thing that turns it off is somebody
-/// turning it off.
+/// Anything but a plain `"false"` keeps the copies: a missing or unreadable preference must
+/// not switch a safety net off.
 pub(crate) fn wanted(stored: Option<&str>) -> bool {
     stored != Some("false")
 }
 
-/// ⚠️ Read from the preferences file rather than handed over by the front end: the copy
-/// is taken at unlock, before the front has booted far enough to tell anyone anything.
+/// Read from the preferences file: the copy is taken at unlock, before the front end has
+/// booted far enough to say anything.
 fn wanted_by_preference(app: &AppHandle) -> bool {
     use tauri_plugin_store::StoreExt;
 
@@ -274,8 +239,7 @@ fn wanted_by_preference(app: &AppHandle) -> bool {
     wanted(stored.as_deref())
 }
 
-/// The launch copy. ⚠️ Never fatal and never in the way: a library that cannot be
-/// copied still has to open.
+/// The launch copy. Never fatal: a library that cannot be copied still has to open.
 pub(crate) fn take(app: &AppHandle, db: &Db) {
     if wanted_by_preference(app) {
         copy(db);
@@ -309,11 +273,9 @@ pub fn list_backups(db: State<'_, Db>) -> Result<Vec<Backup>, AppError> {
 
 /// Puts a copy back, and answers where the library it replaced was moved to.
 ///
-/// ⚠️ It **closes the library** first, under the same lock that guards every other
-/// command: renaming a database file out from under a live connection is how a working
-/// library becomes a lost one. Every command answers `Locked` afterwards, which is what
-/// sends the interface back to the gate — the restored copy needs a passphrase, and
-/// asking for it is the only proof the right file is in place.
+/// ⚠️ Closes the library first, under the lock every command takes: renaming a database out
+/// from under a live connection loses it. Every command then answers `Locked`, which sends
+/// the interface back to the gate to ask for the restored copy's phrase.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
 #[specta::specta]
@@ -330,8 +292,7 @@ fn restore(db: &Db, id: &str, now: DateTime<Utc>) -> Result<PathBuf, StorageErro
         .ok_or(StorageError::Locked)?
         .directory()
         .to_path_buf();
-    // Dropped before a single file moves, and held for the whole swap so nothing can
-    // reopen it halfway through.
+    // Dropped before a single file moves, and the lock held for the whole swap.
     *open = None;
 
     replace(&directory, id, now)
@@ -344,7 +305,6 @@ mod tests {
     use crate::notes::store as notes;
     use crate::spaces::store as spaces;
 
-    /// ⚠️ The shipped cost is ~52 ms a derivation and these tests derive a dozen times.
     fn at(offset_hours: i64) -> DateTime<Utc> {
         db::iso8601::parse("2026-07-25T09:00:00.000Z").unwrap() + TimeDelta::hours(offset_hours)
     }
@@ -396,7 +356,7 @@ mod tests {
         drop(db);
     }
 
-    /// ⚠️ Closed before a single file moves: every command answers `Locked` afterwards.
+    /// Closed before a single file moves: every command answers `Locked` afterwards.
     #[test]
     fn restoring_closes_the_library_and_says_where_the_replaced_one_went() {
         let scratch = tempfile::tempdir().unwrap();
@@ -416,7 +376,7 @@ mod tests {
         ));
     }
 
-    /// ⚠️ The only test that matters: a copy that cannot be opened is not a backup.
+    /// A copy that cannot be opened is not a backup.
     #[test]
     fn a_copy_opens_as_a_library_and_holds_the_notes() {
         let scratch = tempfile::tempdir().unwrap();
@@ -434,7 +394,6 @@ mod tests {
         assert_eq!(written[0].title, "À sauvegarder");
     }
 
-    /// ⚠️ Without the key file the copy is a file nobody can ever open again.
     #[test]
     fn the_key_file_travels_with_the_database() {
         let scratch = tempfile::tempdir().unwrap();
@@ -447,7 +406,6 @@ mod tests {
         assert!(target.join(layout::DATABASE).is_file());
     }
 
-    /// ⚠️ Five launches in an hour must not rotate the history out.
     #[test]
     fn a_second_launch_the_same_day_takes_nothing() {
         let scratch = tempfile::tempdir().unwrap();
@@ -491,7 +449,6 @@ mod tests {
         assert_eq!(taken_at(&kept[0]).unwrap(), at(5 * 25));
     }
 
-    /// ⚠️ Fail safe: only a deliberate "false" stops the copies.
     #[test]
     fn only_a_preference_turning_them_off_turns_them_off() {
         assert!(wanted(Some("true")));
@@ -502,9 +459,8 @@ mod tests {
         assert!(!wanted(Some("false")));
     }
 
-    /// ⚠️ The point of #157. Changing the passphrase is the gesture somebody makes when
-    /// they believe the old one leaked, and every retained copy kept a key file still
-    /// wrapped under it — in the same profile directory. It revoked nothing.
+    /// Changing the phrase is what somebody does when they believe the old one leaked, and each
+    /// copy in the same profile holds a key file wrapped under it.
     #[test]
     fn changing_the_passphrase_stops_the_old_one_opening_a_backup() {
         let scratch = tempfile::tempdir().unwrap();
@@ -520,7 +476,7 @@ mod tests {
         )
         .unwrap();
 
-        // The gap itself, kept in the test: rewrapping the live file alone revokes nothing.
+        // Rewrapping the live file alone revokes nothing.
         crate::vault::file::unlock(&target, "a passphrase")
             .expect("the copy still opens with the retired phrase before the rewrap");
 
@@ -535,9 +491,8 @@ mod tests {
         crate::vault::file::unlock(&target, "a new one").unwrap();
     }
 
-    /// ⚠️ Every retired phrase, not only the last: a copy is rewrapped from the key the
-    /// live file just gave up, so one taken two changes ago is reached as well. Opening
-    /// each copy with the phrase being retired would have missed exactly this one.
+    /// A copy is rewrapped from the key, not opened with the phrase being retired, so one taken
+    /// two changes ago is reached as well.
     #[test]
     fn a_copy_left_over_from_an_older_phrase_is_reached_too() {
         let scratch = tempfile::tempdir().unwrap();
@@ -552,7 +507,7 @@ mod tests {
             Cost::FOR_TESTS,
         )
         .unwrap();
-        // ⚠️ No rewrap here, so the first copy stays under the very first phrase.
+        // No rewrap here: the first copy stays under the very first phrase.
         let second = rotate(&directory, &mut connection, at(25))
             .unwrap()
             .unwrap();
@@ -620,7 +575,6 @@ mod tests {
             .unwrap();
         }
 
-        /// ⚠️ The whole point: the copy is what opens afterwards, not the live file.
         #[test]
         fn the_copy_takes_the_place_of_the_live_library() {
             let scratch = tempfile::tempdir().unwrap();
@@ -636,7 +590,6 @@ mod tests {
             assert_eq!(title_in(&directory, "a passphrase"), "À sauvegarder");
         }
 
-        /// ⚠️ Moved aside, never deleted: this is the one gesture that can lose a corpus.
         #[test]
         fn the_library_it_replaced_is_still_readable_where_it_was_put() {
             let scratch = tempfile::tempdir().unwrap();
@@ -653,7 +606,7 @@ mod tests {
             assert_eq!(title_in(&aside, "a passphrase"), "écrit après la copie");
         }
 
-        /// ⚠️ A database from one wrapping and a key file from another opens nothing.
+        /// A database from one wrapping and a key file from another open nothing.
         #[test]
         fn the_key_file_goes_one_way_and_comes_back_the_other() {
             let scratch = tempfile::tempdir().unwrap();
@@ -669,8 +622,7 @@ mod tests {
             assert!(aside.join(KEY_FILE).is_file());
         }
 
-        /// ⚠️ They are not in the copies, so moving them aside would point every restored
-        /// record at a file that left.
+        /// Not in the copies: moving them aside would point every restored record at a file that left.
         #[test]
         fn the_attachments_stay_where_they_are() {
             let scratch = tempfile::tempdir().unwrap();
@@ -687,8 +639,6 @@ mod tests {
             assert!(directory.join("attachments").join("a-1.png").is_file());
         }
 
-        /// ⚠️ An id comes from the front end: `../…` joins to a path outside `backups/`
-        /// whose file name still parses as a stamp.
         #[test]
         fn an_id_cannot_name_a_directory_outside_the_copies() {
             let scratch = tempfile::tempdir().unwrap();
@@ -710,7 +660,6 @@ mod tests {
             );
         }
 
-        /// ⚠️ Offering to restore it would be offering to lose the library for nothing.
         #[test]
         fn a_copy_with_no_key_file_is_refused_rather_than_swapped_in() {
             let scratch = tempfile::tempdir().unwrap();
@@ -739,15 +688,14 @@ mod tests {
             let copies = list(&directory);
 
             assert_eq!(copies.len(), 2);
-            // Newest first, which is the order the panel wants and the pruning uses.
+            // Newest first, the order the panel wants and the pruning uses.
             assert_eq!(copies[0].taken_at, at(25));
             assert!(copies[0].bytes > 0.0);
             assert!(copies.iter().all(|copy| copy.openable));
         }
     }
 
-    /// A directory somebody dropped in there is not a backup, and must not hold the
-    /// rotation off by looking like the newest one.
+    /// A stray directory must not hold the rotation off by looking like the newest copy.
     #[test]
     fn something_that_is_not_a_copy_is_ignored() {
         let scratch = tempfile::tempdir().unwrap();

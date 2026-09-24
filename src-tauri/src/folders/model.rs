@@ -1,5 +1,5 @@
-//! A folder cuts a space into regions. Its name and colour are domain and travel with an
-//! export; ⚠️ where its zone sits on the board never enters this file — see `folders/board`.
+//! A folder cuts a space into regions. Its name and colour travel with an export; where its
+//! zone sits on the board never enters this file (see `folders/board`).
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -9,9 +9,8 @@ use crate::closed_enum::closed_enum;
 use crate::error::ValidationError;
 
 closed_enum! {
-    /// Assigned on creation rather than chosen, and changed from the zone menu after:
-    /// drawing a folder must stay one gesture. The five are the theme's own accents, so
-    /// each already has a light-theme twin.
+    /// Assigned on creation, changed from the zone menu after: drawing a folder stays one
+    /// gesture. The five are the theme's accents, each with a light-theme twin.
     pub enum FolderColour {
         #[default]
         Blue = "blue",
@@ -23,8 +22,8 @@ closed_enum! {
 }
 
 impl FolderColour {
-    /// Rotates through the palette so two folders made back to back differ. ⚠️ Counted,
-    /// not random: a deterministic colour is one a test can assert and a user can predict.
+    /// Rotates through the palette so two folders made back to back differ; counted rather
+    /// than random, so a test can assert it and a user predict it.
     pub fn nth(index: usize) -> Self {
         Self::ALL[index % Self::ALL.len()]
     }
@@ -59,8 +58,7 @@ pub struct NoteFolder {
     pub colour: FolderColour,
 }
 
-/// Which folder each note left, which is the only thing that can put a filing back.
-/// `folder_id` is `None` for a note that was loose.
+/// Which folder each note left, the only thing that can put a filing back; `None` was loose.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct NoteFiling {

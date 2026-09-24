@@ -1,8 +1,6 @@
-//! The retention itself, and what a purge does to the attachment files, live in
-//! `notes::trash` — this module only knows that `deleted_at` decides.
-//!
-//! ⚠️ Every read elsewhere filters on `deleted_at IS NULL`, or a trashed note comes back
-//! editable without saying it is on borrowed time.
+//! The retention, and what a purge does to the attachment files, live in `notes::trash`: here
+//! `deleted_at` decides. ⚠️ Every read elsewhere filters on `deleted_at IS NULL`, or a trashed
+//! note comes back editable without saying it is on borrowed time.
 
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
@@ -15,9 +13,8 @@ use crate::error::StorageError;
 use crate::notes::model::Note;
 use crate::notes::trash;
 
-/// ⚠️ Stamps `deleted_at`; the row survives for [`trash::RETENTION`]. [`purge`] is what
-/// erases — `delete` is the word `spaces::store` and `attachments::store` use for an
-/// irreversible one.
+/// Stamps `deleted_at`; the row survives for [`trash::RETENTION`] and [`purge`] erases. `delete`
+/// is the word `spaces::store` and `attachments::store` use for an irreversible one.
 pub fn trash(connection: &mut Library, id: &str, now: DateTime<Utc>) -> Result<(), StorageError> {
     if trash_many(connection, std::slice::from_ref(&id.to_string()), now)? == 0 {
         return Err(StorageError::NoteNotFound(id.to_string()));
@@ -26,8 +23,7 @@ pub fn trash(connection: &mut Library, id: &str, now: DateTime<Utc>) -> Result<(
     Ok(())
 }
 
-/// Returns what was actually moved: a selection can hold an id gone stale, and failing
-/// the whole batch for one of them would be worse than a partial result.
+/// Returns what actually moved: an id gone stale fails nothing but itself.
 pub fn trash_many(
     connection: &mut Library,
     ids: &[String],
@@ -46,7 +42,7 @@ pub fn trash_many(
     .execute(connection.db())?)
 }
 
-/// `updated_at` is not touched: the note comes back where it was.
+/// Leaves `updated_at` alone: the note comes back where it was.
 pub fn restore_many(connection: &mut Library, ids: &[String]) -> Result<usize, StorageError> {
     if ids.is_empty() {
         return Ok(0);
@@ -95,8 +91,7 @@ pub fn expired_ids(
     connection: &mut Library,
     now: DateTime<Utc>,
 ) -> Result<Vec<String>, StorageError> {
-    // ⚠️ Compared as text: `db::iso8601` always writes milliseconds, which is what makes
-    // the column sort — and compare — in time order.
+    // Compared as text: `db::iso8601` always writes milliseconds, so the column orders in time.
     let cutoff = iso8601::format(trash::expiry_cutoff(now));
 
     Ok(notes::table
@@ -112,8 +107,8 @@ pub fn trashed_ids(connection: &mut Library) -> Result<Vec<String>, StorageError
         .load::<String>(connection.db())?)
 }
 
-/// Permanent. Tags and attachments leave by cascade — hence the `PRAGMA foreign_keys` in
-/// `db::configure`. ⚠️ Restricted to trashed notes: nothing may short-circuit the reprieve.
+/// Permanent; tags and attachments leave by cascade (`PRAGMA foreign_keys`). Restricted to
+/// trashed notes, so nothing short-circuits the reprieve.
 pub fn purge(connection: &mut Library, ids: &[String]) -> Result<usize, StorageError> {
     if ids.is_empty() {
         return Ok(0);

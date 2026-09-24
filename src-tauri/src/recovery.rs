@@ -1,9 +1,7 @@
 //! What to do with a library that will not open.
 //!
-//! ⚠️ Detection without a way out is a loop: an application that refuses to start and
-//! tells you why, every time, leaves deleting a file by hand as the only move. So this
-//! is the other half of the check — set the damaged library aside, rescue what SQLite
-//! will still hand over, and let the next launch start clean.
+//! The other half of the integrity check: without a way out, a library that will not open
+//! leaves deleting a file by hand as the only move.
 
 #![allow(clippy::needless_pass_by_value)]
 
@@ -21,14 +19,11 @@ use crate::layout::{self, ARCHIVED, ATTACHMENTS, DAMAGED, DATABASE, DATABASE_SID
 /// Why a library is being set aside, which is what decides what travels with it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Reason {
-    /// SQLite says the file is corrupt. The phrase still works, so `vault.json` **stays**
-    /// and the rescued copy opens under it — asking someone to choose a new passphrase in
-    /// the middle of losing their library would be its own small cruelty.
+    /// SQLite says the file is corrupt. The phrase still works, so `vault.json` stays and the
+    /// rescued copy opens under it.
     Damaged,
-    /// The phrase was forgotten. ⚠️ `vault.json` **travels**: it is the only thing that
-    /// phrase would ever open again, and leaving it behind would turn a library that is
-    /// merely locked into one that is gone. Nothing is rescued either — the file is
-    /// sealed, and SQLite has nothing to hand over without the key.
+    /// The phrase was forgotten. `vault.json` travels: it is the only thing that phrase would
+    /// ever open again. Nothing is rescued, since the file is sealed.
     Forgotten,
 }
 
@@ -44,9 +39,8 @@ impl Reason {
 /// The name the rescued copy takes, beside the file it was rescued from.
 const RESCUED: &str = "rescued.sqlite3";
 
-/// ⚠️ Best effort and deliberately so: `VACUUM INTO` on a partly readable database often
-/// rescues most of it, and when it cannot, the damaged original is still set aside. A
-/// failure here must not stop the user getting a working application back.
+/// Best effort: `VACUUM INTO` often rescues most of a partly readable file, and the original
+/// is set aside either way.
 fn rescue(damaged: &Path, into: &Path) -> Option<PathBuf> {
     let mut connection = SqliteConnection::establish(&damaged.to_string_lossy()).ok()?;
     let target = into.join(RESCUED);
@@ -61,12 +55,9 @@ fn rescue(damaged: &Path, into: &Path) -> Option<PathBuf> {
 
 /// Moves a library aside and leaves the directory ready for a fresh one.
 ///
-/// ⚠️ The attachments go with it, whatever the reason. They are files the database points
-/// at, and a fresh library would call every one of them an orphan — the startup sweep
-/// would then delete the pictures belonging to the notes just set aside.
-///
-/// ⚠️ What happens to `vault.json` is [`Reason`]'s to decide, and the two answers are
-/// opposite. Getting it wrong either way loses the library for good.
+/// The attachments go too, whatever the reason: a fresh library would call them orphans and
+/// the startup sweep would delete them. ⚠️ `vault.json` is [`Reason`]'s to decide, and the two
+/// answers are opposite: getting it wrong either way loses the library for good.
 pub(crate) fn set_aside(
     directory: &Path,
     reason: Reason,
@@ -83,7 +74,7 @@ pub(crate) fn set_aside(
     std::fs::create_dir_all(&target).context(target.display())?;
 
     if reason == Reason::Damaged {
-        // Before the move, while the file is still where SQLite expects its sidecars.
+        // Before the move, while SQLite still finds its sidecars beside the file.
         rescue(&database, &target);
     }
 
@@ -106,9 +97,7 @@ pub(crate) fn set_aside(
     Ok(target)
 }
 
-/// ⚠️ Refused on an open library, for both commands below: they only answer the case
-/// where opening failed, and moving a database under a live connection is how a library
-/// that was merely shut becomes a lost one.
+/// Refused on an open library: moving a database under a live connection loses it.
 fn set_aside_closed(directory: &Path, db: &Db, reason: Reason) -> Result<String, StorageError> {
     if db.lock().map_err(|_| StorageError::Unavailable)?.is_some() {
         return Err(StorageError::LibraryOpen);
@@ -121,8 +110,7 @@ fn set_aside_closed(directory: &Path, db: &Db, reason: Reason) -> Result<String,
 
 /// Sets the damaged library aside so the next unlock starts on a fresh one.
 ///
-/// ⚠️ Answers the folder it moved everything into, and the interface says it out loud:
-/// "set aside" is only true if the user can be told where.
+/// Answers the folder it moved everything into, so the interface can say where.
 #[tauri::command(async)]
 #[specta::specta]
 pub fn set_aside_damaged_library(app: AppHandle, db: State<'_, Db>) -> Result<String, AppError> {
@@ -133,10 +121,8 @@ pub fn set_aside_damaged_library(app: AppHandle, db: State<'_, Db>) -> Result<St
 
 /// Archives a library whose passphrase was forgotten, so a fresh one can be started.
 ///
-/// ⚠️ Nothing is recovered and nothing is meant to be: the notes leave **sealed**, under
-/// the phrase nobody remembers. What this buys is a way out of the gate that does not
-/// require knowing where `%APPDATA%` is — and a copy still standing on the day the phrase
-/// comes back, which is why `vault.json` goes with it.
+/// Nothing is recovered: the notes leave sealed, under the forgotten phrase, and `vault.json`
+/// goes with them for the day the phrase comes back.
 #[tauri::command(async)]
 #[specta::specta]
 pub fn archive_locked_library(app: AppHandle, db: State<'_, Db>) -> Result<String, AppError> {
@@ -213,8 +199,7 @@ mod tests {
         assert!(target.join(DATABASE).is_file());
     }
 
-    /// ⚠️ Or the next launch's orphan sweep deletes the pictures of the notes just set
-    /// aside — the one way this recovery could destroy what it was meant to save.
+    /// Or the next launch's orphan sweep deletes the pictures of the notes just set aside.
     #[test]
     fn the_attachments_go_with_the_database_they_belong_to() {
         let scratch = tempfile::tempdir().unwrap();
@@ -227,7 +212,7 @@ mod tests {
         assert!(target.join(ATTACHMENTS).join("a-1.png").is_file());
     }
 
-    /// ⚠️ The passphrase is unchanged, and the rescued copy needs that exact key.
+    /// The rescued copy needs that exact key.
     #[test]
     fn the_key_file_stays_where_it_was() {
         let scratch = tempfile::tempdir().unwrap();
@@ -239,7 +224,6 @@ mod tests {
         assert!(directory.join(KEY_FILE).is_file());
     }
 
-    /// What is rescued is a real library: the point of trying `VACUUM INTO` at all.
     #[test]
     fn what_could_be_read_is_rescued_beside_it() {
         let scratch = tempfile::tempdir().unwrap();
@@ -279,9 +263,7 @@ mod tests {
     mod a_forgotten_passphrase {
         use super::*;
 
-        /// ⚠️ The opposite of the damaged case, and the whole point: the phrase would
-        /// only ever open this file again, so leaving it behind turns a library that is
-        /// merely locked into one that is gone.
+        /// The phrase would only ever open this file again.
         #[test]
         fn the_key_file_goes_with_the_library_it_seals() {
             let scratch = tempfile::tempdir().unwrap();
@@ -294,8 +276,7 @@ mod tests {
             assert!(!directory.join(KEY_FILE).exists());
         }
 
-        /// ⚠️ With no key file left, `vault_state` answers `absent` and the gate asks for
-        /// a new phrase rather than one nobody has.
+        /// With no key file left, the gate asks for a new phrase.
         #[test]
         fn what_is_left_behind_is_a_directory_with_no_library_in_it() {
             let scratch = tempfile::tempdir().unwrap();
@@ -308,7 +289,6 @@ mod tests {
             assert!(!directory.join(KEY_FILE).exists());
         }
 
-        /// Sealed is the promise: the copy is still openable, by whoever remembers.
         #[test]
         fn the_archived_copy_still_opens_on_the_day_the_phrase_comes_back() {
             let scratch = tempfile::tempdir().unwrap();
@@ -325,8 +305,7 @@ mod tests {
             assert_eq!(spaces[0].id, space);
         }
 
-        /// ⚠️ Nothing to rescue: the file is sealed, and SQLite hands over nothing
-        /// without the key. A `rescued.sqlite3` here would be an empty promise.
+        /// Sealed: SQLite hands over nothing without the key.
         #[test]
         fn nothing_is_rescued_beside_it() {
             let scratch = tempfile::tempdir().unwrap();
@@ -338,7 +317,6 @@ mod tests {
             assert!(!target.join(RESCUED).exists());
         }
 
-        /// The two reasons must not land in the same folder: one is recoverable, one is not.
         #[test]
         fn it_is_filed_apart_from_a_damaged_one() {
             let scratch = tempfile::tempdir().unwrap();
@@ -351,8 +329,6 @@ mod tests {
             assert!(!directory.join(DAMAGED).exists());
         }
 
-        /// ⚠️ Or the next launch's orphan sweep deletes the pictures of notes that are
-        /// only sealed, not gone.
         #[test]
         fn the_attachments_go_with_it_too() {
             let scratch = tempfile::tempdir().unwrap();

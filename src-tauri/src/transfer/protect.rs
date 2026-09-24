@@ -1,14 +1,8 @@
 //! The passphrase an export can be protected with.
 //!
-//! ⚠️ A different key from the library's, always. The library key is derived from the
-//! passphrase typed at launch and never leaves this machine; an export is meant to reach
-//! another one, so it carries its own salt and is opened by whatever phrase the user gave
-//! it. That is also what lets a file be sent to someone without handing them the keys to
-//! the library it came from.
-//!
-//! ⚠️ An unprotected export is still written, and is still plaintext. Refusing to write
-//! one would break the portability the exchange format exists for — what the interface
-//! owes the user is to say which of the two they are about to produce.
+//! A key of the export's own, never the library's: the file is meant to reach another machine,
+//! and sending it must not hand over the library it came from. An unprotected export is still
+//! written, in plaintext, for portability; the interface says which one it is producing.
 
 use serde::{Deserialize, Serialize};
 
@@ -20,9 +14,8 @@ use base64::engine::general_purpose::STANDARD as BASE64;
 /// Bumped when a protected file written today would stop being readable.
 const FORMAT_VERSION: u32 = 1;
 
-/// What a reader needs to derive the same key, and nothing more. Written in the clear
-/// beside the sealed payload: a salt is not a secret, and a cost has to be read before
-/// anything can be derived.
+/// What a reader needs to derive the same key, in the clear beside the payload: a salt is not
+/// secret, and the cost has to be read before anything is derived.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Recipe {
@@ -53,10 +46,8 @@ pub fn seal_with(passphrase: &str) -> Result<(Vault, Recipe), StorageError> {
     ))
 }
 
-/// ⚠️ Answers [`StorageError::WrongPassphrase`] on a phrase that does not open the
-/// payload, and the caller has no way to tell that from a corrupt file — which is
-/// deliberate. The recipe carries no check value of its own: the payload's own
-/// authentication tag is the check, so there is nothing extra to brute-force against.
+/// Answers [`StorageError::WrongPassphrase`] on a phrase that does not open the payload, which
+/// a corrupt file looks the same as. The payload's tag is the only check.
 pub fn open_with(passphrase: &str, recipe: &Recipe) -> Result<Vault, StorageError> {
     if recipe.version > FORMAT_VERSION {
         return Err(StorageError::ImportFormat(format!(
@@ -115,8 +106,8 @@ mod tests {
         assert!(reader.open_bytes(&sealed).is_err());
     }
 
-    /// ⚠️ Two exports of the same library under the same phrase must not share a key: a
-    /// fresh salt is what stops one opened file from opening every other.
+    /// Two exports under the same phrase must not share a key: one opened file would open
+    /// every other.
     #[test]
     fn two_exports_under_one_phrase_do_not_share_a_key() {
         let (first, first_recipe) = seal_with("a shared phrase").unwrap();

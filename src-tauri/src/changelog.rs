@@ -2,7 +2,7 @@ pub mod model;
 
 use model::ChangelogRelease;
 
-/// Resolved from the manifest, for the same reason as `BINDINGS_PATH`. ⚠️ The one place
+/// Resolved from the manifest, for the same reason as `BINDINGS_PATH`. The one place
 /// user-facing text comes out of Rust: it is data shipped as a file, untranslated like
 /// the release notes the updater hands over.
 const CHANGELOG: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../CHANGELOG.md"));
@@ -40,7 +40,7 @@ mod tests {
         }
     }
 
-    /// ⚠️ On the shipped file and not on a sample: the hand-written sections are the ones
+    /// On the shipped file and not on a sample: the hand-written sections are the ones
     /// that carry emphasis, and they were printed with their markers on screen.
     #[test]
     fn the_shipped_file_carries_emphasis_that_is_read_rather_than_printed() {

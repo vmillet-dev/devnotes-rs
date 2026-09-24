@@ -39,13 +39,10 @@ pub(super) struct NoteRow {
     folder_id: Option<String>,
 }
 
-/// ⚠️ Not a `TryFrom`: opening a row needs the key, and a trait cannot take one. The
-/// same goes for [`NoteRow::seal`] in the other direction.
-///
-/// An unreadable date fails the read: these columns are only ever written by
-/// [`iso8601::format`]. Language and `kind` degrade instead — a newer version may have
-/// written a value this build does not know. ⚠️ A value that will not open does **not**
-/// degrade: a wrong key must stop the read rather than hand back plausible emptiness.
+/// Not a `TryFrom`: opening a row needs the key. An unreadable date fails the read — only
+/// [`iso8601::format`] writes these columns — while language and `kind` degrade, since a newer
+/// version may write a value this build does not know. ⚠️ A value that will not open never
+/// degrades: a wrong key must stop the read, not hand back plausible emptiness.
 impl NoteRow {
     fn open(row: Self, vault: &Vault) -> Result<Note, StorageError> {
         let instant = |field: &'static str, value: &str| {
@@ -55,7 +52,7 @@ impl NoteRow {
             })
         };
 
-        // The schema `CHECK` makes `("expires", None)` unreachable.
+        // The schema's `CHECK` makes `("expires", None)` unreachable.
         let lifecycle = match (row.lifecycle_kind.as_str(), &row.lifecycle_expires_at) {
             ("expires", Some(at)) => NoteLifecycle::Expires {
                 at: instant("lifecycleExpiresAt", at)?,
@@ -82,9 +79,8 @@ impl NoteRow {
         })
     }
 
-    /// ⚠️ `space_id`, the instants, `pinned`, `language` and `kind` stay in the clear:
-    /// every one of them is filtered, ordered or grouped on in SQL, and sealing one would
-    /// move that work into Rust for no secret. What is sealed is what a reader would want.
+    /// What SQL filters, orders or groups on stays in the clear; what a reader would want is
+    /// sealed.
     fn seal(note: &Note, vault: &Vault) -> Result<Self, StorageError> {
         let (lifecycle_kind, lifecycle_expires_at) = lifecycle_columns(&note.lifecycle);
 
@@ -113,14 +109,11 @@ fn lifecycle_columns(lifecycle: &NoteLifecycle) -> (&'static str, Option<String>
     }
 }
 
-/// What an update actually writes.
+/// What an update writes.
 ///
-/// ⚠️ Every column is optional so an untouched one is left alone — `None` emits no
-/// assignment at all. That is what stops a value this build cannot parse from being
-/// overwritten: an older binary reads `language = "rust"` as `txt`, and writing all ten
-/// columns back would have made that fallback permanent, in the database, with no error
-/// anywhere. `updated_at` is not optional because refreshing it is what the patch path
-/// exists for.
+/// ⚠️ Every column is optional so an untouched one gets no assignment: writing all of them
+/// back would make permanent the fallback an older build read for a value it does not know.
+/// `updated_at` is not optional: refreshing it is what the patch path is for.
 #[derive(AsChangeset)]
 #[diesel(table_name = notes)]
 struct NoteChanges {
@@ -132,21 +125,18 @@ struct NoteChanges {
     pinned: Option<bool>,
     updated_at: String,
     lifecycle_kind: Option<String>,
-    /// ⚠️ Twice optional, and both layers matter: the outer one skips the column, the
-    /// inner one is the `NULL` a permanent note needs written. Diesel’s own idiom for a
-    /// nullable column, and the three cases are exactly the three the lint asks about.
+    /// Twice optional: the outer layer skips the column, the inner one is the `NULL` a
+    /// permanent note needs written.
     #[allow(clippy::option_option)]
     lifecycle_expires_at: Option<Option<String>>,
     kind: Option<String>,
-    /// Twice optional for the same reason, and only ever written by a move between
-    /// spaces: filing has a command of its own.
+    /// Twice optional too, written only by a move between spaces: filing has its own command.
     #[allow(clippy::option_option)]
     folder_id: Option<Option<String>>,
 }
 
 impl NoteChanges {
-    /// The columns `after` moved away from `before`. ⚠️ Only those are sealed: a pin toggled
-    /// is a boolean, and it is not worth three passes of AES-GCM over the text.
+    /// The columns `after` moved away from `before`. Only those are sealed.
     fn between(before: &Note, after: &Note, vault: &Vault) -> Result<Self, StorageError> {
         let sealed = |moved: bool, text: &str| moved.then(|| vault.seal(text)).transpose();
         let lifecycle_moved = after.lifecycle != before.lifecycle;
@@ -168,15 +158,14 @@ impl NoteChanges {
     }
 }
 
-/// ⚠️ Every row or none: a value that will not open stops the read rather than handing
-/// back a note with an empty body. A wrong key is not a degraded note.
+/// Every row or none: a value that will not open stops the read.
 fn open_all(rows: Vec<NoteRow>, vault: &Vault) -> Result<Vec<Note>, StorageError> {
     rows.into_iter()
         .map(|row| NoteRow::open(row, vault))
         .collect()
 }
 
-/// Opens the rows and attaches their side tables: the tail every reader shares.
+/// Opens the rows and attaches their side tables.
 fn opened(
     connection: &mut Library,
     rows: Vec<NoteRow>,
@@ -200,8 +189,8 @@ pub(super) fn notes_of_space(
         .filter(notes::space_id.eq(space_id.to_string()))
 }
 
-/// ⚠️ The value is sealed like a note's own, the name is not: the name is the key rows
-/// are found by, and a variable called `host` is worth a good deal less than what it holds.
+/// The value is sealed, the name is not: rows are found by it, and a variable called `host`
+/// says little without what it holds.
 pub fn global_placeholder_values(
     connection: &mut Library,
 ) -> Result<BTreeMap<String, String>, StorageError> {
@@ -242,7 +231,7 @@ pub fn replace_global_placeholder_values(
     })
 }
 
-/// Scoped to the space and not to the current filter — see [`NotesView`].
+/// Scoped to the space, not to the current filter: see `NotesView`.
 fn facets(connection: &mut Library, space_id: Option<&str>) -> Result<Facets, StorageError> {
     let mut tags = note_tags::table
         .inner_join(notes::table)
@@ -314,8 +303,8 @@ pub fn fetch(
         );
     }
 
-    // On `updated_at` although the sections group on `created_at`: the section says when
-    // a note was born, the order within it which one moved last.
+    // `updated_at` although the sections group on `created_at`: the section says when a note
+    // was born, the order within it which one moved last.
     let rows = query
         .order((notes::updated_at.desc(), notes::id.asc()))
         .load::<NoteRow>(connection.db())?;
@@ -324,7 +313,7 @@ pub fn fetch(
     Ok((notes, facets(connection, request.space_id.as_deref())?))
 }
 
-/// One note, whole — what the editor opens on.
+/// One note, whole: what the editor opens on.
 pub fn get(connection: &mut Library, id: &str) -> Result<Note, StorageError> {
     let (connection, vault) = connection.split();
 
@@ -366,8 +355,8 @@ pub fn create(
     connection.transaction(|connection, vault| create_in(connection, vault, draft, now))
 }
 
-/// For a caller already inside a transaction — the first launch writes a space and four
-/// notes as one.
+/// For a caller already inside a transaction: the first launch writes a space and its notes
+/// as one.
 pub(crate) fn create_in(
     connection: &mut SqliteConnection,
     vault: &Vault,
@@ -392,13 +381,9 @@ pub(crate) fn create_in(
 
 /// The first launch, as one write.
 ///
-/// ⚠️ The space and its notes commit together or not at all. Six round trips used to
-/// seed them — one space, one marker, four notes — and a process that died between any
-/// two left a space standing with nothing in it, which both of `seedIfFirstRun`'s guards
-/// then read as "already seeded". The canvas stayed empty for the life of that install.
-///
-/// ⚠️ Each draft's own `space_id` is ignored and replaced: the front end composes the
-/// drafts before the space it files them into exists.
+/// One transaction for the space, the folders and the notes: a space standing without them
+/// reads as "already seeded" to both of the front end's guards, for ever. A draft's own
+/// `space_id` is replaced — the space does not exist when the front end composes them.
 pub fn seed(
     connection: &mut Library,
     space_name: &str,
@@ -409,22 +394,15 @@ pub fn seed(
     connection.transaction(|connection, vault| {
         let space = spaces::create_in(connection, vault, space_name)?;
 
-        // ⚠️ Inside the same transaction as the space and the notes. A seeding that wrote
-        // the space but not the folders would be permanent: a space exists, so both of the
-        // front end's guards read "already seeded" and it never runs again.
-        //
-        // ⚠️ A millisecond apart, and *forward*: `folders::list` orders `created_at` ascending
-        // and breaks a tie on the id, which is a random UUID — sharing one instant would
-        // leave the board's zones in an order that differs from one install to the next.
+        // A millisecond apart, forward: `folders::list` orders `created_at` ascending and
+        // breaks ties on a random UUID.
         let mut folder_ids: Vec<String> = Vec::with_capacity(folder_names.len());
         for (index, name) in folder_names.iter().enumerate() {
             let at = now + TimeDelta::milliseconds(i64::try_from(index).unwrap_or(0));
             folder_ids.push(folders::create_in(connection, vault, &space.id, name, at)?.id);
         }
 
-        // ⚠️ And *backward* for the notes, for the same reason read the other way: the
-        // canvas orders `updated_at` descending, so the first one declared needs the latest
-        // instant to come out first.
+        // And backward for the notes: the canvas orders `updated_at` descending.
         for (index, note) in notes.into_iter().enumerate() {
             let at = now - TimeDelta::milliseconds(i64::try_from(index).unwrap_or(0));
             let folder_id = note
@@ -465,14 +443,12 @@ pub fn update(
             return Err(StorageError::SpaceNotFound(space_id.clone()));
         }
 
-        // ⚠️ Compared against the note as it was read, not against the patch's own
-        // fields: `apply` moves more than it is handed — a new body re-detects the
-        // language — and a column the patch never named can still have changed.
+        // Compared against the note as read, not the patch: `apply` moves more than it is
+        // handed — a new body re-detects the language.
         let before = note.clone();
         patch.apply(&mut note, now);
 
-        // ⚠️ Before the update and inside the same transaction: what is worth keeping is
-        // the body as it **was**.
+        // Before the update, in the same transaction: what is kept is the body as it was.
         if revision::worth_keeping(&before, &note) {
             revisions::record(connection, vault, &note.id, &before.content, now)?;
         }
@@ -494,15 +470,9 @@ pub fn update(
     })
 }
 
-/// Goes back to a kept body: the note takes it, and it leaves the history along with every
-/// body kept after it.
-///
-/// ⚠️ Nothing is kept of the text it replaces — A → B → C, back to B, and C is gone. The
-/// preview is the guard, not an undo.
-///
-/// ⚠️ `updated_at` is not touched: putting something back is not editing it, and the
-/// canvas sorts on that column — the same line `restore`, `restore_placements` and
-/// `untag_many` already hold.
+/// Goes back to a kept body, which leaves the history with every body kept after it. Nothing
+/// is kept of the text it replaces: the preview is the guard, not an undo. Leaves
+/// `updated_at` alone.
 pub fn restore_revision(
     connection: &mut Library,
     id: &str,
@@ -529,8 +499,7 @@ pub fn restore_revision(
     })
 }
 
-/// ⚠️ `updated_at` is not touched: filling a field is not editing the note, and the
-/// canvas sorts on that column.
+/// Leaves `updated_at` alone: filling a field is not editing the note.
 pub fn set_placeholder_values(
     connection: &mut Library,
     id: &str,
@@ -564,8 +533,7 @@ pub fn move_many(
             return Err(StorageError::SpaceNotFound(space_id.to_string()));
         }
 
-        // ⚠️ Read before the update: afterwards they all say `space_id`, and where each
-        // one came from is gone.
+        // Read before the update, which erases where each note came from.
         let moved: Vec<NotePlacement> = notes::table
             .filter(notes::id.eq_any(ids))
             .filter(notes::deleted_at.is_null())
@@ -590,10 +558,7 @@ pub fn move_many(
     })
 }
 
-/// Puts moved notes back where they were.
-///
-/// ⚠️ `updated_at` is left alone, like restoring from the trash: undoing is not editing,
-/// and the canvas sorts on that column.
+/// Puts moved notes back where they were, leaving `updated_at` alone: undoing is not editing.
 pub fn restore_placements(
     connection: &mut Library,
     placements: &[NotePlacement],
@@ -649,11 +614,9 @@ pub fn tag_many(
             .select(notes::id)
             .load::<String>(connection)?;
 
-        // ⚠️ What the batch is about to find already there, read before it inserts. This
-        // is what the undo hangs on: re-adding a tag a note carries is a no-op, so
-        // stripping it afterwards would take away something the batch never gave.
-        // `note_tags.tag` is `NOCASE`, which SQLite folds over ASCII only — exactly what
-        // `eq_ignore_ascii_case` compares below.
+        // ⚠️ What the notes already carry, read before inserting: the undo strips exactly what
+        // was added. `note_tags.tag` is `NOCASE`, which SQLite folds over ASCII only — the
+        // comparison `to_ascii_lowercase` makes below.
         let carried: HashSet<(String, String)> = note_tags::table
             .filter(note_tags::note_id.eq_any(&targets))
             .filter(note_tags::tag.eq_any(tags))
@@ -694,8 +657,7 @@ pub fn tag_many(
             .values(rows)
             .execute(connection)?;
 
-        // Only what gained something: a note that already carried the tag did not change,
-        // and the canvas sorts on this column.
+        // Only what gained something moves up the canvas.
         let touched: Vec<&String> = added.iter().map(|pair| &pair.note_id).collect();
         diesel::update(notes::table.filter(notes::id.eq_any(touched)))
             .set(notes::updated_at.eq(iso8601::format(now)))
@@ -705,9 +667,7 @@ pub fn tag_many(
     })
 }
 
-/// Removes exactly these pairs — the undo of [`tag_many`], and nothing wider.
-///
-/// ⚠️ `updated_at` is left alone, for the reason [`restore_placements`] gives.
+/// Removes exactly these pairs, the undo of [`tag_many`], leaving `updated_at` alone.
 pub fn untag_many(connection: &mut Library, pairs: &[NoteTag]) -> Result<usize, StorageError> {
     if pairs.is_empty() {
         return Ok(0);
@@ -735,8 +695,7 @@ pub fn untag_many(connection: &mut Library, pairs: &[NoteTag]) -> Result<usize, 
 
 /// How many notes — the trash included — carry at least one of these tags.
 ///
-/// ⚠️ Counted distinctly, not summed per tag: a note carrying two of them is one note,
-/// and a confirmation that overstates its blast radius teaches people to dismiss it.
+/// Counted distinctly, not summed per tag: a note carrying two of them is one note.
 pub fn count_notes_tagged(
     connection: &mut Library,
     tags: &[String],
@@ -748,8 +707,7 @@ pub fn count_notes_tagged(
     carrying(connection.db(), tags)
 }
 
-/// The counters and the global values. The folder chips depend on the view, so they are the
-/// caller's to add.
+/// The counters and the global values. The folder chips depend on the view: the caller's.
 pub fn decorations(connection: &mut Library) -> Result<Decorations, StorageError> {
     Ok(Decorations {
         attachment_counts: crate::attachments::store::counts(connection)?,
@@ -768,8 +726,7 @@ pub fn tag_usage(connection: &mut Library) -> Result<Vec<(String, i64)>, Storage
         .load::<(String, i64)>(connection.db())?)
 }
 
-/// ⚠️ `updated_at` stays intact — the canvas sorts on it, and a corpus-wide rename would
-/// float up notes nobody reopened.
+/// Leaves `updated_at` alone: a corpus-wide rename would float up notes nobody reopened.
 pub fn retag(
     connection: &mut Library,
     sources: &[String],
@@ -786,8 +743,8 @@ pub fn retag(
             .distinct()
             .load::<String>(connection)?;
 
-        // ⚠️ The target is swept along with the sources then rewritten: the key is
-        // `NOCASE`, so a pure case correction (`auth` → `Auth`) would be a no-op.
+        // ⚠️ The target is swept with the sources, then rewritten: the key is `NOCASE`, so a
+        // pure case correction (`auth` → `Auth`) would otherwise be a no-op.
         let mut holders = renamed.clone();
         holders.extend(
             note_tags::table
@@ -815,8 +772,7 @@ pub fn retag(
     })
 }
 
-/// Answers the number of notes, like the confirmation that preceded it — not the number of
-/// rows, which counts a note carrying two of the tags twice.
+/// Answers the number of notes, like the confirmation before it, not the number of rows.
 pub fn drop_tags(connection: &mut Library, tags: &[String]) -> Result<usize, StorageError> {
     if tags.is_empty() {
         return Ok(0);
@@ -830,8 +786,7 @@ pub fn drop_tags(connection: &mut Library, tags: &[String]) -> Result<usize, Sto
     })
 }
 
-/// ⚠️ Trashed notes included, in all three tag operations: a note restored after a rename
-/// must come back under the name the rail shows.
+/// Trashed notes included: a note restored after a rename comes back under the rail's name.
 fn carrying(connection: &mut SqliteConnection, tags: &[String]) -> Result<usize, StorageError> {
     let counted: i64 = note_tags::table
         .filter(note_tags::tag.eq_any(tags))
@@ -877,8 +832,7 @@ pub fn insert_imported(connection: &mut Library, note: &Note) -> Result<bool, St
 }
 
 /// For a caller already inside a transaction: an import is one transaction for the whole
-/// file, and every note it brings in runs inside it. The note is written as given —
-/// [`Note::normalized`] is the caller's.
+/// file. Written as given; [`Note::normalized`] is the caller's.
 pub(crate) fn insert_imported_in(
     connection: &mut SqliteConnection,
     vault: &Vault,

@@ -14,9 +14,8 @@ use tauri::{AppHandle, Emitter, Manager, State, Wry};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 closed_enum! {
-    /// One event carrying a closed value, not one topic per action: a topic string
-    /// mirrored on both sides makes a typo into a silently inert subscription. It
-    /// crosses as a generated union, so a variant added here stops the front compiling.
+    /// One event carrying a closed value rather than a topic per action: a mistyped topic is
+    /// a silently inert subscription, and a new variant here stops the front compiling.
     pub enum GlobalAction {
         #[default]
         Capture = "capture",
@@ -37,15 +36,14 @@ pub(crate) fn reveal(app: &AppHandle) {
     }
 }
 
-/// Shows the window then asks the front end for the action: the native side never
-/// creates the note itself, which spares it duplicating language detection.
+/// Shows the window then asks the front end for the action: the note itself is the front's to
+/// create, language detection included.
 fn reveal_and_emit(app: &AppHandle, action: GlobalAction) {
     reveal(app);
     let _ = app.emit(ACTION_EVENT, action);
 }
 
-/// Three fields rather than a map, which would leave the compiler silent about a
-/// missing shortcut.
+/// Three fields rather than a map, so a missing shortcut is a compile error.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ShortcutBindings {
@@ -55,14 +53,9 @@ pub struct ShortcutBindings {
 }
 
 impl ShortcutBindings {
-    /// ⚠️ Taken before the front end has started: without them `Ctrl+Alt+P` is dead for
-    /// the length of the first render — exactly the second it is used from another
-    /// application. That is why the native side has defaults of its own at all.
-    ///
-    /// The front end keeps no copy: these cross as the `DEFAULT_SHORTCUTS` constant.
-    ///
-    /// ⚠️ Not `Ctrl+Alt+Space` for the palette: widely installed applications hold it
-    /// already, and a global shortcut is first come, first served.
+    /// ⚠️ Registered before the front end starts, or `Ctrl+Alt+P` is dead during the first
+    /// render — exactly when it is used from another application. The front reads them as
+    /// `DEFAULT_SHORTCUTS`. Not `Ctrl+Alt+Space`, which widely installed applications hold.
     pub(crate) fn defaults() -> Self {
         Self {
             capture: "Ctrl+Alt+V".to_string(),
@@ -80,13 +73,11 @@ impl ShortcutBindings {
     }
 }
 
-/// A list rather than three constants: the combinations change with the preferences,
-/// so the handler cannot compare them against captured values.
+/// A list rather than three constants: the combinations change with the preferences.
 type ActiveShortcuts = Mutex<Vec<(Shortcut, GlobalAction)>>;
 
-/// ⚠️ Every piece of state the native side owns is managed here, before any command can
-/// run: a command creating its own would race another doing the same. A shortcut already
-/// taken by another application is logged but not fatal.
+/// Every piece of native state is managed here, before any command can run: a command creating
+/// its own would race another. A shortcut another application holds is logged, not fatal.
 pub(crate) fn init(app: &AppHandle) -> tauri::Result<()> {
     app.manage(ActiveShortcuts::default());
     app.manage(WindowBehaviorState::default());
@@ -129,8 +120,8 @@ fn action_of(app: &AppHandle, shortcut: &Shortcut) -> Option<GlobalAction> {
         .map(|(_, action)| *action)
 }
 
-/// Takes the three from scratch and returns what could not be taken. ⚠️ Everything is
-/// released first, or the combination a setting replaced would keep firing.
+/// Takes the three from scratch and returns what could not be taken. Everything is released
+/// first, or a replaced combination would keep firing.
 fn apply_shortcuts(app: &AppHandle, bindings: &ShortcutBindings) -> Vec<String> {
     if let Err(error) = app.global_shortcut().unregister_all() {
         log::warn!("Global shortcuts not released: {error}");
@@ -172,8 +163,7 @@ pub fn set_global_shortcuts(bindings: ShortcutBindings, app: AppHandle) -> Vec<S
     apply_shortcuts(&app, &bindings)
 }
 
-/// Pushed from the preferences panel like the tray labels: reading `preferences.json`
-/// back from Rust would be a second source to keep in step.
+/// Pushed from the preferences panel as it changes, like the tray labels.
 #[derive(Debug, Clone, Copy, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct WindowBehavior {
@@ -207,14 +197,12 @@ fn window_behavior(app: &AppHandle) -> WindowBehavior {
         .unwrap_or_default()
 }
 
-/// ⚠️ Both require a tray: without one, hiding the window leaves a process nothing can
-/// call back.
+/// Both require a tray: without one, a hidden window leaves a process nothing can call back.
 pub(crate) fn hides_on_close(app: &AppHandle) -> bool {
     window_behavior(app).close_to_tray && tray_exists(app)
 }
 
-/// ⚠️ Tauri emits no "minimized" event: only `Resized` comes through, and it is up to
-/// the caller to ask the window where it stands.
+/// Tauri emits no "minimized" event: the caller asks the window after a `Resized`.
 pub(crate) fn hides_on_minimize(app: &AppHandle) -> bool {
     window_behavior(app).minimize_to_tray && tray_exists(app)
 }
@@ -227,8 +215,7 @@ const CAPTURE_ITEM: &str = "capture";
 const PALETTE_ITEM: &str = "palette";
 const QUIT_ITEM: &str = "quit";
 
-/// Labels cross the bridge already translated: the interface language is a front-end
-/// preference, and a translation table in Rust would be a second one.
+/// Labels cross already translated: the interface language is a front-end preference.
 #[derive(Debug, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct TrayLabels {
@@ -239,9 +226,8 @@ pub struct TrayLabels {
     pub quit: String,
 }
 
-/// Replaces only the menu when the tray already exists, so a language change does not
-/// make it flicker. No `Result`: an absent tray is not a failure the front can handle,
-/// and [`tray_exists`] is what then keeps closing from hiding the window.
+/// Replaces only the menu when the tray exists, so a language change does not flicker. No
+/// `Result`: without a tray, `tray_exists` is what stops closing from hiding the window.
 #[tauri::command]
 #[specta::specta]
 #[allow(clippy::needless_pass_by_value)]

@@ -26,7 +26,7 @@ pub struct ChangelogSection {
 
 /// One bullet, cut into the runs it is drawn with.
 ///
-/// ⚠️ Runs and not a line of markdown: the panel renders them with a `switch` and three
+/// Runs and not a line of markdown: the panel renders them with a `switch` and three
 /// spans, so nothing has to be trusted, sanitised or handed to `innerHTML`.
 pub type ChangelogEntry = Vec<ChangelogSpan>;
 
@@ -63,7 +63,7 @@ impl ChangelogSpan {
     }
 }
 
-/// ⚠️ The order of the file, never re-sorted: versions are strings here, and sorting them
+/// The order of the file, never re-sorted: versions are strings here, and sorting them
 /// as such would put `0.10` before `0.9`.
 pub fn parse(markdown: &str) -> Vec<ChangelogRelease> {
     let mut releases: Vec<ChangelogRelease> = Vec::new();
@@ -103,7 +103,7 @@ pub fn parse(markdown: &str) -> Vec<ChangelogRelease> {
         } else if item_open
             && let Some(item) = release.sections.last_mut().and_then(|s| s.items.last_mut())
         {
-            // ⚠️ Re-cut with what it continues rather than appended to it: a marker opened
+            // Re-cut with what it continues rather than appended to it: a marker opened
             // on the line above closes on this one.
             *item = spans(&format!("{} {line}", written(item)));
         }
@@ -140,7 +140,7 @@ fn written(entry: &ChangelogEntry) -> String {
 
 /// The trailing `(#123)` a squashed pull request leaves behind.
 ///
-/// ⚠️ Dropped when the entry is read and not when the file is written: the number is what
+/// Dropped when the entry is read and not when the file is written: the number is what
 /// makes the release on github.com navigable, and noise on a panel with no links in it.
 fn without_pull_request(entry: &str) -> &str {
     let Some(open) = entry.strip_suffix(')').and_then(|rest| rest.rfind("(#")) else {
@@ -157,7 +157,7 @@ fn without_pull_request(entry: &str) -> &str {
 
 /// Cuts a bullet into plain, strong and code runs.
 ///
-/// ⚠️ The grammar is two markers, paired, on one line, and nothing else — no links, no
+/// The grammar is two markers, paired, on one line, and nothing else — no links, no
 /// nesting, no headings. An unclosed marker is text, which is what keeps an entry about
 /// `5 * 3` readable.
 fn spans(entry: &str) -> ChangelogEntry {
@@ -345,8 +345,8 @@ Everything above the first release is preamble.
         assert_eq!(reads(&releases[0].sections[0]), ["Shipped."]);
     }
 
-    /// ⚠️ The hand-written sections of the file open on `**Todo-list notes.**` and carry
-    /// backticks; all of it used to land on screen as punctuation.
+    /// The hand-written sections open on `**Todo-list notes.**` and carry backticks, which
+    /// must reach the screen as emphasis and code, not punctuation.
     mod how_an_entry_is_drawn {
         use super::*;
 
@@ -404,7 +404,7 @@ Everything above the first release is preamble.
             );
         }
 
-        /// ⚠️ Unclosed is text: an entry about `5 * 3` has to stay readable.
+        /// Unclosed is text: an entry about `5 * 3` has to stay readable.
         #[test]
         fn a_lone_marker_is_text() {
             assert_eq!(
@@ -420,7 +420,7 @@ Everything above the first release is preamble.
             assert_eq!(read(&only("Nothing to see ****")), "Nothing to see ****");
         }
 
-        /// ⚠️ A continuation is re-cut with what it continues, or a marker opened on the
+        /// A continuation is re-cut with what it continues, or a marker opened on the
         /// first line would never find its close.
         #[test]
         fn a_marker_survives_a_wrapped_line() {

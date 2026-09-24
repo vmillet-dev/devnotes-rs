@@ -38,7 +38,7 @@ pub fn normalize_items(items: &[ChecklistItem]) -> Vec<ChecklistItem> {
         .collect()
 }
 
-/// ⚠️ The only place the `- [x] ` syntax exists; the front reads it as `copy_text`.
+/// The only place the `- [x] ` syntax exists; the front reads it as `copy_text`.
 pub fn to_markdown(items: &[ChecklistItem]) -> String {
     items
         .iter()

@@ -1,9 +1,8 @@
 //! What a query costs as the corpus grows, and how much of it crosses the bridge.
 //!
-//! The measurement #21 asks for, kept out of `commands` so that bench's numbers stay
-//! comparable across runs and its corpus stays one size.
+//! Kept out of `commands` so that bench's corpus stays one size and its numbers comparable.
 //!
-//! ⚠️ Slow by construction: it seeds three corpora of ~13 kB notes, the largest of them
+//! Slow by construction: it seeds three corpora of ~13 kB notes, the largest of them
 //! 20 000. Run it on its own.
 //!
 //! ```
@@ -65,7 +64,7 @@ fn query_by_corpus_size(c: &mut Criterion) {
                 b.iter(|| black_box(run_query(&mut corpus, &request)));
             });
 
-            // ⚠️ The same query stopped before the view is built and serialised: the gap
+            // The same query stopped before the view is built and serialised: the gap
             // between the two is what a lighter wire shape could take away, and what a
             // LIMIT could not.
             group.bench_with_input(

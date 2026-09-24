@@ -1,6 +1,5 @@
-//! The geometry, which is the half of a folder that does not travel. Same split as
-//! `notes::store::trash` beside `notes::trash`: the rules are in `folders::board`, this is
-//! only the SQL that stores and reads them.
+//! The geometry, the half of a folder that does not travel: the rules are in
+//! `folders::board`, and this is the SQL that stores and reads them.
 
 use std::collections::HashMap;
 
@@ -63,18 +62,10 @@ pub fn frame_of(
     Ok(row.and_then(frame_from))
 }
 
-/// Opens a zone far enough to show everything filed into it, and never closes it again.
-///
-/// ⚠️ Grow only. A zone somebody stretched keeps its size; one they made too small for
-/// what is now in it is reopened by the drop — where shrinking would move the board under
-/// the pointer every time a card is taken out.
-///
-/// ⚠️ Rows counted against the zone's **own** width, not the nominal two columns: a zone
-/// widened by hand fits more across, and growing it by the default would leave a band of
-/// nothing under the cards.
-///
-/// A folder with no frame yet is left alone: `geometry` computes its first one from the
-/// same count, on the next read.
+/// Opens a zone far enough to show everything filed into it, and never shrinks it: a zone
+/// made too small is reopened by the drop, while shrinking would move the board under the
+/// pointer. Rows are counted against the zone's own width. A folder with no frame yet is left
+/// to `geometry`, which computes its first one on the next read.
 pub fn grow_to_fit(
     connection: &mut SqliteConnection,
     folder_id: &str,
@@ -116,8 +107,8 @@ pub fn set_frame(
     Ok(())
 }
 
-/// ⚠️ Narrowed by subquery, not by a list of bound ids — the rule every side table here
-/// follows. Reading a superset is harmless: the caller only looks up the notes it holds.
+/// Narrowed by the space's subquery: reading a superset is harmless, since the caller only
+/// looks up the notes it holds.
 pub fn positions(
     connection: &mut SqliteConnection,
     space_id: &str,
@@ -159,8 +150,7 @@ pub fn set_position(
     Ok(())
 }
 
-/// ⚠️ A row exists only for a loose note, so filing one into a zone drops it: a filed card
-/// flows inside its zone and has no position of its own to keep consistent.
+/// A row exists only for a loose note: filing one drops it, since a filed card flows.
 pub fn forget_positions(
     connection: &mut SqliteConnection,
     note_ids: &[String],
@@ -197,9 +187,8 @@ pub fn save_layout(
             )?;
         }
 
-        // ⚠️ Only a loose note has a place of its own. A card filed between the drag and the
-        // save flows inside its zone, and writing a position for it would put a row back
-        // that `file_many` had just dropped.
+        // ⚠️ Only a loose note has a place: a card filed between the drag and the save would
+        // get back the row `file_many` just dropped.
         let moved: Vec<&String> = cards.iter().map(|placement| &placement.note_id).collect();
         let filed: std::collections::HashSet<String> = notes::table
             .filter(notes::id.eq_any(moved))
@@ -227,10 +216,8 @@ pub fn save_layout(
 
 /// Reads the geometry, filling in whatever has never been laid out, in one transaction.
 ///
-/// ⚠️ A read that writes, deliberately: every folder and every loose note needs a first
-/// position, and computing one on the fly without storing it would let the very first drag
-/// land next to cards that have no stored place of their own. It is idempotent — the
-/// second board read of a space writes nothing.
+/// ⚠️ A read that writes: every folder and loose note gets a first position stored, or the
+/// first drag lands among cards that have none. Idempotent — a second read writes nothing.
 pub fn geometry(
     connection: &mut Library,
     space_id: &str,
@@ -247,9 +234,8 @@ pub fn geometry(
             .collect();
 
         if !missing.is_empty() {
-            // ⚠️ Arranged against *every* folder, not just the unplaced ones, so a folder
-            // added later lands in the slot reading order gives it rather than on top of
-            // the first zone.
+            // Against every folder, so one added later takes its reading-order slot rather
+            // than the first zone's.
             let counts: Vec<usize> = folder_ids
                 .iter()
                 .map(|id| occupancy.per_folder.get(id).copied().unwrap_or(0))
@@ -274,10 +260,8 @@ pub fn geometry(
         if !unplaced.is_empty() {
             let zones: Vec<BoardFrame> = stored_frames.values().copied().collect();
             let top = board::loose_top(&zones);
-            // ⚠️ The first seat nothing is standing on, and never the seat the note's
-            // index in the list gives it: a note created now is the most recently updated,
-            // so it arrives at index 0 and used to be written on top of whichever card was
-            // laid out there on the board's very first read.
+            // The first seat nothing stands on, never the one of its index: a new note arrives
+            // at index 0 and would land on whichever card sits there.
             let mut standing: Vec<BoardPoint> = stored_positions.values().copied().collect();
 
             for id in unplaced {
@@ -294,9 +278,8 @@ pub fn geometry(
 
 /// Every folder of the space in reading order, and how many live notes each one holds.
 ///
-/// ⚠️ Ids and counts rather than [`crate::folders::store::list`] and
-/// [`crate::notes::store::fetch`]: a tidy-up needs no name and no body, and those two
-/// would decrypt the whole space to answer a count.
+/// Ids and counts rather than `folders::store::list` and `notes::store::fetch`, which would
+/// decrypt the whole space to answer a count.
 fn folder_counts(
     connection: &mut SqliteConnection,
     space_id: &str,
@@ -328,8 +311,7 @@ fn folder_counts(
         .collect())
 }
 
-/// The unfiled notes, in the order the board draws them — pinned first, then by when they
-/// last moved, exactly as `notes::store::fetch` hands them over.
+/// The unfiled notes, in the board's order: pinned first, then by last change.
 fn loose_ids(
     connection: &mut SqliteConnection,
     space_id: &str,
@@ -349,13 +331,9 @@ fn loose_ids(
 
 /// Rewrites one space's geometry as far as `scope` allows, and answers what it was.
 ///
-/// ⚠️ The **previous** layout and not the new one: the new one arrives with the reload the
-/// front end does anyway, where this is the only moment the old one still exists.
-///
-/// ⚠️ Only what actually had a place is reported back. A zone the board had never laid out
-/// had nothing to restore, and writing a frame for it on the undo would invent a position
-/// the user never chose. `moved` is narrower still — it counts what came out somewhere
-/// other than where it went in, so a board already in order opens no undo window at all.
+/// It answers the previous layout: the new one arrives with the front end's reload anyway.
+/// Only what had a place is reported, or an undo would invent positions nobody chose, and
+/// `moved` counts what came out somewhere else, so a board already in order opens no undo.
 pub fn arrange(
     connection: &mut Library,
     space_id: &str,

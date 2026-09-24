@@ -78,7 +78,7 @@ fn a_stored_date_always_carries_its_milliseconds() {
     assert_eq!(stored, "2026-07-25T09:00:00.000Z");
 }
 
-/// ⚠️ The point of the whole thing, and the only test that reads the file rather than the
+/// The point of the whole thing, and the only test that reads the file rather than the
 /// API: a note written through the store must not be findable by grepping the database.
 #[test]
 fn a_note_is_not_readable_in_the_file_it_was_written_to() {
@@ -123,7 +123,7 @@ fn a_note_is_not_readable_in_the_file_it_was_written_to() {
         !haystack.contains("prod.internal"),
         "a global variable's value is in the clear"
     );
-    // ⚠️ Tags and the names of variables are deliberately not sealed: the facet, the
+    // Tags and the names of variables are deliberately not sealed: the facet, the
     // filter and the lookup all touch them in SQL. This asserts the decision rather than
     // an accident.
     assert!(

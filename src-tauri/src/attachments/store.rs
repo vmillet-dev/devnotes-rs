@@ -22,7 +22,7 @@ struct AttachmentRow {
     created_at: String,
 }
 
-/// ⚠️ `mime_type` stays in the clear, deliberately: the file on disk is named
+/// `mime_type` stays in the clear, deliberately: the file on disk is named
 /// `{id}.{extension}`, so the type is already public. Sealing it would be theatre.
 impl AttachmentRow {
     fn open(row: Self, vault: &Vault) -> Result<Attachment, StorageError> {

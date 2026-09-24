@@ -42,9 +42,8 @@ pub fn trashed(note: Note, deleted_at: DateTime<Utc>) -> TrashedNote {
     }
 }
 
-/// ⚠️ The attachment file names are collected before the `DELETE`: afterwards the cascade
-/// has taken the records that carried them, and the files are orphaned until the next
-/// startup sweep.
+/// The attachment file names are collected before the `DELETE`, which cascades the records
+/// that carried them away.
 pub fn purge(db: &Db, ids: Vec<String>) -> Result<usize, StorageError> {
     if ids.is_empty() {
         return Ok(0);

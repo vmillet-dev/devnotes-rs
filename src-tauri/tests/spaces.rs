@@ -110,7 +110,7 @@ fn unpinning_lets_a_space_fall_back_among_the_others() {
     assert_eq!(names(&mut connection), ["Archive", "Veille"]);
 }
 
-/// ⚠️ A rename answers with the row it read back, not with what it was sent — which
+/// A rename answers with the row it read back, not with what it was sent — which
 /// is what keeps it from quietly reporting a pinned space as unpinned.
 #[test]
 fn renaming_a_pinned_space_leaves_it_pinned() {

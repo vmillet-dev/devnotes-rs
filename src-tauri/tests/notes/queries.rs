@@ -577,7 +577,7 @@ fn only_note(view: &NotesView) -> &DisplayNote {
     note
 }
 
-/// ⚠️ A list sends the head of a long body; the editor reads the rest with `get`.
+/// A list sends the head of a long body; the editor reads the rest with `get`.
 #[test]
 fn a_list_sends_the_head_of_a_long_body_and_get_the_whole_of_it() {
     let mut connection = open_in_memory().unwrap();

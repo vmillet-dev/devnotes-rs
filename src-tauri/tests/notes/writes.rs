@@ -75,9 +75,8 @@ fn dropping_an_expiry_clears_the_stored_date() {
     ));
 }
 
-/// ⚠️ The scenario in full: a newer build writes a language this one cannot name, this
-/// one reads it as the fallback — and writing every column back used to make that
-/// fallback permanent, in the database, with no error anywhere along the way.
+/// A newer build writes a language this one cannot name, and this one reads it as the
+/// fallback: an edit must not write that fallback back.
 #[test]
 fn an_edit_keeps_a_language_this_build_cannot_read() {
     let mut connection = open_in_memory().unwrap();

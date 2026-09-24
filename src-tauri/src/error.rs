@@ -1,5 +1,5 @@
-//! ⚠️ No user-facing text leaves this module: a `String` would put French in the English
-//! UI and force callers to parse prose. The front maps `code` onto a translation key.
+//! No user-facing text leaves this module: a `String` would put French in the English UI and
+//! make callers parse prose. The front maps `code` onto a translation key.
 
 use std::collections::BTreeMap;
 
@@ -68,26 +68,23 @@ pub enum StorageError {
     SchemaTooRecent(String),
     #[error("Migration failed: {0}")]
     Migration(String),
-    /// ⚠️ Its own variant because the answer is its own: everything else is "try again",
-    /// this one is "this file will not get better on its own".
+    /// Its own variant because the answer is: this file will not get better by retrying.
     #[error("The library is damaged: {0}")]
     Damaged(String),
     /// Deriving a key, sealing a value, or opening one that will not open.
     #[error("Vault error: {0}")]
     Vault(String),
-    /// ⚠️ Says only that: which of the passphrase and the file is wrong is not something
-    /// to help a caller narrow down.
+    /// Says only that: which of the passphrase and the file is wrong is not for a caller to
+    /// narrow down.
     #[error("Wrong passphrase")]
     WrongPassphrase,
-    /// A protected export was offered without the phrase that opens it. Not a failure —
-    /// the interface has to ask, and nothing could know before looking inside.
+    /// A protected export offered without its phrase: not a failure, the interface asks.
     #[error("This file is protected by a passphrase")]
     PassphraseRequired,
     /// A command panicked while holding the connection.
     #[error("Storage unavailable: a previous operation failed")]
     Unavailable,
-    /// ⚠️ A command reached the library before the passphrase did. The front gates on the
-    /// unlock screen, so this is a caller that jumped the queue rather than a state.
+    /// A command reached the library before the passphrase: a caller that jumped the queue.
     #[error("The library is locked")]
     Locked,
     /// `#[from]`: required by `Connection::transaction`.
@@ -95,8 +92,7 @@ pub enum StorageError {
     Sqlite(#[from] diesel::result::Error),
 }
 
-/// Turns any failure into a [`StorageError::File`] named after what it was about:
-/// `"<what>: <error>"`, the detail every file error has always carried.
+/// Turns any failure into a [`StorageError::File`] named after what it was about.
 pub(crate) trait FileContext<T> {
     fn context(self, what: impl std::fmt::Display) -> Result<T, StorageError>;
 }
@@ -107,8 +103,8 @@ impl<T, E: std::fmt::Display> FileContext<T> for Result<T, E> {
     }
 }
 
-/// ⚠️ Adding a variant breaks the front-end build until `CODE_KEYS`
-/// (`core/services/errors/error-notifier.service.ts`) and both locales have their key.
+/// ⚠️ A new variant breaks the front-end build until `CODE_KEYS`
+/// (`core/services/errors/error-notifier.service.ts`) and both locales have its key.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub enum ErrorCode {
@@ -131,15 +127,13 @@ pub enum ErrorCode {
     InvalidInput,
     /// Poisoned mutex: a command panicked while holding the connection.
     StorageUnavailable,
-    /// The one the unlock screen acts on: it clears the field rather than banishing the
-    /// user to a banner.
+    /// The unlock screen clears the field on this one rather than showing a banner.
     WrongPassphrase,
     /// A command ran before the library was unlocked.
     Locked,
     /// The import needs the phrase the export was protected with.
     PassphraseRequired,
-    /// SQLite says the file is corrupt. The only code the interface answers with an
-    /// action rather than a message.
+    /// SQLite says the file is corrupt: the one code the interface answers with an action.
     LibraryDamaged,
     Storage,
 }

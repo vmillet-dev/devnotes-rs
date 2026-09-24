@@ -15,9 +15,8 @@ use crate::folders::model::NoteFolder;
 pub struct NotesQuery {
     /// `None` = every space: a choice, not an absence of one.
     pub space_id: Option<String>,
-    /// `None` = every folder, filed or not. Narrowing to "unfiled" is not offered: the
-    /// absence of a chip already reads, and a filter for it would be a fourth way to say
-    /// the same thing.
+    /// `None` = every folder, filed or not. No "unfiled" filter: the absence of a chip already
+    /// says it.
     #[serde(default)]
     #[specta(optional)]
     pub folder_id: Option<String>,
@@ -27,8 +26,8 @@ pub struct NotesQuery {
     pub tags: Vec<String>,
     pub languages: Vec<Language>,
     pub now: DateTime<Utc>,
-    /// ⚠️ `Date#getTimezoneOffset()`, whose sign is the opposite of the offset
-    /// (−120 for UTC+2). Sections reason in local days.
+    /// `Date#getTimezoneOffset()`, whose sign is the opposite of the offset (−120 for
+    /// UTC+2). Sections reason in local days.
     pub tz_offset_minutes: i32,
     /// Their own section when the view is chronological, the head of the list when flat.
     pub pinned_first: bool,
@@ -43,10 +42,8 @@ pub enum NoteFilter {
     Untriaged,
 }
 
-/// What the search, the quick filter and the two rails ask of a note, normalised once.
-///
-/// ⚠️ The date view narrows on these in SQL and the board dims on them in Rust. This is the
-/// rule both are held to, so the two views cannot disagree on which notes match.
+/// What the search, the quick filter and the two rails ask of a note, normalised once: the
+/// date view narrows on it and the board dims on it, so the two cannot disagree on a match.
 #[derive(Debug, Clone)]
 pub struct Criteria {
     needle: String,
@@ -70,8 +67,8 @@ impl Criteria {
         &self.needle
     }
 
-    /// Whether the search or a rail narrows the notes. The quick filter is not counted: the
-    /// date view keeps its sections under it.
+    /// Whether the search or a rail narrows the notes. Not the quick filter, under which the
+    /// date view keeps its sections.
     pub fn narrows(&self) -> bool {
         !self.needle.is_empty() || !self.tags.is_empty() || !self.languages.is_empty()
     }
@@ -110,8 +107,8 @@ pub struct Facets {
     pub languages: Vec<Language>,
 }
 
-/// Dated sections, or one flat list — which offers the create card only when it is a place
-/// to create in rather than a list of what matched.
+/// Dated sections, or one flat list, which offers the create card only as a place to create
+/// in rather than a list of matches.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Layout {
     Chronological,
@@ -122,18 +119,17 @@ enum Layout {
 #[serde(rename_all = "camelCase")]
 pub struct NotesView {
     pub sections: Vec<NoteSection>,
-    /// Attached to the space, not the current filter: facets drawn from already
-    /// filtered notes would empty the rail on the first selection.
+    /// The space's, not the current filter's: facets drawn from filtered notes would empty
+    /// the rail on the first selection.
     pub available_tags: Vec<String>,
     pub available_languages: Vec<Language>,
     pub is_filtering: bool,
-    /// `u32` and not `usize`: Specta refuses a type JSON cannot render losslessly.
+    /// `u32` and not `usize`: Specta refuses what JSON cannot carry exactly.
     pub matched: u32,
 }
 
-/// ⚠️ No `Title` variant, deliberately: a note found by its own title needs no
-/// explanation, and an excerpt would repeat the biggest thing on the card. That case is
-/// [`SearchMatch::Title`], which carries nothing.
+/// No `Title` variant: a note found by its own title needs no excerpt, which would repeat the
+/// biggest thing on the card. That case is `SearchMatch::Title`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub enum SearchField {
@@ -177,8 +173,7 @@ impl NotesQuery {
         model::normalize_tags(&self.tags)
     }
 
-    /// Not inside an opened folder: every card would name the folder the breadcrumb
-    /// already names.
+    /// Not inside an opened folder, whose breadcrumb already names it.
     pub fn shows_folder_chips(&self) -> bool {
         self.folder_id.is_none()
     }
@@ -193,9 +188,8 @@ impl NotesView {
     }
 }
 
-/// What a card carries beside its note, read from other tables — which is why it is
-/// separate from [`build`], which reads no database. The canvas, the board and a single note
-/// all go through [`Decorations::apply`].
+/// What a card carries beside its note, read from other tables, and so apart from [`build`],
+/// which reads no database. The canvas, the board and a single note all go through `apply`.
 #[derive(Debug, Default)]
 pub struct Decorations {
     pub attachment_counts: HashMap<String, u32>,
@@ -234,19 +228,14 @@ pub fn build(mut notes: Vec<Note>, facets: Facets, request: &NotesQuery) -> Note
         });
     }
 
-    // A quick filter restricts a view that stays chronological; a search, a facet or an
-    // opened folder switches to a flat list.
-    //
-    // ⚠️ The folder belongs here and `build_sections` still knows nothing about it: the
-    // inside of a folder is already sorted by the fact of being there, so dating it again
-    // would be classifying twice. The date view's own sections are untouched — nothing
-    // sends a `folder_id` unless a folder has actually been opened.
+    // A quick filter keeps the view chronological; a search, a facet or an opened folder
+    // switches to a flat list. `build_sections` knows nothing of folders: the inside of one is
+    // already sorted by being there.
     let inside_folder = request.folder_id.is_some();
     let is_filtering = criteria.narrows() || inside_folder;
 
-    // ⚠️ The inside of a folder is a place to create in — a note made there arrives filed
-    // — where a result list is a list of what already matched. So the ghost rides on the
-    // flat view only when the folder is the *whole* reason it is flat.
+    // The ghost card rides on a flat view only when the folder is its whole reason: a place to
+    // create in, not a list of matches.
     let layout = if is_filtering {
         Layout::Flat {
             create_ghost: !criteria.narrows(),
@@ -266,9 +255,8 @@ pub fn build(mut notes: Vec<Note>, facets: Facets, request: &NotesQuery) -> Note
         matched,
     };
 
-    // A pass of its own, like the attachment counter: the notes become `DisplayNote`s
-    // inside `build_sections`, and threading a second value through would cost every
-    // section-splitting test an argument.
+    // A pass of its own, like the attachment counter: threading a second value through
+    // `build_sections` would cost every section test an argument.
     apply_search_hits(&mut view, &mut hits);
     view.notes_mut().for_each(DisplayNote::cut_to_preview);
     view
@@ -284,13 +272,9 @@ fn apply_search_hits(view: &mut NotesView, hits: &mut HashMap<String, SearchHit>
     }
 }
 
-/// `needle` is expected to have been through [`fold`] and trimmed.
-///
-/// ⚠️ Folded in Rust and not in SQL: without ICU, SQLite's `LOWER()` only handles ASCII,
-/// so `Étape` would not match `étape`. The items count as much as the content — a todo
-/// list has no body to be found by.
-/// ⚠️ The one place a needle meets a note. The board reuses it rather than growing a
-/// second, subtly different match — it dims what does not match instead of dropping it.
+/// `needle` is expected folded and trimmed. Folded in Rust, not SQL: without ICU, `LOWER()`
+/// only handles ASCII. The items count like the content, a todo list having no body. The
+/// board reuses this rather than growing a second, subtly different match.
 pub fn matches_search(note: &Note, needle: &str) -> bool {
     find_match(note, needle).is_some()
 }
@@ -334,10 +318,10 @@ impl SearchMatch {
     }
 }
 
-/// A card shows one line, and a body is free to hold a minified payload on one of them.
+/// A card shows one line, and a body may hold a minified payload on one.
 const EXCERPT_CHARS: usize = 160;
 
-/// ⚠️ Characters and not bytes: `s[..160]` panics in the middle of a `é`.
+/// Characters, not bytes: `s[..160]` panics in the middle of a `é`.
 fn clip(text: &str) -> String {
     let mut clipped: String = text.chars().take(EXCERPT_CHARS).collect();
     if text.chars().nth(EXCERPT_CHARS).is_some() {
@@ -346,14 +330,10 @@ fn clip(text: &str) -> String {
     clipped
 }
 
-/// Lowercase and accent-free, so `etape` finds `Étape`. Both sides go through here,
-/// which makes the match symmetric. Only what a canonical decomposition separates is
-/// folded: `ø` and `ß` are letters of their own and stay.
-///
-/// ⚠️ Decomposed one character at a time, not through the `nfd()` iterator over the whole
-/// string — measured 5× slower for the same answer, its lookahead buffering earning
-/// nothing when every mark is dropped anyway. The ASCII branches are the common case,
-/// not a micro-optimisation: code is ASCII end to end, prose between its accents.
+/// Lowercase and accent-free, so `etape` finds `Étape`, and symmetric since both sides come
+/// through here. Only what a canonical decomposition separates is folded: `ø` and `ß` stay.
+/// Decomposed per character rather than through `nfd()` over the string, whose lookahead
+/// buffering buys nothing when every mark is dropped; the ASCII branches are the common case.
 pub(crate) fn fold(text: &str) -> String {
     if text.is_ascii() {
         return text.to_ascii_lowercase();
@@ -376,9 +356,8 @@ pub(crate) fn fold(text: &str) -> String {
     folded
 }
 
-/// ⚠️ Do not hand-roll a fold-as-you-compare scan to save the copy: `str::contains` runs
-/// Two-Way (O(n+m)) where a window scan is O(n·m), and searching is precisely the case
-/// where most notes do not match. Measured at nearly twice the cost.
+/// Not a fold-as-you-compare scan: `str::contains` runs Two-Way, O(n+m), where a window scan
+/// is O(n·m), and most notes do not match.
 fn contains_folded(haystack: &str, needle: &str) -> bool {
     fold(haystack).contains(needle)
 }
@@ -387,9 +366,8 @@ const A_WEEK: TimeDelta = TimeDelta::days(7);
 
 const MAX_TZ_OFFSET_MINUTES: u32 = 14 * 60;
 
-/// ⚠️ The sign flips: JavaScript counts the minutes to add to local time to get UTC
-/// (−120 for UTC+2), where chrono expects the offset east. The bound is checked before
-/// the multiplication, which would otherwise overflow.
+/// ⚠️ The sign flips: JavaScript counts the minutes to add to local time to reach UTC (−120 for
+/// UTC+2), chrono the offset east. The bound is checked before the multiplication overflows.
 fn offset_from_minutes(tz_offset_minutes: i32) -> FixedOffset {
     let utc = FixedOffset::east_opt(0).expect("UTC is a valid offset");
 
@@ -618,9 +596,6 @@ mod tests {
         assert_eq!(keys(&view), [NoteSectionKey::Results]);
     }
 
-    /// ⚠️ The inside of a folder is already sorted by the fact of being there, so dating
-    /// it again would be classifying twice. `build_sections` still knows nothing about a
-    /// folder — this is the only place the two meet.
     #[test]
     fn an_opened_folder_is_a_flat_grid_rather_than_dated_sections() {
         let view = build(
@@ -637,8 +612,6 @@ mod tests {
         assert_eq!(view.matched, 2);
     }
 
-    /// ⚠️ The inside of a folder is a place to create in — a note made there arrives
-    /// filed — where the flat view a search produces is a list of what already matched.
     #[test]
     fn an_opened_folder_keeps_the_slot_a_note_is_created_from() {
         let view = build(
@@ -686,7 +659,6 @@ mod tests {
         assert!(!view.sections[0].show_create_ghost);
     }
 
-    /// The date view is untouched: nothing sends a folder unless one has been opened.
     #[test]
     fn no_folder_leaves_the_sections_exactly_as_they_were() {
         let view = build(
@@ -1009,8 +981,8 @@ mod tests {
 
         #[test]
         fn an_absurd_offset_falls_back_to_utc_without_overflowing() {
-            // ⚠️ Negating i32::MIN or multiplying i32::MAX by 60 panics in debug while
-            // the connection mutex is held, poisoning it for the rest of the process.
+            // Negating i32::MIN or multiplying i32::MAX by 60 would panic under the connection
+            // mutex and poison it.
             for absurd in [i32::MIN, i32::MAX, -100_000, 100_000, 841, -841] {
                 assert_eq!(offset_from_minutes(absurd).local_minus_utc(), 0);
             }

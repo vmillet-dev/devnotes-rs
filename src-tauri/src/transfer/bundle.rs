@@ -32,16 +32,13 @@ pub fn of(connection: &mut Library, scope: &ExportScope) -> Result<Bundle, Stora
     collect(connection, exported)
 }
 
-/// Only the spaces and folders actually cited travel with the notes: exporting one space
-/// must not recreate the whole tree for whoever imports it.
+/// Only the spaces and folders cited travel: exporting one space must not recreate the tree.
 pub fn collect(connection: &mut Library, exported: Vec<Note>) -> Result<Bundle, StorageError> {
     let spaces: Vec<Space> = spaces::list(connection)?
         .into_iter()
         .filter(|space| exported.iter().any(|note| note.space_id == space.id))
         .collect();
 
-    // ⚠️ `Folder` carries no geometry, so nothing has to be stripped by hand here: where a
-    // zone sits is columns only the board query reads.
     let folders: Vec<Folder> = folders::list(connection, None)?
         .into_iter()
         .filter(|folder| {
@@ -63,11 +60,9 @@ pub fn collect(connection: &mut Library, exported: Vec<Note>) -> Result<Bundle, 
     })
 }
 
-/// Merge, never replace: spaces are matched by name, and a note whose id is already taken
-/// is counted then set aside, so importing the same file twice duplicates nothing.
-///
-/// ⚠️ One transaction for the whole file, or a failure halfway leaves spaces created and
-/// part of the notes in, with the report lost along with the error.
+/// Merge, never replace: spaces match by name, and a note whose id is taken is counted and
+/// skipped, so importing a file twice duplicates nothing. One transaction for the whole
+/// file, or a failure halfway leaves part of it in with the report lost.
 pub fn merge(
     connection: &mut Library,
     incoming: IncomingBundle,
@@ -102,15 +97,13 @@ pub fn merge(
 
         for mut note in bundle.notes {
             let Some(space_id) = mapping.get(&note.space_id) else {
-                // A file truncated by hand: inventing a space would file the note where
-                // nobody will look.
+                // A file truncated by hand: inventing a space would file the note out of sight.
                 report.notes_skipped += 1;
                 continue;
             };
             note.space_id.clone_from(space_id);
-            // ⚠️ Remapped, and dropped when the file did not carry the folder: the id is
-            // the *sending* library's, and a dangling one would be refused by the foreign
-            // key — losing the whole import over a note that is merely unfiled.
+            // Remapped, and dropped when the file did not carry the folder: the id is the
+            // sending library's, and a dangling one would fail the foreign key and the import.
             note.folder_id = note
                 .folder_id
                 .as_ref()
@@ -121,8 +114,7 @@ pub fn merge(
             if notes::insert_imported_in(connection, vault, &note)? {
                 report.notes_imported += 1;
                 arrived.insert(note.id.clone());
-                // Only what actually came in, or re-importing the same file would keep
-                // reporting the same degradation.
+                // Only what came in, or re-importing would keep reporting the same loss.
                 if degraded.contains(&note.id) {
                     report.notes_degraded += 1;
                 }
@@ -145,11 +137,8 @@ pub fn merge(
     })
 }
 
-/// Matched by name inside the destination space, and created when absent — the rule spaces
-/// already follow, case-insensitively.
-///
-/// ⚠️ A folder whose space did not make it is dropped rather than invented: its notes were
-/// skipped for the same reason, and a folder in no space is unreachable.
+/// Matched by name inside the destination space, case-insensitively, and created when absent.
+/// A folder whose space did not make it is dropped: its notes were skipped too.
 fn merge_folders(
     connection: &mut SqliteConnection,
     vault: &Vault,
@@ -181,12 +170,8 @@ fn merge_folders(
     Ok(mapping)
 }
 
-/// ⚠️ The file is written **before** the record, the rule `attachments.rs` already holds:
-/// a record without a file is a broken thumbnail, where a file without a record is swept
-/// at the next startup — which is also what collects these when the transaction rolls back.
-///
-/// Only attachments whose note actually arrived: one belonging to a skipped note is
-/// already in the library, and re-importing the same file has to add nothing.
+/// The file before the record, as in `attachments.rs`; a rolled-back transaction leaves files
+/// the startup sweep collects. Only attachments whose note arrived: re-importing adds nothing.
 fn restore_attachments(
     connection: &mut SqliteConnection,
     vault: &Vault,
@@ -201,17 +186,14 @@ fn restore_attachments(
             continue;
         }
 
-        // The archive is keyed by the *sending* library's stored name, so the bytes are
-        // taken before the id is replaced.
+        // The archive is keyed by the sending library's stored name: bytes first, then the id.
         let Some(bytes) = payload.take(&record.stored_name()) else {
             report.attachments_missing += 1;
             continue;
         };
 
-        // ⚠️ Remapped like a space's or a folder's, and for a harder reason: this id came
-        // out of a file someone was sent, and it is half of the name the line below joins
-        // onto the attachments directory. `../vault` there overwrote the key file and the
-        // import reported success.
+        // ⚠️ Remapped like a space or a folder: this id came from a file someone was sent, and it
+        // is half of the name joined onto the attachments directory below.
         let record = Attachment {
             id: Uuid::new_v4().to_string(),
             ..record
@@ -246,10 +228,7 @@ mod tests {
         Vault::derive("the sending library", b"0123456789abcdef", Cost::FOR_TESTS).unwrap()
     }
 
-    /// ⚠️ The demonstration #160 was filed on. A bundle whose attachment record claims
-    /// `id = "../vault"` used to make the import write `profile/vault.json` — the wrapped
-    /// master key — with bytes the file chose, and report the import a success. Nobody
-    /// could open their library again.
+    /// A record claiming `id = "../vault"` must not write the wrapped key beside the library.
     #[test]
     fn an_identifier_read_out_of_a_file_cannot_write_outside_the_attachments_directory() {
         let scratch = tempfile::tempdir().unwrap();

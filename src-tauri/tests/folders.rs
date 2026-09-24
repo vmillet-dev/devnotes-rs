@@ -316,7 +316,7 @@ fn undoing_a_filing_puts_every_note_back_where_it_was() {
     assert_eq!(folder_of(&mut connection, &filed.id), Some(migrations.id));
 }
 
-/// ⚠️ Undoing is not editing, and the canvas sorts on that column.
+/// Undoing is not editing, and the canvas sorts on that column.
 #[test]
 fn undoing_a_filing_leaves_the_instant_alone() {
     let mut connection = open_in_memory().unwrap();
@@ -393,7 +393,7 @@ fn deleting_a_space_takes_its_folders_and_unfiles_the_notes_it_hands_over() {
     assert_eq!(folder_of(&mut connection, &note.id), None);
 }
 
-/// ⚠️ The chip would otherwise name a folder the space switcher can never reach.
+/// The chip would otherwise name a folder the space switcher can never reach.
 #[test]
 fn moving_a_note_to_another_space_takes_it_out_of_its_folder() {
     let mut connection = open_in_memory().unwrap();
@@ -528,7 +528,7 @@ mod board {
     fn a_board_draws_every_folder_as_a_zone_holding_its_notes() {
         let mut connection = open_in_memory().unwrap();
         let sql = space(&mut connection, "SQL");
-        // ⚠️ Distinct instants: `list` orders by `(created_at, id)`, so two folders made
+        // Distinct instants: `list` orders by `(created_at, id)`, so two folders made
         // in the same millisecond fall back to their UUIDs — stable across launches, which
         // is what the board needs, but not something a test can name.
         let migrations = create(&mut connection, &sql, "Migrations", t0()).unwrap();
@@ -631,10 +631,8 @@ mod board {
         assert_eq!(first.loose[0].position, second.loose[0].position);
     }
 
-    /// A frame the user moved is theirs; a later read must not lay it out again.
-    /// ⚠️ The report: a card filed into a zone that was already full flowed out of sight,
-    /// because a frame is computed once and never again. The gesture that filled it is the
-    /// one that should have made room.
+    /// A frame is computed once: the gesture that files a card into a full zone is the one
+    /// that makes room, or the card flows out of sight.
     #[test]
     fn filing_a_card_into_a_full_zone_makes_room_for_it() {
         let mut connection = open_in_memory().unwrap();
@@ -665,10 +663,8 @@ mod board {
         assert_eq!(after.width, before.width, "the width must not move");
     }
 
-    /// ⚠️ The report, measured in the reporter's own library: a zone dragged 14px
-    /// narrower than nominal, two notes in it, 536px tall — which is three rows of one card.
-    /// `columns_in` subtracted a scrollbar that was not there, halved the count, and the next
-    /// card filed in bought a second empty row while the browser kept flowing two across.
+    /// A zone slightly narrower than nominal still flows two across, so the next card filed
+    /// in needs at most one more row.
     #[test]
     fn filing_into_a_zone_shaved_narrower_than_nominal_adds_one_row_and_not_two() {
         let mut connection = open_in_memory().unwrap();
@@ -701,7 +697,7 @@ mod board {
         );
     }
 
-    /// ⚠️ Grow only: shrinking would move the board under the pointer every time a card
+    /// Grow only: shrinking would move the board under the pointer every time a card
     /// is taken out, and a zone somebody stretched is a zone they chose the size of.
     #[test]
     fn a_zone_made_bigger_by_hand_keeps_its_size() {
@@ -1017,10 +1013,8 @@ mod board {
         );
     }
 
-    /// ⚠️ The report: a note captured from the clipboard was written under a card that was
-    /// already on the board, and had to be dragged off to be found. A note created now is
-    /// the most recently updated, so it arrives first in the list and used to be handed the
-    /// seat its index gave it — seat zero, where the board's first read had put another.
+    /// A new note is the most recently updated, so it comes first in the list: it must not
+    /// be handed seat zero, where another card already sits.
     #[test]
     fn a_note_created_later_is_placed_beside_the_cards_rather_than_on_one() {
         let mut connection = open_in_memory().unwrap();
@@ -1177,7 +1171,7 @@ mod gesture {
         assert_eq!(positions(&mut connection, &sql).get(&note.id), Some(&point));
     }
 
-    /// ⚠️ A zone nothing can be dropped into is not a zone. Clamped rather than refused:
+    /// A zone nothing can be dropped into is not a zone. Clamped rather than refused:
     /// answering an error mid-gesture leaves the interface holding a frame nothing stored.
     #[test]
     fn a_zone_squashed_to_nothing_keeps_room_for_one_card() {
@@ -1208,7 +1202,7 @@ mod gesture {
         assert_eq!(frame.height, MIN_ZONE_HEIGHT);
     }
 
-    /// ⚠️ A filed card flows inside its zone. Writing a position for one would put back the
+    /// A filed card flows inside its zone. Writing a position for one would put back the
     /// row `file_many` had just dropped, and the table would stop meaning "this is loose".
     #[test]
     fn a_card_filed_since_the_drag_is_not_given_a_position_back() {
@@ -1444,7 +1438,7 @@ mod gesture {
             assert!(at.y > zone.y + zone.height);
         }
 
-        /// ⚠️ What the undo reads. Restoring the answer has to put the board back exactly as
+        /// What the undo reads. Restoring the answer has to put the board back exactly as
         /// it was, or the tidy-up is a one-way gesture.
         #[test]
         fn it_answers_the_layout_it_replaced() {
@@ -1468,7 +1462,7 @@ mod gesture {
             assert_eq!(positions(&mut connection, &sql).get(&note.id), Some(&seat));
         }
 
-        /// ⚠️ A folder the board has never drawn had no place to go back to, and inventing
+        /// A folder the board has never drawn had no place to go back to, and inventing
         /// one on the undo would leave it somewhere nobody chose.
         #[test]
         fn a_zone_that_never_had_a_place_is_not_offered_back() {
@@ -1483,7 +1477,7 @@ mod gesture {
             assert!(before.previous.cards.is_empty());
         }
 
-        /// ⚠️ The half worth a single click: what goes to pieces is the cards outside the
+        /// The half worth a single click: what goes to pieces is the cards outside the
         /// zones, and a zone somebody sized by hand is the only manual work the board holds.
         #[test]
         fn aligning_the_loose_cards_leaves_every_zone_exactly_where_it_was() {
@@ -1520,7 +1514,7 @@ mod gesture {
             assert!(at.y > DRAGGED.y + DRAGGED.height);
         }
 
-        /// ⚠️ What the undo bar reads. A board nobody disturbed must open no undo window,
+        /// What the undo bar reads. A board nobody disturbed must open no undo window,
         /// or the bar offers to put back an arrangement that never changed.
         #[test]
         fn a_board_already_in_order_reports_nothing_moved() {
@@ -1554,7 +1548,7 @@ mod gesture {
     }
 }
 
-/// ⚠️ A chip naming the folder every card is already in is noise, and the breadcrumb above
+/// A chip naming the folder every card is already in is noise, and the breadcrumb above
 /// says it once. Same reason the board resolves none.
 #[test]
 fn a_card_inside_an_opened_folder_carries_no_chip() {

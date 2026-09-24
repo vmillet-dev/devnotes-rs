@@ -289,7 +289,7 @@ fn capture(note_id: &str) -> Attachment {
     }
 }
 
-/// ⚠️ The point of the archive. A screenshot is a file beside the database, so an export
+/// The point of the archive. A screenshot is a file beside the database, so an export
 /// that carried only the rows handed over notes whose thumbnails would never load — and
 /// nothing said so.
 #[test]
@@ -323,8 +323,8 @@ fn an_attachment_travels_with_the_library() {
     assert_eq!(report.attachments_missing, 0);
     let landed = attachments::list(&mut target, &note_id).unwrap();
     assert_eq!(landed.len(), 1);
-    // ⚠️ Not `record.stored_name()`: the id is remapped on the way in, because it decides
-    // a write path and it came out of a file (#160). The bytes are what has to survive.
+    // Not `record.stored_name()`: the id is remapped on the way in, because it decides a
+    // write path and came out of a file. The bytes are what has to survive.
     assert_eq!(
         std::fs::read(target_files.join(landed[0].stored_name())).unwrap(),
         b"\x89PNG"
@@ -372,7 +372,7 @@ fn importing_the_same_archive_twice_restores_the_attachment_once() {
     assert_eq!(attachments::list(&mut target, &note_id).unwrap().len(), 1);
 }
 
-/// ⚠️ A record whose bytes the archive does not carry is counted, never swallowed: the
+/// A record whose bytes the archive does not carry is counted, never swallowed: the
 /// note arrives with a preview that will stay empty, and the report is what explains it.
 #[test]
 fn an_attachment_the_archive_does_not_carry_is_reported() {
@@ -528,7 +528,7 @@ mod folders_travelling {
         assert_eq!(bundle.spaces[0].id, space_id);
     }
 
-    /// ⚠️ A board received from elsewhere must not land on top of the one you arranged.
+    /// A board received from elsewhere must not land on top of the one you arranged.
     /// Keeping the geometry off the `Folder` model is what makes this free.
     #[test]
     fn no_coordinate_ever_leaves_the_machine() {
@@ -617,7 +617,7 @@ mod folders_travelling {
         assert_eq!(second.notes_skipped, 3);
     }
 
-    /// ⚠️ `#[serde(default)]`, exactly as `kind` and `items` carry it: no `FORMAT_VERSION`
+    /// `#[serde(default)]`, exactly as `kind` and `items` carry it: no `FORMAT_VERSION`
     /// bump, because such a file still parses.
     #[test]
     fn an_export_written_before_folders_still_reads() {
@@ -637,7 +637,7 @@ mod folders_travelling {
         assert_eq!(folder_of(&mut target, "EXPLAIN lent"), None);
     }
 
-    /// ⚠️ The id is the *sending* library's: a dangling one would be refused by the foreign
+    /// The id is the *sending* library's: a dangling one would be refused by the foreign
     /// key, losing the whole import over a note that is merely unfiled.
     #[test]
     fn a_note_naming_a_folder_the_file_left_out_arrives_unfiled() {
@@ -698,9 +698,8 @@ mod folders_travelling {
     }
 }
 
-/// ⚠️ A deliberate omission, held by a test rather than left to be noticed: revisions in
-/// the bundle would inflate it by a factor of the cap, and a note restored elsewhere
-/// arriving without its history is the accepted cost (#39).
+/// A deliberate omission: revisions would inflate the bundle by a factor of the cap, and a
+/// note arriving elsewhere without its history is the accepted cost.
 #[test]
 fn a_bundle_carries_no_history_of_the_bodies_it_holds() {
     let mut connection = open_in_memory().unwrap();

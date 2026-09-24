@@ -1,5 +1,5 @@
 /// One list gives the enum, its `ALL` array, its stored spelling, `Display` and
-/// `FromStr`. ⚠️ The literal per variant is the single spelling: serde, the column,
+/// `FromStr`. The literal per variant is the single spelling: serde, the column,
 /// `Display` and `FromStr` all read it, so they cannot drift.
 macro_rules! closed_enum {
     (

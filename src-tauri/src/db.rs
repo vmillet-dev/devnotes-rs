@@ -13,10 +13,8 @@ use crate::vault::key::Vault;
 
 /// The connection, and the key everything it holds is sealed with.
 ///
-/// ⚠️ It derefs to the connection, so a caller keeps writing `&mut connection`. What it
-/// does **not** do is stand in for one where Diesel expects it: `load` and its siblings
-/// take their connection as a generic parameter, and a generic gets no deref coercion —
-/// hence [`Library::db`] at every query.
+/// ⚠️ It derefs to the connection, but Diesel's `load` and its siblings take a generic
+/// connection, which gets no deref coercion: hence [`Library::db`] at every query.
 pub struct Library {
     connection: SqliteConnection,
     vault: Vault,
@@ -29,41 +27,35 @@ impl Library {
         &mut self.connection
     }
 
-    /// ⚠️ Both halves at once. Two calls would not do: one borrows mutably and the other
-    /// shared, and the compiler cannot see they touch different fields until they are
-    /// destructured together.
+    /// Both halves at once: two calls, one mutable and one shared, would not borrow-check.
     pub fn split(&mut self) -> (&mut SqliteConnection, &Vault) {
         (&mut self.connection, &self.vault)
     }
 
-    /// The key. Sealing is the caller's to do — this only hands it over.
     pub fn vault(&self) -> &Vault {
         &self.vault
     }
 
-    /// An in-memory library that writes its files into `directory`, for a test that
-    /// attaches something.
+    /// An in-memory library that writes its files into `directory`.
     #[cfg(test)]
     pub(crate) fn with_directory(mut self, directory: PathBuf) -> Self {
         self.directory = directory;
         self
     }
 
-    /// Where the database file sits, and everything that travels with it. ⚠️ Asked of the
-    /// open library rather than of the registry, which is a file read per call.
+    /// Where the database file sits, with everything that travels with it. Asked of the open
+    /// library, where the registry would be a file read per call.
     pub fn directory(&self) -> &Path {
         &self.directory
     }
 
-    /// ⚠️ Hands the closure the connection **and** the key. `SqliteConnection::transaction`
-    /// alone gives back a bare connection, which would leave a caller unable to seal
-    /// anything inside the transaction it just opened.
+    /// The closure gets the key as well: `SqliteConnection::transaction` alone hands back a
+    /// bare connection, with nothing to seal with.
     pub fn transaction<T, F>(&mut self, f: F) -> Result<T, StorageError>
     where
         F: FnOnce(&mut SqliteConnection, &Vault) -> Result<T, StorageError>,
     {
-        // Split borrows: the connection mutably, the key shared, and they are disjoint
-        // fields — which is the whole reason this is destructured rather than chained.
+        // Destructured so the two disjoint fields borrow separately.
         let Self {
             connection, vault, ..
         } = self;
@@ -85,9 +77,8 @@ impl DerefMut for Library {
     }
 }
 
-/// ⚠️ Empty until the passphrase has been given. Every command runs behind the front
-/// end's unlock gate, so `None` here is a caller that jumped the queue, not a state to
-/// render.
+/// Empty until the passphrase is given. The front end gates every command on the unlock,
+/// so `None` here is a caller that jumped the queue, not a state to render.
 pub type Db = Mutex<Option<Library>>;
 
 /// A poisoned mutex means a command panicked while holding it.
@@ -117,13 +108,8 @@ impl DerefMut for LibraryGuard<'_> {
     }
 }
 
-/// ⚠️ `quick_check` and not `integrity_check`: the quick one skips the most expensive
-/// cross-checks and reads the file once, which is milliseconds on a library this size.
-/// The full check belongs behind a button, never on the path to a window.
-///
-/// ⚠️ Run before anything writes. A damaged file discovered on the first failing query is
-/// discovered too late — by then the launch copies are copies of a broken database, and
-/// a backup that propagates the damage on a schedule is worse than none.
+/// `quick_check` and not `integrity_check`: milliseconds on a library this size. The full
+/// check belongs behind a button, never on the path to a window.
 pub(crate) fn quick_check(connection: &mut SqliteConnection) -> Result<(), StorageError> {
     #[derive(QueryableByName)]
     struct Answer {
@@ -149,9 +135,8 @@ pub(crate) fn quick_check(connection: &mut SqliteConnection) -> Result<(), Stora
     ))
 }
 
-/// ⚠️ Every failure here names the file. This is the one error a user meets before any
-/// window has anything in it, and "migration failed" without a path leaves them nowhere
-/// to look — the database is in a directory they have never opened.
+/// Every failure names the file: this is the error a user meets before any window has
+/// anything in it, and the database sits in a directory they have never opened.
 pub fn open(path: &Path, vault: Vault) -> Result<Library, StorageError> {
     let named = |error: &dyn std::fmt::Display| {
         StorageError::Migration(format!("{}: {error}", path.display()))
@@ -190,16 +175,14 @@ pub fn open_in_memory() -> Result<Library, StorageError> {
     Ok(Library {
         connection,
         vault: test_vault()?,
-        // ⚠️ Named, never created: a test that writes beside the library fails on a
-        // missing directory rather than writing into whatever the working directory is.
+        // Named, never created: a test writing beside the library fails loudly.
         directory: std::env::temp_dir()
             .join(format!("devnotes-in-memory-{}", uuid::Uuid::new_v4())),
     })
 }
 
-/// ⚠️ A key derived at a cost nobody would ship, for in-memory libraries and the benchmarks'
-/// corpus: what matters there is that the sealing path is the real one, not that the key is
-/// expensive to guess.
+/// A key derived at a cost nobody would ship: the sealing path is the real one, which is
+/// what the tests and the benchmarks need.
 #[doc(hidden)]
 pub fn test_vault() -> Result<Vault, StorageError> {
     Vault::derive(
@@ -210,15 +193,9 @@ pub fn test_vault() -> Result<Vault, StorageError> {
 }
 
 fn configure(connection: &mut SqliteConnection) -> Result<(), StorageError> {
-    // ⚠️ `foreign_keys` is set per connection and is off by default: without it the
-    // `ON DELETE CASCADE` clauses are inert. `busy_timeout` covers the window where a
-    // second process still holds the file, where the default of zero surfaces
-    // `SQLITE_BUSY` as a storage error on the very first write.
-    //
-    // ⚠️ `synchronous = NORMAL` is WAL's own default, written down because it is a
-    // durability choice and not a detail: a power cut can cost the last committed
-    // transaction, and cannot corrupt the file. `FULL` would fsync every commit for a
-    // note the user can retype, on an application whose whole corpus is local.
+    // ⚠️ `foreign_keys` is per connection and off by default: without it every `ON DELETE
+    // CASCADE` is inert. `busy_timeout` rides out another process holding the file.
+    // `synchronous = NORMAL` under WAL can lose the last commit to a power cut, never the file.
     connection.batch_execute(
         "PRAGMA foreign_keys = ON;
          PRAGMA journal_mode = WAL;
@@ -229,10 +206,8 @@ fn configure(connection: &mut SqliteConnection) -> Result<(), StorageError> {
     Ok(())
 }
 
-/// ⚠️ Milliseconds are always written, even when zero. `created_at` and `updated_at` are
-/// TEXT columns sorted lexicographically, and the canvas orders on them: `.` (0x2E)
-/// precedes `Z` (0x5A), so `09:00:00.500Z` would sort before `09:00:00Z` — exactly what
-/// chrono's default `SecondsFormat::AutoSi` produces.
+/// ⚠️ Milliseconds are always written: the TEXT columns sort lexicographically and `.`
+/// precedes `Z`, so chrono's default `09:00:00.500Z` would sort before `09:00:00Z`.
 pub mod iso8601 {
     use chrono::{DateTime, SecondsFormat, Utc};
 
@@ -308,9 +283,8 @@ mod tests {
         assert_eq!(enabled, 1);
     }
 
-    /// ⚠️ The point of checking at all: SQLite discovers this on the first query that
-    /// happens to read the broken page, which can be days later — and by then every
-    /// launch copy is a copy of a broken file.
+    /// SQLite would otherwise meet the damage on whichever query reads the broken page, days
+    /// later, with every launch copy a copy of the broken file.
     #[test]
     fn a_damaged_file_is_named_as_such_rather_than_opened() {
         let scratch = tempfile::tempdir().unwrap();
@@ -325,8 +299,7 @@ mod tests {
             }
         }
 
-        // Garbage over a page that is not the header: the header alone would fail to
-        // open rather than fail to check, which is a different story.
+        // Garbage past the header: a broken header fails to open rather than to check.
         let mut bytes = std::fs::read(&path).unwrap();
         assert!(bytes.len() > 4096, "the corpus did not reach a second page");
         for byte in bytes.iter_mut().skip(4096).take(512) {
@@ -353,17 +326,13 @@ mod tests {
         assert!(quick_check(library.db()).is_ok());
     }
 
-    /// ⚠️ The one storage error a user can meet with an empty window: a message without
-    /// the path leaves them nowhere to look, since the database sits in a directory they
-    /// have never opened.
     #[test]
     fn a_database_that_will_not_open_says_which_file() {
         let scratch = tempfile::tempdir().unwrap();
         let directory = scratch.path().to_path_buf();
 
-        // A directory is not a database file, so establishing it fails the way a corrupt
-        // file or a bad permission would. ⚠️ Destructured rather than `unwrap_err`, which
-        // would want `Library: Debug` — and a library carries the key.
+        // A directory fails to open the way a corrupt file or a permission would.
+        // Destructured: `unwrap_err` would want `Library: Debug`, and a library holds the key.
         let Err(error) = open(&directory, test_vault().unwrap()) else {
             panic!("a directory opened as a database");
         };
@@ -374,8 +343,7 @@ mod tests {
         );
     }
 
-    /// ⚠️ Zero is SQLite's own default, and it turns a database another process holds for
-    /// twenty milliseconds — a checkpoint, an antivirus, a second instance — into a
+    /// SQLite's default of zero turns a file another process holds for a moment into a
     /// storage error on the first write.
     #[test]
     fn a_locked_database_is_waited_on_rather_than_reported() {
@@ -395,8 +363,7 @@ mod tests {
         assert_eq!(timeout, 5000);
     }
 
-    /// The durability trade-off is chosen, not inherited: `NORMAL` can lose the last
-    /// commit to a power cut and cannot corrupt the file.
+    /// `NORMAL` can lose the last commit to a power cut, and cannot corrupt the file.
     #[test]
     fn commits_are_not_fsynced_one_by_one() {
         #[derive(QueryableByName)]
@@ -422,9 +389,7 @@ mod tests {
         assert!(lock(&db).is_ok());
     }
 
-    /// ⚠️ A command that reached the library before the passphrase did. The front gates
-    /// on the unlock screen, so this only catches a caller that jumped the queue — but it
-    /// answers rather than unwrapping a `None`.
+    /// A command that reached the library before the passphrase answers rather than unwrapping.
     #[test]
     fn a_library_still_locked_is_reported_rather_than_unwrapped() {
         let db: Db = Mutex::new(None);
@@ -449,8 +414,7 @@ mod tests {
         }));
         std::panic::set_hook(hook);
 
-        // `unwrap_err()` would need the guard to be `Debug`, which `SqliteConnection`
-        // is not.
+        // `unwrap_err()` would want the guard to be `Debug`.
         let Err(error) = lock(&db) else {
             panic!("a poisoned mutex must be reported, not returned");
         };

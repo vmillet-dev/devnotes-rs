@@ -1,7 +1,5 @@
-//! ⚠️ `folders.name` is sealed, so uniqueness leaves SQL exactly as it did for
-//! `spaces.name`: two seals of the same name differ, and a unique index on ciphertext
-//! catches nothing. The order does not move — `created_at` stays in the clear, and
-//! reading order is what the board lays zones out in.
+//! `folders.name` is sealed, so uniqueness is decided in Rust, as for `spaces.name`: an index
+//! on ciphertext catches nothing. `created_at` stays in the clear, and orders the zones.
 
 pub mod board;
 
@@ -36,8 +34,7 @@ impl FolderRow {
                 field: "createdAt",
             })?,
             name: vault.open(&self.name)?,
-            // Degrades like `notes.language`: a newer build may have written a colour this
-            // one cannot name, and a folder is worth more than its swatch.
+            // Degrades like `notes.language`: a folder is worth more than its swatch.
             colour: self.colour.parse().unwrap_or_default(),
             id: self.id,
             space_id: self.space_id,
@@ -45,8 +42,7 @@ impl FolderRow {
     }
 }
 
-/// `None` = every space. Ordered by creation, which is the reading order the board
-/// lays its zones out in.
+/// `None` = every space. Ordered by creation, the order the board lays zones out in.
 pub fn list(connection: &mut Library, space_id: Option<&str>) -> Result<Vec<Folder>, StorageError> {
     let (db, vault) = connection.split();
 
@@ -72,8 +68,7 @@ pub(crate) fn list_in(
         .collect()
 }
 
-/// Keyed by folder id: the decoration pass holds notes carrying a `folder_id` and needs
-/// nothing else to resolve them.
+/// Keyed by folder id, for the decoration pass.
 pub fn by_id(
     connection: &mut Library,
     space_id: Option<&str>,
@@ -215,9 +210,8 @@ pub fn recolour(
     })
 }
 
-/// ⚠️ The notes are not touched here and must not be: `notes.folder_id` carries
-/// `ON DELETE SET NULL`, so they come out loose. Nor is `updated_at` refreshed — the
-/// user aimed at the folder, and the canvas sorts on that column.
+/// The notes are not touched: `notes.folder_id` is `ON DELETE SET NULL`, so they come out
+/// loose. Nor is `updated_at`: the user aimed at the folder.
 pub fn delete(connection: &mut Library, id: &str) -> Result<(), StorageError> {
     if diesel::delete(folders::table.find(id)).execute(connection.db())? == 0 {
         return Err(StorageError::FolderNotFound(id.to_string()));
@@ -226,11 +220,9 @@ pub fn delete(connection: &mut Library, id: &str) -> Result<(), StorageError> {
     Ok(())
 }
 
-/// Answers where each note was filed, which is what putting the filing back needs.
-/// `folder_id` of `None` unfiles.
-///
-/// ⚠️ A note is only filed into a folder of its own space: the two are joined by the
-/// space, and a cross-space filing would show a chip the space switcher can never reach.
+/// Answers where each note was filed, for the undo; `None` unfiles. Only into a folder of
+/// the note's own space: a cross-space filing would show a chip the space switcher cannot
+/// reach.
 pub fn file_many(
     connection: &mut Library,
     ids: &[String],
@@ -255,8 +247,7 @@ pub fn file_many(
             query = query.filter(notes::space_id.eq(space_id.clone()));
         }
 
-        // ⚠️ Read before the update: afterwards every one of them says `folder_id`, and
-        // where each came from is gone.
+        // Read before the update, which erases where each note came from.
         let filed: Vec<NoteFiling> = query
             .select((notes::id, notes::folder_id))
             .load::<(String, Option<String>)>(connection)?
@@ -267,8 +258,7 @@ pub fn file_many(
 
         let touched: Vec<String> = filed.iter().map(|filing| filing.note_id.clone()).collect();
         if folder_id.is_some() {
-            // ⚠️ A position row means "loose": a filed card flows inside its zone and has
-            // no place of its own to keep consistent.
+            // A position row means "loose": a filed card flows inside its zone.
             board::forget_positions(connection, &touched)?;
         }
 
@@ -300,9 +290,7 @@ fn count_filed(connection: &mut SqliteConnection, folder_id: &str) -> Result<usi
     Ok(usize::try_from(count).unwrap_or(0))
 }
 
-/// Puts filed notes back where they were.
-///
-/// ⚠️ `updated_at` is left alone, like restoring from the trash: undoing is not editing.
+/// Puts filed notes back where they were, leaving `updated_at` alone: undoing is not editing.
 pub fn restore_filings(
     connection: &mut Library,
     filings: &[NoteFiling],
@@ -315,8 +303,7 @@ pub fn restore_filings(
         let mut restored = 0;
 
         for filing in filings {
-            // A folder deleted since the batch is not an error: the rest still goes back,
-            // and that note simply stays loose.
+            // A folder deleted since is not an error: that note simply stays loose.
             if let Some(folder_id) = &filing.folder_id
                 && !exists(connection, folder_id)?
             {

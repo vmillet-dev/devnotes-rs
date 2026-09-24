@@ -1,11 +1,8 @@
 //! Deriving the key from a passphrase, and sealing a value with it.
 //!
-//! ⚠️ AES-256-GCM hides the content of a value, never its **length**: the ciphertext is as
-//! long as the plaintext. Someone holding the file learns how big each note is, and that a
-//! title is empty. That is inherent to the construction and is not worth padding around.
-//!
-//! ⚠️ The nonce is 96 bits of randomness, fresh per seal. Reusing one under the same key
-//! breaks GCM outright, so nothing here ever takes a nonce from the caller.
+//! AES-256-GCM hides a value's content, never its length: the file says how big each note
+//! is. ⚠️ The nonce is 96 fresh random bits per seal and never the caller's — reusing one
+//! under the same key breaks GCM outright.
 
 use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Key};
@@ -23,9 +20,8 @@ pub(crate) const SALT_BYTES: usize = 16;
 
 /// What `derive` costs, and what an attacker guessing passphrases pays per guess.
 ///
-/// ⚠️ These travel **in the key file**, not as constants read at derivation: raising them
-/// in a later version must not lock every existing library out. A file carries the
-/// parameters it was written with, and only a deliberate re-key changes them.
+/// ⚠️ Stored in the key file, not read from constants: raising the cost in a later version
+/// must not lock existing libraries out. Only a deliberate re-key changes a file's cost.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Cost {
     /// KiB of memory. The parameter that actually hurts a GPU.
@@ -35,8 +31,7 @@ pub struct Cost {
 }
 
 impl Cost {
-    /// A cost nobody would ship, for keys that live as long as a test or a benchmark and
-    /// never guard a file anyone keeps.
+    /// For keys that live as long as a test or a benchmark.
     #[doc(hidden)]
     pub const FOR_TESTS: Self = Self {
         memory_kib: 64,
@@ -46,17 +41,8 @@ impl Cost {
 }
 
 impl Default for Cost {
-    /// Paid **once per launch**, and the only thing standing between a copied library and
-    /// someone working through a wordlist.
-    ///
-    /// ⚠️ **52.6 ms per derivation in a release build** (`cargo bench -- unlock`), not the
-    /// ~1.2 s this claimed for a while — that figure came from `cargo test`, where Argon2
-    /// is unoptimised, and the two differ by twenty. What bounds an attacker here is the
-    /// 64 MiB, three times OWASP's floor and the parameter a GPU cannot buy its way out of;
-    /// the time never carried the defence, which is why the real number changes nothing.
-    ///
-    /// Raising it later locks nobody out: the cost travels in the key file, and a library
-    /// reopens at whatever it was written with.
+    /// Paid once per unlock. The 64 MiB is what bounds an attacker, three times OWASP's floor;
+    /// the time — about 50 ms in a release build — never carried the defence.
     fn default() -> Self {
         Self {
             memory_kib: 64 * 1024,
@@ -66,14 +52,13 @@ impl Default for Cost {
     }
 }
 
-/// The key, and nothing else. ⚠️ Held in a `Zeroizing` so it is wiped when the vault is
-/// dropped rather than left in freed memory for whatever reads it next.
+/// The key, wiped from memory when the vault is dropped.
 pub struct Vault {
     key: Zeroizing<[u8; 32]>,
 }
 
 impl std::fmt::Debug for Vault {
-    /// ⚠️ Deliberately says nothing: a key that reaches a log is a key that is gone.
+    /// Says nothing: a key that reaches a log is a key that is gone.
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter.write_str("Vault(…)")
     }
@@ -82,11 +67,9 @@ impl std::fmt::Debug for Vault {
 impl Vault {
     /// The key the library's values are actually sealed with — random, never derived.
     ///
-    /// ⚠️ This is what makes changing the passphrase a hundred bytes of rewriting instead
-    /// of re-encrypting every note and every attachment: the phrase only ever protects
-    /// this key, and a new phrase wraps the same one again. The cost is the other side of
-    /// that coin — whoever gets hold of this key keeps access across a change, so a
-    /// changed passphrase answers a leaked *phrase*, never a leaked key.
+    /// The phrase only wraps this key, which makes changing it a hundred bytes of rewriting
+    /// rather than re-encrypting the corpus — and means a changed phrase answers a leaked
+    /// phrase, never a leaked key.
     pub fn random() -> Result<Self, StorageError> {
         let mut key = Zeroizing::new([0u8; 32]);
         getrandom::fill(key.as_mut())
@@ -100,9 +83,7 @@ impl Vault {
         wrapping.seal_bytes(self.key.as_ref())
     }
 
-    /// ⚠️ The other direction, and the only check there is: a phrase that does not open
-    /// the wrapped key is the wrong phrase, said by the authentication tag rather than by
-    /// a known value sealed beside it.
+    /// The only check there is: a wrong phrase is one whose key the tag refuses to open.
     pub fn unwrapped_with(wrapping: &Self, wrapped: &[u8]) -> Result<Self, StorageError> {
         let opened = Zeroizing::new(wrapping.open_bytes(wrapped)?);
         let key: [u8; 32] = opened
@@ -115,8 +96,7 @@ impl Vault {
         })
     }
 
-    /// ⚠️ Slow on purpose — this is the whole defence against someone trying passphrases
-    /// against a copied file. It is paid once, at unlock, never per value.
+    /// Slow on purpose, and paid once per unlock, never per value.
     pub fn derive(passphrase: &str, salt: &[u8], cost: Cost) -> Result<Self, StorageError> {
         let params = Params::new(cost.memory_kib, cost.passes, cost.lanes, Some(32))
             .map_err(|error| StorageError::Vault(format!("key parameters: {error}")))?;
@@ -133,8 +113,7 @@ impl Vault {
         Aes256Gcm::new(&Key::<Aes256Gcm>::from(*self.key))
     }
 
-    /// `nonce ++ ciphertext ++ tag`, raw. What a file holds — a column holds the base64 of
-    /// this, because the columns are TEXT.
+    /// `nonce ++ ciphertext ++ tag`, raw: what a file holds. A column holds its base64.
     pub fn seal_bytes(&self, plaintext: &[u8]) -> Result<Vec<u8>, StorageError> {
         let mut nonce = [0u8; NONCE_BYTES];
         getrandom::fill(&mut nonce)
@@ -152,8 +131,7 @@ impl Vault {
         Ok(joined)
     }
 
-    /// ⚠️ Whole, never streamed: GCM only authenticates a message once all of it has been
-    /// seen, and handing back bytes before the tag is checked would defeat the point.
+    /// Whole, never streamed: GCM authenticates a message only once all of it has been seen.
     pub fn open_bytes(&self, sealed: &[u8]) -> Result<Vec<u8>, StorageError> {
         if sealed.len() <= NONCE_BYTES {
             return Err(StorageError::Vault(
@@ -169,15 +147,13 @@ impl Vault {
             .map_err(|_| StorageError::Vault("it would not open".to_string()))
     }
 
-    /// The same bytes, base64. The columns are TEXT, so what goes in one has to survive
-    /// being read back as a string.
+    /// The same bytes, base64, for the TEXT columns.
     pub fn seal(&self, plaintext: &str) -> Result<String, StorageError> {
         Ok(BASE64.encode(self.seal_bytes(plaintext.as_bytes())?))
     }
 
-    /// ⚠️ Fails on a value that was not sealed with this key, and that is the point: the
-    /// tag is what tells a wrong passphrase from a tampered file. Neither is recoverable,
-    /// so neither is guessed at.
+    /// Fails on a value sealed with another key: the tag is what tells a wrong passphrase or a
+    /// tampered file, and neither is guessed at.
     pub fn open(&self, sealed: &str) -> Result<String, StorageError> {
         let raw = BASE64
             .decode(sealed)
@@ -202,8 +178,6 @@ pub fn fresh_salt() -> Result<[u8; SALT_BYTES], StorageError> {
 mod tests {
     use super::*;
 
-    /// ⚠️ Cheap parameters, and only here: deriving at the real cost in every test would
-    /// add minutes to `cargo test` to prove nothing the real parameters prove better.
     fn vault() -> Vault {
         Vault::derive("a passphrase", b"0123456789abcdef", Cost::FOR_TESTS).unwrap()
     }
@@ -237,8 +211,7 @@ mod tests {
         assert_eq!(vault.open(&vault.seal(text).unwrap()).unwrap(), text);
     }
 
-    /// The same text twice must not produce the same ciphertext, or the file would say
-    /// which notes are identical.
+    /// Otherwise the file would say which notes are identical.
     #[test]
     fn sealing_the_same_text_twice_gives_two_different_values() {
         let vault = vault();
@@ -255,8 +228,7 @@ mod tests {
         assert!(!sealed.contains("hunter2"));
     }
 
-    /// ⚠️ What tells a wrong passphrase from a right one. Without it an unlock would
-    /// succeed and the library would read as gibberish.
+    /// What tells a wrong passphrase from a right one.
     #[test]
     fn a_value_will_not_open_under_another_passphrase() {
         let sealed = vault().seal("secret").unwrap();
@@ -275,8 +247,7 @@ mod tests {
         assert!(elsewhere.open(&sealed).is_err());
     }
 
-    /// ⚠️ GCM authenticates: a flipped byte is refused rather than decrypted into
-    /// plausible-looking nonsense.
+    /// A flipped byte is refused rather than decrypted into plausible nonsense.
     #[test]
     fn a_tampered_value_is_refused_rather_than_opened() {
         let vault = vault();
@@ -298,13 +269,11 @@ mod tests {
         assert!(vault.open(&BASE64.encode([0u8; 4])).is_err());
     }
 
-    /// Two salts drawn in a row must differ, or every library would share a key.
     #[test]
     fn a_fresh_salt_is_not_the_previous_one() {
         assert_ne!(fresh_salt().unwrap(), fresh_salt().unwrap());
     }
 
-    /// ⚠️ A key that reaches a log is a key that is gone.
     #[test]
     fn a_vault_never_prints_its_key() {
         assert_eq!(format!("{:?}", vault()), "Vault(…)");

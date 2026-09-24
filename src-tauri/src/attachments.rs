@@ -1,6 +1,5 @@
-//! ⚠️ The bytes cross the bridge only on read, as a `data:` URI: the `WebView`'s CSP
-//! forbids loading a local file, and opening the `asset:` protocol to show a screenshot
-//! would be a wide door for a narrow need.
+//! The bytes cross the bridge only on read, as a `data:` URI: the CSP forbids loading a local
+//! file, and opening the `asset:` protocol for a screenshot would be a wide door.
 
 #![allow(clippy::needless_pass_by_value)]
 
@@ -22,7 +21,7 @@ use crate::db::{Db, Library, lock};
 use crate::error::{AppError, FileContext, StorageError};
 use model::Attachment;
 
-/// Created when the library opens (`vault::open_library`), so every writer can assume it.
+/// Created when the library opens (`vault::install`), so every writer can assume it.
 pub fn directory(library: &Library) -> PathBuf {
     library.directory().join(crate::layout::ATTACHMENTS)
 }
@@ -39,8 +38,8 @@ pub(crate) fn remove_files(directory: &Path, stored_names: &[String]) {
     }
 }
 
-/// ⚠️ The limit is enforced by the read rather than by `metadata`: a file growing between
-/// the two would land whole, whatever the limit said. One byte past it is enough to refuse.
+/// The limit is enforced by the read rather than by `metadata`, which a growing file would
+/// outrun. One byte past it is enough to refuse.
 fn read_within_limit(source: &str) -> Result<Vec<u8>, StorageError> {
     let reader = std::fs::File::open(source).context(source)?;
 
@@ -50,12 +49,9 @@ fn read_within_limit(source: &str) -> Result<Vec<u8>, StorageError> {
     Ok(bytes)
 }
 
-/// A new attachment of `note_id`: `bytes` sealed beside the library, then recorded. Their
-/// size is the caller's to have validated.
-///
-/// ⚠️ The file before the record, and the file removed again when the record cannot be
-/// written: a record without a file shows a broken thumbnail, where a file without a record
-/// is swept at startup. Sealed on the way in, so nothing readable is ever written.
+/// A new attachment of `note_id`: `bytes` sealed beside the library, then recorded; their size
+/// is the caller's to have validated. The file before the record, removed again if the
+/// record fails: a record without a file is a broken thumbnail, a file without one is swept.
 fn store_new(
     note_id: String,
     file_name: String,
@@ -98,10 +94,8 @@ pub fn attach_file(
     Ok(store_new(note_id, file_name, &bytes, &db)?)
 }
 
-/// The record and its bytes, opened. What the three read commands share.
-///
-/// ⚠️ The record is looked up first: opening a file nothing refers to would be a leak out
-/// of the directory.
+/// The record and its bytes, opened, for the three read commands. The record is looked up
+/// first: opening a file nothing refers to would read outside what the library knows.
 pub fn read_plain(library: &mut Library, id: &str) -> Result<(Attachment, Vec<u8>), StorageError> {
     let attachment = store::find(library, id)?
         .ok_or_else(|| StorageError::AttachmentNotFound(id.to_string()))?;
@@ -131,15 +125,12 @@ pub fn read_attachment(id: String, db: State<'_, Db>) -> Result<String, AppError
     ))
 }
 
-/// ⚠️ The call starts from Rust: opening a path from the front end would mean allowing
+/// The call starts from Rust: opening a path from the front end would mean allowing
 /// `opener:allow-open-path` over a whole directory.
 ///
-/// ⚠️ **This is the one place a decrypted copy reaches the disk.** Handing a file to the
-/// application the desktop chose for it means handing over a path, and that file has to
-/// be readable. The copy goes under a directory of ours in the OS temporary folder and is
-/// swept at the next launch — it cannot be deleted on close, because the application that
-/// opened it still holds it. The README says so; replacing this with "save as" was the
-/// alternative and was turned down, one click being the point.
+/// ⚠️ The one place a decrypted copy reaches the disk: the program the desktop picks reads a
+/// path. It goes under the profile's `open/` ([`sealed::plaintext_directory`]) and is swept
+/// on exit and at the next launch, since that program may still hold it on close.
 #[tauri::command(async)]
 #[specta::specta]
 pub fn open_attachment(id: String, app: AppHandle, db: State<'_, Db>) -> Result<(), AppError> {
@@ -148,8 +139,7 @@ pub fn open_attachment(id: String, app: AppHandle, db: State<'_, Db>) -> Result<
     let directory = sealed::plaintext_directory(&app)?;
     std::fs::create_dir_all(&directory).context("a directory for decrypted copies")?;
 
-    // Named after the record, not after what the user called it: two `capture.png` must
-    // not overwrite each other here either.
+    // Named after the record: two `capture.png` must not overwrite each other here either.
     let copy = directory.join(attachment.stored_name());
     std::fs::write(&copy, &bytes).context(attachment.file_name)?;
 
@@ -166,8 +156,7 @@ pub fn open_attachment(id: String, app: AppHandle, db: State<'_, Db>) -> Result<
 pub fn save_attachment(id: String, path: String, db: State<'_, Db>) -> Result<(), AppError> {
     let (_, bytes) = read_plain(&mut *lock(&db)?, &id)?;
 
-    // In the clear, where the user chose: that is what "save as" means, and it is an
-    // explicit gesture rather than something the application does behind them.
+    // In the clear, where the user chose: that is what "save as" means.
     std::fs::write(&path, &bytes).context(path)?;
 
     Ok(())
@@ -212,8 +201,7 @@ fn delete(db: &Db, id: &str) -> Result<(), StorageError> {
     Ok(())
 }
 
-/// Files no record claims any more: a copy interrupted between `fs::copy` and the
-/// insert leaves one, and so does a purge that fails in between.
+/// Files no record claims: an interrupted copy or a purge failing halfway leaves one.
 pub fn sweep_orphan_files(db: &Db) -> Result<usize, StorageError> {
     let (directory, known) = {
         let mut connection = lock(db)?;
@@ -270,7 +258,6 @@ mod tests {
         (scratch, std::sync::Mutex::new(Some(library)), note.id)
     }
 
-    /// An in-memory library names a directory it never creates; opening one creates it.
     fn attachments_of(db: &Db) -> PathBuf {
         let directory = directory(&lock(db).unwrap());
         std::fs::create_dir_all(&directory).unwrap();
@@ -368,8 +355,8 @@ mod tests {
         assert_eq!(bytes, vec![7u8; 2048]);
     }
 
-    /// The limit is applied by the read, so a file that grew past it is still refused — and
-    /// no more than one byte past it is ever held.
+    /// A file that grew past the limit is still refused, and no more than one byte past it is
+    /// ever held.
     #[test]
     fn a_file_over_the_limit_is_read_one_byte_past_it_and_refused() {
         let scratch = tempfile::tempdir().unwrap();

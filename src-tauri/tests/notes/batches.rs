@@ -66,7 +66,7 @@ fn tagging_a_selection_adds_without_replacing() {
     );
 }
 
-/// ⚠️ The pair list is what the undo strips again, so a tag the note already carried
+/// The pair list is what the undo strips again, so a tag the note already carried
 /// must not appear in it — and nothing changed, so `updated_at` stays put.
 #[test]
 fn tagging_twice_does_not_duplicate_the_tag_nor_claim_to_have_added_it() {
@@ -152,7 +152,7 @@ fn a_move_goes_back_to_the_space_each_note_left() {
     assert_eq!(other.space_id, work);
 }
 
-/// ⚠️ Like restoring from the trash: undoing is not editing, and the canvas sorts on it.
+/// Like restoring from the trash: undoing is not editing, and the canvas sorts on it.
 #[test]
 fn putting_a_move_back_does_not_refresh_updated_at() {
     let mut connection = open_in_memory().unwrap();

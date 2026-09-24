@@ -1,21 +1,17 @@
-//! ⚠️ What Cargo has no field for comes from `[package.metadata.devnotes]` and
-//! `rust-toolchain.toml`, both read by `build.rs` — Cargo does not pass
-//! `[package.metadata]` to the crate.
-//!
-//! Its own version and Tauri's are absent on purpose: the front asks the running binary,
-//! which cannot go stale the way a committed `bindings.ts` can.
+//! What Cargo has no field for comes from `[package.metadata.devnotes]` and
+//! `rust-toolchain.toml`, read by `build.rs`: Cargo does not pass `[package.metadata]` to the
+//! crate. No version here: the front asks the running binary, which cannot go stale.
 
 use serde::Serialize;
 use specta::Type;
 
-/// A constant of `bindings.ts` and not a command: the titlebar reads the name
-/// synchronously, and a round trip would show an empty one first.
+/// A constant rather than a command: the titlebar reads the name synchronously.
 #[derive(Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct AppMetadata {
     /// What the user is shown, which is not the crate name (`devnotes`).
     pub(crate) name: &'static str,
-    /// ⚠️ Must stay covered by the scope declared for `opener:allow-open-url` in
+    /// ⚠️ Must stay inside the scope `opener:allow-open-url` declares in
     /// `capabilities/default.json`, or opening it is refused at runtime.
     pub(crate) repository: &'static str,
     pub(crate) author: &'static str,
@@ -36,10 +32,8 @@ pub(crate) const METADATA: AppMetadata = AppMetadata {
 mod tests {
     use super::METADATA;
 
-    /// ⚠️ The comment on `repository` is a promise nothing checked. Tauri refuses an
-    /// `openUrl` outside the scope at runtime, with nothing on screen to explain it, so
-    /// moving the repository without widening the scope would only show up in someone's
-    /// hands. Read from the shipped capability, next to the constant it constrains.
+    /// Tauri refuses an `openUrl` outside the scope at runtime, with nothing on screen: read
+    /// from the shipped capability, next to the constant it constrains.
     #[test]
     fn the_repository_stays_inside_the_scope_the_capability_allows() {
         const CAPABILITY: &str = include_str!("../capabilities/default.json");

@@ -28,7 +28,7 @@ fn embedded_versions() -> Result<Vec<String>, StorageError> {
     Ok(versions)
 }
 
-/// ⚠️ 0.1.0 versioned its schema with `PRAGMA user_version` rather than Diesel's table, and
+/// 0.1.0 versioned its schema with `PRAGMA user_version` rather than Diesel's table, and
 /// replaying the migrations over it would fail on the first `CREATE TABLE`. It is refused by
 /// name instead: 0.4 still adopts that history, and a library opened there once opens here.
 fn refuse_a_pre_diesel_schema(connection: &mut SqliteConnection) -> Result<(), StorageError> {

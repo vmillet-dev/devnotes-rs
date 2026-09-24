@@ -1,9 +1,6 @@
 //! The body as it was before an edit.
 //!
-//! ⚠️ The trash protects a deletion; nothing protected an edit. You adjust a command that
-//! worked, it stops working, and the version that worked is gone. The point is not the
-//! restoring — it is the **ease**: a text you know is recoverable is a text you edit
-//! freely, and touching a snippet that works stops costing nerve.
+//! What the trash does for a deletion, for an edit: the version that worked stays recoverable.
 
 use std::time::Duration;
 
@@ -18,16 +15,14 @@ use crate::count::saturating_u32;
 
 /// How many bodies are kept per note.
 ///
-/// ⚠️ A **count**, not a time window. A body runs to tens of kilobytes, so a cap is the
-/// only bound that is predictable for storage — the trash's thirty days is a precedent
-/// for the shape of the retention, not for its unit.
+/// A count, not a time window: a body runs to tens of kilobytes, and a cap is the bound that
+/// is predictable for storage.
 pub const KEEP: usize = 20;
 
 /// Whether the body a write replaces is worth keeping.
 ///
-/// ⚠️ Snippets only: a checklist's items live in `note_items`, a second table to snapshot.
-/// ⚠️ And never an empty body. Creating a note writes the title first, so the body always
-/// arrives as a second update over the empty string the row was born with.
+/// Snippets only — a checklist's items live in `note_items`, a second table to snapshot — and
+/// never an empty body: a new note's body always arrives as an update over an empty row.
 pub(crate) fn worth_keeping(before: &Note, after: &Note) -> bool {
     before.kind == NoteKind::Snippet
         && after.content != before.content
@@ -36,8 +31,8 @@ pub(crate) fn worth_keeping(before: &Note, after: &Note) -> bool {
 
 /// One kept body, as the panel lists it.
 ///
-/// ⚠️ Metadata only. The bodies are what makes this table big, and a list that carried
-/// twenty of them would send the whole history across to draw twenty dates.
+/// Metadata only: twenty bodies across the bridge to draw twenty dates would be the whole
+/// history.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct Revision {
@@ -72,8 +67,7 @@ pub enum DiffLine {
 /// Lines shown either side of a change, as a patch shows them.
 const CONTEXT: usize = 3;
 
-/// ⚠️ A cap on time rather than on size: past it `similar` approximates instead of holding
-/// the panel on a body of tens of kilobytes.
+/// A cap on time rather than size: past it `similar` approximates instead of holding the panel.
 const DIFF_TIMEOUT: Duration = Duration::from_millis(300);
 
 /// What restoring `version` over `current` would change, line by line. Empty when the two
@@ -173,8 +167,7 @@ mod tests {
         assert!(diff("a\nb\n", "a\nb\n").is_empty());
     }
 
-    /// ⚠️ The typo in the middle of two hundred lines is the case this exists for: the
-    /// change and its context, and the rest folded to a count.
+    /// The typo in the middle of two hundred lines: the change and its context, the rest folded.
     #[test]
     fn a_change_is_shown_with_its_context_and_the_rest_is_folded() {
         let current = numbered(20);
