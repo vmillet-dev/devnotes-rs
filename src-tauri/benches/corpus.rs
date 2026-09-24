@@ -137,7 +137,7 @@ pub(crate) fn build_of(notes: usize) -> Corpus {
     // commands really pay, encryption included.
     let mut connection = db::open(
         &directory.join("bench.sqlite3"),
-        db::bench_vault().expect("a key"),
+        db::test_vault().expect("a key"),
     )
     .expect("a fresh database");
 

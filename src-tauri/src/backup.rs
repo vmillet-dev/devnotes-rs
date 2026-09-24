@@ -345,14 +345,6 @@ mod tests {
     use crate::spaces::store as spaces;
 
     /// ⚠️ The shipped cost is ~52 ms a derivation and these tests derive a dozen times.
-    fn cheap() -> Cost {
-        Cost {
-            memory_kib: 64,
-            passes: 1,
-            lanes: 1,
-        }
-    }
-
     fn at(offset_hours: i64) -> DateTime<Utc> {
         db::iso8601::parse("2026-07-25T09:00:00.000Z").unwrap() + TimeDelta::hours(offset_hours)
     }
@@ -362,11 +354,7 @@ mod tests {
         let vault = crate::vault::file::create(
             directory,
             "a passphrase",
-            crate::vault::key::Cost {
-                memory_kib: 64,
-                passes: 1,
-                lanes: 1,
-            },
+            crate::vault::key::Cost::FOR_TESTS,
         )
         .unwrap();
 
@@ -524,15 +512,19 @@ mod tests {
         let (mut connection, _) = library(&directory);
         let target = rotate(&directory, &mut connection, at(0)).unwrap().unwrap();
 
-        let vault =
-            crate::vault::file::change_passphrase(&directory, "a passphrase", "a new one", cheap())
-                .unwrap();
+        let vault = crate::vault::file::change_passphrase(
+            &directory,
+            "a passphrase",
+            "a new one",
+            Cost::FOR_TESTS,
+        )
+        .unwrap();
 
         // The gap itself, kept in the test: rewrapping the live file alone revokes nothing.
         crate::vault::file::unlock(&target, "a passphrase")
             .expect("the copy still opens with the retired phrase before the rewrap");
 
-        let tally = rewrap(&directory, &vault, "a new one", cheap());
+        let tally = rewrap(&directory, &vault, "a new one", Cost::FOR_TESTS);
 
         assert_eq!(tally, Rewrapped { done: 1, left: 0 });
         assert!(
@@ -557,20 +549,29 @@ mod tests {
             &directory,
             "a passphrase",
             "the second",
-            cheap(),
+            Cost::FOR_TESTS,
         )
         .unwrap();
         // ⚠️ No rewrap here, so the first copy stays under the very first phrase.
         let second = rotate(&directory, &mut connection, at(25))
             .unwrap()
             .unwrap();
-        crate::vault::file::write_wrapped(&second.join(KEY_FILE), &vault, "the second", cheap())
-            .unwrap();
+        crate::vault::file::write_wrapped(
+            &second.join(KEY_FILE),
+            &vault,
+            "the second",
+            Cost::FOR_TESTS,
+        )
+        .unwrap();
 
-        let vault =
-            crate::vault::file::change_passphrase(&directory, "the second", "the third", cheap())
-                .unwrap();
-        let tally = rewrap(&directory, &vault, "the third", cheap());
+        let vault = crate::vault::file::change_passphrase(
+            &directory,
+            "the second",
+            "the third",
+            Cost::FOR_TESTS,
+        )
+        .unwrap();
+        let tally = rewrap(&directory, &vault, "the third", Cost::FOR_TESTS);
 
         assert_eq!(tally.done, 2);
         for copy in [&first, &second] {
@@ -590,7 +591,7 @@ mod tests {
         std::fs::remove_file(target.join(KEY_FILE)).unwrap();
 
         let vault = crate::vault::file::unlock(&directory, "a passphrase").unwrap();
-        let tally = rewrap(&directory, &vault, "a new one", cheap());
+        let tally = rewrap(&directory, &vault, "a new one", Cost::FOR_TESTS);
 
         assert_eq!(tally, Rewrapped { done: 0, left: 0 });
     }

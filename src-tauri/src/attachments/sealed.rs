@@ -72,16 +72,7 @@ mod tests {
     use crate::vault::key::Cost;
 
     fn vault() -> Vault {
-        Vault::derive(
-            "a passphrase",
-            b"0123456789abcdef",
-            Cost {
-                memory_kib: 64,
-                passes: 1,
-                lanes: 1,
-            },
-        )
-        .unwrap()
+        Vault::derive("a passphrase", b"0123456789abcdef", Cost::FOR_TESTS).unwrap()
     }
 
     /// The property the name has to have, asserted without waiting for a coincidence.
@@ -142,16 +133,8 @@ mod tests {
         let target = directory.join("capture.png");
         write_sealed(&vault(), &target, b"bytes").unwrap();
 
-        let other = Vault::derive(
-            "another passphrase",
-            b"0123456789abcdef",
-            Cost {
-                memory_kib: 64,
-                passes: 1,
-                lanes: 1,
-            },
-        )
-        .unwrap();
+        let other =
+            Vault::derive("another passphrase", b"0123456789abcdef", Cost::FOR_TESTS).unwrap();
 
         assert!(read_sealed(&other, &target).is_err());
     }

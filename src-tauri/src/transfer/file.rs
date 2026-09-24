@@ -345,16 +345,7 @@ mod tests {
     use crate::vault::key::Cost;
 
     fn library() -> Vault {
-        Vault::derive(
-            "the library",
-            b"0123456789abcdef",
-            Cost {
-                memory_kib: 64,
-                passes: 1,
-                lanes: 1,
-            },
-        )
-        .unwrap()
+        Vault::derive("the library", b"0123456789abcdef", Cost::FOR_TESTS).unwrap()
     }
 
     fn bundle() -> Bundle {

@@ -34,6 +34,17 @@ pub struct Cost {
     pub lanes: u32,
 }
 
+impl Cost {
+    /// A cost nobody would ship, for keys that live as long as a test or a benchmark and
+    /// never guard a file anyone keeps.
+    #[doc(hidden)]
+    pub const FOR_TESTS: Self = Self {
+        memory_kib: 64,
+        passes: 1,
+        lanes: 1,
+    };
+}
+
 impl Default for Cost {
     /// Paid **once per launch**, and the only thing standing between a copied library and
     /// someone working through a wordlist.
@@ -193,16 +204,8 @@ mod tests {
 
     /// ⚠️ Cheap parameters, and only here: deriving at the real cost in every test would
     /// add minutes to `cargo test` to prove nothing the real parameters prove better.
-    fn cheap() -> Cost {
-        Cost {
-            memory_kib: 64,
-            passes: 1,
-            lanes: 1,
-        }
-    }
-
     fn vault() -> Vault {
-        Vault::derive("a passphrase", b"0123456789abcdef", cheap()).unwrap()
+        Vault::derive("a passphrase", b"0123456789abcdef", Cost::FOR_TESTS).unwrap()
     }
 
     #[test]
@@ -257,7 +260,8 @@ mod tests {
     #[test]
     fn a_value_will_not_open_under_another_passphrase() {
         let sealed = vault().seal("secret").unwrap();
-        let other = Vault::derive("another passphrase", b"0123456789abcdef", cheap()).unwrap();
+        let other =
+            Vault::derive("another passphrase", b"0123456789abcdef", Cost::FOR_TESTS).unwrap();
 
         assert!(other.open(&sealed).is_err());
     }
@@ -265,7 +269,8 @@ mod tests {
     #[test]
     fn the_same_passphrase_under_another_salt_is_another_key() {
         let sealed = vault().seal("secret").unwrap();
-        let elsewhere = Vault::derive("a passphrase", b"fedcba9876543210", cheap()).unwrap();
+        let elsewhere =
+            Vault::derive("a passphrase", b"fedcba9876543210", Cost::FOR_TESTS).unwrap();
 
         assert!(elsewhere.open(&sealed).is_err());
     }

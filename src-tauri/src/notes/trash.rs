@@ -83,12 +83,7 @@ pub fn sweep_at_startup(db: &Db) {
 mod tests {
     use super::*;
     use crate::attachments::model::Attachment;
-    use crate::db::iso8601;
-    use crate::notes::fixtures::note;
-
-    fn at(iso: &str) -> DateTime<Utc> {
-        iso8601::parse(iso).unwrap()
-    }
+    use crate::notes::fixtures::{at, note};
 
     /// A note trashed long ago, with an attachment whose file sits in the library.
     fn a_trashed_note_with_a_file() -> (tempfile::TempDir, Db, String, std::path::PathBuf) {

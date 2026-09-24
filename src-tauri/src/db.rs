@@ -179,7 +179,8 @@ pub fn open(path: &Path, vault: Vault) -> Result<Library, StorageError> {
     })
 }
 
-/// Public for the integration tests, which see nothing of the crate but its API.
+/// For the integration tests, which see nothing of the crate but its API.
+#[doc(hidden)]
 pub fn open_in_memory() -> Result<Library, StorageError> {
     let mut connection = SqliteConnection::establish(":memory:")
         .map_err(|error| StorageError::Migration(error.to_string()))?;
@@ -196,25 +197,15 @@ pub fn open_in_memory() -> Result<Library, StorageError> {
     })
 }
 
-/// The same key the in-memory libraries use, for the benchmarks, which open a file.
-pub fn bench_vault() -> Result<Vault, StorageError> {
-    test_vault()
-}
-
-/// ⚠️ A key of its own per in-memory library, derived at a cost nobody would ship. These
-/// libraries exist for the length of a test and never reach a file, so what matters is
-/// that the sealing path is the real one — not that the key is expensive to guess.
+/// ⚠️ A key derived at a cost nobody would ship, for in-memory libraries and the benchmarks'
+/// corpus: what matters there is that the sealing path is the real one, not that the key is
+/// expensive to guess.
+#[doc(hidden)]
 pub fn test_vault() -> Result<Vault, StorageError> {
-    use crate::vault::key::Cost;
-
     Vault::derive(
         "in-memory",
         b"0123456789abcdef",
-        Cost {
-            memory_kib: 64,
-            passes: 1,
-            lanes: 1,
-        },
+        crate::vault::key::Cost::FOR_TESTS,
     )
 }
 

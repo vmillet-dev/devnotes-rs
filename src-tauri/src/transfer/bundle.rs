@@ -243,16 +243,7 @@ mod tests {
     use crate::vault::key::Cost;
 
     fn sending_vault() -> Vault {
-        Vault::derive(
-            "the sending library",
-            b"0123456789abcdef",
-            Cost {
-                memory_kib: 64,
-                passes: 1,
-                lanes: 1,
-            },
-        )
-        .unwrap()
+        Vault::derive("the sending library", b"0123456789abcdef", Cost::FOR_TESTS).unwrap()
     }
 
     /// ⚠️ The demonstration #160 was filed on. A bundle whose attachment record claims

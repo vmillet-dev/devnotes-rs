@@ -385,9 +385,7 @@ pub fn normalize_tags(tags: &[String]) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::notes::fixtures::note as sample;
-
-    const NOW: &str = "2026-07-25T09:00:00.000Z";
+    use crate::notes::fixtures::{NOW, at, note as sample};
 
     #[test]
     fn a_rename_normalises_its_sources_and_refuses_a_blank_target() {
@@ -397,10 +395,6 @@ mod tests {
         assert_eq!(sources, ["Auth"]);
         assert_eq!(target, "identity");
         assert_eq!(retagging(&sources, " # ").unwrap_err().field, "tag");
-    }
-
-    fn at(iso: &str) -> DateTime<Utc> {
-        crate::db::iso8601::parse(iso).unwrap()
     }
 
     #[test]

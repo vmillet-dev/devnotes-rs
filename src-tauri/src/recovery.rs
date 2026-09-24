@@ -186,11 +186,7 @@ mod tests {
         let vault = crate::vault::file::create(
             directory,
             "a passphrase",
-            crate::vault::key::Cost {
-                memory_kib: 64,
-                passes: 1,
-                lanes: 1,
-            },
+            crate::vault::key::Cost::FOR_TESTS,
         )
         .unwrap();
 

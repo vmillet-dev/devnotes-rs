@@ -264,14 +264,6 @@ mod tests {
         assert!(wiped.get());
     }
 
-    fn cheap() -> Cost {
-        Cost {
-            memory_kib: 64,
-            passes: 1,
-            lanes: 1,
-        }
-    }
-
     fn close(db: &Db) {
         *db.lock().unwrap() = None;
     }
@@ -282,7 +274,7 @@ mod tests {
         let directory = scratch.path().to_path_buf();
         let db: Db = std::sync::Mutex::new(None);
 
-        create("a passphrase", &directory, &db, cheap()).unwrap();
+        create("a passphrase", &directory, &db, Cost::FOR_TESTS).unwrap();
         assert!(db.lock().unwrap().is_some());
         close(&db);
 
@@ -298,9 +290,9 @@ mod tests {
         let scratch = tempfile::tempdir().unwrap();
         let directory = scratch.path().to_path_buf();
         let db: Db = std::sync::Mutex::new(None);
-        create("a passphrase", &directory, &db, cheap()).unwrap();
+        create("a passphrase", &directory, &db, Cost::FOR_TESTS).unwrap();
 
-        let changed = change("a passphrase", "another phrase", &db, cheap()).unwrap();
+        let changed = change("a passphrase", "another phrase", &db, Cost::FOR_TESTS).unwrap();
         close(&db);
 
         assert_eq!(changed.backups_left, 0);
@@ -314,7 +306,7 @@ mod tests {
     fn a_phrase_is_not_changed_on_a_library_nobody_opened() {
         let db: Db = std::sync::Mutex::new(None);
 
-        let refused = change("a passphrase", "another phrase", &db, cheap());
+        let refused = change("a passphrase", "another phrase", &db, Cost::FOR_TESTS);
 
         assert!(matches!(refused, Err(StorageError::Locked)));
     }
