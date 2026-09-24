@@ -2860,8 +2860,9 @@ memorable pattern, and a strength meter is a dependency and a chunk of bundle.
 
 ⚠️ **Never at unlock.** The floor was eight until 0.5.1, and refusing a phrase chosen under it
 would lock someone out of their own notes. The gate and the import prompt check nothing but
-emptiness, and `unlock_vault` answers `Unlocked { belowMinimum }`: the front says so under the
-titlebar after **every** unlock, until the phrase is changed from Préférences → Sécurité.
+emptiness, `unlock` holds no floor, and `VaultStore.unlock` compares the phrase it just sent
+with the constant — in code points, as `chars()` counts — to say so under the titlebar after
+**every** unlock, until the phrase is changed from Préférences → Sécurité.
 
 ⚠️ **Raising the floor did not raise `Cost`.** Argon2id makes each guess expensive; only the length
 makes the guesses many, and only the second grows exponentially. At 64 MiB a GPU runs about

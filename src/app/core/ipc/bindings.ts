@@ -159,7 +159,7 @@ export const commands = {
 	 *  `(async)` because deriving the key is slow on purpose, and would freeze the window over
 	 *  every attempt on the main thread.
 	 */
-	unlockVault: (passphrase: string) => typedError<Unlocked, AppError>(__TAURI_INVOKE("unlock_vault", { passphrase })),
+	unlockVault: (passphrase: string) => typedError<null, AppError>(__TAURI_INVOKE("unlock_vault", { passphrase })),
 	/**
 	 *  A new phrase over the same library, from the preferences panel.
 	 * 
@@ -783,14 +783,6 @@ export type TrayLabels = {
 	capture: string,
 	palette: string,
 	quit: string,
-};
-
-/**
- *  ⚠️ A phrase under today's floor still opens: it was chosen under an older one, and refusing
- *  it would lock someone out of their own notes. It is reported instead, at every unlock.
- */
-export type Unlocked = {
-	belowMinimum: boolean,
 };
 
 /**  What the front end renders before it renders anything else. */

@@ -114,29 +114,16 @@ fn refuse_a_database_without_its_key(directory: &Path) -> Result<(), StorageErro
 /// every attempt on the main thread.
 #[tauri::command(async)]
 #[specta::specta]
-pub fn unlock_vault(
-    passphrase: String,
-    app: AppHandle,
-    db: State<'_, Db>,
-) -> Result<Unlocked, AppError> {
+pub fn unlock_vault(passphrase: String, app: AppHandle, db: State<'_, Db>) -> Result<(), AppError> {
     let directory = crate::libraries::open_directory(&app)?;
-    let passphrase = secret(passphrase);
-    unlock(&passphrase, &directory, &db)?;
+    unlock(&secret(passphrase), &directory, &db)?;
     crate::sweep(&app);
 
-    Ok(Unlocked {
-        below_minimum: validate(&passphrase).is_err(),
-    })
+    Ok(())
 }
 
-/// ⚠️ A phrase under today's floor still opens: it was chosen under an older one, and refusing
-/// it would lock someone out of their own notes. It is reported instead, at every unlock.
-#[derive(Debug, Clone, Copy, Serialize, Type)]
-#[serde(rename_all = "camelCase")]
-pub struct Unlocked {
-    pub below_minimum: bool,
-}
-
+/// ⚠️ No floor here: a phrase chosen under an older, lower one still opens, and refusing it
+/// would lock someone out of their own notes. The front end says so instead.
 fn unlock(passphrase: &str, directory: &Path, db: &Db) -> Result<(), StorageError> {
     let vault = file::unlock(directory, passphrase)?;
 
@@ -212,9 +199,14 @@ fn install(directory: &Path, db: &Db, vault: key::Vault) -> Result<(), StorageEr
     Ok(())
 }
 
+/// An export written in the clear has no phrase to hold to anything.
+pub(crate) fn validate_protection(passphrase: Option<&str>) -> Result<(), ValidationError> {
+    passphrase.map_or(Ok(()), validate)
+}
+
 /// A length and nothing else: rules about digits and symbols push people towards one
-/// memorable pattern. Also what an export's protection must meet, since that file travels.
-pub(crate) fn validate(passphrase: &str) -> Result<(), ValidationError> {
+/// memorable pattern.
+fn validate(passphrase: &str) -> Result<(), ValidationError> {
     if passphrase.chars().count() < MINIMUM_LENGTH as usize {
         return Err(ValidationError::new(
             "passphrase",
@@ -290,6 +282,29 @@ mod tests {
         assert!(db.lock().unwrap().is_some());
 
         close(&db);
+    }
+
+    /// Chosen when the floor was eight: refusing it would lock the library for good.
+    #[test]
+    fn a_phrase_under_the_floor_still_opens() {
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
+        let db: Db = std::sync::Mutex::new(None);
+        create("eight ch", &directory, &db, Cost::FOR_TESTS).unwrap();
+        close(&db);
+
+        unlock("eight ch", &directory, &db).unwrap();
+
+        assert!(db.lock().unwrap().is_some());
+        close(&db);
+    }
+
+    /// An export is the one file meant to travel, so its phrase meets the same floor.
+    #[test]
+    fn an_export_phrase_meets_the_floor_and_no_phrase_is_no_protection() {
+        assert!(validate_protection(Some("eleven char")).is_err());
+        assert!(validate_protection(Some("twelve chars")).is_ok());
+        assert!(validate_protection(None).is_ok());
     }
 
     #[test]

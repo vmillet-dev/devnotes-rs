@@ -47,11 +47,14 @@ export class VaultStore {
     return this.attempt(() => this.repository.create(passphrase));
   }
 
-  /** A phrase under today's floor still opens, and says so every time until it is changed. */
+  /**
+   * A phrase under today's floor still opens, and says so every time until it is changed.
+   * Counted in code points, as `vault::validate` counts `chars()`.
+   */
   async unlock(passphrase: string): Promise<boolean> {
     return this.attempt(async () => {
-      const unlocked = await this.repository.unlock(passphrase);
-      if (unlocked.belowMinimum) {
+      await this.repository.unlock(passphrase);
+      if ([...passphrase].length < MINIMUM_PASSPHRASE_LENGTH) {
         this.status.notify({ key: 'vault.belowMinimum', params: { length: MINIMUM_PASSPHRASE_LENGTH } });
       }
     });

@@ -87,8 +87,6 @@ describe('VaultStore', () => {
 
     /** Refusing a phrase chosen under the older floor would lock someone out of their notes. */
     it('opens under a phrase below the floor, and says so', async () => {
-      repository.unlocked = { belowMinimum: true };
-
       expect(await store.unlock('eight ch')).toBe(true);
 
       expect(store.isUnlocked()).toBe(true);
@@ -96,6 +94,13 @@ describe('VaultStore', () => {
         key: 'vault.belowMinimum',
         params: { length: 12 },
       });
+    });
+
+    /** Six keys are twelve UTF-16 units and six characters, which is what Rust counts. */
+    it('counts characters as Rust does, not UTF-16 units', async () => {
+      await store.unlock('🔑'.repeat(6));
+
+      expect(TestBed.inject(StatusNotifier).status()?.key).toBe('vault.belowMinimum');
     });
 
     it('creates on a first launch, and the library is open straight after', async () => {
