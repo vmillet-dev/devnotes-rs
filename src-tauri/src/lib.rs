@@ -282,8 +282,8 @@ pub(crate) fn sweep(handle: &tauri::AppHandle) {
     // retention is about to purge.
     backup::take(handle, &db);
 
-    notes::trash::sweep_at_startup(handle, &db);
-    if let Err(error) = attachments::sweep_orphan_files(handle, &db) {
+    notes::trash::sweep_at_startup(&db);
+    if let Err(error) = attachments::sweep_orphan_files(&db) {
         log::warn!("Orphan attachment files not swept: {error}");
     }
     // ⚠️ The decrypted copies `open_attachment` had to write. They cannot be deleted on

@@ -5,7 +5,7 @@ pub mod file;
 pub mod model;
 pub mod protect;
 
-use tauri::{AppHandle, State};
+use tauri::State;
 
 use crate::attachments;
 use crate::db::{Db, lock};
@@ -21,7 +21,6 @@ pub fn export_notes(
     path: String,
     space_id: Option<String>,
     passphrase: Option<String>,
-    app: AppHandle,
     db: State<'_, Db>,
 ) -> Result<ExportReport, AppError> {
     let passphrase = secret(passphrase);
@@ -34,7 +33,7 @@ pub fn export_notes(
     Ok(file::write(
         &path,
         &exported,
-        &attachments::directory(&app)?,
+        &attachments::directory(&connection),
         connection.vault(),
         passphrase.as_deref(),
     )?)
@@ -46,7 +45,6 @@ pub fn export_selection(
     path: String,
     ids: Vec<String>,
     passphrase: Option<String>,
-    app: AppHandle,
     db: State<'_, Db>,
 ) -> Result<ExportReport, AppError> {
     let passphrase = secret(passphrase);
@@ -59,7 +57,7 @@ pub fn export_selection(
     Ok(file::write(
         &path,
         &exported,
-        &attachments::directory(&app)?,
+        &attachments::directory(&connection),
         connection.vault(),
         passphrase.as_deref(),
     )?)
@@ -72,15 +70,14 @@ pub fn export_selection(
 pub fn import_notes(
     path: String,
     passphrase: Option<String>,
-    app: AppHandle,
     db: State<'_, Db>,
 ) -> Result<ImportReport, AppError> {
     model::validate_path(&path)?;
 
     let (imported, mut payload) = file::read(&path, secret(passphrase).as_deref())?;
-    let directory = attachments::directory(&app)?;
 
     let mut connection = lock(&db)?;
+    let directory = attachments::directory(&connection);
 
     Ok(bundle::merge(
         &mut connection,
