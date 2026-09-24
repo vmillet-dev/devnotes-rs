@@ -1,17 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { TranslationRef } from '@core/services/i18n/translation-ref.model';
-import { HelpStore } from '@core/services/help/help.store';
+import { HelpPanel, HelpStore } from '@core/services/help/help.store';
 import { UpdateStore } from '@core/services/updates/update.store';
 import { MenuPanelDirective } from '@shared/directives/menu-panel.directive';
 import { MenuTriggerDirective } from '@shared/directives/menu-trigger.directive';
+import { dialogRung } from '@shared/layout/dialog/dialog.model';
 import { AboutDialogComponent } from '@titlebar/about-menu/about-dialog/about-dialog.component';
 import { GettingStartedDialogComponent } from '@titlebar/about-menu/getting-started-dialog/getting-started-dialog.component';
 import { ShortcutsDialogComponent } from '@titlebar/about-menu/shortcuts-dialog/shortcuts-dialog.component';
 import { WhatsNewDialogComponent } from '@titlebar/about-menu/whats-new-dialog/whats-new-dialog.component';
-
-/** One signal rather than four booleans, which would allow a state with two stacked. */
-export type AboutPanel = 'whatsNew' | 'gettingStarted' | 'shortcuts' | 'about';
 
 @Component({
   selector: 'app-about-menu',
@@ -30,11 +28,12 @@ export type AboutPanel = 'whatsNew' | 'gettingStarted' | 'shortcuts' | 'about';
 })
 export class AboutMenuComponent {
   protected readonly store = inject(UpdateStore);
-  /** Shared, because the guide is reached from the thing it explains as well as here. */
+  /** Shared: the guide is reached from the thing it explains, and a global shortcut puts it away. */
   protected readonly help = inject(HelpStore);
   protected readonly menu = inject(MenuTriggerDirective);
 
-  protected readonly panel = signal<AboutPanel | null>(null);
+  /** Over a full-screen editor, the one modal that leaves the titlebar in reach. */
+  protected readonly menuRung = dialogRung('titlebar');
 
   protected readonly checking = computed(() => this.store.checkState() === 'checking');
 
@@ -52,24 +51,16 @@ export class AboutMenuComponent {
     }
   });
 
-  /**
-   * The guide is the one panel with a second way in: `HelpStore` is what an empty canvas
-   * or an empty board opens it through, so the state has to be the same either way.
-   */
-  protected readonly showing = computed<AboutPanel | null>(() =>
-    this.help.chapter() !== null ? 'gettingStarted' : this.panel(),
-  );
-
   protected checkUpdates(): void {
     if (this.checking()) return;
     void this.store.checkNow();
   }
 
-  protected openPanel(panel: AboutPanel): void {
+  protected openPanel(panel: HelpPanel): void {
     if (panel === 'gettingStarted') {
       this.help.open();
     } else {
-      this.panel.set(panel);
+      this.help.show(panel);
     }
     // No focus restored: the modal opening takes it itself.
     this.menu.close(false);
@@ -77,7 +68,6 @@ export class AboutMenuComponent {
 
   /** The modal's focus trap would hand back to the menu entry, destroyed since. */
   protected closePanel(): void {
-    this.panel.set(null);
     this.help.close();
     this.menu.focusAnchor();
   }

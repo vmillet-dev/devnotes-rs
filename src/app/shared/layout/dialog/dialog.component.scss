@@ -18,8 +18,10 @@
 }
 
 // The offset pushes a panel down from the top — the palette sits at 12vh. A fullscreen
-// panel is sized against this box, so the offset would come straight off its height.
+// panel is sized against this box, so the offset would come straight off its height. It
+// starts under the titlebar, whose menus and theme toggle stay in reach.
 .dialog-backdrop.fullscreen {
+  top: var(--titlebar-height);
   padding-top: 0;
 }
 

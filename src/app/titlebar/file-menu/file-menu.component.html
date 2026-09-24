@@ -13,7 +13,7 @@
   </button>
 
   @if (menu.open()) {
-    <div appMenuPanel class="file-dropdown">
+    <div appMenuPanel class="file-dropdown" [style.z-index]="menuRung">
       @for (entry of entries; track entry.id) {
         <button
           appMenuItem

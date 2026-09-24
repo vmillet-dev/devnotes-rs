@@ -1,10 +1,20 @@
 /**
  * ⚠️ The order is the value: a rung's position is both its `z-index` and its Escape priority,
  * and no stylesheet carries a modal `z-index`. The banners (`banners/`, at 80) stay above every
- * modal, which can trigger them. `app` — the help panels — sits under the editor, which a
- * global shortcut can open over them.
+ * modal, which can trigger them. `titlebar` is no dialog but the titlebar's menus, which a
+ * full-screen editor leaves in reach; `app`, the help panels they open, lands over the editor.
  */
-const LAYERS = ['app', 'editor', 'settings', 'update', 'palette', 'fields', 'zoom', 'passphrase'] as const;
+const LAYERS = [
+  'editor',
+  'titlebar',
+  'app',
+  'settings',
+  'update',
+  'palette',
+  'fields',
+  'zoom',
+  'passphrase',
+] as const;
 
 export type DialogLayer = (typeof LAYERS)[number];
 

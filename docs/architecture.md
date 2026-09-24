@@ -342,9 +342,9 @@ click; a dialog projects its content into it and says which rung it sits on:
 
 | Input                  | Decides                                                                           |
 | ---------------------- | --------------------------------------------------------------------------------- |
-| `layer` (required)     | the rung: `app`, `editor`, `settings`, `update`, `palette`, `fields`, `zoom`      |
+| `layer` (required)     | the rung: `editor`, `app`, `settings`, `update`, `palette`, `fields`, `zoom`      |
 | `variant`              | `fitted` (height follows the content), `framed` (fixed, scrolling middle), `bare` |
-| `fullscreen`           | fills the window — the editor's toggle                                            |
+| `fullscreen`           | fills the window under the titlebar — the editor's toggle                         |
 | `dismissible`          | `false` refuses Escape and the backdrop click (an update being installed)         |
 | `labelledBy` / `label` | what names it to assistive technology                                             |
 
@@ -364,11 +364,12 @@ whatever it shows, an image the panel only bounds.
 Escape follows. No stylesheet carries a modal `z-index` any more, and adding a rung is one
 entry in that array.
 
-⚠️ `app` — the About menu's four help panels — sits **under** `editor`. A help panel covers
-the whole page, so the only way to a note while one is up is a global shortcut, which comes
-from outside the application altogether; the other way round drew the note behind the help.
-Nothing is lost by it: an About panel can only be opened from the titlebar, and the titlebar
-is under the scrim while the editor, the trash panel or the tag manager is up.
+⚠️ **A full-screen editor leaves the titlebar in reach**, so what the titlebar opens lands
+over the editor: `titlebar` — no dialog, the rung its two menus take — and then `app`, the
+About menu's four help panels. The price is the other way in: a global shortcut that opens the
+editor while a help panel is up would draw the note behind it, so `NotesPage` puts every panel
+away first (`HelpStore.close`), and `HelpStore` holds which panel is up for that reason.
+⚠️ An open menu stops the Escape it handles, or the editor behind it closed on the same key.
 
 `DialogStack` is what makes Escape reach **one** dialog. Every open modal listens on
 `document`, so without it they all answer the same keystroke — which used to be patched case
@@ -1587,7 +1588,8 @@ border-box }` folds that padding into the width. Getting this wrong shifts typin
 
 Deletion is a two-step confirm in the toolbar rather than a native `confirm()`, which would
 freeze the whole WebView. The fullscreen toggle expands the panel to fill the backdrop and
-persists through `PreferencesService`.
+persists through `PreferencesService`; the backdrop starts under the titlebar
+(`--titlebar-height`), which stays usable over the note.
 
 Where the note lives — its space, then its folder — is a **band of its own** under the meta
 row, labelled like the attachments below it. It used to sit inside the meta row, between the

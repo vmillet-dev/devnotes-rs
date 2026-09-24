@@ -3,8 +3,9 @@ import { DialogLayer, dialogRung } from './dialog.model';
 
 /** The order of the rungs is the file's whole content, so that is what is asserted. */
 const IN_ORDER: readonly DialogLayer[] = [
-  'app',
   'editor',
+  'titlebar',
+  'app',
   'settings',
   'update',
   'palette',
@@ -44,12 +45,9 @@ describe('dialogRung', () => {
     expect(dialogRung('zoom')).toBeGreaterThan(dialogRung('editor'));
   });
 
-  /**
-   * A help panel covers the page, so the only way to a note while one is up is a
-   * global shortcut — which comes from outside the application. The note has to arrive
-   * in front of the help, not behind it.
-   */
-  it('draws a note opened while a help panel is up in front of it', () => {
-    expect(dialogRung('editor')).toBeGreaterThan(dialogRung('app'));
+  /** The titlebar stays in reach over a full-screen note, so what it opens lands in front. */
+  it('draws the titlebar menus and the help panels over the editor', () => {
+    expect(dialogRung('titlebar')).toBeGreaterThan(dialogRung('editor'));
+    expect(dialogRung('app')).toBeGreaterThan(dialogRung('titlebar'));
   });
 });

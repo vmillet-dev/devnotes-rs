@@ -111,6 +111,20 @@ describe('MenuTriggerDirective', () => {
     expect(menu().open()).toBe(false);
   });
 
+  it('keeps an Escape meant for it from reaching a dialog behind', async () => {
+    await open();
+    let reached = 0;
+    const listener = (): void => {
+      reached += 1;
+    };
+    document.addEventListener('keydown', listener);
+
+    element('anchor')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    document.removeEventListener('keydown', listener);
+
+    expect(reached).toBe(0);
+  });
+
   /** A multi-level menu folds its own panel before the whole thing closes. */
   it('hands Escape to the host that asked for it instead', async () => {
     let handled = 0;
