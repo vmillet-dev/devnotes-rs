@@ -48,6 +48,11 @@ export class NotesRepository {
     return toNote(unwrap('create_note', await commands.createNote(toWireNoteDraft(draft))));
   }
 
+  /** Everything the note carries but its history; `title` arrives with its translated suffix. */
+  async duplicate(id: string, title: string): Promise<Note> {
+    return toNote(unwrap('duplicate_note', await commands.duplicateNote(id, title)));
+  }
+
   /**
    * The first launch, as one write. Neither the space nor the folders exist yet, so a note
    * carries no space of its own and names its folder by **index** — the back end creates

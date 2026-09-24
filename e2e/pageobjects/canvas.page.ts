@@ -444,6 +444,11 @@ export const canvas = {
     await entry.click();
   },
 
+  async duplicateFromCardMenu(title: string): Promise<void> {
+    const card = await canvas.openCardMenu(title);
+    await card.$(testid('note-card-duplicate')).click();
+  },
+
   async pinFromCardMenu(title: string): Promise<void> {
     const card = await canvas.openCardMenu(title);
     await card.$(testid('note-card-pin')).click();

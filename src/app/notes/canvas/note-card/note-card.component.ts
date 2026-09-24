@@ -9,7 +9,7 @@ import {
   output,
   viewChild,
 } from '@angular/core';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { checklistProgress } from '@core/model/checklist.model';
 import { Note } from '@core/model/note.model';
 import { NoteSelectionStore } from '@core/state/note-selection.store';
@@ -68,6 +68,7 @@ function canTakeFocus(card: HTMLElement): boolean {
 })
 export class NoteCardComponent {
   private readonly clock = inject(ClockService);
+  private readonly transloco = inject(TranslocoService);
   private readonly notes = inject(NotesStore);
   private readonly selection = inject(NoteSelectionStore);
   private readonly fill = inject(PlaceholderFillStore);
@@ -253,6 +254,12 @@ export class NoteCardComponent {
   /** The whole rule — the fields form, a todo list's Markdown — lives in the store. */
   protected onCopy(): void {
     void this.fill.copyNote(this.note());
+  }
+
+  /** The suffix is a translation, so the copy's title is made here; an untitled note stays so. */
+  protected onDuplicate(): void {
+    const { id, title } = this.note();
+    void this.notes.duplicateNote(id, title ? this.transloco.translate('notes.copyTitle', { title }) : '');
   }
 
   /** Through the same activation the click surface emits, so the page arbitrates once. */

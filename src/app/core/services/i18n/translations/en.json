@@ -88,6 +88,8 @@
     },
     "openNote": "Open",
     "copy": "Copy",
+    "duplicate": "Duplicate",
+    "copyTitle": "{{title}} (copy)",
     "fileInto": "File into",
     "noFolder": "No folder"
   },
@@ -205,6 +207,7 @@
     "notesLoadFailed": "Could not load notes.",
     "noteSaveFailed": "Could not save the note. Your text is still on screen.",
     "noteCreateFailed": "Could not create the note.",
+    "noteDuplicateFailed": "Could not duplicate the note.",
     "noteReadFailed": "Could not read the note.",
     "noteDeleteFailed": "Could not delete the note. It is still there.",
     "spacesLoadFailed": "Could not load spaces.",

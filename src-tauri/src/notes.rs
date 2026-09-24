@@ -1,6 +1,7 @@
 #![allow(clippy::needless_pass_by_value)]
 
 pub mod checklist;
+pub(crate) mod duplicate;
 pub mod language;
 pub mod model;
 pub mod placeholder;
@@ -58,6 +59,21 @@ pub fn get_note(id: String, db: State<'_, Db>) -> Result<DisplayNote, AppError> 
 pub fn create_note(draft: NoteDraft, db: State<'_, Db>) -> Result<DisplayNote, AppError> {
     let mut connection = lock(&db)?;
     let note = store::create(&mut connection, draft, Utc::now())?;
+
+    Ok(display(&mut connection, note)?)
+}
+
+/// A copy to start another note from, attachments included and history left behind. The
+/// title is the front end's: its suffix is a translation.
+#[tauri::command(async)]
+#[specta::specta]
+pub fn duplicate_note(
+    id: String,
+    title: String,
+    db: State<'_, Db>,
+) -> Result<DisplayNote, AppError> {
+    let mut connection = lock(&db)?;
+    let note = duplicate::duplicate(&mut connection, &id, title, Utc::now())?;
 
     Ok(display(&mut connection, note)?)
 }

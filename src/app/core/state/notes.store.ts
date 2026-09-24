@@ -285,6 +285,17 @@ export class NotesStore {
     await this.createWithContent(await this.clipboard.paste());
   }
 
+  /** The copy opens in the editor, ready to be renamed; the canvas learns of it either way. */
+  async duplicateNote(id: string, title: string): Promise<void> {
+    const copy = await this.notifier.attempt('errors.noteDuplicateFailed', () =>
+      this.repository.duplicate(id, title),
+    );
+    if (!copy) return;
+
+    this.revision.bump();
+    await this.openNote(copy.id);
+  }
+
   /** Already carries its content, so no draft: the editor opens on a saved note. */
   async createWithContent(content: string): Promise<void> {
     if (!content.trim()) return;
