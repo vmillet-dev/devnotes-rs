@@ -834,31 +834,23 @@ It stays untranslated, like `CHANGELOG.md` and the "Nouveautés" panel that read
 release note in one language beats no release note. The `<pre>` shows the section as
 written, bullets and all.
 
-### The theme is one gesture, where it was three
+### The theme is one gesture
 
-The theme sat behind File → Préférences → Apparence, three gestures away, and it is a
-choice made more than once. There is a theme control in the titlebar now, and it is a
-**toggle between light and dark**. It used to cycle
-through the three `THEME_CHOICES`, and a click on "system" usually changed nothing on screen
-— the one thing a click there is expected to do (#323). Following the system is chosen in
-the panel, which keeps its three rows.
+The theme is a choice made more than once, so besides its row behind File → Préférences →
+Apparence it has a control in the titlebar, and that control is a **toggle between light and
+dark** rather than a cycle through the three `THEME_CHOICES`: a click on "system" usually
+changes nothing on screen, the one thing a click there is expected to do. Following the
+system is chosen in the panel, which keeps its three rows.
 
-The language went the other way (#186). Its `FR` / `EN` switch sat at the top right, where
-Windows draws the window controls, and duplicated a row of the panel: a language is chosen
-once. The three coloured dots went with it — macOS traffic lights that closed nothing, drawn
-under the real buttons, inviting a click that did nothing at all.
+The language has no control there: it is chosen once, in the panel. Nor does the titlebar
+draw window controls; the native frame has its own.
 
 ⚠️ The control reads `resolvedTheme`, **what is on screen**, not the setting: on "system" it
 shows what the machine resolved, and a press writes the explicit opposite. It writes
 `SettingsStore.theme`, the **same signal** the panel writes, so the two cannot disagree.
 ⚠️ Icon and label both name the **action** — a moon on a light screen, "Passer au thème
-sombre" — the convention a toggle follows. An icon rather than a word: the language beside
-it is two letters, and a label would be the widest thing in a bar whose middle is the
-application's name.
-
-⚠️ Both switches sit in **one** group. `.titlebar` is `space-between` and the title takes
-no part in that row, being absolutely positioned, so two loose groups put the theme in the
-middle of the bar beside the application's name.
+sombre" — the convention a toggle follows. An icon rather than a word: a label would be
+the widest thing in a bar whose middle is the application's name.
 
 ### One row, and the first card in the top half
 
@@ -2302,9 +2294,9 @@ about samples nobody asked for would only add noise.
   `attachments_missing` rather than swallowed: the note arrives with a preview that will stay
   empty, and the report is the only thing that explains it.
 - **What arrives is sealed and measured, never trusted.** The bytes go through
-  `sealed::write_sealed` like every other writer on that directory — written in the clear, an
-  imported attachment was readable beside a sealed library and could never be opened again —
-  and the record's `byte_size` is the length that arrived, not the one the file declared.
+  `sealed::write_sealed` like every other writer on that directory — in the clear it would
+  sit readable beside a sealed library, and never open — and the record's `byte_size` is the
+  length that arrived, not the one the file declared.
 - **An archive entry is read under a ceiling.** `bundle.json` and the recipe may expand to a
   hundred times their compressed size, with a 64 MiB floor so a small entry is never refused over
   its ratio: a guard against a decompression bomb, not against a large export, which grows
@@ -2783,7 +2775,7 @@ reader of the raw file, with no key, learns the number of notes and the shape of
 folders they hang in, every instant, each note's language, kind, pin and item states, every tag
 and `{{field}}` name, each attachment's type and size, and the **length** of every sealed value
 — AES-GCM hides no length. `libraries.json` and both `preferences.json` are plain too. The
-README lists it for the people deciding what to keep here (#216).
+README lists it for the people deciding what to keep here.
 `a_note_is_not_readable_in_the_file_it_was_written_to` (`tests/notes.rs`) greps a freshly
 written database and asserts exactly that split — the only test here that reads the file
 rather than the API.
@@ -2803,9 +2795,9 @@ file rather than edits it and hands it back.
 
 ⚠️ Nor is it a defence against a machine already compromised while DevNotes runs. The
 plaintext is in the heap as ordinary `String`s, never zeroized: every body `query_notes` matched
-against, the previews it sent (#21 made those a few lines rather than the whole body), and the
-note open in the editor — so it can reach swap, a hibernation image or a crash dump. And the key is
-in this process’s memory for the length of the session, and there is no idle re-lock.
+against, the previews it sent (a few lines each, not the whole body), and the note open in the
+editor — so it can reach swap, a hibernation image or a crash dump. And the key is in this
+process’s memory for the length of the session, and there is no idle re-lock.
 
 ### The pieces
 
@@ -2881,7 +2873,7 @@ memorable pattern, and a strength meter is a dependency and a chunk of bundle.
 is the key file's to refuse whatever its length, and a length hint on a phrase the user already
 has is noise.
 
-⚠️ **Raising the floor did not raise `Cost`.** Argon2id makes each guess expensive; only the length
+⚠️ **The floor is a length, not a `Cost`.** Argon2id makes each guess expensive; only the length
 makes the guesses many, and only the second grows exponentially. At 64 MiB a GPU runs about
 VRAM ÷ 64 MiB guesses in parallel — on the order of a thousand a second on one consumer card, an
 estimate from memory bandwidth rather than a measurement — against the 25–30 bits a human-chosen
@@ -3647,9 +3639,8 @@ global factor, because these four are what decide how many cards fit on screen.
 
 They reach past the canvas where a surface claims them: the topbar's padding, the library rail's
 own padding and its rows, and a dialog's default padding and gap are written in terms of the four,
-so "Compact" tightens the whole window. ⚠️ Written so the comfortable values come out identical
-to the numbers they replaced — `calc(var(--space-grid) / 4 + 2px)` is a rail row's 5px, 4px
-compact, which keeps a row above the 24px target. The board's surface stays out of it: its
+so "Compact" tightens the whole window. A rail row is `calc(var(--space-grid) / 4 + 2px)`:
+5px, 4px in Compact, which keeps it above the 24px target. The board's surface stays out of it: its
 geometry is computed in Rust, and a padding there would offset every gesture. A dialog that sets
 its own `--dialog-padding` keeps it.
 

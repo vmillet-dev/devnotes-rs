@@ -42,10 +42,7 @@ describe('TitlebarComponent', () => {
     expect(fixture.nativeElement.querySelector('.titlebar-title').textContent.trim()).toBe('DevNotes');
   });
 
-  /**
-   * Three dots that closed nothing, drawn under Windows' own buttons, and a language switch
-   * where Windows puts them: both invited a click. The language is the preferences' to choose.
-   */
+  /** The window's controls are the native frame's, and the language is the preferences' to choose. */
   it('draws no window controls and no language switch of its own', () => {
     expect(fixture.nativeElement.querySelector('.dot, .dots')).toBeNull();
     expect(fixture.nativeElement.querySelector('[data-testid="locale-option"]')).toBeNull();
