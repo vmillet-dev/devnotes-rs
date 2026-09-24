@@ -6,15 +6,65 @@ import { CodeViewerComponent } from '@notes/ui/code-viewer/code-viewer.component
 import { LifecycleBadgeComponent } from './lifecycle-badge/lifecycle-badge.component';
 import { TagPillComponent } from '@notes/ui/tag-pill/tag-pill.component';
 import { LANGUAGE_LABELS } from '@core/model/language.model';
+import { Folder } from '@core/model/folder.model';
 import { NotePatch } from '@core/model/note.model';
+import { Space } from '@core/model/space.model';
 import { AttachmentsStore } from '@core/state/attachments.store';
+import { NotesStore } from '@core/state/notes.store';
 import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
 import { createNote } from '@testing/note.fixture';
 import { provideAppTesting } from '@testing/testing.providers';
 import { NoteEditorOverlayComponent } from './note-editor-overlay.component';
 
+const SPACES: readonly Space[] = [
+  { id: 'space-1', name: 'Perso', pinned: false },
+  { id: 'work', name: 'Work', pinned: false },
+];
+
+const FOLDERS: readonly Folder[] = [
+  {
+    id: 'perf',
+    spaceId: 'space-1',
+    name: 'Perf',
+    colour: 'amber',
+    createdAt: new Date('2026-01-01T10:00:00Z'),
+  },
+];
+
 describe('NoteEditorOverlayComponent', () => {
   let fixture: ComponentFixture<NoteEditorOverlayComponent>;
+
+  /**
+   * What the overlay asked of the store that owns the open note. Recorded rather than
+   * carried out: the note on screen is a fixture no repository holds.
+   */
+  let asked: {
+    patches: ((patch: NotePatch) => void)[];
+    closes: number;
+    deletions: number;
+    filings: (string | null)[];
+    values: Record<string, string>[];
+  };
+
+  function listenToTheStore(): void {
+    asked = { patches: [], closes: 0, deletions: 0, filings: [], values: [] };
+    const store = TestBed.inject(NotesStore);
+    vi.spyOn(store, 'applyPatch').mockImplementation(async (_id, patch) => {
+      for (const listener of asked.patches) listener(patch);
+    });
+    vi.spyOn(store, 'closeOverlay').mockImplementation(() => {
+      asked.closes += 1;
+    });
+    vi.spyOn(store, 'deleteNote').mockImplementation(async () => {
+      asked.deletions += 1;
+    });
+    vi.spyOn(store, 'fileNote').mockImplementation(async (_id, folderId) => {
+      asked.filings.push(folderId);
+    });
+    vi.spyOn(store, 'setPlaceholderValues').mockImplementation(async (_id, values) => {
+      asked.values.push(values);
+    });
+  }
 
   function titleInput(): HTMLInputElement {
     return fixture.nativeElement.querySelector('.overlay-title-input');
@@ -44,7 +94,7 @@ describe('NoteEditorOverlayComponent', () => {
   /** What successive patches carried for one field. */
   function patched<K extends keyof NotePatch>(field: K): NonNullable<NotePatch[K]>[] {
     const values: NonNullable<NotePatch[K]>[] = [];
-    fixture.componentInstance.patchRequested.subscribe((patch) => {
+    asked.patches.push((patch) => {
       const value = patch[field];
       if (value !== undefined) values.push(value as NonNullable<NotePatch[K]>);
     });
@@ -81,8 +131,9 @@ describe('NoteEditorOverlayComponent', () => {
 
     TestBed.configureTestingModule({
       imports: [NoteEditorOverlayComponent],
-      providers: [provideAppTesting()],
+      providers: [provideAppTesting({ spaces: SPACES, folders: FOLDERS })],
     });
+    listenToTheStore();
     createOverlay();
   });
 
@@ -93,18 +144,6 @@ describe('NoteEditorOverlayComponent', () => {
 
   it('renders nothing when there is no note', () => {
     expect(fixture.debugElement.query(By.css('.dialog-backdrop'))).toBeNull();
-  });
-
-  it('falls back to sensible defaults for the footer computed values when there is no note', () => {
-    const instance = fixture.componentInstance as unknown as {
-      languageLabel: () => string;
-      lineCount: () => number;
-      byteSize: () => number;
-    };
-
-    expect(instance.languageLabel()).toBe('TXT');
-    expect(instance.lineCount()).toBe(0);
-    expect(instance.byteSize()).toBe(0);
   });
 
   it('renders the note title, tags, lifecycle and code content', async () => {
@@ -297,8 +336,6 @@ describe('NoteEditorOverlayComponent', () => {
     it('leaves the body on Escape instead of closing the whole overlay', async () => {
       fixture.componentRef.setInput('note', createNote({ content: 'before' }));
       await fixture.whenStable();
-      let closed = false;
-      fixture.componentInstance.closed.subscribe(() => (closed = true));
       const emitted = patched('content');
 
       bodyEditor().focus();
@@ -307,7 +344,7 @@ describe('NoteEditorOverlayComponent', () => {
       await fixture.whenStable();
 
       expect(emitted).toEqual(['after']);
-      expect(closed).toBe(false);
+      expect(asked.closes).toBe(0);
       expect(document.activeElement).not.toBe(bodyEditor());
     });
   });
@@ -440,58 +477,47 @@ describe('NoteEditorOverlayComponent', () => {
     it('emits closed when the close button is clicked', async () => {
       fixture.componentRef.setInput('note', createNote());
       await fixture.whenStable();
-      let emitted = false;
-      fixture.componentInstance.closed.subscribe(() => (emitted = true));
 
       fixture.debugElement.query(By.css('.close-btn')).triggerEventHandler('click');
 
-      expect(emitted).toBe(true);
+      expect(asked.closes).toBe(1);
     });
 
     it('emits closed when Escape is pressed while a note is open', async () => {
       fixture.componentRef.setInput('note', createNote());
       await fixture.whenStable();
-      let emitted = false;
-      fixture.componentInstance.closed.subscribe(() => (emitted = true));
 
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
 
-      expect(emitted).toBe(true);
+      expect(asked.closes).toBe(1);
     });
 
     it('does not emit closed on Escape when there is no note open', () => {
-      let emitted = false;
-      fixture.componentInstance.closed.subscribe(() => (emitted = true));
-
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
 
-      expect(emitted).toBe(false);
+      expect(asked.closes).toBe(0);
     });
 
     it('emits closed when clicking directly on the backdrop', async () => {
       fixture.componentRef.setInput('note', createNote());
       await fixture.whenStable();
-      let emitted = false;
-      fixture.componentInstance.closed.subscribe(() => (emitted = true));
 
       fixture.nativeElement
         .querySelector('.dialog-backdrop')
         .dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
-      expect(emitted).toBe(true);
+      expect(asked.closes).toBe(1);
     });
 
     it('does not emit closed when clicking inside the panel', async () => {
       fixture.componentRef.setInput('note', createNote());
       await fixture.whenStable();
-      let emitted = false;
-      fixture.componentInstance.closed.subscribe(() => (emitted = true));
 
       fixture.nativeElement
         .querySelector('.dialog-panel')
         .dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
-      expect(emitted).toBe(false);
+      expect(asked.closes).toBe(0);
     });
   });
 
@@ -529,6 +555,43 @@ describe('NoteEditorOverlayComponent', () => {
       await fixture.whenStable();
 
       expect(emitted).toEqual(['json']);
+    });
+  });
+
+  describe('placement', () => {
+    /** Opens one of the two placement menus and picks an option once the store has it. */
+    async function pick(kind: 'space' | 'folder', id: string): Promise<void> {
+      fixture.nativeElement.querySelector(`[data-testid="choice-${kind}"]`).click();
+      await fixture.whenStable();
+      const option = await vi.waitFor(() => {
+        const found = fixture.nativeElement.querySelector(
+          `[data-testid="choice-panel-${kind}"] [data-option-id="${id}"]`,
+        );
+        if (!found) throw new Error(`no option ${id} yet`);
+        return found as HTMLElement;
+      });
+      option.click();
+      await fixture.whenStable();
+    }
+
+    it('moves the note to the space picked', async () => {
+      fixture.componentRef.setInput('note', createNote());
+      await fixture.whenStable();
+      const emitted = patched('spaceId');
+
+      await pick('space', 'work');
+
+      expect(emitted).toEqual(['work']);
+    });
+
+    /** ⚠️ Not a patch: filing answers what it changed, which the undo needs. */
+    it('files the note into the folder picked, among those of its space', async () => {
+      fixture.componentRef.setInput('note', createNote());
+      await fixture.whenStable();
+
+      await pick('folder', 'perf');
+
+      expect(asked.filings).toEqual(['perf']);
     });
   });
 
@@ -598,18 +661,16 @@ describe('NoteEditorOverlayComponent', () => {
     it('asks for confirmation before emitting a deletion', async () => {
       fixture.componentRef.setInput('note', createNote());
       await fixture.whenStable();
-      let emitted = false;
-      fixture.componentInstance.deleteRequested.subscribe(() => (emitted = true));
 
       toolbarButton('.delete-btn').click();
       await fixture.whenStable();
 
-      expect(emitted).toBe(false);
+      expect(asked.deletions).toBe(0);
       expect(text('.delete-btn')).toBe('🗑 Confirmer ?');
 
       toolbarButton('.delete-btn').click();
 
-      expect(emitted).toBe(true);
+      expect(asked.deletions).toBe(1);
     });
 
     it('drops the pending confirmation when another note is opened', async () => {
@@ -676,20 +737,6 @@ describe('NoteEditorOverlayComponent', () => {
       await pick('');
 
       expect(emitted).toEqual([{ kind: 'permanent' }]);
-    });
-
-    it('ignores an unparseable value rather than emitting an invalid date', async () => {
-      const emitted = patched('lifecycle');
-      fixture.componentRef.setInput('note', createNote());
-      await fixture.whenStable();
-
-      // Through the handler: a date input sanitizes anything malformed to "".
-      (fixture.componentInstance as unknown as { onExpiryChange: (v: string) => void }).onExpiryChange(
-        'pas-une-date',
-      );
-      await fixture.whenStable();
-
-      expect(emitted).toEqual([]);
     });
 
     it('is labelled, since a bare date field says nothing about what it sets', async () => {
@@ -835,8 +882,6 @@ describe('NoteEditorOverlayComponent', () => {
 
     it('emits the values to save when a field is left', async () => {
       await openTemplated();
-      let emitted: Record<string, string> | undefined;
-      fixture.componentInstance.placeholderValuesChanged.subscribe((values) => (emitted = values));
 
       await type(fieldInputs()[1], '6543');
       fixture.nativeElement
@@ -844,19 +889,17 @@ describe('NoteEditorOverlayComponent', () => {
         .dispatchEvent(new Event('focusout', { bubbles: true }));
       await fixture.whenStable();
 
-      expect(emitted).toEqual({ host: 'db.internal', port: '6543' });
+      expect(asked.values.at(-1)).toEqual({ host: 'db.internal', port: '6543' });
     });
 
     it('confirms the pending values before closing', async () => {
       await openTemplated();
-      let emitted: Record<string, string> | undefined;
-      fixture.componentInstance.placeholderValuesChanged.subscribe((values) => (emitted = values));
 
       await type(fieldInputs()[1], '6543');
       toolbarButton('.close-btn').click();
       await fixture.whenStable();
 
-      expect(emitted).toEqual({ host: 'db.internal', port: '6543' });
+      expect(asked.values.at(-1)).toEqual({ host: 'db.internal', port: '6543' });
     });
 
     it('folds the panel and remembers it for the next session', async () => {

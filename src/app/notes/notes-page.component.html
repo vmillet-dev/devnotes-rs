@@ -251,15 +251,7 @@
 <!-- The id comes from the store and never from an editor emission: it may be a draft
      with no row yet, which the editor does not tell apart. -->
 @if (store.selectedNote(); as note) {
-  <app-note-editor-overlay
-    [note]="note"
-    [session]="store.editorSession()"
-    (closed)="store.closeOverlay()"
-    (patchRequested)="store.applyPatch(note.id, $event)"
-    (fileRequested)="store.fileNote(note.id, $event)"
-    (deleteRequested)="store.deleteNote(note.id)"
-    (placeholderValuesChanged)="store.setPlaceholderValues(note.id, $event)"
-  />
+  <app-note-editor-overlay [note]="note" [session]="store.editorSession()" />
 }
 
 @if (attachments.zoomed() && attachments.previewed(); as attachment) {
