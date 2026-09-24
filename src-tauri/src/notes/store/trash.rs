@@ -68,7 +68,7 @@ pub fn list_trashed(connection: &mut Library) -> Result<Vec<(Note, DateTime<Utc>
         .order((notes::deleted_at.desc(), notes::id.asc()))
         .load::<(NoteRow, Option<String>)>(connection.db())?;
 
-    let mut grouped = related::all_tags(connection, None)?;
+    let mut grouped = related::trashed_tags(connection)?;
     let vault = connection.vault();
     rows.into_iter()
         .map(|(row, deleted_at)| {
@@ -95,18 +95,14 @@ pub fn expired_ids(
     connection: &mut Library,
     now: DateTime<Utc>,
 ) -> Result<Vec<String>, StorageError> {
-    let rows = notes::table
-        .filter(notes::deleted_at.is_not_null())
-        .select((notes::id, notes::deleted_at))
-        .load::<(String, Option<String>)>(connection.db())?;
+    // ⚠️ Compared as text: `db::iso8601` always writes milliseconds, which is what makes
+    // the column sort — and compare — in time order.
+    let cutoff = iso8601::format(trash::expiry_cutoff(now));
 
-    Ok(rows
-        .into_iter()
-        .filter_map(|(id, deleted_at)| {
-            let deleted_at = iso8601::parse(&deleted_at?).ok()?;
-            trash::is_expired(deleted_at, now).then_some(id)
-        })
-        .collect())
+    Ok(notes::table
+        .filter(notes::deleted_at.le(cutoff))
+        .select(notes::id)
+        .load::<String>(connection.db())?)
 }
 
 pub fn trashed_ids(connection: &mut Library) -> Result<Vec<String>, StorageError> {

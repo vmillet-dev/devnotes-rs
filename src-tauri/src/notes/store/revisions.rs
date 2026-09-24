@@ -21,20 +21,31 @@ struct RevisionRow {
     taken_at: String,
 }
 
-/// The kept bodies of one note, newest first.
-///
-/// ⚠️ Ordered by `rowid`, not by `taken_at`. The editor commits the title, the source
-/// and the body back to back, so two revisions can share a millisecond — and the
-/// tiebreak was a random UUID, which put the older one first about half the time.
-/// Insertion order is what "newest" means here, and `rowid` *is* insertion order.
+/// ⚠️ Newest first by `rowid`, not by `taken_at`: the editor commits the title, the
+/// source and the body back to back, so two revisions can share a millisecond. `rowid` *is*
+/// insertion order.
+fn newest_first() -> diesel::expression::SqlLiteral<diesel::sql_types::Bool> {
+    diesel::dsl::sql::<diesel::sql_types::Bool>("rowid DESC")
+}
+
+/// The kept bodies of one note, newest first, sealed.
 fn rows(
     connection: &mut SqliteConnection,
     note_id: &str,
 ) -> Result<Vec<RevisionRow>, StorageError> {
     Ok(note_revisions::table
         .filter(note_revisions::note_id.eq(note_id))
-        .order(diesel::dsl::sql::<diesel::sql_types::Bool>("rowid DESC"))
+        .order(newest_first())
         .select(RevisionRow::as_select())
+        .load(connection)?)
+}
+
+/// Their ids alone, in the same order: what the rotation needs, without twenty bodies.
+fn ids(connection: &mut SqliteConnection, note_id: &str) -> Result<Vec<String>, StorageError> {
+    Ok(note_revisions::table
+        .filter(note_revisions::note_id.eq(note_id))
+        .order(newest_first())
+        .select(note_revisions::id)
         .load(connection)?)
 }
 
@@ -112,11 +123,11 @@ pub fn discard_from(
     note_id: &str,
     revision_id: &str,
 ) -> Result<(), StorageError> {
-    let kept = rows(connection, note_id)?;
-    let Some(at) = kept.iter().position(|row| row.id == revision_id) else {
+    let kept = ids(connection, note_id)?;
+    let Some(at) = kept.iter().position(|id| id == revision_id) else {
         return Ok(());
     };
-    let newer: Vec<&String> = kept[..=at].iter().map(|row| &row.id).collect();
+    let newer = &kept[..=at];
 
     diesel::delete(
         note_revisions::table
@@ -144,12 +155,18 @@ pub fn record(
     content: &str,
     now: DateTime<Utc>,
 ) -> Result<(), StorageError> {
-    let kept = rows(connection, note_id)?;
-    if let Some(newest) = kept.first()
-        && vault.open(&newest.content)? == content
+    let newest: Option<String> = note_revisions::table
+        .filter(note_revisions::note_id.eq(note_id))
+        .order(newest_first())
+        .select(note_revisions::content)
+        .first(connection)
+        .optional()?;
+    if let Some(newest) = newest
+        && vault.open(&newest)? == content
     {
         return Ok(());
     }
+    let kept = ids(connection, note_id)?;
 
     diesel::insert_into(note_revisions::table)
         .values(RevisionRow {
@@ -170,12 +187,11 @@ pub fn record(
 fn prune(
     connection: &mut SqliteConnection,
     note_id: &str,
-    kept: &[RevisionRow],
+    kept: &[String],
 ) -> Result<(), StorageError> {
-    let stale: Vec<&String> = kept.iter().skip(KEEP - 1).map(|row| &row.id).collect();
-    if stale.is_empty() {
+    let Some(stale) = kept.get(KEEP - 1..) else {
         return Ok(());
-    }
+    };
 
     diesel::delete(
         note_revisions::table

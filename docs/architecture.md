@@ -3724,6 +3724,22 @@ The second row is not a command: it is `libraries::open_directory_in` plus the
 `create_dir_all` of `attachments/`, which every read paid on top of the first until the open
 `Library` carried its directory — nearly half of what a thumbnail cost.
 
+The `body writes` group, and three rows of the first table, measured before and after the write
+paths stopped doing per-row work SQLite does once (one run, same machine):
+
+| Bench                                    | Before  | After      |
+| ---------------------------------------- | ------- | ---------- |
+| `update_note`, body, with a full history | 362 µs  | 299 µs     |
+| `update_note`, pin toggled               | 95 µs   | 71 µs      |
+| `list_trash`, nothing trashed            | 4.57 ms | **4.5 µs** |
+| `tag_notes`, 100 notes                   | 142 µs  | 144 µs     |
+
+A body save read and opened the twenty kept bodies to compare with the newest; it now opens
+that one and reads the others' ids. A pin toggled sealed the title, the body and the source to
+write a boolean; `NoteChanges::between` seals only what moved. `list_trash` read the tags of
+the whole library to decorate an empty list. `tag_notes` did not move: a hundred notes and two
+tags is too few comparisons for the set to matter, and it is there for the case with more.
+
 Three things worth reading off the first table.
 
 **`query_notes` has gone past the debounce.** It runs on every keystroke behind a 150 ms

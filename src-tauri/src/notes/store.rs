@@ -2,7 +2,7 @@ pub mod related;
 pub mod revisions;
 pub mod trash;
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use diesel::prelude::*;
 use uuid::Uuid;
@@ -86,10 +86,7 @@ impl NoteRow {
     /// every one of them is filtered, ordered or grouped on in SQL, and sealing one would
     /// move that work into Rust for no secret. What is sealed is what a reader would want.
     fn seal(note: &Note, vault: &Vault) -> Result<Self, StorageError> {
-        let (lifecycle_kind, lifecycle_expires_at) = match note.lifecycle {
-            NoteLifecycle::Permanent => ("permanent", None),
-            NoteLifecycle::Expires { at } => ("expires", Some(iso8601::format(at))),
-        };
+        let (lifecycle_kind, lifecycle_expires_at) = lifecycle_columns(&note.lifecycle);
 
         Ok(Self {
             id: note.id.clone(),
@@ -106,6 +103,13 @@ impl NoteRow {
             kind: note.kind.to_string(),
             folder_id: note.folder_id.clone(),
         })
+    }
+}
+
+fn lifecycle_columns(lifecycle: &NoteLifecycle) -> (&'static str, Option<String>) {
+    match lifecycle {
+        NoteLifecycle::Permanent => ("permanent", None),
+        NoteLifecycle::Expires { at } => ("expires", Some(iso8601::format(*at))),
     }
 }
 
@@ -138,6 +142,30 @@ struct NoteChanges {
     /// spaces: filing has a command of its own.
     #[allow(clippy::option_option)]
     folder_id: Option<Option<String>>,
+}
+
+impl NoteChanges {
+    /// The columns `after` moved away from `before`. ⚠️ Only those are sealed: a pin toggled
+    /// is a boolean, and it is not worth three passes of AES-GCM over the text.
+    fn between(before: &Note, after: &Note, vault: &Vault) -> Result<Self, StorageError> {
+        let sealed = |moved: bool, text: &str| moved.then(|| vault.seal(text)).transpose();
+        let lifecycle_moved = after.lifecycle != before.lifecycle;
+        let (lifecycle_kind, lifecycle_expires_at) = lifecycle_columns(&after.lifecycle);
+
+        Ok(Self {
+            space_id: (after.space_id != before.space_id).then(|| after.space_id.clone()),
+            title: sealed(after.title != before.title, &after.title)?,
+            language: (after.language != before.language).then(|| after.language.to_string()),
+            content: sealed(after.content != before.content, &after.content)?,
+            source: sealed(after.source != before.source, &after.source)?,
+            pinned: (after.pinned != before.pinned).then_some(after.pinned),
+            updated_at: iso8601::format(after.updated_at),
+            lifecycle_kind: lifecycle_moved.then(|| lifecycle_kind.to_string()),
+            lifecycle_expires_at: lifecycle_moved.then_some(lifecycle_expires_at),
+            kind: (after.kind != before.kind).then(|| after.kind.to_string()),
+            folder_id: (after.folder_id != before.folder_id).then(|| after.folder_id.clone()),
+        })
+    }
 }
 
 /// ⚠️ Every row or none: a value that will not open stops the read rather than handing
@@ -442,24 +470,8 @@ pub fn update(
             revisions::record(connection, vault, &note.id, &before.content, now)?;
         }
 
-        let row = NoteRow::seal(&note, vault)?;
-        let moved = |changed: bool, value: &String| changed.then(|| value.clone());
-        let lifecycle_moved = note.lifecycle != before.lifecycle;
-
         diesel::update(notes::table.find(&note.id))
-            .set(NoteChanges {
-                space_id: moved(note.space_id != before.space_id, &row.space_id),
-                title: moved(note.title != before.title, &row.title),
-                language: moved(note.language != before.language, &row.language),
-                content: moved(note.content != before.content, &row.content),
-                source: moved(note.source != before.source, &row.source),
-                pinned: (note.pinned != before.pinned).then_some(row.pinned),
-                updated_at: row.updated_at.clone(),
-                lifecycle_kind: moved(lifecycle_moved, &row.lifecycle_kind),
-                lifecycle_expires_at: lifecycle_moved.then(|| row.lifecycle_expires_at.clone()),
-                kind: moved(note.kind != before.kind, &row.kind),
-                folder_id: (note.folder_id != before.folder_id).then(|| row.folder_id.clone()),
-            })
+            .set(NoteChanges::between(&before, &note, vault)?)
             .execute(connection)?;
 
         if patch.tags.is_some() {
@@ -635,18 +647,19 @@ pub fn tag_many(
         // stripping it afterwards would take away something the batch never gave.
         // `note_tags.tag` is `NOCASE`, which SQLite folds over ASCII only — exactly what
         // `eq_ignore_ascii_case` compares below.
-        let carried = note_tags::table
+        let carried: HashSet<(String, String)> = note_tags::table
             .filter(note_tags::note_id.eq_any(&targets))
             .filter(note_tags::tag.eq_any(tags))
             .select((note_tags::note_id, note_tags::tag))
-            .load::<(String, String)>(connection)?;
+            .load::<(String, String)>(connection)?
+            .into_iter()
+            .map(|(id, name)| (id, name.to_ascii_lowercase()))
+            .collect();
 
         let mut added = Vec::new();
         for note_id in &targets {
             for tag in tags {
-                let held = carried
-                    .iter()
-                    .any(|(id, name)| id == note_id && name.eq_ignore_ascii_case(tag));
+                let held = carried.contains(&(note_id.clone(), tag.to_ascii_lowercase()));
                 if !held {
                     added.push(NoteTag {
                         note_id: note_id.clone(),
@@ -693,13 +706,18 @@ pub fn untag_many(connection: &mut Library, pairs: &[NoteTag]) -> Result<usize, 
         return Ok(0);
     }
 
+    let mut by_tag: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
+    for pair in pairs {
+        by_tag.entry(&pair.tag).or_default().push(&pair.note_id);
+    }
+
     connection.transaction(|connection, _vault| {
         let mut removed = 0;
-        for pair in pairs {
+        for (tag, note_ids) in by_tag {
             removed += diesel::delete(
                 note_tags::table
-                    .filter(note_tags::note_id.eq(&pair.note_id))
-                    .filter(note_tags::tag.eq(&pair.tag)),
+                    .filter(note_tags::tag.eq(tag))
+                    .filter(note_tags::note_id.eq_any(note_ids)),
             )
             .execute(connection)?;
         }
@@ -708,7 +726,7 @@ pub fn untag_many(connection: &mut Library, pairs: &[NoteTag]) -> Result<usize, 
     })
 }
 
-/// How many live notes carry at least one of these tags.
+/// How many notes — the trash included — carry at least one of these tags.
 ///
 /// ⚠️ Counted distinctly, not summed per tag: a note carrying two of them is one note,
 /// and a confirmation that overstates its blast radius teaches people to dismiss it.

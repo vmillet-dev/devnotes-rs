@@ -6,7 +6,7 @@ use std::collections::{BTreeMap, HashMap};
 use diesel::prelude::*;
 
 use super::notes_of_space;
-use crate::db::schema::{note_items, note_placeholders, note_tags};
+use crate::db::schema::{note_items, note_placeholders, note_tags, notes};
 use crate::error::StorageError;
 use crate::notes::checklist::ChecklistItem;
 use crate::notes::model::Note;
@@ -30,6 +30,27 @@ pub fn all_tags(
 
     let mut grouped: HashMap<String, Vec<String>> = HashMap::new();
     for (note_id, tag) in query.load::<(String, String)>(connection)? {
+        grouped.entry(note_id).or_default().push(tag);
+    }
+
+    Ok(grouped)
+}
+
+/// The tags of the notes in the trash, and of no other note.
+pub fn trashed_tags(
+    connection: &mut SqliteConnection,
+) -> Result<HashMap<String, Vec<String>>, StorageError> {
+    let trashed = notes::table
+        .filter(notes::deleted_at.is_not_null())
+        .select(notes::id);
+    let rows = note_tags::table
+        .filter(note_tags::note_id.eq_any(trashed))
+        .select((note_tags::note_id, note_tags::tag))
+        .order(note_tags::tag.asc())
+        .load::<(String, String)>(connection)?;
+
+    let mut grouped: HashMap<String, Vec<String>> = HashMap::new();
+    for (note_id, tag) in rows {
         grouped.entry(note_id).or_default().push(tag);
     }
 
