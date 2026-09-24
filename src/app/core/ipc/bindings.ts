@@ -791,7 +791,12 @@ export type VaultState =
  *  Held in Rust, not in the front end: a page reload must not ask again for a library
  *  this process has open.
  */
-"unlocked";
+"unlocked" | 
+/**
+ *  ⚠️ A database is here and its key file is not. Not `Absent`: a new key over it would
+ *  open nothing it holds, and asking for a new phrase would be the first step towards that.
+ */
+"keyMissing";
 
 /**  Pushed from the preferences panel as it changes, like the tray labels. */
 export type WindowBehavior = {

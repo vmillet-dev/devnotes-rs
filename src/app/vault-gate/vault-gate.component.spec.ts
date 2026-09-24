@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { IpcError } from '@core/ipc/ipc.error';
 import { VaultRepository } from '@core/data/vault.repository';
 import { LibrariesStore } from '@core/state/libraries.store';
@@ -51,11 +51,32 @@ describe('VaultGateComponent', () => {
     await fixture.whenStable();
   }
 
-  async function open(state: 'absent' | 'locked'): Promise<void> {
+  async function open(state: 'absent' | 'locked' | 'keyMissing'): Promise<void> {
     repository.answer = state;
     await store.load();
     await fixture.whenStable();
   }
+
+  describe('a library that lost its key file', () => {
+    beforeEach(() => open('keyMissing'));
+
+    /** No phrase can open it, and a new one would open nothing it holds. */
+    it('asks for no passphrase, and says where the key file goes back', () => {
+      const panel = fixture.debugElement.query(By.css('[data-testid="vault-key-missing"]'))
+        .nativeElement as HTMLElement;
+
+      expect(field('vault-passphrase')).toBeNull();
+      expect(panel.textContent).toContain('vault.json');
+    });
+
+    it('sets the library aside, then asks for the phrase of a new one', async () => {
+      fixture.debugElement.query(By.css('[data-testid="vault-set-aside"]')).nativeElement.click();
+      await fixture.whenStable();
+
+      expect(repository.setAside).toHaveLength(1);
+      await vi.waitFor(() => expect(field('vault-confirmation')).not.toBeNull());
+    });
+  });
 
   describe('a library that will not open', () => {
     beforeEach(async () => {

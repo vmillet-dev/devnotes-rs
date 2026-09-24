@@ -21,7 +21,24 @@
 </ng-template>
 
 <main class="gate">
-  @if (vault.damaged()) {
+  @if (vault.keyMissing()) {
+    <section class="panel" data-testid="vault-key-missing">
+      <ng-container [ngTemplateOutlet]="library" />
+      <h1 class="title">{{ 'vault.keyMissingTitle' | transloco }}</h1>
+      <p class="lead">{{ 'vault.keyMissingLead' | transloco }}</p>
+      <p class="warning" role="note">{{ 'vault.keyMissingNote' | transloco }}</p>
+
+      <button
+        class="submit"
+        type="button"
+        [disabled]="vault.isWorking()"
+        data-testid="vault-set-aside"
+        (click)="setAside()"
+      >
+        {{ (vault.isWorking() ? 'vault.working' : 'vault.damagedAction') | transloco }}
+      </button>
+    </section>
+  } @else if (vault.damaged()) {
     <!--
       ⚠️ Not a message beside the field: retyping the passphrase cannot help, so the form
       would be an invitation to do the one thing that will not work.

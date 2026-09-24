@@ -2796,7 +2796,7 @@ in this process’s memory for the length of the session, and there is no idle r
 
 ### The gate
 
-`vault_state` answers `absent` / `locked` / `unlocked`; `startApplication()` awaits it before the
+`vault_state` answers `absent` / `locked` / `unlocked` / `keyMissing`; `startApplication()` awaits it before the
 first render and `app.component.html` puts `VaultGateComponent` in front of the outlet. ⚠️ It
 does not hide the outlet, it never creates it — which is what keeps every store free of a
 "locked" branch: the canvas queries notes the moment it mounts, and nothing would be there
@@ -2805,6 +2805,17 @@ to answer.
 ⚠️ The unlocked state lives in Rust and not in the front end: a page reload must not ask
 again for a library this process already has open. That is also what keeps `reopenSession()`
 working in the end-to-end suite, where the front end reboots and the process does not.
+
+⚠️ **A database without its key file is `keyMissing`, never `absent`.** The file can go missing
+in ordinary ways — copied without it, dropped by a sync client — and `absent` would send the
+gate to ask for a new phrase over notes no new key opens. The gate shows a panel of its own
+instead: put a copy of `vault.json` back, or set the library aside (`set_aside_damaged_library`,
+which leaves the key file alone and so comes back `absent`). `vault::create` refuses the same
+case on its own, a command being reachable from more than the gate.
+
+**The cost in a key file is bounded before anything is derived** (`vault::file::bounded`: at most
+1 GiB, 16 passes, 16 lanes). It is the one input an attacker can write, and read unbounded it is
+a multi-gigabyte allocation or an hour of hashing at every unlock.
 
 ### Changing the passphrase
 

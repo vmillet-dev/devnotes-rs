@@ -137,17 +137,39 @@ pub fn unlock(directory: &Path, passphrase: &str) -> Result<Vault, StorageError>
         ));
     }
 
-    let cost = Cost {
+    let cost = bounded(Cost {
         memory_kib: file.kdf.memory_kib,
         passes: file.kdf.passes,
         lanes: file.kdf.lanes,
-    };
+    })?;
     let wrapping = Vault::derive(passphrase, &salt, cost)?;
     let wrapped = BASE64
         .decode(&file.key)
         .map_err(|_| StorageError::Vault("the wrapped key is not base64".to_string()))?;
 
     Vault::unwrapped_with(&wrapping, &wrapped).map_err(|_| StorageError::WrongPassphrase)
+}
+
+/// Sixteen times the shipped memory cost, far past any raise worth making.
+const MAX_MEMORY_KIB: u32 = 1024 * 1024;
+const MAX_PASSES: u32 = 16;
+const MAX_LANES: u32 = 16;
+
+/// ⚠️ The key file is the one input an attacker can write: an unbounded cost read out of it is
+/// a gigabyte allocation, or an hour of hashing, at every unlock.
+fn bounded(cost: Cost) -> Result<Cost, StorageError> {
+    let fits = cost.memory_kib <= MAX_MEMORY_KIB
+        && (1..=MAX_PASSES).contains(&cost.passes)
+        && (1..=MAX_LANES).contains(&cost.lanes);
+
+    if fits {
+        Ok(cost)
+    } else {
+        Err(StorageError::Vault(format!(
+            "key parameters out of range: {} KiB, {} passes, {} lanes",
+            cost.memory_kib, cost.passes, cost.lanes
+        )))
+    }
 }
 
 /// Staged then renamed: a plain write truncates first, and a half-written key file is a
@@ -345,6 +367,34 @@ mod tests {
 
         let error = unlock(&directory, "correct horse").unwrap_err();
         assert!(format!("{error}").contains("reads up to"));
+    }
+
+    /// A key file asking for four gigabytes is refused before anything is allocated.
+    #[test]
+    fn a_cost_out_of_range_is_refused_before_deriving() {
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
+        create(&directory, "correct horse", Cost::FOR_TESTS).unwrap();
+
+        for (field, value) in [("memoryKib", 4 * 1024 * 1024), ("passes", 0), ("lanes", 64)] {
+            let path = path_in(&directory);
+            let mut json: serde_json::Value =
+                serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+            let original = json["kdf"][field].clone();
+            json["kdf"][field] = serde_json::json!(value);
+            std::fs::write(&path, json.to_string()).unwrap();
+
+            let error = unlock(&directory, "correct horse").unwrap_err();
+            assert!(
+                format!("{error}").contains("out of range"),
+                "{field}: {error}"
+            );
+
+            json["kdf"][field] = original;
+            std::fs::write(&path, json.to_string()).unwrap();
+        }
+
+        assert!(unlock(&directory, "correct horse").is_ok());
     }
 
     #[test]
