@@ -706,6 +706,32 @@ a task list reads `- [x] …` is a rule, and it now has exactly one home —
 `notes::checklist::to_markdown`, which sharing and exporting already used. The front end held
 a second copy of that syntax, and one of the two was going to drift.
 
+### A list sends previews, and the body is read by id
+
+`query_notes` and `board_view` send each body cut to what a card shows —
+`notes::model::PREVIEW_LINES` lines, and at most `PREVIEW_CHARS` characters, since a minified
+file is one line — and say so with `DisplayNote.truncated`. The cut is the **last** pass of
+`view::build` and `board::build`: the fields, the matching and the search excerpt read the
+whole body first, so a list still knows a snippet has a `{{field}}` on its fortieth line, and
+still quotes the line a search found there. The card draws what it is sent; it no longer
+slices anything itself.
+
+⚠️ **A note from a list is never edited.** `NotesStore.openNote` takes an id and reads the note
+with `get_note`, every time: a draft seeded from a preview would write the first lines back
+over the body on the first commit. Every other way into the open note is a write's answer,
+which is the whole row, so the editor holds a whole note by construction. A later open, a new
+note or a close while the read is on its way wins over it.
+
+A copy or a fill of a card goes through `NotesRepository.whole`, which reads the note only when
+it is `truncated`: the card's copy button takes a function and asks at the click, and the ⚡
+form and the palette fill the whole body. A todo list is never cut — it has no body — and
+copies its `copyText` without a round trip.
+
+The palette used to hand the note itself to the editor (#280), because nothing on the bridge
+could read one the canvas filters hid. `get_note` is that read, so it passes the id like the
+canvas does. The trash still sends whole bodies: it is not on the keystroke path, and nothing
+in it is copied.
+
 ### A card is two layers, and the click surface is the lower one
 
 A `<button>` may not contain another, and a card's header carries three — the selection tick,
@@ -724,8 +750,8 @@ instead of a floating layer of their own.
 a 📎 — used to have a band of their own above the title: a line that says nothing about the
 note, on a card that is a fixed 150px. They are right-aligned on the title's row now, the
 title gives way to them (`flex: 1` plus `min-width: 0`, without which a long title pushes
-them off the card instead of clamping), and the body is what got the line back —
-`SNIPPET_LINES` went from four to five.
+them off the card instead of clamping), and the body is what got the line back — five lines
+where it was four, which is `notes::model::PREVIEW_LINES` since a list sends no more than that.
 
 ⚠️ `MAX_VISIBLE_ITEMS` deliberately did **not** move. A todo list with nothing to mark never
 drew that band, so it gave nothing up; and 21px recovered is less than the 24px a row needs
@@ -3754,6 +3780,15 @@ the unfiltered read needs and what binding thousands of parameters lost to. Meas
 160 pinned notes of the corpus (`query_notes, pinned only`): 84 ms before, **73 ms** after,
 with the three unfiltered rows unchanged. What is left is not the side tables: the pinned filter
 scans the notes table, and the facets are read for the whole space by design.
+
+**A list sends previews** (#21). One run, same machine — slower that day than the baseline
+above, so read the ratios: `query_notes` unfiltered went from 648 ms to **549 ms** (−15 %), a
+search folding accents from 629 ms to 539 ms, and a search matching nothing did not move, having
+nothing to serialise. The larger half is not in those figures: an unfiltered query used to put
+~100 MB of bodies on the bridge and now puts **7.3 MB**, and the IPC hop and the WebView's
+`JSON.parse` that paid for the difference sit past where the harness stops. What remains is
+upstream — reading and opening 8000 sealed bodies, which a preview cannot spare, since the
+matching and the fields need them whole.
 
 Three things worth reading off the first table.
 

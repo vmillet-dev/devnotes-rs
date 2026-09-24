@@ -270,6 +270,7 @@ pub fn build(mut notes: Vec<Note>, facets: Facets, request: &NotesQuery) -> Note
     // inside `build_sections`, and threading a second value through would cost every
     // section-splitting test an argument.
     apply_search_hits(&mut view, &mut hits);
+    view.notes_mut().for_each(DisplayNote::cut_to_preview);
     view
 }
 

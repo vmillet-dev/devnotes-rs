@@ -60,6 +60,7 @@ function emptyNote(spaceId: string, now: Date, kind: NoteKind, folderId: string 
     folder: null,
     copyText: null,
     searchHit: null,
+    truncated: false,
   };
 }
 
@@ -170,25 +171,32 @@ export class NotesStore {
    */
   private materialisedNote: Note | null = null;
 
+  private opening = 0;
+
   /**
-   * ⚠️ A `Note` and not only an id, for the palette. It queries every space and ignores
-   * the canvas filters — deliberately — so `find`, whose last rung is the canvas view and
-   * the board view, has nothing that can resolve one of its results: a note the filters
-   * hide used to open onto `null`, which is the editor not opening at all and nothing on
-   * screen saying why (#280). The row is handed over rather than read again; a
-   * `find_note` on the bridge would be a second source for what the caller already holds.
+   * Read by id, never taken from a list: a list sends previews, and a draft seeded from
+   * one would write the first lines back over the body on the first commit.
+   *
+   * ⚠️ Whatever moved the editor while the note was on its way wins over it — a later
+   * open, a new note, a close.
    */
-  openNote(wanted: Note | string): void {
-    const note = typeof wanted === 'string' ? this.find(wanted) : wanted;
+  async openNote(id: string): Promise<void> {
+    const ticket = ++this.opening;
+    const session = this._editorSession();
+
+    const note = await this.notifier.attempt('errors.noteReadFailed', () => this.repository.get(id));
+    if (!note || ticket !== this.opening || session !== this._editorSession()) return;
 
     this.materialisedNote = null;
     this.discardDraft();
-    this._editorSession.update((session) => session + 1);
+    this._editorSession.update((each) => each + 1);
     this._selectedNote.set(note);
-    // Nothing resolved is nothing to point at: the ring stays where the user left it.
-    if (note) {
-      this.selection.focusNote(note.id);
-    }
+    this.selection.focusNote(note.id);
+  }
+
+  /** What a copy or a fill reads; `null` when the body could not be read, which is said. */
+  whole(note: Note): Promise<Note | null> {
+    return this.notifier.attempt('errors.noteReadFailed', () => this.repository.whole(note));
   }
 
   /**

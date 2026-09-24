@@ -125,10 +125,10 @@ describe('CanvasKeyboardDirective', () => {
       );
     });
 
-    it('opens it', () => {
+    it('opens it', async () => {
       press('Enter');
 
-      expect(harness.store.selectedNoteId()).toBe('note-1');
+      await vi.waitFor(() => expect(harness.store.selectedNoteId()).toBe('note-1'));
     });
 
     /** ⚠️ The ring may be on a card scrolled out of view: "copied" alone is no answer. */

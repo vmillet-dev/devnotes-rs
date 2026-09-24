@@ -10,10 +10,12 @@ use devnotes_lib::db::schema::{
 use devnotes_lib::error::StorageError;
 use devnotes_lib::notes::checklist::{ChecklistItem, NoteKind};
 use devnotes_lib::notes::language::Language;
-use devnotes_lib::notes::model::{Note, NoteDraft, NoteLifecycle, NotePatch, decorate};
+use devnotes_lib::notes::model::{
+    DisplayNote, Note, NoteDraft, NoteLifecycle, NotePatch, PREVIEW_LINES, decorate,
+};
 use devnotes_lib::notes::store::trash::{expired_ids, list_trashed, purge, restore_many, trash};
 use devnotes_lib::notes::store::{
-    all, by_ids, count_notes_tagged, create, drop_tags, fetch, global_placeholder_values,
+    all, by_ids, count_notes_tagged, create, drop_tags, fetch, get, global_placeholder_values,
     insert_imported, move_many, replace_global_placeholder_values, restore_placements, retag, seed,
     set_placeholder_values, tag_many, tag_usage, untag_many, update,
 };

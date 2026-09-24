@@ -109,6 +109,24 @@ describe('PaletteStore', () => {
     expect(harness.window.hidden).toBe(1);
   });
 
+  it('copies the whole body of a result the list cut', async () => {
+    harness.repository.setView({
+      sections: [
+        {
+          key: 'results',
+          notes: [createNote({ id: 'note-1', title: 'First', content: 'plain', truncated: true })],
+          hasExpiringNotes: false,
+          showCreateGhost: false,
+        },
+      ],
+    });
+    await harness.store.open();
+
+    await harness.store.chooseHighlighted();
+
+    expect(harness.clipboard.content).toBe('plain body');
+  });
+
   it('asks for the fields before copying a templated snippet', async () => {
     harness.store.highlight(1);
 

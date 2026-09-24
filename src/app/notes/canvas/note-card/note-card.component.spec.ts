@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { NotesRepository } from '@core/data/notes.repository';
 import { Space } from '@core/model/space.model';
 import { LanguageBadgeComponent } from '@notes/ui/language-badge/language-badge.component';
 import { NoteSelectionStore } from '@core/state/note-selection.store';
@@ -141,9 +142,12 @@ describe('NoteCardComponent', () => {
     expect(text('.card-title')).toBe('Sans titre');
   });
 
-  /** Five, where it was four: the marks' own band is what the body got back. */
-  it('shows only the first 5 lines of content as a snippet', async () => {
-    fixture.componentRef.setInput('note', createNote({ content: 'one\ntwo\nthree\nfour\nfive\nsix' }));
+  /** The cut is Rust's (`PREVIEW_LINES`): the card draws what the list sent. */
+  it('shows the preview it is sent, line for line', async () => {
+    fixture.componentRef.setInput(
+      'note',
+      createNote({ content: 'one\ntwo\nthree\nfour\nfive', truncated: true }),
+    );
     await fixture.whenStable();
 
     const lines = fixture.debugElement.queryAll(By.css('.card-snippet .line-content'));
@@ -154,6 +158,20 @@ describe('NoteCardComponent', () => {
       'four',
       'five',
     ]);
+  });
+
+  it('copies the whole body of a note the list cut, read at the click', async () => {
+    vi.spyOn(TestBed.inject(NotesRepository), 'get').mockResolvedValue(
+      createNote({ id: 'note-42', content: 'the whole body' }),
+    );
+    fixture.componentRef.setInput('note', createNote({ id: 'note-42', content: 'the', truncated: true }));
+    await fixture.whenStable();
+
+    const copy = fixture.debugElement.query(By.directive(CopyButtonComponent))
+      .componentInstance as CopyButtonComponent;
+    const value = copy.value();
+
+    expect(typeof value === 'function' && (await value())).toBe('the whole body');
   });
 
   describe('what a search put it here for', () => {
@@ -393,7 +411,7 @@ describe('NoteCardComponent', () => {
     fixture.componentRef.setInput('note', createNote({ id: 'note-42', pinned: true }));
     await vi.waitFor(() => expect(TestBed.inject(NotesQueryStore).visibleNotes()).toHaveLength(1));
 
-    TestBed.inject(NotesStore).openNote('note-42');
+    await TestBed.inject(NotesStore).openNote('note-42');
     await fixture.whenStable();
 
     const card = fixture.debugElement.query(By.css('.card'));
@@ -632,11 +650,14 @@ describe('NoteCardComponent', () => {
       expect(opened).toEqual([]);
     });
 
-    it('hands the copy button a markdown rendering, the note having no content', () => {
+    it('hands the copy button a markdown rendering, the note having no content', async () => {
       const copy = fixture.debugElement.query(By.directive(CopyButtonComponent))
         .componentInstance as CopyButtonComponent;
+      const value = copy.value();
 
-      expect(copy.value()).toBe(['- [x] Relire', '- [ ] Déployer'].join(NEWLINE));
+      expect(typeof value === 'function' && (await value())).toBe(
+        ['- [x] Relire', '- [ ] Déployer'].join(NEWLINE),
+      );
     });
 
     it('shows no code viewer, a checklist having no body to colour', () => {

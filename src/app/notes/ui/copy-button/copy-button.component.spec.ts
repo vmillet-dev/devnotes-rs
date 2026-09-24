@@ -47,6 +47,18 @@ describe('CopyButtonComponent', () => {
     expect(adapter.writeText).toHaveBeenCalledWith('SELECT 1');
   });
 
+  it('reads the text at the click when handed a function, and copies nothing on null', async () => {
+    fixture.componentRef.setInput('value', async () => 'SELECT 2');
+    button().click();
+    await fixture.whenStable();
+    expect(adapter.writeText).toHaveBeenCalledWith('SELECT 2');
+
+    fixture.componentRef.setInput('value', async () => null);
+    button().click();
+    await fixture.whenStable();
+    expect(adapter.writeText).toHaveBeenCalledTimes(1);
+  });
+
   it('announces the copy, then stops announcing it', async () => {
     expect(status()).toBe('');
 

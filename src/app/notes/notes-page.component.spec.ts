@@ -302,7 +302,7 @@ describe('NotesPageComponent', () => {
   it('disables the search shortcut while the editor overlay is open', async () => {
     expect(child(SearchBoxComponent).shortcutEnabled()).toBe(true);
 
-    store.openNote('note-42');
+    await store.openNote('note-42');
     await fixture.whenStable();
 
     expect(child(SearchBoxComponent).shortcutEnabled()).toBe(false);
@@ -450,7 +450,7 @@ describe('NotesPageComponent', () => {
     });
 
     it('renders one note-section per section, forwarding the selected note id', async () => {
-      store.openNote('note-42');
+      await store.openNote('note-42');
       await fixture.whenStable();
 
       expect(sections().map((s) => s.section().key)).toEqual(['pinned', 'week']);
@@ -580,7 +580,7 @@ describe('NotesPageComponent', () => {
     }
 
     it('goes away once the editor is closed', async () => {
-      store.openNote('note-42');
+      await store.openNote('note-42');
       await fixture.whenStable();
 
       overlay().querySelector<HTMLElement>('.close-btn')?.click();
@@ -590,7 +590,7 @@ describe('NotesPageComponent', () => {
     });
 
     it('writes what the editor commits onto the open note', async () => {
-      store.openNote('note-42');
+      await store.openNote('note-42');
       await fixture.whenStable();
       const applyPatch = vi.spyOn(store, 'applyPatch').mockResolvedValue();
 
@@ -603,7 +603,7 @@ describe('NotesPageComponent', () => {
     });
 
     it('deletes the open note on the second click of the editor button', async () => {
-      store.openNote('note-42');
+      await store.openNote('note-42');
       await fixture.whenStable();
       const deleteNote = vi.spyOn(store, 'deleteNote').mockResolvedValue();
 
@@ -690,12 +690,12 @@ describe('NotesPageComponent', () => {
       expect(selection.focusedNoteId()).toBe('n2');
     });
 
-    it('opens the focused note on Enter', () => {
+    it('opens the focused note on Enter', async () => {
       selection.focusNote('n3');
 
       press('Enter');
 
-      expect(store.selectedNoteId()).toBe('n3');
+      await vi.waitFor(() => expect(store.selectedNoteId()).toBe('n3'));
     });
 
     it('checks and unchecks the focused note on x', () => {
@@ -864,7 +864,7 @@ describe('NotesPageComponent', () => {
     });
 
     it('ignores the canvas keys while a modal holds the keyboard', async () => {
-      store.openNote('n1');
+      await store.openNote('n1');
       await fixture.whenStable();
       selection.focusNote('n2');
 
@@ -884,7 +884,7 @@ describe('NotesPageComponent', () => {
 
   describe('attachments', () => {
     beforeEach(async () => {
-      store.openNote('note-42');
+      await store.openNote('note-42');
       await fixture.whenStable();
       await vi.waitFor(() => expect(TestBed.inject(AttachmentsStore).attachments()).toEqual([]));
     });
@@ -1061,7 +1061,7 @@ describe('NotesPageComponent', () => {
     });
 
     it('saves the values from the editor panel without touching the note', async () => {
-      store.openNote('snippet');
+      await store.openNote('snippet');
       await fixture.whenStable();
 
       const panel = fixture.debugElement.query(By.directive(NoteEditorOverlayComponent)).nativeElement;
@@ -1074,7 +1074,7 @@ describe('NotesPageComponent', () => {
     });
 
     it('fills the editor preview and hands the text back to the overlay', async () => {
-      store.openNote('snippet');
+      await store.openNote('snippet');
       await fixture.whenStable();
 
       void TestBed.inject(PlaceholderFillStore).refreshPreview({
@@ -1088,7 +1088,7 @@ describe('NotesPageComponent', () => {
     });
 
     it('copies the filled body from the editor and says so', async () => {
-      store.openNote('snippet');
+      await store.openNote('snippet');
       await fixture.whenStable();
 
       void TestBed.inject(PlaceholderFillStore).copyFilled({
@@ -1101,7 +1101,7 @@ describe('NotesPageComponent', () => {
     });
 
     it('says nothing when the clipboard refuses the filled copy', async () => {
-      store.openNote('snippet');
+      await store.openNote('snippet');
       await fixture.whenStable();
       clipboard.failNext = new Error('no clipboard');
 
@@ -1186,11 +1186,11 @@ describe('NotesPageComponent', () => {
     it('opens one no view is holding, which is what a filter makes of a result', async () => {
       const hidden = createNote({ id: 'hidden-note', title: 'Hidden by a filter' });
       expect(canvas.visibleNotes().map((note) => note.id)).not.toContain('hidden-note');
+      vi.spyOn(repository, 'get').mockResolvedValue(hidden);
 
       child(QuickPaletteComponent).openRequested.emit(hidden);
-      await fixture.whenStable();
 
-      expect(store.selectedNoteId()).toBe('hidden-note');
+      await vi.waitFor(() => expect(store.selectedNoteId()).toBe('hidden-note'));
       expect(store.selectedNote()?.title).toBe('Hidden by a filter');
     });
 

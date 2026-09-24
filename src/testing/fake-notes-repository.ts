@@ -103,6 +103,21 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
     });
   }
 
+  get(id: string): Promise<Note> {
+    return guard(this, () => {
+      const note = this.notes.find((each) => each.id === id);
+      if (!note) {
+        throw new Error(`Unknown note: ${id}`);
+      }
+      return note;
+    });
+  }
+
+  /** The stored notes are whole; a spec hands a truncated one over through `setView`. */
+  async whole(note: Note): Promise<Note> {
+    return note.truncated ? this.get(note.id) : note;
+  }
+
   create(draft: NoteDraft): Promise<Note> {
     return guard(this, () => {
       const now = new Date();
@@ -118,6 +133,7 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
         attachmentCount: 0,
         copyText: draft.kind === 'checklist' ? checklistMarkdown(draft.items) : null,
         searchHit: null,
+        truncated: false,
       };
       this.notes = [note, ...this.notes];
       return note;
@@ -236,6 +252,7 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
           folder: null,
           copyText: null,
           searchHit: null,
+          truncated: false,
           // The trash shape drops the items; a spec needing them restored uses `setView`.
           items: [],
         })),

@@ -449,7 +449,7 @@ describe('NoteSelectionStore', () => {
         createNote({ id: 'b' }),
       ]);
 
-      store.openNote('b');
+      await store.openNote('b');
 
       expect(selection.focusedNoteId()).toBe('b');
     });

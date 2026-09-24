@@ -236,6 +236,8 @@ pub struct DisplayNote {
     /// Filled in afterwards by `view::build`; `None` outside a search, and for a note
     /// found by its own title.
     pub search_hit: Option<SearchHit>,
+    /// `content` holds only its first lines: a list sends previews, `get_note` the body.
+    pub truncated: bool,
 }
 
 impl std::ops::Deref for DisplayNote {
@@ -244,6 +246,37 @@ impl std::ops::Deref for DisplayNote {
     fn deref(&self) -> &Self::Target {
         &self.note
     }
+}
+
+/// What a card shows of a body, and so all a list sends of one.
+pub const PREVIEW_LINES: usize = 5;
+
+/// ⚠️ Lines alone are no bound: a minified file is one line of a megabyte.
+pub const PREVIEW_CHARS: usize = 1_000;
+
+impl DisplayNote {
+    /// ⚠️ After everything that reads the body — the fields, the search excerpt — and only
+    /// on what goes into a list: a note cut here must never reach the editor.
+    pub fn cut_to_preview(&mut self) {
+        if let Some(preview) = preview_of(&self.note.content) {
+            self.note.content = preview;
+            self.truncated = true;
+        }
+    }
+}
+
+/// `None` when the body already fits, which is most snippets.
+fn preview_of(body: &str) -> Option<String> {
+    let lines_end = body
+        .match_indices('\n')
+        .nth(PREVIEW_LINES - 1)
+        .map_or(body.len(), |(at, _)| at);
+    let end = body[..lines_end]
+        .char_indices()
+        .nth(PREVIEW_CHARS)
+        .map_or(lines_end, |(at, _)| at);
+
+    (end < body.len()).then(|| body[..end].to_string())
 }
 
 impl Note {
@@ -272,6 +305,7 @@ pub fn decorate(note: Note, now: DateTime<Utc>) -> DisplayNote {
             NoteKind::Checklist => Some(checklist::to_markdown(&note.items)),
             NoteKind::Snippet => None,
         },
+        truncated: false,
         note,
     }
 }
@@ -695,5 +729,52 @@ mod tests {
     #[test]
     fn an_already_expired_note_counts_as_expiring_soon() {
         assert!(expires_soon(&expiring("2026-07-01T00:00:00.000Z"), now()));
+    }
+
+    fn previewed(content: &str) -> DisplayNote {
+        let mut note = decorate(
+            Note {
+                content: content.to_string(),
+                ..sample()
+            },
+            now(),
+        );
+        note.cut_to_preview();
+
+        note
+    }
+
+    #[test]
+    fn a_body_that_fits_is_sent_whole_and_not_marked() {
+        for body in ["", "one", "1\n2\n3\n4\n5"] {
+            let note = previewed(body);
+
+            assert_eq!(note.content, body);
+            assert!(!note.truncated);
+        }
+    }
+
+    #[test]
+    fn a_long_body_keeps_the_lines_a_card_shows() {
+        let note = previewed("1\n2\n3\n4\n5\n6\n7");
+
+        assert_eq!(note.content, "1\n2\n3\n4\n5");
+        assert!(note.truncated);
+    }
+
+    #[test]
+    fn one_long_line_is_cut_on_a_character_boundary() {
+        let note = previewed(&"é".repeat(PREVIEW_CHARS * 3));
+
+        assert_eq!(note.content.chars().count(), PREVIEW_CHARS);
+        assert!(note.truncated);
+    }
+
+    /// ⚠️ Read before the cut: a list cannot say a snippet has fields past its first lines.
+    #[test]
+    fn the_fields_are_found_in_the_whole_body() {
+        let note = previewed("1\n2\n3\n4\n5\npsql -h {{host}}");
+
+        assert_eq!(note.placeholders[0].name, "host");
     }
 }

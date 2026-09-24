@@ -99,17 +99,75 @@ describe('NotesStore', () => {
       const note = createNote({ id: 'selected' });
       const { store } = await createNotesHarness([note]);
 
-      store.openNote('selected');
+      await store.openNote('selected');
       expect(store.selectedNote()).toEqual(note);
 
       store.closeOverlay();
       expect(store.selectedNote()).toBeNull();
     });
 
-    it('returns null when the selected id does not match any note', async () => {
+    /** ⚠️ A draft seeded from a preview would write the first lines back over the body. */
+    it('opens the whole note, whatever the list holds of it', async () => {
+      const { store, repository } = await createNotesHarness([
+        createNote({ id: 'a', content: 'one\ntwo\nthree\nfour\nfive\nsix' }),
+      ]);
+      repository.setView({
+        sections: [
+          {
+            key: 'week',
+            notes: [createNote({ id: 'a', content: 'one', truncated: true })],
+            hasExpiringNotes: false,
+            showCreateGhost: true,
+          },
+        ],
+      });
+
+      await store.openNote('a');
+
+      expect(store.selectedNote()?.content).toBe('one\ntwo\nthree\nfour\nfive\nsix');
+    });
+
+    it('lets a later open, or a new note, win over a note still on its way', async () => {
+      const { store, repository } = await createNotesHarness([
+        createNote({ id: 'a' }),
+        createNote({ id: 'b' }),
+      ]);
+      const read = repository.get.bind(repository);
+      let land!: () => void;
+      const held = new Promise<void>((resolve) => (land = resolve));
+      vi.spyOn(repository, 'get').mockImplementationOnce(async (id) => {
+        await held;
+        return read(id);
+      });
+
+      const first = store.openNote('a');
+      await store.openNote('b');
+      land();
+      await first;
+      expect(store.selectedNoteId()).toBe('b');
+
+      const second = store.openNote('a');
+      store.createNote('snippet');
+      await second;
+      expect(store.selectedNoteId()).toBe(DRAFT_ID);
+    });
+
+    it('reads the body only of a note the list cut', async () => {
+      const { store, repository } = await createNotesHarness([createNote({ id: 'a', content: 'whole' })]);
+      const get = vi.spyOn(repository, 'get');
+
+      expect((await store.whole(createNote({ id: 'a', content: 'kept' })))?.content).toBe('kept');
+      expect(get).not.toHaveBeenCalled();
+
+      expect((await store.whole(createNote({ id: 'a', content: 'wh', truncated: true })))?.content).toBe(
+        'whole',
+      );
+    });
+
+    it('opens nothing when the note cannot be read', async () => {
       const { store } = await createNotesHarness([createNote({ id: 'a' })]);
 
-      store.openNote('does-not-exist');
+      await store.openNote('does-not-exist');
 
       expect(store.selectedNote()).toBeNull();
     });
@@ -118,7 +176,7 @@ describe('NotesStore', () => {
       const { store, canvas, repository } = await createNotesHarness([
         createNote({ id: 'a', tags: ['urgent'] }),
       ]);
-      store.openNote('a');
+      await store.openNote('a');
       const before = repository.queryCount;
 
       repository.setView({ sections: [], matched: 0, isFiltering: true });
@@ -134,7 +192,7 @@ describe('NotesStore', () => {
     it('persists a pin toggle and adopts the stored note', async () => {
       const { store, repository } = await createNotesHarness([createNote({ id: 'a', pinned: false })]);
       const update = vi.spyOn(repository, 'update');
-      store.openNote('a');
+      await store.openNote('a');
 
       await store.togglePinned('a');
 
@@ -653,7 +711,7 @@ describe('NotesStore', () => {
       const create = vi.spyOn(repository, 'create');
       store.createNote();
 
-      store.openNote('a');
+      await store.openNote('a');
 
       expect(create).not.toHaveBeenCalled();
       expect(store.selectedNoteId()).toBe('a');
@@ -701,7 +759,7 @@ describe('NotesStore', () => {
   describe('deleteNote', () => {
     it('closes the overlay when the deleted note was the open one', async () => {
       const { store, canvas } = await createNotesHarness([createNote({ id: 'a' }), createNote({ id: 'b' })]);
-      store.openNote('a');
+      await store.openNote('a');
 
       await store.deleteNote('a');
 
@@ -711,7 +769,7 @@ describe('NotesStore', () => {
 
     it('leaves the open note alone when another one is deleted', async () => {
       const { store } = await createNotesHarness([createNote({ id: 'a' }), createNote({ id: 'b' })]);
-      store.openNote('a');
+      await store.openNote('a');
 
       await store.deleteNote('b');
 
@@ -721,8 +779,8 @@ describe('NotesStore', () => {
     it('keeps the note and notifies when deletion fails', async () => {
       const { store, canvas, repository } = await createNotesHarness([createNote({ id: 'a' })]);
       const notifier = TestBed.inject(ErrorNotifier);
+      await store.openNote('a');
       repository.failNext = new Error('locked');
-      store.openNote('a');
 
       await store.deleteNote('a');
 
@@ -813,7 +871,7 @@ describe('NotesStore', () => {
         placeholders: [{ name: 'host', defaultValue: '', value: '' }],
       });
       const { store } = await createNotesHarness([snippet]);
-      store.openNote('snippet');
+      await store.openNote('snippet');
 
       await store.setPlaceholderValues('snippet', { host: 'db.internal' });
 
@@ -883,7 +941,7 @@ describe('NotesStore filing one note', () => {
       undefined,
       [{ id: 'perf', spaceId: 'space-1', name: 'Perf', colour: 'amber', createdAt: new Date('2026-01-01') }],
     );
-    harness.store.openNote('a');
+    await harness.store.openNote('a');
     await vi.waitFor(() => expect(harness.store.selectedNote()?.id).toBe('a'));
 
     await harness.store.fileNote('a', 'perf');
@@ -899,7 +957,7 @@ describe('NotesStore filing one note', () => {
       undefined,
       [{ id: 'perf', spaceId: 'space-1', name: 'Perf', colour: 'amber', createdAt: new Date('2026-01-01') }],
     );
-    harness.store.openNote('a');
+    await harness.store.openNote('a');
     await vi.waitFor(() => expect(harness.store.selectedNote()?.id).toBe('a'));
 
     await harness.store.fileNote('a', null);

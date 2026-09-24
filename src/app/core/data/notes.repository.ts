@@ -34,6 +34,16 @@ export class NotesRepository {
     return toNotesView(unwrap('query_notes', await commands.queryNotes(toWireNotesQuery(query))));
   }
 
+  /** The whole note, by id: the editor's source, since a list sends previews. */
+  async get(id: string): Promise<Note> {
+    return toNote(unwrap('get_note', await commands.getNote(id)));
+  }
+
+  /** ⚠️ What a copy or a fill reads: a note taken from a list may carry its first lines only. */
+  async whole(note: Note): Promise<Note> {
+    return note.truncated ? this.get(note.id) : note;
+  }
+
   async create(draft: NoteDraft): Promise<Note> {
     return toNote(unwrap('create_note', await commands.createNote(toWireNoteDraft(draft))));
   }

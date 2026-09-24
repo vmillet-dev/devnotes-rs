@@ -62,13 +62,20 @@ export class PlaceholderFillStore {
       return;
     }
 
-    if (!(await this.copier.copy(noteCopyText(note)))) return;
+    const text = await this.textToCopy(note);
+    if (text === null || !(await this.copier.copy(text))) return;
 
     this.status.notify(
       note.title
         ? { key: 'notes.copiedNote', params: { title: note.title } }
         : { key: 'notes.copiedUntitled' },
     );
+  }
+
+  /** `null` when the body could not be read, which has been said. */
+  async textToCopy(note: Note): Promise<string | null> {
+    const whole = await this.notes.whole(note);
+    return whole && noteCopyText(whole);
   }
 
   cancel(): void {
@@ -80,7 +87,10 @@ export class PlaceholderFillStore {
     if (!note) return;
 
     this._target.set(null);
-    await this.copier.copy(await this.notes.fillPlaceholders(note.content, values));
+    const whole = await this.notes.whole(note);
+    if (!whole) return;
+
+    await this.copier.copy(await this.notes.fillPlaceholders(whole.content, values));
     await this.notes.setPlaceholderValues(note.id, values);
   }
 
@@ -88,8 +98,9 @@ export class PlaceholderFillStore {
   async copyRaw(): Promise<void> {
     const note = this._target();
     this._target.set(null);
-    if (note) {
-      await this.copier.copy(note.content);
+    const whole = note && (await this.notes.whole(note));
+    if (whole) {
+      await this.copier.copy(whole.content);
     }
   }
 
@@ -113,9 +124,10 @@ export class PlaceholderFillStore {
 
   async submitForPalette(values: Record<string, string>): Promise<void> {
     const note = this.palette.pendingFill();
-    if (!note) return;
+    const whole = note && (await this.notes.whole(note));
+    if (!whole) return;
 
-    await this.palette.copyAndDismiss(await this.notes.fillPlaceholders(note.content, values), note.title);
-    await this.notes.setPlaceholderValues(note.id, values);
+    await this.palette.copyAndDismiss(await this.notes.fillPlaceholders(whole.content, values), whole.title);
+    await this.notes.setPlaceholderValues(whole.id, values);
   }
 }

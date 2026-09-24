@@ -39,10 +39,10 @@ use folders::{
 use libraries::{create_library, delete_library, list_libraries, open_library, rename_library};
 use notes::{
     count_notes_tagged, create_note, delete_note, delete_notes, delete_tags, empty_trash,
-    fill_placeholders, list_global_placeholders, list_revisions, list_tags, list_trash, move_notes,
-    move_notes_back, purge_notes, query_notes, rename_tags, restore_notes, restore_revision,
-    revision_diff, seed_samples, set_global_placeholders, set_placeholder_values, tag_notes,
-    untag_notes, update_note,
+    fill_placeholders, get_note, list_global_placeholders, list_revisions, list_tags, list_trash,
+    move_notes, move_notes_back, purge_notes, query_notes, rename_tags, restore_notes,
+    restore_revision, revision_diff, seed_samples, set_global_placeholders, set_placeholder_values,
+    tag_notes, untag_notes, update_note,
 };
 use recovery::{archive_locked_library, set_aside_damaged_library};
 use spaces::{create_space, delete_space, list_spaces, pin_space, rename_space};
@@ -69,6 +69,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
         .commands(collect_commands![
             query_notes,
+            get_note,
             create_note,
             seed_samples,
             update_note,

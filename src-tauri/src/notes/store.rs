@@ -324,6 +324,13 @@ pub fn fetch(
     Ok((notes, facets(connection, request.space_id.as_deref())?))
 }
 
+/// One note, whole — what the editor opens on.
+pub fn get(connection: &mut Library, id: &str) -> Result<Note, StorageError> {
+    let (connection, vault) = connection.split();
+
+    find(connection, vault, id)?.ok_or_else(|| StorageError::NoteNotFound(id.to_string()))
+}
+
 fn find(
     connection: &mut SqliteConnection,
     vault: &Vault,
