@@ -313,8 +313,7 @@ pub fn list_tags(db: State<'_, Db>) -> Result<Vec<TagUsage>, AppError> {
 #[tauri::command(async)]
 #[specta::specta]
 pub fn rename_tags(tags: Vec<String>, into: String, db: State<'_, Db>) -> Result<u32, AppError> {
-    let target = model::validated_tag(&into)?;
-    let sources = model::normalize_tags(&tags);
+    let (sources, target) = model::retagging(&tags, &into)?;
 
     let mut connection = lock(&db)?;
 
