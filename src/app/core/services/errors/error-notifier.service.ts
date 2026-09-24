@@ -94,8 +94,9 @@ export class ErrorNotifier {
     // the call and its answer, enough to change when a rendered view settles. The `try`
     // covers the synchronous throw alone.
     let pending: Promise<T>;
-    try {
-      pending = action(); // NOSONAR S4822: the rejection is `.catch`'s, below
+    // prettier-ignore
+    try { // NOSONAR S4822: the synchronous throw alone, as above
+      pending = action();
     } catch (error) {
       return Promise.resolve(report(error));
     }
