@@ -28,7 +28,6 @@ import { BoardComponent, CardDrop } from './canvas/board/board.component';
 import { LibraryTreeComponent } from './sidebar/library-tree/library-tree.component';
 import { FolderNamePromptComponent } from './overlays/folder-name-prompt/folder-name-prompt.component';
 import { FacetsPanelComponent } from './header/facets-panel/facets-panel.component';
-import { FolderRecolouring, FolderRenaming } from './header/folder-editor/folder-editor.component';
 import { FolderBreadcrumbComponent } from './header/folder-breadcrumb/folder-breadcrumb.component';
 import { FolderSwitcherComponent } from './header/folder-switcher/folder-switcher.component';
 import { NewNoteButtonComponent } from './header/new-note-button/new-note-button.component';
@@ -40,7 +39,6 @@ import { ImageLightboxComponent } from './overlays/image-lightbox/image-lightbox
 import { QuickPaletteComponent } from './overlays/quick-palette/quick-palette.component';
 import { SearchBoxComponent } from './header/search-box/search-box.component';
 import { SelectionBarComponent } from './header/selection-bar/selection-bar.component';
-import { SpaceDeletion, SpaceRenaming } from './header/space-editor/space-editor.component';
 import { SpaceSwitcherComponent } from './header/space-switcher/space-switcher.component';
 import { TagManagerComponent } from './overlays/tag-manager/tag-manager.component';
 import { ViewSwitchComponent } from './header/view-switch/view-switch.component';
@@ -208,23 +206,6 @@ export class NotesPageComponent {
     this.folders.selectFolder(folder.id);
   }
 
-  protected onSpaceRenamed({ id, name }: SpaceRenaming): void {
-    // Nothing to reload: a note carries only the `spaceId`, never the name.
-    void this.spaces.renameSpace(id, name);
-  }
-
-  protected onSpaceDeleted({ id, targetSpaceId }: SpaceDeletion): void {
-    void this.spaces.deleteSpace(id, targetSpaceId);
-  }
-
-  protected onFolderRenamed({ id, name }: FolderRenaming): void {
-    void this.folders.renameFolder(id, name);
-  }
-
-  protected onFolderRecoloured({ id, colour }: FolderRecolouring): void {
-    void this.folders.recolourFolder(id, colour);
-  }
-
   /** Where a band was drawn, held until it has been given a name. */
   protected readonly pendingZone = signal<BoardFrame | null>(null);
 
@@ -233,10 +214,6 @@ export class NotesPageComponent {
   }
 
   /** Deleting from here goes back to the board, with the notes now loose on it. */
-  protected onFolderDeleted(id: string): void {
-    void this.folders.deleteFolder(id);
-  }
-
   protected onZoneDrawn(frame: BoardFrame): void {
     this.pendingZone.set(frame);
   }

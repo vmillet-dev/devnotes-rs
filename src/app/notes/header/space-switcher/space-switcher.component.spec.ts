@@ -2,6 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Space } from '@core/model/space.model';
+import { SpacesStore } from '@core/state/spaces.store';
+import { RecordingSpaceActions } from '@testing/recording-actions';
 import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
 import { SpaceSwitcherComponent } from './space-switcher.component';
 
@@ -12,6 +14,7 @@ const SPACES: readonly Space[] = [
 
 describe('SpaceSwitcherComponent', () => {
   let fixture: ComponentFixture<SpaceSwitcherComponent>;
+  let actions: RecordingSpaceActions;
 
   function trigger(): HTMLButtonElement {
     return fixture.nativeElement.querySelector('.space-switch');
@@ -47,9 +50,10 @@ describe('SpaceSwitcherComponent', () => {
   }
 
   beforeEach(async () => {
+    actions = new RecordingSpaceActions();
     TestBed.configureTestingModule({
       imports: [SpaceSwitcherComponent],
-      providers: [provideTranslocoTesting()],
+      providers: [provideTranslocoTesting(), { provide: SpacesStore, useValue: actions }],
     });
     fixture = TestBed.createComponent(SpaceSwitcherComponent);
     fixture.componentRef.setInput('spaces', SPACES);
@@ -320,29 +324,25 @@ describe('SpaceSwitcherComponent', () => {
       expect(renameInput()?.value).toBe('Work');
     });
 
-    it('emits the new name on submit and closes', async () => {
-      const renames: { id: string; name: string }[] = [];
-      fixture.componentInstance.spaceRenamed.subscribe((event) => renames.push(event));
+    it('renames on submit and closes', async () => {
       await edit(0);
 
       renameInput()!.value = 'Boulot';
       renameForm().dispatchEvent(new Event('submit'));
       await fixture.whenStable();
 
-      expect(renames).toEqual([{ id: 'work', name: 'Boulot' }]);
+      expect(actions.renamed).toEqual([{ id: 'work', name: 'Boulot' }]);
       expect(fixture.debugElement.query(By.css('.space-dropdown'))).toBeNull();
     });
 
-    it('emits nothing for a blank name', async () => {
-      const renames: unknown[] = [];
-      fixture.componentInstance.spaceRenamed.subscribe(() => renames.push(true));
+    it('renames nothing for a blank name', async () => {
       await edit(0);
 
       renameInput()!.value = '   ';
       renameForm().dispatchEvent(new Event('submit'));
       await fixture.whenStable();
 
-      expect(renames).toEqual([]);
+      expect(actions.renamed).toEqual([]);
     });
 
     it('offers every other space as a refuge for the notes', async () => {
@@ -351,20 +351,18 @@ describe('SpaceSwitcherComponent', () => {
       expect(await targetOptions()).toEqual(['personal']);
     });
 
-    it('requires two clicks and emits the chosen refuge', async () => {
-      const deletions: { id: string; targetSpaceId: string }[] = [];
-      fixture.componentInstance.spaceDeleted.subscribe((event) => deletions.push(event));
+    it('requires two clicks and deletes into the chosen refuge', async () => {
       await edit(0);
 
       deleteButton()!.click();
       await fixture.whenStable();
-      expect(deletions).toEqual([]);
+      expect(actions.deleted).toEqual([]);
       expect(deleteButton()!.textContent?.trim()).toBe('Confirmer ?');
 
       deleteButton()!.click();
       await fixture.whenStable();
 
-      expect(deletions).toEqual([{ id: 'work', targetSpaceId: 'personal' }]);
+      expect(actions.deleted).toEqual([{ id: 'work', targetSpaceId: 'personal' }]);
     });
 
     it('refuses deletion outright when there is no other space', async () => {

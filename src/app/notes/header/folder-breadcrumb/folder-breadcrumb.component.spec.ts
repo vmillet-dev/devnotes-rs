@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Folder } from '@core/model/folder.model';
+import { FoldersStore } from '@core/state/folders.store';
+import { RecordingFolderActions } from '@testing/recording-actions';
 import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
 import { FolderBreadcrumbComponent } from './folder-breadcrumb.component';
 
@@ -14,6 +16,7 @@ const PERF: Folder = {
 
 describe('FolderBreadcrumbComponent', () => {
   let fixture: ComponentFixture<FolderBreadcrumbComponent>;
+  let actions: RecordingFolderActions;
 
   function root(): HTMLElement {
     return fixture.nativeElement;
@@ -26,9 +29,10 @@ describe('FolderBreadcrumbComponent', () => {
 
   beforeEach(async () => {
     TestBed.resetTestingModule();
+    actions = new RecordingFolderActions();
     TestBed.configureTestingModule({
       imports: [FolderBreadcrumbComponent],
-      providers: [provideTranslocoTesting()],
+      providers: [provideTranslocoTesting(), { provide: FoldersStore, useValue: actions }],
     });
     fixture = TestBed.createComponent(FolderBreadcrumbComponent);
     fixture.componentRef.setInput('folder', PERF);
@@ -73,31 +77,25 @@ describe('FolderBreadcrumbComponent', () => {
   });
 
   it('renames from the panel and closes it', async () => {
-    const seen: { id: string; name: string }[] = [];
-    fixture.componentInstance.renamed.subscribe((renaming) => seen.push(renaming));
-
     await click('[data-testid="folder-breadcrumb-menu"]');
     const input = root().querySelector<HTMLInputElement>('[data-testid="folder-rename-input"]');
     if (input) input.value = 'Performance';
     root().querySelector('form')?.dispatchEvent(new Event('submit'));
     await fixture.whenStable();
 
-    expect(seen).toEqual([{ id: 'perf', name: 'Performance' }]);
+    expect(actions.renamed).toEqual([{ id: 'perf', name: 'Performance' }]);
     expect(root().querySelector('[data-testid="folder-breadcrumb-panel"]')).toBeNull();
   });
 
   /** Two steps: the WebView blocks on a native `confirm()`. */
   it('asks once before deleting, then goes back with the notes left standing', async () => {
-    const seen: string[] = [];
-    fixture.componentInstance.deleted.subscribe((id) => seen.push(id));
-
     await click('[data-testid="folder-breadcrumb-menu"]');
     expect(root().querySelector('.editor-note')?.textContent).toContain('Les notes restent');
 
     await click('[data-testid="folder-delete"]');
-    expect(seen).toEqual([]);
+    expect(actions.deleted).toEqual([]);
 
     await click('[data-testid="folder-delete"]');
-    expect(seen).toEqual(['perf']);
+    expect(actions.deleted).toEqual(['perf']);
   });
 });

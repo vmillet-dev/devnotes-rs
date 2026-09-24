@@ -13,16 +13,8 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { Folder } from '@core/model/folder.model';
 import { RAIL_WIDTH } from '@core/services/settings/app-settings.model';
 import { Space } from '@core/model/space.model';
-import {
-  FolderEditorComponent,
-  FolderRecolouring,
-  FolderRenaming,
-} from '@notes/header/folder-editor/folder-editor.component';
-import {
-  SpaceDeletion,
-  SpaceEditorComponent,
-  SpaceRenaming,
-} from '@notes/header/space-editor/space-editor.component';
+import { FolderEditorComponent } from '@notes/header/folder-editor/folder-editor.component';
+import { SpaceEditorComponent } from '@notes/header/space-editor/space-editor.component';
 
 /** A space and the folders drawn under it. */
 interface SpaceNode {
@@ -61,14 +53,8 @@ export class LibraryTreeComponent {
 
   readonly spaceChanged = output<string | null>();
   readonly spaceCreated = output<string>();
-  readonly spaceRenamed = output<SpaceRenaming>();
-  readonly pinRequested = output<string>();
-  readonly spaceDeleted = output<SpaceDeletion>();
   readonly folderOpened = output<Folder>();
   readonly folderCreated = output<string>();
-  readonly folderRenamed = output<FolderRenaming>();
-  readonly folderRecoloured = output<FolderRecolouring>();
-  readonly folderDeleted = output<string>();
   readonly widthChanged = output<number>();
 
   /**
@@ -233,28 +219,8 @@ export class LibraryTreeComponent {
     this.folderCreated.emit(name);
   }
 
-  protected onSpaceRenamed(renaming: SpaceRenaming): void {
-    this.closePanels();
-    this.spaceRenamed.emit(renaming);
-  }
-
-  protected onSpaceDeleted(deletion: SpaceDeletion): void {
-    this.closePanels();
-    this.spaceDeleted.emit(deletion);
-  }
-
-  protected onFolderRenamed(renaming: FolderRenaming): void {
-    this.closePanels();
-    this.folderRenamed.emit(renaming);
-  }
-
-  protected onFolderDeleted(id: string): void {
-    this.closePanels();
-    this.folderDeleted.emit(id);
-  }
-
   /** One panel at a time: two open forms in a rail this narrow read as one. */
-  private closePanels(): void {
+  protected closePanels(): void {
     this.creatingSpace.set(false);
     this.creatingFolder.set(false);
     this.editedSpace.set(null);

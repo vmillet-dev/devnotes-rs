@@ -1384,10 +1384,12 @@ asks `hasUserFilters` and not `isFiltering` — the latter is the _view's_ answe
 inside an opened folder, so Escape would clear a search that is not there and never fall
 through.
 
-**The folder's three actions live in one component.** `folder-editor/` holds the rename, the
-palette and the delete; the switcher, the breadcrumb and the zone menu on the board all
-project it, so they cannot drift apart. Deleting from the breadcrumb goes back, with the
-notes now loose.
+**The folder's three actions live in one component, and it performs them.** `folder-editor/`
+holds the rename, the palette and the delete and calls `FoldersStore` itself; the switcher,
+the breadcrumb, the rail and the zone menu on the board all project it, and hear only
+`finished`, to close whatever they opened it from. `space-editor/` is its twin over
+`SpacesStore`, and the page binds none of their events. Deleting from the breadcrumb goes back, with the
+notes now loose — `FoldersStore.deleteFolder` clears the open folder.
 
 ### A folder travels; its coordinates do not
 

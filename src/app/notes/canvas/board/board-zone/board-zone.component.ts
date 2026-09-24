@@ -3,11 +3,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { BoardFrame, BoardNote, BoardZone } from '@core/model/board.model';
 import { isCardControl } from '../board-gesture';
 import { NoteActivation, NoteCardComponent } from '@notes/canvas/note-card/note-card.component';
-import {
-  FolderEditorComponent,
-  FolderRecolouring,
-  FolderRenaming,
-} from '@notes/header/folder-editor/folder-editor.component';
+import { FolderEditorComponent } from '@notes/header/folder-editor/folder-editor.component';
 
 /** A card grabbed inside a zone, with where it sits so the drag keeps its offset. */
 export interface CardGrab {
@@ -48,9 +44,6 @@ export class BoardZoneComponent {
   readonly headGrabbed = output<PointerEvent>();
   readonly resizeGrabbed = output<PointerEvent>();
   readonly cardGrabbed = output<CardGrab>();
-  readonly renamed = output<FolderRenaming>();
-  readonly recoloured = output<FolderRecolouring>();
-  readonly deleted = output<string>();
   readonly selectRequested = output<string>();
 
   /** The same three actions the breadcrumb and the switcher offer, in the same panel. */
@@ -61,16 +54,6 @@ export class BoardZoneComponent {
   protected onSelectRequested(folderId: string): void {
     this.menuOpen.set(false);
     this.selectRequested.emit(folderId);
-  }
-
-  protected onRenamed(renaming: FolderRenaming): void {
-    this.menuOpen.set(false);
-    this.renamed.emit(renaming);
-  }
-
-  protected onDeleted(id: string): void {
-    this.menuOpen.set(false);
-    this.deleted.emit(id);
   }
 
   /**

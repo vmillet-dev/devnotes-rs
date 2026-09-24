@@ -22,12 +22,7 @@
     <div class="folder-dropdown" data-testid="folder-dropdown">
       @if (editing(); as edited) {
         <!-- The edit panel replaces the menu, like the create form. -->
-        <app-folder-editor
-          [folder]="edited"
-          (renamed)="onRenamed($event)"
-          (recoloured)="folderRecoloured.emit($event)"
-          (deleted)="onDeleted($event)"
-        />
+        <app-folder-editor [folder]="edited" (finished)="menu.close()" />
       } @else if (creating()) {
         <!-- The form replaces the menu rather than adding to it: an input inside a
              role="menu" is neither valid ARIA nor navigable the way options are. -->

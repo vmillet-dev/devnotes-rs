@@ -97,13 +97,7 @@
         </div>
 
         @if (editedSpace() === space.id) {
-          <app-space-editor
-            [space]="space"
-            [moveTargets]="moveTargets()"
-            (renamed)="onSpaceRenamed($event)"
-            (pinRequested)="pinRequested.emit($event)"
-            (deleted)="onSpaceDeleted($event)"
-          />
+          <app-space-editor [space]="space" [moveTargets]="moveTargets()" (finished)="closePanels()" />
         }
 
         @if (open) {
@@ -142,12 +136,7 @@
                 </div>
 
                 @if (editedFolder() === folder.id) {
-                  <app-folder-editor
-                    [folder]="folder"
-                    (renamed)="onFolderRenamed($event)"
-                    (recoloured)="folderRecoloured.emit($event)"
-                    (deleted)="onFolderDeleted($event)"
-                  />
+                  <app-folder-editor [folder]="folder" (finished)="closePanels()" />
                 }
               </li>
             }

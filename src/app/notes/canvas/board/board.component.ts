@@ -14,7 +14,6 @@ import {
 import { TranslocoPipe } from '@jsverse/transloco';
 import { BoardFrame, BoardNote, BoardPoint, BoardScope, BoardZone } from '@core/model/board.model';
 import { NoteActivation, NoteCardComponent } from '@notes/canvas/note-card/note-card.component';
-import { FolderRecolouring, FolderRenaming } from '@notes/header/folder-editor/folder-editor.component';
 import { BoardTidyComponent } from './board-tidy/board-tidy.component';
 import { BoardZoneComponent } from './board-zone/board-zone.component';
 import {
@@ -93,9 +92,6 @@ export class BoardComponent {
   readonly cardDropped = output<CardDrop>();
   readonly zoneMoved = output<ZoneMove>();
   readonly zoneDrawn = output<BoardFrame>();
-  readonly folderRenamed = output<FolderRenaming>();
-  readonly folderRecoloured = output<FolderRecolouring>();
-  readonly folderDeleted = output<string>();
   readonly folderNotesSelected = output<string>();
   /** Every card a right-drag swept over; the page decides what selecting means. */
   readonly notesBanded = output<readonly string[]>();

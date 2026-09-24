@@ -219,7 +219,7 @@ describe('NotesPageComponent', () => {
   it('renames a space without touching the canvas', async () => {
     const queries = repository.queryCount;
 
-    child(LibraryTreeComponent).spaceRenamed.emit({ id: 'work', name: 'Client work' });
+    void spaces.renameSpace('work', 'Client work');
     await vi.waitFor(() => expect(spaces.spaces()[1].name).toBe('Client work'));
 
     expect(repository.queryCount).toBe(queries);
@@ -228,20 +228,10 @@ describe('NotesPageComponent', () => {
   it('reloads the canvas once a deleted space has handed its notes over', async () => {
     const queries = repository.queryCount;
 
-    child(LibraryTreeComponent).spaceDeleted.emit({ id: 'work', targetSpaceId: 'space-1' });
+    void spaces.deleteSpace('work', 'space-1');
 
     await vi.waitFor(() => expect(spaces.spaces()).toHaveLength(1));
     await vi.waitFor(() => expect(repository.queryCount).toBeGreaterThan(queries));
-  });
-
-  it('leaves the canvas alone when the space deletion failed', async () => {
-    const queries = repository.queryCount;
-    vi.spyOn(spaces, 'deleteSpace').mockResolvedValue(false);
-
-    child(LibraryTreeComponent).spaceDeleted.emit({ id: 'work', targetSpaceId: 'space-1' });
-    await fixture.whenStable();
-
-    expect(repository.queryCount).toBe(queries);
   });
 
   describe('the library rail', () => {
@@ -440,7 +430,7 @@ describe('NotesPageComponent', () => {
     it('comes back out when the folder it is showing is deleted', async () => {
       await open();
 
-      child(FolderBreadcrumbComponent).deleted.emit('perf');
+      void folders.deleteFolder('perf');
       await vi.waitFor(() => expect(folders.activeFolderId()).toBeNull());
 
       expect(maybeChild(FolderBreadcrumbComponent)).toBeNull();
