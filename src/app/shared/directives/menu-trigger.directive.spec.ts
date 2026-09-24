@@ -9,12 +9,7 @@ import { MenuTriggerDirective } from './menu-trigger.directive';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <button type="button" id="outside">outside</button>
-    <div
-      appMenuTrigger
-      #menu="appMenu"
-      (escaped)="escapes.set(escapes() + 1)"
-      (closed)="closes.set(closes() + 1)"
-    >
+    <div appMenuTrigger #menu="appMenu" (closed)="closes.set(closes() + 1)">
       <button type="button" appMenuAnchor id="anchor" (click)="menu.toggle()">File</button>
       @if (menu.open()) {
         <div id="panel"><button type="button" id="entry">Import…</button></div>
@@ -24,7 +19,6 @@ import { MenuTriggerDirective } from './menu-trigger.directive';
 })
 class MenuTriggerHostComponent {
   readonly menu = viewChild.required(MenuTriggerDirective);
-  readonly escapes = signal(0);
   readonly closes = signal(0);
 }
 
@@ -108,17 +102,25 @@ describe('MenuTriggerDirective', () => {
     expect(menu().open()).toBe(true);
   });
 
-  /**
-   * ⚠️ Escape is emitted rather than handled here: a multi-level menu has to be able to
-   * fold its own panel before the whole thing closes.
-   */
-  it('emits Escape instead of closing itself', async () => {
+  it('closes on Escape by default', async () => {
     await open();
 
     element('anchor')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     await fixture.whenStable();
 
-    expect(fixture.componentInstance.escapes()).toBe(1);
+    expect(menu().open()).toBe(false);
+  });
+
+  /** A multi-level menu folds its own panel before the whole thing closes. */
+  it('hands Escape to the host that asked for it instead', async () => {
+    let handled = 0;
+    menu().handleEscape(() => (handled += 1));
+    await open();
+
+    element('anchor')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await fixture.whenStable();
+
+    expect(handled).toBe(1);
     expect(menu().open()).toBe(true);
   });
 

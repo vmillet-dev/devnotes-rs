@@ -4,7 +4,7 @@ import { IpcError } from '@core/ipc/ipc.error';
 import { VaultRepository } from '@core/data/vault.repository';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
-import { SEEDED_KEY } from './sample-notes.service';
+import { SEEDED_KEY } from '@core/services/samples/sample-notes.service';
 import { StatusNotifier } from '@core/services/notifications/status.service';
 import { FakeVaultRepository } from '@testing/fake-vault-repository';
 import { provideAppTesting } from '@testing/testing.providers';

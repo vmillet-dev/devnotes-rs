@@ -173,6 +173,19 @@ Membership is decidable, not a matter of taste:
 | Is it a cross-cutting service?              | `core/services/<subject>/`                   |
 | Does it cross two areas of the screen?      | `shared/`                                    |
 
+**`notes/ui/` holds what several zones draw**: the choice menu, the code viewer, the copy
+button, the language badge, the `{{field}}` rows and the tag pill. They are the common
+ancestor rule applied to `notes/` itself — shown by more than one zone, so they rise to the
+zones' parent — and they sit in one folder rather than loose at the root beside the page.
+
+**What has no place on screen is filed by subject, even when a store uses it.**
+`core/state/` holds the stores and nothing else; `NoteCopyService` is under
+`core/services/clipboard/`, `SampleNotesService` under `core/services/samples/`, and the boot
+sequence is `startApplication()` in `core/services/startup/`, with a spec that holds its order
+— `app.config.ts` is configuration. The canvas keyboard (`CanvasKeyboardDirective`) is the
+page's host directive and lives beside the page in `notes/`: it injects nine stores, and
+`shared/` injects nothing.
+
 **The zones come from the template, not from taste.** `notes/` used to hold eleven entries
 that mixed screen zones with invented categories — `tag-rail` sat outside `topbar/` while
 `search-box` sat inside, `image-lightbox` outside `overlays/` while the palette sat inside, and
@@ -291,9 +304,9 @@ Two details are load-bearing:
 - `MenuPanelDirective` walks `[appMenuItem]` rather than every button, because a menu may
   carry a secondary action deliberately outside the arrow cycle — the `⋯` that opens a
   space's edit panel is reachable by Tab, not by arrows.
-- `MenuTriggerDirective` **emits** `escaped` instead of closing on Escape. A single-level menu
-  wires it straight to `close()`; the space switcher first collapses its create/edit panel and
-  only closes on the second press.
+- `MenuTriggerDirective` **closes on Escape by default**, and a host that needs more hands it
+  a handler with `handleEscape()` — the switchers first collapse their create/edit panel and
+  only close on the second press. One handler, so nothing depends on listener order.
 
 Putting the click listener in a directive also removes the `click-events-have-key-events`
 suppressions the three modal templates used to carry: the keyboard equivalent exists, it is
@@ -736,9 +749,9 @@ spaces this wants the command palette rather than a longer menu.
 ⚠️ `placement-menu` swallows Escape while it is open, and it is the **only** menu in the
 application that has to: it lives inside a dialog. `MenuTriggerDirective` lets Escape
 bubble on purpose — a multi-level menu folds its panel before closing — but here the next
-listener up is the editor's own, so one Escape closed the note along with the menu. It also
-closes itself from that handler rather than from `escaped`, so the decision does not depend
-on which listener was registered first.
+listener up is the editor's own, so one Escape closed the note along with the menu. Its handler is
+the one it gives `handleEscape()`, so the decision does not depend on which listener was
+registered first.
 
 ⚠️ **The two actions hang outside the card**, in a pill over its **bottom**-right corner,
 shown on hover and on focus. Outside rather than in the flow, so they cost the card no room
@@ -2737,7 +2750,7 @@ in this process’s memory for the length of the session, and there is no idle r
 
 ### The gate
 
-`vault_state` answers `absent` / `locked` / `unlocked`; `app.config.ts` awaits it before the
+`vault_state` answers `absent` / `locked` / `unlocked`; `startApplication()` awaits it before the
 first render and `app.component.html` puts `VaultGateComponent` in front of the outlet. ⚠️ It
 does not hide the outlet, it never creates it — which is what keeps every store free of a
 "locked" branch: the canvas queries notes the moment it mounts, and nothing would be there

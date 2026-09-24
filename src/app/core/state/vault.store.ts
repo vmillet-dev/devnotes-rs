@@ -7,7 +7,7 @@ import { PassphraseChange } from '@core/ipc/bindings';
 import { TranslationRef } from '@core/services/i18n/translation-ref.model';
 import { VaultRepository } from '../data/vault.repository';
 import { VaultState } from '@core/model/vault.model';
-import { SEEDED_KEY } from './sample-notes.service';
+import { SEEDED_KEY } from '@core/services/samples/sample-notes.service';
 
 /**
  * ⚠️ The state lives in Rust, not here: a page reload must not ask again for a library

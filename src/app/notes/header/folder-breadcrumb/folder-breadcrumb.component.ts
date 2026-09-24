@@ -29,10 +29,6 @@ export class FolderBreadcrumbComponent {
 
   protected readonly menu = inject(MenuTriggerDirective);
 
-  constructor() {
-    this.menu.escaped.subscribe(() => this.menu.close());
-  }
-
   protected onSelectRequested(folderId: string): void {
     this.selectRequested.emit(folderId);
     this.menu.close();

@@ -18,10 +18,6 @@ export class NewNoteButtonComponent {
 
   protected readonly menu = inject(MenuTriggerDirective);
 
-  constructor() {
-    this.menu.escaped.subscribe(() => this.menu.close());
-  }
-
   protected create(kind: NoteKind): void {
     this.created.emit(kind);
     this.menu.close();

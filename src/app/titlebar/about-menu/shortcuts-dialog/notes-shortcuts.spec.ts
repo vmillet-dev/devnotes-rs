@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CANVAS_SHORTCUT_GROUP } from '@shared/directives/canvas-keyboard.directive';
+import { CANVAS_SHORTCUT_GROUP } from '@notes/canvas-keyboard.directive';
 import fr from '@core/services/i18n/translations/fr.json';
 import en from '@core/services/i18n/translations/en.json';
 import { NOTES_SHORTCUT_GROUPS } from './notes-shortcuts';

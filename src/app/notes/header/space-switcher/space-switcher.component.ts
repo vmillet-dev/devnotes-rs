@@ -49,7 +49,7 @@ export class SpaceSwitcherComponent {
   });
 
   constructor() {
-    this.menu.escaped.subscribe(() => this.onEscape());
+    this.menu.handleEscape(() => this.onEscape());
     this.menu.closed.subscribe(() => this.resetPanels());
 
     effect(() => {

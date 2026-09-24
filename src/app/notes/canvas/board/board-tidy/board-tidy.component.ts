@@ -37,10 +37,6 @@ export class BoardTidyComponent {
    */
   protected readonly counts = computed(() => ({ zones: this.zoneCount(), cards: this.looseCount() }));
 
-  constructor() {
-    this.menu.escaped.subscribe(() => this.menu.close());
-  }
-
   protected ask(scope: BoardScope): void {
     this.requested.emit(scope);
     this.menu.close();
