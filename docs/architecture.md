@@ -1075,9 +1075,12 @@ touched. A note already in the target folder is not reported, so a batch that ch
 opens no undo window.
 
 **The card says where a note lives, and the back end is what resolved it.**
-`view::apply_folders` decorates `DisplayNote.folder` in a pass of its own, exactly as
-`apply_attachment_counts` and `apply_global_defaults` do. The front end never joins a
-`folderId` against a list it happens to hold. ⚠️ The chip is a **square swatch on a neutral
+`view::Decorations` fills `DisplayNote.folder` in the same pass as the attachment count and
+the global `{{field}}` defaults — one pass that `query_notes`, `board_view` and every
+single-note answer run, where there used to be three. `notes::store::decorations` reads the
+counters and the globals; the chips are added by `query_notes` alone, and only when
+`NotesQuery::shows_folder_chips`. The front end never joins a `folderId` against a list it
+happens to hold. ⚠️ The chip is a **square swatch on a neutral
 pill** — never a coloured pill, which is what a tag is. A note with no folder gets no chip at
 all: the absence reads on its own, and an "unfiled" chip would soil every loose card.
 
@@ -1193,8 +1196,8 @@ marker nobody can find a place for is a marker nobody needs — the loose cards 
 count, sitting on the background where a filed one cannot be. Deleted rather than relocated
 a third time.
 
-⚠️ `apply_folders` deliberately does **not** run for the board: a chip naming the zone a
-card already sits in is noise, and a loose card has no folder to name. The card component is
+⚠️ The board's decorations carry **no** folder chips: a chip naming the zone a card already
+sits in is noise, and a loose card has no folder to name. The card component is
 the same one the canvas draws, so it renders no chip simply because `folder` is `None`.
 
 On the front end, `notes/canvas/` is the region and the two views are alternatives inside
@@ -1351,8 +1354,8 @@ expensive one — which is what stops anyone pressing it a second time.
 
 ⚠️ The command answers a `BoardArrangement`: `moved`, and the layout it **replaced**. The
 new one arrives with the reload the front end does anyway, and this is the only moment the
-old one still exists. `restore_board_layout` puts it back, and the record is the fourth
-branch of `Reversible`. ⚠️ `moved` counts what came out somewhere other than where it
+old one still exists. `save_board_layout` — the command a drag writes through — puts it back,
+and the record is the fourth branch of `Reversible`. ⚠️ `moved` counts what came out somewhere other than where it
 went in, never what was placed: a board already in order opens no undo window, because
 `openUndoWindow` refuses a count of zero. A zone the board had never laid out is left out
 of `previous` entirely — it had no place to go back to, and inventing one on the undo would
@@ -2610,7 +2613,7 @@ The commands, grouped by the feature that owns them:
 | `notes`       | `query_notes`, `create_note`, `update_note`, `delete_note`, `delete_notes`, `restore_notes`, `list_trash`, `purge_notes`, `empty_trash`, `move_notes`, `tag_notes`, `list_tags`, `count_notes_tagged`, `rename_tags`, `delete_tags`, `fill_placeholders`, `set_placeholder_values` |
 | `spaces`      | `list_spaces`, `create_space`, `rename_space`, `pin_space`, `delete_space`                                                                                                                                                                                                         |
 | `attachments` | `attach_file`, `attach_clipboard_image`, `list_attachments`, `read_attachment`, `open_attachment`, `save_attachment`, `delete_attachment`                                                                                                                                          |
-| `transfer`    | `export_notes`, `export_selection`, `import_notes`, `share_notes`                                                                                                                                                                                                                  |
+| `transfer`    | `export_notes` (over an `ExportScope`: the library, a space or a selection), `import_notes`, `share_notes`                                                                                                                                                                         |
 | `desktop`     | `sync_tray`, `unavailable_shortcuts`                                                                                                                                                                                                                                               |
 
 The guarantees the front-end relies on (persisted value returned, `Err` on an unknown id,

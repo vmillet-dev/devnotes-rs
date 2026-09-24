@@ -9,10 +9,10 @@ use devnotes_lib::notes::language::Language;
 use devnotes_lib::notes::model::{NoteDraft, NoteLifecycle};
 use devnotes_lib::notes::store as notes;
 use devnotes_lib::spaces::store as spaces;
-use devnotes_lib::transfer::bundle::{collect, merge as merge_bundle};
+use devnotes_lib::transfer::bundle::{self, collect, merge as merge_bundle};
 use devnotes_lib::transfer::file;
 use devnotes_lib::transfer::file::Payload;
-use devnotes_lib::transfer::model::{self, Bundle, ImportReport, IncomingBundle};
+use devnotes_lib::transfer::model::{self, Bundle, ExportScope, ImportReport, IncomingBundle};
 
 fn t0() -> DateTime<Utc> {
     iso8601::parse("2026-07-25T09:00:00.000Z").unwrap()
@@ -109,6 +109,31 @@ fn only_the_spaces_actually_cited_travel() {
 
     assert_eq!(bundle.spaces.len(), 1);
     assert_eq!(bundle.notes.len(), 1);
+}
+
+#[test]
+fn an_export_scope_takes_the_library_a_space_or_a_selection() {
+    let mut source = library();
+    let personal = spaces::list(&mut source).unwrap()[1].id.clone();
+    let one = notes::all(&mut source, None).unwrap()[0].id.clone();
+
+    let count =
+        |source: &mut Library, scope: ExportScope| bundle::of(source, &scope).unwrap().notes.len();
+
+    assert_eq!(count(&mut source, ExportScope::Library), 2);
+    assert_eq!(
+        count(&mut source, ExportScope::Space { space_id: personal }),
+        1
+    );
+    assert_eq!(count(&mut source, ExportScope::Notes { ids: vec![one] }), 1);
+}
+
+/// The shape the front end sends, `kind` and camelCase included.
+#[test]
+fn an_export_scope_reads_the_way_the_bindings_write_it() {
+    let scope: ExportScope = serde_json::from_str(r#"{"kind":"space","spaceId":"s-1"}"#).unwrap();
+
+    assert!(matches!(scope, ExportScope::Space { space_id } if space_id == "s-1"));
 }
 
 #[test]

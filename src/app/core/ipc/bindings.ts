@@ -89,8 +89,8 @@ export const commands = {
 	 *  filter, the rails and the search all **dim** on the board. Reflowing the survivors into
 	 *  a list would throw away the spatial memory the board exists for.
 	 * 
-	 *  ⚠️ `apply_folders` deliberately does not run: a chip naming the zone a card already
-	 *  sits in is noise, and a loose card has no folder to name.
+	 *  ⚠️ No folder chips: a chip naming the zone a card already sits in is noise, and a loose
+	 *  card has no folder to name.
 	 */
 	boardView: (query: BoardQuery) => typedError<BoardView, AppError>(__TAURI_INVOKE("board_view", { query })),
 	/**
@@ -100,7 +100,8 @@ export const commands = {
 	 *  ⚠️ One command and one transaction for the whole gesture: a drag that ends outside the
 	 *  window, or an application that quits mid-gesture, must not leave half a board behind.
 	 *  Filing is **not** here — membership comes from [`file_notes`], which answers what it
-	 *  changed so the undo can put it back.
+	 *  changed so the undo can put it back. The undo of [`arrange_board`] is this command too,
+	 *  with the layout that one answered.
 	 */
 	saveBoardLayout: (zones: ZonePlacement[], cards: CardPlacement[]) => typedError<null, AppError>(__TAURI_INVOKE("save_board_layout", { zones, cards })),
 	/**
@@ -113,8 +114,6 @@ export const commands = {
 	 *  board gesture that cannot be walked back by dragging.
 	 */
 	arrangeBoard: (spaceId: string, scope: BoardScope) => typedError<BoardArrangement, AppError>(__TAURI_INVOKE("arrange_board", { spaceId, scope })),
-	/**  The undo of [`arrange_board`]: every zone and every loose card back where it was. */
-	restoreBoardLayout: (layout: BoardLayout) => typedError<null, AppError>(__TAURI_INVOKE("restore_board_layout", { layout })),
 	createFolder: (draft: FolderDraft) => typedError<Folder, AppError>(__TAURI_INVOKE("create_folder", { draft })),
 	renameFolder: (id: string, name: string) => typedError<Folder, AppError>(__TAURI_INVOKE("rename_folder", { id, name })),
 	recolourFolder: (id: string, colour: FolderColour) => typedError<Folder, AppError>(__TAURI_INVOKE("recolour_folder", { id, colour })),
@@ -158,9 +157,11 @@ export const commands = {
 	/**  The path comes from a native picker; the write stays here. */
 	saveAttachment: (id: string, path: string) => typedError<null, AppError>(__TAURI_INVOKE("save_attachment", { id, path })),
 	deleteAttachment: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("delete_attachment", { id })),
-	/**  The spaces travel with the notes, or an import holds an id with nowhere to file it. */
-	exportNotes: (path: string, spaceId: string | null, passphrase: string | null) => typedError<ExportReport, AppError>(__TAURI_INVOKE("export_notes", { path, spaceId, passphrase })),
-	exportSelection: (path: string, ids: string[], passphrase: string | null) => typedError<ExportReport, AppError>(__TAURI_INVOKE("export_selection", { path, ids, passphrase })),
+	/**
+	 *  ⚠️ A `None` passphrase writes the file in the clear: the library's key protects what is
+	 *  on this machine, never what leaves it.
+	 */
+	exportNotes: (path: string, scope: ExportScope, passphrase: string | null) => typedError<ExportReport, AppError>(__TAURI_INVOKE("export_notes", { path, scope, passphrase })),
 	/**
 	 *  ⚠️ The file is read before the lock is taken: parsing a large export while holding the
 	 *  connection would block every other command for the length of it.
@@ -517,6 +518,11 @@ export type ExportReport = {
 	 */
 	protected: boolean,
 };
+
+/**  What an export takes. */
+export type ExportScope = { kind: "library" } | { kind: "space"; spaceId: string } | 
+/**  A selection: the ids the canvas had ticked. */
+{ kind: "notes"; ids: string[] };
 
 export type Folder = {
 	id: string,

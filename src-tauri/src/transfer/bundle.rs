@@ -8,7 +8,7 @@ use diesel::SqliteConnection;
 use uuid::Uuid;
 
 use super::file::Payload;
-use super::model::{self, Bundle, ImportReport, IncomingBundle};
+use super::model::{self, Bundle, ExportScope, ImportReport, IncomingBundle};
 use crate::attachments::model::Attachment;
 use crate::attachments::store as attachments;
 use crate::db::Library;
@@ -20,6 +20,17 @@ use crate::notes::store as notes;
 use crate::spaces::model::Space;
 use crate::spaces::store as spaces;
 use crate::vault::key::Vault;
+
+/// The live notes a scope covers, then the bundle that carries them.
+pub fn of(connection: &mut Library, scope: &ExportScope) -> Result<Bundle, StorageError> {
+    let exported = match scope {
+        ExportScope::Library => notes::all(connection, None)?,
+        ExportScope::Space { space_id } => notes::all(connection, Some(space_id))?,
+        ExportScope::Notes { ids } => notes::by_ids(connection, ids)?,
+    };
+
+    collect(connection, exported)
+}
 
 /// Only the spaces and folders actually cited travel with the notes: exporting one space
 /// must not recreate the whole tree for whoever imports it.

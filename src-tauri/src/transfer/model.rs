@@ -24,6 +24,21 @@ use crate::spaces::model::Space;
 /// 500-note file over one note's unknown `language`.
 pub const FORMAT_VERSION: u32 = 1;
 
+/// What an export takes.
+#[derive(Debug, Clone, Deserialize, Type)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum ExportScope {
+    Library,
+    Space {
+        #[serde(rename = "spaceId")]
+        space_id: String,
+    },
+    /// A selection: the ids the canvas had ticked.
+    Notes {
+        ids: Vec<String>,
+    },
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct Bundle {

@@ -15,7 +15,6 @@ use std::path::PathBuf;
 use chrono::{DateTime, TimeDelta, Utc};
 use devnotes_lib::db::Library;
 
-use devnotes_lib::attachments::store as attachments;
 use devnotes_lib::db;
 use devnotes_lib::notes::checklist::{ChecklistItem, NoteKind};
 use devnotes_lib::notes::language::Language;
@@ -115,12 +114,10 @@ fn draft(seed: usize, space_id: &str) -> NoteDraft {
 /// returns is what would cross the bridge.
 pub(crate) fn run_query(corpus: &mut Corpus, request: &NotesQuery) -> String {
     let (notes, facets) = store::fetch(&mut corpus.connection, request).expect("a view");
-    let counts = attachments::counts(&mut corpus.connection).expect("the counters");
-    let globals = store::global_placeholder_values(&mut corpus.connection).expect("the globals");
+    let decorations = store::decorations(&mut corpus.connection).expect("the decorations");
 
     let mut built = view::build(notes, facets, request);
-    view::apply_attachment_counts(&mut built, &counts);
-    view::apply_global_defaults(&mut built, &globals);
+    decorations.apply(built.notes_mut());
 
     serde_json::to_string(&built).expect("a serialisable view")
 }

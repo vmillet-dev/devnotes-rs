@@ -2,7 +2,7 @@ pub mod related;
 pub mod revisions;
 pub mod trash;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use diesel::prelude::*;
 use uuid::Uuid;
@@ -14,7 +14,7 @@ use super::model::{
     self, Note, NoteDraft, NoteLifecycle, NotePatch, NotePlacement, NoteTag, SampleNote,
 };
 use super::placeholder;
-use super::view::{Facets, NoteFilter, NotesQuery};
+use super::view::{Decorations, Facets, NoteFilter, NotesQuery};
 use crate::db::schema::{global_placeholders, note_tags, notes};
 use crate::db::{Library, iso8601};
 use crate::error::StorageError;
@@ -725,6 +725,16 @@ pub fn count_notes_tagged(
     }
 
     carrying(connection.db(), tags)
+}
+
+/// The counters and the global values. The folder chips depend on the view, so they are the
+/// caller's to add.
+pub fn decorations(connection: &mut Library) -> Result<Decorations, StorageError> {
+    Ok(Decorations {
+        attachment_counts: crate::attachments::store::counts(connection)?,
+        folders: HashMap::new(),
+        globals: global_placeholder_values(connection)?,
+    })
 }
 
 pub fn tag_usage(connection: &mut Library) -> Result<Vec<(String, i64)>, StorageError> {

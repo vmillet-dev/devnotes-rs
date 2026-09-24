@@ -168,15 +168,6 @@ pub fn all_stored_names(connection: &mut Library) -> Result<Vec<String>, Storage
 }
 
 /// One note; [`counts`] answers for the whole corpus at once.
-pub fn count_for(connection: &mut SqliteConnection, note_id: &str) -> Result<u32, StorageError> {
-    let total: i64 = attachments::table
-        .filter(attachments::note_id.eq(note_id))
-        .count()
-        .get_result(connection)?;
-
-    Ok(saturating_u32(total))
-}
-
 pub fn counts(connection: &mut SqliteConnection) -> Result<HashMap<String, u32>, StorageError> {
     let rows = attachments::table
         .group_by(attachments::note_id)

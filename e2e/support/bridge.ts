@@ -91,7 +91,11 @@ export const bridge = {
     invoke<Record<string, string>>('set_global_placeholders', { values }),
 
   exportNotes: (path: string, spaceId: string | null = null, passphrase: string | null = null) =>
-    invoke<ExportReport>('export_notes', { path, spaceId, passphrase }),
+    invoke<ExportReport>('export_notes', {
+      path,
+      scope: spaceId === null ? { kind: 'library' } : { kind: 'space', spaceId },
+      passphrase,
+    }),
   importNotes: (path: string, passphrase: string | null = null) =>
     invoke<ImportReport>('import_notes', { path, passphrase }),
   exportIsProtected: (path: string) => invoke<boolean>('export_is_protected', { path }),
