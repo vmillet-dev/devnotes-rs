@@ -96,16 +96,6 @@ export class NoteCardComponent {
 
   private readonly cardButton = viewChild.required<ElementRef<HTMLButtonElement>>('cardButton');
 
-  constructor() {
-    // Real focus follows the state, or arrow navigation moves an outline without
-    // taking the keyboard with it.
-    effect(() => {
-      if (this.focused() && canTakeFocus(this.cardButton().nativeElement)) {
-        this.cardButton().nativeElement.focus({ preventScroll: false });
-      }
-    });
-  }
-
   protected readonly searchHit = computed(() => this.note().searchHit);
 
   protected readonly snippet = computed(() => {
@@ -120,24 +110,6 @@ export class NoteCardComponent {
     const hit = this.searchHit();
     return !hit || hit.field === 'body';
   });
-
-  /**
-   * Where a short list has to start for the thing a search found to be in it. ⚠️ A
-   * window, not a filter: the list keeps its order and its length.
-   */
-  private windowStart(length: number, at: number, size: number): number {
-    if (at < size) return 0;
-    return Math.min(at, Math.max(0, length - size));
-  }
-
-  /**
-   * ⚠️ The excerpt is clipped at 160 characters, so an item found by a long line comes
-   * back with a trailing `…` and never equals its own text. Compared by prefix.
-   */
-  private indexOfHit(texts: readonly string[], excerpt: string): number {
-    const needle = excerpt.endsWith('…') ? excerpt.slice(0, -1) : excerpt;
-    return texts.findIndex((text) => text.startsWith(needle));
-  }
 
   private readonly tagWindowStart = computed(() => {
     const hit = this.searchHit();
@@ -205,6 +177,34 @@ export class NoteCardComponent {
     }
     return { kind: 'ref', ref: relativeTimeRef(footer.at, this.clock.now()) };
   });
+
+  constructor() {
+    // Real focus follows the state, or arrow navigation moves an outline without
+    // taking the keyboard with it.
+    effect(() => {
+      if (this.focused() && canTakeFocus(this.cardButton().nativeElement)) {
+        this.cardButton().nativeElement.focus({ preventScroll: false });
+      }
+    });
+  }
+
+  /**
+   * Where a short list has to start for the thing a search found to be in it. ⚠️ A
+   * window, not a filter: the list keeps its order and its length.
+   */
+  private windowStart(length: number, at: number, size: number): number {
+    if (at < size) return 0;
+    return Math.min(at, Math.max(0, length - size));
+  }
+
+  /**
+   * ⚠️ The excerpt is clipped at 160 characters, so an item found by a long line comes
+   * back with a trailing `…` and never equals its own text. Compared by prefix.
+   */
+  private indexOfHit(texts: readonly string[], excerpt: string): number {
+    const needle = excerpt.endsWith('…') ? excerpt.slice(0, -1) : excerpt;
+    return texts.findIndex((text) => text.startsWith(needle));
+  }
 
   protected onOpen(event: MouseEvent): void {
     this.opened.emit({

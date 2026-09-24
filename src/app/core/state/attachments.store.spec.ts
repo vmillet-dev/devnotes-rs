@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { StatusNotifier } from '@core/services/notifications/status.service';
-import { Attachment } from '../model/note.model';
+import { Attachment } from '@core/model/note.model';
 import { FakeAttachmentsRepository } from '@testing/fake-attachments-repository';
 import { FakeFileDialog } from '@testing/fake-file-dialog';
 import { provideAppTesting } from '@testing/testing.providers';

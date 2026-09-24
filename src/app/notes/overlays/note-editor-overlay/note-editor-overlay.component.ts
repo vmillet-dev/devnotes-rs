@@ -97,13 +97,6 @@ export class NoteEditorOverlayComponent {
     this.spaces.spaces().map((space) => ({ id: space.id, name: space.name })),
   );
 
-  /** ⚠️ The note's **own** space, not the active one: a note open from "all spaces"
-   *  belongs to a space of its own, and another one's folders would file it nowhere. */
-  protected onSpaceChosen(spaceId: string | null): void {
-    // A note always has a space: the menu carries no "none" entry, so this cannot be null.
-    if (spaceId !== null) this.requestPatch({ spaceId });
-  }
-
   protected readonly folderOptions = computed<readonly ChoiceOption[]>(() => {
     const spaceId = this.note()?.spaceId;
     return this.folders
@@ -187,6 +180,13 @@ export class NoteEditorOverlayComponent {
       const note = this.note();
       void this.revisions.openFor(note && note.kind === 'snippet' ? note.id : null);
     });
+  }
+
+  /** ⚠️ The note's **own** space, not the active one: a note open from "all spaces"
+   *  belongs to a space of its own, and another one's folders would file it nowhere. */
+  protected onSpaceChosen(spaceId: string | null): void {
+    // A note always has a space: the menu carries no "none" entry, so this cannot be null.
+    if (spaceId !== null) this.requestPatch({ spaceId });
   }
 
   /** Folding closes the preview: a read-only body without the button that caused it is a trap. */

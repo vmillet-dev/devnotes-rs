@@ -1,7 +1,7 @@
 import { WritableSignal, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { NotesView } from '../model/note.model';
+import { NotesView } from '@core/model/note.model';
 import { ClockService } from '@core/services/time/clock.service';
 import { FakeClipboard } from '@testing/fake-clipboard';
 import { FakeFoldersRepository } from '@testing/fake-folders-repository';

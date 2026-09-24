@@ -1,6 +1,6 @@
 import { Injectable, Signal, signal } from '@angular/core';
-import { debounced } from '../time/debounce';
-import { TranslationRef } from '../i18n/translation-ref.model';
+import { debounced } from '@core/services/time/debounce';
+import { TranslationRef } from '@core/services/i18n/translation-ref.model';
 
 /** Long enough to be read, short enough not to sit across the screen. */
 export const STATUS_TTL_MS = 6000;

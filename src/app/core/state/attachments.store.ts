@@ -4,8 +4,8 @@ import { FileDialogService } from '@core/services/dialogs/file-dialog.service';
 import { StatusNotifier } from '@core/services/notifications/status.service';
 import { ClockService } from '@core/services/time/clock.service';
 import { FileDropService } from '@core/services/window/file-drop.service';
-import { AttachmentsRepository } from '../data/attachments.repository';
-import { Attachment } from '../model/note.model';
+import { AttachmentsRepository } from '@core/data/attachments.repository';
+import { Attachment } from '@core/model/note.model';
 import { NotesStore } from './notes.store';
 
 /**
@@ -30,6 +30,18 @@ export class AttachmentsStore {
   private readonly _zoomed = signal(false);
 
   readonly zoomed = this._zoomed.asReadonly();
+
+  readonly attachments = this._attachments.asReadonly();
+  readonly isBusy = this._isBusy.asReadonly();
+  readonly previewId = this._previewId.asReadonly();
+  readonly previewData = this._previewData.asReadonly();
+  readonly count = computed(() => this._attachments().length);
+
+  /** Resolved here: the lightbox lives in the page and cannot see the strip's state. */
+  readonly previewed = computed<Attachment | null>(() => {
+    const id = this._previewId();
+    return this._attachments().find((attachment) => attachment.id === id) ?? null;
+  });
 
   constructor() {
     // Attachments follow the persisted note: a draft has no row to carry them.
@@ -91,18 +103,6 @@ export class AttachmentsStore {
 
     return noteId;
   }
-
-  readonly attachments = this._attachments.asReadonly();
-  readonly isBusy = this._isBusy.asReadonly();
-  readonly previewId = this._previewId.asReadonly();
-  readonly previewData = this._previewData.asReadonly();
-  readonly count = computed(() => this._attachments().length);
-
-  /** Resolved here: the lightbox lives in the page and cannot see the strip's state. */
-  readonly previewed = computed<Attachment | null>(() => {
-    const id = this._previewId();
-    return this._attachments().find((attachment) => attachment.id === id) ?? null;
-  });
 
   /** A different note clears the preview: the previous screenshot would be worse than nothing. */
   async openFor(noteId: string | null): Promise<void> {

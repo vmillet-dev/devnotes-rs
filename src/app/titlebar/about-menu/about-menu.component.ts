@@ -52,11 +52,6 @@ export class AboutMenuComponent {
     }
   });
 
-  protected checkUpdates(): void {
-    if (this.checking()) return;
-    void this.store.checkNow();
-  }
-
   /**
    * ⚠️ The guide is the one panel with a second way in: `HelpStore` is what an empty canvas
    * or an empty board opens it through, so the state has to be the same either way.
@@ -64,6 +59,11 @@ export class AboutMenuComponent {
   protected readonly showing = computed<AboutPanel | null>(() =>
     this.help.chapter() !== null ? 'gettingStarted' : this.panel(),
   );
+
+  protected checkUpdates(): void {
+    if (this.checking()) return;
+    void this.store.checkNow();
+  }
 
   protected openPanel(panel: AboutPanel): void {
     if (panel === 'gettingStarted') {

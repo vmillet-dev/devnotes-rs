@@ -17,6 +17,12 @@ export class FakeVaultRepository implements Pick<VaultRepository, keyof VaultRep
   setAside: string[] = [];
   changes: { current: string; next: string }[] = [];
 
+  /** Where an archived library was moved, and how many times it was asked for. */
+  archived: string[] = [];
+
+  /** What the next change answers, so a spec can drive the report it produces. */
+  rewrapped: PassphraseChange = { backupsRewrapped: 0, backupsLeft: 0 };
+
   /** ⚠️ Through the guard like the rest: reading the state is a command too, and it is
    *  the one that fails when there is no bridge at all. */
   async state(): Promise<VaultState> {
@@ -48,9 +54,6 @@ export class FakeVaultRepository implements Pick<VaultRepository, keyof VaultRep
     return target;
   }
 
-  /** Where an archived library was moved, and how many times it was asked for. */
-  archived: string[] = [];
-
   /** ⚠️ The key file travels, so what is left has no library at all: `absent`, not
    *  `locked`, which is what makes the gate ask for a new phrase. */
   async archiveLockedLibrary(): Promise<string> {
@@ -64,9 +67,6 @@ export class FakeVaultRepository implements Pick<VaultRepository, keyof VaultRep
 
     return target;
   }
-
-  /** What the next change answers, so a spec can drive the report it produces. */
-  rewrapped: PassphraseChange = { backupsRewrapped: 0, backupsLeft: 0 };
 
   async changePassphrase(current: string, next: string): Promise<PassphraseChange> {
     this.changes.push({ current, next });

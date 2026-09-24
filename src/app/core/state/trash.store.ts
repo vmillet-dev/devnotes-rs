@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
-import { NotesRepository } from '../data/notes.repository';
-import { TrashedNote } from '../model/note.model';
+import { NotesRepository } from '@core/data/notes.repository';
+import { TrashedNote } from '@core/model/note.model';
 import { NotesRevision } from './notes-revision';
 
 /** Loaded when the panel opens: a permanent resource would query on every deletion. */

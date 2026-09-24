@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { commands } from '@core/ipc/bindings';
 import { unwrap } from '@core/ipc/ipc.error';
-import { DiffLine, Revision } from '../model/revision.model';
-import { Space } from '../model/space.model';
+import { DiffLine, Revision } from '@core/model/revision.model';
+import { Space } from '@core/model/space.model';
 import {
   Note,
   NoteDraft,
@@ -14,7 +14,7 @@ import {
   SampleNote,
   TagUsage,
   TrashedNote,
-} from '../model/note.model';
+} from '@core/model/note.model';
 import {
   toNote,
   toWireNoteDraft,

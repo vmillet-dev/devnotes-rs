@@ -1,11 +1,11 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { debounced } from '@core/services/time/debounce';
-import { FoldersRepository } from '../data/folders.repository';
-import { NotesRepository } from '../data/notes.repository';
-import { BoardLayout } from '../model/board.model';
-import { NoteFiling } from '../model/folder.model';
-import { NotePlacement, NoteTag } from '../model/note.model';
+import { FoldersRepository } from '@core/data/folders.repository';
+import { NotesRepository } from '@core/data/notes.repository';
+import { BoardLayout } from '@core/model/board.model';
+import { NoteFiling } from '@core/model/folder.model';
+import { NotePlacement, NoteTag } from '@core/model/note.model';
 import { BoardStore } from './board.store';
 import { NotesRevision } from './notes-revision';
 

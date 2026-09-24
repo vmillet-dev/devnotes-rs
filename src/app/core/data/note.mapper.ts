@@ -26,7 +26,7 @@ import {
   NotesQuery,
   NotesView,
   TrashedNote,
-} from '../model/note.model';
+} from '@core/model/note.model';
 
 export class ContractError extends Error {
   constructor(field: string, value: unknown) {

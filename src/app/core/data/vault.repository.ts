@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { PassphraseChange, commands } from '@core/ipc/bindings';
 import { unwrap } from '@core/ipc/ipc.error';
-import { VaultState } from '../model/vault.model';
+import { VaultState } from '@core/model/vault.model';
 
 /**
  * ⚠️ The passphrase crosses the bridge and is never held on this side: nothing here keeps

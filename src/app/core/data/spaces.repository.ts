@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { commands } from '@core/ipc/bindings';
 import { unwrap } from '@core/ipc/ipc.error';
 import type { Space as WireSpace } from '@core/ipc/bindings';
-import { Space, SpaceDraft } from '../model/space.model';
+import { Space, SpaceDraft } from '@core/model/space.model';
 
 /**
  * ⚠️ The one thing a space needs converting for: `pinned` carries `#[serde(default)]` so

@@ -5,7 +5,7 @@ import { StatusNotifier } from '@core/services/notifications/status.service';
 import { hasErrorCode } from '@core/ipc/ipc.error';
 import { PassphraseChange } from '@core/ipc/bindings';
 import { TranslationRef } from '@core/services/i18n/translation-ref.model';
-import { VaultRepository } from '../data/vault.repository';
+import { VaultRepository } from '@core/data/vault.repository';
 import { VaultState } from '@core/model/vault.model';
 import { SEEDED_KEY } from '@core/services/samples/sample-notes.service';
 

@@ -1,7 +1,7 @@
 import { Injectable, Signal, computed, effect, inject, resource, signal } from '@angular/core';
-import { SpacesRepository } from '../data/spaces.repository';
+import { SpacesRepository } from '@core/data/spaces.repository';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
-import { Space } from '../model/space.model';
+import { Space } from '@core/model/space.model';
 import { NotesRevision } from './notes-revision';
 
 /**

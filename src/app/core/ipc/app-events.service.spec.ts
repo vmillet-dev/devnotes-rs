@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { Unlisten } from '../utils/subscription.util';
+import { Unlisten } from '@core/utils/subscription.util';
 import { AppEventsService, EVENT_SUBSCRIBER, EventSubscriber } from './app-events.service';
 
 describe('AppEventsService', () => {

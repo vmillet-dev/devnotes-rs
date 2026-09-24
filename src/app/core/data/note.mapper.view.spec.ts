@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { NotesView as WireNotesView } from '@core/ipc/bindings';
-import { NotesQuery } from '../model/note.model';
+import { NotesQuery } from '@core/model/note.model';
 import { toNotesView, toWireNotesQuery } from './note.mapper';
 
 const BASE_VIEW: WireNotesView = {
