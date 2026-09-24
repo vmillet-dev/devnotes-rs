@@ -2775,14 +2775,18 @@ CI build. On a realistic library (~2 MB) the sealing costs well under a millisec
 
 ### What is sealed, and what is not
 
-Sealed: note titles, bodies and sources, checklist item texts, space names, `{{field}}`
-values and their global defaults, attachment file names — and the attachment files
+Sealed: note titles, bodies and sources, the bodies kept as revisions, checklist item texts,
+space and folder names, `{{field}}` values and their global defaults, attachment file names — and the attachment files
 themselves, bytes and all.
 
 Not sealed, deliberately: tags, instants, ids, `kind`, `language` and the foreign keys.
 They are what SQL filters, sorts, groups and joins on, and sealing them would move every
-query into Rust over the whole corpus. ⚠️ Tag names are the visible cost of that line, and
-the one thing a reader of the raw file learns.
+query into Rust over the whole corpus. ⚠️ Tag names are not the only cost of that line. A
+reader of the raw file, with no key, learns the number of notes and the shape of the spaces and
+folders they hang in, every instant, each note's language, kind, pin and item states, every tag
+and `{{field}}` name, each attachment's type and size, and the **length** of every sealed value
+— AES-GCM hides no length. `libraries.json` and both `preferences.json` are plain too. The
+README lists it for the people deciding what to keep here (#216).
 `a_note_is_not_readable_in_the_file_it_was_written_to` (`tests/notes.rs`) greps a freshly
 written database and asserts exactly that split — the only test here that reads the file
 rather than the API.
@@ -2800,7 +2804,10 @@ still verify. Binding it would mean threading the row identity through every sea
 call in the stores; it buys nothing against the threat above, where the attacker reads the
 file rather than edits it and hands it back.
 
-⚠️ Nor is it a defence against a machine already compromised while DevNotes runs: the key is
+⚠️ Nor is it a defence against a machine already compromised while DevNotes runs. The
+plaintext is in the heap as ordinary `String`s, never zeroized: every body `query_notes` matched
+against, the previews it sent (#21 made those a few lines rather than the whole body), and the
+note open in the editor — so it can reach swap, a hibernation image or a crash dump. And the key is
 in this process’s memory for the length of the session, and there is no idle re-lock.
 
 ### The pieces
