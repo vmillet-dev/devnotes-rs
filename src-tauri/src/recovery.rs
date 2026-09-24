@@ -150,17 +150,10 @@ mod tests {
     use super::*;
     use crate::db;
 
-    fn scratch() -> PathBuf {
-        let directory =
-            std::env::temp_dir().join(format!("devnotes-recovery-{}", uuid::Uuid::new_v4()));
-        std::fs::create_dir_all(&directory).unwrap();
-
-        directory
-    }
-
     #[test]
     fn nothing_is_set_aside_under_an_open_library() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         std::fs::write(directory.join(DATABASE), b"a library").unwrap();
         let db: Db = std::sync::Mutex::new(Some(db::open_in_memory().unwrap()));
 
@@ -168,12 +161,12 @@ mod tests {
 
         assert!(refused.is_err());
         assert!(directory.join(DATABASE).exists());
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     #[test]
     fn a_closed_library_is_set_aside_and_the_answer_says_where() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         std::fs::write(directory.join(DATABASE), b"a sealed library").unwrap();
         std::fs::write(directory.join(KEY_FILE), b"its key").unwrap();
         let db: Db = std::sync::Mutex::new(None);
@@ -182,7 +175,6 @@ mod tests {
 
         assert!(Path::new(&target).join(DATABASE).exists());
         assert!(!directory.join(DATABASE).exists());
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     fn at() -> DateTime<Utc> {
@@ -194,11 +186,7 @@ mod tests {
         let vault = crate::vault::file::create(
             directory,
             "a passphrase",
-            crate::vault::key::Cost {
-                memory_kib: 64,
-                passes: 1,
-                lanes: 1,
-            },
+            crate::vault::key::Cost::FOR_TESTS,
         )
         .unwrap();
 
@@ -215,46 +203,47 @@ mod tests {
 
     #[test]
     fn the_database_leaves_and_the_directory_is_ready_for_a_new_one() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         library(&directory);
 
         let target = set_aside(&directory, Reason::Damaged, at()).unwrap();
 
         assert!(!directory.join(DATABASE).exists());
         assert!(target.join(DATABASE).is_file());
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     /// ⚠️ Or the next launch's orphan sweep deletes the pictures of the notes just set
     /// aside — the one way this recovery could destroy what it was meant to save.
     #[test]
     fn the_attachments_go_with_the_database_they_belong_to() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         library(&directory);
 
         let target = set_aside(&directory, Reason::Damaged, at()).unwrap();
 
         assert!(!directory.join(ATTACHMENTS).exists());
         assert!(target.join(ATTACHMENTS).join("a-1.png").is_file());
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     /// ⚠️ The passphrase is unchanged, and the rescued copy needs that exact key.
     #[test]
     fn the_key_file_stays_where_it_was() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         library(&directory);
 
         set_aside(&directory, Reason::Damaged, at()).unwrap();
 
         assert!(directory.join(KEY_FILE).is_file());
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     /// What is rescued is a real library: the point of trying `VACUUM INTO` at all.
     #[test]
     fn what_could_be_read_is_rescued_beside_it() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         let space = library(&directory);
 
         let target = set_aside(&directory, Reason::Damaged, at()).unwrap();
@@ -265,12 +254,12 @@ mod tests {
 
         assert_eq!(spaces.len(), 1);
         assert_eq!(spaces[0].id, space);
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     #[test]
     fn a_fresh_library_opens_in_its_place() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         library(&directory);
         set_aside(&directory, Reason::Damaged, at()).unwrap();
 
@@ -278,15 +267,14 @@ mod tests {
         let mut fresh = db::open(&directory.join(DATABASE), vault).unwrap();
 
         assert!(crate::spaces::store::list(&mut fresh).unwrap().is_empty());
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     #[test]
     fn setting_aside_nothing_says_so_rather_than_pretending() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
 
         assert!(set_aside(&directory, Reason::Damaged, at()).is_err());
-        std::fs::remove_dir_all(&directory).ok();
     }
     mod a_forgotten_passphrase {
         use super::*;
@@ -296,34 +284,35 @@ mod tests {
         /// merely locked into one that is gone.
         #[test]
         fn the_key_file_goes_with_the_library_it_seals() {
-            let directory = scratch();
+            let scratch = tempfile::tempdir().unwrap();
+            let directory = scratch.path().to_path_buf();
             library(&directory);
 
             let target = set_aside(&directory, Reason::Forgotten, at()).unwrap();
 
             assert!(target.join(KEY_FILE).is_file());
             assert!(!directory.join(KEY_FILE).exists());
-            std::fs::remove_dir_all(&directory).ok();
         }
 
         /// ⚠️ With no key file left, `vault_state` answers `absent` and the gate asks for
         /// a new phrase rather than one nobody has.
         #[test]
         fn what_is_left_behind_is_a_directory_with_no_library_in_it() {
-            let directory = scratch();
+            let scratch = tempfile::tempdir().unwrap();
+            let directory = scratch.path().to_path_buf();
             library(&directory);
 
             set_aside(&directory, Reason::Forgotten, at()).unwrap();
 
             assert!(!directory.join(DATABASE).exists());
             assert!(!directory.join(KEY_FILE).exists());
-            std::fs::remove_dir_all(&directory).ok();
         }
 
         /// Sealed is the promise: the copy is still openable, by whoever remembers.
         #[test]
         fn the_archived_copy_still_opens_on_the_day_the_phrase_comes_back() {
-            let directory = scratch();
+            let scratch = tempfile::tempdir().unwrap();
+            let directory = scratch.path().to_path_buf();
             let space = library(&directory);
 
             let target = set_aside(&directory, Reason::Forgotten, at()).unwrap();
@@ -334,46 +323,45 @@ mod tests {
 
             assert_eq!(spaces.len(), 1);
             assert_eq!(spaces[0].id, space);
-            std::fs::remove_dir_all(&directory).ok();
         }
 
         /// ⚠️ Nothing to rescue: the file is sealed, and SQLite hands over nothing
         /// without the key. A `rescued.sqlite3` here would be an empty promise.
         #[test]
         fn nothing_is_rescued_beside_it() {
-            let directory = scratch();
+            let scratch = tempfile::tempdir().unwrap();
+            let directory = scratch.path().to_path_buf();
             library(&directory);
 
             let target = set_aside(&directory, Reason::Forgotten, at()).unwrap();
 
             assert!(!target.join(RESCUED).exists());
-            std::fs::remove_dir_all(&directory).ok();
         }
 
         /// The two reasons must not land in the same folder: one is recoverable, one is not.
         #[test]
         fn it_is_filed_apart_from_a_damaged_one() {
-            let directory = scratch();
+            let scratch = tempfile::tempdir().unwrap();
+            let directory = scratch.path().to_path_buf();
             library(&directory);
 
             let target = set_aside(&directory, Reason::Forgotten, at()).unwrap();
 
             assert!(target.starts_with(directory.join(ARCHIVED)));
             assert!(!directory.join(DAMAGED).exists());
-            std::fs::remove_dir_all(&directory).ok();
         }
 
         /// ⚠️ Or the next launch's orphan sweep deletes the pictures of notes that are
         /// only sealed, not gone.
         #[test]
         fn the_attachments_go_with_it_too() {
-            let directory = scratch();
+            let scratch = tempfile::tempdir().unwrap();
+            let directory = scratch.path().to_path_buf();
             library(&directory);
 
             let target = set_aside(&directory, Reason::Forgotten, at()).unwrap();
 
             assert!(target.join(ATTACHMENTS).join("a-1.png").is_file());
-            std::fs::remove_dir_all(&directory).ok();
         }
     }
 }

@@ -240,17 +240,13 @@ pub fn sweep_orphan_files(db: &Db) -> Result<usize, StorageError> {
 mod tests {
     use super::*;
 
-    fn scratch() -> PathBuf {
-        let directory = std::env::temp_dir().join(format!("devnotes-{}", Uuid::new_v4()));
-        std::fs::create_dir_all(&directory).unwrap();
-
-        directory
-    }
-
-    fn a_library_with_a_note() -> (Db, String) {
+    fn a_library_with_a_note() -> (tempfile::TempDir, Db, String) {
         use crate::notes::model::NoteDraft;
 
-        let mut library = crate::db::open_in_memory().unwrap();
+        let scratch = tempfile::tempdir().unwrap();
+        let mut library = crate::db::open_in_memory()
+            .unwrap()
+            .with_directory(scratch.path().to_path_buf());
         let space = crate::spaces::store::create(&mut library, "Personal").unwrap();
         let note = crate::notes::store::create(
             &mut library,
@@ -271,7 +267,7 @@ mod tests {
         )
         .unwrap();
 
-        (std::sync::Mutex::new(Some(library)), note.id)
+        (scratch, std::sync::Mutex::new(Some(library)), note.id)
     }
 
     /// An in-memory library names a directory it never creates; opening one creates it.
@@ -284,7 +280,7 @@ mod tests {
 
     #[test]
     fn a_new_attachment_is_sealed_beside_the_library_then_recorded() {
-        let (db, note_id) = a_library_with_a_note();
+        let (_scratch, db, note_id) = a_library_with_a_note();
         let directory = attachments_of(&db);
         let attachment =
             store_new(note_id.clone(), "capture.png".to_string(), b"png", &db).unwrap();
@@ -293,37 +289,34 @@ mod tests {
         assert_ne!(written, b"png");
         let listed = store::list(&mut lock(&db).unwrap(), &note_id).unwrap();
         assert_eq!(listed[0].mime_type, "image/png");
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     /// A file without a record would sit there until the next launch's sweep.
     #[test]
     fn an_attachment_that_cannot_be_recorded_leaves_no_file_behind() {
-        let (db, _) = a_library_with_a_note();
+        let (_scratch, db, _) = a_library_with_a_note();
         let directory = attachments_of(&db);
         let refused = store_new("ghost".to_string(), "capture.png".to_string(), b"png", &db);
 
         assert!(matches!(refused, Err(StorageError::NoteNotFound(_))));
         assert_eq!(std::fs::read_dir(&directory).unwrap().count(), 0);
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     #[test]
     fn an_attachment_reads_back_as_the_bytes_it_was_given() {
-        let (db, note_id) = a_library_with_a_note();
-        let directory = attachments_of(&db);
+        let (_scratch, db, note_id) = a_library_with_a_note();
+        attachments_of(&db);
         let stored = store_new(note_id, "capture.png".to_string(), b"png", &db).unwrap();
 
         let (attachment, bytes) = read_plain(&mut lock(&db).unwrap(), &stored.id).unwrap();
 
         assert_eq!(attachment.id, stored.id);
         assert_eq!(bytes, b"png");
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     #[test]
     fn an_attachment_nobody_recorded_is_not_read() {
-        let (db, _) = a_library_with_a_note();
+        let (_scratch, db, _) = a_library_with_a_note();
 
         let refused = read_plain(&mut lock(&db).unwrap(), "../vault");
 
@@ -332,7 +325,7 @@ mod tests {
 
     #[test]
     fn deleting_an_attachment_takes_its_file_with_it() {
-        let (db, note_id) = a_library_with_a_note();
+        let (_scratch, db, note_id) = a_library_with_a_note();
         let directory = attachments_of(&db);
         let stored = store_new(note_id.clone(), "capture.png".to_string(), b"png", &db).unwrap();
 
@@ -348,12 +341,11 @@ mod tests {
             delete(&db, &stored.id),
             Err(StorageError::AttachmentNotFound(_))
         ));
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     #[test]
     fn the_sweep_removes_the_files_no_record_claims_and_only_those() {
-        let (db, note_id) = a_library_with_a_note();
+        let (_scratch, db, note_id) = a_library_with_a_note();
         let directory = attachments_of(&db);
         let kept = store_new(note_id, "capture.png".to_string(), b"png", &db).unwrap();
         std::fs::write(directory.join("orphan.png"), b"left behind").unwrap();
@@ -362,26 +354,26 @@ mod tests {
 
         assert!(directory.join(kept.stored_name()).exists());
         assert!(!directory.join("orphan.png").exists());
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     #[test]
     fn a_file_within_the_limit_is_read_whole() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         let source = directory.join("capture.png");
         std::fs::write(&source, vec![7u8; 2048]).unwrap();
 
         let bytes = read_within_limit(&source.to_string_lossy()).unwrap();
 
         assert_eq!(bytes, vec![7u8; 2048]);
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     /// The limit is applied by the read, so a file that grew past it is still refused — and
     /// no more than one byte past it is ever held.
     #[test]
     fn a_file_over_the_limit_is_read_one_byte_past_it_and_refused() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         let source = directory.join("huge.bin");
         let limit = usize::try_from(model::MAX_BYTES).unwrap();
         std::fs::write(&source, vec![0u8; limit + 10]).unwrap();
@@ -393,7 +385,6 @@ mod tests {
             model::validate_size(bytes.len() as u64).unwrap_err().field,
             "byteSize"
         );
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     #[test]

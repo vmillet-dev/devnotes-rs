@@ -83,16 +83,14 @@ pub fn sweep_at_startup(db: &Db) {
 mod tests {
     use super::*;
     use crate::attachments::model::Attachment;
-    use crate::db::iso8601;
-    use crate::notes::fixtures::note;
-
-    fn at(iso: &str) -> DateTime<Utc> {
-        iso8601::parse(iso).unwrap()
-    }
+    use crate::notes::fixtures::{at, note};
 
     /// A note trashed long ago, with an attachment whose file sits in the library.
-    fn a_trashed_note_with_a_file() -> (Db, String, std::path::PathBuf) {
-        let mut library = crate::db::open_in_memory().unwrap();
+    fn a_trashed_note_with_a_file() -> (tempfile::TempDir, Db, String, std::path::PathBuf) {
+        let scratch = tempfile::tempdir().unwrap();
+        let mut library = crate::db::open_in_memory()
+            .unwrap()
+            .with_directory(scratch.path().to_path_buf());
         let space_id = crate::spaces::store::create(&mut library, "Perso")
             .unwrap()
             .id;
@@ -115,22 +113,21 @@ mod tests {
         attachments::store::create(db, vault, &attachment).unwrap();
         store::trash::trash(&mut library, &note.id, at("2020-01-01T00:00:00.000Z")).unwrap();
 
-        (std::sync::Mutex::new(Some(library)), note.id, file)
+        (scratch, std::sync::Mutex::new(Some(library)), note.id, file)
     }
 
     #[test]
     fn purging_a_note_removes_the_files_of_its_attachments() {
-        let (db, id, file) = a_trashed_note_with_a_file();
+        let (_scratch, db, id, file) = a_trashed_note_with_a_file();
 
         assert_eq!(purge(&db, vec![id]).unwrap(), 1);
 
         assert!(!file.exists());
-        std::fs::remove_dir_all(file.parent().unwrap()).ok();
     }
 
     #[test]
     fn the_startup_sweep_purges_what_outlived_its_retention() {
-        let (db, _, file) = a_trashed_note_with_a_file();
+        let (_scratch, db, _, file) = a_trashed_note_with_a_file();
 
         sweep_at_startup(&db);
 
@@ -140,7 +137,6 @@ mod tests {
                 .unwrap()
                 .is_empty()
         );
-        std::fs::remove_dir_all(file.parent().unwrap()).ok();
     }
 
     #[test]

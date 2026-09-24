@@ -41,6 +41,14 @@ impl Library {
         &self.vault
     }
 
+    /// An in-memory library that writes its files into `directory`, for a test that
+    /// attaches something.
+    #[cfg(test)]
+    pub(crate) fn with_directory(mut self, directory: PathBuf) -> Self {
+        self.directory = directory;
+        self
+    }
+
     /// Where the database file sits, and everything that travels with it. ⚠️ Asked of the
     /// open library rather than of the registry, which is a file read per call.
     pub fn directory(&self) -> &Path {
@@ -171,7 +179,8 @@ pub fn open(path: &Path, vault: Vault) -> Result<Library, StorageError> {
     })
 }
 
-/// Public for the integration tests, which see nothing of the crate but its API.
+/// For the integration tests, which see nothing of the crate but its API.
+#[doc(hidden)]
 pub fn open_in_memory() -> Result<Library, StorageError> {
     let mut connection = SqliteConnection::establish(":memory:")
         .map_err(|error| StorageError::Migration(error.to_string()))?;
@@ -188,25 +197,15 @@ pub fn open_in_memory() -> Result<Library, StorageError> {
     })
 }
 
-/// The same key the in-memory libraries use, for the benchmarks, which open a file.
-pub fn bench_vault() -> Result<Vault, StorageError> {
-    test_vault()
-}
-
-/// ⚠️ A key of its own per in-memory library, derived at a cost nobody would ship. These
-/// libraries exist for the length of a test and never reach a file, so what matters is
-/// that the sealing path is the real one — not that the key is expensive to guess.
+/// ⚠️ A key derived at a cost nobody would ship, for in-memory libraries and the benchmarks'
+/// corpus: what matters there is that the sealing path is the real one, not that the key is
+/// expensive to guess.
+#[doc(hidden)]
 pub fn test_vault() -> Result<Vault, StorageError> {
-    use crate::vault::key::Cost;
-
     Vault::derive(
         "in-memory",
         b"0123456789abcdef",
-        Cost {
-            memory_kib: 64,
-            passes: 1,
-            lanes: 1,
-        },
+        crate::vault::key::Cost::FOR_TESTS,
     )
 }
 
@@ -314,9 +313,8 @@ mod tests {
     /// launch copy is a copy of a broken file.
     #[test]
     fn a_damaged_file_is_named_as_such_rather_than_opened() {
-        let directory =
-            std::env::temp_dir().join(format!("devnotes-damaged-{}", uuid::Uuid::new_v4()));
-        std::fs::create_dir_all(&directory).unwrap();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         let path = directory.join(crate::layout::DATABASE);
 
         // A real library, with enough in it to fill more than the first page.
@@ -345,8 +343,6 @@ mod tests {
             format!("{error}").contains(&path.display().to_string()),
             "the failure does not name the file: {error}"
         );
-
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     /// A sound library answers the check and says nothing about it.
@@ -362,9 +358,8 @@ mod tests {
     /// have never opened.
     #[test]
     fn a_database_that_will_not_open_says_which_file() {
-        let directory =
-            std::env::temp_dir().join(format!("devnotes-unopenable-{}", uuid::Uuid::new_v4()));
-        std::fs::create_dir_all(&directory).unwrap();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
 
         // A directory is not a database file, so establishing it fails the way a corrupt
         // file or a bad permission would. ⚠️ Destructured rather than `unwrap_err`, which
@@ -377,8 +372,6 @@ mod tests {
             format!("{error}").contains(&directory.display().to_string()),
             "the failure does not name the file: {error}"
         );
-
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     /// ⚠️ Zero is SQLite's own default, and it turns a database another process holds for

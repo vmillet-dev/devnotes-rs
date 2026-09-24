@@ -1,12 +1,11 @@
-use chrono::{DateTime, Utc};
 use devnotes_lib::db::Library;
 
 use devnotes_lib::attachments::model::Attachment;
 use devnotes_lib::attachments::store as attachments;
-use devnotes_lib::db::{iso8601, open_in_memory};
+use devnotes_lib::db::open_in_memory;
 use devnotes_lib::notes::checklist::NoteKind;
 use devnotes_lib::notes::language::Language;
-use devnotes_lib::notes::model::{NoteDraft, NoteLifecycle};
+use devnotes_lib::notes::model::NoteDraft;
 use devnotes_lib::notes::store as notes;
 use devnotes_lib::spaces::store as spaces;
 use devnotes_lib::transfer::bundle::{self, collect, merge as merge_bundle};
@@ -14,23 +13,17 @@ use devnotes_lib::transfer::file;
 use devnotes_lib::transfer::file::Payload;
 use devnotes_lib::transfer::model::{self, Bundle, ExportScope, ImportReport, IncomingBundle};
 
-fn t0() -> DateTime<Utc> {
-    iso8601::parse("2026-07-25T09:00:00.000Z").unwrap()
-}
+mod common;
+use common::{snippet, t0};
 
 fn draft(space_id: &str, title: &str) -> NoteDraft {
     NoteDraft {
-        space_id: space_id.to_string(),
-        folder_id: None,
         title: title.to_string(),
         language: Language::Sql,
         content: "select 1".to_string(),
         source: "API / Auth".to_string(),
         tags: vec!["auth".to_string()],
-        pinned: false,
-        lifecycle: NoteLifecycle::Permanent,
-        kind: NoteKind::Snippet,
-        items: Vec::new(),
+        ..snippet(space_id)
     }
 }
 
@@ -285,18 +278,6 @@ fn attach(
     attachments::create(db, vault, record)
 }
 
-/// A directory of its own per scenario: these write real files beside a real archive.
-fn scratch() -> std::path::PathBuf {
-    let stamp = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
-    let directory = std::env::temp_dir().join(format!("devnotes-transfer-{stamp}"));
-    std::fs::create_dir_all(&directory).unwrap();
-
-    directory
-}
-
 fn capture(note_id: &str) -> Attachment {
     Attachment {
         id: format!("a-{note_id}"),
@@ -313,7 +294,8 @@ fn capture(note_id: &str) -> Attachment {
 /// nothing said so.
 #[test]
 fn an_attachment_travels_with_the_library() {
-    let directory = scratch();
+    let scratch = tempfile::tempdir().unwrap();
+    let directory = scratch.path().to_path_buf();
     let source_files = directory.join("source");
     let target_files = directory.join("target");
     std::fs::create_dir_all(&source_files).unwrap();
@@ -348,15 +330,14 @@ fn an_attachment_travels_with_the_library() {
         b"\x89PNG"
     );
     assert_ne!(landed[0].id, record.id);
-
-    std::fs::remove_dir_all(&directory).ok();
 }
 
 /// Re-importing the same archive adds nothing, attachments included: the notes are
 /// skipped, so their files have nowhere to land twice.
 #[test]
 fn importing_the_same_archive_twice_restores_the_attachment_once() {
-    let directory = scratch();
+    let scratch = tempfile::tempdir().unwrap();
+    let directory = scratch.path().to_path_buf();
     let files = directory.join("files");
     std::fs::create_dir_all(&files).unwrap();
 
@@ -389,15 +370,14 @@ fn importing_the_same_archive_twice_restores_the_attachment_once() {
     assert_eq!(second.notes_imported, 0);
     assert_eq!(second.attachments_imported, 0);
     assert_eq!(attachments::list(&mut target, &note_id).unwrap().len(), 1);
-
-    std::fs::remove_dir_all(&directory).ok();
 }
 
 /// ⚠️ A record whose bytes the archive does not carry is counted, never swallowed: the
 /// note arrives with a preview that will stay empty, and the report is what explains it.
 #[test]
 fn an_attachment_the_archive_does_not_carry_is_reported() {
-    let directory = scratch();
+    let scratch = tempfile::tempdir().unwrap();
+    let directory = scratch.path().to_path_buf();
     let files = directory.join("files");
     std::fs::create_dir_all(&files).unwrap();
 
@@ -427,8 +407,6 @@ fn an_attachment_the_archive_does_not_carry_is_reported() {
     assert_eq!(report.notes_imported, 2);
     assert_eq!(report.attachments_missing, 1);
     assert_eq!(report.attachments_imported, 0);
-
-    std::fs::remove_dir_all(&directory).ok();
 }
 
 mod folders_travelling {

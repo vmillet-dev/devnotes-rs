@@ -345,16 +345,7 @@ mod tests {
     use crate::vault::key::Cost;
 
     fn library() -> Vault {
-        Vault::derive(
-            "the library",
-            b"0123456789abcdef",
-            Cost {
-                memory_kib: 64,
-                passes: 1,
-                lanes: 1,
-            },
-        )
-        .unwrap()
+        Vault::derive("the library", b"0123456789abcdef", Cost::FOR_TESTS).unwrap()
     }
 
     fn bundle() -> Bundle {
@@ -383,13 +374,6 @@ mod tests {
         }
     }
 
-    fn scratch() -> PathBuf {
-        let directory = std::env::temp_dir().join(format!("devnotes-{}", Uuid::new_v4()));
-        std::fs::create_dir_all(&directory).unwrap();
-
-        directory
-    }
-
     /// The attachment as it really sits beside the database: sealed under the library.
     fn seal_beside(directory: &Path, vault: &Vault, bytes: &[u8]) {
         let sealed = vault.seal_bytes(bytes).unwrap();
@@ -411,7 +395,8 @@ mod tests {
 
     #[test]
     fn two_exports_of_the_same_target_never_stage_the_same_file() {
-        let target = std::env::temp_dir().join("library.devnotes");
+        let scratch = tempfile::tempdir().unwrap();
+        let target = scratch.path().join("library.devnotes");
 
         let first = staging_path(&target.to_string_lossy());
         let second = staging_path(&target.to_string_lossy());
@@ -421,7 +406,8 @@ mod tests {
 
     #[test]
     fn an_export_leaves_no_staging_file_behind() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         let target = directory.join("library.devnotes");
 
         write(
@@ -440,12 +426,12 @@ mod tests {
             .collect();
 
         assert_eq!(left, ["library.devnotes"]);
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     #[test]
     fn exporting_over_an_existing_file_replaces_it_whole() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         let target = directory.join("library.devnotes");
         std::fs::write(&target, "previous export, longer than what replaces it").unwrap();
 
@@ -460,12 +446,12 @@ mod tests {
 
         let written = std::fs::read(&target).unwrap();
         assert_eq!(written[..4], ZIP_MAGIC);
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     #[test]
     fn an_export_to_an_unreachable_directory_reports_rather_than_panicking() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
 
         let error = write(
             "/no/such/directory/library.devnotes",
@@ -477,12 +463,12 @@ mod tests {
         .unwrap_err();
 
         assert!(matches!(error, StorageError::File(_)), "{error}");
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     #[test]
     fn a_written_bundle_reads_back_as_itself() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         let target = directory.join("library.devnotes");
 
         write(
@@ -497,13 +483,13 @@ mod tests {
 
         assert_eq!(read_back.bundle.notes.len(), 1);
         assert_eq!(read_back.bundle.spaces[0].name, "Personal");
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     /// The point of the archive: the bytes travel with the record.
     #[test]
     fn an_attachment_travels_with_its_note() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         let target = directory.join("library.devnotes");
         let vault = library();
         seal_beside(&directory, &vault, b"\x89PNG");
@@ -528,13 +514,13 @@ mod tests {
             payload.take(&record().stored_name()),
             Some(b"\x89PNG".to_vec())
         );
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     /// ⚠️ A record whose file has gone missing must not fail the export.
     #[test]
     fn a_record_whose_file_is_gone_leaves_the_export_rather_than_failing_it() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         let target = directory.join("library.devnotes");
 
         let mut exported = bundle();
@@ -550,13 +536,13 @@ mod tests {
 
         assert_eq!(report.attachments, 0);
         assert_eq!(report.notes, 1);
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     /// ⚠️ New DevNotes reads what old DevNotes wrote: a `.json` export predates the archive.
     #[test]
     fn a_json_export_from_before_the_archive_still_imports() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         let target = directory.join("library.json");
         let json = serde_json::to_string_pretty(&bundle()).unwrap();
         std::fs::write(&target, json).unwrap();
@@ -565,14 +551,14 @@ mod tests {
 
         assert_eq!(read_back.bundle.notes.len(), 1);
         assert!(matches!(payload, Payload::Empty));
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     /// ⚠️ The whole point of protecting an export: the file most likely to leave the
     /// machine was the one carrying everything in the clear.
     #[test]
     fn a_protected_export_carries_none_of_the_notes_in_the_clear() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         let target = directory.join("library.devnotes");
         let vault = library();
         seal_beside(&directory, &vault, b"a screenshot of something");
@@ -596,13 +582,12 @@ mod tests {
         assert!(!haystack.contains("hunter2"));
         assert!(!haystack.contains("Personal"));
         assert!(!haystack.contains("a screenshot of"));
-
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     #[test]
     fn a_protected_export_reads_back_whole_with_its_phrase() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         let target = directory.join("library.devnotes");
         let vault = library();
         seal_beside(&directory, &vault, b"\x89PNG");
@@ -626,14 +611,14 @@ mod tests {
             payload.take(&record().stored_name()),
             Some(b"\x89PNG".to_vec())
         );
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     /// ⚠️ Offered without one, it asks rather than failing: nothing can know a file is
     /// protected until something has looked inside it.
     #[test]
     fn a_protected_export_asks_for_a_phrase_rather_than_failing() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         let target = directory.join("library.devnotes");
 
         write(
@@ -648,13 +633,12 @@ mod tests {
         let error = read(&target.to_string_lossy(), None).unwrap_err();
         assert!(matches!(error, StorageError::PassphraseRequired), "{error}");
         assert!(is_protected(&target.to_string_lossy()).unwrap());
-
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     #[test]
     fn the_wrong_phrase_is_refused_rather_than_read_as_nonsense() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         let target = directory.join("library.devnotes");
 
         write(
@@ -669,14 +653,14 @@ mod tests {
         let error = read(&target.to_string_lossy(), Some("the wrong one")).unwrap_err();
 
         assert!(matches!(error, StorageError::WrongPassphrase), "{error}");
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     /// ⚠️ Asked before an import starts, so it must not pay for the bundle: a file whose
     /// payload could not be parsed at all still answers the question.
     #[test]
     fn whether_a_file_is_protected_is_answered_without_reading_the_bundle() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         let target = directory.join("library.devnotes");
         write(
             &target.to_string_lossy(),
@@ -696,14 +680,13 @@ mod tests {
         assert!(!is_protected(&target.to_string_lossy()).unwrap());
         // And the import that follows is what says the file is unreadable.
         assert!(read(&target.to_string_lossy(), None).is_err());
-
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     /// An ordinary export needs no phrase, and must not be made to ask for one.
     #[test]
     fn an_unprotected_export_is_not_reported_as_protected() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         let target = directory.join("library.devnotes");
 
         write(
@@ -716,6 +699,5 @@ mod tests {
         .unwrap();
 
         assert!(!is_protected(&target.to_string_lossy()).unwrap());
-        std::fs::remove_dir_all(&directory).ok();
     }
 }

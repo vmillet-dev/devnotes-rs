@@ -321,14 +321,6 @@ pub fn delete_library(id: String, app: AppHandle, db: State<'_, Db>) -> Result<(
 mod tests {
     use super::*;
 
-    fn scratch() -> PathBuf {
-        let directory =
-            std::env::temp_dir().join(format!("devnotes-libraries-{}", uuid::Uuid::new_v4()));
-        std::fs::create_dir_all(&directory).unwrap();
-
-        directory
-    }
-
     fn entry(id: &str, directory: &str) -> LibraryEntry {
         LibraryEntry {
             id: id.to_string(),
@@ -342,13 +334,13 @@ mod tests {
     /// deletable like any other.
     #[test]
     fn a_library_sits_under_a_folder_of_its_own() {
-        let profile = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let profile = scratch.path().to_path_buf();
 
         assert_eq!(
             directory_of(&profile, &entry("b", "libraries/b")),
             profile.join("libraries").join("b")
         );
-        std::fs::remove_dir_all(&profile).ok();
     }
 
     /// ⚠️ Without the key file the gathered library is one nobody can ever open again,
@@ -356,7 +348,8 @@ mod tests {
     /// of notes that are merely somewhere else.
     #[test]
     fn gathering_takes_the_key_and_the_attachments_with_the_database() {
-        let profile = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let profile = scratch.path().to_path_buf();
         std::fs::write(profile.join(DATABASE), b"a database").unwrap();
         std::fs::write(profile.join(KEY_FILE), b"{}").unwrap();
         std::fs::create_dir_all(profile.join("attachments")).unwrap();
@@ -373,14 +366,14 @@ mod tests {
         assert!(into.join("backups").is_dir());
         assert!(!profile.join(DATABASE).exists());
         assert!(!profile.join("attachments").exists());
-        std::fs::remove_dir_all(&profile).ok();
     }
 
     /// A directory a library gains has to be declared in `layout` to travel, and this is
     /// what notices one that was not moved.
     #[test]
     fn gathering_moves_every_entry_the_layout_declares() {
-        let profile = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let profile = scratch.path().to_path_buf();
         for name in LIBRARY_FILES {
             std::fs::write(profile.join(name), b"x").unwrap();
         }
@@ -396,14 +389,14 @@ mod tests {
             assert!(into.join(name).exists(), "{name} did not arrive");
             assert!(!profile.join(name).exists(), "{name} stayed behind");
         }
-        std::fs::remove_dir_all(&profile).ok();
     }
 
     /// ⚠️ The application's own preferences stay at the root: they follow the person, not
     /// the corpus, and `backup::wanted` reads one of their keys from there.
     #[test]
     fn gathering_leaves_the_application_preferences_where_they_are() {
-        let profile = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let profile = scratch.path().to_path_buf();
         std::fs::write(profile.join(DATABASE), b"a database").unwrap();
         std::fs::write(profile.join("preferences.json"), b"{}").unwrap();
         let into = profile.join("libraries").join("x");
@@ -413,26 +406,26 @@ mod tests {
 
         assert!(profile.join("preferences.json").is_file());
         assert!(!into.join("preferences.json").exists());
-        std::fs::remove_dir_all(&profile).ok();
     }
 
     /// Nothing there is nothing to move, and must not leave a half-made library behind.
     #[test]
     fn a_profile_with_no_library_in_it_holds_none() {
-        let profile = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let profile = scratch.path().to_path_buf();
         assert!(!holds_a_library(&profile));
 
         std::fs::write(profile.join(KEY_FILE), b"{}").unwrap();
 
         assert!(holds_a_library(&profile));
-        std::fs::remove_dir_all(&profile).ok();
     }
 
     /// ⚠️ `fs::write` truncates first: a disk that fills mid-write would otherwise leave a
     /// registry naming no libraries at all, with every one of them still on disk.
     #[test]
     fn the_registry_is_staged_and_renamed_rather_than_truncated() {
-        let profile = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let profile = scratch.path().to_path_buf();
         let registry = Registry {
             libraries: vec![entry("a", "")],
             open: Some("a".to_string()),
@@ -443,16 +436,15 @@ mod tests {
         assert!(profile.join(REGISTRY).is_file());
         assert!(!profile.join(format!("{REGISTRY}.writing")).exists());
         assert_eq!(read(&profile).libraries, registry.libraries);
-        std::fs::remove_dir_all(&profile).ok();
     }
 
     #[test]
     fn a_registry_that_cannot_be_read_answers_an_empty_one_rather_than_failing() {
-        let profile = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let profile = scratch.path().to_path_buf();
         std::fs::write(profile.join(REGISTRY), b"not json at all").unwrap();
 
         assert!(read(&profile).libraries.is_empty());
-        std::fs::remove_dir_all(&profile).ok();
     }
 
     /// ⚠️ A gate that asks for *a* library's passphrase needs one to be current; a
@@ -481,7 +473,8 @@ mod tests {
     /// names the directory they were moved into.
     #[test]
     fn a_profile_from_before_the_registry_is_adopted_and_gathered() {
-        let profile = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let profile = scratch.path().to_path_buf();
         std::fs::write(profile.join(DATABASE), b"a database").unwrap();
         std::fs::write(profile.join(KEY_FILE), b"{}").unwrap();
 
@@ -495,50 +488,50 @@ mod tests {
             registry.open.as_deref(),
             Some(registry.libraries[0].id.as_str())
         );
-        std::fs::remove_dir_all(&profile).ok();
     }
 
     /// A first launch has nothing to gather, and still gets a library of its own.
     #[test]
     fn a_virgin_profile_gets_one_library_and_no_files_moved() {
-        let profile = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let profile = scratch.path().to_path_buf();
 
         let registry = registry_in(&profile);
 
         assert_eq!(registry.libraries.len(), 1);
         assert!(directory_of(&profile, &registry.libraries[0]).is_dir());
-        std::fs::remove_dir_all(&profile).ok();
     }
 
     /// ⚠️ Read twice must not adopt twice: the second read finds the registry it wrote.
     #[test]
     fn adopting_happens_once() {
-        let profile = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let profile = scratch.path().to_path_buf();
         let first = registry_in(&profile);
 
         let second = registry_in(&profile);
 
         assert_eq!(second.libraries.len(), 1);
         assert_eq!(second.libraries[0].id, first.libraries[0].id);
-        std::fs::remove_dir_all(&profile).ok();
     }
 
     #[test]
     fn the_open_directory_is_the_one_the_registry_points_at() {
-        let profile = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let profile = scratch.path().to_path_buf();
         let created = create_in(&profile, "Boulot").unwrap();
         point_at(&profile, &created.id).unwrap();
 
         let directory = open_directory_in(&profile).unwrap();
 
         assert_eq!(directory, directory_of(&profile, &created));
-        std::fs::remove_dir_all(&profile).ok();
     }
 
     /// ⚠️ A library is born when its passphrase is chosen, not here: only the directory.
     #[test]
     fn creating_one_adds_it_to_the_registry_and_leaves_it_closed() {
-        let profile = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let profile = scratch.path().to_path_buf();
         let first = registry_in(&profile).open;
 
         let created = create_in(&profile, "  Boulot  ").unwrap();
@@ -549,24 +542,24 @@ mod tests {
         assert_eq!(registry.open, first, "creating does not open");
         assert!(directory_of(&profile, &created).is_dir());
         assert!(!directory_of(&profile, &created).join(DATABASE).exists());
-        std::fs::remove_dir_all(&profile).ok();
     }
 
     #[test]
     fn pointing_at_one_that_does_not_exist_says_so() {
-        let profile = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let profile = scratch.path().to_path_buf();
         registry_in(&profile);
 
         assert!(matches!(
             point_at(&profile, "nothing"),
             Err(StorageError::LibraryNotFound(_))
         ));
-        std::fs::remove_dir_all(&profile).ok();
     }
 
     #[test]
     fn renaming_touches_the_name_and_nothing_else() {
-        let profile = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let profile = scratch.path().to_path_buf();
         let created = create_in(&profile, "Boulot").unwrap();
         let open = registry_in(&profile).open;
 
@@ -577,24 +570,24 @@ mod tests {
         assert_eq!(renamed.name, "Archives");
         assert_eq!(renamed.directory, created.directory);
         assert_eq!(registry.open, open);
-        std::fs::remove_dir_all(&profile).ok();
     }
 
     #[test]
     fn renaming_one_that_does_not_exist_says_so() {
-        let profile = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let profile = scratch.path().to_path_buf();
         registry_in(&profile);
 
         assert!(matches!(
             rename_in(&profile, "nothing", "Archives"),
             Err(StorageError::LibraryNotFound(_))
         ));
-        std::fs::remove_dir_all(&profile).ok();
     }
 
     #[test]
     fn deleting_takes_the_entry_and_the_files() {
-        let profile = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let profile = scratch.path().to_path_buf();
         let created = create_in(&profile, "Boulot").unwrap();
         std::fs::write(directory_of(&profile, &created).join(DATABASE), b"x").unwrap();
 
@@ -602,14 +595,14 @@ mod tests {
 
         assert_eq!(registry_in(&profile).libraries.len(), 1);
         assert!(!directory_of(&profile, &created).exists());
-        std::fs::remove_dir_all(&profile).ok();
     }
 
     /// ⚠️ The gate would have nothing to offer, and the next read would adopt the empty
     /// root as a library nobody asked for.
     #[test]
     fn the_last_library_cannot_be_deleted() {
-        let profile = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let profile = scratch.path().to_path_buf();
         let only = registry_in(&profile).libraries[0].clone();
 
         assert!(matches!(
@@ -617,14 +610,14 @@ mod tests {
             Err(StorageError::LastLibrary)
         ));
         assert_eq!(registry_in(&profile).libraries.len(), 1);
-        std::fs::remove_dir_all(&profile).ok();
     }
 
     /// Deleting the open one leaves the registry pointing at what is left, never at a
     /// library that is gone.
     #[test]
     fn deleting_the_open_one_moves_the_mark_to_what_remains() {
-        let profile = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let profile = scratch.path().to_path_buf();
         let created = create_in(&profile, "Boulot").unwrap();
         point_at(&profile, &created.id).unwrap();
 
@@ -636,18 +629,17 @@ mod tests {
             registry.open.as_deref(),
             Some(registry.libraries[0].id.as_str())
         );
-        std::fs::remove_dir_all(&profile).ok();
     }
 
     #[test]
     fn deleting_one_that_does_not_exist_says_so() {
-        let profile = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let profile = scratch.path().to_path_buf();
         create_in(&profile, "Boulot").unwrap();
 
         assert!(matches!(
             delete_in(&profile, "nothing"),
             Err(StorageError::LibraryNotFound(_))
         ));
-        std::fs::remove_dir_all(&profile).ok();
     }
 }

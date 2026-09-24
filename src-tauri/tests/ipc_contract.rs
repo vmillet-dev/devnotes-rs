@@ -4,8 +4,6 @@
 
 use std::collections::BTreeMap;
 
-use chrono::{DateTime, Utc};
-
 use devnotes_lib::attachments::model::Attachment;
 use devnotes_lib::db::iso8601;
 use devnotes_lib::error::StorageError;
@@ -24,9 +22,8 @@ use devnotes_lib::transfer::model::{Bundle, ImportReport};
 
 const NOW: &str = "2026-07-25T09:00:00.000Z";
 
-fn at(iso: &str) -> DateTime<Utc> {
-    iso8601::parse(iso).expect("tests write valid instants")
-}
+mod common;
+use common::at;
 
 fn sample() -> Note {
     Note {

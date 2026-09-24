@@ -185,52 +185,37 @@ mod tests {
 
     /// ⚠️ Cheap parameters: the real ones cost about a second a derivation, and these tests derive
     /// a dozen times. What they assert on is the file, not Argon2id's strength.
-    fn cheap() -> Cost {
-        Cost {
-            memory_kib: 64,
-            passes: 1,
-            lanes: 1,
-        }
-    }
-
-    fn scratch() -> PathBuf {
-        let directory = std::env::temp_dir().join(format!("devnotes-vault-{}", Uuid::new_v4()));
-        std::fs::create_dir_all(&directory).unwrap();
-
-        directory
-    }
-
     #[test]
     fn a_created_vault_opens_again_with_the_same_passphrase() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
 
-        let created = create(&directory, "correct horse", cheap()).unwrap();
+        let created = create(&directory, "correct horse", Cost::FOR_TESTS).unwrap();
         let sealed = created.seal("a note").unwrap();
 
         let reopened = unlock(&directory, "correct horse").unwrap();
         assert_eq!(reopened.open(&sealed).unwrap(), "a note");
-
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     /// ⚠️ Without the wrapped key to open, this would succeed and every later write
     /// would seal real notes under a key nobody can reproduce.
     #[test]
     fn a_wrong_passphrase_is_refused_rather_than_accepted_quietly() {
-        let directory = scratch();
-        create(&directory, "correct horse", cheap()).unwrap();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
+        create(&directory, "correct horse", Cost::FOR_TESTS).unwrap();
 
         let error = unlock(&directory, "battery staple").unwrap_err();
 
         assert!(matches!(error, StorageError::WrongPassphrase));
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     /// The key it carries is sealed; the phrase that opens it is nowhere.
     #[test]
     fn the_key_file_holds_no_passphrase_and_no_key_in_the_clear() {
-        let directory = scratch();
-        let vault = create(&directory, "correct horse", cheap()).unwrap();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
+        let vault = create(&directory, "correct horse", Cost::FOR_TESTS).unwrap();
 
         let written = std::fs::read_to_string(path_in(&directory)).unwrap();
         let sealed = vault.seal("a note").unwrap();
@@ -248,51 +233,62 @@ mod tests {
                 .unwrap(),
             "a note"
         );
-
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     /// ⚠️ The point of wrapping a random key rather than deriving one: the notes stay
     /// sealed exactly as they were, and a change cannot half-rewrite a library.
     #[test]
     fn a_changed_passphrase_opens_the_notes_the_old_one_sealed() {
-        let directory = scratch();
-        let sealed = create(&directory, "correct horse", cheap())
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
+        let sealed = create(&directory, "correct horse", Cost::FOR_TESTS)
             .unwrap()
             .seal("a note")
             .unwrap();
 
-        change_passphrase(&directory, "correct horse", "battery staple", cheap()).unwrap();
+        change_passphrase(
+            &directory,
+            "correct horse",
+            "battery staple",
+            Cost::FOR_TESTS,
+        )
+        .unwrap();
 
         let reopened = unlock(&directory, "battery staple").unwrap();
         assert_eq!(reopened.open(&sealed).unwrap(), "a note");
-
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     #[test]
     fn the_old_passphrase_stops_opening_the_library() {
-        let directory = scratch();
-        create(&directory, "correct horse", cheap()).unwrap();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
+        create(&directory, "correct horse", Cost::FOR_TESTS).unwrap();
 
-        change_passphrase(&directory, "correct horse", "battery staple", cheap()).unwrap();
+        change_passphrase(
+            &directory,
+            "correct horse",
+            "battery staple",
+            Cost::FOR_TESTS,
+        )
+        .unwrap();
 
         assert!(matches!(
             unlock(&directory, "correct horse").unwrap_err(),
             StorageError::WrongPassphrase
         ));
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     /// ⚠️ Refused *before* anything is written: a change that took a wrong current phrase
     /// on trust would lock the library behind a phrase nobody chose.
     #[test]
     fn a_change_that_cannot_name_the_current_passphrase_writes_nothing() {
-        let directory = scratch();
-        create(&directory, "correct horse", cheap()).unwrap();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
+        create(&directory, "correct horse", Cost::FOR_TESTS).unwrap();
         let before = std::fs::read_to_string(path_in(&directory)).unwrap();
 
-        let error = change_passphrase(&directory, "not it", "battery staple", cheap()).unwrap_err();
+        let error =
+            change_passphrase(&directory, "not it", "battery staple", Cost::FOR_TESTS).unwrap_err();
 
         assert!(matches!(error, StorageError::WrongPassphrase));
         assert_eq!(
@@ -300,33 +296,37 @@ mod tests {
             before
         );
         assert!(unlock(&directory, "correct horse").is_ok());
-
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     /// Two phrases over one library must not share a derivation.
     #[test]
     fn a_change_draws_a_fresh_salt() {
-        let directory = scratch();
-        create(&directory, "correct horse", cheap()).unwrap();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
+        create(&directory, "correct horse", Cost::FOR_TESTS).unwrap();
         let before: serde_json::Value =
             serde_json::from_str(&std::fs::read_to_string(path_in(&directory)).unwrap()).unwrap();
 
-        change_passphrase(&directory, "correct horse", "battery staple", cheap()).unwrap();
+        change_passphrase(
+            &directory,
+            "correct horse",
+            "battery staple",
+            Cost::FOR_TESTS,
+        )
+        .unwrap();
 
         let after: serde_json::Value =
             serde_json::from_str(&std::fs::read_to_string(path_in(&directory)).unwrap()).unwrap();
         assert_ne!(before["kdf"]["salt"], after["kdf"]["salt"]);
         assert_ne!(before["key"], after["key"]);
-
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     /// The cost travels with the file, so raising the default later does not lock an
     /// existing library out.
     #[test]
     fn a_library_reopens_at_the_cost_it_was_written_with() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         let odd = Cost {
             memory_kib: 96,
             passes: 3,
@@ -336,26 +336,25 @@ mod tests {
 
         // `unlock` reads the parameters rather than assuming today's defaults.
         assert!(unlock(&directory, "correct horse").is_ok());
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     /// ⚠️ Overwriting would throw away the only way into the notes sitting beside it.
     #[test]
     fn creating_over_an_existing_key_file_is_refused() {
-        let directory = scratch();
-        create(&directory, "first", cheap()).unwrap();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
+        create(&directory, "first", Cost::FOR_TESTS).unwrap();
 
-        assert!(create(&directory, "second", cheap()).is_err());
+        assert!(create(&directory, "second", Cost::FOR_TESTS).is_err());
         // And the first passphrase still works.
         assert!(unlock(&directory, "first").is_ok());
-
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     #[test]
     fn a_key_file_from_a_newer_version_says_so_rather_than_failing_on_serde() {
-        let directory = scratch();
-        create(&directory, "correct horse", cheap()).unwrap();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
+        create(&directory, "correct horse", Cost::FOR_TESTS).unwrap();
 
         let path = path_in(&directory);
         let mut json: serde_json::Value =
@@ -365,14 +364,13 @@ mod tests {
 
         let error = unlock(&directory, "correct horse").unwrap_err();
         assert!(format!("{error}").contains("reads up to"));
-
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     #[test]
     fn an_unknown_derivation_is_named_rather_than_guessed_at() {
-        let directory = scratch();
-        create(&directory, "correct horse", cheap()).unwrap();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
+        create(&directory, "correct horse", Cost::FOR_TESTS).unwrap();
 
         let path = path_in(&directory);
         let mut json: serde_json::Value =
@@ -382,25 +380,23 @@ mod tests {
 
         let error = unlock(&directory, "correct horse").unwrap_err();
         assert!(format!("{error}").contains("scrypt"));
-
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     #[test]
     fn a_library_with_no_key_file_says_it_has_none() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
 
         assert!(!exists(&directory));
-        create(&directory, "correct horse", cheap()).unwrap();
+        create(&directory, "correct horse", Cost::FOR_TESTS).unwrap();
         assert!(exists(&directory));
-
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     #[test]
     fn creating_leaves_no_staging_file_behind() {
-        let directory = scratch();
-        create(&directory, "correct horse", cheap()).unwrap();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
+        create(&directory, "correct horse", Cost::FOR_TESTS).unwrap();
 
         let left: Vec<_> = std::fs::read_dir(&directory)
             .unwrap()
@@ -409,6 +405,5 @@ mod tests {
             .collect();
 
         assert_eq!(left, [KEY_FILE]);
-        std::fs::remove_dir_all(&directory).ok();
     }
 }
