@@ -91,6 +91,7 @@ export class SettingsStore {
   readonly libraryRailWidth = this.setting('libraryRailWidth', asPixels(RAIL_WIDTH));
   readonly showPinnedFirst = this.setting('showPinnedFirst', asBoolean);
   readonly automaticBackups = this.setting('automaticBackups', asBoolean);
+  readonly backupAttachments = this.setting('backupAttachments', asBoolean);
   readonly copyConfirmation = this.setting('copyConfirmation', asBoolean);
   readonly updateNotifications = this.setting('updateNotifications', asBoolean);
   readonly skippedUpdate = this.setting('skippedUpdate', asText);

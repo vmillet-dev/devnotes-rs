@@ -14,11 +14,15 @@ use diesel::sql_types::Text;
 
 use crate::db::{Db, Library, lock};
 use crate::error::{AppError, FileContext, StorageError};
-use crate::layout::{self, BACKUPS, DATABASE_SIDECARS, KEY_FILE, REPLACED};
+use crate::layout::{self, ATTACHMENTS, BACKUPS, DATABASE_SIDECARS, KEY_FILE, REPLACED};
 use crate::vault::key::{Cost, Vault};
 
 /// The key the front end writes this setting under, in the application's preferences.
 pub(crate) const AUTOMATIC_BACKUPS_KEY: &str = "devnotes.automaticBackups";
+
+/// Whether a copy carries `attachments/`, read the same way: a copy of the corpus is a
+/// multiple of it, and some would rather keep the notes alone.
+pub(crate) const BACKUP_ATTACHMENTS_KEY: &str = "devnotes.backupAttachments";
 
 /// Enough to reach past the launch that went wrong without becoming a second library.
 pub(crate) const KEEP: usize = 3;
@@ -51,11 +55,12 @@ fn existing(directory: &Path) -> Vec<PathBuf> {
 /// Takes one if the newest is older than a day, then prunes to [`KEEP`].
 ///
 /// ⚠️ The key file travels with the database: without `vault.json` the copy is a sealed file
-/// nobody can ever open.
+/// nobody can ever open. The attachments are copied as they are, sealed under that same key.
 pub(crate) fn rotate(
     library: &Path,
     connection: &mut Library,
     now: DateTime<Utc>,
+    with_attachments: bool,
 ) -> Result<Option<PathBuf>, StorageError> {
     let directory = library.join(BACKUPS);
     let taken = existing(&directory);
@@ -85,12 +90,47 @@ pub(crate) fn rotate(
         StorageError::File(format!("{KEY_FILE}: {error}"))
     })?;
 
+    // Created even when the library has none: its presence is what says the copy carries them.
+    if with_attachments {
+        copy_files(&library.join(ATTACHMENTS), &target.join(ATTACHMENTS)).map_err(|error| {
+            let _ = std::fs::remove_dir_all(&target);
+            StorageError::File(format!("{ATTACHMENTS}: {error}"))
+        })?;
+    }
+
     for old in existing(&directory).into_iter().skip(KEEP) {
         // Best effort: a copy that resists deletion is not worth failing a launch over.
         let _ = std::fs::remove_dir_all(old);
     }
 
     Ok(Some(target))
+}
+
+/// `attachments/` is flat: a stored name is one path component.
+fn copy_files(from: &Path, to: &Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(to)?;
+    let Ok(entries) = std::fs::read_dir(from) else {
+        return Ok(());
+    };
+    for entry in entries {
+        let path = entry?.path();
+        if let Some(name) = path.file_name().filter(|_| path.is_file()) {
+            std::fs::copy(&path, to.join(name))?;
+        }
+    }
+
+    Ok(())
+}
+
+fn size_of_files(directory: &Path) -> u64 {
+    std::fs::read_dir(directory).map_or(0, |entries| {
+        entries
+            .flatten()
+            .filter_map(|entry| entry.metadata().ok())
+            .filter(std::fs::Metadata::is_file)
+            .map(|meta| meta.len())
+            .sum()
+    })
 }
 
 /// One copy, as the interface lists it. `bytes` is `f64` because specta refuses the integer
@@ -104,19 +144,23 @@ pub struct Backup {
     pub bytes: f64,
     /// Whether the key file travelled with it: without one, restoring loses the library.
     pub openable: bool,
+    /// Without them, a restore leaves the live `attachments/` where it is.
+    pub attachments: bool,
 }
 
 #[allow(clippy::cast_precision_loss)]
 fn describe(copy: &Path) -> Option<Backup> {
     let at = taken_at(copy)?;
     let database = copy.join(layout::DATABASE);
-    let bytes = std::fs::metadata(&database).map_or(0, |meta| meta.len());
+    let bytes = std::fs::metadata(&database).map_or(0, |meta| meta.len())
+        + size_of_files(&copy.join(ATTACHMENTS));
 
     Some(Backup {
         id: copy.file_name()?.to_str()?.to_string(),
         taken_at: at,
         bytes: bytes as f64,
         openable: database.is_file() && copy.join(KEY_FILE).is_file(),
+        attachments: copy.join(ATTACHMENTS).is_dir(),
     })
 }
 
@@ -131,8 +175,9 @@ pub(crate) fn list(library: &Path) -> Vec<Backup> {
 /// Puts a copy back in place of the live library, and answers where the live one went.
 ///
 /// Moved aside into `replaced/`, never deleted, and `vault.json` with it: the copy brings its
-/// own, and a database and a key from two wrappings open nothing. `attachments/` stays: the
-/// copies do not carry it, and the next launch's orphan sweep collects what they no longer name.
+/// own, and a database and a key from two wrappings open nothing. `attachments/` goes too when
+/// the copy carries its own; otherwise it stays, or every restored record would name a file
+/// that left.
 pub(crate) fn replace(
     library: &Path,
     id: &str,
@@ -152,32 +197,61 @@ pub(crate) fn replace(
     let aside = library.join(REPLACED).join(layout::stamp(now));
     std::fs::create_dir_all(&aside).context(aside.display())?;
 
+    let carries = copy.join(ATTACHMENTS).is_dir();
     let mut moved: Vec<(PathBuf, PathBuf)> = Vec::new();
     for name in [layout::DATABASE, KEY_FILE] {
         let from = library.join(name);
         let to = aside.join(name);
-        std::fs::rename(&from, &to).context(from.display())?;
+        if let Err(error) = std::fs::rename(&from, &to) {
+            put_back(&moved, &aside);
+            return Err(StorageError::File(format!("{}: {error}", from.display())));
+        }
         moved.push((from, to));
     }
-    for sidecar in DATABASE_SIDECARS {
-        // Absent is the ordinary case: a clean shutdown leaves neither.
-        let _ = std::fs::rename(library.join(sidecar), aside.join(sidecar));
-    }
-
-    for name in [layout::DATABASE, KEY_FILE] {
-        if let Err(error) = std::fs::copy(copy.join(name), library.join(name)) {
-            // Back where they were: a failed restore must never leave no library at all.
-            for (from, to) in &moved {
-                let _ = std::fs::remove_file(from);
-                let _ = std::fs::rename(to, from);
-            }
-            let _ = std::fs::remove_dir_all(&aside);
-
-            return Err(StorageError::File(format!("{name}: {error}")));
+    // Absent is the ordinary case for all three: a clean shutdown leaves no sidecar, and a
+    // library may hold no attachment at all.
+    let optional = DATABASE_SIDECARS
+        .into_iter()
+        .chain(carries.then_some(ATTACHMENTS));
+    for name in optional {
+        let (from, to) = (library.join(name), aside.join(name));
+        if std::fs::rename(&from, &to).is_ok() {
+            moved.push((from, to));
         }
     }
 
+    if let Err(error) = copy_back(&copy, library, carries) {
+        // Back where they were: a failed restore must never leave no library at all.
+        put_back(&moved, &aside);
+        return Err(StorageError::File(error));
+    }
+
     Ok(aside)
+}
+
+fn copy_back(copy: &Path, library: &Path, carries: bool) -> Result<(), String> {
+    for name in [layout::DATABASE, KEY_FILE] {
+        std::fs::copy(copy.join(name), library.join(name))
+            .map_err(|error| format!("{name}: {error}"))?;
+    }
+    if carries {
+        copy_files(&copy.join(ATTACHMENTS), &library.join(ATTACHMENTS))
+            .map_err(|error| format!("{ATTACHMENTS}: {error}"))?;
+    }
+
+    Ok(())
+}
+
+fn put_back(moved: &[(PathBuf, PathBuf)], aside: &Path) {
+    for (from, to) in moved {
+        let _ = if from.is_dir() {
+            std::fs::remove_dir_all(from)
+        } else {
+            std::fs::remove_file(from)
+        };
+        let _ = std::fs::rename(to, from);
+    }
+    let _ = std::fs::remove_dir_all(aside);
 }
 
 /// What [`rewrap`] managed. `left` is counted rather than failed: a locked backup must not
@@ -227,13 +301,13 @@ pub(crate) fn wanted(stored: Option<&str>) -> bool {
 
 /// Read from the preferences file: the copy is taken at unlock, before the front end has
 /// booted far enough to say anything.
-fn wanted_by_preference(app: &AppHandle) -> bool {
+fn wanted_by_preference(app: &AppHandle, key: &str) -> bool {
     use tauri_plugin_store::StoreExt;
 
     let stored = app
         .store(layout::PREFERENCES)
         .ok()
-        .and_then(|store| store.get(AUTOMATIC_BACKUPS_KEY))
+        .and_then(|store| store.get(key))
         .and_then(|value| value.as_str().map(str::to_owned));
 
     wanted(stored.as_deref())
@@ -241,12 +315,12 @@ fn wanted_by_preference(app: &AppHandle) -> bool {
 
 /// The launch copy. Never fatal: a library that cannot be copied still has to open.
 pub(crate) fn take(app: &AppHandle, db: &Db) {
-    if wanted_by_preference(app) {
-        copy(db);
+    if wanted_by_preference(app, AUTOMATIC_BACKUPS_KEY) {
+        copy(db, wanted_by_preference(app, BACKUP_ATTACHMENTS_KEY));
     }
 }
 
-fn copy(db: &Db) {
+fn copy(db: &Db, with_attachments: bool) {
     let mut connection = match crate::db::lock(db) {
         Ok(connection) => connection,
         Err(error) => {
@@ -256,7 +330,7 @@ fn copy(db: &Db) {
     };
     let directory = connection.directory().to_path_buf();
 
-    match rotate(&directory, &mut connection, Utc::now()) {
+    match rotate(&directory, &mut connection, Utc::now(), with_attachments) {
         Ok(Some(target)) => log::info!("Library copied to {}", target.display()),
         Ok(None) => {}
         Err(error) => log::warn!("No backup taken: {error}"),
@@ -350,7 +424,7 @@ mod tests {
         let (connection, _) = library(&directory);
         let db: Db = std::sync::Mutex::new(Some(connection));
 
-        copy(&db);
+        copy(&db, true);
 
         assert_eq!(list(&directory).len(), 1);
         drop(db);
@@ -362,7 +436,9 @@ mod tests {
         let scratch = tempfile::tempdir().unwrap();
         let directory = scratch.path().to_path_buf();
         let (mut connection, _) = library(&directory);
-        let copy = rotate(&directory, &mut connection, at(0)).unwrap().unwrap();
+        let copy = rotate(&directory, &mut connection, at(0), false)
+            .unwrap()
+            .unwrap();
         let id = copy.file_name().unwrap().to_string_lossy().to_string();
         let db: Db = std::sync::Mutex::new(Some(connection));
 
@@ -383,7 +459,9 @@ mod tests {
         let directory = scratch.path().to_path_buf();
         let (mut connection, note_id) = library(&directory);
 
-        let target = rotate(&directory, &mut connection, at(0)).unwrap().unwrap();
+        let target = rotate(&directory, &mut connection, at(0), false)
+            .unwrap()
+            .unwrap();
 
         let reopened = crate::vault::file::unlock(&target, "a passphrase").unwrap();
         let mut copy = db::open(&target.join(layout::DATABASE), reopened).unwrap();
@@ -400,10 +478,76 @@ mod tests {
         let directory = scratch.path().to_path_buf();
         let (mut connection, _) = library(&directory);
 
-        let target = rotate(&directory, &mut connection, at(0)).unwrap().unwrap();
+        let target = rotate(&directory, &mut connection, at(0), false)
+            .unwrap()
+            .unwrap();
 
         assert!(target.join(KEY_FILE).is_file());
         assert!(target.join(layout::DATABASE).is_file());
+    }
+
+    fn attach(directory: &Path, name: &str, bytes: &[u8]) {
+        std::fs::create_dir_all(directory.join(ATTACHMENTS)).unwrap();
+        std::fs::write(directory.join(ATTACHMENTS).join(name), bytes).unwrap();
+    }
+
+    #[test]
+    fn the_attachments_travel_with_the_copy_when_asked() {
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
+        let (mut connection, _) = library(&directory);
+        let sealed = b"\x89PNG sealed";
+        attach(&directory, "a-1.png", sealed);
+
+        let target = rotate(&directory, &mut connection, at(0), true)
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(
+            std::fs::read(target.join(ATTACHMENTS).join("a-1.png")).unwrap(),
+            sealed
+        );
+        let listed = &list(&directory)[0];
+        assert!(listed.attachments);
+        let database = std::fs::metadata(target.join(layout::DATABASE))
+            .unwrap()
+            .len();
+        #[allow(clippy::cast_precision_loss)]
+        let expected = (database + sealed.len() as u64) as f64;
+        assert!(
+            (listed.bytes - expected).abs() < f64::EPSILON,
+            "the size counts them"
+        );
+    }
+
+    /// The directory is what says a copy carries them, so it exists even with nothing in it.
+    #[test]
+    fn a_library_with_no_attachment_still_takes_a_copy_that_carries_them() {
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
+        let (mut connection, _) = library(&directory);
+
+        let target = rotate(&directory, &mut connection, at(0), true)
+            .unwrap()
+            .unwrap();
+
+        assert!(target.join(ATTACHMENTS).is_dir());
+        assert!(list(&directory)[0].attachments);
+    }
+
+    #[test]
+    fn a_copy_taken_without_them_says_so() {
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
+        let (mut connection, _) = library(&directory);
+        attach(&directory, "a-1.png", b"\x89PNG");
+
+        let target = rotate(&directory, &mut connection, at(0), false)
+            .unwrap()
+            .unwrap();
+
+        assert!(!target.join(ATTACHMENTS).exists());
+        assert!(!list(&directory)[0].attachments);
     }
 
     #[test]
@@ -411,9 +555,11 @@ mod tests {
         let scratch = tempfile::tempdir().unwrap();
         let directory = scratch.path().to_path_buf();
         let (mut connection, _) = library(&directory);
-        rotate(&directory, &mut connection, at(0)).unwrap().unwrap();
+        rotate(&directory, &mut connection, at(0), false)
+            .unwrap()
+            .unwrap();
 
-        let again = rotate(&directory, &mut connection, at(3)).unwrap();
+        let again = rotate(&directory, &mut connection, at(3), false).unwrap();
 
         assert!(again.is_none());
         assert_eq!(existing(&directory.join(BACKUPS)).len(), 1);
@@ -424,9 +570,9 @@ mod tests {
         let scratch = tempfile::tempdir().unwrap();
         let directory = scratch.path().to_path_buf();
         let (mut connection, _) = library(&directory);
-        rotate(&directory, &mut connection, at(0)).unwrap();
+        rotate(&directory, &mut connection, at(0), false).unwrap();
 
-        rotate(&directory, &mut connection, at(25))
+        rotate(&directory, &mut connection, at(25), false)
             .unwrap()
             .unwrap();
 
@@ -440,7 +586,7 @@ mod tests {
         let (mut connection, _) = library(&directory);
 
         for day in 0..6 {
-            rotate(&directory, &mut connection, at(day * 25)).unwrap();
+            rotate(&directory, &mut connection, at(day * 25), false).unwrap();
         }
 
         let kept = existing(&directory.join(BACKUPS));
@@ -466,7 +612,9 @@ mod tests {
         let scratch = tempfile::tempdir().unwrap();
         let directory = scratch.path().to_path_buf();
         let (mut connection, _) = library(&directory);
-        let target = rotate(&directory, &mut connection, at(0)).unwrap().unwrap();
+        let target = rotate(&directory, &mut connection, at(0), false)
+            .unwrap()
+            .unwrap();
 
         let vault = crate::vault::file::change_passphrase(
             &directory,
@@ -498,7 +646,9 @@ mod tests {
         let scratch = tempfile::tempdir().unwrap();
         let directory = scratch.path().to_path_buf();
         let (mut connection, _) = library(&directory);
-        let first = rotate(&directory, &mut connection, at(0)).unwrap().unwrap();
+        let first = rotate(&directory, &mut connection, at(0), false)
+            .unwrap()
+            .unwrap();
 
         let vault = crate::vault::file::change_passphrase(
             &directory,
@@ -508,7 +658,7 @@ mod tests {
         )
         .unwrap();
         // No rewrap here: the first copy stays under the very first phrase.
-        let second = rotate(&directory, &mut connection, at(25))
+        let second = rotate(&directory, &mut connection, at(25), false)
             .unwrap()
             .unwrap();
         crate::vault::file::write_wrapped(
@@ -542,7 +692,9 @@ mod tests {
         let scratch = tempfile::tempdir().unwrap();
         let directory = scratch.path().to_path_buf();
         let (mut connection, _) = library(&directory);
-        let target = rotate(&directory, &mut connection, at(0)).unwrap().unwrap();
+        let target = rotate(&directory, &mut connection, at(0), false)
+            .unwrap()
+            .unwrap();
         std::fs::remove_file(target.join(KEY_FILE)).unwrap();
 
         let vault = crate::vault::file::unlock(&directory, "a passphrase").unwrap();
@@ -580,7 +732,9 @@ mod tests {
             let scratch = tempfile::tempdir().unwrap();
             let directory = scratch.path().to_path_buf();
             let (mut connection, note) = library(&directory);
-            let copy = rotate(&directory, &mut connection, at(0)).unwrap().unwrap();
+            let copy = rotate(&directory, &mut connection, at(0), false)
+                .unwrap()
+                .unwrap();
             let id = copy.file_name().unwrap().to_str().unwrap().to_string();
             retitle(&mut connection, &note, "écrit après la copie");
             drop(connection);
@@ -595,7 +749,9 @@ mod tests {
             let scratch = tempfile::tempdir().unwrap();
             let directory = scratch.path().to_path_buf();
             let (mut connection, note) = library(&directory);
-            let copy = rotate(&directory, &mut connection, at(0)).unwrap().unwrap();
+            let copy = rotate(&directory, &mut connection, at(0), false)
+                .unwrap()
+                .unwrap();
             let id = copy.file_name().unwrap().to_str().unwrap().to_string();
             retitle(&mut connection, &note, "écrit après la copie");
             drop(connection);
@@ -612,7 +768,9 @@ mod tests {
             let scratch = tempfile::tempdir().unwrap();
             let directory = scratch.path().to_path_buf();
             let (mut connection, _) = library(&directory);
-            let copy = rotate(&directory, &mut connection, at(0)).unwrap().unwrap();
+            let copy = rotate(&directory, &mut connection, at(0), false)
+                .unwrap()
+                .unwrap();
             let id = copy.file_name().unwrap().to_str().unwrap().to_string();
             drop(connection);
 
@@ -622,13 +780,74 @@ mod tests {
             assert!(aside.join(KEY_FILE).is_file());
         }
 
-        /// Not in the copies: moving them aside would point every restored record at a file that left.
+        /// The live ones go aside with the database: one written since the copy is not lost,
+        /// and the restored records name only what the copy brought.
         #[test]
-        fn the_attachments_stay_where_they_are() {
+        fn the_attachments_come_back_with_a_copy_that_carries_them() {
             let scratch = tempfile::tempdir().unwrap();
             let directory = scratch.path().to_path_buf();
             let (mut connection, _) = library(&directory);
-            let copy = rotate(&directory, &mut connection, at(0)).unwrap().unwrap();
+            attach(&directory, "a-1.png", b"as copied");
+            let copy = rotate(&directory, &mut connection, at(0), true)
+                .unwrap()
+                .unwrap();
+            let id = copy.file_name().unwrap().to_str().unwrap().to_string();
+            drop(connection);
+            std::fs::remove_file(directory.join(ATTACHMENTS).join("a-1.png")).unwrap();
+            attach(&directory, "a-2.png", b"added since");
+
+            let aside = replace(&directory, &id, at(30)).unwrap();
+
+            assert_eq!(
+                std::fs::read(directory.join(ATTACHMENTS).join("a-1.png")).unwrap(),
+                b"as copied"
+            );
+            assert!(!directory.join(ATTACHMENTS).join("a-2.png").exists());
+            assert!(aside.join(ATTACHMENTS).join("a-2.png").is_file());
+        }
+
+        /// A failed copy leaves both halves as they were, directories included.
+        #[test]
+        fn putting_back_undoes_a_half_finished_restore() {
+            let scratch = tempfile::tempdir().unwrap();
+            let directory = scratch.path().to_path_buf();
+            attach(&directory, "a-1.png", b"live");
+            std::fs::write(directory.join(KEY_FILE), b"live key").unwrap();
+            let aside = directory.join(REPLACED).join("2026-07-25_09-00-00");
+            std::fs::create_dir_all(&aside).unwrap();
+            let mut moved = Vec::new();
+            for name in [KEY_FILE, ATTACHMENTS] {
+                std::fs::rename(directory.join(name), aside.join(name)).unwrap();
+                moved.push((directory.join(name), aside.join(name)));
+            }
+            std::fs::write(directory.join(KEY_FILE), b"half copied").unwrap();
+            attach(&directory, "from-the-copy.png", b"half");
+
+            put_back(&moved, &aside);
+
+            assert_eq!(
+                std::fs::read(directory.join(KEY_FILE)).unwrap(),
+                b"live key"
+            );
+            assert!(directory.join(ATTACHMENTS).join("a-1.png").is_file());
+            assert!(
+                !directory
+                    .join(ATTACHMENTS)
+                    .join("from-the-copy.png")
+                    .exists()
+            );
+            assert!(!aside.exists());
+        }
+
+        /// Not in this copy: moving them aside would point every restored record at a file that left.
+        #[test]
+        fn the_attachments_stay_where_they_are_when_the_copy_has_none() {
+            let scratch = tempfile::tempdir().unwrap();
+            let directory = scratch.path().to_path_buf();
+            let (mut connection, _) = library(&directory);
+            let copy = rotate(&directory, &mut connection, at(0), false)
+                .unwrap()
+                .unwrap();
             let id = copy.file_name().unwrap().to_str().unwrap().to_string();
             drop(connection);
             std::fs::create_dir_all(directory.join("attachments")).unwrap();
@@ -644,7 +863,7 @@ mod tests {
             let scratch = tempfile::tempdir().unwrap();
             let directory = scratch.path().to_path_buf();
             let (mut connection, _) = library(&directory);
-            rotate(&directory, &mut connection, at(0)).unwrap();
+            rotate(&directory, &mut connection, at(0), false).unwrap();
             drop(connection);
             let outside = directory.join("2026-07-25_09-00-00");
             std::fs::create_dir_all(&outside).unwrap();
@@ -665,7 +884,9 @@ mod tests {
             let scratch = tempfile::tempdir().unwrap();
             let directory = scratch.path().to_path_buf();
             let (mut connection, _) = library(&directory);
-            let copy = rotate(&directory, &mut connection, at(0)).unwrap().unwrap();
+            let copy = rotate(&directory, &mut connection, at(0), false)
+                .unwrap()
+                .unwrap();
             let id = copy.file_name().unwrap().to_str().unwrap().to_string();
             drop(connection);
             std::fs::remove_file(copy.join(KEY_FILE)).unwrap();
@@ -682,8 +903,8 @@ mod tests {
             let scratch = tempfile::tempdir().unwrap();
             let directory = scratch.path().to_path_buf();
             let (mut connection, _) = library(&directory);
-            rotate(&directory, &mut connection, at(0)).unwrap();
-            rotate(&directory, &mut connection, at(25)).unwrap();
+            rotate(&directory, &mut connection, at(0), false).unwrap();
+            rotate(&directory, &mut connection, at(25), false).unwrap();
 
             let copies = list(&directory);
 
@@ -703,7 +924,7 @@ mod tests {
         let (mut connection, _) = library(&directory);
         std::fs::create_dir_all(directory.join(BACKUPS).join("notes de Valentin")).unwrap();
 
-        let target = rotate(&directory, &mut connection, at(0)).unwrap();
+        let target = rotate(&directory, &mut connection, at(0), false).unwrap();
 
         assert!(target.is_some());
     }

@@ -35,10 +35,25 @@
       />
     </div>
 
+    <div class="setting-row">
+      <label class="setting-label" for="setting-backup-attachments">
+        {{ 'settings.security.backupAttachments' | transloco }}
+      </label>
+      <input
+        id="setting-backup-attachments"
+        class="setting-switch"
+        type="checkbox"
+        data-testid="setting-backup-attachments"
+        [checked]="draft.value('backupAttachments')"
+        [disabled]="!draft.value('automaticBackups')"
+        (change)="onBackupAttachments($event)"
+      />
+    </div>
+
     <p class="setting-note">{{ 'settings.security.backupsNote' | transloco }}</p>
     <!-- What it does not cover, said here rather than only in the README: a copy
          inside the profile answers an emptied trash or a botched update, not a dead
-         disk, and it carries the notes but not the attached files. -->
+         disk, and the attached files cost their size once per copy kept. -->
     <p class="setting-note">{{ 'settings.security.backupsLimit' | transloco }}</p>
 
     <div class="backup-list">
@@ -51,7 +66,12 @@
           <div class="backup-row" data-testid="backup-row" [attr.data-backup]="copy.backup.id">
             <span class="backup-when">
               {{ copy.when.key | transloco: copy.when.params }}
-              <span class="backup-detail">{{ copy.backup.id }} · {{ copy.size }}</span>
+              <span class="backup-detail"
+                >{{ copy.backup.id }} · {{ copy.size }}
+                @if (!copy.backup.attachments) {
+                  · {{ 'backups.withoutAttachments' | transloco }}
+                }
+              </span>
             </span>
 
             @if (!copy.backup.openable) {

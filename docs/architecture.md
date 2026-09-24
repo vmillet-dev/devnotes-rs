@@ -3048,19 +3048,19 @@ with every one of them still on disk and nothing pointing at them.
 A preference belongs to the **application** or to the **library**, and the line is one
 prefix: ⚠️ **`devnotes.notes.*` is the library's, everything else is the application's.**
 
-|                             | file                                        | holds                                                                                   |
-| --------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `PreferencesService`        | `preferences.json`, at the profile root     | theme, language, density, the keys, the tray, autostart, the window, `automaticBackups` |
-| `LibraryPreferencesService` | `preferences.json`, inside the open library | the samples marker, and which view each space was left on                               |
+|                             | file                                        | holds                                                                                    |
+| --------------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `PreferencesService`        | `preferences.json`, at the profile root     | theme, language, density, the keys, the tray, autostart, the window, the two backup keys |
+| `LibraryPreferencesService` | `preferences.json`, inside the open library | the samples marker, and which view each space was left on                                |
 
 Both extend `KeyValueStore`, which holds the synchronous cache and the plugin's own
 loading — the API stays synchronous where the plugin's is not, because a preference is read
 when a component is constructed and an async read would show the interface in one state
 then the other.
 
-⚠️ `automaticBackups` stays with the application deliberately: "copy my libraries at
-launch" is a habit rather than a property of one corpus, and it is the one key Rust reads
-out of that file before the front end has booted (`backup::wanted`).
+⚠️ `automaticBackups` and `backupAttachments` stay with the application deliberately:
+"copy my libraries at launch" is a habit rather than a property of one corpus, and they are
+the two keys Rust reads out of that file before the front end has booted (`backup::wanted`).
 
 ⚠️ `LibraryPreferencesService` is re-opened on **every** switch, where the application's is
 opened once. A space id means nothing in another library, and a samples marker carried
@@ -3083,7 +3083,14 @@ file needs. It ends on a gate too, so nothing may be filed after it.
 ### The copies, and putting one back
 
 `backup::rotate` takes one at unlock, before the sweeps, into `backups/<stamp>/`: a
-`VACUUM INTO` of the database plus its key file, at most one a day, the last `KEEP` kept.
+`VACUUM INTO` of the database plus its key file and `attachments/`, at most one a day, the
+last `KEEP` kept. The attachments are copied as they are — sealed under the key the copied
+`vault.json` wraps, so nothing is re-sealed. ⚠️ They are also a preference,
+`backupAttachments`, read by Rust out of the application's `preferences.json` exactly like
+`automaticBackups` (on unless it says `"false"`): a copy of the corpus is `KEEP` times the
+corpus, and whoever would rather not pay that keeps the notes alone. The copy's own
+`attachments/` is created even when the library has none, because its presence is what says
+the copy carries them.
 None of that used to be visible. There was no list, no date, no size, no way to put one
 back, and the switch that controls it stood with nothing beside it — a safety net nobody
 can see is one nobody trusts, and one nobody can use.
@@ -3091,9 +3098,10 @@ can see is one nobody trusts, and one nobody can use.
 The **Sécurité** page now says it where the application can be read from: what the copies
 are, where they live, how many are kept, and what they do **not** cover — a copy inside
 the profile answers an emptied trash, a botched update or a slip of the hand, not a dead
-disk, and it carries the notes and the key but **not the attached files**.
+disk — and what the attached files cost, with the switch that leaves them out.
 
-`list_backups` answers `Backup { id, takenAt, bytes, openable }`, newest first. ⚠️
+`list_backups` answers `Backup { id, takenAt, bytes, openable, attachments }`, newest first,
+`bytes` counting the attachments it carries and a copy without them marked as such. ⚠️
 `openable` is the key file: a copy without one opens for nobody, so it is **listed and
 never offered** — proposing it would be proposing to lose the library for nothing. ⚠️
 `bytes` crosses as `f64`, which specta types as nullable because JSON cannot carry `NaN`;
@@ -3112,10 +3120,11 @@ is built like it.
 - ⚠️ `vault.json` travels, unlike `recovery::set_aside` where it deliberately stays. The
   copy brings its own wrapping, and a database from one wrapping with a key from another
   opens nothing.
-- ⚠️ `attachments/` **stays**, also unlike `set_aside`. The copies do not carry it — it is
-  the bulk of a profile — so moving it aside would point every restored record at a file
-  that left. The next launch's orphan sweep collects whatever the restored library no
-  longer names, which is right: those files belong to notes it does not have.
+- ⚠️ `attachments/` follows the copy. When the copy carries its own, the live directory
+  goes into `replaced/<timestamp>/` with the database — an attachment added since is kept
+  there, not lost — and the copy's comes back. When it does not, the live one **stays**:
+  moving it aside would point every restored record at a file that left, and the next
+  launch's orphan sweep collects whatever the restored library no longer names.
 - ⚠️ The id is matched against the listing rather than joined onto `backups/`. It comes
   from the front end, and `../2026-01-01_00-00-00` joins to a path outside the directory
   whose file name still parses as a stamp.

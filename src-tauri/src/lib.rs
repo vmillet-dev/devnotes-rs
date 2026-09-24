@@ -145,6 +145,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
         .constant("PREFERENCES_FILE", layout::PREFERENCES)
         // Read by Rust out of the application's file before the front end has booted.
         .constant("AUTOMATIC_BACKUPS_KEY", backup::AUTOMATIC_BACKUPS_KEY)
+        .constant("BACKUP_ATTACHMENTS_KEY", backup::BACKUP_ATTACHMENTS_KEY)
 }
 
 /// ⚠️ Not the plugin's `all()`, which carries `VISIBLE`: quitting from the tray saves a

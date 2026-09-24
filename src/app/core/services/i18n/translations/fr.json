@@ -557,13 +557,14 @@
       "cancel": "Annuler",
       "changed": "Phrase de passe changée. L'ancienne n'ouvre plus la bibliothèque ni les copies gardées à côté.",
       "automaticBackups": "Copier la bibliothèque au lancement",
+      "backupAttachments": "Inclure les pièces jointes",
       "backupsNote": "Au plus une copie par jour, les trois dernières gardées à côté de la bibliothèque — de quoi couvrir une corbeille vidée ou une mise à jour ratée. Pas une protection contre un disque mort : pour ça, exportez ailleurs.",
       "changedOneLeft": "Phrase de passe changée, mais une copie n'a pas pu être réenveloppée : elle s'ouvre encore avec l'ancienne phrase.",
       "changedSomeLeft": "Phrase de passe changée, mais {{count}} copies n'ont pas pu être réenveloppées : elles s'ouvrent encore avec l'ancienne phrase.",
       "copiesNote": "Les copies gardées à côté de la bibliothèque sont réenveloppées avec elle. Un fichier de clé que vous auriez copié ailleurs, lui, s'ouvrira toujours avec l'ancienne phrase.",
       "backups": "Copies de sauvegarde",
       "access": "Accès",
-      "backupsLimit": "Une copie emporte les notes et la clé qui les ouvre, pas les pièces jointes."
+      "backupsLimit": "Une copie emporte les notes, la clé qui les ouvre et les pièces jointes, sauf si vous les retirez ci-dessus : trois copies prennent trois fois leur place."
     },
     "notifications": {
       "title": "Notifications",
@@ -699,6 +700,7 @@
     "none": "Aucune copie pour l'instant. La première est prise au prochain lancement.",
     "restore": "Restaurer…",
     "unopenable": "Sans clé : illisible",
+    "withoutAttachments": "sans pièces jointes",
     "confirm": "Remplacer la bibliothèque entière par la copie du {{when}}. Tout ce qui a été écrit depuis quitte la bibliothèque — rien n’est supprimé, l’actuelle est mise de côté dans « replaced ». Il faudra ressaisir la phrase de passe.",
     "cancel": "Annuler",
     "confirmRestore": "Remplacer la bibliothèque",
