@@ -638,7 +638,71 @@ fn flowed(loose_ids: &[String], top: i32) -> Vec<CardPlacement> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::notes::fixtures::note;
+    use crate::notes::fixtures::{NOW, at, note};
+
+    /// Everything but the space and the instant is neutral: the board dims, it never narrows.
+    #[test]
+    fn the_board_reads_the_whole_space_whatever_it_is_asked() {
+        let request = BoardQuery {
+            space_id: "s-1".to_string(),
+            search: "deploy".to_string(),
+            filter: NoteFilter::Pinned,
+            tags: vec!["ops".to_string()],
+            languages: vec![Language::Sql],
+            now: at(NOW),
+        };
+
+        let wide = request.whole_space();
+
+        assert_eq!(wide.space_id.as_deref(), Some("s-1"));
+        assert!(wide.search.is_empty() && wide.tags.is_empty() && wide.languages.is_empty());
+        assert_eq!(wide.filter, NoteFilter::All);
+        assert_eq!(wide.now, at(NOW));
+    }
+
+    #[test]
+    fn every_card_of_a_board_is_reached_once_zones_first() {
+        let card = |id: &str| BoardNote {
+            note: model::decorate(
+                Note {
+                    id: id.to_string(),
+                    ..note()
+                },
+                at(NOW),
+            ),
+            matches: true,
+            position: None,
+        };
+        let mut view = BoardView {
+            zones: vec![BoardZone {
+                folder: Folder {
+                    id: "f-1".to_string(),
+                    space_id: "s-1".to_string(),
+                    name: "Ops".to_string(),
+                    colour: super::super::model::FolderColour::nth(0),
+                    created_at: at(NOW),
+                },
+                frame: BoardFrame {
+                    x: 0,
+                    y: 0,
+                    width: 400,
+                    height: 300,
+                },
+                notes: vec![card("filed")],
+            }],
+            loose: vec![card("loose")],
+            available_tags: Vec::new(),
+            available_languages: Vec::new(),
+            is_filtering: false,
+            matched: 2,
+            width: 0,
+            height: 0,
+        };
+
+        let ids: Vec<String> = view.notes_mut().map(|note| note.id.clone()).collect();
+
+        assert_eq!(ids, ["filed", "loose"]);
+    }
 
     #[test]
     fn the_occupancy_counts_each_folder_and_lists_the_loose_notes() {

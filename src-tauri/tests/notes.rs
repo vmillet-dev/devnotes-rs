@@ -1058,9 +1058,12 @@ fn a_global_variable_shows_up_as_the_suggested_value_of_a_field() {
     let space_id = space(&mut connection, "Personal");
     let created = create(&mut connection, templated(&space_id), t0()).unwrap();
 
-    let globals = values(&[("host", "db.internal")]);
+    replace_global_placeholder_values(&mut connection, &values(&[("host", "db.internal")]))
+        .unwrap();
     let mut display = decorate(created, t1());
-    devnotes_lib::notes::model::apply_global_defaults(&mut display, &globals);
+    devnotes_lib::notes::store::decorations(&mut connection)
+        .unwrap()
+        .apply([&mut display]);
 
     let field = display
         .placeholders
