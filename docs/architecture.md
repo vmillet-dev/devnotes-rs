@@ -181,6 +181,15 @@ above it, the canvas, and what is drawn over the page. `sidebar/`, `header/`, `c
 `overlays/` are those four, so finding a component is one question with four answers — left of
 the notes, above them, among them, or over them.
 
+**Each zone has a container, and the page is their layout.** `notes-sidebar`, `notes-header`,
+`notes-canvas` and `notes-overlays` sit at the root of their zone and inject what that zone
+draws; each host is `display: contents`, so the flex layout of `.page` and `.workspace` is
+exactly what it was when the four were one template. The page keeps what belongs to no zone —
+the actions the native side asks for, the first-launch seeding and the canvas keyboard — and
+injects five things for it. State that crosses two zones goes to a store rather than up to the
+page: the band drawn on the board waits for its name in `BoardStore.pendingZone`, where the
+canvas proposes it and an overlay names it.
+
 Two consequences worth stating. **Rendering something is not owning it:** the preferences
 panel hosts the variables page through `NgComponentOutlet`, and the shortcuts sheet imports
 the notes' key groups — neither moves those files into `titlebar/`, because the notes own
@@ -807,7 +816,7 @@ itself. Four changes got it there:
   permanent 44px bands, the single biggest saving. ⚠️ The disclosure is forced open
   whenever a facet is selected and **refuses to fold** while one is: a filter nobody can see
   is a filter nobody can undo, and a canvas silently showing a third of the corpus is worse
-  than the bands were. Its trigger is in the topbar and the panel below it, so `notes-page`
+  than the bands were. Its trigger is in the topbar and the panel below it, so `notes-header`
   owns the state — a component cannot be in two rows at once.
 - **The quick filters became one segmented control.** Three states of one thing, where four
   chips read as four filters that could be combined and took the width of four.

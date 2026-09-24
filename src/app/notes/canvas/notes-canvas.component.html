@@ -1,0 +1,120 @@
+<!-- ⚠️ The region keeps the `canvas` hook whichever view fills it: it is the address on
+ screen, and the two views are alternatives inside it, not replacements for it. -->
+<div
+  class="canvas-region"
+  data-testid="canvas"
+  [attr.aria-busy]="board.isBoard() ? board.isLoading() : canvas.isLoading()"
+>
+  <!-- ⚠️ Over the canvas, not in the flow: inserted, it pushed everything below it down
+   85px, so the canvas jumped on every tick — and it wrapped too. -->
+  @if (selection.hasSelection()) {
+    <app-selection-bar
+      class="floating-selection"
+      [count]="selection.checkedCount()"
+      [spaces]="spaces.spaces()"
+      [folders]="folders.folders()"
+      (moveRequested)="batch.moveSelection($event)"
+      (fileRequested)="batch.fileSelection($event)"
+      (tagRequested)="batch.tagSelection($event)"
+      (copyRequested)="onCopySelection()"
+      (deleteRequested)="batch.deleteSelection()"
+      (cleared)="selection.clearSelection()"
+    />
+  }
+
+  @if (board.isShowing()) {
+    @let boardError = board.loadError();
+
+    @if (boardError) {
+      <div class="canvas-state" role="alert">
+        <p class="canvas-state-text">{{ 'errors.boardLoadFailed' | transloco }}</p>
+        <p class="canvas-state-detail">{{ boardError.message }}</p>
+        <button type="button" class="canvas-retry" (click)="board.reload()">
+          {{ 'errors.retry' | transloco }}
+        </button>
+      </div>
+    } @else if (board.isLoading()) {
+      <p class="canvas-state-text">{{ 'notes.loading' | transloco }}</p>
+    } @else {
+      <app-board
+        [zones]="board.zones()"
+        [loose]="board.loose()"
+        [width]="board.width()"
+        [height]="board.height()"
+        [arrangements]="board.arrangements()"
+        [restorations]="board.restorations()"
+        (noteActivated)="onNoteActivated($event)"
+        (folderOpened)="folders.selectFolder($event)"
+        (cardDropped)="onCardDropped($event)"
+        (zoneMoved)="board.moveZone($event.folderId, $event.frame)"
+        (zoneDrawn)="onZoneDrawn($event)"
+        (folderNotesSelected)="selection.checkFolder($event)"
+        (notesBanded)="selection.checkMany($event)"
+        (tidyRequested)="batch.arrangeBoard($event)"
+        (guideRequested)="help.open('folders')"
+      />
+    }
+  } @else {
+    @let error = canvas.loadError();
+
+    <div class="canvas">
+      @if (error) {
+        <!-- Loading is the one operation whose failure empties the whole screen: it
+         deserves its own retry. -->
+        <div class="canvas-state" role="alert">
+          <p class="canvas-state-text">{{ 'errors.notesLoadFailed' | transloco }}</p>
+          <p class="canvas-state-detail">{{ error.message }}</p>
+          <button type="button" class="canvas-retry" (click)="canvas.reload()">
+            {{ 'errors.retry' | transloco }}
+          </button>
+        </div>
+      } @else if (canvas.isLoading()) {
+        <p class="canvas-state-text">{{ 'notes.loading' | transloco }}</p>
+      } @else if (canvas.hasNoResults()) {
+        <!-- ⚠️ With the way out, not only the news. `hasUserFilters` and not
+             `isFiltering`: the latter is true inside a folder, and offering to clear
+             filters that do not exist is worse than offering nothing. -->
+        <div class="canvas-state">
+          <p class="canvas-state-text" data-testid="canvas-no-results">
+            {{ 'notes.noResults' | transloco }}
+          </p>
+          @if (canvas.hasUserFilters()) {
+            <button
+              type="button"
+              class="canvas-retry"
+              data-testid="canvas-clear-filters"
+              (click)="canvas.clearFilters()"
+            >
+              {{ 'notes.clearFilters' | transloco }}
+            </button>
+          } @else {
+            <!-- ⚠️ The chapter that explains *this* screen, not the top of the guide:
+                 reaching help from the thing it is about is the whole point of #256. -->
+            <button
+              type="button"
+              class="canvas-retry"
+              data-testid="canvas-guide"
+              (click)="help.open('notes')"
+            >
+              {{ 'gettingStarted.openChapter' | transloco }}
+            </button>
+          }
+        </div>
+      } @else {
+        @for (section of canvas.sections(); track section.key) {
+          <app-note-section [section]="section" (noteActivated)="onNoteActivated($event)" />
+        }
+      }
+    </div>
+  }
+</div>
+
+<!-- ⚠️ A footer of the workspace and not the last child of the scrolling canvas: with
+     three notes on screen it sat a third of the way down, and with three hundred it
+     was only reachable by scrolling to the end. It goes for both views — every key it
+     names is bound page-wide — and stands down while a canvas state owns the screen. -->
+@if (showsKeyboardHint()) {
+  <p class="keyboard-hint" data-testid="canvas-keyboard-hint">
+    {{ 'notes.keyboardHint' | transloco }}
+  </p>
+}

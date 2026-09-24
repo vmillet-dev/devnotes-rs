@@ -1,0 +1,14 @@
+@if (settings.showLibraryRail()) {
+  <app-library-tree
+    [spaces]="spaces.spaces()"
+    [folders]="folders.allFolders()"
+    [activeSpaceId]="spaces.activeSpaceId()"
+    [activeFolderId]="folders.activeFolderId()"
+    [width]="settings.libraryRailWidth()"
+    (widthChanged)="settings.libraryRailWidth.write($event)"
+    (spaceChanged)="onSpaceChosen($event)"
+    (spaceCreated)="spaces.createSpace($event)"
+    (folderOpened)="onFolderOpened($event)"
+    (folderCreated)="folders.createFolder($event)"
+  />
+}
