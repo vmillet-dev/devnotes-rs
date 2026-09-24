@@ -384,6 +384,7 @@ fn a_decorated_note_announces_its_fields_and_its_attachments() {
     assert_eq!(json["placeholders"][0]["value"], "db.internal");
     assert_eq!(json["placeholders"][1]["value"], "");
     assert_eq!(json["attachmentCount"], 0);
+    assert_eq!(json["truncated"], false);
 }
 
 #[test]

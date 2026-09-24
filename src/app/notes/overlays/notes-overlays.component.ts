@@ -56,10 +56,9 @@ export class NotesOverlaysComponent {
     void this.tags.proposeDelete();
   }
 
-  /** ⚠️ The note and not its id: the canvas filters may hide it, and often do. */
   protected onPaletteOpen(note: Note): void {
     this.palette.close();
-    this.store.openNote(note);
+    void this.store.openNote(note.id);
   }
 
   /** `PaletteStore` does not know `NotesStore`; the other way round would be a cycle. */

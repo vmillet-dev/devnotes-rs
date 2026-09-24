@@ -29,6 +29,7 @@ const BASE_DTO: WireNote = {
   folder: null,
   copyText: null,
   searchHit: null,
+  truncated: false,
 };
 
 describe('toNote', () => {

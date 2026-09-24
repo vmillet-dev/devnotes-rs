@@ -4,6 +4,7 @@ import { StatusNotifier } from '@core/services/notifications/status.service';
 import { FakeNotesRepository } from '@testing/fake-notes-repository';
 import { createNote } from '@testing/note.fixture';
 import { NotesHarness, createNotesHarness } from '@testing/notes-harness';
+import { NotesRevision } from './notes-revision';
 import { PaletteStore } from './palette.store';
 import { PlaceholderFillStore } from './placeholder-fill.store';
 
@@ -96,6 +97,30 @@ describe('PlaceholderFillStore', () => {
       expect(kept).not.toHaveBeenCalled();
       expect(fill.target()).toBeNull();
     });
+
+    /** ⚠️ The card holds a preview: filling it would copy a command cut short. */
+    it('fills the whole body, not the preview the card holds', async () => {
+      await fill.copyNote({ ...SNIPPET, placeholders: [], content: 'psql', truncated: true });
+      expect(harness.clipboard.content).toBe('psql -h {{host}} -U {{user}}');
+
+      harness.repository.setView({
+        sections: [
+          {
+            key: 'week',
+            notes: [{ ...SNIPPET, content: 'psql', truncated: true }],
+            hasExpiringNotes: false,
+            showCreateGhost: true,
+          },
+        ],
+      });
+      TestBed.inject(NotesRevision).bump();
+      await vi.waitFor(() => expect(harness.canvas.visibleNotes()[0]?.truncated).toBe(true));
+      fill.openFor('note-1');
+
+      await fill.submit({ host: 'prod.internal', user: 'admin' });
+
+      expect(harness.clipboard.content).toBe('psql -h prod.internal -U admin');
+    });
   });
 
   describe('the editor preview', () => {
@@ -125,7 +150,7 @@ describe('PlaceholderFillStore', () => {
       await fill.refreshPreview({ content: '{{host}}', values: { host: 'prod' } });
       expect(fill.preview()).toBe('prod');
 
-      harness.store.openNote('note-1');
+      await harness.store.openNote('note-1');
 
       await vi.waitFor(() => expect(fill.preview()).toBeNull());
     });

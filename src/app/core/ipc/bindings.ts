@@ -6,6 +6,11 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 export const commands = {
 	/**  ⚠️ No command returns the raw list: it would invite re-filtering on the front end. */
 	queryNotes: (query: NotesQuery) => typedError<NotesView, AppError>(__TAURI_INVOKE("query_notes", { query })),
+	/**
+	 *  The whole note. A list sends previews ([`DisplayNote::truncated`]), so the editor and
+	 *  every copy of a long body read it here.
+	 */
+	getNote: (id: string) => typedError<DisplayNote, AppError>(__TAURI_INVOKE("get_note", { id })),
 	createNote: (draft: NoteDraft) => typedError<DisplayNote, AppError>(__TAURI_INVOKE("create_note", { draft })),
 	/**
 	 *  The first launch, and the only command that writes a space and notes at once.
@@ -476,6 +481,8 @@ export type DisplayNote = {
 	 *  found by its own title.
 	 */
 	searchHit: SearchHit | null,
+	/**  `content` holds only its first lines: a list sends previews, `get_note` the body. */
+	truncated: boolean,
 } & Note;
 
 /**

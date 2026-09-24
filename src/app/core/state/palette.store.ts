@@ -105,8 +105,11 @@ export class PaletteStore {
       return;
     }
 
+    const whole = await this.notifier.attempt('errors.noteReadFailed', () => this.repository.whole(note));
+    if (!whole) return;
+
     // A todo list has no content: without this the palette would copy an empty string.
-    await this.copyAndDismiss(noteCopyText(note), note.title);
+    await this.copyAndDismiss(noteCopyText(whole), note.title);
   }
 
   /**

@@ -561,3 +561,85 @@ fn the_view_orders_notes_most_recently_updated_first() {
 
     assert_eq!(matched_ids(&view), [newer.id, older.id]);
 }
+
+fn long_body() -> String {
+    (1..=40)
+        .map(|n| format!("line {n}"))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn only_note(view: &NotesView) -> &DisplayNote {
+    let mut notes = view.sections.iter().flat_map(|section| &section.notes);
+    let note = notes.next().expect("a note");
+    assert!(notes.next().is_none(), "one note only");
+
+    note
+}
+
+/// ⚠️ A list sends the head of a long body; the editor reads the rest with `get`.
+#[test]
+fn a_list_sends_the_head_of_a_long_body_and_get_the_whole_of_it() {
+    let mut connection = open_in_memory().unwrap();
+    let space_id = space(&mut connection, "Personal");
+    let note = create(
+        &mut connection,
+        NoteDraft {
+            content: long_body(),
+            ..draft(&space_id)
+        },
+        t0(),
+    )
+    .unwrap();
+
+    let view = query(&mut connection, &all_notes()).unwrap();
+    let listed = only_note(&view);
+    assert!(listed.truncated);
+    assert_eq!(listed.content.lines().count(), PREVIEW_LINES);
+
+    assert_eq!(get(&mut connection, &note.id).unwrap().content, long_body());
+}
+
+/// The search reads the whole body before the cut: a hit far down still shows its line.
+#[test]
+fn a_hit_past_the_preview_still_shows_its_line() {
+    let mut connection = open_in_memory().unwrap();
+    let space_id = space(&mut connection, "Personal");
+    create(
+        &mut connection,
+        NoteDraft {
+            content: long_body(),
+            ..draft(&space_id)
+        },
+        t0(),
+    )
+    .unwrap();
+
+    let view = query(
+        &mut connection,
+        &NotesQuery {
+            search: "line 40".to_string(),
+            ..all_notes()
+        },
+    )
+    .unwrap();
+    let listed = only_note(&view);
+
+    assert!(listed.truncated);
+    assert_eq!(listed.search_hit.as_ref().unwrap().excerpt, "line 40");
+}
+
+#[test]
+fn get_finds_neither_a_trashed_note_nor_an_unknown_one() {
+    let mut connection = open_in_memory().unwrap();
+    let space_id = space(&mut connection, "Personal");
+    let note = create(&mut connection, draft(&space_id), t0()).unwrap();
+    trash(&mut connection, &note.id, t1()).unwrap();
+
+    for id in [note.id.as_str(), "no-such-note"] {
+        assert!(matches!(
+            get(&mut connection, id),
+            Err(StorageError::NoteNotFound(missing)) if missing == id
+        ));
+    }
+}

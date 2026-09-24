@@ -533,7 +533,7 @@ pub fn build<S: std::hash::BuildHasher>(
 
     let (width, height) = surface(&zones, &loose);
 
-    BoardView {
+    let mut view = BoardView {
         zones,
         loose,
         available_tags: facets.tags,
@@ -542,7 +542,10 @@ pub fn build<S: std::hash::BuildHasher>(
         matched: saturating_u32(matched),
         width,
         height,
-    }
+    };
+    view.notes_mut().for_each(DisplayNote::cut_to_preview);
+
+    view
 }
 
 /// A whole board's geometry in one value: every zone's frame and every loose card's

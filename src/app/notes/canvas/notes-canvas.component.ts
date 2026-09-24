@@ -57,7 +57,7 @@ export class NotesCanvasComponent {
       this.selection.focusNote(noteId);
       return;
     }
-    this.store.openNote(noteId);
+    void this.store.openNote(noteId);
   }
 
   protected onCardDropped({ noteId, folderId, position }: CardDrop): void {

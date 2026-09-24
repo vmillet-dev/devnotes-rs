@@ -28,6 +28,7 @@ export interface Note {
   readonly folder: NoteFolder | null;
   readonly title: string;
   readonly language: LanguageTag;
+  /** ⚠️ Only the first lines when `truncated`: a list sends previews. */
   readonly content: string;
   /** Context, e.g. "API Gateway / Auth" — its first segment is the label. */
   readonly source: string;
@@ -47,6 +48,8 @@ export interface Note {
   readonly copyText: string | null;
   /** Why this note is in the results; `null` outside a search and for a title match. */
   readonly searchHit: SearchHit | null;
+  /** `content` was cut to a preview; `NotesRepository.whole` reads the rest. */
+  readonly truncated: boolean;
 }
 
 /**
@@ -70,6 +73,7 @@ export type NoteDraft = Omit<
   | 'attachmentCount'
   | 'copyText'
   | 'searchHit'
+  | 'truncated'
 >;
 
 /**

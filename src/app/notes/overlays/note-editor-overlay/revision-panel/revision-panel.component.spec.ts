@@ -148,7 +148,7 @@ describe('RevisionPanelComponent', () => {
   it('puts the restored row where the editor re-seeds its draft from', async () => {
     const notes = TestBed.inject(NotesStore);
     await repository.update('note-1', { content: 'select 2' });
-    notes.openNote(createNote({ id: 'note-1', content: 'select 2' }));
+    await notes.openNote('note-1');
     await openHistory();
     const before = store.restored();
 

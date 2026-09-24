@@ -16,7 +16,8 @@ const FEEDBACK_MS = 2000;
 export class CopyButtonComponent {
   private readonly clipboard = inject(ClipboardService);
 
-  readonly value = input.required<string>();
+  /** A function when the text has to be read first; `null` from it copies nothing. */
+  readonly value = input.required<string | (() => Promise<string | null>)>();
   readonly showLabel = input(false);
 
   readonly label = input('notes.copyContent');
@@ -29,7 +30,9 @@ export class CopyButtonComponent {
   protected async onCopy(event: MouseEvent): Promise<void> {
     event.stopPropagation();
 
-    if (!(await this.clipboard.copy(this.value()))) return;
+    const value = this.value();
+    const text = typeof value === 'string' ? value : await value();
+    if (text === null || !(await this.clipboard.copy(text))) return;
 
     this.copied.set(true);
     this.settle();

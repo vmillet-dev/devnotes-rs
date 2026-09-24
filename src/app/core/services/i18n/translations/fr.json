@@ -205,6 +205,7 @@
     "notesLoadFailed": "Impossible de charger les notes.",
     "noteSaveFailed": "Impossible d'enregistrer la note. Votre texte est toujours à l'écran.",
     "noteCreateFailed": "Impossible de créer la note.",
+    "noteReadFailed": "Impossible de lire la note.",
     "noteDeleteFailed": "Impossible de supprimer la note. Elle est toujours là.",
     "spacesLoadFailed": "Impossible de charger les espaces.",
     "spaceCreateFailed": "Impossible de créer l'espace.",

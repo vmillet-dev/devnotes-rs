@@ -113,7 +113,7 @@ const CANVAS_KEYS: readonly CanvasKey[] = [
     id: 'canvas.open',
     accelerator: 'Enter',
     labelKey: 'shortcuts.canvas.open',
-    run: ({ focused, notes }) => given(focused, (note) => notes.openNote(note.id)),
+    run: ({ focused, notes }) => given(focused, (note) => void notes.openNote(note.id)),
   },
   {
     id: 'canvas.copy',

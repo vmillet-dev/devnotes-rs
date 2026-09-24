@@ -10,7 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { checklistProgress, noteCopyText } from '@core/model/checklist.model';
+import { checklistProgress } from '@core/model/checklist.model';
 import { Note } from '@core/model/note.model';
 import { NoteSelectionStore } from '@core/state/note-selection.store';
 import { NotesStore } from '@core/state/notes.store';
@@ -33,7 +33,6 @@ export interface NoteActivation {
   readonly extendRange: boolean;
 }
 
-const SNIPPET_LINES = 5;
 const MAX_VISIBLE_TAGS = 2;
 const MAX_VISIBLE_ITEMS = 2;
 
@@ -102,7 +101,8 @@ export class NoteCardComponent {
     const hit = this.searchHit();
     if (hit) return hit.excerpt;
 
-    return this.note().content.split('\n').slice(0, SNIPPET_LINES).join('\n');
+    // Already cut to what a card shows, by `DisplayNote::cut_to_preview`.
+    return this.note().content;
   });
 
   /** A tag or an item is not code: the highlighter would paint its words as keywords. */
@@ -162,7 +162,11 @@ export class NoteCardComponent {
   });
   protected readonly hiddenItemCount = computed(() => this.note().items.length - this.visibleItems().length);
 
-  protected readonly copyText = computed(() => noteCopyText(this.note()));
+  /** Read at the click: the card holds a preview, and the copy wants the whole body. */
+  protected readonly copyText = computed(() => {
+    const note = this.note();
+    return (): Promise<string | null> => this.fill.textToCopy(note);
+  });
 
   protected readonly hasPlaceholders = computed(() => this.note().placeholders.length > 0);
 

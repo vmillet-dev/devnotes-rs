@@ -552,6 +552,36 @@ mod board {
         assert_eq!(board.loose.len(), 1);
     }
 
+    /// A board is a list like the canvas: filed or loose, a card carries a preview.
+    #[test]
+    fn a_board_card_carries_the_head_of_a_long_body() {
+        let mut connection = open_in_memory().unwrap();
+        let sql = space(&mut connection, "SQL");
+        let perf = create(&mut connection, &sql, "Perf", t0()).unwrap();
+        let long = || NoteDraft {
+            content: "1\n2\n3\n4\n5\n6\n7".to_string(),
+            ..draft(&sql)
+        };
+        let filed = create_note(&mut connection, long(), t0()).unwrap();
+        create_note(&mut connection, long(), t0()).unwrap();
+        file_many(
+            &mut connection,
+            std::slice::from_ref(&filed.id),
+            Some(&perf.id),
+            t1(),
+        )
+        .unwrap();
+
+        let mut board = view(&mut connection, &request(&sql));
+
+        assert_eq!(board.notes_mut().count(), 2);
+        assert!(
+            board
+                .notes_mut()
+                .all(|note| note.truncated && note.content == "1\n2\n3\n4\n5")
+        );
+    }
+
     /// A filed card flows inside its zone; only a loose one carries a place of its own.
     #[test]
     fn a_filed_card_has_no_position_and_a_loose_one_does() {

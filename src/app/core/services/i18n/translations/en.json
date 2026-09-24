@@ -205,6 +205,7 @@
     "notesLoadFailed": "Could not load notes.",
     "noteSaveFailed": "Could not save the note. Your text is still on screen.",
     "noteCreateFailed": "Could not create the note.",
+    "noteReadFailed": "Could not read the note.",
     "noteDeleteFailed": "Could not delete the note. It is still there.",
     "spacesLoadFailed": "Could not load spaces.",
     "spaceCreateFailed": "Could not create the space.",

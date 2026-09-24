@@ -42,6 +42,17 @@ pub fn query_notes(query: NotesQuery, db: State<'_, Db>) -> Result<NotesView, Ap
     Ok(view)
 }
 
+/// The whole note. A list sends previews ([`DisplayNote::truncated`]), so the editor and
+/// every copy of a long body read it here.
+#[tauri::command(async)]
+#[specta::specta]
+pub fn get_note(id: String, db: State<'_, Db>) -> Result<DisplayNote, AppError> {
+    let mut connection = lock(&db)?;
+    let note = store::get(&mut connection, &id)?;
+
+    Ok(display(&mut connection, note)?)
+}
+
 #[tauri::command(async)]
 #[specta::specta]
 pub fn create_note(draft: NoteDraft, db: State<'_, Db>) -> Result<DisplayNote, AppError> {
