@@ -1,7 +1,6 @@
 import { InjectionToken, Injectable, inject } from '@angular/core';
 import { exit } from '@tauri-apps/plugin-process';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { QuitGuard } from './quit-guard';
 
 /** A token: a spec really calling `exit()` would take the test runner down. */
 export interface AppWindowAdapter {
@@ -26,7 +25,6 @@ export const APP_WINDOW_ADAPTER = new InjectionToken<AppWindowAdapter>('APP_WIND
 @Injectable({ providedIn: 'root' })
 export class AppWindowService {
   private readonly adapter = inject(APP_WINDOW_ADAPTER);
-  private readonly guard = inject(QuitGuard);
 
   /** After a copy from the palette: the user goes off to paste elsewhere. */
   async hide(): Promise<void> {
@@ -46,9 +44,7 @@ export class AppWindowService {
     this.adapter.reload();
   }
 
-  /** Whatever is still waiting to be written goes first: `exit` waits for nothing. */
   async quit(): Promise<void> {
-    await this.guard.settle();
     try {
       await this.adapter.exit(0);
     } catch {

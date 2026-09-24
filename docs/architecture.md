@@ -2572,14 +2572,6 @@ them with `.typ::<GlobalAction>()` and `.constant("GLOBAL_ACTION_EVENT", …)`, 
 needs a command to hang off. The front imports both from `bindings.ts`, and its `switch` over
 the action is exhaustive — a variant added in Rust stops the front compiling.
 
-**Quitting goes through the front end.** A write can still be waiting behind a debounce — the
-board's 400 ms, above all — and `exit` waits for nothing, so a drag followed at once by
-"Quitter" was lost. `AppWindowService.quit()` settles every task registered with `QuitGuard`
-first (`BoardStore` registers its flush; a failed write does not keep the application open),
-and the tray's "Quitter" emits `GlobalAction::Quit` rather than calling `app.exit(0)` itself.
-⚠️ It still exits on its own after `QUIT_GRACE` (1.5 s): behind the gate nothing listens, and a
-tray entry that does nothing is worse than a lost drag.
-
 **Application metadata travels the same way.** `app_info::METADATA` is exported with
 `.constant("APP_METADATA", …)` and holds what the front used to spell out: the display name,
 the repository URL, the author and their handle, plus the Rust toolchain the project pins —
@@ -2654,7 +2646,7 @@ changes either, so saving them stores noise.
 
 A minimized window needs no guard of ours — the plugin's `Moved` and `Resized` handlers
 both skip one, which on Windows reports itself at -32000. And the file is written on
-`RunEvent::Exit`, not on every move: both ways of quitting end in `app.exit(0)`, so it goes
+`RunEvent::Exit`, not on every move: the tray's "Quitter" is `app.exit(0)`, so it goes
 through, while a force-kill saves nothing and leaves the previous geometry standing.
 
 ⚠️ **The window is declared `"visible": false` and shown from `setup`.** The plugin restores
