@@ -50,8 +50,12 @@ export class VaultGateComponent {
 
   protected readonly isCreating = computed(() => this.vault.needsCreating());
 
+  /** ⚠️ Only for a phrase being chosen: one set under an older, lower floor still has to be typed here. */
   protected readonly tooShort = computed(
-    () => this.passphrase().length > 0 && this.passphrase().length < MINIMUM_PASSPHRASE_LENGTH,
+    () =>
+      this.isCreating() &&
+      this.passphrase().length > 0 &&
+      this.passphrase().length < MINIMUM_PASSPHRASE_LENGTH,
   );
 
   protected readonly mismatched = computed(
@@ -59,9 +63,10 @@ export class VaultGateComponent {
   );
 
   protected readonly canSubmit = computed(() => {
-    if (this.vault.isWorking() || this.passphrase().length < MINIMUM_PASSPHRASE_LENGTH) return false;
+    if (this.vault.isWorking() || this.passphrase().length === 0) return false;
+    if (!this.isCreating()) return true;
 
-    return !this.isCreating() || this.confirmation() === this.passphrase();
+    return this.passphrase().length >= MINIMUM_PASSPHRASE_LENGTH && this.confirmation() === this.passphrase();
   });
 
   protected readonly minimumLength = MINIMUM_PASSPHRASE_LENGTH;

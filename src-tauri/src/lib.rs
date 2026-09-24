@@ -141,6 +141,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
         // The native side registers them before the front end exists; the front reads them.
         .constant("DEFAULT_SHORTCUTS", desktop::ShortcutBindings::defaults())
         .constant("FIELD_NAME_PATTERN", notes::placeholder::FIELD_NAME_PATTERN)
+        .constant("MINIMUM_PASSPHRASE_LENGTH", vault::MINIMUM_LENGTH)
         // Rust decides where a library lives, so it names its preference file too.
         .constant("PREFERENCES_FILE", layout::PREFERENCES)
         // Read by Rust out of the application's file before the front end has booted.

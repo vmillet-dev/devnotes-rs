@@ -132,20 +132,15 @@ describe('VaultGateComponent', () => {
      * Said before the round trip: deriving takes 224 ms, and answering "too short"
      * after it reads as the application thinking about it.
      */
-    it('says a passphrase is too short without asking the back end', async () => {
-      await type('vault-passphrase', 'short');
+    /** A library created under the older floor of eight must still open: Rust warns, it never refuses. */
+    it('hands over a phrase shorter than the floor for a new one', async () => {
+      await type('vault-passphrase', 'eight ch');
 
-      expect(problem()).toContain('8');
-      expect(submitButton().disabled).toBe(true);
-      expect(repository.passphrases).toEqual([]);
-    });
-
-    it('hands the passphrase over once it is long enough', async () => {
-      await type('vault-passphrase', 'correct horse');
+      expect(problem()).toBe('');
       submitButton().click();
       await fixture.whenStable();
 
-      expect(repository.passphrases).toEqual(['correct horse']);
+      expect(repository.passphrases).toEqual(['eight ch']);
     });
 
     /**
@@ -200,6 +195,15 @@ describe('VaultGateComponent', () => {
     it('asks for the passphrase twice', () => {
       expect(field('vault-passphrase')).not.toBeNull();
       expect(field('vault-confirmation')).not.toBeNull();
+    });
+
+    it('says a phrase is too short without asking the back end', async () => {
+      await type('vault-passphrase', 'eleven char');
+      await type('vault-confirmation', 'eleven char');
+
+      expect(problem()).toContain('12');
+      expect(submitButton().disabled).toBe(true);
+      expect(repository.passphrases).toEqual([]);
     });
 
     it('refuses to submit while the two entries differ', async () => {

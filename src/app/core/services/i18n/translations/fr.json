@@ -673,6 +673,7 @@
     "passphrase": "Phrase de passe",
     "confirmation": "Confirmation",
     "tooShort": "Au moins {{length}} caractères.",
+    "belowMinimum": "La phrase de passe de cette bibliothèque fait moins de {{length}} caractères. Elle l’ouvre toujours — changez-la dans Fichier → Préférences → Sécurité.",
     "mismatched": "Les deux saisies diffèrent.",
     "createAction": "Protéger et continuer",
     "unlockAction": "Déverrouiller",

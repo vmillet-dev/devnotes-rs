@@ -21,8 +21,9 @@ use crate::db::{self, Db};
 use crate::error::{AppError, FileContext, StorageError, ValidationError};
 use key::Cost;
 
-/// Short enough to be typed at every launch, long enough to be worth deriving from.
-const MINIMUM_LENGTH: usize = 8;
+/// In characters. A human-chosen eight carries 25–30 bits, which Argon2id at 64 MiB stretches
+/// to days on one GPU, not years. `u32` because it crosses as `MINIMUM_PASSPHRASE_LENGTH`.
+pub(crate) const MINIMUM_LENGTH: u32 = 12;
 
 /// Wipes a passphrase when the command returns, a panic included. It arrives owned from the
 /// IPC payload, so the command holds the last copy, and freed memory ends up in crash dumps.
@@ -113,12 +114,27 @@ fn refuse_a_database_without_its_key(directory: &Path) -> Result<(), StorageErro
 /// every attempt on the main thread.
 #[tauri::command(async)]
 #[specta::specta]
-pub fn unlock_vault(passphrase: String, app: AppHandle, db: State<'_, Db>) -> Result<(), AppError> {
+pub fn unlock_vault(
+    passphrase: String,
+    app: AppHandle,
+    db: State<'_, Db>,
+) -> Result<Unlocked, AppError> {
     let directory = crate::libraries::open_directory(&app)?;
-    unlock(&secret(passphrase), &directory, &db)?;
+    let passphrase = secret(passphrase);
+    unlock(&passphrase, &directory, &db)?;
     crate::sweep(&app);
 
-    Ok(())
+    Ok(Unlocked {
+        below_minimum: validate(&passphrase).is_err(),
+    })
+}
+
+/// ⚠️ A phrase under today's floor still opens: it was chosen under an older one, and refusing
+/// it would lock someone out of their own notes. It is reported instead, at every unlock.
+#[derive(Debug, Clone, Copy, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct Unlocked {
+    pub below_minimum: bool,
 }
 
 fn unlock(passphrase: &str, directory: &Path, db: &Db) -> Result<(), StorageError> {
@@ -197,12 +213,12 @@ fn install(directory: &Path, db: &Db, vault: key::Vault) -> Result<(), StorageEr
 }
 
 /// A length and nothing else: rules about digits and symbols push people towards one
-/// memorable pattern, and Argon2id carries the cost of guessing.
-fn validate(passphrase: &str) -> Result<(), ValidationError> {
-    if passphrase.chars().count() < MINIMUM_LENGTH {
+/// memorable pattern. Also what an export's protection must meet, since that file travels.
+pub(crate) fn validate(passphrase: &str) -> Result<(), ValidationError> {
+    if passphrase.chars().count() < MINIMUM_LENGTH as usize {
         return Err(ValidationError::new(
             "passphrase",
-            "a passphrase of at least 8 characters",
+            format!("a passphrase of at least {MINIMUM_LENGTH} characters"),
         ));
     }
 
@@ -339,13 +355,14 @@ mod tests {
 
     #[test]
     fn a_passphrase_of_the_minimum_length_is_accepted() {
-        assert!(validate("12345678").is_ok());
+        assert!(validate("123456789012").is_ok());
+        assert!(validate("12345678901").is_err());
     }
 
-    /// "clé-privée" is ten characters and twelve bytes: a byte count would let an accent pass.
+    /// Six accented letters are twelve bytes: a byte count would let them pass.
     #[test]
     fn the_length_is_counted_in_characters() {
-        assert!(validate("éàèùçâêîô").is_ok());
-        assert!(validate("éàèùç").is_err());
+        assert!(validate("éàèùçâêîôûëï").is_ok());
+        assert!(validate("éàèùçâ").is_err());
     }
 }

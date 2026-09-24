@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { PassphraseChange, commands } from '@core/ipc/bindings';
+import { PassphraseChange, Unlocked, commands } from '@core/ipc/bindings';
 import { unwrap } from '@core/ipc/ipc.error';
 import { VaultState } from '@core/model/vault.model';
 
@@ -17,8 +17,8 @@ export class VaultRepository {
     unwrap('create_vault', await commands.createVault(passphrase));
   }
 
-  async unlock(passphrase: string): Promise<void> {
-    unwrap('unlock_vault', await commands.unlockVault(passphrase));
+  async unlock(passphrase: string): Promise<Unlocked> {
+    return unwrap('unlock_vault', await commands.unlockVault(passphrase));
   }
 
   /** Answers where everything was moved, which is what the interface has to say. */

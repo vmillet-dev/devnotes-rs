@@ -1,6 +1,6 @@
 import { VaultRepository } from '@core/data/vault.repository';
 import { IpcError } from '@core/ipc/ipc.error';
-import { PassphraseChange } from '@core/ipc/bindings';
+import { PassphraseChange, Unlocked } from '@core/ipc/bindings';
 import { VaultState } from '@core/model/vault.model';
 
 /** The real one reaches for the Tauri bridge, absent under jsdom. */
@@ -23,6 +23,9 @@ export class FakeVaultRepository implements Pick<VaultRepository, keyof VaultRep
   /** What the next change answers, so a spec can drive the report it produces. */
   rewrapped: PassphraseChange = { backupsRewrapped: 0, backupsLeft: 0 };
 
+  /** What the next unlock answers, so a spec can drive the warning it produces. */
+  unlocked: Unlocked = { belowMinimum: false };
+
   /** ⚠️ Through the guard like the rest: reading the state is a command too, and it is
    *  the one that fails when there is no bridge at all. */
   async state(): Promise<VaultState> {
@@ -37,8 +40,10 @@ export class FakeVaultRepository implements Pick<VaultRepository, keyof VaultRep
     return this.attempt(passphrase);
   }
 
-  async unlock(passphrase: string): Promise<void> {
-    return this.attempt(passphrase);
+  async unlock(passphrase: string): Promise<Unlocked> {
+    await this.attempt(passphrase);
+
+    return this.unlocked;
   }
 
   /** Records the pair; `failNext` is how a spec makes the current phrase wrong. */

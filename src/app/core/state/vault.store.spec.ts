@@ -82,6 +82,20 @@ describe('VaultStore', () => {
 
       expect(repository.passphrases).toEqual(['an end-to-end passphrase']);
       expect(store.isUnlocked()).toBe(true);
+      expect(TestBed.inject(StatusNotifier).status()).toBeNull();
+    });
+
+    /** Refusing a phrase chosen under the older floor would lock someone out of their notes. */
+    it('opens under a phrase below the floor, and says so', async () => {
+      repository.unlocked = { belowMinimum: true };
+
+      expect(await store.unlock('eight ch')).toBe(true);
+
+      expect(store.isUnlocked()).toBe(true);
+      expect(TestBed.inject(StatusNotifier).status()).toEqual({
+        key: 'vault.belowMinimum',
+        params: { length: 12 },
+      });
     });
 
     it('creates on a first launch, and the library is open straight after', async () => {

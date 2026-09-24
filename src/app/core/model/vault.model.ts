@@ -2,7 +2,7 @@
 export type { VaultState } from '@core/ipc/bindings';
 
 /**
- * What `vault::validate` refuses below, said on the front too: before a second of derivation,
- * and before an export prompt sells a short phrase as protection.
+ * What `vault::validate` refuses below, from Rust: the form says it before a second of
+ * derivation, and before an export prompt sells a short phrase as protection.
  */
-export const MINIMUM_PASSPHRASE_LENGTH = 8;
+export { MINIMUM_PASSPHRASE_LENGTH } from '@core/ipc/bindings';

@@ -6,7 +6,7 @@ import { hasErrorCode } from '@core/ipc/ipc.error';
 import { PassphraseChange } from '@core/ipc/bindings';
 import { TranslationRef } from '@core/services/i18n/translation-ref.model';
 import { VaultRepository } from '@core/data/vault.repository';
-import { VaultState } from '@core/model/vault.model';
+import { MINIMUM_PASSPHRASE_LENGTH, VaultState } from '@core/model/vault.model';
 import { SEEDED_KEY } from '@core/services/samples/sample-notes.service';
 
 /** The state lives in Rust: a page reload must not ask again for a library the process has open. */
@@ -47,8 +47,14 @@ export class VaultStore {
     return this.attempt(() => this.repository.create(passphrase));
   }
 
+  /** A phrase under today's floor still opens, and says so every time until it is changed. */
   async unlock(passphrase: string): Promise<boolean> {
-    return this.attempt(() => this.repository.unlock(passphrase));
+    return this.attempt(async () => {
+      const unlocked = await this.repository.unlock(passphrase);
+      if (unlocked.belowMinimum) {
+        this.status.notify({ key: 'vault.belowMinimum', params: { length: MINIMUM_PASSPHRASE_LENGTH } });
+      }
+    });
   }
 
   /**
