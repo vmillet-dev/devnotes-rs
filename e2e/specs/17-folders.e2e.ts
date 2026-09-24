@@ -272,6 +272,7 @@ describe('Folders', () => {
           'note-card-open',
           'note-card-pin',
           'note-card-copy',
+          'note-card-duplicate',
           'note-card-file',
           'note-card-move',
           'note-card-delete',
@@ -313,6 +314,38 @@ describe('Folders', () => {
       );
       expect(view.sections[0]?.notes[0]?.pinned).toBe(true);
       await canvas.pinFromCardMenu(title);
+    });
+
+    /** A copy to start from: it keeps the folder, and opens ready to be renamed. */
+    it('duplicates a note from the card and opens the copy', async () => {
+      await canvas.fileNote(title, folderId);
+      await eventually(
+        () => bridge.queryNotes(query({ search: title })),
+        (found) => found.sections[0]?.notes[0]?.folderId === folderId,
+        'the filing to reach the database',
+      );
+
+      await canvas.duplicateFromCardMenu(title);
+
+      expect(await editor.isOpen()).toBe(true);
+      const copyTitle = await editor.title();
+      // Whatever the language the suite left: the title, and a suffix after it.
+      expect(copyTitle.startsWith(title)).toBe(true);
+      expect(copyTitle).not.toBe(title);
+      const view = await eventually(
+        () => bridge.queryNotes(query({ search: title })),
+        (found) => found.matched === 2,
+        'the copy to reach the database',
+      );
+      const copy = view.sections.flatMap((section) => section.notes).find((note) => note.title === copyTitle);
+      expect(copy?.folderId).toBe(folderId);
+
+      // Later steps find the note by searching its title, which the copy also matches.
+      await editor.close();
+      await bridge.deleteNotes([copy!.id]);
+      await bridge.purgeNotes([copy!.id]);
+      await canvas.fileNote(title, null);
+      await reloadInHomeSpace();
     });
 
     /**

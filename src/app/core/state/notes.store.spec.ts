@@ -294,6 +294,27 @@ describe('NotesStore', () => {
     });
   });
 
+  describe('duplicateNote', () => {
+    it('opens the copy in the editor, under the title it was given', async () => {
+      const { store } = await createNotesHarness([createNote({ id: 'a', title: 'Deploy', pinned: true })]);
+
+      await store.duplicateNote('a', 'Deploy (copy)');
+
+      expect(store.selectedNote()?.id).not.toBe('a');
+      expect(store.selectedNote()?.title).toBe('Deploy (copy)');
+      expect(store.selectedNote()?.pinned).toBe(false);
+    });
+
+    it('says so and opens nothing when the copy fails', async () => {
+      const { store, repository } = await createNotesHarness([createNote({ id: 'a' })]);
+      repository.failNext = new Error('disk full');
+
+      await store.duplicateNote('a', 'Copy');
+
+      expect(store.selectedNote()).toBeNull();
+    });
+  });
+
   describe('moveNote', () => {
     it('files the note in another space', async () => {
       const { store, repository } = await createNotesHarness([createNote({ id: 'a', spaceId: 'space-1' })]);

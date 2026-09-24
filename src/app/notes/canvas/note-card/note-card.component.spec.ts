@@ -514,6 +514,23 @@ describe('NoteCardComponent', () => {
 
       expect(deleteNote).toHaveBeenCalledWith('note-42');
     });
+
+    /** The suffix is a translation; an untitled note stays untitled rather than "Sans titre (copie)". */
+    it('names the copy after the note, and leaves an untitled one untitled', async () => {
+      const duplicateNote = vi.spyOn(TestBed.inject(NotesStore), 'duplicateNote').mockResolvedValue();
+      fixture.componentRef.setInput('note', createNote({ id: 'note-42', title: 'Deploy' }));
+      await fixture.whenStable();
+
+      menu().duplicateRequested.emit();
+      fixture.componentRef.setInput('note', createNote({ id: 'note-43', title: '' }));
+      await fixture.whenStable();
+      menu().duplicateRequested.emit();
+
+      expect(duplicateNote.mock.calls).toEqual([
+        ['note-42', 'Deploy (copie)'],
+        ['note-43', ''],
+      ]);
+    });
   });
 
   describe('a checklist note', () => {

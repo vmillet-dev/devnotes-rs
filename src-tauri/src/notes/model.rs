@@ -287,6 +287,20 @@ impl Note {
 
         self
     }
+
+    /// Everything the note says, under a new id and title, dated now and not pinned. Its
+    /// history stays with the original: the copy starts its own.
+    #[must_use]
+    pub fn duplicate(self, id: String, title: String, now: DateTime<Utc>) -> Self {
+        Self {
+            id,
+            title,
+            pinned: false,
+            created_at: now,
+            updated_at: now,
+            ..self
+        }
+    }
 }
 
 pub fn decorate(note: Note, now: DateTime<Utc>) -> DisplayNote {

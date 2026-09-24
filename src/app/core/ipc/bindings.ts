@@ -13,6 +13,11 @@ export const commands = {
 	getNote: (id: string) => typedError<DisplayNote, AppError>(__TAURI_INVOKE("get_note", { id })),
 	createNote: (draft: NoteDraft) => typedError<DisplayNote, AppError>(__TAURI_INVOKE("create_note", { draft })),
 	/**
+	 *  A copy to start another note from, attachments included and history left behind. The
+	 *  title is the front end's: its suffix is a translation.
+	 */
+	duplicateNote: (id: string, title: string) => typedError<DisplayNote, AppError>(__TAURI_INVOKE("duplicate_note", { id, title })),
+	/**
 	 *  The first launch: the space, its folders and the notes in one transaction, since a space
 	 *  standing alone reads as "already seeded" for good. The strings stay on the front end, with
 	 *  the translations. Answers the space it made, which the front end opens on.

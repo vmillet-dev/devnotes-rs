@@ -140,6 +140,26 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
     });
   }
 
+  duplicate(id: string, title: string): Promise<Note> {
+    return guard(this, () => {
+      const original = this.notes.find((each) => each.id === id);
+      if (!original) {
+        throw new Error(`Unknown note: ${id}`);
+      }
+      const now = new Date();
+      const copy: Note = {
+        ...original,
+        id: `fake-${++this.nextId}`,
+        title,
+        pinned: false,
+        createdAt: now,
+        updatedAt: now,
+      };
+      this.notes = [copy, ...this.notes];
+      return copy;
+    });
+  }
+
   seedSamples(spaceName: string, folders: readonly string[], notes: readonly SampleNote[]): Promise<Space> {
     return guard(this, () => {
       const spaceId = `fake-space-${++this.nextId}`;

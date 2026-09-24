@@ -112,20 +112,21 @@ describe('NoteCardMenuComponent', () => {
 
   /** The complete menu: every property of a note, from its card. */
   describe('the entries that used to be somewhere else', () => {
-    it('opens, pins and copies from here too', async () => {
+    it('opens, pins, copies and duplicates from here too', async () => {
       const fired: string[] = [];
       fixture.componentInstance.opened.subscribe(() => fired.push('open'));
       fixture.componentInstance.pinToggled.subscribe(() => fired.push('pin'));
       fixture.componentInstance.copyRequested.subscribe(() => fired.push('copy'));
+      fixture.componentInstance.duplicateRequested.subscribe(() => fired.push('duplicate'));
       await open();
 
-      for (const id of ['note-card-open', 'note-card-pin', 'note-card-copy']) {
+      for (const id of ['note-card-open', 'note-card-pin', 'note-card-copy', 'note-card-duplicate']) {
         fixture.nativeElement.querySelector(`[data-testid="${id}"]`).click();
         await fixture.whenStable();
         await open();
       }
 
-      expect(fired).toEqual(['open', 'pin', 'copy']);
+      expect(fired).toEqual(['open', 'pin', 'copy', 'duplicate']);
     });
 
     it('names the pin by what pressing it would do', async () => {

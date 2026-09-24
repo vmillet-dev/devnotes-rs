@@ -48,6 +48,17 @@
       <span aria-hidden="true">⧉</span>
       {{ 'notes.copy' | transloco }}
     </button>
+    <button
+      appMenuItem
+      type="button"
+      role="menuitem"
+      class="card-menu-item"
+      data-testid="note-card-duplicate"
+      (click)="run(duplicateRequested)"
+    >
+      <span aria-hidden="true">⎘</span>
+      {{ 'notes.duplicate' | transloco }}
+    </button>
 
     <!-- A folder belongs to one space, so this list is the **current** space's and
          moving the note elsewhere clears its folder. The two sections are shown together

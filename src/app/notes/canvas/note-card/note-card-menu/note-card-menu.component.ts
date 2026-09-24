@@ -36,6 +36,7 @@ export class NoteCardMenuComponent {
   readonly opened = output<void>();
   readonly pinToggled = output<void>();
   readonly copyRequested = output<void>();
+  readonly duplicateRequested = output<void>();
   readonly fileRequested = output<string | null>();
   readonly moveRequested = output<string>();
   readonly deleteRequested = output<void>();

@@ -765,12 +765,18 @@ precisely where the marks now are: anything floating there sits on top of them, 
 collision is what decided this layout. A selection affordance that exists only under the
 pointer is also one nobody finds.
 
-**The card's ⋯ menu is the complete one.** Open, pin, copy, file into…, move to…, delete —
+**The card's ⋯ menu is the complete one.** Open, pin, copy, duplicate, file into…, move to…, delete —
 a note's properties used to be spread over four surfaces with none of them complete: filing
 one from the date view took three clicks through the selection bar plus a fourth to clear
 it, and pinning with the mouse took a full-screen modal for a boolean that has its own
 filter chip in the header. The editor gained the two placements it was missing, as
 `placement-menu` used twice.
+
+**Duplicate is Rust's** (`notes::duplicate`): the note, its tags, items, field values and
+attachments under new ids, not pinned, dated now, its history left with the original. The files
+are copied before the rows — sealed as they are, the key being the library's — and the rows go in
+one transaction. The title arrives from the front end, whose translations own the " (copy)"
+suffix, and the copy opens in the editor to be renamed.
 
 ⚠️ **The two placement controls are shown together**, and that is not decoration: a folder
 belongs to one space, so `NotePatch::apply` clears `folder_id` whenever `space_id` moves.
