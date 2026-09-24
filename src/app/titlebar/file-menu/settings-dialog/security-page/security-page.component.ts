@@ -82,6 +82,10 @@ export class SecurityPageComponent {
     this.draft.set('automaticBackups', (event.target as HTMLInputElement).checked);
   }
 
+  protected onBackupAttachments(event: Event): void {
+    this.draft.set('backupAttachments', (event.target as HTMLInputElement).checked);
+  }
+
   protected ask(backup: Backup): void {
     this.backups.ask(backup);
   }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AUTOMATIC_BACKUPS_KEY } from '@core/ipc/bindings';
+import { AUTOMATIC_BACKUPS_KEY, BACKUP_ATTACHMENTS_KEY } from '@core/ipc/bindings';
 import { DEFAULT_SHORTCUTS } from '@core/services/shortcuts/shortcut.model';
 import {
   AppSettings,
@@ -26,8 +26,9 @@ describe('app settings model', () => {
   });
 
   /** Rust reads this one out of the file itself, before the front end has booted. */
-  it('writes the backups switch under the key Rust reads it by', () => {
+  it('writes the backups switches under the keys Rust reads them by', () => {
     expect(SETTINGS_KEYS.automaticBackups).toBe(AUTOMATIC_BACKUPS_KEY);
+    expect(SETTINGS_KEYS.backupAttachments).toBe(BACKUP_ATTACHMENTS_KEY);
   });
 
   it('namespaces every key, since the store is shared with everything else', () => {

@@ -48,6 +48,8 @@ export interface AppSettings {
   readonly showPinnedFirst: boolean;
   /** Read by Rust at launch, before the front end exists: `backup::wanted`. */
   readonly automaticBackups: boolean;
+  /** Whether that copy carries `attachments/`, read by Rust the same way. */
+  readonly backupAttachments: boolean;
   readonly copyConfirmation: boolean;
   readonly updateNotifications: boolean;
   /**
@@ -72,6 +74,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   libraryRailWidth: RAIL_WIDTH.default,
   showPinnedFirst: true,
   automaticBackups: true,
+  backupAttachments: true,
   copyConfirmation: true,
   updateNotifications: true,
   skippedUpdate: '',

@@ -13,8 +13,8 @@ const STORE_FILE = PREFERENCES_FILE;
 
 /**
  * The line between the two files: `devnotes.notes.*` is the library's
- * (`LibraryPreferencesService`), everything else follows the person. `automaticBackups` stays
- * here: Rust reads it from this file before the front end boots (`backup::wanted`).
+ * (`LibraryPreferencesService`), everything else follows the person. The two backup keys stay
+ * here: Rust reads them from this file before the front end boots (`backup::wanted`).
  */
 export const LIBRARY_KEY_PREFIX = 'devnotes.notes.';
 

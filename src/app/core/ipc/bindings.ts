@@ -224,6 +224,8 @@ export const APP_METADATA = {"author":"Valentin MILLET","authorHandle":"@vmillet
 
 export const AUTOMATIC_BACKUPS_KEY = "devnotes.automaticBackups" as const;
 
+export const BACKUP_ATTACHMENTS_KEY = "devnotes.backupAttachments" as const;
+
 export const DEFAULT_SHORTCUTS = {"capture":"Ctrl+Alt+V","newNote":"Ctrl+Alt+N","palette":"Ctrl+Alt+P"} as const;
 
 export const FIELD_NAME_PATTERN = "^[A-Za-z0-9_-]+$" as const;
@@ -262,6 +264,8 @@ export type Backup = {
 	bytes: number | null,
 	/**  Whether the key file travelled with it: without one, restoring loses the library. */
 	openable: boolean,
+	/**  Without them, a restore leaves the live `attachments/` where it is. */
+	attachments: boolean,
 };
 
 /**  What a tidy-up did, and what it takes to walk it back. */
