@@ -14,7 +14,6 @@ function backup(overrides: Partial<Backup> = {}): Backup {
     takenAt: new Date('2026-07-25T09:00:00.000Z'),
     bytes: 2_500_000,
     openable: true,
-    attachments: true,
     ...overrides,
   };
 }

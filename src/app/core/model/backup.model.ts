@@ -3,9 +3,8 @@ export interface Backup {
   /** The folder's name, which is its stamp, and what a restore asks for. */
   readonly id: string;
   readonly takenAt: Date;
+  /** The database alone: the attachments are shared with the library and the other copies. */
   readonly bytes: number;
   /** Whether the key file travelled with it: without one the copy opens for nobody. */
   readonly openable: boolean;
-  /** Without them, a restore leaves the live attachments where they are. */
-  readonly attachments: boolean;
 }

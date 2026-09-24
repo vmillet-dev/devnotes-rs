@@ -14,14 +14,12 @@ const TAKEN: readonly Backup[] = [
     takenAt: new Date('2026-07-25T09:00:00.000Z'),
     bytes: 2_500_000,
     openable: true,
-    attachments: true,
   },
   {
     id: '2026-07-24_09-00-00',
     takenAt: new Date('2026-07-24T09:00:00.000Z'),
     bytes: 2_400_000,
     openable: false,
-    attachments: false,
   },
 ];
 
@@ -33,9 +31,6 @@ describe('SecurityPageComponent', () => {
 
   const backups = (): HTMLInputElement =>
     fixture.nativeElement.querySelector('[data-testid="setting-automatic-backups"]');
-
-  const attachments = (): HTMLInputElement =>
-    fixture.nativeElement.querySelector('[data-testid="setting-backup-attachments"]');
 
   beforeEach(async () => {
     TestBed.resetTestingModule();
@@ -87,31 +82,6 @@ describe('SecurityPageComponent', () => {
     expect(settings.automaticBackups()).toBe(false);
   });
 
-  /** Read by Rust at launch like the switch above it, so it waits for Appliquer too. */
-  it('stages whether a copy carries the attachments until it is applied', async () => {
-    expect(attachments().checked).toBe(true);
-
-    attachments().click();
-    await fixture.whenStable();
-
-    expect(draft.value('backupAttachments')).toBe(false);
-    expect(settings.backupAttachments()).toBe(true);
-
-    draft.apply();
-
-    expect(settings.backupAttachments()).toBe(false);
-  });
-
-  /** It decides what a copy holds, and with no copy taken there is nothing to decide. */
-  it('greys the attachments switch while no copy is taken', async () => {
-    expect(attachments().disabled).toBe(false);
-
-    backups().click();
-    await fixture.whenStable();
-
-    expect(attachments().disabled).toBe(true);
-  });
-
   /**
    * The two together, which is the whole of this page: the phrase unwraps the key and
    * the copies are wrapped under it too, so a page carrying only one of them would let
@@ -138,12 +108,6 @@ describe('SecurityPageComponent', () => {
       expect(rows()).toHaveLength(2);
       expect(rows()[0].textContent).toContain('2026-07-25_09-00-00');
       expect(rows()[0].textContent).toContain('2.4 Mo');
-    });
-
-    /** Restoring one of those leaves the live attachments in place, which is worth knowing first. */
-    it('says which copies were taken without the attachments', () => {
-      expect(rows()[0].textContent).not.toContain('sans pièces jointes');
-      expect(rows()[1].textContent).toContain('sans pièces jointes');
     });
 
     /** Listed, never offered: it opens for nobody. */

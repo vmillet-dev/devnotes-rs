@@ -176,11 +176,6 @@
     outline: 2px solid var(--amber-edge);
     outline-offset: 2px;
   }
-
-  &:disabled {
-    opacity: 0.45;
-    cursor: default;
-  }
 }
 
 // A note under a group: what the setting does not say about itself.

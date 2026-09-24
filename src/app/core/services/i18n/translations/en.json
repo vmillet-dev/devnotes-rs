@@ -556,14 +556,13 @@
       "cancel": "Cancel",
       "changed": "Passphrase changed. The old one no longer opens the library, nor the copies kept beside it.",
       "automaticBackups": "Copy the library at launch",
-      "backupAttachments": "Include the attached files",
       "backupsNote": "At most one copy a day, the last three kept beside the library — enough for an emptied trash or an update gone wrong. Not a defence against a dead disk: export somewhere else for that.",
       "changedOneLeft": "Passphrase changed, but one copy could not be rewrapped: it still opens with the old phrase.",
       "changedSomeLeft": "Passphrase changed, but {{count}} copies could not be rewrapped: they still open with the old phrase.",
       "copiesNote": "The copies kept beside the library are rewrapped with it. A key file you copied somewhere else will still open with the old phrase.",
       "backups": "Backups",
       "access": "Access",
-      "backupsLimit": "A copy carries the notes and the key that opens them, and the attached files unless you leave them out above: three copies take three times their room."
+      "backupsLimit": "A copy carries the notes, the key that opens them and the attached files. The files are linked rather than duplicated, shared with the library, so a copy costs little more than its notes."
     },
     "notifications": {
       "title": "Notifications",
@@ -700,7 +699,6 @@
     "none": "No copy yet. The first one is taken at the next launch.",
     "restore": "Restore…",
     "unopenable": "No key: unreadable",
-    "withoutAttachments": "without attachments",
     "confirm": "Replace the whole library with the copy from {{when}}. Everything written since leaves the library — nothing is deleted, the current one is set aside in \"replaced\". You will have to type the passphrase again.",
     "cancel": "Cancel",
     "confirmRestore": "Replace the library",

@@ -112,10 +112,11 @@ something nobody can open again.
 DevNotes takes a **rolling copy at launch**, at most one a day, and keeps the last three in
 `backups/`. Each one is a full library — database, key file and attachments together — so
 restoring is copying a folder back. It is written with `VACUUM INTO` rather than by copying
-the file, because under WAL the database on its own is not a consistent snapshot. Turn it
-off in Preferences → Security if you would rather it did not, or leave the attachments out
-there: three copies of them take three times their room, and a copy without them brings back
-the notes while the attachments on disk stay as they are.
+the file, because under WAL the database on its own is not a consistent snapshot. The
+attachments are hard-linked rather than copied: a copy shares their bytes with the library,
+so it costs little more than the notes, and an attachment you delete afterwards is still
+whole in the copies taken before. Turn it off in Preferences → Security if you would rather
+it did not.
 
 DevNotes also checks the database is still sound every time it opens one. If it is not, it
 says so rather than starting on it, and offers to set it aside: the database, its
