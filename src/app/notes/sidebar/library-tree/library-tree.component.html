@@ -181,16 +181,16 @@
   </ul>
 </nav>
 
-<!-- ⚠️ Pointer events and not HTML5 drag & drop, which this WebView never sees. A
-     separator rather than a button: the arrow keys move it, and that is the pattern
-     screen readers already know for a splitter. ⚠️ Outside the tree, which scrolls —
-     an edge inside it would only cover the first screenful. -->
+<!-- ⚠️ Pointer events and not HTML5 drag & drop, which this WebView never sees. A slider
+     rather than a button: the arrow keys move it and the value is the width, which is what
+     a screen reader announces. ⚠️ Outside the tree, which scrolls — an edge inside it would
+     only cover the first screenful. -->
 <div
   class="rail-edge"
   data-testid="library-rail-edge"
-  role="separator"
+  role="slider"
   tabindex="0"
-  aria-orientation="vertical"
+  aria-orientation="horizontal"
   [attr.aria-label]="'sidebar.resize' | transloco"
   [attr.aria-valuenow]="width()"
   [attr.aria-valuemin]="bounds.min"

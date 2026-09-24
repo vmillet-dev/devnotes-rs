@@ -91,12 +91,16 @@ export class ErrorNotifier {
     };
 
     // ⚠️ `.catch` rather than `async`/`await`: wrapping adds two microtask hops between
-    // the call and its answer, enough to change when a rendered view settles.
+    // the call and its answer, enough to change when a rendered view settles. The `try`
+    // covers the synchronous throw alone.
+    let pending: Promise<T>;
     try {
-      return action().catch(report);
+      pending = action();
     } catch (error) {
       return Promise.resolve(report(error));
     }
+
+    return pending.catch(report);
   }
 
   /** `attempt`, with `flag` raised for exactly the length of the call, failure included. */
