@@ -54,9 +54,9 @@
             {{ 'folders.allFolders' | transloco }}
           </button>
           @for (folder of folders(); track folder.id) {
-            <!-- `role="none"`: a bare container between the menu and its items would
+            <!-- `role="presentation"`: a bare container between the menu and its items would
                  break the relationship screen readers expect. -->
-            <div class="folder-row" role="none">
+            <div class="folder-row" role="presentation">
               <button
                 appMenuItem
                 type="button"

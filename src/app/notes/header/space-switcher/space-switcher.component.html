@@ -49,9 +49,9 @@
             {{ 'notes.allSpaces' | transloco }}
           </button>
           @for (space of spaces(); track space.id) {
-            <!-- `role="none"`: a bare container between the menu and its items would
+            <!-- `role="presentation"`: a bare container between the menu and its items would
                  break the relationship screen readers expect. -->
-            <div class="space-row" role="none">
+            <div class="space-row" role="presentation">
               <button
                 appMenuItem
                 type="button"

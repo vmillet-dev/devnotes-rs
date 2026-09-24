@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { AppEventsService, GlobalAction } from '@core/ipc/app-events.service';
 import { NotesRevision } from '@core/state/notes-revision';
 import { NotesStore } from '@core/state/notes.store';
@@ -24,7 +24,7 @@ import { NotesSidebarComponent } from './sidebar/notes-sidebar.component';
   styleUrl: './notes-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class NotesPageComponent {
+export class NotesPageComponent implements OnInit {
   private readonly store = inject(NotesStore);
   private readonly palette = inject(PaletteStore);
   private readonly spaces = inject(SpacesStore);
@@ -34,8 +34,10 @@ export class NotesPageComponent {
   constructor() {
     const events = inject(AppEventsService);
     inject(DestroyRef).onDestroy(events.on((action) => this.runGlobalAction(action)));
+  }
 
-    // A fresh installation has no space, so not even a creatable note.
+  /** A fresh installation has no space, so not even a creatable note. */
+  ngOnInit(): void {
     void this.seedSamples();
   }
 
