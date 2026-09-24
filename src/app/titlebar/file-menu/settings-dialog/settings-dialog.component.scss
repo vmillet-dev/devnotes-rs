@@ -121,7 +121,7 @@ app-dialog {
   color: var(--amber-ink);
 }
 
-// ⚠️ Text and a hairline, never a fill: one red button beside the single amber accent
+// Text and a hairline, never a fill: one red button beside the single amber accent
 // reads as a second accent.
 .settings-btn.discard {
   @include destructive;

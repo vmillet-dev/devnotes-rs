@@ -12,7 +12,7 @@
     (languageToggled)="languageToggled.emit($event)"
   />
 
-  <!-- ⚠️ Here rather than in the topbar: the panel is open exactly when something is
+  <!-- Here rather than in the topbar: the panel is open exactly when something is
        filtering, which is exactly when this is worth a place. -->
   @if (canClear()) {
     <button type="button" class="facets-clear" data-testid="clear-filters" (click)="clearRequested.emit()">

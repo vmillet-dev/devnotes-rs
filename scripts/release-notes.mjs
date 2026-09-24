@@ -2,7 +2,7 @@
 // Release notes from the pull requests merged since the last tag.
 //
 // `generate` splices a `## [x.y.z] - DATE` section into CHANGELOG.md, `extract` reads one
-// back out. ⚠️ The GitHub release body comes from `extract` at the tag rather than from a
+// back out. The GitHub release body comes from `extract` at the tag rather than from a
 // job output, so the file baked into the binary and the page on github.com cannot say two
 // different things. The grammar is the one `src-tauri/src/changelog/model.rs` parses.
 
@@ -11,7 +11,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 /**
- * ⚠️ The order of this table is the order of the sections on screen and the precedence
+ * The order of this table is the order of the sections on screen and the precedence
  * when a pull request wears two mapped labels.
  */
 export const SECTIONS = [
@@ -34,7 +34,7 @@ export const SECTIONS = [
 ];
 
 /**
- * Subjects that describe the release rather than something in it. ⚠️ `(?![A-Za-z])` and
+ * Subjects that describe the release rather than something in it. `(?![A-Za-z])` and
  * not `\b`: after `chore(release)` comes a `:`, and two non-word characters carry no word
  * boundary between them.
  */
@@ -147,7 +147,7 @@ export function groupEntries(entries) {
 }
 
 /**
- * ⚠️ A release with no entry, or a heading with no bullet under it, turns `cargo test` red
+ * A release with no entry, or a heading with no bullet under it, turns `cargo test` red
  * once committed — and the commit this workflow makes is never seen by CI.
  */
 export function assertRenderable(groups) {
@@ -253,7 +253,7 @@ function subjectsSince(tag) {
 }
 
 /**
- * ⚠️ Asked for by number rather than listed: a pull request merged into an intermediate
+ * Asked for by number rather than listed: a pull request merged into an intermediate
  * branch never lands as a commit on `main`, so any listing reports work this release does
  * not carry. `closingIssuesReferences` is GraphQL-only and is the point of the call — the
  * issues are labelled here, the pull requests almost never are.

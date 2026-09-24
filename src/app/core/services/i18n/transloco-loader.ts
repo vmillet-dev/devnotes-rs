@@ -8,7 +8,7 @@ import fr from './translations/fr.json';
 const TRANSLATIONS: Record<string, Translation> = { fr, en };
 
 /**
- * Bundled at build time rather than fetched over HTTP. ⚠️ The files live outside
+ * Bundled at build time rather than fetched over HTTP. The files live outside
  * `src/assets` on purpose: the asset glob would ship a second, unread copy in `dist`.
  */
 @Injectable({ providedIn: 'root' })

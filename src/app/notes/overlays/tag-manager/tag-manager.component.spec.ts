@@ -85,7 +85,7 @@ describe('TagManagerComponent', () => {
     expect(deleteButton().getAttribute('aria-disabled')).toBe('true');
   });
 
-  /** ⚠️ The field keeps what was typed: the change has only been proposed, and
+  /** The field keeps what was typed: the change has only been proposed, and
    *  cancelling must not cost the user their typing. */
   it('emits the target name and keeps the field until the change is confirmed', async () => {
     let emitted: string | undefined;
@@ -124,7 +124,7 @@ describe('TagManagerComponent', () => {
   });
 
   /**
-   * ⚠️ In place of the actions, not beside them: the click that asked for this is the one
+   * In place of the actions, not beside them: the click that asked for this is the one
    * that would confirm it, and a second click landing on the same spot is the accident a
    * confirmation exists to stop.
    */

@@ -7,7 +7,7 @@ import { clipboardText, eventually, press, reloadCanvas, testid } from '../suppo
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
- * `note_items` is keyed by position, so every write replaces the whole list. ⚠️ Reordering
+ * `note_items` is keyed by position, so every write replaces the whole list. Reordering
  * is pointer events plus `Alt+↑/↓`, because HTML5 drag and drop receives nothing in this
  * WebView — the keyboard path is the one a test can drive.
  */
@@ -54,7 +54,7 @@ describe('Todo lists', () => {
   });
 
   it('ticks an item from the card, without opening it', async () => {
-    // ⚠️ The items sit on a layer above the card button, which is why they can be clicked
+    // The items sit on a layer above the card button, which is why they can be clicked
     // at all — a `<div>` inside a `<button>` would be invalid HTML.
     const card = await canvas.cardWithTitle(title);
     // The rows are what is left to do, so the first one is not the item the editor ticked.
@@ -70,7 +70,7 @@ describe('Todo lists', () => {
 
   it('offers a drag handle that says what it moves', async () => {
     await canvas.openNote(title);
-    // ⚠️ Asserted, not dragged — see `editor.grip`.
+    // Asserted, not dragged — see `editor.grip`.
     const grip = await editor.grip(0);
     expect(await grip.isExisting()).toBe(true);
     expect(await grip.getAttribute('aria-label')).toContain('Tag the release');
@@ -119,9 +119,8 @@ describe('Todo lists', () => {
   });
 
   /**
-   * ⚠️ `C` used to copy `note.content`, and a todo list has none — it put an empty
-   * string on the clipboard while the card's own button handed over the Markdown.
-   * Opening the note and closing it is what leaves the canvas cursor on that card.
+   * A todo list has no `content`: `C` copies its Markdown, as the card's own button does.
+   * Opening the note and closing it leaves the canvas cursor on that card.
    */
   it('copies that same Markdown from the keyboard, and says which note', async function () {
     await canvas.openNote(title);
@@ -133,7 +132,7 @@ describe('Todo lists', () => {
     await banners.status().waitForExist({ timeout: 10_000 });
     expect(await banners.status().getText()).toContain(title);
 
-    // ⚠️ An unreadable clipboard answers null at once, so only the readable case waits.
+    // An unreadable clipboard answers null at once, so only the readable case waits.
     const copied = await eventually(
       () => clipboardText(),
       (text) => text === null || text.includes('- ['),
@@ -151,7 +150,7 @@ describe('Todo lists', () => {
     const card = await canvas.cardWithTitle(title);
     await card.$(testid('copy-button')).click();
 
-    // ⚠️ An unreadable clipboard answers null at once, so only the readable case waits.
+    // An unreadable clipboard answers null at once, so only the readable case waits.
     const copied = await eventually(
       () => clipboardText(),
       (text) => text === null || text.includes('- [x] Write the changelog'),
@@ -167,7 +166,7 @@ describe('Todo lists', () => {
   });
 
   /**
-   * ⚠️ WCAG 2.2 AA (2.5.8) asks 24x24, and this row was 18: it is the control that was
+   * WCAG 2.2 AA (2.5.8) asks 24x24, and this row was 18: it is the control that was
    * reported as impossible to tick. Growing it is not free — the card is a fixed 150px and
    * `.card-items` is `overflow: hidden`, so the second half of this asserts the card still
    * shows what it claims rather than clipping a row the badge is still counting.
@@ -187,10 +186,8 @@ describe('Todo lists', () => {
   });
 
   /**
-   * ⚠️ The assertion #176 needed and did not have. Growing a row to 24px pushed the list past
-   * the 53px it gets inside a 150px card, and `.card-items` is anchored to the bottom — so
-   * the first row was drawn nine pixels above its own box and cut in half. Counting the rows
-   * and checking the badge both passed the whole time.
+   * `.card-items` is anchored to the bottom of 53px inside a 150px card: a row that does not fit
+   * is drawn above its box and cut, while counting the rows still passes. So the boxes are read.
    */
   it('draws every row it shows inside the box that holds them', async () => {
     await canvas.waitForCard(title);
@@ -222,7 +219,7 @@ describe('Todo lists', () => {
 
   /**
    * A card has two rows to say what a list is about, and what it is about is what is left.
-   * ⚠️ The progress bar already says how much is done, so a ticked row costs a seat and
+   * The progress bar already says how much is done, so a ticked row costs a seat and
    * pays nothing back.
    */
   describe('a list with some of its items already done', () => {
@@ -263,7 +260,7 @@ describe('Todo lists', () => {
       await canvas.waitForCard(partly);
     });
 
-    // ⚠️ The canvas is shared with every spec file that runs after this one.
+    // The canvas is shared with every spec file that runs after this one.
     after(async () => {
       await bridge.deleteNotes(seeded);
       await reloadCanvas();
@@ -331,7 +328,7 @@ describe('Todo lists', () => {
     });
 
     /**
-     * ⚠️ A row is not at the place it holds in the note: ticking the second visible box
+     * A row is not at the place it holds in the note: ticking the second visible box
      * must not tick the second box of the list.
      */
     it('ticks the box it shows, not the one at the same place in the list', async () => {

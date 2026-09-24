@@ -23,7 +23,7 @@ describe('language model', () => {
   });
 
   /**
-   * ⚠️ It narrows a `<select>`'s value, never data from the bridge: an unknown language
+   * It narrows a `<select>`'s value, never data from the bridge: an unknown language
    * coming from Rust fails deserialisation before it gets here.
    */
   it('refuses anything it does not label', () => {
@@ -34,7 +34,7 @@ describe('language model', () => {
     expect(isLanguageTag(42)).toBe(false);
   });
 
-  /** ⚠️ `Object.hasOwn`, so a name off the prototype is not a language. */
+  /** `Object.hasOwn`, so a name off the prototype is not a language. */
   it('refuses the names every object carries', () => {
     expect(isLanguageTag('toString')).toBe(false);
     expect(isLanguageTag('constructor')).toBe(false);

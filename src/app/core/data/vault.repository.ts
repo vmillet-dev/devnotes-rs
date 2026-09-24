@@ -4,7 +4,7 @@ import { unwrap } from '@core/ipc/ipc.error';
 import { VaultState } from '@core/model/vault.model';
 
 /**
- * ⚠️ The passphrase crosses the bridge and is never held on this side: nothing here keeps
+ * The passphrase crosses the bridge and is never held on this side: nothing here keeps
  * it, and the field that carried it is cleared as soon as it has been sent.
  */
 @Injectable({ providedIn: 'root' })
@@ -27,9 +27,8 @@ export class VaultRepository {
   }
 
   /**
-   * The same move for a library nobody can open any more. ⚠️ Nothing is recovered: the
-   * notes leave sealed, and the key file goes with them so the day the phrase comes back
-   * there is still something to try it on.
+   * The same move for a library whose phrase is forgotten. Nothing is recovered: the notes
+   * leave sealed, with their key file, for the day the phrase comes back.
    */
   async archiveLockedLibrary(): Promise<string> {
     return unwrap('archive_locked_library', await commands.archiveLockedLibrary());

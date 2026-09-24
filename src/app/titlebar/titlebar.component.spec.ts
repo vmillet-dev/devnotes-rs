@@ -62,7 +62,7 @@ describe('TitlebarComponent', () => {
     expect(menus().compareDocumentPosition(title)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
-  /** ⚠️ Every File entry acts on the library, and the component itself injects
+  /** Every File entry acts on the library, and the component itself injects
    *  `SpacesStore`, which would query a database nobody has opened yet. */
   it('keeps the File menu out of the titlebar until the library is open', async () => {
     expect(menus().querySelector('app-file-menu')).toBeNull();
@@ -96,7 +96,7 @@ describe('TitlebarComponent', () => {
   });
 
   /**
-   * ⚠️ Light or dark, never "system": a click is expected to change what is on screen, and
+   * Light or dark, never "system": a click is expected to change what is on screen, and
    * "system" usually looks exactly like what was already there. The panel keeps the three.
    */
   describe('the theme, beside the language', () => {
@@ -143,7 +143,7 @@ describe('TitlebarComponent', () => {
       expect(settings.theme()).toBe('dark');
     });
 
-    /** ⚠️ The icon is decorative: the label says what a press will do. */
+    /** The icon is decorative: the label says what a press will do. */
     it('names the action in words, which the icon does not', async () => {
       TestBed.inject(SettingsStore).setTheme('dark');
       await fixture.whenStable();

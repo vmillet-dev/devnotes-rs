@@ -7,11 +7,11 @@ import { TagRailComponent } from '@notes/header/tag-rail/tag-rail.component';
 /**
  * The tag rail and the language rail, shown only while they are wanted.
  *
- * ⚠️ They were two permanent 44px bands — 92px of a 720px window spent on a secondary
+ * They were two permanent 44px bands — 92px of a 720px window spent on a secondary
  * filter, and the largest single reason the first card started 39% of the way down. They
  * are **facets**: worth reaching, not worth a band each.
  *
- * ⚠️ Its trigger lives in the topbar and not here: the two sit in different rows, and a
+ * Its trigger lives in the topbar and not here: the two sit in different rows, and a
  * component cannot be in two places. `notes-header` owns the disclosure state for that
  * reason, and forces it open whenever a facet is selected — a filter you cannot see is a
  * filter you cannot undo.

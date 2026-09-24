@@ -22,12 +22,12 @@ export const DESKTOP_NOTIFICATION_ADAPTER = new InjectionToken<DesktopNotificati
  * A toast on the desktop, for the one path whose acknowledgement cannot be drawn in the
  * window: the palette copies and then hides it.
  *
- * ⚠️ Never load-bearing, and never in the way. Whatever it is asked to say has already
+ * Never load-bearing, and never in the way. Whatever it is asked to say has already
  * happened, so a refused permission, a plugin that is not there and a desktop that drops
  * the toast all come to the same thing — `false`, and nothing thrown. `StatusNotifier` is
  * still the answer everywhere the window stays.
  *
- * ⚠️ It translates, where the rest of the application hands a `TranslationRef` to the
+ * It translates, where the rest of the application hands a `TranslationRef` to the
  * `transloco` pipe. There is no template on the other side of this one: the string leaves
  * for the operating system already formed.
  */

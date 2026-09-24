@@ -66,10 +66,7 @@ describe('QuickPaletteComponent', () => {
     expect(moves).toEqual([1, -1]);
   });
 
-  /**
-   * ⚠️ Enter used to copy and put the window away, where a click on the same row opened
-   * the note and Enter opens everywhere else in the application.
-   */
+  /** Enter opens, as a click on the row does and as Enter does everywhere else. */
   it('opens the highlighted note on Enter, as a click on it does', async () => {
     let opened: Note | undefined;
     let chosen = 0;
@@ -96,7 +93,7 @@ describe('QuickPaletteComponent', () => {
     expect(opened).toBe(0);
   });
 
-  /** ⚠️ The field is a search field: a selection in it is what Ctrl+C means there. */
+  /** The field is a search field: a selection in it is what Ctrl+C means there. */
   it('leaves Ctrl+C to the field while text is selected in it', async () => {
     let chosen = 0;
     fixture.componentInstance.chosen.subscribe(() => (chosen += 1));
@@ -109,7 +106,7 @@ describe('QuickPaletteComponent', () => {
   });
 
   /**
-   * ⚠️ Released to the DOM, Tab walked stops nothing drew a ring on while the highlight
+   * Released to the DOM, Tab walked stops nothing drew a ring on while the highlight
    * stayed where the arrows had left it. One current row, and it is the highlighted one.
    */
   it('walks the list with Tab too, and opens nothing on the way', async () => {
@@ -159,11 +156,7 @@ describe('QuickPaletteComponent', () => {
     expect(fixture.nativeElement.querySelector('.palette-empty').textContent).toContain('Aucun');
   });
 
-  /**
-   * ⚠️ A click **opens**: it is what a click on a note means everywhere else, and the
-   * window is already in front. It used to copy and put the window away, which read as a
-   * crash — nothing on screen said anything had been copied.
-   */
+  /** A click opens, as a click on a note does everywhere else: the window is already in front. */
   it('opens the note that was clicked, without copying it', async () => {
     let index: number | undefined;
     let opened: Note | undefined;

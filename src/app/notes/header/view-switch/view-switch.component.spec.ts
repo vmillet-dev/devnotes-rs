@@ -39,7 +39,7 @@ describe('ViewSwitchComponent', () => {
     expect(option('date').getAttribute('aria-pressed')).toBe('true');
   });
 
-  /** ⚠️ Disabled with a reason, not hidden: a control that vanishes reads as a bug. */
+  /** Disabled with a reason, not hidden: a control that vanishes reads as a bug. */
   it('disables the board and says why when no space is chosen', async () => {
     fixture.componentRef.setInput('boardAvailable', false);
     await fixture.whenStable();

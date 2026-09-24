@@ -8,7 +8,7 @@ import { SpacesStore } from './spaces.store';
 /**
  * The folders of the active space, and which one narrows the canvas.
  *
- * ⚠️ `null` on both counts is a choice, not a waiting state: no active space means the
+ * `null` on both counts is a choice, not a waiting state: no active space means the
  * user asked for all of them, and no active folder means every note, filed or not.
  */
 @Injectable({ providedIn: 'root' })
@@ -24,17 +24,16 @@ export class FoldersStore {
    * is also what lets a folder in another space be opened without a round trip first.
    */
   private readonly foldersResource = resource({
-    // ⚠️ Keyed on the revision and no longer on the active space, which used to be what
-    // reloaded it: the seeding writes its folders after this has already read an empty
+    // Keyed on the revision: the seeding writes its folders after this has read an empty
     // database, and nothing else would tell the rail they exist.
     params: () => ({ revision: this.revision.current() }),
-    // ⚠️ No `defaultValue`: it would make `hasValue()` true with an empty list while a
+    // No `defaultValue`: it would make `hasValue()` true with an empty list while a
     // reload is in flight, and the retained value below would be that empty list.
     loader: (): Promise<readonly Folder[]> => this.repository.loadAll(null),
   });
 
   /**
-   * ⚠️ Retained across a reload, like `NotesQueryStore.view`: a write bumps the revision
+   * Retained across a reload, like `NotesQueryStore.view`: a write bumps the revision
    * and the rail would blink empty each time. Writable on purpose — a write adopts what
    * persistence answered, and the reload it triggers replaces it with the same thing.
    */
@@ -101,7 +100,7 @@ export class FoldersStore {
     if (!created) return null;
 
     this.known.set([...this.allFolders(), created]);
-    // ⚠️ The rail shows it at once from the line above; the **board** would not draw its
+    // The rail shows it at once from the line above; the **board** would not draw its
     // zone until something else happened to reload it. `createZone` — the same folder made
     // by drawing a band — has always bumped for exactly that reason.
     this.revision.bump();
@@ -138,7 +137,7 @@ export class FoldersStore {
     return true;
   }
 
-  /** ⚠️ No refuge to choose: the notes stay where they are and come out loose. */
+  /** No refuge to choose: the notes stay where they are and come out loose. */
   async deleteFolder(id: string): Promise<boolean> {
     const deleted = await this.notifier.attempt('errors.folderDeleteFailed', () =>
       this.repository.delete(id),

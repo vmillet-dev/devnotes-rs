@@ -46,7 +46,7 @@ export class NoteCardMenuComponent {
   /**
    * Where the panel is drawn, in viewport coordinates.
    *
-   * ⚠️ `position: fixed`, measured, rather than `absolute` against the trigger. The card
+   * `position: fixed`, measured, rather than `absolute` against the trigger. The card
    * sits inside the canvas, which scrolls — so an absolutely placed panel is clipped by
    * that box, and this menu became tall enough for it to matter the day it became the
    * complete one: it lost its last entry, which is the delete. Fixed escapes the clip, and
@@ -54,7 +54,7 @@ export class NoteCardMenuComponent {
    */
   protected readonly panelStyle = signal<Record<string, string>>({});
 
-  /** ⚠️ The gap the panel keeps from the window edge, and from its own trigger. */
+  /** The gap the panel keeps from the window edge, and from its own trigger. */
   private static readonly MARGIN = 8;
 
   /** Two steps: the WebView blocks everything during a native `confirm()`. */

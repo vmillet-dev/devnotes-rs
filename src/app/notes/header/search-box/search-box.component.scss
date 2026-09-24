@@ -17,7 +17,7 @@
   cursor: text;
 }
 
-// ⚠️ `:focus-within` on the box and not `:focus-visible` on the field: the input is
+// `:focus-within` on the box and not `:focus-visible` on the field: the input is
 // borderless inside the <label>, so the <label> is the only thing on screen that can say
 // the caret is here. And unlike a button, a field pointed at with the mouse is one being
 // typed into — the ring belongs there whichever way the caret arrived.
@@ -33,7 +33,7 @@
   font-size: 13px;
 }
 
-// ⚠️ Chromium draws its own cross for `type="search"`, and `all: unset` does not reach a
+// Chromium draws its own cross for `type="search"`, and `all: unset` does not reach a
 // pseudo-element: the field showed two of them. Ours is the one that stays, because it
 // carries a name, a hit target and a focus ring.
 .search-bar input::-webkit-search-cancel-button {
@@ -55,8 +55,7 @@
   margin-left: auto;
 }
 
-// Takes the shortcut hint's place, and its alignment with it. A count and not a control:
-// what it says is how many, and it used to answer a click by dropping every filter.
+// Takes the shortcut hint's place, and its alignment. A count and not a control.
 .count {
   margin-left: auto;
   white-space: nowrap;

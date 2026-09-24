@@ -34,7 +34,7 @@ export class FolderEditorComponent {
    * How many of this folder's notes are on screen, or `null` where selecting them makes
    * no sense.
    *
-   * ⚠️ Opt-in rather than always drawn: the switcher lists folders you are **not** in, and
+   * Opt-in rather than always drawn: the switcher lists folders you are **not** in, and
    * "select all the notes of that one over there" is a gesture with no visible result. The
    * zone menu and the breadcrumb are the two that are looking at the notes.
    */
@@ -75,7 +75,7 @@ export class FolderEditorComponent {
     void this.folders.recolourFolder(this.folder().id, colour);
   }
 
-  /** ⚠️ No refuge to choose, unlike a space: the notes come out loose. */
+  /** No refuge to choose, unlike a space: the notes come out loose. */
   protected onDeleteClick(): void {
     if (!this.confirmingDelete()) {
       this.confirmingDelete.set(true);

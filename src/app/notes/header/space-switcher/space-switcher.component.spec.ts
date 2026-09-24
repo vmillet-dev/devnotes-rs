@@ -282,7 +282,7 @@ describe('SpaceSwitcherComponent', () => {
       return fixture.nativeElement.querySelector('.editor-panel form');
     }
 
-    /** ⚠️ A menu now, not a `<select>`: the refuge is chosen, not typed. */
+    /** A menu now, not a `<select>`: the refuge is chosen, not typed. */
     function targetTrigger(): HTMLElement | null {
       return fixture.nativeElement.querySelector('[data-testid="choice-space-move-target"]');
     }

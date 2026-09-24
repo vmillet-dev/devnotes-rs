@@ -1,12 +1,7 @@
 /** A line of the preview: what going back to a version would keep, bring back or take away. */
 export type { DiffLine } from '@core/ipc/bindings';
 
-/**
- * A body kept beside a note, before an edit replaced it.
- *
- * ⚠️ Metadata only: the bodies are what make the history big, and a list that carried
- * twenty of them would send the whole thing across to draw twenty dates.
- */
+/** A body kept beside a note, before an edit replaced it: metadata only. */
 export interface Revision {
   readonly id: string;
   readonly takenAt: Date;

@@ -23,7 +23,7 @@ export class MenuTriggerDirective {
 
   private escapeHandler: (event: Event) => void = () => this.close();
 
-  /** Replaces what Escape does. ⚠️ One handler, so nothing depends on listener order. */
+  /** Replaces what Escape does. One handler, so nothing depends on listener order. */
   handleEscape(handler: (event: Event) => void): void {
     this.escapeHandler = handler;
   }

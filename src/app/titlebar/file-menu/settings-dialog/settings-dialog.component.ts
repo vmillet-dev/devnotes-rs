@@ -38,7 +38,7 @@ const PAGES: readonly SettingsPage[] = [
  * The controls edit `SettingsDraftStore`; Appliquer and OK write it through, Annuler
  * drops it.
  *
- * ⚠️ Applying as it was typed cost more than it bought: a shortcut is **captured**, so a
+ * Applying as it was typed cost more than it bought: a shortcut is **captured**, so a
  * half-entered one was live across the whole machine until it was finished, and there
  * was no way back from a change other than remembering what it was. What that idiom did
  * buy is kept where it means something — the theme and the density show on screen while
@@ -56,7 +56,7 @@ export class SettingsDialogComponent {
 
   protected readonly draft = inject(SettingsDraftStore);
   /**
-   * ⚠️ The variables are corpus data rather than a preference, so they have a store of
+   * The variables are corpus data rather than a preference, so they have a store of
    * their own — but they are edited under the same footer, and a panel where one page
    * commits on blur and three wait for a button would be worse than either rule alone.
    * The panel is what holds the three of them to one gesture.
@@ -74,7 +74,7 @@ export class SettingsDialogComponent {
   private readonly requestedPageId = signal(GENERAL_PAGE.id);
 
   /**
-   * ⚠️ Shown in place of the buttons once a close was attempted with work in hand.
+   * Shown in place of the buttons once a close was attempted with work in hand.
    * Escape and the backdrop produce no click, so without it either one is a silent
    * Annuler — and Annuler is the one outcome nobody would have chosen by accident.
    */

@@ -108,7 +108,7 @@ app-dialog {
   @include accent-state(var(--text-0), var(--amber-dim));
 }
 
-// Pushed away from "Restaurer", which it used to sit 6px from and look identical to.
+// Kept apart from "Restaurer", which it must not look like.
 .trash-action.danger {
   @include destructive;
 

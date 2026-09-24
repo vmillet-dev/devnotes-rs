@@ -111,9 +111,8 @@ export class NoteEditorOverlayComponent {
   });
 
   /**
-   * ⚠️ Keyed on the restore counter as well as the id: putting a body back does not
-   * change the note's id, so the field went on showing the version that had just been
-   * replaced — and the commit on close wrote it straight back. The restore undid itself.
+   * Keyed on the restore counter as well as the id: putting a body back does not change the
+   * id, and the commit on close would write the replaced text back.
    */
   protected readonly draftContent = linkedSignal({
     source: () => [this.session(), this.revisions.restored()] as const,
@@ -182,7 +181,7 @@ export class NoteEditorOverlayComponent {
     });
   }
 
-  /** ⚠️ The note's **own** space, not the active one: a note open from "all spaces"
+  /** The note's **own** space, not the active one: a note open from "all spaces"
    *  belongs to a space of its own, and another one's folders would file it nowhere. */
   protected onSpaceChosen(spaceId: string | null): void {
     // A note always has a space: the menu carries no "none" entry, so this cannot be null.
@@ -277,7 +276,7 @@ export class NoteEditorOverlayComponent {
     }
   }
 
-  /** ⚠️ Not a patch: filing goes through `file_notes`, which answers what it changed. */
+  /** Not a patch: filing goes through `file_notes`, which answers what it changed. */
   protected fileInto(folderId: string | null): void {
     const note = this.note();
     if (note) {

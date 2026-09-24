@@ -6,7 +6,7 @@ import { NOTES_SHORTCUT_GROUPS } from '@titlebar/about-menu/shortcuts-dialog/not
 import { DialogComponent } from '@shared/layout/dialog/dialog.component';
 
 /**
- * ⚠️ Every row that can be moved is resolved through `ShortcutBindingsStore`, so the
+ * Every row that can be moved is resolved through `ShortcutBindingsStore`, so the
  * sheet shows the key that is really bound rather than the one that shipped — the rest
  * are drawn as declared, being the ones nothing can move.
  */

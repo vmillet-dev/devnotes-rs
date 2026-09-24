@@ -17,7 +17,7 @@ describe('ChangelogService', () => {
   });
 
   /**
-   * ⚠️ The command returns no `Result` — reading a string baked in with `include_str!`
+   * The command returns no `Result` — reading a string baked in with `include_str!`
    * cannot fail — so the only failure is having no bridge, and it has to reach the dialog.
    * Swallowed into an empty list it would read as "this release changed nothing".
    */
@@ -30,7 +30,7 @@ describe('ChangelogService', () => {
   });
 
   /**
-   * ⚠️ Outside the scope declared for `opener:allow-open-url` the call is refused at
+   * Outside the scope declared for `opener:allow-open-url` the call is refused at
    * runtime with nothing on screen to explain it. The scope itself is asserted against the
    * shipped capability file in `app_info.rs`, on the side that owns it.
    */

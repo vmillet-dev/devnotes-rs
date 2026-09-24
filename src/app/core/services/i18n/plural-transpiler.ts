@@ -6,20 +6,10 @@ import type { Translation } from '@jsverse/transloco';
  * Counting, in the one ICU shape these translations use:
  * `{name, plural, =0 {…} one {# thing} other {# things}}`.
  *
- * ⚠️ Written here rather than taken from `@jsverse/transloco-messageformat`, which was tried
- * and **cannot run in this application**: it compiles each message into a function with
- * `new Function`, and `tauri.conf.json` locks the WebView down to `script-src 'self'`. The
- * application booted onto a CSP error banner and seeded nothing. A unit test cannot see
- * that — vitest runs under jsdom, where there is no policy to violate.
- *
- * ⚠️ Deliberately tiny. It knows `plural`, exact `=N` matches, the categories
- * `Intl.PluralRules` answers, and `#`. It does **not** know `select`, `selectordinal`, or a
- * plural inside a plural, because nothing here needs them — and a parser that guesses at a
- * grammar it does not implement is worse than one that refuses it.
- *
- * Plain interpolation stays `{{name}}`, which is the rest of the application's convention
- * and what `DefaultTranspiler` already does. This only ever expands the counted blocks and
- * then hands the result on.
+ * Not `@jsverse/transloco-messageformat`, which compiles each message with `new Function`:
+ * the CSP is `script-src 'self'`, and jsdom, having no policy, cannot show it failing. Tiny on
+ * purpose — `plural`, `=N`, the `Intl.PluralRules` categories and `#`; no `select`, no
+ * nesting. `{{name}}` stays `DefaultTranspiler`'s.
  */
 @Injectable()
 export class PluralTranspiler extends DefaultTranspiler {
@@ -91,7 +81,7 @@ function matchingBrace(source: string, start: number): number {
 }
 
 /**
- * ⚠️ An exact `=N` wins over a category, which is the whole reason `=0` is written out:
+ * An exact `=N` wins over a category, which is the whole reason `=0` is written out:
  * French calls zero `one`, so "0 note" would otherwise read as a singular where the
  * sentence wants "aucune note".
  */

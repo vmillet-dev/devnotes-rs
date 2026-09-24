@@ -63,7 +63,7 @@ export class NotesPageComponent implements OnInit {
   /**
    * The spaces reload afterwards — they had already read an empty database.
    *
-   * ⚠️ And the seeded space is selected: with exactly one, "all spaces" is a distinction
+   * And the seeded space is selected: with exactly one, "all spaces" is a distinction
    * without a difference, and it is the state in which the board cannot be shown at all —
    * a first launch would hide the feature behind a disabled button.
    */

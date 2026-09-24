@@ -16,7 +16,7 @@ export const crumb = {
       `${testid('folder-breadcrumb')} ~ * .crumb-swatch, ${testid('folder-breadcrumb')} .crumb-swatch`,
     ),
 
-  /** ⚠️ Opens behind the ⋯, which is the only way to the folder's own actions from here. */
+  /** Opens behind the ⋯, which is the only way to the folder's own actions from here. */
   async openMenu(): Promise<void> {
     if (!(await $(testid('folder-breadcrumb-panel')).isExisting())) {
       await $(testid('folder-breadcrumb-menu')).click();
@@ -30,7 +30,7 @@ export const crumb = {
     await $(testid('folder-rename-submit')).click();
   },
 
-  /** ⚠️ No refuge to choose, unlike a space: the notes come out loose. */
+  /** No refuge to choose, unlike a space: the notes come out loose. */
   async remove(): Promise<void> {
     await crumb.openMenu();
     await confirmTwice($(testid('folder-delete')));

@@ -4,7 +4,7 @@ import { NotesRepository } from '@core/data/notes.repository';
 import { Variable, duplicateNames, toVariableRecord } from '@core/model/variable.model';
 
 /**
- * ⚠️ The local state is a list, not the map the back end returns: a row just added has
+ * The local state is a list, not the map the back end returns: a row just added has
  * neither name nor value yet, and a map would lose it on the next keystroke.
  */
 @Injectable({ providedIn: 'root' })
@@ -20,7 +20,7 @@ export class VariablesStore {
   readonly isLoading = this._isLoading.asReadonly();
 
   /**
-   * ⚠️ These rows are edited in the preferences panel, which commits on a button — so
+   * These rows are edited in the preferences panel, which commits on a button — so
    * nothing here reaches the corpus until the panel says so, and this is what tells it
    * there is something waiting.
    */
@@ -30,7 +30,7 @@ export class VariablesStore {
   readonly duplicates = computed(() => duplicateNames(this._variables()));
 
   /**
-   * ⚠️ Refuses to overwrite edits in hand. The page is recreated every time the rail
+   * Refuses to overwrite edits in hand. The page is recreated every time the rail
    * changes section, so without this, leaving the page and coming back would silently
    * drop what was typed and not yet applied.
    */

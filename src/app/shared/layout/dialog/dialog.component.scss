@@ -55,7 +55,7 @@
 }
 
 // Last, so it wins over both variants above — including `fitted`'s own `max-height`.
-// ⚠️ The base rule's `max-*` pair has to be undone explicitly: 92vw × 92vh is a
+// The base rule's `max-*` pair has to be undone explicitly: 92vw × 92vh is a
 // percentage, so it left a band that grew with the display. Loosening it there instead
 // is what would put every other dialog on the screen edges.
 .dialog-panel.fullscreen {

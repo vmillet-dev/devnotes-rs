@@ -125,7 +125,7 @@ describe('NoteEditorOverlayComponent', () => {
   }
 
   beforeEach(() => {
-    // ⚠️ Only `Date`: the zoneless scheduler needs real rAF/setTimeout for `whenStable()`.
+    // Only `Date`: the zoneless scheduler needs real rAF/setTimeout for `whenStable()`.
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-01-10T12:00:00Z'));
 
@@ -522,7 +522,7 @@ describe('NoteEditorOverlayComponent', () => {
   });
 
   describe('language', () => {
-    /** ⚠️ A menu now, not a `<select>`: nothing in the window wears the OS's chrome. */
+    /** A menu now, not a `<select>`: nothing in the window wears the OS's chrome. */
     async function openLanguageMenu(): Promise<HTMLElement[]> {
       fixture.nativeElement.querySelector('[data-testid="choice-language"]').click();
       await fixture.whenStable();
@@ -584,7 +584,7 @@ describe('NoteEditorOverlayComponent', () => {
       expect(emitted).toEqual(['work']);
     });
 
-    /** ⚠️ Not a patch: filing answers what it changed, which the undo needs. */
+    /** Not a patch: filing answers what it changed, which the undo needs. */
     it('files the note into the folder picked, among those of its space', async () => {
       fixture.componentRef.setInput('note', createNote());
       await fixture.whenStable();
@@ -747,10 +747,7 @@ describe('NoteEditorOverlayComponent', () => {
     });
   });
 
-  /**
-   * ⚠️ A band of its own between the header and the attachments: wedged in the meta row,
-   * between the tags and the deadline, the two choices stacked and read as neither (#324).
-   */
+  /** A band of its own between the header and the attachments, not wedged in the meta row. */
   describe('where the note lives', () => {
     it('is a band after the meta row and before the attachments, both choices inside it', async () => {
       fixture.componentRef.setInput('note', createNote());
@@ -988,7 +985,7 @@ describe('NoteEditorOverlayComponent', () => {
 
   describe('a draft that becomes a note', () => {
     /**
-     * ⚠️ Committing the title materialises the draft, which changes the note's id and
+     * Committing the title materialises the draft, which changes the note's id and
      * hands the editor back a note whose content is not written yet. Drafts keyed on
      * that id are replayed over the body; they key on the session instead.
      */

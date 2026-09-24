@@ -140,7 +140,7 @@ app-dialog {
   margin-left: 4px;
 }
 
-// ⚠️ After the mixin, and it has to win: a disabled control is not offering anything, so
+// After the mixin, and it has to win: a disabled control is not offering anything, so
 // it must not go on wearing the warning.
 .tags-action[aria-disabled='true'],
 .tags-action[aria-disabled='true']:hover {

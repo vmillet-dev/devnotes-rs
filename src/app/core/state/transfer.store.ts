@@ -17,7 +17,7 @@ function pad(value: number): string {
  * Stamped to the minute, so two exports on the same day are two names — the second was
  * offered the first one's, and replacing it was one Enter away.
  *
- * ⚠️ Local time, not `toISOString`: the name is read by whoever wrote it, and an export
+ * Local time, not `toISOString`: the name is read by whoever wrote it, and an export
  * taken at 23:30 in Paris was dated the next day.
  */
 function defaultFileName(now: Date): string {
@@ -140,7 +140,7 @@ export class TransferStore {
   }
 
   /**
-   * ⚠️ A refused phrase asks again rather than failing the import: it is the ordinary
+   * A refused phrase asks again rather than failing the import: it is the ordinary
    * answer to a typo, and a file nobody can reopen for one is a file lost. `null` when
    * the user gave up at the prompt, which is not a failure either.
    */
@@ -172,7 +172,7 @@ export class TransferStore {
   }
 
   /**
-   * ⚠️ The phrase is asked for once the destination is known, and never kept: it goes
+   * The phrase is asked for once the destination is known, and never kept: it goes
    * straight to the command, which derives a key of its own for that one file.
    */
   private async write(

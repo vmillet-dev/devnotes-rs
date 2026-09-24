@@ -8,7 +8,7 @@ export function sameArray<T>(
 }
 
 /**
- * One comparator per field. ⚠️ A mapped record rather than a chain of `&&`: a field added
+ * One comparator per field. A mapped record rather than a chain of `&&`: a field added
  * to `T` stops compiling until it says how it compares, where a chain would treat it as
  * always equal and a `resource` keyed on it would never re-run.
  */

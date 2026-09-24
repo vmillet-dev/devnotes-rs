@@ -52,7 +52,7 @@ describe('subscribeCancellable', () => {
   });
 
   /**
-   * ⚠️ The reason this helper exists: the subscription only lands on the next turn, and a
+   * The reason this helper exists: the subscription only lands on the next turn, and a
    * caller destroyed before then would stay subscribed for the rest of the session — with
    * nothing left holding the unlisten to call it.
    */

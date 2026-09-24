@@ -10,23 +10,23 @@ import { bridge, homeSpaceId, query } from '../support/bridge.js';
  * A database file that does not exist yet: migrations against a real path, the seeding
  * guards, and a front end that boots far enough to render what came back.
  *
- * ⚠️ The only file that meets a virgin profile, and the rest of the run depends on it:
+ * The only file that meets a virgin profile, and the rest of the run depends on it:
  * `homeSpaceId()` resolves the seeded space here, while there is still exactly one.
  */
 describe('First launch', () => {
   /**
-   * ⚠️ `waitForCanvas` cannot see this one: seeding happens after the first view has
+   * `waitForCanvas` cannot see this one: seeding happens after the first view has
    * already arrived and settled — empty — so the settle loop reports a settled, empty
    * canvas. It waits for notes to exist and never for how many, or the assertion below
    * would be its own witness.
    */
-  /** ⚠️ A scenario that throws on the board would leave every later one reading it. */
+  /** A scenario that throws on the board would leave every later one reading it. */
   afterEach(async () => {
     await board.show('date');
   });
 
   before(async () => {
-    // ⚠️ Before anything is asked of the library: this is the only file that meets the
+    // Before anything is asked of the library: this is the only file that meets the
     // gate, and no command is answered — not even a read — until it has been passed.
     await passTheGate();
 
@@ -59,12 +59,12 @@ describe('First launch', () => {
   });
 
   /**
-   * ⚠️ Written in the same transaction as the space and the notes: a seeding that left the
+   * Written in the same transaction as the space and the notes: a seeding that left the
    * folders out would be permanent, because a space exists and both of the front end's
    * guards then read "already seeded".
    */
   /**
-   * ⚠️ Nothing here compares a seeded name: the samples are translated, and the locale
+   * Nothing here compares a seeded name: the samples are translated, and the locale
    * comes from the system — French on a developer's machine, English on the runners. What
    * is asserted is the shape and the order, which are the same in every language.
    */
@@ -72,7 +72,7 @@ describe('First launch', () => {
     const folders = await bridge.listFolders(await homeSpaceId());
     expect(folders).toHaveLength(2);
 
-    // ⚠️ A millisecond apart. Sharing one instant left `created_at` tying and the order
+    // A millisecond apart. Sharing one instant left `created_at` tying and the order
     // falling back to a random UUID, so the two zones swapped between installs.
     const at = folders.map((folder) => new Date(folder.createdAt).getTime());
     expect(at[0]).toBeLessThan(at[1]!);
@@ -94,10 +94,7 @@ describe('First launch', () => {
     expect(filed).toBe(3);
   });
 
-  /**
-   * The one screen that explains what a folder is for used to open empty on a fresh
-   * install: the feature was finished and undiscoverable.
-   */
+  /** The screen that explains what a folder is for must not open empty on a fresh install. */
   it('opens a board that already has something on it', async () => {
     const folders = await bridge.listFolders(await homeSpaceId());
     await canvas.open();
@@ -131,7 +128,7 @@ describe('First launch', () => {
 
   it('offers a way out of the application, which nothing here clicks', async () => {
     await fileMenu.open();
-    // ⚠️ Presence only. Clicking it quits, and one application serves the whole run.
+    // Presence only. Clicking it quits, and one application serves the whole run.
     expect(await fileMenu.quit().isExisting()).toBe(true);
     await fileMenu.open();
   });

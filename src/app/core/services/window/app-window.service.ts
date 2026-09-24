@@ -2,7 +2,7 @@ import { InjectionToken, Injectable, inject } from '@angular/core';
 import { exit } from '@tauri-apps/plugin-process';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
-/** ⚠️ A token: a spec really calling `exit()` would take the test runner down. */
+/** A token: a spec really calling `exit()` would take the test runner down. */
 export interface AppWindowAdapter {
   hide(): Promise<void>;
   exit(code: number): Promise<void>;
@@ -36,7 +36,7 @@ export class AppWindowService {
   }
 
   /**
-   * Rebuilds the front end from nothing, over the same process. ⚠️ What a library switch
+   * Rebuilds the front end from nothing, over the same process. What a library switch
    * needs: every store is `providedIn: 'root'` and would otherwise carry the other
    * library's spaces, selection and undo record into this one.
    */

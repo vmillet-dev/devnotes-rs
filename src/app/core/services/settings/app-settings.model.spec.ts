@@ -12,7 +12,7 @@ import {
 
 describe('app settings model', () => {
   /**
-   * ⚠️ Derived rather than hand-written, and this is what makes "a setting is one line"
+   * Derived rather than hand-written, and this is what makes "a setting is one line"
    * true: a field added to `AppSettings` gets its key for free, and cannot get a
    * hand-typed one that drifts from the field name.
    */
@@ -39,7 +39,7 @@ describe('app settings model', () => {
     it('offers "system" as a choice for what the OS can answer, and nothing else', () => {
       expect(LOCALE_CHOICES).toEqual(['system', 'fr', 'en']);
       expect(THEME_CHOICES).toEqual(['system', 'dark', 'light']);
-      // ⚠️ Density is spacing only: a density that shrank the type would be a zoom.
+      // Density is spacing only: a density that shrank the type would be a zoom.
       expect(DENSITIES).toEqual(['comfortable', 'compact']);
     });
 
@@ -48,7 +48,7 @@ describe('app settings model', () => {
       expect(DEFAULT_SETTINGS.theme).toBe('system');
     });
 
-    /** ⚠️ `true`, and `desktop.rs` carries the same default on the native side. */
+    /** `true`, and `desktop.rs` carries the same default on the native side. */
     it('closes to the tray rather than quitting', () => {
       expect(DEFAULT_SETTINGS.closeToTray).toBe(true);
       expect(DEFAULT_SETTINGS.minimizeToTray).toBe(false);
@@ -56,7 +56,7 @@ describe('app settings model', () => {
     });
 
     /**
-     * ⚠️ On, and Rust agrees by reading anything that is not a plain "false" as on: a
+     * On, and Rust agrees by reading anything that is not a plain "false" as on: a
      * safety net nobody asked to remove stays.
      */
     it('copies the library unless somebody says otherwise', () => {
@@ -69,7 +69,7 @@ describe('app settings model', () => {
     });
 
     /**
-     * ⚠️ A version and not a boolean: remembering "no" would silence the release after
+     * A version and not a boolean: remembering "no" would silence the release after
      * it too, and the empty string is what "nothing is silenced" looks like.
      */
     it('silences no update until one is named', () => {

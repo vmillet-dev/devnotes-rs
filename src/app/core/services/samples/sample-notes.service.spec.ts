@@ -37,7 +37,7 @@ describe('SampleNotesService', () => {
   }
 
   beforeEach(() => {
-    // ⚠️ `Date` alone, or the zoneless scheduler loses the `requestAnimationFrame` it needs.
+    // `Date` alone, or the zoneless scheduler loses the `requestAnimationFrame` it needs.
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-11T09:00:00Z'));
     setUp();
@@ -52,7 +52,7 @@ describe('SampleNotesService', () => {
 
     expect(notes.seededSamples?.spaceName).toBe('Découverte');
     expect(drafts()).toHaveLength(4);
-    // ⚠️ The drafts carry no space: it does not exist when they are composed, and the
+    // The drafts carry no space: it does not exist when they are composed, and the
     // command that creates it is the one that files them into it.
     expect(notes.seededSamples?.notes.every(({ draft }) => draft.spaceId === '')).toBe(true);
   });
@@ -65,11 +65,11 @@ describe('SampleNotesService', () => {
     await service.seedIfFirstRun();
 
     expect(notes.seededSamples?.folders).toEqual(['Snippets', 'Prise en main']);
-    // ⚠️ Indexes, not ids: the folders do not exist when these are composed.
+    // Indexes, not ids: the folders do not exist when these are composed.
     expect(notes.seededSamples?.notes.map((note) => note.folder)).toEqual([1, 0, undefined, 0]);
   });
 
-  /** ⚠️ "No folder" is a legitimate state, and the first launch shows it rather than
+  /** "No folder" is a legitimate state, and the first launch shows it rather than
    *  describing it. */
   it('leaves the checklist unfiled, so the loose area is not empty either', async () => {
     await service.seedIfFirstRun();
@@ -135,7 +135,7 @@ describe('SampleNotesService', () => {
   });
 
   /**
-   * ⚠️ The opposite of what this asserted before, and the point of the ticket: the space
+   * The opposite of what this asserted before, and the point of the ticket: the space
    * and its notes are one write now, so a failure leaves neither — and "it is seeded" is
    * written only once it is true, which lets the next launch try again.
    */

@@ -30,7 +30,7 @@ export class WhatsNewDialogComponent {
     defaultValue: [] as readonly ChangelogRelease[],
   });
 
-  /** ⚠️ Read behind `hasValue()`: `value()` throws while the resource is in error. */
+  /** Read behind `hasValue()`: `value()` throws while the resource is in error. */
   protected readonly releases = computed<readonly ChangelogRelease[]>(() =>
     this.releasesResource.hasValue() ? this.releasesResource.value() : [],
   );

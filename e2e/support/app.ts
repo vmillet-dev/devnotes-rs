@@ -16,7 +16,7 @@ const SETTLE_INTERVAL = 200;
  * for it rather than for the window, which exists long before anything is queryable.
  */
 /**
- * ⚠️ The library is encrypted, so a run creates this on its first launch and carries it
+ * The library is encrypted, so a run creates this on its first launch and carries it
  * for the rest. There is nothing to remember between runs: `resetProfile` deletes the key
  * file with everything else, so every run starts from a library that has none.
  */
@@ -25,7 +25,7 @@ export const PASSPHRASE = 'an end-to-end passphrase';
 /**
  * Passes the unlock screen when it is there, and says nothing when it is not.
  *
- * ⚠️ Only `01-first-launch` ever meets it. The unlocked state lives in Rust and the
+ * Only `01-first-launch` ever meets it. The unlocked state lives in Rust and the
  * process outlives every page reload — `before()` and `reopenSession` both rebuild the
  * front end over a library that is already open — so a later file finds no gate at all.
  */
@@ -41,7 +41,7 @@ export async function passTheGate(): Promise<void> {
   }
 
   await $(testid('vault-submit')).click();
-  // ⚠️ Generous: deriving the key is deliberately slow, and a first launch seals whatever
+  // Generous: deriving the key is deliberately slow, and a first launch seals whatever
   // was already there on top of it.
   await field.waitForExist({ reverse: true, timeout: 60_000 });
 }
@@ -50,7 +50,7 @@ export async function waitForCanvas(): Promise<void> {
   await passTheGate();
   await $(testid('canvas')).waitForExist({ timeout: 30_000 });
 
-  // ⚠️ `aria-busy` answers "has anything at all arrived yet", once, and then says nothing
+  // `aria-busy` answers "has anything at all arrived yet", once, and then says nothing
   // ever again — the retained `linkedSignal` keeps `isLoading` false for the rest of the
   // session. It gives no signal for the reload that follows a write, and the canvas
   // re-renders under the spec either way.
@@ -100,7 +100,7 @@ export async function cursorOf(selector: string): Promise<string> {
 }
 
 /**
- * Sets a field and checks it took, retrying if it did not. ⚠️ The editor's drafts are
+ * Sets a field and checks it took, retrying if it did not. The editor's drafts are
  * `linkedSignal`s: a render landing between the click and the keystrokes rewrites
  * `[value]` from the note and wipes what was just typed.
  */
@@ -121,7 +121,7 @@ export async function setField(selector: string, text: string): Promise<void> {
 }
 
 /**
- * ⚠️ The click crosses the bridge and comes back through a re-render; reading the list on
+ * The click crosses the bridge and comes back through a re-render; reading the list on
  * the next line reads it as it was before the click.
  */
 export async function clickToAddRow(button: string, row: string) {
@@ -143,16 +143,13 @@ export async function clickToAddRow(button: string, row: string) {
 }
 
 /**
- * Waits for a read to answer something, and hands that answer back so the assertion reads
- * what was waited for.
+ * Waits for a read to answer something, and hands the answer back so the assertion reads what
+ * was waited for.
  *
- * ⚠️ A condition rather than a duration. `pause` before an `expect` is a guess at a round
- * trip on a runner already sharing a CPU with a WebView: one scenario went red on Windows
- * and green on a re-run of the very same commit (#190).
- *
- * ⚠️ A **negative** assertion is the one case a duration is the right tool — nothing
- * arriving is not a condition anything can wait on. Those keep their `pause`, with a line
- * saying so.
+ * ⚠️ A condition rather than a duration: a `pause` before an `expect` is a guess at a round
+ * trip on a runner sharing a CPU with a WebView. ⚠️ A negative assertion is the one case a
+ * duration fits — nothing arriving is not a condition — and those keep their `pause`, with a
+ * line saying so.
  */
 export async function eventually<T>(
   read: () => Promise<T>,
@@ -179,7 +176,7 @@ interface Confirmable {
 }
 
 /**
- * ⚠️ Destructive controls confirm on a second click. Clicking twice in a row bets the
+ * Destructive controls confirm on a second click. Clicking twice in a row bets the
  * first click's render has landed — and that render moves the button out from under it.
  */
 export async function confirmTwice(button: Confirmable): Promise<void> {
@@ -197,7 +194,7 @@ export async function confirmTwice(button: Confirmable): Promise<void> {
 type Extract = 'text' | 'value' | `@${string}`;
 
 /**
- * Reads one thing off every match, in a single call. ⚠️ A walk fetching one element per
+ * Reads one thing off every match, in a single call. A walk fetching one element per
  * round trip leaves a window in which the page re-renders, and the list that comes back
  * mixes two states.
  */
@@ -218,7 +215,7 @@ export async function readEach(selector: string, extract: Extract, child?: strin
 }
 
 /**
- * ⚠️ Writes here are not optimistic, so `aria-pressed` read on the line after the click
+ * Writes here are not optimistic, so `aria-pressed` read on the line after the click
  * is still the state before it.
  */
 export async function toggleAndWait(selector: string, attribute = 'aria-pressed'): Promise<void> {
@@ -280,17 +277,8 @@ export async function press(key: string, modifiers: Modifier[] = []): Promise<vo
 }
 
 /**
- * ⚠️ Neither `<select>` nor `<input type="date">` can be driven the obvious way:
- * `selectByAttribute` moves the selection without the `change` the components listen to,
- * and a date input accepts keystrokes in the display format, which follows the WebView's
- * locale. This skips the browser's own parsing; every handler downstream still runs.
- */
-/**
- * Picks one entry of an `app-choice-menu`, which replaced every `<select>` but the date.
- *
- * ⚠️ Two clicks, not an assignment: these are menus, so there is no value to set — which is
- * the whole point of #179. A screen reader used to be told the selection bar held a combobox
- * whose current value was "Ranger dans".
+ * Picks one entry of an `app-choice-menu`. Two clicks, not an assignment: these are menus, so
+ * there is no value to set.
  */
 export async function pickChoice(kind: string, optionId: string | null): Promise<void> {
   await $(testid(`choice-${kind}`)).click();
@@ -310,7 +298,7 @@ export function choiceLabel(kind: string): Promise<string> {
 /**
  * Picks one of the few options a segmented control shows all at once.
  *
- * ⚠️ Addressed by `data-testid` and never by its `aria-label`: the suite switches the
+ * Addressed by `data-testid` and never by its `aria-label`: the suite switches the
  * interface language partway through, so a selector naming "Thème" passes or fails
  * depending on which spec file ran before — which is exactly how this shipped red.
  */
@@ -339,7 +327,7 @@ export async function setNativeValue(selector: string, value: string): Promise<v
 }
 
 /**
- * ⚠️ Enter inside a text input submits through implicit submission, which the browser
+ * Enter inside a text input submits through implicit submission, which the browser
  * reserves for real user input. `requestSubmit()` fires the event the form listens to.
  */
 export async function submitFormOf(selector: string): Promise<void> {
@@ -350,7 +338,7 @@ export async function submitFormOf(selector: string): Promise<void> {
 }
 
 /**
- * ⚠️ Title, body and source commit on blur, and a synthetic key event does not move
+ * Title, body and source commit on blur, and a synthetic key event does not move
  * focus — so the blur is asked for directly.
  */
 export async function blur(): Promise<void> {
@@ -360,11 +348,11 @@ export async function blur(): Promise<void> {
 }
 
 /**
- * ⚠️ A note written straight through the bridge is invisible to a canvas that has not
+ * A note written straight through the bridge is invisible to a canvas that has not
  * been told to re-query: `NotesRevision` is a front-end signal, and the back end does
  * not push.
  */
-/** ⚠️ The canvas keyboard ignores a keystroke aimed at a text field, by design. */
+/** The canvas keyboard ignores a keystroke aimed at a text field, by design. */
 export async function blurField(): Promise<void> {
   await browser.execute(() => (document.activeElement as HTMLElement | null)?.blur());
 }
@@ -385,7 +373,7 @@ export async function boxOf(selector: string): Promise<{ left: number; top: numb
  * which is what a wrapping toolbar leaves it most of the time. A runner with a wide window
  * would otherwise measure a width nobody has.
  *
- * ⚠️ Measured by putting the placeholder in as a value and reading the scroll width: there
+ * Measured by putting the placeholder in as a value and reading the scroll width: there
  * is no other way to ask a browser how wide a placeholder renders. Everything touched is
  * put back, and no event is dispatched, so the component never hears about it.
  */
@@ -425,7 +413,7 @@ export async function bottomGapOf(selector: string): Promise<number> {
 
 /**
  * Whether what is drawn at the middle of a box is that box, rather than something over
- * it. ⚠️ Asked of the painting and not of a `z-index`: stacking contexts make the number
+ * it. Asked of the painting and not of a `z-index`: stacking contexts make the number
  * on its own say nothing.
  */
 export async function isInFront(selector: string): Promise<boolean> {
@@ -455,7 +443,7 @@ export async function reloadCanvas(): Promise<void> {
  * side, its SQLite connection and the store plugin's map all survive.
  *
  * What it buys is a front end built from nothing — every store reconstructed from what
- * the commands answer. ⚠️ Never use it to prove something reached the disk;
+ * the commands answer. Never use it to prove something reached the disk;
  * `15-preferences-on-disk.e2e.ts` reads the file from Node for that.
  */
 export async function reopenSession(): Promise<void> {
@@ -503,7 +491,7 @@ export async function clipboardText(): Promise<string | null> {
 }
 
 /**
- * ⚠️ There is no way to stand in front of the OS file picker.
+ * There is no way to stand in front of the OS file picker.
  * `window.__TAURI_INTERNALS__.invoke` is defined `writable: false, configurable: false`,
  * so neither an assignment nor `browser.tauri.mock()` can wrap it — a picker opened by a
  * click blocks the whole application until a human clicks it.

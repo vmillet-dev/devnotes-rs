@@ -8,7 +8,7 @@ import { VaultStore } from './vault.store';
 /**
  * The copies of the library, and the one gesture that puts one back.
  *
- * ⚠️ Restoring is the most destructive thing the application can do — it replaces the
+ * Restoring is the most destructive thing the application can do — it replaces the
  * whole corpus — so it follows the shape the tag manager and the trash already use: the
  * trigger only **proposes**, `pending()` says which copy and what it would cost, and
  * `confirm()` is what writes. A second click on the button that fired it is the guard a
@@ -38,7 +38,7 @@ export class BackupsStore {
     if (backups !== null) this._backups.set(backups);
   }
 
-  /** ⚠️ Proposes only. A copy with no key file opens for nobody and is never offered. */
+  /** Proposes only. A copy with no key file opens for nobody and is never offered. */
   ask(backup: Backup): void {
     if (!backup.openable) return;
 
@@ -50,7 +50,7 @@ export class BackupsStore {
   }
 
   /**
-   * ⚠️ The library is closed by the time this returns, so the shell is sent back to the
+   * The library is closed by the time this returns, so the shell is sent back to the
    * gate: the restored copy needs a passphrase, and asking for it is the only proof the
    * right file is in place. Reloading the vault state is what destroys the outlet — and
    * with it this panel, which is rendered from a File menu that only exists unlocked.

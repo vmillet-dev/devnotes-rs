@@ -34,7 +34,7 @@ describe('ShortcutBindingsStore', () => {
   });
 
   /**
-   * ⚠️ Two storage paths. A canvas key is one preference of its own; the three global
+   * Two storage paths. A canvas key is one preference of its own; the three global
    * ones live in `AppSettings`, because the native command takes them as a block.
    */
   it('writes a canvas key to its own preference and a global one to the settings', () => {
@@ -52,14 +52,14 @@ describe('ShortcutBindingsStore', () => {
     expect(store.binding(PIN)).toBe('P');
   });
 
-  /** ⚠️ Across both halves, or a key could be taken twice between them. */
+  /** Across both halves, or a key could be taken twice between them. */
   it('sees a global key colliding with a canvas one', () => {
     store.rebind(COPY, 'Ctrl+B', EVERY);
 
     expect(store.rebind(PALETTE, 'Ctrl+B', EVERY)).toEqual({ kind: 'taken', by: COPY });
   });
 
-  /** ⚠️ A global shortcut with no modifier would swallow that key machine-wide. */
+  /** A global shortcut with no modifier would swallow that key machine-wide. */
   it('refuses a bare key on a global action but takes one on a canvas action', () => {
     expect(store.rebind(PALETTE, 'K', EVERY)).toEqual({ kind: 'illegal' });
     expect(store.rebind(COPY, 'K', EVERY)).toBeNull();
@@ -71,7 +71,7 @@ describe('ShortcutBindingsStore', () => {
     expect(store.rebind(COPY, 'Tab', EVERY)).toEqual({ kind: 'illegal' });
   });
 
-  /** ⚠️ Forgotten rather than written back: a default is free to move between versions. */
+  /** Forgotten rather than written back: a default is free to move between versions. */
   it('forgets an override rather than storing the default over it', () => {
     store.rebind(COPY, 'Y', EVERY);
 
@@ -97,7 +97,7 @@ describe('ShortcutBindingsStore', () => {
   });
 
   /**
-   * ⚠️ `rebind` refuses to make one, so this answers for what it cannot refuse: a
+   * `rebind` refuses to make one, so this answers for what it cannot refuse: a
    * preferences file edited by hand, and a shipped default that lands on a taken key.
    */
   it('reports a collision it had no chance to refuse', () => {

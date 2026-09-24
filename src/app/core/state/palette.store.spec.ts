@@ -61,7 +61,7 @@ describe('PaletteStore', () => {
     // zoneless scheduler.
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     harness = createStore();
-    // ⚠️ Loaded, not merely configured: the desktop toast is a **translated string**,
+    // Loaded, not merely configured: the desktop toast is a **translated string**,
     // and `translate` hands back the key itself until the language is in.
     await firstValueFrom(TestBed.inject(TranslocoService).load('fr'));
     await harness.store.open();
@@ -155,11 +155,7 @@ describe('PaletteStore', () => {
     expect(harness.window.hidden).toBe(0);
   });
 
-  /**
-   * ⚠️ The window is what every other acknowledgement is drawn on, and this path takes
-   * it away. Without a word from the desktop the application simply vanished, which reads
-   * as a crash on a copy that worked (#285).
-   */
+  /** The window is gone, so the desktop is the only place left to say the copy happened. */
   it('says on the desktop which note it took, once the window has gone', async () => {
     await harness.store.chooseHighlighted();
 

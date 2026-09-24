@@ -12,7 +12,7 @@ describe('IconComponent', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  /** ⚠️ An HTML \`<path>\` inside an \`@for\` draws nothing and fails no other assertion. */
+  /** An HTML \`<path>\` inside an \`@for\` draws nothing and fails no other assertion. */
   it('draws its paths in the SVG namespace', () => {
     const paths = render('trash').querySelectorAll('path');
 

@@ -1,9 +1,8 @@
 import { Injectable, Signal, signal } from '@angular/core';
 
 /**
- * A store that writes notes without knowing `NotesStore` — injecting it would close a
- * cycle — bumps this instead. `NotesQueryStore` reads it among its query parameters, so
- * its `resource` re-runs on its own and nothing reloads the canvas by hand.
+ * Bumped by a store that writes notes without knowing `NotesStore`, which would close a cycle:
+ * the canvas and the board read it among their query parameters and re-run on their own.
  */
 @Injectable({ providedIn: 'root' })
 export class NotesRevision {

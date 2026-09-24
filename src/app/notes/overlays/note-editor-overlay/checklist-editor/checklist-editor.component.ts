@@ -19,7 +19,7 @@ interface Drag {
 }
 
 /**
- * ⚠️ HTML5 drag and drop does not work here: Tauri's `dragDropEnabled` is `true` — it is
+ * HTML5 drag and drop does not work here: Tauri's `dragDropEnabled` is `true` — it is
  * what delivers dropped files to `FileDropService` — so the WebView never sees
  * `dragstart` or `drop`. Reordering is pointer events instead, and turning the flag off
  * would break attachments.
@@ -34,7 +34,7 @@ interface Drag {
 export class ChecklistEditorComponent {
   readonly items = input.required<readonly ChecklistItem[]>();
   /**
-   * ⚠️ The editor session, not the note's id: materialising a draft changes that id for
+   * The editor session, not the note's id: materialising a draft changes that id for
    * the same note, and a draft keyed on it is replayed over what was just typed.
    */
   readonly session = input.required<number>();
@@ -156,7 +156,7 @@ export class ChecklistEditorComponent {
   }
 
   /**
-   * ⚠️ Called on `blur` and by the editor before it closes: Escape, the backdrop and
+   * Called on `blur` and by the editor before it closes: Escape, the backdrop and
    * the close button produce no `blur`, so the last line typed would be lost.
    */
   commit(): void {

@@ -11,11 +11,8 @@ export interface PendingLibraryDeletion {
 }
 
 /**
- * The libraries, and which one is open.
- *
- * ⚠️ Switching is a full teardown: the command empties the connection and the front end
- * reloads onto the gate. The other library has its own passphrase, and asking for it is
- * the only proof the right one is open.
+ * The libraries, and which one is open. Switching is a full teardown: the connection empties
+ * and the page reloads onto the gate, which asks for the other library's phrase.
  */
 @Injectable({ providedIn: 'root' })
 export class LibrariesStore {
@@ -34,9 +31,8 @@ export class LibrariesStore {
   readonly isWorking = this._isWorking.asReadonly();
 
   /**
-   * ⚠️ Named before it runs, like emptying the trash and like a corpus-wide retag: this
-   * erases a whole library outright, and a second click on the button that fired it is
-   * the guard a double click defeats.
+   * Named before it runs, like emptying the trash: this erases a whole library, and a second
+   * click on the same button is the guard a double click defeats.
    */
   readonly pendingDeletion = this._pendingDeletion.asReadonly();
 
@@ -44,15 +40,12 @@ export class LibrariesStore {
     () => this._libraries().find((entry) => entry.id === this._openId()) ?? null,
   );
 
-  /** ⚠️ One library is not a choice: the menu shows the entry only past the first. */
+  /** One library is not a choice: the menu offers others only past the first. */
   readonly hasSeveral = computed(() => this._libraries().length > 1);
 
   /**
-   * Reads the registry and opens the library's own preference file.
-   *
-   * ⚠️ Both, always together. The file's path comes from the entry, so a registry read
-   * without the hydrate leaves the samples marker and the per-space views pointing at
-   * whichever library was open last.
+   * Reads the registry and opens the library's own preference file, always together: the file's
+   * path comes from the entry.
    */
   async load(): Promise<void> {
     await this.notifier.attempt('errors.librariesListFailed', async () => {
@@ -64,11 +57,7 @@ export class LibrariesStore {
     });
   }
 
-  /**
-   * ⚠️ Creates **and opens**. One gesture rather than two: you have just named it, so you
-   * want to be in it — the surprise would be staying where you were. The gate then asks
-   * for a phrase, which is what a first launch does too.
-   */
+  /** Creates and opens, in one gesture: the gate then asks for a phrase, as on a first launch. */
   async create(name: string): Promise<LibraryEntry | null> {
     return this.attempt(async () => {
       const entry = await this.repository.create(name);
@@ -80,9 +69,8 @@ export class LibrariesStore {
   }
 
   /**
-   * ⚠️ A reload, not a `vault.load()`: every store is `providedIn: 'root'` and would carry
-   * the other library's spaces, board and undo record past the gate. The vault state lives
-   * in Rust, so the page comes back on the gate of the library just opened.
+   * ⚠️ A reload, not a `vault.load()`: every store is `providedIn: 'root'` and would carry the
+   * other library's spaces, board and undo record past the gate.
    */
   async openLibrary(id: string): Promise<void> {
     if (id === this._openId()) return;
@@ -101,12 +89,9 @@ export class LibrariesStore {
   }
 
   /**
-   * ⚠️ Proposes only. `confirmDeletion` is what erases.
-   *
-   * ⚠️ Never the open one — deleting the files under a live connection is how a library
-   * that was merely unwanted takes the process down — and never the last, which would
-   * leave the gate with nothing to offer. Refused here *and* in Rust: a command is
-   * reachable from more than the interface.
+   * Proposes only; `confirmDeletion` erases. Never the open one, whose files sit under a live
+   * connection, nor the last — refused in Rust as well, a command being reachable from more
+   * than the interface.
    */
   askToDelete(entry: LibraryEntry): void {
     if (entry.id === this._openId() || !this.hasSeveral()) return;

@@ -7,7 +7,7 @@ import { cursorOf, eventually, press, reopenSession, testid } from '../support/a
 /**
  * A preference applies as it is typed, one key at a time.
  *
- * ⚠️ What this file does not prove is that any of it reached the disk: `reopenSession()`
+ * What this file does not prove is that any of it reached the disk: `reopenSession()`
  * opens a new session against the same living process, so the store plugin's in-memory
  * map is still the one answering. `15-preferences-on-disk` reads the file itself.
  */
@@ -22,7 +22,7 @@ describe('Preferences', () => {
   it('applies the theme as it is chosen, before anything is written', async () => {
     await settings.setTheme('light');
 
-    // ⚠️ A preview, not a write: nobody picks a theme without seeing it. Dark is the base
+    // A preview, not a write: nobody picks a theme without seeing it. Dark is the base
     // because the preference lives in a file nothing can read before Angular boots.
     expect(await browser.$('html').getAttribute('data-theme')).toBe('light');
   });
@@ -32,7 +32,7 @@ describe('Preferences', () => {
     expect(await browser.$('html').getAttribute('data-density')).toBe('compact');
   });
 
-  /** ⚠️ A preview Annuler undoes is not the same thing as a write. */
+  /** A preview Annuler undoes is not the same thing as a write. */
   it('puts the previous appearance back on Annuler', async () => {
     // Applied first, so what Annuler falls back to is a theme this file chose rather than
     // whatever the machine resolves "system" to.
@@ -54,16 +54,15 @@ describe('Preferences', () => {
   });
 
   /**
-   * ⚠️ Everything but the appearance waits for the button. A half-captured global
+   * Everything but the appearance waits for the button. A half-captured global
    * shortcut live across the whole machine is the argument this panel was changed on,
    * and the language is in the same half.
    */
   it('holds the language until it is applied', async () => {
     await fileMenu.openPreferences();
 
-    // ⚠️ Established, never assumed: the locale ships as "system", which resolves to the
-    // machine's own — and the runner this suite lives on is not in French. Asserting "fr"
-    // here passed on a French desktop and went red on CI (#311).
+    // Established, never assumed: the locale ships as "system", which resolves to the
+    // machine's own, and the runner is not in French.
     await settings.setLocale('fr');
     await settings.apply();
     await eventually(
@@ -87,7 +86,7 @@ describe('Preferences', () => {
   });
 
   /**
-   * ⚠️ Escape and the backdrop produce no click, so without this guard either one is a
+   * Escape and the backdrop produce no click, so without this guard either one is a
    * silent Annuler — the one outcome nobody would have chosen on purpose.
    */
   describe('closing with work in hand', () => {
@@ -139,7 +138,7 @@ describe('Preferences', () => {
       const field = settings.shortcut('palette');
       const before = await field.getValue();
 
-      // ⚠️ A global accelerator without a modifier would swallow that key in every
+      // A global accelerator without a modifier would swallow that key in every
       // application on the machine — which is also what leaves Tab and Escape working here.
       await field.click();
       await press('p');
@@ -155,9 +154,8 @@ describe('Preferences', () => {
     });
 
     /**
-     * ⚠️ The whole of #254: three keys out of twenty could be moved. A canvas key takes a
-     * bare letter, where a global one may not — it answers only while the canvas has the
-     * keyboard, so nothing outside the window is taken.
+     * A canvas key takes a bare letter, where a global one may not: it answers only while the
+     * canvas has the keyboard.
      */
     it('takes a bare letter on a canvas key, and the canvas then answers to it', async () => {
       const field = settings.shortcut('canvas.check');
@@ -192,7 +190,7 @@ describe('Preferences', () => {
       expect(await settings.shortcut('canvas.check').getValue()).toBe('X');
     });
 
-    /** ⚠️ The second action would be unreachable, and nothing would say which. */
+    /** The second action would be unreachable, and nothing would say which. */
     it('refuses a keystroke another action already answers to', async () => {
       const field = settings.shortcut('canvas.pin');
       await field.click();
@@ -222,12 +220,12 @@ describe('Preferences', () => {
   });
 
   /**
-   * ⚠️ The same signal the panel writes, so the two cannot disagree — and the panel keeps
+   * The same signal the panel writes, so the two cannot disagree — and the panel keeps
    * its row: a setting that only exists in a corner of the titlebar is a setting nobody
    * finds twice. The theme was three gestures away where the language was one.
    */
   describe('the theme, from the titlebar', () => {
-    /** ⚠️ "System" is not the titlebar's to set any more: back through the panel. */
+    /** "System" is not the titlebar's to set any more: back through the panel. */
     after(async () => {
       await fileMenu.openPreferences();
       await settings.setTheme('system');
@@ -258,9 +256,8 @@ describe('Preferences', () => {
     });
 
     /**
-     * ⚠️ From "system", one press lands on the explicit **opposite of what is on screen** —
-     * never on "system" again, which usually looks exactly like what was already there
-     * (#323). What "system" resolves to is the runner's, so it is read, not assumed.
+     * From "system", one press lands on the explicit opposite of what is on screen, never on
+     * "system" again. What "system" resolves to is the runner's, so it is read, not assumed.
      */
     it('toggles between light and dark, never through system', async () => {
       await fileMenu.openPreferences();
@@ -294,7 +291,7 @@ describe('Preferences', () => {
   });
 
   /**
-   * ⚠️ Ten chapters of prose in one scrolling panel was roughly 3 400 characters, all of it
+   * Ten chapters of prose in one scrolling panel was roughly 3 400 characters, all of it
    * true and none of it looked at — the worst return a help surface can have.
    */
   describe('the written guide', () => {
@@ -323,7 +320,7 @@ describe('Preferences', () => {
       expect(await aboutMenu.chapter()).toBe('transfer');
     });
 
-    /** ⚠️ A walk you can only leave by finishing it is a wall with extra steps. */
+    /** A walk you can only leave by finishing it is a wall with extra steps. */
     it('closes from any chapter', async () => {
       await aboutMenu.jumpTo('fields');
       await aboutMenu.close();

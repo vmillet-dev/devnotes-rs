@@ -36,7 +36,7 @@ export const appConfig: ApplicationConfig = {
       loader: AppTranslocoLoader,
     }),
 
-    // ⚠️ French keeps the singular at zero where English does not, and four of these
+    // French keeps the singular at zero where English does not, and four of these
     // strings carry three independent counts in one sentence, each with its own agreement.
     // A key per form would have meant eight variants of those alone.
     //
@@ -45,7 +45,7 @@ export const appConfig: ApplicationConfig = {
     // onto an error banner with it. See `plural-transpiler.ts`.
     { provide: TRANSLOCO_TRANSPILER, useClass: PluralTranspiler },
 
-    // ⚠️ One initialiser for the whole sequence rather than several: Angular starts them
+    // One initialiser for the whole sequence rather than several: Angular starts them
     // together and awaits their promises as a block, so a later step would read a
     // still-empty cache.
     provideAppInitializer(startApplication),

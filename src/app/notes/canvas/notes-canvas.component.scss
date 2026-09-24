@@ -5,7 +5,7 @@
 }
 
 // The address on screen, whichever of the two views is filling it.
-// ⚠️ Relative, because the selection bar floats over it rather than being inserted above.
+// Relative, because the selection bar floats over it rather than being inserted above.
 .canvas-region {
   position: relative;
   display: flex;
@@ -14,9 +14,8 @@
   min-height: 0;
 }
 
-// ⚠️ It used to be a band in the flow, and ticking a card pushed everything below it down
-// 85px — the canvas jumped on every tick. Floating costs the canvas nothing and moves
-// nothing; the lift is what says it is above the surface rather than part of it.
+// Floating rather than in the flow, where ticking a card would push the canvas down. The lift
+// says it is above the surface rather than part of it.
 .floating-selection {
   position: absolute;
   z-index: 5;

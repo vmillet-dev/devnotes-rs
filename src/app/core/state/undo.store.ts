@@ -13,8 +13,8 @@ import { NotesRevision } from './notes-revision';
 export const UNDO_WINDOW_MS = 8000;
 
 /**
- * ⚠️ Each variant carries what the back end answered, never what the front end guessed.
- * Rebuilding the pairs from the selection would undo a tag the note already carried.
+ * Each variant carries what the back end answered, never what the front end guessed:
+ * rebuilding the pairs from the selection would undo a tag the note already carried.
  */
 export type Reversible =
   | { readonly kind: 'deletion'; readonly ids: readonly string[]; readonly count: number }
@@ -24,10 +24,8 @@ export type Reversible =
   | { readonly kind: 'arrange'; readonly layout: BoardLayout; readonly count: number };
 
 /**
- * The last write that can be put back, and the bar offering it.
- *
- * ⚠️ Two things: the banner is what the timer hides, the record is what `Ctrl+Z` reads.
- * Hiding a suggestion is not withdrawing it; only `dismiss()` gives up for good.
+ * The last write that can be put back, and the bar offering it. The banner is what the timer
+ * hides, the record what `Ctrl+Z` reads: only `dismiss()` gives up for good.
  */
 @Injectable({ providedIn: 'root' })
 export class UndoStore {

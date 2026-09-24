@@ -75,7 +75,7 @@ export const config: WebdriverIO.Config = {
   async before() {
     const { browser } = await import('@wdio/globals');
 
-    // ⚠️ Never before the first file: there is nothing to clear, and the application is
+    // Never before the first file: there is nothing to clear, and the application is
     // still seeding its samples. `SampleNotesService` writes its marker before the notes,
     // so a front end reloaded inside that window skips the seeding it interrupted — and
     // every launch after it agrees there is nothing to do.

@@ -15,7 +15,7 @@ describe('NOTES_SHORTCUT_GROUPS', () => {
   const shortcuts = groups.flatMap((group) => group.shortcuts);
 
   /**
-   * ⚠️ The canvas group is not written here: it is derived from the table that *binds*
+   * The canvas group is not written here: it is derived from the table that *binds*
    * the keys, so a key cannot be documented in the sheet without being bound. The two
    * other groups are documentation only, handled by the editor and the palette.
    */

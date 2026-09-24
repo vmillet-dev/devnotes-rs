@@ -8,7 +8,7 @@ import { bridge, draft } from '../support/bridge.js';
 /**
  * Several libraries, and switching between them.
  *
- * ⚠️ **Last on purpose, and after `24-forgotten-passphrase`.** That one archives the
+ * **Last on purpose, and after `24-forgotten-passphrase`.** That one archives the
  * library and leaves the gate asking for a phrase on a fresh one, which is exactly the
  * state this file needs: it creates that first library, then a second, and ends on a gate
  * again. Nothing may be filed after it.
@@ -21,7 +21,7 @@ describe('Several libraries', () => {
 
   const rows = () => $$(testid('library-row'));
 
-  /** ⚠️ Through the File menu, which only exists while a library is open. */
+  /** Through the File menu, which only exists while a library is open. */
   async function openPanel(): Promise<void> {
     await $(testid('file-menu')).click();
     await $(testid('file-libraries')).click();
@@ -49,7 +49,7 @@ describe('Several libraries', () => {
     );
     await passTheGate();
 
-    // ⚠️ After the seeding, which only runs on a library holding no space at all.
+    // After the seeding, which only runs on a library holding no space at all.
     await eventually(
       () => bridge.listSpaces(),
       (all) => all.length > 0,
@@ -67,7 +67,7 @@ describe('Several libraries', () => {
   });
 
   /**
-   * ⚠️ Creating opens it: one gesture rather than two, and the gate then asks for a
+   * Creating opens it: one gesture rather than two, and the gate then asks for a
    * phrase — which is what a first launch does too.
    */
   it('creates one and goes straight to it, through the gate', async () => {
@@ -83,13 +83,13 @@ describe('Several libraries', () => {
     ).toBe(true);
     // A library with no key file yet asks twice, like a first launch.
     expect(await $(testid('vault-confirmation')).isExisting()).toBe(true);
-    // ⚠️ And says which one: there are two now, each with a phrase of its own.
+    // And says which one: there are two now, each with a phrase of its own.
     expect(await gateLibrary()).toContain(OTHER);
 
     await passTheGate();
   });
 
-  /** ⚠️ Nothing crosses: its own database, its own samples, its own everything. */
+  /** Nothing crosses: its own database, its own samples, its own everything. */
   it('lands in a library of its own, seeded as a first launch', async () => {
     const titles = await $$(testid('note-card-title')).map((card) => card.getText());
 
@@ -113,7 +113,7 @@ describe('Several libraries', () => {
   });
 
   /**
-   * ⚠️ The File menu does not exist until a library is open, so the gate is the only place
+   * The File menu does not exist until a library is open, so the gate is the only place
    * someone holding several can say which one they have the phrase for.
    */
   it('goes to another library from the gate itself, and back', async () => {
@@ -146,9 +146,8 @@ describe('Several libraries', () => {
   });
 
   /**
-   * ⚠️ Back to a library that was **already seeded**, which is what the scenario above
-   * never did: the stores outlived the switch, the rail listed the other library's spaces,
-   * and the board asked this database about a space it had never held (#318).
+   * Back to a library that was already seeded: the rail and the board must be that library's,
+   * not whatever the stores held from the other one.
    */
   it('draws the spaces and the board of the library it came back to', async () => {
     await spaces.open();
@@ -171,7 +170,7 @@ describe('Several libraries', () => {
   });
 
   /**
-   * ⚠️ Named before it runs, and the confirm is somewhere other than the button that
+   * Named before it runs, and the confirm is somewhere other than the button that
    * fired it — the treatment emptying the trash gets, because it takes everything at once.
    */
   it('names what a deletion would take before it takes it', async () => {
@@ -193,7 +192,7 @@ describe('Several libraries', () => {
     ).toBe(1);
   });
 
-  /** ⚠️ The gate would have nothing to offer if the last one could go. */
+  /** The gate would have nothing to offer if the last one could go. */
   it('offers no deletion on the one that is left', async () => {
     expect(await $(testid('library-delete')).isExisting()).toBe(false);
 

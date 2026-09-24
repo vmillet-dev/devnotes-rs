@@ -17,7 +17,7 @@ import {
 } from '../support/app.js';
 
 /**
- * ⚠️ Title, body and source commit on blur, so every setter here blurs before returning:
+ * Title, body and source commit on blur, so every setter here blurs before returning:
  * a spec asserting right after typing would be asserting on a draft nothing has saved.
  */
 async function typeAndCommit(selector: string, text: string): Promise<void> {
@@ -35,7 +35,7 @@ async function rowAt(selector: string, index: number) {
 }
 
 export const editor = {
-  /** Where the note is kept, which the editor could not change at all until #182. */
+  /** Where the note is kept: its space, and its folder. */
   place: (kind: 'space' | 'folder', optionId: string | null) => pickChoice(kind, optionId),
 
   placementLabel: (kind: 'space' | 'folder') => choiceLabel(kind),
@@ -56,11 +56,11 @@ export const editor = {
 
   async addTag(tag: string): Promise<void> {
     await setField(testid('editor-tag-add'), tag);
-    // ⚠️ The field commits by submitting its form, which Enter does natively and no
+    // The field commits by submitting its form, which Enter does natively and no
     // synthetic key can — see `submitFormOf`.
     await submitFormOf(testid('editor-tag-add'));
 
-    // ⚠️ The field clearing only says the form was submitted; the list comes from the
+    // The field clearing only says the form was submitted; the list comes from the
     // note, after the write has crossed the bridge and come back. The comparison is loose
     // on purpose — `#` and case are `normalize_tags`'s to decide, and the scenario still
     // asserts the exact list Rust produced.
@@ -103,7 +103,7 @@ export const editor = {
     await $(testid('editor-close')).click();
     await $(testid('editor-title')).waitForExist({ reverse: true, timeout: 10_000 });
 
-    // ⚠️ Closing commits, and the dialog disappears without waiting for any of the three
+    // Closing commits, and the dialog disappears without waiting for any of the three
     // writes. Settling the canvas is the observable end of that round trip.
     await waitForCanvas();
   },
@@ -140,7 +140,7 @@ export const editor = {
   },
 
   /**
-   * ⚠️ Asserted on, not dragged: synthesising a pointer capture through WebDriver is
+   * Asserted on, not dragged: synthesising a pointer capture through WebDriver is
    * unreliable and beside the point, `Alt+↑/↓` being its keyboard twin.
    */
   grip: (index: number) =>
@@ -163,7 +163,7 @@ export const editor = {
     (await $(testid('placeholder-panel-toggle')).getAttribute('aria-expanded')) === 'true',
 
   /**
-   * ⚠️ Scoped to the overlay: `placeholder-input` is the same hook in this panel and in
+   * Scoped to the overlay: `placeholder-input` is the same hook in this panel and in
    * the fill form, and a bare `$()` returns whichever comes first in the DOM.
    */
   field: (name: string) => $(`app-note-editor-overlay ${testid('placeholder-input')}[data-field="${name}"]`),
@@ -186,7 +186,7 @@ export const editor = {
   attachmentNames: (): Promise<string[]> => readEach(testid('attachment-item'), '@data-file-name'),
 
   /**
-   * ⚠️ Asserted on, never clicked — both open OS UI, and the picker blocks the whole
+   * Asserted on, never clicked — both open OS UI, and the picker blocks the whole
    * application until a human answers it. See `support/app.ts`.
    */
   attachmentAdd: () => $(testid('attachment-add')),

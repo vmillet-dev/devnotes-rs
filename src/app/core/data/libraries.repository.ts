@@ -6,7 +6,7 @@ import { unwrap } from '@core/ipc/ipc.error';
 export type { LibraryEntry, Registry };
 
 /**
- * ⚠️ `Registry` crosses as itself: there is no wire shape to put back, so there is no
+ * `Registry` crosses as itself: there is no wire shape to put back, so there is no
  * mapper. `createdAt` is never read as a date — the list is ordered as Rust gives it.
  */
 @Injectable({ providedIn: 'root' })
@@ -21,7 +21,7 @@ export class LibrariesRepository {
   }
 
   /**
-   * ⚠️ The library is **closed** by the time this returns, so every command answers
+   * The library is **closed** by the time this returns, so every command answers
    * `Locked` afterwards. The caller's next move is to send the shell back to the gate:
    * the other library has its own passphrase, and asking for it is the only proof the
    * right one is open.

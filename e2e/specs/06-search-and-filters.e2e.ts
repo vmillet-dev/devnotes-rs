@@ -45,7 +45,7 @@ describe('Search, filters and facets', () => {
     await reloadCanvas();
   });
 
-  // ⚠️ `unstyled-control` is `all: unset` and `cursor` is inherited, so a field takes its
+  // `unstyled-control` is `all: unset` and `cursor` is inherited, so a field takes its
   // parent's arrow. The `<label>` is the visible box here.
   it('says it can be typed into, on the whole box', async () => {
     expect(await cursorOf(testid('search-input'))).toBe('text');
@@ -53,7 +53,7 @@ describe('Search, filters and facets', () => {
   });
 
   /**
-   * ⚠️ The field is borderless inside the <label> that draws the box, so the box is the
+   * The field is borderless inside the <label> that draws the box, so the box is the
    * only thing on screen that can say the caret is here. It said nothing at all.
    */
   it('says it has the caret, on the box the field sits in', async () => {
@@ -65,7 +65,7 @@ describe('Search, filters and facets', () => {
     await canvas.clearSearch();
   });
 
-  /** ⚠️ At the floor, which is the width a wrapping toolbar leaves it most of the time. */
+  /** At the floor, which is the width a wrapping toolbar leaves it most of the time. */
   it('says what it searches without being cut off', async () => {
     expect(await placeholderFitsAtItsFloor(testid('search-input'), '.search-bar')).toBe(true);
   });
@@ -98,9 +98,8 @@ describe('Search, filters and facets', () => {
   });
 
   /**
-   * ⚠️ Opening a note is what arms this: it sets the canvas cursor, and the cards follow
-   * that cursor with the real focus. The first character typed switches the canvas to one
-   * flat section, every card is rebuilt, and the rebuilt one used to grab the keyboard
+   * Opening a note sets the canvas cursor, which the cards follow with the real focus. The first
+   * character typed rebuilds every card as one flat section: none of them may take the keyboard
    * back out of the field mid-word.
    */
   it('keeps the keyboard in the field once a note has been opened', async () => {
@@ -126,7 +125,7 @@ describe('Search, filters and facets', () => {
   });
 
   /**
-   * ⚠️ An empty state that only reports is a dead end: the one thing to do from here is the
+   * An empty state that only reports is a dead end: the one thing to do from here is the
    * thing that emptied it, and `clearFilters()` was already sitting there unoffered.
    */
   it('offers the way out of the state that emptied it', async () => {
@@ -142,7 +141,7 @@ describe('Search, filters and facets', () => {
   /** How big is this result, and why is that card in it. */
   describe('what a search says about itself', () => {
     /**
-     * ⚠️ Mocha runs a suite's own tests before its nested suites, so this block is the
+     * Mocha runs a suite's own tests before its nested suites, so this block is the
      * last thing in the file whatever its position — and a search left in the field is a
      * search the next spec file inherits.
      */
@@ -155,7 +154,7 @@ describe('Search, filters and facets', () => {
       // Against what is on screen: the corpus is shared with every file that ran before.
       expect(await canvas.matchedCount()).toContain(String((await canvas.titles()).length));
 
-      // ⚠️ Not on the words. The zero case is written out — French calls zero `one`, so
+      // Not on the words. The zero case is written out — French calls zero `one`, so
       // "0 résultat" would read as a singular — but **the suite runs in whatever language
       // the machine is set to**: French here, English on CI. Asserting "aucun" passed
       // locally and failed on both runners. What the scenario is about is that the badge
@@ -172,11 +171,8 @@ describe('Search, filters and facets', () => {
     });
 
     /**
-     * ⚠️ Both halves of #201, and both came from the hairline #196 gave the badge. On a card
-     * the band is `overflow: hidden` and a `<span>` is inline, so the badge's border hung
-     * outside the line box its host was sized to and was cut. In the rail the chip drew a
-     * second outline two pixels further out, at a different radius — two rings around one
-     * badge rather than a selection.
+     * On a card, an inline badge's border hangs outside its line box and an `overflow: hidden`
+     * band cuts it; in the rail, a second outline at another radius reads as two rings.
      */
     it('draws the badge whole, with one outline around the selected one', async () => {
       await canvas.toggleLanguage('sh');
@@ -191,10 +187,8 @@ describe('Search, filters and facets', () => {
     });
 
     /**
-     * ⚠️ #207: the rail cannot reach the badge. `.lang-tag` belongs to `app-language-badge`,
-     * so a rule written in the rail's own stylesheet is rewritten with the rail's
-     * `_ngcontent` attribute and never matches — the selection had no mark at all while
-     * `outlines` above still counted one. The badge's own hairline was that one.
+     * The rail cannot reach the badge: `.lang-tag` belongs to `app-language-badge`, so a rule in
+     * the rail's stylesheet carries the rail's `_ngcontent` and matches nothing.
      */
     it('marks the selected format on the badge that carries the ring', async () => {
       const resting = await canvas.badgeRing('sh');
@@ -205,11 +199,7 @@ describe('Search, filters and facets', () => {
       expect(resting).not.toBeNull();
       expect(selected).not.toBe(resting);
     });
-    /**
-     * ⚠️ Its own button in the row, shown whenever any of the three is on. The way out
-     * used to be the count inside the field, which looks like a count and reads like a
-     * cross, and did neither.
-     */
+    /** Its own button in the row, shown whenever any of the three is on. */
     it('drops the search, the tag and the language in one click', async () => {
       await canvas.search('Docker');
       await canvas.toggleTag('ops');
@@ -224,10 +214,7 @@ describe('Search, filters and facets', () => {
       expect(await canvas.languageChip('sh').getAttribute('aria-pressed')).toBe('false');
     });
 
-    /**
-     * ⚠️ The cross in the field empties the field. It used to drop the tags and the
-     * languages with it, which is not what a cross in a search box means anywhere.
-     */
+    /** The cross in the field empties the field, and nothing else. */
     it('empties the field alone from the cross inside it', async () => {
       await canvas.search('Docker');
       await canvas.toggleTag('ops');
@@ -244,7 +231,7 @@ describe('Search, filters and facets', () => {
 
     it('does the same on Escape, once there is no selection to clear', async () => {
       await canvas.search('Docker');
-      // ⚠️ Focus has to leave the field: the canvas keyboard ignores a keystroke aimed at
+      // Focus has to leave the field: the canvas keyboard ignores a keystroke aimed at
       // an input, which is what leaves Ctrl+K and typing alone.
       await blur();
       await press('Escape');
@@ -328,11 +315,8 @@ describe('Search, filters and facets', () => {
   });
 
   /**
-   * ⚠️ The measurement the header has to hold, at the size the application ships with. It
-   * used to wrap here — not in a narrow edge case, on first launch: the primary action was
-   * pushed onto a second row and the search was squeezed below its own placeholder. With
-   * the two facet rails and the topbar's second row gone, the first card came up from 284px
-   * to about 150.
+   * The header at the size the application ships with: one row, the primary action on it, and
+   * the search no narrower than its placeholder.
    */
   describe('the header, at the window the application ships with', () => {
     let restore = { width: 1100, height: 720 };
@@ -379,7 +363,7 @@ describe('Search, filters and facets', () => {
       expect(top!).toBeLessThan(360);
     });
 
-    /** ⚠️ The bar floats over the canvas: inserted, it pushed everything down 85px. */
+    /** The bar floats over the canvas: inserted, it pushed everything down 85px. */
     it('moves nothing when a card is ticked', async () => {
       const before = await canvas.firstCardTop();
 

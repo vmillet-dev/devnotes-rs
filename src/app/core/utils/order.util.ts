@@ -1,9 +1,6 @@
 /**
- * The order `Array.prototype.sort` gives strings when it is handed no comparator — UTF-16
- * code units — spelled out, so no reader has to wonder whether it was meant.
- *
- * ⚠️ Not `localeCompare`: where this sorts the key a `resource`'s `equal` compares against
- * its previous value, any stable order does, and changing it gains nothing.
+ * The order `Array.prototype.sort` gives strings without a comparator, UTF-16 code units,
+ * spelled out. Not `localeCompare`: any stable order serves the `equal` it feeds.
  */
 export function byCodeUnit(a: string, b: string): number {
   if (a < b) return -1;

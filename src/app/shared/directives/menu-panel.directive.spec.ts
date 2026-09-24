@@ -45,7 +45,7 @@ describe('MenuPanelDirective', () => {
     expect(element('panel').getAttribute('role')).toBe('menu');
   });
 
-  /** ⚠️ Load-bearing: a menu opened without focus is unreachable from the keyboard. */
+  /** Load-bearing: a menu opened without focus is unreachable from the keyboard. */
   it('focuses its first entry once the panel exists', () => {
     expect(document.activeElement).toBe(element('first'));
   });

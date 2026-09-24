@@ -37,7 +37,7 @@ describe('NotesStore', () => {
     }
 
     /**
-     * ⚠️ The editor can be closed inside the round trip that materialises a draft, and
+     * The editor can be closed inside the round trip that materialises a draft, and
      * adopting the created note would then put the overlay back on screen.
      */
     it('does not put the editor back on screen', async () => {
@@ -55,7 +55,7 @@ describe('NotesStore', () => {
       expect(store.selectedNote()).toBeNull();
     });
 
-    /** ⚠️ The note is still written, and the canvas has to hear about it either way. */
+    /** The note is still written, and the canvas has to hear about it either way. */
     it('still puts the note on the canvas', async () => {
       const { store, canvas, repository } = await createNotesHarness([]);
       const write = holdCreate(repository);
@@ -72,7 +72,7 @@ describe('NotesStore', () => {
     });
 
     /**
-     * ⚠️ The commits still in flight have to land on the row too. Closing fires title,
+     * The commits still in flight have to land on the row too. Closing fires title,
      * source and content back to back, the close lands between them, and a closed editor
      * adopts nothing — so without `materialisedNote` the later commits are dropped.
      */
@@ -106,7 +106,7 @@ describe('NotesStore', () => {
       expect(store.selectedNote()).toBeNull();
     });
 
-    /** ⚠️ A draft seeded from a preview would write the first lines back over the body. */
+    /** A draft seeded from a preview would write the first lines back over the body. */
     it('opens the whole note, whatever the list holds of it', async () => {
       const { store, repository } = await createNotesHarness([
         createNote({ id: 'a', content: 'one\ntwo\nthree\nfour\nfive\nsix' }),
@@ -211,7 +211,7 @@ describe('NotesStore', () => {
     });
 
     /**
-     * ⚠️ Through `NotesRevision` and not by reloading the canvas by hand: the board is a
+     * Through `NotesRevision` and not by reloading the canvas by hand: the board is a
      * second view of the same notes, and a write it never hears about leaves a ticked
      * item looking unticked until the view is switched.
      */
@@ -360,7 +360,7 @@ describe('NotesStore', () => {
     });
 
     /**
-     * ⚠️ The board dims where the canvas narrows: a card there can be ticked while its
+     * The board dims where the canvas narrows: a card there can be ticked while its
      * note is nowhere in the canvas view, and resolving it against that view alone made
      * the click write nothing at all.
      */
@@ -556,7 +556,7 @@ describe('NotesStore', () => {
     });
 
     /**
-     * ⚠️ `requestClose()` fires three commits back to back with no `await` between them,
+     * `requestClose()` fires three commits back to back with no `await` between them,
      * so a draft that still resolves to `DRAFT_ID` in that window is created twice.
      */
     it('creates one note when the closing commits are chained without awaiting', async () => {
@@ -828,7 +828,7 @@ describe('NotesStore', () => {
 
     it('hides the banner after its window but stays undoable', async () => {
       const { store, undo } = await createNotesHarness([createNote({ id: 'a' })]);
-      // ⚠️ The timers are faked after the store is built: `waitFor` needs them to await
+      // The timers are faked after the store is built: `waitFor` needs them to await
       // the first view.
       vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
       try {
@@ -915,7 +915,7 @@ describe('NotesStore filing one note', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
   });
 
-  /** ⚠️ A batch of one, through the command the selection bar already takes. */
+  /** A batch of one, through the command the selection bar already takes. */
   it('files through the batch command and offers the filing back', async () => {
     const harness = await createNotesHarness(
       [createNote({ id: 'a', spaceId: 'space-1' })],
@@ -931,7 +931,7 @@ describe('NotesStore filing one note', () => {
   });
 
   /**
-   * ⚠️ `file_notes` answers the placements it changed, not the rows — so the open note
+   * `file_notes` answers the placements it changed, not the rows — so the open note
    * kept the folder it had, and the editor's own control went on naming it.
    */
   it('refreshes the open note, which the filing command does not answer with', async () => {

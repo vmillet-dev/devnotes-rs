@@ -54,7 +54,7 @@ describe('TagsStore', () => {
   });
 
   /**
-   * ⚠️ Proposing must write nothing. This is the whole protection: the tag manager acts
+   * Proposing must write nothing. This is the whole protection: the tag manager acts
    * on the corpus rather than on a selection, so a mis-click reaches it easily.
    */
   it('asks before it writes, and says how many notes it would touch', async () => {
@@ -171,7 +171,7 @@ describe('TagsStore', () => {
     expect(harness.notifier.notice()?.ref.key).toBe('errors.tagsLoadFailed');
   });
 
-  /** ⚠️ A blast radius that cannot be read is not a reason to go ahead blind. */
+  /** A blast radius that cannot be read is not a reason to go ahead blind. */
   it('proposes nothing when it cannot say what would be touched', async () => {
     await harness.store.open();
     harness.store.toggle('auth');

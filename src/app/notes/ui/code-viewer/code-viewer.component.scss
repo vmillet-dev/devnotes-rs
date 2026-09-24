@@ -28,5 +28,5 @@
   word-break: break-word;
 }
 
-// ⚠️ The token colours (`.hljs-*`) live in `src/styles/_code-theme.scss`: injected through
+// The token colours (`.hljs-*`) live in `src/styles/_code-theme.scss`: injected through
 // [innerHTML], they escape the component's encapsulation.

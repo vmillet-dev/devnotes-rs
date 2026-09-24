@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { expandPlurals } from './plural-transpiler';
 
 /**
- * ⚠️ Exhaustive on purpose. This is a parser written here rather than taken from a library,
+ * Exhaustive on purpose. This is a parser written here rather than taken from a library,
  * because the library compiles with `new Function` and the CSP forbids it — so the grammar
  * it accepts is the grammar nobody else is checking.
  */
@@ -17,7 +17,7 @@ describe('expandPlurals', () => {
     expect(fr(source, { count: 4 })).toBe('4 notes');
   });
 
-  /** ⚠️ The whole reason `=0` is written out: French calls zero `one`. */
+  /** The whole reason `=0` is written out: French calls zero `one`. */
   it('lets an exact match win over the category', () => {
     const source = '{count, plural, =0 {aucune note} one {# note} other {# notes}}';
 
@@ -41,7 +41,7 @@ describe('expandPlurals', () => {
     expect(fr(source, { notes: 1, skipped: 3 })).toBe('1 note depuis {{path}}, 3 ignorées.');
   });
 
-  /** ⚠️ `{{app}}` and the like must pass through untouched: they are the other transpiler's. */
+  /** `{{app}}` and the like must pass through untouched: they are the other transpiler's. */
   it('leaves a double-brace interpolation alone', () => {
     expect(fr('Bienvenue dans {{app}}')).toBe('Bienvenue dans {{app}}');
     expect(fr('{{notes}} et {{path}}')).toBe('{{notes}} et {{path}}');

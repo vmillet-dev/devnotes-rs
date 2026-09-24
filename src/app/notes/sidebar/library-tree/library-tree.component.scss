@@ -145,9 +145,8 @@
   overflow: hidden;
 }
 
-// ⚠️ The ellipsis belongs to a child and not to the row: `text-overflow` is a property of
-// a block container, and a flex one simply ignores it — the name was cut mid-letter. It
-// went unseen until the rail could be narrow enough to cut one (#212).
+// The ellipsis belongs to a child and not to the row: `text-overflow` needs a block
+// container, and a flex one ignores it.
 .node-label {
   flex: 1;
   min-width: 0;
@@ -215,9 +214,8 @@
   color: var(--text-0);
 }
 
-// ⚠️ The twisty and the ✦ that stands in for it are one column, sized once: it is what
-// puts the name of "all spaces" on the same edge as every space under it. The ✦ used to
-// sit inside the name, which pushed that one label right by its own width.
+// The twisty and the ✦ that stands in for it are one column, sized once, so "all spaces"
+// lines up with every space under it.
 .node-twisty,
 .node-twisty-space {
   display: flex;
@@ -227,7 +225,7 @@
   width: 18px;
 }
 
-// ⚠️ ▾ is a *small* triangle by design: at the 12px the row's other marks use it draws a
+// ▾ is a *small* triangle by design: at the 12px the row's other marks use it draws a
 // speck of ink, and nobody could tell what it was. 16px is where it reads as a triangle —
 // measured against the rendered pixels, not guessed, and still lighter than the label.
 .node-twisty {
@@ -244,10 +242,9 @@
   background: var(--folder-hue);
 }
 
-// Not indented with its row: the rail is narrow enough as it is. ⚠️ And its minimum is
-// released here, so the panel follows the rail where a dropdown needs 240px to have a
-// width at all — a custom property because a rule spelled here would be rewritten with
-// the rail's own `_ngcontent` and never reach the panel (#207).
+// Not indented with its row: the rail is narrow enough. Its minimum is released through a
+// custom property, since a rule spelled here would carry the rail's `_ngcontent` and never
+// reach the panel.
 app-space-editor,
 app-folder-editor {
   --editor-min-width: 0;

@@ -1,6 +1,6 @@
 @use 'mixins' as *;
 
-// ⚠️ Decorative: every chapter says in words what its figure shows, so the SVG is
+// Decorative: every chapter says in words what its figure shows, so the SVG is
 // `aria-hidden` and nothing is lost by not seeing it.
 :host {
   display: block;

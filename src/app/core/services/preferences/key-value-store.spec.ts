@@ -43,7 +43,7 @@ describe('KeyValueStore', () => {
     expect(file.read('theme')).toBe('light');
   });
 
-  /** ⚠️ Another library's file must not answer for keys the first one held. */
+  /** Another library's file must not answer for keys the first one held. */
   it('forgets what the previous file held when it opens another', async () => {
     load.mockResolvedValueOnce(fakeStore([['marker', 'yes']])).mockResolvedValueOnce(fakeStore());
 

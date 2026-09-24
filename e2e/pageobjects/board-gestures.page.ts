@@ -5,7 +5,7 @@ import { testid } from '../support/app.js';
 /**
  * The board's pointer gestures, dispatched from inside the page.
  *
- * ⚠️ Synthetic, like every other input this suite sends: the embedded driver drops
+ * Synthetic, like every other input this suite sends: the embedded driver drops
  * WebDriver actions. So this proves the wiring — grip to store to command to database —
  * and not the WebView's own pointer capture, which the unit specs cover instead.
  */
@@ -13,13 +13,13 @@ export const gestures = {
   /** Drags a loose card into a zone and waits for the write to have landed. */
   async dragCardInto(noteId: string, folderId: string): Promise<void> {
     await gestures.dropCardInto(noteId, folderId);
-    // ⚠️ A duration, deliberately: what the callers of this one go on to read is the
+    // A duration, deliberately: what the callers of this one go on to read is the
     // database, and no condition in the page says the debounced write has reached it.
     await browser.pause(1200);
   },
 
   /**
-   * The gesture alone. ⚠️ Nothing is waited on: a spec using this is asking what the
+   * The gesture alone. Nothing is waited on: a spec using this is asking what the
    * board draws **before** the round trip, which is what the staged overlay is for.
    */
   async dropCardInto(noteId: string, folderId: string): Promise<void> {
@@ -97,7 +97,7 @@ export const gestures = {
   /**
    * Sweeps a selection band with the **right** button, in surface coordinates.
    *
-   * ⚠️ The right one because the left is taken: dragging the background draws a folder,
+   * The right one because the left is taken: dragging the background draws a folder,
    * and that gesture does not move.
    */
   async bandSelect(at: { x: number; y: number; width: number; height: number }): Promise<void> {
@@ -142,7 +142,7 @@ export const gestures = {
 
   /**
    * Sweeps a band over empty ground, then asks for a menu **off the board**, twice: what
-   * the page answers each time, in order. ⚠️ One call, so nothing can press in between.
+   * the page answers each time, in order. One call, so nothing can press in between.
    */
   menusAfterSweep: (offBoard: string): Promise<boolean[]> =>
     browser.execute((selector: string) => {
@@ -175,7 +175,7 @@ export const gestures = {
 
   /**
    * The computed fill of the band a button draws, read **while** it is drawn, then thrown
-   * away with `pointercancel` so nothing is written. ⚠️ Computed, not the class: a
+   * away with `pointercancel` so nothing is written. Computed, not the class: a
    * declaration the browser dropped as invalid leaves the class on and the band empty.
    */
   // `await` flattens what `execute` types as a promise of the page's own promise.
@@ -199,7 +199,7 @@ export const gestures = {
       send('pointerdown', box.left + 40, box.top + 3000);
       send('pointermove', box.left + 300, box.top + 3200);
 
-      // ⚠️ Zoneless: the band is drawn on the next change detection, not by the dispatch.
+      // Zoneless: the band is drawn on the next change detection, not by the dispatch.
       return new Promise<string>((resolve) => {
         requestAnimationFrame(() =>
           requestAnimationFrame(() => {
@@ -245,7 +245,7 @@ export const gestures = {
     await browser.pause(400);
   },
 
-  /** ⚠️ The card itself: the whole of it is the handle, there is no grip any more. */
+  /** The card itself: the whole of it is the handle. */
   cardGrip: (noteId: string) => `[data-note-id="${noteId}"] ${testid('note-card-title')}`,
   zoneGrip: (folderId: string) =>
     `${testid('board-zone')}[data-folder-id="${folderId}"] ${testid('board-zone-grip')}`,

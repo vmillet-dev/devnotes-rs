@@ -4,9 +4,8 @@
   position: relative;
 }
 
-// ⚠️ The whole card, underneath everything it shows: opening a note is a click anywhere on
-// it, and the header's controls are real buttons in the flow above. The card itself cannot
-// be the `<button>` — a button holds no buttons — and that is what used to scatter them.
+// The whole card, underneath everything it shows: opening a note is a click anywhere on it,
+// and the header's controls are real buttons above. A button holds no buttons.
 .card-open {
   @include unstyled-control;
 
@@ -24,7 +23,7 @@
   outline-offset: 2px;
 }
 
-// ⚠️ Transparent to the pointer as a whole: what is under it is the click surface. The
+// Transparent to the pointer as a whole: what is under it is the click surface. The
 // controls take their own events back, one by one.
 .card {
   @include surface(var(--bg-1), 10px);
@@ -52,7 +51,7 @@
   border-color: var(--red);
 }
 
-// ⚠️ Over the footer, which is the line that matters least at that moment, rather than
+// Over the footer, which is the line that matters least at that moment, rather than
 // inside the card: it is a fixed 150px and a band in the flow would push a row of the
 // todo list out of sight. Transparent to the pointer — the card underneath still opens.
 .card-arming {
@@ -82,9 +81,8 @@
   background: rgba(var(--amber-rgb), 0.06);
 }
 
-// ⚠️ One row for the tick, the title and the marks, where the marks used to have a band of
-// their own above the title: 21px of a fixed 150px card spent on a line that says nothing
-// about the note. The body is what got it back.
+// One row for the tick, the title and the marks: a fixed 150px card has no line to spend on
+// a band that says nothing about the note.
 .card-title-row {
   display: flex;
   align-items: flex-start;
@@ -115,7 +113,7 @@
   color: var(--amber-text);
 }
 
-// ⚠️ Outside the card, over its **bottom** edge. The top right belongs to the marks now,
+// Outside the card, over its **bottom** edge. The top right belongs to the marks now,
 // and a pill floating there sat on top of them — which is the collision that decided this
 // layout. Outside rather than in the flow, so it still costs the card no room at all.
 .card-actions {
@@ -131,8 +129,8 @@
   background: var(--bg-2);
   border: 1px solid var(--line-soft);
   box-shadow: var(--shadow-dropdown);
-  // ⚠️ Quiet at rest, never absent: `display: none` takes it out of the tab order. And
-  // ⚠️ the `opacity` pair has to stay **after** `unstyled-control` wherever it is written —
+  // Quiet at rest, never absent: `display: none` takes it out of the tab order. And
+  // the `opacity` pair has to stay **after** `unstyled-control` wherever it is written —
   // that mixin expands to `all: unset`, which resets both.
   opacity: 0;
   @include eases(opacity);
@@ -163,7 +161,7 @@ app-copy-button {
   opacity: 1;
 }
 
-// ⚠️ The arming band owns the bottom of the card while it is asking, and the pill hangs
+// The arming band owns the bottom of the card while it is asking, and the pill hangs
 // right below it. Standing the pill down for those four seconds keeps the question legible;
 // the keyboard still reaches it, which is what `:focus-within` is doing here.
 .card-shell.armed .card-actions {
@@ -179,7 +177,7 @@ app-copy-button {
   color: var(--text-0);
 }
 
-// ⚠️ In the flow and always drawn, unlike the pill it left: floating it over a corner is
+// In the flow and always drawn, unlike the pill it left: floating it over a corner is
 // what covered the marks, and a selection affordance that only exists under the pointer is
 // one nobody finds. Quiet at rest, amber once it is ticked.
 .card-check {
@@ -207,7 +205,7 @@ app-copy-button {
   outline-offset: 1px;
 }
 
-// ⚠️ It takes the room the row has left and gives way to the marks, never the other way
+// It takes the room the row has left and gives way to the marks, never the other way
 // round: `min-width: 0` is what lets a flex child actually shrink, and without it a long
 // title pushes the marks off the card instead of clamping.
 .card-title {
@@ -256,7 +254,7 @@ app-copy-button {
   color: var(--red);
 }
 
-/* ⚠️ Neutral pill with a square swatch. A tinted pill is what a tag is, and the two
+/* Neutral pill with a square swatch. A tinted pill is what a tag is, and the two
    must not be read as the same thing. */
 .card-folder {
   display: inline-flex;
@@ -320,7 +318,7 @@ app-copy-button {
   white-space: nowrap;
 }
 
-// In the flow: the card is no longer a button, so the items need no layer of their own.
+// In the flow: the card is not a button, so the items need no layer of their own.
 .card-items {
   flex: 1;
   margin: 0;

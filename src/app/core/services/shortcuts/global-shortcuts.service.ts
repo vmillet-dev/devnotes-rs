@@ -5,7 +5,7 @@ import { SettingsStore } from '@core/services/settings/settings.store';
 import { ShortcutBindings } from './shortcut.model';
 
 /**
- * ⚠️ A global shortcut is first-come, first-served across the machine and the loser gets
+ * A global shortcut is first-come, first-served across the machine and the loser gets
  * no error, so without this message pressing the key does nothing and nothing says why.
  * All three travel together because the native command takes them as a block.
  */
@@ -34,7 +34,7 @@ export class GlobalShortcutsService {
       // No `Result` on the Rust side: it throws when the bridge is absent.
       const taken = await commands.setGlobalShortcuts(bindings);
       if (taken.length > 0) {
-        // ⚠️ The count travels beside the list: the sentence agrees three times over —
+        // The count travels beside the list: the sentence agrees three times over —
         // the noun, the adjective and the participle — and a list cannot be counted by
         // the translation.
         this.notifier.notify({

@@ -95,11 +95,7 @@ describe('FocusTrapDirective', () => {
     expect(event.defaultPrevented).toBe(false);
   });
 
-  /**
-   * ⚠️ `tabindex="-1"` takes an element out of the tab order whatever it is made of, and
-   * the trap used to read only a bare `[tabindex]` that way. The palette's rows are
-   * buttons, and Shift+Tab in its field landed on the last one's copy control (#283).
-   */
+  /** `tabindex="-1"` takes any element out of the tab order, a button included. */
   it('treats an untabbable control as out of the trap, button or not', async () => {
     fixture.componentInstance.open.set(true);
     await fixture.whenStable();

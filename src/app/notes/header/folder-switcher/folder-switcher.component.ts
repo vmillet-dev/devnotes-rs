@@ -19,7 +19,7 @@ import { MenuTriggerDirective } from '@shared/directives/menu-trigger.directive'
  * Narrows the canvas to one folder, and is where a folder is made and managed until the
  * board has a zone menu of its own.
  *
- * ⚠️ No "unfiled" entry: the absence of a chip already reads on a card, and a third
+ * No "unfiled" entry: the absence of a chip already reads on a card, and a third
  * state here would be a second way to say the same thing.
  */
 @Component({
@@ -44,7 +44,7 @@ export class FolderSwitcherComponent {
 
   protected readonly creating = signal(false);
 
-  /** ⚠️ The panel replaces the menu: input fields inside a `role="menu"` are not valid ARIA. */
+  /** The panel replaces the menu: input fields inside a `role="menu"` are not valid ARIA. */
   protected readonly editing = signal<Folder | null>(null);
 
   private readonly nameInput = viewChild<ElementRef<HTMLInputElement>>('nameInput');

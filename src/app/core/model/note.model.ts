@@ -28,7 +28,7 @@ export interface Note {
   readonly folder: NoteFolder | null;
   readonly title: string;
   readonly language: LanguageTag;
-  /** ⚠️ Only the first lines when `truncated`: a list sends previews. */
+  /** Only the first lines when `truncated`: a list sends previews. */
   readonly content: string;
   /** Context, e.g. "API Gateway / Auth" — its first segment is the label. */
   readonly source: string;
@@ -53,7 +53,7 @@ export interface Note {
 }
 
 /**
- * One seeded note, and which of the seeded folders it lands in. ⚠️ An **index**, not an
+ * One seeded note, and which of the seeded folders it lands in. An **index**, not an
  * id: the folders do not exist until the command that writes them runs.
  */
 export interface SampleNote {
@@ -77,7 +77,7 @@ export type NoteDraft = Omit<
 >;
 
 /**
- * ⚠️ No `folderId`: filing has a command of its own (`FoldersRepository.fileMany`), so
+ * No `folderId`: filing has a command of its own (`FoldersRepository.fileMany`), so
  * a patch can never refile a note as a side effect. The back end has no field for it
  * either — the only move it makes is unfiling a note that changes space.
  */
@@ -98,7 +98,7 @@ export interface NotesQuery {
   readonly languages: readonly LanguageTag[];
   readonly now: Date;
   /**
-   * ⚠️ `Date#getTimezoneOffset()`. The sections reason in local days: without this
+   * `Date#getTimezoneOffset()`. The sections reason in local days: without this
    * offset a note created at 11 pm lands in the wrong one.
    */
   readonly tzOffsetMinutes: number;
@@ -157,7 +157,7 @@ export interface TagUsage {
 export interface Attachment {
   readonly id: string;
   readonly noteId: string;
-  /** The original name, displayed as is. ⚠️ Never used as a path. */
+  /** The original name, displayed as is. Never used as a path. */
   readonly fileName: string;
   readonly mimeType: string;
   readonly byteSize: number;

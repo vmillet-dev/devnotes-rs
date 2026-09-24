@@ -56,7 +56,7 @@ function describeCause(cause: unknown): string {
 }
 
 /**
- * ⚠️ `code` is `null` when the rejection does not come from our commands: Tauri rejects
+ * `code` is `null` when the rejection does not come from our commands: Tauri rejects
  * with a plain string for an unknown command or a bad argument, and `bindings.ts`
  * files that in the `error` branch typed as an `AppError` it is not.
  */

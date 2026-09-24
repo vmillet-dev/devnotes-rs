@@ -8,42 +8,30 @@ import { MenuTriggerDirective } from '@shared/directives/menu-trigger.directive'
 export interface ChoiceOption {
   readonly id: string;
   readonly name: string;
-  /**
-   * `name` is a translation key rather than user data. ⚠️ Translated in the template, so
-   * it follows a change of language.
-   */
+  /** `name` is a translation key, translated in the template so it follows the language. */
   readonly nameIsKey?: boolean;
   /** Only a folder has one, and it is the same swatch the card's chip draws. */
   readonly colour?: FolderColour;
 }
 
 /**
- * One choice among a list, as a menu rather than a `<select>`.
- *
- * ⚠️ The application draws every one of its own surfaces, and a native `<select>` brings
- * the operating system's back: a different border, a different arrow, a different focus
- * ring and, on Windows, a different font. Worse where the control is a **command** rather
- * than a field — the selection bar's two reset their value to `''` after every `change`, so
- * a screen reader announced a combobox whose current value was "Ranger dans".
- *
- * ⚠️ `naming: 'label'` is what tells the two apart. A field shows what is chosen; a command
- * shows what it does, and has no current value to announce.
+ * One choice among a list, as a menu rather than a native `<select>`, which brings the
+ * operating system's border, arrow, focus ring and font. `naming: 'label'` makes it a command:
+ * it shows what it does, and has no current value to announce.
  */
 @Component({
   selector: 'app-choice-menu',
   imports: [MenuPanelDirective, TranslocoPipe],
   hostDirectives: [MenuTriggerDirective],
-  // ⚠️ This one is used **inside dialogs**, unlike every other menu in the application.
-  // The trigger directive lets Escape bubble on purpose — a multi-level menu folds its
-  // panel before closing — but the next listener up there is the dialog's own, so one
-  // Escape closed the editor along with the menu. Swallowed only while the panel is open.
+  // Used inside dialogs, whose own listener is the next one up for Escape: swallowed while the
+  // panel is open, so one Escape does not close both.
   templateUrl: './choice-menu.component.html',
   styleUrl: './choice-menu.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChoiceMenuComponent {
   readonly label = input.required<string>();
-  /** ⚠️ Stable, unlike `label`, which is translated: this is what the tests address. */
+  /** Stable, unlike the translated `label`: what the tests address. */
   readonly kind = input.required<string>();
   readonly options = input.required<readonly ChoiceOption[]>();
   readonly currentId = input<string | null>(null);
@@ -74,7 +62,7 @@ export class ChoiceMenuComponent {
     this.menu.handleEscape((event) => this.onEscape(event));
   }
 
-  /** ⚠️ The key is swallowed only while the menu is open: closed, it belongs to the dialog. */
+  /** Swallowed only while open: closed, the key belongs to the dialog. */
   private onEscape(event: Event): void {
     if (!this.menu.open()) return;
 

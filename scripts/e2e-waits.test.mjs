@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 /**
- * ⚠️ `node --test` and not a `*.spec.ts`, like the palette file beside it: this reads the
+ * `node --test` and not a `*.spec.ts`, like the palette file beside it: this reads the
  * shipped spec files off disk, and the Angular builder compiles its own specs for a browser.
  */
 const SPECS = 'e2e/specs';
@@ -16,10 +16,8 @@ const REACH = 4;
 const EXCUSE_REACH = 3;
 
 /**
- * ⚠️ This is the lookahead #190 got wrong. It demanded a literal `expect(` on the **very
- * next line**, which misses the two shapes that are everywhere: a value read now and
- * asserted two lines down, and a blank line between the pause and the assertion. Counted
- * properly, the sweep had covered a sixth of the job.
+ * The lookahead: not a literal `expect(` on the very next line, which misses a value read now
+ * and asserted two lines down, and a blank line between the pause and the assertion.
  */
 const READS = /expect\(|const .* = await|await (bridge|canvas|editor|board|crumb|trash|settings)\./;
 

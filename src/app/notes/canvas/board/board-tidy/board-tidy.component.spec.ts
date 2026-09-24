@@ -29,7 +29,7 @@ describe('BoardTidyComponent', () => {
     await fixture.whenStable();
   });
 
-  /** ⚠️ The cheap half in one click; the half that overwrites frames set by hand in two. */
+  /** The cheap half in one click; the half that overwrites frames set by hand in two. */
   it('aligns the loose cards alone on the main button', async () => {
     await click('board-tidy');
 

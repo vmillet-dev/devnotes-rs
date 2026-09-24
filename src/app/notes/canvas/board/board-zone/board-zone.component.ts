@@ -17,7 +17,7 @@ export interface CardGrab {
  * carrying coordinates of their own: the inside of a folder is already sorted by the fact
  * of being there, and a second set of positions would be a second thing to keep straight.
  *
- * ⚠️ Moving a zone carries its notes, and resizing one captures and releases nothing —
+ * Moving a zone carries its notes, and resizing one captures and releases nothing —
  * both fall out of the flow rather than being coded. Unreal's own rule, where a comment
  * owns whatever it overlaps, was considered and refused: it silently refiles notes the day
  * a frame is stretched.
@@ -59,7 +59,7 @@ export class BoardZoneComponent {
   /**
    * A card flows here, so its drag starts from where the zone is rather than from itself.
    *
-   * ⚠️ Not from its own controls: a press on the tick, the copy, the ⋯ or a checklist item
+   * Not from its own controls: a press on the tick, the copy, the ⋯ or a checklist item
    * is aimed at that control, and starting a gesture there would swallow its click.
    */
   protected grabCard(event: PointerEvent, entry: BoardNote): void {

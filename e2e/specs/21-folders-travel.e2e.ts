@@ -11,14 +11,14 @@ import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
  * The last of the five: a library exported from one machine and imported on another comes
  * back arranged.
  *
- * ⚠️ There is one process and one library for the whole run, so "the other machine" is
+ * There is one process and one library for the whole run, so "the other machine" is
  * this one with the notes cleared out — an import that met their ids would skip them, as
  * it is meant to. `tests/transfer.rs` covers the genuinely fresh database.
  */
 describe('Folders travelling with a library', () => {
   const directory = mkdtempSync(join(tmpdir(), 'devnotes-folders-'));
 
-  /** ⚠️ Forward slashes: `\` is an escape on the wire and a separator on Windows. */
+  /** Forward slashes: `\` is an escape on the wire and a separator on Windows. */
   const bundlePath = join(directory, 'arranged.devnotes').replaceAll('\\', '/');
 
   let homeId = '';
@@ -74,7 +74,7 @@ describe('Folders travelling with a library', () => {
   });
 
   /**
-   * ⚠️ A board received from elsewhere must not land on top of the one you arranged.
+   * A board received from elsewhere must not land on top of the one you arranged.
    * Keeping the geometry off the `Folder` model is what makes that free rather than a
    * filter to maintain — and this reads the file on disk to prove it.
    */

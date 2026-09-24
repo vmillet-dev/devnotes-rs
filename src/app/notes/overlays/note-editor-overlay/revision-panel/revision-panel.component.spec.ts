@@ -36,7 +36,7 @@ describe('RevisionPanelComponent', () => {
     await render();
   });
 
-  /** ⚠️ A panel always there and always empty is a feature nobody uses. */
+  /** A panel always there and always empty is a feature nobody uses. */
   it('shows nothing at all for a note nobody has edited', async () => {
     await store.openFor('note-1');
     await fixture.whenStable();
@@ -87,10 +87,7 @@ describe('RevisionPanelComponent', () => {
 
   const current = (): string | undefined => repository.contentOf('note-1');
 
-  /**
-   * ⚠️ Going back is irreversible — the current text and every newer version go — so a
-   * row opens a preview and never restores on its own (#325).
-   */
+  /** Going back is irreversible, so a row opens a preview and never restores on its own. */
   it('opens a preview on a click, and changes nothing yet', async () => {
     await openHistory('select 2');
 
@@ -112,7 +109,7 @@ describe('RevisionPanelComponent', () => {
     expect(text('revision-consequence')).toContain('la version plus récente');
   });
 
-  /** The reporter's case: A → B → C, back to B, and C no longer exists. */
+  /** A → B → C, back to B: C is gone. */
   it('goes back from the preview, and the history loses that version and every newer one', async () => {
     await openHistory('select 2', 'select 3');
 
@@ -139,11 +136,8 @@ describe('RevisionPanelComponent', () => {
   });
 
   /**
-   * ⚠️ The defect the end-to-end run found, and the reason this is worth a fast test too:
-   * the editor's body draft is a `linkedSignal` on the note **id**, which does not change
-   * when a body is put back underneath it. The field went on showing the version that had
-   * just been replaced — and the commit on close wrote it straight back, so the restore
-   * undid itself.
+   * The editor's body draft is a `linkedSignal` on the note id, which a restore does not
+   * change: the restored row must reach where the draft re-seeds from.
    */
   it('puts the restored row where the editor re-seeds its draft from', async () => {
     const notes = TestBed.inject(NotesStore);
@@ -162,7 +156,7 @@ describe('RevisionPanelComponent', () => {
     expect(store.restored()).toBe(before + 1);
   });
 
-  /** ⚠️ A history left over from the note before would offer to paste its body here. */
+  /** A history left over from the note before would offer to paste its body here. */
   it('drops the history when the editor moves to another note', async () => {
     await repository.update('note-1', { content: 'select 2' });
     await store.openFor('note-1');

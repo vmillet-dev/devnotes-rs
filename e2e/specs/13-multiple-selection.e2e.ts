@@ -64,7 +64,7 @@ describe('Selecting several notes at once', () => {
   });
 
   /**
-   * ⚠️ The pairs come back from Rust, not from the selection: `first` already carries
+   * The pairs come back from Rust, not from the selection: `first` already carries
    * `batch`, so undoing a second tagging must not strip it.
    */
   it('offers to take a bulk tagging back, without stripping what was already there', async () => {
@@ -124,7 +124,7 @@ describe('Selecting several notes at once', () => {
 
   /**
    * Putting thirty notes back by hand means remembering which thirty, and from where.
-   * ⚠️ States its own precondition: the move above took its notes out of this space, and
+   * States its own precondition: the move above took its notes out of this space, and
    * with them the selection.
    */
   it('offers to take a bulk move back, to the space each note left', async () => {

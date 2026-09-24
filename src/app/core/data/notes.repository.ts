@@ -25,7 +25,7 @@ import {
 } from './note.mapper';
 
 /**
- * ⚠️ `query` returns a view already filtered and grouped, and there is deliberately no
+ * `query` returns a view already filtered and grouped, and there is deliberately no
  * method handing back the raw list: one would invite re-filtering on the front.
  */
 @Injectable({ providedIn: 'root' })
@@ -85,7 +85,7 @@ export class NotesRepository {
   }
 
   /**
-   * Goes back to a kept body; it and every body kept after it leave the history. ⚠️ Does
+   * Goes back to a kept body; it and every body kept after it leave the history. Does
    * not refresh `updated_at` — putting something back is not editing it.
    */
   async restoreRevision(id: string, revisionId: string): Promise<Note> {

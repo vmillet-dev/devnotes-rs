@@ -30,7 +30,7 @@ describe('VaultStore', () => {
   });
 
   /**
-   * ⚠️ `null` is not "locked": the shell renders neither the canvas nor the gate until
+   * `null` is not "locked": the shell renders neither the canvas nor the gate until
    * Rust has answered, rather than flashing one and replacing it with the other.
    */
   it('knows nothing before the first answer', () => {
@@ -93,7 +93,7 @@ describe('VaultStore', () => {
     });
 
     /**
-     * ⚠️ A refused passphrase is the ordinary answer to a typo: it belongs beside the
+     * A refused passphrase is the ordinary answer to a typo: it belongs beside the
      * field, never in the error banner, which is for things that went wrong.
      */
     it('refuses beside the field, not in the banner', async () => {
@@ -162,7 +162,7 @@ describe('VaultStore', () => {
     });
 
     /**
-     * ⚠️ Neither a refusal nor a failure: retyping the passphrase cannot help, so the
+     * Neither a refusal nor a failure: retyping the passphrase cannot help, so the
      * screen has to stop offering the field and offer a way out instead.
      */
     it('is its own state, not a refused passphrase', async () => {
@@ -187,7 +187,7 @@ describe('VaultStore', () => {
     });
 
     /**
-     * ⚠️ Without this the fresh library opens on a canvas with no space — and a note
+     * Without this the fresh library opens on a canvas with no space — and a note
      * cannot be created without one, so the application comes back working and unusable.
      */
     it('forgets the samples marker, so the fresh library seeds like a first launch', async () => {
@@ -228,11 +228,7 @@ describe('VaultStore', () => {
       expect(store.isUnlocked()).toBe(true);
     });
 
-    /**
-     * ⚠️ The half of #157 that matters. Rewrapping the live key file alone revokes
-     * nothing: every retained copy kept one wrapped under the phrase being retired, in
-     * the same profile directory.
-     */
+    /** Rewrapping the live key file alone revokes nothing: every copy kept its own. */
     it('says the retired phrase no longer opens the copies kept beside the library', async () => {
       repository.rewrapped = { backupsRewrapped: 3, backupsLeft: 0 };
 
@@ -269,7 +265,7 @@ describe('VaultStore', () => {
       expect(notifier.notice()).toBeNull();
     });
 
-    /** ⚠️ Its own message: "unlock failed" would be a lie about what was attempted. */
+    /** Its own message: "unlock failed" would be a lie about what was attempted. */
     it('reports anything else under its own name', async () => {
       repository.failNext = new IpcError('change_passphrase', {
         code: 'storage',

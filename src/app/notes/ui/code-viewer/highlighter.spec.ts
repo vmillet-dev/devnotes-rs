@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { LANGUAGE_LABELS, LanguageTag } from '@core/model/language.model';
 import { highlightLines, splitHighlightedLines } from './highlighter';
 
-/** ⚠️ `Record`, not `Partial<Record>`: a language added to the Rust enum must stop this compiling. */
+/** `Record`, not `Partial<Record>`: a language added to the Rust enum must stop this compiling. */
 const SAMPLES: Readonly<Record<LanguageTag, string>> = {
   json: '{ "a": 1 }',
   js: 'const a = 1;',

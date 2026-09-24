@@ -6,7 +6,7 @@ import { eventually, reloadCanvas } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
- * ⚠️ The rule under test lives in `notes::store::retag` and needs a real SQLite: the
+ * The rule under test lives in `notes::store::retag` and needs a real SQLite: the
  * primary key `(note_id, tag)` is `NOCASE`, so a rename onto an existing tag is a merge
  * and the target has to be swept along with the sources.
  */
@@ -43,7 +43,7 @@ describe('Managing the tags of the whole corpus', () => {
   });
 
   /**
-   * ⚠️ This acts on the whole library rather than on a selection, so a mis-click reaches
+   * This acts on the whole library rather than on a selection, so a mis-click reaches
    * it easily — the count is what makes the confirmation worth reading.
    */
   it('states what it would touch, and writes nothing until that is accepted', async () => {
@@ -58,7 +58,7 @@ describe('Managing the tags of the whole corpus', () => {
 
     await tagManager.cancel();
 
-    // ⚠️ A duration, deliberately: cancelling is the whole point of asking, so this
+    // A duration, deliberately: cancelling is the whole point of asking, so this
     // asserts nothing moved — which is not a condition anything can wait on.
     await browser.pause(400);
     expect(await tagsOf('Tagged alpha')).toEqual(['staging']);

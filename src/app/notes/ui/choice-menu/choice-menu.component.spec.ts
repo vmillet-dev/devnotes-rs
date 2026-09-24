@@ -110,7 +110,7 @@ describe('ChoiceMenuComponent', () => {
   });
 
   /**
-   * ⚠️ This menu lives inside a dialog, unlike every other one in the application. The
+   * This menu lives inside a dialog, unlike every other one in the application. The
    * trigger directive lets Escape bubble on purpose, and the next listener up is the
    * editor's own — so one Escape closed the note along with the menu.
    */
@@ -140,7 +140,7 @@ describe('ChoiceMenuComponent', () => {
   });
 
   /**
-   * ⚠️ `naming: 'label'` is what tells a **command** from a field. The selection bar's two
+   * `naming: 'label'` is what tells a **command** from a field. The selection bar's two
    * controls reset their own value after every `change`, so a screen reader announced a
    * combobox whose current value was "Ranger dans".
    */

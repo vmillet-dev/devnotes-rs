@@ -53,7 +53,7 @@ describe('BackupsStore', () => {
   });
 
   /**
-   * ⚠️ The shape the tag manager and the trash already use: the trigger only proposes,
+   * The shape the tag manager and the trash already use: the trigger only proposes,
    * and something else confirms. This is the one gesture that replaces a whole corpus.
    */
   it('proposes a restore rather than running one', async () => {
@@ -65,7 +65,7 @@ describe('BackupsStore', () => {
     expect(repository.restored).toEqual([]);
   });
 
-  /** ⚠️ It opens for nobody, so offering it would be offering to lose the library. */
+  /** It opens for nobody, so offering it would be offering to lose the library. */
   it('refuses to propose a copy with no key file', async () => {
     configure([backup({ openable: false })]);
     await store.load();
@@ -102,7 +102,7 @@ describe('BackupsStore', () => {
   });
 
   /**
-   * ⚠️ The library is closed by the time the command returns, so the shell has to be sent
+   * The library is closed by the time the command returns, so the shell has to be sent
    * back to the gate: the restored copy needs a passphrase, and asking for it is the only
    * proof the right file is in place.
    */
@@ -119,7 +119,7 @@ describe('BackupsStore', () => {
     expect(vaultStore.isUnlocked()).toBe(false);
   });
 
-  /** ⚠️ The library stays where it is on a failure, and the offer stays on screen. */
+  /** The library stays where it is on a failure, and the offer stays on screen. */
   it('keeps the proposal standing when the restore was refused', async () => {
     const vaultStore = TestBed.inject(VaultStore);
     await vaultStore.load();

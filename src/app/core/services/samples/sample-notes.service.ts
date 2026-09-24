@@ -8,7 +8,7 @@ import { SpacesRepository } from '@core/data/spaces.repository';
 import { NoteDraft, SampleNote } from '@core/model/note.model';
 import { Space } from '@core/model/space.model';
 
-/** ⚠️ Exported because `VaultStore` clears it: a library set aside has to seed again. */
+/** Exported because `VaultStore` clears it: a library set aside has to seed again. */
 export const SEEDED_KEY = 'devnotes.notes.samplesSeeded';
 
 /** The space these drafts belong to does not exist yet; `seed_samples` fills it in. */
@@ -30,7 +30,7 @@ increment(): void {
 }`;
 
 /**
- * ⚠️ Indexes into the folders below, not ids: they do not exist until the command that
+ * Indexes into the folders below, not ids: they do not exist until the command that
  * writes them runs. The order is the order the board lays its zones out in.
  */
 const SNIPPETS = 0;
@@ -105,10 +105,10 @@ export class SampleNotesService {
   private async seed(): Promise<Space> {
     const text = await this.texts();
 
-    // ⚠️ No space of their own: one command writes the space, its folders and these four
+    // No space of their own: one command writes the space, its folders and these four
     // notes in a single transaction, and it is the one that decides where they land.
     //
-    // ⚠️ One note is deliberately left loose. "No folder" is a legitimate state, and a
+    // One note is deliberately left loose. "No folder" is a legitimate state, and a
     // first launch where everything is filed would teach the opposite.
     const drafts: NoteDraft[] = [
       {
@@ -182,7 +182,7 @@ export class SampleNotesService {
 
     const space = await this.notes.seedSamples(text.spaceName, folders, notes);
 
-    // ⚠️ Written after, and only after: it says "this library has been seeded", which is
+    // Written after, and only after: it says "this library has been seeded", which is
     // now something observed rather than hoped for. An interrupted seeding rolls back
     // whole, so the next launch finds no marker and no space, and seeds again.
     this.preferences.write(SEEDED_KEY, 'true');

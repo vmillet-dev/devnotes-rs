@@ -230,7 +230,7 @@ describe('SpacesStore', () => {
       expect(setPinned).toHaveBeenCalledWith('work', true);
     });
 
-    /** ⚠️ Reloaded rather than patched in place: pinning changes the order, which is the back end's. */
+    /** Reloaded rather than patched in place: pinning changes the order, which is the back end's. */
     it('takes the new order from the backend rather than keeping its own', async () => {
       const { store } = await createStore();
       expect(store.spaces().map((space) => space.id)).toEqual(['work', 'personal']);

@@ -12,7 +12,7 @@ import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
  * Every operation reports, including when it changed nothing — the one case
  * indistinguishable from a failure without a report.
  *
- * ⚠️ The OS file picker is not driven here (see `support/app.ts`): the commands take a
+ * The OS file picker is not driven here (see `support/app.ts`): the commands take a
  * path, and the path is where the real work happens.
  */
 /** The message rather than the throw: a refusal is what these two assertions are about. */
@@ -25,7 +25,7 @@ async function failureOf(running: Promise<unknown>): Promise<string> {
 describe('Import, export and share', () => {
   const directory = mkdtempSync(join(tmpdir(), 'devnotes-e2e-'));
 
-  /** ⚠️ Forward slashes: `\` is an escape on the wire and a separator on Windows. */
+  /** Forward slashes: `\` is an escape on the wire and a separator on Windows. */
   const bundlePath = join(directory, 'library.devnotes').replaceAll('\\', '/');
 
   /** Kept from `before`: the seeded space is named from a translation (see below). */
@@ -47,7 +47,7 @@ describe('Import, export and share', () => {
 
     expect(existsSync(bundlePath)).toBe(true);
 
-    // ⚠️ An archive, not JSON: the attachments travel as entries beside the bundle. What
+    // An archive, not JSON: the attachments travel as entries beside the bundle. What
     // the archive holds is asserted in `tests/transfer.rs`, which can open one — reading
     // a deflated entry from here would mean a zip reader in the harness for one check.
     expect(readFileSync(bundlePath).subarray(0, 4)).toEqual(Buffer.from('PK\x03\x04', 'binary'));
@@ -86,7 +86,7 @@ describe('Import, export and share', () => {
 
   it('files an imported note into the existing space rather than a second one', async () => {
     const before = await bridge.listSpaces();
-    // ⚠️ By identity, never by name: the seeded space is translated and the application
+    // By identity, never by name: the seeded space is translated and the application
     // opens in the system language, so a spec that spells the name fails on CI.
     expect(before.some((space) => space.id === homeId)).toBe(true);
 
@@ -106,7 +106,7 @@ describe('Import, export and share', () => {
    * arrives with that field brought down to the default rather than failing the file.
    */
   it('imports a bundle from a newer version instead of refusing it whole', async () => {
-    // ⚠️ Written as a bare `.json`, which is also the shape DevNotes exported before the
+    // Written as a bare `.json`, which is also the shape DevNotes exported before the
     // archive: this doubles as the proof that an old export still imports.
     const exported = await bridge.queryNotes(query({ search: 'Worth exporting' }));
     const source = exported.sections[0]?.notes[0];
@@ -140,7 +140,7 @@ describe('Import, export and share', () => {
   });
 
   /**
-   * ⚠️ The export is the one file the library key does not protect: it is meant to reach
+   * The export is the one file the library key does not protect: it is meant to reach
    * another machine, so it carries a key of its own. Read from Node, against the bytes on
    * disk rather than against what the application says about them.
    */
@@ -168,7 +168,7 @@ describe('Import, export and share', () => {
     expect(await fileMenu.isDisabled('exportSelection')).toBe(true);
     expect(await fileMenu.isDisabled('exportAll')).toBe(false);
 
-    // ⚠️ Neither is clicked: both open the OS file picker, which blocks the application
+    // Neither is clicked: both open the OS file picker, which blocks the application
     // until a human answers it.
     expect(await fileMenu.entry('exportAll').isExisting()).toBe(true);
     await press('Escape');

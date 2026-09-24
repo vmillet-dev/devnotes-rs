@@ -7,7 +7,7 @@ import { eventually, testid } from '../support/app.js';
 /**
  * The bodies kept beside a note.
  *
- * ⚠️ The trash protects a deletion and nothing protected an edit: you adjust a command
+ * The trash protects a deletion and nothing protected an edit: you adjust a command
  * that worked, it stops working, and the version that worked is gone.
  */
 describe('The history of a note', () => {
@@ -16,7 +16,7 @@ describe('The history of a note', () => {
   const toggle = () => $(testid('revisions-toggle'));
   const rows = () => $$(testid('revision-row'));
 
-  /** ⚠️ Reopening the same note keeps the panel as it was left: open it only if shut. */
+  /** Reopening the same note keeps the panel as it was left: open it only if shut. */
   async function showHistory(): Promise<void> {
     if ((await toggle().getAttribute('aria-expanded')) !== 'true') {
       await toggle().click();
@@ -32,7 +32,7 @@ describe('The history of a note', () => {
     await editor.close();
   });
 
-  /** ⚠️ A panel always there and always empty is a feature nobody uses. */
+  /** A panel always there and always empty is a feature nobody uses. */
   it('shows nothing on a note nobody has edited', async () => {
     await canvas.openNote(TITLE);
 
@@ -82,8 +82,8 @@ describe('The history of a note', () => {
   });
 
   /**
-   * ⚠️ Going back is irreversible, so a row opens a preview and never restores on its own
-   * — and the preview shows what would change, which a date and a size never did (#325).
+   * Going back is irreversible, so a row opens a preview and never restores on its own, and the
+   * preview shows what would change.
    */
   it('opens a preview on a click, showing what going back would change', async () => {
     await $$(testid('revision-open'))[0]!.click();
@@ -99,7 +99,7 @@ describe('The history of a note', () => {
     expect(await editor.body()).toContain('select 3');
   });
 
-  /** The reporter's own words: A → B → C, go back to B, and C no longer exists. */
+  /** A → B → C, go back to B: C is gone. */
   it('goes back from the preview, and the version and everything newer leave the list', async () => {
     await $(testid('revision-restore')).click();
 
@@ -123,7 +123,7 @@ describe('The history of a note', () => {
     await editor.close();
   });
 
-  /** ⚠️ A checklist's items live in `note_items` — out of this first version, said so. */
+  /** A checklist's items live in `note_items` — out of this first version, said so. */
   it('offers nothing on a todo list', async () => {
     await canvas.createChecklist();
     await editor.setTitle('Liste sans historique');

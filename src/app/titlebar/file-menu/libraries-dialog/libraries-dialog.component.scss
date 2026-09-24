@@ -1,6 +1,6 @@
 @use 'mixins' as *;
 
-// ⚠️ `fitted` and not `framed`: the panel sizes to the list it holds, where a fixed
+// `fitted` and not `framed`: the panel sizes to the list it holds, where a fixed
 // height would show one library in a box the height of the screen. The padding goes to
 // zero because the three sections below carry their own, with the rules between them.
 app-dialog {
@@ -49,7 +49,7 @@ app-dialog {
   color: var(--text-1);
 }
 
-// ⚠️ The hue *is* the information here, so the label keeps it and the fill goes neutral.
+// The hue *is* the information here, so the label keeps it and the fill goes neutral.
 .library-open {
   @include hue-badge(var(--amber-text));
   padding: 1px 6px;
@@ -94,13 +94,13 @@ app-dialog {
   }
 }
 
-// ⚠️ Red at rest, not on hover: a warning that arrives under the pointer plays no part
+// Red at rest, not on hover: a warning that arrives under the pointer plays no part
 // in choosing.
 .library-action.destructive {
   color: var(--red);
 }
 
-// ⚠️ Text and a hairline, never a fill: one red block beside the single amber accent
+// Text and a hairline, never a fill: one red block beside the single amber accent
 // reads as a second accent.
 .library-confirm {
   @include surface($bg: var(--bg-2), $border-color: rgba(var(--red-rgb), 0.4));

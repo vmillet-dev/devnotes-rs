@@ -72,7 +72,7 @@ describe('LibraryTreeComponent', () => {
   });
 
   /**
-   * ⚠️ The name sits in a box of its own rather than loose in the row: `text-overflow` is
+   * The name sits in a box of its own rather than loose in the row: `text-overflow` is
    * a block container's property and the row is a flex one, which ignores it — a name too
    * long for the rail was cut mid-letter instead of ellipsised.
    */
@@ -148,7 +148,7 @@ describe('LibraryTreeComponent', () => {
     expect(created).toEqual(['Ops']);
   });
 
-  /** ⚠️ Under the active space alone: a folder is created in the space one is in. */
+  /** Under the active space alone: a folder is created in the space one is in. */
   it('offers to create a folder in the active space only', async () => {
     expect(each('[data-testid="folder-create-open"]')).toHaveLength(1);
 
@@ -175,7 +175,7 @@ describe('LibraryTreeComponent', () => {
     expect(root().querySelector('app-folder-editor')).not.toBeNull();
   });
 
-  /** ⚠️ The arrow keys are not optional: the drag is pointer events, which no keyboard has. */
+  /** The arrow keys are not optional: the drag is pointer events, which no keyboard has. */
   it('nudges its own width from the edge, and stops at the bounds', async () => {
     const widths: number[] = [];
     fixture.componentInstance.widthChanged.subscribe((width) => widths.push(width));

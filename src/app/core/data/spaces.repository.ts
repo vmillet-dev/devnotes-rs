@@ -5,7 +5,7 @@ import type { Space as WireSpace } from '@core/ipc/bindings';
 import { Space, SpaceDraft } from '@core/model/space.model';
 
 /**
- * ⚠️ The one thing a space needs converting for: `pinned` carries `#[serde(default)]` so
+ * The one thing a space needs converting for: `pinned` carries `#[serde(default)]` so
  * an export file written before the column stays readable, and specta turns that into an
  * optional key — which the model refuses to be.
  */
@@ -14,7 +14,7 @@ function toSpace(dto: WireSpace): Space {
 }
 
 /**
- * ⚠️ `delete` takes a refuge space: the schema takes a deleted space's notes with it
+ * `delete` takes a refuge space: the schema takes a deleted space's notes with it
  * (`ON DELETE CASCADE`), so a one-argument signature would make data loss the default.
  */
 @Injectable({ providedIn: 'root' })

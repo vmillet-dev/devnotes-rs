@@ -11,7 +11,7 @@ import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
  * omitted key must stay omitted, and `targetSpaceId` is the one argument Tauri renames.
  */
 describe('Editing a note', () => {
-  // ⚠️ Not a sample note's title: `reread()` takes the first hit of a search, so a shared
+  // Not a sample note's title: `reread()` takes the first hit of a search, so a shared
   // title makes the assertions depend on which of the two sorts first.
   const title = 'Rollout under edit';
   let spaceId = '';

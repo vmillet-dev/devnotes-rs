@@ -10,7 +10,7 @@ import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
  * The bytes are not in the database: the row holds a record and the file lives under
- * `app_data_dir()/attachments/`. ⚠️ The picker is not driven (see `support/app.ts`);
+ * `app_data_dir()/attachments/`. The picker is not driven (see `support/app.ts`);
  * `attach_file` takes the path it would have returned.
  */
 describe('Attachments', () => {
@@ -28,7 +28,7 @@ describe('Attachments', () => {
     await canvas.waitForCard(title);
   });
 
-  /** ⚠️ Forward slashes: `\` is an escape on the wire, a separator on Windows. */
+  /** Forward slashes: `\` is an escape on the wire, a separator on Windows. */
   async function attach(path: string) {
     return browser.executeAsync(
       (id: string, file: string, done: (value: unknown) => void) => {
@@ -48,7 +48,7 @@ describe('Attachments', () => {
     expect(await editor.attachmentEmpty().isExisting()).toBe(true);
     expect(await editor.attachments().length).toBe(0);
 
-    // ⚠️ Presence only: clicking it raises the OS file picker, which blocks the whole
+    // Presence only: clicking it raises the OS file picker, which blocks the whole
     // application until a human answers.
     expect(await editor.attachmentAdd().isExisting()).toBe(true);
     await editor.close();
@@ -83,7 +83,7 @@ describe('Attachments', () => {
   });
 
   it('offers to hand the file to the desktop, which nothing here clicks', async () => {
-    // ⚠️ `open_attachment` asks the OS to launch the default application for the file.
+    // `open_attachment` asks the OS to launch the default application for the file.
     const open = editor.attachmentOpen('runbook.txt');
     expect(await open.isExisting()).toBe(true);
     expect(await open.getAttribute('aria-label')).toContain('runbook.txt');
@@ -108,13 +108,13 @@ describe('Attachments', () => {
   it('removes one on the second click, and only then', async () => {
     await canvas.openNote(title);
 
-    // ⚠️ By its id, not by position: this note carries two attachments of the same name, so
+    // By its id, not by position: this note carries two attachments of the same name, so
     // "the first remove button" is not a stable way to click the same one twice.
     const [doomed] = await bridge.listAttachments(noteId);
     const remove = browser.$(`[data-testid="attachment-remove"][data-attachment-id="${doomed?.id}"]`);
 
     await remove.click();
-    // ⚠️ A duration, deliberately: this asserts that nothing happened, and nothing
+    // A duration, deliberately: this asserts that nothing happened, and nothing
     // happening is not a condition anything can wait on.
     await browser.pause(400);
     expect(await bridge.listAttachments(noteId)).toHaveLength(2);

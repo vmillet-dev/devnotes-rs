@@ -1,6 +1,6 @@
 @use 'mixins' as *;
 
-// ⚠️ In the card's header row now, not floating over its corner: `relative` is only what
+// In the card's header row now, not floating over its corner: `relative` is only what
 // anchors its own dropdown. It takes the pointer back from the card, which is transparent.
 :host {
   position: relative;
@@ -20,7 +20,7 @@
   cursor: pointer;
 }
 
-// ⚠️ No `opacity` of its own any more: the card's action pill is what appears and goes,
+// No `opacity` of its own any more: the card's action pill is what appears and goes,
 // and two rules deciding the same thing is how one of them ends up saying nothing.
 .card-menu-trigger:hover,
 .card-menu-trigger:focus-visible,
@@ -34,7 +34,7 @@
   outline-offset: 2px;
 }
 
-// ⚠️ `fixed`, placed by the component from the trigger's own box. The card sits inside the
+// `fixed`, placed by the component from the trigger's own box. The card sits inside the
 // canvas, which scrolls, so an absolutely placed panel is clipped by it — and this menu
 // became tall enough for that to matter the day it became the complete one: it lost its
 // last entry, the delete. The component also flips it above the trigger when that is where
@@ -96,7 +96,7 @@
 }
 
 // The same square swatch the card's folder chip carries, so the two read as one thing.
-// ⚠️ `inline-block`: `.card-menu-item` expands `all: unset`, so its inner display is
+// `inline-block`: `.card-menu-item` expands `all: unset`, so its inner display is
 // `inline` — and width and height on an inline box do nothing at all. The swatch was in
 // the DOM and 0x0 on screen.
 .menu-swatch {

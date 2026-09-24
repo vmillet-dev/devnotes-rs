@@ -113,10 +113,9 @@ export class PaletteStore {
   }
 
   /**
-   * ⚠️ The toast is sent **after** the window has gone, and it is the only
-   * acknowledgement this path can have: `StatusNotifier` draws under the titlebar, and
-   * the titlebar is what is being taken away. Without it the window simply vanished, and
-   * it read as the application crashing on a copy that had in fact worked (#285).
+   * The toast is sent after the window has gone, and is the only acknowledgement this path
+   * has: `StatusNotifier` draws under the titlebar, which is going away. Without it the
+   * window simply vanishes, which reads as a crash.
    */
   async copyAndDismiss(content: string, title: string): Promise<void> {
     if (!(await this.clipboard.copy(content))) {

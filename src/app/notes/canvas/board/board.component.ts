@@ -32,7 +32,7 @@ import {
 
 const NOWHERE: BoardFrame = { x: 0, y: 0, width: 0, height: 0 };
 
-/** ⚠️ `PointerEvent.button`, where 2 is the right one — not `buttons`, which is a mask. */
+/** `PointerEvent.button`, where 2 is the right one — not `buttons`, which is a mask. */
 const RIGHT_BUTTON = 2;
 
 /** What a drop asks the page to do. */
@@ -52,10 +52,10 @@ export interface ZoneMove {
  * The second way to look at a space. Zones are placed from stored frames; cards flow
  * inside them and sit freely outside.
  *
- * ⚠️ Pan only, no zoom: a zoom is a second thing to persist and to reset, and full-size
+ * Pan only, no zoom: a zoom is a second thing to persist and to reset, and full-size
  * cards are what makes the board worth panning in the first place.
  *
- * ⚠️ Every gesture here is pointer events — `pointerdown` + `setPointerCapture` +
+ * Every gesture here is pointer events — `pointerdown` + `setPointerCapture` +
  * `pointermove` + `pointerup`, as checklist reordering already is. HTML5 drag and drop
  * does not work in this WebView and cannot be turned on: `dragDropEnabled` has to stay
  * `true` for the native file drop that feeds attachments.
@@ -63,7 +63,7 @@ export interface ZoneMove {
 @Component({
   selector: 'app-board',
   imports: [BoardTidyComponent, BoardZoneComponent, NoteCardComponent, TranslocoPipe],
-  // ⚠️ The whole board, not the surface alone: the tidy control and the ground past the
+  // The whole board, not the surface alone: the tidy control and the ground past the
   // surface's edge are the board too, and a sweep can end over either.
   host: { '(contextmenu)': 'onContextMenu($event)' },
   templateUrl: './board.component.html',
@@ -81,7 +81,7 @@ export class BoardComponent {
   /** Nothing can be drawn or dropped without a space to file it into. */
   readonly editable = input(true);
   /**
-   * ⚠️ Two counters, not two booleans: what matters is that the value **changed**, and a
+   * Two counters, not two booleans: what matters is that the value **changed**, and a
    * board arranged twice running has to pan twice. See `panTo` for what they are for.
    */
   readonly arrangements = input(0);
@@ -114,7 +114,7 @@ export class BoardComponent {
   /**
    * The card being dragged out of a zone, drawn on the surface at the pointer.
    *
-   * ⚠️ A filed card **flows** inside its zone and has no coordinates of its own, so there
+   * A filed card **flows** inside its zone and has no coordinates of its own, so there
    * is nothing to move: without this the pointer carries nothing at all, and the only
    * feedback left is the zone lighting up under it. A loose card needs none — `positionOf`
    * already moves the real one.
@@ -158,7 +158,7 @@ export class BoardComponent {
   constructor() {
     inject(DestroyRef).onDestroy(() => this.disarmMenuGuard());
 
-    // ⚠️ The result of a whole-board arrangement happens **off screen** otherwise. The pan
+    // The result of a whole-board arrangement happens **off screen** otherwise. The pan
     // is a native scroll on `.board` and nothing resets it, so on a wide board panned to
     // the right, "Réorganiser" lands everything back at the top left and leaves the user
     // looking at empty dotted ground with a banner announcing success — indistinguishable
@@ -169,7 +169,7 @@ export class BoardComponent {
       this.panTo({ x: 0, y: 0 });
     });
 
-    // ⚠️ The same defect from the other end: undoing puts the board back where it was
+    // The same defect from the other end: undoing puts the board back where it was
     // dragged to, while the pan is at the origin the arrangement sent it to.
     effect(() => {
       if (this.restorations() === 0) return;
@@ -245,7 +245,7 @@ export class BoardComponent {
   }
 
   /**
-   * ⚠️ Only on the background itself: a pointerdown that bubbled up from a zone or a card
+   * Only on the background itself: a pointerdown that bubbled up from a zone or a card
    * would start drawing a band under whatever the user actually grabbed. The **right**
    * button is exempt — it has no other meaning anywhere on the board, so a selection band
    * can start on a card as readily as on empty ground.
@@ -261,7 +261,7 @@ export class BoardComponent {
   }
 
   /**
-   * ⚠️ Or the browser's own menu opens at the end of every selection, right where the
+   * Or the browser's own menu opens at the end of every selection, right where the
    * pointer was lifted. The application has no context menu of its own anywhere, so
    * nothing is being taken away.
    */
@@ -281,7 +281,7 @@ export class BoardComponent {
   }
 
   /**
-   * ⚠️ The only place a gesture is committed. A drag that never travelled writes nothing —
+   * The only place a gesture is committed. A drag that never travelled writes nothing —
    * it was a click — and `pointercancel` throws the whole thing away rather than leaving a
    * card at coordinates nobody chose.
    */
@@ -335,7 +335,7 @@ export class BoardComponent {
 
   private begin(event: PointerEvent, kind: Gesture['kind'], id: string, from: BoardFrame): void {
     this.travelled = false;
-    // ⚠️ The band is the one gesture that runs while nothing can be filed: it writes
+    // The band is the one gesture that runs while nothing can be filed: it writes
     // nothing to the board, it only ticks what is already drawn.
     const banding = kind === 'select-band';
     if ((!this.editable() && !banding) || event.button !== (banding ? RIGHT_BUTTON : 0)) return;
@@ -354,7 +354,7 @@ export class BoardComponent {
   private disarmMenuGuard: () => void = () => undefined;
 
   /**
-   * ⚠️ The menu opens on whatever is under the pointer when the button comes up, and a
+   * The menu opens on whatever is under the pointer when the button comes up, and a
    * sweep can end anywhere — over the header, off the board. So this one band swallows the
    * next menu wherever it lands, and the next press anywhere stands the guard down.
    */
@@ -398,7 +398,7 @@ export class BoardComponent {
   /**
    * Which cards a band swept over, measured off the screen.
    *
-   * ⚠️ Measured and not computed: a card **filed into a zone flows** and has no
+   * Measured and not computed: a card **filed into a zone flows** and has no
    * coordinates of its own, so there is nothing in the model to test a rectangle against.
    * The DOM is the only place a zone's cards have a position at all.
    */
@@ -422,7 +422,7 @@ export class BoardComponent {
   }
 
   /**
-   * ⚠️ Surface coordinates, not viewport ones: the board scrolls, and a frame stored in
+   * Surface coordinates, not viewport ones: the board scrolls, and a frame stored in
    * viewport space would move every time the user pans.
    */
   private surfacePoint(event: PointerEvent): BoardPoint {

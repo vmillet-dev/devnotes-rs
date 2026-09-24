@@ -95,7 +95,7 @@ describe('FoldersStore', () => {
     expect(harness.store.activeFolder()?.name).toBe('Perf');
   });
 
-  /** ⚠️ Otherwise switching space would leave the canvas narrowed to nothing at all. */
+  /** Otherwise switching space would leave the canvas narrowed to nothing at all. */
   it('falls back to every folder when the selected one is not in this space', async () => {
     const harness = await createStore();
     await inSpace(harness, 'sql');
@@ -118,7 +118,7 @@ describe('FoldersStore', () => {
   });
 
   /**
-   * ⚠️ The rail shows it at once from the adopted list; the board reads its zones through
+   * The rail shows it at once from the adopted list; the board reads its zones through
    * a query of its own and would not draw the new one until something else reloaded it.
    */
   it('bumps the revision on a creation, so the board draws the zone', async () => {

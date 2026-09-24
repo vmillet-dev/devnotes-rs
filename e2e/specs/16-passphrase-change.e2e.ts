@@ -7,7 +7,7 @@ import { bridge, query } from '../support/bridge.js';
 import { vaultPath } from '../support/profile.js';
 
 /**
- * ⚠️ Last on purpose: it leaves the profile behind a phrase nothing else in the run
+ * Last on purpose: it leaves the profile behind a phrase nothing else in the run
  * knows. Nothing after it unlocks — the process stays open for the whole suite — but a
  * scenario inserted after this one would be the first to find out the hard way.
  *
@@ -48,7 +48,7 @@ describe('Changing the passphrase', () => {
     expect(after.kdf.salt).not.toBe(before.kdf.salt);
     expect(after.key).not.toBe(before.key);
 
-    // ⚠️ The library is still open on the same key: a change that re-encrypted would have
+    // The library is still open on the same key: a change that re-encrypted would have
     // had to stop and restart everything to prove as much.
     expect((await bridge.queryNotes(query())).matched).toBe(corpus);
   });

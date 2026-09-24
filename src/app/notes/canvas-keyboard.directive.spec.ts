@@ -15,7 +15,7 @@ import { CANVAS_ACTIONS, CANVAS_SHORTCUT_GROUP, CanvasKeyboardDirective } from '
   selector: 'app-canvas-keyboard-host',
   hostDirectives: [CanvasKeyboardDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  // ⚠️ `data-note-id` and not only a class: the directive resolves what it measured back to
+  // `data-note-id` and not only a class: the directive resolves what it measured back to
   // a note through that attribute, which is what keeps the board's order out of the date
   // view's list. A stand-in without it is a card the grid cannot name.
   template: `
@@ -51,7 +51,7 @@ describe('CanvasKeyboardDirective', () => {
     harness.selection.focusNote('note-1');
   });
 
-  /** ⚠️ Documenting a key and binding it are the same act: the sheet is derived here. */
+  /** Documenting a key and binding it are the same act: the sheet is derived here. */
   it('documents exactly the keys it declares, in reading order', () => {
     expect(CANVAS_SHORTCUT_GROUP.id).toBe('notes.canvas');
     expect(CANVAS_SHORTCUT_GROUP.shortcuts[0].keys).toEqual(['Ctrl', 'K']);
@@ -59,7 +59,7 @@ describe('CanvasKeyboardDirective', () => {
   });
 
   /**
-   * ⚠️ The table is also what the preferences panel edits, so a key that can be documented
+   * The table is also what the preferences panel edits, so a key that can be documented
    * without being movable has to stay one the grid could not do without.
    */
   it('offers every letter key to the panel, and none of the fixed ones', () => {
@@ -92,7 +92,7 @@ describe('CanvasKeyboardDirective', () => {
       expect(harness.clipboard.content).toBe('');
     });
 
-    /** ⚠️ Backspace has trashed a note since before the key could be moved. */
+    /** Backspace has trashed a note since before the key could be moved. */
     it('keeps the alias its action shipped with', () => {
       const trash = CANVAS_ACTIONS.find((action) => action.id === 'canvas.trash')!;
       bindings.rebind(trash, 'Ctrl+Delete', CANVAS_ACTIONS);
@@ -131,7 +131,7 @@ describe('CanvasKeyboardDirective', () => {
       await vi.waitFor(() => expect(harness.store.selectedNoteId()).toBe('note-1'));
     });
 
-    /** ⚠️ The ring may be on a card scrolled out of view: "copied" alone is no answer. */
+    /** The ring may be on a card scrolled out of view: "copied" alone is no answer. */
     it('says which note it copied', async () => {
       press('c');
       await fixture.whenStable();
@@ -161,10 +161,7 @@ describe('CanvasKeyboardDirective', () => {
       harness.selection.focusNote('note-1');
     }
 
-    /**
-     * ⚠️ A todo list has no `content` at all, so the key used to put an empty string on
-     * the clipboard while the card's own button handed over the Markdown.
-     */
+    /** A todo list has no `content`: the key copies its Markdown, as the card's button does. */
     it('gives a todo list as its Markdown', async () => {
       await focusing({
         kind: 'checklist',
@@ -199,7 +196,7 @@ describe('CanvasKeyboardDirective', () => {
   });
 
   /**
-   * ⚠️ The key is what puts the gesture in the shortcuts sheet at all: the sheet is derived
+   * The key is what puts the gesture in the shortcuts sheet at all: the sheet is derived
    * from this table, so an action with no key is an action nobody discovers. Only the light
    * half gets one — reorganising the zones overwrites sizes chosen by hand, and a keystroke
    * is the one address that cannot ask first.
@@ -225,7 +222,7 @@ describe('CanvasKeyboardDirective', () => {
   });
 
   describe('what it refuses to act on', () => {
-    /** ⚠️ A key that acted is the only one whose default is cancelled. */
+    /** A key that acted is the only one whose default is cancelled. */
     it('leaves the browser alone when nothing was focused', () => {
       harness.selection.focusNote(null);
 
@@ -255,7 +252,7 @@ describe('CanvasKeyboardDirective', () => {
       expect(harness.selection.checkedNoteIds()).toEqual([]);
     });
 
-    /** ⚠️ A bare key stays bare: Alt is a different gesture entirely. */
+    /** A bare key stays bare: Alt is a different gesture entirely. */
     it('ignores a bound key held with Alt', () => {
       press('x', { altKey: true });
 
@@ -288,7 +285,7 @@ describe('CanvasKeyboardDirective', () => {
 
     it('clears the filters once nothing is selected', async () => {
       harness.canvas.setSearchQuery('first');
-      // ⚠️ Waited for: the search is debounced, and pressing Escape before the query left
+      // Waited for: the search is debounced, and pressing Escape before the query left
       // would undo a filter that had not been applied yet.
       await vi.waitFor(() => expect(harness.repository.lastQuery?.search).toBe('first'));
       const before = harness.repository.queryCount;

@@ -26,7 +26,7 @@ import { LanguageTag } from '@core/model/language.model';
 
 /**
  * Three do not share a name across the two sides, and `txt` deliberately has none.
- * ⚠️ `Record`, not `Partial<Record>`: a language added to the Rust enum has to break
+ * `Record`, not `Partial<Record>`: a language added to the Rust enum has to break
  * this build, or it comes back uncoloured with nothing to say so.
  */
 const GRAMMARS: Readonly<Record<LanguageTag, string | null>> = {
@@ -125,7 +125,7 @@ export function splitHighlightedLines(html: string): string[] {
 }
 
 /**
- * ⚠️ The HTML returned holds only `<span class="hljs-…">` around text highlight.js has
+ * The HTML returned holds only `<span class="hljs-…">` around text highlight.js has
  * escaped: it passes Angular's sanitizer intact, and must never be marked as safe —
  * a note's content is typed by the user.
  */

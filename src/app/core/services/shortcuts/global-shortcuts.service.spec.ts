@@ -6,8 +6,8 @@ import { SettingsStore } from '@core/services/settings/settings.store';
 import { GlobalShortcutsService } from './global-shortcuts.service';
 
 describe('GlobalShortcutsService', () => {
-  // The generated bindings call `invoke` directly: what a spec substitutes is the
-  // commands object, there is no injectable seam any more.
+  // The generated bindings call `invoke` directly: what a spec substitutes is the commands
+  // object.
   let setGlobalShortcuts: MockInstance<typeof commands.setGlobalShortcuts>;
   let service: GlobalShortcutsService;
   let settings: SettingsStore;
@@ -52,7 +52,7 @@ describe('GlobalShortcutsService', () => {
     TestBed.tick();
     await Promise.resolve();
 
-    // ⚠️ The count travels beside the list: the sentence agrees three times over, and a
+    // The count travels beside the list: the sentence agrees three times over, and a
     // list is not something a translation can count.
     expect(TestBed.inject(ErrorNotifier).notice()?.ref).toEqual({
       key: 'shortcuts.unavailable',

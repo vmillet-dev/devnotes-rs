@@ -10,7 +10,7 @@ export const canvas = {
   cards: () => $$(testid('note-card')),
 
   /**
-   * ⚠️ Read in one call: a round trip per card leaves a window in which the canvas
+   * Read in one call: a round trip per card leaves a window in which the canvas
    * re-renders, and the list that comes back mixes two states.
    */
   async titles(): Promise<string[]> {
@@ -25,7 +25,7 @@ export const canvas = {
   },
 
   /**
-   * ⚠️ The note id behind a title, matched in one call for the same reason `titles()` is.
+   * The note id behind a title, matched in one call for the same reason `titles()` is.
    * The card is then addressed by that id, so what comes back is resolved against the
    * canvas as it is now rather than against a position in a list that has moved.
    */
@@ -56,7 +56,7 @@ export const canvas = {
   },
 
   /**
-   * What a card's head has to work with, measured in the page. ⚠️ The buttons are drawn
+   * What a card's head has to work with, measured in the page. The buttons are drawn
    * at `opacity: 0` until the pointer arrives, and opacity changes nothing about layout —
    * so their boxes are readable without hovering, which is the only way this is not flaky.
    */
@@ -101,7 +101,7 @@ export const canvas = {
   },
 
   /**
-   * How visible the hover pill is on one card. ⚠️ Read from the computed style: the pill
+   * How visible the hover pill is on one card. Read from the computed style: the pill
    * hangs under the card's bottom edge, right where the arming band is asking its question,
    * and it stands down rather than crowding it.
    */
@@ -121,13 +121,13 @@ export const canvas = {
   },
 
   /**
-   * The smallest box each control actually gets, measured in the page. ⚠️ Read from the
+   * The smallest box each control actually gets, measured in the page. Read from the
    * rendered boxes and not from the stylesheet: padding, line-height and the mixin compose,
    * and it is the composition that has to clear 24px.
    */
   async controlSizes(): Promise<Record<string, { width: number; height: number }[]>> {
-    // ⚠️ The tag pill is one of the controls measured here, and the tag rail moved behind
-    // the facets disclosure in #181: without this it is simply not in the DOM.
+    // The tag pill is one of the controls measured here, and the tag rail sits behind the
+    // facets disclosure: closed, it is not in the DOM.
     await canvas.openFacets();
 
     return browser.execute(
@@ -153,7 +153,7 @@ export const canvas = {
 
   /**
    * The card that really has the keyboard, read from `document.activeElement` rather than
-   * from a class. ⚠️ The ring a card draws is `:focus-visible` on its own click surface, so
+   * from a class. The ring a card draws is `:focus-visible` on its own click surface, so
    * asserting on the store's idea of focus would not prove the keyboard went with it.
    */
   focusedCardTitle(): Promise<string | null> {
@@ -171,7 +171,7 @@ export const canvas = {
    * What the language badge is drawn outside its band, and how many boxes the selected chip
    * in the rail draws around it.
    *
-   * ⚠️ Both come from the badge having a border of its own. The band is `overflow: hidden`,
+   * Both come from the badge having a border of its own. The band is `overflow: hidden`,
    * so a badge taller than its line box is cut; and a chip that draws its own outline around
    * a badge that already has one reads as two rings rather than as a selection.
    */
@@ -183,7 +183,7 @@ export const canvas = {
       const inChip = chip?.querySelector('.lang-tag');
       if (!band || !onCard || !chip || !inChip) return null;
 
-      // A border nobody can see is not an outline, whatever its width says. ⚠️ `transparent`
+      // A border nobody can see is not an outline, whatever its width says. `transparent`
       // computes to `rgba(…, 0)`, so the alpha is what decides — read by splitting rather
       // than by matching, which is one escaping mistake fewer in a string sent to the page.
       const drawn = (element: Element) => {
@@ -211,7 +211,7 @@ export const canvas = {
   },
 
   /**
-   * How far each todo row is drawn **outside** the box that holds it, in pixels. ⚠️ Counting
+   * How far each todo row is drawn **outside** the box that holds it, in pixels. Counting
    * the rows in the DOM is not the same question: `.card-items` is `overflow: hidden` and
    * anchored to the bottom, so a row that no longer fits is still there and simply gets cut
    * off the top.
@@ -238,9 +238,9 @@ export const canvas = {
   },
 
   /**
-   * The colour of the hairline around one format's badge in the rail. ⚠️ Read on the badge
-   * and not on the chip: the chip is the click surface, the badge is what carries the ring,
-   * and they live in two different components — which is the whole trap (#207).
+   * The colour of the hairline around one format's badge in the rail. Read on the badge, not
+   * the chip: the chip is the click surface, the badge carries the ring, and they are two
+   * components.
    */
   badgeRing(language: string): Promise<string | null> {
     return browser.execute(
@@ -276,7 +276,7 @@ export const canvas = {
   },
 
   /**
-   * ⚠️ Clicks the card's own click surface, which is a layer **under** what it shows: the
+   * Clicks the card's own click surface, which is a layer **under** what it shows: the
    * card's content is transparent to the pointer, so a click on the title reaches nothing
    * at all. It is also what keeps a checklist's tickable items out of the way.
    */
@@ -316,7 +316,7 @@ export const canvas = {
   },
 
   /**
-   * ⚠️ The search crosses the bridge behind a 150 ms debounce, so a spec asserting
+   * The search crosses the bridge behind a 150 ms debounce, so a spec asserting
    * straight after typing reads the previous view.
    */
   async search(text: string): Promise<void> {
@@ -328,13 +328,13 @@ export const canvas = {
   searchQuery: (): Promise<string> => $(testid('search-input')).getValue(),
 
   async clearSearch(): Promise<void> {
-    // ⚠️ `setValue('')` rather than select-all-then-Backspace: it goes through the element
+    // `setValue('')` rather than select-all-then-Backspace: it goes through the element
     // endpoint, which the embedded driver implements, where key actions are dropped.
     await setField(testid('search-input'), '');
     await waitForCanvas();
   },
 
-  /** ⚠️ One segmented control now, where four chips read as four combinable filters. */
+  /** One segmented control now, where four chips read as four combinable filters. */
   filter: (key: 'all' | 'pinned' | 'untriaged') =>
     $(`${testid('segmented-quick-filter')} [data-segment-id="${key}"]`),
   tagPill: (tag: string) => $(`${testid('tag-pill')}[data-tag="${tag}"]`),
@@ -347,8 +347,8 @@ export const canvas = {
   },
 
   /**
-   * ⚠️ The two facet rails live behind a disclosure since #181 — they were two permanent
-   * 44px bands. Opening it is idempotent: it refuses to fold while a facet is selected.
+   * Opens the disclosure the two facet rails live behind. Idempotent: it refuses to fold while
+   * a facet is selected.
    */
   async openFacets(): Promise<void> {
     if (await $(testid('facets-panel')).isExisting()) return;
@@ -374,7 +374,7 @@ export const canvas = {
 
   noResults: () => $(testid('canvas-no-results')),
 
-  /** Where the canvas actually starts, which is what #181 was about. */
+  /** Where the canvas actually starts, under the header. */
   async firstCardTop(): Promise<number> {
     const top = await browser.execute(() => {
       const card = document.querySelector('[data-testid="note-card"]');
@@ -393,7 +393,7 @@ export const canvas = {
   /** What the search field says instead of its shortcut hint while filtering. */
   matchedCount: () => $(testid('search-matched')).getText(),
 
-  /** ⚠️ "Gérer" sits at the end of the tag rail, which is behind the disclosure now. */
+  /** "Gérer" sits at the end of the tag rail, which is behind the disclosure now. */
   async openTagManager(): Promise<void> {
     await canvas.openFacets();
     await $(testid('tag-manage')).click();
@@ -434,7 +434,7 @@ export const canvas = {
     await card.$(`${testid('note-card-move')}[data-space-id="${spaceId}"]`).click();
   },
 
-  /** ⚠️ A batch of one, through the command the selection bar already takes. */
+  /** A batch of one, through the command the selection bar already takes. */
   async fileNote(title: string, folderId: string | null): Promise<void> {
     const card = await canvas.openCardMenu(title);
     const entry =
@@ -452,9 +452,9 @@ export const canvas = {
   /**
    * Which entries the menu offers, by `data-testid` rather than by label.
    *
-   * ⚠️ Not the text: the suite switches the interface language partway through, so an
+   * Not the text: the suite switches the interface language partway through, so an
    * assertion on "Épingler" passes or fails depending on which spec file ran before this
-   * one. ⚠️ Read in one call — a round trip per entry leaves a window in which the menu
+   * one. Read in one call — a round trip per entry leaves a window in which the menu
    * can close.
    */
   async cardMenuEntries(title: string): Promise<string[]> {

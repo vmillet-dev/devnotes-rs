@@ -47,7 +47,7 @@ describe('PassphrasePromptComponent', () => {
 
   /**
    * The prompt is what an export or an import waits on, so a scenario starts one.
-   * ⚠️ Wrapped rather than returned: an `async` helper handing back a promise would
+   * Wrapped rather than returned: an `async` helper handing back a promise would
    * adopt it, and wait for the very operation the prompt is blocking.
    */
   async function whileExporting(): Promise<{ done: Promise<void> }> {
@@ -119,7 +119,7 @@ describe('PassphrasePromptComponent', () => {
       expect(element('passphrase-prompt')).toBeNull();
     });
 
-    /** ⚠️ The escape has to stay, and has to be a deliberate second button: an export in
+    /** The escape has to stay, and has to be a deliberate second button: an export in
      *  the clear is the portable format, and the warning beside it is the point. */
     it('lets the file be written in the clear', async () => {
       const { done } = await whileExporting();

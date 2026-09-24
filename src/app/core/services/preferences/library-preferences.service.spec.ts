@@ -48,7 +48,7 @@ describe('LibraryPreferencesService', () => {
     expect(files.has(`libraries/a/${PREFERENCES_FILE}`)).toBe(true);
   });
 
-  /** ⚠️ Every install before the registry kept both scopes in the application's file. */
+  /** Every install before the registry kept both scopes in the application's file. */
   it("moves the library's keys out of the application's file, once", async () => {
     await upgradeFrom([
       ['devnotes.notes.samplesSeeded', 'true'],
@@ -71,7 +71,7 @@ describe('LibraryPreferencesService', () => {
     expect(library.read('devnotes.notes.view.s-1')).toBe('board');
   });
 
-  /** ⚠️ A second library must not inherit the first one's samples marker. */
+  /** A second library must not inherit the first one's samples marker. */
   it('leaves nothing for the next library to adopt', async () => {
     await upgradeFrom([['devnotes.notes.samplesSeeded', 'true']]);
     await library.hydrate('libraries/a');

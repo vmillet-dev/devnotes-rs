@@ -1,6 +1,6 @@
 @use 'mixins' as *;
 
-// ⚠️ Not a filter chip and not the trash button: this one floats **over** the canvas
+// Not a filter chip and not the trash button: this one floats **over** the canvas
 // rather than sitting in a row with them, and a control that borrows their weight reads as
 // one more filter. The lift is what says it is above the surface.
 .tidy {
@@ -29,7 +29,7 @@
   }
 }
 
-// ⚠️ Rounded on the halves rather than clipped by the pill: `overflow: hidden` on `.tidy`
+// Rounded on the halves rather than clipped by the pill: `overflow: hidden` on `.tidy`
 // keeps the hover fills inside the border, and cuts off the menu the caret opens — which
 // is a child of the same box.
 .tidy-btn {

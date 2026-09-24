@@ -39,7 +39,7 @@ const asAccelerator: SettingCodec<string> = {
   format: (value) => value,
 };
 
-/** ⚠️ Clamped rather than rejected: a width out of range is a stale file, not a mistake. */
+/** Clamped rather than rejected: a width out of range is a stale file, not a mistake. */
 function asPixels(bounds: { readonly min: number; readonly max: number }): SettingCodec<number> {
   return {
     parse: (stored) => {
@@ -73,7 +73,7 @@ export class SettingsStore {
   /** ⚠️ Both declared before the settings below: class fields initialise in order. */
   private readonly restorers: (() => void)[] = [];
   /**
-   * ⚠️ Widened in the map and narrowed back by the two accessors below: eighteen signals
+   * Widened in the map and narrowed back by the two accessors below: eighteen signals
    * of eighteen types share no member type, and `key` is what proves each one.
    */
   private readonly byKey = new Map<keyof AppSettings, SettingSignal<AppSettings[keyof AppSettings]>>();
@@ -99,7 +99,7 @@ export class SettingsStore {
   private readonly systemPrefersDark = signal(false);
 
   /**
-   * ⚠️ A preview is **not** a write. Nobody picks a theme without seeing it, so the panel
+   * A preview is **not** a write. Nobody picks a theme without seeing it, so the panel
    * shows the one being chosen while nothing has reached the file yet — and Annuler puts
    * the previous appearance back by clearing this, with nothing to roll back.
    */
@@ -131,7 +131,7 @@ export class SettingsStore {
   }
 
   /**
-   * ⚠️ Only these two. Everything else a draft can hold has no preview that means
+   * Only these two. Everything else a draft can hold has no preview that means
    * anything, and a half-captured global shortcut being live across the whole machine is
    * one of the arguments for not applying as you type in the first place.
    */
@@ -140,7 +140,7 @@ export class SettingsStore {
   }
 
   /**
-   * ⚠️ Addressed by key, so the draft reads and writes any setting without a switch over
+   * Addressed by key, so the draft reads and writes any setting without a switch over
    * eighteen of them — and so adding a setting stays the one line it is below.
    */
   read<K extends keyof AppSettings>(key: K): AppSettings[K] {
@@ -151,7 +151,7 @@ export class SettingsStore {
     (this.byKey.get(key) as SettingSignal<AppSettings[K]>).write(value);
   }
 
-  /** ⚠️ Called after `PreferencesService.hydrate()`: before it, every read yields a default. */
+  /** Called after `PreferencesService.hydrate()`: before it, every read yields a default. */
   restore(): void {
     for (const restore of this.restorers) {
       restore();

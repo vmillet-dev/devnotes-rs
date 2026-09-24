@@ -7,7 +7,7 @@ import { MINIMUM_PASSPHRASE_LENGTH } from '@core/model/vault.model';
 /**
  * The phrase a transfer needs, asked for at the moment it is needed.
  *
- * ⚠️ It sits at the root, like the gate: an export starts from the titlebar and a
+ * It sits at the root, like the gate: an export starts from the titlebar and a
  * selection export from the canvas header, and a prompt owned by either would be torn
  * down by the menu that closes under it.
  */
@@ -73,7 +73,7 @@ export class PassphrasePromptComponent {
   }
 
   /**
-   * ⚠️ The fields are cleared before the answer leaves: a phrase left in a DOM node
+   * The fields are cleared before the answer leaves: a phrase left in a DOM node
    * outlives the dialog, and the store never holds one either.
    */
   protected submit(event: Event): void {
@@ -85,7 +85,7 @@ export class PassphrasePromptComponent {
     this.prompt.answer({ kind: 'phrase', value: typed });
   }
 
-  /** ⚠️ The plain export, taken deliberately: the warning above the button is the point. */
+  /** The plain export, taken deliberately: the warning above the button is the point. */
   protected exportInTheClear(): void {
     if (this.working()) return;
 
@@ -93,7 +93,7 @@ export class PassphrasePromptComponent {
     this.prompt.answer({ kind: 'none' });
   }
 
-  /** ⚠️ Refused while a phrase is being derived from: the operation is under way, and
+  /** Refused while a phrase is being derived from: the operation is under way, and
    *  the dialog is showing that rather than waiting for an answer. */
   protected cancel(): void {
     if (this.working()) return;

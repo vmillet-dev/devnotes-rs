@@ -51,7 +51,7 @@ describe('LibrariesDialogComponent', () => {
       expect(within('lib-1', 'library-open')).toBeNull();
     });
 
-    /** ⚠️ Deleting the files under a live connection takes the process down with them. */
+    /** Deleting the files under a live connection takes the process down with them. */
     it('offers neither a switch nor a deletion on the open one', () => {
       expect(within('lib-0', 'library-switch')).toBeNull();
       expect(within('lib-0', 'library-delete')).toBeNull();
@@ -100,7 +100,7 @@ describe('LibrariesDialogComponent', () => {
   describe('with one library', () => {
     beforeEach(() => open(['Notes']));
 
-    /** ⚠️ The last one cannot go: the gate would have nothing to offer. */
+    /** The last one cannot go: the gate would have nothing to offer. */
     it('offers no deletion at all', () => {
       expect(root().querySelector('[data-testid="library-delete"]')).toBeNull();
     });
