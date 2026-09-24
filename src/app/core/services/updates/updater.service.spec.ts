@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { check } from '@tauri-apps/plugin-updater';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DownloadProgress, UPDATE_CHECK, UpdaterService } from './updater.service';
 
@@ -42,6 +43,12 @@ describe('UpdaterService', () => {
       providers: [{ provide: UPDATE_CHECK, useValue: async () => offered }],
     });
     service = TestBed.inject(UpdaterService);
+  });
+
+  it('asks the plugin when nothing stands in for it', () => {
+    TestBed.resetTestingModule();
+
+    expect(TestBed.inject(UPDATE_CHECK)).toBe(check);
   });
 
   it('refuses to install what no check has retained', async () => {
