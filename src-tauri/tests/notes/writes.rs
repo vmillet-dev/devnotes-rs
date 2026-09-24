@@ -197,7 +197,28 @@ fn updating_refreshes_updated_at_but_not_created_at() {
 }
 
 #[test]
-fn pasting_into_a_freshly_created_note_settles_its_language() {
+fn typing_into_a_freshly_created_note_keeps_it_text() {
+    let mut connection = open_in_memory().unwrap();
+    let space_id = space(&mut connection, "Personal");
+    let empty = NoteDraft {
+        language: Language::Txt,
+        content: String::new(),
+        ..draft(&space_id)
+    };
+    let created = create(&mut connection, empty, t0()).unwrap();
+
+    let patch = NotePatch {
+        content: Some("## Standup\n\ninterface Note { id: string } is the model".to_string()),
+        ..NotePatch::default()
+    };
+    let updated = update(&mut connection, &created.id, &patch, t1()).unwrap();
+
+    assert_eq!(updated.language, Language::Txt);
+}
+
+/// A paste of code is detected by the front end, through `detect_language`, before it writes.
+#[test]
+fn a_detected_paste_lands_with_its_language() {
     let mut connection = open_in_memory().unwrap();
     let space_id = space(&mut connection, "Personal");
     let empty = NoteDraft {
@@ -209,6 +230,7 @@ fn pasting_into_a_freshly_created_note_settles_its_language() {
 
     let patch = NotePatch {
         content: Some("interface Note { id: string }".to_string()),
+        language: Some(Language::Ts),
         ..NotePatch::default()
     };
     let updated = update(&mut connection, &created.id, &patch, t1()).unwrap();
@@ -230,6 +252,7 @@ fn a_later_edit_does_not_move_the_language_again() {
 
     let first = NotePatch {
         content: Some("SELECT 1".to_string()),
+        language: Some(Language::Sql),
         ..NotePatch::default()
     };
     update(&mut connection, &created.id, &first, t1()).unwrap();

@@ -18,6 +18,11 @@ export const commands = {
 	 */
 	duplicateNote: (id: string, title: string) => typedError<DisplayNote, AppError>(__TAURI_INVOKE("duplicate_note", { id, title })),
 	/**
+	 *  What a paste into an empty Text note is. Asked by the front end before it writes: typing
+	 *  keeps a note Text, and only a paste of code gives it a language.
+	 */
+	detectLanguage: (content: string) => __TAURI_INVOKE<Language>("detect_language", { content }),
+	/**
 	 *  The first launch: the space, its folders and the notes in one transaction, since a space
 	 *  standing alone reads as "already seeded" for good. The strings stay on the front end, with
 	 *  the translations. Answers the space it made, which the front end opens on.

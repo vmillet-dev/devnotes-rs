@@ -1,6 +1,7 @@
 //! ⚠️ `rename_all` and `tag = "kind"` are load-bearing: without them serde emits
 //! `space_id` and `{"Expires":{…}}`, which the front end cannot read back.
 
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 
 use chrono::{DateTime, TimeDelta, Utc};
@@ -9,6 +10,7 @@ use specta::Type;
 
 use super::checklist::{self, ChecklistItem, NoteKind};
 use super::language::{self, Language};
+use super::markdown;
 use super::placeholder::{self, Placeholder};
 use super::view::SearchHit;
 use crate::folders::model::NoteFolder;
@@ -146,16 +148,10 @@ impl NoteDraft {
 }
 
 impl NotePatch {
-    /// Does not check that `space_id` exists: persistence does, before calling.
+    /// Does not check that `space_id` exists: persistence does, before calling. ⚠️ Never detects
+    /// a language: typing keeps a Text note Text, and a paste of code asks `detect_language`
+    /// before it is written.
     pub fn apply(&self, note: &mut Note, now: DateTime<Utc>) {
-        // Skipped once the note is — or becomes — a checklist: no body to read.
-        let becomes_checklist = self.kind.unwrap_or(note.kind) == NoteKind::Checklist;
-        let detected = if becomes_checklist {
-            None
-        } else {
-            language::after_patch(note, self)
-        };
-
         if let Some(space_id) = &self.space_id {
             // A folder belongs to one space: a chip the space switcher cannot reach is worse
             // than none.
@@ -172,9 +168,6 @@ impl NotePatch {
         }
         if let Some(content) = &self.content {
             note.content.clone_from(content);
-        }
-        if let Some(language) = detected {
-            note.language = language;
         }
         if let Some(source) = &self.source {
             note.source.clone_from(source);
@@ -254,6 +247,14 @@ impl DisplayNote {
     /// ⚠️ After everything that reads the body — the fields, the search excerpt — and only
     /// on what goes into a list: a note cut here must never reach the editor.
     pub fn cut_to_preview(&mut self) {
+        // Marked cut even when it fits: a copy taken from the list would copy the words
+        // without their Markdown.
+        if let Cow::Owned(readable) = self.note.readable_body()
+            && readable != self.note.content
+        {
+            self.note.content = readable;
+            self.truncated = true;
+        }
         if let Some(preview) = preview_of(&self.note.content) {
             self.note.content = preview;
             self.truncated = true;
@@ -276,6 +277,20 @@ fn preview_of(body: &str) -> Option<String> {
 }
 
 impl Note {
+    /// A Text note is written in the rich editor, as Markdown.
+    pub fn is_rich_text(&self) -> bool {
+        self.kind == NoteKind::Snippet && self.language == Language::Txt
+    }
+
+    /// What a card shows and a search quotes: a Text note's words without their Markdown.
+    pub fn readable_body(&self) -> Cow<'_, str> {
+        if self.is_rich_text() {
+            Cow::Owned(markdown::plain(&self.content))
+        } else {
+            Cow::Borrowed(&self.content)
+        }
+    }
+
     /// Brought to the rules every draft and patch applies: an import inserts whole notes
     /// through neither.
     #[must_use]
@@ -577,20 +592,55 @@ mod tests {
     }
 
     #[test]
-    fn a_patch_filling_an_empty_note_detects_its_language() {
+    fn typing_into_an_empty_text_note_keeps_it_text() {
         let mut note = Note {
             language: Language::Txt,
             content: String::new(),
             ..sample()
         };
         let patch = NotePatch {
-            content: Some("SELECT 1".to_string()),
+            content: Some("## Standup\n\nSELECT 1 is slow".to_string()),
             ..NotePatch::default()
         };
 
         patch.apply(&mut note, now());
 
-        assert_eq!(note.language, Language::Sql);
+        assert_eq!(note.language, Language::Txt);
+    }
+
+    /// Cut even when it fits, so the list never passes the words off as the Markdown.
+    #[test]
+    fn a_text_note_reaches_a_card_without_its_markdown() {
+        let mut note = decorate(
+            Note {
+                language: Language::Txt,
+                content: "- [x] **ship** it".to_string(),
+                ..sample()
+            },
+            now(),
+        );
+
+        note.cut_to_preview();
+
+        assert_eq!(note.content, "☑ ship it");
+        assert!(note.truncated);
+    }
+
+    #[test]
+    fn a_snippet_keeps_its_characters_on_a_card() {
+        let mut note = decorate(
+            Note {
+                language: Language::Sh,
+                content: "echo **not bold**".to_string(),
+                ..sample()
+            },
+            now(),
+        );
+
+        note.cut_to_preview();
+
+        assert_eq!(note.content, "echo **not bold**");
+        assert!(!note.truncated);
     }
 
     #[test]
@@ -739,9 +789,11 @@ mod tests {
         assert!(expires_soon(&expiring("2026-07-01T00:00:00.000Z"), now()));
     }
 
+    /// A snippet's: a Text note's preview is its words, tested on their own.
     fn previewed(content: &str) -> DisplayNote {
         let mut note = decorate(
             Note {
+                language: Language::Sh,
                 content: content.to_string(),
                 ..sample()
             },

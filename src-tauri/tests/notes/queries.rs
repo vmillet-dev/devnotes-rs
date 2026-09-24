@@ -585,6 +585,7 @@ fn a_list_sends_the_head_of_a_long_body_and_get_the_whole_of_it() {
     let note = create(
         &mut connection,
         NoteDraft {
+            language: Language::Sh,
             content: long_body(),
             ..draft(&space_id)
         },
@@ -608,6 +609,7 @@ fn a_hit_past_the_preview_still_shows_its_line() {
     create(
         &mut connection,
         NoteDraft {
+            language: Language::Sh,
             content: long_body(),
             ..draft(&space_id)
         },
