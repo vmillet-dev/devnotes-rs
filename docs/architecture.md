@@ -3740,6 +3740,13 @@ write a boolean; `NoteChanges::between` seals only what moved. `list_trash` read
 the whole library to decorate an empty list. `tag_notes` did not move: a hundred notes and two
 tags is too few comparisons for the set to matter, and it is there for the case with more.
 
+**A filtered query reads the side tables of the notes it fetched.** Up to `BIND_AT_MOST` (500)
+notes, `attach_related` binds their ids; past it, it keeps the space's subquery, which is what
+the unfiltered read needs and what binding thousands of parameters lost to. Measured on the
+160 pinned notes of the corpus (`query_notes, pinned only`): 84 ms before, **73 ms** after,
+with the three unfiltered rows unchanged. What is left is not the side tables: the pinned filter
+scans the notes table, and the facets are read for the whole space by design.
+
 Three things worth reading off the first table.
 
 **`query_notes` has gone past the debounce.** It runs on every keystroke behind a 150 ms

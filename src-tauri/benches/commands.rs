@@ -63,6 +63,15 @@ fn whole_corpus_read(c: &mut Criterion) {
         b.iter(|| black_box(run_query(&mut corpus, &query("deploiement"))));
     });
 
+    // Narrowed in SQL to the 160 pinned notes: what a filtered query pays for its side tables.
+    group.bench_function("query_notes, pinned only", |b| {
+        let pinned = NotesQuery {
+            filter: NoteFilter::Pinned,
+            ..query("")
+        };
+        b.iter(|| black_box(run_query(&mut corpus, &pinned)));
+    });
+
     group.finish();
 }
 
