@@ -3135,7 +3135,8 @@ installed or shipped alongside the executable. The database file lives in Tauri'
   (`Db = Mutex<Option<Library>>`, the connection and the key together), registered with
   `.manage()` in `lib.rs` — never a global, and empty until the library is unlocked.
   Overlapping commands serialize on that mutex, and each command holds `db::lock` for its
-  whole body, so a check and the write that depends on it cannot be interleaved.
+  whole body, so a check and the write that depends on it cannot be interleaved. Whether one
+  lock is enough was measured rather than assumed: see "Who holds the lock" under Benchmarks.
 - **⚠️ Commands that touch the database or the disk are `#[tauri::command(async)]`.** A plain
   `#[tauri::command]` is compiled as `ExecutionContext::Blocking` and its body runs **inline
   in the WebView's IPC handler** — on the main thread, where it freezes the window for as long
@@ -3789,6 +3790,28 @@ nothing to serialise. The larger half is not in those figures: an unfiltered que
 `JSON.parse` that paid for the difference sit past where the harness stops. What remains is
 upstream — reading and opening 8000 sealed bodies, which a preview cannot spare, since the
 matching and the fields need them whole.
+
+**Who holds the lock** (#222). Every command takes the one connection `Mutex` for its whole
+body, so a slow one keeps the palette, the editor's commits and the board's saves waiting behind
+it. Measured after the previews and the side-table reads, in one full run:
+
+| Command, 8000 notes of ~13 kB          | Holds the lock                   |
+| -------------------------------------- | -------------------------------- |
+| `export_notes`                         | 639 ms — a gesture, not a typing |
+| `query_notes`, unfiltered              | **483 ms** of its 536            |
+| `import_notes`, every id already there | 118 ms                           |
+| `list_tags`                            | 41 ms                            |
+| `delete_notes` + `restore_notes`, 100  | 9.2 ms                           |
+| `rename_tags`, `move_notes` (100)      | 7.0 ms, 4.0 ms                   |
+| every single-note write                | under 0.3 ms                     |
+
+`query_notes, the locked part` is the fetch and the decorations: 90 % of the command. Releasing
+the lock before `view::build` would free about 50 ms of 536, so there is no cheap half left to
+take. What the lock covers is reading and opening every sealed body, and that follows the total
+bytes: half a second for ~104 MB of bodies, a few milliseconds for the few hundred ~1 kB
+snippets a library actually holds. **So the locking stays as it is.** The day that row matters,
+the answer is a read connection beside the writer — which means the key taken out of `Library`,
+since `split()` hands the connection and the key out together — not a shorter critical section.
 
 Three things worth reading off the first table.
 

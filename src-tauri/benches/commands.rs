@@ -52,6 +52,15 @@ fn whole_corpus_read(c: &mut Criterion) {
         b.iter(|| black_box(run_query(&mut corpus, &query(""))));
     });
 
+    // What `query_notes` holds the lock for: everything before `view::build`.
+    group.bench_function("query_notes, the locked part", |b| {
+        b.iter(|| {
+            let fetched = store::fetch(&mut corpus.connection, &query("")).expect("a view");
+            let decorations = store::decorations(&mut corpus.connection).expect("the decorations");
+            black_box((fetched, decorations))
+        });
+    });
+
     // Matching runs on the fetched rows, not in SQL — the needle decides the cost.
     group.bench_function("query_notes, search matching nothing", |b| {
         b.iter(|| black_box(run_query(&mut corpus, &query("zzz-no-such-needle"))));
@@ -111,10 +120,7 @@ fn body_writes(c: &mut Criterion) {
     // A full history, so every save below also rotates the oldest body out.
     for kept in 0..=devnotes_lib::notes::revision::KEEP {
         let patch = NotePatch {
-            content: Some(format!(
-                "{body}
--- {kept}"
-            )),
+            content: Some(format!("{body}\n-- {kept}")),
             ..NotePatch::default()
         };
         store::update(&mut corpus.connection, &id, &patch, now()).expect("a write");
@@ -125,10 +131,7 @@ fn body_writes(c: &mut Criterion) {
         b.iter(|| {
             at += 1;
             let patch = NotePatch {
-                content: Some(format!(
-                    "{body}
--- saved {at}"
-                )),
+                content: Some(format!("{body}\n-- saved {at}")),
                 ..NotePatch::default()
             };
             black_box(store::update(&mut corpus.connection, &id, &patch, now()).expect("a write"));
