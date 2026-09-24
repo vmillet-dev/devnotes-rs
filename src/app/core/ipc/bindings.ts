@@ -113,6 +113,11 @@ export const commands = {
 	renameSpace: (id: string, draft: SpaceDraft) => typedError<Space, AppError>(__TAURI_INVOKE("rename_space", { id, draft })),
 	pinSpace: (id: string, pinned: boolean) => typedError<Space, AppError>(__TAURI_INVOKE("pin_space", { id, pinned })),
 	deleteSpace: (id: string, targetSpaceId: string) => typedError<null, AppError>(__TAURI_INVOKE("delete_space", { id, targetSpaceId })),
+	/**
+	 *  ⚠️ `path` is not checked, and cannot be: it is the native picker's answer. With
+	 *  `read_attachment` this reads any file the account can read into the `WebView`, and what keeps
+	 *  that harmless is the CSP — `script-src 'self'`, nothing remote — not this function.
+	 */
 	attachFile: (noteId: string, path: string) => typedError<Attachment, AppError>(__TAURI_INVOKE("attach_file", { noteId, path })),
 	/**  The bytes do not cross the bridge: the clipboard is read natively, as raw RGBA. */
 	attachClipboardImage: (noteId: string, fileName: string) => typedError<Attachment, AppError>(__TAURI_INVOKE("attach_clipboard_image", { noteId, fileName })),

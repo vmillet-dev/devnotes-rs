@@ -3731,6 +3731,14 @@ application's file — both serve 0.3.x, the release before the one that introdu
   additionally allows the dev server's websocket and inline scripts for hot reload. Both
   keep `ipc:` and `http://ipc.localhost` in `connect-src` — without them `invoke()` is
   blocked. Loading anything remote means widening these, deliberately.
+- ⚠️ **The CSP is a control, not a formality.** `attach_file` takes any path — it is the native
+  picker's answer, so there is nothing to check it against — and `read_attachment` hands the
+  bytes back as a `data:` URI: together they read any file the account can read into the
+  WebView. That is harmless only because no code can be injected there: `script-src 'self'`
+  with no `'unsafe-inline'`, the one `[innerHTML]` (the highlighter) escaping before it
+  renders, and nothing loaded from anywhere else. `devCsp` carries `'unsafe-inline'` for the
+  dev server; it is the shape somebody copies when widening the production one in a hurry, and
+  it must not be.
 
 ## Testing
 

@@ -81,6 +81,9 @@ fn store_new(
     stored.map(|()| attachment)
 }
 
+/// ⚠️ `path` is not checked, and cannot be: it is the native picker's answer. With
+/// `read_attachment` this reads any file the account can read into the `WebView`, and what keeps
+/// that harmless is the CSP — `script-src 'self'`, nothing remote — not this function.
 #[tauri::command(async)]
 #[specta::specta]
 pub fn attach_file(
