@@ -1,6 +1,7 @@
 import { $, $$, browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
+import { rail } from '../pageobjects/sidebar.page.js';
 import { aboutMenu, fileMenu, settings, titlebar } from '../pageobjects/titlebar.page.js';
 import { cursorOf, eventually, press, reopenSession, testid } from '../support/app.js';
 
@@ -12,7 +13,18 @@ import { cursorOf, eventually, press, reopenSession, testid } from '../support/a
  * map is still the one answering. `15-preferences-on-disk` reads the file itself.
  */
 describe('Preferences', () => {
-  before(canvas.open);
+  // Compact is measured on the rail too, and `05-spaces` leaves it put away.
+  let railWasShowing = false;
+
+  before(async () => {
+    await canvas.open();
+    railWasShowing = await rail.isShowing();
+    await rail.show();
+  });
+
+  after(async () => {
+    if (!railWasShowing) await rail.hide();
+  });
 
   it('opens from the File menu', async () => {
     await fileMenu.openPreferences();
@@ -44,15 +56,17 @@ describe('Preferences', () => {
       });
 
     await settings.setDensity('comfortable');
-    const comfortable = await eventually(paddings, ({ bar }) => bar === '12px', 'the comfortable topbar');
+    await eventually(
+      paddings,
+      ({ bar, row }) => bar === '12px' && row === '5px',
+      'the comfortable topbar and rail',
+    );
     await settings.setDensity('compact');
-    const compact = await eventually(paddings, ({ bar }) => bar === '8px', 'the compact topbar');
-
-    // The rail may have been hidden by an earlier file: the processes are shared.
-    if (compact.row !== null) {
-      expect(comfortable.row).toBe('5px');
-      expect(compact.row).toBe('4px');
-    }
+    await eventually(
+      paddings,
+      ({ bar, row }) => bar === '8px' && row === '4px',
+      'the compact topbar and rail',
+    );
   });
 
   /** A preview Annuler undoes is not the same thing as a write. */
