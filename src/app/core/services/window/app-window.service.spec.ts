@@ -2,7 +2,6 @@ import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { FakeAppWindow } from '@testing/fake-app-window';
 import { APP_WINDOW_ADAPTER, AppWindowService } from './app-window.service';
-import { QuitGuard } from './quit-guard';
 
 describe('AppWindowService', () => {
   let adapter: FakeAppWindow;
@@ -27,19 +26,6 @@ describe('AppWindowService', () => {
   it('quits with a success code', async () => {
     await service.quit();
 
-    expect(adapter.exitedWith).toBe(0);
-  });
-
-  it('waits for a pending write before it exits', async () => {
-    let finish = (): void => undefined;
-    TestBed.inject(QuitGuard).register(() => new Promise<void>((resolve) => (finish = resolve)));
-
-    const quitting = service.quit();
-    await Promise.resolve();
-    expect(adapter.exitedWith).toBeNull();
-
-    finish();
-    await quitting;
     expect(adapter.exitedWith).toBe(0);
   });
 

@@ -21,7 +21,6 @@ closed_enum! {
         Capture = "capture",
         NewNote = "new-note",
         Palette = "palette",
-        Quit = "quit",
     }
 }
 
@@ -42,22 +41,6 @@ pub(crate) fn reveal(app: &AppHandle) {
 fn reveal_and_emit(app: &AppHandle, action: GlobalAction) {
     reveal(app);
     let _ = app.emit(ACTION_EVENT, action);
-}
-
-/// Long enough for a write still behind a debounce, short enough to read as the quit it is.
-const QUIT_GRACE: std::time::Duration = std::time::Duration::from_millis(1500);
-
-/// The front end quits, so a write still behind a debounce reaches the disk first. ⚠️ And the
-/// process ends anyway after a moment: a front end not listening — the gate is up, or it hung —
-/// must not leave a quit that does nothing.
-fn quit_through_the_front(app: &AppHandle) {
-    let _ = app.emit(ACTION_EVENT, GlobalAction::Quit);
-
-    let app = app.clone();
-    std::thread::spawn(move || {
-        std::thread::sleep(QUIT_GRACE);
-        app.exit(0);
-    });
 }
 
 /// Three fields rather than a map, so a missing shortcut is a compile error.
@@ -305,7 +288,7 @@ fn build_tray(app: &AppHandle, menu: &Menu<Wry>) -> tauri::Result<()> {
             CAPTURE_ITEM => reveal_and_emit(app, GlobalAction::Capture),
             PALETTE_ITEM => reveal_and_emit(app, GlobalAction::Palette),
             // The only path that terminates the process: the close button only hides.
-            QUIT_ITEM => quit_through_the_front(app),
+            QUIT_ITEM => app.exit(0),
             _ => {}
         })
         .on_tray_icon_event(|tray, event| {

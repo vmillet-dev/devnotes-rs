@@ -15,7 +15,6 @@ import { ClockService } from '@core/services/time/clock.service';
 import { FoldersRepository } from '@core/data/folders.repository';
 import { BoardRepository } from '@core/data/board.repository';
 import { debounced } from '@core/services/time/debounce';
-import { QuitGuard } from '@core/services/window/quit-guard';
 import { sameBy } from '@core/utils/equality.util';
 import { retained } from '@core/utils/retained.util';
 import {
@@ -288,8 +287,6 @@ export class BoardStore {
   readonly restorations = this._restorations.asReadonly();
 
   constructor() {
-    inject(QuitGuard).register(() => this.flushLayout());
-
     // Restores the switch as the space changes: it is remembered per space.
     effect(() => {
       const spaceId = this.spaces.activeSpaceId();
@@ -423,12 +420,6 @@ export class BoardStore {
     );
     this.revision.bump();
     return true;
-  }
-
-  /** A gesture still behind the debounce is written now, before the process ends. */
-  private async flushLayout(): Promise<void> {
-    this.writeLayout.cancel();
-    await this.persistLayout();
   }
 
   private async persistLayout(): Promise<void> {

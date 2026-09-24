@@ -486,7 +486,7 @@ export type FolderDraft = {
  *  One event carrying a closed value rather than a topic per action: a mistyped topic is
  *  a silently inert subscription, and a new variant here stops the front compiling.
  */
-export type GlobalAction = "capture" | "new-note" | "palette" | "quit";
+export type GlobalAction = "capture" | "new-note" | "palette";
 
 /**  `skipped`: notes already present or whose space is missing, so an import can be replayed. */
 export type ImportReport = {

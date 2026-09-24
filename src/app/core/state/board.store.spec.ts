@@ -1,6 +1,5 @@
 import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AppWindowService } from '@core/services/window/app-window.service';
 import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
 import { createNote } from '@testing/note.fixture';
 import { FakeBoardRepository, fakeBoardNote, fakeZone } from '@testing/fake-board-repository';
@@ -240,23 +239,6 @@ describe('BoardStore', () => {
   });
 
   describe('what a gesture writes', () => {
-    /** "Quitter" inside the debounce must not drop the drag it follows. */
-    it('writes a gesture still waiting on the debounce when the application quits', async () => {
-      const harness = await createStore(
-        new FakeBoardRepository({
-          zones: [fakeZone({ folder: PERF })],
-          loose: [fakeBoardNote(createNote({ id: 'a' }), { position: { x: 0, y: 0 } })],
-        }),
-      );
-      await onBoard(harness);
-      harness.store.moveCard('a', { x: 80, y: 600 });
-      expect(harness.repository.saved).toHaveLength(0);
-
-      await TestBed.inject(AppWindowService).quit();
-
-      expect(harness.repository.saved[0]?.cards).toEqual([{ noteId: 'a', position: { x: 80, y: 600 } }]);
-    });
-
     /** One write per gesture, not one per pointermove. */
     it('coalesces everything moved into a single batch', async () => {
       const harness = await createStore(
