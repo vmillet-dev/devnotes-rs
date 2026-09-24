@@ -12,20 +12,45 @@ use crate::notes::checklist::ChecklistItem;
 use crate::notes::model::Note;
 use crate::vault::key::Vault;
 
-/// ⚠️ Narrowed by subquery, not by a list of bound ids: binding one parameter per note
-/// measured slower than reading the table whole past a few thousand notes. Reading a
-/// superset is harmless — `attach_related` only looks up what it holds.
-pub fn all_tags(
+/// Up to this many notes, their side tables are read by id; past it, by their space.
+const BIND_AT_MOST: usize = 500;
+
+/// Which notes a side-table read covers.
+///
+/// ⚠️ Bound ids for a few, the space's subquery for many: one parameter per note measured
+/// slower than reading the table whole past a few thousand notes — but a filter that cut the
+/// query to a hundred notes has no business paying for the space they sit in. Reading a
+/// superset is harmless: `attach_related` only looks up the notes it holds.
+enum Scope<'a> {
+    Notes(&'a [String]),
+    Space(Option<&'a str>),
+}
+
+impl<'a> Scope<'a> {
+    fn of(ids: &'a [String], space_id: Option<&'a str>) -> Self {
+        if ids.len() <= BIND_AT_MOST {
+            Self::Notes(ids)
+        } else {
+            Self::Space(space_id)
+        }
+    }
+}
+
+fn all_tags(
     connection: &mut SqliteConnection,
-    space_id: Option<&str>,
+    scope: &Scope<'_>,
 ) -> Result<HashMap<String, Vec<String>>, StorageError> {
     let mut query = note_tags::table
         .select((note_tags::note_id, note_tags::tag))
         .order(note_tags::tag.asc())
         .into_boxed();
 
-    if let Some(space_id) = space_id {
-        query = query.filter(note_tags::note_id.eq_any(notes_of_space(space_id)));
+    match scope {
+        Scope::Notes(ids) => query = query.filter(note_tags::note_id.eq_any(*ids)),
+        Scope::Space(Some(space_id)) => {
+            query = query.filter(note_tags::note_id.eq_any(notes_of_space(space_id)));
+        }
+        Scope::Space(None) => {}
     }
 
     let mut grouped: HashMap<String, Vec<String>> = HashMap::new();
@@ -90,18 +115,22 @@ pub fn replace_tags(
     tags_of(connection, note_id)
 }
 
-pub fn all_items(
+fn all_items(
     connection: &mut SqliteConnection,
     vault: &Vault,
-    space_id: Option<&str>,
+    scope: &Scope<'_>,
 ) -> Result<HashMap<String, Vec<ChecklistItem>>, StorageError> {
     let mut query = note_items::table
         .select((note_items::note_id, note_items::text, note_items::done))
         .order((note_items::note_id.asc(), note_items::position.asc()))
         .into_boxed();
 
-    if let Some(space_id) = space_id {
-        query = query.filter(note_items::note_id.eq_any(notes_of_space(space_id)));
+    match scope {
+        Scope::Notes(ids) => query = query.filter(note_items::note_id.eq_any(*ids)),
+        Scope::Space(Some(space_id)) => {
+            query = query.filter(note_items::note_id.eq_any(notes_of_space(space_id)));
+        }
+        Scope::Space(None) => {}
     }
 
     let mut grouped: HashMap<String, Vec<ChecklistItem>> = HashMap::new();
@@ -176,9 +205,11 @@ pub fn attach_related(
         return Ok(());
     }
 
-    let mut tags = all_tags(connection, space_id)?;
-    let mut items = all_items(connection, vault, space_id)?;
-    let mut values = all_placeholder_values(connection, vault, space_id)?;
+    let ids: Vec<String> = notes.iter().map(|note| note.id.clone()).collect();
+    let scope = Scope::of(&ids, space_id);
+    let mut tags = all_tags(connection, &scope)?;
+    let mut items = all_items(connection, vault, &scope)?;
+    let mut values = all_placeholder_values(connection, vault, &scope)?;
 
     for note in notes {
         note.tags = tags.remove(&note.id).unwrap_or_default();
@@ -189,10 +220,10 @@ pub fn attach_related(
     Ok(())
 }
 
-pub fn all_placeholder_values(
+fn all_placeholder_values(
     connection: &mut SqliteConnection,
     vault: &Vault,
-    space_id: Option<&str>,
+    scope: &Scope<'_>,
 ) -> Result<HashMap<String, BTreeMap<String, String>>, StorageError> {
     let mut query = note_placeholders::table
         .select((
@@ -202,8 +233,12 @@ pub fn all_placeholder_values(
         ))
         .into_boxed();
 
-    if let Some(space_id) = space_id {
-        query = query.filter(note_placeholders::note_id.eq_any(notes_of_space(space_id)));
+    match scope {
+        Scope::Notes(ids) => query = query.filter(note_placeholders::note_id.eq_any(*ids)),
+        Scope::Space(Some(space_id)) => {
+            query = query.filter(note_placeholders::note_id.eq_any(notes_of_space(space_id)));
+        }
+        Scope::Space(None) => {}
     }
 
     let mut grouped: HashMap<String, BTreeMap<String, String>> = HashMap::new();
@@ -257,4 +292,88 @@ pub fn replace_placeholder_values(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn ids(count: usize) -> Vec<String> {
+        (0..count).map(|n| format!("n-{n}")).collect()
+    }
+
+    #[test]
+    fn a_few_notes_are_read_by_their_ids() {
+        let few = ids(BIND_AT_MOST);
+
+        assert!(
+            matches!(Scope::of(&few, Some("s-1")), Scope::Notes(bound) if bound.len() == BIND_AT_MOST)
+        );
+    }
+
+    #[test]
+    fn many_notes_are_read_by_their_space() {
+        let many = ids(BIND_AT_MOST + 1);
+
+        assert!(matches!(
+            Scope::of(&many, Some("s-1")),
+            Scope::Space(Some("s-1"))
+        ));
+        assert!(matches!(Scope::of(&many, None), Scope::Space(None)));
+    }
+
+    /// Past the bound the space's subquery reads them, with a space and without one.
+    #[test]
+    fn past_the_bound_every_note_still_carries_its_tags_and_items() {
+        use crate::notes::checklist::NoteKind;
+        use crate::notes::language::Language;
+        use crate::notes::model::{NoteDraft, NoteLifecycle};
+        use crate::notes::view::{NoteFilter, NotesQuery};
+
+        let mut library = crate::db::open_in_memory().unwrap();
+        let space = crate::spaces::store::create(&mut library, "Ops")
+            .unwrap()
+            .id;
+        for n in 0..=BIND_AT_MOST {
+            let draft = NoteDraft {
+                space_id: space.clone(),
+                folder_id: None,
+                title: format!("List {n}"),
+                language: Language::Txt,
+                content: String::new(),
+                source: String::new(),
+                tags: vec!["ops".to_string()],
+                pinned: false,
+                lifecycle: NoteLifecycle::Permanent,
+                kind: NoteKind::Checklist,
+                items: vec![ChecklistItem {
+                    text: "Restart".to_string(),
+                    done: false,
+                }],
+            };
+            crate::notes::store::create(&mut library, draft, chrono::Utc::now()).unwrap();
+        }
+
+        for space_id in [Some(space.clone()), None] {
+            let query = NotesQuery {
+                space_id,
+                folder_id: None,
+                search: String::new(),
+                filter: NoteFilter::All,
+                tags: Vec::new(),
+                languages: Vec::new(),
+                now: chrono::Utc::now(),
+                tz_offset_minutes: 0,
+                pinned_first: true,
+            };
+            let (notes, _) = crate::notes::store::fetch(&mut library, &query).unwrap();
+
+            assert_eq!(notes.len(), BIND_AT_MOST + 1);
+            assert!(
+                notes
+                    .iter()
+                    .all(|note| note.tags == ["ops"] && note.items.len() == 1)
+            );
+        }
+    }
 }
