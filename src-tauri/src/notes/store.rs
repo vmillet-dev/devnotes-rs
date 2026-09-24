@@ -499,7 +499,7 @@ pub fn restore_revision(
         };
 
         let Some(content) = revisions::content_of(connection, vault, id, revision_id)? else {
-            return Err(StorageError::NoteNotFound(revision_id.to_string()));
+            return Err(StorageError::RevisionNotFound(revision_id.to_string()));
         };
 
         revisions::discard_from(connection, id, revision_id)?;

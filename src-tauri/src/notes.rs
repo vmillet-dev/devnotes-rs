@@ -134,7 +134,7 @@ pub fn revision_diff(
 
     let Some((current, version)) = store::revisions::compare(connection, vault, &id, &revision_id)?
     else {
-        return Err(StorageError::NoteNotFound(revision_id).into());
+        return Err(StorageError::RevisionNotFound(revision_id).into());
     };
 
     Ok(revision::diff(&current, &version))
