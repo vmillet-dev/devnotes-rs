@@ -10,8 +10,8 @@
   >
     <app-icon name="sidebar" />
   </button>
-  <!-- ⚠️ Away from the filters *and* from the primary action: it is a view on the
-       notes rather than a filter, and it used to sit six pixels from "Nouvelle note". -->
+  <!-- Away from the filters and from the primary action: it is a view on the notes, not a
+       filter. -->
   <button
     type="button"
     class="trash-btn"
@@ -31,7 +31,7 @@
       (selectRequested)="selection.checkFolder($event)"
     />
   } @else {
-    <!-- ⚠️ Not while the rail is showing: two places to change space is how a tree and a
+    <!-- Not while the rail is showing: two places to change space is how a tree and a
      dropdown drift apart. -->
     @if (!settings.showLibraryRail()) {
       <app-space-switcher
@@ -54,7 +54,7 @@
     (textCleared)="canvas.setSearchQuery('')"
     (queryChange)="canvas.setSearchQuery($event)"
   />
-  <!-- ⚠️ Three states of one thing, so one control: four chips read as four filters
+  <!-- Three states of one thing, so one control: four chips read as four filters
        that could be combined, and took the width of four. -->
   <app-segmented-choice
     [kind]="'quick-filter'"
@@ -63,7 +63,7 @@
     [currentId]="canvas.activeFilter()"
     (chosen)="onQuickFilter($event)"
   />
-  <!-- ⚠️ Forced open by a selection, and it refuses to fold while one is on: a filter
+  <!-- Forced open by a selection, and it refuses to fold while one is on: a filter
        nobody can see is a filter nobody can undo. -->
   <button
     type="button"

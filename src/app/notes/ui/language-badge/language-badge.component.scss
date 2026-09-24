@@ -1,8 +1,7 @@
 @use 'mixins' as *;
 
-// ⚠️ A box of its own, not an inline run. A `<span>` is inline by default, so its padding
-// and its border hang outside the line box its host is sized to — and `.card-head` is
-// `overflow: hidden`, which cut the badge by three pixels once #196 gave it a hairline.
+// A box of its own, not an inline run: a `<span>`'s padding and border hang outside the
+// line box, and an `overflow: hidden` parent cuts them.
 .lang-tag {
   display: inline-flex;
   align-items: center;
@@ -17,7 +16,7 @@
 // Six hues for nineteen languages, shared by family: the label names the language, the
 // colour only groups it at a glance.
 //
-// ⚠️ Every member of `Language` needs a rule here, or its badge is bare text — no fill, no
+// Every member of `Language` needs a rule here, or its badge is bare text — no fill, no
 // hairline, and the label in whatever colour surrounds it. Six had accumulated without one
 // while this comment still said "thirteen". `scripts/language-hues.test.mjs` holds it now.
 

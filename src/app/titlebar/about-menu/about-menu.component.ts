@@ -30,7 +30,7 @@ export type AboutPanel = 'whatsNew' | 'gettingStarted' | 'shortcuts' | 'about';
 })
 export class AboutMenuComponent {
   protected readonly store = inject(UpdateStore);
-  /** ⚠️ Shared, because the guide is reached from the thing it explains as well as here. */
+  /** Shared, because the guide is reached from the thing it explains as well as here. */
   protected readonly help = inject(HelpStore);
   protected readonly menu = inject(MenuTriggerDirective);
 
@@ -53,7 +53,7 @@ export class AboutMenuComponent {
   });
 
   /**
-   * ⚠️ The guide is the one panel with a second way in: `HelpStore` is what an empty canvas
+   * The guide is the one panel with a second way in: `HelpStore` is what an empty canvas
    * or an empty board opens it through, so the state has to be the same either way.
    */
   protected readonly showing = computed<AboutPanel | null>(() =>

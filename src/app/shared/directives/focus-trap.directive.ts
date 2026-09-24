@@ -1,10 +1,8 @@
 import { AfterViewInit, Directive, ElementRef, OnDestroy, inject } from '@angular/core';
 
 /**
- * ⚠️ `:not([tabindex="-1"])` on **every** candidate and not only on the last one. A
- * `<button tabindex="-1">` is out of the tab order as far as the browser is concerned,
- * and the trap used to disagree: the palette's rows went out of the order and Shift+Tab
- * in the search field still landed on the last row's copy button (#283).
+ * ⚠️ `:not([tabindex="-1"])` on every candidate, not only the last: a `<button tabindex="-1">`
+ * is out of the browser's tab order, and the trap has to agree.
  */
 const FOCUSABLE_SELECTOR = [
   'a[href]',
@@ -41,7 +39,7 @@ export class FocusTrapDirective implements AfterViewInit, OnDestroy {
   // `Event` and not `KeyboardEvent`: modifier pseudo-events are absent from the
   // host-binding type table, so `typeCheckHostBindings` hands over an `Event`.
   protected onTab(event: Event, backwards: boolean): void {
-    // ⚠️ Something inside has already answered for this key — the palette takes Tab as an
+    // Something inside has already answered for this key — the palette takes Tab as an
     // arrow — and moving the focus on top of that is the trap undoing what it wrapped.
     if (event.defaultPrevented) return;
 

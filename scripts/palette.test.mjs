@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 
 /**
- * ⚠️ `node --test` and not a `*.spec.ts`, for the same reason the release-notes tests are
+ * `node --test` and not a `*.spec.ts`, for the same reason the release-notes tests are
  * here: this reads a shipped file off disk, and the Angular builder compiles its specs for
  * a browser, where `node:fs` does not exist and `?raw` has no loader. Both were tried.
  */
@@ -16,7 +16,7 @@ const AA = 4.5;
 const AA_UI = 3;
 
 /**
- * The four plain surfaces. ⚠️ Not the only backgrounds text lands on — a badge draws its
+ * The four plain surfaces. Not the only backgrounds text lands on — a badge draws its
  * label on a **tint** of one of the hues, which is measured separately below.
  */
 const SURFACES = ['--bg-0', '--bg-1', '--bg-2', '--bg-3'];
@@ -34,7 +34,7 @@ const EDGES = ['--amber-edge'];
 /**
  * Never text and never a line it matters to see: hairlines, the softer accent behind a
  * hover, the accent as a **surface**, the ink drawn *on* that surface, and the titlebar's
- * decorative dots. ⚠️ Listed rather than skipped, so a colour added to the palette fails
+ * decorative dots. Listed rather than skipped, so a colour added to the palette fails
  * the last test here until somebody says which of the four it is.
  */
 const NOT_TEXT = [
@@ -52,7 +52,7 @@ const NOT_TEXT = [
 /**
  * The dark palette is the bare `:root`, deliberately — see the comment above it.
  *
- * ⚠️ A declaration may hand down another variable rather than a hex: on a dark surface one
+ * A declaration may hand down another variable rather than a hex: on a dark surface one
  * amber does every job, so two of the three roles are declared as the third. Resolved one
  * level, which is all the file uses.
  */
@@ -79,7 +79,7 @@ function block(theme) {
 }
 
 /**
- * The strongest tint any badge is drawn on. ⚠️ It is `tint-badge`'s own default, and the
+ * The strongest tint any badge is drawn on. It is `tint-badge`'s own default, and the
  * highest alpha in use at a call site — a stronger one typed later would want this raised
  * with it.
  */
@@ -119,7 +119,7 @@ function contrast(a, b) {
 for (const theme of ['dark', 'light']) {
   describe(`the ${theme} palette`, () => {
     const declared = block(theme);
-    // ⚠️ The light block redefines only what changes, so what it does not name it inherits
+    // The light block redefines only what changes, so what it does not name it inherits
     // from the dark one — reading it from the wrong block would test a colour twice and
     // check another never.
     const of = (name) => declared[name] ?? block('dark')[name];
@@ -138,9 +138,8 @@ for (const theme of ['dark', 'light']) {
     });
 
     /**
-     * ⚠️ A tint moves the background **toward** the colour it is made of, so a badge's label
-     * has less to work with than the plain surface underneath suggests. The hue used to be
-     * the label as well, which cost about a point and put light amber at 4.20:1.
+     * A tint moves the background toward the colour it is made of, so a badge's label has less
+     * to work with than the plain surface suggests.
      */
     it('draws a badge label legibly on the tint it sits on', () => {
       for (const hue of TINTED) {
@@ -157,7 +156,7 @@ for (const theme of ['dark', 'light']) {
     });
 
     /**
-     * ⚠️ The bar a line has to clear, and the reason the accent can be bright at all: the
+     * The bar a line has to clear, and the reason the accent can be bright at all: the
      * fill is a surface, so it is only ever read *through* the ink on it, while the ring
      * has to be findable against the four surfaces it is drawn over.
      */
@@ -182,7 +181,7 @@ for (const theme of ['dark', 'light']) {
     });
 
     /**
-     * ⚠️ What stops the two lists above going quietly out of date. `--text-2` was under AA
+     * What stops the two lists above going quietly out of date. `--text-2` was under AA
      * on all four surfaces for as long as it existed, across 129 declarations, and nothing
      * anywhere said so.
      */
@@ -200,7 +199,7 @@ for (const theme of ['dark', 'light']) {
 }
 
 /**
- * ⚠️ The promise the three-way split was made on: the accent's **surface** is one colour
+ * The promise the three-way split was made on: the accent's **surface** is one colour
  * for the whole application, and the dark theme does not move. Only the line and the label
  * step down on a light background, and only in the light block.
  */

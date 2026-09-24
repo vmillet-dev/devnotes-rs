@@ -7,7 +7,7 @@ import { APP_INFO } from './app-info.service';
 export type { ChangelogRelease, ChangelogSection, ChangelogSpan };
 
 /**
- * ⚠️ Must stay covered by the scope declared for `opener:allow-open-url` in
+ * Must stay covered by the scope declared for `opener:allow-open-url` in
  * `src-tauri/capabilities/default.json`, or opening is refused at runtime.
  */
 export const RELEASES_URL = `${APP_INFO.repository}/releases`;

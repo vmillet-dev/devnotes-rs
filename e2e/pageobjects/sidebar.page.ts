@@ -30,7 +30,7 @@ export const rail = {
     ),
 
   /**
-   * Two arrows on the edge, the keyboard twin of dragging it. ⚠️ Focused from script: the
+   * Two arrows on the edge, the keyboard twin of dragging it. Focused from script: the
    * edge swallows its own `pointerdown` to start a drag, and that is what would focus it.
    */
   async widen(): Promise<void> {
@@ -113,7 +113,7 @@ export const spaces = {
   },
 
   /**
-   * From the same panel as the rename and the delete, which the ⋯ opens. ⚠️ Closes behind
+   * From the same panel as the rename and the delete, which the ⋯ opens. Closes behind
    * itself: a panel left open covers the rows the next caller is looking for.
    */
   async togglePin(id: string): Promise<void> {
@@ -122,7 +122,7 @@ export const spaces = {
     await spaces.close();
   },
 
-  /** ⚠️ The refuge is mandatory: the space leaves with its notes if nobody takes them in. */
+  /** The refuge is mandatory: the space leaves with its notes if nobody takes them in. */
   async remove(id: string, refugeId: string): Promise<void> {
     await $(`${testid('space-edit')}[data-space-id="${id}"]`).click();
     await pickChoice('space-move-target', refugeId);
@@ -164,14 +164,14 @@ export const folders = {
     await $(testid('folder-rename-submit')).click();
   },
 
-  /** ⚠️ Closes behind itself: a panel left open covers the rows under it. */
+  /** Closes behind itself: a panel left open covers the rows under it. */
   async recolour(id: string, colour: string): Promise<void> {
     await $(`${testid('folder-edit')}[data-folder-id="${id}"]`).click();
     await $(`${testid('folder-colour')}[data-colour="${colour}"]`).click();
     await folders.close();
   },
 
-  /** ⚠️ No refuge to choose, unlike a space: the notes simply come out loose. */
+  /** No refuge to choose, unlike a space: the notes simply come out loose. */
   async remove(id: string): Promise<void> {
     await $(`${testid('folder-edit')}[data-folder-id="${id}"]`).click();
     await confirmTwice($(testid('folder-delete')));

@@ -20,8 +20,7 @@
     "esModuleInterop": true,
     "target": "ES2022",
     "module": "preserve",
-    // Sans `baseUrl` (déprécié depuis TS 6) : les chemins sont résolus
-    // relativement à l'emplacement de ce fichier.
+    // No `baseUrl` (deprecated since TS 6): paths resolve relative to this file.
     "paths": {
       "@core/*": ["./src/app/core/*"],
       "@shared/*": ["./src/app/shared/*"],

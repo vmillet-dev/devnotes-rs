@@ -9,11 +9,7 @@ import { VaultRepository } from '@core/data/vault.repository';
 import { VaultState } from '@core/model/vault.model';
 import { SEEDED_KEY } from '@core/services/samples/sample-notes.service';
 
-/**
- * ⚠️ The state lives in Rust, not here: a page reload must not ask again for a library
- * this process already has open. That is also what keeps `reopenSession` working in the
- * end-to-end suite, where the front end reboots and the process does not.
- */
+/** The state lives in Rust: a page reload must not ask again for a library the process has open. */
 @Injectable({ providedIn: 'root' })
 export class VaultStore {
   private readonly repository = inject(VaultRepository);
@@ -33,10 +29,7 @@ export class VaultStore {
   /** The last attempt was refused. Cleared as soon as the field is touched again. */
   readonly refused = this._refused.asReadonly();
 
-  /**
-   * SQLite says the file is damaged. ⚠️ Not a refusal and not a failure: retyping the
-   * passphrase will not help, so the screen has to offer something else entirely.
-   */
+  /** SQLite says the file is damaged: retyping will not help, so the screen offers something else. */
   readonly damaged = this._damaged.asReadonly();
 
   readonly isUnlocked = computed(() => this._state() === 'unlocked');
@@ -57,13 +50,9 @@ export class VaultStore {
   }
 
   /**
-   * A new phrase over the same library. ⚠️ Nothing is re-encrypted — the phrase only ever
-   * wrapped the key the notes are sealed with — so this cannot leave a library half
-   * readable, and the session carries on as it was.
-   *
-   * ⚠️ Reports from here rather than from the dialog, which closes on the click: what the
-   * change reached is the whole point of it, and a retained backup it could not rewrap
-   * still opens with the phrase the user just retired.
+   * A new phrase over the same library; nothing is re-encrypted. Reported from here rather than
+   * from the dialog, which closes on the click: a backup left unwrapped still opens with the
+   * retired phrase, and saying so is the point.
    */
   async changePassphrase(current: string, next: string): Promise<boolean> {
     return this.attempt(async () => {
@@ -72,42 +61,28 @@ export class VaultStore {
     }, 'errors.passphraseChangeFailed');
   }
 
-  /** Typing again is what withdraws the refusal — it should not outlive the correction. */
+  /** Typing again withdraws the refusal. */
   clearRefusal(): void {
     this._refused.set(false);
   }
 
-  /**
-   * Moves the damaged library aside so the next unlock starts on a fresh one, and says
-   * where it went.
-   *
-   * ⚠️ The samples marker goes with it. Without that, the fresh library opens on a canvas
-   * with no space — and a note cannot be created without one, so the application would
-   * come back working and unusable.
-   */
+  /** Moves the damaged library aside so the next unlock starts on a fresh one, and says where. */
   async setAsideDamagedLibrary(): Promise<boolean> {
     return this.moveAside(() => this.repository.setAsideDamagedLibrary(), 'vault.setAside');
   }
 
   /**
-   * Archives a library whose phrase was forgotten, and starts over.
-   *
-   * ⚠️ It recovers nothing, and must not look as though it does: the notes leave sealed,
-   * under the phrase nobody remembers. What it buys is a way past the gate that does not
-   * require knowing where the profile directory is — and a copy still standing, which is
-   * why the report says where it went.
+   * Archives a library whose phrase was forgotten, and starts over. It recovers nothing — the
+   * notes leave sealed — and the report says where the copy went.
    */
   async archiveLockedLibrary(): Promise<boolean> {
     return this.moveAside(() => this.repository.archiveLockedLibrary(), 'vault.archived');
   }
 
   /**
-   * ⚠️ The samples marker goes with the library, whichever reason moved it. Without that,
-   * the fresh one opens on a canvas with no space — and a note cannot be created without
-   * one, so the application would come back working and unusable.
-   *
-   * ⚠️ The state is re-read rather than assumed: a damaged library leaves its key file
-   * behind and comes back `locked`, an archived one takes it and comes back `absent`.
+   * ⚠️ The samples marker goes with the library, or the fresh one opens with no space, where no
+   * note can be created. The state is re-read: a damaged library keeps its key file and comes
+   * back `locked`, an archived one takes it and comes back `absent`.
    */
   private async moveAside(move: () => Promise<string>, reportKey: string): Promise<boolean> {
     const moved = await this.notifier.attemptWhile(this._isWorking, 'errors.setAsideFailed', async () => {
@@ -123,9 +98,8 @@ export class VaultStore {
   }
 
   /**
-   * ⚠️ A refused passphrase is not reported through the banner: it is the ordinary answer
-   * to a typo, and it belongs beside the field that caused it. Anything else is a failure
-   * and goes where failures go.
+   * A refused passphrase goes beside the field, not into the banner: it is the ordinary answer
+   * to a typo. Anything else is a failure.
    */
   private async attempt(action: () => Promise<void>, failureKey = 'errors.unlockFailed'): Promise<boolean> {
     this._isWorking.set(true);
@@ -153,10 +127,7 @@ export class VaultStore {
   }
 }
 
-/**
- * ⚠️ Three strings rather than one with a count: the copies it could not reach are the
- * half that matters, and French keeps the singular where English does not.
- */
+/** Three strings, not one with a count: French keeps the singular where English does not. */
 function revocation(change: PassphraseChange): TranslationRef {
   if (change.backupsLeft === 0) {
     return { key: 'settings.security.changed' };

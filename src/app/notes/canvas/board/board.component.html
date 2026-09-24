@@ -1,6 +1,6 @@
 @let drawnBand = band();
 
-<!-- ⚠️ On the board rather than in the topbar: it acts on this space's geometry and on
+<!-- On the board rather than in the topbar: it acts on this space's geometry and on
      nothing else, and the topbar is already the widest row in the window. Bottom and not
      top: zones are laid out downward, so a control in the top-right corner covers the ⋯ of
      whichever zone is in the last visible column. -->
@@ -15,7 +15,7 @@
 
 <div class="board" data-testid="board">
   <!-- Sized by the back end from what is actually on it: the surface is what is panned.
-       ⚠️ The move and up handlers sit here and not on each draggable: the pointer is
+       The move and up handlers sit here and not on each draggable: the pointer is
        captured by the element that was grabbed, and these are where its events land. -->
   <div
     class="board-surface"
@@ -48,7 +48,7 @@
     @if (loose().length > 0) {
       @for (entry of loose(); track entry.note.id) {
         @let at = positionOf(entry);
-        <!-- ⚠️ The whole card is the handle: a press that travels moves it, one that does
+        <!-- The whole card is the handle: a press that travels moves it, one that does
              not opens the note, and the distance is what tells them apart. The keyboard
              twin is the selection bar — tick with X, then "file into…". -->
         <div
@@ -66,7 +66,7 @@
       }
     }
 
-    <!-- ⚠️ Drawn at the pointer and transparent to it: a card out of a zone has no seat of
+    <!-- Drawn at the pointer and transparent to it: a card out of a zone has no seat of
          its own to move, so this is the only thing that follows the drag. Its seat stays
          behind, faded — the drop can still be cancelled. -->
     @if (travelling(); as entry) {
@@ -112,7 +112,7 @@
     @if (zones().length === 0 && loose().length === 0) {
       <div class="board-empty" data-testid="board-empty">
         <p>{{ 'board.empty' | transloco }}</p>
-        <!-- ⚠️ The chapter about folders and the board, not the top of the guide. -->
+        <!-- The chapter about folders and the board, not the top of the guide. -->
         <button type="button" class="board-guide" data-testid="board-guide" (click)="guideRequested.emit()">
           {{ 'gettingStarted.openChapter' | transloco }}
         </button>

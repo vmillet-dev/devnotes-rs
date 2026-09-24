@@ -2,8 +2,7 @@
 export type { VaultState } from '@core/ipc/bindings';
 
 /**
- * What `vault::validate` refuses below. Said on the front too, so a first launch does not
- * answer "too short" after a second of derivation, and an export prompt can refuse a
- * phrase it would be sold as protection.
+ * What `vault::validate` refuses below, said on the front too: before a second of derivation,
+ * and before an export prompt sells a short phrase as protection.
  */
 export const MINIMUM_PASSPHRASE_LENGTH = 8;

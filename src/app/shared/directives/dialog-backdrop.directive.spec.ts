@@ -45,7 +45,7 @@ describe('DialogBackdropDirective', () => {
   });
 
   /**
-   * ⚠️ The whole point: a click inside the panel bubbles up to the backdrop, and taking
+   * The whole point: a click inside the panel bubbles up to the backdrop, and taking
    * it as a dismissal would close the dialog on every button in it.
    */
   it('stays put for a click that started inside the panel', () => {

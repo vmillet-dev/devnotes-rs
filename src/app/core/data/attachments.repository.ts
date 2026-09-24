@@ -5,7 +5,7 @@ import { Attachment } from '@core/model/note.model';
 import { toAttachment } from './note.mapper';
 
 /**
- * ⚠️ `read` answers a `data:` URI, the one form an `<img>` accepts under the WebView's
+ * `read` answers a `data:` URI, the one form an `<img>` accepts under the WebView's
  * CSP. It weighs a third more than the file, so the bytes are only read on demand.
  */
 @Injectable({ providedIn: 'root' })

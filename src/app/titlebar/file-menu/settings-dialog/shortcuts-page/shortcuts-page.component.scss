@@ -53,7 +53,7 @@
   color: var(--red);
 }
 
-// ⚠️ Text and a hairline, never a solid fill: one red block beside the single amber
+// Text and a hairline, never a solid fill: one red block beside the single amber
 // accent reads as a second accent.
 .shortcut-conflict {
   @include surface($bg: var(--bg-2), $border-color: rgba(var(--red-rgb), 0.4));

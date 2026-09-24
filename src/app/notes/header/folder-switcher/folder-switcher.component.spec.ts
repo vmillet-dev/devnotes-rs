@@ -171,7 +171,7 @@ describe('FolderSwitcherComponent', () => {
     expect(actions.deleted).toEqual(['perf']);
   });
 
-  /** ⚠️ Unlike a space, which cannot go without one: its cascade would take the notes. */
+  /** Unlike a space, which cannot go without one: its cascade would take the notes. */
   it('offers no refuge to choose when deleting', async () => {
     await open();
     await click('[data-testid="folder-edit"]');

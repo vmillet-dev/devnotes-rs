@@ -43,7 +43,7 @@ export class UpdaterService {
     };
   }
 
-  /** ⚠️ On Windows the installer stops the app itself: nothing after this call runs. */
+  /** On Windows the installer stops the app itself: nothing after this call runs. */
   async install(onProgress: (progress: DownloadProgress) => void): Promise<void> {
     const update = this.pending;
     if (!update) throw new Error('No update pending.');

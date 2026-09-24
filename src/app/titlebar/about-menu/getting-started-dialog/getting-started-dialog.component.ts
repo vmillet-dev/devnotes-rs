@@ -10,12 +10,12 @@ import { GuideFigureComponent } from './guide-figure/guide-figure.component';
 /**
  * The written guide, **one chapter at a time**.
  *
- * ⚠️ It was ten chapters of prose in one scrolling panel — roughly 3 400 characters, all of
+ * It was ten chapters of prose in one scrolling panel — roughly 3 400 characters, all of
  * it true and none of it looked at, which is the worst return a help surface can have. A
  * chapter is now a schematic of the screen it is about and two sentences beside it: short
  * enough to be read standing up, and ten of them is a walk rather than a wall.
  *
- * ⚠️ It opens **at a chapter**, because the canvas and the board link straight into the one
+ * It opens **at a chapter**, because the canvas and the board link straight into the one
  * that explains them. That is what `HelpStore` exists for.
  */
 @Component({
@@ -45,7 +45,7 @@ export class GettingStartedDialogComponent {
   protected readonly isLast = computed(() => this.at() === this.chapters.length - 1);
 
   /**
-   * ⚠️ Interpolated into every chapter, because Transloco replaces an unknown `{{name}}`
+   * Interpolated into every chapter, because Transloco replaces an unknown `{{name}}`
    * with the empty string — a body cannot spell a key out. The quick-paste one follows
    * the preference rather than the combination that shipped.
    */

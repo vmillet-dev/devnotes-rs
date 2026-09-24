@@ -5,7 +5,7 @@ import { MINIMUM_PASSPHRASE_LENGTH } from '@core/model/vault.model';
 import { VaultStore } from '@core/state/vault.store';
 
 /**
- * ⚠️ Changing the phrase re-wraps the library's key; it re-encrypts nothing. So there is
+ * Changing the phrase re-wraps the library's key; it re-encrypts nothing. So there is
  * no progress to report beyond the two derivations, and nothing to roll back.
  */
 @Component({
@@ -60,7 +60,7 @@ export class ChangePassphraseDialogComponent {
   }
 
   /**
-   * ⚠️ The three fields are cleared before the round trip, success or not: a phrase left
+   * The three fields are cleared before the round trip, success or not: a phrase left
    * in a DOM node outlives the dialog.
    */
   protected async submit(event: Event): Promise<void> {
@@ -73,7 +73,7 @@ export class ChangePassphraseDialogComponent {
     this.next.set('');
     this.confirmation.set('');
 
-    // ⚠️ The report comes from the store, which is what knows how much the change
+    // The report comes from the store, which is what knows how much the change
     // reached. This only closes.
     if (await this.vault.changePassphrase(from, to)) {
       this.closed.emit();

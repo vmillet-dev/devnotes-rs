@@ -13,7 +13,7 @@ export function errorDetail(error: unknown): string {
 }
 
 /**
- * ⚠️ `Record` and not `Partial`: a variant added in Rust breaks the build here until its
+ * `Record` and not `Partial`: a variant added in Rust breaks the build here until its
  * key is decided. `null` means the caller's own action message says it better.
  */
 const CODE_KEYS: Record<IpcErrorCode, string | null> = {

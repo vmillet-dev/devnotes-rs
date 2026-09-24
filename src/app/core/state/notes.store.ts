@@ -140,9 +140,8 @@ export class NotesStore {
   private readonly _draftNote = signal<Note | null>(null);
 
   /**
-   * What the editor's local drafts key on. ⚠️ Bumped when the editor is pointed at a
-   * different note, and deliberately not when a draft adopts the row it became: that
-   * changes the id of the *same* note, and stale drafts would be replayed over it.
+   * What the editor's local drafts key on. ⚠️ Bumped when the editor points at another note,
+   * never when a draft adopts the row it became: stale drafts would replay over the same note.
    */
   private readonly _editorSession = signal(0);
 
@@ -156,29 +155,23 @@ export class NotesStore {
   readonly persistedNoteId = computed<string | null>(() => this._selectedNote()?.id ?? null);
 
   /**
-   * ⚠️ The **promise**, not the id it will yield. `requestClose()` fires three commits
-   * back to back with no `await` between them; holding the id — which exists only once
-   * the write returns — leaves that window answering "still a draft", and one close
-   * then creates two notes.
+   * ⚠️ The promise, not the id it will yield: closing fires three commits back to back with no
+   * `await` between them, and an id that exists only once the write returns lets one close
+   * create two notes.
    */
   private draftMaterialisation: Promise<string | null> | null = null;
 
   /**
-   * ⚠️ The row a draft became, held until the editor moves on. Commits are still in
-   * flight when the overlay closes, and the canvas view is a round trip behind the
-   * write that created the note — without this they resolve against nothing and the
-   * body typed after the title is dropped.
+   * The row a draft became, held until the editor moves on: commits still in flight when the
+   * overlay closes resolve against it, the canvas view being a round trip behind.
    */
   private materialisedNote: Note | null = null;
 
   private opening = 0;
 
   /**
-   * Read by id, never taken from a list: a list sends previews, and a draft seeded from
-   * one would write the first lines back over the body on the first commit.
-   *
-   * ⚠️ Whatever moved the editor while the note was on its way wins over it — a later
-   * open, a new note, a close.
+   * Read by id, never taken from a list: a draft seeded from a preview would write the first
+   * lines back over the body. Whatever moves the editor while the read is on its way wins.
    */
   async openNote(id: string): Promise<void> {
     const ticket = ++this.opening;
@@ -200,12 +193,9 @@ export class NotesStore {
   }
 
   /**
-   * Takes the row a write elsewhere produced, when it is the one on screen.
-   *
-   * ⚠️ The editor's body draft is re-seeded from `selectedNote`, so putting a revision
-   * back has to reach here: without it the field went on showing the version that had
-   * just been replaced, and the commit on close wrote it straight back. The restore undid
-   * itself.
+   * Takes the row a write elsewhere produced, when it is the one on screen: the editor re-seeds
+   * its body draft from `selectedNote`, so a restored revision must land here or the commit on
+   * close writes the replaced text back.
    */
   adoptRestored(note: Note): void {
     if (this._selectedNote()?.id !== note.id) return;
@@ -237,12 +227,8 @@ export class NotesStore {
   }
 
   /**
-   * Files one note, which is a **batch of one**.
-   *
-   * ⚠️ Not a `NotePatch` field, and deliberately not a command of its own either: filing
-   * goes through `file_notes`, which answers the placements it actually changed — that
-   * answer is what the undo puts back, and a second path would drift from the selection
-   * bar's. A draft is materialised first: a note with no row cannot be filed.
+   * Files one note, a batch of one through `file_notes`, whose answer the undo puts back — the
+   * selection bar's path. A draft is materialised first: a note with no row cannot be filed.
    */
   async fileNote(id: string, folderId: string | null): Promise<void> {
     const resolved = await this.resolve(id);
@@ -260,13 +246,8 @@ export class NotesStore {
   }
 
   /**
-   * ⚠️ The one write that has no note to adopt. `file_notes` answers the placements it
-   * changed, not the rows — so the open note kept the folder it had, and the editor's own
-   * control went on naming it until the note was closed and reopened.
-   *
-   * It is not a guess: the filing is exactly what was asked for and accepted, and the
-   * folder is resolved from the same list the control offered. The canvas still reloads,
-   * which is what refreshes the card's chip.
+   * `file_notes` answers placements, not rows, so the open note adopts its new folder here,
+   * resolved from the list the control offered. The canvas reload refreshes the card's chip.
    */
   private adoptFiling(id: string, folderId: string | null): void {
     const open = this._selectedNote();
@@ -286,12 +267,8 @@ export class NotesStore {
   }
 
   /**
-   * Opens the editor on a local draft; a note with no space at all is refused.
-   *
-   * ⚠️ A note made while a folder is open arrives already filed. That and a drop on the
-   * board are the only two places that file a new one: the quick-paste palette
-   * deliberately does not, because it is used mid-task from another application and a
-   * decision there would sit in the fastest path in the product.
+   * Opens the editor on a local draft; a note with no space at all is refused. A note made
+   * inside an open folder arrives filed; the palette's never does, being the fastest path.
    */
   createNote(kind: NoteKind = 'snippet'): void {
     const spaceId = this.spaceForNewNote();
@@ -382,7 +359,7 @@ export class NotesStore {
     return spaceId;
   }
 
-  /** ⚠️ Synchronous down to the assignment, so a second caller joins the write in flight. */
+  /** Synchronous down to the assignment, so a second caller joins the write in flight. */
   private saveDraft(draft: Note): Promise<string | null> {
     this.draftMaterialisation ??= this.writeDraft(draft);
 
@@ -397,8 +374,7 @@ export class NotesStore {
       return null;
     }
 
-    // Before the draft is dropped: between the two, `find()` would know the note by
-    // neither name.
+    // Before the draft is dropped: in between, `find()` would know the note by neither name.
     this.materialisedNote = created;
     this._draftNote.set(null);
 
@@ -406,8 +382,8 @@ export class NotesStore {
   }
 
   private async persistNew(payload: NoteDraft): Promise<Note | null> {
-    // ⚠️ Read before the write leaves: the editor can be closed inside the round trip,
-    // and adopting the created note would then put the overlay back on screen.
+    // Read before the write leaves: the editor may close inside the round trip, and adopting
+    // the created note would put it back on screen.
     const session = this._editorSession();
 
     const created = await this.notifier.attempt('errors.noteCreateFailed', () =>
@@ -454,8 +430,8 @@ export class NotesStore {
       return;
     }
 
-    // ⚠️ A write in flight owns the row, so this patch updates it rather than creating a
-    // second one. Joining the write would drop it: that carries the first call's argument.
+    // A write in flight owns the row, so this patch updates it; joining the write would drop
+    // this patch, the write carrying the first call's argument.
     if (this.draftMaterialisation) {
       const id = await this.draftMaterialisation;
 
@@ -466,9 +442,8 @@ export class NotesStore {
   }
 
   /**
-   * `DRAFT_ID` names the draft **or** the note it became: the editor chains commits
-   * with no change detection between them and keeps sending the old id. ⚠️ Async on
-   * purpose — awaiting the write in flight is what makes the next commit an update.
+   * `DRAFT_ID` names the draft or the note it became: the editor chains commits and keeps
+   * sending the old id. Async on purpose: awaiting the write in flight makes the next an update.
    */
   private async resolve(id: string): Promise<string> {
     if (id !== DRAFT_ID || !this.draftMaterialisation) return id;

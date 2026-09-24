@@ -37,7 +37,7 @@ describe('SettingsPageComponent', () => {
   });
 
   /**
-   * ⚠️ A menu where the list can grow and a segmented control where it is three. A native
+   * A menu where the list can grow and a segmented control where it is three. A native
    * `<select>` brought the operating system's border, arrow, focus ring and — on Windows —
    * its font into the middle of an application that draws all of its own surfaces.
    */
@@ -51,7 +51,7 @@ describe('SettingsPageComponent', () => {
     ];
   }
 
-  /** ⚠️ By `data-testid`, never by the translated `aria-label`. */
+  /** By `data-testid`, never by the translated `aria-label`. */
   function segments(kind: string): HTMLElement[] {
     const root = fixture.nativeElement as HTMLElement;
     return [
@@ -65,7 +65,7 @@ describe('SettingsPageComponent', () => {
     expect(options.map((option) => option.getAttribute('data-option-id'))).toEqual(['system', 'fr', 'en']);
   });
 
-  /** ⚠️ Into the draft, not the file: nothing is written before Appliquer or OK. */
+  /** Into the draft, not the file: nothing is written before Appliquer or OK. */
   it('stages a chosen language rather than writing it', async () => {
     const options = await openLocaleMenu();
 
@@ -75,7 +75,7 @@ describe('SettingsPageComponent', () => {
     expect(draft.value('locale')).toBe('en');
   });
 
-  /** ⚠️ Exactly one is chosen at all times, which is what `aria-checked` has to say. */
+  /** Exactly one is chosen at all times, which is what `aria-checked` has to say. */
   it('shows the active theme as the checked segment', () => {
     const checked = segments('setting-theme').filter(
       (segment) => segment.getAttribute('aria-checked') === 'true',

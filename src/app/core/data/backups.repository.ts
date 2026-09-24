@@ -5,7 +5,7 @@ import { unwrap } from '@core/ipc/ipc.error';
 import { Backup } from '@core/model/backup.model';
 
 /**
- * ⚠️ Two wire shapes to put back. JSON has no date type, so `takenAt` crosses as an ISO
+ * Two wire shapes to put back. JSON has no date type, so `takenAt` crosses as an ISO
  * string; and specta types a `f64` as nullable because JSON cannot carry `NaN` — a size
  * that came back missing is reported as nothing rather than as a hole in the row.
  */
@@ -23,7 +23,7 @@ export class BackupsRepository {
    * Answers where the library it replaced was moved to, which the interface has to say:
    * "set aside" is only true if the user can be told where.
    *
-   * ⚠️ The library is **closed** by the time this returns. Every command answers `Locked`
+   * The library is **closed** by the time this returns. Every command answers `Locked`
    * afterwards, so the caller's next move is to send the shell back to the gate.
    */
   async restore(id: string): Promise<string> {

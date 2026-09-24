@@ -30,7 +30,7 @@ const RESIZE_STEP_PX = 16;
  * project. It replaces the two switchers while it is showing — two places to change
  * space is how a tree and a dropdown drift apart.
  *
- * ⚠️ Nothing here narrows the canvas itself. A row answers *where to go*; the page turns
+ * Nothing here narrows the canvas itself. A row answers *where to go*; the page turns
  * that into a space and a folder, and the stores do the rest.
  */
 @Component({
@@ -58,7 +58,7 @@ export class LibraryTreeComponent {
   readonly widthChanged = output<number>();
 
   /**
-   * ⚠️ What the user *closed*, not what they opened: a library is worth showing whole,
+   * What the user *closed*, not what they opened: a library is worth showing whole,
    * and a set of opened ids would leave a fresh install looking empty.
    */
   private readonly collapsed = signal<ReadonlySet<string>>(new Set());
@@ -103,7 +103,7 @@ export class LibraryTreeComponent {
   }
 
   /**
-   * ⚠️ Pointer events, like every other drag in this application: HTML5 drag and drop
+   * Pointer events, like every other drag in this application: HTML5 drag and drop
    * does not work in this WebView and cannot be turned on. The edge is a `separator`, so
    * the arrow keys move it too — the same rule the board's grips follow.
    */

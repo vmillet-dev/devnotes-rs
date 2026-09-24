@@ -67,7 +67,7 @@ app-dialog {
   flex-shrink: 0;
 }
 
-// The 20px under the header rule is this band's now, which the attachments used to carry.
+// The 20px under the header rule belongs to this band.
 .overlay-placement {
   display: flex;
   align-items: center;
@@ -134,11 +134,11 @@ app-dialog {
   outline-offset: 2px;
 }
 
-// ⚠️ The one native control that stays, and deliberately: an `<input type="date">` brings a
+// The one native control that stays, and deliberately: an `<input type="date">` brings a
 // free calendar, a localised format and keyboard entry that a hand-rolled picker has to
 // earn back. Its **box** is the application's, and only its popup is the system's.
 //
-// ⚠️ Its picker icon is themed from `src/styles/styles.scss` and not from here: the rule
+// Its picker icon is themed from `src/styles/styles.scss` and not from here: the rule
 // has to open on `:root`, and Angular's emulated encapsulation rewrites a `:root` written
 // in a component stylesheet into a form that never matches `<html>`.
 .overlay-expiry-input::-webkit-calendar-picker-indicator {
@@ -212,7 +212,7 @@ app-dialog {
   pointer-events: none;
 }
 
-// ⚠️ Metrics copied exactly from the viewer's, or the caret drifts away from the
+// Metrics copied exactly from the viewer's, or the caret drifts away from the
 // coloured text: same font, same line height, same wrapping, and a left inset that adds
 // the line-number gutter to the padding — 32px in total, not 32 + 16, the global
 // `box-sizing: border-box` keeping `.line-no`'s `padding-right` inside its `width`.

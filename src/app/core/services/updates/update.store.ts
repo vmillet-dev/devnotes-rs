@@ -12,7 +12,7 @@ export type CheckState = 'idle' | 'checking' | 'upToDate' | 'failed';
  * Nothing installs without an explicit gesture: a silent update would restart the app
  * mid-keystroke, and the editor's drafts only commit on blur.
  *
- * ⚠️ A failed check stays silent — offline, or on a dev build with a placeholder public
+ * A failed check stays silent — offline, or on a dev build with a placeholder public
  * key, it fails on every launch. A failed install follows an explicit action.
  */
 @Injectable({ providedIn: 'root' })
@@ -115,7 +115,7 @@ export class UpdateStore {
       this.settings.setSkippedUpdate(version);
     }
 
-    // ⚠️ `_update` is left standing: the dot is what it feeds. Only the status moves.
+    // `_update` is left standing: the dot is what it feeds. Only the status moves.
     this._status.set('idle');
     await this.updater.discard();
   }

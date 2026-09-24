@@ -30,7 +30,7 @@ export class LocaleService {
   }
 
   /**
-   * ⚠️ Called after `SettingsStore.restore()`: the effect above only flushes after the
+   * Called after `SettingsStore.restore()`: the effect above only flushes after the
    * first render, which would show the interface in one language then the other.
    */
   restore(): void {

@@ -13,10 +13,7 @@
 </button>
 
 @if (menu.open()) {
-  <!-- ⚠️ The complete one. A note's properties used to be spread over four surfaces with
-       none of them complete: filing one from the date view took three clicks through the
-       selection bar, and pinning with the mouse took a full-screen modal for a boolean
-       that has its own filter chip in the header. -->
+  <!-- The complete one: every property of a note, from the card it is drawn on. -->
   <div appMenuPanel class="card-menu" data-testid="note-card-menu-panel" [style]="panelStyle()">
     <button
       appMenuItem
@@ -52,7 +49,7 @@
       {{ 'notes.copy' | transloco }}
     </button>
 
-    <!-- ⚠️ A folder belongs to one space, so this list is the **current** space's and
+    <!-- A folder belongs to one space, so this list is the **current** space's and
          moving the note elsewhere clears its folder. The two sections are shown together
          for that reason: the second would otherwise lie about what the first just did. -->
     @if (folders().length > 0 || currentFolderId() !== null) {
@@ -85,7 +82,7 @@
       }
     }
 
-    <!-- ⚠️ Flat, and it grows with the library: past a handful of spaces this wants the
+    <!-- Flat, and it grows with the library: past a handful of spaces this wants the
          command palette rather than a longer menu. -->
     @if (moveTargets().length > 0) {
       <p class="card-menu-title">{{ 'notes.moveToSpace' | transloco }}</p>

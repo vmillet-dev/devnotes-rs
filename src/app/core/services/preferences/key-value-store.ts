@@ -3,8 +3,8 @@ import { load } from '@tauri-apps/plugin-store';
 import type { Store, StoreOptions } from '@tauri-apps/plugin-store';
 
 /**
- * ⚠️ A token rather than a direct call to `load`: the Angular builder bundles the modules
- * before Vitest sees them, and `vi.mock` then intercepts only half the time.
+ * ⚠️ A token rather than a direct call to `load`: the Angular builder bundles the modules before
+ * Vitest sees them, and `vi.mock` then intercepts only half the time.
  */
 type PreferencesStoreLoader = (path: string, options: StoreOptions) => Promise<Store>;
 
@@ -16,23 +16,16 @@ export const PREFERENCES_STORE_LOADER = new InjectionToken<PreferencesStoreLoade
 const AUTO_SAVE_MS = 300;
 
 /**
- * One file of string preferences, read synchronously.
- *
- * ⚠️ The API stays synchronous where the plugin's is not: a preference is read when a
- * component is constructed, and an async `read` would show the interface in one state
- * then the other. Outside Tauri it degrades to a memory cache.
- *
- * ⚠️ Two of these exist, because a preference belongs to one of two scopes — the
- * **application** (theme, language, keys, window) or the **library** (which notes these
- * are about). They are separate files so that opening another library changes the second
- * and leaves the first alone.
+ * One file of string preferences, read synchronously — a preference is read while a component
+ * is constructed, and an async read would show two states in turn. Outside Tauri it degrades
+ * to a memory cache. Two subclasses, one per scope: the application and the library.
  */
 export abstract class KeyValueStore {
   private readonly load = inject(PREFERENCES_STORE_LOADER);
   private readonly cache = new Map<string, string>();
   private store: Store | null = null;
 
-  /** ⚠️ Call before the first read, which would otherwise answer `null`. */
+  /** Before the first read, which would otherwise answer `null`. */
   protected async open(path: string): Promise<void> {
     this.cache.clear();
     this.store = null;
@@ -60,10 +53,7 @@ export abstract class KeyValueStore {
     void this.store?.set(key, value).catch(() => undefined);
   }
 
-  /**
-   * ⚠️ Removed, not emptied: a guard that reads "has this key" — the samples marker —
-   * would take an empty string for an answer.
-   */
+  /** Removed, not emptied: a guard asking "is this key here" would take `''` for an answer. */
   forget(key: string): void {
     this.cache.delete(key);
     void this.store?.delete(key).catch(() => undefined);

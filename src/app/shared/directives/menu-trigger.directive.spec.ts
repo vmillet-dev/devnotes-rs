@@ -60,7 +60,7 @@ describe('MenuTriggerDirective', () => {
     expect(fixture.componentInstance.closes()).toBe(1);
   });
 
-  /** ⚠️ Focus would otherwise go to `<body>`, leaving the keyboard nowhere. */
+  /** Focus would otherwise go to `<body>`, leaving the keyboard nowhere. */
   it('gives focus back to the anchor when it closes', async () => {
     await open();
     element('entry')!.focus();

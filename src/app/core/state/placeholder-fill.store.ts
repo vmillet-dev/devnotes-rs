@@ -53,7 +53,7 @@ export class PlaceholderFillStore {
    * with fields asks for them first, a todo list gives its Markdown — it has no `content`
    * at all — and anything else goes as it is.
    *
-   * ⚠️ It says which note it took. The card's own button paints a tick on itself; the
+   * It says which note it took. The card's own button paints a tick on itself; the
    * keyboard has no such surface, and the ring may be on a card that is scrolled away.
    */
   async copyNote(note: Note): Promise<void> {

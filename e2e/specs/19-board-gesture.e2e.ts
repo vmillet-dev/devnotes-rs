@@ -14,12 +14,12 @@ import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
  * The gesture, against a real database: what a drop files, what a move writes, and what
  * survives a restart of the front end.
  *
- * ⚠️ The pointer events are dispatched from inside the page, like every other input this
+ * The pointer events are dispatched from inside the page, like every other input this
  * suite sends — the embedded driver drops WebDriver actions. So these prove the wiring,
  * grip to store to command to database; the WebView's own pointer capture is what the
  * unit specs cover.
  *
- * ⚠️ A space of its own: eighteen files run before this one and leave notes in the home
+ * A space of its own: eighteen files run before this one and leave notes in the home
  * space, so "the loose cards are exactly these" would be a claim about the whole corpus.
  */
 
@@ -27,7 +27,7 @@ import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 const CARD_HEIGHT = 150;
 
 /**
- * `folders::board::ZONE_HEADER`. ⚠️ The one number in that module the sweep cannot read:
+ * `folders::board::ZONE_HEADER`. The one number in that module the sweep cannot read:
  * the header is its padding plus wherever the text lands, and no stylesheet states it. So it
  * is measured here instead, against the assembled application.
  */
@@ -96,7 +96,7 @@ describe('Arranging the board', () => {
     );
   });
 
-  /** ⚠️ A filed card flows inside its zone; only a loose one has a place of its own. */
+  /** A filed card flows inside its zone; only a loose one has a place of its own. */
   it('forgets where a filed card sat', async () => {
     const stillLoose = await browser.execute(
       (selector: string) => document.querySelector(selector) !== null,
@@ -137,14 +137,14 @@ describe('Arranging the board', () => {
     expect(await board.frameOf(perfId)).toEqual(moved);
   });
 
-  /** ⚠️ Moving a zone carries its notes: they flow inside it, so there is nothing to carry. */
+  /** Moving a zone carries its notes: they flow inside it, so there is nothing to carry. */
   it('refiles nothing when a zone is moved', async () => {
     const view = await bridge.queryNotes(query({ spaceId, folderId: perfId }));
     expect(view.sections.flatMap((section) => section.notes).map((note) => note.id)).toEqual([filedId]);
   });
 
   /**
-   * ⚠️ The rule Unreal's own comment box gets wrong: a frame that owns whatever it overlaps
+   * The rule Unreal's own comment box gets wrong: a frame that owns whatever it overlaps
    * silently refiles notes the day it is stretched. Membership comes from the drop.
    */
   it('captures and releases nothing when a zone is resized', async () => {
@@ -177,7 +177,7 @@ describe('Arranging the board', () => {
   });
 
   /**
-   * ⚠️ The keyboard twin, and it is not optional: the linter requires it and the
+   * The keyboard twin, and it is not optional: the linter requires it and the
    * application has held that line everywhere else. It is the path the selection bar
    * already offers, which is why the gesture adds to it rather than replacing it.
    */
@@ -218,13 +218,8 @@ describe('Arranging the board', () => {
   });
 
   /**
-   * ⚠️ A frame is computed once, on the board's first read, and never again — so a card
-   * filed into a zone that was already full flowed out of sight behind its scrollbar.
-   */
-  /**
-   * ⚠️ Membership was the one thing no overlay covered. The ghost the drag drew vanished
-   * on `pointerup` and the card was drawn again where the last view had it — inside its
-   * old zone, or loose at its old place — until the round trip landed (#282).
+   * Membership is staged like a place: the card is drawn in its new home the moment it is let
+   * go of, before the round trip lands.
    */
   it('draws a card in its new home the moment it is let go of', async () => {
     const moving = (await bridge.createNote(draft({ spaceId, title: 'Bascule instantanee' }))).id;
@@ -235,13 +230,12 @@ describe('Arranging the board', () => {
       'the new card to reach the background',
     );
 
-    // ⚠️ No settling: this reads the board the frame after the drop, which is where the
-    // card used to be drawn back at its old place. The unit specs are what pin it with
+    // No settling: this reads the board the frame after the drop. The unit specs pin it with
     // the view held still; here a fast round trip could answer the same thing honestly.
     await gestures.dropCardInto(moving, migrationsId);
     expect(await board.holderOf(moving)).toBe(migrationsId);
 
-    // ⚠️ Let it land before the opposite gesture, or the two files race each other.
+    // Let it land before the opposite gesture, or the two files race each other.
     await eventually(
       () => bridge.queryNotes(query({ spaceId, folderId: migrationsId })),
       (view) => view.sections.flatMap((section) => section.notes).some((note) => note.id === moving),
@@ -258,7 +252,7 @@ describe('Arranging the board', () => {
       ),
     ).toBeTruthy();
 
-    // ⚠️ Taken off the board again. This card was let go of at the place the scenario
+    // Taken off the board again. This card was let go of at the place the scenario
     // above drops its own, and the last scenario in this file asserts that no loose card
     // covers another — a claim about the whole background, which this one would break.
     await bridge.deleteNote(moving);
@@ -281,10 +275,8 @@ describe('Arranging the board', () => {
   });
 
   /**
-   * ⚠️ The report: a note captured from the clipboard was written under a card that was
-   * already on the board. A note created now is the most recently updated, so it arrives
-   * first in the list and used to be handed the seat its index gave it — seat zero, where
-   * the board's first read had already put another card.
+   * A note created now is the most recently updated, so it comes first in the list: it must
+   * not be handed seat zero, where another card already sits.
    */
   it('puts a note it has never placed on free ground', async () => {
     await bridge.createNote(draft({ spaceId, title: 'Collé du presse-papiers' }));
@@ -314,10 +306,8 @@ describe('Arranging the board', () => {
   });
 
   /**
-   * ⚠️ `columns_in` used to take a scrollbar off the width that `.zone-body` was not
-   * showing. A zone dragged a little narrower than nominal still flowed two cards across
-   * and was told it held one, so the next card filed in bought a whole extra row — a band
-   * of empty board under the cards, which is what was reported (#284).
+   * A zone dragged a little narrower than nominal still flows two cards across, so the next
+   * card filed in needs at most one more row.
    */
   it('adds one row and not two to a zone dragged narrower than nominal', async () => {
     const rapports = (await bridge.createFolder({ spaceId, name: 'Rapports' })).id;
@@ -347,13 +337,13 @@ describe('Arranging the board', () => {
     expect(shaved?.width).toBeGreaterThan(0);
     expect(await board.zoneRows(rapports)).toEqual([2, 1]);
     expect(await board.zoneSlack(rapports)).toBeLessThan(CARD_HEIGHT);
-    // ⚠️ Guessed in Rust, so it has to be checked where it is drawn: one pixel over and
+    // Guessed in Rust, so it has to be checked where it is drawn: one pixel over and
     // the body is short of its own rows, which costs a scrollbar and then a column.
     expect(await board.zoneHeaderHeight(rapports)).toBeLessThanOrEqual(ZONE_HEADER);
   });
 
   /**
-   * ⚠️ The right button, because the left one is taken: dragging the background draws a
+   * The right button, because the left one is taken: dragging the background draws a
    * folder, and that gesture does not move. Zones are **not** selectable — a band picks up
    * cards only, so "delete the selection" cannot mean two different things.
    */
@@ -396,36 +386,35 @@ describe('Arranging the board', () => {
     it('sweeps nothing where there is nothing, and opens no bar', async () => {
       await gestures.bandSelect({ x: 20, y: 3000, width: 200, height: 200 });
 
-      // ⚠️ An assertion that nothing happened, so there is no condition to wait on: the
+      // An assertion that nothing happened, so there is no condition to wait on: the
       // pause is deliberately a duration.
       await browser.pause(800);
       expect(await selectionBar.bar().isExisting()).toBe(false);
     });
 
     /**
-     * ⚠️ `rgb(var(--amber-rgb) / 12%)` over a comma-separated variable is invalid, and the
-     * browser dropped it without a word: both bands were drawn as bare hairlines (#329).
+     * `rgb(var(--amber-rgb) / 12%)` over a comma-separated variable is invalid, and the browser
+     * drops it silently: both bands must actually be filled.
      */
     it('fills both bands with the accent while they are drawn', async () => {
       expect(await gestures.bandFill(2)).toMatch(/^rgba\(\d+, \d+, \d+, 0\.12\)$/);
       expect(await gestures.bandFill(0)).toMatch(/^rgba\(\d+, \d+, \d+, 0\.08\)$/);
     });
 
-    /** ⚠️ Or the browser's own menu opens at the end of every selection. */
+    /** Or the browser's own menu opens at the end of every selection. */
     it('refuses the browser’s own menu on the surface', async () => {
       expect(await gestures.contextMenuRefused()).toBe(true);
     });
 
     /**
-     * ⚠️ The menu opens on whatever is under the pointer when the button comes up, and a
-     * sweep that overshoots ends over the header (#321). Refused there once, and only once:
-     * the search field's own menu must still open afterwards.
+     * A sweep that overshoots ends over the header, where the menu is refused once, and only
+     * once: the search field's own menu must still open afterwards.
      */
     it('refuses it where a sweep ends off the board, and only that once', async () => {
       expect(await gestures.menusAfterSweep(testid('search-input'))).toEqual([true, false]);
     });
 
-    /** ⚠️ The existing gesture does not move: the left button still draws a folder. */
+    /** The existing gesture does not move: the left button still draws a folder. */
     it('leaves the left button drawing a folder', async () => {
       const before = (await bridge.listFolders(spaceId)).length;
 
@@ -444,7 +433,7 @@ describe('Arranging the board', () => {
   /**
    * Eleven cards in a zone was eleven clicks, and the zone already knows what it holds.
    *
-   * ⚠️ It ticks what the zone is **showing**, dimmed cards included: the board dims rather
+   * It ticks what the zone is **showing**, dimmed cards included: the board dims rather
    * than narrowing, so a card the search filtered out of the date view is still filed here.
    */
   describe('selecting a whole folder', () => {
@@ -491,11 +480,11 @@ describe('Arranging the board', () => {
   });
 
   /**
-   * ⚠️ Last in the file: it rewrites every frame and every seat of the space, so any
+   * Last in the file: it rewrites every frame and every seat of the space, so any
    * scenario asserting a place of its own has to have run already.
    */
   describe('tidying it up', () => {
-    /** ⚠️ The half worth a corner click: a zone sized by hand is the only manual work a
+    /** The half worth a corner click: a zone sized by hand is the only manual work a
      *  board holds, and the frequent gesture must not be what overwrites it. */
     it('aligns the loose cards without touching a single zone', async () => {
       await openBoard();
@@ -508,7 +497,7 @@ describe('Arranging the board', () => {
 
       await board.align();
 
-      // ⚠️ An assertion that nothing happened, so there is no condition to wait on: the
+      // An assertion that nothing happened, so there is no condition to wait on: the
       // pause is deliberately a duration.
       await browser.pause(1500);
       expect(await storedFrame(perfId)).toEqual(dragged);
@@ -533,7 +522,7 @@ describe('Arranging the board', () => {
     });
 
     /**
-     * ⚠️ The result happens off screen otherwise. The pan is a native scroll nothing else
+     * The result happens off screen otherwise. The pan is a native scroll nothing else
      * resets, so a board panned to the right lands everything at the top left and leaves
      * empty ground under a banner announcing success.
      */
@@ -558,9 +547,9 @@ describe('Arranging the board', () => {
     });
 
     /**
-     * ⚠️ Non-optional: it overwrites sizes chosen by hand, which dragging cannot undo.
+     * Non-optional: it overwrites sizes chosen by hand, which dragging cannot undo.
      *
-     * ⚠️ It drags a zone away first rather than leaning on the scenario above. The count
+     * It drags a zone away first rather than leaning on the scenario above. The count
      * is computed on what actually **moved**, so reorganising a board already in order
      * opens no undo window at all — which is the point, and which made this read as a
      * missing bar when it was a correct refusal.

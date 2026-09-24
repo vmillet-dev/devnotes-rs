@@ -19,7 +19,7 @@ import {
 import { toIsoString, toNote } from './note.mapper';
 
 /**
- * ⚠️ `BoardNote` spreads a `DisplayNote` on the wire, so the note has to be lifted out of
+ * `BoardNote` spreads a `DisplayNote` on the wire, so the note has to be lifted out of
  * it here: `toNote` is what turns the ISO instants back into `Date`s.
  */
 function toBoardNote({ matches, position, ...note }: WireBoardNote): BoardNote {

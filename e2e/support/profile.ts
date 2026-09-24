@@ -17,7 +17,7 @@ function e2eDataDir(): string {
 }
 
 /**
- * ⚠️ A second directory, and on Linux it is not the first one:
+ * A second directory, and on Linux it is not the first one:
  * `tauri-plugin-window-state` writes under `app_config_dir()` while everything else
  * writes under `app_data_dir()`. Windows cannot tell the two apart, so wiping only the
  * data directory looks complete there and leaves the geometry behind on Linux.
@@ -31,7 +31,7 @@ function e2eConfigDir(): string {
 }
 
 /**
- * ⚠️ Under the data directory, not the config one: `tauri-plugin-store` resolves a
+ * Under the data directory, not the config one: `tauri-plugin-store` resolves a
  * relative path against `BaseDirectory::AppData`. Worth spelling out because a test
  * looking in the wrong one still passes on Windows, where the two are the same path.
  */
@@ -40,12 +40,9 @@ export function preferencesPath(): string {
 }
 
 /**
- * Where the open library's files sit.
- *
- * ⚠️ Read out of the registry rather than assumed. A library is no longer the profile
- * root: it lives under `libraries/<id>/`, and which one is open is a thing the
- * application decides — a helper that guessed would read the wrong `vault.json` the
- * moment a spec switches library.
+ * Where the open library's files sit, read out of the registry: libraries live under
+ * `libraries/<id>/`, and a helper that guessed would read the wrong `vault.json` the moment a
+ * spec switches library.
  */
 export function openLibraryDir(): string {
   const profile = e2eDataDir();
@@ -91,7 +88,7 @@ export function resetProfile(): void {
   }
   rmSync(homeSpaceMarker(), { force: true });
 
-  // ⚠️ `force` covers "it was not there", the ordinary case, but it also swallows the one
+  // `force` covers "it was not there", the ordinary case, but it also swallows the one
   // that matters: a previous run still holding the database open. The wipe then does
   // nothing, the suite starts on the corpus the last run left, and every failure after
   // it blames the wrong thing.

@@ -63,7 +63,7 @@ describe('SecurityPageComponent', () => {
   });
 
   /**
-   * ⚠️ Rust reads this at launch, before the front end exists — turning it off has to
+   * Rust reads this at launch, before the front end exists — turning it off has to
    * reach the preferences file, which is the only thing the back end sees. Which is
    * exactly why it waits for Appliquer: until then the switch is a draft.
    */
@@ -83,7 +83,7 @@ describe('SecurityPageComponent', () => {
   });
 
   /**
-   * ⚠️ The two together, which is the whole of this page: the phrase unwraps the key and
+   * The two together, which is the whole of this page: the phrase unwraps the key and
    * the copies are wrapped under it too, so a page carrying only one of them would let
    * someone change the phrase without meeting what the change reaches.
    */
@@ -102,10 +102,7 @@ describe('SecurityPageComponent', () => {
   const confirmStrip = (): HTMLElement | null =>
     fixture.nativeElement.querySelector('[data-testid="backup-confirm"]');
 
-  /**
-   * ⚠️ The whole of #251: the copies were taken at unlock, kept beside the library and
-   * pruned to three, and none of it said anywhere the application could be read from.
-   */
+  /** Taken at unlock, kept beside the library, pruned to three: said where it can be read. */
   describe('the copies it lists', () => {
     it('shows one row per copy, with when it was taken and how big it is', () => {
       expect(rows()).toHaveLength(2);
@@ -113,7 +110,7 @@ describe('SecurityPageComponent', () => {
       expect(rows()[0].textContent).toContain('2.4 Mo');
     });
 
-    /** ⚠️ Listed, never offered: it opens for nobody. */
+    /** Listed, never offered: it opens for nobody. */
     it('offers no restore on a copy whose key file did not travel with it', () => {
       expect(restoreButton('2026-07-25_09-00-00')).not.toBeNull();
       expect(restoreButton('2026-07-24_09-00-00')).toBeNull();
@@ -121,7 +118,7 @@ describe('SecurityPageComponent', () => {
     });
 
     /**
-     * ⚠️ The trigger is replaced by a sentence naming what will happen, and the confirm
+     * The trigger is replaced by a sentence naming what will happen, and the confirm
      * sits somewhere else: a second click on the button that fired it is the guard a
      * double click defeats.
      */

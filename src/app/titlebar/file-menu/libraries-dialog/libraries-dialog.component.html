@@ -54,7 +54,7 @@
           >
             {{ 'libraries.rename' | transloco }}
           </button>
-          <!-- ⚠️ Neither the open one nor the last: deleting the files under a live
+          <!-- Neither the open one nor the last: deleting the files under a live
                connection is how a library that was merely unwanted takes the process down
                with it, and the last one leaves the gate with nothing to offer. -->
           @if (!row.isOnlyOne && !row.isOpen) {
@@ -71,7 +71,7 @@
         </div>
       </div>
 
-      <!-- ⚠️ The trigger is replaced by a sentence naming what goes, and the confirm sits
+      <!-- The trigger is replaced by a sentence naming what goes, and the confirm sits
            somewhere else — the treatment emptying the trash gets, for the same reason:
            it is irreversible and it takes everything at once. -->
       @if (store.pendingDeletion()?.entry?.id === row.entry.id) {

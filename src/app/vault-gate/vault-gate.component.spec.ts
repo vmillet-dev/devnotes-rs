@@ -70,7 +70,7 @@ describe('VaultGateComponent', () => {
       await fixture.whenStable();
     });
 
-    /** ⚠️ The form would be an invitation to do the one thing that cannot work. */
+    /** The form would be an invitation to do the one thing that cannot work. */
     it('replaces the passphrase form with a way out', () => {
       expect(field('vault-passphrase')).toBeNull();
       expect(fixture.debugElement.query(By.css('[data-testid="vault-damaged"]'))).not.toBeNull();
@@ -108,7 +108,7 @@ describe('VaultGateComponent', () => {
     });
 
     /**
-     * ⚠️ Said before the round trip: deriving takes 224 ms, and answering "too short"
+     * Said before the round trip: deriving takes 224 ms, and answering "too short"
      * after it reads as the application thinking about it.
      */
     it('says a passphrase is too short without asking the back end', async () => {
@@ -128,7 +128,7 @@ describe('VaultGateComponent', () => {
     });
 
     /**
-     * ⚠️ Whatever happens, success included: a passphrase left in a DOM node is a
+     * Whatever happens, success included: a passphrase left in a DOM node is a
      * passphrase in a memory dump.
      */
     it('clears the field as soon as it has been sent', async () => {
@@ -207,11 +207,7 @@ describe('VaultGateComponent', () => {
       expect(warning.nativeElement.textContent.trim()).not.toBe('');
     });
   });
-  /**
-   * ⚠️ A forgotten passphrase is final by design, and the gate used to offer nothing but
-   * the field: the only way past was finding the profile directory and moving files by
-   * hand, which is not something an application should require anyone to know.
-   */
+  /** A forgotten passphrase is final: the gate offers a way past that needs no file moved by hand. */
   describe('a passphrase nobody remembers', () => {
     const click = async (hook: string): Promise<void> => {
       (
@@ -229,7 +225,7 @@ describe('VaultGateComponent', () => {
       await fixture.whenStable();
     });
 
-    /** ⚠️ A fresh library has no phrase to have forgotten. */
+    /** A fresh library has no phrase to have forgotten. */
     it('offers the way out only on a library that already exists', async () => {
       expect(fixture.debugElement.query(By.css('[data-testid="vault-forgotten"]'))).not.toBeNull();
 
@@ -240,7 +236,7 @@ describe('VaultGateComponent', () => {
       expect(fixture.debugElement.query(By.css('[data-testid="vault-forgotten"]'))).toBeNull();
     });
 
-    /** ⚠️ Instead of the form, never beside it: this reads as giving up, not a shortcut. */
+    /** Instead of the form, never beside it: this reads as giving up, not a shortcut. */
     it('replaces the field with what would be lost, rather than acting', async () => {
       await click('vault-forgotten');
 
@@ -268,7 +264,7 @@ describe('VaultGateComponent', () => {
     });
 
     /**
-     * ⚠️ The key file travels, so what is left has no library at all — `absent`, not
+     * The key file travels, so what is left has no library at all — `absent`, not
      * `locked`, which is what turns the gate into the one that asks for a new phrase.
      */
     it('archives the library and comes back asking for a new phrase', async () => {
@@ -293,7 +289,7 @@ describe('VaultGateComponent', () => {
   });
 
   /**
-   * ⚠️ The File menu, where the libraries live, does not exist until one is open: the gate
+   * The File menu, where the libraries live, does not exist until one is open: the gate
    * is the only place a user holding several can say which one they have the phrase for.
    */
   describe('which library it asks for', () => {
@@ -352,7 +348,7 @@ describe('VaultGateComponent', () => {
       expect(appWindow.reloaded).toBe(1);
     });
 
-    /** ⚠️ Archiving "the library" without naming which is the worst place to be vague. */
+    /** Archiving "the library" without naming which is the worst place to be vague. */
     it('names it on the way out too', async () => {
       await withLibraries(['Boulot']);
 

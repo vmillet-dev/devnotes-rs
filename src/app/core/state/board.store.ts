@@ -37,18 +37,12 @@ import { Criteria, NotesQueryStore } from './notes-query.store';
 import { NotesRevision } from './notes-revision';
 import { SpacesStore } from './spaces.store';
 
-/**
- * ⚠️ One key per space, not one serialised map: a user who arranges their SQL space and
- * leaves the others alone must not have the switch follow them around.
- */
+/** One key per space, not one map: arranging one space must not move the switch on the others. */
 function preferenceKey(spaceId: string): string {
   return `devnotes.notes.view.${spaceId}`;
 }
 
-/**
- * ⚠️ Long enough that dragging three cards in a row is one write, short enough that a
- * quit right after a drop has already been beaten to it.
- */
+/** Three cards dragged in a row are one write, and a quit right after a drop is still beaten. */
 export const LAYOUT_SAVE_DEBOUNCE_MS = 400;
 
 interface BoardParams {
@@ -66,13 +60,9 @@ const sameParams = sameBy<BoardParams>({
 });
 
 /**
- * What the overlay still has to cover once a view has arrived: a place the view does not
- * carry yet. One it agrees with is redundant, and letting go of it is what lets the view
- * move that card again.
- *
- * ⚠️ A place the view says nothing about is **kept**. The view a reload answers with is
- * the board as it was read, and a card it has never heard of — one dropped a moment ago —
- * is exactly the case the overlay exists for.
+ * What the overlay still covers once a view has arrived: places the view does not carry yet.
+ * A place the view says nothing about is kept — a card dropped a moment ago is exactly what
+ * the overlay is for.
  */
 function stillCovering<T>(
   staged: ReadonlyMap<string, T>,
@@ -118,10 +108,8 @@ function membershipOf(view: BoardView | null): ReadonlyMap<string, string | null
 }
 
 /**
- * Where a card sits once the overlay has had its say.
- *
- * ⚠️ `has` and not `??`: `null` is a value here — it is the background — and a staged
- * `null` coalesced away is a card dropped out of a zone that never leaves it.
+ * Where a card sits once the overlay has had its say. ⚠️ `has` and not `??`: `null` is the
+ * background, and a staged `null` coalesced away keeps a card in the zone it was dragged out of.
  */
 function sittingIn(
   staged: ReadonlyMap<string, string | null>,
@@ -139,11 +127,8 @@ function sameBoardParams(a: BoardParams | undefined, b: BoardParams | undefined)
 }
 
 /**
- * Which of the two views is showing, and what the board draws.
- *
- * ⚠️ The board is unavailable on "all spaces": a folder belongs to a space, so there would
- * be no zones to draw. The switch falls back to the date view rather than disappearing
- * mid-gesture.
+ * Which of the two views is showing, and what the board draws. The board is unavailable on
+ * "all spaces", which have no zones: the switch falls back to the date view.
  */
 @Injectable({ providedIn: 'root' })
 export class BoardStore {
@@ -167,18 +152,14 @@ export class BoardStore {
   readonly isBoard = computed(() => this.mode() === 'board');
 
   /**
-   * Whether the board is actually the thing on screen, which is not the same question.
-   *
-   * ⚠️ The inside of a folder is a **flat grid**, not a board, so an open folder takes the
-   * canvas back whatever the switch says. Spelled here once rather than in the page, the
-   * canvas keyboard and the selection: three copies of one predicate is how they drift.
+   * Whether the board is actually on screen: an open folder is a flat grid whatever the switch
+   * says. Spelled once, for the page, the canvas keyboard and the selection.
    */
   readonly isShowing = computed(() => this.isBoard() && this.openFolder.activeFolderId() === null);
 
   /**
-   * ⚠️ `undefined` means "do not ask", which is what keeps the board idle on the date
-   * view, and an `equal` comparator is what keeps the fresh literal from firing a query
-   * on every clock tick — the same trap `NotesQueryStore` documents.
+   * `undefined` keeps the board idle on the date view. The `equal` comparator keeps the
+   * fresh literal from firing a query on every clock tick.
    */
   private readonly queryParams = computed<BoardParams | undefined>(
     () => {
@@ -206,14 +187,9 @@ export class BoardStore {
   private readonly view = retained(this.viewResource);
 
   /**
-   * What a gesture has moved and no view has come back with yet. ⚠️ Laid over the view
-   * rather than written into it: without this the card snaps back to where the server last
-   * saw it for as long as the save is in flight.
-   *
-   * ⚠️ And it is let go of when a **view** carries the place, never when the write
-   * returns. `reload()` only asks: the view still being drawn is the one read before the
-   * drag, so clearing on the write uncovered it for a whole round trip — the card flashed
-   * back to where it came from and then settled.
+   * What a gesture moved and no view has come back with yet, laid over the view so a card does
+   * not snap back while the save is in flight. ⚠️ Let go of when a view carries the place, never
+   * when the write returns: the view still drawn then is the one read before the drag.
    */
   private readonly stagedFrames = linkedSignal<BoardView | null, ReadonlyMap<string, BoardFrame>>({
     source: () => this.view(),
@@ -226,13 +202,9 @@ export class BoardStore {
   });
 
   /**
-   * Which folder a drop has decided a card is in, before any view says so. ⚠️ The third
-   * overlay, and the one that was missing: a place was staged and a **membership** was
-   * not, so a card dropped into a zone was drawn back where it came from until the round
-   * trip landed, and one dropped out snapped back into its zone for just as long (#282).
-   *
-   * Released on the same rule as the other two — when a view agrees, never when the write
-   * returns. The difference is the failure: see `dropCard`.
+   * Which folder a drop has put a card in, before any view says so; without it a card snaps
+   * back into or out of its zone for a round trip. Released like the other two, when a view
+   * agrees. The failure differs: see `dropCard`.
    */
   private readonly stagedFiling = linkedSignal<BoardView | null, ReadonlyMap<string, string | null>>({
     source: () => this.view(),
@@ -267,12 +239,8 @@ export class BoardStore {
       });
   });
   /**
-   * Every card the board draws, zones first and then the background — dimmed ones
-   * **included**.
-   *
-   * ⚠️ The board dims where the canvas narrows, so a card the search filtered out of the
-   * date view is still a card on screen and still in its folder. Anything resolving a
-   * selection or a focus against the canvas's list silently drops it.
+   * Every card the board draws, dimmed ones included: the board dims where the canvas narrows,
+   * so a card the search hides from the date view is still on screen and in its folder.
    */
   readonly visibleNotes = computed<readonly Note[]>(() => [
     ...this.zones().flatMap((zone) => zone.notes.map((entry) => entry.note)),
@@ -300,24 +268,20 @@ export class BoardStore {
   /** Where a band was drawn, held until it has been given a name. */
   readonly pendingZone = this._pendingZone.asReadonly();
 
-  /** ⚠️ Every staged move, or a batch interrupted halfway leaves half a board. */
+  /** Every staged move at once, or an interrupted batch leaves half a board. */
   private readonly writeLayout = debounced<void>(() => void this.persistLayout(), LAYOUT_SAVE_DEBOUNCE_MS);
 
   /**
-   * ⚠️ Bumped by anything that moves the whole board at once. The pan is a native scroll
-   * on `.board` and nothing resets it, so an arrangement that lands everything back at the
-   * top left while the user is panned elsewhere produces its result **off screen**: empty
-   * dotted ground and a banner announcing success, which is indistinguishable from an
-   * erasure. The board watches this and pans home.
+   * ⚠️ Bumped by anything that moves the whole board at once. The pan is a native scroll that
+   * nothing resets, so an arrangement landing at the top left while the user is panned
+   * elsewhere shows empty ground and a success banner. The board watches this and pans home.
    */
   private readonly _arrangements = signal(0);
   readonly arrangements = this._arrangements.asReadonly();
 
   /**
-   * ⚠️ The same defect seen from the other end. Undoing puts the board back at the
-   * coordinates it was dragged to, while the pan is now at the origin `arrange` sent it
-   * to — so the undo would land its own result off screen. The board watches this and pans
-   * back to where it was before it was sent home.
+   * The same from the other end: an undo lands where the cards were dragged, while the pan sits
+   * where `arrange` sent it. The board watches this and pans back.
    */
   private readonly _restorations = signal(0);
   readonly restorations = this._restorations.asReadonly();
@@ -355,11 +319,8 @@ export class BoardStore {
   }
 
   /**
-   * The note a card on the board is showing, zone or background.
-   *
-   * ⚠️ The twin of `NotesQueryStore.findVisible`, and the board needs one of its own: it
-   * **dims** where the canvas **narrows**, so a card here can be ticked, moved or deleted
-   * while its note is nowhere in the canvas view.
+   * The note a card on the board is showing, zone or background: the twin of
+   * `NotesQueryStore.findVisible`, since a dimmed card can be ticked, moved or deleted here.
    */
   findVisible(id: string): Note | null {
     for (const zone of this.zones()) {
@@ -385,11 +346,8 @@ export class BoardStore {
   }
 
   /**
-   * A drop decides membership, in both directions. `folderId` of `null` takes the note out
-   * of its folder and leaves it where it was dropped.
-   *
-   * ⚠️ Filing goes through the batch command, which answers what it changed — the same
-   * path the selection bar takes, so the two cannot drift.
+   * A drop decides membership both ways; `folderId` of `null` unfiles the note where it was
+   * dropped. Through the batch command, the path the selection bar takes too.
    */
   async dropCard(noteId: string, folderId: string | null, position: BoardPoint): Promise<boolean> {
     if (folderId === null) {
@@ -401,9 +359,8 @@ export class BoardStore {
       this.folders.fileMany([noteId], folderId),
     );
 
-    // ⚠️ Dropped on failure, where a refused **place** is kept. A place the server would
-    // not take is worth leaving on screen with a banner beside it; a membership it would
-    // not take is a lie about which folder the note is in.
+    // Dropped on failure, where a refused place is kept: a membership the server refused is a
+    // lie about which folder the note is in.
     if (filed === null) {
       this.unstageFiling(noteId);
       return false;
@@ -456,8 +413,8 @@ export class BoardStore {
     );
     if (!created) return false;
 
-    // ⚠️ Written straight through rather than staged: the board is about to reload, and a
-    // staged frame keyed on a folder the reload has only just heard of would be dropped.
+    // Written straight through: the board is about to reload, and a staged frame keyed on a
+    // folder the reload has only just heard of would be dropped.
     await this.notifier.attempt('errors.boardSaveFailed', () =>
       this.repository.saveLayout([{ folderId: created.id, frame }], []),
     );
@@ -474,20 +431,16 @@ export class BoardStore {
       this.repository.saveLayout(zones, cards),
     );
 
-    // ⚠️ The overlay is dropped on neither outcome. A failure has to keep it, or every
-    // card snaps back with nothing on screen saying why; a success has to keep it until
-    // the reload lands, which is the whole of this fix.
+    // Kept either way: a failure without it snaps every card back silently, and a success
+    // needs it until the reload lands.
     if (written === null) return;
 
     this.reload();
   }
 
   /**
-   * Puts the space back in order, as far as `scope` allows.
-   *
-   * ⚠️ It answers what moved and the layout it **replaced**, and the caller is what offers
-   * that back. `everything` overwrites sizes chosen by hand, which is the one board gesture
-   * no amount of dragging walks back.
+   * Puts the space back in order, as far as `scope` allows, and answers what moved and the
+   * layout it replaced, for the caller to offer back.
    */
   async arrange(scope: BoardScope): Promise<BoardArrangement | null> {
     const spaceId = this.spaces.activeSpaceId();
@@ -498,9 +451,8 @@ export class BoardStore {
     );
     if (done === null) return null;
 
-    // ⚠️ Dropped rather than left to expire: the overlay covers places a gesture staged,
-    // and every one of them has just been overwritten. Kept, it would draw the cards back
-    // where the drag left them until a view happened to agree.
+    // Dropped: every staged place has just been overwritten, and would draw the cards back
+    // where the drag left them.
     this.stagedFrames.set(new Map());
     this.stagedCards.set(new Map());
     this._arrangements.update((count) => count + 1);

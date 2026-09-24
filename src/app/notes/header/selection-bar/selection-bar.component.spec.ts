@@ -42,7 +42,7 @@ describe('SelectionBarComponent', () => {
   });
 
   /**
-   * ⚠️ Menus, not fields. Both are **commands** — they reset their own value after every
+   * Menus, not fields. Both are **commands** — they reset their own value after every
    * change — so a `<select>` announced a combobox whose current value was "Ranger dans".
    */
   function entries(kind: string): string[] {
@@ -99,7 +99,7 @@ describe('SelectionBarComponent', () => {
       await fixture.whenStable();
     });
 
-    /** ⚠️ Both directions are one control: unfiling is as much a filing as any other. */
+    /** Both directions are one control: unfiling is as much a filing as any other. */
     it('offers every folder and a way back out of one', async () => {
       await openMenu('selection-file');
 

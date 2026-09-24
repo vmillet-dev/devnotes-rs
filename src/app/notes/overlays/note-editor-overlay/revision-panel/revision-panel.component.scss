@@ -1,6 +1,6 @@
 @use 'mixins' as *;
 
-// ⚠️ The 20px inset every band of the editor carries itself: the rule runs full width, the
+// The 20px inset every band of the editor carries itself: the rule runs full width, the
 // rows do not touch the panel's edges.
 .revisions {
   border-top: 1px solid var(--line-soft);
@@ -35,7 +35,7 @@
   list-style: none;
   margin: 4px 0 0;
   padding: 0;
-  // ⚠️ Capped and scrolling: twenty rows would push the editor's own footer off screen.
+  // Capped and scrolling: twenty rows would push the editor's own footer off screen.
   max-height: 168px;
   overflow-y: auto;
 }
@@ -113,7 +113,7 @@
   font-size: 10.5px;
 }
 
-// ⚠️ Capped and scrolling like the list was: a long body would push the footer off screen.
+// Capped and scrolling like the list was: a long body would push the footer off screen.
 .diff {
   @include surface(var(--bg-0), 6px);
 
@@ -144,7 +144,7 @@
   width: 1.4ch;
 }
 
-// ⚠️ Hue on the text, a faint tint behind it: `palette.test.mjs` holds every text colour
+// Hue on the text, a faint tint behind it: `palette.test.mjs` holds every text colour
 // at 4.5:1, and a tinted fill moves the background toward the colour it is made of.
 .restored {
   color: var(--green);
@@ -190,7 +190,7 @@
   }
 }
 
-// ⚠️ Red at rest, like every destructive control: it erases the current text.
+// Red at rest, like every destructive control: it erases the current text.
 .preview-restore {
   @include unstyled-control;
   @include hit-target;

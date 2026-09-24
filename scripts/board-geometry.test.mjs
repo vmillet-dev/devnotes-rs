@@ -3,21 +3,14 @@ import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 
 /**
- * The board is laid out twice: once in Rust, which decides how tall a zone has to be for
- * what is filed into it, and once by the browser, which actually flows the cards. Neither
- * side can see the other, both are valid on their own, and the only symptom of a
- * disagreement is a band of empty board under the cards — or a card behind a scrollbar.
+ * The board is laid out twice: in Rust, which decides how tall a zone must be for what is filed
+ * into it, and by the browser, which flows the cards. Neither sees the other, and the only
+ * symptom of a disagreement is a band of empty board under the cards, or a card behind a
+ * scrollbar. This holds the two against each other from the shipped files.
  *
- * ⚠️ That is exactly how #284 happened: `columns_in` took a scrollbar off the width that
- * `.zone-body` was not showing, said one column where the browser flowed two, and bought
- * a whole extra row for the next card filed in. No type catches it and no test did.
- *
- * ⚠️ `node --test` and not a `*.spec.ts`, like the other sweeps: this reads the shipped
- * stylesheets and the shipped Rust off disk, and the Angular builder compiles its specs
- * for a browser, where `node:fs` does not exist.
- *
- * What is **not** here, and cannot be: `ZONE_HEADER`. The header's height comes from its
- * padding plus whatever the text lands on, and no stylesheet states it.
+ * `node --test` and not a `*.spec.ts`: it reads the shipped stylesheets and Rust off disk, and
+ * the Angular builder compiles its specs for a browser. Not here, and cannot be: `ZONE_HEADER`,
+ * whose height comes from the text it lands on.
  */
 const BOARD_RS = 'src-tauri/src/folders/board.rs';
 const MIXINS = 'src/styles/_mixins.scss';
@@ -64,7 +57,7 @@ describe('the board is measured the same on both sides', () => {
     assert.equal(inBlock(MIXINS, '@mixin board-card', /width:\s*(\d+)px/), rustConst('CARD_WIDTH'));
   });
 
-  /** ⚠️ Fixed, not nominal: the zone's height is computed from this number of rows. */
+  /** Fixed, not nominal: the zone's height is computed from this number of rows. */
   it('agrees on how tall a card is', () => {
     assert.equal(inBlock(CARD_SCSS, '.card', /height:\s*(\d+)px/), rustConst('CARD_HEIGHT'));
   });
@@ -77,7 +70,7 @@ describe('the board is measured the same on both sides', () => {
     assert.equal(inBlock(ZONE_SCSS, '.zone-body', /padding:\s*(\d+)px/), rustConst('ZONE_PADDING'));
   });
 
-  /** ⚠️ `box-sizing` is `border-box`, so the hairline comes off the width Rust was given. */
+  /** `box-sizing` is `border-box`, so the hairline comes off the width Rust was given. */
   it('agrees on the zone hairline the width has to pay for', () => {
     assert.equal(inBlock(ZONE_SCSS, '.zone', /border:\s*(\d+)px solid/), rustConst('ZONE_BORDER'));
   });
@@ -101,7 +94,7 @@ describe('the board is measured the same on both sides', () => {
   });
 
   /**
-   * ⚠️ And to the height, which is the half that bites hardest: `.zone-body` is the box
+   * And to the height, which is the half that bites hardest: `.zone-body` is the box
    * that scrolls, so a zone one pixel short of its rows shows a vertical scrollbar, the
    * scrollbar takes a slice of the row, and the row wraps. Two across become one.
    */
@@ -113,7 +106,7 @@ describe('the board is measured the same on both sides', () => {
     );
   });
 
-  /** ⚠️ The dotted lattice every gesture snaps to: drift and a snapped board stops looking it. */
+  /** The dotted lattice every gesture snaps to: drift and a snapped board stops looking it. */
   it('snaps to the grid it draws', () => {
     const drawn = inBlock(BOARD_SCSS, '.board', /background-size:\s*(\d+)px/);
 

@@ -2,27 +2,19 @@ import { Injectable } from '@angular/core';
 import { PREFERENCES_FILE } from '@core/ipc/bindings';
 import { KeyValueStore, PREFERENCES_STORE_LOADER } from './key-value-store';
 
-// Re-exported from where it was, so the dozen specs that substitute the plugin keep one
-// import to reach for.
+// Re-exported so the specs substituting the plugin have one import to reach for.
 export { PREFERENCES_STORE_LOADER };
 
 /**
- * ⚠️ `app_data_dir()`, not `app_config_dir()`: `tauri-plugin-store` resolves a relative
- * path against `BaseDirectory::AppData`. The two are the same directory on Windows and
- * only Linux splits them.
+ * `tauri-plugin-store` resolves a relative path against `BaseDirectory::AppData`: the same as
+ * the config directory on Windows, not on Linux.
  */
 const STORE_FILE = PREFERENCES_FILE;
 
 /**
- * ⚠️ Everything a key can be **except** what belongs to one library's notes. Which
- * library is open changes nothing here: the theme, the language, the keys, the tray and
- * the window geometry follow the person, not the corpus.
- *
- * ⚠️ The line is one prefix. `devnotes.notes.*` is the library's — see
- * `LibraryPreferencesService` — and everything else is this file's. `automaticBackups`
- * stays here deliberately: "copy my libraries at launch" is a habit rather than a
- * property of one corpus, and it is the one key Rust reads out of this file before the
- * front end has booted (`backup::wanted`).
+ * The line between the two files: `devnotes.notes.*` is the library's
+ * (`LibraryPreferencesService`), everything else follows the person. `automaticBackups` stays
+ * here: Rust reads it from this file before the front end boots (`backup::wanted`).
  */
 export const LIBRARY_KEY_PREFIX = 'devnotes.notes.';
 
@@ -33,14 +25,7 @@ export class PreferencesService extends KeyValueStore {
     this.adoptLegacyValues();
   }
 
-  /**
-   * The library-scoped keys this file used to hold, so they can be moved into the library
-   * that owns them.
-   *
-   * ⚠️ Every install before the registry kept both scopes in one file. Without this, the
-   * first launch after the upgrade reads no samples marker and re-seeds a library that is
-   * full, and forgets which view each space was left on.
-   */
+  /** The library-scoped keys this file still holds from before the registry, to hand over. */
   libraryScoped(): readonly [string, string][] {
     return this.keys()
       .filter((key) => key.startsWith(LIBRARY_KEY_PREFIX))

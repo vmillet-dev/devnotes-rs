@@ -31,7 +31,7 @@ describe('locale model', () => {
       expect(isAppLocale('')).toBe(false);
     });
 
-    /** ⚠️ The file that answers when a key is missing from the other one. */
+    /** The file that answers when a key is missing from the other one. */
     it('falls back to French for a missing key', () => {
       expect(DEFAULT_LOCALE).toBe('fr');
     });
@@ -57,7 +57,7 @@ describe('locale model', () => {
     });
 
     /**
-     * ⚠️ English, not the default: `DEFAULT_LOCALE` answers a missing translation key,
+     * English, not the default: `DEFAULT_LOCALE` answers a missing translation key,
      * this answers a machine speaking neither — and the wider audience is the right guess
      * there, where the fallback file is the right answer to the other question.
      */

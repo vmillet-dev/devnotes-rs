@@ -54,7 +54,7 @@ export class TrashPanelComponent {
   });
 
   /**
-   * ⚠️ Two strings and not one with a count: French keeps the singular at one where English
+   * Two strings and not one with a count: French keeps the singular at one where English
    * does not, and this sentence is the last thing said before the notes stop existing.
    */
   protected readonly emptyWarning = computed<TranslationRef>(() => {
@@ -81,7 +81,7 @@ export class TrashPanelComponent {
 }
 
 /**
- * ⚠️ Rounded to the nearest day, and neither of the other two will do. Rounding **up** put
+ * Rounded to the nearest day, and neither of the other two will do. Rounding **up** put
  * "erased in 31 d" one line under a panel saying notes are kept 30 days: `purgeAt` is
  * `deletedAt + 30 days`, so a note just deleted has a few milliseconds under 30 left and
  * any fraction became a whole extra day. Rounding **down** says 29 for the same note, which

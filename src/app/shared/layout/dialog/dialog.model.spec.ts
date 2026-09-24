@@ -20,7 +20,7 @@ describe('dialogRung', () => {
     expect(new Set(rungs).size).toBe(IN_ORDER.length);
   });
 
-  /** ⚠️ A rung is both the `z-index` and the Escape priority: one list, two behaviours. */
+  /** A rung is both the `z-index` and the Escape priority: one list, two behaviours. */
   it('rises with the order the layers are declared in', () => {
     const rungs = IN_ORDER.map(dialogRung);
 
@@ -28,7 +28,7 @@ describe('dialogRung', () => {
   });
 
   /**
-   * ⚠️ The banners of `layout/` sit at 80 and must stay above every modal — they are
+   * The banners of `layout/` sit at 80 and must stay above every modal — they are
    * triggered from inside one. That is what the base well below it is for.
    */
   it('stays under the banners, which are raised from inside a dialog', () => {
@@ -45,7 +45,7 @@ describe('dialogRung', () => {
   });
 
   /**
-   * ⚠️ A help panel covers the page, so the only way to a note while one is up is a
+   * A help panel covers the page, so the only way to a note while one is up is a
    * global shortcut — which comes from outside the application. The note has to arrive
    * in front of the help, not behind it.
    */

@@ -24,7 +24,7 @@ describe('BoardComponent', () => {
 
   beforeEach(() => {
     TestBed.resetTestingModule();
-    // ⚠️ Only `Date`: the zoneless scheduler needs real rAF for `whenStable()`.
+    // Only `Date`: the zoneless scheduler needs real rAF for `whenStable()`.
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-01-10T12:00:00Z'));
 
@@ -41,7 +41,7 @@ describe('BoardComponent', () => {
   });
 
   /**
-   * ⚠️ The result of a whole-board arrangement happens **off screen** otherwise. The pan is
+   * The result of a whole-board arrangement happens **off screen** otherwise. The pan is
    * a native scroll on `.board` that nothing else resets, so an arrangement lands
    * everything at the top left while the user is looking somewhere else entirely — empty
    * dotted ground under a banner announcing success.
@@ -122,7 +122,7 @@ describe('BoardComponent', () => {
     expect(root().querySelector('[data-testid="board-zone"]')?.className).toContain('is-amber');
   });
 
-  /** ⚠️ The inside of a zone is a flow, not a second set of coordinates to maintain. */
+  /** The inside of a zone is a flow, not a second set of coordinates to maintain. */
   it('lets the cards of a zone flow rather than placing them', async () => {
     fixture.componentRef.setInput('zones', [
       fakeZone({ folder: PERF, notes: [fakeBoardNote(createNote({ id: 'a' }))] }),
@@ -145,7 +145,7 @@ describe('BoardComponent', () => {
     expect(card?.style.top).toBe('426px');
   });
 
-  /** ⚠️ Dimmed in place: a reflow throws away the only thing the board has. */
+  /** Dimmed in place: a reflow throws away the only thing the board has. */
   it('dims what a search did not match instead of dropping it', async () => {
     fixture.componentRef.setInput('zones', [
       fakeZone({
@@ -169,7 +169,7 @@ describe('BoardComponent', () => {
   });
 
   describe('the pointer gesture', () => {
-    // ⚠️ HTML5 drag & drop does not work in this WebView: the pointer events are the path
+    // HTML5 drag & drop does not work in this WebView: the pointer events are the path
     // to cover, not a `dragstart` that would never arrive.
     function pointer(target: Element, type: string, x = 0, y = 0, button = 0): void {
       target.dispatchEvent(
@@ -195,7 +195,7 @@ describe('BoardComponent', () => {
     });
 
     /**
-     * ⚠️ The right button, because the left one is taken: dragging the background draws a
+     * The right button, because the left one is taken: dragging the background draws a
      * folder, and that gesture does not move. A zone is never in the result — "delete the
      * selection" cannot mean two different things.
      */
@@ -231,7 +231,7 @@ describe('BoardComponent', () => {
         expect(banded).toEqual([]);
       });
 
-      /** ⚠️ Still the folder gesture, untouched: the existing one does not move. */
+      /** Still the folder gesture, untouched: the existing one does not move. */
       it('leaves the left button drawing a folder', async () => {
         const drawn: unknown[] = [];
         const banded: unknown[] = [];
@@ -252,7 +252,7 @@ describe('BoardComponent', () => {
         return event;
       }
 
-      /** ⚠️ Or the browser's own menu opens at the end of every selection. */
+      /** Or the browser's own menu opens at the end of every selection. */
       it('refuses the context menu on the surface', () => {
         expect(menuOn(surface()).defaultPrevented).toBe(true);
       });
@@ -263,10 +263,7 @@ describe('BoardComponent', () => {
         expect(menuOn(root().querySelector('app-board-tidy')!).defaultPrevented).toBe(true);
       });
 
-      /**
-       * ⚠️ The menu opens on whatever is under the pointer when the button comes up, and a
-       * sweep that overshoots ends over the header or off the board altogether (#321).
-       */
+      /** A sweep that overshoots ends over the header or off the board, and the menu opens there. */
       it('swallows the menu where a sweep ends, even off the board — once', () => {
         pointer(surface(), 'pointerdown', 20, 20, 2);
         pointer(surface(), 'pointermove', 200, 200, 2);
@@ -300,13 +297,13 @@ describe('BoardComponent', () => {
       });
     });
 
-    /** ⚠️ The card itself: the whole of it is the handle, there is no grip any more. */
+    /** The card itself: the whole of it is the handle. */
     function grip(): HTMLElement {
       return root().querySelector<HTMLElement>('[data-testid="board-loose-card"] .card-title')!;
     }
 
     /**
-     * ⚠️ The whole card is the handle, so a drag ends with a click on the card it moved —
+     * The whole card is the handle, so a drag ends with a click on the card it moved —
      * and that click must not also open the note.
      */
     it('swallows the click a drag leaves behind, and only that one', async () => {
@@ -348,7 +345,7 @@ describe('BoardComponent', () => {
       expect(seen).toEqual([]);
     });
 
-    /** ⚠️ A click must not persist anything: it is how a note is opened. */
+    /** A click must not persist anything: it is how a note is opened. */
     it('writes nothing when the pointer never travelled', async () => {
       const seen: unknown[] = [];
       fixture.componentInstance.cardDropped.subscribe((drop) => seen.push(drop));
@@ -396,11 +393,11 @@ describe('BoardComponent', () => {
     });
 
     /**
-     * ⚠️ A filed card flows inside its zone and has no coordinates of its own, so nothing
+     * A filed card flows inside its zone and has no coordinates of its own, so nothing
      * followed the pointer at all — half a gesture, with only the zone lighting up.
      */
     describe('a card dragged out of a zone', () => {
-      /** ⚠️ The card itself: the whole of it is the handle, there is no grip any more. */
+      /** The card itself: the whole of it is the handle. */
       function zoneGrip(): HTMLElement {
         return root().querySelector<HTMLElement>('.zone-card .card-title')!;
       }
@@ -429,7 +426,7 @@ describe('BoardComponent', () => {
 
         expect(ghost()).not.toBeNull();
         expect(ghost()?.getAttribute('data-note-id')).toBe('filed-1');
-        // ⚠️ By the grab offset, not under the pointer: the card was grabbed 40px into its
+        // By the grab offset, not under the pointer: the card was grabbed 40px into its
         // seat, so it travels 460 rather than jumping its own corner onto the cursor —
         // then snapped to the grid, which puts 410 on 420.
         expect(ghost()?.style.left).toBe('460px');
@@ -457,7 +454,7 @@ describe('BoardComponent', () => {
       });
     });
 
-    /** ⚠️ A pointer the system took back must not leave a card where nobody put it. */
+    /** A pointer the system took back must not leave a card where nobody put it. */
     it('throws the whole gesture away when the pointer is cancelled', async () => {
       const seen: unknown[] = [];
       fixture.componentInstance.cardDropped.subscribe((drop) => seen.push(drop));
@@ -485,7 +482,7 @@ describe('BoardComponent', () => {
       expect(seen[0]?.frame).toEqual({ x: 200, y: 100, width: 300, height: 300 });
     });
 
-    /** ⚠️ Resizing captures and releases nothing — the notes are not even consulted. */
+    /** Resizing captures and releases nothing — the notes are not even consulted. */
     it('resizes a zone from its corner without touching what is in it', async () => {
       const seen: { frame: { x: number; y: number; width: number; height: number } }[] = [];
       fixture.componentInstance.zoneMoved.subscribe((move) => seen.push(move));

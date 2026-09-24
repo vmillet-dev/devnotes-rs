@@ -50,7 +50,7 @@ export class SearchBoxComponent {
   }
 
   /**
-   * ⚠️ `preventDefault` because the field is inside the `<label>`: without it the click
+   * `preventDefault` because the field is inside the `<label>`: without it the click
    * focuses the field as well, and a caret arrives in a box that has just been emptied.
    */
   protected onClearText(event: MouseEvent): void {

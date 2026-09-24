@@ -35,7 +35,7 @@ describe('LibrariesStore', () => {
   });
 
   /**
-   * ⚠️ Both, always together: the preference file's path comes from the entry, so a
+   * Both, always together: the preference file's path comes from the entry, so a
    * registry read without the hydrate leaves the samples marker and the per-space views
    * pointing at whichever library was open last.
    */
@@ -50,7 +50,7 @@ describe('LibrariesStore', () => {
   });
 
   /**
-   * ⚠️ One gesture rather than two: you have just named it, so you want to be in it. The
+   * One gesture rather than two: you have just named it, so you want to be in it. The
    * gate then asks for a phrase, which is what a first launch does too.
    */
   it('creates and opens in one gesture', async () => {
@@ -64,7 +64,7 @@ describe('LibrariesStore', () => {
   });
 
   /**
-   * ⚠️ A reload, not a gate over the same stores: they are `providedIn: 'root'`, and the
+   * A reload, not a gate over the same stores: they are `providedIn: 'root'`, and the
    * spaces of the library just left were what the board then asked this one about.
    */
   it('rebuilds the front end on a switch, once the registry points at the other one', async () => {
@@ -105,7 +105,7 @@ describe('LibrariesStore', () => {
   });
 
   describe('deleting one', () => {
-    /** ⚠️ Named before it runs, like emptying the trash: it takes everything at once. */
+    /** Named before it runs, like emptying the trash: it takes everything at once. */
     it('proposes rather than erasing', async () => {
       await store.load();
 
@@ -115,7 +115,7 @@ describe('LibrariesStore', () => {
       expect(store.libraries()).toHaveLength(2);
     });
 
-    /** ⚠️ Deleting files under a live connection takes the process down with them. */
+    /** Deleting files under a live connection takes the process down with them. */
     it('refuses the one that is open', async () => {
       await store.load();
 
@@ -124,7 +124,7 @@ describe('LibrariesStore', () => {
       expect(store.pendingDeletion()).toBeNull();
     });
 
-    /** ⚠️ The gate would have nothing to offer, and the registry would adopt an empty
+    /** The gate would have nothing to offer, and the registry would adopt an empty
      *  profile as a library nobody asked for. */
     it('refuses the last one', async () => {
       configure(['Notes']);

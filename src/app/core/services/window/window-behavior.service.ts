@@ -4,7 +4,7 @@ import { SettingsStore } from '@core/services/settings/settings.store';
 
 /**
  * Pushed to the native side like the tray labels; Rust still carries a default, since
- * the window can be closed before the front has started. ⚠️ Both settings only hold when
+ * the window can be closed before the front has started. Both settings only hold when
  * there is a tray: without one Rust refuses to hide the window, which would leave a
  * process nothing can call back.
  */

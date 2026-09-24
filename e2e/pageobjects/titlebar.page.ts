@@ -14,8 +14,8 @@ import {
 import { bridge } from '../support/bridge.js';
 
 /**
- * ⚠️ Not `<select>`s any more: the language is a menu and the other two are segmented
- * controls, so there is no value to assign. ⚠️ Addressed by `data-testid` and never by
+ * Not `<select>`s any more: the language is a menu and the other two are segmented
+ * controls, so there is no value to assign. Addressed by `data-testid` and never by
  * their translated label — the suite switches the interface language partway through.
  */
 const SEGMENTED = { theme: 'setting-theme', density: 'setting-density' } as const;
@@ -30,7 +30,7 @@ export const titlebar = {
   shownTheme: () => $(testid('theme-toggle')).getAttribute('data-theme-shown'),
 
   /**
-   * ⚠️ Light or dark only: the button toggles between the two, and "system" is the
+   * Light or dark only: the button toggles between the two, and "system" is the
    * preferences panel's to choose. One press at most.
    */
   async setTheme(theme: 'light' | 'dark'): Promise<void> {
@@ -61,7 +61,7 @@ export const fileMenu = {
   open: () => $(testid('file-menu')).click(),
   entry: (id: string) => $(`${testid('file-option')}[data-entry="${id}"]`),
 
-  /** ⚠️ Asserted on, never clicked: it would take the application down mid-run. */
+  /** Asserted on, never clicked: it would take the application down mid-run. */
   quit: () => $(testid('file-quit')),
 
   async isDisabled(id: string): Promise<boolean> {
@@ -79,7 +79,7 @@ export const settings = {
   page: (id: string) => $(`${testid('settings-page')}[data-page="${id}"]`),
   open: (id: string) => settings.page(id).click(),
 
-  /** ⚠️ The button marked OK: it writes the draft **and** closes. */
+  /** The button marked OK: it writes the draft **and** closes. */
   close: () => $(testid('settings-close')).click(),
   apply: () => $(testid('settings-apply')).click(),
   cancel: () => $(testid('settings-cancel')).click(),
@@ -87,10 +87,10 @@ export const settings = {
   unapplied: () => $(testid('settings-unapplied')),
   discard: () => $(testid('settings-discard')).click(),
 
-  /** ⚠️ Addressed by its action, never by position: the page holds eleven of them. */
+  /** Addressed by its action, never by position: the page holds eleven of them. */
   shortcut: (action: string) => $(`${testid('shortcut-field')}[data-action="${action}"]`),
   resetShortcut: (action: string) => $(`${testid('shortcut-reset')}[data-action="${action}"]`).click(),
-  /** ⚠️ An id holding a dot, so an attribute selector rather than `#`. */
+  /** An id holding a dot, so an attribute selector rather than `#`. */
   shortcutError: (action: string) => $(`[id="shortcut-error-${action}"]`),
 
   /** What the language menu names, which is the only one of the three that has a trigger. */
@@ -101,7 +101,7 @@ export const settings = {
     await browser.pause(200);
   },
 
-  /** ⚠️ The label addresses the group: a segmented control has no `id` to assign to. */
+  /** The label addresses the group: a segmented control has no `id` to assign to. */
   async setTheme(theme: string): Promise<void> {
     await pickSegment(SEGMENTED.theme, theme);
     await browser.pause(200);
@@ -127,7 +127,7 @@ export const variables = {
   names: (): Promise<string[]> => readEach(testid('variable-row'), 'value', testid('variable-name')),
 
   /**
-   * ⚠️ Waits for the value to reach the back end, not for a plausible number of
+   * Waits for the value to reach the back end, not for a plausible number of
    * milliseconds: the panel commits on Appliquer and the write crosses the bridge.
    */
   async add(name: string, value: string): Promise<void> {
@@ -186,7 +186,7 @@ export const aboutMenu = {
 
   gettingStarted: () => $(testid('getting-started')),
 
-  /** ⚠️ One chapter at a time since #256: this is the chapter on screen, not all ten. */
+  /** The guide shows one chapter at a time: this is the one on screen. */
   chapter: () => $(testid('guide-chapter')).getAttribute('data-chapter'),
 
   next: () => $(testid('guide-next')).click(),

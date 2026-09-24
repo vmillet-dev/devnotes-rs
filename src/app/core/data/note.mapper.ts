@@ -93,7 +93,7 @@ function toFooter(dto: WireNoteFooter): NoteFooter {
 }
 
 /**
- * ⚠️ `placeholderValues` is dropped on purpose: the front reads what was typed through
+ * `placeholderValues` is dropped on purpose: the front reads what was typed through
  * `placeholders[].value`, already paired with the field the text carries. A second,
  * unpaired copy would invite reading a value whose token has left the content.
  */

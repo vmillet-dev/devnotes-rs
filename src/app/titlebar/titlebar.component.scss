@@ -54,7 +54,7 @@
   letter-spacing: 0.3px;
 }
 
-// ⚠️ One group at the right end. `.titlebar` is `space-between` and the title takes no
+// One group at the right end. `.titlebar` is `space-between` and the title takes no
 // part in it — being absolutely positioned — so two loose groups put the theme in the
 // middle of the bar, beside the application's name.
 .titlebar-choices {
@@ -63,7 +63,7 @@
   gap: 10px;
 }
 
-// ⚠️ One shape for both: the theme and the language are the same kind of choice, and a
+// One shape for both: the theme and the language are the same kind of choice, and a
 // second idiom in the same corner would say they are not.
 .titlebar-switch {
   display: flex;

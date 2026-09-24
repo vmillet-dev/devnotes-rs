@@ -34,7 +34,7 @@ describe('SettingsDraftStore', () => {
     expect(settings.density()).toBe('comfortable');
   });
 
-  /** ⚠️ Or the panel would claim there is something to apply after a switch was toggled twice. */
+  /** Or the panel would claim there is something to apply after a switch was toggled twice. */
   it('goes clean again when a value is put back to what is stored', () => {
     draft.set('closeToTray', false);
     expect(draft.isDirty()).toBe(true);
@@ -67,7 +67,7 @@ describe('SettingsDraftStore', () => {
   });
 
   /**
-   * ⚠️ A preview is not a write. Nobody picks a theme without seeing it, so the two that
+   * A preview is not a write. Nobody picks a theme without seeing it, so the two that
    * are worth seeing show on `<html>` straight away — and cancelling puts the previous
    * appearance back with nothing to roll back.
    */
@@ -108,7 +108,7 @@ describe('SettingsDraftStore', () => {
       expect(settings.theme()).toBe('light');
     });
 
-    /** ⚠️ A half-captured global shortcut live across the machine is why nothing else previews. */
+    /** A half-captured global shortcut live across the machine is why nothing else previews. */
     it('previews nothing but the theme and the density', () => {
       draft.set('paletteShortcut', 'Ctrl+Shift+K');
       TestBed.flushEffects();
@@ -135,7 +135,7 @@ describe('SettingsDraftStore', () => {
       expect(settings.paletteShortcut()).toBe('Ctrl+Shift+K');
     });
 
-    /** ⚠️ The same rule the store applies, read through what is staged rather than stored. */
+    /** The same rule the store applies, read through what is staged rather than stored. */
     it('refuses a keystroke another action was staged onto a moment ago', () => {
       draft.rebind(PIN, 'Y', EVERY);
 

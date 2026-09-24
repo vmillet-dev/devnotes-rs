@@ -55,7 +55,7 @@ describe('SpaceEditorComponent', () => {
     expect(finished).toBe(1);
   });
 
-  /** ⚠️ The cascade would take the notes with the space: a refuge is not optional. */
+  /** The cascade would take the notes with the space: a refuge is not optional. */
   it('deletes into the refuge on the second click only', async () => {
     await click('[data-testid="space-delete"]');
     expect(actions.deleted).toEqual([]);

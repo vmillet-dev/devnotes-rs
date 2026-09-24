@@ -16,10 +16,10 @@
 
   <div class="titlebar-title" data-testid="titlebar-title">{{ title }}</div>
 
-  <!-- ⚠️ One group, or `space-between` puts the theme in the middle of the bar: the title
+  <!-- One group, or `space-between` puts the theme in the middle of the bar: the title
        is absolutely positioned and takes no part in the flex row. -->
   <div class="titlebar-choices">
-    <!-- ⚠️ Light or dark, never "system": a click is expected to change what is on screen,
+    <!-- Light or dark, never "system": a click is expected to change what is on screen,
          and "system" usually looks exactly like what was already there. Following the
          system is chosen in the preferences panel, which keeps its three rows — and writes
          the same `SettingsStore.theme`, so the two cannot disagree.

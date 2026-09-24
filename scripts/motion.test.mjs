@@ -4,7 +4,7 @@ import { join, sep } from 'node:path';
 import { describe, it } from 'node:test';
 
 /**
- * ⚠️ `node --test` and not a `*.spec.ts`, for the same reason the palette tests are here:
+ * `node --test` and not a `*.spec.ts`, for the same reason the palette tests are here:
  * this reads the shipped stylesheets off disk, and the Angular builder compiles its specs
  * for a browser, where `node:fs` does not exist.
  *
@@ -16,7 +16,7 @@ import { describe, it } from 'node:test';
 const ROOT = 'src';
 const GLOBAL = 'src/styles/styles.scss';
 
-/** ⚠️ Separators normalised: `join` answers backslashes on Windows and CI runs on Linux. */
+/** Separators normalised: `join` answers backslashes on Windows and CI runs on Linux. */
 function stylesheets(directory) {
   return readdirSync(directory).flatMap((entry) => {
     const path = join(directory, entry).split(sep).join('/');
@@ -46,7 +46,7 @@ describe('motion', () => {
     assert.match(global, /--motion:\s*\d+ms;/);
   });
 
-  /** ⚠️ A duration written out is one nobody can retune, and the three that existed had
+  /** A duration written out is one nobody can retune, and the three that existed had
    *  already drifted to three different values. */
   it('writes no duration of its own anywhere', () => {
     const offenders = SHEETS.flatMap(({ path, source }) =>
@@ -60,7 +60,7 @@ describe('motion', () => {
   });
 
   /**
-   * ⚠️ `all` catches layout properties too, and a transition on one of those is what makes
+   * `all` catches layout properties too, and a transition on one of those is what makes
    * a list feel heavy — the canvas renders every note with no virtualisation.
    */
   it('never transitions everything', () => {
@@ -74,7 +74,7 @@ describe('motion', () => {
   });
 
   /**
-   * ⚠️ One block, and it has to stay the only one: it is what turns every duration above
+   * One block, and it has to stay the only one: it is what turns every duration above
    * off without naming any of them. A second copy somewhere else is a rule that stops
    * covering whatever is added next.
    */

@@ -32,7 +32,7 @@
     </button>
   </form>
 
-  <!-- ⚠️ Named with its count, so it says what it will tick before it ticks it. Absent
+  <!-- Named with its count, so it says what it will tick before it ticks it. Absent
        from the switcher, where the folder's notes are not on screen to be selected. -->
   @if (selectableCount(); as count) {
     <button type="button" class="editor-action" data-testid="folder-select-notes" (click)="selectNotes()">
@@ -40,7 +40,7 @@
     </button>
   }
 
-  <!-- ⚠️ No refuge to choose, unlike a space: `ON DELETE SET NULL` leaves the notes where
+  <!-- No refuge to choose, unlike a space: `ON DELETE SET NULL` leaves the notes where
        they are, merely unfiled. -->
   <button
     type="button"

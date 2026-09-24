@@ -1,6 +1,6 @@
 @use 'mixins' as *;
 
-// ⚠️ A band only while it is open, where the two rails were a band always. It enters from
+// A band only while it is open, where the two rails were a band always. It enters from
 // the top, which is where it comes from.
 .facets-panel {
   @include enters;

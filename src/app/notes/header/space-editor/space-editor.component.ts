@@ -29,7 +29,7 @@ import { ChoiceMenuComponent, ChoiceOption } from '@notes/ui/choice-menu/choice-
 })
 export class SpaceEditorComponent {
   readonly space = input.required<Space>();
-  /** ⚠️ A space cannot be its own refuge: the cascade would take the notes after the move. */
+  /** A space cannot be its own refuge: the cascade would take the notes after the move. */
   readonly moveTargets = input.required<readonly Space[]>();
 
   /** After a rename or a deletion; pinning leaves the panel where it is. */
@@ -42,7 +42,7 @@ export class SpaceEditorComponent {
   );
 
   /**
-   * ⚠️ The refuge is state now, where the `<select>` held it: a menu writes what it was
+   * The refuge is state now, where the `<select>` held it: a menu writes what it was
    * asked for and has nothing to read back. Keyed on the list, so a space appearing or
    * disappearing lands on the first one rather than on an id that no longer exists.
    */

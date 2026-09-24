@@ -33,7 +33,7 @@ describe('TrashPanelComponent', () => {
   }
 
   beforeEach(async () => {
-    // ⚠️ Only `Date`: a faked `requestAnimationFrame` blocks the zoneless scheduler.
+    // Only `Date`: a faked `requestAnimationFrame` blocks the zoneless scheduler.
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(NOW);
 
@@ -64,7 +64,7 @@ describe('TrashPanelComponent', () => {
   });
 
   /**
-   * ⚠️ The panel says notes are kept 30 days and this said 31 one line under it. The cause
+   * The panel says notes are kept 30 days and this said 31 one line under it. The cause
    * is not arithmetic on the retention — it is that `ClockService` ticks every 30 s, so the
    * `now` a card renders against can be **behind** an instant Rust has just stamped. The
    * gap then reads as 30 days *and change*, and rounding up made the change a whole day.
@@ -156,7 +156,7 @@ describe('TrashPanelComponent', () => {
       fixture.nativeElement.querySelector(`[data-testid="${testId}"]`);
 
     /**
-     * ⚠️ Nothing puts these notes back, so the confirmation is not the same button in the
+     * Nothing puts these notes back, so the confirmation is not the same button in the
      * same place — that is the shape a double click defeats. It says how many it would
      * erase first, like the tag manager does before a merge.
      */

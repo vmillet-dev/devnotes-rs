@@ -1,4 +1,4 @@
-<!-- ⚠️ At the head of every panel, not only the form: archiving or setting aside "the
+<!-- At the head of every panel, not only the form: archiving or setting aside "the
      library" without naming which is the worst place to be vague. -->
 <ng-template #library>
   @if (libraries.hasSeveral()) {
@@ -23,7 +23,7 @@
 <main class="gate">
   @if (vault.damaged()) {
     <!--
-      ⚠️ Not a message beside the field: retyping the passphrase cannot help, so the form
+      Not a message beside the field: retyping the passphrase cannot help, so the form
       would be an invitation to do the one thing that will not work.
     -->
     <section class="panel" data-testid="vault-damaged">
@@ -44,7 +44,7 @@
     </section>
   } @else if (isConfirmingArchive()) {
     <!--
-      ⚠️ Instead of the form, never beside it. This recovers nothing — the notes leave
+      Instead of the form, never beside it. This recovers nothing — the notes leave
       sealed, under the phrase nobody remembers — so it has to read as giving up, not as
       a shortcut past a field that is merely in the way.
     -->
@@ -58,7 +58,7 @@
         <button class="secondary" type="button" data-testid="vault-keep-trying" (click)="keepTrying()">
           {{ 'vault.forgottenBack' | transloco }}
         </button>
-        <!-- ⚠️ Red text and a hairline, never the amber fill. The fill is the button you
+        <!-- Red text and a hairline, never the amber fill. The fill is the button you
              are meant to press, and this one loses the notes: the panel's whole job is to
              slow the hand down. -->
         <button
@@ -82,7 +82,7 @@
         {{ (isCreating() ? 'vault.createLead' : 'vault.unlockLead') | transloco }}
       </p>
 
-      <!-- ⚠️ Said once, at the only moment it can still be acted on. -->
+      <!-- Said once, at the only moment it can still be acted on. -->
       @if (isCreating()) {
         <p class="warning" role="note">{{ 'vault.noRecovery' | transloco }}</p>
       }
@@ -137,7 +137,7 @@
         }
       </button>
 
-      <!-- ⚠️ Only on a library that exists: a fresh one has no phrase to have forgotten.
+      <!-- Only on a library that exists: a fresh one has no phrase to have forgotten.
            Kept well away from the field and drawn as the small thing it should be —
            somewhere to go, not somewhere to click by accident. -->
       @if (!isCreating()) {

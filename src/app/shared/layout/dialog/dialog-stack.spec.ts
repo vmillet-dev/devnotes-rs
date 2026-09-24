@@ -38,7 +38,7 @@ describe('DialogStack', () => {
   });
 
   /**
-   * ⚠️ The reason the stack orders by rung and not by arrival: the fields form is created
+   * The reason the stack orders by rung and not by arrival: the fields form is created
    * *after* the palette in the DOM but is drawn in front of it, and Escape has to follow
    * what is on screen rather than what was built last.
    */

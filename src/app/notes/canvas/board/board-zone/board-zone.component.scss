@@ -52,7 +52,7 @@
   color: var(--text-2);
 }
 
-// ⚠️ It scrolls, so it clips: the top padding is what keeps a card's action pill — drawn
+// It scrolls, so it clips: the top padding is what keeps a card's action pill — drawn
 // 9px above its own top edge — from being cut off on the first row.
 .zone-body {
   display: flex;
@@ -70,7 +70,7 @@
 }
 
 // Dimmed in place: the card keeps its seat, it just stops asking for attention.
-// ⚠️ On the wrapper, not on `app-note-card`: the wrapper is what carries the class.
+// On the wrapper, not on `app-note-card`: the wrapper is what carries the class.
 .zone-card.dimmed {
   opacity: 0.32;
 }

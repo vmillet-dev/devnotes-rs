@@ -4,20 +4,15 @@ import type { ShortcutBindings } from '@core/ipc/bindings';
 export type { ShortcutBindings };
 
 /**
- * The three accelerators the native side registers before the front end exists — read
- * from it rather than retyped. ⚠️ It still has defaults of its own, and must: without
- * them `Ctrl+Alt+P` is dead for the length of the first render, which is exactly the
- * second it gets used from another application.
+ * The three accelerators the native side registers before the front end exists, read rather
+ * than retyped. Rust keeps defaults of its own, or `Ctrl+Alt+P` would be dead during the first
+ * render.
  */
 export { DEFAULT_SHORTCUTS };
 
 /**
- * An action a key can be moved to: what it is stored under, what to call it, and the
- * accelerator it ships with.
- *
- * ⚠️ It carries its own fallback, so `ShortcutBindingsStore` holds no list of its own —
- * the canvas ones are declared in the table that binds them and the global ones just
- * below, and a store that also kept a copy would be a third place to add a key to.
+ * An action a key can be moved to: its storage name, its label, and its default. The default
+ * travels with it, so `ShortcutBindingsStore` keeps no third list of keys.
  */
 export interface Rebindable {
   readonly id: string;
@@ -26,9 +21,8 @@ export interface Rebindable {
 }
 
 /**
- * ⚠️ The three registered with the operating system, first come first served across the
- * machine. They are stored in `AppSettings` because the native command takes them as a
- * block, where a canvas key is one preference of its own.
+ * The three registered with the operating system, first come first served across the machine:
+ * stored in `AppSettings`, since the native command takes them as a block.
  */
 export const GLOBAL_ACTIONS: readonly Rebindable[] = [
   { id: 'palette', labelKey: 'shortcuts.global.palette', fallback: DEFAULT_SHORTCUTS.palette },
@@ -40,10 +34,7 @@ export const GLOBAL_ACTIONS: readonly Rebindable[] = [
 export interface ShortcutEntry {
   readonly keys: readonly string[];
   readonly labelKey: string;
-  /**
-   * Present when the row can be moved, which is what lets the read-only sheet draw the
-   * key that is bound rather than the one that shipped. `keys` is then its default.
-   */
+  /** Present when the row can be moved, so the read-only sheet draws the key actually bound. */
   readonly action?: Rebindable | undefined;
 }
 
@@ -102,9 +93,8 @@ const NAMED_KEYS = new Set([
 const MODIFIER_NAMES = new Set(['Ctrl', 'Alt', 'Shift', 'Super']);
 
 /**
- * ⚠️ `KeyboardEvent.code` is the key's position, not the character it produces: a
- * shortcut set on AZERTY stays in the same place on QWERTY, which `event.key` would
- * not guarantee.
+ * ⚠️ `KeyboardEvent.code` is the key's position, not its character: a shortcut set on AZERTY
+ * stays put on QWERTY.
  */
 function keyName(code: string): string | null {
   const named = /^Key([A-Z])$/.exec(code)?.[1] ?? /^Digit(\d)$/.exec(code)?.[1];
@@ -119,10 +109,7 @@ function isKeyName(name: string): boolean {
   );
 }
 
-/**
- * ⚠️ At least one modifier is required: a **global** shortcut without one would swallow
- * that key in every application on the machine, typing included.
- */
+/** At least one modifier: a global shortcut without one would swallow that key everywhere. */
 export function acceleratorFromEvent(event: KeyboardEvent): string | null {
   if (MODIFIER_CODES.has(event.code)) return null;
 
@@ -142,16 +129,9 @@ export function acceleratorFromEvent(event: KeyboardEvent): string | null {
 const MODIFIER_KEYS = new Set(['Control', 'Alt', 'AltGraph', 'Shift', 'Meta']);
 
 /**
- * A canvas keystroke, modifiers first — `C`, `Ctrl+B`, `Delete`.
- *
- * ⚠️ The **printed** key, where a global shortcut reads the key's position. The opposite
- * trade, and a deliberate one: a global combination must survive a layout change because
- * the native side parses it back by position, while `C` on the canvas is read off the
- * keycap by someone looking at this window — on AZERTY, position `KeyA` is the key
- * labelled `Q`, and aligning the board from the key marked `A` is what a reader expects.
- *
- * ⚠️ `Ctrl` covers ⌘ too: the table is written with one modifier name, and `Super` means
- * something of its own only where a shortcut leaves the window.
+ * A canvas keystroke, modifiers first — `C`, `Ctrl+B`, `Delete`. The printed key, where a
+ * global shortcut reads the position: someone looking at this window reads `C` off the keycap,
+ * and on AZERTY position `KeyA` is the key labelled `Q`. `Ctrl` covers ⌘ too.
  */
 export function canvasKeystrokeFromEvent(event: KeyboardEvent): string | null {
   if (MODIFIER_KEYS.has(event.key)) return null;
@@ -161,7 +141,7 @@ export function canvasKeystrokeFromEvent(event: KeyboardEvent): string | null {
   if (event.altKey) modifiers.push('Alt');
   if (event.shiftKey) modifiers.push('Shift');
 
-  // ⚠️ Upper-cased, so a caps-locked keyboard answers the same key as a bare one.
+  // Upper-cased, so a caps-locked keyboard answers the same key.
   const key = event.key.length === 1 ? event.key.toUpperCase() : event.key;
 
   return isCanvasKey(key) ? [...modifiers, key].join('+') : null;
@@ -178,10 +158,8 @@ export function isAccelerator(value: string): boolean {
 }
 
 /**
- * ⚠️ The keyboard would stop answering if these moved: the arrows are the grid's own
- * navigation, Tab is how the window is crossed, and Escape is the way out of every other
- * thing on screen. `+` and the space are refused for a duller reason — one is the
- * separator and the other is written as a blank nobody could read back in a field.
+ * The arrows move through the grid, Tab crosses the window and Escape leaves everything else.
+ * `+` is the separator, and a space would read as a blank.
  */
 const RESERVED_KEYS = new Set(['Tab', 'Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', '+', ' ']);
 
@@ -192,10 +170,7 @@ function isCanvasKey(key: string): boolean {
   return key.length === 1 || NAMED_KEYS.has(key) || /^F([1-9]|1\d|2[0-4])$/.test(key);
 }
 
-/**
- * ⚠️ A canvas key may be **bare**, where a global one may not: it answers only while the
- * canvas has the keyboard, so `C` on the copy costs nothing outside the window.
- */
+/** A canvas key may be bare: it answers only while the canvas has the keyboard. */
 export function isCanvasAccelerator(value: string): boolean {
   const tokens = value.split('+').map((token) => token.trim());
   const key = tokens.at(-1);

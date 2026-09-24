@@ -37,7 +37,7 @@ describe('DesktopNotifier', () => {
     expect(desktop.sent[0]?.body).toContain('Reset the dev database');
   });
 
-  /** ⚠️ Whatever it was asked to say has already happened; a refusal is not a failure. */
+  /** Whatever it was asked to say has already happened; a refusal is not a failure. */
   it('answers no rather than throwing when the desktop refuses', async () => {
     await createNotifier('denied');
 
@@ -56,7 +56,7 @@ describe('DesktopNotifier', () => {
     );
   });
 
-  /** ⚠️ Once. A prompt on every copy is worse than no acknowledgement at all. */
+  /** Once. A prompt on every copy is worse than no acknowledgement at all. */
   it('asks the desktop for permission once, not once per toast', async () => {
     await createNotifier('default');
     await notifier.notify({ key: 'palette.copiedTitle' }, { key: 'palette.copiedUntitled' });

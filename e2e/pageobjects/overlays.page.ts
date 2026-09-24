@@ -23,7 +23,7 @@ export const trash = {
   },
 
   /**
-   * ⚠️ **Not** a second click on the same button, unlike the rest: nothing puts these notes
+   * **Not** a second click on the same button, unlike the rest: nothing puts these notes
    * back, so the trigger is replaced by a sentence saying how many and a separate confirm.
    */
   async empty(): Promise<void> {
@@ -93,13 +93,13 @@ export const palette = {
 export const fieldsForm = {
   form: () => $(testid('placeholder-form')),
 
-  /** ⚠️ Scoped to the form: `placeholder-input` is the same hook in the editor's panel. */
+  /** Scoped to the form: `placeholder-input` is the same hook in the editor's panel. */
   field: (name: string) =>
     $(testid('placeholder-form')).$(`${testid('placeholder-input')}[data-field="${name}"]`),
 
   submit: () => $(testid('placeholder-submit')).click(),
 
-  /** ⚠️ Copies and dismisses: there is no form left to cancel afterwards. */
+  /** Copies and dismisses: there is no form left to cancel afterwards. */
   copyRaw: () => $(testid('placeholder-copy-raw')).click(),
 
   cancel: () => $(testid('placeholder-cancel')).click(),

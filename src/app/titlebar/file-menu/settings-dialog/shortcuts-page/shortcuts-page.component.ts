@@ -25,7 +25,7 @@ interface ShortcutSection {
 }
 
 /**
- * ⚠️ Two sections because there are two storage paths, and the difference is not
+ * Two sections because there are two storage paths, and the difference is not
  * cosmetic: a global key is taken from the whole machine and must carry a modifier,
  * where a canvas one answers only while the canvas has the keyboard.
  */
@@ -44,7 +44,7 @@ const SECTIONS: readonly ShortcutSection[] = [
   },
 ];
 
-/** ⚠️ Both paths at once: the check is worth nothing if it only looks at one table. */
+/** Both paths at once: the check is worth nothing if it only looks at one table. */
 const EVERY_ACTION = SECTIONS.flatMap((section) => section.actions);
 
 @Component({
@@ -77,11 +77,11 @@ export class ShortcutsPageComponent {
 
   /**
    * The field listens for a keystroke rather than accepting text, which would let through
-   * combinations the native side cannot read back. ⚠️ A modifier on its own is a
+   * combinations the native side cannot read back. A modifier on its own is a
    * combination still being typed and goes back to the dialog — which is what leaves Tab
    * and Escape working inside the field.
    *
-   * ⚠️ Captured through the reader its own half matches with: a global key is stored by
+   * Captured through the reader its own half matches with: a global key is stored by
    * **position** because the native parser reads it back that way, a canvas one by the
    * **printed** character. Capturing both the same way puts one of the two on the wrong
    * key the moment the layout is not QWERTY.
@@ -90,7 +90,7 @@ export class ShortcutsPageComponent {
     const isGlobal = GLOBAL_ACTIONS.includes(action);
     const keystroke = isGlobal ? acceleratorFromEvent(event) : canvasKeystrokeFromEvent(event);
     if (keystroke === null) {
-      // ⚠️ A bare key on a global row is a refusal worth saying out loud, but Tab and
+      // A bare key on a global row is a refusal worth saying out loud, but Tab and
       // Escape are not one — and the canvas reader is already what refuses those two.
       // Nothing is prevented here: the key was not taken, so it goes on working.
       if (isGlobal && canvasKeystrokeFromEvent(event) !== null) {

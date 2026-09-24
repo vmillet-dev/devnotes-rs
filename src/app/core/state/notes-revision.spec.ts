@@ -16,7 +16,7 @@ describe('NotesRevision', () => {
   });
 
   /**
-   * ⚠️ Every bump has to be a new value, never a toggle: `NotesQueryStore` reads this
+   * Every bump has to be a new value, never a toggle: `NotesQueryStore` reads this
    * among its query parameters, and a value that came back to one already seen would
    * compare equal and leave the canvas showing what it had.
    */

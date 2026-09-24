@@ -64,7 +64,7 @@ describe('board gesture geometry', () => {
       expect(first.y).toBe(second.y);
     });
 
-    /** ⚠️ A gesture under the threshold never reaches this, so a click still moves nothing. */
+    /** A gesture under the threshold never reaches this, so a click still moves nothing. */
     it('leaves a frame already on the grid exactly where it is', () => {
       const moved = movedTo(gesture({ from: { x: 100, y: 100, width: 240, height: 150 } }), {
         x: 100,
@@ -76,12 +76,12 @@ describe('board gesture geometry', () => {
   });
 
   describe('moving', () => {
-    /** ⚠️ The grab offset is the whole point: a frame follows the pointer, it does not
+    /** The grab offset is the whole point: a frame follows the pointer, it does not
      *  jump so its corner sits under it. */
     it('keeps the offset the pointer was grabbed at', () => {
       const moved = movedTo(gesture(), { x: 300, y: 300 });
 
-      // ⚠️ Snapped onto the lattice the background draws: the offset is kept, then
+      // Snapped onto the lattice the background draws: the offset is kept, then
       // rounded — 290 lands on 300 and 280 was already on a dot.
       expect(moved.x).toBe(300);
       expect(moved.y).toBe(280);
@@ -103,7 +103,7 @@ describe('board gesture geometry', () => {
   });
 
   describe('resizing', () => {
-    /** ⚠️ Resizing captures and releases nothing — Unreal's own rule was refused. */
+    /** Resizing captures and releases nothing — Unreal's own rule was refused. */
     it('moves the far corner and leaves the near one where it is', () => {
       const resized = resizedTo(gesture({ kind: 'resize-zone' }), { x: 200, y: 150 });
 
@@ -158,7 +158,7 @@ describe('board gesture geometry', () => {
       expect(zoneAt([{ id: 'a', frame: ZONE }], { x: 50, y: 50 })).toBe('a');
     });
 
-    /** ⚠️ The free background is a legitimate answer: it takes the note out of its folder. */
+    /** The free background is a legitimate answer: it takes the note out of its folder. */
     it('names nothing on the background', () => {
       expect(zoneAt([{ id: 'a', frame: ZONE }], { x: 150, y: 50 })).toBeNull();
     });

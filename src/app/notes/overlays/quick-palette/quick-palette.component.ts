@@ -7,12 +7,9 @@ import { Note } from '@core/model/note.model';
 const SNIPPET_LINES = 2;
 
 /**
- * ⚠️ `aria-activedescendant` and not a moved focus, which would lose what is being typed
- * — and the rows are out of the tab order so that it stays true. Tab was released to the
- * DOM when Enter took over opening, and it walked a list of stops nothing drew a ring on
- * while the highlight stayed where the arrows had left it: two notions of "the current
- * row", one of them invisible (#283). Tab is a slower arrow now, and the copy control is
- * reached with `Ctrl+C` rather than by walking to it.
+ * `aria-activedescendant` and not a moved focus, which would lose what is being typed; the
+ * rows are out of the tab order so there is one "current row". Tab is a slower arrow, and the
+ * copy control is reached with `Ctrl+C`.
  */
 @Component({
   selector: 'app-quick-palette',
@@ -48,14 +45,14 @@ export class QuickPaletteComponent {
     return this.results()[this.highlighted()] ?? null;
   }
 
-  /** ⚠️ A field with a selection in it: `Ctrl+C` there means the selected text. */
+  /** A field with a selection in it: `Ctrl+C` there means the selected text. */
   private hasSelectedText(event: KeyboardEvent): boolean {
     const field = event.target;
     return field instanceof HTMLInputElement && field.selectionStart !== field.selectionEnd;
   }
 
   protected onKeydown(event: KeyboardEvent): void {
-    // ⚠️ `Ctrl+C` and not a bare `c`, which the field would simply type. It is the letter
+    // `Ctrl+C` and not a bare `c`, which the field would simply type. It is the letter
     // the canvas already copies with, and the only modifier a text field leaves free.
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'c') {
       if (this.hasSelectedText(event)) return;

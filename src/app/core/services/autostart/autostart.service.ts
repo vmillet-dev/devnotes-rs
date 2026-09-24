@@ -15,7 +15,7 @@ export const AUTOSTART_ADAPTER = new InjectionToken<AutostartAdapter>('AUTOSTART
 });
 
 /**
- * ⚠️ The real state belongs to the system, not the preferences file: startup reads the
+ * The real state belongs to the system, not the preferences file: startup reads the
  * system and aligns the preference to it. Without that read-back, disabling autostart
  * from the task manager leaves the box ticked and gets re-enabled on the next change.
  */

@@ -4,11 +4,9 @@
   display: contents;
 }
 
-// ⚠️ **One row, and it does not wrap.** It used to, and the wrap was never an edge case: at
-// the shipped 1100px window with the library rail open it wrapped on first launch, pushing
-// the primary action onto a second line and squeezing the search below its own placeholder.
-// The search is what gives way instead — it is the only thing here that can be narrow and
-// still be itself — and an e2e scenario measures the row at that width.
+// One row, and it does not wrap: at the shipped 1100px window with the rail open a wrap
+// pushed the primary action onto a second line. The search gives way instead — the only thing
+// here that can be narrow and still be itself — and an e2e scenario measures the row.
 .topbar {
   display: flex;
   flex-wrap: nowrap;
@@ -17,11 +15,11 @@
   padding: 12px 24px;
   border-bottom: 1px solid var(--line-soft);
   flex-shrink: 0;
-  // ⚠️ Without this a flex child's content width wins and the row overflows anyway.
+  // Without this a flex child's content width wins and the row overflows anyway.
   min-width: 0;
 }
 
-// First in the row, where the space switcher used to be: the rail is what replaced it.
+// First in the row: the rail it toggles is what changes space.
 .rail-toggle {
   @include unstyled-control;
   @include surface(var(--bg-2), 8px);
@@ -42,9 +40,8 @@
   outline-offset: 2px;
 }
 
-// ⚠️ Icon-only, and beside the rail toggle: it is a **view** on the notes rather than a
-// filter, so it left the filter chips it was never a member of — and it used to sit six
-// pixels from the primary action. Its name is on the tooltip and on the accessible label.
+// Icon-only, beside the rail toggle: a view on the notes, not a filter. Its name is on the
+// tooltip and on the accessible label.
 .trash-btn {
   all: unset;
   box-sizing: border-box;
@@ -65,7 +62,7 @@
   outline-offset: 2px;
 }
 
-// ⚠️ The disclosure that replaced two permanent bands. Amber while it is holding a facet,
+// The disclosure that replaced two permanent bands. Amber while it is holding a facet,
 // and refusing to fold then — see the template.
 .facets-toggle {
   @include unstyled-control;
@@ -93,7 +90,7 @@
   }
 }
 
-// ⚠️ One box for the three icon buttons, as tall as the row around them: they were 24, 28
+// One box for the three icon buttons, as tall as the row around them: they were 24, 28
 // and 30 px of three different glyph sizes, and the icon was the smallest thing in each.
 .rail-toggle,
 .trash-btn,

@@ -5,7 +5,7 @@ import { Space } from '@core/model/space.model';
 import { NotesRevision } from './notes-revision';
 
 /**
- * ⚠️ `null` is not a waiting state but a choice — "all spaces". No "All" entry exists on
+ * `null` is not a waiting state but a choice — "all spaces". No "All" entry exists on
  * the data side: it would be a phantom space notes could be filed into.
  */
 @Injectable({ providedIn: 'root' })
@@ -90,7 +90,7 @@ export class SpacesStore {
   }
 
   /**
-   * ⚠️ Reloads rather than patching the one row: pinning changes the order of the list,
+   * Reloads rather than patching the one row: pinning changes the order of the list,
    * and the order is the back end's.
    */
   async togglePinned(id: string): Promise<boolean> {

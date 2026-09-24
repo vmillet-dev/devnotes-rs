@@ -1,14 +1,13 @@
 import { Injectable, signal } from '@angular/core';
 
 /**
- * What the prompt is for: sealing a file about to be written, or opening one about to be
- * read. The two ask for different things — the first confirms the phrase and may be
- * declined, the second cannot be.
+ * Sealing a file about to be written, or opening one about to be read: the first confirms the
+ * phrase and may be declined, the second cannot be.
  */
 export interface PassphraseRequest {
   readonly purpose: 'protect' | 'unlock';
   readonly fileName: string;
-  /** The previous attempt was refused, which belongs beside the field and nowhere else. */
+  /** The previous attempt was refused: said beside the field. */
   readonly refused: boolean;
 }
 
@@ -29,8 +28,7 @@ export class PassphrasePromptStore {
   /** What the prompt is asking for; `null` when it is not asking. */
   readonly request = this._request.asReadonly();
 
-  /** A phrase has been given and is being derived from. The prompt waits rather than
-   *  leaving the screen, and cannot be answered twice. */
+  /** A phrase is being derived from: the prompt waits on screen, and cannot be answered twice. */
   readonly working = this._working.asReadonly();
 
   private pending: ((answer: PassphraseAnswer) => void) | null = null;
@@ -44,11 +42,8 @@ export class PassphrasePromptStore {
   }
 
   /**
-   * The prompt's only way back in.
-   *
-   * ⚠️ A phrase leaves the prompt on screen, working: deriving the key takes about a
-   * second, and a dialog that vanished and came back on a typo would read as a fault.
-   * Anything else ends the asking there and then.
+   * The prompt's only way back in. A phrase leaves it on screen, working — derivation takes
+   * about a second, and a dialog vanishing and coming back on a typo would read as a fault.
    */
   answer(answer: PassphraseAnswer): void {
     const resolve = this.pending;

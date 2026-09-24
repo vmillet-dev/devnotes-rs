@@ -2,7 +2,7 @@ import { APP_LOCALES } from '@core/services/i18n/locale.model';
 import { DEFAULT_SHORTCUTS } from '@core/services/shortcuts/shortcut.model';
 
 /**
- * ⚠️ A preference is stored per key rather than as one serialised object, so a setting
+ * A preference is stored per key rather than as one serialised object, so a setting
  * added later cannot make a file written by the previous version unreadable.
  */
 
@@ -19,7 +19,7 @@ export const DENSITIES = ['comfortable', 'compact'] as const;
 export type Density = (typeof DENSITIES)[number];
 
 /**
- * ⚠️ The floor is the tree's own, not the panels': `--editor-min-width` is what lets
+ * The floor is the tree's own, not the panels': `--editor-min-width` is what lets
  * `space-editor` and `folder-editor` follow the rail rather than hold it open at their
  * 240px. It opens at that floor — the width is remembered, so the default is a first
  * launch and nothing else.
@@ -34,7 +34,7 @@ export interface AppSettings {
   readonly minimizeToTray: boolean;
   readonly closeToTray: boolean;
   /**
-   * ⚠️ The three **global** accelerators, stored here because the native side takes them
+   * The three **global** accelerators, stored here because the native side takes them
    * as a block. The canvas keys are one preference each and belong to
    * `ShortcutBindingsStore`, which is what reads both paths as one table.
    */
@@ -46,7 +46,7 @@ export interface AppSettings {
   /** Its width, dragged from its edge and clamped on the way in and out. */
   readonly libraryRailWidth: number;
   readonly showPinnedFirst: boolean;
-  /** ⚠️ Read by Rust at launch, before the front end exists: `backup::wanted`. */
+  /** Read by Rust at launch, before the front end exists: `backup::wanted`. */
   readonly automaticBackups: boolean;
   readonly copyConfirmation: boolean;
   readonly updateNotifications: boolean;
@@ -57,7 +57,7 @@ export interface AppSettings {
   readonly skippedUpdate: string;
 }
 
-/** ⚠️ `closeToTray` is `true`, and the native side carries the same default. */
+/** `closeToTray` is `true`, and the native side carries the same default. */
 export const DEFAULT_SETTINGS: AppSettings = {
   locale: 'system',
   theme: 'system',

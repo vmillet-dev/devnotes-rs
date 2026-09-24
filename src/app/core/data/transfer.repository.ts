@@ -7,7 +7,7 @@ import { ExportReport, ExportScope, ImportReport } from '@core/model/note.model'
 @Injectable({ providedIn: 'root' })
 export class TransferRepository {
   /**
-   * ⚠️ A `null` `passphrase` writes the file in the clear — the library's own key protects
+   * A `null` `passphrase` writes the file in the clear — the library's own key protects
    * what is on this machine, never what leaves it.
    */
   async export(path: string, scope: ExportScope, passphrase: string | null): Promise<ExportReport> {

@@ -110,11 +110,7 @@ describe('NoteCardMenuComponent', () => {
     expect(deleteItem()).not.toBeNull();
   });
 
-  /**
-   * ⚠️ The complete menu, which is the point: a note's properties used to be spread over
-   * four surfaces and none of them could do everything. Filing one from the date view took
-   * three clicks through the selection bar; pinning took a full-screen modal.
-   */
+  /** The complete menu: every property of a note, from its card. */
   describe('the entries that used to be somewhere else', () => {
     it('opens, pins and copies from here too', async () => {
       const fired: string[] = [];
@@ -149,7 +145,7 @@ describe('NoteCardMenuComponent', () => {
       expect(fileItems().map((item) => item.textContent?.trim())).toEqual(['Migrations']);
     });
 
-    /** ⚠️ Filing is a batch command of its own, so `null` is a real answer, not an absence. */
+    /** Filing is a batch command of its own, so `null` is a real answer, not an absence. */
     it('offers a way out of the folder only when there is one to leave', async () => {
       fixture.componentRef.setInput('folders', FOLDERS);
       await open();

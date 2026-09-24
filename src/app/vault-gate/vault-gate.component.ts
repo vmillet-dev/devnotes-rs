@@ -19,7 +19,7 @@ import { ChoiceMenuComponent, ChoiceOption } from '../notes/ui/choice-menu/choic
 /**
  * The screen that stands in front of everything until the library is open.
  *
- * ⚠️ The gate is here, at the root, and not in each store: the canvas is never mounted
+ * The gate is here, at the root, and not in each store: the canvas is never mounted
  * while the library is locked, so no store has to hold a "locked" branch and no command
  * is called before it can be answered.
  */
@@ -42,7 +42,7 @@ export class VaultGateComponent {
     this.libraries.libraries().map((entry) => ({ id: entry.id, name: entry.name.trim() || this.unnamed() })),
   );
 
-  /** ⚠️ Empty for the one library that predates names: "Library: Library" says nothing. */
+  /** Empty for the one library that predates names: "Library: Library" says nothing. */
   protected readonly libraryName = computed(() => this.libraries.open()?.name.trim() ?? '');
 
   protected readonly passphrase = signal('');
@@ -69,13 +69,13 @@ export class VaultGateComponent {
   private readonly passphraseField = viewChild<ElementRef<HTMLInputElement>>('passphraseField');
 
   /**
-   * ⚠️ Shown instead of the form, not beside it. The field is the one thing that cannot
+   * Shown instead of the form, not beside it. The field is the one thing that cannot
    * help here, and an offer to give up standing next to it would be read as a shortcut.
    */
   protected readonly isConfirmingArchive = signal(false);
 
   constructor() {
-    // ⚠️ Not the `autofocus` attribute, which the linter refuses: this screen is the only
+    // Not the `autofocus` attribute, which the linter refuses: this screen is the only
     // thing there is, and the user opened the application to type into this field.
     afterNextRender(() => this.passphraseField()?.nativeElement.focus());
   }
@@ -95,7 +95,7 @@ export class VaultGateComponent {
   }
 
   /**
-   * ⚠️ Recovers nothing, and the sentence above it says so: the notes leave **sealed**,
+   * Recovers nothing, and the sentence above it says so: the notes leave **sealed**,
    * under the phrase nobody remembers. The store re-reads the state afterwards, and with
    * the key file gone the gate comes back asking for a new phrase rather than one nobody
    * has.
@@ -107,7 +107,7 @@ export class VaultGateComponent {
   }
 
   /**
-   * ⚠️ From here, because the File menu does not exist until a library is open — and the
+   * From here, because the File menu does not exist until a library is open — and the
    * gate was asking for a phrase the user may not have for this one.
    */
   protected async switchLibrary(id: string | null): Promise<void> {
@@ -128,7 +128,7 @@ export class VaultGateComponent {
   }
 
   /**
-   * ⚠️ The field is cleared whatever happens, success included: a passphrase left in a
+   * The field is cleared whatever happens, success included: a passphrase left in a
    * DOM node is a passphrase in a memory dump, and the store never held it either.
    */
   protected async submit(event: Event): Promise<void> {

@@ -7,7 +7,7 @@ import { DialogComponent } from '@shared/layout/dialog/dialog.component';
 /**
  * The libraries, and the four things one can do with them.
  *
- * ⚠️ Opening one is a full teardown: the connection closes, every command answers
+ * Opening one is a full teardown: the connection closes, every command answers
  * `Locked`, and the shell goes back to the gate. So the dialog closes itself on a switch
  * — a panel left standing over the unlock screen would be asking about a library nobody
  * has opened yet.
@@ -32,7 +32,7 @@ export class LibrariesDialogComponent {
     this.store.libraries().map((entry) => ({
       entry,
       isOpen: entry.id === this.store.open()?.id,
-      // ⚠️ The last one cannot go: the gate would have nothing to offer, and the next
+      // The last one cannot go: the gate would have nothing to offer, and the next
       // read of the registry would adopt an empty profile as a library nobody asked for.
       isOnlyOne: !this.store.hasSeveral(),
     })),

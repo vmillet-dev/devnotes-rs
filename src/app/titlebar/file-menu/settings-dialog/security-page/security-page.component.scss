@@ -33,7 +33,7 @@
   color: var(--text-2);
 }
 
-// ⚠️ Text and a hairline, never a fill: one red block beside the single amber accent
+// Text and a hairline, never a fill: one red block beside the single amber accent
 // reads as a second accent.
 .backup-confirm {
   @include surface($bg: var(--bg-2), $border-color: rgba(var(--red-rgb), 0.4));
@@ -74,7 +74,7 @@
   @include accent-state(var(--text-0), var(--amber-dim));
 }
 
-// ⚠️ Red at rest, not on hover: a warning that arrives under the pointer plays no part
+// Red at rest, not on hover: a warning that arrives under the pointer plays no part
 // in choosing.
 .backup-go {
   @include destructive;

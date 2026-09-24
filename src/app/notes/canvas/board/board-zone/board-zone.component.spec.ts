@@ -61,7 +61,7 @@ describe('BoardZoneComponent', () => {
     expect(root().querySelector('.zone-count')?.textContent).toBe('2');
   });
 
-  /** ⚠️ Dimmed, never dropped: reflowing the survivors throws away the board's memory. */
+  /** Dimmed, never dropped: reflowing the survivors throws away the board's memory. */
   it('dims the cards the filters do not match, and keeps them', () => {
     expect(card('shown')?.classList.contains('dimmed')).toBe(false);
     expect(card('dimmed')?.classList.contains('dimmed')).toBe(true);

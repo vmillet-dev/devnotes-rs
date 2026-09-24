@@ -30,7 +30,7 @@ export type {
 /** Kept out of `Note`: where a card sits is local, and must never travel with an export. */
 export interface BoardNote {
   readonly note: Note;
-  /** ⚠️ Dimmed in place, never dropped — a reflow throws the spatial memory away. */
+  /** Dimmed in place, never dropped — a reflow throws the spatial memory away. */
   readonly matches: boolean;
   /** `null` inside a zone, where a card flows; set only on the free background. */
   readonly position: WireBoardNote['position'];
@@ -54,7 +54,7 @@ export interface BoardView {
   readonly height: number;
 }
 
-/** ⚠️ `spaceId` is required: a folder belongs to a space, so a board across all of them
+/** `spaceId` is required: a folder belongs to a space, so a board across all of them
  *  would have no zones to draw. */
 export interface BoardQuery {
   readonly spaceId: string;

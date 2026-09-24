@@ -9,7 +9,7 @@ import { Attachment } from '@core/model/note.model';
 import { NotesStore } from './notes.store';
 
 /**
- * Follows the open note itself rather than being told to. ⚠️ The bytes are never loaded
+ * Follows the open note itself rather than being told to. The bytes are never loaded
  * in bulk: `preview` asks for one at a time, and a `data:` URI weighs a third more
  * than the file.
  */
@@ -47,7 +47,7 @@ export class AttachmentsStore {
     // Attachments follow the persisted note: a draft has no row to carry them.
     effect(() => void this.openFor(this.notes.persistedNoteId()));
 
-    // ⚠️ A drop is a window event, not a DOM one.
+    // A drop is a window event, not a DOM one.
     const drops = inject(FileDropService);
     inject(DestroyRef).onDestroy(drops.on((paths) => void this.addDroppedFiles(paths)));
   }
@@ -91,7 +91,7 @@ export class AttachmentsStore {
   }
 
   /**
-   * ⚠️ Re-pointed here rather than by the effect on `persistedNoteId`, which only runs
+   * Re-pointed here rather than by the effect on `persistedNoteId`, which only runs
    * on the next detection cycle — after the write that follows, which would then attach
    * nothing and not say so. `openFor` is idempotent.
    */

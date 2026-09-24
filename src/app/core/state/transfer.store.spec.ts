@@ -169,7 +169,7 @@ describe('TransferStore', () => {
       expect(harness.status.status()?.params).toMatchObject({ attachments: '3' });
     });
 
-    /** ⚠️ The note arrives with a thumbnail that will never load, and this is the only
+    /** The note arrives with a thumbnail that will never load, and this is the only
      *  thing that says why. It outranks the degraded notice on purpose: a missing file is
      *  a defect, a degraded field is a shrug. */
     it('says when the archive named an attachment it did not carry', async () => {
@@ -235,7 +235,7 @@ describe('TransferStore', () => {
       expect(harness.repository.importedWith).toBe('the shared phrase');
     });
 
-    /** ⚠️ A typo must not cost the import: the phrase is asked for again, and the refusal
+    /** A typo must not cost the import: the phrase is asked for again, and the refusal
      *  is said beside the field rather than in the error banner. */
     it('asks again when the phrase is refused', async () => {
       harness.dialog.openPath = 'C:/in.devnotes';
@@ -282,7 +282,7 @@ describe('TransferStore', () => {
 
   describe('export', () => {
     /**
-     * ⚠️ Down to the minute: two exports on the same day were offered the same name, and
+     * Down to the minute: two exports on the same day were offered the same name, and
      * replacing the first was one Enter away. The expectation is derived through
      * `sv-SE`, which formats local time ISO-style — a literal would pin the runner's
      * timezone, and the point is that the name is **not** the UTC day.
@@ -383,7 +383,7 @@ describe('TransferStore', () => {
       expect(harness.dialog.saveCalls).toHaveLength(0);
     });
 
-    /** ⚠️ The file is the one thing here most likely to leave the machine: the phrase goes
+    /** The file is the one thing here most likely to leave the machine: the phrase goes
      *  through to the command, and the report says the file was sealed with it. */
     it('seals the file with the phrase that was given', async () => {
       harness.dialog.savePath = 'C:/backups/devnotes.devnotes';
@@ -425,7 +425,7 @@ describe('TransferStore', () => {
     });
   });
 
-  /** ⚠️ A dialog that vanished and came back on a typo would read as a fault, so the
+  /** A dialog that vanished and came back on a typo would read as a fault, so the
    *  prompt stays up while the phrase is being derived from — and refuses a second answer. */
   it('keeps the prompt on screen while the phrase is being used', async () => {
     harness.dialog.openPath = 'C:/in.devnotes';

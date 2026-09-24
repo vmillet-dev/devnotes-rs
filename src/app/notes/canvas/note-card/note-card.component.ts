@@ -37,7 +37,7 @@ const MAX_VISIBLE_TAGS = 2;
 const MAX_VISIBLE_ITEMS = 2;
 
 /**
- * ⚠️ The effect below runs when the card is *rebuilt* too, and a card is rebuilt on every
+ * The effect below runs when the card is *rebuilt* too, and a card is rebuilt on every
  * section change — the first character typed into the search field switches the canvas to
  * one flat `results` section. Without this guard the card took the keyboard off the field
  * mid-word.
@@ -75,7 +75,7 @@ export class NoteCardComponent {
   protected readonly spaces = inject(SpacesStore);
   private readonly folders = inject(FoldersStore);
 
-  /** ⚠️ The note's **own** space, not the active one: a card on "all spaces" belongs to a
+  /** The note's **own** space, not the active one: a card on "all spaces" belongs to a
    *  space of its own, and offering another one's folders would file it nowhere. */
   protected readonly foldersOfSpace = computed(() =>
     this.folders.allFolders().filter((folder) => folder.spaceId === this.note().spaceId),
@@ -139,7 +139,7 @@ export class NoteCardComponent {
   });
 
   /**
-   * Two rows, spent on what is left to do. ⚠️ A matched item keeps its seat whatever its
+   * Two rows, spent on what is left to do. A matched item keeps its seat whatever its
    * state — it is why the card is on screen — and a list with nothing left falls back on
    * its *last* items, the top of a finished list saying the least about where it ended.
    * Each row carries the position it holds in the note, which is what gets ticked.
@@ -193,7 +193,7 @@ export class NoteCardComponent {
   }
 
   /**
-   * Where a short list has to start for the thing a search found to be in it. ⚠️ A
+   * Where a short list has to start for the thing a search found to be in it. A
    * window, not a filter: the list keeps its order and its length.
    */
   private windowStart(length: number, at: number, size: number): number {
@@ -202,7 +202,7 @@ export class NoteCardComponent {
   }
 
   /**
-   * ⚠️ The excerpt is clipped at 160 characters, so an item found by a long line comes
+   * The excerpt is clipped at 160 characters, so an item found by a long line comes
    * back with a trailing `…` and never equals its own text. Compared by prefix.
    */
   private indexOfHit(texts: readonly string[], excerpt: string): number {
@@ -241,7 +241,7 @@ export class NoteCardComponent {
     void this.notes.moveNote(this.note().id, spaceId);
   }
 
-  /** ⚠️ A batch of one, through the same command the selection bar takes. */
+  /** A batch of one, through the same command the selection bar takes. */
   protected onFile(folderId: string | null): void {
     void this.notes.fileNote(this.note().id, folderId);
   }
@@ -255,7 +255,7 @@ export class NoteCardComponent {
     void this.fill.copyNote(this.note());
   }
 
-  /** ⚠️ Through the same activation the click surface emits, so the page arbitrates once. */
+  /** Through the same activation the click surface emits, so the page arbitrates once. */
   protected onOpenFromMenu(): void {
     this.opened.emit({ noteId: this.note().id, toggleChecked: false, extendRange: false });
   }

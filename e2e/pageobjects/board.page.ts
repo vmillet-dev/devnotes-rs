@@ -38,7 +38,7 @@ export const board = {
   },
 
   /**
-   * ⚠️ Read in one call, like `canvas.titles()`: a round trip per card leaves a window in
+   * Read in one call, like `canvas.titles()`: a round trip per card leaves a window in
    * which the board re-renders, and the list that comes back mixes two states.
    */
   zoneTitles(folderName: string): Promise<string[]> {
@@ -58,10 +58,9 @@ export const board = {
 
   /** Whether every card in a zone is drawn inside the zone's own box, none cut off. */
   /**
-   * How the browser actually flowed a zone: one entry per row, each the number of cards
-   * on it. ⚠️ The claim Rust makes when it sizes a zone, read back off the screen — a
-   * zone one pixel short of its rows shows a scrollbar, the scrollbar takes a slice of the
-   * row, and two cards across silently become one (#284).
+   * How the browser actually flowed a zone: one entry per row, each the number of cards on it.
+   * The claim Rust makes when it sizes a zone, read back off the screen: one pixel short of its
+   * rows, a zone shows a scrollbar that wraps two cards into one column.
    */
   async zoneRows(folderId: string): Promise<number[]> {
     const tops = await browser.execute(
@@ -98,9 +97,8 @@ export const board = {
   },
 
   /**
-   * The empty board left under the lowest card in a zone. ⚠️ A whole card’s worth of it
-   * is the symptom of the count and the flow disagreeing: Rust made room for a row the
-   * browser never used (#284).
+   * The empty board under the lowest card in a zone: a whole card's worth of it means Rust made
+   * room for a row the browser never used.
    */
   zoneSlack(folderId: string): Promise<number> {
     return browser.execute(
@@ -273,7 +271,7 @@ export const board = {
   /** What the label offers to touch, which is the count and not a warning. */
   reorganiseLabel: () => $(testid('board-tidy-everything')).getText(),
 
-  /** ⚠️ Where the board is panned to. An arrangement that lands its result outside this
+  /** Where the board is panned to. An arrangement that lands its result outside this
    *  is indistinguishable from an erasure. */
   pan: (): Promise<{ x: number; y: number }> =>
     browser.execute(() => {
@@ -290,7 +288,7 @@ export const board = {
       y,
     ),
 
-  /** ⚠️ Dimmed, never dropped: the card is still there, it has only stopped shouting. */
+  /** Dimmed, never dropped: the card is still there, it has only stopped shouting. */
   isDimmed(title: string): Promise<boolean> {
     return browser.execute(
       (cardSelector: string, titleSelector: string, wanted: string) =>

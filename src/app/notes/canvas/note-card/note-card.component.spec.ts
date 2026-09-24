@@ -29,7 +29,7 @@ describe('NoteCardComponent', () => {
   }
 
   beforeEach(() => {
-    // ⚠️ Only `Date`: the zoneless scheduler needs real rAF/setTimeout for `whenStable()`.
+    // Only `Date`: the zoneless scheduler needs real rAF/setTimeout for `whenStable()`.
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-01-10T12:00:00Z'));
 
@@ -57,13 +57,7 @@ describe('NoteCardComponent', () => {
     expect(badge.language()).toBe('json');
   });
 
-  /**
-   * Structural, not visual: jsdom lays nothing out. ⚠️ The title is **outside** the band —
-   * inline after the badge and the marks it began in the middle of the card, and what was
-   * left of it wrapped.
-   */
-  /** ⚠️ One row, not two: the marks used to have a band above the title, and it said
-   *  nothing about the note that the marks themselves do not. */
+  /** Structural, not visual — jsdom lays nothing out: the title, the tick and the marks share one row. */
   it('puts the title, the tick and the marks on one row', async () => {
     fixture.componentRef.setInput('note', createNote({ title: 'My note', attachmentCount: 2 }));
     await fixture.whenStable();
@@ -77,7 +71,7 @@ describe('NoteCardComponent', () => {
   });
 
   /**
-   * ⚠️ No band at all, and that is the point: the actions hang outside the card, so a todo
+   * No band at all, and that is the point: the actions hang outside the card, so a todo
    * list with nothing to mark starts on its title instead of on 26px of nothing.
    */
   it('draws no band on a todo list with nothing to mark', async () => {
@@ -91,7 +85,7 @@ describe('NoteCardComponent', () => {
     expect(fixture.nativeElement.querySelector('[data-testid="note-card-check"]')).not.toBeNull();
   });
 
-  /** ⚠️ A mark among the marks: it says what the note *is*, like the badge beside it. */
+  /** A mark among the marks: it says what the note *is*, like the badge beside it. */
   it('puts the pin with the marks rather than over the card corner', async () => {
     fixture.componentRef.setInput('note', createNote({ title: 'My note', pinned: true }));
     await fixture.whenStable();
@@ -105,7 +99,7 @@ describe('NoteCardComponent', () => {
     );
   });
 
-  /** ⚠️ One ⚡, not two: the mark says the copy will ask for the values before it copies. */
+  /** One ⚡, not two: the mark says the copy will ask for the values before it copies. */
   it('marks a snippet with fields once, and copies through the form', async () => {
     fixture.componentRef.setInput(
       'note',
@@ -119,10 +113,7 @@ describe('NoteCardComponent', () => {
     expect(fixture.debugElement.query(By.directive(CopyButtonComponent))).toBeNull();
   });
 
-  /**
-   * ⚠️ The click surface is a layer of its own under the card: a `<button>` cannot hold
-   * the buttons the header carries, which is what used to scatter them over the text.
-   */
+  /** The click surface is a layer of its own under the card: a `<button>` cannot hold buttons. */
   it('opens from a layer under the card, not from the card itself', async () => {
     fixture.componentRef.setInput('note', createNote({ title: 'My note' }));
     await fixture.whenStable();
@@ -245,7 +236,7 @@ describe('NoteCardComponent', () => {
         expect(itemTexts()).toEqual(['Version bumped', 'Changelog written']);
       });
 
-      /** ⚠️ The excerpt is clipped at 160 characters and never equals its own text. */
+      /** The excerpt is clipped at 160 characters and never equals its own text. */
       it('finds the item behind a clipped excerpt', async () => {
         const long = 'x'.repeat(200);
         fixture.componentRef.setInput(
@@ -261,7 +252,7 @@ describe('NoteCardComponent', () => {
         expect(itemTexts()).toEqual(['Changelog written', long]);
       });
 
-      /** ⚠️ A row is not at the place it holds in the note; it is what it carries that gets written. */
+      /** A row is not at the place it holds in the note; it is what it carries that gets written. */
       it('ticks the item it shows, not the one at the same place in the list', async () => {
         const store = TestBed.inject(NotesStore);
         const setChecklist = vi.spyOn(store, 'setChecklist').mockResolvedValue(undefined);
@@ -343,7 +334,7 @@ describe('NoteCardComponent', () => {
       );
     });
 
-    /** ⚠️ The absence reads on its own; an "unfiled" chip would soil every loose card. */
+    /** The absence reads on its own; an "unfiled" chip would soil every loose card. */
     it('shows nothing at all when the note has no folder', async () => {
       fixture.componentRef.setInput('note', createNote({ folderId: null, folder: null }));
       await fixture.whenStable();
@@ -419,7 +410,7 @@ describe('NoteCardComponent', () => {
     expect(card.classes['selected']).toBe(true);
   });
 
-  /** ⚠️ Still true, and now trivially so: the click surface holds nothing at all. */
+  /** Still true, and now trivially so: the click surface holds nothing at all. */
   it('keeps every button free of flow content, which a <button> may not contain', () => {
     expect(fixture.nativeElement.querySelectorAll('button div')).toHaveLength(0);
   });
@@ -666,7 +657,7 @@ describe('NoteCardComponent', () => {
   });
 
   /**
-   * ⚠️ Real words and not only a red border: the border says something is wrong, not that
+   * Real words and not only a red border: the border says something is wrong, not that
    * one more press trashes the note. `role="status"` is what announces it.
    */
   describe('armed for deletion', () => {
@@ -700,7 +691,7 @@ describe('NoteCardComponent', () => {
   });
 
   /**
-   * ⚠️ The card is rebuilt whenever its section changes, and the first character typed
+   * The card is rebuilt whenever its section changes, and the first character typed
    * into the search field switches the canvas to one flat `results` section — so the
    * effect that follows the canvas cursor runs while somebody is typing somewhere else.
    */

@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 
 /**
- * ⚠️ `node --test` and not a `*.spec.ts`, like the palette and the focus-ring sweeps: this
+ * `node --test` and not a `*.spec.ts`, like the palette and the focus-ring sweeps: this
  * reads two shipped files off disk, and the Angular builder compiles its specs for a
  * browser, where `node:fs` does not exist.
  *

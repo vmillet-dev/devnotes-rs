@@ -17,7 +17,7 @@ describe('Spaces', () => {
     await canvas.open();
     homeId = await homeSpaceId();
 
-    // ⚠️ The first scenario asserts on "the only space there is", a property of the whole
+    // The first scenario asserts on "the only space there is", a property of the whole
     // database — and one application serves the whole run. Established, never inherited.
     for (const space of await bridge.listSpaces()) {
       if (space.id !== homeId) {
@@ -75,7 +75,7 @@ describe('Spaces', () => {
   });
 
   /**
-   * The order is SQL's, which only a real database can prove. ⚠️ Its own space, named to
+   * The order is SQL's, which only a real database can prove. Its own space, named to
    * sort last: Mocha runs a nested suite after its siblings, and by then the tests above
    * have renamed and deleted theirs.
    */
@@ -120,7 +120,7 @@ describe('Spaces', () => {
       expect(loose.at(-1)?.pinned).toBe(false);
     });
 
-    /** ⚠️ A rename answers with the row it read back, not with what it was sent. */
+    /** A rename answers with the row it read back, not with what it was sent. */
     it('survives a rename', async () => {
       await spaces.open();
       await spaces.togglePin(id);
@@ -175,7 +175,7 @@ describe('Spaces', () => {
   });
 
   /**
-   * ⚠️ Runs after everything above it, like the pinning suite: Mocha takes a nested suite
+   * Runs after everything above it, like the pinning suite: Mocha takes a nested suite
    * once its siblings are done, and this one puts the rail away for a moment.
    */
   describe('the library rail', () => {
@@ -189,7 +189,7 @@ describe('Spaces', () => {
       expect(await browser.$(testid('folder-switcher')).isExisting()).toBe(false);
     });
 
-    /** ⚠️ The drag is pointer events, which no keyboard has: the edge answers arrows too. */
+    /** The drag is pointer events, which no keyboard has: the edge answers arrows too. */
     it('is resized from its edge, and the width survives the page', async () => {
       await rail.show();
       const before = await rail.width();
@@ -209,9 +209,8 @@ describe('Spaces', () => {
     });
 
     /**
-     * ⚠️ The two panels a ⋯ opens used to hold the floor up with a `min-width` of their
-     * own, and releasing it is the whole of #212: at the floor the delete control has to
-     * still be inside the rail, which only a laid-out window can say.
+     * The panels a ⋯ opens follow the rail down to its floor: the delete control must still be
+     * inside the rail there, which only a laid-out window can say.
      */
     it('narrows to its floor with the space panel still inside it', async () => {
       await rail.show();
@@ -235,7 +234,7 @@ describe('Spaces', () => {
       await rail.hide();
       expect(await browser.$(testid('space-switcher')).isExisting()).toBe(true);
 
-      // ⚠️ The preference has to reach the file before the reload, or the rail comes back.
+      // The preference has to reach the file before the reload, or the rail comes back.
       await eventually(
         () => rail.isShowing(),
         (showing) => !showing,

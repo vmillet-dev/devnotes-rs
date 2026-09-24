@@ -26,7 +26,7 @@ describe('NoteCopyService', () => {
   });
 
   /**
-   * ⚠️ The answer is what the clipboard accepted, not what was attempted: outside Tauri
+   * The answer is what the clipboard accepted, not what was attempted: outside Tauri
    * the plugin throws, and a caller that took a copy on trust would tick a card that
    * copied nothing.
    */

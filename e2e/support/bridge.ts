@@ -53,7 +53,7 @@ async function invoke<T>(command: string, args: Record<string, unknown> = {}): P
 }
 
 export const bridge = {
-  /** ⚠️ Answers while locked: the registry is beside the libraries, not inside one. */
+  /** Answers while locked: the registry is beside the libraries, not inside one. */
   listLibraries: () => invoke<Registry>('list_libraries'),
   listSpaces: () => invoke<Space[]>('list_spaces'),
   createSpace: (draft: SpaceDraft) => invoke<Space>('create_space', { draft }),
@@ -135,11 +135,9 @@ export function query(overrides: Partial<NotesQuery> = {}): NotesQuery {
 /**
  * The space the install seeded, by id, for the whole run.
  *
- * ⚠️ Not `listSpaces()[0]`: `list_spaces` orders by `name COLLATE NOCASE`, so the first
- * row is the alphabetically first space and a spec file that created `Ops` would pick
- * that one instead. Resolved once while a virgin profile still holds exactly one space,
- * then read back from a file — each spec file gets its own worker process, so a
- * module-level cache would be empty again in the next one.
+ * Not `listSpaces()[0]`: spaces come back ordered by name, so a spec file that created `Ops`
+ * would pick that one. Resolved once while a virgin profile holds exactly one space, then read
+ * back from a file: each spec file runs in its own worker, where a module cache starts empty.
  */
 function readHomeSpaceId(): string | null {
   try {

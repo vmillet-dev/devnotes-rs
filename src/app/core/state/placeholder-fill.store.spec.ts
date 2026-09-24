@@ -68,7 +68,7 @@ describe('PlaceholderFillStore', () => {
     });
 
     /**
-     * ⚠️ An empty value is a field the user left alone, and it is kept as such: the
+     * An empty value is a field the user left alone, and it is kept as such: the
      * snippet's own default is what fills it, and copying that default into the stored
      * value would freeze it the day the default changes.
      */
@@ -98,7 +98,7 @@ describe('PlaceholderFillStore', () => {
       expect(fill.target()).toBeNull();
     });
 
-    /** ⚠️ The card holds a preview: filling it would copy a command cut short. */
+    /** The card holds a preview: filling it would copy a command cut short. */
     it('fills the whole body, not the preview the card holds', async () => {
       await fill.copyNote({ ...SNIPPET, placeholders: [], content: 'psql', truncated: true });
       expect(harness.clipboard.content).toBe('psql -h {{host}} -U {{user}}');
@@ -135,7 +135,7 @@ describe('PlaceholderFillStore', () => {
     });
 
     /**
-     * ⚠️ Two answers can come back out of order, and the newer request is the one the
+     * Two answers can come back out of order, and the newer request is the one the
      * user is looking at: an older answer landing late would overwrite it.
      */
     it('ignores an answer that arrives after a newer request', async () => {

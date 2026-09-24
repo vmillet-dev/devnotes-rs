@@ -53,7 +53,7 @@ app-dialog {
   color: var(--text-2);
 }
 
-// ⚠️ A **fixed** height, not a maximum. The dialog is `fitted` — sized by its content — so
+// A **fixed** height, not a maximum. The dialog is `fitted` — sized by its content — so
 // a block that grows with the release makes the prompt a different size every time, and the
 // buttons land somewhere else. It scrolls inside instead.
 .update-notes-body {

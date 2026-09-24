@@ -81,7 +81,7 @@ describe('BoardStore', () => {
     expect(store.isBoard()).toBe(false);
   });
 
-  /** ⚠️ A folder belongs to a space, so there would be no zones to draw. */
+  /** A folder belongs to a space, so there would be no zones to draw. */
   it('refuses the board while the user is on all spaces', async () => {
     const { store } = await createStore();
 
@@ -100,7 +100,7 @@ describe('BoardStore', () => {
   });
 
   /**
-   * ⚠️ Its own lookup, and not the canvas's: the board **dims** where the canvas
+   * Its own lookup, and not the canvas's: the board **dims** where the canvas
    * **narrows**, so a card here can be acted on while its note is nowhere in that view.
    */
   it('finds a card wherever it sits, zone or background, dimmed or not', async () => {
@@ -147,7 +147,7 @@ describe('BoardStore', () => {
     expect(harness.repository.lastQuery?.tags).toEqual(['sql']);
   });
 
-  /** ⚠️ Without the `equal` comparator a fresh literal fires a query on every tick. */
+  /** Without the `equal` comparator a fresh literal fires a query on every tick. */
   it('does not re-query when nothing it reads has moved', async () => {
     const harness = await createStore();
     await onBoard(harness);
@@ -213,7 +213,7 @@ describe('BoardStore', () => {
   });
 
   /**
-   * ⚠️ A `computed` reading `hasValue()` answers `null` for the whole round trip, so the
+   * A `computed` reading `hasValue()` answers `null` for the whole round trip, so the
    * board went blank on every reload — a card disappearing under the pointer that ticked it.
    */
   it('keeps what it is drawing while it re-reads', async () => {
@@ -239,7 +239,7 @@ describe('BoardStore', () => {
   });
 
   describe('what a gesture writes', () => {
-    /** ⚠️ One write per gesture, not one per pointermove. */
+    /** One write per gesture, not one per pointermove. */
     it('coalesces everything moved into a single batch', async () => {
       const harness = await createStore(
         new FakeBoardRepository({
@@ -261,7 +261,7 @@ describe('BoardStore', () => {
       expect(batch?.cards).toEqual([{ noteId: 'a', position: { x: 80, y: 600 } }]);
     });
 
-    /** ⚠️ Without the overlay the card snaps back to where the server last saw it. */
+    /** Without the overlay the card snaps back to where the server last saw it. */
     it('shows the move at once, before it is written', async () => {
       const harness = await createStore(
         new FakeBoardRepository({
@@ -275,11 +275,7 @@ describe('BoardStore', () => {
       expect(harness.store.zones()[0]?.frame.x).toBe(400);
     });
 
-    /**
-     * ⚠️ The overlay used to be dropped when the **write** returned, and  only
-     * asks: the view still on screen is the one read before the drag, so for a whole round
-     * trip the card was drawn where it came from. It flashed back, then settled.
-     */
+    /** Released when a view carries the drop, not when the write returns. */
     it('holds the drop until a view comes back carrying it', async () => {
       const harness = await createStore(
         new FakeBoardRepository({
@@ -305,7 +301,7 @@ describe('BoardStore', () => {
       );
       await onBoard(harness);
 
-      // ⚠️ The width is what says the reload has actually landed: the frame reads the same
+      // The width is what says the reload has actually landed: the frame reads the same
       // either way while the overlay is still up, so asserting on it would prove nothing.
       harness.repository.setView({ zones: [fakeZone({ folder: PERF, frame: moved })], width: 1234 });
       harness.store.moveZone('perf', moved);
@@ -357,11 +353,7 @@ describe('BoardStore', () => {
       expect(harness.repository.saved.at(-1)?.cards).toEqual([{ noteId: 'a', position: { x: 320, y: 480 } }]);
     });
 
-    /**
-     * ⚠️ The overlay covered places and not **membership**, so the ghost the drag drew
-     * vanished on `pointerup` and the card was drawn back in `loose`, at the place the
-     * last view gave it, until the round trip landed. Two frames of flashback (#282).
-     */
+    /** Membership is staged like a place: the card stays in the zone it was dropped into. */
     it('draws a card inside the zone it was dropped into, before any view says so', async () => {
       const harness = await createStore(
         new FakeBoardRepository({
@@ -396,7 +388,7 @@ describe('BoardStore', () => {
     });
 
     /**
-     * ⚠️ The opposite of what a refused **place** does. A place the server would not take
+     * The opposite of what a refused **place** does. A place the server would not take
      * is worth leaving on screen with a banner beside it; a membership it would not take
      * is a lie about which folder the note is in.
      */
@@ -424,7 +416,7 @@ describe('BoardStore', () => {
       );
       await onBoard(harness);
 
-      // ⚠️ The width is what says the reload has landed: the zone holds the card either
+      // The width is what says the reload has landed: the zone holds the card either
       // way while the overlay is still up, so asserting on it would prove nothing.
       harness.repository.setView({
         zones: [fakeZone({ folder: PERF, notes: [fakeBoardNote(createNote({ id: 'a' }))] })],
@@ -509,7 +501,7 @@ describe('BoardStore', () => {
       expect(done).toEqual({ moved: 2, previous: DRAGGED });
     });
 
-    /** ⚠️ The split is the feature: a zone sized by hand is the only manual work a board
+    /** The split is the feature: a zone sized by hand is the only manual work a board
      *  holds, and the frequent gesture must not be the one that overwrites it. */
     it('asks for the loose cards alone when that is the scope', async () => {
       const harness = await createStore();
@@ -528,7 +520,7 @@ describe('BoardStore', () => {
       expect(harness.repository.arranged).toEqual([]);
     });
 
-    /** ⚠️ Every staged place has just been overwritten; kept, the overlay would draw the
+    /** Every staged place has just been overwritten; kept, the overlay would draw the
      *  cards back where the drag left them. */
     it('lets go of what a gesture had staged', async () => {
       const harness = await createStore(
@@ -547,7 +539,7 @@ describe('BoardStore', () => {
     });
 
     /**
-     * ⚠️ What the board watches to pan home. The arrangement puts everything back at the
+     * What the board watches to pan home. The arrangement puts everything back at the
      * top left, and the pan is a native scroll nothing else resets — so a board panned
      * elsewhere produces its result off screen, which reads as an erasure.
      */

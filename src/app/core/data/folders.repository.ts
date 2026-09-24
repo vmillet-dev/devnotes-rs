@@ -16,7 +16,7 @@ function toFolder(dto: WireFolder): Folder {
 }
 
 /**
- * ⚠️ `delete` takes no refuge, unlike `SpacesRepository.delete`: the notes come out
+ * `delete` takes no refuge, unlike `SpacesRepository.delete`: the notes come out
  * loose, and "no folder" is a legitimate state rather than data loss.
  */
 @Injectable({ providedIn: 'root' })

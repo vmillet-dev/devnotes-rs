@@ -9,7 +9,7 @@ export interface Debounced<T> {
   cancel(): void;
 }
 
-/** ⚠️ Must be built in an injection context: the pending timer is cleared on destruction. */
+/** Must be built in an injection context: the pending timer is cleared on destruction. */
 export function debounced<T>(action: (value: T) => void, delayMs: number): Debounced<T> {
   const destroyRef = inject(DestroyRef);
   let timeout: ReturnType<typeof setTimeout> | null = null;

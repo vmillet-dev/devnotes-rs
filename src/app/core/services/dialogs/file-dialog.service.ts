@@ -14,7 +14,7 @@ export const FILE_DIALOG_ADAPTER = new InjectionToken<FileDialogAdapter>('FILE_D
   factory: () => ({ open, save }),
 });
 
-/** ⚠️ `json` stays on the way in: an export written before the archive existed is still
+/** `json` stays on the way in: an export written before the archive existed is still
  * importable, and the picker has to let the user reach it. */
 const OPEN_FILTER = { name: APP_INFO.name, extensions: ['devnotes', 'json'] };
 const SAVE_FILTER = { name: APP_INFO.name, extensions: ['devnotes'] };

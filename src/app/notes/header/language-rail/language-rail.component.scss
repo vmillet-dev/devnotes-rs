@@ -32,15 +32,10 @@
   flex-shrink: 0;
 }
 
-// ⚠️ The chip's own box stays invisible: the badge carries a hairline of its own since
-// #196, and a second outline two pixels further out — at a different radius — read as two
-// rings around one badge rather than as a selection. The padding stays, because it is what
-// the chip is clickable by.
-//
-// ⚠️ Which is why the state is handed down as a custom property and not written as a rule
-// on `.lang-tag`: that element belongs to `app-language-badge`, and emulated encapsulation
-// rewrites a selector spelled here with *this* component's `_ngcontent` attribute. It then
-// matches nothing, silently — and the selected format had no mark at all (#207).
+// The chip's own box stays invisible: the badge carries a hairline of its own, and a second
+// outline at another radius reads as two rings. The state goes down as a custom property:
+// `.lang-tag` belongs to `app-language-badge`, and a rule spelled here would carry this
+// component's `_ngcontent` and match nothing.
 .language-chip:hover {
   --badge-ring: var(--line);
 }

@@ -42,7 +42,7 @@ describe('FileMenuComponent', () => {
     return found;
   }
 
-  /** ⚠️ The prompt stands between the click and the file; these scenarios decline it. */
+  /** The prompt stands between the click and the file; these scenarios decline it. */
   async function declineProtection(): Promise<void> {
     const prompt = TestBed.inject(PassphrasePromptStore);
     await vi.waitFor(() => expect(prompt.request()).not.toBeNull());

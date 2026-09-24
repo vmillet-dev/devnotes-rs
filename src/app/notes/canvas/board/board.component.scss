@@ -1,8 +1,7 @@
 @use 'mixins' as *;
 
-// The host is the flex child; `.board` is what actually scrolls. ⚠️ `relative` for
-// `.board-empty`, which centres against it, and for nothing else since the no-folder
-// count went (#295).
+// The host is the flex child; `.board` is what actually scrolls. `relative` for
+// `.board-empty`, which centres against it.
 :host {
   display: flex;
   flex-direction: column;
@@ -18,7 +17,7 @@
   margin: 16px 24px 24px;
   background: var(--bg-0);
   background-image: radial-gradient(var(--bg-2) 1px, transparent 1px);
-  // ⚠️ The lattice every gesture snaps to: `GRID_PX` in `board-gesture.ts`. Drift here and
+  // The lattice every gesture snaps to: `GRID_PX` in `board-gesture.ts`. Drift here and
   // a snapped board stops looking snapped.
   background-size: 20px 20px;
   border: 1px solid var(--line-soft);
@@ -26,7 +25,7 @@
   overflow: auto;
 }
 
-// ⚠️ At least the visible ground, whatever size the back end gave it: the gestures listen
+// At least the visible ground, whatever size the back end gave it: the gestures listen
 // here, and `folders::board::surface` stops at the content or at 960 × 540.
 .board-surface {
   position: relative;
@@ -35,7 +34,7 @@
 }
 
 // Dimmed in place: the card keeps its seat, it just stops asking for attention.
-// ⚠️ On the wrapper, not on `app-note-card`: the wrapper is what carries the class.
+// On the wrapper, not on `app-note-card`: the wrapper is what carries the class.
 .loose-card.dimmed {
   opacity: 0.32;
 }
@@ -97,7 +96,7 @@
   pointer-events: none;
 }
 
-// ⚠️ Visibly not the folder band: the left button draws a region that will **exist**, the
+// Visibly not the folder band: the left button draws a region that will **exist**, the
 // right one sweeps a selection that will not. Amber is the application's one accent, so the
 // selection reads as a highlight rather than as a second kind of zone.
 .select-band {
@@ -109,7 +108,7 @@
   border-radius: 4px;
 }
 
-// ⚠️ Placed here, drawn by `board-tidy`. The host is `relative`, so this floats over
+// Placed here, drawn by `board-tidy`. The host is `relative`, so this floats over
 // whatever the board has scrolled under it; the offsets clear `.board`'s own 24px margin
 // and the scrollbars inside its border.
 .board-tidy {

@@ -41,7 +41,7 @@ describe('{{fields}} in a snippet', () => {
   });
 
   /**
-   * ⚠️ The keyboard went straight past the form and pasted the tokens. Opening the note
+   * The keyboard went straight past the form and pasted the tokens. Opening the note
    * and closing it is what leaves the canvas cursor on that card.
    */
   it('asks for the fields when the copy comes from the keyboard too', async () => {
@@ -91,7 +91,7 @@ describe('{{fields}} in a snippet', () => {
     expect(await editor.hasCopyFilled()).toBe(true);
 
     await editor.copyFilled();
-    // ⚠️ An unreadable clipboard answers null at once, so only the readable case waits.
+    // An unreadable clipboard answers null at once, so only the readable case waits.
     const filled = await eventually(
       () => clipboardText(),
       (text) => text === null || text.includes('-p 5432'),
@@ -115,7 +115,7 @@ describe('{{fields}} in a snippet', () => {
     await fieldsForm.form().waitForExist({ timeout: 10_000 });
 
     await fieldsForm.copyRaw();
-    // ⚠️ Copies and dismisses — there is no form left to cancel.
+    // Copies and dismisses — there is no form left to cancel.
     await fieldsForm.form().waitForExist({ reverse: true, timeout: 10_000 });
 
     const raw = await clipboardText();
@@ -177,7 +177,7 @@ describe('{{fields}} in a snippet', () => {
     await fieldsForm.form().waitForExist({ timeout: 10_000 });
     await fieldsForm.field('host').setValue('db.other');
     await fieldsForm.submit();
-    // ⚠️ The form closing is its own condition, and the next scenario opens a panel over
+    // The form closing is its own condition, and the next scenario opens a panel over
     // this one: waiting on the stored value alone let the two dialogs overlap.
     await fieldsForm.form().waitForExist({ reverse: true, timeout: 10_000 });
 

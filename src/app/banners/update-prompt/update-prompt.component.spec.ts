@@ -65,7 +65,7 @@ describe('UpdatePromptComponent', () => {
   });
 
   /**
-   * ⚠️ Closed by default meant installing without reading — and worse, opening it changed
+   * Closed by default meant installing without reading — and worse, opening it changed
    * the dialog's height: the body is bounded but the collapsed summary is one line, so the
    * panel grew under the cursor and moved "Install now" out from under the mouse.
    */

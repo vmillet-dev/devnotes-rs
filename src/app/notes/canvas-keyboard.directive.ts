@@ -43,7 +43,7 @@ interface CanvasContext {
  * Documenting a key, binding it and letting it be moved are the same act: the sheet and
  * the preferences panel are both derived from this.
  *
- * ⚠️ Two shapes. A **rebindable** entry declares `id` and `accelerator`, and its caps are
+ * Two shapes. A **rebindable** entry declares `id` and `accelerator`, and its caps are
  * derived from the second — so the key is spelled once. A **fixed** one declares `keys`
  * for the sheet and `on` for the match: the arrows are the grid's own navigation and
  * Escape is the way out of everything on screen, so neither may be moved.
@@ -54,7 +54,7 @@ interface CanvasKey {
   readonly id?: string;
   readonly accelerator?: string;
   /**
-   * ⚠️ Fires the action whatever it is bound to. Backspace has trashed a note since
+   * Fires the action whatever it is bound to. Backspace has trashed a note since
    * before the key could be moved, and making it movable is no reason to take that away.
    */
   readonly aliases?: readonly string[];
@@ -66,7 +66,7 @@ interface CanvasKey {
   readonly run?: (context: CanvasContext, key: string) => boolean;
 }
 
-/** ⚠️ Spelled once: the table below binds it and the written guide names it. */
+/** Spelled once: the table below binds it and the written guide names it. */
 export const CHECK_KEY = 'X';
 
 const DIRECTIONS: Record<string, FocusDirection> = {
@@ -134,7 +134,7 @@ const CANVAS_KEYS: readonly CanvasKey[] = [
     run: ({ focused, selection }) => given(focused, (note) => selection.toggleChecked(note.id)),
   },
   {
-    // ⚠️ The light half only. Reorganising the zones overwrites sizes chosen by hand, and
+    // The light half only. Reorganising the zones overwrites sizes chosen by hand, and
     // a key is the one address that cannot ask first — it stays a notch further away, in
     // the control's own menu.
     id: 'canvas.align',
@@ -149,8 +149,8 @@ const CANVAS_KEYS: readonly CanvasKey[] = [
     accelerator: 'Delete',
     aliases: ['Backspace'],
     labelKey: 'shortcuts.canvas.trash',
-    // ⚠️ Twice, the way the card's own menu asks for two clicks. One press used to trash
-    // whichever card the ring was on, and the ring can be on a card that is scrolled away.
+    // Twice, the way the card's own menu asks for two clicks: the ring can be on a card
+    // scrolled out of view.
     run: ({ focused, notes, selection }) =>
       given(focused, (note) => {
         if (selection.armedForDeletion() !== note.id) {
@@ -171,7 +171,7 @@ const CANVAS_KEYS: readonly CanvasKey[] = [
   },
   {
     keys: ['Escape'],
-    // ⚠️ Not `clearSelection`, which is what it was called when the selection was the
+    // Not `clearSelection`, which is what it was called when the selection was the
     // only thing it undid. The card's own banner names this key for the same reason.
     labelKey: 'shortcuts.canvas.stepBack',
     on: ['Escape'],
@@ -179,12 +179,9 @@ const CANVAS_KEYS: readonly CanvasKey[] = [
     // the selection, then the search and the facets, and only then out of the folder —
     // leaving it is the biggest, so it is last.
     //
-    // ⚠️ The second rung is the only one that **writes**, and it reads `undo.banner()`
-    // rather than `undo.last()` on purpose: the two differ by design, the banner being
-    // what the 8s timer clears while the record survives for `Ctrl+Z`. Escape answers
-    // only while the offer is on screen — outside it, this key has other rungs to serve
-    // and must not quietly rewrite the corpus. The card taught it and one keystroke later
-    // it meant nothing (#293).
+    // The second rung is the only one that writes, and it reads `undo.banner()`, not
+    // `undo.last()`: Escape answers only while the offer is on screen, and outside it must not
+    // quietly rewrite the corpus.
     run: ({ selection, canvas, folders, undo }) =>
       when(selection.armedForDeletion() !== null, () => selection.disarm()) ||
       when(undo.banner() !== null, () => void undo.revert()) ||
@@ -294,7 +291,7 @@ export class CanvasKeyboardDirective {
     const first = cards[0];
     if (!first) return;
 
-    // ⚠️ Found by id among what was just measured, never by a position in `visibleNotes`.
+    // Found by id among what was just measured, never by a position in `visibleNotes`.
     // That list is the date view's order — pinned first, then `updated_at` — and the board
     // lays its cards out zone by zone, so an index resolved there landed the focus on an
     // unrelated card: the first ArrowRight on the board jumped two cards sideways.

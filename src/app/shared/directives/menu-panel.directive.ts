@@ -1,7 +1,7 @@
 import { Directive, ElementRef, afterNextRender, inject } from '@angular/core';
 
 /**
- * Keyboard navigation for a `role="menu"` panel. ⚠️ The initial focus is load-bearing —
+ * Keyboard navigation for a `role="menu"` panel. The initial focus is load-bearing —
  * a menu opened without it is unreachable from the keyboard — and is set by
  * `afterNextRender`, once the `@if` has created the panel.
  */

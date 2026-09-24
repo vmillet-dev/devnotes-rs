@@ -29,7 +29,7 @@ describe('SearchBoxComponent', () => {
   });
 
   /**
-   * ⚠️ The row wraps before the window is narrow, so the field spends most of its life at
+   * The row wraps before the window is narrow, so the field spends most of its life at
    * its floor — the long form was cut mid-word and said less than nothing.
    */
   it('keeps the long form as a tooltip and a short one in the field', () => {
@@ -40,7 +40,7 @@ describe('SearchBoxComponent', () => {
   });
 
   /**
-   * ⚠️ The row wraps before the window is narrow, so the field spends most of its life at
+   * The row wraps before the window is narrow, so the field spends most of its life at
    * its floor — the long form was cut mid-word and said less than nothing.
    */
   it('keeps the long form as a tooltip and a short one in the field', () => {
@@ -107,10 +107,7 @@ describe('SearchBoxComponent', () => {
       expect(fixture.nativeElement.querySelector('.kbd')).not.toBeNull();
     });
 
-    /**
-     * ⚠️ It used to be a button whose click dropped the tags and the languages with the
-     * text, which is not what a count says and not what a cross in a field means.
-     */
+    /** A count says how many; clearing is the cross's job. */
     it('is a count and not a control', async () => {
       fixture.componentRef.setInput('matched', 12);
       await fixture.whenStable();
@@ -134,7 +131,7 @@ describe('SearchBoxComponent', () => {
     });
 
     /**
-     * ⚠️ `preventDefault` matters: the field is inside the `<label>`, so the click would
+     * `preventDefault` matters: the field is inside the `<label>`, so the click would
      * otherwise focus it and hand the user a caret in a box they had just emptied.
      */
     it('asks for the text to go, without focusing the field it emptied', async () => {

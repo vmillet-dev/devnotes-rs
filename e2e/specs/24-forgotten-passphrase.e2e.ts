@@ -3,13 +3,12 @@ import { $, browser, expect } from '@wdio/globals';
 import { eventually, testid } from '../support/app.js';
 
 /**
- * The way out of a library nobody can open any more.
+ * The way out of a library whose phrase is forgotten.
  *
- * ⚠️ This file runs **after `23-backups`** and depends on it: that one ends by restoring
- * a copy, which closes the library and leaves the gate on screen. There is no other way
- * to meet a locked gate inside one run — the unlocked state lives in the process, and the
- * process outlives every page reload. Nothing may be filed after this one either: it
- * archives the library and leaves the profile with none.
+ * Runs after `23-backups` and depends on it: that one ends by restoring a copy, which closes
+ * the library and leaves the gate on screen — the only way to meet a locked gate inside one
+ * run, since the unlocked state outlives every page reload. Nothing may run after this one:
+ * it archives the library and leaves the profile with none.
  */
 describe('A forgotten passphrase', () => {
   const panel = () => $(testid('vault-archive'));
@@ -25,7 +24,7 @@ describe('A forgotten passphrase', () => {
     );
   });
 
-  /** ⚠️ Well away from the field: it is the one thing that cannot help here. */
+  /** Well away from the field: it is the one thing that cannot help here. */
   it('offers a way out from under the unlock button', async () => {
     expect(await $(testid('vault-forgotten')).isExisting()).toBe(true);
   });
@@ -45,7 +44,7 @@ describe('A forgotten passphrase', () => {
   });
 
   /**
-   * ⚠️ The key file travels with the notes, so what is left has no library at all — which
+   * The key file travels with the notes, so what is left has no library at all — which
    * is what turns the gate into the one that asks for a **new** phrase. A gate still
    * asking for the old one would be the same dead end with extra steps.
    */

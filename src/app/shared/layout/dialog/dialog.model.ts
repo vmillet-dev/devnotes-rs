@@ -1,13 +1,8 @@
 /**
- * ⚠️ The order is the value: a rung's position decides both the `z-index` and which
- * dialog Escape reaches, and no stylesheet carries a modal `z-index`. The banners of
- * `layout/` sit at 80 and must stay above every modal — they are triggered from inside
- * one — hence the base well below it.
- *
- * ⚠️ `app` is the About menu's four help panels, and it sits **under** the editor. A
- * help panel covers the whole page, so nothing on the canvas can be reached while one is
- * up — except through a global shortcut, which comes from outside the application
- * altogether. Opening a note from the palette then drew it behind the help.
+ * ⚠️ The order is the value: a rung's position is both its `z-index` and its Escape priority,
+ * and no stylesheet carries a modal `z-index`. The banners (`banners/`, at 80) stay above every
+ * modal, which can trigger them. `app` — the help panels — sits under the editor, which a
+ * global shortcut can open over them.
  */
 const LAYERS = ['app', 'editor', 'settings', 'update', 'palette', 'fields', 'zoom', 'passphrase'] as const;
 

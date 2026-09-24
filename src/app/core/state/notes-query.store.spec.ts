@@ -194,7 +194,7 @@ describe('NotesQueryStore', () => {
       canvas.setSearchQuery('deploy');
       canvas.toggleTag('urgent');
       canvas.toggleLanguage('json');
-      // ⚠️ Waited for: three setters undone before the `computed` runs would collapse to
+      // Waited for: three setters undone before the `computed` runs would collapse to
       // no change at all and prove nothing.
       await vi.waitFor(() => expect(repository.lastQuery?.search).toBe('deploy'));
       const before = repository.queryCount;
@@ -209,7 +209,7 @@ describe('NotesQueryStore', () => {
       expect(canvas.searchQuery()).toBe('');
     });
 
-    /** ⚠️ Not through `setSearchQuery`: its debounce would leave the canvas filtered. */
+    /** Not through `setSearchQuery`: its debounce would leave the canvas filtered. */
     it('takes the search out of the query without waiting for the debounce', async () => {
       const { canvas, repository } = await createNotesHarness([createNote()]);
       canvas.setSearchQuery('deploy');
@@ -223,7 +223,7 @@ describe('NotesQueryStore', () => {
     });
 
     /**
-     * ⚠️ Clearing has to cancel the pending call, not merely set the signals past it: a
+     * Clearing has to cancel the pending call, not merely set the signals past it: a
      * keystroke still on its way lands 150 ms later and puts the query back. Real timers,
      * and a real wait — faking them only proves the assertion ran before the timer did.
      */
@@ -256,7 +256,7 @@ describe('NotesQueryStore', () => {
 
   describe('search debounce', () => {
     beforeEach(() => {
-      // ⚠️ Only Date and timers: faking requestAnimationFrame hangs the zoneless
+      // Only Date and timers: faking requestAnimationFrame hangs the zoneless
       // scheduler in whenStable().
       vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     });

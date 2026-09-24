@@ -113,7 +113,7 @@ describe('NoteSelectionStore', () => {
     });
 
     /**
-     * ⚠️ The record carries what the back end answered, never what the front guessed:
+     * The record carries what the back end answered, never what the front guessed:
      * rebuilding it from the selection would unfile a note the batch never touched.
      */
     it('offers to put a filing back, folder by folder', async () => {
@@ -173,7 +173,7 @@ describe('NoteSelectionStore', () => {
     });
 
     /**
-     * ⚠️ The asymmetry this closes: deleting a note had three safety nets, and moving
+     * The asymmetry this closes: deleting a note had three safety nets, and moving
      * thirty of them had none — where putting a move back by hand means remembering
      * which thirty, and which space each one came from.
      */
@@ -222,7 +222,7 @@ describe('NoteSelectionStore', () => {
     });
 
     /**
-     * ⚠️ The reason the back end answers pairs rather than a count: the note that already
+     * The reason the back end answers pairs rather than a count: the note that already
      * carried the tag gained nothing, so the undo must not take it away.
      */
     it('undoing a tagging leaves the tag on the note that already carried it', async () => {
@@ -312,7 +312,7 @@ describe('NoteSelectionStore', () => {
   });
 
   /**
-   * ⚠️ The board **dims** where the canvas **narrows**. A card the search filtered out of
+   * The board **dims** where the canvas **narrows**. A card the search filtered out of
    * the date view is still drawn on the board and still in its folder — resolved against
    * the canvas it left the selection the instant it was ticked, and the bar said nothing
    * was selected.
@@ -419,11 +419,7 @@ describe('NoteSelectionStore', () => {
       expect(selection.focusedIndex()).toBe(-1);
     });
 
-    /**
-     * ⚠️ By id, never by position. Focus used to be set with an index into `visibleNotes`
-     * while the caller had measured the grid in DOM order — the same list on the date view,
-     * a different one on the board, where the first arrow jumped two cards sideways.
-     */
+    /** By id, never by position: the board and the date view order the same notes differently. */
     it('focuses a note, and still knows where it sits', async () => {
       const { selection } = await createNotesHarness([createNote({ id: 'a' }), createNote({ id: 'b' })]);
 

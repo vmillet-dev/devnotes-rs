@@ -1,12 +1,12 @@
 @for (line of lines(); track $index) {
-  <!-- ⚠️ <span> and not <div>: the viewer is inserted into a card's <button>, whose
+  <!-- <span> and not <div>: the viewer is inserted into a card's <button>, whose
        content model admits only phrasing content. -->
   <span class="code-line">
     @if (showLineNumbers()) {
       <!-- Purely visual: a screen reader would announce "1 2 3 …" between every line. -->
       <span class="line-no" aria-hidden="true">{{ $index + 1 }}</span>
     }
-    <!-- ⚠️ [innerHTML] because the colouring is markup. highlight.js escapes the source
+    <!-- [innerHTML] because the colouring is markup. highlight.js escapes the source
          text and this still goes through Angular's sanitizer — never bypass it. -->
     <span class="line-content" [innerHTML]="line"></span>
   </span>

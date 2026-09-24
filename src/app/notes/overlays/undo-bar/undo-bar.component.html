@@ -1,7 +1,7 @@
 <div class="undo-bar" data-testid="undo-bar" role="status">
   <span class="undo-text">{{ message() | transloco: { count: action().count } }}</span>
-  <!-- ⚠️ The key is on the control, not in the sentence: the card that armed the note
-       names Escape, and one keystroke later the bar used to name nothing at all (#293). -->
+  <!-- The key is on the control, not in the sentence: the card that armed the note named
+       Escape, and the bar names it too. -->
   <button type="button" class="undo-action" data-testid="undo-restore" (click)="undone.emit()">
     {{ 'undo.restore' | transloco }}
     <kbd class="undo-key" aria-hidden="true">{{ 'undo.restoreKey' | transloco }}</kbd>

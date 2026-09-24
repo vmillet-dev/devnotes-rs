@@ -59,7 +59,7 @@ describe('VariablesPageComponent', () => {
     expect(rows()).toHaveLength(0);
   });
 
-  /** ⚠️ Nothing here reaches the corpus before the panel's own button says so. */
+  /** Nothing here reaches the corpus before the panel's own button says so. */
   it('holds what was typed until the panel commits it', async () => {
     await render();
     fixture.nativeElement.querySelector('.variables-add').click();

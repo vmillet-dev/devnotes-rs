@@ -5,7 +5,7 @@
 // opens under it — so the whole band's padding sits on the host: put on either rule
 // alone, the other slides out from under it.
 //
-// ⚠️ The gap under the header rule belongs to the location band above, which is always
+// The gap under the header rule belongs to the location band above, which is always
 // there: a note always has a space.
 :host {
   display: block;

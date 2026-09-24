@@ -7,7 +7,7 @@
   box-sizing: border-box;
 }
 
-// ⚠️ `cursor` is inherited, so the `all: unset` above resolves it to the parent's arrow
+// `cursor` is inherited, so the `all: unset` above resolves it to the parent's arrow
 // and not to the UA's I-beam. The declaration has to come after the unset, which is why
 // this is a mixin of its own rather than a line inside it.
 @mixin text-field {
@@ -15,15 +15,10 @@
   cursor: text;
 }
 
-// ⚠️ Red **at rest**, not only under the pointer. Every destructive control in the
-// application turned red on `:hover`, which warns at the moment the choice has already
-// been made — while choosing, "Supprimer définitivement" was pixel-identical to
-// "Restaurer" sitting beside it.
-//
-// Text and border, never a solid fill: one red button next to the single amber accent
-// reads as a second accent rather than as a warning. ⚠️ And the pressed-in state fills
-// with `--bg-3` rather than a red tint, because red text on a tint of itself falls under
-// AA (#191).
+// ⚠️ Red at rest, not only under the pointer: a warning that arrives on `:hover` comes after
+// the choice. Text and border, never a solid fill, which beside the single amber accent reads
+// as a second accent; the pressed state fills with `--bg-3`, since red text on a tint of
+// itself falls under AA.
 @mixin destructive {
   color: var(--red);
   border-color: rgba(var(--red-rgb), 0.3);
@@ -41,8 +36,8 @@
 // of these sat between 17 and 23px — the worst being a todo list's tick, which is what got
 // reported as unhittable.
 //
-// ⚠️ The box grows, never the type: a bigger glyph would be a density change, and density
-// is deliberately about spacing alone. ⚠️ `min-*` and not `height`, so a control whose
+// The box grows, never the type: a bigger glyph would be a density change, and density
+// is deliberately about spacing alone. `min-*` and not `height`, so a control whose
 // label wraps still grows rather than clipping.
 @mixin hit-target($size: 24px) {
   display: inline-flex;
@@ -51,14 +46,14 @@
   min-height: $size;
 }
 
-// What a panel does when it arrives. ⚠️ An animation rather than a transition: these are
+// What a panel does when it arrives. An animation rather than a transition: these are
 // `@if`-rendered, so there is no previous state to transition *from* — the element simply
 // did not exist a frame ago.
 @mixin enters($keyframes: enter-rise) {
   animation: $keyframes var(--motion) ease-out;
 }
 
-// What a control does under the pointer. ⚠️ Named properties, never `all`: `all` catches
+// What a control does under the pointer. Named properties, never `all`: `all` catches
 // layout properties too, and a transition on one of those is what makes a list feel heavy.
 @mixin eases($properties...) {
   transition-property: $properties;
@@ -82,7 +77,7 @@
 // Where the keyboard is. The declaration was written out in fifteen stylesheets and
 // missing from four controls, the tag rail among them — the keyboard walked it invisibly.
 //
-// ⚠️ `:focus-visible` and not `:focus`: a pointer must not leave a ring behind it.
+// `:focus-visible` and not `:focus`: a pointer must not leave a ring behind it.
 @mixin focus-ring($offset: 2px) {
   &:focus-visible {
     outline: 2px solid var(--amber-edge);
@@ -90,7 +85,7 @@
   }
 }
 
-// The room that ring needs inside a row that scrolls. ⚠️ A box that is `auto` on one axis
+// The room that ring needs inside a row that scrolls. A box that is `auto` on one axis
 // is `auto` on the other too — there is no scrolling sideways while overflowing upwards —
 // so a horizontal rail cuts its pills' rings flat. The padding is the room; the negative
 // margin hands it back to the layout, so the rail is no taller than it was.
@@ -192,7 +187,7 @@
 }
 
 // The skeleton the preferences pages share: their groups, their titles, and the four
-// things every row is made of. ⚠️ A page's SCSS is out of reach of its neighbours, so
+// things every row is made of. A page's SCSS is out of reach of its neighbours, so
 // without this the three of them carry the same thirty lines three times over.
 @mixin settings-page {
   .setting-groups {
@@ -244,12 +239,12 @@
 // A state said with a translucent fill in one hue, from an RGB variable so no colour is
 // duplicated in hex.
 //
-// ⚠️ The label is **neutral**, not the hue. A tint moves the background toward the text, so
+// The label is **neutral**, not the hue. A tint moves the background toward the text, so
 // a hue drawn on a tint of itself loses about a point of contrast and lands under AA — the
 // light amber one was 4.20:1, the faintest text in the editor. The fill and the border carry
 // the colour; the label only has to be read.
 //
-// ⚠️ For a badge whose hue *is* the information rather than a state, this is the wrong
+// For a badge whose hue *is* the information rather than a state, this is the wrong
 // trade — see `hue-badge`.
 @mixin tint-badge($rgb-var, $bg-alpha: 0.15, $border-alpha: null) {
   background: rgba(var(#{$rgb-var}), $bg-alpha);
@@ -266,10 +261,10 @@
 // ⚠️ On a tint of itself, three of the six language hues fall under AA in each theme — a
 // different three each time. Neutralising the label instead would erase the only thing the
 // badge is recognised by, so it is the fill that gives way.
-// ⚠️ The hairline is what gives the chip a shape, and it is in the hue rather than in a
+// The hairline is what gives the chip a shape, and it is in the hue rather than in a
 // grey: `--bg-3` sits at 1.1:1 against the light theme's surfaces, so a neutral fill alone
 // left the badge as bare text on every light screen.
-// ⚠️ `--badge-ring` and `--badge-surface` are the only way in from outside: the badge is a
+// `--badge-ring` and `--badge-surface` are the only way in from outside: the badge is a
 // component of its own, so a consumer's stylesheet cannot reach `.lang-tag` with a rule.
 @mixin hue-badge($colour) {
   background: var(--badge-surface, var(--bg-3));
@@ -356,7 +351,7 @@
   color: var(--text-1);
 }
 
-// ⚠️ A card on the board carries its own width, where the canvas gets one from its grid
+// A card on the board carries its own width, where the canvas gets one from its grid
 // column. Without it the flow inside a zone is the content's width, the second card wraps
 // out of sight, and `folders::board::CARD_WIDTH` — which every frame is computed from —
 // corresponds to nothing on screen. Keep the two in step.

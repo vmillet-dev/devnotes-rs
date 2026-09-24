@@ -22,7 +22,7 @@ describe('UndoBarComponent', () => {
     expect(fixture.nativeElement.querySelector('.undo-text').textContent).toContain('3');
   });
 
-  /** ⚠️ "3 notes deleted" and "3 notes moved" are not the same sentence. */
+  /** "3 notes deleted" and "3 notes moved" are not the same sentence. */
   it('says which action it is offering to put back', async () => {
     expect(fixture.nativeElement.querySelector('.undo-text').textContent).toContain('corbeille');
 

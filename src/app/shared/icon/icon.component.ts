@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 /**
  * Paths from Lucide (https://lucide.dev, ISC licence), 24 × 24, drawn as strokes.
  *
- * ⚠️ Paths and not glyphs: `🗑` is drawn by the system's colour font and looks different on
+ * Paths and not glyphs: `🗑` is drawn by the system's colour font and looks different on
  * every machine, `▤` barely renders in most fonts, and neither follows `color`.
  */
 const PATHS = {

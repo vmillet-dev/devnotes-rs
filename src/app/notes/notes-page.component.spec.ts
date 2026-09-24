@@ -240,7 +240,7 @@ describe('NotesPageComponent', () => {
       await fixture.whenStable();
     }
 
-    /** ⚠️ Two places to change space is how a tree and a dropdown drift apart. */
+    /** Two places to change space is how a tree and a dropdown drift apart. */
     it('keeps the switchers out of the topbar while it is showing', () => {
       expect(maybeChild(LibraryTreeComponent)).not.toBeNull();
       expect(maybeChild(SpaceSwitcherComponent)).toBeNull();
@@ -265,7 +265,7 @@ describe('NotesPageComponent', () => {
       expect(settings.showLibraryRail()).toBe(true);
     });
 
-    /** ⚠️ The space first: a folder is resolved against the active space's folders. */
+    /** The space first: a folder is resolved against the active space's folders. */
     it('opens a folder with the space that holds it', async () => {
       child(LibraryTreeComponent).folderOpened.emit(PERF);
       await fixture.whenStable();
@@ -309,7 +309,7 @@ describe('NotesPageComponent', () => {
   });
 
   /**
-   * ⚠️ The two facet rails were permanent 44px bands and are a disclosure now — the single
+   * The two facet rails were permanent 44px bands and are a disclosure now — the single
    * biggest saving of the six the header had. They are not in the DOM until it is open.
    */
   describe('the facets, behind their disclosure', () => {
@@ -331,7 +331,7 @@ describe('NotesPageComponent', () => {
       expect(toggleTag).toHaveBeenCalledWith('urgent');
     });
 
-    /** ⚠️ A filter nobody can see is a filter nobody can undo. */
+    /** A filter nobody can see is a filter nobody can undo. */
     it('opens itself when a facet is selected, and refuses to fold while one is', async () => {
       canvas.toggleTag('urgent');
       await fixture.whenStable();
@@ -357,7 +357,7 @@ describe('NotesPageComponent', () => {
   });
 
   describe('descending into a folder', () => {
-    /** ⚠️ Inside a folder there is one place to go, and it is back. */
+    /** Inside a folder there is one place to go, and it is back. */
     async function open(): Promise<void> {
       spaces.selectSpace('space-1');
       await vi.waitFor(() => expect(folders.folders()).toHaveLength(1));
@@ -388,7 +388,7 @@ describe('NotesPageComponent', () => {
     });
 
     /**
-     * ⚠️ Escape falls through: the selection first, then the search, and only then out of
+     * Escape falls through: the selection first, then the search, and only then out of
      * the folder — leaving it is the biggest of the three, so it goes last.
      */
     it('comes back out on Escape, but not before the search has gone', async () => {
@@ -487,7 +487,7 @@ describe('NotesPageComponent', () => {
   });
 
   /**
-   * ⚠️ A footer of the workspace, outside the scrolling canvas: with three notes on screen
+   * A footer of the workspace, outside the scrolling canvas: with three notes on screen
    * the legend sat a third of the way down, and with three hundred it was only reachable
    * by scrolling to the end.
    */
@@ -735,10 +735,7 @@ describe('NotesPageComponent', () => {
       await vi.waitFor(() => expect(canvas.visibleNotes().find((n) => n.id === 'n1')?.pinned).toBe(true));
     });
 
-    /**
-     * ⚠️ Two presses, the way the card's own menu asks for two clicks. One used to trash
-     * whichever card the ring was on, and the ring can be on a card scrolled out of view.
-     */
+    /** Two presses, the way the card's own menu asks for two clicks. */
     it('trashes the focused note on a second Delete, offering to take it back', async () => {
       selection.focusNote('n1');
 
@@ -775,11 +772,7 @@ describe('NotesPageComponent', () => {
       expect(selection.armedForDeletion()).toBeNull();
     });
 
-    /**
-     * ⚠️ The report, with the probe’s own output: the card says "Suppr. à nouveau · Échap
-     * pour annuler", the second Suppr sends the note to the trash, and the key the card
-     * had just taught meant nothing one keystroke later (#293).
-     */
+    /** The key the card just taught still works one keystroke later, on the undo bar. */
     it('takes the note back on Escape while the bar is still offering', async () => {
       selection.focusNote('n1');
       press('Delete');
@@ -793,7 +786,7 @@ describe('NotesPageComponent', () => {
       expect(undo.banner()).toBeNull();
     });
 
-    /** ⚠️ Only while the offer is on screen: outside it Escape has other rungs to serve. */
+    /** Only while the offer is on screen: outside it Escape has other rungs to serve. */
     it('leaves the corpus alone on Escape once the bar has gone', async () => {
       selection.focusNote('n1');
       press('Delete');
@@ -1177,12 +1170,7 @@ describe('NotesPageComponent', () => {
       expect(store.selectedNoteId()).toBe(note.id);
     });
 
-    /**
-     * ⚠️ The palette queries every space and ignores the canvas filters, so its results
-     * routinely name a note no view holds. The page used to hand over the id, `find`
-     * ended at the canvas view and the board view, and the editor opened onto `null`:
-     * the palette closed and nothing happened (#280).
-     */
+    /** The palette ignores the canvas filters, so its results often name a note no view holds. */
     it('opens one no view is holding, which is what a filter makes of a result', async () => {
       const hidden = createNote({ id: 'hidden-note', title: 'Hidden by a filter' });
       expect(canvas.visibleNotes().map((note) => note.id)).not.toContain('hidden-note');
@@ -1250,7 +1238,7 @@ describe('NotesPageComponent', () => {
       await fixture.whenStable();
 
       child(TagManagerComponent).renameRequested.emit('authentication');
-      // ⚠️ Nothing is written until the blast radius has been shown and accepted.
+      // Nothing is written until the blast radius has been shown and accepted.
       await vi.waitFor(() => expect(TestBed.inject(TagsStore).pending()).not.toBeNull());
       expect(repository.retagged).toBeNull();
       child(TagManagerComponent).confirmed.emit();

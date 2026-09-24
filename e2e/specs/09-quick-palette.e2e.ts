@@ -8,7 +8,7 @@ import { emitGlobalAction, isInFront, press, reloadCanvas, testid } from '../sup
 import { bridge, draft, homeSpaceId } from '../support/bridge.js';
 
 /**
- * ⚠️ The OS-level `Ctrl+Alt+P` is out of scope: WebDriver types into the WebView, not into
+ * The OS-level `Ctrl+Alt+P` is out of scope: WebDriver types into the WebView, not into
  * the machine. What is exercised is everything downstream of it — the same action event
  * the accelerator and the tray both send.
  */
@@ -62,10 +62,7 @@ describe('The quick-paste palette', () => {
     expect(await palette.options().length).toBeGreaterThan(0);
   });
 
-  /**
-   * ⚠️ Enter used to copy and put the window away, where a click on the same row opened
-   * the note — the first thing anyone does having found a result is press Enter.
-   */
+  /** Enter opens, as a click on the row does: the first thing anyone does with a result. */
   it('opens the highlighted note in the editor on Enter', async () => {
     await palette.type('reset');
     await press('Enter');
@@ -75,12 +72,7 @@ describe('The quick-paste palette', () => {
     await editor.close();
   });
 
-  /**
-   * ⚠️ The palette queries every space and ignores the canvas filters, deliberately — and
-   * opening one of its results used to go back through the canvas view to resolve the id.
-   * With a filter on, that resolved to nothing: the palette closed onto an editor that
-   * never opened, and nothing said why (#280).
-   */
+  /** The palette ignores the canvas filters, so its results often name a note no view holds. */
   it('opens a result the canvas filters are hiding', async () => {
     await press('Escape');
     await canvas.search('Unrelated note');
@@ -101,11 +93,9 @@ describe('The quick-paste palette', () => {
   });
 
   /**
-   * ⚠️ The toast itself is out of reach — it is drawn by the operating system, after the
-   * window has gone, and this run shares one window with every file after it. What the suite
+   * The toast itself is drawn by the operating system after the window has gone. What the suite
    * can prove is the half that fails silently: a capability missing from
-   * `capabilities/default.json` makes the plugin refuse at runtime and nothing else says so
-   * (#285).
+   * `capabilities/default.json` makes the plugin refuse at runtime, and nothing says so.
    */
   it('is allowed to ask the desktop whether it may speak', async () => {
     const answer = (await browser.executeAsync((done: (value: unknown) => void) => {
@@ -119,11 +109,7 @@ describe('The quick-paste palette', () => {
     expect(answer.err).toBeUndefined();
   });
 
-  /**
-   * ⚠️ Tab used to be released to the DOM, and it walked the rows' buttons — which draw no
-   * ring — while the highlight stayed where the arrows had left it. Two notions of "the
-   * current row", one of them invisible (#283).
-   */
+  /** Tab walks the results like an arrow: one current row, drawn, and the field keeps the keyboard. */
   it('walks the results with Tab, without letting the field lose the keyboard', async () => {
     // Nothing above it leaves the palette open, so this one opens its own.
     await emitGlobalAction('palette');
@@ -143,7 +129,7 @@ describe('The quick-paste palette', () => {
   });
 
   /**
-   * ⚠️ Asked of a snippet with fields on purpose: the copy path proper ends in
+   * Asked of a snippet with fields on purpose: the copy path proper ends in
    * `window.hide()`, and this run shares one window with every file after it. The form is
    * where `Ctrl+C` lands for this note, which proves the binding reaches the copy without
    * putting the window away.
@@ -160,10 +146,7 @@ describe('The quick-paste palette', () => {
     expect(await editor.isOpen()).toBe(false);
   });
 
-  /**
-   * ⚠️ A click opens: it used to copy and hide the window, which reads as the application
-   * crashing on the click — nothing on screen says anything was copied.
-   */
+  /** A click opens, with the window still on screen: nothing is copied behind the user's back. */
   it('opens the note that was clicked, with the window still on screen', async () => {
     await emitGlobalAction('palette');
     await palette.input().waitForExist({ timeout: 10_000 });
@@ -177,9 +160,8 @@ describe('The quick-paste palette', () => {
   });
 
   /**
-   * ⚠️ The one way to a note while a help panel is up: the panel covers the whole page,
-   * and a global shortcut comes from outside the application. The note used to open
-   * behind it — `editor` was the bottom rung and `app` the one above.
+   * The one way to a note while a help panel is up: the panel covers the page, and a global
+   * shortcut comes from outside. The editor's rung sits above the help's.
    */
   it('opens a note in front of a help panel that was left open', async () => {
     await aboutMenu.openGettingStarted();
@@ -205,7 +187,7 @@ describe('The quick-paste palette', () => {
   });
 
   it('re-registers the three accelerators and names the ones it lost', async () => {
-    // ⚠️ A global accelerator is first-come-first-served across the machine and the loser
+    // A global accelerator is first-come-first-served across the machine and the loser
     // gets no error, so the command answers with what it could not take. Which of the
     // three is machine-dependent; that they are the only candidates is not.
     const asked = { palette: 'Ctrl+Alt+P', capture: 'Ctrl+Alt+V', newNote: 'Ctrl+Alt+N' };

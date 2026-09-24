@@ -16,7 +16,7 @@
 >
   <header class="zone-head">
     @if (editable()) {
-      <!-- ⚠️ A grip, not the whole header: the title is a button that descends into the
+      <!-- A grip, not the whole header: the title is a button that descends into the
            folder, and a drag started on it would have to swallow its own click. -->
       <button
         type="button"
@@ -75,11 +75,10 @@
 
   <div class="zone-body">
     @for (entry of zone().notes; track entry.note.id) {
-      <!-- ⚠️ Dimmed, never dropped: reflowing the survivors throws away the spatial
+      <!-- Dimmed, never dropped: reflowing the survivors throws away the spatial
            memory the board exists for. -->
-      <!-- ⚠️ The whole card is the handle: pointer events already tell a drag from a click
-           by the distance travelled, so the grip that used to sit in the corner — over the
-           selection tick — buys nothing. A press that never travels still opens the note. -->
+      <!-- The whole card is the handle: pointer events tell a drag from a click by the
+           distance travelled, and a press that never travels still opens the note. -->
       <div
         class="zone-card"
         [attr.data-note-id]="entry.note.id"
@@ -96,7 +95,7 @@
   </div>
 
   @if (editable()) {
-    <!-- ⚠️ Resizing captures and releases nothing: membership comes from the drop. -->
+    <!-- Resizing captures and releases nothing: membership comes from the drop. -->
     <button
       type="button"
       class="zone-resize"

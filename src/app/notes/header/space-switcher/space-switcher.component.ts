@@ -36,7 +36,7 @@ export class SpaceSwitcherComponent {
 
   protected readonly creating = signal(false);
 
-  /** ⚠️ The panel replaces the menu: input fields inside a `role="menu"` are not valid ARIA. */
+  /** The panel replaces the menu: input fields inside a `role="menu"` are not valid ARIA. */
   protected readonly editing = signal<Space | null>(null);
 
   private readonly nameInput = viewChild<ElementRef<HTMLInputElement>>('nameInput');

@@ -10,7 +10,7 @@ import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
  * The board is drawn from geometry a real database stores, and the first layout is
  * materialised on the first read — only a real one proves it comes back unchanged.
  *
- * ⚠️ A space of its own, and not the home one: seventeen spec files have run before this
+ * A space of its own, and not the home one: seventeen spec files have run before this
  * and left their notes there, so "the loose cards are exactly these" would be a claim
  * about the whole corpus. The e2e run shares one process and one database.
  */
@@ -19,7 +19,7 @@ describe('The board', () => {
   let spaceId = '';
   let perfId = '';
 
-  /** ⚠️ The active space is front-end state, so a refresh drops it back to "all spaces". */
+  /** The active space is front-end state, so a refresh drops it back to "all spaces". */
   async function reloadInSpace(id = spaceId): Promise<void> {
     await reloadCanvas();
     await spaces.open();
@@ -57,7 +57,7 @@ describe('The board', () => {
     expect(await board.pressed('date')).toBe('true');
   });
 
-  /** ⚠️ A folder belongs to a space, so there would be no zones to draw. */
+  /** A folder belongs to a space, so there would be no zones to draw. */
   it('offers no board while the user is on all spaces', async () => {
     await spaces.open();
     await spaces.allOption().click();
@@ -87,7 +87,7 @@ describe('The board', () => {
     expect(await card.$(testid('note-card-open')).isExisting()).toBe(true);
   });
 
-  /** ⚠️ Dimmed in place: reflowing throws away the only thing the board has. */
+  /** Dimmed in place: reflowing throws away the only thing the board has. */
   it('dims what a search does not match rather than removing it', async () => {
     await canvas.search('EXPLAIN');
 
@@ -158,8 +158,8 @@ describe('The board', () => {
   });
 
   /**
-   * ⚠️ A card on the board is the same card, so its checkboxes are real ones — and the
-   * board has to hear about the write, which used to reload the canvas and nothing else.
+   * A card on the board is the same card, so its checkboxes are real ones, and the board has to
+   * hear about the write as the canvas does.
    */
   it('ticks a todo list on the board, and shows it ticked without a view switch', async () => {
     const list = await bridge.createNote(
@@ -190,12 +190,7 @@ describe('The board', () => {
     expect(await card.$(testid('note-card-item')).getAttribute('aria-checked')).toBe('true');
   });
 
-  /**
-   * ⚠️ The grip used to be drawn on top of the selection tick, with an opaque background
-   * and a higher `z-index`, so ticking a card on the board meant aiming at the few pixels
-   * of checkbox that stuck out from under it. There is no grip at all now — the card is
-   * its own handle — and the corner is the tick's.
-   */
+  /** The card is its own handle, so the corner belongs to the selection tick. */
   it('leaves the corner to the selection tick, having no grip left', async () => {
     await board.show('board');
     expect(await browser.$(testid('board-card-grip')).isExisting()).toBe(false);
@@ -208,7 +203,7 @@ describe('The board', () => {
   });
 
   /**
-   * ⚠️ The board lays its cards out zone by zone, where the date view orders them pinned
+   * The board lays its cards out zone by zone, where the date view orders them pinned
    * first and then by `updated_at`. The arrows measured the grid in DOM order and resolved
    * the answer through `visibleNotes` — the date view's list — so the first ArrowRight here
    * jumped two cards sideways, onto one nowhere near the pointer.
@@ -221,14 +216,14 @@ describe('The board', () => {
     const order = await canvas.titles();
     expect(order.length).toBeGreaterThan(1);
 
-    // ⚠️ Walked to a known end rather than started from wherever: these files share one
+    // Walked to a known end rather than started from wherever: these files share one
     // session, so what holds the focus here is whatever the scenario before it left.
     for (const _ of order) {
       await press('ArrowLeft');
     }
 
-    // The first card **on screen**. The date view lists the newest note first, and on this
-    // board that is the last of the three — which is what the focus used to land on.
+    // The first card on screen. The date view lists the newest note first, and on this board
+    // that is the last of the three.
     expect(await canvas.focusedCardTitle()).toBe(order[0]);
 
     await press('ArrowRight');
@@ -244,9 +239,9 @@ describe('The board', () => {
   });
 
   /**
-   * ⚠️ Hit-tested, not dispatched: `gestures.drawZone` fires its events on the surface itself,
-   * so it draws wherever it is told to. What the user met was the pointer landing on the
-   * dotted ground **beside** a surface the back end had sized to its content (#320).
+   * Hit-tested, not dispatched: `gestures.drawZone` fires on the surface itself, so it draws
+   * wherever it is told. What matters is the pointer landing on the dotted ground beside a
+   * surface sized to its content.
    */
   describe('on a window larger than what it holds', () => {
     let restore = { width: 1100, height: 720 };

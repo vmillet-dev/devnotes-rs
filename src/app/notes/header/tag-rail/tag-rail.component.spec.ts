@@ -43,7 +43,7 @@ describe('TagRailComponent', () => {
   });
 
   /**
-   * ⚠️ Structural, because jsdom lays nothing out. Inside the scrolling row the Manage
+   * Structural, because jsdom lays nothing out. Inside the scrolling row the Manage
    * button's `margin-left: auto` had no free space to claim once the tags overflowed, so
    * it followed them out of the viewport — at forty tags it sat at x=2710 in a rail 1920
    * wide. What keeps it reachable is being outside that row.

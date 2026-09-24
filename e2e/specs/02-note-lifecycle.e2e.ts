@@ -34,11 +34,7 @@ describe('Creating a note, and finding it again', () => {
     expect(view.matched).toBe(1);
   });
 
-  /**
-   * ⚠️ Measured, not asserted on a class: the marks used to have a band of their own above
-   * the title — a line that says nothing about the note, on a card that is a fixed 150px.
-   * They share the title's row now, and the body is what got that line back.
-   */
+  /** Measured, not asserted on a class: the marks share the title's row, and the body follows. */
   it('puts the title and the marks on one row, with the body right under it', async () => {
     const layout = await canvas.cardHeadLayout(title);
 
@@ -51,13 +47,12 @@ describe('Creating a note, and finding it again', () => {
     expect(layout!.titleTop).toBeLessThanOrEqual(16);
     // …and the body starts immediately after it.
     expect(layout!.snippetTop).toBeLessThanOrEqual(10);
-    // …because the copy and ⋯ buttons hang under the card's bottom edge rather than over
-    // the marks, which is the corner they used to cover.
+    // …because the copy and ⋯ buttons hang under the card's bottom edge, clear of the marks.
     expect(layout!.actionsBelowBottom).toBe(true);
   });
 
   it('materialises the draft exactly once, not once per committed field', async () => {
-    // ⚠️ Closing commits the title then the content with no change detection between
+    // Closing commits the title then the content with no change detection between
     // them: the second call still carries `DRAFT_ID` while the row already exists.
     expect((await bridge.queryNotes(query())).matched).toBe(corpusBefore + 1);
   });
@@ -79,17 +74,13 @@ describe('Creating a note, and finding it again', () => {
     expect((await bridge.queryNotes(query())).matched).toBe(corpusBefore + 1);
   });
 
-  /**
-   * ⚠️ It used to be the last child of the scrolling canvas, so with a handful of notes
-   * it floated in the middle of the window and with hundreds it was off the end of the
-   * scroll. A legend belongs on the edge.
-   */
+  /** A legend belongs on the edge, whatever the canvas holds above it. */
   it('keeps the keyboard legend on the bottom edge whatever is above it', async () => {
     expect(await bottomGapOf(testid('canvas-keyboard-hint'))).toBeLessThanOrEqual(1);
   });
 
   it('reads the note back from the database on a fresh front end', async () => {
-    // ⚠️ Not a process restart — see `reopenSession`. It proves the canvas renders what
+    // Not a process restart — see `reopenSession`. It proves the canvas renders what
     // the commands answer, not something a signal was still holding.
     await reopenSession();
 

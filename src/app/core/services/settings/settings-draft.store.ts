@@ -19,12 +19,12 @@ interface StagedBinding {
 /**
  * What the preferences panel edits, between its controls and the two stores that write.
  *
- * A control writes here, Appliquer and OK push it through, Annuler drops it. ⚠️ The
+ * A control writes here, Appliquer and OK push it through, Annuler drops it. The
  * three services that carry a setting to the native side read `SettingsStore`, never
  * this: a half-captured global shortcut must not be live across the whole machine for as
  * long as it takes to finish typing it — which is the argument this layer exists for.
  *
- * ⚠️ It stages **both** paths a preference can take, because the panel edits both: an
+ * It stages **both** paths a preference can take, because the panel edits both: an
  * `AppSettings` key, and a shortcut binding. A draft covering only the first would let
  * OK mean two different things on two pages.
  */
@@ -48,7 +48,7 @@ export class SettingsDraftStore {
   }
 
   /**
-   * ⚠️ A value put back to what is stored leaves the draft **clean**: toggling a switch
+   * A value put back to what is stored leaves the draft **clean**: toggling a switch
    * twice must not leave the panel claiming there is something to apply.
    */
   set<K extends keyof AppSettings>(key: K, value: AppSettings[K]): void {
@@ -91,7 +91,7 @@ export class SettingsDraftStore {
     return conflictsAmong(among, (action) => this.binding(action));
   }
 
-  /** ⚠️ The preview is cleared last, so the written value is already what it falls back to. */
+  /** The preview is cleared last, so the written value is already what it falls back to. */
   apply(): void {
     for (const [key, value] of Object.entries(this.staged())) {
       this.settings.write(key as keyof AppSettings, value);

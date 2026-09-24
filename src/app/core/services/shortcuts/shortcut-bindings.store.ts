@@ -23,7 +23,7 @@ export interface ShortcutConflict {
 }
 
 /**
- * Why a keystroke was not taken. ⚠️ A reason and not a boolean: the panel has to say
+ * Why a keystroke was not taken. A reason and not a boolean: the panel has to say
  * which of the two it was, and deciding it twice is how the field and the store drift.
  */
 export type Refused = { readonly kind: 'illegal' } | { readonly kind: 'taken'; readonly by: Rebindable };
@@ -34,7 +34,7 @@ export type BindingReader = (action: Rebindable) => string;
 /**
  * Whether a keystroke can be taken, and why not.
  *
- * ⚠️ One rule, two readers: this store answers from what is stored and
+ * One rule, two readers: this store answers from what is stored and
  * `SettingsDraftStore` from what is staged, and a check living in only one of them would
  * let the panel offer a key the store is about to refuse.
  */
@@ -55,7 +55,7 @@ export function refuseBinding(
 /**
  * Every keystroke claimed more than once.
  *
- * ⚠️ `refuseBinding` stops one being made, so this answers for what nothing can refuse: a
+ * `refuseBinding` stops one being made, so this answers for what nothing can refuse: a
  * preferences file edited by hand, and a shipped default that lands on a taken key.
  */
 export function conflictsAmong(
@@ -76,7 +76,7 @@ export function conflictsAmong(
 /**
  * Which accelerator each rebindable action answers to.
  *
- * ⚠️ **Two storage paths, deliberately.** The three global ones live in `AppSettings`,
+ * **Two storage paths, deliberately.** The three global ones live in `AppSettings`,
  * because Rust registers them with the operating system and takes them as a block; a
  * canvas key is one preference of its own, written straight through
  * `PreferencesService`. This store is what reads both as one table — which is also what
@@ -90,7 +90,7 @@ export class ShortcutBindingsStore {
   private readonly preferences = inject(PreferencesService);
   private readonly settings = inject(SettingsStore);
 
-  /** ⚠️ `PreferencesService` is a synchronous cache and not reactive: this is what makes
+  /** `PreferencesService` is a synchronous cache and not reactive: this is what makes
    *  a rebind redraw the caps that are on screen. */
   private readonly revision = signal(0);
 
@@ -111,7 +111,7 @@ export class ShortcutBindingsStore {
   /**
    * Moves an action onto a keystroke, or says why it could not.
    *
-   * ⚠️ `among` is the whole table the panel shows — **both** storage paths, or a key
+   * `among` is the whole table the panel shows — **both** storage paths, or a key
    * could be taken twice across them.
    */
   rebind(action: Rebindable, accelerator: string, among: readonly Rebindable[]): Refused | null {

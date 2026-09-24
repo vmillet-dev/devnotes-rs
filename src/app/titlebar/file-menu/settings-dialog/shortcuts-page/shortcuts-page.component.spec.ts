@@ -42,10 +42,7 @@ describe('ShortcutsPageComponent', () => {
     await fixture.whenStable();
   });
 
-  /**
-   * ⚠️ The whole of #254: three keys out of twenty could be changed, and the other
-   * seventeen were documented in a sheet that offered nothing.
-   */
+  /** Every rebindable action, the canvas ones included, not only the three global ones. */
   it('offers every rebindable action, the canvas ones included', () => {
     const fields = [...fixture.nativeElement.querySelectorAll('[data-testid="shortcut-field"]')];
 
@@ -54,11 +51,7 @@ describe('ShortcutsPageComponent', () => {
     expect(field('canvas.copy').value).toBe('C');
   });
 
-  /**
-   * ⚠️ Staged, not registered. A global shortcut is taken from the whole machine, and a
-   * half-captured one being live for as long as it takes to finish is the argument #255
-   * was written on.
-   */
+  /** Staged, not registered: a half-captured global shortcut must not be live machine-wide. */
   it('records a global shortcut from the keystroke, and holds it until it is applied', async () => {
     press('palette', { code: 'KeyK', ctrlKey: true, shiftKey: true });
     await fixture.whenStable();
@@ -72,7 +65,7 @@ describe('ShortcutsPageComponent', () => {
   });
 
   /**
-   * ⚠️ The two halves read the keyboard differently on purpose: a global key is stored by
+   * The two halves read the keyboard differently on purpose: a global key is stored by
    * position, because the native parser reads it back that way, and a canvas key by the
    * printed character — `C` is read off the keycap.
    */
@@ -97,7 +90,7 @@ describe('ShortcutsPageComponent', () => {
     expect(error('canvas.pin')).toBeNull();
   });
 
-  /** ⚠️ A global key with no modifier would swallow that key in every application. */
+  /** A global key with no modifier would swallow that key in every application. */
   it('refuses a bare key on the global half, and says why', async () => {
     press('palette', { key: 'j', code: 'KeyJ' });
     await fixture.whenStable();
@@ -114,7 +107,7 @@ describe('ShortcutsPageComponent', () => {
     expect(error('palette')).toBeNull();
   });
 
-  /** ⚠️ The second action would be unreachable, and nothing on screen would say which. */
+  /** The second action would be unreachable, and nothing on screen would say which. */
   it('refuses a keystroke another action already answers to, naming it', async () => {
     press('canvas.pin', { key: 'c' });
     await fixture.whenStable();
@@ -124,7 +117,7 @@ describe('ShortcutsPageComponent', () => {
     expect(error('canvas.pin')).toContain('Copier');
   });
 
-  /** ⚠️ Across the two storage paths, or a key could be taken twice between them. */
+  /** Across the two storage paths, or a key could be taken twice between them. */
   it('sees a collision between the two halves, not only inside one', async () => {
     press('palette', { code: 'KeyB', ctrlKey: true });
     await fixture.whenStable();
@@ -149,7 +142,7 @@ describe('ShortcutsPageComponent', () => {
   });
 
   /**
-   * ⚠️ The fields refuse a collision, so this answers for what they cannot refuse: a
+   * The fields refuse a collision, so this answers for what they cannot refuse: a
    * preferences file written by hand, or a shipped default landing on a taken key.
    */
   it('reports a collision it could not have refused', async () => {

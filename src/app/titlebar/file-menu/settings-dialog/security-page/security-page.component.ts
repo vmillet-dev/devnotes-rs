@@ -28,7 +28,7 @@ function humanSize(bytes: number): string {
  * The two things that decide who can read the library — the phrase that unwraps its key,
  * and whether a copy is taken at every launch — and the copies themselves.
  *
- * ⚠️ They were invisible: taken at unlock, kept beside the library, pruned to three, and
+ * They were invisible: taken at unlock, kept beside the library, pruned to three, and
  * none of it said anywhere the application could be read from. A safety net nobody can
  * see is one nobody trusts, and one nobody can use.
  */
@@ -47,7 +47,7 @@ export class SecurityPageComponent {
 
   protected readonly isChangingPassphrase = signal(false);
 
-  /** ⚠️ Formatted here rather than in Rust: a label has to age without a round trip. */
+  /** Formatted here rather than in Rust: a label has to age without a round trip. */
   protected readonly copies = computed(() =>
     this.backups.backups().map((backup) => ({
       backup,
@@ -62,7 +62,7 @@ export class SecurityPageComponent {
     // A pending task, so `whenStable` waits for the read rather than for a guess at it.
     void inject(PendingTasks).run(() => this.backups.load());
 
-    // ⚠️ The strip replaces the trigger further down a panel that scrolls, so without
+    // The strip replaces the trigger further down a panel that scrolls, so without
     // this the click reads as having done nothing at all. `?.` on the call because jsdom
     // has no `scrollIntoView`.
     effect(() => {

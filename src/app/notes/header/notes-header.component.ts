@@ -63,7 +63,7 @@ export class NotesHeaderComponent {
   protected readonly quickFilters = QUICK_FILTERS;
 
   /**
-   * ⚠️ The disclosure is the header's and not the panel's: the trigger lives in the topbar
+   * The disclosure is the header's and not the panel's: the trigger lives in the topbar
    * and the panel below it, and a component cannot be in two rows at once.
    */
   protected readonly facetsExpanded = signal(false);
@@ -72,7 +72,7 @@ export class NotesHeaderComponent {
     () => this.canvas.selectedTags().size + this.canvas.selectedLanguages().size,
   );
 
-  /** ⚠️ Forced open by a selection: a filter nobody can see is a filter nobody can undo. */
+  /** Forced open by a selection: a filter nobody can see is a filter nobody can undo. */
   protected readonly facetsOpen = computed(() => this.facetsExpanded() || this.facetCount() > 0);
 
   /** Asked of `DialogStack` rather than of each store in turn. */

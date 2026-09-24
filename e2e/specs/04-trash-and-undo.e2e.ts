@@ -29,7 +29,7 @@ describe('Deleting a note, and taking it back', () => {
     const card = await canvas.openCardMenu('Armed but not fired');
     await card.$('[data-testid="note-card-delete"]').click();
 
-    // ⚠️ A duration, deliberately: this asserts the note is *still* there, and nothing
+    // A duration, deliberately: this asserts the note is *still* there, and nothing
     // happening is not a condition anything can wait on.
     await browser.pause(500);
     expect((await bridge.queryNotes(query({ search: 'Armed but not fired' }))).matched).toBe(1);
@@ -38,10 +38,7 @@ describe('Deleting a note, and taking it back', () => {
     await press('Escape');
   });
 
-  /**
-   * ⚠️ The keyboard asks twice too. One press used to trash whichever card the ring was
-   * on — and after opening a note and scrolling, that card can be nowhere on screen.
-   */
+  /** The keyboard asks twice too: the ring can be on a card scrolled out of view. */
   it('needs the second Delete too, and says so on the card', async () => {
     await seed('Armed from the keyboard');
     await canvas.openNote('Armed from the keyboard');
@@ -65,11 +62,7 @@ describe('Deleting a note, and taking it back', () => {
     await undoBar.dismiss();
   });
 
-  /**
-   * ⚠️ Escape has always disarmed — it is the first rung of the fall-through — and the
-   * banner named only the key that goes through, so the only way out a user could see was
-   * the cancel entry in the card's own menu, which is a mouse target (#281).
-   */
+  /** Escape disarms, and the banner says so: the way out must be as visible as the way through. */
   it('lets Escape call the armed deletion off', async () => {
     await seed('Armed then called off');
     await canvas.openNote('Armed then called off');
@@ -78,7 +71,7 @@ describe('Deleting a note, and taking it back', () => {
     await press('Delete');
     const card = await canvas.cardWithTitle('Armed then called off');
     expect(await card.$(testid('note-card-arming')).isExisting()).toBe(true);
-    // ⚠️ The hover pill hangs right under that question. A copy button and a ⋯ beside
+    // The hover pill hangs right under that question. A copy button and a ⋯ beside
     // "delete again?" are noise, so it stands down until the card disarms.
     expect(await canvas.actionsOpacity('Armed then called off')).toBe('0');
 
@@ -93,11 +86,7 @@ describe('Deleting a note, and taking it back', () => {
     await press('Escape');
   });
 
-  /**
-   * ⚠️ The report: the card says "Suppr. à nouveau · Échap pour annuler", the second
-   * Suppr sends the note to the trash, and the key the card had just taught meant nothing
-   * one keystroke later — the reversal was a button and a shortcut nothing named (#293).
-   */
+  /** The key the card just taught still works one keystroke later, on the undo bar. */
   it('takes the note back on Escape while the bar is still offering', async () => {
     await seed('Taken back with Escape');
     await canvas.openNote('Taken back with Escape');

@@ -41,7 +41,7 @@ export class PlaceholderPanelComponent {
   readonly placeholders = input.required<readonly Placeholder[]>();
 
   /**
-   * ⚠️ The editor session, not the note's id: materialising a draft changes that id for
+   * The editor session, not the note's id: materialising a draft changes that id for
    * the same note, and a draft keyed on it is replayed over what was just typed.
    */
   readonly session = input.required<number>();
@@ -98,7 +98,7 @@ export class PlaceholderPanelComponent {
   }
 
   /**
-   * ⚠️ Called on field exit and by the editor before it closes: neither Escape, the
+   * Called on field exit and by the editor before it closes: neither Escape, the
    * backdrop nor the close button produces a `blur`.
    */
   commit(): void {

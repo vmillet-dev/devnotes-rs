@@ -46,7 +46,7 @@
   font-size: 0.85rem;
 }
 
-// ⚠️ Amber rather than red: it is a condition of the choice, not a failure of it.
+// Amber rather than red: it is a condition of the choice, not a failure of it.
 .warning {
   color: var(--amber-text);
 }
@@ -127,7 +127,7 @@
   }
 }
 
-// ⚠️ Deliberately small and quiet, below the button and away from the field: somewhere to
+// Deliberately small and quiet, below the button and away from the field: somewhere to
 // go once the phrase will not come, never somewhere to land by accident.
 .forgotten {
   @include unstyled-control;
@@ -145,7 +145,7 @@
   }
 }
 
-// ⚠️ Red at rest, not on hover: a warning that arrives under the pointer plays no part
+// Red at rest, not on hover: a warning that arrives under the pointer plays no part
 // in choosing. Text and a hairline, never a fill — one red block beside the single amber
 // accent reads as a second accent.
 .give-up {

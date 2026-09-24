@@ -7,18 +7,15 @@
   [class.checked]="checked()"
   [class.checklist]="isChecklist()"
 >
-  <!-- ⚠️ `role="status"` and real words, and **both** keys: the border says something
-       is wrong, the first half says what finishes it, and the second half is the way out —
-       which was there from the start and which nothing on screen mentioned (#281). -->
+  <!-- `role="status"` and real words, and both keys: what finishes the deletion, and the
+       way out. -->
   @if (armed()) {
     <p class="card-arming" data-testid="note-card-arming" role="status">
       {{ 'notes.deleteArmed' | transloco }}
     </p>
   }
-  <!-- ⚠️ The click surface is a layer **under** the card, not the card itself: a `<button>`
-       cannot contain the buttons the header carries, and that is what used to push them
-       into absolute positions floating over the text, each a few pixels off the line. The
-       same two-layer trick the tickable items already use. -->
+  <!-- ⚠️ The click surface is a layer under the card, not the card itself: a `<button>` cannot
+       contain the buttons the header carries. -->
   <button
     #cardButton
     type="button"
@@ -29,11 +26,8 @@
   ></button>
 
   <div class="card" [class.pinned]="note().pinned" [class.selected]="selected()" [class.armed]="armed()">
-    <!-- ⚠️ One line, not two. The marks used to have a band of their own above the title —
-         a line that says nothing about the note, and 21px of a card that is a fixed 150.
-         The tick is **in the flow** at the head of this row rather than floating over the
-         card's corner: anything floating there sits on top of the marks, which is the
-         collision that decided this layout. -->
+    <!-- One row for the tick, the title and the marks: the tick in the flow at its head, since
+         anything floating over the corner sits on the marks. -->
     <div class="card-title-row">
       <!-- `aria-pressed` rather than an `<input type=checkbox>`, which would inherit the
            card's own styles. -->
@@ -69,7 +63,7 @@
         @if (!isChecklist()) {
           <app-language-badge [language]="note().language" />
         }
-        <!-- ⚠️ A mark, not a button: the copy below asks for the values when it sees this,
+        <!-- A mark, not a button: the copy below asks for the values when it sees this,
              and a second ⚡ beside it would be the same thing said twice. -->
         @if (hasPlaceholders()) {
           <span class="card-fields" data-testid="note-card-fields" aria-hidden="true">⚡</span>
@@ -97,7 +91,7 @@
         <span class="progress-count" data-testid="note-card-progress">
           {{ 'notes.checklistProgress' | transloco: { done: progress().done, total: progress().total } }}
         </span>
-        <!-- ⚠️ Here and not under the rows: inside the list it cost them 14px of a box that
+        <!-- Here and not under the rows: inside the list it cost them 14px of a box that
              is only 53 tall, and the first row was drawn outside it. -->
         @if (hiddenItemCount() > 0) {
           <span class="progress-more" data-testid="note-card-more">
@@ -106,8 +100,7 @@
         }
       </span>
 
-      <!-- In the flow now that the card is not a button: the items used to be a layer of
-           their own, absolutely placed, because a `<button>` cannot hold one. -->
+      <!-- In the flow: the card is not a button, so the items need no layer of their own. -->
       <ul class="card-items">
         @for (item of visibleItems(); track item.at) {
           <li>
@@ -164,12 +157,12 @@
     </span>
   </div>
 
-  <!-- ⚠️ Outside the card and over its **bottom** edge, shown under the pointer. The top
+  <!-- Outside the card and over its **bottom** edge, shown under the pointer. The top
        right belongs to the marks now, and a pill floating there covered them; down here it
        is clear of the arming band inside the card, which owns the footer line. Still
        outside rather than in the flow, so it costs the card no room at all. -->
   <div class="card-actions">
-    <!-- ⚠️ One copy, two behaviours: a snippet with fields cannot be copied as it is, so
+    <!-- One copy, two behaviours: a snippet with fields cannot be copied as it is, so
          this asks for the values first. The ⚡ among the marks is what says so. -->
     @if (hasPlaceholders()) {
       <button

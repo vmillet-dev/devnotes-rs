@@ -4,16 +4,10 @@ import { KeyValueStore } from './key-value-store';
 import { PreferencesService } from './preferences.service';
 
 /**
- * What belongs to *these* notes rather than to the application: the samples marker, and
- * which view each space was left on.
- *
- * ⚠️ Re-opened on every library switch, where `PreferencesService` is opened once. That
- * is the whole point of the split — a space id means nothing in another library, and a
- * samples marker carried across would leave a fresh library empty with no way to create
- * a note, since a note needs a space.
- *
- * The file is named by Rust (`PREFERENCES_FILE`), which decides where a library lives. It
- * shares its name with the application's file and is told apart by its directory.
+ * What belongs to these notes rather than to the application: the samples marker, and the view
+ * each space was left on. Re-opened on every library switch: a space id means nothing in another
+ * library, and a marker carried across would leave a fresh one with no space. The file is named
+ * by Rust (`PREFERENCES_FILE`) and told apart from the application's by its directory.
  */
 @Injectable({ providedIn: 'root' })
 export class LibraryPreferencesService extends KeyValueStore {
@@ -26,13 +20,9 @@ export class LibraryPreferencesService extends KeyValueStore {
   }
 
   /**
-   * ⚠️ Moves the library-scoped keys out of the application's file, once. Every install
-   * before the registry kept both scopes in one — without this, the first launch after
-   * the upgrade reads no samples marker and re-seeds a library that is full.
-   *
-   * ⚠️ Only into a library that has none of its own: a second library must not inherit
-   * the first one's markers, and the application file is emptied of them by the first
-   * adoption anyway.
+   * ⚠️ Moves the library-scoped keys out of the application's file, once: installs from before
+   * the registry kept both scopes in one, and would re-seed a full library. Only into a library
+   * with none of its own, so a second library inherits nothing.
    */
   private adoptFromApplication(): void {
     for (const [key, value] of this.application.libraryScoped()) {

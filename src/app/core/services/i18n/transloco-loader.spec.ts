@@ -52,11 +52,7 @@ describe('the translation files', () => {
     expect(strings(translations).some((value) => value.includes('{{app}}'))).toBe(true);
   });
 
-  /**
-   * ⚠️ Both keys, in every locale. Escape disarms and always has; the banner named only
-   * the key that finishes the job, so the way out was invisible and the one people found
-   * was a mouse target (#281).
-   */
+  /** Both keys, in every locale: the way out must be as visible as the way through. */
   it.each([
     ['fr', fr, ['Suppr', 'Échap']],
     ['en', en, ['Del', 'Esc']],
@@ -71,11 +67,7 @@ describe('the translation files', () => {
     },
   );
 
-  /**
-   * ⚠️ The same key, on both surfaces. The card teaches Escape while the note is armed;
-   * the bar that offers it back one keystroke later used to name nothing at all, so the
-   * lesson expired immediately (#293).
-   */
+  /** The same key on both surfaces: the bar that offers the note back names it too. */
   it.each([
     ['fr', fr, 'Échap'],
     ['en', en, 'Esc'],
@@ -86,7 +78,7 @@ describe('the translation files', () => {
   });
 
   /**
-   * ⚠️ "(s)" is not a plural, it is a refusal to choose one — and French does not agree
+   * "(s)" is not a plural, it is a refusal to choose one — and French does not agree
    * with English about zero, or about where the mark goes on a past participle. Counting
    * is the transpiler's job now.
    */
@@ -98,7 +90,7 @@ describe('the translation files', () => {
   });
 
   /**
-   * ⚠️ The messageformat transpiler replaces the default one, so `{` is syntax. A literal
+   * The messageformat transpiler replaces the default one, so `{` is syntax. A literal
    * brace in a translated string would have to be escaped as `'{'`, and the failure mode is
    * silent — the string renders as something else entirely rather than throwing.
    */

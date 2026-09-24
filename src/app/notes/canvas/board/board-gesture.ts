@@ -1,25 +1,18 @@
 import { BoardFrame, BoardPoint } from '@core/model/board.model';
 
 /**
- * The geometry a pointer drag needs, as plain functions. No signals and no DOM: the
- * arithmetic is the part worth testing, and it is the part that gets subtly wrong.
- *
- * ⚠️ HTML5 drag and drop does not work in this WebView and cannot be turned on —
- * `dragDropEnabled` has to stay `true` for the native file drop that feeds attachments,
- * which is exactly what stops the WebView seeing `dragstart` and `drop`. Everything here
- * is driven by pointer events, as checklist reordering already is.
+ * The geometry a pointer drag needs, as plain functions: no signals, no DOM. ⚠️ HTML5 drag and
+ * drop never reaches this WebView — `dragDropEnabled` stays `true` for the native file drop — so
+ * every gesture is pointer events.
  */
 
 /** Below this, a pointer that moved is a click that wobbled. */
 export const DRAG_THRESHOLD_PX = 4;
 
 /**
- * Everything a gesture writes lands on this lattice, and it is the one already drawn: the
- * surface's dotted background is 20px (`board.component.scss`), so a snapped board looks
- * deliberate rather than merely tidy. Keep the two in step.
- *
- * ⚠️ Snapping never turns a click into a move: nothing here runs until the pointer has
- * travelled past `DRAG_THRESHOLD_PX`, and `pointerup` commits nothing before then.
+ * The lattice everything a gesture writes lands on: the surface's dotted background is 20px
+ * (`board.component.scss`), keep the two in step. Nothing snaps before the pointer has passed
+ * `DRAG_THRESHOLD_PX`, so a click never becomes a move.
  */
 export const GRID_PX = 20;
 
@@ -73,27 +66,20 @@ export function movedTo(gesture: Gesture, at: BoardPoint): BoardFrame {
   };
 }
 
-/**
- * ⚠️ Resizing captures and releases nothing. Unreal's own rule — a comment owns whatever
- * it overlaps — was considered and refused: it silently refiles notes the day a frame is
- * stretched. Membership comes from the drop, in both directions.
- */
+/** Resizing captures and releases nothing: membership comes from the drop alone. */
 export function resizedTo(gesture: Gesture, at: BoardPoint): BoardFrame {
   return {
     x: gesture.from.x,
     y: gesture.from.y,
-    // ⚠️ Snapped first, clamped second: the minimum is `folders::board`'s and is not a
-    // multiple of the grid, so a zone squashed all the way is the one frame off it.
+    // Snapped then clamped: the minimum is `folders::board`'s and not a multiple of the grid.
     width: Math.max(MIN_ZONE_WIDTH, snap(gesture.from.width + (at.x - gesture.origin.x))),
     height: Math.max(MIN_ZONE_HEIGHT, snap(gesture.from.height + (at.y - gesture.origin.y))),
   };
 }
 
 /**
- * The rubber band, which reads the same whichever corner it was started from.
- *
- * ⚠️ Both corners are snapped, not the size: rounding a width would leave the far edge
- * between two dots whenever the near one moved.
+ * The rubber band, the same whichever corner it started from. Both corners snap, not the
+ * size, which would leave the far edge between two dots.
  */
 export function drawnTo(origin: BoardPoint, at: BoardPoint): BoardFrame {
   const left = Math.max(0, snap(Math.min(origin.x, at.x)));
@@ -113,11 +99,8 @@ export function isWorthDrawing(frame: BoardFrame): boolean {
 }
 
 /**
- * Whether a band and a card box overlap at all — **touching** is enough, as every rubber
- * band anyone has used works, and as `free_slot` already tests a seat.
- *
- * ⚠️ Half-open on the far edges, like [`contains`]: a band whose right edge lands exactly
- * on a card's left edge is beside it, not on it.
+ * Whether a band and a card box overlap at all: touching is enough, as with any rubber band.
+ * Half-open on the far edges, like `contains`.
  */
 export function overlaps(band: BoardFrame, card: BoardFrame): boolean {
   return (
@@ -147,10 +130,7 @@ export function contains(frame: BoardFrame, point: BoardPoint): boolean {
   );
 }
 
-/**
- * Which zone a drop lands in, topmost first — `null` is the free background, and that is
- * a legitimate answer: dropping there takes a note out of its folder.
- */
+/** Which zone a drop lands in, topmost first; `null` is the background, where a drop unfiles. */
 export function zoneAt(
   frames: readonly { readonly id: string; readonly frame: BoardFrame }[],
   point: BoardPoint,

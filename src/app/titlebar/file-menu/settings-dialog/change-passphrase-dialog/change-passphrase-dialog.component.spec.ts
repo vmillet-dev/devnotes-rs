@@ -85,7 +85,7 @@ describe('ChangePassphraseDialogComponent', () => {
     expect(closed).toBe(1);
   });
 
-  /** ⚠️ A phrase left in a DOM node outlives the dialog that carried it. */
+  /** A phrase left in a DOM node outlives the dialog that carried it. */
   it('clears the three fields whatever the answer', async () => {
     repository.failNext = REFUSED;
     await fill('not the old one', 'a longer phrase');

@@ -83,7 +83,7 @@ describe('FileDropService', () => {
   });
 
   /**
-   * ⚠️ The window `subscribeCancellable` exists for: the subscription only lands on the
+   * The window `subscribeCancellable` exists for: the subscription only lands on the
    * next turn, and a caller destroyed before then would otherwise stay subscribed for
    * the rest of the session.
    */

@@ -126,7 +126,7 @@ describe('ChecklistEditorComponent', () => {
   });
 
   describe('reordering by pointer', () => {
-    // ⚠️ HTML5 drag & drop does not work in this WebView: the pointer events are the
+    // HTML5 drag & drop does not work in this WebView: the pointer events are the
     // path to cover, not a `dragstart` that would never arrive.
     function grip(index: number): HTMLElement {
       return fixture.nativeElement.querySelectorAll('.row-grip')[index];
@@ -234,7 +234,7 @@ describe('ChecklistEditorComponent', () => {
   });
 
   /**
-   * ⚠️ The sequence every new todo list goes through. The editor opens on a **draft**;
+   * The sequence every new todo list goes through. The editor opens on a **draft**;
    * the first committed field materialises the note, which then receives its real id.
    * Keyed on that id, this draft was replayed from `items()` — whatever the server last
    * knew, which for a row added a moment earlier is nothing. Worse, only a change of

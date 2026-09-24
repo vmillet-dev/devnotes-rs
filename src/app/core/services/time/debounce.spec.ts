@@ -8,7 +8,7 @@ describe('debounced', () => {
   let destroy: () => void;
 
   beforeEach(() => {
-    // ⚠️ Only the timers: a faked `requestAnimationFrame` hangs Angular's zoneless scheduler.
+    // Only the timers: a faked `requestAnimationFrame` hangs Angular's zoneless scheduler.
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({});
@@ -86,7 +86,7 @@ describe('debounced', () => {
   });
 
   /**
-   * ⚠️ Why it must be built in an injection context: a pending call belonging to a
+   * Why it must be built in an injection context: a pending call belonging to a
    * component that has gone would act on state nobody is looking at — and in a spec, it
    * fires after the test that created it.
    */

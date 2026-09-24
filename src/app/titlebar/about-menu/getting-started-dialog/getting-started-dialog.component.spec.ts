@@ -36,10 +36,7 @@ describe('GettingStartedDialogComponent', () => {
     await fixture.whenStable();
   }
 
-  /**
-   * ⚠️ One chapter at a time, which is the whole of #256: ten chapters of prose in one
-   * scrolling panel was roughly 3 400 characters, all of it true and none of it looked at.
-   */
+  /** One chapter at a time. */
   it('shows one chapter, and walks to the next', async () => {
     expect(fixture.nativeElement.querySelectorAll('[data-testid="guide-chapter"]')).toHaveLength(1);
     expect(title()).toContain('notes');
@@ -58,7 +55,7 @@ describe('GettingStartedDialogComponent', () => {
     expect(fixture.nativeElement.querySelector('[data-chapter="spaces"]')).not.toBeNull();
   });
 
-  /** ⚠️ A reader who knows which chapter they want must still be able to land on it. */
+  /** A reader who knows which chapter they want must still be able to land on it. */
   it('jumps straight to a chapter from its dot', async () => {
     expect(dots()).toHaveLength(10);
 
@@ -79,7 +76,7 @@ describe('GettingStartedDialogComponent', () => {
     expect(fixture.nativeElement.querySelector('[data-testid="guide-next"]')).toBeNull();
   });
 
-  /** ⚠️ A walk you can only leave by finishing it is a wall with extra steps. */
+  /** A walk you can only leave by finishing it is a wall with extra steps. */
   it('can be closed from any chapter, not only the last', async () => {
     let closed = 0;
     fixture.componentInstance.closed.subscribe(() => (closed += 1));
@@ -89,7 +86,7 @@ describe('GettingStartedDialogComponent', () => {
     expect(closed).toBe(1);
   });
 
-  /** ⚠️ Reaching help from the thing it explains is what the empty canvas and board use. */
+  /** Reaching help from the thing it explains is what the empty canvas and board use. */
   it('opens at the chapter it was asked for', async () => {
     fixture.componentRef.setInput('startAt', 'folders');
     await fixture.whenStable();
@@ -109,7 +106,7 @@ describe('GettingStartedDialogComponent', () => {
     expect(bodies()).not.toContain('Ctrl+Alt+P');
   });
 
-  /** ⚠️ Transloco replaces an unknown `{{name}}` with the empty string, so a body that
+  /** Transloco replaces an unknown `{{name}}` with the empty string, so a body that
    *  spells a key out silently loses it. Walked, because only one is on screen at a time. */
   it('leaves no interpolation unfilled, in any chapter', async () => {
     for (const dot of dots()) {

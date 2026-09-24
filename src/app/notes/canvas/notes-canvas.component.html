@@ -1,11 +1,11 @@
-<!-- ⚠️ The region keeps the `canvas` hook whichever view fills it: it is the address on
+<!-- The region keeps the `canvas` hook whichever view fills it: it is the address on
  screen, and the two views are alternatives inside it, not replacements for it. -->
 <div
   class="canvas-region"
   data-testid="canvas"
   [attr.aria-busy]="board.isBoard() ? board.isLoading() : canvas.isLoading()"
 >
-  <!-- ⚠️ Over the canvas, not in the flow: inserted, it pushed everything below it down
+  <!-- Over the canvas, not in the flow: inserted, it pushed everything below it down
    85px, so the canvas jumped on every tick — and it wrapped too. -->
   @if (selection.hasSelection()) {
     <app-selection-bar
@@ -71,7 +71,7 @@
       } @else if (canvas.isLoading()) {
         <p class="canvas-state-text">{{ 'notes.loading' | transloco }}</p>
       } @else if (canvas.hasNoResults()) {
-        <!-- ⚠️ With the way out, not only the news. `hasUserFilters` and not
+        <!-- With the way out, not only the news. `hasUserFilters` and not
              `isFiltering`: the latter is true inside a folder, and offering to clear
              filters that do not exist is worse than offering nothing. -->
         <div class="canvas-state">
@@ -88,8 +88,7 @@
               {{ 'notes.clearFilters' | transloco }}
             </button>
           } @else {
-            <!-- ⚠️ The chapter that explains *this* screen, not the top of the guide:
-                 reaching help from the thing it is about is the whole point of #256. -->
+            <!-- The chapter that explains this screen, not the top of the guide. -->
             <button
               type="button"
               class="canvas-retry"
@@ -109,7 +108,7 @@
   }
 </div>
 
-<!-- ⚠️ A footer of the workspace and not the last child of the scrolling canvas: with
+<!-- A footer of the workspace and not the last child of the scrolling canvas: with
      three notes on screen it sat a third of the way down, and with three hundred it
      was only reachable by scrolling to the end. It goes for both views — every key it
      names is bound page-wide — and stands down while a canvas state owns the screen. -->

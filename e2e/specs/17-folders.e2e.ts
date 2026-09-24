@@ -15,7 +15,7 @@ describe('Folders', () => {
   let homeId = '';
 
   /**
-   * ⚠️ The active space is front-end state, so `browser.refresh()` drops it back to "all
+   * The active space is front-end state, so `browser.refresh()` drops it back to "all
    * spaces" — where the switcher offers no creation, a folder having nowhere to go. Every
    * reload here therefore settles back into the home space.
    */
@@ -123,7 +123,7 @@ describe('Folders', () => {
       expect(await card.$(testid('note-card-folder')).getText()).toContain('Perf');
     });
 
-    /** ⚠️ The absence reads on its own; an "unfiled" chip would soil every loose card. */
+    /** The absence reads on its own; an "unfiled" chip would soil every loose card. */
     it('shows no chip at all on a note with no folder', async () => {
       await bridge.createNote(draft({ spaceId: homeId, title: 'Hors dossier' }));
       await reloadInHomeSpace();
@@ -163,7 +163,7 @@ describe('Folders', () => {
       expect(view.matched).toBe(1);
     });
 
-    /** ⚠️ The chip would otherwise name a folder the space switcher can never reach. */
+    /** The chip would otherwise name a folder the space switcher can never reach. */
     it('unfiles a note carried off to another space', async () => {
       const elsewhere = await bridge.createSpace({ name: 'Ailleurs' });
       const id = await canvas.noteIdWithTitle('Locks sur jobs');
@@ -205,7 +205,7 @@ describe('Folders', () => {
    * The whole point of `ON DELETE SET NULL`: a folder is a label on a region, never a
    * container that takes its contents with it. A cascade here would be silent data loss.
    *
-   * ⚠️ Seeds its own folder and note rather than reusing the ones above: Mocha runs a
+   * Seeds its own folder and note rather than reusing the ones above: Mocha runs a
    * nested suite after its siblings, so the filing block below has not run yet.
    */
   it('leaves every note standing when the folder goes', async () => {
@@ -251,12 +251,7 @@ describe('Folders', () => {
     await reloadInHomeSpace();
   });
 
-  /**
-   * A note's properties used to be spread over four surfaces, and none of them was
-   * complete: filing one from the date view took three clicks through the selection bar,
-   * and pinning with the mouse took a full-screen modal for a boolean with its own chip in
-   * the header.
-   */
+  /** The card's menu and the editor: each is complete about one note. */
   describe('the two surfaces about one note', () => {
     let folderId = '';
     const title = 'Sauvegarde nocturne';
@@ -284,7 +279,7 @@ describe('Folders', () => {
       );
     });
 
-    /** ⚠️ One gesture, where the selection bar took three clicks and a fourth to clear. */
+    /** One gesture, where the selection bar took three clicks and a fourth to clear. */
     it('files a note into a folder from the card, in one gesture', async () => {
       await canvas.fileNote(title, folderId);
 
@@ -307,7 +302,7 @@ describe('Folders', () => {
       expect(view.sections[0]?.notes[0]?.folderId ?? null).toBeNull();
     });
 
-    /** ⚠️ Three clicks and a full-screen modal, for a boolean, until now. */
+    /** Three clicks and a full-screen modal, for a boolean, until now. */
     it('pins with the mouse without opening anything', async () => {
       await canvas.pinFromCardMenu(title);
 
@@ -321,7 +316,7 @@ describe('Folders', () => {
     });
 
     /**
-     * ⚠️ The editor was the one surface about a single note that could not move it. A
+     * The editor was the one surface about a single note that could not move it. A
      * folder belongs to one space, so the two controls are shown together: moving the
      * space clears the folder, and a folder control alone would lie about it.
      */
@@ -337,14 +332,14 @@ describe('Folders', () => {
         'the editor filing to reach the database',
       );
       expect(view.sections[0]?.notes[0]?.folderId).toBe(folderId);
-      // ⚠️ The name, not a translated "no folder": the suite switches language partway.
+      // The name, not a translated "no folder": the suite switches language partway.
       expect(before).not.toContain('Exploitation');
       expect(await editor.placementLabel('folder')).toContain('Exploitation');
       await editor.close();
     });
 
     /**
-     * ⚠️ This menu lives inside a dialog, unlike every other one in the application: the
+     * This menu lives inside a dialog, unlike every other one in the application: the
      * trigger lets Escape bubble on purpose, and the next listener up is the editor's own.
      * One Escape closed the note along with the menu.
      */
@@ -362,7 +357,7 @@ describe('Folders', () => {
 
     it('moves the note to another space from the editor, which clears its folder', async () => {
       const elsewhere = await bridge.createSpace({ name: 'Ailleurs' });
-      // ⚠️ The bridge writes straight to the database, so the front end has never heard of
+      // The bridge writes straight to the database, so the front end has never heard of
       // that space: without this the menu it offers has no such entry to click.
       await reloadInHomeSpace();
       await canvas.openNote(title);

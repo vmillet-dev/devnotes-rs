@@ -4,13 +4,9 @@ import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 /**
- * ⚠️ `node --test` and not a `*.spec.ts`, like the palette and the sleep sweep: this reads
- * the shipped stylesheets off disk, and the Angular builder compiles its specs for a
- * browser, where `node:fs` does not exist.
- *
- * The linter catches most of the accessibility rules and cannot catch this one: a control
- * with no `:focus-visible` is valid CSS and valid HTML, and the keyboard simply walks it
- * invisibly. Four of them had accumulated, the tag rail among them (#233).
+ * `node --test` and not a `*.spec.ts`: it reads the shipped stylesheets off disk, and the
+ * Angular builder compiles its specs for a browser. The linter cannot catch this one: a control
+ * with no `:focus-visible` is valid CSS and HTML, and the keyboard walks it invisibly.
  */
 const ROOT = 'src/app';
 
@@ -23,7 +19,7 @@ function stylesheets(directory) {
 }
 
 /**
- * What marks a stylesheet as drawing something the keyboard can reach. ⚠️ `cursor:
+ * What marks a stylesheet as drawing something the keyboard can reach. `cursor:
  * pointer` and not a `<button>` count: the templates are elsewhere, and a control is
  * styled where it is drawn.
  */
@@ -54,13 +50,8 @@ describe('every control says where the keyboard is', () => {
 });
 
 /**
- * The other half of the same omission. A ring nobody drew and a ring nobody left room for
- * look the same to the keyboard, and both are valid CSS.
- *
- * ⚠️ A box that scrolls on one axis scrolls on the other: `overflow-x: auto` makes the
- * used value of `overflow-y` `auto` too — there is no scrolling sideways while
- * overflowing upwards — so a horizontal rail of pills clips their rings flat against its
- * own edges. The tag rail did exactly that (#279).
+ * The other half: room for the ring. `overflow-x: auto` makes `overflow-y` `auto` too, so a
+ * horizontal rail of pills clips their rings flat against its own edges.
  */
 const ROOM = Number(
   /@mixin ring-room\(\$room: (\d+)px\)/.exec(readFileSync('src/styles/_mixins.scss', 'utf8'))?.[1],

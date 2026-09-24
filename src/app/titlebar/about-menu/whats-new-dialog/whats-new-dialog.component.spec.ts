@@ -52,9 +52,8 @@ describe('WhatsNewDialogComponent', () => {
   });
 
   /**
-   * ⚠️ The hand-written sections of `CHANGELOG.md` open on `**Todo-list notes.**` and
-   * carry backticks, and all of it used to land on screen as punctuation. Rendered as
-   * elements over a switch, never through `innerHTML`.
+   * The hand-written sections carry `**…**` and backticks: rendered as elements over a switch,
+   * never through `innerHTML`.
    */
   it('draws the runs an entry was cut into rather than their markers', async () => {
     await mount();

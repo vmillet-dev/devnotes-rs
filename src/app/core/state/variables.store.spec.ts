@@ -53,10 +53,7 @@ describe('VariablesStore', () => {
     expect(store.variables()).toHaveLength(2);
   });
 
-  /**
-   * ⚠️ Staged like every other change in the panel: removing a row used to write on the
-   * spot, which is the one gesture here that cannot be taken back.
-   */
+  /** Staged like every other change in the panel: a removal cannot be taken back. */
   it('removing a row waits for the commit, like the rest', async () => {
     store.add();
     store.rename(0, 'host');
@@ -85,7 +82,7 @@ describe('VariablesStore', () => {
     expect(store.isDirty()).toBe(false);
   });
 
-  /** ⚠️ The page is recreated every time the rail changes section. */
+  /** The page is recreated every time the rail changes section. */
   it('refuses to reload over edits in hand', async () => {
     await repository.saveVariables({ host: 'db.internal' });
     await store.load();

@@ -57,7 +57,7 @@ describe('NoteRevisionsStore', () => {
     ]);
   });
 
-  /** ⚠️ A comparison that arrives after the editor moved on belongs to nobody. */
+  /** A comparison that arrives after the editor moved on belongs to nobody. */
   it('drops a preview that arrives after the editor moved to another note', async () => {
     await store.openFor('n-1');
 
@@ -77,7 +77,7 @@ describe('NoteRevisionsStore', () => {
     expect(restore).not.toHaveBeenCalled();
   });
 
-  /** ⚠️ The editor re-seeds its draft when the counter moves: the note must be there first. */
+  /** The editor re-seeds its draft when the counter moves: the note must be there first. */
   it('adopts the restored note before it says a restore happened', async () => {
     await store.openFor('n-1');
     await store.openPreview('r-1');

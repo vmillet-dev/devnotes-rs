@@ -85,7 +85,7 @@ describe('SettingsDialogComponent', () => {
   });
 
   /**
-   * ⚠️ The variables are corpus data with a store of their own, but they are edited under
+   * The variables are corpus data with a store of their own, but they are edited under
    * the same footer: a panel where one page committed on blur and three waited for a
    * button would be worse than either rule on its own.
    */
@@ -167,7 +167,7 @@ describe('SettingsDialogComponent', () => {
     });
 
     /**
-     * ⚠️ Escape and the backdrop produce no click, so without this guard the two of them
+     * Escape and the backdrop produce no click, so without this guard the two of them
      * are a silent Annuler — the one outcome nobody would have chosen on purpose.
      */
     it('holds the panel open when the shell asks to close with work in hand', async () => {

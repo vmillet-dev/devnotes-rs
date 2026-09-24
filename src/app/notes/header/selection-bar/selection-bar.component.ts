@@ -33,10 +33,10 @@ export class SelectionBarComponent {
   );
 
   /**
-   * ⚠️ "Take it out" is an entry of the same menu, not a second control: the two directions
+   * "Take it out" is an entry of the same menu, not a second control: the two directions
    * are one command, and `file_notes` takes `null` for one of them.
    */
-  // ⚠️ The template gates on `folders()` and not on this: the way out is always here, so
+  // The template gates on `folders()` and not on this: the way out is always here, so
   // this list is never empty and a space with no folder would still draw the control.
   protected readonly folderChoices = computed<readonly ChoiceOption[]>(() => [
     ...this.folders().map((folder) => ({

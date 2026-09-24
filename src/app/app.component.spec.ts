@@ -46,7 +46,7 @@ describe('AppComponent', () => {
   });
 
   /**
-   * ⚠️ The outlet is not merely hidden while the library is locked: it is not created.
+   * The outlet is not merely hidden while the library is locked: it is not created.
    * The canvas queries notes the moment it mounts, and there would be nothing to answer.
    */
   it('puts the gate in front of the outlet while the library is locked', async () => {

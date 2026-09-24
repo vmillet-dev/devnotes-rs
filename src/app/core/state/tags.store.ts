@@ -5,9 +5,8 @@ import { TagUsage } from '@core/model/note.model';
 import { NotesRevision } from './notes-revision';
 
 /**
- * A corpus-wide change, waiting to be confirmed. ⚠️ `notes` is counted distinctly by the
- * back end, never summed from the per-tag counts on screen: a note carrying two of the
- * selected tags is one note.
+ * A corpus-wide change, waiting to be confirmed. `notes` is counted distinctly by the back end,
+ * never summed from the counts on screen: a note carrying two of the tags is one note.
  */
 export interface PendingTagChange {
   readonly kind: 'rename' | 'merge' | 'delete';
@@ -103,7 +102,7 @@ export class TagsStore {
     );
   }
 
-  /** ⚠️ A blast radius that cannot be read leaves nothing pending, so nothing runs. */
+  /** A blast radius that cannot be read leaves nothing pending, so nothing runs. */
   private async propose(
     kind: PendingTagChange['kind'],
     tags: readonly string[],

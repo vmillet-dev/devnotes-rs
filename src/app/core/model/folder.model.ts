@@ -4,7 +4,7 @@ import type { Folder as WireFolder } from '@core/ipc/bindings';
 export type { FolderColour, NoteFolder, NoteFiling } from '@core/ipc/bindings';
 
 /**
- * ⚠️ `colour` carries `#[serde(default)]` on the Rust side so an export file written
+ * `colour` carries `#[serde(default)]` on the Rust side so an export file written
  * before folders stays readable, and specta turns that into an optional key — which the
  * model refuses to be. Same seam as `Space.pinned`.
  */

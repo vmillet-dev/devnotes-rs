@@ -11,7 +11,7 @@ import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 /**
  * The descent: a space shows its folders, a folder shows its notes.
  *
- * ⚠️ A space of its own, like the two board files before it: nineteen files run first and
+ * A space of its own, like the two board files before it: nineteen files run first and
  * leave their notes in the home space.
  */
 describe('Opening a folder', () => {
@@ -56,7 +56,7 @@ describe('Opening a folder', () => {
     expect(await crumb.name()).toBe('Perf');
   });
 
-  /** ⚠️ The inside of a folder is not spatial: no zones, no coordinates, nothing to draw. */
+  /** The inside of a folder is not spatial: no zones, no coordinates, nothing to draw. */
   it('shows an ordinary grid of its notes and nothing else', async () => {
     expect(await board.isShowing()).toBe(false);
     expect(await canvas.titles()).toEqual(['EXPLAIN lent sur join']);
@@ -74,7 +74,7 @@ describe('Opening a folder', () => {
   });
 
   /**
-   * ⚠️ The flat view a folder produces had `show_create_ghost: false` like any other, so
+   * The flat view a folder produces had `show_create_ghost: false` like any other, so
    * the one place where creating a note files it had nothing to create from.
    */
   it('keeps the slot a note is created from, and drops it while searching', async () => {
@@ -104,7 +104,7 @@ describe('Opening a folder', () => {
     await editor.setTitle('Cache hit ratio');
     await editor.close();
 
-    // ⚠️ Two conditions and not one: the note has to exist before "filed" means anything,
+    // Two conditions and not one: the note has to exist before "filed" means anything,
     // and keeping them apart is what tells a note never written from one written loose.
     await eventually(
       () => bridge.queryNotes(query({ spaceId, search: 'Cache hit ratio' })),
@@ -137,12 +137,12 @@ describe('Opening a folder', () => {
   });
 
   /**
-   * ⚠️ Escape falls through: the search first, then out of the folder. Leaving is the
+   * Escape falls through: the search first, then out of the folder. Leaving is the
    * biggest of the two, so it goes last.
    */
   it('gives the search back before it gives the folder back', async () => {
     await canvas.search('EXPLAIN');
-    // ⚠️ The canvas keyboard ignores a keystroke aimed at the search field, by design.
+    // The canvas keyboard ignores a keystroke aimed at the search field, by design.
     await blurField();
 
     await press('Escape');
