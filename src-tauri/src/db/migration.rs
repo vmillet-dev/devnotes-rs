@@ -81,16 +81,14 @@ mod tests {
 
     #[test]
     fn opening_twice_is_idempotent() {
-        let directory = std::env::temp_dir().join(format!("devnotes-{}", uuid::Uuid::new_v4()));
-        std::fs::create_dir_all(&directory).unwrap();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         let path = directory.join(DATABASE);
 
         open(&path, crate::db::test_vault().unwrap()).unwrap();
         let mut connection = open(&path, crate::db::test_vault().unwrap()).unwrap();
 
         assert!(!connection.has_pending_migration(MIGRATIONS).unwrap());
-
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     #[test]

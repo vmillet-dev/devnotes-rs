@@ -2193,14 +2193,9 @@ fn a_stored_date_always_carries_its_milliseconds() {
 fn a_note_is_not_readable_in_the_file_it_was_written_to() {
     use devnotes_lib::db;
 
-    let directory = std::env::temp_dir().join(format!(
-        "devnotes-sealed-{}",
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    ));
-    std::fs::create_dir_all(&directory).unwrap();
+    let scratch = tempfile::tempdir().unwrap();
+
+    let directory = scratch.path().to_path_buf();
     let path = directory.join("sealed.sqlite3");
 
     let secret = "psql -h prod.internal -U admin -W hunter2";
@@ -2248,8 +2243,6 @@ fn a_note_is_not_readable_in_the_file_it_was_written_to() {
         haystack.contains("host"),
         "a variable's name is expected to stay readable"
     );
-
-    std::fs::remove_dir_all(&directory).ok();
 }
 
 mod revisions {

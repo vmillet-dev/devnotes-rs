@@ -272,17 +272,14 @@ mod tests {
         }
     }
 
-    fn scratch() -> std::path::PathBuf {
-        std::env::temp_dir().join(format!("devnotes-vault-{}", uuid::Uuid::new_v4()))
-    }
-
     fn close(db: &Db) {
         *db.lock().unwrap() = None;
     }
 
     #[test]
     fn a_library_created_is_open_and_unlocks_again_with_its_phrase_alone() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         let db: Db = std::sync::Mutex::new(None);
 
         create("a passphrase", &directory, &db, cheap()).unwrap();
@@ -294,12 +291,12 @@ mod tests {
         assert!(db.lock().unwrap().is_some());
 
         close(&db);
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     #[test]
     fn a_changed_phrase_opens_the_library_and_the_old_one_no_longer_does() {
-        let directory = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         let db: Db = std::sync::Mutex::new(None);
         create("a passphrase", &directory, &db, cheap()).unwrap();
 
@@ -311,7 +308,6 @@ mod tests {
         unlock("another phrase", &directory, &db).unwrap();
 
         close(&db);
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     #[test]
@@ -326,9 +322,8 @@ mod tests {
     /// A key written over a database it did not seal would open nothing that database holds.
     #[test]
     fn a_database_left_without_its_key_is_answered_as_damaged() {
-        let directory =
-            std::env::temp_dir().join(format!("devnotes-keyless-{}", uuid::Uuid::new_v4()));
-        std::fs::create_dir_all(&directory).unwrap();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         assert!(refuse_a_database_without_its_key(&directory).is_ok());
 
         std::fs::write(directory.join(crate::layout::DATABASE), b"a sealed library").unwrap();
@@ -337,7 +332,6 @@ mod tests {
             refuse_a_database_without_its_key(&directory),
             Err(StorageError::Damaged(_))
         ));
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     #[test]

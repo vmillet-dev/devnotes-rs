@@ -41,6 +41,14 @@ impl Library {
         &self.vault
     }
 
+    /// An in-memory library that writes its files into `directory`, for a test that
+    /// attaches something.
+    #[cfg(test)]
+    pub(crate) fn with_directory(mut self, directory: PathBuf) -> Self {
+        self.directory = directory;
+        self
+    }
+
     /// Where the database file sits, and everything that travels with it. ⚠️ Asked of the
     /// open library rather than of the registry, which is a file read per call.
     pub fn directory(&self) -> &Path {
@@ -314,9 +322,8 @@ mod tests {
     /// launch copy is a copy of a broken file.
     #[test]
     fn a_damaged_file_is_named_as_such_rather_than_opened() {
-        let directory =
-            std::env::temp_dir().join(format!("devnotes-damaged-{}", uuid::Uuid::new_v4()));
-        std::fs::create_dir_all(&directory).unwrap();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
         let path = directory.join(crate::layout::DATABASE);
 
         // A real library, with enough in it to fill more than the first page.
@@ -345,8 +352,6 @@ mod tests {
             format!("{error}").contains(&path.display().to_string()),
             "the failure does not name the file: {error}"
         );
-
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     /// A sound library answers the check and says nothing about it.
@@ -362,9 +367,8 @@ mod tests {
     /// have never opened.
     #[test]
     fn a_database_that_will_not_open_says_which_file() {
-        let directory =
-            std::env::temp_dir().join(format!("devnotes-unopenable-{}", uuid::Uuid::new_v4()));
-        std::fs::create_dir_all(&directory).unwrap();
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
 
         // A directory is not a database file, so establishing it fails the way a corrupt
         // file or a bad permission would. ⚠️ Destructured rather than `unwrap_err`, which
@@ -377,8 +381,6 @@ mod tests {
             format!("{error}").contains(&directory.display().to_string()),
             "the failure does not name the file: {error}"
         );
-
-        std::fs::remove_dir_all(&directory).ok();
     }
 
     /// ⚠️ Zero is SQLite's own default, and it turns a database another process holds for

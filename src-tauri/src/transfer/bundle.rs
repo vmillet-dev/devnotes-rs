@@ -255,20 +255,14 @@ mod tests {
         .unwrap()
     }
 
-    fn scratch() -> std::path::PathBuf {
-        let directory = std::env::temp_dir().join(format!("devnotes-traversal-{}", Uuid::new_v4()));
-        std::fs::create_dir_all(&directory).unwrap();
-
-        directory
-    }
-
     /// ⚠️ The demonstration #160 was filed on. A bundle whose attachment record claims
     /// `id = "../vault"` used to make the import write `profile/vault.json` — the wrapped
     /// master key — with bytes the file chose, and report the import a success. Nobody
     /// could open their library again.
     #[test]
     fn an_identifier_read_out_of_a_file_cannot_write_outside_the_attachments_directory() {
-        let profile = scratch();
+        let scratch = tempfile::tempdir().unwrap();
+        let profile = scratch.path().to_path_buf();
         let sending_files = profile.join("sending");
         let receiving_files = profile.join("attachments");
         std::fs::create_dir_all(&sending_files).unwrap();
@@ -332,7 +326,5 @@ mod tests {
         let stem = landed.file_stem().unwrap().to_string_lossy();
         assert_eq!(landed.extension().unwrap(), "json");
         assert!(Uuid::parse_str(&stem).is_ok(), "{stem}");
-
-        std::fs::remove_dir_all(&profile).ok();
     }
 }
