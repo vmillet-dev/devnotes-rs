@@ -77,8 +77,16 @@ describe('Preferences reach the disk', () => {
     expect((await settled('devnotes.theme', 'light'))['devnotes.theme']).toBe('light');
   });
 
-  it('stores the locale the titlebar switch chose, like the panel does', async () => {
-    await titlebar.setLocale('en');
+  it('stores the locale the panel applied', async () => {
+    // From French, established rather than assumed: an earlier file may have left English.
+    await fileMenu.openPreferences();
+    await settings.setLocale('fr');
+    await settings.close();
+    await settled('devnotes.locale', 'fr');
+
+    await fileMenu.openPreferences();
+    await settings.setLocale('en');
+    await settings.close();
 
     expect((await settled('devnotes.locale', 'en'))['devnotes.locale']).toBe('en');
     expect(await titlebar.activeLocale()).toBe('en');

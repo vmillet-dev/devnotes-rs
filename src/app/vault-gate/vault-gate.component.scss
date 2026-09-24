@@ -1,5 +1,14 @@
 @use 'mixins' as *;
 
+// The rest of the shell's column: without a height of its own, `min-height: 100%` below
+// resolves to nothing and the panel sits at the top of the window.
+:host {
+  display: block;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
 .gate {
   display: grid;
   place-items: center;
@@ -67,6 +76,45 @@
 .label {
   color: var(--text-2);
   font-size: 0.8rem;
+}
+
+.field-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.reveal {
+  @include unstyled-control;
+  @include hit-target;
+  @include focus-ring;
+  @include eases(color);
+
+  justify-content: center;
+  padding: 0 6px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: var(--text-2);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text-1);
+  }
+
+  &[aria-pressed='true'] {
+    background: var(--bg-3);
+    color: var(--amber-text);
+  }
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-2);
+
+  &.broken {
+    color: var(--red);
+  }
 }
 
 .input {

@@ -23,9 +23,6 @@ const SEGMENTED = { theme: 'setting-theme', density: 'setting-density' } as cons
 export const titlebar = {
   title: () => $(testid('titlebar-title')).getText(),
 
-  /** One of the few untranslated labels, so a scenario can pin the language it asserts in. */
-  setLocale: (locale: 'fr' | 'en') => $(`${testid('locale-option')}[data-locale="${locale}"]`).click(),
-
   /** The theme on screen, which on "system" is whatever the machine resolved it to. */
   shownTheme: () => $(testid('theme-toggle')).getAttribute('data-theme-shown'),
 
@@ -44,17 +41,8 @@ export const titlebar = {
     );
   },
 
-  /** One call: two reads leave a window in which the pressed option can change. */
-  activeLocale: async (): Promise<string> =>
-    (
-      await browser.execute(
-        (selector: string) =>
-          [...document.querySelectorAll(selector)]
-            .filter((option) => option.getAttribute('aria-pressed') === 'true')
-            .map((option) => option.getAttribute('data-locale') ?? ''),
-        testid('locale-option'),
-      )
-    )[0] ?? '',
+  /** `LocaleService` writes it on `<html lang>`: the titlebar no longer carries a switch. */
+  activeLocale: (): Promise<string> => browser.execute(() => document.documentElement.lang),
 };
 
 export const fileMenu = {

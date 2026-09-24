@@ -19,29 +19,6 @@
   gap: 8px;
 }
 
-.dots {
-  display: flex;
-  gap: 6px;
-}
-
-.dot {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-}
-
-.dot.r {
-  background: var(--dot-red);
-}
-
-.dot.y {
-  background: var(--dot-yellow);
-}
-
-.dot.g {
-  background: var(--dot-green);
-}
-
 /* Centred on the window rather than on what the two groups leave between them,
    which would shift it as soon as a label changes width with the language. */
 .titlebar-title {
@@ -54,20 +31,10 @@
   letter-spacing: 0.3px;
 }
 
-// One group at the right end. `.titlebar` is `space-between` and the title takes no
-// part in it — being absolutely positioned — so two loose groups put the theme in the
-// middle of the bar, beside the application's name.
 .titlebar-choices {
   display: flex;
   align-items: center;
   gap: 10px;
-}
-
-// One shape for both: the theme and the language are the same kind of choice, and a
-// second idiom in the same corner would say they are not.
-.titlebar-switch {
-  display: flex;
-  gap: 4px;
 }
 
 .titlebar-option {
@@ -83,7 +50,6 @@
   letter-spacing: 0.3px;
 }
 
-// The icon at the height of the two letters beside it.
 .theme-toggle {
   display: inline-flex;
   align-items: center;
@@ -92,9 +58,4 @@
 
 .titlebar-option:hover {
   color: var(--text-1);
-}
-
-.titlebar-option.active {
-  @include accent-state;
-  background: rgba(var(--amber-rgb), 0.1);
 }

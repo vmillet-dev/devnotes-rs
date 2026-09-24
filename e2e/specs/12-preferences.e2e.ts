@@ -229,19 +229,6 @@ describe('Preferences', () => {
     });
   });
 
-  it('keeps the titlebar switch and the panel in agreement', async () => {
-    await titlebar.setLocale('fr');
-    await eventually(
-      () => titlebar.activeLocale(),
-      (locale) => locale === 'fr',
-      'the titlebar to settle on the locale it was given',
-    );
-    await fileMenu.openPreferences();
-
-    expect(await settings.locale()).toContain('Français');
-    await settings.close();
-  });
-
   /**
    * The same signal the panel writes, so the two cannot disagree — and the panel keeps
    * its row: a setting that only exists in a corner of the titlebar is a setting nobody

@@ -23,7 +23,8 @@
 
       <label class="field">
         <span class="label">{{ 'vault.passphrase' | transloco }}</span>
-        <!-- Not the `autofocus` attribute, which the linter refuses. -->
+        <!-- Not the `autofocus` attribute, which the linter refuses. ⚠️ `off` on purpose: this
+             origin is the gate's too, and a manager keeping a file's phrase would offer it there. -->
         <input
           class="input"
           type="password"

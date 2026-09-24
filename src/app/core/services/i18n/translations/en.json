@@ -282,7 +282,6 @@
     "palette": "Quick paste"
   },
   "locale": {
-    "groupLabel": "Interface language",
     "system": "System",
     "fr": "French",
     "en": "English"
@@ -674,6 +673,7 @@
     "passphrase": "Passphrase",
     "confirmation": "Confirmation",
     "tooShort": "At least {{length}} characters.",
+    "reveal": "Show",
     "mismatched": "The two entries differ.",
     "createAction": "Protect and continue",
     "unlockAction": "Unlock",
