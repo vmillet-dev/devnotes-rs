@@ -3,10 +3,10 @@ import { TranslocoService } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 import { ClockService } from '@core/services/time/clock.service';
 import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
-import { NotesRepository } from '../data/notes.repository';
-import { SpacesRepository } from '../data/spaces.repository';
-import { NoteDraft, SampleNote } from '../model/note.model';
-import { Space } from '../model/space.model';
+import { NotesRepository } from '@core/data/notes.repository';
+import { SpacesRepository } from '@core/data/spaces.repository';
+import { NoteDraft, SampleNote } from '@core/model/note.model';
+import { Space } from '@core/model/space.model';
 
 /** ⚠️ Exported because `VaultStore` clears it: a library set aside has to seed again. */
 export const SEEDED_KEY = 'devnotes.notes.samplesSeeded';

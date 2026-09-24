@@ -57,10 +57,6 @@ export class NoteCardMenuComponent {
   /** ⚠️ The gap the panel keeps from the window edge, and from its own trigger. */
   private static readonly MARGIN = 8;
 
-  constructor() {
-    this.menu.escaped.subscribe(() => this.menu.close());
-  }
-
   /** Two steps: the WebView blocks everything during a native `confirm()`. */
   protected readonly confirmingDelete = linkedSignal({
     source: this.menu.open,

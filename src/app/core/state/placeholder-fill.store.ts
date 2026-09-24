@@ -2,7 +2,7 @@ import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { StatusNotifier } from '@core/services/notifications/status.service';
 import { noteCopyText } from '../model/checklist.model';
 import { Note } from '../model/note.model';
-import { NoteCopyService } from './note-copy.service';
+import { NoteCopyService } from '@core/services/clipboard/note-copy.service';
 import { NotesQueryStore } from './notes-query.store';
 import { NotesStore } from './notes.store';
 import { PaletteStore } from './palette.store';

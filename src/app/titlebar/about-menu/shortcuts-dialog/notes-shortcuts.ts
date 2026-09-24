@@ -1,5 +1,5 @@
 import { ShortcutGroup } from '@core/services/shortcuts/shortcut.model';
-import { CANVAS_SHORTCUT_GROUP } from '@shared/directives/canvas-keyboard.directive';
+import { CANVAS_SHORTCUT_GROUP } from '@notes/canvas-keyboard.directive';
 
 /**
  * The canvas group comes from `CanvasKeyboardDirective`, where the same table binds the

@@ -36,10 +36,6 @@ export class AboutMenuComponent {
 
   protected readonly panel = signal<AboutPanel | null>(null);
 
-  constructor() {
-    this.menu.escaped.subscribe(() => this.menu.close());
-  }
-
   protected readonly checking = computed(() => this.store.checkState() === 'checking');
 
   /** Exhaustive rather than defaulted: a state added to `CheckState` breaks the build. */

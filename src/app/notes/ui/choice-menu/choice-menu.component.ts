@@ -37,7 +37,6 @@ export interface ChoiceOption {
   // The trigger directive lets Escape bubble on purpose — a multi-level menu folds its
   // panel before closing — but the next listener up there is the dialog's own, so one
   // Escape closed the editor along with the menu. Swallowed only while the panel is open.
-  host: { '(keydown.escape)': 'onEscape($event)' },
   templateUrl: './choice-menu.component.html',
   styleUrl: './choice-menu.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -71,13 +70,12 @@ export class ChoiceMenuComponent {
   /** A command has no current entry to mark, and nothing to leave. */
   protected readonly showsNone = computed(() => this.naming() === 'value' && this.noneLabel() !== null);
 
-  /**
-   * ⚠️ Closed from here rather than from `escaped`, which is the trigger directive's own
-   * listener on the same element: subscribing to it would close the menu **before** this
-   * runs, and there would be nothing left to justify swallowing the key. One handler, one
-   * decision, and no dependence on which listener was registered first.
-   */
-  protected onEscape(event: Event): void {
+  constructor() {
+    this.menu.handleEscape((event) => this.onEscape(event));
+  }
+
+  /** ⚠️ The key is swallowed only while the menu is open: closed, it belongs to the dialog. */
+  private onEscape(event: Event): void {
     if (!this.menu.open()) return;
 
     event.stopPropagation();

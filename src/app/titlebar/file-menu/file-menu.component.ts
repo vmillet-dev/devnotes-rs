@@ -71,7 +71,6 @@ export class FileMenuComponent {
   ];
 
   constructor() {
-    this.menu.escaped.subscribe(() => this.menu.close());
     this.menu.closed.subscribe(() => this.confirmingQuit.set(false));
   }
 
