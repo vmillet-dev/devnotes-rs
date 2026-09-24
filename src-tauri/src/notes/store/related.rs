@@ -1,5 +1,5 @@
-//! The side tables a note owns. All three are keyed on `note_id` and rewritten whole
-//! rather than patched — the row set *is* the value.
+//! The side tables a note owns, keyed on `note_id` and rewritten whole: the row set is the
+//! value.
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -15,12 +15,9 @@ use crate::vault::key::Vault;
 /// Up to this many notes, their side tables are read by id; past it, by their space.
 const BIND_AT_MOST: usize = 500;
 
-/// Which notes a side-table read covers.
-///
-/// ⚠️ Bound ids for a few, the space's subquery for many: one parameter per note measured
-/// slower than reading the table whole past a few thousand notes — but a filter that cut the
-/// query to a hundred notes has no business paying for the space they sit in. Reading a
-/// superset is harmless: `attach_related` only looks up the notes it holds.
+/// Which notes a side-table read covers: bound ids for a few, the space's subquery for many,
+/// since one parameter per note is slower than reading the table whole past a few thousand.
+/// Reading a superset is harmless: `attach_related` only looks up the notes it holds.
 enum Scope<'a> {
     Notes(&'a [String]),
     Space(Option<&'a str>),
@@ -93,8 +90,8 @@ pub fn tags_of(
         .load::<String>(connection)?)
 }
 
-/// ⚠️ Re-read rather than sorted: `note_tags.tag` is `COLLATE NOCASE` and a read orders
-/// in that collation, which a byte-wise `sort()` does not reproduce.
+/// ⚠️ Re-read rather than sorted: `note_tags.tag` is `COLLATE NOCASE`, and a read orders in
+/// that collation, which a byte-wise `sort()` does not reproduce.
 pub fn replace_tags(
     connection: &mut SqliteConnection,
     note_id: &str,
@@ -164,8 +161,8 @@ pub fn items_of(
         .collect()
 }
 
-/// Wiped then reinserted: the position is part of the key, so reordering would otherwise
-/// move rows one at a time under a key that refuses duplicates.
+/// Wiped then reinserted: the position is part of the key, which refuses duplicates halfway
+/// through a reorder.
 pub fn replace_items(
     connection: &mut SqliteConnection,
     vault: &Vault,

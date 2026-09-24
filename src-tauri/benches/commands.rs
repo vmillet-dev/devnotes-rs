@@ -1,6 +1,6 @@
 //! What the IPC surface costs, by class of command.
 //!
-//! ⚠️ Below the command boundary, not through Tauri: a command is four lines, so
+//! Below the command boundary, not through Tauri: a command is four lines, so
 //! `store::*` plus `view::*` plus the serde round trip captures nearly all of the cost.
 //! `tauri::test::mock_app` would drag the whole app lifecycle in and buy only the IPC
 //! transport, which this codebase does not control.
@@ -66,7 +66,7 @@ fn whole_corpus_read(c: &mut Criterion) {
         b.iter(|| black_box(run_query(&mut corpus, &query("zzz-no-such-needle"))));
     });
 
-    // ⚠️ Unaccented on purpose: the fold has to strip the accents off every byte of the
+    // Unaccented on purpose: the fold has to strip the accents off every byte of the
     // corpus before it can answer.
     group.bench_function("query_notes, search folding accents", |b| {
         b.iter(|| black_box(run_query(&mut corpus, &query("deploiement"))));
@@ -286,8 +286,8 @@ fn disk(c: &mut Criterion) {
 
 /// One thumbnail, as the editor asks for it — once per attachment on the note it opens.
 ///
-/// ⚠️ The second function is not a command: it is the registry lookup every one of these
-/// paid before the open library carried its directory (#343), kept to say what that cost.
+/// The second function is not a command: it is the registry lookup an open library spares
+/// every read, measured beside what it is spared from.
 fn attachment(c: &mut Criterion) {
     let mut corpus = build();
     let mut group = c.benchmark_group("attachment");
@@ -336,13 +336,9 @@ fn attachment(c: &mut Criterion) {
     let _ = std::fs::remove_dir_all(&profile);
 }
 
-/// ⚠️ The one number in this codebase that had been measured in the wrong profile, and
-/// the reason it lives here now: criterion builds in release, so it cannot be read off a
-/// debug run by accident. What `Cost::default` costs is what an attacker pays per guess
-/// against a copied library, so it is the parameter the whole at-rest defence rests on.
-///
-/// It seeds no corpus — deriving a key touches no database — so it is cheap to run alone:
-/// `cargo bench -- unlock`.
+/// What `Cost::default` costs is what an attacker pays per guess against a copied library.
+/// Here because criterion builds in release: a debug run overstates Argon2 twentyfold. Seeds
+/// no corpus, so it runs alone: `cargo bench -- unlock`.
 fn unlock(c: &mut Criterion) {
     let mut group = c.benchmark_group("unlock");
     group.sample_size(10);

@@ -1,5 +1,4 @@
-//! ⚠️ A field name is restricted to `[A-Za-z0-9_-]` on purpose: without it a note holding
-//! Angular template code (`{{ user.name }}`) would demand a form on every copy.
+//! What counts as a `{{field}}`, and how one is filled.
 
 use std::collections::BTreeMap;
 
@@ -19,16 +18,13 @@ pub struct Placeholder {
     pub value: String,
 }
 
-/// The same rule as [`is_field_name`], written as a pattern so the front end can refuse
-/// a name in the same terms rather than keeping a copy of the rule.
-///
-/// ⚠️ Crosses as a constant and is the front's only source. The two are held together by
-/// `the_pattern_and_the_rule_agree` below — Rust checks characters rather than matching a
-/// regex, so nothing but that test stops the two drifting.
+/// The rule of [`is_field_name`] as a pattern, which crosses as a constant: the front end
+/// refuses a name in the same terms without keeping a copy. ⚠️ Rust checks characters rather
+/// than matching it, so only `the_pattern_and_the_rule_agree` keeps the two in step.
 pub(crate) const FIELD_NAME_PATTERN: &str = "^[A-Za-z0-9_-]+$";
 
-/// ⚠️ Where the rule lives. The name is restricted on purpose: without it a note holding
-/// Angular template code (`{{ user.name }}`) would demand a form on every copy.
+/// Restricted to `[A-Za-z0-9_-]` on purpose: without it a note holding Angular template
+/// code (`{{ user.name }}`) would demand a form on every copy.
 fn is_field_name(name: &str) -> bool {
     !name.is_empty()
         && name
@@ -62,9 +58,8 @@ enum Fragment<'a> {
     },
 }
 
-/// One walk, so [`parse`] and [`fill`] cannot each carry their own idea of where a token
-/// starts and ends. An unterminated `{{` ends the walk, and the remainder comes back as
-/// one last literal.
+/// One walk, so [`parse`] and [`fill`] share one idea of where a token starts and ends. An
+/// unterminated `{{` ends it, and the rest comes back as one literal.
 fn scan(content: &str, mut on_fragment: impl FnMut(Fragment<'_>)) {
     let mut rest = content;
 
@@ -88,8 +83,8 @@ fn scan(content: &str, mut on_fragment: impl FnMut(Fragment<'_>)) {
     on_fragment(Fragment::Literal(rest));
 }
 
-/// ⚠️ The text says which fields exist, never the value map: a value whose token has left
-/// the content is not a field, it is waiting for it to come back.
+/// The text says which fields exist, never the value map: a value whose token left the text
+/// waits for it to come back.
 pub fn parse(content: &str, values: &BTreeMap<String, String>) -> Vec<Placeholder> {
     let mut found: Vec<Placeholder> = Vec::new();
 
@@ -113,8 +108,8 @@ pub fn parse(content: &str, values: &BTreeMap<String, String>) -> Vec<Placeholde
     found
 }
 
-/// An empty value is dropped rather than stored: it means "I keep what the snippet
-/// offers", and a row would freeze that answer the day the default changes.
+/// An empty value is dropped rather than stored: it means "keep what the snippet offers", and
+/// a row would freeze that answer the day the default changes.
 pub fn normalize_values(values: BTreeMap<String, String>) -> BTreeMap<String, String> {
     values
         .into_iter()
@@ -168,9 +163,8 @@ pub fn fill(content: &str, values: &BTreeMap<String, String>) -> String {
 
 #[cfg(test)]
 mod tests {
-    /// ⚠️ The pattern is what the front end refuses names with, and the character check
-    /// is what this crate refuses them with. Nothing else stops the two drifting, so
-    /// every case that distinguishes them is listed here.
+    /// Every case that distinguishes the pattern from the character check is listed here:
+    /// nothing else stops the two drifting.
     #[test]
     fn the_pattern_and_the_rule_agree() {
         let names = [
@@ -193,8 +187,7 @@ mod tests {
             "{{host}}",
         ];
 
-        // A hand-rolled reader of the pattern: the crate carries no regex engine, and
-        // adding one to check a character class would be the larger duplication.
+        // A hand-rolled reader of the pattern: the crate carries no regex engine.
         let matches = |name: &str| {
             let class = super::FIELD_NAME_PATTERN
                 .strip_prefix("^[")

@@ -39,8 +39,8 @@ pub fn for_draft(draft: &NoteDraft) -> Language {
     }
 }
 
-/// Creation sees no content — the paste comes after — so without this the note stays in
-/// `txt`. The three refusals keep detection from becoming a permanent correction.
+/// Creation sees no content, the paste coming after: without this the note stays `txt`. The
+/// three refusals keep detection from becoming a permanent correction.
 pub fn after_patch(before: &Note, patch: &NotePatch) -> Option<Language> {
     if patch.language.is_some()
         || before.language != Language::default()
@@ -57,26 +57,18 @@ pub fn after_patch(before: &Note, patch: &NotePatch) -> Option<Language> {
     Some(from_content(content))
 }
 
-/// What one marker is worth.
-///
-/// ⚠️ Three tiers and no more. The weights are what replaced a hand-ordered chain of `if`s,
-/// and a scale with ten steps would be the same invisible ordering written differently —
-/// the point is that a marker declares how much it proves, not where it sits in a list.
+/// What one marker is worth. Three tiers and no more: a marker declares how much it proves,
+/// and ten steps would bring back an ordering nobody can read.
 const SIGNATURE: u32 = 6;
 const STRONG: u32 = 3;
 const WEAK: u32 = 1;
 
-/// Below this, the highest score is not an answer.
-///
-/// ⚠️ **One weak marker is not an answer; two are.** Detection could not abstain before:
-/// every snippet got a language, and a wrong one is worse than none — it colours the body,
-/// puts a badge on the card and files the note under a facet in the rail. `txt` says
-/// nothing, which is honest. ⚠️ A tie is no answer either: two languages that prove
-/// themselves equally have proved nothing.
+/// Below this, the highest score is not an answer: one weak marker is not enough, two are.
+/// A wrong language colours the body, badges the card and files the note under a facet;
+/// `txt` says nothing, which is honest. A tie is no answer either.
 const MIN_CONFIDENCE: u32 = 2;
 
-/// The content in the shapes the markers read it in, computed once: `to_lowercase` inside
-/// every predicate was the same allocation eighteen times over.
+/// The content in the shapes the markers read it in, computed once.
 struct Sample<'a> {
     trimmed: &'a str,
     lower: String,
@@ -114,10 +106,8 @@ fn worth(weight: u32, present: bool) -> u32 {
 /// How much one language believes a sample is its own.
 type Scorer = fn(&Sample<'_>) -> u32;
 
-/// Every language that can be guessed at, each scoring itself.
-///
-/// ⚠️ The order of this table means nothing, which is the point of the rewrite: a language
-/// added to it needs no slot found by hand, only markers with honest weights.
+/// Every language that can be guessed at, each scoring itself. The order means nothing: a
+/// language added here needs markers with honest weights, not a slot.
 const SCORERS: [(Language, Scorer); 18] = [
     (Language::Json, score_json),
     (Language::Php, score_php),
@@ -139,13 +129,9 @@ const SCORERS: [(Language, Scorer); 18] = [
     (Language::Sh, score_shell),
 ];
 
-/// The best-scoring language, or `txt` when nothing proved itself.
-///
-/// ⚠️ It **scores** where it used to try predicates in a hand-written order, and that order
-/// *was* the priority: a Rust snippet carrying a match arm came back `js`, because
-/// `is_javascript` matched `=>` anywhere in the text. The two facts the order encoded are
-/// weights now rather than positions — `<?php` outweighs the `<` that made it look like an
-/// XML processing instruction, and Rust's `println!` outweighs JavaScript's `=>`.
+/// The best-scoring language, or `txt` when nothing proved itself. Weights settle what an
+/// order would: `<?php` outweighs the `<` of a processing instruction, and Rust's `println!`
+/// outweighs JavaScript's `=>`.
 pub fn from_content(content: &str) -> Language {
     let sample = Sample::of(content);
     if sample.trimmed.is_empty() {
@@ -178,8 +164,8 @@ fn starts_with_any(line: &str, prefixes: &[&str]) -> bool {
     prefixes.iter().any(|prefix| line.starts_with(prefix))
 }
 
-/// ⚠️ Structural, and worth a signature: nothing else here is a quoted object or an array
-/// from its first character to its last.
+/// Structural, and worth a signature: nothing else here is a quoted object or an array from
+/// its first character to its last.
 fn score_json(sample: &Sample<'_>) -> u32 {
     let content = sample.trimmed;
     let wrapped = (content.starts_with('{') && content.ends_with('}'))
@@ -191,15 +177,13 @@ fn score_json(sample: &Sample<'_>) -> u32 {
     )
 }
 
-/// ⚠️ A signature, which is what keeps it ahead of the markup score its `<` also earns.
-/// Ordering used to do that job, and a position in a list is not a reason.
+/// A signature, which keeps it ahead of the markup score its `<` also earns.
 fn score_php(sample: &Sample<'_>) -> u32 {
     worth(SIGNATURE, sample.lower.starts_with("<?php")) + worth(WEAK, sample.has("->"))
 }
 
-/// ⚠️ **The generic shape is XML's alone**, and HTML scores only what is its own. Sharing it
-/// made the two tie on every plain document — and a tie is `txt`, so a perfectly ordinary
-/// `<config>…</config>` came back as prose.
+/// The generic shape is XML's alone, and HTML scores only what is its own: sharing it made
+/// the two tie on a plain `<config>…</config>`, and a tie is `txt`.
 fn score_xml(sample: &Sample<'_>) -> u32 {
     let looks_like_markup =
         sample.lower.starts_with('<') && sample.trimmed.ends_with('>') && sample.has("</");
@@ -207,8 +191,7 @@ fn score_xml(sample: &Sample<'_>) -> u32 {
     worth(STRONG, looks_like_markup) + worth(SIGNATURE, sample.lower.starts_with("<?xml"))
 }
 
-/// ⚠️ Its tags are a **signature**: nothing else in this file writes `<div` or `<table`,
-/// and they have to outweigh the markup shape XML earns on the very same document.
+/// Its tags are a signature: they must outweigh the markup shape XML earns on the same text.
 fn score_html(sample: &Sample<'_>) -> u32 {
     const TAGS: [&str; 8] = [
         "<div", "<span", "<p>", "<body", "<head", "<a ", "<ul", "<table",
@@ -294,9 +277,8 @@ fn score_go(sample: &Sample<'_>) -> u32 {
         + worth(WEAK, sample.has(":=") || sample.has("err != nil"))
 }
 
-/// ⚠️ `struct`, `trait` and `enum` count now. They were deliberately given up when the chain
-/// decided by position — a heuristic weakened to protect the one after it — and weights are
-/// what stop that: a marker Rust shares with TypeScript is worth little, not nothing.
+/// `struct`, `trait` and `enum` count, weakly: a marker Rust shares with TypeScript is worth
+/// little, not nothing.
 fn score_rust(sample: &Sample<'_>) -> u32 {
     worth(SIGNATURE, sample.has("println!") || sample.has("let mut "))
         + worth(
@@ -350,8 +332,7 @@ fn score_c(sample: &Sample<'_>) -> u32 {
     ) + worth(STRONG, sample.has("int main(") && sample.has("printf("))
 }
 
-/// ⚠️ Its own markers only, never JavaScript's. Inheriting them would make TypeScript score
-/// at least as much as JavaScript on every file, and a tie is no answer.
+/// Its own markers only, never JavaScript's: inheriting them would tie the two on every file.
 fn score_typescript(sample: &Sample<'_>) -> u32 {
     const ANNOTATIONS: [&str; 4] = [": string", ": number", ": boolean", "implements "];
     const DECLARATIONS: [&str; 4] = ["interface ", "type ", "enum ", "declare "];
@@ -366,10 +347,8 @@ fn score_typescript(sample: &Sample<'_>) -> u32 {
         )
 }
 
-/// ⚠️ `=>` is the greediest marker in this file — C++, Kotlin, Swift, Scala, Dart and
-/// anything with a lambda write it — so it is worth the least. It used to sit near the end
-/// of the chain for that reason, which made JavaScript the *default* answer rather than an
-/// answer.
+/// `=>` is the greediest marker in this file — C++, Kotlin, Swift, Scala, Dart and anything
+/// with a lambda write it — so it is worth the least.
 fn score_javascript(sample: &Sample<'_>) -> u32 {
     const KEYWORDS: [&str; 7] = [
         "function ",
@@ -388,14 +367,8 @@ fn score_javascript(sample: &Sample<'_>) -> u32 {
         + worth(WEAK, sample.line_starts_with_any(&KEYWORDS))
 }
 
-/// A selector and a declaration, plus something only a stylesheet writes.
-///
-/// ⚠️ The pair used to be worth a signature, and the corpus is what caught what that cost:
-/// `export interface Note {` is a "selector" ending in a brace, and `id: string;` is a
-/// "declaration" with a colon before a semicolon — so CSS scored six on TypeScript, and on
-/// PHP's `foreach (…) {` with an `echo …;` inside it. Two sixes are a tie, and a tie is
-/// `txt`: both came back as prose. The shape is strong evidence, not proof; a unit or a
-/// custom property is what makes it a stylesheet.
+/// A selector and a declaration, plus something only a stylesheet writes: the shape alone is
+/// strong evidence, not proof — `export interface Note {` and `id: string;` have it too.
 fn score_css(sample: &Sample<'_>) -> u32 {
     if !sample.has("{") || !sample.has("}") {
         return 0;
@@ -692,17 +665,14 @@ mod tests {
         assert_eq!(from_content("from os import path"), Language::Py);
     }
 
-    /// ⚠️ It used to answer `js`, and that was the whole complaint: `class Note { }` is
-    /// written the same way in Java, C#, PHP, Dart, TypeScript and JavaScript, so one weak
-    /// marker is not an answer. `txt` says nothing, which is what is true here.
+    /// `class Note { }` is written the same way in Java, C#, PHP, Dart, TypeScript and
+    /// JavaScript: one weak marker is not an answer.
     #[test]
     fn one_weak_marker_is_not_an_answer() {
         assert_eq!(from_content("class Note { }"), Language::Txt);
         assert_eq!(from_content("x => x + 1"), Language::Txt);
     }
 
-    /// The five compiled languages are tried before TypeScript and JavaScript, which
-    /// claim `=>` and `const`.
     #[test]
     fn a_compiled_language_is_not_taken_for_javascript() {
         assert_eq!(
@@ -758,8 +728,7 @@ int main(void) { return 0; }"
         );
     }
 
-    /// `<?php` opens with a `<`, which the markup check reads as a processing
-    /// instruction, so PHP needs its own branch first.
+    /// `<?php` opens with a `<`, which the markup check reads as a processing instruction.
     #[test]
     fn php_is_recognised_before_the_markup_check_claims_it() {
         assert_eq!(
@@ -773,8 +742,6 @@ echo 'hi';"
         assert_eq!(from_content("<?xml version=\"1.0\"?>"), Language::Xml);
     }
 
-    /// The new branches sit in front of the old ones: this says they take nothing that
-    /// was not theirs.
     #[test]
     fn the_languages_detected_before_them_are_left_alone() {
         assert_eq!(from_content("export enum Kind { A }"), Language::Ts);

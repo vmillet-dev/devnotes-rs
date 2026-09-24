@@ -1,12 +1,9 @@
 //! The board: a second way to look at one space, where a folder is a region drawn on a
 //! free canvas and its notes sit inside it.
 //!
-//! ⚠️ A query of its own rather than a bent [`crate::notes::view::NotesQuery`]: it answers
-//! folders and positions, not sections, and `build_sections` must never learn about a
-//! folder. What the two share is the coarse filtering, which happens in SQL either way.
-//!
-//! This module imports neither Diesel nor Tauri, so the layout rules are tested without
-//! opening a database.
+//! A query of its own rather than a bent [`crate::notes::view::NotesQuery`]: it answers
+//! folders and positions, and `build_sections` must never learn about a folder. Neither Diesel
+//! nor Tauri is imported here, so the layout rules are tested without a database.
 
 use std::collections::HashMap;
 
@@ -20,17 +17,13 @@ use crate::notes::language::Language;
 use crate::notes::model::{self, DisplayNote, Note};
 use crate::notes::view::{Criteria, Facets, NoteFilter, NotesQuery};
 
-/// The card is the same card as on the canvas — full size, with its language tag, its
-/// snippet, its footer and its tags. The consequence is accepted: the board is large, and
-/// panning arrives with it.
+/// The same card as on the canvas, full size: the board is large, and pans.
 pub const CARD_WIDTH: i32 = 240;
-/// Nominal: a real card grows with its content, and only the *first* frame is computed
-/// from this. Once a zone has been resized the stored size is what counts.
+/// Nominal: only a first frame is computed from it; a resized zone keeps its stored size.
 pub const CARD_HEIGHT: i32 = 150;
 pub const GAP: i32 = 12;
 pub const ZONE_PADDING: i32 = 12;
-/// The zone's own hairline. ⚠️ `box-sizing` is `border-box`, so it comes off the width
-/// before anything flows inside — which is what [`columns_in`] got wrong.
+/// The zone's own hairline, inside the width: `box-sizing` is `border-box`.
 pub const ZONE_BORDER: i32 = 1;
 /// The title, the count and the ⋯ trigger.
 pub const ZONE_HEADER: i32 = 38;
@@ -43,22 +36,15 @@ pub const BOARD_COLUMNS: usize = 3;
 pub const BOARD_MARGIN: i32 = 16;
 /// How many loose cards sit side by side under the zones.
 pub const LOOSE_COLUMNS: usize = 4;
-/// ⚠️ The zone body scrolls, so a vertical scrollbar can take a slice of the row. Without
-/// this allowance two cards plus their gap come to *exactly* the inner width, the second
-/// wraps, the wrap causes the scrollbar, and the scrollbar keeps it wrapped — a zone that
-/// says "2" and shows one.
-///
-/// ⚠️ It is only ever added to [`default_zone_width`], never taken off a count: what fits
-/// is what [`columns_in`] answers, and a zone [`zone_height`] sized correctly shows no
-/// scrollbar at all. The measured slice in this `WebView` is 9px — this stays generous on
-/// purpose, since it costs a few pixels of board and the alternative costs a column.
+/// ⚠️ The zone body scrolls, and a scrollbar takes a slice of the row: at exactly two cards'
+/// width the second wraps, the wrap brings the scrollbar, and the scrollbar keeps it wrapped.
+/// Added to [`default_zone_width`] only, never taken off a count; generous on purpose.
 pub const SCROLLBAR: i32 = 18;
 
 #[derive(Debug, Clone, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct BoardQuery {
-    /// Required, unlike [`crate::notes::view::NotesQuery::space_id`]: a folder belongs to
-    /// a space, so a board across all of them would have no zones to draw.
+    /// Required, unlike `NotesQuery::space_id`: a board across every space has no zones.
     pub space_id: String,
     pub search: String,
     pub filter: NoteFilter,
@@ -68,8 +54,7 @@ pub struct BoardQuery {
 }
 
 impl BoardQuery {
-    /// Everything neutral but the space: the board decides what matches on the whole space,
-    /// because it dims rather than narrows.
+    /// Everything neutral but the space: the board dims rather than narrows.
     pub fn whole_space(&self) -> NotesQuery {
         NotesQuery {
             space_id: Some(self.space_id.clone()),
@@ -128,8 +113,8 @@ pub struct BoardPoint {
 pub struct BoardNote {
     #[serde(flatten)]
     pub note: DisplayNote,
-    /// ⚠️ Dimmed in place rather than reflowed into a list: spatial memory is the only
-    /// thing the board has that the date view does not, and a reflow throws it away.
+    /// Dimmed in place rather than reflowed: spatial memory is what the board has that the
+    /// date view does not.
     pub matches: bool,
     /// `None` inside a zone, where a card flows; `Some` only on the free background.
     pub position: Option<BoardPoint>,
@@ -148,13 +133,13 @@ pub struct BoardZone {
 pub struct BoardView {
     pub zones: Vec<BoardZone>,
     pub loose: Vec<BoardNote>,
-    /// Attached to the space, like [`crate::notes::view::NotesView`]'s: facets drawn from
-    /// already filtered notes would empty the rails on the first selection.
+    /// The space's, like `NotesView`'s: facets drawn from filtered notes would empty the
+    /// rails on the first selection.
     pub available_tags: Vec<String>,
     pub available_languages: Vec<Language>,
     pub is_filtering: bool,
     pub matched: u32,
-    /// The surface to pan over, so the front end sizes it from what is actually on it.
+    /// The surface to pan over, sized from what is on it.
     pub width: i32,
     pub height: i32,
 }
@@ -177,9 +162,8 @@ pub struct ZonePlacement {
     pub frame: BoardFrame,
 }
 
-/// One loose card that moved. ⚠️ Filing is not here: membership comes from
-/// [`crate::folders::file_notes`], which answers what it changed so the undo can put it
-/// back. A position is a local gesture and has no undo of its own.
+/// One loose card that moved. Filing is not here: it goes through `file_notes`, whose answer
+/// the undo puts back. A position has no undo of its own.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct CardPlacement {
@@ -187,17 +171,15 @@ pub struct CardPlacement {
     pub position: BoardPoint,
 }
 
-/// A count of cards or columns, as a multiplier of pixels. Saturated: a board of two
-/// billion cards is not one to lay out exactly.
+/// A count as a multiplier of pixels, saturated.
 fn px(count: usize) -> i32 {
     i32::try_from(count).unwrap_or(i32::MAX)
 }
 
 /// Refuses a frame nothing could be dropped into, and keeps a zone on the board.
 ///
-/// ⚠️ Clamped rather than rejected: a resize that ends at a silly size is a slip, and
-/// answering an error mid-gesture would leave the interface holding a frame the database
-/// refused.
+/// Clamped rather than rejected: an error mid-gesture would leave the interface holding a
+/// frame the database refused.
 #[must_use]
 pub fn clamp(frame: BoardFrame) -> BoardFrame {
     BoardFrame {
@@ -216,20 +198,15 @@ pub fn clamp_point(point: BoardPoint) -> BoardPoint {
     }
 }
 
-/// A zone must stay big enough to hold the header and one card, or it becomes a target
-/// nothing can be dropped into.
+/// Big enough for the header and one card, or nothing can be dropped in.
 pub const MIN_ZONE_WIDTH: i32 = ZONE_BORDER * 2 + ZONE_PADDING * 2 + CARD_WIDTH;
 pub const MIN_ZONE_HEIGHT: i32 = ZONE_BORDER * 2 + ZONE_HEADER + ZONE_PADDING * 2 + CARD_HEIGHT;
-/// Far enough for any board, near enough that a runaway drag cannot make the surface
-/// unusable.
+/// Far enough for any board, near enough that a runaway drag leaves it usable.
 pub const MAX_SIDE: i32 = 100_000;
 
-/// Which zone a point falls in, topmost first. `None` is the free background, which is a
-/// legitimate answer: dropping there takes a note out of its folder.
-///
-/// ⚠️ Membership comes from the drop and from nothing else. Unreal's own rule — a comment
-/// owns whatever it overlaps — was considered and refused: it silently refiles notes the
-/// day a frame is stretched.
+/// Which zone a point falls in, topmost first; `None` is the free background, where a drop
+/// unfiles. Membership comes from the drop alone: owning whatever a frame overlaps would
+/// refile notes the day a frame is stretched.
 #[must_use]
 pub fn zone_at(frames: &[(String, BoardFrame)], point: BoardPoint) -> Option<String> {
     frames
@@ -244,38 +221,27 @@ pub fn zone_at(frames: &[(String, BoardFrame)], point: BoardPoint) -> Option<Str
         .map(|(id, _)| id.clone())
 }
 
-/// The width every zone gets on its first layout: [`ZONE_COLUMNS`] cards, the gaps, and
-/// room for the scrollbar that a zone too short for its cards will show.
+/// A first layout's width: [`ZONE_COLUMNS`] cards, the gaps, and the [`SCROLLBAR`] allowance.
 #[must_use]
 pub fn default_zone_width() -> i32 {
     ZONE_PADDING * 2 + ZONE_COLUMNS * CARD_WIDTH + (ZONE_COLUMNS - 1) * GAP + SCROLLBAR
 }
 
-/// How many cards fit across a zone of this width — one at the very least.
+/// How many cards fit across a zone of this width, one at least.
 ///
-/// ⚠️ Exactly what `.zone-body` will do with that width, and nothing more cautious: the
-/// hairline and the padding come off, the [`SCROLLBAR`] allowance does **not**. That
-/// allowance belongs to [`default_zone_width`], which reserves it so the nominal zone still
-/// shows two cards across when it is too short for them. Subtracted here it made the count
-/// disagree with the flow: a zone shaved 14px narrower than nominal still laid two cards
-/// across and was told it held one, so the next card filed into it bought a whole extra row
-/// and left 162px of empty board under the cards (#284).
+/// Exactly what `.zone-body` does: the hairlines and the padding come off, the
+/// [`SCROLLBAR`] allowance does not. Taken off here, a zone slightly narrower than nominal
+/// counted one card across while the flow still laid two, and sized itself a row too tall.
 #[must_use]
 pub fn columns_in(width: i32) -> i32 {
     let inner = width - ZONE_BORDER * 2 - ZONE_PADDING * 2;
     ((inner + GAP) / (CARD_WIDTH + GAP)).max(1)
 }
 
-/// Tall enough for that many notes flowing that many across, and never shorter than one
-/// row — an empty zone is still somewhere to drop a card.
+/// Tall enough for that many notes that many across, and never shorter than one row.
 ///
-/// ⚠️ The hairlines are in it, exactly as they are in [`columns_in`], and for a reason
-/// that bites harder: `.zone-body` is the box that scrolls, so a zone one pixel short of
-/// its own cards shows a **vertical** scrollbar, the scrollbar takes a slice of the row,
-/// and the row it takes it from wraps — two cards across become one, two rows become three,
-/// and nothing gets it back because the taller content keeps the scrollbar. Measured in the
-/// assembled application: a 374px zone left its body 335px of client height where two rows
-/// need 336, and the cards came out in a single column (#284).
+/// ⚠️ The hairlines count here too: one pixel short of its cards, `.zone-body` shows a vertical
+/// scrollbar, which takes a slice of the row and wraps two cards into one column.
 #[must_use]
 pub fn zone_height(note_count: usize, columns: i32) -> i32 {
     let columns = columns.max(1);
@@ -299,9 +265,8 @@ pub fn default_zone_height(note_count: usize) -> i32 {
 
 /// Lays zones out in reading order, wrapping every [`BOARD_COLUMNS`].
 ///
-/// ⚠️ Deterministic and driven only by the order it is handed: the board would look
-/// shuffled at every launch otherwise, and the caller reads folders in `created_at` order
-/// for exactly that reason.
+/// Deterministic, and driven only by the order it is handed: the caller reads folders in
+/// `created_at` order so the board does not look shuffled at every launch.
 #[must_use]
 pub fn arrange_zones(note_counts: &[usize]) -> Vec<BoardFrame> {
     let width = default_zone_width();
@@ -333,9 +298,6 @@ pub fn arrange_zones(note_counts: &[usize]) -> Vec<BoardFrame> {
 
 /// Where the loose cards start: clear of the lowest zone.
 ///
-/// ⚠️ It used to reserve a band above them for the "no folder · N" label. The label is
-/// now a chip in the board's own corner — loose cards stopped being a band the day they
-/// could be placed anywhere.
 #[must_use]
 pub fn loose_top(frames: &[BoardFrame]) -> i32 {
     frames
@@ -393,16 +355,12 @@ fn under_everything(taken: &[BoardPoint], zones: &[BoardFrame]) -> BoardPoint {
 /// Where a card that has never been placed goes: the first seat of the flow grid nothing
 /// is standing on, neither a card that already has a place nor a zone.
 ///
-/// ⚠️ Not the seat its index in the list gives it. A new note is the most recently
-/// updated, so it arrives at index 0 and was handed seat 0 — which whichever card was laid
-/// out there on the very first read of the board is still sitting on. Two cards, one place.
-///
-/// ⚠️ A rectangle test and not an equality one: a card dragged by hand almost never sits
-/// exactly on a seat, and a card half over one still hides what lands there.
+/// ⚠️ Not the seat of its index: a new note is the most recently updated, arrives at index 0,
+/// and would land on whichever card sits on seat 0. A rectangle test, because a card dragged
+/// by hand half covers the seats it straddles.
 #[must_use]
 pub fn free_slot(top: i32, taken: &[BoardPoint], zones: &[BoardFrame]) -> BoardPoint {
-    // Each occupant blocks at most the four seats its box can straddle; past that the
-    // board is arranged in a way the grid cannot answer, and the card goes under it all.
+    // Each occupant blocks at most the four seats its box straddles; past that, under it all.
     let limit = (taken.len() + zones.len()) * 4;
 
     (0..=limit)
@@ -414,9 +372,8 @@ pub fn free_slot(top: i32, taken: &[BoardPoint], zones: &[BoardFrame]) -> BoardP
         .unwrap_or_else(|| under_everything(taken, zones))
 }
 
-/// The surface to pan over: whatever the furthest zone or card reaches, plus a margin, and
-/// never smaller than one screen's worth — a board holding one zone should still feel like
-/// a canvas.
+/// The surface to pan over: the furthest zone or card plus a margin, and never smaller than
+/// a screen, so one small zone still sits on a canvas.
 #[must_use]
 pub fn surface(zones: &[BoardZone], loose: &[BoardNote]) -> (i32, i32) {
     const MIN_WIDTH: i32 = 960;
@@ -439,8 +396,7 @@ pub fn surface(zones: &[BoardZone], loose: &[BoardNote]) -> (i32, i32) {
     (right + BOARD_MARGIN, bottom + BOARD_MARGIN)
 }
 
-/// Pinned first, then by when they last moved — the order the canvas gives them, kept so a
-/// note does not sit in one place on one view and another on the other.
+/// Pinned first, then by last change: the canvas's order, so a note sits the same way in both.
 fn in_zone_order(notes: &mut [BoardNote]) {
     notes.sort_by_key(|entry| !entry.note.pinned);
 }
@@ -456,9 +412,7 @@ pub fn build<S: std::hash::BuildHasher>(
     facets: Facets,
     request: &BoardQuery,
 ) -> BoardView {
-    // ⚠️ Nothing is dropped: every criterion decides what is dimmed, never what is drawn.
-    // Reflowing the survivors into a list would throw away the spatial memory the board
-    // exists for.
+    // Nothing is dropped: every criterion decides what is dimmed, never what is drawn.
     let criteria = Criteria::new(
         &request.search,
         request.filter,
@@ -515,9 +469,8 @@ pub fn build<S: std::hash::BuildHasher>(
         })
         .collect();
 
-    // A loose note with no stored place is one the geometry pass has not seen yet — it is
-    // put on free ground rather than on top of a card that has one. Same rule as
-    // `store::board::geometry`, which is what will write the place down.
+    // A loose note with no stored place has not been through the geometry pass yet: it goes
+    // on free ground, by the same rule `store::board::geometry` writes down.
     let mut standing: Vec<BoardPoint> = loose.iter().filter_map(|entry| entry.position).collect();
     for entry in &mut loose {
         if entry.position.is_none() {
@@ -527,8 +480,7 @@ pub fn build<S: std::hash::BuildHasher>(
         }
     }
 
-    // The quick filter counts here and not on the date view, deliberately: the board dims on
-    // it, where the date view keeps its sections.
+    // The quick filter counts on the board, which dims on it; the date view keeps its sections.
     let is_filtering = criteria.narrows() || request.filter != NoteFilter::All;
 
     let (width, height) = surface(&zones, &loose);
@@ -548,9 +500,8 @@ pub fn build<S: std::hash::BuildHasher>(
     view
 }
 
-/// A whole board's geometry in one value: every zone's frame and every loose card's
-/// place. It says what a tidy-up is about to write, and — read back before the write —
-/// what it has to be able to put back.
+/// A whole board's geometry: every zone's frame and every loose card's place. What a tidy-up
+/// writes, and, read back first, what its undo puts back.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct BoardLayout {
@@ -560,18 +511,15 @@ pub struct BoardLayout {
 
 /// How much of a board a tidy-up is allowed to move.
 ///
-/// ⚠️ Two, and not one with a warning on it. What goes to pieces on a board is the cards
-/// **outside** the zones; a zone somebody positioned and sized by hand is the only manual
-/// work the board holds. One button did both, so the click that repaired the cheap half
-/// destroyed the expensive one — which is what stops anyone pressing it twice.
+/// Two scopes rather than one with a warning: what goes to pieces is the loose cards, and a
+/// zone placed and sized by hand is the only manual work the board holds.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub enum BoardScope {
-    /// The loose cards alone, flowed under the zones **as they stand**. Often, and nothing
-    /// anybody chose is lost.
+    /// The loose cards alone, flowed under the zones as they stand.
     LooseCards,
-    /// The zones as well: back in reading order, at the size their contents need. Rarely,
-    /// and it overwrites every frame that was set by hand.
+    /// The zones as well: reading order, sized to their contents. Overwrites every frame
+    /// set by hand.
     Everything,
 }
 
@@ -579,8 +527,7 @@ pub enum BoardScope {
 #[derive(Debug, Clone, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct BoardArrangement {
-    /// ⚠️ What actually **moved**, not what was placed. A board already in order moves
-    /// nothing, and an undo bar offering to put back a board nobody disturbed is noise.
+    /// What actually moved: a board already in order moves nothing, and opens no undo.
     pub moved: u32,
     pub previous: BoardLayout,
 }
@@ -588,14 +535,9 @@ pub struct BoardArrangement {
 /// Puts a whole space back in order: zones in reading order three across, each at the
 /// height its contents need, and the loose cards flowing underneath.
 ///
-/// ⚠️ It **resizes** as well as repositions, which is the whole point — an arrangement
-/// that leaves a zone too small for what is in it has not arranged anything — and it is
-/// therefore the one board gesture that overwrites a size chosen by hand. That is what
-/// makes its undo non-optional, and what keeps it a notch further away than
-/// [`arrange_loose_cards`].
-///
-/// `folder_counts` arrives in `created_at` order, as [`arrange_zones`] needs it: the same
-/// board tidied twice has to be the same board.
+/// It resizes as well as repositions — a zone left too small has not been arranged — so it
+/// overwrites sizes chosen by hand, and its undo is not optional. `folder_counts` arrives in
+/// `created_at` order: the same board tidied twice is the same board.
 #[must_use]
 pub fn arrange_everything(folder_counts: &[(String, usize)], loose_ids: &[String]) -> BoardLayout {
     let counts: Vec<usize> = folder_counts.iter().map(|(_, count)| *count).collect();
@@ -616,9 +558,7 @@ pub fn arrange_everything(folder_counts: &[(String, usize)], loose_ids: &[String
 
 /// The loose cards alone, flowed under the zones exactly where they already are.
 ///
-/// ⚠️ `zones` comes back empty, which is the whole point: nothing sized or placed by hand
-/// is touched, so this one is worth a single click in the corner where
-/// [`arrange_everything`] is not.
+/// `zones` comes back empty: nothing placed or sized by hand is touched.
 #[must_use]
 pub fn arrange_loose_cards(frames: &[BoardFrame], loose_ids: &[String]) -> BoardLayout {
     BoardLayout {
@@ -727,8 +667,7 @@ mod tests {
         assert_eq!(occupancy.loose, ["c"]);
     }
 
-    /// ⚠️ Two cards *and* room for the scrollbar: at exactly the inner width the second
-    /// card wraps, which is what causes the scrollbar that keeps it wrapped.
+    /// Two cards and room for the scrollbar: at exactly the inner width the second card wraps.
     #[test]
     fn a_zone_is_two_cards_wide_with_room_for_the_scrollbar() {
         assert_eq!(default_zone_width(), 12 + 240 + 12 + 240 + 12 + SCROLLBAR);
@@ -744,11 +683,7 @@ mod tests {
         assert_eq!(default_zone_height(4), two_rows);
     }
 
-    /// ⚠️ Measured in the assembled application, and the reason the fix above was not
-    /// enough on its own: `.zone-body` is the box that scrolls, and the two hairlines came
-    /// off its height as well. A 374px zone gave it 335px of client height where two rows of
-    /// cards need 336 — one pixel — so a vertical scrollbar appeared, took 9px off the row,
-    /// and the second card wrapped. Three cards in one column, in a zone sized for two.
+    /// One pixel short of two rows brings a vertical scrollbar that wraps the second card.
     #[test]
     fn a_zone_is_tall_enough_for_its_rows_once_its_own_hairlines_are_paid_for() {
         let body = zone_height(3, 2) - ZONE_BORDER * 2 - ZONE_HEADER;
@@ -760,9 +695,7 @@ mod tests {
         );
     }
 
-    /// ⚠️ The report: a zone dragged 14px narrower than nominal still flows two cards
-    /// across — `box-sizing` is `border-box`, and no scrollbar is showing once the zone is
-    /// tall enough — and the count said one, so a third note bought a second empty row.
+    /// `border-box`, and no scrollbar once the zone is tall enough: two cards still flow across.
     #[test]
     fn a_zone_shaved_narrower_than_nominal_still_fits_two_across() {
         let shaved = default_zone_width() - 14;
@@ -783,8 +716,7 @@ mod tests {
         assert_eq!(columns_in(two - 1), 1);
     }
 
-    /// ⚠️ A zone widened by hand fits more across, and growing it by the nominal two
-    /// columns would leave a band of nothing under the cards.
+    /// A zone widened by hand fits more across, and needs fewer rows.
     #[test]
     fn a_wider_zone_needs_fewer_rows_for_the_same_notes() {
         let nominal = default_zone_width();
@@ -825,7 +757,7 @@ mod tests {
         assert!(frames[3].y > frames[0].y);
     }
 
-    /// ⚠️ A row advances by its tallest zone, or the next row lands on top of it.
+    /// A row advances by its tallest zone, or the next row lands on top of it.
     #[test]
     fn a_wrapped_row_clears_the_tallest_zone_above_it() {
         let frames = arrange_zones(&[1, 9, 1, 1]);
@@ -834,7 +766,6 @@ mod tests {
         assert!(frames[3].y >= tallest);
     }
 
-    /// The same board twice is the same board: it must not look shuffled at every launch.
     #[test]
     fn the_layout_is_the_same_every_time() {
         assert_eq!(arrange_zones(&[3, 1, 7]), arrange_zones(&[3, 1, 7]));
@@ -865,8 +796,7 @@ mod tests {
         assert_eq!(loose_top(&[]), BOARD_MARGIN);
     }
 
-    /// ⚠️ The report: a note captured from the clipboard was written under a card that was
-    /// already there, and had to be dragged off to be found.
+    /// A new note must not land under a card that is already there.
     #[test]
     fn a_card_with_no_place_never_takes_one_that_is_occupied() {
         let top = loose_top(&[]);
@@ -876,8 +806,7 @@ mod tests {
         assert_eq!(free_slot(top, &[first], &[]), slot(1, top));
     }
 
-    /// A card dragged by hand almost never sits exactly on a seat, and it hides the two it
-    /// straddles just as well as the one it would have sat on.
+    /// A card dragged by hand hides the seats it straddles.
     #[test]
     fn a_seat_half_covered_is_a_seat_taken() {
         let top = loose_top(&[]);
@@ -908,7 +837,6 @@ mod tests {
         );
     }
 
-    /// Holes are filled rather than skipped: the board stays as tight as it was arranged.
     #[test]
     fn a_seat_freed_in_the_middle_is_the_next_one_given() {
         let top = loose_top(&[]);
@@ -917,8 +845,6 @@ mod tests {
         assert_eq!(free_slot(top, &taken, &[]), slot(1, top));
     }
 
-    /// With every seat the scan can reach standing on something, the card goes under it all
-    /// rather than on top of one.
     #[test]
     fn a_card_with_nowhere_to_sit_goes_below_everything() {
         let top = loose_top(&[]);
@@ -960,7 +886,6 @@ mod tests {
         assert_eq!(height, 1700 + BOARD_MARGIN);
     }
 
-    /// A board holding one small zone should still feel like a canvas.
     #[test]
     fn the_surface_is_never_smaller_than_a_screen() {
         let (width, height) = surface(&[], &[]);
@@ -981,8 +906,7 @@ mod tests {
         assert!(layout.zones.iter().all(|zone| zone.frame.y == BOARD_MARGIN));
     }
 
-    /// ⚠️ The half that makes it a tidy-up rather than a reshuffle: a zone stretched or
-    /// squashed by hand comes back at the height its contents need.
+    /// A zone stretched or squashed by hand comes back at the height its contents need.
     #[test]
     fn tidying_up_resizes_a_zone_to_what_it_holds() {
         let layout = arrange_everything(&[("a".into(), 5)], &[]);

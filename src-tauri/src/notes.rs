@@ -24,7 +24,7 @@ use revision::{DiffLine, Revision};
 use trash::TrashedNote;
 use view::{NotesQuery, NotesView};
 
-/// ⚠️ No command returns the raw list: it would invite re-filtering on the front end.
+/// No command returns the raw list: it would invite re-filtering on the front end.
 #[tauri::command(async)]
 #[specta::specta]
 pub fn query_notes(query: NotesQuery, db: State<'_, Db>) -> Result<NotesView, AppError> {
@@ -62,15 +62,9 @@ pub fn create_note(draft: NoteDraft, db: State<'_, Db>) -> Result<DisplayNote, A
     Ok(display(&mut connection, note)?)
 }
 
-/// The first launch, and the only command that writes a space and notes at once.
-///
-/// ⚠️ One transaction, because six round trips were six chances to be killed halfway:
-/// a space with nothing in it reads as "already seeded" to both of the front end's
-/// guards, and the canvas stays empty for the life of that install. The strings stay on
-/// the front end, where the translations are — only the atomicity comes from here.
-///
-/// Answers the space it made: with exactly one, "all spaces" is a distinction without a
-/// difference, and the front end opens on it rather than on a board it cannot show.
+/// The first launch: the space, its folders and the notes in one transaction, since a space
+/// standing alone reads as "already seeded" for good. The strings stay on the front end, with
+/// the translations. Answers the space it made, which the front end opens on.
 #[tauri::command(async)]
 #[specta::specta]
 pub fn seed_samples(
@@ -111,9 +105,7 @@ pub fn update_note(
 
 /// The bodies kept beside a note, newest first.
 ///
-/// ⚠️ Metadata only: instants and sizes, never the bodies themselves. Twenty of them is
-/// what makes this table big, and a list that carried them would send the whole history
-/// across to draw twenty dates.
+/// Instants and sizes, never the bodies.
 #[tauri::command(async)]
 #[specta::specta]
 pub fn list_revisions(id: String, db: State<'_, Db>) -> Result<Vec<Revision>, AppError> {
@@ -145,9 +137,7 @@ pub fn revision_diff(
 
 /// Goes back to a kept body, dropping it and every body kept after it from the history.
 ///
-/// ⚠️ `updated_at` is **not** touched. Putting something back is not editing it — the
-/// same line `restore_notes`, `move_notes_back`, `untag_notes` and
-/// `set_placeholder_values` already hold — and the canvas sorts on that column.
+/// Leaves `updated_at` alone: putting something back is not editing it.
 #[tauri::command(async)]
 #[specta::specta]
 pub fn restore_revision(
@@ -334,8 +324,8 @@ pub fn delete_tags(tags: Vec<String>, db: State<'_, Db>) -> Result<u32, AppError
     Ok(count(store::drop_tags(&mut connection, &tags)?))
 }
 
-/// ⚠️ A command of its own rather than a `NotePatch` field: filling a field is not
-/// editing the note, so `updated_at` stays put — the canvas sorts on it.
+/// A command of its own rather than a `NotePatch` field, so `updated_at` stays put: filling a
+/// field is not editing the note.
 #[tauri::command(async)]
 #[specta::specta]
 pub fn set_placeholder_values(
@@ -392,8 +382,7 @@ pub fn set_global_placeholders(
     Ok(retained)
 }
 
-/// What only the database knows. Both are queries of their own, which is why neither
-/// lives in [`model::decorate`].
+/// What only the database knows, each a query of its own: hence not in [`model::decorate`].
 fn display(connection: &mut Library, note: model::Note) -> Result<DisplayNote, StorageError> {
     let mut decorated = model::decorate_now(note);
     store::decorations(connection)?.apply([&mut decorated]);

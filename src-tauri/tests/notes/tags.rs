@@ -1,6 +1,6 @@
 use super::*;
 
-/// ⚠️ Distinct, not summed: a note carrying two of the tags is one note, and a
+/// Distinct, not summed: a note carrying two of the tags is one note, and a
 /// confirmation that overstates its blast radius teaches people to dismiss it.
 #[test]
 fn the_blast_radius_counts_a_note_carrying_two_of_the_tags_once() {

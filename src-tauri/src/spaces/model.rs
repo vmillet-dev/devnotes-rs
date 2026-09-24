@@ -1,4 +1,4 @@
-//! ⚠️ No "All spaces" entry on the data side: it is a display mode, and creating one
+//! No "All spaces" entry on the data side: it is a display mode, and creating one
 //! would have notes filed into it.
 
 use serde::{Deserialize, Serialize};
@@ -30,7 +30,7 @@ impl SpaceDraft {
     }
 }
 
-/// ⚠️ A space cannot be its own refuge: the `ON DELETE CASCADE` would sweep away the
+/// A space cannot be its own refuge: the `ON DELETE CASCADE` would sweep away the
 /// notes right after the transfer, and persistence cannot tell — the space exists.
 pub fn validate_move_target(id: &str, target_id: &str) -> Result<(), ValidationError> {
     if id == target_id {

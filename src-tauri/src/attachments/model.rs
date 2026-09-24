@@ -1,7 +1,6 @@
-//! ⚠️ The bytes are not here: the database holds a record, and the file lives in
-//! `app_data_dir()/attachments/` under a name derived from the id — two captures called
-//! `image.png` must not overwrite each other, and a name from outside has no business
-//! deciding a write path.
+//! The bytes are not here: the database holds a record, and the file lives in the library's
+//! `attachments/` under a name derived from the id — two `image.png` must not overwrite each
+//! other, and a name from outside has no business deciding a write path.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -18,7 +17,7 @@ pub const MAX_BYTES: u64 = 10 * 1024 * 1024;
 pub struct Attachment {
     pub id: String,
     pub note_id: String,
-    /// The original name, the one displayed. ⚠️ Never used as a path.
+    /// The original name, the one displayed. Never used as a path.
     pub file_name: String,
     pub mime_type: String,
     /// `u32` and not `u64`: Specta refuses what JSON cannot carry without loss.
@@ -32,21 +31,17 @@ impl Attachment {
     }
 }
 
-/// What an identifier is allowed to contribute to a file name. ⚠️ The application's own
-/// ids are UUIDs and pass through untouched; an id read out of an import file is whatever
-/// the file said, and a separator or a `..` there is an arbitrary path on disk — the whole
-/// of `stored_name` is joined onto the attachments directory, and also passed to the
-/// sweeps that *delete*. Filtering here is what makes a traversing name unrepresentable,
-/// rather than a rule every caller has to remember.
+/// What an id may contribute to a file name. ⚠️ An imported id is whatever the file said, and
+/// `stored_name` is joined onto the attachments directory by the writes and by the sweeps that
+/// delete: filtering here makes a traversing name unrepresentable for every caller.
 fn contained(id: &str) -> String {
     let kept: String = id
         .chars()
         .filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_')
         .collect();
 
-    // Only reachable from an id this application did not generate, which the import
-    // boundary already replaces. Two of them collide, and losing one attachment's bytes
-    // to another inside the directory beats writing outside it.
+    // Only an id this application did not generate reaches this, and the import replaces
+    // those. Two collide rather than one writing outside the directory.
     if kept.is_empty() {
         return "attachment".to_string();
     }
@@ -54,8 +49,7 @@ fn contained(id: &str) -> String {
     kept
 }
 
-/// ⚠️ Lowercase and purely alphanumeric: anything else (separators, `..`, colons) would
-/// escape the attachments directory.
+/// Lowercase and alphanumeric: separators, `..` or colons would escape the directory.
 fn extension_of(file_name: &str) -> Option<String> {
     let candidate = file_name.rsplit_once('.')?.1;
     if candidate.is_empty()
@@ -97,8 +91,7 @@ pub fn mime_of(file_name: &str) -> String {
     mime.to_string()
 }
 
-/// ⚠️ Stripped of any path: an import must not be able to show `../../secrets/key.pem`
-/// as though the note had produced it.
+/// Stripped of any path: an import must not show `../../secrets/key.pem` as a note's own.
 pub fn display_name(path: &str) -> Result<String, ValidationError> {
     let trimmed = path
         .rsplit(['/', '\\'])
@@ -114,8 +107,8 @@ pub fn display_name(path: &str) -> Result<String, ValidationError> {
     Ok(trimmed)
 }
 
-/// The caller supplies a readable timestamp, this guarantees the extension: without it
-/// `mime_of` would answer `application/octet-stream` and skip the preview.
+/// The caller supplies a readable timestamp, this guarantees the extension, without which
+/// `mime_of` answers `application/octet-stream` and skips the preview.
 pub fn png_name(base: &str) -> String {
     let trimmed = base.trim();
     let stem = if trimmed.is_empty() {
@@ -185,8 +178,7 @@ mod tests {
         }
     }
 
-    /// ⚠️ The id half used to be prepended raw, and an import decided it: a record
-    /// claiming `../vault` overwrote the key file and the import reported success.
+    /// An import decides the id: a record claiming `../vault` must not reach the key file.
     #[test]
     fn a_hostile_identifier_cannot_leave_the_directory() {
         use std::path::{Component, Path};

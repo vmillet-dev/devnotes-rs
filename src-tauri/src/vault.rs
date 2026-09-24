@@ -1,8 +1,7 @@
 //! Encryption at rest: the key, what it seals, and the one gate that opens the library.
 //!
-//! ⚠️ The passphrase is never stored, anywhere, deliberately: this is the bargain a
-//! password manager makes, not a keychain's. Losing it loses the library, and an export
-//! is the only copy that does not depend on it.
+//! The passphrase is never stored, anywhere: losing it loses the library, and an export is
+//! the only copy that does not depend on it.
 
 #![allow(clippy::needless_pass_by_value)]
 
@@ -25,11 +24,8 @@ use key::Cost;
 /// Short enough to be typed at every launch, long enough to be worth deriving from.
 const MINIMUM_LENGTH: usize = 8;
 
-/// Holds a passphrase for the rest of a command, and wipes it when the command returns —
-/// whatever it returns, a panic included.
-///
-/// ⚠️ A passphrase arrives owned from the IPC payload, so the command holds the last copy —
-/// and one left in freed memory is one in a crash dump.
+/// Wipes a passphrase when the command returns, a panic included. It arrives owned from the
+/// IPC payload, so the command holds the last copy, and freed memory ends up in crash dumps.
 pub(crate) fn secret<S: Zeroize>(value: S) -> Zeroizing<S> {
     Zeroizing::new(value)
 }
@@ -43,9 +39,8 @@ pub enum VaultState {
     Absent,
     /// A key file is there and the passphrase has not been given yet.
     Locked,
-    /// ⚠️ Held in Rust, never in the front end: a page reload must not ask again for a
-    /// library this process already has open — which is also what keeps `reopenSession`
-    /// working in the end-to-end suite.
+    /// Held in Rust, not in the front end: a page reload must not ask again for a library
+    /// this process has open.
     Unlocked,
 }
 
@@ -65,8 +60,8 @@ pub fn vault_state(app: AppHandle, db: State<'_, Db>) -> Result<VaultState, AppE
     })
 }
 
-/// The first launch. ⚠️ Refuses a library that already has a key file rather than
-/// replacing it: that file is the only way into the notes beside it.
+/// The first launch. Refuses a library that already has a key file: that file is the only
+/// way into the notes beside it.
 #[tauri::command(async)]
 #[specta::specta]
 pub fn create_vault(passphrase: String, app: AppHandle, db: State<'_, Db>) -> Result<(), AppError> {
@@ -81,8 +76,8 @@ pub fn create_vault(passphrase: String, app: AppHandle, db: State<'_, Db>) -> Re
 }
 
 fn create(passphrase: &str, directory: &Path, db: &Db, cost: Cost) -> Result<(), StorageError> {
-    // ⚠️ The directory, not just the cause: this is the first thing a full disk or a
-    // permissions problem reaches, and the user has never opened that folder.
+    // The directory in the error: a full disk or a permission reaches this first, in a folder
+    // the user has never opened.
     std::fs::create_dir_all(directory).context(directory.display())?;
     refuse_a_database_without_its_key(directory)?;
 
@@ -91,10 +86,9 @@ fn create(passphrase: &str, directory: &Path, db: &Db, cost: Cost) -> Result<(),
     install(directory, db, vault)
 }
 
-/// ⚠️ A database already here without a key file is a library that lost its key — or one
-/// written in the clear before 0.2.0, which this version no longer seals in place. A new key
-/// over it would open nothing it holds, so it is answered as damaged, which the gate offers
-/// to set aside.
+/// A database here without a key file lost it, or predates encryption (before 0.2.0). A new
+/// key over it would open nothing it holds, so it is answered as damaged, which the gate
+/// offers to set aside.
 fn refuse_a_database_without_its_key(directory: &Path) -> Result<(), StorageError> {
     if directory.join(crate::layout::DATABASE).exists() {
         return Err(StorageError::Damaged(format!(
@@ -106,9 +100,8 @@ fn refuse_a_database_without_its_key(directory: &Path) -> Result<(), StorageErro
     Ok(())
 }
 
-/// ⚠️ Deliberately slow: deriving the key is the whole defence against someone trying
-/// passphrases against a copied file. It is `(async)` for the same reason — a second on the
-/// main thread would freeze the window over every attempt.
+/// `(async)` because deriving the key is slow on purpose, and would freeze the window over
+/// every attempt on the main thread.
 #[tauri::command(async)]
 #[specta::specta]
 pub fn unlock_vault(passphrase: String, app: AppHandle, db: State<'_, Db>) -> Result<(), AppError> {
@@ -125,9 +118,8 @@ fn unlock(passphrase: &str, directory: &Path, db: &Db) -> Result<(), StorageErro
     install(directory, db, vault)
 }
 
-/// What a change reached, so the interface can say it. ⚠️ `backupsLeft` is the honest half:
-/// the application can only speak for the copies it knows about, and a key file the user
-/// put somewhere else still opens with the retired phrase.
+/// What a change reached. `backupsLeft` is the honest half: a key file copied somewhere else
+/// still opens with the retired phrase.
 #[derive(Debug, Clone, Copy, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct PassphraseChange {
@@ -137,10 +129,8 @@ pub struct PassphraseChange {
 
 /// A new phrase over the same library, from the preferences panel.
 ///
-/// ⚠️ Not a re-encryption: the key the notes are sealed with is the one being rewrapped,
-/// so nothing in the database moves and the library stays open on the key it already had.
-/// The consequence is worth knowing — this answers a phrase somebody else learned, never
-/// a key somebody else got hold of.
+/// Not a re-encryption: the key the notes are sealed with is rewrapped, and the library stays
+/// open on it.
 #[tauri::command(async)]
 #[specta::specta]
 pub fn change_passphrase(
@@ -160,9 +150,7 @@ fn change(
     db: &Db,
     cost: Cost,
 ) -> Result<PassphraseChange, StorageError> {
-    // ⚠️ Asked and released rather than held: the derivations below cost tens of
-    // milliseconds each, and keeping the connection for them would freeze every other
-    // command.
+    // Asked and released: the derivations below cost tens of milliseconds each.
     let directory = db
         .lock()
         .map_err(|_| StorageError::Unavailable)?
@@ -170,9 +158,8 @@ fn change(
         .ok_or(StorageError::Locked)?
         .directory()
         .to_path_buf();
-    // ⚠️ The live file first, and the whole change fails here if it cannot be written: it
-    // is the only one whose loss is fatal. The copies follow, and a copy that resists is
-    // counted rather than fatal — see `backup::rewrap`.
+    // The live file first, and the change fails here if it cannot be written: it is the only
+    // one whose loss is fatal. A copy that resists is counted instead (`backup::rewrap`).
     let vault = file::change_passphrase(&directory, current, next, cost)?;
     let copies = crate::backup::rewrap(&directory, &vault, next, cost);
 
@@ -182,11 +169,8 @@ fn change(
     })
 }
 
-/// Opens the library under the key and hands it to the rest of the application. The
-/// sweeps are the caller's to run, because a first launch has to seal what is there first.
-///
-/// ⚠️ `attachments/` is created here, once, and nowhere else: every writer and the
-/// startup sweep assume it is there.
+/// Opens the library under the key and hands it over; the caller runs the sweeps. Creates
+/// `attachments/`, which every writer and the startup sweep then assume.
 fn install(directory: &Path, db: &Db, vault: key::Vault) -> Result<(), StorageError> {
     let library = db::open(&directory.join(crate::layout::DATABASE), vault)?;
     let attachments = crate::attachments::directory(&library);
@@ -194,8 +178,7 @@ fn install(directory: &Path, db: &Db, vault: key::Vault) -> Result<(), StorageEr
 
     {
         let mut held = db.lock().map_err(|_| StorageError::Unavailable)?;
-        // ⚠️ A second unlock would drop the library the first one opened, and with it any
-        // connection state. The front gates on `vault_state`, so this only catches a race.
+        // The front gates on `vault_state`, so a second unlock is a race: keep the first.
         if held.is_none() {
             *held = Some(library);
         }
@@ -204,8 +187,8 @@ fn install(directory: &Path, db: &Db, vault: key::Vault) -> Result<(), StorageEr
     Ok(())
 }
 
-/// ⚠️ A length, and nothing else. A rule about digits and symbols pushes people towards
-/// one memorable pattern, and the cost of guessing is Argon2id's to carry.
+/// A length and nothing else: rules about digits and symbols push people towards one
+/// memorable pattern, and Argon2id carries the cost of guessing.
 fn validate(passphrase: &str) -> Result<(), ValidationError> {
     if passphrase.chars().count() < MINIMUM_LENGTH {
         return Err(ValidationError::new(
@@ -245,8 +228,7 @@ mod tests {
         assert!(wiped.get());
     }
 
-    /// The hand-written `zeroize()` this replaced ran on the way out of a normal return
-    /// only; a command that panicked halfway left the phrase where it was.
+    /// A command that panics halfway must not leave the phrase where it was.
     #[test]
     fn a_secret_is_wiped_when_the_command_panics_too() {
         let wiped = Rc::new(Cell::new(false));
@@ -337,8 +319,7 @@ mod tests {
         assert!(validate("12345678").is_ok());
     }
 
-    /// ⚠️ Counted in characters, not bytes: "clé-privée" is ten characters and twelve
-    /// bytes, and a byte count would accept a shorter one through an accent.
+    /// "clé-privée" is ten characters and twelve bytes: a byte count would let an accent pass.
     #[test]
     fn the_length_is_counted_in_characters() {
         assert!(validate("éàèùçâêîô").is_ok());

@@ -4,7 +4,7 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 
 /** Commands */
 export const commands = {
-	/**  ⚠️ No command returns the raw list: it would invite re-filtering on the front end. */
+	/**  No command returns the raw list: it would invite re-filtering on the front end. */
 	queryNotes: (query: NotesQuery) => typedError<NotesView, AppError>(__TAURI_INVOKE("query_notes", { query })),
 	/**
 	 *  The whole note. A list sends previews ([`DisplayNote::truncated`]), so the editor and
@@ -13,24 +13,16 @@ export const commands = {
 	getNote: (id: string) => typedError<DisplayNote, AppError>(__TAURI_INVOKE("get_note", { id })),
 	createNote: (draft: NoteDraft) => typedError<DisplayNote, AppError>(__TAURI_INVOKE("create_note", { draft })),
 	/**
-	 *  The first launch, and the only command that writes a space and notes at once.
-	 * 
-	 *  ⚠️ One transaction, because six round trips were six chances to be killed halfway:
-	 *  a space with nothing in it reads as "already seeded" to both of the front end's
-	 *  guards, and the canvas stays empty for the life of that install. The strings stay on
-	 *  the front end, where the translations are — only the atomicity comes from here.
-	 * 
-	 *  Answers the space it made: with exactly one, "all spaces" is a distinction without a
-	 *  difference, and the front end opens on it rather than on a board it cannot show.
+	 *  The first launch: the space, its folders and the notes in one transaction, since a space
+	 *  standing alone reads as "already seeded" for good. The strings stay on the front end, with
+	 *  the translations. Answers the space it made, which the front end opens on.
 	 */
 	seedSamples: (spaceName: string, folders: string[], notes: SampleNote[]) => typedError<Space, AppError>(__TAURI_INVOKE("seed_samples", { spaceName, folders, notes })),
 	updateNote: (id: string, patch: NotePatch) => typedError<DisplayNote, AppError>(__TAURI_INVOKE("update_note", { id, patch })),
 	/**
 	 *  The bodies kept beside a note, newest first.
 	 * 
-	 *  ⚠️ Metadata only: instants and sizes, never the bodies themselves. Twenty of them is
-	 *  what makes this table big, and a list that carried them would send the whole history
-	 *  across to draw twenty dates.
+	 *  Instants and sizes, never the bodies.
 	 */
 	listRevisions: (id: string) => typedError<Revision[], AppError>(__TAURI_INVOKE("list_revisions", { id })),
 	/**  What going back to a kept body would change, line by line, against the current text. */
@@ -38,9 +30,7 @@ export const commands = {
 	/**
 	 *  Goes back to a kept body, dropping it and every body kept after it from the history.
 	 * 
-	 *  ⚠️ `updated_at` is **not** touched. Putting something back is not editing it — the
-	 *  same line `restore_notes`, `move_notes_back`, `untag_notes` and
-	 *  `set_placeholder_values` already hold — and the canvas sorts on that column.
+	 *  Leaves `updated_at` alone: putting something back is not editing it.
 	 */
 	restoreRevision: (id: string, revisionId: string) => typedError<DisplayNote, AppError>(__TAURI_INVOKE("restore_revision", { id, revisionId })),
 	/**
@@ -77,8 +67,8 @@ export const commands = {
 	 */
 	fillPlaceholders: (content: string, values: { [key in string]: string }) => typedError<string, AppError>(__TAURI_INVOKE("fill_placeholders", { content, values })),
 	/**
-	 *  ⚠️ A command of its own rather than a `NotePatch` field: filling a field is not
-	 *  editing the note, so `updated_at` stays put — the canvas sorts on it.
+	 *  A command of its own rather than a `NotePatch` field, so `updated_at` stays put: filling a
+	 *  field is not editing the note.
 	 */
 	setPlaceholderValues: (id: string, values: { [key in string]: string }) => typedError<DisplayNote, AppError>(__TAURI_INVOKE("set_placeholder_values", { id, values })),
 	listGlobalPlaceholders: () => typedError<{ [key in string]: string }, AppError>(__TAURI_INVOKE("list_global_placeholders")),
@@ -87,44 +77,28 @@ export const commands = {
 	/**  `None` = every space, like [`crate::notes::view::NotesQuery::space_id`]. */
 	listFolders: (spaceId: string | null) => typedError<Folder[], AppError>(__TAURI_INVOKE("list_folders", { spaceId })),
 	/**
-	 *  The second way to look at a space: folders as zones, their notes inside them, the
-	 *  loose ones beside them.
-	 * 
-	 *  ⚠️ It reads the whole space and marks what matches rather than narrowing — the quick
-	 *  filter, the rails and the search all **dim** on the board. Reflowing the survivors into
-	 *  a list would throw away the spatial memory the board exists for.
-	 * 
-	 *  ⚠️ No folder chips: a chip naming the zone a card already sits in is noise, and a loose
-	 *  card has no folder to name.
+	 *  The second way to look at a space: folders as zones, their notes inside, the loose ones
+	 *  beside them. It reads the whole space and marks what matches rather than narrowing, and
+	 *  draws no folder chips — a chip naming the zone a card sits in is noise.
 	 */
 	boardView: (query: BoardQuery) => typedError<BoardView, AppError>(__TAURI_INVOKE("board_view", { query })),
 	/**
-	 *  Where the zones and the loose cards ended up, written as one batch behind the front
-	 *  end's debounce.
-	 * 
-	 *  ⚠️ One command and one transaction for the whole gesture: a drag that ends outside the
-	 *  window, or an application that quits mid-gesture, must not leave half a board behind.
-	 *  Filing is **not** here — membership comes from [`file_notes`], which answers what it
-	 *  changed so the undo can put it back. The undo of [`arrange_board`] is this command too,
-	 *  with the layout that one answered.
+	 *  Where the zones and the loose cards ended up, as one batch and one transaction: a gesture
+	 *  cut short must not leave half a board. Filing is not here (see [`file_notes`]). This is
+	 *  also the undo of [`arrange_board`], with the layout that one answered.
 	 */
 	saveBoardLayout: (zones: ZonePlacement[], cards: CardPlacement[]) => typedError<null, AppError>(__TAURI_INVOKE("save_board_layout", { zones, cards })),
 	/**
-	 *  Puts one space's board back in order, as far as `scope` allows: the loose cards alone,
-	 *  or the zones with them.
-	 * 
-	 *  ⚠️ It answers the layout it **replaced**, not the one it wrote. The new one arrives
-	 *  with the reload the front end does anyway; this is the only moment the old one still
-	 *  exists, and [`board::BoardScope::Everything`] overwrites sizes chosen by hand — the one
-	 *  board gesture that cannot be walked back by dragging.
+	 *  Puts one space's board back in order, as far as `scope` allows, and answers the layout it
+	 *  replaced: the only moment the old one still exists, for an undo.
 	 */
 	arrangeBoard: (spaceId: string, scope: BoardScope) => typedError<BoardArrangement, AppError>(__TAURI_INVOKE("arrange_board", { spaceId, scope })),
 	createFolder: (draft: FolderDraft) => typedError<Folder, AppError>(__TAURI_INVOKE("create_folder", { draft })),
 	renameFolder: (id: string, name: string) => typedError<Folder, AppError>(__TAURI_INVOKE("rename_folder", { id, name })),
 	recolourFolder: (id: string, colour: FolderColour) => typedError<Folder, AppError>(__TAURI_INVOKE("recolour_folder", { id, colour })),
 	/**
-	 *  ⚠️ No refuge argument, unlike [`crate::spaces::delete_space`]: the notes come out
-	 *  loose, and "no folder" is a legitimate state rather than data loss.
+	 *  No refuge, unlike [`crate::spaces::delete_space`]: the notes come out loose, a legitimate
+	 *  state.
 	 */
 	deleteFolder: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("delete_folder", { id })),
 	/**
@@ -132,10 +106,7 @@ export const commands = {
 	 *  and a drop on the board is a batch of one. `folderId` absent unfiles.
 	 */
 	fileNotes: (ids: string[], folderId: string | null) => typedError<NoteFiling[], AppError>(__TAURI_INVOKE("file_notes", { ids, folderId })),
-	/**
-	 *  The undo of [`file_notes`]: each note goes back to the folder it left, or back to
-	 *  being loose.
-	 */
+	/**  The undo of [`file_notes`]: each note goes back to the folder it left, or to loose. */
 	fileNotesBack: (filings: NoteFiling[]) => typedError<number, AppError>(__TAURI_INVOKE("file_notes_back", { filings })),
 	listSpaces: () => typedError<Space[], AppError>(__TAURI_INVOKE("list_spaces")),
 	createSpace: (draft: SpaceDraft) => typedError<Space, AppError>(__TAURI_INVOKE("create_space", { draft })),
@@ -148,27 +119,24 @@ export const commands = {
 	listAttachments: (noteId: string) => typedError<Attachment[], AppError>(__TAURI_INVOKE("list_attachments", { noteId })),
 	readAttachment: (id: string) => typedError<string, AppError>(__TAURI_INVOKE("read_attachment", { id })),
 	/**
-	 *  ⚠️ The call starts from Rust: opening a path from the front end would mean allowing
+	 *  The call starts from Rust: opening a path from the front end would mean allowing
 	 *  `opener:allow-open-path` over a whole directory.
 	 * 
-	 *  ⚠️ **This is the one place a decrypted copy reaches the disk.** Handing a file to the
-	 *  application the desktop chose for it means handing over a path, and that file has to
-	 *  be readable. The copy goes under a directory of ours in the OS temporary folder and is
-	 *  swept at the next launch — it cannot be deleted on close, because the application that
-	 *  opened it still holds it. The README says so; replacing this with "save as" was the
-	 *  alternative and was turned down, one click being the point.
+	 *  ⚠️ The one place a decrypted copy reaches the disk: the program the desktop picks reads a
+	 *  path. It goes under the profile's `open/` ([`sealed::plaintext_directory`]) and is swept
+	 *  on exit and at the next launch, since that program may still hold it on close.
 	 */
 	openAttachment: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("open_attachment", { id })),
 	/**  The path comes from a native picker; the write stays here. */
 	saveAttachment: (id: string, path: string) => typedError<null, AppError>(__TAURI_INVOKE("save_attachment", { id, path })),
 	deleteAttachment: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("delete_attachment", { id })),
 	/**
-	 *  ⚠️ A `None` passphrase writes the file in the clear: the library's key protects what is
+	 *  A `None` passphrase writes the file in the clear: the library's key protects what is
 	 *  on this machine, never what leaves it.
 	 */
 	exportNotes: (path: string, scope: ExportScope, passphrase: string | null) => typedError<ExportReport, AppError>(__TAURI_INVOKE("export_notes", { path, scope, passphrase })),
 	/**
-	 *  ⚠️ The file is read before the lock is taken: parsing a large export while holding the
+	 *  The file is read before the lock is taken: parsing a large export while holding the
 	 *  connection would block every other command for the length of it.
 	 */
 	importNotes: (path: string, passphrase: string | null) => typedError<ImportReport, AppError>(__TAURI_INVOKE("import_notes", { path, passphrase })),
@@ -178,39 +146,33 @@ export const commands = {
 	exportIsProtected: (path: string) => typedError<boolean, AppError>(__TAURI_INVOKE("export_is_protected", { path })),
 	vaultState: () => typedError<VaultState, AppError>(__TAURI_INVOKE("vault_state")),
 	/**
-	 *  The first launch. ⚠️ Refuses a library that already has a key file rather than
-	 *  replacing it: that file is the only way into the notes beside it.
+	 *  The first launch. Refuses a library that already has a key file: that file is the only
+	 *  way into the notes beside it.
 	 */
 	createVault: (passphrase: string) => typedError<null, AppError>(__TAURI_INVOKE("create_vault", { passphrase })),
 	/**
-	 *  ⚠️ Deliberately slow: deriving the key is the whole defence against someone trying
-	 *  passphrases against a copied file. It is `(async)` for the same reason — a second on the
-	 *  main thread would freeze the window over every attempt.
+	 *  `(async)` because deriving the key is slow on purpose, and would freeze the window over
+	 *  every attempt on the main thread.
 	 */
 	unlockVault: (passphrase: string) => typedError<null, AppError>(__TAURI_INVOKE("unlock_vault", { passphrase })),
 	/**
 	 *  A new phrase over the same library, from the preferences panel.
 	 * 
-	 *  ⚠️ Not a re-encryption: the key the notes are sealed with is the one being rewrapped,
-	 *  so nothing in the database moves and the library stays open on the key it already had.
-	 *  The consequence is worth knowing — this answers a phrase somebody else learned, never
-	 *  a key somebody else got hold of.
+	 *  Not a re-encryption: the key the notes are sealed with is rewrapped, and the library stays
+	 *  open on it.
 	 */
 	changePassphrase: (current: string, next: string) => typedError<PassphraseChange, AppError>(__TAURI_INVOKE("change_passphrase", { current, next })),
 	/**
 	 *  Sets the damaged library aside so the next unlock starts on a fresh one.
 	 * 
-	 *  ⚠️ Answers the folder it moved everything into, and the interface says it out loud:
-	 *  "set aside" is only true if the user can be told where.
+	 *  Answers the folder it moved everything into, so the interface can say where.
 	 */
 	setAsideDamagedLibrary: () => typedError<string, AppError>(__TAURI_INVOKE("set_aside_damaged_library")),
 	/**
 	 *  Archives a library whose passphrase was forgotten, so a fresh one can be started.
 	 * 
-	 *  ⚠️ Nothing is recovered and nothing is meant to be: the notes leave **sealed**, under
-	 *  the phrase nobody remembers. What this buys is a way out of the gate that does not
-	 *  require knowing where `%APPDATA%` is — and a copy still standing on the day the phrase
-	 *  comes back, which is why `vault.json` goes with it.
+	 *  Nothing is recovered: the notes leave sealed, under the forgotten phrase, and `vault.json`
+	 *  goes with them for the day the phrase comes back.
 	 */
 	archiveLockedLibrary: () => typedError<string, AppError>(__TAURI_INVOKE("archive_locked_library")),
 	/**  The copies that exist, newest first, for the panel that lists them. */
@@ -218,11 +180,9 @@ export const commands = {
 	/**
 	 *  Puts a copy back, and answers where the library it replaced was moved to.
 	 * 
-	 *  ⚠️ It **closes the library** first, under the same lock that guards every other
-	 *  command: renaming a database file out from under a live connection is how a working
-	 *  library becomes a lost one. Every command answers `Locked` afterwards, which is what
-	 *  sends the interface back to the gate — the restored copy needs a passphrase, and
-	 *  asking for it is the only proof the right file is in place.
+	 *  ⚠️ Closes the library first, under the lock every command takes: renaming a database out
+	 *  from under a live connection loses it. Every command then answers `Locked`, which sends
+	 *  the interface back to the gate to ask for the restored copy's phrase.
 	 */
 	restoreBackup: (id: string) => typedError<string, AppError>(__TAURI_INVOKE("restore_backup", { id })),
 	/**  The libraries, and which one is open. */
@@ -232,26 +192,21 @@ export const commands = {
 	/**
 	 *  Closes whatever is open and points the registry at another one.
 	 * 
-	 *  ⚠️ The connection `Mutex` is emptied under the same lock every other command takes:
-	 *  every one of them then answers `Locked`, which is what sends the interface back to the
-	 *  gate. The new library has its own passphrase, and asking for it is the only proof the
-	 *  right one is open.
+	 *  ⚠️ The connection `Mutex` is emptied under the lock every command takes: they all answer
+	 *  `Locked` afterwards, which sends the interface back to the gate for the other passphrase.
 	 */
 	openLibrary: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("open_library", { id })),
 	renameLibrary: (id: string, name: string) => typedError<null, AppError>(__TAURI_INVOKE("rename_library", { id, name })),
 	/**
 	 *  Erases a library and everything in it.
 	 * 
-	 *  ⚠️ Refused on the open one: the front end switches first, which is what closes the
-	 *  connection. Deleting the files under a live one is how a library that was merely
-	 *  unwanted takes the process down with it.
+	 *  Refused on the open one: deleting files under a live connection takes the process down.
 	 */
 	deleteLibrary: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("delete_library", { id })),
 	appChangelog: () => __TAURI_INVOKE<ChangelogRelease[]>("app_changelog"),
 	/**
-	 *  Replaces only the menu when the tray already exists, so a language change does not
-	 *  make it flicker. No `Result`: an absent tray is not a failure the front can handle,
-	 *  and [`tray_exists`] is what then keeps closing from hiding the window.
+	 *  Replaces only the menu when the tray exists, so a language change does not flicker. No
+	 *  `Result`: without a tray, `tray_exists` is what stops closing from hiding the window.
 	 */
 	syncTray: (labels: TrayLabels) => __TAURI_INVOKE<void>("sync_tray", { labels }),
 	/**  The native side can only fail silently, and a log line is not an interface. */
@@ -283,7 +238,7 @@ export type AppError = {
 export type Attachment = {
 	id: string,
 	noteId: string,
-	/**  The original name, the one displayed. ⚠️ Never used as a path. */
+	/**  The original name, the one displayed. Never used as a path. */
 	fileName: string,
 	mimeType: string,
 	/**  `u32` and not `u64`: Specta refuses what JSON cannot carry without loss. */
@@ -292,30 +247,21 @@ export type Attachment = {
 };
 
 /**
- *  One copy, as the interface lists it.
- * 
- *  ⚠️ `bytes` is `f64` rather than `u64`: specta refuses the integer types JSON cannot
- *  carry without losing precision, and a size is the one field where a float says the
- *  same thing.
+ *  One copy, as the interface lists it. `bytes` is `f64` because specta refuses the integer
+ *  types JSON cannot carry exactly.
  */
 export type Backup = {
-	/**  The folder's name, which is its stamp — and what a restore is asked for by. */
+	/**  The folder's name, which is its stamp, and what a restore asks for. */
 	id: string,
 	takenAt: string,
 	bytes: number | null,
-	/**
-	 *  ⚠️ Whether the key file travelled with it. Without one, the copy is a file nobody
-	 *  can open, and offering to restore it would be offering to lose the library.
-	 */
+	/**  Whether the key file travelled with it: without one, restoring loses the library. */
 	openable: boolean,
 };
 
 /**  What a tidy-up did, and what it takes to walk it back. */
 export type BoardArrangement = {
-	/**
-	 *  ⚠️ What actually **moved**, not what was placed. A board already in order moves
-	 *  nothing, and an undo bar offering to put back a board nobody disturbed is noise.
-	 */
+	/**  What actually moved: a board already in order moves nothing, and opens no undo. */
 	moved: number,
 	previous: BoardLayout,
 };
@@ -328,9 +274,8 @@ export type BoardFrame = {
 };
 
 /**
- *  A whole board's geometry in one value: every zone's frame and every loose card's
- *  place. It says what a tidy-up is about to write, and — read back before the write —
- *  what it has to be able to put back.
+ *  A whole board's geometry: every zone's frame and every loose card's place. What a tidy-up
+ *  writes, and, read back first, what its undo puts back.
  */
 export type BoardLayout = {
 	zones: ZonePlacement[],
@@ -340,8 +285,8 @@ export type BoardLayout = {
 /**  `flatten`: the front end draws this with the same card component the canvas uses. */
 export type BoardNote = {
 	/**
-	 *  ⚠️ Dimmed in place rather than reflowed into a list: spatial memory is the only
-	 *  thing the board has that the date view does not, and a reflow throws it away.
+	 *  Dimmed in place rather than reflowed: spatial memory is what the board has that the
+	 *  date view does not.
 	 */
 	matches: boolean,
 	/**  `None` inside a zone, where a card flows; `Some` only on the free background. */
@@ -354,10 +299,7 @@ export type BoardPoint = {
 };
 
 export type BoardQuery = {
-	/**
-	 *  Required, unlike [`crate::notes::view::NotesQuery::space_id`]: a folder belongs to
-	 *  a space, so a board across all of them would have no zones to draw.
-	 */
+	/**  Required, unlike `NotesQuery::space_id`: a board across every space has no zones. */
 	spaceId: string,
 	search: string,
 	filter: NoteFilter,
@@ -369,20 +311,15 @@ export type BoardQuery = {
 /**
  *  How much of a board a tidy-up is allowed to move.
  * 
- *  ⚠️ Two, and not one with a warning on it. What goes to pieces on a board is the cards
- *  **outside** the zones; a zone somebody positioned and sized by hand is the only manual
- *  work the board holds. One button did both, so the click that repaired the cheap half
- *  destroyed the expensive one — which is what stops anyone pressing it twice.
+ *  Two scopes rather than one with a warning: what goes to pieces is the loose cards, and a
+ *  zone placed and sized by hand is the only manual work the board holds.
  */
 export type BoardScope = 
-/**
- *  The loose cards alone, flowed under the zones **as they stand**. Often, and nothing
- *  anybody chose is lost.
- */
+/**  The loose cards alone, flowed under the zones as they stand. */
 "looseCards" | 
 /**
- *  The zones as well: back in reading order, at the size their contents need. Rarely,
- *  and it overwrites every frame that was set by hand.
+ *  The zones as well: reading order, sized to their contents. Overwrites every frame
+ *  set by hand.
  */
 "everything";
 
@@ -390,14 +327,14 @@ export type BoardView = {
 	zones: BoardZone[],
 	loose: BoardNote[],
 	/**
-	 *  Attached to the space, like [`crate::notes::view::NotesView`]'s: facets drawn from
-	 *  already filtered notes would empty the rails on the first selection.
+	 *  The space's, like `NotesView`'s: facets drawn from filtered notes would empty the
+	 *  rails on the first selection.
 	 */
 	availableTags: string[],
 	availableLanguages: Language[],
 	isFiltering: boolean,
 	matched: number,
-	/**  The surface to pan over, so the front end sizes it from what is actually on it. */
+	/**  The surface to pan over, sized from what is on it. */
 	width: number,
 	height: number,
 };
@@ -409,9 +346,8 @@ export type BoardZone = {
 };
 
 /**
- *  One loose card that moved. ⚠️ Filing is not here: membership comes from
- *  [`crate::folders::file_notes`], which answers what it changed so the undo can put it
- *  back. A position is a local gesture and has no undo of its own.
+ *  One loose card that moved. Filing is not here: it goes through `file_notes`, whose answer
+ *  the undo puts back. A position has no undo of its own.
  */
 export type CardPlacement = {
 	noteId: string,
@@ -472,8 +408,8 @@ export type DisplayNote = {
 	 */
 	folder: NoteFolder | null,
 	/**
-	 *  ⚠️ What copying yields when that is not the content. Decided here so
-	 *  `checklist::to_markdown` stays the only place the `- [x] ` syntax exists.
+	 *  What copying yields when that is not the content, so `checklist::to_markdown` stays
+	 *  the only place the `- [x] ` syntax exists.
 	 */
 	copyText: string | null,
 	/**
@@ -486,43 +422,30 @@ export type DisplayNote = {
 } & Note;
 
 /**
- *  ⚠️ Adding a variant breaks the front-end build until `CODE_KEYS`
- *  (`core/services/errors/error-notifier.service.ts`) and both locales have their key.
+ *  ⚠️ A new variant breaks the front-end build until `CODE_KEYS`
+ *  (`core/services/errors/error-notifier.service.ts`) and both locales have its key.
  */
 export type ErrorCode = "noteNotFound" | "spaceNotFound" | "duplicateSpaceName" | "folderNotFound" | "duplicateFolderName" | "attachmentNotFound" | "revisionNotFound" | "libraryNotFound" | "libraryOpen" | "lastLibrary" | "nothingToSetAside" | "backupNotFound" | "backupUnopenable" | "fileAccess" | "importFormat" | 
 /**  The `field` parameter names the offending field. */
 "invalidInput" | 
 /**  Poisoned mutex: a command panicked while holding the connection. */
 "storageUnavailable" | 
-/**
- *  The one the unlock screen acts on: it clears the field rather than banishing the
- *  user to a banner.
- */
+/**  The unlock screen clears the field on this one rather than showing a banner. */
 "wrongPassphrase" | 
 /**  A command ran before the library was unlocked. */
 "locked" | 
 /**  The import needs the phrase the export was protected with. */
 "passphraseRequired" | 
-/**
- *  SQLite says the file is corrupt. The only code the interface answers with an
- *  action rather than a message.
- */
+/**  SQLite says the file is corrupt: the one code the interface answers with an action. */
 "libraryDamaged" | "storage";
 
 export type ExportReport = {
 	notes: number,
 	spaces: number,
 	folders: number,
-	/**
-	 *  What actually went into the archive. A record whose file has gone missing is left
-	 *  out rather than failing the export.
-	 */
+	/**  What went into the archive; a record whose file is missing is left out. */
 	attachments: number,
-	/**
-	 *  ⚠️ `false` means the file is readable by anyone who has it — every note, every
-	 *  screenshot. The interface says which of the two it wrote, because the file is the
-	 *  one thing here most likely to leave the machine.
-	 */
+	/**  `false` means readable by anyone who has the file: the interface says which it wrote. */
 	protected: boolean,
 };
 
@@ -541,9 +464,8 @@ export type Folder = {
 };
 
 /**
- *  Assigned on creation rather than chosen, and changed from the zone menu after:
- *  drawing a folder must stay one gesture. The five are the theme's own accents, so
- *  each already has a light-theme twin.
+ *  Assigned on creation, changed from the zone menu after: drawing a folder stays one
+ *  gesture. The five are the theme's accents, each with a light-theme twin.
  */
 export type FolderColour = "blue" | "amber" | "purple" | "green" | "red";
 
@@ -553,35 +475,27 @@ export type FolderDraft = {
 };
 
 /**
- *  One event carrying a closed value, not one topic per action: a topic string
- *  mirrored on both sides makes a typo into a silently inert subscription. It
- *  crosses as a generated union, so a variant added here stops the front compiling.
+ *  One event carrying a closed value rather than a topic per action: a mistyped topic is
+ *  a silently inert subscription, and a new variant here stops the front compiling.
  */
 export type GlobalAction = "capture" | "new-note" | "palette";
 
-/**
- *  `skipped`: notes already present or whose space is missing from the file — an import
- *  has to be replayable without duplicating.
- */
+/**  `skipped`: notes already present or whose space is missing, so an import can be replayed. */
 export type ImportReport = {
 	spacesCreated: number,
-	/**
-	 *  Matched by name inside the destination space, and created when absent — the rule
-	 *  spaces already follow. Every library operation reports, including when it changed
-	 *  nothing.
-	 */
+	/**  Matched by name inside the destination space, created when absent. */
 	foldersCreated: number,
 	notesImported: number,
 	notesSkipped: number,
 	/**
-	 *  Imported with a `language` or `kind` this build does not know brought down to the
-	 *  default. Counted so the loss is said rather than discovered.
+	 *  Brought down to the default for a `language` or `kind` this build does not know, and
+	 *  counted so the loss is said.
 	 */
 	notesDegraded: number,
 	attachmentsImported: number,
 	/**
-	 *  Records the archive named but did not carry. Counted rather than swallowed: the
-	 *  note arrives with a thumbnail that will never load, and only this says why.
+	 *  Records the archive named but did not carry: the only thing that says why a thumbnail
+	 *  will never load.
 	 */
 	attachmentsMissing: number,
 };
@@ -598,7 +512,7 @@ export type Language = "json" | "js" | "ts" | "py" | "rs" | "go" | "java" | "cs"
 export type LibraryEntry = {
 	id: string,
 	name: string,
-	/**  ⚠️ Relative to the profile, so a profile copied to another machine still resolves. */
+	/**  Relative to the profile, so a profile copied to another machine still resolves. */
 	directory: string,
 	createdAt: string,
 };
@@ -607,8 +521,8 @@ export type Note = {
 	id: string,
 	spaceId: string,
 	/**
-	 *  ⚠️ The folder travels with an export; where its zone sits on the board does not,
-	 *  and must never join this model — `transfer::Bundle` deserializes `Note` itself.
+	 *  The folder travels with an export; where its zone sits must never join this model,
+	 *  which `transfer::Bundle` deserialises.
 	 */
 	folderId?: string | null,
 	title: string,
@@ -622,16 +536,13 @@ export type Note = {
 	updatedAt: string,
 	lifecycle: NoteLifecycle,
 	/**
-	 *  ⚠️ `default`: `transfer::Bundle` deserializes `Note` itself, and a required key
-	 *  would make every export file written before todo lists unreadable.
+	 *  `default`: `transfer::Bundle` deserialises `Note`, and export files from before todo
+	 *  lists carry no such key.
 	 */
 	kind?: NoteKind,
 	/**  A checklist has these instead of `content`. */
 	items?: ChecklistItem[],
-	/**
-	 *  Written by `set_placeholder_values` and by nothing else: filling a field is not
-	 *  editing the note, so it leaves `updated_at` alone.
-	 */
+	/**  Written by `set_placeholder_values` alone, which leaves `updated_at` alone. */
 	placeholderValues?: { [key in string]: string },
 };
 
@@ -650,10 +561,7 @@ export type NoteDraft = {
 	items?: ChecklistItem[],
 };
 
-/**
- *  Which folder each note left, which is the only thing that can put a filing back.
- *  `folder_id` is `None` for a note that was loose.
- */
+/**  Which folder each note left, the only thing that can put a filing back; `None` was loose. */
 export type NoteFiling = {
 	noteId: string,
 	folderId?: string | null,
@@ -689,9 +597,8 @@ export type NoteKind =
 export type NoteLifecycle = { kind: "permanent" } | { kind: "expires"; at: string };
 
 /**
- *  ⚠️ A field set to `None` stays unchanged, and `#[specta(optional)]` makes the key
- *  omissible on the TypeScript side — without it the front sends `null` for what it does
- *  not touch, overwriting it.
+ *  ⚠️ A field set to `None` stays unchanged, and `#[specta(optional)]` makes the key omissible
+ *  in TypeScript: without it the front sends `null` for what it does not touch, overwriting it.
  */
 export type NotePatch = {
 	spaceId?: string | null,
@@ -724,8 +631,8 @@ export type NoteSection = {
 export type NoteSectionKey = "pinned" | "today" | "week" | "older" | "results";
 
 /**
- *  One tag on one note. A batch tagging answers pair by pair rather than with a count,
- *  so undoing it cannot strip a tag the note already carried.
+ *  One tag on one note: a batch answers pair by pair, so its undo cannot strip a tag the note
+ *  already carried.
  */
 export type NoteTag = {
 	noteId: string,
@@ -736,9 +643,8 @@ export type NotesQuery = {
 	/**  `None` = every space: a choice, not an absence of one. */
 	spaceId: string | null,
 	/**
-	 *  `None` = every folder, filed or not. Narrowing to "unfiled" is not offered: the
-	 *  absence of a chip already reads, and a filter for it would be a fourth way to say
-	 *  the same thing.
+	 *  `None` = every folder, filed or not. No "unfiled" filter: the absence of a chip already
+	 *  says it.
 	 */
 	folderId?: string | null,
 	search: string,
@@ -748,8 +654,8 @@ export type NotesQuery = {
 	languages: Language[],
 	now: string,
 	/**
-	 *  ⚠️ `Date#getTimezoneOffset()`, whose sign is the opposite of the offset
-	 *  (−120 for UTC+2). Sections reason in local days.
+	 *  `Date#getTimezoneOffset()`, whose sign is the opposite of the offset (−120 for
+	 *  UTC+2). Sections reason in local days.
 	 */
 	tzOffsetMinutes: number,
 	/**  Their own section when the view is chronological, the head of the list when flat. */
@@ -759,20 +665,19 @@ export type NotesQuery = {
 export type NotesView = {
 	sections: NoteSection[],
 	/**
-	 *  Attached to the space, not the current filter: facets drawn from already
-	 *  filtered notes would empty the rail on the first selection.
+	 *  The space's, not the current filter's: facets drawn from filtered notes would empty
+	 *  the rail on the first selection.
 	 */
 	availableTags: string[],
 	availableLanguages: Language[],
 	isFiltering: boolean,
-	/**  `u32` and not `usize`: Specta refuses a type JSON cannot render losslessly. */
+	/**  `u32` and not `usize`: Specta refuses what JSON cannot carry exactly. */
 	matched: number,
 };
 
 /**
- *  What a change reached, so the interface can say it. ⚠️ `backupsLeft` is the honest half:
- *  the application can only speak for the copies it knows about, and a key file the user
- *  put somewhere else still opens with the retired phrase.
+ *  What a change reached. `backupsLeft` is the honest half: a key file copied somewhere else
+ *  still opens with the retired phrase.
  */
 export type PassphraseChange = {
 	backupsRewrapped: number,
@@ -798,8 +703,8 @@ export type Registry = {
 /**
  *  One kept body, as the panel lists it.
  * 
- *  ⚠️ Metadata only. The bodies are what makes this table big, and a list that carried
- *  twenty of them would send the whole history across to draw twenty dates.
+ *  Metadata only: twenty bodies across the bridge to draw twenty dates would be the whole
+ *  history.
  */
 export type Revision = {
 	id: string,
@@ -811,9 +716,8 @@ export type Revision = {
 /**
  *  One seeded note, and which of the seeded folders it lands in.
  * 
- *  ⚠️ An **index** into the folders the same command creates, not an id: they do not exist
- *  until the transaction that writes them is under way. `None` stays loose, which the
- *  first launch shows on purpose — "no folder" is a legitimate state.
+ *  An index into the folders the same command creates, which have no id yet. `None` stays
+ *  loose, which the first launch shows on purpose.
  */
 export type SampleNote = {
 	folder?: number | null,
@@ -821,9 +725,8 @@ export type SampleNote = {
 };
 
 /**
- *  ⚠️ No `Title` variant, deliberately: a note found by its own title needs no
- *  explanation, and an excerpt would repeat the biggest thing on the card. That case is
- *  [`SearchMatch::Title`], which carries nothing.
+ *  No `Title` variant: a note found by its own title needs no excerpt, which would repeat the
+ *  biggest thing on the card. That case is `SearchMatch::Title`.
  */
 export type SearchField = "tag" | "body" | "item";
 
@@ -834,10 +737,7 @@ export type SearchHit = {
 	excerpt: string,
 };
 
-/**
- *  Three fields rather than a map, which would leave the compiler silent about a
- *  missing shortcut.
- */
+/**  Three fields rather than a map, so a missing shortcut is a compile error. */
 export type ShortcutBindings = {
 	capture: string,
 	newNote: string,
@@ -869,10 +769,7 @@ export type TrashedNote = {
 	purgeAt: string,
 } & Note;
 
-/**
- *  Labels cross the bridge already translated: the interface language is a front-end
- *  preference, and a translation table in Rust would be a second one.
- */
+/**  Labels cross already translated: the interface language is a front-end preference. */
 export type TrayLabels = {
 	open: string,
 	newNote: string,
@@ -891,16 +788,12 @@ export type VaultState =
 /**  A key file is there and the passphrase has not been given yet. */
 "locked" | 
 /**
- *  ⚠️ Held in Rust, never in the front end: a page reload must not ask again for a
- *  library this process already has open — which is also what keeps `reopenSession`
- *  working in the end-to-end suite.
+ *  Held in Rust, not in the front end: a page reload must not ask again for a library
+ *  this process has open.
  */
 "unlocked";
 
-/**
- *  Pushed from the preferences panel like the tray labels: reading `preferences.json`
- *  back from Rust would be a second source to keep in step.
- */
+/**  Pushed from the preferences panel as it changes, like the tray labels. */
 export type WindowBehavior = {
 	closeToTray: boolean,
 	minimizeToTray: boolean,

@@ -1,7 +1,6 @@
 //! The corpus the benchmarks run against.
 //!
-//! **8000 notes of ~13 kB**, the shape quoted in `notes/view.rs` taken to the size #21 is
-//! about — a corpus big enough that a linear cost shows up as one.
+//! **8000 notes of ~13 kB**: big enough that a linear cost shows up as one.
 //!
 //! ⚠️ **File-backed, never `open_in_memory`.** An in-memory database has no pager behind a
 //! file, no page cache and no I/O, so it measures something the application never does.
@@ -55,7 +54,7 @@ pub(crate) fn now() -> DateTime<Utc> {
     db::iso8601::parse("2026-07-25T09:00:00.000Z").expect("a valid instant")
 }
 
-/// ⚠️ Accented on purpose: `fold` has a fast path for pure ASCII, and a corpus that only
+/// Accented on purpose: `fold` has a fast path for pure ASCII, and a corpus that only
 /// took it would measure the one branch that was never in question.
 fn body(seed: usize) -> String {
     let mut text = String::with_capacity(LINES_PER_NOTE * 70);
@@ -127,8 +126,8 @@ pub(crate) fn build() -> Corpus {
     build_of(NOTES)
 }
 
-/// ⚠️ The size is a parameter only because #21 asks what a query costs as a corpus grows.
-/// Every other group takes [`NOTES`], so its numbers stay comparable across runs.
+/// The size is a parameter for `corpus_size` alone: every other group takes [`NOTES`], so
+/// its numbers stay comparable across runs.
 pub(crate) fn build_of(notes: usize) -> Corpus {
     let directory = std::env::temp_dir().join(format!("devnotes-bench-{}", uuid::Uuid::new_v4()));
     std::fs::create_dir_all(&directory).expect("a writable temporary directory");

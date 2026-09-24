@@ -17,15 +17,9 @@ use board::{
 };
 use model::{Folder, FolderColour, FolderDraft, NoteFiling};
 
-/// The second way to look at a space: folders as zones, their notes inside them, the
-/// loose ones beside them.
-///
-/// ⚠️ It reads the whole space and marks what matches rather than narrowing — the quick
-/// filter, the rails and the search all **dim** on the board. Reflowing the survivors into
-/// a list would throw away the spatial memory the board exists for.
-///
-/// ⚠️ No folder chips: a chip naming the zone a card already sits in is noise, and a loose
-/// card has no folder to name.
+/// The second way to look at a space: folders as zones, their notes inside, the loose ones
+/// beside them. It reads the whole space and marks what matches rather than narrowing, and
+/// draws no folder chips — a chip naming the zone a card sits in is noise.
 #[tauri::command(async)]
 #[specta::specta]
 pub fn board_view(query: BoardQuery, db: State<'_, Db>) -> Result<BoardView, AppError> {
@@ -48,14 +42,9 @@ pub fn board_view(query: BoardQuery, db: State<'_, Db>) -> Result<BoardView, App
     Ok(view)
 }
 
-/// Where the zones and the loose cards ended up, written as one batch behind the front
-/// end's debounce.
-///
-/// ⚠️ One command and one transaction for the whole gesture: a drag that ends outside the
-/// window, or an application that quits mid-gesture, must not leave half a board behind.
-/// Filing is **not** here — membership comes from [`file_notes`], which answers what it
-/// changed so the undo can put it back. The undo of [`arrange_board`] is this command too,
-/// with the layout that one answered.
+/// Where the zones and the loose cards ended up, as one batch and one transaction: a gesture
+/// cut short must not leave half a board. Filing is not here (see [`file_notes`]). This is
+/// also the undo of [`arrange_board`], with the layout that one answered.
 #[tauri::command(async)]
 #[specta::specta]
 pub fn save_board_layout(
@@ -114,8 +103,8 @@ pub fn recolour_folder(
     Ok(store::recolour(&mut connection, &id, colour)?)
 }
 
-/// ⚠️ No refuge argument, unlike [`crate::spaces::delete_space`]: the notes come out
-/// loose, and "no folder" is a legitimate state rather than data loss.
+/// No refuge, unlike [`crate::spaces::delete_space`]: the notes come out loose, a legitimate
+/// state.
 #[tauri::command(async)]
 #[specta::specta]
 pub fn delete_folder(id: String, db: State<'_, Db>) -> Result<(), AppError> {
@@ -143,8 +132,7 @@ pub fn file_notes(
     )?)
 }
 
-/// The undo of [`file_notes`]: each note goes back to the folder it left, or back to
-/// being loose.
+/// The undo of [`file_notes`]: each note goes back to the folder it left, or to loose.
 #[tauri::command(async)]
 #[specta::specta]
 pub fn file_notes_back(filings: Vec<NoteFiling>, db: State<'_, Db>) -> Result<u32, AppError> {
@@ -153,13 +141,8 @@ pub fn file_notes_back(filings: Vec<NoteFiling>, db: State<'_, Db>) -> Result<u3
     Ok(count(store::restore_filings(&mut connection, &filings)?))
 }
 
-/// Puts one space's board back in order, as far as `scope` allows: the loose cards alone,
-/// or the zones with them.
-///
-/// ⚠️ It answers the layout it **replaced**, not the one it wrote. The new one arrives
-/// with the reload the front end does anyway; this is the only moment the old one still
-/// exists, and [`board::BoardScope::Everything`] overwrites sizes chosen by hand — the one
-/// board gesture that cannot be walked back by dragging.
+/// Puts one space's board back in order, as far as `scope` allows, and answers the layout it
+/// replaced: the only moment the old one still exists, for an undo.
 #[tauri::command(async)]
 #[specta::specta]
 pub fn arrange_board(

@@ -1,16 +1,9 @@
 //! Nothing here knows the database.
 //!
-//! The export is a zip: the bundle at the root, one entry per attachment under
-//! `attachments/`. ⚠️ Base64 inside the JSON was the obvious alternative and was refused:
-//! it costs a third more bytes, and the import path holds the file as a `String`, then a
-//! `serde_json::Value`, then a `Bundle` — three copies of every screenshot in memory.
-//! Archive entries are pulled one at a time instead.
-//!
-//! ⚠️ An export leaves the library's key behind. The attachment files on disk are sealed
-//! with a key that never leaves this machine, so they are opened on the way out and then
-//! either written in the clear — an unprotected export is portable and readable, which is
-//! what the exchange format exists for — or resealed under a key derived from the phrase
-//! the user gave this one file.
+//! The export is a zip: the bundle at the root, one entry per attachment under `attachments/`,
+//! pulled one at a time. Not base64 inside the JSON, which costs a third more bytes and holds
+//! every screenshot three times in memory on import. The library's key never leaves: the files
+//! are opened on the way out, then written in the clear or resealed under this file's phrase.
 
 use std::ffi::{OsStr, OsString};
 use std::fs::File;
@@ -31,17 +24,15 @@ use crate::vault::key::Vault;
 const BUNDLE_ENTRY: &str = "bundle.json";
 const ATTACHMENTS_ENTRY: &str = "attachments";
 
-/// ⚠️ Present only in a protected export, and it **replaces** `bundle.json` rather than
-/// sitting beside it: a reader that finds this and cannot open it must not fall back on a
-/// plaintext bundle that should not exist.
+/// ⚠️ Present only in a protected export, and instead of `bundle.json`, never beside it: a
+/// reader that cannot open it must find no plaintext bundle to fall back on.
 const SEALED_ENTRY: &str = "bundle.sealed";
 
-/// Beside the sealed payload, in the clear: the salt and the cost are what a reader needs
-/// to derive the same key, and neither is a secret.
+/// Beside the sealed payload, in the clear: a reader needs the salt and the cost to derive
+/// the key, and neither is secret.
 const RECIPE_ENTRY: &str = "recipe.json";
 
-/// What a zip opens with. An export written before the archive existed is plain JSON and
-/// is still read: a new DevNotes reads an old file, an old DevNotes does not read a new one.
+/// What a zip opens with. A plain JSON export from before the archive is still read.
 const ZIP_MAGIC: [u8; 4] = [b'P', b'K', 0x03, 0x04];
 
 fn zip_error(error: &zip::result::ZipError) -> StorageError {
@@ -57,11 +48,9 @@ fn stored_as_is() -> SimpleFileOptions {
     SimpleFileOptions::default().compression_method(CompressionMethod::Stored)
 }
 
-/// ⚠️ Written beside the target then renamed: a truncating write destroys the previous
-/// export the day the disk fills.
-///
-/// `passphrase` protects the archive. Without one the file is plaintext — every note,
-/// every screenshot — which is what the interface has to say before it writes one.
+/// ⚠️ Staged beside the target, in the same directory, then renamed: a truncating write
+/// destroys the previous export the day the disk fills, and a rename across volumes is not
+/// atomic. Without `passphrase` the file is plaintext, which the interface says before writing.
 pub fn write(
     path: &str,
     bundle: &Bundle,
@@ -115,8 +104,7 @@ fn archive(
     let target = File::create(staged).context(staged.display().to_string())?;
     let mut writer = ZipWriter::new(target);
 
-    // The recipe goes in first and in the clear: a reader has to know how to derive the
-    // key before it can be asked for a phrase.
+    // The recipe first, in the clear: a reader derives the key before asking for a phrase.
     if let Some((_, recipe)) = protection {
         let written = serde_json::to_string_pretty(recipe)
             .map_err(|error| StorageError::File(error.to_string()))?;
@@ -144,13 +132,12 @@ fn archive(
     for record in records {
         let name = record.stored_name();
 
-        // A record whose file has gone missing leaves the export rather than failing it:
-        // the note still travels, and `attachments_missing` says so on the way back in.
+        // A record whose file is missing leaves the export rather than failing it; the import
+        // reports it as `attachments_missing`.
         let Ok(sealed) = std::fs::read(source.join(&name)) else {
             continue;
         };
 
-        // Opened under the library's key, then written the way this export travels.
         let plain = library.open_bytes(&sealed)?;
         let bytes = match protection {
             Some((vault, _)) => vault.seal_bytes(&plain)?,
@@ -169,11 +156,9 @@ fn archive(
     Ok(stored)
 }
 
-/// The bundle, and whatever carries the attachment bytes that belong with it.
-///
-/// ⚠️ Answers [`StorageError::PassphraseRequired`] on a protected file offered without
-/// one: nothing can tell a protected archive from an ordinary one until it has looked
-/// inside, so looking is this function's job rather than the interface's.
+/// The bundle, and whatever carries the attachment bytes that belong with it. Answers
+/// [`StorageError::PassphraseRequired`] for a protected file offered without one: only looking
+/// inside can tell.
 pub fn read(
     path: &str,
     passphrase: Option<&str>,
@@ -204,8 +189,7 @@ pub fn read(
     let vault = protect::open_with(passphrase, &recipe)?;
     let sealed = entry(&mut archive, SEALED_ENTRY)?;
 
-    // ⚠️ The payload's own tag is the check: a phrase that does not open it is refused
-    // here, so the file carries no separate verifier to work against.
+    // The payload's own tag is the check: the file carries no separate verifier.
     let raw = vault
         .open_bytes(&sealed)
         .map_err(|_| StorageError::WrongPassphrase)?;
@@ -221,11 +205,8 @@ pub fn read(
     ))
 }
 
-/// Whether a file will want a phrase, asked without one so an interface can prompt.
-///
-/// ⚠️ The recipe and nothing else. Answering this through [`read`] would parse the whole
-/// bundle — a hundred megabytes on a large library — and then throw it away, for the import
-/// to parse it again a moment later.
+/// Whether a file will want a phrase, asked without one so the interface can prompt. Reads the
+/// recipe alone: going through [`read`] would parse the whole bundle only to throw it away.
 pub fn is_protected(path: &str) -> Result<bool, StorageError> {
     let Some(mut archive) = open_archive(path)? else {
         return Ok(false);
@@ -234,8 +215,7 @@ pub fn is_protected(path: &str) -> Result<bool, StorageError> {
     Ok(read_recipe(&mut archive)?.is_some())
 }
 
-/// `None` for a file that is not a zip: a `.json` export written before the archive, which
-/// carries no attachments and cannot be protected.
+/// `None` for a file that is not a zip: a `.json` export, with no attachments and no phrase.
 fn open_archive(path: &str) -> Result<Option<ZipArchive<File>>, StorageError> {
     let mut file = File::open(path).context(path)?;
 
@@ -275,9 +255,8 @@ fn entry(archive: &mut ZipArchive<File>, name: &str) -> Result<Vec<u8>, StorageE
     Ok(bytes)
 }
 
-/// The attachment bytes of an import, handed over one at a time.
-///
-/// ⚠️ `Debug` says nothing about the key it may hold, for the same reason `Vault`'s does.
+/// The attachment bytes of an import, handed over one at a time. `Debug` says nothing about
+/// the key it may hold.
 pub enum Payload {
     /// A `.json` export: it carried no attachments.
     Empty,
@@ -302,9 +281,8 @@ impl std::fmt::Debug for Payload {
 }
 
 impl Payload {
-    /// `None` when the archive names the record but does not carry its bytes, and `None`
-    /// too when it carries them under a key that will not open them — a caller cannot act
-    /// on the difference, and the import reports both as missing.
+    /// `None` when the archive lacks the bytes or holds them under a key that will not open:
+    /// the import reports both as missing.
     pub fn take(&mut self, stored_name: &str) -> Option<Vec<u8>> {
         let Self::Archive { archive, vault } = self else {
             return None;
@@ -323,7 +301,6 @@ impl Payload {
     }
 }
 
-/// ⚠️ Same directory as the target, or the rename crosses volumes and stops being atomic.
 fn staging_path(path: &str) -> PathBuf {
     let target = Path::new(path);
     let name = target
@@ -380,7 +357,6 @@ mod tests {
         std::fs::write(directory.join(record().stored_name()), sealed).unwrap();
     }
 
-    /// A staging file one directory away would make the rename cross volumes.
     #[test]
     fn the_staging_file_sits_next_to_its_target() {
         let target = std::env::temp_dir()
@@ -485,7 +461,6 @@ mod tests {
         assert_eq!(read_back.bundle.spaces[0].name, "Personal");
     }
 
-    /// The point of the archive: the bytes travel with the record.
     #[test]
     fn an_attachment_travels_with_its_note() {
         let scratch = tempfile::tempdir().unwrap();
@@ -516,7 +491,7 @@ mod tests {
         );
     }
 
-    /// ⚠️ A record whose file has gone missing must not fail the export.
+    /// A record whose file has gone missing must not fail the export.
     #[test]
     fn a_record_whose_file_is_gone_leaves_the_export_rather_than_failing_it() {
         let scratch = tempfile::tempdir().unwrap();
@@ -538,7 +513,7 @@ mod tests {
         assert_eq!(report.notes, 1);
     }
 
-    /// ⚠️ New DevNotes reads what old DevNotes wrote: a `.json` export predates the archive.
+    /// A `.json` export from before the archive still reads.
     #[test]
     fn a_json_export_from_before_the_archive_still_imports() {
         let scratch = tempfile::tempdir().unwrap();
@@ -553,8 +528,7 @@ mod tests {
         assert!(matches!(payload, Payload::Empty));
     }
 
-    /// ⚠️ The whole point of protecting an export: the file most likely to leave the
-    /// machine was the one carrying everything in the clear.
+    /// The file most likely to leave the machine must not carry everything in the clear.
     #[test]
     fn a_protected_export_carries_none_of_the_notes_in_the_clear() {
         let scratch = tempfile::tempdir().unwrap();
@@ -613,8 +587,7 @@ mod tests {
         );
     }
 
-    /// ⚠️ Offered without one, it asks rather than failing: nothing can know a file is
-    /// protected until something has looked inside it.
+    /// Offered without one, it asks rather than failing.
     #[test]
     fn a_protected_export_asks_for_a_phrase_rather_than_failing() {
         let scratch = tempfile::tempdir().unwrap();
@@ -655,8 +628,7 @@ mod tests {
         assert!(matches!(error, StorageError::WrongPassphrase), "{error}");
     }
 
-    /// ⚠️ Asked before an import starts, so it must not pay for the bundle: a file whose
-    /// payload could not be parsed at all still answers the question.
+    /// Asked before an import starts: a file whose payload does not parse still answers.
     #[test]
     fn whether_a_file_is_protected_is_answered_without_reading_the_bundle() {
         let scratch = tempfile::tempdir().unwrap();
@@ -671,14 +643,14 @@ mod tests {
         )
         .unwrap();
 
-        // The entry is there and is nonsense; only the recipe decides the answer.
+        // The entry is there and is nonsense; the recipe alone decides the answer.
         let mut rewritten = ZipWriter::new(std::fs::File::create(&target).unwrap());
         rewritten.start_file(BUNDLE_ENTRY, deflated()).unwrap();
         rewritten.write_all(b"not json at all").unwrap();
         rewritten.finish().unwrap();
 
         assert!(!is_protected(&target.to_string_lossy()).unwrap());
-        // And the import that follows is what says the file is unreadable.
+        // The import that follows is what says the file is unreadable.
         assert!(read(&target.to_string_lossy(), None).is_err());
     }
 

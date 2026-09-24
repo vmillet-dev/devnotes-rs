@@ -1,8 +1,8 @@
 //! The names on disk: what a library's directory holds, and what the profile holds beside
 //! the libraries.
 //!
-//! ⚠️ Each is the address of something already written on someone's machine. Renaming
-//! one sends an installed copy looking for files that are still there under the old name.
+//! ⚠️ Each is the address of something already written on someone's machine: renaming one
+//! sends an installed copy looking for files still there under the old name.
 
 use chrono::{DateTime, NaiveDateTime, Utc};
 
@@ -15,11 +15,11 @@ macro_rules! database {
 
 pub(crate) const DATABASE: &str = database!();
 
-/// What SQLite keeps beside the database under WAL. They belong to it and travel with it.
+/// What SQLite keeps beside the database under WAL; they travel with it.
 pub(crate) const DATABASE_SIDECARS: [&str; 2] =
     [concat!(database!(), "-wal"), concat!(database!(), "-shm")];
 
-/// The library's key, wrapped under the passphrase. Without it the database opens for nobody.
+/// The library's key, wrapped under the passphrase.
 pub(crate) const KEY_FILE: &str = "vault.json";
 
 pub(crate) const ATTACHMENTS: &str = "attachments";
@@ -36,8 +36,7 @@ pub(crate) const ARCHIVED: &str = "archived";
 /// The library a restore replaced, kept so the gesture can be undone by hand.
 pub(crate) const REPLACED: &str = "replaced";
 
-/// ⚠️ The library's own preferences **and** the application's, at the profile root: the
-/// same name, told apart by their directory.
+/// The library's own preferences and the application's, told apart by their directory.
 pub(crate) const PREFERENCES: &str = "preferences.json";
 
 /// Every file a library is made of.
@@ -62,7 +61,7 @@ pub(crate) const LIBRARIES: &str = "libraries";
 /// every library's.
 pub(crate) const PLAINTEXT_COPIES: &str = "open";
 
-/// ⚠️ Colons are legal in an instant and not in a Windows path.
+/// Colons are legal in an instant and not in a Windows path.
 const STAMP: &str = "%Y-%m-%d_%H-%M-%S";
 
 /// The name of a timestamped directory — a backup, a library set aside.

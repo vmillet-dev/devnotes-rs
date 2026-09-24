@@ -1,8 +1,7 @@
 use super::*;
 
-/// ⚠️ The first launch used to be six round trips — one space, one marker, four notes —
-/// and a process killed between any two left a space standing with nothing in it, which
-/// both of the front end’s guards then read as "already seeded".
+/// A process killed halfway must not leave a space with nothing in it, which both of the
+/// front end's guards would read as "already seeded".
 #[test]
 fn the_first_launch_writes_the_space_and_its_notes_as_one() {
     let mut library = open_in_memory().unwrap();
@@ -34,11 +33,11 @@ fn the_first_launch_writes_the_space_and_its_notes_as_one() {
     assert_eq!(space.name, "Personnel");
     let written = list(&mut library).unwrap();
     assert_eq!(written.len(), 2);
-    // ⚠️ The drafts carry a space that does not exist when the front end composes them.
+    // The drafts carry a space that does not exist when the front end composes them.
     assert!(written.iter().all(|note| note.space_id == space.id));
 }
 
-/// ⚠️ The folders belong to the same transaction. A seeding that wrote the space and the
+/// The folders belong to the same transaction. A seeding that wrote the space and the
 /// notes but not the folders would be permanent: a space exists, so both of the front
 /// end's guards read "already seeded" and it never runs again.
 #[test]
@@ -93,13 +92,13 @@ fn the_first_launch_writes_its_folders_with_everything_else() {
     };
     assert_eq!(filed("Connexion psql"), Some(folders[0].id.clone()));
     assert_eq!(filed("Bienvenue"), Some(folders[1].id.clone()));
-    // ⚠️ One left loose on purpose: "no folder" is a legitimate state, and the first
+    // One left loose on purpose: "no folder" is a legitimate state, and the first
     // launch shows it rather than describing it.
     assert_eq!(filed("À essayer"), None);
 }
 
-/// ⚠️ Every seeded row used to share one instant, so both orders fell back to a random
-/// UUID: the zones and the sample cards came out arranged differently on each install.
+/// Rows sharing one instant would fall back to a random UUID in both orders, and each install
+/// would be arranged differently.
 #[test]
 fn the_samples_are_read_back_in_the_order_they_were_declared() {
     let mut library = open_in_memory().unwrap();

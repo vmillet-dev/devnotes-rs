@@ -1,9 +1,7 @@
 //! The bytes on disk, sealed like the rows beside them.
 //!
-//! ⚠️ A sealed file is read whole to be opened: AES-GCM authenticates the message, and a
-//! message is only authentic once all of it has been seen. That is the price of knowing a
-//! file was not tampered with, and the 10 MiB cap on an attachment is what keeps it
-//! bounded.
+//! A sealed file is read whole to be opened: GCM authenticates a message only once all of it
+//! has been seen. The 10 MiB cap on an attachment keeps that bounded.
 
 use std::path::{Path, PathBuf};
 
@@ -16,8 +14,7 @@ pub fn write_sealed(vault: &Vault, destination: &Path, bytes: &[u8]) -> Result<u
     let sealed = vault.seal_bytes(bytes)?;
     std::fs::write(destination, &sealed).context(destination.display())?;
 
-    // ⚠️ The plaintext length, not the file's: the record is what the interface shows, and
-    // a size inflated by the nonce and the tag would be a lie the user could measure.
+    // The plaintext length: the record is what the interface shows.
     Ok(bytes.len() as u64)
 }
 
@@ -27,17 +24,9 @@ pub fn read_sealed(vault: &Vault, path: &Path) -> Result<Vec<u8>, StorageError> 
     vault.open_bytes(&sealed)
 }
 
-/// Where a decrypted copy goes so the desktop can open it.
-///
-/// ⚠️ The application's own data directory, deliberately, and **not** the OS temporary
-/// one: that is a namespace shared with every account on the machine, where the copy would
-/// be readable by all of them and where a directory somebody else created first would be
-/// theirs rather than ours. This one sits inside the user's profile.
-///
-/// ⚠️ The **profile**, not the open library, which is the one path here that stayed put.
-/// These copies are ephemeral and swept wholesale; one directory means one sweep catches
-/// every library's leftovers, where a directory per library would leave the ones nobody
-/// opened again untouched for good.
+/// Where a decrypted copy goes so the desktop can open it: inside the user's profile, never the
+/// OS temporary directory, which every account on the machine shares. The profile rather than
+/// the library, so one sweep catches every library's copies.
 pub fn plaintext_directory(app: &AppHandle) -> Result<PathBuf, StorageError> {
     Ok(app
         .path()
@@ -46,10 +35,8 @@ pub fn plaintext_directory(app: &AppHandle) -> Result<PathBuf, StorageError> {
         .join(crate::layout::PLAINTEXT_COPIES))
 }
 
-/// ⚠️ Run on the way out *and* at every launch. A copy handed to another application
-/// cannot be deleted while that application holds it, and a crash reaches neither path —
-/// so the guarantee is "gone by the next launch", with the exit sweep narrowing the
-/// window to the session for everything not still open.
+/// Run on the way out and at every launch: a copy another application still holds cannot be
+/// deleted, and a crash reaches neither path, so the guarantee is "gone by the next launch".
 pub fn sweep_plaintext(app: &AppHandle) {
     let Ok(directory) = plaintext_directory(app) else {
         return;
@@ -99,8 +86,7 @@ mod tests {
         assert_eq!(read_sealed(&vault, &target).unwrap(), bytes);
     }
 
-    /// ⚠️ The point: a screenshot of a credentials page must not be readable beside a
-    /// database that is.
+    /// A screenshot of a credentials page must not be readable beside a sealed database.
     #[test]
     fn the_file_on_disk_carries_none_of_the_bytes_it_was_given() {
         let scratch = tempfile::tempdir().unwrap();

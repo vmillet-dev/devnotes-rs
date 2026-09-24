@@ -1,21 +1,9 @@
 //! The list of libraries, and which one is open.
 //!
-//! ⚠️ There used to be exactly one, and its address was compiled in: `app_data_dir()` for
-//! the directory, `devnotes.sqlite3` for the database, `attachments/` and `backups/`
-//! beside it. Four names that are the **address of a library** rather than decoration —
-//! renaming any of them sends an installed copy to a virgin profile with the notes still
-//! on disk and no way in.
-//!
-//! ⚠️ So the library that was already there is **moved**, once, by [`adopt`] — database,
-//! key file, attachments and every directory beside them — into `libraries/<id>/` with
-//! the rest. Every library is then the same shape, which is what makes the first one
-//! deletable like any other and keeps the profile root down to the registry and the
-//! application's own preferences.
-//!
-//! ⚠️ The registry itself lives beside the libraries and **no library owns it**. A
-//! library that is deleted, moved by hand or sealed under a forgotten passphrase takes
-//! nothing else with it — which is exactly the situation #252 is about, seen from the
-//! other end.
+//! The names in `layout` are the address of a library: renaming one sends an installed copy
+//! to an empty profile, with the notes still on disk and no way in. A library from before the
+//! registry is moved once by `gather` into `libraries/<id>/`, so every library has the same
+//! shape; the registry sits beside them and belongs to none.
 
 #![allow(clippy::needless_pass_by_value)]
 
@@ -36,7 +24,7 @@ use crate::layout::{DATABASE, KEY_FILE, LIBRARIES, LIBRARY_DIRECTORIES, LIBRARY_
 pub struct LibraryEntry {
     pub id: String,
     pub name: String,
-    /// ⚠️ Relative to the profile, so a profile copied to another machine still resolves.
+    /// Relative to the profile, so a profile copied to another machine still resolves.
     pub directory: String,
     pub created_at: DateTime<Utc>,
 }
@@ -54,9 +42,8 @@ impl Registry {
         self.libraries.iter().find(|entry| entry.id == id)
     }
 
-    /// ⚠️ Always one, and never `None` once anything exists: the gate asks for *a*
-    /// library's passphrase, so a registry with nothing open would need a third screen
-    /// nobody asked for.
+    /// One is always open once anything exists: the gate asks for a library's passphrase,
+    /// and a registry with nothing open would need a screen of its own.
     fn opened(&self) -> Option<&LibraryEntry> {
         self.open
             .as_deref()
@@ -80,14 +67,9 @@ fn holds_a_library(directory: &Path) -> bool {
 
 /// Moves a library that predates the registry into a directory of its own.
 ///
-/// ⚠️ Best effort, file by file, and never fatal. A profile where the move half finished
-/// is still a profile whose registry names where the library went — and the half that
-/// stayed behind is what the *next* launch picks up, because the same move runs again
-/// over whatever is left.
-///
-/// ⚠️ Everything beside the database travels: the key file (without it the copy opens for
-/// nobody), the attachments (a fresh library calls every one of them an orphan and the
-/// startup sweep deletes them), and the four directories a library accumulates.
+/// Best effort, file by file, and never fatal: whatever stays behind, the next launch moves.
+/// The key file and the attachments travel too — without them the copy opens for nobody, and
+/// the startup sweep deletes every picture as an orphan.
 fn gather(profile: &Path, into: &Path) {
     for name in LIBRARY_FILES {
         let _ = std::fs::rename(profile.join(name), into.join(name));
@@ -108,9 +90,8 @@ fn read(profile: &Path) -> Registry {
         .unwrap_or_default()
 }
 
-/// ⚠️ Staged and renamed. `fs::write` truncates first, so a disk that fills mid-write
-/// leaves a registry naming no libraries at all — with every one of them still on disk
-/// and nothing pointing at them.
+/// Staged and renamed: `fs::write` truncates first, and a registry naming no libraries leaves
+/// every one of them on disk with nothing pointing at them.
 fn write(profile: &Path, registry: &Registry) -> Result<(), StorageError> {
     let target = profile.join(REGISTRY);
     let staged = profile.join(format!("{REGISTRY}.writing"));
@@ -124,12 +105,8 @@ fn write(profile: &Path, registry: &Registry) -> Result<(), StorageError> {
 
 /// The registry as it stands, adopting what is already on disk the first time.
 ///
-/// ⚠️ The adoption is the migration: a library that predates the registry is gathered into
-/// a directory of its own, and the registry then names where it went.
-///
-/// ⚠️ Takes a path rather than an `AppHandle`, like every rule below it. That is what
-/// makes this module testable at all — a Tauri handle cannot be built in a unit test, and
-/// the rules would otherwise only ever be exercised through the interface.
+/// Gathering a library from before the registry is the migration. Takes a path rather than an
+/// `AppHandle`, like every rule below: a Tauri handle cannot be built in a unit test.
 fn registry_in(profile: &Path) -> Registry {
     let mut registry = read(profile);
 
@@ -138,8 +115,7 @@ fn registry_in(profile: &Path) -> Registry {
         let directory = directory_of(profile, &entry);
 
         if std::fs::create_dir_all(&directory).is_ok() {
-            // ⚠️ Only when something is there to gather: a virgin profile has nothing to
-            // move, and the first launch creates its library in the new place directly.
+            // A virgin profile has nothing to move: its first library is created in place.
             if holds_a_library(profile) {
                 gather(profile, &directory);
             }
@@ -189,18 +165,16 @@ pub fn open_directory_in(profile: &Path) -> Result<PathBuf, StorageError> {
 /// The directory of the library the registry points at, for what runs while none is open:
 /// the gate, the first launch, the recovery commands.
 ///
-/// ⚠️ An open library answers `Library::directory` instead: this reads the registry off
-/// disk on every call. And never `app_data_dir()` directly — that is the profile, which
-/// holds no library of its own.
+/// ⚠️ An open library answers `Library::directory` instead, without reading this file. Never
+/// `app_data_dir()` directly: that is the profile, which holds no library.
 pub(crate) fn open_directory(app: &AppHandle) -> Result<PathBuf, StorageError> {
     open_directory_in(&profile(app)?)
 }
 
 /// Adds one to the registry, with a directory of its own.
 ///
-/// ⚠️ Nothing is created on disk beyond that directory. A library is born when its
-/// passphrase is chosen — `create_vault` writes the key file and the database — which is
-/// the same path a first launch takes, and the only one that has ever been exercised.
+/// Only the directory: a library is born when its passphrase is chosen, by `create_vault`,
+/// the path a first launch takes too.
 fn create_in(profile: &Path, name: &str) -> Result<LibraryEntry, StorageError> {
     let mut registry = registry_in(profile);
     let entry = fresh(name.trim().to_string());
@@ -237,13 +211,8 @@ fn rename_in(profile: &Path, id: &str, name: &str) -> Result<(), StorageError> {
 
 /// Erases a library and everything in it.
 ///
-/// ⚠️ Never the last one. A profile with no library at all would have the gate offering
-/// nothing — and the next read of the registry would adopt the empty root as a library
-/// nobody asked for, which is not an error anybody can act on.
-///
-/// ⚠️ The registry is written **first**: a directory that resists deletion must not stay
-/// listed and openable, where a listing that lost an entry leaves files nobody points at —
-/// which is the same thing as a library moved by hand, and harmless.
+/// Never the last one: the gate would have nothing to offer. The registry is written first,
+/// so a directory that resists deletion is left unlisted rather than listed and broken.
 fn delete_in(profile: &Path, id: &str) -> Result<(), StorageError> {
     let mut registry = registry_in(profile);
     let Some(entry) = registry.entry(id).cloned() else {
@@ -278,10 +247,8 @@ pub fn create_library(name: String, app: AppHandle) -> Result<LibraryEntry, AppE
 
 /// Closes whatever is open and points the registry at another one.
 ///
-/// ⚠️ The connection `Mutex` is emptied under the same lock every other command takes:
-/// every one of them then answers `Locked`, which is what sends the interface back to the
-/// gate. The new library has its own passphrase, and asking for it is the only proof the
-/// right one is open.
+/// ⚠️ The connection `Mutex` is emptied under the lock every command takes: they all answer
+/// `Locked` afterwards, which sends the interface back to the gate for the other passphrase.
 #[tauri::command(async)]
 #[specta::specta]
 pub fn open_library(id: String, app: AppHandle, db: State<'_, Db>) -> Result<(), AppError> {
@@ -301,9 +268,7 @@ pub fn rename_library(id: String, name: String, app: AppHandle) -> Result<(), Ap
 
 /// Erases a library and everything in it.
 ///
-/// ⚠️ Refused on the open one: the front end switches first, which is what closes the
-/// connection. Deleting the files under a live one is how a library that was merely
-/// unwanted takes the process down with it.
+/// Refused on the open one: deleting files under a live connection takes the process down.
 #[tauri::command(async)]
 #[specta::specta]
 pub fn delete_library(id: String, app: AppHandle, db: State<'_, Db>) -> Result<(), AppError> {
@@ -330,8 +295,6 @@ mod tests {
         }
     }
 
-    /// ⚠️ Every library is the same shape now, which is what makes the first one
-    /// deletable like any other.
     #[test]
     fn a_library_sits_under_a_folder_of_its_own() {
         let scratch = tempfile::tempdir().unwrap();
@@ -343,9 +306,8 @@ mod tests {
         );
     }
 
-    /// ⚠️ Without the key file the gathered library is one nobody can ever open again,
-    /// and without the attachments the next launch's orphan sweep deletes the pictures
-    /// of notes that are merely somewhere else.
+    /// Without the key file the library opens for nobody, and without the attachments the next
+    /// orphan sweep deletes the pictures.
     #[test]
     fn gathering_takes_the_key_and_the_attachments_with_the_database() {
         let scratch = tempfile::tempdir().unwrap();
@@ -368,8 +330,7 @@ mod tests {
         assert!(!profile.join("attachments").exists());
     }
 
-    /// A directory a library gains has to be declared in `layout` to travel, and this is
-    /// what notices one that was not moved.
+    /// A directory a library gains travels only once `layout` declares it.
     #[test]
     fn gathering_moves_every_entry_the_layout_declares() {
         let scratch = tempfile::tempdir().unwrap();
@@ -391,8 +352,7 @@ mod tests {
         }
     }
 
-    /// ⚠️ The application's own preferences stay at the root: they follow the person, not
-    /// the corpus, and `backup::wanted` reads one of their keys from there.
+    /// The application's preferences follow the person, not the corpus.
     #[test]
     fn gathering_leaves_the_application_preferences_where_they_are() {
         let scratch = tempfile::tempdir().unwrap();
@@ -408,7 +368,6 @@ mod tests {
         assert!(!into.join("preferences.json").exists());
     }
 
-    /// Nothing there is nothing to move, and must not leave a half-made library behind.
     #[test]
     fn a_profile_with_no_library_in_it_holds_none() {
         let scratch = tempfile::tempdir().unwrap();
@@ -420,8 +379,6 @@ mod tests {
         assert!(holds_a_library(&profile));
     }
 
-    /// ⚠️ `fs::write` truncates first: a disk that fills mid-write would otherwise leave a
-    /// registry naming no libraries at all, with every one of them still on disk.
     #[test]
     fn the_registry_is_staged_and_renamed_rather_than_truncated() {
         let scratch = tempfile::tempdir().unwrap();
@@ -447,8 +404,6 @@ mod tests {
         assert!(read(&profile).libraries.is_empty());
     }
 
-    /// ⚠️ A gate that asks for *a* library's passphrase needs one to be current; a
-    /// registry with nothing open would want a third screen nobody asked for.
     #[test]
     fn the_first_one_stands_in_when_nothing_is_marked_open() {
         let registry = Registry {
@@ -469,8 +424,7 @@ mod tests {
         assert_eq!(registry.opened().map(|entry| entry.id.as_str()), Some("a"));
     }
 
-    /// ⚠️ The migration, end to end: an installed copy finds its notes, and the registry
-    /// names the directory they were moved into.
+    /// The migration, end to end.
     #[test]
     fn a_profile_from_before_the_registry_is_adopted_and_gathered() {
         let scratch = tempfile::tempdir().unwrap();
@@ -502,7 +456,6 @@ mod tests {
         assert!(directory_of(&profile, &registry.libraries[0]).is_dir());
     }
 
-    /// ⚠️ Read twice must not adopt twice: the second read finds the registry it wrote.
     #[test]
     fn adopting_happens_once() {
         let scratch = tempfile::tempdir().unwrap();
@@ -527,7 +480,6 @@ mod tests {
         assert_eq!(directory, directory_of(&profile, &created));
     }
 
-    /// ⚠️ A library is born when its passphrase is chosen, not here: only the directory.
     #[test]
     fn creating_one_adds_it_to_the_registry_and_leaves_it_closed() {
         let scratch = tempfile::tempdir().unwrap();
@@ -597,8 +549,6 @@ mod tests {
         assert!(!directory_of(&profile, &created).exists());
     }
 
-    /// ⚠️ The gate would have nothing to offer, and the next read would adopt the empty
-    /// root as a library nobody asked for.
     #[test]
     fn the_last_library_cannot_be_deleted() {
         let scratch = tempfile::tempdir().unwrap();
@@ -612,8 +562,6 @@ mod tests {
         assert_eq!(registry_in(&profile).libraries.len(), 1);
     }
 
-    /// Deleting the open one leaves the registry pointing at what is left, never at a
-    /// library that is gone.
     #[test]
     fn deleting_the_open_one_moves_the_mark_to_what_remains() {
         let scratch = tempfile::tempdir().unwrap();

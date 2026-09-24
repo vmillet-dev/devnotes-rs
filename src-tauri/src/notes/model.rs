@@ -18,8 +18,8 @@ use crate::folders::model::NoteFolder;
 pub struct Note {
     pub id: String,
     pub space_id: String,
-    /// ⚠️ The folder travels with an export; where its zone sits on the board does not,
-    /// and must never join this model — `transfer::Bundle` deserializes `Note` itself.
+    /// The folder travels with an export; where its zone sits must never join this model,
+    /// which `transfer::Bundle` deserialises.
     #[serde(default)]
     #[specta(optional)]
     pub folder_id: Option<String>,
@@ -33,15 +33,14 @@ pub struct Note {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub lifecycle: NoteLifecycle,
-    /// ⚠️ `default`: `transfer::Bundle` deserializes `Note` itself, and a required key
-    /// would make every export file written before todo lists unreadable.
+    /// `default`: `transfer::Bundle` deserialises `Note`, and export files from before todo
+    /// lists carry no such key.
     #[serde(default)]
     pub kind: NoteKind,
     /// A checklist has these instead of `content`.
     #[serde(default)]
     pub items: Vec<ChecklistItem>,
-    /// Written by `set_placeholder_values` and by nothing else: filling a field is not
-    /// editing the note, so it leaves `updated_at` alone.
+    /// Written by `set_placeholder_values` alone, which leaves `updated_at` alone.
     #[serde(default)]
     pub placeholder_values: BTreeMap<String, String>,
 }
@@ -76,9 +75,8 @@ pub struct NoteDraft {
 
 /// One seeded note, and which of the seeded folders it lands in.
 ///
-/// ⚠️ An **index** into the folders the same command creates, not an id: they do not exist
-/// until the transaction that writes them is under way. `None` stays loose, which the
-/// first launch shows on purpose — "no folder" is a legitimate state.
+/// An index into the folders the same command creates, which have no id yet. `None` stays
+/// loose, which the first launch shows on purpose.
 #[derive(Debug, Clone, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct SampleNote {
@@ -88,9 +86,8 @@ pub struct SampleNote {
     pub draft: NoteDraft,
 }
 
-/// ⚠️ A field set to `None` stays unchanged, and `#[specta(optional)]` makes the key
-/// omissible on the TypeScript side — without it the front sends `null` for what it does
-/// not touch, overwriting it.
+/// ⚠️ A field set to `None` stays unchanged, and `#[specta(optional)]` makes the key omissible
+/// in TypeScript: without it the front sends `null` for what it does not touch, overwriting it.
 #[derive(Debug, Clone, Default, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct NotePatch {
@@ -149,8 +146,7 @@ impl NoteDraft {
 }
 
 impl NotePatch {
-    /// ⚠️ Does not check that `space_id` exists — only persistence can, and it does so
-    /// before calling.
+    /// Does not check that `space_id` exists: persistence does, before calling.
     pub fn apply(&self, note: &mut Note, now: DateTime<Utc>) {
         // Skipped once the note is — or becomes — a checklist: no body to read.
         let becomes_checklist = self.kind.unwrap_or(note.kind) == NoteKind::Checklist;
@@ -161,8 +157,8 @@ impl NotePatch {
         };
 
         if let Some(space_id) = &self.space_id {
-            // ⚠️ A folder belongs to one space, so leaving the note in it would show a
-            // chip the space switcher can never reach.
+            // A folder belongs to one space: a chip the space switcher cannot reach is worse
+            // than none.
             if *space_id != note.space_id {
                 note.folder_id = None;
             }
@@ -230,8 +226,8 @@ pub struct DisplayNote {
     /// Resolved in a pass of its own, like [`Self::attachment_count`]: the front end
     /// never joins a `folder_id` against a list it happens to hold.
     pub folder: Option<NoteFolder>,
-    /// ⚠️ What copying yields when that is not the content. Decided here so
-    /// `checklist::to_markdown` stays the only place the `- [x] ` syntax exists.
+    /// What copying yields when that is not the content, so `checklist::to_markdown` stays
+    /// the only place the `- [x] ` syntax exists.
     pub copy_text: Option<String>,
     /// Filled in afterwards by `view::build`; `None` outside a search, and for a note
     /// found by its own title.
@@ -251,7 +247,7 @@ impl std::ops::Deref for DisplayNote {
 /// What a card shows of a body, and so all a list sends of one.
 pub const PREVIEW_LINES: usize = 5;
 
-/// ⚠️ Lines alone are no bound: a minified file is one line of a megabyte.
+/// Lines alone are no bound: a minified file is one line of a megabyte.
 pub const PREVIEW_CHARS: usize = 1_000;
 
 impl DisplayNote {
@@ -280,8 +276,8 @@ fn preview_of(body: &str) -> Option<String> {
 }
 
 impl Note {
-    /// Brought to the rules every draft and patch applies. An import is the one path that
-    /// inserts a whole note without going through either.
+    /// Brought to the rules every draft and patch applies: an import inserts whole notes
+    /// through neither.
     #[must_use]
     pub fn normalized(mut self) -> Self {
         self.tags = normalize_tags(&self.tags);
@@ -314,8 +310,8 @@ pub fn decorate_now(note: Note) -> DisplayNote {
     decorate(note, Utc::now())
 }
 
-/// ⚠️ They override the default written in the text but do not touch what was typed on
-/// the note: copying one into `value` would freeze the variable the day it changes.
+/// They override the default written in the text, never what was typed on the note: copying
+/// one into `value` would freeze the variable the day it changes.
 pub fn apply_global_defaults(note: &mut DisplayNote, globals: &BTreeMap<String, String>) {
     for placeholder in &mut note.placeholders {
         if let Some(value) = globals.get(&placeholder.name) {
@@ -364,8 +360,8 @@ pub struct NotePlacement {
     pub space_id: String,
 }
 
-/// One tag on one note. A batch tagging answers pair by pair rather than with a count,
-/// so undoing it cannot strip a tag the note already carried.
+/// One tag on one note: a batch answers pair by pair, so its undo cannot strip a tag the note
+/// already carried.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct NoteTag {
@@ -380,8 +376,7 @@ pub struct TagUsage {
     pub note_count: u32,
 }
 
-/// Written across the whole corpus, so its failure is an error: staying silent would
-/// rename onto nothing.
+/// Written across the whole corpus, so a failure is an error: silence would rename onto nothing.
 pub fn validated_tag(raw: &str) -> Result<String, crate::error::ValidationError> {
     normalize_tag(raw)
         .map(str::to_string)
@@ -403,9 +398,8 @@ pub fn normalize_tag(tag: &str) -> Option<&str> {
     (!cleaned.is_empty()).then_some(cleaned)
 }
 
-/// ⚠️ Both writing and querying go through here, or a typed `#urgent` would not find the
-/// stored `urgent`. De-duplication is case-insensitive and keeps the first spelling,
-/// like the `COLLATE NOCASE` on the column.
+/// Both writing and querying go through here, or a typed `#urgent` would miss the stored
+/// `urgent`. De-duplication folds case and keeps the first spelling, like the column's `NOCASE`.
 pub fn normalize_tags(tags: &[String]) -> Vec<String> {
     let mut seen = std::collections::HashSet::new();
 
@@ -770,7 +764,7 @@ mod tests {
         assert!(note.truncated);
     }
 
-    /// ⚠️ Read before the cut: a list cannot say a snippet has fields past its first lines.
+    /// Read before the cut: a list must still know a snippet has fields past its first lines.
     #[test]
     fn the_fields_are_found_in_the_whole_body() {
         let note = previewed("1\n2\n3\n4\n5\npsql -h {{host}}");

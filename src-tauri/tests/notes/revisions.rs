@@ -27,8 +27,7 @@ fn opened(connection: &mut Library, note_id: &str, revision_id: &str) -> String 
         .unwrap()
 }
 
-/// ⚠️ The whole of #39: it is the body **before** the edit that is worth keeping —
-/// the version that worked, not the one that has just stopped working.
+/// It is the body before the edit that is worth keeping: the version that worked.
 #[test]
 fn an_edit_keeps_the_body_it_replaced() {
     let mut connection = open_in_memory().unwrap();
@@ -41,7 +40,7 @@ fn an_edit_keeps_the_body_it_replaced() {
     assert_eq!(opened(&mut connection, &id, &history[0].id), "Contenu");
 }
 
-/// ⚠️ Creating a note writes nothing until the first change worth keeping, and that
+/// Creating a note writes nothing until the first change worth keeping, and that
 /// write is the **title**: the body arrives as a second update, replacing the empty
 /// string the row was born with. Without the guard, every note came out of its first
 /// editing session already carrying a revision of nothing.
@@ -69,7 +68,7 @@ fn the_first_body_typed_replaces_nothing_worth_keeping() {
     assert_eq!(kept(&mut connection, &id).len(), 1);
 }
 
-/// ⚠️ The front end already computes what moved, and the back end agrees: a
+/// The front end already computes what moved, and the back end agrees: a
 /// title-only edit stores no body.
 #[test]
 fn a_title_only_edit_keeps_nothing() {
@@ -90,7 +89,7 @@ fn a_title_only_edit_keeps_nothing() {
     assert!(kept(&mut connection, &id).is_empty());
 }
 
-/// ⚠️ The editor commits on blur *and* on every closing path, so one session writes
+/// The editor commits on blur *and* on every closing path, so one session writes
 /// the same body several times. Without the skip, each write would push a duplicate
 /// and rotate a genuinely different version out of the cap.
 #[test]
@@ -108,7 +107,7 @@ fn writing_the_same_body_again_keeps_one_copy_of_it() {
     assert_eq!(history.len(), 2);
 }
 
-/// ⚠️ A count and not a time window: a body runs to tens of kilobytes.
+/// A count and not a time window: a body runs to tens of kilobytes.
 #[test]
 fn only_the_last_few_are_kept() {
     let mut connection = open_in_memory().unwrap();
@@ -143,7 +142,7 @@ fn a_kept_body_goes_back_onto_the_note() {
     );
 }
 
-/// ⚠️ The canvas sorts on `updated_at`, and putting something back is not editing it
+/// The canvas sorts on `updated_at`, and putting something back is not editing it
 /// — the same line `restore_many`, `restore_placements` and `untag_many` hold.
 #[test]
 fn putting_a_body_back_does_not_float_the_note_to_the_top() {
@@ -161,8 +160,7 @@ fn putting_a_body_back_does_not_float_the_note_to_the_top() {
     );
 }
 
-/// ⚠️ Going back, not adding a row: the body a restore replaced was a second line in
-/// the panel, beside one identical to the text on screen (#325).
+/// Going back, not adding a row: nothing of the replaced body stays in the history.
 #[test]
 fn a_restore_keeps_nothing_of_what_it_replaced() {
     let mut connection = open_in_memory().unwrap();
@@ -175,8 +173,7 @@ fn a_restore_keeps_nothing_of_what_it_replaced() {
     assert!(kept(&mut connection, &id).is_empty());
 }
 
-/// The reporter's own case: A → B → C, back to B, and C no longer exists — nor does B
-/// in the list, since it is the text now.
+/// A → B → C, back to B: C is gone, and so is B from the list, since it is the text now.
 #[test]
 fn going_back_drops_the_version_and_everything_newer() {
     let mut connection = open_in_memory().unwrap();
@@ -239,7 +236,7 @@ fn a_revision_of_another_note_cannot_be_previewed() {
     assert_eq!(compare(db, vault, &mine, &history[0].id).unwrap(), None);
 }
 
-/// ⚠️ An id comes from the front end: one note's history must not be reachable
+/// An id comes from the front end: one note's history must not be reachable
 /// through another note.
 #[test]
 fn a_revision_of_another_note_is_not_reachable() {
@@ -255,7 +252,7 @@ fn a_revision_of_another_note_is_not_reachable() {
     assert!(matches!(refused, Err(StorageError::RevisionNotFound(_))));
 }
 
-/// ⚠️ Said out loud rather than shipped silently: a checklist's items live in
+/// Said out loud rather than shipped silently: a checklist's items live in
 /// `note_items`, a second table to snapshot and a two-step restore. Half the note
 /// kinds get nothing from this first version.
 #[test]
@@ -283,7 +280,7 @@ fn a_checklist_keeps_nothing_yet() {
     assert!(kept(&mut connection, &id).is_empty());
 }
 
-/// ⚠️ A history of every body in plaintext beside a sealed library would undo the
+/// A history of every body in plaintext beside a sealed library would undo the
 /// encryption entirely.
 #[test]
 fn a_kept_body_is_not_readable_in_the_column_it_sits_in() {
@@ -300,7 +297,7 @@ fn a_kept_body_is_not_readable_in_the_column_it_sits_in() {
     assert!(!stored[0].contains("Contenu"));
 }
 
-/// ⚠️ Deleting a note takes its history with it: `ON DELETE CASCADE`, which is inert
+/// Deleting a note takes its history with it: `ON DELETE CASCADE`, which is inert
 /// without `PRAGMA foreign_keys` — set per connection in `db::configure`.
 #[test]
 fn purging_a_note_takes_its_history_with_it() {
