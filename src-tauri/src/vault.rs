@@ -19,7 +19,7 @@ use zeroize::{Zeroize, Zeroizing};
 
 use crate::count::saturating_u32;
 use crate::db::{self, Db};
-use crate::error::{AppError, StorageError, ValidationError};
+use crate::error::{AppError, FileContext, StorageError, ValidationError};
 use key::Cost;
 
 /// Short enough to be typed at every launch, long enough to be worth deriving from.
@@ -69,36 +69,26 @@ pub fn vault_state(app: AppHandle, db: State<'_, Db>) -> Result<VaultState, AppE
 /// replacing it: that file is the only way into the notes beside it.
 #[tauri::command(async)]
 #[specta::specta]
-pub fn create_vault(
-    mut passphrase: String,
-    app: AppHandle,
-    db: State<'_, Db>,
-) -> Result<(), AppError> {
-    // ⚠️ Wiped before this returns, whatever it returns. The string arrives owned from the
-    // IPC payload, so this is the last reference to it — and a passphrase left in freed
-    // memory is a passphrase in a crash dump.
-    let result = create_with(&passphrase, &app, &db);
-    passphrase.zeroize();
+pub fn create_vault(passphrase: String, app: AppHandle, db: State<'_, Db>) -> Result<(), AppError> {
+    let passphrase = secret(passphrase);
+    validate(&passphrase)?;
 
-    result
-}
-
-fn create_with(passphrase: &str, app: &AppHandle, db: &State<'_, Db>) -> Result<(), AppError> {
-    validate(passphrase)?;
-
-    let directory = crate::libraries::open_directory(app)?;
-    // ⚠️ The directory, not just the cause: this is the first thing a full disk or a
-    // permissions problem reaches, and the user has never opened that folder.
-    std::fs::create_dir_all(&directory)
-        .map_err(|error| storage_msg(&format!("{}: {error}", directory.display())))?;
-    refuse_a_database_without_its_key(&directory)?;
-
-    let vault = file::create(&directory, passphrase, Cost::default())?;
-
-    open_library(app, db, vault)?;
-    crate::sweep(app);
+    let directory = crate::libraries::open_directory(&app)?;
+    create(&passphrase, &directory, &db, Cost::default())?;
+    crate::sweep(&app);
 
     Ok(())
+}
+
+fn create(passphrase: &str, directory: &Path, db: &Db, cost: Cost) -> Result<(), StorageError> {
+    // ⚠️ The directory, not just the cause: this is the first thing a full disk or a
+    // permissions problem reaches, and the user has never opened that folder.
+    std::fs::create_dir_all(directory).context(directory.display())?;
+    refuse_a_database_without_its_key(directory)?;
+
+    let vault = file::create(directory, passphrase, cost)?;
+
+    open_library(directory, db, vault)
 }
 
 /// ⚠️ A database already here without a key file is a library that lost its key — or one
@@ -121,26 +111,18 @@ fn refuse_a_database_without_its_key(directory: &Path) -> Result<(), StorageErro
 /// main thread would freeze the window over every attempt.
 #[tauri::command(async)]
 #[specta::specta]
-pub fn unlock_vault(
-    mut passphrase: String,
-    app: AppHandle,
-    db: State<'_, Db>,
-) -> Result<(), AppError> {
-    // ⚠️ Wiped before this returns, whatever it returns — see `create_vault`.
-    let result = unlock_with(&passphrase, &app, &db);
-    passphrase.zeroize();
-
-    result
-}
-
-fn unlock_with(passphrase: &str, app: &AppHandle, db: &State<'_, Db>) -> Result<(), AppError> {
-    let directory = crate::libraries::open_directory(app)?;
-    let vault = file::unlock(&directory, passphrase)?;
-
-    open_library(app, db, vault)?;
-    crate::sweep(app);
+pub fn unlock_vault(passphrase: String, app: AppHandle, db: State<'_, Db>) -> Result<(), AppError> {
+    let directory = crate::libraries::open_directory(&app)?;
+    unlock(&secret(passphrase), &directory, &db)?;
+    crate::sweep(&app);
 
     Ok(())
+}
+
+fn unlock(passphrase: &str, directory: &Path, db: &Db) -> Result<(), StorageError> {
+    let vault = file::unlock(directory, passphrase)?;
+
+    open_library(directory, db, vault)
 }
 
 /// What a change reached, so the interface can say it. ⚠️ `backupsLeft` is the honest half:
@@ -162,40 +144,37 @@ pub struct PassphraseChange {
 #[tauri::command(async)]
 #[specta::specta]
 pub fn change_passphrase(
-    mut current: String,
-    mut next: String,
+    current: String,
+    next: String,
     app: AppHandle,
     db: State<'_, Db>,
 ) -> Result<PassphraseChange, AppError> {
-    // ⚠️ Wiped before this returns, whatever it returns — see `create_vault`.
-    let result = change_with(&current, &next, &app, &db);
-    current.zeroize();
-    next.zeroize();
+    let (current, next) = (secret(current), secret(next));
+    validate(&next)?;
 
-    result
+    let directory = crate::libraries::open_directory(&app)?;
+    Ok(change(&current, &next, &directory, &db, Cost::default())?)
 }
 
-fn change_with(
+fn change(
     current: &str,
     next: &str,
-    app: &AppHandle,
-    db: &State<'_, Db>,
-) -> Result<PassphraseChange, AppError> {
-    validate(next)?;
-
+    directory: &Path,
+    db: &Db,
+    cost: Cost,
+) -> Result<PassphraseChange, StorageError> {
     // ⚠️ Asked and released rather than held: the derivations below cost tens of
     // milliseconds each, and keeping the connection for them would freeze every other
     // command.
     if db.lock().map_err(|_| StorageError::Unavailable)?.is_none() {
-        return Err(StorageError::Locked.into());
+        return Err(StorageError::Locked);
     }
 
-    let directory = crate::libraries::open_directory(app)?;
     // ⚠️ The live file first, and the whole change fails here if it cannot be written: it
     // is the only one whose loss is fatal. The copies follow, and a copy that resists is
     // counted rather than fatal — see `backup::rewrap`.
-    let vault = file::change_passphrase(&directory, current, next, Cost::default())?;
-    let copies = crate::backup::rewrap(&directory, &vault, next, Cost::default());
+    let vault = file::change_passphrase(directory, current, next, cost)?;
+    let copies = crate::backup::rewrap(directory, &vault, next, cost);
 
     Ok(PassphraseChange {
         backups_rewrapped: saturating_u32(copies.done),
@@ -205,8 +184,7 @@ fn change_with(
 
 /// Opens the library under the key and hands it to the rest of the application. The
 /// sweeps are the caller's to run, because a first launch has to seal what is there first.
-fn open_library(app: &AppHandle, db: &State<'_, Db>, vault: key::Vault) -> Result<(), AppError> {
-    let directory = crate::libraries::open_directory(app)?;
+fn open_library(directory: &Path, db: &Db, vault: key::Vault) -> Result<(), StorageError> {
     let library = db::open(&directory.join(crate::layout::DATABASE), vault)?;
 
     {
@@ -232,10 +210,6 @@ fn validate(passphrase: &str) -> Result<(), ValidationError> {
     }
 
     Ok(())
-}
-
-fn storage_msg(detail: &str) -> StorageError {
-    StorageError::Vault(detail.to_string())
 }
 
 #[cfg(test)]
@@ -283,6 +257,65 @@ mod tests {
 
         assert!(unwound.is_err());
         assert!(wiped.get());
+    }
+
+    fn cheap() -> Cost {
+        Cost {
+            memory_kib: 64,
+            passes: 1,
+            lanes: 1,
+        }
+    }
+
+    fn scratch() -> std::path::PathBuf {
+        std::env::temp_dir().join(format!("devnotes-vault-{}", uuid::Uuid::new_v4()))
+    }
+
+    fn close(db: &Db) {
+        *db.lock().unwrap() = None;
+    }
+
+    #[test]
+    fn a_library_created_is_open_and_unlocks_again_with_its_phrase_alone() {
+        let directory = scratch();
+        let db: Db = std::sync::Mutex::new(None);
+
+        create("a passphrase", &directory, &db, cheap()).unwrap();
+        assert!(db.lock().unwrap().is_some());
+        close(&db);
+
+        assert!(unlock("not the phrase", &directory, &db).is_err());
+        unlock("a passphrase", &directory, &db).unwrap();
+        assert!(db.lock().unwrap().is_some());
+
+        close(&db);
+        std::fs::remove_dir_all(&directory).ok();
+    }
+
+    #[test]
+    fn a_changed_phrase_opens_the_library_and_the_old_one_no_longer_does() {
+        let directory = scratch();
+        let db: Db = std::sync::Mutex::new(None);
+        create("a passphrase", &directory, &db, cheap()).unwrap();
+
+        let changed = change("a passphrase", "another phrase", &directory, &db, cheap()).unwrap();
+        close(&db);
+
+        assert_eq!(changed.backups_left, 0);
+        assert!(unlock("a passphrase", &directory, &db).is_err());
+        unlock("another phrase", &directory, &db).unwrap();
+
+        close(&db);
+        std::fs::remove_dir_all(&directory).ok();
+    }
+
+    #[test]
+    fn a_phrase_is_not_changed_on_a_library_nobody_opened() {
+        let db: Db = std::sync::Mutex::new(None);
+
+        let refused = change("a passphrase", "another phrase", &scratch(), &db, cheap());
+
+        assert!(matches!(refused, Err(StorageError::Locked)));
     }
 
     /// A key written over a database it did not seal would open nothing that database holds.

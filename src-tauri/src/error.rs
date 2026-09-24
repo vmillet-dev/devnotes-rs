@@ -78,6 +78,18 @@ pub enum StorageError {
     Sqlite(#[from] diesel::result::Error),
 }
 
+/// Turns any failure into a [`StorageError::File`] named after what it was about:
+/// `"<what>: <error>"`, the detail every file error has always carried.
+pub(crate) trait FileContext<T> {
+    fn context(self, what: impl std::fmt::Display) -> Result<T, StorageError>;
+}
+
+impl<T, E: std::fmt::Display> FileContext<T> for Result<T, E> {
+    fn context(self, what: impl std::fmt::Display) -> Result<T, StorageError> {
+        self.map_err(|error| StorageError::File(format!("{what}: {error}")))
+    }
+}
+
 /// ⚠️ Adding a variant breaks the front-end build until `CODE_KEYS`
 /// (`core/services/errors/error-notifier.service.ts`) and both locales have their key.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]

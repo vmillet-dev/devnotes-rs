@@ -7,7 +7,7 @@ use super::model::Note;
 use super::store;
 use crate::attachments;
 use crate::db::{Db, lock};
-use crate::error::AppError;
+use crate::error::StorageError;
 
 /// Single threshold: the panel shows the deadline the purge applies.
 pub const RETENTION: TimeDelta = TimeDelta::days(30);
@@ -41,7 +41,7 @@ pub fn trashed(note: Note, deleted_at: DateTime<Utc>) -> TrashedNote {
 /// ⚠️ The attachment file names are collected before the `DELETE`: afterwards the cascade
 /// has taken the records that carried them, and the files are orphaned until the next
 /// startup sweep.
-pub fn purge(app: &AppHandle, db: &Db, ids: Vec<String>) -> Result<usize, AppError> {
+pub fn purge(app: &AppHandle, db: &Db, ids: Vec<String>) -> Result<usize, StorageError> {
     if ids.is_empty() {
         return Ok(0);
     }
@@ -58,7 +58,7 @@ pub fn purge(app: &AppHandle, db: &Db, ids: Vec<String>) -> Result<usize, AppErr
     Ok(purged)
 }
 
-pub fn purge_expired(app: &AppHandle, db: &Db) -> Result<(), AppError> {
+pub fn purge_expired(app: &AppHandle, db: &Db) -> Result<(), StorageError> {
     let expired = {
         let mut connection = lock(db)?;
         store::trash::expired_ids(&mut connection, Utc::now())?
@@ -72,7 +72,7 @@ pub fn purge_expired(app: &AppHandle, db: &Db) -> Result<(), AppError> {
 /// What makes retention hold even if nobody opens the trash. Never fatal.
 pub fn sweep_at_startup(app: &AppHandle, db: &Db) {
     if let Err(error) = purge_expired(app, db) {
-        log::warn!("Expired trash not purged: {}", error.detail);
+        log::warn!("Expired trash not purged: {error}");
     }
 }
 

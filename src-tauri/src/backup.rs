@@ -17,7 +17,7 @@ use diesel::prelude::*;
 use diesel::sql_types::Text;
 
 use crate::db::{Db, Library};
-use crate::error::{AppError, StorageError};
+use crate::error::{AppError, FileContext, StorageError};
 use crate::layout::{self, BACKUPS, DATABASE_SIDECARS, KEY_FILE, REPLACED};
 use crate::vault::key::{Cost, Vault};
 
@@ -75,8 +75,7 @@ pub(crate) fn rotate(
     }
 
     let target = directory.join(layout::stamp(now));
-    std::fs::create_dir_all(&target)
-        .map_err(|error| StorageError::File(format!("{}: {error}", target.display())))?;
+    std::fs::create_dir_all(&target).context(target.display())?;
 
     let copy = target.join(layout::DATABASE);
     diesel::sql_query("VACUUM INTO ?")
@@ -176,15 +175,13 @@ pub(crate) fn replace(
     }
 
     let aside = library.join(REPLACED).join(layout::stamp(now));
-    std::fs::create_dir_all(&aside)
-        .map_err(|error| StorageError::File(format!("{}: {error}", aside.display())))?;
+    std::fs::create_dir_all(&aside).context(aside.display())?;
 
     let mut moved: Vec<(PathBuf, PathBuf)> = Vec::new();
     for name in [layout::DATABASE, KEY_FILE] {
         let from = library.join(name);
         let to = aside.join(name);
-        std::fs::rename(&from, &to)
-            .map_err(|error| StorageError::File(format!("{}: {error}", from.display())))?;
+        std::fs::rename(&from, &to).context(from.display())?;
         moved.push((from, to));
     }
     for sidecar in DATABASE_SIDECARS {

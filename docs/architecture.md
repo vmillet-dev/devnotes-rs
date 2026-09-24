@@ -2332,6 +2332,12 @@ This exists because business rules live in Rust. A message written there would b
 an English UI, and branching on a cause would mean parsing a sentence that breaks at the
 first rewording.
 
+**`AppError` appears in command signatures and nowhere else.** Helpers answer
+`StorageError` or `ValidationError`, and the command's `?` is the one translation. A file
+failure is named after what it was about through `error::FileContext` —
+`fs::write(&path, bytes).context(path.display())?` — which builds the `"<what>: <error>"`
+detail every `StorageError::File` carries, rather than a `format!` at each call site.
+
 The mapping lives in **one** place, `core/services/errors/error-notifier.service.ts`: `ipcNotice(error, fallback)`
 turns a failure into the message that helps most. A named cause wins over the attempted
 action — "this note no longer exists" beats "could not save the note", which would leave the

@@ -12,7 +12,7 @@ use super::model::{self, Bundle, ImportReport, IncomingBundle};
 use crate::attachments::model::Attachment;
 use crate::attachments::store as attachments;
 use crate::db::Library;
-use crate::error::StorageError;
+use crate::error::{FileContext, StorageError};
 use crate::folders::model::Folder;
 use crate::folders::store as folders;
 use crate::notes::model::Note;
@@ -206,7 +206,7 @@ fn restore_attachments(
         };
 
         std::fs::write(directory.join(record.stored_name()), &bytes)
-            .map_err(|error| StorageError::File(format!("{}: {error}", record.stored_name())))?;
+            .context(record.stored_name())?;
         attachments::create(connection, vault, &record)?;
         report.attachments_imported += 1;
     }

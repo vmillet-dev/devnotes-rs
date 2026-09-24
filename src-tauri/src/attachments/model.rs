@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 
 use crate::count::saturating_u32;
-use crate::error::{StorageError, ValidationError};
+use crate::error::{FileContext, StorageError, ValidationError};
 
 /// 10 MB: past that it is no longer a screenshot pasted next to a note.
 pub const MAX_BYTES: u64 = 10 * 1024 * 1024;
@@ -148,12 +148,10 @@ pub fn encode_png(width: u32, height: u32, rgba: &[u8]) -> Result<Vec<u8>, Stora
         let mut encoder = png::Encoder::new(&mut png, width, height);
         encoder.set_color(png::ColorType::Rgba);
         encoder.set_depth(png::BitDepth::Eight);
-        let mut writer = encoder
-            .write_header()
-            .map_err(|error| StorageError::File(format!("png header: {error}")))?;
+        let mut writer = encoder.write_header().context("png header")?;
         writer
             .write_image_data(&rgba[..expected])
-            .map_err(|error| StorageError::File(format!("png data: {error}")))?;
+            .context("png data")?;
     }
 
     Ok(png)
