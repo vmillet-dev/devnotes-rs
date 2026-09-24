@@ -194,12 +194,17 @@ pub fn attach_clipboard_image(
 #[tauri::command(async)]
 #[specta::specta]
 pub fn delete_attachment(id: String, db: State<'_, Db>) -> Result<(), AppError> {
-    let mut connection = lock(&db)?;
+    Ok(delete(&db, &id)?)
+}
+
+/// The record, then the file, which is removed outside the lock.
+fn delete(db: &Db, id: &str) -> Result<(), StorageError> {
+    let mut connection = lock(db)?;
     let directory = directory(&connection);
-    let stored_name = store::find(&mut connection, &id)?
-        .ok_or_else(|| StorageError::AttachmentNotFound(id.clone()))?
+    let stored_name = store::find(&mut connection, id)?
+        .ok_or_else(|| StorageError::AttachmentNotFound(id.to_string()))?
         .stored_name();
-    store::delete(&mut connection, &id)?;
+    store::delete(&mut connection, id)?;
     drop(connection);
 
     remove_files(&directory, &[stored_name]);
@@ -300,6 +305,63 @@ mod tests {
 
         assert!(matches!(refused, Err(StorageError::NoteNotFound(_))));
         assert_eq!(std::fs::read_dir(&directory).unwrap().count(), 0);
+        std::fs::remove_dir_all(&directory).ok();
+    }
+
+    #[test]
+    fn an_attachment_reads_back_as_the_bytes_it_was_given() {
+        let (db, note_id) = a_library_with_a_note();
+        let directory = attachments_of(&db);
+        let stored = store_new(note_id, "capture.png".to_string(), b"png", &db).unwrap();
+
+        let (attachment, bytes) = read_plain(&mut lock(&db).unwrap(), &stored.id).unwrap();
+
+        assert_eq!(attachment.id, stored.id);
+        assert_eq!(bytes, b"png");
+        std::fs::remove_dir_all(&directory).ok();
+    }
+
+    #[test]
+    fn an_attachment_nobody_recorded_is_not_read() {
+        let (db, _) = a_library_with_a_note();
+
+        let refused = read_plain(&mut lock(&db).unwrap(), "../vault");
+
+        assert!(matches!(refused, Err(StorageError::AttachmentNotFound(_))));
+    }
+
+    #[test]
+    fn deleting_an_attachment_takes_its_file_with_it() {
+        let (db, note_id) = a_library_with_a_note();
+        let directory = attachments_of(&db);
+        let stored = store_new(note_id.clone(), "capture.png".to_string(), b"png", &db).unwrap();
+
+        delete(&db, &stored.id).unwrap();
+
+        assert!(!directory.join(stored.stored_name()).exists());
+        assert!(
+            store::list(&mut lock(&db).unwrap(), &note_id)
+                .unwrap()
+                .is_empty()
+        );
+        assert!(matches!(
+            delete(&db, &stored.id),
+            Err(StorageError::AttachmentNotFound(_))
+        ));
+        std::fs::remove_dir_all(&directory).ok();
+    }
+
+    #[test]
+    fn the_sweep_removes_the_files_no_record_claims_and_only_those() {
+        let (db, note_id) = a_library_with_a_note();
+        let directory = attachments_of(&db);
+        let kept = store_new(note_id, "capture.png".to_string(), b"png", &db).unwrap();
+        std::fs::write(directory.join("orphan.png"), b"left behind").unwrap();
+
+        assert_eq!(sweep_orphan_files(&db).unwrap(), 1);
+
+        assert!(directory.join(kept.stored_name()).exists());
+        assert!(!directory.join("orphan.png").exists());
         std::fs::remove_dir_all(&directory).ok();
     }
 

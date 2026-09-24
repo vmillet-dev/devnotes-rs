@@ -276,11 +276,13 @@ fn wanted_by_preference(app: &AppHandle) -> bool {
 
 /// The launch copy. ⚠️ Never fatal and never in the way: a library that cannot be
 /// copied still has to open.
-pub(crate) fn take(app: &AppHandle, db: &crate::db::Db) {
-    if !wanted_by_preference(app) {
-        return;
+pub(crate) fn take(app: &AppHandle, db: &Db) {
+    if wanted_by_preference(app) {
+        copy(db);
     }
+}
 
+fn copy(db: &Db) {
     let mut connection = match crate::db::lock(db) {
         Ok(connection) => connection,
         Err(error) => {
@@ -302,9 +304,7 @@ pub(crate) fn take(app: &AppHandle, db: &crate::db::Db) {
 #[tauri::command(async)]
 #[specta::specta]
 pub fn list_backups(db: State<'_, Db>) -> Result<Vec<Backup>, AppError> {
-    let directory = lock(&db)?.directory().to_path_buf();
-
-    Ok(list(&directory))
+    Ok(list(lock(&db)?.directory()))
 }
 
 /// Puts a copy back, and answers where the library it replaced was moved to.
@@ -318,6 +318,12 @@ pub fn list_backups(db: State<'_, Db>) -> Result<Vec<Backup>, AppError> {
 #[tauri::command(async)]
 #[specta::specta]
 pub fn restore_backup(id: String, db: State<'_, Db>) -> Result<String, AppError> {
+    let aside = restore(&db, &id, Utc::now())?;
+
+    Ok(aside.to_string_lossy().to_string())
+}
+
+fn restore(db: &Db, id: &str, now: DateTime<Utc>) -> Result<PathBuf, StorageError> {
     let mut open = db.lock().map_err(|_| StorageError::Unavailable)?;
     let directory = open
         .as_ref()
@@ -328,9 +334,7 @@ pub fn restore_backup(id: String, db: State<'_, Db>) -> Result<String, AppError>
     // reopen it halfway through.
     *open = None;
 
-    let aside = replace(&directory, &id, Utc::now())?;
-
-    Ok(aside.to_string_lossy().to_string())
+    replace(&directory, id, now)
 }
 
 #[cfg(test)]
@@ -397,6 +401,39 @@ mod tests {
         .id;
 
         (connection, note)
+    }
+
+    #[test]
+    fn the_launch_copy_lands_beside_the_open_library() {
+        let directory = scratch();
+        let (connection, _) = library(&directory);
+        let db: Db = std::sync::Mutex::new(Some(connection));
+
+        copy(&db);
+
+        assert_eq!(list(&directory).len(), 1);
+        drop(db);
+        std::fs::remove_dir_all(&directory).ok();
+    }
+
+    /// ⚠️ Closed before a single file moves: every command answers `Locked` afterwards.
+    #[test]
+    fn restoring_closes_the_library_and_says_where_the_replaced_one_went() {
+        let directory = scratch();
+        let (mut connection, _) = library(&directory);
+        let copy = rotate(&directory, &mut connection, at(0)).unwrap().unwrap();
+        let id = copy.file_name().unwrap().to_string_lossy().to_string();
+        let db: Db = std::sync::Mutex::new(Some(connection));
+
+        let aside = restore(&db, &id, at(1)).unwrap();
+
+        assert!(db.lock().unwrap().is_none());
+        assert!(aside.join(layout::DATABASE).exists());
+        assert!(matches!(
+            restore(&db, &id, at(2)),
+            Err(StorageError::Locked)
+        ));
+        std::fs::remove_dir_all(&directory).ok();
     }
 
     /// ⚠️ The only test that matters: a copy that cannot be opened is not a backup.
