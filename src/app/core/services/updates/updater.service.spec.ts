@@ -1,5 +1,6 @@
+import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DownloadProgress, UpdaterService } from './updater.service';
+import { DownloadProgress, UPDATE_CHECK, UpdaterService } from './updater.service';
 
 /** What is pinned here is the download arithmetic and the lifetime of the native handle. */
 
@@ -12,6 +13,9 @@ type DownloadEvent =
 /** Stand-in for the plugin's `Update`, a native resource that has to be closed. */
 function fakeUpdate(events: DownloadEvent[] = []) {
   return {
+    version: '0.5.0',
+    currentVersion: '0.4.1',
+    body: 'Notes',
     closed: 0,
     downloadAndInstall: vi.fn(async (onEvent: (event: DownloadEvent) => void) => {
       for (const event of events) onEvent(event);
@@ -24,14 +28,20 @@ function fakeUpdate(events: DownloadEvent[] = []) {
 
 describe('UpdaterService', () => {
   let service: UpdaterService;
+  let offered: ReturnType<typeof fakeUpdate> | null;
 
-  /** The handle a `check()` would have retained, which the spec cannot go through. */
-  function retain(update: ReturnType<typeof fakeUpdate>): void {
-    (service as unknown as { pending: unknown }).pending = update;
+  /** What the next `check()` finds, retained the way the real one retains it. */
+  async function retain(update: ReturnType<typeof fakeUpdate>): Promise<void> {
+    offered = update;
+    await service.check();
   }
 
   beforeEach(() => {
-    service = new UpdaterService();
+    offered = null;
+    TestBed.configureTestingModule({
+      providers: [{ provide: UPDATE_CHECK, useValue: async () => offered }],
+    });
+    service = TestBed.inject(UpdaterService);
   });
 
   it('refuses to install what no check has retained', async () => {
@@ -39,7 +49,7 @@ describe('UpdaterService', () => {
   });
 
   it('turns the download events into a fraction of the total', async () => {
-    retain(
+    await retain(
       fakeUpdate([
         { event: 'Started', data: { contentLength: 400 } },
         { event: 'Progress', data: { chunkLength: 100 } },
@@ -55,7 +65,7 @@ describe('UpdaterService', () => {
   });
 
   it('leaves the progress undetermined when the server announces no size', async () => {
-    retain(
+    await retain(
       fakeUpdate([
         { event: 'Started', data: {} },
         { event: 'Progress', data: { chunkLength: 100 } },
@@ -69,7 +79,7 @@ describe('UpdaterService', () => {
   });
 
   it('reports no progress at all for a download that never starts', async () => {
-    retain(fakeUpdate());
+    await retain(fakeUpdate());
     const progress: DownloadProgress[] = [];
 
     await service.install((value) => progress.push(value));
@@ -78,7 +88,7 @@ describe('UpdaterService', () => {
   });
 
   it('lets go of the update once it is installed', async () => {
-    retain(fakeUpdate([{ event: 'Finished' }]));
+    await retain(fakeUpdate([{ event: 'Finished' }]));
     await service.install(() => undefined);
 
     await expect(service.install(() => undefined)).rejects.toThrow();
@@ -86,7 +96,7 @@ describe('UpdaterService', () => {
 
   it('closes the update without installing it when it is discarded', async () => {
     const update = fakeUpdate();
-    retain(update);
+    await retain(update);
 
     await service.discard();
 
@@ -96,7 +106,7 @@ describe('UpdaterService', () => {
 
   it('has nothing to close when no update is pending', async () => {
     const update = fakeUpdate();
-    retain(update);
+    await retain(update);
     await service.discard();
 
     await expect(service.discard()).resolves.toBeUndefined();
