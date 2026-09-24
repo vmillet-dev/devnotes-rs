@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { AppEventsService, GlobalAction } from '@core/ipc/app-events.service';
-import { HelpStore } from '@core/services/help/help.store';
 import { NotesRevision } from '@core/state/notes-revision';
 import { NotesStore } from '@core/state/notes.store';
 import { PaletteStore } from '@core/state/palette.store';
@@ -28,7 +27,6 @@ import { NotesSidebarComponent } from './sidebar/notes-sidebar.component';
 export class NotesPageComponent implements OnInit {
   private readonly store = inject(NotesStore);
   private readonly palette = inject(PaletteStore);
-  private readonly help = inject(HelpStore);
   private readonly spaces = inject(SpacesStore);
   private readonly samples = inject(SampleNotesService);
   private readonly revision = inject(NotesRevision);
@@ -50,13 +48,10 @@ export class NotesPageComponent implements OnInit {
    */
   private runGlobalAction(action: GlobalAction): void {
     switch (action) {
-      // The help panels are drawn over the editor: one left up would hide the note asked for.
       case 'capture':
-        this.help.close();
         void this.store.captureFromClipboard();
         break;
       case 'new-note':
-        this.help.close();
         this.store.createNote();
         break;
       case 'palette':

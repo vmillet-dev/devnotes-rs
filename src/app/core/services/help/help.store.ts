@@ -8,8 +8,8 @@ export type HelpPanel = 'whatsNew' | 'gettingStarted' | 'shortcuts' | 'about';
  * Which help panel is up, and which chapter of the guide.
  *
  * A store rather than a signal inside the About menu: the guide is reached from **the thing
- * it explains** too — an empty canvas, an empty board — and a global shortcut opening the
- * editor has to put every panel away, since they are drawn over it.
+ * it explains** too — an empty canvas, an empty board — and the editor puts every panel away
+ * when it opens, since they are drawn over it.
  */
 @Injectable({ providedIn: 'root' })
 export class HelpStore {

@@ -633,7 +633,8 @@ describe('NotesPageComponent', () => {
       expect(store.persistedNoteId()).toBeNull();
     });
 
-    it('puts a help panel away before a shortcut opens the editor under it', async () => {
+    /** Whatever opens the editor — a shortcut here, the palette in the e2e run. */
+    it('puts a help panel away when the editor opens under it', async () => {
       const help = TestBed.inject(HelpStore);
       help.show('about');
 

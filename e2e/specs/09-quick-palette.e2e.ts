@@ -161,7 +161,7 @@ describe('The quick-paste palette', () => {
 
   /**
    * The one way to a note while a help panel is up: the panel covers the page, and a global
-   * shortcut comes from outside. The editor's rung sits above the help's.
+   * shortcut comes from outside. The help is drawn over the editor, so the editor puts it away.
    */
   it('opens a note in front of a help panel that was left open', async () => {
     await aboutMenu.openGettingStarted();
@@ -173,10 +173,9 @@ describe('The quick-paste palette', () => {
 
     await editor.title();
     expect(await isInFront(testid('editor-title'))).toBe(true);
+    expect(await aboutMenu.gettingStarted().isExisting()).toBe(false);
 
     await editor.close();
-    await browser.keys(['Escape']);
-    await aboutMenu.gettingStarted().waitForExist({ reverse: true, timeout: 10_000 });
   });
 
   it('closes on Escape', async () => {

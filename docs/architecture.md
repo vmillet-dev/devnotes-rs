@@ -366,9 +366,10 @@ entry in that array.
 
 ⚠️ **A full-screen editor leaves the titlebar in reach**, so what the titlebar opens lands
 over the editor: `titlebar` — no dialog, the rung its two menus take — and then `app`, the
-About menu's four help panels. The price is the other way in: a global shortcut that opens the
-editor while a help panel is up would draw the note behind it, so `NotesPage` puts every panel
-away first (`HelpStore.close`), and `HelpStore` holds which panel is up for that reason.
+About menu's four help panels. The price is the other way in: a global shortcut or the palette opening the
+editor while a help panel is up would draw the note behind it, so the editor puts every panel
+away each time it opens (`HelpStore.close`, on its `session`), and `HelpStore` holds which
+panel is up for that reason.
 ⚠️ An open menu stops the Escape it handles, or the editor behind it closed on the same key.
 
 `DialogStack` is what makes Escape reach **one** dialog. Every open modal listens on

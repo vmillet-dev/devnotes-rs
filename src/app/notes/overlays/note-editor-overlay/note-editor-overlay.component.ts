@@ -21,6 +21,7 @@ import { NotesStore } from '@core/state/notes.store';
 import { SpacesStore } from '@core/state/spaces.store';
 import { NoteRevisionsStore } from '@core/state/note-revisions.store';
 import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
+import { HelpStore } from '@core/services/help/help.store';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
 import { ClockService } from '@core/services/time/clock.service';
 import { endOfLocalDay, toDateInputValue } from '@core/utils/local-day.util';
@@ -81,6 +82,7 @@ export class NoteEditorOverlayComponent {
   private readonly spaces = inject(SpacesStore);
   private readonly folders = inject(FoldersStore);
   protected readonly fill = inject(PlaceholderFillStore);
+  private readonly help = inject(HelpStore);
 
   readonly note = input<Note | null>(null);
 
@@ -173,6 +175,13 @@ export class NoteEditorOverlayComponent {
   });
 
   constructor() {
+    // The help panels are drawn over the editor: one left up would hide the note just opened,
+    // whatever opened it — a global shortcut, the palette.
+    effect(() => {
+      this.session();
+      untracked(() => this.help.close());
+    });
+
     // A snippet's history only: a checklist's items live in `note_items`, a second table
     // to snapshot, and a panel always empty for half the note kinds says nothing.
     effect(() => {
