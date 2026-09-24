@@ -1,12 +1,11 @@
-use chrono::{DateTime, Utc};
 use devnotes_lib::db::Library;
 
 use devnotes_lib::attachments::model::Attachment;
 use devnotes_lib::attachments::store as attachments;
-use devnotes_lib::db::{iso8601, open_in_memory};
+use devnotes_lib::db::open_in_memory;
 use devnotes_lib::notes::checklist::NoteKind;
 use devnotes_lib::notes::language::Language;
-use devnotes_lib::notes::model::{NoteDraft, NoteLifecycle};
+use devnotes_lib::notes::model::NoteDraft;
 use devnotes_lib::notes::store as notes;
 use devnotes_lib::spaces::store as spaces;
 use devnotes_lib::transfer::bundle::{self, collect, merge as merge_bundle};
@@ -14,23 +13,17 @@ use devnotes_lib::transfer::file;
 use devnotes_lib::transfer::file::Payload;
 use devnotes_lib::transfer::model::{self, Bundle, ExportScope, ImportReport, IncomingBundle};
 
-fn t0() -> DateTime<Utc> {
-    iso8601::parse("2026-07-25T09:00:00.000Z").unwrap()
-}
+mod common;
+use common::{snippet, t0};
 
 fn draft(space_id: &str, title: &str) -> NoteDraft {
     NoteDraft {
-        space_id: space_id.to_string(),
-        folder_id: None,
         title: title.to_string(),
         language: Language::Sql,
         content: "select 1".to_string(),
         source: "API / Auth".to_string(),
         tags: vec!["auth".to_string()],
-        pinned: false,
-        lifecycle: NoteLifecycle::Permanent,
-        kind: NoteKind::Snippet,
-        items: Vec::new(),
+        ..snippet(space_id)
     }
 }
 

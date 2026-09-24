@@ -3,51 +3,18 @@
 
 use std::collections::HashMap;
 
-use chrono::{DateTime, Utc};
-
 use devnotes_lib::db::{Library, iso8601, open_in_memory};
 use devnotes_lib::error::StorageError;
 use devnotes_lib::folders::model::{FolderColour, NoteFiling};
 use devnotes_lib::folders::store::{
     create, delete, file_many, list, recolour, rename, restore_filings,
 };
-use devnotes_lib::notes::checklist::NoteKind;
-use devnotes_lib::notes::language::Language;
-use devnotes_lib::notes::model::{Note, NoteDraft, NoteLifecycle, NotePatch};
+use devnotes_lib::notes::model::{Note, NoteDraft, NotePatch};
 use devnotes_lib::notes::store::{create as create_note, update};
 use devnotes_lib::spaces::store as spaces;
 
-fn at(iso: &str) -> DateTime<Utc> {
-    iso8601::parse(iso).expect("tests write valid instants")
-}
-
-fn t0() -> DateTime<Utc> {
-    at("2026-07-25T09:00:00.000Z")
-}
-
-fn t1() -> DateTime<Utc> {
-    at("2026-07-25T10:00:00.000Z")
-}
-
-fn space(connection: &mut Library, name: &str) -> String {
-    spaces::create(connection, name).unwrap().id
-}
-
-fn draft(space_id: &str) -> NoteDraft {
-    NoteDraft {
-        space_id: space_id.to_string(),
-        folder_id: None,
-        title: "Titre".to_string(),
-        language: Language::Txt,
-        content: "Contenu".to_string(),
-        source: String::new(),
-        tags: Vec::new(),
-        pinned: false,
-        lifecycle: NoteLifecycle::Permanent,
-        kind: NoteKind::Snippet,
-        items: Vec::new(),
-    }
-}
+mod common;
+use common::{at, snippet as draft, space, t0, t1};
 
 fn note_in(connection: &mut Library, space_id: &str) -> Note {
     create_note(connection, draft(space_id), t0()).unwrap()

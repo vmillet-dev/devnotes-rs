@@ -3847,7 +3847,14 @@ Component specs follow one consistent pattern:
 Unit tests are inline `#[cfg(test)] mod tests` blocks at the bottom of the file they cover —
 the idiomatic Rust form, and the one that keeps a test next to what it asserts. Shared
 fixtures for the notes tests live in `notes::fixtures`, a `#[cfg(test)]` module in `notes.rs`.
-`src-tauri/tests/` holds the integration binaries, which see only the crate's public API.
+`src-tauri/tests/` holds the integration binaries, which see only the crate's public API. Their
+instants, the space and the plain snippet they build on are `tests/common/mod.rs`, once;
+`notes` is a directory (`tests/notes/main.rs` and one module per subject — writes, trash,
+tags, fields, queries, revisions…) rather than one file of a hundred tests. A test that writes
+to disk holds a `tempfile::TempDir`, which removes itself on drop — a failing assertion
+included, where a `remove_dir_all` on the last line never ran. The crate's test-only
+constructors (`db::open_in_memory`, `db::test_vault`, `Cost::FOR_TESTS`) are public for
+`tests/` and `benches/`, and `#[doc(hidden)]` so the API says what they are for.
 
 The tests split by what they need in order to run:
 
