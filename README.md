@@ -39,17 +39,17 @@ English, and it ships with a light and a dark theme.
 
 DevNotes asks for a passphrase the first time it runs, and once at every launch after that.
 It is what opens the library, and it is never stored anywhere — not in a keychain, not
-behind a "remember me". While the application runs the key lives in memory and nowhere
-else.
+behind a "remember me".
 
-What is sealed on disk: note titles, bodies and sources, checklist items, space names,
-`{{field}}` values, attachment file names, and the attachment files themselves.
+What is sealed on disk: note titles, bodies and sources, the earlier bodies kept as history,
+checklist items, space and folder names, `{{field}}` values, attachment file names, and the
+attachment files themselves.
 
 | What               | How                                                                                                                                                                                                                    |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Key derivation** | Argon2id, 64 MiB and 3 passes, over a random salt kept beside the database. The passphrase seals the library key rather than being it, so you can change it from Preferences → Security without re-encrypting anything |
 | **Encryption**     | AES-256-GCM, a fresh nonce per write; the authentication tag refuses a tampered value rather than decrypting it into nonsense                                                                                          |
-| **Not sealed**     | tags, dates, ids and the links between rows — what the database filters, sorts and joins on. Sealing them would mean loading the whole library to answer a query, and tag names are the visible cost of that trade     |
+| **Not sealed**     | tags, dates, ids and the links between rows — what the database filters, sorts and joins on. Sealing them would mean loading the whole library to answer a query. What that leaves readable is listed just below       |
 
 A passphrase is at least **twelve characters**, and that is what the protection rests on:
 Argon2id makes each guess slow, but only the length makes the guesses many. Several unrelated
@@ -68,18 +68,46 @@ give it a passphrase and it travels sealed, attachments included, or write it in
 for a file any DevNotes can read. The application asks which, every time, and says which one
 it wrote.
 
+### What a stolen file gives away
+
+Without the passphrase, whoever holds your files cannot read a title, a body or an
+attachment. They can read everything that is not sealed, and that says more than the tags:
+
+- how many notes there are, and how they hang in spaces and folders — the shape, not the names;
+- when each note was created, last changed, put in the trash or given a deadline, and whether
+  it is pinned;
+- each note's language and kind, how many items a list holds and which are ticked;
+- every tag and every `{{field}}` name, as typed — `prod`, `aws`, `client-acme`, `db_password`;
+- the length of every sealed value: AES-GCM hides what a title says, not how long it is;
+- each attachment's type and size;
+- the names of your libraries and your preferences (`libraries.json`, `preferences.json`).
+
+Keep that in mind before a tag or a field name carries the secret itself.
+
+### What lives in memory while it runs
+
+The key, for the length of the session: there is no idle re-lock. And your notes, decrypted
+as they are read — a search reads the bodies it matches against, the interface holds the first
+lines of every card on screen and the whole of the note you open. None of that is wiped when
+it is let go, so it can reach the swap file, a hibernation image or a crash dump. DevNotes
+protects a file read at rest — a stolen laptop, a copied profile — not a machine already
+compromised while it runs.
+
 ## Where your library lives, and how it is backed up
 
-Two files, and they only mean anything together — the database is sealed, and the key
-file is what opens it:
+A library is two files that only mean anything together — the database is sealed, and the
+key file is what opens it — and they live in your profile:
 
 |             |                                    |
 | ----------- | ---------------------------------- |
 | **Windows** | `%APPDATA%\com.devnotes.app\`      |
 | **Linux**   | `~/.local/share/com.devnotes.app/` |
 
-In it: `devnotes.sqlite3`, `vault.json`, `attachments/`, and `preferences.json`. ⚠️ Copy the
-database without the key file and you have copied something nobody can open again.
+In it, `libraries.json` lists your libraries and `preferences.json` holds the application's
+preferences. Each library is a folder of its own, `libraries/<id>/`, holding
+`devnotes.sqlite3`, `vault.json`, `attachments/`, its own `preferences.json` and the
+`backups/` described below. ⚠️ Copy the database without the key file and you have copied
+something nobody can open again.
 
 DevNotes takes a **rolling copy at launch**, at most one a day, and keeps the last three in
 `backups/`. Each one is a full library — database, key file and attachments together — so
