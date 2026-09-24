@@ -19,33 +19,37 @@ use crate::folders::board::{
 /// where each loose card does.
 pub type Geometry = (HashMap<String, BoardFrame>, HashMap<String, BoardPoint>);
 
-/// A folder never laid out answers `None` — all four columns move together.
+type FrameColumns = (Option<i32>, Option<i32>, Option<i32>, Option<i32>);
+
+/// All four columns move together: a half-laid-out folder is not a state, and a folder
+/// never laid out answers `None`.
+fn frame_from((x, y, width, height): FrameColumns) -> Option<BoardFrame> {
+    Some(BoardFrame {
+        x: x?,
+        y: y?,
+        width: width?,
+        height: height?,
+    })
+}
+
 pub fn frames(
     connection: &mut SqliteConnection,
     space_id: &str,
 ) -> Result<HashMap<String, BoardFrame>, StorageError> {
     let rows = folders::table
         .filter(folders::space_id.eq(space_id))
-        .select((folders::id, folders::x, folders::y, folders::w, folders::h))
-        .load::<(String, Option<i32>, Option<i32>, Option<i32>, Option<i32>)>(connection)?;
+        .select((
+            folders::id,
+            (folders::x, folders::y, folders::w, folders::h),
+        ))
+        .load::<(String, FrameColumns)>(connection)?;
 
     Ok(rows
         .into_iter()
-        .filter_map(|(id, x, y, width, height)| {
-            Some((
-                id,
-                BoardFrame {
-                    x: x?,
-                    y: y?,
-                    width: width?,
-                    height: height?,
-                },
-            ))
-        })
+        .filter_map(|(id, columns)| Some((id, frame_from(columns)?)))
         .collect())
 }
 
-/// One zone's frame, or `None` for a folder that has never been laid out.
 pub fn frame_of(
     connection: &mut SqliteConnection,
     folder_id: &str,
@@ -53,18 +57,10 @@ pub fn frame_of(
     let row = folders::table
         .find(folder_id)
         .select((folders::x, folders::y, folders::w, folders::h))
-        .first::<(Option<i32>, Option<i32>, Option<i32>, Option<i32>)>(connection)
+        .first::<FrameColumns>(connection)
         .optional()?;
 
-    // All four columns move together: a half-laid-out folder is not a state.
-    Ok(row.and_then(|(x, y, width, height)| {
-        Some(BoardFrame {
-            x: x?,
-            y: y?,
-            width: width?,
-            height: height?,
-        })
-    }))
+    Ok(row.and_then(frame_from))
 }
 
 /// Opens a zone far enough to show everything filed into it, and never closes it again.

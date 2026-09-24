@@ -117,6 +117,7 @@ pub fn merge(
                 .and_then(|id| folder_mapping.get(id))
                 .cloned();
 
+            let note = note.normalized();
             if notes::insert_imported_in(connection, vault, &note)? {
                 report.notes_imported += 1;
                 arrived.insert(note.id.clone());

@@ -18,38 +18,32 @@ use crate::error::StorageError;
 use crate::spaces::store as spaces;
 use crate::vault::key::Vault;
 
-type Row = (String, String, String, String, String);
-
-fn open(row: Row, vault: &Vault) -> Result<Folder, StorageError> {
-    let (id, space_id, name, colour, created_at) = row;
-
-    Ok(Folder {
-        created_at: iso8601::parse(&created_at).map_err(|_| StorageError::CorruptRow {
-            id: id.clone(),
-            field: "createdAt",
-        })?,
-        name: vault.open(&name)?,
-        // Degrades like `notes.language`: a newer build may have written a colour this
-        // one cannot name, and a folder is worth more than its swatch.
-        colour: colour.parse().unwrap_or_default(),
-        id,
-        space_id,
-    })
+#[derive(Queryable, Selectable)]
+#[diesel(table_name = folders, check_for_backend(diesel::sqlite::Sqlite))]
+struct FolderRow {
+    id: String,
+    space_id: String,
+    name: String,
+    colour: String,
+    created_at: String,
 }
 
-const COLUMNS: (
-    folders::id,
-    folders::space_id,
-    folders::name,
-    folders::colour,
-    folders::created_at,
-) = (
-    folders::id,
-    folders::space_id,
-    folders::name,
-    folders::colour,
-    folders::created_at,
-);
+impl FolderRow {
+    fn open(self, vault: &Vault) -> Result<Folder, StorageError> {
+        Ok(Folder {
+            created_at: iso8601::parse(&self.created_at).map_err(|_| StorageError::CorruptRow {
+                id: self.id.clone(),
+                field: "createdAt",
+            })?,
+            name: vault.open(&self.name)?,
+            // Degrades like `notes.language`: a newer build may have written a colour this
+            // one cannot name, and a folder is worth more than its swatch.
+            colour: self.colour.parse().unwrap_or_default(),
+            id: self.id,
+            space_id: self.space_id,
+        })
+    }
+}
 
 /// `None` = every space. Ordered by creation, which is the reading order the board
 /// lays its zones out in.
@@ -64,7 +58,7 @@ pub(crate) fn list_in(
     vault: &Vault,
     space_id: Option<&str>,
 ) -> Result<Vec<Folder>, StorageError> {
-    let mut query = folders::table.select(COLUMNS).into_boxed();
+    let mut query = folders::table.select(FolderRow::as_select()).into_boxed();
 
     if let Some(space_id) = space_id {
         query = query.filter(folders::space_id.eq(space_id.to_string()));
@@ -72,9 +66,9 @@ pub(crate) fn list_in(
 
     query
         .order((folders::created_at.asc(), folders::id.asc()))
-        .load::<Row>(connection)?
+        .load::<FolderRow>(connection)?
         .into_iter()
-        .map(|row| open(row, vault))
+        .map(|row| row.open(vault))
         .collect()
 }
 
@@ -106,10 +100,10 @@ fn find(
 ) -> Result<Folder, StorageError> {
     folders::table
         .find(id)
-        .select(COLUMNS)
-        .first::<Row>(connection)
+        .select(FolderRow::as_select())
+        .first::<FolderRow>(connection)
         .optional()?
-        .map(|row| open(row, vault))
+        .map(|row| row.open(vault))
         .transpose()?
         .ok_or_else(|| StorageError::FolderNotFound(id.to_string()))
 }
@@ -123,8 +117,7 @@ pub fn exists(connection: &mut SqliteConnection, id: &str) -> Result<bool, Stora
         .is_some())
 }
 
-/// ⚠️ Every name in the space is opened to answer, for the reason the module says. A
-/// library holds a handful of folders per space, so the cost is the cost of the check.
+/// Unique within its space: two spaces may each hold a "Perf".
 fn ensure_unique_name(
     connection: &mut SqliteConnection,
     vault: &Vault,
@@ -132,14 +125,12 @@ fn ensure_unique_name(
     name: &str,
     except_id: Option<&str>,
 ) -> Result<(), StorageError> {
-    let taken = list_in(connection, vault, Some(space_id))?
-        .into_iter()
-        .any(|folder| {
-            Some(folder.id.as_str()) != except_id
-                && folder.name.to_lowercase() == name.to_lowercase()
-        });
+    let folders = list_in(connection, vault, Some(space_id))?;
+    let held = folders
+        .iter()
+        .map(|folder| (folder.id.as_str(), folder.name.as_str()));
 
-    if taken {
+    if crate::name::is_taken(held, name, except_id) {
         return Err(StorageError::DuplicateFolderName(name.to_string()));
     }
 
@@ -203,7 +194,10 @@ pub fn rename(connection: &mut Library, id: &str, name: &str) -> Result<Folder, 
             .set(folders::name.eq(vault.seal(name)?))
             .execute(connection)?;
 
-        find(connection, vault, id)
+        Ok(Folder {
+            name: name.to_string(),
+            ..folder
+        })
     })
 }
 
@@ -213,10 +207,6 @@ pub fn recolour(
     colour: FolderColour,
 ) -> Result<Folder, StorageError> {
     connection.transaction(|connection, vault| {
-        if !exists(connection, id)? {
-            return Err(StorageError::FolderNotFound(id.to_string()));
-        }
-
         diesel::update(folders::table.find(id))
             .set(folders::colour.eq(colour.as_str()))
             .execute(connection)?;
@@ -229,15 +219,11 @@ pub fn recolour(
 /// `ON DELETE SET NULL`, so they come out loose. Nor is `updated_at` refreshed — the
 /// user aimed at the folder, and the canvas sorts on that column.
 pub fn delete(connection: &mut Library, id: &str) -> Result<(), StorageError> {
-    connection.transaction(|connection, _vault| {
-        if !exists(connection, id)? {
-            return Err(StorageError::FolderNotFound(id.to_string()));
-        }
+    if diesel::delete(folders::table.find(id)).execute(connection.db())? == 0 {
+        return Err(StorageError::FolderNotFound(id.to_string()));
+    }
 
-        diesel::delete(folders::table.find(id)).execute(connection)?;
-
-        Ok(())
-    })
+    Ok(())
 }
 
 /// Answers where each note was filed, which is what putting the filing back needs.

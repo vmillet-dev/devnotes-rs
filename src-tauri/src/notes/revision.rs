@@ -12,6 +12,8 @@ use serde::Serialize;
 use similar::{ChangeTag, DiffTag, TextDiff};
 use specta::Type;
 
+use super::checklist::NoteKind;
+use super::model::Note;
 use crate::count::saturating_u32;
 
 /// How many bodies are kept per note.
@@ -20,6 +22,17 @@ use crate::count::saturating_u32;
 /// only bound that is predictable for storage — the trash's thirty days is a precedent
 /// for the shape of the retention, not for its unit.
 pub const KEEP: usize = 20;
+
+/// Whether the body a write replaces is worth keeping.
+///
+/// ⚠️ Snippets only: a checklist's items live in `note_items`, a second table to snapshot.
+/// ⚠️ And never an empty body. Creating a note writes the title first, so the body always
+/// arrives as a second update over the empty string the row was born with.
+pub(crate) fn worth_keeping(before: &Note, after: &Note) -> bool {
+    before.kind == NoteKind::Snippet
+        && after.content != before.content
+        && !before.content.is_empty()
+}
 
 /// One kept body, as the panel lists it.
 ///
@@ -112,6 +125,35 @@ fn skip(lines: &mut Vec<DiffLine>, count: usize) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::notes::fixtures::note;
+
+    fn snippet(content: &str) -> Note {
+        Note {
+            content: content.to_string(),
+            ..note()
+        }
+    }
+
+    #[test]
+    fn a_changed_body_is_worth_keeping() {
+        assert!(worth_keeping(&snippet("select 1"), &snippet("select 2")));
+    }
+
+    #[test]
+    fn an_unchanged_or_empty_body_is_not() {
+        assert!(!worth_keeping(&snippet("select 1"), &snippet("select 1")));
+        assert!(!worth_keeping(&snippet(""), &snippet("select 1")));
+    }
+
+    #[test]
+    fn a_checklist_keeps_nothing() {
+        let before = Note {
+            kind: NoteKind::Checklist,
+            ..snippet("select 1")
+        };
+
+        assert!(!worth_keeping(&before, &snippet("select 2")));
+    }
 
     fn numbered(count: usize) -> Vec<String> {
         (1..=count).map(|n| format!("ligne {n}")).collect()

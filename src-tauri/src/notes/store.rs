@@ -9,11 +9,8 @@ use uuid::Uuid;
 
 use chrono::{DateTime, TimeDelta, Utc};
 
-use super::checklist;
-use super::model::{
-    self, Note, NoteDraft, NoteLifecycle, NotePatch, NotePlacement, NoteTag, SampleNote,
-};
-use super::placeholder;
+use super::model::{Note, NoteDraft, NoteLifecycle, NotePatch, NotePlacement, NoteTag, SampleNote};
+use super::revision;
 use super::view::{Decorations, Facets, NoteFilter, NotesQuery};
 use crate::db::schema::{global_placeholders, note_tags, notes};
 use crate::db::{Library, iso8601};
@@ -151,6 +148,19 @@ fn open_all(rows: Vec<NoteRow>, vault: &Vault) -> Result<Vec<Note>, StorageError
         .collect()
 }
 
+/// Opens the rows and attaches their side tables: the tail every reader shares.
+fn opened(
+    connection: &mut Library,
+    rows: Vec<NoteRow>,
+    space_id: Option<&str>,
+) -> Result<Vec<Note>, StorageError> {
+    let (db, vault) = connection.split();
+    let mut notes = open_all(rows, vault)?;
+    related::attach_related(db, vault, &mut notes, space_id)?;
+
+    Ok(notes)
+}
+
 pub(super) fn notes_of_space(
     space_id: &str,
 ) -> diesel::helper_types::Filter<
@@ -265,8 +275,7 @@ pub fn fetch(
         query = query.filter(notes::language.eq_any(selected));
     }
 
-    // Same normalization as on write, or a typed `#urgent` misses `urgent`.
-    let selected_tags = model::normalize_tags(&request.tags);
+    let selected_tags = request.selected_tags();
     if !selected_tags.is_empty() {
         query = query.filter(
             notes::id.eq_any(
@@ -282,9 +291,7 @@ pub fn fetch(
     let rows = query
         .order((notes::updated_at.desc(), notes::id.asc()))
         .load::<NoteRow>(connection.db())?;
-    let (db, vault) = connection.split();
-    let mut notes = open_all(rows, vault)?;
-    related::attach_related(db, vault, &mut notes, request.space_id.as_deref())?;
+    let notes = opened(connection, rows, request.space_id.as_deref())?;
 
     Ok((notes, facets(connection, request.space_id.as_deref())?))
 }
@@ -430,19 +437,8 @@ pub fn update(
         patch.apply(&mut note, now);
 
         // ⚠️ Before the update and inside the same transaction: what is worth keeping is
-        // the body as it **was**. Snippets only — a checklist's items live in
-        // `note_items`, a second table to snapshot and a two-step restore, deliberately
-        // out of this first version.
-        //
-        // ⚠️ And never an empty one. Creating a note writes nothing until the first change
-        // worth keeping, and that write is the **title**: the body arrives as a second
-        // update, replacing the empty string the row was born with. Without this, every
-        // note came out of its first editing session already carrying a revision of
-        // nothing.
-        if before.kind == crate::notes::checklist::NoteKind::Snippet
-            && note.content != before.content
-            && !before.content.is_empty()
-        {
+        // the body as it **was**.
+        if revision::worth_keeping(&before, &note) {
             revisions::record(connection, vault, &note.id, &before.content, now)?;
         }
 
@@ -834,11 +830,7 @@ pub fn all(connection: &mut Library, space_id: Option<&str>) -> Result<Vec<Note>
     let rows = query
         .order((notes::created_at.asc(), notes::id.asc()))
         .load::<NoteRow>(connection.db())?;
-    let (db, vault) = connection.split();
-    let mut notes = open_all(rows, vault)?;
-    related::attach_related(db, vault, &mut notes, space_id)?;
-
-    Ok(notes)
+    opened(connection, rows, space_id)
 }
 
 pub fn by_ids(connection: &mut Library, ids: &[String]) -> Result<Vec<Note>, StorageError> {
@@ -852,11 +844,7 @@ pub fn by_ids(connection: &mut Library, ids: &[String]) -> Result<Vec<Note>, Sto
         .select(NoteRow::as_select())
         .order((notes::created_at.asc(), notes::id.asc()))
         .load::<NoteRow>(connection.db())?;
-    let (db, vault) = connection.split();
-    let mut notes = open_all(rows, vault)?;
-    related::attach_related(db, vault, &mut notes, None)?;
-
-    Ok(notes)
+    opened(connection, rows, None)
 }
 
 pub fn insert_imported(connection: &mut Library, note: &Note) -> Result<bool, StorageError> {
@@ -864,40 +852,29 @@ pub fn insert_imported(connection: &mut Library, note: &Note) -> Result<bool, St
 }
 
 /// For a caller already inside a transaction: an import is one transaction for the whole
-/// file, and every note it brings in runs inside it.
+/// file, and every note it brings in runs inside it. The note is written as given —
+/// [`Note::normalized`] is the caller's.
 pub(crate) fn insert_imported_in(
     connection: &mut SqliteConnection,
     vault: &Vault,
     note: &Note,
 ) -> Result<bool, StorageError> {
-    {
-        let taken = notes::table
-            .find(&note.id)
-            .select(notes::id)
-            .first::<String>(connection)
-            .optional()?
-            .is_some();
-        if taken {
-            return Ok(false);
-        }
-
-        diesel::insert_into(notes::table)
-            .values(NoteRow::seal(note, vault)?)
-            .execute(connection)?;
-        related::replace_tags(connection, &note.id, &model::normalize_tags(&note.tags))?;
-        related::replace_items(
-            connection,
-            vault,
-            &note.id,
-            &checklist::normalize_items(&note.items),
-        )?;
-        related::replace_placeholder_values(
-            connection,
-            vault,
-            &note.id,
-            &placeholder::normalize_values(note.placeholder_values.clone()),
-        )?;
-
-        Ok(true)
+    let taken = notes::table
+        .find(&note.id)
+        .select(notes::id)
+        .first::<String>(connection)
+        .optional()?
+        .is_some();
+    if taken {
+        return Ok(false);
     }
+
+    diesel::insert_into(notes::table)
+        .values(NoteRow::seal(note, vault)?)
+        .execute(connection)?;
+    related::replace_tags(connection, &note.id, &note.tags)?;
+    related::replace_items(connection, vault, &note.id, &note.items)?;
+    related::replace_placeholder_values(connection, vault, &note.id, &note.placeholder_values)?;
+
+    Ok(true)
 }

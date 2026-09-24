@@ -69,18 +69,8 @@ pub struct NoteFiling {
     pub folder_id: Option<String>,
 }
 
-/// ⚠️ Trimming is not cosmetic: the uniqueness check folds case but not spaces, so
-/// "Perf" and " Perf " would coexist, identical on screen.
 pub fn validated_name(raw: &str) -> Result<String, ValidationError> {
-    let trimmed = raw.trim();
-    if trimmed.is_empty() {
-        return Err(ValidationError::new(
-            "name",
-            "a folder must have a readable name",
-        ));
-    }
-
-    Ok(trimmed.to_string())
+    crate::name::readable(raw, "folder")
 }
 
 impl FolderDraft {
@@ -96,13 +86,6 @@ mod tests {
     #[test]
     fn a_name_is_trimmed_before_being_stored() {
         assert_eq!(validated_name("  Perf  ").unwrap(), "Perf");
-    }
-
-    #[test]
-    fn a_blank_name_is_refused_with_its_field() {
-        for blank in ["", "   ", "\t\n"] {
-            assert_eq!(validated_name(blank).unwrap_err().field, "name");
-        }
     }
 
     #[test]
