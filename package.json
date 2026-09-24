@@ -24,7 +24,8 @@
     "format": "prettier --write .",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "bindings": "cargo run --manifest-path src-tauri/Cargo.toml --bin export-bindings"
+    "bindings": "cargo run --manifest-path src-tauri/Cargo.toml --bin export-bindings",
+    "icons": "node scripts/icons.mjs"
   },
   "private": true,
   "dependencies": {
