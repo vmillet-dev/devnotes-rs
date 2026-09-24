@@ -1,18 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { SettingsStore } from '@core/services/settings/settings.store';
-import { By } from '@angular/platform-browser';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { LocaleService } from '@core/services/i18n/locale.service';
 import { VaultStore } from '@core/state/vault.store';
 import { provideAppTesting } from '@testing/testing.providers';
 import { TitlebarComponent } from './titlebar.component';
 
 describe('TitlebarComponent', () => {
   let fixture: ComponentFixture<TitlebarComponent>;
-
-  function localeOptions(): HTMLButtonElement[] {
-    return [...fixture.nativeElement.querySelectorAll('.locale-option')];
-  }
 
   /** With no choice made the active language is the system one, and jsdom's is `en-US`. */
   function stubSystemLanguage(tag: string): void {
@@ -48,9 +42,13 @@ describe('TitlebarComponent', () => {
     expect(fixture.nativeElement.querySelector('.titlebar-title').textContent.trim()).toBe('DevNotes');
   });
 
-  it('renders the three window-control dots, hidden from assistive tech', () => {
-    expect(fixture.debugElement.queryAll(By.css('.dot'))).toHaveLength(3);
-    expect(fixture.nativeElement.querySelector('.dots').getAttribute('aria-hidden')).toBe('true');
+  /**
+   * Three dots that closed nothing, drawn under Windows' own buttons, and a language switch
+   * where Windows puts them: both invited a click. The language is the preferences' to choose.
+   */
+  it('draws no window controls and no language switch of its own', () => {
+    expect(fixture.nativeElement.querySelector('.dot, .dots')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="locale-option"]')).toBeNull();
   });
 
   it('groups the menus on the left, ahead of the title', async () => {
@@ -73,33 +71,11 @@ describe('TitlebarComponent', () => {
     expect(menus().querySelector('app-file-menu')).not.toBeNull();
   });
 
-  it('renders a locale option per available locale, marking French active by default', () => {
-    expect(localeOptions().map((option) => option.textContent?.trim())).toEqual(['FR', 'EN']);
-    expect(localeOptions()[0].classList.contains('active')).toBe(true);
-    expect(localeOptions()[1].classList.contains('active')).toBe(false);
-  });
-
-  it('exposes the active locale as a pressed toggle with a spelled-out name', () => {
-    expect(localeOptions().map((option) => option.getAttribute('aria-pressed'))).toEqual(['true', 'false']);
-    expect(localeOptions()[0].getAttribute('aria-label')).toBe('Français');
-  });
-
-  it('switches the active locale when a locale option is clicked', async () => {
-    const localeService = TestBed.inject(LocaleService);
-
-    localeOptions()[1].click();
-    await fixture.whenStable();
-
-    expect(localeService.activeLocale()).toBe('en');
-    expect(localeOptions()[1].classList.contains('active')).toBe(true);
-    expect(localeOptions()[0].classList.contains('active')).toBe(false);
-  });
-
   /**
    * Light or dark, never "system": a click is expected to change what is on screen, and
    * "system" usually looks exactly like what was already there. The panel keeps the three.
    */
-  describe('the theme, beside the language', () => {
+  describe('the theme', () => {
     function control(): HTMLButtonElement {
       return fixture.nativeElement.querySelector('[data-testid="theme-toggle"]');
     }

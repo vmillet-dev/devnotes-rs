@@ -124,6 +124,23 @@ describe('VaultGateComponent', () => {
       expect(field('vault-confirmation')).toBeNull();
     });
 
+    /** A manager fills the phrase it keeps for this library, and does not offer to save it again. */
+    it('lets a password manager fill the phrase it already has', () => {
+      expect(field('vault-passphrase')?.getAttribute('autocomplete')).toBe('current-password');
+    });
+
+    it('shows the phrase while it is typed, on demand', async () => {
+      const reveal = field('vault-reveal')!;
+      expect(field('vault-passphrase')?.type).toBe('password');
+      expect(reveal.getAttribute('aria-pressed')).toBe('false');
+
+      reveal.click();
+      await fixture.whenStable();
+
+      expect(field('vault-passphrase')?.type).toBe('text');
+      expect(reveal.getAttribute('aria-pressed')).toBe('true');
+    });
+
     it('will not submit an empty field', () => {
       expect(submitButton().disabled).toBe(true);
     });
@@ -196,13 +213,38 @@ describe('VaultGateComponent', () => {
       expect(field('vault-confirmation')).not.toBeNull();
     });
 
+    /** Said before it is broken, and part of the field's description rather than beside it. */
+    it('states the minimum before anything is typed', () => {
+      const minimum = field('vault-minimum')!;
+
+      expect(minimum.textContent).toContain('12');
+      expect(minimum.classList.contains('broken')).toBe(false);
+      expect(field('vault-passphrase')?.getAttribute('aria-describedby')).toBe('vault-minimum');
+    });
+
     it('says a phrase is too short without asking the back end', async () => {
       await type('vault-passphrase', 'eleven char');
       await type('vault-confirmation', 'eleven char');
 
-      expect(problem()).toContain('12');
+      expect(field('vault-minimum')?.classList.contains('broken')).toBe(true);
+      expect(field('vault-passphrase')?.getAttribute('aria-invalid')).toBe('true');
       expect(submitButton().disabled).toBe(true);
       expect(repository.passphrases).toEqual([]);
+    });
+
+    /** The pair keeps a manager from saving the confirmation, or the wrong field, as the phrase. */
+    it('asks a password manager for a new phrase in both fields', () => {
+      expect(field('vault-passphrase')?.getAttribute('autocomplete')).toBe('new-password');
+      expect(field('vault-confirmation')?.getAttribute('autocomplete')).toBe('new-password');
+    });
+
+    /** Both at once: the point is to compare what was typed with what was meant. */
+    it('shows both fields with one press', async () => {
+      field('vault-reveal')!.click();
+      await fixture.whenStable();
+
+      expect(field('vault-passphrase')?.type).toBe('text');
+      expect(field('vault-confirmation')?.type).toBe('text');
     });
 
     it('refuses to submit while the two entries differ', async () => {

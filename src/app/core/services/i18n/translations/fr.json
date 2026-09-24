@@ -282,7 +282,6 @@
     "palette": "Collage rapide"
   },
   "locale": {
-    "groupLabel": "Langue de l'interface",
     "system": "Système",
     "fr": "Français",
     "en": "Anglais"
@@ -674,6 +673,7 @@
     "passphrase": "Phrase de passe",
     "confirmation": "Confirmation",
     "tooShort": "Au moins {{length}} caractères.",
+    "reveal": "Afficher",
     "mismatched": "Les deux saisies diffèrent.",
     "createAction": "Protéger et continuer",
     "unlockAction": "Déverrouiller",

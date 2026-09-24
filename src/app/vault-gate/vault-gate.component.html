@@ -104,43 +104,62 @@
         <p class="warning" role="note">{{ 'vault.noRecovery' | transloco }}</p>
       }
 
-      <label class="field">
-        <span class="label">{{ 'vault.passphrase' | transloco }}</span>
+      <!-- ⚠️ Not `off`: the library cannot be recovered, so the phrase should be long and random,
+           which is what a password manager makes and keeps. The new/current pair also stops one
+           offering to save the wrong field. -->
+      <div class="field">
+        <div class="field-head">
+          <label class="label" for="vault-passphrase">{{ 'vault.passphrase' | transloco }}</label>
+          <button
+            type="button"
+            class="reveal"
+            [attr.aria-pressed]="isRevealed()"
+            (click)="toggleReveal()"
+            data-testid="vault-reveal"
+          >
+            {{ 'vault.reveal' | transloco }}
+          </button>
+        </div>
         <input
+          id="vault-passphrase"
           class="input"
-          type="password"
-          autocomplete="off"
+          [type]="isRevealed() ? 'text' : 'password'"
+          [attr.autocomplete]="isCreating() ? 'new-password' : 'current-password'"
           spellcheck="false"
           [value]="passphrase()"
           [attr.aria-invalid]="vault.refused() || tooShort() ? 'true' : null"
-          [attr.aria-describedby]="vault.refused() || tooShort() ? 'vault-problem' : null"
+          [attr.aria-describedby]="describedBy()"
           (input)="onPassphrase($any($event.target).value)"
           data-testid="vault-passphrase"
           #passphraseField
         />
-      </label>
+        @if (isCreating()) {
+          <p class="hint" id="vault-minimum" [class.broken]="tooShort()" data-testid="vault-minimum">
+            {{ 'vault.tooShort' | transloco: { length: minimumLength } }}
+          </p>
+        }
+      </div>
 
       @if (isCreating()) {
-        <label class="field">
-          <span class="label">{{ 'vault.confirmation' | transloco }}</span>
+        <div class="field">
+          <label class="label" for="vault-confirmation">{{ 'vault.confirmation' | transloco }}</label>
           <input
+            id="vault-confirmation"
             class="input"
-            type="password"
-            autocomplete="off"
+            [type]="isRevealed() ? 'text' : 'password'"
+            autocomplete="new-password"
             spellcheck="false"
             [value]="confirmation()"
             (input)="onConfirmation($any($event.target).value)"
             data-testid="vault-confirmation"
           />
-        </label>
+        </div>
       }
 
       <!-- One line, whichever problem is current: two stacked would read as two faults. -->
       <p class="problem" id="vault-problem" role="status" data-testid="vault-problem">
         @if (vault.refused()) {
           {{ 'errors.wrongPassphrase' | transloco }}
-        } @else if (tooShort()) {
-          {{ 'vault.tooShort' | transloco: { length: minimumLength } }}
         } @else if (mismatched()) {
           {{ 'vault.mismatched' | transloco }}
         }

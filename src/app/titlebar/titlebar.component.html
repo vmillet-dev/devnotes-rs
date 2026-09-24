@@ -1,8 +1,5 @@
 <div class="titlebar">
   <div class="titlebar-menus">
-    <div class="dots" aria-hidden="true">
-      <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
-    </div>
     <!--
       ⚠️ Not merely disabled while the library is locked: every entry acts on it, and
       creating the component would have `SpacesStore` query a database nobody has opened
@@ -16,8 +13,8 @@
 
   <div class="titlebar-title" data-testid="titlebar-title">{{ title }}</div>
 
-  <!-- One group, or `space-between` puts the theme in the middle of the bar: the title
-       is absolutely positioned and takes no part in the flex row. -->
+  <!-- The language is chosen in the preferences, once: a switch here sat where Windows
+       draws the window controls, beside a twin three clicks away. -->
   <div class="titlebar-choices">
     <!-- Light or dark, never "system": a click is expected to change what is on screen,
          and "system" usually looks exactly like what was already there. Following the
@@ -35,26 +32,5 @@
     >
       <app-icon [name]="switchesTo() === 'dark' ? 'moon' : 'sun'" />
     </button>
-
-    <div
-      class="titlebar-switch locale-switch"
-      role="group"
-      [attr.aria-label]="'locale.groupLabel' | transloco"
-    >
-      @for (locale of locales; track locale) {
-        <button
-          type="button"
-          class="titlebar-option locale-option"
-          data-testid="locale-option"
-          [attr.data-locale]="locale"
-          [class.active]="locale === localeService.activeLocale()"
-          [attr.aria-pressed]="locale === localeService.activeLocale()"
-          [attr.aria-label]="'locale.' + locale | transloco"
-          (click)="localeService.setLocale(locale)"
-        >
-          {{ locale.toUpperCase() }}
-        </button>
-      }
-    </div>
   </div>
 </div>

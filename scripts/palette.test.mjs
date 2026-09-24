@@ -33,21 +33,11 @@ const EDGES = ['--amber-edge'];
 
 /**
  * Never text and never a line it matters to see: hairlines, the softer accent behind a
- * hover, the accent as a **surface**, the ink drawn *on* that surface, and the titlebar's
- * decorative dots. Listed rather than skipped, so a colour added to the palette fails
- * the last test here until somebody says which of the four it is.
+ * hover, the accent as a **surface**, and the ink drawn *on* that surface. Listed rather than
+ * skipped, so a colour added to the palette fails the last test here until somebody says
+ * which of the four it is.
  */
-const NOT_TEXT = [
-  '--line',
-  '--line-soft',
-  '--line-no',
-  '--amber-fill',
-  '--amber-dim',
-  '--amber-ink',
-  '--dot-red',
-  '--dot-yellow',
-  '--dot-green',
-];
+const NOT_TEXT = ['--line', '--line-soft', '--line-no', '--amber-fill', '--amber-dim', '--amber-ink'];
 
 /**
  * The dark palette is the bare `:root`, deliberately — see the comment above it.

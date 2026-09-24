@@ -71,6 +71,17 @@ export class VaultGateComponent {
 
   protected readonly minimumLength = MINIMUM_PASSPHRASE_LENGTH;
 
+  /** Both fields at once: the point is to compare what was typed with what was meant. */
+  protected readonly isRevealed = signal(false);
+
+  /** The minimum is said before it is broken, so it is part of the field's description. */
+  protected readonly describedBy = computed(
+    () =>
+      [this.isCreating() ? 'vault-minimum' : null, this.vault.refused() ? 'vault-problem' : null]
+        .filter((id) => id !== null)
+        .join(' ') || null,
+  );
+
   private readonly passphraseField = viewChild<ElementRef<HTMLInputElement>>('passphraseField');
 
   /**
@@ -121,6 +132,10 @@ export class VaultGateComponent {
     this.passphrase.set('');
     this.confirmation.set('');
     await this.libraries.openLibrary(id);
+  }
+
+  protected toggleReveal(): void {
+    this.isRevealed.update((shown) => !shown);
   }
 
   protected onPassphrase(value: string): void {

@@ -16,12 +16,13 @@
       {{ 'settings.security.copiesNote' | transloco }}
     </p>
 
+    <!-- The gate's pair, for the gate's reason: a manager is where a long random phrase lives. -->
     <label class="field">
       <span class="label">{{ 'settings.security.current' | transloco }}</span>
       <input
         class="input"
         type="password"
-        autocomplete="off"
+        autocomplete="current-password"
         spellcheck="false"
         [value]="current()"
         [disabled]="vault.isWorking()"
@@ -37,7 +38,7 @@
       <input
         class="input"
         type="password"
-        autocomplete="off"
+        autocomplete="new-password"
         spellcheck="false"
         [value]="next()"
         [disabled]="vault.isWorking()"
@@ -51,7 +52,7 @@
       <input
         class="input"
         type="password"
-        autocomplete="off"
+        autocomplete="new-password"
         spellcheck="false"
         [value]="confirmation()"
         [disabled]="vault.isWorking()"

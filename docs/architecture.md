@@ -836,12 +836,17 @@ written, bullets and all.
 
 ### The theme is one gesture, where it was three
 
-The theme and the language are the same kind of choice, and they sat three gestures apart:
-the language in the titlebar, the theme behind File → Préférences → Apparence. There is a
-theme control beside it now, and it is a **toggle between light and dark**. It used to cycle
+The theme sat behind File → Préférences → Apparence, three gestures away, and it is a
+choice made more than once. There is a theme control in the titlebar now, and it is a
+**toggle between light and dark**. It used to cycle
 through the three `THEME_CHOICES`, and a click on "system" usually changed nothing on screen
 — the one thing a click there is expected to do (#323). Following the system is chosen in
 the panel, which keeps its three rows.
+
+The language went the other way (#186). Its `FR` / `EN` switch sat at the top right, where
+Windows draws the window controls, and duplicated a row of the panel: a language is chosen
+once. The three coloured dots went with it — macOS traffic lights that closed nothing, drawn
+under the real buttons, inviting a click that did nothing at all.
 
 ⚠️ The control reads `resolvedTheme`, **what is on screen**, not the setting: on "system" it
 shows what the machine resolved, and a press writes the explicit opposite. It writes
@@ -2861,6 +2866,17 @@ instead: put a copy of `vault.json` back, or set the library aside (`set_aside_d
 which leaves the key file alone and so comes back `absent`). `vault::create` refuses the same
 case on its own, a command being reachable from more than the gate.
 
+**The form is built for a password manager.** `autocomplete` is `new-password` on creation
+(both fields) and `current-password` on unlock, the same pair as in the change dialog. ⚠️ It
+was `off`, which read as protection and was the opposite: the library cannot be recovered,
+so its phrase should be long and random, and a manager is where such a phrase is made and
+kept. The pair is also what stops one offering to save the confirmation, or the wrong field.
+The export prompt stays `off` on purpose: it shares the gate's origin, and a manager keeping
+a file's phrase would offer it at the gate. One "Afficher" toggle (`aria-pressed`, the
+input's `type` flipped rather than a second plain-text field) shows both fields at once, and
+on creation the minimum is the field's description from the start rather than a complaint
+after the first character.
+
 **The cost in a key file is bounded before anything is derived** (`vault::file::bounded`: at most
 1 GiB, 16 passes, 16 lanes). It is the one input an attacker can write, and read unbounded it is
 a multi-gigabyte allocation or an hour of hashing at every unlock.
@@ -3482,8 +3498,7 @@ Transloco's `transloco` pipe. French is the fallback locale.
 - **The choice belongs to `SettingsStore`** (`locale`: `system` / `fr` / `en`, default
   `system`), exactly like the theme. `LocaleService` is what _resolves_ it and pushes it to
   Transloco and `<html lang>` — the same shape as the three services that carry a preference
-  down to the native side. Two controls write that one setting: the preferences panel and the
-  `FR` / `EN` buttons in the titlebar, which set an explicit language.
+  down to the native side. The preferences panel is the one control that writes it.
 - `system` resolves through `resolveSystemLocale()` (`core/services/i18n/locale.model.ts`), which reads
   `navigator.languages` — the WebView takes it from the OS — and falls back to
   `SYSTEM_FALLBACK_LOCALE` (English) when the machine speaks neither language. Nothing is
@@ -3541,7 +3556,7 @@ Treated as part of the definition of done, and partly enforced by
 - **Information conveyed only graphically is duplicated as text.** A pinned card renders a
   `.visually-hidden` label, because the pin itself is a CSS pseudo-element.
 - **Toggles expose `aria-pressed`**, not just a CSS class: tag pills, filter chips, the pin
-  button, the locale switcher. A non-interactive tag pill renders a `<span>`, not a button —
+  button, the gate's "Afficher". A non-interactive tag pill renders a `<span>`, not a button —
   announcing a button would advertise an action that does not exist.
 - **Every modal is a real dialog**: `role="dialog"`, `aria-modal`, `aria-labelledby` and a
   focus trap that confines Tab and restores focus on close. All of it comes from
