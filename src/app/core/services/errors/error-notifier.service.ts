@@ -95,7 +95,7 @@ export class ErrorNotifier {
     // covers the synchronous throw alone.
     let pending: Promise<T>;
     try {
-      pending = action();
+      pending = action(); // NOSONAR S4822: the rejection is `.catch`'s, below
     } catch (error) {
       return Promise.resolve(report(error));
     }
