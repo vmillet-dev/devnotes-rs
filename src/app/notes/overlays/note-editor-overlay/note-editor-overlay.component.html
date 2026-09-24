@@ -216,6 +216,23 @@
           [session]="session()"
           (itemsChanged)="requestPatch({ items: $event })"
         />
+      } @else if (isRichText()) {
+        <!-- Deferred: TipTap is loaded the first time a Text note opens, not at startup. -->
+        @defer (on immediate) {
+          <app-rich-text-editor
+            #richEditor
+            [content]="draftContent()"
+            [label]="'editor.contentLabel' | transloco"
+            [placeholder]="'editor.emptyRich' | transloco"
+            (changed)="draftContent.set($event)"
+            (blurred)="commitContent()"
+            (pastedIntoEmpty)="onRichPaste($event)"
+            (imagePasted)="onImagePasted()"
+            (linkOpened)="openLink($event)"
+          />
+        } @placeholder {
+          <div class="rich-text-loading" aria-hidden="true"></div>
+        }
       } @else {
         <div class="editor-stack">
           <app-code-viewer aria-hidden="true" [content]="draftContent()" [language]="note.language" />
@@ -227,7 +244,7 @@
             [attr.aria-label]="'editor.contentLabel' | transloco"
             [placeholder]="'editor.emptyBody' | transloco"
             [value]="draftContent()"
-            (input)="onBodyInput($event, bodyEditor.value)"
+            (input)="onBodyInput(bodyEditor.value)"
             (paste)="onPaste($event)"
             (blur)="commitContent()"
           ></textarea>

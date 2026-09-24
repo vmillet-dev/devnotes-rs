@@ -1,0 +1,97 @@
+<!-- mousedown is kept from the buttons: taking focus would move the caret out of the text
+     before the command reaches it. -->
+<div
+  class="rich-toolbar"
+  role="toolbar"
+  [attr.aria-label]="'editor.rich.toolbar' | transloco"
+  data-testid="rich-toolbar"
+>
+  @for (group of tools; track $index) {
+    <div class="rich-group">
+      @for (tool of group; track tool.action) {
+        <button
+          type="button"
+          class="rich-tool"
+          [attr.data-testid]="'rich-' + tool.action"
+          [attr.aria-pressed]="isActive(tool)"
+          [attr.aria-label]="tool.labelKey | transloco"
+          [attr.title]="tool.labelKey | transloco"
+          (mousedown)="$event.preventDefault()"
+          (click)="run(tool.action)"
+        >
+          @if (tool.icon) {
+            <app-icon [name]="tool.icon" />
+          } @else {
+            <span class="rich-tool-text">{{ tool.text }}</span>
+          }
+        </button>
+      }
+    </div>
+  }
+
+  <div class="rich-group">
+    <button
+      type="button"
+      class="rich-tool"
+      data-testid="rich-link"
+      [attr.aria-pressed]="linkDraft() !== null"
+      [attr.aria-label]="'editor.rich.link' | transloco"
+      [attr.title]="'editor.rich.link' | transloco"
+      (mousedown)="$event.preventDefault()"
+      (click)="openLinkForm()"
+    >
+      <app-icon name="link" />
+    </button>
+    <button
+      type="button"
+      class="rich-tool"
+      data-testid="rich-table"
+      [attr.aria-label]="'editor.rich.table' | transloco"
+      [attr.title]="'editor.rich.table' | transloco"
+      (mousedown)="$event.preventDefault()"
+      (click)="run('table')"
+    >
+      <app-icon name="table" />
+    </button>
+  </div>
+
+  @if (inTable()) {
+    <div class="rich-group rich-table-tools">
+      @for (tool of tableTools; track tool.action) {
+        <button
+          type="button"
+          class="rich-tool rich-tool-wide"
+          [attr.data-testid]="'rich-' + tool.action"
+          (mousedown)="$event.preventDefault()"
+          (click)="run(tool.action)"
+        >
+          {{ tool.labelKey | transloco }}
+        </button>
+      }
+    </div>
+  }
+</div>
+
+@if (linkDraft() !== null) {
+  <form class="rich-link-form" data-testid="rich-link-form" (submit)="$event.preventDefault(); applyLink()">
+    <label class="visually-hidden" for="rich-link-field">{{ 'editor.rich.linkAddress' | transloco }}</label>
+    <input
+      #linkField
+      id="rich-link-field"
+      class="rich-link-field"
+      type="url"
+      spellcheck="false"
+      autocomplete="off"
+      data-testid="rich-link-field"
+      [value]="linkDraft()"
+      (input)="linkDraft.set($any($event.target).value)"
+      (keydown.escape)="closeLinkForm($event)"
+    />
+    <button type="submit" class="rich-link-apply" data-testid="rich-link-apply">
+      {{ 'editor.rich.linkApply' | transloco }}
+    </button>
+    <span class="rich-link-hint">{{ 'editor.rich.linkHint' | transloco }}</span>
+  </form>
+}
+
+<div #surface class="rich-surface"></div>
