@@ -1,7 +1,7 @@
 @use 'mixins' as *;
 
 .titlebar {
-  height: 38px;
+  height: var(--titlebar-height);
   background: var(--bg-0);
   border-bottom: 1px solid var(--line-soft);
   display: flex;

@@ -1,9 +1,9 @@
-import { expect } from '@wdio/globals';
+import { $, browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
 import { spaces } from '../pageobjects/sidebar.page.js';
-import { eventually, reloadCanvas, viewportSize } from '../support/app.js';
+import { eventually, isInFront, press, reloadCanvas, testid, viewportSize } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
@@ -63,9 +63,25 @@ describe('Editing a note', () => {
     expect(await editor.body()).toBe('kubectl rollout restart deployment/api');
 
     // Measured, not asked: the button reports itself pressed before the panel has grown.
-    const full = await editor.panelSize();
-    expect(full.width).toBeGreaterThanOrEqual(viewport.width - 1);
-    expect(full.height).toBeGreaterThanOrEqual(viewport.height - 1);
+    // It fills the window under the titlebar, which stays in reach.
+    const bar = await browser.execute(
+      () => document.querySelector('.titlebar')!.getBoundingClientRect().height,
+    );
+    const full = await eventually(
+      () => editor.panelSize(),
+      ({ width }) => width >= viewport.width - 1,
+      'the editor to fill the window',
+    );
+    expect(full.height).toBeGreaterThanOrEqual(viewport.height - bar - 1);
+    expect(full.height).toBeLessThanOrEqual(viewport.height - bar + 1);
+
+    await $(testid('file-menu')).click();
+    await $(testid('file-preferences')).waitForExist({ timeout: 5_000 });
+    expect(await isInFront(testid('file-preferences'))).toBe(true);
+    // One Escape, one thing: the menu closes and the note stays open.
+    await press('Escape');
+    await $(testid('file-preferences')).waitForExist({ reverse: true, timeout: 5_000 });
+    expect(await editor.isOpen()).toBe(true);
 
     await editor.toggleFullscreen();
     expect(await editor.isFullscreen()).toBe(false);

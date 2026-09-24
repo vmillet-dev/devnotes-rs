@@ -7,6 +7,7 @@ import { NoteSelectionStore } from '@core/state/note-selection.store';
 import { SpacesStore } from '@core/state/spaces.store';
 import { MenuPanelDirective } from '@shared/directives/menu-panel.directive';
 import { MenuTriggerDirective } from '@shared/directives/menu-trigger.directive';
+import { dialogRung } from '@shared/layout/dialog/dialog.model';
 import { LibrariesDialogComponent } from '@titlebar/file-menu/libraries-dialog/libraries-dialog.component';
 import { SettingsDialogComponent } from '@titlebar/file-menu/settings-dialog/settings-dialog.component';
 
@@ -27,6 +28,9 @@ interface FileMenuEntry {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FileMenuComponent {
+  /** Over a full-screen editor, the one modal that leaves the titlebar in reach. */
+  protected readonly menuRung = dialogRung('titlebar');
+
   private readonly window = inject(AppWindowService);
   private readonly transfer = inject(TransferStore);
   private readonly selection = inject(NoteSelectionStore);

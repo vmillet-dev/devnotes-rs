@@ -51,7 +51,9 @@ export class MenuTriggerDirective {
     this.host.nativeElement.querySelector<HTMLElement>('[appMenuAnchor]')?.focus();
   }
 
+  /** An open menu takes the whole keystroke: a dialog behind it, the editor, must not close too. */
   protected onEscape(event: Event): void {
+    if (this._open()) event.stopPropagation();
     this.escapeHandler(event);
   }
 

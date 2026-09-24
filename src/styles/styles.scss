@@ -53,6 +53,9 @@
   --motion-fast: 120ms;
   --motion: 160ms;
 
+  // A full-screen editor starts under it, so the titlebar stays in reach.
+  --titlebar-height: 38px;
+
   // The four gaps density tightens; everything else stays fixed.
   --space-card: 14px;
   --space-grid: 12px;

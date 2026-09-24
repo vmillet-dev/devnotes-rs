@@ -14,6 +14,7 @@ import { AttachmentsStore } from '@core/state/attachments.store';
 import { NoteSelectionStore } from '@core/state/note-selection.store';
 import { NotesQueryStore } from '@core/state/notes-query.store';
 import { NotesStore } from '@core/state/notes.store';
+import { HelpStore } from '@core/services/help/help.store';
 import { UndoStore } from '@core/state/undo.store';
 import { PaletteStore } from '@core/state/palette.store';
 import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
@@ -630,6 +631,18 @@ describe('NotesPageComponent', () => {
 
       expect(store.selectedNote()?.content).toBe('');
       expect(store.persistedNoteId()).toBeNull();
+    });
+
+    /** Whatever opens the editor — a shortcut here, the palette in the e2e run. */
+    it('puts a help panel away when the editor opens under it', async () => {
+      const help = TestBed.inject(HelpStore);
+      help.show('about');
+
+      fireAction('new-note');
+      await fixture.whenStable();
+
+      expect(help.panel()).toBeNull();
+      expect(store.selectedNote()).not.toBeNull();
     });
 
     it('opens the quick palette when the palette event fires', async () => {
