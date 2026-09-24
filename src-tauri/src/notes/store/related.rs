@@ -321,4 +321,59 @@ mod tests {
         ));
         assert!(matches!(Scope::of(&many, None), Scope::Space(None)));
     }
+
+    /// Past the bound the space's subquery reads them, with a space and without one.
+    #[test]
+    fn past_the_bound_every_note_still_carries_its_tags_and_items() {
+        use crate::notes::checklist::NoteKind;
+        use crate::notes::language::Language;
+        use crate::notes::model::{NoteDraft, NoteLifecycle};
+        use crate::notes::view::{NoteFilter, NotesQuery};
+
+        let mut library = crate::db::open_in_memory().unwrap();
+        let space = crate::spaces::store::create(&mut library, "Ops")
+            .unwrap()
+            .id;
+        for n in 0..=BIND_AT_MOST {
+            let draft = NoteDraft {
+                space_id: space.clone(),
+                folder_id: None,
+                title: format!("List {n}"),
+                language: Language::Txt,
+                content: String::new(),
+                source: String::new(),
+                tags: vec!["ops".to_string()],
+                pinned: false,
+                lifecycle: NoteLifecycle::Permanent,
+                kind: NoteKind::Checklist,
+                items: vec![ChecklistItem {
+                    text: "Restart".to_string(),
+                    done: false,
+                }],
+            };
+            crate::notes::store::create(&mut library, draft, chrono::Utc::now()).unwrap();
+        }
+
+        for space_id in [Some(space.clone()), None] {
+            let query = NotesQuery {
+                space_id,
+                folder_id: None,
+                search: String::new(),
+                filter: NoteFilter::All,
+                tags: Vec::new(),
+                languages: Vec::new(),
+                now: chrono::Utc::now(),
+                tz_offset_minutes: 0,
+                pinned_first: true,
+            };
+            let (notes, _) = crate::notes::store::fetch(&mut library, &query).unwrap();
+
+            assert_eq!(notes.len(), BIND_AT_MOST + 1);
+            assert!(
+                notes
+                    .iter()
+                    .all(|note| note.tags == ["ops"] && note.items.len() == 1)
+            );
+        }
+    }
 }
