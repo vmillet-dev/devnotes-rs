@@ -3,7 +3,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { BoardFrame } from '@core/model/board.model';
 import { BoardStore } from '@core/state/board.store';
 import { FoldersStore } from '@core/state/folders.store';
-import { LibraryStore } from '@core/state/library.store';
+import { TransferStore } from '@core/state/transfer.store';
 import { NoteBatchStore } from '@core/state/note-batch.store';
 import { NoteSelectionStore } from '@core/state/note-selection.store';
 import { NotesQueryStore } from '@core/state/notes-query.store';
@@ -31,7 +31,7 @@ export class NotesCanvasComponent {
   protected readonly spaces = inject(SpacesStore);
   protected readonly folders = inject(FoldersStore);
   protected readonly board = inject(BoardStore);
-  private readonly library = inject(LibraryStore);
+  private readonly transfer = inject(TransferStore);
   /** The guide, opened at the chapter about whatever is empty on screen. */
   protected readonly help = inject(HelpStore);
 
@@ -69,6 +69,6 @@ export class NotesCanvasComponent {
   }
 
   protected onCopySelection(): void {
-    void this.library.copyAsMarkdown(this.selection.checkedNoteIds());
+    void this.transfer.copyAsMarkdown(this.selection.checkedNoteIds());
   }
 }

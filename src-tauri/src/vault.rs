@@ -88,7 +88,7 @@ fn create(passphrase: &str, directory: &Path, db: &Db, cost: Cost) -> Result<(),
 
     let vault = file::create(directory, passphrase, cost)?;
 
-    open_library(directory, db, vault)
+    install(directory, db, vault)
 }
 
 /// ⚠️ A database already here without a key file is a library that lost its key — or one
@@ -122,7 +122,7 @@ pub fn unlock_vault(passphrase: String, app: AppHandle, db: State<'_, Db>) -> Re
 fn unlock(passphrase: &str, directory: &Path, db: &Db) -> Result<(), StorageError> {
     let vault = file::unlock(directory, passphrase)?;
 
-    open_library(directory, db, vault)
+    install(directory, db, vault)
 }
 
 /// What a change reached, so the interface can say it. ⚠️ `backupsLeft` is the honest half:
@@ -187,7 +187,7 @@ fn change(
 ///
 /// ⚠️ `attachments/` is created here, once, and nowhere else: every writer and the
 /// startup sweep assume it is there.
-fn open_library(directory: &Path, db: &Db, vault: key::Vault) -> Result<(), StorageError> {
+fn install(directory: &Path, db: &Db, vault: key::Vault) -> Result<(), StorageError> {
     let library = db::open(&directory.join(crate::layout::DATABASE), vault)?;
     let attachments = crate::attachments::directory(&library);
     std::fs::create_dir_all(&attachments).context(attachments.display())?;
