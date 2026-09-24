@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { DialogComponent } from '@shared/layout/dialog/dialog.component';
-import { LibraryStore, PassphraseRequest } from '@core/state/library.store';
+import { PassphrasePromptStore, PassphraseRequest } from '@core/state/passphrase-prompt.store';
 import { MINIMUM_PASSPHRASE_LENGTH } from '@core/model/vault.model';
 
 /**
@@ -19,10 +19,10 @@ import { MINIMUM_PASSPHRASE_LENGTH } from '@core/model/vault.model';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PassphrasePromptComponent {
-  private readonly library = inject(LibraryStore);
+  private readonly prompt = inject(PassphrasePromptStore);
 
-  protected readonly request = this.library.passphraseRequest;
-  protected readonly working = this.library.passphraseWorking;
+  protected readonly request = this.prompt.request;
+  protected readonly working = this.prompt.working;
 
   protected readonly isProtecting = computed(() => this.request()?.purpose === 'protect');
 
@@ -82,7 +82,7 @@ export class PassphrasePromptComponent {
 
     const typed = this.passphrase();
     this.clear();
-    this.library.answerPassphrase({ kind: 'phrase', value: typed });
+    this.prompt.answer({ kind: 'phrase', value: typed });
   }
 
   /** ⚠️ The plain export, taken deliberately: the warning above the button is the point. */
@@ -90,7 +90,7 @@ export class PassphrasePromptComponent {
     if (this.working()) return;
 
     this.clear();
-    this.library.answerPassphrase({ kind: 'none' });
+    this.prompt.answer({ kind: 'none' });
   }
 
   /** ⚠️ Refused while a phrase is being derived from: the operation is under way, and
@@ -99,7 +99,7 @@ export class PassphrasePromptComponent {
     if (this.working()) return;
 
     this.clear();
-    this.library.answerPassphrase({ kind: 'cancelled' });
+    this.prompt.answer({ kind: 'cancelled' });
   }
 
   private clear(): void {

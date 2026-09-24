@@ -141,6 +141,13 @@ also derives `specta::Type`, which is what lets tauri-specta generate the front-
 
 ### Where a file goes
 
+⚠️ **"Library" means one thing on each side.** On the front it is the registry of libraries
+(`LibrariesStore`, the File menu's dialog); in Rust it is the open database and its key
+(`db::Library`). Moving notes in and out of a file is `TransferStore`, and the phrase such a
+file may ask for is `PassphrasePromptStore`. The private helper that fills the connection
+`Mutex` is `vault::install`, so a search for `open_library` finds the command alone — the
+one that points the registry elsewhere and empties that `Mutex`.
+
 > **A folder's path is its address in the interface** — for everything that has one. A
 > component lives in the folder of its parent on screen; one with two parents rises to their
 > nearest common ancestor. What has no place on screen lives in `core/`: the model, the data
@@ -153,7 +160,7 @@ see a button, you want the code behind it. `titlebar/about-menu/whats-new-dialog
 exactly where to click. Walking down the tree is walking down the screen.
 
 **But a store is not a component.** A `providedIn: 'root'` singleton has no place on screen —
-it has consumers, and `SpacesStore`, `NoteSelectionStore` and `LibraryStore` are read by the
+it has consumers, and `SpacesStore`, `NoteSelectionStore` and `TransferStore` are read by the
 File menu in the titlebar as much as by the canvas. Filing one under a consumer would claim a
 containment that does not exist. The same holds for the model and the repositories: there is
 **one application and one domain**, so its vocabulary sits at the top rather than inside the
@@ -535,15 +542,16 @@ each restating that comparison, and a new field meant editing four files.
 
 Smaller stores sit beside them, each for a screen or a job that is not the canvas:
 
-| Store                  | Owns                                                                          |
-| ---------------------- | ----------------------------------------------------------------------------- |
-| `TrashStore`           | the trash panel: open/close, list, restore, purge, empty                      |
-| `TagsStore`            | global tag management: list with counts, selection, rename/merge              |
-| `LibraryStore`         | import, export and copy-out, each reporting through `StatusNotifier`          |
-| `PaletteStore`         | the quick-paste palette: its own search, highlight and copy                   |
-| `AttachmentsStore`     | the open note's attachments, the preview, and the three ways of adding one    |
-| `PlaceholderFillStore` | filling a snippet's `{{fields}}` before copying, from card, palette or editor |
-| `NoteCopyService`      | putting text on the clipboard, and saying so when that failed                 |
+| Store                   | Owns                                                                          |
+| ----------------------- | ----------------------------------------------------------------------------- |
+| `TrashStore`            | the trash panel: open/close, list, restore, purge, empty                      |
+| `TagsStore`             | global tag management: list with counts, selection, rename/merge              |
+| `TransferStore`         | import, export and copy-out, each reporting through `StatusNotifier`          |
+| `PassphrasePromptStore` | the phrase an export or an import waits for, and the prompt that asks it      |
+| `PaletteStore`          | the quick-paste palette: its own search, highlight and copy                   |
+| `AttachmentsStore`      | the open note's attachments, the preview, and the three ways of adding one    |
+| `PlaceholderFillStore`  | filling a snippet's `{{fields}}` before copying, from card, palette or editor |
+| `NoteCopyService`       | putting text on the clipboard, and saying so when that failed                 |
 
 The first four know nothing of `NotesStore` — the reverse dependency exists and closing the
 loop would be an injection cycle — so each writes through `NotesRevision` and the canvas
@@ -1900,7 +1908,7 @@ application. It holds import, export, "copy the selection as Markdown", the pref
 quitting.
 
 **The menu owns its entries**: `FileMenuComponent` declares them as an array and injects what
-they need — `LibraryStore`, `NoteSelectionStore`, `SpacesStore`, `ClockService`. `disabled` is
+they need — `TransferStore`, `NoteSelectionStore`, `SpacesStore`, `ClockService`. `disabled` is
 a `Signal` because "Exporter la sélection" follows what is checked at that instant, and the
 order on screen is the order in the array.
 
@@ -2256,7 +2264,7 @@ about samples nobody asked for would only add noise.
 ⚠️ **Every one of these reports, including when it changed nothing.** Exporting then
 re-importing at once is the first thing anyone tries, and it legitimately imports zero notes:
 every id is already there. Without a message that outcome is indistinguishable from a
-failure, so `LibraryStore` pushes a distinct `file.importedNothing` for it, and an export
+failure, so `TransferStore` pushes a distinct `file.importedNothing` for it, and an export
 names the file it wrote. The report goes to `StatusNotifier` (`core/services/notifications/`), rendered
 under the titlebar by `StatusToastComponent` — not inside the menu, which closes on the click
 and which a native file dialog covers anyway.
@@ -2922,7 +2930,7 @@ already locked. ⚠️ `libraries::open_directory(app)` reads and parses `librar
 every call, so it is kept for what runs while **no** library is open: `vault_state`,
 `create_vault`, `unlock_vault` and the recovery commands. Reading the thumbnail of a
 screenshot used to pay that lookup plus two `create_dir_all`; `attachments/` is now created
-once, by `vault::open_library`. A module that reaches for `app_data_dir()` directly writes
+once, by `vault::install`. A module that reaches for `app_data_dir()` directly writes
 into the profile, which holds no library. The one directory that lives there on purpose is
 `open/`, the decrypted attachment copies: they are ephemeral and swept wholesale, and one
 directory means one sweep catches every library's leftovers.

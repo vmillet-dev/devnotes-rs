@@ -6,7 +6,8 @@ import { FakeClipboard } from '@testing/fake-clipboard';
 import { FakeFileDialog } from '@testing/fake-file-dialog';
 import { FakeTransferRepository } from '@testing/fake-transfer-repository';
 import { provideAppTesting } from '@testing/testing.providers';
-import { LibraryStore, PassphraseAnswer } from './library.store';
+import { PassphraseAnswer, PassphrasePromptStore } from './passphrase-prompt.store';
+import { TransferStore } from './transfer.store';
 
 const NOW = new Date('2026-08-27T09:00:00Z');
 
@@ -14,7 +15,8 @@ const NOW = new Date('2026-08-27T09:00:00Z');
 const IN_THE_CLEAR: PassphraseAnswer = { kind: 'none' };
 
 interface Harness {
-  readonly store: LibraryStore;
+  readonly store: TransferStore;
+  readonly prompt: PassphrasePromptStore;
   readonly repository: FakeTransferRepository;
   readonly dialog: FakeFileDialog;
   readonly clipboard: FakeClipboard;
@@ -32,7 +34,8 @@ function createStore(): Harness {
   });
 
   return {
-    store: TestBed.inject(LibraryStore),
+    store: TestBed.inject(TransferStore),
+    prompt: TestBed.inject(PassphrasePromptStore),
     repository,
     dialog,
     clipboard,
@@ -44,7 +47,7 @@ function createStore(): Harness {
 /** The prompt is a promise the store is waiting on; nothing advances until it is given one. */
 async function asking(harness: Harness): Promise<void> {
   for (let turn = 0; turn < 50; turn++) {
-    if (harness.store.passphraseRequest() !== null && !harness.store.passphraseWorking()) return;
+    if (harness.prompt.request() !== null && !harness.prompt.working()) return;
     await Promise.resolve();
   }
 }
@@ -53,8 +56,8 @@ async function answer(harness: Harness, ...answers: PassphraseAnswer[]): Promise
   for (const given of answers) {
     await asking(harness);
 
-    expect(harness.store.passphraseRequest()).not.toBeNull();
-    harness.store.answerPassphrase(given);
+    expect(harness.prompt.request()).not.toBeNull();
+    harness.prompt.answer(given);
   }
 }
 
@@ -69,7 +72,7 @@ async function exportEverything(
   await done;
 }
 
-describe('LibraryStore', () => {
+describe('TransferStore', () => {
   let harness: Harness;
 
   beforeEach(() => {
@@ -216,7 +219,7 @@ describe('LibraryStore', () => {
       harness.dialog.openPath = 'C:/in.devnotes';
 
       expect(await harness.store.import()).toBe(true);
-      expect(harness.store.passphraseRequest()).toBeNull();
+      expect(harness.prompt.request()).toBeNull();
       expect(harness.repository.importedWith).toBeNull();
     });
 
@@ -257,9 +260,9 @@ describe('LibraryStore', () => {
       await answer(harness, { kind: 'phrase', value: 'a typo' });
       await asking(harness);
 
-      expect(harness.store.passphraseRequest()).toMatchObject({ purpose: 'unlock', refused: true });
+      expect(harness.prompt.request()).toMatchObject({ purpose: 'unlock', refused: true });
 
-      harness.store.answerPassphrase({ kind: 'cancelled' });
+      harness.prompt.answer({ kind: 'cancelled' });
       await done;
     });
 
@@ -323,7 +326,7 @@ describe('LibraryStore', () => {
 
       await harness.store.export(null, NOW);
 
-      expect(harness.store.passphraseRequest()).toBeNull();
+      expect(harness.prompt.request()).toBeNull();
       expect(harness.repository.exportedTo).toBeNull();
       expect(harness.status.status()).toBeNull();
     });
@@ -400,13 +403,13 @@ describe('LibraryStore', () => {
       const done = harness.store.export(null, NOW);
       await asking(harness);
 
-      expect(harness.store.passphraseRequest()).toEqual({
+      expect(harness.prompt.request()).toEqual({
         purpose: 'protect',
         fileName: 'devnotes.devnotes',
         refused: false,
       });
 
-      harness.store.answerPassphrase(IN_THE_CLEAR);
+      harness.prompt.answer(IN_THE_CLEAR);
       await done;
     });
 
@@ -432,15 +435,15 @@ describe('LibraryStore', () => {
     const done = harness.store.import();
     await answer(harness, { kind: 'phrase', value: 'a typo' });
 
-    expect(harness.store.passphraseRequest()).not.toBeNull();
-    expect(harness.store.passphraseWorking()).toBe(true);
+    expect(harness.prompt.request()).not.toBeNull();
+    expect(harness.prompt.working()).toBe(true);
 
-    harness.store.answerPassphrase({ kind: 'cancelled' });
-    expect(harness.store.passphraseWorking()).toBe(true);
+    harness.prompt.answer({ kind: 'cancelled' });
+    expect(harness.prompt.working()).toBe(true);
 
     await answer(harness, { kind: 'cancelled' });
     expect(await done).toBe(false);
-    expect(harness.store.passphraseRequest()).toBeNull();
+    expect(harness.prompt.request()).toBeNull();
   });
 
   describe('copy as Markdown', () => {

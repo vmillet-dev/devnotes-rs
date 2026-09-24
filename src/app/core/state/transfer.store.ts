@@ -7,6 +7,7 @@ import { ExportReport, ExportScope, ImportReport } from '@core/model/note.model'
 import { hasErrorCode } from '@core/ipc/ipc.error';
 import { TransferRepository } from '@core/data/transfer.repository';
 import { NotesRevision } from './notes-revision';
+import { PassphraseAnswer, PassphrasePromptStore } from './passphrase-prompt.store';
 
 function pad(value: number): string {
   return String(value).padStart(2, '0');
@@ -23,23 +24,6 @@ function defaultFileName(now: Date): string {
   const day = [now.getFullYear(), pad(now.getMonth() + 1), pad(now.getDate())].join('-');
   return `devnotes-${day}-${pad(now.getHours())}${pad(now.getMinutes())}.devnotes`;
 }
-
-/**
- * What the prompt is for: sealing a file about to be written, or opening one about to be
- * read. The two ask for different things — the first confirms the phrase and may be
- * declined, the second cannot be.
- */
-export interface PassphraseRequest {
-  readonly purpose: 'protect' | 'unlock';
-  readonly fileName: string;
-  /** The previous attempt was refused, which belongs beside the field and nowhere else. */
-  readonly refused: boolean;
-}
-
-export type PassphraseAnswer =
-  | { readonly kind: 'phrase'; readonly value: string }
-  | { readonly kind: 'none' }
-  | { readonly kind: 'cancelled' };
 
 /**
  * Export then re-import at once adds nothing at all, and saying so explicitly stops it
@@ -75,28 +59,18 @@ function fileNameOf(path: string): string {
  * titlebar: the menu closes on the click, and a native dialog would cover it.
  */
 @Injectable({ providedIn: 'root' })
-export class LibraryStore {
+export class TransferStore {
   private readonly repository = inject(TransferRepository);
   private readonly dialog = inject(FileDialogService);
   private readonly clipboard = inject(ClipboardService);
   private readonly status = inject(StatusNotifier);
   private readonly notifier = inject(ErrorNotifier);
   private readonly revision = inject(NotesRevision);
+  private readonly prompt = inject(PassphrasePromptStore);
 
   private readonly _isBusy = signal(false);
-  private readonly _passphraseRequest = signal<PassphraseRequest | null>(null);
-  private readonly _passphraseWorking = signal(false);
 
   readonly isBusy = this._isBusy.asReadonly();
-
-  /** What the prompt drawn over the page is asking for; `null` when it is not asking. */
-  readonly passphraseRequest = this._passphraseRequest.asReadonly();
-
-  /** A phrase has been given and is being derived from. The prompt waits rather than
-   *  leaving the screen, and cannot be answered twice. */
-  readonly passphraseWorking = this._passphraseWorking.asReadonly();
-
-  private pending: ((answer: PassphraseAnswer) => void) | null = null;
 
   /** `true` when notes came in, which is what bumps the canvas revision. */
   async import(): Promise<boolean> {
@@ -155,48 +129,13 @@ export class LibraryStore {
     }, 'errors.shareFailed');
   }
 
-  /**
-   * The prompt's only way back in.
-   *
-   * ⚠️ A phrase leaves the prompt on screen, working: deriving the key takes about a
-   * second, and a dialog that vanished and came back on a typo would read as a fault.
-   * Anything else ends the asking there and then.
-   */
-  answerPassphrase(answer: PassphraseAnswer): void {
-    const resolve = this.pending;
-    if (resolve === null) return;
-
-    this.pending = null;
-    if (answer.kind === 'phrase') {
-      this._passphraseWorking.set(true);
-    } else {
-      this.closePrompt();
-    }
-
-    resolve(answer);
-  }
-
-  private ask(request: PassphraseRequest): Promise<PassphraseAnswer> {
-    return new Promise((resolve) => {
-      this.pending = resolve;
-      this._passphraseWorking.set(false);
-      this._passphraseRequest.set(request);
-    });
-  }
-
-  private closePrompt(): void {
-    this.pending = null;
-    this._passphraseWorking.set(false);
-    this._passphraseRequest.set(null);
-  }
-
   /** The prompt never outlives the operation it was opened for, failure included. */
   private async readWithPrompt(path: string): Promise<ImportReport | null> {
     const isProtected = await this.repository.isProtected(path);
     try {
       return await this.read(path, isProtected);
     } finally {
-      this.closePrompt();
+      this.prompt.close();
     }
   }
 
@@ -211,7 +150,7 @@ export class LibraryStore {
     for (;;) {
       let passphrase: string | null = null;
       if (isProtected) {
-        const answer = await this.ask({ purpose: 'unlock', fileName: fileNameOf(path), refused });
+        const answer = await this.prompt.ask({ purpose: 'unlock', fileName: fileNameOf(path), refused });
         if (answer.kind !== 'phrase') return null;
         passphrase = answer.value;
       }
@@ -243,14 +182,14 @@ export class LibraryStore {
     const path = await this.dialog.chooseBundleDestination(defaultFileName(now));
     if (path === null) return;
 
-    const answer = await this.ask({ purpose: 'protect', fileName: fileNameOf(path), refused: false });
+    const answer = await this.prompt.ask({ purpose: 'protect', fileName: fileNameOf(path), refused: false });
     if (answer.kind === 'cancelled') return;
 
     await this.run(async () => {
       try {
         return await this.writeWith(action, path, answer);
       } finally {
-        this.closePrompt();
+        this.prompt.close();
       }
     }, 'errors.exportFailed');
   }

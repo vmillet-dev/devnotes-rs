@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { LibraryStore, PassphraseAnswer } from '@core/state/library.store';
+import { PassphraseAnswer, PassphrasePromptStore } from '@core/state/passphrase-prompt.store';
+import { TransferStore } from '@core/state/transfer.store';
 import { FakeFileDialog } from '@testing/fake-file-dialog';
 import { FakeTransferRepository } from '@testing/fake-transfer-repository';
 import { provideAppTesting } from '@testing/testing.providers';
@@ -9,7 +10,8 @@ import { PassphrasePromptComponent } from './passphrase-prompt.component';
 
 describe('PassphrasePromptComponent', () => {
   let fixture: ComponentFixture<PassphrasePromptComponent>;
-  let library: LibraryStore;
+  let transfer: TransferStore;
+  let prompt: PassphrasePromptStore;
   let repository: FakeTransferRepository;
   let dialog: FakeFileDialog;
 
@@ -21,7 +23,8 @@ describe('PassphrasePromptComponent', () => {
       imports: [PassphrasePromptComponent],
       providers: [provideAppTesting({ transferRepository: repository, fileDialog: dialog })],
     });
-    library = TestBed.inject(LibraryStore);
+    transfer = TestBed.inject(TransferStore);
+    prompt = TestBed.inject(PassphrasePromptStore);
     fixture = TestBed.createComponent(PassphrasePromptComponent);
     fixture.autoDetectChanges();
   });
@@ -49,7 +52,7 @@ describe('PassphrasePromptComponent', () => {
    */
   async function whileExporting(): Promise<{ done: Promise<void> }> {
     dialog.savePath = 'C:/out/library.devnotes';
-    const done = library.export(null, new Date('2026-08-27T09:00:00Z'));
+    const done = transfer.export(null, new Date('2026-08-27T09:00:00Z'));
     await vi.waitFor(() => expect(element('passphrase-prompt')).not.toBeNull());
     return { done };
   }
@@ -58,7 +61,7 @@ describe('PassphrasePromptComponent', () => {
     dialog.openPath = 'C:/in/library.devnotes';
     repository.fileIsProtected = true;
     repository.expectedPassphrase = 'a shared phrase';
-    const done = library.import();
+    const done = transfer.import();
     await vi.waitFor(() => expect(element('passphrase-prompt')).not.toBeNull());
     return { done };
   }
@@ -73,7 +76,7 @@ describe('PassphrasePromptComponent', () => {
 
       expect(element('passphrase-prompt')?.textContent).toContain('library.devnotes');
 
-      library.answerPassphrase({ kind: 'cancelled' });
+      prompt.answer({ kind: 'cancelled' });
       await done;
     });
 
@@ -87,7 +90,7 @@ describe('PassphrasePromptComponent', () => {
       expect(submitButton().disabled).toBe(true);
       expect(element('passphrase-prompt-problem')?.textContent?.trim()).not.toBe('');
 
-      library.answerPassphrase({ kind: 'cancelled' });
+      prompt.answer({ kind: 'cancelled' });
       await done;
     });
 
@@ -99,7 +102,7 @@ describe('PassphrasePromptComponent', () => {
 
       expect(submitButton().disabled).toBe(true);
 
-      library.answerPassphrase({ kind: 'cancelled' });
+      prompt.answer({ kind: 'cancelled' });
       await done;
     });
 
@@ -135,7 +138,7 @@ describe('PassphrasePromptComponent', () => {
       expect(element('passphrase-prompt-confirmation')).toBeNull();
       expect(element('passphrase-prompt-plain')).toBeNull();
 
-      library.answerPassphrase({ kind: 'cancelled' });
+      prompt.answer({ kind: 'cancelled' });
       await done;
     });
 
@@ -158,7 +161,7 @@ describe('PassphrasePromptComponent', () => {
 
       expect((element('passphrase-prompt-field') as HTMLInputElement).value).toBe('');
 
-      library.answerPassphrase({ kind: 'cancelled' });
+      prompt.answer({ kind: 'cancelled' });
       await done;
     });
 
@@ -173,7 +176,7 @@ describe('PassphrasePromptComponent', () => {
 
       expect(element('passphrase-prompt-problem')?.textContent?.trim()).toBe('');
 
-      library.answerPassphrase({ kind: 'cancelled' });
+      prompt.answer({ kind: 'cancelled' });
       await done;
     });
 
@@ -190,8 +193,8 @@ describe('PassphrasePromptComponent', () => {
   it('answers the store exactly once per request', async () => {
     const { done } = await whileExporting();
     const answers: PassphraseAnswer[] = [];
-    const original = library.answerPassphrase.bind(library);
-    vi.spyOn(library, 'answerPassphrase').mockImplementation((answer) => {
+    const original = prompt.answer.bind(prompt);
+    vi.spyOn(prompt, 'answer').mockImplementation((answer) => {
       answers.push(answer);
       original(answer);
     });

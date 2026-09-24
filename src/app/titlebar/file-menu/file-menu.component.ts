@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, Signal, computed, inject, signal } 
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ClockService } from '@core/services/time/clock.service';
 import { AppWindowService } from '@core/services/window/app-window.service';
-import { LibraryStore } from '@core/state/library.store';
+import { TransferStore } from '@core/state/transfer.store';
 import { NoteSelectionStore } from '@core/state/note-selection.store';
 import { SpacesStore } from '@core/state/spaces.store';
 import { MenuPanelDirective } from '@shared/directives/menu-panel.directive';
@@ -28,7 +28,7 @@ interface FileMenuEntry {
 })
 export class FileMenuComponent {
   private readonly window = inject(AppWindowService);
-  private readonly library = inject(LibraryStore);
+  private readonly transfer = inject(TransferStore);
   private readonly selection = inject(NoteSelectionStore);
   private readonly spaces = inject(SpacesStore);
   private readonly clock = inject(ClockService);
@@ -48,25 +48,25 @@ export class FileMenuComponent {
     {
       id: 'exportAll',
       labelKey: 'file.exportAll',
-      run: () => void this.library.export(null, this.clock.now()),
+      run: () => void this.transfer.export(null, this.clock.now()),
     },
     {
       id: 'exportSpace',
       labelKey: 'file.exportSpace',
       disabled: computed(() => this.spaces.activeSpaceId() === null),
-      run: () => void this.library.export(this.spaces.activeSpaceId(), this.clock.now()),
+      run: () => void this.transfer.export(this.spaces.activeSpaceId(), this.clock.now()),
     },
     {
       id: 'exportSelection',
       labelKey: 'file.exportSelection',
       disabled: this.nothingChecked,
-      run: () => void this.library.exportSelection(this.checked(), this.clock.now()),
+      run: () => void this.transfer.exportSelection(this.checked(), this.clock.now()),
     },
     {
       id: 'copyMarkdown',
       labelKey: 'file.copyMarkdown',
       disabled: this.nothingChecked,
-      run: () => void this.library.copyAsMarkdown(this.checked()),
+      run: () => void this.transfer.copyAsMarkdown(this.checked()),
     },
   ];
 
@@ -116,7 +116,7 @@ export class FileMenuComponent {
 
   /** Only the spaces reload: the canvas follows `NotesRevision`, which the library bumps. */
   private async onImport(): Promise<void> {
-    if (await this.library.import()) {
+    if (await this.transfer.import()) {
       this.spaces.reload();
     }
   }

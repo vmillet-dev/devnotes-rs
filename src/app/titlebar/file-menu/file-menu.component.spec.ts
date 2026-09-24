@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { StatusNotifier } from '@core/services/notifications/status.service';
-import { LibraryStore } from '@core/state/library.store';
+import { PassphrasePromptStore } from '@core/state/passphrase-prompt.store';
 import { NoteSelectionStore } from '@core/state/note-selection.store';
 import { NotesQueryStore } from '@core/state/notes-query.store';
 import { SpacesStore } from '@core/state/spaces.store';
@@ -44,9 +44,9 @@ describe('FileMenuComponent', () => {
 
   /** ⚠️ The prompt stands between the click and the file; these scenarios decline it. */
   async function declineProtection(): Promise<void> {
-    const library = TestBed.inject(LibraryStore);
-    await vi.waitFor(() => expect(library.passphraseRequest()).not.toBeNull());
-    library.answerPassphrase({ kind: 'none' });
+    const prompt = TestBed.inject(PassphrasePromptStore);
+    await vi.waitFor(() => expect(prompt.request()).not.toBeNull());
+    prompt.answer({ kind: 'none' });
   }
 
   async function openMenu(): Promise<void> {
