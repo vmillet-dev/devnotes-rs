@@ -16,10 +16,10 @@ use zip::{CompressionMethod, ZipArchive, ZipWriter};
 
 use super::model::{Bundle, ExportReport, IncomingBundle};
 use super::protect::{self, Recipe};
-use crate::attachments::model::Attachment;
+use crate::attachments::model::{Attachment, MAX_BYTES};
 use crate::count::saturating_u32;
 use crate::error::{FileContext, StorageError};
-use crate::vault::key::Vault;
+use crate::vault::key::{SEALED_OVERHEAD, Vault};
 
 const BUNDLE_ENTRY: &str = "bundle.json";
 const ATTACHMENTS_ENTRY: &str = "attachments";
@@ -34,6 +34,12 @@ const RECIPE_ENTRY: &str = "recipe.json";
 
 /// What a zip opens with. A plain JSON export from before the archive is still read.
 const ZIP_MAGIC: [u8; 4] = [b'P', b'K', 0x03, 0x04];
+
+/// How far an entry may expand past its compressed size: JSON deflates to about a tenth, and a
+/// hundred times is a decompression bomb, not an export.
+const MAX_EXPANSION: u64 = 100;
+/// A floor under that ratio, so a small entry is never refused over it.
+const MIN_CEILING: u64 = 64 * 1024 * 1024;
 
 fn zip_error(error: &zip::result::ZipError) -> StorageError {
     StorageError::File(error.to_string())
@@ -249,10 +255,24 @@ fn entry(archive: &mut ZipArchive<File>, name: &str) -> Result<Vec<u8>, StorageE
         .by_name(name)
         .map_err(|_| StorageError::ImportFormat(format!("no {name} in the archive")))?;
 
-    let mut bytes = Vec::new();
-    entry.read_to_end(&mut bytes).context(name)?;
+    let ceiling = entry
+        .compressed_size()
+        .saturating_mul(MAX_EXPANSION)
+        .max(MIN_CEILING);
 
-    Ok(bytes)
+    read_at_most(&mut entry, ceiling)
+        .context(name)?
+        .ok_or_else(|| StorageError::ImportFormat(format!("{name} expands past {ceiling} bytes")))
+}
+
+/// `None` past `limit`. Read through `take`, so a stream announcing less cannot deliver more.
+fn read_at_most(reader: impl Read, limit: u64) -> std::io::Result<Option<Vec<u8>>> {
+    let mut bytes = Vec::new();
+    reader
+        .take(limit.saturating_add(1))
+        .read_to_end(&mut bytes)?;
+
+    Ok((bytes.len() as u64 <= limit).then_some(bytes))
 }
 
 /// The attachment bytes of an import, handed over one at a time. `Debug` says nothing about
@@ -281,8 +301,8 @@ impl std::fmt::Debug for Payload {
 }
 
 impl Payload {
-    /// `None` when the archive lacks the bytes or holds them under a key that will not open:
-    /// the import reports both as missing.
+    /// `None` when the archive lacks the bytes, holds more than an attachment may, or holds
+    /// them under a key that will not open: the import reports all three as missing.
     pub fn take(&mut self, stored_name: &str) -> Option<Vec<u8>> {
         let Self::Archive { archive, vault } = self else {
             return None;
@@ -291,13 +311,15 @@ impl Payload {
         let mut entry = archive
             .by_name(&format!("{ATTACHMENTS_ENTRY}/{stored_name}"))
             .ok()?;
-        let mut bytes = Vec::new();
-        entry.read_to_end(&mut bytes).ok()?;
+        let limit = MAX_BYTES + vault.as_ref().map_or(0, |_| SEALED_OVERHEAD as u64);
+        let bytes = read_at_most(&mut entry, limit).ok()??;
 
-        match vault {
-            Some(vault) => vault.open_bytes(&bytes).ok(),
-            None => Some(bytes),
-        }
+        let plain = match vault {
+            Some(vault) => vault.open_bytes(&bytes).ok()?,
+            None => bytes,
+        };
+
+        (plain.len() as u64 <= MAX_BYTES).then_some(plain)
     }
 }
 
@@ -671,5 +693,64 @@ mod tests {
         .unwrap();
 
         assert!(!is_protected(&target.to_string_lossy()).unwrap());
+    }
+
+    #[test]
+    fn a_read_stops_one_byte_past_its_limit() {
+        assert_eq!(
+            read_at_most(&b"four"[..], 4).unwrap(),
+            Some(b"four".to_vec())
+        );
+        assert_eq!(read_at_most(&b"five!"[..], 4).unwrap(), None);
+    }
+
+    /// A deflate stream that expands far past what it weighs is refused rather than read.
+    #[test]
+    fn a_bundle_expanding_past_the_ceiling_is_refused() {
+        let scratch = tempfile::tempdir().unwrap();
+        let target = scratch.path().join("bomb.devnotes");
+        let mut zip = ZipWriter::new(File::create(&target).unwrap());
+        zip.start_file(
+            BUNDLE_ENTRY,
+            SimpleFileOptions::default().compression_method(CompressionMethod::Deflated),
+        )
+        .unwrap();
+        let chunk = vec![b' '; 1024 * 1024];
+        for _ in 0..=MIN_CEILING / 1024 / 1024 {
+            zip.write_all(&chunk).unwrap();
+        }
+        zip.finish().unwrap();
+
+        assert!(matches!(
+            read(&target.to_string_lossy(), None),
+            Err(StorageError::ImportFormat(reason)) if reason.contains("expands past")
+        ));
+    }
+
+    /// Past the limit an attachment is counted missing, as one the archive did not carry.
+    #[test]
+    fn an_attachment_larger_than_the_limit_is_not_handed_over() {
+        let scratch = tempfile::tempdir().unwrap();
+        let directory = scratch.path().to_path_buf();
+        let vault = library();
+        let too_big = usize::try_from(MAX_BYTES).unwrap() + 1;
+        seal_beside(&directory, &vault, &vec![0u8; too_big]);
+        let mut exported = bundle();
+        exported.attachments = vec![record()];
+
+        for protected in [None, Some("a phrase for the file")] {
+            let target = directory.join("library.devnotes");
+            write(
+                &target.to_string_lossy(),
+                &exported,
+                &directory,
+                &vault,
+                protected,
+            )
+            .unwrap();
+            let (_, mut payload) = read(&target.to_string_lossy(), protected).unwrap();
+
+            assert!(payload.take(&record().stored_name()).is_none());
+        }
     }
 }

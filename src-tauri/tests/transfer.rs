@@ -324,12 +324,50 @@ fn an_attachment_travels_with_the_library() {
     let landed = attachments::list(&mut target, &note_id).unwrap();
     assert_eq!(landed.len(), 1);
     // Not `record.stored_name()`: the id is remapped on the way in, because it decides a
-    // write path and came out of a file. The bytes are what has to survive.
-    assert_eq!(
-        std::fs::read(target_files.join(landed[0].stored_name())).unwrap(),
-        b"\x89PNG"
+    // write path and came out of a file. The bytes arrive sealed, and open.
+    let on_disk = std::fs::read(target_files.join(landed[0].stored_name())).unwrap();
+    assert!(
+        !on_disk.windows(4).any(|window| window == b"\x89PNG"),
+        "the imported bytes landed in the clear"
     );
+    assert_eq!(target.vault().open_bytes(&on_disk).unwrap(), b"\x89PNG");
     assert_ne!(landed[0].id, record.id);
+}
+
+/// The size shown is what arrived, whatever the sending file declared.
+#[test]
+fn an_imported_attachment_reports_the_size_that_arrived() {
+    let scratch = tempfile::tempdir().unwrap();
+    let directory = scratch.path().to_path_buf();
+    let source_files = directory.join("source");
+    let target_files = directory.join("target");
+    std::fs::create_dir_all(&source_files).unwrap();
+    std::fs::create_dir_all(&target_files).unwrap();
+
+    let mut source = library();
+    let note_id = notes::all(&mut source, None).unwrap()[0].id.clone();
+    let record = Attachment {
+        byte_size: 999_999,
+        ..capture(&note_id)
+    };
+    seal_beside(&source_files, &source, &record, b"\x89PNG");
+    attach(&mut source, &record).unwrap();
+
+    let target_path = directory
+        .join("library.devnotes")
+        .to_string_lossy()
+        .to_string();
+    let packed = exported(&mut source);
+    file::write(&target_path, &packed, &source_files, source.vault(), None).unwrap();
+
+    let mut target = open_in_memory().unwrap();
+    let (incoming, mut payload) = file::read(&target_path, None).unwrap();
+    merge_bundle(&mut target, incoming, &mut payload, &target_files).unwrap();
+
+    assert_eq!(
+        attachments::list(&mut target, &note_id).unwrap()[0].byte_size,
+        4
+    );
 }
 
 /// Re-importing the same archive adds nothing, attachments included: the notes are

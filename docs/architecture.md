@@ -2296,6 +2296,16 @@ about samples nobody asked for would only add noise.
   the transaction rolls back. A record the archive names but does not carry is counted in
   `attachments_missing` rather than swallowed: the note arrives with a preview that will stay
   empty, and the report is the only thing that explains it.
+- **What arrives is sealed and measured, never trusted.** The bytes go through
+  `sealed::write_sealed` like every other writer on that directory — written in the clear, an
+  imported attachment was readable beside a sealed library and could never be opened again —
+  and the record's `byte_size` is the length that arrived, not the one the file declared.
+- **An archive entry is read under a ceiling.** `bundle.json` and the recipe may expand to a
+  hundred times their compressed size, with a 64 MiB floor so a small entry is never refused over
+  its ratio: a guard against a decompression bomb, not against a large export, which grows
+  with the corpus. An attachment is read up to `MAX_BYTES` (plus the seal's overhead when the
+  file is protected); past it, it is counted in `attachments_missing` and the note still
+  arrives.
 - **Copying out stops at the clipboard.** `share_notes` renders the selection as Markdown
   (heading, space, context, tags, then a fenced block). The fence is longer than the longest
   run of backticks in the content, otherwise a note that already contains a Markdown block
