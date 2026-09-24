@@ -41,7 +41,7 @@ export const titlebar = {
     );
   },
 
-  /** `LocaleService` writes it on `<html lang>`: the titlebar no longer carries a switch. */
+  /** Read off `<html lang>`, which `LocaleService` writes. */
   activeLocale: (): Promise<string> => browser.execute(() => document.documentElement.lang),
 };
 
