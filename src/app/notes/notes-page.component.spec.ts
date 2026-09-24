@@ -637,6 +637,13 @@ describe('NotesPageComponent', () => {
 
       await vi.waitFor(() => expect(maybeChild(QuickPaletteComponent)).not.toBeNull());
     });
+
+    /** The tray's quit goes through the window, so pending writes are settled first. */
+    it('quits through the window when the quit event fires', async () => {
+      fireAction('quit');
+
+      await vi.waitFor(() => expect(appWindow.exitedWith).toBe(0));
+    });
   });
 
   describe('bulk actions', () => {

@@ -4,6 +4,7 @@ import { NotesRevision } from '@core/state/notes-revision';
 import { NotesStore } from '@core/state/notes.store';
 import { PaletteStore } from '@core/state/palette.store';
 import { SampleNotesService } from '@core/services/samples/sample-notes.service';
+import { AppWindowService } from '@core/services/window/app-window.service';
 import { SpacesStore } from '@core/state/spaces.store';
 import { CanvasKeyboardDirective } from '@notes/canvas-keyboard.directive';
 import { NotesCanvasComponent } from './canvas/notes-canvas.component';
@@ -30,6 +31,7 @@ export class NotesPageComponent implements OnInit {
   private readonly spaces = inject(SpacesStore);
   private readonly samples = inject(SampleNotesService);
   private readonly revision = inject(NotesRevision);
+  private readonly window = inject(AppWindowService);
 
   constructor() {
     const events = inject(AppEventsService);
@@ -56,6 +58,9 @@ export class NotesPageComponent implements OnInit {
         break;
       case 'palette':
         void this.palette.open();
+        break;
+      case 'quit':
+        void this.window.quit();
         break;
     }
   }
