@@ -68,10 +68,15 @@
   }
 </div>
 
+<!-- Deferred: fetched the first time they open, not at startup. -->
 @if (librariesOpen()) {
-  <app-libraries-dialog (closed)="closeLibraries()" />
+  @defer (on immediate) {
+    <app-libraries-dialog (closed)="closeLibraries()" />
+  }
 }
 
 @if (settingsOpen()) {
-  <app-settings-dialog (closed)="closeSettings()" />
+  @defer (on immediate) {
+    <app-settings-dialog (closed)="closeSettings()" />
+  }
 }

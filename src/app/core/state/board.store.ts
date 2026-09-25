@@ -142,8 +142,12 @@ export class BoardStore {
   private readonly openFolder = inject(FoldersStore);
   private readonly revision = inject(NotesRevision);
 
-  /** What the user asked for; `mode` is what they actually get. */
-  private readonly wanted = signal<NotesViewMode>('date');
+  /** What the user asked for, remembered per space; `mode` is what they actually get. */
+  private readonly wanted = linkedSignal<string | null, NotesViewMode>({
+    source: () => this.spaces.activeSpaceId(),
+    computation: (spaceId) =>
+      spaceId !== null && this.preferences.read(preferenceKey(spaceId)) === 'board' ? 'board' : 'date',
+  });
 
   readonly canShowBoard = computed(() => this.spaces.activeSpaceId() !== null);
 
@@ -287,16 +291,6 @@ export class BoardStore {
   readonly restorations = this._restorations.asReadonly();
 
   constructor() {
-    // Restores the switch as the space changes: it is remembered per space.
-    effect(() => {
-      const spaceId = this.spaces.activeSpaceId();
-      untracked(() => {
-        this.wanted.set(
-          spaceId !== null && this.preferences.read(preferenceKey(spaceId)) === 'board' ? 'board' : 'date',
-        );
-      });
-    });
-
     effect(() => {
       const error = this.loadError();
       if (error) {

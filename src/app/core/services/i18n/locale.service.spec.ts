@@ -1,16 +1,18 @@
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { TRANSLOCO_LOADER, TranslocoService } from '@jsverse/transloco';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
 import { LocaleService } from './locale.service';
+import { AppTranslocoLoader } from './transloco-loader';
 
 describe('LocaleService', () => {
   /** Mirrors the app initializer: the settings first, the language it holds second. */
   function createService(): LocaleService {
     TestBed.inject(SettingsStore).restore();
     const service = TestBed.inject(LocaleService);
-    service.restore();
+    void service.restore();
     return service;
   }
 
@@ -112,5 +114,16 @@ describe('LocaleService', () => {
     TestBed.tick();
 
     expect(document.documentElement.lang).toBe('en');
+  });
+
+  /** With the application's loader, which imports a chunk: the startup awaits this. */
+  it('resolves once the active language is loaded, so the first render has its strings', async () => {
+    TestBed.overrideProvider(TRANSLOCO_LOADER, { useValue: new AppTranslocoLoader() });
+    stubSystemLanguages('en-US');
+    TestBed.inject(SettingsStore).restore();
+
+    await TestBed.inject(LocaleService).restore();
+
+    expect(TestBed.inject(TranslocoService).translate('notes.untitled')).not.toBe('notes.untitled');
   });
 });

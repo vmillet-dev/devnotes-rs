@@ -12,7 +12,7 @@ A note is a snippet (a body with a language, a source, `{{fields}}`; in the Text
 
 **The Rust back-end is feature-first.** `notes/`, `spaces/`, `folders/`, `attachments/` and `transfer/` each own their model, their SQL and their commands: `<feature>.rs` holds the `#[tauri::command]`s (validate, lock, delegate, translate the error — a command that grows means a rule landed in the wrong place), `<feature>/model.rs` the types and rules (no Diesel, no Tauri), `<feature>/store.rs` the SQL (no rules). What belongs to no feature stays at the root: `error.rs`, `db.rs` (the connection `Mutex`, `db::schema`, `db::migration`, `db::iso8601`), `desktop.rs` (tray and global shortcuts), and the library plumbing (`vault`, `libraries`, `layout`, `backup`, `recovery`). → `docs/architecture.md` → "Feature-first, not layer-first".
 
-**The front-end tree is the shape of the interface.** `notes/`, `titlebar/` and `banners/` hold components only, and a folder's path is its address on screen: a component lives in its parent's folder, one with two parents rises to their nearest common ancestor. `notes/` puts the page and its keyboard at its root, what several zones draw in `notes/ui/`, then its four zones — `sidebar/`, `header/`, `canvas/`, `overlays/` — each with a container that injects what it draws. **Everything without a place on screen lives in `core/`**: `model/`, `data/` (repositories and the wire mapper), `state/` (the stores, flat), `ipc/`, and one folder per subject under `services/`. `shared/` crosses areas of the screen and **injects nothing**, except `DialogComponent`, which injects its neighbour `DialogStack`. ⚠️ `core/ipc/` stays at the root of `core/`: `src-tauri/src/lib.rs` writes `bindings.ts` to that exact path. → "Where a file goes".
+**The front-end tree is the shape of the interface.** `notes/`, `titlebar/` and `banners/` hold components only, and a folder's path is its address on screen: a component lives in its parent's folder, one with two parents rises to their nearest common ancestor. `notes/` puts the page and its keyboard at its root, what several zones draw in `notes/ui/`, then its four zones — `sidebar/`, `header/`, `canvas/`, `overlays/` — each with a container that injects what it draws. **Everything without a place on screen lives in `core/`**: `model/`, `data/` (repositories and the wire mapper), `state/` (the domain's stores, flat), `ipc/`, `utils/`, and one folder per subject under `services/`, which keeps that subject's own store and model. `shared/` crosses areas of the screen and **injects nothing**, except `DialogComponent`, which injects its neighbour `DialogStack`. ⚠️ `core/ipc/` stays at the root of `core/`: `src-tauri/src/lib.rs` writes `bindings.ts` to that exact path. → "Where a file goes".
 
 Primary language for code comments, docstrings, and UI strings in this repo is **English**.
 
@@ -58,7 +58,7 @@ Run all commands from the repo root (`package.json` there wraps both Angular and
 
 ### Libraries, the vault and the disk
 
-- **⚠️ Nothing answers until the library is unlocked.** `Db = Mutex<Option<Library>>` is empty until `unlock_vault` fills it, and a command run first answers `Locked`; the front end never creates the outlet before then, so no store has a "locked" branch. → "Encryption at rest".
+- **⚠️ Nothing answers until the library is unlocked.** `Db = Mutex<Option<Library>>` is empty until `unlock_vault` fills it, and a command run first answers `Locked`; the front end never creates the notes page before then, so no store has a "locked" branch. → "Encryption at rest".
 - **Sealed and not sealed is a line.** Titles, bodies, sources, items, space and folder names, field values and attachments are sealed; what SQL filters, sorts or joins on (tags, instants, ids, `kind`, `language`) is not. Never SQLCipher (measured 4× slower, vendored OpenSSL). → "What is sealed, and what is not".
 - **The passphrase wraps the key, it does not derive it**, and is `zeroize`d before a command returns. ⚠️ Changing it rewrites every retained backup's `vault.json` too (`backup::rewrap`), or the old phrase still opens them. → "Changing the passphrase".
 - **The 12-character floor is for choosing a phrase** (`vault::MINIMUM_LENGTH`, crossing as `MINIMUM_PASSPHRASE_LENGTH`): a new library, a changed phrase, a protected export. Unlocking checks nothing but emptiness — the key file refuses a wrong phrase. → "The floor".
@@ -111,6 +111,7 @@ Run all commands from the repo root (`package.json` there wraps both Angular and
 
 ### Front-end state
 
+- **No host `(document:*)` listener on what is drawn per card.** Angular marks a listener's view dirty before calling it, so one per card re-rendered every card on every click; `MenuTriggerDirective` listens only while open.
 - **Zoneless, `OnPush`, signals.** Writable signals in a store are private (`_x`) behind `.asReadonly()`; derived state is `computed()`. Writes are not optimistic: persist, adopt the answer, bump.
 - **Nothing reloads a view by hand.** Every writer bumps `NotesRevision`; the canvas and the board both read it.
 - **A `computed` feeding a `resource` needs an `equal` comparator**, or a fresh literal fires a query on every clock tick. `resource.value()` throws in error: read behind `hasValue()`.
@@ -119,6 +120,7 @@ Run all commands from the repo root (`package.json` there wraps both Angular and
 - **The canvas stores, one way**: `NotesQueryStore` (which notes), `NoteSelectionStore` (which one is pointed at), `NotesStore` (the note itself), `NoteBatchStore`, `UndoStore`. One method writes a note's fields (`applyPatch`, with an exhaustive `UNCHANGED` table). → "State".
 - **Creating a note writes nothing** until it is worth keeping; ⚠️ `draftMaterialisation` holds the **promise** of the write, or one close creates two notes. → "Creating a note writes nothing".
 - **The editor keeps local drafts** keyed on the note id (and the restore counter), committed on blur and on every closing path.
+- **⚠️ A `@defer`red component is imported on a line of its own** (the notes page, the board, TipTap, the titlebar's dialogs): the compiler defers an import only when every symbol on it serves the block, so a type shares nothing with it (`import type`), and nothing else names the class. There is no router: one screen, and the date view and the board are state (`BoardStore`), not routes. → "No router".
 - **⚠️ TipTap is its own chunk**, behind `@defer`: query the rich editor by template reference, never `viewChild(RichTextEditorComponent)`. On WebKit (Linux) `chain().focus()` throws a mismatched transaction: `focusFirst`, then the chain. Its Markdown escaping is ours (`escapeMarkdownText`), or `{{db_host}}` is stored as `{{db\_host}}`.
 - **Tab stays in the text.** The code field indents through `execCommand('insertText')`, the textarea's own undo, by `codeIndent`; its `preventDefault` is what the focus trap reads. The rich editor stores a tab starting a line as `&#9;`, which `MarkdownWithTabs` turns back. → "Editing a note".
 - **`null` space means "all spaces"**, a choice and not a loading state. Deleting a space needs a refuge; there is no one-argument variant.
@@ -139,7 +141,7 @@ Run all commands from the repo root (`package.json` there wraps both Angular and
 - **A card flows inside a zone and is placed outside one**: a `note_positions` row means "loose", and `file_many` deletes it. `store::board::geometry` is a read that writes.
 - **Opening a folder is one state** (`FoldersStore.activeFolderId`); inside, the view is a flat grid, and Escape falls through selection → search → folder, asking `hasUserFilters`. → "Descending into a folder".
 - **The library rail is the navigation**: while it shows, the two switchers leave the topbar. `FoldersStore` loads every space's folders. → "The library rail".
-- **The canvas keyboard is one table** (`CANVAS_KEYS`): the sheet is derived from it, and a `run` answers whether it acted.
+- **The canvas keyboard is one table** (`CANVAS_KEYS`, in `notes/canvas-keys.ts` apart from the directive, so the titlebar imports data and not stores): the sheet is derived from it, and a `run` answers whether it acted.
 
 ### Preferences, shortcuts and the window
 

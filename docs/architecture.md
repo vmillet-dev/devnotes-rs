@@ -6,17 +6,14 @@ For build/run instructions see the [README](../README.md).
 ## Overview
 
 DevNotes is a Tauri v2 desktop app: an Angular single-page front-end rendered in a WebView,
-and a Rust process that owns everything native (storage, and later hashing and filesystem).
+and a Rust process that owns everything native (storage, encryption, the filesystem).
 The two halves talk only through Tauri's `invoke()` bridge.
 
 Notes and spaces are complete end to end: the front-end has no in-memory dataset left, every
 read and write goes through `invoke()`, and the Rust commands persist to an embedded SQLite
 database. Built on top of that: a 30-day trash with undo, multiple selection and bulk actions,
 corpus-wide tag management, `{{fields}}` in snippets, a quick-paste palette on a global
-shortcut, attachments, and import / export / share. The planned domains (crypto, formatters)
-have **no** module of their own yet: a
-placeholder would ship dead code in the binary, and an empty file documenting a contract
-drifts from whatever eventually gets written.
+shortcut, attachments, and import / export / share.
 
 **Where the work happens.** Data processing belongs to Rust. Filtering (space, full-text,
 tags, languages, quick filters), grouping into display sections, facet aggregation and tag
@@ -30,7 +27,7 @@ yet — a round trip per keystroke), and plain UI concerns like keyboard shortcu
 ```
 src/                Angular front-end
 ├── app/
-│   ├── app.component.*   the frame: titlebar, banners, <router-outlet>
+│   ├── app.component.*   the frame: titlebar, banners, the notes page behind @defer
 │   ├── core/       everything that has no place on screen
 │   │   ├── model/      the vocabulary: note, space, checklist, variable, language
 │   │   ├── data/       repositories and the wire mapper
@@ -44,7 +41,7 @@ src/                Angular front-end
 │   │               overlays/ (drawn over the page), plus ui/ for what two of them share
 │   ├── titlebar/   titlebar.component, then file-menu/ and about-menu/ with the panels
 │   │               each of them opens, nested where they open from
-│   ├── banners/    error banner, status toast, update prompt — siblings of the outlet
+│   ├── banners/    error banner, status toast, update prompt — siblings of the page
 │   └── shared/     what crosses two areas of the screen: the modal frame, a11y directives
 ├── assets/         static images
 ├── styles/         global theme (styles.scss) and SCSS partials
@@ -181,10 +178,10 @@ Membership is decidable, not a matter of taste:
 | Is it a cross-cutting service?              | `core/services/<subject>/`                   |
 | Does it cross two areas of the screen?      | `shared/`                                    |
 
-**`notes/ui/` holds what several zones draw**: the choice menu, the code viewer, the copy
-button, the language badge, the `{{field}}` rows and the tag pill. They are the common
-ancestor rule applied to `notes/` itself — shown by more than one zone, so they rise to the
-zones' parent — and they sit in one folder rather than loose at the root beside the page.
+**`notes/ui/` holds what several zones draw**: the code viewer, the copy button, the language
+badge, the `{{field}}` rows and the tag pill. They are the common ancestor rule applied to
+`notes/` itself — shown by more than one zone, so they rise to the zones' parent — and they sit
+in one folder rather than loose at the root beside the page.
 
 **What has no place on screen is filed by subject, even when a store uses it.**
 `core/state/` holds the stores and nothing else; `NoteCopyService` is under
@@ -193,6 +190,12 @@ sequence is `startApplication()` in `core/services/startup/`, with a spec that h
 — `app.config.ts` is configuration. The canvas keyboard (`CanvasKeyboardDirective`) is the
 page's host directive and lives beside the page in `notes/`: it injects nine stores, and
 `shared/` injects nothing.
+
+**The other way round, a store or a model that belongs to one subject stays with it.**
+`SettingsStore`, `HelpStore`, `UpdateStore` and `ShortcutBindingsStore`, with their models, sit
+in their `core/services/<subject>/` folder beside the service they drive; `core/state/` and
+`core/model/` hold the notes' domain. Helpers with no subject at all — equality, ordering, the
+local day, grid navigation — are `core/utils/`.
 
 **The zones come from the template, not from taste.** `notes/` used to hold eleven entries
 that mixed screen zones with invented categories — `tag-rail` sat outside `topbar/` while
@@ -237,8 +240,9 @@ declaration order whatever the constructor's position, so moving one above anoth
 is the only way to break a class by reordering it.
 
 The rule is **relative when a single `../` reaches the target, alias otherwise** — so
-`core/state/notes.store.ts` reads `../data/notes.repository`, while
-`notes/canvas/note-section/note-card/` reaches the model through `@core/model/note.model`. There is
+`notes/canvas/note-section/` reads `../note-card/note-card.component`, while
+`notes/canvas/note-card/` reaches the model through `@core/model/note.model`, and inside `core/`
+even a neighbour folder is `@core/…`. There is
 no `../../` anywhere in `src/`, and since this reorganisation that is **enforced**:
 `no-restricted-imports` in `eslint.config.mjs` refuses the pattern. The aliases are what make
 it possible — the tree is four levels deep in places, and without them a card reaching the
@@ -246,7 +250,8 @@ model would write `../../../`.
 
 **No `index.ts` barrels.** Three reasons, in order of weight: a barrel at `notes/index.ts`
 would pull `data/`, `state/` and every component into the lazy chunk _while hiding that it
-does_ — the explicit `loadComponent` path is what keeps the chunk honest; barrels re-close
+does_ — the one import of `NotesPageComponent`, deferred by `AppComponent`, is what keeps the
+chunk honest; barrels re-close
 import cycles by construction, and this codebase has one deliberate cycle broken by hand
 (`core/ipc` ↔ `core/data`, see below); and with six aliases the
 import lines are already short. The tree has zero barrels — keep it that way.
@@ -256,16 +261,24 @@ are no NgModules. Change detection is **zoneless** (`provideZonelessChangeDetect
 State lives in signals and every component is `OnPush` — enforced by the
 `prefer-on-push-component-change-detection` lint rule, not by convention alone.
 
-### Routing
+### No router
 
 `AppComponent` _is_ the persistent chrome — titlebar, global error banner, status toast and
-update prompt — around a `<router-outlet>`. Features are lazy-loaded with
-`loadComponent`, so adding the planned crypto and formatters tools will not weigh on the
-initial bundle.
+update prompt — around the notes page, which it loads with `@defer (on immediate)`. There is
+**one** screen, so there is no router: its only job was a lazy `loadComponent` for one route,
+67 kB of the initial chunk to do what `@defer` does. Nothing else a router offers has a use in
+a desktop window — no link to share, no deep URL to reload — and
+[#23](https://github.com/vmillet-dev/devnotes-rs/issues/23) settled that there would be no
+second tool to route to.
 
-Routing uses **hash location** (`withHashLocation()`). Tauri serves the built files from an
-internal protocol with no server to rewrite deep URLs back to `index.html`; the fragment
-sidesteps the problem entirely.
+⚠️ **The date view and the board are state, not routes.** The switch is remembered per space
+and falls back on "all spaces" and inside a folder (`BoardStore.mode`, `isShowing`): a URL
+would be a second source of truth to keep in step, and history a trap — a mouse's back
+button would switch views. The board has a `@defer` of its own instead.
+
+⚠️ The defer sits **outside** the `@if` on the vault: the page's chunk loads from the first
+render, behind the gate, and unlocking never waits for it — while the page itself is still
+not created until the library is open.
 
 ### Component contracts
 
@@ -290,10 +303,10 @@ Components never reach into each other imperatively. A keyboard shortcut belongs
 component that owns the affected element: `Ctrl/⌘+K` is handled inside `SearchBoxComponent`,
 which also renders the hint, rather than travelling down a chain of `viewChild` calls.
 
-A component that only relays inputs and outputs is not a component. The page composes
-`SpaceSwitcher`, `SearchBox`, `FilterChips` and `NoteSection` directly rather than through a
-topbar and a canvas wrapper, which added two files and eleven declarations without a single
-decision between them. The same rule applied to `NoteSectionComponent`, which used to forward
+A component that only relays inputs and outputs is not a component. The zone containers pass
+that test — each injects the stores its zone draws and decides every binding — where the
+topbar and canvas wrappers before them only forwarded what the page handed down. The same rule
+applied to `NoteSectionComponent`, which used to forward
 eleven bindings to the card without reading one of them: the section now takes `[section]`,
 the card takes `[note]` and reads selection, focus and ticks off the stores, and the whole
 binding list is
@@ -308,18 +321,21 @@ ticking, extending a range or opening depends on the visible list, which is the 
 ### Shared behaviour lives in one place, not in copies
 
 Three menus (space switcher, card actions, about) share their interaction rules through
-directives in `shared/a11y/`, applied with `hostDirectives` so no wrapper element is needed:
+directives in `shared/directives/`, applied with `hostDirectives` so no wrapper element is needed:
 
-| Directive              | Selector                                  | Owns                                                                              |
-| ---------------------- | ----------------------------------------- | --------------------------------------------------------------------------------- |
-| `MenuTriggerDirective` | `[appMenuTrigger]`, `exportAs: 'appMenu'` | open state, outside click, Escape, focus returned to `[appMenuAnchor]`            |
-| `MenuPanelDirective`   | `[appMenuPanel]`                          | `role="menu"`, focus on the first entry, arrows and Home/End over `[appMenuItem]` |
+| Directive              | Selector                                  | Owns                                                                                |
+| ---------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------- |
+| `MenuTriggerDirective` | `[appMenuTrigger]`, `exportAs: 'appMenu'` | open state, outside click (while open), Escape, focus returned to `[appMenuAnchor]` |
+| `MenuPanelDirective`   | `[appMenuPanel]`                          | `role="menu"`, focus on the first entry, arrows and Home/End over `[appMenuItem]`   |
 
-Two details are load-bearing:
+Three details are load-bearing:
 
 - `MenuPanelDirective` walks `[appMenuItem]` rather than every button, because a menu may
   carry a secondary action deliberately outside the arrow cycle — the `⋯` that opens a
   space's edit panel is reachable by Tab, not by arrows.
+- ⚠️ `MenuTriggerDirective` listens to `document` **only while open**, from an effect. A host
+  `(document:click)` ran on every card, and Angular marks a listener's view dirty before calling
+  it: any click re-rendered every card — 1001 translation-pipe runs for 200 cards.
 - `MenuTriggerDirective` **closes on Escape by default**, and a host that needs more hands it
   a handler with `handleEscape()` — the switchers first collapse their create/edit panel and
   only close on the second press. One handler, so nothing depends on listener order.
@@ -468,8 +484,6 @@ the whole point of the change is that adding one is no longer a slot to find by 
   the content is typed by the user.
 - Two inputs let a card reuse it: `showLineNumbers` (a gutter on a three-line excerpt is
   noise) and `compact` (no padding, no scroll, no font size of its own — the card decides).
-  The viewer renders `<span>`s rather than `<div>`s for the same reason: a card is a
-  `<button>`, whose content model only admits phrasing content.
 
 ### State
 
@@ -951,14 +965,14 @@ dans" were a `<select>` doing a **command's** job, resetting their own value to 
 every `change`. A screen reader announced a combobox whose current value was "Ranger dans",
 and a keyboard user got a listbox where the rest of the application gives a menu.
 
-**`notes/ui/choice-menu/` replaced seven of the eight**, on the existing menu directives:
-the two selection-bar commands, the editor's language, the editor's space and folder, the
-space editor's refuge and the preferences' language. ⚠️ `naming` is what tells the two
-shapes apart — `'value'` names what is chosen and refuses to re-emit it, `'label'` names
-what the control _does_ and has no current value at all. It lives in `notes/ui/` beside
-`copy-button` because it crosses two zones of `notes/`, and it is the one menu that
-**swallows Escape**: it is used inside dialogs, where the next listener up is the dialog's
-own.
+**`shared/controls/choice-menu/` replaced seven of the eight**, on the existing menu
+directives: the two selection-bar commands, the editor's language, the editor's space and
+folder, the space editor's refuge and the preferences' language. ⚠️ `naming` is what tells the
+two shapes apart — `'value'` names what is chosen and refuses to re-emit it, `'label'` names
+what the control _does_ and has no current value at all. It lives in `shared/` because it
+crosses areas of the screen — the notes, the preferences and the unlock screen — and injects
+nothing but its own host directive. It is the one menu that **swallows Escape**: it is used
+inside dialogs, where the next listener up is the dialog's own.
 
 **Three options get a segmented control instead** (`shared/controls/segmented-choice/`):
 Thème and Densité. Hiding two of three choices behind a click buys nothing, and
@@ -1208,6 +1222,11 @@ is remembered **per space** — one key each, `devnotes.notes.view.<spaceId>`, s
 space does not switch the others. ⚠️ It is unavailable on "all spaces", where a folder
 belongs to no board: the switch disables rather than disappears, and falls back to the date
 view.
+
+**The board is a chunk of its own**, behind `@defer (on immediate)` in the canvas: most
+sessions never show it. ⚠️ `notes-canvas` imports `CardDrop` with an `import type` of its own —
+the compiler defers an import only when every symbol on its line serves the deferred block,
+and a shared line kept the board in the page's chunk without a word.
 
 **The board has a query of its own.** `board_view` answers folders and positions, not
 sections — `build_sections` must never learn about a folder. It reads the whole space and
@@ -1744,7 +1763,9 @@ sections.
 
 **One table binds the keys and documents them.** `CANVAS_KEYS` gives each entry the caps the
 shortcuts sheet draws (`keys`, `labelKey`) _and_, where there is one, the behaviour (`on`,
-`ctrl`, `run`); `CANVAS_SHORTCUT_GROUP` is derived from it. An entry with no `run` is a key
+`ctrl`, `run`); `CANVAS_SHORTCUT_GROUP` is derived from it. It lives in `notes/canvas-keys.ts`,
+data with type-only imports of the stores, so the sheet, the preferences and the guide read it
+without pulling the directive's stores into their chunks. An entry with no `run` is a key
 documented here and handled elsewhere — `Ctrl+K` belongs to the search field, and a modifier
 held during a click is not a key press at all. Before this, the sheet and the handler were two
 lists and nothing kept them in step.
@@ -2009,6 +2030,10 @@ they need — `TransferStore`, `NoteSelectionStore`, `SpacesStore`, `ClockServic
 a `Signal` because "Exporter la sélection" follows what is checked at that instant, and the
 order on screen is the order in the array.
 
+**Its two dialogs, like the About menu's four panels, sit behind `@defer (on immediate)`**:
+the titlebar is in the initial chunk, and those six weighed ~95 kB of it before anyone opened
+one. Each is imported by its menu alone, which is what lets the compiler split it off.
+
 There used to be a contribution registry here — three of them, in fact, one per extension
 point — so the chrome could stay ignorant of a feature it might not have. That indirection had
 exactly one purpose, a second tool, and [#23](https://github.com/vmillet-dev/devnotes-rs/issues/23)
@@ -2156,8 +2181,8 @@ screen, Tab is how the window is crossed, and the Ctrl/Shift clicks are not keys
 `isCanvasAccelerator` refuses those by name, which is what keeps a library you can still get
 out of.
 
-**A canvas key is declared where it is bound.** `CANVAS_KEYS` in `CanvasKeyboardDirective`
-grew an `id` and an `accelerator` on the entries that can move; the caps the sheet draws are
+**A canvas key is declared where it is bound.** `CANVAS_KEYS`, which `CanvasKeyboardDirective`
+binds, grew an `id` and an `accelerator` on the entries that can move; the caps the sheet draws are
 derived from that accelerator, so a key is spelled once. Two constants come out of the same
 table — `CANVAS_SHORTCUT_GROUP` for the sheet, `CANVAS_ACTIONS` for the panel — and a key
 cannot be documented, bound or made movable without the other two following.
@@ -2262,9 +2287,9 @@ the loser keeps the keyboard.
   keep in step.
 
 The groups of the notes — the canvas arrows, `X` to check a card, `Alt+↑` to reorder a
-checklist item — come from `core/constantes/notes-shortcuts.ts`, which the sheet imports.
+checklist item — come from `shortcuts-dialog/notes-shortcuts.ts`, which the sheet imports.
 They live with the notes rather than in the sheet because the canvas group is **derived from
-the key table that binds them** (`CANVAS_SHORTCUT_GROUP`, from `CanvasKeyboardDirective`): a
+the key table that binds them** (`CANVAS_SHORTCUT_GROUP`, from `notes/canvas-keys.ts`): a
 key documented but not bound, or the reverse, is not possible.
 
 The **global** group is the exception and is built by the dialog itself: those three
@@ -2895,8 +2920,8 @@ process’s memory for the length of the session, and there is no idle re-lock.
 ### The gate
 
 `vault_state` answers `absent` / `locked` / `unlocked` / `keyMissing`; `startApplication()` awaits it before the
-first render and `app.component.html` puts `VaultGateComponent` in front of the outlet. ⚠️ It
-does not hide the outlet, it never creates it — which is what keeps every store free of a
+first render and `app.component.html` puts `VaultGateComponent` in front of the notes page.
+⚠️ It does not hide the page, it never creates it — which is what keeps every store free of a
 "locked" branch: the canvas queries notes the moment it mounts, and nothing would be there
 to answer.
 
@@ -3102,7 +3127,7 @@ empties the connection `Mutex` under the same lock every other command takes, th
 Rust, so the front end comes back on the gate of the library just opened. ⚠️ The other
 library has its own passphrase, and asking for it is the only proof the right one is open.
 
-⚠️ **A reload, not a gate over the same stores.** Destroying the outlet is not enough: every
+⚠️ **A reload, not a gate over the same stores.** Destroying the notes page is not enough: every
 store is `providedIn: 'root'` and outlives it. `SpacesStore` loads once and nothing
 reloaded it on a switch, so going back to a library that was already seeded left the rail
 listing the other library's spaces and the board asking this database about a space it had
@@ -3225,8 +3250,8 @@ is built like it.
   from the front end, and `../2026-01-01_00-00-00` joins to a path outside the directory
   whose file name still parses as a stamp.
 
-Afterwards every command answers `Locked`, `VaultStore.load()` sees it, and the outlet is
-destroyed — with the File menu the panel was opened from, which is gated on the same
+Afterwards every command answers `Locked`, `VaultStore.load()` sees it, and the notes page
+is destroyed — with the File menu the panel was opened from, which is gated on the same
 signal. The restored copy needs a passphrase, and asking for it is the only proof the
 right file is in place.
 
@@ -3537,10 +3562,14 @@ colour, created_at)` and `notes.folder_id` points into it. ⚠️ The column was
 UI strings live in `src/app/core/services/i18n/translations/{fr,en}.json` and render through
 Transloco's `transloco` pipe. French is the fallback locale.
 
-- Translations are `import`ed and bundled at build time rather than fetched over HTTP — a
-  small desktop binary with two locales gains nothing from `HttpClient` and a round-trip.
-  They deliberately sit **outside** `src/assets`, where the assets glob would copy them into
-  `dist` a second time, never to be read.
+- Translations are `import()`ed rather than fetched over HTTP — a small desktop binary gains
+  nothing from `HttpClient` and a round-trip. **One chunk per language**, imported when it
+  becomes active: both used to sit in the initial bundle, ~68 kB of which one half is never
+  read. ⚠️ `LocaleService.restore()` resolves only once the active one is in, and
+  `startApplication()` awaits it, or the first render shows empty labels. Specs read both
+  files synchronously through their own loader (`provideTranslocoTesting`), since they assert
+  on text right after a render. The files deliberately sit **outside** `src/assets`, where the
+  assets glob would copy them into `dist` a second time, never to be read.
 - **The choice belongs to `SettingsStore`** (`locale`: `system` / `fr` / `en`, default
   `system`), exactly like the theme. `LocaleService` is what _resolves_ it and pushes it to
   Transloco and `<html lang>` — the same shape as the three services that carry a preference
@@ -3705,9 +3734,15 @@ so "Compact" tightens the whole window. A rail row is `calc(var(--space-grid) / 
 geometry is computed in Rust, and a padding there would offset every gesture. A dialog that sets
 its own `--dialog-padding` keeps it.
 
-Fonts are self-hosted through the `@fontsource` packages listed in `angular.json`'s `styles`
-array. They used to come from Google Fonts, which on a desktop app meant degraded typography
-offline and a CSP that could not be locked down.
+Fonts are self-hosted through the `@fontsource-variable` packages listed in `angular.json`'s
+`styles` array. They used to come from Google Fonts, which on a desktop app meant degraded
+typography offline and a CSP that could not be locked down.
+
+**Variable, and every script kept.** The per-weight `@fontsource` packages shipped each weight
+of each script twice, as woff2 and woff: 118 files, 1.49 MB embedded in the binary for the few
+the WebView ever loads. The `wght` files carry every weight in one woff2 per script — 13 files,
+~300 kB — and `unicode-range` still loads only the scripts on screen. Cyrillic and Greek stay:
+a note is free text. The family names carry the `Variable` suffix.
 
 ## Application updates
 

@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input, output, signal } f
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Folder } from '@core/model/folder.model';
 import { Space } from '@core/model/space.model';
-import { ChoiceMenuComponent, ChoiceOption } from '@notes/ui/choice-menu/choice-menu.component';
+import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
 
 /** An entry of the filing menu, and not a folder id: taking a note out is a choice too. */
 const UNFILE = '__unfile__';

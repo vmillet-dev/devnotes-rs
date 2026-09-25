@@ -2,7 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
-  effect,
+  afterRenderEffect,
   inject,
   input,
   output,
@@ -54,7 +54,7 @@ export class FolderSwitcherComponent {
     this.menu.handleEscape(() => this.onEscape());
     this.menu.closed.subscribe(() => this.resetPanels());
 
-    effect(() => {
+    afterRenderEffect(() => {
       if (!this.menu.open()) return;
       if (this.editing()) {
         this.editor()?.focusName();
