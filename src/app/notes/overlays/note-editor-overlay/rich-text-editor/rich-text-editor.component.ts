@@ -16,6 +16,7 @@ import {
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import type { ChainedCommands, Editor } from '@tiptap/core';
+import { TextSelection } from '@tiptap/pm/state';
 import { IconComponent, IconName } from '@shared/icon/icon.component';
 import { createRichEditor, focusFirst } from './rich-text.engine';
 
@@ -45,6 +46,11 @@ interface Tool {
   readonly text?: string;
   /** What `isActive` asks, when the tool has a state to show. */
   readonly active?: readonly [string, Record<string, unknown>?];
+}
+
+interface LinkForm {
+  readonly text: string;
+  readonly href: string;
 }
 
 /** Grouped as they are separated on screen. */
@@ -90,11 +96,21 @@ const TABLE_TOOLS: readonly Tool[] = [
   templateUrl: './rich-text-editor.component.html',
   styleUrl: './rich-text-editor.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '(document:keydown)': 'followModifier($event)',
+    '(document:keyup)': 'followModifier($event)',
+    '(window:blur)': 'linksLive.set(false)',
+  },
 })
 export class RichTextEditorComponent {
   readonly content = input.required<string>();
   readonly label = input('');
   readonly placeholder = input('');
+  /**
+   * What hovering a link says, since a plain click edits it. Shown by the surface: a link's own
+   * `title` is its Markdown title, `null` on almost all of them.
+   */
+  readonly linkTitle = input('');
 
   readonly changed = output<string>();
   readonly blurred = output<void>();
@@ -107,15 +123,21 @@ export class RichTextEditorComponent {
   protected readonly tools = TOOLS;
   protected readonly tableTools = TABLE_TOOLS;
 
-  /** The address being typed, while the link form is open. */
-  protected readonly linkDraft = signal<string | null>(null);
+  /** The words and the address being typed, while the link form is open. */
+  protected readonly linkForm = signal<LinkForm | null>(null);
+  /** Ctrl is held: a click opens a link, and the pointer says so. */
+  protected readonly linksLive = signal(false);
+  protected readonly overLink = signal(false);
 
   /** Bumped on every transaction, which is what makes the toolbar's state follow the caret. */
   private readonly revision = signal(0);
   private readonly surface = viewChild.required<ElementRef<HTMLElement>>('surface');
-  private readonly linkField = viewChild<ElementRef<HTMLInputElement>>('linkField');
+  private readonly linkTextField = viewChild<ElementRef<HTMLInputElement>>('linkTextField');
+  private readonly linkAddressField = viewChild<ElementRef<HTMLInputElement>>('linkAddressField');
   private readonly injector = inject(Injector);
   private editor: Editor | null = null;
+  /** What the form replaces, taken when it opened: the caret leaves for its fields. */
+  private linkTarget: { readonly from: number; readonly to: number; readonly text: string } | null = null;
   /** The Markdown the document last held: what it emitted or was given. */
   private written = '';
 
@@ -223,29 +245,74 @@ export class RichTextEditorComponent {
     }
   }
 
+  /** On a link, the whole link; otherwise the selection, whose words the form starts from. */
   protected openLinkForm(): void {
-    const href = (this.editor?.getAttributes('link')['href'] as string | undefined) ?? '';
-    this.linkDraft.set(href || 'https://');
-    afterNextRender(() => this.linkField()?.nativeElement.select(), { injector: this.injector });
+    const editor = this.editor;
+    if (!editor) return;
+
+    if (editor.isActive('link')) {
+      editor.commands.extendMarkRange('link');
+    }
+    // Select-all starts before the first paragraph: the range the form replaces is text.
+    const { $from, $to } = editor.state.selection;
+    const { from, to } = TextSelection.between($from, $to);
+    const text = editor.state.doc.textBetween(from, to, ' ');
+    const href = (editor.getAttributes('link')['href'] as string | undefined) ?? '';
+    this.linkTarget = { from, to, text };
+    this.linkForm.set({ text, href: href || 'https://' });
+    afterNextRender(() => (text ? this.linkAddressField() : this.linkTextField())?.nativeElement.select(), {
+      injector: this.injector,
+    });
   }
 
-  /** An empty address takes the link off, which is how one is removed. */
+  protected editLink(change: Partial<LinkForm>): void {
+    this.linkForm.update((form) => form && { ...form, ...change });
+  }
+
+  /**
+   * Words left as they were keep their formatting and only gain or lose the link; new words
+   * replace them. An empty address takes the link off, and no words at all show the address.
+   */
   protected applyLink(): void {
-    const href = this.linkDraft()?.trim() ?? '';
-    const chain = this.chain()?.extendMarkRange('link');
-    if (chain) {
-      (href && href !== 'https://' ? chain.setLink({ href }) : chain.unsetLink()).run();
+    const form = this.linkForm();
+    const target = this.linkTarget;
+    this.linkForm.set(null);
+    if (!form || !target) return;
+
+    const href = form.href.trim();
+    const linked = href !== '' && href !== 'https://';
+    const text = form.text || (linked ? href : target.text);
+    if (!text) return;
+
+    let chain = this.chain();
+    if (!chain) return;
+    let range = { from: target.from, to: target.to };
+    if (text !== target.text) {
+      chain = chain.insertContentAt(range, { type: 'text', text });
+      range = { from: target.from, to: target.from + text.length };
     }
-    this.linkDraft.set(null);
+    chain = chain.setTextSelection(range);
+    chain = linked ? chain.setLink({ href }) : chain.unsetLink();
+    // A link carries on into what is typed after it otherwise.
+    chain.setTextSelection(range.to).unsetMark('link').run();
   }
 
   /** Escape closes the form, and only the form: the editor stays open behind it. */
   protected closeLinkForm(event: Event): void {
     event.stopPropagation();
-    this.linkDraft.set(null);
+    this.linkForm.set(null);
     if (this.editor) {
       focusFirst(this.editor);
     }
+  }
+
+  protected followModifier(event: KeyboardEvent | MouseEvent): void {
+    this.linksLive.set(event.ctrlKey || event.metaKey);
+  }
+
+  protected followPointer(event: MouseEvent): void {
+    this.followModifier(event);
+    this.overLink.set(event.target instanceof Element && event.target.closest('a') !== null);
   }
 
   /** Focused before the chain, never inside it: see `focusFirst`. */

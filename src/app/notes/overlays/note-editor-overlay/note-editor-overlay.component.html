@@ -224,6 +224,7 @@
             [content]="draftContent()"
             [label]="'editor.contentLabel' | transloco"
             [placeholder]="'editor.emptyRich' | transloco"
+            [linkTitle]="'editor.rich.linkOpen' | transloco"
             (changed)="draftContent.set($event)"
             (blurred)="commitContent()"
             (pastedIntoEmpty)="onRichPaste($event)"

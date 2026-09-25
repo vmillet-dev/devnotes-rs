@@ -184,9 +184,11 @@
       "deleteRow": "− Ligne",
       "deleteColumn": "− Colonne",
       "deleteTable": "Supprimer le tableau",
+      "linkText": "Texte",
       "linkAddress": "Adresse du lien",
       "linkApply": "Appliquer",
-      "linkHint": "Vide retire le lien · Ctrl+clic l’ouvre"
+      "linkHint": "Une adresse vide retire le lien · Ctrl+clic l’ouvre",
+      "linkOpen": "Ctrl+clic pour ouvrir"
     },
     "languageLabel": "Format du contenu",
     "placementLabel": "Emplacement",

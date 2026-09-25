@@ -742,7 +742,10 @@ block: a code block is what the note's language is for.
   note moves to the code field with its characters intact — the rich editor would have folded
   its indentation into paragraphs.
 - **A link opens on Ctrl+click**, through `ExternalLinksService`, which refuses any scheme but
-  `http` and `https`. A plain click places the caret, as it does everywhere else in the text.
+  `http` and `https`. A plain click places the caret, as it does everywhere else in the text,
+  so the pointer turns to a hand only while Ctrl is held, and the surface carries the "Ctrl+click
+  to open" tooltip: a link's own `title` is its Markdown title. The link form edits the words
+  and the address; words left as they were keep their formatting and only gain the mark.
 - The draft is committed on blur and on every closing path, like the code field's: the overlay
   blurs the rich editor before it closes, so the last keystrokes are not lost.
 

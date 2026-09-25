@@ -40,9 +40,10 @@ describe('RichTextEditorComponent', () => {
   }
 
   /** Created with its content, as a note opens: `open` replaces a document already there. */
-  async function mount(content: string): Promise<void> {
+  async function mount(content: string, linkTitle = ''): Promise<void> {
     fixture = TestBed.createComponent(RichTextEditorComponent);
     fixture.componentRef.setInput('content', content);
+    fixture.componentRef.setInput('linkTitle', linkTitle);
     emitted = [];
     fixture.componentInstance.changed.subscribe((markdown) => emitted.push(markdown));
     document.body.appendChild(fixture.nativeElement);
@@ -100,36 +101,114 @@ describe('RichTextEditorComponent', () => {
     expect(down.defaultPrevented).toBe(true);
   });
 
-  it('links the selection from Ctrl+K', async () => {
-    await open('runbook');
-    await press('a', { ctrlKey: true });
-    await press('k', { ctrlKey: true });
+  describe('the link form', () => {
+    function field(testid: 'rich-link-text' | 'rich-link-address'): HTMLInputElement {
+      return fixture.nativeElement.querySelector(`[data-testid="${testid}"]`);
+    }
 
-    const field = fixture.nativeElement.querySelector('[data-testid="rich-link-field"]') as HTMLInputElement;
-    field.value = 'https://example.com/runbook';
-    field.dispatchEvent(new Event('input'));
-    button('rich-link-apply').click();
-    await fixture.whenStable();
+    function fill(testid: 'rich-link-text' | 'rich-link-address', value: string): void {
+      field(testid).value = value;
+      field(testid).dispatchEvent(new Event('input'));
+    }
 
-    expect(emitted.at(-1)).toBe('[runbook](https://example.com/runbook)');
-    expect(fixture.nativeElement.querySelector('[data-testid="rich-link-form"]')).toBeNull();
+    async function apply(): Promise<void> {
+      button('rich-link-apply').click();
+      await fixture.whenStable();
+    }
+
+    it('links the selection from Ctrl+K, starting from its words', async () => {
+      await open('runbook');
+      await press('a', { ctrlKey: true });
+      await press('k', { ctrlKey: true });
+      expect(field('rich-link-text').value).toBe('runbook');
+
+      fill('rich-link-address', 'https://example.com/runbook');
+      await apply();
+
+      expect(emitted.at(-1)).toBe('[runbook](https://example.com/runbook)');
+      expect(fixture.nativeElement.querySelector('[data-testid="rich-link-form"]')).toBeNull();
+    });
+
+    it('writes a link with its own words where nothing was selected', async () => {
+      await press('k', { ctrlKey: true });
+
+      fill('rich-link-text', 'the runbook');
+      fill('rich-link-address', 'https://example.com');
+      await apply();
+
+      expect(emitted.at(-1)).toBe('[the runbook](https://example.com)');
+    });
+
+    it('takes the whole link under the caret, and rewords it without losing its address', async () => {
+      await open('see [runbook](https://example.com) first');
+      (surface() as HTMLElement & { editor: Editor }).editor.commands.setTextSelection(8);
+      await press('k', { ctrlKey: true });
+      expect(field('rich-link-text').value).toBe('runbook');
+
+      fill('rich-link-text', 'the runbook');
+      await apply();
+
+      expect(emitted.at(-1)).toBe('see [the runbook](https://example.com) first');
+    });
+
+    it('shows the address when no words are given', async () => {
+      await press('k', { ctrlKey: true });
+
+      fill('rich-link-address', 'https://example.com');
+      await apply();
+
+      expect(surface().querySelector('a')?.textContent).toBe('https://example.com');
+    });
+
+    it('offers the address of the link under the caret, and an empty one takes the link off', async () => {
+      await open('[runbook](https://example.com)');
+      await press('a', { ctrlKey: true });
+      await press('k', { ctrlKey: true });
+      expect(field('rich-link-address').value).toBe('https://example.com');
+
+      fill('rich-link-address', '');
+      await apply();
+
+      expect(emitted.at(-1)).toBe('runbook');
+    });
+
+    it('closes on Escape without letting the key reach the dialog', async () => {
+      await press('k', { ctrlKey: true });
+      let reached = false;
+      const listener = (): void => {
+        reached = true;
+      };
+      document.addEventListener('keydown', listener);
+
+      field('rich-link-text').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await fixture.whenStable();
+      document.removeEventListener('keydown', listener);
+
+      expect(fixture.nativeElement.querySelector('[data-testid="rich-link-form"]')).toBeNull();
+      expect(reached).toBe(false);
+    });
   });
 
-  it('closes the link form on Escape without letting the key reach the dialog', async () => {
-    await press('k', { ctrlKey: true });
-    const field = fixture.nativeElement.querySelector('[data-testid="rich-link-field"]') as HTMLInputElement;
-    let reached = false;
-    const listener = (): void => {
-      reached = true;
-    };
-    document.addEventListener('keydown', listener);
+  /** A plain click edits a link: the pointer shows it opens only while Ctrl is held. */
+  it('points at a link while Ctrl is held, and says so on hover', async () => {
+    fixture.nativeElement.remove();
+    await mount('[runbook](https://example.com)', 'Ctrl+click to open');
+    const live = (): boolean => surface().parentElement!.classList.contains('links-live');
 
-    field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    surface()
+      .querySelector('a')!
+      .dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
     await fixture.whenStable();
-    document.removeEventListener('keydown', listener);
+    expect(surface().parentElement!.getAttribute('title')).toBe('Ctrl+click to open');
+    expect(live()).toBe(false);
 
-    expect(fixture.nativeElement.querySelector('[data-testid="rich-link-form"]')).toBeNull();
-    expect(reached).toBe(false);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Control', ctrlKey: true }));
+    await fixture.whenStable();
+    expect(live()).toBe(true);
+
+    document.dispatchEvent(new KeyboardEvent('keyup', { key: 'Control' }));
+    await fixture.whenStable();
+    expect(live()).toBe(false);
   });
 
   it('offers the table tools while the caret is in a table, and only then', async () => {
@@ -185,22 +264,6 @@ describe('RichTextEditorComponent', () => {
     await use('deleteTable');
     expect(surface().querySelector('table')).toBeNull();
     expect(button('rich-rowAfter')).toBeNull();
-  });
-
-  it('offers the address of the link under the caret, and an empty one takes the link off', async () => {
-    await open('[runbook](https://example.com)');
-    await press('a', { ctrlKey: true });
-    await press('k', { ctrlKey: true });
-
-    const field = fixture.nativeElement.querySelector('[data-testid="rich-link-field"]') as HTMLInputElement;
-    expect(field.value).toBe('https://example.com');
-
-    field.value = '';
-    field.dispatchEvent(new Event('input'));
-    button('rich-link-apply').click();
-    await fixture.whenStable();
-
-    expect(emitted.at(-1)).toBe('runbook');
   });
 
   it('says whether the text holds the focus, and when it lets it go', () => {

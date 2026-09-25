@@ -184,9 +184,11 @@
       "deleteRow": "− Row",
       "deleteColumn": "− Column",
       "deleteTable": "Delete the table",
+      "linkText": "Text",
       "linkAddress": "Link address",
       "linkApply": "Apply",
-      "linkHint": "Empty removes the link · Ctrl+click opens it"
+      "linkHint": "An empty address removes the link · Ctrl+click opens it",
+      "linkOpen": "Ctrl+click to open"
     },
     "languageLabel": "Content format",
     "placementLabel": "Location",

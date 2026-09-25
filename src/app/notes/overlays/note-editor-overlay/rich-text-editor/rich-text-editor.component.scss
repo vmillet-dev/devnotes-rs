@@ -67,6 +67,7 @@
 
 .rich-link-form {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   padding: 8px 24px;
@@ -98,7 +99,12 @@
   cursor: pointer;
 }
 
+.rich-link-address {
+  flex: 1.5;
+}
+
 .rich-link-hint {
+  flex-basis: 100%;
   font-size: 11px;
   color: var(--text-2);
 }

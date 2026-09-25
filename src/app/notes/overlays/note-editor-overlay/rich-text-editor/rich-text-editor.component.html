@@ -34,7 +34,7 @@
       type="button"
       class="rich-tool"
       data-testid="rich-link"
-      [attr.aria-pressed]="linkDraft() !== null"
+      [attr.aria-pressed]="linkForm() !== null"
       [attr.aria-label]="'editor.rich.link' | transloco"
       [attr.title]="'editor.rich.link' | transloco"
       (mousedown)="$event.preventDefault()"
@@ -72,20 +72,37 @@
   }
 </div>
 
-@if (linkDraft() !== null) {
-  <form class="rich-link-form" data-testid="rich-link-form" (submit)="$event.preventDefault(); applyLink()">
-    <label class="visually-hidden" for="rich-link-field">{{ 'editor.rich.linkAddress' | transloco }}</label>
+@if (linkForm(); as form) {
+  <form
+    class="rich-link-form"
+    data-testid="rich-link-form"
+    (submit)="$event.preventDefault(); applyLink()"
+    (keydown.escape)="closeLinkForm($event)"
+  >
+    <label class="visually-hidden" for="rich-link-text">{{ 'editor.rich.linkText' | transloco }}</label>
     <input
-      #linkField
-      id="rich-link-field"
+      #linkTextField
+      id="rich-link-text"
       class="rich-link-field"
+      type="text"
+      spellcheck="false"
+      autocomplete="off"
+      data-testid="rich-link-text"
+      [placeholder]="'editor.rich.linkText' | transloco"
+      [value]="form.text"
+      (input)="editLink({ text: linkTextField.value })"
+    />
+    <label class="visually-hidden" for="rich-link-address">{{ 'editor.rich.linkAddress' | transloco }}</label>
+    <input
+      #linkAddressField
+      id="rich-link-address"
+      class="rich-link-field rich-link-address"
       type="url"
       spellcheck="false"
       autocomplete="off"
-      data-testid="rich-link-field"
-      [value]="linkDraft()"
-      (input)="linkDraft.set($any($event.target).value)"
-      (keydown.escape)="closeLinkForm($event)"
+      data-testid="rich-link-address"
+      [value]="form.href"
+      (input)="editLink({ href: linkAddressField.value })"
     />
     <button type="submit" class="rich-link-apply" data-testid="rich-link-apply">
       {{ 'editor.rich.linkApply' | transloco }}
@@ -94,4 +111,11 @@
   </form>
 }
 
-<div #surface class="rich-surface"></div>
+<div
+  #surface
+  class="rich-surface"
+  [class.links-live]="linksLive()"
+  [attr.title]="overLink() && linkTitle() ? linkTitle() : null"
+  (mousemove)="followPointer($event)"
+  (mouseleave)="overLink.set(false)"
+></div>
