@@ -7,7 +7,7 @@ import { LifecycleBadgeComponent } from './lifecycle-badge/lifecycle-badge.compo
 import { TagPillComponent } from '@notes/ui/tag-pill/tag-pill.component';
 import { LANGUAGE_LABELS } from '@core/model/language.model';
 import { Folder } from '@core/model/folder.model';
-import { NotePatch } from '@core/model/note.model';
+import { Note, NotePatch } from '@core/model/note.model';
 import { Space } from '@core/model/space.model';
 import { AttachmentsStore } from '@core/state/attachments.store';
 import { NotesStore } from '@core/state/notes.store';
@@ -17,7 +17,6 @@ import { provideAppTesting } from '@testing/testing.providers';
 import { ExternalLinksService } from '@core/services/links/external-links.service';
 import { FakeNotesRepository } from '@testing/fake-notes-repository';
 import { NotesRepository } from '@core/data/notes.repository';
-import { Note } from '@core/model/note.model';
 import { NoteEditorOverlayComponent } from './note-editor-overlay.component';
 import { RichTextEditorComponent } from './rich-text-editor/rich-text-editor.component';
 

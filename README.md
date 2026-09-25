@@ -64,6 +64,7 @@ Spaces, folders and tags. Browse notes by date or lay them out on a board. The k
 | **Search**            | titles, bodies, list items and tags, accents folded, and each card quotes the line that matched                                 |
 | **Board and folders** | a space laid out as a board where folders are regions, or listed by date                                                        |
 | **Keyboard first**    | arrows to move, `Enter` to open, `C` to copy, `P` to pin, `X` to select, `Del` to trash, `Ctrl+Z` to undo                       |
+| **Formatted notes**   | a Text note takes headings, bold, lists, checkboxes, tables and links; paste code into one and it becomes a snippet             |
 | **Todo lists**        | a second kind of note: an ordered list you tick off                                                                             |
 | **History**           | the last twenty versions of a snippet, one click from coming back                                                               |
 | **Trash and undo**    | a deletion is undone at once, or brought back within 30 days                                                                    |

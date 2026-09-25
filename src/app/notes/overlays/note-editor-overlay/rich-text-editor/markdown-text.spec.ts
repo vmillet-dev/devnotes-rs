@@ -29,12 +29,12 @@ describe('escapeMarkdownText', () => {
   it.each([
     ['*not emphasis*', '\\*not emphasis\\*'],
     ['_not emphasis_', '\\_not emphasis\\_'],
-    ['~~not struck~~', '\\~\\~not struck\\~\\~'],
+    ['~~not struck~~', '\\~\\~not struck\\~~'],
     ['`not code`', '\\`not code\\`'],
     ['[not a link](x)', '\\[not a link](x)'],
     ['<div> tag', '\\<div> tag'],
     ['&amp; entity', '\\&amp; entity'],
-    ['\\* escaped', '\\\\* escaped'],
+    ['\\* escaped', '\\\\\\* escaped'],
   ])('escapes %j, which would read as syntax', (text, stored) => {
     expect(escapeMarkdownText(text)).toBe(stored);
   });
