@@ -9,7 +9,7 @@ import {
   acceleratorFromEvent,
   canvasKeystrokeFromEvent,
 } from '@core/services/shortcuts/shortcut.model';
-import { CANVAS_ACTIONS } from '@notes/canvas-keyboard.directive';
+import { CANVAS_ACTIONS } from '@notes/canvas-keys';
 
 /** A refusal belongs to the field that caused it: two rows, two independent messages. */
 interface Refusal {

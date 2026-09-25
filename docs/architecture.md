@@ -1744,7 +1744,9 @@ sections.
 
 **One table binds the keys and documents them.** `CANVAS_KEYS` gives each entry the caps the
 shortcuts sheet draws (`keys`, `labelKey`) _and_, where there is one, the behaviour (`on`,
-`ctrl`, `run`); `CANVAS_SHORTCUT_GROUP` is derived from it. An entry with no `run` is a key
+`ctrl`, `run`); `CANVAS_SHORTCUT_GROUP` is derived from it. It lives in `notes/canvas-keys.ts`,
+data with type-only imports of the stores, so the sheet, the preferences and the guide read it
+without pulling the directive's stores into their chunks. An entry with no `run` is a key
 documented here and handled elsewhere — `Ctrl+K` belongs to the search field, and a modifier
 held during a click is not a key press at all. Before this, the sheet and the handler were two
 lists and nothing kept them in step.
@@ -2160,8 +2162,8 @@ screen, Tab is how the window is crossed, and the Ctrl/Shift clicks are not keys
 `isCanvasAccelerator` refuses those by name, which is what keeps a library you can still get
 out of.
 
-**A canvas key is declared where it is bound.** `CANVAS_KEYS` in `CanvasKeyboardDirective`
-grew an `id` and an `accelerator` on the entries that can move; the caps the sheet draws are
+**A canvas key is declared where it is bound.** `CANVAS_KEYS`, which `CanvasKeyboardDirective`
+binds, grew an `id` and an `accelerator` on the entries that can move; the caps the sheet draws are
 derived from that accelerator, so a key is spelled once. Two constants come out of the same
 table — `CANVAS_SHORTCUT_GROUP` for the sheet, `CANVAS_ACTIONS` for the panel — and a key
 cannot be documented, bound or made movable without the other two following.
@@ -2266,9 +2268,9 @@ the loser keeps the keyboard.
   keep in step.
 
 The groups of the notes — the canvas arrows, `X` to check a card, `Alt+↑` to reorder a
-checklist item — come from `core/constantes/notes-shortcuts.ts`, which the sheet imports.
+checklist item — come from `shortcuts-dialog/notes-shortcuts.ts`, which the sheet imports.
 They live with the notes rather than in the sheet because the canvas group is **derived from
-the key table that binds them** (`CANVAS_SHORTCUT_GROUP`, from `CanvasKeyboardDirective`): a
+the key table that binds them** (`CANVAS_SHORTCUT_GROUP`, from `notes/canvas-keys.ts`): a
 key documented but not bound, or the reverse, is not possible.
 
 The **global** group is the exception and is built by the dialog itself: those three

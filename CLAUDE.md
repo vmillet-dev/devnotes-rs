@@ -139,7 +139,7 @@ Run all commands from the repo root (`package.json` there wraps both Angular and
 - **A card flows inside a zone and is placed outside one**: a `note_positions` row means "loose", and `file_many` deletes it. `store::board::geometry` is a read that writes.
 - **Opening a folder is one state** (`FoldersStore.activeFolderId`); inside, the view is a flat grid, and Escape falls through selection → search → folder, asking `hasUserFilters`. → "Descending into a folder".
 - **The library rail is the navigation**: while it shows, the two switchers leave the topbar. `FoldersStore` loads every space's folders. → "The library rail".
-- **The canvas keyboard is one table** (`CANVAS_KEYS`): the sheet is derived from it, and a `run` answers whether it acted.
+- **The canvas keyboard is one table** (`CANVAS_KEYS`, in `notes/canvas-keys.ts` apart from the directive, so the titlebar imports data and not stores): the sheet is derived from it, and a `run` answers whether it acted.
 
 ### Preferences, shortcuts and the window
 
