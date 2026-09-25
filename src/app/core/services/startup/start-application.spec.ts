@@ -39,7 +39,7 @@ describe('startApplication', () => {
       providers: [
         { provide: PreferencesService, useValue: { hydrate: later('preferences') } },
         { provide: SettingsStore, useValue: { restore: step('settings') } },
-        { provide: LocaleService, useValue: { restore: step('locale') } },
+        { provide: LocaleService, useValue: { restore: later('locale') } },
         { provide: TrayService, useValue: { start: step('tray') } },
         { provide: LibrariesStore, useValue: { load: later('libraries') } },
         { provide: VaultStore, useValue: { load: later('vault') } },

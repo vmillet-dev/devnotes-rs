@@ -3551,10 +3551,14 @@ colour, created_at)` and `notes.folder_id` points into it. ⚠️ The column was
 UI strings live in `src/app/core/services/i18n/translations/{fr,en}.json` and render through
 Transloco's `transloco` pipe. French is the fallback locale.
 
-- Translations are `import`ed and bundled at build time rather than fetched over HTTP — a
-  small desktop binary with two locales gains nothing from `HttpClient` and a round-trip.
-  They deliberately sit **outside** `src/assets`, where the assets glob would copy them into
-  `dist` a second time, never to be read.
+- Translations are `import()`ed rather than fetched over HTTP — a small desktop binary gains
+  nothing from `HttpClient` and a round-trip. **One chunk per language**, imported when it
+  becomes active: both used to sit in the initial bundle, ~68 kB of which one half is never
+  read. ⚠️ `LocaleService.restore()` resolves only once the active one is in, and
+  `startApplication()` awaits it, or the first render shows empty labels. Specs read both
+  files synchronously through their own loader (`provideTranslocoTesting`), since they assert
+  on text right after a render. The files deliberately sit **outside** `src/assets`, where the
+  assets glob would copy them into `dist` a second time, never to be read.
 - **The choice belongs to `SettingsStore`** (`locale`: `system` / `fr` / `en`, default
   `system`), exactly like the theme. `LocaleService` is what _resolves_ it and pushes it to
   Transloco and `<html lang>` — the same shape as the three services that carry a preference

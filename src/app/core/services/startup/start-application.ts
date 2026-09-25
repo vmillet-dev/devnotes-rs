@@ -30,7 +30,7 @@ export async function startApplication(): Promise<void> {
   await preferences.hydrate();
   // Before `locale.restore()`, which reads the language out of it.
   settings.restore();
-  locale.restore();
+  await locale.restore();
   // After `restore()`: the front creates the tray by giving it its labels, and earlier
   // would push the default language and a setting the user had changed.
   tray.start();

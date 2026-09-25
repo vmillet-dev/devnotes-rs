@@ -1,5 +1,4 @@
 import { TestBed } from '@angular/core/testing';
-import { firstValueFrom } from 'rxjs';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { APP_INFO } from '@core/services/app-info/app-info.service';
 import en from './translations/en.json';
@@ -16,13 +15,19 @@ describe('AppTranslocoLoader', () => {
   });
 
   it('adds the application name as a key, which is what `{{app}}` resolves to', async () => {
-    const translation = await firstValueFrom(loader.getTranslation('fr'));
+    const translation = await loader.getTranslation('fr');
 
     expect(translation['app']).toBe(APP_INFO.name);
   });
 
+  it('imports the file of the language asked for', async () => {
+    const translation = await loader.getTranslation('en');
+
+    expect(translation['notes']).toEqual(en.notes);
+  });
+
   it('answers an empty translation for a language it does not bundle', async () => {
-    const translation = await firstValueFrom(loader.getTranslation('de'));
+    const translation = await loader.getTranslation('de');
 
     expect(Object.keys(translation)).toEqual(['app']);
   });
