@@ -1,6 +1,6 @@
 use crate::closed_enum::closed_enum;
 
-use super::model::{Note, NoteDraft, NotePatch};
+use super::model::NoteDraft;
 
 closed_enum! {
     /// Closed: the front receives a generated union, so an unknown value stops compiling
@@ -37,24 +37,6 @@ pub fn for_draft(draft: &NoteDraft) -> Language {
     } else {
         draft.language
     }
-}
-
-/// Creation sees no content, the paste coming after: without this the note stays `txt`. The
-/// three refusals keep detection from becoming a permanent correction.
-pub fn after_patch(before: &Note, patch: &NotePatch) -> Option<Language> {
-    if patch.language.is_some()
-        || before.language != Language::default()
-        || !before.content.trim().is_empty()
-    {
-        return None;
-    }
-
-    let content = patch.content.as_ref()?;
-    if content.trim().is_empty() {
-        return None;
-    }
-
-    Some(from_content(content))
 }
 
 /// What one marker is worth. Three tiers and no more: a marker declares how much it proves,
@@ -499,73 +481,6 @@ mod tests {
     #[test]
     fn an_empty_draft_stays_plain_text() {
         assert_eq!(for_draft(&draft(Language::Txt, "")), Language::Txt);
-    }
-
-    fn blank_note() -> Note {
-        Note {
-            language: Language::Txt,
-            content: String::new(),
-            ..crate::notes::fixtures::note()
-        }
-    }
-
-    fn content_patch(content: &str) -> NotePatch {
-        NotePatch {
-            content: Some(content.to_string()),
-            ..NotePatch::default()
-        }
-    }
-
-    #[test]
-    fn an_empty_note_receiving_its_first_content_gets_a_language() {
-        let detected = after_patch(&blank_note(), &content_patch("interface A { id: string }"));
-
-        assert_eq!(detected, Some(Language::Ts));
-    }
-
-    #[test]
-    fn a_note_that_already_had_content_keeps_its_language() {
-        let note = Note {
-            content: "some prose".to_string(),
-            ..blank_note()
-        };
-
-        assert!(after_patch(&note, &content_patch("SELECT 1")).is_none());
-    }
-
-    #[test]
-    fn a_chosen_language_is_never_corrected_by_a_later_paste() {
-        let note = Note {
-            language: Language::Md,
-            ..blank_note()
-        };
-
-        assert!(after_patch(&note, &content_patch("SELECT 1")).is_none());
-    }
-
-    #[test]
-    fn a_patch_setting_the_language_itself_is_left_alone() {
-        let patch = NotePatch {
-            language: Some(Language::Md),
-            ..content_patch("SELECT 1")
-        };
-
-        assert!(after_patch(&blank_note(), &patch).is_none());
-    }
-
-    #[test]
-    fn a_patch_carrying_no_content_detects_nothing() {
-        let patch = NotePatch {
-            title: Some("Title".to_string()),
-            ..NotePatch::default()
-        };
-
-        assert!(after_patch(&blank_note(), &patch).is_none());
-    }
-
-    #[test]
-    fn clearing_the_content_does_not_detect() {
-        assert!(after_patch(&blank_note(), &content_patch("   ")).is_none());
     }
 
     #[test]

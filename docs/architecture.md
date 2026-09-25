@@ -669,9 +669,8 @@ where its rule already lived:
   so it would otherwise be findable only by its title.
 - `transfer::model::to_markdown` renders `- [x] …` lines instead of a fenced block. An empty
   ` ```txt ` block is not something anybody pastes into a ticket.
-- Language detection is skipped, at creation and on patch alike. There is no body to read,
-  and a format select over a note that shows no code is a control with nothing to do — which
-  is why the editor hides it too.
+- Language detection is skipped. There is no body to read, and a format select over a note
+  that shows no code is a control with nothing to do — which is why the editor hides it too.
 
 Both fields carry `#[serde(default)]`. `transfer::Bundle` deserialises `Note` itself, so a
 required key would have made every export file written before todo lists unreadable —
@@ -707,6 +706,48 @@ a snippet, whose `content` is already there. Counting an array is presentation; 
 a task list reads `- [x] …` is a rule, and it now has exactly one home —
 `notes::checklist::to_markdown`, which sharing and exporting already used. The front end held
 a second copy of that syntax, and one of the two was going to drift.
+
+### A Text note is written formatted, and stored as Markdown
+
+There is no third kind. A snippet in `txt` is edited in the rich editor instead of the code
+field (`Note::is_rich_text` in Rust, `isRichText` in the overlay), and its body is still one
+string: it is sealed, exported, copied, searched and kept in revisions like any other. What the
+editor writes is GitHub-flavoured Markdown, and it offers only what that can hold — headings,
+emphasis, inline code, lists, task boxes, quotes, tables, links. No underline, and no code
+block: a code block is what the note's language is for.
+
+- **⚠️ The escaping is ours.** `@tiptap/markdown` escapes every `_ * ~ [ ] \` and turns
+  `& < >` into entities, so `{{db_host}}` stopped being a field and `a -> b` was stored as
+  `a -&gt; b`. `rich-text.engine.ts` replaces its private `encodeTextForMarkdown` with
+  `escapeMarkdownText`, which escapes a character only where it would read as syntax and never
+  inside a `{{field}}`. `markdown-text.spec.ts` fails if an upgrade stops calling it.
+- **⚠️ Focus before a chain, never inside it.** On WebKit, which Linux runs, TipTap's
+  `chain().focus()` focuses synchronously, and the focus dispatches first: a note ending in a
+  list gains its trailing paragraph under the chain's transaction, which then throws "Applying a
+  mismatched transaction". `focusFirst` runs before every chain the toolbar builds, and a
+  capture listener runs it before TaskItem's own when a box is ticked. Chromium defers that
+  focus to the next frame, so Windows never shows it; the component spec fakes WebKit's agent.
+- **TipTap is a chunk of its own**, some 135 kB gzipped, loaded by `@defer (on immediate)` when
+  a Text note opens. ⚠️ `viewChild(RichTextEditorComponent)` names the class at runtime and
+  pulls the whole editor back into the page's chunk: the overlay queries it by template
+  reference, with a type-only import.
+- **A card shows words, not Markdown.** `notes::markdown::plain` (pulldown-cmark) turns the
+  body into one line per block — `☐`/`☑` for a task, table cells joined by `·` — and
+  `cut_to_preview` puts that in place of a Text note's body, marked `truncated` even when it is
+  short: a copy taken from the list rereads the Markdown instead of copying the words. The
+  search matches the stored body and quotes the readable one (`Note::readable_body`).
+- **Typing never changes the language; a paste into an empty note can.** The rich editor hands
+  plain text pasted into an empty Text note to the overlay, which asks `detect_language`. Prose
+  stays Text and is written as it is; code is written with its language in one patch, and the
+  note moves to the code field with its characters intact — the rich editor would have folded
+  its indentation into paragraphs.
+- **A link opens on Ctrl+click**, through `ExternalLinksService`, which refuses any scheme but
+  `http` and `https`. A plain click places the caret, as it does everywhere else in the text,
+  so the pointer turns to a hand only while Ctrl is held, and the surface carries the "Ctrl+click
+  to open" tooltip: a link's own `title` is its Markdown title. The link form edits the words
+  and the address; words left as they were keep their formatting and only gain the mark.
+- The draft is committed on blur and on every closing path, like the code field's: the overlay
+  blurs the rich editor before it closes, so the last keystrokes are not lost.
 
 ### A list sends previews, and the body is read by id
 
@@ -2521,23 +2562,19 @@ who remember to touch the select. Three things keep it honest:
 
 - `txt` doubles as **"nothing chosen"**, and detection runs on exactly two moments, both of
   which are a note acquiring its first content:
-  - `with_detected_language` on a draft that reaches `create_note` as `txt` — the capture
+  - `language::for_draft` on a draft that reaches `create_note` as `txt` — the capture
     shortcut, which pastes and creates in one go;
-  - `language_after_patch` when a patch gives a **still-empty** note its content — the ordinary
-    "+ New note, then paste", where creation sees no content at all. Applied from
-    `notes::store::update`, which calls into the model for the rule the same way it calls
-    `notes::model::normalize_tags`.
-- It **never replays afterwards**. Once a note has content, or carries a language other than
-  `txt`, or the patch sets a language itself, nothing is guessed: re-detecting on every write
-  would take the select back from the user, and there would be no way to overrule a bad guess.
+  - `detect_language`, asked by the rich editor when text is **pasted** into an empty Text
+    note — the ordinary "+ New note, then paste". The front end writes the answer with the
+    content, in one patch.
+- **A patch never guesses.** A Text note is where prose is typed, and the first blur of typed
+  prose would otherwise hand it to a heuristic built for code. Once a note has content, nothing
+  is guessed either: re-detecting on every write would take the select back from the user, and
+  there would be no way to overrule a bad guess.
 - The heuristics are cheap and **allowed to be wrong**: the result is a starting value the
   editor can change. A miss costs one click.
 - Order runs from the most discriminating signal to the vaguest (a wrapping brace beats a
   `key: value`), so each new rule goes in at the position its confidence earns.
-- The editor commits a **paste** immediately rather than on blur (`onBodyInput` tests
-  `inputType === 'insertFromPaste'`). The language is only known once the content is persisted,
-  so waiting for the blur would leave the badge on TXT — which reads as a failed detection.
-  Plain typing stays deferred: that is what avoids one round trip per character.
 
 ### Rules
 
@@ -3797,10 +3834,11 @@ application's file — both serve 0.3.x, the release before the one that introdu
 - `src-tauri/capabilities/default.json` is the v2 permission manifest for the main window.
   Any new plugin or restricted API needs its permission listed there, or the call is denied
   at runtime — that is where `updater:default` and `process:allow-restart` come from.
-- **`opener:allow-open-url` carries a scope**, not the bare permission: only
-  `https://github.com/vmillet-dev/*` may be opened. `opener:default` would let any URL through
-  the WebView's only escape hatch to the system browser. The About dialog needs the plugin
-  precisely because the CSP is locked to `'self'` — a plain `<a href>` leads nowhere — and
+- **`opener:allow-open-url` carries a scope**, not the bare permission: `http://*` and
+  `https://*`, for the About dialog and a link Ctrl+clicked in a Text note, and nothing else —
+  no `file:`, no scheme a program registered for itself. It is the WebView's only escape hatch
+  to the system, and `ExternalLinksService` refuses any other scheme before the call as well.
+  The About dialog needs the plugin precisely because the CSP is locked to `'self'` — a plain `<a href>` leads nowhere — and
   `AppInfoService` (`core/services/app-info/`) is its seam, alongside `getVersion()`. That one needs no
   permission of its own: `core:app:allow-version` already ships inside `core:default`.
 - `serde_json` is a **runtime** dependency, not just a dev one: `generate_context!` embeds the

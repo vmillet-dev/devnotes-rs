@@ -1,9 +1,10 @@
-import { $, $$ } from '@wdio/globals';
+import { $, $$, browser } from '@wdio/globals';
 
 import {
   blur,
   clickToAddRow,
   confirmTwice,
+  eventually,
   press,
   readEach,
   setField,
@@ -25,6 +26,40 @@ async function typeAndCommit(selector: string, text: string): Promise<void> {
   await blur();
 }
 
+/** A Text note's body is the rich editor, loaded on demand; any other note's, the code field. */
+async function bodyField(): Promise<'rich' | 'code'> {
+  const field = await eventually(
+    async () =>
+      (await $(testid('editor-rich')).isExisting())
+        ? 'rich'
+        : (await $(testid('editor-body')).isExisting())
+          ? 'code'
+          : null,
+    (found) => found !== null,
+    'the body field to be drawn',
+  );
+  return field as 'rich' | 'code';
+}
+
+/** `setValue` reaches no contenteditable: the page inserts the text, which ProseMirror reads as typing. */
+async function typeRich(text: string): Promise<void> {
+  await browser.execute(
+    (selector: string, value: string) => {
+      (document.querySelector(selector) as HTMLElement).focus();
+      document.execCommand('selectAll');
+      document.execCommand('insertText', false, value);
+    },
+    testid('editor-rich'),
+    text,
+  );
+  await eventually(
+    () => $(testid('editor-rich')).getText(),
+    (shown) => shown === text,
+    'the rich editor to hold what was typed',
+  );
+  await blur();
+}
+
 async function rowAt(selector: string, index: number) {
   const rows = await $$(selector).getElements();
   const row = rows[index];
@@ -43,11 +78,21 @@ export const editor = {
   isOpen: () => $(testid('editor-title')).isExisting(),
 
   setTitle: (text: string) => typeAndCommit(testid('editor-title'), text),
-  setBody: (text: string) => typeAndCommit(testid('editor-body'), text),
+  async setBody(text: string): Promise<void> {
+    if ((await bodyField()) === 'rich') {
+      await typeRich(text);
+    } else {
+      await typeAndCommit(testid('editor-body'), text);
+    }
+  },
   setSource: (text: string) => typeAndCommit(testid('editor-source'), text),
 
   title: () => $(testid('editor-title')).getValue(),
-  body: () => $(testid('editor-body')).getValue(),
+  async body(): Promise<string> {
+    return (await bodyField()) === 'rich'
+      ? $(testid('editor-rich')).getText()
+      : $(testid('editor-body')).getValue();
+  },
 
   setLanguage: (language: string) => pickChoice('language', language),
 

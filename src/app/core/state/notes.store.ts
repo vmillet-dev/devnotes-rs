@@ -3,7 +3,7 @@ import { FoldersRepository } from '@core/data/folders.repository';
 import { NotesRepository } from '@core/data/notes.repository';
 import { ClipboardService } from '@core/services/clipboard/clipboard.service';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
-import { FALLBACK_LANGUAGE } from '@core/model/language.model';
+import { FALLBACK_LANGUAGE, LanguageTag } from '@core/model/language.model';
 import { ChecklistItem, Note, NoteDraft, NoteKind, NoteLifecycle, NotePatch } from '@core/model/note.model';
 import { ClockService } from '@core/services/time/clock.service';
 import { sameArray } from '@core/utils/equality.util';
@@ -283,6 +283,15 @@ export class NotesStore {
 
   async captureFromClipboard(): Promise<void> {
     await this.createWithContent(await this.clipboard.paste());
+  }
+
+  /** A paste Rust cannot read is prose: the note stays Text rather than failing the paste. */
+  async detectLanguage(content: string): Promise<LanguageTag> {
+    try {
+      return await this.repository.detectLanguage(content);
+    } catch {
+      return 'txt';
+    }
   }
 
   /** The copy opens in the editor, ready to be renamed; the canvas learns of it either way. */

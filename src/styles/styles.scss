@@ -1,5 +1,6 @@
 // Global and not scoped to the code viewer: see the top of that file.
 @use 'code-theme';
+@use 'rich-text';
 
 /*
  * ⚠️ These variables must live here, in a global unscoped file, and never in a

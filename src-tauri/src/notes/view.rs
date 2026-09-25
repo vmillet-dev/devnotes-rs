@@ -288,10 +288,12 @@ fn find_match(note: &Note, needle: &str) -> Option<SearchMatch> {
         return Some(SearchMatch::elsewhere(SearchField::Tag, tag));
     }
 
-    if let Some(line) = note
-        .content
-        .lines()
-        .find(|line| contains_folded(line, needle))
+    // The Markdown only adds characters, so a body without the needle is skipped unparsed.
+    if contains_folded(&note.content, needle)
+        && let Some(line) = note
+            .readable_body()
+            .lines()
+            .find(|line| contains_folded(line, needle))
     {
         return Some(SearchMatch::elsewhere(SearchField::Body, line.trim()));
     }
@@ -853,6 +855,7 @@ mod tests {
         #[test]
         fn quotes_the_line_that_matched_and_not_the_first_one() {
             let note = Note {
+                language: crate::notes::language::Language::Sh,
                 content: "first\nsecond\n  kubectl rollout restart\nfourth".to_string(),
                 ..sample()
             };
@@ -861,6 +864,18 @@ mod tests {
             assert_eq!(hit.field, SearchField::Body);
             // Trimmed: a card shows one line and it should start with the code.
             assert_eq!(hit.excerpt, "kubectl rollout restart");
+        }
+
+        /// A Text note is quoted without its Markdown, found by the words it shows.
+        #[test]
+        fn quotes_a_text_note_without_its_markdown() {
+            let note = Note {
+                content: "# Standup\n\n- [ ] ask about the **rollout** window".to_string(),
+                ..sample()
+            };
+
+            let hit = hit_for(note, "rollout").expect("a body match is worth quoting");
+            assert_eq!(hit.excerpt, "☐ ask about the rollout window");
         }
 
         #[test]

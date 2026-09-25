@@ -1,5 +1,6 @@
 import { guard } from './fail-next';
 import { NotesRepository } from '@core/data/notes.repository';
+import { LanguageTag } from '@core/model/language.model';
 import { DiffLine, Revision } from '@core/model/revision.model';
 import {
   Note,
@@ -48,6 +49,9 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
 
   /** When set, the next call to any method rejects with this error, then clears. */
   failNext: Error | null = null;
+
+  /** What a spec sets: a paste reads as prose unless told otherwise. */
+  detectedLanguage: LanguageTag = 'txt';
 
   /** Query the store sent last, for asserting how it assembles its parameters. */
   lastQuery: NotesQuery | null = null;
@@ -138,6 +142,10 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
       this.notes = [note, ...this.notes];
       return note;
     });
+  }
+
+  detectLanguage(): Promise<LanguageTag> {
+    return guard(this, () => this.detectedLanguage);
   }
 
   duplicate(id: string, title: string): Promise<Note> {

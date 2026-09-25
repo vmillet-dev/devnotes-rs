@@ -315,6 +315,15 @@ describe('NotesStore', () => {
     });
   });
 
+  describe('detectLanguage', () => {
+    it('takes a paste Rust could not read for prose', async () => {
+      const { store, repository } = await createNotesHarness([]);
+      repository.failNext = new Error('bridge down');
+
+      expect(await store.detectLanguage('SELECT 1;')).toBe('txt');
+    });
+  });
+
   describe('moveNote', () => {
     it('files the note in another space', async () => {
       const { store, repository } = await createNotesHarness([createNote({ id: 'a', spaceId: 'space-1' })]);

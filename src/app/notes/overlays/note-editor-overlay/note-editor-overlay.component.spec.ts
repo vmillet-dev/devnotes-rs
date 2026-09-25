@@ -7,14 +7,21 @@ import { LifecycleBadgeComponent } from './lifecycle-badge/lifecycle-badge.compo
 import { TagPillComponent } from '@notes/ui/tag-pill/tag-pill.component';
 import { LANGUAGE_LABELS } from '@core/model/language.model';
 import { Folder } from '@core/model/folder.model';
-import { NotePatch } from '@core/model/note.model';
+import { Note, NotePatch } from '@core/model/note.model';
 import { Space } from '@core/model/space.model';
 import { AttachmentsStore } from '@core/state/attachments.store';
 import { NotesStore } from '@core/state/notes.store';
 import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
-import { createNote } from '@testing/note.fixture';
+import { createNote as noteFixture } from '@testing/note.fixture';
 import { provideAppTesting } from '@testing/testing.providers';
+import { ExternalLinksService } from '@core/services/links/external-links.service';
+import { FakeNotesRepository } from '@testing/fake-notes-repository';
+import { NotesRepository } from '@core/data/notes.repository';
 import { NoteEditorOverlayComponent } from './note-editor-overlay.component';
+import { RichTextEditorComponent } from './rich-text-editor/rich-text-editor.component';
+
+/** A snippet unless a test says otherwise: a Text note has the rich editor, tested apart. */
+const createNote = (overrides: Partial<Note> = {}): Note => noteFixture({ language: 'sh', ...overrides });
 
 const SPACES: readonly Space[] = [
   { id: 'space-1', name: 'Perso', pinned: false },
@@ -301,24 +308,12 @@ describe('NoteEditorOverlayComponent', () => {
     });
 
     it('updates the footer stats as the user types, before anything is saved', async () => {
-      fixture.componentRef.setInput('note', createNote({ content: 'a', language: 'txt' }));
+      fixture.componentRef.setInput('note', createNote({ content: 'a' }));
       await fixture.whenStable();
 
       await type(bodyEditor(), 'one\ntwo');
 
-      expect(text('.overlay-footer span')).toBe('TXT · 2 lignes · 7 octets');
-    });
-
-    it('confirms a paste immediately instead of waiting for the blur', async () => {
-      fixture.componentRef.setInput('note', createNote({ content: '' }));
-      await fixture.whenStable();
-      const emitted = patched('content');
-
-      bodyEditor().value = 'interface Note { id: string }';
-      bodyEditor().dispatchEvent(new InputEvent('input', { inputType: 'insertFromPaste' }));
-      await fixture.whenStable();
-
-      expect(emitted).toEqual(['interface Note { id: string }']);
+      expect(text('.overlay-footer span')).toBe('SH · 2 lignes · 7 octets');
     });
 
     it('still defers plain typing to the blur', async () => {
@@ -346,6 +341,95 @@ describe('NoteEditorOverlayComponent', () => {
       expect(emitted).toEqual(['after']);
       expect(asked.closes).toBe(0);
       expect(document.activeElement).not.toBe(bodyEditor());
+    });
+  });
+
+  describe('a Text note', () => {
+    function rich(): RichTextEditorComponent {
+      return fixture.debugElement.query(By.directive(RichTextEditorComponent))
+        .componentInstance as RichTextEditorComponent;
+    }
+
+    async function openText(content = ''): Promise<void> {
+      fixture.componentRef.setInput('note', createNote({ language: 'txt', content }));
+      await fixture.whenStable();
+      await vi.waitFor(() =>
+        expect(fixture.debugElement.query(By.directive(RichTextEditorComponent))).not.toBeNull(),
+      );
+    }
+
+    it('is written in the rich editor, and no code field is drawn', async () => {
+      await openText('**bold**');
+
+      expect(bodyEditor()).toBeNull();
+      expect(rich().content()).toBe('**bold**');
+    });
+
+    it('keeps what is typed as the draft, and writes it on blur', async () => {
+      await openText();
+      const emitted = patched('content');
+
+      rich().changed.emit('## Standup');
+      await fixture.whenStable();
+      expect(emitted).toEqual([]);
+
+      rich().blurred.emit();
+      await fixture.whenStable();
+      expect(emitted).toEqual(['## Standup']);
+    });
+
+    /** Code keeps its characters and gets its language: the note leaves for the code field. */
+    it('hands a paste of code over with the language Rust read in it', async () => {
+      await openText();
+      (TestBed.inject(NotesRepository) as unknown as FakeNotesRepository).detectedLanguage = 'sh';
+      const contents = patched('content');
+      const languages = patched('language');
+
+      rich().pastedIntoEmpty.emit('#!/bin/sh\necho hi');
+      await vi.waitFor(() => expect(languages).toEqual(['sh']));
+
+      expect(contents).toEqual(['#!/bin/sh\necho hi']);
+    });
+
+    it('keeps a paste of prose in the rich editor, as a Text note', async () => {
+      await openText();
+      const contents = patched('content');
+      const languages = patched('language');
+
+      rich().pastedIntoEmpty.emit('Meeting notes');
+      await vi.waitFor(() => expect(contents).toEqual(['Meeting notes']));
+
+      expect(languages).toEqual([]);
+      expect(rich().content()).toBe('Meeting notes');
+    });
+
+    it('opens a Ctrl+clicked link through the service that only opens the web', async () => {
+      await openText('[runbook](https://example.com)');
+      const open = vi.spyOn(TestBed.inject(ExternalLinksService), 'open').mockResolvedValue(true);
+
+      rich().linkOpened.emit('https://example.com');
+
+      expect(open).toHaveBeenCalledWith('https://example.com');
+    });
+
+    it('turns a pasted image into an attachment, as the code field does', async () => {
+      await openText();
+      const attach = vi.spyOn(TestBed.inject(AttachmentsStore), 'addPastedImage').mockResolvedValue();
+
+      rich().imagePasted.emit();
+
+      expect(attach).toHaveBeenCalled();
+    });
+
+    it('leaves the text on Escape instead of closing the whole overlay', async () => {
+      await openText('draft');
+      vi.spyOn(rich(), 'hasFocus').mockReturnValue(true);
+      const blur = vi.spyOn(rich(), 'blur');
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+      expect(blur).toHaveBeenCalled();
+      expect(asked.closes).toBe(0);
     });
   });
 

@@ -3,6 +3,7 @@
 pub mod checklist;
 pub(crate) mod duplicate;
 pub mod language;
+pub(crate) mod markdown;
 pub mod model;
 pub mod placeholder;
 pub mod revision;
@@ -20,6 +21,7 @@ use crate::db::{Db, Library, lock};
 use crate::error::{AppError, StorageError};
 use crate::folders;
 use crate::spaces::model::SpaceDraft;
+use language::Language;
 use model::{DisplayNote, NoteDraft, NotePatch, SampleNote, TagUsage};
 use revision::{DiffLine, Revision};
 use trash::TrashedNote;
@@ -61,6 +63,15 @@ pub fn create_note(draft: NoteDraft, db: State<'_, Db>) -> Result<DisplayNote, A
     let note = store::create(&mut connection, draft, Utc::now())?;
 
     Ok(display(&mut connection, note)?)
+}
+
+/// What a paste into an empty Text note is. Asked by the front end before it writes: typing
+/// keeps a note Text, and only a paste of code gives it a language.
+#[tauri::command]
+#[specta::specta]
+#[allow(clippy::needless_pass_by_value)]
+pub fn detect_language(content: String) -> Language {
+    language::from_content(&content)
 }
 
 /// A copy to start another note from, attachments included and history left behind. The

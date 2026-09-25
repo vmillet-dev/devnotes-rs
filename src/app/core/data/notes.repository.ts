@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { commands } from '@core/ipc/bindings';
 import { unwrap } from '@core/ipc/ipc.error';
+import { LanguageTag } from '@core/model/language.model';
 import { DiffLine, Revision } from '@core/model/revision.model';
 import { Space } from '@core/model/space.model';
 import {
@@ -46,6 +47,11 @@ export class NotesRepository {
 
   async create(draft: NoteDraft): Promise<Note> {
     return toNote(unwrap('create_note', await commands.createNote(toWireNoteDraft(draft))));
+  }
+
+  /** Rust's reading of a paste; answers `txt` for prose. */
+  detectLanguage(content: string): Promise<LanguageTag> {
+    return commands.detectLanguage(content);
   }
 
   /** Everything the note carries but its history; `title` arrives with its translated suffix. */

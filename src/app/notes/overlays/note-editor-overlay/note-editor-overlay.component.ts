@@ -22,6 +22,7 @@ import { SpacesStore } from '@core/state/spaces.store';
 import { NoteRevisionsStore } from '@core/state/note-revisions.store';
 import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
 import { HelpStore } from '@core/services/help/help.store';
+import { ExternalLinksService } from '@core/services/links/external-links.service';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
 import { ClockService } from '@core/services/time/clock.service';
 import { endOfLocalDay, toDateInputValue } from '@core/utils/local-day.util';
@@ -34,6 +35,7 @@ import { CopyButtonComponent } from '@notes/ui/copy-button/copy-button.component
 import { LifecycleBadgeComponent } from './lifecycle-badge/lifecycle-badge.component';
 import { PlaceholderPanelComponent } from './placeholder-panel/placeholder-panel.component';
 import { RevisionPanelComponent } from './revision-panel/revision-panel.component';
+import { RichTextEditorComponent } from './rich-text-editor/rich-text-editor.component';
 import { ChoiceMenuComponent, ChoiceOption } from '@notes/ui/choice-menu/choice-menu.component';
 import { TagPillComponent } from '@notes/ui/tag-pill/tag-pill.component';
 
@@ -67,6 +69,7 @@ const LANGUAGE_CHOICES: readonly ChoiceOption[] = Object.entries(LANGUAGE_LABELS
     RevisionPanelComponent,
     ChoiceMenuComponent,
     CodeViewerComponent,
+    RichTextEditorComponent,
     TranslocoPipe,
   ],
   templateUrl: './note-editor-overlay.component.html',
@@ -83,6 +86,7 @@ export class NoteEditorOverlayComponent {
   private readonly folders = inject(FoldersStore);
   protected readonly fill = inject(PlaceholderFillStore);
   private readonly help = inject(HelpStore);
+  private readonly links = inject(ExternalLinksService);
 
   readonly note = input<Note | null>(null);
 
@@ -143,10 +147,17 @@ export class NoteEditorOverlayComponent {
   });
 
   private readonly bodyEditor = viewChild<ElementRef<HTMLTextAreaElement>>('bodyEditor');
+  /** By its template name: a class query would pull TipTap out of its deferred chunk. */
+  private readonly richEditor = viewChild<RichTextEditorComponent>('richEditor');
   private readonly checklistEditor = viewChild(ChecklistEditorComponent);
   private readonly fieldsPanel = viewChild(PlaceholderPanelComponent);
 
   protected readonly isChecklist = computed(() => this.note()?.kind === 'checklist');
+  /** A Text note is written in the rich editor; every other language keeps the code field. */
+  protected readonly isRichText = computed(() => {
+    const note = this.note();
+    return note?.kind === 'snippet' && note.language === 'txt';
+  });
   protected readonly checklistStats = computed(() => checklistProgress(this.note()?.items ?? []));
 
   /** The draft, so copying before leaving the field yields what is on screen. */
@@ -248,16 +259,8 @@ export class NoteEditorOverlayComponent {
     this.preferences.write(FULLSCREEN_STORAGE_KEY, String(next));
   }
 
-  /**
-   * A paste commits at once, typing stays deferred to blur: the paste is what gives an
-   * empty note its language, and waiting would leave the badge reading TXT.
-   */
-  protected onBodyInput(event: Event, value: string): void {
+  protected onBodyInput(value: string): void {
     this.draftContent.set(value);
-
-    if ((event as InputEvent).inputType === 'insertFromPaste') {
-      this.commitContent();
-    }
   }
 
   /**
@@ -275,6 +278,28 @@ export class NoteEditorOverlayComponent {
 
     event.preventDefault();
     void this.attachments.addPastedImage();
+  }
+
+  /**
+   * Plain text pasted into an empty Text note. Code keeps its characters and its language, and
+   * the note leaves for the code field; prose stays here, read as Markdown.
+   */
+  protected async onRichPaste(text: string): Promise<void> {
+    const language = await this.store.detectLanguage(text);
+    this.draftContent.set(text);
+    if (language === 'txt') {
+      this.commitContent();
+    } else {
+      this.requestPatch({ content: text, language });
+    }
+  }
+
+  protected onImagePasted(): void {
+    void this.attachments.addPastedImage();
+  }
+
+  protected openLink(url: string): void {
+    void this.links.open(url);
   }
 
   /** Every field goes through here: whether a value moved is `NotesStore`'s call. */
@@ -374,6 +399,11 @@ export class NoteEditorOverlayComponent {
     const editor = this.bodyEditor()?.nativeElement;
     if (editor && document.activeElement === editor) {
       editor.blur();
+      return;
+    }
+    const rich = this.richEditor();
+    if (rich?.hasFocus()) {
+      rich.blur();
       return;
     }
     this.requestClose();

@@ -164,6 +164,72 @@ describe('Editing a note', () => {
     await canvas.waitForCard(title);
   });
 
+  /** Written in the rich editor, stored as Markdown, shown on a card as words. */
+  describe('a Text note', () => {
+    const richTitle = 'Standup, formatted';
+    let noteId = '';
+
+    before(async () => {
+      noteId = (await bridge.createNote(draft({ spaceId, title: richTitle, content: '' }))).id;
+      // A patch and not the draft: a draft's content is still read for a language.
+      await bridge.updateNote(noteId, { content: '**Ship** it and `tag`\n\n- [ ] write the notes' });
+      await reloadCanvas();
+      await canvas.waitForCard(richTitle);
+    });
+
+    it('reaches its card as words, without the Markdown', async () => {
+      const view = await bridge.queryNotes(query({ search: richTitle }));
+
+      expect(view.sections[0]?.notes[0]?.content).toBe('Ship it and tag\n☐ write the notes');
+    });
+
+    it('opens formatted, and a box ticked there is stored as Markdown', async () => {
+      await canvas.openNote(richTitle);
+      const bold = $(`${testid('editor-rich')} strong`);
+      await bold.waitForExist({ timeout: 10_000 });
+      expect(await bold.getText()).toBe('Ship');
+
+      await $(`${testid('editor-rich')} input[type="checkbox"]`).click();
+      await editor.close();
+
+      const stored = await eventually(
+        async () => (await bridge.getNote(noteId)).content,
+        (content) => content.includes('- [x] write the notes'),
+        'the ticked box to reach the database',
+      );
+      expect(stored).toContain('**Ship** it and `tag`');
+    });
+
+    /** Code keeps its characters and gets its language: the note leaves for the code field. */
+    it('hands a paste of code over to the code field, with its language', async () => {
+      const code = 'SELECT id, title FROM notes WHERE pinned = 1;';
+      await canvas.createSnippet();
+      await $(testid('editor-rich')).waitForExist({ timeout: 10_000 });
+
+      await browser.execute(
+        (selector: string, text: string) => {
+          const data = new DataTransfer();
+          data.setData('text/plain', text);
+          const event = new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true });
+          document.querySelector(selector)!.dispatchEvent(event);
+        },
+        testid('editor-rich'),
+        code,
+      );
+
+      await $(testid('editor-body')).waitForExist({ timeout: 10_000 });
+      expect(await editor.body()).toBe(code);
+      await editor.close();
+
+      const pasted = (await bridge.queryNotes(query({ search: 'pinned = 1' }))).sections[0]?.notes[0];
+      expect(pasted?.language).toBe('sql');
+      // Untitled, and in every later file's canvas otherwise.
+      await bridge.deleteNotes([pasted!.id]);
+      await bridge.purgeNotes([pasted!.id]);
+      await reloadCanvas();
+    });
+  });
+
   it('shows every space again through the "all spaces" row', async () => {
     await spaces.open();
     await spaces.allOption().click();

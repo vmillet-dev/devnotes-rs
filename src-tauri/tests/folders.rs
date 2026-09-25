@@ -9,6 +9,7 @@ use devnotes_lib::folders::model::{FolderColour, NoteFiling};
 use devnotes_lib::folders::store::{
     create, delete, file_many, list, recolour, rename, restore_filings,
 };
+use devnotes_lib::notes::language::Language;
 use devnotes_lib::notes::model::{Note, NoteDraft, NotePatch};
 use devnotes_lib::notes::store::{create as create_note, update};
 use devnotes_lib::spaces::store as spaces;
@@ -558,7 +559,9 @@ mod board {
         let mut connection = open_in_memory().unwrap();
         let sql = space(&mut connection, "SQL");
         let perf = create(&mut connection, &sql, "Perf", t0()).unwrap();
+        // A snippet: a Text note's preview is its words, not its lines.
         let long = || NoteDraft {
+            language: Language::Sh,
             content: "1\n2\n3\n4\n5\n6\n7".to_string(),
             ..draft(&sql)
         };
