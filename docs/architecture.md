@@ -194,6 +194,12 @@ sequence is `startApplication()` in `core/services/startup/`, with a spec that h
 page's host directive and lives beside the page in `notes/`: it injects nine stores, and
 `shared/` injects nothing.
 
+**The other way round, a store or a model that belongs to one subject stays with it.**
+`SettingsStore`, `HelpStore`, `UpdateStore` and `ShortcutBindingsStore`, with their models, sit
+in their `core/services/<subject>/` folder beside the service they drive; `core/state/` and
+`core/model/` hold the notes' domain. Helpers with no subject at all — equality, ordering, the
+local day, grid navigation — are `core/utils/`.
+
 **The zones come from the template, not from taste.** `notes/` used to hold eleven entries
 that mixed screen zones with invented categories — `tag-rail` sat outside `topbar/` while
 `search-box` sat inside, `image-lightbox` outside `overlays/` while the palette sat inside, and
@@ -237,8 +243,9 @@ declaration order whatever the constructor's position, so moving one above anoth
 is the only way to break a class by reordering it.
 
 The rule is **relative when a single `../` reaches the target, alias otherwise** — so
-`core/state/notes.store.ts` reads `../data/notes.repository`, while
-`notes/canvas/note-section/note-card/` reaches the model through `@core/model/note.model`. There is
+`notes/canvas/note-section/` reads `../note-card/note-card.component`, while
+`notes/canvas/note-card/` reaches the model through `@core/model/note.model`, and inside `core/`
+even a neighbour folder is `@core/…`. There is
 no `../../` anywhere in `src/`, and since this reorganisation that is **enforced**:
 `no-restricted-imports` in `eslint.config.mjs` refuses the pattern. The aliases are what make
 it possible — the tree is four levels deep in places, and without them a card reaching the
@@ -290,10 +297,10 @@ Components never reach into each other imperatively. A keyboard shortcut belongs
 component that owns the affected element: `Ctrl/⌘+K` is handled inside `SearchBoxComponent`,
 which also renders the hint, rather than travelling down a chain of `viewChild` calls.
 
-A component that only relays inputs and outputs is not a component. The page composes
-`SpaceSwitcher`, `SearchBox`, `FilterChips` and `NoteSection` directly rather than through a
-topbar and a canvas wrapper, which added two files and eleven declarations without a single
-decision between them. The same rule applied to `NoteSectionComponent`, which used to forward
+A component that only relays inputs and outputs is not a component. The zone containers pass
+that test — each injects the stores its zone draws and decides every binding — where the
+topbar and canvas wrappers before them only forwarded what the page handed down. The same rule
+applied to `NoteSectionComponent`, which used to forward
 eleven bindings to the card without reading one of them: the section now takes `[section]`,
 the card takes `[note]` and reads selection, focus and ticks off the stores, and the whole
 binding list is
@@ -308,18 +315,21 @@ ticking, extending a range or opening depends on the visible list, which is the 
 ### Shared behaviour lives in one place, not in copies
 
 Three menus (space switcher, card actions, about) share their interaction rules through
-directives in `shared/a11y/`, applied with `hostDirectives` so no wrapper element is needed:
+directives in `shared/directives/`, applied with `hostDirectives` so no wrapper element is needed:
 
-| Directive              | Selector                                  | Owns                                                                              |
-| ---------------------- | ----------------------------------------- | --------------------------------------------------------------------------------- |
-| `MenuTriggerDirective` | `[appMenuTrigger]`, `exportAs: 'appMenu'` | open state, outside click, Escape, focus returned to `[appMenuAnchor]`            |
-| `MenuPanelDirective`   | `[appMenuPanel]`                          | `role="menu"`, focus on the first entry, arrows and Home/End over `[appMenuItem]` |
+| Directive              | Selector                                  | Owns                                                                                |
+| ---------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------- |
+| `MenuTriggerDirective` | `[appMenuTrigger]`, `exportAs: 'appMenu'` | open state, outside click (while open), Escape, focus returned to `[appMenuAnchor]` |
+| `MenuPanelDirective`   | `[appMenuPanel]`                          | `role="menu"`, focus on the first entry, arrows and Home/End over `[appMenuItem]`   |
 
-Two details are load-bearing:
+Three details are load-bearing:
 
 - `MenuPanelDirective` walks `[appMenuItem]` rather than every button, because a menu may
   carry a secondary action deliberately outside the arrow cycle — the `⋯` that opens a
   space's edit panel is reachable by Tab, not by arrows.
+- ⚠️ `MenuTriggerDirective` listens to `document` **only while open**, from an effect. A host
+  `(document:click)` ran on every card, and Angular marks a listener's view dirty before calling
+  it: any click re-rendered every card — 1001 translation-pipe runs for 200 cards.
 - `MenuTriggerDirective` **closes on Escape by default**, and a host that needs more hands it
   a handler with `handleEscape()` — the switchers first collapse their create/edit panel and
   only close on the second press. One handler, so nothing depends on listener order.
@@ -468,8 +478,6 @@ the whole point of the change is that adding one is no longer a slot to find by 
   the content is typed by the user.
 - Two inputs let a card reuse it: `showLineNumbers` (a gutter on a three-line excerpt is
   noise) and `compact` (no padding, no scroll, no font size of its own — the card decides).
-  The viewer renders `<span>`s rather than `<div>`s for the same reason: a card is a
-  `<button>`, whose content model only admits phrasing content.
 
 ### State
 
