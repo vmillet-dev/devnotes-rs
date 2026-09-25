@@ -12,6 +12,18 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [0.5.2] - 2026-09-25
+
+### 🧰 Under the hood
+
+- Bump the version to 0.5.2 (#441)
+- Indent with Tab in the note editor (#440)
+- Write Text notes formatted, stored as Markdown (#438)
+- Duplicate a note from the card menu (#437)
+- Give DevNotes a logo of its own (#436)
+- Keep the titlebar above the editor in full screen (#435)
+- Make the README a front page, with a smooth 1080p tour and the quality badges (#429)
+
 ## [0.5.1] - 2026-09-24
 
 ### 🔧 Changed
