@@ -30,7 +30,7 @@ yet — a round trip per keystroke), and plain UI concerns like keyboard shortcu
 ```
 src/                Angular front-end
 ├── app/
-│   ├── app.component.*   the frame: titlebar, banners, <router-outlet>
+│   ├── app.component.*   the frame: titlebar, banners, the notes page behind @defer
 │   ├── core/       everything that has no place on screen
 │   │   ├── model/      the vocabulary: note, space, checklist, variable, language
 │   │   ├── data/       repositories and the wire mapper
@@ -44,7 +44,7 @@ src/                Angular front-end
 │   │               overlays/ (drawn over the page), plus ui/ for what two of them share
 │   ├── titlebar/   titlebar.component, then file-menu/ and about-menu/ with the panels
 │   │               each of them opens, nested where they open from
-│   ├── banners/    error banner, status toast, update prompt — siblings of the outlet
+│   ├── banners/    error banner, status toast, update prompt — siblings of the page
 │   └── shared/     what crosses two areas of the screen: the modal frame, a11y directives
 ├── assets/         static images
 ├── styles/         global theme (styles.scss) and SCSS partials
@@ -253,7 +253,8 @@ model would write `../../../`.
 
 **No `index.ts` barrels.** Three reasons, in order of weight: a barrel at `notes/index.ts`
 would pull `data/`, `state/` and every component into the lazy chunk _while hiding that it
-does_ — the explicit `loadComponent` path is what keeps the chunk honest; barrels re-close
+does_ — the one import of `NotesPageComponent`, deferred by `AppComponent`, is what keeps the
+chunk honest; barrels re-close
 import cycles by construction, and this codebase has one deliberate cycle broken by hand
 (`core/ipc` ↔ `core/data`, see below); and with six aliases the
 import lines are already short. The tree has zero barrels — keep it that way.
@@ -263,16 +264,24 @@ are no NgModules. Change detection is **zoneless** (`provideZonelessChangeDetect
 State lives in signals and every component is `OnPush` — enforced by the
 `prefer-on-push-component-change-detection` lint rule, not by convention alone.
 
-### Routing
+### No router
 
 `AppComponent` _is_ the persistent chrome — titlebar, global error banner, status toast and
-update prompt — around a `<router-outlet>`. Features are lazy-loaded with
-`loadComponent`, so adding the planned crypto and formatters tools will not weigh on the
-initial bundle.
+update prompt — around the notes page, which it loads with `@defer (on immediate)`. There is
+**one** screen, so there is no router: its only job was a lazy `loadComponent` for one route,
+67 kB of the initial chunk to do what `@defer` does. Nothing else a router offers has a use in
+a desktop window — no link to share, no deep URL to reload — and
+[#23](https://github.com/vmillet-dev/devnotes-rs/issues/23) settled that there would be no
+second tool to route to.
 
-Routing uses **hash location** (`withHashLocation()`). Tauri serves the built files from an
-internal protocol with no server to rewrite deep URLs back to `index.html`; the fragment
-sidesteps the problem entirely.
+⚠️ **The date view and the board are state, not routes.** The switch is remembered per space
+and falls back on "all spaces" and inside a folder (`BoardStore.mode`, `isShowing`): a URL
+would be a second source of truth to keep in step, and history a trap — a mouse's back
+button would switch views. The board has a `@defer` of its own instead.
+
+⚠️ The defer sits **outside** the `@if` on the vault: the page's chunk loads from the first
+render, behind the gate, and unlocking never waits for it — while the page itself is still
+not created until the library is open.
 
 ### Component contracts
 
@@ -1216,6 +1225,11 @@ is remembered **per space** — one key each, `devnotes.notes.view.<spaceId>`, s
 space does not switch the others. ⚠️ It is unavailable on "all spaces", where a folder
 belongs to no board: the switch disables rather than disappears, and falls back to the date
 view.
+
+**The board is a chunk of its own**, behind `@defer (on immediate)` in the canvas: most
+sessions never show it. ⚠️ `notes-canvas` imports `CardDrop` with an `import type` of its own —
+the compiler defers an import only when every symbol on its line serves the deferred block,
+and a shared line kept the board in the page's chunk without a word.
 
 **The board has a query of its own.** `board_view` answers folders and positions, not
 sections — `build_sections` must never learn about a folder. It reads the whole space and
@@ -2909,8 +2923,8 @@ process’s memory for the length of the session, and there is no idle re-lock.
 ### The gate
 
 `vault_state` answers `absent` / `locked` / `unlocked` / `keyMissing`; `startApplication()` awaits it before the
-first render and `app.component.html` puts `VaultGateComponent` in front of the outlet. ⚠️ It
-does not hide the outlet, it never creates it — which is what keeps every store free of a
+first render and `app.component.html` puts `VaultGateComponent` in front of the notes page.
+⚠️ It does not hide the page, it never creates it — which is what keeps every store free of a
 "locked" branch: the canvas queries notes the moment it mounts, and nothing would be there
 to answer.
 
@@ -3116,7 +3130,7 @@ empties the connection `Mutex` under the same lock every other command takes, th
 Rust, so the front end comes back on the gate of the library just opened. ⚠️ The other
 library has its own passphrase, and asking for it is the only proof the right one is open.
 
-⚠️ **A reload, not a gate over the same stores.** Destroying the outlet is not enough: every
+⚠️ **A reload, not a gate over the same stores.** Destroying the notes page is not enough: every
 store is `providedIn: 'root'` and outlives it. `SpacesStore` loads once and nothing
 reloaded it on a switch, so going back to a library that was already seeded left the rail
 listing the other library's spaces and the board asking this database about a space it had
@@ -3239,8 +3253,8 @@ is built like it.
   from the front end, and `../2026-01-01_00-00-00` joins to a path outside the directory
   whose file name still parses as a stamp.
 
-Afterwards every command answers `Locked`, `VaultStore.load()` sees it, and the outlet is
-destroyed — with the File menu the panel was opened from, which is gated on the same
+Afterwards every command answers `Locked`, `VaultStore.load()` sees it, and the notes page
+is destroyed — with the File menu the panel was opened from, which is gated on the same
 signal. The restored copy needs a passphrase, and asking for it is the only proof the
 right file is in place.
 

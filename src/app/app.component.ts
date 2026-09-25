@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
 import { ErrorBannerComponent } from '@banners/error-banner/error-banner.component';
+import { NotesPageComponent } from '@notes/notes-page.component';
 import { StatusToastComponent } from '@banners/status-toast/status-toast.component';
 import { TitlebarComponent } from '@titlebar/titlebar.component';
 import { UpdatePromptComponent } from '@banners/update-prompt/update-prompt.component';
@@ -14,7 +14,7 @@ import { VaultStore } from '@core/state/vault.store';
     TitlebarComponent,
     ErrorBannerComponent,
     StatusToastComponent,
-    RouterOutlet,
+    NotesPageComponent,
     UpdatePromptComponent,
     VaultGateComponent,
     PassphrasePromptComponent,

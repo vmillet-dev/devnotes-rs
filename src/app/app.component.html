@@ -3,13 +3,17 @@
   <app-error-banner />
   <app-status-toast />
   <!--
-    ⚠️ The outlet is not merely hidden while the library is locked: it is not created.
+    ⚠️ The notes page is not merely hidden while the library is locked: it is not created.
     The canvas queries notes the moment it mounts, and there would be nothing to answer
-    with — which is why no store carries a "locked" branch.
+    with — which is why no store carries a "locked" branch. Its chunk loads from the first
+    render all the same, behind the gate, so unlocking never waits for it.
   -->
-  @if (vault.isUnlocked()) {
-    <router-outlet />
-  } @else if (vault.state() !== null) {
+  @defer (on immediate) {
+    @if (vault.isUnlocked()) {
+      <app-notes-page />
+    }
+  }
+  @if (!vault.isUnlocked() && vault.state() !== null) {
     <app-vault-gate />
   }
   <app-update-prompt />

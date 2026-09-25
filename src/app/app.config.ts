@@ -6,10 +6,8 @@ import {
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
 } from '@angular/core';
-import { provideRouter, withHashLocation } from '@angular/router';
 import { TRANSLOCO_TRANSPILER, provideTransloco } from '@jsverse/transloco';
 
-import { routes } from './app.routes';
 import { AppErrorHandler } from '@core/services/errors/app-error-handler';
 import { APP_LOCALES, DEFAULT_LOCALE } from '@core/services/i18n/locale.model';
 import { PluralTranspiler } from '@core/services/i18n/plural-transpiler';
@@ -21,10 +19,6 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideZonelessChangeDetection(),
-
-    // Hash routing: the files are served from Tauri's internal protocol, where a
-    // reloaded deep URL has no server to rewrite it to index.html.
-    provideRouter(routes, withHashLocation()),
 
     provideTransloco({
       config: {
