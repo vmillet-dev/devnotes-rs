@@ -230,6 +230,39 @@ describe('Editing a note', () => {
     });
   });
 
+  /** Through the WebView's own editing, which is what keeps it in the field's undo. */
+  it('indents with Tab rather than leaving the code', async () => {
+    const indented = 'Indented with Tab';
+    const { id } = await bridge.createNote(
+      draft({ spaceId, title: indented, content: 'echo hi', language: 'sh' }),
+    );
+    await reloadCanvas();
+    await canvas.openNote(indented);
+    await browser.execute((selector: string) => {
+      const field = document.querySelector(selector) as HTMLTextAreaElement;
+      field.focus();
+      field.setSelectionRange(0, 0);
+    }, testid('editor-body'));
+
+    await press('Tab');
+
+    expect(await editor.body()).toBe('  echo hi');
+    expect(await browser.execute(() => document.activeElement?.getAttribute('data-testid'))).toBe(
+      'editor-body',
+    );
+    await editor.close();
+    const stored = await eventually(
+      async () => (await bridge.getNote(id)).content,
+      (content) => content === '  echo hi',
+      'the indented body to reach the database',
+    );
+    expect(stored).toBe('  echo hi');
+    // In every later file's canvas otherwise.
+    await bridge.deleteNotes([id]);
+    await bridge.purgeNotes([id]);
+    await reloadCanvas();
+  });
+
   it('shows every space again through the "all spaces" row', async () => {
     await spaces.open();
     await spaces.allOption().click();

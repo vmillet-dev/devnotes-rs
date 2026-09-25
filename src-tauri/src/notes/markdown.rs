@@ -129,6 +129,12 @@ mod tests {
         );
     }
 
+    /// How the rich editor stores a tab starting a line, which Markdown would read as code.
+    #[test]
+    fn a_tab_written_as_an_entity_reads_as_a_tab() {
+        assert_eq!(plain("&#9;indented"), "\tindented");
+    }
+
     #[test]
     fn plain_text_stays_plain() {
         assert_eq!(plain("just a line\nand another"), "just a line and another");

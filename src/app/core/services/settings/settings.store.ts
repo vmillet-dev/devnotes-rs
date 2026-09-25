@@ -5,6 +5,7 @@ import {
   DEFAULT_SETTINGS,
   DENSITIES,
   Density,
+  INDENT_CHOICES,
   LOCALE_CHOICES,
   LocaleChoice,
   RAIL_WIDTH,
@@ -81,6 +82,7 @@ export class SettingsStore {
   readonly locale = this.setting('locale', asOneOf(LOCALE_CHOICES));
   readonly theme = this.setting('theme', asOneOf(THEME_CHOICES));
   readonly density = this.setting('density', asOneOf(DENSITIES));
+  readonly codeIndent = this.setting('codeIndent', asOneOf(INDENT_CHOICES));
   readonly startWithSystem = this.setting('startWithSystem', asBoolean);
   readonly minimizeToTray = this.setting('minimizeToTray', asBoolean);
   readonly closeToTray = this.setting('closeToTray', asBoolean);

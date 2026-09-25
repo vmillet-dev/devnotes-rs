@@ -1,6 +1,8 @@
+// The editor's field lies over this one: the same tab width, or the caret drifts.
 :host {
   display: block;
   font-family: var(--font-mono), serif;
+  tab-size: 4;
 }
 
 :host(:not(.compact)) {

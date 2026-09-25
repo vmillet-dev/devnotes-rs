@@ -40,6 +40,21 @@
   </section>
 
   <section class="setting-group">
+    <h4 class="setting-group-title">{{ 'settings.editor.title' | transloco }}</h4>
+
+    <div class="setting-row">
+      <span class="setting-label">{{ 'settings.editor.indent' | transloco }}</span>
+      <app-choice-menu
+        [kind]="'setting-indent'"
+        [label]="'settings.editor.indent' | transloco"
+        [options]="indentChoices"
+        [currentId]="draft.value('codeIndent')"
+        (chosen)="onIndent($event)"
+      />
+    </div>
+  </section>
+
+  <section class="setting-group">
     <h4 class="setting-group-title">{{ 'settings.behavior.title' | transloco }}</h4>
 
     <div class="setting-row">

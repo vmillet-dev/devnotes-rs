@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
+import { SettingsStore } from '@core/services/settings/settings.store';
 import { CodeViewerComponent } from '@notes/ui/code-viewer/code-viewer.component';
 import { LifecycleBadgeComponent } from './lifecycle-badge/lifecycle-badge.component';
 import { TagPillComponent } from '@notes/ui/tag-pill/tag-pill.component';
@@ -341,6 +342,78 @@ describe('NoteEditorOverlayComponent', () => {
       expect(emitted).toEqual(['after']);
       expect(asked.closes).toBe(0);
       expect(document.activeElement).not.toBe(bodyEditor());
+    });
+  });
+
+  describe('Tab in the code field', () => {
+    /** jsdom has no editing commands: this one does what the WebView's `insertText` does. */
+    beforeEach(() => {
+      Object.defineProperty(document, 'execCommand', {
+        configurable: true,
+        value: (command: string, _ui: boolean, text: string) => {
+          const field = bodyEditor();
+          field.setRangeText(
+            command === 'delete' ? '' : text,
+            field.selectionStart,
+            field.selectionEnd,
+            'end',
+          );
+          field.dispatchEvent(new InputEvent('input', { inputType: 'insertText' }));
+          return true;
+        },
+      });
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(document, 'execCommand');
+    });
+
+    async function openCode(content: string, language: Note['language']): Promise<void> {
+      fixture.componentRef.setInput('note', createNote({ content, language }));
+      await fixture.whenStable();
+    }
+
+    function press(init: KeyboardEventInit): KeyboardEvent {
+      const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true, ...init });
+      bodyEditor().dispatchEvent(event);
+      return event;
+    }
+
+    it('indents by the note language, and keeps the focus in the field', async () => {
+      await openCode('if ready:\nstart()', 'py');
+      bodyEditor().setSelectionRange(10, 10);
+
+      const tab = press({});
+      await fixture.whenStable();
+
+      expect(tab.defaultPrevented).toBe(true);
+      expect(bodyEditor().value).toBe('if ready:\n    start()');
+      expect(text('.overlay-footer span')).toContain('21 octets');
+    });
+
+    it('indents with what Preferences chose over the language', async () => {
+      TestBed.inject(SettingsStore).codeIndent.write('tab');
+      await openCode('start()', 'py');
+      bodyEditor().setSelectionRange(0, 0);
+
+      press({});
+
+      expect(bodyEditor().value).toBe('\tstart()');
+    });
+
+    it('takes a level back with Shift+Tab, on every line selected', async () => {
+      await openCode('  a\n  b', 'sh');
+      bodyEditor().setSelectionRange(0, 6);
+
+      press({ shiftKey: true });
+
+      expect(bodyEditor().value).toBe('a\nb');
+    });
+
+    it('leaves Ctrl+Tab to the window', async () => {
+      await openCode('a', 'sh');
+
+      expect(press({ ctrlKey: true }).defaultPrevented).toBe(false);
     });
   });
 

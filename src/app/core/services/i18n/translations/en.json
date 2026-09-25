@@ -563,6 +563,16 @@
       "comfortable": "Comfortable",
       "compact": "Compact"
     },
+    "editor": {
+      "title": "Editor",
+      "indent": "Indent with Tab"
+    },
+    "indent": {
+      "language": "By the note's language",
+      "two-spaces": "2 spaces",
+      "four-spaces": "4 spaces",
+      "tab": "A tab"
+    },
     "behavior": {
       "title": "Behavior",
       "startWithSystem": "Start with the system",

@@ -18,6 +18,10 @@ export type ResolvedTheme = Exclude<ThemeChoice, 'system'>;
 export const DENSITIES = ['comfortable', 'compact'] as const;
 export type Density = (typeof DENSITIES)[number];
 
+/** What Tab inserts in the code field; `language` follows the note's. */
+export const INDENT_CHOICES = ['language', 'two-spaces', 'four-spaces', 'tab'] as const;
+export type IndentChoice = (typeof INDENT_CHOICES)[number];
+
 /**
  * The floor is the tree's own, not the panels': `--editor-min-width` is what lets
  * `space-editor` and `folder-editor` follow the rail rather than hold it open at their
@@ -30,6 +34,7 @@ export interface AppSettings {
   readonly locale: LocaleChoice;
   readonly theme: ThemeChoice;
   readonly density: Density;
+  readonly codeIndent: IndentChoice;
   readonly startWithSystem: boolean;
   readonly minimizeToTray: boolean;
   readonly closeToTray: boolean;
@@ -62,6 +67,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   locale: 'system',
   theme: 'system',
   density: 'comfortable',
+  codeIndent: 'language',
   startWithSystem: false,
   minimizeToTray: false,
   closeToTray: true,

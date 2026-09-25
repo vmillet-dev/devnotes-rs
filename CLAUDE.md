@@ -120,6 +120,7 @@ Run all commands from the repo root (`package.json` there wraps both Angular and
 - **Creating a note writes nothing** until it is worth keeping; ⚠️ `draftMaterialisation` holds the **promise** of the write, or one close creates two notes. → "Creating a note writes nothing".
 - **The editor keeps local drafts** keyed on the note id (and the restore counter), committed on blur and on every closing path.
 - **⚠️ TipTap is its own chunk**, behind `@defer`: query the rich editor by template reference, never `viewChild(RichTextEditorComponent)`. On WebKit (Linux) `chain().focus()` throws a mismatched transaction: `focusFirst`, then the chain. Its Markdown escaping is ours (`escapeMarkdownText`), or `{{db_host}}` is stored as `{{db\_host}}`.
+- **Tab stays in the text.** The code field indents through `execCommand('insertText')`, the textarea's own undo, by `codeIndent`; its `preventDefault` is what the focus trap reads. The rich editor stores a tab starting a line as `&#9;`, which `MarkdownWithTabs` turns back. → "Editing a note".
 - **`null` space means "all spaces"**, a choice and not a loading state. Deleting a space needs a refuge; there is no one-argument variant.
 - **The undo banner and the undo record differ**: the timer hides `banner()`, `Ctrl+Z` reads `last()`. `Reversible` is exhaustive.
 - **Nothing corpus-wide runs before saying what it touches** (tag changes, emptying the trash, deleting a library): the count comes from the back end, and the confirm button is not the trigger.
