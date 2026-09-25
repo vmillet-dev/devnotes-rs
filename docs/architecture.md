@@ -2009,6 +2009,10 @@ they need — `TransferStore`, `NoteSelectionStore`, `SpacesStore`, `ClockServic
 a `Signal` because "Exporter la sélection" follows what is checked at that instant, and the
 order on screen is the order in the array.
 
+**Its two dialogs, like the About menu's four panels, sit behind `@defer (on immediate)`**:
+the titlebar is in the initial chunk, and those six weighed ~95 kB of it before anyone opened
+one. Each is imported by its menu alone, which is what lets the compiler split it off.
+
 There used to be a contribution registry here — three of them, in fact, one per extension
 point — so the chrome could stay ignorant of a feature it might not have. That indirection had
 exactly one purpose, a second tool, and [#23](https://github.com/vmillet-dev/devnotes-rs/issues/23)
