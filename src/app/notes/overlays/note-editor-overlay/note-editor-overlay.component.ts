@@ -24,6 +24,7 @@ import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
 import { HelpStore } from '@core/services/help/help.store';
 import { ExternalLinksService } from '@core/services/links/external-links.service';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
+import { SettingsStore } from '@core/services/settings/settings.store';
 import { ClockService } from '@core/services/time/clock.service';
 import { endOfLocalDay, toDateInputValue } from '@core/utils/local-day.util';
 import { relativeTimeRef } from '@core/utils/relative-time.util';
@@ -36,6 +37,7 @@ import { LifecycleBadgeComponent } from './lifecycle-badge/lifecycle-badge.compo
 import { PlaceholderPanelComponent } from './placeholder-panel/placeholder-panel.component';
 import { RevisionPanelComponent } from './revision-panel/revision-panel.component';
 import { RichTextEditorComponent } from './rich-text-editor/rich-text-editor.component';
+import { applyEdit, indent, indentUnit, outdent } from './indentation';
 import { ChoiceMenuComponent, ChoiceOption } from '@notes/ui/choice-menu/choice-menu.component';
 import { TagPillComponent } from '@notes/ui/tag-pill/tag-pill.component';
 
@@ -87,6 +89,7 @@ export class NoteEditorOverlayComponent {
   protected readonly fill = inject(PlaceholderFillStore);
   private readonly help = inject(HelpStore);
   private readonly links = inject(ExternalLinksService);
+  private readonly settings = inject(SettingsStore);
 
   readonly note = input<Note | null>(null);
 
@@ -261,6 +264,19 @@ export class NoteEditorOverlayComponent {
 
   protected onBodyInput(value: string): void {
     this.draftContent.set(value);
+  }
+
+  /** Tab stays in the code: Escape is how the keyboard leaves the field. */
+  protected onBodyKeydown(event: KeyboardEvent, field: HTMLTextAreaElement): void {
+    if (event.key !== 'Tab' || event.ctrlKey || event.altKey || event.metaKey || event.isComposing) return;
+
+    event.preventDefault();
+    const unit = indentUnit(this.settings.codeIndent(), this.note()?.language ?? FALLBACK_LANGUAGE);
+    const { value, selectionStart, selectionEnd } = field;
+    const edit = event.shiftKey
+      ? outdent(value, selectionStart, selectionEnd, unit)
+      : indent(value, selectionStart, selectionEnd, unit);
+    if (edit) applyEdit(field, edit);
   }
 
   /**

@@ -3,6 +3,8 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import {
   DENSITIES,
   Density,
+  INDENT_CHOICES,
+  IndentChoice,
   LOCALE_CHOICES,
   LocaleChoice,
   THEME_CHOICES,
@@ -53,6 +55,12 @@ export class SettingsPageComponent {
     labelKey: `settings.density.${choice}`,
   }));
 
+  protected readonly indentChoices: readonly ChoiceOption[] = INDENT_CHOICES.map((choice) => ({
+    id: choice,
+    name: `settings.indent.${choice}`,
+    nameIsKey: true,
+  }));
+
   protected onUpdateNotifications(event: Event): void {
     const wanted = checkedValue(event);
     this.draft.set('updateNotifications', wanted);
@@ -74,6 +82,10 @@ export class SettingsPageComponent {
 
   protected onDensity(density: string): void {
     this.draft.set('density', density as Density);
+  }
+
+  protected onIndent(choice: string | null): void {
+    if (choice) this.draft.set('codeIndent', choice as IndentChoice);
   }
 
   protected onToggle(key: BooleanSetting, event: Event): void {

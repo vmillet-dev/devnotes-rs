@@ -246,6 +246,7 @@
             [placeholder]="'editor.emptyBody' | transloco"
             [value]="draftContent()"
             (input)="onBodyInput(bodyEditor.value)"
+            (keydown)="onBodyKeydown($event, bodyEditor)"
             (paste)="onPaste($event)"
             (blur)="commitContent()"
           ></textarea>

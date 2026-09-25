@@ -9,8 +9,11 @@ const SPACE = /\s/;
  * ⚠️ Replaces TipTap's own encoding, which escapes every `_ * ~ [ ] \` and turns `& < >` into
  * entities: `{{db_host}}` stopped being a field, and "a -> b" was stored as `a -&gt; b`, then
  * copied and searched that way. A `{{field}}` is left exactly as typed.
+ *
+ * A tab starting a line is written `&#9;`: Markdown reads it as an indented code block, or
+ * drops it on a line that continues a paragraph.
  */
-export function escapeMarkdownText(text: string): string {
+export function escapeMarkdownText(text: string, startsLine = false): string {
   let out = '';
   let from = 0;
   for (const field of text.matchAll(FIELD)) {
@@ -19,7 +22,8 @@ export function escapeMarkdownText(text: string): string {
     from = field.index + field[0].length;
   }
 
-  return out + escapeRun(text.slice(from));
+  const escaped = out + escapeRun(text.slice(from));
+  return startsLine ? escaped.replace(/^\t+/, (tabs) => '&#9;'.repeat(tabs.length)) : escaped;
 }
 
 function escapeRun(run: string): string {

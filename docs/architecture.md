@@ -748,6 +748,12 @@ block: a code block is what the note's language is for.
   and the address; words left as they were keep their formatting and only gain the mark.
 - The draft is committed on blur and on every closing path, like the code field's: the overlay
   blurs the rich editor before it closes, so the last keystrokes are not lost.
+- **Tab is a character once lists and tables pass on it** (`TabCharacter`, priority below
+  theirs): it nests a list item, moves to the next cell, and otherwise types a tab. ⚠️ A tab
+  starting a line is written `&#9;` (`escapeMarkdownText`), since Markdown reads a leading tab
+  as an indented code block, or drops it after a line break. `@tiptap/markdown` decodes only
+  four named entities, so `MarkdownWithTabs` wraps its `parse` and turns `&#9;` back into a
+  tab. pulldown-cmark decodes it by itself for the cards.
 
 ### A list sends previews, and the body is read by id
 
@@ -1633,6 +1639,15 @@ border-box }` folds that padding into the width. Getting this wrong shifts typin
   holds focus), so a keystroke aimed at the field does not dismiss the whole modal. Escape
   itself comes from the dialog shell, which only gives it to the modal in front — the editor
   no longer has to know whether the lightbox is open.
+- **Tab stays in the code**, and Escape is how the keyboard leaves. At a caret it inserts one
+  level (spaces up to the next stop, or a tab); a selection gains a level on every line it
+  touches, and Shift+Tab takes one back (`indentation.ts`, pure). What a level is comes from
+  Preferences → Editor (`codeIndent`), by the note's language unless the user forced one: a tab
+  for Go, four spaces for Python, Rust, Java, C#, PHP and C, two elsewhere. The edit goes
+  through `document.execCommand('insertText')`, deprecated but the only way into the
+  textarea's own undo: `setRangeText` would make Ctrl+Z skip it. The handler
+  `preventDefault`s, which is what `FocusTrapDirective` reads to leave the key alone. Both
+  layers carry `tab-size: 4`, since a tab drawn at another width drifts the caret.
 
 Deletion is a two-step confirm in the toolbar rather than a native `confirm()`, which would
 freeze the whole WebView. The fullscreen toggle expands the panel to fill the backdrop and

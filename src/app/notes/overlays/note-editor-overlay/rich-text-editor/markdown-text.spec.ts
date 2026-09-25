@@ -38,6 +38,12 @@ describe('escapeMarkdownText', () => {
   ])('escapes %j, which would read as syntax', (text, stored) => {
     expect(escapeMarkdownText(text)).toBe(stored);
   });
+
+  it('writes a tab starting a line as an entity, and leaves the others as they are', () => {
+    expect(escapeMarkdownText('\t\tindented', true)).toBe('&#9;&#9;indented');
+    expect(escapeMarkdownText('a\tb', true)).toBe('a\tb');
+    expect(escapeMarkdownText('\tafter bold', false)).toBe('\tafter bold');
+  });
 });
 
 describe('the rich editor round trip', () => {
@@ -61,6 +67,7 @@ describe('the rich editor round trip', () => {
     'a -> b && c < d, <div> & &amp;',
     '*stars* _underscores_ ~~tildes~~ `ticks` [brackets]',
     'C:\\Users\\me and \\* a backslash',
+    '\tindented, and\ta tab inside',
   ])('keeps %j as it was typed', (text) => {
     const editor = open('');
     editor.commands.setContent({
@@ -71,6 +78,25 @@ describe('the rich editor round trip', () => {
     const reread = open(markdownOf(editor));
 
     expect(reread.getText()).toBe(text);
+  });
+
+  it('keeps a tab that starts the line after a line break', () => {
+    const editor = open('');
+    editor.commands.setContent({
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: 'first' },
+            { type: 'hardBreak' },
+            { type: 'text', text: '\tsecond' },
+          ],
+        },
+      ],
+    });
+
+    expect(open(markdownOf(editor)).getText()).toBe('first\n\tsecond');
   });
 
   /** ⚠️ Fails if an upgrade of `@tiptap/markdown` stops going through the encoder this replaces. */

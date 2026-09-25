@@ -211,6 +211,21 @@ describe('RichTextEditorComponent', () => {
     expect(live()).toBe(false);
   });
 
+  /** Kept from the dialog's focus trap: a Tab it sees already answered is left alone. */
+  it('types a tab rather than leaving the text, and Shift+Tab takes it back', async () => {
+    await open('hello');
+    (surface() as HTMLElement & { editor: Editor }).editor.commands.setTextSelection(1);
+    const tab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+
+    surface().dispatchEvent(tab);
+    await fixture.whenStable();
+    expect(tab.defaultPrevented).toBe(true);
+    expect(emitted.at(-1)).toBe('&#9;hello');
+
+    await press('Tab', { shiftKey: true });
+    expect(emitted.at(-1)).toBe('hello');
+  });
+
   it('offers the table tools while the caret is in a table, and only then', async () => {
     expect(button('rich-rowAfter')).toBeNull();
 

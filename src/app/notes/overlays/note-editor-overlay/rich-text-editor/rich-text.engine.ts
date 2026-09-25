@@ -1,4 +1,4 @@
-import { Editor } from '@tiptap/core';
+import { Editor, Extension, JSONContent } from '@tiptap/core';
 import { TableKit } from '@tiptap/extension-table';
 import { TaskItem, TaskList } from '@tiptap/extension-list';
 import { Placeholder } from '@tiptap/extensions';
@@ -24,9 +24,59 @@ interface MarkdownEncoder {
   encodeTextForMarkdown(
     text: string,
     node: { marks?: (string | { type: string })[] },
-    parent: { type?: string } | null,
+    parent: { type?: string; content?: readonly unknown[] } | null,
   ): string;
 }
+
+/**
+ * Reads back the `&#9;` a line starts with (see `escapeMarkdownText`): the parser decodes
+ * four named entities and leaves the others as typed.
+ */
+const MarkdownWithTabs = Markdown.extend({
+  onBeforeCreate(event) {
+    this.parent?.(event);
+    const manager = this.editor.markdown;
+    if (!manager) return;
+
+    const parse = manager.parse.bind(manager);
+    manager.parse = (markdown: string) => withTabs(parse(markdown));
+    // The first document is parsed by the call above, before `parse` is wrapped.
+    const content = this.editor.options.content;
+    if (content && typeof content === 'object' && !Array.isArray(content)) {
+      this.editor.options.content = withTabs(content);
+    }
+  },
+});
+
+function withTabs(node: JSONContent): JSONContent {
+  return {
+    ...node,
+    ...(node.text !== undefined && { text: node.text.replaceAll('&#9;', '	') }),
+    ...(node.content && { content: node.content.map(withTabs) }),
+  };
+}
+
+/**
+ * Tab once lists (nesting) and tables (next cell) have passed on it: a character in the text,
+ * not a way out of the field. Shift+Tab takes back the one a line starts with.
+ */
+const TabCharacter = Extension.create({
+  name: 'tabCharacter',
+  priority: 50,
+  addKeyboardShortcuts() {
+    return {
+      Tab: () => this.editor.commands.insertContent({ type: 'text', text: '\t' }),
+      'Shift-Tab': () =>
+        this.editor.commands.command(({ tr, state }) => {
+          const { $from } = state.selection;
+          if ($from.parent.firstChild?.text?.startsWith('\t')) {
+            tr.delete($from.start(), $from.start() + 1);
+          }
+          return true;
+        }),
+    };
+  },
+});
 
 /** What the rich editor stores. Tables come out wrapped in blank lines; the body does not keep them. */
 export function markdownOf(editor: Editor): string {
@@ -47,10 +97,11 @@ export function createRichEditor(element: HTMLElement, markdown: string, hooks: 
         link: { openOnClick: false, autolink: true, defaultProtocol: 'https' },
       }),
       Placeholder.configure({ placeholder: hooks.placeholder }),
-      Markdown,
+      MarkdownWithTabs,
       TableKit.configure({ table: { resizable: false } }),
       TaskList,
       TaskItem.configure({ nested: true }),
+      TabCharacter,
     ],
     content: markdown,
     contentType: 'markdown',
@@ -102,6 +153,13 @@ function encodeMinimally(editor: Editor): void {
       (parent?.type !== undefined && encoder.codeTypes.has(parent.type)) ||
       (node.marks ?? []).some((mark) => encoder.codeTypes.has(typeof mark === 'string' ? mark : mark.type));
 
-    return inCode ? text : escapeMarkdownText(text);
+    return inCode ? text : escapeMarkdownText(text, startsLine(node, parent));
   };
+}
+
+/** First in its block, or after a line break: where Markdown reads leading blanks as layout. */
+function startsLine(node: unknown, parent: { content?: readonly unknown[] } | null): boolean {
+  const siblings = parent?.content ?? [];
+  const at = siblings.indexOf(node);
+  return at === 0 || (at > 0 && (siblings[at - 1] as { type?: string }).type === 'hardBreak');
 }

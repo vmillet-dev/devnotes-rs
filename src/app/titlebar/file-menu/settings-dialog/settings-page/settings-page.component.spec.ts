@@ -28,12 +28,12 @@ describe('SettingsPageComponent', () => {
     await fixture.whenStable();
   });
 
-  it('shows the four groups left once the keys and the library have pages of their own', () => {
+  it('shows the five groups left once the keys and the library have pages of their own', () => {
     const titles = [...fixture.nativeElement.querySelectorAll('.setting-group-title')].map(
       (title: HTMLElement) => title.textContent?.trim(),
     );
 
-    expect(titles).toEqual(['Apparence', 'Comportement', 'Collage rapide', 'Notifications']);
+    expect(titles).toEqual(['Apparence', 'Éditeur', 'Comportement', 'Collage rapide', 'Notifications']);
   });
 
   /**
@@ -109,6 +109,22 @@ describe('SettingsPageComponent', () => {
     await fixture.whenStable();
 
     expect(draft.value('theme')).toBe('light');
+  });
+
+  it('stages the indentation chosen for Tab, by the language until one is chosen', async () => {
+    fixture.nativeElement.querySelector('[data-testid="choice-setting-indent"]').click();
+    await fixture.whenStable();
+    const options: HTMLElement[] = [
+      ...fixture.nativeElement.querySelectorAll(
+        '[data-testid="choice-panel-setting-indent"] [data-option-id]',
+      ),
+    ];
+    expect(draft.value('codeIndent')).toBe('language');
+
+    options.find((option) => option.getAttribute('data-option-id') === 'tab')!.click();
+    await fixture.whenStable();
+
+    expect(draft.value('codeIndent')).toBe('tab');
   });
 
   it('stages a chosen density the same way', async () => {
