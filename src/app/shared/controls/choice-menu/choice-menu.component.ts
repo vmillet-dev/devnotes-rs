@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { FolderColour } from '@core/model/folder.model';
+import type { FolderColour } from '@core/model/folder.model';
 import { MenuPanelDirective } from '@shared/directives/menu-panel.directive';
 import { MenuTriggerDirective } from '@shared/directives/menu-trigger.directive';
 

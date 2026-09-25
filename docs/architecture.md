@@ -181,10 +181,10 @@ Membership is decidable, not a matter of taste:
 | Is it a cross-cutting service?              | `core/services/<subject>/`                   |
 | Does it cross two areas of the screen?      | `shared/`                                    |
 
-**`notes/ui/` holds what several zones draw**: the choice menu, the code viewer, the copy
-button, the language badge, the `{{field}}` rows and the tag pill. They are the common
-ancestor rule applied to `notes/` itself — shown by more than one zone, so they rise to the
-zones' parent — and they sit in one folder rather than loose at the root beside the page.
+**`notes/ui/` holds what several zones draw**: the code viewer, the copy button, the language
+badge, the `{{field}}` rows and the tag pill. They are the common ancestor rule applied to
+`notes/` itself — shown by more than one zone, so they rise to the zones' parent — and they sit
+in one folder rather than loose at the root beside the page.
 
 **What has no place on screen is filed by subject, even when a store uses it.**
 `core/state/` holds the stores and nothing else; `NoteCopyService` is under
@@ -951,14 +951,14 @@ dans" were a `<select>` doing a **command's** job, resetting their own value to 
 every `change`. A screen reader announced a combobox whose current value was "Ranger dans",
 and a keyboard user got a listbox where the rest of the application gives a menu.
 
-**`notes/ui/choice-menu/` replaced seven of the eight**, on the existing menu directives:
-the two selection-bar commands, the editor's language, the editor's space and folder, the
-space editor's refuge and the preferences' language. ⚠️ `naming` is what tells the two
-shapes apart — `'value'` names what is chosen and refuses to re-emit it, `'label'` names
-what the control _does_ and has no current value at all. It lives in `notes/ui/` beside
-`copy-button` because it crosses two zones of `notes/`, and it is the one menu that
-**swallows Escape**: it is used inside dialogs, where the next listener up is the dialog's
-own.
+**`shared/controls/choice-menu/` replaced seven of the eight**, on the existing menu
+directives: the two selection-bar commands, the editor's language, the editor's space and
+folder, the space editor's refuge and the preferences' language. ⚠️ `naming` is what tells the
+two shapes apart — `'value'` names what is chosen and refuses to re-emit it, `'label'` names
+what the control _does_ and has no current value at all. It lives in `shared/` because it
+crosses areas of the screen — the notes, the preferences and the unlock screen — and injects
+nothing but its own host directive. It is the one menu that **swallows Escape**: it is used
+inside dialogs, where the next listener up is the dialog's own.
 
 **Three options get a segmented control instead** (`shared/controls/segmented-choice/`):
 Thème and Densité. Hiding two of three choices behind a click buys nothing, and

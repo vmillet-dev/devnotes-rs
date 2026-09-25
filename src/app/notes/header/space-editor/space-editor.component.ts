@@ -13,7 +13,7 @@ import {
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Space } from '@core/model/space.model';
 import { SpacesStore } from '@core/state/spaces.store';
-import { ChoiceMenuComponent, ChoiceOption } from '@notes/ui/choice-menu/choice-menu.component';
+import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
 
 /**
  * Pin, rename, delete — the three things a space can be told to do, in one panel so the
