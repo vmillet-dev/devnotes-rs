@@ -6,17 +6,14 @@ For build/run instructions see the [README](../README.md).
 ## Overview
 
 DevNotes is a Tauri v2 desktop app: an Angular single-page front-end rendered in a WebView,
-and a Rust process that owns everything native (storage, and later hashing and filesystem).
+and a Rust process that owns everything native (storage, encryption, the filesystem).
 The two halves talk only through Tauri's `invoke()` bridge.
 
 Notes and spaces are complete end to end: the front-end has no in-memory dataset left, every
 read and write goes through `invoke()`, and the Rust commands persist to an embedded SQLite
 database. Built on top of that: a 30-day trash with undo, multiple selection and bulk actions,
 corpus-wide tag management, `{{fields}}` in snippets, a quick-paste palette on a global
-shortcut, attachments, and import / export / share. The planned domains (crypto, formatters)
-have **no** module of their own yet: a
-placeholder would ship dead code in the binary, and an empty file documenting a contract
-drifts from whatever eventually gets written.
+shortcut, attachments, and import / export / share.
 
 **Where the work happens.** Data processing belongs to Rust. Filtering (space, full-text,
 tags, languages, quick filters), grouping into display sections, facet aggregation and tag
