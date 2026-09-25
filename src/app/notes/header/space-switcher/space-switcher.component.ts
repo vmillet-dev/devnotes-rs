@@ -2,8 +2,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  afterRenderEffect,
   computed,
-  effect,
   inject,
   input,
   output,
@@ -52,7 +52,7 @@ export class SpaceSwitcherComponent {
     this.menu.handleEscape(() => this.onEscape());
     this.menu.closed.subscribe(() => this.resetPanels());
 
-    effect(() => {
+    afterRenderEffect(() => {
       if (!this.menu.open()) return;
       if (this.editing()) {
         this.editor()?.focusName();

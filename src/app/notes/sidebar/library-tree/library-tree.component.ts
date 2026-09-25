@@ -2,8 +2,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  afterRenderEffect,
   computed,
-  effect,
   input,
   output,
   signal,
@@ -89,7 +89,7 @@ export class LibraryTreeComponent {
   });
 
   constructor() {
-    effect(() => {
+    afterRenderEffect(() => {
       if (this.editedSpace() !== null) {
         this.spaceEditor()?.focusName();
       } else if (this.editedFolder() !== null) {

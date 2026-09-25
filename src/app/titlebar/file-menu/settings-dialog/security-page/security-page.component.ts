@@ -3,8 +3,8 @@ import {
   Component,
   ElementRef,
   PendingTasks,
+  afterRenderEffect,
   computed,
-  effect,
   inject,
   signal,
   viewChild,
@@ -65,7 +65,7 @@ export class SecurityPageComponent {
     // The strip replaces the trigger further down a panel that scrolls, so without
     // this the click reads as having done nothing at all. `?.` on the call because jsdom
     // has no `scrollIntoView`.
-    effect(() => {
+    afterRenderEffect(() => {
       this.confirmStrip()?.nativeElement.scrollIntoView?.({ block: 'nearest' });
     });
   }
