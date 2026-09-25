@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Editor } from '@tiptap/core';
 import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
 import { RichTextEditorComponent } from './rich-text-editor.component';
 
@@ -38,22 +39,28 @@ describe('RichTextEditorComponent', () => {
     return event;
   }
 
+  /** Created with its content, as a note opens: `open` replaces a document already there. */
+  async function mount(content: string): Promise<void> {
+    fixture = TestBed.createComponent(RichTextEditorComponent);
+    fixture.componentRef.setInput('content', content);
+    emitted = [];
+    fixture.componentInstance.changed.subscribe((markdown) => emitted.push(markdown));
+    document.body.appendChild(fixture.nativeElement);
+    fixture.autoDetectChanges();
+    await fixture.whenStable();
+  }
+
   beforeEach(async () => {
     TestBed.configureTestingModule({
       imports: [RichTextEditorComponent],
       providers: [provideTranslocoTesting()],
     });
-    fixture = TestBed.createComponent(RichTextEditorComponent);
-    fixture.componentRef.setInput('content', '');
-    emitted = [];
-    fixture.componentInstance.changed.subscribe((markdown) => emitted.push(markdown));
-    document.body.appendChild(fixture.nativeElement);
-    fixture.autoDetectChanges();
-    await open('');
+    await mount('');
   });
 
   afterEach(() => {
     fixture.nativeElement.remove();
+    vi.restoreAllMocks();
   });
 
   it('shows the Markdown it is given as formatted text', async () => {
@@ -133,6 +140,140 @@ describe('RichTextEditorComponent', () => {
 
     expect(button('rich-rowAfter')).not.toBeNull();
     expect(emitted.at(-1)).toContain('| --- |');
+  });
+
+  it.each([
+    ['h1', '# hello'],
+    ['h2', '## hello'],
+    ['h3', '### hello'],
+    ['italic', '*hello*'],
+    ['strike', '~~hello~~'],
+    ['code', '`hello`'],
+    ['bullet', '- hello'],
+    ['ordered', '1. hello'],
+    ['tasks', '- [ ] hello'],
+    ['quote', '> hello'],
+  ])('writes what %s does as Markdown', async (tool, markdown) => {
+    await open('hello');
+    await press('a', { ctrlKey: true });
+
+    button(`rich-${tool}`).click();
+    await fixture.whenStable();
+
+    expect(emitted.at(-1)).toBe(markdown);
+  });
+
+  it('grows and shrinks a table from its tools, then takes it away', async () => {
+    const rows = (): number => surface().querySelectorAll('tr').length;
+    const columns = (): number => surface().querySelector('tr')?.children.length ?? 0;
+    const use = async (tool: string): Promise<void> => {
+      button(`rich-${tool}`).click();
+      await fixture.whenStable();
+    };
+
+    await use('table');
+    expect([rows(), columns()]).toEqual([3, 3]);
+
+    await use('rowAfter');
+    await use('columnAfter');
+    expect([rows(), columns()]).toEqual([4, 4]);
+
+    await use('deleteRow');
+    await use('deleteColumn');
+    expect([rows(), columns()]).toEqual([3, 3]);
+
+    await use('deleteTable');
+    expect(surface().querySelector('table')).toBeNull();
+    expect(button('rich-rowAfter')).toBeNull();
+  });
+
+  it('offers the address of the link under the caret, and an empty one takes the link off', async () => {
+    await open('[runbook](https://example.com)');
+    await press('a', { ctrlKey: true });
+    await press('k', { ctrlKey: true });
+
+    const field = fixture.nativeElement.querySelector('[data-testid="rich-link-field"]') as HTMLInputElement;
+    expect(field.value).toBe('https://example.com');
+
+    field.value = '';
+    field.dispatchEvent(new Event('input'));
+    button('rich-link-apply').click();
+    await fixture.whenStable();
+
+    expect(emitted.at(-1)).toBe('runbook');
+  });
+
+  it('says whether the text holds the focus, and when it lets it go', () => {
+    let blurs = 0;
+    fixture.componentInstance.blurred.subscribe(() => (blurs += 1));
+    expect(fixture.componentInstance.hasFocus()).toBe(false);
+
+    surface().focus();
+    expect(fixture.componentInstance.hasFocus()).toBe(true);
+
+    surface().blur();
+    expect(fixture.componentInstance.hasFocus()).toBe(false);
+    expect(blurs).toBe(1);
+  });
+
+  /** jsdom has no layout for ProseMirror to find a click in: its click hook is asked directly. */
+  it('opens a link on Ctrl+click, and leaves a plain click to the caret', async () => {
+    await open('[runbook](https://example.com)');
+    const opened: string[] = [];
+    fixture.componentInstance.linkOpened.subscribe((href) => opened.push(href));
+    const view = (surface() as HTMLElement & { editor: Editor }).editor.view;
+    const click = (init: MouseEventInit): boolean => {
+      const event = new MouseEvent('click', { cancelable: true, ...init });
+      Object.defineProperty(event, 'target', { value: surface().querySelector('a') });
+      return view.someProp('handleClick', (handle) => handle(view, 1, event)) ?? false;
+    };
+
+    expect(click({})).toBe(false);
+    expect(click({ ctrlKey: true })).toBe(true);
+    expect(opened).toEqual(['https://example.com']);
+  });
+
+  /**
+   * WebKit, which Linux runs, focuses inside TipTap's `chain().focus()`, and that focus dispatches
+   * first: a note ending in a list gains its trailing paragraph under the chain's transaction.
+   */
+  describe('on WebKit, with the text not focused yet', () => {
+    beforeEach(() => {
+      vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(
+        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+      );
+      // jsdom lays nothing out, and a focused view scrolls to its caret.
+      Object.assign(Range.prototype, {
+        getClientRects: () => [],
+        getBoundingClientRect: () => ({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 }),
+      });
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(Range.prototype, 'getClientRects');
+      Reflect.deleteProperty(Range.prototype, 'getBoundingClientRect');
+    });
+
+    it('ticks a box', async () => {
+      fixture.nativeElement.remove();
+      await mount('- [ ] ship it');
+      const box = surface().querySelector<HTMLInputElement>('input[type="checkbox"]')!;
+
+      box.click();
+      await fixture.whenStable();
+
+      expect(emitted.at(-1)).toBe('- [x] ship it');
+    });
+
+    it('runs a tool', async () => {
+      fixture.nativeElement.remove();
+      await mount('- [ ] ship it');
+
+      button('rich-tasks').click();
+      await fixture.whenStable();
+
+      expect(emitted.at(-1)).toBe('ship it');
+    });
   });
 
   describe('a paste', () => {

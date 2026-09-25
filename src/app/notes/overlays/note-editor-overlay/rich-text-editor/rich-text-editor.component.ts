@@ -15,9 +15,9 @@ import {
   viewChild,
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import type { Editor } from '@tiptap/core';
+import type { ChainedCommands, Editor } from '@tiptap/core';
 import { IconComponent, IconName } from '@shared/icon/icon.component';
-import { createRichEditor } from './rich-text.engine';
+import { createRichEditor, focusFirst } from './rich-text.engine';
 
 type Action =
   | 'h1'
@@ -165,7 +165,7 @@ export class RichTextEditorComponent {
   }
 
   protected run(action: Action): void {
-    const chain = this.editor?.chain().focus();
+    const chain = this.chain();
     if (!chain) return;
 
     switch (action) {
@@ -232,7 +232,7 @@ export class RichTextEditorComponent {
   /** An empty address takes the link off, which is how one is removed. */
   protected applyLink(): void {
     const href = this.linkDraft()?.trim() ?? '';
-    const chain = this.editor?.chain().focus().extendMarkRange('link');
+    const chain = this.chain()?.extendMarkRange('link');
     if (chain) {
       (href && href !== 'https://' ? chain.setLink({ href }) : chain.unsetLink()).run();
     }
@@ -243,7 +243,17 @@ export class RichTextEditorComponent {
   protected closeLinkForm(event: Event): void {
     event.stopPropagation();
     this.linkDraft.set(null);
-    this.editor?.commands.focus();
+    if (this.editor) {
+      focusFirst(this.editor);
+    }
+  }
+
+  /** Focused before the chain, never inside it: see `focusFirst`. */
+  private chain(): ChainedCommands | undefined {
+    if (!this.editor) return undefined;
+
+    focusFirst(this.editor);
+    return this.editor.chain();
   }
 
   private load(content: string): void {

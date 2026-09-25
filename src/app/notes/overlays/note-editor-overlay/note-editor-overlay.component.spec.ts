@@ -420,6 +420,17 @@ describe('NoteEditorOverlayComponent', () => {
 
       expect(attach).toHaveBeenCalled();
     });
+
+    it('leaves the text on Escape instead of closing the whole overlay', async () => {
+      await openText('draft');
+      vi.spyOn(rich(), 'hasFocus').mockReturnValue(true);
+      const blur = vi.spyOn(rich(), 'blur');
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+      expect(blur).toHaveBeenCalled();
+      expect(asked.closes).toBe(0);
+    });
   });
 
   describe('pasting an image', () => {

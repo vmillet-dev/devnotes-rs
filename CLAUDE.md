@@ -119,7 +119,7 @@ Run all commands from the repo root (`package.json` there wraps both Angular and
 - **The canvas stores, one way**: `NotesQueryStore` (which notes), `NoteSelectionStore` (which one is pointed at), `NotesStore` (the note itself), `NoteBatchStore`, `UndoStore`. One method writes a note's fields (`applyPatch`, with an exhaustive `UNCHANGED` table). → "State".
 - **Creating a note writes nothing** until it is worth keeping; ⚠️ `draftMaterialisation` holds the **promise** of the write, or one close creates two notes. → "Creating a note writes nothing".
 - **The editor keeps local drafts** keyed on the note id (and the restore counter), committed on blur and on every closing path.
-- **⚠️ TipTap is its own chunk**, behind `@defer`: query the rich editor by template reference, never `viewChild(RichTextEditorComponent)`. Its Markdown escaping is ours (`escapeMarkdownText`), or `{{db_host}}` is stored as `{{db\_host}}`.
+- **⚠️ TipTap is its own chunk**, behind `@defer`: query the rich editor by template reference, never `viewChild(RichTextEditorComponent)`. On WebKit (Linux) `chain().focus()` throws a mismatched transaction: `focusFirst`, then the chain. Its Markdown escaping is ours (`escapeMarkdownText`), or `{{db_host}}` is stored as `{{db\_host}}`.
 - **`null` space means "all spaces"**, a choice and not a loading state. Deleting a space needs a refuge; there is no one-argument variant.
 - **The undo banner and the undo record differ**: the timer hides `banner()`, `Ctrl+Z` reads `last()`. `Reversible` is exhaustive.
 - **Nothing corpus-wide runs before saying what it touches** (tag changes, emptying the trash, deleting a library): the count comes from the back end, and the confirm button is not the trigger.

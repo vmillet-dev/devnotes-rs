@@ -73,8 +73,21 @@ export function createRichEditor(element: HTMLElement, markdown: string, hooks: 
     onBlur: () => hooks.blur(),
   });
 
+  // A tick runs TaskItem's own `chain().focus()`: captured here, the focus comes before it.
+  editor.view.dom.addEventListener('change', () => focusFirst(editor), { capture: true });
   encodeMinimally(editor);
   return editor;
+}
+
+/**
+ * ⚠️ On WebKit, which Linux runs, `chain().focus()` focuses synchronously and the focus dispatches
+ * before the chain: a note ending in a list gains its trailing paragraph, and the chain throws
+ * "Applying a mismatched transaction". Focused beforehand, `focus()` has nothing left to do.
+ */
+export function focusFirst(editor: Editor): void {
+  if (!editor.view.hasFocus()) {
+    editor.view.focus();
+  }
 }
 
 /** ⚠️ A private method of `@tiptap/markdown`: `markdown-text.spec.ts` fails if an upgrade renames it. */

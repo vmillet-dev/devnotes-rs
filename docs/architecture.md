@@ -721,6 +721,12 @@ block: a code block is what the note's language is for.
   `a -&gt; b`. `rich-text.engine.ts` replaces its private `encodeTextForMarkdown` with
   `escapeMarkdownText`, which escapes a character only where it would read as syntax and never
   inside a `{{field}}`. `markdown-text.spec.ts` fails if an upgrade stops calling it.
+- **⚠️ Focus before a chain, never inside it.** On WebKit, which Linux runs, TipTap's
+  `chain().focus()` focuses synchronously, and the focus dispatches first: a note ending in a
+  list gains its trailing paragraph under the chain's transaction, which then throws "Applying a
+  mismatched transaction". `focusFirst` runs before every chain the toolbar builds, and a
+  capture listener runs it before TaskItem's own when a box is ticked. Chromium defers that
+  focus to the next frame, so Windows never shows it; the component spec fakes WebKit's agent.
 - **TipTap is a chunk of its own**, some 135 kB gzipped, loaded by `@defer (on immediate)` when
   a Text note opens. ⚠️ `viewChild(RichTextEditorComponent)` names the class at runtime and
   pulls the whole editor back into the page's chunk: the overlay queries it by template
