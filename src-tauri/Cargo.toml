@@ -1,6 +1,6 @@
 [package]
 name = "devnotes"
-version = "0.5.1"
+version = "0.5.2"
 description = "A developer's notes and snippets manager for the desktop"
 authors = ["Valentin MILLET"]
 edition = "2024"
