@@ -3705,9 +3705,15 @@ so "Compact" tightens the whole window. A rail row is `calc(var(--space-grid) / 
 geometry is computed in Rust, and a padding there would offset every gesture. A dialog that sets
 its own `--dialog-padding` keeps it.
 
-Fonts are self-hosted through the `@fontsource` packages listed in `angular.json`'s `styles`
-array. They used to come from Google Fonts, which on a desktop app meant degraded typography
-offline and a CSP that could not be locked down.
+Fonts are self-hosted through the `@fontsource-variable` packages listed in `angular.json`'s
+`styles` array. They used to come from Google Fonts, which on a desktop app meant degraded
+typography offline and a CSP that could not be locked down.
+
+**Variable, and every script kept.** The per-weight `@fontsource` packages shipped each weight
+of each script twice, as woff2 and woff: 118 files, 1.49 MB embedded in the binary for the few
+the WebView ever loads. The `wght` files carry every weight in one woff2 per script — 13 files,
+~300 kB — and `unicode-range` still loads only the scripts on screen. Cyrillic and Greek stay:
+a note is free text. The family names carry the `Variable` suffix.
 
 ## Application updates
 
