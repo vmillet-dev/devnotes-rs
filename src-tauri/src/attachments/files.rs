@@ -2,6 +2,7 @@
 
 use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use chrono::Utc;
 use uuid::Uuid;
@@ -9,6 +10,7 @@ use uuid::Uuid;
 use crate::count::saturating_u32;
 use crate::db::{Db, Library, lock};
 use crate::error::{FileContext, StorageError};
+use crate::vault::key::Vault;
 
 use super::model::{self, Attachment};
 use super::{sealed, store};
@@ -73,15 +75,31 @@ pub(crate) fn store_new(
     stored.map(|()| attachment)
 }
 
-/// The record and its bytes, opened, for the three read commands. The record is looked up
-/// first: opening a file nothing refers to would read outside what the library knows.
+/// The record and its bytes, opened. The record is looked up first: opening a file nothing
+/// refers to would read outside what the library knows.
 pub fn read_plain(library: &mut Library, id: &str) -> Result<(Attachment, Vec<u8>), StorageError> {
+    let (attachment, path, vault) = locate(library, id)?;
+
+    Ok((attachment, sealed::read_sealed(&vault, &path)?))
+}
+
+/// The same for the read commands, with the lock held for the lookup alone: up to 10 MiB read
+/// and opened is time every other command would spend waiting.
+pub(crate) fn read_outside_lock(db: &Db, id: &str) -> Result<(Attachment, Vec<u8>), StorageError> {
+    let (attachment, path, vault) = locate(&mut *lock(db)?, id)?;
+
+    Ok((attachment, sealed::read_sealed(&vault, &path)?))
+}
+
+fn locate(
+    library: &mut Library,
+    id: &str,
+) -> Result<(Attachment, PathBuf, Arc<Vault>), StorageError> {
     let attachment = store::find(library, id)?
         .ok_or_else(|| StorageError::AttachmentNotFound(id.to_string()))?;
     let path = directory(library).join(attachment.stored_name());
-    let bytes = sealed::read_sealed(library.vault(), &path)?;
 
-    Ok((attachment, bytes))
+    Ok((attachment, path, library.shared_vault()))
 }
 
 /// Files no record claims: an interrupted copy or a purge failing halfway leaves one.
@@ -182,6 +200,26 @@ pub(crate) mod tests {
 
         assert_eq!(attachment.id, stored.id);
         assert_eq!(bytes, b"png");
+    }
+
+    /// The read commands' path: the same bytes, and the lock free again once they are in hand.
+    #[test]
+    fn an_attachment_read_outside_the_lock_leaves_it_free() {
+        let (_scratch, db, note_id) = a_library_with_a_note();
+        attachments_of(&db);
+        let stored = store_new(note_id, "capture.png".to_string(), b"png", &db).unwrap();
+
+        let (attachment, bytes) = read_outside_lock(&db, &stored.id).unwrap();
+
+        assert_eq!(
+            (attachment.id, bytes.as_slice()),
+            (stored.id, b"png".as_slice())
+        );
+        assert!(db.try_lock().is_ok());
+        assert!(matches!(
+            read_outside_lock(&db, "unknown"),
+            Err(StorageError::AttachmentNotFound(_))
+        ));
     }
 
     #[test]

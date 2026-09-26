@@ -14,7 +14,7 @@ use tauri::AppHandle;
 
 use crate::db::{Db, blocking, lock};
 use crate::error::{AppError, FileContext, StorageError};
-use files::{directory, read_plain, read_within_limit, remove_files, store_new};
+use files::{directory, read_outside_lock, read_within_limit, remove_files, store_new};
 use model::Attachment;
 
 /// ⚠️ `path` is not checked, and cannot be: it is the native picker's answer. With
@@ -54,7 +54,7 @@ pub async fn list_attachments(
 #[specta::specta]
 pub async fn read_attachment(id: String, app: AppHandle) -> Result<String, AppError> {
     blocking(app, move |_, db| {
-        let (attachment, bytes) = read_plain(&mut *lock(db)?, &id)?;
+        let (attachment, bytes) = read_outside_lock(db, &id)?;
 
         Ok(format!(
             "data:{};base64,{}",
@@ -75,7 +75,7 @@ pub async fn read_attachment(id: String, app: AppHandle) -> Result<String, AppEr
 #[specta::specta]
 pub async fn open_attachment(id: String, app: AppHandle) -> Result<(), AppError> {
     blocking(app, move |app, db| {
-        let (attachment, bytes) = read_plain(&mut *lock(db)?, &id)?;
+        let (attachment, bytes) = read_outside_lock(db, &id)?;
 
         let directory = sealed::plaintext_directory(app)?;
         std::fs::create_dir_all(&directory).context("a directory for decrypted copies")?;
@@ -98,7 +98,7 @@ pub async fn open_attachment(id: String, app: AppHandle) -> Result<(), AppError>
 #[specta::specta]
 pub async fn save_attachment(id: String, path: String, app: AppHandle) -> Result<(), AppError> {
     blocking(app, move |_, db| {
-        let (_, bytes) = read_plain(&mut *lock(db)?, &id)?;
+        let (_, bytes) = read_outside_lock(db, &id)?;
 
         // In the clear, where the user chose: that is what "save as" means.
         std::fs::write(&path, &bytes).context(path)?;

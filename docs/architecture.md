@@ -3255,9 +3255,12 @@ written for. The numeric prefix is the run order, and nothing may be filed after
 
 ### Attachments, and the one plaintext copy
 
-The bytes are sealed on the way in (`attachments::copy_within_limit`) and opened in memory
+The bytes are sealed on the way in (`attachments::files::store_new`) and opened in memory
 on the way out: `read_attachment` decrypts into the `data:` URI the preview already used,
-and `save_attachment` writes plaintext where the user chose to put it.
+and `save_attachment` writes plaintext where the user chose to put it. The three read commands
+hold the lock for the lookup alone (`attachments::files::read_outside_lock`): the file is read
+and opened after it, the key travelling as `Library::shared_vault`, since up to 10 MiB read
+and decrypted is time every other command would spend waiting.
 
 ⚠️ `open_attachment` is the exception, and a deliberate one: the program that opens a
 document reads it from disk, so DevNotes writes a decrypted copy under `app_data_dir()/open/`

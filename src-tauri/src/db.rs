@@ -3,7 +3,7 @@ pub mod schema;
 
 use std::ops::{Deref, DerefMut};
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use diesel::connection::SimpleConnection;
 use diesel::prelude::*;
@@ -17,7 +17,8 @@ use crate::vault::key::Vault;
 /// through [`Library::db`] alone: Diesel's generic `load` gets no deref coercion anyway.
 pub struct Library {
     connection: SqliteConnection,
-    vault: Vault,
+    /// Shared, so a read can take the key past the lock: see [`Library::shared_vault`].
+    vault: Arc<Vault>,
     directory: PathBuf,
 }
 
@@ -34,6 +35,12 @@ impl Library {
 
     pub fn vault(&self) -> &Vault {
         &self.vault
+    }
+
+    /// The key, for work that can finish once the lock is released: opening a file read off
+    /// disk needs the key and nothing else the lock guards.
+    pub fn shared_vault(&self) -> Arc<Vault> {
+        Arc::clone(&self.vault)
     }
 
     /// An in-memory library that writes its files into `directory`.
@@ -158,7 +165,7 @@ pub fn open(path: &Path, vault: Vault) -> Result<Library, StorageError> {
 
     Ok(Library {
         connection,
-        vault,
+        vault: Arc::new(vault),
         directory: path.parent().map(Path::to_path_buf).unwrap_or_default(),
     })
 }
@@ -173,7 +180,7 @@ pub fn open_in_memory() -> Result<Library, StorageError> {
 
     Ok(Library {
         connection,
-        vault: test_vault()?,
+        vault: Arc::new(test_vault()?),
         // Named, never created: a test writing beside the library fails loudly.
         directory: std::env::temp_dir()
             .join(format!("devnotes-in-memory-{}", uuid::Uuid::new_v4())),
