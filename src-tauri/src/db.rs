@@ -202,11 +202,14 @@ fn configure(connection: &mut SqliteConnection) -> Result<(), StorageError> {
     // ⚠️ `foreign_keys` is per connection and off by default: without it every `ON DELETE
     // CASCADE` is inert. `busy_timeout` rides out another process holding the file.
     // `synchronous = NORMAL` under WAL can lose the last commit to a power cut, never the file.
+    // `mmap_size` reads pages in place: a file truncated under the mapping is a SIGBUS, not an
+    // error, which is why nothing moves a library's files while its connection is open.
     connection.batch_execute(
         "PRAGMA foreign_keys = ON;
          PRAGMA journal_mode = WAL;
          PRAGMA busy_timeout = 5000;
-         PRAGMA synchronous = NORMAL;",
+         PRAGMA synchronous = NORMAL;
+         PRAGMA mmap_size = 1073741824;",
     )?;
 
     Ok(())
@@ -264,7 +267,7 @@ pub mod iso8601 {
 mod tests {
     use super::*;
     use crate::error::{AppError, ErrorCode};
-    use diesel::sql_types::Integer;
+    use diesel::sql_types::{BigInt, Integer};
 
     fn in_memory() -> Db {
         Mutex::new(Some(open_in_memory().unwrap()))
@@ -386,6 +389,27 @@ mod tests {
             .synchronous;
 
         assert_eq!(level, 1);
+    }
+
+    /// Asked of a file: an in-memory database has nothing to map. A build of SQLite whose
+    /// ceiling is lower answers that ceiling, and the corpus would be read through the cache.
+    #[test]
+    fn the_file_is_read_through_a_mapping() {
+        #[derive(QueryableByName)]
+        struct MmapSize {
+            #[diesel(sql_type = BigInt)]
+            mmap_size: i64,
+        }
+
+        let scratch = tempfile::tempdir().unwrap();
+        let mut library = open(&scratch.path().join("notes.db"), test_vault().unwrap()).unwrap();
+
+        let size = diesel::sql_query("PRAGMA mmap_size")
+            .get_result::<MmapSize>(library.db())
+            .unwrap()
+            .mmap_size;
+
+        assert_eq!(size, 1 << 30);
     }
 
     #[test]
