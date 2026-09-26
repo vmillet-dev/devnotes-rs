@@ -8,7 +8,7 @@ pub mod copies;
 
 use std::path::PathBuf;
 
-use tauri::AppHandle;
+use tauri::{AppHandle, Runtime};
 
 use chrono::{DateTime, Utc};
 
@@ -22,7 +22,7 @@ pub(crate) const AUTOMATIC_BACKUPS_KEY: &str = "devnotes.automaticBackups";
 
 /// Read from the preferences file: the copy is taken at unlock, before the front end has
 /// booted far enough to say anything.
-fn wanted_by_preference(app: &AppHandle) -> bool {
+fn wanted_by_preference<R: Runtime>(app: &AppHandle<R>) -> bool {
     use tauri_plugin_store::StoreExt;
 
     let stored = app
@@ -35,7 +35,7 @@ fn wanted_by_preference(app: &AppHandle) -> bool {
 }
 
 /// The launch copy. Never fatal: a library that cannot be copied still has to open.
-pub(crate) fn take(app: &AppHandle, db: &Db) {
+pub(crate) fn take<R: Runtime>(app: &AppHandle<R>, db: &Db) {
     if wanted_by_preference(app) {
         copy(db);
     }
@@ -62,7 +62,7 @@ fn copy(db: &Db) {
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command]
 #[specta::specta]
-pub async fn list_backups(app: AppHandle) -> Result<Vec<Backup>, AppError> {
+pub async fn list_backups<R: Runtime>(app: AppHandle<R>) -> Result<Vec<Backup>, AppError> {
     blocking(app, move |_, db| Ok(list(lock(db)?.directory()))).await
 }
 
@@ -74,7 +74,7 @@ pub async fn list_backups(app: AppHandle) -> Result<Vec<Backup>, AppError> {
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command]
 #[specta::specta]
-pub async fn restore_backup(id: String, app: AppHandle) -> Result<String, AppError> {
+pub async fn restore_backup<R: Runtime>(id: String, app: AppHandle<R>) -> Result<String, AppError> {
     blocking(app, move |_, db| {
         let aside = restore(db, &id, Utc::now())?;
 

@@ -2613,7 +2613,9 @@ who remember to touch the select. Three things keep it honest:
   Make it an `async fn` whose body runs in `db::blocking` when it takes the lock — see the
   threading note under [Persistence](#persistence-rust) — **and** annotate it
   `#[specta::specta]`, then regenerate; an
-  unannotated function will not compile inside `collect_commands!`.
+  unannotated function will not compile inside `collect_commands!`. A command handed an
+  `AppHandle` is generic over `R: Runtime` and registered as `name::<tauri::Wry>`: that is what
+  lets `tests/commands` call it on the mock runtime, and specta needs the concrete type.
 - A module holding commands is `pub`, and that is not decoration: `#[specta::specta]`
   generates a macro per command that `collect_commands!` resolves from the crate root.
   Everything else is `pub(crate)` or narrower, so that `dead_code` and `unreachable_pub` —
@@ -3320,7 +3322,8 @@ installed or shipped alongside the executable. The database file lives in Tauri'
   worker of its own. `db::blocking(app, |app, db| …)` runs the body on Tokio's **blocking** pool
   instead and hands it the handle and the `Db`; `bindings.ts` is unaffected, the generated
   TypeScript having always been promise-based. A body that panics answers
-  `StorageError::Unavailable`, the answer the lock it would have poisoned gives. The commands
+  `StorageError::Unavailable`, the answer the lock it would have poisoned gives. `blocking`
+  and the commands are generic over `R: Runtime`, so a test runs them on Tauri's mock runtime. The commands
   that never take the lock — the registry of libraries, `export_is_protected`, the changelog —
   stay `(async)`: a short read of a file.
 
@@ -4155,6 +4158,12 @@ The tests split by what they need in order to run:
   `fetch` + `notes::view::build` so the whole read path stays covered end to end.
 - **`db` and `error`** — that a poisoned mutex reports `storageUnavailable` instead of
   panicking a second time, and that each error variant maps to the right code and params.
+- **The commands** — `tests/commands/`, one module per feature, through
+  `tauri::test::mock_app()` (tauri's `test` feature, enabled in `[dev-dependencies]` only) with
+  the library managed as its `Db`. What a command adds to the store is what they check: the
+  lock, the validation before it, and the code a failure crosses the bridge as. The commands
+  that reach the profile (the gate, the registry, the copies) or a plugin (the opener, the
+  clipboard) are left to the end-to-end suite: the mock app has neither.
 
 Test names and comments are in English, like the front-end specs. `notes::store::list`
 survives only as a `#[cfg(test)]` helper — no command returns a raw list.

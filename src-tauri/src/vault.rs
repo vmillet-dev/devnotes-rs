@@ -11,7 +11,7 @@ pub mod key;
 
 use serde::Serialize;
 use specta::Type;
-use tauri::AppHandle;
+use tauri::{AppHandle, Runtime};
 
 use zeroize::{Zeroize, Zeroizing};
 
@@ -48,7 +48,7 @@ pub enum VaultState {
 
 #[tauri::command]
 #[specta::specta]
-pub async fn vault_state(app: AppHandle) -> Result<VaultState, AppError> {
+pub async fn vault_state<R: Runtime>(app: AppHandle<R>) -> Result<VaultState, AppError> {
     blocking(app, move |app, db| {
         if db.lock().map_err(|_| StorageError::Unavailable)?.is_some() {
             return Ok(VaultState::Unlocked);
@@ -65,7 +65,10 @@ pub async fn vault_state(app: AppHandle) -> Result<VaultState, AppError> {
 /// way into the notes beside it.
 #[tauri::command]
 #[specta::specta]
-pub async fn create_vault(passphrase: String, app: AppHandle) -> Result<(), AppError> {
+pub async fn create_vault<R: Runtime>(
+    passphrase: String,
+    app: AppHandle<R>,
+) -> Result<(), AppError> {
     blocking(app, move |app, db| {
         let passphrase = secret(passphrase);
         validate(&passphrase)?;
@@ -83,7 +86,10 @@ pub async fn create_vault(passphrase: String, app: AppHandle) -> Result<(), AppE
 /// every attempt.
 #[tauri::command]
 #[specta::specta]
-pub async fn unlock_vault(passphrase: String, app: AppHandle) -> Result<(), AppError> {
+pub async fn unlock_vault<R: Runtime>(
+    passphrase: String,
+    app: AppHandle<R>,
+) -> Result<(), AppError> {
     blocking(app, move |app, db| {
         let directory = crate::libraries::open_directory(app)?;
         gate::unlock(&secret(passphrase), &directory, db)?;
@@ -109,10 +115,10 @@ pub struct PassphraseChange {
 /// open on it.
 #[tauri::command]
 #[specta::specta]
-pub async fn change_passphrase(
+pub async fn change_passphrase<R: Runtime>(
     current: String,
     next: String,
-    app: AppHandle,
+    app: AppHandle<R>,
 ) -> Result<PassphraseChange, AppError> {
     blocking(app, move |_, db| {
         let (current, next) = (secret(current), secret(next));

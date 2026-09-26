@@ -3,7 +3,7 @@
 pub mod model;
 pub mod store;
 
-use tauri::AppHandle;
+use tauri::{AppHandle, Runtime};
 
 use crate::db::{blocking, lock};
 use crate::error::AppError;
@@ -11,7 +11,7 @@ use model::{Space, SpaceDraft};
 
 #[tauri::command]
 #[specta::specta]
-pub async fn list_spaces(app: AppHandle) -> Result<Vec<Space>, AppError> {
+pub async fn list_spaces<R: Runtime>(app: AppHandle<R>) -> Result<Vec<Space>, AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
 
@@ -22,7 +22,10 @@ pub async fn list_spaces(app: AppHandle) -> Result<Vec<Space>, AppError> {
 
 #[tauri::command]
 #[specta::specta]
-pub async fn create_space(draft: SpaceDraft, app: AppHandle) -> Result<Space, AppError> {
+pub async fn create_space<R: Runtime>(
+    draft: SpaceDraft,
+    app: AppHandle<R>,
+) -> Result<Space, AppError> {
     blocking(app, move |_, db| {
         let name = draft.validated_name()?;
 
@@ -35,10 +38,10 @@ pub async fn create_space(draft: SpaceDraft, app: AppHandle) -> Result<Space, Ap
 
 #[tauri::command]
 #[specta::specta]
-pub async fn rename_space(
+pub async fn rename_space<R: Runtime>(
     id: String,
     draft: SpaceDraft,
-    app: AppHandle,
+    app: AppHandle<R>,
 ) -> Result<Space, AppError> {
     blocking(app, move |_, db| {
         let name = draft.validated_name()?;
@@ -52,7 +55,11 @@ pub async fn rename_space(
 
 #[tauri::command]
 #[specta::specta]
-pub async fn pin_space(id: String, pinned: bool, app: AppHandle) -> Result<Space, AppError> {
+pub async fn pin_space<R: Runtime>(
+    id: String,
+    pinned: bool,
+    app: AppHandle<R>,
+) -> Result<Space, AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
 
@@ -63,10 +70,10 @@ pub async fn pin_space(id: String, pinned: bool, app: AppHandle) -> Result<Space
 
 #[tauri::command]
 #[specta::specta]
-pub async fn delete_space(
+pub async fn delete_space<R: Runtime>(
     id: String,
     target_space_id: String,
-    app: AppHandle,
+    app: AppHandle<R>,
 ) -> Result<(), AppError> {
     blocking(app, move |_, db| {
         // A space as its own refuge would see its notes swept away by the cascade right

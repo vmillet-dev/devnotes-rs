@@ -10,7 +10,7 @@ pub mod store;
 
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
-use tauri::AppHandle;
+use tauri::{AppHandle, Runtime};
 
 use crate::db::{Db, blocking, lock};
 use crate::error::{AppError, FileContext, StorageError};
@@ -22,10 +22,10 @@ use model::Attachment;
 /// that harmless is the CSP — `script-src 'self'`, nothing remote — not this function.
 #[tauri::command]
 #[specta::specta]
-pub async fn attach_file(
+pub async fn attach_file<R: Runtime>(
     note_id: String,
     path: String,
-    app: AppHandle,
+    app: AppHandle<R>,
 ) -> Result<Attachment, AppError> {
     blocking(app, move |_, db| {
         let file_name = model::display_name(&path)?;
@@ -38,9 +38,9 @@ pub async fn attach_file(
 
 #[tauri::command]
 #[specta::specta]
-pub async fn list_attachments(
+pub async fn list_attachments<R: Runtime>(
     note_id: String,
-    app: AppHandle,
+    app: AppHandle<R>,
 ) -> Result<Vec<Attachment>, AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
@@ -52,7 +52,10 @@ pub async fn list_attachments(
 
 #[tauri::command]
 #[specta::specta]
-pub async fn read_attachment(id: String, app: AppHandle) -> Result<String, AppError> {
+pub async fn read_attachment<R: Runtime>(
+    id: String,
+    app: AppHandle<R>,
+) -> Result<String, AppError> {
     blocking(app, move |_, db| {
         let (attachment, bytes) = read_outside_lock(db, &id)?;
 
@@ -73,7 +76,7 @@ pub async fn read_attachment(id: String, app: AppHandle) -> Result<String, AppEr
 /// on exit and at the next launch, since that program may still hold it on close.
 #[tauri::command]
 #[specta::specta]
-pub async fn open_attachment(id: String, app: AppHandle) -> Result<(), AppError> {
+pub async fn open_attachment<R: Runtime>(id: String, app: AppHandle<R>) -> Result<(), AppError> {
     blocking(app, move |app, db| {
         let (attachment, bytes) = read_outside_lock(db, &id)?;
 
@@ -96,7 +99,11 @@ pub async fn open_attachment(id: String, app: AppHandle) -> Result<(), AppError>
 /// The path comes from a native picker; the write stays here.
 #[tauri::command]
 #[specta::specta]
-pub async fn save_attachment(id: String, path: String, app: AppHandle) -> Result<(), AppError> {
+pub async fn save_attachment<R: Runtime>(
+    id: String,
+    path: String,
+    app: AppHandle<R>,
+) -> Result<(), AppError> {
     blocking(app, move |_, db| {
         let (_, bytes) = read_outside_lock(db, &id)?;
 
@@ -111,10 +118,10 @@ pub async fn save_attachment(id: String, path: String, app: AppHandle) -> Result
 /// The bytes do not cross the bridge: the clipboard is read natively, as raw RGBA.
 #[tauri::command]
 #[specta::specta]
-pub async fn attach_clipboard_image(
+pub async fn attach_clipboard_image<R: Runtime>(
     note_id: String,
     file_name: String,
-    app: AppHandle,
+    app: AppHandle<R>,
 ) -> Result<Attachment, AppError> {
     blocking(app, move |app, db| {
         let image = tauri_plugin_clipboard_manager::ClipboardExt::clipboard(app)
@@ -130,7 +137,7 @@ pub async fn attach_clipboard_image(
 
 #[tauri::command]
 #[specta::specta]
-pub async fn delete_attachment(id: String, app: AppHandle) -> Result<(), AppError> {
+pub async fn delete_attachment<R: Runtime>(id: String, app: AppHandle<R>) -> Result<(), AppError> {
     blocking(app, move |_, db| Ok(delete(db, &id)?)).await
 }
 

@@ -11,7 +11,7 @@ pub mod registry;
 
 use std::path::PathBuf;
 
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, Runtime};
 
 use crate::db::blocking;
 use crate::error::{AppError, FileContext, StorageError};
@@ -20,11 +20,11 @@ use registry::{
     rename_in,
 };
 
-fn profile(app: &AppHandle) -> Result<PathBuf, StorageError> {
+fn profile<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, StorageError> {
     app.path().app_data_dir().context("app_data_dir")
 }
 
-pub(crate) fn registry(app: &AppHandle) -> Result<Registry, StorageError> {
+pub(crate) fn registry<R: Runtime>(app: &AppHandle<R>) -> Result<Registry, StorageError> {
     Ok(registry_in(&profile(app)?))
 }
 
@@ -33,21 +33,24 @@ pub(crate) fn registry(app: &AppHandle) -> Result<Registry, StorageError> {
 ///
 /// ⚠️ An open library answers `Library::directory` instead, without reading this file. Never
 /// `app_data_dir()` directly: that is the profile, which holds no library.
-pub(crate) fn open_directory(app: &AppHandle) -> Result<PathBuf, StorageError> {
+pub(crate) fn open_directory<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, StorageError> {
     open_directory_in(&profile(app)?)
 }
 
 /// The libraries, and which one is open.
 #[tauri::command(async)]
 #[specta::specta]
-pub fn list_libraries(app: AppHandle) -> Result<Registry, AppError> {
+pub fn list_libraries<R: Runtime>(app: AppHandle<R>) -> Result<Registry, AppError> {
     Ok(registry(&app)?)
 }
 
 /// Adds one, and leaves it closed: opening it is a second, deliberate gesture.
 #[tauri::command(async)]
 #[specta::specta]
-pub fn create_library(name: String, app: AppHandle) -> Result<LibraryEntry, AppError> {
+pub fn create_library<R: Runtime>(
+    name: String,
+    app: AppHandle<R>,
+) -> Result<LibraryEntry, AppError> {
     Ok(create_in(&profile(&app)?, &name)?)
 }
 
@@ -57,7 +60,7 @@ pub fn create_library(name: String, app: AppHandle) -> Result<LibraryEntry, AppE
 /// `Locked` afterwards, which sends the interface back to the gate for the other passphrase.
 #[tauri::command]
 #[specta::specta]
-pub async fn open_library(id: String, app: AppHandle) -> Result<(), AppError> {
+pub async fn open_library<R: Runtime>(id: String, app: AppHandle<R>) -> Result<(), AppError> {
     blocking(app, move |app, db| {
         let profile = profile(app)?;
 
@@ -71,7 +74,11 @@ pub async fn open_library(id: String, app: AppHandle) -> Result<(), AppError> {
 
 #[tauri::command(async)]
 #[specta::specta]
-pub fn rename_library(id: String, name: String, app: AppHandle) -> Result<(), AppError> {
+pub fn rename_library<R: Runtime>(
+    id: String,
+    name: String,
+    app: AppHandle<R>,
+) -> Result<(), AppError> {
     Ok(rename_in(&profile(&app)?, &id, &name)?)
 }
 
@@ -80,7 +87,7 @@ pub fn rename_library(id: String, name: String, app: AppHandle) -> Result<(), Ap
 /// Refused on the open one: deleting files under a live connection takes the process down.
 #[tauri::command]
 #[specta::specta]
-pub async fn delete_library(id: String, app: AppHandle) -> Result<(), AppError> {
+pub async fn delete_library<R: Runtime>(id: String, app: AppHandle<R>) -> Result<(), AppError> {
     blocking(app, move |app, db| {
         let profile = profile(app)?;
         if registry_in(&profile).open.as_deref() == Some(id.as_str())

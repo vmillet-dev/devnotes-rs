@@ -5,7 +5,7 @@ pub mod model;
 pub mod store;
 
 use chrono::Utc;
-use tauri::AppHandle;
+use tauri::{AppHandle, Runtime};
 
 use crate::count::saturating_u32 as count;
 use crate::db::{blocking, lock};
@@ -22,7 +22,10 @@ use model::{Folder, FolderColour, FolderDraft, NoteFiling};
 /// draws no folder chips — a chip naming the zone a card sits in is noise.
 #[tauri::command]
 #[specta::specta]
-pub async fn board_view(query: BoardQuery, app: AppHandle) -> Result<BoardView, AppError> {
+pub async fn board_view<R: Runtime>(
+    query: BoardQuery,
+    app: AppHandle<R>,
+) -> Result<BoardView, AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
 
@@ -54,10 +57,10 @@ pub async fn board_view(query: BoardQuery, app: AppHandle) -> Result<BoardView, 
 /// also the undo of [`arrange_board`], with the layout that one answered.
 #[tauri::command]
 #[specta::specta]
-pub async fn save_board_layout(
+pub async fn save_board_layout<R: Runtime>(
     zones: Vec<ZonePlacement>,
     cards: Vec<CardPlacement>,
-    app: AppHandle,
+    app: AppHandle<R>,
 ) -> Result<(), AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
@@ -70,9 +73,9 @@ pub async fn save_board_layout(
 /// `None` = every space, like [`crate::notes::view::NotesQuery::space_id`].
 #[tauri::command]
 #[specta::specta]
-pub async fn list_folders(
+pub async fn list_folders<R: Runtime>(
     space_id: Option<String>,
-    app: AppHandle,
+    app: AppHandle<R>,
 ) -> Result<Vec<Folder>, AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
@@ -84,7 +87,10 @@ pub async fn list_folders(
 
 #[tauri::command]
 #[specta::specta]
-pub async fn create_folder(draft: FolderDraft, app: AppHandle) -> Result<Folder, AppError> {
+pub async fn create_folder<R: Runtime>(
+    draft: FolderDraft,
+    app: AppHandle<R>,
+) -> Result<Folder, AppError> {
     blocking(app, move |_, db| {
         let name = draft.validated_name()?;
 
@@ -102,7 +108,11 @@ pub async fn create_folder(draft: FolderDraft, app: AppHandle) -> Result<Folder,
 
 #[tauri::command]
 #[specta::specta]
-pub async fn rename_folder(id: String, name: String, app: AppHandle) -> Result<Folder, AppError> {
+pub async fn rename_folder<R: Runtime>(
+    id: String,
+    name: String,
+    app: AppHandle<R>,
+) -> Result<Folder, AppError> {
     blocking(app, move |_, db| {
         let name = model::validated_name(&name)?;
 
@@ -115,10 +125,10 @@ pub async fn rename_folder(id: String, name: String, app: AppHandle) -> Result<F
 
 #[tauri::command]
 #[specta::specta]
-pub async fn recolour_folder(
+pub async fn recolour_folder<R: Runtime>(
     id: String,
     colour: FolderColour,
-    app: AppHandle,
+    app: AppHandle<R>,
 ) -> Result<Folder, AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
@@ -132,7 +142,7 @@ pub async fn recolour_folder(
 /// state.
 #[tauri::command]
 #[specta::specta]
-pub async fn delete_folder(id: String, app: AppHandle) -> Result<(), AppError> {
+pub async fn delete_folder<R: Runtime>(id: String, app: AppHandle<R>) -> Result<(), AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
 
@@ -145,10 +155,10 @@ pub async fn delete_folder(id: String, app: AppHandle) -> Result<(), AppError> {
 /// and a drop on the board is a batch of one. `folderId` absent unfiles.
 #[tauri::command]
 #[specta::specta]
-pub async fn file_notes(
+pub async fn file_notes<R: Runtime>(
     ids: Vec<String>,
     folder_id: Option<String>,
-    app: AppHandle,
+    app: AppHandle<R>,
 ) -> Result<Vec<NoteFiling>, AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
@@ -166,7 +176,10 @@ pub async fn file_notes(
 /// The undo of [`file_notes`]: each note goes back to the folder it left, or to loose.
 #[tauri::command]
 #[specta::specta]
-pub async fn file_notes_back(filings: Vec<NoteFiling>, app: AppHandle) -> Result<u32, AppError> {
+pub async fn file_notes_back<R: Runtime>(
+    filings: Vec<NoteFiling>,
+    app: AppHandle<R>,
+) -> Result<u32, AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
 
@@ -179,10 +192,10 @@ pub async fn file_notes_back(filings: Vec<NoteFiling>, app: AppHandle) -> Result
 /// replaced: the only moment the old one still exists, for an undo.
 #[tauri::command]
 #[specta::specta]
-pub async fn arrange_board(
+pub async fn arrange_board<R: Runtime>(
     space_id: String,
     scope: BoardScope,
-    app: AppHandle,
+    app: AppHandle<R>,
 ) -> Result<BoardArrangement, AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;

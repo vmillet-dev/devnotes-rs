@@ -77,6 +77,8 @@ similar = "3.2.0"
 pulldown-cmark = { version = "0.13.4", default-features = false }
 
 [dev-dependencies]
+# The mock runtime `tests/commands` calls the commands through.
+tauri = { version = "2", features = ["test"] }
 tempfile = "3"
 criterion = { version = "0.8", default-features = false, features = ["cargo_bench_support"] }
 

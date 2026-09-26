@@ -5,7 +5,7 @@
 
 use std::path::{Path, PathBuf};
 
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, Runtime};
 
 use crate::error::{FileContext, StorageError};
 use crate::vault::key::Vault;
@@ -27,7 +27,7 @@ pub fn read_sealed(vault: &Vault, path: &Path) -> Result<Vec<u8>, StorageError> 
 /// Where a decrypted copy goes so the desktop can open it: inside the user's profile, never the
 /// OS temporary directory, which every account on the machine shares. The profile rather than
 /// the library, so one sweep catches every library's copies.
-pub fn plaintext_directory(app: &AppHandle) -> Result<PathBuf, StorageError> {
+pub fn plaintext_directory<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, StorageError> {
     Ok(app
         .path()
         .app_data_dir()
@@ -37,7 +37,7 @@ pub fn plaintext_directory(app: &AppHandle) -> Result<PathBuf, StorageError> {
 
 /// Run on the way out and at every launch: a copy another application still holds cannot be
 /// deleted, and a crash reaches neither path, so the guarantee is "gone by the next launch".
-pub fn sweep_plaintext(app: &AppHandle) {
+pub fn sweep_plaintext<R: Runtime>(app: &AppHandle<R>) {
     let Ok(directory) = plaintext_directory(app) else {
         return;
     };

@@ -14,7 +14,7 @@ pub mod view;
 use std::collections::BTreeMap;
 
 use chrono::Utc;
-use tauri::AppHandle;
+use tauri::{AppHandle, Runtime};
 
 use crate::count::saturating_u32 as count;
 use crate::db::{Library, blocking, lock};
@@ -30,7 +30,10 @@ use view::{NotesQuery, NotesView};
 /// No command returns the raw list: it would invite re-filtering on the front end.
 #[tauri::command]
 #[specta::specta]
-pub async fn query_notes(query: NotesQuery, app: AppHandle) -> Result<NotesView, AppError> {
+pub async fn query_notes<R: Runtime>(
+    query: NotesQuery,
+    app: AppHandle<R>,
+) -> Result<NotesView, AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
         let (notes, facets) = store::fetch(&mut connection, &query)?;
@@ -55,7 +58,7 @@ pub async fn query_notes(query: NotesQuery, app: AppHandle) -> Result<NotesView,
 /// every copy of a long body read it here.
 #[tauri::command]
 #[specta::specta]
-pub async fn get_note(id: String, app: AppHandle) -> Result<DisplayNote, AppError> {
+pub async fn get_note<R: Runtime>(id: String, app: AppHandle<R>) -> Result<DisplayNote, AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
         let note = store::get(&mut connection, &id)?;
@@ -67,7 +70,10 @@ pub async fn get_note(id: String, app: AppHandle) -> Result<DisplayNote, AppErro
 
 #[tauri::command]
 #[specta::specta]
-pub async fn create_note(draft: NoteDraft, app: AppHandle) -> Result<DisplayNote, AppError> {
+pub async fn create_note<R: Runtime>(
+    draft: NoteDraft,
+    app: AppHandle<R>,
+) -> Result<DisplayNote, AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
         let note = store::create(&mut connection, draft, Utc::now())?;
@@ -90,10 +96,10 @@ pub fn detect_language(content: String) -> Language {
 /// title is the front end's: its suffix is a translation.
 #[tauri::command]
 #[specta::specta]
-pub async fn duplicate_note(
+pub async fn duplicate_note<R: Runtime>(
     id: String,
     title: String,
-    app: AppHandle,
+    app: AppHandle<R>,
 ) -> Result<DisplayNote, AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
@@ -109,11 +115,11 @@ pub async fn duplicate_note(
 /// the translations. Answers the space it made, which the front end opens on.
 #[tauri::command]
 #[specta::specta]
-pub async fn seed_samples(
+pub async fn seed_samples<R: Runtime>(
     space_name: String,
     folders: Vec<String>,
     notes: Vec<SampleNote>,
-    app: AppHandle,
+    app: AppHandle<R>,
 ) -> Result<crate::spaces::model::Space, AppError> {
     blocking(app, move |_, db| {
         let name = SpaceDraft { name: space_name }.validated_name()?;
@@ -137,10 +143,10 @@ pub async fn seed_samples(
 
 #[tauri::command]
 #[specta::specta]
-pub async fn update_note(
+pub async fn update_note<R: Runtime>(
     id: String,
     patch: NotePatch,
-    app: AppHandle,
+    app: AppHandle<R>,
 ) -> Result<DisplayNote, AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
@@ -156,7 +162,10 @@ pub async fn update_note(
 /// Instants and sizes, never the bodies.
 #[tauri::command]
 #[specta::specta]
-pub async fn list_revisions(id: String, app: AppHandle) -> Result<Vec<Revision>, AppError> {
+pub async fn list_revisions<R: Runtime>(
+    id: String,
+    app: AppHandle<R>,
+) -> Result<Vec<Revision>, AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
 
@@ -170,10 +179,10 @@ pub async fn list_revisions(id: String, app: AppHandle) -> Result<Vec<Revision>,
 /// What going back to a kept body would change, line by line, against the current text.
 #[tauri::command]
 #[specta::specta]
-pub async fn revision_diff(
+pub async fn revision_diff<R: Runtime>(
     id: String,
     revision_id: String,
-    app: AppHandle,
+    app: AppHandle<R>,
 ) -> Result<Vec<DiffLine>, AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
@@ -195,10 +204,10 @@ pub async fn revision_diff(
 /// Leaves `updated_at` alone: putting something back is not editing it.
 #[tauri::command]
 #[specta::specta]
-pub async fn restore_revision(
+pub async fn restore_revision<R: Runtime>(
     id: String,
     revision_id: String,
-    app: AppHandle,
+    app: AppHandle<R>,
 ) -> Result<DisplayNote, AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
@@ -213,7 +222,7 @@ pub async fn restore_revision(
 /// [`trash::RETENTION`].
 #[tauri::command]
 #[specta::specta]
-pub async fn delete_note(id: String, app: AppHandle) -> Result<(), AppError> {
+pub async fn delete_note<R: Runtime>(id: String, app: AppHandle<R>) -> Result<(), AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
 
@@ -224,7 +233,10 @@ pub async fn delete_note(id: String, app: AppHandle) -> Result<(), AppError> {
 
 #[tauri::command]
 #[specta::specta]
-pub async fn delete_notes(ids: Vec<String>, app: AppHandle) -> Result<u32, AppError> {
+pub async fn delete_notes<R: Runtime>(
+    ids: Vec<String>,
+    app: AppHandle<R>,
+) -> Result<u32, AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
 
@@ -239,7 +251,10 @@ pub async fn delete_notes(ids: Vec<String>, app: AppHandle) -> Result<u32, AppEr
 
 #[tauri::command]
 #[specta::specta]
-pub async fn restore_notes(ids: Vec<String>, app: AppHandle) -> Result<u32, AppError> {
+pub async fn restore_notes<R: Runtime>(
+    ids: Vec<String>,
+    app: AppHandle<R>,
+) -> Result<u32, AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
 
@@ -251,7 +266,7 @@ pub async fn restore_notes(ids: Vec<String>, app: AppHandle) -> Result<u32, AppE
 /// Purges first: the trash must never show a note a restart would erase.
 #[tauri::command]
 #[specta::specta]
-pub async fn list_trash(app: AppHandle) -> Result<Vec<TrashedNote>, AppError> {
+pub async fn list_trash<R: Runtime>(app: AppHandle<R>) -> Result<Vec<TrashedNote>, AppError> {
     blocking(app, move |_, db| {
         trash::purge_expired(db)?;
 
@@ -267,13 +282,13 @@ pub async fn list_trash(app: AppHandle) -> Result<Vec<TrashedNote>, AppError> {
 
 #[tauri::command]
 #[specta::specta]
-pub async fn purge_notes(ids: Vec<String>, app: AppHandle) -> Result<u32, AppError> {
+pub async fn purge_notes<R: Runtime>(ids: Vec<String>, app: AppHandle<R>) -> Result<u32, AppError> {
     blocking(app, move |_, db| Ok(count(trash::purge(db, ids)?))).await
 }
 
 #[tauri::command]
 #[specta::specta]
-pub async fn empty_trash(app: AppHandle) -> Result<u32, AppError> {
+pub async fn empty_trash<R: Runtime>(app: AppHandle<R>) -> Result<u32, AppError> {
     blocking(app, move |_, db| {
         let ids = {
             let mut connection = lock(db)?;
@@ -287,10 +302,10 @@ pub async fn empty_trash(app: AppHandle) -> Result<u32, AppError> {
 
 #[tauri::command]
 #[specta::specta]
-pub async fn move_notes(
+pub async fn move_notes<R: Runtime>(
     ids: Vec<String>,
     space_id: String,
-    app: AppHandle,
+    app: AppHandle<R>,
 ) -> Result<Vec<model::NotePlacement>, AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
@@ -308,9 +323,9 @@ pub async fn move_notes(
 /// The undo of [`move_notes`]: each note goes back to the space it left.
 #[tauri::command]
 #[specta::specta]
-pub async fn move_notes_back(
+pub async fn move_notes_back<R: Runtime>(
     placements: Vec<model::NotePlacement>,
-    app: AppHandle,
+    app: AppHandle<R>,
 ) -> Result<u32, AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
@@ -326,10 +341,10 @@ pub async fn move_notes_back(
 /// Normalized here as everywhere else, or a typed `#urgent` would not join `urgent`.
 #[tauri::command]
 #[specta::specta]
-pub async fn tag_notes(
+pub async fn tag_notes<R: Runtime>(
     ids: Vec<String>,
     tags: Vec<String>,
-    app: AppHandle,
+    app: AppHandle<R>,
 ) -> Result<Vec<model::NoteTag>, AppError> {
     blocking(app, move |_, db| {
         let normalized = model::normalize_tags(&tags);
@@ -349,7 +364,10 @@ pub async fn tag_notes(
 /// The undo of [`tag_notes`]: exactly the pairs it added, and nothing wider.
 #[tauri::command]
 #[specta::specta]
-pub async fn untag_notes(pairs: Vec<model::NoteTag>, app: AppHandle) -> Result<u32, AppError> {
+pub async fn untag_notes<R: Runtime>(
+    pairs: Vec<model::NoteTag>,
+    app: AppHandle<R>,
+) -> Result<u32, AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
 
@@ -361,7 +379,10 @@ pub async fn untag_notes(pairs: Vec<model::NoteTag>, app: AppHandle) -> Result<u
 /// What a corpus-wide tag action is about to touch, asked before it runs.
 #[tauri::command]
 #[specta::specta]
-pub async fn count_notes_tagged(tags: Vec<String>, app: AppHandle) -> Result<u32, AppError> {
+pub async fn count_notes_tagged<R: Runtime>(
+    tags: Vec<String>,
+    app: AppHandle<R>,
+) -> Result<u32, AppError> {
     blocking(app, move |_, db| {
         let normalized = model::normalize_tags(&tags);
 
@@ -377,7 +398,7 @@ pub async fn count_notes_tagged(tags: Vec<String>, app: AppHandle) -> Result<u32
 
 #[tauri::command]
 #[specta::specta]
-pub async fn list_tags(app: AppHandle) -> Result<Vec<TagUsage>, AppError> {
+pub async fn list_tags<R: Runtime>(app: AppHandle<R>) -> Result<Vec<TagUsage>, AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
 
@@ -396,7 +417,11 @@ pub async fn list_tags(app: AppHandle) -> Result<Vec<TagUsage>, AppError> {
 /// since a note cannot carry one twice.
 #[tauri::command]
 #[specta::specta]
-pub async fn rename_tags(tags: Vec<String>, into: String, app: AppHandle) -> Result<u32, AppError> {
+pub async fn rename_tags<R: Runtime>(
+    tags: Vec<String>,
+    into: String,
+    app: AppHandle<R>,
+) -> Result<u32, AppError> {
     blocking(app, move |_, db| {
         let (sources, target) = model::retagging(&tags, &into)?;
 
@@ -410,7 +435,10 @@ pub async fn rename_tags(tags: Vec<String>, into: String, app: AppHandle) -> Res
 /// A list rather than one tag at a time: one round trip per tag is one lock per tag.
 #[tauri::command]
 #[specta::specta]
-pub async fn delete_tags(tags: Vec<String>, app: AppHandle) -> Result<u32, AppError> {
+pub async fn delete_tags<R: Runtime>(
+    tags: Vec<String>,
+    app: AppHandle<R>,
+) -> Result<u32, AppError> {
     blocking(app, move |_, db| {
         let tags = model::normalize_tags(&tags);
 
@@ -425,10 +453,10 @@ pub async fn delete_tags(tags: Vec<String>, app: AppHandle) -> Result<u32, AppEr
 /// field is not editing the note.
 #[tauri::command]
 #[specta::specta]
-pub async fn set_placeholder_values(
+pub async fn set_placeholder_values<R: Runtime>(
     id: String,
     values: BTreeMap<String, String>,
-    app: AppHandle,
+    app: AppHandle<R>,
 ) -> Result<DisplayNote, AppError> {
     blocking(app, move |_, db| {
         let retained = placeholder::normalize_values(values);
@@ -445,10 +473,10 @@ pub async fn set_placeholder_values(
 /// The database is read only for the global variables.
 #[tauri::command]
 #[specta::specta]
-pub async fn fill_placeholders(
+pub async fn fill_placeholders<R: Runtime>(
     content: String,
     values: BTreeMap<String, String>,
-    app: AppHandle,
+    app: AppHandle<R>,
 ) -> Result<String, AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
@@ -464,8 +492,8 @@ pub async fn fill_placeholders(
 
 #[tauri::command]
 #[specta::specta]
-pub async fn list_global_placeholders(
-    app: AppHandle,
+pub async fn list_global_placeholders<R: Runtime>(
+    app: AppHandle<R>,
 ) -> Result<BTreeMap<String, String>, AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
@@ -478,9 +506,9 @@ pub async fn list_global_placeholders(
 /// Stores the whole set: what is not sent is what the user removed.
 #[tauri::command]
 #[specta::specta]
-pub async fn set_global_placeholders(
+pub async fn set_global_placeholders<R: Runtime>(
     values: BTreeMap<String, String>,
-    app: AppHandle,
+    app: AppHandle<R>,
 ) -> Result<BTreeMap<String, String>, AppError> {
     blocking(app, move |_, db| {
         let retained = placeholder::normalize_values(values);

@@ -5,7 +5,7 @@ pub mod file;
 pub mod model;
 pub mod protect;
 
-use tauri::AppHandle;
+use tauri::{AppHandle, Runtime};
 
 use crate::attachments;
 use crate::db::{blocking, lock};
@@ -18,11 +18,11 @@ use model::{ExportReport, ExportScope, ImportReport};
 /// on this machine, never what leaves it.
 #[tauri::command]
 #[specta::specta]
-pub async fn export_notes(
+pub async fn export_notes<R: Runtime>(
     path: String,
     scope: ExportScope,
     passphrase: Option<String>,
-    app: AppHandle,
+    app: AppHandle<R>,
 ) -> Result<ExportReport, AppError> {
     blocking(app, move |_, db| {
         let passphrase = secret(passphrase);
@@ -47,10 +47,10 @@ pub async fn export_notes(
 /// connection would block every other command for the length of it.
 #[tauri::command]
 #[specta::specta]
-pub async fn import_notes(
+pub async fn import_notes<R: Runtime>(
     path: String,
     passphrase: Option<String>,
-    app: AppHandle,
+    app: AppHandle<R>,
 ) -> Result<ImportReport, AppError> {
     blocking(app, move |_, db| {
         model::validate_path(&path)?;
@@ -82,7 +82,10 @@ pub fn export_is_protected(path: String) -> Result<bool, AppError> {
 /// Nothing is sent anywhere: "share" stops at the clipboard.
 #[tauri::command]
 #[specta::specta]
-pub async fn share_notes(ids: Vec<String>, app: AppHandle) -> Result<String, AppError> {
+pub async fn share_notes<R: Runtime>(
+    ids: Vec<String>,
+    app: AppHandle<R>,
+) -> Result<String, AppError> {
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
         let selected = notes::by_ids(&mut connection, &ids)?;

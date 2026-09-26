@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use diesel::sql_types::Text;
-use tauri::AppHandle;
+use tauri::{AppHandle, Runtime};
 
 use crate::db::{Db, blocking};
 use crate::error::{AppError, FileContext, StorageError};
@@ -113,7 +113,7 @@ fn set_aside_closed(directory: &Path, db: &Db, reason: Reason) -> Result<String,
 /// Answers the folder it moved everything into, so the interface can say where.
 #[tauri::command]
 #[specta::specta]
-pub async fn set_aside_damaged_library(app: AppHandle) -> Result<String, AppError> {
+pub async fn set_aside_damaged_library<R: Runtime>(app: AppHandle<R>) -> Result<String, AppError> {
     blocking(app, move |app, db| {
         let directory = crate::libraries::open_directory(app)?;
 
@@ -128,7 +128,7 @@ pub async fn set_aside_damaged_library(app: AppHandle) -> Result<String, AppErro
 /// goes with them for the day the phrase comes back.
 #[tauri::command]
 #[specta::specta]
-pub async fn archive_locked_library(app: AppHandle) -> Result<String, AppError> {
+pub async fn archive_locked_library<R: Runtime>(app: AppHandle<R>) -> Result<String, AppError> {
     blocking(app, move |app, db| {
         let directory = crate::libraries::open_directory(app)?;
 
