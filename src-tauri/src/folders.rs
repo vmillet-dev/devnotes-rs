@@ -36,8 +36,12 @@ pub fn board_view(query: BoardQuery, db: State<'_, Db>) -> Result<BoardView, App
         &Occupancy::of(&notes),
     )?;
 
+    let decorations = notes::store::decorations(&mut connection)?;
+    // The dimming and the layout read nothing more: every other command waits on this lock.
+    drop(connection);
+
     let mut view = board::build(notes, folders, &frames, &positions, facets, &query);
-    notes::store::decorations(&mut connection)?.apply(view.notes_mut());
+    decorations.apply(view.notes_mut());
 
     Ok(view)
 }
