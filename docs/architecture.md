@@ -3374,14 +3374,20 @@ colour, created_at)` and `notes.folder_id` points into it. ⚠️ The column was
   filtering by tag, or querying what expires before a date, is a `WHERE` clause instead of a
   full re-read — which is why `query_notes` needed no migration. `PRAGMA foreign_keys` is set
   per connection, which is what makes the `ON DELETE CASCADE` on notes and tags actually fire.
-- **The four pragmas in `db::configure` are each a decision, and each has a test.**
+- **The five pragmas in `db::configure` are each a decision, and each has a test.**
   `foreign_keys` because the cascades are inert without it; `journal_mode = WAL` so a reader
   never blocks the writer; `busy_timeout = 5000` because SQLite's own default is **zero**,
   which turns a file another process holds for twenty milliseconds — a checkpoint, an
   antivirus, a second instance — into a storage error on the first write; and
   ⚠️ `synchronous = NORMAL`, WAL's default, written down because it is a durability choice:
   a power cut can cost the last committed transaction and cannot corrupt the file. `FULL`
-  would fsync every commit to protect a note the user can retype.
+  would fsync every commit to protect a note the user can retype. `mmap_size = 1 GiB` reads
+  pages in place rather than copying each one through SQLite's 2 MB cache: against the same
+  build without it, `list_tags` and a pinned-only query halve and the whole-corpus queries
+  gain 7–13 % at 8000 notes. ⚠️ An I/O error or a truncation under the mapping is a `SIGBUS`,
+  not an error code: a library's files live in the profile, and nothing moves them while its
+  connection is open (`recovery::set_aside` refuses an open library, a restore empties the
+  `Mutex` first).
 - **Every open runs `PRAGMA quick_check`, and a damaged file is its own answer.** Nothing
   checked the database was still readable, so the first symptom was a query failing somewhere
   in the interface, reported as a storage error — "try again" about a file that will never get
@@ -4048,7 +4054,9 @@ making the match faster would be aimed at the wrong half.
 **`list_tags` is the one that degrades faster than the corpus.** ×64 for ×10 the data, the only
 entry on the table that is markedly super-linear, and invisible at 800 notes where it cost
 591 µs. It joins `note_tags` to `notes` to read one nullable column, so each of the 16 000 tag
-rows dereferences a ~13 kB note row; the notes table was 10 MB at 800 notes and is ~104 MB at 8000. ⚠️ That is the likely cause and it is **not confirmed** — no query plan was taken.
+rows dereferences a ~13 kB note row; the notes table was 10 MB at 800 notes and is ~104 MB at 8000. ⚠️ That is the likely cause and it is **not confirmed** — no query plan was taken. Reading
+the file through a mapping (`mmap_size`) halved it, which points the same way: the cost is
+pages copied, not tags compared.
 
 Unit tests run with Vitest through the `@angular/build:unit-test` builder in a jsdom
 environment (configured in `angular.json`'s `test` target and `vitest-base.config.ts`), so
