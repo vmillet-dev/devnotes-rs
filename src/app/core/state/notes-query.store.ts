@@ -3,6 +3,7 @@ import { LanguageTag } from '@core/model/language.model';
 import { ClockService } from '@core/services/time/clock.service';
 import { SEARCH_DEBOUNCE_MS, debounced } from '@core/services/time/debounce';
 import { sameArray, sameBy } from '@core/utils/equality.util';
+import { OneInFlight } from '@core/utils/one-in-flight.util';
 import { byCodeUnit } from '@core/utils/order.util';
 import { retained } from '@core/utils/retained.util';
 import { NotesRepository } from '@core/data/notes.repository';
@@ -114,21 +115,24 @@ export class NotesQueryStore {
     { equal: sameQueryParams },
   );
 
+  private readonly queries = new OneInFlight();
+
   private readonly viewResource = resource({
     params: () => this.queryParams(),
-    loader: ({ params }): Promise<NotesView> => {
-      // Untracked: the current instant, without the query re-running on every tick.
-      const now = untracked(() => this.clock.now());
-      const query: NotesQuery = {
-        ...params.criteria,
-        spaceId: params.spaceId,
-        folderId: params.folderId,
-        now,
-        tzOffsetMinutes: now.getTimezoneOffset(),
-        pinnedFirst: true,
-      };
-      return this.repository.query(query);
-    },
+    loader: ({ params, abortSignal }): Promise<NotesView> =>
+      this.queries.run(abortSignal, () => {
+        // Untracked: the current instant, without the query re-running on every tick.
+        const now = untracked(() => this.clock.now());
+        const query: NotesQuery = {
+          ...params.criteria,
+          spaceId: params.spaceId,
+          folderId: params.folderId,
+          now,
+          tzOffsetMinutes: now.getTimezoneOffset(),
+          pinnedFirst: true,
+        };
+        return this.repository.query(query);
+      }),
   });
 
   private readonly view = retained(this.viewResource);

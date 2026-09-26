@@ -148,8 +148,8 @@ fn exists_distinguishes_known_from_unknown_identifiers() {
     let mut connection = open_in_memory().unwrap();
     let space = create(&mut connection, "Personal").unwrap();
 
-    assert!(exists(&mut connection, &space.id).unwrap());
-    assert!(!exists(&mut connection, "unknown").unwrap());
+    assert!(exists(connection.db(), &space.id).unwrap());
+    assert!(!exists(connection.db(), "unknown").unwrap());
 }
 
 #[test]

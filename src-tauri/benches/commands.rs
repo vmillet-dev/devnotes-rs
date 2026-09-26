@@ -292,7 +292,7 @@ fn attachment(c: &mut Criterion) {
     let mut corpus = build();
     let mut group = c.benchmark_group("attachment");
 
-    let directory = attachments::directory(&corpus.connection);
+    let directory = attachments::files::directory(&corpus.connection);
     std::fs::create_dir_all(&directory).expect("a writable temporary directory");
     let screenshot = Attachment {
         id: "a-screenshot".to_string(),
@@ -314,7 +314,8 @@ fn attachment(c: &mut Criterion) {
     group.bench_function("read_attachment, 256 kB", |b| {
         b.iter(|| {
             black_box(
-                attachments::read_plain(&mut corpus.connection, "a-screenshot").expect("the bytes"),
+                attachments::files::read_plain(&mut corpus.connection, "a-screenshot")
+                    .expect("the bytes"),
             )
         });
     });
@@ -322,11 +323,11 @@ fn attachment(c: &mut Criterion) {
     let profile =
         std::env::temp_dir().join(format!("devnotes-bench-profile-{}", uuid::Uuid::new_v4()));
     std::fs::create_dir_all(&profile).expect("a writable temporary directory");
-    libraries::open_directory_in(&profile).expect("a registry");
+    libraries::registry::open_directory_in(&profile).expect("a registry");
 
     group.bench_function("the registry lookup it no longer pays", |b| {
         b.iter(|| {
-            let library = libraries::open_directory_in(&profile).expect("a directory");
+            let library = libraries::registry::open_directory_in(&profile).expect("a directory");
             std::fs::create_dir_all(library.join("attachments")).expect("a directory");
             black_box(library)
         });

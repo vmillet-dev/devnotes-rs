@@ -3,21 +3,22 @@ pub mod schema;
 
 use std::ops::{Deref, DerefMut};
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use diesel::connection::SimpleConnection;
 use diesel::prelude::*;
 
-use crate::error::StorageError;
+use tauri::{AppHandle, Manager, Runtime};
+
+use crate::error::{AppError, StorageError};
 use crate::vault::key::Vault;
 
-/// The connection, and the key everything it holds is sealed with.
-///
-/// ⚠️ It derefs to the connection, but Diesel's `load` and its siblings take a generic
-/// connection, which gets no deref coercion: hence [`Library::db`] at every query.
+/// The connection, and the key everything it holds is sealed with. The connection is reached
+/// through [`Library::db`] alone: Diesel's generic `load` gets no deref coercion anyway.
 pub struct Library {
     connection: SqliteConnection,
-    vault: Vault,
+    /// Shared, so a read can take the key past the lock: see [`Library::shared_vault`].
+    vault: Arc<Vault>,
     directory: PathBuf,
 }
 
@@ -34,6 +35,12 @@ impl Library {
 
     pub fn vault(&self) -> &Vault {
         &self.vault
+    }
+
+    /// The key, for work that can finish once the lock is released: opening a file read off
+    /// disk needs the key and nothing else the lock guards.
+    pub fn shared_vault(&self) -> Arc<Vault> {
+        Arc::clone(&self.vault)
     }
 
     /// An in-memory library that writes its files into `directory`.
@@ -63,20 +70,6 @@ impl Library {
     }
 }
 
-impl Deref for Library {
-    type Target = SqliteConnection;
-
-    fn deref(&self) -> &Self::Target {
-        &self.connection
-    }
-}
-
-impl DerefMut for Library {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.connection
-    }
-}
-
 /// Empty until the passphrase is given. The front end gates every command on the unlock,
 /// so `None` here is a caller that jumped the queue, not a state to render.
 pub type Db = Mutex<Option<Library>>;
@@ -89,6 +82,20 @@ pub(crate) fn lock(db: &Db) -> Result<LibraryGuard<'_>, StorageError> {
     }
 
     Ok(LibraryGuard(guard))
+}
+
+/// A command's body, on Tokio's blocking pool rather than on a runtime worker: waiting on the
+/// lock, or holding it through a whole-corpus read, would park a worker the updater and the
+/// plugins share. A body that panics answers as the lock it would have poisoned.
+pub(crate) async fn blocking<R, T, F>(app: AppHandle<R>, body: F) -> Result<T, AppError>
+where
+    R: Runtime,
+    T: Send + 'static,
+    F: FnOnce(&AppHandle<R>, &Db) -> Result<T, AppError> + Send + 'static,
+{
+    tauri::async_runtime::spawn_blocking(move || body(&app, &app.state::<Db>()))
+        .await
+        .map_err(|_| StorageError::Unavailable)?
 }
 
 /// The guard, narrowed to a library that is definitely there — [`lock`] refused otherwise.
@@ -159,7 +166,7 @@ pub fn open(path: &Path, vault: Vault) -> Result<Library, StorageError> {
 
     Ok(Library {
         connection,
-        vault,
+        vault: Arc::new(vault),
         directory: path.parent().map(Path::to_path_buf).unwrap_or_default(),
     })
 }
@@ -174,7 +181,7 @@ pub fn open_in_memory() -> Result<Library, StorageError> {
 
     Ok(Library {
         connection,
-        vault: test_vault()?,
+        vault: Arc::new(test_vault()?),
         // Named, never created: a test writing beside the library fails loudly.
         directory: std::env::temp_dir()
             .join(format!("devnotes-in-memory-{}", uuid::Uuid::new_v4())),
@@ -196,11 +203,14 @@ fn configure(connection: &mut SqliteConnection) -> Result<(), StorageError> {
     // ⚠️ `foreign_keys` is per connection and off by default: without it every `ON DELETE
     // CASCADE` is inert. `busy_timeout` rides out another process holding the file.
     // `synchronous = NORMAL` under WAL can lose the last commit to a power cut, never the file.
+    // `mmap_size` reads pages in place: a file truncated under the mapping is a SIGBUS, not an
+    // error, which is why nothing moves a library's files while its connection is open.
     connection.batch_execute(
         "PRAGMA foreign_keys = ON;
          PRAGMA journal_mode = WAL;
          PRAGMA busy_timeout = 5000;
-         PRAGMA synchronous = NORMAL;",
+         PRAGMA synchronous = NORMAL;
+         PRAGMA mmap_size = 1073741824;",
     )?;
 
     Ok(())
@@ -258,7 +268,7 @@ pub mod iso8601 {
 mod tests {
     use super::*;
     use crate::error::{AppError, ErrorCode};
-    use diesel::sql_types::Integer;
+    use diesel::sql_types::{BigInt, Integer};
 
     fn in_memory() -> Db {
         Mutex::new(Some(open_in_memory().unwrap()))
@@ -380,6 +390,27 @@ mod tests {
             .synchronous;
 
         assert_eq!(level, 1);
+    }
+
+    /// Asked of a file: an in-memory database has nothing to map. A build of SQLite whose
+    /// ceiling is lower answers that ceiling, and the corpus would be read through the cache.
+    #[test]
+    fn the_file_is_read_through_a_mapping() {
+        #[derive(QueryableByName)]
+        struct MmapSize {
+            #[diesel(sql_type = BigInt)]
+            mmap_size: i64,
+        }
+
+        let scratch = tempfile::tempdir().unwrap();
+        let mut library = open(&scratch.path().join("notes.db"), test_vault().unwrap()).unwrap();
+
+        let size = diesel::sql_query("PRAGMA mmap_size")
+            .get_result::<MmapSize>(library.db())
+            .unwrap()
+            .mmap_size;
+
+        assert_eq!(size, 1 << 30);
     }
 
     #[test]

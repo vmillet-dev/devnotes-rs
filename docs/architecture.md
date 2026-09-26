@@ -108,14 +108,25 @@ is the destructive one, and it is restricted to rows already in the trash.
 
 What is left at the root is what belongs to no single feature:
 
-| Module        | Holds                                                                                             |
-| ------------- | ------------------------------------------------------------------------------------------------- |
-| `error.rs`    | `ValidationError`, `StorageError`, and the `AppError` that crosses the bridge                     |
-| `db.rs`       | the connection and its `Mutex`, `open`/`open_in_memory`, plus `db::schema` and `db::migration`    |
-| `db::iso8601` | the stored-instant format — millisecond-exact, because the canvas sorts on a TEXT column          |
-| `desktop.rs`  | tray and global shortcuts, including the `sync_tray` command that feeds the tray its labels       |
-| `app_info.rs` | what the application says about itself, read from `Cargo.toml` at compile time by `build.rs`      |
-| `name.rs`     | what a space and a folder share about their names: trimmed, never blank, unique whatever the case |
+| Module           | Holds                                                                                             |
+| ---------------- | ------------------------------------------------------------------------------------------------- |
+| `error.rs`       | `ValidationError`, `StorageError`, and the `AppError` that crosses the bridge                     |
+| `db.rs`          | the connection and its `Mutex`, `open`/`open_in_memory`, plus `db::schema` and `db::migration`    |
+| `db::iso8601`    | the stored-instant format — millisecond-exact, because the canvas sorts on a TEXT column          |
+| `desktop.rs`     | tray and global shortcuts, including the `sync_tray` command that feeds the tray its labels       |
+| `app_info.rs`    | what the application says about itself, read from `Cargo.toml` at compile time by `build.rs`      |
+| `name.rs`        | what a space and a folder share about their names: trimmed, never blank, unique whatever the case |
+| `closed_enum.rs` | the `closed_enum!` macro: one literal per variant for serde, the column, `Display` and `FromStr`  |
+| `count.rs`       | `saturating_u32`, the one conversion a count takes to cross the bridge                            |
+| `layout.rs`      | the names on disk — a library's directory and the profile beside it                               |
+
+The library plumbing sits at the root too, and follows the features' split: the commands in
+`vault.rs`, `libraries.rs` and `backup.rs`, the work in a module of each — `vault::gate` (a
+library opened under its key and handed to the `Mutex`), `vault::key` and `vault::file`,
+`libraries::registry` (the registry and the directories it names) and `backup::copies`
+(taking, listing, putting back and rewrapping the copies). `recovery.rs` is small enough to
+hold its two commands and `set_aside` together. `attachments` does the same with
+`attachments::files`, the bytes on disk beside their records.
 
 This replaces an earlier split into three technical layers (`commands/ → domain/ ← storage/`),
 which cost three files and three modules per subject and a `check-layers.sh` script in CI to
@@ -145,7 +156,7 @@ also derives `specta::Type`, which is what lets tauri-specta generate the front-
 (`LibrariesStore`, the File menu's dialog); in Rust it is the open database and its key
 (`db::Library`). Moving notes in and out of a file is `TransferStore`, and the phrase such a
 file may ask for is `PassphrasePromptStore`. The private helper that fills the connection
-`Mutex` is `vault::install`, so a search for `open_library` finds the command alone — the
+`Mutex` is `vault::gate::install`, so a search for `open_library` finds the command alone — the
 one that points the registry elsewhere and empties that `Mutex`.
 
 > **A folder's path is its address in the interface** — for everything that has one. A
@@ -588,6 +599,11 @@ Rules of the house:
   produced a new object, a new request, and a full `query_notes` + SQLite round trip, hidden
   by the retained view and by `isLoading` staying false. A spec covers it: a clock tick must
   not increment `queryCount`.
+- **Its loader runs through `OneInFlight`** (`core/utils/`), and so does the board's. `resource`
+  drops a stale answer, but Rust has already queued the call behind its one lock and computes
+  it to the end: at 8000 notes, five pauses in typing were five half-second queries in line.
+  The loader waits for the call in flight and gives up if `abortSignal` fired meanwhile, so a
+  burst sends the one in flight and the newest.
 - **The back-end is authoritative; writes are not optimistic.** A mutation persists, adopts
   the returned note, then reloads the view. Nothing is applied locally first, so there is
   nothing to roll back on failure — an `ErrorNotifier` message is raised and the screen still
@@ -1995,7 +2011,7 @@ gives the keystroke to whichever modal is in front.
 Ordering matters on write: the file is copied **before** the record is inserted, and the
 record is rolled back with the file if the insert fails. A record without a file shows a
 broken thumbnail; a file without a record is swept at the next startup
-(`attachments::sweep_orphan_files`). Purging a note collects its file names **before** the
+(`attachments::files::sweep_orphan_files`). Purging a note collects its file names **before** the
 `DELETE`, since the cascade takes the records with it.
 
 ### The "Fichier" menu, and where the rest lives
@@ -2594,9 +2610,12 @@ who remember to touch the select. Three things keep it honest:
 ### Rules
 
 - A new command needs **one** registration: `collect_commands![…]` in `src-tauri/src/lib.rs`.
-  Annotate it `#[tauri::command(async)]` — see the threading note under
-  [Persistence](#persistence-rust) — **and** `#[specta::specta]`, then regenerate; an
-  unannotated function will not compile inside `collect_commands!`.
+  Make it an `async fn` whose body runs in `db::blocking` when it takes the lock — see the
+  threading note under [Persistence](#persistence-rust) — **and** annotate it
+  `#[specta::specta]`, then regenerate; an
+  unannotated function will not compile inside `collect_commands!`. A command handed an
+  `AppHandle` is generic over `R: Runtime` and registered as `name::<tauri::Wry>`: that is what
+  lets `tests/commands` call it on the mock runtime, and specta needs the concrete type.
 - A module holding commands is `pub`, and that is not decoration: `#[specta::specta]`
   generates a macro per command that `collect_commands!` resolves from the crate root.
   Everything else is `pub(crate)` or narrower, so that `dead_code` and `unreachable_pub` —
@@ -2960,7 +2979,7 @@ ever retired, and the envelope means **one master key for the life of the librar
 key file ever written is a permanent escrow for it. A note written _after_ the change opened
 under a phrase abandoned before it.
 
-So `backup::rewrap` is the second half, and `vault::change_with` is the one place that holds
+So `backup::copies::rewrap` is the second half, and `vault::gate::change` is the one place that holds
 both. Three things decide its shape:
 
 - It writes the key it is **given** rather than opening each copy with the phrase being
@@ -3078,7 +3097,7 @@ moved by hand or sealed under a forgotten passphrase takes nothing else with it 
 exactly the situation #252 is about, seen from the other end.
 
 ⚠️ **Every library has the same shape**, including the one that was already there:
-`libraries::gather` moves it — database, sidecars, key file, attachments and the four
+`libraries::registry::gather` moves it — database, sidecars, key file, attachments and the four
 directories a library accumulates — into `libraries/<id>/` the first time the registry is
 read. That move is best effort and never fatal, and the same move runs again over whatever
 is left, so a half-finished one is picked up by the next launch. Uniformity is what makes
@@ -3091,7 +3110,7 @@ already locked. ⚠️ `libraries::open_directory(app)` reads and parses `librar
 every call, so it is kept for what runs while **no** library is open: `vault_state`,
 `create_vault`, `unlock_vault` and the recovery commands. Reading the thumbnail of a
 screenshot used to pay that lookup plus two `create_dir_all`; `attachments/` is now created
-once, by `vault::install`. A module that reaches for `app_data_dir()` directly writes
+once, by `vault::gate::install`. A module that reaches for `app_data_dir()` directly writes
 into the profile, which holds no library. The one directory that lives there on purpose is
 `open/`, the decrypted attachment copies: they are ephemeral and swept wholesale, and one
 directory means one sweep catches every library's leftovers.
@@ -3151,7 +3170,7 @@ then the other.
 
 ⚠️ `automaticBackups` stays with the application deliberately: "copy my libraries at
 launch" is a habit rather than a property of one corpus, and it is the one key Rust reads
-out of that file before the front end has booted (`backup::wanted`).
+out of that file before the front end has booted (`backup::copies::wanted`).
 
 ⚠️ `LibraryPreferencesService` is re-opened on **every** switch, where the application's is
 opened once. A space id means nothing in another library, and a samples marker carried
@@ -3173,9 +3192,9 @@ file needs. It ends on a gate too, so nothing may be filed after it.
 
 ### The copies, and putting one back
 
-`backup::rotate` takes one at unlock, before the sweeps, into `backups/<stamp>/`: a
+`backup::copies::rotate` takes one at unlock, before the sweeps, into `backups/<stamp>/`: a
 `VACUUM INTO` of the database plus its key file and `attachments/`, at most one a day, the
-last `KEEP` kept. The attachments are **hard-linked** (`backup::link_files`), sealed under the
+last `KEEP` kept. The attachments are **hard-linked** (`backup::copies::link_files`), sealed under the
 key the copied `vault.json` wraps, so nothing is re-sealed. The copy runs inside
 `unlock_vault`, under the lock: duplicating the bytes there would hold the gate for as long
 as they take, and make `backups/` `KEEP` times the attachments. A link is free and
@@ -3211,7 +3230,7 @@ is built like it.
 - ⚠️ `restore_backup` empties the connection `Mutex` **before a single file moves**, under
   the same lock every other command takes. Renaming a database out from under a live
   connection is how a working library becomes a lost one.
-- ⚠️ `backup::replace` moves the live database **and** `vault.json` into
+- ⚠️ `backup::copies::replace` moves the live database **and** `vault.json` into
   `replaced/<timestamp>/` before copying the chosen pair in, and moves them back if the
   copy fails. A failed restore must never leave no library at all. Nothing is deleted: a
   folder with a date on it is the difference between a mistake and a loss.
@@ -3243,9 +3262,12 @@ written for. The numeric prefix is the run order, and nothing may be filed after
 
 ### Attachments, and the one plaintext copy
 
-The bytes are sealed on the way in (`attachments::copy_within_limit`) and opened in memory
+The bytes are sealed on the way in (`attachments::files::store_new`) and opened in memory
 on the way out: `read_attachment` decrypts into the `data:` URI the preview already used,
-and `save_attachment` writes plaintext where the user chose to put it.
+and `save_attachment` writes plaintext where the user chose to put it. The three read commands
+hold the lock for the lookup alone (`attachments::files::read_outside_lock`): the file is read
+and opened after it, the key travelling as `Library::shared_vault`, since up to 10 MiB read
+and decrypted is time every other command would spend waiting.
 
 ⚠️ `open_attachment` is the exception, and a deliberate one: the program that opens a
 document reads it from disk, so DevNotes writes a decrypted copy under `app_data_dir()/open/`
@@ -3284,27 +3306,26 @@ installed or shipped alongside the executable. The database file lives in Tauri'
   every query, reads included. A single connection is shared as `tauri::State<Db>`
   (`Db = Mutex<Option<Library>>`, the connection and the key together), registered with
   `.manage()` in `lib.rs` — never a global, and empty until the library is unlocked.
-  Overlapping commands serialize on that mutex, and each command holds `db::lock` for its
-  whole body, so a check and the write that depends on it cannot be interleaved. Whether one
-  lock is enough was measured rather than assumed: see "Who holds the lock" under Benchmarks.
-- **⚠️ Commands that touch the database or the disk are `#[tauri::command(async)]`.** A plain
-  `#[tauri::command]` is compiled as `ExecutionContext::Blocking` and its body runs **inline
-  in the WebView's IPC handler** — on the main thread, where it freezes the window for as long
-  as it takes. Exporting a library, importing one, reading a 10 MB attachment into a `data:`
-  URI or copying a file all did exactly that. `(async)` on the same synchronous function moves
-  the body off that thread; no signature changes and `bindings.ts` is unaffected, since the
-  generated TypeScript was always promise-based.
-
-  ⚠️ Where it moves it to is worth being precise about, because the name suggests otherwise.
-  `tauri-macros` emits `respond_async_serialized(async move { … })`, which hands the task to
-  `async_runtime::spawn` — and Tauri's default runtime is Tokio's **multi-threaded** one. A
-  synchronous body therefore occupies a Tokio _worker_ for its whole duration; it is not
-  `spawn_blocking`, whatever the `sync_threadpool` label on the macro's tracing span implies.
-  The window is freed, which is the whole point, but the workers are a bounded pool the size of
-  the core count, shared with the updater and the plugins. It holds because the connection
-  mutex already serializes the database work behind it, and because no command here is
-  long-running by design. A genuinely long one would need `async fn` plus an explicit
-  `async_runtime::spawn_blocking`.
+  Overlapping commands serialize on that mutex, and each command holds `db::lock` from its
+  first read to its last write, so a check and the write that depends on it cannot be
+  interleaved. A read lets it go before the work that needs no more rows: `view::build`,
+  `board::build`, reading an attachment's file. Whether one lock is enough was measured rather
+  than assumed: see "Who holds the lock" under Benchmarks.
+- **⚠️ A command that takes the lock is an `async fn` whose body runs in `db::blocking`.** A
+  plain `#[tauri::command]` over a synchronous function is compiled as
+  `ExecutionContext::Blocking` and runs **inline in the WebView's IPC handler** — on the main
+  thread, where it freezes the window for as long as it takes. `(async)` on the same function
+  frees the window but not much else: `tauri-macros` hands the body to `async_runtime::spawn`,
+  so it occupies a Tokio **worker** — a pool the size of the core count, shared with the
+  updater and the plugins — for its whole duration, waiting on the lock included. At 8000 notes
+  `query_notes` holds that lock for ~430 ms, and each command queued behind it would park a
+  worker of its own. `db::blocking(app, |app, db| …)` runs the body on Tokio's **blocking** pool
+  instead and hands it the handle and the `Db`; `bindings.ts` is unaffected, the generated
+  TypeScript having always been promise-based. A body that panics answers
+  `StorageError::Unavailable`, the answer the lock it would have poisoned gives. `blocking`
+  and the commands are generic over `R: Runtime`, so a test runs them on Tauri's mock runtime. The commands
+  that never take the lock — the registry of libraries, `export_is_protected`, the changelog —
+  stay `(async)`: a short read of a file.
 
   The exception is `desktop.rs`: `sync_tray`, `set_global_shortcuts` and
   `set_window_behavior` stay blocking, because the tray and shortcut registration want the
@@ -3356,14 +3377,20 @@ colour, created_at)` and `notes.folder_id` points into it. ⚠️ The column was
   filtering by tag, or querying what expires before a date, is a `WHERE` clause instead of a
   full re-read — which is why `query_notes` needed no migration. `PRAGMA foreign_keys` is set
   per connection, which is what makes the `ON DELETE CASCADE` on notes and tags actually fire.
-- **The four pragmas in `db::configure` are each a decision, and each has a test.**
+- **The five pragmas in `db::configure` are each a decision, and each has a test.**
   `foreign_keys` because the cascades are inert without it; `journal_mode = WAL` so a reader
   never blocks the writer; `busy_timeout = 5000` because SQLite's own default is **zero**,
   which turns a file another process holds for twenty milliseconds — a checkpoint, an
   antivirus, a second instance — into a storage error on the first write; and
   ⚠️ `synchronous = NORMAL`, WAL's default, written down because it is a durability choice:
   a power cut can cost the last committed transaction and cannot corrupt the file. `FULL`
-  would fsync every commit to protect a note the user can retype.
+  would fsync every commit to protect a note the user can retype. `mmap_size = 1 GiB` reads
+  pages in place rather than copying each one through SQLite's 2 MB cache: against the same
+  build without it, `list_tags` and a pinned-only query halve and the whole-corpus queries
+  gain 7–13 % at 8000 notes. ⚠️ An I/O error or a truncation under the mapping is a `SIGBUS`,
+  not an error code: a library's files live in the profile, and nothing moves them while its
+  connection is open (`recovery::set_aside` refuses an open library, a restore empties the
+  `Mutex` first).
 - **Every open runs `PRAGMA quick_check`, and a damaged file is its own answer.** Nothing
   checked the database was still readable, so the first symptom was a query failing somewhere
   in the interface, reported as a storage error — "try again" about a file that will never get
@@ -3955,7 +3982,7 @@ on the note it opens:
 | `read_attachment`, 256 kB                                            | **109 µs** |
 | the registry lookup it paid before the library carried its directory | 102 µs     |
 
-The second row is not a command: it is `libraries::open_directory_in` plus the
+The second row is not a command: it is `libraries::registry::open_directory_in` plus the
 `create_dir_all` of `attachments/`, which every read paid on top of the first until the open
 `Library` carried its directory — nearly half of what a thumbnail cost.
 
@@ -3991,9 +4018,9 @@ nothing to serialise. The larger half is not in those figures: an unfiltered que
 upstream — reading and opening 8000 sealed bodies, which a preview cannot spare, since the
 matching and the fields need them whole.
 
-**Who holds the lock** (#222). Every command takes the one connection `Mutex` for its whole
-body, so a slow one keeps the palette, the editor's commits and the board's saves waiting behind
-it. Measured after the previews and the side-table reads, in one full run:
+**Who holds the lock** (#222). Every command takes the one connection `Mutex`, so a slow one
+keeps the palette, the editor's commits and the board's saves waiting behind it. Measured after
+the previews and the side-table reads, in one full run:
 
 | Command, 8000 notes of ~13 kB          | Holds the lock                   |
 | -------------------------------------- | -------------------------------- |
@@ -4005,13 +4032,13 @@ it. Measured after the previews and the side-table reads, in one full run:
 | `rename_tags`, `move_notes` (100)      | 7.0 ms, 4.0 ms                   |
 | every single-note write                | under 0.3 ms                     |
 
-`query_notes, the locked part` is the fetch and the decorations: 90 % of the command. Releasing
-the lock before `view::build` would free about 50 ms of 536, so there is no cheap half left to
-take. What the lock covers is reading and opening every sealed body, and that follows the total
-bytes: half a second for ~104 MB of bodies, a few milliseconds for the few hundred ~1 kB
-snippets a library actually holds. **So the locking stays as it is.** The day that row matters,
-the answer is a read connection beside the writer — which means the key taken out of `Library`,
-since `split()` hands the connection and the key out together — not a shorter critical section.
+`query_notes, the locked part` is the fetch and the decorations: 90 % of the command. The lock
+is released before `view::build` (and `board::build`), which frees the last 50–80 ms and was the
+only cheap half. What it still covers is reading and opening every sealed body, and that follows
+the total bytes: half a second for ~104 MB of bodies, a few milliseconds for the few hundred
+~1 kB snippets a library actually holds. The day that row matters, the answer is a read
+connection beside the writer, not a shorter critical section; the key already travels apart
+from the connection (`Library::shared_vault`).
 
 Three things worth reading off the first table.
 
@@ -4019,6 +4046,8 @@ Three things worth reading off the first table.
 debounce, and at 800 notes its 27 ms sat comfortably inside it. At 8000 it costs 403 ms: the
 query fired for one keystroke is still running when the third one after it arrives. That is
 what #21 is about, and this is the number that says the problem has stopped being theoretical.
+The front end now sends the query in flight and the newest, never the ones in between
+(`OneInFlight`, under State), which bounds the wait to two queries rather than shortening one.
 
 **The search is still not what costs.** Folding accents is the _cheapest_ of the three
 variants (392 ms against 403 ms unfiltered) — fewer notes survive to be serialised. Fetching
@@ -4028,7 +4057,9 @@ making the match faster would be aimed at the wrong half.
 **`list_tags` is the one that degrades faster than the corpus.** ×64 for ×10 the data, the only
 entry on the table that is markedly super-linear, and invisible at 800 notes where it cost
 591 µs. It joins `note_tags` to `notes` to read one nullable column, so each of the 16 000 tag
-rows dereferences a ~13 kB note row; the notes table was 10 MB at 800 notes and is ~104 MB at 8000. ⚠️ That is the likely cause and it is **not confirmed** — no query plan was taken.
+rows dereferences a ~13 kB note row; the notes table was 10 MB at 800 notes and is ~104 MB at 8000. ⚠️ That is the likely cause and it is **not confirmed** — no query plan was taken. Reading
+the file through a mapping (`mmap_size`) halved it, which points the same way: the cost is
+pages copied, not tags compared.
 
 Unit tests run with Vitest through the `@angular/build:unit-test` builder in a jsdom
 environment (configured in `angular.json`'s `test` target and `vitest-base.config.ts`), so
@@ -4127,6 +4158,15 @@ The tests split by what they need in order to run:
   `fetch` + `notes::view::build` so the whole read path stays covered end to end.
 - **`db` and `error`** — that a poisoned mutex reports `storageUnavailable` instead of
   panicking a second time, and that each error variant maps to the right code and params.
+- **The commands** — `tests/commands/`, one module per feature, through
+  `tauri::test::mock_app()` (tauri's `test` feature, enabled in `[dev-dependencies]` only) with
+  the library managed as its `Db`. What a command adds to the store is what they check: the
+  lock, the validation before it, and the code a failure crosses the bridge as. The commands
+  that reach the profile (the gate, the registry, the copies) or a plugin (the opener, the
+  clipboard) are left to the end-to-end suite: the mock app has neither. ⚠️ On Windows,
+  `tauri_build` embeds its manifest in the binaries alone; `build.rs` embeds the same Common
+  Controls v6 dependency in the test executables, without which this one dies at load
+  (`STATUS_ENTRYPOINT_NOT_FOUND`) before a single test runs.
 
 Test names and comments are in English, like the front-end specs. `notes::store::list`
 survives only as a `#[cfg(test)]` helper — no command returns a raw list.

@@ -64,7 +64,7 @@ pub fn list_trashed(connection: &mut Library) -> Result<Vec<(Note, DateTime<Utc>
         .order((notes::deleted_at.desc(), notes::id.asc()))
         .load::<(NoteRow, Option<String>)>(connection.db())?;
 
-    let mut grouped = related::trashed_tags(connection)?;
+    let mut grouped = related::trashed_tags(connection.db())?;
     let vault = connection.vault();
     rows.into_iter()
         .map(|(row, deleted_at)| {
