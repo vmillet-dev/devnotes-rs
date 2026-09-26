@@ -8,7 +8,9 @@ use std::sync::{Mutex, MutexGuard};
 use diesel::connection::SimpleConnection;
 use diesel::prelude::*;
 
-use crate::error::StorageError;
+use tauri::{AppHandle, Manager};
+
+use crate::error::{AppError, StorageError};
 use crate::vault::key::Vault;
 
 /// The connection, and the key everything it holds is sealed with. The connection is reached
@@ -73,6 +75,19 @@ pub(crate) fn lock(db: &Db) -> Result<LibraryGuard<'_>, StorageError> {
     }
 
     Ok(LibraryGuard(guard))
+}
+
+/// A command's body, on Tokio's blocking pool rather than on a runtime worker: waiting on the
+/// lock, or holding it through a whole-corpus read, would park a worker the updater and the
+/// plugins share. A body that panics answers as the lock it would have poisoned.
+pub(crate) async fn blocking<T, F>(app: AppHandle, body: F) -> Result<T, AppError>
+where
+    T: Send + 'static,
+    F: FnOnce(&AppHandle, &Db) -> Result<T, AppError> + Send + 'static,
+{
+    tauri::async_runtime::spawn_blocking(move || body(&app, &app.state::<Db>()))
+        .await
+        .map_err(|_| StorageError::Unavailable)?
 }
 
 /// The guard, narrowed to a library that is definitely there — [`lock`] refused otherwise.

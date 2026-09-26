@@ -2605,8 +2605,9 @@ who remember to touch the select. Three things keep it honest:
 ### Rules
 
 - A new command needs **one** registration: `collect_commands![…]` in `src-tauri/src/lib.rs`.
-  Annotate it `#[tauri::command(async)]` — see the threading note under
-  [Persistence](#persistence-rust) — **and** `#[specta::specta]`, then regenerate; an
+  Make it an `async fn` whose body runs in `db::blocking` when it takes the lock — see the
+  threading note under [Persistence](#persistence-rust) — **and** annotate it
+  `#[specta::specta]`, then regenerate; an
   unannotated function will not compile inside `collect_commands!`.
 - A module holding commands is `pub`, and that is not decoration: `#[specta::specta]`
   generates a macro per command that `collect_commands!` resolves from the crate root.
@@ -3298,24 +3299,20 @@ installed or shipped alongside the executable. The database file lives in Tauri'
   Overlapping commands serialize on that mutex, and each command holds `db::lock` for its
   whole body, so a check and the write that depends on it cannot be interleaved. Whether one
   lock is enough was measured rather than assumed: see "Who holds the lock" under Benchmarks.
-- **⚠️ Commands that touch the database or the disk are `#[tauri::command(async)]`.** A plain
-  `#[tauri::command]` is compiled as `ExecutionContext::Blocking` and its body runs **inline
-  in the WebView's IPC handler** — on the main thread, where it freezes the window for as long
-  as it takes. Exporting a library, importing one, reading a 10 MB attachment into a `data:`
-  URI or copying a file all did exactly that. `(async)` on the same synchronous function moves
-  the body off that thread; no signature changes and `bindings.ts` is unaffected, since the
-  generated TypeScript was always promise-based.
-
-  ⚠️ Where it moves it to is worth being precise about, because the name suggests otherwise.
-  `tauri-macros` emits `respond_async_serialized(async move { … })`, which hands the task to
-  `async_runtime::spawn` — and Tauri's default runtime is Tokio's **multi-threaded** one. A
-  synchronous body therefore occupies a Tokio _worker_ for its whole duration; it is not
-  `spawn_blocking`, whatever the `sync_threadpool` label on the macro's tracing span implies.
-  The window is freed, which is the whole point, but the workers are a bounded pool the size of
-  the core count, shared with the updater and the plugins. It holds because the connection
-  mutex already serializes the database work behind it, and because no command here is
-  long-running by design. A genuinely long one would need `async fn` plus an explicit
-  `async_runtime::spawn_blocking`.
+- **⚠️ A command that takes the lock is an `async fn` whose body runs in `db::blocking`.** A
+  plain `#[tauri::command]` over a synchronous function is compiled as
+  `ExecutionContext::Blocking` and runs **inline in the WebView's IPC handler** — on the main
+  thread, where it freezes the window for as long as it takes. `(async)` on the same function
+  frees the window but not much else: `tauri-macros` hands the body to `async_runtime::spawn`,
+  so it occupies a Tokio **worker** — a pool the size of the core count, shared with the
+  updater and the plugins — for its whole duration, waiting on the lock included. At 8000 notes
+  `query_notes` holds that lock for ~430 ms, and each command queued behind it would park a
+  worker of its own. `db::blocking(app, |app, db| …)` runs the body on Tokio's **blocking** pool
+  instead and hands it the handle and the `Db`; `bindings.ts` is unaffected, the generated
+  TypeScript having always been promise-based. A body that panics answers
+  `StorageError::Unavailable`, the answer the lock it would have poisoned gives. The commands
+  that never take the lock — the registry of libraries, `export_is_protected`, the changelog —
+  stay `(async)`: a short read of a file.
 
   The exception is `desktop.rs`: `sync_tray`, `set_global_shortcuts` and
   `set_window_behavior` stay blocking, because the tray and shortcut registration want the

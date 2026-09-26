@@ -8,11 +8,11 @@ pub mod copies;
 
 use std::path::PathBuf;
 
-use tauri::{AppHandle, State};
+use tauri::AppHandle;
 
 use chrono::{DateTime, Utc};
 
-use crate::db::{Db, lock};
+use crate::db::{Db, blocking, lock};
 use crate::error::{AppError, StorageError};
 use crate::layout;
 use copies::{Backup, list, replace, rotate, wanted};
@@ -60,10 +60,10 @@ fn copy(db: &Db) {
 
 /// The copies that exist, newest first, for the panel that lists them.
 #[allow(clippy::needless_pass_by_value)]
-#[tauri::command(async)]
+#[tauri::command]
 #[specta::specta]
-pub fn list_backups(db: State<'_, Db>) -> Result<Vec<Backup>, AppError> {
-    Ok(list(lock(&db)?.directory()))
+pub async fn list_backups(app: AppHandle) -> Result<Vec<Backup>, AppError> {
+    blocking(app, move |_, db| Ok(list(lock(db)?.directory()))).await
 }
 
 /// Puts a copy back, and answers where the library it replaced was moved to.
@@ -72,12 +72,15 @@ pub fn list_backups(db: State<'_, Db>) -> Result<Vec<Backup>, AppError> {
 /// from under a live connection loses it. Every command then answers `Locked`, which sends
 /// the interface back to the gate to ask for the restored copy's phrase.
 #[allow(clippy::needless_pass_by_value)]
-#[tauri::command(async)]
+#[tauri::command]
 #[specta::specta]
-pub fn restore_backup(id: String, db: State<'_, Db>) -> Result<String, AppError> {
-    let aside = restore(&db, &id, Utc::now())?;
+pub async fn restore_backup(id: String, app: AppHandle) -> Result<String, AppError> {
+    blocking(app, move |_, db| {
+        let aside = restore(db, &id, Utc::now())?;
 
-    Ok(aside.to_string_lossy().to_string())
+        Ok(aside.to_string_lossy().to_string())
+    })
+    .await
 }
 
 fn restore(db: &Db, id: &str, now: DateTime<Utc>) -> Result<PathBuf, StorageError> {

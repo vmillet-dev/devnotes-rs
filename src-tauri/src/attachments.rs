@@ -10,9 +10,9 @@ pub mod store;
 
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
-use tauri::{AppHandle, State};
+use tauri::AppHandle;
 
-use crate::db::{Db, lock};
+use crate::db::{Db, blocking, lock};
 use crate::error::{AppError, FileContext, StorageError};
 use files::{directory, read_plain, read_within_limit, remove_files, store_new};
 use model::Attachment;
@@ -20,37 +20,49 @@ use model::Attachment;
 /// ⚠️ `path` is not checked, and cannot be: it is the native picker's answer. With
 /// `read_attachment` this reads any file the account can read into the `WebView`, and what keeps
 /// that harmless is the CSP — `script-src 'self'`, nothing remote — not this function.
-#[tauri::command(async)]
+#[tauri::command]
 #[specta::specta]
-pub fn attach_file(
+pub async fn attach_file(
     note_id: String,
     path: String,
-    db: State<'_, Db>,
+    app: AppHandle,
 ) -> Result<Attachment, AppError> {
-    let file_name = model::display_name(&path)?;
-    let bytes = read_within_limit(&path)?;
-    model::validate_size(bytes.len() as u64)?;
-    Ok(store_new(note_id, file_name, &bytes, &db)?)
+    blocking(app, move |_, db| {
+        let file_name = model::display_name(&path)?;
+        let bytes = read_within_limit(&path)?;
+        model::validate_size(bytes.len() as u64)?;
+        Ok(store_new(note_id, file_name, &bytes, db)?)
+    })
+    .await
 }
 
-#[tauri::command(async)]
+#[tauri::command]
 #[specta::specta]
-pub fn list_attachments(note_id: String, db: State<'_, Db>) -> Result<Vec<Attachment>, AppError> {
-    let mut connection = lock(&db)?;
+pub async fn list_attachments(
+    note_id: String,
+    app: AppHandle,
+) -> Result<Vec<Attachment>, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
 
-    Ok(store::list(&mut connection, &note_id)?)
+        Ok(store::list(&mut connection, &note_id)?)
+    })
+    .await
 }
 
-#[tauri::command(async)]
+#[tauri::command]
 #[specta::specta]
-pub fn read_attachment(id: String, db: State<'_, Db>) -> Result<String, AppError> {
-    let (attachment, bytes) = read_plain(&mut *lock(&db)?, &id)?;
+pub async fn read_attachment(id: String, app: AppHandle) -> Result<String, AppError> {
+    blocking(app, move |_, db| {
+        let (attachment, bytes) = read_plain(&mut *lock(db)?, &id)?;
 
-    Ok(format!(
-        "data:{};base64,{}",
-        attachment.mime_type,
-        STANDARD.encode(bytes)
-    ))
+        Ok(format!(
+            "data:{};base64,{}",
+            attachment.mime_type,
+            STANDARD.encode(bytes)
+        ))
+    })
+    .await
 }
 
 /// The call starts from Rust: opening a path from the front end would mean allowing
@@ -59,59 +71,67 @@ pub fn read_attachment(id: String, db: State<'_, Db>) -> Result<String, AppError
 /// ⚠️ The one place a decrypted copy reaches the disk: the program the desktop picks reads a
 /// path. It goes under the profile's `open/` ([`sealed::plaintext_directory`]) and is swept
 /// on exit and at the next launch, since that program may still hold it on close.
-#[tauri::command(async)]
+#[tauri::command]
 #[specta::specta]
-pub fn open_attachment(id: String, app: AppHandle, db: State<'_, Db>) -> Result<(), AppError> {
-    let (attachment, bytes) = read_plain(&mut *lock(&db)?, &id)?;
+pub async fn open_attachment(id: String, app: AppHandle) -> Result<(), AppError> {
+    blocking(app, move |app, db| {
+        let (attachment, bytes) = read_plain(&mut *lock(db)?, &id)?;
 
-    let directory = sealed::plaintext_directory(&app)?;
-    std::fs::create_dir_all(&directory).context("a directory for decrypted copies")?;
+        let directory = sealed::plaintext_directory(app)?;
+        std::fs::create_dir_all(&directory).context("a directory for decrypted copies")?;
 
-    // Named after the record: two `capture.png` must not overwrite each other here either.
-    let copy = directory.join(attachment.stored_name());
-    std::fs::write(&copy, &bytes).context(attachment.file_name)?;
+        // Named after the record: two `capture.png` must not overwrite each other here either.
+        let copy = directory.join(attachment.stored_name());
+        std::fs::write(&copy, &bytes).context(attachment.file_name)?;
 
-    tauri_plugin_opener::OpenerExt::opener(&app)
-        .open_path(copy.to_string_lossy(), None::<&str>)
-        .context("open")?;
+        tauri_plugin_opener::OpenerExt::opener(app)
+            .open_path(copy.to_string_lossy(), None::<&str>)
+            .context("open")?;
 
-    Ok(())
+        Ok(())
+    })
+    .await
 }
 
 /// The path comes from a native picker; the write stays here.
-#[tauri::command(async)]
+#[tauri::command]
 #[specta::specta]
-pub fn save_attachment(id: String, path: String, db: State<'_, Db>) -> Result<(), AppError> {
-    let (_, bytes) = read_plain(&mut *lock(&db)?, &id)?;
+pub async fn save_attachment(id: String, path: String, app: AppHandle) -> Result<(), AppError> {
+    blocking(app, move |_, db| {
+        let (_, bytes) = read_plain(&mut *lock(db)?, &id)?;
 
-    // In the clear, where the user chose: that is what "save as" means.
-    std::fs::write(&path, &bytes).context(path)?;
+        // In the clear, where the user chose: that is what "save as" means.
+        std::fs::write(&path, &bytes).context(path)?;
 
-    Ok(())
+        Ok(())
+    })
+    .await
 }
 
 /// The bytes do not cross the bridge: the clipboard is read natively, as raw RGBA.
-#[tauri::command(async)]
+#[tauri::command]
 #[specta::specta]
-pub fn attach_clipboard_image(
+pub async fn attach_clipboard_image(
     note_id: String,
     file_name: String,
     app: AppHandle,
-    db: State<'_, Db>,
 ) -> Result<Attachment, AppError> {
-    let image = tauri_plugin_clipboard_manager::ClipboardExt::clipboard(&app)
-        .read_image()
-        .context("clipboard image")?;
+    blocking(app, move |app, db| {
+        let image = tauri_plugin_clipboard_manager::ClipboardExt::clipboard(app)
+            .read_image()
+            .context("clipboard image")?;
 
-    let png = model::encode_png(image.width(), image.height(), image.rgba())?;
-    model::validate_size(png.len() as u64)?;
-    Ok(store_new(note_id, model::png_name(&file_name), &png, &db)?)
+        let png = model::encode_png(image.width(), image.height(), image.rgba())?;
+        model::validate_size(png.len() as u64)?;
+        Ok(store_new(note_id, model::png_name(&file_name), &png, db)?)
+    })
+    .await
 }
 
-#[tauri::command(async)]
+#[tauri::command]
 #[specta::specta]
-pub fn delete_attachment(id: String, db: State<'_, Db>) -> Result<(), AppError> {
-    Ok(delete(&db, &id)?)
+pub async fn delete_attachment(id: String, app: AppHandle) -> Result<(), AppError> {
+    blocking(app, move |_, db| Ok(delete(db, &id)?)).await
 }
 
 /// The record, then the file, which is removed outside the lock.

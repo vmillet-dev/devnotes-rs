@@ -166,8 +166,8 @@ export const commands = {
 	 */
 	createVault: (passphrase: string) => typedError<null, AppError>(__TAURI_INVOKE("create_vault", { passphrase })),
 	/**
-	 *  `(async)` because deriving the key is slow on purpose, and would freeze the window over
-	 *  every attempt on the main thread.
+	 *  Off the main thread: deriving the key is slow on purpose, and would freeze the window over
+	 *  every attempt.
 	 */
 	unlockVault: (passphrase: string) => typedError<null, AppError>(__TAURI_INVOKE("unlock_vault", { passphrase })),
 	/**

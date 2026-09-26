@@ -72,7 +72,7 @@ Run all commands from the repo root (`package.json` there wraps both Angular and
 
 ### The Rust back-end
 
-- **⚠️ A command touching the database or the disk is `#[tauri::command(async)]`**, or it runs on the WebView's thread and freezes the window. It lands on a Tokio worker, not `spawn_blocking`. `desktop.rs` is the exception. → "Persistence (Rust)".
+- **⚠️ A command taking the lock is an `async fn` whose body runs in `db::blocking`** (Tokio's blocking pool). A plain `#[tauri::command]` runs on the WebView's thread and freezes the window; `(async)` alone parks a runtime worker while it waits on the lock. `desktop.rs` is the exception. → "Persistence (Rust)".
 - **One lock serialises every command**, and that is measured: `query_notes` holds it for 90 % of its cost, so only a read connection would change it. → "Who holds the lock".
 - **A module holding commands is `pub`; the rest is `pub(crate)`,** so `dead_code` and `unreachable_pub` can speak. `#[specta::specta]` resolves its macro from the crate root.
 - **Migrations are append-only** (`src-tauri/migrations/`, `embed_migrations!`), and `db/schema.rs` is written by hand: a column is added in both, and `check_for_backend` on `NoteRow` catches a divergence. Libraries from 0.2.0 on open; 0.1.0's `PRAGMA user_version` is refused by name. → "How far back an upgrade reaches".

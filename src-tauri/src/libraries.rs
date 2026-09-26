@@ -11,9 +11,9 @@ pub mod registry;
 
 use std::path::PathBuf;
 
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Manager};
 
-use crate::db::Db;
+use crate::db::blocking;
 use crate::error::{AppError, FileContext, StorageError};
 use registry::{
     LibraryEntry, Registry, create_in, delete_in, open_directory_in, point_at, registry_in,
@@ -55,15 +55,18 @@ pub fn create_library(name: String, app: AppHandle) -> Result<LibraryEntry, AppE
 ///
 /// ⚠️ The connection `Mutex` is emptied under the lock every command takes: they all answer
 /// `Locked` afterwards, which sends the interface back to the gate for the other passphrase.
-#[tauri::command(async)]
+#[tauri::command]
 #[specta::specta]
-pub fn open_library(id: String, app: AppHandle, db: State<'_, Db>) -> Result<(), AppError> {
-    let profile = profile(&app)?;
+pub async fn open_library(id: String, app: AppHandle) -> Result<(), AppError> {
+    blocking(app, move |app, db| {
+        let profile = profile(app)?;
 
-    let mut open = db.lock().map_err(|_| StorageError::Unavailable)?;
-    *open = None;
+        let mut open = db.lock().map_err(|_| StorageError::Unavailable)?;
+        *open = None;
 
-    Ok(point_at(&profile, &id)?)
+        Ok(point_at(&profile, &id)?)
+    })
+    .await
 }
 
 #[tauri::command(async)]
@@ -75,15 +78,18 @@ pub fn rename_library(id: String, name: String, app: AppHandle) -> Result<(), Ap
 /// Erases a library and everything in it.
 ///
 /// Refused on the open one: deleting files under a live connection takes the process down.
-#[tauri::command(async)]
+#[tauri::command]
 #[specta::specta]
-pub fn delete_library(id: String, app: AppHandle, db: State<'_, Db>) -> Result<(), AppError> {
-    let profile = profile(&app)?;
-    if registry_in(&profile).open.as_deref() == Some(id.as_str())
-        && db.lock().map_err(|_| StorageError::Unavailable)?.is_some()
-    {
-        return Err(StorageError::LibraryOpen.into());
-    }
+pub async fn delete_library(id: String, app: AppHandle) -> Result<(), AppError> {
+    blocking(app, move |app, db| {
+        let profile = profile(app)?;
+        if registry_in(&profile).open.as_deref() == Some(id.as_str())
+            && db.lock().map_err(|_| StorageError::Unavailable)?.is_some()
+        {
+            return Err(StorageError::LibraryOpen.into());
+        }
 
-    Ok(delete_in(&profile, &id)?)
+        Ok(delete_in(&profile, &id)?)
+    })
+    .await
 }

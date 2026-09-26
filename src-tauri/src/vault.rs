@@ -11,11 +11,11 @@ pub mod key;
 
 use serde::Serialize;
 use specta::Type;
-use tauri::{AppHandle, State};
+use tauri::AppHandle;
 
 use zeroize::{Zeroize, Zeroizing};
 
-use crate::db::Db;
+use crate::db::blocking;
 use crate::error::{AppError, StorageError, ValidationError};
 use key::Cost;
 
@@ -46,43 +46,52 @@ pub enum VaultState {
     KeyMissing,
 }
 
-#[tauri::command(async)]
+#[tauri::command]
 #[specta::specta]
-pub fn vault_state(app: AppHandle, db: State<'_, Db>) -> Result<VaultState, AppError> {
-    if db.lock().map_err(|_| StorageError::Unavailable)?.is_some() {
-        return Ok(VaultState::Unlocked);
-    }
+pub async fn vault_state(app: AppHandle) -> Result<VaultState, AppError> {
+    blocking(app, move |app, db| {
+        if db.lock().map_err(|_| StorageError::Unavailable)?.is_some() {
+            return Ok(VaultState::Unlocked);
+        }
 
-    let directory = crate::libraries::open_directory(&app)?;
+        let directory = crate::libraries::open_directory(app)?;
 
-    Ok(gate::state_of(&directory))
+        Ok(gate::state_of(&directory))
+    })
+    .await
 }
 
 /// The first launch. Refuses a library that already has a key file: that file is the only
 /// way into the notes beside it.
-#[tauri::command(async)]
+#[tauri::command]
 #[specta::specta]
-pub fn create_vault(passphrase: String, app: AppHandle, db: State<'_, Db>) -> Result<(), AppError> {
-    let passphrase = secret(passphrase);
-    validate(&passphrase)?;
+pub async fn create_vault(passphrase: String, app: AppHandle) -> Result<(), AppError> {
+    blocking(app, move |app, db| {
+        let passphrase = secret(passphrase);
+        validate(&passphrase)?;
 
-    let directory = crate::libraries::open_directory(&app)?;
-    gate::create(&passphrase, &directory, &db, Cost::default())?;
-    crate::sweep(&app);
+        let directory = crate::libraries::open_directory(app)?;
+        gate::create(&passphrase, &directory, db, Cost::default())?;
+        crate::sweep(app);
 
-    Ok(())
+        Ok(())
+    })
+    .await
 }
 
-/// `(async)` because deriving the key is slow on purpose, and would freeze the window over
-/// every attempt on the main thread.
-#[tauri::command(async)]
+/// Off the main thread: deriving the key is slow on purpose, and would freeze the window over
+/// every attempt.
+#[tauri::command]
 #[specta::specta]
-pub fn unlock_vault(passphrase: String, app: AppHandle, db: State<'_, Db>) -> Result<(), AppError> {
-    let directory = crate::libraries::open_directory(&app)?;
-    gate::unlock(&secret(passphrase), &directory, &db)?;
-    crate::sweep(&app);
+pub async fn unlock_vault(passphrase: String, app: AppHandle) -> Result<(), AppError> {
+    blocking(app, move |app, db| {
+        let directory = crate::libraries::open_directory(app)?;
+        gate::unlock(&secret(passphrase), &directory, db)?;
+        crate::sweep(app);
 
-    Ok(())
+        Ok(())
+    })
+    .await
 }
 
 /// What a change reached. `backupsLeft` is the honest half: a key file copied somewhere else
@@ -98,17 +107,20 @@ pub struct PassphraseChange {
 ///
 /// Not a re-encryption: the key the notes are sealed with is rewrapped, and the library stays
 /// open on it.
-#[tauri::command(async)]
+#[tauri::command]
 #[specta::specta]
-pub fn change_passphrase(
+pub async fn change_passphrase(
     current: String,
     next: String,
-    db: State<'_, Db>,
+    app: AppHandle,
 ) -> Result<PassphraseChange, AppError> {
-    let (current, next) = (secret(current), secret(next));
-    validate(&next)?;
+    blocking(app, move |_, db| {
+        let (current, next) = (secret(current), secret(next));
+        validate(&next)?;
 
-    Ok(gate::change(&current, &next, &db, Cost::default())?)
+        Ok(gate::change(&current, &next, db, Cost::default())?)
+    })
+    .await
 }
 
 /// An export written in the clear has no phrase to hold to anything.
