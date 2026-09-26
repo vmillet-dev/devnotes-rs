@@ -306,6 +306,8 @@ jobs:
             -Dsonar.organization=vmillet-dev
             -Dsonar.projectKey=devnotes-rust
             -Dsonar.sources=src-tauri
+            -Dsonar.tests=src-tauri
+            -Dsonar.test.inclusions=src-tauri/tests/**,src-tauri/benches/**
             -Dsonar.rust.cargo.manifestPaths=src-tauri/Cargo.toml
             -Dsonar.rust.lcov.reportPaths=coverage/lcov.info
             -Dsonar.qualitygate.wait=true
