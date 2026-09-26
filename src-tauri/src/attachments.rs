@@ -14,7 +14,10 @@ use tauri::{AppHandle, Runtime};
 
 use crate::db::{Db, blocking, lock};
 use crate::error::{AppError, FileContext, StorageError};
-use files::{directory, read_outside_lock, read_within_limit, remove_files, store_new};
+use files::{
+    directory, read_outside_lock, read_within_limit, remove_files, store_new, write_plain,
+    write_plaintext_copy,
+};
 use model::Attachment;
 
 /// ⚠️ `path` is not checked, and cannot be: it is the native picker's answer. With
@@ -79,13 +82,7 @@ pub async fn read_attachment<R: Runtime>(
 pub async fn open_attachment<R: Runtime>(id: String, app: AppHandle<R>) -> Result<(), AppError> {
     blocking(app, move |app, db| {
         let (attachment, bytes) = read_outside_lock(db, &id)?;
-
-        let directory = sealed::plaintext_directory(app)?;
-        std::fs::create_dir_all(&directory).context("a directory for decrypted copies")?;
-
-        // Named after the record: two `capture.png` must not overwrite each other here either.
-        let copy = directory.join(attachment.stored_name());
-        std::fs::write(&copy, &bytes).context(attachment.file_name)?;
+        let copy = write_plaintext_copy(&sealed::plaintext_directory(app)?, &attachment, &bytes)?;
 
         tauri_plugin_opener::OpenerExt::opener(app)
             .open_path(copy.to_string_lossy(), None::<&str>)
@@ -107,10 +104,7 @@ pub async fn save_attachment<R: Runtime>(
     blocking(app, move |_, db| {
         let (_, bytes) = read_outside_lock(db, &id)?;
 
-        // In the clear, where the user chose: that is what "save as" means.
-        std::fs::write(&path, &bytes).context(path)?;
-
-        Ok(())
+        Ok(write_plain(&path, &bytes)?)
     })
     .await
 }

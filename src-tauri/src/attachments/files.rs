@@ -91,6 +91,26 @@ pub(crate) fn read_outside_lock(db: &Db, id: &str) -> Result<(Attachment, Vec<u8
     Ok((attachment, sealed::read_sealed(&vault, &path)?))
 }
 
+/// The decrypted copy the desktop opens, under `directory`. Named after the record: two
+/// `capture.png` must not overwrite each other here either.
+pub(crate) fn write_plaintext_copy(
+    directory: &Path,
+    attachment: &Attachment,
+    bytes: &[u8],
+) -> Result<PathBuf, StorageError> {
+    std::fs::create_dir_all(directory).context("a directory for decrypted copies")?;
+
+    let copy = directory.join(attachment.stored_name());
+    std::fs::write(&copy, bytes).context(&attachment.file_name)?;
+
+    Ok(copy)
+}
+
+/// In the clear, where the user chose: that is what "save as" means.
+pub(crate) fn write_plain(path: &str, bytes: &[u8]) -> Result<(), StorageError> {
+    std::fs::write(path, bytes).context(path)
+}
+
 fn locate(
     library: &mut Library,
     id: &str,
@@ -220,6 +240,22 @@ pub(crate) mod tests {
             read_outside_lock(&db, "unknown"),
             Err(StorageError::AttachmentNotFound(_))
         ));
+    }
+
+    #[test]
+    fn two_decrypted_copies_of_the_same_name_do_not_overwrite_each_other() {
+        let (scratch, db, note_id) = a_library_with_a_note();
+        attachments_of(&db);
+        let first = store_new(note_id.clone(), "capture.png".to_string(), b"1", &db).unwrap();
+        let second = store_new(note_id, "capture.png".to_string(), b"2", &db).unwrap();
+        let open = scratch.path().join("open");
+
+        let one = write_plaintext_copy(&open, &first, b"1").unwrap();
+        let two = write_plaintext_copy(&open, &second, b"2").unwrap();
+
+        assert_ne!(one, two);
+        assert_eq!(std::fs::read(one).unwrap(), b"1");
+        assert_eq!(std::fs::read(two).unwrap(), b"2");
     }
 
     #[test]
