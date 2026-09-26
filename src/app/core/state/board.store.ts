@@ -16,6 +16,7 @@ import { FoldersRepository } from '@core/data/folders.repository';
 import { BoardRepository } from '@core/data/board.repository';
 import { debounced } from '@core/services/time/debounce';
 import { sameBy } from '@core/utils/equality.util';
+import { OneInFlight } from '@core/utils/one-in-flight.util';
 import { retained } from '@core/utils/retained.util';
 import {
   BoardArrangement,
@@ -171,17 +172,20 @@ export class BoardStore {
     { equal: sameBoardParams },
   );
 
+  private readonly queries = new OneInFlight();
+
   private readonly viewResource = resource({
     params: () => this.queryParams(),
-    loader: ({ params }): Promise<BoardView> => {
-      const query: BoardQuery = {
-        ...params.criteria,
-        spaceId: params.spaceId,
-        // Untracked: the current instant, without the query re-running on every tick.
-        now: untracked(() => this.clock.now()),
-      };
-      return this.repository.query(query);
-    },
+    loader: ({ params, abortSignal }): Promise<BoardView> =>
+      this.queries.run(abortSignal, () => {
+        const query: BoardQuery = {
+          ...params.criteria,
+          spaceId: params.spaceId,
+          // Untracked: the current instant, without the query re-running on every tick.
+          now: untracked(() => this.clock.now()),
+        };
+        return this.repository.query(query);
+      }),
   });
 
   private readonly view = retained(this.viewResource);
