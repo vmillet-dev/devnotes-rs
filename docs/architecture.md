@@ -4163,7 +4163,10 @@ The tests split by what they need in order to run:
   the library managed as its `Db`. What a command adds to the store is what they check: the
   lock, the validation before it, and the code a failure crosses the bridge as. The commands
   that reach the profile (the gate, the registry, the copies) or a plugin (the opener, the
-  clipboard) are left to the end-to-end suite: the mock app has neither.
+  clipboard) are left to the end-to-end suite: the mock app has neither. ⚠️ On Windows,
+  `tauri_build` embeds its manifest in the binaries alone; `build.rs` embeds the same Common
+  Controls v6 dependency in the test executables, without which this one dies at load
+  (`STATUS_ENTRYPOINT_NOT_FOUND`) before a single test runs.
 
 Test names and comments are in English, like the front-end specs. `notes::store::list`
 survives only as a `#[cfg(test)]` helper — no command returns a raw list.
