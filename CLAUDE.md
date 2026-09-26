@@ -114,6 +114,7 @@ Run all commands from the repo root (`package.json` there wraps both Angular and
 - **Zoneless, `OnPush`, signals.** Writable signals in a store are private (`_x`) behind `.asReadonly()`; derived state is `computed()`. Writes are not optimistic: persist, adopt the answer, bump.
 - **Nothing reloads a view by hand.** Every writer bumps `NotesRevision`; the canvas and the board both read it.
 - **A `computed` feeding a `resource` needs an `equal` comparator**, or a fresh literal fires a query on every clock tick. `resource.value()` throws in error: read behind `hasValue()`.
+- **A loader over the whole corpus runs through `OneInFlight`**: `resource` drops a stale answer, but Rust still computes it behind the lock.
 - **`NotesQueryStore.view` is a retained `linkedSignal`**: read everything through it, and read it first in an `&&`.
 - **Time comes from `ClockService`**: a `new Date()` inside a `computed()` freezes it. In specs, fake `Date` (or `setTimeout`/`clearTimeout`) only — a bare `useFakeTimers()` fakes `requestAnimationFrame` and hangs `whenStable()`.
 - **The canvas stores, one way**: `NotesQueryStore` (which notes), `NoteSelectionStore` (which one is pointed at), `NotesStore` (the note itself), `NoteBatchStore`, `UndoStore`. One method writes a note's fields (`applyPatch`, with an exhaustive `UNCHANGED` table). → "State".

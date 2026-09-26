@@ -599,6 +599,11 @@ Rules of the house:
   produced a new object, a new request, and a full `query_notes` + SQLite round trip, hidden
   by the retained view and by `isLoading` staying false. A spec covers it: a clock tick must
   not increment `queryCount`.
+- **Its loader runs through `OneInFlight`** (`core/utils/`), and so does the board's. `resource`
+  drops a stale answer, but Rust has already queued the call behind its one lock and computes
+  it to the end: at 8000 notes, five pauses in typing were five half-second queries in line.
+  The loader waits for the call in flight and gives up if `abortSignal` fired meanwhile, so a
+  burst sends the one in flight and the newest.
 - **The back-end is authoritative; writes are not optimistic.** A mutation persists, adopts
   the returned note, then reloads the view. Nothing is applied locally first, so there is
   nothing to roll back on failure — an `ErrorNotifier` message is raised and the screen still
@@ -3299,9 +3304,11 @@ installed or shipped alongside the executable. The database file lives in Tauri'
   every query, reads included. A single connection is shared as `tauri::State<Db>`
   (`Db = Mutex<Option<Library>>`, the connection and the key together), registered with
   `.manage()` in `lib.rs` — never a global, and empty until the library is unlocked.
-  Overlapping commands serialize on that mutex, and each command holds `db::lock` for its
-  whole body, so a check and the write that depends on it cannot be interleaved. Whether one
-  lock is enough was measured rather than assumed: see "Who holds the lock" under Benchmarks.
+  Overlapping commands serialize on that mutex, and each command holds `db::lock` from its
+  first read to its last write, so a check and the write that depends on it cannot be
+  interleaved. A read lets it go before the work that needs no more rows: `view::build`,
+  `board::build`, reading an attachment's file. Whether one lock is enough was measured rather
+  than assumed: see "Who holds the lock" under Benchmarks.
 - **⚠️ A command that takes the lock is an `async fn` whose body runs in `db::blocking`.** A
   plain `#[tauri::command]` over a synchronous function is compiled as
   `ExecutionContext::Blocking` and runs **inline in the WebView's IPC handler** — on the main
@@ -4002,9 +4009,9 @@ nothing to serialise. The larger half is not in those figures: an unfiltered que
 upstream — reading and opening 8000 sealed bodies, which a preview cannot spare, since the
 matching and the fields need them whole.
 
-**Who holds the lock** (#222). Every command takes the one connection `Mutex` for its whole
-body, so a slow one keeps the palette, the editor's commits and the board's saves waiting behind
-it. Measured after the previews and the side-table reads, in one full run:
+**Who holds the lock** (#222). Every command takes the one connection `Mutex`, so a slow one
+keeps the palette, the editor's commits and the board's saves waiting behind it. Measured after
+the previews and the side-table reads, in one full run:
 
 | Command, 8000 notes of ~13 kB          | Holds the lock                   |
 | -------------------------------------- | -------------------------------- |
@@ -4016,13 +4023,13 @@ it. Measured after the previews and the side-table reads, in one full run:
 | `rename_tags`, `move_notes` (100)      | 7.0 ms, 4.0 ms                   |
 | every single-note write                | under 0.3 ms                     |
 
-`query_notes, the locked part` is the fetch and the decorations: 90 % of the command. Releasing
-the lock before `view::build` would free about 50 ms of 536, so there is no cheap half left to
-take. What the lock covers is reading and opening every sealed body, and that follows the total
-bytes: half a second for ~104 MB of bodies, a few milliseconds for the few hundred ~1 kB
-snippets a library actually holds. **So the locking stays as it is.** The day that row matters,
-the answer is a read connection beside the writer — which means the key taken out of `Library`,
-since `split()` hands the connection and the key out together — not a shorter critical section.
+`query_notes, the locked part` is the fetch and the decorations: 90 % of the command. The lock
+is released before `view::build` (and `board::build`), which frees the last 50–80 ms and was the
+only cheap half. What it still covers is reading and opening every sealed body, and that follows
+the total bytes: half a second for ~104 MB of bodies, a few milliseconds for the few hundred
+~1 kB snippets a library actually holds. The day that row matters, the answer is a read
+connection beside the writer, not a shorter critical section; the key already travels apart
+from the connection (`Library::shared_vault`).
 
 Three things worth reading off the first table.
 
@@ -4030,6 +4037,8 @@ Three things worth reading off the first table.
 debounce, and at 800 notes its 27 ms sat comfortably inside it. At 8000 it costs 403 ms: the
 query fired for one keystroke is still running when the third one after it arrives. That is
 what #21 is about, and this is the number that says the problem has stopped being theoretical.
+The front end now sends the query in flight and the newest, never the ones in between
+(`OneInFlight`, under State), which bounds the wait to two queries rather than shortening one.
 
 **The search is still not what costs.** Folding accents is the _cheapest_ of the three
 variants (392 ms against 403 ms unfiltered) — fewer notes survive to be serialised. Fetching
