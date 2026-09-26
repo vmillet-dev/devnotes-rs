@@ -34,7 +34,7 @@ pub fn export_notes(
     Ok(file::write(
         &path,
         &exported,
-        &attachments::directory(&connection),
+        &attachments::files::directory(&connection),
         connection.vault(),
         passphrase.as_deref(),
     )?)
@@ -54,7 +54,7 @@ pub fn import_notes(
     let (imported, mut payload) = file::read(&path, secret(passphrase).as_deref())?;
 
     let mut connection = lock(&db)?;
-    let directory = attachments::directory(&connection);
+    let directory = attachments::files::directory(&connection);
 
     Ok(bundle::merge(
         &mut connection,

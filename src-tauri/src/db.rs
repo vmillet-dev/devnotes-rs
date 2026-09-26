@@ -11,10 +11,8 @@ use diesel::prelude::*;
 use crate::error::StorageError;
 use crate::vault::key::Vault;
 
-/// The connection, and the key everything it holds is sealed with.
-///
-/// ⚠️ It derefs to the connection, but Diesel's `load` and its siblings take a generic
-/// connection, which gets no deref coercion: hence [`Library::db`] at every query.
+/// The connection, and the key everything it holds is sealed with. The connection is reached
+/// through [`Library::db`] alone: Diesel's generic `load` gets no deref coercion anyway.
 pub struct Library {
     connection: SqliteConnection,
     vault: Vault,
@@ -60,20 +58,6 @@ impl Library {
             connection, vault, ..
         } = self;
         connection.transaction(|connection| f(connection, vault))
-    }
-}
-
-impl Deref for Library {
-    type Target = SqliteConnection;
-
-    fn deref(&self) -> &Self::Target {
-        &self.connection
-    }
-}
-
-impl DerefMut for Library {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.connection
     }
 }
 

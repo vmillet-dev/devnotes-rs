@@ -251,7 +251,7 @@ pub(crate) fn sweep(handle: &tauri::AppHandle) {
     backup::take(handle, &db);
 
     notes::trash::sweep_at_startup(&db);
-    if let Err(error) = attachments::sweep_orphan_files(&db) {
+    if let Err(error) = attachments::files::sweep_orphan_files(&db) {
         log::warn!("Orphan attachment files not swept: {error}");
     }
     // The decrypted copies `open_attachment` wrote: another application may still hold

@@ -108,14 +108,25 @@ is the destructive one, and it is restricted to rows already in the trash.
 
 What is left at the root is what belongs to no single feature:
 
-| Module        | Holds                                                                                             |
-| ------------- | ------------------------------------------------------------------------------------------------- |
-| `error.rs`    | `ValidationError`, `StorageError`, and the `AppError` that crosses the bridge                     |
-| `db.rs`       | the connection and its `Mutex`, `open`/`open_in_memory`, plus `db::schema` and `db::migration`    |
-| `db::iso8601` | the stored-instant format — millisecond-exact, because the canvas sorts on a TEXT column          |
-| `desktop.rs`  | tray and global shortcuts, including the `sync_tray` command that feeds the tray its labels       |
-| `app_info.rs` | what the application says about itself, read from `Cargo.toml` at compile time by `build.rs`      |
-| `name.rs`     | what a space and a folder share about their names: trimmed, never blank, unique whatever the case |
+| Module           | Holds                                                                                             |
+| ---------------- | ------------------------------------------------------------------------------------------------- |
+| `error.rs`       | `ValidationError`, `StorageError`, and the `AppError` that crosses the bridge                     |
+| `db.rs`          | the connection and its `Mutex`, `open`/`open_in_memory`, plus `db::schema` and `db::migration`    |
+| `db::iso8601`    | the stored-instant format — millisecond-exact, because the canvas sorts on a TEXT column          |
+| `desktop.rs`     | tray and global shortcuts, including the `sync_tray` command that feeds the tray its labels       |
+| `app_info.rs`    | what the application says about itself, read from `Cargo.toml` at compile time by `build.rs`      |
+| `name.rs`        | what a space and a folder share about their names: trimmed, never blank, unique whatever the case |
+| `closed_enum.rs` | the `closed_enum!` macro: one literal per variant for serde, the column, `Display` and `FromStr`  |
+| `count.rs`       | `saturating_u32`, the one conversion a count takes to cross the bridge                            |
+| `layout.rs`      | the names on disk — a library's directory and the profile beside it                               |
+
+The library plumbing sits at the root too, and follows the features' split: the commands in
+`vault.rs`, `libraries.rs` and `backup.rs`, the work in a module of each — `vault::gate` (a
+library opened under its key and handed to the `Mutex`), `vault::key` and `vault::file`,
+`libraries::registry` (the registry and the directories it names) and `backup::copies`
+(taking, listing, putting back and rewrapping the copies). `recovery.rs` is small enough to
+hold its two commands and `set_aside` together. `attachments` does the same with
+`attachments::files`, the bytes on disk beside their records.
 
 This replaces an earlier split into three technical layers (`commands/ → domain/ ← storage/`),
 which cost three files and three modules per subject and a `check-layers.sh` script in CI to
@@ -145,7 +156,7 @@ also derives `specta::Type`, which is what lets tauri-specta generate the front-
 (`LibrariesStore`, the File menu's dialog); in Rust it is the open database and its key
 (`db::Library`). Moving notes in and out of a file is `TransferStore`, and the phrase such a
 file may ask for is `PassphrasePromptStore`. The private helper that fills the connection
-`Mutex` is `vault::install`, so a search for `open_library` finds the command alone — the
+`Mutex` is `vault::gate::install`, so a search for `open_library` finds the command alone — the
 one that points the registry elsewhere and empties that `Mutex`.
 
 > **A folder's path is its address in the interface** — for everything that has one. A
@@ -1995,7 +2006,7 @@ gives the keystroke to whichever modal is in front.
 Ordering matters on write: the file is copied **before** the record is inserted, and the
 record is rolled back with the file if the insert fails. A record without a file shows a
 broken thumbnail; a file without a record is swept at the next startup
-(`attachments::sweep_orphan_files`). Purging a note collects its file names **before** the
+(`attachments::files::sweep_orphan_files`). Purging a note collects its file names **before** the
 `DELETE`, since the cascade takes the records with it.
 
 ### The "Fichier" menu, and where the rest lives
@@ -2960,7 +2971,7 @@ ever retired, and the envelope means **one master key for the life of the librar
 key file ever written is a permanent escrow for it. A note written _after_ the change opened
 under a phrase abandoned before it.
 
-So `backup::rewrap` is the second half, and `vault::change_with` is the one place that holds
+So `backup::copies::rewrap` is the second half, and `vault::gate::change` is the one place that holds
 both. Three things decide its shape:
 
 - It writes the key it is **given** rather than opening each copy with the phrase being
@@ -3078,7 +3089,7 @@ moved by hand or sealed under a forgotten passphrase takes nothing else with it 
 exactly the situation #252 is about, seen from the other end.
 
 ⚠️ **Every library has the same shape**, including the one that was already there:
-`libraries::gather` moves it — database, sidecars, key file, attachments and the four
+`libraries::registry::gather` moves it — database, sidecars, key file, attachments and the four
 directories a library accumulates — into `libraries/<id>/` the first time the registry is
 read. That move is best effort and never fatal, and the same move runs again over whatever
 is left, so a half-finished one is picked up by the next launch. Uniformity is what makes
@@ -3091,7 +3102,7 @@ already locked. ⚠️ `libraries::open_directory(app)` reads and parses `librar
 every call, so it is kept for what runs while **no** library is open: `vault_state`,
 `create_vault`, `unlock_vault` and the recovery commands. Reading the thumbnail of a
 screenshot used to pay that lookup plus two `create_dir_all`; `attachments/` is now created
-once, by `vault::install`. A module that reaches for `app_data_dir()` directly writes
+once, by `vault::gate::install`. A module that reaches for `app_data_dir()` directly writes
 into the profile, which holds no library. The one directory that lives there on purpose is
 `open/`, the decrypted attachment copies: they are ephemeral and swept wholesale, and one
 directory means one sweep catches every library's leftovers.
@@ -3151,7 +3162,7 @@ then the other.
 
 ⚠️ `automaticBackups` stays with the application deliberately: "copy my libraries at
 launch" is a habit rather than a property of one corpus, and it is the one key Rust reads
-out of that file before the front end has booted (`backup::wanted`).
+out of that file before the front end has booted (`backup::copies::wanted`).
 
 ⚠️ `LibraryPreferencesService` is re-opened on **every** switch, where the application's is
 opened once. A space id means nothing in another library, and a samples marker carried
@@ -3173,9 +3184,9 @@ file needs. It ends on a gate too, so nothing may be filed after it.
 
 ### The copies, and putting one back
 
-`backup::rotate` takes one at unlock, before the sweeps, into `backups/<stamp>/`: a
+`backup::copies::rotate` takes one at unlock, before the sweeps, into `backups/<stamp>/`: a
 `VACUUM INTO` of the database plus its key file and `attachments/`, at most one a day, the
-last `KEEP` kept. The attachments are **hard-linked** (`backup::link_files`), sealed under the
+last `KEEP` kept. The attachments are **hard-linked** (`backup::copies::link_files`), sealed under the
 key the copied `vault.json` wraps, so nothing is re-sealed. The copy runs inside
 `unlock_vault`, under the lock: duplicating the bytes there would hold the gate for as long
 as they take, and make `backups/` `KEEP` times the attachments. A link is free and
@@ -3211,7 +3222,7 @@ is built like it.
 - ⚠️ `restore_backup` empties the connection `Mutex` **before a single file moves**, under
   the same lock every other command takes. Renaming a database out from under a live
   connection is how a working library becomes a lost one.
-- ⚠️ `backup::replace` moves the live database **and** `vault.json` into
+- ⚠️ `backup::copies::replace` moves the live database **and** `vault.json` into
   `replaced/<timestamp>/` before copying the chosen pair in, and moves them back if the
   copy fails. A failed restore must never leave no library at all. Nothing is deleted: a
   folder with a date on it is the difference between a mistake and a loss.
@@ -3955,7 +3966,7 @@ on the note it opens:
 | `read_attachment`, 256 kB                                            | **109 µs** |
 | the registry lookup it paid before the library carried its directory | 102 µs     |
 
-The second row is not a command: it is `libraries::open_directory_in` plus the
+The second row is not a command: it is `libraries::registry::open_directory_in` plus the
 `create_dir_all` of `attachments/`, which every read paid on top of the first until the open
 `Library` carried its directory — nearly half of what a thumbnail cost.
 
