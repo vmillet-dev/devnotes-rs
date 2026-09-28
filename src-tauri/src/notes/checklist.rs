@@ -1,19 +1,6 @@
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-use crate::closed_enum::closed_enum;
-
-closed_enum! {
-    /// Closed, like `Language`: the front receives a generated union, so an unknown
-    /// value stops compiling there.
-    pub enum NoteKind {
-        /// Default, and what every note written before todo lists reads back as.
-        #[default]
-        Snippet = "snippet",
-        Checklist = "checklist",
-    }
-}
-
 /// No identifier: the position is the identity — `note_items` is keyed on
 /// `(note_id, position)`, and a write rewrites the whole list.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -56,26 +43,6 @@ mod tests {
             text: text.to_string(),
             done,
         }
-    }
-
-    #[test]
-    fn the_serialized_form_matches_the_stored_one() {
-        for kind in NoteKind::ALL {
-            let json = serde_json::to_string(&kind).unwrap();
-
-            assert_eq!(json, format!("\"{}\"", kind.as_str()));
-            assert_eq!(kind.as_str().parse::<NoteKind>().unwrap(), kind);
-        }
-    }
-
-    #[test]
-    fn an_unknown_stored_kind_is_refused_rather_than_guessed() {
-        assert!("kanban".parse::<NoteKind>().is_err());
-    }
-
-    #[test]
-    fn a_note_written_before_todo_lists_reads_back_as_a_snippet() {
-        assert_eq!(NoteKind::default(), NoteKind::Snippet);
     }
 
     #[test]

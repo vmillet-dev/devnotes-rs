@@ -84,7 +84,7 @@ export function markdownOf(editor: Editor): string {
 }
 
 /**
- * The editor of a Text note: what GitHub's Markdown can hold and nothing more — no underline,
+ * The editor of a Note: what GitHub's Markdown can hold and nothing more — no underline,
  * no code block, which the note's language already offers.
  */
 export function createRichEditor(element: HTMLElement, markdown: string, hooks: RichEditorHooks): Editor {

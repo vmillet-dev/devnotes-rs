@@ -8,7 +8,8 @@ use devnotes_lib::db::schema::{
     spaces as spaces_table,
 };
 use devnotes_lib::error::StorageError;
-use devnotes_lib::notes::checklist::{ChecklistItem, NoteKind};
+use devnotes_lib::notes::checklist::ChecklistItem;
+use devnotes_lib::notes::kind::NoteKind;
 use devnotes_lib::notes::language::Language;
 use devnotes_lib::notes::model::{
     DisplayNote, Note, NoteDraft, NoteLifecycle, NotePatch, PREVIEW_LINES, decorate,

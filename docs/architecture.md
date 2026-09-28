@@ -679,11 +679,16 @@ previously lived only on the front (`isExpiringSoon`, 3 days) while the back sep
 computed `has_expiring_notes` — two definitions of "soon" behind a hint that reads "to triage
 soon". The section flag now derives from the same per-note value.
 
-### The two kinds of note
+### The three kinds of note
 
-A note is a `snippet` or a `checklist`, and `notes::checklist::NoteKind` is a closed enum for
-the same reason `Language` is: the front receives a generated union, so an unhandled variant
-stops compiling rather than surfacing at runtime.
+A note is a `snippet`, a `note` or a `checklist`, and `notes::kind::NoteKind` is a closed
+enum for the same reason `Language` is: the front receives a generated union, so an unhandled
+variant stops compiling rather than surfacing at runtime.
+
+**Only a snippet has a language** (`NoteKind::has_language`). A Note's body is prose and a
+checklist has none: neither is read for one, a patch cannot give them one, and the language
+rail — its facet and its filter — counts snippets alone, where a Note or a list would put
+"Text" on it.
 
 A checklist has **no body**. Its items replace `content` — they are not an addition to it —
 and they live in `note_items`, keyed `(note_id, position)`. That key is the whole design: an
@@ -732,19 +737,20 @@ and the editor each count in a `computed()`. That is the same line as relative-t
 formatting: presenting data the front already holds is the front's job.
 
 What _is_ on the wire is `DisplayNote.copy_text`: `Some(markdown)` for a checklist, `None` for
-a snippet, whose `content` is already there. Counting an array is presentation; deciding that
+a snippet or a Note, whose `content` is already there. Counting an array is presentation; deciding that
 a task list reads `- [x] …` is a rule, and it now has exactly one home —
 `notes::checklist::to_markdown`, which sharing and exporting already used. The front end held
 a second copy of that syntax, and one of the two was going to drift.
 
-### A Text note is written formatted, and stored as Markdown
+### A Note is written formatted, and stored as Markdown
 
-There is no third kind. A snippet in `txt` is edited in the rich editor instead of the code
+A Note is a kind of its own (`NoteKind::Note`), edited in the rich editor instead of the code
 field (`Note::is_rich_text` in Rust, `isRichText` in the overlay), and its body is still one
-string: it is sealed, exported, copied, searched and kept in revisions like any other. What the
-editor writes is GitHub-flavoured Markdown, and it offers only what that can hold — headings,
-emphasis, inline code, lists, task boxes, quotes, tables, links. No underline, and no code
-block: a code block is what the note's language is for.
+string: it is sealed, exported, copied, searched and kept in revisions like a snippet's. A
+snippet in `txt` is plain text, in the code field. What the editor writes is GitHub-flavoured
+Markdown, and it offers only what that can hold — headings, emphasis, inline code, lists, task
+boxes, quotes, tables, links. No underline, and no code block: code goes in a snippet. Sharing
+and exporting write a Note as the Markdown it is, where a snippet is fenced.
 
 - **⚠️ The escaping is ours.** `@tiptap/markdown` escapes every `_ * ~ [ ] \` and turns
   `& < >` into entities, so `{{db_host}}` stopped being a field and `a -> b` was stored as
@@ -758,19 +764,19 @@ block: a code block is what the note's language is for.
   capture listener runs it before TaskItem's own when a box is ticked. Chromium defers that
   focus to the next frame, so Windows never shows it; the component spec fakes WebKit's agent.
 - **TipTap is a chunk of its own**, some 135 kB gzipped, loaded by `@defer (on immediate)` when
-  a Text note opens. ⚠️ `viewChild(RichTextEditorComponent)` names the class at runtime and
+  a Note opens. ⚠️ `viewChild(RichTextEditorComponent)` names the class at runtime and
   pulls the whole editor back into the page's chunk: the overlay queries it by template
   reference, with a type-only import.
 - **A card shows words, not Markdown.** `notes::markdown::plain` (pulldown-cmark) turns the
   body into one line per block — `☐`/`☑` for a task, table cells joined by `·` — and
-  `cut_to_preview` puts that in place of a Text note's body, marked `truncated` even when it is
+  `cut_to_preview` puts that in place of a Note's body, marked `truncated` even when it is
   short: a copy taken from the list rereads the Markdown instead of copying the words. The
   search matches the stored body and quotes the readable one (`Note::readable_body`).
-- **Typing never changes the language; a paste into an empty note can.** The rich editor hands
-  plain text pasted into an empty Text note to the overlay, which asks `detect_language`. Prose
-  stays Text and is written as it is; code is written with its language in one patch, and the
-  note moves to the code field with its characters intact — the rich editor would have folded
-  its indentation into paragraphs.
+- **Typing never changes the kind; a paste into an empty Note can.** The rich editor hands
+  plain text pasted into an empty Note to the overlay, which asks `detect_language`. Prose
+  stays a Note and is written as it is; code is written as a snippet with its language, in one
+  patch, and the note moves to the code field with its characters intact — the rich editor
+  would have folded its indentation into paragraphs.
 - **A link opens on Ctrl+click**, through `ExternalLinksService`, which refuses any scheme but
   `http` and `https`. A plain click places the caret, as it does everywhere else in the text,
   so the pointer turns to a hand only while Ctrl is held, and the surface carries the "Ctrl+click
@@ -2616,17 +2622,20 @@ The typed tables drift no further than the next build; the stylesheet is the one
 one of `LANGUAGES`; without it every note is born `txt` and the format rail only serves people
 who remember to touch the select. Three things keep it honest:
 
-- `txt` doubles as **"nothing chosen"**, and detection runs on exactly two moments, both of
-  which are a note acquiring its first content:
+- `txt` doubles as **"nothing chosen"**, and detection runs on the moments a snippet
+  acquires its first content:
   - `language::for_draft` on a draft that reaches `create_note` as `txt` — the capture
-    shortcut, which pastes and creates in one go;
-  - `detect_language`, asked by the rich editor when text is **pasted** into an empty Text
-    note — the ordinary "+ New note, then paste". The front end writes the answer with the
-    content, in one patch.
-- **A patch never guesses.** A Text note is where prose is typed, and the first blur of typed
-  prose would otherwise hand it to a heuristic built for code. Once a note has content, nothing
-  is guessed either: re-detecting on every write would take the select back from the user, and
-  there would be no way to overrule a bad guess.
+    shortcut, which pastes and creates in one go, and a new snippet whose body is committed
+    before its title;
+  - `language::after_patch`, when a patch fills the empty body of a snippet left `txt` — the
+    title came first, so creation saw no content;
+  - `detect_language`, asked by the rich editor when text is **pasted** into an empty Note:
+    code turns it into a snippet, and the front end writes the answer with the content and the
+    kind, in one patch.
+- **A Note is never read for a language.** It is where prose is typed, and the first blur of
+  typed prose would otherwise hand it to a heuristic built for code. Once a snippet has content,
+  nothing is guessed either: re-detecting on every write would take the select back from the
+  user, and there would be no way to overrule a bad guess.
 - The heuristics are cheap and **allowed to be wrong**: the result is a starting value the
   editor can change. A miss costs one click.
 - Order runs from the most discriminating signal to the vaguest (a wrapping brace beats a
@@ -3042,7 +3051,7 @@ note.
 |                      |         | why                                                                                                                                          |
 | -------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | the **body**         | kept    | the 90% case and by far the cheapest; title, tags and language are almost never what anyone wants back                                       |
-| **snippets** only    | kept    | a checklist's items live in `note_items` — a second table to snapshot and a two-step restore                                                 |
+| **no checklist**     | kept    | a checklist's items live in `note_items` — a second table to snapshot and a two-step restore                                                 |
 | the last `KEEP` (20) | kept    | ⚠️ a **count**, not a time window: a body runs to tens of kilobytes, so a cap is the only bound that is predictable for storage              |
 | exports              | **out** | revisions in the bundle would inflate it by a factor of the cap; a note restored elsewhere arriving without its history is the accepted cost |
 
@@ -3912,7 +3921,7 @@ application's file — both serve 0.3.x, the release before the one that introdu
   Any new plugin or restricted API needs its permission listed there, or the call is denied
   at runtime — that is where `updater:default` and `process:allow-restart` come from.
 - **`opener:allow-open-url` carries a scope**, not the bare permission: `http://*` and
-  `https://*`, for the About dialog and a link Ctrl+clicked in a Text note, and nothing else —
+  `https://*`, for the About dialog and a link Ctrl+clicked in a Note, and nothing else —
   no `file:`, no scheme a program registered for itself. It is the WebView's only escape hatch
   to the system, and `ExternalLinksService` refuses any other scheme before the call as well.
   The About dialog needs the plugin precisely because the CSP is locked to `'self'` — a plain `<a href>` leads nowhere — and

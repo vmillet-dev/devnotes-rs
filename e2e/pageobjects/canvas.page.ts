@@ -303,6 +303,13 @@ export const canvas = {
     await $(testid('editor-title')).waitForExist({ timeout: 10_000 });
   },
 
+  /** A Note: prose, in the rich editor. */
+  async createRichNote(): Promise<void> {
+    await $(testid('new-note-kind')).click();
+    await $(testid('new-note-note')).click();
+    await $(testid('editor-title')).waitForExist({ timeout: 10_000 });
+  },
+
   async createChecklist(): Promise<void> {
     await $(testid('new-note-kind')).click();
     await $(testid('new-note-checklist')).click();

@@ -12,7 +12,8 @@ use specta::Type;
 use crate::attachments::model::Attachment;
 use crate::error::{StorageError, ValidationError};
 use crate::folders::model::Folder;
-use crate::notes::checklist::{self, NoteKind};
+use crate::notes::checklist;
+use crate::notes::kind::NoteKind;
 use crate::notes::language::Language;
 use crate::notes::model::Note;
 use crate::spaces::model::Space;
@@ -176,8 +177,8 @@ fn fence_for(content: &str) -> String {
     "`".repeat(longest.max(2) + 1)
 }
 
-/// A todo list comes out as a task list: it has no content, and an empty block pastes
-/// nowhere.
+/// A todo list comes out as a task list, a Note as the Markdown it already is: only a snippet
+/// is fenced, and an empty block pastes nowhere.
 pub fn to_markdown(notes: &[Note], space_names: &BTreeMap<String, String>) -> String {
     let mut out = String::new();
 
@@ -213,18 +214,23 @@ pub fn to_markdown(notes: &[Note], space_names: &BTreeMap<String, String>) -> St
             let _ = writeln!(out, "_{}_\n", meta.join(" · "));
         }
 
-        if note.kind == NoteKind::Checklist {
-            let _ = writeln!(out, "{}", checklist::to_markdown(&note.items));
-            continue;
+        match note.kind {
+            NoteKind::Checklist => {
+                let _ = writeln!(out, "{}", checklist::to_markdown(&note.items));
+            }
+            NoteKind::Note => {
+                let _ = writeln!(out, "{}", note.content.trim_end());
+            }
+            NoteKind::Snippet => {
+                let fence = fence_for(&note.content);
+                let _ = writeln!(
+                    out,
+                    "{fence}{}\n{}\n{fence}",
+                    note.language,
+                    note.content.trim_end()
+                );
+            }
         }
-
-        let fence = fence_for(&note.content);
-        let _ = writeln!(
-            out,
-            "{fence}{}\n{}\n{fence}",
-            note.language,
-            note.content.trim_end()
-        );
     }
 
     out
@@ -250,6 +256,18 @@ mod tests {
         assert!(markdown.contains("## Title"));
         assert!(markdown.contains("_Personal · API Gateway / Auth · #auth_"));
         assert!(markdown.contains("```txt\nContent\n```"));
+    }
+
+    #[test]
+    fn a_note_is_shared_as_the_markdown_it_is() {
+        let mut note = sample();
+        note.kind = NoteKind::Note;
+        note.content = "## Standup\n\n- [x] ship it\n".to_string();
+
+        let markdown = to_markdown(&[note], &spaces());
+
+        assert!(markdown.contains("## Standup\n\n- [x] ship it\n"));
+        assert!(!markdown.contains("```"));
     }
 
     #[test]

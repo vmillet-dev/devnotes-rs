@@ -84,7 +84,7 @@ const TABLE_TOOLS: readonly Tool[] = [
 ];
 
 /**
- * A Text note's body, formatted as it is typed and stored as Markdown.
+ * A Note's body, formatted as it is typed and stored as Markdown.
  *
  * ⚠️ Holds no draft of its own: `content` is the editor overlay's, and what this emits is
  * written back into it. A `content` it did not emit — another note, a restored revision, a

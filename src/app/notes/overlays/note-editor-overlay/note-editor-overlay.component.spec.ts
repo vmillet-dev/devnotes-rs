@@ -21,7 +21,7 @@ import { NotesRepository } from '@core/data/notes.repository';
 import { NoteEditorOverlayComponent } from './note-editor-overlay.component';
 import { RichTextEditorComponent } from './rich-text-editor/rich-text-editor.component';
 
-/** A snippet unless a test says otherwise: a Text note has the rich editor, tested apart. */
+/** A snippet unless a test says otherwise: a Note has the rich editor, tested apart. */
 const createNote = (overrides: Partial<Note> = {}): Note => noteFixture({ language: 'sh', ...overrides });
 
 const SPACES: readonly Space[] = [
@@ -417,14 +417,14 @@ describe('NoteEditorOverlayComponent', () => {
     });
   });
 
-  describe('a Text note', () => {
+  describe('a Note', () => {
     function rich(): RichTextEditorComponent {
       return fixture.debugElement.query(By.directive(RichTextEditorComponent))
         .componentInstance as RichTextEditorComponent;
     }
 
     async function openText(content = ''): Promise<void> {
-      fixture.componentRef.setInput('note', createNote({ language: 'txt', content }));
+      fixture.componentRef.setInput('note', createNote({ kind: 'note', language: 'txt', content }));
       await fixture.whenStable();
       await vi.waitFor(() =>
         expect(fixture.debugElement.query(By.directive(RichTextEditorComponent))).not.toBeNull(),
@@ -451,20 +451,22 @@ describe('NoteEditorOverlayComponent', () => {
       expect(emitted).toEqual(['## Standup']);
     });
 
-    /** Code keeps its characters and gets its language: the note leaves for the code field. */
-    it('hands a paste of code over with the language Rust read in it', async () => {
+    /** Code keeps its characters and gets its language: the note becomes a snippet. */
+    it('hands a paste of code over as a snippet in the language Rust read in it', async () => {
       await openText();
       (TestBed.inject(NotesRepository) as unknown as FakeNotesRepository).detectedLanguage = 'sh';
       const contents = patched('content');
       const languages = patched('language');
+      const kinds = patched('kind');
 
       rich().pastedIntoEmpty.emit('#!/bin/sh\necho hi');
       await vi.waitFor(() => expect(languages).toEqual(['sh']));
 
       expect(contents).toEqual(['#!/bin/sh\necho hi']);
+      expect(kinds).toEqual(['snippet']);
     });
 
-    it('keeps a paste of prose in the rich editor, as a Text note', async () => {
+    it('keeps a paste of prose in the rich editor, as a Note', async () => {
       await openText();
       const contents = patched('content');
       const languages = patched('language');
@@ -700,6 +702,15 @@ describe('NoteEditorOverlayComponent', () => {
       expect(options.map((option) => option.getAttribute('data-option-id'))).toEqual(
         Object.keys(LANGUAGE_LABELS),
       );
+    });
+
+    it('offers no format to a Note or a checklist', async () => {
+      for (const kind of ['note', 'checklist'] as const) {
+        fixture.componentRef.setInput('note', createNote({ kind, language: 'txt' }));
+        await fixture.whenStable();
+
+        expect(fixture.nativeElement.querySelector('[data-testid="choice-language"]'), kind).toBeNull();
+      }
     });
 
     it('emits the picked language', async () => {

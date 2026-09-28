@@ -322,7 +322,7 @@ mod tests {
     /// Past the bound the space's subquery reads them, with a space and without one.
     #[test]
     fn past_the_bound_every_note_still_carries_its_tags_and_items() {
-        use crate::notes::checklist::NoteKind;
+        use crate::notes::kind::NoteKind;
         use crate::notes::language::Language;
         use crate::notes::model::{NoteDraft, NoteLifecycle};
         use crate::notes::view::{NoteFilter, NotesQuery};

@@ -33,6 +33,15 @@
         appMenuItem
         type="button"
         class="new-note-option"
+        data-testid="new-note-note"
+        (click)="create('note')"
+      >
+        {{ 'notes.newRichNote' | transloco }}
+      </button>
+      <button
+        appMenuItem
+        type="button"
+        class="new-note-option"
         data-testid="new-note-checklist"
         (click)="create('checklist')"
       >

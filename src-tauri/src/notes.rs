@@ -2,6 +2,7 @@
 
 pub mod checklist;
 pub(crate) mod duplicate;
+pub mod kind;
 pub mod language;
 pub(crate) mod markdown;
 pub mod model;
@@ -83,8 +84,8 @@ pub async fn create_note<R: Runtime>(
     .await
 }
 
-/// What a paste into an empty Text note is. Asked by the front end before it writes: typing
-/// keeps a note Text, and only a paste of code gives it a language.
+/// What a paste into an empty Note is. Asked by the front end before it writes: typing keeps
+/// a Note prose, and only a paste of code turns it into a snippet with a language.
 #[tauri::command]
 #[specta::specta]
 #[allow(clippy::needless_pass_by_value)]
@@ -537,7 +538,7 @@ pub(crate) mod fixtures {
 
     use chrono::{DateTime, Utc};
 
-    use super::checklist::NoteKind;
+    use super::kind::NoteKind;
     use super::language::Language;
     use super::model::{Note, NoteLifecycle};
     use crate::db::iso8601;

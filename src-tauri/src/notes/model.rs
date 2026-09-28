@@ -8,7 +8,8 @@ use chrono::{DateTime, TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-use super::checklist::{self, ChecklistItem, NoteKind};
+use super::checklist::{self, ChecklistItem};
+use super::kind::NoteKind;
 use super::language::{self, Language};
 use super::markdown;
 use super::placeholder::{self, Placeholder};
@@ -117,12 +118,12 @@ pub struct NotePatch {
 }
 
 impl NoteDraft {
-    /// A checklist is exempt from language detection — it has no body to read.
+    /// Only a snippet is read for a language: a checklist has no body, and a Note's is prose.
     pub fn into_note(self, id: String, now: DateTime<Utc>) -> Note {
-        let language = if self.kind == NoteKind::Checklist {
-            Language::default()
-        } else {
+        let language = if self.kind.has_language() {
             language::for_draft(&self)
+        } else {
+            Language::default()
         };
         let tags = normalize_tags(&self.tags);
         let items = checklist::normalize_items(&self.items);
@@ -148,10 +149,16 @@ impl NoteDraft {
 }
 
 impl NotePatch {
-    /// Does not check that `space_id` exists: persistence does, before calling. ⚠️ Never detects
-    /// a language: typing keeps a Text note Text, and a paste of code asks `detect_language`
-    /// before it is written.
+    /// Does not check that `space_id` exists: persistence does, before calling. ⚠️ Detects a
+    /// language for a snippet's first content alone: a Note is prose, and a paste of code into
+    /// one asks `detect_language` before it is written.
     pub fn apply(&self, note: &mut Note, now: DateTime<Utc>) {
+        let detected = if self.kind.unwrap_or(note.kind).has_language() {
+            language::after_patch(note, self)
+        } else {
+            None
+        };
+
         if let Some(space_id) = &self.space_id {
             // A folder belongs to one space: a chip the space switcher cannot reach is worse
             // than none.
@@ -186,6 +193,12 @@ impl NotePatch {
         }
         if let Some(items) = &self.items {
             note.items = checklist::normalize_items(items);
+        }
+        if let Some(language) = detected {
+            note.language = language;
+        }
+        if !note.kind.has_language() {
+            note.language = Language::default();
         }
 
         note.updated_at = now;
@@ -277,12 +290,12 @@ fn preview_of(body: &str) -> Option<String> {
 }
 
 impl Note {
-    /// A Text note is written in the rich editor, as Markdown.
+    /// A Note is written in the rich editor, as Markdown.
     pub fn is_rich_text(&self) -> bool {
-        self.kind == NoteKind::Snippet && self.language == Language::Txt
+        self.kind == NoteKind::Note
     }
 
-    /// What a card shows and a search quotes: a Text note's words without their Markdown.
+    /// What a card shows and a search quotes: a Note's words without their Markdown.
     pub fn readable_body(&self) -> Cow<'_, str> {
         if self.is_rich_text() {
             Cow::Owned(markdown::plain(&self.content))
@@ -328,7 +341,7 @@ pub fn decorate(note: Note, now: DateTime<Utc>) -> DisplayNote {
         search_hit: None,
         copy_text: match note.kind {
             NoteKind::Checklist => Some(checklist::to_markdown(&note.items)),
-            NoteKind::Snippet => None,
+            NoteKind::Snippet | NoteKind::Note => None,
         },
         truncated: false,
         note,
@@ -592,9 +605,9 @@ mod tests {
     }
 
     #[test]
-    fn typing_into_an_empty_text_note_keeps_it_text() {
+    fn typing_into_an_empty_note_keeps_it_a_note() {
         let mut note = Note {
-            language: Language::Txt,
+            kind: NoteKind::Note,
             content: String::new(),
             ..sample()
         };
@@ -605,12 +618,84 @@ mod tests {
 
         patch.apply(&mut note, now());
 
+        assert_eq!(note.kind, NoteKind::Note);
         assert_eq!(note.language, Language::Txt);
+    }
+
+    #[test]
+    fn a_patch_filling_an_empty_snippet_detects_its_language() {
+        let mut note = Note {
+            language: Language::Txt,
+            content: String::new(),
+            ..sample()
+        };
+        let patch = NotePatch {
+            content: Some("SELECT 1".to_string()),
+            ..NotePatch::default()
+        };
+
+        patch.apply(&mut note, now());
+
+        assert_eq!(note.language, Language::Sql);
+    }
+
+    #[test]
+    fn a_patch_gives_a_note_no_language() {
+        let mut note = Note {
+            kind: NoteKind::Note,
+            ..sample()
+        };
+        let patch = NotePatch {
+            language: Some(Language::Sql),
+            ..NotePatch::default()
+        };
+
+        patch.apply(&mut note, now());
+
+        assert_eq!(note.language, Language::Txt);
+    }
+
+    /// Code pasted into an empty Note: the note leaves for the code field.
+    #[test]
+    fn a_note_turned_into_a_snippet_takes_the_language_it_is_given() {
+        let mut note = Note {
+            kind: NoteKind::Note,
+            content: String::new(),
+            ..sample()
+        };
+        let patch = NotePatch {
+            kind: Some(NoteKind::Snippet),
+            language: Some(Language::Sql),
+            content: Some("SELECT 1".to_string()),
+            ..NotePatch::default()
+        };
+
+        patch.apply(&mut note, now());
+
+        assert_eq!(note.kind, NoteKind::Snippet);
+        assert_eq!(note.language, Language::Sql);
     }
 
     /// Cut even when it fits, so the list never passes the words off as the Markdown.
     #[test]
-    fn a_text_note_reaches_a_card_without_its_markdown() {
+    fn a_note_reaches_a_card_without_its_markdown() {
+        let mut note = decorate(
+            Note {
+                kind: NoteKind::Note,
+                content: "- [x] **ship** it".to_string(),
+                ..sample()
+            },
+            now(),
+        );
+
+        note.cut_to_preview();
+
+        assert_eq!(note.content, "☑ ship it");
+        assert!(note.truncated);
+    }
+
+    #[test]
+    fn a_text_snippet_keeps_its_markdown_characters_on_a_card() {
         let mut note = decorate(
             Note {
                 language: Language::Txt,
@@ -622,8 +707,8 @@ mod tests {
 
         note.cut_to_preview();
 
-        assert_eq!(note.content, "☑ ship it");
-        assert!(note.truncated);
+        assert_eq!(note.content, "- [x] **ship** it");
+        assert!(!note.truncated);
     }
 
     #[test]
@@ -651,17 +736,18 @@ mod tests {
     }
 
     #[test]
-    fn a_checklist_is_not_given_a_guessed_language() {
-        let draft = NoteDraft {
-            kind: NoteKind::Checklist,
-            content: "{ \"a\": 1 }".to_string(),
-            language: Language::Txt,
-            ..draft(Language::Txt, String::new().as_str())
-        };
+    fn only_a_snippet_is_given_a_guessed_language() {
+        for kind in [NoteKind::Checklist, NoteKind::Note] {
+            let draft = NoteDraft {
+                kind,
+                content: "{ \"a\": 1 }".to_string(),
+                ..draft(Language::Txt, "")
+            };
 
-        let note = draft.into_note("n-2".to_string(), now());
+            let note = draft.into_note("n-2".to_string(), now());
 
-        assert_eq!(note.language, Language::Txt);
+            assert_eq!(note.language, Language::Txt, "{kind}");
+        }
     }
 
     #[test]
@@ -789,7 +875,7 @@ mod tests {
         assert!(expires_soon(&expiring("2026-07-01T00:00:00.000Z"), now()));
     }
 
-    /// A snippet's: a Text note's preview is its words, tested on their own.
+    /// A snippet's: a Note's preview is its words, tested on their own.
     fn previewed(content: &str) -> DisplayNote {
         let mut note = decorate(
             Note {

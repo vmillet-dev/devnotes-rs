@@ -43,25 +43,30 @@ describe('NewNoteButtonComponent', () => {
     expect(fixture.nativeElement.querySelector('.new-note-caret').getAttribute('aria-expanded')).toBe('true');
   });
 
-  it('emits the checklist kind from the menu, then closes it', async () => {
-    click('.new-note-caret');
-    await fixture.whenStable();
+  it('emits the kind picked in the menu, then closes it', async () => {
+    for (const [index, kind] of [
+      [1, 'note'],
+      [2, 'checklist'],
+    ] as const) {
+      click('.new-note-caret');
+      await fixture.whenStable();
 
-    fixture.nativeElement.querySelectorAll('.new-note-option')[1].click();
-    await fixture.whenStable();
+      fixture.nativeElement.querySelectorAll('.new-note-option')[index].click();
+      await fixture.whenStable();
 
-    expect(created).toEqual(['checklist']);
-    expect(fixture.nativeElement.querySelector('.new-note-menu')).toBeNull();
+      expect(created.at(-1)).toBe(kind);
+      expect(fixture.nativeElement.querySelector('.new-note-menu')).toBeNull();
+    }
   });
 
-  it('offers exactly the two kinds, in the order the label reads', async () => {
+  it('offers exactly the three kinds, the snippet first', async () => {
     click('.new-note-caret');
     await fixture.whenStable();
 
     const labels = [...fixture.nativeElement.querySelectorAll('.new-note-option')].map((option) =>
       (option as HTMLElement).textContent?.trim(),
     );
-    expect(labels).toEqual(['Nouvelle note', 'Nouvelle todolist']);
+    expect(labels).toEqual(['Snippet de code', 'Note', 'Liste de tâches']);
   });
 
   it('closes on Escape without creating anything', async () => {

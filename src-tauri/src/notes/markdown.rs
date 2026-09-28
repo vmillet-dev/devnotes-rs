@@ -1,4 +1,4 @@
-//! What a Text note reads as once its Markdown is taken away: a card's preview, a search
+//! What a Note reads as once its Markdown is taken away: a card's preview, a search
 //! excerpt. The rich editor writes the body; nobody reads `**` or `- [ ]` on a card.
 
 use std::fmt::Write;

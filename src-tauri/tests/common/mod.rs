@@ -5,7 +5,7 @@
 
 use chrono::{DateTime, Utc};
 use devnotes_lib::db::{Library, iso8601};
-use devnotes_lib::notes::checklist::NoteKind;
+use devnotes_lib::notes::kind::NoteKind;
 use devnotes_lib::notes::language::Language;
 use devnotes_lib::notes::model::{NoteDraft, NoteLifecycle};
 use devnotes_lib::spaces::store as spaces;

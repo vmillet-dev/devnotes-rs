@@ -9,7 +9,7 @@ use serde::Serialize;
 use similar::{ChangeTag, DiffTag, TextDiff};
 use specta::Type;
 
-use super::checklist::NoteKind;
+use super::kind::NoteKind;
 use super::model::Note;
 use crate::count::saturating_u32;
 
@@ -21,10 +21,10 @@ pub const KEEP: usize = 20;
 
 /// Whether the body a write replaces is worth keeping.
 ///
-/// Snippets only — a checklist's items live in `note_items`, a second table to snapshot — and
+/// Never a checklist — its items live in `note_items`, a second table to snapshot — and
 /// never an empty body: a new note's body always arrives as an update over an empty row.
 pub(crate) fn worth_keeping(before: &Note, after: &Note) -> bool {
-    before.kind == NoteKind::Snippet
+    before.kind != NoteKind::Checklist
         && after.content != before.content
         && !before.content.is_empty()
 }
@@ -147,6 +147,19 @@ mod tests {
         };
 
         assert!(!worth_keeping(&before, &snippet("select 2")));
+    }
+
+    #[test]
+    fn a_note_keeps_its_prose() {
+        let note = |content| Note {
+            kind: NoteKind::Note,
+            ..snippet(content)
+        };
+
+        assert!(worth_keeping(
+            &note("## Standup"),
+            &note("## Standup, done")
+        ));
     }
 
     fn numbered(count: usize) -> Vec<String> {
