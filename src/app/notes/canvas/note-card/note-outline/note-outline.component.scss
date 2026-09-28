@@ -1,0 +1,43 @@
+:host {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-1);
+}
+
+.outline-heading,
+.outline-text,
+.outline-item {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.outline-heading {
+  font-weight: 600;
+  color: var(--text-0);
+}
+
+.outline-item {
+  display: flex;
+  gap: 6px;
+  padding-left: calc(var(--depth, 0) * 12px);
+}
+
+.outline-marker {
+  flex-shrink: 0;
+  color: var(--purple);
+}
+
+.outline-code {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  white-space: pre;
+  overflow: hidden;
+  color: var(--text-2);
+}

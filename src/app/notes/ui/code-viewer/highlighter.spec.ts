@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LANGUAGE_LABELS, LanguageTag } from '@core/model/language.model';
-import { highlightLines, splitHighlightedLines } from './highlighter';
+import { highlightLines, highlightRanges, splitHighlightedLines } from './highlighter';
 
 /** `Record`, not `Partial<Record>`: a language added to the Rust enum must stop this compiling. */
 const SAMPLES: Readonly<Record<LanguageTag, string>> = {
@@ -102,5 +102,35 @@ describe('highlightLines', () => {
 
   it('has a label for every tag it can colour', () => {
     expect(Object.keys(SAMPLES)).toEqual(Object.keys(LANGUAGE_LABELS));
+  });
+});
+
+describe('highlightRanges', () => {
+  function textOf(content: string, classes: string): string[] {
+    return highlightRanges(content, 'sql')
+      .filter((range) => range.classes === classes)
+      .map((range) => content.slice(range.from, range.to));
+  }
+
+  it('finds the coloured words at their offsets in the text', () => {
+    const content = "SELECT id FROM notes WHERE title = 'a < b';";
+
+    expect(textOf(content, 'hljs-keyword')).toEqual(['SELECT', 'FROM', 'WHERE']);
+    // Read past an escape: `<` is one character of the text, four of the HTML.
+    expect(textOf(content, 'hljs-string')).toEqual(["'a < b'"]);
+  });
+
+  it('colours nothing in plain text', () => {
+    expect(highlightRanges('SELECT 1', 'txt')).toEqual([]);
+  });
+
+  it('keeps every range inside the text', () => {
+    const content = 'const a = "x & y";\n// done';
+    const ranges = highlightRanges(content, 'js');
+
+    expect(ranges.length).toBeGreaterThan(0);
+    expect(
+      ranges.every((range) => range.from >= 0 && range.to <= content.length && range.from < range.to),
+    ).toBe(true);
   });
 });

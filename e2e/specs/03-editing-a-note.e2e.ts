@@ -183,6 +183,16 @@ describe('Editing a note', () => {
       expect(view.sections[0]?.notes[0]?.content).toBe('Ship it and tag\n☐ write the notes');
     });
 
+    /** Its shape, read by Rust, and its kind where a snippet shows its format. */
+    it('shows its outline on its card, under a Note badge', async () => {
+      const card = await canvas.cardWithTitle(richTitle);
+
+      expect(await card.$(testid('kind-badge')).isExisting()).toBe(true);
+      const task = card.$(`${testid('note-card-outline')} .outline-item`);
+      await task.waitForExist({ timeout: 10_000 });
+      expect(await task.getText()).toContain('write the notes');
+    });
+
     it('opens formatted, and a box ticked there is stored as Markdown', async () => {
       await canvas.openNote(richTitle);
       const bold = $(`${testid('editor-rich')} strong`);
@@ -203,6 +213,27 @@ describe('Editing a note', () => {
         'the ticked box to reach the database',
       );
       expect(stored).toContain('**Ship** it and `tag`');
+    });
+
+    /** Coloured by the code field's grammars, and stored as the fence it was given. */
+    it('holds a code block in its language', async () => {
+      const title = 'Checks after the switch';
+      const content = 'Run it:\n\n```sql\nSELECT pg_is_in_recovery();\n```';
+      const id = (await bridge.createNote(draft({ spaceId, title, content, kind: 'note' }))).id;
+      await reloadCanvas();
+      await canvas.waitForCard(title);
+
+      await canvas.openNote(title);
+      const keyword = $(`${testid('editor-rich')} pre .hljs-keyword`);
+      await keyword.waitForExist({ timeout: 10_000 });
+      expect(await keyword.getText()).toBe('SELECT');
+      expect(await $(`${testid('editor-rich')} pre`).getAttribute('data-language')).toBe('SQL');
+      await editor.close();
+
+      expect((await bridge.getNote(id)).content).toBe(content);
+      await bridge.deleteNotes([id]);
+      await bridge.purgeNotes([id]);
+      await reloadCanvas();
     });
 
     /** Code keeps its characters and gets its language: the note becomes a snippet. */

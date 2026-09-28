@@ -59,10 +59,7 @@
           <!-- Decorative: without this text twin, a screen reader gets nothing. -->
           <span class="visually-hidden">{{ 'notes.pinnedState' | transloco }}</span>
         }
-        <!-- No format for a todo list: "TXT" would announce a language nothing shows. -->
-        @if (!isChecklist()) {
-          <app-language-badge [language]="note().language" />
-        }
+        <app-kind-badge [kind]="note().kind" [language]="note().language" />
         <!-- A mark, not a button: the copy below asks for the values when it sees this,
              and a second ⚡ beside it would be the same thing said twice. -->
         @if (hasPlaceholders()) {
@@ -120,6 +117,8 @@
           </li>
         }
       </ul>
+    } @else if (isNote() && !searchHit()) {
+      <app-note-outline data-testid="note-card-outline" [lines]="note().outline" />
     } @else if (snippetIsCode()) {
       <app-code-viewer
         class="card-snippet"

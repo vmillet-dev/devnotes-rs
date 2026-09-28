@@ -1,12 +1,22 @@
 //! What a Note reads as once its Markdown is taken away: a card's preview, a search
 //! excerpt. The rich editor writes the body; nobody reads `**` or `- [ ]` on a card.
 
-use std::fmt::Write;
-
 use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
+
+use super::model::OutlineLine;
+use crate::count::saturating_u32;
 
 /// One line per block, list items marked `•`, `1.` or `☐`/`☑`, table cells joined by ` · `.
 pub(crate) fn plain(markdown: &str) -> String {
+    outline(markdown)
+        .iter()
+        .map(OutlineLine::plain)
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// The same lines, each saying what it is: what a card draws a Note from.
+pub(crate) fn outline(markdown: &str) -> Vec<OutlineLine> {
     let mut out = Out::default();
     let mut lists: Vec<Option<u64>> = Vec::new();
 
@@ -18,23 +28,24 @@ pub(crate) fn plain(markdown: &str) -> String {
             Event::End(TagEnd::List(_)) => {
                 lists.pop();
             }
+            Event::Start(Tag::Heading { .. }) => out.open(Block::Heading),
+            Event::Start(Tag::CodeBlock(_)) => out.open(Block::Code),
             Event::Start(Tag::Item) => {
-                out.flush();
-                let depth = lists.len().saturating_sub(1);
-                out.line.push_str(&"  ".repeat(depth));
-                match lists.last_mut() {
+                let depth = saturating_u32(lists.len().saturating_sub(1));
+                let marker = match lists.last_mut() {
                     Some(Some(number)) => {
-                        let _ = write!(out.line, "{number}. ");
+                        let marker = format!("{number}.");
                         *number += 1;
+                        marker
                     }
-                    _ => out.line.push_str("• "),
-                }
+                    _ => "•".to_string(),
+                };
+                out.open(Block::Item { depth, marker });
             }
             Event::TaskListMarker(done) => {
-                if out.line.ends_with("• ") {
-                    out.line.truncate(out.line.len() - "• ".len());
+                if let Block::Item { depth, .. } = out.block {
+                    out.block = Block::Task { depth, done };
                 }
-                out.line.push_str(if done { "☑ " } else { "☐ " });
             }
             Event::Text(text) | Event::Code(text) => out.line.push_str(&text),
             Event::SoftBreak => out.line.push(' '),
@@ -54,25 +65,58 @@ pub(crate) fn plain(markdown: &str) -> String {
     }
     out.flush();
 
-    out.text
+    out.lines
+}
+
+/// What the line being written will be, decided when its block opens.
+#[derive(Default)]
+enum Block {
+    #[default]
+    Text,
+    Heading,
+    Code,
+    Item {
+        depth: u32,
+        marker: String,
+    },
+    Task {
+        depth: u32,
+        done: bool,
+    },
 }
 
 #[derive(Default)]
 struct Out {
-    text: String,
+    lines: Vec<OutlineLine>,
     line: String,
+    block: Block,
 }
 
 impl Out {
+    fn open(&mut self, block: Block) {
+        self.flush();
+        self.block = block;
+    }
+
+    /// A line with nothing readable is dropped; what follows it is text until a block says.
     fn flush(&mut self) {
-        let line = self.line.trim_end();
-        if !line.trim().is_empty() {
-            if !self.text.is_empty() {
-                self.text.push('\n');
-            }
-            self.text.push_str(line);
+        let text = self.line.trim_end();
+        if !text.trim().is_empty() {
+            let text = text.to_string();
+            self.lines.push(match std::mem::take(&mut self.block) {
+                Block::Text => OutlineLine::Text { text },
+                Block::Heading => OutlineLine::Heading { text },
+                Block::Code => OutlineLine::Code { text },
+                Block::Item { depth, marker } => OutlineLine::Item {
+                    text,
+                    depth,
+                    marker,
+                },
+                Block::Task { depth, done } => OutlineLine::Task { text, depth, done },
+            });
         }
         self.line.clear();
+        self.block = Block::Text;
     }
 }
 
@@ -133,6 +177,27 @@ mod tests {
     #[test]
     fn a_tab_written_as_an_entity_reads_as_a_tab() {
         assert_eq!(plain("&#9;indented"), "\tindented");
+    }
+
+    /// A card shows a code block's lines as written, and a search finds and quotes them.
+    #[test]
+    fn a_code_block_reads_as_its_lines() {
+        assert_eq!(
+            plain(
+                "Check:
+
+```sql
+SELECT 1;
+  -- *not* emphasis
+```
+
+Done."
+            ),
+            "Check:
+SELECT 1;
+  -- *not* emphasis
+Done."
+        );
     }
 
     #[test]

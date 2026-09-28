@@ -438,6 +438,11 @@ export type DisplayNote = {
 	searchHit: SearchHit | null,
 	/**  `content` holds only its first lines: a list sends previews, `get_note` the body. */
 	truncated: boolean,
+	/**
+	 *  A Note's lines as its card draws them, cut like `content`; empty for the other kinds
+	 *  and outside a list.
+	 */
+	outline: OutlineLine[],
 } & Note;
 
 /**
@@ -703,6 +708,13 @@ export type NotesView = {
 	/**  `u32` and not `usize`: Specta refuses what JSON cannot carry exactly. */
 	matched: number,
 };
+
+/**  One line of a Note as a card draws it, read from its Markdown by `notes::markdown`. */
+export type OutlineLine = { kind: "heading"; text: string } | { kind: "text"; text: string } | 
+/**  `marker` is `•` or the item's number. */
+{ kind: "item"; text: string; depth: number; marker: string } | { kind: "task"; text: string; depth: number; done: boolean } | 
+/**  A code block, its lines as written. */
+{ kind: "code"; text: string };
 
 /**
  *  What a change reached. `backupsLeft` is the honest half: a key file copied somewhere else

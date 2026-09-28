@@ -1,0 +1,13 @@
+@switch (kind()) {
+  @case ('snippet') {
+    <app-language-badge [language]="language()" />
+  }
+  @case ('note') {
+    <span class="kind-tag is-note" data-testid="kind-badge">{{ 'notes.kindTag.note' | transloco }}</span>
+  }
+  @case ('checklist') {
+    <span class="kind-tag is-checklist" data-testid="kind-badge"
+      ><span aria-hidden="true">✓ </span>{{ 'notes.kindTag.checklist' | transloco }}</span
+    >
+  }
+}

@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Editor } from '@tiptap/core';
 import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
 import { RichTextEditorComponent } from './rich-text-editor.component';
@@ -75,7 +75,7 @@ describe('RichTextEditorComponent', () => {
       ['rich-h1', 'rich-h2', 'rich-h3'],
       ['rich-bold', 'rich-italic', 'rich-strike', 'rich-code', 'rich-link'],
       ['rich-bullet', 'rich-ordered', 'rich-tasks', 'rich-quote'],
-      ['rich-table'],
+      ['rich-codeBlock', 'rich-table'],
     ]);
   });
 
@@ -257,6 +257,79 @@ describe('RichTextEditorComponent', () => {
 
     await press('Tab', { shiftKey: true });
     expect(emitted.at(-1)).toBe('hello');
+  });
+
+  describe('a code block', () => {
+    // jsdom lays nothing out, and ProseMirror asks a range for its boxes to scroll to the caret.
+    beforeAll(() => {
+      Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
+      Range.prototype.getBoundingClientRect = () =>
+        ({ x: 0, y: 0, width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0 }) as DOMRect;
+    });
+
+    function editor(): Editor {
+      return (surface() as HTMLElement & { editor: Editor }).editor;
+    }
+
+    function languagePicker(): HTMLSelectElement | null {
+      return fixture.nativeElement.querySelector('[data-testid="rich-code-language"]');
+    }
+
+    it('is fenced, and written as typed: no escape inside it, a tab kept a tab', async () => {
+      await mount('```sh\n\techo *a*_b &#9;\n```');
+      editor().commands.setTextSelection(editor().state.doc.content.size - 1);
+      editor().commands.insertContent(' ');
+      await fixture.whenStable();
+
+      expect(emitted.at(-1)).toBe('```sh\n\techo *a*_b &#9; \n```');
+    });
+
+    it('turns a paragraph into a block from the toolbar', async () => {
+      await open('SELECT 1');
+      editor().commands.setTextSelection(2);
+
+      button('rich-codeBlock').click();
+      await fixture.whenStable();
+
+      expect(emitted.at(-1)).toBe('```\nSELECT 1\n```');
+    });
+
+    it('offers its language while the caret is in it, and writes the one chosen', async () => {
+      await open('```\nSELECT 1\n```\n\nafter');
+      editor().commands.setTextSelection(editor().state.doc.content.size - 1);
+      await fixture.whenStable();
+      expect(languagePicker()).toBeNull();
+
+      editor().commands.setTextSelection(3);
+      await fixture.whenStable();
+      const picker = languagePicker()!;
+      expect(picker.value).toBe('txt');
+
+      picker.value = 'sql';
+      picker.dispatchEvent(new Event('change'));
+      await fixture.whenStable();
+
+      expect(emitted.at(-1)).toBe('```sql\nSELECT 1\n```\n\nafter');
+    });
+
+    it('colours its code with the grammar of its language, and labels it', async () => {
+      await open('```sql\nSELECT 1\n```');
+
+      const block = surface().querySelector('pre')!;
+      expect(block.getAttribute('data-language')).toBe('SQL');
+      expect(block.querySelector('.hljs-keyword')?.textContent).toBe('SELECT');
+    });
+
+    /** The code field's level, not the prose's tab. */
+    it('indents with Tab as the code field would for its language', async () => {
+      fixture.componentRef.setInput('codeIndent', 'language');
+      await open('```py\npass\n```');
+      editor().commands.setTextSelection(1);
+
+      await press('Tab');
+
+      expect(emitted.at(-1)).toBe('```py\n    pass\n```');
+    });
   });
 
   it('offers the table tools while the caret is in a table, and only then', async () => {
