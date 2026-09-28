@@ -86,6 +86,8 @@ function toFooter(dto: WireNoteFooter): NoteFooter {
       return { kind: 'expiry', at: parseIsoDate(dto.at, 'footer.at') };
     case 'age':
       return { kind: 'age', at: parseIsoDate(dto.at, 'footer.at') };
+    case 'created':
+      return { kind: 'created', at: parseIsoDate(dto.at, 'footer.at') };
     default:
       // Only an older front end against a newer back end: exhaustive at compile time.
       throw new ContractError('footer.kind', (dto satisfies never as { kind: string }).kind);

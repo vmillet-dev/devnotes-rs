@@ -97,6 +97,9 @@ describe('toNote', () => {
     });
 
     it('carries a source footer as plain text, with no date to parse', () => {
+      const created = toNote({ ...BASE_DTO, footer: { kind: 'created', at: '2026-01-02T10:00:00.000Z' } });
+      expect(created.footer).toEqual({ kind: 'created', at: new Date('2026-01-02T10:00:00.000Z') });
+
       const note = toNote({ ...BASE_DTO, footer: { kind: 'source', value: 'API Gateway' } });
 
       expect(note.footer).toEqual({ kind: 'source', value: 'API Gateway' });

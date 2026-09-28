@@ -141,7 +141,7 @@
     <span class="card-footer">
       <!-- prettier-ignore -->
       <span [class.stale]="note().expiringSoon"
-        >@if (footerLabel(); as label) {@if (label.kind === 'text') {{{ label.value }}} @else {{{ label.ref.key | transloco: label.ref.params }}}}</span
+        >@if (footerLabel(); as label) {@if (label.kind === 'text') {{{ label.value }}} @else {@if (label.prefix) {{{ label.prefix | transloco }} }{{ label.ref.key | transloco: label.ref.params }}}}</span
       >
       @if (note().folder; as folder) {
         <span class="card-folder" data-testid="note-card-folder">

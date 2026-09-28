@@ -13,7 +13,7 @@ import {
   testid,
   waitForCanvas,
 } from '../support/app.js';
-import { bridge, draft, homeSpaceId } from '../support/bridge.js';
+import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
  * Filtering, grouping and facet aggregation all run in Rust. What crosses the bridge here
@@ -324,6 +324,23 @@ describe('Search, filters and facets', () => {
     await canvas.toggleKind('all');
     expect(await canvas.titles()).toContain('Docker compose');
     expect(await canvas.kindChip('note').getAttribute('aria-pressed')).toBe('false');
+  });
+
+  /** Ordered in Rust: titles folded, ties on the last edit; the card names the date sorted by. */
+  it('orders the notes as asked, and dates the cards by creation when sorted so', async () => {
+    const spaceId = await homeSpaceId();
+    const byTitle = await bridge.queryNotes(
+      query({ spaceId, search: 'migration', order: { key: 'title', direction: 'ascending' } }),
+    );
+    const byCreation = await bridge.queryNotes(
+      query({ spaceId, search: 'migration', order: { key: 'created', direction: 'descending' } }),
+    );
+
+    expect(byTitle.sections[0]?.notes.map((note) => note.title)).toEqual([
+      'Compte rendu de migration',
+      'Étape de migration',
+    ]);
+    expect(byCreation.sections[0]?.notes.every((note) => note.footer.kind === 'created')).toBe(true);
   });
 
   /** Several levels at once, like tags; "All" gives every note back. */

@@ -3,6 +3,7 @@ import type {
   ExportScope,
   FacetCount,
   ImportReport,
+  NoteOrder,
   OutlineLine,
   Priority,
   SearchHit,
@@ -20,13 +21,16 @@ export type { NotePlacement, NotePriority, NoteTag } from '@core/ipc/bindings';
 
 export type { Priority } from '@core/ipc/bindings';
 
+export type { NoteOrder, SortDirection, SortKey } from '@core/ipc/bindings';
+
 export type NoteLifecycle = { readonly kind: 'permanent' } | { readonly kind: 'expires'; readonly at: Date };
 
 /** Two variants carry a date and not a label, so the text ages without a round trip. */
 export type NoteFooter =
   | { readonly kind: 'source'; readonly value: string }
   | { readonly kind: 'expiry'; readonly at: Date }
-  | { readonly kind: 'age'; readonly at: Date };
+  | { readonly kind: 'age'; readonly at: Date }
+  | { readonly kind: 'created'; readonly at: Date };
 
 /** Everything `NoteDraft` omits below is derived by the back end and never written. */
 export interface Note {
@@ -113,6 +117,8 @@ export interface NotesQuery {
   readonly languages: readonly LanguageTag[];
   readonly kinds: readonly NoteKind[];
   readonly priorities: readonly Priority[];
+  /** Left out by the palette: the modification date, newest first. */
+  readonly order?: NoteOrder;
   readonly now: Date;
   /**
    * `Date#getTimezoneOffset()`. The sections reason in local days: without this

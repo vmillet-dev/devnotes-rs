@@ -114,6 +114,19 @@ describe('NotesQueryStore', () => {
       expect(repository.lastQuery?.languages).toEqual([]);
     });
 
+    /** Not a criterion: the board, which spreads the criteria, keeps its own geometry. */
+    it('sends the order, the newest edit first until another is chosen', async () => {
+      const { canvas, repository } = await createNotesHarness([createNote()]);
+      expect(repository.lastQuery?.order).toEqual({ key: 'modified', direction: 'descending' });
+
+      const before = repository.queryCount;
+      canvas.setOrder({ key: 'title', direction: 'ascending' });
+      await awaitQuery(repository, before);
+
+      expect(repository.lastQuery?.order).toEqual({ key: 'title', direction: 'ascending' });
+      expect(canvas.criteria()).not.toHaveProperty('order');
+    });
+
     it('sends the selected priorities, and none once "All" is chosen', async () => {
       const { canvas, repository } = await createNotesHarness([createNote()]);
 

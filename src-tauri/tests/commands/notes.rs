@@ -5,7 +5,7 @@ use devnotes_lib::error::ErrorCode;
 use devnotes_lib::notes::model::{NoteDraft, NotePatch, SampleNote};
 use devnotes_lib::notes::priority::Priority;
 use devnotes_lib::notes::revision::DiffLine;
-use devnotes_lib::notes::view::{NoteFilter, NotesQuery};
+use devnotes_lib::notes::view::{NoteFilter, NoteOrder, NotesQuery};
 use devnotes_lib::notes::{
     count_notes_tagged, create_note, delete_note, delete_notes, delete_tags, duplicate_note,
     empty_trash, fill_placeholders, get_note, list_global_placeholders, list_revisions, list_tags,
@@ -27,6 +27,7 @@ fn everything(search: &str) -> NotesQuery {
         languages: Vec::new(),
         kinds: Vec::new(),
         priorities: Vec::new(),
+        order: NoteOrder::default(),
         now: Utc::now(),
         tz_offset_minutes: 0,
         pinned_first: true,

@@ -19,6 +19,8 @@ macro_rules! closed_enum {
             Default,
             PartialEq,
             Eq,
+            PartialOrd,
+            Ord,
             Hash,
             serde::Serialize,
             serde::Deserialize,

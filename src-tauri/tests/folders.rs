@@ -471,7 +471,7 @@ mod board {
     use devnotes_lib::folders::board::{self, BoardFrame, BoardPoint, BoardQuery, BoardView};
     use devnotes_lib::folders::store::board as geometry;
     use devnotes_lib::notes::store::fetch;
-    use devnotes_lib::notes::view::{NoteFilter, NotesQuery};
+    use devnotes_lib::notes::view::{NoteFilter, NoteOrder, NotesQuery};
 
     fn request(space_id: &str) -> BoardQuery {
         BoardQuery {
@@ -500,6 +500,7 @@ mod board {
                 languages: Vec::new(),
                 kinds: Vec::new(),
                 priorities: Vec::new(),
+                order: NoteOrder::default(),
                 now: query.now,
                 tz_offset_minutes: 0,
                 pinned_first: true,
@@ -997,6 +998,7 @@ mod board {
                 languages: Vec::new(),
                 kinds: Vec::new(),
                 priorities: Vec::new(),
+                order: NoteOrder::default(),
                 now: t1(),
                 tz_offset_minutes: 0,
                 pinned_first: true,
@@ -1619,7 +1621,7 @@ mod gesture {
 #[test]
 fn a_card_inside_an_opened_folder_carries_no_chip() {
     use devnotes_lib::folders::store::by_id;
-    use devnotes_lib::notes::view::{self, NoteFilter, NotesQuery};
+    use devnotes_lib::notes::view::{self, NoteFilter, NoteOrder, NotesQuery};
 
     let mut connection = open_in_memory().unwrap();
     let sql = space(&mut connection, "SQL");
@@ -1642,6 +1644,7 @@ fn a_card_inside_an_opened_folder_carries_no_chip() {
         languages: Vec::new(),
         kinds: Vec::new(),
         priorities: Vec::new(),
+        order: NoteOrder::default(),
         now: t1(),
         tz_offset_minutes: 0,
         pinned_first: true,

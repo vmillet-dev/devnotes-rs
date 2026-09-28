@@ -417,6 +417,17 @@ describe('NoteCardComponent', () => {
       expect(text('.card-footer span')).toBe('expire dans 3j');
     });
 
+    /** A list sorted by creation says so on each card. */
+    it('names the creation date when that is what the list is sorted by', async () => {
+      fixture.componentRef.setInput(
+        'note',
+        createNote({ footer: { kind: 'created', at: new Date('2026-01-10T11:00:00Z') } }),
+      );
+      await fixture.whenStable();
+
+      expect(text('.card-footer span')).toBe('créée il y a 1h');
+    });
+
     it('renders an age footer as a relative time', async () => {
       fixture.componentRef.setInput(
         'note',
@@ -424,7 +435,7 @@ describe('NoteCardComponent', () => {
       );
       await fixture.whenStable();
 
-      expect(text('.card-footer span')).toBe('il y a 1h');
+      expect(text('.card-footer span')).toBe('modifiée il y a 1h');
     });
 
     it('renders a source footer as plain text, with nothing to translate', async () => {
