@@ -1,5 +1,6 @@
 import { Injectable, Signal, computed, effect, inject } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
+import { firstValueFrom } from 'rxjs';
 import { LocaleChoice } from '@core/services/settings/app-settings.model';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { AppLocale, DEFAULT_LOCALE, isAppLocale, resolveSystemLocale } from './locale.model';
@@ -31,10 +32,12 @@ export class LocaleService {
 
   /**
    * Called after `SettingsStore.restore()`: the effect above only flushes after the
-   * first render, which would show the interface in one language then the other.
+   * first render, which would show the interface in one language then the other. It
+   * resolves once that language's chunk is in, so the first render has its strings.
    */
-  restore(): void {
+  async restore(): Promise<void> {
     this.apply(this.settings.locale());
+    await firstValueFrom(this.transloco.load(this.transloco.getActiveLang()));
   }
 
   setLocale(choice: LocaleChoice): void {

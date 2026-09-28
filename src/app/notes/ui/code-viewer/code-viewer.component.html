@@ -1,6 +1,4 @@
 @for (line of lines(); track $index) {
-  <!-- <span> and not <div>: the viewer is inserted into a card's <button>, whose
-       content model admits only phrasing content. -->
   <span class="code-line">
     @if (showLineNumbers()) {
       <!-- Purely visual: a screen reader would announce "1 2 3 …" between every line. -->

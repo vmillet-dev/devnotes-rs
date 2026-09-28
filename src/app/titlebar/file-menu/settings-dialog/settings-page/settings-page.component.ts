@@ -11,7 +11,7 @@ import {
   ThemeChoice,
 } from '@core/services/settings/app-settings.model';
 import { SettingsDraftStore } from '@core/services/settings/settings-draft.store';
-import { ChoiceMenuComponent, ChoiceOption } from '@notes/ui/choice-menu/choice-menu.component';
+import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
 import {
   Segment,
   SegmentedChoiceComponent,

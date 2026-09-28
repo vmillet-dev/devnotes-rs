@@ -2,8 +2,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  afterRenderEffect,
   computed,
-  effect,
   inject,
   input,
   output,
@@ -186,7 +186,7 @@ export class NoteCardComponent {
   constructor() {
     // Real focus follows the state, or arrow navigation moves an outline without
     // taking the keyboard with it.
-    effect(() => {
+    afterRenderEffect(() => {
       if (this.focused() && canTakeFocus(this.cardButton().nativeElement)) {
         this.cardButton().nativeElement.focus({ preventScroll: false });
       }

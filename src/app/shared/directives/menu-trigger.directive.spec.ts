@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, signal, viewChild } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MenuTriggerDirective } from './menu-trigger.directive';
 
 @Component({
@@ -91,6 +91,26 @@ describe('MenuTriggerDirective', () => {
 
     expect(menu().open()).toBe(false);
     expect(document.activeElement).toBe(element('outside'));
+  });
+
+  it('listens to the document only while open', async () => {
+    const added = vi.spyOn(document, 'addEventListener');
+    const removed = vi.spyOn(document, 'removeEventListener');
+    const clicks = (spy: typeof added): number => spy.mock.calls.filter(([type]) => type === 'click').length;
+
+    element('outside')!.click();
+    await fixture.whenStable();
+    expect(clicks(added)).toBe(0);
+
+    await open();
+    expect(clicks(added)).toBe(1);
+
+    element('outside')!.click();
+    await fixture.whenStable();
+    expect(clicks(removed)).toBe(1);
+
+    added.mockRestore();
+    removed.mockRestore();
   });
 
   it('stays open for a click inside itself', async () => {

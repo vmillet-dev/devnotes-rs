@@ -9,7 +9,8 @@ import { dialogRung } from '@shared/layout/dialog/dialog.model';
 import { NotesHarness, awaitQuery, createNotesHarness } from '@testing/notes-harness';
 import { createNote } from '@testing/note.fixture';
 import { ShortcutBindingsStore } from '@core/services/shortcuts/shortcut-bindings.store';
-import { CANVAS_ACTIONS, CANVAS_SHORTCUT_GROUP, CanvasKeyboardDirective } from './canvas-keyboard.directive';
+import { CANVAS_ACTIONS, CANVAS_SHORTCUT_GROUP } from './canvas-keys';
+import { CanvasKeyboardDirective } from './canvas-keyboard.directive';
 
 @Component({
   selector: 'app-canvas-keyboard-host',

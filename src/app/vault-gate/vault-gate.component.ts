@@ -14,7 +14,7 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { MINIMUM_PASSPHRASE_LENGTH } from '@core/model/vault.model';
 import { LibrariesStore } from '@core/state/libraries.store';
 import { VaultStore } from '@core/state/vault.store';
-import { ChoiceMenuComponent, ChoiceOption } from '../notes/ui/choice-menu/choice-menu.component';
+import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
 
 /**
  * The screen that stands in front of everything until the library is open.

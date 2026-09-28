@@ -1,8 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { RouterOutlet, provideRouter } from '@angular/router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ErrorBannerComponent } from '@banners/error-banner/error-banner.component';
+import { NotesPageComponent } from '@notes/notes-page.component';
 import { TitlebarComponent } from '@titlebar/titlebar.component';
 import { UpdatePromptComponent } from '@banners/update-prompt/update-prompt.component';
 import { provideAppTesting } from '@testing/testing.providers';
@@ -20,7 +20,7 @@ describe('AppComponent', () => {
     localStorage.clear();
     TestBed.configureTestingModule({
       imports: [AppComponent],
-      providers: [provideAppTesting(), provideRouter([])],
+      providers: [provideAppTesting()],
     });
     fixture = TestBed.createComponent(AppComponent);
     fixture.autoDetectChanges();
@@ -39,21 +39,22 @@ describe('AppComponent', () => {
     expect(fixture.debugElement.query(By.directive(UpdatePromptComponent))).not.toBeNull();
   });
 
-  it('hosts features through the router outlet rather than importing them directly', async () => {
+  it('shows the notes page once the library is unlocked', async () => {
     await withVault('unlocked');
 
-    expect(fixture.debugElement.query(By.directive(RouterOutlet))).not.toBeNull();
+    expect(fixture.debugElement.query(By.directive(NotesPageComponent))).not.toBeNull();
+    expect(fixture.debugElement.query(By.directive(VaultGateComponent))).toBeNull();
   });
 
   /**
-   * The outlet is not merely hidden while the library is locked: it is not created.
+   * The page is not merely hidden while the library is locked: it is not created.
    * The canvas queries notes the moment it mounts, and there would be nothing to answer.
    */
-  it('puts the gate in front of the outlet while the library is locked', async () => {
+  it('puts the gate in front of the notes page while the library is locked', async () => {
     await withVault('locked');
 
     expect(fixture.debugElement.query(By.directive(VaultGateComponent))).not.toBeNull();
-    expect(fixture.debugElement.query(By.directive(RouterOutlet))).toBeNull();
+    expect(fixture.debugElement.query(By.directive(NotesPageComponent))).toBeNull();
   });
 
   /** A library that has never been encrypted asks for a passphrase to be chosen. */
@@ -66,6 +67,6 @@ describe('AppComponent', () => {
   /** Before the answer lands, neither: the shell would flash a screen it is replacing. */
   it('renders neither until Rust has answered', () => {
     expect(fixture.debugElement.query(By.directive(VaultGateComponent))).toBeNull();
-    expect(fixture.debugElement.query(By.directive(RouterOutlet))).toBeNull();
+    expect(fixture.debugElement.query(By.directive(NotesPageComponent))).toBeNull();
   });
 });

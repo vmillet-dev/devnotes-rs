@@ -1,22 +1,30 @@
 import { Injectable } from '@angular/core';
 import { Translation, TranslocoLoader } from '@jsverse/transloco';
-import { Observable, of } from 'rxjs';
 import { APP_INFO } from '@core/services/app-info/app-info.service';
-import en from './translations/en.json';
-import fr from './translations/fr.json';
+import { AppLocale, isAppLocale } from './locale.model';
 
-const TRANSLATIONS: Record<string, Translation> = { fr, en };
+/** `Record`: a locale added to `APP_LOCALES` stops this compiling until it has its file. */
+const TRANSLATIONS: Readonly<Record<AppLocale, () => Promise<{ default: Translation }>>> = {
+  fr: () => import('./translations/fr.json'),
+  en: () => import('./translations/en.json'),
+};
 
 /**
- * Bundled at build time rather than fetched over HTTP. The files live outside
- * `src/assets` on purpose: the asset glob would ship a second, unread copy in `dist`.
+ * ⚠️ `app` is not a string anyone reads: it is what `{{app}}` resolves to. Transloco falls
+ * back to a sibling key when an interpolation is not in the params, so the name reaches
+ * every string without a call site passing it.
+ */
+export function withAppName(translation: Translation): Translation {
+  return { ...translation, app: APP_INFO.name };
+}
+
+/**
+ * One chunk per language, imported when it becomes active rather than fetched over HTTP. The
+ * files live outside `src/assets` on purpose: the asset glob would ship a second, unread copy.
  */
 @Injectable({ providedIn: 'root' })
 export class AppTranslocoLoader implements TranslocoLoader {
-  getTranslation(lang: string): Observable<Translation> {
-    // ⚠️ `app` is not a string anyone reads: it is what `{{app}}` resolves to. Transloco
-    // falls back to a sibling key when an interpolation is not in the params, so the name
-    // reaches every string without a call site passing it.
-    return of({ ...(TRANSLATIONS[lang] ?? {}), app: APP_INFO.name });
+  async getTranslation(lang: string): Promise<Translation> {
+    return withAppName(isAppLocale(lang) ? (await TRANSLATIONS[lang]()).default : {});
   }
 }

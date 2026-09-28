@@ -77,17 +77,26 @@
   }
 </div>
 
+<!-- Deferred: each panel is a chunk of its own, fetched the first time it opens. -->
 @switch (help.panel()) {
   @case ('whatsNew') {
-    <app-whats-new-dialog (closed)="closePanel()" />
+    @defer (on immediate) {
+      <app-whats-new-dialog (closed)="closePanel()" />
+    }
   }
   @case ('gettingStarted') {
-    <app-getting-started-dialog [startAt]="help.chapter() ?? 'notes'" (closed)="closePanel()" />
+    @defer (on immediate) {
+      <app-getting-started-dialog [startAt]="help.chapter() ?? 'notes'" (closed)="closePanel()" />
+    }
   }
   @case ('shortcuts') {
-    <app-shortcuts-dialog (closed)="closePanel()" />
+    @defer (on immediate) {
+      <app-shortcuts-dialog (closed)="closePanel()" />
+    }
   }
   @case ('about') {
-    <app-about-dialog (closed)="closePanel()" />
+    @defer (on immediate) {
+      <app-about-dialog (closed)="closePanel()" />
+    }
   }
 }

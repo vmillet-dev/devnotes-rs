@@ -64,9 +64,9 @@
   --space-canvas: 24px;
 
   // Shipped with the binary through @fontsource: Google Fonts would mean degraded type
-  // offline and a CSP that could not be locked down.
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  // offline and a CSP that could not be locked down. Variable: one file per script.
+  --font-sans: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   /* Tells the browser — WebView2 on Windows — that this application is dark by
      design, so the OS theme does not repaint the native <input>s, <select>s,

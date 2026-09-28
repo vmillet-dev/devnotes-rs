@@ -36,23 +36,26 @@
     } @else if (board.isLoading()) {
       <p class="canvas-state-text">{{ 'notes.loading' | transloco }}</p>
     } @else {
-      <app-board
-        [zones]="board.zones()"
-        [loose]="board.loose()"
-        [width]="board.width()"
-        [height]="board.height()"
-        [arrangements]="board.arrangements()"
-        [restorations]="board.restorations()"
-        (noteActivated)="onNoteActivated($event)"
-        (folderOpened)="folders.selectFolder($event)"
-        (cardDropped)="onCardDropped($event)"
-        (zoneMoved)="board.moveZone($event.folderId, $event.frame)"
-        (zoneDrawn)="onZoneDrawn($event)"
-        (folderNotesSelected)="selection.checkFolder($event)"
-        (notesBanded)="selection.checkMany($event)"
-        (tidyRequested)="batch.arrangeBoard($event)"
-        (guideRequested)="help.open('folders')"
-      />
+      <!-- Its own chunk: most sessions never show the board. -->
+      @defer (on immediate) {
+        <app-board
+          [zones]="board.zones()"
+          [loose]="board.loose()"
+          [width]="board.width()"
+          [height]="board.height()"
+          [arrangements]="board.arrangements()"
+          [restorations]="board.restorations()"
+          (noteActivated)="onNoteActivated($event)"
+          (folderOpened)="folders.selectFolder($event)"
+          (cardDropped)="onCardDropped($event)"
+          (zoneMoved)="board.moveZone($event.folderId, $event.frame)"
+          (zoneDrawn)="onZoneDrawn($event)"
+          (folderNotesSelected)="selection.checkFolder($event)"
+          (notesBanded)="selection.checkMany($event)"
+          (tidyRequested)="batch.arrangeBoard($event)"
+          (guideRequested)="help.open('folders')"
+        />
+      }
     }
   } @else {
     @let error = canvas.loadError();

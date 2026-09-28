@@ -3,7 +3,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { GUIDE_CHAPTERS, GuideChapter } from '@core/services/help/guide.model';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { DEFAULT_SHORTCUTS } from '@core/services/shortcuts/shortcut.model';
-import { CHECK_KEY } from '@notes/canvas-keyboard.directive';
+import { CHECK_KEY } from '@notes/canvas-keys';
 import { DialogComponent } from '@shared/layout/dialog/dialog.component';
 import { GuideFigureComponent } from './guide-figure/guide-figure.component';
 

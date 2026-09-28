@@ -38,7 +38,7 @@ import { PlaceholderPanelComponent } from './placeholder-panel/placeholder-panel
 import { RevisionPanelComponent } from './revision-panel/revision-panel.component';
 import { RichTextEditorComponent } from './rich-text-editor/rich-text-editor.component';
 import { applyEdit, indent, indentUnit, outdent } from './indentation';
-import { ChoiceMenuComponent, ChoiceOption } from '@notes/ui/choice-menu/choice-menu.component';
+import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
 import { TagPillComponent } from '@notes/ui/tag-pill/tag-pill.component';
 
 const TEXT_ENCODER = new TextEncoder();

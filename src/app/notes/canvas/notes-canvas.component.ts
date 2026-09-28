@@ -11,7 +11,9 @@ import { NotesStore } from '@core/state/notes.store';
 import { SpacesStore } from '@core/state/spaces.store';
 import { HelpStore } from '@core/services/help/help.store';
 import { SelectionBarComponent } from '../header/selection-bar/selection-bar.component';
-import { BoardComponent, CardDrop } from './board/board.component';
+// ⚠️ The type apart: a value import sharing the component's line would keep it eager.
+import { BoardComponent } from './board/board.component';
+import type { CardDrop } from './board/board.component';
 import { NoteActivation } from './note-card/note-card.component';
 import { NoteSectionComponent } from './note-section/note-section.component';
 

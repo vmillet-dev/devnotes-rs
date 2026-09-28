@@ -1,4 +1,4 @@
-import { Directive, ElementRef, inject, output, signal } from '@angular/core';
+import { DOCUMENT, Directive, ElementRef, effect, inject, output, signal } from '@angular/core';
 
 /**
  * A dropdown's open/closed state. Focus returns to `[appMenuAnchor]` on close, which it
@@ -8,10 +8,7 @@ import { Directive, ElementRef, inject, output, signal } from '@angular/core';
 @Directive({
   selector: '[appMenuTrigger]',
   exportAs: 'appMenu',
-  host: {
-    '(document:click)': 'onDocumentClick($event)',
-    '(keydown.escape)': 'onEscape($event)',
-  },
+  host: { '(keydown.escape)': 'onEscape($event)' },
 })
 export class MenuTriggerDirective {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -20,6 +17,22 @@ export class MenuTriggerDirective {
   readonly open = this._open.asReadonly();
 
   readonly closed = output<void>();
+
+  constructor() {
+    const document = inject(DOCUMENT);
+
+    // ⚠️ Not a host `(document:click)`: every card carries a menu, and Angular marks a
+    // listener's view dirty before calling it, so each click re-rendered every card.
+    effect((onCleanup) => {
+      if (!this._open()) return;
+
+      const closeIfOutside = (event: MouseEvent): void => {
+        if (!this.host.nativeElement.contains(event.target as Node)) this.close(false);
+      };
+      document.addEventListener('click', closeIfOutside);
+      onCleanup(() => document.removeEventListener('click', closeIfOutside));
+    });
+  }
 
   private escapeHandler: (event: Event) => void = () => this.close();
 
@@ -55,11 +68,5 @@ export class MenuTriggerDirective {
   protected onEscape(event: Event): void {
     if (this._open()) event.stopPropagation();
     this.escapeHandler(event);
-  }
-
-  protected onDocumentClick(event: MouseEvent): void {
-    if (this._open() && !this.host.nativeElement.contains(event.target as Node)) {
-      this.close(false);
-    }
   }
 }
