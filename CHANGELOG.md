@@ -12,6 +12,23 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [0.6.0] - 2026-09-28
+
+### ✨ Added
+
+- Filter the canvas by kind, with counts (#504)
+- Hold code blocks in a Note (#503)
+- Show a Note's structure on its card (#502)
+- Write a Note in an editor of its own (#501)
+- Create a Note from the menu and the keyboard (#500)
+- Make Note a kind of its own (#499)
+
+### 🧰 Under the hood
+
+- Bump the version to 0.6.0
+- Stop re-rendering every card on a click, and bring the initial bundle back under budget (#442)
+- Stop queuing stale queries behind the lock, and read the library through a mapping (#445)
+
 ## [0.5.2] - 2026-09-25
 
 ### 🧰 Under the hood
