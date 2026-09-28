@@ -189,6 +189,11 @@ describe('Editing a note', () => {
       await bold.waitForExist({ timeout: 10_000 });
       expect(await bold.getText()).toBe('Ship');
 
+      // Its kind where a snippet names its format, and its words — seven — in the footer.
+      expect(await $(testid('editor-kind')).isExisting()).toBe(true);
+      expect(await $(testid('choice-language')).isExisting()).toBe(false);
+      expect(await $(testid('editor-stats')).getText()).toContain('7');
+
       await $(`${testid('editor-rich')} input[type="checkbox"]`).click();
       await editor.close();
 

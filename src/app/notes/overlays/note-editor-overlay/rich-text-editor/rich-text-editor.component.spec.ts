@@ -64,6 +64,27 @@ describe('RichTextEditorComponent', () => {
     vi.restoreAllMocks();
   });
 
+  /** Headings, what marks words, blocks, then what is inserted: the mockup's order. */
+  it('lays its tools out in four groups, the link among the marks', () => {
+    const groups: HTMLElement[] = [...fixture.nativeElement.querySelectorAll('.rich-group')];
+    const ids = groups.map((group) =>
+      [...group.querySelectorAll('.rich-tool')].map((tool) => tool.getAttribute('data-testid')),
+    );
+
+    expect(ids).toEqual([
+      ['rich-h1', 'rich-h2', 'rich-h3'],
+      ['rich-bold', 'rich-italic', 'rich-strike', 'rich-code', 'rich-link'],
+      ['rich-bullet', 'rich-ordered', 'rich-tasks', 'rich-quote'],
+      ['rich-table'],
+    ]);
+  });
+
+  it('names each block tool with the key that does the same', () => {
+    expect(button('rich-h1').title).toContain('Ctrl+Alt+1');
+    expect(button('rich-bullet').title).toContain('Ctrl+Maj+8');
+    expect(button('rich-quote').title).toContain('Ctrl+Maj+B');
+  });
+
   it('shows the Markdown it is given as formatted text', async () => {
     await open('# Title\n\n**bold** and a [link](https://example.com)\n\n- [x] done');
 
@@ -115,6 +136,18 @@ describe('RichTextEditorComponent', () => {
       button('rich-link-apply').click();
       await fixture.whenStable();
     }
+
+    it('opens from its tool, which stays pressed while the form is open', async () => {
+      await open('runbook');
+      await press('a', { ctrlKey: true });
+      expect(button('rich-link').getAttribute('aria-pressed')).toBe('false');
+
+      button('rich-link').click();
+      await fixture.whenStable();
+
+      expect(field('rich-link-text').value).toBe('runbook');
+      expect(button('rich-link').getAttribute('aria-pressed')).toBe('true');
+    });
 
     it('links the selection from Ctrl+K, starting from its words', async () => {
       await open('runbook');

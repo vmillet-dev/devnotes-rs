@@ -29,6 +29,8 @@
           [currentId]="note.language"
           (chosen)="onLanguageChange($event ?? note.language)"
         />
+      } @else if (isRichText()) {
+        <span class="kind-badge" data-testid="editor-kind">{{ 'editor.noteKind' | transloco }}</span>
       }
 
       <button
@@ -256,12 +258,14 @@
     <app-revision-panel />
 
     <div class="overlay-footer" data-testid="editor-footer">
-      <span>
+      <span data-testid="editor-stats">
         @if (isChecklist()) {
           {{
             'editor.checklistStats'
               | transloco: { done: checklistStats().done, total: checklistStats().total }
           }}
+        } @else if (isRichText()) {
+          {{ 'editor.noteStats' | transloco: { count: wordCount() } }}
         } @else {
           {{ languageLabel() }} ·
           {{ 'editor.footerStats' | transloco: { lines: lineCount(), bytes: byteSize() } }}

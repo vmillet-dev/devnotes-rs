@@ -38,6 +38,7 @@ import { PlaceholderPanelComponent } from './placeholder-panel/placeholder-panel
 import { RevisionPanelComponent } from './revision-panel/revision-panel.component';
 import { RichTextEditorComponent } from './rich-text-editor/rich-text-editor.component';
 import { applyEdit, indent, indentUnit, outdent } from './indentation';
+import { countWords } from './word-count';
 import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
 import { TagPillComponent } from '@notes/ui/tag-pill/tag-pill.component';
 
@@ -176,6 +177,7 @@ export class NoteEditorOverlayComponent {
     () => LANGUAGE_LABELS[this.note()?.language ?? FALLBACK_LANGUAGE],
   );
   protected readonly lineCount = computed(() => (this.note() ? this.draftContent().split('\n').length : 0));
+  protected readonly wordCount = computed(() => countWords(this.draftContent()));
   protected readonly byteSize = computed(() => TEXT_ENCODER.encode(this.draftContent()).length);
   protected readonly modifiedRef = computed(() => {
     const note = this.note();
