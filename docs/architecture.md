@@ -1860,6 +1860,17 @@ level for the whole batch. ⚠️ Neither moves `updated_at`: triaging is not ed
 given a priority would jump to the head of a list sorted by modification. That is why the
 priority never travels in a `NotePatch`, whose `apply` moves `updated_at` for every field.
 
+**On screen, a priority is said three ways**: a pill on the card (`PriorityPillComponent`, in
+`notes/ui/`) with three bars and the level's name, in a hue that only repeats them — none at
+`none`. It is set from the card menu, from the digits 0 to 4 on the pointed card (one fixed
+entry of `CANVAS_KEYS`, like the arrows), from the editor's toolbar and from the selection bar;
+`PRIORITIES` (`core/model/priority.model.ts`) lists the levels in key order for all four. One
+note goes through `NotesStore.setPriority`, a batch of one with its undo, like filing; a draft
+takes a level the way it takes a pin — it becomes worth keeping. The card menu's **submenu is
+the first** in the application: a sibling of the panel and not a child, or the panel's arrows
+would walk into it; → opens it, ← and Escape fold it back onto its entry before Escape closes
+the menu, and it opens on the current level (`MenuPanelDirective.opensOnChecked`).
+
 ### `{{fields}}` in a snippet
 
 A snippet like `psql -h {{host}} -p {{port=5432}}` is worth copying **filled in**. What counts

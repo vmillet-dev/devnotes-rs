@@ -56,6 +56,11 @@ export const selectionBar = {
     await submitFormOf(testid('selection-tag'));
   },
 
+  async prioritise(level: string): Promise<void> {
+    await $(testid('choice-selection-priority')).click();
+    await $(`${testid('choice-panel-selection-priority')} [data-option-id="${level}"]`).click();
+  },
+
   async delete(): Promise<void> {
     const button = $(testid('selection-delete'));
     await button.click();
