@@ -59,6 +59,11 @@ describe('RichTextEditorComponent', () => {
     await mount('');
   });
 
+  afterEach(() => {
+    fixture.nativeElement.remove();
+    vi.restoreAllMocks();
+  });
+
   /** Headings, what marks words, blocks, then what is inserted: the mockup's order. */
   it('lays its tools out in four groups, the link among the marks', () => {
     const groups: HTMLElement[] = [...fixture.nativeElement.querySelectorAll('.rich-group')];
@@ -78,11 +83,6 @@ describe('RichTextEditorComponent', () => {
     expect(button('rich-h1').title).toContain('Ctrl+Alt+1');
     expect(button('rich-bullet').title).toContain('Ctrl+Maj+8');
     expect(button('rich-quote').title).toContain('Ctrl+Maj+B');
-  });
-
-  afterEach(() => {
-    fixture.nativeElement.remove();
-    vi.restoreAllMocks();
   });
 
   it('shows the Markdown it is given as formatted text', async () => {
@@ -136,6 +136,18 @@ describe('RichTextEditorComponent', () => {
       button('rich-link-apply').click();
       await fixture.whenStable();
     }
+
+    it('opens from its tool, which stays pressed while the form is open', async () => {
+      await open('runbook');
+      await press('a', { ctrlKey: true });
+      expect(button('rich-link').getAttribute('aria-pressed')).toBe('false');
+
+      button('rich-link').click();
+      await fixture.whenStable();
+
+      expect(field('rich-link-text').value).toBe('runbook');
+      expect(button('rich-link').getAttribute('aria-pressed')).toBe('true');
+    });
 
     it('links the selection from Ctrl+K, starting from its words', async () => {
       await open('runbook');
