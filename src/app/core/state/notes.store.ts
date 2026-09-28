@@ -62,6 +62,7 @@ function emptyNote(spaceId: string, now: Date, kind: NoteKind, folderId: string 
     copyText: null,
     searchHit: null,
     truncated: false,
+    outline: [],
   };
 }
 

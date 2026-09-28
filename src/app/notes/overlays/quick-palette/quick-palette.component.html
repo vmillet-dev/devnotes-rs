@@ -46,7 +46,7 @@
           (click)="highlightSet.emit(index); openRequested.emit(note)"
         >
           <span class="palette-option-head">
-            <app-language-badge [language]="note.language" />
+            <app-kind-badge [kind]="note.kind" [language]="note.language" />
             <span class="palette-option-title">
               {{ note.title || ('notes.untitled' | transloco) }}
             </span>

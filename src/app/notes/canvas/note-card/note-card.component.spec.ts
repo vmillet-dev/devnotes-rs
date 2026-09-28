@@ -320,6 +320,45 @@ describe('NoteCardComponent', () => {
     expect(tags.map((tag) => tag.nativeElement.textContent)).toEqual(['#a', '#b']);
   });
 
+  describe('what kind it is', () => {
+    const badge = (): string =>
+      fixture.nativeElement.querySelector('[data-testid="kind-badge"]')?.textContent.trim() ?? '';
+
+    it('names a list and a Note by their kind, not by the language they are stored with', async () => {
+      fixture.componentRef.setInput('note', createNote({ kind: 'checklist' }));
+      await fixture.whenStable();
+      expect(badge()).toBe('✓ Tâches');
+
+      fixture.componentRef.setInput('note', createNote({ kind: 'note', language: 'txt' }));
+      await fixture.whenStable();
+      expect(badge()).toBe('Note');
+    });
+
+    /** The shape Rust read; a search quotes the line it found instead. */
+    it('draws a Note as its outline, and a search hit as the line it found', async () => {
+      const outline = [
+        { kind: 'heading', text: 'Décisions' },
+        { kind: 'item', text: 'Bascule le 14/10', depth: 0, marker: '•' },
+      ] as const;
+      fixture.componentRef.setInput('note', createNote({ kind: 'note', outline: [...outline] }));
+      await fixture.whenStable();
+
+      const drawn = fixture.nativeElement.querySelector('[data-testid="note-card-outline"]');
+      expect(drawn.querySelector('.outline-heading').textContent).toBe('Décisions');
+
+      fixture.componentRef.setInput(
+        'note',
+        createNote({
+          kind: 'note',
+          outline: [...outline],
+          searchHit: { field: 'body', excerpt: '• Bascule' },
+        }),
+      );
+      await fixture.whenStable();
+      expect(fixture.nativeElement.querySelector('[data-testid="note-card-outline"]')).toBeNull();
+    });
+  });
+
   describe('the folder chip', () => {
     it('names the folder and carries its colour as a swatch', async () => {
       fixture.componentRef.setInput(
