@@ -87,6 +87,26 @@ describe('Selecting several notes at once', () => {
     expect((await reread(second))?.tags).toEqual(['batch']);
   });
 
+  /** Triaging is not editing: a list sorted by modification must not reshuffle under it. */
+  it('gives a priority without moving the modification date, and takes it back note by note', async () => {
+    const one = await reread(first);
+    const two = await reread(second);
+    if (one === undefined || two === undefined) throw new Error('the batch notes are not on the canvas');
+    await bridge.setPriority([two.id], 'low');
+
+    const previous = await bridge.setPriority([one.id, two.id], 'urgent');
+    const urgent = await bridge.getNote(one.id);
+    await bridge.restorePriorities(previous);
+
+    const had = Object.fromEntries(previous.map((change) => [change.noteId, change.priority]));
+    expect(had).toEqual({ [one.id]: 'none', [two.id]: 'low' });
+    expect(urgent.priority).toBe('urgent');
+    expect(urgent.updatedAt).toBe(one.updatedAt);
+    expect((await bridge.getNote(one.id)).priority).toBe('none');
+    expect((await bridge.getNote(two.id)).priority).toBe('low');
+    await bridge.setPriority([two.id], 'none');
+  });
+
   it('copies the selection as Markdown', async function () {
     await selectionBar.copy();
 

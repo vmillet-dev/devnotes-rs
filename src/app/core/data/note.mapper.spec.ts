@@ -42,6 +42,12 @@ describe('toNote', () => {
     expect(note.updatedAt.toISOString()).toBe('2026-01-02T10:00:00.000Z');
   });
 
+  /** `#[serde(default)]` makes the key optional on the wire. */
+  it('reads a note without a priority as having none', () => {
+    expect(toNote(BASE_DTO).priority).toBe('none');
+    expect(toNote({ ...BASE_DTO, priority: 'high' }).priority).toBe('high');
+  });
+
   it('parses the expiry date of an expiring lifecycle', () => {
     const note = toNote({ ...BASE_DTO, lifecycle: { kind: 'expires', at: '2026-03-01T00:00:00.000Z' } });
 
@@ -121,6 +127,7 @@ describe('toWireNoteDraft', () => {
       pinned: false,
       lifecycle: { kind: 'expires', at: new Date('2026-05-01T00:00:00.000Z') },
       kind: 'snippet',
+      priority: 'high',
       items: [],
     };
 
@@ -137,6 +144,7 @@ describe('toWireNoteDraft', () => {
       pinned: false,
       lifecycle: { kind: 'expires', at: '2026-05-01T00:00:00.000Z' },
       kind: 'snippet',
+      priority: 'high',
       items: [],
     });
     expect(dto).not.toHaveProperty('id');

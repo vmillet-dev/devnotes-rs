@@ -61,6 +61,10 @@ export const commands = {
 	tagNotes: (ids: string[], tags: string[]) => typedError<NoteTag[], AppError>(__TAURI_INVOKE("tag_notes", { ids, tags })),
 	/**  The undo of [`tag_notes`]: exactly the pairs it added, and nothing wider. */
 	untagNotes: (pairs: NoteTag[]) => typedError<number, AppError>(__TAURI_INVOKE("untag_notes", { pairs })),
+	/**  Answers each note whose priority moved, with the one it had; `updated_at` stays. */
+	setPriority: (ids: string[], priority: Priority) => typedError<NotePriority[], AppError>(__TAURI_INVOKE("set_priority", { ids, priority })),
+	/**  The undo of [`set_priority`]: each note gets back the priority it had. */
+	restorePriorities: (previous: NotePriority[]) => typedError<number, AppError>(__TAURI_INVOKE("restore_priorities", { previous })),
 	/**  What a corpus-wide tag action is about to touch, asked before it runs. */
 	countNotesTagged: (tags: string[]) => typedError<number, AppError>(__TAURI_INVOKE("count_notes_tagged", { tags })),
 	listTags: () => typedError<TagUsage[], AppError>(__TAURI_INVOKE("list_tags")),
@@ -570,6 +574,8 @@ export type Note = {
 	 *  lists carry no such key.
 	 */
 	kind?: NoteKind,
+	/**  Set by `set_priority` alone, which leaves `updated_at` alone: triaging is not editing. */
+	priority?: Priority,
 	/**  A checklist has these instead of `content`. */
 	items?: ChecklistItem[],
 	/**  Written by `set_placeholder_values` alone, which leaves `updated_at` alone. */
@@ -588,6 +594,7 @@ export type NoteDraft = {
 	pinned: boolean,
 	lifecycle: NoteLifecycle,
 	kind?: NoteKind,
+	priority?: Priority,
 	items?: ChecklistItem[],
 };
 
@@ -650,6 +657,12 @@ export type NotePatch = {
 export type NotePlacement = {
 	noteId: string,
 	spaceId: string,
+};
+
+/**  A note's priority before a batch moved it: its undo puts back each note's own. */
+export type NotePriority = {
+	noteId: string,
+	priority: Priority,
 };
 
 export type NoteSection = {
@@ -734,6 +747,12 @@ export type Placeholder = {
 	 */
 	value: string,
 };
+
+/**
+ *  Not sealed: SQL filters and sorts on it. Declared from the least to the most pressing,
+ *  the order of the keys 0 to 4.
+ */
+export type Priority = "none" | "low" | "medium" | "high" | "urgent";
 
 /**  What the File menu draws: the libraries, and which of them is open. */
 export type Registry = {

@@ -325,6 +325,7 @@ mod tests {
         use crate::notes::kind::NoteKind;
         use crate::notes::language::Language;
         use crate::notes::model::{NoteDraft, NoteLifecycle};
+        use crate::notes::priority::Priority;
         use crate::notes::view::{NoteFilter, NotesQuery};
 
         let mut library = crate::db::open_in_memory().unwrap();
@@ -343,6 +344,7 @@ mod tests {
                 pinned: false,
                 lifecycle: NoteLifecycle::Permanent,
                 kind: NoteKind::Checklist,
+                priority: Priority::None,
                 items: vec![ChecklistItem {
                     text: "Restart".to_string(),
                     done: false,

@@ -16,8 +16,10 @@ import type {
   ImportReport,
   NoteDraft,
   NotePatch,
+  NotePriority,
   NotesQuery,
   NotesView,
+  Priority,
   Registry,
   Space,
   SpaceDraft,
@@ -81,6 +83,10 @@ export const bridge = {
   deleteNotes: (ids: string[]) => invoke<number>('delete_notes', { ids }),
   moveNotes: (ids: string[], spaceId: string) => invoke<number>('move_notes', { ids, spaceId }),
   tagNotes: (ids: string[], tags: string[]) => invoke<number>('tag_notes', { ids, tags }),
+  /** Answers each note whose priority moved, with the one it had: what the undo hands back. */
+  setPriority: (ids: string[], priority: Priority) =>
+    invoke<NotePriority[]>('set_priority', { ids, priority }),
+  restorePriorities: (previous: NotePriority[]) => invoke<number>('restore_priorities', { previous }),
   purgeNotes: (ids: string[]) => invoke<number>('purge_notes', { ids }),
   emptyTrash: () => invoke<number>('empty_trash'),
 

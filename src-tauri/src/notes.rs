@@ -7,6 +7,7 @@ pub mod language;
 pub(crate) mod markdown;
 pub mod model;
 pub mod placeholder;
+pub mod priority;
 pub mod revision;
 pub mod store;
 pub mod trash;
@@ -24,6 +25,7 @@ use crate::folders;
 use crate::spaces::model::SpaceDraft;
 use language::Language;
 use model::{DisplayNote, NoteDraft, NotePatch, SampleNote, TagUsage};
+use priority::Priority;
 use revision::{DiffLine, Revision};
 use trash::TrashedNote;
 use view::{NotesQuery, NotesView};
@@ -377,6 +379,40 @@ pub async fn untag_notes<R: Runtime>(
     .await
 }
 
+/// Answers each note whose priority moved, with the one it had; `updated_at` stays.
+#[tauri::command]
+#[specta::specta]
+pub async fn set_priority<R: Runtime>(
+    ids: Vec<String>,
+    priority: Priority,
+    app: AppHandle<R>,
+) -> Result<Vec<model::NotePriority>, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(store::set_priority_many(&mut connection, &ids, priority)?)
+    })
+    .await
+}
+
+/// The undo of [`set_priority`]: each note gets back the priority it had.
+#[tauri::command]
+#[specta::specta]
+pub async fn restore_priorities<R: Runtime>(
+    previous: Vec<model::NotePriority>,
+    app: AppHandle<R>,
+) -> Result<u32, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(count(store::restore_priorities(
+            &mut connection,
+            &previous,
+        )?))
+    })
+    .await
+}
+
 /// What a corpus-wide tag action is about to touch, asked before it runs.
 #[tauri::command]
 #[specta::specta]
@@ -541,6 +577,7 @@ pub(crate) mod fixtures {
     use super::kind::NoteKind;
     use super::language::Language;
     use super::model::{Note, NoteLifecycle};
+    use super::priority::Priority;
     use crate::db::iso8601;
 
     pub(crate) const NOW: &str = "2026-07-25T09:00:00.000Z";
@@ -564,6 +601,7 @@ pub(crate) mod fixtures {
             updated_at: at(NOW),
             lifecycle: NoteLifecycle::Permanent,
             kind: NoteKind::Snippet,
+            priority: Priority::None,
             items: Vec::new(),
             placeholder_values: BTreeMap::new(),
         }

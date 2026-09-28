@@ -10,7 +10,10 @@ use uuid::Uuid;
 use chrono::{DateTime, TimeDelta, Utc};
 
 use super::kind::NoteKind;
-use super::model::{Note, NoteDraft, NoteLifecycle, NotePatch, NotePlacement, NoteTag, SampleNote};
+use super::model::{
+    Note, NoteDraft, NoteLifecycle, NotePatch, NotePlacement, NotePriority, NoteTag, SampleNote,
+};
+use super::priority::Priority;
 use super::revision;
 use super::view::{self, Decorations, Facets, NoteFilter, NotesQuery};
 use crate::db::schema::{global_placeholders, note_tags, notes};
@@ -38,10 +41,11 @@ pub(super) struct NoteRow {
     lifecycle_expires_at: Option<String>,
     kind: String,
     folder_id: Option<String>,
+    priority: String,
 }
 
 /// Not a `TryFrom`: opening a row needs the key. An unreadable date fails the read — only
-/// [`iso8601::format`] writes these columns — while language and `kind` degrade, since a newer
+/// [`iso8601::format`] writes these columns — while the closed enums degrade, since a newer
 /// version may write a value this build does not know. ⚠️ A value that will not open never
 /// degrades: a wrong key must stop the read, not hand back plausible emptiness.
 impl NoteRow {
@@ -66,6 +70,7 @@ impl NoteRow {
             updated_at: instant("updatedAt", &row.updated_at)?,
             language: row.language.parse().unwrap_or_default(),
             kind: row.kind.parse().unwrap_or_default(),
+            priority: row.priority.parse().unwrap_or_default(),
             title: vault.open(&row.title)?,
             content: vault.open(&row.content)?,
             source: vault.open(&row.source)?,
@@ -99,6 +104,7 @@ impl NoteRow {
             lifecycle_expires_at,
             kind: note.kind.to_string(),
             folder_id: note.folder_id.clone(),
+            priority: note.priority.to_string(),
         })
     }
 }
@@ -712,6 +718,74 @@ pub fn untag_many(connection: &mut Library, pairs: &[NoteTag]) -> Result<usize, 
         }
 
         Ok(removed)
+    })
+}
+
+/// Answers each note whose priority moved, with the one it had. `updated_at` stays where it
+/// is: triaging is not editing, and a list sorted by modification would reshuffle.
+pub fn set_priority_many(
+    connection: &mut Library,
+    ids: &[String],
+    priority: Priority,
+) -> Result<Vec<NotePriority>, StorageError> {
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    connection.transaction(|connection, _vault| {
+        // Read before the update, which erases what each note had.
+        let previous: Vec<NotePriority> = notes::table
+            .filter(notes::id.eq_any(ids))
+            .filter(notes::deleted_at.is_null())
+            .filter(notes::priority.ne(priority.as_str()))
+            .select((notes::id, notes::priority))
+            .load::<(String, String)>(connection)?
+            .into_iter()
+            .map(|(note_id, had)| NotePriority {
+                note_id,
+                priority: had.parse().unwrap_or_default(),
+            })
+            .collect();
+
+        let touched: Vec<&String> = previous.iter().map(|change| &change.note_id).collect();
+        diesel::update(notes::table.filter(notes::id.eq_any(touched)))
+            .set(notes::priority.eq(priority.as_str()))
+            .execute(connection)?;
+
+        Ok(previous)
+    })
+}
+
+/// Gives each note back its own priority, the undo of [`set_priority_many`].
+pub fn restore_priorities(
+    connection: &mut Library,
+    previous: &[NotePriority],
+) -> Result<usize, StorageError> {
+    if previous.is_empty() {
+        return Ok(0);
+    }
+
+    let mut by_priority: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
+    for change in previous {
+        by_priority
+            .entry(change.priority.as_str())
+            .or_default()
+            .push(&change.note_id);
+    }
+
+    connection.transaction(|connection, _vault| {
+        let mut restored = 0;
+        for (priority, ids) in by_priority {
+            restored += diesel::update(
+                notes::table
+                    .filter(notes::id.eq_any(ids))
+                    .filter(notes::deleted_at.is_null()),
+            )
+            .set(notes::priority.eq(priority))
+            .execute(connection)?;
+        }
+
+        Ok(restored)
     })
 }
 

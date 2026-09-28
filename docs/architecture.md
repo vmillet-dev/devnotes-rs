@@ -1852,6 +1852,14 @@ them changed.
 comparison the insert will make: `note_tags.tag` is `COLLATE NOCASE`, and SQLite's `NOCASE`
 folds **ASCII only** — which is exactly what `eq_ignore_ascii_case` does in `tag_many`.
 
+**A priority is set by a batch of its own**, `set_priority`, and a batch of one for a single
+note. `notes::priority::Priority` is a closed enum in a column left in the clear, like `kind`:
+the canvas filters, sorts and groups on it. The command answers each note whose priority
+moved, with the one it had, and `restore_priorities` gives each note its own back — never one
+level for the whole batch. ⚠️ Neither moves `updated_at`: triaging is not editing, and a note
+given a priority would jump to the head of a list sorted by modification. That is why the
+priority never travels in a `NotePatch`, whose `apply` moves `updated_at` for every field.
+
 ### `{{fields}}` in a snippet
 
 A snippet like `psql -h {{host}} -p {{port=5432}}` is worth copying **filled in**. What counts

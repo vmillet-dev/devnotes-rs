@@ -13,6 +13,7 @@ use super::kind::NoteKind;
 use super::language::{self, Language};
 use super::markdown;
 use super::placeholder::{self, Placeholder};
+use super::priority::Priority;
 use super::view::SearchHit;
 use crate::folders::model::NoteFolder;
 
@@ -40,6 +41,9 @@ pub struct Note {
     /// lists carry no such key.
     #[serde(default)]
     pub kind: NoteKind,
+    /// Set by `set_priority` alone, which leaves `updated_at` alone: triaging is not editing.
+    #[serde(default)]
+    pub priority: Priority,
     /// A checklist has these instead of `content`.
     #[serde(default)]
     pub items: Vec<ChecklistItem>,
@@ -72,6 +76,9 @@ pub struct NoteDraft {
     pub lifecycle: NoteLifecycle,
     #[serde(default)]
     pub kind: NoteKind,
+    #[serde(default)]
+    #[specta(optional)]
+    pub priority: Priority,
     #[serde(default)]
     pub items: Vec<ChecklistItem>,
 }
@@ -142,6 +149,7 @@ impl NoteDraft {
             updated_at: now,
             lifecycle: self.lifecycle,
             kind: self.kind,
+            priority: self.priority,
             items,
             placeholder_values: BTreeMap::new(),
         }
@@ -500,6 +508,14 @@ pub struct NotePlacement {
     pub space_id: String,
 }
 
+/// A note's priority before a batch moved it: its undo puts back each note's own.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct NotePriority {
+    pub note_id: String,
+    pub priority: Priority,
+}
+
 /// One tag on one note: a batch answers pair by pair, so its undo cannot strip a tag the note
 /// already carried.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
@@ -636,6 +652,7 @@ mod tests {
             pinned: true,
             lifecycle: NoteLifecycle::Permanent,
             kind: NoteKind::Snippet,
+            priority: Priority::None,
             items: Vec::new(),
         }
     }

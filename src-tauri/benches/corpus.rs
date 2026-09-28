@@ -19,6 +19,7 @@ use devnotes_lib::notes::checklist::ChecklistItem;
 use devnotes_lib::notes::kind::NoteKind;
 use devnotes_lib::notes::language::Language;
 use devnotes_lib::notes::model::{NoteDraft, NoteLifecycle};
+use devnotes_lib::notes::priority::Priority;
 use devnotes_lib::notes::store;
 use devnotes_lib::notes::view::{self, NotesQuery};
 use devnotes_lib::spaces::store as spaces;
@@ -97,6 +98,7 @@ fn draft(seed: usize, space_id: &str) -> NoteDraft {
         } else {
             NoteKind::Snippet
         },
+        priority: Priority::None,
         items: if checklist {
             (0..5u32)
                 .map(|at| ChecklistItem {

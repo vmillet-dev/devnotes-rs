@@ -4,6 +4,7 @@ import type {
   FacetCount,
   ImportReport,
   OutlineLine,
+  Priority,
   SearchHit,
 } from '@core/ipc/bindings';
 import { LanguageTag } from '@core/model/language.model';
@@ -14,8 +15,10 @@ export { type ChecklistItem, type NoteKind } from './checklist.model';
 
 export type { FacetCount, OutlineLine, SearchField, SearchHit } from '@core/ipc/bindings';
 
-/** Both cross as themselves: a batch answers what it changed, and the undo hands it back. */
-export type { NotePlacement, NoteTag } from '@core/ipc/bindings';
+/** They cross as themselves: a batch answers what it changed, and the undo hands it back. */
+export type { NotePlacement, NotePriority, NoteTag } from '@core/ipc/bindings';
+
+export type { Priority } from '@core/ipc/bindings';
 
 export type NoteLifecycle = { readonly kind: 'permanent' } | { readonly kind: 'expires'; readonly at: Date };
 
@@ -49,6 +52,7 @@ export interface Note {
   readonly placeholders: readonly Placeholder[];
   readonly attachmentCount: number;
   readonly kind: NoteKind;
+  readonly priority: Priority;
   /** A todo list has these instead of `content`. */
   readonly items: readonly ChecklistItem[];
   /** What copying yields when that is not `content`; `null` for a snippet. */
@@ -89,9 +93,10 @@ export type NoteDraft = Omit<
 /**
  * No `folderId`: filing has a command of its own (`FoldersRepository.fileMany`), so
  * a patch can never refile a note as a side effect. The back end has no field for it
- * either — the only move it makes is unfiling a note that changes space.
+ * either — the only move it makes is unfiling a note that changes space. No `priority`
+ * either: `setPriority` leaves `updatedAt` alone, and every patch moves it.
  */
-export type NotePatch = Partial<Omit<NoteDraft, 'folderId'>>;
+export type NotePatch = Partial<Omit<NoteDraft, 'folderId' | 'priority'>>;
 
 /** `untriaged` = notes carrying a deadline, the ones whose fate is undecided. */
 export type NoteFilter = 'all' | 'pinned' | 'untriaged';

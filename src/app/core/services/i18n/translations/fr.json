@@ -477,6 +477,7 @@
     "dismiss": "Masquer",
     "moved": "{count, plural, one {# note déplacée} other {# notes déplacées}}",
     "tagged": "{count, plural, one {# note étiquetée} other {# notes étiquetées}}",
+    "prioritised": "{count, plural, one {Priorité changée sur # note} other {Priorité changée sur # notes}}",
     "filed": "{count, plural, one {# note rangée} other {# notes rangées}}",
     "restoreKey": "Échap",
     "arranged": "Tableau réorganisé"

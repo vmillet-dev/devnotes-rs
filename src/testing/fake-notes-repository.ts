@@ -7,9 +7,11 @@ import {
   NoteDraft,
   NotePatch,
   NotePlacement,
+  NotePriority,
   NotesQuery,
   NotesView,
   NoteTag,
+  Priority,
   SampleNote,
   TagUsage,
   TrashedNote,
@@ -283,6 +285,7 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
           searchHit: null,
           truncated: false,
           outline: [],
+          priority: 'none' as const,
           // The trash shape drops the items; a spec needing them restored uses `setView`.
           items: [],
         })),
@@ -325,6 +328,10 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
     return this.notes.find((note) => note.id === id)?.tags;
   }
 
+  priorityOf(id: string): Priority | undefined {
+    return this.notes.find((note) => note.id === id)?.priority;
+  }
+
   moveMany(ids: readonly string[], spaceId: string): Promise<readonly NotePlacement[]> {
     return guard(this, () => {
       this.movedTo = { ids, spaceId };
@@ -349,6 +356,32 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
       });
 
       return placements.length;
+    });
+  }
+
+  /** Only the notes that change, like `notes::store::set_priority_many`. */
+  setPriority(ids: readonly string[], priority: Priority): Promise<readonly NotePriority[]> {
+    return guard(this, () => {
+      const previous = this.notes
+        .filter((note) => ids.includes(note.id) && note.priority !== priority)
+        .map((note) => ({ noteId: note.id, priority: note.priority }));
+
+      this.notes = this.notes.map((note) => (ids.includes(note.id) ? { ...note, priority } : note));
+
+      return previous;
+    });
+  }
+
+  restorePriorities(previous: readonly NotePriority[]): Promise<number> {
+    return guard(this, () => {
+      const had = new Map(previous.map((change) => [change.noteId, change.priority]));
+      this.notes = this.notes.map((note) => {
+        const priority = had.get(note.id);
+
+        return priority === undefined ? note : { ...note, priority };
+      });
+
+      return previous.length;
     });
   }
 
