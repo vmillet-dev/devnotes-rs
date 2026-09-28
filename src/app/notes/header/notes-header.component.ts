@@ -76,7 +76,8 @@ export class NotesHeaderComponent {
     () =>
       this.canvas.selectedTags().size +
       this.canvas.selectedLanguages().size +
-      this.canvas.selectedKinds().size,
+      this.canvas.selectedKinds().size +
+      this.canvas.selectedPriorities().size,
   );
 
   /** Forced open by a selection: a filter nobody can see is a filter nobody can undo. */

@@ -579,6 +579,60 @@ fn every_kind_is_counted_over_the_space_whatever_is_selected() {
     assert_eq!(view.matched, 1);
 }
 
+/// The space's counts, whatever is pressed, and a note answers to one of the levels asked.
+#[test]
+fn a_priority_filters_on_one_of_its_levels_and_every_level_is_counted() {
+    let mut connection = open_in_memory().unwrap();
+    let space_id = space(&mut connection, "Personal");
+    let urgent = create(
+        &mut connection,
+        NoteDraft {
+            priority: Priority::Urgent,
+            ..draft(&space_id)
+        },
+        t0(),
+    )
+    .unwrap();
+    let high = create(
+        &mut connection,
+        NoteDraft {
+            priority: Priority::High,
+            ..draft(&space_id)
+        },
+        t0(),
+    )
+    .unwrap();
+    create(&mut connection, draft(&space_id), t0()).unwrap();
+
+    let view = query(
+        &mut connection,
+        &NotesQuery {
+            priorities: vec![Priority::Urgent, Priority::High],
+            ..all_notes()
+        },
+    )
+    .unwrap();
+
+    let ids = matched_ids(&view);
+    assert_eq!(ids.len(), 2);
+    assert!(ids.contains(&urgent.id) && ids.contains(&high.id));
+    let counts: Vec<(Priority, u32)> = view
+        .priority_counts
+        .iter()
+        .map(|counted| (counted.value, counted.count))
+        .collect();
+    assert_eq!(
+        counts,
+        [
+            (Priority::None, 1),
+            (Priority::Low, 0),
+            (Priority::Medium, 0),
+            (Priority::High, 1),
+            (Priority::Urgent, 1)
+        ]
+    );
+}
+
 #[test]
 fn available_tags_are_sorted_and_de_duplicated() {
     let mut connection = open_in_memory().unwrap();

@@ -12,6 +12,7 @@ use devnotes_lib::folders::store::{
 use devnotes_lib::notes::kind::NoteKind;
 use devnotes_lib::notes::language::Language;
 use devnotes_lib::notes::model::{Note, NoteDraft, NotePatch};
+use devnotes_lib::notes::priority::Priority;
 use devnotes_lib::notes::store::{create as create_note, update};
 use devnotes_lib::spaces::store as spaces;
 
@@ -480,6 +481,7 @@ mod board {
             tags: Vec::new(),
             languages: Vec::new(),
             kinds: Vec::new(),
+            priorities: Vec::new(),
             now: t1(),
         }
     }
@@ -497,6 +499,7 @@ mod board {
                 tags: Vec::new(),
                 languages: Vec::new(),
                 kinds: Vec::new(),
+                priorities: Vec::new(),
                 now: query.now,
                 tz_offset_minutes: 0,
                 pinned_first: true,
@@ -903,6 +906,33 @@ mod board {
     }
 
     #[test]
+    fn a_priority_dims_rather_than_narrows_too() {
+        let mut connection = open_in_memory().unwrap();
+        let sql = space(&mut connection, "SQL");
+        create_note(&mut connection, draft(&sql), t0()).unwrap();
+        create_note(
+            &mut connection,
+            NoteDraft {
+                priority: Priority::High,
+                ..draft(&sql)
+            },
+            t0(),
+        )
+        .unwrap();
+
+        let board = view(
+            &mut connection,
+            &BoardQuery {
+                priorities: vec![Priority::High],
+                ..request(&sql)
+            },
+        );
+
+        assert_eq!(board.loose.len(), 2);
+        assert_eq!(board.matched, 1);
+    }
+
+    #[test]
     fn a_kind_dims_rather_than_narrows_too() {
         let mut connection = open_in_memory().unwrap();
         let sql = space(&mut connection, "SQL");
@@ -966,6 +996,7 @@ mod board {
                 tags: tags.clone(),
                 languages: Vec::new(),
                 kinds: Vec::new(),
+                priorities: Vec::new(),
                 now: t1(),
                 tz_offset_minutes: 0,
                 pinned_first: true,
@@ -1610,6 +1641,7 @@ fn a_card_inside_an_opened_folder_carries_no_chip() {
         tags: Vec::new(),
         languages: Vec::new(),
         kinds: Vec::new(),
+        priorities: Vec::new(),
         now: t1(),
         tz_offset_minutes: 0,
         pinned_first: true,

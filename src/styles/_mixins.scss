@@ -360,6 +360,32 @@
   width: 240px;
 }
 
+// A priority's dot, in the hue its pill carries, on an `.is-<level>` element: the card
+// menu's levels and the priority rail. `none` keeps the unlit bar's grey.
+@mixin priority-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--line-no);
+
+  &.is-low {
+    background: var(--text-2);
+  }
+
+  &.is-medium {
+    background: var(--blue);
+  }
+
+  &.is-high {
+    background: var(--amber-text);
+  }
+
+  &.is-urgent {
+    background: var(--red);
+  }
+}
+
 // The five folder colours, as `--folder-hue` on an `.is-<colour>` element. The list is
 // `FolderColour` in Rust; adding one there means adding it here, and the swatch is blue
 // until it is. Every consumer — chip, filter, zone, breadcrumb — reads the variable.

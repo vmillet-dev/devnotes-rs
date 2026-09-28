@@ -113,27 +113,7 @@
 }
 
 .priority-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--line-no);
-
-  &.is-low {
-    background: var(--text-2);
-  }
-
-  &.is-medium {
-    background: var(--blue);
-  }
-
-  &.is-high {
-    background: var(--amber-text);
-  }
-
-  &.is-urgent {
-    background: var(--red);
-  }
+  @include priority-dot;
 }
 
 .card-menu-delete {

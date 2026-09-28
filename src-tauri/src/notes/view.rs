@@ -8,6 +8,7 @@ use unicode_normalization::char::{decompose_canonical, is_combining_mark};
 use super::kind::NoteKind;
 use super::language::Language;
 use super::model::{self, DisplayNote, Note, NoteLifecycle};
+use super::priority::Priority;
 use crate::count::saturating_u32;
 use crate::folders::model::NoteFolder;
 
@@ -27,6 +28,7 @@ pub struct NotesQuery {
     pub tags: Vec<String>,
     pub languages: Vec<Language>,
     pub kinds: Vec<NoteKind>,
+    pub priorities: Vec<Priority>,
     pub now: DateTime<Utc>,
     /// `Date#getTimezoneOffset()`, whose sign is the opposite of the offset (−120 for
     /// UTC+2). Sections reason in local days.
@@ -44,7 +46,7 @@ pub enum NoteFilter {
     Untriaged,
 }
 
-/// What the search, the quick filter and the three rails ask of a note, normalised once: the
+/// What the search, the quick filter and the four rails ask of a note, normalised once: the
 /// date view narrows on it and the board dims on it, so the two cannot disagree on a match.
 #[derive(Debug, Clone)]
 pub struct Criteria {
@@ -53,6 +55,7 @@ pub struct Criteria {
     tags: Vec<String>,
     languages: Vec<Language>,
     kinds: Vec<NoteKind>,
+    priorities: Vec<Priority>,
 }
 
 impl Criteria {
@@ -62,6 +65,7 @@ impl Criteria {
         tags: &[String],
         languages: &[Language],
         kinds: &[NoteKind],
+        priorities: &[Priority],
     ) -> Self {
         Self {
             needle: fold(search.trim()),
@@ -69,6 +73,7 @@ impl Criteria {
             tags: model::normalize_tags(tags),
             languages: languages.to_vec(),
             kinds: kinds.to_vec(),
+            priorities: priorities.to_vec(),
         }
     }
 
@@ -84,6 +89,7 @@ impl Criteria {
             || !self.tags.is_empty()
             || !self.languages.is_empty()
             || !self.kinds.is_empty()
+            || !self.priorities.is_empty()
     }
 
     pub fn passes(&self, note: &Note) -> bool {
@@ -104,9 +110,10 @@ impl Criteria {
         let languages = self.languages.is_empty()
             || (note.kind.has_language() && self.languages.contains(&note.language));
         let kinds = self.kinds.is_empty() || self.kinds.contains(&note.kind);
+        let priorities = self.priorities.is_empty() || self.priorities.contains(&note.priority);
         let search = self.needle.is_empty() || matches_search(note, &self.needle);
 
-        filter && tags && languages && kinds && search
+        filter && tags && languages && kinds && priorities && search
     }
 }
 
@@ -118,6 +125,7 @@ impl From<&NotesQuery> for Criteria {
             &query.tags,
             &query.languages,
             &query.kinds,
+            &query.priorities,
         )
     }
 }
@@ -127,6 +135,7 @@ pub struct Facets {
     pub tags: Vec<String>,
     pub languages: Vec<Language>,
     pub kinds: Vec<FacetCount<NoteKind>>,
+    pub priorities: Vec<FacetCount<Priority>>,
 }
 
 /// How many of the space's notes carry a value.
@@ -137,19 +146,32 @@ pub struct FacetCount<T> {
     pub count: u32,
 }
 
-/// Every kind in its declared order, zeros included: a chip keeps its place when its count
-/// falls to nothing. `rows` is the column grouped and counted.
-pub fn count_kinds(rows: &[(String, i64)]) -> Vec<FacetCount<NoteKind>> {
-    NoteKind::ALL
-        .into_iter()
-        .map(|kind| FacetCount {
-            value: kind,
+/// Every value in its declared order, zeros included: a chip keeps its place when its count
+/// falls to nothing. `rows` is the column grouped and counted; a value this build does not
+/// know counts nowhere.
+fn counted<T: Copy>(
+    every: &[T],
+    stored: impl Fn(T) -> &'static str,
+    rows: &[(String, i64)],
+) -> Vec<FacetCount<T>> {
+    every
+        .iter()
+        .map(|&value| FacetCount {
+            value,
             count: rows
                 .iter()
-                .find(|(stored, _)| stored == kind.as_str())
+                .find(|(name, _)| name == stored(value))
                 .map_or(0, |(_, count)| saturating_u32(*count)),
         })
         .collect()
+}
+
+pub fn count_kinds(rows: &[(String, i64)]) -> Vec<FacetCount<NoteKind>> {
+    counted(&NoteKind::ALL, NoteKind::as_str, rows)
+}
+
+pub fn count_priorities(rows: &[(String, i64)]) -> Vec<FacetCount<Priority>> {
+    counted(&Priority::ALL, Priority::as_str, rows)
 }
 
 /// Dated sections, or one flat list, which offers the create card only as a place to create
@@ -169,6 +191,7 @@ pub struct NotesView {
     pub available_tags: Vec<String>,
     pub available_languages: Vec<Language>,
     pub kind_counts: Vec<FacetCount<NoteKind>>,
+    pub priority_counts: Vec<FacetCount<Priority>>,
     pub is_filtering: bool,
     /// `u32` and not `usize`: Specta refuses what JSON cannot carry exactly.
     pub matched: u32,
@@ -298,6 +321,7 @@ pub fn build(mut notes: Vec<Note>, facets: Facets, request: &NotesQuery) -> Note
         available_tags: facets.tags,
         available_languages: facets.languages,
         kind_counts: facets.kinds,
+        priority_counts: facets.priorities,
         is_filtering,
         matched,
     };
@@ -537,6 +561,7 @@ mod tests {
             tags: Vec::new(),
             languages: Vec::new(),
             kinds: Vec::new(),
+            priorities: Vec::new(),
             now: at(NOW),
             tz_offset_minutes: 0,
             pinned_first: true,
@@ -758,6 +783,7 @@ mod tests {
                 tags: vec!["api".to_string(), "auth".to_string()],
                 languages: vec![Language::Json, Language::Txt],
                 kinds: count_kinds(&[("note".to_string(), 2)]),
+                priorities: count_priorities(&[("high".to_string(), 1)]),
             },
             &NotesQuery {
                 search: "no-such-thing".to_string(),
@@ -768,6 +794,7 @@ mod tests {
         assert_eq!(view.available_tags, ["api", "auth"]);
         assert_eq!(view.available_languages, [Language::Json, Language::Txt]);
         assert_eq!(view.kind_counts[1].count, 2);
+        assert_eq!(view.priority_counts[3].count, 1);
     }
 
     #[test]
@@ -790,6 +817,30 @@ mod tests {
     }
 
     #[test]
+    fn a_selected_priority_counts_as_filtering_and_passes_only_its_notes() {
+        let view = build(
+            vec![note("a", "Un")],
+            Facets::default(),
+            &NotesQuery {
+                priorities: vec![Priority::Urgent, Priority::High],
+                ..request()
+            },
+        );
+        let criteria = Criteria::new("", NoteFilter::All, &[], &[], &[], &[Priority::Urgent]);
+        let counts = count_priorities(&[("urgent".to_string(), 2)]);
+
+        assert!(view.is_filtering);
+        assert_eq!(keys(&view), [NoteSectionKey::Results]);
+        assert!(criteria.passes(&Note {
+            priority: Priority::Urgent,
+            ..sample()
+        }));
+        assert!(!criteria.passes(&sample()));
+        assert_eq!(counts.len(), Priority::ALL.len());
+        assert_eq!((counts[4].value, counts[4].count), (Priority::Urgent, 2));
+    }
+
+    #[test]
     fn a_selected_kind_counts_as_filtering_and_passes_only_its_notes() {
         let view = build(
             vec![note("a", "Un")],
@@ -799,7 +850,7 @@ mod tests {
                 ..request()
             },
         );
-        let criteria = Criteria::new("", NoteFilter::All, &[], &[], &[NoteKind::Note]);
+        let criteria = Criteria::new("", NoteFilter::All, &[], &[], &[NoteKind::Note], &[]);
 
         assert!(view.is_filtering);
         assert_eq!(keys(&view), [NoteSectionKey::Results]);
@@ -1395,7 +1446,7 @@ mod tests {
 
         fn wanting(tags: &[&str]) -> Criteria {
             let tags: Vec<String> = tags.iter().map(ToString::to_string).collect();
-            Criteria::new("", NoteFilter::All, &tags, &[], &[])
+            Criteria::new("", NoteFilter::All, &tags, &[], &[], &[])
         }
 
         /// `note_tags.tag` is `COLLATE NOCASE`, which folds ASCII and nothing else.
@@ -1423,7 +1474,7 @@ mod tests {
 
         #[test]
         fn the_quick_filter_decides_a_match_without_counting_as_narrowing() {
-            let criteria = Criteria::new("", NoteFilter::Pinned, &[], &[], &[]);
+            let criteria = Criteria::new("", NoteFilter::Pinned, &[], &[], &[], &[]);
 
             assert!(!criteria.narrows());
             assert!(!criteria.passes(&sample()));
@@ -1435,7 +1486,7 @@ mod tests {
 
         #[test]
         fn the_search_is_trimmed_and_folded_before_it_is_compared() {
-            let criteria = Criteria::new("  ÉTAPE ", NoteFilter::All, &[], &[], &[]);
+            let criteria = Criteria::new("  ÉTAPE ", NoteFilter::All, &[], &[], &[], &[]);
 
             assert_eq!(criteria.needle(), "etape");
             assert!(criteria.passes(&Note {

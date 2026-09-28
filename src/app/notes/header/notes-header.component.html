@@ -111,6 +111,10 @@
     (languageToggled)="canvas.toggleLanguage($event)"
     (kindToggled)="canvas.toggleKind($event)"
     (allKindsChosen)="canvas.clearKinds()"
+    [priorityCounts]="canvas.priorityCounts()"
+    [activePriorities]="canvas.selectedPriorities()"
+    (priorityToggled)="canvas.togglePriority($event)"
+    (allPrioritiesChosen)="canvas.clearPriorities()"
     (manageRequested)="tags.open()"
     (clearRequested)="canvas.clearFilters()"
   />

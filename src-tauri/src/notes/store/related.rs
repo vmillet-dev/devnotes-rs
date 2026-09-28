@@ -362,6 +362,7 @@ mod tests {
                 tags: Vec::new(),
                 languages: Vec::new(),
                 kinds: Vec::new(),
+                priorities: Vec::new(),
                 now: chrono::Utc::now(),
                 tz_offset_minutes: 0,
                 pinned_first: true,

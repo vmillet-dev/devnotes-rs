@@ -8,6 +8,7 @@ const BASE_VIEW: WireNotesView = {
   availableTags: ['api'],
   availableLanguages: ['json', 'yml'],
   kindCounts: [{ value: 'note', count: 2 }],
+  priorityCounts: [{ value: 'urgent', count: 1 }],
   isFiltering: false,
   matched: 0,
 };
@@ -20,6 +21,7 @@ const BASE_QUERY: NotesQuery = {
   tags: ['api'],
   languages: ['json'],
   kinds: ['note'],
+  priorities: ['urgent'],
   now: new Date('2026-01-01T10:00:00.000Z'),
   tzOffsetMinutes: -120,
   pinnedFirst: true,
@@ -29,6 +31,7 @@ describe('toWireNotesQuery', () => {
   it('sends the selected languages and kinds across the bridge', () => {
     expect(toWireNotesQuery(BASE_QUERY).languages).toEqual(['json']);
     expect(toWireNotesQuery(BASE_QUERY).kinds).toEqual(['note']);
+    expect(toWireNotesQuery(BASE_QUERY).priorities).toEqual(['urgent']);
   });
 
   it('carries the pinned-first flag, which the palette alone turns off', () => {

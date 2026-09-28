@@ -45,6 +45,7 @@ describe('Search, filters and facets', () => {
     await bridge.createNote(
       draft({ spaceId, title: 'Compte rendu de migration', content: '## Décisions', kind: 'note' }),
     );
+    await bridge.createNote(draft({ spaceId, title: 'Rotation des secrets', priority: 'urgent' }));
     await reloadCanvas();
   });
 
@@ -323,6 +324,18 @@ describe('Search, filters and facets', () => {
     await canvas.toggleKind('all');
     expect(await canvas.titles()).toContain('Docker compose');
     expect(await canvas.kindChip('note').getAttribute('aria-pressed')).toBe('false');
+  });
+
+  /** Several levels at once, like tags; "All" gives every note back. */
+  it('filters on a priority from the rail', async () => {
+    await canvas.togglePriority('urgent');
+    const titles = await canvas.titles();
+    expect(titles).toContain('Rotation des secrets');
+    expect(titles).not.toContain('Docker compose');
+    expect(await canvas.sectionKeys()).toEqual(['results']);
+
+    await canvas.togglePriority('all');
+    expect(await canvas.titles()).toContain('Docker compose');
   });
 
   it('keeps the quick filters chronological, unlike a facet', async () => {

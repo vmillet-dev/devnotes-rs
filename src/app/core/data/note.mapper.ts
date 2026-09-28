@@ -161,6 +161,7 @@ export function toWireNotesQuery(query: NotesQuery): WireNotesQuery {
     tags: [...query.tags],
     languages: [...query.languages],
     kinds: [...query.kinds],
+    priorities: [...query.priorities],
     now: toIsoString(query.now, 'now'),
   };
 }

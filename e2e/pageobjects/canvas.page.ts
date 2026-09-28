@@ -347,6 +347,7 @@ export const canvas = {
   tagPill: (tag: string) => $(`${testid('tag-pill')}[data-tag="${tag}"]`),
   languageChip: (language: string) => $(`${testid('language-chip')}[data-language="${language}"]`),
   kindChip: (kind: 'all' | 'snippet' | 'note' | 'checklist') => $(testid(`kind-chip-${kind}`)),
+  priorityChip: (level: string) => $(testid(`priority-chip-${level}`)),
 
   /** The three controls that re-run the query, each waited on rather than slept past. */
   async applyFilter(key: 'all' | 'pinned' | 'untriaged'): Promise<void> {
@@ -374,6 +375,12 @@ export const canvas = {
   async toggleLanguage(language: string): Promise<void> {
     await canvas.openFacets();
     await canvas.languageChip(language).click();
+    await waitForCanvas();
+  },
+
+  async togglePriority(level: string): Promise<void> {
+    await canvas.openFacets();
+    await canvas.priorityChip(level).click();
     await waitForCanvas();
   },
 

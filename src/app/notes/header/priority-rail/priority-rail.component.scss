@@ -1,0 +1,54 @@
+@use 'mixins' as *;
+
+.priority-rail {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--line-soft);
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+
+.priority-rail-label {
+  font-size: 11px;
+  color: var(--text-2);
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+
+// The kind rail's chip: the rows of the panel read as one set of filters.
+.priority-chip {
+  @include eases(background, border-color, color);
+  @include hit-target;
+  @include surface($radius: 12px);
+  @include focus-ring;
+
+  gap: 6px;
+  padding: 4px 10px;
+  font: inherit;
+  font-family: var(--font-mono), serif;
+  font-size: 11px;
+  color: var(--text-1);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.priority-chip:hover:not(:disabled),
+.priority-chip.on {
+  @include accent-state;
+}
+
+.priority-chip:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.priority-count {
+  color: var(--text-2);
+}
+
+.priority-dot {
+  @include priority-dot;
+}

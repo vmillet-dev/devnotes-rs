@@ -134,6 +134,7 @@ export function query(overrides: Partial<NotesQuery> = {}): NotesQuery {
     tags: [],
     languages: [],
     kinds: [],
+    priorities: [],
     now: new Date().toISOString(),
     tzOffsetMinutes: new Date().getTimezoneOffset(),
     pinnedFirst: true,

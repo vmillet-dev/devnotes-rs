@@ -16,6 +16,7 @@ use crate::count::saturating_u32;
 use crate::notes::kind::NoteKind;
 use crate::notes::language::Language;
 use crate::notes::model::{self, DisplayNote, Note};
+use crate::notes::priority::Priority;
 use crate::notes::view::{Criteria, Facets, NoteFilter, NotesQuery};
 
 /// The same card as on the canvas, full size: the board is large, and pans.
@@ -52,6 +53,7 @@ pub struct BoardQuery {
     pub tags: Vec<String>,
     pub languages: Vec<Language>,
     pub kinds: Vec<NoteKind>,
+    pub priorities: Vec<Priority>,
     pub now: DateTime<Utc>,
 }
 
@@ -66,6 +68,7 @@ impl BoardQuery {
             tags: Vec::new(),
             languages: Vec::new(),
             kinds: Vec::new(),
+            priorities: Vec::new(),
             now: self.now,
             tz_offset_minutes: 0,
             pinned_first: true,
@@ -422,6 +425,7 @@ pub fn build<S: std::hash::BuildHasher>(
         &request.tags,
         &request.languages,
         &request.kinds,
+        &request.priorities,
     );
 
     let mut by_folder: HashMap<String, Vec<BoardNote>> = HashMap::new();
@@ -597,6 +601,7 @@ mod tests {
             tags: vec!["ops".to_string()],
             languages: vec![Language::Sql],
             kinds: vec![NoteKind::Note],
+            priorities: Vec::new(),
             now: at(NOW),
         };
 
@@ -604,7 +609,7 @@ mod tests {
 
         assert_eq!(wide.space_id.as_deref(), Some("s-1"));
         assert!(wide.search.is_empty() && wide.tags.is_empty() && wide.languages.is_empty());
-        assert!(wide.kinds.is_empty());
+        assert!(wide.kinds.is_empty() && wide.priorities.is_empty());
         assert_eq!(wide.filter, NoteFilter::All);
         assert_eq!(wide.now, at(NOW));
     }

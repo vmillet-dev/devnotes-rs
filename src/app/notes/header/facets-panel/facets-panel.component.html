@@ -6,6 +6,13 @@
     (allChosen)="allKindsChosen.emit()"
   />
 
+  <app-priority-rail
+    [counts]="priorityCounts()"
+    [activePriorities]="activePriorities()"
+    (priorityToggled)="priorityToggled.emit($event)"
+    (allChosen)="allPrioritiesChosen.emit()"
+  />
+
   <app-tag-rail
     [tags]="tags()"
     [activeTags]="activeTags()"
