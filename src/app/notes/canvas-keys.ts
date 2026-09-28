@@ -1,6 +1,6 @@
 import type { SettingsStore } from '@core/services/settings/settings.store';
 import { Rebindable, ShortcutGroup, acceleratorKeys } from '@core/services/shortcuts/shortcut.model';
-import type { Note } from '@core/model/note.model';
+import type { Note, NoteKind } from '@core/model/note.model';
 import type { BoardStore } from '@core/state/board.store';
 import type { FoldersStore } from '@core/state/folders.store';
 import type { NoteBatchStore } from '@core/state/note-batch.store';
@@ -80,9 +80,37 @@ function when(condition: boolean, action: () => void): boolean {
   return true;
 }
 
+/** The three the new-note menu offers as well, and names the keys of. */
+export const CREATE_ACTIONS: Readonly<Record<NoteKind, Rebindable>> = {
+  snippet: { id: 'canvas.newSnippet', labelKey: 'shortcuts.canvas.newSnippet', fallback: 'Ctrl+N' },
+  note: { id: 'canvas.newNote', labelKey: 'shortcuts.canvas.newNote', fallback: 'Ctrl+Shift+N' },
+  checklist: {
+    id: 'canvas.newChecklist',
+    labelKey: 'shortcuts.canvas.newChecklist',
+    fallback: 'Ctrl+Shift+L',
+  },
+};
+
+function creating(kind: NoteKind): CanvasKey {
+  const { id, labelKey, fallback } = CREATE_ACTIONS[kind];
+
+  return {
+    id,
+    labelKey,
+    accelerator: fallback,
+    run: ({ notes }) => {
+      notes.createNote(kind);
+      return true;
+    },
+  };
+}
+
 /** In reading order, which is also the order the sheet lists them in. */
 export const CANVAS_KEYS: readonly CanvasKey[] = [
   { keys: ['Ctrl', 'K'], labelKey: 'shortcuts.canvas.search' },
+  creating('snippet'),
+  creating('note'),
+  creating('checklist'),
   {
     id: 'canvas.library',
     accelerator: 'Ctrl+B',

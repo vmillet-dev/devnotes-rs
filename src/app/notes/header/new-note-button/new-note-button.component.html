@@ -19,34 +19,34 @@
   </button>
 
   @if (menu.open()) {
-    <div appMenuPanel class="new-note-menu">
-      <button
-        appMenuItem
-        type="button"
-        class="new-note-option"
-        data-testid="new-note-snippet"
-        (click)="create('snippet')"
-      >
-        {{ 'notes.newSnippet' | transloco }}
-      </button>
-      <button
-        appMenuItem
-        type="button"
-        class="new-note-option"
-        data-testid="new-note-note"
-        (click)="create('note')"
-      >
-        {{ 'notes.newRichNote' | transloco }}
-      </button>
-      <button
-        appMenuItem
-        type="button"
-        class="new-note-option"
-        data-testid="new-note-checklist"
-        (click)="create('checklist')"
-      >
-        {{ 'notes.newChecklist' | transloco }}
-      </button>
+    <div appMenuPanel class="new-note-menu" aria-labelledby="new-note-menu-title">
+      <p id="new-note-menu-title" class="new-note-menu-title">{{ 'notes.createMenuTitle' | transloco }}</p>
+      @for (kind of kinds; track kind.id) {
+        <button
+          appMenuItem
+          type="button"
+          class="new-note-option"
+          [attr.data-testid]="'new-note-' + kind.id"
+          [attr.aria-keyshortcuts]="ariaShortcut(kind.id)"
+          (click)="create(kind.id)"
+        >
+          <span class="kind-glyph" [attr.data-kind]="kind.id" aria-hidden="true">{{ kind.glyph }}</span>
+          <span class="kind-text">
+            <span class="kind-name">
+              {{ kind.nameKey | transloco }}
+              @if (kind.id === 'note' && noteIsNew()) {
+                <span class="kind-new" data-testid="new-note-badge">{{ 'notes.kindNew' | transloco }}</span>
+              }
+            </span>
+            <span class="kind-line">{{ kind.lineKey | transloco }}</span>
+          </span>
+          <span class="kind-keys" aria-hidden="true">
+            @for (key of shortcuts()[kind.id]; track $index) {
+              <kbd>{{ key }}</kbd>
+            }
+          </span>
+        </button>
+      }
     </div>
   }
 </div>

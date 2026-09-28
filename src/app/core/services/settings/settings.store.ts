@@ -96,6 +96,7 @@ export class SettingsStore {
   readonly copyConfirmation = this.setting('copyConfirmation', asBoolean);
   readonly updateNotifications = this.setting('updateNotifications', asBoolean);
   readonly skippedUpdate = this.setting('skippedUpdate', asText);
+  readonly noteKindTried = this.setting('noteKindTried', asBoolean);
 
   /** Followed live: a "system" theme must switch without a restart. */
   private readonly systemPrefersDark = signal(false);

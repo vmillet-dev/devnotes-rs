@@ -9,6 +9,8 @@ import { SpacesStore } from '@core/state/spaces.store';
 import { TagsStore } from '@core/state/tags.store';
 import { TrashStore } from '@core/state/trash.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
+import { ShortcutBindingsStore } from '@core/services/shortcuts/shortcut-bindings.store';
+import { acceleratorKeys } from '@core/services/shortcuts/shortcut.model';
 import { DialogStack } from '@shared/layout/dialog/dialog-stack';
 import {
   Segment,
@@ -22,6 +24,7 @@ import { NewNoteButtonComponent } from './new-note-button/new-note-button.compon
 import { SearchBoxComponent } from './search-box/search-box.component';
 import { SpaceSwitcherComponent } from './space-switcher/space-switcher.component';
 import { ViewSwitchComponent } from './view-switch/view-switch.component';
+import { CREATE_ACTIONS } from '../canvas-keys';
 
 /** Three states of one thing, so one control rather than three chips. */
 const QUICK_FILTERS: readonly Segment[] = (['all', 'pinned', 'untriaged'] as const).map((key) => ({
@@ -59,6 +62,7 @@ export class NotesHeaderComponent {
   protected readonly tags = inject(TagsStore);
   protected readonly settings = inject(SettingsStore);
   private readonly dialogs = inject(DialogStack);
+  private readonly bindings = inject(ShortcutBindingsStore);
 
   protected readonly quickFilters = QUICK_FILTERS;
 
@@ -74,6 +78,13 @@ export class NotesHeaderComponent {
 
   /** Forced open by a selection: a filter nobody can see is a filter nobody can undo. */
   protected readonly facetsOpen = computed(() => this.facetsExpanded() || this.facetCount() > 0);
+
+  /** Read from the bindings, so a key moved in the preferences is the one the menu names. */
+  protected readonly createShortcuts = computed(() => ({
+    snippet: acceleratorKeys(this.bindings.binding(CREATE_ACTIONS.snippet)),
+    note: acceleratorKeys(this.bindings.binding(CREATE_ACTIONS.note)),
+    checklist: acceleratorKeys(this.bindings.binding(CREATE_ACTIONS.checklist)),
+  }));
 
   /** Asked of `DialogStack` rather than of each store in turn. */
   protected readonly searchShortcutEnabled = computed(() => !this.dialogs.hasOpenDialog());

@@ -91,7 +91,11 @@
       (folderCreated)="folders.createFolder($event)"
     />
   }
-  <app-new-note-button (created)="store.createNote($event)" />
+  <app-new-note-button
+    [shortcuts]="createShortcuts()"
+    [noteIsNew]="!settings.noteKindTried()"
+    (created)="store.createNote($event)"
+  />
 </div>
 
 @if (facetsOpen()) {
