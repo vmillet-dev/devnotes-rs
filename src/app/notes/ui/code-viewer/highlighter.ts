@@ -141,3 +141,40 @@ export function highlightLines(content: string, language: LanguageTag): string[]
 
   return splitHighlightedLines(highlighted);
 }
+
+/** One coloured stretch of a text, by offsets into it rather than as HTML. */
+export interface HighlightRange {
+  readonly from: number;
+  readonly to: number;
+  readonly classes: string;
+}
+
+/** The five highlight.js escapes, each one character of the text. */
+const HTML_TOKEN = /<span class="([^"]*)">|<\/span>|&(?:amp|lt|gt|quot|#x27);|[^<&]+/g;
+
+/**
+ * For an editor that holds the text itself and colours it with decorations: the same
+ * grammars as the viewer, read back as offsets.
+ */
+export function highlightRanges(content: string, language: LanguageTag): HighlightRange[] {
+  const grammar = GRAMMARS[language];
+  if (!grammar) return [];
+
+  const html = hljs.highlight(content, { language: grammar, ignoreIllegals: true }).value;
+  const ranges: HighlightRange[] = [];
+  const open: { readonly classes: string; readonly from: number }[] = [];
+  let offset = 0;
+
+  for (const [token, classes] of html.matchAll(HTML_TOKEN)) {
+    if (classes !== undefined) {
+      open.push({ classes, from: offset });
+    } else if (token === '</span>') {
+      const span = open.pop();
+      if (span && offset > span.from) ranges.push({ from: span.from, to: offset, classes: span.classes });
+    } else {
+      offset += token.startsWith('&') ? 1 : token.length;
+    }
+  }
+
+  return ranges;
+}

@@ -17,8 +17,11 @@ import {
 import { TranslocoPipe } from '@jsverse/transloco';
 import type { ChainedCommands, Editor } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';
+import { LANGUAGE_LABELS, LanguageTag, isLanguageTag } from '@core/model/language.model';
+import type { IndentChoice } from '@core/services/settings/app-settings.model';
 import { IconComponent, IconName } from '@shared/icon/icon.component';
-import { createRichEditor, focusFirst } from './rich-text.engine';
+import { indentUnit } from '../indentation';
+import { createRichEditor, focusFirst, languageOf } from './rich-text.engine';
 
 type Action =
   | 'h1'
@@ -33,6 +36,7 @@ type Action =
   | 'tasks'
   | 'quote'
   | 'link'
+  | 'codeBlock'
   | 'table'
   | 'rowAfter'
   | 'columnAfter'
@@ -74,8 +78,13 @@ const TOOLS: readonly (readonly Tool[])[] = [
     { action: 'tasks', labelKey: 'editor.rich.taskList', icon: 'list-tasks', active: ['taskList'] },
     { action: 'quote', labelKey: 'editor.rich.quote', icon: 'quote', active: ['blockquote'] },
   ],
-  [{ action: 'table', labelKey: 'editor.rich.table', icon: 'table' }],
+  [
+    { action: 'codeBlock', labelKey: 'editor.rich.codeBlock', text: '{ }', active: ['codeBlock'] },
+    { action: 'table', labelKey: 'editor.rich.table', icon: 'table' },
+  ],
 ];
+
+const CODE_LANGUAGES = Object.entries(LANGUAGE_LABELS).map(([id, label]) => ({ id, label }));
 
 /** Shown while the caret is in a table, and only then. */
 const TABLE_TOOLS: readonly Tool[] = [
@@ -114,6 +123,8 @@ export class RichTextEditorComponent {
    * `title` is its Markdown title, `null` on almost all of them.
    */
   readonly linkTitle = input('');
+  /** Tab in a code block indents as the code field does. */
+  readonly codeIndent = input<IndentChoice>('language');
 
   readonly changed = output<string>();
   readonly blurred = output<void>();
@@ -125,6 +136,7 @@ export class RichTextEditorComponent {
 
   protected readonly tools = TOOLS;
   protected readonly tableTools = TABLE_TOOLS;
+  protected readonly codeLanguages = CODE_LANGUAGES;
 
   /** The words and the address being typed, while the link form is open. */
   protected readonly linkForm = signal<LinkForm | null>(null);
@@ -149,6 +161,13 @@ export class RichTextEditorComponent {
     return this.editor?.isActive('table') ?? false;
   });
 
+  /** The block the caret is in, when it is a code block: its language is chosen above it. */
+  protected readonly codeLanguage = computed<LanguageTag | null>(() => {
+    this.revision();
+    const parent = this.editor?.state.selection.$from.parent;
+    return parent?.type.name === 'codeBlock' ? languageOf(parent) : null;
+  });
+
   constructor() {
     afterNextRender(() => {
       this.written = this.content();
@@ -164,6 +183,7 @@ export class RichTextEditorComponent {
         paste: (event) => this.onPaste(event),
         click: (event, href) => this.onClick(event, href),
         keydown: (event) => this.onKeydown(event),
+        indent: (language) => indentUnit(this.codeIndent(), language),
       });
       this.revision.update((count) => count + 1);
     });
@@ -222,6 +242,9 @@ export class RichTextEditorComponent {
       case 'code':
         chain.toggleCode().run();
         break;
+      case 'codeBlock':
+        chain.toggleCodeBlock().run();
+        break;
       case 'bullet':
         chain.toggleBulletList().run();
         break;
@@ -256,6 +279,12 @@ export class RichTextEditorComponent {
   }
 
   /** On a link, the whole link; otherwise the selection, whose words the form starts from. */
+  /** `txt` is no language at all: the fence is written bare. */
+  protected setCodeLanguage(value: string): void {
+    const language = isLanguageTag(value) && value !== 'txt' ? value : null;
+    this.chain()?.updateAttributes('codeBlock', { language }).run();
+  }
+
   protected openLinkForm(): void {
     const editor = this.editor;
     if (!editor) return;

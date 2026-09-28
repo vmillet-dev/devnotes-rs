@@ -178,6 +178,7 @@ export class NoteEditorOverlayComponent {
   );
   protected readonly lineCount = computed(() => (this.note() ? this.draftContent().split('\n').length : 0));
   protected readonly wordCount = computed(() => countWords(this.draftContent()));
+  protected readonly codeIndent = computed(() => this.settings.codeIndent());
   protected readonly byteSize = computed(() => TEXT_ENCODER.encode(this.draftContent()).length);
   protected readonly modifiedRef = computed(() => {
     const note = this.note();

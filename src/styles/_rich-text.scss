@@ -1,5 +1,5 @@
 /*
- * A Text note's body in the rich editor.
+ * A Note's body in the rich editor.
  *
  * ⚠️ Global, like the code theme: TipTap builds this DOM itself, so no `_ngcontent-*`
  * attribute reaches it and a rule in the component's stylesheet would never match.
@@ -91,6 +91,35 @@
 
   li + li {
     margin-top: 0.2em;
+  }
+
+  // A fenced block: the code field's type and colours, its language in the corner.
+  pre {
+    position: relative;
+    margin: 0.7em 0 0;
+    padding: 12px 14px;
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    background: var(--bg-1);
+    white-space: pre;
+    overflow-x: auto;
+
+    code {
+      padding: 0;
+      background: none;
+      font-size: 12.5px;
+      line-height: 1.6;
+    }
+
+    &[data-language]::before {
+      content: attr(data-language);
+      position: absolute;
+      top: 6px;
+      right: 10px;
+      font-family: var(--font-mono), monospace;
+      font-size: 10px;
+      color: var(--text-2);
+    }
   }
 
   blockquote {

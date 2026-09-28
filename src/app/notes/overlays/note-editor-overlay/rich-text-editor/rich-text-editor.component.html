@@ -29,6 +29,23 @@
     </div>
   }
 
+  @if (codeLanguage(); as language) {
+    <div class="rich-group">
+      <label class="rich-code-language">
+        <span class="visually-hidden">{{ 'editor.rich.codeLanguage' | transloco }}</span>
+        <select
+          #languagePicker
+          data-testid="rich-code-language"
+          (change)="setCodeLanguage(languagePicker.value)"
+        >
+          @for (option of codeLanguages; track option.id) {
+            <option [value]="option.id" [selected]="option.id === language">{{ option.label }}</option>
+          }
+        </select>
+      </label>
+    </div>
+  }
+
   @if (inTable()) {
     <div class="rich-group rich-table-tools">
       @for (tool of tableTools; track tool.action) {
