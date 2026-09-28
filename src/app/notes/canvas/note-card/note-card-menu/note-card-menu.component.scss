@@ -84,6 +84,58 @@
   outline-offset: -2px;
 }
 
+// Laid out in a row: the entry grows, the chevron or the key sits at its end.
+.card-menu-parent,
+.card-menu-level {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-menu-label {
+  flex-grow: 1;
+}
+
+.card-menu-parent[aria-expanded='true'],
+.card-menu-level[aria-checked='true'] {
+  background: rgba(var(--amber-rgb), 0.12);
+  color: var(--text-0);
+}
+
+.card-submenu {
+  min-width: 200px;
+}
+
+.card-menu-key {
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  color: var(--text-2);
+}
+
+.priority-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--line-no);
+
+  &.is-low {
+    background: var(--text-2);
+  }
+
+  &.is-medium {
+    background: var(--blue);
+  }
+
+  &.is-high {
+    background: var(--amber-text);
+  }
+
+  &.is-urgent {
+    background: var(--red);
+  }
+}
+
 .card-menu-delete {
   margin-top: 2px;
   border-top: 1px solid var(--line-soft);

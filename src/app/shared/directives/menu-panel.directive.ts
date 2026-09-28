@@ -1,4 +1,4 @@
-import { Directive, ElementRef, afterNextRender, inject } from '@angular/core';
+import { Directive, ElementRef, afterNextRender, inject, input } from '@angular/core';
 
 /**
  * Keyboard navigation for a `role="menu"` panel. The initial focus is load-bearing —
@@ -15,8 +15,17 @@ import { Directive, ElementRef, afterNextRender, inject } from '@angular/core';
 export class MenuPanelDirective {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
+  /** A submenu of levels opens on the current one; the switchers open on their first entry. */
+  readonly opensOnChecked = input(false);
+
   constructor() {
-    afterNextRender(() => this.items()[0]?.focus());
+    afterNextRender(() => {
+      const items = this.items();
+      const checked = this.opensOnChecked()
+        ? items.find((item) => item.getAttribute('aria-checked') === 'true')
+        : undefined;
+      (checked ?? items[0])?.focus();
+    });
   }
 
   protected onKeydown(event: KeyboardEvent): void {

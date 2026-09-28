@@ -4,7 +4,15 @@ import { NotesRepository } from '@core/data/notes.repository';
 import { ClipboardService } from '@core/services/clipboard/clipboard.service';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { FALLBACK_LANGUAGE, LanguageTag } from '@core/model/language.model';
-import { ChecklistItem, Note, NoteDraft, NoteKind, NoteLifecycle, NotePatch } from '@core/model/note.model';
+import {
+  ChecklistItem,
+  Note,
+  NoteDraft,
+  NoteKind,
+  NoteLifecycle,
+  NotePatch,
+  Priority,
+} from '@core/model/note.model';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { ClockService } from '@core/services/time/clock.service';
 import { sameArray } from '@core/utils/equality.util';
@@ -27,6 +35,7 @@ function isWorthSaving(note: Note): boolean {
     note.tags.length > 0 ||
     note.items.length > 0 ||
     note.pinned ||
+    note.priority !== 'none' ||
     note.lifecycle.kind === 'expires'
   );
 }
@@ -248,6 +257,33 @@ export class NotesStore {
     this.adoptFiling(target, folderId);
     this.revision.bump();
     this.undo.record({ kind: 'file', previous, count: previous.length });
+  }
+
+  /**
+   * One note's priority, a batch of one through `set_priority`, whose answer the undo puts
+   * back. A draft takes it like a pin: it becomes worth keeping, and is written with it.
+   */
+  async setPriority(id: string, priority: Priority): Promise<void> {
+    const resolved = await this.resolve(id);
+    if (resolved === DRAFT_ID) {
+      const draft = this.find(DRAFT_ID);
+      if (!draft) return;
+
+      const updated: Note = { ...draft, priority };
+      if (isWorthSaving(updated)) await this.saveDraft(updated);
+      else this._draftNote.set(updated);
+      return;
+    }
+
+    const previous = await this.notifier.attempt('errors.priorityFailed', () =>
+      this.repository.setPriority([resolved], priority),
+    );
+    if (previous === null) return;
+
+    const open = this._selectedNote();
+    if (open?.id === resolved) this._selectedNote.set({ ...open, priority });
+    this.revision.bump();
+    this.undo.record({ kind: 'priority', previous, count: previous.length });
   }
 
   /**

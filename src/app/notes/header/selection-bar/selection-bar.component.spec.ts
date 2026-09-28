@@ -132,6 +132,21 @@ describe('SelectionBarComponent', () => {
     });
   });
 
+  /** "None" is offered too: taking the priority off a batch is a choice like the others. */
+  it('offers the five levels and emits the one picked', async () => {
+    let emitted: string | undefined;
+    fixture.componentInstance.priorityRequested.subscribe((level) => (emitted = level));
+
+    await openMenu('selection-priority');
+    expect(entries('selection-priority')).toEqual(['Aucune', 'Basse', 'Moyenne', 'Haute', 'Urgente']);
+    fixture.nativeElement
+      .querySelector('[data-testid="choice-panel-selection-priority"] [data-option-id="urgent"]')
+      .click();
+    await fixture.whenStable();
+
+    expect(emitted).toBe('urgent');
+  });
+
   it('emits the typed tag and clears the field', async () => {
     let emitted: string | undefined;
     fixture.componentInstance.tagRequested.subscribe((tag) => (emitted = tag));

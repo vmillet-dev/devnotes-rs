@@ -58,6 +58,14 @@
       "note": "Note",
       "checklist": "Tâches"
     },
+    "priorityLabel": "Priorité",
+    "priority": {
+      "none": "Aucune",
+      "low": "Basse",
+      "medium": "Moyenne",
+      "high": "Haute",
+      "urgent": "Urgente"
+    },
     "newSnippet": "Snippet de code",
     "newRichNote": "Note",
     "newChecklist": "Liste de tâches",
@@ -226,6 +234,7 @@
     "exitFullscreen": "Quitter le plein écran",
     "pin": "Épingler",
     "pinned": "Épinglée",
+    "noPriority": "Aucune priorité",
     "expiryLabel": "Échéance de la note (vide = permanente)",
     "footerStats": "{{lines}} lignes · {{bytes}} octets",
     "modifiedPrefix": "Modifiée",
@@ -319,6 +328,7 @@
     "boardLoadFailed": "Le tableau n’a pas pu être chargé.",
     "boardSaveFailed": "La disposition du tableau n’a pas pu être enregistrée.",
     "fileFailed": "La note n’a pas pu être rangée.",
+    "priorityFailed": "La priorité n’a pas pu être changée.",
     "boardArrangeFailed": "Le tableau n’a pas pu être rangé.",
     "backupsListFailed": "Impossible de lire les copies de sauvegarde.",
     "backupRestoreFailed": "Impossible de restaurer cette copie. La bibliothèque est restée en place.",
@@ -417,6 +427,7 @@
     "count": "{count, plural, one {# sélectionnée} other {# sélectionnées}}",
     "clear": "Tout désélectionner",
     "moveTo": "Déplacer vers",
+    "priority": "Priorité",
     "addTagLabel": "Ajouter un tag à la sélection",
     "addTagPlaceholder": "+ tag",
     "delete": "Mettre à la corbeille",
@@ -547,6 +558,7 @@
       "checkWithClick": "Cocher une carte au clic",
       "extendWithClick": "Étendre la sélection au clic",
       "trash": "Mettre à la corbeille, en deux fois",
+      "priority": "Donner une priorité : 0 aucune, 1 basse… 4 urgente",
       "undo": "Annuler la dernière suppression",
       "stepBack": "Reprendre la note, annuler la suppression en attente, la sélection, les filtres, puis sortir du dossier",
       "align": "Aligner les cartes libres (tableau)"

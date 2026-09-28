@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { checklistProgress } from '@core/model/checklist.model';
-import { Note } from '@core/model/note.model';
+import { Note, Priority } from '@core/model/note.model';
 import { NoteSelectionStore } from '@core/state/note-selection.store';
 import { NotesStore } from '@core/state/notes.store';
 import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
@@ -22,6 +22,7 @@ import { ClockService } from '@core/services/time/clock.service';
 import { expiryRef, relativeTimeRef } from '@core/utils/relative-time.util';
 import { CodeViewerComponent } from '@notes/ui/code-viewer/code-viewer.component';
 import { KindBadgeComponent } from '@notes/ui/kind-badge/kind-badge.component';
+import { PriorityPillComponent } from '@notes/ui/priority-pill/priority-pill.component';
 import { CopyButtonComponent } from '@notes/ui/copy-button/copy-button.component';
 import { NoteCardMenuComponent } from './note-card-menu/note-card-menu.component';
 import { NoteOutlineComponent } from './note-outline/note-outline.component';
@@ -62,6 +63,7 @@ function canTakeFocus(card: HTMLElement): boolean {
     KindBadgeComponent,
     NoteOutlineComponent,
     NoteCardMenuComponent,
+    PriorityPillComponent,
     TranslocoPipe,
   ],
   templateUrl: './note-card.component.html',
@@ -252,6 +254,10 @@ export class NoteCardComponent {
 
   protected onTogglePin(): void {
     void this.notes.togglePinned(this.note().id);
+  }
+
+  protected onPriority(priority: Priority): void {
+    void this.notes.setPriority(this.note().id, priority);
   }
 
   /** The whole rule — the fields form, a todo list's Markdown — lives in the store. */

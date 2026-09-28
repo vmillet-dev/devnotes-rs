@@ -151,6 +151,16 @@ describe('CanvasKeyboardDirective', () => {
       );
     });
 
+    /** A digit is a level, in the order the menus list them; with Ctrl it is not one. */
+    it('gives it the priority of the digit pressed', async () => {
+      press('3');
+      await vi.waitFor(() =>
+        expect(harness.canvas.visibleNotes().find((note) => note.id === 'note-1')?.priority).toBe('high'),
+      );
+
+      expect(press('1', { ctrlKey: true }).defaultPrevented).toBe(false);
+    });
+
     it('opens it', async () => {
       press('Enter');
 

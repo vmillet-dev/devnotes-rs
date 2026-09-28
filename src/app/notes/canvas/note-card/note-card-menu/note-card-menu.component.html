@@ -38,6 +38,22 @@
       {{ (pinned() ? 'editor.pinned' : 'editor.pin') | transloco }}
     </button>
     <button
+      #priorityItem
+      appMenuItem
+      type="button"
+      role="menuitem"
+      class="card-menu-item card-menu-parent"
+      data-testid="note-card-priority"
+      aria-haspopup="menu"
+      [attr.aria-expanded]="submenuOpen()"
+      (click)="toggleSubmenu()"
+      (keydown.arrowright)="openSubmenu($event)"
+    >
+      <span aria-hidden="true">⚑</span>
+      <span class="card-menu-label">{{ 'notes.priorityLabel' | transloco }}</span>
+      <span aria-hidden="true">›</span>
+    </button>
+    <button
       appMenuItem
       type="button"
       role="menuitem"
@@ -125,4 +141,34 @@
       {{ (confirmingDelete() ? 'editor.deleteConfirm' : 'editor.delete') | transloco }}
     </button>
   </div>
+
+  <!-- A sibling of the panel, not a child: the panel's arrows would walk into it. -->
+  @if (submenuOpen()) {
+    <div
+      appMenuPanel
+      class="card-menu card-submenu"
+      [opensOnChecked]="true"
+      data-testid="note-card-priority-menu"
+      [attr.aria-label]="'notes.priorityLabel' | transloco"
+      [style]="submenuStyle()"
+    >
+      @for (level of levels; track level; let key = $index) {
+        <button
+          appMenuItem
+          type="button"
+          role="menuitemradio"
+          class="card-menu-item card-menu-level"
+          data-testid="note-card-priority-level"
+          [attr.data-priority]="level"
+          [attr.aria-checked]="level === priority()"
+          (click)="choosePriority(level)"
+          (keydown.arrowleft)="closeSubmenu()"
+        >
+          <i [class]="'priority-dot is-' + level" aria-hidden="true"></i>
+          <span class="card-menu-label">{{ 'notes.priority.' + level | transloco }}</span>
+          <kbd class="card-menu-key">{{ key }}</kbd>
+        </button>
+      }
+    </div>
+  }
 }

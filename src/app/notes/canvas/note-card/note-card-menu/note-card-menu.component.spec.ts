@@ -184,6 +184,87 @@ describe('NoteCardMenuComponent', () => {
     });
   });
 
+  describe('the priority submenu', () => {
+    function parent(): HTMLButtonElement {
+      return fixture.nativeElement.querySelector('[data-testid="note-card-priority"]');
+    }
+
+    function levels(): HTMLButtonElement[] {
+      return [...fixture.nativeElement.querySelectorAll('[data-testid="note-card-priority-level"]')];
+    }
+
+    async function openLevels(): Promise<void> {
+      await open();
+      parent().click();
+      await fixture.whenStable();
+    }
+
+    it('lists the five levels with their keys, the current one checked and focused', async () => {
+      fixture.componentRef.setInput('priority', 'medium');
+
+      await openLevels();
+
+      expect(levels().map((level) => level.getAttribute('data-priority'))).toEqual([
+        'none',
+        'low',
+        'medium',
+        'high',
+        'urgent',
+      ]);
+      expect(levels().map((level) => level.querySelector('kbd')?.textContent)).toEqual([
+        '0',
+        '1',
+        '2',
+        '3',
+        '4',
+      ]);
+      expect(levels().filter((level) => level.getAttribute('aria-checked') === 'true')).toEqual([
+        levels()[2],
+      ]);
+      expect(parent().getAttribute('aria-expanded')).toBe('true');
+      expect(document.activeElement).toBe(levels()[2]);
+    });
+
+    it('emits the level chosen and closes, and nothing for the one already set', async () => {
+      fixture.componentRef.setInput('priority', 'low');
+      const chosen: string[] = [];
+      fixture.componentInstance.priorityChosen.subscribe((level) => chosen.push(level));
+
+      await openLevels();
+      levels()[4].click();
+      await fixture.whenStable();
+      expect(items()).toHaveLength(0);
+
+      await openLevels();
+      levels()[1].click();
+      await fixture.whenStable();
+
+      expect(chosen).toEqual(['urgent']);
+    });
+
+    /** → opens it, ← or Escape fold it back onto its entry, and only then does Escape close. */
+    it('opens from the keyboard and folds back before the menu closes', async () => {
+      await open();
+      parent().focus();
+
+      await pressKey('ArrowRight');
+      expect(document.activeElement).toBe(levels()[0]);
+
+      await pressKey('ArrowLeft');
+      expect(levels()).toHaveLength(0);
+      expect(document.activeElement).toBe(parent());
+
+      await pressKey('ArrowRight');
+      await pressKey('Escape');
+      expect(levels()).toHaveLength(0);
+      expect(document.activeElement).toBe(parent());
+
+      await pressKey('Escape');
+      expect(items()).toHaveLength(0);
+      expect(document.activeElement).toBe(trigger());
+    });
+  });
+
   it('asks for confirmation before emitting a deletion', async () => {
     const deletions: unknown[] = [];
     fixture.componentInstance.deleteRequested.subscribe(() => deletions.push(true));

@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Folder } from '@core/model/folder.model';
+import { Priority } from '@core/model/note.model';
+import { PRIORITIES } from '@core/model/priority.model';
 import { Space } from '@core/model/space.model';
 import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
 
@@ -23,6 +25,7 @@ export class SelectionBarComponent {
   /** `null` takes the selection out of its folder; the two directions are one control. */
   readonly fileRequested = output<string | null>();
   readonly tagRequested = output<string>();
+  readonly priorityRequested = output<Priority>();
   /** The label announces the format: Markdown must not be a surprise. */
   readonly copyRequested = output<void>();
   readonly deleteRequested = output<void>();
@@ -47,6 +50,13 @@ export class SelectionBarComponent {
     { id: UNFILE, name: 'selection.unfile', nameIsKey: true },
   ]);
 
+  /** "None" included: taking the priority off a batch is a choice like the others. */
+  protected readonly priorityChoices: readonly ChoiceOption[] = PRIORITIES.map((level) => ({
+    id: level,
+    name: `notes.priority.${level}`,
+    nameIsKey: true,
+  }));
+
   protected readonly tagDraft = signal('');
 
   /** Two steps: the WebView blocks on a native `confirm()`. */
@@ -61,6 +71,13 @@ export class SelectionBarComponent {
   protected onFile(value: string | null): void {
     if (value) {
       this.fileRequested.emit(value === UNFILE ? null : value);
+    }
+  }
+
+  protected onPriority(level: string | null): void {
+    const priority = PRIORITIES.find((each) => each === level);
+    if (priority) {
+      this.priorityRequested.emit(priority);
     }
   }
 

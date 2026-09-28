@@ -8,9 +8,12 @@ import {
   linkedSignal,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Folder } from '@core/model/folder.model';
+import { Priority } from '@core/model/note.model';
+import { PRIORITIES } from '@core/model/priority.model';
 import { Space } from '@core/model/space.model';
 import { MenuPanelDirective } from '@shared/directives/menu-panel.directive';
 import { MenuTriggerDirective } from '@shared/directives/menu-trigger.directive';
@@ -32,6 +35,7 @@ export class NoteCardMenuComponent {
   readonly folders = input<readonly Folder[]>([]);
   readonly currentFolderId = input<string | null>(null);
   readonly pinned = input(false);
+  readonly priority = input<Priority>('none');
 
   readonly opened = output<void>();
   readonly pinToggled = output<void>();
@@ -40,9 +44,20 @@ export class NoteCardMenuComponent {
   readonly fileRequested = output<string | null>();
   readonly moveRequested = output<string>();
   readonly deleteRequested = output<void>();
+  readonly priorityChosen = output<Priority>();
 
   protected readonly menu = inject(MenuTriggerDirective);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+
+  protected readonly levels = PRIORITIES;
+
+  /** The first submenu of the application: folded with the menu, and first on Escape. */
+  protected readonly submenuOpen = linkedSignal({
+    source: this.menu.open,
+    computation: () => false,
+  });
+  protected readonly submenuStyle = signal<Record<string, string>>({});
+  private readonly priorityItem = viewChild<ElementRef<HTMLElement>>('priorityItem');
 
   /**
    * Where the panel is drawn, in viewport coordinates.
@@ -58,6 +73,9 @@ export class NoteCardMenuComponent {
   /** The gap the panel keeps from the window edge, and from its own trigger. */
   private static readonly MARGIN = 8;
 
+  /** Measured before the submenu exists: five entries and its padding, with room to spare. */
+  private static readonly SUBMENU = { width: 200, height: 200 };
+
   /** Two steps: the WebView blocks everything during a native `confirm()`. */
   protected readonly confirmingDelete = linkedSignal({
     source: this.menu.open,
@@ -72,6 +90,10 @@ export class NoteCardMenuComponent {
   protected readonly fileTargets = computed<readonly Folder[]>(() =>
     this.folders().filter((folder) => folder.id !== this.currentFolderId()),
   );
+
+  constructor() {
+    this.menu.handleEscape(() => (this.submenuOpen() ? this.closeSubmenu() : this.menu.close()));
+  }
 
   protected toggle(event: MouseEvent): void {
     // The whole card is an opening button: without this, a click on the ⋯ bubbles up
@@ -97,6 +119,48 @@ export class NoteCardMenuComponent {
       [dropUp ? 'bottom' : 'top']:
         `${Math.round(dropUp ? window.innerHeight - box.top + 4 : box.bottom + 4)}px`,
       maxHeight: `${Math.round(Math.max(above, below) - 4)}px`,
+    });
+  }
+
+  protected toggleSubmenu(): void {
+    if (this.submenuOpen()) {
+      this.closeSubmenu();
+      return;
+    }
+    this.openSubmenu();
+  }
+
+  protected openSubmenu(event?: Event): void {
+    event?.preventDefault();
+    this.placeSubmenu();
+    this.submenuOpen.set(true);
+  }
+
+  protected closeSubmenu(): void {
+    this.submenuOpen.set(false);
+    this.priorityItem()?.nativeElement.focus();
+  }
+
+  protected choosePriority(priority: Priority): void {
+    if (priority !== this.priority()) this.priorityChosen.emit(priority);
+    this.menu.close();
+  }
+
+  /** Beside the panel, on the side with room: the menu hangs from the card's right edge. */
+  private placeSubmenu(): void {
+    const item = this.priorityItem()?.nativeElement.getBoundingClientRect();
+    const panel = this.priorityItem()?.nativeElement.closest('.card-menu')?.getBoundingClientRect();
+    if (!item || !panel) return;
+
+    const margin = NoteCardMenuComponent.MARGIN;
+    const { width, height } = NoteCardMenuComponent.SUBMENU;
+    const onTheLeft = panel.left - width - margin >= 0;
+    const top = Math.max(margin, Math.min(item.top - 5, window.innerHeight - height - margin));
+
+    this.submenuStyle.set({
+      [onTheLeft ? 'right' : 'left']:
+        `${Math.round(onTheLeft ? window.innerWidth - panel.left + 4 : panel.right + 4)}px`,
+      top: `${Math.round(top)}px`,
     });
   }
 

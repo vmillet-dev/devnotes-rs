@@ -15,6 +15,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { FALLBACK_LANGUAGE, LANGUAGE_LABELS, isLanguageTag } from '@core/model/language.model';
 import { checklistProgress } from '@core/model/checklist.model';
 import { Note, NotePatch } from '@core/model/note.model';
+import { PRIORITIES } from '@core/model/priority.model';
 import { AttachmentsStore } from '@core/state/attachments.store';
 import { FoldersStore } from '@core/state/folders.store';
 import { NotesStore } from '@core/state/notes.store';
@@ -52,6 +53,11 @@ const LANGUAGE_CHOICES: readonly ChoiceOption[] = Object.entries(LANGUAGE_LABELS
   id,
   name,
 }));
+
+/** "None" is the menu's own entry, and what the trigger says while no level is set. */
+const PRIORITY_CHOICES: readonly ChoiceOption[] = PRIORITIES.filter((level) => level !== 'none').map(
+  (level) => ({ id: level, name: `notes.priority.${level}`, nameIsKey: true }),
+);
 
 /**
  * Talks to stores, like every other editor: `NotesStore` persists the note, and the
@@ -102,6 +108,7 @@ export class NoteEditorOverlayComponent {
   readonly session = input(0);
 
   protected readonly languageChoices = LANGUAGE_CHOICES;
+  protected readonly priorityChoices = PRIORITY_CHOICES;
 
   protected readonly spaceOptions = computed<readonly ChoiceOption[]>(() =>
     this.spaces.spaces().map((space) => ({ id: space.id, name: space.name })),
@@ -333,6 +340,14 @@ export class NoteEditorOverlayComponent {
     const note = this.note();
     if (note) {
       void this.store.fileNote(note.id, folderId);
+    }
+  }
+
+  /** Not a patch either: `set_priority` leaves `updatedAt` alone. */
+  protected choosePriority(level: string | null): void {
+    const note = this.note();
+    if (note) {
+      void this.store.setPriority(note.id, PRIORITIES.find((each) => each === level) ?? 'none');
     }
   }
 
