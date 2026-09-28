@@ -122,6 +122,7 @@ export class SampleNotesService {
         pinned: true,
         lifecycle: { kind: 'permanent' },
         kind: 'note',
+        priority: 'none',
         items: [],
       },
       {
@@ -135,6 +136,7 @@ export class SampleNotesService {
         pinned: false,
         lifecycle: { kind: 'permanent' },
         kind: 'snippet',
+        priority: 'none',
         items: [],
       },
       {
@@ -148,6 +150,7 @@ export class SampleNotesService {
         pinned: false,
         lifecycle: { kind: 'permanent' },
         kind: 'checklist',
+        priority: 'none',
         items: [
           text.checklistOpen,
           text.checklistCopy,
@@ -168,6 +171,7 @@ export class SampleNotesService {
         pinned: false,
         lifecycle: { kind: 'expires', at: this.deadline() },
         kind: 'snippet',
+        priority: 'none',
         items: [],
       },
     ];

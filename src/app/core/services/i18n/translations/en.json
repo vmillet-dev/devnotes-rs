@@ -477,6 +477,7 @@
     "dismiss": "Dismiss",
     "moved": "{count, plural, one {# note} other {# notes}} moved",
     "tagged": "{count, plural, one {# note} other {# notes}} tagged",
+    "prioritised": "Priority changed on {count, plural, one {# note} other {# notes}}",
     "filed": "{count, plural, one {# note} other {# notes}} filed",
     "restoreKey": "Esc",
     "arranged": "Board reorganised"

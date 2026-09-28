@@ -5,7 +5,7 @@ import { FoldersRepository } from '@core/data/folders.repository';
 import { NotesRepository } from '@core/data/notes.repository';
 import { BoardLayout } from '@core/model/board.model';
 import { NoteFiling } from '@core/model/folder.model';
-import { NotePlacement, NoteTag } from '@core/model/note.model';
+import { NotePlacement, NotePriority, NoteTag } from '@core/model/note.model';
 import { BoardStore } from './board.store';
 import { NotesRevision } from './notes-revision';
 
@@ -20,6 +20,7 @@ export type Reversible =
   | { readonly kind: 'deletion'; readonly ids: readonly string[]; readonly count: number }
   | { readonly kind: 'move'; readonly previous: readonly NotePlacement[]; readonly count: number }
   | { readonly kind: 'tag'; readonly added: readonly NoteTag[]; readonly count: number }
+  | { readonly kind: 'priority'; readonly previous: readonly NotePriority[]; readonly count: number }
   | { readonly kind: 'file'; readonly previous: readonly NoteFiling[]; readonly count: number }
   | { readonly kind: 'arrange'; readonly layout: BoardLayout; readonly count: number };
 
@@ -76,6 +77,8 @@ export class UndoStore {
         return this.notes.moveBack(action.previous);
       case 'tag':
         return this.notes.untagMany(action.added);
+      case 'priority':
+        return this.notes.restorePriorities(action.previous);
       case 'file':
         return this.folders.fileBack(action.previous);
       case 'arrange':

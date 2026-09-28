@@ -44,6 +44,7 @@ function emptyDraft(spaceId: string, kind: NoteKind, folderId: string | null = n
     pinned: false,
     lifecycle: { kind: 'permanent' },
     kind,
+    priority: 'none',
     items: [],
   };
 }
@@ -78,6 +79,7 @@ function toDraftPayload(note: Note): NoteDraft {
     pinned: note.pinned,
     lifecycle: note.lifecycle,
     kind: note.kind,
+    priority: note.priority,
     items: note.items.map((item) => ({ ...item })),
   };
 }

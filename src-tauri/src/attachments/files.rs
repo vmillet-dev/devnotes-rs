@@ -170,6 +170,7 @@ pub(crate) mod tests {
                 pinned: false,
                 lifecycle: crate::notes::model::NoteLifecycle::Permanent,
                 kind: crate::notes::kind::NoteKind::Snippet,
+                priority: crate::notes::priority::Priority::None,
                 items: Vec::new(),
             },
             Utc::now(),

@@ -242,6 +242,31 @@ describe('NoteSelectionStore', () => {
       expect(repository.tagsOf('b')).toEqual([]);
     });
 
+    /** The batch answered what each note had, so each one gets its own back. */
+    it('offers to put a priority back, note by note', async () => {
+      const { selection, repository, batch, undo } = await createNotesHarness([
+        createNote({ id: 'a', priority: 'low' }),
+        createNote({ id: 'b', priority: 'urgent' }),
+      ]);
+      selection.toggleChecked('a');
+      selection.toggleChecked('b');
+
+      await batch.prioritiseSelection('urgent');
+
+      expect(undo.banner()).toEqual({
+        kind: 'priority',
+        previous: [{ noteId: 'a', priority: 'low' }],
+        count: 1,
+      });
+
+      const queries = repository.queryCount;
+      await undo.revert();
+      await awaitQuery(repository, queries);
+
+      expect(repository.priorityOf('a')).toBe('low');
+      expect(repository.priorityOf('b')).toBe('urgent');
+    });
+
     /** A bar offering to undo nothing is noise, not a safety net. */
     it('offers no undo when the batch changed nothing', async () => {
       const { selection, batch, undo } = await createNotesHarness([

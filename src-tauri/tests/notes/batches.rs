@@ -43,6 +43,74 @@ fn moving_to_an_unknown_space_is_refused_for_the_whole_batch() {
     assert_eq!(list(&mut connection).unwrap()[0].space_id, space_id);
 }
 
+fn prioritised(space_id: &str, priority: Priority) -> NoteDraft {
+    NoteDraft {
+        priority,
+        ..draft(space_id)
+    }
+}
+
+/// Triaging is not editing: a list sorted by modification must not reshuffle under it.
+#[test]
+fn a_priority_moves_only_the_notes_that_differ_and_leaves_updated_at_alone() {
+    let mut connection = open_in_memory().unwrap();
+    let space_id = space(&mut connection, "Personal");
+    let plain = create(&mut connection, draft(&space_id), t0()).unwrap();
+    let urgent = create(
+        &mut connection,
+        prioritised(&space_id, Priority::Urgent),
+        t0(),
+    )
+    .unwrap();
+
+    let previous = set_priority_many(
+        &mut connection,
+        &[plain.id.clone(), urgent.id.clone()],
+        Priority::Urgent,
+    )
+    .unwrap();
+
+    assert_eq!(
+        previous,
+        [NotePriority {
+            note_id: plain.id,
+            priority: Priority::None
+        }]
+    );
+    let listed = list(&mut connection).unwrap();
+    assert!(listed.iter().all(|note| note.priority == Priority::Urgent));
+    assert!(listed.iter().all(|note| note.updated_at == t0()));
+}
+
+/// Each note gets its own back, not one priority for the whole batch.
+#[test]
+fn undoing_a_priority_gives_each_note_back_its_own() {
+    let mut connection = open_in_memory().unwrap();
+    let space_id = space(&mut connection, "Personal");
+    let low = create(&mut connection, prioritised(&space_id, Priority::Low), t0()).unwrap();
+    let high = create(
+        &mut connection,
+        prioritised(&space_id, Priority::High),
+        t0(),
+    )
+    .unwrap();
+
+    let previous = set_priority_many(
+        &mut connection,
+        &[low.id.clone(), high.id.clone()],
+        Priority::Urgent,
+    )
+    .unwrap();
+    let restored = restore_priorities(&mut connection, &previous).unwrap();
+
+    assert_eq!(restored, 2);
+    let listed = list(&mut connection).unwrap();
+    let priority_of = |id: &str| listed.iter().find(|note| note.id == id).unwrap().priority;
+    assert_eq!(priority_of(&low.id), Priority::Low);
+    assert_eq!(priority_of(&high.id), Priority::High);
+    assert!(listed.iter().all(|note| note.updated_at == t0()));
+}
+
 #[test]
 fn tagging_a_selection_adds_without_replacing() {
     let mut connection = open_in_memory().unwrap();

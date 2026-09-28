@@ -13,8 +13,9 @@ use devnotes_lib::notes::checklist::ChecklistItem;
 use devnotes_lib::notes::kind::NoteKind;
 use devnotes_lib::notes::language::Language;
 use devnotes_lib::notes::model::{
-    DisplayNote, Note, NoteDraft, NoteLifecycle, NotePatch, TagUsage, decorate,
+    DisplayNote, Note, NoteDraft, NoteLifecycle, NotePatch, NotePriority, TagUsage, decorate,
 };
+use devnotes_lib::notes::priority::Priority;
 use devnotes_lib::notes::trash;
 use devnotes_lib::notes::view::{
     self, NoteFilter, NoteSection, NoteSectionKey, NotesQuery, NotesView,
@@ -43,6 +44,7 @@ fn sample() -> Note {
         updated_at: at(NOW),
         lifecycle: NoteLifecycle::Permanent,
         kind: NoteKind::Snippet,
+        priority: Priority::None,
         items: Vec::new(),
         placeholder_values: BTreeMap::new(),
     }
@@ -488,6 +490,27 @@ fn a_note_announces_its_kind_and_its_items() {
     assert_eq!(json["kind"], serde_json::json!("checklist"));
     assert_eq!(json["items"][0]["text"], serde_json::json!("Relire"));
     assert_eq!(json["items"][0]["done"], serde_json::json!(true));
+}
+
+#[test]
+fn a_priority_crosses_as_its_stored_word_and_a_change_names_its_note() {
+    let note = Note {
+        priority: Priority::Urgent,
+        ..sample()
+    };
+    let change = NotePriority {
+        note_id: "n-1".to_string(),
+        priority: Priority::Low,
+    };
+
+    assert_eq!(
+        serde_json::to_value(note).unwrap()["priority"],
+        serde_json::json!("urgent")
+    );
+    assert_eq!(
+        serde_json::to_value(change).unwrap(),
+        serde_json::json!({ "noteId": "n-1", "priority": "low" })
+    );
 }
 
 #[test]

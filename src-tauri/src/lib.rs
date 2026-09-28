@@ -40,8 +40,9 @@ use notes::{
     count_notes_tagged, create_note, delete_note, delete_notes, delete_tags, detect_language,
     duplicate_note, empty_trash, fill_placeholders, get_note, list_global_placeholders,
     list_revisions, list_tags, list_trash, move_notes, move_notes_back, purge_notes, query_notes,
-    rename_tags, restore_notes, restore_revision, revision_diff, seed_samples,
-    set_global_placeholders, set_placeholder_values, tag_notes, untag_notes, update_note,
+    rename_tags, restore_notes, restore_priorities, restore_revision, revision_diff, seed_samples,
+    set_global_placeholders, set_placeholder_values, set_priority, tag_notes, untag_notes,
+    update_note,
 };
 use recovery::{archive_locked_library, set_aside_damaged_library};
 use spaces::{create_space, delete_space, list_spaces, pin_space, rename_space};
@@ -84,6 +85,8 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             move_notes_back::<tauri::Wry>,
             tag_notes::<tauri::Wry>,
             untag_notes::<tauri::Wry>,
+            set_priority::<tauri::Wry>,
+            restore_priorities::<tauri::Wry>,
             count_notes_tagged::<tauri::Wry>,
             list_tags::<tauri::Wry>,
             rename_tags::<tauri::Wry>,

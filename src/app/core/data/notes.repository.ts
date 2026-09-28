@@ -9,9 +9,11 @@ import {
   NoteDraft,
   NotePatch,
   NotePlacement,
+  NotePriority,
   NotesQuery,
   NotesView,
   NoteTag,
+  Priority,
   SampleNote,
   TagUsage,
   TrashedNote,
@@ -144,6 +146,15 @@ export class NotesRepository {
 
   async untagMany(pairs: readonly NoteTag[]): Promise<number> {
     return unwrap('untag_notes', await commands.untagNotes([...pairs]));
+  }
+
+  /** Answers each note whose priority moved, with the one it had. */
+  async setPriority(ids: readonly string[], priority: Priority): Promise<readonly NotePriority[]> {
+    return unwrap('set_priority', await commands.setPriority([...ids], priority));
+  }
+
+  async restorePriorities(previous: readonly NotePriority[]): Promise<number> {
+    return unwrap('restore_priorities', await commands.restorePriorities([...previous]));
   }
 
   /** What a corpus-wide tag action would touch, asked before it runs. */

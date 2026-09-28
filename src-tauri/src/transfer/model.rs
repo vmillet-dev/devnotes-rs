@@ -16,6 +16,7 @@ use crate::notes::checklist;
 use crate::notes::kind::NoteKind;
 use crate::notes::language::Language;
 use crate::notes::model::Note;
+use crate::notes::priority::Priority;
 use crate::spaces::model::Space;
 
 /// Bumped when a file written today would stop being readable. An added enum variant does not
@@ -117,9 +118,9 @@ pub fn read_bundle(json: &str) -> Result<IncomingBundle, StorageError> {
     Ok(IncomingBundle { bundle, degraded })
 }
 
-/// `Note` deserialises `language` and `kind` as closed enums, so one value from a newer
-/// DevNotes would fail the whole import. This degrades it instead, as the database read does
-/// (`NoteRow::open`); only the bridge stays strict.
+/// `Note` deserialises `language`, `kind` and `priority` as closed enums, so one value from
+/// a newer DevNotes would fail the whole import. This degrades it instead, as the database read
+/// does (`NoteRow::open`); only the bridge stays strict.
 fn degrade_unknown_values(bundle: &mut serde_json::Value) -> BTreeSet<String> {
     let mut degraded = BTreeSet::new();
 
@@ -133,8 +134,9 @@ fn degrade_unknown_values(bundle: &mut serde_json::Value) -> BTreeSet<String> {
     for note in notes {
         let language = degrade_field::<Language>(note, "language");
         let kind = degrade_field::<NoteKind>(note, "kind");
+        let priority = degrade_field::<Priority>(note, "priority");
 
-        if (language || kind)
+        if (language || kind || priority)
             && let Some(id) = note.get("id").and_then(serde_json::Value::as_str)
         {
             degraded.insert(id.to_string());
@@ -358,6 +360,27 @@ mod tests {
 
         assert_eq!(read.bundle.notes[0].kind, NoteKind::default());
         assert_eq!(read.degraded.len(), 1);
+    }
+
+    #[test]
+    fn an_unknown_priority_is_brought_down_the_same_way() {
+        let read = read_bundle(&bundle_with("priority", "from-the-future".into())).unwrap();
+
+        assert_eq!(read.bundle.notes[0].priority, Priority::default());
+        assert_eq!(read.degraded.len(), 1);
+    }
+
+    /// An export from before priorities carries no such key.
+    #[test]
+    fn a_note_without_a_priority_reads_as_having_none() {
+        let mut json: serde_json::Value =
+            serde_json::from_str(&bundle_with("priority", "high".into())).unwrap();
+        json["notes"][0].as_object_mut().unwrap().remove("priority");
+
+        let read = read_bundle(&json.to_string()).unwrap();
+
+        assert_eq!(read.bundle.notes[0].priority, Priority::None);
+        assert!(read.degraded.is_empty());
     }
 
     #[test]

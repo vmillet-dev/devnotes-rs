@@ -59,6 +59,7 @@ mod tests {
     use crate::notes::checklist::ChecklistItem;
     use crate::notes::fixtures::{NOW, at, note};
     use crate::notes::kind::NoteKind;
+    use crate::notes::priority::Priority;
 
     fn library_with(original: impl FnOnce(String) -> Note) -> (tempfile::TempDir, Library, Note) {
         let scratch = tempfile::tempdir().unwrap();
@@ -105,6 +106,7 @@ mod tests {
             content: "ssh {{user}}@{{host}}".to_string(),
             source: "OpenSSH".to_string(),
             placeholder_values: BTreeMap::from([("user".to_string(), "deploy".to_string())]),
+            priority: Priority::High,
             ..note()
         });
         let later = at("2026-07-26T09:00:00.000Z");
@@ -124,6 +126,7 @@ mod tests {
         assert_eq!(read.source, original.source);
         assert_eq!(read.tags, original.tags);
         assert_eq!(read.placeholder_values, original.placeholder_values);
+        assert_eq!(read.priority, Priority::High);
         assert_eq!(read.space_id, original.space_id);
         assert!(!read.pinned, "a copy is not pinned");
         assert_eq!((read.created_at, read.updated_at), (later, later));

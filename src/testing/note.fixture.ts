@@ -17,6 +17,7 @@ export function createNote(overrides: Partial<Note> = {}): Note {
     updatedAt: new Date('2026-01-01T10:00:00Z'),
     lifecycle: { kind: 'permanent' },
     kind: 'snippet',
+    priority: 'none',
     items: [],
     // Derived by the back end; a spec about them overrides them.
     footer: { kind: 'age', at: new Date('2026-01-01T10:00:00Z') },

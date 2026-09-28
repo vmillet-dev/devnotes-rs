@@ -3,6 +3,7 @@ import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { FoldersRepository } from '@core/data/folders.repository';
 import { NotesRepository } from '@core/data/notes.repository';
 import { BoardScope } from '@core/model/board.model';
+import { Priority } from '@core/model/note.model';
 import { BoardStore } from './board.store';
 import { NoteSelectionStore } from './note-selection.store';
 import { NotesRevision } from './notes-revision';
@@ -45,6 +46,13 @@ export class NoteBatchStore {
     if (added === null) return;
 
     this.undo.record({ kind: 'tag', added, count: added.length });
+  }
+
+  async prioritiseSelection(priority: Priority): Promise<void> {
+    const previous = await this.runOnSelection((ids) => this.notes.setPriority(ids, priority));
+    if (previous === null) return;
+
+    this.undo.record({ kind: 'priority', previous, count: previous.length });
   }
 
   async deleteSelection(): Promise<void> {

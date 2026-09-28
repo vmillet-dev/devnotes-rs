@@ -7,6 +7,7 @@ const MESSAGES: Record<Reversible['kind'], string> = {
   deletion: 'undo.deleted',
   move: 'undo.moved',
   tag: 'undo.tagged',
+  priority: 'undo.prioritised',
   file: 'undo.filed',
   arrange: 'undo.arranged',
 };

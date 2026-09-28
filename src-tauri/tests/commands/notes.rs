@@ -3,14 +3,15 @@ use std::collections::BTreeMap;
 use chrono::Utc;
 use devnotes_lib::error::ErrorCode;
 use devnotes_lib::notes::model::{NoteDraft, NotePatch, SampleNote};
+use devnotes_lib::notes::priority::Priority;
 use devnotes_lib::notes::revision::DiffLine;
 use devnotes_lib::notes::view::{NoteFilter, NotesQuery};
 use devnotes_lib::notes::{
     count_notes_tagged, create_note, delete_note, delete_notes, delete_tags, duplicate_note,
     empty_trash, fill_placeholders, get_note, list_global_placeholders, list_revisions, list_tags,
     list_trash, move_notes, move_notes_back, purge_notes, query_notes, rename_tags, restore_notes,
-    restore_revision, revision_diff, seed_samples, set_global_placeholders, set_placeholder_values,
-    tag_notes, untag_notes, update_note,
+    restore_priorities, restore_revision, revision_diff, seed_samples, set_global_placeholders,
+    set_placeholder_values, set_priority, tag_notes, untag_notes, update_note,
 };
 
 use super::common::snippet;
@@ -233,6 +234,29 @@ fn a_move_is_undone_by_the_placements_it_answered() {
     assert_eq!(moved.note.space_id, work);
     assert_eq!(undone, 1);
     assert_eq!(back.note.space_id, personal);
+}
+
+#[test]
+fn a_priority_is_set_and_put_back_without_touching_the_modification_date() {
+    let session = Session::open();
+    let space = session.space("Personal");
+    let id = note(&session, snippet(&space));
+    let before = session.call(|app| get_note(id.clone(), app)).unwrap();
+
+    let previous = session
+        .call(|app| set_priority(ids(&id), Priority::Urgent, app))
+        .unwrap();
+    let set = session.call(|app| get_note(id.clone(), app)).unwrap();
+    let restored = session
+        .call(|app| restore_priorities(previous.clone(), app))
+        .unwrap();
+    let back = session.call(|app| get_note(id.clone(), app)).unwrap();
+
+    assert_eq!(previous.len(), 1);
+    assert_eq!(set.note.priority, Priority::Urgent);
+    assert_eq!(set.note.updated_at, before.note.updated_at);
+    assert_eq!(restored, 1);
+    assert_eq!(back.note.priority, Priority::None);
 }
 
 /// A typed `#urgent` joins `urgent`: the command normalises before the store sees it.

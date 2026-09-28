@@ -8,6 +8,7 @@ use devnotes_lib::db::{Library, iso8601};
 use devnotes_lib::notes::kind::NoteKind;
 use devnotes_lib::notes::language::Language;
 use devnotes_lib::notes::model::{NoteDraft, NoteLifecycle};
+use devnotes_lib::notes::priority::Priority;
 use devnotes_lib::spaces::store as spaces;
 
 pub(crate) fn at(iso: &str) -> DateTime<Utc> {
@@ -39,6 +40,7 @@ pub(crate) fn snippet(space_id: &str) -> NoteDraft {
         pinned: false,
         lifecycle: NoteLifecycle::Permanent,
         kind: NoteKind::Snippet,
+        priority: Priority::None,
         items: Vec::new(),
     }
 }

@@ -443,6 +443,7 @@ mod tests {
     use super::*;
     use crate::notes::kind::NoteKind;
     use crate::notes::model::NoteLifecycle;
+    use crate::notes::priority::Priority;
 
     #[test]
     fn every_variant_round_trips_through_its_stored_form() {
@@ -482,6 +483,7 @@ mod tests {
             pinned: false,
             lifecycle: NoteLifecycle::Permanent,
             kind: NoteKind::Snippet,
+            priority: Priority::None,
             items: Vec::new(),
         }
     }

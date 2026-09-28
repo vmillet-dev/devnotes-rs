@@ -189,6 +189,7 @@ mod tests {
     use crate::notes::kind::NoteKind;
     use crate::notes::language::Language;
     use crate::notes::model::{NoteDraft, NoteLifecycle};
+    use crate::notes::priority::Priority;
 
     fn note(connection: &mut Library) -> String {
         let space = crate::spaces::store::create(connection, "Personal").unwrap();
@@ -205,6 +206,7 @@ mod tests {
                 pinned: false,
                 lifecycle: NoteLifecycle::Permanent,
                 kind: NoteKind::Snippet,
+                priority: Priority::None,
                 items: Vec::new(),
             },
             Utc::now(),

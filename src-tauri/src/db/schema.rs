@@ -43,6 +43,7 @@ diesel::table! {
         deleted_at -> Nullable<Text>,
         kind -> Text,
         folder_id -> Nullable<Text>,
+        priority -> Text,
     }
 }
 
