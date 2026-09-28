@@ -73,7 +73,7 @@ export const bridge = {
   queryNotes: (query: NotesQuery) => invoke<NotesView>('query_notes', { query }),
   createNote: (draft: NoteDraft) => invoke<DisplayNote>('create_note', { draft }),
   updateNote: (id: string, patch: NotePatch) => invoke<DisplayNote>('update_note', { id, patch }),
-  /** The whole body, as stored: a list sends a Text note's words without their Markdown. */
+  /** The whole body, as stored: a list sends a Note's words without their Markdown. */
   getNote: (id: string) => invoke<DisplayNote>('get_note', { id }),
   deleteNote: (id: string) => invoke<null>('delete_note', { id }),
 

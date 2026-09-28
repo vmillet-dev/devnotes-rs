@@ -186,7 +186,7 @@ mod tests {
 
     use super::*;
     use crate::db::open_in_memory;
-    use crate::notes::checklist::NoteKind;
+    use crate::notes::kind::NoteKind;
     use crate::notes::language::Language;
     use crate::notes::model::{NoteDraft, NoteLifecycle};
 

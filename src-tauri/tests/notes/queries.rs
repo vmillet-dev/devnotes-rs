@@ -435,6 +435,33 @@ fn available_languages_are_sorted_and_de_duplicated() {
 }
 
 #[test]
+fn only_a_snippet_brings_its_language_to_the_rail_and_answers_to_it() {
+    let mut connection = open_in_memory().unwrap();
+    let space_id = space(&mut connection, "Personal");
+    create(&mut connection, written_in(&space_id, Language::Json), t0()).unwrap();
+    for kind in [NoteKind::Note, NoteKind::Checklist] {
+        let draft = NoteDraft {
+            kind,
+            ..written_in(&space_id, Language::Txt)
+        };
+        create(&mut connection, draft, t0()).unwrap();
+    }
+
+    let view = query(&mut connection, &all_notes()).unwrap();
+    let text = query(
+        &mut connection,
+        &NotesQuery {
+            languages: vec![Language::Txt],
+            ..all_notes()
+        },
+    )
+    .unwrap();
+
+    assert_eq!(view.available_languages, [Language::Json]);
+    assert_eq!(text.matched, 0);
+}
+
+#[test]
 fn available_languages_are_scoped_to_the_active_space() {
     let mut connection = open_in_memory().unwrap();
     let here = space(&mut connection, "Personal");

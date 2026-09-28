@@ -56,8 +56,9 @@ mod tests {
     use std::collections::BTreeMap;
 
     use super::*;
-    use crate::notes::checklist::{ChecklistItem, NoteKind};
+    use crate::notes::checklist::ChecklistItem;
     use crate::notes::fixtures::{NOW, at, note};
+    use crate::notes::kind::NoteKind;
 
     fn library_with(original: impl FnOnce(String) -> Note) -> (tempfile::TempDir, Library, Note) {
         let scratch = tempfile::tempdir().unwrap();

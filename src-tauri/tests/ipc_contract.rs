@@ -9,7 +9,8 @@ use devnotes_lib::db::iso8601;
 use devnotes_lib::error::StorageError;
 use devnotes_lib::error::ValidationError;
 use devnotes_lib::error::{AppError, ErrorCode};
-use devnotes_lib::notes::checklist::{ChecklistItem, NoteKind};
+use devnotes_lib::notes::checklist::ChecklistItem;
+use devnotes_lib::notes::kind::NoteKind;
 use devnotes_lib::notes::language::Language;
 use devnotes_lib::notes::model::{
     DisplayNote, Note, NoteDraft, NoteLifecycle, NotePatch, TagUsage, decorate,

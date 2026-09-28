@@ -104,10 +104,11 @@ describe('SampleNotesService', () => {
     expect(lifecycle.at.getDate()).toBe(new Date('2026-09-18T09:00:00Z').getDate());
   });
 
-  it('spells out the languages rather than leaving detection to guess', async () => {
+  it('spells out the kinds and the languages rather than leaving detection to guess', async () => {
     await service.seedIfFirstRun();
 
-    expect(drafts().map((draft) => draft.language)).toEqual(['md', 'sh', 'txt', 'ts']);
+    expect(drafts().map((draft) => draft.kind)).toEqual(['note', 'snippet', 'checklist', 'snippet']);
+    expect(drafts().map((draft) => draft.language)).toEqual(['txt', 'sh', 'txt', 'ts']);
   });
 
   it('never offers the samples twice', async () => {

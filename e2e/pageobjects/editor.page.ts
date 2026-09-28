@@ -26,7 +26,7 @@ async function typeAndCommit(selector: string, text: string): Promise<void> {
   await blur();
 }
 
-/** A Text note's body is the rich editor, loaded on demand; any other note's, the code field. */
+/** A Note's body is the rich editor, loaded on demand; a snippet's, the code field. */
 async function bodyField(): Promise<'rich' | 'code'> {
   const field = await eventually(
     async () =>

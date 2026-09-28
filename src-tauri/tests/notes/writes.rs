@@ -197,10 +197,11 @@ fn updating_refreshes_updated_at_but_not_created_at() {
 }
 
 #[test]
-fn typing_into_a_freshly_created_note_keeps_it_text() {
+fn typing_into_a_freshly_created_note_keeps_it_prose() {
     let mut connection = open_in_memory().unwrap();
     let space_id = space(&mut connection, "Personal");
     let empty = NoteDraft {
+        kind: NoteKind::Note,
         language: Language::Txt,
         content: String::new(),
         ..draft(&space_id)
@@ -213,7 +214,29 @@ fn typing_into_a_freshly_created_note_keeps_it_text() {
     };
     let updated = update(&mut connection, &created.id, &patch, t1()).unwrap();
 
+    assert_eq!(updated.kind, NoteKind::Note);
     assert_eq!(updated.language, Language::Txt);
+}
+
+/// The title was typed first, so creation saw no body: the first one is read when it comes.
+#[test]
+fn a_freshly_created_snippet_takes_the_language_of_its_first_content() {
+    let mut connection = open_in_memory().unwrap();
+    let space_id = space(&mut connection, "Personal");
+    let empty = NoteDraft {
+        language: Language::Txt,
+        content: String::new(),
+        ..draft(&space_id)
+    };
+    let created = create(&mut connection, empty, t0()).unwrap();
+
+    let patch = NotePatch {
+        content: Some("SELECT id FROM notes WHERE pinned = 1;".to_string()),
+        ..NotePatch::default()
+    };
+    let updated = update(&mut connection, &created.id, &patch, t1()).unwrap();
+
+    assert_eq!(updated.language, Language::Sql);
 }
 
 /// A paste of code is detected by the front end, through `detect_language`, before it writes.

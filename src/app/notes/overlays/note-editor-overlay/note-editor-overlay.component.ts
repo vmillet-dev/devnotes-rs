@@ -156,11 +156,10 @@ export class NoteEditorOverlayComponent {
   private readonly fieldsPanel = viewChild(PlaceholderPanelComponent);
 
   protected readonly isChecklist = computed(() => this.note()?.kind === 'checklist');
-  /** A Text note is written in the rich editor; every other language keeps the code field. */
-  protected readonly isRichText = computed(() => {
-    const note = this.note();
-    return note?.kind === 'snippet' && note.language === 'txt';
-  });
+  /** A Note is written in the rich editor; a snippet keeps the code field. */
+  protected readonly isRichText = computed(() => this.note()?.kind === 'note');
+  /** Only a snippet's body is code: a format picker anywhere else would do nothing. */
+  protected readonly hasLanguage = computed(() => this.note()?.kind === 'snippet');
   protected readonly checklistStats = computed(() => checklistProgress(this.note()?.items ?? []));
 
   /** The draft, so copying before leaving the field yields what is on screen. */
@@ -196,11 +195,11 @@ export class NoteEditorOverlayComponent {
       untracked(() => this.help.close());
     });
 
-    // A snippet's history only: a checklist's items live in `note_items`, a second table
-    // to snapshot, and a panel always empty for half the note kinds says nothing.
+    // Never a checklist's: its items live in `note_items`, a second table to snapshot, and a
+    // panel always empty for one kind in three says nothing.
     effect(() => {
       const note = this.note();
-      void this.revisions.openFor(note && note.kind === 'snippet' ? note.id : null);
+      void this.revisions.openFor(note && note.kind !== 'checklist' ? note.id : null);
     });
   }
 
@@ -297,8 +296,8 @@ export class NoteEditorOverlayComponent {
   }
 
   /**
-   * Plain text pasted into an empty Text note. Code keeps its characters and its language, and
-   * the note leaves for the code field; prose stays here, read as Markdown.
+   * Plain text pasted into an empty Note. Code keeps its characters and gets its language: the
+   * note becomes a snippet, in the code field. Prose stays here, read as Markdown.
    */
   protected async onRichPaste(text: string): Promise<void> {
     const language = await this.store.detectLanguage(text);
@@ -306,7 +305,7 @@ export class NoteEditorOverlayComponent {
     if (language === 'txt') {
       this.commitContent();
     } else {
-      this.requestPatch({ content: text, language });
+      this.requestPatch({ content: text, language, kind: 'snippet' });
     }
   }
 

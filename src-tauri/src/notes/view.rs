@@ -88,7 +88,8 @@ impl Criteria {
                     .any(|carried| carried.eq_ignore_ascii_case(wanted))
             });
 
-        let languages = self.languages.is_empty() || self.languages.contains(&note.language);
+        let languages = self.languages.is_empty()
+            || (note.kind.has_language() && self.languages.contains(&note.language));
         let search = self.needle.is_empty() || matches_search(note, &self.needle);
 
         filter && tags && languages && search
@@ -478,8 +479,9 @@ fn build_sections(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::notes::checklist::{ChecklistItem, NoteKind};
+    use crate::notes::checklist::ChecklistItem;
     use crate::notes::fixtures::{NOW, at, note as sample};
+    use crate::notes::kind::NoteKind;
 
     fn request() -> NotesQuery {
         NotesQuery {
@@ -866,10 +868,11 @@ mod tests {
             assert_eq!(hit.excerpt, "kubectl rollout restart");
         }
 
-        /// A Text note is quoted without its Markdown, found by the words it shows.
+        /// A Note is quoted without its Markdown, found by the words it shows.
         #[test]
-        fn quotes_a_text_note_without_its_markdown() {
+        fn quotes_a_note_without_its_markdown() {
             let note = Note {
+                kind: NoteKind::Note,
                 content: "# Standup\n\n- [ ] ask about the **rollout** window".to_string(),
                 ..sample()
             };

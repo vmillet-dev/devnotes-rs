@@ -21,8 +21,7 @@
         (blur)="commitTitle()"
       />
 
-      <!-- No format for a todo list: a picker with no effect is worth less than none. -->
-      @if (!isChecklist()) {
+      @if (hasLanguage()) {
         <app-choice-menu
           [kind]="'language'"
           [label]="'editor.languageLabel' | transloco"
@@ -217,7 +216,7 @@
           (itemsChanged)="requestPatch({ items: $event })"
         />
       } @else if (isRichText()) {
-        <!-- Deferred: TipTap is loaded the first time a Text note opens, not at startup. -->
+        <!-- Deferred: TipTap is loaded the first time a Note opens, not at startup. -->
         @defer (on immediate) {
           <app-rich-text-editor
             #richEditor

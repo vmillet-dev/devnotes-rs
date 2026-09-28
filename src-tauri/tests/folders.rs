@@ -559,7 +559,7 @@ mod board {
         let mut connection = open_in_memory().unwrap();
         let sql = space(&mut connection, "SQL");
         let perf = create(&mut connection, &sql, "Perf", t0()).unwrap();
-        // A snippet: a Text note's preview is its words, not its lines.
+        // A snippet: a Note's preview is its words, not its lines.
         let long = || NoteDraft {
             language: Language::Sh,
             content: "1\n2\n3\n4\n5\n6\n7".to_string(),

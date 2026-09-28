@@ -165,14 +165,14 @@ describe('Editing a note', () => {
   });
 
   /** Written in the rich editor, stored as Markdown, shown on a card as words. */
-  describe('a Text note', () => {
+  describe('a Note', () => {
     const richTitle = 'Standup, formatted';
     let noteId = '';
 
     before(async () => {
-      noteId = (await bridge.createNote(draft({ spaceId, title: richTitle, content: '' }))).id;
-      // A patch and not the draft: a draft's content is still read for a language.
-      await bridge.updateNote(noteId, { content: '**Ship** it and `tag`\n\n- [ ] write the notes' });
+      // A Note's content is never read for a language, so the draft can carry it.
+      const content = '**Ship** it and `tag`\n\n- [ ] write the notes';
+      noteId = (await bridge.createNote(draft({ spaceId, title: richTitle, content, kind: 'note' }))).id;
       await reloadCanvas();
       await canvas.waitForCard(richTitle);
     });
@@ -200,10 +200,10 @@ describe('Editing a note', () => {
       expect(stored).toContain('**Ship** it and `tag`');
     });
 
-    /** Code keeps its characters and gets its language: the note leaves for the code field. */
-    it('hands a paste of code over to the code field, with its language', async () => {
+    /** Code keeps its characters and gets its language: the note becomes a snippet. */
+    it('turns into a snippet in the code field when code is pasted into it empty', async () => {
       const code = 'SELECT id, title FROM notes WHERE pinned = 1;';
-      await canvas.createSnippet();
+      await canvas.createRichNote();
       await $(testid('editor-rich')).waitForExist({ timeout: 10_000 });
 
       await browser.execute(
@@ -222,6 +222,7 @@ describe('Editing a note', () => {
       await editor.close();
 
       const pasted = (await bridge.queryNotes(query({ search: 'pinned = 1' }))).sections[0]?.notes[0];
+      expect(pasted?.kind).toBe('snippet');
       expect(pasted?.language).toBe('sql');
       // Untitled, and in every later file's canvas otherwise.
       await bridge.deleteNotes([pasted!.id]);

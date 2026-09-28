@@ -18,8 +18,8 @@ export const commands = {
 	 */
 	duplicateNote: (id: string, title: string) => typedError<DisplayNote, AppError>(__TAURI_INVOKE("duplicate_note", { id, title })),
 	/**
-	 *  What a paste into an empty Text note is. Asked by the front end before it writes: typing
-	 *  keeps a note Text, and only a paste of code gives it a language.
+	 *  What a paste into an empty Note is. Asked by the front end before it writes: typing keeps
+	 *  a Note prose, and only a paste of code turns it into a snippet with a language.
 	 */
 	detectLanguage: (content: string) => __TAURI_INVOKE<Language>("detect_language", { content }),
 	/**
@@ -610,7 +610,9 @@ export type NoteFooter = { kind: "source"; value: string } | { kind: "expiry"; a
  */
 export type NoteKind = 
 /**  Default, and what every note written before todo lists reads back as. */
-"snippet" | "checklist";
+"snippet" | "checklist" | 
+/**  Prose, written in the rich editor and stored as Markdown. */
+"note";
 
 export type NoteLifecycle = { kind: "permanent" } | { kind: "expires"; at: string };
 

@@ -15,7 +15,8 @@ use chrono::{DateTime, TimeDelta, Utc};
 use devnotes_lib::db::Library;
 
 use devnotes_lib::db;
-use devnotes_lib::notes::checklist::{ChecklistItem, NoteKind};
+use devnotes_lib::notes::checklist::ChecklistItem;
+use devnotes_lib::notes::kind::NoteKind;
 use devnotes_lib::notes::language::Language;
 use devnotes_lib::notes::model::{NoteDraft, NoteLifecycle};
 use devnotes_lib::notes::store;

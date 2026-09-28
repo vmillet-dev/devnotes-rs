@@ -9,6 +9,7 @@ use uuid::Uuid;
 
 use chrono::{DateTime, TimeDelta, Utc};
 
+use super::kind::NoteKind;
 use super::model::{Note, NoteDraft, NoteLifecycle, NotePatch, NotePlacement, NoteTag, SampleNote};
 use super::revision;
 use super::view::{Decorations, Facets, NoteFilter, NotesQuery};
@@ -240,8 +241,10 @@ fn facets(connection: &mut Library, space_id: Option<&str>) -> Result<Facets, St
         .distinct()
         .order(note_tags::tag.asc())
         .into_boxed();
+    // A snippet's alone: a Note or a list would bring "Text" to the rail.
     let mut languages = notes::table
         .filter(notes::deleted_at.is_null())
+        .filter(notes::kind.eq(NoteKind::Snippet.as_str()))
         .select(notes::language)
         .distinct()
         .order(notes::language.asc())
@@ -289,7 +292,9 @@ pub fn fetch(
 
     if !request.languages.is_empty() {
         let selected: Vec<String> = request.languages.iter().map(ToString::to_string).collect();
-        query = query.filter(notes::language.eq_any(selected));
+        query = query
+            .filter(notes::kind.eq(NoteKind::Snippet.as_str()))
+            .filter(notes::language.eq_any(selected));
     }
 
     let selected_tags = request.selected_tags();

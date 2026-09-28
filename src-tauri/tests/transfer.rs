@@ -3,7 +3,7 @@ use devnotes_lib::db::Library;
 use devnotes_lib::attachments::model::Attachment;
 use devnotes_lib::attachments::store as attachments;
 use devnotes_lib::db::open_in_memory;
-use devnotes_lib::notes::checklist::NoteKind;
+use devnotes_lib::notes::kind::NoteKind;
 use devnotes_lib::notes::language::Language;
 use devnotes_lib::notes::model::NoteDraft;
 use devnotes_lib::notes::store as notes;

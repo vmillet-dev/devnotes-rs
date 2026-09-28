@@ -305,7 +305,7 @@ pub(crate) mod tests {
                 tags: Vec::new(),
                 pinned: false,
                 lifecycle: crate::notes::model::NoteLifecycle::Permanent,
-                kind: crate::notes::checklist::NoteKind::Snippet,
+                kind: crate::notes::kind::NoteKind::Snippet,
                 items: Vec::new(),
             },
             at(0),
