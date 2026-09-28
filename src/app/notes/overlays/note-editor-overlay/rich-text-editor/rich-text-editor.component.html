@@ -29,32 +29,6 @@
     </div>
   }
 
-  <div class="rich-group">
-    <button
-      type="button"
-      class="rich-tool"
-      data-testid="rich-link"
-      [attr.aria-pressed]="linkForm() !== null"
-      [attr.aria-label]="'editor.rich.link' | transloco"
-      [attr.title]="'editor.rich.link' | transloco"
-      (mousedown)="$event.preventDefault()"
-      (click)="openLinkForm()"
-    >
-      <app-icon name="link" />
-    </button>
-    <button
-      type="button"
-      class="rich-tool"
-      data-testid="rich-table"
-      [attr.aria-label]="'editor.rich.table' | transloco"
-      [attr.title]="'editor.rich.table' | transloco"
-      (mousedown)="$event.preventDefault()"
-      (click)="run('table')"
-    >
-      <app-icon name="table" />
-    </button>
-  </div>
-
   @if (inTable()) {
     <div class="rich-group rich-table-tools">
       @for (tool of tableTools; track tool.action) {

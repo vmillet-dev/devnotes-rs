@@ -438,6 +438,27 @@ describe('NoteEditorOverlayComponent', () => {
       expect(rich().content()).toBe('**bold**');
     });
 
+    it('says what it is where a snippet names its format', async () => {
+      await openText();
+
+      expect(fixture.nativeElement.querySelector('[data-testid="editor-kind"]').textContent.trim()).toBe(
+        'Note',
+      );
+    });
+
+    /** The draft's words, not its Markdown: they follow the typing before anything is saved. */
+    it('counts its words in the footer, and says how it is stored', async () => {
+      await openText('**Ship** it');
+      const stats = (): string =>
+        fixture.nativeElement.querySelector('[data-testid="editor-stats"]').textContent.trim();
+
+      expect(stats()).toBe('Note · 2 mots · enregistrée en Markdown');
+
+      rich().changed.emit('## Standup\n\n- [x] ship it today');
+      await fixture.whenStable();
+      expect(stats()).toContain('4 mots');
+    });
+
     it('keeps what is typed as the draft, and writes it on blur', async () => {
       await openText();
       const emitted = patched('content');

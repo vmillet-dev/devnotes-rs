@@ -32,6 +32,7 @@ type Action =
   | 'ordered'
   | 'tasks'
   | 'quote'
+  | 'link'
   | 'table'
   | 'rowAfter'
   | 'columnAfter'
@@ -53,7 +54,7 @@ interface LinkForm {
   readonly href: string;
 }
 
-/** Grouped as they are separated on screen. */
+/** Grouped as they are separated on screen: headings, what marks words, blocks, inserts. */
 const TOOLS: readonly (readonly Tool[])[] = [
   [
     { action: 'h1', labelKey: 'editor.rich.heading1', text: 'H1', active: ['heading', { level: 1 }] },
@@ -65,6 +66,7 @@ const TOOLS: readonly (readonly Tool[])[] = [
     { action: 'italic', labelKey: 'editor.rich.italic', icon: 'italic', active: ['italic'] },
     { action: 'strike', labelKey: 'editor.rich.strike', icon: 'strike', active: ['strike'] },
     { action: 'code', labelKey: 'editor.rich.code', icon: 'code', active: ['code'] },
+    { action: 'link', labelKey: 'editor.rich.link', icon: 'link' },
   ],
   [
     { action: 'bullet', labelKey: 'editor.rich.bulletList', icon: 'list-bullet', active: ['bulletList'] },
@@ -72,6 +74,7 @@ const TOOLS: readonly (readonly Tool[])[] = [
     { action: 'tasks', labelKey: 'editor.rich.taskList', icon: 'list-tasks', active: ['taskList'] },
     { action: 'quote', labelKey: 'editor.rich.quote', icon: 'quote', active: ['blockquote'] },
   ],
+  [{ action: 'table', labelKey: 'editor.rich.table', icon: 'table' }],
 ];
 
 /** Shown while the caret is in a table, and only then. */
@@ -175,6 +178,8 @@ export class RichTextEditorComponent {
 
   isActive(tool: Tool): boolean {
     this.revision();
+    if (tool.action === 'link') return this.linkForm() !== null;
+
     return tool.active ? (this.editor?.isActive(tool.active[0], tool.active[1]) ?? false) : false;
   }
 
@@ -187,6 +192,11 @@ export class RichTextEditorComponent {
   }
 
   protected run(action: Action): void {
+    if (action === 'link') {
+      this.openLinkForm();
+      return;
+    }
+
     const chain = this.chain();
     if (!chain) return;
 

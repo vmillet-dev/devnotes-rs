@@ -777,6 +777,10 @@ and exporting write a Note as the Markdown it is, where a snippet is fenced.
   stays a Note and is written as it is; code is written as a snippet with its language, in one
   patch, and the note moves to the code field with its characters intact — the rich editor
   would have folded its indentation into paragraphs.
+- **The editor says what it holds.** A "Note" badge sits where a snippet has its format menu,
+  and the footer counts the draft's words (`countWords`) where a snippet counts lines and bytes:
+  presenting the draft is the front's job, as the line count is. The toolbar runs headings, what
+  marks words (the link among them), blocks, then what is inserted, each tool naming its key.
 - **A link opens on Ctrl+click**, through `ExternalLinksService`, which refuses any scheme but
   `http` and `https`. A plain click places the caret, as it does everywhere else in the text,
   so the pointer turns to a hand only while Ctrl is held, and the surface carries the "Ctrl+click
