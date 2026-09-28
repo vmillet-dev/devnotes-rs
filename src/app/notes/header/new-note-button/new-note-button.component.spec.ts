@@ -18,6 +18,11 @@ describe('NewNoteButtonComponent', () => {
       providers: [provideTranslocoTesting()],
     });
     fixture = TestBed.createComponent(NewNoteButtonComponent);
+    fixture.componentRef.setInput('shortcuts', {
+      snippet: ['Ctrl', 'N'],
+      note: ['Ctrl', 'Shift', 'N'],
+      checklist: ['Alt', 'L'],
+    });
     // Focus management moves through real elements, which jsdom only tracks for
     // an attached tree.
     document.body.appendChild(fixture.nativeElement);
@@ -63,10 +68,39 @@ describe('NewNoteButtonComponent', () => {
     click('.new-note-caret');
     await fixture.whenStable();
 
-    const labels = [...fixture.nativeElement.querySelectorAll('.new-note-option')].map((option) =>
-      (option as HTMLElement).textContent?.trim(),
+    const names = [...fixture.nativeElement.querySelectorAll('.kind-name')].map((name) =>
+      (name as HTMLElement).textContent?.trim(),
     );
-    expect(labels).toEqual(['Snippet de code', 'Note', 'Liste de tâches']);
+    expect(names).toEqual(['Snippet de code', 'Note', 'Liste de tâches']);
+  });
+
+  /** A rebound key is the one named: the caps come in from the bindings, not from here. */
+  it('names the keys each kind is bound to', async () => {
+    click('.new-note-caret');
+    await fixture.whenStable();
+
+    const options: HTMLElement[] = [...fixture.nativeElement.querySelectorAll('.new-note-option')];
+    const caps = options.map((option) => [...option.querySelectorAll('kbd')].map((kbd) => kbd.textContent));
+
+    expect(caps).toEqual([
+      ['Ctrl', 'N'],
+      ['Ctrl', 'Shift', 'N'],
+      ['Alt', 'L'],
+    ]);
+    expect(options[1]?.getAttribute('aria-keyshortcuts')).toBe('Control+Shift+N');
+  });
+
+  it('marks the Note new only while it is', async () => {
+    fixture.componentRef.setInput('noteIsNew', true);
+    click('.new-note-caret');
+    await fixture.whenStable();
+
+    const badge = () => fixture.nativeElement.querySelector('[data-testid="new-note-badge"]');
+    expect(badge()?.closest('[data-testid="new-note-note"]')).not.toBeNull();
+
+    fixture.componentRef.setInput('noteIsNew', false);
+    await fixture.whenStable();
+    expect(badge()).toBeNull();
   });
 
   it('closes on Escape without creating anything', async () => {

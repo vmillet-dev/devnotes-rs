@@ -49,6 +49,13 @@
     "newSnippet": "Snippet de code",
     "newRichNote": "Note",
     "newChecklist": "Liste de tâches",
+    "createMenuTitle": "Créer",
+    "kindNew": "Nouveau",
+    "kindLines": {
+      "snippet": "Un bloc de code, son langage et ses champs à remplir.",
+      "note": "Du texte mis en forme : titres, listes, liens, tableaux.",
+      "checklist": "Des étapes à cocher, dans l'ordre."
+    },
     "checklistProgress": "{{done}}/{{total}}",
     "checklistToggle": "Cocher la tâche {{text}}",
     "checklistMore": "+{count, plural, one {# autre} other {# autres}}",
@@ -511,6 +518,9 @@
     },
     "canvas": {
       "search": "Aller au champ de recherche",
+      "newSnippet": "Nouveau snippet de code",
+      "newNote": "Nouvelle note mise en forme",
+      "newChecklist": "Nouvelle liste de tâches",
       "library": "Afficher ou masquer la bibliothèque",
       "move": "Se déplacer de carte en carte",
       "open": "Ouvrir la carte sous le focus",
@@ -669,7 +679,7 @@
       },
       "checklists": {
         "title": "Des listes à cocher",
-        "body": "Une note est soit un snippet, soit une liste à cocher — et une liste se coche depuis la carte, sans l'ouvrir. Dans l'éditeur, Entrée ajoute un item et Alt avec une flèche le déplace."
+        "body": "Une note est un snippet, une note mise en forme ou une liste à cocher — et une liste se coche depuis la carte, sans l'ouvrir. Dans l'éditeur, Entrée ajoute un item et Alt avec une flèche le déplace."
       },
       "palette": {
         "title": "Coller sans quitter ce que vous faites",

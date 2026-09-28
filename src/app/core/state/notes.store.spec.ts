@@ -6,6 +6,7 @@ import { FakeClipboard } from '@testing/fake-clipboard';
 import { FakeNotesRepository } from '@testing/fake-notes-repository';
 import { createNote } from '@testing/note.fixture';
 import { HARNESS_SPACES, awaitQuery, createNotesHarness, visibleIds } from '@testing/notes-harness';
+import { SettingsStore } from '@core/services/settings/settings.store';
 import { NotesRevision } from './notes-revision';
 import { DRAFT_ID } from './notes.store';
 import { UNDO_WINDOW_MS } from './undo.store';
@@ -534,6 +535,20 @@ describe('NotesStore', () => {
   });
 
   describe('createNote', () => {
+    /** The new-note menu's badge: the menu and the key both arrive here. */
+    it('marks the Note kind tried once one is opened, and only a Note', async () => {
+      const { store } = await createNotesHarness([]);
+      const settings = TestBed.inject(SettingsStore);
+
+      store.createNote('snippet');
+      store.createNote('checklist');
+      expect(settings.noteKindTried()).toBe(false);
+
+      store.createNote('note');
+      expect(settings.noteKindTried()).toBe(true);
+      expect(store.selectedNote()?.kind).toBe('note');
+    });
+
     it('writes nothing until the note is worth keeping', async () => {
       const { store, repository } = await createNotesHarness([]);
       const create = vi.spyOn(repository, 'create');

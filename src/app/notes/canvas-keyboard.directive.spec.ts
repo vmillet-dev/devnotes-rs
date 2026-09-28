@@ -71,6 +71,31 @@ describe('CanvasKeyboardDirective', () => {
     expect(CANVAS_ACTIONS.every((action) => action.fallback.length > 0)).toBe(true);
   });
 
+  describe('creating a note', () => {
+    it('opens a draft of the kind its key names', async () => {
+      for (const [key, init, kind] of [
+        ['n', { ctrlKey: true }, 'snippet'],
+        ['N', { ctrlKey: true, shiftKey: true }, 'note'],
+        ['L', { ctrlKey: true, shiftKey: true }, 'checklist'],
+      ] as const) {
+        const event = press(key, init);
+        await fixture.whenStable();
+
+        expect(harness.store.selectedNote()?.kind, kind).toBe(kind);
+        // The WebView would otherwise open a window of its own.
+        expect(event.defaultPrevented).toBe(true);
+      }
+    });
+
+    it('lets the three be moved like any other key', () => {
+      const ids = CANVAS_ACTIONS.map((action) => action.id);
+
+      expect(ids).toEqual(
+        expect.arrayContaining(['canvas.newSnippet', 'canvas.newNote', 'canvas.newChecklist']),
+      );
+    });
+  });
+
   describe('a key that was moved', () => {
     let bindings: ShortcutBindingsStore;
 

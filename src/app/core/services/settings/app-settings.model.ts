@@ -60,6 +60,8 @@ export interface AppSettings {
    * remembering "no" would silence the release after it too.
    */
   readonly skippedUpdate: string;
+  /** Until a first Note is made here, the new-note menu marks the kind as new. */
+  readonly noteKindTried: boolean;
 }
 
 /** `closeToTray` is `true`, and the native side carries the same default. */
@@ -81,6 +83,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   copyConfirmation: true,
   updateNotifications: true,
   skippedUpdate: '',
+  noteKindTried: false,
 };
 
 /** Derived rather than hand-written: the key is the field name, prefixed. */

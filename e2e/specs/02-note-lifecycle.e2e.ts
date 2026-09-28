@@ -1,8 +1,8 @@
-import { expect } from '@wdio/globals';
+import { $, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
-import { bottomGapOf, reopenSession, testid } from '../support/app.js';
+import { bottomGapOf, press, reopenSession, testid } from '../support/app.js';
 import { bridge, query } from '../support/bridge.js';
 
 /**
@@ -72,6 +72,33 @@ describe('Creating a note, and finding it again', () => {
     expect(await editor.isOpen()).toBe(true);
     await editor.close();
     expect((await bridge.queryNotes(query())).matched).toBe(corpusBefore + 1);
+  });
+
+  /** The keys the kind menu names beside each kind: one draft each, and no row left behind. */
+  it('opens each kind of note from its own key', async () => {
+    for (const [key, modifiers, body] of [
+      ['n', ['Control'], 'editor-body'],
+      ['N', ['Control', 'Shift'], 'editor-rich'],
+      ['L', ['Control', 'Shift'], 'checklist-add'],
+    ] as const) {
+      await press(key, [...modifiers]);
+      await $(testid(body)).waitForExist({ timeout: 10_000 });
+      await editor.close();
+    }
+
+    expect((await bridge.queryNotes(query())).matched).toBe(corpusBefore + 1);
+  });
+
+  /** Whatever an earlier file did with the menu: opening a Note is what retires the badge. */
+  it('stops calling the Note new once one has been opened', async () => {
+    await canvas.createRichNote();
+    await editor.close();
+
+    await $(testid('new-note-kind')).click();
+    await $(testid('new-note-note')).waitForExist({ timeout: 10_000 });
+    expect(await $(testid('new-note-badge')).isExisting()).toBe(false);
+    await press('Escape');
+    await $(testid('new-note-note')).waitForExist({ reverse: true, timeout: 10_000 });
   });
 
   /** A legend belongs on the edge, whatever the canvas holds above it. */

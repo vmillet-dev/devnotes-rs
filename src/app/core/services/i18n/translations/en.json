@@ -49,6 +49,13 @@
     "newSnippet": "Code snippet",
     "newRichNote": "Note",
     "newChecklist": "To-do list",
+    "createMenuTitle": "Create",
+    "kindNew": "New",
+    "kindLines": {
+      "snippet": "A block of code, its language and its fields to fill in.",
+      "note": "Formatted text: headings, lists, links, tables.",
+      "checklist": "Steps to tick off, in order."
+    },
     "checklistProgress": "{{done}}/{{total}}",
     "checklistToggle": "Tick the task {{text}}",
     "checklistMore": "+{count, plural, one {# more} other {# more}}",
@@ -511,6 +518,9 @@
     },
     "canvas": {
       "search": "Jump to the search field",
+      "newSnippet": "New code snippet",
+      "newNote": "New formatted note",
+      "newChecklist": "New to-do list",
       "library": "Show or hide the library",
       "move": "Move from card to card",
       "open": "Open the focused card",
@@ -669,7 +679,7 @@
       },
       "checklists": {
         "title": "Lists to tick",
-        "body": "A note is either a snippet or a todo list — and a list is ticked from the card, without opening it. In the editor, Enter adds an item and Alt with an arrow moves it."
+        "body": "A note is a snippet, a formatted note or a todo list — and a list is ticked from the card, without opening it. In the editor, Enter adds an item and Alt with an arrow moves it."
       },
       "palette": {
         "title": "Pasting without leaving what you are doing",

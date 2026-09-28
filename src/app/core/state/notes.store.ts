@@ -5,6 +5,7 @@ import { ClipboardService } from '@core/services/clipboard/clipboard.service';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { FALLBACK_LANGUAGE, LanguageTag } from '@core/model/language.model';
 import { ChecklistItem, Note, NoteDraft, NoteKind, NoteLifecycle, NotePatch } from '@core/model/note.model';
+import { SettingsStore } from '@core/services/settings/settings.store';
 import { ClockService } from '@core/services/time/clock.service';
 import { sameArray } from '@core/utils/equality.util';
 import { NoteSelectionStore } from './note-selection.store';
@@ -135,6 +136,7 @@ export class NotesStore {
   private readonly revision = inject(NotesRevision);
   private readonly selection = inject(NoteSelectionStore);
   private readonly undo = inject(UndoStore);
+  private readonly settings = inject(SettingsStore);
 
   private readonly _selectedNote = signal<Note | null>(null);
   private readonly _draftNote = signal<Note | null>(null);
@@ -279,6 +281,9 @@ export class NotesStore {
     this.draftMaterialisation = null;
     this._editorSession.update((session) => session + 1);
     this._draftNote.set(emptyNote(spaceId, this.clock.now(), kind, this.openFolder.activeFolderId()));
+
+    // Here, where the menu and the key both arrive: either way the kind is new no longer.
+    if (kind === 'note') this.settings.noteKindTried.write(true);
   }
 
   async captureFromClipboard(): Promise<void> {
