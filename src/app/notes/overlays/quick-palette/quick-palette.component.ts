@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { DialogComponent } from '@shared/layout/dialog/dialog.component';
-import { LanguageBadgeComponent } from '@notes/ui/language-badge/language-badge.component';
+import { KindBadgeComponent } from '@notes/ui/kind-badge/kind-badge.component';
 import { Note } from '@core/model/note.model';
 
 const SNIPPET_LINES = 2;
@@ -13,7 +13,7 @@ const SNIPPET_LINES = 2;
  */
 @Component({
   selector: 'app-quick-palette',
-  imports: [DialogComponent, LanguageBadgeComponent, TranslocoPipe],
+  imports: [DialogComponent, KindBadgeComponent, TranslocoPipe],
   templateUrl: './quick-palette.component.html',
   styleUrl: './quick-palette.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

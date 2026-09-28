@@ -1,11 +1,11 @@
-import type { ExportReport, ExportScope, ImportReport, SearchHit } from '@core/ipc/bindings';
+import type { ExportReport, ExportScope, ImportReport, OutlineLine, SearchHit } from '@core/ipc/bindings';
 import { LanguageTag } from '@core/model/language.model';
 import { ChecklistItem, NoteKind } from './checklist.model';
 import type { NoteFolder } from './folder.model';
 
 export { type ChecklistItem, type NoteKind } from './checklist.model';
 
-export type { SearchField, SearchHit } from '@core/ipc/bindings';
+export type { OutlineLine, SearchField, SearchHit } from '@core/ipc/bindings';
 
 /** Both cross as themselves: a batch answers what it changed, and the undo hands it back. */
 export type { NotePlacement, NoteTag } from '@core/ipc/bindings';
@@ -50,6 +50,8 @@ export interface Note {
   readonly searchHit: SearchHit | null;
   /** `content` was cut to a preview; `NotesRepository.whole` reads the rest. */
   readonly truncated: boolean;
+  /** A Note's lines as its card draws them; empty for the other kinds and outside a list. */
+  readonly outline: readonly OutlineLine[];
 }
 
 /**
@@ -74,6 +76,7 @@ export type NoteDraft = Omit<
   | 'copyText'
   | 'searchHit'
   | 'truncated'
+  | 'outline'
 >;
 
 /**

@@ -183,6 +183,16 @@ describe('Editing a note', () => {
       expect(view.sections[0]?.notes[0]?.content).toBe('Ship it and tag\n☐ write the notes');
     });
 
+    /** Its shape, read by Rust, and its kind where a snippet shows its format. */
+    it('shows its outline on its card, under a Note badge', async () => {
+      const card = await canvas.cardWithTitle(richTitle);
+
+      expect(await card.$(testid('kind-badge')).isExisting()).toBe(true);
+      const task = card.$(`${testid('note-card-outline')} .outline-item`);
+      await task.waitForExist({ timeout: 10_000 });
+      expect(await task.getText()).toContain('write the notes');
+    });
+
     it('opens formatted, and a box ticked there is stored as Markdown', async () => {
       await canvas.openNote(richTitle);
       const bold = $(`${testid('editor-rich')} strong`);

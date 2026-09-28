@@ -46,6 +46,10 @@
     "trash": "Trash",
     "manageTags": "Manage",
     "newNoteKindLabel": "Choose the note type",
+    "kindTag": {
+      "note": "Note",
+      "checklist": "Tasks"
+    },
     "newSnippet": "Code snippet",
     "newRichNote": "Note",
     "newChecklist": "To-do list",

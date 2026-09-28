@@ -767,11 +767,15 @@ and exporting write a Note as the Markdown it is, where a snippet is fenced.
   a Note opens. ⚠️ `viewChild(RichTextEditorComponent)` names the class at runtime and
   pulls the whole editor back into the page's chunk: the overlay queries it by template
   reference, with a type-only import.
-- **A card shows words, not Markdown.** `notes::markdown::plain` (pulldown-cmark) turns the
-  body into one line per block — `☐`/`☑` for a task, table cells joined by `·` — and
-  `cut_to_preview` puts that in place of a Note's body, marked `truncated` even when it is
-  short: a copy taken from the list rereads the Markdown instead of copying the words. The
-  search matches the stored body and quotes the readable one (`Note::readable_body`).
+- **A card shows a Note's shape, not its Markdown.** `notes::markdown::outline`
+  (pulldown-cmark) reads the body into one line per block, each saying what it is — a heading,
+  an item and its marker, a task, a code block, text, table cells joined by `·` — and the card
+  draws those (`DisplayNote.outline`, `NoteOutlineComponent`), cut to a card's lines. `plain`
+  is the same lines with their markers spelled out (`•`, `1.`, `☐`/`☑`): `cut_to_preview`
+  puts it in place of the body, one parse for both, marked `truncated` even when it is short —
+  a copy taken from the list rereads the Markdown instead of copying the words. The search
+  matches the stored body and quotes the readable one (`Note::readable_body`). A snippet names
+  its format on its card and in the palette, a Note and a list their kind (`KindBadgeComponent`).
 - **Typing never changes the kind; a paste into an empty Note can.** The rich editor hands
   plain text pasted into an empty Note to the overlay, which asks `detect_language`. Prose
   stays a Note and is written as it is; code is written as a snippet with its language, in one

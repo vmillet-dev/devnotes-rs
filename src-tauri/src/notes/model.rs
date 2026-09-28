@@ -240,6 +240,64 @@ pub struct DisplayNote {
     pub search_hit: Option<SearchHit>,
     /// `content` holds only its first lines: a list sends previews, `get_note` the body.
     pub truncated: bool,
+    /// A Note's lines as its card draws them, cut like `content`; empty for the other kinds
+    /// and outside a list.
+    pub outline: Vec<OutlineLine>,
+}
+
+/// One line of a Note as a card draws it, read from its Markdown by `notes::markdown`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum OutlineLine {
+    Heading {
+        text: String,
+    },
+    Text {
+        text: String,
+    },
+    /// `marker` is `•` or the item's number.
+    Item {
+        text: String,
+        depth: u32,
+        marker: String,
+    },
+    Task {
+        text: String,
+        depth: u32,
+        done: bool,
+    },
+    /// A code block, its lines as written.
+    Code {
+        text: String,
+    },
+}
+
+impl OutlineLine {
+    /// The line as a search quotes it: its marker spelled out, `☐`/`☑` for a task.
+    pub(crate) fn plain(&self) -> String {
+        let indent = |depth: &u32| "  ".repeat(usize::try_from(*depth).unwrap_or(0));
+        match self {
+            Self::Heading { text } | Self::Text { text } | Self::Code { text } => text.clone(),
+            Self::Item {
+                text,
+                depth,
+                marker,
+            } => format!("{}{marker} {text}", indent(depth)),
+            Self::Task { text, depth, done } => {
+                format!("{}{} {text}", indent(depth), if *done { '☑' } else { '☐' })
+            }
+        }
+    }
+
+    fn text_mut(&mut self) -> &mut String {
+        match self {
+            Self::Heading { text }
+            | Self::Text { text }
+            | Self::Code { text }
+            | Self::Item { text, .. }
+            | Self::Task { text, .. } => text,
+        }
+    }
 }
 
 impl std::ops::Deref for DisplayNote {
@@ -260,19 +318,58 @@ impl DisplayNote {
     /// ⚠️ After everything that reads the body — the fields, the search excerpt — and only
     /// on what goes into a list: a note cut here must never reach the editor.
     pub fn cut_to_preview(&mut self) {
-        // Marked cut even when it fits: a copy taken from the list would copy the words
-        // without their Markdown.
-        if let Cow::Owned(readable) = self.note.readable_body()
-            && readable != self.note.content
-        {
-            self.note.content = readable;
-            self.truncated = true;
+        if self.note.is_rich_text() {
+            // One parse for both: the words a copy must not mistake for the Markdown, and the
+            // lines the card draws.
+            let lines = markdown::outline(&self.note.content);
+            let readable = lines
+                .iter()
+                .map(OutlineLine::plain)
+                .collect::<Vec<_>>()
+                .join("\n");
+            // Marked cut even when it fits: a copy taken from the list would copy the words
+            // without their Markdown.
+            if readable != self.note.content {
+                self.note.content = readable;
+                self.truncated = true;
+            }
+            self.outline = outline_preview(lines);
         }
         if let Some(preview) = preview_of(&self.note.content) {
             self.note.content = preview;
             self.truncated = true;
         }
     }
+}
+
+/// A card's room, `PREVIEW_LINES` lines and `PREVIEW_CHARS` characters, over lines of which a
+/// code block may span several.
+fn outline_preview(lines: Vec<OutlineLine>) -> Vec<OutlineLine> {
+    let mut rows_left = PREVIEW_LINES;
+    let mut chars_left = PREVIEW_CHARS;
+    let mut kept = Vec::new();
+
+    for mut line in lines {
+        if rows_left == 0 || chars_left == 0 {
+            break;
+        }
+        let text = line.text_mut();
+        let rows_end = text
+            .match_indices('\n')
+            .nth(rows_left - 1)
+            .map_or(text.len(), |(at, _)| at);
+        let end = text[..rows_end]
+            .char_indices()
+            .nth(chars_left)
+            .map_or(rows_end, |(at, _)| at);
+        text.truncate(end);
+
+        rows_left = rows_left.saturating_sub(text.lines().count().max(1));
+        chars_left = chars_left.saturating_sub(text.chars().count());
+        kept.push(line);
+    }
+
+    kept
 }
 
 /// `None` when the body already fits, which is most snippets.
@@ -339,6 +436,7 @@ pub fn decorate(note: Note, now: DateTime<Utc>) -> DisplayNote {
         attachment_count: 0,
         folder: None,
         search_hit: None,
+        outline: Vec::new(),
         copy_text: match note.kind {
             NoteKind::Checklist => Some(checklist::to_markdown(&note.items)),
             NoteKind::Snippet | NoteKind::Note => None,
@@ -692,6 +790,82 @@ mod tests {
 
         assert_eq!(note.content, "☑ ship it");
         assert!(note.truncated);
+        assert_eq!(
+            note.outline,
+            [OutlineLine::Task {
+                text: "ship it".to_string(),
+                depth: 0,
+                done: true
+            }]
+        );
+    }
+
+    #[test]
+    fn a_notes_card_draws_its_heading_and_its_items() {
+        let mut note = decorate(
+            Note {
+                kind: NoteKind::Note,
+                content: "## Décisions\n\n- Bascule le 14/10\n- Réplica d'abord".to_string(),
+                ..sample()
+            },
+            now(),
+        );
+
+        note.cut_to_preview();
+
+        let item = |text: &str| OutlineLine::Item {
+            text: text.to_string(),
+            depth: 0,
+            marker: "•".to_string(),
+        };
+        assert_eq!(
+            note.outline,
+            [
+                OutlineLine::Heading {
+                    text: "Décisions".to_string()
+                },
+                item("Bascule le 14/10"),
+                item("Réplica d'abord"),
+            ]
+        );
+    }
+
+    /// A code block is one entry of several lines: the card's room is counted in lines.
+    #[test]
+    fn a_notes_card_holds_as_many_lines_as_any_card() {
+        let body = format!("# Title\n\n```sh\n{}\n```", ["one"; 9].join("\n"));
+        let mut note = decorate(
+            Note {
+                kind: NoteKind::Note,
+                content: body,
+                ..sample()
+            },
+            now(),
+        );
+
+        note.cut_to_preview();
+
+        assert_eq!(note.outline.len(), 2);
+        let OutlineLine::Code { text } = &note.outline[1] else {
+            panic!("the second line is the code block");
+        };
+        assert_eq!(text.lines().count(), PREVIEW_LINES - 1);
+    }
+
+    #[test]
+    fn a_snippets_card_has_no_outline() {
+        let mut note = decorate(
+            Note {
+                content: "# not a heading, a comment".to_string(),
+                language: Language::Sh,
+                ..sample()
+            },
+            now(),
+        );
+
+        note.cut_to_preview();
+
+        assert!(note.outline.is_empty());
     }
 
     #[test]

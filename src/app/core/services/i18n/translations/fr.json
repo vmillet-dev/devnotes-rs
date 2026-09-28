@@ -46,6 +46,10 @@
     "trash": "Corbeille",
     "manageTags": "Gérer",
     "newNoteKindLabel": "Choisir le type de note",
+    "kindTag": {
+      "note": "Note",
+      "checklist": "Tâches"
+    },
     "newSnippet": "Snippet de code",
     "newRichNote": "Note",
     "newChecklist": "Liste de tâches",

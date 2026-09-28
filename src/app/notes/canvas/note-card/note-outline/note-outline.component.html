@@ -1,0 +1,25 @@
+@for (line of lines(); track $index) {
+  @switch (line.kind) {
+    @case ('heading') {
+      <span class="outline-heading">{{ line.text }}</span>
+    }
+    @case ('item') {
+      <span class="outline-item" [style.--depth]="line.depth"
+        ><span class="outline-marker" aria-hidden="true">{{ line.marker }}</span
+        >{{ line.text }}</span
+      >
+    }
+    @case ('task') {
+      <span class="outline-item" [style.--depth]="line.depth"
+        ><span class="outline-marker">{{ line.done ? '☑' : '☐' }}</span
+        >{{ line.text }}</span
+      >
+    }
+    @case ('code') {
+      <span class="outline-code">{{ line.text }}</span>
+    }
+    @default {
+      <span class="outline-text">{{ line.text }}</span>
+    }
+  }
+}

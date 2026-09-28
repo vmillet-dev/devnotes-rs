@@ -21,9 +21,10 @@ import { TranslationRef } from '@core/services/i18n/translation-ref.model';
 import { ClockService } from '@core/services/time/clock.service';
 import { expiryRef, relativeTimeRef } from '@core/utils/relative-time.util';
 import { CodeViewerComponent } from '@notes/ui/code-viewer/code-viewer.component';
-import { LanguageBadgeComponent } from '@notes/ui/language-badge/language-badge.component';
+import { KindBadgeComponent } from '@notes/ui/kind-badge/kind-badge.component';
 import { CopyButtonComponent } from '@notes/ui/copy-button/copy-button.component';
 import { NoteCardMenuComponent } from './note-card-menu/note-card-menu.component';
+import { NoteOutlineComponent } from './note-outline/note-outline.component';
 
 type FooterLabel = { kind: 'text'; value: string } | { kind: 'ref'; ref: TranslationRef };
 
@@ -58,7 +59,8 @@ function canTakeFocus(card: HTMLElement): boolean {
   imports: [
     CodeViewerComponent,
     CopyButtonComponent,
-    LanguageBadgeComponent,
+    KindBadgeComponent,
+    NoteOutlineComponent,
     NoteCardMenuComponent,
     TranslocoPipe,
   ],
@@ -126,6 +128,7 @@ export class NoteCardComponent {
   });
 
   protected readonly isChecklist = computed(() => this.note().kind === 'checklist');
+  protected readonly isNote = computed(() => this.note().kind === 'note');
   protected readonly progress = computed(() => checklistProgress(this.note().items));
   /**
    * The excerpt cannot replace the layer: these are real checkboxes a card can be

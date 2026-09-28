@@ -1,0 +1,23 @@
+@use 'mixins' as *;
+
+// The language badge's box, so a card's marks line up whatever the kind.
+.kind-tag {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono), serif;
+  font-size: 9.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.is-note {
+  @include hue-badge(var(--purple));
+}
+
+.is-checklist {
+  @include hue-badge(var(--text-1));
+}
