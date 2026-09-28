@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NotesView } from '@core/model/note.model';
 import { ClockService } from '@core/services/time/clock.service';
+import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
 import { FakeClipboard } from '@testing/fake-clipboard';
 import { FakeFoldersRepository } from '@testing/fake-folders-repository';
 import { FakeNotesRepository } from '@testing/fake-notes-repository';
@@ -125,6 +126,30 @@ describe('NotesQueryStore', () => {
 
       expect(repository.lastQuery?.order).toEqual({ key: 'title', direction: 'ascending' });
       expect(canvas.criteria()).not.toHaveProperty('order');
+    });
+
+    /** The library's choice, read when the notes page opens and written on every change. */
+    it('restores the arrangement it was left in, and remembers a new one', async () => {
+      TestBed.configureTestingModule({ providers: [provideAppTesting()] });
+      const preferences = TestBed.inject(LibraryPreferencesService);
+      preferences.write(
+        'devnotes.notes.arrangement',
+        JSON.stringify({
+          order: { key: 'created', direction: 'ascending' },
+          grouping: 'none',
+          pinnedFirst: false,
+        }),
+      );
+
+      const canvas = TestBed.inject(NotesQueryStore);
+      expect(canvas.arrangement()).toEqual({
+        order: { key: 'created', direction: 'ascending' },
+        grouping: 'none',
+        pinnedFirst: false,
+      });
+
+      canvas.setPinnedFirst(true);
+      expect(JSON.parse(preferences.read('devnotes.notes.arrangement') ?? '{}').pinnedFirst).toBe(true);
     });
 
     it('sends the grouping, by date until another is chosen', async () => {

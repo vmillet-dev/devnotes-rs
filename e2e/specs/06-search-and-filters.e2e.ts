@@ -343,6 +343,30 @@ describe('Search, filters and facets', () => {
     expect(byCreation.sections[0]?.notes.every((note) => note.footer.kind === 'created')).toBe(true);
   });
 
+  /**
+   * The arrangement is the library's, and every later spec file reads the same preferences:
+   * the scenario puts the default back before it ends.
+   */
+  it('sorts by title in one section from the topbar menu', async () => {
+    const fold = (title: string): string => title.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+
+    await canvas.arrange('sort-grouping', 'none');
+    await canvas.arrange('sort-key', 'title');
+    await canvas.setPinnedFirst(false);
+
+    const titles = (await canvas.titles()).map(fold);
+    const keys = await canvas.sectionKeys();
+
+    await canvas.setPinnedFirst(true);
+    await canvas.arrange('sort-key', 'modified');
+    await canvas.arrange('sort-grouping', 'date');
+    await press('Escape');
+
+    expect(keys).toEqual(['all']);
+    expect(titles.every((title, at) => at === 0 || titles[at - 1]! <= title)).toBe(true);
+    expect(await canvas.sectionKeys()).toContain('week');
+  });
+
   /** From the most pressing level down, "none" always there to create in. */
   it('gathers the notes by priority when asked', async () => {
     const spaceId = await homeSpaceId();

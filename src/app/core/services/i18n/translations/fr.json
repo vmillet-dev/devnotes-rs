@@ -186,6 +186,42 @@
     "reorganise": "Réorganiser {zones, plural, =0 {aucun dossier} one {# dossier} other {# dossiers}} et {cards, plural, =0 {aucune carte} one {# carte} other {# cartes}}",
     "reorganiseHint": "Replace et redimensionne les dossiers. Écrase les tailles choisies à la main ; annulable."
   },
+  "sort": {
+    "label": "Trier et regrouper",
+    "sortBy": "Trier par",
+    "keys": {
+      "modified": "Date de modification",
+      "created": "Date de création",
+      "priority": "Priorité",
+      "format": "Format",
+      "title": "Titre"
+    },
+    "short": {
+      "modified": "Modification",
+      "created": "Création",
+      "priority": "Priorité",
+      "format": "Format",
+      "title": "Titre"
+    },
+    "hints": {
+      "modified": "par défaut",
+      "format": "langage",
+      "title": "A → Z"
+    },
+    "direction": "Ordre",
+    "directions": {
+      "descending": "Décroissant ↓",
+      "ascending": "Croissant ↑"
+    },
+    "groupBy": "Regrouper",
+    "groupings": {
+      "date": "Par date",
+      "priority": "Par priorité",
+      "format": "Par format",
+      "none": "Sans groupe"
+    },
+    "pinnedFirst": "Épinglées en tête"
+  },
   "sections": {
     "pinned": "Épinglées",
     "today": "Aujourd'hui",
