@@ -21,7 +21,7 @@ pub(crate) fn duplicate(
 ) -> Result<Note, StorageError> {
     let copy = store::get(library, id)?.duplicate(Uuid::new_v4().to_string(), title, now);
 
-    let directory = attachments::directory(library);
+    let directory = attachments::files::directory(library);
     let mut carried = Vec::new();
     for attachment in attachments::store::list(library, id)? {
         let source = directory.join(attachment.stored_name());
@@ -82,7 +82,7 @@ mod tests {
             byte_size: 4,
             created_at: at(NOW),
         };
-        let directory = attachments::directory(library);
+        let directory = attachments::files::directory(library);
         std::fs::create_dir_all(&directory).unwrap();
         attachments::sealed::write_sealed(
             library.vault(),
@@ -172,7 +172,8 @@ mod tests {
         assert_ne!(carried[0].id, attachment.id);
         assert_eq!(carried[0].file_name, attachment.file_name);
         let sealed =
-            std::fs::read(attachments::directory(&library).join(carried[0].stored_name())).unwrap();
+            std::fs::read(attachments::files::directory(&library).join(carried[0].stored_name()))
+                .unwrap();
         assert_eq!(library.vault().open_bytes(&sealed).unwrap(), b"\x89PNG");
         assert_eq!(
             attachments::store::list(&mut library, &original.id)
@@ -187,8 +188,10 @@ mod tests {
         let (_scratch, mut library, original) =
             library_with(|space_id| Note { space_id, ..note() });
         let attachment = attach(&mut library, &original.id, "a-1");
-        std::fs::remove_file(attachments::directory(&library).join(attachment.stored_name()))
-            .unwrap();
+        std::fs::remove_file(
+            attachments::files::directory(&library).join(attachment.stored_name()),
+        )
+        .unwrap();
 
         let copy = duplicate(&mut library, &original.id, "Copy".to_string(), at(NOW)).unwrap();
 

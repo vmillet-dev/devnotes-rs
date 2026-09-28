@@ -710,7 +710,7 @@ pub fn count_notes_tagged(
 /// The counters and the global values. The folder chips depend on the view: the caller's.
 pub fn decorations(connection: &mut Library) -> Result<Decorations, StorageError> {
     Ok(Decorations {
-        attachment_counts: crate::attachments::store::counts(connection)?,
+        attachment_counts: crate::attachments::store::counts(connection.db())?,
         folders: HashMap::new(),
         globals: global_placeholder_values(connection)?,
     })

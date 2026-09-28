@@ -66,7 +66,7 @@ pub fn create(directory: &Path, passphrase: &str, cost: Cost) -> Result<Vault, S
 /// A new phrase over the same library: only the wrapping changes, so this cannot half-succeed.
 ///
 /// ⚠️ Answers the key because the caller is not done: every retained backup holds a key file
-/// still wrapped under the retired phrase. `backup::rewrap` is the other half, and
+/// still wrapped under the retired phrase. `backup::copies::rewrap` is the other half, and
 /// `vault::change` the one place that does both.
 pub fn change_passphrase(
     directory: &Path,

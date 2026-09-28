@@ -50,12 +50,12 @@ pub fn purge(db: &Db, ids: Vec<String>) -> Result<usize, StorageError> {
     }
 
     let mut connection = lock(db)?;
-    let directory = attachments::directory(&connection);
+    let directory = attachments::files::directory(&connection);
     let files = attachments::store::stored_names_of(&mut connection, &ids)?;
     let purged = store::trash::purge(&mut connection, &ids)?;
     drop(connection);
 
-    attachments::remove_files(&directory, &files);
+    attachments::files::remove_files(&directory, &files);
 
     Ok(purged)
 }
@@ -104,7 +104,7 @@ mod tests {
             byte_size: 3,
             created_at: at("2020-01-01T00:00:00.000Z"),
         };
-        let directory = attachments::directory(&library);
+        let directory = attachments::files::directory(&library);
         std::fs::create_dir_all(&directory).unwrap();
         let file = directory.join(attachment.stored_name());
         std::fs::write(&file, b"png").unwrap();

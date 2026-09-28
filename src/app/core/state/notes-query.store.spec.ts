@@ -335,6 +335,25 @@ describe('NotesQueryStore', () => {
       expect(visibleIds(canvas)).toEqual(['recovered']);
     });
 
+    /** Rust computes every query it is sent to the end, one at a time behind its lock. */
+    it('sends the query in flight and the newest, never the ones a burst outran', async () => {
+      const { canvas, repository } = await createNotesHarness([createNote()]);
+      const before = repository.queryCount;
+      repository.hold();
+
+      canvas.setFilter('pinned');
+      TestBed.tick();
+      canvas.setFilter('untriaged');
+      TestBed.tick();
+      canvas.toggleTag('urgent');
+      TestBed.tick();
+      repository.release();
+      await vi.waitFor(() => expect(repository.lastQuery?.tags).toEqual(['urgent']));
+
+      expect(repository.queryCount - before).toBe(2);
+      expect(repository.lastQuery?.filter).toBe('untriaged');
+    });
+
     it('keeps the previous results on screen while a new query runs', async () => {
       const { canvas, spaces } = await createNotesHarness([createNote({ id: 'a' })]);
 

@@ -88,14 +88,14 @@ mod tests {
         open(&path, crate::db::test_vault().unwrap()).unwrap();
         let mut connection = open(&path, crate::db::test_vault().unwrap()).unwrap();
 
-        assert!(!connection.has_pending_migration(MIGRATIONS).unwrap());
+        assert!(!connection.db().has_pending_migration(MIGRATIONS).unwrap());
     }
 
     #[test]
     fn a_fresh_database_applies_every_embedded_migration() {
         let mut connection = open_in_memory().unwrap();
 
-        let applied = connection.applied_migrations().unwrap();
+        let applied = connection.db().applied_migrations().unwrap();
         assert_eq!(applied.len(), embedded_versions().unwrap().len());
     }
 
@@ -105,6 +105,7 @@ mod tests {
     fn every_migration_can_be_reverted_and_replayed() {
         let mut connection = open_in_memory().unwrap();
 
+        let connection = connection.db();
         connection.revert_all_migrations(MIGRATIONS).unwrap();
         assert!(connection.applied_migrations().unwrap().is_empty());
 
@@ -142,7 +143,7 @@ mod tests {
         .execute(connection.db())
         .unwrap();
 
-        let error = run(&mut connection).unwrap_err();
+        let error = run(connection.db()).unwrap_err();
 
         assert!(matches!(error, StorageError::SchemaTooRecent(_)));
     }

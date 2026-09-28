@@ -4,8 +4,8 @@
 //! is. ⚠️ The nonce is 96 fresh random bits per seal and never the caller's — reusing one
 //! under the same key breaks GCM outright.
 
+use aes_gcm::Aes256Gcm;
 use aes_gcm::aead::{Aead, KeyInit};
-use aes_gcm::{Aes256Gcm, Key};
 use argon2::{Algorithm, Argon2, Params, Version};
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
@@ -57,6 +57,9 @@ impl Default for Cost {
 /// The key, wiped from memory when the vault is dropped.
 pub struct Vault {
     key: Zeroizing<[u8; 32]>,
+    /// Expanded once, not per value: a query opens three fields of every note. Wiped on drop
+    /// like the key, through `aes-gcm`'s `zeroize` feature; boxed, being the round keys.
+    cipher: Box<Aes256Gcm>,
 }
 
 impl std::fmt::Debug for Vault {
@@ -77,7 +80,17 @@ impl Vault {
         getrandom::fill(key.as_mut())
             .map_err(|error| StorageError::Vault(format!("no randomness: {error}")))?;
 
-        Ok(Self { key })
+        Self::from_key(key)
+    }
+
+    fn from_key(key: Zeroizing<[u8; 32]>) -> Result<Self, StorageError> {
+        let cipher = Aes256Gcm::new_from_slice(key.as_ref())
+            .map_err(|_| StorageError::Vault("the key is the wrong size".to_string()))?;
+
+        Ok(Self {
+            key,
+            cipher: Box::new(cipher),
+        })
     }
 
     /// Seals this key under another one, for the key file to hold.
@@ -93,9 +106,7 @@ impl Vault {
             .try_into()
             .map_err(|_| StorageError::Vault("the wrapped key is the wrong size".to_string()))?;
 
-        Ok(Self {
-            key: Zeroizing::new(key),
-        })
+        Self::from_key(Zeroizing::new(key))
     }
 
     /// Slow on purpose, and paid once per unlock, never per value.
@@ -108,11 +119,7 @@ impl Vault {
             .hash_password_into(passphrase.as_bytes(), salt, key.as_mut())
             .map_err(|error| StorageError::Vault(format!("key derivation: {error}")))?;
 
-        Ok(Self { key })
-    }
-
-    fn cipher(&self) -> Aes256Gcm {
-        Aes256Gcm::new(&Key::<Aes256Gcm>::from(*self.key))
+        Self::from_key(key)
     }
 
     /// `nonce ++ ciphertext ++ tag`, raw: what a file holds. A column holds its base64.
@@ -122,7 +129,7 @@ impl Vault {
             .map_err(|error| StorageError::Vault(format!("no randomness: {error}")))?;
 
         let sealed = self
-            .cipher()
+            .cipher
             .encrypt((&nonce).into(), plaintext)
             .map_err(|_| StorageError::Vault("could not seal a value".to_string()))?;
 
@@ -144,7 +151,7 @@ impl Vault {
         let (nonce, body) = sealed.split_at(NONCE_BYTES);
         let nonce: &[u8; NONCE_BYTES] = nonce.try_into().expect("a checked length");
 
-        self.cipher()
+        self.cipher
             .decrypt(nonce.into(), body)
             .map_err(|_| StorageError::Vault("it would not open".to_string()))
     }
