@@ -1,11 +1,13 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LanguageTag } from '@core/model/language.model';
+import { FacetCount, NoteKind } from '@core/model/note.model';
+import { KindRailComponent } from '@notes/header/kind-rail/kind-rail.component';
 import { LanguageRailComponent } from '@notes/header/language-rail/language-rail.component';
 import { TagRailComponent } from '@notes/header/tag-rail/tag-rail.component';
 
 /**
- * The tag rail and the language rail, shown only while they are wanted.
+ * The kind, tag and language rails, shown only while they are wanted.
  *
  * They were two permanent 44px bands — 92px of a 720px window spent on a secondary
  * filter, and the largest single reason the first card started 39% of the way down. They
@@ -18,7 +20,7 @@ import { TagRailComponent } from '@notes/header/tag-rail/tag-rail.component';
  */
 @Component({
   selector: 'app-facets-panel',
-  imports: [TranslocoPipe, TagRailComponent, LanguageRailComponent],
+  imports: [TranslocoPipe, KindRailComponent, TagRailComponent, LanguageRailComponent],
   templateUrl: './facets-panel.component.html',
   styleUrl: './facets-panel.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -28,11 +30,15 @@ export class FacetsPanelComponent {
   readonly languages = input.required<readonly LanguageTag[]>();
   readonly activeTags = input.required<ReadonlySet<string>>();
   readonly activeLanguages = input.required<ReadonlySet<LanguageTag>>();
-  /** The search and the quick filter count too: the way out clears all three. */
+  readonly kindCounts = input.required<readonly FacetCount<NoteKind>[]>();
+  readonly activeKinds = input.required<ReadonlySet<NoteKind>>();
+  /** The search counts too: the way out clears it with the rails. */
   readonly canClear = input(false);
 
   readonly tagToggled = output<string>();
   readonly languageToggled = output<LanguageTag>();
+  readonly kindToggled = output<NoteKind>();
+  readonly allKindsChosen = output<void>();
   readonly manageRequested = output<void>();
   readonly clearRequested = output<void>();
 }

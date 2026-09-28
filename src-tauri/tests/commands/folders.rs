@@ -30,6 +30,7 @@ fn board(space_id: &str) -> BoardQuery {
         filter: NoteFilter::All,
         tags: Vec::new(),
         languages: Vec::new(),
+        kinds: Vec::new(),
         now: Utc::now(),
     }
 }

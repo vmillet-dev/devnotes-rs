@@ -1,0 +1,36 @@
+@if (total() > 0 || !everyKind()) {
+  <div
+    class="kind-rail"
+    role="group"
+    data-testid="kind-rail"
+    [attr.aria-label]="'notes.kindsGroupLabel' | transloco"
+  >
+    <span class="kind-rail-label">{{ 'notes.kinds' | transloco }}</span>
+    <button
+      type="button"
+      class="kind-chip"
+      data-testid="kind-chip-all"
+      [class.on]="everyKind()"
+      [attr.aria-pressed]="everyKind()"
+      (click)="allChosen.emit()"
+    >
+      <span>{{ 'notes.kindAll' | transloco }}</span>
+      <span class="kind-count">{{ total() }}</span>
+    </button>
+    @for (counted of counts(); track counted.value) {
+      <!-- An empty kind stays in its place, and stays reachable while it is pressed. -->
+      <button
+        type="button"
+        class="kind-chip"
+        [attr.data-testid]="'kind-chip-' + counted.value"
+        [class.on]="activeKinds().has(counted.value)"
+        [attr.aria-pressed]="activeKinds().has(counted.value)"
+        [disabled]="counted.count === 0 && !activeKinds().has(counted.value)"
+        (click)="kindToggled.emit(counted.value)"
+      >
+        <span>{{ 'notes.kindPlural.' + counted.value | transloco }}</span>
+        <span class="kind-count">{{ counted.count }}</span>
+      </button>
+    }
+  </div>
+}

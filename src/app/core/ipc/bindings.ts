@@ -323,6 +323,7 @@ export type BoardQuery = {
 	filter: NoteFilter,
 	tags: string[],
 	languages: Language[],
+	kinds: NoteKind[],
 	now: string,
 };
 
@@ -477,6 +478,12 @@ export type ExportScope = { kind: "library" } | { kind: "space"; spaceId: string
 /**  A selection: the ids the canvas had ticked. */
 { kind: "notes"; ids: string[] };
 
+/**  How many of the space's notes carry a value. */
+export type FacetCount<T> = {
+	value: T,
+	count: number,
+};
+
 export type Folder = {
 	id: string,
 	spaceId: string,
@@ -611,13 +618,13 @@ export type NoteFooter = { kind: "source"; value: string } | { kind: "expiry"; a
 
 /**
  *  Closed, like `Language`: the front receives a generated union, so an unknown
- *  value stops compiling there.
+ *  value stops compiling there. Declared in the order the kind rail counts them.
  */
 export type NoteKind = 
 /**  Default, and what every note written before todo lists reads back as. */
-"snippet" | "checklist" | 
+"snippet" | 
 /**  Prose, written in the rich editor and stored as Markdown. */
-"note";
+"note" | "checklist";
 
 export type NoteLifecycle = { kind: "permanent" } | { kind: "expires"; at: string };
 
@@ -677,6 +684,7 @@ export type NotesQuery = {
 	/**  A note passes if it carries at least one of these tags. */
 	tags: string[],
 	languages: Language[],
+	kinds: NoteKind[],
 	now: string,
 	/**
 	 *  `Date#getTimezoneOffset()`, whose sign is the opposite of the offset (−120 for
@@ -695,6 +703,7 @@ export type NotesView = {
 	 */
 	availableTags: string[],
 	availableLanguages: Language[],
+	kindCounts: FacetCount<NoteKind>[],
 	isFiltering: boolean,
 	/**  `u32` and not `usize`: Specta refuses what JSON cannot carry exactly. */
 	matched: number,

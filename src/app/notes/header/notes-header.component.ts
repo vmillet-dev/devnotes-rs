@@ -73,7 +73,10 @@ export class NotesHeaderComponent {
   protected readonly facetsExpanded = signal(false);
 
   protected readonly facetCount = computed(
-    () => this.canvas.selectedTags().size + this.canvas.selectedLanguages().size,
+    () =>
+      this.canvas.selectedTags().size +
+      this.canvas.selectedLanguages().size +
+      this.canvas.selectedKinds().size,
   );
 
   /** Forced open by a selection: a filter nobody can see is a filter nobody can undo. */

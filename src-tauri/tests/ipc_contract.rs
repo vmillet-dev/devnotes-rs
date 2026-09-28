@@ -16,7 +16,9 @@ use devnotes_lib::notes::model::{
     DisplayNote, Note, NoteDraft, NoteLifecycle, NotePatch, TagUsage, decorate,
 };
 use devnotes_lib::notes::trash;
-use devnotes_lib::notes::view::{NoteFilter, NoteSection, NoteSectionKey, NotesQuery, NotesView};
+use devnotes_lib::notes::view::{
+    self, NoteFilter, NoteSection, NoteSectionKey, NotesQuery, NotesView,
+};
 use devnotes_lib::spaces::model::{Space, SpaceDraft};
 use devnotes_lib::transfer;
 use devnotes_lib::transfer::model::{Bundle, ImportReport};
@@ -164,6 +166,7 @@ fn a_view_serializes_with_camel_case_keys() {
         }],
         available_tags: vec!["auth".to_string()],
         available_languages: vec![Language::Json],
+        kind_counts: view::count_kinds(&[("note".to_string(), 3)]),
         is_filtering: false,
         matched: 1,
     };
@@ -172,6 +175,10 @@ fn a_view_serializes_with_camel_case_keys() {
 
     assert!(json.get("availableTags").is_some());
     assert!(json.get("availableLanguages").is_some());
+    assert_eq!(
+        json["kindCounts"][1],
+        serde_json::json!({ "value": "note", "count": 3 })
+    );
     assert!(json.get("isFiltering").is_some());
     assert!(json.get("available_tags").is_none());
     assert!(json.get("available_languages").is_none());
@@ -201,6 +208,7 @@ fn a_query_is_read_from_the_camel_case_payload_the_front_sends() {
         "filter": "untriaged",
         "tags": ["urgent"],
         "languages": ["json", "yml"],
+        "kinds": ["note", "checklist"],
         "now": NOW,
         "tzOffsetMinutes": -120,
         "pinnedFirst": true
@@ -210,6 +218,7 @@ fn a_query_is_read_from_the_camel_case_payload_the_front_sends() {
     assert_eq!(query.space_id.as_deref(), Some("s-1"));
     assert_eq!(query.filter, NoteFilter::Untriaged);
     assert_eq!(query.languages, [Language::Json, Language::Yml]);
+    assert_eq!(query.kinds, [NoteKind::Note, NoteKind::Checklist]);
     assert_eq!(query.tz_offset_minutes, -120);
     assert!(query.pinned_first);
 }
@@ -222,6 +231,7 @@ fn a_null_space_is_read_as_every_space() {
         "filter": "all",
         "tags": [],
         "languages": [],
+        "kinds": [],
         "now": NOW,
         "tzOffsetMinutes": 0,
         "pinnedFirst": false

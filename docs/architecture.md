@@ -538,7 +538,7 @@ Two consequences worth knowing:
 `SpacesStore` owns the spaces and the active one. Two decisions matter there:
 
 - **The active space is a filter, not a label.** `NotesStore` injects `SpacesStore` (never the
-  other way round) and sends `activeSpaceId()` with every query, so the space also scopes both
+  other way round) and sends `activeSpaceId()` with every query, so the space also scopes the
   facet rails — a tag or a language that filters nothing in the current space has no reason to
   be offered.
 - **`null` means "all spaces", and is a choice, not a loading state.** There is deliberately
@@ -689,6 +689,14 @@ variant stops compiling rather than surfacing at runtime.
 checklist has none: neither is read for one, a patch cannot give them one, and the language
 rail — its facet and its filter — counts snippets alone, where a Note or a list would put
 "Text" on it.
+
+**A kind is a facet with a count.** `NotesQuery.kinds` narrows like a tag or a language — the
+date view turns into one flat `results` section, the board dims — and the kind rail
+(`kind-rail/`, first in the facets panel) says how many notes of each kind the space holds:
+`NotesView.kind_counts`, built by `view::count_kinds` from one `GROUP BY`, every kind in
+`NoteKind`'s declared order and zeros included. Counted over the space and not the filter,
+for the reason `available_tags` is: counted over the selection, pressing one chip would zero
+the others. "All" is no kind selected, and an empty kind is offered only while pressed.
 
 A checklist has **no body**. Its items replace `content` — they are not an addition to it —
 and they live in `note_items`, keyed `(note_id, position)`. That key is the whole design: an
@@ -1267,8 +1275,8 @@ and a shared line kept the board in the page's chunk without a word.
 
 **The board has a query of its own.** `board_view` answers folders and positions, not
 sections — `build_sections` must never learn about a folder. It reads the whole space and
-marks each note `matches`, because the search, the quick filter, the tag rail and the
-language rail all **dim** on the board rather than narrow it. ⚠️ Reflowing the survivors
+marks each note `matches`, because the search, the quick filter and the kind, tag and
+language rails all **dim** on the board rather than narrow it. ⚠️ Reflowing the survivors
 into a list would throw away the spatial memory the board exists for, which is the one
 thing the date view cannot give.
 
@@ -1728,7 +1736,7 @@ Deleting is **not** destroying. `delete_note` stamps `deleted_at` and the note l
 canvas; `notes::trash::RETENTION` (30 days) then decides when it really goes. Three
 consequences:
 
-- **Every read filters on `deleted_at IS NULL`** — `fetch`, `find`, both facet queries and
+- **Every read filters on `deleted_at IS NULL`** — `fetch`, `find`, the facet queries and
   the tag counts. A trashed note that resurfaced in a query would be editable without ever
   saying it is on borrowed time.
 - **Purging is restricted to notes already in the trash** (`WHERE deleted_at IS NOT NULL`),

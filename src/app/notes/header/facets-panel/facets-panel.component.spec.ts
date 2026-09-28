@@ -21,13 +21,18 @@ describe('FacetsPanelComponent', () => {
     fixture.componentRef.setInput('languages', ['sql'] as LanguageTag[]);
     fixture.componentRef.setInput('activeTags', new Set<string>());
     fixture.componentRef.setInput('activeLanguages', new Set<LanguageTag>());
+    fixture.componentRef.setInput('kindCounts', [{ value: 'note', count: 1 }]);
+    fixture.componentRef.setInput('activeKinds', new Set());
     fixture.autoDetectChanges();
     await fixture.whenStable();
   });
 
-  it('draws both rails', () => {
-    expect(fixture.nativeElement.querySelector('app-tag-rail')).not.toBeNull();
-    expect(fixture.nativeElement.querySelector('app-language-rail')).not.toBeNull();
+  it('draws the three rails, the kinds first', () => {
+    const rails = [...fixture.nativeElement.querySelector('.facets-panel').children].map((rail: Element) =>
+      rail.tagName.toLowerCase(),
+    );
+
+    expect(rails).toEqual(['app-kind-rail', 'app-tag-rail', 'app-language-rail']);
   });
 
   /** The way out is offered exactly when there is something to leave. */

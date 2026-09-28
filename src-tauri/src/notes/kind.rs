@@ -2,14 +2,14 @@ use crate::closed_enum::closed_enum;
 
 closed_enum! {
     /// Closed, like `Language`: the front receives a generated union, so an unknown
-    /// value stops compiling there.
+    /// value stops compiling there. Declared in the order the kind rail counts them.
     pub enum NoteKind {
         /// Default, and what every note written before todo lists reads back as.
         #[default]
         Snippet = "snippet",
-        Checklist = "checklist",
         /// Prose, written in the rich editor and stored as Markdown.
         Note = "note",
+        Checklist = "checklist",
     }
 }
 

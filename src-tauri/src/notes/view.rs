@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 use unicode_normalization::char::{decompose_canonical, is_combining_mark};
 
+use super::kind::NoteKind;
 use super::language::Language;
 use super::model::{self, DisplayNote, Note, NoteLifecycle};
 use crate::count::saturating_u32;
@@ -25,6 +26,7 @@ pub struct NotesQuery {
     /// A note passes if it carries at least one of these tags.
     pub tags: Vec<String>,
     pub languages: Vec<Language>,
+    pub kinds: Vec<NoteKind>,
     pub now: DateTime<Utc>,
     /// `Date#getTimezoneOffset()`, whose sign is the opposite of the offset (−120 for
     /// UTC+2). Sections reason in local days.
@@ -42,7 +44,7 @@ pub enum NoteFilter {
     Untriaged,
 }
 
-/// What the search, the quick filter and the two rails ask of a note, normalised once: the
+/// What the search, the quick filter and the three rails ask of a note, normalised once: the
 /// date view narrows on it and the board dims on it, so the two cannot disagree on a match.
 #[derive(Debug, Clone)]
 pub struct Criteria {
@@ -50,15 +52,23 @@ pub struct Criteria {
     filter: NoteFilter,
     tags: Vec<String>,
     languages: Vec<Language>,
+    kinds: Vec<NoteKind>,
 }
 
 impl Criteria {
-    pub fn new(search: &str, filter: NoteFilter, tags: &[String], languages: &[Language]) -> Self {
+    pub fn new(
+        search: &str,
+        filter: NoteFilter,
+        tags: &[String],
+        languages: &[Language],
+        kinds: &[NoteKind],
+    ) -> Self {
         Self {
             needle: fold(search.trim()),
             filter,
             tags: model::normalize_tags(tags),
             languages: languages.to_vec(),
+            kinds: kinds.to_vec(),
         }
     }
 
@@ -70,7 +80,10 @@ impl Criteria {
     /// Whether the search or a rail narrows the notes. Not the quick filter, under which the
     /// date view keeps its sections.
     pub fn narrows(&self) -> bool {
-        !self.needle.is_empty() || !self.tags.is_empty() || !self.languages.is_empty()
+        !self.needle.is_empty()
+            || !self.tags.is_empty()
+            || !self.languages.is_empty()
+            || !self.kinds.is_empty()
     }
 
     pub fn passes(&self, note: &Note) -> bool {
@@ -90,15 +103,22 @@ impl Criteria {
 
         let languages = self.languages.is_empty()
             || (note.kind.has_language() && self.languages.contains(&note.language));
+        let kinds = self.kinds.is_empty() || self.kinds.contains(&note.kind);
         let search = self.needle.is_empty() || matches_search(note, &self.needle);
 
-        filter && tags && languages && search
+        filter && tags && languages && kinds && search
     }
 }
 
 impl From<&NotesQuery> for Criteria {
     fn from(query: &NotesQuery) -> Self {
-        Self::new(&query.search, query.filter, &query.tags, &query.languages)
+        Self::new(
+            &query.search,
+            query.filter,
+            &query.tags,
+            &query.languages,
+            &query.kinds,
+        )
     }
 }
 
@@ -106,6 +126,30 @@ impl From<&NotesQuery> for Criteria {
 pub struct Facets {
     pub tags: Vec<String>,
     pub languages: Vec<Language>,
+    pub kinds: Vec<FacetCount<NoteKind>>,
+}
+
+/// How many of the space's notes carry a value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct FacetCount<T> {
+    pub value: T,
+    pub count: u32,
+}
+
+/// Every kind in its declared order, zeros included: a chip keeps its place when its count
+/// falls to nothing. `rows` is the column grouped and counted.
+pub fn count_kinds(rows: &[(String, i64)]) -> Vec<FacetCount<NoteKind>> {
+    NoteKind::ALL
+        .into_iter()
+        .map(|kind| FacetCount {
+            value: kind,
+            count: rows
+                .iter()
+                .find(|(stored, _)| stored == kind.as_str())
+                .map_or(0, |(_, count)| saturating_u32(*count)),
+        })
+        .collect()
 }
 
 /// Dated sections, or one flat list, which offers the create card only as a place to create
@@ -124,6 +168,7 @@ pub struct NotesView {
     /// the rail on the first selection.
     pub available_tags: Vec<String>,
     pub available_languages: Vec<Language>,
+    pub kind_counts: Vec<FacetCount<NoteKind>>,
     pub is_filtering: bool,
     /// `u32` and not `usize`: Specta refuses what JSON cannot carry exactly.
     pub matched: u32,
@@ -252,6 +297,7 @@ pub fn build(mut notes: Vec<Note>, facets: Facets, request: &NotesQuery) -> Note
         sections: build_sections(notes, layout, request.pinned_first, request.now, offset),
         available_tags: facets.tags,
         available_languages: facets.languages,
+        kind_counts: facets.kinds,
         is_filtering,
         matched,
     };
@@ -481,7 +527,6 @@ mod tests {
     use super::*;
     use crate::notes::checklist::ChecklistItem;
     use crate::notes::fixtures::{NOW, at, note as sample};
-    use crate::notes::kind::NoteKind;
 
     fn request() -> NotesQuery {
         NotesQuery {
@@ -491,6 +536,7 @@ mod tests {
             filter: NoteFilter::All,
             tags: Vec::new(),
             languages: Vec::new(),
+            kinds: Vec::new(),
             now: at(NOW),
             tz_offset_minutes: 0,
             pinned_first: true,
@@ -711,6 +757,7 @@ mod tests {
             Facets {
                 tags: vec!["api".to_string(), "auth".to_string()],
                 languages: vec![Language::Json, Language::Txt],
+                kinds: count_kinds(&[("note".to_string(), 2)]),
             },
             &NotesQuery {
                 search: "no-such-thing".to_string(),
@@ -720,6 +767,50 @@ mod tests {
 
         assert_eq!(view.available_tags, ["api", "auth"]);
         assert_eq!(view.available_languages, [Language::Json, Language::Txt]);
+        assert_eq!(view.kind_counts[1].count, 2);
+    }
+
+    #[test]
+    fn every_kind_is_counted_in_its_order_even_at_zero() {
+        let counts = count_kinds(&[
+            ("checklist".to_string(), 3),
+            ("snippet".to_string(), 5),
+            ("from-a-newer-build".to_string(), 1),
+        ]);
+
+        let pairs: Vec<(NoteKind, u32)> = counts.iter().map(|c| (c.value, c.count)).collect();
+        assert_eq!(
+            pairs,
+            [
+                (NoteKind::Snippet, 5),
+                (NoteKind::Note, 0),
+                (NoteKind::Checklist, 3)
+            ]
+        );
+    }
+
+    #[test]
+    fn a_selected_kind_counts_as_filtering_and_passes_only_its_notes() {
+        let view = build(
+            vec![note("a", "Un")],
+            Facets::default(),
+            &NotesQuery {
+                kinds: vec![NoteKind::Note],
+                ..request()
+            },
+        );
+        let criteria = Criteria::new("", NoteFilter::All, &[], &[], &[NoteKind::Note]);
+
+        assert!(view.is_filtering);
+        assert_eq!(keys(&view), [NoteSectionKey::Results]);
+        assert!(criteria.passes(&Note {
+            kind: NoteKind::Note,
+            ..sample()
+        }));
+        assert!(!criteria.passes(&Note {
+            kind: NoteKind::Snippet,
+            ..sample()
+        }));
     }
 
     #[test]
@@ -1304,7 +1395,7 @@ mod tests {
 
         fn wanting(tags: &[&str]) -> Criteria {
             let tags: Vec<String> = tags.iter().map(ToString::to_string).collect();
-            Criteria::new("", NoteFilter::All, &tags, &[])
+            Criteria::new("", NoteFilter::All, &tags, &[], &[])
         }
 
         /// `note_tags.tag` is `COLLATE NOCASE`, which folds ASCII and nothing else.
@@ -1332,7 +1423,7 @@ mod tests {
 
         #[test]
         fn the_quick_filter_decides_a_match_without_counting_as_narrowing() {
-            let criteria = Criteria::new("", NoteFilter::Pinned, &[], &[]);
+            let criteria = Criteria::new("", NoteFilter::Pinned, &[], &[], &[]);
 
             assert!(!criteria.narrows());
             assert!(!criteria.passes(&sample()));
@@ -1344,7 +1435,7 @@ mod tests {
 
         #[test]
         fn the_search_is_trimmed_and_folded_before_it_is_compared() {
-            let criteria = Criteria::new("  ÉTAPE ", NoteFilter::All, &[], &[]);
+            let criteria = Criteria::new("  ÉTAPE ", NoteFilter::All, &[], &[], &[]);
 
             assert_eq!(criteria.needle(), "etape");
             assert!(criteria.passes(&Note {

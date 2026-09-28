@@ -9,6 +9,7 @@ use devnotes_lib::folders::model::{FolderColour, NoteFiling};
 use devnotes_lib::folders::store::{
     create, delete, file_many, list, recolour, rename, restore_filings,
 };
+use devnotes_lib::notes::kind::NoteKind;
 use devnotes_lib::notes::language::Language;
 use devnotes_lib::notes::model::{Note, NoteDraft, NotePatch};
 use devnotes_lib::notes::store::{create as create_note, update};
@@ -478,6 +479,7 @@ mod board {
             filter: NoteFilter::All,
             tags: Vec::new(),
             languages: Vec::new(),
+            kinds: Vec::new(),
             now: t1(),
         }
     }
@@ -494,6 +496,7 @@ mod board {
                 filter: NoteFilter::All,
                 tags: Vec::new(),
                 languages: Vec::new(),
+                kinds: Vec::new(),
                 now: query.now,
                 tz_offset_minutes: 0,
                 pinned_first: true,
@@ -899,6 +902,34 @@ mod board {
         assert_eq!(board.matched, 1);
     }
 
+    #[test]
+    fn a_kind_dims_rather_than_narrows_too() {
+        let mut connection = open_in_memory().unwrap();
+        let sql = space(&mut connection, "SQL");
+        create_note(&mut connection, draft(&sql), t0()).unwrap();
+        create_note(
+            &mut connection,
+            NoteDraft {
+                kind: NoteKind::Note,
+                ..draft(&sql)
+            },
+            t0(),
+        )
+        .unwrap();
+
+        let board = view(
+            &mut connection,
+            &BoardQuery {
+                kinds: vec![NoteKind::Note],
+                ..request(&sql)
+            },
+        );
+
+        assert_eq!(board.loose.len(), 2);
+        assert_eq!(board.matched, 1);
+        assert!(board.is_filtering);
+    }
+
     /// The two views answer the same question, and must not answer it differently. Tags
     /// are compared as the column compares them — ASCII case only, `#` stripped — and a
     /// tag that normalises to nothing asks for nothing.
@@ -934,6 +965,7 @@ mod board {
                 filter: NoteFilter::All,
                 tags: tags.clone(),
                 languages: Vec::new(),
+                kinds: Vec::new(),
                 now: t1(),
                 tz_offset_minutes: 0,
                 pinned_first: true,
@@ -1577,6 +1609,7 @@ fn a_card_inside_an_opened_folder_carries_no_chip() {
         filter: NoteFilter::All,
         tags: Vec::new(),
         languages: Vec::new(),
+        kinds: Vec::new(),
         now: t1(),
         tz_offset_minutes: 0,
         pinned_first: true,

@@ -48,6 +48,7 @@ describe('Arranging the board', () => {
       filter: 'all',
       tags: [],
       languages: [],
+      kinds: [],
       now: new Date().toISOString(),
     });
     return view.zones.find((zone) => zone.folder.id === folderId)?.frame ?? null;

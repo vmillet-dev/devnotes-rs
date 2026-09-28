@@ -127,6 +127,7 @@ export function query(overrides: Partial<NotesQuery> = {}): NotesQuery {
     filter: 'all',
     tags: [],
     languages: [],
+    kinds: [],
     now: new Date().toISOString(),
     tzOffsetMinutes: new Date().getTimezoneOffset(),
     pinnedFirst: true,

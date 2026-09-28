@@ -13,6 +13,7 @@ use specta::Type;
 
 use super::model::Folder;
 use crate::count::saturating_u32;
+use crate::notes::kind::NoteKind;
 use crate::notes::language::Language;
 use crate::notes::model::{self, DisplayNote, Note};
 use crate::notes::view::{Criteria, Facets, NoteFilter, NotesQuery};
@@ -50,6 +51,7 @@ pub struct BoardQuery {
     pub filter: NoteFilter,
     pub tags: Vec<String>,
     pub languages: Vec<Language>,
+    pub kinds: Vec<NoteKind>,
     pub now: DateTime<Utc>,
 }
 
@@ -63,6 +65,7 @@ impl BoardQuery {
             filter: NoteFilter::All,
             tags: Vec::new(),
             languages: Vec::new(),
+            kinds: Vec::new(),
             now: self.now,
             tz_offset_minutes: 0,
             pinned_first: true,
@@ -418,6 +421,7 @@ pub fn build<S: std::hash::BuildHasher>(
         request.filter,
         &request.tags,
         &request.languages,
+        &request.kinds,
     );
 
     let mut by_folder: HashMap<String, Vec<BoardNote>> = HashMap::new();
@@ -592,6 +596,7 @@ mod tests {
             filter: NoteFilter::Pinned,
             tags: vec!["ops".to_string()],
             languages: vec![Language::Sql],
+            kinds: vec![NoteKind::Note],
             now: at(NOW),
         };
 
@@ -599,6 +604,7 @@ mod tests {
 
         assert_eq!(wide.space_id.as_deref(), Some("s-1"));
         assert!(wide.search.is_empty() && wide.tags.is_empty() && wide.languages.is_empty());
+        assert!(wide.kinds.is_empty());
         assert_eq!(wide.filter, NoteFilter::All);
         assert_eq!(wide.now, at(NOW));
     }

@@ -501,6 +501,84 @@ fn available_languages_ignore_the_current_selection() {
     assert_eq!(view.matched, 1);
 }
 
+fn of_kind(space_id: &str, kind: NoteKind) -> NoteDraft {
+    NoteDraft {
+        kind,
+        ..draft(space_id)
+    }
+}
+
+#[test]
+fn a_note_matches_when_it_is_of_one_of_the_selected_kinds() {
+    let mut connection = open_in_memory().unwrap();
+    let space_id = space(&mut connection, "Personal");
+    create(&mut connection, of_kind(&space_id, NoteKind::Snippet), t0()).unwrap();
+    let note = create(&mut connection, of_kind(&space_id, NoteKind::Note), t0()).unwrap();
+    let list = create(
+        &mut connection,
+        of_kind(&space_id, NoteKind::Checklist),
+        t0(),
+    )
+    .unwrap();
+
+    let view = query(
+        &mut connection,
+        &NotesQuery {
+            kinds: vec![NoteKind::Note, NoteKind::Checklist],
+            ..all_notes()
+        },
+    )
+    .unwrap();
+
+    let ids = matched_ids(&view);
+    assert_eq!(ids.len(), 2);
+    assert!(ids.contains(&note.id) && ids.contains(&list.id));
+    assert!(view.is_filtering);
+}
+
+/// The space's counts, like its tags: counted from the selection, a chip would read 0 the
+/// moment another one is pressed.
+#[test]
+fn every_kind_is_counted_over_the_space_whatever_is_selected() {
+    let mut connection = open_in_memory().unwrap();
+    let here = space(&mut connection, "Personal");
+    let elsewhere = space(&mut connection, "Boulot");
+    for kind in [NoteKind::Snippet, NoteKind::Snippet, NoteKind::Note] {
+        create(&mut connection, of_kind(&here, kind), t0()).unwrap();
+    }
+    create(
+        &mut connection,
+        of_kind(&elsewhere, NoteKind::Checklist),
+        t0(),
+    )
+    .unwrap();
+
+    let view = query(
+        &mut connection,
+        &NotesQuery {
+            space_id: Some(here),
+            kinds: vec![NoteKind::Note],
+            ..all_notes()
+        },
+    )
+    .unwrap();
+
+    let counts: Vec<(NoteKind, u32)> = view
+        .kind_counts
+        .iter()
+        .map(|counted| (counted.value, counted.count))
+        .collect();
+    assert_eq!(
+        counts,
+        [
+            (NoteKind::Snippet, 2),
+            (NoteKind::Note, 1),
+            (NoteKind::Checklist, 0)
+        ]
+    );
+    assert_eq!(view.matched, 1);
+}
+
 #[test]
 fn available_tags_are_sorted_and_de_duplicated() {
     let mut connection = open_in_memory().unwrap();

@@ -520,10 +520,15 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
       ],
       availableTags: [...new Set(this.notes.flatMap((note) => note.tags))].sort(byCodeUnit),
       availableLanguages: [...new Set(this.notes.map((note) => note.language))].sort(byCodeUnit),
+      kindCounts: (['snippet', 'note', 'checklist'] as const).map((value) => ({
+        value,
+        count: this.notes.filter((note) => note.kind === value).length,
+      })),
       isFiltering:
         (query?.search.trim().length ?? 0) > 0 ||
         (query?.tags.length ?? 0) > 0 ||
-        (query?.languages.length ?? 0) > 0,
+        (query?.languages.length ?? 0) > 0 ||
+        (query?.kinds.length ?? 0) > 0,
       matched: this.notes.length,
     };
   }

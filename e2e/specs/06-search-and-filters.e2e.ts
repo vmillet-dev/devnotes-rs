@@ -42,6 +42,9 @@ describe('Search, filters and facets', () => {
       }),
     );
     await bridge.createNote(draft({ spaceId, title: 'Pinned reference', pinned: true, tags: ['ops'] }));
+    await bridge.createNote(
+      draft({ spaceId, title: 'Compte rendu de migration', content: '## Décisions', kind: 'note' }),
+    );
     await reloadCanvas();
   });
 
@@ -301,6 +304,25 @@ describe('Search, filters and facets', () => {
     await canvas.toggleLanguage('sql');
     expect(await canvas.titles()).toEqual(['Étape de migration']);
     await canvas.toggleLanguage('sql');
+  });
+
+  /** Counted over the space, so the count does not move with the selection. */
+  it('filters on a kind from the rail, and gives every kind back from "All"', async () => {
+    await canvas.openFacets();
+    const counted = Number(await canvas.kindChip('note').$('.kind-count').getText());
+    expect(counted).toBeGreaterThan(0);
+
+    await canvas.toggleKind('note');
+    const titles = await canvas.titles();
+    expect(titles).toContain('Compte rendu de migration');
+    expect(titles).not.toContain('Docker compose');
+    expect(await canvas.sectionKeys()).toEqual(['results']);
+    expect(await canvas.kindChip('all').getAttribute('aria-pressed')).toBe('false');
+    expect(Number(await canvas.kindChip('note').$('.kind-count').getText())).toBe(counted);
+
+    await canvas.toggleKind('all');
+    expect(await canvas.titles()).toContain('Docker compose');
+    expect(await canvas.kindChip('note').getAttribute('aria-pressed')).toBe('false');
   });
 
   it('keeps the quick filters chronological, unlike a facet', async () => {
