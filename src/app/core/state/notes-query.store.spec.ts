@@ -114,6 +114,24 @@ describe('NotesQueryStore', () => {
       expect(repository.lastQuery?.languages).toEqual([]);
     });
 
+    it('sends the selected kinds, and none once "All" is chosen', async () => {
+      const { canvas, repository } = await createNotesHarness([createNote()]);
+
+      const beforeAdd = repository.queryCount;
+      canvas.toggleKind('note');
+      canvas.toggleKind('checklist');
+      await awaitQuery(repository, beforeAdd);
+      expect(repository.lastQuery?.kinds).toEqual(['checklist', 'note']);
+      expect(canvas.hasUserFilters()).toBe(true);
+
+      const beforeAll = repository.queryCount;
+      canvas.clearKinds();
+      await awaitQuery(repository, beforeAll);
+
+      expect(repository.lastQuery?.kinds).toEqual([]);
+      expect(canvas.hasUserFilters()).toBe(false);
+    });
+
     it('sends the timezone offset, without which sections straddle local midnight', async () => {
       const { repository } = await createNotesHarness([createNote()]);
 
@@ -189,11 +207,12 @@ describe('NotesQueryStore', () => {
   });
 
   describe('clearing the filters', () => {
-    it('drops the search, the tags and the languages together', async () => {
+    it('drops the search, the tags, the languages and the kinds together', async () => {
       const { canvas, repository } = await createNotesHarness([createNote()]);
       canvas.setSearchQuery('deploy');
       canvas.toggleTag('urgent');
       canvas.toggleLanguage('json');
+      canvas.toggleKind('note');
       // Waited for: three setters undone before the `computed` runs would collapse to
       // no change at all and prove nothing.
       await vi.waitFor(() => expect(repository.lastQuery?.search).toBe('deploy'));
@@ -205,6 +224,7 @@ describe('NotesQueryStore', () => {
       expect(repository.lastQuery?.search).toBe('');
       expect(repository.lastQuery?.tags).toEqual([]);
       expect(repository.lastQuery?.languages).toEqual([]);
+      expect(repository.lastQuery?.kinds).toEqual([]);
       // The field is what the user is looking at, and it has to look empty too.
       expect(canvas.searchQuery()).toBe('');
     });
@@ -400,6 +420,19 @@ describe('NotesQueryStore', () => {
       ]);
 
       expect(canvas.allLanguages()).toEqual(['json', 'yml']);
+    });
+
+    it('exposes the count of each kind the backend offers for the rail', async () => {
+      const { canvas } = await createNotesHarness([
+        createNote({ id: 'a', kind: 'note' }),
+        createNote({ id: 'b', kind: 'snippet' }),
+      ]);
+
+      expect(canvas.kindCounts().map(({ value, count }) => `${value}:${count}`)).toEqual([
+        'snippet:1',
+        'note:1',
+        'checklist:0',
+      ]);
     });
   });
 

@@ -12,7 +12,7 @@ use chrono::{DateTime, TimeDelta, Utc};
 use super::kind::NoteKind;
 use super::model::{Note, NoteDraft, NoteLifecycle, NotePatch, NotePlacement, NoteTag, SampleNote};
 use super::revision;
-use super::view::{Decorations, Facets, NoteFilter, NotesQuery};
+use super::view::{self, Decorations, Facets, NoteFilter, NotesQuery};
 use crate::db::schema::{global_placeholders, note_tags, notes};
 use crate::db::{Library, iso8601};
 use crate::error::StorageError;
@@ -249,10 +249,16 @@ fn facets(connection: &mut Library, space_id: Option<&str>) -> Result<Facets, St
         .distinct()
         .order(notes::language.asc())
         .into_boxed();
+    let mut kinds = notes::table
+        .filter(notes::deleted_at.is_null())
+        .group_by(notes::kind)
+        .select((notes::kind, diesel::dsl::count_star()))
+        .into_boxed();
 
     if let Some(id) = space_id {
         tags = tags.filter(notes::space_id.eq(id.to_string()));
         languages = languages.filter(notes::space_id.eq(id.to_string()));
+        kinds = kinds.filter(notes::space_id.eq(id.to_string()));
     }
 
     Ok(Facets {
@@ -263,6 +269,7 @@ fn facets(connection: &mut Library, space_id: Option<&str>) -> Result<Facets, St
             .iter()
             .filter_map(|language| language.parse().ok())
             .collect(),
+        kinds: view::count_kinds(&kinds.load::<(String, i64)>(connection.db())?),
     })
 }
 
@@ -295,6 +302,16 @@ pub fn fetch(
         query = query
             .filter(notes::kind.eq(NoteKind::Snippet.as_str()))
             .filter(notes::language.eq_any(selected));
+    }
+
+    if !request.kinds.is_empty() {
+        let selected: Vec<&str> = request
+            .kinds
+            .iter()
+            .copied()
+            .map(NoteKind::as_str)
+            .collect();
+        query = query.filter(notes::kind.eq_any(selected));
     }
 
     let selected_tags = request.selected_tags();

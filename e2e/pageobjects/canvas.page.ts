@@ -346,6 +346,7 @@ export const canvas = {
     $(`${testid('segmented-quick-filter')} [data-segment-id="${key}"]`),
   tagPill: (tag: string) => $(`${testid('tag-pill')}[data-tag="${tag}"]`),
   languageChip: (language: string) => $(`${testid('language-chip')}[data-language="${language}"]`),
+  kindChip: (kind: 'all' | 'snippet' | 'note' | 'checklist') => $(testid(`kind-chip-${kind}`)),
 
   /** The three controls that re-run the query, each waited on rather than slept past. */
   async applyFilter(key: 'all' | 'pinned' | 'untriaged'): Promise<void> {
@@ -373,6 +374,12 @@ export const canvas = {
   async toggleLanguage(language: string): Promise<void> {
     await canvas.openFacets();
     await canvas.languageChip(language).click();
+    await waitForCanvas();
+  },
+
+  async toggleKind(kind: 'all' | 'snippet' | 'note' | 'checklist'): Promise<void> {
+    await canvas.openFacets();
+    await canvas.kindChip(kind).click();
     await waitForCanvas();
   },
   sections: () => $$(testid('note-section')),

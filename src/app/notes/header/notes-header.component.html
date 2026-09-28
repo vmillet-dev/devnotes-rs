@@ -104,9 +104,13 @@
     [languages]="canvas.allLanguages()"
     [activeTags]="canvas.selectedTags()"
     [activeLanguages]="canvas.selectedLanguages()"
+    [kindCounts]="canvas.kindCounts()"
+    [activeKinds]="canvas.selectedKinds()"
     [canClear]="canvas.hasUserFilters()"
     (tagToggled)="canvas.toggleTag($event)"
     (languageToggled)="canvas.toggleLanguage($event)"
+    (kindToggled)="canvas.toggleKind($event)"
+    (allKindsChosen)="canvas.clearKinds()"
     (manageRequested)="tags.open()"
     (clearRequested)="canvas.clearFilters()"
   />

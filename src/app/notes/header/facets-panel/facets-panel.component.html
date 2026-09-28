@@ -1,4 +1,11 @@
 <div class="facets-panel" id="facets-panel" data-testid="facets-panel">
+  <app-kind-rail
+    [counts]="kindCounts()"
+    [activeKinds]="activeKinds()"
+    (kindToggled)="kindToggled.emit($event)"
+    (allChosen)="allKindsChosen.emit()"
+  />
+
   <app-tag-rail
     [tags]="tags()"
     [activeTags]="activeTags()"

@@ -115,6 +115,7 @@ describe('Folders travelling with a library', () => {
       filter: 'all',
       tags: [],
       languages: [],
+      kinds: [],
       now: new Date().toISOString(),
     });
 

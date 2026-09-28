@@ -7,6 +7,7 @@ const BASE_VIEW: WireNotesView = {
   sections: [],
   availableTags: ['api'],
   availableLanguages: ['json', 'yml'],
+  kindCounts: [{ value: 'note', count: 2 }],
   isFiltering: false,
   matched: 0,
 };
@@ -18,14 +19,16 @@ const BASE_QUERY: NotesQuery = {
   filter: 'all',
   tags: ['api'],
   languages: ['json'],
+  kinds: ['note'],
   now: new Date('2026-01-01T10:00:00.000Z'),
   tzOffsetMinutes: -120,
   pinnedFirst: true,
 };
 
 describe('toWireNotesQuery', () => {
-  it('sends the selected languages across the bridge', () => {
+  it('sends the selected languages and kinds across the bridge', () => {
     expect(toWireNotesQuery(BASE_QUERY).languages).toEqual(['json']);
+    expect(toWireNotesQuery(BASE_QUERY).kinds).toEqual(['note']);
   });
 
   it('carries the pinned-first flag, which the palette alone turns off', () => {

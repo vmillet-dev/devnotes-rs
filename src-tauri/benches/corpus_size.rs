@@ -32,6 +32,7 @@ fn query(search: &str) -> NotesQuery {
         filter: NoteFilter::All,
         tags: Vec::new(),
         languages: Vec::new(),
+        kinds: Vec::new(),
         now: now(),
         tz_offset_minutes: -120,
         pinned_first: true,

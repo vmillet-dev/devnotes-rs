@@ -1,0 +1,50 @@
+@use 'mixins' as *;
+
+.kind-rail {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--line-soft);
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+
+.kind-rail-label {
+  font-size: 11px;
+  color: var(--text-2);
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+
+// The tag pill's shape: the two rows read as one set of filters.
+.kind-chip {
+  @include eases(background, border-color, color);
+  @include hit-target;
+  @include surface($radius: 12px);
+  @include focus-ring;
+
+  gap: 6px;
+  padding: 4px 10px;
+  font: inherit;
+  font-family: var(--font-mono), serif;
+  font-size: 11px;
+  color: var(--text-1);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.kind-chip:hover:not(:disabled),
+.kind-chip.on {
+  @include accent-state;
+}
+
+.kind-chip:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.kind-count {
+  color: var(--text-2);
+}

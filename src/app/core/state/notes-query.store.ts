@@ -7,7 +7,15 @@ import { OneInFlight } from '@core/utils/one-in-flight.util';
 import { byCodeUnit } from '@core/utils/order.util';
 import { retained } from '@core/utils/retained.util';
 import { NotesRepository } from '@core/data/notes.repository';
-import { Note, NoteFilter, NoteSection, NotesQuery, NotesView } from '@core/model/note.model';
+import {
+  FacetCount,
+  Note,
+  NoteFilter,
+  NoteKind,
+  NoteSection,
+  NotesQuery,
+  NotesView,
+} from '@core/model/note.model';
 import { FoldersStore } from './folders.store';
 import { NotesRevision } from './notes-revision';
 import { SpacesStore } from './spaces.store';
@@ -21,13 +29,14 @@ function localDayKey(now: Date): string {
   return `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
 }
 
-/** What the search, the quick filter and the two rails ask for — the canvas and the board alike. */
+/** What the search, the quick filter and the three rails ask for — the canvas and the board alike. */
 export interface Criteria {
   readonly search: string;
   readonly filter: NoteFilter;
   /** Sorted, so a selection compares equal however it was ticked. */
   readonly tags: readonly string[];
   readonly languages: readonly LanguageTag[];
+  readonly kinds: readonly NoteKind[];
 }
 
 const sameCriteria = sameBy<Criteria>({
@@ -35,6 +44,7 @@ const sameCriteria = sameBy<Criteria>({
   filter: Object.is,
   tags: sameArray,
   languages: sameArray,
+  kinds: sameArray,
 });
 
 interface QueryParams {
@@ -81,12 +91,14 @@ export class NotesQueryStore {
   private readonly _activeFilter = signal<NoteFilter>('all');
   private readonly _selectedTags = signal<ReadonlySet<string>>(new Set());
   private readonly _selectedLanguages = signal<ReadonlySet<LanguageTag>>(new Set());
+  private readonly _selectedKinds = signal<ReadonlySet<NoteKind>>(new Set());
 
   /** Follows the typing without waiting: this is what the field shows. */
   readonly searchQuery = this._searchQuery.asReadonly();
   readonly activeFilter = this._activeFilter.asReadonly();
   readonly selectedTags = this._selectedTags.asReadonly();
   readonly selectedLanguages = this._selectedLanguages.asReadonly();
+  readonly selectedKinds = this._selectedKinds.asReadonly();
 
   private readonly commitSearch = debounced(
     (query: string) => this._debouncedSearch.set(query),
@@ -100,6 +112,7 @@ export class NotesQueryStore {
       filter: this._activeFilter(),
       tags: [...this._selectedTags()].sort(byCodeUnit),
       languages: [...this._selectedLanguages()].sort(byCodeUnit),
+      kinds: [...this._selectedKinds()].sort(byCodeUnit),
     }),
     { equal: sameCriteria },
   );
@@ -140,6 +153,7 @@ export class NotesQueryStore {
   readonly sections = computed<readonly NoteSection[]>(() => this.view()?.sections ?? []);
   readonly allTags = computed<readonly string[]>(() => this.view()?.availableTags ?? []);
   readonly allLanguages = computed<readonly LanguageTag[]>(() => this.view()?.availableLanguages ?? []);
+  readonly kindCounts = computed<readonly FacetCount<NoteKind>[]>(() => this.view()?.kindCounts ?? []);
   readonly isFiltering = computed(() => this.view()?.isFiltering ?? false);
 
   /** `null` when nothing is being filtered. */
@@ -155,7 +169,11 @@ export class NotesQueryStore {
    * folder: Escape would clear a search that is not there and never leave the folder.
    */
   readonly hasUserFilters = computed(
-    () => this._searchQuery() !== '' || this._selectedTags().size > 0 || this._selectedLanguages().size > 0,
+    () =>
+      this._searchQuery() !== '' ||
+      this._selectedTags().size > 0 ||
+      this._selectedLanguages().size > 0 ||
+      this._selectedKinds().size > 0,
   );
 
   /** ⚠️ `view()` first: an `&&` the other way round skips the read and drops the loaded view. */
@@ -193,9 +211,18 @@ export class NotesQueryStore {
     this._selectedLanguages.update((languages) => toggled(languages, language));
   }
 
+  toggleKind(kind: NoteKind): void {
+    this._selectedKinds.update((kinds) => toggled(kinds, kind));
+  }
+
+  /** The rail's "All": every kind again, the other filters untouched. */
+  clearKinds(): void {
+    this._selectedKinds.set(new Set());
+  }
+
   /**
-   * The three things `notes::view` counts as filtering; the quick filter keeps its "All". The
-   * debounce is cancelled first, or a keystroke on its way puts the query back.
+   * What `notes::view` counts as filtering; the quick filter keeps its "All". The debounce is
+   * cancelled first, or a keystroke on its way puts the query back.
    */
   clearFilters(): void {
     this.commitSearch.cancel();
@@ -203,6 +230,7 @@ export class NotesQueryStore {
     this._debouncedSearch.set('');
     this._selectedTags.set(new Set());
     this._selectedLanguages.set(new Set());
+    this._selectedKinds.set(new Set());
   }
 
   findVisible(id: string): Note | null {

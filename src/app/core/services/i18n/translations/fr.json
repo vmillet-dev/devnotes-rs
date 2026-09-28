@@ -26,6 +26,14 @@
     "tagsGroupLabel": "Filtrer par tag",
     "languages": "Format",
     "languagesGroupLabel": "Filtrer par format",
+    "kinds": "Type",
+    "kindsGroupLabel": "Filtrer par type",
+    "kindAll": "Tous",
+    "kindPlural": {
+      "snippet": "Snippets",
+      "note": "Notes",
+      "checklist": "Tâches"
+    },
     "createOrPaste": "Coller ou créer",
     "copyContent": "Copier",
     "copied": "Copié",

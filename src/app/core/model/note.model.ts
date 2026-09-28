@@ -1,11 +1,11 @@
-import type { ExportReport, ExportScope, ImportReport, SearchHit } from '@core/ipc/bindings';
+import type { ExportReport, ExportScope, FacetCount, ImportReport, SearchHit } from '@core/ipc/bindings';
 import { LanguageTag } from '@core/model/language.model';
 import { ChecklistItem, NoteKind } from './checklist.model';
 import type { NoteFolder } from './folder.model';
 
 export { type ChecklistItem, type NoteKind } from './checklist.model';
 
-export type { SearchField, SearchHit } from '@core/ipc/bindings';
+export type { FacetCount, SearchField, SearchHit } from '@core/ipc/bindings';
 
 /** Both cross as themselves: a batch answers what it changed, and the undo hands it back. */
 export type { NotePlacement, NoteTag } from '@core/ipc/bindings';
@@ -96,6 +96,7 @@ export interface NotesQuery {
   /** Union semantics, like `languages`: at least one of them. Empty = all. */
   readonly tags: readonly string[];
   readonly languages: readonly LanguageTag[];
+  readonly kinds: readonly NoteKind[];
   readonly now: Date;
   /**
    * `Date#getTimezoneOffset()`. The sections reason in local days: without this
@@ -111,6 +112,8 @@ export interface NotesView {
   readonly sections: readonly NoteSection[];
   readonly availableTags: readonly string[];
   readonly availableLanguages: readonly LanguageTag[];
+  /** Every kind, zeros included, counted over the space and not over the filter. */
+  readonly kindCounts: readonly FacetCount<NoteKind>[];
   readonly isFiltering: boolean;
   readonly matched: number;
 }

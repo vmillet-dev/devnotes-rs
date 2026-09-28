@@ -24,6 +24,7 @@ fn everything(search: &str) -> NotesQuery {
         filter: NoteFilter::All,
         tags: Vec::new(),
         languages: Vec::new(),
+        kinds: Vec::new(),
         now: Utc::now(),
         tz_offset_minutes: 0,
         pinned_first: true,
