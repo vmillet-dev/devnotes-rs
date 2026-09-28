@@ -179,6 +179,27 @@ mod tests {
         assert_eq!(plain("&#9;indented"), "\tindented");
     }
 
+    /// A card shows a code block's lines as written, and a search finds and quotes them.
+    #[test]
+    fn a_code_block_reads_as_its_lines() {
+        assert_eq!(
+            plain(
+                "Check:
+
+```sql
+SELECT 1;
+  -- *not* emphasis
+```
+
+Done."
+            ),
+            "Check:
+SELECT 1;
+  -- *not* emphasis
+Done."
+        );
+    }
+
     #[test]
     fn plain_text_stays_plain() {
         assert_eq!(plain("just a line\nand another"), "just a line and another");

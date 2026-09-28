@@ -12,6 +12,7 @@ const NO_HOOKS = {
   paste: () => false,
   click: () => false,
   keydown: () => false,
+  indent: () => '  ',
 };
 
 describe('escapeMarkdownText', () => {

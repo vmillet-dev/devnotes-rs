@@ -57,7 +57,7 @@
     "kindNew": "New",
     "kindLines": {
       "snippet": "A block of code, its language and its fields to fill in.",
-      "note": "Formatted text: headings, lists, links, tables.",
+      "note": "Formatted text: headings, lists, links, tables, code blocks.",
       "checklist": "Steps to tick off, in order."
     },
     "checklistProgress": "{{done}}/{{total}}",
@@ -190,6 +190,8 @@
       "taskList": "Task list (Ctrl+Shift+9)",
       "quote": "Quote (Ctrl+Shift+B)",
       "link": "Link (Ctrl+K)",
+      "codeBlock": "Code block (Ctrl+Alt+C)",
+      "codeLanguage": "Code block language",
       "table": "Insert a table",
       "addRow": "+ Row",
       "addColumn": "+ Column",

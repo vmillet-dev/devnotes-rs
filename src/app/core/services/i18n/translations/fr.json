@@ -57,7 +57,7 @@
     "kindNew": "Nouveau",
     "kindLines": {
       "snippet": "Un bloc de code, son langage et ses champs à remplir.",
-      "note": "Du texte mis en forme : titres, listes, liens, tableaux.",
+      "note": "Du texte mis en forme : titres, listes, liens, tableaux, blocs de code.",
       "checklist": "Des étapes à cocher, dans l'ordre."
     },
     "checklistProgress": "{{done}}/{{total}}",
@@ -190,6 +190,8 @@
       "taskList": "Liste de tâches (Ctrl+Maj+9)",
       "quote": "Citation (Ctrl+Maj+B)",
       "link": "Lien (Ctrl+K)",
+      "codeBlock": "Bloc de code (Ctrl+Alt+C)",
+      "codeLanguage": "Langage du bloc de code",
       "table": "Insérer un tableau",
       "addRow": "+ Ligne",
       "addColumn": "+ Colonne",

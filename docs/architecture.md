@@ -749,7 +749,8 @@ field (`Note::is_rich_text` in Rust, `isRichText` in the overlay), and its body 
 string: it is sealed, exported, copied, searched and kept in revisions like a snippet's. A
 snippet in `txt` is plain text, in the code field. What the editor writes is GitHub-flavoured
 Markdown, and it offers only what that can hold — headings, emphasis, inline code, lists, task
-boxes, quotes, tables, links. No underline, and no code block: code goes in a snippet. Sharing
+boxes, quotes, tables, links, code blocks. No underline. A code block keeps its language in its
+fence, picked from the toolbar while the caret is in it (`txt` writes the fence bare). Sharing
 and exporting write a Note as the Markdown it is, where a snippet is fenced.
 
 - **⚠️ The escaping is ours.** `@tiptap/markdown` escapes every `_ * ~ [ ] \` and turns
@@ -781,6 +782,12 @@ and exporting write a Note as the Markdown it is, where a snippet is fenced.
   stays a Note and is written as it is; code is written as a snippet with its language, in one
   patch, and the note moves to the code field with its characters intact — the rich editor
   would have folded its indentation into paragraphs.
+- **A code block is coloured by decorations.** TipTap holds text, not HTML: `highlightRanges`
+  reads highlight.js's output back as offsets over the block's text, and `CodeHighlight` lays
+  them as inline decorations, the language as a label on the block — the code field's grammars,
+  nothing loaded twice. Tab indents as the code field does (`indentUnit`), and `withTabs`
+  leaves a fence alone: nothing is escaped in one, so its `&#9;` is text. A card and a search
+  read its lines as they are (`notes::markdown::plain`).
 - **The editor says what it holds.** A "Note" badge sits where a snippet has its format menu,
   and the footer counts the draft's words (`countWords`) where a snippet counts lines and bytes:
   presenting the draft is the front's job, as the line count is. The toolbar runs headings, what

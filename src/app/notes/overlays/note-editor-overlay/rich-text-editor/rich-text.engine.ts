@@ -3,7 +3,12 @@ import { TableKit } from '@tiptap/extension-table';
 import { TaskItem, TaskList } from '@tiptap/extension-list';
 import { Placeholder } from '@tiptap/extensions';
 import { Markdown } from '@tiptap/markdown';
+import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import StarterKit from '@tiptap/starter-kit';
+import { LANGUAGE_LABELS, LanguageTag, isLanguageTag } from '@core/model/language.model';
+import { highlightRanges } from '@notes/ui/code-viewer/highlighter';
 import { escapeMarkdownText } from './markdown-text';
 
 export interface RichEditorHooks {
@@ -16,6 +21,8 @@ export interface RichEditorHooks {
   paste(event: ClipboardEvent): boolean;
   click(event: MouseEvent, href: string | null): boolean;
   keydown(event: KeyboardEvent): boolean;
+  /** One level of indentation in a code block of that language, as the code field has it. */
+  indent(language: LanguageTag): string;
 }
 
 /** The private encoder this overrides, as the Markdown manager holds it. */
@@ -49,6 +56,9 @@ const MarkdownWithTabs = Markdown.extend({
 });
 
 function withTabs(node: JSONContent): JSONContent {
+  // A fence is never escaped: its tabs are tabs, and a `&#9;` typed in it is text.
+  if (node.type === 'codeBlock') return node;
+
   return {
     ...node,
     ...(node.text !== undefined && { text: node.text.replaceAll('&#9;', '	') }),
@@ -56,27 +66,82 @@ function withTabs(node: JSONContent): JSONContent {
   };
 }
 
+export function languageOf(node: ProseMirrorNode): LanguageTag {
+  const language: unknown = node.attrs['language'];
+  return isLanguageTag(language) ? language : 'txt';
+}
+
 /**
  * Tab once lists (nesting) and tables (next cell) have passed on it: a character in the text,
- * not a way out of the field. Shift+Tab takes back the one a line starts with.
+ * not a way out of the field — in a code block, the code field's level. Shift+Tab takes back
+ * the tab a line starts with.
  */
-const TabCharacter = Extension.create({
-  name: 'tabCharacter',
-  priority: 50,
-  addKeyboardShortcuts() {
-    return {
-      Tab: () => this.editor.commands.insertContent({ type: 'text', text: '\t' }),
-      'Shift-Tab': () =>
-        this.editor.commands.command(({ tr, state }) => {
-          const { $from } = state.selection;
-          if ($from.parent.firstChild?.text?.startsWith('\t')) {
-            tr.delete($from.start(), $from.start() + 1);
-          }
-          return true;
-        }),
-    };
+const tabCharacter = (indent: RichEditorHooks['indent']): Extension =>
+  Extension.create({
+    name: 'tabCharacter',
+    priority: 50,
+    addKeyboardShortcuts() {
+      return {
+        Tab: () => {
+          const { parent } = this.editor.state.selection.$from;
+          const text = parent.type.name === 'codeBlock' ? indent(languageOf(parent)) : '\t';
+          return this.editor.commands.insertContent({ type: 'text', text });
+        },
+        'Shift-Tab': () =>
+          this.editor.commands.command(({ tr, state }) => {
+            const { $from } = state.selection;
+            if ($from.parent.firstChild?.text?.startsWith('\t')) {
+              tr.delete($from.start(), $from.start() + 1);
+            }
+            return true;
+          }),
+      };
+    },
+  });
+
+/**
+ * A code block coloured by the code field's grammars. TipTap holds text, not HTML, so the
+ * colours are decorations over it, and the language a label on the block.
+ */
+const CodeHighlight = Extension.create({
+  name: 'codeHighlight',
+  addProseMirrorPlugins() {
+    return [
+      new Plugin<DecorationSet>({
+        key: new PluginKey('codeHighlight'),
+        state: {
+          init: (_, { doc }) => highlightCode(doc),
+          apply: (tr, previous) => (tr.docChanged ? highlightCode(tr.doc) : previous),
+        },
+        props: {
+          decorations(state) {
+            return this.getState(state);
+          },
+        },
+      }),
+    ];
   },
 });
+
+function highlightCode(doc: ProseMirrorNode): DecorationSet {
+  const decorations: Decoration[] = [];
+
+  doc.descendants((node, position) => {
+    if (node.type.name !== 'codeBlock') return true;
+
+    const language = languageOf(node);
+    decorations.push(
+      Decoration.node(position, position + node.nodeSize, { 'data-language': LANGUAGE_LABELS[language] }),
+    );
+    for (const range of highlightRanges(node.textContent, language)) {
+      const start = position + 1 + range.from;
+      decorations.push(Decoration.inline(start, position + 1 + range.to, { class: range.classes }));
+    }
+    return false;
+  });
+
+  return DecorationSet.create(doc, decorations);
+}
 
 /** What the rich editor stores. Tables come out wrapped in blank lines; the body does not keep them. */
 export function markdownOf(editor: Editor): string {
@@ -84,15 +149,14 @@ export function markdownOf(editor: Editor): string {
 }
 
 /**
- * The editor of a Note: what GitHub's Markdown can hold and nothing more — no underline,
- * no code block, which the note's language already offers.
+ * The editor of a Note: what GitHub's Markdown can hold and nothing more — no underline. A
+ * code block keeps its language in its fence.
  */
 export function createRichEditor(element: HTMLElement, markdown: string, hooks: RichEditorHooks): Editor {
   const editor = new Editor({
     element,
     extensions: [
       StarterKit.configure({
-        codeBlock: false,
         underline: false,
         link: { openOnClick: false, autolink: true, defaultProtocol: 'https' },
       }),
@@ -101,7 +165,8 @@ export function createRichEditor(element: HTMLElement, markdown: string, hooks: 
       TableKit.configure({ table: { resizable: false } }),
       TaskList,
       TaskItem.configure({ nested: true }),
-      TabCharacter,
+      tabCharacter((language) => hooks.indent(language)),
+      CodeHighlight,
     ],
     content: markdown,
     contentType: 'markdown',
