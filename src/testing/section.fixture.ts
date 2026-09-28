@@ -5,5 +5,5 @@ export function createSection(
   notes: readonly Note[] = [],
   overrides: Partial<NoteSection> = {},
 ): NoteSection {
-  return { key, notes, hasExpiringNotes: false, showCreateGhost: false, ...overrides };
+  return { key, id: key, group: null, notes, hasExpiringNotes: false, showCreateGhost: false, ...overrides };
 }

@@ -107,6 +107,8 @@ describe('PlaceholderFillStore', () => {
         sections: [
           {
             key: 'week',
+            id: 'week',
+            group: null,
             notes: [{ ...SNIPPET, content: 'psql', truncated: true }],
             hasExpiringNotes: false,
             showCreateGhost: true,

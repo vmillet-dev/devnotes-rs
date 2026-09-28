@@ -546,6 +546,8 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
       sections: [
         {
           key: 'week',
+          id: 'week',
+          group: null,
           notes: this.notes,
           hasExpiringNotes: this.notes.some((note) => note.lifecycle.kind === 'expires'),
           showCreateGhost: true,

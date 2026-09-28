@@ -41,12 +41,32 @@ describe('NoteSectionComponent', () => {
       ['week', 'Cette semaine'],
       ['older', 'Plus anciennes'],
       ['results', 'Résultats'],
+      ['all', 'Toutes les notes'],
     ] as const) {
       fixture.componentRef.setInput('section', createSection(key));
       await fixture.whenStable();
 
       expect(text('.canvas-section-title')).toContain(expected);
     }
+  });
+
+  /** Every format section is `format`: what it gathers names it, and tells it apart. */
+  it('names a gathered section by what it gathers', async () => {
+    const titles: string[] = [];
+    for (const group of [
+      { group: 'priority', priority: 'urgent' },
+      { group: 'priority', priority: 'none' },
+      { group: 'kind', kind: 'checklist' },
+      { group: 'language', language: 'sql' },
+    ] as const) {
+      const key = group.group === 'priority' ? 'priority' : 'format';
+      fixture.componentRef.setInput('section', createSection(key, [], { id: `${key}-x`, group }));
+      await fixture.whenStable();
+      titles.push(text('.canvas-section-title').split(' · ')[0] ?? '');
+    }
+
+    expect(titles).toEqual(['Urgente', 'Sans priorité', 'Tâches', 'SQL']);
+    expect(fixture.nativeElement.querySelector('h2').id).toBe('section-heading-format-x');
   });
 
   it('appends the expiring hint to the count when the section holds an expiring note', async () => {

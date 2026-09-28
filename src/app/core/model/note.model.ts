@@ -2,11 +2,13 @@ import type {
   ExportReport,
   ExportScope,
   FacetCount,
+  Grouping,
   ImportReport,
   NoteOrder,
   OutlineLine,
   Priority,
   SearchHit,
+  SectionGroup,
 } from '@core/ipc/bindings';
 import { LanguageTag } from '@core/model/language.model';
 import { ChecklistItem, NoteKind } from './checklist.model';
@@ -21,7 +23,7 @@ export type { NotePlacement, NotePriority, NoteTag } from '@core/ipc/bindings';
 
 export type { Priority } from '@core/ipc/bindings';
 
-export type { NoteOrder, SortDirection, SortKey } from '@core/ipc/bindings';
+export type { Grouping, NoteOrder, SectionGroup, SortDirection, SortKey } from '@core/ipc/bindings';
 
 export type NoteLifecycle = { readonly kind: 'permanent' } | { readonly kind: 'expires'; readonly at: Date };
 
@@ -119,6 +121,7 @@ export interface NotesQuery {
   readonly priorities: readonly Priority[];
   /** Left out by the palette: the modification date, newest first. */
   readonly order?: NoteOrder;
+  readonly grouping?: Grouping;
   readonly now: Date;
   /**
    * `Date#getTimezoneOffset()`. The sections reason in local days: without this
@@ -143,10 +146,15 @@ export interface NotesView {
 }
 
 /** Doubles as a translation key (`'sections.' + key`). */
-export type NoteSectionKey = 'pinned' | 'today' | 'week' | 'older' | 'results';
+export type NoteSectionKey =
+  'pinned' | 'today' | 'week' | 'older' | 'results' | 'priority' | 'format' | 'all';
 
 export interface NoteSection {
   readonly key: NoteSectionKey;
+  /** Unique among the sections, where the key is not: every format section is `format`. */
+  readonly id: string;
+  /** What a priority or a format section gathers, which names it. */
+  readonly group: SectionGroup | null;
   readonly notes: readonly Note[];
   readonly hasExpiringNotes: boolean;
   readonly showCreateGhost: boolean;

@@ -420,12 +420,16 @@ describe('NoteSelectionStore', () => {
         sections: [
           {
             key: 'pinned',
+            id: 'pinned',
+            group: null,
             notes: [createNote({ id: 'p' })],
             hasExpiringNotes: false,
             showCreateGhost: false,
           },
           {
             key: 'week',
+            id: 'week',
+            group: null,
             notes: [createNote({ id: 'w' })],
             hasExpiringNotes: false,
             showCreateGhost: false,

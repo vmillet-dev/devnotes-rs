@@ -116,6 +116,8 @@ describe('NotesStore', () => {
         sections: [
           {
             key: 'week',
+            id: 'week',
+            group: null,
             notes: [createNote({ id: 'a', content: 'one', truncated: true })],
             hasExpiringNotes: false,
             showCreateGhost: true,

@@ -192,6 +192,8 @@
     "week": "Cette semaine",
     "older": "Plus anciennes",
     "results": "Résultats",
+    "all": "Toutes les notes",
+    "noPriority": "Sans priorité",
     "expiringHint": "à trier bientôt"
   },
   "editor": {

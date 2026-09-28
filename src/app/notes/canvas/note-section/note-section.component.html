@@ -2,10 +2,15 @@
   class="canvas-section"
   data-testid="note-section"
   [attr.data-section]="section().key"
+  [attr.data-section-id]="section().id"
   [attr.aria-labelledby]="headingId()"
 >
   <h2 class="canvas-section-title" [id]="headingId()">
-    {{ titleKey() | transloco }}
+    @if (priority(); as level) {
+      <i [class]="'priority-dot is-' + level" aria-hidden="true"></i>
+    }
+    @let heading = title();
+    {{ 'key' in heading ? (heading.key | transloco) : heading.text }}
     <!-- Compact on purpose: a line break between the interpolations would leave a stray space in the rendered text, which the prettier-ignore below keeps out. -->
     <!-- prettier-ignore -->
     <span class="n">· {{ section().notes.length }}@if (section().hasExpiringNotes) { · {{ 'sections.expiringHint' | transloco }}}</span>
