@@ -1,0 +1,7 @@
+<pre
+  class="lines"
+>@for (line of view().lines; track $index) {<span class="line">{{ line.content }}@if (line.trailing) {<span class="trailing">{{ line.trailing }}</span>}@if (line.ending) {<span class="ending" [attr.data-ending]="line.ending">{{ marks[line.ending] }}</span>}</span>
+}</pre>
+@if (view().hidden > 0) {
+  <p class="more">{{ 'tools.line-breaks.moreLines' | transloco: { count: view().hidden } }}</p>
+}

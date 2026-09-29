@@ -24,6 +24,10 @@ export const commands = {
 	detectLanguage: (content: string) => __TAURI_INVOKE<Language>("detect_language", { content }),
 	/**  No lock, but off the window's thread: a document of a few megabytes takes a while. */
 	exploreJson: (query: JsonQuery) => typedError<JsonView, AppError>(__TAURI_INVOKE("explore_json", { query })),
+	convertCase: (text: string) => typedError<CaseConversion[], AppError>(__TAURI_INVOKE("convert_case", { text })),
+	slugify: (request: SlugRequest) => typedError<string, AppError>(__TAURI_INVOKE("slugify", { request })),
+	fixLineBreaks: (request: LineBreaksRequest) => typedError<LineBreaksAnswer, AppError>(__TAURI_INVOKE("fix_line_breaks", { request })),
+	parseUrl: (text: string) => typedError<UrlAnswer, AppError>(__TAURI_INVOKE("parse_url", { text })),
 	/**
 	 *  The first launch: the space, its folders and the notes in one transaction, since a space
 	 *  standing alone reads as "already seeded" for good. The strings stay on the front end, with
@@ -380,6 +384,11 @@ export type CardPlacement = {
 	position: BoardPoint,
 };
 
+export type CaseConversion = {
+	case: TextCase,
+	value: string,
+};
+
 export type ChangelogRelease = {
 	/**  `0.1.1`, or whatever the heading names. Square brackets are dropped. */
 	version: string,
@@ -452,6 +461,12 @@ export type DisplayNote = {
 	outline: OutlineLine[],
 } & Note;
 
+export type EndingCounts = {
+	lf: number,
+	crlf: number,
+	cr: number,
+};
+
 /**
  *  ⚠️ A new variant breaks the front-end build until `CODE_KEYS`
  *  (`core/services/errors/error-notifier.service.ts`) and both locales have its key.
@@ -490,6 +505,10 @@ export type FacetCount<T> = {
 	value: T,
 	count: number,
 };
+
+export type FinalNewline = "keep" | "add" | "remove";
+
+export type FinalNewlineChange = "unchanged" | "added" | "removed";
 
 export type Folder = {
 	id: string,
@@ -660,6 +679,27 @@ export type LibraryEntry = {
 	directory: string,
 	createdAt: string,
 };
+
+export type LineBreaksAnswer = {
+	/**  In the text as it was given. */
+	found: EndingCounts,
+	text: string,
+	/**  Endings rewritten to another kind. */
+	converted: number,
+	/**  Lines that lost spaces or tabs at their end. */
+	trimmed: number,
+	finalNewline: FinalNewlineChange,
+};
+
+export type LineBreaksRequest = {
+	text: string,
+	/**  `None` keeps each line's own ending. */
+	ending: LineEnding | null,
+	trimTrailing: boolean,
+	finalNewline: FinalNewline,
+};
+
+export type LineEnding = "lf" | "crlf" | "cr";
 
 export type Note = {
 	id: string,
@@ -883,6 +923,11 @@ export type Placeholder = {
  */
 export type Priority = "none" | "low" | "medium" | "high" | "urgent";
 
+export type QueryParameter = {
+	name: string,
+	value: string,
+};
+
 /**  What the File menu draws: the libraries, and which of them is open. */
 export type Registry = {
 	libraries: LibraryEntry[],
@@ -938,6 +983,14 @@ export type ShortcutBindings = {
 	palette: string,
 };
 
+export type SlugRequest = {
+	text: string,
+	separator: SlugSeparator,
+	lowercase: boolean,
+};
+
+export type SlugSeparator = "dash" | "underscore" | "dot";
+
 export type SortDirection = "descending" | "ascending";
 
 export type SortKey = "modified" | "created" | "priority" | 
@@ -972,6 +1025,8 @@ export type TagUsage = {
 	noteCount: number,
 };
 
+export type TextCase = "camel" | "pascal" | "snake" | "kebab" | "constant" | "title" | "sentence";
+
 export type TrashedNote = {
 	deletedAt: string,
 	/**  Derived, never stored: retention can change between versions. */
@@ -986,6 +1041,27 @@ export type TrayLabels = {
 	palette: string,
 	quit: string,
 };
+
+export type UrlAnswer = { kind: "parsed"; parts: UrlParts } | { kind: "invalid"; problem: UrlProblem };
+
+/**  The user and the password decoded, the path as written, the query both ways. */
+export type UrlParts = {
+	scheme: string,
+	username: string | null,
+	password: string | null,
+	host: string | null,
+	/**  The port written, or the scheme's own when none is. */
+	port: number | null,
+	portIsDefault: boolean,
+	path: string,
+	query: string | null,
+	parameters: QueryParameter[],
+	fragment: string | null,
+};
+
+export type UrlProblem = "empty" | 
+/**  "example.com/path": a URL starts with its scheme. */
+"noScheme" | "emptyHost" | "invalidPort" | "invalidAddress" | "invalidDomain" | "other";
 
 /**  What the front end renders before it renders anything else. */
 export type VaultState = 

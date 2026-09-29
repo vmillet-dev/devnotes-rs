@@ -988,6 +988,99 @@
       "encode": "Encodeurs",
       "compare": "Comparer",
       "generate": "Générateurs"
+    },
+    "input": "Entrée",
+    "result": "Résultat",
+    "results": "Résultats",
+    "copy": "Copier",
+    "copied": "Copié",
+    "copyWhat": "Copier {{what}}",
+    "case": {
+      "name": "Convertisseur de casse",
+      "description": "camelCase, snake_case, kebab-case, Titre",
+      "inputLabel": "Texte à convertir",
+      "placeholder": "Un nom de variable ou une phrase : parse HTTP response",
+      "empty": "Les sept casses s’affichent ici.",
+      "noteTitle": "Casses de « {{text}} »"
+    },
+    "slug": {
+      "name": "Générateur de slug",
+      "description": "« Été 2026 ! » → ete-2026",
+      "inputLabel": "Texte à transformer en slug",
+      "placeholder": "Été 2026 !",
+      "separator": "Séparateur",
+      "separators": {
+        "dash": "Tiret -",
+        "underscore": "Souligné _",
+        "dot": "Point ."
+      },
+      "lowercase": "En minuscules",
+      "empty": "Le slug s’affiche ici.",
+      "noteTitle": "Slug de « {{text}} »"
+    },
+    "url-parser": {
+      "name": "Analyseur d’URL",
+      "description": "Protocole, hôte, chemin, paramètres",
+      "inputLabel": "URL à analyser",
+      "placeholder": "https://api.exemple.fr/v1/factures?statut=payée&page=2",
+      "parts": "Composants",
+      "labels": {
+        "scheme": "Protocole",
+        "username": "Utilisateur",
+        "password": "Mot de passe",
+        "host": "Hôte",
+        "port": "Port",
+        "path": "Chemin",
+        "query": "Requête",
+        "fragment": "Fragment"
+      },
+      "defaultPort": "par défaut",
+      "parameters": "{count, plural, one {Paramètre · #} other {Paramètres · #}}",
+      "parameterName": "Nom",
+      "parameterValue": "Valeur",
+      "empty": "Les composants de l’URL s’affichent ici.",
+      "noteTitle": "URL de {{host}}",
+      "problems": {
+        "empty": "Collez une URL.",
+        "noScheme": "Il manque le protocole : une URL commence par https:// ou un autre schéma.",
+        "emptyHost": "L’hôte est vide.",
+        "invalidPort": "Le port n’est pas un nombre entre 0 et 65535.",
+        "invalidAddress": "L’adresse IP est mal formée.",
+        "invalidDomain": "Le nom de domaine contient un caractère interdit.",
+        "other": "Cette URL n’est pas valide."
+      }
+    },
+    "line-breaks": {
+      "name": "Sauts de ligne",
+      "description": "CRLF ↔ LF, espaces en fin de ligne",
+      "paste": "Coller",
+      "inputLabel": "Texte collé",
+      "placeholder": "Collez un texte ici (Ctrl+V) : ses fins de ligne s’affichent.",
+      "mixed": "Mélange",
+      "ending": "Fins de ligne",
+      "endings": {
+        "keep": "Garder",
+        "lf": "LF",
+        "crlf": "CRLF",
+        "cr": "CR"
+      },
+      "final": "Saut final",
+      "finals": {
+        "keep": "Garder",
+        "add": "Ajouter",
+        "remove": "Retirer"
+      },
+      "trim": "Retirer les espaces en fin de ligne",
+      "converted": "{count, plural, =0 {aucune fin de ligne convertie} one {# fin de ligne convertie} other {# fins de ligne converties}}",
+      "trimmed": "{count, plural, =0 {aucune ligne nettoyée} one {# ligne nettoyée} other {# lignes nettoyées}}",
+      "finalChanges": {
+        "unchanged": "saut final inchangé",
+        "added": "saut final ajouté",
+        "removed": "saut final retiré"
+      },
+      "moreLines": "{count, plural, one {… et # ligne de plus} other {… et # lignes de plus}}",
+      "empty": "Le texte corrigé s’affiche ici.",
+      "noteTitle": "Texte aux fins de ligne corrigées"
     }
   }
 }

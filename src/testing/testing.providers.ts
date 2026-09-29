@@ -10,6 +10,7 @@ import { LibrariesRepository } from '@core/data/libraries.repository';
 import { BoardRepository } from '@core/data/board.repository';
 import { FoldersRepository } from '@core/data/folders.repository';
 import { JsonRepository } from '@core/data/json.repository';
+import { ToolsRepository } from '@core/data/tools.repository';
 import { NotesRepository } from '@core/data/notes.repository';
 import { SpacesRepository } from '@core/data/spaces.repository';
 import { TransferRepository } from '@core/data/transfer.repository';
@@ -30,6 +31,7 @@ import { FakeDesktopNotifications } from './fake-desktop-notifications';
 import { FakeFileDialog } from './fake-file-dialog';
 import { FakeFoldersRepository } from './fake-folders-repository';
 import { FakeJsonRepository } from './fake-json-repository';
+import { FakeToolsRepository } from './fake-tools-repository';
 import { FakeNotesRepository } from './fake-notes-repository';
 import { FakePrettier } from './fake-prettier';
 import { FakeSpacesRepository } from './fake-spaces-repository';
@@ -50,6 +52,7 @@ interface DataDoubles {
   readonly attachmentsRepository?: FakeAttachmentsRepository;
   readonly transferRepository?: FakeTransferRepository;
   readonly jsonRepository?: FakeJsonRepository;
+  readonly toolsRepository?: FakeToolsRepository;
   readonly vaultRepository?: FakeVaultRepository;
   readonly backupsRepository?: FakeBackupsRepository;
   readonly librariesRepository?: FakeLibrariesRepository;
@@ -102,6 +105,7 @@ export function provideAppTesting(doubles: DataDoubles = {}): Provider[] {
       useValue: doubles.transferRepository ?? new FakeTransferRepository(),
     },
     { provide: JsonRepository, useValue: doubles.jsonRepository ?? new FakeJsonRepository() },
+    { provide: ToolsRepository, useValue: doubles.toolsRepository ?? new FakeToolsRepository() },
     // The shell hosts the update prompt and the about menu, so every spec reaching it
     // pulls the Tauri bridge, absent under jsdom.
     { provide: UpdaterService, useValue: doubles.updater ?? new FakeUpdater() },

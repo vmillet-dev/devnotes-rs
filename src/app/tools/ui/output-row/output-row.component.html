@@ -1,0 +1,12 @@
+<div class="row" data-testid="output-row" [attr.data-name]="name()">
+  <div class="head">
+    <span class="name">{{ name() }}</span>
+    @if (meta()) {
+      <span class="meta">{{ meta() }}</span>
+    }
+  </div>
+  <div class="line">
+    <code class="value" data-testid="output-value">{{ value() }}</code>
+    <app-copy-value [value]="value()" [what]="name()" />
+  </div>
+</div>

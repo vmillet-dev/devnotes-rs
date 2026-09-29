@@ -446,3 +446,89 @@
   text-transform: uppercase;
   color: var(--text-2);
 }
+
+// A tool's body: what goes in on the left, what comes out on the right; one column when narrow.
+@mixin tool-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: 18px;
+  align-items: start;
+
+  @media (width < 960px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@mixin tool-column {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+// A section's title with a control at its other end: "ENTRÉE … Texte | Fichier".
+@mixin tool-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 28px;
+}
+
+// What is typed or pasted into a tool, and what a tool gives back to be read.
+@mixin tool-text-area {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-1);
+  color: var(--text-0);
+  font-family: var(--font-mono), monospace;
+  font-size: 12.5px;
+  line-height: 1.6;
+
+  &::placeholder {
+    color: var(--text-2);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--amber-edge);
+    outline-offset: 1px;
+  }
+}
+
+// "62 octets · UTF-8 · sans saut de ligne final": what a tool says about its input.
+@mixin tool-note {
+  margin: 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+// What went wrong with an input, drawn where the answer would be.
+@mixin tool-problem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--red);
+}
+
+// A checkbox and its label, in the accent.
+@mixin tool-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--text-1);
+  cursor: pointer;
+
+  input {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    accent-color: var(--amber-fill);
+  }
+}

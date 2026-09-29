@@ -988,6 +988,99 @@
       "encode": "Encoders",
       "compare": "Compare",
       "generate": "Generators"
+    },
+    "input": "Input",
+    "result": "Result",
+    "results": "Results",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyWhat": "Copy {{what}}",
+    "case": {
+      "name": "Case converter",
+      "description": "camelCase, snake_case, kebab-case, Title",
+      "inputLabel": "Text to convert",
+      "placeholder": "A variable name or a sentence: parse HTTP response",
+      "empty": "The seven cases show here.",
+      "noteTitle": "Cases of “{{text}}”"
+    },
+    "slug": {
+      "name": "Slug generator",
+      "description": "“Summer 2026!” → summer-2026",
+      "inputLabel": "Text to turn into a slug",
+      "placeholder": "Été 2026 !",
+      "separator": "Separator",
+      "separators": {
+        "dash": "Dash -",
+        "underscore": "Underscore _",
+        "dot": "Dot ."
+      },
+      "lowercase": "Lower case",
+      "empty": "The slug shows here.",
+      "noteTitle": "Slug of “{{text}}”"
+    },
+    "url-parser": {
+      "name": "URL parser",
+      "description": "Scheme, host, path, parameters",
+      "inputLabel": "URL to parse",
+      "placeholder": "https://api.example.com/v1/invoices?status=paid&page=2",
+      "parts": "Parts",
+      "labels": {
+        "scheme": "Scheme",
+        "username": "User",
+        "password": "Password",
+        "host": "Host",
+        "port": "Port",
+        "path": "Path",
+        "query": "Query",
+        "fragment": "Fragment"
+      },
+      "defaultPort": "default",
+      "parameters": "{count, plural, one {Parameter · #} other {Parameters · #}}",
+      "parameterName": "Name",
+      "parameterValue": "Value",
+      "empty": "The URL's parts show here.",
+      "noteTitle": "URL of {{host}}",
+      "problems": {
+        "empty": "Paste a URL.",
+        "noScheme": "The scheme is missing: a URL starts with https:// or another scheme.",
+        "emptyHost": "The host is empty.",
+        "invalidPort": "The port is not a number between 0 and 65535.",
+        "invalidAddress": "The IP address is malformed.",
+        "invalidDomain": "The domain name holds a forbidden character.",
+        "other": "This URL is not valid."
+      }
+    },
+    "line-breaks": {
+      "name": "Line breaks",
+      "description": "CRLF ↔ LF, trailing spaces",
+      "paste": "Paste",
+      "inputLabel": "Pasted text",
+      "placeholder": "Paste a text here (Ctrl+V): its line endings show.",
+      "mixed": "Mixed",
+      "ending": "Line endings",
+      "endings": {
+        "keep": "Keep",
+        "lf": "LF",
+        "crlf": "CRLF",
+        "cr": "CR"
+      },
+      "final": "Final newline",
+      "finals": {
+        "keep": "Keep",
+        "add": "Add",
+        "remove": "Remove"
+      },
+      "trim": "Remove trailing spaces",
+      "converted": "{count, plural, =0 {no line ending converted} one {# line ending converted} other {# line endings converted}}",
+      "trimmed": "{count, plural, =0 {no line trimmed} one {# line trimmed} other {# lines trimmed}}",
+      "finalChanges": {
+        "unchanged": "final newline unchanged",
+        "added": "final newline added",
+        "removed": "final newline removed"
+      },
+      "moreLines": "{count, plural, one {… and # more line} other {… and # more lines}}",
+      "empty": "The fixed text shows here.",
+      "noteTitle": "Text with fixed line endings"
     }
   }
 }

@@ -12,7 +12,9 @@ export class FakeToolComponent implements Tool {
   readonly swapped = signal(false);
 
   readonly result = computed<ToolResult | null>(() =>
-    this.text() ? { title: 'Fake', kind: 'snippet', language: 'txt', content: this.text() } : null,
+    this.text()
+      ? { title: { key: 'tools.title' }, kind: 'snippet', language: 'txt', content: this.text() }
+      : null,
   );
 
   readonly actions = computed<readonly ToolAction[]>(() => [

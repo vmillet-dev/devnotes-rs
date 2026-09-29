@@ -1,0 +1,27 @@
+@use 'mixins' as *;
+
+.columns {
+  @include tool-columns;
+}
+
+.column {
+  @include tool-column;
+  gap: 10px;
+}
+
+.section-title {
+  @include tool-section-title;
+}
+
+.field {
+  display: flex;
+}
+
+.text {
+  @include tool-text-area;
+  resize: vertical;
+}
+
+.empty {
+  @include tool-note;
+}

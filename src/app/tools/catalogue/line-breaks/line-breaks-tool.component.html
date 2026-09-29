@@ -1,0 +1,81 @@
+<div class="columns">
+  <section class="column" aria-labelledby="line-breaks-input-title">
+    <div class="section-head">
+      <h2 id="line-breaks-input-title" class="section-title">{{ 'tools.input' | transloco }}</h2>
+      <button type="button" class="paste" data-testid="line-breaks-paste" (click)="pasteFromClipboard()">
+        {{ 'tools.line-breaks.paste' | transloco }}
+      </button>
+    </div>
+    <div
+      class="paste-zone"
+      role="region"
+      tabindex="0"
+      data-testid="line-breaks-input"
+      [attr.aria-label]="'tools.line-breaks.inputLabel' | transloco"
+      (paste)="onPaste($event)"
+    >
+      @if (text() === '') {
+        <p class="placeholder">{{ 'tools.line-breaks.placeholder' | transloco }}</p>
+      } @else {
+        <app-line-view [text]="text()" />
+      }
+    </div>
+
+    @if (answer.value(); as answer) {
+      <p class="found" data-testid="line-breaks-found">
+        <span>LF {{ answer.found.lf }}</span>
+        <span>CRLF {{ answer.found.crlf }}</span>
+        <span>CR {{ answer.found.cr }}</span>
+        @if (mixed()) {
+          <span class="mixed" data-testid="line-breaks-mixed">{{
+            'tools.line-breaks.mixed' | transloco
+          }}</span>
+        }
+      </p>
+    }
+
+    <div class="options">
+      <span class="option-label">{{ 'tools.line-breaks.ending' | transloco }}</span>
+      <app-segmented-choice
+        kind="line-breaks-ending"
+        [label]="'tools.line-breaks.ending' | transloco"
+        [segments]="endings"
+        [currentId]="ending()"
+        (chosen)="onEnding($event)"
+      />
+      <span class="option-label">{{ 'tools.line-breaks.final' | transloco }}</span>
+      <app-segmented-choice
+        kind="line-breaks-final"
+        [label]="'tools.line-breaks.final' | transloco"
+        [segments]="finals"
+        [currentId]="final()"
+        (chosen)="onFinal($event)"
+      />
+      <label class="check">
+        <input type="checkbox" data-testid="line-breaks-trim" [checked]="trim()" (change)="onTrim($event)" />
+        {{ 'tools.line-breaks.trim' | transloco }}
+      </label>
+    </div>
+  </section>
+
+  <section class="column" aria-labelledby="line-breaks-output-title">
+    <div class="section-head">
+      <h2 id="line-breaks-output-title" class="section-title">{{ 'tools.result' | transloco }}</h2>
+      @if (answer.value(); as answer) {
+        <app-copy-value [value]="answer.text" [what]="'tools.result' | transloco" />
+      }
+    </div>
+    @if (answer.value(); as answer) {
+      <div class="output" data-testid="line-breaks-output">
+        <app-line-view [text]="answer.text" />
+      </div>
+      <p class="changes" data-testid="line-breaks-changes">
+        {{ 'tools.line-breaks.converted' | transloco: { count: answer.converted } }} ·
+        {{ 'tools.line-breaks.trimmed' | transloco: { count: answer.trimmed } }} ·
+        {{ 'tools.line-breaks.finalChanges.' + answer.finalNewline | transloco }}
+      </p>
+    } @else {
+      <p class="empty">{{ 'tools.line-breaks.empty' | transloco }}</p>
+    }
+  </section>
+</div>
