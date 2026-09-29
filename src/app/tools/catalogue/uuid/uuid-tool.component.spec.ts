@@ -58,6 +58,45 @@ describe('UuidToolComponent', () => {
     expect(harness.element('[data-testid="uuid-created"]').textContent).toBe('2024-09-25 23:05:01.488 UTC');
   });
 
+  it('asks for the count and the case as they are set', async () => {
+    const harness = await renderTool(UuidToolComponent, answer);
+    await vi.waitFor(() => expect(generated(harness)).toHaveLength(1));
+
+    await harness.type('uuid-count', '12', 'generate_uuids');
+    const count = harness.element<HTMLInputElement>('[data-testid="uuid-count"]');
+    count.value = '';
+    count.dispatchEvent(new Event('input'));
+    const uppercase = harness.element<HTMLInputElement>('[data-testid="uuid-uppercase"]');
+    uppercase.checked = true;
+    uppercase.dispatchEvent(new Event('change'));
+    await vi.waitFor(() => expect(generated(harness)).toHaveLength(3));
+
+    expect(generated(harness).at(-1)).toEqual({ version: 'v4', count: 12, uppercase: true });
+  });
+
+  it('gives no time for a UUID that carries none', async () => {
+    const harness = await renderTool(UuidToolComponent, (tools) => {
+      tools.uuidInspection = { kind: 'valid', version: 4, variant: 'rfc', created: null, nil: false };
+    });
+
+    await harness.type('uuid-checked', 'c1e32598-a35e-496e-b8b3-0e422a66ef02', 'inspect_uuid');
+
+    expect(harness.element('[data-testid="uuid-version"]').textContent?.trim()).toBe('v4');
+    expect(harness.element('[data-testid="uuid-created"]')).toBeNull();
+  });
+
+  it('empties the UUID being checked on Vider, and keeps the drawn ones', async () => {
+    const harness = await renderTool(UuidToolComponent, answer);
+    await harness.type('uuid-checked', V7, 'inspect_uuid');
+
+    harness.tool.clear();
+    await harness.settle();
+
+    expect(harness.element<HTMLInputElement>('[data-testid="uuid-checked"]').value).toBe('');
+    expect(harness.element('[data-testid="uuid-facts"]')).toBeNull();
+    expect(harness.element('[data-testid="uuid-list"]').textContent).toContain(V7);
+  });
+
   it('says what is not a UUID', async () => {
     const harness = await renderTool(UuidToolComponent, (tools) => {
       tools.uuidInspection = { kind: 'invalid' };

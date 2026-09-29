@@ -68,6 +68,41 @@ describe('PasswordToolComponent', () => {
     ]);
   });
 
+  it('asks for the length, the count and the look-alikes as they are set, and skips an empty field', async () => {
+    const harness = await renderTool(PasswordToolComponent, answer);
+    await drawn(harness, 1);
+
+    await harness.type('password-length', '32', 'generate_passwords');
+    const lookAlikes = harness.element<HTMLInputElement>('[data-testid="password-look-alikes"]');
+    lookAlikes.checked = false;
+    lookAlikes.dispatchEvent(new Event('change'));
+    await drawn(harness, 3);
+    const length = harness.element<HTMLInputElement>('[data-testid="password-length"]');
+    length.value = '';
+    length.dispatchEvent(new Event('input'));
+    await harness.type('password-count', '3', 'generate_passwords');
+
+    expect(requests(harness).at(-1)).toEqual({
+      length: 32,
+      sets: ['lowercase', 'uppercase', 'digits', 'symbols'],
+      avoidLookAlikes: false,
+      count: 3,
+    });
+  });
+
+  it('puts the options back as they were on Vider', async () => {
+    const harness = await renderTool(PasswordToolComponent, answer);
+    await drawn(harness, 1);
+    await harness.type('password-length', '8', 'generate_passwords');
+    await harness.type('password-count', '2', 'generate_passwords');
+
+    harness.tool.clear();
+    await drawn(harness, 4);
+
+    expect(requests(harness).at(-1)).toEqual(requests(harness)[0]);
+    expect(harness.element<HTMLInputElement>('[data-testid="password-length"]').value).toBe('20');
+  });
+
   /** Your choice: a password may be kept, but the dialog says why it had better not be. */
   it('may be kept as a note, with a warning the dialog shows', async () => {
     const harness = await renderTool(PasswordToolComponent, answer);
