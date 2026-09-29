@@ -55,6 +55,7 @@ src-tauri/          Rust back-end
 ├── src/spaces/     the spaces feature: model, SQL
 ├── src/attachments/ the attachments feature: model, SQL (the bytes live on disk)
 ├── src/transfer/   import, export and share: bundle rules, the file, the exchange format
+├── src/tools/      the Outils area: one pure module per group of tools, no lock, no store
 ├── src/db.rs       connection, migrations, schema, stored-instant format
 ├── src/error.rs    the three errors and the translation between them
 ├── src/desktop.rs  tray and global shortcuts — native glue, not a feature
@@ -631,6 +632,29 @@ reads. It folds case and accents, as `view::fold` does.
 **The recent tools are an application preference** (`devnotes.recentTools`): which and when,
 nothing typed into them. Ctrl+Shift+T opens the home on its search from any area — the home
 takes `ToolsStore.searchWanted` whether it already existed or not.
+
+**In Rust, a tool is a module of `tools/`** (`text`, `url_parts`, …): pure functions and
+their types, tested in place, no Tauri. `tools.rs` holds the commands, three lines each
+through `off_thread` — no lock, but never on the window's thread. One command per tool rather
+than one `run_tool` over an enum: a registration line is the price of precise generated types.
+
+**Adding a tool**, the whole of it:
+
+1. `src-tauri/src/tools/<module>.rs`: the function, its request and answer types, its tests.
+2. `tools.rs`: a command through `off_thread`; `lib.rs`: a line in `collect_commands!`; then
+   `npm run bindings`.
+3. `core/data/tools.repository.ts`: a method, and its twin in `FakeToolsRepository`; the types
+   re-exported by `core/model/tool-answers.model.ts`.
+4. `tools/catalogue/catalogue.ts`: an entry; `tools/catalogue/<id>/`: the component
+   implementing `Tool`, and its spec through `renderTool`.
+5. `tools.<id>.*` in both locales, and a scenario in `29-tools.e2e.ts`.
+
+What every tool draws alike is the kit: `tools/ui/` (`app-output-row`, `app-copy-value`) and
+the `tool-*` mixins.
+
+⚠️ **The line breaks tool has no `<textarea>`**: a textarea's value turns every CRLF and CR
+into LF, the very thing it is asked about. A paste is read raw from its `clipboardData`, Coller
+reads the native clipboard, and the text is drawn with its endings.
 
 ### State
 

@@ -1,6 +1,7 @@
 import { InjectionToken, Signal, Type } from '@angular/core';
 import { LanguageTag } from '@core/model/language.model';
 import { NoteKind } from '@core/model/note.model';
+import { TranslationRef } from '@core/services/i18n/translation-ref.model';
 
 /** In the home's order, which the rail follows. */
 export const TOOL_CATEGORIES = ['text', 'crypto', 'encode', 'compare', 'generate'] as const;
@@ -17,7 +18,8 @@ export interface ToolDefinition {
 
 /** What "Enregistrer comme note" keeps: the tool decides, so the dialog asks nothing it could infer. */
 export interface ToolResult {
-  readonly title: string;
+  /** Proposed, and the dialog lets it be changed. */
+  readonly title: TranslationRef;
   readonly kind: NoteKind;
   readonly language: LanguageTag;
   readonly content: string;

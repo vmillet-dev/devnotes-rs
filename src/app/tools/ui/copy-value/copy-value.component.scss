@@ -1,0 +1,36 @@
+@use 'mixins' as *;
+
+:host {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.copy {
+  @include unstyled-control;
+  @include surface(var(--bg-2), 7px, var(--line));
+  @include focus-ring;
+  @include eases(border-color, color);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 11.5px;
+  color: var(--text-1);
+  cursor: pointer;
+  --icon-size: 12px;
+
+  &:hover:not(:disabled) {
+    border-color: var(--amber-dim);
+    color: var(--text-0);
+  }
+
+  &.copied {
+    color: var(--amber-text);
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.55;
+  }
+}

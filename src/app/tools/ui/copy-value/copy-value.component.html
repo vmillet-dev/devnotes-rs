@@ -1,0 +1,17 @@
+<button
+  type="button"
+  class="copy"
+  data-testid="copy-value"
+  [class.copied]="copied()"
+  [disabled]="value() === ''"
+  [attr.aria-label]="'tools.copyWhat' | transloco: { what: what() }"
+  (click)="copy()"
+>
+  <app-icon [name]="copied() ? 'check' : 'copy'" />
+  <span aria-hidden="true">{{ (copied() ? 'tools.copied' : 'tools.copy') | transloco }}</span>
+  <span class="visually-hidden" role="status">
+    @if (copied()) {
+      {{ 'tools.copied' | transloco }}
+    }
+  </span>
+</button>

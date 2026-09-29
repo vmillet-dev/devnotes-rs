@@ -12,6 +12,7 @@ pub mod libraries;
 pub mod notes;
 pub mod recovery;
 pub mod spaces;
+pub mod tools;
 pub mod transfer;
 pub mod vault;
 
@@ -48,6 +49,7 @@ use notes::{
 };
 use recovery::{archive_locked_library, set_aside_damaged_library};
 use spaces::{create_space, delete_space, list_spaces, pin_space, rename_space};
+use tools::{convert_case, fix_line_breaks, parse_url, slugify};
 use transfer::{export_is_protected, export_notes, import_notes, share_notes};
 use vault::{change_passphrase, create_vault, unlock_vault, vault_state};
 
@@ -73,6 +75,10 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             duplicate_note::<tauri::Wry>,
             detect_language,
             explore_json,
+            convert_case,
+            slugify,
+            fix_line_breaks,
+            parse_url,
             seed_samples::<tauri::Wry>,
             update_note::<tauri::Wry>,
             list_revisions::<tauri::Wry>,

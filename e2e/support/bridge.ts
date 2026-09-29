@@ -16,6 +16,8 @@ import type {
   ImportReport,
   JsonQuery,
   JsonView,
+  LineBreaksAnswer,
+  LineBreaksRequest,
   NoteDraft,
   NotePatch,
   NotePriority,
@@ -60,6 +62,7 @@ export const bridge = {
   /** Answers while locked: the registry is beside the libraries, not inside one. */
   listLibraries: () => invoke<Registry>('list_libraries'),
   exploreJson: (query: JsonQuery) => invoke<JsonView>('explore_json', { query }),
+  fixLineBreaks: (request: LineBreaksRequest) => invoke<LineBreaksAnswer>('fix_line_breaks', { request }),
   listSpaces: () => invoke<Space[]>('list_spaces'),
   createSpace: (draft: SpaceDraft) => invoke<Space>('create_space', { draft }),
   renameSpace: (id: string, draft: SpaceDraft) => invoke<Space>('rename_space', { id, draft }),

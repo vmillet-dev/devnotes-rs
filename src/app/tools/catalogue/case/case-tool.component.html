@@ -1,0 +1,25 @@
+<div class="columns">
+  <section class="column" aria-labelledby="case-input-title">
+    <h2 id="case-input-title" class="section-title">{{ 'tools.input' | transloco }}</h2>
+    <label class="field">
+      <span class="visually-hidden">{{ 'tools.case.inputLabel' | transloco }}</span>
+      <textarea
+        class="text"
+        data-testid="case-input"
+        rows="6"
+        [value]="text()"
+        [placeholder]="'tools.case.placeholder' | transloco"
+        (input)="onInput($event)"
+      ></textarea>
+    </label>
+  </section>
+
+  <section class="column" aria-labelledby="case-output-title">
+    <h2 id="case-output-title" class="section-title">{{ 'tools.results' | transloco }}</h2>
+    @for (conversion of conversions.value() ?? []; track conversion.case) {
+      <app-output-row [name]="caseNames[conversion.case]" [value]="conversion.value" />
+    } @empty {
+      <p class="empty">{{ 'tools.case.empty' | transloco }}</p>
+    }
+  </section>
+</div>
