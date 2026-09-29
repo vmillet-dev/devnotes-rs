@@ -5,9 +5,9 @@ import { AreaStore } from '@core/services/areas/area.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { VaultStore } from '@core/state/vault.store';
 import { IconComponent } from '@shared/icon/icon.component';
-import { AreaSwitchComponent } from '@shared/controls/area-switch/area-switch.component';
 import { AboutMenuComponent } from './about-menu/about-menu.component';
 import { FileMenuComponent } from './file-menu/file-menu.component';
+import { AreaSwitchComponent } from '@shared/controls/area-switch/area-switch.component';
 
 @Component({
   selector: 'app-titlebar',

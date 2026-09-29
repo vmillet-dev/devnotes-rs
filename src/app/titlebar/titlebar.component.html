@@ -10,9 +10,12 @@
     }
     <app-about-menu />
     <!-- Here rather than in the notes' topbar, which has no width left at the shipped size:
-         the rail it heads is hidden, and nothing else leads to the other areas. -->
+         the rail it heads is hidden, and nothing else leads to the other areas. Deferred, so
+         the titlebar does not carry it into the first chunk. -->
     @if (switchInBar()) {
-      <app-area-switch layout="bar" [current]="areas.current()" (chosen)="areas.show($event)" />
+      @defer (on immediate) {
+        <app-area-switch layout="bar" [current]="areas.current()" (chosen)="areas.show($event)" />
+      }
     }
   </div>
 
