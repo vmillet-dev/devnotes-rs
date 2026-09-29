@@ -72,4 +72,17 @@ export const TOOLS: readonly ToolDefinition[] = [
     keywords: ['color', 'hex', 'rgb', 'hsl', 'oklch', 'contrast', 'wcag'],
     load: () => import('./colour/colour-tool.component').then((m) => m.ColourToolComponent),
   },
+  {
+    id: 'json-generator',
+    category: 'generate',
+    keywords: ['json', 'schema', 'mock', 'fixture', 'fake', 'faker'],
+    load: () =>
+      import('./json-generator/json-generator-tool.component').then((m) => m.JsonGeneratorToolComponent),
+  },
+  {
+    id: 'lorem',
+    category: 'generate',
+    keywords: ['lorem', 'ipsum', 'placeholder', 'text'],
+    load: () => import('./lorem/lorem-tool.component').then((m) => m.LoremToolComponent),
+  },
 ];

@@ -6,6 +6,7 @@ pub mod colour;
 pub mod convert;
 pub mod encoding;
 pub(crate) mod files;
+pub mod generate;
 pub mod hash;
 pub mod random;
 pub mod text;
@@ -139,4 +140,20 @@ pub async fn convert_data(
     request: convert::ConvertRequest,
 ) -> Result<convert::ConvertAnswer, AppError> {
     off_thread(move || convert::convert(&request)).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn generate_json(
+    request: generate::GenerateRequest,
+) -> Result<generate::GenerateAnswer, AppError> {
+    off_thread(move || generate::generate(&request)).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn lorem_ipsum(
+    request: generate::LoremRequest,
+) -> Result<generate::LoremAnswer, AppError> {
+    off_thread(move || generate::lorem(&request)).await
 }

@@ -1309,6 +1309,46 @@
         "toml": "TOML n’a pas de null et veut une table à sa racine ; une date TOML devient une chaîne en JSON."
       },
       "noteTitle": "{{from}} converti en {{to}}"
+    },
+    "json-generator": {
+      "name": "JSON",
+      "description": "À partir d’un schéma ou d’un exemple",
+      "source": "Source",
+      "sources": {
+        "schema": "Schéma",
+        "example": "Exemple"
+      },
+      "inputLabel": "Schéma JSON ou document d’exemple",
+      "placeholders": {
+        "schema": "{ \"type\": \"object\", \"required\": [\"id\"], \"properties\": { \"id\": { \"type\": \"string\", \"format\": \"uuid\" } } }",
+        "example": "{ \"id\": \"9b2f6c1e-3d4a-4f8b-9e2c-7a1d5b6c8e90\", \"email\": \"ana@exemple.fr\", \"amount\": 49.9 }"
+      },
+      "unreadable": "Ce JSON ne se lit pas : ligne {{line}}, colonne {{column}}.",
+      "notASchema": "Un schéma JSON est un objet.",
+      "count": "Documents",
+      "seed": "Graine",
+      "seedPlaceholder": "au hasard",
+      "documents": "Documents",
+      "seedUsed": "Graine utilisée : {{seed}}",
+      "keepSeed": "La garder",
+      "again": "Tirer à nouveau",
+      "unsupported": "Le générateur n’a pas tenu compte de ces mots-clés : les documents peuvent ne pas les respecter.",
+      "empty": "Collez un schéma ou un exemple : les documents s’affichent ici.",
+      "noteTitle": "Documents JSON générés"
+    },
+    "lorem": {
+      "name": "Lorem ipsum",
+      "description": "Mots, phrases, paragraphes",
+      "unit": "Unité",
+      "units": {
+        "words": "Mots",
+        "sentences": "Phrases",
+        "paragraphs": "Paragraphes"
+      },
+      "count": "Nombre",
+      "opening": "Commencer par « Lorem ipsum »",
+      "again": "Tirer à nouveau",
+      "noteTitle": "Lorem ipsum"
     }
   }
 }

@@ -1,0 +1,108 @@
+<div class="columns">
+  <section class="column" aria-labelledby="json-generator-source-title">
+    <div class="section-head">
+      <h2 id="json-generator-source-title" class="section-title">
+        {{ 'tools.json-generator.source' | transloco }}
+      </h2>
+      <app-segmented-choice
+        kind="json-generator-source"
+        [label]="'tools.json-generator.source' | transloco"
+        [segments]="sources"
+        [currentId]="source()"
+        (chosen)="onSource($event)"
+      />
+    </div>
+    <label class="field">
+      <span class="visually-hidden">{{ 'tools.json-generator.inputLabel' | transloco }}</span>
+      <textarea
+        class="text"
+        data-testid="json-generator-input"
+        rows="14"
+        spellcheck="false"
+        [value]="text()"
+        [placeholder]="'tools.json-generator.placeholders.' + source() | transloco"
+        (input)="onInput($event)"
+      ></textarea>
+    </label>
+    @if (unreadable(); as unreadable) {
+      <p class="problem" role="status" data-testid="json-generator-unreadable">
+        {{
+          'tools.json-generator.unreadable' | transloco: { line: unreadable.line, column: unreadable.column }
+        }}
+      </p>
+    }
+    @if (notASchema()) {
+      <p class="problem" role="status" data-testid="json-generator-not-schema">
+        {{ 'tools.json-generator.notASchema' | transloco }}
+      </p>
+    }
+
+    <div class="options">
+      <label class="option">
+        {{ 'tools.json-generator.count' | transloco }}
+        <input
+          type="number"
+          class="number"
+          data-testid="json-generator-count"
+          min="1"
+          max="100"
+          [value]="count()"
+          (input)="onCount($event)"
+        />
+      </label>
+      <label class="option">
+        {{ 'tools.json-generator.seed' | transloco }}
+        <input
+          type="text"
+          inputmode="numeric"
+          class="number seed"
+          data-testid="json-generator-seed"
+          [placeholder]="'tools.json-generator.seedPlaceholder' | transloco"
+          [value]="seed() ?? ''"
+          (input)="onSeed($event)"
+        />
+      </label>
+    </div>
+  </section>
+
+  <section class="column" aria-labelledby="json-generator-output-title">
+    <div class="section-head">
+      <h2 id="json-generator-output-title" class="section-title">
+        {{ 'tools.json-generator.documents' | transloco }}
+      </h2>
+      @if (generated(); as generated) {
+        <app-copy-value [value]="generated.text" [what]="'tools.json-generator.documents' | transloco" />
+      }
+    </div>
+    @if (generated(); as generated) {
+      <pre class="output" data-testid="json-generator-output">{{ generated.text }}</pre>
+      <p class="seed-line" data-testid="json-generator-seed-used">
+        {{ 'tools.json-generator.seedUsed' | transloco: { seed: generated.seed } }}
+        @if (seed() === null) {
+          <button
+            type="button"
+            class="keep"
+            data-testid="json-generator-keep-seed"
+            (click)="keepSeed(generated.seed)"
+          >
+            {{ 'tools.json-generator.keepSeed' | transloco }}
+          </button>
+        }
+      </p>
+      @if (generated.unsupported.length > 0) {
+        <div class="unsupported" data-testid="json-generator-unsupported">
+          <p class="unsupported-title">{{ 'tools.json-generator.unsupported' | transloco }}</p>
+          <ul>
+            @for (item of generated.unsupported; track item.path + item.keyword) {
+              <li>
+                <code>{{ item.keyword }}</code> · <code class="path">{{ item.path }}</code>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    } @else {
+      <p class="note">{{ 'tools.json-generator.empty' | transloco }}</p>
+    }
+  </section>
+</div>

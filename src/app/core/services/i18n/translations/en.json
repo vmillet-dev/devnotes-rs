@@ -1309,6 +1309,46 @@
         "toml": "TOML has no null and wants a table at its root; a TOML date becomes a string in JSON."
       },
       "noteTitle": "{{from}} converted to {{to}}"
+    },
+    "json-generator": {
+      "name": "JSON",
+      "description": "From a schema or an example",
+      "source": "Source",
+      "sources": {
+        "schema": "Schema",
+        "example": "Example"
+      },
+      "inputLabel": "JSON Schema or example document",
+      "placeholders": {
+        "schema": "{ \"type\": \"object\", \"required\": [\"id\"], \"properties\": { \"id\": { \"type\": \"string\", \"format\": \"uuid\" } } }",
+        "example": "{ \"id\": \"9b2f6c1e-3d4a-4f8b-9e2c-7a1d5b6c8e90\", \"email\": \"ana@example.com\", \"amount\": 49.9 }"
+      },
+      "unreadable": "This JSON does not parse: line {{line}}, column {{column}}.",
+      "notASchema": "A JSON Schema is an object.",
+      "count": "Documents",
+      "seed": "Seed",
+      "seedPlaceholder": "random",
+      "documents": "Documents",
+      "seedUsed": "Seed used: {{seed}}",
+      "keepSeed": "Keep it",
+      "again": "Draw again",
+      "unsupported": "The generator did not take these keywords into account: the documents may not honour them.",
+      "empty": "Paste a schema or an example: the documents show here.",
+      "noteTitle": "Generated JSON documents"
+    },
+    "lorem": {
+      "name": "Lorem ipsum",
+      "description": "Words, sentences, paragraphs",
+      "unit": "Unit",
+      "units": {
+        "words": "Words",
+        "sentences": "Sentences",
+        "paragraphs": "Paragraphs"
+      },
+      "count": "Count",
+      "opening": "Start with “Lorem ipsum”",
+      "again": "Draw again",
+      "noteTitle": "Lorem ipsum"
     }
   }
 }

@@ -41,6 +41,8 @@ export const commands = {
 	inspectUuid: (text: string) => typedError<UuidInspection, AppError>(__TAURI_INVOKE("inspect_uuid", { text })),
 	describeColour: (request: ColourRequest) => typedError<ColourAnswer, AppError>(__TAURI_INVOKE("describe_colour", { request })),
 	convertData: (request: ConvertRequest) => typedError<ConvertAnswer, AppError>(__TAURI_INVOKE("convert_data", { request })),
+	generateJson: (request: GenerateRequest) => typedError<GenerateAnswer, AppError>(__TAURI_INVOKE("generate_json", { request })),
+	loremIpsum: (request: LoremRequest) => typedError<LoremAnswer, AppError>(__TAURI_INVOKE("lorem_ipsum", { request })),
 	/**
 	 *  The first launch: the space, its folders and the notes in one transaction, since a space
 	 *  standing alone reads as "already seeded" for good. The strings stay on the front end, with
@@ -635,6 +637,18 @@ export type FolderDraft = {
 	name: string,
 };
 
+export type GenerateAnswer = { kind: "generated"; text: string; seed: number; unsupported: Unsupported[] } | { kind: "unreadable"; line: number; column: number } | 
+/**  A schema is an object, or `true`. */
+{ kind: "notASchema" };
+
+export type GenerateRequest = {
+	source: JsonSource,
+	text: string,
+	count: number,
+	/**  The same seed and the same source draw the same documents; none draws one, and says which. */
+	seed: number | null,
+};
+
 /**
  *  One event carrying a closed value rather than a topic per action: a mistyped topic is
  *  a silently inert subscription, and a new variant here stops the front compiling.
@@ -770,6 +784,8 @@ export type JsonRow = {
 	hit: boolean,
 };
 
+export type JsonSource = "schema" | "example";
+
 export type JsonStats = {
 	keys: number,
 	/**  Container levels below the root: `{"a": {"b": 1}}` is 1. */
@@ -826,6 +842,21 @@ export type LineBreaksRequest = {
 };
 
 export type LineEnding = "lf" | "crlf" | "cr";
+
+export type LoremAnswer = {
+	text: string,
+	seed: number,
+};
+
+export type LoremRequest = {
+	unit: LoremUnit,
+	count: number,
+	/**  Opens on "Lorem ipsum dolor sit amet…", as the reader expects to recognise it. */
+	opening: boolean,
+	seed: number | null,
+};
+
+export type LoremUnit = "words" | "sentences" | "paragraphs";
 
 export type Notation = "hex" | "rgb" | "hsl" | "oklch";
 
@@ -1199,6 +1230,12 @@ export type TrayLabels = {
 	capture: string,
 	palette: string,
 	quit: string,
+};
+
+export type Unsupported = {
+	keyword: string,
+	/**  A `JSONPath` into the schema. */
+	path: string,
 };
 
 export type UrlAnswer = { kind: "parsed"; parts: UrlParts } | { kind: "invalid"; problem: UrlProblem };

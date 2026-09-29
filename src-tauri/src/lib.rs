@@ -51,8 +51,8 @@ use recovery::{archive_locked_library, set_aside_damaged_library};
 use spaces::{create_space, delete_space, list_spaces, pin_space, rename_space};
 use tools::{
     convert_case, convert_data, decode_base64, describe_colour, encode_base64, encode_base64_file,
-    fix_line_breaks, generate_passwords, generate_uuids, hash_input, inspect_uuid, parse_url,
-    save_base64, slugify, url_codec,
+    fix_line_breaks, generate_json, generate_passwords, generate_uuids, hash_input, inspect_uuid,
+    lorem_ipsum, parse_url, save_base64, slugify, url_codec,
 };
 use transfer::{export_is_protected, export_notes, import_notes, share_notes};
 use vault::{change_passphrase, create_vault, unlock_vault, vault_state};
@@ -70,6 +70,10 @@ pub fn export_bindings() -> Result<(), specta_typescript::Error> {
 }
 
 /// The single list of commands: it registers them with Tauri and writes `bindings.ts`.
+#[allow(
+    clippy::too_many_lines,
+    reason = "one line per command: the list is the point"
+)]
 fn ipc_builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
         .commands(collect_commands![
@@ -94,6 +98,8 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             inspect_uuid,
             describe_colour,
             convert_data,
+            generate_json,
+            lorem_ipsum,
             seed_samples::<tauri::Wry>,
             update_note::<tauri::Wry>,
             list_revisions::<tauri::Wry>,

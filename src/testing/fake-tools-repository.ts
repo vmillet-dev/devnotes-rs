@@ -9,10 +9,14 @@ import {
   ColourRequest,
   ConvertAnswer,
   ConvertRequest,
+  GenerateAnswer,
+  GenerateRequest,
   HashAnswer,
   HashRequest,
   LineBreaksAnswer,
   LineBreaksRequest,
+  LoremAnswer,
+  LoremRequest,
   PasswordAnswer,
   PasswordRequest,
   SlugRequest,
@@ -54,6 +58,8 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
   uuidInspection: UuidInspection = { kind: 'invalid' };
   colour: ColourAnswer = { colour: { kind: 'empty' }, against: { kind: 'empty' }, contrast: null };
   conversion: ConvertAnswer = { kind: 'converted', text: '' };
+  generated: GenerateAnswer = { kind: 'generated', text: '{}', seed: 1, unsupported: [] };
+  loremAnswer: LoremAnswer = { text: '', seed: 1 };
 
   convertCase(text: string): Promise<CaseConversion[]> {
     return this.answer('convert_case', text, this.cases);
@@ -113,6 +119,14 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
 
   convert(request: ConvertRequest): Promise<ConvertAnswer> {
     return this.answer('convert_data', request, this.conversion);
+  }
+
+  generateJson(request: GenerateRequest): Promise<GenerateAnswer> {
+    return this.answer('generate_json', request, this.generated);
+  }
+
+  lorem(request: LoremRequest): Promise<LoremAnswer> {
+    return this.answer('lorem_ipsum', request, this.loremAnswer);
   }
 
   requestsOf(command: string): unknown[] {

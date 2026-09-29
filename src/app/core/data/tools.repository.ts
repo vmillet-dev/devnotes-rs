@@ -11,10 +11,14 @@ import {
   ColourRequest,
   ConvertAnswer,
   ConvertRequest,
+  GenerateAnswer,
+  GenerateRequest,
   HashAnswer,
   HashRequest,
   LineBreaksAnswer,
   LineBreaksRequest,
+  LoremAnswer,
+  LoremRequest,
   PasswordAnswer,
   PasswordRequest,
   SlugRequest,
@@ -88,5 +92,13 @@ export class ToolsRepository {
 
   async convert(request: ConvertRequest): Promise<ConvertAnswer> {
     return unwrap('convert_data', await commands.convertData(request));
+  }
+
+  async generateJson(request: GenerateRequest): Promise<GenerateAnswer> {
+    return unwrap('generate_json', await commands.generateJson(request));
+  }
+
+  async lorem(request: LoremRequest): Promise<LoremAnswer> {
+    return unwrap('lorem_ipsum', await commands.loremIpsum(request));
   }
 }

@@ -420,6 +420,52 @@ describe('The tools', () => {
     });
   });
 
+  describe('the generators', () => {
+    const output = () => $(testid('json-generator-output')).getText();
+
+    it('draws the same documents again from the same seed', async () => {
+      await openTool('json-generator');
+      await $(`${testid('segmented-json-generator-source')} [data-segment-id="example"]`).click();
+      await setField(testid('json-generator-seed'), '7');
+      await setField(testid('json-generator-input'), '{"id":"9b2f6c1e-3d4a-4f8b-9e2c-7a1d5b6c8e90","n":3}');
+      await eventually(output, (text) => text.startsWith('['), 'the documents');
+      const first = await output();
+
+      await setField(testid('json-generator-seed'), '8');
+      await eventually(output, (text) => text !== first, 'other documents');
+      await setField(testid('json-generator-seed'), '7');
+
+      await eventually(output, (text) => text === first, 'the first documents again');
+      expect((JSON.parse(first) as unknown[]).length).toBe(3);
+    });
+
+    it('lists the schema keywords it did not honour', async () => {
+      await $(`${testid('segmented-json-generator-source')} [data-segment-id="schema"]`).click();
+      await setField(
+        testid('json-generator-input'),
+        '{"type":"object","required":["code"],"properties":{"code":{"type":"string","pattern":"^[A-Z]{3}$"}}}',
+      );
+
+      await eventually(
+        () => $(testid('json-generator-unsupported')).getText(),
+        (text) => text.includes('pattern') && text.includes('$.properties.code'),
+        'the unsupported keyword',
+      );
+    });
+
+    it('opens Lorem ipsum on the classic words', async () => {
+      await openTool('lorem');
+      await $(`${testid('segmented-lorem-unit')} [data-segment-id="words"]`).click();
+      await setField(testid('lorem-count'), '5');
+
+      await eventually(
+        () => $(testid('lorem-output')).getText(),
+        (text) => text === 'Lorem ipsum dolor sit amet,',
+        'the opening words',
+      );
+    });
+  });
+
   describe('a result kept as a note', () => {
     const inSpace = async () =>
       (await bridge.queryNotes(query({ spaceId }))).sections.flatMap((section) => section.notes);

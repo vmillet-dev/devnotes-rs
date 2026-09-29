@@ -1,0 +1,122 @@
+@use 'mixins' as *;
+
+.columns {
+  @include tool-columns;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.column {
+  @include tool-column;
+  gap: 10px;
+}
+
+.section-head {
+  @include tool-section-head;
+}
+
+.section-title {
+  @include tool-section-title;
+}
+
+.field {
+  display: flex;
+}
+
+.text {
+  @include tool-text-area;
+  resize: vertical;
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-1);
+}
+
+.number {
+  @include text-field;
+  @include surface(var(--bg-1), 7px, var(--line));
+  @include focus-ring;
+  width: 64px;
+  height: 30px;
+  padding: 0 8px;
+  font-family: var(--font-mono), monospace;
+  font-size: 12.5px;
+  color: var(--text-0);
+
+  &::placeholder {
+    color: var(--text-2);
+  }
+}
+
+.seed {
+  width: 120px;
+}
+
+.output {
+  @include tool-text-area;
+  margin: 0;
+  max-height: 480px;
+  overflow: auto;
+  white-space: pre;
+}
+
+.seed-line {
+  @include tool-note;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.keep {
+  @include unstyled-control;
+  @include focus-ring;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  color: var(--amber-text);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.unsupported {
+  padding: 10px 12px;
+  border: 1px solid rgba(var(--amber-rgb), 0.4);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--text-1);
+
+  ul {
+    margin: 6px 0 0;
+    padding-left: 18px;
+  }
+
+  code {
+    font-family: var(--font-mono), monospace;
+    color: var(--text-0);
+  }
+
+  .path {
+    color: var(--text-2);
+  }
+}
+
+.unsupported-title {
+  margin: 0;
+  color: var(--amber-text);
+}
+
+.problem {
+  @include tool-problem;
+}
+
+.note {
+  @include tool-note;
+}
