@@ -707,6 +707,19 @@ the card's age names the date it is sorted by: "modifiée il y a 4 h", or "cré�
 sorted by creation (`NoteFooter::Created`, set after the sections by `dated_by_creation`).
 The closed enums derive `Ord` in declared order, which is what ranks a priority and a kind.
 
+**The date view gathers its cards four ways** (`NotesQuery.grouping`): by date, by priority,
+by format, or all in one section. ⚠️ The dated sections split on **the date the list is
+sorted by** — the creation date under the creation sort, the last edit otherwise — where they
+used to split on the creation date while the list ran on the last edit, so the two could
+disagree. Priority sections run from the most pressing down, and "none" is always there: it
+holds the create card, and a new note lands in it. Format sections gather snippets by
+language, then the Notes, then the lists (`SectionGroup`, declared in that order); the create
+card rides the last one. Sections stay exhaustive, a pinned note heads its own group outside
+the dated layout, and a search or a facet still makes one flat `results` list. Several
+sections share a key (`format`), so each carries an `id` the canvas tracks it by, and a
+`group` saying what it gathers, which the front names — a translation key, or a language's
+own label.
+
 **A priority is filtered the same way** (`NotesQuery.priorities`, `priority_counts`), both
 counted by one helper, `view::counted`; its rail reads the levels from the most pressing
 down, offers no chip for `none`, and stays away from a space where nothing has a priority.

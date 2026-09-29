@@ -9,6 +9,7 @@ import { retained } from '@core/utils/retained.util';
 import { NotesRepository } from '@core/data/notes.repository';
 import {
   FacetCount,
+  Grouping,
   Note,
   NoteFilter,
   NoteKind,
@@ -58,8 +59,9 @@ const sameOrder = sameBy<NoteOrder>({ key: Object.is, direction: Object.is });
 
 interface QueryParams {
   readonly criteria: Criteria;
-  /** Not a criterion: the board, which reads those, keeps its own geometry. */
+  /** Not criteria: the board, which reads those, keeps its own geometry. */
   readonly order: NoteOrder;
+  readonly grouping: Grouping;
   readonly spaceId: string | null;
   readonly folderId: string | null;
   readonly day: string;
@@ -75,6 +77,7 @@ interface QueryParams {
 const sameQueryParams = sameBy<QueryParams>({
   criteria: Object.is,
   order: sameOrder,
+  grouping: Object.is,
   spaceId: Object.is,
   folderId: Object.is,
   day: Object.is,
@@ -106,6 +109,7 @@ export class NotesQueryStore {
   private readonly _selectedKinds = signal<ReadonlySet<NoteKind>>(new Set());
   private readonly _selectedPriorities = signal<ReadonlySet<Priority>>(new Set());
   private readonly _order = signal<NoteOrder>(DEFAULT_ORDER, { equal: sameOrder });
+  private readonly _grouping = signal<Grouping>('date');
 
   /** Follows the typing without waiting: this is what the field shows. */
   readonly searchQuery = this._searchQuery.asReadonly();
@@ -115,6 +119,7 @@ export class NotesQueryStore {
   readonly selectedKinds = this._selectedKinds.asReadonly();
   readonly selectedPriorities = this._selectedPriorities.asReadonly();
   readonly order = this._order.asReadonly();
+  readonly grouping = this._grouping.asReadonly();
 
   private readonly commitSearch = debounced(
     (query: string) => this._debouncedSearch.set(query),
@@ -138,6 +143,7 @@ export class NotesQueryStore {
     () => ({
       criteria: this.criteria(),
       order: this._order(),
+      grouping: this._grouping(),
       spaceId: this.spaces.activeSpaceId(),
       folderId: this.folders.activeFolderId(),
       day: localDayKey(this.clock.now()),
@@ -157,6 +163,7 @@ export class NotesQueryStore {
         const query: NotesQuery = {
           ...params.criteria,
           order: params.order,
+          grouping: params.grouping,
           spaceId: params.spaceId,
           folderId: params.folderId,
           now,
@@ -245,6 +252,10 @@ export class NotesQueryStore {
 
   setOrder(order: NoteOrder): void {
     this._order.set(order);
+  }
+
+  setGrouping(grouping: Grouping): void {
+    this._grouping.set(grouping);
   }
 
   togglePriority(priority: Priority): void {

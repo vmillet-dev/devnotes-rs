@@ -114,6 +114,8 @@ describe('PaletteStore', () => {
       sections: [
         {
           key: 'results',
+          id: 'results',
+          group: null,
           notes: [createNote({ id: 'note-1', title: 'First', content: 'plain', truncated: true })],
           hasExpiringNotes: false,
           showCreateGhost: false,

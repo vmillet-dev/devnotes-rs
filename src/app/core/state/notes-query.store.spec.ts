@@ -127,6 +127,17 @@ describe('NotesQueryStore', () => {
       expect(canvas.criteria()).not.toHaveProperty('order');
     });
 
+    it('sends the grouping, by date until another is chosen', async () => {
+      const { canvas, repository } = await createNotesHarness([createNote()]);
+      expect(repository.lastQuery?.grouping).toBe('date');
+
+      const before = repository.queryCount;
+      canvas.setGrouping('priority');
+      await awaitQuery(repository, before);
+
+      expect(repository.lastQuery?.grouping).toBe('priority');
+    });
+
     it('sends the selected priorities, and none once "All" is chosen', async () => {
       const { canvas, repository } = await createNotesHarness([createNote()]);
 
@@ -475,9 +486,23 @@ describe('NotesQueryStore', () => {
       const before = repository.queryCount;
       const view: Partial<NotesView> = {
         sections: [
-          { key: 'pinned', notes: [], hasExpiringNotes: false, showCreateGhost: false },
-          { key: 'today', notes: [], hasExpiringNotes: true, showCreateGhost: false },
-          { key: 'week', notes: [], hasExpiringNotes: false, showCreateGhost: true },
+          {
+            key: 'pinned',
+            id: 'pinned',
+            group: null,
+            notes: [],
+            hasExpiringNotes: false,
+            showCreateGhost: false,
+          },
+          {
+            key: 'today',
+            id: 'today',
+            group: null,
+            notes: [],
+            hasExpiringNotes: true,
+            showCreateGhost: false,
+          },
+          { key: 'week', id: 'week', group: null, notes: [], hasExpiringNotes: false, showCreateGhost: true },
         ],
       };
       repository.setView(view);

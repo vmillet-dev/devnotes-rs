@@ -1,5 +1,10 @@
 @use 'mixins' as *;
 
+.priority-dot {
+  @include priority-dot;
+  margin-right: 2px;
+}
+
 .canvas-section {
   margin-bottom: var(--space-section);
 }

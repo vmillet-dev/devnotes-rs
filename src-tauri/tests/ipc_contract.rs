@@ -18,7 +18,8 @@ use devnotes_lib::notes::model::{
 use devnotes_lib::notes::priority::Priority;
 use devnotes_lib::notes::trash;
 use devnotes_lib::notes::view::{
-    self, NoteFilter, NoteSection, NoteSectionKey, NotesQuery, NotesView, SortDirection, SortKey,
+    self, NoteFilter, NoteSection, NoteSectionKey, NotesQuery, NotesView, SectionGroup,
+    SortDirection, SortKey,
 };
 use devnotes_lib::spaces::model::{Space, SpaceDraft};
 use devnotes_lib::transfer;
@@ -162,6 +163,8 @@ fn a_view_serializes_with_camel_case_keys() {
     let view = NotesView {
         sections: vec![NoteSection {
             key: NoteSectionKey::Week,
+            id: "week".to_string(),
+            group: None,
             notes: vec![displayed(sample())],
             has_expiring_notes: false,
             show_create_ghost: true,
@@ -197,6 +200,8 @@ fn a_view_serializes_with_camel_case_keys() {
 fn a_section_key_serializes_as_the_translation_key_the_front_expects() {
     let section = NoteSection {
         key: NoteSectionKey::Older,
+        id: "older".to_string(),
+        group: None,
         notes: Vec::new(),
         has_expiring_notes: false,
         show_create_ghost: false,
@@ -205,6 +210,28 @@ fn a_section_key_serializes_as_the_translation_key_the_front_expects() {
     let json = serde_json::to_value(section).unwrap();
 
     assert_eq!(json["key"], "older");
+}
+
+/// A format section names what it gathers; its key alone would say "format" for all of them.
+#[test]
+fn a_gathered_section_says_what_it_gathers() {
+    let section = NoteSection {
+        key: NoteSectionKey::Format,
+        id: "format-sql".to_string(),
+        group: Some(SectionGroup::Language {
+            language: Language::Sql,
+        }),
+        notes: Vec::new(),
+        has_expiring_notes: false,
+        show_create_ghost: false,
+    };
+
+    let json = serde_json::to_value(section).unwrap();
+
+    assert_eq!(
+        json["group"],
+        serde_json::json!({ "group": "language", "language": "sql" })
+    );
 }
 
 #[test]

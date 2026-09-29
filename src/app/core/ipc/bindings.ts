@@ -515,6 +515,9 @@ export type FolderDraft = {
  */
 export type GlobalAction = "capture" | "new-note" | "palette";
 
+/**  How the date view gathers its cards. A search or a facet still makes one flat list. */
+export type Grouping = "date" | "priority" | "format" | "none";
+
 /**  `skipped`: notes already present or whose space is missing, so an import can be replayed. */
 export type ImportReport = {
 	spacesCreated: number,
@@ -678,13 +681,17 @@ export type NotePriority = {
 
 export type NoteSection = {
 	key: NoteSectionKey,
+	/**  Unique among the sections, where the key is not: every format section is `format`. */
+	id: string,
+	/**  What a priority or a format section gathers, which the front names. */
+	group: SectionGroup | null,
 	hasExpiringNotes: boolean,
 	notes: DisplayNote[],
 	showCreateGhost: boolean,
 };
 
 /**  A translation key on the front-end side: no readable label crosses the bridge. */
-export type NoteSectionKey = "pinned" | "today" | "week" | "older" | "results";
+export type NoteSectionKey = "pinned" | "today" | "week" | "older" | "results" | "priority" | "format" | "all";
 
 /**
  *  One tag on one note: a batch answers pair by pair, so its undo cannot strip a tag the note
@@ -712,6 +719,7 @@ export type NotesQuery = {
 	priorities: Priority[],
 	/**  Left out by the palette: the modification date, newest first. */
 	order?: NoteOrder,
+	grouping?: Grouping,
 	now: string,
 	/**
 	 *  `Date#getTimezoneOffset()`, whose sign is the opposite of the offset (−120 for
@@ -811,6 +819,11 @@ export type SearchHit = {
 	/**  The matching line, not the whole body: a card has room for one. */
 	excerpt: string,
 };
+
+/**  Declared in the order the format sections run: snippets by language, then the other kinds. */
+export type SectionGroup = { group: "language"; language: Language } | 
+/**  A Note or a todo list, whose kind is its format. */
+{ group: "kind"; kind: NoteKind } | { group: "priority"; priority: Priority };
 
 /**  Three fields rather than a map, so a missing shortcut is a compile error. */
 export type ShortcutBindings = {

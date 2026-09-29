@@ -20,7 +20,7 @@ use devnotes_lib::attachments::{self, model::Attachment, sealed};
 use devnotes_lib::libraries;
 use devnotes_lib::notes::model::NotePatch;
 use devnotes_lib::notes::store;
-use devnotes_lib::notes::view::{NoteFilter, NoteOrder, NotesQuery};
+use devnotes_lib::notes::view::{Grouping, NoteFilter, NoteOrder, NotesQuery};
 use devnotes_lib::transfer::{bundle, file};
 use devnotes_lib::vault::key::{Cost, Vault};
 
@@ -37,6 +37,7 @@ fn query(search: &str) -> NotesQuery {
         kinds: Vec::new(),
         priorities: Vec::new(),
         order: NoteOrder::default(),
+        grouping: Grouping::default(),
         now: now(),
         tz_offset_minutes: -120,
         pinned_first: true,

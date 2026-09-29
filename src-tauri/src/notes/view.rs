@@ -33,6 +33,9 @@ pub struct NotesQuery {
     #[serde(default)]
     #[specta(optional)]
     pub order: NoteOrder,
+    #[serde(default)]
+    #[specta(optional)]
+    pub grouping: Grouping,
     pub now: DateTime<Utc>,
     /// `Date#getTimezoneOffset()`, whose sign is the opposite of the offset (−120 for
     /// UTC+2). Sections reason in local days.
@@ -59,6 +62,17 @@ pub enum SortKey {
     /// The kind, then the language.
     Format,
     Title,
+}
+
+/// How the date view gathers its cards. A search or a facet still makes one flat list.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum Grouping {
+    #[default]
+    Date,
+    Priority,
+    Format,
+    None,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Type)]
@@ -206,12 +220,21 @@ pub fn count_priorities(rows: &[(String, i64)]) -> Vec<FacetCount<Priority>> {
     counted(&Priority::ALL, Priority::as_str, rows)
 }
 
-/// Dated sections, or one flat list, which offers the create card only as a place to create
-/// in rather than a list of matches.
+/// Sections gathered by date, priority or format, or all in one; or one flat list of matches,
+/// which offers the create card only as a place to create in rather than a list of matches.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Layout {
-    Chronological,
-    Flat { create_ghost: bool },
+    /// Split on the creation date when the list is sorted by it, on the last edit otherwise:
+    /// the sections and the order cannot disagree.
+    Dated {
+        by_creation: bool,
+    },
+    ByPriority,
+    ByFormat,
+    Whole,
+    Flat {
+        create_ghost: bool,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Type)]
@@ -252,6 +275,10 @@ pub struct SearchHit {
 #[serde(rename_all = "camelCase")]
 pub struct NoteSection {
     pub key: NoteSectionKey,
+    /// Unique among the sections, where the key is not: every format section is `format`.
+    pub id: String,
+    /// What a priority or a format section gathers, which the front names.
+    pub group: Option<SectionGroup>,
     pub has_expiring_notes: bool,
     pub notes: Vec<DisplayNote>,
     pub show_create_ghost: bool,
@@ -266,6 +293,67 @@ pub enum NoteSectionKey {
     Week,
     Older,
     Results,
+    Priority,
+    Format,
+    All,
+}
+
+impl NoteSectionKey {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Pinned => "pinned",
+            Self::Today => "today",
+            Self::Week => "week",
+            Self::Older => "older",
+            Self::Results => "results",
+            Self::Priority => "priority",
+            Self::Format => "format",
+            Self::All => "all",
+        }
+    }
+}
+
+/// Declared in the order the format sections run: snippets by language, then the other kinds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Type)]
+#[serde(tag = "group", rename_all = "camelCase")]
+pub enum SectionGroup {
+    Language {
+        language: Language,
+    },
+    /// A Note or a todo list, whose kind is its format.
+    Kind {
+        kind: NoteKind,
+    },
+    Priority {
+        priority: Priority,
+    },
+}
+
+impl SectionGroup {
+    fn format_of(note: &Note) -> Self {
+        if note.kind.has_language() {
+            Self::Language {
+                language: note.language,
+            }
+        } else {
+            Self::Kind { kind: note.kind }
+        }
+    }
+
+    fn key(self) -> NoteSectionKey {
+        match self {
+            Self::Priority { .. } => NoteSectionKey::Priority,
+            Self::Language { .. } | Self::Kind { .. } => NoteSectionKey::Format,
+        }
+    }
+
+    fn id(self) -> String {
+        match self {
+            Self::Language { language } => format!("format-{language}"),
+            Self::Kind { kind } => format!("format-{kind}"),
+            Self::Priority { priority } => format!("priority-{priority}"),
+        }
+    }
 }
 
 impl NotesQuery {
@@ -344,7 +432,14 @@ pub fn build(mut notes: Vec<Note>, facets: Facets, request: &NotesQuery) -> Note
             create_ghost: !criteria.narrows(),
         }
     } else {
-        Layout::Chronological
+        match request.grouping {
+            Grouping::Date => Layout::Dated {
+                by_creation: request.order.key == SortKey::Created,
+            },
+            Grouping::Priority => Layout::ByPriority,
+            Grouping::Format => Layout::ByFormat,
+            Grouping::None => Layout::Whole,
+        }
     };
     let matched = saturating_u32(notes.len());
 
@@ -549,23 +644,101 @@ fn section(
     NoteSection {
         has_expiring_notes: notes.iter().any(|note| note.expiring_soon),
         key,
+        id: key.as_str().to_string(),
+        group: None,
         notes,
         show_create_ghost,
     }
 }
 
-/// The partition is stable: at equal pinning, SQL decides.
+fn gathered(
+    group: SectionGroup,
+    notes: Vec<Note>,
+    show_create_ghost: bool,
+    now: DateTime<Utc>,
+) -> NoteSection {
+    NoteSection {
+        id: group.id(),
+        group: Some(group),
+        ..section(group.key(), notes, show_create_ghost, now)
+    }
+}
+
+/// The partition is stable: at equal pinning, the order the list was sorted in holds.
+fn hoisted(mut notes: Vec<Note>, pinned_first: bool) -> Vec<Note> {
+    if pinned_first {
+        notes.sort_by_key(|note| !note.pinned);
+    }
+    notes
+}
+
+/// From the most pressing down. "None" is always there: it hosts the create card, and it is
+/// where a new note lands.
+fn by_priority(notes: Vec<Note>, pinned_first: bool, now: DateTime<Utc>) -> Vec<NoteSection> {
+    let mut groups: BTreeMap<std::cmp::Reverse<Priority>, Vec<Note>> = BTreeMap::new();
+    groups.entry(std::cmp::Reverse(Priority::None)).or_default();
+    for note in notes {
+        groups
+            .entry(std::cmp::Reverse(note.priority))
+            .or_default()
+            .push(note);
+    }
+
+    groups
+        .into_iter()
+        .map(|(std::cmp::Reverse(priority), notes)| {
+            gathered(
+                SectionGroup::Priority { priority },
+                hoisted(notes, pinned_first),
+                priority == Priority::None,
+                now,
+            )
+        })
+        .collect()
+}
+
+/// The create card rides the last section, or a section of its own when there is none.
+fn by_format(notes: Vec<Note>, pinned_first: bool, now: DateTime<Utc>) -> Vec<NoteSection> {
+    let mut groups: BTreeMap<SectionGroup, Vec<Note>> = BTreeMap::new();
+    for note in notes {
+        groups
+            .entry(SectionGroup::format_of(&note))
+            .or_default()
+            .push(note);
+    }
+    if groups.is_empty() {
+        return whole(Vec::new(), pinned_first, now);
+    }
+
+    let last = groups.len() - 1;
+    groups
+        .into_iter()
+        .enumerate()
+        .map(|(at, (group, notes))| gathered(group, hoisted(notes, pinned_first), at == last, now))
+        .collect()
+}
+
+fn whole(notes: Vec<Note>, pinned_first: bool, now: DateTime<Utc>) -> Vec<NoteSection> {
+    vec![section(
+        NoteSectionKey::All,
+        hoisted(notes, pinned_first),
+        true,
+        now,
+    )]
+}
+
 fn results(
-    mut notes: Vec<Note>,
+    notes: Vec<Note>,
     pinned_first: bool,
     create_ghost: bool,
     now: DateTime<Utc>,
 ) -> Vec<NoteSection> {
-    if pinned_first {
-        notes.sort_by_key(|note| !note.pinned);
-    }
-
-    vec![section(NoteSectionKey::Results, notes, create_ghost, now)]
+    vec![section(
+        NoteSectionKey::Results,
+        hoisted(notes, pinned_first),
+        create_ghost,
+        now,
+    )]
 }
 
 fn build_sections(
@@ -576,9 +749,13 @@ fn build_sections(
     offset: FixedOffset,
 ) -> Vec<NoteSection> {
     let local_now = now.with_timezone(&offset);
-    if let Layout::Flat { create_ghost } = layout {
-        return results(notes, pinned_first, create_ghost, now);
-    }
+    let by_creation = match layout {
+        Layout::Flat { create_ghost } => return results(notes, pinned_first, create_ghost, now),
+        Layout::ByPriority => return by_priority(notes, pinned_first, now),
+        Layout::ByFormat => return by_format(notes, pinned_first, now),
+        Layout::Whole => return whole(notes, pinned_first, now),
+        Layout::Dated { by_creation } => by_creation,
+    };
 
     let mut pinned = Vec::new();
     let mut today = Vec::new();
@@ -592,10 +769,15 @@ fn build_sections(
             continue;
         }
 
-        let created = note.created_at.with_timezone(&offset);
-        if is_same_local_day(&created, &local_now) {
+        let dated = if by_creation {
+            note.created_at
+        } else {
+            note.updated_at
+        }
+        .with_timezone(&offset);
+        if is_same_local_day(&dated, &local_now) {
             today.push(note);
-        } else if is_within(&created, &local_now, A_WEEK) {
+        } else if is_within(&dated, &local_now, A_WEEK) {
             this_week.push(note);
         } else {
             older.push(note);
@@ -638,6 +820,7 @@ mod tests {
             kinds: Vec::new(),
             priorities: Vec::new(),
             order: NoteOrder::default(),
+            grouping: Grouping::default(),
             now: at(NOW),
             tz_offset_minutes: 0,
             pinned_first: true,
@@ -1337,6 +1520,119 @@ mod tests {
             }
         }
 
+        fn edited(id: &str, at_: &str) -> Note {
+            Note {
+                created_at: at("2019-01-01T08:00:00.000Z"),
+                updated_at: at(at_),
+                ..note(id, at_)
+            }
+        }
+
+        /// Sorted by the last edit, the list is split on it too: the two cannot disagree.
+        #[test]
+        fn the_dated_sections_split_on_the_date_the_list_is_sorted_by() {
+            let offset = utc();
+            let notes = vec![edited("touched today", "2026-07-25T08:00:00.000Z")];
+
+            let by_edit = build_sections(
+                notes.clone(),
+                Layout::Dated { by_creation: false },
+                true,
+                now_at(offset),
+                offset,
+            );
+            let by_creation = build_sections(
+                notes,
+                Layout::Dated { by_creation: true },
+                true,
+                now_at(offset),
+                offset,
+            );
+
+            assert_eq!(ids_in(&by_edit, NoteSectionKey::Today), ["touched today"]);
+            assert_eq!(
+                ids_in(&by_creation, NoteSectionKey::Older),
+                ["touched today"]
+            );
+        }
+
+        #[test]
+        fn priorities_gather_from_the_most_pressing_down_pinned_first_in_each() {
+            let offset = utc();
+            let with = |id: &str, priority: Priority, pinned: bool| Note {
+                pinned,
+                priority,
+                ..note(id, "2026-07-25T08:00:00.000Z")
+            };
+            let notes = vec![
+                with("low", Priority::Low, false),
+                with("urgent", Priority::Urgent, false),
+                with("urgent pinned", Priority::Urgent, true),
+            ];
+
+            let sections = build_sections(notes, Layout::ByPriority, true, now_at(offset), offset);
+
+            let ids: Vec<&str> = sections.iter().map(|section| section.id.as_str()).collect();
+            assert_eq!(ids, ["priority-urgent", "priority-low", "priority-none"]);
+            let urgent: Vec<&str> = sections[0]
+                .notes
+                .iter()
+                .map(|note| note.note.id.as_str())
+                .collect();
+            assert_eq!(urgent, ["urgent pinned", "urgent"]);
+            assert!(sections[2].notes.is_empty() && sections[2].show_create_ghost);
+        }
+
+        #[test]
+        fn formats_gather_snippets_by_language_then_the_other_kinds() {
+            let offset = utc();
+            let of = |id: &str, language: Language, kind: NoteKind| Note {
+                language,
+                kind,
+                ..note(id, "2026-07-25T08:00:00.000Z")
+            };
+            let notes = vec![
+                of("list", Language::Txt, NoteKind::Checklist),
+                of("sql", Language::Sql, NoteKind::Snippet),
+                of("prose", Language::Txt, NoteKind::Note),
+                of("json", Language::Json, NoteKind::Snippet),
+            ];
+
+            let sections = build_sections(notes, Layout::ByFormat, true, now_at(offset), offset);
+
+            let ids: Vec<&str> = sections.iter().map(|section| section.id.as_str()).collect();
+            assert_eq!(
+                ids,
+                [
+                    "format-json",
+                    "format-sql",
+                    "format-note",
+                    "format-checklist"
+                ]
+            );
+            assert!(
+                sections
+                    .iter()
+                    .all(|section| section.key == NoteSectionKey::Format)
+            );
+            let ghosts: Vec<bool> = sections.iter().map(|s| s.show_create_ghost).collect();
+            assert_eq!(ghosts, [false, false, false, true]);
+        }
+
+        /// Without a grouping, and without a note, the create card still has a place.
+        #[test]
+        fn no_grouping_is_one_section_that_always_holds_the_create_card() {
+            let offset = utc();
+
+            let empty = build_sections(Vec::new(), Layout::Whole, true, now_at(offset), offset);
+            let formats =
+                build_sections(Vec::new(), Layout::ByFormat, true, now_at(offset), offset);
+
+            assert_eq!(keys(&empty), [NoteSectionKey::All]);
+            assert!(empty[0].show_create_ghost);
+            assert_eq!(keys(&formats), [NoteSectionKey::All]);
+        }
+
         #[test]
         fn every_unpinned_note_lands_in_exactly_one_section() {
             let offset = utc();
@@ -1346,8 +1642,13 @@ mod tests {
                 note("older", "2020-01-01T08:00:00.000Z"),
             ];
 
-            let sections =
-                build_sections(notes, Layout::Chronological, true, now_at(offset), offset);
+            let sections = build_sections(
+                notes,
+                Layout::Dated { by_creation: true },
+                true,
+                now_at(offset),
+                offset,
+            );
 
             let placed: Vec<String> = sections
                 .iter()
@@ -1365,7 +1666,7 @@ mod tests {
 
             let sections = build_sections(
                 Vec::new(),
-                Layout::Chronological,
+                Layout::Dated { by_creation: true },
                 true,
                 now_at(offset),
                 offset,
@@ -1383,8 +1684,13 @@ mod tests {
                 note("older", "2020-01-01T08:00:00.000Z"),
             ];
 
-            let sections =
-                build_sections(notes, Layout::Chronological, true, now_at(offset), offset);
+            let sections = build_sections(
+                notes,
+                Layout::Dated { by_creation: true },
+                true,
+                now_at(offset),
+                offset,
+            );
 
             let with_ghost: Vec<NoteSectionKey> = sections
                 .iter()
@@ -1402,7 +1708,7 @@ mod tests {
 
             let sections = build_sections(
                 vec![pinned],
-                Layout::Chronological,
+                Layout::Dated { by_creation: true },
                 true,
                 now_at(offset),
                 offset,
@@ -1420,7 +1726,7 @@ mod tests {
 
             let sections = build_sections(
                 vec![pinned],
-                Layout::Chronological,
+                Layout::Dated { by_creation: true },
                 false,
                 now_at(offset),
                 offset,
@@ -1472,7 +1778,7 @@ mod tests {
 
             let sections = build_sections(
                 vec![note("today", "2026-07-25T08:00:00.000Z")],
-                Layout::Chronological,
+                Layout::Dated { by_creation: true },
                 true,
                 now_at(offset),
                 offset,
@@ -1516,7 +1822,7 @@ mod tests {
 
             let sections = build_sections(
                 vec![expiring, note("plain", "2026-07-25T08:00:00.000Z")],
-                Layout::Chronological,
+                Layout::Dated { by_creation: true },
                 true,
                 now_at(offset),
                 offset,
@@ -1544,7 +1850,7 @@ mod tests {
 
             let sections = build_sections(
                 vec![expiring],
-                Layout::Chronological,
+                Layout::Dated { by_creation: true },
                 true,
                 now_at(offset),
                 offset,
@@ -1564,7 +1870,7 @@ mod tests {
 
             let sections = build_sections(
                 vec![note("local-today", "2026-07-25T20:00:00.000Z")],
-                Layout::Chronological,
+                Layout::Dated { by_creation: true },
                 true,
                 now,
                 paris,
@@ -1580,7 +1886,7 @@ mod tests {
 
             let sections = build_sections(
                 vec![note("after-midnight", "2026-07-25T22:10:00.000Z")],
-                Layout::Chronological,
+                Layout::Dated { by_creation: true },
                 true,
                 now,
                 paris,
@@ -1595,7 +1901,7 @@ mod tests {
 
             let sections = build_sections(
                 vec![note("future", "2030-01-01T00:00:00.000Z")],
-                Layout::Chronological,
+                Layout::Dated { by_creation: true },
                 true,
                 now_at(offset),
                 offset,
@@ -1612,8 +1918,13 @@ mod tests {
                 note("second", "2026-07-25T07:00:00.000Z"),
             ];
 
-            let sections =
-                build_sections(notes, Layout::Chronological, true, now_at(offset), offset);
+            let sections = build_sections(
+                notes,
+                Layout::Dated { by_creation: true },
+                true,
+                now_at(offset),
+                offset,
+            );
 
             assert_eq!(
                 ids_in(&sections, NoteSectionKey::Today),

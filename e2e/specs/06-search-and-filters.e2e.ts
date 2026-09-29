@@ -343,6 +343,17 @@ describe('Search, filters and facets', () => {
     expect(byCreation.sections[0]?.notes.every((note) => note.footer.kind === 'created')).toBe(true);
   });
 
+  /** From the most pressing level down, "none" always there to create in. */
+  it('gathers the notes by priority when asked', async () => {
+    const spaceId = await homeSpaceId();
+    const view = await bridge.queryNotes(query({ spaceId, grouping: 'priority' }));
+
+    const ids = view.sections.map((section) => section.id);
+    expect(ids[0]).toBe('priority-urgent');
+    expect(ids.at(-1)).toBe('priority-none');
+    expect(view.sections[0]?.notes.map((note) => note.title)).toContain('Rotation des secrets');
+  });
+
   /** Several levels at once, like tags; "All" gives every note back. */
   it('filters on a priority from the rail', async () => {
     await canvas.togglePriority('urgent');

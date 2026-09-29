@@ -104,7 +104,7 @@
           }
         </div>
       } @else {
-        @for (section of canvas.sections(); track section.key) {
+        @for (section of canvas.sections(); track section.id) {
           <app-note-section [section]="section" (noteActivated)="onNoteActivated($event)" />
         }
       }
