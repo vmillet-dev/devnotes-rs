@@ -36,9 +36,9 @@ describe('OutputRowComponent', () => {
 
     copy().click();
 
-    await vi.waitFor(() => expect(clipboard.content).toBe('bfc0d2dc'));
-    await fixture.whenStable();
-    expect(copy().classList).toContain('copied');
+    // The acknowledgement comes after the write resolves, and whenStable does not wait for it.
+    await vi.waitFor(() => expect(copy().classList).toContain('copied'));
+    expect(clipboard.content).toBe('bfc0d2dc');
   });
 
   it('copies nothing when there is nothing', async () => {
