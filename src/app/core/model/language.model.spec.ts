@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { FALLBACK_LANGUAGE, LANGUAGE_LABELS, LanguageTag, isLanguageTag } from './language.model';
 
 describe('language model', () => {
-  it('labels every language it offers, and offers the eighteen it highlights', () => {
+  it('labels every language it offers, and offers the twenty it highlights', () => {
     const tags = Object.keys(LANGUAGE_LABELS) as LanguageTag[];
 
-    expect(tags.length).toBe(19);
+    expect(tags.length).toBe(21);
     expect(tags.every((tag) => LANGUAGE_LABELS[tag].length > 0)).toBe(true);
   });
 

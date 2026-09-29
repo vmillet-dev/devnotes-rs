@@ -1,0 +1,7 @@
+$gutter: 16px;
+$radius: 8px;
+
+.panel {
+  margin: 0 $gutter;
+  border-radius: $radius;
+}

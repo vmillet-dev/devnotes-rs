@@ -464,7 +464,10 @@ facet in the rail. Some notes that were coloured before are not any more.
 
 ⚠️ `score_typescript` deliberately does **not** inherit JavaScript's markers: inheriting
 them would make TypeScript score at least as much as JavaScript on every file, and a tie is
-no answer.
+no answer. `score_scss` follows the same rule with CSS: a variable, a Sass at-rule or a line
+opening on `&` is a signature, and a stylesheet with none of them is CSS. GraphQL's
+`type User {` is TypeScript's shape too, so a definition is weak and a non-null type
+(`ID!`, `[String!]!`), which TypeScript never writes after a name, is what outweighs it.
 
 ⚠️ **`src-tauri/tests/corpus/` is what says whether this is better rather than differently
 wrong.** One file per case, named `<language>[-<variant>].txt`, read from disk and asserted

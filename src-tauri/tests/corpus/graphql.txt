@@ -1,0 +1,14 @@
+query InvoicesOf($customerId: ID!, $first: Int = 20) {
+  customer(id: $customerId) {
+    name
+    invoices(first: $first) {
+      edges {
+        node {
+          id
+          total
+          ...InvoiceStatus
+        }
+      }
+    }
+  }
+}

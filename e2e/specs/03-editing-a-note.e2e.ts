@@ -300,6 +300,43 @@ describe('Editing a note', () => {
     await reloadCanvas();
   });
 
+  /** Detected in Rust, badged by a hue rule and coloured by a grammar: three places to forget. */
+  it('recognises SCSS and GraphQL, and draws them as languages', async () => {
+    const samples = [
+      { title: 'Card styles', content: '$gap: 8px;\n\n.card {\n  padding: $gap;\n}', language: 'scss' },
+      {
+        title: 'Invoices query',
+        content: 'query Invoices($id: ID!) {\n  customer(id: $id) {\n    name\n  }\n}',
+        language: 'graphql',
+      },
+    ] as const;
+    const ids = [];
+    for (const sample of samples) {
+      ids.push(
+        (await bridge.createNote(draft({ spaceId, title: sample.title, content: sample.content }))).id,
+      );
+    }
+    await reloadCanvas();
+
+    for (const [index, sample] of samples.entries()) {
+      await canvas.waitForCard(sample.title);
+      expect((await bridge.getNote(ids[index]!)).language).toBe(sample.language);
+
+      const badge = (await canvas.cardWithTitle(sample.title)).$('.lang-tag');
+      expect(await badge.getText()).toBe(sample.language.toUpperCase());
+      // A language with no `.lang-*` rule still draws its label, on no fill at all.
+      expect((await badge.getCSSProperty('background-color')).value).not.toBe('rgba(0,0,0,0)');
+
+      await canvas.openNote(sample.title);
+      expect(await $('.editor-stack .line-content span[class^="hljs-"]').isExisting()).toBe(true);
+      await editor.close();
+    }
+
+    await bridge.deleteNotes(ids);
+    await bridge.purgeNotes(ids);
+    await reloadCanvas();
+  });
+
   it('shows every space again through the "all spaces" row', async () => {
     await spaces.open();
     await spaces.allOption().click();

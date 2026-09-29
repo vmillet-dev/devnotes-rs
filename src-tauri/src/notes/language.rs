@@ -17,11 +17,13 @@ closed_enum! {
         Php = "php",
         C = "c",
         Sql = "sql",
+        Graphql = "graphql",
         Yml = "yml",
         Toml = "toml",
         Xml = "xml",
         Html = "html",
         Css = "css",
+        Scss = "scss",
         Sh = "sh",
         Md = "md",
         /// Default, and the signal that the front end chose nothing.
@@ -108,12 +110,13 @@ type Scorer = fn(&Sample<'_>) -> u32;
 
 /// Every language that can be guessed at, each scoring itself. The order means nothing: a
 /// language added here needs markers with honest weights, not a slot.
-const SCORERS: [(Language, Scorer); 18] = [
+const SCORERS: [(Language, Scorer); 20] = [
     (Language::Json, score_json),
     (Language::Php, score_php),
     (Language::Xml, score_xml),
     (Language::Html, score_html),
     (Language::Sql, score_sql),
+    (Language::Graphql, score_graphql),
     (Language::Toml, score_toml),
     (Language::Py, score_python),
     (Language::Go, score_go),
@@ -124,6 +127,7 @@ const SCORERS: [(Language, Scorer); 18] = [
     (Language::Ts, score_typescript),
     (Language::Js, score_javascript),
     (Language::Css, score_css),
+    (Language::Scss, score_scss),
     (Language::Yml, score_yaml),
     (Language::Md, score_markdown),
     (Language::Sh, score_shell),
@@ -219,6 +223,37 @@ fn score_sql(sample: &Sample<'_>) -> u32 {
             WEAK,
             sample.lower.contains(" from ") || sample.lower.contains(" where "),
         )
+}
+
+/// An operation or a fragment is a signature; a schema's `type User {` is TypeScript's shape
+/// too, so it counts only with a non-null type, which TypeScript never writes after a name.
+fn score_graphql(sample: &Sample<'_>) -> u32 {
+    const NON_NULL: [&str; 6] = ["ID!", "String!", "Int!", "Boolean!", "Float!", "]!"];
+
+    let operation = sample.has("{")
+        && sample.any_line(|line| {
+            ["query", "mutation", "subscription"].iter().any(|keyword| {
+                line.strip_prefix(keyword)
+                    .is_some_and(|rest| rest.starts_with([' ', '{', '(']))
+            })
+        });
+    let fragment = sample.has("... on ")
+        || sample.any_line(|line| line.starts_with("fragment ") && line.contains(" on "));
+    let definition = sample.any_line(|line| {
+        let Some(name) = ["type ", "input ", "interface ", "enum "]
+            .iter()
+            .find_map(|keyword| line.strip_prefix(keyword))
+        else {
+            return false;
+        };
+        name.ends_with('{')
+            && !name.contains('=')
+            && name.chars().next().is_some_and(char::is_uppercase)
+    });
+
+    worth(SIGNATURE, operation || fragment)
+        + worth(STRONG, NON_NULL.iter().any(|marker| sample.has(marker)))
+        + worth(WEAK, definition)
 }
 
 /// A section and an assignment: `[…]` alone could be an array on its own line.
@@ -391,6 +426,35 @@ fn score_css(sample: &Sample<'_>) -> u32 {
             .any(|unit| sample.has(unit));
 
     worth(STRONG, has_declaration && has_selector) + worth(WEAK, stylesheet_only)
+}
+
+/// Its own markers only, never CSS's, which it earns as well: a stylesheet with no variable,
+/// mixin or nesting is CSS, whatever file it came from.
+fn score_scss(sample: &Sample<'_>) -> u32 {
+    const AT_RULES: [&str; 6] = [
+        "@mixin ",
+        "@include ",
+        "@use ",
+        "@forward ",
+        "@extend ",
+        "@each ",
+    ];
+
+    let variable = sample.any_line(|line| {
+        line.strip_prefix('$').is_some_and(|rest| {
+            rest.split_once(':')
+                .is_some_and(|(name, _)| !name.is_empty() && name.chars().all(is_identifier_char))
+        })
+    });
+
+    // Native CSS nests too, but a nested stylesheet pasted today is far more often SCSS, and a
+    // tie with CSS's own score would answer `txt`.
+    let nested = sample.line_starts_with_any(&["&:", "&.", "&-", "& "]);
+
+    worth(
+        SIGNATURE,
+        variable || nested || sample.line_starts_with_any(&AT_RULES),
+    )
 }
 
 fn score_yaml(sample: &Sample<'_>) -> u32 {
@@ -587,6 +651,8 @@ mod tests {
             "interface A { }",
             "const a = 1",
             ".a { color: red; }",
+            "$a: 1px;\n.b { margin: $a; }",
+            "query { a }",
             "key: value",
             "# Title\n\n- item",
             "git status",
@@ -778,6 +844,44 @@ echo 'hi';"
             from_content("@media print {\n  a { color: #000; }\n}"),
             Language::Css
         );
+    }
+
+    #[test]
+    fn scss_is_css_with_a_variable_a_mixin_or_nesting() {
+        assert_eq!(
+            from_content("$gap: 8px;\n.card {\n  padding: $gap;\n}"),
+            Language::Scss
+        );
+        assert_eq!(
+            from_content("@use 'mixins' as *;\n.card {\n  @include surface;\n}"),
+            Language::Scss
+        );
+        assert_eq!(
+            from_content(".card {\n  color: red;\n  &:hover {\n    color: blue;\n  }\n}"),
+            Language::Scss
+        );
+        assert_eq!(from_content(".card {\n  color: red;\n}"), Language::Css);
+    }
+
+    #[test]
+    fn graphql_is_told_apart_from_typescript_by_its_non_null_types() {
+        assert_eq!(
+            from_content("query GetUser($id: ID!) {\n  user(id: $id) {\n    name\n  }\n}"),
+            Language::Graphql
+        );
+        assert_eq!(
+            from_content("fragment Card on Note {\n  id\n  title\n}"),
+            Language::Graphql
+        );
+        assert_eq!(
+            from_content("type Note {\n  id: ID!\n  tags: [String!]!\n}"),
+            Language::Graphql
+        );
+        assert_eq!(
+            from_content("type Note = {\n  id: string;\n}"),
+            Language::Ts
+        );
+        assert_ne!(from_content("the query ran twice"), Language::Graphql);
     }
 
     #[test]

@@ -13,7 +13,7 @@
   letter-spacing: 0.4px;
 }
 
-// Six hues for nineteen languages, shared by family: the label names the language, the
+// Six hues for twenty-one languages, shared by family: the label names the language, the
 // colour only groups it at a glance.
 //
 // Every member of `Language` needs a rule here, or its badge is bare text — no fill, no
@@ -47,7 +47,9 @@
 
 // Data, and the language written to shape it.
 .lang-sql,
-.lang-css {
+.lang-graphql,
+.lang-css,
+.lang-scss {
   @include hue-badge(var(--purple));
 }
 
