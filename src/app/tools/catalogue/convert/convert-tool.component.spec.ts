@@ -27,6 +27,21 @@ describe('ConvertToolComponent', () => {
     });
   });
 
+  it('keeps the result in the format it was converted to, until the next one lands', async () => {
+    const harness = await renderTool(ConvertToolComponent, answer);
+    await harness.type('convert-input', '{"service":"billing"}', 'convert_data');
+
+    harness
+      .element<HTMLButtonElement>('[data-testid="segmented-convert-to"] [data-segment-id="toml"]')
+      .click();
+    await harness.settle();
+
+    expect(harness.tool.result()).toMatchObject({
+      title: { params: { to: 'YAML' } },
+      language: 'yml',
+    });
+  });
+
   it('swaps the formats, the result becoming what is converted back', async () => {
     const harness = await renderTool(ConvertToolComponent, answer);
     await harness.type('convert-input', '{"service":"billing"}', 'convert_data');

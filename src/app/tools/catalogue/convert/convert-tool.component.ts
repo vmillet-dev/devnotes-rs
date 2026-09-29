@@ -47,8 +47,8 @@ export class ConvertToolComponent implements Tool {
   });
 
   protected readonly unreadable = computed(() => {
-    const answer = this.answer.value();
-    return answer?.kind === 'unreadable' ? answer : null;
+    const [answer, asked] = [this.answer.value(), this.answer.answered()];
+    return answer?.kind === 'unreadable' && asked ? { ...answer, format: asked.from } : null;
   });
 
   protected readonly impossible = computed(() => {
@@ -66,15 +66,15 @@ export class ConvertToolComponent implements Tool {
   ]);
 
   readonly result = computed<ToolResult | null>(() => {
-    const converted = this.converted();
-    return converted
+    const [converted, asked] = [this.converted(), this.answer.answered()];
+    return converted && asked
       ? {
           title: {
             key: 'tools.convert.noteTitle',
-            params: { from: this.from().toUpperCase(), to: this.to().toUpperCase() },
+            params: { from: asked.from.toUpperCase(), to: asked.to.toUpperCase() },
           },
           kind: 'snippet',
-          language: LANGUAGES[this.to()],
+          language: LANGUAGES[asked.to],
           content: converted,
         }
       : null;
@@ -86,8 +86,8 @@ export class ConvertToolComponent implements Tool {
 
   /** The result becomes what is converted back: the way to check a round trip. */
   protected swap(): void {
-    const converted = this.converted();
-    const [from, to] = [this.from(), this.to()];
+    const [converted, asked] = [this.converted(), this.answer.answered()];
+    const [from, to] = converted !== null && asked ? [asked.from, asked.to] : [this.from(), this.to()];
     this.from.set(to);
     this.to.set(from);
     if (converted !== null) {

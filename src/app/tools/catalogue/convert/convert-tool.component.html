@@ -26,7 +26,8 @@
       <p class="problem" role="status" data-testid="convert-unreadable">
         {{
           'tools.convert.unreadable'
-            | transloco: { format: from().toUpperCase(), line: unreadable.line, column: unreadable.column }
+            | transloco
+              : { format: unreadable.format.toUpperCase(), line: unreadable.line, column: unreadable.column }
         }}
       </p>
     }
