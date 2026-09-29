@@ -12,6 +12,20 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [0.8.0] - 2026-09-29
+
+### ✨ Added
+
+- Explore a JSON snippet as a graph or a tree (#516)
+- Set Prettier's style for the library (#515)
+- Format a snippet with Prettier (#513)
+- Model a JSON document for the visualiser (#514)
+- Add SCSS and GraphQL to the languages (#512)
+
+### 🧰 Under the hood
+
+- Bump the version to 0.8.0
+
 ## [0.7.0] - 2026-09-29
 
 ### ✨ Added
