@@ -12,6 +12,21 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [0.7.0] - 2026-09-29
+
+### ✨ Added
+
+- Choose the sort and the grouping from the topbar (#510)
+- Group the canvas by date, priority or format (#509)
+- Sort the canvas (#508)
+- Filter the canvas by priority (#507)
+- See and set a note's priority on the canvas (#506)
+- Give a note a priority (#505)
+
+### 🧰 Under the hood
+
+- Bump the version to 0.7.0
+
 ## [0.6.0] - 2026-09-28
 
 ### ✨ Added
