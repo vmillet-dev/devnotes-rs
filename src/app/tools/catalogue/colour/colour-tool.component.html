@@ -7,6 +7,7 @@
         class="picker"
         [attr.aria-label]="'tools.colour.pick' | transloco"
         [value]="pickerValue(first())"
+        data-testid="colour-picker"
         (input)="onPicked('colour', $event)"
       />
       <input
@@ -47,6 +48,7 @@
         class="picker"
         [attr.aria-label]="'tools.colour.pickBackground' | transloco"
         [value]="pickerValue(second())"
+        data-testid="colour-against-picker"
         (input)="onPicked('against', $event)"
       />
       <input

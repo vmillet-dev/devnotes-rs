@@ -52,6 +52,41 @@ describe('ColourToolComponent', () => {
     expect(harness.element('[data-testid="colour-swatch"]').dataset['swatch']).toBe('#1e90ff');
   });
 
+  it('asks again for what is typed, on either side', async () => {
+    const harness = await rendered();
+
+    await harness.type('colour-input', 'oklch(70% 0.25 150)', 'describe_colour');
+    await harness.type('colour-against', '#15171c', 'describe_colour');
+
+    expect(harness.tools.requestsOf('describe_colour').at(-1)).toEqual({
+      colour: 'oklch(70% 0.25 150)',
+      against: '#15171c',
+    });
+  });
+
+  it('takes a colour from the system picker as if it had been typed', async () => {
+    const harness = await rendered();
+    const picker = harness.element<HTMLInputElement>('[data-testid="colour-against-picker"]');
+
+    expect(picker.value).toBe('#ffffff');
+    picker.value = '#15171c';
+    picker.dispatchEvent(new Event('input'));
+    await vi.waitFor(() => expect(harness.tools.requestsOf('describe_colour')).toHaveLength(2));
+
+    expect(harness.tools.requestsOf('describe_colour')[1]).toEqual({ colour: '#1e90ff', against: '#15171c' });
+    expect(harness.element<HTMLInputElement>('[data-testid="colour-against"]').value).toBe('#15171c');
+  });
+
+  it('empties both colours on Vider', async () => {
+    const harness = await rendered();
+
+    harness.tool.clear();
+    await vi.waitFor(() => expect(harness.tools.requestsOf('describe_colour')).toHaveLength(2));
+
+    expect(harness.tools.requestsOf('describe_colour')[1]).toEqual({ colour: '', against: '' });
+    expect(harness.element<HTMLInputElement>('[data-testid="colour-input"]').value).toBe('');
+  });
+
   it('gives the ratio and the WCAG verdicts', async () => {
     const harness = await rendered();
 
