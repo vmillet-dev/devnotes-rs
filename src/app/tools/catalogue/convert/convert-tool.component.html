@@ -1,0 +1,68 @@
+<div class="columns">
+  <section class="column" aria-labelledby="convert-from-title">
+    <div class="section-head">
+      <h2 id="convert-from-title" class="section-title">{{ 'tools.convert.from' | transloco }}</h2>
+      <app-segmented-choice
+        kind="convert-from"
+        [label]="'tools.convert.from' | transloco"
+        [segments]="formats"
+        [currentId]="from()"
+        (chosen)="onFrom($event)"
+      />
+    </div>
+    <label class="field">
+      <span class="visually-hidden">{{ 'tools.convert.inputLabel' | transloco }}</span>
+      <textarea
+        class="text"
+        data-testid="convert-input"
+        rows="16"
+        spellcheck="false"
+        [value]="text()"
+        [placeholder]="'tools.convert.placeholders.' + from() | transloco"
+        (input)="onInput($event)"
+      ></textarea>
+    </label>
+    @if (unreadable(); as unreadable) {
+      <p class="problem" role="status" data-testid="convert-unreadable">
+        {{
+          'tools.convert.unreadable'
+            | transloco
+              : { format: unreadable.format.toUpperCase(), line: unreadable.line, column: unreadable.column }
+        }}
+      </p>
+    }
+  </section>
+
+  <section class="column" aria-labelledby="convert-to-title">
+    <div class="section-head">
+      <h2 id="convert-to-title" class="section-title">{{ 'tools.convert.to' | transloco }}</h2>
+      <div class="head-end">
+        <app-segmented-choice
+          kind="convert-to"
+          [label]="'tools.convert.to' | transloco"
+          [segments]="formats"
+          [currentId]="to()"
+          (chosen)="onTo($event)"
+        />
+        @if (converted(); as converted) {
+          <app-copy-value [value]="converted" [what]="'tools.result' | transloco" />
+        }
+      </div>
+    </div>
+    @if (converted(); as converted) {
+      <pre class="output" data-testid="convert-output">{{ converted }}</pre>
+    } @else if (impossible(); as impossible) {
+      <p class="problem" role="status" data-testid="convert-impossible">
+        {{ 'tools.convert.crossings.' + impossible.crossing | transloco }}
+        <code class="path">{{ impossible.path }}</code>
+      </p>
+    } @else if (!unreadable()) {
+      <p class="note">{{ 'tools.convert.empty' | transloco }}</p>
+    }
+    @for (format of conventions(); track format) {
+      <p class="convention" [attr.data-testid]="'convert-convention-' + format">
+        {{ 'tools.convert.conventions.' + format | transloco }}
+      </p>
+    }
+  </section>
+</div>

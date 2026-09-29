@@ -1275,6 +1275,40 @@
       "fail": "✗ échoue",
       "wcag": "WCAG 2.2 : AA demande 4,5:1 (3:1 en grand texte), AAA 7:1 (4,5:1). Le calcul est celui de la palette de l’application.",
       "noteTitle": "Couleur {{hex}}"
+    },
+    "convert": {
+      "name": "JSON → TOML / XML / YAML",
+      "description": "Et dans l’autre sens",
+      "from": "Depuis",
+      "to": "Vers",
+      "formats": {
+        "json": "JSON",
+        "toml": "TOML",
+        "xml": "XML",
+        "yaml": "YAML"
+      },
+      "swap": "Échanger les formats",
+      "inputLabel": "Texte à convertir",
+      "placeholders": {
+        "json": "{ \"service\": \"billing\", \"replicas\": 2 }",
+        "toml": "service = \"billing\"\nreplicas = 2",
+        "xml": "<service replicas=\"2\">billing</service>",
+        "yaml": "service: billing\nreplicas: 2"
+      },
+      "unreadable": "Le {{format}} ne se lit pas : ligne {{line}}, colonne {{column}}.",
+      "crossings": {
+        "tomlNull": "TOML n’a pas de null :",
+        "tomlRoot": "Un document TOML est une table : sa racine ne peut pas être une liste ou une valeur.",
+        "xmlRoot": "Un document XML a un seul élément racine : il faut un objet d’une seule clé.",
+        "xmlName": "XML n’accepte pas ce nom d’élément ou d’attribut :",
+        "xmlAttribute": "Un @attribut porte une valeur, pas un objet ni une liste :"
+      },
+      "empty": "Le résultat s’affiche ici.",
+      "conventions": {
+        "xml": "Convention XML : @nom pour un attribut, #text pour le texte à côté d’éléments, un élément répété devient une liste, un élément vide devient null. XML n’a pas de types : tout ce qu’il donne est du texte.",
+        "toml": "TOML n’a pas de null et veut une table à sa racine ; une date TOML devient une chaîne en JSON."
+      },
+      "noteTitle": "{{from}} converti en {{to}}"
     }
   }
 }

@@ -3,6 +3,7 @@
 //! for the unexpected. No lock and no store: nothing here reads the library.
 
 pub mod colour;
+pub mod convert;
 pub mod encoding;
 pub(crate) mod files;
 pub mod hash;
@@ -130,4 +131,12 @@ pub async fn describe_colour(
     request: colour::ColourRequest,
 ) -> Result<colour::ColourAnswer, AppError> {
     off_thread(move || colour::describe(&request)).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn convert_data(
+    request: convert::ConvertRequest,
+) -> Result<convert::ConvertAnswer, AppError> {
+    off_thread(move || convert::convert(&request)).await
 }

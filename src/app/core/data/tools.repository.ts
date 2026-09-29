@@ -9,6 +9,8 @@ import {
   CaseConversion,
   ColourAnswer,
   ColourRequest,
+  ConvertAnswer,
+  ConvertRequest,
   HashAnswer,
   HashRequest,
   LineBreaksAnswer,
@@ -82,5 +84,9 @@ export class ToolsRepository {
 
   async describeColour(request: ColourRequest): Promise<ColourAnswer> {
     return unwrap('describe_colour', await commands.describeColour(request));
+  }
+
+  async convert(request: ConvertRequest): Promise<ConvertAnswer> {
+    return unwrap('convert_data', await commands.convertData(request));
   }
 }

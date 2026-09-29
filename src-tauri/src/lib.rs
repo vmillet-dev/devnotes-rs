@@ -50,7 +50,7 @@ use notes::{
 use recovery::{archive_locked_library, set_aside_damaged_library};
 use spaces::{create_space, delete_space, list_spaces, pin_space, rename_space};
 use tools::{
-    convert_case, decode_base64, describe_colour, encode_base64, encode_base64_file,
+    convert_case, convert_data, decode_base64, describe_colour, encode_base64, encode_base64_file,
     fix_line_breaks, generate_passwords, generate_uuids, hash_input, inspect_uuid, parse_url,
     save_base64, slugify, url_codec,
 };
@@ -93,6 +93,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             generate_uuids,
             inspect_uuid,
             describe_colour,
+            convert_data,
             seed_samples::<tauri::Wry>,
             update_note::<tauri::Wry>,
             list_revisions::<tauri::Wry>,

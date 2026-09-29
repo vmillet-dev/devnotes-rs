@@ -7,6 +7,8 @@ import {
   CaseConversion,
   ColourAnswer,
   ColourRequest,
+  ConvertAnswer,
+  ConvertRequest,
   HashAnswer,
   HashRequest,
   LineBreaksAnswer,
@@ -51,6 +53,7 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
   uuids: string[] = [];
   uuidInspection: UuidInspection = { kind: 'invalid' };
   colour: ColourAnswer = { colour: { kind: 'empty' }, against: { kind: 'empty' }, contrast: null };
+  conversion: ConvertAnswer = { kind: 'converted', text: '' };
 
   convertCase(text: string): Promise<CaseConversion[]> {
     return this.answer('convert_case', text, this.cases);
@@ -106,6 +109,10 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
 
   describeColour(request: ColourRequest): Promise<ColourAnswer> {
     return this.answer('describe_colour', request, this.colour);
+  }
+
+  convert(request: ConvertRequest): Promise<ConvertAnswer> {
+    return this.answer('convert_data', request, this.conversion);
   }
 
   requestsOf(command: string): unknown[] {

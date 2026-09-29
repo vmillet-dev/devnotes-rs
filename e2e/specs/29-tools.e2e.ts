@@ -294,6 +294,50 @@ describe('The tools', () => {
 
       await $(testid('colour-gamut')).waitForDisplayed({ timeout: 5_000 });
     });
+
+    it('converts JSON to YAML in the order the document keeps, and back', async () => {
+      await openTool('convert');
+      await setField(testid('convert-input'), '{"service":"billing","replicas":2,"database":{"pool":10}}');
+
+      await eventually(
+        () => $(testid('convert-output')).getText(),
+        (yaml) => yaml.startsWith('service: billing'),
+        'the YAML',
+      );
+
+      await $(testid('tool-action-swap')).click();
+      await eventually(
+        () => $(testid('convert-output')).getText(),
+        (json) => json.startsWith('{') && json.indexOf('service') < json.indexOf('replicas'),
+        'the JSON back',
+      );
+    });
+
+    it('says what TOML cannot hold, and where', async () => {
+      await $(`${testid('segmented-convert-from')} [data-segment-id="json"]`).click();
+      await $(`${testid('segmented-convert-to')} [data-segment-id="toml"]`).click();
+      await setField(testid('convert-input'), '{"database":{"replica":null}}');
+
+      await eventually(
+        () => $(testid('convert-impossible')).getText(),
+        (text) => text.includes('$.database.replica'),
+        'the refusal',
+      );
+    });
+
+    it('reads XML attributes and repeated elements under the stated convention', async () => {
+      await $(`${testid('segmented-convert-from')} [data-segment-id="xml"]`).click();
+      await $(`${testid('segmented-convert-to')} [data-segment-id="json"]`).click();
+      await setField(testid('convert-input'), '<order id="42"><line>A</line><line>B</line></order>');
+
+      await eventually(
+        () => $(testid('convert-output')).getText(),
+        (json) =>
+          JSON.stringify(JSON.parse(json)) === JSON.stringify({ order: { '@id': '42', line: ['A', 'B'] } }),
+        'the JSON',
+      );
+      expect(await $(testid('convert-convention-xml')).isDisplayed()).toBe(true);
+    });
   });
 
   describe('the crypto tools', () => {

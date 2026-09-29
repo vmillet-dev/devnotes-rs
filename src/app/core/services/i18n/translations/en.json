@@ -1275,6 +1275,40 @@
       "fail": "✗ fails",
       "wcag": "WCAG 2.2: AA asks 4.5:1 (3:1 for large text), AAA 7:1 (4.5:1). The formula is the one the application's palette is checked with.",
       "noteTitle": "Colour {{hex}}"
+    },
+    "convert": {
+      "name": "JSON → TOML / XML / YAML",
+      "description": "And back again",
+      "from": "From",
+      "to": "To",
+      "formats": {
+        "json": "JSON",
+        "toml": "TOML",
+        "xml": "XML",
+        "yaml": "YAML"
+      },
+      "swap": "Swap the formats",
+      "inputLabel": "Text to convert",
+      "placeholders": {
+        "json": "{ \"service\": \"billing\", \"replicas\": 2 }",
+        "toml": "service = \"billing\"\nreplicas = 2",
+        "xml": "<service replicas=\"2\">billing</service>",
+        "yaml": "service: billing\nreplicas: 2"
+      },
+      "unreadable": "The {{format}} does not parse: line {{line}}, column {{column}}.",
+      "crossings": {
+        "tomlNull": "TOML has no null:",
+        "tomlRoot": "A TOML document is a table: its root cannot be a list or a value.",
+        "xmlRoot": "An XML document has one root element: it takes an object of one key.",
+        "xmlName": "XML does not take this element or attribute name:",
+        "xmlAttribute": "An @attribute holds a value, not an object or a list:"
+      },
+      "empty": "The result shows here.",
+      "conventions": {
+        "xml": "XML convention: @name for an attribute, #text for text beside elements, a repeated element becomes a list, an empty element becomes null. XML has no types: everything it gives is text.",
+        "toml": "TOML has no null and wants a table at its root; a TOML date becomes a string in JSON."
+      },
+      "noteTitle": "{{from}} converted to {{to}}"
     }
   }
 }
