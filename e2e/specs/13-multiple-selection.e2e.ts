@@ -1,10 +1,11 @@
 import { expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
+import { editor } from '../pageobjects/editor.page.js';
 import { selectionBar } from '../pageobjects/header.page.js';
 import { undoBar } from '../pageobjects/overlays.page.js';
 import { banners } from '../pageobjects/titlebar.page.js';
-import { clipboardText, eventually, reloadCanvas } from '../support/app.js';
+import { clipboardText, eventually, press, reloadCanvas, testid } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
@@ -105,6 +106,48 @@ describe('Selecting several notes at once', () => {
     expect((await bridge.getNote(one.id)).priority).toBe('none');
     expect((await bridge.getNote(two.id)).priority).toBe('low');
     await bridge.setPriority([two.id], 'none');
+  });
+
+  it('gives the whole selection one priority from the bar, and offers it back', async () => {
+    await selectionBar.prioritise('medium');
+
+    await eventually(
+      () => reread(second),
+      (note) => note?.priority === 'medium',
+      'the priority to reach the last note it was given',
+    );
+    expect((await reread(first))?.priority).toBe('medium');
+    expect((await reread(untouched))?.priority).toBe('none');
+
+    await undoBar.bar().waitForDisplayed({ timeout: 10_000 });
+    await undoBar.restore();
+    await eventually(
+      () => reread(first),
+      (note) => note?.priority === 'none',
+      'the priority was never taken back',
+    );
+  });
+
+  it('sets one from the card menu, and the card says it', async () => {
+    await canvas.prioritiseFromCardMenu(untouched, 'high');
+
+    const pill = (await canvas.cardWithTitle(untouched)).$(testid('priority-pill'));
+    await pill.waitForExist({ timeout: 10_000 });
+    expect(await pill.getAttribute('data-priority')).toBe('high');
+  });
+
+  /** Opening the note and closing it leaves the canvas cursor on its card. */
+  it('sets one from the keyboard on the card the cursor is on', async () => {
+    await canvas.openNote(untouched);
+    await editor.close();
+
+    await press('4');
+
+    await eventually(
+      () => reread(untouched),
+      (note) => note?.priority === 'urgent',
+      'the key to reach the note under the cursor',
+    );
   });
 
   it('copies the selection as Markdown', async function () {

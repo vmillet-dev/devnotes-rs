@@ -463,6 +463,13 @@ export const canvas = {
     await card.$(testid('note-card-duplicate')).click();
   },
 
+  /** Through the menu's first submenu: its entry, then the level. */
+  async prioritiseFromCardMenu(title: string, level: string): Promise<void> {
+    const card = await canvas.openCardMenu(title);
+    await card.$(testid('note-card-priority')).click();
+    await card.$(`${testid('note-card-priority-level')}[data-priority="${level}"]`).click();
+  },
+
   async pinFromCardMenu(title: string): Promise<void> {
     const card = await canvas.openCardMenu(title);
     await card.$(testid('note-card-pin')).click();

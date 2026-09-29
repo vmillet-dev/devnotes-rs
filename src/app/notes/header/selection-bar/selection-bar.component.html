@@ -32,6 +32,14 @@
     />
   }
 
+  <app-choice-menu
+    [kind]="'selection-priority'"
+    [naming]="'label'"
+    [label]="'selection.priority' | transloco"
+    [options]="priorityChoices"
+    (chosen)="onPriority($event)"
+  />
+
   <form class="selection-tag-form" (submit)="submitTag($event)">
     <input
       #tagInput

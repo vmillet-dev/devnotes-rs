@@ -1,0 +1,62 @@
+// The hue is the third clue, after the bars and the name: each is a text colour
+// `palette.test.mjs` already holds to AA on every surface a card sits on.
+.priority-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 7px;
+  border: 1px solid var(--pill-edge);
+  border-radius: 10px;
+  color: var(--pill-ink);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 16px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.priority-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1.5px;
+  height: 10px;
+}
+
+.priority-bar {
+  width: 3px;
+  height: 4px;
+  border-radius: 1px;
+  background: var(--line-no);
+
+  &:nth-child(2) {
+    height: 7px;
+  }
+
+  &:nth-child(3) {
+    height: 10px;
+  }
+
+  &.lit {
+    background: currentColor;
+  }
+}
+
+.is-urgent {
+  --pill-ink: var(--red);
+  --pill-edge: rgba(var(--red-rgb), 0.45);
+}
+
+.is-high {
+  --pill-ink: var(--amber-text);
+  --pill-edge: rgba(var(--amber-rgb), 0.45);
+}
+
+.is-medium {
+  --pill-ink: var(--blue);
+  --pill-edge: rgba(var(--blue-rgb), 0.45);
+}
+
+.is-low {
+  --pill-ink: var(--text-2);
+  --pill-edge: var(--line);
+}

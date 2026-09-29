@@ -320,6 +320,18 @@ describe('NoteCardComponent', () => {
     expect(tags.map((tag) => tag.nativeElement.textContent)).toEqual(['#a', '#b']);
   });
 
+  it('says its priority when it has one, and nothing otherwise', async () => {
+    const pill = (): HTMLElement | null =>
+      fixture.nativeElement.querySelector('[data-testid="priority-pill"]');
+    fixture.componentRef.setInput('note', createNote());
+    await fixture.whenStable();
+    expect(pill()).toBeNull();
+
+    fixture.componentRef.setInput('note', createNote({ priority: 'urgent' }));
+    await fixture.whenStable();
+    expect(pill()?.getAttribute('data-priority')).toBe('urgent');
+  });
+
   describe('what kind it is', () => {
     const badge = (): string =>
       fixture.nativeElement.querySelector('[data-testid="kind-badge"]')?.textContent.trim() ?? '';

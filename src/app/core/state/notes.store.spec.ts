@@ -953,6 +953,40 @@ describe('NotesStore', () => {
   });
 });
 
+describe('NotesStore giving one note a priority', () => {
+  beforeEach(() => {
+    TestBed.resetTestingModule();
+    vi.restoreAllMocks();
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  });
+
+  /** A batch of one; the open note adopts what the command does not answer with. */
+  it('sets it through the batch command, updates the open note and offers it back', async () => {
+    const harness = await createNotesHarness([createNote({ id: 'a' })]);
+    await harness.store.openNote('a');
+    await vi.waitFor(() => expect(harness.store.selectedNote()?.id).toBe('a'));
+
+    await harness.store.setPriority('a', 'high');
+
+    expect(harness.repository.priorityOf('a')).toBe('high');
+    expect(harness.store.selectedNote()?.priority).toBe('high');
+    expect(harness.undo.banner()).toMatchObject({ kind: 'priority', count: 1 });
+  });
+
+  /** Like a pin: a level makes a draft worth keeping, and it is written with it. */
+  it('keeps a draft local without a level, and writes it with the level once it has one', async () => {
+    const { store, repository } = await createNotesHarness([]);
+    const create = vi.spyOn(repository, 'create');
+    store.createNote('snippet');
+
+    await store.setPriority(DRAFT_ID, 'none');
+    expect(create).not.toHaveBeenCalled();
+
+    await store.setPriority(DRAFT_ID, 'urgent');
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ priority: 'urgent' }));
+  });
+});
+
 describe('NotesStore filing one note', () => {
   beforeEach(() => {
     TestBed.resetTestingModule();

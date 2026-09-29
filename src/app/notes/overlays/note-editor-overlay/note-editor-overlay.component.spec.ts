@@ -52,10 +52,11 @@ describe('NoteEditorOverlayComponent', () => {
     deletions: number;
     filings: (string | null)[];
     values: Record<string, string>[];
+    priorities: string[];
   };
 
   function listenToTheStore(): void {
-    asked = { patches: [], closes: 0, deletions: 0, filings: [], values: [] };
+    asked = { patches: [], closes: 0, deletions: 0, filings: [], values: [], priorities: [] };
     const store = TestBed.inject(NotesStore);
     vi.spyOn(store, 'applyPatch').mockImplementation(async (_id, patch) => {
       for (const listener of asked.patches) listener(patch);
@@ -71,6 +72,9 @@ describe('NoteEditorOverlayComponent', () => {
     });
     vi.spyOn(store, 'setPlaceholderValues').mockImplementation(async (_id, values) => {
       asked.values.push(values);
+    });
+    vi.spyOn(store, 'setPriority').mockImplementation(async (_id, priority) => {
+      asked.priorities.push(priority);
     });
   }
 
@@ -771,6 +775,30 @@ describe('NoteEditorOverlayComponent', () => {
       await pick('space', 'work');
 
       expect(emitted).toEqual(['work']);
+    });
+
+    /** Not a patch either: `set_priority` leaves the modification date alone. */
+    it('gives the note the priority picked, and takes it off from "No priority"', async () => {
+      fixture.componentRef.setInput('note', createNote({ priority: 'low' }));
+      await fixture.whenStable();
+      expect(fixture.nativeElement.querySelector('[data-testid="choice-priority"]').textContent).toContain(
+        'Basse',
+      );
+
+      fixture.nativeElement.querySelector('[data-testid="choice-priority"]').click();
+      await fixture.whenStable();
+      fixture.nativeElement
+        .querySelector('[data-testid="choice-panel-priority"] [data-option-id="high"]')
+        .click();
+      await fixture.whenStable();
+      fixture.nativeElement.querySelector('[data-testid="choice-priority"]').click();
+      await fixture.whenStable();
+      fixture.nativeElement
+        .querySelector('[data-testid="choice-panel-priority"] [data-testid="choice-none"]')
+        .click();
+      await fixture.whenStable();
+
+      expect(asked.priorities).toEqual(['high', 'none']);
     });
 
     /** Not a patch: filing answers what it changed, which the undo needs. */

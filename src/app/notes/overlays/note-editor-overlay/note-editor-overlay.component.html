@@ -44,6 +44,14 @@
         <span aria-hidden="true">📌</span>
         {{ (note.pinned ? 'editor.pinned' : 'editor.pin') | transloco }}
       </button>
+      <app-choice-menu
+        [kind]="'priority'"
+        [label]="'notes.priorityLabel' | transloco"
+        [options]="priorityChoices"
+        [currentId]="note.priority === 'none' ? null : note.priority"
+        [noneLabel]="'editor.noPriority' | transloco"
+        (chosen)="choosePriority($event)"
+      />
       <!-- A note with fields copies filled; "Copy as is" stays within reach in the panel. -->
       @if (hasPlaceholders()) {
         <button

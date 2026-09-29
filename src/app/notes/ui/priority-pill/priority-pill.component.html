@@ -1,0 +1,15 @@
+@if (priority() !== 'none') {
+  <span
+    class="priority-pill"
+    data-testid="priority-pill"
+    [class]="'is-' + priority()"
+    [attr.data-priority]="priority()"
+  >
+    <span class="priority-bars" aria-hidden="true">
+      @for (lit of bars(); track $index) {
+        <i class="priority-bar" [class.lit]="lit"></i>
+      }
+    </span>
+    {{ 'notes.priority.' + priority() | transloco }}
+  </span>
+}

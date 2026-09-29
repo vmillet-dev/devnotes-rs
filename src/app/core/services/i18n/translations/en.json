@@ -58,6 +58,14 @@
       "note": "Note",
       "checklist": "Tasks"
     },
+    "priorityLabel": "Priority",
+    "priority": {
+      "none": "None",
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "urgent": "Urgent"
+    },
     "newSnippet": "Code snippet",
     "newRichNote": "Note",
     "newChecklist": "To-do list",
@@ -226,6 +234,7 @@
     "exitFullscreen": "Exit fullscreen",
     "pin": "Pin",
     "pinned": "Pinned",
+    "noPriority": "No priority",
     "expiryLabel": "Note deadline (empty = permanent)",
     "footerStats": "{{lines}} lines · {{bytes}} bytes",
     "modifiedPrefix": "Updated",
@@ -319,6 +328,7 @@
     "boardLoadFailed": "The board could not be loaded.",
     "boardSaveFailed": "The board layout could not be saved.",
     "fileFailed": "The note could not be filed.",
+    "priorityFailed": "The priority could not be changed.",
     "boardArrangeFailed": "The board could not be tidied up.",
     "backupsListFailed": "The backup copies could not be read.",
     "backupRestoreFailed": "That copy could not be restored. The library was left in place.",
@@ -417,6 +427,7 @@
     "count": "{count, plural, one {# selected} other {# selected}}",
     "clear": "Clear selection",
     "moveTo": "Move to",
+    "priority": "Priority",
     "addTagLabel": "Add a tag to the selection",
     "addTagPlaceholder": "+ tag",
     "delete": "Move to trash",
@@ -547,6 +558,7 @@
       "checkWithClick": "Check a card with a click",
       "extendWithClick": "Extend the selection with a click",
       "trash": "Send to the trash, in two presses",
+      "priority": "Give a priority: 0 none, 1 low… 4 urgent",
       "undo": "Undo the last deletion",
       "stepBack": "Take the note back, call off a pending deletion, then the selection, then the filters, then leave the folder",
       "align": "Align the loose cards (board)"

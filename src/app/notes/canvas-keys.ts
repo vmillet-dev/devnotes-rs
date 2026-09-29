@@ -1,6 +1,7 @@
 import type { SettingsStore } from '@core/services/settings/settings.store';
 import { Rebindable, ShortcutGroup, acceleratorKeys } from '@core/services/shortcuts/shortcut.model';
 import type { Note, NoteKind } from '@core/model/note.model';
+import { PRIORITIES } from '@core/model/priority.model';
 import type { BoardStore } from '@core/state/board.store';
 import type { FoldersStore } from '@core/state/folders.store';
 import type { NoteBatchStore } from '@core/state/note-batch.store';
@@ -143,6 +144,14 @@ export const CANVAS_KEYS: readonly CanvasKey[] = [
     accelerator: 'P',
     labelKey: 'shortcuts.canvas.pin',
     run: ({ focused, notes }) => given(focused, (note) => void notes.togglePinned(note.id)),
+  },
+  {
+    // Fixed, like the arrows: each digit is a level, in the order the menus list them.
+    keys: ['0 … 4'],
+    labelKey: 'shortcuts.canvas.priority',
+    on: ['0', '1', '2', '3', '4'],
+    run: ({ focused, notes }, key) =>
+      given(focused, (note) => void notes.setPriority(note.id, PRIORITIES[Number(key)] ?? 'none')),
   },
   {
     id: 'canvas.check',
