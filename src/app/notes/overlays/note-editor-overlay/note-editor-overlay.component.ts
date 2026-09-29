@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
   computed,
   effect,
@@ -22,6 +23,8 @@ import { NotesStore } from '@core/state/notes.store';
 import { SpacesStore } from '@core/state/spaces.store';
 import { NoteRevisionsStore } from '@core/state/note-revisions.store';
 import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
+import { FormatAnswer } from '@core/services/format/format.model';
+import { FormatterService } from '@core/services/format/formatter.service';
 import { HelpStore } from '@core/services/help/help.store';
 import { ExternalLinksService } from '@core/services/links/external-links.service';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
@@ -38,7 +41,7 @@ import { LifecycleBadgeComponent } from './lifecycle-badge/lifecycle-badge.compo
 import { PlaceholderPanelComponent } from './placeholder-panel/placeholder-panel.component';
 import { RevisionPanelComponent } from './revision-panel/revision-panel.component';
 import { RichTextEditorComponent } from './rich-text-editor/rich-text-editor.component';
-import { applyEdit, indent, indentUnit, outdent } from './indentation';
+import { applyEdit, indent, indentUnit, outdent, rewrite } from './indentation';
 import { countWords } from './word-count';
 import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
 import { TagPillComponent } from '@notes/ui/tag-pill/tag-pill.component';
@@ -48,6 +51,27 @@ const TEXT_ENCODER = new TextEncoder();
 const FULLSCREEN_STORAGE_KEY = 'devnotes.editorFullscreen';
 
 const FIELDS_PANEL_STORAGE_KEY = 'devnotes.editorFieldsPanel';
+
+/** How long a format's notice stays; the marked lines stay until the next keystroke. */
+const FORMAT_NOTICE_MS = 6000;
+
+const NO_LINES: ReadonlySet<number> = new Set();
+
+type FormatNotice =
+  Exclude<FormatAnswer, { kind: 'formatted' }> | { readonly kind: 'formatted'; readonly changed: number };
+
+/** By the printed key, and by position where Alt prints another (macOS). */
+function isFormatShortcut(event: KeyboardEvent): boolean {
+  if (!event.shiftKey || !event.altKey || event.ctrlKey || event.metaKey) return false;
+  return event.key.toLowerCase() === 'f' || (!/^[a-z]$/i.test(event.key) && event.code === 'KeyF');
+}
+
+/** Prettier's one-based line and column, as an offset into the text. */
+function offsetOf(text: string, line: number, column: number): number {
+  const lines = text.split('\n');
+  const before = lines.slice(0, line - 1).reduce((sum, each) => sum + each.length + 1, 0);
+  return Math.min(text.length, before + column - 1);
+}
 
 const LANGUAGE_CHOICES: readonly ChoiceOption[] = Object.entries(LANGUAGE_LABELS).map(([id, name]) => ({
   id,
@@ -83,6 +107,7 @@ const PRIORITY_CHOICES: readonly ChoiceOption[] = PRIORITIES.filter((level) => l
   ],
   templateUrl: './note-editor-overlay.component.html',
   styleUrl: './note-editor-overlay.component.scss',
+  host: { '(keydown)': 'onEditorKeydown($event)' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NoteEditorOverlayComponent {
@@ -97,6 +122,7 @@ export class NoteEditorOverlayComponent {
   private readonly help = inject(HelpStore);
   private readonly links = inject(ExternalLinksService);
   private readonly settings = inject(SettingsStore);
+  private readonly formatter = inject(FormatterService);
 
   readonly note = input<Note | null>(null);
 
@@ -187,6 +213,21 @@ export class NoteEditorOverlayComponent {
   protected readonly wordCount = computed(() => countWords(this.draftContent()));
   protected readonly codeIndent = computed(() => this.settings.codeIndent());
   protected readonly byteSize = computed(() => TEXT_ENCODER.encode(this.draftContent()).length);
+  protected readonly lineEnding = computed(() => (this.draftContent().includes('\r\n') ? 'CRLF' : 'LF'));
+
+  protected readonly canFormat = computed(
+    () => this.hasLanguage() && this.formatter.canFormat(this.note()?.language ?? FALLBACK_LANGUAGE),
+  );
+  protected readonly formatting = signal(false);
+  protected readonly formatNotice = linkedSignal<number, FormatNotice | null>({
+    source: this.session,
+    computation: () => null,
+  });
+  protected readonly markedLines = linkedSignal<number, ReadonlySet<number>>({
+    source: this.session,
+    computation: () => NO_LINES,
+  });
+  private noticeTimer: ReturnType<typeof setTimeout> | undefined;
   protected readonly modifiedRef = computed(() => {
     const note = this.note();
     return note ? relativeTimeRef(note.updatedAt, this.clock.now()) : null;
@@ -198,6 +239,8 @@ export class NoteEditorOverlayComponent {
   });
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => clearTimeout(this.noticeTimer));
+
     // The help panels are drawn over the editor: one left up would hide the note just opened,
     // whatever opened it — a global shortcut, the palette.
     effect(() => {
@@ -273,6 +316,64 @@ export class NoteEditorOverlayComponent {
 
   protected onBodyInput(value: string): void {
     this.draftContent.set(value);
+    this.clearFormat();
+  }
+
+  protected onEditorKeydown(event: KeyboardEvent): void {
+    if (!isFormatShortcut(event)) return;
+    event.preventDefault();
+    void this.formatBody();
+  }
+
+  /**
+   * Through the field's own editing, like indentation: Ctrl+Z undoes a format like a
+   * keystroke. The worker answers asynchronously, so the text is compared before applying.
+   */
+  protected async formatBody(): Promise<void> {
+    const field = this.bodyEditor()?.nativeElement;
+    const note = this.note();
+    if (!field || !note || !this.canFormat() || this.formatting()) return;
+
+    const before = field.value;
+    const indentation = indentUnit(this.settings.codeIndent(), note.language);
+    this.formatting.set(true);
+    const answer = await this.formatter.format(before, note.language, field.selectionStart, indentation);
+    this.formatting.set(false);
+    if (field.value !== before || this.bodyEditor()?.nativeElement !== field) return;
+
+    field.focus();
+    if (answer.kind === 'formatted') {
+      applyEdit(field, rewrite(before, answer.text, answer.cursor));
+      this.markedLines.set(new Set(answer.changedLines));
+      this.showFormatNotice({ kind: 'formatted', changed: answer.changedLines.length });
+      return;
+    }
+    if (answer.kind === 'syntax') {
+      const at = offsetOf(before, answer.line, answer.column);
+      field.setSelectionRange(at, at);
+    }
+    this.showFormatNotice(answer);
+  }
+
+  /** The field's own undo, so the notice's button and Ctrl+Z are one and the same step. */
+  protected undoFormat(): void {
+    const field = this.bodyEditor()?.nativeElement;
+    if (!field) return;
+    field.focus();
+    document.execCommand('undo');
+    this.clearFormat();
+  }
+
+  private showFormatNotice(notice: FormatNotice): void {
+    clearTimeout(this.noticeTimer);
+    this.formatNotice.set(notice);
+    this.noticeTimer = setTimeout(() => this.formatNotice.set(null), FORMAT_NOTICE_MS);
+  }
+
+  private clearFormat(): void {
+    clearTimeout(this.noticeTimer);
+    this.formatNotice.set(null);
+    this.markedLines.set(NO_LINES);
   }
 
   /** Tab stays in the code: Escape is how the keyboard leaves the field. */

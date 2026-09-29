@@ -191,7 +191,7 @@ jobs:
             -Dsonar.sources=src
             -Dsonar.tests=src
             -Dsonar.test.inclusions=src/**/*.spec.ts
-            -Dsonar.coverage.exclusions=src/**/*.spec.ts,src/main.ts,src/test.ts,src/testing/*.ts,src/**/bindings.ts,src/**/*.repository.ts
+            -Dsonar.coverage.exclusions=src/**/*.spec.ts,src/main.ts,src/test.ts,src/testing/*.ts,src/**/bindings.ts,src/**/*.repository.ts,src/**/*.worker.ts
             -Dsonar.javascript.lcov.reportPaths=coverage/devnotes/lcov.info
             -Dsonar.issue.ignore.multicriteria=mixins
             -Dsonar.issue.ignore.multicriteria.mixins.ruleKey=css:S8776

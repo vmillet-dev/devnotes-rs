@@ -1,5 +1,5 @@
 @for (line of lines(); track $index) {
-  <span class="code-line">
+  <span class="code-line" [class.marked]="markedLines().has($index)">
     @if (showLineNumbers()) {
       <!-- Purely visual: a screen reader would announce "1 2 3 …" between every line. -->
       <span class="line-no" aria-hidden="true">{{ $index + 1 }}</span>

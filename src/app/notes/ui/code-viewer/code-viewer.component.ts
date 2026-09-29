@@ -18,6 +18,9 @@ export class CodeViewerComponent {
   /** The embedded variant: no margin, no scrolling, no font size of its own. */
   readonly compact = input(false);
 
+  /** Zero-based: the lines a format just changed, until the next keystroke. */
+  readonly markedLines = input<ReadonlySet<number>>(new Set());
+
   protected readonly lines = computed<readonly string[]>(() =>
     highlightLines(this.content(), this.language()),
   );

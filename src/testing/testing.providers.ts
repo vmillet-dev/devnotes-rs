@@ -3,6 +3,7 @@ import { CLIPBOARD_ADAPTER } from '@core/services/clipboard/clipboard.service';
 import { DESKTOP_NOTIFICATION_ADAPTER } from '@core/services/notifications/desktop-notifier.service';
 import { FILE_DIALOG_ADAPTER } from '@core/services/dialogs/file-dialog.service';
 import { APP_WINDOW_ADAPTER } from '@core/services/window/app-window.service';
+import { PRETTIER_ADAPTER } from '@core/services/format/formatter.service';
 import { AttachmentsRepository } from '@core/data/attachments.repository';
 import { BackupsRepository } from '@core/data/backups.repository';
 import { LibrariesRepository } from '@core/data/libraries.repository';
@@ -28,6 +29,7 @@ import { FakeDesktopNotifications } from './fake-desktop-notifications';
 import { FakeFileDialog } from './fake-file-dialog';
 import { FakeFoldersRepository } from './fake-folders-repository';
 import { FakeNotesRepository } from './fake-notes-repository';
+import { FakePrettier } from './fake-prettier';
 import { FakeSpacesRepository } from './fake-spaces-repository';
 import { FakeTransferRepository } from './fake-transfer-repository';
 import { FakeVaultRepository } from './fake-vault-repository';
@@ -54,6 +56,7 @@ interface DataDoubles {
   readonly desktopNotifications?: FakeDesktopNotifications;
   readonly fileDialog?: FakeFileDialog;
   readonly appWindow?: FakeAppWindow;
+  readonly prettier?: FakePrettier;
 }
 
 /** Bundled so a new data seam is not added to a dozen spec files one by one. */
@@ -107,6 +110,7 @@ export function provideAppTesting(doubles: DataDoubles = {}): Provider[] {
     { provide: FILE_DIALOG_ADAPTER, useValue: doubles.fileDialog ?? new FakeFileDialog() },
     // Never the real one: `exit()` would take the test runner down with it.
     { provide: APP_WINDOW_ADAPTER, useValue: doubles.appWindow ?? new FakeAppWindow() },
+    { provide: PRETTIER_ADAPTER, useValue: doubles.prettier ?? new FakePrettier() },
     provideTranslocoTesting(),
   ];
 }

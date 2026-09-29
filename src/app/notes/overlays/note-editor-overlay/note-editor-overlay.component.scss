@@ -6,6 +6,7 @@ app-dialog {
 }
 
 .overlay-toolbar {
+  container-type: inline-size;
   padding: 14px 20px;
   border-bottom: 1px solid var(--line-soft);
   display: flex;
@@ -20,6 +21,9 @@ app-dialog {
   font-weight: 600;
   color: var(--text-0);
   flex: 1;
+  // The title gives way first, down to a floor: the buttons were pushing the close button out.
+  width: 0;
+  min-width: 120px;
   font-family: var(--font-sans), serif;
 }
 
@@ -33,6 +37,7 @@ app-dialog {
   display: flex;
   align-items: center;
   gap: 5px;
+  white-space: nowrap;
 }
 
 .toolbar-btn:hover {
@@ -42,6 +47,45 @@ app-dialog {
 .toolbar-btn.pinned {
   @include tint-badge('--amber-rgb', 0.08);
   border-color: var(--amber-dim);
+}
+
+.format-btn {
+  @include focus-ring;
+  @include tint-badge('--amber-rgb', 0.12);
+  border-color: var(--amber-dim);
+  color: var(--amber-text);
+  font-weight: 600;
+}
+
+.format-btn[aria-disabled='true'] {
+  background: none;
+  border-color: var(--line-soft);
+  color: var(--text-2);
+  font-weight: 400;
+  cursor: default;
+}
+
+.format-icon {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.format-keys {
+  font-family: var(--font-mono), serif;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-2);
+}
+
+// The tooltip says the same: the hint is what goes when the toolbar runs short.
+@container (max-width: 960px) {
+  .format-keys {
+    display: none;
+  }
 }
 
 .icon-btn {
@@ -187,6 +231,15 @@ app-dialog {
 }
 
 // The only thing that scrolls, so both layers move together with no `scrollTop` to sync.
+// The frame holds the format notice over the body without scrolling along with it.
+.overlay-body-frame {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .overlay-body {
   flex: 1;
   min-height: 0;
@@ -263,6 +316,62 @@ app-dialog {
   border-radius: 5px;
   font-size: 11px;
   font-weight: 700;
+}
+
+.format-notice {
+  @include enters(enter-lift);
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px 8px 14px;
+  @include surface(var(--bg-3), 10px, var(--line));
+  box-shadow: var(--shadow-overlay);
+  font-size: 12.5px;
+  color: var(--text-0);
+  white-space: nowrap;
+}
+
+.format-notice.failed {
+  border-color: rgba(var(--red-rgb), 0.5);
+}
+
+.notice-mark {
+  color: var(--green);
+  font-weight: 700;
+}
+
+.notice-count {
+  color: var(--amber-text);
+}
+
+.notice-undo {
+  @include unstyled-control;
+  @include focus-ring;
+  @include surface($radius: 6px);
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--text-0);
+  cursor: pointer;
+}
+
+.notice-undo:hover {
+  @include accent-state(var(--text-0), var(--amber-edge));
+}
+
+.notice-keys {
+  margin-left: 4px;
+  font-family: var(--font-mono), serif;
+  font-size: 10px;
+  color: var(--text-2);
+}
+
+.footer-end {
+  display: flex;
+  gap: 14px;
 }
 
 .overlay-footer {

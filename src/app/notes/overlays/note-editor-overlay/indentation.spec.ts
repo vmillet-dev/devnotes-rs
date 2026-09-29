@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TextEdit, indent, indentUnit, outdent } from './indentation';
+import { TextEdit, indent, indentUnit, outdent, rewrite } from './indentation';
 
 /** The text after the edit, with `[` and `]` where the selection lands. */
 function applied(text: string, edit: TextEdit | null): string | null {
@@ -98,5 +98,24 @@ describe('outdent', () => {
 
   it('changes nothing on lines with no indentation', () => {
     expect(shiftTab('a\n[b]')).toBeNull();
+  });
+});
+
+describe('rewrite', () => {
+  it('replaces only what differs, and puts the caret where it is asked', () => {
+    const edit = rewrite('keep f(a,b) keep', 'keep f(a, b) keep', 4);
+
+    expect(edit).toEqual({ from: 9, to: 9, insert: ' ', selectionStart: 4, selectionEnd: 4 });
+    expect(applied('keep f(a,b) keep', edit)).toBe('keep[] f(a, b) keep');
+  });
+
+  it('removes when the new text is the old one shortened', () => {
+    expect(applied('a  b', rewrite('a  b', 'a b', 3))).toBe('a b[]');
+  });
+
+  it('does not let the common start and end overlap', () => {
+    const edit = rewrite('aa', 'aaa', 3);
+
+    expect(applied('aa', edit)).toBe('aaa[]');
   });
 });

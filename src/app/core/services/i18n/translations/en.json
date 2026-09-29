@@ -281,7 +281,22 @@
     "pinned": "Pinned",
     "noPriority": "No priority",
     "expiryLabel": "Note deadline (empty = permanent)",
-    "footerStats": "{{lines}} lines · {{bytes}} bytes",
+    "footerStats": "{{lines}} lines · {{bytes}} bytes · UTF-8 · {{eol}}",
+    "format": {
+      "label": "Format",
+      "keys": "Shift Alt F",
+      "hint": "Format with Prettier (Shift+Alt+F)",
+      "unsupported": "Prettier does not format {{language}}",
+      "done": "Formatted with Prettier",
+      "changed": "{count, plural, =0 {lines removed only} one {# line changed} other {# lines changed}}",
+      "undo": "Undo",
+      "undoKeys": "Ctrl Z",
+      "unchanged": "Already formatted: nothing to change.",
+      "syntax": "Syntax error at line {{line}}, column {{column}}: the text is unchanged.",
+      "fields": "A field would not have survived formatting: the text is unchanged.",
+      "failed": "Prettier could not format this text.",
+      "footer": "Prettier 3 · library settings"
+    },
     "modifiedPrefix": "Updated",
     "noteKind": "Note",
     "noteStats": "Note · {count, plural, =0 {no words} one {# word} other {# words}} · saved as Markdown",
@@ -612,7 +627,8 @@
       "close": "Close the editor, saving",
       "newItem": "Add an item below this one",
       "removeItem": "Remove an empty item",
-      "moveItem": "Move the item within the list"
+      "moveItem": "Move the item within the list",
+      "format": "Format the snippet with Prettier"
     },
     "palette": {
       "navigate": "Walk the results",
