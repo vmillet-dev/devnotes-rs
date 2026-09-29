@@ -43,6 +43,33 @@ describe('LoremToolComponent', () => {
     ]);
   });
 
+  it('asks for the count typed, and without the classic opening once unticked', async () => {
+    const harness = await renderTool(LoremToolComponent, answer);
+    await drawn(harness, 1);
+
+    await harness.type('lorem-count', '5', 'lorem_ipsum');
+    const opening = harness.element<HTMLInputElement>('[data-testid="lorem-opening"]');
+    opening.checked = false;
+    opening.dispatchEvent(new Event('change'));
+    await drawn(harness, 3);
+
+    expect(requests(harness).at(-1)).toEqual({ unit: 'paragraphs', count: 5, opening: false, seed: null });
+  });
+
+  it('puts the options back as they were on Vider', async () => {
+    const harness = await renderTool(LoremToolComponent, answer);
+    await drawn(harness, 1);
+    harness
+      .element<HTMLButtonElement>('[data-testid="segmented-lorem-unit"] [data-segment-id="words"]')
+      .click();
+    await drawn(harness, 2);
+
+    harness.tool.clear();
+    await drawn(harness, 3);
+
+    expect(requests(harness).at(-1)).toEqual(requests(harness)[0]);
+  });
+
   it('keeps the text as a note', async () => {
     const harness = await renderTool(LoremToolComponent, answer);
     await drawn(harness, 1);

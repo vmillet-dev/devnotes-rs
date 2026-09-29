@@ -37,6 +37,47 @@ describe('JsonGeneratorToolComponent', () => {
     expect(harness.tool.actions()[0]!.disabled).toBe(true);
   });
 
+  it('takes a typed seed within 32 bits, and lets it go when the field is emptied', async () => {
+    const harness = await renderTool(JsonGeneratorToolComponent, answer);
+    await harness.type('json-generator-input', '{"id":1}', 'generate_json');
+
+    await harness.type('json-generator-seed', '99', 'generate_json');
+    await harness.type('json-generator-seed', '99999999999', 'generate_json');
+    await harness.type('json-generator-seed', '-5', 'generate_json');
+    await harness.type('json-generator-seed', '', 'generate_json');
+
+    expect(requests(harness).map((request) => (request as { seed: number | null }).seed)).toEqual([
+      null,
+      99,
+      4_294_967_295,
+      0,
+      null,
+    ]);
+  });
+
+  it('asks for as many documents as typed', async () => {
+    const harness = await renderTool(JsonGeneratorToolComponent, answer);
+    await harness.type('json-generator-input', '{"id":1}', 'generate_json');
+
+    await harness.type('json-generator-count', '7', 'generate_json');
+
+    expect(requests(harness).at(-1)).toMatchObject({ count: 7 });
+  });
+
+  it('empties the source and lets the seed go on Vider', async () => {
+    const harness = await renderTool(JsonGeneratorToolComponent, answer);
+    await harness.type('json-generator-input', '{"id":1}', 'generate_json');
+    harness.element<HTMLButtonElement>('[data-testid="json-generator-keep-seed"]').click();
+    await vi.waitFor(() => expect(requests(harness)).toHaveLength(2));
+
+    harness.tool.clear();
+    await harness.settle();
+
+    expect(harness.element('[data-testid="json-generator-output"]')).toBeNull();
+    expect(harness.element<HTMLInputElement>('[data-testid="json-generator-seed"]').value).toBe('');
+    expect(harness.tool.actions()[0]!.disabled).toBe(false);
+  });
+
   it('draws again without a seed, on request', async () => {
     const harness = await renderTool(JsonGeneratorToolComponent, answer);
     await harness.type('json-generator-input', '{"id":1}', 'generate_json');
