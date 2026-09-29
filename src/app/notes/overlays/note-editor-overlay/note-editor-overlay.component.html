@@ -29,25 +29,14 @@
           [currentId]="note.language"
           (chosen)="onLanguageChange($event ?? note.language)"
         />
-        <!-- `aria-disabled` and not `disabled`: a disabled button shows no tooltip, and this
-             one has to say why it cannot format. -->
-        <button
-          type="button"
-          class="toolbar-btn format-btn"
-          data-testid="editor-format"
-          [attr.aria-disabled]="!canFormat() || showingPreview() || formatting()"
-          [attr.title]="
-            (canFormat() ? 'editor.format.hint' : 'editor.format.unsupported')
-              | transloco: { language: languageLabel() }
-          "
-          (click)="formatBody()"
-        >
-          <svg class="format-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M4 6h16M4 12h10M4 18h13" />
-          </svg>
-          {{ 'editor.format.label' | transloco }}
-          <span class="format-keys" aria-hidden="true">{{ 'editor.format.keys' | transloco }}</span>
-        </button>
+        <app-format-button
+          [formattable]="canFormat()"
+          [busy]="showingPreview() || formatting()"
+          [language]="languageLabel()"
+          [settings]="prettierSettings.settings()"
+          (formatRequested)="formatBody()"
+          (settingsChanged)="prettierSettings.update($event)"
+        />
       } @else if (isRichText()) {
         <span class="kind-badge" data-testid="editor-kind">{{ 'editor.noteKind' | transloco }}</span>
       }
@@ -283,7 +272,7 @@
               (input)="onBodyInput(bodyEditor.value)"
               (keydown)="onBodyKeydown($event, bodyEditor)"
               (paste)="onPaste($event)"
-              (blur)="commitContent()"
+              (blur)="commitBodyOnBlur()"
             ></textarea>
           </div>
         }

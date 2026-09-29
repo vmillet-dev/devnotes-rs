@@ -3,7 +3,7 @@ import { $, $$, expect } from '@wdio/globals';
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
 import { spaces } from '../pageobjects/sidebar.page.js';
-import { eventually, press, reloadCanvas, testid } from '../support/app.js';
+import { checkedSegment, eventually, pickSegment, press, reloadCanvas, testid } from '../support/app.js';
 import { bridge, draft } from '../support/bridge.js';
 
 /**
@@ -20,6 +20,7 @@ describe('Formatting a snippet with Prettier', () => {
   const BROKEN = 'Broken on purpose';
   const QUERY = 'Unformattable query';
   const ids: string[] = [];
+  let spaceId = '';
 
   const formatButton = () => $(testid('editor-format'));
   const notice = () => $(testid('editor-format-notice'));
@@ -35,7 +36,7 @@ describe('Formatting a snippet with Prettier', () => {
   before(async () => {
     await canvas.open();
     // A space of its own: the first launch's went with the library 24-forgotten-passphrase set aside.
-    const spaceId = (await bridge.createSpace({ name: 'Prettier' })).id;
+    spaceId = (await bridge.createSpace({ name: 'Prettier' })).id;
     for (const [title, content, language] of [
       [TITLE, MESSY, 'ts'],
       [BROKEN, 'const a = {\n  b: 1,,\n}', 'ts'],
@@ -104,5 +105,82 @@ describe('Formatting a snippet with Prettier', () => {
     expect(await formatButton().getAttribute('aria-disabled')).toBe('true');
     expect(await $(testid('editor-prettier')).isExisting()).toBe(false);
     await editor.close();
+  });
+
+  describe('the library settings', () => {
+    const SAVED = 'Formatted on save';
+    // Double quotes and four spaces, as the panel is about to ask.
+    const RESTYLED =
+      'import { inject } from "@angular/core";\nconst host = {{db_host}};\nexport class InvoicesApi {\n    private readonly http = inject(HttpClient);\n    list(id: string) {\n        return this.http.get(`/api/customers/${id}/invoices`, { params: { page: 1, limit: 50 } });\n    }\n}';
+
+    async function openPanel(): Promise<void> {
+      await $(testid('editor-format-settings')).click();
+      await $(testid('format-panel')).waitForExist({ timeout: 5_000 });
+    }
+
+    async function closePanel(): Promise<void> {
+      await press('Escape');
+      await $(testid('format-panel')).waitForExist({ reverse: true, timeout: 5_000 });
+    }
+
+    before(async () => {
+      ids.push((await bridge.createNote(draft({ spaceId, title: SAVED, content: 'a', language: 'ts' }))).id);
+      await reloadCanvas();
+      await canvas.waitForCard(SAVED);
+    });
+
+    /** Back to the defaults: the library's preferences outlive this file. */
+    after(async () => {
+      await canvas.openNote(TITLE);
+      await openPanel();
+      await pickSegment('prettier-quotes', 'single');
+      await pickSegment('prettier-indentation', 'editor');
+      if (await $(testid('prettier-formatOnSave')).isSelected()) {
+        await $(testid('prettier-formatOnSave')).click();
+      }
+      await closePanel();
+      await editor.close();
+    });
+
+    it('formats in the style chosen in its panel', async () => {
+      await canvas.openNote(TITLE);
+      await openPanel();
+      await pickSegment('prettier-quotes', 'double');
+      await pickSegment('prettier-indentation', 'four');
+      await closePanel();
+
+      await formatButton().click();
+
+      expect(await bodyBecomes(RESTYLED, 'the text in the chosen style')).toBe(RESTYLED);
+      await editor.close();
+    });
+
+    it('keeps the choices in the library', async () => {
+      await reloadCanvas();
+      await canvas.openNote(TITLE);
+      await openPanel();
+
+      expect(await checkedSegment('prettier-quotes')).toBe('double');
+      expect(await checkedSegment('prettier-indentation')).toBe('four');
+      await closePanel();
+      await editor.close();
+    });
+
+    it('formats what the field commits once asked to', async () => {
+      await canvas.openNote(SAVED);
+      await openPanel();
+      await $(testid('prettier-formatOnSave')).click();
+      await closePanel();
+
+      await editor.setBody('const a={b:1}');
+
+      const stored = await eventually(
+        async () => (await bridge.getNote(ids.at(-1)!)).content,
+        (content) => content === 'const a = { b: 1 };',
+        'the formatted text to be what is saved',
+      );
+      expect(stored).toBe('const a = { b: 1 };');
+      await editor.close();
+    });
   });
 });

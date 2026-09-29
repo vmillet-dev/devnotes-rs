@@ -535,8 +535,14 @@ Prettier is JavaScript. `core/services/format/` holds all of it.
   edit of only what differs, applied by `execCommand('insertText')`, so Ctrl+Z undoes a format
   like a keystroke and the notice's "Annuler" is `execCommand('undo')`. An answer about a text
   typed over meanwhile is dropped.
-- **The indentation is the Tab key's** (`indentUnit`), and the rest of the style — 100
-  columns, single quotes, semicolons, trailing commas — is fixed until the library's settings.
+- **The style is the library's** (`PrettierSettingsStore`, under `devnotes.notes.prettier`),
+  set from the button's chevron and applied as it is chosen, like the arrangement: every
+  snippet of a library formats alike. Its indentation is by default "Éditeur", the Tab key's
+  own level (`indentUnit`), so the two agree until the panel forces 2, 4 or Tab.
+- **Formatting on save** (off by default) runs on the body's blur and on close, through the
+  same service — but not the field's undo: the field has lost the focus its editing commands
+  need. Only a body that changed is formatted, a text Prettier refuses is saved as it is, and a
+  close waits for the answer only then: with the option off, nothing waits.
 - The button is `aria-disabled` rather than `disabled` on a language Prettier does not format:
   a disabled button shows no tooltip, and this one says why.
 

@@ -295,7 +295,27 @@
       "syntax": "Erreur de syntaxe ligne {{line}}, colonne {{column}} : le texte n'a pas changé.",
       "fields": "Un champ n'aurait pas survécu au formatage : le texte n'a pas changé.",
       "failed": "Prettier n'a pas pu formater ce texte.",
-      "footer": "Prettier 3 · réglages de la bibliothèque"
+      "footer": "Prettier 3 · réglages de la bibliothèque",
+      "settings": "Réglages du formatage",
+      "scope": "pour toute la bibliothèque",
+      "printWidth": "Largeur de ligne",
+      "indentation": "Indentation",
+      "indentations": {
+        "editor": "Éditeur",
+        "two": "2",
+        "four": "4",
+        "tab": "Tab"
+      },
+      "quotes": "Guillemets",
+      "quotesSingle": "Simples",
+      "quotesDouble": "Doubles",
+      "semicolons": "Points-virgules",
+      "trailingCommas": "Virgules finales",
+      "formatOnSave": "Formater à l'enregistrement",
+      "formattedTitle": "Formatés :",
+      "formattedList": "JavaScript, TypeScript, JSON, CSS, SCSS, HTML, Markdown, YAML, GraphQL.",
+      "notFormattedTitle": "Pas par Prettier :",
+      "notFormattedList": "SQL, Python, Rust, Go, Java, C#, PHP, C, Shell, TOML, XML. Le bouton y est désactivé et dit pourquoi."
     },
     "modifiedPrefix": "Modifiée",
     "noteKind": "Note",

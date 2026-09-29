@@ -1,6 +1,7 @@
 import { InjectionToken, Injectable, inject } from '@angular/core';
 import { LanguageTag } from '@core/model/language.model';
 import { FormatAnswer, FormatRequest, PRETTIER_PARSERS, prettierOptions } from './format.model';
+import { PrettierSettingsStore } from './prettier-settings.store';
 
 /** A token, like the clipboard's: jsdom has no `Worker`, and specs answer for Prettier. */
 export interface PrettierAdapter {
@@ -53,16 +54,18 @@ export const PRETTIER_ADAPTER = new InjectionToken<PrettierAdapter>('PRETTIER_AD
 @Injectable({ providedIn: 'root' })
 export class FormatterService {
   private readonly prettier = inject(PRETTIER_ADAPTER);
+  private readonly settings = inject(PrettierSettingsStore);
 
   canFormat(language: LanguageTag): boolean {
     return PRETTIER_PARSERS[language] !== null;
   }
 
-  /** `indent` is one level as the editor's Tab key writes it. */
-  format(text: string, language: LanguageTag, cursor: number, indent: string): Promise<FormatAnswer> {
+  /** `editorIndent` is one level as the editor's Tab key writes it. */
+  format(text: string, language: LanguageTag, cursor: number, editorIndent: string): Promise<FormatAnswer> {
     const parser = PRETTIER_PARSERS[language];
     if (parser === null) return Promise.resolve({ kind: 'failed' });
 
-    return this.prettier.run({ text, cursor, parser, options: prettierOptions(indent) });
+    const options = prettierOptions(this.settings.settings(), editorIndent);
+    return this.prettier.run({ text, cursor, parser, options });
   }
 }

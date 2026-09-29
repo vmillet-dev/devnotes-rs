@@ -20,6 +20,7 @@ import { FakeNotesRepository } from '@testing/fake-notes-repository';
 import { NotesRepository } from '@core/data/notes.repository';
 import { PRETTIER_ADAPTER } from '@core/services/format/formatter.service';
 import { FakePrettier } from '@testing/fake-prettier';
+import { PrettierSettingsStore } from '@core/services/format/prettier-settings.store';
 import { NoteEditorOverlayComponent } from './note-editor-overlay.component';
 import { RichTextEditorComponent } from './rich-text-editor/rich-text-editor.component';
 
@@ -637,6 +638,86 @@ describe('NoteEditorOverlayComponent', () => {
       await openCode('a\r\nb');
 
       expect(text('.overlay-footer span')).toContain('UTF-8 · CRLF');
+    });
+
+    it("writes the panel's choices to the library", async () => {
+      await openCode('a');
+
+      fixture.nativeElement.querySelector('[data-testid="editor-format-settings"]').click();
+      await fixture.whenStable();
+      fixture.nativeElement.querySelector('[data-testid="prettier-formatOnSave"]').click();
+
+      expect(TestBed.inject(PrettierSettingsStore).settings().formatOnSave).toBe(true);
+    });
+
+    describe('on save', () => {
+      beforeEach(() => TestBed.inject(PrettierSettingsStore).update({ formatOnSave: true }));
+
+      it('formats what the blur commits', async () => {
+        prettier.answer = { kind: 'formatted', text: 'f(a, b);', cursor: 0, changedLines: [0] };
+        const committed = patched('content');
+        await openCode('f(a)');
+        await type(bodyEditor(), 'f(a,b)');
+
+        bodyEditor().dispatchEvent(new Event('blur'));
+        await fixture.whenStable();
+
+        expect(committed).toEqual(['f(a, b);']);
+        expect(bodyEditor().value).toBe('f(a, b);');
+      });
+
+      it('holds the close until Prettier answers, then commits what it wrote', async () => {
+        prettier.answer = { kind: 'formatted', text: 'f(a, b);', cursor: 0, changedLines: [0] };
+        const committed = patched('content');
+        await openCode('f(a)');
+        await type(bodyEditor(), 'f(a,b)');
+
+        toolbarButton('.close-btn').click();
+        toolbarButton('.close-btn').click();
+        await fixture.whenStable();
+
+        expect(committed).toEqual(['f(a, b);']);
+        expect(asked.closes).toBe(1);
+      });
+
+      it('saves a text Prettier refuses as it was typed', async () => {
+        prettier.answer = { kind: 'syntax', line: 1, column: 1 };
+        const committed = patched('content');
+        await openCode('f(a)');
+        await type(bodyEditor(), 'f(a,,b)');
+
+        bodyEditor().dispatchEvent(new Event('blur'));
+        await fixture.whenStable();
+
+        expect(committed).toEqual(['f(a,,b)']);
+      });
+
+      it('drops a blur answer about a body typed into again', async () => {
+        prettier.answer = { kind: 'formatted', text: 'f(a, b);', cursor: 0, changedLines: [0] };
+        const committed = patched('content');
+        await openCode('f(a)');
+        await type(bodyEditor(), 'f(a,b)');
+        vi.spyOn(prettier, 'run').mockImplementation(async () => {
+          bodyEditor().value = 'f(a,b,c)';
+          bodyEditor().dispatchEvent(new Event('input'));
+          return prettier.answer;
+        });
+
+        bodyEditor().dispatchEvent(new Event('blur'));
+        await fixture.whenStable();
+
+        expect(committed).toEqual([]);
+        expect(bodyEditor().value).toBe('f(a,b,c)');
+      });
+
+      it('leaves a body nobody changed alone, and closes at once', async () => {
+        await openCode('f(a)');
+
+        toolbarButton('.close-btn').click();
+
+        expect(prettier.requests).toEqual([]);
+        expect(asked.closes).toBe(1);
+      });
     });
   });
 
