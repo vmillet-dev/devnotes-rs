@@ -25,6 +25,14 @@
   min-width: 0;
 }
 
+.search {
+  @include tool-field;
+}
+
+.add-title {
+  margin-top: 10px;
+}
+
 .button {
   @include tool-button;
   height: 34px;
