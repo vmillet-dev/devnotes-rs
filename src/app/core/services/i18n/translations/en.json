@@ -1349,6 +1349,40 @@
       "opening": "Start with “Lorem ipsum”",
       "again": "Draw again",
       "noteTitle": "Lorem ipsum"
+    },
+    "json-diff": {
+      "name": "JSON Diff",
+      "description": "Semantic: key order does not count",
+      "pasted": "pasted text",
+      "openNote": "Open a note",
+      "inputLabel": "Document {{side}}",
+      "placeholder": "Paste a JSON document, or open a snippet",
+      "unreadable": "This JSON does not parse: line {{line}}, column {{column}}.",
+      "added": "{count, plural, one {+ # addition} other {+ # additions}}",
+      "removed": "{count, plural, one {− # removal} other {− # removals}}",
+      "modified": "{count, plural, one {~ # change} other {~ # changes}}",
+      "ignoreKeyOrder": "Ignore key order",
+      "ignoreWhitespace": "Ignore spaces",
+      "layout": "Layout",
+      "layouts": {
+        "split": "Side by side",
+        "unified": "Unified"
+      },
+      "identical": "The two documents are identical.",
+      "truncated": "The rest is not shown: the changes and the patch stay whole.",
+      "changes": "Changes",
+      "changesCount": "Changes · {{count}}",
+      "reordered": "key order",
+      "scalar": "{{text}}",
+      "object": "object · {count, plural, one {# key} other {# keys}}",
+      "array": "list · {count, plural, one {# item} other {# items}}",
+      "swap": "Swap A and B",
+      "copyPatch": "Copy the JSON patch",
+      "empty": "Paste two documents: their differences show here.",
+      "noteTitle": "JSON patch from {{a}} to {{b}}",
+      "pickTitle": "Open a JSON snippet",
+      "pickSearch": "Search for a JSON snippet",
+      "pickNone": "No JSON snippet."
     }
   }
 }

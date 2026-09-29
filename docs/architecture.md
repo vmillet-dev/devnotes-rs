@@ -690,6 +690,13 @@ list (`UNDERSTOOD`); any other is listed back with its path, so a document that 
 `pattern` is never passed off as one that honours it. From an example, each value is redrawn in
 its kind — a UUID, an email, an instant, a URL, words — at its magnitude.
 
+**JSON Diff compares values** (`tools/diff.rs`): objects key by key, lists by a longest
+common sequence of their elements — one element inserted at the top is one change, not a change
+of every element below it. Each change carries its `JSONPath`, the patch is RFC 6902 from A to
+B (checked in the tests by applying it), and the two documents come back as aligned rows,
+pretty-printed with B's keys in A's order when order is ignored, so the same keys meet on the
+same row. The unified view is the same rows read one after the other, on the front.
+
 **Adding a tool**, the whole of it:
 
 1. `src-tauri/src/tools/<module>.rs`: the function, its request and answer types, its tests.

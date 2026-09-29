@@ -1,0 +1,40 @@
+<app-dialog [layer]="'app'" labelledBy="json-note-picker-title" (closed)="closed.emit()">
+  <div class="picker" data-testid="json-note-picker">
+    <h2 id="json-note-picker-title" class="title">{{ 'tools.json-diff.pickTitle' | transloco }}</h2>
+    <input
+      #searchField
+      type="search"
+      class="search"
+      data-testid="json-note-search"
+      [attr.aria-label]="'tools.json-diff.pickSearch' | transloco"
+      [placeholder]="'tools.json-diff.pickSearch' | transloco"
+      [value]="search()"
+      (input)="onSearch($event)"
+    />
+    <ul class="list">
+      @for (note of found(); track note.id) {
+        <li>
+          <button
+            type="button"
+            class="note"
+            data-testid="json-note-option"
+            [attr.data-note-id]="note.id"
+            (click)="pick(note)"
+          >
+            <span class="note-title">{{ note.title || ('notes.untitled' | transloco) }}</span>
+            @if (note.folder; as folder) {
+              <span class="note-where">{{ folder.name }}</span>
+            }
+          </button>
+        </li>
+      } @empty {
+        <li class="none">{{ 'tools.json-diff.pickNone' | transloco }}</li>
+      }
+    </ul>
+    <div class="actions">
+      <button type="button" class="action" (click)="closed.emit()">
+        {{ 'placeholders.cancel' | transloco }}
+      </button>
+    </div>
+  </div>
+</app-dialog>

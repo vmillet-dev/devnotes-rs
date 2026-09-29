@@ -13,6 +13,8 @@ import {
   GenerateRequest,
   HashAnswer,
   HashRequest,
+  JsonDiffAnswer,
+  JsonDiffRequest,
   LineBreaksAnswer,
   LineBreaksRequest,
   LoremAnswer,
@@ -60,6 +62,14 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
   conversion: ConvertAnswer = { kind: 'converted', text: '' };
   generated: GenerateAnswer = { kind: 'generated', text: '{}', seed: 1, unsupported: [] };
   loremAnswer: LoremAnswer = { text: '', seed: 1 };
+  diffAnswer: JsonDiffAnswer = {
+    kind: 'compared',
+    changes: [],
+    counts: { added: 0, removed: 0, modified: 0 },
+    rows: [],
+    rowsTruncated: false,
+    patch: '[]',
+  };
 
   convertCase(text: string): Promise<CaseConversion[]> {
     return this.answer('convert_case', text, this.cases);
@@ -127,6 +137,10 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
 
   lorem(request: LoremRequest): Promise<LoremAnswer> {
     return this.answer('lorem_ipsum', request, this.loremAnswer);
+  }
+
+  diffJson(request: JsonDiffRequest): Promise<JsonDiffAnswer> {
+    return this.answer('diff_json', request, this.diffAnswer);
   }
 
   requestsOf(command: string): unknown[] {

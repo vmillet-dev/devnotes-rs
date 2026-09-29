@@ -1349,6 +1349,40 @@
       "opening": "Commencer par « Lorem ipsum »",
       "again": "Tirer à nouveau",
       "noteTitle": "Lorem ipsum"
+    },
+    "json-diff": {
+      "name": "JSON Diff",
+      "description": "Sémantique : l’ordre des clés ne compte pas",
+      "pasted": "texte collé",
+      "openNote": "Ouvrir une note",
+      "inputLabel": "Document {{side}}",
+      "placeholder": "Collez un document JSON, ou ouvrez un snippet",
+      "unreadable": "Ce JSON ne se lit pas : ligne {{line}}, colonne {{column}}.",
+      "added": "{count, plural, one {+ # ajout} other {+ # ajouts}}",
+      "removed": "{count, plural, one {− # suppression} other {− # suppressions}}",
+      "modified": "{count, plural, one {~ # modification} other {~ # modifications}}",
+      "ignoreKeyOrder": "Ignorer l’ordre des clés",
+      "ignoreWhitespace": "Ignorer les espaces",
+      "layout": "Présentation",
+      "layouts": {
+        "split": "Côte à côte",
+        "unified": "Unifié"
+      },
+      "identical": "Les deux documents sont identiques.",
+      "truncated": "La suite n’est pas affichée : les changements et le patch restent complets.",
+      "changes": "Changements",
+      "changesCount": "Changements · {{count}}",
+      "reordered": "ordre des clés",
+      "scalar": "{{text}}",
+      "object": "objet · {count, plural, one {# clé} other {# clés}}",
+      "array": "liste · {count, plural, one {# élément} other {# éléments}}",
+      "swap": "Échanger A et B",
+      "copyPatch": "Copier le patch JSON",
+      "empty": "Collez deux documents : leurs différences s’affichent ici.",
+      "noteTitle": "Patch JSON de {{a}} vers {{b}}",
+      "pickTitle": "Ouvrir un snippet JSON",
+      "pickSearch": "Rechercher un snippet JSON",
+      "pickNone": "Aucun snippet JSON."
     }
   }
 }

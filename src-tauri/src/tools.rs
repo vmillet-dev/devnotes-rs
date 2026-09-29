@@ -4,6 +4,7 @@
 
 pub mod colour;
 pub mod convert;
+pub mod diff;
 pub mod encoding;
 pub(crate) mod files;
 pub mod generate;
@@ -156,4 +157,10 @@ pub async fn lorem_ipsum(
     request: generate::LoremRequest,
 ) -> Result<generate::LoremAnswer, AppError> {
     off_thread(move || generate::lorem(&request)).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn diff_json(request: diff::JsonDiffRequest) -> Result<diff::JsonDiffAnswer, AppError> {
+    off_thread(move || diff::diff(&request)).await
 }
