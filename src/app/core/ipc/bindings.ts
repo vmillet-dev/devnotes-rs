@@ -597,8 +597,12 @@ export type JsonNode = {
 export type JsonOpening = 
 /**  Whole when small, its first level otherwise. */
 { kind: "initial" } | { kind: "all" } | 
-/**  `JSONPath`s, the root being always open: a path whose parent is closed stays closed. */
-{ kind: "paths"; paths: string[] };
+/**
+ *  `JSONPath`s, the root being always open: a path whose parent is closed stays closed.
+ *  `reveal` opens every container above one more path — a match stepped to — so the front
+ *  never has to take a path apart.
+ */
+{ kind: "paths"; paths: string[]; reveal?: string | null };
 
 export type JsonQuery = {
 	text: string,

@@ -21,6 +21,10 @@ import { NotesRepository } from '@core/data/notes.repository';
 import { PRETTIER_ADAPTER } from '@core/services/format/formatter.service';
 import { FakePrettier } from '@testing/fake-prettier';
 import { PrettierSettingsStore } from '@core/services/format/prettier-settings.store';
+import { JsonRepository } from '@core/data/json.repository';
+import { ClipboardService } from '@core/services/clipboard/clipboard.service';
+import { FakeJsonRepository } from '@testing/fake-json-repository';
+import { JSON_TEXT, jsonView } from '@testing/json-view.fixture';
 import { NoteEditorOverlayComponent } from './note-editor-overlay.component';
 import { RichTextEditorComponent } from './rich-text-editor/rich-text-editor.component';
 
@@ -718,6 +722,125 @@ describe('NoteEditorOverlayComponent', () => {
         expect(prettier.requests).toEqual([]);
         expect(asked.closes).toBe(1);
       });
+    });
+  });
+
+  describe('a JSON snippet', () => {
+    let repository: FakeJsonRepository;
+
+    beforeEach(() => {
+      repository = TestBed.inject(JsonRepository) as unknown as FakeJsonRepository;
+      repository.view = jsonView();
+    });
+
+    async function openJson(content = JSON_TEXT): Promise<void> {
+      fixture.componentRef.setInput('note', createNote({ content, language: 'json' }));
+      await fixture.whenStable();
+    }
+
+    function tab(view: string): HTMLButtonElement {
+      return fixture.nativeElement.querySelector(`[data-testid="editor-view-${view}"]`);
+    }
+
+    async function show(view: string): Promise<void> {
+      tab(view).click();
+      await fixture.whenStable();
+    }
+
+    it('has no tabs for another language', async () => {
+      fixture.componentRef.setInput('note', createNote({ language: 'yml' }));
+      await fixture.whenStable();
+
+      expect(tab('graph')).toBeNull();
+      expect(repository.queries).toEqual([]);
+    });
+
+    it('opens on its code, and says the draft parses', async () => {
+      await openJson();
+
+      expect(tab('code').getAttribute('aria-selected')).toBe('true');
+      expect(text('[data-testid="editor-json-validity"]')).toBe('✓ JSON valide');
+      expect(repository.queries[0]).toEqual({ text: JSON_TEXT, search: '', opening: { kind: 'initial' } });
+    });
+
+    it('says where the draft stops parsing', async () => {
+      repository.view = jsonView({ error: { reason: 'unexpectedEnd', line: 2, column: 1, offset: 3 } });
+      await openJson('{\n');
+
+      expect(text('[data-testid="editor-json-validity"]')).toBe('✕ JSON invalide · ligne 2');
+    });
+
+    it('explores the draft as it is typed', async () => {
+      await openJson();
+      vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
+
+      await type(bodyEditor(), '[1]');
+      vi.advanceTimersByTime(250);
+      vi.useFakeTimers({ toFake: ['Date'] });
+      await fixture.whenStable();
+
+      expect(repository.queries.at(-1)?.text).toBe('[1]');
+    });
+
+    it('shows the graph and the tree in place of the code, which formats no more', async () => {
+      await openJson();
+
+      await show('graph');
+      expect(fixture.nativeElement.querySelector('[data-testid="json-graph"]')).not.toBeNull();
+      expect(bodyEditor()).toBeNull();
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="editor-format"]').getAttribute('aria-disabled'),
+      ).toBe('true');
+
+      await show('tree');
+      expect(fixture.nativeElement.querySelector('[data-testid="json-tree"]')).not.toBeNull();
+    });
+
+    it('goes back to the code with the value selected', async () => {
+      await openJson();
+      await show('graph');
+      fixture.nativeElement.querySelector('[data-testid="json-row"][data-path="$.data"]').click();
+      await fixture.whenStable();
+
+      fixture.nativeElement.querySelector('[data-testid="json-show-in-code"]').click();
+      await fixture.whenStable();
+
+      expect(tab('code').getAttribute('aria-selected')).toBe('true');
+      expect([bodyEditor().selectionStart, bodyEditor().selectionEnd]).toEqual([19, 38]);
+      expect(document.activeElement).toBe(bodyEditor());
+    });
+
+    it('copies through the clipboard', async () => {
+      const clipboard = TestBed.inject(ClipboardService);
+      const copy = vi.spyOn(clipboard, 'copy').mockResolvedValue(true);
+      await openJson();
+      await show('graph');
+
+      fixture.nativeElement.querySelector('[data-testid="json-copy-path"]').click();
+
+      expect(copy).toHaveBeenCalledWith('$');
+    });
+
+    it('turns to the tree when the graph proposes it', async () => {
+      repository.view = jsonView({ graph: { ...jsonView().graph, folded: true } });
+      await openJson();
+      await show('graph');
+
+      fixture.nativeElement.querySelector('[data-testid="json-folded"] button').click();
+      await fixture.whenStable();
+
+      expect(tab('tree').getAttribute('aria-selected')).toBe('true');
+    });
+
+    it('forgets the document once the language is no longer JSON', async () => {
+      await openJson();
+      await show('graph');
+
+      fixture.componentRef.setInput('note', createNote({ content: 'a: 1', language: 'yml' }));
+      await fixture.whenStable();
+
+      expect(tab('code')).toBeNull();
+      expect(bodyEditor()).not.toBeNull();
     });
   });
 

@@ -1,0 +1,157 @@
+@let view = this.view();
+<div class="explorer" data-testid="json-explorer">
+  <div class="stage">
+    @if (view.error; as error) {
+      <div class="invalid" role="status" data-testid="json-invalid">
+        <p>
+          {{ 'json.invalidAt' | transloco: { line: error.line, column: error.column } }}
+          {{ 'json.reasons.' + error.reason | transloco }}
+        </p>
+        <button
+          type="button"
+          class="tool"
+          data-testid="json-error-show"
+          (click)="shownInCode.emit({ start: error.offset, end: error.offset })"
+        >
+          {{ 'json.showInCode' | transloco }}
+        </button>
+      </div>
+    } @else {
+      @if (mode() === 'graph') {
+        <app-json-graph
+          class="surface"
+          [graph]="view.graph"
+          [selectedPath]="selectedPath()"
+          (selected)="selected.emit($event)"
+          (rowActivated)="onRow($event)"
+        />
+      } @else {
+        <app-json-tree
+          class="surface"
+          [lines]="view.tree"
+          [truncated]="view.treeTruncated"
+          [selectedPath]="selectedPath()"
+          (selected)="selected.emit($event)"
+          (toggled)="onLine($event)"
+        />
+      }
+
+      <div class="tools">
+        <label class="search">
+          <span class="visually-hidden">{{ 'json.search' | transloco }}</span>
+          <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" />
+            <path d="M20 20l-3.5-3.5" />
+          </svg>
+          <input
+            #searchField
+            type="search"
+            data-testid="json-search"
+            [placeholder]="'json.searchPlaceholder' | transloco"
+            [value]="search()"
+            (input)="searchChanged.emit(searchField.value)"
+            (keydown)="onSearchKeydown($event, searchField)"
+          />
+          @if (search() !== '') {
+            <span class="match-count" data-testid="json-match-count">{{ matchLabel() }}</span>
+          }
+        </label>
+        @if (search() !== '') {
+          <button
+            type="button"
+            class="tool icon"
+            data-testid="json-match-previous"
+            [attr.aria-label]="'json.previousMatch' | transloco"
+            [attr.title]="'json.previousMatch' | transloco"
+            (click)="stepped.emit(-1)"
+          >
+            ↑
+          </button>
+          <button
+            type="button"
+            class="tool icon"
+            data-testid="json-match-next"
+            [attr.aria-label]="'json.nextMatch' | transloco"
+            [attr.title]="'json.nextMatch' | transloco"
+            (click)="stepped.emit(1)"
+          >
+            ↓
+          </button>
+        }
+        <button type="button" class="tool" data-testid="json-open-all" (click)="openedAll.emit()">
+          {{ 'json.openAll' | transloco }}
+        </button>
+        @if (mode() === 'graph') {
+          <button type="button" class="tool" data-testid="json-fit" (click)="fit()">
+            {{ 'json.fit' | transloco }}
+          </button>
+        }
+      </div>
+
+      @if (mode() === 'graph' && view.graph.folded) {
+        <div class="folded" role="status" data-testid="json-folded">
+          <span>{{ 'json.folded' | transloco }}</span>
+          <button type="button" class="tool" (click)="treeProposed.emit()">
+            {{ 'json.showTree' | transloco }}
+          </button>
+        </div>
+      }
+    }
+
+    @if (mode() === 'graph' && crumbs().length > 0) {
+      <nav class="crumbs" data-testid="json-crumbs" [attr.aria-label]="'json.crumbs' | transloco">
+        @for (crumb of crumbs(); track crumb.path; let last = $last) {
+          <button type="button" class="crumb" [class.last]="last" (click)="selected.emit(crumb.path)">
+            {{ crumb.label }}
+          </button>
+          @if (!last) {
+            <span class="crumb-separator" aria-hidden="true">›</span>
+          }
+        }
+      </nav>
+    }
+  </div>
+
+  <aside class="aside" data-testid="json-selection" [attr.aria-label]="'json.selectionLabel' | transloco">
+    @if (selection(); as selected) {
+      <p class="aside-title">{{ 'json.selection' | transloco }}</p>
+      <code class="selected-path" data-testid="json-selected-path">{{ selected.path }}</code>
+      <button
+        type="button"
+        class="action primary"
+        data-testid="json-copy-path"
+        (click)="copied.emit(selected.path)"
+      >
+        {{ 'json.copyPath' | transloco }}
+      </button>
+      <p class="selected-kind" data-testid="json-selected-kind">
+        {{ 'json.kinds.' + selected.kind | transloco: { count: selected.size } }}
+      </p>
+      <pre class="selected-preview">{{ selected.preview }}</pre>
+      <div class="actions">
+        <button type="button" class="action" data-testid="json-copy-value" (click)="copyValue(selected.span)">
+          {{ 'json.copyValue' | transloco }}
+        </button>
+        <button
+          type="button"
+          class="action"
+          data-testid="json-show-in-code"
+          (click)="shownInCode.emit(selected.span)"
+        >
+          {{ 'json.showInCode' | transloco }}
+        </button>
+      </div>
+      <span class="aside-rule" aria-hidden="true"></span>
+    }
+    <p class="aside-title">{{ 'json.document' | transloco }}</p>
+    <dl class="stats" data-testid="json-stats">
+      <dt>{{ 'json.keys' | transloco }}</dt>
+      <dd>{{ view.stats.keys }}</dd>
+      <dt>{{ 'json.depth' | transloco }}</dt>
+      <dd>{{ view.stats.depth }}</dd>
+      <dt>{{ 'json.size' | transloco }}</dt>
+      <dd>{{ size().key | transloco: { value: size().value } }}</dd>
+    </dl>
+    <p class="aside-note">{{ 'json.limitNote' | transloco }}</p>
+  </aside>
+</div>

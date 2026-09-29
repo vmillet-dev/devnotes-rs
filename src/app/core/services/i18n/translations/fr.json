@@ -898,5 +898,61 @@
     "confirmDelete": "Supprimer « {{name}} » : ses notes, ses pièces jointes et ses copies de sauvegarde partent avec elle, définitivement.",
     "confirmDeleteAction": "Supprimer la bibliothèque",
     "menuEntry": "Bibliothèques…"
+  },
+  "json": {
+    "views": "Affichage",
+    "tabs": {
+      "code": "Code",
+      "graph": "Graphe",
+      "tree": "Arbre"
+    },
+    "valid": "JSON valide",
+    "invalid": "JSON invalide · ligne {{line}}",
+    "invalidAt": "JSON invalide ligne {{line}}, colonne {{column}} :",
+    "reasons": {
+      "unexpectedEnd": "le document s’arrête trop tôt.",
+      "unexpectedCharacter": "un caractère inattendu.",
+      "invalidNumber": "un nombre mal formé.",
+      "invalidEscape": "un échappement inconnu.",
+      "controlCharacter": "un caractère de contrôle dans une chaîne.",
+      "trailingCharacters": "du texte suit le document.",
+      "tooDeep": "une imbrication trop profonde."
+    },
+    "showInCode": "Voir dans le code",
+    "search": "Rechercher dans le JSON",
+    "searchPlaceholder": "Rechercher une clé ou une valeur",
+    "previousMatch": "Résultat précédent (Maj+Entrée)",
+    "nextMatch": "Résultat suivant (Entrée)",
+    "openAll": "Tout déplier",
+    "fit": "Ajuster à l’écran",
+    "folded": "Plus de 2 000 nœuds : les tableaux restent repliés.",
+    "showTree": "Voir l’arbre",
+    "crumbs": "Chemin",
+    "selectionLabel": "Nœud sélectionné",
+    "selection": "Sélection",
+    "copyPath": "Copier le chemin",
+    "copyValue": "Copier la valeur",
+    "kinds": {
+      "object": "{count, plural, =0 {Objet vide} one {Objet · # clé} other {Objet · # clés}}",
+      "array": "{count, plural, =0 {Tableau vide} one {Tableau · # élément} other {Tableau · # éléments}}",
+      "string": "Chaîne",
+      "number": "Nombre",
+      "boolean": "Booléen",
+      "null": "Null"
+    },
+    "document": "Document",
+    "keys": "Clés",
+    "depth": "Profondeur",
+    "size": "Taille",
+    "bytes": "{{value}} o",
+    "kilobytes": "{{value}} Ko",
+    "megabytes": "{{value}} Mo",
+    "limitNote": "Au-delà de 2 000 nœuds, le graphe replie les tableaux et propose l’arbre.",
+    "hiddenRows": "{count, plural, one {+ # autre} other {+ # autres}}",
+    "tree": "Arbre du document",
+    "treeTruncated": "L’arbre s’arrête à 5 000 lignes : repliez ce qui ne sert pas.",
+    "zoom": "Zoom",
+    "zoomIn": "Zoomer",
+    "zoomOut": "Dézoomer"
   }
 }

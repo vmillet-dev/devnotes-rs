@@ -1,0 +1,19 @@
+@if (store.view(); as view) {
+  <app-json-explorer
+    [view]="view"
+    [mode]="mode()"
+    [text]="store.text() ?? ''"
+    [selectedPath]="store.selectedPath()"
+    [search]="store.search()"
+    [matchIndex]="store.matchIndex()"
+    [locale]="locale.activeLocale()"
+    (searchChanged)="store.setSearch($event)"
+    (stepped)="store.step($event)"
+    (toggled)="store.toggle($event)"
+    (selected)="store.select($event)"
+    (openedAll)="store.openAll()"
+    (copied)="copy($event)"
+    (shownInCode)="shownInCode.emit($event)"
+    (treeProposed)="modeChanged.emit('tree')"
+  />
+}

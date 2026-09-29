@@ -192,6 +192,60 @@ app-dialog {
 }
 
 // The only thing that scrolls, so both layers move together with no `scrollTop` to sync.
+// A JSON snippet's band: what the body shows, and whether the draft parses.
+.json-band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 20px;
+  border-bottom: 1px solid var(--line-soft);
+  flex-shrink: 0;
+}
+
+.view-tabs {
+  display: flex;
+  padding: 2px;
+  @include surface(var(--bg-0), 8px, var(--line-soft));
+}
+
+.view-tab {
+  @include unstyled-control;
+  @include focus-ring(-2px);
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.view-tab:hover {
+  color: var(--text-0);
+}
+
+.view-tab.on {
+  background: var(--bg-3);
+  color: var(--text-0);
+  font-weight: 600;
+}
+
+.json-validity {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--green);
+}
+
+.json-validity.invalid {
+  color: var(--red);
+}
+
+// The visualiser pans and scrolls inside itself: the body only frames it.
+.overlay-body.exploring {
+  overflow: hidden;
+}
+
 // The frame holds the format notice over the body without scrolling along with it.
 .overlay-body-frame {
   position: relative;

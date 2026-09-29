@@ -31,7 +31,7 @@
         />
         <app-format-button
           [formattable]="canFormat()"
-          [busy]="showingPreview() || formatting()"
+          [busy]="showingPreview() || formatting() || jsonMode() !== null"
           [language]="languageLabel()"
           [settings]="prettierSettings.settings()"
           (formatRequested)="formatBody()"
@@ -222,9 +222,45 @@
          draft underneath, the <textarea> takes the typing on top with transparent text.
          The textarea carries the accessible text; the viewer is hidden from screen
          readers, which would otherwise read the content twice. -->
+    @if (isJson()) {
+      <div class="json-band">
+        <div class="view-tabs" role="tablist" [attr.aria-label]="'json.views' | transloco">
+          @for (tab of jsonTabs; track tab) {
+            <button
+              type="button"
+              role="tab"
+              class="view-tab"
+              [attr.data-testid]="'editor-view-' + tab"
+              [attr.aria-selected]="bodyView() === tab"
+              [class.on]="bodyView() === tab"
+              (click)="showBody(tab)"
+            >
+              {{ 'json.tabs.' + tab | transloco }}
+            </button>
+          }
+        </div>
+        @if (jsonValidity(); as validity) {
+          <span class="json-validity" data-testid="editor-json-validity" [class.invalid]="!validity.valid">
+            <span aria-hidden="true">{{ validity.valid ? '✓' : '✕' }}</span>
+            {{ (validity.valid ? 'json.valid' : 'json.invalid') | transloco: { line: validity.line } }}
+          </span>
+        }
+      </div>
+    }
+
     <div class="overlay-body-frame">
-      <div class="overlay-body" [class.previewing]="showingPreview()">
-        @if (showingPreview()) {
+      <div class="overlay-body" [class.previewing]="showingPreview()" [class.exploring]="jsonMode() !== null">
+        @if (jsonMode(); as mode) {
+          @defer (on immediate) {
+            <app-json-view
+              [mode]="mode"
+              (shownInCode)="showInCode($event)"
+              (modeChanged)="showBody($event)"
+            />
+          } @placeholder {
+            <div class="rich-text-loading" aria-hidden="true"></div>
+          }
+        } @else if (showingPreview()) {
           <!-- The filled body, read-only: the input is absent rather than hidden, or
              typing would go into text nobody keeps. -->
           <app-code-viewer [content]="fill.preview() ?? ''" [language]="note.language" />

@@ -34,8 +34,13 @@ pub enum JsonOpening {
     Initial,
     All,
     /// `JSONPath`s, the root being always open: a path whose parent is closed stays closed.
+    /// `reveal` opens every container above one more path — a match stepped to — so the front
+    /// never has to take a path apart.
     Paths {
         paths: Vec<String>,
+        #[serde(default)]
+        #[specta(optional)]
+        reveal: Option<String>,
     },
 }
 
@@ -380,15 +385,17 @@ fn stats(entries: &[Entry], bytes: u32) -> JsonStats {
 fn opened(entries: &[Entry], opening: &JsonOpening) -> (BTreeSet<usize>, bool) {
     let containers = entries.iter().filter(|entry| entry.container()).count();
     let asked: Option<BTreeSet<&str>> = match opening {
-        JsonOpening::Paths { paths } => Some(paths.iter().map(String::as_str).collect()),
+        JsonOpening::Paths { paths, .. } => Some(paths.iter().map(String::as_str).collect()),
         _ => None,
     };
+    let revealed = revealed(entries, opening);
     let wants = |index: usize, entry: &Entry| -> bool {
         match opening {
             JsonOpening::All => true,
             JsonOpening::Initial => containers <= OPEN_WHOLE_UP_TO || entry.depth <= 1,
             JsonOpening::Paths { .. } => {
                 index == 0
+                    || revealed.contains(&index)
                     || asked
                         .as_ref()
                         .is_some_and(|asked| asked.contains(entry.path.as_str()))
@@ -428,6 +435,27 @@ fn opened(entries: &[Entry], opening: &JsonOpening) -> (BTreeSet<usize>, bool) {
         return (folded, true);
     }
     (open, capped)
+}
+
+/// The containers above the path to reveal, which open whatever the paths say.
+fn revealed(entries: &[Entry], opening: &JsonOpening) -> BTreeSet<usize> {
+    let JsonOpening::Paths {
+        reveal: Some(target),
+        ..
+    } = opening
+    else {
+        return BTreeSet::new();
+    };
+    let mut above = BTreeSet::new();
+    let mut next = entries
+        .iter()
+        .find(|entry| entry.path == *target)
+        .and_then(|entry| entry.parent);
+    while let Some(index) = next {
+        above.insert(index);
+        next = entries[index].parent;
+    }
+    above
 }
 
 fn graph(entries: &[Entry], open: &BTreeSet<usize>, folded: bool) -> JsonGraph {
@@ -487,11 +515,15 @@ fn graph(entries: &[Entry], open: &BTreeSet<usize>, folded: bool) -> JsonGraph {
 }
 
 /// Wide enough for its widest row, within bounds: the front cuts what still overflows.
+/// Counted in characters, padding and gaps included: a row's two sides, the space between
+/// key and value, and the marker of a value that opens.
 fn width(entry: &Entry, rows: &[JsonRow]) -> u32 {
-    let header = entry.key.chars().count() + 8;
+    let header = entry.key.chars().count() + 12;
     let widest = rows
         .iter()
-        .map(|row| row.key.chars().count() + row.value.chars().count() + 4)
+        .map(|row| {
+            row.key.chars().count() + row.value.chars().count() + if row.opens { 8 } else { 5 }
+        })
         .max()
         .unwrap_or(0);
 
@@ -675,6 +707,7 @@ mod tests {
     fn opens_the_paths_asked_and_none_under_a_closed_one() {
         let opening = JsonOpening::Paths {
             paths: vec!["$.data".into(), "$.data.object.customer".into()],
+            reveal: None,
         };
         let view = explore(&query(INVOICE, "", opening));
         let paths: Vec<&str> = view
@@ -746,8 +779,37 @@ mod tests {
     }
 
     #[test]
+    fn reveals_a_path_by_opening_everything_above_it() {
+        let opening = JsonOpening::Paths {
+            paths: Vec::new(),
+            reveal: Some("$.data.object.lines[1].description".into()),
+        };
+        let view = explore(&query(INVOICE, "", opening));
+        let paths: Vec<&str> = view
+            .graph
+            .nodes
+            .iter()
+            .map(|node| node.path.as_str())
+            .collect();
+
+        assert_eq!(
+            paths,
+            [
+                "$",
+                "$.data",
+                "$.data.object",
+                "$.data.object.lines",
+                "$.data.object.lines[1]"
+            ]
+        );
+    }
+
+    #[test]
     fn finds_what_is_not_open_too() {
-        let opening = JsonOpening::Paths { paths: Vec::new() };
+        let opening = JsonOpening::Paths {
+            paths: Vec::new(),
+            reveal: None,
+        };
         let view = explore(&query(INVOICE, "stockage", opening));
 
         assert_eq!(view.matches, ["$.data.object.lines[1].description"]);
@@ -808,6 +870,7 @@ mod tests {
     fn the_tree_lists_what_is_open_in_the_documents_order() {
         let opening = JsonOpening::Paths {
             paths: vec!["$.data".into()],
+            reveal: None,
         };
         let view = explore(&query(INVOICE, "", opening));
         let lines: Vec<(u32, &str, bool, bool)> = view

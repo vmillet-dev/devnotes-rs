@@ -1,0 +1,107 @@
+@let graph = this.graph();
+<div
+  #ground
+  class="ground"
+  data-testid="json-graph"
+  tabindex="-1"
+  [class.panning]="panning()"
+  (pointerdown)="onPointerDown($event)"
+  (pointermove)="onPointerMove($event)"
+  (pointerup)="onPointerUp()"
+  (pointercancel)="onPointerUp()"
+  (wheel)="onWheel($event)"
+  (scroll)="ground.scrollTop = 0; ground.scrollLeft = 0"
+  (keydown)="onKeydown($event)"
+>
+  <div
+    class="plane"
+    [style.transform]="'translate(' + pan().x + 'px, ' + pan().y + 'px) scale(' + scale() + ')'"
+  >
+    <span #probe class="probe" aria-hidden="true">0</span>
+    <!-- In the layout's own units, stretched to the plane: the stroke keeps its width. -->
+    <svg
+      class="edges"
+      aria-hidden="true"
+      preserveAspectRatio="none"
+      [attr.viewBox]="'0 0 ' + graph.width + ' ' + graph.height"
+      [style.width.ch]="graph.width"
+      [style.height.px]="graph.height * rowPx"
+    >
+      @for (edge of edges(); track $index) {
+        <path [attr.d]="edge.d" [class.lit]="edge.lit" vector-effect="non-scaling-stroke" />
+      }
+    </svg>
+
+    @for (node of graph.nodes; track node.path) {
+      <div
+        class="node"
+        data-testid="json-node"
+        [attr.data-path]="node.path"
+        [class.lit]="lit().has(node.id)"
+        [class.current]="isCursor(node, -1)"
+        [class.hit]="node.hit"
+        [style.left.ch]="node.x"
+        [style.top.px]="node.y * rowPx"
+        [style.width.ch]="node.width"
+      >
+        <button
+          type="button"
+          class="node-head"
+          data-testid="json-node-head"
+          [attr.data-cursor]="isCursor(node, -1)"
+          [tabindex]="tabStop(node, -1)"
+          (click)="chooseHeader(node)"
+        >
+          <span class="node-label">{{ node.label }}</span>
+          <span class="node-size">{{ node.kind === 'object' ? '{ }' : '[ ]' }} {{ node.size }}</span>
+        </button>
+        @for (row of node.rows; track row.path; let index = $index) {
+          <button
+            type="button"
+            class="row"
+            data-testid="json-row"
+            [attr.data-path]="row.path"
+            [attr.data-kind]="row.kind"
+            [attr.data-cursor]="isCursor(node, index)"
+            [attr.aria-expanded]="row.opens ? row.child !== null : null"
+            [class.hit]="row.hit"
+            [class.current]="isCursor(node, index)"
+            [tabindex]="tabStop(node, index)"
+            (click)="chooseRow(node, index)"
+          >
+            <span class="row-key">{{ row.key }}</span>
+            <span class="row-value">{{ row.value }}</span>
+            @if (row.opens) {
+              <span class="row-opens" aria-hidden="true">{{ row.child === null ? '›' : '‹' }}</span>
+            }
+          </button>
+        }
+        @if (node.hiddenRows > 0) {
+          <span class="row more">{{ 'json.hiddenRows' | transloco: { count: node.hiddenRows } }}</span>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="zoom" role="group" [attr.aria-label]="'json.zoom' | transloco">
+    <button
+      type="button"
+      data-testid="json-zoom-out"
+      [attr.aria-label]="'json.zoomOut' | transloco"
+      (click)="zoomBy(-1)"
+    >
+      −
+    </button>
+    <button type="button" class="zoom-level" data-testid="json-zoom-reset" (click)="zoomTo(1)">
+      {{ zoomLabel() }}
+    </button>
+    <button
+      type="button"
+      data-testid="json-zoom-in"
+      [attr.aria-label]="'json.zoomIn' | transloco"
+      (click)="zoomBy(1)"
+    >
+      +
+    </button>
+  </div>
+</div>

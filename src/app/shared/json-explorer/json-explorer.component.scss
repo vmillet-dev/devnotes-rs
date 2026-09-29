@@ -1,0 +1,284 @@
+@use 'mixins' as *;
+
+:host {
+  display: block;
+  height: 100%;
+  min-height: 0;
+}
+
+.explorer {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+
+.stage {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.surface {
+  flex: 1;
+  min-height: 0;
+}
+
+.tools {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.tools > * {
+  pointer-events: auto;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 280px;
+  height: 32px;
+  padding: 0 10px;
+  @include surface(var(--bg-2), 8px, var(--line));
+  color: var(--text-2);
+  cursor: text;
+}
+
+.search:focus-within {
+  border-color: var(--amber-edge);
+}
+
+.search input {
+  @include text-field;
+  flex: 1;
+  width: 0;
+  font-size: 12.5px;
+  color: var(--text-0);
+}
+
+.search input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.search-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.match-count {
+  font-family: var(--font-mono), serif;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.tool {
+  @include unstyled-control;
+  @include focus-ring;
+  height: 32px;
+  padding: 0 11px;
+  @include surface(var(--bg-2), 8px, var(--line));
+  font-size: 12px;
+  color: var(--text-1);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tool.icon {
+  @include hit-target(32px);
+  justify-content: center;
+  padding: 0;
+}
+
+.tool:hover {
+  @include accent-state(var(--text-0), var(--amber-dim));
+}
+
+.folded {
+  position: absolute;
+  left: 50%;
+  bottom: 56px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px 8px 14px;
+  @include surface(var(--bg-3), 10px, var(--line));
+  box-shadow: var(--shadow-overlay);
+  font-size: 12px;
+  color: var(--text-1);
+  white-space: nowrap;
+}
+
+.invalid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  background: var(--bg-0);
+  font-size: 13px;
+  color: var(--text-1);
+  text-align: center;
+}
+
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  flex-shrink: 0;
+  padding: 0 16px;
+  overflow-x: auto;
+  @include ring-room;
+  border-top: 1px solid var(--line-soft);
+  background: var(--bg-1);
+  font-family: var(--font-mono), serif;
+  font-size: 12px;
+}
+
+.crumb {
+  @include unstyled-control;
+  @include focus-ring;
+  @include hit-target;
+  color: var(--text-2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.crumb.last {
+  color: var(--amber-text);
+}
+
+.crumb:hover {
+  color: var(--text-0);
+}
+
+.crumb-separator {
+  color: var(--line-no);
+}
+
+.aside {
+  width: 260px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  overflow-y: auto;
+  border-left: 1px solid var(--line-soft);
+  background: var(--bg-1);
+  font-size: 12.5px;
+}
+
+.aside-title {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.selected-path {
+  padding: 8px 10px;
+  @include surface(var(--bg-0), 7px, var(--line));
+  font-family: var(--font-mono), serif;
+  font-size: 12px;
+  color: var(--amber-text);
+  overflow-wrap: anywhere;
+}
+
+.selected-kind {
+  margin: 0;
+  color: var(--text-1);
+}
+
+.selected-preview {
+  margin: 0;
+  max-height: 180px;
+  overflow: auto;
+  padding: 10px;
+  @include surface(var(--bg-0), 7px, var(--line-soft));
+  font-family: var(--font-mono), serif;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-1);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.action {
+  @include unstyled-control;
+  @include focus-ring;
+  min-height: 30px;
+  justify-content: center;
+  padding: 0 8px;
+  @include surface(var(--bg-2), 7px, var(--line));
+  font-size: 12px;
+  color: var(--text-1);
+  cursor: pointer;
+  text-align: center;
+}
+
+.action.primary {
+  @include tint-badge('--amber-rgb', 0.12);
+  border: 1px solid var(--amber-dim);
+  color: var(--amber-text);
+  font-weight: 600;
+}
+
+.action:hover {
+  @include accent-state(var(--text-0), var(--amber-edge));
+}
+
+.aside-rule {
+  height: 1px;
+  background: var(--line-soft);
+}
+
+.stats {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 12px;
+  font-size: 12px;
+}
+
+.stats dt {
+  color: var(--text-2);
+}
+
+.stats dd {
+  margin: 0;
+  text-align: right;
+  font-family: var(--font-mono), serif;
+}
+
+.aside-note {
+  margin: auto 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
