@@ -22,7 +22,8 @@ The front-end describes what the user asked for and renders the view it gets bac
 not filter, sort or group. The deliberate exceptions are relative-time **formatting** (labels
 must age on their own, without a round trip), the ISO ↔ `Date` conversion at the serialisation
 boundary, syntax highlighting (it colours the in-flight editor draft, which is not persisted
-yet — a round trip per keystroke), and plain UI concerns like keyboard shortcuts and drafts.
+yet — a round trip per keystroke), formatting a snippet with Prettier (the same draft, and
+Prettier is JavaScript), and plain UI concerns like keyboard shortcuts and drafts.
 
 ```
 src/                Angular front-end
@@ -498,6 +499,44 @@ the whole point of the change is that adding one is no longer a slot to find by 
   the content is typed by the user.
 - Two inputs let a card reuse it: `showLineNumbers` (a gutter on a three-line excerpt is
   noise) and `compact` (no padding, no scroll, no font size of its own — the card decides).
+  A third, `markedLines`, is the editor's: the lines a format just changed.
+
+### Formatting a snippet with Prettier
+
+"Formater" (Shift+Alt+F) runs Prettier 3 on the editor's draft, **in the front**: the exception
+sits beside highlighting, for the same reason — the text is the unsaved draft — and because
+Prettier is JavaScript. `core/services/format/` holds all of it.
+
+- **A worker, started by the first format and kept.** `PrettierWorker` builds it from
+  `prettier.worker.ts` (the Angular builder bundles a `new Worker(new URL(…))`); the worker
+  loads each language's plugins by `import()`, one chunk each (`prettier-plugins.ts`). Nothing
+  of Prettier is in the initial bundle: the worker is 25 kB over the wire, TypeScript's plugin
+  the heaviest at 166 kB, and each is fetched by the first format that needs it. The spike's
+  numbers (#458): a first format of 2,000 lines of TypeScript takes 158 ms on a developer
+  machine, 915 ms on the CI's WebKitGTK.
+- ⚠️ **The worker has no CSP.** Tauri puts `Content-Security-Policy` on the HTML only, and a
+  dedicated worker takes its policy from its own response: `new Function` succeeds inside it,
+  on both engines. Prettier never evaluates, so this costs nothing today — but the worker must
+  only ever be handed text to format (`FormatRequest`), never code to run.
+- **What runs is `prettier-runner.ts`**, apart from the worker's message glue, so its spec
+  drives the real Prettier and its real plugins. It answers `formatted` (the text, the caret,
+  the changed lines), `unchanged`, `syntax` (Prettier's one-based line and column), `fields`
+  or `failed` — never a throw.
+- **Every `{{…}}` is shielded** (`field-shield.ts`): read as code, `{{db_host}}` is two nested
+  blocks in JavaScript and a flow mapping in YAML. Each becomes an identifier of its own
+  length, made of a two-letter marker absent from the text, and comes back in order afterwards.
+  One missing, copied or moved past another and the answer is `fields`: nothing is applied. A
+  field or not — Angular's `{{ user.name }}` is shielded too.
+- **The snippet keeps its own shape:** `endOfLine: 'auto'` (Prettier's `lf` would rewrite a
+  CRLF snippet), and no final newline added where there was none.
+- **Through the field's own editing**, like indentation: `rewrite` turns the answer into one
+  edit of only what differs, applied by `execCommand('insertText')`, so Ctrl+Z undoes a format
+  like a keystroke and the notice's "Annuler" is `execCommand('undo')`. An answer about a text
+  typed over meanwhile is dropped.
+- **The indentation is the Tab key's** (`indentUnit`), and the rest of the style — 100
+  columns, single quotes, semicolons, trailing commas — is fixed until the library's settings.
+- The button is `aria-disabled` rather than `disabled` on a language Prettier does not format:
+  a disabled button shows no tooltip, and this one says why.
 
 ### State
 
@@ -4024,6 +4063,8 @@ application's file — both serve 0.3.x, the release before the one that introdu
   renders, and nothing loaded from anywhere else. `devCsp` carries `'unsafe-inline'` for the
   dev server; it is the shape somebody copies when widening the production one in a hurry, and
   it must not be.
+- ⚠️ **The Prettier worker runs outside it.** Tauri sets the header on the HTML response only,
+  and a worker's policy is its own response's: see "Formatting a snippet with Prettier".
 
 ## Testing
 

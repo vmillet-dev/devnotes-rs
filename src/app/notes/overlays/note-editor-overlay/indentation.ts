@@ -57,6 +57,31 @@ export function outdent(text: string, start: number, end: number, unit: string):
   return edit.insert === text.slice(edit.from, edit.to) ? null : edit;
 }
 
+/**
+ * The whole text for another, as one edit of only what differs: the undo takes it back in one
+ * step, and the lines either side keep their scroll position.
+ */
+export function rewrite(before: string, after: string, cursor: number): TextEdit {
+  let prefix = 0;
+  const shortest = Math.min(before.length, after.length);
+  while (prefix < shortest && before[prefix] === after[prefix]) prefix++;
+  let suffix = 0;
+  while (
+    suffix < shortest - prefix &&
+    before[before.length - 1 - suffix] === after[after.length - 1 - suffix]
+  ) {
+    suffix++;
+  }
+
+  return {
+    from: prefix,
+    to: before.length - suffix,
+    insert: after.slice(prefix, after.length - suffix),
+    selectionStart: cursor,
+    selectionEnd: cursor,
+  };
+}
+
 /** Through the editing commands, which is what keeps the indentation in the field's undo. */
 export function applyEdit(field: HTMLTextAreaElement, edit: TextEdit): void {
   field.setSelectionRange(edit.from, edit.to);

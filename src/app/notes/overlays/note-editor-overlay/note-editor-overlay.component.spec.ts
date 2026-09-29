@@ -18,6 +18,8 @@ import { provideAppTesting } from '@testing/testing.providers';
 import { ExternalLinksService } from '@core/services/links/external-links.service';
 import { FakeNotesRepository } from '@testing/fake-notes-repository';
 import { NotesRepository } from '@core/data/notes.repository';
+import { PRETTIER_ADAPTER } from '@core/services/format/formatter.service';
+import { FakePrettier } from '@testing/fake-prettier';
 import { NoteEditorOverlayComponent } from './note-editor-overlay.component';
 import { RichTextEditorComponent } from './rich-text-editor/rich-text-editor.component';
 
@@ -198,7 +200,7 @@ describe('NoteEditorOverlayComponent', () => {
     fixture.componentRef.setInput('note', createNote({ content: 'line one\nline two', language: 'js' }));
     await fixture.whenStable();
 
-    expect(text('.overlay-footer span')).toBe('JS · 2 lignes · 17 octets');
+    expect(text('.overlay-footer span')).toBe('JS · 2 lignes · 17 octets · UTF-8 · LF');
   });
 
   describe('accessibility', () => {
@@ -230,7 +232,7 @@ describe('NoteEditorOverlayComponent', () => {
     });
 
     it('exposes the pin button as a toggle', () => {
-      expect(toolbarButton('.toolbar-btn').getAttribute('aria-pressed')).toBe('false');
+      expect(toolbarButton('[data-testid="editor-pin"]').getAttribute('aria-pressed')).toBe('false');
     });
 
     it('names the tag removal buttons after the tag they remove', async () => {
@@ -318,7 +320,7 @@ describe('NoteEditorOverlayComponent', () => {
 
       await type(bodyEditor(), 'one\ntwo');
 
-      expect(text('.overlay-footer span')).toBe('SH · 2 lignes · 7 octets');
+      expect(text('.overlay-footer span')).toBe('SH · 2 lignes · 7 octets · UTF-8 · LF');
     });
 
     it('still defers plain typing to the blur', async () => {
@@ -418,6 +420,223 @@ describe('NoteEditorOverlayComponent', () => {
       await openCode('a', 'sh');
 
       expect(press({ ctrlKey: true }).defaultPrevented).toBe(false);
+    });
+  });
+
+  describe('formatting with Prettier', () => {
+    let prettier: FakePrettier;
+    /** What the field held before each edit, for the fake `undo`. */
+    let history: string[];
+    let commands: string[];
+
+    /** jsdom has no editing commands: these do what the WebView's do, undo included. */
+    beforeEach(() => {
+      prettier = TestBed.inject(PRETTIER_ADAPTER) as FakePrettier;
+      history = [];
+      commands = [];
+      Object.defineProperty(document, 'execCommand', {
+        configurable: true,
+        value: (command: string, _ui: boolean, text: string) => {
+          commands.push(command);
+          const field = bodyEditor();
+          if (command === 'undo') {
+            field.value = history.pop() ?? field.value;
+          } else {
+            history.push(field.value);
+            field.setRangeText(
+              command === 'delete' ? '' : text,
+              field.selectionStart,
+              field.selectionEnd,
+              'end',
+            );
+          }
+          field.dispatchEvent(new InputEvent('input'));
+          return true;
+        },
+      });
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(document, 'execCommand');
+    });
+
+    async function openCode(content: string, language: Note['language'] = 'ts'): Promise<void> {
+      fixture.componentRef.setInput('note', createNote({ content, language }));
+      await fixture.whenStable();
+    }
+
+    function formatButton(): HTMLButtonElement {
+      return fixture.nativeElement.querySelector('[data-testid="editor-format"]');
+    }
+
+    async function format(): Promise<void> {
+      formatButton().click();
+      await fixture.whenStable();
+    }
+
+    function notice(): string | null {
+      const element = fixture.nativeElement.querySelector('[data-testid="editor-format-notice"]');
+      return element ? element.textContent.replace(/\s+/g, ' ').trim() : null;
+    }
+
+    it('offers the button on a language Prettier formats, and says why not elsewhere', async () => {
+      await openCode('a', 'ts');
+      expect(formatButton().getAttribute('aria-disabled')).toBe('false');
+      expect(formatButton().title).toBe('Formater avec Prettier (Maj+Alt+F)');
+      expect(text('[data-testid="editor-prettier"]')).toBe('Prettier 3 · réglages de la bibliothèque');
+
+      await openCode('select 1', 'sql');
+      expect(formatButton().getAttribute('aria-disabled')).toBe('true');
+      expect(formatButton().title).toBe('Prettier ne sait pas formater SQL');
+      expect(fixture.nativeElement.querySelector('[data-testid="editor-prettier"]')).toBeNull();
+
+      await format();
+      expect(prettier.requests).toEqual([]);
+    });
+
+    it('sends the draft, the caret and the indentation the Tab key uses', async () => {
+      TestBed.inject(SettingsStore).codeIndent.write('tab');
+      await openCode('f(a,b)');
+      bodyEditor().setSelectionRange(2, 2);
+
+      await format();
+
+      expect(prettier.requests).toEqual([
+        expect.objectContaining({
+          text: 'f(a,b)',
+          cursor: 2,
+          parser: 'typescript',
+          options: expect.objectContaining({ useTabs: true }),
+        }),
+      ]);
+    });
+
+    it('writes the result through the field, marks the lines and says how many', async () => {
+      prettier.answer = {
+        kind: 'formatted',
+        text: 'f(\n  a,\n  b,\n);',
+        cursor: 3,
+        changedLines: [0, 1, 2, 3],
+      };
+      await openCode('f(a,b)');
+
+      await format();
+
+      expect(bodyEditor().value).toBe('f(\n  a,\n  b,\n);');
+      expect(commands).toEqual(['insertText']);
+      expect(bodyEditor().selectionStart).toBe(3);
+      expect([...codeViewer().markedLines()]).toEqual([0, 1, 2, 3]);
+      expect(notice()).toBe('✓ Formaté avec Prettier · 4 lignes modifiées Annuler Ctrl Z');
+    });
+
+    it('lets the next keystroke clear the marks and the notice', async () => {
+      prettier.answer = { kind: 'formatted', text: 'b', cursor: 1, changedLines: [0] };
+      await openCode('a');
+      await format();
+
+      await type(bodyEditor(), 'bc');
+
+      expect(codeViewer().markedLines().size).toBe(0);
+      expect(notice()).toBeNull();
+    });
+
+    it("undoes through the field's own undo", async () => {
+      prettier.answer = { kind: 'formatted', text: 'b', cursor: 1, changedLines: [0] };
+      await openCode('a');
+      await format();
+
+      fixture.nativeElement.querySelector('[data-testid="editor-format-undo"]').click();
+      await fixture.whenStable();
+
+      expect(commands).toEqual(['insertText', 'undo']);
+      expect(bodyEditor().value).toBe('a');
+      expect(notice()).toBeNull();
+    });
+
+    it('formats on Shift+Alt+F from anywhere in the editor', async () => {
+      await openCode('a');
+
+      const event = new KeyboardEvent('keydown', {
+        key: 'F',
+        shiftKey: true,
+        altKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      titleInput().dispatchEvent(event);
+      await fixture.whenStable();
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(prettier.requests).toHaveLength(1);
+    });
+
+    it('answers by position when Alt prints another character', async () => {
+      await openCode('a');
+
+      bodyEditor().dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Ï', code: 'KeyF', shiftKey: true, altKey: true, bubbles: true }),
+      );
+      bodyEditor().dispatchEvent(new KeyboardEvent('keydown', { key: 'F', shiftKey: true, bubbles: true }));
+      await fixture.whenStable();
+
+      expect(prettier.requests).toHaveLength(1);
+    });
+
+    it('says where a syntax error is and puts the caret there, the text untouched', async () => {
+      prettier.answer = { kind: 'syntax', line: 2, column: 8 };
+      await openCode('const a = {\n  b: 1,,\n}');
+
+      await format();
+
+      expect(bodyEditor().value).toBe('const a = {\n  b: 1,,\n}');
+      expect(bodyEditor().selectionStart).toBe(19);
+      expect(notice()).toBe("Erreur de syntaxe ligne 2, colonne 8 : le texte n'a pas changé.");
+    });
+
+    it('says so when a field would not have survived, or nothing needed doing', async () => {
+      await openCode('{{a}}');
+
+      prettier.answer = { kind: 'fields' };
+      await format();
+      expect(notice()).toBe("Un champ n'aurait pas survécu au formatage : le texte n'a pas changé.");
+
+      prettier.answer = { kind: 'unchanged' };
+      await format();
+      expect(notice()).toBe('Déjà formaté : rien à changer.');
+      expect(commands).toEqual([]);
+    });
+
+    it('drops an answer about a text typed over while Prettier ran', async () => {
+      prettier.answer = { kind: 'formatted', text: 'formatted', cursor: 0, changedLines: [0] };
+      await openCode('a');
+      vi.spyOn(prettier, 'run').mockImplementation(async () => {
+        bodyEditor().value = 'typed meanwhile';
+        return prettier.answer;
+      });
+
+      await format();
+
+      expect(bodyEditor().value).toBe('typed meanwhile');
+      expect(commands).toEqual([]);
+    });
+
+    it('puts the notice away after a few seconds, and leaves the marks', async () => {
+      vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
+      prettier.answer = { kind: 'formatted', text: 'b', cursor: 1, changedLines: [0] };
+      await openCode('a');
+      await format();
+
+      vi.advanceTimersByTime(6000);
+      fixture.detectChanges();
+
+      expect(notice()).toBeNull();
+      expect(codeViewer().markedLines().size).toBe(1);
+    });
+
+    it('names the line endings in the footer', async () => {
+      await openCode('a\r\nb');
+
+      expect(text('.overlay-footer span')).toContain('UTF-8 · CRLF');
     });
   });
 
@@ -858,8 +1077,8 @@ describe('NoteEditorOverlayComponent', () => {
       await fixture.whenStable();
       const emitted = patched('pinned');
 
-      const pinButton = fixture.debugElement.query(By.css('.toolbar-btn'));
-      expect(text('.toolbar-btn')).toBe('📌 Épingler');
+      const pinButton = fixture.debugElement.query(By.css('[data-testid="editor-pin"]'));
+      expect(text('[data-testid="editor-pin"]')).toBe('📌 Épingler');
       expect(pinButton.classes['pinned']).toBeFalsy();
 
       pinButton.triggerEventHandler('click');
@@ -871,8 +1090,8 @@ describe('NoteEditorOverlayComponent', () => {
       fixture.componentRef.setInput('note', createNote({ pinned: true }));
       await fixture.whenStable();
 
-      expect(text('.toolbar-btn')).toBe('📌 Épinglée');
-      expect(fixture.debugElement.query(By.css('.toolbar-btn')).classes['pinned']).toBe(true);
+      expect(text('[data-testid="editor-pin"]')).toBe('📌 Épinglée');
+      expect(fixture.debugElement.query(By.css('[data-testid="editor-pin"]')).classes['pinned']).toBe(true);
     });
 
     it('asks for confirmation before emitting a deletion', async () => {

@@ -281,7 +281,22 @@
     "pinned": "Épinglée",
     "noPriority": "Aucune priorité",
     "expiryLabel": "Échéance de la note (vide = permanente)",
-    "footerStats": "{{lines}} lignes · {{bytes}} octets",
+    "footerStats": "{{lines}} lignes · {{bytes}} octets · UTF-8 · {{eol}}",
+    "format": {
+      "label": "Formater",
+      "keys": "Maj Alt F",
+      "hint": "Formater avec Prettier (Maj+Alt+F)",
+      "unsupported": "Prettier ne sait pas formater {{language}}",
+      "done": "Formaté avec Prettier",
+      "changed": "{count, plural, =0 {lignes retirées seulement} one {# ligne modifiée} other {# lignes modifiées}}",
+      "undo": "Annuler",
+      "undoKeys": "Ctrl Z",
+      "unchanged": "Déjà formaté : rien à changer.",
+      "syntax": "Erreur de syntaxe ligne {{line}}, colonne {{column}} : le texte n'a pas changé.",
+      "fields": "Un champ n'aurait pas survécu au formatage : le texte n'a pas changé.",
+      "failed": "Prettier n'a pas pu formater ce texte.",
+      "footer": "Prettier 3 · réglages de la bibliothèque"
+    },
     "modifiedPrefix": "Modifiée",
     "noteKind": "Note",
     "noteStats": "Note · {count, plural, =0 {aucun mot} one {# mot} other {# mots}} · enregistrée en Markdown",
@@ -612,7 +627,8 @@
       "close": "Fermer l'éditeur en enregistrant",
       "newItem": "Ajouter un item sous celui-ci",
       "removeItem": "Retirer un item vide",
-      "moveItem": "Déplacer l'item dans la liste"
+      "moveItem": "Déplacer l'item dans la liste",
+      "format": "Formater le snippet avec Prettier"
     },
     "palette": {
       "navigate": "Parcourir les résultats",

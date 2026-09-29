@@ -21,6 +21,8 @@ export default defineConfig({
         // Thin `invoke()` adapters: nothing to assert without a live Tauri runtime.
         '**/*.repository.ts',
         '**/ipc.service.ts',
+        // Its message glue: what it runs is `prettier-runner.ts`, driven by a spec with the real Prettier.
+        '**/*.worker.ts',
       ],
       thresholds: {
         statements: 80,

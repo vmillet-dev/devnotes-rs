@@ -29,6 +29,25 @@
           [currentId]="note.language"
           (chosen)="onLanguageChange($event ?? note.language)"
         />
+        <!-- `aria-disabled` and not `disabled`: a disabled button shows no tooltip, and this
+             one has to say why it cannot format. -->
+        <button
+          type="button"
+          class="toolbar-btn format-btn"
+          data-testid="editor-format"
+          [attr.aria-disabled]="!canFormat() || showingPreview() || formatting()"
+          [attr.title]="
+            (canFormat() ? 'editor.format.hint' : 'editor.format.unsupported')
+              | transloco: { language: languageLabel() }
+          "
+          (click)="formatBody()"
+        >
+          <svg class="format-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 6h16M4 12h10M4 18h13" />
+          </svg>
+          {{ 'editor.format.label' | transloco }}
+          <span class="format-keys" aria-hidden="true">{{ 'editor.format.keys' | transloco }}</span>
+        </button>
       } @else if (isRichText()) {
         <span class="kind-badge" data-testid="editor-kind">{{ 'editor.noteKind' | transloco }}</span>
       }
@@ -214,52 +233,98 @@
          draft underneath, the <textarea> takes the typing on top with transparent text.
          The textarea carries the accessible text; the viewer is hidden from screen
          readers, which would otherwise read the content twice. -->
-    <div class="overlay-body" [class.previewing]="showingPreview()">
-      @if (showingPreview()) {
-        <!-- The filled body, read-only: the input is absent rather than hidden, or
+    <div class="overlay-body-frame">
+      <div class="overlay-body" [class.previewing]="showingPreview()">
+        @if (showingPreview()) {
+          <!-- The filled body, read-only: the input is absent rather than hidden, or
              typing would go into text nobody keeps. -->
-        <app-code-viewer [content]="fill.preview() ?? ''" [language]="note.language" />
-      } @else if (isChecklist()) {
-        <app-checklist-editor
-          [items]="note.items"
-          [session]="session()"
-          (itemsChanged)="requestPatch({ items: $event })"
-        />
-      } @else if (isRichText()) {
-        <!-- Deferred: TipTap is loaded the first time a Note opens, not at startup. -->
-        @defer (on immediate) {
-          <app-rich-text-editor
-            #richEditor
-            [content]="draftContent()"
-            [label]="'editor.contentLabel' | transloco"
-            [placeholder]="'editor.emptyRich' | transloco"
-            [linkTitle]="'editor.rich.linkOpen' | transloco"
-            [codeIndent]="codeIndent()"
-            (changed)="draftContent.set($event)"
-            (blurred)="commitContent()"
-            (pastedIntoEmpty)="onRichPaste($event)"
-            (imagePasted)="onImagePasted()"
-            (linkOpened)="openLink($event)"
+          <app-code-viewer [content]="fill.preview() ?? ''" [language]="note.language" />
+        } @else if (isChecklist()) {
+          <app-checklist-editor
+            [items]="note.items"
+            [session]="session()"
+            (itemsChanged)="requestPatch({ items: $event })"
           />
-        } @placeholder {
-          <div class="rich-text-loading" aria-hidden="true"></div>
+        } @else if (isRichText()) {
+          <!-- Deferred: TipTap is loaded the first time a Note opens, not at startup. -->
+          @defer (on immediate) {
+            <app-rich-text-editor
+              #richEditor
+              [content]="draftContent()"
+              [label]="'editor.contentLabel' | transloco"
+              [placeholder]="'editor.emptyRich' | transloco"
+              [linkTitle]="'editor.rich.linkOpen' | transloco"
+              [codeIndent]="codeIndent()"
+              (changed)="draftContent.set($event)"
+              (blurred)="commitContent()"
+              (pastedIntoEmpty)="onRichPaste($event)"
+              (imagePasted)="onImagePasted()"
+              (linkOpened)="openLink($event)"
+            />
+          } @placeholder {
+            <div class="rich-text-loading" aria-hidden="true"></div>
+          }
+        } @else {
+          <div class="editor-stack">
+            <app-code-viewer
+              aria-hidden="true"
+              [content]="draftContent()"
+              [language]="note.language"
+              [markedLines]="markedLines()"
+            />
+            <textarea
+              #bodyEditor
+              class="overlay-body-editor"
+              data-testid="editor-body"
+              spellcheck="false"
+              [attr.aria-label]="'editor.contentLabel' | transloco"
+              [placeholder]="'editor.emptyBody' | transloco"
+              [value]="draftContent()"
+              (input)="onBodyInput(bodyEditor.value)"
+              (keydown)="onBodyKeydown($event, bodyEditor)"
+              (paste)="onPaste($event)"
+              (blur)="commitContent()"
+            ></textarea>
+          </div>
         }
-      } @else {
-        <div class="editor-stack">
-          <app-code-viewer aria-hidden="true" [content]="draftContent()" [language]="note.language" />
-          <textarea
-            #bodyEditor
-            class="overlay-body-editor"
-            data-testid="editor-body"
-            spellcheck="false"
-            [attr.aria-label]="'editor.contentLabel' | transloco"
-            [placeholder]="'editor.emptyBody' | transloco"
-            [value]="draftContent()"
-            (input)="onBodyInput(bodyEditor.value)"
-            (keydown)="onBodyKeydown($event, bodyEditor)"
-            (paste)="onPaste($event)"
-            (blur)="commitContent()"
-          ></textarea>
+      </div>
+
+      @if (formatNotice(); as notice) {
+        <div
+          class="format-notice"
+          role="status"
+          data-testid="editor-format-notice"
+          [attr.data-kind]="notice.kind"
+          [class.failed]="notice.kind !== 'formatted' && notice.kind !== 'unchanged'"
+        >
+          @switch (notice.kind) {
+            @case ('formatted') {
+              <span class="notice-mark" aria-hidden="true">✓</span>
+              <span>
+                {{ 'editor.format.done' | transloco }} ·
+                <span class="notice-count">{{
+                  'editor.format.changed' | transloco: { count: notice.changed }
+                }}</span>
+              </span>
+              <button
+                type="button"
+                class="notice-undo"
+                data-testid="editor-format-undo"
+                (click)="undoFormat()"
+              >
+                {{ 'editor.format.undo' | transloco }}
+                <span class="notice-keys" aria-hidden="true">{{ 'editor.format.undoKeys' | transloco }}</span>
+              </button>
+            }
+            @case ('syntax') {
+              <span>{{
+                'editor.format.syntax' | transloco: { line: notice.line, column: notice.column }
+              }}</span>
+            }
+            @default {
+              <span>{{ 'editor.format.' + notice.kind | transloco }}</span>
+            }
+          }
         </div>
       }
     </div>
@@ -277,12 +342,17 @@
           {{ 'editor.noteStats' | transloco: { count: wordCount() } }}
         } @else {
           {{ languageLabel() }} ·
-          {{ 'editor.footerStats' | transloco: { lines: lineCount(), bytes: byteSize() } }}
+          {{ 'editor.footerStats' | transloco: { lines: lineCount(), bytes: byteSize(), eol: lineEnding() } }}
         }
       </span>
-      @if (modifiedRef(); as ref) {
-        <span>{{ 'editor.modifiedPrefix' | transloco }} {{ ref.key | transloco: ref.params }}</span>
-      }
+      <span class="footer-end">
+        @if (modifiedRef(); as ref) {
+          <span>{{ 'editor.modifiedPrefix' | transloco }} {{ ref.key | transloco: ref.params }}</span>
+        }
+        @if (canFormat()) {
+          <span data-testid="editor-prettier">{{ 'editor.format.footer' | transloco }}</span>
+        }
+      </span>
     </div>
   </app-dialog>
 }

@@ -16,6 +16,14 @@
   display: flex;
 }
 
+// Out to the edges of the padding, where the bar reads as a gutter mark and not a border.
+.code-line.marked {
+  margin: 0 -24px;
+  padding: 0 24px;
+  background: rgba(var(--amber-rgb), 0.07);
+  box-shadow: inset 3px 0 var(--amber);
+}
+
 .line-no {
   width: 32px;
   text-align: right;
