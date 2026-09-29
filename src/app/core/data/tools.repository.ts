@@ -7,6 +7,8 @@ import {
   Base64Options,
   Base64Saved,
   CaseConversion,
+  ColourAnswer,
+  ColourRequest,
   HashAnswer,
   HashRequest,
   LineBreaksAnswer,
@@ -76,5 +78,9 @@ export class ToolsRepository {
 
   async inspectUuid(text: string): Promise<UuidInspection> {
     return unwrap('inspect_uuid', await commands.inspectUuid(text));
+  }
+
+  async describeColour(request: ColourRequest): Promise<ColourAnswer> {
+    return unwrap('describe_colour', await commands.describeColour(request));
   }
 }

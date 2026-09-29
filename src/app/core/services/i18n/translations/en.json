@@ -1255,6 +1255,26 @@
       "nil": "Nil UUID",
       "invalid": "This is not a UUID.",
       "noteTitle": "Generated UUIDs"
+    },
+    "colour": {
+      "name": "Colours",
+      "description": "HEX, RGB, HSL, OKLCH, contrast",
+      "colour": "Colour",
+      "pick": "Pick the colour",
+      "placeholder": "#1e90ff, rgb(30 144 255), hsl(…), oklch(…)",
+      "invalid": "Not a colour: write #1e90ff, rgb(…), hsl(…) or oklch(…), with or without alpha.",
+      "outOfGamut": "Outside sRGB: the screen cannot show it. Brought inside at the same lightness and hue — that is what the preview, HEX, RGB and HSL show.",
+      "contrast": "Contrast",
+      "background": "Background",
+      "pickBackground": "Pick the background",
+      "backgroundPlaceholder": "The background colour, #ffffff",
+      "sampleText": "Body text on this background",
+      "normalText": "Body text",
+      "largeText": "Large text",
+      "pass": "✓ passes",
+      "fail": "✗ fails",
+      "wcag": "WCAG 2.2: AA asks 4.5:1 (3:1 for large text), AAA 7:1 (4.5:1). The formula is the one the application's palette is checked with.",
+      "noteTitle": "Colour {{hex}}"
     }
   }
 }

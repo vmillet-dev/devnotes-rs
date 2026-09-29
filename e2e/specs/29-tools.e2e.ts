@@ -262,6 +262,38 @@ describe('The tools', () => {
         problem: 'notFound',
       });
     });
+
+    it('writes a colour in every notation', async () => {
+      await openTool('colour');
+
+      await setField(testid('colour-input'), 'hsl(0 100% 50%)');
+
+      await eventually(outputValues, (values) => values[0] === '#ff0000', 'the hex');
+      expect(await outputValues()).toEqual([
+        '#ff0000',
+        'rgb(255 0 0)',
+        'hsl(0 100% 50%)',
+        'oklch(62.8% 0.258 29.2)',
+      ]);
+    });
+
+    it('measures a contrast as the palette test does', async () => {
+      await setField(testid('colour-input'), '#777777');
+      await setField(testid('colour-against'), '#ffffff');
+
+      await eventually(
+        () => $(testid('colour-ratio')).getText(),
+        (ratio) => ratio === '4.48:1',
+        'the ratio',
+      );
+      expect(await readEach(`${testid('colour-verdicts')} td`, '@class')).toEqual(['', 'pass', '', '']);
+    });
+
+    it('brings a colour sRGB cannot show inside, and says so', async () => {
+      await setField(testid('colour-input'), 'oklch(70% 0.4 150)');
+
+      await $(testid('colour-gamut')).waitForDisplayed({ timeout: 5_000 });
+    });
   });
 
   describe('the crypto tools', () => {

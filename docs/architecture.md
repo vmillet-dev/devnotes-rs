@@ -669,6 +669,11 @@ an `AppError` rather than a weaker fallback. Generated passwords are the answer 
 but the tool's `ToolResult.warning` makes the dialog say why they had better not be, and its
 button read "Enregistrer quand même".
 
+**A colour is Rust's to read** (`tools/colour.rs`): the four notations, `OKLab` and `OKLCH`,
+the gamut, and the WCAG ratio — with the `0.03928` of `scripts/palette.test.mjs`, so the tool
+and the palette's own check agree. The page paints the swatch Rust hands it. An `OKLCH` colour
+sRGB cannot show gives up chroma, at the same lightness and hue, until it can, and says so.
+
 **Adding a tool**, the whole of it:
 
 1. `src-tauri/src/tools/<module>.rs`: the function, its request and answer types, its tests.
