@@ -7,6 +7,7 @@ pub mod db;
 pub mod desktop;
 pub mod error;
 pub mod folders;
+pub mod json;
 pub mod libraries;
 pub mod notes;
 pub mod recovery;
@@ -35,6 +36,7 @@ use folders::{
     arrange_board, board_view, create_folder, delete_folder, file_notes, file_notes_back,
     list_folders, recolour_folder, rename_folder, save_board_layout,
 };
+use json::explore_json;
 use libraries::{create_library, delete_library, list_libraries, open_library, rename_library};
 use notes::{
     count_notes_tagged, create_note, delete_note, delete_notes, delete_tags, detect_language,
@@ -70,6 +72,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             create_note::<tauri::Wry>,
             duplicate_note::<tauri::Wry>,
             detect_language,
+            explore_json,
             seed_samples::<tauri::Wry>,
             update_note::<tauri::Wry>,
             list_revisions::<tauri::Wry>,

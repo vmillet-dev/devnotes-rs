@@ -68,6 +68,8 @@ and the Tauri commands that expose it. Deleting `src/notes/` deletes the feature
 database — the repository's `CHANGELOG.md` is baked into the binary by `include_str!` and
 parsed by `changelog/model.rs`. It keeps the convention all the same, the command in the file
 and the rules in the module, which is what lets the parser be tested without a Tauri runtime.
+`json.rs` is the other one without a table: it takes a text and answers what the JSON
+visualiser draws — see [The JSON visualiser's model](#the-json-visualisers-model).
 
 `transfer` is the one without a `store.rs`: import and export read and write **whole
 libraries**, so they compose the two other stores rather than owning a table. That is also why
@@ -3393,6 +3395,34 @@ and opens that — one click, as before. Those copies are swept on the way out
 still held, and a crash. ⚠️ The profile and **not** the OS temporary directory: that one is
 shared with every account on the machine, where the copy would be readable by all of them
 and a directory somebody else created first would be theirs rather than ours.
+
+### The JSON visualiser's model
+
+`explore_json` takes a **text**, not a note id — an HTTP response is explored the same way —
+with a search and an _opening_, and answers what to draw: `json/` decides it all, and the
+front draws. It takes no lock, but runs on the blocking pool: a document of a few megabytes
+is not the WebView's thread's to parse.
+
+- **Its own parser** (`json/parse.rs`), because `serde_json` forgets where a value sits and
+  "Voir dans le code" needs it. Offsets are in **UTF-16 units**, the front's; an invalid
+  document answers a reason, a one-based line and column, and the offset. ⚠️ The nesting is
+  capped at 256: recursion bounded by the stack would let `[[[[…` take the process down.
+- **Entries, flattened once** (`json/model.rs`): every value with its key, its JSONPath
+  (`$.data.lines[0]`, `$['a key']` when the key is no identifier), a one-line display cut to
+  40 characters, and whether the search hits it — folded by `view::fold`, like every search.
+  The graph, the tree, the matches and the counts all read that list.
+- **The opening is one set for both views**: `initial` (the whole document up to 64
+  containers, its first level past that), `all`, or the paths the front holds open. A
+  container opens only under an open parent.
+- ⚠️ **Nothing is sent the WebView cannot draw.** At most 2,000 nodes and 20,000 rows, filled
+  breadth-first so a cap keeps the levels nearest the root; past it, `all` folds arrays and
+  says so (`folded`), and the front proposes the tree. A node shows its first 200 rows and
+  counts the rest; the tree stops at 5,000 lines.
+- **Placed in Rust** (`json/layout.rs`), in grid units — a column is a character of the
+  monospace font, a row one line of a node: one column per level, each as wide as its widest
+  node, and a child level with the row that opens it whenever the nodes above leave room.
+- **The matches cover the whole document**, open or not, in its order: stepping to one opens
+  its ancestors.
 
 ## Persistence (Rust)
 
