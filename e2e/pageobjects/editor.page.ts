@@ -76,6 +76,8 @@ export const editor = {
   placementLabel: (kind: 'space' | 'folder') => choiceLabel(kind),
 
   isOpen: () => $(testid('editor-title')).isExisting(),
+  /** After what opens it through Rust — a copy, say — rather than from a draft at once. */
+  waitOpen: () => $(testid('editor-title')).waitForExist({ timeout: 10_000 }),
 
   setTitle: (text: string) => typeAndCommit(testid('editor-title'), text),
   async setBody(text: string): Promise<void> {

@@ -327,7 +327,8 @@ describe('Folders', () => {
 
       await canvas.duplicateFromCardMenu(title);
 
-      expect(await editor.isOpen()).toBe(true);
+      // The copy is written before the editor opens on it: a round trip, not a render.
+      await editor.waitOpen();
       const copyTitle = await editor.title();
       // Whatever the language the suite left: the title, and a suffix after it.
       expect(copyTitle.startsWith(title)).toBe(true);
