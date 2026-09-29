@@ -1,0 +1,91 @@
+@let now = arrangement();
+@let arrow = now.order.direction === 'descending' ? '↓' : '↑';
+@let short = 'sort.short.' + now.order.key | transloco;
+
+<button
+  appMenuAnchor
+  type="button"
+  class="sort-trigger"
+  data-testid="sort-trigger"
+  aria-haspopup="menu"
+  [attr.aria-expanded]="menu.open()"
+  [attr.aria-label]="('sort.label' | transloco) + ' · ' + short"
+  [attr.title]="('sort.label' | transloco) + ' · ' + short + ' ' + arrow"
+  (click)="menu.toggle()"
+>
+  <span class="sort-glyph" aria-hidden="true">⇅</span>
+  <span class="sort-now" data-testid="sort-now">{{ short }} {{ arrow }}</span>
+</button>
+
+@if (menu.open()) {
+  <div
+    appMenuPanel
+    class="sort-menu"
+    data-testid="sort-menu"
+    [opensOnChecked]="true"
+    [attr.aria-label]="'sort.label' | transloco"
+  >
+    <p class="sort-menu-title">{{ 'sort.sortBy' | transloco }}</p>
+    @for (key of keys; track key) {
+      <button
+        appMenuItem
+        type="button"
+        role="menuitemradio"
+        class="sort-item"
+        data-testid="sort-key"
+        [attr.data-key]="key"
+        [attr.aria-checked]="key === now.order.key"
+        (click)="chooseKey(key)"
+      >
+        <span class="sort-label">{{ 'sort.keys.' + key | transloco }}</span>
+        @if (hints[key]; as hint) {
+          <span class="sort-hint">{{ hint | transloco }}</span>
+        }
+      </button>
+    }
+
+    <p class="sort-menu-title">{{ 'sort.direction' | transloco }}</p>
+    @for (direction of directions; track direction) {
+      <button
+        appMenuItem
+        type="button"
+        role="menuitemradio"
+        class="sort-item"
+        data-testid="sort-direction"
+        [attr.data-direction]="direction"
+        [attr.aria-checked]="direction === now.order.direction"
+        (click)="chooseDirection(direction)"
+      >
+        <span class="sort-label">{{ 'sort.directions.' + direction | transloco }}</span>
+      </button>
+    }
+
+    <p class="sort-menu-title">{{ 'sort.groupBy' | transloco }}</p>
+    @for (grouping of groupings; track grouping) {
+      <button
+        appMenuItem
+        type="button"
+        role="menuitemradio"
+        class="sort-item"
+        data-testid="sort-grouping"
+        [attr.data-grouping]="grouping"
+        [attr.aria-checked]="grouping === now.grouping"
+        (click)="chooseGrouping(grouping)"
+      >
+        <span class="sort-label">{{ 'sort.groupings.' + grouping | transloco }}</span>
+      </button>
+    }
+
+    <button
+      appMenuItem
+      type="button"
+      role="menuitemcheckbox"
+      class="sort-item sort-pinned"
+      data-testid="sort-pinned-first"
+      [attr.aria-checked]="now.pinnedFirst"
+      (click)="pinnedFirstChosen.emit(!now.pinnedFirst)"
+    >
+      <span class="sort-label">{{ 'sort.pinnedFirst' | transloco }}</span>
+    </button>
+  </div>
+}

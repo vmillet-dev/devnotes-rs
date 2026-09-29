@@ -720,6 +720,18 @@ sections share a key (`format`), so each carries an `id` the canvas tracks it by
 `group` saying what it gathers, which the front names — a translation key, or a language's
 own label.
 
+**"Trier et regrouper" sits in the topbar** (`notes/header/sort-menu/`): its button names the
+order the canvas is in — "Priorité ↓" — and its menu sets the key, the direction, the
+grouping and "Épinglées en tête" together, so it stays open on a choice. A new key starts
+the way it reads first (`naturalOrder`: the newest and the most pressing on top, words from
+A to Z). The choice is the library's (`devnotes.notes.arrangement` in
+`LibraryPreferencesService`), read when the notes page opens — the library's preferences are
+open by then — and written on every change; `readArrangement` trusts the file no further
+than it reads, a value it cannot name staying default. The button leaves the topbar while
+the board shows, which orders nothing. ⚠️ At the size the application ships with, the topbar
+holds one row with a few pixels to spare (`06-search-and-filters` measures it): below
+1280 px the button is a glyph, the order in its tooltip.
+
 **A priority is filtered the same way** (`NotesQuery.priorities`, `priority_counts`), both
 counted by one helper, `view::counted`; its rail reads the levels from the most pressing
 down, offers no chip for `none`, and stays away from a space where nothing has a priority.

@@ -1,5 +1,7 @@
 import { Injectable, Signal, computed, inject, resource, signal, untracked } from '@angular/core';
+import { Arrangement, readArrangement } from '@core/model/arrangement.model';
 import { LanguageTag } from '@core/model/language.model';
+import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
 import { ClockService } from '@core/services/time/clock.service';
 import { SEARCH_DEBOUNCE_MS, debounced } from '@core/services/time/debounce';
 import { sameArray, sameBy } from '@core/utils/equality.util';
@@ -52,8 +54,8 @@ const sameCriteria = sameBy<Criteria>({
   priorities: sameArray,
 });
 
-/** What the canvas shows first until the user picks another order. */
-export const DEFAULT_ORDER: NoteOrder = { key: 'modified', direction: 'descending' };
+/** The library's, like the view each space was left on. */
+const ARRANGEMENT_KEY = 'devnotes.notes.arrangement';
 
 const sameOrder = sameBy<NoteOrder>({ key: Object.is, direction: Object.is });
 
@@ -62,6 +64,7 @@ interface QueryParams {
   /** Not criteria: the board, which reads those, keeps its own geometry. */
   readonly order: NoteOrder;
   readonly grouping: Grouping;
+  readonly pinnedFirst: boolean;
   readonly spaceId: string | null;
   readonly folderId: string | null;
   readonly day: string;
@@ -78,6 +81,7 @@ const sameQueryParams = sameBy<QueryParams>({
   criteria: Object.is,
   order: sameOrder,
   grouping: Object.is,
+  pinnedFirst: Object.is,
   spaceId: Object.is,
   folderId: Object.is,
   day: Object.is,
@@ -100,6 +104,7 @@ export class NotesQueryStore {
   private readonly spaces = inject(SpacesStore);
   private readonly folders = inject(FoldersStore);
   private readonly revision = inject(NotesRevision);
+  private readonly preferences = inject(LibraryPreferencesService);
 
   private readonly _searchQuery = signal('');
   private readonly _debouncedSearch = signal('');
@@ -108,8 +113,10 @@ export class NotesQueryStore {
   private readonly _selectedLanguages = signal<ReadonlySet<LanguageTag>>(new Set());
   private readonly _selectedKinds = signal<ReadonlySet<NoteKind>>(new Set());
   private readonly _selectedPriorities = signal<ReadonlySet<Priority>>(new Set());
-  private readonly _order = signal<NoteOrder>(DEFAULT_ORDER, { equal: sameOrder });
-  private readonly _grouping = signal<Grouping>('date');
+  private readonly restored = readArrangement(this.preferences.read(ARRANGEMENT_KEY));
+  private readonly _order = signal<NoteOrder>(this.restored.order, { equal: sameOrder });
+  private readonly _grouping = signal<Grouping>(this.restored.grouping);
+  private readonly _pinnedFirst = signal(this.restored.pinnedFirst);
 
   /** Follows the typing without waiting: this is what the field shows. */
   readonly searchQuery = this._searchQuery.asReadonly();
@@ -120,6 +127,13 @@ export class NotesQueryStore {
   readonly selectedPriorities = this._selectedPriorities.asReadonly();
   readonly order = this._order.asReadonly();
   readonly grouping = this._grouping.asReadonly();
+  readonly pinnedFirst = this._pinnedFirst.asReadonly();
+
+  readonly arrangement = computed<Arrangement>(() => ({
+    order: this._order(),
+    grouping: this._grouping(),
+    pinnedFirst: this._pinnedFirst(),
+  }));
 
   private readonly commitSearch = debounced(
     (query: string) => this._debouncedSearch.set(query),
@@ -144,6 +158,7 @@ export class NotesQueryStore {
       criteria: this.criteria(),
       order: this._order(),
       grouping: this._grouping(),
+      pinnedFirst: this._pinnedFirst(),
       spaceId: this.spaces.activeSpaceId(),
       folderId: this.folders.activeFolderId(),
       day: localDayKey(this.clock.now()),
@@ -168,7 +183,7 @@ export class NotesQueryStore {
           folderId: params.folderId,
           now,
           tzOffsetMinutes: now.getTimezoneOffset(),
-          pinnedFirst: true,
+          pinnedFirst: params.pinnedFirst,
         };
         return this.repository.query(query);
       }),
@@ -252,10 +267,17 @@ export class NotesQueryStore {
 
   setOrder(order: NoteOrder): void {
     this._order.set(order);
+    this.remember();
   }
 
   setGrouping(grouping: Grouping): void {
     this._grouping.set(grouping);
+    this.remember();
+  }
+
+  setPinnedFirst(pinnedFirst: boolean): void {
+    this._pinnedFirst.set(pinnedFirst);
+    this.remember();
   }
 
   togglePriority(priority: Priority): void {
@@ -278,6 +300,10 @@ export class NotesQueryStore {
     this._selectedLanguages.set(new Set());
     this._selectedKinds.set(new Set());
     this._selectedPriorities.set(new Set());
+  }
+
+  private remember(): void {
+    this.preferences.write(ARRANGEMENT_KEY, JSON.stringify(untracked(this.arrangement)));
   }
 
   findVisible(id: string): Note | null {

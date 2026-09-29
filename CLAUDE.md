@@ -130,7 +130,8 @@ Run all commands from the repo root (`package.json` there wraps both Angular and
 - **Nothing corpus-wide runs before saying what it touches** (tag changes, emptying the trash, deleting a library): the count comes from the back end, and the confirm button is not the trigger.
 - **Sections are exhaustive and local-day based**: `tzOffsetMinutes` travels with the query, with the sign flipped. A search or a facet switches to one flat `results` section; a quick filter does not. The search is debounced 150 ms.
 - **"À trier" is a note with a deadline**, set at the end of the local day (`endOfLocalDay`).
-- **`pinnedFirst` hoists pinned notes in both shapes of view**; only the palette sends `false`.
+- **`pinnedFirst` hoists pinned notes in every shape of view**, and is the user's choice ("Épinglées en tête"); the palette always sends `false`.
+- **The order and the grouping are the library's** (`devnotes.notes.arrangement`, read back by `readArrangement` no further than it can trust the file), and not criteria: the board, which spreads the criteria, keeps its own geometry.
 - **Every library operation reports, including when it changed nothing** (`file.importedNothing`), through `StatusNotifier` under the titlebar — the menu closes on the click.
 - **The File menu owns its entries** as an array, in screen order; the trash and tag management deliberately live next to the canvas instead.
 - **A startup initialiser injects everything before its first `await`** (`startApplication()`): an `inject()` after one fails with NG0203 and a black window.

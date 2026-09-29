@@ -1,5 +1,13 @@
 @use 'mixins' as *;
 
+// The host is the topbar's flex item: without this the box sat at its content's width,
+// neither growing into the free space nor giving any back.
+:host {
+  display: flex;
+  flex: 1;
+  max-width: 520px;
+}
+
 .search-bar {
   flex: 1;
   // Lets it give ground before the row wraps: without it the input floors the shrink.
@@ -25,9 +33,12 @@
   border-color: var(--amber-edge);
 }
 
+// `width: 0` under `flex: 1`: a field's intrinsic width otherwise floors the box above its
+// `min-width`, and the topbar overflowed at the size the application ships with.
 .search-bar input {
   @include text-field;
   flex: 1;
+  width: 0;
   color: var(--text-0);
   font-family: var(--font-sans);
   font-size: 13px;

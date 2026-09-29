@@ -186,6 +186,42 @@
     "reorganise": "Reorganise {zones, plural, =0 {no folder} one {# folder} other {# folders}} and {cards, plural, =0 {no card} one {# card} other {# cards}}",
     "reorganiseHint": "Repositions and resizes the folders. Overwrites sizes chosen by hand; undoable."
   },
+  "sort": {
+    "label": "Sort and group",
+    "sortBy": "Sort by",
+    "keys": {
+      "modified": "Date modified",
+      "created": "Date created",
+      "priority": "Priority",
+      "format": "Format",
+      "title": "Title"
+    },
+    "short": {
+      "modified": "Modified",
+      "created": "Created",
+      "priority": "Priority",
+      "format": "Format",
+      "title": "Title"
+    },
+    "hints": {
+      "modified": "default",
+      "format": "language",
+      "title": "A → Z"
+    },
+    "direction": "Order",
+    "directions": {
+      "descending": "Descending ↓",
+      "ascending": "Ascending ↑"
+    },
+    "groupBy": "Group",
+    "groupings": {
+      "date": "By date",
+      "priority": "By priority",
+      "format": "By format",
+      "none": "No grouping"
+    },
+    "pinnedFirst": "Pinned first"
+  },
   "sections": {
     "pinned": "Pinned",
     "today": "Today",

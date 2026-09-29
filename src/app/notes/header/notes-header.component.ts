@@ -18,6 +18,7 @@ import {
 } from '@shared/controls/segmented-choice/segmented-choice.component';
 import { IconComponent } from '@shared/icon/icon.component';
 import { FacetsPanelComponent } from './facets-panel/facets-panel.component';
+import { SortMenuComponent } from './sort-menu/sort-menu.component';
 import { FolderBreadcrumbComponent } from './folder-breadcrumb/folder-breadcrumb.component';
 import { FolderSwitcherComponent } from './folder-switcher/folder-switcher.component';
 import { NewNoteButtonComponent } from './new-note-button/new-note-button.component';
@@ -39,6 +40,7 @@ const QUICK_FILTERS: readonly Segment[] = (['all', 'pinned', 'untriaged'] as con
     SpaceSwitcherComponent,
     SearchBoxComponent,
     FacetsPanelComponent,
+    SortMenuComponent,
     SegmentedChoiceComponent,
     IconComponent,
     FolderSwitcherComponent,

@@ -393,6 +393,29 @@ export const canvas = {
 
   sectionKeys: (): Promise<string[]> => readEach(testid('note-section'), '@data-section'),
 
+  /** Through the topbar's "Trier et regrouper", which stays open on a choice. */
+  async arrange(entry: 'sort-key' | 'sort-direction' | 'sort-grouping', value: string): Promise<void> {
+    if (!(await $(testid('sort-menu')).isExisting())) {
+      await $(testid('sort-trigger')).click();
+      await $(testid('sort-menu')).waitForExist({ timeout: 5_000 });
+    }
+    const attribute = entry.replace('sort-', '');
+    await $(`${testid(entry)}[data-${attribute}="${value}"]`).click();
+    await waitForCanvas();
+  },
+
+  async setPinnedFirst(on: boolean): Promise<void> {
+    if (!(await $(testid('sort-menu')).isExisting())) {
+      await $(testid('sort-trigger')).click();
+      await $(testid('sort-menu')).waitForExist({ timeout: 5_000 });
+    }
+    const toggle = $(testid('sort-pinned-first'));
+    if ((await toggle.getAttribute('aria-checked')) !== String(on)) {
+      await toggle.click();
+      await waitForCanvas();
+    }
+  },
+
   noResults: () => $(testid('canvas-no-results')),
 
   /** Where the canvas actually starts, under the header. */

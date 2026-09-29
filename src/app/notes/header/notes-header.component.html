@@ -63,6 +63,15 @@
     [currentId]="canvas.activeFilter()"
     (chosen)="onQuickFilter($event)"
   />
+  <!-- It orders nothing on the board, which keeps the places its cards were given. -->
+  @if (!board.isShowing()) {
+    <app-sort-menu
+      [arrangement]="canvas.arrangement()"
+      (orderChosen)="canvas.setOrder($event)"
+      (groupingChosen)="canvas.setGrouping($event)"
+      (pinnedFirstChosen)="canvas.setPinnedFirst($event)"
+    />
+  }
   <!-- Forced open by a selection, and it refuses to fold while one is on: a filter
        nobody can see is a filter nobody can undo. -->
   <button
