@@ -1,0 +1,64 @@
+<app-dialog [layer]="'app'" labelledBy="save-as-note-title" (closed)="closed.emit()">
+  <form class="form" data-testid="save-as-note" (submit)="save($event)">
+    <h2 id="save-as-note-title" class="title">{{ 'tools.saveAsNote.title' | transloco }}</h2>
+    <p class="what" data-testid="save-as-note-what">
+      {{ 'tools.saveAsNote.what' | transloco: { language: languageLabel() } }}
+    </p>
+
+    <label class="field">
+      <span class="label">{{ 'tools.saveAsNote.noteTitle' | transloco }}</span>
+      <input
+        #titleField
+        type="text"
+        class="input"
+        data-testid="save-as-note-title"
+        [value]="title()"
+        (input)="onTitle($event)"
+      />
+    </label>
+
+    <div class="field">
+      <span class="label">{{ 'tools.saveAsNote.space' | transloco }}</span>
+      <app-choice-menu
+        kind="save-as-note-space"
+        [label]="'tools.saveAsNote.space' | transloco"
+        [options]="spaces()"
+        [currentId]="spaceId()"
+        (chosen)="onSpace($event)"
+      />
+    </div>
+
+    <div class="field">
+      <span class="label">{{ 'tools.saveAsNote.folder' | transloco }}</span>
+      <app-choice-menu
+        kind="save-as-note-folder"
+        [label]="'tools.saveAsNote.folder' | transloco"
+        [options]="folders()"
+        [currentId]="folderId()"
+        [noneLabel]="'tools.saveAsNote.noFolder' | transloco"
+        (chosen)="onFolder($event)"
+      />
+    </div>
+
+    <label class="field">
+      <span class="label">{{ 'tools.saveAsNote.tags' | transloco }}</span>
+      <input
+        type="text"
+        class="input"
+        data-testid="save-as-note-tags"
+        [placeholder]="'tools.saveAsNote.tagsPlaceholder' | transloco"
+        [value]="tags()"
+        (input)="onTags($event)"
+      />
+    </label>
+
+    <div class="actions">
+      <button type="button" class="action" data-testid="save-as-note-cancel" (click)="closed.emit()">
+        {{ 'placeholders.cancel' | transloco }}
+      </button>
+      <button type="submit" class="action primary" data-testid="save-as-note-submit" [disabled]="!canSave()">
+        {{ 'tools.saveAsNote.submit' | transloco }}
+      </button>
+    </div>
+  </form>
+</app-dialog>

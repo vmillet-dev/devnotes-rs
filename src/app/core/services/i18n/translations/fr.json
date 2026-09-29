@@ -980,7 +980,8 @@
     "clear": "Vider",
     "promise": {
       "title": "Tout reste sur cette machine",
-      "offline": "Aucun outil n’appelle le réseau. Ce que vous collez ne quitte pas l’application."
+      "offline": "Aucun outil n’appelle le réseau. Ce que vous collez ne quitte pas l’application.",
+      "keep": "Chaque outil propose « Enregistrer comme note » : le résultat rejoint un espace, avec ses tags."
     },
     "categories": {
       "text": "Texte",
@@ -1081,6 +1082,20 @@
       "moreLines": "{count, plural, one {… et # ligne de plus} other {… et # lignes de plus}}",
       "empty": "Le texte corrigé s’affiche ici.",
       "noteTitle": "Texte aux fins de ligne corrigées"
+    },
+    "saved": "Note « {{title}} » enregistrée dans {{place}}.",
+    "saveAsNote": {
+      "open": "Enregistrer comme note",
+      "nothing": "L’outil n’a encore rien calculé à garder.",
+      "title": "Enregistrer comme note",
+      "what": "Un snippet {{language}}, avec ce que l’outil a calculé — jamais ce qui y a été tapé.",
+      "noteTitle": "Titre",
+      "space": "Espace",
+      "folder": "Dossier",
+      "noFolder": "Aucun dossier",
+      "tags": "Tags",
+      "tagsPlaceholder": "api, webhook",
+      "submit": "Enregistrer"
     }
   }
 }

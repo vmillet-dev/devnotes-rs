@@ -633,6 +633,14 @@ reads. It folds case and accents, as `view::fold` does.
 nothing typed into them. Ctrl+Shift+T opens the home on its search from any area — the home
 takes `ToolsStore.searchWanted` whether it already existed or not.
 
+**"Enregistrer comme note" belongs to the frame**: one dialog for every tool
+(`tools/frame/save-as-note/`). It asks for a title (the tool proposes one, as a
+`TranslationRef`), a space and a folder (those open in the notes by default) and tags; the kind
+and the language are the tool's own. It takes the result as it stood on the click. `ToolNotes`
+creates the note through `NotesRepository` like any other, with "Outils / <tool>" as its source,
+bumps `NotesRevision` for the canvas behind, and `StatusNotifier` says where it went. The HTTP
+client will open the same dialog, which then rises to the two areas' common ancestor.
+
 **In Rust, a tool is a module of `tools/`** (`text`, `url_parts`, …): pure functions and
 their types, tested in place, no Tauri. `tools.rs` holds the commands, three lines each
 through `off_thread` — no lock, but never on the window's thread. One command per tool rather

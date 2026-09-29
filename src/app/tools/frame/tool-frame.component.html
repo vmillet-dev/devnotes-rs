@@ -19,8 +19,22 @@
   <button type="button" class="action" data-testid="tool-clear" (click)="clear()">
     {{ 'tools.clear' | transloco }}
   </button>
+  <button
+    type="button"
+    class="action primary"
+    data-testid="tool-save-as-note"
+    [attr.aria-disabled]="result() === null"
+    [attr.title]="result() === null ? ('tools.saveAsNote.nothing' | transloco) : null"
+    (click)="saveAsNote()"
+  >
+    {{ 'tools.saveAsNote.open' | transloco }}
+  </button>
 </header>
 
 <div class="body" data-testid="tool-body" [attr.data-tool]="id">
   <ng-container #host />
 </div>
+
+@if (saving(); as result) {
+  <app-save-as-note-dialog [result]="result" [toolId]="id" (closed)="saving.set(null)" />
+}
