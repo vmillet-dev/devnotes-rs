@@ -1,0 +1,127 @@
+<div class="columns">
+  <section class="column" aria-labelledby="base64-input-title">
+    <div class="section-head">
+      <h2 id="base64-input-title" class="section-title">{{ 'tools.input' | transloco }}</h2>
+      <app-segmented-choice
+        kind="base64-direction"
+        [label]="'tools.base64.direction' | transloco"
+        [segments]="directions"
+        [currentId]="direction()"
+        (chosen)="choose('direction', $event)"
+      />
+    </div>
+
+    @if (direction() === 'encode') {
+      <app-segmented-choice
+        kind="base64-source"
+        [label]="'tools.base64.source' | transloco"
+        [segments]="sources"
+        [currentId]="source()"
+        (chosen)="choose('source', $event)"
+      />
+    }
+
+    @if (direction() === 'encode' && source() === 'file') {
+      <div class="file">
+        <button type="button" class="pick" data-testid="base64-pick-file" (click)="pickFile()">
+          {{ 'tools.base64.pickFile' | transloco }}
+        </button>
+        @if (encodedFile.value(); as file) {
+          @if (file.kind === 'encoded') {
+            <p class="note" data-testid="base64-file">
+              {{ 'tools.base64.fileRead' | transloco: { name: file.name, count: file.bytes } }}
+            </p>
+          } @else {
+            <p class="problem" role="status" data-testid="base64-file-problem">
+              {{ 'tools.files.' + file.problem | transloco }}
+            </p>
+          }
+        } @else {
+          <p class="note">{{ 'tools.base64.fileHint' | transloco }}</p>
+        }
+      </div>
+    } @else {
+      <label class="field">
+        <span class="visually-hidden">{{ 'tools.base64.inputLabel' | transloco }}</span>
+        <textarea
+          class="text"
+          data-testid="base64-input"
+          rows="8"
+          spellcheck="false"
+          [value]="text()"
+          [placeholder]="
+            (direction() === 'encode' ? 'tools.base64.encodePlaceholder' : 'tools.base64.decodePlaceholder')
+              | transloco
+          "
+          (input)="onInput($event)"
+        ></textarea>
+      </label>
+    }
+
+    <div class="options">
+      <app-segmented-choice
+        kind="base64-alphabet"
+        [label]="'tools.base64.alphabet' | transloco"
+        [segments]="alphabets"
+        [currentId]="alphabet()"
+        (chosen)="choose('alphabet', $event)"
+      />
+      @if (direction() === 'encode') {
+        <label class="check">
+          <input
+            type="checkbox"
+            data-testid="base64-padded"
+            [checked]="padded()"
+            (change)="onPadded($event)"
+          />
+          {{ 'tools.base64.padded' | transloco }}
+        </label>
+      }
+    </div>
+  </section>
+
+  <section class="column" aria-labelledby="base64-output-title">
+    <div class="section-head">
+      <h2 id="base64-output-title" class="section-title">{{ 'tools.result' | transloco }}</h2>
+      @if (direction() === 'encode' && encoded(); as encoded) {
+        <app-copy-value [value]="encoded" what="Base64" />
+      }
+      @if (direction() === 'decode' && decodedText(); as text) {
+        <app-copy-value [value]="text" [what]="'tools.result' | transloco" />
+      }
+    </div>
+
+    @if (direction() === 'encode') {
+      @if (encoded()) {
+        <pre class="output" data-testid="base64-output">{{ shown() }}</pre>
+      } @else {
+        <p class="note">{{ 'tools.base64.encodeEmpty' | transloco }}</p>
+      }
+    } @else {
+      @if (decodedText() !== null) {
+        <pre class="output" data-testid="base64-output">{{ decodedText() }}</pre>
+      } @else if (decodedBinary(); as binary) {
+        <p class="note" data-testid="base64-binary">
+          {{ 'tools.base64.binary' | transloco: { count: binary.bytes } }}
+        </p>
+        <pre class="output hex">{{ binary.preview }}</pre>
+        <button type="button" class="pick" data-testid="base64-save-file" (click)="saveAsFile()">
+          {{ 'tools.base64.saveFile' | transloco }}
+        </button>
+      } @else if (decodingProblem(); as invalid) {
+        <p class="problem" role="status" data-testid="base64-problem">
+          @if (invalid.character !== null && invalid.at !== null) {
+            {{
+              'tools.base64.problems.' + invalid.problem
+                | transloco: { character: invalid.character, at: invalid.at + 1 }
+            }}
+          } @else {
+            {{ 'tools.base64.problems.length' | transloco }}
+          }
+        </p>
+      } @else {
+        <p class="note">{{ 'tools.base64.decodeEmpty' | transloco }}</p>
+      }
+    }
+  </section>
+</div>

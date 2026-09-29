@@ -32,6 +32,11 @@ export class FileDialogService {
     return this.pick({ multiple: false });
   }
 
+  /** Any file, for a tool that reads it where it lies. */
+  async pickFile(): Promise<string | null> {
+    return this.pick({ multiple: false });
+  }
+
   async chooseBundleDestination(defaultPath: string): Promise<string | null> {
     return this.destination({ defaultPath, filters: [SAVE_FILTER] });
   }

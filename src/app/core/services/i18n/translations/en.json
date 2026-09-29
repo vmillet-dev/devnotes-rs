@@ -1096,6 +1096,71 @@
       "tags": "Tags",
       "tagsPlaceholder": "api, webhook",
       "submit": "Save"
+    },
+    "files": {
+      "notFound": "This file cannot be found.",
+      "tooLarge": "This file is over 10 MB: the tool does not show it.",
+      "unreadable": "This file cannot be read.",
+      "unwritable": "The file could not be written there."
+    },
+    "url-codec": {
+      "name": "URL",
+      "description": "Encode, decode, component by component",
+      "scope": "Scope",
+      "scopes": {
+        "component": "Component",
+        "whole": "Whole URL"
+      },
+      "scopeHints": {
+        "component": "A query or path value: / ? & = are escaped.",
+        "whole": "A complete URL: its structure stays readable."
+      },
+      "decoded": "Text",
+      "encoded": "Encoded",
+      "decodedPlaceholder": "café crème & croissants",
+      "encodedPlaceholder": "caf%C3%A9%20cr%C3%A8me",
+      "malformed": "Incomplete escape at character {{at}}: a % expects two hexadecimal digits.",
+      "notUtf8": "These bytes are no UTF-8 text.",
+      "noteEncoded": "Text encoded for a URL",
+      "noteDecoded": "Decoded URL"
+    },
+    "base64": {
+      "name": "Base64",
+      "description": "Text or file, URL variant",
+      "direction": "Direction",
+      "directions": {
+        "encode": "Encode",
+        "decode": "Decode"
+      },
+      "source": "Source",
+      "sources": {
+        "text": "Text",
+        "file": "File"
+      },
+      "alphabet": "Alphabet",
+      "alphabets": {
+        "standard": "Standard",
+        "urlSafe": "URL (- _)"
+      },
+      "padded": "With = padding",
+      "inputLabel": "Text to encode or decode",
+      "encodePlaceholder": "The text to encode",
+      "decodePlaceholder": "SGVsbG8sIHdvcmxkIQ==",
+      "pickFile": "Choose a file…",
+      "fileHint": "The file is read where it lies: its content never crosses the interface.",
+      "fileRead": "{{name}} · {count, plural, one {# byte} other {# bytes}}",
+      "encodeEmpty": "The Base64 shows here.",
+      "decodeEmpty": "The decoded text shows here.",
+      "binary": "{count, plural, one {# byte} other {# bytes}} that are no text. Here they are in hexadecimal:",
+      "saveFile": "Save as a file…",
+      "saved": "{count, plural, one {File saved: # byte.} other {File saved: # bytes.}}",
+      "problems": {
+        "character": "“{{character}}” is not in the alphabet, at character {{at}}.",
+        "truncated": "The text looks cut: “{{character}}” at character {{at}} cannot end a Base64.",
+        "length": "Characters are missing: a Base64 cannot end this way."
+      },
+      "noteEncoded": "Text in Base64",
+      "noteDecoded": "Decoded Base64"
     }
   }
 }

@@ -1,4 +1,7 @@
 import { $, $$, browser, expect } from '@wdio/globals';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import {
@@ -194,6 +197,70 @@ describe('The tools', () => {
         (tools) => tools.slice(0, 3).join() === 'line-breaks,url-parser,slug',
         'the recent tools',
       );
+    });
+  });
+
+  describe('the encoders', () => {
+    it('encodes a URL component as it is typed, and decodes the other way', async () => {
+      await openTool('url-codec');
+
+      await setField(testid('url-codec-decoded'), 'café crème & co');
+      await eventually(
+        () => $(testid('url-codec-encoded')).getValue(),
+        (value) => value === 'caf%C3%A9%20cr%C3%A8me%20%26%20co',
+        'the encoding',
+      );
+
+      await setField(testid('url-codec-encoded'), '50%2');
+      await $(testid('url-codec-problem')).waitForDisplayed({ timeout: 5_000 });
+    });
+
+    it('writes Base64 in either alphabet, padded or not', async () => {
+      await openTool('base64');
+      await setField(testid('base64-input'), 'été?>');
+      await eventually(
+        () => $(testid('base64-output')).getText(),
+        (text) => text === 'w6l0w6k/Pg==',
+        'standard',
+      );
+
+      await $(`${testid('segmented-base64-alphabet')} [data-segment-id="urlSafe"]`).click();
+      await $(testid('base64-padded')).click();
+
+      await eventually(
+        () => $(testid('base64-output')).getText(),
+        (text) => text === 'w6l0w6k_Pg',
+        'URL-safe',
+      );
+    });
+
+    it('names the character a decoding stops at', async () => {
+      await $(`${testid('segmented-base64-direction')} [data-segment-id="decode"]`).click();
+      await setField(testid('base64-input'), 'QUJD#');
+
+      await $(testid('base64-problem')).waitForDisplayed({ timeout: 5_000 });
+      expect(await $(testid('base64-problem')).getText()).toContain('#');
+      await $(testid('tool-clear')).click();
+      await $(`${testid('segmented-base64-direction')} [data-segment-id="encode"]`).click();
+    });
+
+    it('reads a file where it lies, by its path', async () => {
+      const folder = mkdtempSync(join(tmpdir(), 'devnotes-e2e-'));
+      const path = join(folder, 'logo.bin');
+      writeFileSync(path, Buffer.from([0, 255, 16]));
+
+      expect(await bridge.encodeBase64File(path, { alphabet: 'standard', padded: true })).toEqual({
+        kind: 'encoded',
+        name: 'logo.bin',
+        bytes: 3,
+        text: 'AP8Q',
+      });
+      expect(
+        await bridge.encodeBase64File(join(folder, 'absent.bin'), { alphabet: 'standard', padded: true }),
+      ).toEqual({
+        kind: 'failed',
+        problem: 'notFound',
+      });
     });
   });
 
