@@ -625,6 +625,11 @@ answer on screen until the next lands; `undefined` asks nothing. A tool's own fa
 that does not parse, is part of its answer and drawn in place; `liveResult` reports only the
 unexpected.
 
+⚠️ Since the previous answer stays on screen, whatever describes it — a label, a note's language
+or title, a direction — reads `answered()`, the request that answer was computed from, and never
+the inputs as they stand: for a debounce and a round trip they already describe the next one, and
+a plain digest would read "HMAC-SHA256" — on screen, in a copy, in a note.
+
 **Searching the catalogue runs on the front**, a deliberate exception to "data processing
 belongs to Rust": it matches the translated names and lines, and Rust knows no string the user
 reads. It folds case and accents, as `view::fold` does.

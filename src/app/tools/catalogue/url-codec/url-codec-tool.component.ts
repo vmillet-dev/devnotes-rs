@@ -35,20 +35,25 @@ export class UrlCodecToolComponent implements Tool {
 
   protected readonly scopes = SCOPES;
 
+  private readonly direction = computed(() =>
+    this.side() === 'decoded' ? ('encode' as const) : ('decode' as const),
+  );
+
   protected readonly answer = liveResult(
     () =>
       this.text() === ''
         ? undefined
-        : {
-            text: this.text(),
-            direction: this.side() === 'decoded' ? ('encode' as const) : ('decode' as const),
-            scope: this.scope(),
-          },
+        : { text: this.text(), direction: this.direction(), scope: this.scope() },
     (request) => this.repository.urlCodec(request),
   );
 
+  /** An answer going the other way is not shown: typed on the other side, it is the reverse. */
+  private readonly current = computed(() =>
+    this.answer.answered()?.direction === this.direction() ? this.answer.value() : null,
+  );
+
   private readonly translated = computed(() => {
-    const answer = this.answer.value();
+    const answer = this.current();
     return answer?.kind === 'done' ? answer.text : '';
   });
 
@@ -56,7 +61,7 @@ export class UrlCodecToolComponent implements Tool {
   protected readonly encoded = computed(() => (this.side() === 'encoded' ? this.text() : this.translated()));
 
   protected readonly problem = computed(() => {
-    const answer = this.answer.value();
+    const answer = this.current();
     return answer === null || answer.kind === 'done' ? null : answer;
   });
 
@@ -64,7 +69,7 @@ export class UrlCodecToolComponent implements Tool {
     const translated = this.translated();
     if (translated === '') return null;
 
-    const encoding = this.side() === 'decoded';
+    const encoding = this.answer.answered()?.direction === 'encode';
     return {
       title: { key: encoding ? 'tools.url-codec.noteEncoded' : 'tools.url-codec.noteDecoded' },
       kind: 'snippet',

@@ -38,6 +38,19 @@ describe('UrlCodecToolComponent', () => {
     expect(value(harness, 'url-codec-decoded')).toBe('café');
   });
 
+  it('never shows the last translation on the side now being typed from', async () => {
+    const harness = await renderTool(UrlCodecToolComponent, encodes);
+    await harness.type('url-codec-decoded', 'café', 'url_codec');
+
+    const encoded = harness.element<HTMLTextAreaElement>('[data-testid="url-codec-encoded"]');
+    encoded.value = 'th%C3%A9';
+    encoded.dispatchEvent(new Event('input'));
+    await harness.settle();
+
+    expect(value(harness, 'url-codec-decoded')).toBe('');
+    expect(harness.tool.result()).toBeNull();
+  });
+
   it('says where an escape breaks, counting from one', async () => {
     const harness = await renderTool(UrlCodecToolComponent, (tools) => {
       tools.urlCodecAnswer = { kind: 'malformedEscape', at: 2 };
