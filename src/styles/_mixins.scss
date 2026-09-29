@@ -532,3 +532,27 @@
     accent-color: var(--amber-fill);
   }
 }
+
+// A number a tool asks for: its own field, without the spinner the browser draws over the digits.
+@mixin tool-number($width: 72px) {
+  @include text-field;
+  @include surface(var(--bg-1), 7px, var(--line));
+  @include focus-ring;
+  width: $width;
+  height: 30px;
+  padding: 0 8px;
+  font-family: var(--font-mono), monospace;
+  font-size: 12.5px;
+  color: var(--text-0);
+  appearance: textfield;
+
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+
+  &::placeholder {
+    color: var(--text-2);
+  }
+}
