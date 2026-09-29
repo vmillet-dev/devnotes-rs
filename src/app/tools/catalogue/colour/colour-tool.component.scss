@@ -1,0 +1,146 @@
+@use 'mixins' as *;
+
+.columns {
+  @include tool-columns;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.column {
+  @include tool-column;
+  gap: 10px;
+}
+
+.section-title {
+  @include tool-section-title;
+}
+
+.entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.picker {
+  @include focus-ring;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-1);
+  cursor: pointer;
+}
+
+.text {
+  @include text-field;
+  @include surface(var(--bg-1), 8px, var(--line));
+  @include focus-ring;
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  padding: 0 12px;
+  font-family: var(--font-mono), monospace;
+  font-size: 12.5px;
+  color: var(--text-0);
+
+  &::placeholder {
+    color: var(--text-2);
+  }
+}
+
+// A checkerboard under the paint, so a colour with alpha shows as one.
+.swatch {
+  height: 72px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: repeating-conic-gradient(var(--bg-3) 0 25%, var(--bg-1) 0 50%) 0 0 / 16px 16px;
+}
+
+.paint {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.gamut {
+  margin: 0;
+  font-size: 12px;
+  color: var(--amber-text);
+}
+
+.problem {
+  @include tool-problem;
+}
+
+.sample {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.sample-large {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.sample-normal {
+  font-size: 13px;
+}
+
+.ratio {
+  margin: 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-0);
+}
+
+.verdicts {
+  @include surface(var(--bg-1), 10px);
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  font-size: 12px;
+
+  th,
+  td {
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--line-soft);
+    text-align: left;
+    color: var(--text-1);
+  }
+
+  thead th {
+    font-weight: 600;
+    color: var(--text-2);
+  }
+
+  tbody th {
+    font-family: var(--font-mono), monospace;
+    color: var(--text-0);
+  }
+
+  tr:last-child th,
+  tr:last-child td {
+    border-bottom: none;
+  }
+
+  td {
+    color: var(--red);
+  }
+
+  td.pass {
+    color: var(--green);
+  }
+}
+
+.note {
+  @include tool-note;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+}

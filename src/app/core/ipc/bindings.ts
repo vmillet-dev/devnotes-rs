@@ -39,6 +39,7 @@ export const commands = {
 	generatePasswords: (request: PasswordRequest) => typedError<PasswordAnswer, AppError>(__TAURI_INVOKE("generate_passwords", { request })),
 	generateUuids: (request: UuidRequest) => typedError<string[], AppError>(__TAURI_INVOKE("generate_uuids", { request })),
 	inspectUuid: (text: string) => typedError<UuidInspection, AppError>(__TAURI_INVOKE("inspect_uuid", { text })),
+	describeColour: (request: ColourRequest) => typedError<ColourAnswer, AppError>(__TAURI_INVOKE("describe_colour", { request })),
 	/**
 	 *  The first launch: the space, its folders and the notes in one transaction, since a space
 	 *  standing alone reads as "already seeded" for good. The strings stay on the front end, with
@@ -461,6 +462,30 @@ export type ChecklistItem = {
 
 export type CodecDirection = "encode" | "decode";
 
+export type ColourAnswer = {
+	colour: ColourReading,
+	against: ColourReading,
+	contrast: Contrast | null,
+};
+
+export type ColourReading = { kind: "read"; given: Notation; notations: Notations; 
+/**  What the window paints: in sRGB, always. */
+swatch: string; 
+/**  An OKLCH colour sRGB cannot show, brought inside at the same lightness and hue. */
+outOfGamut: boolean } | { kind: "invalid" } | { kind: "empty" };
+
+export type ColourRequest = {
+	colour: string,
+	/**  The background the contrast is measured on; empty for none. */
+	against: string,
+};
+
+export type Contrast = {
+	ratio: number | null,
+	aa: TextSizes,
+	aaa: TextSizes,
+};
+
 /**  One line of a kept body, compared with the text restoring it would replace. */
 export type DiffLine = 
 /**  In both: restoring leaves it where it is. */
@@ -774,6 +799,15 @@ export type LineBreaksRequest = {
 };
 
 export type LineEnding = "lf" | "crlf" | "cr";
+
+export type Notation = "hex" | "rgb" | "hsl" | "oklch";
+
+export type Notations = {
+	hex: string,
+	rgb: string,
+	hsl: string,
+	oklch: string,
+};
 
 export type Note = {
 	id: string,
@@ -1119,6 +1153,11 @@ export type TagUsage = {
 };
 
 export type TextCase = "camel" | "pascal" | "snake" | "kebab" | "constant" | "title" | "sentence";
+
+export type TextSizes = {
+	normal: boolean,
+	large: boolean,
+};
 
 export type TrashedNote = {
 	deletedAt: string,

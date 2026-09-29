@@ -1,0 +1,102 @@
+<div class="columns">
+  <section class="column" aria-labelledby="colour-title">
+    <h2 id="colour-title" class="section-title">{{ 'tools.colour.colour' | transloco }}</h2>
+    <div class="entry">
+      <input
+        type="color"
+        class="picker"
+        [attr.aria-label]="'tools.colour.pick' | transloco"
+        [value]="pickerValue(first())"
+        data-testid="colour-picker"
+        (input)="onPicked('colour', $event)"
+      />
+      <input
+        type="text"
+        class="text"
+        data-testid="colour-input"
+        spellcheck="false"
+        [attr.aria-label]="'tools.colour.colour' | transloco"
+        [value]="colour()"
+        [placeholder]="'tools.colour.placeholder' | transloco"
+        (input)="onText('colour', $event)"
+      />
+    </div>
+    @if (invalid()) {
+      <p class="problem" role="status" data-testid="colour-invalid">
+        {{ 'tools.colour.invalid' | transloco }}
+      </p>
+    }
+
+    @if (first(); as first) {
+      <div class="swatch" data-testid="colour-swatch" [attr.data-swatch]="first.swatch">
+        <span class="paint" [style.background]="first.swatch"></span>
+      </div>
+      @if (first.outOfGamut) {
+        <p class="gamut" data-testid="colour-gamut">{{ 'tools.colour.outOfGamut' | transloco }}</p>
+      }
+      @for (row of rows; track row.id) {
+        <app-output-row [name]="row.name" [value]="first.notations[row.id]" />
+      }
+    }
+  </section>
+
+  <section class="column" aria-labelledby="contrast-title">
+    <h2 id="contrast-title" class="section-title">{{ 'tools.colour.contrast' | transloco }}</h2>
+    <div class="entry">
+      <input
+        type="color"
+        class="picker"
+        [attr.aria-label]="'tools.colour.pickBackground' | transloco"
+        [value]="pickerValue(second())"
+        data-testid="colour-against-picker"
+        (input)="onPicked('against', $event)"
+      />
+      <input
+        type="text"
+        class="text"
+        data-testid="colour-against"
+        spellcheck="false"
+        [attr.aria-label]="'tools.colour.background' | transloco"
+        [value]="against()"
+        [placeholder]="'tools.colour.backgroundPlaceholder' | transloco"
+        (input)="onText('against', $event)"
+      />
+    </div>
+    @if (againstInvalid()) {
+      <p class="problem" role="status">{{ 'tools.colour.invalid' | transloco }}</p>
+    }
+
+    @if (contrast(); as contrast) {
+      <div class="sample" [style.background]="second()?.swatch" aria-hidden="true">
+        <span class="sample-large" [style.color]="first()?.swatch">Aa</span>
+        <span class="sample-normal" [style.color]="first()?.swatch">{{
+          'tools.colour.sampleText' | transloco
+        }}</span>
+      </div>
+      <p class="ratio" data-testid="colour-ratio">{{ ratio() }}:1</p>
+      <table class="verdicts" data-testid="colour-verdicts">
+        <thead>
+          <tr>
+            <th scope="col"></th>
+            <th scope="col">{{ 'tools.colour.normalText' | transloco }}</th>
+            <th scope="col">{{ 'tools.colour.largeText' | transloco }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (level of ['aa', 'aaa']; track level) {
+            @let sizes = level === 'aa' ? contrast.aa : contrast.aaa;
+            <tr>
+              <th scope="row">{{ level.toUpperCase() }}</th>
+              @for (passes of [sizes.normal, sizes.large]; track $index) {
+                <td [class.pass]="passes" [attr.data-level]="level">
+                  {{ (passes ? 'tools.colour.pass' : 'tools.colour.fail') | transloco }}
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+      <p class="note">{{ 'tools.colour.wcag' | transloco }}</p>
+    }
+  </section>
+</div>

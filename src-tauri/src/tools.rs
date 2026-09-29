@@ -2,6 +2,7 @@
 //! A tool's own failure — a line that does not parse — is part of its answer; `AppError` is left
 //! for the unexpected. No lock and no store: nothing here reads the library.
 
+pub mod colour;
 pub mod encoding;
 pub(crate) mod files;
 pub mod hash;
@@ -121,4 +122,12 @@ pub async fn generate_uuids(request: random::UuidRequest) -> Result<Vec<String>,
 #[specta::specta]
 pub async fn inspect_uuid(text: String) -> Result<random::UuidInspection, AppError> {
     off_thread(move || random::inspect_uuid(&text)).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn describe_colour(
+    request: colour::ColourRequest,
+) -> Result<colour::ColourAnswer, AppError> {
+    off_thread(move || colour::describe(&request)).await
 }

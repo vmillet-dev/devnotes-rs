@@ -60,4 +60,10 @@ export const TOOLS: readonly ToolDefinition[] = [
     keywords: ['base64', 'b64', 'jwt', 'data uri'],
     load: () => import('./base64/base64-tool.component').then((m) => m.Base64ToolComponent),
   },
+  {
+    id: 'colour',
+    category: 'encode',
+    keywords: ['color', 'hex', 'rgb', 'hsl', 'oklch', 'contrast', 'wcag'],
+    load: () => import('./colour/colour-tool.component').then((m) => m.ColourToolComponent),
+  },
 ];

@@ -5,6 +5,8 @@ import {
   Base64Options,
   Base64Saved,
   CaseConversion,
+  ColourAnswer,
+  ColourRequest,
   HashAnswer,
   HashRequest,
   LineBreaksAnswer,
@@ -48,6 +50,7 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
   passwords: PasswordAnswer = { kind: 'noCharacters' };
   uuids: string[] = [];
   uuidInspection: UuidInspection = { kind: 'invalid' };
+  colour: ColourAnswer = { colour: { kind: 'empty' }, against: { kind: 'empty' }, contrast: null };
 
   convertCase(text: string): Promise<CaseConversion[]> {
     return this.answer('convert_case', text, this.cases);
@@ -99,6 +102,10 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
 
   inspectUuid(text: string): Promise<UuidInspection> {
     return this.answer('inspect_uuid', text, this.uuidInspection);
+  }
+
+  describeColour(request: ColourRequest): Promise<ColourAnswer> {
+    return this.answer('describe_colour', request, this.colour);
   }
 
   requestsOf(command: string): unknown[] {
