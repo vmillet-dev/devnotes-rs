@@ -5,6 +5,8 @@ import {
   Base64Options,
   Base64Saved,
   CaseConversion,
+  HashAnswer,
+  HashRequest,
   LineBreaksAnswer,
   LineBreaksRequest,
   SlugRequest,
@@ -32,6 +34,13 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
   base64File: Base64FileAnswer = { kind: 'failed', problem: 'notFound' };
   base64Decoded: Base64Decoded = { kind: 'text', text: '', bytes: 0 };
   base64Saved: Base64Saved = { kind: 'saved', bytes: 0 };
+  hashAnswer: HashAnswer = {
+    kind: 'hashed',
+    bytes: 0,
+    endsWithNewline: false,
+    digests: [],
+    recognised: null,
+  };
 
   convertCase(text: string): Promise<CaseConversion[]> {
     return this.answer('convert_case', text, this.cases);
@@ -67,6 +76,10 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
 
   saveBase64(text: string, options: Base64Options, path: string): Promise<Base64Saved> {
     return this.answer('save_base64', { text, options, path }, this.base64Saved);
+  }
+
+  hash(request: HashRequest): Promise<HashAnswer> {
+    return this.answer('hash_input', request, this.hashAnswer);
   }
 
   requestsOf(command: string): unknown[] {

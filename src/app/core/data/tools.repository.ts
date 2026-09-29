@@ -7,6 +7,8 @@ import {
   Base64Options,
   Base64Saved,
   CaseConversion,
+  HashAnswer,
+  HashRequest,
   LineBreaksAnswer,
   LineBreaksRequest,
   SlugRequest,
@@ -49,6 +51,11 @@ export class ToolsRepository {
 
   async decodeBase64(text: string, options: Base64Options): Promise<Base64Decoded> {
     return unwrap('decode_base64', await commands.decodeBase64(text, options));
+  }
+
+  /** A file by its path, read in Rust a block at a time; the HMAC key is zeroed there. */
+  async hash(request: HashRequest): Promise<HashAnswer> {
+    return unwrap('hash_input', await commands.hashInput(request));
   }
 
   async saveBase64(text: string, options: Base64Options, path: string): Promise<Base64Saved> {

@@ -652,6 +652,11 @@ lie and they never cross the bridge. What a tool sends back of a file is refused
 not an `AppError`. Bytes that are no text — a Base64 decoding — are written to a file the user
 chooses, never to a note.
 
+⚠️ **The HMAC key never outlives the tool**: it is a plain `signal` of the component, never a
+`toolState`, and Rust zeroes its copy once the digests are computed. The switch alone is
+remembered. A file is hashed a block at a time, so its size has no limit, and a pasted
+signature is compared with every algorithm in both encodings, whichever are shown.
+
 **Adding a tool**, the whole of it:
 
 1. `src-tauri/src/tools/<module>.rs`: the function, its request and answer types, its tests.

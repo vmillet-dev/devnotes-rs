@@ -31,6 +31,12 @@ export const TOOLS: readonly ToolDefinition[] = [
     load: () => import('./line-breaks/line-breaks-tool.component').then((m) => m.LineBreaksToolComponent),
   },
   {
+    id: 'hash',
+    category: 'crypto',
+    keywords: ['md5', 'sha1', 'sha256', 'sha512', 'sha3', 'hmac', 'digest', 'checksum', 'webhook'],
+    load: () => import('./hash/hash-tool.component').then((m) => m.HashToolComponent),
+  },
+  {
     id: 'url-codec',
     category: 'encode',
     keywords: ['url', 'percent', 'encodeURIComponent', 'escape'],

@@ -264,6 +264,44 @@ describe('The tools', () => {
     });
   });
 
+  describe('the crypto tools', () => {
+    const FOX_HMAC_SHA256 = 'f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8';
+
+    it('keys a digest with a masked key, as the reference says', async () => {
+      await openTool('hash');
+      await setField(testid('hash-input'), 'The quick brown fox jumps over the lazy dog');
+      await $(testid('hash-hmac')).click();
+      await setField(testid('hash-key'), 'key');
+
+      expect(await $(testid('hash-key')).getAttribute('type')).toBe('password');
+      await eventually(
+        () => $(`${testid('output-row')}[data-name="HMAC-SHA256"] ${testid('output-value')}`).getText(),
+        (value) => value === FOX_HMAC_SHA256,
+        'the HMAC',
+      );
+    });
+
+    it('recognises a pasted signature, whatever its case', async () => {
+      await setField(testid('hash-expected'), FOX_HMAC_SHA256.toUpperCase());
+
+      await eventually(
+        () => $(testid('hash-verdict')).getText(),
+        (verdict) => verdict.includes('HMAC-SHA256') && verdict.includes('hex'),
+        'the verdict',
+      );
+    });
+
+    it('never gives the key back after a trip away', async () => {
+      await $(testid('tool-back')).click();
+      await entry('hash').click();
+
+      await $(testid('hash-key')).waitForDisplayed({ timeout: 5_000 });
+      expect(await $(testid('hash-key')).getValue()).toBe('');
+      expect(await $(testid('hash-input')).getValue()).toBe('The quick brown fox jumps over the lazy dog');
+      await $(testid('hash-hmac')).click();
+    });
+  });
+
   describe('a result kept as a note', () => {
     const inSpace = async () =>
       (await bridge.queryNotes(query({ spaceId }))).sections.flatMap((section) => section.notes);

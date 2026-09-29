@@ -1,0 +1,163 @@
+<div class="columns">
+  <section class="column" aria-labelledby="hash-input-title">
+    <div class="section-head">
+      <h2 id="hash-input-title" class="section-title">{{ 'tools.input' | transloco }}</h2>
+      <app-segmented-choice
+        kind="hash-source"
+        [label]="'tools.hash.source' | transloco"
+        [segments]="sources"
+        [currentId]="source()"
+        (chosen)="onSource($event)"
+      />
+    </div>
+
+    @if (source() === 'text') {
+      <label class="field">
+        <span class="visually-hidden">{{ 'tools.hash.inputLabel' | transloco }}</span>
+        <textarea
+          class="text"
+          data-testid="hash-input"
+          rows="7"
+          spellcheck="false"
+          [value]="text()"
+          [placeholder]="'tools.hash.placeholder' | transloco"
+          (input)="onText($event)"
+        ></textarea>
+      </label>
+    } @else {
+      <div class="file">
+        <button type="button" class="pick" data-testid="hash-pick-file" (click)="pickFile()">
+          {{ 'tools.base64.pickFile' | transloco }}
+        </button>
+        @if (path(); as path) {
+          <span class="note">{{ fileName(path) }}</span>
+        } @else {
+          <span class="note">{{ 'tools.hash.fileHint' | transloco }}</span>
+        }
+      </div>
+    }
+
+    @if (hashed(); as hashed) {
+      <p class="note" data-testid="hash-measure">
+        {{ 'tools.hash.bytes' | transloco: { count: hashed.bytes } }} ·
+        @if (source() === 'text') {
+          UTF-8 ·
+        }
+        {{ (hashed.endsWithNewline ? 'tools.hash.withNewline' : 'tools.hash.withoutNewline') | transloco }}
+      </p>
+    }
+    @if (problem(); as problem) {
+      <p class="problem" role="status" data-testid="hash-problem">
+        {{ 'tools.files.' + problem | transloco }}
+      </p>
+    }
+
+    <div class="card">
+      <div class="card-head">
+        <label class="card-title" for="hash-hmac">HMAC</label>
+        <input
+          id="hash-hmac"
+          class="switch"
+          type="checkbox"
+          role="switch"
+          data-testid="hash-hmac"
+          [checked]="hmac()"
+          (change)="onHmac($event)"
+        />
+      </div>
+      @if (hmac()) {
+        <div class="key">
+          <label class="key-label" for="hash-key">{{ 'tools.hash.key' | transloco }}</label>
+          <input
+            id="hash-key"
+            class="key-field"
+            data-testid="hash-key"
+            autocomplete="off"
+            spellcheck="false"
+            [type]="keyShown() ? 'text' : 'password'"
+            [value]="key()"
+            (input)="onKey($event)"
+          />
+          <button
+            type="button"
+            class="reveal"
+            data-testid="hash-key-reveal"
+            [attr.aria-pressed]="keyShown()"
+            [attr.aria-label]="'tools.hash.showKey' | transloco"
+            [attr.title]="'tools.hash.showKey' | transloco"
+            (click)="keyShown.set(!keyShown())"
+          >
+            <app-icon [name]="keyShown() ? 'eye-off' : 'eye'" />
+          </button>
+        </div>
+      }
+      <p class="note">{{ 'tools.hash.keyNeverKept' | transloco }}</p>
+    </div>
+
+    <div class="verify">
+      <label class="verify-title" for="hash-expected">{{ 'tools.hash.verify' | transloco }}</label>
+      <input
+        id="hash-expected"
+        class="expected"
+        data-testid="hash-expected"
+        spellcheck="false"
+        [class.matched]="recognised() !== null"
+        [value]="expected()"
+        [placeholder]="'tools.hash.expectedPlaceholder' | transloco"
+        (input)="onExpected($event)"
+      />
+      @if (expected().trim() !== '' && hashed()) {
+        @if (recognised(); as recognised) {
+          <p class="verdict ok" role="status" data-testid="hash-verdict">
+            <app-icon name="check" />
+            {{ 'tools.hash.matches' | transloco: { name: recognised.name, encoding: recognised.encoding } }}
+          </p>
+        } @else {
+          <p class="verdict" role="status" data-testid="hash-verdict">
+            {{ 'tools.hash.noMatch' | transloco }}
+          </p>
+        }
+      }
+    </div>
+  </section>
+
+  <section class="column" aria-labelledby="hash-output-title">
+    <div class="section-head">
+      <h2 id="hash-output-title" class="section-title">{{ 'tools.hash.algorithms' | transloco }}</h2>
+      <app-segmented-choice
+        kind="hash-encoding"
+        [label]="'tools.hash.encoding' | transloco"
+        [segments]="encodings"
+        [currentId]="encoding()"
+        (chosen)="onEncoding($event)"
+      />
+    </div>
+    <div class="pills" role="group" [attr.aria-label]="'tools.hash.algorithms' | transloco">
+      @for (algorithm of allAlgorithms; track algorithm) {
+        <button
+          type="button"
+          class="pill"
+          data-testid="hash-algorithm"
+          [attr.data-algorithm]="algorithm"
+          [attr.aria-pressed]="isChosen(algorithm)"
+          (click)="toggle(algorithm)"
+        >
+          {{ names[algorithm] }}
+        </button>
+      }
+    </div>
+    @for (digest of digests(); track digest.algorithm) {
+      <app-output-row
+        [name]="digest.name"
+        [meta]="'tools.hash.bits' | transloco: { count: digest.bits }"
+        [value]="digest.value"
+        [matched]="digest.matched"
+      />
+    } @empty {
+      <p class="note">{{ 'tools.hash.empty' | transloco }}</p>
+    }
+    @if (weakChosen()) {
+      <p class="note caveat">{{ 'tools.hash.weak' | transloco }}</p>
+    }
+  </section>
+</div>

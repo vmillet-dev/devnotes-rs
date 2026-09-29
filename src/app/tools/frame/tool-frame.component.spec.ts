@@ -26,7 +26,7 @@ describe('ToolFrameComponent', () => {
     fixture.nativeElement.querySelector(`[data-testid="${testid}"]`);
 
   it('draws the tool under its breadcrumb', () => {
-    expect(button('tool-title').textContent?.trim()).toBe('tools.hash.name');
+    expect(button('tool-title').textContent?.trim()).toBe('Hash / HMAC');
     expect(fixture.nativeElement.querySelector('[data-testid="fake-tool"]').textContent).toBe('typed');
   });
 

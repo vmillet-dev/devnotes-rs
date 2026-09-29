@@ -1161,6 +1161,38 @@
       },
       "noteEncoded": "Texte en Base64",
       "noteDecoded": "Base64 décodé"
+    },
+    "hash": {
+      "name": "Hash / HMAC",
+      "description": "MD5, SHA-1, SHA-2, SHA-3",
+      "source": "Source",
+      "sources": {
+        "text": "Texte",
+        "file": "Fichier"
+      },
+      "inputLabel": "Texte à hacher",
+      "placeholder": "Le texte dont calculer l’empreinte",
+      "fileHint": "Le fichier est lu sur place, par blocs : sa taille n’a pas de limite.",
+      "bytes": "{count, plural, one {# octet} other {# octets}}",
+      "withNewline": "avec saut de ligne final",
+      "withoutNewline": "sans saut de ligne final",
+      "key": "Clé",
+      "showKey": "Afficher la clé",
+      "keyNeverKept": "La clé n’est jamais enregistrée avec la note.",
+      "verify": "Vérifier une signature",
+      "expectedPlaceholder": "L’empreinte attendue, en hex ou en base64",
+      "matches": "Correspond à {{name}}, en {{encoding}}",
+      "noMatch": "Ne correspond à aucune empreinte de ce texte.",
+      "algorithms": "Algorithmes",
+      "encoding": "Format de sortie",
+      "encodings": {
+        "hex": "hex",
+        "base64": "base64"
+      },
+      "bits": "{{count}} bits",
+      "empty": "Choisissez un algorithme et saisissez un texte.",
+      "weak": "MD5 et SHA-1 ne protègent plus rien : l’outil les garde pour comparer des empreintes existantes.",
+      "noteTitle": "Empreintes"
     }
   }
 }
