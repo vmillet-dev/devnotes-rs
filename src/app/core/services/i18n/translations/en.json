@@ -295,7 +295,27 @@
       "syntax": "Syntax error at line {{line}}, column {{column}}: the text is unchanged.",
       "fields": "A field would not have survived formatting: the text is unchanged.",
       "failed": "Prettier could not format this text.",
-      "footer": "Prettier 3 · library settings"
+      "footer": "Prettier 3 · library settings",
+      "settings": "Format settings",
+      "scope": "for the whole library",
+      "printWidth": "Line width",
+      "indentation": "Indentation",
+      "indentations": {
+        "editor": "Editor",
+        "two": "2",
+        "four": "4",
+        "tab": "Tab"
+      },
+      "quotes": "Quotes",
+      "quotesSingle": "Single",
+      "quotesDouble": "Double",
+      "semicolons": "Semicolons",
+      "trailingCommas": "Trailing commas",
+      "formatOnSave": "Format on save",
+      "formattedTitle": "Formatted:",
+      "formattedList": "JavaScript, TypeScript, JSON, CSS, SCSS, HTML, Markdown, YAML, GraphQL.",
+      "notFormattedTitle": "Not by Prettier:",
+      "notFormattedList": "SQL, Python, Rust, Go, Java, C#, PHP, C, Shell, TOML, XML. The button is disabled there and says why."
     },
     "modifiedPrefix": "Updated",
     "noteKind": "Note",

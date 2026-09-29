@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FormatAnswer, FormatRequest } from './format.model';
 import { FormatterService, PRETTIER_ADAPTER, PrettierAdapter, PrettierWorker } from './formatter.service';
+import { PrettierSettingsStore } from './prettier-settings.store';
 
 /** jsdom has no `Worker`: this one answers what the test tells it to. */
 class FakeWorker extends EventTarget {
@@ -112,6 +113,18 @@ describe('FormatterService', () => {
         cursor: 1,
         parser: 'typescript',
         options: expect.objectContaining({ useTabs: true, tabWidth: 4 }),
+      }),
+    );
+  });
+
+  it("formats in the library's style", async () => {
+    TestBed.inject(PrettierSettingsStore).update({ printWidth: 80, quotes: 'double', indentation: 'two' });
+
+    await TestBed.inject(FormatterService).format('x', 'js', 0, '\t');
+
+    expect(run).toHaveBeenCalledWith(
+      expect.objectContaining({
+        options: expect.objectContaining({ printWidth: 80, singleQuote: false, useTabs: false, tabWidth: 2 }),
       }),
     );
   });

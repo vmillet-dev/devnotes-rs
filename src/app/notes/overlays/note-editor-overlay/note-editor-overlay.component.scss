@@ -49,45 +49,6 @@ app-dialog {
   border-color: var(--amber-dim);
 }
 
-.format-btn {
-  @include focus-ring;
-  @include tint-badge('--amber-rgb', 0.12);
-  border-color: var(--amber-dim);
-  color: var(--amber-text);
-  font-weight: 600;
-}
-
-.format-btn[aria-disabled='true'] {
-  background: none;
-  border-color: var(--line-soft);
-  color: var(--text-2);
-  font-weight: 400;
-  cursor: default;
-}
-
-.format-icon {
-  width: 14px;
-  height: 14px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-}
-
-.format-keys {
-  font-family: var(--font-mono), serif;
-  font-size: 10px;
-  font-weight: 400;
-  color: var(--text-2);
-}
-
-// The tooltip says the same: the hint is what goes when the toolbar runs short.
-@container (max-width: 960px) {
-  .format-keys {
-    display: none;
-  }
-}
-
 .icon-btn {
   @include unstyled-control;
   color: var(--text-2);

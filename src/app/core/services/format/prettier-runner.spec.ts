@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { FormatRequest, PrettierParser, prettierOptions } from './format.model';
+import { DEFAULT_PRETTIER_SETTINGS, FormatRequest, PrettierParser, prettierOptions } from './format.model';
 import { loadPlugins } from './prettier-plugins';
 import { runPrettier } from './prettier-runner';
 
 /** The real Prettier and its real plugins: the worker is the only thing left out. */
 function request(text: string, parser: PrettierParser, indent = '  '): FormatRequest {
-  return { text, cursor: 0, parser, options: prettierOptions(indent) };
+  return { text, cursor: 0, parser, options: prettierOptions(DEFAULT_PRETTIER_SETTINGS, indent) };
 }
 
 describe('runPrettier', () => {

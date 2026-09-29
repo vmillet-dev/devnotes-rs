@@ -25,6 +25,7 @@ import { NoteRevisionsStore } from '@core/state/note-revisions.store';
 import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
 import { FormatAnswer } from '@core/services/format/format.model';
 import { FormatterService } from '@core/services/format/formatter.service';
+import { PrettierSettingsStore } from '@core/services/format/prettier-settings.store';
 import { HelpStore } from '@core/services/help/help.store';
 import { ExternalLinksService } from '@core/services/links/external-links.service';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
@@ -36,6 +37,7 @@ import { DialogComponent } from '@shared/layout/dialog/dialog.component';
 import { CodeViewerComponent } from '@notes/ui/code-viewer/code-viewer.component';
 import { AttachmentStripComponent } from './attachment-strip/attachment-strip.component';
 import { ChecklistEditorComponent } from './checklist-editor/checklist-editor.component';
+import { FormatButtonComponent } from './format-button/format-button.component';
 import { CopyButtonComponent } from '@notes/ui/copy-button/copy-button.component';
 import { LifecycleBadgeComponent } from './lifecycle-badge/lifecycle-badge.component';
 import { PlaceholderPanelComponent } from './placeholder-panel/placeholder-panel.component';
@@ -96,6 +98,7 @@ const PRIORITY_CHOICES: readonly ChoiceOption[] = PRIORITIES.filter((level) => l
     AttachmentStripComponent,
     ChecklistEditorComponent,
     CopyButtonComponent,
+    FormatButtonComponent,
     TagPillComponent,
     LifecycleBadgeComponent,
     PlaceholderPanelComponent,
@@ -123,6 +126,7 @@ export class NoteEditorOverlayComponent {
   private readonly links = inject(ExternalLinksService);
   private readonly settings = inject(SettingsStore);
   private readonly formatter = inject(FormatterService);
+  protected readonly prettierSettings = inject(PrettierSettingsStore);
 
   readonly note = input<Note | null>(null);
 
@@ -228,6 +232,8 @@ export class NoteEditorOverlayComponent {
     computation: () => NO_LINES,
   });
   private noticeTimer: ReturnType<typeof setTimeout> | undefined;
+  /** A close waiting on Prettier: a second Escape must not commit and close twice. */
+  private closing = false;
   protected readonly modifiedRef = computed(() => {
     const note = this.note();
     return note ? relativeTimeRef(note.updatedAt, this.clock.now()) : null;
@@ -463,6 +469,44 @@ export class NoteEditorOverlayComponent {
     this.requestPatch({ content: this.draftContent() });
   }
 
+  /**
+   * Formatted first when the library asks for it — without the field's undo: the field has
+   * lost the focus its editing commands need. Dropped if the editor closed meanwhile, the
+   * close having committed on its own, or if the body was typed into again.
+   */
+  protected async commitBodyOnBlur(): Promise<void> {
+    const text = this.draftContent();
+    const formatting = this.formatForSave(text);
+    if (formatting === null) {
+      this.commitContent();
+      return;
+    }
+
+    const session = this.session();
+    const formatted = await formatting;
+    if (this.session() !== session || this.draftContent() !== text) return;
+    if (formatted !== null) this.draftContent.set(formatted);
+    this.commitContent();
+  }
+
+  /** `null` at once when there is nothing to format; a text Prettier refuses is saved as it is. */
+  private formatForSave(text: string): Promise<string | null> | null {
+    const note = this.note();
+    if (
+      !note ||
+      !this.canFormat() ||
+      !this.prettierSettings.settings().formatOnSave ||
+      text === note.content
+    ) {
+      return null;
+    }
+
+    const indentation = indentUnit(this.settings.codeIndent(), note.language);
+    return this.formatter
+      .format(text, note.language, 0, indentation)
+      .then((answer) => (answer.kind === 'formatted' ? answer.text : null));
+  }
+
   protected commitTitle(): void {
     this.requestPatch({ title: this.draftTitle() });
   }
@@ -545,9 +589,26 @@ export class NoteEditorOverlayComponent {
 
   /**
    * ⚠️ The only closing path, and it commits the drafts first: Escape, the backdrop and
-   * the close button produce no `blur`, so the last line typed would be lost.
+   * the close button produce no `blur`, so the last line typed would be lost. Formatting on
+   * save holds the close until Prettier answers; without it, nothing waits.
    */
   protected requestClose(): void {
+    const formatting = this.formatForSave(this.draftContent());
+    if (formatting === null) {
+      this.close();
+      return;
+    }
+    if (this.closing) return;
+
+    this.closing = true;
+    void formatting.then((formatted) => {
+      if (formatted !== null) this.draftContent.set(formatted);
+      this.closing = false;
+      this.close();
+    });
+  }
+
+  private close(): void {
     this.commitTitle();
     this.commitSource();
     this.commitContent();

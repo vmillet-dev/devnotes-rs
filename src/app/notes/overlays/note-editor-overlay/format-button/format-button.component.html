@@ -1,0 +1,114 @@
+<div class="split">
+  <!-- `aria-disabled` and not `disabled`: a disabled button shows no tooltip, and this one
+       has to say why it cannot format. -->
+  <button
+    type="button"
+    class="format-btn"
+    data-testid="editor-format"
+    [attr.aria-disabled]="!formattable() || busy()"
+    [attr.title]="
+      (formattable() ? 'editor.format.hint' : 'editor.format.unsupported')
+        | transloco: { language: language() }
+    "
+    (click)="formatRequested.emit()"
+  >
+    <svg class="format-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 6h16M4 12h10M4 18h13" />
+    </svg>
+    {{ 'editor.format.label' | transloco }}
+    <span class="format-keys" aria-hidden="true">{{ 'editor.format.keys' | transloco }}</span>
+  </button>
+  <button
+    appMenuAnchor
+    type="button"
+    class="format-chevron"
+    data-testid="editor-format-settings"
+    aria-haspopup="dialog"
+    [attr.aria-expanded]="menu.open()"
+    [attr.aria-label]="'editor.format.settings' | transloco"
+    [attr.title]="'editor.format.settings' | transloco"
+    (click)="togglePanel()"
+  >
+    <svg class="chevron-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  </button>
+</div>
+
+@if (menu.open()) {
+  @let now = settings();
+  <div
+    class="format-panel"
+    role="dialog"
+    data-testid="format-panel"
+    [attr.aria-label]="'editor.format.settings' | transloco"
+  >
+    <div class="panel-head">
+      <span class="panel-title">Prettier</span>
+      <span class="panel-scope">{{ 'editor.format.scope' | transloco }}</span>
+    </div>
+
+    <div class="setting-row">
+      <label class="setting-label" for="prettier-width">{{ 'editor.format.printWidth' | transloco }}</label>
+      <input
+        #widthField
+        id="prettier-width"
+        class="width-field"
+        data-testid="prettier-width"
+        type="number"
+        min="40"
+        max="200"
+        [value]="now.printWidth"
+        (change)="onWidth(widthField)"
+      />
+    </div>
+
+    <div class="setting-row">
+      <span class="setting-label">{{ 'editor.format.indentation' | transloco }}</span>
+      <app-segmented-choice
+        kind="prettier-indentation"
+        [label]="'editor.format.indentation' | transloco"
+        [segments]="indentations"
+        [currentId]="now.indentation"
+        (chosen)="onIndentation($event)"
+      />
+    </div>
+
+    <div class="setting-row">
+      <span class="setting-label">{{ 'editor.format.quotes' | transloco }}</span>
+      <app-segmented-choice
+        kind="prettier-quotes"
+        [label]="'editor.format.quotes' | transloco"
+        [segments]="quotes"
+        [currentId]="now.quotes"
+        (chosen)="onQuotes($event)"
+      />
+    </div>
+
+    @for (key of switches; track key) {
+      <div class="setting-row">
+        <label class="setting-label" [for]="'prettier-' + key">{{
+          'editor.format.' + key | transloco
+        }}</label>
+        <input
+          #switchField
+          class="setting-switch"
+          type="checkbox"
+          [id]="'prettier-' + key"
+          [attr.data-testid]="'prettier-' + key"
+          [checked]="now[key]"
+          (change)="onSwitch(key, switchField)"
+        />
+      </div>
+    }
+
+    <p class="panel-note">
+      <strong>{{ 'editor.format.formattedTitle' | transloco }}</strong>
+      {{ 'editor.format.formattedList' | transloco }}
+    </p>
+    <p class="panel-note">
+      <strong>{{ 'editor.format.notFormattedTitle' | transloco }}</strong>
+      {{ 'editor.format.notFormattedList' | transloco }}
+    </p>
+  </div>
+}
