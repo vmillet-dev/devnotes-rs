@@ -14,7 +14,7 @@ import {
   setField,
   testid,
 } from '../support/app.js';
-import { bridge, query } from '../support/bridge.js';
+import { bridge, draft, query } from '../support/bridge.js';
 
 const entry = (tool: string) => $(`${testid('tools-entry')}[data-tool="${tool}"]`);
 const outputValues = () => readEach(testid('output-value'), 'text');
@@ -416,6 +416,143 @@ describe('The tools', () => {
         () => $(testid('uuid-created')).getText(),
         (created) => created === '2024-09-25 23:05:01.488 UTC',
         'its time',
+      );
+    });
+  });
+
+  describe('the generators', () => {
+    const output = () => $(testid('json-generator-output')).getText();
+
+    it('draws the same documents again from the same seed', async () => {
+      await openTool('json-generator');
+      await $(`${testid('segmented-json-generator-source')} [data-segment-id="example"]`).click();
+      await setField(testid('json-generator-seed'), '7');
+      await setField(testid('json-generator-input'), '{"id":"9b2f6c1e-3d4a-4f8b-9e2c-7a1d5b6c8e90","n":3}');
+      await eventually(output, (text) => text.startsWith('['), 'the documents');
+      const first = await output();
+
+      await setField(testid('json-generator-seed'), '8');
+      await eventually(output, (text) => text !== first, 'other documents');
+      await setField(testid('json-generator-seed'), '7');
+
+      await eventually(output, (text) => text === first, 'the first documents again');
+      expect((JSON.parse(first) as unknown[]).length).toBe(3);
+    });
+
+    it('lists the schema keywords it did not honour', async () => {
+      await $(`${testid('segmented-json-generator-source')} [data-segment-id="schema"]`).click();
+      await setField(
+        testid('json-generator-input'),
+        '{"type":"object","required":["code"],"properties":{"code":{"type":"string","pattern":"^[A-Z]{3}$"}}}',
+      );
+
+      await eventually(
+        () => $(testid('json-generator-unsupported')).getText(),
+        (text) => text.includes('pattern') && text.includes('$.properties.code'),
+        'the unsupported keyword',
+      );
+    });
+
+    it('opens Lorem ipsum on the classic words', async () => {
+      await openTool('lorem');
+      await $(`${testid('segmented-lorem-unit')} [data-segment-id="words"]`).click();
+      await setField(testid('lorem-count'), '5');
+
+      await eventually(
+        () => $(testid('lorem-output')).getText(),
+        (text) => text === 'Lorem ipsum dolor sit amet,',
+        'the opening words',
+      );
+    });
+  });
+
+  describe('comparing JSON', () => {
+    const STAGING = JSON.stringify({
+      service: 'billing',
+      replicas: 2,
+      database: { host: 'db.staging.internal', pool: 10 },
+      features: { newInvoices: true, betaExports: true },
+      logLevel: 'debug',
+    });
+    const PRODUCTION = JSON.stringify({
+      replicas: 6,
+      service: 'billing',
+      database: { host: 'db.prod.internal', pool: 40, readReplica: 'db-ro.prod.internal' },
+      features: { newInvoices: true },
+      logLevel: 'info',
+      sentry: { sampleRate: 0.2 },
+    });
+    let noteId = '';
+
+    after(async () => {
+      await bridge.deleteNotes([noteId]);
+      await bridge.purgeNotes([noteId]);
+    });
+
+    it('answers the changes and the patch from Rust', async () => {
+      const answer = await bridge.diffJson({
+        a: STAGING,
+        b: PRODUCTION,
+        ignoreKeyOrder: true,
+        ignoreWhitespace: true,
+      });
+
+      expect(answer.kind).toBe('compared');
+      if (answer.kind !== 'compared') return;
+      expect(answer.counts).toEqual({ added: 2, removed: 1, modified: 4 });
+      expect(JSON.parse(answer.patch)).toContainEqual({ op: 'replace', path: '/replicas', value: 6 });
+    });
+
+    it('lists the mockup’s seven changes, and brings one into view', async () => {
+      await openTool('json-diff');
+      await setField(testid('json-diff-a'), STAGING);
+      await setField(testid('json-diff-b'), PRODUCTION);
+
+      await eventually(
+        () => readEach(testid('json-diff-change'), '@data-path'),
+        (paths) => paths.length === 7,
+        'seven changes',
+      );
+      expect(await readEach(testid('json-diff-change'), '@data-path')).toEqual([
+        '$.replicas',
+        '$.database.host',
+        '$.database.pool',
+        '$.database.readReplica',
+        '$.features.betaExports',
+        '$.logLevel',
+        '$.sentry',
+      ]);
+
+      await $(`${testid('json-diff-change')}[data-path="$.database.pool"]`).click();
+      await $(`${testid('json-diff-row')}.selected`).waitForExist({ timeout: 5_000 });
+    });
+
+    it('counts a new key order only when asked', async () => {
+      await $(testid('json-diff-ignore-order')).click();
+
+      await eventually(
+        () => readEach(testid('json-diff-change'), '@data-kind'),
+        (kinds) => kinds.includes('reordered'),
+        'the reordering',
+      );
+      await $(testid('json-diff-ignore-order')).click();
+    });
+
+    it('opens a JSON snippet into A, under its title', async () => {
+      noteId = (
+        await bridge.createNote(
+          draft({ spaceId, title: 'config.staging.json', content: STAGING, language: 'json' }),
+        )
+      ).id;
+
+      await $(testid('json-diff-open-a')).click();
+      await setField(testid('json-note-search'), 'config.staging');
+      await $(`${testid('json-note-option')}[data-note-id="${noteId}"]`).click();
+
+      await eventually(
+        () => readEach(testid('json-diff-name-a'), 'text'),
+        (names) => names[0] === 'config.staging.json',
+        'the snippet in A',
       );
     });
   });

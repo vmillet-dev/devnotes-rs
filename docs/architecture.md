@@ -683,6 +683,20 @@ tool states beside its result (`@name`, `#text`, a repeated element as a list). 
 cannot hold — a TOML `null`, a list at a TOML root, two XML roots, a name XML refuses — is an
 answer carrying its `JSONPath`, never a guess.
 
+**A generation is drawn from a seed** (`tools/generate.rs`, a `SplitMix64` — never for a
+secret): the same seed and source give the same documents, and a generation without one draws a
+seed and says which, so it can be kept. From a JSON Schema, the keywords it draws from are one
+list (`UNDERSTOOD`); any other is listed back with its path, so a document that ignores a
+`pattern` is never passed off as one that honours it. From an example, each value is redrawn in
+its kind — a UUID, an email, an instant, a URL, words — at its magnitude.
+
+**JSON Diff compares values** (`tools/diff.rs`): objects key by key, lists by a longest
+common sequence of their elements — one element inserted at the top is one change, not a change
+of every element below it. Each change carries its `JSONPath`, the patch is RFC 6902 from A to
+B (checked in the tests by applying it), and the two documents come back as aligned rows,
+pretty-printed with B's keys in A's order when order is ignored, so the same keys meet on the
+same row. The unified view is the same rows read one after the other, on the front.
+
 **Adding a tool**, the whole of it:
 
 1. `src-tauri/src/tools/<module>.rs`: the function, its request and answer types, its tests.

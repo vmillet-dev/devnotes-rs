@@ -1309,6 +1309,80 @@
         "toml": "TOML n’a pas de null et veut une table à sa racine ; une date TOML devient une chaîne en JSON."
       },
       "noteTitle": "{{from}} converti en {{to}}"
+    },
+    "json-generator": {
+      "name": "JSON",
+      "description": "À partir d’un schéma ou d’un exemple",
+      "source": "Source",
+      "sources": {
+        "schema": "Schéma",
+        "example": "Exemple"
+      },
+      "inputLabel": "Schéma JSON ou document d’exemple",
+      "placeholders": {
+        "schema": "{ \"type\": \"object\", \"required\": [\"id\"], \"properties\": { \"id\": { \"type\": \"string\", \"format\": \"uuid\" } } }",
+        "example": "{ \"id\": \"9b2f6c1e-3d4a-4f8b-9e2c-7a1d5b6c8e90\", \"email\": \"ana@exemple.fr\", \"amount\": 49.9 }"
+      },
+      "unreadable": "Ce JSON ne se lit pas : ligne {{line}}, colonne {{column}}.",
+      "notASchema": "Un schéma JSON est un objet.",
+      "count": "Documents",
+      "seed": "Graine",
+      "seedPlaceholder": "au hasard",
+      "documents": "Documents",
+      "seedUsed": "Graine utilisée : {{seed}}",
+      "keepSeed": "La garder",
+      "again": "Tirer à nouveau",
+      "unsupported": "Le générateur n’a pas tenu compte de ces mots-clés : les documents peuvent ne pas les respecter.",
+      "empty": "Collez un schéma ou un exemple : les documents s’affichent ici.",
+      "noteTitle": "Documents JSON générés"
+    },
+    "lorem": {
+      "name": "Lorem ipsum",
+      "description": "Mots, phrases, paragraphes",
+      "unit": "Unité",
+      "units": {
+        "words": "Mots",
+        "sentences": "Phrases",
+        "paragraphs": "Paragraphes"
+      },
+      "count": "Nombre",
+      "opening": "Commencer par « Lorem ipsum »",
+      "again": "Tirer à nouveau",
+      "noteTitle": "Lorem ipsum"
+    },
+    "json-diff": {
+      "name": "JSON Diff",
+      "description": "Sémantique : l’ordre des clés ne compte pas",
+      "pasted": "texte collé",
+      "openNote": "Ouvrir une note",
+      "inputLabel": "Document {{side}}",
+      "placeholder": "Collez un document JSON, ou ouvrez un snippet",
+      "unreadable": "Ce JSON ne se lit pas : ligne {{line}}, colonne {{column}}.",
+      "added": "{count, plural, one {+ # ajout} other {+ # ajouts}}",
+      "removed": "{count, plural, one {− # suppression} other {− # suppressions}}",
+      "modified": "{count, plural, one {~ # modification} other {~ # modifications}}",
+      "ignoreKeyOrder": "Ignorer l’ordre des clés",
+      "ignoreWhitespace": "Ignorer les espaces",
+      "layout": "Présentation",
+      "layouts": {
+        "split": "Côte à côte",
+        "unified": "Unifié"
+      },
+      "identical": "Les deux documents sont identiques.",
+      "truncated": "La suite n’est pas affichée : les changements et le patch restent complets.",
+      "changes": "Changements",
+      "changesCount": "Changements · {{count}}",
+      "reordered": "ordre des clés",
+      "scalar": "{{text}}",
+      "object": "objet · {count, plural, one {# clé} other {# clés}}",
+      "array": "liste · {count, plural, one {# élément} other {# éléments}}",
+      "swap": "Échanger A et B",
+      "copyPatch": "Copier le patch JSON",
+      "empty": "Collez deux documents : leurs différences s’affichent ici.",
+      "noteTitle": "Patch JSON de {{a}} vers {{b}}",
+      "pickTitle": "Ouvrir un snippet JSON",
+      "pickSearch": "Rechercher un snippet JSON",
+      "pickNone": "Aucun snippet JSON."
     }
   }
 }

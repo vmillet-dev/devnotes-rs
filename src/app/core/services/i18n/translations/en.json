@@ -1309,6 +1309,80 @@
         "toml": "TOML has no null and wants a table at its root; a TOML date becomes a string in JSON."
       },
       "noteTitle": "{{from}} converted to {{to}}"
+    },
+    "json-generator": {
+      "name": "JSON",
+      "description": "From a schema or an example",
+      "source": "Source",
+      "sources": {
+        "schema": "Schema",
+        "example": "Example"
+      },
+      "inputLabel": "JSON Schema or example document",
+      "placeholders": {
+        "schema": "{ \"type\": \"object\", \"required\": [\"id\"], \"properties\": { \"id\": { \"type\": \"string\", \"format\": \"uuid\" } } }",
+        "example": "{ \"id\": \"9b2f6c1e-3d4a-4f8b-9e2c-7a1d5b6c8e90\", \"email\": \"ana@example.com\", \"amount\": 49.9 }"
+      },
+      "unreadable": "This JSON does not parse: line {{line}}, column {{column}}.",
+      "notASchema": "A JSON Schema is an object.",
+      "count": "Documents",
+      "seed": "Seed",
+      "seedPlaceholder": "random",
+      "documents": "Documents",
+      "seedUsed": "Seed used: {{seed}}",
+      "keepSeed": "Keep it",
+      "again": "Draw again",
+      "unsupported": "The generator did not take these keywords into account: the documents may not honour them.",
+      "empty": "Paste a schema or an example: the documents show here.",
+      "noteTitle": "Generated JSON documents"
+    },
+    "lorem": {
+      "name": "Lorem ipsum",
+      "description": "Words, sentences, paragraphs",
+      "unit": "Unit",
+      "units": {
+        "words": "Words",
+        "sentences": "Sentences",
+        "paragraphs": "Paragraphs"
+      },
+      "count": "Count",
+      "opening": "Start with “Lorem ipsum”",
+      "again": "Draw again",
+      "noteTitle": "Lorem ipsum"
+    },
+    "json-diff": {
+      "name": "JSON Diff",
+      "description": "Semantic: key order does not count",
+      "pasted": "pasted text",
+      "openNote": "Open a note",
+      "inputLabel": "Document {{side}}",
+      "placeholder": "Paste a JSON document, or open a snippet",
+      "unreadable": "This JSON does not parse: line {{line}}, column {{column}}.",
+      "added": "{count, plural, one {+ # addition} other {+ # additions}}",
+      "removed": "{count, plural, one {− # removal} other {− # removals}}",
+      "modified": "{count, plural, one {~ # change} other {~ # changes}}",
+      "ignoreKeyOrder": "Ignore key order",
+      "ignoreWhitespace": "Ignore spaces",
+      "layout": "Layout",
+      "layouts": {
+        "split": "Side by side",
+        "unified": "Unified"
+      },
+      "identical": "The two documents are identical.",
+      "truncated": "The rest is not shown: the changes and the patch stay whole.",
+      "changes": "Changes",
+      "changesCount": "Changes · {{count}}",
+      "reordered": "key order",
+      "scalar": "{{text}}",
+      "object": "object · {count, plural, one {# key} other {# keys}}",
+      "array": "list · {count, plural, one {# item} other {# items}}",
+      "swap": "Swap A and B",
+      "copyPatch": "Copy the JSON patch",
+      "empty": "Paste two documents: their differences show here.",
+      "noteTitle": "JSON patch from {{a}} to {{b}}",
+      "pickTitle": "Open a JSON snippet",
+      "pickSearch": "Search for a JSON snippet",
+      "pickNone": "No JSON snippet."
     }
   }
 }

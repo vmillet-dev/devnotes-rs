@@ -9,10 +9,16 @@ import {
   ColourRequest,
   ConvertAnswer,
   ConvertRequest,
+  GenerateAnswer,
+  GenerateRequest,
   HashAnswer,
   HashRequest,
+  JsonDiffAnswer,
+  JsonDiffRequest,
   LineBreaksAnswer,
   LineBreaksRequest,
+  LoremAnswer,
+  LoremRequest,
   PasswordAnswer,
   PasswordRequest,
   SlugRequest,
@@ -54,6 +60,16 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
   uuidInspection: UuidInspection = { kind: 'invalid' };
   colour: ColourAnswer = { colour: { kind: 'empty' }, against: { kind: 'empty' }, contrast: null };
   conversion: ConvertAnswer = { kind: 'converted', text: '' };
+  generated: GenerateAnswer = { kind: 'generated', text: '{}', seed: 1, unsupported: [] };
+  loremAnswer: LoremAnswer = { text: '', seed: 1 };
+  diffAnswer: JsonDiffAnswer = {
+    kind: 'compared',
+    changes: [],
+    counts: { added: 0, removed: 0, modified: 0 },
+    rows: [],
+    rowsTruncated: false,
+    patch: '[]',
+  };
 
   convertCase(text: string): Promise<CaseConversion[]> {
     return this.answer('convert_case', text, this.cases);
@@ -113,6 +129,18 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
 
   convert(request: ConvertRequest): Promise<ConvertAnswer> {
     return this.answer('convert_data', request, this.conversion);
+  }
+
+  generateJson(request: GenerateRequest): Promise<GenerateAnswer> {
+    return this.answer('generate_json', request, this.generated);
+  }
+
+  lorem(request: LoremRequest): Promise<LoremAnswer> {
+    return this.answer('lorem_ipsum', request, this.loremAnswer);
+  }
+
+  diffJson(request: JsonDiffRequest): Promise<JsonDiffAnswer> {
+    return this.answer('diff_json', request, this.diffAnswer);
   }
 
   requestsOf(command: string): unknown[] {

@@ -41,6 +41,9 @@ export const commands = {
 	inspectUuid: (text: string) => typedError<UuidInspection, AppError>(__TAURI_INVOKE("inspect_uuid", { text })),
 	describeColour: (request: ColourRequest) => typedError<ColourAnswer, AppError>(__TAURI_INVOKE("describe_colour", { request })),
 	convertData: (request: ConvertRequest) => typedError<ConvertAnswer, AppError>(__TAURI_INVOKE("convert_data", { request })),
+	generateJson: (request: GenerateRequest) => typedError<GenerateAnswer, AppError>(__TAURI_INVOKE("generate_json", { request })),
+	loremIpsum: (request: LoremRequest) => typedError<LoremAnswer, AppError>(__TAURI_INVOKE("lorem_ipsum", { request })),
+	diffJson: (request: JsonDiffRequest) => typedError<JsonDiffAnswer, AppError>(__TAURI_INVOKE("diff_json", { request })),
 	/**
 	 *  The first launch: the space, its folders and the notes in one transaction, since a space
 	 *  standing alone reads as "already seeded" for good. The strings stay on the front end, with
@@ -635,6 +638,18 @@ export type FolderDraft = {
 	name: string,
 };
 
+export type GenerateAnswer = { kind: "generated"; text: string; seed: number; unsupported: Unsupported[] } | { kind: "unreadable"; line: number; column: number } | 
+/**  A schema is an object, or `true`. */
+{ kind: "notASchema" };
+
+export type GenerateRequest = {
+	source: JsonSource,
+	text: string,
+	count: number,
+	/**  The same seed and the same source draw the same documents; none draws one, and says which. */
+	seed: number | null,
+};
+
 /**
  *  One event carrying a closed value rather than a topic per action: a mistyped topic is
  *  a silently inert subscription, and a new variant here stops the front compiling.
@@ -684,6 +699,55 @@ export type ImportReport = {
 	 */
 	attachmentsMissing: number,
 };
+
+export type JsonChange = {
+	kind: JsonChangeKind,
+	path: string,
+	before: ValueSummary | null,
+	after: ValueSummary | null,
+};
+
+export type JsonChangeKind = "added" | "removed" | "modified" | 
+/**  The same keys, in another order: counted with the modifications. */
+"reordered";
+
+export type JsonDiffAnswer = { kind: "compared"; changes: JsonChange[]; counts: JsonDiffCounts; rows: JsonDiffRow[]; rowsTruncated: boolean; 
+/**  RFC 6902, from A to B, as JSON. */
+patch: string } | { kind: "unreadable"; side: JsonDiffSide; line: number; column: number };
+
+export type JsonDiffCounts = {
+	added: number,
+	removed: number,
+	modified: number,
+};
+
+export type JsonDiffLine = {
+	/**  One-based, in that side's own text. */
+	number: number,
+	text: string,
+};
+
+export type JsonDiffRequest = {
+	a: string,
+	b: string,
+	/**  On, `{"a":1,"b":2}` and `{"b":2,"a":1}` are the same document. */
+	ignoreKeyOrder: boolean,
+	/**  On, two strings that differ only by their spaces are the same. */
+	ignoreWhitespace: boolean,
+};
+
+/**  One row of the side-by-side view: a side without a line is a gap. */
+export type JsonDiffRow = {
+	kind: JsonDiffRowKind,
+	left: JsonDiffLine | null,
+	right: JsonDiffLine | null,
+	/**  The `JSONPath` of the value the row writes, for a change to scroll to. */
+	path: string,
+};
+
+export type JsonDiffRowKind = "same" | "added" | "removed" | "modified";
+
+export type JsonDiffSide = "a" | "b";
 
 /**  One-based line and column, the column in UTF-16 units like the offset. */
 export type JsonError = {
@@ -770,6 +834,8 @@ export type JsonRow = {
 	hit: boolean,
 };
 
+export type JsonSource = "schema" | "example";
+
 export type JsonStats = {
 	keys: number,
 	/**  Container levels below the root: `{"a": {"b": 1}}` is 1. */
@@ -826,6 +892,21 @@ export type LineBreaksRequest = {
 };
 
 export type LineEnding = "lf" | "crlf" | "cr";
+
+export type LoremAnswer = {
+	text: string,
+	seed: number,
+};
+
+export type LoremRequest = {
+	unit: LoremUnit,
+	count: number,
+	/**  Opens on "Lorem ipsum dolor sit amet…", as the reader expects to recognise it. */
+	opening: boolean,
+	seed: number | null,
+};
+
+export type LoremUnit = "words" | "sentences" | "paragraphs";
 
 export type Notation = "hex" | "rgb" | "hsl" | "oklch";
 
@@ -1201,6 +1282,12 @@ export type TrayLabels = {
 	quit: string,
 };
 
+export type Unsupported = {
+	keyword: string,
+	/**  A `JSONPath` into the schema. */
+	path: string,
+};
+
 export type UrlAnswer = { kind: "parsed"; parts: UrlParts } | { kind: "invalid"; problem: UrlProblem };
 
 export type UrlCodecAnswer = { kind: "done"; text: string } | 
@@ -1257,6 +1344,9 @@ export type UuidVariant = "ncs" |
 export type UuidVersion = "v4" | 
 /**  Its first 48 bits are the time it was made: sorted, they sort by creation. */
 "v7";
+
+/**  What a value was, as the list of changes shows it: itself when short, its size otherwise. */
+export type ValueSummary = { kind: "scalar"; text: string } | { kind: "object"; keys: number } | { kind: "array"; items: number };
 
 /**  What the front end renders before it renders anything else. */
 export type VaultState = 
