@@ -2,8 +2,9 @@ import { $, $$, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
+import { spaces } from '../pageobjects/sidebar.page.js';
 import { eventually, press, reloadCanvas, testid } from '../support/app.js';
-import { bridge, draft, homeSpaceId } from '../support/bridge.js';
+import { bridge, draft } from '../support/bridge.js';
 
 /**
  * Prettier runs in a worker the assembled application loads under its CSP, and writes through
@@ -33,7 +34,8 @@ describe('Formatting a snippet with Prettier', () => {
 
   before(async () => {
     await canvas.open();
-    const spaceId = await homeSpaceId();
+    // A space of its own: the first launch's went with the library 24-forgotten-passphrase set aside.
+    const spaceId = (await bridge.createSpace({ name: 'Prettier' })).id;
     for (const [title, content, language] of [
       [TITLE, MESSY, 'ts'],
       [BROKEN, 'const a = {\n  b: 1,,\n}', 'ts'],
@@ -42,6 +44,8 @@ describe('Formatting a snippet with Prettier', () => {
       ids.push((await bridge.createNote(draft({ spaceId, title, content, language }))).id);
     }
     await reloadCanvas();
+    await spaces.open();
+    await spaces.option(spaceId).click();
     await canvas.waitForCard(TITLE);
   });
 
