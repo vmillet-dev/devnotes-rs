@@ -3,8 +3,9 @@
 
 use std::fmt::Write;
 
-use quick_xml::Reader;
-use quick_xml::events::{BytesStart, Event};
+use quick_xml::escape::resolve_predefined_entity;
+use quick_xml::events::{BytesRef, BytesStart, Event};
+use quick_xml::{Reader, XmlVersion};
 use serde_json::{Map, Value};
 
 use super::{Blocked, Crossing, child};
@@ -29,7 +30,10 @@ impl Element {
         };
         for attribute in start.attributes() {
             let attribute = attribute.map_err(|_| ())?;
-            let value = attribute.unescape_value().map_err(|_| ())?.into_owned();
+            let value = attribute
+                .normalized_value(XmlVersion::Implicit1_0)
+                .map_err(|_| ())?
+                .into_owned();
             let key = format!("@{}", String::from_utf8_lossy(attribute.key.as_ref()));
             element.fields.insert(key, Value::String(value));
         }
@@ -66,6 +70,34 @@ impl Element {
         };
         (self.name, value)
     }
+}
+
+/// Text between tags, which only an element may hold.
+fn push_text(open: &mut [Element], text: &str) -> Result<(), ()> {
+    match open.last_mut() {
+        Some(element) => {
+            if !text.trim().is_empty() {
+                element.empty = false;
+            }
+            element.text.push_str(text);
+            Ok(())
+        }
+        None if text.trim().is_empty() => Ok(()),
+        None => Err(()),
+    }
+}
+
+/// A character reference, or one of XML's five entities: without a DTD, no other is defined.
+fn resolve(reference: &BytesRef<'_>) -> Option<String> {
+    if reference.is_char_ref() {
+        return reference
+            .resolve_char_ref()
+            .ok()
+            .flatten()
+            .map(String::from);
+    }
+    let name = reference.decode().ok()?;
+    resolve_predefined_entity(&name).map(str::to_owned)
 }
 
 /// The document's one root, as an object of one key; a byte offset where it stops parsing.
@@ -109,17 +141,12 @@ pub(super) fn read(text: &str) -> Result<Value, usize> {
                 }
             }
             Event::Text(text) => {
-                let text = text.unescape().map_err(|_| at(&reader))?;
-                match open.last_mut() {
-                    Some(element) => {
-                        if !text.trim().is_empty() {
-                            element.empty = false;
-                        }
-                        element.text.push_str(&text);
-                    }
-                    None if text.trim().is_empty() => {}
-                    None => return Err(at(&reader)),
-                }
+                let text = text.xml10_content().map_err(|_| at(&reader))?;
+                push_text(&mut open, &text).map_err(|()| at(&reader))?;
+            }
+            Event::GeneralRef(reference) => {
+                let text = resolve(&reference).ok_or_else(|| at(&reader))?;
+                push_text(&mut open, &text).map_err(|()| at(&reader))?;
             }
             Event::CData(data) => {
                 if let Some(element) = open.last_mut() {
@@ -350,6 +377,15 @@ mod tests {
             impossible(r#"{"a":{"@b":[1]}}"#),
             (Crossing::XmlAttribute, r#"$.a["@b"]"#.to_owned())
         );
+    }
+
+    #[test]
+    fn references_are_resolved_and_an_undeclared_entity_refused() {
+        assert_eq!(
+            to_json(r#"<a q="&quot;x&quot; &amp; y">caf&#233; &#x41;&lt;&gt;&apos;</a>"#),
+            serde_json::json!({ "a": { "@q": "\"x\" & y", "#text": "café A<>'" } })
+        );
+        assert!(read("<a>&nbsp;</a>").is_err());
     }
 
     #[test]
