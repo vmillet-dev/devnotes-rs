@@ -22,6 +22,8 @@ export const commands = {
 	 *  a Note prose, and only a paste of code turns it into a snippet with a language.
 	 */
 	detectLanguage: (content: string) => __TAURI_INVOKE<Language>("detect_language", { content }),
+	/**  No lock, but off the window's thread: a document of a few megabytes takes a while. */
+	exploreJson: (query: JsonQuery) => typedError<JsonView, AppError>(__TAURI_INVOKE("explore_json", { query })),
 	/**
 	 *  The first launch: the space, its folders and the notes in one transaction, since a space
 	 *  standing alone reads as "already seeded" for good. The strings stay on the front end, with
@@ -538,6 +540,106 @@ export type ImportReport = {
 	attachmentsMissing: number,
 };
 
+/**  One-based line and column, the column in UTF-16 units like the offset. */
+export type JsonError = {
+	reason: JsonErrorReason,
+	line: number,
+	column: number,
+	offset: number,
+};
+
+export type JsonErrorReason = "unexpectedEnd" | "unexpectedCharacter" | "invalidNumber" | "invalidEscape" | "controlCharacter" | "trailingCharacters" | "tooDeep";
+
+export type JsonGraph = {
+	nodes: JsonNode[],
+	width: number,
+	height: number,
+	/**  Opening everything asked was more than the front can draw: arrays stayed folded. */
+	folded: boolean,
+};
+
+export type JsonKind = "object" | "array" | "string" | "number" | "boolean" | "null";
+
+export type JsonLine = {
+	depth: number,
+	key: string,
+	path: string,
+	kind: JsonKind,
+	value: string,
+	size: number,
+	span: Span,
+	opens: boolean,
+	open: boolean,
+	hit: boolean,
+};
+
+export type JsonNode = {
+	id: number,
+	parent: number | null,
+	path: string,
+	/**  `$`, the key it is under, or `[0]`. */
+	label: string,
+	kind: JsonKind,
+	/**  Keys or items, all of them: `rows` may hold fewer. */
+	size: number,
+	rows: JsonRow[],
+	/**  Past `ROWS_PER_NODE`. */
+	hiddenRows: number,
+	span: Span,
+	x: number,
+	y: number,
+	width: number,
+	/**  The header line, one per row, one more for the rows left out. */
+	height: number,
+	hit: boolean,
+};
+
+export type JsonOpening = 
+/**  Whole when small, its first level otherwise. */
+{ kind: "initial" } | { kind: "all" } | 
+/**  `JSONPath`s, the root being always open: a path whose parent is closed stays closed. */
+{ kind: "paths"; paths: string[] };
+
+export type JsonQuery = {
+	text: string,
+	search: string,
+	opening: JsonOpening,
+};
+
+export type JsonRow = {
+	/**  `id`, or `[0]` in an array. */
+	key: string,
+	path: string,
+	kind: JsonKind,
+	/**  `"paid"`, `4900`, `{ … }`, `[ 3 ]`: cut to one line. */
+	value: string,
+	span: Span,
+	/**  The node drawn for this value, when it is a container and open. */
+	child: number | null,
+	/**  Whether the value is a container, open or not. */
+	opens: boolean,
+	hit: boolean,
+};
+
+export type JsonStats = {
+	keys: number,
+	/**  Container levels below the root: `{"a": {"b": 1}}` is 1. */
+	depth: number,
+	bytes: number,
+};
+
+export type JsonView = {
+	/**  `None` is "JSON valide"; the rest is then empty. */
+	error: JsonError | null,
+	stats: JsonStats,
+	graph: JsonGraph,
+	tree: JsonLine[],
+	treeTruncated: boolean,
+	/**  Every entry the search found, in the document's order, open or not. */
+	matches: string[],
+	matchCount: number,
+};
+
 /**
  *  Closed: the front receives a generated union, so an unknown value stops compiling
  *  there instead of being refused at runtime.
@@ -848,6 +950,15 @@ export type Space = {
 
 export type SpaceDraft = {
 	name: string,
+};
+
+/**
+ *  Offsets in UTF-16 code units: the front's strings count in them, and "Voir dans le code"
+ *  puts a caret with one.
+ */
+export type Span = {
+	start: number,
+	end: number,
 };
 
 export type SpanKind = "plain" | "strong" | "code";

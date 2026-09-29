@@ -14,6 +14,8 @@ import type {
   NoteFiling,
   ExportReport,
   ImportReport,
+  JsonQuery,
+  JsonView,
   NoteDraft,
   NotePatch,
   NotePriority,
@@ -57,6 +59,7 @@ async function invoke<T>(command: string, args: Record<string, unknown> = {}): P
 export const bridge = {
   /** Answers while locked: the registry is beside the libraries, not inside one. */
   listLibraries: () => invoke<Registry>('list_libraries'),
+  exploreJson: (query: JsonQuery) => invoke<JsonView>('explore_json', { query }),
   listSpaces: () => invoke<Space[]>('list_spaces'),
   createSpace: (draft: SpaceDraft) => invoke<Space>('create_space', { draft }),
   renameSpace: (id: string, draft: SpaceDraft) => invoke<Space>('rename_space', { id, draft }),

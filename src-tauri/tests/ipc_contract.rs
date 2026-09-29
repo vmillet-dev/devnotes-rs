@@ -9,6 +9,7 @@ use devnotes_lib::db::iso8601;
 use devnotes_lib::error::StorageError;
 use devnotes_lib::error::ValidationError;
 use devnotes_lib::error::{AppError, ErrorCode};
+use devnotes_lib::json::model::{JsonOpening, JsonQuery, explore};
 use devnotes_lib::notes::checklist::ChecklistItem;
 use devnotes_lib::notes::kind::NoteKind;
 use devnotes_lib::notes::language::Language;
@@ -649,4 +650,50 @@ fn every_error_code_crosses_as_a_camel_case_string() {
 
         assert_eq!(json["code"], expected);
     }
+}
+
+#[test]
+fn a_json_query_is_read_from_the_tagged_opening_the_front_sends() {
+    let query: JsonQuery = serde_json::from_value(serde_json::json!({
+        "text": "{}",
+        "search": "id",
+        "opening": { "kind": "paths", "paths": ["$.data"] },
+    }))
+    .unwrap();
+
+    assert!(matches!(query.opening, JsonOpening::Paths { ref paths } if paths == &["$.data"]));
+
+    let initial: JsonOpening =
+        serde_json::from_value(serde_json::json!({ "kind": "initial" })).unwrap();
+    assert!(matches!(initial, JsonOpening::Initial));
+}
+
+#[test]
+fn a_json_view_serializes_with_camel_case_keys() {
+    let view = explore(&JsonQuery {
+        text: r#"{"a": [1]}"#.to_string(),
+        search: String::new(),
+        opening: JsonOpening::Initial,
+    });
+    let json = serde_json::to_value(&view).unwrap();
+
+    assert!(json["error"].is_null());
+    assert_eq!(json["matchCount"], 0);
+    assert_eq!(json["treeTruncated"], false);
+    assert_eq!(json["graph"]["nodes"][0]["hiddenRows"], 0);
+    assert_eq!(json["graph"]["nodes"][0]["rows"][0]["kind"], "array");
+    assert_eq!(
+        json["graph"]["nodes"][0]["span"],
+        serde_json::json!({ "start": 0, "end": 10 })
+    );
+
+    let broken = explore(&JsonQuery {
+        text: "[".to_string(),
+        search: String::new(),
+        opening: JsonOpening::All,
+    });
+    assert_eq!(
+        serde_json::to_value(broken.error).unwrap(),
+        serde_json::json!({ "reason": "unexpectedEnd", "line": 1, "column": 2, "offset": 1 })
+    );
 }
