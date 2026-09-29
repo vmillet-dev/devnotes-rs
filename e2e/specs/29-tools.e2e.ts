@@ -300,6 +300,48 @@ describe('The tools', () => {
       expect(await $(testid('hash-input')).getValue()).toBe('The quick brown fox jumps over the lazy dog');
       await $(testid('hash-hmac')).click();
     });
+
+    it('draws passwords of every set chosen, and draws new ones on request', async () => {
+      await openTool('password');
+
+      await eventually(outputValues, (values) => values.length === 5, 'five passwords');
+      const first = await outputValues();
+      expect(first.every((password) => password.length === 20)).toBe(true);
+      expect(
+        first.every((password) => /[a-z]/.test(password) && /[A-Z]/.test(password) && /\d/.test(password)),
+      ).toBe(true);
+
+      await $(testid('password-generate')).click();
+      await eventually(outputValues, (values) => values.length === 5 && values[0] !== first[0], 'a new draw');
+    });
+
+    it('warns before a password is kept as a note', async () => {
+      await $(testid('tool-save-as-note')).click();
+
+      await $(testid('save-as-note-warning')).waitForDisplayed({ timeout: 5_000 });
+      await $(testid('save-as-note-cancel')).click();
+      await $(testid('save-as-note')).waitForExist({ reverse: true, timeout: 5_000 });
+    });
+
+    it('draws v7 UUIDs that sort by creation, and reads the time back out of one', async () => {
+      await openTool('uuid');
+      await $(`${testid('segmented-uuid-version')} [data-segment-id="v7"]`).click();
+
+      await eventually(
+        async () => (await $(testid('uuid-list')).getText()).split('\n'),
+        (lines) => lines.length === 5 && lines.every((line) => /^[0-9a-f]{8}-[0-9a-f]{4}-7/.test(line)),
+        'five v7s',
+      );
+      const lines = (await $(testid('uuid-list')).getText()).split('\n');
+      expect([...lines].sort()).toEqual(lines);
+
+      await setField(testid('uuid-checked'), '01922b6e-4b30-7cc4-9a5c-6f2d8e1b3a77');
+      await eventually(
+        () => $(testid('uuid-created')).getText(),
+        (created) => created === '2024-09-25 23:05:01.488 UTC',
+        'its time',
+      );
+    });
   });
 
   describe('a result kept as a note', () => {

@@ -52,12 +52,18 @@
       />
     </label>
 
+    @if (result().warning; as warning) {
+      <p class="warning" role="alert" data-testid="save-as-note-warning">
+        {{ warning.key | transloco: warning.params }}
+      </p>
+    }
+
     <div class="actions">
       <button type="button" class="action" data-testid="save-as-note-cancel" (click)="closed.emit()">
         {{ 'placeholders.cancel' | transloco }}
       </button>
       <button type="submit" class="action primary" data-testid="save-as-note-submit" [disabled]="!canSave()">
-        {{ 'tools.saveAsNote.submit' | transloco }}
+        {{ (result().warning ? 'tools.saveAsNote.submitAnyway' : 'tools.saveAsNote.submit') | transloco }}
       </button>
     </div>
   </form>

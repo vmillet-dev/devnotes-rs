@@ -37,6 +37,18 @@ export const TOOLS: readonly ToolDefinition[] = [
     load: () => import('./hash/hash-tool.component').then((m) => m.HashToolComponent),
   },
   {
+    id: 'password',
+    category: 'crypto',
+    keywords: ['password', 'passphrase', 'secret', 'random', 'entropy'],
+    load: () => import('./password/password-tool.component').then((m) => m.PasswordToolComponent),
+  },
+  {
+    id: 'uuid',
+    category: 'crypto',
+    keywords: ['uuid', 'guid', 'v4', 'v7', 'identifier'],
+    load: () => import('./uuid/uuid-tool.component').then((m) => m.UuidToolComponent),
+  },
+  {
     id: 'url-codec',
     category: 'encode',
     keywords: ['url', 'percent', 'encodeURIComponent', 'escape'],

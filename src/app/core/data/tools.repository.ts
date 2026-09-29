@@ -11,10 +11,14 @@ import {
   HashRequest,
   LineBreaksAnswer,
   LineBreaksRequest,
+  PasswordAnswer,
+  PasswordRequest,
   SlugRequest,
   UrlAnswer,
   UrlCodecAnswer,
   UrlCodecRequest,
+  UuidInspection,
+  UuidRequest,
 } from '@core/model/tool-answers.model';
 
 /** One method per tool: a request in, an answer out, and nothing of the library read. */
@@ -60,5 +64,17 @@ export class ToolsRepository {
 
   async saveBase64(text: string, options: Base64Options, path: string): Promise<Base64Saved> {
     return unwrap('save_base64', await commands.saveBase64(text, options, path));
+  }
+
+  async generatePasswords(request: PasswordRequest): Promise<PasswordAnswer> {
+    return unwrap('generate_passwords', await commands.generatePasswords(request));
+  }
+
+  async generateUuids(request: UuidRequest): Promise<string[]> {
+    return unwrap('generate_uuids', await commands.generateUuids(request));
+  }
+
+  async inspectUuid(text: string): Promise<UuidInspection> {
+    return unwrap('inspect_uuid', await commands.inspectUuid(text));
   }
 }

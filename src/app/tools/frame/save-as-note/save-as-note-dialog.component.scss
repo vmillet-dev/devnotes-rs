@@ -48,6 +48,18 @@
   }
 }
 
+// Red at rest, like every destructive warning here: it has to be read before the click.
+.warning {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(var(--red-rgb), 0.45);
+  border-radius: 8px;
+  background: rgba(var(--red-rgb), 0.08);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-0);
+}
+
 .actions {
   display: flex;
   justify-content: flex-end;

@@ -5,6 +5,7 @@
 pub mod encoding;
 pub(crate) mod files;
 pub mod hash;
+pub mod random;
 pub mod text;
 pub mod url_parts;
 
@@ -95,4 +96,29 @@ pub async fn save_base64(
 #[specta::specta]
 pub async fn hash_input(request: hash::HashRequest) -> Result<hash::HashAnswer, AppError> {
     off_thread(move || hash::hash(request)).await
+}
+
+/// No randomness from the system is the unexpected: nothing weaker is drawn in its place.
+#[tauri::command]
+#[specta::specta]
+pub async fn generate_passwords(
+    request: random::PasswordRequest,
+) -> Result<random::PasswordAnswer, AppError> {
+    off_thread(move || random::passwords(&request))
+        .await?
+        .map_err(|_| StorageError::Unavailable.into())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn generate_uuids(request: random::UuidRequest) -> Result<Vec<String>, AppError> {
+    off_thread(move || random::uuids(&request))
+        .await?
+        .map_err(|_| StorageError::Unavailable.into())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn inspect_uuid(text: String) -> Result<random::UuidInspection, AppError> {
+    off_thread(move || random::inspect_uuid(&text)).await
 }
