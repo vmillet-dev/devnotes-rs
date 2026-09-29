@@ -12,6 +12,25 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [0.9.0] - 2026-09-29
+
+### ✨ Added
+
+- Generate JSON and Lorem ipsum, and compare two JSON documents (#536)
+- Convert JSON to and from TOML, XML and YAML (#535)
+- Convert colours and check their contrast (#525)
+- Generate passwords and UUIDs (#523)
+- Hash and HMAC a text or a file (#522)
+- Encode and decode URLs and Base64 (#521)
+- Keep a tool's result as a note (#520)
+- Convert case, slugify, parse URLs and fix line breaks (#519)
+- Give the tools a home (#518)
+- Switch between the Notes and Outils areas (#517)
+
+### 🧰 Under the hood
+
+- Describe a tool's answer by the request it answers (#524)
+
 ## [0.8.0] - 2026-09-29
 
 ### ✨ Added
