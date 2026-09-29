@@ -1161,6 +1161,38 @@
       },
       "noteEncoded": "Text in Base64",
       "noteDecoded": "Decoded Base64"
+    },
+    "hash": {
+      "name": "Hash / HMAC",
+      "description": "MD5, SHA-1, SHA-2, SHA-3",
+      "source": "Source",
+      "sources": {
+        "text": "Text",
+        "file": "File"
+      },
+      "inputLabel": "Text to hash",
+      "placeholder": "The text to digest",
+      "fileHint": "The file is read where it lies, a block at a time: its size has no limit.",
+      "bytes": "{count, plural, one {# byte} other {# bytes}}",
+      "withNewline": "with a final newline",
+      "withoutNewline": "no final newline",
+      "key": "Key",
+      "showKey": "Show the key",
+      "keyNeverKept": "The key is never saved with the note.",
+      "verify": "Check a signature",
+      "expectedPlaceholder": "The expected digest, in hex or base64",
+      "matches": "Matches {{name}}, in {{encoding}}",
+      "noMatch": "Matches no digest of this text.",
+      "algorithms": "Algorithms",
+      "encoding": "Output format",
+      "encodings": {
+        "hex": "hex",
+        "base64": "base64"
+      },
+      "bits": "{{count}} bits",
+      "empty": "Choose an algorithm and type a text.",
+      "weak": "MD5 and SHA-1 protect nothing any more: the tool keeps them to compare existing digests.",
+      "noteTitle": "Digests"
     }
   }
 }

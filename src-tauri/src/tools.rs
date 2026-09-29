@@ -4,6 +4,7 @@
 
 pub mod encoding;
 pub(crate) mod files;
+pub mod hash;
 pub mod text;
 pub mod url_parts;
 
@@ -88,4 +89,10 @@ pub async fn save_base64(
     path: String,
 ) -> Result<encoding::Base64Saved, AppError> {
     off_thread(move || encoding::save_base64(&text, options, &path)).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn hash_input(request: hash::HashRequest) -> Result<hash::HashAnswer, AppError> {
+    off_thread(move || hash::hash(request)).await
 }

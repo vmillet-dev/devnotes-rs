@@ -34,6 +34,7 @@ export const commands = {
 	encodeBase64File: (path: string, options: Base64Options) => typedError<Base64FileAnswer, AppError>(__TAURI_INVOKE("encode_base64_file", { path, options })),
 	decodeBase64: (text: string, options: Base64Options) => typedError<Base64Decoded, AppError>(__TAURI_INVOKE("decode_base64", { text, options })),
 	saveBase64: (text: string, options: Base64Options, path: string) => typedError<Base64Saved, AppError>(__TAURI_INVOKE("save_base64", { text, options, path })),
+	hashInput: (request: HashRequest) => typedError<HashAnswer, AppError>(__TAURI_INVOKE("hash_input", { request })),
 	/**
 	 *  The first launch: the space, its folders and the notes in one transaction, since a space
 	 *  standing alone reads as "already seeded" for good. The strings stay on the front end, with
@@ -465,6 +466,14 @@ export type DiffLine =
 /**  Unchanged lines too far from any change to be worth reading. */
 { kind: "skipped"; count: number };
 
+export type DigestEncoding = "hex" | "base64";
+
+export type DigestValue = {
+	algorithm: HashAlgorithm,
+	bits: number,
+	value: string,
+};
+
 /**  `flatten`: the front end has a single note type. */
 export type DisplayNote = {
 	footer: NoteFooter,
@@ -576,6 +585,27 @@ export type GlobalAction = "capture" | "new-note" | "palette";
 
 /**  How the date view gathers its cards. A search or a facet still makes one flat list. */
 export type Grouping = "date" | "priority" | "format" | "none";
+
+/**  In the order the tool lists them. */
+export type HashAlgorithm = "md5" | "sha1" | "sha256" | "sha384" | "sha512" | "sha3-256";
+
+export type HashAnswer = { kind: "hashed"; bytes: number; endsWithNewline: boolean; digests: DigestValue[]; 
+/**  `None` with an expected digest given: it is none of them. */
+recognised: Recognised | null } | { kind: "failed"; problem: FileProblem };
+
+export type HashInput = { kind: "text"; text: string } | 
+/**  Read here, a block at a time: its bytes never cross the bridge, whatever its size. */
+{ kind: "file"; path: string };
+
+export type HashRequest = {
+	input: HashInput,
+	algorithms: HashAlgorithm[],
+	encoding: DigestEncoding,
+	/**  An HMAC when present. ⚠️ Zeroed once the digests are computed, and never stored. */
+	key: string | null,
+	/**  A digest to recognise, in any of the algorithms and either encoding. */
+	expected: string | null,
+};
 
 /**  `skipped`: notes already present or whose space is missing, so an import can be replayed. */
 export type ImportReport = {
@@ -964,6 +994,11 @@ export type Priority = "none" | "low" | "medium" | "high" | "urgent";
 export type QueryParameter = {
 	name: string,
 	value: string,
+};
+
+export type Recognised = {
+	algorithm: HashAlgorithm,
+	encoding: DigestEncoding,
 };
 
 /**  What the File menu draws: the libraries, and which of them is open. */
