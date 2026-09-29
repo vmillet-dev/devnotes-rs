@@ -9,10 +9,14 @@ import {
   HashRequest,
   LineBreaksAnswer,
   LineBreaksRequest,
+  PasswordAnswer,
+  PasswordRequest,
   SlugRequest,
   UrlAnswer,
   UrlCodecAnswer,
   UrlCodecRequest,
+  UuidInspection,
+  UuidRequest,
 } from '@core/model/tool-answers.model';
 
 /** Answers what a spec sets and records what was asked: the tools' rules are Rust's. */
@@ -41,6 +45,9 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
     digests: [],
     recognised: null,
   };
+  passwords: PasswordAnswer = { kind: 'noCharacters' };
+  uuids: string[] = [];
+  uuidInspection: UuidInspection = { kind: 'invalid' };
 
   convertCase(text: string): Promise<CaseConversion[]> {
     return this.answer('convert_case', text, this.cases);
@@ -80,6 +87,18 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
 
   hash(request: HashRequest): Promise<HashAnswer> {
     return this.answer('hash_input', request, this.hashAnswer);
+  }
+
+  generatePasswords(request: PasswordRequest): Promise<PasswordAnswer> {
+    return this.answer('generate_passwords', request, this.passwords);
+  }
+
+  generateUuids(request: UuidRequest): Promise<string[]> {
+    return this.answer('generate_uuids', request, this.uuids);
+  }
+
+  inspectUuid(text: string): Promise<UuidInspection> {
+    return this.answer('inspect_uuid', text, this.uuidInspection);
   }
 
   requestsOf(command: string): unknown[] {

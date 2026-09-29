@@ -657,6 +657,13 @@ chooses, never to a note.
 remembered. A file is hashed a block at a time, so its size has no limit, and a pasted
 signature is compared with every algorithm in both encodings, whichever are shown.
 
+**Randomness is the system's** (`getrandom`), never a seeded generator: a character is drawn by
+rejection, so none comes up more often than another, and a system that gives no randomness is
+an `AppError` rather than a weaker fallback. Generated passwords are the answer of a
+`liveResult` and die with the tool. They may be kept as a note — the choice made for v0.9.0 —
+but the tool's `ToolResult.warning` makes the dialog say why they had better not be, and its
+button read "Enregistrer quand même".
+
 **Adding a tool**, the whole of it:
 
 1. `src-tauri/src/tools/<module>.rs`: the function, its request and answer types, its tests.

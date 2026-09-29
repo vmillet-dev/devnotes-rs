@@ -1095,7 +1095,8 @@
       "noFolder": "Aucun dossier",
       "tags": "Tags",
       "tagsPlaceholder": "api, webhook",
-      "submit": "Enregistrer"
+      "submit": "Enregistrer",
+      "submitAnyway": "Enregistrer quand même"
     },
     "files": {
       "notFound": "Ce fichier est introuvable.",
@@ -1193,6 +1194,67 @@
       "empty": "Choisissez un algorithme et saisissez un texte.",
       "weak": "MD5 et SHA-1 ne protègent plus rien : l’outil les garde pour comparer des empreintes existantes.",
       "noteTitle": "Empreintes"
+    },
+    "password": {
+      "name": "Mots de passe",
+      "description": "Longueur, jeux de caractères, entropie",
+      "options": "Options",
+      "length": "Longueur",
+      "sets": "Caractères",
+      "setNames": {
+        "lowercase": "Minuscules",
+        "uppercase": "Majuscules",
+        "digits": "Chiffres",
+        "symbols": "Symboles"
+      },
+      "lookAlikes": "Sans caractères qui se ressemblent",
+      "count": "Nombre",
+      "generate": "Générer",
+      "passwords": "Mots de passe",
+      "entropy": "≈ {{bits}} bits d’entropie",
+      "strengths": {
+        "veryWeak": "très faible",
+        "weak": "faible",
+        "fair": "correct",
+        "strong": "fort",
+        "veryStrong": "très fort"
+      },
+      "noCharacters": "Choisissez au moins un jeu de caractères.",
+      "noteTitle": "Mots de passe générés",
+      "saveWarning": "Un mot de passe gardé dans une note est chiffré avec la bibliothèque, mais une note se copie, se partage et s’exporte : un gestionnaire de mots de passe le garde mieux."
+    },
+    "uuid": {
+      "name": "UUID",
+      "description": "v4, v7, en lot, validation",
+      "generate": "Générer",
+      "all": "tous les UUID",
+      "version": "Version",
+      "versions": {
+        "v4": "v4 · aléatoire",
+        "v7": "v7 · horodaté"
+      },
+      "versionHints": {
+        "v4": "122 bits tirés du générateur du système.",
+        "v7": "Ses 48 premiers bits sont l’heure de sa création : triés, ils se rangent dans l’ordre où ils ont été faits."
+      },
+      "count": "Nombre",
+      "uppercase": "En majuscules",
+      "again": "Tirer à nouveau",
+      "check": "Valider",
+      "checkLabel": "UUID à valider",
+      "checkPlaceholder": "01922b6e-4b30-7cc4-9a5c-6f2d8e1b3a77",
+      "versionLabel": "Version",
+      "variant": "Variante",
+      "variants": {
+        "ncs": "NCS (obsolète)",
+        "rfc": "RFC 9562",
+        "microsoft": "Microsoft",
+        "future": "réservée"
+      },
+      "created": "Créé le",
+      "nil": "UUID nul",
+      "invalid": "Ce n’est pas un UUID.",
+      "noteTitle": "UUID générés"
     }
   }
 }

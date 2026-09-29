@@ -35,6 +35,10 @@ export const commands = {
 	decodeBase64: (text: string, options: Base64Options) => typedError<Base64Decoded, AppError>(__TAURI_INVOKE("decode_base64", { text, options })),
 	saveBase64: (text: string, options: Base64Options, path: string) => typedError<Base64Saved, AppError>(__TAURI_INVOKE("save_base64", { text, options, path })),
 	hashInput: (request: HashRequest) => typedError<HashAnswer, AppError>(__TAURI_INVOKE("hash_input", { request })),
+	/**  No randomness from the system is the unexpected: nothing weaker is drawn in its place. */
+	generatePasswords: (request: PasswordRequest) => typedError<PasswordAnswer, AppError>(__TAURI_INVOKE("generate_passwords", { request })),
+	generateUuids: (request: UuidRequest) => typedError<string[], AppError>(__TAURI_INVOKE("generate_uuids", { request })),
+	inspectUuid: (text: string) => typedError<UuidInspection, AppError>(__TAURI_INVOKE("inspect_uuid", { text })),
 	/**
 	 *  The first launch: the space, its folders and the notes in one transaction, since a space
 	 *  standing alone reads as "already seeded" for good. The strings stay on the front end, with
@@ -443,6 +447,8 @@ export type ChangelogSpan = {
 	kind: SpanKind,
 	text: string,
 };
+
+export type CharacterSet = "lowercase" | "uppercase" | "digits" | "symbols";
 
 /**
  *  No identifier: the position is the identity — `note_items` is keyed on
@@ -975,6 +981,18 @@ export type PassphraseChange = {
 	backupsLeft: number,
 };
 
+export type PasswordAnswer = { kind: "generated"; passwords: string[]; entropyBits: number | null; strength: Strength } | 
+/**  Every character set was left out. */
+{ kind: "noCharacters" };
+
+export type PasswordRequest = {
+	length: number,
+	/**  Each chosen set is in every password drawn. */
+	sets: CharacterSet[],
+	avoidLookAlikes: boolean,
+	count: number,
+};
+
 export type Placeholder = {
 	name: string,
 	defaultValue: string,
@@ -1093,6 +1111,8 @@ export type Span = {
 
 export type SpanKind = "plain" | "strong" | "code";
 
+export type Strength = "veryWeak" | "weak" | "fair" | "strong" | "veryStrong";
+
 export type TagUsage = {
 	tag: string,
 	noteCount: number,
@@ -1153,6 +1173,24 @@ export type UrlScope =
 "component" | 
 /**  A URL as a whole, whose structure stays readable. */
 "whole";
+
+export type UuidInspection = { kind: "valid"; version: number; variant: UuidVariant; 
+/**  v1, v6 and v7 carry the time they were made, in UTC. */
+created: string | null; nil: boolean } | { kind: "invalid" };
+
+export type UuidRequest = {
+	version: UuidVersion,
+	count: number,
+	uppercase: boolean,
+};
+
+export type UuidVariant = "ncs" | 
+/**  RFC 9562, which every UUID made today follows. */
+"rfc" | "microsoft" | "future";
+
+export type UuidVersion = "v4" | 
+/**  Its first 48 bits are the time it was made: sorted, they sort by creation. */
+"v7";
 
 /**  What the front end renders before it renders anything else. */
 export type VaultState = 

@@ -23,6 +23,8 @@ export interface ToolResult {
   readonly kind: NoteKind;
   readonly language: LanguageTag;
   readonly content: string;
+  /** Said in the dialog, whose button then reads "Enregistrer quand même": a password. */
+  readonly warning?: TranslationRef;
 }
 
 /** A button of the tool's own in the frame's header: "Échanger A et B". */

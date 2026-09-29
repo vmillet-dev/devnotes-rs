@@ -1,0 +1,85 @@
+<div class="columns">
+  <section class="column" aria-labelledby="uuid-generate-title">
+    <div class="section-head">
+      <h2 id="uuid-generate-title" class="section-title">{{ 'tools.uuid.generate' | transloco }}</h2>
+      <app-copy-value [value]="list()" [what]="'tools.uuid.all' | transloco" />
+    </div>
+
+    <div class="options">
+      <app-segmented-choice
+        kind="uuid-version"
+        [label]="'tools.uuid.version' | transloco"
+        [segments]="versions"
+        [currentId]="version()"
+        (chosen)="onVersion($event)"
+      />
+      <label class="option">
+        {{ 'tools.uuid.count' | transloco }}
+        <input
+          type="number"
+          class="number"
+          data-testid="uuid-count"
+          min="1"
+          max="500"
+          [value]="count()"
+          (input)="onCount($event)"
+        />
+      </label>
+      <label class="check">
+        <input
+          type="checkbox"
+          data-testid="uuid-uppercase"
+          [checked]="uppercase()"
+          (change)="onUppercase($event)"
+        />
+        {{ 'tools.uuid.uppercase' | transloco }}
+      </label>
+      <button type="button" class="generate" data-testid="uuid-generate" (click)="regenerate()">
+        {{ 'tools.uuid.again' | transloco }}
+      </button>
+    </div>
+
+    <pre class="list" data-testid="uuid-list">{{ list() }}</pre>
+    <p class="note">{{ 'tools.uuid.versionHints.' + version() | transloco }}</p>
+  </section>
+
+  <section class="column" aria-labelledby="uuid-check-title">
+    <h2 id="uuid-check-title" class="section-title">{{ 'tools.uuid.check' | transloco }}</h2>
+    <label class="field">
+      <span class="visually-hidden">{{ 'tools.uuid.checkLabel' | transloco }}</span>
+      <input
+        type="text"
+        class="checked"
+        data-testid="uuid-checked"
+        spellcheck="false"
+        [value]="checked()"
+        [placeholder]="'tools.uuid.checkPlaceholder' | transloco"
+        (input)="onChecked($event)"
+      />
+    </label>
+    @if (inspection.value(); as inspection) {
+      @if (inspection.kind === 'valid') {
+        <dl class="facts" data-testid="uuid-facts">
+          <div class="fact">
+            <dt>{{ 'tools.uuid.versionLabel' | transloco }}</dt>
+            <dd data-testid="uuid-version">
+              {{ inspection.nil ? ('tools.uuid.nil' | transloco) : 'v' + inspection.version }}
+            </dd>
+          </div>
+          <div class="fact">
+            <dt>{{ 'tools.uuid.variant' | transloco }}</dt>
+            <dd>{{ 'tools.uuid.variants.' + inspection.variant | transloco }}</dd>
+          </div>
+          @if (created(); as created) {
+            <div class="fact">
+              <dt>{{ 'tools.uuid.created' | transloco }}</dt>
+              <dd data-testid="uuid-created">{{ created }}</dd>
+            </div>
+          }
+        </dl>
+      } @else {
+        <p class="problem" role="status" data-testid="uuid-invalid">{{ 'tools.uuid.invalid' | transloco }}</p>
+      }
+    }
+  </section>
+</div>

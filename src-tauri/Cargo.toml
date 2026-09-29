@@ -47,7 +47,7 @@ serde_json = "1.0.151"
 diesel = { version = "2.3.12", features = ["sqlite"] }
 diesel_migrations = { version = "2.3.2", features = ["sqlite"] }
 libsqlite3-sys = { version = "0.38.1", features = ["bundled"] }
-uuid = { version = "1.24.0", features = ["v4"] }
+uuid = { version = "1.24.0", features = ["v4", "v7"] }
 chrono = { version = "0.4.45", features = ["serde"] }
 base64 = "0.22.1"
 png = "0.18.1"

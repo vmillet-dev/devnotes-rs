@@ -1095,7 +1095,8 @@
       "noFolder": "No folder",
       "tags": "Tags",
       "tagsPlaceholder": "api, webhook",
-      "submit": "Save"
+      "submit": "Save",
+      "submitAnyway": "Save anyway"
     },
     "files": {
       "notFound": "This file cannot be found.",
@@ -1193,6 +1194,67 @@
       "empty": "Choose an algorithm and type a text.",
       "weak": "MD5 and SHA-1 protect nothing any more: the tool keeps them to compare existing digests.",
       "noteTitle": "Digests"
+    },
+    "password": {
+      "name": "Passwords",
+      "description": "Length, character sets, entropy",
+      "options": "Options",
+      "length": "Length",
+      "sets": "Characters",
+      "setNames": {
+        "lowercase": "Lower case",
+        "uppercase": "Upper case",
+        "digits": "Digits",
+        "symbols": "Symbols"
+      },
+      "lookAlikes": "No characters that look alike",
+      "count": "Count",
+      "generate": "Generate",
+      "passwords": "Passwords",
+      "entropy": "≈ {{bits}} bits of entropy",
+      "strengths": {
+        "veryWeak": "very weak",
+        "weak": "weak",
+        "fair": "fair",
+        "strong": "strong",
+        "veryStrong": "very strong"
+      },
+      "noCharacters": "Choose at least one character set.",
+      "noteTitle": "Generated passwords",
+      "saveWarning": "A password kept in a note is encrypted with the library, but a note gets copied, shared and exported: a password manager keeps it better."
+    },
+    "uuid": {
+      "name": "UUID",
+      "description": "v4, v7, in bulk, validation",
+      "generate": "Generate",
+      "all": "every UUID",
+      "version": "Version",
+      "versions": {
+        "v4": "v4 · random",
+        "v7": "v7 · time-ordered"
+      },
+      "versionHints": {
+        "v4": "122 bits drawn from the system's generator.",
+        "v7": "Its first 48 bits are the time it was made: sorted, they sort in the order they were made."
+      },
+      "count": "Count",
+      "uppercase": "Upper case",
+      "again": "Draw again",
+      "check": "Validate",
+      "checkLabel": "UUID to validate",
+      "checkPlaceholder": "01922b6e-4b30-7cc4-9a5c-6f2d8e1b3a77",
+      "versionLabel": "Version",
+      "variant": "Variant",
+      "variants": {
+        "ncs": "NCS (obsolete)",
+        "rfc": "RFC 9562",
+        "microsoft": "Microsoft",
+        "future": "reserved"
+      },
+      "created": "Created",
+      "nil": "Nil UUID",
+      "invalid": "This is not a UUID.",
+      "noteTitle": "Generated UUIDs"
     }
   }
 }

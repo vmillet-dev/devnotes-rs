@@ -149,4 +149,15 @@ describe('SaveAsNoteDialogComponent', () => {
 
     expect(closed).toBe(0);
   });
+
+  it('says what a tool warns about, and saves only "anyway"', async () => {
+    await open();
+    fixture.componentRef.setInput('result', { ...RESULT, warning: { key: 'tools.password.saveWarning' } });
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('[data-testid="save-as-note-warning"]').textContent).toContain(
+      'gestionnaire de mots de passe',
+    );
+    expect(field('save-as-note-submit').textContent?.trim()).toBe('Enregistrer quand même');
+  });
 });
