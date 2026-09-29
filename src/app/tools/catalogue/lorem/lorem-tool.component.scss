@@ -22,15 +22,7 @@
 }
 
 .number {
-  @include text-field;
-  @include surface(var(--bg-1), 7px, var(--line));
-  @include focus-ring;
-  width: 72px;
-  height: 30px;
-  padding: 0 8px;
-  font-family: var(--font-mono), monospace;
-  font-size: 12.5px;
-  color: var(--text-0);
+  @include tool-number(72px);
 }
 
 .check {
