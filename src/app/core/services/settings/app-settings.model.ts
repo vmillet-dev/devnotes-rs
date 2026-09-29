@@ -1,5 +1,6 @@
 import { AREAS, Area } from '@core/services/areas/area.model';
 import { APP_LOCALES } from '@core/services/i18n/locale.model';
+import { RecentTool } from '@core/services/tools/tool.model';
 import { DEFAULT_SHORTCUTS } from '@core/services/shortcuts/shortcut.model';
 
 /**
@@ -53,6 +54,8 @@ export interface AppSettings {
   readonly libraryRailWidth: number;
   /** Which area shows — Notes or Outils — and the one the window reopens on. */
   readonly area: Area;
+  /** The tools opened last, newest first: which and when, nothing typed into them. */
+  readonly recentTools: readonly RecentTool[];
   readonly showPinnedFirst: boolean;
   /** Read by Rust at launch, before the front end exists: `backup::wanted`. */
   readonly automaticBackups: boolean;
@@ -82,6 +85,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   showLibraryRail: true,
   libraryRailWidth: RAIL_WIDTH.default,
   area: AREAS[0],
+  recentTools: [],
   showPinnedFirst: true,
   automaticBackups: true,
   copyConfirmation: true,

@@ -408,3 +408,41 @@
     --folder-hue: var(--red);
   }
 }
+
+// The five tool categories, as `--tool-hue` (a dot, an icon) and `--tool-hue-rgb` (a tint) on
+// a `[data-category]` element. The list is `TOOL_CATEGORIES`; a category added there is blue
+// until it is added here.
+@mixin tool-hues {
+  --tool-hue: var(--blue);
+  --tool-hue-rgb: var(--blue-rgb);
+
+  &[data-category='crypto'] {
+    --tool-hue: var(--purple);
+    --tool-hue-rgb: var(--purple-rgb);
+  }
+
+  &[data-category='encode'] {
+    --tool-hue: var(--green);
+    --tool-hue-rgb: var(--green-rgb);
+  }
+
+  &[data-category='compare'] {
+    --tool-hue: var(--amber-text);
+    --tool-hue-rgb: var(--amber-rgb);
+  }
+
+  &[data-category='generate'] {
+    --tool-hue: var(--red);
+    --tool-hue-rgb: var(--red-rgb);
+  }
+}
+
+// A section's title inside a tool or the tools' home: "ENTRÉE", "RÉCENTS".
+@mixin tool-section-title {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}

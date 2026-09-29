@@ -1,0 +1,80 @@
+@use 'mixins' as *;
+
+:host {
+  display: flex;
+  flex: 0 0 auto;
+  min-height: 0;
+  background: var(--bg-1);
+}
+
+.rail {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-card) 10px var(--space-canvas);
+  border-right: 1px solid var(--line-soft);
+  overflow-y: auto;
+}
+
+.rail-switch {
+  margin-bottom: 12px;
+}
+
+.rail-link {
+  @include unstyled-control;
+  @include focus-ring(-2px);
+  @include eases(background, color);
+  @include tool-hues;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border-radius: 7px;
+  font-size: 13px;
+  color: var(--text-1);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--bg-3);
+    color: var(--text-0);
+  }
+
+  &.on {
+    background: var(--bg-3);
+    color: var(--amber-text);
+    font-weight: 600;
+  }
+}
+
+// Wrapped rather than cut: the rail opens at 160px, and "Convertisseur de casse" is longer.
+.rail-label {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.rail-count {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-2);
+}
+
+.on .rail-count {
+  color: inherit;
+}
+
+.hue-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--tool-hue);
+}
+
+.rail-heading {
+  @include tool-section-title;
+  padding: 12px 10px 4px;
+}

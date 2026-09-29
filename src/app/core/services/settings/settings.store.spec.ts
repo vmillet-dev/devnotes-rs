@@ -70,6 +70,22 @@ describe('SettingsStore', () => {
     expect(createStore().theme()).toBe('system');
   });
 
+  /** Remembered with the application; a hand-edited file loses its bad entries, not the list. */
+  it('reads the recent tools back, entry by entry', () => {
+    preferences().write(
+      SETTINGS_KEYS.recentTools,
+      JSON.stringify([{ id: 'hash', at: '2026-09-29T10:00:00.000Z' }, { id: 42 }, 'slug']),
+    );
+
+    expect(createStore().recentTools()).toEqual([{ id: 'hash', at: '2026-09-29T10:00:00.000Z' }]);
+  });
+
+  it('starts with no recent tool when the file holds no list', () => {
+    preferences().write(SETTINGS_KEYS.recentTools, '{not json');
+
+    expect(createStore().recentTools()).toEqual([]);
+  });
+
   it('keeps the default of a flag nothing has stored, rather than reading it as false', () => {
     expect(createStore().closeToTray()).toBe(true);
   });
