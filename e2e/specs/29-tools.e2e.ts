@@ -550,8 +550,8 @@ describe('The tools', () => {
       await $(`${testid('json-note-option')}[data-note-id="${noteId}"]`).click();
 
       await eventually(
-        () => $(testid('json-diff-name-a')).getText(),
-        (name) => name === 'config.staging.json',
+        () => readEach(testid('json-diff-name-a'), 'text'),
+        (names) => names[0] === 'config.staging.json',
         'the snippet in A',
       );
     });

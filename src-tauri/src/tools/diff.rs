@@ -365,6 +365,9 @@ impl Printer<'_> {
                 .map(|key| format!("{}: ", Value::String(key.to_owned())))
                 .unwrap_or_default()
         );
+        // The comma only says whether a sibling follows: a line that gains or loses one is the
+        // same line, or every last key before an added one would read as changed.
+        let key_body = key_body.strip_suffix(',').unwrap_or(key_body);
         self.lines.push(Line {
             text: format!("{prefix}{body}"),
             key: format!("{prefix}{key_body}"),
@@ -757,6 +760,15 @@ mod tests {
         assert_eq!(
             (added.kind, added.left.is_none()),
             (JsonDiffRowKind::Added, true)
+        );
+        let kept = rows
+            .iter()
+            .find(|row| row.path == "$.features.newInvoices")
+            .unwrap();
+        assert_eq!(
+            kept.kind,
+            JsonDiffRowKind::Same,
+            "a comma lost is no change"
         );
         let removed = rows
             .iter()
