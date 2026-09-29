@@ -617,7 +617,8 @@
       "global": "Global (even with the window closed)",
       "canvas": "Canvas",
       "editor": "Editor",
-      "palette": "Quick paste"
+      "palette": "Quick paste",
+      "areas": "Areas"
     },
     "global": {
       "palette": "Open the quick-paste palette",
@@ -954,5 +955,18 @@
     "zoom": "Zoom",
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out"
+  },
+  "areas": {
+    "label": "Areas",
+    "hint": "{{area}} ({{key}})",
+    "notes": "Notes",
+    "tools": "Tools",
+    "go": {
+      "notes": "Go to the notes",
+      "tools": "Go to the tools"
+    }
+  },
+  "tools": {
+    "title": "Tools"
   }
 }

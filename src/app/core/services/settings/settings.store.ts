@@ -1,4 +1,5 @@
 import { Injectable, Signal, computed, effect, inject, signal } from '@angular/core';
+import { AREAS } from '@core/services/areas/area.model';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
 import {
   AppSettings,
@@ -91,6 +92,7 @@ export class SettingsStore {
   readonly newNoteShortcut = this.setting('newNoteShortcut', asAccelerator);
   readonly showLibraryRail = this.setting('showLibraryRail', asBoolean);
   readonly libraryRailWidth = this.setting('libraryRailWidth', asPixels(RAIL_WIDTH));
+  readonly area = this.setting('area', asOneOf(AREAS));
   readonly showPinnedFirst = this.setting('showPinnedFirst', asBoolean);
   readonly automaticBackups = this.setting('automaticBackups', asBoolean);
   readonly copyConfirmation = this.setting('copyConfirmation', asBoolean);

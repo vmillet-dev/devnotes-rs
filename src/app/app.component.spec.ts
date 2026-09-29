@@ -10,6 +10,8 @@ import { VaultGateComponent } from './vault-gate/vault-gate.component';
 import { VaultStore } from '@core/state/vault.store';
 import { VaultRepository } from '@core/data/vault.repository';
 import { FakeVaultRepository } from '@testing/fake-vault-repository';
+import { AreaStore } from '@core/services/areas/area.store';
+import { ToolsPageComponent } from '@tools/tools-page.component';
 import { AppComponent } from './app.component';
 
 describe('AppComponent', () => {
@@ -68,5 +70,36 @@ describe('AppComponent', () => {
   it('renders neither until Rust has answered', () => {
     expect(fixture.debugElement.query(By.directive(VaultGateComponent))).toBeNull();
     expect(fixture.debugElement.query(By.directive(NotesPageComponent))).toBeNull();
+  });
+
+  describe('the areas', () => {
+    const press = (code: string) =>
+      document.dispatchEvent(new KeyboardEvent('keydown', { code, key: '?', ctrlKey: true, bubbles: true }));
+    const notesPage = () => fixture.debugElement.query(By.directive(NotesPageComponent));
+
+    it('opens the tools on Ctrl+2, and keeps the notes behind them', async () => {
+      await withVault('unlocked');
+
+      press('Digit2');
+      await fixture.whenStable();
+
+      expect(TestBed.inject(AreaStore).current()).toBe('tools');
+      expect(fixture.debugElement.query(By.directive(ToolsPageComponent))).not.toBeNull();
+      expect(notesPage().nativeElement.classList).toContain('away');
+
+      press('Digit1');
+      await fixture.whenStable();
+
+      expect(fixture.debugElement.query(By.directive(ToolsPageComponent))).toBeNull();
+      expect(notesPage().nativeElement.classList).not.toContain('away');
+    });
+
+    it('answers no key behind the gate', async () => {
+      await withVault('locked');
+
+      press('Digit2');
+
+      expect(TestBed.inject(AreaStore).current()).toBe('notes');
+    });
   });
 });

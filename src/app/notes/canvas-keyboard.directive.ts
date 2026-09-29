@@ -1,4 +1,5 @@
 import { Directive, ElementRef, inject } from '@angular/core';
+import { AreaStore } from '@core/services/areas/area.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { ShortcutBindingsStore } from '@core/services/shortcuts/shortcut-bindings.store';
 import { canvasKeystrokeFromEvent } from '@core/services/shortcuts/shortcut.model';
@@ -48,12 +49,15 @@ export class CanvasKeyboardDirective {
   private readonly dialogs = inject(DialogStack);
   private readonly settings = inject(SettingsStore);
   private readonly bindings = inject(ShortcutBindingsStore);
+  private readonly areas = inject(AreaStore);
 
   protected onKeydown(event: KeyboardEvent): void {
     // ⚠️ `defaultPrevented` too: this listens on the document, so a control that has
     // already handled the key — the rail's resize edge — would see the canvas act on it
     // as well, and the arrows would move the card focus while the rail is being widened.
     if (this.dialogs.hasOpenDialog() || isTypingTarget(event.target) || event.defaultPrevented) return;
+    // The page stays alive behind another area, and its keys must not reach through.
+    if (this.areas.current() !== 'notes') return;
 
     const chord = canvasKeystrokeFromEvent(event);
     const entry = CANVAS_KEYS.find((candidate) => this.answersTo(candidate, event, chord));

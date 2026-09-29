@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { AreaStore } from '@core/services/areas/area.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { VaultStore } from '@core/state/vault.store';
@@ -66,6 +67,22 @@ describe('TitlebarComponent', () => {
     await unlock();
 
     expect(menus().querySelector('app-file-menu')).not.toBeNull();
+  });
+
+  /** The notes' rail heads with the switch between areas; hidden, the switch comes here. */
+  it('carries the switch between areas while the notes hide their rail', async () => {
+    const settings = TestBed.inject(SettingsStore);
+    const areas = TestBed.inject(AreaStore);
+    await unlock();
+    expect(menus().querySelector('app-area-switch')).toBeNull();
+
+    settings.showLibraryRail.write(false);
+    await fixture.whenStable();
+    menus().querySelector<HTMLButtonElement>('[data-area="tools"]')!.click();
+    await fixture.whenStable();
+
+    expect(areas.current()).toBe('tools');
+    expect(menus().querySelector('app-area-switch')).toBeNull();
   });
 
   /**

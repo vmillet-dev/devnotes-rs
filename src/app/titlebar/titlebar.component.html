@@ -9,6 +9,11 @@
       <app-file-menu />
     }
     <app-about-menu />
+    <!-- Here rather than in the notes' topbar, which has no width left at the shipped size:
+         the rail it heads is hidden, and nothing else leads to the other areas. -->
+    @if (switchInBar()) {
+      <app-area-switch layout="bar" [current]="areas.current()" (chosen)="areas.show($event)" />
+    }
   </div>
 
   <div class="titlebar-title" data-testid="titlebar-title">{{ title }}</div>

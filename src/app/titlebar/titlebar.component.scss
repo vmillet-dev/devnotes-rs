@@ -19,6 +19,10 @@
   gap: 8px;
 }
 
+app-area-switch {
+  margin-left: 6px;
+}
+
 /* Centred on the window rather than on what the two groups leave between them,
    which would shift it as soon as a label changes width with the language. */
 .titlebar-title {

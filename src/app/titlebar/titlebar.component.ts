@@ -1,15 +1,17 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { APP_INFO } from '@core/services/app-info/app-info.service';
+import { AreaStore } from '@core/services/areas/area.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { VaultStore } from '@core/state/vault.store';
 import { IconComponent } from '@shared/icon/icon.component';
+import { AreaSwitchComponent } from '@shared/controls/area-switch/area-switch.component';
 import { AboutMenuComponent } from './about-menu/about-menu.component';
 import { FileMenuComponent } from './file-menu/file-menu.component';
 
 @Component({
   selector: 'app-titlebar',
-  imports: [TranslocoPipe, FileMenuComponent, AboutMenuComponent, IconComponent],
+  imports: [TranslocoPipe, FileMenuComponent, AboutMenuComponent, IconComponent, AreaSwitchComponent],
   templateUrl: './titlebar.component.html',
   styleUrl: './titlebar.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -28,6 +30,12 @@ export class TitlebarComponent {
   );
 
   protected readonly vault = inject(VaultStore);
+  protected readonly areas = inject(AreaStore);
+
+  /** Only the notes can hide their rail, and the switch heads it. */
+  protected readonly switchInBar = computed(
+    () => this.vault.isUnlocked() && this.areas.current() === 'notes' && !this.settings.showLibraryRail(),
+  );
 
   protected toggleTheme(): void {
     this.settings.setTheme(this.switchesTo());

@@ -1,0 +1,16 @@
+<div class="page" data-testid="tools-page">
+  <nav
+    class="rail"
+    data-testid="tools-rail"
+    [style.width.px]="settings.libraryRailWidth()"
+    [attr.aria-label]="'tools.title' | transloco"
+  >
+    <app-area-switch [current]="areas.current()" (chosen)="areas.show($event)" />
+  </nav>
+
+  <main class="workspace">
+    <header class="topbar">
+      <h1 class="title">{{ 'tools.title' | transloco }}</h1>
+    </header>
+  </main>
+</div>
