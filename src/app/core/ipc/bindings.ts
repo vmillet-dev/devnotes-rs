@@ -51,6 +51,7 @@ export const commands = {
 	placeInZones: (request: ZonesRequest) => typedError<ZonesAnswer, AppError>(__TAURI_INVOKE("place_in_zones", { request })),
 	timeInZone: (zone: string | null) => typedError<string, AppError>(__TAURI_INVOKE("time_in_zone", { zone })),
 	describeCron: (request: CronRequest) => typedError<CronAnswer, AppError>(__TAURI_INVOKE("describe_cron", { request })),
+	convertSize: (request: SizesRequest) => typedError<SizesAnswer, AppError>(__TAURI_INVOKE("convert_size", { request })),
 	/**
 	 *  The first launch: the space, its folders and the notes in one transaction, since a space
 	 *  standing alone reads as "already seeded" for good. The strings stay on the front end, with
@@ -1325,6 +1326,39 @@ export type ShortcutBindings = {
 	capture: string,
 	newNote: string,
 	palette: string,
+};
+
+/**  What one decimal unit is in the binary unit of the same rank: `1 GB = 0.931 GiB`. */
+export type SizeGap = {
+	decimal: SizeUnit,
+	binary: SizeUnit,
+	exact: string,
+	rounded: string,
+};
+
+export type SizeRow = {
+	unit: SizeUnit,
+	exact: string,
+	rounded: string,
+};
+
+export type SizeUnit = "bit" | "kilobit" | "megabit" | "gigabit" | "terabit" | "byte" | "kilobyte" | "megabyte" | "gigabyte" | "terabyte" | "petabyte" | "kibibyte" | "mebibyte" | "gibibyte" | "tebibyte" | "pebibyte";
+
+export type SizesAnswer = { kind: "converted"; unit: SizeUnit; 
+/**  The unit was written in the text, rather than chosen beside it. */
+unitInText: boolean; rows: SizeRow[]; gap: SizeGap } | 
+/**  One-based, in characters. */
+{ kind: "unreadable"; at: number } | { kind: "negative"; at: number } | 
+/**  Past the 28 digits exact arithmetic holds. */
+{ kind: "tooLarge" };
+
+export type SizesRequest = {
+	/**  A number, with its unit or without one. */
+	text: string,
+	/**  The unit of a number typed without one. */
+	unit: SizeUnit,
+	/**  How many decimals the rounded values keep; the exact ones keep all. */
+	decimals: number,
 };
 
 export type SlugRequest = {

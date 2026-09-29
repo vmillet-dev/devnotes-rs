@@ -25,6 +25,8 @@ import {
   LoremRequest,
   PasswordAnswer,
   PasswordRequest,
+  SizesAnswer,
+  SizesRequest,
   SlugRequest,
   UrlAnswer,
   UrlCodecAnswer,
@@ -83,6 +85,7 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
   zonesAnswer: ZonesAnswer = { kind: 'unreadable', at: 1 };
   wallClock = '2026-09-29 14:03:12';
   cron: CronAnswer = { kind: 'reboot' };
+  sizes: SizesAnswer = { kind: 'tooLarge' };
 
   convertCase(text: string): Promise<CaseConversion[]> {
     return this.answer('convert_case', text, this.cases);
@@ -178,6 +181,10 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
 
   describeCron(request: CronRequest): Promise<CronAnswer> {
     return this.answer('describe_cron', request, this.cron);
+  }
+
+  convertSize(request: SizesRequest): Promise<SizesAnswer> {
+    return this.answer('convert_size', request, this.sizes);
   }
 
   requestsOf(command: string): unknown[] {

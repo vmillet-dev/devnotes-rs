@@ -11,7 +11,9 @@ pub mod encoding;
 pub(crate) mod files;
 pub mod generate;
 pub mod hash;
+pub(crate) mod numbers;
 pub mod random;
+pub mod sizes;
 pub mod text;
 pub mod url_parts;
 pub mod zones;
@@ -210,4 +212,10 @@ pub async fn time_in_zone(zone: Option<String>) -> Result<String, AppError> {
 #[specta::specta]
 pub async fn describe_cron(request: cron::CronRequest) -> Result<cron::CronAnswer, AppError> {
     off_thread(move || cron::describe(&request, local_zone().as_deref(), chrono::Utc::now())).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn convert_size(request: sizes::SizesRequest) -> Result<sizes::SizesAnswer, AppError> {
+    off_thread(move || sizes::convert(&request)).await
 }

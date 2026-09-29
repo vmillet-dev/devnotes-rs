@@ -722,6 +722,14 @@ written as times when the minute and the hour are plain values, one clause per f
 When both day fields are set, either one matching is enough, as in cron, and the tool says so.
 `@midnight` is expanded here, since `croner` does not know it.
 
+**A number is read exactly** (`tools/numbers.rs`, `rust_decimal`, never a float): a point or a
+comma before the decimals whatever the language — the last mark when both appear, a repeated one
+grouping thousands — spaces or underscores between thousands, an exponent. **A data size is
+counted in bits** (`tools/sizes.rs`), every unit divided out of that one figure, so `1 GB` is
+`1000000000` bytes and never nearly: each value comes back exact and rounded to the decimals
+asked. The page writes the digits in its language (`formatDecimal`) and copies the exact value
+(`app-output-row`'s `copied`). An all-lowercase `gb` is read as bytes, `Gb` as bits.
+
 **Adding a tool**, the whole of it:
 
 1. `src-tauri/src/tools/<module>.rs`: the function, its request and answer types, its tests.

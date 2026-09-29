@@ -1006,7 +1006,8 @@
       "encode": "Encodeurs",
       "compare": "Comparer",
       "generate": "Générateurs",
-      "time": "Temps"
+      "time": "Temps",
+      "calc": "Calcul"
     },
     "input": "Entrée",
     "result": "Résultat",
@@ -1632,6 +1633,65 @@
         "4": "quatrième",
         "5": "cinquième"
       }
+    },
+    "sizes": {
+      "name": "Tailles de données",
+      "description": "o, ko, Mo, Go ↔ Kio, Mio, Gio, et les bits",
+      "inputLabel": "Quantité",
+      "placeholder": "1,5 Go · 750 Kio · 100 Mbit",
+      "unit": "Unité sans symbole",
+      "decimals": "Décimales",
+      "readAs": "Lu comme {{value}} {{unit}}",
+      "unitInText": "L’unité écrite l’emporte sur celle choisie.",
+      "gap": "1 {{decimal}} = {{ratio}} {{binary}}",
+      "conventions": "Décimal (SI) : 1 ko = 1 000 o. Binaire (CEI) : 1 Kio = 1 024 o. Un disque se vend en Go ; un système compte souvent en Gio.",
+      "rounded": "≈ : valeur arrondie. Copier donne la valeur exacte.",
+      "groups": {
+        "bytes": "Octets et bits",
+        "decimal": "Décimal · 1 000",
+        "binary": "Binaire · 1 024"
+      },
+      "units": {
+        "bit": "bit",
+        "kilobit": "kbit",
+        "megabit": "Mbit",
+        "gigabit": "Gbit",
+        "terabit": "Tbit",
+        "byte": "o",
+        "kilobyte": "ko",
+        "megabyte": "Mo",
+        "gigabyte": "Go",
+        "terabyte": "To",
+        "petabyte": "Po",
+        "kibibyte": "Kio",
+        "mebibyte": "Mio",
+        "gibibyte": "Gio",
+        "tebibyte": "Tio",
+        "pebibyte": "Pio"
+      },
+      "unitNames": {
+        "bit": "bit",
+        "kilobit": "kilobit (kbit)",
+        "megabit": "mégabit (Mbit)",
+        "gigabit": "gigabit (Gbit)",
+        "terabit": "térabit (Tbit)",
+        "byte": "octet (o)",
+        "kilobyte": "kilooctet (ko)",
+        "megabyte": "mégaoctet (Mo)",
+        "gigabyte": "gigaoctet (Go)",
+        "terabyte": "téraoctet (To)",
+        "petabyte": "pétaoctet (Po)",
+        "kibibyte": "kibioctet (Kio)",
+        "mebibyte": "mébioctet (Mio)",
+        "gibibyte": "gibioctet (Gio)",
+        "tebibyte": "tébioctet (Tio)",
+        "pebibyte": "pébioctet (Pio)"
+      },
+      "unreadable": "Illisible à partir du caractère {{at}}.",
+      "negative": "Une taille ne peut pas être négative (caractère {{at}}).",
+      "tooLarge": "Trop grand pour être compté exactement : 28 chiffres au plus.",
+      "empty": "Tapez une quantité, avec son unité ou non : chaque unité s’affiche ici.",
+      "noteTitle": "{{value}} {{unit}} dans toutes les unités"
     }
   }
 }

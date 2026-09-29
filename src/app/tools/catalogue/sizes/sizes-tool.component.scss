@@ -1,0 +1,74 @@
+@use 'mixins' as *;
+
+.columns {
+  @include tool-columns;
+}
+
+.column {
+  @include tool-column;
+  gap: 10px;
+}
+
+.section-title {
+  @include tool-section-title;
+}
+
+.group-title {
+  @include tool-section-title;
+  margin-top: 6px;
+  font-size: 10.5px;
+}
+
+.field {
+  @include tool-field;
+  height: 40px;
+  font-size: 15px;
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-1);
+}
+
+.number {
+  @include tool-number(56px);
+}
+
+.reading {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-0);
+}
+
+.gap {
+  margin: 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 14px;
+  color: var(--text-0);
+}
+
+.note {
+  @include tool-note;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+}
+
+.problem {
+  @include tool-problem;
+}
+
+.empty {
+  @include tool-note;
+  font-family: var(--font-sans);
+  font-size: 12px;
+}

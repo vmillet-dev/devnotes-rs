@@ -41,6 +41,17 @@ describe('OutputRowComponent', () => {
     expect(clipboard.content).toBe('bfc0d2dc');
   });
 
+  it('copies the exact value behind a rounded one', async () => {
+    fixture.componentRef.setInput('value', '≈ 0.931');
+    fixture.componentRef.setInput('copied', '0.931322574615478515625');
+    await fixture.whenStable();
+
+    copy().click();
+
+    await vi.waitFor(() => expect(clipboard.content).toBe('0.931322574615478515625'));
+    expect(fixture.nativeElement.querySelector('[data-testid="output-value"]').textContent).toBe('≈ 0.931');
+  });
+
   it('copies nothing when there is nothing', async () => {
     fixture.componentRef.setInput('value', '');
     await fixture.whenStable();

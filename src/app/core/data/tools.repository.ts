@@ -27,6 +27,8 @@ import {
   LoremRequest,
   PasswordAnswer,
   PasswordRequest,
+  SizesAnswer,
+  SizesRequest,
   SlugRequest,
   UrlAnswer,
   UrlCodecAnswer,
@@ -137,6 +139,11 @@ export class ToolsRepository {
   /** Read in the machine's zone unless another is named; the next runs are counted from now. */
   async describeCron(request: CronRequest): Promise<CronAnswer> {
     return unwrap('describe_cron', await commands.describeCron(request));
+  }
+
+  /** Exact: the rounded values are for reading, the exact ones for copying. */
+  async convertSize(request: SizesRequest): Promise<SizesAnswer> {
+    return unwrap('convert_size', await commands.convertSize(request));
   }
 
   /** The wall clock of a zone now, as the field takes it. */

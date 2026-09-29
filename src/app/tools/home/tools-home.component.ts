@@ -31,6 +31,7 @@ const CATEGORY_ICONS: Record<ToolCategory, IconName> = {
   compare: 'compare',
   generate: 'sparkle',
   time: 'clock',
+  calc: 'calculator',
 };
 
 /** The catalogue in its panels, the recent tools above it, and a search over both names and lines. */

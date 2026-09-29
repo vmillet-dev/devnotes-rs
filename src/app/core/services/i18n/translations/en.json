@@ -1006,7 +1006,8 @@
       "encode": "Encoders",
       "compare": "Compare",
       "generate": "Generators",
-      "time": "Time"
+      "time": "Time",
+      "calc": "Calculate"
     },
     "input": "Input",
     "result": "Result",
@@ -1632,6 +1633,65 @@
         "4": "fourth",
         "5": "fifth"
       }
+    },
+    "sizes": {
+      "name": "Data sizes",
+      "description": "B, kB, MB, GB ↔ KiB, MiB, GiB, and bits",
+      "inputLabel": "Quantity",
+      "placeholder": "1.5 GB · 750 KiB · 100 Mbit",
+      "unit": "Unit when none is typed",
+      "decimals": "Decimals",
+      "readAs": "Read as {{value}} {{unit}}",
+      "unitInText": "The unit typed wins over the one chosen.",
+      "gap": "1 {{decimal}} = {{ratio}} {{binary}}",
+      "conventions": "Decimal (SI): 1 kB = 1,000 B. Binary (IEC): 1 KiB = 1,024 B. A disk is sold in GB; a system often counts in GiB.",
+      "rounded": "≈: a rounded value. Copy gives the exact one.",
+      "groups": {
+        "bytes": "Bytes and bits",
+        "decimal": "Decimal · 1,000",
+        "binary": "Binary · 1,024"
+      },
+      "units": {
+        "bit": "bit",
+        "kilobit": "kbit",
+        "megabit": "Mbit",
+        "gigabit": "Gbit",
+        "terabit": "Tbit",
+        "byte": "B",
+        "kilobyte": "kB",
+        "megabyte": "MB",
+        "gigabyte": "GB",
+        "terabyte": "TB",
+        "petabyte": "PB",
+        "kibibyte": "KiB",
+        "mebibyte": "MiB",
+        "gibibyte": "GiB",
+        "tebibyte": "TiB",
+        "pebibyte": "PiB"
+      },
+      "unitNames": {
+        "bit": "bit",
+        "kilobit": "kilobit (kbit)",
+        "megabit": "megabit (Mbit)",
+        "gigabit": "gigabit (Gbit)",
+        "terabit": "terabit (Tbit)",
+        "byte": "byte (B)",
+        "kilobyte": "kilobyte (kB)",
+        "megabyte": "megabyte (MB)",
+        "gigabyte": "gigabyte (GB)",
+        "terabyte": "terabyte (TB)",
+        "petabyte": "petabyte (PB)",
+        "kibibyte": "kibibyte (KiB)",
+        "mebibyte": "mebibyte (MiB)",
+        "gibibyte": "gibibyte (GiB)",
+        "tebibyte": "tebibyte (TiB)",
+        "pebibyte": "pebibyte (PiB)"
+      },
+      "unreadable": "Unreadable from character {{at}} on.",
+      "negative": "A size cannot be negative (character {{at}}).",
+      "tooLarge": "Too large to count exactly: 28 digits at most.",
+      "empty": "Type a quantity, with its unit or without: every unit shows here.",
+      "noteTitle": "{{value}} {{unit}} in every unit"
     }
   }
 }
