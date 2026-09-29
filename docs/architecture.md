@@ -674,6 +674,15 @@ the gamut, and the WCAG ratio — with the `0.03928` of `scripts/palette.test.mj
 and the palette's own check agree. The page paints the swatch Rust hands it. An `OKLCH` colour
 sRGB cannot show gives up chroma, at the same lightness and hue, until it can, and says so.
 
+**A conversion goes through one value** (`tools/convert.rs`): each format is read into a
+`serde_json::Value` and written out of it, so any format reaches any other. ⚠️ `serde_json`
+has `preserve_order` on: without it a `Map` sorts its keys, and a converted document would
+come back in alphabetical order. YAML is `yaml-rust2`, maintained and pure Rust — `serde_yaml`
+is archived — and XML is read and written by hand around `quick-xml`, to one convention the
+tool states beside its result (`@name`, `#text`, a repeated element as a list). What a format
+cannot hold — a TOML `null`, a list at a TOML root, two XML roots, a name XML refuses — is an
+answer carrying its `JSONPath`, never a guess.
+
 **Adding a tool**, the whole of it:
 
 1. `src-tauri/src/tools/<module>.rs`: the function, its request and answer types, its tests.

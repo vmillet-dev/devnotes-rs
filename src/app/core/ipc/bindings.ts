@@ -40,6 +40,7 @@ export const commands = {
 	generateUuids: (request: UuidRequest) => typedError<string[], AppError>(__TAURI_INVOKE("generate_uuids", { request })),
 	inspectUuid: (text: string) => typedError<UuidInspection, AppError>(__TAURI_INVOKE("inspect_uuid", { text })),
 	describeColour: (request: ColourRequest) => typedError<ColourAnswer, AppError>(__TAURI_INVOKE("describe_colour", { request })),
+	convertData: (request: ConvertRequest) => typedError<ConvertAnswer, AppError>(__TAURI_INVOKE("convert_data", { request })),
 	/**
 	 *  The first launch: the space, its folders and the notes in one transaction, since a space
 	 *  standing alone reads as "already seeded" for good. The strings stay on the front end, with
@@ -252,7 +253,7 @@ export const commands = {
 };
 
 /* Constants */
-export const APP_METADATA = {"author":"Valentin MILLET","authorHandle":"@vmillet-dev","name":"DevNotes","repository":"https://github.com/vmillet-dev/devnotes-rs","rustVersion":"1.97.1"} as const;
+export const APP_METADATA = {"name":"DevNotes","repository":"https://github.com/vmillet-dev/devnotes-rs","author":"Valentin MILLET","authorHandle":"@vmillet-dev","rustVersion":"1.97.1"} as const;
 
 export const AUTOMATIC_BACKUPS_KEY = "devnotes.automaticBackups" as const;
 
@@ -485,6 +486,32 @@ export type Contrast = {
 	aa: TextSizes,
 	aaa: TextSizes,
 };
+
+export type ConvertAnswer = { kind: "converted"; text: string } | 
+/**  The text given does not parse: one-based line and column, in characters. */
+{ kind: "unreadable"; line: number; column: number } | 
+/**  It parses, but the other format cannot hold it: `path` is a `JSONPath`. */
+{ kind: "impossible"; crossing: Crossing; path: string };
+
+export type ConvertRequest = {
+	text: string,
+	from: DataFormat,
+	to: DataFormat,
+};
+
+export type Crossing = 
+/**  TOML has no `null`. */
+"tomlNull" | 
+/**  A TOML document is a table: its root cannot be a list or a value. */
+"tomlRoot" | 
+/**  An XML document has one root element: an object of one key. */
+"xmlRoot" | 
+/**  A key XML cannot take as an element or an attribute name. */
+"xmlName" | 
+/**  An `@attribute` holds a value, not an object or a list. */
+"xmlAttribute";
+
+export type DataFormat = "json" | "toml" | "xml" | "yaml";
 
 /**  One line of a kept body, compared with the text restoring it would replace. */
 export type DiffLine = 

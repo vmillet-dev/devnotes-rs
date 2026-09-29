@@ -61,6 +61,12 @@ export const TOOLS: readonly ToolDefinition[] = [
     load: () => import('./base64/base64-tool.component').then((m) => m.Base64ToolComponent),
   },
   {
+    id: 'convert',
+    category: 'encode',
+    keywords: ['json', 'toml', 'xml', 'yaml', 'yml', 'convert'],
+    load: () => import('./convert/convert-tool.component').then((m) => m.ConvertToolComponent),
+  },
+  {
     id: 'colour',
     category: 'encode',
     keywords: ['color', 'hex', 'rgb', 'hsl', 'oklch', 'contrast', 'wcag'],
