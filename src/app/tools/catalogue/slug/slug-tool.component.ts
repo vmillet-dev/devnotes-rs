@@ -44,7 +44,10 @@ export class SlugToolComponent implements Tool {
     const slug = this.slug.value();
     return slug
       ? {
-          title: { key: 'tools.slug.noteTitle', params: { text: this.text().trim().slice(0, 40) } },
+          title: {
+            key: 'tools.slug.noteTitle',
+            params: { text: (this.slug.answered()?.text ?? '').trim().slice(0, 40) },
+          },
           kind: 'snippet',
           language: 'txt',
           content: slug,

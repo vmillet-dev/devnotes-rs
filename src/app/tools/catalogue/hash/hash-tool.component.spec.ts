@@ -65,6 +65,26 @@ describe('HashToolComponent', () => {
     expect(harness.element<HTMLInputElement>('[data-testid="hash-key"]').type).toBe('password');
   });
 
+  it('names the digests on screen after the key they were computed with, not the one being typed', async () => {
+    const harness = await renderTool(HashToolComponent, answer);
+    await harness.type('hash-input', 'payload', 'hash_input');
+    harness.element<HTMLInputElement>('[data-testid="hash-hmac"]').click();
+    await harness.settle();
+
+    const key = harness.element<HTMLInputElement>('[data-testid="hash-key"]');
+    key.value = 'whsec_9f2c';
+    key.dispatchEvent(new Event('input'));
+    await harness.settle();
+
+    expect(rows(harness)).toEqual(['SHA-1', 'SHA-256']);
+    expect(harness.tool.result()!.content).toBe('SHA-1    1fbd6946\nSHA-256  bfc0d2dc');
+    await vi.waitFor(() =>
+      expect(harness.tools.requestsOf('hash_input').at(-1)).toMatchObject({ key: 'whsec_9f2c' }),
+    );
+    await harness.settle();
+    expect(rows(harness)).toEqual(['HMAC-SHA1', 'HMAC-SHA256']);
+  });
+
   it('keeps the digests as a note, never the key', async () => {
     const harness = await renderTool(HashToolComponent, answer);
     await harness.type('hash-input', 'payload', 'hash_input');

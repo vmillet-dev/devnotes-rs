@@ -5,10 +5,20 @@ import { debounced } from '@core/services/time/debounce';
 /** Long enough to let a word be typed, short enough to read as live. */
 export const LIVE_RESULT_DEBOUNCE_MS = 150;
 
-export interface LiveResult<T> {
+export interface LiveResult<P, T> {
   /** The last answer, kept on screen while the next is computed; `null` once nothing is asked. */
   readonly value: Signal<T | null>;
+  /**
+   * ⚠️ The request `value` answers, not the one being typed: a label, a language or a direction
+   * describing the answer reads this, or it describes the next answer over the last one.
+   */
+  readonly answered: Signal<P | null>;
   readonly pending: Signal<boolean>;
+}
+
+interface Answered<P, R> {
+  readonly asked: P;
+  readonly answer: R;
 }
 
 function sameJson(a: unknown, b: unknown): boolean {
@@ -25,7 +35,7 @@ export function liveResult<P, R>(
   request: () => P | undefined,
   load: (request: P) => Promise<R>,
   delayMs = LIVE_RESULT_DEBOUNCE_MS,
-): LiveResult<R> {
+): LiveResult<P, R> {
   const notifier = inject(ErrorNotifier);
   const asked = computed(request, { equal: sameJson });
   // The first request goes at once: a tool found again shows its answer without a wait.
@@ -42,7 +52,10 @@ export function liveResult<P, R>(
     }
   });
 
-  const answer = resource({ params: () => settled(), loader: ({ params }) => load(params) });
+  const answer = resource({
+    params: () => settled(),
+    loader: async ({ params }): Promise<Answered<P, R>> => ({ asked: params, answer: await load(params) }),
+  });
 
   effect(() => {
     if (answer.status() === 'error') {
@@ -50,7 +63,7 @@ export function liveResult<P, R>(
     }
   });
 
-  const value = linkedSignal<{ asked: boolean; fresh: R | undefined }, R | null>({
+  const last = linkedSignal<{ asked: boolean; fresh: Answered<P, R> | undefined }, Answered<P, R> | null>({
     source: () => ({
       asked: settled() !== undefined,
       fresh: answer.hasValue() ? answer.value() : undefined,
@@ -60,7 +73,8 @@ export function liveResult<P, R>(
   });
 
   return {
-    value,
+    value: computed(() => last()?.answer ?? null),
+    answered: computed(() => last()?.asked ?? null),
     pending: computed(() => !sameJson(asked(), settled()) || answer.isLoading()),
   };
 }

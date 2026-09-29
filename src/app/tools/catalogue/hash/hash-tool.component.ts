@@ -105,6 +105,10 @@ export class HashToolComponent implements Tool {
     (request) => this.repository.hash(request),
   );
 
+  private readonly digestNames = computed(() =>
+    (this.answer.answered()?.key ?? null) === null ? NAMES : HMAC_NAMES,
+  );
+
   protected readonly hashed = computed(() => {
     const answer = this.answer.value();
     return answer?.kind === 'hashed' ? answer : null;
@@ -117,7 +121,7 @@ export class HashToolComponent implements Tool {
 
   protected readonly digests = computed(() => {
     const hashed = this.hashed();
-    const names = this.keyed() ? HMAC_NAMES : NAMES;
+    const names = this.digestNames();
     return (hashed?.digests ?? []).map((digest) => ({
       ...digest,
       name: names[digest.algorithm],
@@ -129,7 +133,7 @@ export class HashToolComponent implements Tool {
   protected readonly recognised = computed(() => {
     const recognised = this.hashed()?.recognised;
     return recognised
-      ? { name: (this.keyed() ? HMAC_NAMES : NAMES)[recognised.algorithm], encoding: recognised.encoding }
+      ? { name: this.digestNames()[recognised.algorithm], encoding: recognised.encoding }
       : null;
   });
 

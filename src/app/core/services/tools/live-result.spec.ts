@@ -9,7 +9,7 @@ describe('liveResult', () => {
   let text: ReturnType<typeof signal<string>>;
   let calls: string[];
   let fail: boolean;
-  let live: LiveResult<string>;
+  let live: LiveResult<{ text: string }, string>;
 
   async function settle(): Promise<void> {
     await vi.advanceTimersByTimeAsync(LIVE_RESULT_DEBOUNCE_MS);
@@ -63,6 +63,21 @@ describe('liveResult', () => {
     expect(live.pending()).toBe(false);
   });
 
+  it('says which request the answer on screen answers, not the one waiting', async () => {
+    TestBed.tick();
+    await settle();
+    expect(live.value()).toBe('ÉTÉ');
+
+    text.set('Hiver');
+    TestBed.tick();
+
+    expect(live.value()).toBe('ÉTÉ');
+    expect(live.answered()).toEqual({ text: 'Été' });
+    await settle();
+    expect(live.value()).toBe('HIVER');
+    expect(live.answered()).toEqual({ text: 'Hiver' });
+  });
+
   it('empties when nothing is asked', async () => {
     TestBed.tick();
     await settle();
@@ -72,6 +87,7 @@ describe('liveResult', () => {
     await settle();
 
     expect(live.value()).toBeNull();
+    expect(live.answered()).toBeNull();
   });
 
   it('reports the unexpected, and keeps the last answer on screen', async () => {

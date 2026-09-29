@@ -43,7 +43,10 @@ export class CaseToolComponent implements Tool {
 
     const width = Math.max(...conversions.map(({ case: kind }) => CASE_NAMES[kind].length));
     return {
-      title: { key: 'tools.case.noteTitle', params: { text: this.text().trim().slice(0, 40) } },
+      title: {
+        key: 'tools.case.noteTitle',
+        params: { text: (this.conversions.answered() ?? '').trim().slice(0, 40) },
+      },
       kind: 'snippet',
       language: 'txt',
       content: conversions
