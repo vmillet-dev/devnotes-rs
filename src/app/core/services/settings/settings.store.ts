@@ -1,6 +1,7 @@
 import { Injectable, Signal, computed, effect, inject, signal } from '@angular/core';
 import { AREAS } from '@core/services/areas/area.model';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
+import { MAX_RECENT_TOOLS, RecentTool, isRecentTool } from '@core/services/tools/tool.model';
 import {
   AppSettings,
   DEFAULT_SETTINGS,
@@ -52,6 +53,19 @@ function asPixels(bounds: { readonly min: number; readonly max: number }): Setti
   };
 }
 
+/** Whatever the file garbled is dropped entry by entry, not the whole list. */
+const asRecentTools: SettingCodec<readonly RecentTool[]> = {
+  parse: (stored) => {
+    try {
+      const value: unknown = JSON.parse(stored);
+      return Array.isArray(value) ? value.filter(isRecentTool).slice(0, MAX_RECENT_TOOLS) : null;
+    } catch {
+      return null;
+    }
+  },
+  format: (value) => JSON.stringify(value),
+};
+
 function asOneOf<T extends string>(values: readonly T[]): SettingCodec<T> {
   return {
     parse: (stored) => ((values as readonly string[]).includes(stored) ? (stored as T) : null),
@@ -93,6 +107,7 @@ export class SettingsStore {
   readonly showLibraryRail = this.setting('showLibraryRail', asBoolean);
   readonly libraryRailWidth = this.setting('libraryRailWidth', asPixels(RAIL_WIDTH));
   readonly area = this.setting('area', asOneOf(AREAS));
+  readonly recentTools = this.setting('recentTools', asRecentTools);
   readonly showPinnedFirst = this.setting('showPinnedFirst', asBoolean);
   readonly automaticBackups = this.setting('automaticBackups', asBoolean);
   readonly copyConfirmation = this.setting('copyConfirmation', asBoolean);

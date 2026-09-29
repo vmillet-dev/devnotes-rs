@@ -23,7 +23,8 @@ not filter, sort or group. The deliberate exceptions are relative-time **formatt
 must age on their own, without a round trip), the ISO ↔ `Date` conversion at the serialisation
 boundary, syntax highlighting (it colours the in-flight editor draft, which is not persisted
 yet — a round trip per keystroke), formatting a snippet with Prettier (the same draft, and
-Prettier is JavaScript), and plain UI concerns like keyboard shortcuts and drafts.
+Prettier is JavaScript), searching the tools' catalogue (its names are translated), and plain UI
+concerns like keyboard shortcuts and drafts.
 
 ```
 src/                Angular front-end
@@ -36,11 +37,12 @@ src/                Angular front-end
 │   │   ├── ipc/        generated bindings, error contract, native events
 │   │   └── services/   one folder per subject: i18n, errors, time, preferences,
 │   │                   settings, updates, app-info, clipboard, dialogs, window,
-│   │                   shortcuts, autostart, tray, notifications
+│   │                   shortcuts, autostart, tray, notifications, areas, tools
 │   ├── notes/      the page at the root, then its four zones: sidebar/ (the library
 │   │               rail), header/ (above the canvas), canvas/ (the cards),
 │   │               overlays/ (drawn over the page), plus ui/ for what two of them share
-│   ├── tools/      the Outils area: its page, its rail
+│   ├── tools/      the Outils area: its page, rail/, home/, frame/, and catalogue/ with one
+│   │               folder per tool
 │   ├── titlebar/   titlebar.component, then file-menu/ and about-menu/ with the panels
 │   │               each of them opens, nested where they open from
 │   ├── banners/    error banner, status toast, update prompt — siblings of the page
@@ -587,6 +589,48 @@ model](#the-json-visualisers-model); the front draws it.
   go, and the editor closes.
 - "Voir dans le code" goes back to Code with the value **selected** — its span is in UTF-16
   units, the textarea's own — and the body scrolled to it.
+
+### The tools: one contract, and the rest written once
+
+The Outils area (`tools/`) is a home, a rail and a frame, and a tool is what the frame draws.
+**A tool is a pure Rust function and a component**; everything around it — the catalogue in
+its panels, the search, the recent tools, the breadcrumb, Vider — is written once, and knows a
+tool only through `Tool` (`core/services/tools/tool.model.ts`):
+
+- `result`, what "Enregistrer comme note" keeps. ⚠️ An output, never an input: an HMAC key or a
+  password typed into a tool cannot reach a note, because nothing in the contract carries one.
+- `actions`, the tool's own buttons in the header ("Échanger A et B").
+- `clear()`, which Vider calls.
+
+**The catalogue is one list** (`tools/catalogue/catalogue.ts`), each tool in a folder beside
+it: an id, a category, keywords, a loader. The name and the line are read from the id
+(`tools.<id>.name`, `.description`), and a tool is a chunk of its own, loaded the first time it
+is opened, so the fourteenth costs nothing at startup. The page provides the list as
+`TOOL_CATALOGUE`: the home, the rail and the frame are tested on a fake one (`FAKE_TOOLS`).
+
+**The frame creates the tool by hand** (`ViewContainerRef.createComponent`, in an effect)
+rather than through `NgComponentOutlet`, so the header reads the tool's signals from the moment
+it exists.
+
+**What a tool holds lives for the session** (`toolState`, over `ToolSessions`): left for
+another tool or for the notes, it is found as it was. In memory only — never on disk — and gone
+with the page when the library changes. ⚠️ A secret is never a `toolState`: a key or a
+generated password is a plain `signal` of the component, and dies with it when the tool is
+left.
+
+**Every tool calls Rust the same way** (`liveResult`): the request as the inputs change,
+debounced, compared by value — a fresh literal would ask again for nothing — and the previous
+answer on screen until the next lands; `undefined` asks nothing. A tool's own failure, a line
+that does not parse, is part of its answer and drawn in place; `liveResult` reports only the
+unexpected.
+
+**Searching the catalogue runs on the front**, a deliberate exception to "data processing
+belongs to Rust": it matches the translated names and lines, and Rust knows no string the user
+reads. It folds case and accents, as `view::fold` does.
+
+**The recent tools are an application preference** (`devnotes.recentTools`): which and when,
+nothing typed into them. Ctrl+Shift+T opens the home on its search from any area — the home
+takes `ToolsStore.searchWanted` whether it already existed or not.
 
 ### State
 

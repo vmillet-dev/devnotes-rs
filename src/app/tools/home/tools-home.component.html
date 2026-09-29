@@ -1,0 +1,85 @@
+<header class="topbar">
+  <h1 class="title">{{ 'tools.title' | transloco }}</h1>
+  <span class="subtitle" data-testid="tools-count">{{
+    'tools.count' | transloco: { count: catalogue.length }
+  }}</span>
+  <span class="spacer"></span>
+  <label class="search">
+    <app-icon name="search" />
+    <span class="visually-hidden">{{ 'tools.searchLabel' | transloco }}</span>
+    <input
+      #searchField
+      type="search"
+      class="search-field"
+      data-testid="tools-search"
+      [value]="store.search()"
+      [placeholder]="'tools.searchPlaceholder' | transloco"
+      (input)="onSearch($event)"
+    />
+    <kbd class="key-hint">{{ 'tools.searchKeys' | transloco }}</kbd>
+  </label>
+</header>
+
+<div class="body">
+  @if (recents().length > 0 && !searching()) {
+    <section class="recents" aria-labelledby="tools-recents-title">
+      <h2 id="tools-recents-title" class="section-title">{{ 'tools.recents' | transloco }}</h2>
+      <div class="recent-row">
+        @for (recent of recents(); track recent.tool.id) {
+          <button
+            type="button"
+            class="recent"
+            data-testid="tools-recent"
+            [attr.data-tool]="recent.tool.id"
+            [attr.data-category]="recent.tool.category"
+            (click)="store.open(recent.tool.id)"
+          >
+            <span class="hue-dot" aria-hidden="true"></span>
+            {{ 'tools.' + recent.tool.id + '.name' | transloco }}
+            <span class="when">{{ recent.when.key | transloco: recent.when.params }}</span>
+          </button>
+        }
+      </div>
+    </section>
+  }
+
+  <div class="panels">
+    @for (panel of panels(); track panel.category) {
+      <section
+        class="panel"
+        data-testid="tools-panel"
+        [attr.data-category]="panel.category"
+        [attr.aria-labelledby]="'tools-panel-' + panel.category"
+      >
+        <h2 class="panel-head" [id]="'tools-panel-' + panel.category">
+          <span class="tile"><app-icon [name]="panel.icon" /></span>
+          <span class="panel-name">{{ 'tools.categories.' + panel.category | transloco }}</span>
+          <span class="panel-count">{{ panel.tools.length }}</span>
+        </h2>
+        @for (tool of panel.tools; track tool.id) {
+          <button
+            type="button"
+            class="tool"
+            data-testid="tools-entry"
+            [attr.data-tool]="tool.id"
+            (click)="store.open(tool.id)"
+          >
+            <span class="tool-name">{{ 'tools.' + tool.id + '.name' | transloco }}</span>
+            <span class="tool-line">{{ 'tools.' + tool.id + '.description' | transloco }}</span>
+          </button>
+        }
+      </section>
+    }
+
+    @if (searching() && panels().length === 0) {
+      <p class="no-match" data-testid="tools-no-match">
+        {{ 'tools.noMatch' | transloco: { query: store.search().trim() } }}
+      </p>
+    }
+
+    <section class="promise" data-testid="tools-promise">
+      <strong class="promise-title">{{ 'tools.promise.title' | transloco }}</strong>
+      <span>{{ 'tools.promise.offline' | transloco }}</span>
+    </section>
+  </div>
+</div>

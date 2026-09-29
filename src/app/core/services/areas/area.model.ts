@@ -12,11 +12,18 @@ export function areaForKey(event: KeyboardEvent): Area | null {
   return rank === undefined ? null : (AREAS[Number(rank) - 1] ?? null);
 }
 
+/** Ctrl+Shift+T, the tools' search from anywhere: a letter, read as printed like the canvas keys. */
+export function isToolSearchKey(event: KeyboardEvent): boolean {
+  return (
+    (event.ctrlKey || event.metaKey) && event.shiftKey && !event.altKey && event.key.toLowerCase() === 't'
+  );
+}
+
 export const AREA_SHORTCUT_GROUP: ShortcutGroup = {
   id: 'areas',
   labelKey: 'shortcuts.groups.areas',
-  shortcuts: AREAS.map((area, index) => ({
-    keys: ['Ctrl', String(index + 1)],
-    labelKey: `areas.go.${area}`,
-  })),
+  shortcuts: [
+    ...AREAS.map((area, index) => ({ keys: ['Ctrl', String(index + 1)], labelKey: `areas.go.${area}` })),
+    { keys: ['Ctrl', 'Shift', 'T'], labelKey: 'tools.searchShortcut' },
+  ],
 };

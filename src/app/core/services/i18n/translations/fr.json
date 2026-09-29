@@ -416,7 +416,8 @@
     "revisionRestoreFailed": "Impossible de rétablir cette version.",
     "revisionDiffFailed": "Impossible de comparer cette version au texte actuel.",
     "librariesListFailed": "Impossible de lire la liste des bibliothèques.",
-    "libraryActionFailed": "L'opération sur la bibliothèque a échoué."
+    "libraryActionFailed": "L'opération sur la bibliothèque a échoué.",
+    "toolFailed": "L’outil n’a pas pu calculer son résultat."
   },
   "tray": {
     "open": "Ouvrir {{app}}",
@@ -967,6 +968,26 @@
     }
   },
   "tools": {
-    "title": "Outils"
+    "title": "Outils",
+    "count": "{count, plural, =0 {Aucun utilitaire pour l’instant} one {# utilitaire, hors ligne} other {# utilitaires, tous hors ligne}}",
+    "all": "Tous les outils",
+    "recents": "Récents",
+    "searchLabel": "Rechercher un outil",
+    "searchPlaceholder": "Rechercher un outil…",
+    "searchKeys": "Ctrl Maj T",
+    "searchShortcut": "Chercher un outil",
+    "noMatch": "Aucun outil ne correspond à « {{query}} ».",
+    "clear": "Vider",
+    "promise": {
+      "title": "Tout reste sur cette machine",
+      "offline": "Aucun outil n’appelle le réseau. Ce que vous collez ne quitte pas l’application."
+    },
+    "categories": {
+      "text": "Texte",
+      "crypto": "Crypto",
+      "encode": "Encodeurs",
+      "compare": "Comparer",
+      "generate": "Générateurs"
+    }
   }
 }

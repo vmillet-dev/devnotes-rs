@@ -416,7 +416,8 @@
     "revisionRestoreFailed": "That version could not be restored.",
     "revisionDiffFailed": "This version could not be compared with the current text.",
     "librariesListFailed": "The list of libraries could not be read.",
-    "libraryActionFailed": "That library operation failed."
+    "libraryActionFailed": "That library operation failed.",
+    "toolFailed": "The tool could not compute its result."
   },
   "tray": {
     "open": "Open {{app}}",
@@ -967,6 +968,26 @@
     }
   },
   "tools": {
-    "title": "Tools"
+    "title": "Tools",
+    "count": "{count, plural, =0 {No utility yet} one {# utility, offline} other {# utilities, all offline}}",
+    "all": "All tools",
+    "recents": "Recent",
+    "searchLabel": "Search for a tool",
+    "searchPlaceholder": "Search for a tool…",
+    "searchKeys": "Ctrl Shift T",
+    "searchShortcut": "Search for a tool",
+    "noMatch": "No tool matches “{{query}}”.",
+    "clear": "Clear",
+    "promise": {
+      "title": "Everything stays on this machine",
+      "offline": "No tool reaches the network. What you paste never leaves the application."
+    },
+    "categories": {
+      "text": "Text",
+      "crypto": "Crypto",
+      "encode": "Encoders",
+      "compare": "Compare",
+      "generate": "Generators"
+    }
   }
 }

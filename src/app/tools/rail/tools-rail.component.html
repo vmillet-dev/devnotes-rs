@@ -1,0 +1,69 @@
+<nav
+  class="rail"
+  data-testid="tools-rail"
+  [style.width.px]="settings.libraryRailWidth()"
+  [attr.aria-label]="'tools.title' | transloco"
+>
+  <app-area-switch class="rail-switch" [current]="areas.current()" (chosen)="areas.show($event)" />
+
+  @let allShown = openTool() === null && store.category() === null;
+  <button
+    type="button"
+    class="rail-link"
+    data-testid="tools-rail-all"
+    [class.on]="allShown"
+    [attr.aria-current]="allShown ? 'page' : null"
+    (click)="store.home()"
+  >
+    <span class="rail-label">{{ 'tools.all' | transloco }}</span>
+    <span class="rail-count">{{ catalogue.length }}</span>
+  </button>
+
+  @if (openTool(); as tool) {
+    <h2 class="rail-heading">{{ 'tools.categories.' + tool.category | transloco }}</h2>
+    @for (sibling of siblings(); track sibling.id) {
+      <button
+        type="button"
+        class="rail-link"
+        data-testid="tools-rail-tool"
+        [attr.data-tool]="sibling.id"
+        [class.on]="sibling.id === tool.id"
+        [attr.aria-current]="sibling.id === tool.id ? 'page' : null"
+        (click)="store.open(sibling.id)"
+      >
+        <span class="rail-label">{{ 'tools.' + sibling.id + '.name' | transloco }}</span>
+      </button>
+    }
+
+    @if (recents().length > 0) {
+      <h2 class="rail-heading">{{ 'tools.recents' | transloco }}</h2>
+      @for (recent of recents(); track recent.id) {
+        <button
+          type="button"
+          class="rail-link"
+          data-testid="tools-rail-recent"
+          [attr.data-tool]="recent.id"
+          (click)="store.open(recent.id)"
+        >
+          <span class="rail-label">{{ 'tools.' + recent.id + '.name' | transloco }}</span>
+        </button>
+      }
+    }
+  } @else {
+    @for (category of categories; track category.id) {
+      <button
+        type="button"
+        class="rail-link"
+        data-testid="tools-rail-category"
+        [attr.data-category]="category.id"
+        [class.on]="store.category() === category.id"
+        [attr.aria-current]="store.category() === category.id ? 'page' : null"
+        (click)="store.home(category.id)"
+      >
+        <span class="hue-dot" aria-hidden="true"></span>
+        <span class="rail-label">{{ 'tools.categories.' + category.id | transloco }}</span>
+        <span class="rail-count">{{ category.count }}</span>
+      </button>
+    }
+  }
+</nav>

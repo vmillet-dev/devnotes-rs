@@ -1,0 +1,26 @@
+@let id = tool().id;
+<header class="topbar">
+  <button type="button" class="crumb" data-testid="tool-back" (click)="store.home()">
+    {{ 'tools.title' | transloco }} <span aria-hidden="true">›</span>
+  </button>
+  <h1 class="title" data-testid="tool-title">{{ 'tools.' + id + '.name' | transloco }}</h1>
+  <span class="spacer"></span>
+  @for (action of actions(); track action.id) {
+    <button
+      type="button"
+      class="action"
+      [attr.data-testid]="'tool-action-' + action.id"
+      [disabled]="action.disabled"
+      (click)="action.run()"
+    >
+      {{ action.labelKey | transloco }}
+    </button>
+  }
+  <button type="button" class="action" data-testid="tool-clear" (click)="clear()">
+    {{ 'tools.clear' | transloco }}
+  </button>
+</header>
+
+<div class="body" data-testid="tool-body" [attr.data-tool]="id">
+  <ng-container #host />
+</div>

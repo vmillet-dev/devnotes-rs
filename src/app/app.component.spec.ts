@@ -11,6 +11,8 @@ import { VaultStore } from '@core/state/vault.store';
 import { VaultRepository } from '@core/data/vault.repository';
 import { FakeVaultRepository } from '@testing/fake-vault-repository';
 import { AreaStore } from '@core/services/areas/area.store';
+import { ToolsStore } from '@core/services/tools/tools.store';
+import { ToolsHomeComponent } from '@tools/home/tools-home.component';
 import { ToolsPageComponent } from '@tools/tools-page.component';
 import { AppComponent } from './app.component';
 
@@ -92,6 +94,26 @@ describe('AppComponent', () => {
 
       expect(fixture.debugElement.query(By.directive(ToolsPageComponent))).toBeNull();
       expect(notesPage().nativeElement.classList).not.toContain('away');
+    });
+
+    it('opens the tools on their search from the notes, on Ctrl+Shift+T', async () => {
+      await withVault('unlocked');
+
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'T',
+          code: 'KeyT',
+          ctrlKey: true,
+          shiftKey: true,
+          bubbles: true,
+        }),
+      );
+      await fixture.whenStable();
+
+      expect(TestBed.inject(AreaStore).current()).toBe('tools');
+      expect(fixture.debugElement.query(By.directive(ToolsHomeComponent))).not.toBeNull();
+      // The home took the request: its field has the focus, where a document holds it.
+      expect(TestBed.inject(ToolsStore).searchWanted()).toBe(false);
     });
 
     it('answers no key behind the gate', async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AREAS, AREA_SHORTCUT_GROUP, areaForKey } from './area.model';
+import { AREAS, AREA_SHORTCUT_GROUP, areaForKey, isToolSearchKey } from './area.model';
 
 describe('areaForKey', () => {
   const key = (code: string, init: KeyboardEventInit = {}) =>
@@ -26,9 +26,18 @@ describe('areaForKey', () => {
     expect(key('KeyA')).toBeNull();
   });
 
-  it('documents one key per area, in the switch order', () => {
-    expect(AREA_SHORTCUT_GROUP.shortcuts.map((entry) => entry.keys)).toEqual(
-      AREAS.map((_, index) => ['Ctrl', String(index + 1)]),
-    );
+  it('documents one key per area, in the switch order, then the tools search', () => {
+    expect(AREA_SHORTCUT_GROUP.shortcuts.map((entry) => entry.keys)).toEqual([
+      ...AREAS.map((_, index) => ['Ctrl', String(index + 1)]),
+      ['Ctrl', 'Shift', 'T'],
+    ]);
+  });
+
+  it('knows the tools search by its letter, whatever the layout puts under it', () => {
+    const chord = (init: KeyboardEventInit) => isToolSearchKey(new KeyboardEvent('keydown', init));
+
+    expect(chord({ key: 'T', ctrlKey: true, shiftKey: true })).toBe(true);
+    expect(chord({ key: 't', ctrlKey: true })).toBe(false);
+    expect(chord({ key: 'T', ctrlKey: true, shiftKey: true, altKey: true })).toBe(false);
   });
 });

@@ -1,0 +1,76 @@
+@use 'mixins' as *;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 57px;
+  box-sizing: border-box;
+  padding: var(--space-grid) 20px;
+  border-bottom: 1px solid var(--line-soft);
+  flex-shrink: 0;
+}
+
+.crumb {
+  @include unstyled-control;
+  @include hit-target;
+  @include focus-ring;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-2);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text-0);
+  }
+}
+
+.title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.action {
+  @include unstyled-control;
+  @include surface(var(--bg-2), 7px);
+  @include focus-ring;
+  @include eases(border-color, color);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 12px;
+  font-size: 12.5px;
+  white-space: nowrap;
+  color: var(--text-1);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: var(--amber-dim);
+    color: var(--text-0);
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.55;
+  }
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 20px;
+}
