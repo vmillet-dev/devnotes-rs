@@ -3,6 +3,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { ShortcutBindingsStore } from '@core/services/shortcuts/shortcut-bindings.store';
 import { GLOBAL_ACTIONS, ShortcutGroup, acceleratorKeys } from '@core/services/shortcuts/shortcut.model';
 import { NOTES_SHORTCUT_GROUPS } from '@titlebar/about-menu/shortcuts-dialog/notes-shortcuts';
+import { AREA_SHORTCUT_GROUP } from '@core/services/areas/area.model';
 import { DialogComponent } from '@shared/layout/dialog/dialog.component';
 
 /**
@@ -34,6 +35,7 @@ export class ShortcutsDialogComponent {
           action,
         })),
       },
+      AREA_SHORTCUT_GROUP,
       ...NOTES_SHORTCUT_GROUPS,
     ].map((group) => ({
       ...group,

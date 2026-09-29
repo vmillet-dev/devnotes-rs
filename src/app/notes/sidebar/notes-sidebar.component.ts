@@ -1,20 +1,23 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Folder } from '@core/model/folder.model';
+import { AreaStore } from '@core/services/areas/area.store';
 import { FoldersStore } from '@core/state/folders.store';
 import { SpacesStore } from '@core/state/spaces.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
+import { AreaSwitchComponent } from '@shared/controls/area-switch/area-switch.component';
 import { LibraryTreeComponent } from './library-tree/library-tree.component';
 
-/** The library rail, while it is shown. */
+/** The library rail, while it is shown, headed by the switch between areas. */
 @Component({
   selector: 'app-notes-sidebar',
-  imports: [LibraryTreeComponent],
+  imports: [LibraryTreeComponent, AreaSwitchComponent],
   templateUrl: './notes-sidebar.component.html',
-  styles: ':host { display: contents; }',
+  styles: ':host { display: contents; } .rail-switch { margin-bottom: 10px; }',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NotesSidebarComponent {
   protected readonly settings = inject(SettingsStore);
+  protected readonly areas = inject(AreaStore);
   protected readonly spaces = inject(SpacesStore);
   protected readonly folders = inject(FoldersStore);
 

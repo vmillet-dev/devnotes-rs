@@ -7,10 +7,18 @@
     The canvas queries notes the moment it mounts, and there would be nothing to answer
     with — which is why no store carries a "locked" branch. Its chunk loads from the first
     render all the same, behind the gate, so unlocking never waits for it.
+
+    Once created it stays, hidden while another area shows: its scroll, its focus and the
+    native side's actions all need it alive.
   -->
   @defer (on immediate) {
     @if (vault.isUnlocked()) {
-      <app-notes-page />
+      <app-notes-page [class.away]="areas.current() !== 'notes'" />
+    }
+  }
+  @if (vault.isUnlocked() && areas.current() === 'tools') {
+    @defer (on immediate) {
+      <app-tools-page />
     }
   }
   @if (!vault.isUnlocked() && vault.state() !== null) {

@@ -48,8 +48,15 @@ describe('ShortcutsDialogComponent', () => {
     expect(keysFor('palette de collage rapide')).toEqual(['Ctrl', 'Shift', 'K']);
   });
 
-  it('lists the groups of the notes after the global one, in their declared order', async () => {
-    expect(groupTitles()).toEqual(['Globaux (même fenêtre fermée)', 'Canevas', 'Éditeur', 'Collage rapide']);
+  it('lists the areas, then the groups of the notes, after the global one', async () => {
+    expect(groupTitles()).toEqual([
+      'Globaux (même fenêtre fermée)',
+      'Zones',
+      'Canevas',
+      'Éditeur',
+      'Collage rapide',
+    ]);
+    expect(keysFor('Aller aux outils')).toEqual(['Ctrl', '2']);
     expect(keysFor('champ de recherche')).toEqual(['Ctrl', 'K']);
   });
 

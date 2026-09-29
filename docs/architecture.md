@@ -28,7 +28,7 @@ Prettier is JavaScript), and plain UI concerns like keyboard shortcuts and draft
 ```
 src/                Angular front-end
 ├── app/
-│   ├── app.component.*   the frame: titlebar, banners, the notes page behind @defer
+│   ├── app.component.*   the frame: titlebar, banners, the areas behind @defer, their keys
 │   ├── core/       everything that has no place on screen
 │   │   ├── model/      the vocabulary: note, space, checklist, variable, language
 │   │   ├── data/       repositories and the wire mapper
@@ -40,6 +40,7 @@ src/                Angular front-end
 │   ├── notes/      the page at the root, then its four zones: sidebar/ (the library
 │   │               rail), header/ (above the canvas), canvas/ (the cards),
 │   │               overlays/ (drawn over the page), plus ui/ for what two of them share
+│   ├── tools/      the Outils area: its page, its rail
 │   ├── titlebar/   titlebar.component, then file-menu/ and about-menu/ with the panels
 │   │               each of them opens, nested where they open from
 │   ├── banners/    error banner, status toast, update prompt — siblings of the page
@@ -241,7 +242,7 @@ front, and that knowledge cannot be handed down an `input()` from twelve callers
 
 ### Imports
 
-**One alias per area of the screen**: `@notes/*`, `@titlebar/*`, `@banners/*`, plus `@core/*`,
+**One alias per area of the screen**: `@notes/*`, `@tools/*`, `@titlebar/*`, `@banners/*`, plus `@core/*`,
 `@shared/*` and `@testing/*` (declared in `tsconfig.json`, and nowhere else). An import says
 which part of the interface it reaches into before it says which file.
 
@@ -278,17 +279,31 @@ State lives in signals and every component is `OnPush` — enforced by the
 ### No router
 
 `AppComponent` _is_ the persistent chrome — titlebar, global error banner, status toast and
-update prompt — around the notes page, which it loads with `@defer (on immediate)`. There is
-**one** screen, so there is no router: its only job was a lazy `loadComponent` for one route,
-67 kB of the initial chunk to do what `@defer` does. Nothing else a router offers has a use in
-a desktop window — no link to share, no deep URL to reload — and
-[#23](https://github.com/vmillet-dev/devnotes-rs/issues/23) settled that there would be no
-second tool to route to.
+update prompt — around the areas: the notes page, which it loads with `@defer (on immediate)`,
+and the tools page, deferred until it is first shown. There is no router: its only job would be
+a lazy `loadComponent` per area, 67 kB of the initial chunk to do what `@defer` does. Nothing
+else a router offers has a use in a desktop window — no link to share, no deep URL to reload.
+[#23](https://github.com/vmillet-dev/devnotes-rs/issues/23) had settled that there would be no
+second tool; the tools of v0.9.0 reversed that, and the answer stayed state.
 
-⚠️ **The date view and the board are state, not routes.** The switch is remembered per space
-and falls back on "all spaces" and inside a folder (`BoardStore.mode`, `isShowing`): a URL
-would be a second source of truth to keep in step, and history a trap — a mouse's back
-button would switch views. The board has a `@defer` of its own instead.
+⚠️ **The areas, the date view and the board are state, not routes.** The area is an
+application preference (`AreaStore.current`, `devnotes.area`), a state the window is in like
+the rail, so the window reopens on it. The date view or board switch is remembered per space and
+falls back on "all spaces" and inside a folder (`BoardStore.mode`, `isShowing`). A URL would be
+a second source of truth to keep in step, and history a trap — a mouse's back button would
+switch views. The board has a `@defer` of its own instead.
+
+⚠️ **The notes page is created once and hidden behind another area, never destroyed.** Its
+scroll, its focus and the native side's actions — capture, new note, the palette — need it
+alive. So its document listeners (`CanvasKeyboardDirective`, the search box's Ctrl+K) ask
+`AreaStore` first, and a native action brings the notes back before it opens anything. The
+tools page is created when shown and dropped when left: what a tool holds lives outside it.
+
+**One key per area**, Ctrl and its rank, read from `KeyboardEvent.code` — on AZERTY the digit
+row types `&é"` — and bound by `AreaKeysDirective` on `AppComponent`, whose listener runs
+before the notes' own and never behind a modal. The switch (`shared/controls/area-switch/`)
+heads each area's rail, and comes to the **titlebar** while the library rail is hidden — not to
+the notes' topbar, which has no width left at the shipped 1100px.
 
 ⚠️ The defer sits **outside** the `@if` on the vault: the page's chunk loads from the first
 render, behind the gate, and unlocking never waits for it — while the page itself is still

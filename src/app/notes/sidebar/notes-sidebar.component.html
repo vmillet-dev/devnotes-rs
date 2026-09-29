@@ -10,5 +10,7 @@
     (spaceCreated)="spaces.createSpace($event)"
     (folderOpened)="onFolderOpened($event)"
     (folderCreated)="folders.createFolder($event)"
-  />
+  >
+    <app-area-switch class="rail-switch" [current]="areas.current()" (chosen)="areas.show($event)" />
+  </app-library-tree>
 }

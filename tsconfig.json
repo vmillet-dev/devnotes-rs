@@ -27,6 +27,7 @@
       "@notes/*": ["./src/app/notes/*"],
       "@titlebar/*": ["./src/app/titlebar/*"],
       "@banners/*": ["./src/app/banners/*"],
+      "@tools/*": ["./src/app/tools/*"],
       "@testing/*": ["./src/testing/*"]
     }
   },

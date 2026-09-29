@@ -8,6 +8,7 @@ import { NoteFilter, NotesStore } from '@core/state/notes.store';
 import { SpacesStore } from '@core/state/spaces.store';
 import { TagsStore } from '@core/state/tags.store';
 import { TrashStore } from '@core/state/trash.store';
+import { AreaStore } from '@core/services/areas/area.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { ShortcutBindingsStore } from '@core/services/shortcuts/shortcut-bindings.store';
 import { acceleratorKeys } from '@core/services/shortcuts/shortcut.model';
@@ -63,6 +64,7 @@ export class NotesHeaderComponent {
   protected readonly trash = inject(TrashStore);
   protected readonly tags = inject(TagsStore);
   protected readonly settings = inject(SettingsStore);
+  protected readonly areas = inject(AreaStore);
   private readonly dialogs = inject(DialogStack);
   private readonly bindings = inject(ShortcutBindingsStore);
 
@@ -92,8 +94,10 @@ export class NotesHeaderComponent {
     checklist: acceleratorKeys(this.bindings.binding(CREATE_ACTIONS.checklist)),
   }));
 
-  /** Asked of `DialogStack` rather than of each store in turn. */
-  protected readonly searchShortcutEnabled = computed(() => !this.dialogs.hasOpenDialog());
+  /** Asked of `DialogStack` rather than of each store in turn; and the page may be hidden. */
+  protected readonly searchShortcutEnabled = computed(
+    () => !this.dialogs.hasOpenDialog() && this.areas.current() === 'notes',
+  );
 
   protected toggleLibraryRail(): void {
     this.settings.showLibraryRail.write(!this.settings.showLibraryRail());

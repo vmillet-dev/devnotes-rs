@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { AppEventsService, GlobalAction } from '@core/ipc/app-events.service';
+import { AreaStore } from '@core/services/areas/area.store';
 import { NotesRevision } from '@core/state/notes-revision';
 import { NotesStore } from '@core/state/notes.store';
 import { PaletteStore } from '@core/state/palette.store';
@@ -30,6 +31,7 @@ export class NotesPageComponent implements OnInit {
   private readonly spaces = inject(SpacesStore);
   private readonly samples = inject(SampleNotesService);
   private readonly revision = inject(NotesRevision);
+  private readonly areas = inject(AreaStore);
 
   constructor() {
     const events = inject(AppEventsService);
@@ -47,6 +49,8 @@ export class NotesPageComponent implements OnInit {
    * this compiling until it is handled.
    */
   private runGlobalAction(action: GlobalAction): void {
+    // Each one opens something drawn by this page, which another area hides.
+    this.areas.show('notes');
     switch (action) {
       case 'capture':
         void this.store.captureFromClipboard();

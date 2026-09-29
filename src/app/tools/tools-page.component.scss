@@ -1,0 +1,48 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.page {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.rail {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-card) 10px var(--space-canvas);
+  border-right: 1px solid var(--line-soft);
+  background: var(--bg-1);
+  overflow-y: auto;
+}
+
+.workspace {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 57px;
+  box-sizing: border-box;
+  padding: var(--space-grid) var(--space-canvas);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}

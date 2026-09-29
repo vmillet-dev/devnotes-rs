@@ -1,0 +1,18 @@
+<div class="switch" role="group" data-testid="area-switch" [attr.aria-label]="'areas.label' | transloco">
+  @for (area of areas; track area.id) {
+    @let name = 'areas.' + area.id | transloco;
+    <button
+      type="button"
+      class="area"
+      data-testid="area-option"
+      [attr.data-area]="area.id"
+      [class.on]="area.id === current()"
+      [attr.aria-current]="area.id === current() ? 'page' : null"
+      [attr.title]="'areas.hint' | transloco: { area: name, key: area.key }"
+      (click)="choose(area.id)"
+    >
+      <app-icon [name]="area.icon" />
+      <span class="label" [class.visually-hidden]="layout() === 'bar'">{{ name }}</span>
+    </button>
+  }
+</div>

@@ -4,6 +4,7 @@ import { By } from '@angular/platform-browser';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EVENT_SUBSCRIBER, EventSubscriber, GlobalAction } from '@core/ipc/app-events.service';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
+import { AreaStore } from '@core/services/areas/area.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { StatusNotifier } from '@core/services/notifications/status.service';
 import { FILE_DROP_SUBSCRIBER, FileDropSubscriber } from '@core/services/window/file-drop.service';
@@ -42,6 +43,7 @@ import { PlaceholderFormComponent } from './overlays/placeholder-form/placeholde
 import { QuickPaletteComponent } from './overlays/quick-palette/quick-palette.component';
 import { SearchBoxComponent } from './header/search-box/search-box.component';
 import { SegmentedChoiceComponent } from '@shared/controls/segmented-choice/segmented-choice.component';
+import { AreaSwitchComponent } from '@shared/controls/area-switch/area-switch.component';
 import { SelectionBarComponent } from './header/selection-bar/selection-bar.component';
 import { SpaceSwitcherComponent } from './header/space-switcher/space-switcher.component';
 import { LibraryTreeComponent } from './sidebar/library-tree/library-tree.component';
@@ -275,6 +277,14 @@ describe('NotesPageComponent', () => {
       expect(folders.activeFolderId()).toBe('perf');
     });
 
+    it('is headed by the switch between areas, which goes with it', async () => {
+      child(AreaSwitchComponent).chosen.emit('tools');
+      expect(TestBed.inject(AreaStore).current()).toBe('tools');
+
+      await hideRail();
+      expect(maybeChild(AreaSwitchComponent)).toBeNull();
+    });
+
     it('leaves the open folder behind when another space is chosen', async () => {
       child(LibraryTreeComponent).folderOpened.emit(PERF);
       await fixture.whenStable();
@@ -298,6 +308,17 @@ describe('NotesPageComponent', () => {
     expect(setSearchQuery).toHaveBeenCalledWith('term');
     expect(setFilter).toHaveBeenCalledWith('untriaged');
     expect(createNoteSpy).toHaveBeenCalled();
+  });
+
+  /** The page stays alive behind another area: its keys must not reach through. */
+  it('answers no key of its own while another area shows', async () => {
+    TestBed.inject(AreaStore).show('tools');
+    await fixture.whenStable();
+    expect(child(SearchBoxComponent).shortcutEnabled()).toBe(false);
+
+    press('b', { ctrlKey: true });
+
+    expect(settings.showLibraryRail()).toBe(true);
   });
 
   it('disables the search shortcut while the editor overlay is open', async () => {
@@ -631,6 +652,17 @@ describe('NotesPageComponent', () => {
 
       expect(store.selectedNote()?.content).toBe('');
       expect(store.persistedNoteId()).toBeNull();
+    });
+
+    it('comes back from another area to open what it was asked for', async () => {
+      const areas = TestBed.inject(AreaStore);
+      areas.show('tools');
+
+      fireAction('new-note');
+      await fixture.whenStable();
+
+      expect(areas.current()).toBe('notes');
+      expect(store.selectedNote()).not.toBeNull();
     });
 
     /** Whatever opens the editor — a shortcut here, the palette in the e2e run. */

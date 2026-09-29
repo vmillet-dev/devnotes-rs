@@ -617,7 +617,8 @@
       "global": "Globaux (même fenêtre fermée)",
       "canvas": "Canevas",
       "editor": "Éditeur",
-      "palette": "Collage rapide"
+      "palette": "Collage rapide",
+      "areas": "Zones"
     },
     "global": {
       "palette": "Ouvrir la palette de collage rapide",
@@ -954,5 +955,18 @@
     "zoom": "Zoom",
     "zoomIn": "Zoomer",
     "zoomOut": "Dézoomer"
+  },
+  "areas": {
+    "label": "Zones",
+    "hint": "{{area}} ({{key}})",
+    "notes": "Notes",
+    "tools": "Outils",
+    "go": {
+      "notes": "Aller aux notes",
+      "tools": "Aller aux outils"
+    }
+  },
+  "tools": {
+    "title": "Outils"
   }
 }
