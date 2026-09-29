@@ -15,6 +15,8 @@ import {
   GenerateRequest,
   HashAnswer,
   HashRequest,
+  InstantAnswer,
+  InstantRequest,
   JsonDiffAnswer,
   JsonDiffRequest,
   LineBreaksAnswer,
@@ -106,5 +108,15 @@ export class ToolsRepository {
 
   async diffJson(request: JsonDiffRequest): Promise<JsonDiffAnswer> {
     return unwrap('diff_json', await commands.diffJson(request));
+  }
+
+  /** Read in the machine's zone when written without an offset. */
+  async describeInstant(request: InstantRequest): Promise<InstantAnswer> {
+    return unwrap('describe_instant', await commands.describeInstant(request));
+  }
+
+  /** ISO 8601 in UTC, to the millisecond. */
+  async currentInstant(): Promise<string> {
+    return unwrap('current_instant', await commands.currentInstant());
   }
 }

@@ -1,0 +1,62 @@
+@use 'mixins' as *;
+
+.columns {
+  @include tool-columns;
+}
+
+.column {
+  @include tool-column;
+  gap: 10px;
+}
+
+.section-title {
+  @include tool-section-title;
+}
+
+.entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field {
+  @include tool-field;
+  flex: 1;
+  min-width: 0;
+}
+
+.button {
+  @include tool-button;
+  height: 34px;
+}
+
+.reading {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-1);
+
+  strong {
+    font-weight: 600;
+    color: var(--text-0);
+  }
+}
+
+.guessed {
+  color: var(--text-2);
+}
+
+.note {
+  @include tool-note;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+}
+
+.problem {
+  @include tool-problem;
+}
+
+.empty {
+  @include tool-note;
+  font-family: var(--font-sans);
+  font-size: 12px;
+}

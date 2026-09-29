@@ -337,7 +337,24 @@
     "hoursAgo": "il y a {{count}}h",
     "daysAgo": "il y a {{count}}j",
     "expiresIn": "expire dans {{count}}j",
-    "expired": "expirée"
+    "expired": "expirée",
+    "span": {
+      "now": "à moins d’une minute",
+      "past": {
+        "minutes": "{count, plural, one {il y a # minute} other {il y a # minutes}}",
+        "hours": "{count, plural, one {il y a # heure} other {il y a # heures}}",
+        "days": "{count, plural, one {il y a # jour} other {il y a # jours}}",
+        "months": "il y a {{count}} mois",
+        "years": "{count, plural, one {il y a # an} other {il y a # ans}}"
+      },
+      "future": {
+        "minutes": "{count, plural, one {dans # minute} other {dans # minutes}}",
+        "hours": "{count, plural, one {dans # heure} other {dans # heures}}",
+        "days": "{count, plural, one {dans # jour} other {dans # jours}}",
+        "months": "dans {{count}} mois",
+        "years": "{count, plural, one {dans # an} other {dans # ans}}"
+      }
+    }
   },
   "errors": {
     "dismiss": "Masquer le message",
@@ -988,7 +1005,8 @@
       "crypto": "Crypto",
       "encode": "Encodeurs",
       "compare": "Comparer",
-      "generate": "Générateurs"
+      "generate": "Générateurs",
+      "time": "Temps"
     },
     "input": "Entrée",
     "result": "Résultat",
@@ -1383,6 +1401,66 @@
       "pickTitle": "Ouvrir un snippet JSON",
       "pickSearch": "Rechercher un snippet JSON",
       "pickNone": "Aucun snippet JSON."
+    },
+    "dates": {
+      "name": "Dates et timestamps",
+      "description": "Unix ↔ ISO 8601, en s, ms, µs ou ns",
+      "inputLabel": "Date ou timestamp",
+      "placeholder": "1790000000, 2026-09-29T14:03:12+02:00, 2026-W40-2…",
+      "now": "Maintenant",
+      "forms": "Formes",
+      "readAs": "Lu comme",
+      "guessed": "d’après sa taille",
+      "readings": {
+        "seconds": "timestamp Unix en secondes",
+        "milliseconds": "timestamp Unix en millisecondes",
+        "microseconds": "timestamp Unix en microsecondes",
+        "nanoseconds": "timestamp Unix en nanosecondes",
+        "iso8601": "date ISO 8601",
+        "weekDate": "date ISO 8601 par semaine",
+        "ordinalDate": "date ISO 8601 ordinale",
+        "rfc2822": "date RFC 2822"
+      },
+      "magnitude": "Unité du timestamp",
+      "magnitudes": {
+        "auto": "Auto",
+        "seconds": "s",
+        "milliseconds": "ms",
+        "microseconds": "µs",
+        "nanoseconds": "ns"
+      },
+      "localAssumed": "Écrite sans décalage : lue à l’heure de cette machine.",
+      "ambiguous": "Cette heure a lieu deux fois, au retour à l’heure d’hiver : la première est retenue.",
+      "unreadable": "Illisible à partir du caractère {{at}}.",
+      "skipped": "Cette heure n’existe pas ici : les horloges l’ont sautée au passage à l’heure d’été.",
+      "outOfRange": "Au-delà de ce qu’une date peut représenter : quelque 262 000 ans de part et d’autre de l’an 0.",
+      "empty": "Tapez un timestamp ou une date, ou prenez l’instant présent : chaque forme s’affiche ici.",
+      "rows": {
+        "unixSeconds": "Unix · s",
+        "unixMilliseconds": "Unix · ms",
+        "unixMicroseconds": "Unix · µs",
+        "unixNanoseconds": "Unix · ns",
+        "isoUtc": "ISO 8601 · UTC",
+        "isoLocal": "ISO 8601 · heure locale",
+        "rfc2822": "RFC 2822",
+        "relative": "Par rapport à maintenant",
+        "weekday": "Jour de la semaine",
+        "week": "Semaine ISO",
+        "dayOfYear": "Jour de l’année"
+      },
+      "weekMeta": "semaine {{week}}",
+      "dayMeta": "{day, plural, =1 {1er jour} other {#ᵉ jour}}",
+      "localMeta": "UTC{{offset}}",
+      "weekdays": {
+        "1": "lundi",
+        "2": "mardi",
+        "3": "mercredi",
+        "4": "jeudi",
+        "5": "vendredi",
+        "6": "samedi",
+        "7": "dimanche"
+      },
+      "noteTitle": "Instant {{instant}}"
     }
   }
 }

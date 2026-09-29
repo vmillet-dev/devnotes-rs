@@ -92,6 +92,7 @@ yaml-rust2 = "0.13.0"
 tauri = { version = "2", features = ["test"] }
 tempfile = "3"
 criterion = { version = "0.8", default-features = false, features = ["cargo_bench_support"] }
+chrono-tz = "0.10.4"
 
 [[bench]]
 name = "commands"

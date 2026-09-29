@@ -697,6 +697,16 @@ B (checked in the tests by applying it), and the two documents come back as alig
 pretty-printed with B's keys in A's order when order is ignored, so the same keys meet on the
 same row. The unified view is the same rows read one after the other, on the front.
 
+**An instant is read from whatever was typed** (`tools/dates.rs`): a number by its magnitude
+(seconds below 10¹¹, then milliseconds, microseconds, nanoseconds — each unit read from 1973
+on), unless a unit is forced; a text by its shape. ISO 8601, week and ordinal dates included, is
+parsed by hand so that a refusal says at which character it stops; RFC 2822 is chrono's. A date
+written without an offset is read in the machine's zone (`chrono::Local`, handed in as a
+`TimeZone` so the tests fix one): a local time the clocks skipped is said, one they went through
+twice is read as the earlier. ⚠️ chrono panics on a local time past its range, which an offset
+can push its edges into — `within_range` refuses it first. How long ago or how far off is the
+front's (`spanRef`), so it ages with the clock.
+
 **Adding a tool**, the whole of it:
 
 1. `src-tauri/src/tools/<module>.rs`: the function, its request and answer types, its tests.

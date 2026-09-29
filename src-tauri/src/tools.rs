@@ -4,6 +4,7 @@
 
 pub mod colour;
 pub mod convert;
+pub mod dates;
 pub mod diff;
 pub mod encoding;
 pub(crate) mod files;
@@ -163,4 +164,19 @@ pub async fn lorem_ipsum(
 #[specta::specta]
 pub async fn diff_json(request: diff::JsonDiffRequest) -> Result<diff::JsonDiffAnswer, AppError> {
     off_thread(move || diff::diff(&request)).await
+}
+
+/// A date written without an offset is read in the machine's zone, as the person typing it means.
+#[tauri::command]
+#[specta::specta]
+pub async fn describe_instant(
+    request: dates::InstantRequest,
+) -> Result<dates::InstantAnswer, AppError> {
+    off_thread(move || dates::describe(&request, &chrono::Local)).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn current_instant() -> Result<String, AppError> {
+    off_thread(dates::now).await
 }
