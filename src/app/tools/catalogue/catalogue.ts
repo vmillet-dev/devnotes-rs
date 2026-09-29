@@ -73,6 +73,12 @@ export const TOOLS: readonly ToolDefinition[] = [
     load: () => import('./colour/colour-tool.component').then((m) => m.ColourToolComponent),
   },
   {
+    id: 'json-diff',
+    category: 'compare',
+    keywords: ['json', 'diff', 'compare', 'patch', 'rfc 6902'],
+    load: () => import('./json-diff/json-diff-tool.component').then((m) => m.JsonDiffToolComponent),
+  },
+  {
     id: 'json-generator',
     category: 'generate',
     keywords: ['json', 'schema', 'mock', 'fixture', 'fake', 'faker'],

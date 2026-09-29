@@ -1,0 +1,179 @@
+<div class="inputs">
+  @for (side of ['a', 'b']; track side) {
+    @let name = side === 'a' ? aName() : bName();
+    <section class="input" [attr.aria-labelledby]="'json-diff-input-' + side">
+      <div class="input-head">
+        <span class="side" [id]="'json-diff-input-' + side">{{ side.toUpperCase() }}</span>
+        <span class="name" [attr.data-testid]="'json-diff-name-' + side">
+          {{ name ?? ('tools.json-diff.pasted' | transloco) }}
+        </span>
+        <span class="spacer"></span>
+        <button
+          type="button"
+          class="open"
+          [attr.data-testid]="'json-diff-open-' + side"
+          (click)="picking.set(side === 'a' ? 'a' : 'b')"
+        >
+          {{ 'tools.json-diff.openNote' | transloco }}
+        </button>
+      </div>
+      <textarea
+        class="text"
+        rows="6"
+        spellcheck="false"
+        [attr.data-testid]="'json-diff-' + side"
+        [attr.aria-label]="'tools.json-diff.inputLabel' | transloco: { side: side.toUpperCase() }"
+        [value]="side === 'a' ? a() : b()"
+        [placeholder]="'tools.json-diff.placeholder' | transloco"
+        (input)="onInput(side === 'a' ? 'a' : 'b', $event)"
+      ></textarea>
+      @if (unreadable()?.side === side) {
+        <p class="problem" role="status" [attr.data-testid]="'json-diff-unreadable-' + side">
+          {{
+            'tools.json-diff.unreadable'
+              | transloco: { line: unreadable()!.line, column: unreadable()!.column }
+          }}
+        </p>
+      }
+    </section>
+  }
+</div>
+
+@if (compared(); as compared) {
+  <div class="bar">
+    <span class="count added" data-testid="json-diff-added">
+      {{ 'tools.json-diff.added' | transloco: { count: compared.counts.added } }}
+    </span>
+    <span class="count removed" data-testid="json-diff-removed">
+      {{ 'tools.json-diff.removed' | transloco: { count: compared.counts.removed } }}
+    </span>
+    <span class="count modified" data-testid="json-diff-modified">
+      {{ 'tools.json-diff.modified' | transloco: { count: compared.counts.modified } }}
+    </span>
+    <span class="spacer"></span>
+    <label class="check">
+      <input
+        type="checkbox"
+        data-testid="json-diff-ignore-order"
+        [checked]="ignoreKeyOrder()"
+        (change)="onOption('order', $event)"
+      />
+      {{ 'tools.json-diff.ignoreKeyOrder' | transloco }}
+    </label>
+    <label class="check">
+      <input
+        type="checkbox"
+        data-testid="json-diff-ignore-spaces"
+        [checked]="ignoreWhitespace()"
+        (change)="onOption('spaces', $event)"
+      />
+      {{ 'tools.json-diff.ignoreWhitespace' | transloco }}
+    </label>
+    <app-segmented-choice
+      kind="json-diff-layout"
+      [label]="'tools.json-diff.layout' | transloco"
+      [segments]="layouts"
+      [currentId]="layout()"
+      (chosen)="onLayout($event)"
+    />
+  </div>
+
+  @if (compared.changes.length === 0) {
+    <p class="identical" data-testid="json-diff-identical">{{ 'tools.json-diff.identical' | transloco }}</p>
+  } @else {
+    <div class="comparison">
+      <div class="rows" #rowsBox data-testid="json-diff-rows" [class.unified]="layout() === 'unified'">
+        @if (layout() === 'split') {
+          <div class="head">
+            <span><b>A</b> {{ aName() ?? ('tools.json-diff.pasted' | transloco) }}</span>
+            <span><b>B</b> {{ bName() ?? ('tools.json-diff.pasted' | transloco) }}</span>
+          </div>
+          @for (row of compared.rows; track $index) {
+            <div
+              class="row"
+              data-testid="json-diff-row"
+              [attr.data-row]="$index"
+              [attr.data-kind]="row.kind"
+              [class.selected]="row.path === selectedPath()"
+            >
+              @for (line of [row.left, row.right]; track $index; let right = $last) {
+                @if (line) {
+                  <div class="cell" [attr.data-side]="right ? 'b' : 'a'">
+                    <span class="mark" aria-hidden="true">{{
+                      row.kind === 'same' ? '' : row.kind === 'modified' ? '~' : right ? '+' : '−'
+                    }}</span>
+                    <span class="number">{{ line.number }}</span>
+                    <span class="code">{{ line.text }}</span>
+                  </div>
+                } @else {
+                  <div class="cell gap" [attr.data-side]="right ? 'b' : 'a'"></div>
+                }
+              }
+            </div>
+          }
+        } @else {
+          @for (line of unifiedLines(); track $index) {
+            <div
+              class="line"
+              data-testid="json-diff-line"
+              [attr.data-row]="line.row"
+              [attr.data-kind]="line.kind"
+            >
+              <span class="mark" aria-hidden="true">{{ line.mark }}</span>
+              <span class="number">{{ line.number }}</span>
+              <span class="code">{{ line.text }}</span>
+            </div>
+          }
+        }
+        @if (compared.rowsTruncated) {
+          <p class="truncated">{{ 'tools.json-diff.truncated' | transloco }}</p>
+        }
+      </div>
+
+      <aside class="changes" [attr.aria-label]="'tools.json-diff.changes' | transloco">
+        <p class="changes-title">
+          {{ 'tools.json-diff.changesCount' | transloco: { count: compared.changes.length } }}
+        </p>
+        @for (change of compared.changes; track $index) {
+          <button
+            type="button"
+            class="change"
+            data-testid="json-diff-change"
+            [attr.data-path]="change.path"
+            [attr.data-kind]="change.kind"
+            [class.selected]="change.path === selectedPath()"
+            (click)="show(change)"
+          >
+            <span class="change-path">
+              <span class="mark" aria-hidden="true">{{ marks[change.kind] }}</span>
+              {{ change.path }}
+            </span>
+            <span class="change-detail">
+              @if (change.kind === 'reordered') {
+                {{ 'tools.json-diff.reordered' | transloco }}
+              } @else {
+                @if (change.before; as before) {
+                  @let shown = described(before);
+                  {{ shown.key | transloco: shown.params }}
+                }
+                @if (change.before && change.after) {
+                  →
+                }
+                @if (change.after; as after) {
+                  @let shown = described(after);
+                  {{ shown.key | transloco: shown.params }}
+                }
+              }
+            </span>
+          </button>
+        }
+      </aside>
+    </div>
+  }
+} @else if (!unreadable()) {
+  <p class="note">{{ 'tools.json-diff.empty' | transloco }}</p>
+}
+
+@if (picking()) {
+  <app-json-note-picker (picked)="onPicked($event)" (closed)="picking.set(null)" />
+}

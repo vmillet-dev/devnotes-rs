@@ -43,6 +43,7 @@ export const commands = {
 	convertData: (request: ConvertRequest) => typedError<ConvertAnswer, AppError>(__TAURI_INVOKE("convert_data", { request })),
 	generateJson: (request: GenerateRequest) => typedError<GenerateAnswer, AppError>(__TAURI_INVOKE("generate_json", { request })),
 	loremIpsum: (request: LoremRequest) => typedError<LoremAnswer, AppError>(__TAURI_INVOKE("lorem_ipsum", { request })),
+	diffJson: (request: JsonDiffRequest) => typedError<JsonDiffAnswer, AppError>(__TAURI_INVOKE("diff_json", { request })),
 	/**
 	 *  The first launch: the space, its folders and the notes in one transaction, since a space
 	 *  standing alone reads as "already seeded" for good. The strings stay on the front end, with
@@ -699,6 +700,55 @@ export type ImportReport = {
 	attachmentsMissing: number,
 };
 
+export type JsonChange = {
+	kind: JsonChangeKind,
+	path: string,
+	before: ValueSummary | null,
+	after: ValueSummary | null,
+};
+
+export type JsonChangeKind = "added" | "removed" | "modified" | 
+/**  The same keys, in another order: counted with the modifications. */
+"reordered";
+
+export type JsonDiffAnswer = { kind: "compared"; changes: JsonChange[]; counts: JsonDiffCounts; rows: JsonDiffRow[]; rowsTruncated: boolean; 
+/**  RFC 6902, from A to B, as JSON. */
+patch: string } | { kind: "unreadable"; side: JsonDiffSide; line: number; column: number };
+
+export type JsonDiffCounts = {
+	added: number,
+	removed: number,
+	modified: number,
+};
+
+export type JsonDiffLine = {
+	/**  One-based, in that side's own text. */
+	number: number,
+	text: string,
+};
+
+export type JsonDiffRequest = {
+	a: string,
+	b: string,
+	/**  On, `{"a":1,"b":2}` and `{"b":2,"a":1}` are the same document. */
+	ignoreKeyOrder: boolean,
+	/**  On, two strings that differ only by their spaces are the same. */
+	ignoreWhitespace: boolean,
+};
+
+/**  One row of the side-by-side view: a side without a line is a gap. */
+export type JsonDiffRow = {
+	kind: JsonDiffRowKind,
+	left: JsonDiffLine | null,
+	right: JsonDiffLine | null,
+	/**  The `JSONPath` of the value the row writes, for a change to scroll to. */
+	path: string,
+};
+
+export type JsonDiffRowKind = "same" | "added" | "removed" | "modified";
+
+export type JsonDiffSide = "a" | "b";
+
 /**  One-based line and column, the column in UTF-16 units like the offset. */
 export type JsonError = {
 	reason: JsonErrorReason,
@@ -1294,6 +1344,9 @@ export type UuidVariant = "ncs" |
 export type UuidVersion = "v4" | 
 /**  Its first 48 bits are the time it was made: sorted, they sort by creation. */
 "v7";
+
+/**  What a value was, as the list of changes shows it: itself when short, its size otherwise. */
+export type ValueSummary = { kind: "scalar"; text: string } | { kind: "object"; keys: number } | { kind: "array"; items: number };
 
 /**  What the front end renders before it renders anything else. */
 export type VaultState = 

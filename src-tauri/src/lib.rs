@@ -50,9 +50,9 @@ use notes::{
 use recovery::{archive_locked_library, set_aside_damaged_library};
 use spaces::{create_space, delete_space, list_spaces, pin_space, rename_space};
 use tools::{
-    convert_case, convert_data, decode_base64, describe_colour, encode_base64, encode_base64_file,
-    fix_line_breaks, generate_json, generate_passwords, generate_uuids, hash_input, inspect_uuid,
-    lorem_ipsum, parse_url, save_base64, slugify, url_codec,
+    convert_case, convert_data, decode_base64, describe_colour, diff_json, encode_base64,
+    encode_base64_file, fix_line_breaks, generate_json, generate_passwords, generate_uuids,
+    hash_input, inspect_uuid, lorem_ipsum, parse_url, save_base64, slugify, url_codec,
 };
 use transfer::{export_is_protected, export_notes, import_notes, share_notes};
 use vault::{change_passphrase, create_vault, unlock_vault, vault_state};
@@ -100,6 +100,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             convert_data,
             generate_json,
             lorem_ipsum,
+            diff_json,
             seed_samples::<tauri::Wry>,
             update_note::<tauri::Wry>,
             list_revisions::<tauri::Wry>,

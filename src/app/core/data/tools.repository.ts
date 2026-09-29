@@ -15,6 +15,8 @@ import {
   GenerateRequest,
   HashAnswer,
   HashRequest,
+  JsonDiffAnswer,
+  JsonDiffRequest,
   LineBreaksAnswer,
   LineBreaksRequest,
   LoremAnswer,
@@ -100,5 +102,9 @@ export class ToolsRepository {
 
   async lorem(request: LoremRequest): Promise<LoremAnswer> {
     return unwrap('lorem_ipsum', await commands.loremIpsum(request));
+  }
+
+  async diffJson(request: JsonDiffRequest): Promise<JsonDiffAnswer> {
+    return unwrap('diff_json', await commands.diffJson(request));
   }
 }
