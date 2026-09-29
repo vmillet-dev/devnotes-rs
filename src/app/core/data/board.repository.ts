@@ -46,6 +46,7 @@ export class BoardRepository {
       tags: [...query.tags],
       languages: [...query.languages],
       kinds: [...query.kinds],
+      priorities: [...query.priorities],
       now: toIsoString(query.now, 'now'),
     };
     return toBoardView(unwrap('board_view', await commands.boardView(wire)));

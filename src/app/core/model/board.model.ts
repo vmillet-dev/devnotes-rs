@@ -6,7 +6,7 @@ import type {
   BoardZone as WireBoardZone,
 } from '@core/ipc/bindings';
 import { Folder } from './folder.model';
-import { Note, NoteFilter, NoteKind } from './note.model';
+import { Note, NoteFilter, NoteKind, Priority } from './note.model';
 import { LanguageTag } from './language.model';
 
 export function samePoint(a: BoardPoint, b: BoardPoint): boolean {
@@ -63,6 +63,7 @@ export interface BoardQuery {
   readonly tags: readonly string[];
   readonly languages: readonly LanguageTag[];
   readonly kinds: readonly NoteKind[];
+  readonly priorities: readonly Priority[];
   readonly now: Date;
 }
 

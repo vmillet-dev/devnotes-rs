@@ -557,11 +557,16 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
         value,
         count: this.notes.filter((note) => note.kind === value).length,
       })),
+      priorityCounts: (['none', 'low', 'medium', 'high', 'urgent'] as const).map((value) => ({
+        value,
+        count: this.notes.filter((note) => note.priority === value).length,
+      })),
       isFiltering:
         (query?.search.trim().length ?? 0) > 0 ||
         (query?.tags.length ?? 0) > 0 ||
         (query?.languages.length ?? 0) > 0 ||
-        (query?.kinds.length ?? 0) > 0,
+        (query?.kinds.length ?? 0) > 0 ||
+        (query?.priorities.length ?? 0) > 0,
       matched: this.notes.length,
     };
   }

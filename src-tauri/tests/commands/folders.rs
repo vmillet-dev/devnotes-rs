@@ -31,6 +31,7 @@ fn board(space_id: &str) -> BoardQuery {
         tags: Vec::new(),
         languages: Vec::new(),
         kinds: Vec::new(),
+        priorities: Vec::new(),
         now: Utc::now(),
     }
 }

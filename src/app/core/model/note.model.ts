@@ -112,6 +112,7 @@ export interface NotesQuery {
   readonly tags: readonly string[];
   readonly languages: readonly LanguageTag[];
   readonly kinds: readonly NoteKind[];
+  readonly priorities: readonly Priority[];
   readonly now: Date;
   /**
    * `Date#getTimezoneOffset()`. The sections reason in local days: without this
@@ -129,6 +130,8 @@ export interface NotesView {
   readonly availableLanguages: readonly LanguageTag[];
   /** Every kind, zeros included, counted over the space and not over the filter. */
   readonly kindCounts: readonly FacetCount<NoteKind>[];
+  /** Every level, `none` included, counted like the kinds. */
+  readonly priorityCounts: readonly FacetCount<Priority>[];
   readonly isFiltering: boolean;
   readonly matched: number;
 }

@@ -29,6 +29,9 @@
     "kinds": "Type",
     "kindsGroupLabel": "Filter by type",
     "kindAll": "All",
+    "priorities": "Priority",
+    "prioritiesGroupLabel": "Filter by priority",
+    "priorityAll": "All",
     "kindPlural": {
       "snippet": "Snippets",
       "note": "Notes",

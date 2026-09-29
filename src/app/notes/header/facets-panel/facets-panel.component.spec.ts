@@ -23,16 +23,18 @@ describe('FacetsPanelComponent', () => {
     fixture.componentRef.setInput('activeLanguages', new Set<LanguageTag>());
     fixture.componentRef.setInput('kindCounts', [{ value: 'note', count: 1 }]);
     fixture.componentRef.setInput('activeKinds', new Set());
+    fixture.componentRef.setInput('priorityCounts', [{ value: 'high', count: 1 }]);
+    fixture.componentRef.setInput('activePriorities', new Set());
     fixture.autoDetectChanges();
     await fixture.whenStable();
   });
 
-  it('draws the three rails, the kinds first', () => {
+  it('draws the four rails, the kinds and the priorities first', () => {
     const rails = [...fixture.nativeElement.querySelector('.facets-panel').children].map((rail: Element) =>
       rail.tagName.toLowerCase(),
     );
 
-    expect(rails).toEqual(['app-kind-rail', 'app-tag-rail', 'app-language-rail']);
+    expect(rails).toEqual(['app-kind-rail', 'app-priority-rail', 'app-tag-rail', 'app-language-rail']);
   });
 
   /** The way out is offered exactly when there is something to leave. */

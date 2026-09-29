@@ -149,6 +149,7 @@ export class PaletteStore {
         tags: [],
         languages: [],
         kinds: [],
+        priorities: [],
         now,
         tzOffsetMinutes: now.getTimezoneOffset(),
         // The one place the pinned hoist is a setting.

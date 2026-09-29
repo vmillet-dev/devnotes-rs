@@ -169,6 +169,7 @@ fn a_view_serializes_with_camel_case_keys() {
         available_tags: vec!["auth".to_string()],
         available_languages: vec![Language::Json],
         kind_counts: view::count_kinds(&[("note".to_string(), 3)]),
+        priority_counts: view::count_priorities(&[("urgent".to_string(), 1)]),
         is_filtering: false,
         matched: 1,
     };
@@ -180,6 +181,10 @@ fn a_view_serializes_with_camel_case_keys() {
     assert_eq!(
         json["kindCounts"][1],
         serde_json::json!({ "value": "note", "count": 3 })
+    );
+    assert_eq!(
+        json["priorityCounts"][4],
+        serde_json::json!({ "value": "urgent", "count": 1 })
     );
     assert!(json.get("isFiltering").is_some());
     assert!(json.get("available_tags").is_none());
@@ -211,6 +216,7 @@ fn a_query_is_read_from_the_camel_case_payload_the_front_sends() {
         "tags": ["urgent"],
         "languages": ["json", "yml"],
         "kinds": ["note", "checklist"],
+        "priorities": ["urgent"],
         "now": NOW,
         "tzOffsetMinutes": -120,
         "pinnedFirst": true
@@ -234,6 +240,7 @@ fn a_null_space_is_read_as_every_space() {
         "tags": [],
         "languages": [],
         "kinds": [],
+        "priorities": [],
         "now": NOW,
         "tzOffsetMinutes": 0,
         "pinnedFirst": false

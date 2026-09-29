@@ -114,6 +114,24 @@ describe('NotesQueryStore', () => {
       expect(repository.lastQuery?.languages).toEqual([]);
     });
 
+    it('sends the selected priorities, and none once "All" is chosen', async () => {
+      const { canvas, repository } = await createNotesHarness([createNote()]);
+
+      const beforeAdd = repository.queryCount;
+      canvas.togglePriority('urgent');
+      canvas.togglePriority('high');
+      await awaitQuery(repository, beforeAdd);
+      expect(repository.lastQuery?.priorities).toEqual(['high', 'urgent']);
+      expect(canvas.hasUserFilters()).toBe(true);
+
+      const beforeAll = repository.queryCount;
+      canvas.clearPriorities();
+      await awaitQuery(repository, beforeAll);
+
+      expect(repository.lastQuery?.priorities).toEqual([]);
+      expect(canvas.hasUserFilters()).toBe(false);
+    });
+
     it('sends the selected kinds, and none once "All" is chosen', async () => {
       const { canvas, repository } = await createNotesHarness([createNote()]);
 
@@ -213,6 +231,7 @@ describe('NotesQueryStore', () => {
       canvas.toggleTag('urgent');
       canvas.toggleLanguage('json');
       canvas.toggleKind('note');
+      canvas.togglePriority('low');
       // Waited for: three setters undone before the `computed` runs would collapse to
       // no change at all and prove nothing.
       await vi.waitFor(() => expect(repository.lastQuery?.search).toBe('deploy'));
@@ -225,6 +244,7 @@ describe('NotesQueryStore', () => {
       expect(repository.lastQuery?.tags).toEqual([]);
       expect(repository.lastQuery?.languages).toEqual([]);
       expect(repository.lastQuery?.kinds).toEqual([]);
+      expect(repository.lastQuery?.priorities).toEqual([]);
       // The field is what the user is looking at, and it has to look empty too.
       expect(canvas.searchQuery()).toBe('');
     });

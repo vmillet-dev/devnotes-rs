@@ -328,6 +328,7 @@ export type BoardQuery = {
 	tags: string[],
 	languages: Language[],
 	kinds: NoteKind[],
+	priorities: Priority[],
 	now: string,
 };
 
@@ -698,6 +699,7 @@ export type NotesQuery = {
 	tags: string[],
 	languages: Language[],
 	kinds: NoteKind[],
+	priorities: Priority[],
 	now: string,
 	/**
 	 *  `Date#getTimezoneOffset()`, whose sign is the opposite of the offset (−120 for
@@ -717,6 +719,7 @@ export type NotesView = {
 	availableTags: string[],
 	availableLanguages: Language[],
 	kindCounts: FacetCount<NoteKind>[],
+	priorityCounts: FacetCount<Priority>[],
 	isFiltering: boolean,
 	/**  `u32` and not `usize`: Specta refuses what JSON cannot carry exactly. */
 	matched: number,

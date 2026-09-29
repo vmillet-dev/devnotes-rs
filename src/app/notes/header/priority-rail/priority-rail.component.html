@@ -1,0 +1,36 @@
+@if (shown()) {
+  <div
+    class="priority-rail"
+    role="group"
+    data-testid="priority-rail"
+    [attr.aria-label]="'notes.prioritiesGroupLabel' | transloco"
+  >
+    <span class="priority-rail-label">{{ 'notes.priorities' | transloco }}</span>
+    <button
+      type="button"
+      class="priority-chip"
+      data-testid="priority-chip-all"
+      [class.on]="everyLevel()"
+      [attr.aria-pressed]="everyLevel()"
+      (click)="allChosen.emit()"
+    >
+      <span>{{ 'notes.priorityAll' | transloco }}</span>
+      <span class="priority-count">{{ total() }}</span>
+    </button>
+    @for (counted of levels(); track counted.value) {
+      <button
+        type="button"
+        class="priority-chip"
+        [attr.data-testid]="'priority-chip-' + counted.value"
+        [class.on]="activePriorities().has(counted.value)"
+        [attr.aria-pressed]="activePriorities().has(counted.value)"
+        [disabled]="counted.count === 0 && !activePriorities().has(counted.value)"
+        (click)="priorityToggled.emit(counted.value)"
+      >
+        <i [class]="'priority-dot is-' + counted.value" aria-hidden="true"></i>
+        <span>{{ 'notes.priority.' + counted.value | transloco }}</span>
+        <span class="priority-count">{{ counted.count }}</span>
+      </button>
+    }
+  </div>
+}

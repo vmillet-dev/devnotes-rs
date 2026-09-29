@@ -260,11 +260,17 @@ fn facets(connection: &mut Library, space_id: Option<&str>) -> Result<Facets, St
         .group_by(notes::kind)
         .select((notes::kind, diesel::dsl::count_star()))
         .into_boxed();
+    let mut priorities = notes::table
+        .filter(notes::deleted_at.is_null())
+        .group_by(notes::priority)
+        .select((notes::priority, diesel::dsl::count_star()))
+        .into_boxed();
 
     if let Some(id) = space_id {
         tags = tags.filter(notes::space_id.eq(id.to_string()));
         languages = languages.filter(notes::space_id.eq(id.to_string()));
         kinds = kinds.filter(notes::space_id.eq(id.to_string()));
+        priorities = priorities.filter(notes::space_id.eq(id.to_string()));
     }
 
     Ok(Facets {
@@ -276,6 +282,7 @@ fn facets(connection: &mut Library, space_id: Option<&str>) -> Result<Facets, St
             .filter_map(|language| language.parse().ok())
             .collect(),
         kinds: view::count_kinds(&kinds.load::<(String, i64)>(connection.db())?),
+        priorities: view::count_priorities(&priorities.load::<(String, i64)>(connection.db())?),
     })
 }
 
@@ -318,6 +325,16 @@ pub fn fetch(
             .map(NoteKind::as_str)
             .collect();
         query = query.filter(notes::kind.eq_any(selected));
+    }
+
+    if !request.priorities.is_empty() {
+        let selected: Vec<&str> = request
+            .priorities
+            .iter()
+            .copied()
+            .map(Priority::as_str)
+            .collect();
+        query = query.filter(notes::priority.eq_any(selected));
     }
 
     let selected_tags = request.selected_tags();

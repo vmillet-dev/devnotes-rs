@@ -697,6 +697,9 @@ date view turns into one flat `results` section, the board dims — and the kind
 `NoteKind`'s declared order and zeros included. Counted over the space and not the filter,
 for the reason `available_tags` is: counted over the selection, pressing one chip would zero
 the others. "All" is no kind selected, and an empty kind is offered only while pressed.
+**A priority is filtered the same way** (`NotesQuery.priorities`, `priority_counts`), both
+counted by one helper, `view::counted`; its rail reads the levels from the most pressing
+down, offers no chip for `none`, and stays away from a space where nothing has a priority.
 
 A checklist has **no body**. Its items replace `content` — they are not an addition to it —
 and they live in `note_items`, keyed `(note_id, position)`. That key is the whole design: an
