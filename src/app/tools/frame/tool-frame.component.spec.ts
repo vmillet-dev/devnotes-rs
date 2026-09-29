@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToolsStore } from '@core/services/tools/tools.store';
 import { FAKE_TOOLS, FakeToolComponent } from '@testing/tool-catalogue.fixture';
 import { provideAppTesting } from '@testing/testing.providers';
+import { SaveAsNoteDialogComponent } from './save-as-note/save-as-note-dialog.component';
 import { ToolFrameComponent } from './tool-frame.component';
 
 describe('ToolFrameComponent', () => {
@@ -38,6 +39,29 @@ describe('ToolFrameComponent', () => {
 
     expect(tool()!.text()).toBe('');
     expect(button('tool-action-swap').disabled).toBe(true);
+  });
+
+  it('keeps nothing before the tool has a result, and says why', async () => {
+    tool()!.clear();
+    await fixture.whenStable();
+
+    expect(button('tool-save-as-note').getAttribute('aria-disabled')).toBe('true');
+    expect(button('tool-save-as-note').title).not.toBe('');
+    button('tool-save-as-note').click();
+    await fixture.whenStable();
+
+    expect(fixture.debugElement.query(By.directive(SaveAsNoteDialogComponent))).toBeNull();
+  });
+
+  it('hands the dialog the result as it was on the click', async () => {
+    button('tool-save-as-note').click();
+    await fixture.whenStable();
+    tool()!.text.set('typed afterwards');
+    await fixture.whenStable();
+
+    const dialog = fixture.debugElement.query(By.directive(SaveAsNoteDialogComponent));
+    expect((dialog.componentInstance as SaveAsNoteDialogComponent).result().content).toBe('typed');
+    expect((dialog.componentInstance as SaveAsNoteDialogComponent).toolId()).toBe('hash');
   });
 
   it('goes back to the home from the breadcrumb', () => {

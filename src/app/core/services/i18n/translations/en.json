@@ -980,7 +980,8 @@
     "clear": "Clear",
     "promise": {
       "title": "Everything stays on this machine",
-      "offline": "No tool reaches the network. What you paste never leaves the application."
+      "offline": "No tool reaches the network. What you paste never leaves the application.",
+      "keep": "Every tool offers “Save as note”: the result joins a space, with its tags."
     },
     "categories": {
       "text": "Text",
@@ -1081,6 +1082,20 @@
       "moreLines": "{count, plural, one {… and # more line} other {… and # more lines}}",
       "empty": "The fixed text shows here.",
       "noteTitle": "Text with fixed line endings"
+    },
+    "saved": "Note “{{title}}” saved in {{place}}.",
+    "saveAsNote": {
+      "open": "Save as note",
+      "nothing": "The tool has computed nothing to keep yet.",
+      "title": "Save as note",
+      "what": "A {{language}} snippet, holding what the tool computed — never what was typed into it.",
+      "noteTitle": "Title",
+      "space": "Space",
+      "folder": "Folder",
+      "noFolder": "No folder",
+      "tags": "Tags",
+      "tagsPlaceholder": "api, webhook",
+      "submit": "Save"
     }
   }
 }

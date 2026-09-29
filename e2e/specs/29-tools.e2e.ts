@@ -1,8 +1,17 @@
 import { $, $$, browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
-import { activeTestId, eventually, press, readEach, setField, testid } from '../support/app.js';
-import { bridge } from '../support/bridge.js';
+import {
+  activeTestId,
+  eventually,
+  pickChoice,
+  press,
+  readEach,
+  reloadCanvas,
+  setField,
+  testid,
+} from '../support/app.js';
+import { bridge, query } from '../support/bridge.js';
 
 const entry = (tool: string) => $(`${testid('tools-entry')}[data-tool="${tool}"]`);
 const outputValues = () => readEach(testid('output-value'), 'text');
@@ -33,8 +42,13 @@ async function pasteInto(selector: string, text: string): Promise<void> {
 }
 
 describe('The tools', () => {
+  let spaceId = '';
+
   before(async () => {
     await canvas.open();
+    // A space of its own: the first launch's went with the library 24-forgotten-passphrase set aside.
+    spaceId = (await bridge.createSpace({ name: 'Outils' })).id;
+    await reloadCanvas();
   });
 
   after(async () => {
@@ -180,6 +194,51 @@ describe('The tools', () => {
         (tools) => tools.slice(0, 3).join() === 'line-breaks,url-parser,slug',
         'the recent tools',
       );
+    });
+  });
+
+  describe('a result kept as a note', () => {
+    const inSpace = async () =>
+      (await bridge.queryNotes(query({ spaceId }))).sections.flatMap((section) => section.notes);
+
+    after(async () => {
+      const ids = (await inSpace()).map((note) => note.id);
+      await bridge.deleteNotes(ids);
+      await bridge.purgeNotes(ids);
+    });
+
+    it('asks nothing before the tool has computed something', async () => {
+      await openTool('slug');
+      await $(testid('tool-clear')).click();
+
+      await eventually(
+        () => $(testid('tool-save-as-note')).getAttribute('aria-disabled'),
+        (disabled) => disabled === 'true',
+        'nothing to keep',
+      );
+    });
+
+    it('goes where the dialog puts it, with its tags, as the tool shaped it', async () => {
+      await setField(testid('slug-input'), 'Été 2026 !');
+      await eventually(outputValues, (values) => values[0] === 'ete-2026', 'the slug');
+
+      await $(testid('tool-save-as-note')).click();
+      await $(testid('save-as-note')).waitForDisplayed({ timeout: 5_000 });
+      await setField(testid('save-as-note-title'), 'Slug de la page été');
+      await pickChoice('save-as-note-space', spaceId);
+      await setField(testid('save-as-note-tags'), 'web, seo');
+      await $(testid('save-as-note-submit')).click();
+      await $(testid('save-as-note')).waitForExist({ reverse: true, timeout: 10_000 });
+
+      const [note] = await inSpace();
+      expect(note).toMatchObject({
+        title: 'Slug de la page été',
+        content: 'ete-2026',
+        language: 'txt',
+        kind: 'snippet',
+      });
+      expect([...(note?.tags ?? [])].sort()).toEqual(['seo', 'web']);
+      expect(note?.source).toContain('/');
     });
   });
 });
