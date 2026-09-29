@@ -3,6 +3,8 @@ import {
   Component,
   DestroyRef,
   ElementRef,
+  Injector,
+  afterNextRender,
   computed,
   effect,
   inject,
@@ -47,6 +49,11 @@ import { applyEdit, indent, indentUnit, outdent, rewrite } from './indentation';
 import { countWords } from './word-count';
 import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
 import { TagPillComponent } from '@notes/ui/tag-pill/tag-pill.component';
+import { Span } from '@core/model/json.model';
+import { JsonExplorerStore } from '@core/state/json-explorer.store';
+import type { JsonExplorerMode } from '@shared/json-explorer/json-explorer.component';
+// On a line of its own: the visualiser is its own chunk, loaded by a first Graphe or Arbre.
+import { JsonViewComponent } from './json-view/json-view.component';
 
 const TEXT_ENCODER = new TextEncoder();
 
@@ -58,6 +65,8 @@ const FIELDS_PANEL_STORAGE_KEY = 'devnotes.editorFieldsPanel';
 const FORMAT_NOTICE_MS = 6000;
 
 const NO_LINES: ReadonlySet<number> = new Set();
+
+type BodyView = 'code' | JsonExplorerMode;
 
 type FormatNotice =
   Exclude<FormatAnswer, { kind: 'formatted' }> | { readonly kind: 'formatted'; readonly changed: number };
@@ -99,6 +108,7 @@ const PRIORITY_CHOICES: readonly ChoiceOption[] = PRIORITIES.filter((level) => l
     ChecklistEditorComponent,
     CopyButtonComponent,
     FormatButtonComponent,
+    JsonViewComponent,
     TagPillComponent,
     LifecycleBadgeComponent,
     PlaceholderPanelComponent,
@@ -111,6 +121,8 @@ const PRIORITY_CHOICES: readonly ChoiceOption[] = PRIORITIES.filter((level) => l
   templateUrl: './note-editor-overlay.component.html',
   styleUrl: './note-editor-overlay.component.scss',
   host: { '(keydown)': 'onEditorKeydown($event)' },
+  // Here and not at the root: an HTTP response will explore a document of its own beside it.
+  providers: [JsonExplorerStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NoteEditorOverlayComponent {
@@ -126,6 +138,8 @@ export class NoteEditorOverlayComponent {
   private readonly links = inject(ExternalLinksService);
   private readonly settings = inject(SettingsStore);
   private readonly formatter = inject(FormatterService);
+  protected readonly explorer = inject(JsonExplorerStore);
+  private readonly injector = inject(Injector);
   protected readonly prettierSettings = inject(PrettierSettingsStore);
 
   readonly note = input<Note | null>(null);
@@ -198,6 +212,22 @@ export class NoteEditorOverlayComponent {
   protected readonly isRichText = computed(() => this.note()?.kind === 'note');
   /** Only a snippet's body is code: a format picker anywhere else would do nothing. */
   protected readonly hasLanguage = computed(() => this.note()?.kind === 'snippet');
+  protected readonly isJson = computed(() => this.hasLanguage() && this.note()?.language === 'json');
+  protected readonly jsonTabs: readonly BodyView[] = ['code', 'graph', 'tree'];
+  protected readonly bodyView = linkedSignal<number, BodyView>({
+    source: this.session,
+    computation: () => 'code',
+  });
+  /** The visualiser, when it has the body: only a JSON snippet has the tabs. */
+  protected readonly jsonMode = computed<JsonExplorerMode | null>(() => {
+    const view = this.bodyView();
+    return this.isJson() && view !== 'code' ? view : null;
+  });
+  protected readonly jsonValidity = computed(() => {
+    const view = this.explorer.view();
+    if (!this.isJson() || !view) return null;
+    return view.error ? { valid: false, line: view.error.line } : { valid: true, line: 0 };
+  });
   protected readonly checklistStats = computed(() => checklistProgress(this.note()?.items ?? []));
 
   /** The draft, so copying before leaving the field yields what is on screen. */
@@ -246,6 +276,24 @@ export class NoteEditorOverlayComponent {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => clearTimeout(this.noticeTimer));
+
+    // The draft, explored while it is typed: the header's "JSON valide" is about what is on
+    // screen. A note just opened is explored at once, from its first level.
+    let explored = -1;
+    effect(() => {
+      const session = this.session();
+      const text = this.isJson() ? this.draftContent() : null;
+      untracked(() => {
+        if (text === null) {
+          this.explorer.clear();
+        } else if (session !== explored) {
+          explored = session;
+          this.explorer.load(text);
+        } else {
+          this.explorer.setText(text);
+        }
+      });
+    });
 
     // The help panels are drawn over the editor: one left up would hide the note just opened,
     // whatever opened it — a global shortcut, the palette.
@@ -318,6 +366,28 @@ export class NoteEditorOverlayComponent {
     const next = !this.fullscreen();
     this.fullscreen.set(next);
     this.preferences.write(FULLSCREEN_STORAGE_KEY, String(next));
+  }
+
+  protected showBody(view: BodyView): void {
+    this.bodyView.set(view);
+  }
+
+  /** Back to the code with the value selected, scrolled to a third of the way down. */
+  protected showInCode(span: Span): void {
+    this.bodyView.set('code');
+    afterNextRender(
+      () => {
+        const field = this.bodyEditor()?.nativeElement;
+        if (!field) return;
+        field.focus({ preventScroll: true });
+        field.setSelectionRange(span.start, span.end);
+        const line = this.draftContent().slice(0, span.start).split('\n').length - 1;
+        const height = Number.parseFloat(getComputedStyle(field).lineHeight) || 22;
+        const body = field.closest('.overlay-body');
+        if (body) body.scrollTop = Math.max(0, line * height - body.clientHeight / 3);
+      },
+      { injector: this.injector },
+    );
   }
 
   protected onBodyInput(value: string): void {

@@ -661,7 +661,9 @@ fn a_json_query_is_read_from_the_tagged_opening_the_front_sends() {
     }))
     .unwrap();
 
-    assert!(matches!(query.opening, JsonOpening::Paths { ref paths } if paths == &["$.data"]));
+    assert!(
+        matches!(query.opening, JsonOpening::Paths { ref paths, reveal: None } if paths == &["$.data"])
+    );
 
     let initial: JsonOpening =
         serde_json::from_value(serde_json::json!({ "kind": "initial" })).unwrap();

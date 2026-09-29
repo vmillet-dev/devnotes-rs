@@ -1,0 +1,40 @@
+<div
+  #list
+  class="tree"
+  role="tree"
+  data-testid="json-tree"
+  tabindex="-1"
+  [attr.aria-label]="'json.tree' | transloco"
+  (keydown)="onKeydown($event)"
+>
+  @for (line of lines(); track line.path; let index = $index) {
+    <div
+      class="line"
+      role="treeitem"
+      data-testid="json-line"
+      [attr.data-path]="line.path"
+      [attr.data-kind]="line.kind"
+      [attr.aria-level]="line.depth + 1"
+      [attr.aria-expanded]="line.opens ? line.open : null"
+      [attr.aria-selected]="index === cursor()"
+      [class.hit]="line.hit"
+      [class.current]="index === cursor()"
+      [style.padding-left.px]="12 + line.depth * 18"
+      [tabindex]="index === cursor() ? 0 : -1"
+      (click)="choose(line)"
+      (keydown.enter)="activate(line, $event)"
+      (keydown.space)="activate(line, $event)"
+    >
+      <span class="twist" aria-hidden="true">{{ line.opens ? (line.open ? '▾' : '▸') : '' }}</span>
+      <span class="line-key">{{ line.key }}</span>
+      @if (line.opens) {
+        <span class="line-size">{{ line.kind === 'object' ? '{ }' : '[ ]' }} {{ line.size }}</span>
+      } @else {
+        <span class="line-value">{{ line.value }}</span>
+      }
+    </div>
+  }
+  @if (truncated()) {
+    <p class="truncated">{{ 'json.treeTruncated' | transloco }}</p>
+  }
+</div>

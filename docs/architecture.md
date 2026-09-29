@@ -546,6 +546,33 @@ Prettier is JavaScript. `core/services/format/` holds all of it.
 - The button is `aria-disabled` rather than `disabled` on a language Prettier does not format:
   a disabled button shows no tooltip, and this one says why.
 
+### Exploring a JSON snippet
+
+A JSON snippet's editor has a band of its own: **Code / Graphe / Arbre**, and "JSON valide"
+or where the draft stops parsing. The model is Rust's — see [The JSON visualiser's
+model](#the-json-visualisers-model); the front draws it.
+
+- **The explorer takes inputs only** (`shared/json-explorer/`: the explorer, its graph and its
+  tree), so an HTTP response can show one too. Its state is `JsonExplorerStore`, provided by
+  the **editor** and not at the root — two documents may be explored at once — and handed over
+  by `JsonViewComponent`, the editor's container, which is a `@defer` chunk imported on a line
+  of its own: the visualiser loads with a first Graphe or Arbre.
+- **The draft is explored as it is typed**, debounced, so the band answers for what is on
+  screen; a note just opened is explored at once, from its first level.
+- **What is open is read back from each answer.** The front keeps no set of its own: it sends
+  the paths of the nodes it was given, plus or minus the one clicked, and Rust decides what
+  that opens, caps included. Opening a container opens one level. Stepping to a match sends
+  it as `reveal`, and Rust opens what is above it — the front never takes a path apart.
+- **The graph draws in the layout's units**: a node's `left` and `width` in `ch` of the
+  monospace font the plane is set in, its `top` in lines of 24 px; the edges are one SVG in
+  the same units, stretched, with `vector-effect: non-scaling-stroke`.
+- ⚠️ **Pointer events for the pan**, like every drag here, and the wheel scrolls it; the zoom
+  is three buttons. The keyboard twin is a cursor, one tab stop: the arrows walk a node's rows,
+  into a child and back up, Enter opens or closes, and Escape goes up — at the root it lets
+  go, and the editor closes.
+- "Voir dans le code" goes back to Code with the value **selected** — its span is in UTF-16
+  units, the textarea's own — and the body scrolled to it.
+
 ### State
 
 The canvas is held by **three** stores, all `providedIn: 'root'`, split by the question they

@@ -9,6 +9,7 @@ import { BackupsRepository } from '@core/data/backups.repository';
 import { LibrariesRepository } from '@core/data/libraries.repository';
 import { BoardRepository } from '@core/data/board.repository';
 import { FoldersRepository } from '@core/data/folders.repository';
+import { JsonRepository } from '@core/data/json.repository';
 import { NotesRepository } from '@core/data/notes.repository';
 import { SpacesRepository } from '@core/data/spaces.repository';
 import { TransferRepository } from '@core/data/transfer.repository';
@@ -28,6 +29,7 @@ import { FakeClipboard } from './fake-clipboard';
 import { FakeDesktopNotifications } from './fake-desktop-notifications';
 import { FakeFileDialog } from './fake-file-dialog';
 import { FakeFoldersRepository } from './fake-folders-repository';
+import { FakeJsonRepository } from './fake-json-repository';
 import { FakeNotesRepository } from './fake-notes-repository';
 import { FakePrettier } from './fake-prettier';
 import { FakeSpacesRepository } from './fake-spaces-repository';
@@ -47,6 +49,7 @@ interface DataDoubles {
   readonly boardRepository?: FakeBoardRepository;
   readonly attachmentsRepository?: FakeAttachmentsRepository;
   readonly transferRepository?: FakeTransferRepository;
+  readonly jsonRepository?: FakeJsonRepository;
   readonly vaultRepository?: FakeVaultRepository;
   readonly backupsRepository?: FakeBackupsRepository;
   readonly librariesRepository?: FakeLibrariesRepository;
@@ -98,6 +101,7 @@ export function provideAppTesting(doubles: DataDoubles = {}): Provider[] {
       provide: TransferRepository,
       useValue: doubles.transferRepository ?? new FakeTransferRepository(),
     },
+    { provide: JsonRepository, useValue: doubles.jsonRepository ?? new FakeJsonRepository() },
     // The shell hosts the update prompt and the about menu, so every spec reaching it
     // pulls the Tauri bridge, absent under jsdom.
     { provide: UpdaterService, useValue: doubles.updater ?? new FakeUpdater() },

@@ -1,0 +1,78 @@
+@use 'mixins' as *;
+
+:host {
+  display: block;
+  min-height: 0;
+  overflow: auto;
+  background: var(--bg-0);
+}
+
+.tree {
+  padding: 56px 0 16px;
+  font-family: var(--font-mono), serif;
+  font-size: 12px;
+}
+
+.line {
+  @include focus-ring(-2px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 24px;
+  padding-right: 16px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.line:hover {
+  background: var(--bg-2);
+}
+
+.line.current {
+  background: rgba(var(--amber-rgb), 0.1);
+}
+
+.line.hit {
+  background: rgba(var(--amber-rgb), 0.18);
+}
+
+.twist {
+  width: 10px;
+  flex-shrink: 0;
+  color: var(--text-2);
+}
+
+.line-key {
+  color: var(--text-1);
+}
+
+.line-size {
+  font-size: 10.5px;
+  color: var(--text-2);
+}
+
+.line-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-2);
+}
+
+.line[data-kind='string'] .line-value {
+  color: var(--green);
+}
+
+.line[data-kind='number'] .line-value {
+  color: var(--red);
+}
+
+.line[data-kind='boolean'] .line-value {
+  color: var(--purple);
+}
+
+.truncated {
+  margin: 8px 16px;
+  font-family: var(--font-sans), serif;
+  font-size: 11.5px;
+  color: var(--text-2);
+}

@@ -898,5 +898,61 @@
     "confirmDelete": "Delete \"{{name}}\": its notes, its attachments and its backups go with it, for good.",
     "confirmDeleteAction": "Delete the library",
     "menuEntry": "Libraries…"
+  },
+  "json": {
+    "views": "View",
+    "tabs": {
+      "code": "Code",
+      "graph": "Graph",
+      "tree": "Tree"
+    },
+    "valid": "Valid JSON",
+    "invalid": "Invalid JSON · line {{line}}",
+    "invalidAt": "Invalid JSON at line {{line}}, column {{column}}:",
+    "reasons": {
+      "unexpectedEnd": "the document ends too early.",
+      "unexpectedCharacter": "an unexpected character.",
+      "invalidNumber": "a malformed number.",
+      "invalidEscape": "an unknown escape.",
+      "controlCharacter": "a control character inside a string.",
+      "trailingCharacters": "text follows the document.",
+      "tooDeep": "nesting too deep."
+    },
+    "showInCode": "Show in code",
+    "search": "Search the JSON",
+    "searchPlaceholder": "Search a key or a value",
+    "previousMatch": "Previous match (Shift+Enter)",
+    "nextMatch": "Next match (Enter)",
+    "openAll": "Expand all",
+    "fit": "Fit to screen",
+    "folded": "More than 2,000 nodes: arrays stay folded.",
+    "showTree": "Show the tree",
+    "crumbs": "Path",
+    "selectionLabel": "Selected node",
+    "selection": "Selection",
+    "copyPath": "Copy the path",
+    "copyValue": "Copy the value",
+    "kinds": {
+      "object": "{count, plural, =0 {Empty object} one {Object · # key} other {Object · # keys}}",
+      "array": "{count, plural, =0 {Empty array} one {Array · # item} other {Array · # items}}",
+      "string": "String",
+      "number": "Number",
+      "boolean": "Boolean",
+      "null": "Null"
+    },
+    "document": "Document",
+    "keys": "Keys",
+    "depth": "Depth",
+    "size": "Size",
+    "bytes": "{{value}} B",
+    "kilobytes": "{{value}} KB",
+    "megabytes": "{{value}} MB",
+    "limitNote": "Past 2,000 nodes, the graph folds arrays and offers the tree.",
+    "hiddenRows": "{count, plural, one {+ # more} other {+ # more}}",
+    "tree": "Document tree",
+    "treeTruncated": "The tree stops at 5,000 lines: fold what you do not need.",
+    "zoom": "Zoom",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out"
   }
 }

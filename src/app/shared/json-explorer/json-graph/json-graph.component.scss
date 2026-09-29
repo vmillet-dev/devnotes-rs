@@ -1,0 +1,211 @@
+@use 'mixins' as *;
+
+:host {
+  display: block;
+  position: relative;
+  min-height: 0;
+}
+
+// `clip` and not `hidden`: a hidden box still scrolls to a button focused by a click, and the
+// zoom, drawn inside it, went with the scroll.
+.ground {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  cursor: grab;
+  touch-action: none;
+  background-color: var(--bg-0);
+  background-image: radial-gradient(var(--line) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.ground.panning {
+  cursor: grabbing;
+}
+
+// `ch` is the font's: the plane carries the monospace size Rust's columns are counted in.
+.plane {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  font-family: var(--font-mono), serif;
+  font-size: 11.5px;
+}
+
+.probe {
+  position: absolute;
+  visibility: hidden;
+}
+
+.edges {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.edges path {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1.6;
+}
+
+.edges path.lit {
+  stroke: var(--amber-edge);
+}
+
+.node {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  @include surface(var(--bg-1), 9px, var(--line));
+  overflow: hidden;
+}
+
+.node.lit {
+  border-color: var(--amber-dim);
+}
+
+.node.current {
+  border-color: var(--amber-edge);
+  box-shadow: 0 0 0 4px rgba(var(--amber-rgb), 0.15);
+}
+
+.node.hit {
+  border-color: var(--amber-edge);
+}
+
+.node-head,
+.row {
+  @include unstyled-control;
+  @include focus-ring(-2px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 24px;
+  padding: 0 10px;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.node-head {
+  justify-content: space-between;
+  flex-shrink: 0;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.node.lit .node-label,
+.node.current .node-label {
+  color: var(--amber-text);
+}
+
+.node.current .node-head {
+  background: rgba(var(--amber-rgb), 0.14);
+}
+
+.node-label {
+  font-weight: 700;
+  color: var(--text-0);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.node-size {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--text-2);
+}
+
+.row {
+  flex-shrink: 0;
+  border-top: 1px solid var(--line-soft);
+}
+
+.row:first-of-type {
+  border-top: none;
+}
+
+.row:hover,
+.node-head:hover {
+  background: var(--bg-2);
+}
+
+.row.current {
+  background: rgba(var(--amber-rgb), 0.1);
+}
+
+.row.hit {
+  background: rgba(var(--amber-rgb), 0.18);
+}
+
+.row-key {
+  flex-shrink: 0;
+  color: var(--text-1);
+}
+
+.row-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  color: var(--text-2);
+}
+
+.row[data-kind='string'] .row-value {
+  color: var(--green);
+}
+
+.row[data-kind='number'] .row-value {
+  color: var(--red);
+}
+
+.row[data-kind='boolean'] .row-value {
+  color: var(--purple);
+}
+
+.row-opens {
+  color: var(--text-2);
+}
+
+.more {
+  color: var(--text-2);
+  cursor: default;
+  font-style: italic;
+}
+
+.zoom {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  align-items: center;
+  @include surface(var(--bg-2), 8px, var(--line));
+  overflow: hidden;
+}
+
+.zoom button {
+  @include unstyled-control;
+  @include focus-ring(-2px);
+  @include hit-target(30px);
+  justify-content: center;
+  padding: 0 8px;
+  font-size: 15px;
+  color: var(--text-1);
+  cursor: pointer;
+}
+
+.zoom .zoom-level {
+  font-family: var(--font-mono), serif;
+  font-size: 11px;
+}
+
+.zoom button:hover {
+  color: var(--text-0);
+}
