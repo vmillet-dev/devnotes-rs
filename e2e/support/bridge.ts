@@ -16,6 +16,8 @@ import type {
   NoteFiling,
   ExportReport,
   ImportReport,
+  InstantAnswer,
+  InstantRequest,
   JsonDiffAnswer,
   JsonDiffRequest,
   JsonQuery,
@@ -68,6 +70,7 @@ export const bridge = {
   exploreJson: (query: JsonQuery) => invoke<JsonView>('explore_json', { query }),
   fixLineBreaks: (request: LineBreaksRequest) => invoke<LineBreaksAnswer>('fix_line_breaks', { request }),
   diffJson: (request: JsonDiffRequest) => invoke<JsonDiffAnswer>('diff_json', { request }),
+  describeInstant: (request: InstantRequest) => invoke<InstantAnswer>('describe_instant', { request }),
   encodeBase64File: (path: string, options: Base64Options) =>
     invoke<Base64FileAnswer>('encode_base64_file', { path, options }),
   listSpaces: () => invoke<Space[]>('list_spaces'),

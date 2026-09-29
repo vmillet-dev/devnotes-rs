@@ -30,6 +30,7 @@ const CATEGORY_ICONS: Record<ToolCategory, IconName> = {
   encode: 'code',
   compare: 'compare',
   generate: 'sparkle',
+  time: 'clock',
 };
 
 /** The catalogue in its panels, the recent tools above it, and a search over both names and lines. */

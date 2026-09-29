@@ -18,3 +18,26 @@ export function expiryRef(at: Date, now: Date): TranslationRef {
   if (days <= 0) return { key: 'time.expired' };
   return { key: 'time.expiresIn', params: { count: days } };
 }
+
+const SPANS: readonly (readonly [unit: string, ms: number])[] = [
+  ['years', 365.2425 * MS_PER_DAY],
+  ['months', 30.436875 * MS_PER_DAY],
+  ['days', MS_PER_DAY],
+  ['hours', 3_600_000],
+  ['minutes', 60_000],
+];
+
+/**
+ * "il y a 3 ans", "dans 2 jours": either way in time, in the largest unit the gap holds a whole
+ * one of. Under a minute it says so rather than count seconds a 30-second clock cannot follow.
+ */
+export function spanRef(at: number, now: Date): TranslationRef {
+  const gap = at - now.getTime();
+  const span = SPANS.find(([, ms]) => Math.abs(gap) >= ms);
+  if (span === undefined) return { key: 'time.span.now' };
+  const [unit, ms] = span;
+  return {
+    key: `time.span.${gap < 0 ? 'past' : 'future'}.${unit}`,
+    params: { count: Math.floor(Math.abs(gap) / ms) },
+  };
+}

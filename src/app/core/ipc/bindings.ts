@@ -44,6 +44,9 @@ export const commands = {
 	generateJson: (request: GenerateRequest) => typedError<GenerateAnswer, AppError>(__TAURI_INVOKE("generate_json", { request })),
 	loremIpsum: (request: LoremRequest) => typedError<LoremAnswer, AppError>(__TAURI_INVOKE("lorem_ipsum", { request })),
 	diffJson: (request: JsonDiffRequest) => typedError<JsonDiffAnswer, AppError>(__TAURI_INVOKE("diff_json", { request })),
+	/**  A date written without an offset is read in the machine's zone, as the person typing it means. */
+	describeInstant: (request: InstantRequest) => typedError<InstantAnswer, AppError>(__TAURI_INVOKE("describe_instant", { request })),
+	currentInstant: () => typedError<string, AppError>(__TAURI_INVOKE("current_instant")),
 	/**
 	 *  The first launch: the space, its folders and the notes in one transaction, since a space
 	 *  standing alone reads as "already seeded" for good. The strings stay on the front end, with
@@ -700,6 +703,47 @@ export type ImportReport = {
 	attachmentsMissing: number,
 };
 
+export type InstantAnswer = { kind: "read"; readAs: ReadAs; 
+/**  The unit a number was read in, guessed from its magnitude or forced. */
+magnitude: Magnitude | null; guessed: boolean; 
+/**  Written without an offset, it was taken in the local zone. */
+localAssumed: boolean; 
+/**  A local time the clocks went through twice: the earlier reading is kept. */
+ambiguous: boolean; forms: InstantForms } | 
+/**  One-based, in characters: where the text stops making sense. */
+{ kind: "unreadable"; at: number } | 
+/**  A local time the clocks skipped when they went forward. */
+{ kind: "skipped" } | 
+/**  Beyond chrono's range, some 262 000 years either side of year 0. */
+{ kind: "outOfRange" };
+
+export type InstantForms = {
+	unixSeconds: string,
+	unixMilliseconds: string,
+	unixMicroseconds: string,
+	/**  An `i64` of nanoseconds reaches from 1677 to 2262 only. */
+	unixNanoseconds: string | null,
+	isoUtc: string,
+	isoLocal: string,
+	localOffset: string,
+	/**  RFC 2822 writes a year of four digits, and none before year 0. */
+	rfc2822: string | null,
+	/**  The calendar facts are the local date's. 1 is Monday. */
+	weekday: number,
+	weekDate: string,
+	week: number,
+	ordinalDate: string,
+	dayOfYear: number,
+	/**  For the relative time the front formats: exact, since chrono's range stays under 2⁵³ ms. */
+	epochMilliseconds: number | null,
+};
+
+export type InstantRequest = {
+	text: string,
+	/**  A number read in this unit rather than by its magnitude. */
+	magnitude: Magnitude | null,
+};
+
 export type JsonChange = {
 	kind: JsonChangeKind,
 	path: string,
@@ -907,6 +951,8 @@ export type LoremRequest = {
 };
 
 export type LoremUnit = "words" | "sentences" | "paragraphs";
+
+export type Magnitude = "seconds" | "milliseconds" | "microseconds" | "nanoseconds";
 
 export type Notation = "hex" | "rgb" | "hsl" | "oklch";
 
@@ -1155,6 +1201,8 @@ export type QueryParameter = {
 	name: string,
 	value: string,
 };
+
+export type ReadAs = "unix" | "iso8601" | "weekDate" | "ordinalDate" | "rfc2822";
 
 export type Recognised = {
 	algorithm: HashAlgorithm,

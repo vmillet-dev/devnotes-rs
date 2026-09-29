@@ -1,0 +1,70 @@
+<div class="columns">
+  <section class="column" aria-labelledby="dates-input-title">
+    <h2 id="dates-input-title" class="section-title">{{ 'tools.input' | transloco }}</h2>
+    <div class="entry">
+      <input
+        type="text"
+        class="field"
+        data-testid="dates-input"
+        spellcheck="false"
+        [attr.aria-label]="'tools.dates.inputLabel' | transloco"
+        [value]="text()"
+        [placeholder]="'tools.dates.placeholder' | transloco"
+        (input)="onInput($event)"
+      />
+      <button type="button" class="button" data-testid="dates-now" (click)="takeNow()">
+        {{ 'tools.dates.now' | transloco }}
+      </button>
+    </div>
+
+    @if (reading(); as reading) {
+      <p class="reading" data-testid="dates-reading" [attr.data-reading]="reading.key">
+        {{ 'tools.dates.readAs' | transloco }}
+        <strong>{{ 'tools.dates.readings.' + reading.key | transloco }}</strong>
+        @if (reading.guessed) {
+          <span class="guessed">{{ 'tools.dates.guessed' | transloco }}</span>
+        }
+      </p>
+    }
+    @if (numeric()) {
+      <app-segmented-choice
+        kind="dates-magnitude"
+        [label]="'tools.dates.magnitude' | transloco"
+        [segments]="magnitudes"
+        [currentId]="magnitude() ?? 'auto'"
+        (chosen)="onMagnitude($event)"
+      />
+    }
+    @if (read(); as read) {
+      @if (read.localAssumed) {
+        <p class="note" data-testid="dates-local-assumed">{{ 'tools.dates.localAssumed' | transloco }}</p>
+      }
+      @if (read.ambiguous) {
+        <p class="note" data-testid="dates-ambiguous">{{ 'tools.dates.ambiguous' | transloco }}</p>
+      }
+    }
+    @if (problem(); as problem) {
+      <p class="problem" role="status" data-testid="dates-problem" [attr.data-problem]="problem.kind">
+        @if (problem.kind === 'unreadable') {
+          {{ 'tools.dates.unreadable' | transloco: { at: problem.at } }}
+        } @else {
+          {{ 'tools.dates.' + problem.kind | transloco }}
+        }
+      </p>
+    }
+  </section>
+
+  <section class="column" aria-labelledby="dates-forms-title">
+    <h2 id="dates-forms-title" class="section-title">{{ 'tools.dates.forms' | transloco }}</h2>
+    @for (row of rows(); track row.id) {
+      <app-output-row
+        [attr.data-form]="row.id"
+        [name]="'tools.dates.rows.' + row.id | transloco"
+        [value]="row.words ? (row.words.key | transloco: row.words.params) : (row.value ?? '')"
+        [meta]="row.meta ? (row.meta.key | transloco: row.meta.params) : ''"
+      />
+    } @empty {
+      <p class="empty">{{ 'tools.dates.empty' | transloco }}</p>
+    }
+  </section>
+</div>

@@ -4,7 +4,7 @@ import { NoteKind } from '@core/model/note.model';
 import { TranslationRef } from '@core/services/i18n/translation-ref.model';
 
 /** In the home's order, which the rail follows. */
-export const TOOL_CATEGORIES = ['text', 'crypto', 'encode', 'compare', 'generate'] as const;
+export const TOOL_CATEGORIES = ['text', 'crypto', 'encode', 'compare', 'generate', 'time'] as const;
 export type ToolCategory = (typeof TOOL_CATEGORIES)[number];
 
 /** Its name and its line are the keys `tools.<id>.name` and `tools.<id>.description`. */

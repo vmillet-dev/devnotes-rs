@@ -91,4 +91,10 @@ export const TOOLS: readonly ToolDefinition[] = [
     keywords: ['lorem', 'ipsum', 'placeholder', 'text'],
     load: () => import('./lorem/lorem-tool.component').then((m) => m.LoremToolComponent),
   },
+  {
+    id: 'dates',
+    category: 'time',
+    keywords: ['timestamp', 'unix', 'epoch', 'iso 8601', 'rfc 3339', 'rfc 2822', 'date', 'now'],
+    load: () => import('./dates/dates-tool.component').then((m) => m.DatesToolComponent),
+  },
 ];

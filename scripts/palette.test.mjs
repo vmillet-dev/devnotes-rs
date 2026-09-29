@@ -22,7 +22,17 @@ const AA_UI = 3;
 const SURFACES = ['--bg-0', '--bg-1', '--bg-2', '--bg-3'];
 
 /** Drawn as text somewhere, so each has to clear AA on every plain surface above. */
-const TEXT = ['--text-0', '--text-1', '--text-2', '--amber-text', '--green', '--blue', '--red', '--purple'];
+const TEXT = [
+  '--text-0',
+  '--text-1',
+  '--text-2',
+  '--amber-text',
+  '--green',
+  '--blue',
+  '--red',
+  '--purple',
+  '--teal',
+];
 
 /**
  * Drawn as a line the eye has to find — a focus ring, a selected chip's border — and never
@@ -76,7 +86,7 @@ function block(theme) {
 const MAX_TINT = 0.15;
 
 /** The hues a badge tints its background with, and the label it then draws on that tint. */
-const TINTED = ['--amber-fill', '--green', '--blue', '--red', '--purple', '--text-1'];
+const TINTED = ['--amber-fill', '--green', '--blue', '--red', '--purple', '--teal', '--text-1'];
 const BADGE_INK = '--text-1';
 
 function luminance(hex) {

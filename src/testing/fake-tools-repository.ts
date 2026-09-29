@@ -13,6 +13,8 @@ import {
   GenerateRequest,
   HashAnswer,
   HashRequest,
+  InstantAnswer,
+  InstantRequest,
   JsonDiffAnswer,
   JsonDiffRequest,
   LineBreaksAnswer,
@@ -70,6 +72,8 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
     rowsTruncated: false,
     patch: '[]',
   };
+  instant: InstantAnswer = { kind: 'unreadable', at: 1 };
+  now = '2026-09-29T12:03:12.000Z';
 
   convertCase(text: string): Promise<CaseConversion[]> {
     return this.answer('convert_case', text, this.cases);
@@ -141,6 +145,14 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
 
   diffJson(request: JsonDiffRequest): Promise<JsonDiffAnswer> {
     return this.answer('diff_json', request, this.diffAnswer);
+  }
+
+  describeInstant(request: InstantRequest): Promise<InstantAnswer> {
+    return this.answer('describe_instant', request, this.instant);
+  }
+
+  currentInstant(): Promise<string> {
+    return this.answer('current_instant', null, this.now);
   }
 
   requestsOf(command: string): unknown[] {

@@ -466,6 +466,82 @@ describe('The tools', () => {
     });
   });
 
+  describe('the time tools', () => {
+    const form = (id: string) => $(`[data-form="${id}"] ${testid('output-value')}`).getText();
+
+    it('reads the last second of a 32-bit clock, in Rust, whatever the zone', async () => {
+      const answer = await bridge.describeInstant({ text: '2038-01-19T03:14:07Z', magnitude: null });
+
+      expect(answer.kind).toBe('read');
+      if (answer.kind !== 'read') return;
+      expect(answer.forms.unixSeconds).toBe('2147483647');
+      expect(answer.forms.weekDate).toMatch(/^2038-W03-/);
+      expect(await bridge.describeInstant({ text: '-86400', magnitude: null })).toMatchObject({
+        forms: { isoUtc: '1969-12-31T00:00:00Z' },
+      });
+    });
+
+    it('sits in a Temps panel of its own', async () => {
+      await $(testid('tools-rail-all')).click();
+
+      expect(
+        await readEach(
+          `${testid('tools-panel')}[data-category="time"] ${testid('tools-entry')}`,
+          '@data-tool',
+        ),
+      ).toEqual(['dates']);
+    });
+
+    it('reads a timestamp by its size, and in the unit forced', async () => {
+      await openTool('dates');
+      await setField(testid('dates-input'), '1790000000123');
+
+      await eventually(
+        () => form('isoUtc'),
+        (iso) => iso === '2026-09-21T14:13:20.123Z',
+        'the ISO form',
+      );
+      expect(await $(testid('dates-reading')).getAttribute('data-reading')).toBe('milliseconds');
+      expect(await form('unixSeconds')).toBe('1790000000');
+
+      await $(`${testid('segmented-dates-magnitude')} [data-segment-id="microseconds"]`).click();
+      await eventually(
+        () => form('isoUtc'),
+        (iso) => iso === '1970-01-21T17:13:20.000123Z',
+        'microseconds',
+      );
+    });
+
+    it('says where a date stops making sense', async () => {
+      await setField(testid('dates-input'), '2026-13-01');
+
+      await eventually(
+        () => $(testid('dates-problem')).getAttribute('data-problem'),
+        (problem) => problem === 'unreadable',
+        'the refusal',
+      );
+      expect(await $(testid('dates-problem')).getText()).toContain('6');
+    });
+
+    it('takes the present instant from Rust', async () => {
+      await $(testid('dates-now')).click();
+
+      await eventually(
+        () => $(testid('dates-input')).getValue(),
+        (text) => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(text),
+        'the instant in the field',
+      );
+      await eventually(
+        () => $(testid('dates-reading')).getAttribute('data-reading'),
+        (reading) => reading === 'iso8601',
+        'read as ISO 8601',
+      );
+      const shown = Date.parse(await $(testid('dates-input')).getValue());
+      expect(Math.abs(Date.now() - shown)).toBeLessThan(60_000);
+      await $(testid('tool-clear')).click();
+    });
+  });
+
   describe('comparing JSON', () => {
     const STAGING = JSON.stringify({
       service: 'billing',

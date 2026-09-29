@@ -409,7 +409,7 @@
   }
 }
 
-// The five tool categories, as `--tool-hue` (a dot, an icon) and `--tool-hue-rgb` (a tint) on
+// The tool categories, as `--tool-hue` (a dot, an icon) and `--tool-hue-rgb` (a tint) on
 // a `[data-category]` element. The list is `TOOL_CATEGORIES`; a category added there is blue
 // until it is added here.
 @mixin tool-hues {
@@ -434,6 +434,11 @@
   &[data-category='generate'] {
     --tool-hue: var(--red);
     --tool-hue-rgb: var(--red-rgb);
+  }
+
+  &[data-category='time'] {
+    --tool-hue: var(--teal);
+    --tool-hue-rgb: var(--teal-rgb);
   }
 }
 
@@ -554,5 +559,41 @@
 
   &::placeholder {
     color: var(--text-2);
+  }
+}
+
+// One line a tool reads as it is typed: a timestamp, a zone, an expression.
+@mixin tool-field {
+  @include text-field;
+  @include surface(var(--bg-1), 8px, var(--line));
+  @include focus-ring;
+  box-sizing: border-box;
+  width: 100%;
+  height: 34px;
+  padding: 0 12px;
+  font-family: var(--font-mono), monospace;
+  font-size: 12.5px;
+  color: var(--text-0);
+
+  &::placeholder {
+    color: var(--text-2);
+  }
+}
+
+// A tool's own button beside its fields: "Maintenant", "Tirer à nouveau".
+@mixin tool-button {
+  @include unstyled-control;
+  @include surface(var(--bg-2), 7px, var(--line));
+  @include focus-ring;
+  flex-shrink: 0;
+  height: 30px;
+  padding: 0 12px;
+  font-size: 12px;
+  color: var(--text-1);
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--amber-dim);
+    color: var(--text-0);
   }
 }
