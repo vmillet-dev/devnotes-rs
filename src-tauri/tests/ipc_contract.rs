@@ -18,7 +18,7 @@ use devnotes_lib::notes::model::{
 use devnotes_lib::notes::priority::Priority;
 use devnotes_lib::notes::trash;
 use devnotes_lib::notes::view::{
-    self, NoteFilter, NoteSection, NoteSectionKey, NotesQuery, NotesView,
+    self, NoteFilter, NoteSection, NoteSectionKey, NotesQuery, NotesView, SortDirection, SortKey,
 };
 use devnotes_lib::spaces::model::{Space, SpaceDraft};
 use devnotes_lib::transfer;
@@ -217,6 +217,7 @@ fn a_query_is_read_from_the_camel_case_payload_the_front_sends() {
         "languages": ["json", "yml"],
         "kinds": ["note", "checklist"],
         "priorities": ["urgent"],
+        "order": { "key": "title", "direction": "ascending" },
         "now": NOW,
         "tzOffsetMinutes": -120,
         "pinnedFirst": true
@@ -227,6 +228,8 @@ fn a_query_is_read_from_the_camel_case_payload_the_front_sends() {
     assert_eq!(query.filter, NoteFilter::Untriaged);
     assert_eq!(query.languages, [Language::Json, Language::Yml]);
     assert_eq!(query.kinds, [NoteKind::Note, NoteKind::Checklist]);
+    assert_eq!(query.order.key, SortKey::Title);
+    assert_eq!(query.order.direction, SortDirection::Ascending);
     assert_eq!(query.tz_offset_minutes, -120);
     assert!(query.pinned_first);
 }

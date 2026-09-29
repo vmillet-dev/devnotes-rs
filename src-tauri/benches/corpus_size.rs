@@ -16,7 +16,7 @@ use std::hint::black_box;
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 
 use devnotes_lib::notes::store;
-use devnotes_lib::notes::view::{NoteFilter, NotesQuery};
+use devnotes_lib::notes::view::{NoteFilter, NoteOrder, NotesQuery};
 
 use corpus::{Corpus, build_of, now, run_query};
 
@@ -34,6 +34,7 @@ fn query(search: &str) -> NotesQuery {
         languages: Vec::new(),
         kinds: Vec::new(),
         priorities: Vec::new(),
+        order: NoteOrder::default(),
         now: now(),
         tz_offset_minutes: -120,
         pinned_first: true,

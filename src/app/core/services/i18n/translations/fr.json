@@ -62,6 +62,10 @@
       "checklist": "Tâches"
     },
     "priorityLabel": "Priorité",
+    "footer": {
+      "modified": "modifiée",
+      "created": "créée"
+    },
     "priority": {
       "none": "Aucune",
       "low": "Basse",

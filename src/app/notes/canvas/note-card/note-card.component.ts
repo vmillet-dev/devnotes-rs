@@ -27,7 +27,9 @@ import { CopyButtonComponent } from '@notes/ui/copy-button/copy-button.component
 import { NoteCardMenuComponent } from './note-card-menu/note-card-menu.component';
 import { NoteOutlineComponent } from './note-outline/note-outline.component';
 
-type FooterLabel = { kind: 'text'; value: string } | { kind: 'ref'; ref: TranslationRef };
+/** An age names its date — "modifiée il y a 4 h", "créée…" — so a sort by creation reads. */
+type FooterLabel =
+  { kind: 'text'; value: string } | { kind: 'ref'; ref: TranslationRef; prefix: string | null };
 
 export interface NoteActivation {
   readonly noteId: string;
@@ -183,9 +185,13 @@ export class NoteCardComponent {
       return { kind: 'text', value: footer.value };
     }
     if (footer.kind === 'expiry') {
-      return { kind: 'ref', ref: expiryRef(footer.at, this.clock.now()) };
+      return { kind: 'ref', ref: expiryRef(footer.at, this.clock.now()), prefix: null };
     }
-    return { kind: 'ref', ref: relativeTimeRef(footer.at, this.clock.now()) };
+    return {
+      kind: 'ref',
+      ref: relativeTimeRef(footer.at, this.clock.now()),
+      prefix: footer.kind === 'created' ? 'notes.footer.created' : 'notes.footer.modified',
+    };
   });
 
   constructor() {

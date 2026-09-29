@@ -22,7 +22,7 @@ use devnotes_lib::notes::store::{
     restore_priorities, retag, seed, set_placeholder_values, set_priority_many, tag_many,
     tag_usage, untag_many, update,
 };
-use devnotes_lib::notes::view::{self, NoteFilter, NotesQuery, NotesView};
+use devnotes_lib::notes::view::{self, NoteFilter, NoteOrder, NotesQuery, NotesView};
 use devnotes_lib::spaces::store as spaces;
 use diesel::prelude::*;
 use std::collections::BTreeMap;
@@ -61,6 +61,7 @@ fn list(connection: &mut Library) -> Result<Vec<Note>, StorageError> {
             languages: Vec::new(),
             kinds: Vec::new(),
             priorities: Vec::new(),
+            order: NoteOrder::default(),
             now: t0(),
             tz_offset_minutes: 0,
             pinned_first: true,
@@ -126,6 +127,7 @@ fn all_notes() -> NotesQuery {
         languages: Vec::new(),
         kinds: Vec::new(),
         priorities: Vec::new(),
+        order: NoteOrder::default(),
         now: t1(),
         tz_offset_minutes: 0,
         pinned_first: true,

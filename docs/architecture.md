@@ -697,6 +697,16 @@ date view turns into one flat `results` section, the board dims — and the kind
 `NoteKind`'s declared order and zeros included. Counted over the space and not the filter,
 for the reason `available_tags` is: counted over the selection, pressing one chip would zero
 the others. "All" is no kind selected, and an empty kind is offered only while pressed.
+**The date view is ordered in Rust** (`NotesQuery.order`, `view::order_notes`): by the last
+edit (the default), the creation, the priority, the format (the kind, then the language) or
+the title, either way. ⚠️ Titles are sealed, so SQL cannot order them: they are folded once
+per query and compared in Rust. Ties fall on the last edit, then the id, whichever way the
+list runs, so two refreshes never swap neighbours. The order is not a criterion — the board,
+which spreads the criteria into its own query, keeps the places its cards were given — and
+the card's age names the date it is sorted by: "modifiée il y a 4 h", or "créée…" when
+sorted by creation (`NoteFooter::Created`, set after the sections by `dated_by_creation`).
+The closed enums derive `Ord` in declared order, which is what ranks a priority and a kind.
+
 **A priority is filtered the same way** (`NotesQuery.priorities`, `priority_counts`), both
 counted by one helper, `view::counted`; its rail reads the levels from the most pressing
 down, offers no chip for `none`, and stays away from a space where nothing has a priority.

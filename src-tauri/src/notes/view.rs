@@ -29,12 +29,44 @@ pub struct NotesQuery {
     pub languages: Vec<Language>,
     pub kinds: Vec<NoteKind>,
     pub priorities: Vec<Priority>,
+    /// Left out by the palette: the modification date, newest first.
+    #[serde(default)]
+    #[specta(optional)]
+    pub order: NoteOrder,
     pub now: DateTime<Utc>,
     /// `Date#getTimezoneOffset()`, whose sign is the opposite of the offset (−120 for
     /// UTC+2). Sections reason in local days.
     pub tz_offset_minutes: i32,
     /// Their own section when the view is chronological, the head of the list when flat.
     pub pinned_first: bool,
+}
+
+/// What the date view is ordered by. The board keeps the places its cards were given.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct NoteOrder {
+    pub key: SortKey,
+    pub direction: SortDirection,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum SortKey {
+    #[default]
+    Modified,
+    Created,
+    Priority,
+    /// The kind, then the language.
+    Format,
+    Title,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum SortDirection {
+    #[default]
+    Descending,
+    Ascending,
 }
 
 /// `Untriaged` = notes with a deadline, those whose fate is not decided.
@@ -300,6 +332,8 @@ pub fn build(mut notes: Vec<Note>, facets: Facets, request: &NotesQuery) -> Note
     // A quick filter keeps the view chronological; a search, a facet or an opened folder
     // switches to a flat list. `build_sections` knows nothing of folders: the inside of one is
     // already sorted by being there.
+    order_notes(&mut notes, request.order);
+
     let inside_folder = request.folder_id.is_some();
     let is_filtering = criteria.narrows() || inside_folder;
 
@@ -329,8 +363,49 @@ pub fn build(mut notes: Vec<Note>, facets: Facets, request: &NotesQuery) -> Note
     // A pass of its own, like the attachment counter: threading a second value through
     // `build_sections` would cost every section test an argument.
     apply_search_hits(&mut view, &mut hits);
+    if request.order.key == SortKey::Created {
+        view.notes_mut().for_each(DisplayNote::dated_by_creation);
+    }
     view.notes_mut().for_each(DisplayNote::cut_to_preview);
     view
+}
+
+/// Ties fall on the modification date, newest first, then the id: a card never swaps places
+/// with its neighbour between two refreshes, whichever way the list runs.
+fn order_notes(notes: &mut [Note], order: NoteOrder) {
+    // Titles are sealed, so SQL cannot order them; folded once, not per comparison, so that
+    // case and accents do not scatter them.
+    let titles: HashMap<String, String> = if order.key == SortKey::Title {
+        notes
+            .iter()
+            .map(|note| (note.id.clone(), fold(&note.title)))
+            .collect()
+    } else {
+        HashMap::new()
+    };
+
+    notes.sort_by(|a, b| {
+        let primary = match order.key {
+            SortKey::Modified => a.updated_at.cmp(&b.updated_at),
+            SortKey::Created => a.created_at.cmp(&b.created_at),
+            SortKey::Priority => a.priority.cmp(&b.priority),
+            SortKey::Format => a
+                .kind
+                .cmp(&b.kind)
+                .then_with(|| a.language.as_str().cmp(b.language.as_str())),
+            SortKey::Title => titles.get(&a.id).cmp(&titles.get(&b.id)),
+        };
+        let directed = match order.direction {
+            SortDirection::Descending => primary.reverse(),
+            SortDirection::Ascending => primary,
+        };
+
+        directed.then_with(|| {
+            b.updated_at
+                .cmp(&a.updated_at)
+                .then_with(|| a.id.cmp(&b.id))
+        })
+    });
 }
 
 fn apply_search_hits(view: &mut NotesView, hits: &mut HashMap<String, SearchHit>) {
@@ -562,6 +637,7 @@ mod tests {
             languages: Vec::new(),
             kinds: Vec::new(),
             priorities: Vec::new(),
+            order: NoteOrder::default(),
             now: at(NOW),
             tz_offset_minutes: 0,
             pinned_first: true,
@@ -814,6 +890,119 @@ mod tests {
                 (NoteKind::Checklist, 3)
             ]
         );
+    }
+
+    mod order {
+        use super::*;
+
+        fn titles(notes: &[Note]) -> Vec<&str> {
+            notes.iter().map(|note| note.title.as_str()).collect()
+        }
+
+        fn ordered(mut notes: Vec<Note>, key: SortKey, direction: SortDirection) -> Vec<Note> {
+            order_notes(&mut notes, NoteOrder { key, direction });
+            notes
+        }
+
+        /// Sealed titles are ordered here, folded: case and accents do not scatter them.
+        #[test]
+        fn titles_run_a_to_z_whatever_their_case_and_accents() {
+            let notes = vec![note("a", "zeta"), note("b", "Étape"), note("c", "alpha")];
+
+            let up = ordered(notes.clone(), SortKey::Title, SortDirection::Ascending);
+            let down = ordered(notes, SortKey::Title, SortDirection::Descending);
+
+            assert_eq!(titles(&up), ["alpha", "Étape", "zeta"]);
+            assert_eq!(titles(&down), ["zeta", "Étape", "alpha"]);
+        }
+
+        #[test]
+        fn priorities_run_from_the_most_pressing_down() {
+            let notes = [
+                Priority::Low,
+                Priority::Urgent,
+                Priority::None,
+                Priority::High,
+            ]
+            .into_iter()
+            .enumerate()
+            .map(|(at, priority)| Note {
+                priority,
+                ..note(&at.to_string(), priority.as_str())
+            })
+            .collect();
+
+            let down = ordered(notes, SortKey::Priority, SortDirection::Descending);
+
+            assert_eq!(titles(&down), ["urgent", "high", "low", "none"]);
+        }
+
+        #[test]
+        fn a_format_is_its_kind_then_its_language() {
+            let of = |id: &str, kind: NoteKind, language: Language| Note {
+                language,
+                kind,
+                ..note(id, id)
+            };
+            let notes = vec![
+                of("list", NoteKind::Checklist, Language::Txt),
+                of("sql", NoteKind::Snippet, Language::Sql),
+                of("prose", NoteKind::Note, Language::Txt),
+                of("json", NoteKind::Snippet, Language::Json),
+            ];
+
+            let up = ordered(notes, SortKey::Format, SortDirection::Ascending);
+
+            assert_eq!(titles(&up), ["json", "sql", "prose", "list"]);
+        }
+
+        /// Whichever way the list runs: two refreshes never swap neighbours.
+        #[test]
+        fn ties_fall_on_the_last_edit_then_the_id() {
+            let edited = |id: &str, at_: &str| Note {
+                updated_at: at(at_),
+                ..note(id, id)
+            };
+            let notes = vec![
+                edited("b", "2026-07-25T09:00:00.000Z"),
+                edited("c", "2026-07-25T10:00:00.000Z"),
+                edited("a", "2026-07-25T09:00:00.000Z"),
+            ];
+
+            let up = ordered(notes.clone(), SortKey::Priority, SortDirection::Ascending);
+            let down = ordered(notes, SortKey::Priority, SortDirection::Descending);
+
+            assert_eq!(titles(&up), ["c", "a", "b"]);
+            assert_eq!(titles(&down), ["c", "a", "b"]);
+        }
+
+        #[test]
+        fn a_list_sorted_by_creation_dates_its_cards_by_creation() {
+            let view = build(
+                vec![note("a", "Un")],
+                Facets::default(),
+                &NotesQuery {
+                    order: NoteOrder {
+                        key: SortKey::Created,
+                        direction: SortDirection::Descending,
+                    },
+                    ..request()
+                },
+            );
+            let plain = build(vec![note("a", "Un")], Facets::default(), &request());
+
+            let footer = |view: &NotesView| {
+                view.sections
+                    .iter()
+                    .flat_map(|s| &s.notes)
+                    .next()
+                    .unwrap()
+                    .footer
+                    .clone()
+            };
+            assert!(matches!(footer(&view), model::NoteFooter::Created { .. }));
+            assert!(matches!(footer(&plain), model::NoteFooter::Age { .. }));
+        }
     }
 
     #[test]

@@ -622,7 +622,11 @@ export type NoteFolder = {
  *  The decision, not the rendering: the dated variants carry a date and not a label,
  *  so "4 min ago" ages on screen without a round trip.
  */
-export type NoteFooter = { kind: "source"; value: string } | { kind: "expiry"; at: string } | { kind: "age"; at: string };
+export type NoteFooter = { kind: "source"; value: string } | { kind: "expiry"; at: string } | 
+/**  Since the last edit. */
+{ kind: "age"; at: string } | 
+/**  Since the note was made: the age, when the list is sorted by creation. */
+{ kind: "created"; at: string };
 
 /**
  *  Closed, like `Language`: the front receives a generated union, so an unknown
@@ -635,6 +639,12 @@ export type NoteKind =
 "note" | "checklist";
 
 export type NoteLifecycle = { kind: "permanent" } | { kind: "expires"; at: string };
+
+/**  What the date view is ordered by. The board keeps the places its cards were given. */
+export type NoteOrder = {
+	key: SortKey,
+	direction: SortDirection,
+};
 
 /**
  *  ⚠️ A field set to `None` stays unchanged, and `#[specta(optional)]` makes the key omissible
@@ -700,6 +710,8 @@ export type NotesQuery = {
 	languages: Language[],
 	kinds: NoteKind[],
 	priorities: Priority[],
+	/**  Left out by the palette: the modification date, newest first. */
+	order?: NoteOrder,
 	now: string,
 	/**
 	 *  `Date#getTimezoneOffset()`, whose sign is the opposite of the offset (−120 for
@@ -806,6 +818,12 @@ export type ShortcutBindings = {
 	newNote: string,
 	palette: string,
 };
+
+export type SortDirection = "descending" | "ascending";
+
+export type SortKey = "modified" | "created" | "priority" | 
+/**  The kind, then the language. */
+"format" | "title";
 
 export type Space = {
 	id: string,

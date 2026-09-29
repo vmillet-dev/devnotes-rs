@@ -14,6 +14,7 @@ import {
   NoteKind,
   NoteSection,
   NotesQuery,
+  NoteOrder,
   NotesView,
   Priority,
 } from '@core/model/note.model';
@@ -50,8 +51,15 @@ const sameCriteria = sameBy<Criteria>({
   priorities: sameArray,
 });
 
+/** What the canvas shows first until the user picks another order. */
+export const DEFAULT_ORDER: NoteOrder = { key: 'modified', direction: 'descending' };
+
+const sameOrder = sameBy<NoteOrder>({ key: Object.is, direction: Object.is });
+
 interface QueryParams {
   readonly criteria: Criteria;
+  /** Not a criterion: the board, which reads those, keeps its own geometry. */
+  readonly order: NoteOrder;
   readonly spaceId: string | null;
   readonly folderId: string | null;
   readonly day: string;
@@ -66,6 +74,7 @@ interface QueryParams {
  */
 const sameQueryParams = sameBy<QueryParams>({
   criteria: Object.is,
+  order: sameOrder,
   spaceId: Object.is,
   folderId: Object.is,
   day: Object.is,
@@ -96,6 +105,7 @@ export class NotesQueryStore {
   private readonly _selectedLanguages = signal<ReadonlySet<LanguageTag>>(new Set());
   private readonly _selectedKinds = signal<ReadonlySet<NoteKind>>(new Set());
   private readonly _selectedPriorities = signal<ReadonlySet<Priority>>(new Set());
+  private readonly _order = signal<NoteOrder>(DEFAULT_ORDER, { equal: sameOrder });
 
   /** Follows the typing without waiting: this is what the field shows. */
   readonly searchQuery = this._searchQuery.asReadonly();
@@ -104,6 +114,7 @@ export class NotesQueryStore {
   readonly selectedLanguages = this._selectedLanguages.asReadonly();
   readonly selectedKinds = this._selectedKinds.asReadonly();
   readonly selectedPriorities = this._selectedPriorities.asReadonly();
+  readonly order = this._order.asReadonly();
 
   private readonly commitSearch = debounced(
     (query: string) => this._debouncedSearch.set(query),
@@ -126,6 +137,7 @@ export class NotesQueryStore {
   private readonly queryParams = computed<QueryParams>(
     () => ({
       criteria: this.criteria(),
+      order: this._order(),
       spaceId: this.spaces.activeSpaceId(),
       folderId: this.folders.activeFolderId(),
       day: localDayKey(this.clock.now()),
@@ -144,6 +156,7 @@ export class NotesQueryStore {
         const now = untracked(() => this.clock.now());
         const query: NotesQuery = {
           ...params.criteria,
+          order: params.order,
           spaceId: params.spaceId,
           folderId: params.folderId,
           now,
@@ -228,6 +241,10 @@ export class NotesQueryStore {
   /** The rail's "All": every kind again, the other filters untouched. */
   clearKinds(): void {
     this._selectedKinds.set(new Set());
+  }
+
+  setOrder(order: NoteOrder): void {
+    this._order.set(order);
   }
 
   togglePriority(priority: Priority): void {

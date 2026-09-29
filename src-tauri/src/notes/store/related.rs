@@ -326,7 +326,7 @@ mod tests {
         use crate::notes::language::Language;
         use crate::notes::model::{NoteDraft, NoteLifecycle};
         use crate::notes::priority::Priority;
-        use crate::notes::view::{NoteFilter, NotesQuery};
+        use crate::notes::view::{NoteFilter, NoteOrder, NotesQuery};
 
         let mut library = crate::db::open_in_memory().unwrap();
         let space = crate::spaces::store::create(&mut library, "Ops")
@@ -363,6 +363,7 @@ mod tests {
                 languages: Vec::new(),
                 kinds: Vec::new(),
                 priorities: Vec::new(),
+                order: NoteOrder::default(),
                 now: chrono::Utc::now(),
                 tz_offset_minutes: 0,
                 pinned_first: true,

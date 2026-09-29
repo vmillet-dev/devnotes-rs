@@ -17,7 +17,7 @@ use crate::notes::kind::NoteKind;
 use crate::notes::language::Language;
 use crate::notes::model::{self, DisplayNote, Note};
 use crate::notes::priority::Priority;
-use crate::notes::view::{Criteria, Facets, NoteFilter, NotesQuery};
+use crate::notes::view::{Criteria, Facets, NoteFilter, NoteOrder, NotesQuery};
 
 /// The same card as on the canvas, full size: the board is large, and pans.
 pub const CARD_WIDTH: i32 = 240;
@@ -69,6 +69,7 @@ impl BoardQuery {
             languages: Vec::new(),
             kinds: Vec::new(),
             priorities: Vec::new(),
+            order: NoteOrder::default(),
             now: self.now,
             tz_offset_minutes: 0,
             pinned_first: true,

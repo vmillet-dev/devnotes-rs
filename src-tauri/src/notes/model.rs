@@ -220,9 +220,20 @@ const EXPIRING_SOON: TimeDelta = TimeDelta::days(3);
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum NoteFooter {
-    Source { value: String },
-    Expiry { at: DateTime<Utc> },
-    Age { at: DateTime<Utc> },
+    Source {
+        value: String,
+    },
+    Expiry {
+        at: DateTime<Utc>,
+    },
+    /// Since the last edit.
+    Age {
+        at: DateTime<Utc>,
+    },
+    /// Since the note was made: the age, when the list is sorted by creation.
+    Created {
+        at: DateTime<Utc>,
+    },
 }
 
 /// `flatten`: the front end has a single note type.
@@ -323,6 +334,15 @@ pub const PREVIEW_LINES: usize = 5;
 pub const PREVIEW_CHARS: usize = 1_000;
 
 impl DisplayNote {
+    /// The age a list sorted by creation shows: a deadline or a source keeps its place.
+    pub fn dated_by_creation(&mut self) {
+        if matches!(self.footer, NoteFooter::Age { .. }) {
+            self.footer = NoteFooter::Created {
+                at: self.note.created_at,
+            };
+        }
+    }
+
     /// ⚠️ After everything that reads the body — the fields, the search excerpt — and only
     /// on what goes into a list: a note cut here must never reach the editor.
     pub fn cut_to_preview(&mut self) {
