@@ -1410,7 +1410,7 @@
       "now": "Now",
       "forms": "Forms",
       "readAs": "Read as",
-      "guessed": "from its size",
+      "guessed": "· from its size",
       "readings": {
         "seconds": "a Unix timestamp in seconds",
         "milliseconds": "a Unix timestamp in milliseconds",

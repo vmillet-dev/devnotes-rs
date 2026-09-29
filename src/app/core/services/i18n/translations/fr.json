@@ -1410,16 +1410,16 @@
       "now": "Maintenant",
       "forms": "Formes",
       "readAs": "Lu comme",
-      "guessed": "d’après sa taille",
+      "guessed": "· d’après sa taille",
       "readings": {
-        "seconds": "timestamp Unix en secondes",
-        "milliseconds": "timestamp Unix en millisecondes",
-        "microseconds": "timestamp Unix en microsecondes",
-        "nanoseconds": "timestamp Unix en nanosecondes",
-        "iso8601": "date ISO 8601",
-        "weekDate": "date ISO 8601 par semaine",
-        "ordinalDate": "date ISO 8601 ordinale",
-        "rfc2822": "date RFC 2822"
+        "seconds": "un timestamp Unix en secondes",
+        "milliseconds": "un timestamp Unix en millisecondes",
+        "microseconds": "un timestamp Unix en microsecondes",
+        "nanoseconds": "un timestamp Unix en nanosecondes",
+        "iso8601": "une date ISO 8601",
+        "weekDate": "une date ISO 8601 par semaine",
+        "ordinalDate": "une date ISO 8601 ordinale",
+        "rfc2822": "une date RFC 2822"
       },
       "magnitude": "Unité du timestamp",
       "magnitudes": {
