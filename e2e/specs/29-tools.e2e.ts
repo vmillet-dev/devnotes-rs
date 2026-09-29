@@ -489,7 +489,7 @@ describe('The tools', () => {
           `${testid('tools-panel')}[data-category="time"] ${testid('tools-entry')}`,
           '@data-tool',
         ),
-      ).toEqual(['dates', 'zones']);
+      ).toEqual(['dates', 'zones', 'cron']);
     });
 
     it('reads a timestamp by its size, and in the unit forced', async () => {
@@ -604,6 +604,83 @@ describe('The tools', () => {
         'the skipped hour',
       );
       expect(await $(testid('zones-problem')).getText()).toContain('UTC-05:00');
+      await $(testid('tool-clear')).click();
+    });
+  });
+
+  describe('cron', () => {
+    it('takes an expression apart, checks a date and names the field it refuses, in Rust', async () => {
+      const answer = await bridge.describeCron({
+        expression: '*/15 9-18 * * MON-FRI',
+        zone: 'UTC',
+        check: '2026-09-29 09:15',
+      });
+
+      expect(answer).toMatchObject({
+        kind: 'read',
+        bothDays: false,
+        check: { kind: 'checked', matches: true },
+      });
+      if (answer.kind !== 'read') return;
+      expect(answer.fields.map((field) => field.field)).toEqual([
+        'minute',
+        'hour',
+        'dayOfMonth',
+        'month',
+        'dayOfWeek',
+      ]);
+      expect(answer.runs).toHaveLength(10);
+      expect(await bridge.describeCron({ expression: '61 * * * *', zone: 'UTC', check: '' })).toEqual({
+        kind: 'refused',
+        field: 'minute',
+        token: '61',
+        at: 1,
+        problem: 'outOfRange',
+      });
+    });
+
+    it('reads an expression aloud with its next runs, in the zone chosen', async () => {
+      await openTool('cron');
+      await setField(testid('cron-zone-search'), 'utc');
+      await $(`${testid('cron-zone-found')}[data-zone="UTC"]`).click();
+      await setField(testid('cron-input'), '0 12 * * *');
+
+      await eventually(
+        () => readEach(testid('cron-run-at'), 'text'),
+        (runs) => runs.length === 10 && runs.every((run) => run.endsWith('12:00:00')),
+        'ten runs at noon',
+      );
+      expect(await $(testid('cron-zone')).getText()).toBe('UTC');
+      expect(await $(testid('cron-sentence')).getText()).toContain('12:00');
+    });
+
+    it('says whether a date matches', async () => {
+      await setField(testid('cron-input'), '0 9 * * 1');
+      await setField(testid('cron-check'), '2026-09-28 09:00');
+
+      await eventually(
+        () => $(testid('cron-verdict')).getAttribute('data-verdict'),
+        (verdict) => verdict === 'true',
+        'a Monday at nine',
+      );
+      await setField(testid('cron-check'), '2026-09-29 09:00');
+      await eventually(
+        () => $(testid('cron-verdict')).getAttribute('data-verdict'),
+        (verdict) => verdict === 'false',
+        'a Tuesday',
+      );
+    });
+
+    it('names the field of a refusal, and says what @reboot means', async () => {
+      await setField(testid('cron-input'), '* 25 * * *');
+      await eventually(
+        () => $(testid('cron-problem')).getAttribute('data-field'),
+        (field) => field === 'hour',
+        'the hour refused',
+      );
+
+      await setField(testid('cron-input'), '@reboot');
+      await $(testid('cron-reboot')).waitForDisplayed({ timeout: 5_000 });
       await $(testid('tool-clear')).click();
     });
   });

@@ -70,9 +70,11 @@ export class CronToolComponent implements Tool {
       problem: answer.problem,
       field: answer.field,
       at: answer.at,
-      message: this.transloco.translate(`tools.cron.problems.${answer.problem}`, {
+      message: this.transloco.translate<string>(`tools.cron.problems.${answer.problem}`, {
         token: answer.token,
-        range: answer.field ? this.transloco.translate(`tools.cron.fields.${answer.field}.range`) : '',
+        range: answer.field
+          ? this.transloco.translate<string>(`tools.cron.fields.${answer.field}.range`)
+          : '',
       }),
     };
   });
@@ -84,7 +86,7 @@ export class CronToolComponent implements Tool {
     const list = new Intl.ListFormat(this.transloco.getActiveLang(), { type: 'conjunction' });
     return cronSentence(
       read.fields,
-      (key, params) => this.transloco.translate(key, params),
+      (key, params) => this.transloco.translate<string>(key, params),
       (items) => list.format(items),
     );
   });
@@ -111,7 +113,7 @@ export class CronToolComponent implements Tool {
     const runs = read.runs.length
       ? [
           '',
-          this.transloco.translate('tools.cron.noteRuns', { zone: read.zone }),
+          this.transloco.translate<string>('tools.cron.noteRuns', { zone: read.zone }),
           ...read.runs.map((run) => `${run.date} ${run.time}`),
         ]
       : [];

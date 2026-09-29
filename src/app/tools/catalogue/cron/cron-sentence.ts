@@ -14,8 +14,8 @@ function isEvery(pieces: readonly Piece[] | undefined): boolean {
 /** The values of a field made only of values, or `null`. */
 function valuesOf(pieces: readonly Piece[] | undefined): number[] | null {
   if (pieces === undefined || pieces.length === 0) return null;
-  const values = pieces.map((piece) => (piece.kind === 'value' ? piece.value : null));
-  return values.every((value) => value !== null) ? (values as number[]) : null;
+  const values = pieces.flatMap((piece) => (piece.kind === 'value' ? [piece.value] : []));
+  return values.length === pieces.length ? values : null;
 }
 
 const two = (value: number): string => String(value).padStart(2, '0');
@@ -37,7 +37,8 @@ export function cronSentence(fields: readonly FieldReading[], t: Translate, join
         return t(`tools.cron.months.${value}`);
       case 'dayOfWeek':
         return t(`tools.cron.days.${value % 7}`);
-      default:
+      case 'second':
+      case 'minute':
         return String(value);
     }
   };
@@ -128,7 +129,8 @@ function piecePhrase(
           day: format('dayOfWeek', piece.weekday),
         }),
       ];
-    default:
+    case 'every':
+    case 'value':
       return [];
   }
 }
