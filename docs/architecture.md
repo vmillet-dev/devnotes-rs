@@ -707,6 +707,13 @@ twice is read as the earlier. ⚠️ chrono panics on a local time past its rang
 can push its edges into — `within_range` refuses it first. How long ago or how far off is the
 front's (`spanRef`), so it ages with the clock.
 
+**A zone is the IANA database's**, compiled into the binary (`tools/zones.rs`, `chrono-tz`):
+nothing is read from the system but the name of its own zone (`iana-time-zone`), so Windows and
+Linux answer alike. A time is read by `dates::parse` and placed in the zone it was typed in: one
+the clocks skipped says between which offsets, one they went through twice gives both readings
+and places the one chosen. The machine's zone and the one typed in are always listed, whatever
+the list holds. An abbreviation the database writes as an offset (`+0545`) is no name.
+
 **Adding a tool**, the whole of it:
 
 1. `src-tauri/src/tools/<module>.rs`: the function, its request and answer types, its tests.

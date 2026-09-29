@@ -13,6 +13,7 @@ pub mod hash;
 pub mod random;
 pub mod text;
 pub mod url_parts;
+pub mod zones;
 
 use crate::error::{AppError, StorageError};
 
@@ -179,4 +180,27 @@ pub async fn describe_instant(
 #[specta::specta]
 pub async fn current_instant() -> Result<String, AppError> {
     off_thread(dates::now).await
+}
+
+/// The system's zone by its IANA name, when it gives one: the database itself is compiled in.
+fn local_zone() -> Option<String> {
+    iana_time_zone::get_timezone().ok()
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn search_time_zones(query: String) -> Result<Vec<zones::ZoneEntry>, AppError> {
+    off_thread(move || zones::search(&query, chrono::Utc::now())).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn place_in_zones(request: zones::ZonesRequest) -> Result<zones::ZonesAnswer, AppError> {
+    off_thread(move || zones::place(&request, local_zone().as_deref())).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn time_in_zone(zone: Option<String>) -> Result<String, AppError> {
+    off_thread(move || zones::now_in(zone.as_deref(), local_zone().as_deref())).await
 }

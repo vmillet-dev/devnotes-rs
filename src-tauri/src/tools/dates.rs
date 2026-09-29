@@ -113,21 +113,40 @@ pub fn now() -> String {
     Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)
 }
 
-/// `zone` is the machine's in the command, a fixed one in the tests.
-pub fn describe<Z: TimeZone>(request: &InstantRequest, zone: &Z) -> InstantAnswer {
-    let trimmed = request.text.trim_start();
-    let skipped = saturating_u32(request.text.chars().count() - trimmed.chars().count());
+pub(crate) enum Parsed {
+    /// A count from the epoch, or a date that carries its offset.
+    Absolute(Reading),
+    /// A wall-clock time, for a zone to place.
+    Wall(NaiveDateTime, ReadAs),
+}
+
+/// What a text says, before any zone: an `Unreadable` is located in the text as given.
+pub(crate) fn parse(text: &str, magnitude: Option<Magnitude>) -> Result<Parsed, Refusal> {
+    let trimmed = text.trim_start();
+    let skipped = text.chars().count() - trimmed.chars().count();
     let text = trimmed.trim_end();
 
-    let read = if looks_numeric(text) {
-        unix(text, request.magnitude)
+    let parsed = if looks_numeric(text) {
+        unix(text, magnitude).map(Parsed::Absolute)
     } else if text.len() > 4 && text.as_bytes()[..4].iter().all(u8::is_ascii_digit) {
-        iso(text, zone)
+        iso(text)
     } else {
         DateTime::parse_from_rfc2822(text)
-            .map(|at| Reading::exact(ReadAs::Rfc2822, at.with_timezone(&Utc)))
+            .map(|at| Parsed::Absolute(Reading::exact(ReadAs::Rfc2822, at.with_timezone(&Utc))))
             .map_err(|_| Refusal::Unreadable(0))
     };
+    parsed.map_err(|refusal| match refusal {
+        Refusal::Unreadable(at) => Refusal::Unreadable(skipped + at),
+        other => other,
+    })
+}
+
+/// `zone` is the machine's in the command, a fixed one in the tests.
+pub fn describe<Z: TimeZone>(request: &InstantRequest, zone: &Z) -> InstantAnswer {
+    let read = parse(&request.text, request.magnitude).and_then(|parsed| match parsed {
+        Parsed::Absolute(read) => Ok(read),
+        Parsed::Wall(naive, read_as) => local(naive, read_as, zone),
+    });
 
     match read.and_then(|read| within_range(read, zone)) {
         Ok(read) => InstantAnswer::Read {
@@ -139,7 +158,7 @@ pub fn describe<Z: TimeZone>(request: &InstantRequest, zone: &Z) -> InstantAnswe
             forms: Box::new(forms(read.at, zone)),
         },
         Err(Refusal::Unreadable(at)) => InstantAnswer::Unreadable {
-            at: skipped + saturating_u32(at) + 1,
+            at: saturating_u32(at) + 1,
         },
         Err(Refusal::Skipped) => InstantAnswer::Skipped,
         Err(Refusal::OutOfRange) => InstantAnswer::OutOfRange,
@@ -155,9 +174,9 @@ fn within_range<Z: TimeZone>(read: Reading, zone: &Z) -> Result<Reading, Refusal
     }
 }
 
-struct Reading {
+pub(crate) struct Reading {
     read_as: ReadAs,
-    at: DateTime<Utc>,
+    pub(crate) at: DateTime<Utc>,
     magnitude: Option<Magnitude>,
     guessed: bool,
     local_assumed: bool,
@@ -177,8 +196,8 @@ impl Reading {
     }
 }
 
-enum Refusal {
-    /// Zero-based, in characters of the trimmed text.
+pub(crate) enum Refusal {
+    /// Zero-based, in characters.
     Unreadable(usize),
     Skipped,
     OutOfRange,
@@ -282,7 +301,7 @@ impl Cursor<'_> {
     }
 }
 
-fn iso<Z: TimeZone>(text: &str, zone: &Z) -> Result<Reading, Refusal> {
+fn iso(text: &str) -> Result<Parsed, Refusal> {
     if let Some(stop) = text.char_indices().find(|(_, c)| !c.is_ascii()) {
         return Err(Refusal::Unreadable(text[..stop.0].chars().count()));
     }
@@ -330,7 +349,7 @@ fn iso<Z: TimeZone>(text: &str, zone: &Z) -> Result<Reading, Refusal> {
     };
 
     if cursor.done() {
-        return local(date.and_time(NaiveTime::MIN), read_as, zone);
+        return Ok(Parsed::Wall(date.and_time(NaiveTime::MIN), read_as));
     }
     if !(cursor.eat(b'T') || cursor.eat(b't') || cursor.eat(b' ')) {
         return Err(Refusal::Unreadable(cursor.at));
@@ -339,7 +358,7 @@ fn iso<Z: TimeZone>(text: &str, zone: &Z) -> Result<Reading, Refusal> {
     let naive = date.and_time(time);
 
     if cursor.done() {
-        return local(naive, read_as, zone);
+        return Ok(Parsed::Wall(naive, read_as));
     }
     let offset = offset(&mut cursor)?;
     if !cursor.done() {
@@ -349,7 +368,10 @@ fn iso<Z: TimeZone>(text: &str, zone: &Z) -> Result<Reading, Refusal> {
         .from_local_datetime(&naive)
         .single()
         .ok_or(Refusal::OutOfRange)?;
-    Ok(Reading::exact(read_as, at.with_timezone(&Utc)))
+    Ok(Parsed::Absolute(Reading::exact(
+        read_as,
+        at.with_timezone(&Utc),
+    )))
 }
 
 fn time(cursor: &mut Cursor<'_>) -> Result<NaiveTime, Refusal> {

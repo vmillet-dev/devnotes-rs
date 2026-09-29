@@ -31,6 +31,9 @@ import {
   UrlCodecRequest,
   UuidInspection,
   UuidRequest,
+  ZoneEntry,
+  ZonesAnswer,
+  ZonesRequest,
 } from '@core/model/tool-answers.model';
 
 /** One method per tool: a request in, an answer out, and nothing of the library read. */
@@ -118,5 +121,19 @@ export class ToolsRepository {
   /** ISO 8601 in UTC, to the millisecond. */
   async currentInstant(): Promise<string> {
     return unwrap('current_instant', await commands.currentInstant());
+  }
+
+  async searchTimeZones(query: string): Promise<ZoneEntry[]> {
+    return unwrap('search_time_zones', await commands.searchTimeZones(query));
+  }
+
+  /** `from` null is the machine's zone, which is always listed first. */
+  async placeInZones(request: ZonesRequest): Promise<ZonesAnswer> {
+    return unwrap('place_in_zones', await commands.placeInZones(request));
+  }
+
+  /** The wall clock of a zone now, as the field takes it. */
+  async timeInZone(zone: string | null): Promise<string> {
+    return unwrap('time_in_zone', await commands.timeInZone(zone));
   }
 }

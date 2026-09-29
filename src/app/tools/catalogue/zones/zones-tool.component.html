@@ -1,0 +1,178 @@
+<div class="columns">
+  <section class="column" aria-labelledby="zones-input-title">
+    <h2 id="zones-input-title" class="section-title">{{ 'tools.input' | transloco }}</h2>
+    <div class="entry">
+      <input
+        type="text"
+        class="field"
+        data-testid="zones-input"
+        spellcheck="false"
+        [attr.aria-label]="'tools.zones.inputLabel' | transloco"
+        [value]="text()"
+        [placeholder]="'tools.zones.placeholder' | transloco"
+        (input)="onInput($event)"
+      />
+      <button type="button" class="button" data-testid="zones-now" (click)="takeNow()">
+        {{ 'tools.zones.now' | transloco }}
+      </button>
+    </div>
+    @if (placed(); as placed) {
+      <p class="note" data-testid="zones-from" [attr.data-zone]="placed.from">
+        {{ 'tools.zones.typedIn' | transloco: { zone: placed.from } }}
+      </p>
+      @if (placed.ambiguous; as readings) {
+        <div class="ambiguous" role="radiogroup" [attr.aria-label]="'tools.zones.readings' | transloco">
+          <p class="note">{{ 'tools.zones.ambiguous' | transloco: { zone: placed.from } }}</p>
+          @for (reading of readings; track $index) {
+            <label class="check">
+              <input
+                type="radio"
+                name="zones-reading"
+                [attr.data-testid]="'zones-reading-' + $index"
+                [checked]="later() === ($index === 1)"
+                (change)="onReading($index === 1)"
+              />
+              {{ reading.abbreviation ?? '' }} UTC{{ reading.offset }} · {{ reading.isoUtc }}
+            </label>
+          }
+        </div>
+      }
+      @if (placed.unknown.length > 0) {
+        <p class="note" data-testid="zones-unknown">
+          {{ 'tools.zones.unknown' | transloco: { zones: placed.unknown.join(', ') } }}
+        </p>
+      }
+    }
+    @if (problem(); as problem) {
+      <p class="problem" role="status" data-testid="zones-problem" [attr.data-problem]="problem.kind">
+        @switch (problem.kind) {
+          @case ('skipped') {
+            {{
+              'tools.zones.skipped'
+                | transloco: { zone: problem.from, before: problem.before, after: problem.after }
+            }}
+          }
+          @case ('unreadable') {
+            {{ 'tools.zones.unreadable' | transloco: { at: problem.at } }}
+          }
+          @case ('unknownZone') {
+            {{ 'tools.zones.unknownZone' | transloco: { zone: problem.zone } }}
+          }
+          @default {
+            {{ 'tools.zones.outOfRange' | transloco }}
+          }
+        }
+      </p>
+    }
+
+    <h2 id="zones-add-title" class="section-title">{{ 'tools.zones.add' | transloco }}</h2>
+    <input
+      type="search"
+      class="field"
+      data-testid="zones-search"
+      spellcheck="false"
+      aria-labelledby="zones-add-title"
+      [value]="query()"
+      [placeholder]="'tools.zones.addPlaceholder' | transloco"
+      (input)="onQuery($event)"
+    />
+    @if (query().trim() !== '' && found.value(); as found) {
+      @if (found.length > 0) {
+        <ul class="found" data-testid="zones-found">
+          @for (entry of found; track entry.zone) {
+            <li>
+              <button
+                type="button"
+                class="found-entry"
+                data-testid="zones-found-entry"
+                [attr.data-zone]="entry.zone"
+                (click)="add(entry.zone)"
+              >
+                <span class="found-zone">{{ entry.zone }}</span>
+                <span class="found-offset">UTC{{ entry.offset }} {{ entry.abbreviation ?? '' }}</span>
+              </button>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="note" data-testid="zones-no-match">
+          {{ 'tools.zones.noMatch' | transloco: { query: query() } }}
+        </p>
+      }
+    }
+  </section>
+
+  <section class="column" aria-labelledby="zones-list-title">
+    <h2 id="zones-list-title" class="section-title">{{ 'tools.zones.zones' | transloco }}</h2>
+    @if (placed(); as placed) {
+      <ul class="times">
+        @for (time of placed.times; track time.zone) {
+          <li class="time" data-testid="zones-row" [attr.data-zone]="time.zone" [class.source]="time.source">
+            <div class="place">
+              <span class="city">{{ time.city }}</span>
+              <span class="zone">{{ time.zone }}</span>
+              <span class="badges">
+                @if (time.local) {
+                  <span class="badge">{{ 'tools.zones.local' | transloco }}</span>
+                }
+                @if (time.source) {
+                  <span class="badge">{{ 'tools.zones.source' | transloco }}</span>
+                }
+              </span>
+            </div>
+            <div class="clock">
+              <span class="hour" data-testid="zones-time">{{ time.time }}</span>
+              <span class="date" data-testid="zones-date">
+                {{ time.date }}
+                @if (time.dayShift !== 0) {
+                  <span class="shift" data-testid="zones-shift">
+                    {{
+                      (time.dayShift > 0 ? 'tools.zones.dayAhead' : 'tools.zones.dayBehind')
+                        | transloco: { count: time.dayShift > 0 ? time.dayShift : -time.dayShift }
+                    }}
+                  </span>
+                }
+              </span>
+              <span class="offset" data-testid="zones-offset">
+                UTC{{ time.offset }}
+                @if (time.abbreviation) {
+                  · {{ time.abbreviation }}
+                }
+                @if (time.summerTime) {
+                  · <span data-testid="zones-summer">{{ 'tools.zones.summer' | transloco }}</span>
+                }
+              </span>
+            </div>
+            <div class="actions">
+              <app-copy-value [value]="time.iso" [what]="time.zone" />
+              @if (!time.source) {
+                <button
+                  type="button"
+                  class="action"
+                  data-testid="zones-type-in"
+                  [attr.aria-label]="'tools.zones.hereLabel' | transloco: { zone: time.zone }"
+                  (click)="typeIn(time.zone)"
+                >
+                  {{ 'tools.zones.here' | transloco }}
+                </button>
+              }
+              @if (removable(time)) {
+                <button
+                  type="button"
+                  class="action destructive"
+                  data-testid="zones-remove"
+                  [attr.aria-label]="'tools.zones.remove' | transloco: { zone: time.zone }"
+                  (click)="remove(time.zone)"
+                >
+                  ×
+                </button>
+              }
+            </div>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="empty">{{ 'tools.zones.empty' | transloco }}</p>
+    }
+  </section>
+</div>

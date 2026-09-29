@@ -29,6 +29,9 @@ import {
   UrlCodecRequest,
   UuidInspection,
   UuidRequest,
+  ZoneEntry,
+  ZonesAnswer,
+  ZonesRequest,
 } from '@core/model/tool-answers.model';
 
 /** Answers what a spec sets and records what was asked: the tools' rules are Rust's. */
@@ -74,6 +77,9 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
   };
   instant: InstantAnswer = { kind: 'unreadable', at: 1 };
   now = '2026-09-29T12:03:12.000Z';
+  zonesFound: ZoneEntry[] = [];
+  zonesAnswer: ZonesAnswer = { kind: 'unreadable', at: 1 };
+  wallClock = '2026-09-29 14:03:12';
 
   convertCase(text: string): Promise<CaseConversion[]> {
     return this.answer('convert_case', text, this.cases);
@@ -153,6 +159,18 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
 
   currentInstant(): Promise<string> {
     return this.answer('current_instant', null, this.now);
+  }
+
+  searchTimeZones(query: string): Promise<ZoneEntry[]> {
+    return this.answer('search_time_zones', query, this.zonesFound);
+  }
+
+  placeInZones(request: ZonesRequest): Promise<ZonesAnswer> {
+    return this.answer('place_in_zones', request, this.zonesAnswer);
+  }
+
+  timeInZone(zone: string | null): Promise<string> {
+    return this.answer('time_in_zone', zone, this.wallClock);
   }
 
   requestsOf(command: string): unknown[] {

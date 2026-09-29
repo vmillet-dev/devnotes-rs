@@ -47,6 +47,9 @@ export const commands = {
 	/**  A date written without an offset is read in the machine's zone, as the person typing it means. */
 	describeInstant: (request: InstantRequest) => typedError<InstantAnswer, AppError>(__TAURI_INVOKE("describe_instant", { request })),
 	currentInstant: () => typedError<string, AppError>(__TAURI_INVOKE("current_instant")),
+	searchTimeZones: (query: string) => typedError<ZoneEntry[], AppError>(__TAURI_INVOKE("search_time_zones", { query })),
+	placeInZones: (request: ZonesRequest) => typedError<ZonesAnswer, AppError>(__TAURI_INVOKE("place_in_zones", { request })),
+	timeInZone: (zone: string | null) => typedError<string, AppError>(__TAURI_INVOKE("time_in_zone", { zone })),
 	/**
 	 *  The first launch: the space, its folders and the notes in one transaction, since a space
 	 *  standing alone reads as "already seeded" for good. The strings stay on the front end, with
@@ -1422,10 +1425,57 @@ export type WindowBehavior = {
 	minimizeToTray: boolean,
 };
 
+export type ZoneEntry = {
+	zone: string,
+	city: string,
+	offset: string,
+	abbreviation: string | null,
+};
+
 /**  One zone that moved. A batch of these is what a gesture eventually writes. */
 export type ZonePlacement = {
 	folderId: string,
 	frame: BoardFrame,
+};
+
+export type ZoneReading = {
+	offset: string,
+	abbreviation: string | null,
+	isoUtc: string,
+};
+
+export type ZoneTime = {
+	zone: string,
+	city: string,
+	local: boolean,
+	/**  The zone the time was typed in. */
+	source: boolean,
+	date: string,
+	time: string,
+	iso: string,
+	offset: string,
+	abbreviation: string | null,
+	summerTime: boolean,
+	/**  Days ahead of (or behind) the date typed: `1` in Tokyo for an evening in Paris. */
+	dayShift: number,
+};
+
+export type ZonesAnswer = { kind: "placed"; from: string; 
+/**  Both readings of a time the clocks went through twice, the earlier first. */
+ambiguous: [ZoneReading, ZoneReading] | null; times: ZoneTime[]; unknown: string[] } | 
+/**  The clocks jumped over it, from one offset to the other. */
+{ kind: "skipped"; from: string; before: string; after: string } | 
+/**  One-based, in characters. */
+{ kind: "unreadable"; at: number } | { kind: "outOfRange" } | { kind: "unknownZone"; zone: string };
+
+export type ZonesRequest = {
+	/**  A date and time on the wall clock of `from`, or an instant that carries its offset. */
+	text: string,
+	/**  `None` is this machine's zone. */
+	from: string | null,
+	zones: string[],
+	/**  For a time the clocks went through twice: the second pass rather than the first. */
+	later: boolean,
 };
 
 /* Tauri Specta runtime */
