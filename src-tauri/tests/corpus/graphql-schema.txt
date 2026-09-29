@@ -1,0 +1,11 @@
+type Invoice {
+  id: ID!
+  total: Int!
+  currency: String
+  lines: [InvoiceLine!]!
+}
+
+input PayInvoice {
+  invoiceId: ID!
+  amount: Int!
+}

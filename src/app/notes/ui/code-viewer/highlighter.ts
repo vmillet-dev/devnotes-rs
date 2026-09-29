@@ -4,6 +4,7 @@ import c from 'highlight.js/lib/languages/c';
 import csharp from 'highlight.js/lib/languages/csharp';
 import css from 'highlight.js/lib/languages/css';
 import go from 'highlight.js/lib/languages/go';
+import graphql from 'highlight.js/lib/languages/graphql';
 import ini from 'highlight.js/lib/languages/ini';
 import java from 'highlight.js/lib/languages/java';
 import javascript from 'highlight.js/lib/languages/javascript';
@@ -12,6 +13,7 @@ import markdown from 'highlight.js/lib/languages/markdown';
 import php from 'highlight.js/lib/languages/php';
 import python from 'highlight.js/lib/languages/python';
 import rust from 'highlight.js/lib/languages/rust';
+import scss from 'highlight.js/lib/languages/scss';
 import sql from 'highlight.js/lib/languages/sql';
 import typescript from 'highlight.js/lib/languages/typescript';
 import xml from 'highlight.js/lib/languages/xml';
@@ -41,11 +43,13 @@ const GRAMMARS: Readonly<Record<LanguageTag, string | null>> = {
   php: 'php',
   c: 'c',
   sql: 'sql',
+  graphql: 'graphql',
   yml: 'yaml',
   toml: 'ini',
   xml: 'xml',
   html: 'xml',
   css: 'css',
+  scss: 'scss',
   sh: 'bash',
   md: 'markdown',
   txt: null,
@@ -57,6 +61,7 @@ for (const [name, grammar] of Object.entries({
   csharp,
   css,
   go,
+  graphql,
   ini,
   java,
   javascript,
@@ -65,6 +70,7 @@ for (const [name, grammar] of Object.entries({
   php,
   python,
   rust,
+  scss,
   sql,
   typescript,
   xml,

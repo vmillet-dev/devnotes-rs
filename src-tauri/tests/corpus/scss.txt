@@ -1,0 +1,15 @@
+@use 'mixins' as *;
+
+.card {
+  @include surface;
+  padding: 14px;
+  border-radius: 10px;
+
+  &:hover {
+    border-color: var(--line-strong);
+  }
+
+  .card-title {
+    font-weight: 600;
+  }
+}
