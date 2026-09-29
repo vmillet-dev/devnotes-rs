@@ -103,4 +103,10 @@ export const TOOLS: readonly ToolDefinition[] = [
     keywords: ['timezone', 'time zone', 'tz', 'iana', 'utc', 'gmt', 'dst', 'offset'],
     load: () => import('./zones/zones-tool.component').then((m) => m.ZonesToolComponent),
   },
+  {
+    id: 'cron',
+    category: 'time',
+    keywords: ['cron', 'crontab', 'schedule', 'quartz', '@daily', 'job'],
+    load: () => import('./cron/cron-tool.component').then((m) => m.CronToolComponent),
+  },
 ];

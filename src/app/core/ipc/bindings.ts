@@ -50,6 +50,7 @@ export const commands = {
 	searchTimeZones: (query: string) => typedError<ZoneEntry[], AppError>(__TAURI_INVOKE("search_time_zones", { query })),
 	placeInZones: (request: ZonesRequest) => typedError<ZonesAnswer, AppError>(__TAURI_INVOKE("place_in_zones", { request })),
 	timeInZone: (zone: string | null) => typedError<string, AppError>(__TAURI_INVOKE("time_in_zone", { zone })),
+	describeCron: (request: CronRequest) => typedError<CronAnswer, AppError>(__TAURI_INVOKE("describe_cron", { request })),
 	/**
 	 *  The first launch: the space, its folders and the notes in one transaction, since a space
 	 *  standing alone reads as "already seeded" for good. The strings stay on the front end, with
@@ -508,6 +509,34 @@ export type ConvertRequest = {
 	to: DataFormat,
 };
 
+export type CronAnswer = { kind: "read"; 
+/**  What a macro stands for: `@daily` is `0 0 * * *`. */
+expanded: string | null; fields: FieldReading[]; 
+/**  Both day fields restricted: either one matching is enough, as in cron. */
+bothDays: boolean; zone: string; runs: Run[]; check: CronCheck | null } | 
+/**  `@reboot` runs when the machine starts: no time to give. */
+{ kind: "reboot" } | { kind: "refused"; field: CronField | null; token: string; 
+/**  One-based, in characters of the expression as typed. */
+at: number; problem: CronProblem } | { kind: "unknownZone"; zone: string };
+
+export type CronCheck = { kind: "checked"; matches: boolean; at: string } | { kind: "unreadable"; at: number } | { kind: "skipped" };
+
+export type CronField = "second" | "minute" | "hour" | "dayOfMonth" | "month" | "dayOfWeek";
+
+export type CronProblem = "empty" | "fieldCount" | "unknownMacro" | "unknownName" | "notANumber" | "outOfRange" | "reversedRange" | "zeroStep" | 
+/**  A special character this field does not take: `L` in the minutes. */
+"notHere" | 
+/**  Read here, refused by the scheduler: nothing more precise to say. */
+"refused";
+
+export type CronRequest = {
+	expression: string,
+	/**  `None` is the machine's zone. */
+	zone: string | null,
+	/**  A date to test against the expression, read in `zone`; empty asks nothing. */
+	check: string,
+};
+
 export type Crossing = 
 /**  TOML has no `null`. */
 "tomlNull" | 
@@ -616,6 +645,15 @@ export type ExportScope = { kind: "library" } | { kind: "space"; spaceId: string
 export type FacetCount<T> = {
 	value: T,
 	count: number,
+};
+
+export type FieldReading = {
+	field: CronField,
+	text: string,
+	/**  Zero-based character offsets in the expression read (the expansion of a macro). */
+	start: number,
+	end: number,
+	pieces: Piece[],
 };
 
 export type FileProblem = "notFound" | "tooLarge" | "unreadable" | "unwritable";
@@ -1184,6 +1222,19 @@ export type PasswordRequest = {
 	count: number,
 };
 
+/**  One item of a field's list. A day of the week is 0 (Sunday) to 7 (Sunday again). */
+export type Piece = { kind: "every" } | { kind: "value"; value: number } | { kind: "range"; from: number; to: number } | 
+/**  `*\/15`. */
+{ kind: "step"; step: number } | 
+/**  `9-18/2`, `5-59/10`. */
+{ kind: "steppedRange"; step: number; from: number; to: number } | { kind: "lastDayOfMonth" } | 
+/**  `15W`: the weekday nearest the 15th. */
+{ kind: "nearestWeekday"; day: number } | 
+/**  `5L`: the last Friday of the month. */
+{ kind: "lastWeekday"; weekday: number } | 
+/**  `1#2`: the second Monday of the month. */
+{ kind: "nth"; weekday: number; nth: number };
+
 export type Placeholder = {
 	name: string,
 	defaultValue: string,
@@ -1229,6 +1280,15 @@ export type Revision = {
 	takenAt: string,
 	/**  So a row can say how much a version held without carrying it. */
 	characters: number,
+};
+
+export type Run = {
+	date: string,
+	time: string,
+	/**  1 is Monday. */
+	weekday: number,
+	offset: string,
+	epochMilliseconds: number | null,
 };
 
 /**

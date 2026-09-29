@@ -11,6 +11,8 @@ import {
   ColourRequest,
   ConvertAnswer,
   ConvertRequest,
+  CronAnswer,
+  CronRequest,
   GenerateAnswer,
   GenerateRequest,
   HashAnswer,
@@ -130,6 +132,11 @@ export class ToolsRepository {
   /** `from` null is the machine's zone, which is always listed first. */
   async placeInZones(request: ZonesRequest): Promise<ZonesAnswer> {
     return unwrap('place_in_zones', await commands.placeInZones(request));
+  }
+
+  /** Read in the machine's zone unless another is named; the next runs are counted from now. */
+  async describeCron(request: CronRequest): Promise<CronAnswer> {
+    return unwrap('describe_cron', await commands.describeCron(request));
   }
 
   /** The wall clock of a zone now, as the field takes it. */

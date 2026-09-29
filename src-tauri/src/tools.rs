@@ -4,6 +4,7 @@
 
 pub mod colour;
 pub mod convert;
+pub mod cron;
 pub mod dates;
 pub mod diff;
 pub mod encoding;
@@ -203,4 +204,10 @@ pub async fn place_in_zones(request: zones::ZonesRequest) -> Result<zones::Zones
 #[specta::specta]
 pub async fn time_in_zone(zone: Option<String>) -> Result<String, AppError> {
     off_thread(move || zones::now_in(zone.as_deref(), local_zone().as_deref())).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn describe_cron(request: cron::CronRequest) -> Result<cron::CronAnswer, AppError> {
+    off_thread(move || cron::describe(&request, local_zone().as_deref(), chrono::Utc::now())).await
 }

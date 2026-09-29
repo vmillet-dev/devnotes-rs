@@ -9,6 +9,8 @@ import {
   ColourRequest,
   ConvertAnswer,
   ConvertRequest,
+  CronAnswer,
+  CronRequest,
   GenerateAnswer,
   GenerateRequest,
   HashAnswer,
@@ -80,6 +82,7 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
   zonesFound: ZoneEntry[] = [];
   zonesAnswer: ZonesAnswer = { kind: 'unreadable', at: 1 };
   wallClock = '2026-09-29 14:03:12';
+  cron: CronAnswer = { kind: 'reboot' };
 
   convertCase(text: string): Promise<CaseConversion[]> {
     return this.answer('convert_case', text, this.cases);
@@ -171,6 +174,10 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
 
   timeInZone(zone: string | null): Promise<string> {
     return this.answer('time_in_zone', zone, this.wallClock);
+  }
+
+  describeCron(request: CronRequest): Promise<CronAnswer> {
+    return this.answer('describe_cron', request, this.cron);
   }
 
   requestsOf(command: string): unknown[] {
