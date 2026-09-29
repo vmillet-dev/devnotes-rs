@@ -28,6 +28,12 @@ export const commands = {
 	slugify: (request: SlugRequest) => typedError<string, AppError>(__TAURI_INVOKE("slugify", { request })),
 	fixLineBreaks: (request: LineBreaksRequest) => typedError<LineBreaksAnswer, AppError>(__TAURI_INVOKE("fix_line_breaks", { request })),
 	parseUrl: (text: string) => typedError<UrlAnswer, AppError>(__TAURI_INVOKE("parse_url", { text })),
+	urlCodec: (request: UrlCodecRequest) => typedError<UrlCodecAnswer, AppError>(__TAURI_INVOKE("url_codec", { request })),
+	encodeBase64: (text: string, options: Base64Options) => typedError<string, AppError>(__TAURI_INVOKE("encode_base64", { text, options })),
+	/**  By its path: the bytes are read here and never cross the bridge. */
+	encodeBase64File: (path: string, options: Base64Options) => typedError<Base64FileAnswer, AppError>(__TAURI_INVOKE("encode_base64_file", { path, options })),
+	decodeBase64: (text: string, options: Base64Options) => typedError<Base64Decoded, AppError>(__TAURI_INVOKE("decode_base64", { text, options })),
+	saveBase64: (text: string, options: Base64Options, path: string) => typedError<Base64Saved, AppError>(__TAURI_INVOKE("save_base64", { text, options, path })),
 	/**
 	 *  The first launch: the space, its folders and the notes in one transaction, since a space
 	 *  standing alone reads as "already seeded" for good. The strings stay on the front end, with
@@ -287,6 +293,34 @@ export type Backup = {
 	openable: boolean,
 };
 
+export type Base64Alphabet = "standard" | 
+/**  `-` and `_` for `+` and `/`: what a URL or a JWT carries. */
+"urlSafe";
+
+export type Base64Decoded = { kind: "text"; text: string; bytes: number } | 
+/**  Not UTF-8: what it starts with, in hexadecimal, and an offer to save it. */
+{ kind: "binary"; bytes: number; preview: string } | 
+/**  `at` counts characters of the text as given, spaces and line breaks included. */
+{ kind: "invalid"; problem: Base64Problem; at: number | null; character: string | null };
+
+export type Base64FileAnswer = { kind: "encoded"; name: string; bytes: number; text: string } | { kind: "failed"; problem: FileProblem };
+
+export type Base64Options = {
+	alphabet: Base64Alphabet,
+	/**  Encoding only: a decoding takes a text padded or not. */
+	padded: boolean,
+};
+
+export type Base64Problem = 
+/**  A character outside the alphabet, or padding in the middle. */
+"character" | 
+/**  A final group one character long: nothing can end that way. */
+"length" | 
+/**  A last character whose bits say the text was cut. */
+"truncated";
+
+export type Base64Saved = { kind: "saved"; bytes: number } | { kind: "invalid" } | { kind: "failed"; problem: FileProblem };
+
 /**  What a tidy-up did, and what it takes to walk it back. */
 export type BoardArrangement = {
 	/**  What actually moved: a board already in order moves nothing, and opens no undo. */
@@ -418,6 +452,8 @@ export type ChecklistItem = {
 	done: boolean,
 };
 
+export type CodecDirection = "encode" | "decode";
+
 /**  One line of a kept body, compared with the text restoring it would replace. */
 export type DiffLine = 
 /**  In both: restoring leaves it where it is. */
@@ -505,6 +541,8 @@ export type FacetCount<T> = {
 	value: T,
 	count: number,
 };
+
+export type FileProblem = "notFound" | "tooLarge" | "unreadable" | "unwritable";
 
 export type FinalNewline = "keep" | "add" | "remove";
 
@@ -1044,6 +1082,18 @@ export type TrayLabels = {
 
 export type UrlAnswer = { kind: "parsed"; parts: UrlParts } | { kind: "invalid"; problem: UrlProblem };
 
+export type UrlCodecAnswer = { kind: "done"; text: string } | 
+/**  `at` counts characters: a `%` without two hexadecimal digits after it. */
+{ kind: "malformedEscape"; at: number } | 
+/**  The escapes are well formed, but the bytes they spell are no UTF-8 text. */
+{ kind: "notUtf8" };
+
+export type UrlCodecRequest = {
+	text: string,
+	direction: CodecDirection,
+	scope: UrlScope,
+};
+
 /**  The user and the password decoded, the path as written, the query both ways. */
 export type UrlParts = {
 	scheme: string,
@@ -1062,6 +1112,12 @@ export type UrlParts = {
 export type UrlProblem = "empty" | 
 /**  "example.com/path": a URL starts with its scheme. */
 "noScheme" | "emptyHost" | "invalidPort" | "invalidAddress" | "invalidDomain" | "other";
+
+export type UrlScope = 
+/**  One value of a query or of a path: its `/`, `?` and `&` are escaped too. */
+"component" | 
+/**  A URL as a whole, whose structure stays readable. */
+"whole";
 
 /**  What the front end renders before it renders anything else. */
 export type VaultState = 

@@ -5,6 +5,8 @@ import { homeSpaceMarker } from './profile.js';
 
 import type {
   Attachment,
+  Base64FileAnswer,
+  Base64Options,
   DisplayNote,
   BoardQuery,
   BoardView,
@@ -63,6 +65,8 @@ export const bridge = {
   listLibraries: () => invoke<Registry>('list_libraries'),
   exploreJson: (query: JsonQuery) => invoke<JsonView>('explore_json', { query }),
   fixLineBreaks: (request: LineBreaksRequest) => invoke<LineBreaksAnswer>('fix_line_breaks', { request }),
+  encodeBase64File: (path: string, options: Base64Options) =>
+    invoke<Base64FileAnswer>('encode_base64_file', { path, options }),
   listSpaces: () => invoke<Space[]>('list_spaces'),
   createSpace: (draft: SpaceDraft) => invoke<Space>('create_space', { draft }),
   renameSpace: (id: string, draft: SpaceDraft) => invoke<Space>('rename_space', { id, draft }),

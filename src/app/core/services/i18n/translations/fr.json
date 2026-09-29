@@ -1096,6 +1096,71 @@
       "tags": "Tags",
       "tagsPlaceholder": "api, webhook",
       "submit": "Enregistrer"
+    },
+    "files": {
+      "notFound": "Ce fichier est introuvable.",
+      "tooLarge": "Ce fichier dépasse 10 Mo : l’outil ne l’affiche pas.",
+      "unreadable": "Ce fichier ne peut pas être lu.",
+      "unwritable": "Le fichier n’a pas pu être écrit à cet endroit."
+    },
+    "url-codec": {
+      "name": "URL",
+      "description": "Encoder, décoder, composant par composant",
+      "scope": "Portée",
+      "scopes": {
+        "component": "Composant",
+        "whole": "URL entière"
+      },
+      "scopeHints": {
+        "component": "Une valeur de requête ou de chemin : / ? & = sont échappés.",
+        "whole": "Une URL complète : sa structure reste lisible."
+      },
+      "decoded": "Texte",
+      "encoded": "Encodé",
+      "decodedPlaceholder": "café crème & croissants",
+      "encodedPlaceholder": "caf%C3%A9%20cr%C3%A8me",
+      "malformed": "Échappement incomplet au caractère {{at}} : un % attend deux chiffres hexadécimaux.",
+      "notUtf8": "Ces octets ne forment pas du texte UTF-8.",
+      "noteEncoded": "Texte encodé pour une URL",
+      "noteDecoded": "URL décodée"
+    },
+    "base64": {
+      "name": "Base64",
+      "description": "Texte ou fichier, variante URL",
+      "direction": "Sens",
+      "directions": {
+        "encode": "Encoder",
+        "decode": "Décoder"
+      },
+      "source": "Source",
+      "sources": {
+        "text": "Texte",
+        "file": "Fichier"
+      },
+      "alphabet": "Alphabet",
+      "alphabets": {
+        "standard": "Standard",
+        "urlSafe": "URL (- _)"
+      },
+      "padded": "Avec remplissage =",
+      "inputLabel": "Texte à encoder ou à décoder",
+      "encodePlaceholder": "Le texte à encoder",
+      "decodePlaceholder": "SGVsbG8sIHdvcmxkIQ==",
+      "pickFile": "Choisir un fichier…",
+      "fileHint": "Le fichier est lu sur place : son contenu ne transite pas par l’interface.",
+      "fileRead": "{{name}} · {count, plural, one {# octet} other {# octets}}",
+      "encodeEmpty": "Le Base64 s’affiche ici.",
+      "decodeEmpty": "Le texte décodé s’affiche ici.",
+      "binary": "{count, plural, one {# octet} other {# octets}} qui ne forment pas du texte. Les voici en hexadécimal :",
+      "saveFile": "Enregistrer comme fichier…",
+      "saved": "{count, plural, one {Fichier enregistré : # octet.} other {Fichier enregistré : # octets.}}",
+      "problems": {
+        "character": "« {{character}} » n’appartient pas à l’alphabet, au caractère {{at}}.",
+        "truncated": "Le texte semble coupé : « {{character}} » au caractère {{at}} ne peut pas finir un Base64.",
+        "length": "Il manque des caractères : un Base64 ne peut pas finir ainsi."
+      },
+      "noteEncoded": "Texte en Base64",
+      "noteDecoded": "Base64 décodé"
     }
   }
 }

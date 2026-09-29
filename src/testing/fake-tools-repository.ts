@@ -1,10 +1,16 @@
 import { ToolsRepository } from '@core/data/tools.repository';
 import {
+  Base64Decoded,
+  Base64FileAnswer,
+  Base64Options,
+  Base64Saved,
   CaseConversion,
   LineBreaksAnswer,
   LineBreaksRequest,
   SlugRequest,
   UrlAnswer,
+  UrlCodecAnswer,
+  UrlCodecRequest,
 } from '@core/model/tool-answers.model';
 
 /** Answers what a spec sets and records what was asked: the tools' rules are Rust's. */
@@ -21,6 +27,11 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
     finalNewline: 'unchanged',
   };
   url: UrlAnswer = { kind: 'invalid', problem: 'empty' };
+  urlCodecAnswer: UrlCodecAnswer = { kind: 'done', text: '' };
+  base64 = '';
+  base64File: Base64FileAnswer = { kind: 'failed', problem: 'notFound' };
+  base64Decoded: Base64Decoded = { kind: 'text', text: '', bytes: 0 };
+  base64Saved: Base64Saved = { kind: 'saved', bytes: 0 };
 
   convertCase(text: string): Promise<CaseConversion[]> {
     return this.answer('convert_case', text, this.cases);
@@ -36,6 +47,26 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
 
   parseUrl(text: string): Promise<UrlAnswer> {
     return this.answer('parse_url', text, this.url);
+  }
+
+  urlCodec(request: UrlCodecRequest): Promise<UrlCodecAnswer> {
+    return this.answer('url_codec', request, this.urlCodecAnswer);
+  }
+
+  encodeBase64(text: string, options: Base64Options): Promise<string> {
+    return this.answer('encode_base64', { text, options }, this.base64);
+  }
+
+  encodeBase64File(path: string, options: Base64Options): Promise<Base64FileAnswer> {
+    return this.answer('encode_base64_file', { path, options }, this.base64File);
+  }
+
+  decodeBase64(text: string, options: Base64Options): Promise<Base64Decoded> {
+    return this.answer('decode_base64', { text, options }, this.base64Decoded);
+  }
+
+  saveBase64(text: string, options: Base64Options, path: string): Promise<Base64Saved> {
+    return this.answer('save_base64', { text, options, path }, this.base64Saved);
   }
 
   requestsOf(command: string): unknown[] {

@@ -30,4 +30,16 @@ export const TOOLS: readonly ToolDefinition[] = [
     keywords: ['crlf', 'lf', 'eol', 'newline', 'whitespace'],
     load: () => import('./line-breaks/line-breaks-tool.component').then((m) => m.LineBreaksToolComponent),
   },
+  {
+    id: 'url-codec',
+    category: 'encode',
+    keywords: ['url', 'percent', 'encodeURIComponent', 'escape'],
+    load: () => import('./url-codec/url-codec-tool.component').then((m) => m.UrlCodecToolComponent),
+  },
+  {
+    id: 'base64',
+    category: 'encode',
+    keywords: ['base64', 'b64', 'jwt', 'data uri'],
+    load: () => import('./base64/base64-tool.component').then((m) => m.Base64ToolComponent),
+  },
 ];

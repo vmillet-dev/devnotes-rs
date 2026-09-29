@@ -1,0 +1,54 @@
+@use 'mixins' as *;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.scope-label {
+  font-size: 12px;
+  color: var(--text-1);
+}
+
+.scope-hint {
+  @include tool-note;
+}
+
+.columns {
+  @include tool-columns;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.column {
+  @include tool-column;
+  gap: 10px;
+}
+
+.section-head {
+  @include tool-section-head;
+}
+
+.section-title {
+  @include tool-section-title;
+}
+
+.field {
+  display: flex;
+}
+
+.text {
+  @include tool-text-area;
+  resize: vertical;
+}
+
+.problem {
+  @include tool-problem;
+}

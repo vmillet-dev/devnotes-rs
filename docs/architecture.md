@@ -646,6 +646,12 @@ their types, tested in place, no Tauri. `tools.rs` holds the commands, three lin
 through `off_thread` — no lock, but never on the window's thread. One command per tool rather
 than one `run_tool` over an enum: a registration line is the price of precise generated types.
 
+**A tool reading a file takes its path** (`tools/files.rs`): Rust reads the bytes where they
+lie and they never cross the bridge. What a tool sends back of a file is refused past 10 MB
+(`MAX_SENT_BYTES`), and a missing or unreadable file is part of the answer (`FileProblem`),
+not an `AppError`. Bytes that are no text — a Base64 decoding — are written to a file the user
+chooses, never to a note.
+
 **Adding a tool**, the whole of it:
 
 1. `src-tauri/src/tools/<module>.rs`: the function, its request and answer types, its tests.

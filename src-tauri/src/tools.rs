@@ -2,6 +2,8 @@
 //! A tool's own failure — a line that does not parse — is part of its answer; `AppError` is left
 //! for the unexpected. No lock and no store: nothing here reads the library.
 
+pub mod encoding;
+pub(crate) mod files;
 pub mod text;
 pub mod url_parts;
 
@@ -40,4 +42,50 @@ pub async fn fix_line_breaks(
 #[specta::specta]
 pub async fn parse_url(text: String) -> Result<url_parts::UrlAnswer, AppError> {
     off_thread(move || url_parts::parse_url(&text)).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn url_codec(
+    request: encoding::UrlCodecRequest,
+) -> Result<encoding::UrlCodecAnswer, AppError> {
+    off_thread(move || encoding::url_codec(&request)).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn encode_base64(
+    text: String,
+    options: encoding::Base64Options,
+) -> Result<String, AppError> {
+    off_thread(move || encoding::encode_base64(&text, options)).await
+}
+
+/// By its path: the bytes are read here and never cross the bridge.
+#[tauri::command]
+#[specta::specta]
+pub async fn encode_base64_file(
+    path: String,
+    options: encoding::Base64Options,
+) -> Result<encoding::Base64FileAnswer, AppError> {
+    off_thread(move || encoding::encode_base64_file(&path, options)).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn decode_base64(
+    text: String,
+    options: encoding::Base64Options,
+) -> Result<encoding::Base64Decoded, AppError> {
+    off_thread(move || encoding::decode_base64(&text, options)).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn save_base64(
+    text: String,
+    options: encoding::Base64Options,
+    path: String,
+) -> Result<encoding::Base64Saved, AppError> {
+    off_thread(move || encoding::save_base64(&text, options, &path)).await
 }

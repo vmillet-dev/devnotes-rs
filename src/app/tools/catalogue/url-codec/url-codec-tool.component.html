@@ -1,0 +1,60 @@
+<div class="scope">
+  <span class="scope-label">{{ 'tools.url-codec.scope' | transloco }}</span>
+  <app-segmented-choice
+    kind="url-codec-scope"
+    [label]="'tools.url-codec.scope' | transloco"
+    [segments]="scopes"
+    [currentId]="scope()"
+    (chosen)="onScope($event)"
+  />
+  <span class="scope-hint">{{ 'tools.url-codec.scopeHints.' + scope() | transloco }}</span>
+</div>
+
+<div class="columns">
+  <section class="column" aria-labelledby="url-codec-decoded-title">
+    <div class="section-head">
+      <h2 id="url-codec-decoded-title" class="section-title">{{ 'tools.url-codec.decoded' | transloco }}</h2>
+      <app-copy-value [value]="decoded()" [what]="'tools.url-codec.decoded' | transloco" />
+    </div>
+    <label class="field">
+      <span class="visually-hidden">{{ 'tools.url-codec.decoded' | transloco }}</span>
+      <textarea
+        class="text"
+        data-testid="url-codec-decoded"
+        rows="8"
+        spellcheck="false"
+        [value]="decoded()"
+        [placeholder]="'tools.url-codec.decodedPlaceholder' | transloco"
+        (input)="onInput('decoded', $event)"
+      ></textarea>
+    </label>
+  </section>
+
+  <section class="column" aria-labelledby="url-codec-encoded-title">
+    <div class="section-head">
+      <h2 id="url-codec-encoded-title" class="section-title">{{ 'tools.url-codec.encoded' | transloco }}</h2>
+      <app-copy-value [value]="encoded()" [what]="'tools.url-codec.encoded' | transloco" />
+    </div>
+    <label class="field">
+      <span class="visually-hidden">{{ 'tools.url-codec.encoded' | transloco }}</span>
+      <textarea
+        class="text"
+        data-testid="url-codec-encoded"
+        rows="8"
+        spellcheck="false"
+        [value]="encoded()"
+        [placeholder]="'tools.url-codec.encodedPlaceholder' | transloco"
+        (input)="onInput('encoded', $event)"
+      ></textarea>
+    </label>
+    @if (problem(); as problem) {
+      <p class="problem" role="status" data-testid="url-codec-problem">
+        @if (problem.kind === 'malformedEscape') {
+          {{ 'tools.url-codec.malformed' | transloco: { at: problem.at + 1 } }}
+        } @else {
+          {{ 'tools.url-codec.notUtf8' | transloco }}
+        }
+      </p>
+    }
+  </section>
+</div>
