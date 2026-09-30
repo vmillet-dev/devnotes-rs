@@ -13,6 +13,7 @@ pub mod generate;
 pub mod hash;
 pub(crate) mod numbers;
 pub mod percentages;
+pub mod permissions;
 pub mod random;
 pub mod sizes;
 pub mod text;
@@ -227,4 +228,12 @@ pub async fn answer_percentages(
     request: percentages::PercentagesRequest,
 ) -> Result<percentages::PercentagesAnswer, AppError> {
     off_thread(move || percentages::answer_all(&request)).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn describe_permissions(
+    request: permissions::PermissionsRequest,
+) -> Result<permissions::PermissionsAnswer, AppError> {
+    off_thread(move || permissions::describe(&request)).await
 }

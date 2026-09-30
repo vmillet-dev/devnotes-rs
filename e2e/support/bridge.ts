@@ -33,6 +33,8 @@ import type {
   NotesView,
   PercentagesAnswer,
   PercentagesRequest,
+  PermissionsAnswer,
+  PermissionsRequest,
   Priority,
   Registry,
   SizesAnswer,
@@ -85,6 +87,8 @@ export const bridge = {
   convertSize: (request: SizesRequest) => invoke<SizesAnswer>('convert_size', { request }),
   answerPercentages: (request: PercentagesRequest) =>
     invoke<PercentagesAnswer>('answer_percentages', { request }),
+  describePermissions: (request: PermissionsRequest) =>
+    invoke<PermissionsAnswer>('describe_permissions', { request }),
   searchTimeZones: (query: string) => invoke<ZoneEntry[]>('search_time_zones', { query }),
   encodeBase64File: (path: string, options: Base64Options) =>
     invoke<Base64FileAnswer>('encode_base64_file', { path, options }),

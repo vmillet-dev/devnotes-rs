@@ -28,6 +28,8 @@ import {
   PasswordAnswer,
   PercentagesAnswer,
   PercentagesRequest,
+  PermissionsAnswer,
+  PermissionsRequest,
   PasswordRequest,
   SizesAnswer,
   SizesRequest,
@@ -151,6 +153,10 @@ export class ToolsRepository {
   /** The five questions at once, each on its own two numbers. */
   async answerPercentages(request: PercentagesRequest): Promise<PercentagesAnswer> {
     return unwrap('answer_percentages', await commands.answerPercentages(request));
+  }
+
+  async describePermissions(request: PermissionsRequest): Promise<PermissionsAnswer> {
+    return unwrap('describe_permissions', await commands.describePermissions(request));
   }
 
   /** The wall clock of a zone now, as the field takes it. */

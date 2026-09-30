@@ -711,7 +711,7 @@ describe('The tools', () => {
           `${testid('tools-panel')}[data-category="calc"] ${testid('tools-entry')}`,
           '@data-tool',
         ),
-      ).toEqual(['sizes', 'percentages']);
+      ).toEqual(['sizes', 'percentages', 'permissions']);
     });
 
     it('writes a quantity typed in French symbols in every unit, rounded as asked', async () => {
@@ -776,6 +776,51 @@ describe('The tools', () => {
         () => $(testid('percentages-share-problem')).getAttribute('data-problem'),
         (problem) => problem === 'divisionByZero',
         'the division by zero',
+      );
+      await $(testid('tool-clear')).click();
+    });
+
+    it('reads a mode both ways and a umask, in Rust', async () => {
+      const answer = await bridge.describePermissions({ mode: 'rwsr-xr-x', umask: '027' });
+
+      expect(answer.mode).toMatchObject({
+        kind: 'read',
+        mode: { octal: '4755', chmodSymbolic: 'u=rwxs,g=rx,o=rx' },
+      });
+      expect(answer.umask).toMatchObject({
+        kind: 'read',
+        file: { octal: '640' },
+        directory: { octal: '750' },
+      });
+    });
+
+    it('keeps the octal, the letters and the boxes in step', async () => {
+      await openTool('permissions');
+      await setField(testid('permissions-octal'), '644');
+
+      await eventually(
+        () => $(testid('permissions-symbolic')).getValue(),
+        (letters) => letters === 'rw-r--r--',
+        'the letters',
+      );
+      await $(testid('permissions-owner-execute')).click();
+      await eventually(
+        () => $(testid('permissions-octal')).getValue(),
+        (octal) => octal === '744',
+        'the box flipped',
+      );
+      await setField(testid('permissions-symbolic'), 'drwxrwxrwt');
+      await eventually(
+        () => $(testid('permissions-octal')).getValue(),
+        (octal) => octal === '1777',
+        'the sticky directory',
+      );
+      expect(await $(testid('permissions-type')).getAttribute('data-type')).toBe('directory');
+      await setField(testid('permissions-octal'), '758');
+      await eventually(
+        () => $(testid('permissions-problem')).getAttribute('data-problem'),
+        (problem) => problem === 'notOctal',
+        'the digit refused',
       );
       await $(testid('tool-clear')).click();
     });
