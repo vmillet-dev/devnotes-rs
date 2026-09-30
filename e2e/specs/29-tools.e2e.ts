@@ -81,6 +81,17 @@ describe('The tools', () => {
       );
     });
 
+    it('finds the case converter by one of its new cases', async () => {
+      await setField(testid('tools-search'), 'train');
+
+      await eventually(
+        () => readEach(testid('tools-entry'), '@data-tool'),
+        (tools) => tools.includes('case'),
+        'Train-Case to find it',
+      );
+      await setField(testid('tools-search'), '');
+    });
+
     it('says so when no tool answers a search', async () => {
       await setField(testid('tools-search'), 'zzz-no-such-tool');
 
@@ -104,7 +115,7 @@ describe('The tools', () => {
 
       await setField(testid('case-input'), 'parse HTTP response');
 
-      await eventually(outputValues, (values) => values.length === 7, 'the seven cases');
+      await eventually(outputValues, (values) => values.length === 13, 'the thirteen cases');
       expect(await outputValues()).toEqual([
         'parseHttpResponse',
         'ParseHttpResponse',
@@ -113,7 +124,25 @@ describe('The tools', () => {
         'PARSE_HTTP_RESPONSE',
         'Parse Http Response',
         'Parse http response',
+        'parse.http.response',
+        'parse/http/response',
+        'Parse-Http-Response',
+        'parse http response',
+        'PARSE HTTP RESPONSE',
+        'parsehttpresponse',
       ]);
+    });
+
+    it('converts a list line by line', async () => {
+      await setField(testid('case-input'), 'userId\nHTTPServer\nutf8Decoder');
+
+      await eventually(
+        () => $(`${testid('output-row')}[data-name="snake_case"] ${testid('output-value')}`).getText(),
+        (snake) => snake === 'user_id\nhttp_server\nutf8_decoder',
+        'three lines in snake_case',
+      );
+      await setField(testid('case-input'), 'parse HTTP response');
+      await eventually(outputValues, (values) => values[0] === 'parseHttpResponse', 'one line again');
     });
 
     it('keeps what was typed across a trip to the notes', async () => {

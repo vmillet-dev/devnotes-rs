@@ -1017,10 +1017,10 @@
     "copyWhat": "Copy {{what}}",
     "case": {
       "name": "Case converter",
-      "description": "camelCase, snake_case, kebab-case, Title",
+      "description": "camelCase, snake_case, dot.case, Train-Case…",
       "inputLabel": "Text to convert",
-      "placeholder": "A variable name or a sentence: parse HTTP response",
-      "empty": "The seven cases show here.",
+      "placeholder": "A variable name, a sentence, or a list, one per line: parse HTTP response",
+      "empty": "The thirteen cases show here, line by line.",
       "noteTitle": "Cases of “{{text}}”"
     },
     "slug": {

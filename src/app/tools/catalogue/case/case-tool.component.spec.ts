@@ -36,6 +36,27 @@ describe('CaseToolComponent', () => {
     });
   });
 
+  it('names the new cases in themselves, and keeps a list converted line by line aligned', async () => {
+    const harness = await renderTool(CaseToolComponent, (tools) => {
+      tools.cases = [
+        { case: 'dot', value: 'user.id\nhttp.server' },
+        { case: 'train', value: 'User-Id\nHttp-Server' },
+      ];
+    });
+
+    await harness.type('case-input', '  userId\nHTTPServer', 'convert_case');
+
+    expect(harness.all('[data-testid="output-row"]').map((row) => row.dataset['name'])).toEqual([
+      'dot.case',
+      'Train-Case',
+    ]);
+    expect(harness.element('[data-testid="output-value"]').textContent).toBe('user.id\nhttp.server');
+    expect(harness.tool.result()).toMatchObject({
+      title: { key: 'tools.case.noteTitle', params: { text: 'userId' } },
+      content: 'dot.case    user.id\n            http.server\nTrain-Case  User-Id\n            Http-Server',
+    });
+  });
+
   it('asks nothing of a blank text, and empties on Vider', async () => {
     const harness = await renderTool(CaseToolComponent, answer);
     await harness.type('case-input', 'parse', 'convert_case');

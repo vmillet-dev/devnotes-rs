@@ -16,6 +16,12 @@ const CASE_NAMES: Record<TextCase, string> = {
   constant: 'CONSTANT_CASE',
   title: 'Title Case',
   sentence: 'Sentence case',
+  dot: 'dot.case',
+  path: 'path/case',
+  train: 'Train-Case',
+  lower: 'lowercase',
+  upper: 'UPPERCASE',
+  flat: 'flatcase',
 };
 
 @Component({
@@ -45,12 +51,17 @@ export class CaseToolComponent implements Tool {
     return {
       title: {
         key: 'tools.case.noteTitle',
-        params: { text: (this.conversions.answered() ?? '').trim().slice(0, 40) },
+        // An answer is always paired with the request it answers.
+        params: { text: this.conversions.answered()!.trim().split('\n')[0]!.trim().slice(0, 40) },
       },
       kind: 'snippet',
       language: 'txt',
       content: conversions
-        .map(({ case: kind, value }) => `${CASE_NAMES[kind].padEnd(width)}  ${value}`)
+        .map(
+          ({ case: kind, value }) =>
+            // A list converted line by line keeps its lines under the first, past the names.
+            `${CASE_NAMES[kind].padEnd(width)}  ${value.split('\n').join(`\n${' '.repeat(width + 2)}`)}`,
+        )
         .join('\n'),
     };
   });

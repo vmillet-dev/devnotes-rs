@@ -1563,7 +1563,7 @@ export type TagUsage = {
 	noteCount: number,
 };
 
-export type TextCase = "camel" | "pascal" | "snake" | "kebab" | "constant" | "title" | "sentence";
+export type TextCase = "camel" | "pascal" | "snake" | "kebab" | "constant" | "title" | "sentence" | "dot" | "path" | "train" | "lower" | "upper" | "flat";
 
 export type TextSizes = {
 	normal: boolean,
