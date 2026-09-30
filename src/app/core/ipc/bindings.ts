@@ -55,6 +55,8 @@ export const commands = {
 	answerPercentages: (request: PercentagesRequest) => typedError<PercentagesAnswer, AppError>(__TAURI_INVOKE("answer_percentages", { request })),
 	describePermissions: (request: PermissionsRequest) => typedError<PermissionsAnswer, AppError>(__TAURI_INVOKE("describe_permissions", { request })),
 	checkDigits: (request: CheckRequest) => typedError<CheckAnswer, AppError>(__TAURI_INVOKE("check_digits", { request })),
+	/**  The token and the secret are zeroed once the answer is made. */
+	decodeJwt: (request: JwtRequest) => typedError<JwtAnswer, AppError>(__TAURI_INVOKE("decode_jwt", { request })),
 	/**
 	 *  The first launch: the space, its folders and the notes in one transaction, since a space
 	 *  standing alone reads as "already seeded" for good. The strings stay on the front end, with
@@ -282,6 +284,10 @@ export const MINIMUM_PASSPHRASE_LENGTH = 12 as const;
 export const PREFERENCES_FILE = "preferences.json" as const;
 
 /* Types */
+export type AlgorithmFamily = "hmac" | "rsa" | "rsaPss" | "ecdsa" | "edDsa" | 
+/**  `alg: none`: nothing signs it. */
+"unsigned" | "unknown";
+
 export type AppError = {
 	code: ErrorCode,
 	/**  Values to interpolate into the translated message, e.g. `{ "name": "Personal" }`. */
@@ -584,6 +590,13 @@ export type Crossing =
 "xmlAttribute";
 
 export type DataFormat = "json" | "toml" | "xml" | "yaml";
+
+export type DatedClaim = {
+	name: string,
+	iso: string,
+	/**  For how long ago or how far off, which the page writes and ages. */
+	epochMilliseconds: number | null,
+};
 
 /**  One line of a kept body, compared with the text restoring it would replace. */
 export type DiffLine = 
@@ -980,6 +993,25 @@ export type JsonView = {
 	/**  Every entry the search found, in the document's order, open or not. */
 	matches: string[],
 	matchCount: number,
+};
+
+export type JwtAnswer = { kind: "decoded"; header: string; payload: string; 
+/**  Both as one JSON document, which is what a note keeps: never the token. */
+document: string; algorithm: string | null; family: AlgorithmFamily; signature: string; dates: DatedClaim[]; state: TokenState; verification: Verification } | { kind: "malformed"; problem: JwtProblem; segment: Segment | null; segments: number; 
+/**  One-based, in characters of the token, where it could be said. */
+at: number | null };
+
+export type JwtProblem = 
+/**  Not three segments; five is an encrypted token (JWE), not decoded here. */
+"segmentCount" | "notBase64" | "notJson" | 
+/**  JSON, but not an object. */
+"notObject";
+
+export type JwtRequest = {
+	token: string,
+	/**  Empty asks for no verification. Zeroed once used. */
+	secret: string,
+	secretIsBase64: boolean,
 };
 
 /**
@@ -1445,6 +1477,8 @@ export type SectionGroup = { group: "language"; language: Language } |
 /**  A Note or a todo list, whose kind is its format. */
 { group: "kind"; kind: NoteKind } | { group: "priority"; priority: Priority };
 
+export type Segment = "header" | "payload" | "signature";
+
 /**  Three fields rather than a map, so a missing shortcut is a compile error. */
 export type ShortcutBindings = {
 	capture: string,
@@ -1535,6 +1569,10 @@ export type TextSizes = {
 	normal: boolean,
 	large: boolean,
 };
+
+export type TokenState = "valid" | "expired" | "notYetValid" | 
+/**  Neither `exp` nor `nbf`: nothing to be valid against. */
+"undated";
 
 export type TrashedNote = {
 	deletedAt: string,
@@ -1638,6 +1676,14 @@ export type VaultState =
  *  open nothing it holds, and asking for a new phrase would be the first step towards that.
  */
 "keyMissing";
+
+export type Verification = 
+/**  No secret typed. */
+"notAsked" | "valid" | "invalid" | 
+/**  RS*, PS*, ES*, `EdDSA`: named, not verified here. */
+"notVerifiedHere" | "unsigned" | 
+/**  A secret said to be base64 that is not. */
+"unreadableSecret";
 
 /**  Pushed from the preferences panel as it changes, like the tray labels. */
 export type WindowBehavior = {

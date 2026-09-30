@@ -1,0 +1,144 @@
+<div class="columns">
+  <section class="column" aria-labelledby="jwt-input-title">
+    <h2 id="jwt-input-title" class="section-title">{{ 'tools.input' | transloco }}</h2>
+    <textarea
+      class="token"
+      data-testid="jwt-token"
+      rows="7"
+      spellcheck="false"
+      autocomplete="off"
+      [attr.aria-label]="'tools.jwt.tokenLabel' | transloco"
+      [value]="token()"
+      [placeholder]="'tools.jwt.tokenPlaceholder' | transloco"
+      (input)="onToken($event)"
+    ></textarea>
+
+    <div class="key">
+      <label class="key-label" for="jwt-secret">{{ 'tools.jwt.secret' | transloco }}</label>
+      <input
+        id="jwt-secret"
+        class="key-field"
+        data-testid="jwt-secret"
+        autocomplete="off"
+        spellcheck="false"
+        [type]="secretShown() ? 'text' : 'password'"
+        [value]="secret()"
+        [placeholder]="'tools.jwt.secretPlaceholder' | transloco"
+        (input)="onSecret($event)"
+      />
+      <button
+        type="button"
+        class="reveal"
+        data-testid="jwt-secret-reveal"
+        [attr.aria-pressed]="secretShown()"
+        [attr.aria-label]="(secretShown() ? 'tools.jwt.hide' : 'tools.jwt.show') | transloco"
+        [attr.title]="(secretShown() ? 'tools.jwt.hide' : 'tools.jwt.show') | transloco"
+        (click)="secretShown.set(!secretShown())"
+      >
+        <app-icon [name]="secretShown() ? 'eye-off' : 'eye'" />
+      </button>
+    </div>
+    <label class="check">
+      <input
+        type="checkbox"
+        data-testid="jwt-secret-base64"
+        [checked]="secretIsBase64()"
+        (change)="onBase64($event)"
+      />
+      {{ 'tools.jwt.secretBase64' | transloco }}
+    </label>
+    <p class="note">{{ 'tools.jwt.forgotten' | transloco }}</p>
+
+    @if (malformed(); as malformed) {
+      <p class="problem" role="status" data-testid="jwt-problem" [attr.data-problem]="malformed.problem">
+        @switch (malformed.problem) {
+          @case ('segmentCount') {
+            @if (malformed.segments === 5) {
+              {{ 'tools.jwt.problems.jwe' | transloco }}
+            } @else {
+              {{ 'tools.jwt.problems.segmentCount' | transloco: { count: malformed.segments } }}
+            }
+          }
+          @case ('notBase64') {
+            @if (malformed.at !== null) {
+              {{
+                'tools.jwt.problems.notBase64At'
+                  | transloco
+                    : { segment: ('tools.jwt.segments.' + malformed.segment | transloco), at: malformed.at }
+              }}
+            } @else {
+              {{
+                'tools.jwt.problems.notBase64'
+                  | transloco: { segment: ('tools.jwt.segments.' + malformed.segment | transloco) }
+              }}
+            }
+          }
+          @default {
+            {{
+              'tools.jwt.problems.' + malformed.problem
+                | transloco: { segment: ('tools.jwt.segments.' + malformed.segment | transloco) }
+            }}
+          }
+        }
+      </p>
+    }
+  </section>
+
+  <section class="column" aria-labelledby="jwt-output-title">
+    <h2 id="jwt-output-title" class="section-title">{{ 'tools.result' | transloco }}</h2>
+    @if (decoded(); as decoded) {
+      <p class="state" data-testid="jwt-state" [attr.data-state]="decoded.state">
+        <strong>{{ 'tools.jwt.states.' + decoded.state | transloco }}</strong>
+        @if (stateWhen(); as when) {
+          · {{ when.key | transloco: when.params }}
+        }
+      </p>
+      <p
+        class="verification"
+        data-testid="jwt-verification"
+        [attr.data-verification]="decoded.verification"
+        [class.good]="decoded.verification === 'valid'"
+        [class.bad]="decoded.verification === 'invalid' || decoded.verification === 'unsigned'"
+      >
+        {{
+          'tools.jwt.verification.' + decoded.verification
+            | transloco: { family: ('tools.jwt.families.' + decoded.family | transloco) }
+        }}
+      </p>
+      <dl class="facts">
+        <div class="fact">
+          <dt>{{ 'tools.jwt.algorithm' | transloco }}</dt>
+          <dd data-testid="jwt-algorithm">
+            {{ decoded.algorithm ?? '—' }} · {{ 'tools.jwt.families.' + decoded.family | transloco }}
+          </dd>
+        </div>
+        @for (claim of dates(); track claim.name) {
+          <div class="fact" data-testid="jwt-date" [attr.data-claim]="claim.name">
+            <dt>{{ 'tools.jwt.claims.' + claim.name | transloco }}</dt>
+            <dd>
+              {{ claim.iso }}
+              @if (claim.relative; as relative) {
+                <span class="relative">{{ relative.key | transloco: relative.params }}</span>
+              }
+            </dd>
+          </div>
+        }
+      </dl>
+
+      <div class="section-head">
+        <h3 class="section-title">{{ 'tools.jwt.header' | transloco }}</h3>
+        <app-copy-value [value]="decoded.header" [what]="'tools.jwt.header' | transloco" />
+      </div>
+      <pre class="json" data-testid="jwt-header">{{ decoded.header }}</pre>
+      <div class="section-head">
+        <h3 class="section-title">{{ 'tools.jwt.payload' | transloco }}</h3>
+        <app-copy-value [value]="decoded.payload" [what]="'tools.jwt.payload' | transloco" />
+      </div>
+      <pre class="json" data-testid="jwt-payload">{{ decoded.payload }}</pre>
+      <h3 class="section-title">{{ 'tools.jwt.signature' | transloco }}</h3>
+      <code class="signature" data-testid="jwt-signature">{{ decoded.signature }}</code>
+    } @else if (!malformed()) {
+      <p class="note">{{ 'tools.jwt.empty' | transloco }}</p>
+    }
+  </section>
+</div>

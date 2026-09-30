@@ -1856,6 +1856,68 @@
       "empty": "Tapez un numéro de carte, un IBAN ou tout numéro à clé de Luhn.",
       "cardNoteTitle": "Numéro se terminant par {{last}}",
       "ibanNoteTitle": "IBAN {{country}}"
+    },
+    "jwt": {
+      "name": "JWT",
+      "description": "Décodé, ses dates lues, sa signature HS* vérifiée",
+      "tokenLabel": "Jeton JWT",
+      "tokenPlaceholder": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9…",
+      "secret": "Secret",
+      "secretPlaceholder": "Pour vérifier une signature HS256, HS384 ou HS512",
+      "show": "Afficher le secret",
+      "hide": "Masquer le secret",
+      "secretBase64": "Secret encodé en base64",
+      "forgotten": "Le jeton et le secret ne restent pas en mémoire : ils disparaissent quand on quitte l’outil.",
+      "header": "En-tête",
+      "payload": "Charge utile",
+      "signature": "Signature",
+      "algorithm": "Algorithme",
+      "families": {
+        "hmac": "HMAC",
+        "rsa": "RSA",
+        "rsaPss": "RSA-PSS",
+        "ecdsa": "ECDSA",
+        "edDsa": "EdDSA",
+        "unsigned": "aucune signature",
+        "unknown": "inconnu"
+      },
+      "states": {
+        "valid": "Valide",
+        "expired": "Expiré",
+        "notYetValid": "Pas encore valide",
+        "undated": "Sans date d’expiration"
+      },
+      "dates": "Dates",
+      "claims": {
+        "exp": "Expiration · exp",
+        "nbf": "Pas avant · nbf",
+        "iat": "Émis · iat",
+        "auth_time": "Authentifié · auth_time"
+      },
+      "verification": {
+        "notAsked": "Tapez le secret pour vérifier la signature.",
+        "valid": "Signature valide.",
+        "invalid": "Signature invalide.",
+        "notVerifiedHere": "{{family}} : signature non vérifiée ici.",
+        "unsigned": "alg: none — ce jeton n’est pas signé : n’importe qui peut l’écrire.",
+        "unreadableSecret": "Ce secret n’est pas du base64."
+      },
+      "segments": {
+        "header": "En-tête",
+        "payload": "Charge utile",
+        "signature": "Signature"
+      },
+      "problems": {
+        "segmentCount": "Un JWT a trois segments séparés par des points ; celui-ci en a {{count}}.",
+        "jwe": "Cinq segments : un jeton chiffré (JWE), qu’on ne déchiffre pas ici.",
+        "notBase64": "{{segment}} : pas du base64url.",
+        "notBase64At": "{{segment}} : pas du base64url (caractère {{at}}).",
+        "notJson": "{{segment}} : pas du JSON.",
+        "notObject": "{{segment}} : du JSON, mais pas un objet."
+      },
+      "warning": "Un JWT peut ouvrir un compte : la note ne garde que l’en-tête et la charge utile décodés, jamais le jeton ni le secret.",
+      "empty": "Collez un JWT : son en-tête et sa charge utile s’affichent ici.",
+      "noteTitle": "JWT {{algorithm}} décodé"
     }
   }
 }

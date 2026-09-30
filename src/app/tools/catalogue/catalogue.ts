@@ -49,6 +49,12 @@ export const TOOLS: readonly ToolDefinition[] = [
     load: () => import('./uuid/uuid-tool.component').then((m) => m.UuidToolComponent),
   },
   {
+    id: 'jwt',
+    category: 'crypto',
+    keywords: ['jwt', 'json web token', 'bearer', 'hs256', 'claims', 'exp', 'token'],
+    load: () => import('./jwt/jwt-tool.component').then((m) => m.JwtToolComponent),
+  },
+  {
     id: 'url-codec',
     category: 'encode',
     keywords: ['url', 'percent', 'encodeURIComponent', 'escape'],

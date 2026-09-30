@@ -20,6 +20,8 @@ import {
   InstantAnswer,
   InstantRequest,
   JsonDiffAnswer,
+  JwtAnswer,
+  JwtRequest,
   JsonDiffRequest,
   LineBreaksAnswer,
   LineBreaksRequest,
@@ -93,6 +95,7 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
   cron: CronAnswer = { kind: 'reboot' };
   sizes: SizesAnswer = { kind: 'tooLarge' };
   checks: CheckAnswer = { kind: 'tooShort' };
+  jwt: JwtAnswer = { kind: 'malformed', problem: 'segmentCount', segment: null, segments: 1, at: null };
   permissions: PermissionsAnswer = { mode: { kind: 'empty' }, umask: { kind: 'empty' } };
   percentages: PercentagesAnswer = {
     of: { kind: 'empty' },
@@ -212,6 +215,10 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
 
   checkDigits(request: CheckRequest): Promise<CheckAnswer> {
     return this.answer('check_digits', request, this.checks);
+  }
+
+  decodeJwt(request: JwtRequest): Promise<JwtAnswer> {
+    return this.answer('decode_jwt', request, this.jwt);
   }
 
   requestsOf(command: string): unknown[] {
