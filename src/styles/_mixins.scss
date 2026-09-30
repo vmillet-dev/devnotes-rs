@@ -440,6 +440,11 @@
     --tool-hue: var(--teal);
     --tool-hue-rgb: var(--teal-rgb);
   }
+
+  &[data-category='calc'] {
+    --tool-hue: var(--pink);
+    --tool-hue-rgb: var(--pink-rgb);
+  }
 }
 
 // A section's title inside a tool or the tools' home: "ENTRÉE", "RÉCENTS".

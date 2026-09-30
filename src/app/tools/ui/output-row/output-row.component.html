@@ -7,6 +7,6 @@
   </div>
   <div class="line">
     <code class="value" data-testid="output-value">{{ value() }}</code>
-    <app-copy-value [value]="value()" [what]="name()" />
+    <app-copy-value [value]="copied() ?? value()" [what]="name()" />
   </div>
 </div>

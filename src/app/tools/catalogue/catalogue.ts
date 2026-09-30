@@ -109,4 +109,10 @@ export const TOOLS: readonly ToolDefinition[] = [
     keywords: ['cron', 'crontab', 'schedule', 'quartz', '@daily', 'job'],
     load: () => import('./cron/cron-tool.component').then((m) => m.CronToolComponent),
   },
+  {
+    id: 'sizes',
+    category: 'calc',
+    keywords: ['byte', 'octet', 'kb', 'mb', 'gb', 'kib', 'mib', 'gib', 'bit', 'mbit', 'size'],
+    load: () => import('./sizes/sizes-tool.component').then((m) => m.SizesToolComponent),
+  },
 ];

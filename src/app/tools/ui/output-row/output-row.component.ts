@@ -13,6 +13,8 @@ import { CopyValueComponent } from '../copy-value/copy-value.component';
 export class OutputRowComponent {
   readonly name = input.required<string>();
   readonly value = input.required<string>();
+  /** What Copier gives when it is not what is shown: the exact value behind a rounded one. */
+  readonly copied = input<string | null>(null);
   /** "256 bits": what the value is, beside its name. */
   readonly meta = input('');
   /** Outlined, when this is the one that answers what was asked: a signature it matches. */

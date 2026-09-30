@@ -685,6 +685,67 @@ describe('The tools', () => {
     });
   });
 
+  describe('the calculators', () => {
+    const digits = (text: string) => text.replace(/\D/g, '');
+    const sizeValue = (unit: string) => $(`[data-unit="${unit}"] ${testid('output-value')}`).getText();
+
+    it('counts a gigabyte as a billion bytes exactly, in Rust', async () => {
+      const answer = await bridge.convertSize({ text: '1 GB', unit: 'byte', decimals: 3 });
+
+      expect(answer.kind).toBe('converted');
+      if (answer.kind !== 'converted') return;
+      const exact = Object.fromEntries(answer.rows.map((row) => [row.unit, row.exact]));
+      expect(exact['byte']).toBe('1000000000');
+      expect(exact['gibibyte']).toBe('0.931322574615478515625');
+      expect(await bridge.convertSize({ text: '-5 MB', unit: 'byte', decimals: 3 })).toEqual({
+        kind: 'negative',
+        at: 1,
+      });
+    });
+
+    it('sits in a Calcul panel of its own', async () => {
+      await $(testid('tools-rail-all')).click();
+
+      expect(
+        await readEach(
+          `${testid('tools-panel')}[data-category="calc"] ${testid('tools-entry')}`,
+          '@data-tool',
+        ),
+      ).toEqual(['sizes']);
+    });
+
+    it('writes a quantity typed in French symbols in every unit, rounded as asked', async () => {
+      await openTool('sizes');
+      await setField(testid('sizes-input'), '1,5 Go');
+
+      await eventually(
+        async () => digits(await sizeValue('byte')),
+        (bytes) => bytes === '1500000000',
+        'the bytes',
+      );
+      expect(await $(testid('sizes-reading')).getAttribute('data-unit')).toBe('gigabyte');
+      expect(digits(await $(testid('sizes-gap')).getText())).toBe('10931');
+
+      await setField(testid('sizes-decimals'), '6');
+      await eventually(
+        async () => digits(await sizeValue('gibibyte')),
+        (gibibytes) => gibibytes === '1396984',
+        'six decimals',
+      );
+    });
+
+    it('says a negative size is refused, and where', async () => {
+      await setField(testid('sizes-input'), '-5 MB');
+
+      await eventually(
+        () => $(testid('sizes-problem')).getAttribute('data-problem'),
+        (problem) => problem === 'negative',
+        'the refusal',
+      );
+      await $(testid('tool-clear')).click();
+    });
+  });
+
   describe('comparing JSON', () => {
     const STAGING = JSON.stringify({
       service: 'billing',

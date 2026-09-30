@@ -32,6 +32,7 @@ const TEXT = [
   '--red',
   '--purple',
   '--teal',
+  '--pink',
 ];
 
 /**
@@ -86,7 +87,7 @@ function block(theme) {
 const MAX_TINT = 0.15;
 
 /** The hues a badge tints its background with, and the label it then draws on that tint. */
-const TINTED = ['--amber-fill', '--green', '--blue', '--red', '--purple', '--teal', '--text-1'];
+const TINTED = ['--amber-fill', '--green', '--blue', '--red', '--purple', '--teal', '--pink', '--text-1'];
 const BADGE_INK = '--text-1';
 
 function luminance(hex) {
