@@ -10,6 +10,8 @@ import type {
   DisplayNote,
   BoardQuery,
   BoardView,
+  CronAnswer,
+  CronRequest,
   Folder,
   FolderColour,
   FolderDraft,
@@ -75,6 +77,7 @@ export const bridge = {
   diffJson: (request: JsonDiffRequest) => invoke<JsonDiffAnswer>('diff_json', { request }),
   describeInstant: (request: InstantRequest) => invoke<InstantAnswer>('describe_instant', { request }),
   placeInZones: (request: ZonesRequest) => invoke<ZonesAnswer>('place_in_zones', { request }),
+  describeCron: (request: CronRequest) => invoke<CronAnswer>('describe_cron', { request }),
   searchTimeZones: (query: string) => invoke<ZoneEntry[]>('search_time_zones', { query }),
   encodeBase64File: (path: string, options: Base64Options) =>
     invoke<Base64FileAnswer>('encode_base64_file', { path, options }),

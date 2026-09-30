@@ -1,0 +1,168 @@
+<div class="columns">
+  <section class="column" aria-labelledby="cron-input-title">
+    <h2 id="cron-input-title" class="section-title">{{ 'tools.input' | transloco }}</h2>
+    <input
+      type="text"
+      class="field expression"
+      data-testid="cron-input"
+      spellcheck="false"
+      [attr.aria-label]="'tools.cron.inputLabel' | transloco"
+      [value]="expression()"
+      [placeholder]="'tools.cron.placeholder' | transloco"
+      (input)="onInput($event)"
+      (keyup)="onCaret($event)"
+      (click)="onCaret($event)"
+      (blur)="caret.set(null)"
+    />
+
+    @if (read(); as read) {
+      @if (read.expanded) {
+        <p class="note" data-testid="cron-expanded">
+          {{ 'tools.cron.expanded' | transloco: { expression: read.expanded } }}
+        </p>
+      }
+      <ol class="fields" [attr.aria-label]="'tools.cron.fieldsLabel' | transloco">
+        @for (field of read.fields; track field.field) {
+          <li
+            class="chip"
+            data-testid="cron-field"
+            [attr.data-field]="field.field"
+            [class.lit]="litField() === field.field"
+          >
+            <code class="chip-text">{{ field.text }}</code>
+            <span class="chip-name">{{ 'tools.cron.fields.' + field.field + '.name' | transloco }}</span>
+          </li>
+        }
+      </ol>
+      <p class="sentence" data-testid="cron-sentence">{{ sentence() }}</p>
+      @if (read.bothDays) {
+        <p class="note" data-testid="cron-either-day">{{ 'tools.cron.eitherDay' | transloco }}</p>
+      }
+    }
+    @if (reboot()) {
+      <p class="note" data-testid="cron-reboot">{{ 'tools.cron.reboot' | transloco }}</p>
+    }
+    @if (problem(); as problem) {
+      <p
+        class="problem"
+        role="status"
+        data-testid="cron-problem"
+        [attr.data-problem]="problem.problem"
+        [attr.data-field]="problem.field"
+      >
+        <span class="where">
+          @if (problem.field) {
+            {{ 'tools.cron.fields.' + problem.field + '.name' | transloco }} ·
+          }
+          {{ 'tools.cron.refusedAt' | transloco: { at: problem.at } }}
+        </span>
+        {{ problem.message }}
+      </p>
+    }
+    @if (unknownZone(); as zone) {
+      <p class="problem" role="status" data-testid="cron-unknown-zone">
+        {{ 'tools.cron.unknownZone' | transloco: { zone } }}
+      </p>
+    }
+
+    <h2 id="cron-zone-title" class="section-title zone-title">{{ 'tools.cron.zone' | transloco }}</h2>
+    <p class="zone-line">
+      <code data-testid="cron-zone">{{
+        read()?.zone ?? zone() ?? ('tools.cron.zoneLocal' | transloco)
+      }}</code>
+      @if (zone() === null) {
+        <span class="note">{{ 'tools.cron.zoneLocal' | transloco }}</span>
+      } @else {
+        <button type="button" class="button" data-testid="cron-zone-local" (click)="pickZone(null)">
+          {{ 'tools.cron.backToLocal' | transloco }}
+        </button>
+      }
+    </p>
+    <input
+      type="search"
+      class="search"
+      data-testid="cron-zone-search"
+      spellcheck="false"
+      aria-labelledby="cron-zone-title"
+      [value]="query()"
+      [placeholder]="'tools.cron.zoneSearch' | transloco"
+      (input)="onQuery($event)"
+    />
+    @if (query().trim() !== '' && found.value(); as found) {
+      <ul class="found">
+        @for (entry of found; track entry.zone) {
+          <li>
+            <button
+              type="button"
+              class="found-entry"
+              data-testid="cron-zone-found"
+              [attr.data-zone]="entry.zone"
+              (click)="pickZone(entry.zone)"
+            >
+              <span>{{ entry.zone }}</span>
+              <span class="found-offset">UTC{{ entry.offset }} {{ entry.abbreviation ?? '' }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+
+  <section class="column" aria-labelledby="cron-runs-title">
+    <h2 id="cron-runs-title" class="section-title">{{ 'tools.cron.runs' | transloco }}</h2>
+    @if (read()) {
+      <ol class="runs">
+        @for (run of runs(); track $index) {
+          <li class="run" data-testid="cron-run">
+            <span class="day">{{ run.day | transloco }}</span>
+            <span class="date" data-testid="cron-run-at">{{ run.date }} {{ run.time }}</span>
+            <span class="offset">UTC{{ run.offset }}</span>
+            <span class="relative">
+              @if (run.relative) {
+                {{ run.relative.key | transloco: run.relative.params }}
+              }
+            </span>
+          </li>
+        } @empty {
+          <li class="note" data-testid="cron-no-runs">{{ 'tools.cron.noRuns' | transloco }}</li>
+        }
+      </ol>
+    }
+
+    <h2 id="cron-check-title" class="section-title">{{ 'tools.cron.check' | transloco }}</h2>
+    <input
+      type="text"
+      class="search"
+      data-testid="cron-check"
+      spellcheck="false"
+      aria-labelledby="cron-check-title"
+      [value]="check()"
+      [placeholder]="'tools.cron.checkPlaceholder' | transloco"
+      (input)="onCheck($event)"
+    />
+    @if (read()?.check; as verdict) {
+      <p
+        class="verdict"
+        role="status"
+        data-testid="cron-verdict"
+        [attr.data-verdict]="verdict.kind === 'checked' ? verdict.matches : verdict.kind"
+        [class.yes]="verdict.kind === 'checked' && verdict.matches"
+      >
+        @switch (verdict.kind) {
+          @case ('checked') {
+            {{
+              (verdict.matches ? 'tools.cron.matches' : 'tools.cron.notMatches')
+                | transloco: { at: verdict.at }
+            }}
+          }
+          @case ('unreadable') {
+            {{ 'tools.cron.checkUnreadable' | transloco: { at: verdict.at } }}
+          }
+          @default {
+            {{ 'tools.cron.checkSkipped' | transloco }}
+          }
+        }
+      </p>
+    }
+  </section>
+</div>

@@ -1490,6 +1490,148 @@
       "unknown": "Fuseaux inconnus, laissés de côté : {{zones}}.",
       "empty": "Tapez une date et une heure, ou prenez l’heure présente : chaque fuseau l’affiche ici.",
       "noteTitle": "{{time}} dans chaque fuseau"
+    },
+    "cron": {
+      "name": "Cron",
+      "description": "Lu à voix haute, et ses prochaines exécutions",
+      "inputLabel": "Expression cron",
+      "placeholder": "*/15 9-18 * * MON-FRI",
+      "expanded": "Soit {{expression}}",
+      "fieldsLabel": "Champs de l’expression",
+      "fields": {
+        "second": {
+          "name": "Seconde",
+          "range": "0–59"
+        },
+        "minute": {
+          "name": "Minute",
+          "range": "0–59"
+        },
+        "hour": {
+          "name": "Heure",
+          "range": "0–23"
+        },
+        "dayOfMonth": {
+          "name": "Jour du mois",
+          "range": "1–31, L, W"
+        },
+        "month": {
+          "name": "Mois",
+          "range": "1–12, JAN–DEC"
+        },
+        "dayOfWeek": {
+          "name": "Jour de la semaine",
+          "range": "0–7, SUN–SAT, L, #"
+        }
+      },
+      "reboot": "@reboot s’exécute au démarrage de la machine : il n’y a pas d’heure à donner.",
+      "eitherDay": "Le jour du mois et le jour de la semaine sont tous deux fixés : l’un ou l’autre suffit, comme dans cron.",
+      "refusedAt": "Caractère {{at}}",
+      "problems": {
+        "empty": "Un élément de la liste est vide.",
+        "fieldCount": "Il faut cinq champs, ou six avec les secondes en tête.",
+        "unknownMacro": "« {{token}} » n’est pas une macro connue : @yearly, @monthly, @weekly, @daily, @hourly, @reboot.",
+        "unknownName": "« {{token}} » n’est pas un nom que ce champ connaît.",
+        "notANumber": "« {{token}} » n’est pas un nombre.",
+        "outOfRange": "« {{token}} » sort des valeurs de ce champ : {{range}}.",
+        "reversedRange": "« {{token}} » : l’intervalle est à l’envers.",
+        "zeroStep": "Un pas de 0 n’avance jamais.",
+        "notHere": "« {{token}} » n’a pas de sens dans ce champ.",
+        "refused": "Le planificateur refuse cette expression."
+      },
+      "zone": "Fuseau",
+      "zoneLocal": "ce poste",
+      "backToLocal": "Revenir à ce poste",
+      "zoneSearch": "Changer de fuseau : Tokyo, UTC…",
+      "unknownZone": "Fuseau inconnu : {{zone}}.",
+      "runs": "Prochaines exécutions",
+      "noRuns": "Cette expression ne tombe jamais : aucune date ne la remplit.",
+      "check": "Cette date correspond-elle ?",
+      "checkPlaceholder": "2026-09-30 09:15",
+      "matches": "Oui : {{at}} correspond.",
+      "notMatches": "Non : {{at}} ne correspond pas.",
+      "checkUnreadable": "Illisible à partir du caractère {{at}}.",
+      "checkSkipped": "Cette heure n’existe pas dans ce fuseau.",
+      "noteTitle": "Cron {{expression}}",
+      "noteRuns": "Prochaines exécutions ({{zone}}) :",
+      "say": {
+        "at": "à {{list}}",
+        "hourValue": "{{hour}} h",
+        "dayValue": "{day, plural, =1 {1er} other {#}}",
+        "second": {
+          "every": "toutes les secondes",
+          "step": "{step, plural, one {chaque seconde} other {toutes les # secondes}}",
+          "steppedRange": "toutes les {{step}} secondes, de la seconde {{from}} à la seconde {{to}}",
+          "values": "{count, plural, one {à la seconde {{list}}} other {aux secondes {{list}}}}",
+          "range": "de la seconde {{from}} à la seconde {{to}}"
+        },
+        "minute": {
+          "every": "toutes les minutes",
+          "step": "{step, plural, one {chaque minute} other {toutes les # minutes}}",
+          "steppedRange": "toutes les {{step}} minutes, de la minute {{from}} à la minute {{to}}",
+          "values": "{count, plural, one {à la minute {{list}}} other {aux minutes {{list}}}}",
+          "range": "de la minute {{from}} à la minute {{to}}"
+        },
+        "hour": {
+          "every": "toutes les heures",
+          "step": "{step, plural, one {toutes les heures} other {toutes les # heures}}",
+          "steppedRange": "toutes les {{step}} heures, de {{from}} à {{to}}",
+          "values": "à {{list}}",
+          "range": "de {{from}} à {{to}}"
+        },
+        "dayOfMonth": {
+          "step": "{step, plural, one {tous les jours} other {tous les # jours}}",
+          "steppedRange": "tous les {{step}} jours, du {{from}} au {{to}} du mois",
+          "values": "{count, plural, one {le {{list}} du mois} other {les {{list}} du mois}}",
+          "range": "du {{from}} au {{to}} du mois",
+          "last": "le dernier jour du mois",
+          "nearest": "le jour ouvré le plus proche du {{day}}"
+        },
+        "month": {
+          "step": "{step, plural, one {tous les mois} other {tous les # mois}}",
+          "steppedRange": "tous les {{step}} mois, de {{from}} à {{to}}",
+          "values": "en {{list}}",
+          "range": "de {{from}} à {{to}}"
+        },
+        "dayOfWeek": {
+          "step": "{step, plural, one {tous les jours} other {un jour sur #}}",
+          "steppedRange": "un jour sur {{step}}, du {{from}} au {{to}}",
+          "values": "{count, plural, one {le {{list}}} other {les {{list}}}}",
+          "range": "du {{from}} au {{to}}",
+          "last": "le dernier {{day}} du mois",
+          "nth": "le {{nth}} {{day}} du mois"
+        }
+      },
+      "days": {
+        "0": "dimanche",
+        "1": "lundi",
+        "2": "mardi",
+        "3": "mercredi",
+        "4": "jeudi",
+        "5": "vendredi",
+        "6": "samedi"
+      },
+      "months": {
+        "1": "janvier",
+        "2": "février",
+        "3": "mars",
+        "4": "avril",
+        "5": "mai",
+        "6": "juin",
+        "7": "juillet",
+        "8": "août",
+        "9": "septembre",
+        "10": "octobre",
+        "11": "novembre",
+        "12": "décembre"
+      },
+      "nths": {
+        "1": "premier",
+        "2": "deuxième",
+        "3": "troisième",
+        "4": "quatrième",
+        "5": "cinquième"
+      }
     }
   }
 }

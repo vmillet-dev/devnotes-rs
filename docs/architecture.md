@@ -714,6 +714,14 @@ the clocks skipped says between which offsets, one they went through twice gives
 and places the one chosen. The machine's zone and the one typed in are always listed, whatever
 the list holds. An abbreviation the database writes as an offset (`+0545`) is no name.
 
+**A cron expression is read twice** (`tools/cron.rs`): by hand, field by field, so that a
+refusal names its field and its token and the page can light the field under the caret; then by
+`croner`, which counts the next runs in a zone and checks a date. Rust answers what each field
+holds (`Piece`), never a sentence: `cron-sentence.ts` builds it from translation keys — times
+written as times when the minute and the hour are plain values, one clause per field otherwise.
+When both day fields are set, either one matching is enough, as in cron, and the tool says so.
+`@midnight` is expanded here, since `croner` does not know it.
+
 **Adding a tool**, the whole of it:
 
 1. `src-tauri/src/tools/<module>.rs`: the function, its request and answer types, its tests.

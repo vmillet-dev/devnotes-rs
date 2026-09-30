@@ -1490,6 +1490,148 @@
       "unknown": "Unknown zones, left aside: {{zones}}.",
       "empty": "Type a date and a time, or take the present time: every zone shows it here.",
       "noteTitle": "{{time}} in every zone"
+    },
+    "cron": {
+      "name": "Cron",
+      "description": "Read aloud, and its next runs",
+      "inputLabel": "Cron expression",
+      "placeholder": "*/15 9-18 * * MON-FRI",
+      "expanded": "That is {{expression}}",
+      "fieldsLabel": "Fields of the expression",
+      "fields": {
+        "second": {
+          "name": "Second",
+          "range": "0–59"
+        },
+        "minute": {
+          "name": "Minute",
+          "range": "0–59"
+        },
+        "hour": {
+          "name": "Hour",
+          "range": "0–23"
+        },
+        "dayOfMonth": {
+          "name": "Day of month",
+          "range": "1–31, L, W"
+        },
+        "month": {
+          "name": "Month",
+          "range": "1–12, JAN–DEC"
+        },
+        "dayOfWeek": {
+          "name": "Day of week",
+          "range": "0–7, SUN–SAT, L, #"
+        }
+      },
+      "reboot": "@reboot runs when the machine starts: there is no time to give.",
+      "eitherDay": "Both the day of the month and the day of the week are set: either one is enough, as in cron.",
+      "refusedAt": "Character {{at}}",
+      "problems": {
+        "empty": "An item of the list is empty.",
+        "fieldCount": "Five fields are needed, or six with the seconds first.",
+        "unknownMacro": "“{{token}}” is no known macro: @yearly, @monthly, @weekly, @daily, @hourly, @reboot.",
+        "unknownName": "“{{token}}” is not a name this field knows.",
+        "notANumber": "“{{token}}” is not a number.",
+        "outOfRange": "“{{token}}” is outside this field's values: {{range}}.",
+        "reversedRange": "“{{token}}”: the range is backwards.",
+        "zeroStep": "A step of 0 never moves on.",
+        "notHere": "“{{token}}” means nothing in this field.",
+        "refused": "The scheduler refuses this expression."
+      },
+      "zone": "Zone",
+      "zoneLocal": "this machine",
+      "backToLocal": "Back to this machine",
+      "zoneSearch": "Change zone: Tokyo, UTC…",
+      "unknownZone": "Unknown zone: {{zone}}.",
+      "runs": "Next runs",
+      "noRuns": "This expression never comes: no date fills it.",
+      "check": "Does this date match?",
+      "checkPlaceholder": "2026-09-30 09:15",
+      "matches": "Yes: {{at}} matches.",
+      "notMatches": "No: {{at}} does not match.",
+      "checkUnreadable": "Unreadable from character {{at}} on.",
+      "checkSkipped": "This time does not exist in this zone.",
+      "noteTitle": "Cron {{expression}}",
+      "noteRuns": "Next runs ({{zone}}):",
+      "say": {
+        "at": "at {{list}}",
+        "hourValue": "{{hour}}:00",
+        "dayValue": "{{day}}",
+        "second": {
+          "every": "every second",
+          "step": "{step, plural, one {every second} other {every # seconds}}",
+          "steppedRange": "every {{step}} seconds, from second {{from}} to {{to}}",
+          "values": "{count, plural, one {at second {{list}}} other {at seconds {{list}}}}",
+          "range": "from second {{from}} to {{to}}"
+        },
+        "minute": {
+          "every": "every minute",
+          "step": "{step, plural, one {every minute} other {every # minutes}}",
+          "steppedRange": "every {{step}} minutes, from minute {{from}} to {{to}}",
+          "values": "{count, plural, one {at minute {{list}}} other {at minutes {{list}}}}",
+          "range": "from minute {{from}} to {{to}}"
+        },
+        "hour": {
+          "every": "every hour",
+          "step": "{step, plural, one {every hour} other {every # hours}}",
+          "steppedRange": "every {{step}} hours, from {{from}} to {{to}}",
+          "values": "at {{list}}",
+          "range": "from {{from}} to {{to}}"
+        },
+        "dayOfMonth": {
+          "step": "{step, plural, one {every day} other {every # days}}",
+          "steppedRange": "every {{step}} days, from day {{from}} to {{to}} of the month",
+          "values": "{count, plural, one {on day {{list}} of the month} other {on days {{list}} of the month}}",
+          "range": "from day {{from}} to {{to}} of the month",
+          "last": "on the last day of the month",
+          "nearest": "on the weekday nearest day {{day}}"
+        },
+        "month": {
+          "step": "{step, plural, one {every month} other {every # months}}",
+          "steppedRange": "every {{step}} months, from {{from}} to {{to}}",
+          "values": "in {{list}}",
+          "range": "from {{from}} to {{to}}"
+        },
+        "dayOfWeek": {
+          "step": "{step, plural, one {every day} other {every # days of the week}}",
+          "steppedRange": "every {{step}} days, from {{from}} to {{to}}",
+          "values": "on {{list}}",
+          "range": "from {{from}} to {{to}}",
+          "last": "on the last {{day}} of the month",
+          "nth": "on the {{nth}} {{day}} of the month"
+        }
+      },
+      "days": {
+        "0": "Sunday",
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday"
+      },
+      "months": {
+        "1": "January",
+        "2": "February",
+        "3": "March",
+        "4": "April",
+        "5": "May",
+        "6": "June",
+        "7": "July",
+        "8": "August",
+        "9": "September",
+        "10": "October",
+        "11": "November",
+        "12": "December"
+      },
+      "nths": {
+        "1": "first",
+        "2": "second",
+        "3": "third",
+        "4": "fourth",
+        "5": "fifth"
+      }
     }
   }
 }
