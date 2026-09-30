@@ -669,6 +669,11 @@ an `AppError` rather than a weaker fallback. Generated passwords are the answer 
 but the tool's `ToolResult.warning` makes the dialog say why they had better not be, and its
 button read "Enregistrer quand même".
 
+**A text is counted as a reader counts it and as a program does** (`tools/stats.rs`,
+`unicode-segmentation`): characters as grapheme clusters (an accent written apart, a flag, a skin
+tone are one), code points, UTF-16 units (JavaScript's `length`), UTF-8 bytes, words by UAX #29.
+The frequencies are of those same characters, the invisible ones named rather than drawn blank.
+
 **Identifiers are drawn the same way** (`tools/identifiers.rs`): UUID v4 and v7, ULID, NanoID,
 CUID2, `ObjectId` and KSUID, each a few lines held to its published vectors rather than a crate
 each. A ULID batch drawn within one millisecond counts up, as its spec asks, so it sorts as drawn.

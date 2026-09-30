@@ -1938,6 +1938,53 @@
       "outOfRange": "The shape of a {{kind}}, but past what one can hold.",
       "unrecognised": "No known identifier has this shape.",
       "noteTitle": "Generated {{kind}}s"
+    },
+    "text-stats": {
+      "name": "Text statistics",
+      "description": "Characters, words, lines, bytes, frequencies",
+      "inputLabel": "Text to count",
+      "placeholder": "Paste or type a text: every count updates.",
+      "counts": "Counts",
+      "rows": {
+        "characters": "Characters",
+        "nonWhitespace": "Characters without spaces",
+        "words": "Words",
+        "lines": "Lines",
+        "nonEmptyLines": "Non-empty lines",
+        "paragraphs": "Paragraphs",
+        "codePoints": "Code points",
+        "utf16Units": "UTF-16 units",
+        "utf8Bytes": "UTF-8 bytes"
+      },
+      "hints": {
+        "characters": "as they are seen",
+        "utf16Units": "JavaScript's length"
+      },
+      "frequency": "Character frequency",
+      "foldCase": "Upper and lower case together",
+      "countWhitespace": "Count whitespace",
+      "character": "Character",
+      "codePoint": "Code point",
+      "count": "Count",
+      "share": "Share",
+      "distinct": "{count, plural, one {# distinct character} other {# distinct characters}}",
+      "truncated": "The {{shown}} most frequent are listed.",
+      "invisible": {
+        "space": "space",
+        "tab": "tab",
+        "lineBreak": "line break",
+        "noBreakSpace": "no-break space",
+        "narrowNoBreakSpace": "narrow no-break space",
+        "otherSpace": "other space",
+        "zeroWidthSpace": "zero-width space",
+        "zeroWidthJoiner": "zero-width joiner",
+        "zeroWidthNonJoiner": "zero-width non-joiner",
+        "byteOrderMark": "byte order mark (BOM)",
+        "softHyphen": "soft hyphen",
+        "control": "control character"
+      },
+      "empty": "The counts show here.",
+      "noteTitle": "Statistics of a text"
     }
   }
 }

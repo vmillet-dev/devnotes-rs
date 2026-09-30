@@ -1,0 +1,148 @@
+@use 'mixins' as *;
+
+.columns {
+  @include tool-columns;
+}
+
+.column {
+  @include tool-column;
+  gap: 10px;
+}
+
+.section-head {
+  @include tool-section-head;
+}
+
+.section-title {
+  @include tool-section-title;
+}
+
+.field {
+  display: flex;
+}
+
+.text {
+  @include tool-text-area;
+  resize: vertical;
+}
+
+.note {
+  @include tool-note;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+}
+
+.counts {
+  @include surface(var(--bg-1), 10px);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  margin: 0;
+  overflow: hidden;
+}
+
+.count {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line-soft);
+
+  dt {
+    font-size: 11.5px;
+    color: var(--text-2);
+  }
+
+  dd {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 0;
+  }
+}
+
+.hint {
+  display: block;
+  font-size: 10.5px;
+}
+
+.figure {
+  font-family: var(--font-mono), monospace;
+  font-size: 18px;
+  color: var(--text-0);
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.check {
+  @include tool-check;
+}
+
+.frequencies {
+  @include surface(var(--bg-1), 10px, var(--line));
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12px;
+
+  th,
+  td {
+    padding: 5px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  thead th {
+    font-weight: 500;
+    color: var(--text-2);
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .number {
+    text-align: right;
+    font-family: var(--font-mono), monospace;
+  }
+}
+
+.character code {
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+  color: var(--text-0);
+}
+
+.invisible {
+  @include tint-badge(--teal-rgb);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.code-point {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+.share {
+  position: relative;
+  min-width: 90px;
+}
+
+.bar {
+  position: absolute;
+  inset: 4px auto 4px 0;
+  border-radius: 3px;
+  background: rgba(var(--blue-rgb), 0.18);
+}
+
+.percent {
+  position: relative;
+  color: var(--text-1);
+}

@@ -1938,6 +1938,53 @@
       "outOfRange": "La forme d’un {{kind}}, mais au-delà de ce qu’il peut valoir.",
       "unrecognised": "Aucun identifiant connu n’a cette forme.",
       "noteTitle": "{{kind}} générés"
+    },
+    "text-stats": {
+      "name": "Statistiques du texte",
+      "description": "Caractères, mots, lignes, octets, fréquences",
+      "inputLabel": "Texte à compter",
+      "placeholder": "Collez ou tapez un texte : chaque compte se met à jour.",
+      "counts": "Comptes",
+      "rows": {
+        "characters": "Caractères",
+        "nonWhitespace": "Caractères hors espaces",
+        "words": "Mots",
+        "lines": "Lignes",
+        "nonEmptyLines": "Lignes non vides",
+        "paragraphs": "Paragraphes",
+        "codePoints": "Points de code",
+        "utf16Units": "Unités UTF-16",
+        "utf8Bytes": "Octets UTF-8"
+      },
+      "hints": {
+        "characters": "comme on les voit",
+        "utf16Units": "le length de JavaScript"
+      },
+      "frequency": "Fréquence des caractères",
+      "foldCase": "Majuscules et minuscules ensemble",
+      "countWhitespace": "Compter les espaces",
+      "character": "Caractère",
+      "codePoint": "Point de code",
+      "count": "Nombre",
+      "share": "Part",
+      "distinct": "{count, plural, one {# caractère distinct} other {# caractères distincts}}",
+      "truncated": "Les {{shown}} plus fréquents sont listés.",
+      "invisible": {
+        "space": "espace",
+        "tab": "tabulation",
+        "lineBreak": "saut de ligne",
+        "noBreakSpace": "espace insécable",
+        "narrowNoBreakSpace": "espace fine insécable",
+        "otherSpace": "autre espace",
+        "zeroWidthSpace": "espace sans chasse",
+        "zeroWidthJoiner": "liant sans chasse",
+        "zeroWidthNonJoiner": "antiliant sans chasse",
+        "byteOrderMark": "indicateur d’ordre des octets (BOM)",
+        "softHyphen": "trait d’union conditionnel",
+        "control": "caractère de contrôle"
+      },
+      "empty": "Les comptes s’affichent ici.",
+      "noteTitle": "Statistiques d’un texte"
     }
   }
 }

@@ -40,6 +40,8 @@ import {
   SizesAnswer,
   SizesRequest,
   SlugRequest,
+  StatsRequest,
+  TextStats,
   UrlAnswer,
   UrlCodecAnswer,
   UrlCodecRequest,
@@ -171,6 +173,10 @@ export class ToolsRepository {
   /** The token and the secret are zeroed in Rust once the answer is made. */
   async decodeJwt(request: JwtRequest): Promise<JwtAnswer> {
     return unwrap('decode_jwt', await commands.decodeJwt(request));
+  }
+
+  async textStats(request: StatsRequest): Promise<TextStats> {
+    return unwrap('text_stats', await commands.textStats(request));
   }
 
   /** The wall clock of a zone now, as the field takes it. */

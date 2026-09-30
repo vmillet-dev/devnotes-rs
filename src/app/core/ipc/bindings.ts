@@ -39,6 +39,7 @@ export const commands = {
 	generatePasswords: (request: PasswordRequest) => typedError<PasswordAnswer, AppError>(__TAURI_INVOKE("generate_passwords", { request })),
 	generateIdentifiers: (request: IdentifiersRequest) => typedError<string[], AppError>(__TAURI_INVOKE("generate_identifiers", { request })),
 	inspectIdentifier: (text: string) => typedError<IdInspection, AppError>(__TAURI_INVOKE("inspect_identifier", { text })),
+	textStats: (request: StatsRequest) => typedError<TextStats, AppError>(__TAURI_INVOKE("text_stats", { request })),
 	describeColour: (request: ColourRequest) => typedError<ColourAnswer, AppError>(__TAURI_INVOKE("describe_colour", { request })),
 	convertData: (request: ConvertRequest) => typedError<ConvertAnswer, AppError>(__TAURI_INVOKE("convert_data", { request })),
 	generateJson: (request: GenerateRequest) => typedError<GenerateAnswer, AppError>(__TAURI_INVOKE("generate_json", { request })),
@@ -731,6 +732,16 @@ export type FolderDraft = {
 	name: string,
 };
 
+export type Frequency = {
+	character: string,
+	/**  `U+0065 U+0301`: every code point of a character written with several. */
+	codePoints: string,
+	invisible: Invisible | null,
+	count: number,
+	/**  Of the characters counted, in percent. */
+	share: number | null,
+};
+
 export type GenerateAnswer = { kind: "generated"; text: string; seed: number; unsupported: Unsupported[] } | { kind: "unreadable"; line: number; column: number } | 
 /**  A schema is an object, or `true`. */
 { kind: "notASchema" };
@@ -860,6 +871,9 @@ export type InstantRequest = {
 	/**  A number read in this unit rather than by its magnitude. */
 	magnitude: Magnitude | null,
 };
+
+/**  What a reader cannot see, or would take for something else. */
+export type Invisible = "space" | "tab" | "lineBreak" | "noBreakSpace" | "narrowNoBreakSpace" | "otherSpace" | "zeroWidthSpace" | "zeroWidthJoiner" | "zeroWidthNonJoiner" | "byteOrderMark" | "softHyphen" | "control";
 
 export type JsonChange = {
 	kind: JsonChangeKind,
@@ -1581,6 +1595,13 @@ export type Span = {
 
 export type SpanKind = "plain" | "strong" | "code";
 
+export type StatsRequest = {
+	text: string,
+	/**  `A` and `a` counted as one. */
+	foldCase: boolean,
+	countWhitespace: boolean,
+};
+
 export type Strength = "veryWeak" | "weak" | "fair" | "strong" | "veryStrong";
 
 export type TagUsage = {
@@ -1593,6 +1614,23 @@ export type TextCase = "camel" | "pascal" | "snake" | "kebab" | "constant" | "ti
 export type TextSizes = {
 	normal: boolean,
 	large: boolean,
+};
+
+export type TextStats = {
+	/**  As a reader counts them: `é` written as `e` and an accent is one, and so is a flag. */
+	characters: number,
+	codePoints: number,
+	/**  What JavaScript's `length` counts, and many a field limit. */
+	utf16Units: number,
+	utf8Bytes: number,
+	nonWhitespace: number,
+	words: number,
+	lines: number,
+	nonEmptyLines: number,
+	paragraphs: number,
+	distinct: number,
+	frequencies: Frequency[],
+	frequenciesTruncated: boolean,
 };
 
 export type TokenState = "valid" | "expired" | "notYetValid" | 
