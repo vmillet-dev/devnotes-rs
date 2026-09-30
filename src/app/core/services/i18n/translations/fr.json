@@ -1071,8 +1071,8 @@
       }
     },
     "line-breaks": {
-      "name": "Sauts de ligne",
-      "description": "CRLF ↔ LF, espaces en fin de ligne",
+      "name": "Lignes et espaces",
+      "description": "CRLF ↔ LF, lignes vides, espaces en trop",
       "paste": "Coller",
       "inputLabel": "Texte collé",
       "placeholder": "Collez un texte ici (Ctrl+V) : ses fins de ligne s’affichent.",
@@ -1090,9 +1090,9 @@
         "add": "Ajouter",
         "remove": "Retirer"
       },
-      "trim": "Retirer les espaces en fin de ligne",
+      "trim": "Espaces en bord",
       "converted": "{count, plural, =0 {aucune fin de ligne convertie} one {# fin de ligne convertie} other {# fins de ligne converties}}",
-      "trimmed": "{count, plural, =0 {aucune ligne nettoyée} one {# ligne nettoyée} other {# lignes nettoyées}}",
+      "trimmed": "{count, plural, =0 {aucune ligne rognée} one {# ligne rognée} other {# lignes rognées}}",
       "finalChanges": {
         "unchanged": "saut final inchangé",
         "added": "saut final ajouté",
@@ -1100,7 +1100,21 @@
       },
       "moreLines": "{count, plural, one {… et # ligne de plus} other {… et # lignes de plus}}",
       "empty": "Le texte corrigé s’affiche ici.",
-      "noteTitle": "Texte aux fins de ligne corrigées"
+      "noteTitle": "Texte aux lignes et espaces corrigés",
+      "trims": {
+        "keep": "Garder",
+        "end": "Fin",
+        "both": "Début et fin"
+      },
+      "emptyLine": "Lignes vides",
+      "emptyLines": {
+        "keep": "Garder",
+        "collapse": "Une au plus",
+        "remove": "Retirer"
+      },
+      "normalize": "Normaliser les espaces",
+      "removed": "{count, plural, =0 {aucune ligne vide retirée} one {# ligne vide retirée} other {# lignes vides retirées}}",
+      "normalized": "{count, plural, =0 {aucun espace normalisé} one {# espace normalisé} other {# espaces normalisés}}"
     },
     "saved": "Note « {{title}} » enregistrée dans {{place}}.",
     "saveAsNote": {

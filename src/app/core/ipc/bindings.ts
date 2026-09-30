@@ -650,6 +650,11 @@ export type DisplayNote = {
 	outline: OutlineLine[],
 } & Note;
 
+/**  A line holding only whitespace counts as empty. */
+export type EmptyLines = "keep" | 
+/**  One at most between two paragraphs. */
+"collapse" | "remove";
+
 export type EndingCounts = {
 	lf: number,
 	crlf: number,
@@ -1072,8 +1077,12 @@ export type LineBreaksAnswer = {
 	text: string,
 	/**  Endings rewritten to another kind. */
 	converted: number,
-	/**  Lines that lost spaces or tabs at their end. */
+	/**  Lines that lost whitespace at an end. */
 	trimmed: number,
+	/**  Empty lines taken out. */
+	removedLines: number,
+	/**  Whitespace characters replaced, merged into one, or removed as invisible. */
+	normalized: number,
 	finalNewline: FinalNewlineChange,
 };
 
@@ -1081,7 +1090,10 @@ export type LineBreaksRequest = {
 	text: string,
 	/**  `None` keeps each line's own ending. */
 	ending: LineEnding | null,
-	trimTrailing: boolean,
+	trim: Trim,
+	emptyLines: EmptyLines,
+	/**  Runs of spaces inside a line become one, the spaces that pass for one become one. */
+	normalize: boolean,
 	finalNewline: FinalNewline,
 };
 
@@ -1651,6 +1663,8 @@ export type TrayLabels = {
 	palette: string,
 	quit: string,
 };
+
+export type Trim = "keep" | "end" | "both";
 
 export type UmaskReading = { kind: "empty" } | { kind: "read"; file: Mode; directory: Mode } | { kind: "refused"; problem: ModeProblem; at: number };
 

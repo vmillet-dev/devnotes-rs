@@ -39,7 +39,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   {
     id: 'line-breaks',
     category: 'text',
-    keywords: ['crlf', 'lf', 'eol', 'newline', 'whitespace'],
+    keywords: ['crlf', 'lf', 'eol', 'newline', 'whitespace', 'trim', 'blank', 'nbsp', 'vide', 'espace'],
     load: () => import('./line-breaks/line-breaks-tool.component').then((m) => m.LineBreaksToolComponent),
   },
   {

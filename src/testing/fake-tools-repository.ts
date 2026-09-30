@@ -59,6 +59,8 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
     text: '',
     converted: 0,
     trimmed: 0,
+    removedLines: 0,
+    normalized: 0,
     finalNewline: 'unchanged',
   };
   url: UrlAnswer = { kind: 'invalid', problem: 'empty' };

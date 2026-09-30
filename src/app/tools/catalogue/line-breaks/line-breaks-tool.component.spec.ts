@@ -10,6 +10,8 @@ describe('LineBreaksToolComponent', () => {
       text: 'a\nb\n',
       converted: 1,
       trimmed: 1,
+      removedLines: 2,
+      normalized: 3,
       finalNewline: 'unchanged',
     };
   };
@@ -33,7 +35,14 @@ describe('LineBreaksToolComponent', () => {
     await paste(harness, 'a  \r\nb\n');
 
     expect(harness.tools.requestsOf('fix_line_breaks')).toEqual([
-      { text: 'a  \r\nb\n', ending: null, trimTrailing: true, finalNewline: 'keep' },
+      {
+        text: 'a  \r\nb\n',
+        ending: null,
+        trim: 'end',
+        emptyLines: 'keep',
+        normalize: false,
+        finalNewline: 'keep',
+      },
     ]);
   });
 
@@ -56,6 +65,35 @@ describe('LineBreaksToolComponent', () => {
     expect(harness.element('[data-testid="line-breaks-changes"]').textContent).toContain(
       '1 fin de ligne convertie',
     );
+  });
+
+  it('asks for both ends trimmed, empty lines removed and spaces normalised, and counts each', async () => {
+    const harness = await renderTool(LineBreaksToolComponent, answer);
+    await paste(harness, 'a\r\n\r\n b\n');
+
+    harness
+      .element<HTMLButtonElement>('[data-testid="segmented-line-breaks-trim"] [data-segment-id="both"]')
+      .click();
+    harness
+      .element<HTMLButtonElement>(
+        '[data-testid="segmented-line-breaks-empty-lines"] [data-segment-id="remove"]',
+      )
+      .click();
+    const normalize = harness.element<HTMLInputElement>('[data-testid="line-breaks-normalize"]');
+    normalize.checked = true;
+    normalize.dispatchEvent(new Event('change'));
+    await vi.waitFor(() =>
+      expect(harness.tools.requestsOf('fix_line_breaks').at(-1)).toMatchObject({
+        trim: 'both',
+        emptyLines: 'remove',
+        normalize: true,
+      }),
+    );
+    await harness.settle();
+
+    const changes = harness.element('[data-testid="line-breaks-changes"]').textContent;
+    expect(changes).toContain('2 lignes vides retirées');
+    expect(changes).toContain('3 espaces normalisés');
   });
 
   it('asks again for the ending chosen', async () => {

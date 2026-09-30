@@ -51,9 +51,30 @@
         [currentId]="final()"
         (chosen)="onFinal($event)"
       />
+      <span class="option-label">{{ 'tools.line-breaks.trim' | transloco }}</span>
+      <app-segmented-choice
+        kind="line-breaks-trim"
+        [label]="'tools.line-breaks.trim' | transloco"
+        [segments]="trims"
+        [currentId]="trim()"
+        (chosen)="onTrim($event)"
+      />
+      <span class="option-label">{{ 'tools.line-breaks.emptyLine' | transloco }}</span>
+      <app-segmented-choice
+        kind="line-breaks-empty-lines"
+        [label]="'tools.line-breaks.emptyLine' | transloco"
+        [segments]="emptyLineChoices"
+        [currentId]="emptyLines()"
+        (chosen)="onEmptyLines($event)"
+      />
       <label class="check">
-        <input type="checkbox" data-testid="line-breaks-trim" [checked]="trim()" (change)="onTrim($event)" />
-        {{ 'tools.line-breaks.trim' | transloco }}
+        <input
+          type="checkbox"
+          data-testid="line-breaks-normalize"
+          [checked]="normalize()"
+          (change)="onNormalize($event)"
+        />
+        {{ 'tools.line-breaks.normalize' | transloco }}
       </label>
     </div>
   </section>
@@ -72,6 +93,8 @@
       <p class="changes" data-testid="line-breaks-changes">
         {{ 'tools.line-breaks.converted' | transloco: { count: answer.converted } }} ·
         {{ 'tools.line-breaks.trimmed' | transloco: { count: answer.trimmed } }} ·
+        {{ 'tools.line-breaks.removed' | transloco: { count: answer.removedLines } }} ·
+        {{ 'tools.line-breaks.normalized' | transloco: { count: answer.normalized } }} ·
         {{ 'tools.line-breaks.finalChanges.' + answer.finalNewline | transloco }}
       </p>
     } @else {

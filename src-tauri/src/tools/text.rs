@@ -221,13 +221,34 @@ pub enum FinalNewline {
     Remove,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum Trim {
+    Keep,
+    End,
+    Both,
+}
+
+/// A line holding only whitespace counts as empty.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum EmptyLines {
+    Keep,
+    /// One at most between two paragraphs.
+    Collapse,
+    Remove,
+}
+
 #[derive(Debug, Clone, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct LineBreaksRequest {
     pub text: String,
     /// `None` keeps each line's own ending.
     pub ending: Option<LineEnding>,
-    pub trim_trailing: bool,
+    pub trim: Trim,
+    pub empty_lines: EmptyLines,
+    /// Runs of spaces inside a line become one, the spaces that pass for one become one.
+    pub normalize: bool,
     pub final_newline: FinalNewline,
 }
 
@@ -268,8 +289,12 @@ pub struct LineBreaksAnswer {
     pub text: String,
     /// Endings rewritten to another kind.
     pub converted: u32,
-    /// Lines that lost spaces or tabs at their end.
+    /// Lines that lost whitespace at an end.
     pub trimmed: u32,
+    /// Empty lines taken out.
+    pub removed_lines: u32,
+    /// Whitespace characters replaced, merged into one, or removed as invisible.
+    pub normalized: u32,
     pub final_newline: FinalNewlineChange,
 }
 
@@ -300,29 +325,105 @@ fn lines(text: &str) -> Vec<(&str, Option<LineEnding>)> {
     lines
 }
 
-/// Which endings the text has, converted to one if asked, trailing spaces stripped if asked, and
-/// the final newline added or removed — each change counted.
+/// Spaces that pass for one: no-break, narrow, the typographic widths, ideographic.
+fn passes_for_a_space(character: char) -> bool {
+    matches!(
+        character,
+        '\u{a0}' | '\u{202f}' | '\u{2000}'..='\u{200a}' | '\u{205f}' | '\u{3000}'
+    )
+}
+
+/// Invisible, and nothing to keep: a zero-width space, a word joiner, a byte order mark. The
+/// zero-width joiners are left alone — an emoji sequence is made of them.
+fn invisible(character: char) -> bool {
+    matches!(character, '\u{200b}' | '\u{2060}' | '\u{feff}')
+}
+
+/// A line's whitespace made plain: the indentation kept, every other run one space.
+fn normalized(line: &str) -> (String, usize) {
+    let mut out = String::with_capacity(line.len());
+    let mut changed = 0;
+    let mut begun = false;
+    let mut in_run = false;
+    for character in line.chars() {
+        if invisible(character) {
+            changed += 1;
+            continue;
+        }
+        let space = character == ' ' || character == '\t' || passes_for_a_space(character);
+        if !space {
+            begun = true;
+            in_run = false;
+            out.push(character);
+        } else if !begun {
+            if passes_for_a_space(character) {
+                changed += 1;
+                out.push(' ');
+            } else {
+                out.push(character);
+            }
+        } else if in_run {
+            changed += 1;
+        } else {
+            in_run = true;
+            if character != ' ' {
+                changed += 1;
+            }
+            out.push(' ');
+        }
+    }
+    (out, changed)
+}
+
+fn trimmed(line: &str, trim: Trim) -> &str {
+    match trim {
+        Trim::Keep => line,
+        Trim::End => line.trim_end(),
+        Trim::Both => line.trim(),
+    }
+}
+
+/// Which endings the text has, converted to one if asked, its lines trimmed, emptied or
+/// normalised if asked, and the final newline added or removed — each change counted.
 pub fn fix_line_breaks(request: &LineBreaksRequest) -> LineBreaksAnswer {
     let lines = lines(&request.text);
+    let last = lines.len() - 1;
     let mut found = EndingCounts::default();
-    let (mut converted, mut trimmed) = (0usize, 0usize);
+    let (mut converted, mut trimmed_lines, mut removed, mut normalized_count) = (0, 0, 0, 0);
     let mut rewritten: Vec<(String, Option<LineEnding>)> = Vec::with_capacity(lines.len());
-
-    for (content, ending) in lines {
+    let mut previous_blank = false;
+    for (index, (content, ending)) in lines.into_iter().enumerate() {
         match ending {
             Some(LineEnding::Lf) => found.lf += 1,
             Some(LineEnding::Crlf) => found.crlf += 1,
             Some(LineEnding::Cr) => found.cr += 1,
             None => {}
         }
-        let kept = if request.trim_trailing {
-            content.trim_end_matches([' ', '\t'])
+        let (plain, changed) = if request.normalize {
+            normalized(content)
         } else {
-            content
+            (content.to_owned(), 0)
         };
-        if kept.len() != content.len() {
-            trimmed += 1;
+        normalized_count += changed;
+        let kept = trimmed(&plain, request.trim);
+        if kept.len() != plain.len() {
+            trimmed_lines += 1;
         }
+
+        // The last piece has no ending: it is where the text stops, not a line to take out.
+        let blank = index != last && kept.trim().is_empty();
+        let dropped = blank
+            && match request.empty_lines {
+                EmptyLines::Keep => false,
+                EmptyLines::Collapse => previous_blank,
+                EmptyLines::Remove => true,
+            };
+        previous_blank = blank;
+        if dropped {
+            removed += 1;
+            continue;
+        }
+
         let ending = ending.map(|own| match request.ending {
             Some(wanted) if wanted != own => {
                 converted += 1;
@@ -344,7 +445,9 @@ pub fn fix_line_breaks(request: &LineBreaksRequest) -> LineBreaksAnswer {
         found,
         text,
         converted: saturating_u32(converted),
-        trimmed: saturating_u32(trimmed),
+        trimmed: saturating_u32(trimmed_lines),
+        removed_lines: saturating_u32(removed),
+        normalized: saturating_u32(normalized_count),
         final_newline,
     }
 }
@@ -571,9 +674,102 @@ fooBar
         fix_line_breaks(&LineBreaksRequest {
             text: text.to_owned(),
             ending,
-            trim_trailing: trim,
+            trim: if trim { Trim::End } else { Trim::Keep },
+            empty_lines: EmptyLines::Keep,
+            normalize: false,
             final_newline: last,
         })
+    }
+
+    fn tidy(text: &str, trim: Trim, empty_lines: EmptyLines, normalize: bool) -> LineBreaksAnswer {
+        fix_line_breaks(&LineBreaksRequest {
+            text: text.to_owned(),
+            ending: None,
+            trim,
+            empty_lines,
+            normalize,
+            final_newline: FinalNewline::Keep,
+        })
+    }
+
+    #[test]
+    fn empty_lines_are_kept_collapsed_or_removed() {
+        let text = "a\n\n  \n\t\nb\n\nc\n";
+
+        assert_eq!(tidy(text, Trim::Keep, EmptyLines::Keep, false).text, text);
+        let collapsed = tidy(text, Trim::Keep, EmptyLines::Collapse, false);
+        assert_eq!(collapsed.text, "a\n\nb\n\nc\n");
+        assert_eq!(collapsed.removed_lines, 2);
+        let removed = tidy(text, Trim::Keep, EmptyLines::Remove, false);
+        assert_eq!(removed.text, "a\nb\nc\n");
+        assert_eq!(removed.removed_lines, 4);
+    }
+
+    #[test]
+    fn a_text_of_blank_lines_empties_and_keeps_its_end() {
+        assert_eq!(
+            tidy(" \n\n\t\n", Trim::Keep, EmptyLines::Remove, false).text,
+            ""
+        );
+        assert_eq!(
+            tidy("\n\n", Trim::Both, EmptyLines::Collapse, false).text,
+            "\n"
+        );
+    }
+
+    #[test]
+    fn both_ends_trimmed_or_the_end_alone() {
+        let text = "  a  \n\tb\t";
+
+        assert_eq!(
+            tidy(text, Trim::End, EmptyLines::Keep, false).text,
+            "  a\n\tb"
+        );
+        let both = tidy(text, Trim::Both, EmptyLines::Keep, false);
+        assert_eq!(both.text, "a\nb");
+        assert_eq!(both.trimmed, 2);
+    }
+
+    #[test]
+    fn whitespace_is_normalised_inside_a_line_and_the_indentation_kept() {
+        let answer = tidy(
+            "  a  b\t\tc\u{a0}d\u{202f}e\u{200b}f\u{3000}g\u{2009}h",
+            Trim::Keep,
+            EmptyLines::Keep,
+            true,
+        );
+
+        assert_eq!(answer.text, "  a b c d ef g h");
+        assert_eq!(answer.normalized, 8);
+        assert_eq!(
+            tidy("\u{a0}\u{a0}x", Trim::Keep, EmptyLines::Keep, true).text,
+            "  x"
+        );
+        assert_eq!(
+            tidy("👨\u{200d}👩\u{200d}👧", Trim::Keep, EmptyLines::Keep, true).text,
+            "👨\u{200d}👩\u{200d}👧",
+            "a joiner holds an emoji together"
+        );
+        assert_eq!(
+            tidy("\u{feff}x", Trim::Keep, EmptyLines::Keep, true).text,
+            "x"
+        );
+    }
+
+    #[test]
+    fn every_option_at_once_keeps_crlf() {
+        let answer = fix_line_breaks(&LineBreaksRequest {
+            text: "a\u{a0}\u{a0}b  \r\n\r\n\r\n  c\r\n".into(),
+            ending: None,
+            trim: Trim::Both,
+            empty_lines: EmptyLines::Collapse,
+            normalize: true,
+            final_newline: FinalNewline::Keep,
+        });
+
+        assert_eq!(answer.text, "a b\r\n\r\nc\r\n");
+        assert_eq!(answer.found.crlf, 4);
+        assert_eq!((answer.removed_lines, answer.trimmed), (1, 2));
     }
 
     #[test]

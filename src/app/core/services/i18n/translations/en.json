@@ -1071,8 +1071,8 @@
       }
     },
     "line-breaks": {
-      "name": "Line breaks",
-      "description": "CRLF ↔ LF, trailing spaces",
+      "name": "Lines and spaces",
+      "description": "CRLF ↔ LF, empty lines, extra spaces",
       "paste": "Paste",
       "inputLabel": "Pasted text",
       "placeholder": "Paste a text here (Ctrl+V): its line endings show.",
@@ -1090,7 +1090,7 @@
         "add": "Add",
         "remove": "Remove"
       },
-      "trim": "Remove trailing spaces",
+      "trim": "Spaces at the edges",
       "converted": "{count, plural, =0 {no line ending converted} one {# line ending converted} other {# line endings converted}}",
       "trimmed": "{count, plural, =0 {no line trimmed} one {# line trimmed} other {# lines trimmed}}",
       "finalChanges": {
@@ -1100,7 +1100,21 @@
       },
       "moreLines": "{count, plural, one {… and # more line} other {… and # more lines}}",
       "empty": "The fixed text shows here.",
-      "noteTitle": "Text with fixed line endings"
+      "noteTitle": "Text with its lines and spaces fixed",
+      "trims": {
+        "keep": "Keep",
+        "end": "End",
+        "both": "Both ends"
+      },
+      "emptyLine": "Empty lines",
+      "emptyLines": {
+        "keep": "Keep",
+        "collapse": "One at most",
+        "remove": "Remove"
+      },
+      "normalize": "Normalise spaces",
+      "removed": "{count, plural, =0 {no empty line removed} one {# empty line removed} other {# empty lines removed}}",
+      "normalized": "{count, plural, =0 {no space normalised} one {# space normalised} other {# spaces normalised}}"
     },
     "saved": "Note “{{title}}” saved in {{place}}.",
     "saveAsNote": {

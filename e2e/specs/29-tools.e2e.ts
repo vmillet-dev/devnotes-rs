@@ -189,7 +189,9 @@ describe('The tools', () => {
       const answer = await bridge.fixLineBreaks({
         text: 'a  \r\nb\nc',
         ending: 'crlf',
-        trimTrailing: true,
+        trim: 'end',
+        emptyLines: 'keep',
+        normalize: false,
         finalNewline: 'add',
       });
 
@@ -198,8 +200,20 @@ describe('The tools', () => {
         text: 'a\r\nb\r\nc\r\n',
         converted: 1,
         trimmed: 1,
+        removedLines: 0,
+        normalized: 0,
         finalNewline: 'added',
       });
+      expect(
+        await bridge.fixLineBreaks({
+          text: 'a\u00a0\u00a0b\r\n\r\n\r\n  c\r\n',
+          ending: null,
+          trim: 'both',
+          emptyLines: 'collapse',
+          normalize: true,
+          finalNewline: 'keep',
+        }),
+      ).toMatchObject({ text: 'a b\r\n\r\nc\r\n', removedLines: 1, normalized: 2 });
     });
 
     it('shows the endings of a pasted text, and gives them back as one kind', async () => {
@@ -216,6 +230,22 @@ describe('The tools', () => {
         'the output to hold LF alone',
       );
       expect(await $(testid('line-breaks-changes')).getText()).toContain('1');
+    });
+
+    it('takes empty lines out and makes the spaces plain', async () => {
+      await pasteInto(testid('line-breaks-input'), 'a\u00a0 b\n\n\n c\n');
+      await $(`${testid('segmented-line-breaks-empty-lines')} [data-segment-id="remove"]`).click();
+      await $(`${testid('segmented-line-breaks-trim')} [data-segment-id="both"]`).click();
+      await $(testid('line-breaks-normalize')).click();
+
+      await eventually(
+        () => $$(`${testid('line-breaks-output')} [data-ending]`).length,
+        (endings) => endings === 2,
+        'two lines left',
+      );
+      await $(testid('line-breaks-normalize')).click();
+      await $(`${testid('segmented-line-breaks-empty-lines')} [data-segment-id="keep"]`).click();
+      await $(`${testid('segmented-line-breaks-trim')} [data-segment-id="end"]`).click();
     });
 
     it('counts characters as a reader sees them, in Rust', async () => {

@@ -779,7 +779,9 @@ the `tool-*` mixins.
 
 ⚠️ **The line breaks tool has no `<textarea>`**: a textarea's value turns every CRLF and CR
 into LF, the very thing it is asked about. A paste is read raw from its `clipboardData`, Coller
-reads the native clipboard, and the text is drawn with its endings.
+reads the native clipboard, and the text is drawn with its endings. Its whitespace pass keeps a
+line's indentation and makes every other run one plain space; it removes the zero-width space
+and the byte order mark but leaves the zero-width joiner, which holds emoji sequences together.
 
 ### State
 

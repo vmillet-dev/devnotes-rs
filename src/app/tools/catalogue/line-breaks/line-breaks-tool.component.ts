@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ToolsRepository } from '@core/data/tools.repository';
-import { FinalNewline, LineEnding } from '@core/model/tool-answers.model';
+import { EmptyLines, FinalNewline, LineEnding, Trim } from '@core/model/tool-answers.model';
 import { ClipboardService } from '@core/services/clipboard/clipboard.service';
 import { liveResult } from '@core/services/tools/live-result';
 import { Tool, ToolResult } from '@core/services/tools/tool.model';
@@ -25,6 +25,16 @@ const FINALS: readonly Segment[] = (['keep', 'add', 'remove'] as const).map((id)
   labelKey: `tools.line-breaks.finals.${id}`,
 }));
 
+const TRIMS: readonly Segment[] = (['keep', 'end', 'both'] as const).map((id) => ({
+  id,
+  labelKey: `tools.line-breaks.trims.${id}`,
+}));
+
+const EMPTY_LINES: readonly Segment[] = (['keep', 'collapse', 'remove'] as const).map((id) => ({
+  id,
+  labelKey: `tools.line-breaks.emptyLines.${id}`,
+}));
+
 /**
  * ⚠️ No `<textarea>` for the input: its value turns every CRLF and CR into LF, which is the
  * very thing this tool is asked about. A paste is read raw, and the text drawn with its endings.
@@ -42,11 +52,15 @@ export class LineBreaksToolComponent implements Tool {
 
   protected readonly text = toolState('line-breaks.text', '');
   protected readonly ending = toolState<EndingChoice>('line-breaks.ending', 'keep');
-  protected readonly trim = toolState('line-breaks.trim', true);
+  protected readonly trim = toolState<Trim>('line-breaks.trim', 'end');
+  protected readonly emptyLines = toolState<EmptyLines>('line-breaks.emptyLines', 'keep');
+  protected readonly normalize = toolState('line-breaks.normalize', false);
   protected readonly final = toolState<FinalNewline>('line-breaks.final', 'keep');
 
   protected readonly endings = ENDINGS;
   protected readonly finals = FINALS;
+  protected readonly trims = TRIMS;
+  protected readonly emptyLineChoices = EMPTY_LINES;
 
   protected readonly answer = liveResult(
     () => {
@@ -56,7 +70,9 @@ export class LineBreaksToolComponent implements Tool {
         : {
             text: this.text(),
             ending: ending === 'keep' ? null : ending,
-            trimTrailing: this.trim(),
+            trim: this.trim(),
+            emptyLines: this.emptyLines(),
+            normalize: this.normalize(),
             finalNewline: this.final(),
           };
     },
@@ -108,7 +124,15 @@ export class LineBreaksToolComponent implements Tool {
     this.final.set(id as FinalNewline);
   }
 
-  protected onTrim(event: Event): void {
-    this.trim.set((event.target as HTMLInputElement).checked);
+  protected onTrim(id: string): void {
+    this.trim.set(id as Trim);
+  }
+
+  protected onEmptyLines(id: string): void {
+    this.emptyLines.set(id as EmptyLines);
+  }
+
+  protected onNormalize(event: Event): void {
+    this.normalize.set((event.target as HTMLInputElement).checked);
   }
 }
