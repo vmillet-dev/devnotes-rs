@@ -26,6 +26,8 @@ import type {
   JsonDiffRequest,
   JsonQuery,
   JsonView,
+  JwtAnswer,
+  JwtRequest,
   LineBreaksAnswer,
   LineBreaksRequest,
   NoteDraft,
@@ -92,6 +94,7 @@ export const bridge = {
   describePermissions: (request: PermissionsRequest) =>
     invoke<PermissionsAnswer>('describe_permissions', { request }),
   checkDigits: (request: CheckRequest) => invoke<CheckAnswer>('check_digits', { request }),
+  decodeJwt: (request: JwtRequest) => invoke<JwtAnswer>('decode_jwt', { request }),
   searchTimeZones: (query: string) => invoke<ZoneEntry[]>('search_time_zones', { query }),
   encodeBase64File: (path: string, options: Base64Options) =>
     invoke<Base64FileAnswer>('encode_base64_file', { path, options }),

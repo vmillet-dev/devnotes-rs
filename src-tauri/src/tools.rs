@@ -12,6 +12,7 @@ pub mod encoding;
 pub(crate) mod files;
 pub mod generate;
 pub mod hash;
+pub mod jwt;
 pub(crate) mod numbers;
 pub mod percentages;
 pub mod permissions;
@@ -243,4 +244,11 @@ pub async fn describe_permissions(
 #[specta::specta]
 pub async fn check_digits(request: checks::CheckRequest) -> Result<checks::CheckAnswer, AppError> {
     off_thread(move || checks::check(&request)).await
+}
+
+/// The token and the secret are zeroed once the answer is made.
+#[tauri::command]
+#[specta::specta]
+pub async fn decode_jwt(request: jwt::JwtRequest) -> Result<jwt::JwtAnswer, AppError> {
+    off_thread(move || jwt::decode(request, chrono::Utc::now())).await
 }

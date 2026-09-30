@@ -745,6 +745,13 @@ its prefix and length as a hint, and an IBAN's mod 97 with its country's BBAN fo
 a table summed from its registry, held to it by a test. ⚠️ A card number is a secret: a plain
 `signal`, and a note keeps it masked but for its last four digits.
 
+**A JWT is taken apart in Rust** (`tools/jwt.rs`), without a JWT crate — `jsonwebtoken` brings
+`ring`: its header and payload decoded, `exp`, `nbf`, `iat` and `auth_time` read against now,
+and its signature verified for HS256, HS384 and HS512 alone, in constant time
+(`Mac::verify_slice`); the other families are named and left unverified, `alg: none` is flagged.
+⚠️ The token and the secret are plain `signal`s, zeroed in Rust once the answer is made; a note
+keeps the decoded header and payload as one JSON document, after a warning, never the token.
+
 **Adding a tool**, the whole of it:
 
 1. `src-tauri/src/tools/<module>.rs`: the function, its request and answer types, its tests.

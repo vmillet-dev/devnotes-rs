@@ -420,6 +420,49 @@ describe('The tools', () => {
     });
   });
 
+  describe('JWT', () => {
+    const JWT_IO =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+    const verification = () => $(testid('jwt-verification')).getAttribute('data-verification');
+
+    it('verifies jwt.io’s example with its secret, in Rust', async () => {
+      expect(
+        await bridge.decodeJwt({ token: JWT_IO, secret: 'your-256-bit-secret', secretIsBase64: false }),
+      ).toMatchObject({ kind: 'decoded', algorithm: 'HS256', verification: 'valid', state: 'undated' });
+    });
+
+    it('decodes a token and verifies its signature with a masked secret', async () => {
+      await openTool('jwt');
+      await setField(testid('jwt-token'), JWT_IO);
+      await eventually(verification, (state) => state === 'notAsked', 'nothing verified yet');
+      expect(await $(testid('jwt-payload')).getText()).toContain('John Doe');
+
+      await setField(testid('jwt-secret'), 'your-256-bit-secret');
+      expect(await $(testid('jwt-secret')).getAttribute('type')).toBe('password');
+      await eventually(verification, (state) => state === 'valid', 'a valid signature');
+
+      await setField(testid('jwt-secret'), 'another secret');
+      await eventually(verification, (state) => state === 'invalid', 'an invalid signature');
+    });
+
+    it('warns before a token is kept as a note', async () => {
+      await $(testid('tool-save-as-note')).click();
+
+      await $(testid('save-as-note-warning')).waitForDisplayed({ timeout: 5_000 });
+      await $(testid('save-as-note-cancel')).click();
+      await $(testid('save-as-note')).waitForExist({ reverse: true, timeout: 5_000 });
+    });
+
+    it('forgets the token and the secret once the tool is left', async () => {
+      await $(testid('tools-rail-all')).click();
+      await entry('jwt').click();
+
+      await $(testid('jwt-token')).waitForDisplayed({ timeout: 5_000 });
+      expect(await $(testid('jwt-token')).getValue()).toBe('');
+      expect(await $(testid('jwt-secret')).getValue()).toBe('');
+    });
+  });
+
   describe('the generators', () => {
     const output = () => $(testid('json-generator-output')).getText();
 

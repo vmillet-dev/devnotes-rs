@@ -1856,6 +1856,68 @@
       "empty": "Type a card number, an IBAN, or any number with a Luhn check digit.",
       "cardNoteTitle": "Number ending in {{last}}",
       "ibanNoteTitle": "IBAN {{country}}"
+    },
+    "jwt": {
+      "name": "JWT",
+      "description": "Decoded, its dates read, its HS* signature verified",
+      "tokenLabel": "JWT token",
+      "tokenPlaceholder": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9…",
+      "secret": "Secret",
+      "secretPlaceholder": "To verify an HS256, HS384 or HS512 signature",
+      "show": "Show the secret",
+      "hide": "Hide the secret",
+      "secretBase64": "Base64-encoded secret",
+      "forgotten": "The token and the secret are not kept: they are gone once the tool is left.",
+      "header": "Header",
+      "payload": "Payload",
+      "signature": "Signature",
+      "algorithm": "Algorithm",
+      "families": {
+        "hmac": "HMAC",
+        "rsa": "RSA",
+        "rsaPss": "RSA-PSS",
+        "ecdsa": "ECDSA",
+        "edDsa": "EdDSA",
+        "unsigned": "no signature",
+        "unknown": "unknown"
+      },
+      "states": {
+        "valid": "Valid",
+        "expired": "Expired",
+        "notYetValid": "Not yet valid",
+        "undated": "No expiry date"
+      },
+      "dates": "Dates",
+      "claims": {
+        "exp": "Expires · exp",
+        "nbf": "Not before · nbf",
+        "iat": "Issued · iat",
+        "auth_time": "Authenticated · auth_time"
+      },
+      "verification": {
+        "notAsked": "Type the secret to verify the signature.",
+        "valid": "Valid signature.",
+        "invalid": "Invalid signature.",
+        "notVerifiedHere": "{{family}}: signature not verified here.",
+        "unsigned": "alg: none — this token is not signed: anyone can write it.",
+        "unreadableSecret": "This secret is not base64."
+      },
+      "segments": {
+        "header": "Header",
+        "payload": "Payload",
+        "signature": "Signature"
+      },
+      "problems": {
+        "segmentCount": "A JWT has three segments separated by dots; this one has {{count}}.",
+        "jwe": "Five segments: an encrypted token (JWE), not decrypted here.",
+        "notBase64": "{{segment}}: not base64url.",
+        "notBase64At": "{{segment}}: not base64url (character {{at}}).",
+        "notJson": "{{segment}}: not JSON.",
+        "notObject": "{{segment}}: JSON, but not an object."
+      },
+      "warning": "A JWT can open an account: the note keeps only the decoded header and payload, never the token or the secret.",
+      "empty": "Paste a JWT: its header and its payload show here.",
+      "noteTitle": "Decoded {{algorithm}} JWT"
     }
   }
 }
