@@ -86,13 +86,14 @@ hmac = "0.13"
 toml = "1.1"
 quick-xml = "0.41"
 yaml-rust2 = "0.13.0"
+chrono-tz = "0.10.4"
+iana-time-zone = "0.1.65"
 
 [dev-dependencies]
 # The mock runtime `tests/commands` calls the commands through.
 tauri = { version = "2", features = ["test"] }
 tempfile = "3"
 criterion = { version = "0.8", default-features = false, features = ["cargo_bench_support"] }
-chrono-tz = "0.10.4"
 
 [[bench]]
 name = "commands"

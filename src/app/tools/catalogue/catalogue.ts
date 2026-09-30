@@ -97,4 +97,10 @@ export const TOOLS: readonly ToolDefinition[] = [
     keywords: ['timestamp', 'unix', 'epoch', 'iso 8601', 'rfc 3339', 'rfc 2822', 'date', 'now'],
     load: () => import('./dates/dates-tool.component').then((m) => m.DatesToolComponent),
   },
+  {
+    id: 'zones',
+    category: 'time',
+    keywords: ['timezone', 'time zone', 'tz', 'iana', 'utc', 'gmt', 'dst', 'offset'],
+    load: () => import('./zones/zones-tool.component').then((m) => m.ZonesToolComponent),
+  },
 ];

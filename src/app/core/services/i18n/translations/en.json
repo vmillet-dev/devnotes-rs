@@ -1461,6 +1461,35 @@
         "7": "Sunday"
       },
       "noteTitle": "Instant {{instant}}"
+    },
+    "zones": {
+      "name": "Time zones",
+      "description": "One time, in every zone chosen",
+      "inputLabel": "Date and time",
+      "placeholder": "2026-09-29 14:30",
+      "now": "Now",
+      "typedIn": "Typed in {{zone}} time.",
+      "zones": "Zones",
+      "add": "Add a zone",
+      "addPlaceholder": "City, zone or abbreviation: Tokyo, CEST…",
+      "noMatch": "No zone answers “{{query}}”.",
+      "here": "Type here",
+      "hereLabel": "Type the time in the {{zone}} zone",
+      "remove": "Remove {{zone}}",
+      "local": "this machine",
+      "source": "typed",
+      "summer": "summer time",
+      "dayAhead": "+{{count}} d",
+      "dayBehind": "−{{count}} d",
+      "readings": "Which of the two",
+      "ambiguous": "This time happens twice in {{zone}}, as the clocks go back: which one?",
+      "skipped": "This time does not exist in {{zone}}: the clocks go from UTC{{before}} to UTC{{after}} there.",
+      "unreadable": "Unreadable from character {{at}} on.",
+      "outOfRange": "Beyond the dates a zone can place.",
+      "unknownZone": "Unknown zone: {{zone}}.",
+      "unknown": "Unknown zones, left aside: {{zones}}.",
+      "empty": "Type a date and a time, or take the present time: every zone shows it here.",
+      "noteTitle": "{{time}} in every zone"
     }
   }
 }

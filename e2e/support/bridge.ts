@@ -35,6 +35,9 @@ import type {
   SpaceDraft,
   TagUsage,
   TrashedNote,
+  ZoneEntry,
+  ZonesAnswer,
+  ZonesRequest,
 } from '@core/ipc/bindings';
 
 /**
@@ -71,6 +74,8 @@ export const bridge = {
   fixLineBreaks: (request: LineBreaksRequest) => invoke<LineBreaksAnswer>('fix_line_breaks', { request }),
   diffJson: (request: JsonDiffRequest) => invoke<JsonDiffAnswer>('diff_json', { request }),
   describeInstant: (request: InstantRequest) => invoke<InstantAnswer>('describe_instant', { request }),
+  placeInZones: (request: ZonesRequest) => invoke<ZonesAnswer>('place_in_zones', { request }),
+  searchTimeZones: (query: string) => invoke<ZoneEntry[]>('search_time_zones', { query }),
   encodeBase64File: (path: string, options: Base64Options) =>
     invoke<Base64FileAnswer>('encode_base64_file', { path, options }),
   listSpaces: () => invoke<Space[]>('list_spaces'),

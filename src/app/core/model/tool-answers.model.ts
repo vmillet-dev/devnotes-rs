@@ -72,6 +72,11 @@ import type {
   UuidVariant,
   UuidVersion,
   ValueSummary,
+  ZoneEntry,
+  ZoneReading,
+  ZoneTime,
+  ZonesAnswer,
+  ZonesRequest,
 } from '@core/ipc/bindings';
 
 /** What the tools ask Rust and what it answers, as it crosses: no date, nothing to convert. */
@@ -149,4 +154,9 @@ export type {
   UuidVariant,
   UuidVersion,
   ValueSummary,
+  ZoneEntry,
+  ZoneReading,
+  ZoneTime,
+  ZonesAnswer,
+  ZonesRequest,
 };

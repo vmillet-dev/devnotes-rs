@@ -1461,6 +1461,35 @@
         "7": "dimanche"
       },
       "noteTitle": "Instant {{instant}}"
+    },
+    "zones": {
+      "name": "Fuseaux horaires",
+      "description": "Une heure, dans chaque fuseau choisi",
+      "inputLabel": "Date et heure",
+      "placeholder": "2026-09-29 14:30",
+      "now": "Maintenant",
+      "typedIn": "Saisie à l’heure de {{zone}}.",
+      "zones": "Fuseaux",
+      "add": "Ajouter un fuseau",
+      "addPlaceholder": "Ville, fuseau ou abréviation : Tokyo, CEST…",
+      "noMatch": "Aucun fuseau ne répond à « {{query}} ».",
+      "here": "Saisir ici",
+      "hereLabel": "Saisir l’heure dans le fuseau {{zone}}",
+      "remove": "Retirer {{zone}}",
+      "local": "ce poste",
+      "source": "saisie",
+      "summer": "heure d’été",
+      "dayAhead": "+{{count}} j",
+      "dayBehind": "−{{count}} j",
+      "readings": "Laquelle des deux",
+      "ambiguous": "Cette heure a lieu deux fois à {{zone}}, au retour à l’heure d’hiver : laquelle ?",
+      "skipped": "Cette heure n’existe pas à {{zone}} : les horloges y passent de UTC{{before}} à UTC{{after}}.",
+      "unreadable": "Illisible à partir du caractère {{at}}.",
+      "outOfRange": "Au-delà des dates qu’un fuseau sait placer.",
+      "unknownZone": "Fuseau inconnu : {{zone}}.",
+      "unknown": "Fuseaux inconnus, laissés de côté : {{zones}}.",
+      "empty": "Tapez une date et une heure, ou prenez l’heure présente : chaque fuseau l’affiche ici.",
+      "noteTitle": "{{time}} dans chaque fuseau"
     }
   }
 }

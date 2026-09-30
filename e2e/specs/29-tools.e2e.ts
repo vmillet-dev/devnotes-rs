@@ -489,7 +489,7 @@ describe('The tools', () => {
           `${testid('tools-panel')}[data-category="time"] ${testid('tools-entry')}`,
           '@data-tool',
         ),
-      ).toEqual(['dates']);
+      ).toEqual(['dates', 'zones']);
     });
 
     it('reads a timestamp by its size, and in the unit forced', async () => {
@@ -538,6 +538,72 @@ describe('The tools', () => {
       );
       const shown = Date.parse(await $(testid('dates-input')).getValue());
       expect(Math.abs(Date.now() - shown)).toBeLessThan(60_000);
+      await $(testid('tool-clear')).click();
+    });
+
+    const zoneRow = (zone: string) => `${testid('zones-row')}[data-zone="${zone}"]`;
+    const zoneTime = (zone: string) => $(`${zoneRow(zone)} ${testid('zones-time')}`).getText();
+
+    it('gives both readings of the hour Paris goes through twice, from Rust', async () => {
+      const answer = await bridge.placeInZones({
+        text: '2026-10-25 02:30',
+        from: 'Europe/Paris',
+        zones: ['Asia/Kolkata'],
+        later: false,
+      });
+
+      expect(answer).toMatchObject({
+        kind: 'placed',
+        ambiguous: [{ isoUtc: '2026-10-25T00:30:00Z' }, { isoUtc: '2026-10-25T01:30:00Z' }],
+      });
+      expect((await bridge.searchTimeZones('kathmandu')).map((entry) => entry.zone)).toEqual([
+        'Asia/Kathmandu',
+      ]);
+    });
+
+    it('places an instant in every zone of the list, a quarter-hour zone added', async () => {
+      await openTool('zones');
+      await setField(testid('zones-search'), 'kathmandu');
+      await $(`${testid('zones-found-entry')}[data-zone="Asia/Kathmandu"]`).click();
+      await setField(testid('zones-input'), '2026-09-29T12:00:00Z');
+
+      await eventually(
+        () => zoneTime('Asia/Kathmandu'),
+        (time) => time === '17:45:00',
+        'Kathmandu',
+      );
+      expect(await zoneTime('UTC')).toBe('12:00:00');
+      expect(await zoneTime('Asia/Tokyo')).toBe('21:00:00');
+      expect(await zoneTime('America/New_York')).toBe('08:00:00');
+    });
+
+    it('reads a time typed in another zone of the list, and names the day it is elsewhere', async () => {
+      await $(`${zoneRow('Asia/Tokyo')} ${testid('zones-type-in')}`).click();
+      await setField(testid('zones-input'), '2026-09-30 03:30');
+
+      await eventually(
+        () => $(testid('zones-from')).getAttribute('data-zone'),
+        (zone) => zone === 'Asia/Tokyo',
+        'typed in Tokyo',
+      );
+      await eventually(
+        () => zoneTime('UTC'),
+        (time) => time === '18:30:00',
+        'the evening before in UTC',
+      );
+      expect(await $(`${zoneRow('UTC')} ${testid('zones-shift')}`).isDisplayed()).toBe(true);
+    });
+
+    it('says an hour New York skips does not exist', async () => {
+      await $(`${zoneRow('America/New_York')} ${testid('zones-type-in')}`).click();
+      await setField(testid('zones-input'), '2026-03-08 02:30');
+
+      await eventually(
+        () => $(testid('zones-problem')).getAttribute('data-problem'),
+        (problem) => problem === 'skipped',
+        'the skipped hour',
+      );
+      expect(await $(testid('zones-problem')).getText()).toContain('UTC-05:00');
       await $(testid('tool-clear')).click();
     });
   });

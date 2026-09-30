@@ -1,0 +1,200 @@
+@use 'mixins' as *;
+
+.columns {
+  @include tool-columns;
+}
+
+.column {
+  @include tool-column;
+  gap: 10px;
+}
+
+.section-title {
+  @include tool-section-title;
+}
+
+.entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field {
+  @include tool-field;
+  flex: 1;
+  min-width: 0;
+}
+
+.search {
+  @include tool-field;
+}
+
+.add-title {
+  margin-top: 10px;
+}
+
+.button {
+  @include tool-button;
+  height: 34px;
+}
+
+.note {
+  @include tool-note;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+}
+
+.ambiguous {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.check {
+  @include tool-check;
+  font-family: var(--font-mono), monospace;
+}
+
+.problem {
+  @include tool-problem;
+}
+
+.found {
+  @include surface(var(--bg-1), 10px, var(--line));
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 4px;
+  max-height: 260px;
+  overflow: auto;
+  list-style: none;
+}
+
+.found-entry {
+  @include unstyled-control;
+  @include focus-ring(0);
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-0);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--bg-3);
+  }
+}
+
+.found-offset {
+  font-family: var(--font-mono), monospace;
+  color: var(--text-2);
+}
+
+.times {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.time {
+  @include surface(var(--bg-1), 10px, var(--line));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+
+  &.source {
+    border-color: var(--amber-dim);
+  }
+}
+
+.place {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.city {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-0);
+}
+
+.zone {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  color: var(--text-2);
+  overflow-wrap: anywhere;
+}
+
+.badges {
+  display: flex;
+  gap: 4px;
+}
+
+.badge {
+  @include tint-badge(--teal-rgb);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10.5px;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.clock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-family: var(--font-mono), monospace;
+}
+
+.hour {
+  font-size: 16px;
+  color: var(--text-0);
+}
+
+.date,
+.offset {
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+.shift {
+  color: var(--amber-text);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.action {
+  @include tool-button;
+  @include hit-target(28px);
+  justify-content: center;
+  height: 28px;
+  padding: 0 8px;
+  font-size: 11.5px;
+
+  &.destructive {
+    @include destructive;
+  }
+}
+
+.empty {
+  @include tool-note;
+  font-family: var(--font-sans);
+  font-size: 12px;
+}
