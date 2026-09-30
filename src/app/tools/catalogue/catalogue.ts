@@ -9,7 +9,19 @@ export const TOOLS: readonly ToolDefinition[] = [
   {
     id: 'case',
     category: 'text',
-    keywords: ['camelCase', 'PascalCase', 'snake_case', 'kebab-case', 'CONSTANT_CASE'],
+    keywords: [
+      'camelCase',
+      'PascalCase',
+      'snake_case',
+      'kebab-case',
+      'CONSTANT_CASE',
+      'dot.case',
+      'path/case',
+      'Train-Case',
+      'lowercase',
+      'UPPERCASE',
+      'flatcase',
+    ],
     load: () => import('./case/case-tool.component').then((m) => m.CaseToolComponent),
   },
   {

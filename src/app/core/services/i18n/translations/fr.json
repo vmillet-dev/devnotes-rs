@@ -1017,10 +1017,10 @@
     "copyWhat": "Copier {{what}}",
     "case": {
       "name": "Convertisseur de casse",
-      "description": "camelCase, snake_case, kebab-case, Titre",
+      "description": "camelCase, snake_case, dot.case, Train-Case…",
       "inputLabel": "Texte à convertir",
-      "placeholder": "Un nom de variable ou une phrase : parse HTTP response",
-      "empty": "Les sept casses s’affichent ici.",
+      "placeholder": "Un nom de variable, une phrase, ou une liste, un par ligne : parse HTTP response",
+      "empty": "Les treize casses s’affichent ici, ligne par ligne.",
       "noteTitle": "Casses de « {{text}} »"
     },
     "slug": {

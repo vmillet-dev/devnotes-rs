@@ -15,7 +15,30 @@ pub enum TextCase {
     Constant,
     Title,
     Sentence,
+    Dot,
+    Path,
+    Train,
+    Lower,
+    Upper,
+    Flat,
 }
+
+/** In the order the tool lists them. */
+const CASES: [TextCase; 13] = [
+    TextCase::Camel,
+    TextCase::Pascal,
+    TextCase::Snake,
+    TextCase::Kebab,
+    TextCase::Constant,
+    TextCase::Title,
+    TextCase::Sentence,
+    TextCase::Dot,
+    TextCase::Path,
+    TextCase::Train,
+    TextCase::Lower,
+    TextCase::Upper,
+    TextCase::Flat,
+];
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
@@ -73,40 +96,52 @@ fn capitalised(word: &str) -> String {
     })
 }
 
-/// Every case at once, in the order the tool lists them; nothing for a text without a word.
+fn in_case(words: &[&str], case: TextCase) -> String {
+    let lower = || words.iter().map(|word| word.to_lowercase());
+    let upper = || words.iter().map(|word| word.to_uppercase());
+    let capital = || words.iter().map(|word| capitalised(word));
+    let joined = |parts: Vec<String>, separator: &str| parts.join(separator);
+    match case {
+        TextCase::Camel => lower().take(1).chain(capital().skip(1)).collect(),
+        TextCase::Pascal => capital().collect(),
+        TextCase::Snake => joined(lower().collect(), "_"),
+        TextCase::Kebab => joined(lower().collect(), "-"),
+        TextCase::Constant => joined(upper().collect(), "_"),
+        TextCase::Title => joined(capital().collect(), " "),
+        TextCase::Sentence => joined(capital().take(1).chain(lower().skip(1)).collect(), " "),
+        TextCase::Dot => joined(lower().collect(), "."),
+        TextCase::Path => joined(lower().collect(), "/"),
+        TextCase::Train => joined(capital().collect(), "-"),
+        TextCase::Lower => joined(lower().collect(), " "),
+        TextCase::Upper => joined(upper().collect(), " "),
+        TextCase::Flat => lower().collect(),
+    }
+}
+
+/// Every case at once, line by line — a list of identifiers comes back as a list; blank lines at
+/// either end are dropped, those inside kept so each line keeps its place. Nothing for no word.
 pub fn convert_case(text: &str) -> Vec<CaseConversion> {
-    let words = words(text);
-    let Some((first, rest)) = words.split_first() else {
+    let lines: Vec<Vec<&str>> = text.lines().map(words).collect();
+    let (Some(first), Some(last)) = (
+        lines.iter().position(|words| !words.is_empty()),
+        lines.iter().rposition(|words| !words.is_empty()),
+    ) else {
         return Vec::new();
     };
-
-    let lower: Vec<String> = words.iter().map(|word| word.to_lowercase()).collect();
-    let capital: Vec<String> = words.iter().map(|word| capitalised(word)).collect();
-    let rest_capital: String = rest.iter().map(|word| capitalised(word)).collect();
-    let rest_lower: Vec<String> = rest.iter().map(|word| word.to_lowercase()).collect();
-    let sentence = std::iter::once(capitalised(first))
-        .chain(rest_lower)
-        .collect::<Vec<_>>();
-
-    [
-        (TextCase::Camel, first.to_lowercase() + &rest_capital),
-        (TextCase::Pascal, capital.concat()),
-        (TextCase::Snake, lower.join("_")),
-        (TextCase::Kebab, lower.join("-")),
-        (
-            TextCase::Constant,
-            words
+    CASES
+        .into_iter()
+        .map(|case| CaseConversion {
+            case,
+            value: lines[first..=last]
                 .iter()
-                .map(|word| word.to_uppercase())
+                .map(|words| in_case(words, case))
                 .collect::<Vec<_>>()
-                .join("_"),
-        ),
-        (TextCase::Title, capital.join(" ")),
-        (TextCase::Sentence, sentence.join(" ")),
-    ]
-    .into_iter()
-    .map(|(case, value)| CaseConversion { case, value })
-    .collect()
+                .join(
+                    "
+",
+                ),
+        })
+        .collect()
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Type)]
@@ -382,6 +417,12 @@ mod tests {
                 TextCase::Constant,
                 TextCase::Title,
                 TextCase::Sentence,
+                TextCase::Dot,
+                TextCase::Path,
+                TextCase::Train,
+                TextCase::Lower,
+                TextCase::Upper,
+                TextCase::Flat,
             ]
         );
         let values: Vec<&str> = all
@@ -398,7 +439,87 @@ mod tests {
                 "PARSE_HTTP_RESPONSE",
                 "Parse Http Response",
                 "Parse http response",
+                "parse.http.response",
+                "parse/http/response",
+                "Parse-Http-Response",
+                "parse http response",
+                "PARSE HTTP RESPONSE",
+                "parsehttpresponse",
             ]
+        );
+    }
+
+    #[test]
+    fn the_new_cases_split_the_hard_words_as_the_others_do() {
+        for (text, dot, train, flat) in [
+            (
+                "HTTPResponse",
+                "http.response",
+                "Http-Response",
+                "httpresponse",
+            ),
+            (
+                "parseHTTPResponse",
+                "parse.http.response",
+                "Parse-Http-Response",
+                "parsehttpresponse",
+            ),
+            ("utf8Decoder", "utf8.decoder", "Utf8-Decoder", "utf8decoder"),
+            ("v2Api", "v2.api", "V2-Api", "v2api"),
+            ("élévation", "élévation", "Élévation", "élévation"),
+            (
+                "some_mixed-Case value",
+                "some.mixed.case.value",
+                "Some-Mixed-Case-Value",
+                "somemixedcasevalue",
+            ),
+        ] {
+            assert_eq!(case(text, TextCase::Dot), dot, "{text}");
+            assert_eq!(case(text, TextCase::Train), train, "{text}");
+            assert_eq!(case(text, TextCase::Flat), flat, "{text}");
+        }
+        assert_eq!(case("utf8Decoder", TextCase::Path), "utf8/decoder");
+        assert_eq!(
+            case("élévation rapide", TextCase::Upper),
+            "ÉLÉVATION RAPIDE"
+        );
+        assert_eq!(case("Straße Nummer", TextCase::Lower), "straße nummer");
+    }
+
+    #[test]
+    fn several_lines_are_converted_line_by_line() {
+        assert_eq!(
+            case(
+                "userId
+HTTPServer
+
+  created_at  
+",
+                TextCase::Snake
+            ),
+            "user_id
+http_server
+
+created_at"
+        );
+        assert_eq!(
+            case(
+                "
+
+fooBar
+
+",
+                TextCase::Kebab
+            ),
+            "foo-bar"
+        );
+        assert!(
+            convert_case(
+                "
+ - 
+"
+            )
+            .is_empty()
         );
     }
 
