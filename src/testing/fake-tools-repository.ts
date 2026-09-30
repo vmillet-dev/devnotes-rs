@@ -17,6 +17,8 @@ import {
   GenerateRequest,
   HashAnswer,
   HashRequest,
+  IdInspection,
+  IdentifiersRequest,
   InstantAnswer,
   InstantRequest,
   JsonDiffAnswer,
@@ -39,8 +41,6 @@ import {
   UrlAnswer,
   UrlCodecAnswer,
   UrlCodecRequest,
-  UuidInspection,
-  UuidRequest,
   ZoneEntry,
   ZonesAnswer,
   ZonesRequest,
@@ -73,8 +73,8 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
     recognised: null,
   };
   passwords: PasswordAnswer = { kind: 'noCharacters' };
-  uuids: string[] = [];
-  uuidInspection: UuidInspection = { kind: 'invalid' };
+  identifiers: string[] = [];
+  inspection: IdInspection = { kind: 'unrecognised' };
   colour: ColourAnswer = { colour: { kind: 'empty' }, against: { kind: 'empty' }, contrast: null };
   conversion: ConvertAnswer = { kind: 'converted', text: '' };
   generated: GenerateAnswer = { kind: 'generated', text: '{}', seed: 1, unsupported: [] };
@@ -149,12 +149,12 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
     return this.answer('generate_passwords', request, this.passwords);
   }
 
-  generateUuids(request: UuidRequest): Promise<string[]> {
-    return this.answer('generate_uuids', request, this.uuids);
+  generateIdentifiers(request: IdentifiersRequest): Promise<string[]> {
+    return this.answer('generate_identifiers', request, this.identifiers);
   }
 
-  inspectUuid(text: string): Promise<UuidInspection> {
-    return this.answer('inspect_uuid', text, this.uuidInspection);
+  inspectIdentifier(text: string): Promise<IdInspection> {
+    return this.answer('inspect_identifier', text, this.inspection);
   }
 
   describeColour(request: ColourRequest): Promise<ColourAnswer> {

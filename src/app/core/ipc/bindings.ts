@@ -37,8 +37,8 @@ export const commands = {
 	hashInput: (request: HashRequest) => typedError<HashAnswer, AppError>(__TAURI_INVOKE("hash_input", { request })),
 	/**  No randomness from the system is the unexpected: nothing weaker is drawn in its place. */
 	generatePasswords: (request: PasswordRequest) => typedError<PasswordAnswer, AppError>(__TAURI_INVOKE("generate_passwords", { request })),
-	generateUuids: (request: UuidRequest) => typedError<string[], AppError>(__TAURI_INVOKE("generate_uuids", { request })),
-	inspectUuid: (text: string) => typedError<UuidInspection, AppError>(__TAURI_INVOKE("inspect_uuid", { text })),
+	generateIdentifiers: (request: IdentifiersRequest) => typedError<string[], AppError>(__TAURI_INVOKE("generate_identifiers", { request })),
+	inspectIdentifier: (text: string) => typedError<IdInspection, AppError>(__TAURI_INVOKE("inspect_identifier", { text })),
 	describeColour: (request: ColourRequest) => typedError<ColourAnswer, AppError>(__TAURI_INVOKE("describe_colour", { request })),
 	convertData: (request: ConvertRequest) => typedError<ConvertAnswer, AppError>(__TAURI_INVOKE("convert_data", { request })),
 	generateJson: (request: GenerateRequest) => typedError<GenerateAnswer, AppError>(__TAURI_INVOKE("generate_json", { request })),
@@ -779,6 +779,27 @@ export type IbanVerdict = { kind: "valid"; bban: string; bank: string | null; br
 /**  The length is right, the characters are not the country's: letters where digits go. */
 { kind: "wrongFormat" } | { kind: "unknownCountry" };
 
+export type IdInspection = { kind: "uuid"; version: number; variant: UuidVariant; 
+/**  v1, v6 and v7 carry the time they were made, in UTC. */
+created: string | null; nil: boolean } | { kind: "ulid"; created: string } | { kind: "objectId"; created: string; counter: number } | { kind: "ksuid"; created: string; payload: string } | 
+/**  The first CUID, deprecated by its author: its time is in plain sight. */
+{ kind: "cuidV1"; created: string } | 
+/**  The shape of an identifier that carries nothing to read. */
+{ kind: "possible"; kinds: IdKind[] } | 
+/**  The shape fits, the value does not: a ULID past `7ZZZZZZZZZ…`. */
+{ kind: "outOfRange"; id: IdKind } | { kind: "unrecognised" };
+
+export type IdKind = "uuidV4" | "uuidV7" | "ulid" | "nanoId" | "cuid2" | "objectId" | "ksuid";
+
+export type IdentifiersRequest = {
+	kind: IdKind,
+	count: number,
+	/**  For the kinds whose case carries nothing: UUID, ULID, `ObjectId`. */
+	uppercase: boolean,
+	nanoLength: number,
+	nanoAlphabet: NanoAlphabet,
+};
+
 /**  `skipped`: notes already present or whose space is missing, so an import can be replayed. */
 export type ImportReport = {
 	spacesCreated: number,
@@ -1097,6 +1118,10 @@ export type ModeReading = { kind: "empty" } | { kind: "read"; mode: Mode;
 fileType: FileType | null } | { kind: "refused"; problem: ModeProblem; 
 /**  One-based, in characters. */
 at: number };
+
+export type NanoAlphabet = 
+/**  `A-Za-z0-9_-`, `NanoID`'s own. */
+"urlSafe" | "alphanumeric" | "hexLower" | "digits";
 
 export type Notation = "hex" | "rgb" | "hsl" | "oklch";
 
@@ -1636,23 +1661,9 @@ export type UrlScope =
 /**  A URL as a whole, whose structure stays readable. */
 "whole";
 
-export type UuidInspection = { kind: "valid"; version: number; variant: UuidVariant; 
-/**  v1, v6 and v7 carry the time they were made, in UTC. */
-created: string | null; nil: boolean } | { kind: "invalid" };
-
-export type UuidRequest = {
-	version: UuidVersion,
-	count: number,
-	uppercase: boolean,
-};
-
 export type UuidVariant = "ncs" | 
 /**  RFC 9562, which every UUID made today follows. */
 "rfc" | "microsoft" | "future";
-
-export type UuidVersion = "v4" | 
-/**  Its first 48 bits are the time it was made: sorted, they sort by creation. */
-"v7";
 
 /**  What a value was, as the list of changes shows it: itself when short, its size otherwise. */
 export type ValueSummary = { kind: "scalar"; text: string } | { kind: "object"; keys: number } | { kind: "array"; items: number };

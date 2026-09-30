@@ -1242,39 +1242,6 @@
       "noteTitle": "Mots de passe générés",
       "saveWarning": "Un mot de passe gardé dans une note est chiffré avec la bibliothèque, mais une note se copie, se partage et s’exporte : un gestionnaire de mots de passe le garde mieux."
     },
-    "uuid": {
-      "name": "UUID",
-      "description": "v4, v7, en lot, validation",
-      "generate": "Générer",
-      "all": "tous les UUID",
-      "version": "Version",
-      "versions": {
-        "v4": "v4 · aléatoire",
-        "v7": "v7 · horodaté"
-      },
-      "versionHints": {
-        "v4": "122 bits tirés du générateur du système.",
-        "v7": "Ses 48 premiers bits sont l’heure de sa création : triés, ils se rangent dans l’ordre où ils ont été faits."
-      },
-      "count": "Nombre",
-      "uppercase": "En majuscules",
-      "again": "Tirer à nouveau",
-      "check": "Valider",
-      "checkLabel": "UUID à valider",
-      "checkPlaceholder": "01922b6e-4b30-7cc4-9a5c-6f2d8e1b3a77",
-      "versionLabel": "Version",
-      "variant": "Variante",
-      "variants": {
-        "ncs": "NCS (obsolète)",
-        "rfc": "RFC 9562",
-        "microsoft": "Microsoft",
-        "future": "réservée"
-      },
-      "created": "Créé le",
-      "nil": "UUID nul",
-      "invalid": "Ce n’est pas un UUID.",
-      "noteTitle": "UUID générés"
-    },
     "colour": {
       "name": "Couleurs",
       "description": "HEX, RGB, HSL, OKLCH, contraste",
@@ -1918,6 +1885,59 @@
       "warning": "Un JWT peut ouvrir un compte : la note ne garde que l’en-tête et la charge utile décodés, jamais le jeton ni le secret.",
       "empty": "Collez un JWT : son en-tête et sa charge utile s’affichent ici.",
       "noteTitle": "JWT {{algorithm}} décodé"
+    },
+    "identifiers": {
+      "name": "Identifiants",
+      "description": "UUID, ULID, NanoID, CUID2, ObjectId, KSUID — tirés et relus",
+      "generate": "Générer",
+      "all": "tous les identifiants",
+      "kind": "Sorte",
+      "count": "Nombre",
+      "uppercase": "En majuscules",
+      "length": "Longueur",
+      "alphabet": "Alphabet",
+      "alphabets": {
+        "urlSafe": "URL-safe",
+        "alphanumeric": "Alphanumérique",
+        "hexLower": "Hexa",
+        "digits": "Chiffres"
+      },
+      "again": "Tirer à nouveau",
+      "hints": {
+        "uuidV4": "122 bits tirés du générateur du système.",
+        "uuidV7": "Ses 48 premiers bits sont l’heure de sa création : triés, ils se rangent dans l’ordre où ils ont été faits.",
+        "ulid": "48 bits de millisecondes puis 80 bits tirés, en base 32 de Crockford ; tirés dans la même milliseconde, ils comptent vers le haut.",
+        "nanoId": "Des caractères tirés sans biais dans l’alphabet choisi ; 21 caractères URL-safe valent un UUID v4.",
+        "cuid2": "Une lettre, puis un SHA3-512 de l’heure, d’un tirage, d’un compteur et d’une empreinte, en base 36 : rien ne s’y lit.",
+        "objectId": "4 octets de secondes, 5 tirés pour le lot, 3 d’un compteur parti d’un nombre tiré.",
+        "ksuid": "4 octets de secondes depuis mai 2014, puis 16 tirés, en base 62 : triés, ils suivent l’heure."
+      },
+      "check": "Relire",
+      "checkLabel": "Identifiant à relire",
+      "checkPlaceholder": "01ARZ3NDEKTSV4RRFFQ69G5FAV, un UUID, un ObjectId…",
+      "recognised": {
+        "uuid": "UUID",
+        "ulid": "ULID",
+        "objectId": "ObjectId (MongoDB)",
+        "ksuid": "KSUID",
+        "cuidV1": "CUID, première version, dépréciée"
+      },
+      "version": "Version",
+      "variant": "Variante",
+      "variants": {
+        "ncs": "NCS (obsolète)",
+        "rfc": "RFC 9562",
+        "microsoft": "Microsoft",
+        "future": "réservée"
+      },
+      "nil": "UUID nul",
+      "created": "Créé le",
+      "counter": "Compteur",
+      "payload": "Partie tirée",
+      "possible": "Rien ne s’y lit : sa forme est celle d’un {{kinds}}.",
+      "outOfRange": "La forme d’un {{kind}}, mais au-delà de ce qu’il peut valoir.",
+      "unrecognised": "Aucun identifiant connu n’a cette forme.",
+      "noteTitle": "{{kind}} générés"
     }
   }
 }

@@ -12,6 +12,7 @@ pub mod encoding;
 pub(crate) mod files;
 pub mod generate;
 pub mod hash;
+pub mod identifiers;
 pub mod jwt;
 pub(crate) mod numbers;
 pub mod percentages;
@@ -124,16 +125,18 @@ pub async fn generate_passwords(
 
 #[tauri::command]
 #[specta::specta]
-pub async fn generate_uuids(request: random::UuidRequest) -> Result<Vec<String>, AppError> {
-    off_thread(move || random::uuids(&request))
+pub async fn generate_identifiers(
+    request: identifiers::IdentifiersRequest,
+) -> Result<Vec<String>, AppError> {
+    off_thread(move || identifiers::generate(&request))
         .await?
         .map_err(|_| StorageError::Unavailable.into())
 }
 
 #[tauri::command]
 #[specta::specta]
-pub async fn inspect_uuid(text: String) -> Result<random::UuidInspection, AppError> {
-    off_thread(move || random::inspect_uuid(&text)).await
+pub async fn inspect_identifier(text: String) -> Result<identifiers::IdInspection, AppError> {
+    off_thread(move || identifiers::inspect(&text)).await
 }
 
 #[tauri::command]

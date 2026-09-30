@@ -669,6 +669,12 @@ an `AppError` rather than a weaker fallback. Generated passwords are the answer 
 but the tool's `ToolResult.warning` makes the dialog say why they had better not be, and its
 button read "Enregistrer quand même".
 
+**Identifiers are drawn the same way** (`tools/identifiers.rs`): UUID v4 and v7, ULID, NanoID,
+CUID2, `ObjectId` and KSUID, each a few lines held to its published vectors rather than a crate
+each. A ULID batch drawn within one millisecond counts up, as its spec asks, so it sorts as drawn.
+A pasted identifier is recognised by its shape and gives back the instant it carries; NanoID and
+CUID2 carry none, and are only named as possible.
+
 **A colour is Rust's to read** (`tools/colour.rs`): the four notations, `OKLab` and `OKLCH`,
 the gamut, and the WCAG ratio — with the `0.03928` of `scripts/palette.test.mjs`, so the tool
 and the palette's own check agree. The page paints the swatch Rust hands it. An `OKLCH` colour

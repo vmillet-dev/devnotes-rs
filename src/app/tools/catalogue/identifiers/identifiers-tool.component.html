@@ -1,0 +1,157 @@
+<div class="columns">
+  <section class="column" aria-labelledby="identifiers-generate-title">
+    <div class="section-head">
+      <h2 id="identifiers-generate-title" class="section-title">
+        {{ 'tools.identifiers.generate' | transloco }}
+      </h2>
+      <app-copy-value [value]="list()" [what]="'tools.identifiers.all' | transloco" />
+    </div>
+
+    <div class="options">
+      <span class="option">
+        {{ 'tools.identifiers.kind' | transloco }}
+        <app-choice-menu
+          kind="identifiers-kind"
+          [label]="'tools.identifiers.kind' | transloco"
+          [options]="kinds"
+          [currentId]="kind()"
+          (chosen)="onKind($event)"
+        />
+      </span>
+      <label class="option">
+        {{ 'tools.identifiers.count' | transloco }}
+        <input
+          type="number"
+          class="number"
+          data-testid="identifiers-count"
+          min="1"
+          max="500"
+          [value]="count()"
+          (input)="onCount($event)"
+        />
+      </label>
+      @if (caseless()) {
+        <label class="check">
+          <input
+            type="checkbox"
+            data-testid="identifiers-uppercase"
+            [checked]="uppercase()"
+            (change)="onUppercase($event)"
+          />
+          {{ 'tools.identifiers.uppercase' | transloco }}
+        </label>
+      }
+      <button type="button" class="generate" data-testid="identifiers-generate" (click)="regenerate()">
+        {{ 'tools.identifiers.again' | transloco }}
+      </button>
+    </div>
+    @if (kind() === 'nanoId') {
+      <div class="options" data-testid="identifiers-nano">
+        <label class="option">
+          {{ 'tools.identifiers.length' | transloco }}
+          <input
+            type="number"
+            class="number"
+            data-testid="identifiers-nano-length"
+            min="2"
+            max="255"
+            [value]="nanoLength()"
+            (input)="onNanoLength($event)"
+          />
+        </label>
+        <app-segmented-choice
+          kind="identifiers-alphabet"
+          [label]="'tools.identifiers.alphabet' | transloco"
+          [segments]="alphabets"
+          [currentId]="nanoAlphabet()"
+          (chosen)="onNanoAlphabet($event)"
+        />
+      </div>
+    }
+
+    <pre class="list" data-testid="identifiers-list">{{ list() }}</pre>
+    <p class="note" data-testid="identifiers-hint">{{ 'tools.identifiers.hints.' + kind() | transloco }}</p>
+  </section>
+
+  <section class="column" aria-labelledby="identifiers-check-title">
+    <h2 id="identifiers-check-title" class="section-title">{{ 'tools.identifiers.check' | transloco }}</h2>
+    <label class="field">
+      <span class="visually-hidden">{{ 'tools.identifiers.checkLabel' | transloco }}</span>
+      <input
+        type="text"
+        class="checked"
+        data-testid="identifiers-checked"
+        spellcheck="false"
+        [value]="checked()"
+        [placeholder]="'tools.identifiers.checkPlaceholder' | transloco"
+        (input)="onChecked($event)"
+      />
+    </label>
+    @if (inspection.value(); as inspection) {
+      @switch (inspection.kind) {
+        @case ('possible') {
+          @if (inspection.kind === 'possible') {
+            <p class="note" data-testid="identifiers-possible">
+              {{
+                'tools.identifiers.possible'
+                  | transloco: { kinds: inspection.kinds.map(kindName).join(' / ') }
+              }}
+            </p>
+          }
+        }
+        @case ('outOfRange') {
+          @if (inspection.kind === 'outOfRange') {
+            <p class="problem" role="status" data-testid="identifiers-out-of-range">
+              {{ 'tools.identifiers.outOfRange' | transloco: { kind: kindNames[inspection.id] } }}
+            </p>
+          }
+        }
+        @case ('unrecognised') {
+          <p class="problem" role="status" data-testid="identifiers-unrecognised">
+            {{ 'tools.identifiers.unrecognised' | transloco }}
+          </p>
+        }
+        @default {
+          <dl class="facts" data-testid="identifiers-facts" [attr.data-kind]="inspection.kind">
+            <div class="fact">
+              <dt>{{ 'tools.identifiers.kind' | transloco }}</dt>
+              <dd data-testid="identifiers-recognised">
+                {{ 'tools.identifiers.recognised.' + inspection.kind | transloco }}
+              </dd>
+            </div>
+            @if (inspection.kind === 'uuid') {
+              <div class="fact">
+                <dt>{{ 'tools.identifiers.version' | transloco }}</dt>
+                <dd data-testid="identifiers-version">
+                  {{ inspection.nil ? ('tools.identifiers.nil' | transloco) : 'v' + inspection.version }}
+                </dd>
+              </div>
+              <div class="fact">
+                <dt>{{ 'tools.identifiers.variant' | transloco }}</dt>
+                <dd>{{ 'tools.identifiers.variants.' + inspection.variant | transloco }}</dd>
+              </div>
+            }
+            @if (created(); as created) {
+              <div class="fact">
+                <dt>{{ 'tools.identifiers.created' | transloco }}</dt>
+                <dd data-testid="identifiers-created">{{ created }}</dd>
+              </div>
+            }
+            @if (inspection.kind === 'objectId') {
+              <div class="fact">
+                <dt>{{ 'tools.identifiers.counter' | transloco }}</dt>
+                <dd>{{ inspection.counter }}</dd>
+              </div>
+            }
+            @if (inspection.kind === 'ksuid') {
+              <div class="fact">
+                <dt>{{ 'tools.identifiers.payload' | transloco }}</dt>
+                <dd>{{ inspection.payload }}</dd>
+              </div>
+            }
+          </dl>
+        }
+      }
+    }
+  </section>
+</div>

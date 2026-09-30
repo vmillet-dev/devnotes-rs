@@ -428,24 +428,67 @@ describe('The tools', () => {
       await $(testid('save-as-note')).waitForExist({ reverse: true, timeout: 5_000 });
     });
 
+    const drawnLines = async () => (await $(testid('identifiers-list')).getText()).split('\n');
+
     it('draws v7 UUIDs that sort by creation, and reads the time back out of one', async () => {
-      await openTool('uuid');
-      await $(`${testid('segmented-uuid-version')} [data-segment-id="v7"]`).click();
+      await openTool('identifiers');
+      await pickChoice('identifiers-kind', 'uuidV7');
 
       await eventually(
-        async () => (await $(testid('uuid-list')).getText()).split('\n'),
+        drawnLines,
         (lines) => lines.length === 5 && lines.every((line) => /^[0-9a-f]{8}-[0-9a-f]{4}-7/.test(line)),
         'five v7s',
       );
-      const lines = (await $(testid('uuid-list')).getText()).split('\n');
+      const lines = await drawnLines();
       expect([...lines].sort()).toEqual(lines);
 
-      await setField(testid('uuid-checked'), '01922b6e-4b30-7cc4-9a5c-6f2d8e1b3a77');
+      await setField(testid('identifiers-checked'), '01922b6e-4b30-7cc4-9a5c-6f2d8e1b3a77');
       await eventually(
-        () => $(testid('uuid-created')).getText(),
+        () => $(testid('identifiers-created')).getText(),
         (created) => created === '2024-09-25 23:05:01.488 UTC',
         'its time',
       );
+    });
+
+    it('draws ULIDs that count up, and reads the ULID spec’s example back', async () => {
+      await pickChoice('identifiers-kind', 'ulid');
+      await setField(testid('identifiers-count'), '50');
+
+      await eventually(
+        drawnLines,
+        (lines) => lines.length === 50 && lines.every((line) => /^[0-9a-z]{26}$/.test(line)),
+        'fifty ULIDs',
+      );
+      const lines = await drawnLines();
+      expect([...lines].sort()).toEqual(lines);
+
+      await setField(testid('identifiers-checked'), '01ARZ3NDEKTSV4RRFFQ69G5FAV');
+      await eventually(
+        () => $(testid('identifiers-created')).getText(),
+        (created) => created === '2016-07-30 23:54:10.259 UTC',
+        'the ULID’s millisecond',
+      );
+    });
+
+    it('draws NanoIDs in the alphabet and length chosen, and reads a KSUID', async () => {
+      await setField(testid('identifiers-count'), '5');
+      await pickChoice('identifiers-kind', 'nanoId');
+      await setField(testid('identifiers-nano-length'), '12');
+      await $(`${testid('segmented-identifiers-alphabet')} [data-segment-id="digits"]`).click();
+
+      await eventually(
+        drawnLines,
+        (lines) => lines.length === 5 && lines.every((line) => /^\d{12}$/.test(line)),
+        'twelve digits each',
+      );
+      await setField(testid('identifiers-checked'), '0ujtsYcgvSTl8PAuAdqWYSMnLOv');
+      await eventually(
+        () => $(testid('identifiers-facts')).getAttribute('data-kind'),
+        (kind) => kind === 'ksuid',
+        'the KSUID',
+      );
+      await pickChoice('identifiers-kind', 'uuidV4');
+      await $(testid('tool-clear')).click();
     });
   });
 

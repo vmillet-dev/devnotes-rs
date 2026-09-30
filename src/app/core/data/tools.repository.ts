@@ -19,6 +19,8 @@ import {
   GenerateRequest,
   HashAnswer,
   HashRequest,
+  IdInspection,
+  IdentifiersRequest,
   InstantAnswer,
   InstantRequest,
   JsonDiffAnswer,
@@ -41,8 +43,6 @@ import {
   UrlAnswer,
   UrlCodecAnswer,
   UrlCodecRequest,
-  UuidInspection,
-  UuidRequest,
   ZoneEntry,
   ZonesAnswer,
   ZonesRequest,
@@ -97,12 +97,12 @@ export class ToolsRepository {
     return unwrap('generate_passwords', await commands.generatePasswords(request));
   }
 
-  async generateUuids(request: UuidRequest): Promise<string[]> {
-    return unwrap('generate_uuids', await commands.generateUuids(request));
+  async generateIdentifiers(request: IdentifiersRequest): Promise<string[]> {
+    return unwrap('generate_identifiers', await commands.generateIdentifiers(request));
   }
 
-  async inspectUuid(text: string): Promise<UuidInspection> {
-    return unwrap('inspect_uuid', await commands.inspectUuid(text));
+  async inspectIdentifier(text: string): Promise<IdInspection> {
+    return unwrap('inspect_identifier', await commands.inspectIdentifier(text));
   }
 
   async describeColour(request: ColourRequest): Promise<ColourAnswer> {

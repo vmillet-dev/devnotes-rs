@@ -1,9 +1,7 @@
-//! Passwords and UUIDs, drawn from the operating system's generator: never a seeded one.
+//! Passwords, drawn from the operating system's generator: never a seeded one.
 
-use chrono::{DateTime, SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
 use specta::Type;
-use uuid::{Uuid, Variant};
 
 use crate::count::saturating_u32;
 
@@ -22,7 +20,6 @@ const LOOK_ALIKES: &str = "l1I0O|";
 pub const MIN_LENGTH: u32 = 4;
 pub const MAX_LENGTH: u32 = 256;
 pub const MAX_PASSWORDS: u32 = 50;
-pub const MAX_UUIDS: u32 = 500;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
@@ -95,7 +92,7 @@ pub enum PasswordAnswer {
 
 /// A uniform index below `bound`: a draw past the last whole multiple is thrown back, so no
 /// character comes up more often than another.
-fn uniform(bound: u32) -> Result<u32, NoRandomness> {
+pub(crate) fn uniform(bound: u32) -> Result<u32, NoRandomness> {
     let limit = u32::MAX - u32::MAX % bound;
     loop {
         let mut bytes = [0u8; 4];
@@ -156,90 +153,6 @@ pub fn passwords(request: &PasswordRequest) -> Result<PasswordAnswer, NoRandomne
         strength: Strength::of(entropy_bits),
         entropy_bits,
     })
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Type)]
-#[serde(rename_all = "camelCase")]
-pub enum UuidVersion {
-    V4,
-    /// Its first 48 bits are the time it was made: sorted, they sort by creation.
-    V7,
-}
-
-#[derive(Debug, Clone, Deserialize, Type)]
-#[serde(rename_all = "camelCase")]
-pub struct UuidRequest {
-    pub version: UuidVersion,
-    pub count: u32,
-    pub uppercase: bool,
-}
-
-pub fn uuids(request: &UuidRequest) -> Result<Vec<String>, NoRandomness> {
-    (0..request.count.clamp(1, MAX_UUIDS))
-        .map(|_| {
-            let uuid = match request.version {
-                UuidVersion::V4 => {
-                    let mut bytes = [0u8; 16];
-                    getrandom::fill(&mut bytes).map_err(|_| NoRandomness)?;
-                    uuid::Builder::from_random_bytes(bytes).into_uuid()
-                }
-                UuidVersion::V7 => Uuid::now_v7(),
-            };
-            let text = uuid.hyphenated().to_string();
-            Ok(if request.uppercase {
-                text.to_uppercase()
-            } else {
-                text
-            })
-        })
-        .collect()
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
-#[serde(rename_all = "camelCase")]
-pub enum UuidVariant {
-    Ncs,
-    /// RFC 9562, which every UUID made today follows.
-    Rfc,
-    Microsoft,
-    Future,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
-#[serde(tag = "kind", rename_all = "camelCase")]
-pub enum UuidInspection {
-    Valid {
-        version: u32,
-        variant: UuidVariant,
-        /// v1, v6 and v7 carry the time they were made, in UTC.
-        created: Option<String>,
-        nil: bool,
-    },
-    Invalid,
-}
-
-pub fn inspect_uuid(text: &str) -> UuidInspection {
-    let Ok(uuid) = Uuid::parse_str(text.trim()) else {
-        return UuidInspection::Invalid;
-    };
-    let variant = match uuid.get_variant() {
-        Variant::NCS => UuidVariant::Ncs,
-        Variant::RFC4122 => UuidVariant::Rfc,
-        Variant::Microsoft => UuidVariant::Microsoft,
-        _ => UuidVariant::Future,
-    };
-    let created = uuid.get_timestamp().and_then(|timestamp| {
-        let (seconds, nanos) = timestamp.to_unix();
-        DateTime::<Utc>::from_timestamp(i64::try_from(seconds).ok()?, nanos)
-            .map(|at| at.to_rfc3339_opts(SecondsFormat::Millis, true))
-    });
-
-    UuidInspection::Valid {
-        version: u32::try_from(uuid.get_version_num()).unwrap_or(0),
-        variant,
-        created,
-        nil: uuid.is_nil(),
-    }
 }
 
 #[cfg(test)]
@@ -335,59 +248,5 @@ mod tests {
 
         assert_eq!(passwords[0].len(), MIN_LENGTH as usize);
         assert_eq!(strength, Strength::VeryWeak);
-    }
-
-    #[test]
-    fn uuids_come_in_the_version_and_case_asked_for() {
-        let four = uuids(&UuidRequest {
-            version: UuidVersion::V4,
-            count: 2,
-            uppercase: true,
-        })
-        .unwrap();
-        let seven = uuids(&UuidRequest {
-            version: UuidVersion::V7,
-            count: 2,
-            uppercase: false,
-        })
-        .unwrap();
-
-        assert_eq!(four.len(), 2);
-        assert_ne!(four[0], four[1]);
-        assert_eq!(four[0], four[0].to_uppercase());
-        assert_eq!(Uuid::parse_str(&four[0]).unwrap().get_version_num(), 4);
-        assert_eq!(Uuid::parse_str(&seven[1]).unwrap().get_version_num(), 7);
-        assert!(seven[0] <= seven[1], "a v7 sorts by creation");
-    }
-
-    #[test]
-    fn a_v7_says_when_it_was_made() {
-        let inspection = inspect_uuid(" 01922b6e-4b30-7cc4-9a5c-6f2d8e1b3a77 ");
-
-        assert_eq!(
-            inspection,
-            UuidInspection::Valid {
-                version: 7,
-                variant: UuidVariant::Rfc,
-                created: Some("2024-09-25T23:05:01.488Z".to_owned()),
-                nil: false,
-            }
-        );
-    }
-
-    #[test]
-    fn a_v4_carries_no_time_and_a_non_uuid_is_said_to_be_one() {
-        let UuidInspection::Valid {
-            version, created, ..
-        } = inspect_uuid("9b2f6c1e-3d4a-4f8b-9e2c-7a1d5b6c8e90")
-        else {
-            panic!()
-        };
-        assert_eq!((version, created), (4, None));
-        assert_eq!(inspect_uuid("not-a-uuid"), UuidInspection::Invalid);
-        assert!(matches!(
-            inspect_uuid("00000000-0000-0000-0000-000000000000"),
-            UuidInspection::Valid { nil: true, .. }
-        ));
     }
 }
