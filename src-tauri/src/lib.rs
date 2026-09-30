@@ -52,7 +52,7 @@ use spaces::{create_space, delete_space, list_spaces, pin_space, rename_space};
 use tools::{
     answer_percentages, check_digits, convert_case, convert_data, convert_size, current_instant,
     decode_base64, decode_jwt, describe_colour, describe_cron, describe_instant,
-    describe_permissions, diff_json, encode_base64, encode_base64_file, fix_line_breaks,
+    describe_permissions, diff_json, encode_base64, encode_base64_file, fake_data, fix_line_breaks,
     generate_identifiers, generate_json, generate_passwords, hash_input, inspect_identifier,
     lorem_ipsum, parse_url, place_in_zones, save_base64, search_time_zones, slugify, text_stats,
     time_in_zone, url_codec,
@@ -100,6 +100,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             generate_identifiers,
             inspect_identifier,
             text_stats,
+            fake_data,
             describe_colour,
             convert_data,
             generate_json,

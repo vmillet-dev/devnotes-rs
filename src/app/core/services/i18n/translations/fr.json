@@ -2002,6 +2002,40 @@
       },
       "empty": "Les comptes s’affichent ici.",
       "noteTitle": "Statistiques d’un texte"
+    },
+    "fake-data": {
+      "name": "Données factices",
+      "description": "Noms, emails, téléphones, adresses, IBAN, cartes de test",
+      "columns": "Colonnes",
+      "columnNames": {
+        "name": "Nom",
+        "email": "Email",
+        "phone": "Téléphone",
+        "address": "Adresse",
+        "iban": "IBAN",
+        "card": "Carte de test"
+      },
+      "count": "Lignes",
+      "locale": "Données",
+      "locales": {
+        "fr": "Françaises",
+        "en": "Américaines"
+      },
+      "seed": "Graine",
+      "seedPlaceholder": "au hasard",
+      "seedUsed": "Graine utilisée : {{seed}}",
+      "keepSeed": "La garder",
+      "again": "Tirer à nouveau",
+      "format": "Copier et garder en",
+      "formats": {
+        "csv": "CSV",
+        "json": "JSON"
+      },
+      "all": "toutes les lignes",
+      "copyCell": "Copier {{value}}",
+      "harmless": "Sans danger par construction : emails sur les domaines réservés aux exemples (RFC 2606), téléphones dans les plages réservées à la fiction, IBAN à la clé juste mais aux banques inventées, numéros de carte qui passent Luhn sans être à personne.",
+      "noColumn": "Cochez au moins une colonne.",
+      "noteTitle": "Données factices ({{count}} lignes)"
     }
   }
 }

@@ -161,7 +161,7 @@ impl CardNetwork {
     }
 
     /// American Express groups 4-6-5; the others by four.
-    fn grouped(self, digits: &str) -> String {
+    pub(crate) fn grouped(self, digits: &str) -> String {
         match self {
             Self::AmericanExpress if digits.len() == 15 => {
                 format!("{} {} {}", &digits[..4], &digits[4..10], &digits[10..])
@@ -171,7 +171,7 @@ impl CardNetwork {
     }
 }
 
-fn by_four(text: &str) -> String {
+pub(crate) fn by_four(text: &str) -> String {
     text.as_bytes()
         .chunks(4)
         .map(|chunk| String::from_utf8_lossy(chunk).into_owned())

@@ -645,6 +645,40 @@ describe('The tools', () => {
         'the opening words',
       );
     });
+
+    it('draws the same harmless people again from the same seed, in Rust', async () => {
+      const request = {
+        columns: ['name', 'email', 'phone', 'address', 'iban', 'card'] as const,
+        count: 20,
+        locale: 'fr' as const,
+        seed: 7,
+      };
+      const first = await bridge.fakeData({ ...request, columns: [...request.columns] });
+
+      expect(await bridge.fakeData({ ...request, columns: [...request.columns] })).toEqual(first);
+      expect(first.rows).toHaveLength(20);
+      for (const [, email, phone, , iban] of first.rows) {
+        expect(email).toMatch(/@example\.(com|org|net)$/);
+        expect(phone).toMatch(/^0\d \d\d \d\d \d\d \d\d$/);
+        expect(iban).toMatch(/^FR\d\d /);
+      }
+    });
+
+    it('lays fake rows out in the columns ticked, from the seed kept', async () => {
+      await openTool('fake-data');
+      await setField(testid('fake-data-seed'), '7');
+      await $(testid('fake-data-column-card')).click();
+
+      await eventually(
+        () => readEach(`${testid('fake-data-table')} th`, 'text'),
+        (headers) => headers.length === 5,
+        'five columns',
+      );
+      expect(await $$(testid('fake-data-row')).length).toBe(10);
+      expect(await $(testid('fake-data-seed-used')).getText()).toContain('7');
+      await $(testid('fake-data-column-card')).click();
+      await setField(testid('fake-data-seed'), '');
+    });
   });
 
   describe('the time tools', () => {

@@ -40,6 +40,7 @@ export const commands = {
 	generateIdentifiers: (request: IdentifiersRequest) => typedError<string[], AppError>(__TAURI_INVOKE("generate_identifiers", { request })),
 	inspectIdentifier: (text: string) => typedError<IdInspection, AppError>(__TAURI_INVOKE("inspect_identifier", { text })),
 	textStats: (request: StatsRequest) => typedError<TextStats, AppError>(__TAURI_INVOKE("text_stats", { request })),
+	fakeData: (request: FakeRequest) => typedError<FakeAnswer, AppError>(__TAURI_INVOKE("fake_data", { request })),
 	describeColour: (request: ColourRequest) => typedError<ColourAnswer, AppError>(__TAURI_INVOKE("describe_colour", { request })),
 	convertData: (request: ConvertRequest) => typedError<ConvertAnswer, AppError>(__TAURI_INVOKE("convert_data", { request })),
 	generateJson: (request: GenerateRequest) => typedError<GenerateAnswer, AppError>(__TAURI_INVOKE("generate_json", { request })),
@@ -704,6 +705,26 @@ export type ExportScope = { kind: "library" } | { kind: "space"; spaceId: string
 export type FacetCount<T> = {
 	value: T,
 	count: number,
+};
+
+export type FakeAnswer = {
+	seed: number,
+	columns: FakeColumn[],
+	rows: string[][],
+	csv: string,
+	json: string,
+};
+
+export type FakeColumn = "name" | "email" | "phone" | "address" | "iban" | "card";
+
+export type FakeLocale = "fr" | "en";
+
+export type FakeRequest = {
+	columns: FakeColumn[],
+	count: number,
+	locale: FakeLocale,
+	/**  The same seed draws the same rows; none draws one and says which. */
+	seed: number | null,
 };
 
 export type FieldReading = {

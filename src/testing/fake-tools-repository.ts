@@ -13,6 +13,8 @@ import {
   ConvertRequest,
   CronAnswer,
   CronRequest,
+  FakeAnswer,
+  FakeRequest,
   GenerateAnswer,
   GenerateRequest,
   HashAnswer,
@@ -99,6 +101,7 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
   cron: CronAnswer = { kind: 'reboot' };
   sizes: SizesAnswer = { kind: 'tooLarge' };
   checks: CheckAnswer = { kind: 'tooShort' };
+  fakeRows: FakeAnswer = { seed: 1, columns: [], rows: [], csv: '', json: '[]' };
   stats: TextStats = {
     characters: 0,
     codePoints: 0,
@@ -241,6 +244,10 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
 
   textStats(request: StatsRequest): Promise<TextStats> {
     return this.answer('text_stats', request, this.stats);
+  }
+
+  fakeData(request: FakeRequest): Promise<FakeAnswer> {
+    return this.answer('fake_data', request, this.fakeRows);
   }
 
   requestsOf(command: string): unknown[] {

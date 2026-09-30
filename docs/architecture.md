@@ -703,6 +703,12 @@ list (`UNDERSTOOD`); any other is listed back with its path, so a document that 
 `pattern` is never passed off as one that honours it. From an example, each value is redrawn in
 its kind — a UUID, an email, an instant, a URL, words — at its magnitude.
 
+**Fake people are drawn from a seed too** (`tools/fake.rs`), French or American from word lists
+of our own, and harmless by construction: emails on the domains RFC 2606 keeps for examples,
+phones in the ranges kept for fiction (ARCEP's six blocks, `555-01xx`), IBANs whose check digits
+(and French RIB key) are right but whose banks are made up, card numbers in a network's prefix
+that pass Luhn — the checksums are `tools/checks.rs`'s.
+
 **JSON Diff compares values** (`tools/diff.rs`): objects key by key, lists by a longest
 common sequence of their elements — one element inserted at the top is one change, not a change
 of every element below it. Each change carries its `JSONPath`, the patch is RFC 6902 from A to

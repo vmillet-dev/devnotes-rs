@@ -2002,6 +2002,40 @@
       },
       "empty": "The counts show here.",
       "noteTitle": "Statistics of a text"
+    },
+    "fake-data": {
+      "name": "Fake data",
+      "description": "Names, emails, phones, addresses, IBANs, test cards",
+      "columns": "Columns",
+      "columnNames": {
+        "name": "Name",
+        "email": "Email",
+        "phone": "Phone",
+        "address": "Address",
+        "iban": "IBAN",
+        "card": "Test card"
+      },
+      "count": "Rows",
+      "locale": "Data",
+      "locales": {
+        "fr": "French",
+        "en": "American"
+      },
+      "seed": "Seed",
+      "seedPlaceholder": "random",
+      "seedUsed": "Seed used: {{seed}}",
+      "keepSeed": "Keep it",
+      "again": "Draw again",
+      "format": "Copy and keep as",
+      "formats": {
+        "csv": "CSV",
+        "json": "JSON"
+      },
+      "all": "every row",
+      "copyCell": "Copy {{value}}",
+      "harmless": "Harmless by construction: emails on the domains kept for examples (RFC 2606), phones in the ranges kept for fiction, IBANs with right check digits but made-up banks, card numbers that pass Luhn and belong to no one.",
+      "noColumn": "Tick at least one column.",
+      "noteTitle": "Fake data ({{count}} rows)"
     }
   }
 }

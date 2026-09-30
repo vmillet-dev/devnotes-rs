@@ -138,6 +138,23 @@ export const TOOLS: readonly ToolDefinition[] = [
     load: () => import('./lorem/lorem-tool.component').then((m) => m.LoremToolComponent),
   },
   {
+    id: 'fake-data',
+    category: 'generate',
+    keywords: [
+      'fake',
+      'faker',
+      'mock',
+      'name',
+      'email',
+      'phone',
+      'address',
+      'iban',
+      'credit card',
+      'test data',
+    ],
+    load: () => import('./fake-data/fake-data-tool.component').then((m) => m.FakeDataToolComponent),
+  },
+  {
     id: 'dates',
     category: 'time',
     keywords: ['timestamp', 'unix', 'epoch', 'iso 8601', 'rfc 3339', 'rfc 2822', 'date', 'now'],

@@ -9,6 +9,7 @@ pub mod cron;
 pub mod dates;
 pub mod diff;
 pub mod encoding;
+pub mod fake;
 pub(crate) mod files;
 pub mod generate;
 pub mod hash;
@@ -261,4 +262,10 @@ pub async fn decode_jwt(request: jwt::JwtRequest) -> Result<jwt::JwtAnswer, AppE
 #[specta::specta]
 pub async fn text_stats(request: stats::StatsRequest) -> Result<stats::TextStats, AppError> {
     off_thread(move || stats::count(&request)).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn fake_data(request: fake::FakeRequest) -> Result<fake::FakeAnswer, AppError> {
+    off_thread(move || fake::generate(&request)).await
 }

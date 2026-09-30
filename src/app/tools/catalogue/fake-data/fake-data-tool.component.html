@@ -1,0 +1,121 @@
+<div class="page">
+  <section class="options" aria-labelledby="fake-data-options-title">
+    <h2 id="fake-data-options-title" class="visually-hidden">{{ 'tools.fake-data.columns' | transloco }}</h2>
+    <fieldset class="columns">
+      <legend class="label">{{ 'tools.fake-data.columns' | transloco }}</legend>
+      @for (column of allColumns; track column) {
+        <label class="check">
+          <input
+            type="checkbox"
+            [attr.data-testid]="'fake-data-column-' + column"
+            [checked]="chosen(column)"
+            (change)="onColumn(column, $event)"
+          />
+          {{ 'tools.fake-data.columnNames.' + column | transloco }}
+        </label>
+      }
+    </fieldset>
+    <div class="row">
+      <label class="option">
+        {{ 'tools.fake-data.count' | transloco }}
+        <input
+          type="number"
+          class="number"
+          data-testid="fake-data-count"
+          min="1"
+          max="100"
+          [value]="count()"
+          (input)="onCount($event)"
+        />
+      </label>
+      <span class="option">
+        {{ 'tools.fake-data.locale' | transloco }}
+        <app-segmented-choice
+          kind="fake-data-locale"
+          [label]="'tools.fake-data.locale' | transloco"
+          [segments]="locales"
+          [currentId]="locale()"
+          (chosen)="onLocale($event)"
+        />
+      </span>
+      <label class="option">
+        {{ 'tools.fake-data.seed' | transloco }}
+        <input
+          type="text"
+          inputmode="numeric"
+          class="number seed"
+          data-testid="fake-data-seed"
+          [placeholder]="'tools.fake-data.seedPlaceholder' | transloco"
+          [value]="seed() ?? ''"
+          (input)="onSeed($event)"
+        />
+      </label>
+      <button type="button" class="button" data-testid="fake-data-generate" (click)="regenerate()">
+        {{ 'tools.fake-data.again' | transloco }}
+      </button>
+    </div>
+  </section>
+
+  @if (answer.value(); as answer) {
+    <div class="head">
+      <p class="seed-line" data-testid="fake-data-seed-used">
+        {{ 'tools.fake-data.seedUsed' | transloco: { seed: answer.seed } }}
+        @if (seed() === null) {
+          <button
+            type="button"
+            class="keep"
+            data-testid="fake-data-keep-seed"
+            (click)="keepSeed(answer.seed)"
+          >
+            {{ 'tools.fake-data.keepSeed' | transloco }}
+          </button>
+        }
+      </p>
+      <span class="option">
+        {{ 'tools.fake-data.format' | transloco }}
+        <app-segmented-choice
+          kind="fake-data-format"
+          [label]="'tools.fake-data.format' | transloco"
+          [segments]="formats"
+          [currentId]="format()"
+          (chosen)="onFormat($event)"
+        />
+        <app-copy-value [value]="exported()" [what]="'tools.fake-data.all' | transloco" />
+      </span>
+    </div>
+    <div class="table-frame">
+      <table class="table" data-testid="fake-data-table">
+        <thead>
+          <tr>
+            @for (column of answer.columns; track column) {
+              <th scope="col">{{ 'tools.fake-data.columnNames.' + column | transloco }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of answer.rows; track $index; let r = $index) {
+            <tr data-testid="fake-data-row">
+              @for (cell of row; track $index; let c = $index) {
+                <td [attr.data-column]="answer.columns[c]">
+                  <button
+                    type="button"
+                    class="cell"
+                    data-testid="fake-data-cell"
+                    [class.copied]="copiedCell() === r + '-' + c"
+                    [attr.aria-label]="'tools.fake-data.copyCell' | transloco: { value: cell }"
+                    (click)="copyCell(r + '-' + c, cell)"
+                  >
+                    {{ cell }}
+                  </button>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <p class="note" data-testid="fake-data-harmless">{{ 'tools.fake-data.harmless' | transloco }}</p>
+  } @else if (columns().length === 0) {
+    <p class="note" data-testid="fake-data-no-column">{{ 'tools.fake-data.noColumn' | transloco }}</p>
+  }
+</div>

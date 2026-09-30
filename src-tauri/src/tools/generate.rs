@@ -66,7 +66,7 @@ impl Draw {
     }
 }
 
-fn seed_or_draw(seed: Option<u32>) -> u32 {
+pub(crate) fn seed_or_draw(seed: Option<u32>) -> u32 {
     seed.unwrap_or_else(|| {
         let mut bytes = [0u8; 4];
         // Without the system's randomness, the seed is still a seed: 0 is as good as any.

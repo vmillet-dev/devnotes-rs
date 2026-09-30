@@ -19,6 +19,8 @@ import type {
   FolderDraft,
   NoteFiling,
   ExportReport,
+  FakeAnswer,
+  FakeRequest,
   ImportReport,
   InstantAnswer,
   InstantRequest,
@@ -98,6 +100,7 @@ export const bridge = {
   checkDigits: (request: CheckRequest) => invoke<CheckAnswer>('check_digits', { request }),
   decodeJwt: (request: JwtRequest) => invoke<JwtAnswer>('decode_jwt', { request }),
   textStats: (request: StatsRequest) => invoke<TextStats>('text_stats', { request }),
+  fakeData: (request: FakeRequest) => invoke<FakeAnswer>('fake_data', { request }),
   searchTimeZones: (query: string) => invoke<ZoneEntry[]>('search_time_zones', { query }),
   encodeBase64File: (path: string, options: Base64Options) =>
     invoke<Base64FileAnswer>('encode_base64_file', { path, options }),

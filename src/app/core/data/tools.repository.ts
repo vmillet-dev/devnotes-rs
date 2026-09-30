@@ -15,6 +15,8 @@ import {
   ConvertRequest,
   CronAnswer,
   CronRequest,
+  FakeAnswer,
+  FakeRequest,
   GenerateAnswer,
   GenerateRequest,
   HashAnswer,
@@ -177,6 +179,11 @@ export class ToolsRepository {
 
   async textStats(request: StatsRequest): Promise<TextStats> {
     return unwrap('text_stats', await commands.textStats(request));
+  }
+
+  /** Drawn from a seed: the same seed gives the same rows. */
+  async fakeData(request: FakeRequest): Promise<FakeAnswer> {
+    return unwrap('fake_data', await commands.fakeData(request));
   }
 
   /** The wall clock of a zone now, as the field takes it. */
