@@ -94,7 +94,7 @@ export class CronToolComponent implements Tool {
   /** None when a macro was expanded: the offsets are the expansion's, not the text typed. */
   protected readonly litField = computed(() => {
     const [read, caret] = [this.read(), this.caret()];
-    if (!read || read.expanded !== null || caret === null) return null;
+    if (read?.expanded !== null || caret === null) return null;
     return read.fields.find((field) => caret >= field.start && caret <= field.end)?.field ?? null;
   });
 
