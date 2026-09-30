@@ -1242,39 +1242,6 @@
       "noteTitle": "Generated passwords",
       "saveWarning": "A password kept in a note is encrypted with the library, but a note gets copied, shared and exported: a password manager keeps it better."
     },
-    "uuid": {
-      "name": "UUID",
-      "description": "v4, v7, in bulk, validation",
-      "generate": "Generate",
-      "all": "every UUID",
-      "version": "Version",
-      "versions": {
-        "v4": "v4 · random",
-        "v7": "v7 · time-ordered"
-      },
-      "versionHints": {
-        "v4": "122 bits drawn from the system's generator.",
-        "v7": "Its first 48 bits are the time it was made: sorted, they sort in the order they were made."
-      },
-      "count": "Count",
-      "uppercase": "Upper case",
-      "again": "Draw again",
-      "check": "Validate",
-      "checkLabel": "UUID to validate",
-      "checkPlaceholder": "01922b6e-4b30-7cc4-9a5c-6f2d8e1b3a77",
-      "versionLabel": "Version",
-      "variant": "Variant",
-      "variants": {
-        "ncs": "NCS (obsolete)",
-        "rfc": "RFC 9562",
-        "microsoft": "Microsoft",
-        "future": "reserved"
-      },
-      "created": "Created",
-      "nil": "Nil UUID",
-      "invalid": "This is not a UUID.",
-      "noteTitle": "Generated UUIDs"
-    },
     "colour": {
       "name": "Colours",
       "description": "HEX, RGB, HSL, OKLCH, contrast",
@@ -1918,6 +1885,59 @@
       "warning": "A JWT can open an account: the note keeps only the decoded header and payload, never the token or the secret.",
       "empty": "Paste a JWT: its header and its payload show here.",
       "noteTitle": "Decoded {{algorithm}} JWT"
+    },
+    "identifiers": {
+      "name": "Identifiers",
+      "description": "UUID, ULID, NanoID, CUID2, ObjectId, KSUID — drawn and read back",
+      "generate": "Generate",
+      "all": "every identifier",
+      "kind": "Kind",
+      "count": "Count",
+      "uppercase": "Upper case",
+      "length": "Length",
+      "alphabet": "Alphabet",
+      "alphabets": {
+        "urlSafe": "URL-safe",
+        "alphanumeric": "Alphanumeric",
+        "hexLower": "Hex",
+        "digits": "Digits"
+      },
+      "again": "Draw again",
+      "hints": {
+        "uuidV4": "122 bits drawn from the system's generator.",
+        "uuidV7": "Its first 48 bits are the time it was made: sorted, they sort in the order they were made.",
+        "ulid": "48 bits of milliseconds then 80 drawn bits, in Crockford's base 32; drawn within one millisecond, they count up.",
+        "nanoId": "Characters drawn without bias from the alphabet chosen; 21 URL-safe ones are worth a UUID v4.",
+        "cuid2": "A letter, then a SHA3-512 of the time, a draw, a counter and a fingerprint, in base 36: nothing can be read in it.",
+        "objectId": "4 bytes of seconds, 5 drawn for the batch, 3 of a counter started from a drawn number.",
+        "ksuid": "4 bytes of seconds since May 2014, then 16 drawn, in base 62: sorted, they follow the clock."
+      },
+      "check": "Read back",
+      "checkLabel": "Identifier to read back",
+      "checkPlaceholder": "01ARZ3NDEKTSV4RRFFQ69G5FAV, a UUID, an ObjectId…",
+      "recognised": {
+        "uuid": "UUID",
+        "ulid": "ULID",
+        "objectId": "ObjectId (MongoDB)",
+        "ksuid": "KSUID",
+        "cuidV1": "CUID, first version, deprecated"
+      },
+      "version": "Version",
+      "variant": "Variant",
+      "variants": {
+        "ncs": "NCS (obsolete)",
+        "rfc": "RFC 9562",
+        "microsoft": "Microsoft",
+        "future": "reserved"
+      },
+      "nil": "Nil UUID",
+      "created": "Created",
+      "counter": "Counter",
+      "payload": "Drawn part",
+      "possible": "Nothing to read: it has the shape of a {{kinds}}.",
+      "outOfRange": "The shape of a {{kind}}, but past what one can hold.",
+      "unrecognised": "No known identifier has this shape.",
+      "noteTitle": "Generated {{kind}}s"
     }
   }
 }
