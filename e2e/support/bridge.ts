@@ -31,6 +31,8 @@ import type {
   NotePriority,
   NotesQuery,
   NotesView,
+  PercentagesAnswer,
+  PercentagesRequest,
   Priority,
   Registry,
   SizesAnswer,
@@ -81,6 +83,8 @@ export const bridge = {
   placeInZones: (request: ZonesRequest) => invoke<ZonesAnswer>('place_in_zones', { request }),
   describeCron: (request: CronRequest) => invoke<CronAnswer>('describe_cron', { request }),
   convertSize: (request: SizesRequest) => invoke<SizesAnswer>('convert_size', { request }),
+  answerPercentages: (request: PercentagesRequest) =>
+    invoke<PercentagesAnswer>('answer_percentages', { request }),
   searchTimeZones: (query: string) => invoke<ZoneEntry[]>('search_time_zones', { query }),
   encodeBase64File: (path: string, options: Base64Options) =>
     invoke<Base64FileAnswer>('encode_base64_file', { path, options }),

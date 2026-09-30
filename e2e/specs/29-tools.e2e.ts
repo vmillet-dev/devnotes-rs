@@ -711,7 +711,7 @@ describe('The tools', () => {
           `${testid('tools-panel')}[data-category="calc"] ${testid('tools-entry')}`,
           '@data-tool',
         ),
-      ).toEqual(['sizes']);
+      ).toEqual(['sizes', 'percentages']);
     });
 
     it('writes a quantity typed in French symbols in every unit, rounded as asked', async () => {
@@ -734,7 +734,54 @@ describe('The tools', () => {
       );
     });
 
+    it('answers percentages exactly, and says a division by zero, in Rust', async () => {
+      const pair = (x: string, y: string) => ({ x, y });
+      const answer = await bridge.answerPercentages({
+        of: pair('1,1', '100'),
+        share: pair('36', '0'),
+        change: pair('0', '100'),
+        apply: pair('15', '240'),
+        lower: true,
+        before: pair('15', '276'),
+        decimals: 2,
+      });
+
+      expect(answer.of).toMatchObject({ kind: 'answered', exact: '1.1' });
+      expect(answer.share).toEqual({ kind: 'divisionByZero' });
+      expect(answer.change).toEqual({ kind: 'fromZero' });
+      expect(answer.apply).toMatchObject({ exact: '204' });
+      expect(answer.before).toMatchObject({ exact: '240' });
+    });
+
+    it('answers the usual questions as they are typed', async () => {
+      await openTool('percentages');
+      await setField(testid('percentages-of-x'), '15');
+      await setField(testid('percentages-of-y'), '240');
+      await setField(testid('percentages-change-x'), '80');
+      await setField(testid('percentages-change-y'), '100');
+
+      await eventually(
+        async () => digits(await $(testid('percentages-of-result')).getText()),
+        (result) => result === '36',
+        '15 % of 240',
+      );
+      await eventually(
+        () => $(testid('percentages-change-result')).getText(),
+        (result) => result === '+25 %',
+        'from 80 to 100',
+      );
+      await setField(testid('percentages-share-x'), '36');
+      await setField(testid('percentages-share-y'), '0');
+      await eventually(
+        () => $(testid('percentages-share-problem')).getAttribute('data-problem'),
+        (problem) => problem === 'divisionByZero',
+        'the division by zero',
+      );
+      await $(testid('tool-clear')).click();
+    });
+
     it('says a negative size is refused, and where', async () => {
+      await openTool('sizes');
       await setField(testid('sizes-input'), '-5 MB');
 
       await eventually(

@@ -24,6 +24,8 @@ import {
   LoremAnswer,
   LoremRequest,
   PasswordAnswer,
+  PercentagesAnswer,
+  PercentagesRequest,
   PasswordRequest,
   SizesAnswer,
   SizesRequest,
@@ -86,6 +88,13 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
   wallClock = '2026-09-29 14:03:12';
   cron: CronAnswer = { kind: 'reboot' };
   sizes: SizesAnswer = { kind: 'tooLarge' };
+  percentages: PercentagesAnswer = {
+    of: { kind: 'empty' },
+    share: { kind: 'empty' },
+    change: { kind: 'empty' },
+    apply: { kind: 'empty' },
+    before: { kind: 'empty' },
+  };
 
   convertCase(text: string): Promise<CaseConversion[]> {
     return this.answer('convert_case', text, this.cases);
@@ -185,6 +194,10 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
 
   convertSize(request: SizesRequest): Promise<SizesAnswer> {
     return this.answer('convert_size', request, this.sizes);
+  }
+
+  answerPercentages(request: PercentagesRequest): Promise<PercentagesAnswer> {
+    return this.answer('answer_percentages', request, this.percentages);
   }
 
   requestsOf(command: string): unknown[] {

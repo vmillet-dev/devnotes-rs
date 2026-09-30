@@ -1692,6 +1692,57 @@
       "tooLarge": "Too large to count exactly: 28 digits at most.",
       "empty": "Type a quantity, with its unit or without: every unit shows here.",
       "noteTitle": "{{value}} {{unit}} in every unit"
+    },
+    "percentages": {
+      "name": "Percentages",
+      "description": "x % of y, share, change, rise and fall",
+      "decimals": "Decimals",
+      "raise": "raised",
+      "lower": "lowered",
+      "direction": "Direction",
+      "of": {
+        "title": "Percentage of a value",
+        "x": "Percentage",
+        "y": "Value",
+        "middle": "% of",
+        "formula": "{{x}} ÷ 100 × {{y}} = {{result}}"
+      },
+      "share": {
+        "title": "Share as a percentage",
+        "x": "Part",
+        "y": "Total",
+        "middle": "is what % of",
+        "formula": "{{x}} ÷ {{y}} × 100 = {{result}} %"
+      },
+      "change": {
+        "title": "Change",
+        "x": "Starting value",
+        "y": "Final value",
+        "before": "from",
+        "middle": "to",
+        "formula": "({{y}} − {{x}}) ÷ |{{x}}| × 100 = {{result}} %"
+      },
+      "apply": {
+        "title": "Rise or fall",
+        "x": "Percentage",
+        "y": "Value",
+        "middle": "by",
+        "raiseFormula": "{{y}} × (1 + {{x}} ÷ 100) = {{result}}",
+        "lowerFormula": "{{y}} × (1 − {{x}} ÷ 100) = {{result}}"
+      },
+      "before": {
+        "title": "Value before a change",
+        "x": "Change in %",
+        "y": "Value after",
+        "middle": "after a change of",
+        "formula": "{{y}} ÷ (1 + {{x}} ÷ 100) = {{result}}"
+      },
+      "unreadable": "{{field}}: unreadable from character {{at}} on.",
+      "divisionByZero": "A division by zero: no answer.",
+      "fromZero": "A change from 0 is no percentage.",
+      "tooLarge": "Too large to compute exactly: 28 digits at most.",
+      "rounded": "≈: a rounded result. Copy gives the exact one.",
+      "noteTitle": "Percentages"
     }
   }
 }

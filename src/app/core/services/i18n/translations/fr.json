@@ -1692,6 +1692,57 @@
       "tooLarge": "Trop grand pour être compté exactement : 28 chiffres au plus.",
       "empty": "Tapez une quantité, avec son unité ou non : chaque unité s’affiche ici.",
       "noteTitle": "{{value}} {{unit}} dans toutes les unités"
+    },
+    "percentages": {
+      "name": "Pourcentages",
+      "description": "x % de y, part, évolution, hausse et baisse",
+      "decimals": "Décimales",
+      "raise": "augmenté",
+      "lower": "diminué",
+      "direction": "Sens",
+      "of": {
+        "title": "Pourcentage d’une valeur",
+        "x": "Pourcentage",
+        "y": "Valeur",
+        "middle": "% de",
+        "formula": "{{x}} ÷ 100 × {{y}} = {{result}}"
+      },
+      "share": {
+        "title": "Part en pourcentage",
+        "x": "Part",
+        "y": "Total",
+        "middle": "est quel % de",
+        "formula": "{{x}} ÷ {{y}} × 100 = {{result}} %"
+      },
+      "change": {
+        "title": "Évolution",
+        "x": "Valeur de départ",
+        "y": "Valeur d’arrivée",
+        "before": "de",
+        "middle": "à",
+        "formula": "({{y}} − {{x}}) ÷ |{{x}}| × 100 = {{result}} %"
+      },
+      "apply": {
+        "title": "Hausse ou baisse",
+        "x": "Pourcentage",
+        "y": "Valeur",
+        "middle": "de",
+        "raiseFormula": "{{y}} × (1 + {{x}} ÷ 100) = {{result}}",
+        "lowerFormula": "{{y}} × (1 − {{x}} ÷ 100) = {{result}}"
+      },
+      "before": {
+        "title": "Valeur avant une évolution",
+        "x": "Évolution en %",
+        "y": "Valeur après",
+        "middle": "après une évolution de",
+        "formula": "{{y}} ÷ (1 + {{x}} ÷ 100) = {{result}}"
+      },
+      "unreadable": "{{field}} : illisible à partir du caractère {{at}}.",
+      "divisionByZero": "Division par zéro : pas de réponse.",
+      "fromZero": "Une évolution depuis 0 n’est pas un pourcentage.",
+      "tooLarge": "Trop grand pour être calculé exactement : 28 chiffres au plus.",
+      "rounded": "≈ : résultat arrondi. Copier donne la valeur exacte.",
+      "noteTitle": "Pourcentages"
     }
   }
 }

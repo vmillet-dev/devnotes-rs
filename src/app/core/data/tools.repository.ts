@@ -26,6 +26,8 @@ import {
   LoremAnswer,
   LoremRequest,
   PasswordAnswer,
+  PercentagesAnswer,
+  PercentagesRequest,
   PasswordRequest,
   SizesAnswer,
   SizesRequest,
@@ -144,6 +146,11 @@ export class ToolsRepository {
   /** Exact: the rounded values are for reading, the exact ones for copying. */
   async convertSize(request: SizesRequest): Promise<SizesAnswer> {
     return unwrap('convert_size', await commands.convertSize(request));
+  }
+
+  /** The five questions at once, each on its own two numbers. */
+  async answerPercentages(request: PercentagesRequest): Promise<PercentagesAnswer> {
+    return unwrap('answer_percentages', await commands.answerPercentages(request));
   }
 
   /** The wall clock of a zone now, as the field takes it. */
