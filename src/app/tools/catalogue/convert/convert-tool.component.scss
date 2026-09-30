@@ -65,3 +65,13 @@
   line-height: 1.5;
   color: var(--text-2);
 }
+
+.cleaning {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.check {
+  @include tool-check;
+}

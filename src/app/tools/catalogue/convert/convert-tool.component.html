@@ -22,6 +22,26 @@
         (input)="onInput($event)"
       ></textarea>
     </label>
+    <div class="cleaning">
+      <label class="check">
+        <input
+          type="checkbox"
+          data-testid="convert-drop-nulls"
+          [checked]="dropNulls()"
+          (change)="onDropNulls($event)"
+        />
+        {{ 'tools.convert.dropNulls' | transloco }}
+      </label>
+      <label class="check">
+        <input
+          type="checkbox"
+          data-testid="convert-drop-empty"
+          [checked]="dropEmpty()"
+          (change)="onDropEmpty($event)"
+        />
+        {{ 'tools.convert.dropEmpty' | transloco }}
+      </label>
+    </div>
     @if (unreadable(); as unreadable) {
       <p class="problem" role="status" data-testid="convert-unreadable">
         {{
@@ -58,6 +78,11 @@
       </p>
     } @else if (!unreadable()) {
       <p class="note">{{ 'tools.convert.empty' | transloco }}</p>
+    }
+    @if (removed() !== null) {
+      <p class="convention" data-testid="convert-removed">
+        {{ 'tools.convert.removed' | transloco: { count: removed() } }}
+      </p>
     }
     @for (format of conventions(); track format) {
       <p class="convention" [attr.data-testid]="'convert-convention-' + format">

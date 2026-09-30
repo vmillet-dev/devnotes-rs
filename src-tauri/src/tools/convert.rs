@@ -26,6 +26,10 @@ pub struct ConvertRequest {
     pub text: String,
     pub from: DataFormat,
     pub to: DataFormat,
+    /// Every `null`, a member's or a list's element, taken out before writing.
+    pub drop_nulls: bool,
+    /// Every `""`, `[]` and `{}` taken out, and what that empties in turn.
+    pub drop_empty: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
@@ -48,17 +52,13 @@ pub enum Crossing {
 pub enum ConvertAnswer {
     Converted {
         text: String,
+        /// Values the cleaning took out.
+        removed: u32,
     },
     /// The text given does not parse: one-based line and column, in characters.
-    Unreadable {
-        line: u32,
-        column: u32,
-    },
+    Unreadable { line: u32, column: u32 },
     /// It parses, but the other format cannot hold it: `path` is a `JSONPath`.
-    Impossible {
-        crossing: Crossing,
-        path: String,
-    },
+    Impossible { crossing: Crossing, path: String },
 }
 
 pub(super) struct Blocked {
@@ -245,13 +245,53 @@ fn write(value: &Value, format: DataFormat) -> Result<String, Blocked> {
     }
 }
 
+/// Whether a cleaned value goes: `null`, or an empty string, list or object.
+fn goes(value: &Value, nulls: bool, empty: bool) -> bool {
+    match value {
+        Value::Null => nulls,
+        Value::String(text) => empty && text.is_empty(),
+        Value::Array(items) => empty && items.is_empty(),
+        Value::Object(members) => empty && members.is_empty(),
+        _ => false,
+    }
+}
+
+/// Bottom-up, so what the cleaning empties is empty in turn: `{"a": {"b": null}}` becomes `{}`.
+fn clean(value: &mut Value, nulls: bool, empty: bool) -> usize {
+    let mut removed = 0;
+    match value {
+        Value::Array(items) => {
+            for item in items.iter_mut() {
+                removed += clean(item, nulls, empty);
+            }
+            let before = items.len();
+            items.retain(|item| !goes(item, nulls, empty));
+            removed += before - items.len();
+        }
+        Value::Object(members) => {
+            for member in members.values_mut() {
+                removed += clean(member, nulls, empty);
+            }
+            let before = members.len();
+            members.retain(|_, member| !goes(member, nulls, empty));
+            removed += before - members.len();
+        }
+        _ => {}
+    }
+    removed
+}
+
 pub fn convert(request: &ConvertRequest) -> ConvertAnswer {
-    let value = match read(&request.text, request.from) {
+    let mut value = match read(&request.text, request.from) {
         Ok(value) => value,
         Err(answer) => return answer,
     };
+    let removed = clean(&mut value, request.drop_nulls, request.drop_empty);
     match write(&value, request.to) {
-        Ok(text) => ConvertAnswer::Converted { text },
+        Ok(text) => ConvertAnswer::Converted {
+            text,
+            removed: saturating_u32(removed),
+        },
         Err(Blocked { crossing, path }) => ConvertAnswer::Impossible { crossing, path },
     }
 }
@@ -261,12 +301,8 @@ mod tests {
     use super::*;
 
     fn converted(text: &str, from: DataFormat, to: DataFormat) -> String {
-        match convert(&ConvertRequest {
-            text: text.to_owned(),
-            from,
-            to,
-        }) {
-            ConvertAnswer::Converted { text } => text,
+        match answer(text, from, to) {
+            ConvertAnswer::Converted { text, .. } => text,
             other => panic!("{other:?}"),
         }
     }
@@ -276,7 +312,93 @@ mod tests {
             text: text.to_owned(),
             from,
             to,
+            drop_nulls: false,
+            drop_empty: false,
         })
+    }
+
+    fn cleaned(text: &str, to: DataFormat, drop_nulls: bool, drop_empty: bool) -> (String, u32) {
+        match convert(&ConvertRequest {
+            text: text.to_owned(),
+            from: DataFormat::Json,
+            to,
+            drop_nulls,
+            drop_empty,
+        }) {
+            ConvertAnswer::Converted { text, removed } => (text, removed),
+            other => panic!("{other:?}"),
+        }
+    }
+
+    const UNTIDY: &str = r#"{"name":"a","gone":null,"blank":"","list":[1,null,"",[],{}],"nested":{"inner":{"deep":null}},"zero":0,"no":false}"#;
+
+    fn compact(text: &str) -> String {
+        serde_json::from_str::<Value>(text).unwrap().to_string()
+    }
+
+    #[test]
+    fn nulls_go_from_members_and_lists_alike() {
+        let (json, removed) = cleaned(UNTIDY, DataFormat::Json, true, false);
+
+        assert_eq!(
+            compact(&json),
+            r#"{"name":"a","blank":"","list":[1,"",[],{}],"nested":{"inner":{}},"zero":0,"no":false}"#
+        );
+        assert_eq!(removed, 3);
+    }
+
+    #[test]
+    fn empty_values_go_and_what_they_empty_goes_after_them() {
+        let (json, removed) = cleaned(UNTIDY, DataFormat::Json, false, true);
+        assert_eq!(
+            compact(&json),
+            r#"{"name":"a","gone":null,"list":[1,null],"nested":{"inner":{"deep":null}},"zero":0,"no":false}"#
+        );
+        assert_eq!(removed, 4);
+
+        let (both, removed) = cleaned(UNTIDY, DataFormat::Json, true, true);
+        assert_eq!(
+            compact(&both),
+            r#"{"name":"a","list":[1],"zero":0,"no":false}"#
+        );
+        assert_eq!(
+            removed, 9,
+            "gone, blank, four in the list, then deep, inner and nested"
+        );
+    }
+
+    #[test]
+    fn a_document_can_empty_entirely() {
+        assert_eq!(
+            cleaned(r#"{"a":{"b":null},"c":[]}"#, DataFormat::Json, true, true).0,
+            "{}"
+        );
+        assert_eq!(cleaned("[null, {}]", DataFormat::Json, true, true).0, "[]");
+    }
+
+    #[test]
+    fn a_json_with_nulls_reaches_toml_once_they_go() {
+        assert!(matches!(
+            answer(
+                r#"{"db":{"replica":null,"host":"h"}}"#,
+                DataFormat::Json,
+                DataFormat::Toml
+            ),
+            ConvertAnswer::Impossible { .. }
+        ));
+        let (toml, removed) = cleaned(
+            r#"{"db":{"replica":null,"host":"h"}}"#,
+            DataFormat::Toml,
+            true,
+            false,
+        );
+        assert!(toml.contains("host = \"h\""), "{toml}");
+        assert_eq!(removed, 1);
+    }
+
+    #[test]
+    fn nothing_goes_unless_asked() {
+        assert_eq!(cleaned(UNTIDY, DataFormat::Json, false, false).1, 0);
     }
 
     const SERVICE: &str = r#"{"service":"billing","replicas":2,"ratio":0.5,"tags":["a","b"],"database":{"host":"db","pool":10}}"#;

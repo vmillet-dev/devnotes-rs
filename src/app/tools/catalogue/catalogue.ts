@@ -109,7 +109,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   {
     id: 'convert',
     category: 'encode',
-    keywords: ['json', 'toml', 'xml', 'yaml', 'yml', 'convert'],
+    keywords: ['json', 'toml', 'xml', 'yaml', 'yml', 'convert', 'null', 'empty', 'clean', 'nettoyer'],
     load: () => import('./convert/convert-tool.component').then((m) => m.ConvertToolComponent),
   },
   {

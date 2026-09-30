@@ -1308,7 +1308,10 @@
         "xml": "XML convention: @name for an attribute, #text for text beside elements, a repeated element becomes a list, an empty element becomes null. XML has no types: everything it gives is text.",
         "toml": "TOML has no null and wants a table at its root; a TOML date becomes a string in JSON."
       },
-      "noteTitle": "{{from}} converted to {{to}}"
+      "noteTitle": "{{from}} converted to {{to}}",
+      "dropNulls": "Remove nulls",
+      "dropEmpty": "Remove empty values: empty strings, lists and objects",
+      "removed": "{count, plural, =0 {no value removed} one {# value removed} other {# values removed}}"
     },
     "json-generator": {
       "name": "JSON",

@@ -1,11 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { FakeToolsRepository } from '@testing/fake-tools-repository';
 import { ToolHarness, renderTool } from '@testing/tool-harness';
 import { ConvertToolComponent } from './convert-tool.component';
 
 describe('ConvertToolComponent', () => {
   const answer = (tools: FakeToolsRepository): void => {
-    tools.conversion = { kind: 'converted', text: 'service: billing\n' };
+    tools.conversion = { kind: 'converted', text: 'service: billing\n', removed: 0 };
   };
 
   const text = (harness: ToolHarness<ConvertToolComponent>, testid: string): string =>
@@ -17,7 +17,7 @@ describe('ConvertToolComponent', () => {
     await harness.type('convert-input', '{"service":"billing"}', 'convert_data');
 
     expect(harness.tools.requestsOf('convert_data')).toEqual([
-      { text: '{"service":"billing"}', from: 'json', to: 'yaml' },
+      { text: '{"service":"billing"}', from: 'json', to: 'yaml', dropNulls: false, dropEmpty: false },
     ]);
     expect(harness.element('[data-testid="convert-output"]').textContent).toBe('service: billing\n');
     expect(harness.tool.result()).toMatchObject({
@@ -54,6 +54,28 @@ describe('ConvertToolComponent', () => {
     );
     await harness.type('convert-input', 'service: billing\n', 'convert_data');
     expect(harness.tools.requestsOf('convert_data').at(-1)).toMatchObject({ from: 'yaml', to: 'json' });
+  });
+
+  it('takes nulls and empty values out once asked, and says how many went', async () => {
+    const harness = await renderTool(ConvertToolComponent, answer);
+    await harness.type('convert-input', '{"a":null}', 'convert_data');
+    expect(harness.element('[data-testid="convert-removed"]')).toBeNull();
+
+    harness.tools.conversion = { kind: 'converted', text: '{}', removed: 3 };
+    for (const testid of ['convert-drop-nulls', 'convert-drop-empty']) {
+      const box = harness.element<HTMLInputElement>(`[data-testid="${testid}"]`);
+      box.checked = true;
+      box.dispatchEvent(new Event('change'));
+    }
+    await vi.waitFor(() =>
+      expect(harness.tools.requestsOf('convert_data').at(-1)).toMatchObject({
+        dropNulls: true,
+        dropEmpty: true,
+      }),
+    );
+    await harness.settle();
+
+    expect(text(harness, 'convert-removed')).toBe('3 valeurs retirées');
   });
 
   it('says where a text does not parse', async () => {

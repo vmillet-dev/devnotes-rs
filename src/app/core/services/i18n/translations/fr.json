@@ -1308,7 +1308,10 @@
         "xml": "Convention XML : @nom pour un attribut, #text pour le texte à côté d’éléments, un élément répété devient une liste, un élément vide devient null. XML n’a pas de types : tout ce qu’il donne est du texte.",
         "toml": "TOML n’a pas de null et veut une table à sa racine ; une date TOML devient une chaîne en JSON."
       },
-      "noteTitle": "{{from}} converti en {{to}}"
+      "noteTitle": "{{from}} converti en {{to}}",
+      "dropNulls": "Retirer les null",
+      "dropEmpty": "Retirer les vides : chaînes, listes et objets vides",
+      "removed": "{count, plural, =0 {aucune valeur retirée} one {# valeur retirée} other {# valeurs retirées}}"
     },
     "json-generator": {
       "name": "JSON",

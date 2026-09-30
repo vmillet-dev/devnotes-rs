@@ -408,6 +408,18 @@ describe('The tools', () => {
       );
     });
 
+    it('reaches TOML once the nulls are taken out, and says how many went', async () => {
+      await $(testid('convert-drop-nulls')).click();
+
+      await eventually(
+        () => $(testid('convert-output')).getText(),
+        (toml) => toml.includes('[database]') && !toml.includes('replica'),
+        'the TOML without its null',
+      );
+      expect(await $(testid('convert-removed')).getText()).toContain('1');
+      await $(testid('convert-drop-nulls')).click();
+    });
+
     it('reads XML attributes and repeated elements under the stated convention', async () => {
       await $(`${testid('segmented-convert-from')} [data-segment-id="xml"]`).click();
       await $(`${testid('segmented-convert-to')} [data-segment-id="json"]`).click();

@@ -692,7 +692,9 @@ come back in alphabetical order. YAML is `yaml-rust2`, maintained and pure Rust 
 is archived — and XML is read and written by hand around `quick-xml`, to one convention the
 tool states beside its result (`@name`, `#text`, a repeated element as a list). What a format
 cannot hold — a TOML `null`, a list at a TOML root, two XML roots, a name XML refuses — is an
-answer carrying its `JSONPath`, never a guess.
+answer carrying its `JSONPath`, never a guess. Between reading and writing, the value can be
+cleaned of its `null`s and its empty values (`""`, `[]`, `{}`), bottom-up so that what the
+cleaning empties goes in turn — which is also how a JSON with `null`s reaches TOML.
 
 **A generation is drawn from a seed** (`tools/generate.rs`, a `SplitMix64` — never for a
 secret): the same seed and source give the same documents, and a generation without one draws a

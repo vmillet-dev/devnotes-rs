@@ -538,7 +538,9 @@ export type Contrast = {
 	aaa: TextSizes,
 };
 
-export type ConvertAnswer = { kind: "converted"; text: string } | 
+export type ConvertAnswer = { kind: "converted"; text: string; 
+/**  Values the cleaning took out. */
+removed: number } | 
 /**  The text given does not parse: one-based line and column, in characters. */
 { kind: "unreadable"; line: number; column: number } | 
 /**  It parses, but the other format cannot hold it: `path` is a `JSONPath`. */
@@ -548,6 +550,10 @@ export type ConvertRequest = {
 	text: string,
 	from: DataFormat,
 	to: DataFormat,
+	/**  Every `null`, a member's or a list's element, taken out before writing. */
+	dropNulls: boolean,
+	/**  Every `""`, `[]` and `{}` taken out, and what that empties in turn. */
+	dropEmpty: boolean,
 };
 
 export type CronAnswer = { kind: "read"; 

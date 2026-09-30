@@ -360,6 +360,8 @@ mod tests {
             text: json.to_owned(),
             from: DataFormat::Json,
             to: DataFormat::Xml,
+            drop_nulls: false,
+            drop_empty: false,
         }) {
             ConvertAnswer::Impossible { crossing, path } => (crossing, path),
             other => panic!("{other:?}"),

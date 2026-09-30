@@ -33,17 +33,34 @@ export class ConvertToolComponent implements Tool {
   protected readonly text = toolState('convert.text', '');
   protected readonly from = toolState<DataFormat>('convert.from', 'json');
   protected readonly to = toolState<DataFormat>('convert.to', 'yaml');
+  protected readonly dropNulls = toolState('convert.dropNulls', false);
+  protected readonly dropEmpty = toolState('convert.dropEmpty', false);
 
   protected readonly formats = SEGMENTS;
 
   protected readonly answer = liveResult(
-    () => (this.text().trim() === '' ? undefined : { text: this.text(), from: this.from(), to: this.to() }),
+    () =>
+      this.text().trim() === ''
+        ? undefined
+        : {
+            text: this.text(),
+            from: this.from(),
+            to: this.to(),
+            dropNulls: this.dropNulls(),
+            dropEmpty: this.dropEmpty(),
+          },
     (request) => this.repository.convert(request),
   );
 
   protected readonly converted = computed(() => {
     const answer = this.answer.value();
     return answer?.kind === 'converted' ? answer.text : null;
+  });
+
+  /** How many values the cleaning took out, said once it was asked for. */
+  protected readonly removed = computed(() => {
+    const [answer, asked] = [this.answer.value(), this.answer.answered()];
+    return answer?.kind === 'converted' && (asked?.dropNulls || asked?.dropEmpty) ? answer.removed : null;
   });
 
   protected readonly unreadable = computed(() => {
@@ -105,5 +122,13 @@ export class ConvertToolComponent implements Tool {
 
   protected onTo(id: string): void {
     this.to.set(id as DataFormat);
+  }
+
+  protected onDropNulls(event: Event): void {
+    this.dropNulls.set((event.target as HTMLInputElement).checked);
+  }
+
+  protected onDropEmpty(event: Event): void {
+    this.dropEmpty.set((event.target as HTMLInputElement).checked);
   }
 }
