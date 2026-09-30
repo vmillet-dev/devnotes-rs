@@ -733,6 +733,12 @@ percentages are five questions answered at once, each on its own two fields
 (`tools/percentages.rs`): a division by zero, or a change from zero, is said rather than
 answered with `∞`, and the formula beside each result is the page's, from translation keys.
 
+**A Unix mode has three ways in** (`tools/permissions.rs`): the octal digits, the letters `ls -l`
+prints (its file-type letter read and named, `s`/`S` and `t`/`T` telling a special bit with and
+without the execute one), and the grid of boxes. A field shows what was typed in it, or else
+Rust's writing of the mode; a box flips one bit and writes the mode back as octal, which Rust
+reads again — the page keeps no mode of its own.
+
 **Adding a tool**, the whole of it:
 
 1. `src-tauri/src/tools/<module>.rs`: the function, its request and answer types, its tests.

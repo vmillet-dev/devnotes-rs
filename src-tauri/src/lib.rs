@@ -51,10 +51,10 @@ use recovery::{archive_locked_library, set_aside_damaged_library};
 use spaces::{create_space, delete_space, list_spaces, pin_space, rename_space};
 use tools::{
     answer_percentages, convert_case, convert_data, convert_size, current_instant, decode_base64,
-    describe_colour, describe_cron, describe_instant, diff_json, encode_base64, encode_base64_file,
-    fix_line_breaks, generate_json, generate_passwords, generate_uuids, hash_input, inspect_uuid,
-    lorem_ipsum, parse_url, place_in_zones, save_base64, search_time_zones, slugify, time_in_zone,
-    url_codec,
+    describe_colour, describe_cron, describe_instant, describe_permissions, diff_json,
+    encode_base64, encode_base64_file, fix_line_breaks, generate_json, generate_passwords,
+    generate_uuids, hash_input, inspect_uuid, lorem_ipsum, parse_url, place_in_zones, save_base64,
+    search_time_zones, slugify, time_in_zone, url_codec,
 };
 use transfer::{export_is_protected, export_notes, import_notes, share_notes};
 use vault::{change_passphrase, create_vault, unlock_vault, vault_state};
@@ -111,6 +111,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             describe_cron,
             convert_size,
             answer_percentages,
+            describe_permissions,
             seed_samples::<tauri::Wry>,
             update_note::<tauri::Wry>,
             list_revisions::<tauri::Wry>,

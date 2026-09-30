@@ -53,6 +53,7 @@ export const commands = {
 	describeCron: (request: CronRequest) => typedError<CronAnswer, AppError>(__TAURI_INVOKE("describe_cron", { request })),
 	convertSize: (request: SizesRequest) => typedError<SizesAnswer, AppError>(__TAURI_INVOKE("convert_size", { request })),
 	answerPercentages: (request: PercentagesRequest) => typedError<PercentagesAnswer, AppError>(__TAURI_INVOKE("answer_percentages", { request })),
+	describePermissions: (request: PermissionsRequest) => typedError<PermissionsAnswer, AppError>(__TAURI_INVOKE("describe_permissions", { request })),
 	/**
 	 *  The first launch: the space, its folders and the notes in one transaction, since a space
 	 *  standing alone reads as "already seeded" for good. The strings stay on the front end, with
@@ -473,6 +474,18 @@ export type ChecklistItem = {
 	done: boolean,
 };
 
+export type Class = "owner" | "group" | "others";
+
+/**  A row of the grid: its four boxes are four booleans, not a state machine. */
+export type ClassRights = {
+	class: Class,
+	read: boolean,
+	write: boolean,
+	execute: boolean,
+	/**  Setuid for the owner, setgid for the group, the sticky bit for the others. */
+	special: boolean,
+};
+
 export type CodecDirection = "encode" | "decode";
 
 export type ColourAnswer = {
@@ -659,6 +672,8 @@ export type FieldReading = {
 };
 
 export type FileProblem = "notFound" | "tooLarge" | "unreadable" | "unwritable";
+
+export type FileType = "regular" | "directory" | "symbolicLink" | "characterDevice" | "blockDevice" | "namedPipe" | "socket";
 
 export type FinalNewline = "keep" | "add" | "remove";
 
@@ -997,6 +1012,35 @@ export type LoremUnit = "words" | "sentences" | "paragraphs";
 
 export type Magnitude = "seconds" | "milliseconds" | "microseconds" | "nanoseconds";
 
+export type Mode = {
+	/**  The twelve bits, `0o7777` at most. */
+	bits: number,
+	/**  Three digits, or four when a special bit is set: `755`, `4755`. */
+	octal: string,
+	symbolic: string,
+	/**  `u=rwx,g=rx,o=rx`, what `chmod` takes to set exactly this mode. */
+	chmodSymbolic: string,
+	classes: ClassRights[],
+};
+
+export type ModeProblem = 
+/**  Neither octal digits nor a mode string. */
+"unreadable" | 
+/**  A digit past 7. */
+"notOctal" | 
+/**  More than 0o7777. */
+"tooLarge" | 
+/**  A letter where this position of a mode string takes another. */
+"unexpected" | 
+/**  A mode string is nine letters, ten with the file type in front. */
+"length";
+
+export type ModeReading = { kind: "empty" } | { kind: "read"; mode: Mode; 
+/**  Named by the letter a mode string of `ls -l` starts with. */
+fileType: FileType | null } | { kind: "refused"; problem: ModeProblem; 
+/**  One-based, in characters. */
+at: number };
+
 export type Notation = "hex" | "rgb" | "hsl" | "oklch";
 
 export type Notations = {
@@ -1267,6 +1311,17 @@ export type PercentagesRequest = {
 	decimals: number,
 };
 
+export type PermissionsAnswer = {
+	mode: ModeReading,
+	umask: UmaskReading,
+};
+
+export type PermissionsRequest = {
+	/**  `755`, `0644`, `4755`, `rwxr-xr-x`, `drwxr-xr-x`. */
+	mode: string,
+	umask: string,
+};
+
 /**  One item of a field's list. A day of the week is 0 (Sunday) to 7 (Sunday again). */
 export type Piece = { kind: "every" } | { kind: "value"; value: number } | { kind: "range"; from: number; to: number } | 
 /**  `*\/15`. */
@@ -1470,6 +1525,8 @@ export type TrayLabels = {
 	palette: string,
 	quit: string,
 };
+
+export type UmaskReading = { kind: "empty" } | { kind: "read"; file: Mode; directory: Mode } | { kind: "refused"; problem: ModeProblem; at: number };
 
 export type Unsupported = {
 	keyword: string,

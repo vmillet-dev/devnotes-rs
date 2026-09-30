@@ -1743,6 +1743,68 @@
       "tooLarge": "Trop grand pour être calculé exactement : 28 chiffres au plus.",
       "rounded": "≈ : résultat arrondi. Copier donne la valeur exacte.",
       "noteTitle": "Pourcentages"
+    },
+    "permissions": {
+      "name": "Permissions Unix",
+      "description": "chmod : 755 ↔ rwxr-xr-x, bits spéciaux, umask",
+      "octal": "Octal",
+      "octalPlaceholder": "755",
+      "symbolic": "En lettres",
+      "symbolicPlaceholder": "rwxr-xr-x ou drwxr-xr-x",
+      "grid": "Droits",
+      "classes": {
+        "owner": "Propriétaire",
+        "group": "Groupe",
+        "others": "Autres"
+      },
+      "rights": {
+        "read": "Lecture",
+        "write": "Écriture",
+        "execute": "Exécution"
+      },
+      "specials": {
+        "owner": "setuid",
+        "group": "setgid",
+        "others": "sticky"
+      },
+      "boxLabel": "{{right}} · {{class}}",
+      "commands": "Commandes",
+      "file": "fichier",
+      "can": "Ce que chacun peut faire",
+      "words": {
+        "read": "lire",
+        "write": "écrire",
+        "execute": "exécuter",
+        "none": "aucun droit"
+      },
+      "specialWords": {
+        "owner": "setuid : s’exécute avec les droits du propriétaire",
+        "group": "setgid : s’exécute avec les droits du groupe ; un dossier donne son groupe aux fichiers créés dedans",
+        "others": "sticky : dans un dossier, seul le propriétaire d’un fichier peut le supprimer"
+      },
+      "fileType": "Type : {{type}}",
+      "types": {
+        "regular": "fichier ordinaire",
+        "directory": "dossier",
+        "symbolicLink": "lien symbolique",
+        "characterDevice": "périphérique en mode caractère",
+        "blockDevice": "périphérique en mode bloc",
+        "namedPipe": "tube nommé",
+        "socket": "socket"
+      },
+      "umask": "umask",
+      "umaskPlaceholder": "022",
+      "newFile": "Nouveau fichier",
+      "newDirectory": "Nouveau dossier",
+      "problems": {
+        "unreadable": "Illisible à partir du caractère {{at}}.",
+        "notOctal": "Caractère {{at}} : un chiffre octal va de 0 à 7.",
+        "tooLarge": "Au-delà de 7777 : un mode tient sur douze bits.",
+        "unexpected": "Caractère {{at}} : cette lettre n’a rien à faire à cette place.",
+        "length": "Un mode en lettres en compte neuf, dix avec le type de fichier en tête."
+      },
+      "empty": "Tapez un mode en octal ou en lettres, ou cochez les cases.",
+      "noteTitle": "Mode {{octal}}"
     }
   }
 }

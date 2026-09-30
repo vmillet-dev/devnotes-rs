@@ -1743,6 +1743,68 @@
       "tooLarge": "Too large to compute exactly: 28 digits at most.",
       "rounded": "≈: a rounded result. Copy gives the exact one.",
       "noteTitle": "Percentages"
+    },
+    "permissions": {
+      "name": "Unix permissions",
+      "description": "chmod: 755 ↔ rwxr-xr-x, special bits, umask",
+      "octal": "Octal",
+      "octalPlaceholder": "755",
+      "symbolic": "In letters",
+      "symbolicPlaceholder": "rwxr-xr-x or drwxr-xr-x",
+      "grid": "Rights",
+      "classes": {
+        "owner": "Owner",
+        "group": "Group",
+        "others": "Others"
+      },
+      "rights": {
+        "read": "Read",
+        "write": "Write",
+        "execute": "Execute"
+      },
+      "specials": {
+        "owner": "setuid",
+        "group": "setgid",
+        "others": "sticky"
+      },
+      "boxLabel": "{{right}} · {{class}}",
+      "commands": "Commands",
+      "file": "file",
+      "can": "What each may do",
+      "words": {
+        "read": "read",
+        "write": "write",
+        "execute": "execute",
+        "none": "no right"
+      },
+      "specialWords": {
+        "owner": "setuid: runs with the owner's rights",
+        "group": "setgid: runs with the group's rights; a directory gives its group to the files made in it",
+        "others": "sticky: in a directory, only a file's owner may delete it"
+      },
+      "fileType": "Type: {{type}}",
+      "types": {
+        "regular": "regular file",
+        "directory": "directory",
+        "symbolicLink": "symbolic link",
+        "characterDevice": "character device",
+        "blockDevice": "block device",
+        "namedPipe": "named pipe",
+        "socket": "socket"
+      },
+      "umask": "umask",
+      "umaskPlaceholder": "022",
+      "newFile": "New file",
+      "newDirectory": "New directory",
+      "problems": {
+        "unreadable": "Unreadable from character {{at}} on.",
+        "notOctal": "Character {{at}}: an octal digit goes from 0 to 7.",
+        "tooLarge": "Past 7777: a mode fits in twelve bits.",
+        "unexpected": "Character {{at}}: this letter has no business in this place.",
+        "length": "A mode in letters has nine of them, ten with the file type in front."
+      },
+      "empty": "Type a mode in octal or in letters, or tick the boxes.",
+      "noteTitle": "Mode {{octal}}"
     }
   }
 }

@@ -26,6 +26,8 @@ import {
   PasswordAnswer,
   PercentagesAnswer,
   PercentagesRequest,
+  PermissionsAnswer,
+  PermissionsRequest,
   PasswordRequest,
   SizesAnswer,
   SizesRequest,
@@ -88,6 +90,7 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
   wallClock = '2026-09-29 14:03:12';
   cron: CronAnswer = { kind: 'reboot' };
   sizes: SizesAnswer = { kind: 'tooLarge' };
+  permissions: PermissionsAnswer = { mode: { kind: 'empty' }, umask: { kind: 'empty' } };
   percentages: PercentagesAnswer = {
     of: { kind: 'empty' },
     share: { kind: 'empty' },
@@ -198,6 +201,10 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
 
   answerPercentages(request: PercentagesRequest): Promise<PercentagesAnswer> {
     return this.answer('answer_percentages', request, this.percentages);
+  }
+
+  describePermissions(request: PermissionsRequest): Promise<PermissionsAnswer> {
+    return this.answer('describe_permissions', request, this.permissions);
   }
 
   requestsOf(command: string): unknown[] {
