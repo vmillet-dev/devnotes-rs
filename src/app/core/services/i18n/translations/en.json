@@ -1805,6 +1805,57 @@
       },
       "empty": "Type a mode in octal or in letters, or tick the boxes.",
       "noteTitle": "Mode {{octal}}"
+    },
+    "checks": {
+      "name": "Check digits",
+      "description": "Luhn and IBAN: valid or not, and the right check digits",
+      "inputLabel": "Number to check",
+      "placeholder": "4111 1111 1111 1111 or FR14 2004 1010 0505 0001 3M02 606",
+      "kind": "Read as",
+      "kinds": {
+        "auto": "Auto",
+        "luhn": "Luhn",
+        "iban": "IBAN"
+      },
+      "secret": "A card number is not kept: it is gone once the tool is left.",
+      "readAs": {
+        "luhn": "Read as a Luhn number",
+        "iban": "Read as an IBAN"
+      },
+      "guessed": "· from its shape",
+      "valid": "Valid",
+      "invalid": "Invalid",
+      "luhnValid": "The Luhn sum comes out right.",
+      "luhnInvalid": "The last digit should be {{digit}}.",
+      "network": "A {{network}} prefix, as a hint.",
+      "number": "Number",
+      "completed": "With a check digit added",
+      "completedMeta": "if this number has none yet",
+      "country": "Country",
+      "iban": "IBAN",
+      "bban": "BBAN",
+      "bank": "Bank code",
+      "branch": "Branch code",
+      "corrected": "Corrected IBAN",
+      "wrongChecksum": "The check digits should be {{expected}}.",
+      "wrongLength": "{{expected}} characters expected for this country, {{found}} found.",
+      "wrongFormat": "The BBAN does not follow this country's format: letters where digits go, or the other way round.",
+      "unknownCountry": "A country missing from the IBAN registry: {{country}}.",
+      "unreadable": "Unreadable from character {{at}} on.",
+      "tooShort": "Too short to carry a check digit.",
+      "networks": {
+        "visa": "Visa",
+        "mastercard": "Mastercard",
+        "americanExpress": "American Express",
+        "discover": "Discover",
+        "dinersClub": "Diners Club",
+        "jcb": "JCB",
+        "unionPay": "UnionPay",
+        "maestro": "Maestro"
+      },
+      "empty": "Type a card number, an IBAN, or any number with a Luhn check digit.",
+      "cardNoteTitle": "Number ending in {{last}}",
+      "ibanNoteTitle": "IBAN {{country}}"
     }
   }
 }

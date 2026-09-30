@@ -1310,6 +1310,7 @@ dependencies = [
  "getrandom 0.3.4",
  "hmac",
  "iana-time-zone",
+ "iban_validate",
  "libsqlite3-sys",
  "log",
  "md-5",
@@ -2567,6 +2568,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f31827a206f56af32e590ba56d5d2d085f558508192593743f16b2306495269f"
 dependencies = [
  "cc",
+]
+
+[[package]]
+name = "iban_validate"
+version = "5.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0f695c602ee9bb55c4100c3e50559461ea3f49ca0d543cf770720af8165dc756"
+dependencies = [
+ "arrayvec",
 ]
 
 [[package]]

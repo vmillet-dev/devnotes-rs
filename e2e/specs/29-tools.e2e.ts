@@ -711,7 +711,7 @@ describe('The tools', () => {
           `${testid('tools-panel')}[data-category="calc"] ${testid('tools-entry')}`,
           '@data-tool',
         ),
-      ).toEqual(['sizes', 'percentages', 'permissions']);
+      ).toEqual(['sizes', 'percentages', 'permissions', 'checks']);
     });
 
     it('writes a quantity typed in French symbols in every unit, rounded as asked', async () => {
@@ -822,6 +822,49 @@ describe('The tools', () => {
         (problem) => problem === 'notOctal',
         'the digit refused',
       );
+      await $(testid('tool-clear')).click();
+    });
+
+    it('checks a card number and an IBAN, in Rust', async () => {
+      expect(await bridge.checkDigits({ text: '5555 5555 5555 4444', kind: null })).toMatchObject({
+        kind: 'luhn',
+        valid: true,
+        network: 'mastercard',
+      });
+      expect(
+        await bridge.checkDigits({ text: 'FR15 2004 1010 0505 0001 3M02 606', kind: null }),
+      ).toMatchObject({
+        kind: 'iban',
+        verdict: { kind: 'wrongChecksum', expected: '14' },
+      });
+    });
+
+    it('says a card number is valid, and forgets it once the tool is left', async () => {
+      await openTool('checks');
+      await setField(testid('checks-input'), '4111 1111 1111 1111');
+
+      await eventually(
+        () => $(testid('checks-verdict')).getAttribute('data-valid'),
+        (valid) => valid === 'true',
+        'the Luhn verdict',
+      );
+      expect(await $(testid('checks-network')).getAttribute('data-network')).toBe('visa');
+
+      await $(testid('tools-rail-all')).click();
+      await entry('checks').click();
+      await $(testid('checks-input')).waitForDisplayed({ timeout: 5_000 });
+      expect(await $(testid('checks-input')).getValue()).toBe('');
+    });
+
+    it('names an IBAN country and the length it expects', async () => {
+      await setField(testid('checks-input'), 'DE89 3704 0044 0532 0130 0');
+
+      await eventually(
+        () => $(testid('checks-verdict')).getAttribute('data-problem'),
+        (problem) => problem === 'wrongLength',
+        'the length refused',
+      );
+      expect(await $(testid('checks-verdict')).getText()).toContain('22');
       await $(testid('tool-clear')).click();
     });
 

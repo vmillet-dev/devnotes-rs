@@ -2,6 +2,7 @@
 //! A tool's own failure — a line that does not parse — is part of its answer; `AppError` is left
 //! for the unexpected. No lock and no store: nothing here reads the library.
 
+pub mod checks;
 pub mod colour;
 pub mod convert;
 pub mod cron;
@@ -236,4 +237,10 @@ pub async fn describe_permissions(
     request: permissions::PermissionsRequest,
 ) -> Result<permissions::PermissionsAnswer, AppError> {
     off_thread(move || permissions::describe(&request)).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn check_digits(request: checks::CheckRequest) -> Result<checks::CheckAnswer, AppError> {
+    off_thread(move || checks::check(&request)).await
 }

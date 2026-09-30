@@ -54,6 +54,7 @@ export const commands = {
 	convertSize: (request: SizesRequest) => typedError<SizesAnswer, AppError>(__TAURI_INVOKE("convert_size", { request })),
 	answerPercentages: (request: PercentagesRequest) => typedError<PercentagesAnswer, AppError>(__TAURI_INVOKE("answer_percentages", { request })),
 	describePermissions: (request: PermissionsRequest) => typedError<PermissionsAnswer, AppError>(__TAURI_INVOKE("describe_permissions", { request })),
+	checkDigits: (request: CheckRequest) => typedError<CheckAnswer, AppError>(__TAURI_INVOKE("check_digits", { request })),
 	/**
 	 *  The first launch: the space, its folders and the notes in one transaction, since a space
 	 *  standing alone reads as "already seeded" for good. The strings stay on the front end, with
@@ -429,6 +430,8 @@ export type BoardZone = {
 	notes: BoardNote[],
 };
 
+export type CardNetwork = "visa" | "mastercard" | "americanExpress" | "discover" | "dinersClub" | "jcb" | "unionPay" | "maestro";
+
 /**
  *  One loose card that moved. Filing is not here: it goes through `file_notes`, whose answer
  *  the undo puts back. A position has no undo of its own.
@@ -464,6 +467,22 @@ export type ChangelogSpan = {
 };
 
 export type CharacterSet = "lowercase" | "uppercase" | "digits" | "symbols";
+
+export type CheckAnswer = { kind: "luhn"; grouped: string; valid: boolean; 
+/**  The last digit the rest asks for. */
+expectedLast: number; 
+/**  The number with a check digit appended, as if it had none yet. */
+completed: string; network: CardNetwork | null; guessed: boolean } | { kind: "iban"; country: string; printed: string; verdict: IbanVerdict; guessed: boolean } | 
+/**  One-based, in characters. */
+{ kind: "unreadable"; at: number } | { kind: "tooShort" };
+
+export type CheckKind = "luhn" | "iban";
+
+export type CheckRequest = {
+	text: string,
+	/**  Read as this kind rather than by its shape. */
+	kind: CheckKind | null,
+};
 
 /**
  *  No identifier: the position is the identity — `note_items` is keyed on
@@ -740,6 +759,12 @@ export type HashRequest = {
 	/**  A digest to recognise, in any of the algorithms and either encoding. */
 	expected: string | null,
 };
+
+export type IbanVerdict = { kind: "valid"; bban: string; bank: string | null; branch: string | null } | 
+/**  The check digits the rest asks for, and the IBAN written with them. */
+{ kind: "wrongChecksum"; expected: string; corrected: string } | { kind: "wrongLength"; expected: number; found: number } | 
+/**  The length is right, the characters are not the country's: letters where digits go. */
+{ kind: "wrongFormat" } | { kind: "unknownCountry" };
 
 /**  `skipped`: notes already present or whose space is missing, so an import can be replayed. */
 export type ImportReport = {

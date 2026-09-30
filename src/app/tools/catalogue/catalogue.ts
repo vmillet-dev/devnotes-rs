@@ -127,4 +127,10 @@ export const TOOLS: readonly ToolDefinition[] = [
     keywords: ['chmod', 'umask', 'rwx', 'octal', 'setuid', 'setgid', 'sticky', 'ls -l'],
     load: () => import('./permissions/permissions-tool.component').then((m) => m.PermissionsToolComponent),
   },
+  {
+    id: 'checks',
+    category: 'calc',
+    keywords: ['luhn', 'iban', 'mod 97', 'credit card', 'carte', 'checksum', 'bic', 'visa', 'mastercard'],
+    load: () => import('./checks/checks-tool.component').then((m) => m.ChecksToolComponent),
+  },
 ];

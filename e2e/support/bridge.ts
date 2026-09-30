@@ -10,6 +10,8 @@ import type {
   DisplayNote,
   BoardQuery,
   BoardView,
+  CheckAnswer,
+  CheckRequest,
   CronAnswer,
   CronRequest,
   Folder,
@@ -89,6 +91,7 @@ export const bridge = {
     invoke<PercentagesAnswer>('answer_percentages', { request }),
   describePermissions: (request: PermissionsRequest) =>
     invoke<PermissionsAnswer>('describe_permissions', { request }),
+  checkDigits: (request: CheckRequest) => invoke<CheckAnswer>('check_digits', { request }),
   searchTimeZones: (query: string) => invoke<ZoneEntry[]>('search_time_zones', { query }),
   encodeBase64File: (path: string, options: Base64Options) =>
     invoke<Base64FileAnswer>('encode_base64_file', { path, options }),
