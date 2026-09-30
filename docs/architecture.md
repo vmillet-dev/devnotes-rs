@@ -739,6 +739,12 @@ without the execute one), and the grid of boxes. A field shows what was typed in
 Rust's writing of the mode; a box flips one bit and writes the mode back as octal, which Rust
 reads again — the page keeps no mode of its own.
 
+**Check digits are Rust's** (`tools/checks.rs`): Luhn in a few lines, a card's network named from
+its prefix and length as a hint, and an IBAN's mod 97 with its country's BBAN format checked by
+`iban_validate`. That crate keeps its formats to itself, so the length each country expects is
+a table summed from its registry, held to it by a test. ⚠️ A card number is a secret: a plain
+`signal`, and a note keeps it masked but for its last four digits.
+
 **Adding a tool**, the whole of it:
 
 1. `src-tauri/src/tools/<module>.rs`: the function, its request and answer types, its tests.

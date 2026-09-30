@@ -1805,6 +1805,57 @@
       },
       "empty": "Tapez un mode en octal ou en lettres, ou cochez les cases.",
       "noteTitle": "Mode {{octal}}"
+    },
+    "checks": {
+      "name": "Numéros de contrôle",
+      "description": "Luhn et IBAN : valide ou non, et la bonne clé",
+      "inputLabel": "Numéro à vérifier",
+      "placeholder": "4111 1111 1111 1111 ou FR14 2004 1010 0505 0001 3M02 606",
+      "kind": "Lire comme",
+      "kinds": {
+        "auto": "Auto",
+        "luhn": "Luhn",
+        "iban": "IBAN"
+      },
+      "secret": "Un numéro de carte ne reste pas en mémoire : il disparaît quand on quitte l’outil.",
+      "readAs": {
+        "luhn": "Lu comme un numéro à clé de Luhn",
+        "iban": "Lu comme un IBAN"
+      },
+      "guessed": "· d’après sa forme",
+      "valid": "Valide",
+      "invalid": "Invalide",
+      "luhnValid": "La somme de Luhn tombe juste.",
+      "luhnInvalid": "Le dernier chiffre devrait être {{digit}}.",
+      "network": "Préfixe de {{network}}, à titre d’indice.",
+      "number": "Numéro",
+      "completed": "Avec une clé ajoutée",
+      "completedMeta": "si ce numéro n’en a pas encore",
+      "country": "Pays",
+      "iban": "IBAN",
+      "bban": "BBAN",
+      "bank": "Code banque",
+      "branch": "Code guichet",
+      "corrected": "IBAN corrigé",
+      "wrongChecksum": "La clé devrait être {{expected}}.",
+      "wrongLength": "{{expected}} caractères attendus pour ce pays, {{found}} trouvés.",
+      "wrongFormat": "Le BBAN ne suit pas le format de ce pays : des lettres où vont des chiffres, ou l’inverse.",
+      "unknownCountry": "Pays absent du registre IBAN : {{country}}.",
+      "unreadable": "Illisible à partir du caractère {{at}}.",
+      "tooShort": "Trop court pour porter un chiffre de contrôle.",
+      "networks": {
+        "visa": "Visa",
+        "mastercard": "Mastercard",
+        "americanExpress": "American Express",
+        "discover": "Discover",
+        "dinersClub": "Diners Club",
+        "jcb": "JCB",
+        "unionPay": "UnionPay",
+        "maestro": "Maestro"
+      },
+      "empty": "Tapez un numéro de carte, un IBAN ou tout numéro à clé de Luhn.",
+      "cardNoteTitle": "Numéro se terminant par {{last}}",
+      "ibanNoteTitle": "IBAN {{country}}"
     }
   }
 }

@@ -5,6 +5,8 @@ import {
   Base64Options,
   Base64Saved,
   CaseConversion,
+  CheckAnswer,
+  CheckRequest,
   ColourAnswer,
   ColourRequest,
   ConvertAnswer,
@@ -90,6 +92,7 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
   wallClock = '2026-09-29 14:03:12';
   cron: CronAnswer = { kind: 'reboot' };
   sizes: SizesAnswer = { kind: 'tooLarge' };
+  checks: CheckAnswer = { kind: 'tooShort' };
   permissions: PermissionsAnswer = { mode: { kind: 'empty' }, umask: { kind: 'empty' } };
   percentages: PercentagesAnswer = {
     of: { kind: 'empty' },
@@ -205,6 +208,10 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
 
   describePermissions(request: PermissionsRequest): Promise<PermissionsAnswer> {
     return this.answer('describe_permissions', request, this.permissions);
+  }
+
+  checkDigits(request: CheckRequest): Promise<CheckAnswer> {
+    return this.answer('check_digits', request, this.checks);
   }
 
   requestsOf(command: string): unknown[] {

@@ -7,6 +7,8 @@ import {
   Base64Options,
   Base64Saved,
   CaseConversion,
+  CheckAnswer,
+  CheckRequest,
   ColourAnswer,
   ColourRequest,
   ConvertAnswer,
@@ -157,6 +159,11 @@ export class ToolsRepository {
 
   async describePermissions(request: PermissionsRequest): Promise<PermissionsAnswer> {
     return unwrap('describe_permissions', await commands.describePermissions(request));
+  }
+
+  /** A card number crosses and is forgotten: nothing here keeps it. */
+  async checkDigits(request: CheckRequest): Promise<CheckAnswer> {
+    return unwrap('check_digits', await commands.checkDigits(request));
   }
 
   /** The wall clock of a zone now, as the field takes it. */
