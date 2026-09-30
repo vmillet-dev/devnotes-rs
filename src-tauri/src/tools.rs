@@ -12,6 +12,7 @@ pub(crate) mod files;
 pub mod generate;
 pub mod hash;
 pub(crate) mod numbers;
+pub mod percentages;
 pub mod random;
 pub mod sizes;
 pub mod text;
@@ -218,4 +219,12 @@ pub async fn describe_cron(request: cron::CronRequest) -> Result<cron::CronAnswe
 #[specta::specta]
 pub async fn convert_size(request: sizes::SizesRequest) -> Result<sizes::SizesAnswer, AppError> {
     off_thread(move || sizes::convert(&request)).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn answer_percentages(
+    request: percentages::PercentagesRequest,
+) -> Result<percentages::PercentagesAnswer, AppError> {
+    off_thread(move || percentages::answer_all(&request)).await
 }

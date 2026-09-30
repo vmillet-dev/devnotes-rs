@@ -115,4 +115,10 @@ export const TOOLS: readonly ToolDefinition[] = [
     keywords: ['byte', 'octet', 'kb', 'mb', 'gb', 'kib', 'mib', 'gib', 'bit', 'mbit', 'size'],
     load: () => import('./sizes/sizes-tool.component').then((m) => m.SizesToolComponent),
   },
+  {
+    id: 'percentages',
+    category: 'calc',
+    keywords: ['percent', 'percentage', '%', 'pourcent', 'ratio', 'discount', 'vat', 'tva'],
+    load: () => import('./percentages/percentages-tool.component').then((m) => m.PercentagesToolComponent),
+  },
 ];

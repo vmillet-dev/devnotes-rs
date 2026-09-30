@@ -1,0 +1,128 @@
+<div class="lines">
+  <label class="option">
+    {{ 'tools.percentages.decimals' | transloco }}
+    <input
+      type="number"
+      class="number"
+      data-testid="percentages-decimals"
+      min="0"
+      max="12"
+      [value]="decimals()"
+      (input)="onDecimals($event)"
+    />
+  </label>
+
+  @for (shown of shown(); track shown.line.id) {
+    @let line = shown.line;
+    @let second = line.first === 'x' ? 'y' : 'x';
+    <section class="line" data-testid="percentages-line" [attr.data-question]="line.id">
+      <h2 class="title">{{ 'tools.percentages.' + line.id + '.title' | transloco }}</h2>
+      <div class="sentence">
+        @if (line.opening) {
+          <span class="word">{{ 'tools.percentages.' + line.id + '.before' | transloco }}</span>
+        }
+        <input
+          type="text"
+          inputmode="decimal"
+          class="number-field"
+          spellcheck="false"
+          [attr.data-testid]="'percentages-' + line.id + '-' + line.first"
+          [attr.aria-label]="'tools.percentages.' + line.id + '.' + line.first | transloco"
+          [value]="field(line.id, line.first)"
+          (input)="onField(line.id, line.first, $event)"
+        />
+        @if (line.id === 'apply') {
+          <app-segmented-choice
+            kind="percentages-direction"
+            [label]="'tools.percentages.direction' | transloco"
+            [segments]="directions"
+            [currentId]="lower() ? 'lower' : 'raise'"
+            (chosen)="onDirection($event)"
+          />
+        }
+        <span class="word">{{ 'tools.percentages.' + line.id + '.middle' | transloco }}</span>
+        <input
+          type="text"
+          inputmode="decimal"
+          class="number-field"
+          spellcheck="false"
+          [attr.data-testid]="'percentages-' + line.id + '-' + second"
+          [attr.aria-label]="'tools.percentages.' + line.id + '.' + second | transloco"
+          [value]="field(line.id, second)"
+          (input)="onField(line.id, second, $event)"
+        />
+        @if (line.percentAfter) {
+          <span class="word">%</span>
+        }
+        @if (shown.value; as value) {
+          <span class="word">=</span>
+          <strong class="value" [attr.data-testid]="'percentages-' + line.id + '-result'">{{ value }}</strong>
+          @if (shown.result.kind === 'answered') {
+            <app-copy-value
+              [value]="shown.result.exact"
+              [what]="'tools.percentages.' + line.id + '.title' | transloco"
+            />
+          }
+        }
+      </div>
+      @if (shown.formula; as formula) {
+        <p class="formula" [attr.data-testid]="'percentages-' + line.id + '-formula'">
+          {{ formula.key | transloco: formula.params }}
+        </p>
+      }
+      @switch (shown.result.kind) {
+        @case ('unreadable') {
+          @if (shown.result.kind === 'unreadable') {
+            <p
+              class="problem"
+              role="status"
+              [attr.data-testid]="'percentages-' + line.id + '-problem'"
+              data-problem="unreadable"
+            >
+              {{
+                'tools.percentages.unreadable'
+                  | transloco
+                    : {
+                        field: ('tools.percentages.' + line.id + '.' + shown.result.field | transloco),
+                        at: shown.result.at,
+                      }
+              }}
+            </p>
+          }
+        }
+        @case ('divisionByZero') {
+          <p
+            class="problem"
+            role="status"
+            [attr.data-testid]="'percentages-' + line.id + '-problem'"
+            data-problem="divisionByZero"
+          >
+            {{ 'tools.percentages.divisionByZero' | transloco }}
+          </p>
+        }
+        @case ('fromZero') {
+          <p
+            class="problem"
+            role="status"
+            [attr.data-testid]="'percentages-' + line.id + '-problem'"
+            data-problem="fromZero"
+          >
+            {{ 'tools.percentages.fromZero' | transloco }}
+          </p>
+        }
+        @case ('tooLarge') {
+          <p
+            class="problem"
+            role="status"
+            [attr.data-testid]="'percentages-' + line.id + '-problem'"
+            data-problem="tooLarge"
+          >
+            {{ 'tools.percentages.tooLarge' | transloco }}
+          </p>
+        }
+      }
+    </section>
+  }
+
+  <p class="note">{{ 'tools.percentages.rounded' | transloco }}</p>
+</div>

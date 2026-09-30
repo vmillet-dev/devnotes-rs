@@ -103,19 +103,19 @@ pub(crate) fn leading_number(text: &str) -> Result<(Decimal, usize), NumberProbl
     Ok((value.normalize(), at))
 }
 
+/// A whole field that must be one number and nothing else.
+pub(crate) fn number(text: &str) -> Result<Decimal, NumberProblem> {
+    let (value, end) = leading_number(text)?;
+    let rest = text.chars().skip(end);
+    match rest.clone().position(|c| !c.is_whitespace()) {
+        Some(offset) => Err(NumberProblem::Unreadable(end + offset)),
+        None => Ok(value),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// A whole field that must be one number and nothing else.
-    fn number(text: &str) -> Result<Decimal, NumberProblem> {
-        let (value, end) = leading_number(text)?;
-        let rest = text.chars().skip(end);
-        match rest.clone().position(|c| !c.is_whitespace()) {
-            Some(offset) => Err(NumberProblem::Unreadable(end + offset)),
-            None => Ok(value),
-        }
-    }
 
     fn read(text: &str) -> String {
         number(text).map_or_else(|problem| format!("{problem:?}"), |value| value.to_string())

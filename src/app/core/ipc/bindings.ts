@@ -52,6 +52,7 @@ export const commands = {
 	timeInZone: (zone: string | null) => typedError<string, AppError>(__TAURI_INVOKE("time_in_zone", { zone })),
 	describeCron: (request: CronRequest) => typedError<CronAnswer, AppError>(__TAURI_INVOKE("describe_cron", { request })),
 	convertSize: (request: SizesRequest) => typedError<SizesAnswer, AppError>(__TAURI_INVOKE("convert_size", { request })),
+	answerPercentages: (request: PercentagesRequest) => typedError<PercentagesAnswer, AppError>(__TAURI_INVOKE("answer_percentages", { request })),
 	/**
 	 *  The first launch: the space, its folders and the notes in one transaction, since a space
 	 *  standing alone reads as "already seeded" for good. The strings stay on the front end, with
@@ -1195,6 +1196,8 @@ export type NotesView = {
 	matched: number,
 };
 
+export type Operand = "x" | "y";
+
 /**  One line of a Note as a card draws it, read from its Markdown by `notes::markdown`. */
 export type OutlineLine = { kind: "heading"; text: string } | { kind: "text"; text: string } | 
 /**  `marker` is `•` or the item's number. */
@@ -1221,6 +1224,47 @@ export type PasswordRequest = {
 	sets: CharacterSet[],
 	avoidLookAlikes: boolean,
 	count: number,
+};
+
+/**  The two numbers of one question, as typed. */
+export type PercentPair = {
+	x: string,
+	y: string,
+};
+
+export type PercentResult = 
+/**  A field is empty: nothing to answer yet. */
+{ kind: "empty" } | { kind: "answered"; 
+/**  The numbers as read, for the formula written beside the result. */
+x: string; y: string; exact: string; rounded: string } | 
+/**  One-based, in characters of the field. */
+{ kind: "unreadable"; field: Operand; at: number } | 
+/**  A division by zero: a share of 0, or a percentage that brings a value to nothing. */
+{ kind: "divisionByZero" } | 
+/**  An evolution from 0 is no percentage. */
+{ kind: "fromZero" } | { kind: "tooLarge" };
+
+export type PercentagesAnswer = {
+	of: PercentResult,
+	share: PercentResult,
+	change: PercentResult,
+	apply: PercentResult,
+	before: PercentResult,
+};
+
+export type PercentagesRequest = {
+	/**  x % of y. */
+	of: PercentPair,
+	/**  x is what percentage of y. */
+	share: PercentPair,
+	/**  From x to y, by what percentage. */
+	change: PercentPair,
+	/**  y raised, or lowered, by x %. */
+	apply: PercentPair,
+	lower: boolean,
+	/**  What y was before it moved by x %. */
+	before: PercentPair,
+	decimals: number,
 };
 
 /**  One item of a field's list. A day of the week is 0 (Sunday) to 7 (Sunday again). */
