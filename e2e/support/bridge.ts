@@ -45,6 +45,8 @@ import type {
   SizesRequest,
   Space,
   SpaceDraft,
+  StatsRequest,
+  TextStats,
   TagUsage,
   TrashedNote,
   ZoneEntry,
@@ -95,6 +97,7 @@ export const bridge = {
     invoke<PermissionsAnswer>('describe_permissions', { request }),
   checkDigits: (request: CheckRequest) => invoke<CheckAnswer>('check_digits', { request }),
   decodeJwt: (request: JwtRequest) => invoke<JwtAnswer>('decode_jwt', { request }),
+  textStats: (request: StatsRequest) => invoke<TextStats>('text_stats', { request }),
   searchTimeZones: (query: string) => invoke<ZoneEntry[]>('search_time_zones', { query }),
   encodeBase64File: (path: string, options: Base64Options) =>
     invoke<Base64FileAnswer>('encode_base64_file', { path, options }),

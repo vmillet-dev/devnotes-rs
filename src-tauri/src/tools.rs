@@ -19,6 +19,7 @@ pub mod percentages;
 pub mod permissions;
 pub mod random;
 pub mod sizes;
+pub mod stats;
 pub mod text;
 pub mod url_parts;
 pub mod zones;
@@ -254,4 +255,10 @@ pub async fn check_digits(request: checks::CheckRequest) -> Result<checks::Check
 #[specta::specta]
 pub async fn decode_jwt(request: jwt::JwtRequest) -> Result<jwt::JwtAnswer, AppError> {
     off_thread(move || jwt::decode(request, chrono::Utc::now())).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn text_stats(request: stats::StatsRequest) -> Result<stats::TextStats, AppError> {
+    off_thread(move || stats::count(&request)).await
 }

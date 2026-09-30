@@ -1,0 +1,104 @@
+<div class="columns">
+  <section class="column" aria-labelledby="text-stats-input-title">
+    <h2 id="text-stats-input-title" class="section-title">{{ 'tools.input' | transloco }}</h2>
+    <label class="field">
+      <span class="visually-hidden">{{ 'tools.text-stats.inputLabel' | transloco }}</span>
+      <textarea
+        class="text"
+        data-testid="text-stats-input"
+        rows="14"
+        [value]="text()"
+        [placeholder]="'tools.text-stats.placeholder' | transloco"
+        (input)="onInput($event)"
+      ></textarea>
+    </label>
+  </section>
+
+  <section class="column" aria-labelledby="text-stats-counts-title">
+    <h2 id="text-stats-counts-title" class="section-title">{{ 'tools.text-stats.counts' | transloco }}</h2>
+    @if (answer.value(); as stats) {
+      <dl class="counts">
+        @for (count of counts; track count) {
+          <div class="count" data-testid="text-stats-count" [attr.data-count]="count">
+            <dt>
+              {{ 'tools.text-stats.rows.' + count | transloco }}
+              @if (count === 'characters' || count === 'utf16Units') {
+                <span class="hint">{{ 'tools.text-stats.hints.' + count | transloco }}</span>
+              }
+            </dt>
+            <dd>
+              <span class="figure" data-testid="text-stats-value">{{ stats[count] }}</span>
+              <app-copy-value
+                [value]="'' + stats[count]"
+                [what]="'tools.text-stats.rows.' + count | transloco"
+              />
+            </dd>
+          </div>
+        }
+      </dl>
+
+      <div class="section-head">
+        <h2 class="section-title">{{ 'tools.text-stats.frequency' | transloco }}</h2>
+        <span class="note" data-testid="text-stats-distinct">
+          {{ 'tools.text-stats.distinct' | transloco: { count: stats.distinct } }}
+        </span>
+      </div>
+      <div class="options">
+        <label class="check">
+          <input
+            type="checkbox"
+            data-testid="text-stats-fold"
+            [checked]="foldCase()"
+            (change)="onFoldCase($event)"
+          />
+          {{ 'tools.text-stats.foldCase' | transloco }}
+        </label>
+        <label class="check">
+          <input
+            type="checkbox"
+            data-testid="text-stats-whitespace"
+            [checked]="countWhitespace()"
+            (change)="onCountWhitespace($event)"
+          />
+          {{ 'tools.text-stats.countWhitespace' | transloco }}
+        </label>
+      </div>
+      <table class="frequencies" data-testid="text-stats-frequencies">
+        <thead>
+          <tr>
+            <th scope="col">{{ 'tools.text-stats.character' | transloco }}</th>
+            <th scope="col">{{ 'tools.text-stats.codePoint' | transloco }}</th>
+            <th scope="col" class="number">{{ 'tools.text-stats.count' | transloco }}</th>
+            <th scope="col" class="number">{{ 'tools.text-stats.share' | transloco }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (frequency of frequencies(); track frequency.character) {
+            <tr data-testid="text-stats-frequency" [attr.data-invisible]="frequency.invisible">
+              <td class="character">
+                @if (frequency.invisible; as invisible) {
+                  <span class="invisible">{{ 'tools.text-stats.invisible.' + invisible | transloco }}</span>
+                } @else {
+                  <code>{{ frequency.character }}</code>
+                }
+              </td>
+              <td class="code-point">{{ frequency.codePoints }}</td>
+              <td class="number" data-testid="text-stats-frequency-count">{{ frequency.count }}</td>
+              <td class="number share">
+                <span class="bar" [style.width.%]="frequency.width"></span>
+                <span class="percent">{{ frequency.shown }} %</span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      @if (stats.frequenciesTruncated) {
+        <p class="note" data-testid="text-stats-truncated">
+          {{ 'tools.text-stats.truncated' | transloco: { shown: stats.frequencies.length } }}
+        </p>
+      }
+    } @else {
+      <p class="note">{{ 'tools.text-stats.empty' | transloco }}</p>
+    }
+  </section>
+</div>

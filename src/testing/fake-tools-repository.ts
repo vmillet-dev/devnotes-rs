@@ -38,6 +38,8 @@ import {
   SizesAnswer,
   SizesRequest,
   SlugRequest,
+  StatsRequest,
+  TextStats,
   UrlAnswer,
   UrlCodecAnswer,
   UrlCodecRequest,
@@ -95,6 +97,20 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
   cron: CronAnswer = { kind: 'reboot' };
   sizes: SizesAnswer = { kind: 'tooLarge' };
   checks: CheckAnswer = { kind: 'tooShort' };
+  stats: TextStats = {
+    characters: 0,
+    codePoints: 0,
+    utf16Units: 0,
+    utf8Bytes: 0,
+    nonWhitespace: 0,
+    words: 0,
+    lines: 0,
+    nonEmptyLines: 0,
+    paragraphs: 0,
+    distinct: 0,
+    frequencies: [],
+    frequenciesTruncated: false,
+  };
   jwt: JwtAnswer = { kind: 'malformed', problem: 'segmentCount', segment: null, segments: 1, at: null };
   permissions: PermissionsAnswer = { mode: { kind: 'empty' }, umask: { kind: 'empty' } };
   percentages: PercentagesAnswer = {
@@ -219,6 +235,10 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
 
   decodeJwt(request: JwtRequest): Promise<JwtAnswer> {
     return this.answer('decode_jwt', request, this.jwt);
+  }
+
+  textStats(request: StatsRequest): Promise<TextStats> {
+    return this.answer('text_stats', request, this.stats);
   }
 
   requestsOf(command: string): unknown[] {

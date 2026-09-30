@@ -54,8 +54,8 @@ use tools::{
     decode_base64, decode_jwt, describe_colour, describe_cron, describe_instant,
     describe_permissions, diff_json, encode_base64, encode_base64_file, fix_line_breaks,
     generate_identifiers, generate_json, generate_passwords, hash_input, inspect_identifier,
-    lorem_ipsum, parse_url, place_in_zones, save_base64, search_time_zones, slugify, time_in_zone,
-    url_codec,
+    lorem_ipsum, parse_url, place_in_zones, save_base64, search_time_zones, slugify, text_stats,
+    time_in_zone, url_codec,
 };
 use transfer::{export_is_protected, export_notes, import_notes, share_notes};
 use vault::{change_passphrase, create_vault, unlock_vault, vault_state};
@@ -99,6 +99,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             generate_passwords,
             generate_identifiers,
             inspect_identifier,
+            text_stats,
             describe_colour,
             convert_data,
             generate_json,

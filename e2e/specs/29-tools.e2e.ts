@@ -99,13 +99,13 @@ describe('The tools', () => {
       await setField(testid('tools-search'), '');
     });
 
-    it('lays the Texte panel out with its four tools', async () => {
+    it('lays the Texte panel out with its five tools', async () => {
       expect(
         await readEach(
           `${testid('tools-panel')}[data-category="text"] ${testid('tools-entry')}`,
           '@data-tool',
         ),
-      ).toEqual(['case', 'slug', 'url-parser', 'line-breaks']);
+      ).toEqual(['case', 'slug', 'url-parser', 'line-breaks', 'text-stats']);
     });
   });
 
@@ -218,12 +218,36 @@ describe('The tools', () => {
       expect(await $(testid('line-breaks-changes')).getText()).toContain('1');
     });
 
+    it('counts characters as a reader sees them, in Rust', async () => {
+      expect(
+        await bridge.textStats({ text: 'e\u0301te\u0301 🇫🇷', foldCase: false, countWhitespace: false }),
+      ).toMatchObject({ characters: 5, codePoints: 8, utf16Units: 10, utf8Bytes: 16, words: 1 });
+    });
+
+    it('counts a text and names the invisible character in it', async () => {
+      await $(`${testid('tools-rail-tool')}[data-tool="text-stats"]`).click();
+      await setField(testid('text-stats-input'), 'Deux mots\u00a0!');
+
+      await eventually(
+        () => $(`[data-count="words"] ${testid('text-stats-value')}`).getText(),
+        (words) => words === '2',
+        'two words',
+      );
+      await $(testid('text-stats-whitespace')).click();
+      await eventually(
+        () => readEach(testid('text-stats-frequency'), '@data-invisible'),
+        (invisible) => invisible.includes('noBreakSpace'),
+        'the no-break space named',
+      );
+      await $(testid('text-stats-whitespace')).click();
+    });
+
     it('lists the tools opened last on the home, most recent first', async () => {
       await $(testid('tool-back')).click();
 
       await eventually(
         () => readEach(testid('tools-recent'), '@data-tool'),
-        (tools) => tools.slice(0, 3).join() === 'line-breaks,url-parser,slug',
+        (tools) => tools.slice(0, 3).join() === 'text-stats,line-breaks,url-parser',
         'the recent tools',
       );
     });

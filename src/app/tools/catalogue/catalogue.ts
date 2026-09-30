@@ -43,6 +43,22 @@ export const TOOLS: readonly ToolDefinition[] = [
     load: () => import('./line-breaks/line-breaks-tool.component').then((m) => m.LineBreaksToolComponent),
   },
   {
+    id: 'text-stats',
+    category: 'text',
+    keywords: [
+      'count',
+      'characters',
+      'words',
+      'lines',
+      'length',
+      'frequency',
+      'compter',
+      'caractères',
+      'mots',
+    ],
+    load: () => import('./text-stats/text-stats-tool.component').then((m) => m.TextStatsToolComponent),
+  },
+  {
     id: 'hash',
     category: 'crypto',
     keywords: ['md5', 'sha1', 'sha256', 'sha512', 'sha3', 'hmac', 'digest', 'checksum', 'webhook'],
