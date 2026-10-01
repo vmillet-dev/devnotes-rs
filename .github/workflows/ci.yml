@@ -175,7 +175,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: front-coverage
           path: coverage
@@ -292,7 +292,7 @@ jobs:
           printf '<!doctype html><title>ci</title>' > dist/devnotes/browser/index.html
 
       - name: Download Rust coverage
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: rust-coverage
           path: coverage
