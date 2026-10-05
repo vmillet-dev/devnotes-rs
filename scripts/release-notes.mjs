@@ -12,7 +12,10 @@ import { pathToFileURL } from 'node:url';
 
 /**
  * The order of this table is the order of the sections on screen and the precedence
- * when a pull request wears two mapped labels.
+ * when a pull request wears two mapped labels: the first section that claims one of them
+ * wins, so `dependencies` + `enhancement` is an addition. Only the `dependencies` label
+ * (Dependabot sets it itself) reaches the last section, so a month of bumps no longer
+ * buries the refactors.
  */
 export const SECTIONS = [
   { id: 'added', heading: '✨ Added', labels: ['enhancement', 'feature'], kinds: ['feat'] },
@@ -28,9 +31,10 @@ export const SECTIONS = [
   {
     id: 'internal',
     heading: '🧰 Under the hood',
-    labels: ['refactor', 'documentation', 'dependencies', 'chore', 'ci', 'test'],
+    labels: ['refactor', 'documentation', 'chore', 'ci', 'test'],
     kinds: ['refactor', 'docs', 'test', 'chore', 'ci', 'build', 'deps'],
   },
+  { id: 'dependencies', heading: '📦 Dependencies', labels: ['dependencies'], kinds: [] },
 ];
 
 /**

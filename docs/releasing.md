@@ -43,6 +43,12 @@ entry — so a surprise in the summary tells you which of the four fired.
 Beyond GitHub's defaults, the labels worth reaching for are `change` (behaviour that already
 existed and now differs), `security` and `removal`.
 
+The sections, in their order: ✨ Added, 🔧 Changed, 🐛 Fixed, 🗑️ Removed, 🔒 Security,
+🧰 Under the hood, 📦 Dependencies. The last one holds the pull requests labelled
+`dependencies` — Dependabot applies that label itself — and nothing else. When a pull request
+wears two mapped labels, the first section in that order wins: `dependencies` + `enhancement`
+is an addition.
+
 ## Why the changelog is committed before the tag
 
 `src-tauri/src/changelog.rs` pulls `CHANGELOG.md` in with `include_str!`, so the file is

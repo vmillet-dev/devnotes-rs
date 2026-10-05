@@ -115,6 +115,44 @@ describe('sectionFor', () => {
   });
 });
 
+describe('the dependencies section', () => {
+  it('takes a pull request labelled dependencies, as Dependabot labels its own', () => {
+    assert.equal(
+      sectionFor({ labels: ['dependencies'], title: 'Bump tauri from 2.11.5 to 2.11.6' }).section,
+      'dependencies',
+    );
+    assert.equal(sectionFor({ labels: ['dependencies', 'rust'] }).section, 'dependencies');
+  });
+
+  it('takes nothing else, not even a deps prefix', () => {
+    assert.equal(sectionFor({ title: 'deps: refresh the lockfile' }).section, 'internal');
+    assert.equal(sectionFor({ labels: ['refactor'] }).section, 'internal');
+  });
+
+  it('gives way to any other mapped label the pull request wears', () => {
+    assert.equal(sectionFor({ labels: ['dependencies', 'enhancement'] }).section, 'added');
+    assert.equal(sectionFor({ labels: ['dependencies', 'refactor'] }).section, 'internal');
+  });
+
+  it('comes last, after Under the hood, and is not written when empty', () => {
+    const groups = groupEntries([
+      { section: 'dependencies', text: 'Bump jsdom from 29.1.1 to 30.1.1 (#562)' },
+      { section: 'internal', text: 'Drop the DTO aliases (#56)' },
+      { section: 'added', text: 'A sample for every tool (#600)' },
+    ]);
+    assert.deepEqual(
+      groups.map((group) => group.heading),
+      ['✨ Added', '🧰 Under the hood', '📦 Dependencies'],
+    );
+
+    const without = groupEntries([{ section: 'internal', text: 'Drop the DTO aliases (#56)' }]);
+    assert.deepEqual(
+      without.map((group) => group.heading),
+      ['🧰 Under the hood'],
+    );
+  });
+});
+
 describe('groupEntries', () => {
   it('respects the table order, drops empty sections and keeps entry order', () => {
     const groups = groupEntries([
