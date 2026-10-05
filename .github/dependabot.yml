@@ -51,6 +51,10 @@ updates:
         update-types: ['version-update:semver-major']
       - dependency-name: '@vitest/*'
         update-types: ['version-update:semver-major']
+      # The same for TypeScript: `@angular/build` takes the major it was built for, and 7 fails
+      # `npm ci` with ERESOLVE. It moves with Angular, through `ng update`.
+      - dependency-name: 'typescript'
+        update-types: ['version-update:semver-major']
     groups:
       angular:
         patterns:
