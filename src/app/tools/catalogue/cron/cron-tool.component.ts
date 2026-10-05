@@ -125,6 +125,11 @@ export class CronToolComponent implements Tool {
     };
   });
 
+  sample(): void {
+    this.expression.set('*/15 9-18 * * 1-5');
+    this.caret.set(null);
+  }
+
   clear(): void {
     this.expression.set('');
     this.check.set('');

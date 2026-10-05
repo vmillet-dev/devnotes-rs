@@ -19,6 +19,13 @@ const SEGMENTS: readonly Segment[] = FORMATS.map((id) => ({ id, labelKey: `tools
 /** What a note keeps the result as, so it is highlighted in its own language. */
 const LANGUAGES: Record<DataFormat, LanguageTag> = { json: 'json', toml: 'toml', xml: 'xml', yaml: 'yml' };
 
+const SAMPLE = `{
+  "name": "DevNotes",
+  "version": "0.9.2",
+  "features": ["notes", "tools"],
+  "window": { "width": 1440, "height": 900, "maximised": false }
+}`;
+
 /** Any format to any other, through one value in Rust; the conventions are said beside the result. */
 @Component({
   selector: 'app-convert-tool',
@@ -79,6 +86,12 @@ export class ConvertToolComponent implements Tool {
         }
       : null;
   });
+
+  sample(): void {
+    this.from.set('json');
+    this.to.set('yaml');
+    this.text.set(SAMPLE);
+  }
 
   clear(): void {
     this.text.set('');

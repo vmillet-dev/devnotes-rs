@@ -45,6 +45,12 @@ const ENCODINGS: readonly Segment[] = (['hex', 'base64'] as const).map((id) => (
   labelKey: `tools.hash.encodings.${id}`,
 }));
 
+/** SHA-256 of `hello world`, so the check finds its algorithm. */
+const SAMPLE = {
+  text: 'hello world',
+  expected: 'b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9',
+};
+
 /**
  * ⚠️ The HMAC key is a plain signal, never a `toolState`: it dies with the tool, and nothing in
  * the result carries it. The switch alone is remembered.
@@ -153,6 +159,12 @@ export class HashToolComponent implements Tool {
       content: digests.map((digest) => `${digest.name.padEnd(width)}  ${digest.value}`).join('\n'),
     };
   });
+
+  sample(): void {
+    this.source.set('text');
+    this.text.set(SAMPLE.text);
+    this.expected.set(SAMPLE.expected);
+  }
 
   clear(): void {
     this.text.set('');

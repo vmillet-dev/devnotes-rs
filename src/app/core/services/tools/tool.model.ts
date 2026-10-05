@@ -42,6 +42,11 @@ export interface ToolAction {
 export interface Tool {
   readonly result: Signal<ToolResult | null>;
   readonly actions?: Signal<readonly ToolAction[]>;
+  /**
+   * Fills the inputs with test data through the tool's own signals, as typing would, and
+   * replaces what was there. Never a real secret: a key it fills is a made-up one.
+   */
+  sample?(): void;
   clear(): void;
 }
 

@@ -16,6 +16,11 @@
       {{ action.labelKey | transloco }}
     </button>
   }
+  @if (hasSample()) {
+    <button type="button" class="action" data-testid="tool-sample" (click)="sample()">
+      {{ 'tools.sample' | transloco }}
+    </button>
+  }
   <button type="button" class="action" data-testid="tool-clear" (click)="clear()">
     {{ 'tools.clear' | transloco }}
   </button>

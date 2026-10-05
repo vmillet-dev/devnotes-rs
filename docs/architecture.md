@@ -601,6 +601,11 @@ tool only through `Tool` (`core/services/tools/tool.model.ts`):
 - `result`, what "Enregistrer comme note" keeps. ⚠️ An output, never an input: an HMAC key or a
   password typed into a tool cannot reach a note, because nothing in the contract carries one.
 - `actions`, the tool's own buttons in the header ("Échanger A et B").
+- `sample()`, which « Exemple » calls: the tool fills its inputs with test data through its own
+  signals, the path typing takes, and replaces what was there. The data lives in the component —
+  a constant, or a translation key when its language matters — and never carries a real secret
+  (a token signed with « secret », the published example IBAN). Optional: a tool with nothing to
+  fill offers no button.
 - `clear()`, which Vider calls.
 
 **The catalogue is one list** (`tools/catalogue/catalogue.ts`), each tool in a folder beside
@@ -771,7 +776,8 @@ keeps the decoded header and payload as one JSON document, after a warning, neve
 3. `core/data/tools.repository.ts`: a method, and its twin in `FakeToolsRepository`; the types
    re-exported by `core/model/tool-answers.model.ts`.
 4. `tools/catalogue/catalogue.ts`: an entry; `tools/catalogue/<id>/`: the component
-   implementing `Tool`, and its spec through `renderTool`.
+   implementing `Tool`, its `sample()` included (`catalogue.spec.ts` holds every tool to one),
+   and its spec through `renderTool`.
 5. `tools.<id>.*` in both locales, and a scenario in `29-tools.e2e.ts`.
 
 What every tool draws alike is the kit: `tools/ui/` (`app-output-row`, `app-copy-value`) and

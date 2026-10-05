@@ -1027,7 +1027,8 @@
       "inputLabel": "Texte à convertir",
       "placeholder": "Un nom de variable, une phrase, ou une liste, un par ligne : parse HTTP response",
       "empty": "Les treize casses s’affichent ici, ligne par ligne.",
-      "noteTitle": "Casses de « {{text}} »"
+      "noteTitle": "Casses de « {{text}} »",
+      "sample": "Nombre d'articles par page\nuser account ID\nparseURL et HTTPServer"
     },
     "slug": {
       "name": "Générateur de slug",
@@ -1042,7 +1043,8 @@
       },
       "lowercase": "En minuscules",
       "empty": "Le slug s’affiche ici.",
-      "noteTitle": "Slug de « {{text}} »"
+      "noteTitle": "Slug de « {{text}} »",
+      "sample": "Les 10 meilleures crêpes de Bretagne : guide 2026 !"
     },
     "url-parser": {
       "name": "Analyseur d’URL",
@@ -1990,7 +1992,10 @@
         "control": "caractère de contrôle"
       },
       "empty": "Les comptes s’affichent ici.",
-      "noteTitle": "Statistiques d’un texte"
-    }
+      "noteTitle": "Statistiques d’un texte",
+      "sample": "L'été à Paris : 30 °C, un café crème et des 🇫🇷 partout.\n\nNaïve question : où est l'œuvre ?"
+    },
+    "sample": "Exemple",
+    "sampleLoaded": "Exemple chargé"
   }
 }

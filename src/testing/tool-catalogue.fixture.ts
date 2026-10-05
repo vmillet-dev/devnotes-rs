@@ -21,6 +21,10 @@ export class FakeToolComponent implements Tool {
     { id: 'swap', labelKey: 'tools.clear', disabled: this.text() === '', run: () => this.swapped.set(true) },
   ]);
 
+  sample(): void {
+    this.text.set('sample');
+  }
+
   clear(): void {
     this.text.set('');
   }

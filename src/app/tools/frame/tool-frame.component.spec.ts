@@ -1,11 +1,31 @@
+import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { StatusNotifier } from '@core/services/notifications/status.service';
+import { Tool, ToolDefinition } from '@core/services/tools/tool.model';
 import { ToolsStore } from '@core/services/tools/tools.store';
 import { FAKE_TOOLS, FakeToolComponent } from '@testing/tool-catalogue.fixture';
 import { provideAppTesting } from '@testing/testing.providers';
 import { SaveAsNoteDialogComponent } from './save-as-note/save-as-note-dialog.component';
 import { ToolFrameComponent } from './tool-frame.component';
+
+/** A tool with nothing to fill: the frame offers it no sample. */
+@Component({ selector: 'app-bare-tool', template: '', changeDetection: ChangeDetectionStrategy.OnPush })
+class BareToolComponent implements Tool {
+  readonly result = signal(null);
+
+  clear(): void {
+    this.result.set(null);
+  }
+}
+
+const BARE: ToolDefinition = {
+  id: 'slug',
+  category: 'text',
+  keywords: [],
+  load: async () => BareToolComponent,
+};
 
 describe('ToolFrameComponent', () => {
   let fixture: ComponentFixture<ToolFrameComponent>;
@@ -39,6 +59,26 @@ describe('ToolFrameComponent', () => {
 
     expect(tool()!.text()).toBe('');
     expect(button('tool-action-swap').disabled).toBe(true);
+  });
+
+  it('fills the tool with its sample from the header, and says so', async () => {
+    tool()!.clear();
+    await fixture.whenStable();
+
+    button('tool-sample').click();
+    await fixture.whenStable();
+
+    expect(tool()!.text()).toBe('sample');
+    expect(TestBed.inject(StatusNotifier).status()).toEqual({ key: 'tools.sampleLoaded' });
+  });
+
+  it('offers no sample to a tool that has none', async () => {
+    fixture.componentRef.setInput('tool', BARE);
+    await vi.waitFor(() => expect(tool()).toBeNull());
+    await fixture.whenStable();
+
+    expect(button('tool-sample')).toBeNull();
+    expect(button('tool-clear')).not.toBeNull();
   });
 
   it('keeps nothing before the tool has a result, and says why', async () => {

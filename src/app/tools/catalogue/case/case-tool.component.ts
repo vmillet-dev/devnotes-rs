@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { ToolsRepository } from '@core/data/tools.repository';
 import { TextCase } from '@core/model/tool-answers.model';
 import { liveResult } from '@core/services/tools/live-result';
@@ -32,6 +32,7 @@ const CASE_NAMES: Record<TextCase, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CaseToolComponent implements Tool {
+  private readonly transloco = inject(TranslocoService);
   private readonly repository = inject(ToolsRepository);
 
   protected readonly text = toolState('case.text', '');
@@ -65,6 +66,10 @@ export class CaseToolComponent implements Tool {
         .join('\n'),
     };
   });
+
+  sample(): void {
+    this.text.set(this.transloco.translate('tools.case.sample'));
+  }
 
   clear(): void {
     this.text.set('');

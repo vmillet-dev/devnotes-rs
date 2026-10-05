@@ -112,6 +112,11 @@ export class PermissionsToolComponent implements Tool {
     return this.read()?.mode[field] ?? '';
   }
 
+  sample(): void {
+    this.typed.set({ field: 'octal', text: '754' });
+    this.umask.set('027');
+  }
+
   clear(): void {
     this.typed.set({ field: 'octal', text: '' });
     this.umask.set('');

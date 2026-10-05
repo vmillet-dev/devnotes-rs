@@ -79,6 +79,11 @@ export class ZonesToolComponent implements Tool {
       : null;
   });
 
+  sample(): void {
+    this.text.set('2026-03-29 09:00');
+    this.later.set(false);
+  }
+
   clear(): void {
     this.text.set('');
     this.later.set(false);
