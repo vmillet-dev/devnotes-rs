@@ -81,7 +81,7 @@
   background: rgba(var(--amber-rgb), 0.06);
 }
 
-// One row for the tick, the title and the marks: a fixed 150px card has no line to spend on
+// One row for the tick, the title and the kind: a fixed 150px card has no line to spend on
 // a band that says nothing about the note.
 .card-title-row {
   display: flex;
@@ -91,14 +91,17 @@
   min-width: 0;
 }
 
-// Right-aligned, and never squeezed: the title is what gives way.
+.card-title-row app-kind-badge {
+  flex-shrink: 0;
+  // The badge sits on the first line of the title, not on the middle of two.
+  padding-top: 1px;
+}
+
 .card-marks {
   display: flex;
   align-items: center;
   gap: 5px;
   flex-shrink: 0;
-  // The badge sits on the first line of the title, not on the middle of two.
-  padding-top: 1px;
 }
 
 .card-pin,
@@ -113,9 +116,7 @@
   color: var(--amber-text);
 }
 
-// Outside the card, over its **bottom** edge. The top right belongs to the marks now,
-// and a pill floating there sat on top of them — which is the collision that decided this
-// layout. Outside rather than in the flow, so it still costs the card no room at all.
+// Outside the card, over its **bottom** edge, so it costs the card no room at all.
 .card-actions {
   position: absolute;
   bottom: -9px;
@@ -241,13 +242,23 @@ app-copy-button {
   color: var(--text-2);
 }
 
+// The marks never shrink; the folder chip gives way long before the date or the tags do.
 .card-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
   margin-top: 8px;
   font-size: 10.5px;
   color: var(--text-2);
+}
+
+.card-when {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .card-footer .stale {
@@ -258,9 +269,10 @@ app-copy-button {
    must not be read as the same thing. */
 .card-folder {
   display: inline-flex;
+  flex-shrink: 100;
+  min-width: 24px;
   align-items: center;
   gap: 5px;
-  margin-right: auto;
   padding: 1px 7px;
   font-size: 9.5px;
   color: var(--text-1);
@@ -269,8 +281,17 @@ app-copy-button {
   border-radius: 20px;
 }
 
+.folder-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 .folder-swatch {
   @include folder-hues;
+
+  flex-shrink: 0;
 
   width: 7px;
   height: 7px;
@@ -280,7 +301,11 @@ app-copy-button {
 
 .card-tags {
   display: flex;
+  flex-shrink: 10;
+  min-width: 0;
   gap: 4px;
+  margin-left: auto;
+  overflow: hidden;
 }
 
 .card-tags span {

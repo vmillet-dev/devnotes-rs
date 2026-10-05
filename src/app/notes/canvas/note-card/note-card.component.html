@@ -26,8 +26,8 @@
   ></button>
 
   <div class="card" [class.pinned]="note().pinned" [class.selected]="selected()" [class.armed]="armed()">
-    <!-- One row for the tick, the title and the marks: the tick in the flow at its head, since
-         anything floating over the corner sits on the marks. -->
+    <!-- The tick, the title and what the note is: the state marks live in the footer, so a
+         priority never clamps the title to a few characters. -->
     <div class="card-title-row">
       <!-- `aria-pressed` rather than an `<input type=checkbox>`, which would inherit the
            card's own styles. -->
@@ -52,32 +52,7 @@
         }
       </span>
 
-      <!-- What the note *is*, right-aligned: a pin, a format, a ⚡, a 📎. -->
-      <span class="card-marks">
-        @if (note().pinned) {
-          <span class="card-pin" data-testid="note-card-pin" aria-hidden="true">📌</span>
-          <!-- Decorative: without this text twin, a screen reader gets nothing. -->
-          <span class="visually-hidden">{{ 'notes.pinnedState' | transloco }}</span>
-        }
-        <app-priority-pill [priority]="note().priority" />
-        <app-kind-badge [kind]="note().kind" [language]="note().language" />
-        <!-- A mark, not a button: the copy below asks for the values when it sees this,
-             and a second ⚡ beside it would be the same thing said twice. -->
-        @if (hasPlaceholders()) {
-          <span class="card-fields" data-testid="note-card-fields" aria-hidden="true">⚡</span>
-          <span class="visually-hidden">
-            {{ 'notes.placeholdersCount' | transloco: { count: note().placeholders.length } }}
-          </span>
-        }
-        @if (note().attachmentCount > 0) {
-          <span class="card-clip" data-testid="note-card-clip" aria-hidden="true"
-            >📎 {{ note().attachmentCount }}</span
-          >
-          <span class="visually-hidden">
-            {{ 'notes.attachmentsCount' | transloco: { count: note().attachmentCount } }}
-          </span>
-        }
-      </span>
+      <app-kind-badge [kind]="note().kind" [language]="note().language" />
     </div>
 
     @if (isChecklist()) {
@@ -140,13 +115,40 @@
 
     <span class="card-footer">
       <!-- prettier-ignore -->
-      <span [class.stale]="note().expiringSoon"
+      <span class="card-when" [class.stale]="note().expiringSoon"
         >@if (footerLabel(); as label) {@if (label.kind === 'text') {{{ label.value }}} @else {@if (label.prefix) {{{ label.prefix | transloco }} }{{ label.ref.key | transloco: label.ref.params }}}}</span
       >
+      <!-- Never squeezed: the folder chip gives way first. -->
+      @if (hasMarks()) {
+        <span class="card-marks" data-testid="note-card-marks">
+          <app-priority-pill [priority]="note().priority" />
+          @if (note().pinned) {
+            <span class="card-pin" data-testid="note-card-pin" aria-hidden="true">📌</span>
+            <!-- Decorative: without this text twin, a screen reader gets nothing. -->
+            <span class="visually-hidden">{{ 'notes.pinnedState' | transloco }}</span>
+          }
+          <!-- A mark, not a button: the copy below asks for the values when it sees this,
+               and a second ⚡ beside it would be the same thing said twice. -->
+          @if (hasPlaceholders()) {
+            <span class="card-fields" data-testid="note-card-fields" aria-hidden="true">⚡</span>
+            <span class="visually-hidden">
+              {{ 'notes.placeholdersCount' | transloco: { count: note().placeholders.length } }}
+            </span>
+          }
+          @if (note().attachmentCount > 0) {
+            <span class="card-clip" data-testid="note-card-clip" aria-hidden="true"
+              >📎 {{ note().attachmentCount }}</span
+            >
+            <span class="visually-hidden">
+              {{ 'notes.attachmentsCount' | transloco: { count: note().attachmentCount } }}
+            </span>
+          }
+        </span>
+      }
       @if (note().folder; as folder) {
         <span class="card-folder" data-testid="note-card-folder">
           <i class="folder-swatch" [class]="'is-' + folder.colour" aria-hidden="true"></i>
-          {{ folder.name }}
+          <span class="folder-name">{{ folder.name }}</span>
         </span>
       }
       <span class="card-tags" data-testid="note-card-tags">
@@ -157,10 +159,8 @@
     </span>
   </div>
 
-  <!-- Outside the card and over its **bottom** edge, shown under the pointer. The top
-       right belongs to the marks now, and a pill floating there covered them; down here it
-       is clear of the arming band inside the card, which owns the footer line. Still
-       outside rather than in the flow, so it costs the card no room at all. -->
+  <!-- Outside the card and over its **bottom** edge, shown under the pointer: clear of the
+       arming band inside the card, which owns the footer line, and costing the card no room. -->
   <div class="card-actions">
     <!-- One copy, two behaviours: a snippet with fields cannot be copied as it is, so
          this asks for the values first. The ⚡ among the marks is what says so. -->

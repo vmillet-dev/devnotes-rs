@@ -57,17 +57,74 @@ describe('NoteCardComponent', () => {
     expect(badge.language()).toBe('json');
   });
 
-  /** Structural, not visual — jsdom lays nothing out: the title, the tick and the marks share one row. */
-  it('puts the title, the tick and the marks on one row', async () => {
+  /** Structural, not visual — jsdom lays nothing out: the tick, the title and the kind share one row. */
+  it('puts the tick, the title and the kind on one row, and the marks in the footer', async () => {
     fixture.componentRef.setInput('note', createNote({ title: 'My note', attachmentCount: 2 }));
     await fixture.whenStable();
 
     const row = fixture.nativeElement.querySelector('.card-title-row');
     expect(row.querySelector('[data-testid="note-card-title"]')).not.toBeNull();
     expect(row.querySelector('[data-testid="note-card-check"]')).not.toBeNull();
-    expect(row.querySelector('.card-marks app-language-badge')).not.toBeNull();
-    expect(row.querySelector('.card-marks [data-testid="note-card-clip"]')).not.toBeNull();
+    expect(row.querySelector('app-language-badge')).not.toBeNull();
+    expect(row.querySelector('.card-marks')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.card-footer [data-testid="note-card-clip"]')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('.card-head')).toBeNull();
+  });
+
+  /**
+   * The worst case of #564: everything a note can be marked with leaves the title row to the
+   * title, and the footer reads in a fixed order — the date, the marks, then the folder.
+   */
+  it('keeps a pinned, urgent note with fields and attachments to two lines of title', async () => {
+    fixture.componentRef.setInput(
+      'note',
+      createNote({
+        title: 'Rotation des clés de l’API de paiement',
+        pinned: true,
+        priority: 'urgent',
+        attachmentCount: 3,
+        placeholders: [{ name: 'host', defaultValue: '', value: '' }],
+        folder: { id: 'ops', name: 'Exploitation', colour: 'blue' },
+      }),
+    );
+    await fixture.whenStable();
+
+    const row: HTMLElement = fixture.nativeElement.querySelector('.card-title-row');
+    expect([...row.children].map((child) => child.getAttribute('data-testid') ?? child.localName)).toEqual([
+      'note-card-check',
+      'note-card-title',
+      'app-kind-badge',
+    ]);
+    expect(row.querySelector('[data-testid="priority-pill"]')).toBeNull();
+
+    const footer: HTMLElement = fixture.nativeElement.querySelector('.card-footer');
+    const order = [
+      ...footer.querySelectorAll(
+        '.card-when, [data-testid="priority-pill"], [data-testid="note-card-pin"], [data-testid="note-card-fields"], [data-testid="note-card-clip"], [data-testid="note-card-folder"]',
+      ),
+    ].map((node) => node.getAttribute('data-testid') ?? 'when');
+    expect(order).toEqual([
+      'when',
+      'priority-pill',
+      'note-card-pin',
+      'note-card-fields',
+      'note-card-clip',
+      'note-card-folder',
+    ]);
+    // Each glyph keeps its spoken twin right after it.
+    const marks: HTMLElement = footer.querySelector('[data-testid="note-card-marks"]')!;
+    expect(
+      [...marks.querySelectorAll('.visually-hidden')].map((twin) =>
+        twin.previousElementSibling?.getAttribute('data-testid'),
+      ),
+    ).toEqual(['note-card-pin', 'note-card-fields', 'note-card-clip']);
+  });
+
+  it('draws no marks at all on a note with nothing to mark', async () => {
+    fixture.componentRef.setInput('note', createNote({ title: 'Plain' }));
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('[data-testid="note-card-marks"]')).toBeNull();
   });
 
   /**
@@ -85,14 +142,14 @@ describe('NoteCardComponent', () => {
     expect(fixture.nativeElement.querySelector('[data-testid="note-card-check"]')).not.toBeNull();
   });
 
-  /** A mark among the marks: it says what the note *is*, like the badge beside it. */
-  it('puts the pin with the marks rather than over the card corner', async () => {
+  /** A mark among the marks, in the footer: it says what state the note is in. */
+  it('puts the pin with the marks in the footer', async () => {
     fixture.componentRef.setInput('note', createNote({ title: 'My note', pinned: true }));
     await fixture.whenStable();
 
     const pin = fixture.nativeElement.querySelector('[data-testid="note-card-pin"]');
     expect(pin).not.toBeNull();
-    expect(pin.closest('.card-marks')).not.toBeNull();
+    expect(pin.closest('.card-footer .card-marks')).not.toBeNull();
     // The glyph is decorative, so the state reaches a screen reader as text beside it.
     expect(fixture.nativeElement.querySelector('.card-marks .visually-hidden').textContent).toBe(
       'Note épinglée',
