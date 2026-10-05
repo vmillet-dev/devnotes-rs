@@ -1026,6 +1026,25 @@ describe('The tools', () => {
         (gibibytes) => gibibytes === '1396984',
         'six decimals',
       );
+      await setField(testid('sizes-decimals'), '3');
+    });
+
+    it('estimates a transfer on its second tab, at the rate and by connection', async () => {
+      await $(`${testid('segmented-sizes-tab')} [data-segment-id="transfer"]`).click();
+      await setField(testid('transfer-size'), '4,7');
+      await setField(testid('transfer-rate'), '100');
+
+      await eventually(
+        async () => (await $(testid('transfer-time')).getText()).trim(),
+        (time) => time === '6 min 58 s',
+        'the time at 90 %',
+      );
+      expect(
+        await readEach(`${testid('transfer-connections')} ${testid('output-row')}`, '@data-name'),
+      ).toHaveLength(4);
+
+      await $(testid('tool-clear')).click();
+      await $(`${testid('segmented-sizes-tab')} [data-segment-id="conversion"]`).click();
     });
 
     it('answers percentages exactly, and says a division by zero, in Rust', async () => {

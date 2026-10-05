@@ -44,6 +44,8 @@ import {
   TextDiffAnswer,
   TextDiffRequest,
   TextStats,
+  TransferAnswer,
+  TransferRequest,
   UrlAnswer,
   UrlCodecAnswer,
   UrlCodecRequest,
@@ -109,6 +111,7 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
   wallClock = '2026-09-29 14:03:12';
   cron: CronAnswer = { kind: 'reboot' };
   sizes: SizesAnswer = { kind: 'tooLarge' };
+  transfer: TransferAnswer = { kind: 'zeroRate' };
   checks: CheckAnswer = { kind: 'tooShort' };
   stats: TextStats = {
     characters: 0,
@@ -232,6 +235,10 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
 
   describeCron(request: CronRequest): Promise<CronAnswer> {
     return this.answer('describe_cron', request, this.cron);
+  }
+
+  estimateTransfer(request: TransferRequest): Promise<TransferAnswer> {
+    return this.answer('estimate_transfer', request, this.transfer);
   }
 
   convertSize(request: SizesRequest): Promise<SizesAnswer> {

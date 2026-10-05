@@ -46,6 +46,8 @@ import {
   TextDiffAnswer,
   TextDiffRequest,
   TextStats,
+  TransferAnswer,
+  TransferRequest,
   UrlAnswer,
   UrlCodecAnswer,
   UrlCodecRequest,
@@ -160,6 +162,10 @@ export class ToolsRepository {
   }
 
   /** Exact: the rounded values are for reading, the exact ones for copying. */
+  async estimateTransfer(request: TransferRequest): Promise<TransferAnswer> {
+    return unwrap('estimate_transfer', await commands.estimateTransfer(request));
+  }
+
   async convertSize(request: SizesRequest): Promise<SizesAnswer> {
     return unwrap('convert_size', await commands.convertSize(request));
   }

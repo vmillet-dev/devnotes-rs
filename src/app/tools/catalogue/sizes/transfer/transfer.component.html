@@ -1,0 +1,128 @@
+<div class="columns">
+  <section class="column" aria-labelledby="transfer-size-title">
+    <h2 id="transfer-size-title" class="section-title">{{ 'tools.sizes.transferSize' | transloco }}</h2>
+    <div class="value">
+      <input
+        type="text"
+        class="field"
+        data-testid="transfer-size"
+        spellcheck="false"
+        [attr.aria-label]="'tools.sizes.transferSize' | transloco"
+        [value]="size()"
+        placeholder="4,7"
+        (input)="onSize($event)"
+      />
+      <app-choice-menu
+        kind="transfer-size-unit"
+        [label]="'tools.sizes.unit' | transloco"
+        [options]="sizeUnits"
+        [currentId]="sizeUnit()"
+        (chosen)="onSizeUnit($event)"
+      />
+    </div>
+
+    <h2 id="transfer-rate-title" class="section-title">{{ 'tools.sizes.rate' | transloco }}</h2>
+    <div class="value">
+      <input
+        type="text"
+        class="field"
+        data-testid="transfer-rate"
+        spellcheck="false"
+        [attr.aria-label]="'tools.sizes.rate' | transloco"
+        [value]="rate()"
+        placeholder="100"
+        (input)="onRate($event)"
+      />
+      <app-choice-menu
+        kind="transfer-rate-unit"
+        [label]="'tools.sizes.rateUnit' | transloco"
+        [options]="rateUnits"
+        [currentId]="rateUnit()"
+        (chosen)="onRateUnit($event)"
+      />
+    </div>
+
+    <div class="efficiency">
+      <label class="efficiency-label" for="transfer-efficiency">{{
+        'tools.sizes.efficiency' | transloco
+      }}</label>
+      <input
+        id="transfer-efficiency"
+        type="range"
+        class="slider"
+        data-testid="transfer-efficiency-slider"
+        step="1"
+        [min]="bounds.min"
+        [max]="bounds.max"
+        [value]="efficiency()"
+        (input)="onEfficiency($event)"
+      />
+      <span class="percent">
+        <input
+          type="number"
+          class="number"
+          data-testid="transfer-efficiency"
+          [min]="bounds.min"
+          [max]="bounds.max"
+          [attr.aria-label]="'tools.sizes.efficiency' | transloco"
+          [value]="efficiency()"
+          (change)="onEfficiency($event)"
+        />
+        %
+      </span>
+    </div>
+    <p class="caption">{{ 'tools.sizes.efficiencyHint' | transloco }}</p>
+    <p class="explain">{{ 'tools.sizes.bitsAndBytes' | transloco }}</p>
+  </section>
+
+  <section class="column" aria-labelledby="transfer-estimate-title">
+    <h2 id="transfer-estimate-title" class="visually-hidden">{{ 'tools.result' | transloco }}</h2>
+    @if (estimated(); as estimated) {
+      <div class="estimate" data-testid="transfer-estimate">
+        <p class="estimate-caption">
+          {{ 'tools.sizes.estimateAt' | transloco: { rate: rateLabel(), efficiency: estimated.efficiency } }}
+        </p>
+        <p class="estimate-time" data-testid="transfer-time">{{ time(estimated.estimate) }}</p>
+        <p class="estimate-caption" data-testid="transfer-theoretical">
+          {{ 'tools.sizes.theoretical' | transloco: { time: time(estimated.theoretical) } }}
+        </p>
+      </div>
+      <h3 class="section-title">{{ 'tools.sizes.byConnection' | transloco }}</h3>
+      <div class="card" data-testid="transfer-connections">
+        @for (connection of connections(); track connection.id) {
+          <app-result-row
+            [attr.data-connection]="connection.id"
+            [name]="connection.name"
+            [value]="connection.value"
+          />
+        }
+      </div>
+    } @else if (problem(); as problem) {
+      <p class="problem" role="status" data-testid="transfer-problem" [attr.data-problem]="problem.kind">
+        @switch (problem.kind) {
+          @case ('unreadable') {
+            @if (problem.kind === 'unreadable') {
+              {{
+                'tools.sizes.transferProblems.unreadable'
+                  | transloco: { field: ('tools.sizes.fields.' + problem.field | transloco), at: problem.at }
+              }}
+            }
+          }
+          @case ('negative') {
+            @if (problem.kind === 'negative') {
+              {{
+                'tools.sizes.transferProblems.negative'
+                  | transloco: { field: ('tools.sizes.fields.' + problem.field | transloco), at: problem.at }
+              }}
+            }
+          }
+          @default {
+            {{ 'tools.sizes.transferProblems.' + problem.kind | transloco }}
+          }
+        }
+      </p>
+    } @else {
+      <p class="empty">{{ 'tools.sizes.transferEmpty' | transloco }}</p>
+    }
+  </section>
+</div>

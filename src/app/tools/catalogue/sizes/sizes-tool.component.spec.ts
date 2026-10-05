@@ -162,4 +162,52 @@ describe('SizesToolComponent', () => {
     expect(harness.element<HTMLInputElement>('[data-testid="sizes-input"]').value).toBe('');
     expect(harness.all('[data-testid="output-row"]')).toHaveLength(0);
   });
+
+  describe('the Transfert tab', () => {
+    const tab = async (harness: ToolHarness<SizesToolComponent>, id: 'conversion' | 'transfer') => {
+      harness
+        .element<HTMLButtonElement>(`[data-testid="segmented-sizes-tab"] [data-segment-id="${id}"]`)
+        .click();
+      await harness.settle();
+    };
+
+    it('fills both tabs from its sample, saves what the tab on screen shows, and empties both', async () => {
+      const harness = await renderTool(SizesToolComponent, (tools) => {
+        tools.sizes = ONE_AND_A_HALF_GB;
+        tools.transfer = {
+          kind: 'estimated',
+          estimate: { days: 0, hours: 0, minutes: 6, seconds: 58, underASecond: false },
+          theoretical: { days: 0, hours: 0, minutes: 6, seconds: 16, underASecond: false },
+          efficiency: 90,
+          connections: [
+            {
+              connection: null,
+              rate: '100000000',
+              span: { days: 0, hours: 0, minutes: 6, seconds: 58, underASecond: false },
+            },
+          ],
+        };
+      });
+      const field = (id: string) => harness.element<HTMLInputElement>(`[data-testid="${id}"]`).value;
+
+      harness.tool.sample();
+      await vi.waitFor(() => expect(harness.tools.requestsOf('convert_size')).toHaveLength(1));
+      await harness.settle();
+      expect(harness.tool.result()?.title).toMatchObject({ key: 'tools.sizes.noteTitle' });
+
+      await tab(harness, 'transfer');
+      expect([field('transfer-size'), field('transfer-rate'), field('transfer-efficiency')]).toEqual([
+        '4,7',
+        '100',
+        '90',
+      ]);
+      await vi.waitFor(() => expect(harness.tools.requestsOf('estimate_transfer')).toHaveLength(1));
+      await harness.settle();
+      expect(harness.tool.result()?.title).toMatchObject({ key: 'tools.sizes.noteTransfer' });
+
+      harness.tool.clear();
+      await harness.settle();
+      expect([field('transfer-size'), field('transfer-rate')]).toEqual(['', '']);
+    });
+  });
 });

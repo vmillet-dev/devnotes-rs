@@ -1711,8 +1711,8 @@
       }
     },
     "sizes": {
-      "name": "Tailles de données",
-      "description": "o, ko, Mo, Go ↔ Kio, Mio, Gio, et les bits",
+      "name": "Tailles et transfert",
+      "description": "o, ko, Mo, Go ↔ Kio, Mio, Gio, les bits, et le temps d’un transfert",
       "inputLabel": "Quantité",
       "placeholder": "1,5 Go · 750 Kio · 100 Mbit",
       "unit": "Unité sans symbole",
@@ -1767,7 +1767,55 @@
       "tooLarge": "Trop grand pour être compté exactement : 28 chiffres au plus.",
       "empty": "Tapez une quantité, avec son unité ou non : chaque unité s’affiche ici.",
       "noteTitle": "{{value}} {{unit}} dans toutes les unités",
-      "value": "Valeur"
+      "value": "Valeur",
+      "tab": "Onglet",
+      "tabs": {
+        "conversion": "Conversion",
+        "transfer": "Transfert"
+      },
+      "transferSize": "Taille à transférer",
+      "rate": "Débit",
+      "rateUnit": "Unité du débit",
+      "efficiency": "Rendement",
+      "efficiencyHint": "Un lien n’atteint jamais son débit nominal : protocole, chiffrement et latence en retirent 5 à 15 %.",
+      "bitsAndBytes": "Les débits se disent en bits par seconde, les fichiers en octets : 100 Mbit/s ≈ 12,5 Mo/s au mieux. Et 4,7 Go (décimal) font 4,377 Gio.",
+      "estimateAt": "Durée estimée à {{rate}}, rendement {{efficiency}} %",
+      "theoretical": "{{time}} en théorie, à plein débit.",
+      "byConnection": "Selon la connexion",
+      "connections": {
+        "fibre": "Fibre · 1 Gbit/s",
+        "mobile4g": "4G · 30 Mbit/s",
+        "adsl": "ADSL · 10 Mbit/s"
+      },
+      "rateUnits": {
+        "bitPerSecond": "bit/s",
+        "kilobitPerSecond": "kbit/s",
+        "megabitPerSecond": "Mbit/s",
+        "gigabitPerSecond": "Gbit/s",
+        "bytePerSecond": "o/s",
+        "kilobytePerSecond": "ko/s",
+        "megabytePerSecond": "Mo/s",
+        "gigabytePerSecond": "Go/s"
+      },
+      "time": {
+        "days": "{{value}} j",
+        "hours": "{{value}} h",
+        "minutes": "{{value}} min",
+        "seconds": "{{value}} s",
+        "underASecond": "< 1 s"
+      },
+      "fields": {
+        "size": "Taille",
+        "rate": "Débit"
+      },
+      "transferProblems": {
+        "unreadable": "{{field}} : illisible à partir du caractère {{at}}.",
+        "negative": "{{field}} : ne peut pas être négatif (caractère {{at}}).",
+        "zeroRate": "Un débit nul ne transfère rien.",
+        "tooLarge": "Trop grand pour être compté exactement : 28 chiffres au plus."
+      },
+      "transferEmpty": "Tapez une taille et un débit : la durée s’affiche ici, et selon la connexion.",
+      "noteTransfer": "{{size}} à {{rate}}, rendement {{efficiency}} %"
     },
     "percentages": {
       "name": "Pourcentages",
