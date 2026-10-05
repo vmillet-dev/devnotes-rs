@@ -31,8 +31,10 @@ bench = false
 name = "export-bindings"
 path = "src/bin/export-bindings.rs"
 bench = false
+required-features = ["bindings"]
 
 [features]
+bindings = []
 e2e = ["dep:tauri-plugin-wdio", "dep:tauri-plugin-wdio-webdriver"]
 
 [build-dependencies]

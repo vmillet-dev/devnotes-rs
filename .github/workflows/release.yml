@@ -262,6 +262,28 @@ jobs:
         with:
           args: --verbose
 
+      # The bundler packages every binary Cargo builds, which is how 0.9.1's installers came to
+      # carry `export-bindings` beside the application. The MSI is unpacked by an administrative
+      # install, which installs nothing, and the .deb listed; NSIS, RPM and the AppImage are
+      # made from the same list of binaries.
+      - name: Each bundle holds the application alone
+        run: |
+          if [ '${{ matrix.target }}' = 'windows' ]; then
+            msi=$(cygpath -w "$(ls src-tauri/target/release/bundle/msi/*.msi)")
+            pwsh -NoProfile -Command "Start-Process msiexec -ArgumentList '/a','$msi','/qn','TARGETDIR=$(cygpath -w "$RUNNER_TEMP/msi")' -Wait"
+            found=$(find "$RUNNER_TEMP/msi" -type f -name '*.exe' -printf '%f\n' | sort)
+            expected='devnotes.exe'
+          else
+            found=$(dpkg-deb -c src-tauri/target/release/bundle/deb/*.deb \
+              | awk '$6 ~ /^\.\/usr\/bin\/[^\/]+$/ { n = split($6, part, "/"); print part[n] }' | sort)
+            expected='devnotes'
+          fi
+          echo "executables: $found"
+          if [ "$found" != "$expected" ]; then
+            echo "::error::a bundle carries more than the application: $found"
+            exit 1
+          fi
+
       # The `.sig` files are collected wholesale — the bundler produces one per target,
       # including those the updater cannot install. `publish` is what sorts them, rather than
       # this filter: a signature dropped here would vanish from the logs, and with it the
