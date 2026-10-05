@@ -43,6 +43,15 @@ describe('ResultRowComponent', () => {
     expect(clipboard.content).toBe('user_id_exact');
   });
 
+  it('says what the value is under its name, and marks the one that matched', async () => {
+    fixture.componentRef.setInput('meta', '256 bits');
+    fixture.componentRef.setInput('matched', true);
+    await fixture.whenStable();
+
+    expect(element('.meta')?.textContent).toBe('256 bits');
+    expect(fixture.nativeElement.classList).toContain('matched');
+  });
+
   it('offers no copy for a reading', async () => {
     fixture.componentRef.setInput('copyable', false);
     await fixture.whenStable();

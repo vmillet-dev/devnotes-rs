@@ -12,8 +12,20 @@
   border-top: 1px solid var(--line-soft);
 }
 
+:host(.matched) .row {
+  background: rgba(var(--green-rgb), 0.08);
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
 .name {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   min-width: 0;
@@ -21,6 +33,16 @@
   font-weight: 500;
   color: var(--text-0);
   overflow-wrap: anywhere;
+}
+
+:host(.matched) .name {
+  color: var(--green);
+}
+
+.meta {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--text-2);
 }
 
 .value {

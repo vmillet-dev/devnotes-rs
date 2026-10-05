@@ -71,7 +71,7 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
     bytes: 0,
     endsWithNewline: false,
     digests: [],
-    recognised: null,
+    verdict: null,
   };
   passwords: PasswordAnswer = { kind: 'noCharacters' };
   identifiers: string[] = [];

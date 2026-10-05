@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ToolsRepository } from '@core/data/tools.repository';
-import { DigestEncoding, HashAlgorithm, HashInput } from '@core/model/tool-answers.model';
+import { DigestEncoding, DigestShape, HashAlgorithm, HashInput } from '@core/model/tool-answers.model';
 import { FileDialogService } from '@core/services/dialogs/file-dialog.service';
 import { liveResult } from '@core/services/tools/live-result';
 import { Tool, ToolResult } from '@core/services/tools/tool.model';
@@ -11,7 +11,7 @@ import {
   SegmentedChoiceComponent,
 } from '@shared/controls/segmented-choice/segmented-choice.component';
 import { IconComponent } from '@shared/icon/icon.component';
-import { OutputRowComponent } from '@tools/ui/output-row/output-row.component';
+import { ResultRowComponent } from '@tools/ui/result-row/result-row.component';
 
 type Source = 'text' | 'file';
 
@@ -35,6 +35,29 @@ const HMAC_NAMES: Record<HashAlgorithm, string> = {
   'sha3-256': 'HMAC-SHA3-256',
 };
 
+const OBSOLETE: readonly HashAlgorithm[] = ['md5', 'sha1'];
+
+/** "64 caractères hexadécimaux : SHA-256 ou SHA3-256", once translated. */
+interface ShapeView {
+  key: string;
+  count: number;
+  names: string[];
+}
+
+function shapeView(shape: DigestShape): ShapeView {
+  switch (shape.kind) {
+    case 'hex':
+    case 'base64':
+      return {
+        key: `tools.hash.shapes.${shape.kind}${shape.algorithms.length === 0 ? 'None' : ''}`,
+        count: shape.kind === 'hex' ? shape.characters : shape.bytes,
+        names: shape.algorithms.map((algorithm) => NAMES[algorithm]),
+      };
+    case 'unknown':
+      return { key: 'tools.hash.shapes.unknown', count: 0, names: [] };
+  }
+}
+
 const SOURCES: readonly Segment[] = (['text', 'file'] as const).map((id) => ({
   id,
   labelKey: `tools.hash.sources.${id}`,
@@ -57,7 +80,7 @@ const SAMPLE = {
  */
 @Component({
   selector: 'app-hash-tool',
-  imports: [IconComponent, OutputRowComponent, SegmentedChoiceComponent, TranslocoPipe],
+  imports: [IconComponent, ResultRowComponent, SegmentedChoiceComponent, TranslocoPipe],
   templateUrl: './hash-tool.component.html',
   styleUrl: './hash-tool.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -69,11 +92,7 @@ export class HashToolComponent implements Tool {
   protected readonly source = toolState<Source>('hash.source', 'text');
   protected readonly text = toolState('hash.text', '');
   protected readonly path = toolState<string | null>('hash.path', null);
-  protected readonly algorithms = toolState<readonly HashAlgorithm[]>('hash.algorithms', [
-    'sha1',
-    'sha256',
-    'sha512',
-  ]);
+  protected readonly algorithms = toolState<readonly HashAlgorithm[]>('hash.algorithms', ALGORITHMS);
   protected readonly encoding = toolState<DigestEncoding>('hash.encoding', 'hex');
   protected readonly hmac = toolState('hash.hmac', false);
   protected readonly expected = toolState('hash.expected', '');
@@ -95,17 +114,19 @@ export class HashToolComponent implements Tool {
     return this.text() === '' ? undefined : { kind: 'text', text: this.text() };
   });
 
+  /** A pasted digest alone is still asked about: Rust reads its shape. */
   protected readonly answer = liveResult(
     () => {
       const input = this.input();
-      return input === undefined
+      const expected = this.expected().trim() === '' ? null : this.expected();
+      return input === undefined && expected === null
         ? undefined
         : {
-            input,
+            input: input ?? null,
             algorithms: [...this.algorithms()],
             encoding: this.encoding(),
-            key: this.keyed() ? this.key() : null,
-            expected: this.expected().trim() === '' ? null : this.expected(),
+            key: input !== undefined && this.keyed() ? this.key() : null,
+            expected,
           };
     },
     (request) => this.repository.hash(request),
@@ -128,24 +149,37 @@ export class HashToolComponent implements Tool {
   protected readonly digests = computed(() => {
     const hashed = this.hashed();
     const names = this.digestNames();
+    const verdict = hashed?.verdict;
     return (hashed?.digests ?? []).map((digest) => ({
       ...digest,
       name: names[digest.algorithm],
-      matched: hashed?.recognised?.algorithm === digest.algorithm,
+      obsolete: OBSOLETE.includes(digest.algorithm),
+      matched: verdict?.kind === 'matches' && verdict.algorithm === digest.algorithm,
     }));
   });
 
-  /** "HMAC-SHA256, en hex": what a pasted signature turned out to be. */
-  protected readonly recognised = computed(() => {
-    const recognised = this.hashed()?.recognised;
-    return recognised
-      ? { name: this.digestNames()[recognised.algorithm], encoding: recognised.encoding }
-      : null;
+  /** "HMAC-SHA256, en hex" when it matches; otherwise what the pasted digest looks like. */
+  protected readonly verdict = computed(() => {
+    const answer = this.answer.value();
+    if (answer?.kind === 'shaped') return { kind: 'shaped' as const, shape: shapeView(answer.shape) };
+    const verdict = answer?.kind === 'hashed' ? answer.verdict : null;
+    if (!verdict) return null;
+    return verdict.kind === 'matches'
+      ? { kind: 'matches' as const, name: this.digestNames()[verdict.algorithm], encoding: verdict.encoding }
+      : { kind: 'noMatch' as const, shape: shapeView(verdict.shape) };
   });
 
-  protected readonly weakChosen = computed(() =>
-    this.algorithms().some((id) => id === 'md5' || id === 'sha1'),
-  );
+  protected readonly matched = computed(() => {
+    const verdict = this.verdict();
+    return verdict?.kind === 'matches' ? verdict : null;
+  });
+
+  protected readonly shape = computed(() => {
+    const verdict = this.verdict();
+    return verdict && verdict.kind !== 'matches' ? verdict.shape : null;
+  });
+
+  protected readonly weakChosen = computed(() => this.algorithms().some((id) => OBSOLETE.includes(id)));
 
   readonly result = computed<ToolResult | null>(() => {
     const digests = this.digests();

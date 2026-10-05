@@ -469,6 +469,24 @@ describe('The tools', () => {
       );
     });
 
+    it('reads a signature pasted over no text by its shape', async () => {
+      await setField(testid('hash-input'), '');
+
+      await eventually(
+        async () => (await $(testid('hash-shape')).getText()).trim(),
+        (shape) => shape.startsWith('64') && shape.includes('SHA-256') && shape.includes('SHA3-256'),
+        'the shape of a 256-bit digest',
+      );
+      expect(await $(testid('hash-verdict')).isExisting()).toBe(false);
+
+      await setField(testid('hash-input'), 'The quick brown fox jumps over the lazy dog');
+      await eventually(
+        () => $(testid('hash-verdict')).getText(),
+        (verdict) => verdict.includes('HMAC-SHA256'),
+        'the match again',
+      );
+    });
+
     it('never gives the key back after a trip away', async () => {
       await $(testid('tool-back')).click();
       await entry('hash').click();

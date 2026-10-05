@@ -1,4 +1,5 @@
-//! Digests and HMACs of a text or of a file, and which of them a pasted signature is.
+//! Digests and HMACs of a text or of a file, which of them a pasted signature is, and what it
+//! looks like when there is nothing to compare it with.
 
 use std::fmt::Write;
 use std::io::Read;
@@ -41,7 +42,11 @@ const ALGORITHMS: [HashAlgorithm; 6] = [
 ];
 
 impl HashAlgorithm {
-    fn bits(self) -> u32 {
+    const fn bytes(self) -> usize {
+        self.bits() as usize / 8
+    }
+
+    const fn bits(self) -> u32 {
         match self {
             Self::Md5 => 128,
             Self::Sha1 => 160,
@@ -74,7 +79,8 @@ pub enum HashInput {
 #[derive(Debug, Clone, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct HashRequest {
-    pub input: HashInput,
+    /// `None` to read a pasted digest's shape alone.
+    pub input: Option<HashInput>,
     pub algorithms: Vec<HashAlgorithm>,
     pub encoding: DigestEncoding,
     /// An HMAC when present. ⚠️ Zeroed once the digests are computed, and never stored.
@@ -91,11 +97,33 @@ pub struct DigestValue {
     pub value: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
-#[serde(rename_all = "camelCase")]
-pub struct Recognised {
-    pub algorithm: HashAlgorithm,
-    pub encoding: DigestEncoding,
+/// What a digest is from its length alone: an HMAC has the shape of the hash it uses.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum DigestShape {
+    Hex {
+        characters: u32,
+        /// Empty when no digest has this length.
+        algorithms: Vec<HashAlgorithm>,
+    },
+    Base64 {
+        bytes: u32,
+        algorithms: Vec<HashAlgorithm>,
+    },
+    /// Neither alphabet.
+    Unknown,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum DigestVerdict {
+    Matches {
+        algorithm: HashAlgorithm,
+        encoding: DigestEncoding,
+    },
+    NoMatch {
+        shape: DigestShape,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
@@ -109,8 +137,12 @@ pub enum HashAnswer {
         bytes: u32,
         ends_with_newline: bool,
         digests: Vec<DigestValue>,
-        /// `None` with an expected digest given: it is none of them.
-        recognised: Option<Recognised>,
+        /// `None` when no digest was pasted.
+        verdict: Option<DigestVerdict>,
+    },
+    /// No input: what the pasted digest is, by its shape.
+    Shaped {
+        shape: DigestShape,
     },
     Failed {
         problem: FileProblem,
@@ -184,27 +216,77 @@ fn encode(bytes: &[u8], encoding: DigestEncoding) -> String {
     }
 }
 
-/// Hex in either case, Base64 with or without its padding.
-fn recognise(expected: &str, computed: &[(HashAlgorithm, Vec<u8>)]) -> Option<Recognised> {
-    let expected = expected.trim();
-    let hex = expected.to_ascii_lowercase();
-    let base64 = expected.trim_end_matches('=');
+/// Hex in either case, spaced or split by colons (`openssl -c`); Base64 with or without padding.
+fn as_hex(expected: &str) -> Option<String> {
+    let hex: String = expected
+        .chars()
+        .filter(|c| !c.is_whitespace() && *c != ':')
+        .map(|c| c.to_ascii_lowercase())
+        .collect();
+    (!hex.is_empty() && hex.len().is_multiple_of(2) && hex.bytes().all(|b| b.is_ascii_hexdigit()))
+        .then_some(hex)
+}
 
-    computed.iter().find_map(|(algorithm, bytes)| {
-        if encode(bytes, DigestEncoding::Hex) == hex {
-            Some(Recognised {
-                algorithm: *algorithm,
-                encoding: DigestEncoding::Hex,
-            })
-        } else if encode(bytes, DigestEncoding::Base64).trim_end_matches('=') == base64 {
-            Some(Recognised {
-                algorithm: *algorithm,
-                encoding: DigestEncoding::Base64,
-            })
-        } else {
-            None
+fn as_base64(expected: &str) -> Option<String> {
+    let base64: String = expected.chars().filter(|c| !c.is_whitespace()).collect();
+    let base64 = base64.trim_end_matches('=');
+    let alphabet = |b: u8| b.is_ascii_alphanumeric() || matches!(b, b'+' | b'/' | b'-' | b'_');
+    // One character past a group of four carries six bits: not a whole byte.
+    (!base64.is_empty() && base64.len() % 4 != 1 && base64.bytes().all(alphabet))
+        .then(|| base64.replace('-', "+").replace('_', "/"))
+}
+
+fn of_length(bytes: usize) -> Vec<HashAlgorithm> {
+    ALGORITHMS
+        .into_iter()
+        .filter(|algorithm| algorithm.bytes() == bytes)
+        .collect()
+}
+
+/// Hex first: a hex digest is also valid Base64, and hex is what digests are pasted as.
+fn shape(expected: &str) -> DigestShape {
+    if let Some(hex) = as_hex(expected) {
+        DigestShape::Hex {
+            characters: saturating_u32(hex.len() as u64),
+            algorithms: of_length(hex.len() / 2),
         }
-    })
+    } else if let Some(base64) = as_base64(expected) {
+        let bytes = base64.len() * 3 / 4;
+        DigestShape::Base64 {
+            bytes: saturating_u32(bytes as u64),
+            algorithms: of_length(bytes),
+        }
+    } else {
+        DigestShape::Unknown
+    }
+}
+
+fn judge(expected: &str, computed: &[(HashAlgorithm, Vec<u8>)]) -> DigestVerdict {
+    let hex = as_hex(expected);
+    let base64 = as_base64(expected);
+    computed
+        .iter()
+        .find_map(|(algorithm, bytes)| {
+            let matches = |encoding, wanted: &Option<String>| {
+                wanted
+                    .as_deref()
+                    .is_some_and(|wanted| encode(bytes, encoding).trim_end_matches('=') == wanted)
+            };
+            if matches(DigestEncoding::Hex, &hex) {
+                Some(DigestEncoding::Hex)
+            } else if matches(DigestEncoding::Base64, &base64) {
+                Some(DigestEncoding::Base64)
+            } else {
+                None
+            }
+            .map(|encoding| DigestVerdict::Matches {
+                algorithm: *algorithm,
+                encoding,
+            })
+        })
+        .unwrap_or_else(|| DigestVerdict::NoMatch {
+            shape: shape(expected),
+        })
 }
 
 /// Every algorithm asked for, and all of them when a digest is to be recognised.
@@ -244,6 +326,14 @@ pub fn hash(mut request: HashRequest) -> HashAnswer {
         .as_deref()
         .map(str::trim)
         .filter(|text| !text.is_empty());
+    let Some(input) = &request.input else {
+        if let Some(key) = request.key.as_mut() {
+            key.zeroize();
+        }
+        return HashAnswer::Shaped {
+            shape: expected.map_or(DigestShape::Unknown, shape),
+        };
+    };
     let computed_for: Vec<HashAlgorithm> = if expected.is_some() {
         ALGORITHMS.to_vec()
     } else {
@@ -258,7 +348,7 @@ pub fn hash(mut request: HashRequest) -> HashAnswer {
         .iter()
         .map(|&algorithm| sink(algorithm, key))
         .collect();
-    let fed = feed(&request.input, &mut sinks);
+    let fed = feed(input, &mut sinks);
     if let Some(key) = request.key.as_mut() {
         key.zeroize();
     }
@@ -276,10 +366,7 @@ pub fn hash(mut request: HashRequest) -> HashAnswer {
     HashAnswer::Hashed {
         bytes: saturating_u32(bytes),
         ends_with_newline,
-        recognised: request
-            .expected
-            .as_deref()
-            .and_then(|expected| recognise(expected, &computed)),
+        verdict: expected.map(|expected| judge(expected, &computed)),
         digests: computed
             .iter()
             .filter(|(algorithm, _)| request.algorithms.contains(algorithm))
@@ -300,9 +387,9 @@ mod tests {
 
     fn text(algorithms: &[HashAlgorithm], key: Option<&str>, expected: Option<&str>) -> HashAnswer {
         hash(HashRequest {
-            input: HashInput::Text {
+            input: Some(HashInput::Text {
                 text: EVENT.to_owned(),
-            },
+            }),
             algorithms: algorithms.to_vec(),
             encoding: DigestEncoding::Hex,
             key: key.map(str::to_owned),
@@ -316,16 +403,16 @@ mod tests {
                 .iter()
                 .map(|digest| (digest.algorithm, digest.value.as_str()))
                 .collect(),
-            HashAnswer::Failed { problem } => panic!("failed: {problem:?}"),
+            other => panic!("not hashed: {other:?}"),
         }
     }
 
     #[test]
     fn plain_digests_match_the_references() {
         let answer = hash(HashRequest {
-            input: HashInput::Text {
+            input: Some(HashInput::Text {
                 text: "abc".to_owned(),
-            },
+            }),
             algorithms: ALGORITHMS.to_vec(),
             encoding: DigestEncoding::Hex,
             key: None,
@@ -366,9 +453,9 @@ mod tests {
 
     fn fox(algorithms: &[HashAlgorithm], expected: Option<&str>) -> HashAnswer {
         hash(HashRequest {
-            input: HashInput::Text {
+            input: Some(HashInput::Text {
                 text: FOX.to_owned(),
-            },
+            }),
             algorithms: algorithms.to_vec(),
             encoding: DigestEncoding::Hex,
             key: Some("key".to_owned()),
@@ -395,16 +482,14 @@ mod tests {
         );
 
         let HashAnswer::Hashed {
-            recognised,
-            digests,
-            ..
+            verdict, digests, ..
         } = answer
         else {
             panic!()
         };
         assert_eq!(
-            recognised,
-            Some(Recognised {
+            verdict,
+            Some(DigestVerdict::Matches {
                 algorithm: HashAlgorithm::Sha256,
                 encoding: DigestEncoding::Hex
             })
@@ -413,20 +498,20 @@ mod tests {
 
         let abc_sha256_base64 = "ungWv48Bz+pBQUDeXa4iI7ADYaOWF3qctBD/YfIAFa0";
         let answer = hash(HashRequest {
-            input: HashInput::Text {
+            input: Some(HashInput::Text {
                 text: "abc".to_owned(),
-            },
+            }),
             algorithms: vec![],
             encoding: DigestEncoding::Hex,
             key: None,
             expected: Some(abc_sha256_base64.to_owned()),
         });
-        let HashAnswer::Hashed { recognised, .. } = answer else {
+        let HashAnswer::Hashed { verdict, .. } = answer else {
             panic!()
         };
         assert_eq!(
-            recognised,
-            Some(Recognised {
+            verdict,
+            Some(DigestVerdict::Matches {
                 algorithm: HashAlgorithm::Sha256,
                 encoding: DigestEncoding::Base64
             })
@@ -434,12 +519,126 @@ mod tests {
     }
 
     #[test]
-    fn a_signature_of_nothing_known_is_said_to_be_none() {
-        let HashAnswer::Hashed { recognised, .. } = text(&[], None, Some("deadbeef")) else {
+    fn a_signature_split_by_colons_or_spaces_is_still_recognised() {
+        let pairs: Vec<String> = FOX_HMAC_SHA256
+            .as_bytes()
+            .chunks(2)
+            .map(|pair| String::from_utf8(pair.to_vec()).unwrap())
+            .collect();
+
+        for pasted in [pairs.join(":"), pairs.join(" ").to_ascii_uppercase()] {
+            let HashAnswer::Hashed { verdict, .. } = fox(&[], Some(&pasted)) else {
+                panic!()
+            };
+            assert!(
+                matches!(
+                    verdict,
+                    Some(DigestVerdict::Matches {
+                        algorithm: HashAlgorithm::Sha256,
+                        ..
+                    })
+                ),
+                "{pasted}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_signature_of_nothing_known_is_no_match_and_says_its_shape() {
+        let HashAnswer::Hashed { verdict, .. } = text(&[], None, Some(FOX_HMAC_SHA256)) else {
             panic!()
         };
 
-        assert_eq!(recognised, None);
+        assert_eq!(
+            verdict,
+            Some(DigestVerdict::NoMatch {
+                shape: DigestShape::Hex {
+                    characters: 64,
+                    algorithms: vec![HashAlgorithm::Sha256, HashAlgorithm::Sha3_256]
+                }
+            })
+        );
+    }
+
+    fn shaped(expected: &str) -> DigestShape {
+        match hash(HashRequest {
+            input: None,
+            algorithms: ALGORITHMS.to_vec(),
+            encoding: DigestEncoding::Hex,
+            key: None,
+            expected: Some(expected.to_owned()),
+        }) {
+            HashAnswer::Shaped { shape } => shape,
+            other => panic!("{other:?}"),
+        }
+    }
+
+    fn hex(characters: u32, algorithms: &[HashAlgorithm]) -> DigestShape {
+        DigestShape::Hex {
+            characters,
+            algorithms: algorithms.to_vec(),
+        }
+    }
+
+    fn base64(bytes: u32, algorithms: &[HashAlgorithm]) -> DigestShape {
+        DigestShape::Base64 {
+            bytes,
+            algorithms: algorithms.to_vec(),
+        }
+    }
+
+    #[test]
+    fn with_nothing_to_compare_a_hex_digest_is_read_by_its_length() {
+        use HashAlgorithm::{Md5, Sha1, Sha3_256, Sha256, Sha384, Sha512};
+
+        assert_eq!(shaped(&"a".repeat(32)), hex(32, &[Md5]));
+        assert_eq!(shaped(&"B".repeat(40)), hex(40, &[Sha1]));
+        assert_eq!(shaped(FOX_HMAC_SHA256), hex(64, &[Sha256, Sha3_256]));
+        assert_eq!(shaped(&"0".repeat(96)), hex(96, &[Sha384]));
+        assert_eq!(shaped(&"f".repeat(128)), hex(128, &[Sha512]));
+        assert_eq!(shaped("de:ad:BE:EF"), hex(8, &[]), "a length no digest has");
+    }
+
+    #[test]
+    fn with_nothing_to_compare_a_base64_digest_is_read_by_its_decoded_length() {
+        use HashAlgorithm::{Md5, Sha1, Sha3_256, Sha256, Sha384, Sha512};
+
+        assert_eq!(shaped("kAFQmDzST7DWlj99KOF/cg=="), base64(16, &[Md5]));
+        assert_eq!(shaped("qZk+NkcGgWq6PiVxeFDCbJzQ2J0="), base64(20, &[Sha1]));
+        assert_eq!(
+            shaped("ungWv48Bz+pBQUDeXa4iI7ADYaOWF3qctBD/YfIAFa0"),
+            base64(32, &[Sha256, Sha3_256]),
+            "unpadded"
+        );
+        assert_eq!(shaped(&"x".repeat(64)), base64(48, &[Sha384]));
+        assert_eq!(
+            shaped(&format!("{}==", "_".repeat(86))),
+            base64(64, &[Sha512])
+        );
+        assert_eq!(
+            shaped("abcde"),
+            DigestShape::Unknown,
+            "a sixth of a byte left over"
+        );
+        assert_eq!(shaped("not a digest!"), DigestShape::Unknown);
+    }
+
+    #[test]
+    fn nothing_to_hash_and_nothing_pasted_is_an_unknown_shape() {
+        let answer = hash(HashRequest {
+            input: None,
+            algorithms: vec![],
+            encoding: DigestEncoding::Hex,
+            key: Some("key".to_owned()),
+            expected: None,
+        });
+
+        assert_eq!(
+            answer,
+            HashAnswer::Shaped {
+                shape: DigestShape::Unknown
+            }
+        );
     }
 
     #[test]
@@ -462,9 +661,9 @@ mod tests {
         std::fs::write(&path, format!("{EVENT}\n")).unwrap();
 
         let answer = hash(HashRequest {
-            input: HashInput::File {
+            input: Some(HashInput::File {
                 path: path.to_string_lossy().into_owned(),
-            },
+            }),
             algorithms: vec![HashAlgorithm::Md5],
             encoding: DigestEncoding::Base64,
             key: None,
@@ -481,9 +680,9 @@ mod tests {
         };
         assert_eq!((bytes, ends_with_newline), (63, true));
         let text_answer = hash(HashRequest {
-            input: HashInput::Text {
+            input: Some(HashInput::Text {
                 text: format!("{EVENT}\n"),
-            },
+            }),
             algorithms: vec![HashAlgorithm::Md5],
             encoding: DigestEncoding::Base64,
             key: None,
@@ -501,14 +700,14 @@ mod tests {
     #[test]
     fn a_missing_file_says_so() {
         let answer = hash(HashRequest {
-            input: HashInput::File {
+            input: Some(HashInput::File {
                 path: tempfile::tempdir()
                     .unwrap()
                     .path()
                     .join("absent.bin")
                     .to_string_lossy()
                     .into_owned(),
-            },
+            }),
             algorithms: vec![HashAlgorithm::Md5],
             encoding: DigestEncoding::Hex,
             key: None,

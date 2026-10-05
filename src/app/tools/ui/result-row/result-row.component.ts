@@ -8,6 +8,7 @@ import { CopyValueComponent } from '../copy-value/copy-value.component';
   templateUrl: './result-row.component.html',
   styleUrl: './result-row.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[class.matched]': 'matched()' },
 })
 export class ResultRowComponent {
   readonly name = input.required<string>();
@@ -16,4 +17,8 @@ export class ResultRowComponent {
   readonly copied = input<string | null>(null);
   /** A reading, not a value: nothing to paste anywhere. */
   readonly copyable = input(true);
+  /** "256 bits": what the value is, under its name. */
+  readonly meta = input('');
+  /** Tinted, when this is the one that answers what was asked: a signature it matches. */
+  readonly matched = input(false);
 }
