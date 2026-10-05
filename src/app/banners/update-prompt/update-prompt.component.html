@@ -20,7 +20,13 @@
     @if (update.notes) {
       <section class="update-notes">
         <h3 class="update-notes-label">{{ 'update.notesLabel' | transloco }}</h3>
-        <pre class="update-notes-body">{{ update.notes }}</pre>
+        <div class="update-notes-body" data-testid="update-notes">
+          @if (notes(); as sections) {
+            <app-release-notes [sections]="sections" />
+          } @else if (notesFailed()) {
+            <p class="update-notes-raw">{{ update.notes }}</p>
+          }
+        </div>
       </section>
     }
 

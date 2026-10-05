@@ -259,6 +259,8 @@ export const commands = {
 	 */
 	deleteLibrary: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("delete_library", { id })),
 	appChangelog: () => __TAURI_INVOKE<ChangelogRelease[]>("app_changelog"),
+	/**  The notes the updater hands over, read with the same grammar as the file. */
+	releaseNotes: (markdown: string) => __TAURI_INVOKE<ChangelogSection[]>("release_notes", { markdown }),
 	/**
 	 *  Replaces only the menu when the tray exists, so a language change does not flicker. No
 	 *  `Result`: without a tray, `tray_exists` is what stops closing from hiding the window.

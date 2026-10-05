@@ -67,63 +67,105 @@ impl ChangelogSpan {
 /// as such would put `0.10` before `0.9`.
 pub fn parse(markdown: &str) -> Vec<ChangelogRelease> {
     let mut releases: Vec<ChangelogRelease> = Vec::new();
-    // A continuation line belongs to the entry above it, and only while one is open.
-    let mut item_open = false;
+    let mut sections = Sections::default();
 
     for line in markdown.lines() {
         let line = line.trim();
 
         if let Some(heading) = line.strip_prefix("## ") {
+            if let Some(release) = releases.last_mut() {
+                release.sections = sections.take();
+            }
             let (version, date) = split_heading(heading);
             releases.push(ChangelogRelease {
                 version,
                 date,
                 sections: Vec::new(),
             });
-            item_open = false;
-            continue;
+        } else if !releases.is_empty() {
+            // The preamble sits above the first release, with nothing to attach to.
+            sections.read(line);
         }
+    }
 
-        // Nothing to attach to: the preamble sits above the first release.
-        let Some(release) = releases.last_mut() else {
-            continue;
-        };
+    if let Some(release) = releases.last_mut() {
+        release.sections = sections.take();
+    }
+    releases
+}
 
+/// What the updater hands over: one release's section of the file, without its `## `
+/// heading (`release.yml` writes it so). A line outside the grammar is an entry of its own,
+/// so notes written as a paragraph never leave the prompt empty.
+pub fn parse_section(markdown: &str) -> Vec<ChangelogSection> {
+    let mut sections = Sections::default();
+
+    for line in markdown.lines() {
+        let line = line.trim();
+
+        if line.starts_with("# ") || line.starts_with("## ") {
+            // The prompt already names the version.
+            sections.item_open = false;
+        } else if !sections.read(line) {
+            sections.current().items.push(spans(line));
+        }
+    }
+
+    sections.take()
+}
+
+/// A release's categories as its lines arrive: a `### ` heading, a bullet, a blank line,
+/// and a continuation of the entry above.
+#[derive(Default)]
+struct Sections {
+    sections: Vec<ChangelogSection>,
+    // A continuation line belongs to the entry above it, and only while one is open.
+    item_open: bool,
+}
+
+impl Sections {
+    /// `false` for a line the grammar has no place for.
+    fn read(&mut self, line: &str) -> bool {
         if let Some(title) = line.strip_prefix("### ") {
-            release.sections.push(ChangelogSection {
+            self.sections.push(ChangelogSection {
                 title: title.trim().to_string(),
                 items: Vec::new(),
             });
-            item_open = false;
+            self.item_open = false;
         } else if let Some(entry) = bullet(line) {
-            section_of(release).items.push(spans(entry));
-            item_open = true;
+            self.current().items.push(spans(entry));
+            self.item_open = true;
         } else if line.is_empty() {
-            item_open = false;
-        } else if item_open
-            && let Some(item) = release.sections.last_mut().and_then(|s| s.items.last_mut())
+            self.item_open = false;
+        } else if self.item_open
+            && let Some(item) = self.sections.last_mut().and_then(|s| s.items.last_mut())
         {
             // Re-cut with what it continues rather than appended to it: a marker opened
             // on the line above closes on this one.
             *item = spans(&format!("{} {line}", written(item)));
+        } else {
+            return false;
         }
+        true
     }
 
-    releases
-}
+    fn current(&mut self) -> &mut ChangelogSection {
+        if self.sections.is_empty() {
+            self.sections.push(ChangelogSection {
+                title: String::new(),
+                items: Vec::new(),
+            });
+        }
 
-fn section_of(release: &mut ChangelogRelease) -> &mut ChangelogSection {
-    if release.sections.is_empty() {
-        release.sections.push(ChangelogSection {
-            title: String::new(),
-            items: Vec::new(),
-        });
+        self.sections
+            .last_mut()
+            .expect("a section was just pushed if there was none")
     }
 
-    release
-        .sections
-        .last_mut()
-        .expect("a section was just pushed if there was none")
+    fn take(&mut self) -> Vec<ChangelogSection> {
+        self.item_open = false;
+        std::mem::take(&mut self.sections)
+    }
 }
 
 /// The markdown an entry was cut from, so a continuation line can be re-cut with it.
@@ -433,6 +475,64 @@ Everything above the first release is preamble.
                     ChangelogSpan::plain(" And the rest.".to_string()),
                 ]
             );
+        }
+    }
+
+    mod a_section_alone {
+        use super::*;
+
+        fn titles(sections: &[ChangelogSection]) -> Vec<&str> {
+            sections
+                .iter()
+                .map(|section| section.title.as_str())
+                .collect()
+        }
+
+        #[test]
+        fn reads_its_categories_and_entries_as_the_file_does() {
+            let sections = parse_section(
+                "### ✨ Added\n\n- **Todo lists.** A note is now\n  either kind.\n\n### 🐛 Fixed\n\n- A crash (#12)\n",
+            );
+
+            assert_eq!(titles(&sections), ["✨ Added", "🐛 Fixed"]);
+            assert_eq!(
+                sections[0].items[0],
+                vec![
+                    ChangelogSpan::strong("Todo lists.".to_string()),
+                    ChangelogSpan::plain(" A note is now either kind.".to_string()),
+                ]
+            );
+            assert_eq!(reads(&sections[1]), ["A crash"]);
+        }
+
+        #[test]
+        fn drops_a_release_heading_left_on_top() {
+            let sections = parse_section("## [0.9.2] - 2026-10-06\n\n### Fixed\n\n- It works.\n");
+
+            assert_eq!(titles(&sections), ["Fixed"]);
+            assert_eq!(reads(&sections[0]), ["It works."]);
+        }
+
+        #[test]
+        fn makes_each_line_of_free_text_an_entry_rather_than_nothing() {
+            let sections = parse_section("This release fixes the `sync`.\nAnd the rail.\n");
+
+            assert_eq!(titles(&sections), [""]);
+            assert_eq!(
+                sections[0].items[0],
+                vec![
+                    ChangelogSpan::plain("This release fixes the ".to_string()),
+                    ChangelogSpan::code("sync".to_string()),
+                    ChangelogSpan::plain(".".to_string()),
+                ]
+            );
+            assert_eq!(reads(&sections[0])[1], "And the rail.");
+        }
+
+        #[test]
+        fn has_nothing_to_say_about_nothing() {
+            assert!(parse_section("").is_empty());
+            assert!(parse_section("\n  \n").is_empty());
         }
     }
 }

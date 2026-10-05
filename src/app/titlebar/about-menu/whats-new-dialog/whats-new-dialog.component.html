@@ -24,37 +24,7 @@
             }
           </h3>
 
-          <!-- Tracked by position: two categories of a release may legitimately carry the
-               same heading. -->
-          @for (section of release.sections; track $index) {
-            <!-- A release may list its entries with no category: the heading is then
-                 dropped rather than rendered empty. -->
-            @if (section.title) {
-              <h4 class="news-section-title">{{ section.title }}</h4>
-            }
-            <ul class="news-items">
-              @for (item of section.items; track $index) {
-                <!-- Three spans over a switch and never `innerHTML`: the file is baked
-                     into the binary, but a renderer that interprets markup is one the CSP
-                     cannot help with the day it reads something else. -->
-                <li>
-                  @for (span of item; track $index) {
-                    @switch (span.kind) {
-                      @case ('strong') {
-                        <strong>{{ span.text }}</strong>
-                      }
-                      @case ('code') {
-                        <code>{{ span.text }}</code>
-                      }
-                      @default {
-                        <span>{{ span.text }}</span>
-                      }
-                    }
-                  }
-                </li>
-              }
-            </ul>
-          }
+          <app-release-notes [sections]="release.sections" />
         </section>
       }
     }

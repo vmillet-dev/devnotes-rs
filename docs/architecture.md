@@ -1268,8 +1268,12 @@ out from under the mouse. The prompt is a `fitted` dialog, sized by its content,
 a forty-line one. It scrolls inside.
 
 It stays untranslated, like `CHANGELOG.md` and the "Nouveautés" panel that reads it: a
-release note in one language beats no release note. The `<pre>` shows the section as
-written, bullets and all.
+release note in one language beats no release note. **Rust reads it with the panel's grammar**
+(`changelog::model::parse_section`, the `release_notes` command): the section alone, its
+`### ` categories, entries and spans, and a line outside the grammar as an entry of its own, so
+free text never leaves the prompt empty. Both draw it with `app-release-notes` (`shared/`),
+three spans over a `@switch` and no `innerHTML`; without the bridge the prompt shows the text
+as written.
 
 ### The theme is one gesture
 

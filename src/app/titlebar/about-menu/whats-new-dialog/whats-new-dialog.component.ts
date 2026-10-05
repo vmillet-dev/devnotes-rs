@@ -3,6 +3,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { AppInfoService } from '@core/services/app-info/app-info.service';
 import { ChangelogRelease, ChangelogService, RELEASES_URL } from '@core/services/app-info/changelog.service';
 import { DialogComponent } from '@shared/layout/dialog/dialog.component';
+import { ReleaseNotesComponent } from '@shared/release-notes/release-notes.component';
 
 const RELEASES_LABEL = RELEASES_URL.replace(/^https:\/\//, '');
 
@@ -12,7 +13,7 @@ const RELEASES_LABEL = RELEASES_URL.replace(/^https:\/\//, '');
  */
 @Component({
   selector: 'app-whats-new-dialog',
-  imports: [DialogComponent, TranslocoPipe],
+  imports: [DialogComponent, ReleaseNotesComponent, TranslocoPipe],
   templateUrl: './whats-new-dialog.component.html',
   styleUrl: './whats-new-dialog.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
