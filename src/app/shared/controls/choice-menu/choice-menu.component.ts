@@ -39,6 +39,8 @@ export class ChoiceMenuComponent {
   readonly noneLabel = input<string | null>(null);
   /** `value` names what is chosen; `label` names what the menu does. */
   readonly naming = input<'value' | 'label'>('value');
+  /** Replaces `choice-<kind>` on the trigger, where a scenario already addresses another one. */
+  readonly triggerTestId = input<string | null>(null);
 
   readonly chosen = output<string | null>();
 

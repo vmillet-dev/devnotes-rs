@@ -271,8 +271,17 @@ describe('RichTextEditorComponent', () => {
       return (surface() as HTMLElement & { editor: Editor }).editor;
     }
 
-    function languagePicker(): HTMLSelectElement | null {
+    function languagePicker(): HTMLButtonElement | null {
       return fixture.nativeElement.querySelector('[data-testid="rich-code-language"]');
+    }
+
+    async function chooseLanguage(id: string): Promise<void> {
+      languagePicker()!.click();
+      await fixture.whenStable();
+      fixture.nativeElement
+        .querySelector(`[data-testid="choice-panel-rich-code-language"] [data-option-id="${id}"]`)
+        .click();
+      await fixture.whenStable();
     }
 
     it('is fenced, and written as typed: no escape inside it, a tab kept a tab', async () => {
@@ -302,14 +311,51 @@ describe('RichTextEditorComponent', () => {
 
       editor().commands.setTextSelection(3);
       await fixture.whenStable();
-      const picker = languagePicker()!;
-      expect(picker.value).toBe('txt');
+      expect(languagePicker()?.textContent).toContain('TXT');
 
-      picker.value = 'sql';
-      picker.dispatchEvent(new Event('change'));
-      await fixture.whenStable();
+      await chooseLanguage('sql');
 
       expect(emitted.at(-1)).toBe('```sql\nSELECT 1\n```\n\nafter');
+      expect(languagePicker()?.textContent).toContain('SQL');
+    });
+
+    /** The themed menu, never the operating system's `<select>`. */
+    it('picks the language from a menu that keeps the caret in the block', async () => {
+      await open('```\nSELECT 1\n```\n\nafter');
+      editor().commands.setTextSelection(4);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.querySelector('select')).toBeNull();
+      expect(languagePicker()?.getAttribute('aria-haspopup')).toBe('menu');
+      const press = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+      languagePicker()!.dispatchEvent(press);
+      expect(press.defaultPrevented).toBe(true);
+
+      await chooseLanguage('py');
+
+      expect(editor().state.selection.from).toBe(4);
+      expect(editor().state.selection.$from.parent.type.name).toBe('codeBlock');
+      expect(editor().isFocused).toBe(true);
+      expect(emitted.at(-1)).toBe('```py\nSELECT 1\n```\n\nafter');
+    });
+
+    it('closes its menu on Escape without the key reaching the dialog', async () => {
+      await open('```\nSELECT 1\n```');
+      editor().commands.setTextSelection(3);
+      await fixture.whenStable();
+      languagePicker()!.click();
+      await fixture.whenStable();
+      const reached = vi.fn();
+      document.addEventListener('keydown', reached);
+
+      languagePicker()!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await fixture.whenStable();
+      document.removeEventListener('keydown', reached);
+
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="choice-panel-rich-code-language"]'),
+      ).toBeNull();
+      expect(reached).not.toHaveBeenCalled();
     });
 
     it('colours its code with the grammar of its language, and labels it', async () => {

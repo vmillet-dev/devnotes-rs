@@ -31,18 +31,17 @@
 
   @if (codeLanguage(); as language) {
     <div class="rich-group">
-      <label class="rich-code-language">
-        <span class="visually-hidden">{{ 'editor.rich.codeLanguage' | transloco }}</span>
-        <select
-          #languagePicker
-          data-testid="rich-code-language"
-          (change)="setCodeLanguage(languagePicker.value)"
-        >
-          @for (option of codeLanguages; track option.id) {
-            <option [value]="option.id" [selected]="option.id === language">{{ option.label }}</option>
-          }
-        </select>
-      </label>
+      <!-- The press is kept from the trigger and the entries, as from the buttons: the caret
+           stays in the block, and the choice writes there. -->
+      <app-choice-menu
+        kind="rich-code-language"
+        triggerTestId="rich-code-language"
+        [label]="'editor.rich.codeLanguage' | transloco"
+        [options]="codeLanguages"
+        [currentId]="language"
+        (mousedown)="$event.preventDefault()"
+        (chosen)="setCodeLanguage($event)"
+      />
     </div>
   }
 
