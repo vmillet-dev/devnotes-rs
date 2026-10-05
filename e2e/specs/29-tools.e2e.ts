@@ -501,11 +501,13 @@ describe('The tools', () => {
       await $(testid('save-as-note')).waitForExist({ reverse: true, timeout: 5_000 });
     });
 
-    const drawnLines = async () => (await $(testid('identifiers-list')).getText()).split('\n');
+    const drawnLines = () => readEach(testid('identifiers-value'), 'text');
+    const pickKind = (kind: string) =>
+      $(`${testid('segmented-identifiers-kind')} [data-segment-id="${kind}"]`).click();
 
     it('draws v7 UUIDs that sort by creation, and reads the time back out of one', async () => {
       await openTool('identifiers');
-      await pickChoice('identifiers-kind', 'uuidV7');
+      await pickKind('uuidV7');
 
       await eventually(
         drawnLines,
@@ -521,10 +523,28 @@ describe('The tools', () => {
         (created) => created === '2024-09-25 23:05:01.488 UTC',
         'its time',
       );
+      expect((await $(testid('identifiers-random')).getText()).trim()).toBe(
+        '7cc4-9a5c-6f2d8e1b3a77 · 74 bits',
+      );
+    });
+
+    it('draws UUIDs without hyphens, and again on R once out of the field', async () => {
+      await $(testid('identifiers-without-hyphens')).click();
+      await eventually(
+        drawnLines,
+        (lines) => lines.length === 5 && lines.every((line) => /^[0-9a-f]{12}7[0-9a-f]{19}$/.test(line)),
+        'five v7s of 32 digits',
+      );
+      const before = await drawnLines();
+
+      await browser.execute(() => (document.activeElement as HTMLElement | null)?.blur());
+      await browser.keys('r');
+      await eventually(drawnLines, (lines) => lines.length === 5 && lines[0] !== before[0], 'a new draw');
+      await $(testid('identifiers-without-hyphens')).click();
     });
 
     it('draws ULIDs that count up, and reads the ULID spec’s example back', async () => {
-      await pickChoice('identifiers-kind', 'ulid');
+      await pickKind('ulid');
       await setField(testid('identifiers-count'), '50');
 
       await eventually(
@@ -545,7 +565,7 @@ describe('The tools', () => {
 
     it('draws NanoIDs in the alphabet and length chosen, and reads a KSUID', async () => {
       await setField(testid('identifiers-count'), '5');
-      await pickChoice('identifiers-kind', 'nanoId');
+      await pickKind('nanoId');
       await setField(testid('identifiers-nano-length'), '12');
       await $(`${testid('segmented-identifiers-alphabet')} [data-segment-id="digits"]`).click();
 
@@ -560,7 +580,7 @@ describe('The tools', () => {
         (kind) => kind === 'ksuid',
         'the KSUID',
       );
-      await pickChoice('identifiers-kind', 'uuidV4');
+      await pickKind('uuidV4');
       await $(testid('tool-clear')).click();
     });
   });

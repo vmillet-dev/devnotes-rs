@@ -819,7 +819,11 @@ export type IbanVerdict = { kind: "valid"; bban: string; bank: string | null; br
 
 export type IdInspection = { kind: "uuid"; version: number; variant: UuidVariant; 
 /**  v1, v6 and v7 carry the time they were made, in UTC. */
-created: string | null; nil: boolean } | { kind: "ulid"; created: string } | { kind: "objectId"; created: string; counter: number } | { kind: "ksuid"; created: string; payload: string } | 
+created: string | null; nil: boolean; 
+/**  v4 and v7 alone: the other versions draw nothing, or not where it can be told. */
+random: RandomPart | null } | { kind: "ulid"; created: string; random: RandomPart } | { kind: "objectId"; created: string; counter: number; 
+/**  Drawn once per process, not per identifier. */
+random: RandomPart } | { kind: "ksuid"; created: string; random: RandomPart } | 
 /**  The first CUID, deprecated by its author: its time is in plain sight. */
 { kind: "cuidV1"; created: string } | 
 /**  The shape of an identifier that carries nothing to read. */
@@ -834,6 +838,8 @@ export type IdentifiersRequest = {
 	count: number,
 	/**  For the kinds whose case carries nothing: UUID, ULID, `ObjectId`. */
 	uppercase: boolean,
+	/**  UUID only: `false` writes the 32 digits without their four hyphens. */
+	hyphens: boolean,
 	nanoLength: number,
 	nanoAlphabet: NanoAlphabet,
 };
@@ -1477,6 +1483,12 @@ export type Priority = "none" | "low" | "medium" | "high" | "urgent";
 export type QueryParameter = {
 	name: string,
 	value: string,
+};
+
+/**  What was drawn rather than stamped: the characters as pasted, and the bits they hold. */
+export type RandomPart = {
+	text: string,
+	bits: number,
 };
 
 export type ReadAs = "unix" | "iso8601" | "weekDate" | "ordinalDate" | "rfc2822";

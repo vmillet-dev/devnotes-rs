@@ -1909,7 +1909,7 @@
       "all": "tous les identifiants",
       "kind": "Sorte",
       "count": "Nombre",
-      "uppercase": "En majuscules",
+      "uppercase": "Majuscules",
       "length": "Longueur",
       "alphabet": "Alphabet",
       "alphabets": {
@@ -1918,17 +1918,17 @@
         "hexLower": "Hexa",
         "digits": "Chiffres"
       },
-      "again": "Tirer à nouveau",
+      "again": "Générer à nouveau",
       "hints": {
-        "uuidV4": "122 bits tirés du générateur du système.",
-        "uuidV7": "Ses 48 premiers bits sont l’heure de sa création : triés, ils se rangent dans l’ordre où ils ont été faits.",
-        "ulid": "48 bits de millisecondes puis 80 bits tirés, en base 32 de Crockford ; tirés dans la même milliseconde, ils comptent vers le haut.",
-        "nanoId": "Des caractères tirés sans biais dans l’alphabet choisi ; 21 caractères URL-safe valent un UUID v4.",
-        "cuid2": "Une lettre, puis un SHA3-512 de l’heure, d’un tirage, d’un compteur et d’une empreinte, en base 36 : rien ne s’y lit.",
-        "objectId": "4 octets de secondes, 5 tirés pour le lot, 3 d’un compteur parti d’un nombre tiré.",
-        "ksuid": "4 octets de secondes depuis mai 2014, puis 16 tirés, en base 62 : triés, ils suivent l’heure."
+        "uuidV4": "{{name}} : 122 bits aléatoires, tirés du générateur du système.",
+        "uuidV7": "{{name}} : 48 bits de millisecondes puis 74 bits tirés ; triés, ils se rangent dans l’ordre où ils ont été faits.",
+        "ulid": "{{name}} : 48 bits de millisecondes puis 80 bits tirés, en base 32 de Crockford ; tirés dans la même milliseconde, ils comptent vers le haut.",
+        "nanoId": "{{name}} : des caractères tirés sans biais dans l’alphabet choisi ; 21 caractères URL-safe valent un UUID v4.",
+        "cuid2": "{{name}} : une lettre, puis un SHA3-512 de l’heure, d’un tirage, d’un compteur et d’une empreinte, en base 36 : rien ne s’y lit.",
+        "objectId": "{{name}} : 4 octets de secondes, 5 tirés pour le lot, 3 d’un compteur parti d’un nombre tiré.",
+        "ksuid": "{{name}} : 4 octets de secondes depuis mai 2014, puis 16 tirés, en base 62 : triés, ils suivent l’heure."
       },
-      "check": "Relire",
+      "check": "Analyser un identifiant",
       "checkLabel": "Identifiant à relire",
       "checkPlaceholder": "01ARZ3NDEKTSV4RRFFQ69G5FAV, un UUID, un ObjectId…",
       "recognised": {
@@ -1949,11 +1949,34 @@
       "nil": "UUID nul",
       "created": "Créé le",
       "counter": "Compteur",
-      "payload": "Partie tirée",
       "possible": "Rien ne s’y lit : sa forme est celle d’un {{kinds}}.",
       "outOfRange": "La forme d’un {{kind}}, mais au-delà de ce qu’il peut valoir.",
       "unrecognised": "Aucun identifiant connu n’a cette forme.",
-      "noteTitle": "{{kind}} générés"
+      "noteTitle": "{{kind}} générés",
+      "kinds": {
+        "uuidV4": "UUID v4",
+        "uuidV7": "UUID v7",
+        "ulid": "ULID",
+        "nanoId": "NanoID",
+        "cuid2": "CUID2",
+        "objectId": "ObjectId",
+        "ksuid": "KSUID"
+      },
+      "fewer": "Un de moins",
+      "more": "Un de plus",
+      "withoutHyphens": "Sans tirets",
+      "counted": "{count, plural, =0 {Aucun identifiant} one {# identifiant} other {# identifiants}}",
+      "checkHint": "Collez un UUID, un ULID, un ObjectId ou un KSUID : l’outil reconnaît le format et lit ce qu’il contient.",
+      "format": "Format",
+      "formats": {
+        "uuid": "{count, plural, one {# caractère} other {# caractères}}, hexadécimal",
+        "ulid": "{count, plural, one {# caractère} other {# caractères}}, base32",
+        "objectId": "{count, plural, one {# caractère} other {# caractères}}, hexadécimal",
+        "ksuid": "{count, plural, one {# caractère} other {# caractères}}, base62",
+        "cuidV1": "{count, plural, one {# caractère} other {# caractères}}, base36"
+      },
+      "random": "Partie aléatoire",
+      "randomPart": "{{text}} · {{bits}} bits"
     },
     "text-stats": {
       "name": "Statistiques du texte",
@@ -2004,6 +2027,7 @@
       "sample": "L'été à Paris : 30 °C, un café crème et des 🇫🇷 partout.\n\nNaïve question : où est l'œuvre ?"
     },
     "sample": "Exemple",
-    "sampleLoaded": "Exemple chargé"
+    "sampleLoaded": "Exemple chargé",
+    "copyAll": "Copier tout"
   }
 }

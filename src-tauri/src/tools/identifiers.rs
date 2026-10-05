@@ -62,6 +62,8 @@ pub struct IdentifiersRequest {
     pub count: u32,
     /// For the kinds whose case carries nothing: UUID, ULID, `ObjectId`.
     pub uppercase: bool,
+    /// UUID only: `false` writes the 32 digits without their four hyphens.
+    pub hyphens: bool,
     pub nano_length: u32,
     pub nano_alphabet: NanoAlphabet,
 }
@@ -219,7 +221,7 @@ fn ksuids(count: u32) -> Result<Vec<String>, NoRandomness> {
         .collect()
 }
 
-fn uuids(count: u32, version: IdKind) -> Result<Vec<String>, NoRandomness> {
+fn uuids(count: u32, version: IdKind, hyphens: bool) -> Result<Vec<String>, NoRandomness> {
     (0..count)
         .map(|_| {
             let uuid = if version == IdKind::UuidV7 {
@@ -227,7 +229,11 @@ fn uuids(count: u32, version: IdKind) -> Result<Vec<String>, NoRandomness> {
             } else {
                 uuid::Builder::from_random_bytes(random_bytes()?).into_uuid()
             };
-            Ok(uuid.hyphenated().to_string())
+            Ok(if hyphens {
+                uuid.hyphenated().to_string()
+            } else {
+                uuid.simple().to_string()
+            })
         })
         .collect()
 }
@@ -235,7 +241,7 @@ fn uuids(count: u32, version: IdKind) -> Result<Vec<String>, NoRandomness> {
 pub fn generate(request: &IdentifiersRequest) -> Result<Vec<String>, NoRandomness> {
     let count = request.count.clamp(1, MAX_IDENTIFIERS);
     let drawn = match request.kind {
-        IdKind::UuidV4 | IdKind::UuidV7 => uuids(count, request.kind)?,
+        IdKind::UuidV4 | IdKind::UuidV7 => uuids(count, request.kind, request.hyphens)?,
         IdKind::Ulid => ulids(count)?,
         IdKind::NanoId => nanoids(count, request.nano_length, request.nano_alphabet)?,
         IdKind::Cuid2 => cuid2s(count)?,
@@ -266,6 +272,14 @@ pub enum UuidVariant {
     Future,
 }
 
+/// What was drawn rather than stamped: the characters as pasted, and the bits they hold.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct RandomPart {
+    pub text: String,
+    pub bits: u32,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
 #[serde(
     tag = "kind",
@@ -279,17 +293,22 @@ pub enum IdInspection {
         /// v1, v6 and v7 carry the time they were made, in UTC.
         created: Option<String>,
         nil: bool,
+        /// v4 and v7 alone: the other versions draw nothing, or not where it can be told.
+        random: Option<RandomPart>,
     },
     Ulid {
         created: String,
+        random: RandomPart,
     },
     ObjectId {
         created: String,
         counter: u32,
+        /// Drawn once per process, not per identifier.
+        random: RandomPart,
     },
     Ksuid {
         created: String,
-        payload: String,
+        random: RandomPart,
     },
     /// The first CUID, deprecated by its author: its time is in plain sight.
     CuidV1 {
@@ -311,7 +330,15 @@ fn instant(millis: i64) -> Option<String> {
         .map(|at| at.to_rfc3339_opts(SecondsFormat::Millis, true))
 }
 
-fn inspect_uuid(uuid: Uuid) -> IdInspection {
+fn drawn_part(text: &str, bits: u32) -> RandomPart {
+    RandomPart {
+        text: text.to_owned(),
+        bits,
+    }
+}
+
+/// `text` is the UUID as pasted, hyphens or not: its random part is quoted in its own form.
+fn inspect_uuid(uuid: Uuid, text: &str) -> IdInspection {
     let variant = match uuid.get_variant() {
         Variant::NCS => UuidVariant::Ncs,
         Variant::RFC4122 => UuidVariant::Rfc,
@@ -323,18 +350,28 @@ fn inspect_uuid(uuid: Uuid) -> IdInspection {
         DateTime::<Utc>::from_timestamp(i64::try_from(seconds).ok()?, nanos)
             .map(|at| at.to_rfc3339_opts(SecondsFormat::Millis, true))
     });
+    let version = uuid.get_version_num();
+    // After v7's 48 bits of milliseconds: 12 + 62 drawn bits, the version and variant between.
+    let after_time = if text.contains('-') { 14 } else { 12 };
+    let random = match version {
+        4 => Some(drawn_part(text, 122)),
+        7 => text.get(after_time..).map(|rest| drawn_part(rest, 74)),
+        _ => None,
+    }
+    .filter(|_| !uuid.is_nil());
     IdInspection::Uuid {
-        version: u32::try_from(uuid.get_version_num()).unwrap_or(0),
+        version: u32::try_from(version).unwrap_or(0),
         variant,
         created,
         nil: uuid.is_nil(),
+        random,
     }
 }
 
 pub fn inspect(text: &str) -> IdInspection {
     let text = text.trim();
     if let Ok(uuid) = Uuid::parse_str(text) {
-        return inspect_uuid(uuid);
+        return inspect_uuid(uuid, text);
     }
     let length = text.len();
     let only = |alphabet: &[u8]| text.bytes().all(|byte| alphabet.contains(&byte));
@@ -346,7 +383,10 @@ pub fn inspect(text: &str) -> IdInspection {
             .filter(|_| upper.as_bytes()[0] <= b'7')
             .and_then(instant)
         {
-            Some(created) => IdInspection::Ulid { created },
+            Some(created) => IdInspection::Ulid {
+                created,
+                random: drawn_part(&upper[10..], 80),
+            },
             None => IdInspection::OutOfRange { id: IdKind::Ulid },
         };
     }
@@ -355,6 +395,7 @@ pub fn inspect(text: &str) -> IdInspection {
         return IdInspection::ObjectId {
             created: instant(seconds * 1000).unwrap_or_default(),
             counter: u32::from_str_radix(&text[18..], 16).unwrap_or(0),
+            random: drawn_part(&text[8..18], 40),
         };
     }
     if length == 27 && only(BASE62) {
@@ -364,7 +405,7 @@ pub fn inspect(text: &str) -> IdInspection {
                     i64::from(u32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]));
                 IdInspection::Ksuid {
                     created: instant((seconds + KSUID_EPOCH) * 1000).unwrap_or_default(),
-                    payload: hex(&bytes[4..], true),
+                    random: drawn_part(&hex(&bytes[4..], true), 128),
                 }
             }
             None => IdInspection::OutOfRange { id: IdKind::Ksuid },
@@ -405,6 +446,7 @@ mod tests {
             kind,
             count,
             uppercase: false,
+            hyphens: true,
             nano_length: 21,
             nano_alphabet: NanoAlphabet::UrlSafe,
         }
@@ -431,6 +473,23 @@ mod tests {
     }
 
     #[test]
+    fn a_uuid_without_hyphens_is_its_32_digits_in_either_case() {
+        for (version, uppercase) in [(IdKind::UuidV4, false), (IdKind::UuidV7, true)] {
+            let ids = generate(&IdentifiersRequest {
+                uppercase,
+                hyphens: false,
+                ..request(version, 3)
+            })
+            .unwrap();
+
+            assert!(ids.iter().all(|id| id.len() == 32
+                && id.bytes().all(|b| b.is_ascii_hexdigit())
+                && (id == &id.to_uppercase()) == uppercase));
+            assert!(matches!(inspect(&ids[0]), IdInspection::Uuid { .. }));
+        }
+    }
+
+    #[test]
     fn a_uuid_says_its_version_its_variant_and_when_it_was_made() {
         assert_eq!(
             inspect(" 01922b6e-4b30-7cc4-9a5c-6f2d8e1b3a77 "),
@@ -439,6 +498,10 @@ mod tests {
                 variant: UuidVariant::Rfc,
                 created: Some("2024-09-25T23:05:01.488Z".to_owned()),
                 nil: false,
+                random: Some(RandomPart {
+                    text: "7cc4-9a5c-6f2d8e1b3a77".into(),
+                    bits: 74
+                }),
             }
         );
         assert!(matches!(
@@ -451,8 +514,44 @@ mod tests {
         ));
         assert!(matches!(
             inspect("00000000-0000-0000-0000-000000000000"),
-            IdInspection::Uuid { nil: true, .. }
+            IdInspection::Uuid {
+                nil: true,
+                random: None,
+                ..
+            }
         ));
+    }
+
+    #[test]
+    fn the_random_part_of_each_kind_is_quoted_with_its_bits() {
+        let random = |text: &str| match inspect(text) {
+            IdInspection::Uuid { random, .. } => random,
+            IdInspection::Ulid { random, .. }
+            | IdInspection::ObjectId { random, .. }
+            | IdInspection::Ksuid { random, .. } => Some(random),
+            other => panic!("{other:?}"),
+        };
+        let part = |text: &str, bits| Some(drawn_part(text, bits));
+
+        assert_eq!(
+            random("9b2f6c1e-3d4a-4f8b-9e2c-7a1d5b6c8e90"),
+            part("9b2f6c1e-3d4a-4f8b-9e2c-7a1d5b6c8e90", 122)
+        );
+        assert_eq!(
+            random("01922b6e4b307cc49a5c6f2d8e1b3a77"),
+            part("7cc49a5c6f2d8e1b3a77", 74),
+            "without hyphens"
+        );
+        assert_eq!(
+            random("01ARZ3NDEKTSV4RRFFQ69G5FAV"),
+            part("TSV4RRFFQ69G5FAV", 80)
+        );
+        assert_eq!(random("507f1f77bcf86cd799439011"), part("bcf86cd799", 40));
+        assert_eq!(
+            random("0ujtsYcgvSTl8PAuAdqWYSMnLOv"),
+            part("B5A1CD34B5F99D1154FB6853345C9735", 128)
+        );
+        assert_eq!(random("6ba7b810-9dad-11d1-80b4-00c04fd430c8"), None, "a v1");
     }
 
     #[test]
@@ -469,7 +568,7 @@ mod tests {
         sorted.sort();
         sorted.dedup();
         assert_eq!(sorted, ulids, "monotonic, and none drawn twice");
-        let IdInspection::Ulid { created } = inspect(&ulids[0]) else {
+        let IdInspection::Ulid { created, .. } = inspect(&ulids[0]) else {
             panic!("a ULID");
         };
         assert!(created.starts_with(&Utc::now().format("%Y-").to_string()));
@@ -480,7 +579,8 @@ mod tests {
         assert_eq!(
             inspect("01ARZ3NDEKTSV4RRFFQ69G5FAV"),
             IdInspection::Ulid {
-                created: "2016-07-30T23:54:10.259Z".into()
+                created: "2016-07-30T23:54:10.259Z".into(),
+                random: drawn_part("TSV4RRFFQ69G5FAV", 80),
             }
         );
         assert_eq!(
@@ -573,6 +673,7 @@ mod tests {
             IdInspection::ObjectId {
                 created: "2012-10-17T21:13:27.000Z".into(),
                 counter: 0x0043_9011,
+                random: drawn_part("bcf86cd799", 40),
             }
         );
     }
@@ -589,7 +690,7 @@ mod tests {
             inspect("0ujtsYcgvSTl8PAuAdqWYSMnLOv"),
             IdInspection::Ksuid {
                 created: "2017-10-10T04:00:47.000Z".into(),
-                payload: "B5A1CD34B5F99D1154FB6853345C9735".into(),
+                random: drawn_part("B5A1CD34B5F99D1154FB6853345C9735", 128),
             }
         );
         assert_eq!(

@@ -691,8 +691,10 @@ The frequencies are of those same characters, the invisible ones named rather th
 **Identifiers are drawn the same way** (`tools/identifiers.rs`): UUID v4 and v7, ULID, NanoID,
 CUID2, `ObjectId` and KSUID, each a few lines held to its published vectors rather than a crate
 each. A ULID batch drawn within one millisecond counts up, as its spec asks, so it sorts as drawn.
-A pasted identifier is recognised by its shape and gives back the instant it carries; NanoID and
-CUID2 carry none, and are only named as possible.
+A pasted identifier is recognised by its shape and gives back the instant it carries and the part
+of it that was drawn, with its bits; NanoID and CUID2 carry none, and are only named as possible.
+The page dims a UUID's hyphens and picks out its version digit by position alone: the 8-4-4-4-12
+layout is fixed, so this is presentation, not a rule.
 
 **A colour is Rust's to read** (`tools/colour.rs`): the four notations, `OKLab` and `OKLCH`,
 the gamut, and the WCAG ratio — with the `0.03928` of `scripts/palette.test.mjs`, so the tool

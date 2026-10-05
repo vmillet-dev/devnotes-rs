@@ -1918,17 +1918,17 @@
         "hexLower": "Hex",
         "digits": "Digits"
       },
-      "again": "Draw again",
+      "again": "Generate again",
       "hints": {
-        "uuidV4": "122 bits drawn from the system's generator.",
-        "uuidV7": "Its first 48 bits are the time it was made: sorted, they sort in the order they were made.",
-        "ulid": "48 bits of milliseconds then 80 drawn bits, in Crockford's base 32; drawn within one millisecond, they count up.",
-        "nanoId": "Characters drawn without bias from the alphabet chosen; 21 URL-safe ones are worth a UUID v4.",
-        "cuid2": "A letter, then a SHA3-512 of the time, a draw, a counter and a fingerprint, in base 36: nothing can be read in it.",
-        "objectId": "4 bytes of seconds, 5 drawn for the batch, 3 of a counter started from a drawn number.",
-        "ksuid": "4 bytes of seconds since May 2014, then 16 drawn, in base 62: sorted, they follow the clock."
+        "uuidV4": "{{name}}: 122 random bits, drawn from the system’s generator.",
+        "uuidV7": "{{name}}: 48 bits of milliseconds then 74 drawn bits; sorted, they line up in the order they were made.",
+        "ulid": "{{name}}: 48 bits of milliseconds then 80 drawn bits, in Crockford’s base 32; drawn in the same millisecond, they count up.",
+        "nanoId": "{{name}}: characters drawn without bias from the chosen alphabet; 21 URL-safe characters are worth a UUID v4.",
+        "cuid2": "{{name}}: a letter, then a SHA3-512 of the time, a draw, a counter and a fingerprint, in base 36: nothing can be read in it.",
+        "objectId": "{{name}}: 4 bytes of seconds, 5 drawn for the batch, 3 of a counter started from a drawn number.",
+        "ksuid": "{{name}}: 4 bytes of seconds since May 2014, then 16 drawn, in base 62: sorted, they follow the time."
       },
-      "check": "Read back",
+      "check": "Analyse an identifier",
       "checkLabel": "Identifier to read back",
       "checkPlaceholder": "01ARZ3NDEKTSV4RRFFQ69G5FAV, a UUID, an ObjectId…",
       "recognised": {
@@ -1949,11 +1949,34 @@
       "nil": "Nil UUID",
       "created": "Created",
       "counter": "Counter",
-      "payload": "Drawn part",
       "possible": "Nothing to read: it has the shape of a {{kinds}}.",
       "outOfRange": "The shape of a {{kind}}, but past what one can hold.",
       "unrecognised": "No known identifier has this shape.",
-      "noteTitle": "Generated {{kind}}s"
+      "noteTitle": "Generated {{kind}}s",
+      "kinds": {
+        "uuidV4": "UUID v4",
+        "uuidV7": "UUID v7",
+        "ulid": "ULID",
+        "nanoId": "NanoID",
+        "cuid2": "CUID2",
+        "objectId": "ObjectId",
+        "ksuid": "KSUID"
+      },
+      "fewer": "One fewer",
+      "more": "One more",
+      "withoutHyphens": "No hyphens",
+      "counted": "{count, plural, =0 {No identifier} one {# identifier} other {# identifiers}}",
+      "checkHint": "Paste a UUID, a ULID, an ObjectId or a KSUID: the tool recognises the format and reads what it holds.",
+      "format": "Format",
+      "formats": {
+        "uuid": "{count, plural, one {# character} other {# characters}}, hexadecimal",
+        "ulid": "{count, plural, one {# character} other {# characters}}, base32",
+        "objectId": "{count, plural, one {# character} other {# characters}}, hexadecimal",
+        "ksuid": "{count, plural, one {# character} other {# characters}}, base62",
+        "cuidV1": "{count, plural, one {# character} other {# characters}}, base36"
+      },
+      "random": "Random part",
+      "randomPart": "{{text}} · {{bits}} bits"
     },
     "text-stats": {
       "name": "Text statistics",
@@ -2004,6 +2027,7 @@
       "sample": "Summer in Paris: 30 °C, a café crème and 🇫🇷 everywhere.\n\nA naïve question: where is the œuvre?"
     },
     "sample": "Example",
-    "sampleLoaded": "Example loaded"
+    "sampleLoaded": "Example loaded",
+    "copyAll": "Copy all"
   }
 }
