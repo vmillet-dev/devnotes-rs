@@ -41,4 +41,23 @@ describe('NoteOutlineComponent', () => {
     expect(outline.querySelector('.outline-code')?.textContent).toBe('SELECT 1;\n  -- next');
     expect(outline.querySelector('.outline-text')?.textContent).toBe('Done.');
   });
+
+  it('keeps every line of a long list whole, the text of an item in an element of its own', async () => {
+    const outline = await draw(
+      Array.from({ length: 14 }, (_, at) => ({
+        kind: 'item' as const,
+        text: `Point ${at + 1}, long enough to need an ellipsis on a card of the canvas`,
+        depth: at % 2,
+        marker: '•',
+      })),
+    );
+
+    const items = [...outline.querySelectorAll<HTMLElement>('.outline-item')];
+    expect(items).toHaveLength(14);
+    for (const [at, item] of items.entries()) {
+      expect(item.querySelector('.outline-item-text')?.textContent).toBe(
+        `Point ${at + 1}, long enough to need an ellipsis on a card of the canvas`,
+      );
+    }
+  });
 });

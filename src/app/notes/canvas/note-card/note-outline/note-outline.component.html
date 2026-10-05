@@ -6,13 +6,13 @@
     @case ('item') {
       <span class="outline-item" [style.--depth]="line.depth"
         ><span class="outline-marker" aria-hidden="true">{{ line.marker }}</span
-        >{{ line.text }}</span
+        ><span class="outline-item-text">{{ line.text }}</span></span
       >
     }
     @case ('task') {
       <span class="outline-item" [style.--depth]="line.depth"
         ><span class="outline-marker">{{ line.done ? '☑' : '☐' }}</span
-        >{{ line.text }}</span
+        ><span class="outline-item-text">{{ line.text }}</span></span
       >
     }
     @case ('code') {
