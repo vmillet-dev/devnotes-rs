@@ -4,7 +4,9 @@ version = "0.9.1"
 description = "A developer's notes and snippets manager for the desktop"
 authors = ["Valentin MILLET"]
 edition = "2024"
-rust-version = "1.88"
+# The pinned toolchain's (`rust-toolchain.toml`): below it, Cargo's MSRV-aware resolver quietly
+# holds crates back (Tauri 2.12 needs 1.90) while their npm twins move on.
+rust-version = "1.97"
 repository = "https://github.com/vmillet-dev/devnotes-rs"
 license = "GPL-3.0-only"
 readme = "../README.md"
@@ -34,11 +36,14 @@ bench = false
 e2e = ["dep:tauri-plugin-wdio", "dep:tauri-plugin-wdio-webdriver"]
 
 [build-dependencies]
-tauri-build = { version = "2", features = [] }
+# The build half of the 2.11 line below.
+tauri-build = { version = "~2.6", features = [] }
 toml = "1.1"
 
 [dependencies]
-tauri = { version = "2", features = ["tray-icon"] }
+# ~2.11 until `tauri-plugin-wdio-webdriver` (the e2e harness) builds against 2.12's `windows` 0.62.
+# Every plugin then resolves to the newest release that still takes 2.11.
+tauri = { version = "~2.11", features = ["tray-icon"] }
 tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] }
 specta = { version = "=2.0.0-rc.25", features = ["chrono"] }
 specta-typescript = "=0.0.12"

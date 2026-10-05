@@ -2,12 +2,27 @@ version: 2
 
 # Grouped and monthly on purpose. A stream of one-crate pull requests is a stream
 # nobody reviews; the security workflow is what catches anything urgent in between.
+#
+# ⚠️ A group listed by name loses its members to a group listed by update type: Dependabot
+# ranks `update-types` as the more specific rule, which is how `tauri-plugin-*` and
+# `@angular/*` ended up in `rust-minor` and `npm-minor`. Hence the `exclude-patterns`.
+#
+# The default versioning strategy stays: a lockfile-only bump says the declared range already
+# allows the new version, and raising every floor would only add manifest churn.
 updates:
   - package-ecosystem: cargo
     directory: /src-tauri
     schedule:
       interval: monthly
     open-pull-requests-limit: 5
+    # `tauri build` refuses a crate and its npm twin on different minors, and Dependabot opens
+    # the two halves as two pull requests in two ecosystems, each red without the other. A
+    # Tauri minor is bumped by hand, both halves in one pull request; patches come here.
+    ignore:
+      - dependency-name: 'tauri'
+        update-types: ['version-update:semver-minor', 'version-update:semver-major']
+      - dependency-name: 'tauri-*'
+        update-types: ['version-update:semver-minor', 'version-update:semver-major']
     groups:
       tauri:
         patterns:
@@ -17,22 +32,43 @@ updates:
         update-types:
           - minor
           - patch
+        exclude-patterns:
+          - 'tauri'
+          - 'tauri-*'
 
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: monthly
     open-pull-requests-limit: 5
+    ignore:
+      # The npm half of the Tauri rule above.
+      - dependency-name: '@tauri-apps/*'
+        update-types: ['version-update:semver-minor', 'version-update:semver-major']
+      # `@angular/build` declares `vitest@^4` as its peer: a 5 fails `npm ci` with ERESOLVE.
+      # Lifted, and the three bumped together, once the builder accepts it.
+      - dependency-name: 'vitest'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@vitest/*'
+        update-types: ['version-update:semver-major']
     groups:
       angular:
         patterns:
           - '@angular/*'
           - '@angular-*/*'
           - 'angular-eslint'
+      tauri:
+        patterns:
+          - '@tauri-apps/*'
       npm-minor:
         update-types:
           - minor
           - patch
+        exclude-patterns:
+          - '@angular/*'
+          - '@angular-*/*'
+          - 'angular-eslint'
+          - '@tauri-apps/*'
 
   # Pinned action versions go stale silently: nothing in a green run says an action
   # is two majors behind.
