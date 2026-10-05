@@ -1,4 +1,4 @@
-import { ChangelogRelease, ChangelogSpan } from '@core/services/app-info/changelog.service';
+import { ChangelogRelease, ChangelogSection, ChangelogSpan } from '@core/services/app-info/changelog.service';
 
 /** An entry as it usually is: one plain run. */
 function plain(text: string): ChangelogSpan[] {
@@ -37,9 +37,21 @@ export class FakeChangelog {
 
   openedReleases = 0;
 
+  /** What `releaseNotes` was asked to read, in order. */
+  readNotes: string[] = [];
+  /** When set, `releaseNotes` rejects with it. */
+  notesError: Error | null = null;
+
   async load(): Promise<readonly ChangelogRelease[]> {
     if (this.loadError) throw this.loadError;
     return this.releases;
+  }
+
+  /** Not Rust's grammar: a line per entry, enough to tell the notes reached the list. */
+  async releaseNotes(markdown: string): Promise<readonly ChangelogSection[]> {
+    this.readNotes.push(markdown);
+    if (this.notesError) throw this.notesError;
+    return [{ title: '', items: markdown.split('\n').filter(Boolean).map(plain) }];
   }
 
   async openReleases(): Promise<void> {

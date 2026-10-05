@@ -31,7 +31,7 @@ use attachments::{
     read_attachment, save_attachment,
 };
 use backup::{list_backups, restore_backup};
-use changelog::app_changelog;
+use changelog::{app_changelog, release_notes};
 use desktop::{set_global_shortcuts, set_window_behavior, sync_tray};
 use folders::{
     arrange_board, board_view, create_folder, delete_folder, file_notes, file_notes_back,
@@ -181,6 +181,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             rename_library::<tauri::Wry>,
             delete_library::<tauri::Wry>,
             app_changelog,
+            release_notes,
             sync_tray,
             set_global_shortcuts,
             set_window_behavior,

@@ -1,9 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { UpdateStore } from '@core/services/updates/update.store';
 import { UpdaterService } from '@core/services/updates/updater.service';
+import { ChangelogService } from '@core/services/app-info/changelog.service';
+import { FakeChangelog } from '@testing/fake-changelog';
 import { FakeUpdater } from '@testing/fake-updater';
 import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
 import { UpdatePromptComponent } from './update-prompt.component';
@@ -12,6 +14,7 @@ describe('UpdatePromptComponent', () => {
   let fixture: ComponentFixture<UpdatePromptComponent>;
   let updater: FakeUpdater;
   let store: UpdateStore;
+  let changelog: FakeChangelog;
 
   /** Puts an update on the table, as the startup check would. */
   async function offerUpdate(notes?: string): Promise<void> {
@@ -23,9 +26,14 @@ describe('UpdatePromptComponent', () => {
   beforeEach(() => {
     TestBed.resetTestingModule();
     updater = new FakeUpdater();
+    changelog = new FakeChangelog();
     TestBed.configureTestingModule({
       imports: [UpdatePromptComponent],
-      providers: [{ provide: UpdaterService, useValue: updater }, provideTranslocoTesting()],
+      providers: [
+        { provide: UpdaterService, useValue: updater },
+        { provide: ChangelogService, useValue: changelog },
+        provideTranslocoTesting(),
+      ],
     });
     store = TestBed.inject(UpdateStore);
     fixture = TestBed.createComponent(UpdatePromptComponent);
@@ -56,12 +64,36 @@ describe('UpdatePromptComponent', () => {
   it('shows the release notes only when the manifest carries some', async () => {
     await offerUpdate();
     expect(fixture.debugElement.query(By.css('.update-notes'))).toBeNull();
+    expect(changelog.readNotes).toEqual([]);
 
     await store.dismiss();
     await offerUpdate('Corrige le rail de tags');
-    expect(fixture.nativeElement.querySelector('.update-notes-body').textContent).toContain(
-      'Corrige le rail de tags',
+    await vi.waitFor(() =>
+      expect(fixture.nativeElement.querySelector('.update-notes-body li')?.textContent).toContain(
+        'Corrige le rail de tags',
+      ),
     );
+  });
+
+  /** Read by Rust, drawn as a list: no Markdown markers, and no `<pre>` to print them in. */
+  it('draws the notes as formatted text, read by Rust', async () => {
+    await offerUpdate('### ✨ Added\n- **Samples**');
+
+    await vi.waitFor(() => expect(fixture.nativeElement.querySelector('app-release-notes')).not.toBeNull());
+    expect(changelog.readNotes).toEqual(['### ✨ Added\n- **Samples**']);
+    expect(fixture.nativeElement.querySelector('.update-notes pre')).toBeNull();
+  });
+
+  it('still says what the notes say, as written, when they cannot be read', async () => {
+    changelog.notesError = new Error('no bridge');
+    await offerUpdate('Corrige le rail de tags');
+
+    await vi.waitFor(() =>
+      expect(fixture.nativeElement.querySelector('.update-notes-raw')?.textContent).toContain(
+        'Corrige le rail de tags',
+      ),
+    );
+    expect(fixture.nativeElement.querySelector('app-release-notes')).toBeNull();
   });
 
   /**

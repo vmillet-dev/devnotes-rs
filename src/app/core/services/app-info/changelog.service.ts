@@ -20,6 +20,11 @@ export class ChangelogService {
     return commands.appChangelog();
   }
 
+  /** The notes the updater hands over, cut by the same grammar as the file. */
+  async releaseNotes(markdown: string): Promise<readonly ChangelogSection[]> {
+    return commands.releaseNotes(markdown);
+  }
+
   async openReleases(): Promise<void> {
     await openUrl(RELEASES_URL);
   }

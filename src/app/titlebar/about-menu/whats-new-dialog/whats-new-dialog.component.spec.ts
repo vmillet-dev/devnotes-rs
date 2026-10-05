@@ -16,7 +16,7 @@ describe('WhatsNewDialogComponent', () => {
     (fixture.nativeElement.querySelector(selector) as HTMLElement | null)?.textContent?.trim() ?? '';
 
   const items = (): string[] =>
-    Array.from(fixture.nativeElement.querySelectorAll('.news-items li')).map((item) =>
+    Array.from(fixture.nativeElement.querySelectorAll('.notes-items li')).map((item) =>
       (item as HTMLElement).textContent!.trim(),
     );
 
@@ -58,7 +58,7 @@ describe('WhatsNewDialogComponent', () => {
   it('draws the runs an entry was cut into rather than their markers', async () => {
     await mount();
 
-    const entry = fixture.nativeElement.querySelector('.news-items li') as HTMLElement;
+    const entry = fixture.nativeElement.querySelector('.notes-items li') as HTMLElement;
 
     expect(entry.querySelector('strong')?.textContent).toBe('Sample notes.');
     expect(entry.querySelector('code')?.textContent).toBe('their own space');
@@ -77,7 +77,7 @@ describe('WhatsNewDialogComponent', () => {
   it('drops the heading of a release that lists its entries without a category', async () => {
     await mount();
 
-    expect(fixture.nativeElement.querySelectorAll('.news-section-title')).toHaveLength(1);
+    expect(fixture.nativeElement.querySelectorAll('.notes-section-title')).toHaveLength(1);
   });
 
   it('says the changelog is unavailable rather than showing an empty one', async () => {
