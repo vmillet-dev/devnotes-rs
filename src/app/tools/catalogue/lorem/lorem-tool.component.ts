@@ -3,7 +3,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { ToolsRepository } from '@core/data/tools.repository';
 import { LoremUnit } from '@core/model/tool-answers.model';
 import { liveResult } from '@core/services/tools/live-result';
-import { Tool, ToolAction, ToolResult } from '@core/services/tools/tool.model';
+import { Tool, ToolResult } from '@core/services/tools/tool.model';
 import { toolState } from '@core/services/tools/tool-sessions';
 import {
   Segment,
@@ -47,14 +47,12 @@ export class LoremToolComponent implements Tool {
 
   protected readonly paragraphs = computed(() => (this.answer.value()?.text ?? '').split('\n\n'));
 
-  readonly actions = computed<readonly ToolAction[]>(() => [
-    {
-      id: 'draw',
-      labelKey: 'tools.lorem.again',
-      disabled: false,
-      run: () => this.draw.update((draw) => draw + 1),
-    },
-  ]);
+  /** The count asked, when Rust held it to its bound: said rather than silently lowered. */
+  protected readonly heldTo = computed(() => {
+    const answer = this.answer.value();
+    const asked = this.answer.answered();
+    return answer && asked && asked.count > answer.atMost ? answer.atMost : null;
+  });
 
   readonly result = computed<ToolResult | null>(() => {
     const text = this.answer.value()?.text;
@@ -63,7 +61,6 @@ export class LoremToolComponent implements Tool {
       : null;
   });
 
-  /** Nothing typed to empty: Vider puts the options back as they were. */
   /** Three paragraphs, newly drawn. */
   sample(): void {
     this.unit.set('paragraphs');
@@ -72,10 +69,15 @@ export class LoremToolComponent implements Tool {
     this.draw.update((draw) => draw + 1);
   }
 
+  /** Nothing typed to empty: Vider puts the options back as they were. */
   clear(): void {
     this.unit.set('paragraphs');
     this.count.set(3);
     this.opening.set(true);
+  }
+
+  protected regenerate(): void {
+    this.draw.update((draw) => draw + 1);
   }
 
   protected onUnit(id: string): void {

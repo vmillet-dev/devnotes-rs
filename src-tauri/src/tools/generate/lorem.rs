@@ -143,26 +143,40 @@ pub struct LoremRequest {
 pub struct LoremAnswer {
     pub text: String,
     pub seed: u32,
+    /// How many were made: the count asked, held within `at_most`, which the page says.
+    pub count: u32,
+    pub at_most: u32,
 }
 
 pub fn lorem(request: &LoremRequest) -> LoremAnswer {
     let seed = seed_or_draw(request.seed);
     let mut draw = Draw::new(seed);
+    let at_most = match request.unit {
+        LoremUnit::Words => MAX_WORDS,
+        LoremUnit::Sentences | LoremUnit::Paragraphs => MAX_BLOCKS,
+    };
+    let count = request.count.clamp(1, at_most);
     let text = match request.unit {
-        LoremUnit::Words => {
-            let count = usize::try_from(request.count.clamp(1, MAX_WORDS)).unwrap_or(1);
-            words(&mut draw, count, request.opening)
-        }
-        LoremUnit::Sentences => (0..request.count.clamp(1, MAX_BLOCKS))
+        LoremUnit::Words => words(
+            &mut draw,
+            usize::try_from(count).unwrap_or(1),
+            request.opening,
+        ),
+        LoremUnit::Sentences => (0..count)
             .map(|index| sentence(&mut draw, request.opening && index == 0))
             .collect::<Vec<_>>()
             .join(" "),
-        LoremUnit::Paragraphs => (0..request.count.clamp(1, MAX_BLOCKS))
+        LoremUnit::Paragraphs => (0..count)
             .map(|index| paragraph(&mut draw, request.opening && index == 0))
             .collect::<Vec<_>>()
             .join("\n\n"),
     };
-    LoremAnswer { text, seed }
+    LoremAnswer {
+        text,
+        seed,
+        count,
+        at_most,
+    }
 }
 
 #[cfg(test)]
@@ -218,5 +232,25 @@ mod tests {
             text(LoremUnit::Paragraphs, 2, false),
             text(LoremUnit::Paragraphs, 2, false)
         );
+    }
+
+    #[test]
+    fn a_count_past_the_bound_is_held_to_it_and_says_so() {
+        let answer = lorem(&LoremRequest {
+            unit: LoremUnit::Paragraphs,
+            count: 1000,
+            opening: false,
+            seed: Some(7),
+        });
+        assert_eq!((answer.count, answer.at_most), (MAX_BLOCKS, MAX_BLOCKS));
+        assert_eq!(answer.text.split("\n\n").count(), MAX_BLOCKS as usize);
+
+        let words = lorem(&LoremRequest {
+            unit: LoremUnit::Words,
+            count: 0,
+            opening: true,
+            seed: Some(7),
+        });
+        assert_eq!((words.count, words.at_most), (1, MAX_WORDS));
     }
 }

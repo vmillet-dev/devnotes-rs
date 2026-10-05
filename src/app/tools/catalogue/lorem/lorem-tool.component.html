@@ -13,7 +13,7 @@
       class="number"
       data-testid="lorem-count"
       min="1"
-      max="5000"
+      [max]="answer.value()?.atMost ?? null"
       [value]="count()"
       (input)="onCount($event)"
     />
@@ -22,14 +22,31 @@
     <input type="checkbox" data-testid="lorem-opening" [checked]="opening()" (change)="onOpening($event)" />
     {{ 'tools.lorem.opening' | transloco }}
   </label>
-  <span class="spacer"></span>
-  @if (answer.value(); as answer) {
-    <app-copy-value [value]="answer.text" what="Lorem ipsum" />
-  }
 </div>
+@if (heldTo(); as most) {
+  <p class="note" role="status" data-testid="lorem-held">
+    {{ 'tools.lorem.heldTo.' + unit() | transloco: { count: most } }}
+  </p>
+}
 
-<div class="text" data-testid="lorem-output">
-  @for (paragraph of paragraphs(); track $index) {
-    <p>{{ paragraph }}</p>
-  }
-</div>
+@if (answer.value(); as answer) {
+  <section class="card" aria-labelledby="lorem-counted">
+    <div class="card-head">
+      <h2 id="lorem-counted" class="counted" data-testid="lorem-counted">
+        {{
+          'tools.lorem.counted.' + (this.answer.answered()?.unit ?? unit())
+            | transloco: { count: answer.count }
+        }}
+      </h2>
+      <button type="button" class="again" data-testid="lorem-again" (click)="regenerate()">
+        {{ 'tools.lorem.again' | transloco }}
+      </button>
+      <app-copy-value [value]="answer.text" what="Lorem ipsum" />
+    </div>
+    <div class="text" data-testid="lorem-output">
+      @for (paragraph of paragraphs(); track $index) {
+        <p>{{ paragraph }}</p>
+      }
+    </div>
+  </section>
+}

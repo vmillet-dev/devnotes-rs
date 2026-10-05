@@ -1117,6 +1117,9 @@ export type LineEnding = "lf" | "crlf" | "cr";
 export type LoremAnswer = {
 	text: string,
 	seed: number,
+	/**  How many were made: the count asked, held within `at_most`, which the page says. */
+	count: number,
+	atMost: number,
 };
 
 export type LoremRequest = {

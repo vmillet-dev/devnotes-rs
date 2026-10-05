@@ -651,6 +651,7 @@ describe('The tools', () => {
         (text) => text === 'Lorem ipsum dolor sit amet,',
         'the opening words',
       );
+      expect((await $(testid('lorem-counted')).getText()).replace(/\D/g, '')).toBe('5');
     });
   });
 
