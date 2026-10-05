@@ -63,7 +63,8 @@ export const canvas = {
   cardHeadLayout(title: string): Promise<{
     actionsBelowBottom: boolean;
     titleRowOffset: number;
-    marksRightAligned: boolean;
+    kindRightAligned: boolean;
+    noMarkInRow: boolean;
     titleTop: number;
     snippetTop: number;
   } | null> {
@@ -75,20 +76,22 @@ export const canvas = {
         const card = shell?.querySelector('.card')?.getBoundingClientRect();
         const row = shell?.querySelector('.card-title-row')?.getBoundingClientRect();
         const titleBox = shell?.querySelector('.card-title')?.getBoundingClientRect();
-        const marks = shell?.querySelector('.card-marks')?.getBoundingClientRect();
+        const kind = shell?.querySelector('.card-title-row app-kind-badge')?.getBoundingClientRect();
+        const rowElement = shell?.querySelector('.card-title-row');
         const snippet = shell?.querySelector('.card-snippet')?.getBoundingClientRect();
         const actions = shell?.querySelector('.card-actions')?.getBoundingClientRect();
-        if (!card || !row || !titleBox || !marks || !snippet || !actions) return null;
+        if (!card || !row || !titleBox || !kind || !rowElement || !snippet || !actions) return null;
 
         return {
           // The pill hangs over the card's bottom edge instead of being laid out inside
-          // it, which is what stops it costing the card a band of its own — and it is the
-          // bottom, because the top right belongs to the marks now.
+          // it, which is what stops it costing the card a band of its own.
           actionsBelowBottom: actions.bottom > card.bottom && actions.top > titleBox.bottom,
           // The row starts at the card's own edge, exactly like the snippet under it.
           titleRowOffset: Math.round(row.left - snippet.left),
-          // The marks end where the row ends, and the title is what gives way to them.
-          marksRightAligned: Math.round(marks.right) <= Math.round(row.right) && marks.left >= titleBox.right,
+          // The kind ends where the row ends, and the title is what gives way to it.
+          kindRightAligned: Math.round(kind.right) <= Math.round(row.right) && kind.left >= titleBox.right,
+          // The state marks — the priority, the pin — left the title row for the footer.
+          noMarkInRow: rowElement.querySelector('.card-marks, app-priority-pill') === null,
           // And the body starts right after that one row: there is no band above it.
           titleTop: Math.round(titleBox.top - card.top),
           snippetTop: Math.round(snippet.top - row.bottom),
@@ -177,7 +180,7 @@ export const canvas = {
    */
   badgeBoxes(): Promise<{ cutByBand: number; outlines: number } | null> {
     return browser.execute(() => {
-      const band = document.querySelector('.card-marks');
+      const band = document.querySelector('.card-title-row');
       const onCard = band?.querySelector('.lang-tag');
       const chip = document.querySelector('.language-chip.on');
       const inChip = chip?.querySelector('.lang-tag');
