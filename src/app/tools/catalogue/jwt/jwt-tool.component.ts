@@ -13,11 +13,12 @@ import { CopyValueComponent } from '@tools/ui/copy-value/copy-value.component';
 type Decoded = Extract<JwtAnswer, { kind: 'decoded' }>;
 
 /** Made up and signed with the key « secret »: nothing here is anybody's credential. */
-const SAMPLE = {
-  token:
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkFkYSBMb3ZlbGFjZSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwfQ.FPzqUtgp811f7rY_4UkLBOZ5GJrOJ-YNDba9VITtvXU',
-  secret: 'secret',
-};
+const SAMPLE_JWT = [
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9',
+  'eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkFkYSBMb3ZlbGFjZSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc2NzIyNTYwMCwiZXhwIjo0MTAyNDQ0ODAwfQ',
+  'FPzqUtgp811f7rY_4UkLBOZ5GJrOJ-YNDba9VITtvXU',
+].join('.');
+const SAMPLE_KEY = 'secret';
 
 /** Decoded and verified in Rust; how long ago or how far off is the page's, so it ages. */
 @Component({
@@ -85,8 +86,8 @@ export class JwtToolComponent implements Tool {
   });
 
   sample(): void {
-    this.token.set(SAMPLE.token);
-    this.secret.set(SAMPLE.secret);
+    this.token.set(SAMPLE_JWT);
+    this.secret.set(SAMPLE_KEY);
     this.secretIsBase64.set(false);
   }
 
