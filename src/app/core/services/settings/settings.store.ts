@@ -10,6 +10,7 @@ import {
   INDENT_CHOICES,
   LOCALE_CHOICES,
   LocaleChoice,
+  NOTE_KIND_CHOICES,
   RAIL_WIDTH,
   ResolvedTheme,
   SETTINGS_KEYS,
@@ -98,6 +99,7 @@ export class SettingsStore {
   readonly theme = this.setting('theme', asOneOf(THEME_CHOICES));
   readonly density = this.setting('density', asOneOf(DENSITIES));
   readonly codeIndent = this.setting('codeIndent', asOneOf(INDENT_CHOICES));
+  readonly defaultNoteKind = this.setting('defaultNoteKind', asOneOf(NOTE_KIND_CHOICES));
   readonly startWithSystem = this.setting('startWithSystem', asBoolean);
   readonly minimizeToTray = this.setting('minimizeToTray', asBoolean);
   readonly closeToTray = this.setting('closeToTray', asBoolean);

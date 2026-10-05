@@ -2823,6 +2823,11 @@ the later commits wait on it, and `resolve()` redirects them to the row the firs
 Attaching a file needs a real row, so `materialiseDraft()` saves the draft first — a note you
 attach a file to is not empty either.
 
+**Which kind the draft is** is the caller's word when it names one (the ▾ menu, the canvas keys,
+one per kind) and otherwise the application's preference `defaultNoteKind` — a snippet until
+changed: `NotesStore.createNote()` with no argument is what « Nouvelle note », the « + » card
+and the global shortcut call.
+
 ### Data access
 
 Stores never talk to a data source directly. They inject `NotesRepository` /

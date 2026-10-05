@@ -127,6 +127,26 @@ describe('SettingsPageComponent', () => {
     expect(draft.value('codeIndent')).toBe('tab');
   });
 
+  /** Staged like every other choice: the store, and the button it writes for, see nothing yet. */
+  it('stages the kind a new note opens as, a snippet until one is chosen', async () => {
+    const kinds = segments('setting-note-kind');
+    expect(kinds.map((segment) => segment.getAttribute('data-segment-id'))).toEqual([
+      'note',
+      'snippet',
+      'checklist',
+    ]);
+    expect(draft.value('defaultNoteKind')).toBe('snippet');
+
+    kinds.find((segment) => segment.getAttribute('data-segment-id') === 'checklist')!.click();
+    await fixture.whenStable();
+
+    expect(draft.value('defaultNoteKind')).toBe('checklist');
+    expect(settings.defaultNoteKind()).toBe('snippet');
+
+    draft.apply();
+    expect(settings.defaultNoteKind()).toBe('checklist');
+  });
+
   it('stages a chosen density the same way', async () => {
     segments('setting-density')
       .find((segment) => segment.getAttribute('data-segment-id') === 'compact')!

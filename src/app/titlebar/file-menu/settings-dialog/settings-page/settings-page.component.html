@@ -43,6 +43,17 @@
     <h4 class="setting-group-title">{{ 'settings.editor.title' | transloco }}</h4>
 
     <div class="setting-row">
+      <span class="setting-label">{{ 'settings.editor.defaultKind' | transloco }}</span>
+      <app-segmented-choice
+        [kind]="'setting-note-kind'"
+        [label]="'settings.editor.defaultKind' | transloco"
+        [segments]="noteKindSegments"
+        [currentId]="draft.value('defaultNoteKind')"
+        (chosen)="onNoteKind($event)"
+      />
+    </div>
+
+    <div class="setting-row">
       <span class="setting-label">{{ 'settings.editor.indent' | transloco }}</span>
       <app-choice-menu
         [kind]="'setting-indent'"

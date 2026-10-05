@@ -654,6 +654,15 @@ describe('NotesPageComponent', () => {
       expect(store.persistedNoteId()).toBeNull();
     });
 
+    it('opens the kind the preferences name when the new-note event fires', async () => {
+      TestBed.inject(SettingsStore).defaultNoteKind.write('note');
+
+      fireAction('new-note');
+      await fixture.whenStable();
+
+      expect(store.selectedNote()?.kind).toBe('note');
+    });
+
     it('comes back from another area to open what it was asked for', async () => {
       const areas = TestBed.inject(AreaStore);
       areas.show('tools');

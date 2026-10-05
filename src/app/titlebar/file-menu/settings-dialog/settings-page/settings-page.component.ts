@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
+import type { NoteKind } from '@core/model/checklist.model';
 import {
   DENSITIES,
   Density,
@@ -7,6 +8,7 @@ import {
   IndentChoice,
   LOCALE_CHOICES,
   LocaleChoice,
+  NOTE_KIND_CHOICES,
   THEME_CHOICES,
   ThemeChoice,
 } from '@core/services/settings/app-settings.model';
@@ -55,6 +57,11 @@ export class SettingsPageComponent {
     labelKey: `settings.density.${choice}`,
   }));
 
+  protected readonly noteKindSegments: readonly Segment[] = NOTE_KIND_CHOICES.map((choice) => ({
+    id: choice,
+    labelKey: `settings.noteKind.${choice}`,
+  }));
+
   protected readonly indentChoices: readonly ChoiceOption[] = INDENT_CHOICES.map((choice) => ({
     id: choice,
     name: `settings.indent.${choice}`,
@@ -70,6 +77,10 @@ export class SettingsPageComponent {
 
   protected forgetSkippedUpdate(): void {
     this.draft.set('skippedUpdate', '');
+  }
+
+  protected onNoteKind(kind: string): void {
+    this.draft.set('defaultNoteKind', kind as NoteKind);
   }
 
   protected onLocale(locale: string | null): void {

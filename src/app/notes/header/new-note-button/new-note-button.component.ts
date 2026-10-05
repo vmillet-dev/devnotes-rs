@@ -31,13 +31,14 @@ export class NewNoteButtonComponent {
   readonly shortcuts = input.required<Readonly<Record<NoteKind, readonly string[]>>>();
   readonly noteIsNew = input(false);
 
-  readonly created = output<NoteKind>();
+  /** `null` is the main button: the kind the preferences name, which the store reads. */
+  readonly created = output<NoteKind | null>();
 
   protected readonly menu = inject(MenuTriggerDirective);
 
   protected readonly kinds = KINDS;
 
-  protected create(kind: NoteKind): void {
+  protected create(kind: NoteKind | null): void {
     this.created.emit(kind);
     this.menu.close();
   }

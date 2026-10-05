@@ -1,3 +1,4 @@
+import type { NoteKind } from '@core/model/checklist.model';
 import { AREAS, Area } from '@core/services/areas/area.model';
 import { APP_LOCALES } from '@core/services/i18n/locale.model';
 import { RecentTool } from '@core/services/tools/tool.model';
@@ -24,6 +25,9 @@ export type Density = (typeof DENSITIES)[number];
 export const INDENT_CHOICES = ['language', 'two-spaces', 'four-spaces', 'tab'] as const;
 export type IndentChoice = (typeof INDENT_CHOICES)[number];
 
+/** What « Nouvelle note », the « + » card and the global shortcut open; the menu still picks any. */
+export const NOTE_KIND_CHOICES = ['note', 'snippet', 'checklist'] as const satisfies readonly NoteKind[];
+
 /**
  * The floor is the tree's own, not the panels': `--editor-min-width` is what lets
  * `space-editor` and `folder-editor` follow the rail rather than hold it open at their
@@ -37,6 +41,7 @@ export interface AppSettings {
   readonly theme: ThemeChoice;
   readonly density: Density;
   readonly codeIndent: IndentChoice;
+  readonly defaultNoteKind: NoteKind;
   readonly startWithSystem: boolean;
   readonly minimizeToTray: boolean;
   readonly closeToTray: boolean;
@@ -76,6 +81,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   theme: 'system',
   density: 'comfortable',
   codeIndent: 'language',
+  defaultNoteKind: 'snippet',
   startWithSystem: false,
   minimizeToTray: false,
   closeToTray: true,
