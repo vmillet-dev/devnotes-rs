@@ -215,7 +215,7 @@ describe('Editing a note', () => {
       expect(stored).toContain('**Ship** it and `tag`');
     });
 
-    /** Coloured by the code field's grammars, and stored as the fence it was given. */
+    /** Coloured by the code field's grammars, stored as the fence it was given, and changed from a menu. */
     it('holds a code block in its language', async () => {
       const title = 'Checks after the switch';
       const content = 'Run it:\n\n```sql\nSELECT pg_is_in_recovery();\n```';
@@ -228,9 +228,21 @@ describe('Editing a note', () => {
       await keyword.waitForExist({ timeout: 10_000 });
       expect(await keyword.getText()).toBe('SELECT');
       expect(await $(`${testid('editor-rich')} pre`).getAttribute('data-language')).toBe('SQL');
+
+      // From the themed menu, and the caret is still in the block once it has chosen.
+      await $(`${testid('editor-rich')} pre code`).click();
+      await $(testid('rich-code-language')).click();
+      await $(`${testid('choice-panel-rich-code-language')} [data-option-id="py"]`).click();
+      await $(`${testid('editor-rich')} pre[data-language="PY"]`).waitForExist({ timeout: 5_000 });
+      await browser.keys(['End', ' ', '#', ' ', 'o', 'k']);
       await editor.close();
 
-      expect((await bridge.getNote(id)).content).toBe(content);
+      const stored = await eventually(
+        async () => (await bridge.getNote(id)).content,
+        (written) => written.includes('```py'),
+        'the chosen language to reach the database',
+      );
+      expect(stored).toBe('Run it:\n\n```py\nSELECT pg_is_in_recovery(); # ok\n```');
       await bridge.deleteNotes([id]);
       await bridge.purgeNotes([id]);
       await reloadCanvas();

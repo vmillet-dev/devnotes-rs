@@ -20,6 +20,7 @@ import { TextSelection } from '@tiptap/pm/state';
 import { LANGUAGE_LABELS, LanguageTag, isLanguageTag } from '@core/model/language.model';
 import type { IndentChoice } from '@core/services/settings/app-settings.model';
 import { IconComponent, IconName } from '@shared/icon/icon.component';
+import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
 import { indentUnit } from '../indentation';
 import { createRichEditor, focusFirst, languageOf } from './rich-text.engine';
 
@@ -84,7 +85,10 @@ const TOOLS: readonly (readonly Tool[])[] = [
   ],
 ];
 
-const CODE_LANGUAGES = Object.entries(LANGUAGE_LABELS).map(([id, label]) => ({ id, label }));
+const CODE_LANGUAGES: readonly ChoiceOption[] = Object.entries(LANGUAGE_LABELS).map(([id, name]) => ({
+  id,
+  name,
+}));
 
 /** Shown while the caret is in a table, and only then. */
 const TABLE_TOOLS: readonly Tool[] = [
@@ -104,7 +108,7 @@ const TABLE_TOOLS: readonly Tool[] = [
  */
 @Component({
   selector: 'app-rich-text-editor',
-  imports: [TranslocoPipe, IconComponent],
+  imports: [TranslocoPipe, IconComponent, ChoiceMenuComponent],
   templateUrl: './rich-text-editor.component.html',
   styleUrl: './rich-text-editor.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -280,8 +284,8 @@ export class RichTextEditorComponent {
 
   /** On a link, the whole link; otherwise the selection, whose words the form starts from. */
   /** `txt` is no language at all: the fence is written bare. */
-  protected setCodeLanguage(value: string): void {
-    const language = isLanguageTag(value) && value !== 'txt' ? value : null;
+  protected setCodeLanguage(value: string | null): void {
+    const language = value !== null && isLanguageTag(value) && value !== 'txt' ? value : null;
     this.chain()?.updateAttributes('codeBlock', { language }).run();
   }
 

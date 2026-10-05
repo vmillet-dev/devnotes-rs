@@ -39,6 +39,15 @@ describe('ChoiceMenuComponent', () => {
     await fixture.whenStable();
   });
 
+  it('names its trigger after its kind, unless it is given a test id of its own', async () => {
+    expect(trigger().getAttribute('data-testid')).toBe('choice-folder');
+
+    fixture.componentRef.setInput('triggerTestId', 'rich-code-language');
+    await fixture.whenStable();
+
+    expect(trigger().getAttribute('data-testid')).toBe('rich-code-language');
+  });
+
   it('names where the note is, and falls back to the way out when it is nowhere', async () => {
     fixture.componentRef.setInput('noneLabel', 'Aucun dossier');
     await fixture.whenStable();

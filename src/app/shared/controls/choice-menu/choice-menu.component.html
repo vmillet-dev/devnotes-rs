@@ -4,7 +4,7 @@
   appMenuAnchor
   type="button"
   class="choice-trigger"
-  [attr.data-testid]="'choice-' + kind()"
+  [attr.data-testid]="triggerTestId() ?? 'choice-' + kind()"
   aria-haspopup="menu"
   [attr.aria-expanded]="menu.open()"
   [attr.aria-label]="label()"
