@@ -1,27 +1,74 @@
 import { TestBed } from '@angular/core/testing';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { CaseAnswer } from '@core/model/tool-answers.model';
 import { FakeToolsRepository } from '@testing/fake-tools-repository';
 import { renderTool } from '@testing/tool-harness';
 import { CaseToolComponent } from './case-tool.component';
 
+const ANSWER: CaseAnswer = {
+  conversions: [
+    { case: 'camel', group: 'code', value: 'parseHttpResponse' },
+    { case: 'constant', group: 'code', value: 'PARSE_HTTP_RESPONSE' },
+    { case: 'title', group: 'text', value: 'Parse Http Response' },
+    { case: 'upper', group: 'text', value: 'PARSE HTTP RESPONSE' },
+  ],
+  words: ['parse', 'HTTP', 'response'],
+};
+
 describe('CaseToolComponent', () => {
   const answer = (tools: FakeToolsRepository): void => {
-    tools.cases = [
-      { case: 'camel', value: 'parseHttpResponse' },
-      { case: 'constant', value: 'PARSE_HTTP_RESPONSE' },
-    ];
+    tools.caseAnswer = ANSWER;
   };
 
-  it('asks Rust once the typing pauses, and lists every case it answers', async () => {
+  const names = (harness: { all(selector: string): HTMLElement[] }, group: 'code' | 'text') => {
+    const rows = harness.all('[data-testid="case-results"] > *');
+    const start = rows.findIndex((row) => row.dataset['group'] === group);
+    const after = rows.slice(start + 1);
+    const end = after.findIndex((row) => row.dataset['testid'] === 'case-group');
+    return (end === -1 ? after : after.slice(0, end)).map(
+      (row) => row.querySelector<HTMLElement>('[data-testid="output-row"]')?.dataset['name'],
+    );
+  };
+
+  it('asks Rust once the typing pauses, with the options, and lists the cases in two groups', async () => {
     const harness = await renderTool(CaseToolComponent, answer);
 
     await harness.type('case-input', 'parse HTTP response', 'convert_case');
 
-    expect(harness.tools.requestsOf('convert_case')).toEqual(['parse HTTP response']);
-    expect(harness.all('[data-testid="output-row"]').map((row) => row.dataset['name'])).toEqual([
-      'camelCase',
-      'CONSTANT_CASE',
+    expect(harness.tools.requestsOf('convert_case')).toEqual([
+      { text: 'parse HTTP response', stripAccents: true, perLine: true, titleCaseLanguage: 'english' },
     ]);
+    expect(names(harness, 'code')).toEqual(['camelCase', 'CONSTANT_CASE']);
+    // The two named by a word of the language are named in it.
+    expect(names(harness, 'text')).toEqual(['Title Case', 'MAJUSCULES']);
+  });
+
+  it('shows the words the converters work from, and none before there are some', async () => {
+    const harness = await renderTool(CaseToolComponent, answer);
+    expect(harness.element('[data-testid="case-words"]')).toBeNull();
+
+    await harness.type('case-input', 'parse HTTP response', 'convert_case');
+
+    expect(harness.all('[data-testid="case-words"] li').map((chip) => chip.textContent)).toEqual([
+      'parse',
+      'HTTP',
+      'response',
+    ]);
+  });
+
+  it('asks again with each option changed', async () => {
+    const harness = await renderTool(CaseToolComponent, answer);
+    await harness.type('case-input', 'été', 'convert_case');
+    const asked = () => harness.tools.requestsOf('convert_case').at(-1);
+
+    harness.element<HTMLInputElement>('[data-testid="case-strip-accents"]').click();
+    await vi.waitFor(() => expect(asked()).toMatchObject({ stripAccents: false }));
+
+    harness.element<HTMLInputElement>('[data-testid="case-per-line"]').click();
+    await vi.waitFor(() => expect(asked()).toMatchObject({ perLine: false }));
+
+    harness.element('[data-testid="segmented-case-title-language"] [data-segment-id="french"]').click();
+    await vi.waitFor(() => expect(asked()).toMatchObject({ titleCaseLanguage: 'french' }));
   });
 
   it('keeps the cases, each named in itself, as a note', async () => {
@@ -32,24 +79,25 @@ describe('CaseToolComponent', () => {
       title: { key: 'tools.case.noteTitle', params: { text: 'parse HTTP response' } },
       kind: 'snippet',
       language: 'txt',
-      content: 'camelCase      parseHttpResponse\nCONSTANT_CASE  PARSE_HTTP_RESPONSE',
+      content:
+        'camelCase      parseHttpResponse\nCONSTANT_CASE  PARSE_HTTP_RESPONSE\n' +
+        'Title Case     Parse Http Response\nUPPERCASE      PARSE HTTP RESPONSE',
     });
   });
 
-  it('names the new cases in themselves, and keeps a list converted line by line aligned', async () => {
+  it('keeps a list converted line by line aligned in the note', async () => {
     const harness = await renderTool(CaseToolComponent, (tools) => {
-      tools.cases = [
-        { case: 'dot', value: 'user.id\nhttp.server' },
-        { case: 'train', value: 'User-Id\nHttp-Server' },
-      ];
+      tools.caseAnswer = {
+        conversions: [
+          { case: 'dot', group: 'code', value: 'user.id\nhttp.server' },
+          { case: 'train', group: 'code', value: 'User-Id\nHttp-Server' },
+        ],
+        words: ['user', 'Id'],
+      };
     });
 
     await harness.type('case-input', '  userId\nHTTPServer', 'convert_case');
 
-    expect(harness.all('[data-testid="output-row"]').map((row) => row.dataset['name'])).toEqual([
-      'dot.case',
-      'Train-Case',
-    ]);
     expect(harness.element('[data-testid="output-value"]').textContent).toBe('user.id\nhttp.server');
     expect(harness.tool.result()).toMatchObject({
       title: { key: 'tools.case.noteTitle', params: { text: 'userId' } },
@@ -66,6 +114,16 @@ describe('CaseToolComponent', () => {
 
     expect(harness.element<HTMLTextAreaElement>('[data-testid="case-input"]').value).toBe('');
     expect(harness.tool.result()).toBeNull();
+    expect(harness.element('[data-testid="case-results"]')).toBeNull();
+  });
+
+  it('fills its sample in the language on screen', async () => {
+    const harness = await renderTool(CaseToolComponent, answer);
+
+    harness.tool.sample();
+    await harness.settle();
+
+    expect(harness.element<HTMLTextAreaElement>('[data-testid="case-input"]').value).toContain('HTTPServer');
   });
 
   /** Left for another tool and found again: the session keeps what was typed. */

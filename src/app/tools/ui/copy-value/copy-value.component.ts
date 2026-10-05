@@ -20,6 +20,8 @@ export class CopyValueComponent {
   readonly value = input.required<string>();
   /** What is copied, for a screen reader: "Copier camelCase". */
   readonly what = input.required<string>();
+  /** The icon alone, at the end of a row: « Copier » on hover, « Copié » once done. */
+  readonly compact = input(false);
 
   protected readonly copied = signal(false);
 

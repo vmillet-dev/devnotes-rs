@@ -37,8 +37,8 @@ async fn off_thread<T: Send + 'static>(
 
 #[tauri::command]
 #[specta::specta]
-pub async fn convert_case(text: String) -> Result<Vec<text::CaseConversion>, AppError> {
-    off_thread(move || text::convert_case(&text)).await
+pub async fn convert_case(request: text::CaseRequest) -> Result<text::CaseAnswer, AppError> {
+    off_thread(move || text::convert_case(&request)).await
 }
 
 #[tauri::command]

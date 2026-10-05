@@ -457,6 +457,52 @@
   color: var(--text-2);
 }
 
+// One card of results: rows under small group titles, hairlines between them. It scrolls
+// inside itself, never the page.
+@mixin tool-result-card {
+  @include surface(var(--bg-1), 10px);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 4px;
+}
+
+// "Pour le code", "Pour le texte": a label over the rows of a results card.
+@mixin tool-result-group {
+  margin: 0;
+  padding: 12px 16px 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-2);
+}
+
+// A tool laid out to the frame's height, its results card scrolling inside rather than the
+// page; one scrolling column again when the window is too narrow for two.
+@mixin tool-fills-frame {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+
+  @media (width < 960px) {
+    height: auto;
+  }
+}
+
+// The two columns of a tool that fills the frame: one row the frame's height, each column
+// scrolling on its own; a single column on a narrow window, the page scrolling then.
+@mixin tool-columns-fill {
+  flex: 1;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+
+  @media (width < 960px) {
+    grid-template-rows: auto;
+  }
+}
+
 // A tool's body: what goes in on the left, what comes out on the right; one column when narrow.
 @mixin tool-columns {
   display: grid;

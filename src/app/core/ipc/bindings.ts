@@ -24,7 +24,7 @@ export const commands = {
 	detectLanguage: (content: string) => __TAURI_INVOKE<Language>("detect_language", { content }),
 	/**  No lock, but off the window's thread: a document of a few megabytes takes a while. */
 	exploreJson: (query: JsonQuery) => typedError<JsonView, AppError>(__TAURI_INVOKE("explore_json", { query })),
-	convertCase: (text: string) => typedError<CaseConversion[], AppError>(__TAURI_INVOKE("convert_case", { text })),
+	convertCase: (request: CaseRequest) => typedError<CaseAnswer, AppError>(__TAURI_INVOKE("convert_case", { request })),
 	slugify: (request: SlugRequest) => typedError<string, AppError>(__TAURI_INVOKE("slugify", { request })),
 	fixLineBreaks: (request: LineBreaksRequest) => typedError<LineBreaksAnswer, AppError>(__TAURI_INVOKE("fix_line_breaks", { request })),
 	parseUrl: (text: string) => typedError<UrlAnswer, AppError>(__TAURI_INVOKE("parse_url", { text })),
@@ -450,9 +450,32 @@ export type CardPlacement = {
 	position: BoardPoint,
 };
 
+export type CaseAnswer = {
+	/**  Empty for a text without a word. */
+	conversions: CaseConversion[],
+	/**  What the converters work from: the first line holding a word, or the whole phrase. */
+	words: string[],
+};
+
 export type CaseConversion = {
 	case: TextCase,
+	group: CaseGroup,
 	value: string,
+};
+
+/**
+ *  What a case is for. The code cases strip accents when asked; the text cases keep them, and
+ *  keep the apostrophe that binds an elided word to the next (`l'été`).
+ */
+export type CaseGroup = "code" | "text";
+
+export type CaseRequest = {
+	text: string,
+	/**  The code cases only: `été` is `ete` in `snake_case` and stays `été` in a title. */
+	stripAccents: boolean,
+	/**  Each line on its own; off, the whole text is one phrase. */
+	perLine: boolean,
+	titleCaseLanguage: TitleLanguage,
 };
 
 export type ChangelogRelease = {
@@ -1634,6 +1657,12 @@ export type TextStats = {
 	frequencies: Frequency[],
 	frequenciesTruncated: boolean,
 };
+
+export type TitleLanguage = 
+/**  Every word capitalised. */
+"english" | 
+/**  The small words stay in lower case, but at the start. */
+"french";
 
 export type TokenState = "valid" | "expired" | "notYetValid" | 
 /**  Neither `exp` nor `nbf`: nothing to be valid against. */

@@ -6,7 +6,8 @@ import {
   Base64FileAnswer,
   Base64Options,
   Base64Saved,
-  CaseConversion,
+  CaseAnswer,
+  CaseRequest,
   CheckAnswer,
   CheckRequest,
   ColourAnswer,
@@ -53,8 +54,8 @@ import {
 /** One method per tool: a request in, an answer out, and nothing of the library read. */
 @Injectable({ providedIn: 'root' })
 export class ToolsRepository {
-  async convertCase(text: string): Promise<CaseConversion[]> {
-    return unwrap('convert_case', await commands.convertCase(text));
+  async convertCase(request: CaseRequest): Promise<CaseAnswer> {
+    return unwrap('convert_case', await commands.convertCase(request));
   }
 
   async slugify(request: SlugRequest): Promise<string> {
