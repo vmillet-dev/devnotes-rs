@@ -1392,7 +1392,6 @@
       "inputLabel": "Date ou timestamp",
       "placeholder": "1790000000, 2026-09-29T14:03:12+02:00, 2026-W40-2…",
       "now": "Maintenant",
-      "forms": "Formes",
       "readAs": "Lu comme",
       "guessed": "· d’après sa taille",
       "readings": {
@@ -1420,21 +1419,20 @@
       "outOfRange": "Au-delà de ce qu’une date peut représenter : quelque 262 000 ans de part et d’autre de l’an 0.",
       "empty": "Tapez un timestamp ou une date, ou prenez l’instant présent : chaque forme s’affiche ici.",
       "rows": {
-        "unixSeconds": "Unix · s",
-        "unixMilliseconds": "Unix · ms",
-        "unixMicroseconds": "Unix · µs",
-        "unixNanoseconds": "Unix · ns",
+        "unixSeconds": "Secondes",
+        "unixMilliseconds": "Millisecondes",
+        "unixMicroseconds": "Microsecondes",
+        "unixNanoseconds": "Nanosecondes",
         "isoUtc": "ISO 8601 · UTC",
-        "isoLocal": "ISO 8601 · heure locale",
+        "isoLocal": "ISO 8601 · local",
         "rfc2822": "RFC 2822",
         "relative": "Par rapport à maintenant",
         "weekday": "Jour de la semaine",
+        "weekDate": "Date par semaine",
         "week": "Semaine ISO",
+        "ordinalDate": "Date ordinale",
         "dayOfYear": "Jour de l’année"
       },
-      "weekMeta": "semaine {{week}}",
-      "dayMeta": "{day, plural, =1 {1er jour} other {#ᵉ jour}}",
-      "localMeta": "UTC{{offset}}",
       "weekdays": {
         "1": "lundi",
         "2": "mardi",
@@ -1444,7 +1442,13 @@
         "6": "samedi",
         "7": "dimanche"
       },
-      "noteTitle": "Instant {{instant}}"
+      "noteTitle": "Instant {{instant}}",
+      "groups": {
+        "unix": "Timestamp Unix",
+        "formats": "Formats de date",
+        "landmarks": "Repères"
+      },
+      "localZone": "heure locale · UTC{{offset}}"
     },
     "zones": {
       "name": "Fuseaux horaires",
