@@ -35,14 +35,16 @@ describe('Creating a note, and finding it again', () => {
   });
 
   /** Measured, not asserted on a class: the marks share the title's row, and the body follows. */
-  it('puts the title and the marks on one row, with the body right under it', async () => {
+  it('puts the title and its kind on one row, the marks in the footer, the body right under it', async () => {
     const layout = await canvas.cardHeadLayout(title);
 
     expect(layout).not.toBeNull();
     // The row starts at the card's own edge, exactly like the snippet under it…
     expect(layout!.titleRowOffset).toBe(0);
-    // …the marks sit at its right end and the title is what gives way to them…
-    expect(layout!.marksRightAligned).toBe(true);
+    // …the kind sits at its right end and the title is what gives way to it…
+    expect(layout!.kindRightAligned).toBe(true);
+    // …and no state mark sits on it: those live in the footer, where they cost the title nothing…
+    expect(layout!.noMarkInRow).toBe(true);
     // …that row is the first thing in the card, with no band above it…
     expect(layout!.titleTop).toBeLessThanOrEqual(16);
     // …and the body starts immediately after it.

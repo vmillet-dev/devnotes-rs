@@ -178,6 +178,11 @@ export class NoteCardComponent {
 
   protected readonly hasPlaceholders = computed(() => this.note().placeholders.length > 0);
 
+  protected readonly hasMarks = computed(() => {
+    const note = this.note();
+    return note.priority !== 'none' || note.pinned || this.hasPlaceholders() || note.attachmentCount > 0;
+  });
+
   /** The back end decides what to show; the dated variants are formatted here so they age. */
   protected readonly footerLabel = computed<FooterLabel>(() => {
     const footer = this.note().footer;
