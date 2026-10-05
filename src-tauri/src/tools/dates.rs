@@ -196,6 +196,7 @@ impl Reading {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub(crate) enum Refusal {
     /// Zero-based, in characters.
     Unreadable(usize),

@@ -48,6 +48,8 @@ export const commands = {
 	/**  A date written without an offset is read in the machine's zone, as the person typing it means. */
 	describeInstant: (request: InstantRequest) => typedError<InstantAnswer, AppError>(__TAURI_INVOKE("describe_instant", { request })),
 	currentInstant: () => typedError<string, AppError>(__TAURI_INVOKE("current_instant")),
+	/**  The two dates are read in the machine's zone, which the answer names. */
+	measureDurations: (request: DurationsRequest) => typedError<DurationsAnswer, AppError>(__TAURI_INVOKE("measure_durations", { request })),
 	searchTimeZones: (query: string) => typedError<ZoneEntry[], AppError>(__TAURI_INVOKE("search_time_zones", { query })),
 	placeInZones: (request: ZonesRequest) => typedError<ZonesAnswer, AppError>(__TAURI_INVOKE("place_in_zones", { request })),
 	timeInZone: (zone: string | null) => typedError<string, AppError>(__TAURI_INVOKE("time_in_zone", { zone })),
@@ -439,6 +441,16 @@ export type BoardZone = {
 	notes: BoardNote[],
 };
 
+/**  What a calendar counts: whole months first, each of its own length, then the wall clock. */
+export type CalendarGap = {
+	years: number,
+	months: number,
+	days: number,
+	hours: number,
+	minutes: number,
+	seconds: number,
+};
+
 export type CardNetwork = "visa" | "mastercard" | "americanExpress" | "discover" | "dinersClub" | "jcb" | "unionPay" | "maestro";
 
 /**
@@ -700,6 +712,68 @@ export type DisplayNote = {
 	outline: OutlineLine[],
 } & Note;
 
+export type DurationAnswer = { kind: "read"; negative: boolean; parts: DurationParts; iso: string; 
+/**  Typed as words, « 1h30 », rather than in ISO 8601. */
+fromWords: boolean; 
+/**  `None` with years or months: neither has a fixed length in seconds. */
+totals: DurationTotals | null } | 
+/**  One-based, in characters. */
+{ kind: "unreadable"; at: number; problem: DurationProblem };
+
+/**  Each part as typed: a fraction is allowed on the last one only, so they are `f64`. */
+export type DurationParts = {
+	years: number | null,
+	months: number | null,
+	weeks: number | null,
+	days: number | null,
+	hours: number | null,
+	minutes: number | null,
+	seconds: number | null,
+};
+
+export type DurationProblem = 
+/**  Not what an ISO duration or a unit of words may hold here. */
+"unexpected" | 
+/**  `P` or `PT` with nothing after it. */
+"empty" | 
+/**  A unit after a smaller one: `PT30M1H`. */
+"outOfOrder" | "repeated" | 
+/**  A fraction on a part that is not the last. */
+"fractionNotLast";
+
+/**  A day is counted as 24 hours, and a week as 7 of them. */
+export type DurationTotals = {
+	seconds: number | null,
+	minutes: number | null,
+	hours: number | null,
+};
+
+export type DurationsAnswer = {
+	/**  Where a date written without an offset is read: the machine's zone, UTC without one. */
+	zone: string,
+	/**  `None` until both dates are typed. */
+	gap: GapAnswer | null,
+	duration: DurationAnswer | null,
+};
+
+export type DurationsRequest = {
+	from: string,
+	to: string,
+	duration: string,
+};
+
+/**  What a clock counts between the two instants, cut several ways. */
+export type Elapsed = {
+	days: number,
+	hours: number,
+	minutes: number,
+	seconds: number,
+	weeks: number,
+	weekDays: number,
+	totalHours: number,
+	totalMinutes: number,
+};
+
 export type EndingCounts = {
 	lf: number,
 	crlf: number,
@@ -791,6 +865,22 @@ export type Frequency = {
 	/**  Of the characters counted, in percent. */
 	share: number | null,
 };
+
+export type GapAnswer = { kind: "measured"; 
+/**  `to` before `from`: the parts are the gap's size, the ISO form carries the sign. */
+negative: boolean; calendar: CalendarGap; elapsed: Elapsed; 
+/**  The calendar gap, `P6M22DT7H41M`. */
+iso: string; transition: Transition | null; 
+/**  The fields whose local time came twice: the earlier reading is taken. */
+ambiguous: GapField[] } | 
+/**  One-based, in characters. */
+{ kind: "unreadable"; field: GapField; at: number } | 
+/**  A local time the clocks skipped when they went forward. */
+{ kind: "skipped"; field: GapField } | 
+/**  Past the year 9999 either way. */
+{ kind: "outOfRange"; field: GapField };
+
+export type GapField = "from" | "to";
 
 export type GenerateAnswer = { kind: "generated"; text: string; seed: number; unsupported: Unsupported[] } | { kind: "unreadable"; line: number; column: number } | 
 /**  A schema is an object, or `true`. */
@@ -1773,6 +1863,18 @@ export type TitleLanguage =
 export type TokenState = "valid" | "expired" | "notYetValid" | 
 /**  Neither `exp` nor `nbf`: nothing to be valid against. */
 "undated";
+
+/**  The two counts part when the zone's offset differs at either end: a daylight-saving change. */
+export type Transition = {
+	/**  The local date the clocks changed on — the last change, when there were several. */
+	date: string | null,
+	/**  The clocks went forward, to summer time. */
+	forward: boolean,
+	/**  The calendar's count less the clock's. */
+	minutes: number,
+	/**  The wall clock's total, beside `Elapsed::total_minutes`. */
+	wallMinutes: number,
+};
 
 export type TrashedNote = {
 	deletedAt: string,

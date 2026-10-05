@@ -1,0 +1,104 @@
+@use 'mixins' as *;
+
+:host {
+  display: block;
+}
+
+.columns {
+  @include tool-columns;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 32px;
+}
+
+.column {
+  @include tool-column;
+  gap: 12px;
+}
+
+.section-title {
+  @include tool-section-title;
+}
+
+.dates {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.date-row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.date-label {
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+
+label.date-row .field {
+  grid-column: 2 / 4;
+}
+
+.field {
+  @include tool-field;
+  height: 42px;
+  font-size: 14px;
+}
+
+.button {
+  @include tool-button;
+  height: 42px;
+}
+
+.caption {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.card {
+  @include tool-result-card;
+}
+
+.card-head {
+  padding: 14px 16px 12px;
+}
+
+.headline {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-0);
+}
+
+.card-group {
+  @include tool-result-group;
+}
+
+.note {
+  @include tool-note;
+  font-family: var(--font-sans);
+  font-size: 12px;
+}
+
+.explain {
+  @include surface(rgba(var(--amber-rgb), 0.06), 8px, var(--amber-dim));
+  margin: 0;
+  padding: 12px 14px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-1);
+
+  code {
+    font-family: var(--font-mono), monospace;
+    font-size: 11.5px;
+    color: var(--text-0);
+  }
+}
+
+.problem {
+  @include tool-problem;
+}

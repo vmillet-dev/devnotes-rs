@@ -1,0 +1,118 @@
+<div class="columns">
+  <section class="column" aria-labelledby="dates-gap-title">
+    <h2 id="dates-gap-title" class="section-title">{{ 'tools.dates.gapTitle' | transloco }}</h2>
+    <div class="dates">
+      <label class="date-row">
+        <span class="date-label">{{ 'tools.dates.fields.from' | transloco }}</span>
+        <input
+          type="text"
+          class="field"
+          data-testid="dates-from"
+          spellcheck="false"
+          [value]="from()"
+          [placeholder]="'tools.dates.datePlaceholder' | transloco"
+          (input)="onFrom($event)"
+        />
+      </label>
+      <div class="date-row">
+        <label class="date-label" for="dates-to">{{ 'tools.dates.fields.to' | transloco }}</label>
+        <input
+          id="dates-to"
+          type="text"
+          class="field"
+          data-testid="dates-to"
+          spellcheck="false"
+          [value]="to()"
+          [placeholder]="'tools.dates.datePlaceholder' | transloco"
+          (input)="onTo($event)"
+        />
+        <button type="button" class="button" data-testid="dates-to-now" (click)="toNow()">
+          {{ 'tools.dates.now' | transloco }}
+        </button>
+      </div>
+    </div>
+    @if (zone(); as zone) {
+      <p class="caption" data-testid="dates-zone">{{ 'tools.dates.typedIn' | transloco: { zone } }}</p>
+    }
+
+    @if (measured(); as measured) {
+      <div class="card" data-testid="dates-gap" [attr.data-negative]="measured.negative">
+        <div class="card-head">
+          <h3 class="headline" data-testid="dates-gap-calendar">{{ calendarWords() }}</h3>
+        </div>
+        <h4 class="card-group">{{ 'tools.dates.elapsedTitle' | transloco }}</h4>
+        @for (row of elapsedRows(); track row.id) {
+          <app-result-row
+            [attr.data-elapsed]="row.id"
+            [name]="'tools.dates.elapsedRows.' + row.id | transloco"
+            [value]="row.value"
+          />
+        }
+      </div>
+      @if (measured.negative) {
+        <p class="note" data-testid="dates-gap-negative">{{ 'tools.dates.negative' | transloco }}</p>
+      }
+      @for (field of measured.ambiguous; track field) {
+        <p class="note" data-testid="dates-gap-ambiguous">
+          {{ 'tools.dates.ambiguousField' | transloco: { field: fieldName(field) } }}
+        </p>
+      }
+      @if (transitionNote(); as note) {
+        <p class="explain" data-testid="dates-transition">{{ note }}</p>
+      }
+    } @else if (gapProblem(); as problem) {
+      <p class="problem" role="status" data-testid="dates-gap-problem" [attr.data-problem]="problem.kind">
+        {{
+          'tools.dates.gapProblems.' + problem.kind
+            | transloco
+              : { field: fieldName(problem.field), at: problem.kind === 'unreadable' ? problem.at : 0 }
+        }}
+      </p>
+    }
+  </section>
+
+  <section class="column" aria-labelledby="dates-duration-title">
+    <h2 id="dates-duration-title" class="section-title">{{ 'tools.dates.durationTitle' | transloco }}</h2>
+    <input
+      type="text"
+      class="field"
+      data-testid="dates-duration"
+      spellcheck="false"
+      [attr.aria-label]="'tools.dates.durationTitle' | transloco"
+      [value]="duration()"
+      placeholder="PT1H30M"
+      (input)="onDuration($event)"
+    />
+    @if (read(); as read) {
+      <div class="card" data-testid="dates-duration-read">
+        <div class="card-head">
+          <h3 class="headline" data-testid="dates-duration-words">{{ durationWords() }}</h3>
+        </div>
+        @for (row of durationRows(); track row.id) {
+          <app-result-row
+            [attr.data-total]="row.id"
+            [name]="'tools.dates.totals.' + row.id | transloco"
+            [value]="row.value"
+          />
+        }
+      </div>
+      @if (!read.totals) {
+        <p class="note" data-testid="dates-no-totals">{{ 'tools.dates.noTotals' | transloco }}</p>
+      }
+    } @else if (durationProblem(); as problem) {
+      <p
+        class="problem"
+        role="status"
+        data-testid="dates-duration-problem"
+        [attr.data-problem]="problem.problem"
+      >
+        {{ 'tools.dates.durationProblems.' + problem.problem | transloco: { at: problem.at } }}
+      </p>
+    }
+    <p class="caption">{{ 'tools.dates.durationHint' | transloco }}</p>
+    <p class="explain">
+      <code>P1M</code> {{ 'tools.dates.explainMonth' | transloco }} <code>PT1M</code>
+      {{ 'tools.dates.explainMinute' | transloco }} <code>T</code> {{ 'tools.dates.explainT' | transloco }}
+    </p>
+  </section>
+</div>

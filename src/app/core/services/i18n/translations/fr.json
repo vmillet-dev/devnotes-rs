@@ -1391,8 +1391,8 @@
       }
     },
     "dates": {
-      "name": "Dates et timestamps",
-      "description": "Unix ↔ ISO 8601, en s, ms, µs ou ns",
+      "name": "Dates et durées",
+      "description": "Unix ↔ ISO 8601, écarts et durées ISO",
       "inputLabel": "Date ou timestamp",
       "placeholder": "1790000000, 2026-09-29T14:03:12+02:00, 2026-W40-2…",
       "now": "Maintenant",
@@ -1452,7 +1452,88 @@
         "formats": "Formats de date",
         "landmarks": "Repères"
       },
-      "localZone": "heure locale · UTC{{offset}}"
+      "localZone": "heure locale · UTC{{offset}}",
+      "tab": "Onglet",
+      "tabs": {
+        "convert": "Convertir",
+        "durations": "Écart et durées"
+      },
+      "gapTitle": "Écart entre deux dates",
+      "fields": {
+        "from": "De",
+        "to": "À"
+      },
+      "datePlaceholder": "2026-03-12 09:00",
+      "typedIn": "Heures saisies en {{zone}}.",
+      "elapsedTitle": "Total écoulé",
+      "elapsedRows": {
+        "days": "Jours",
+        "weeks": "Semaines",
+        "hours": "Heures",
+        "minutes": "Minutes",
+        "iso": "ISO 8601"
+      },
+      "elapsed": {
+        "days": "{{days}} j {{hours}} h {{minutes}}",
+        "weeks": "{{weeks}} sem {{days}} j",
+        "hours": "{{hours}} h {{minutes}}"
+      },
+      "calendar": {
+        "years": "{count, plural, one {# an} other {# ans}}",
+        "months": "{count, plural, other {# mois}}",
+        "days": "{count, plural, one {# jour} other {# jours}}",
+        "none": "Aucun écart"
+      },
+      "clock": {
+        "hours": "{{value}} h",
+        "minutes": "{{value}} min",
+        "seconds": "{{value}} s"
+      },
+      "negative": "À tombe avant De : l’écart est compté à rebours.",
+      "ambiguousField": "{{field}} : cette heure a lieu deux fois, au retour à l’heure d’hiver ; la première est retenue.",
+      "transition": {
+        "forward": "Le passage à l’heure d’été du {{date}} tombe entre les deux dates : l’écart calendaire ({{wall}}) compte {{difference}} de plus que le temps réellement écoulé ({{elapsed}}).",
+        "backward": "Le retour à l’heure d’hiver du {{date}} tombe entre les deux dates : l’écart calendaire ({{wall}}) compte {{difference}} de moins que le temps réellement écoulé ({{elapsed}}).",
+        "forwardUndated": "Un changement d’heure tombe entre les deux dates : l’écart calendaire ({{wall}}) compte {{difference}} de plus que le temps réellement écoulé ({{elapsed}}).",
+        "backwardUndated": "Un changement d’heure tombe entre les deux dates : l’écart calendaire ({{wall}}) compte {{difference}} de moins que le temps réellement écoulé ({{elapsed}}).",
+        "hoursApart": "{count, plural, one {une heure} other {# heures}}",
+        "minutesApart": "{{minutes}} min"
+      },
+      "gapProblems": {
+        "unreadable": "{{field}} : illisible à partir du caractère {{at}}.",
+        "skipped": "{{field}} : cette heure n’existe pas ici, les horloges l’ont sautée au passage à l’heure d’été.",
+        "outOfRange": "{{field}} : au-delà de l’an 9999."
+      },
+      "durationTitle": "Durée ISO 8601",
+      "units": {
+        "years": "{count, plural, one {an} other {ans}}",
+        "months": "{count, plural, other {mois}}",
+        "weeks": "{count, plural, one {semaine} other {semaines}}",
+        "days": "{count, plural, one {jour} other {jours}}",
+        "hours": "{count, plural, one {heure} other {heures}}",
+        "minutes": "{count, plural, one {minute} other {minutes}}",
+        "seconds": "{count, plural, one {seconde} other {secondes}}",
+        "none": "Aucune durée"
+      },
+      "totals": {
+        "iso": "ISO 8601",
+        "seconds": "Secondes",
+        "minutes": "Minutes",
+        "hours": "Heures"
+      },
+      "noTotals": "Un mois ou une année n’a pas de durée fixe : pas de total en secondes.",
+      "durationProblems": {
+        "unexpected": "Caractère {{at}} : ni un nombre ni une unité attendue ici.",
+        "empty": "Caractère {{at}} : rien après « P » ou « T ».",
+        "outOfOrder": "Caractère {{at}} : cette unité vient avant la précédente ; l’ordre est Y M W D, puis T H M S.",
+        "repeated": "Caractère {{at}} : cette unité est déjà donnée.",
+        "fractionNotLast": "Caractère {{at}} : seule la dernière partie peut avoir des décimales."
+      },
+      "durationHint": "Saisissez aussi « 1h30 » ou « 90 min » : l’outil donne la forme ISO.",
+      "explainMonth": "est un mois,",
+      "explainMinute": "est une minute : le",
+      "explainT": "sépare la date de l’heure. Un mois ou une année n’a pas de durée fixe en secondes.",
+      "noteDurations": "Écart et durée"
     },
     "zones": {
       "name": "Fuseaux horaires",

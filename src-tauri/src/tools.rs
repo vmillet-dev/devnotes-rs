@@ -8,6 +8,7 @@ pub mod convert;
 pub mod cron;
 pub mod dates;
 pub mod diff;
+pub mod durations;
 pub mod encoding;
 pub(crate) mod files;
 pub mod generate;
@@ -188,6 +189,16 @@ pub async fn describe_instant(
     request: dates::InstantRequest,
 ) -> Result<dates::InstantAnswer, AppError> {
     off_thread(move || dates::describe(&request, &chrono::Local)).await
+}
+
+/// The two dates are read in the machine's zone, which the answer names.
+#[tauri::command]
+#[specta::specta]
+pub async fn measure_durations(
+    request: durations::DurationsRequest,
+) -> Result<durations::DurationsAnswer, AppError> {
+    off_thread(move || durations::measure(&request, durations::zone_named(local_zone().as_deref())))
+        .await
 }
 
 #[tauri::command]

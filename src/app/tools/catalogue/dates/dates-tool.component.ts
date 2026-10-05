@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { ToolsRepository } from '@core/data/tools.repository';
@@ -15,8 +15,15 @@ import {
   SegmentedChoiceComponent,
 } from '@shared/controls/segmented-choice/segmented-choice.component';
 import { ResultRowComponent } from '@tools/ui/result-row/result-row.component';
+import { DurationsComponent } from './durations/durations.component';
 
 type Read = Extract<InstantAnswer, { kind: 'read' }>;
+type Tab = 'convert' | 'durations';
+
+const TABS: readonly Segment[] = (['convert', 'durations'] as const).map((id) => ({
+  id,
+  labelKey: `tools.dates.tabs.${id}`,
+}));
 
 const AUTO = 'auto';
 
@@ -96,7 +103,7 @@ function longDate(epochMilliseconds: number, lang: string): string {
 /** Every reading and every form is Rust's; how long ago is the front's, so it ages without a round trip. */
 @Component({
   selector: 'app-dates-tool',
-  imports: [ResultRowComponent, SegmentedChoiceComponent, TranslocoPipe],
+  imports: [DurationsComponent, ResultRowComponent, SegmentedChoiceComponent, TranslocoPipe],
   templateUrl: './dates-tool.component.html',
   styleUrl: './dates-tool.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -111,7 +118,16 @@ export class DatesToolComponent implements Tool {
     initialValue: this.transloco.getActiveLang(),
   });
 
+  protected readonly tab = toolState<Tab>('dates.tab', 'convert');
   protected readonly text = toolState('dates.text', '');
+  /** The other tab's fields, filled by the sample and emptied by Vider from here. */
+  private readonly from = toolState('dates.from', '');
+  private readonly to = toolState('dates.to', '');
+  private readonly duration = toolState('dates.duration', '');
+
+  private readonly durations = viewChild(DurationsComponent);
+
+  protected readonly tabs = TABS;
   protected readonly magnitude = toolState<Magnitude | null>('dates.magnitude', null);
 
   protected readonly magnitudes = MAGNITUDES;
@@ -157,7 +173,11 @@ export class DatesToolComponent implements Tool {
     };
   });
 
-  readonly result = computed<ToolResult | null>(() => {
+  readonly result = computed<ToolResult | null>(() =>
+    this.tab() === 'durations' ? (this.durations()?.result() ?? null) : this.converted(),
+  );
+
+  private readonly converted = computed<ToolResult | null>(() => {
     const forms = this.read()?.forms;
     return forms
       ? {
@@ -178,11 +198,21 @@ export class DatesToolComponent implements Tool {
   sample(): void {
     this.magnitude.set(null);
     this.text.set('1700000000');
+    this.from.set('2026-03-12 09:00');
+    this.to.set('2026-10-04 16:41');
+    this.duration.set('PT1H30M');
   }
 
   clear(): void {
     this.text.set('');
     this.magnitude.set(null);
+    this.from.set('');
+    this.to.set('');
+    this.duration.set('');
+  }
+
+  protected onTab(id: string): void {
+    this.tab.set(id as Tab);
   }
 
   protected async takeNow(): Promise<void> {

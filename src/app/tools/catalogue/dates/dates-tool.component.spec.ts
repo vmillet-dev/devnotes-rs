@@ -248,4 +248,61 @@ describe('DatesToolComponent', () => {
     expect(harness.all('[data-testid="output-row"]')).toHaveLength(0);
     expect(harness.element('[data-testid="segmented-dates-magnitude"]')).toBeNull();
   });
+
+  describe('the « Écart et durées » tab', () => {
+    const tab = async (harness: ToolHarness<DatesToolComponent>, id: 'convert' | 'durations') => {
+      harness
+        .element<HTMLButtonElement>(`[data-testid="segmented-dates-tab"] [data-segment-id="${id}"]`)
+        .click();
+      await harness.settle();
+    };
+
+    it('keeps each tab as it was left, and saves what the tab on screen shows', async () => {
+      const harness = await renderTool(DatesToolComponent, (tools) => {
+        tools.instant = READ;
+        tools.durations = {
+          zone: 'Europe/Paris',
+          gap: null,
+          duration: {
+            kind: 'read',
+            negative: false,
+            parts: { years: 0, months: 0, weeks: 0, days: 0, hours: 0, minutes: 90, seconds: 0 },
+            iso: 'PT90M',
+            fromWords: true,
+            totals: { seconds: 5400, minutes: 90, hours: 1.5 },
+          },
+        };
+      });
+      await harness.type('dates-input', '1790000000', 'describe_instant');
+
+      await tab(harness, 'durations');
+      expect(harness.element('[data-testid="dates-input"]')).toBeNull();
+      await harness.type('dates-duration', '90 min', 'measure_durations');
+      expect(harness.tool.result()?.content).toBe('PT90M = 5400 s');
+
+      await tab(harness, 'convert');
+      expect(harness.element<HTMLInputElement>('[data-testid="dates-input"]').value).toBe('1790000000');
+      expect(harness.tool.result()?.title).toEqual({
+        key: 'tools.dates.noteTitle',
+        params: { instant: '2026-09-21T14:13:20Z' },
+      });
+    });
+
+    it('fills both tabs from its sample, and empties both on Vider', async () => {
+      const harness = await renderTool(DatesToolComponent, answering(READ));
+
+      harness.tool.sample();
+      await tab(harness, 'durations');
+      const field = (id: string) => harness.element<HTMLInputElement>(`[data-testid="${id}"]`).value;
+      expect([field('dates-from'), field('dates-to'), field('dates-duration')]).toEqual([
+        '2026-03-12 09:00',
+        '2026-10-04 16:41',
+        'PT1H30M',
+      ]);
+
+      harness.tool.clear();
+      await harness.settle();
+      expect([field('dates-from'), field('dates-to'), field('dates-duration')]).toEqual(['', '', '']);
+    });
+  });
 });

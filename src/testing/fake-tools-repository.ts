@@ -14,6 +14,8 @@ import {
   ConvertRequest,
   CronAnswer,
   CronRequest,
+  DurationsAnswer,
+  DurationsRequest,
   GenerateAnswer,
   GenerateRequest,
   HashAnswer,
@@ -78,6 +80,7 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
   passwords: PasswordAnswer = { kind: 'noCharacters' };
   identifiers: string[] = [];
   inspection: IdInspection = { kind: 'unrecognised' };
+  durations: DurationsAnswer = { zone: 'Europe/Paris', gap: null, duration: null };
   colour: ColourAnswer = { colour: { kind: 'empty' }, against: { kind: 'empty' }, contrast: null };
   conversion: ConvertAnswer = { kind: 'converted', text: '' };
   generated: GenerateAnswer = { kind: 'generated', text: '{}', seed: 1, unsupported: [] };
@@ -205,6 +208,10 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
 
   describeInstant(request: InstantRequest): Promise<InstantAnswer> {
     return this.answer('describe_instant', request, this.instant);
+  }
+
+  measureDurations(request: DurationsRequest): Promise<DurationsAnswer> {
+    return this.answer('measure_durations', request, this.durations);
   }
 
   currentInstant(): Promise<string> {
