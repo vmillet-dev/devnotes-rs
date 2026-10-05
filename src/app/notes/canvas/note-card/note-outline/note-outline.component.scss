@@ -4,7 +4,10 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  // A line that does not fit wraps into a second column, which the host clips whole: never a
+  // half-drawn line at the bottom of the card.
+  flex-wrap: wrap;
+  gap: 3px 24px;
   font-size: 12px;
   line-height: 1.45;
   color: var(--text-1);
@@ -14,6 +17,7 @@
 // `flex-shrink: 0` the lines squeeze into one another instead of the host clipping them.
 :host > * {
   flex-shrink: 0;
+  width: 100%;
 }
 
 .outline-heading,
