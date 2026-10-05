@@ -120,6 +120,12 @@ export class Base64ToolComponent implements Tool {
     };
   });
 
+  sample(): void {
+    this.direction.set('encode');
+    this.source.set('text');
+    this.text.set('Bonjour, monde ! 👋');
+  }
+
   clear(): void {
     this.text.set('');
     this.path.set(null);

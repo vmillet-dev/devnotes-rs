@@ -79,6 +79,15 @@ export class PasswordToolComponent implements Tool {
   });
 
   /** Nothing typed to empty: Vider puts the options back as they were. */
+  sample(): void {
+    this.options.set({
+      length: 24,
+      sets: ['lowercase', 'uppercase', 'digits', 'symbols'],
+      avoidLookAlikes: true,
+    });
+    this.count.set(3);
+  }
+
   clear(): void {
     this.options.set(DEFAULTS);
     this.count.set(DEFAULT_COUNT);

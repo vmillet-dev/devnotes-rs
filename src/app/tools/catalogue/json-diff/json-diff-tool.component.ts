@@ -53,6 +53,21 @@ function unified(rows: readonly JsonDiffRow[]): UnifiedLine[] {
   });
 }
 
+const SAMPLE = {
+  a: `{
+  "name": "devnotes",
+  "version": "0.9.1",
+  "features": ["notes", "tools"],
+  "window": { "width": 1280, "height": 800 }
+}`,
+  b: `{
+  "name": "devnotes",
+  "version": "0.9.2",
+  "features": ["notes", "tools", "samples"],
+  "window": { "width": 1440, "height": 800 }
+}`,
+};
+
 @Component({
   selector: 'app-json-diff-tool',
   imports: [JsonNotePickerComponent, SegmentedChoiceComponent, TranslocoPipe],
@@ -136,6 +151,13 @@ export class JsonDiffToolComponent implements Tool {
         }
       : null;
   });
+
+  sample(): void {
+    this.a.set(SAMPLE.a);
+    this.b.set(SAMPLE.b);
+    this.aName.set(null);
+    this.bName.set(null);
+  }
 
   clear(): void {
     this.a.set('');

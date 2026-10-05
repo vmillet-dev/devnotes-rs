@@ -35,6 +35,9 @@ export function masked(grouped: string): string {
     .join('');
 }
 
+/** The published French example IBAN: valid, and nobody's account. */
+const SAMPLE = 'FR76 3000 6000 0112 3456 7890 189';
+
 /** Luhn and IBAN are Rust's; the page names the country in the language on screen. */
 @Component({
   selector: 'app-checks-tool',
@@ -110,6 +113,11 @@ export class ChecksToolComponent implements Tool {
         }
       : null;
   });
+
+  sample(): void {
+    this.kind.set(null);
+    this.text.set(SAMPLE);
+  }
 
   clear(): void {
     this.text.set('');

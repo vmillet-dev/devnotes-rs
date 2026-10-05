@@ -62,6 +62,11 @@ export class ColourToolComponent implements Tool {
       : null;
   });
 
+  sample(): void {
+    this.colour.set('#3b82f6');
+    this.against.set('#ffffff');
+  }
+
   clear(): void {
     this.colour.set('');
     this.against.set('');

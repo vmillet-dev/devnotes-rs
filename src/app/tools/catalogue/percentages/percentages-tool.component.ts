@@ -62,6 +62,14 @@ const DIRECTIONS: readonly Segment[] = [
   { id: 'lower', labelKey: 'tools.percentages.lower' },
 ];
 
+const SAMPLE: Record<Question, PercentPair> = {
+  of: { x: '20', y: '150' },
+  share: { x: '30', y: '120' },
+  change: { x: '80', y: '100' },
+  apply: { x: '250', y: '20' },
+  before: { x: '120', y: '20' },
+};
+
 /** Every figure is Rust's, exact; the page writes its digits in the language on screen. */
 @Component({
   selector: 'app-percentages-tool',
@@ -121,6 +129,10 @@ export class PercentagesToolComponent implements Tool {
         }
       : null;
   });
+
+  sample(): void {
+    this.pairs.set(SAMPLE);
+  }
 
   clear(): void {
     this.pairs.set(EMPTY);

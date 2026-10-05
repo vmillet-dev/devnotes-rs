@@ -12,6 +12,9 @@ interface PartRow {
   readonly value: string;
 }
 
+const SAMPLE =
+  'https://ada:secret@api.example.com:8443/v2/search?q=caf%C3%A9%20cr%C3%A8me&tag=a&tag=b#results';
+
 /** Written as the URL gives them: a password is never read back, only said to be there. */
 function rows(parts: UrlParts): PartRow[] {
   const port = parts.port === null ? null : String(parts.port);
@@ -72,6 +75,10 @@ export class UrlParserToolComponent implements Tool {
       content: JSON.stringify(kept, null, 2),
     };
   });
+
+  sample(): void {
+    this.text.set(SAMPLE);
+  }
 
   clear(): void {
     this.text.set('');

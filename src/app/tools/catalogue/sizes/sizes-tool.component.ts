@@ -100,6 +100,11 @@ export class SizesToolComponent implements Tool {
     };
   });
 
+  sample(): void {
+    this.unit.set('gigabyte');
+    this.text.set('4,7');
+  }
+
   clear(): void {
     this.text.set('');
   }

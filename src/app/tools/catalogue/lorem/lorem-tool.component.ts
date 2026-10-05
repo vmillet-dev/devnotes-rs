@@ -64,6 +64,14 @@ export class LoremToolComponent implements Tool {
   });
 
   /** Nothing typed to empty: Vider puts the options back as they were. */
+  /** Three paragraphs, newly drawn. */
+  sample(): void {
+    this.unit.set('paragraphs');
+    this.count.set(3);
+    this.opening.set(true);
+    this.draw.update((draw) => draw + 1);
+  }
+
   clear(): void {
     this.unit.set('paragraphs');
     this.count.set(3);

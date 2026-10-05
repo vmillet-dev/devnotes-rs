@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { ToolsRepository } from '@core/data/tools.repository';
 import { SlugSeparator } from '@core/model/tool-answers.model';
 import { liveResult } from '@core/services/tools/live-result';
@@ -24,6 +24,7 @@ const SEPARATORS: readonly Segment[] = (['dash', 'underscore', 'dot'] as const).
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SlugToolComponent implements Tool {
+  private readonly transloco = inject(TranslocoService);
   private readonly repository = inject(ToolsRepository);
 
   protected readonly text = toolState('slug.text', '');
@@ -54,6 +55,10 @@ export class SlugToolComponent implements Tool {
         }
       : null;
   });
+
+  sample(): void {
+    this.text.set(this.transloco.translate('tools.slug.sample'));
+  }
 
   clear(): void {
     this.text.set('');

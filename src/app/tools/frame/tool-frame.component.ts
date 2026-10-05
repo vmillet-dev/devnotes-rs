@@ -14,6 +14,7 @@ import {
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
+import { StatusNotifier } from '@core/services/notifications/status.service';
 import { Tool, ToolDefinition, ToolResult } from '@core/services/tools/tool.model';
 import { ToolsStore } from '@core/services/tools/tools.store';
 import { SaveAsNoteDialogComponent } from './save-as-note/save-as-note-dialog.component';
@@ -34,6 +35,7 @@ import { SaveAsNoteDialogComponent } from './save-as-note/save-as-note-dialog.co
 export class ToolFrameComponent {
   protected readonly store = inject(ToolsStore);
   private readonly notifier = inject(ErrorNotifier);
+  private readonly status = inject(StatusNotifier);
 
   readonly tool = input.required<ToolDefinition>();
 
@@ -48,6 +50,7 @@ export class ToolFrameComponent {
 
   protected readonly actions = computed(() => this.created()?.instance.actions?.() ?? []);
   protected readonly result = computed(() => this.created()?.instance.result() ?? null);
+  protected readonly hasSample = computed(() => typeof this.created()?.instance.sample === 'function');
 
   /** Taken when the dialog opens: typing on underneath does not change what is being saved. */
   protected readonly saving = signal<ToolResult | null>(null);
@@ -81,6 +84,11 @@ export class ToolFrameComponent {
     if (result !== null) {
       this.saving.set(result);
     }
+  }
+
+  protected sample(): void {
+    this.created()?.instance.sample?.();
+    this.status.notify({ key: 'tools.sampleLoaded' });
   }
 
   protected clear(): void {

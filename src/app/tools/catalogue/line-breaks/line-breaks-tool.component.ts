@@ -25,6 +25,9 @@ const FINALS: readonly Segment[] = (['keep', 'add', 'remove'] as const).map((id)
   labelKey: `tools.line-breaks.finals.${id}`,
 }));
 
+/** Windows and Unix endings mixed, and blanks before them: what the tool is for. */
+const SAMPLE = 'first line\r\nsecond line\nthird line   \r\nlast line  \n';
+
 /**
  * ⚠️ No `<textarea>` for the input: its value turns every CRLF and CR into LF, which is the
  * very thing this tool is asked about. A paste is read raw, and the text drawn with its endings.
@@ -80,6 +83,10 @@ export class LineBreaksToolComponent implements Tool {
         }
       : null;
   });
+
+  sample(): void {
+    this.text.set(SAMPLE);
+  }
 
   clear(): void {
     this.text.set('');

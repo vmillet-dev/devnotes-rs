@@ -1026,7 +1026,8 @@
       "inputLabel": "Text to convert",
       "placeholder": "A variable name, a sentence, or a list, one per line: parse HTTP response",
       "empty": "The thirteen cases show here, line by line.",
-      "noteTitle": "Cases of “{{text}}”"
+      "noteTitle": "Cases of “{{text}}”",
+      "sample": "Number of items per page\nuser account ID\nparseURL and HTTPServer"
     },
     "slug": {
       "name": "Slug generator",
@@ -1041,7 +1042,8 @@
       },
       "lowercase": "Lower case",
       "empty": "The slug shows here.",
-      "noteTitle": "Slug of “{{text}}”"
+      "noteTitle": "Slug of “{{text}}”",
+      "sample": "The 10 best crêpes in Brittany: a 2026 guide!"
     },
     "url-parser": {
       "name": "URL parser",
@@ -1989,7 +1991,10 @@
         "control": "control character"
       },
       "empty": "The counts show here.",
-      "noteTitle": "Statistics of a text"
-    }
+      "noteTitle": "Statistics of a text",
+      "sample": "Summer in Paris: 30 °C, a café crème and 🇫🇷 everywhere.\n\nA naïve question: where is the œuvre?"
+    },
+    "sample": "Example",
+    "sampleLoaded": "Example loaded"
   }
 }

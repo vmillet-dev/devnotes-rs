@@ -16,6 +16,15 @@ const SOURCES: readonly Segment[] = (['schema', 'example'] as const).map((id) =>
   labelKey: `tools.json-generator.sources.${id}`,
 }));
 
+const SAMPLE = `{
+  "id": "0b1c2d3e-4f50-4612-8a7b-9c0d1e2f3a4b",
+  "email": "ada@example.com",
+  "name": "Ada Lovelace",
+  "createdAt": "2026-01-15T09:30:00Z",
+  "tags": ["admin", "beta"],
+  "score": 42
+}`;
+
 /**
  * Without a seed, each draw takes a new one and says which: keeping it makes the draw again.
  * The draw counter is only there to ask twice for the same thing.
@@ -85,6 +94,12 @@ export class JsonGeneratorToolComponent implements Tool {
         }
       : null;
   });
+
+  sample(): void {
+    this.source.set('example');
+    this.text.set(SAMPLE);
+    this.count.set(3);
+  }
 
   clear(): void {
     this.text.set('');

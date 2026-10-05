@@ -78,6 +78,11 @@ export class UrlCodecToolComponent implements Tool {
     };
   });
 
+  sample(): void {
+    this.side.set('decoded');
+    this.text.set('café crème & co/?x=1');
+  }
+
   clear(): void {
     this.text.set('');
   }

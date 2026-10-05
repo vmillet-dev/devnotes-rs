@@ -86,6 +86,10 @@ export class TextStatsToolComponent implements Tool {
     };
   });
 
+  sample(): void {
+    this.text.set(this.transloco.translate('tools.text-stats.sample'));
+  }
+
   clear(): void {
     this.text.set('');
   }

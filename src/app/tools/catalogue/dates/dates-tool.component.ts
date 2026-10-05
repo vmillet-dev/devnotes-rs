@@ -128,6 +128,11 @@ export class DatesToolComponent implements Tool {
       : null;
   });
 
+  sample(): void {
+    this.magnitude.set(null);
+    this.text.set('1700000000');
+  }
+
   clear(): void {
     this.text.set('');
     this.magnitude.set(null);

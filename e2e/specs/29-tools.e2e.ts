@@ -1111,6 +1111,48 @@ describe('The tools', () => {
     });
   });
 
+  /** Filled through the tool's own fields, so Rust answers it as it would answer typing. */
+  describe('a sample', () => {
+    async function loadSample(tool: string): Promise<void> {
+      await openTool(tool);
+      await $(testid('tool-clear')).click();
+      await $(testid('tool-sample')).click();
+      await $(testid('status-toast')).waitForDisplayed({ timeout: 5_000 });
+    }
+
+    it('decodes a made-up token and verifies it with its made-up key', async () => {
+      await loadSample('jwt');
+
+      await eventually(
+        () => $(testid('jwt-payload')).getText(),
+        (payload) => payload.includes('Ada Lovelace'),
+        'the sample token decoded',
+      );
+    });
+
+    it('checks the published example IBAN', async () => {
+      await loadSample('checks');
+
+      await eventually(
+        () => $(testid('checks-verdict')).getAttribute('data-valid'),
+        (valid) => valid === 'true',
+        'the sample IBAN found valid',
+      );
+    });
+
+    it('converts its document, which replaces what was typed', async () => {
+      await openTool('convert');
+      await setField(testid('convert-input'), '{"typed": true}');
+      await loadSample('convert');
+
+      await eventually(
+        () => $(testid('convert-output')).getText(),
+        (converted) => converted.includes('name: DevNotes') && !converted.includes('typed'),
+        'the sample converted',
+      );
+    });
+  });
+
   describe('a result kept as a note', () => {
     const inSpace = async () =>
       (await bridge.queryNotes(query({ spaceId }))).sections.flatMap((section) => section.notes);

@@ -35,6 +35,9 @@ const ALPHABETS: readonly Segment[] = (['urlSafe', 'alphanumeric', 'hexLower', '
   }),
 );
 
+/** The ULID of its own specification: the instant it carries is read back. */
+const SAMPLE_ID = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+
 /** "2024-09-25 23:05:01.488 UTC": the instant as Rust wrote it, read in any language. */
 function readable(iso: string | null): string | null {
   return iso ? iso.replace('T', ' ').replace('Z', ' UTC') : null;
@@ -105,6 +108,12 @@ export class IdentifiersToolComponent implements Tool {
   });
 
   protected readonly kindName = (kind: IdKind): string => KIND_NAMES[kind];
+
+  sample(): void {
+    this.kind.set('uuidV7');
+    this.count.set(5);
+    this.checked.set(SAMPLE_ID);
+  }
 
   clear(): void {
     this.checked.set('');
