@@ -10,6 +10,7 @@ import {
   INDENT_CHOICES,
   LOCALE_CHOICES,
   LocaleChoice,
+  MAX_TIME_ZONES,
   NOTE_KIND_CHOICES,
   RAIL_WIDTH,
   ResolvedTheme,
@@ -67,6 +68,23 @@ const asRecentTools: SettingCodec<readonly RecentTool[]> = {
   format: (value) => JSON.stringify(value),
 };
 
+/** Names alone, each once: which of them the database knows is Rust's to say, not the file's. */
+const asTimeZones: SettingCodec<readonly string[]> = {
+  parse: (stored) => {
+    try {
+      const value: unknown = JSON.parse(stored);
+      if (!Array.isArray(value)) return null;
+      const names = value.filter(
+        (zone): zone is string => typeof zone === 'string' && /^[A-Za-z][\w+\-/]{0,63}$/.test(zone),
+      );
+      return [...new Set(names)].slice(0, MAX_TIME_ZONES);
+    } catch {
+      return null;
+    }
+  },
+  format: (value) => JSON.stringify(value),
+};
+
 function asOneOf<T extends string>(values: readonly T[]): SettingCodec<T> {
   return {
     parse: (stored) => ((values as readonly string[]).includes(stored) ? (stored as T) : null),
@@ -116,6 +134,7 @@ export class SettingsStore {
   readonly updateNotifications = this.setting('updateNotifications', asBoolean);
   readonly skippedUpdate = this.setting('skippedUpdate', asText);
   readonly noteKindTried = this.setting('noteKindTried', asBoolean);
+  readonly timeZones = this.setting('timeZones', asTimeZones);
 
   /** Followed live: a "system" theme must switch without a restart. */
   private readonly systemPrefersDark = signal(false);

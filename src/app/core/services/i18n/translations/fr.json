@@ -1452,7 +1452,6 @@
       "inputLabel": "Date et heure",
       "placeholder": "2026-09-29 14:30",
       "now": "Maintenant",
-      "typedIn": "Saisie à l’heure de {{zone}}.",
       "zones": "Fuseaux",
       "add": "Ajouter un fuseau",
       "addPlaceholder": "Ville, fuseau ou abréviation : Tokyo, CEST…",
@@ -1473,7 +1472,10 @@
       "unknownZone": "Fuseau inconnu : {{zone}}.",
       "unknown": "Fuseaux inconnus, laissés de côté : {{zones}}.",
       "empty": "Tapez une date et une heure, ou prenez l’heure présente : chaque fuseau l’affiche ici.",
-      "noteTitle": "{{time}} dans chaque fuseau"
+      "noteTitle": "{{time}} dans chaque fuseau",
+      "typedInBefore": "Saisie à l’heure de ",
+      "typedInAfter": ".",
+      "notAmbiguous": "Aucune ambiguïté d’heure d’été à cette date."
     },
     "cron": {
       "name": "Cron",

@@ -1,16 +1,23 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ToolsRepository } from '@core/data/tools.repository';
 import { ZoneTime, ZonesAnswer } from '@core/model/tool-answers.model';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
+import { SettingsStore } from '@core/services/settings/settings.store';
 import { liveResult } from '@core/services/tools/live-result';
 import { Tool, ToolResult } from '@core/services/tools/tool.model';
 import { toolState } from '@core/services/tools/tool-sessions';
 import { CopyValueComponent } from '@tools/ui/copy-value/copy-value.component';
 
 type Placed = Extract<ZonesAnswer, { kind: 'placed' }>;
-
-const FIRST_ZONES: readonly string[] = ['UTC', 'America/New_York', 'Asia/Tokyo'];
 
 /** A time typed in one zone, placed in each zone of a list; the database and every rule are Rust's. */
 @Component({
@@ -23,11 +30,13 @@ const FIRST_ZONES: readonly string[] = ['UTC', 'America/New_York', 'Asia/Tokyo']
 export class ZonesToolComponent implements Tool {
   private readonly repository = inject(ToolsRepository);
   private readonly notifier = inject(ErrorNotifier);
+  private readonly settings = inject(SettingsStore);
 
   protected readonly text = toolState('zones.text', '');
   /** `null` is the machine's zone. */
   protected readonly from = toolState<string | null>('zones.from', null);
-  protected readonly zones = toolState<readonly string[]>('zones.list', FIRST_ZONES);
+  /** Kept with the application's preferences, so the list is found again on the next launch. */
+  protected readonly zones = this.settings.timeZones;
   protected readonly later = toolState('zones.later', false);
 
   protected readonly query = signal('');
@@ -79,6 +88,16 @@ export class ZonesToolComponent implements Tool {
       : null;
   });
 
+  constructor() {
+    // A zone the database does not know leaves the list, once said.
+    effect(() => {
+      const unknown = this.placed()?.unknown ?? [];
+      if (unknown.length > 0) {
+        untracked(() => this.zones.write(this.zones().filter((zone) => !unknown.includes(zone))));
+      }
+    });
+  }
+
   sample(): void {
     this.text.set('2026-03-29 09:00');
     this.later.set(false);
@@ -112,13 +131,13 @@ export class ZonesToolComponent implements Tool {
 
   protected add(zone: string): void {
     if (!this.zones().includes(zone)) {
-      this.zones.update((zones) => [...zones, zone]);
+      this.zones.write([...this.zones(), zone]);
     }
     this.query.set('');
   }
 
   protected remove(zone: string): void {
-    this.zones.update((zones) => zones.filter((listed) => listed !== zone));
+    this.zones.write(this.zones().filter((listed) => listed !== zone));
   }
 
   protected onInput(event: Event): void {

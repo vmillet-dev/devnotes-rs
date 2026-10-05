@@ -1,5 +1,7 @@
+import { TestBed } from '@angular/core/testing';
 import { describe, expect, it, vi } from 'vitest';
 import { ZoneTime, ZonesAnswer } from '@core/model/tool-answers.model';
+import { SettingsStore } from '@core/services/settings/settings.store';
 import { FakeToolsRepository } from '@testing/fake-tools-repository';
 import { ToolHarness, renderTool } from '@testing/tool-harness';
 import { ZonesToolComponent } from './zones-tool.component';
@@ -88,13 +90,53 @@ describe('ZonesToolComponent', () => {
       row(harness, 'Pacific/Honolulu').querySelector('[data-testid="zones-shift"]')?.textContent?.trim(),
     ).toBe('−1 j');
     expect(
-      row(harness, 'Pacific/Honolulu').querySelector('[data-testid="zones-offset"]')?.textContent,
-    ).not.toContain('·');
+      row(harness, 'Pacific/Honolulu').querySelector('[data-testid="zones-offset"]')?.textContent?.trim(),
+    ).toBe('Pacific/Honolulu · UTC+02:00');
+    expect(
+      row(harness, 'America/New_York')
+        .querySelector('[data-testid="zones-offset"]')
+        ?.textContent?.replace(/\s+/g, ' ')
+        .trim(),
+    ).toBe('America/New_York · UTC-04:00 · EDT · heure d’été');
     const paris = row(harness, 'Europe/Paris');
     expect(paris.querySelector('[data-testid="zones-summer"]')).not.toBeNull();
     expect(paris.querySelector('[data-testid="zones-remove"]')).toBeNull();
     expect(paris.querySelector('[data-testid="zones-type-in"]')).toBeNull();
     expect(harness.element('[data-testid="zones-from"]').dataset['zone']).toBe('Europe/Paris');
+    expect(harness.element('[data-testid="zones-from"]').textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'Saisie à l’heure de Europe/Paris. Aucune ambiguïté d’heure d’été à cette date.',
+    );
+    expect(paris.querySelector('[data-testid="zones-local"]')).not.toBeNull();
+    expect(paris.querySelector('[data-testid="zones-source"]')).not.toBeNull();
+    expect(row(harness, 'UTC').querySelector('[data-testid="zones-local"]')).toBeNull();
+  });
+
+  /** The one thing a tool keeps on disk: the list is the application's preference. */
+  it('keeps the list in the application’s preferences', async () => {
+    const harness = await renderTool(ZonesToolComponent, (tools) => {
+      tools.zonesAnswer = PLACED;
+      tools.zonesFound = [{ zone: 'Asia/Kolkata', city: 'Kolkata', offset: '+05:30', abbreviation: 'IST' }];
+    });
+    const settings = TestBed.inject(SettingsStore);
+
+    await harness.type('zones-search', 'kol', 'search_time_zones');
+    harness.element<HTMLButtonElement>('[data-testid="zones-found-entry"]').click();
+    await harness.settle();
+
+    expect(settings.timeZones()).toEqual(['UTC', 'America/New_York', 'Asia/Tokyo', 'Asia/Kolkata']);
+  });
+
+  it('drops from the list a zone the database does not know', async () => {
+    const harness = await renderTool(ZonesToolComponent, (tools) => {
+      tools.zonesAnswer = { ...PLACED, unknown: ['Mars/Olympus'] };
+    });
+    const settings = TestBed.inject(SettingsStore);
+    settings.timeZones.write(['UTC', 'Mars/Olympus']);
+
+    await harness.type('zones-input', '2026-09-29 20:30', 'place_in_zones');
+
+    await vi.waitFor(() => expect(settings.timeZones()).toEqual(['UTC']));
+    expect(harness.element('[data-testid="zones-unknown"]').textContent).toContain('Mars/Olympus');
   });
 
   it('types the time in another zone of the list', async () => {

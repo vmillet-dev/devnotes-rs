@@ -73,7 +73,15 @@ export interface AppSettings {
   readonly skippedUpdate: string;
   /** Until a first Note is made here, the new-note menu marks the kind as new. */
   readonly noteKindTried: boolean;
+  /**
+   * The zones tool's list, the machine's own aside. ⚠️ The one thing a tool keeps on disk: a
+   * list of zones is a preference, not something typed.
+   */
+  readonly timeZones: readonly string[];
 }
+
+/** Zones beyond the machine's, read back from a file nobody checks. */
+export const MAX_TIME_ZONES = 24;
 
 /** `closeToTray` is `true`, and the native side carries the same default. */
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -98,6 +106,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   updateNotifications: true,
   skippedUpdate: '',
   noteKindTried: false,
+  timeZones: ['UTC', 'America/New_York', 'Asia/Tokyo'],
 };
 
 /** Derived rather than hand-written: the key is the field name, prefixed. */

@@ -521,6 +521,27 @@ mod tests {
     }
 
     #[test]
+    fn an_abbreviation_several_zones_use_lists_them_all_rather_than_guessing() {
+        let winter = DateTime::parse_from_rfc3339("2026-01-15T12:00:00Z")
+            .unwrap()
+            .with_timezone(&Utc);
+        let zones = |query: &str| -> Vec<String> {
+            search(query, winter)
+                .into_iter()
+                .filter(|entry| entry.abbreviation.as_deref() == Some(query))
+                .map(|entry| entry.zone)
+                .collect()
+        };
+
+        let ist = zones("IST");
+        assert!(ist.contains(&"Asia/Kolkata".to_owned()), "{ist:?}");
+        assert!(ist.contains(&"Asia/Jerusalem".to_owned()), "{ist:?}");
+        let cst = zones("CST");
+        assert!(cst.contains(&"America/Chicago".to_owned()), "{cst:?}");
+        assert!(cst.contains(&"Asia/Shanghai".to_owned()), "{cst:?}");
+    }
+
+    #[test]
     fn a_zone_is_found_by_its_city_its_name_or_its_abbreviation() {
         let summer = DateTime::parse_from_rfc3339("2026-07-01T12:00:00Z")
             .unwrap()
