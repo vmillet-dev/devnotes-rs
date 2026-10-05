@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 use specta::Type;
+use unicode_normalization::UnicodeNormalization;
 
 use crate::count::saturating_u32;
 
@@ -23,43 +24,124 @@ pub enum TextCase {
     Flat,
 }
 
-/** In the order the tool lists them. */
+/// What a case is for. The code cases strip accents when asked; the text cases keep them, and
+/// keep the apostrophe that binds an elided word to the next (`l'été`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum CaseGroup {
+    Code,
+    Text,
+}
+
+impl TextCase {
+    fn group(self) -> CaseGroup {
+        match self {
+            Self::Title | Self::Sentence | Self::Upper | Self::Lower => CaseGroup::Text,
+            _ => CaseGroup::Code,
+        }
+    }
+}
+
+/** In the order the tool lists them: the code cases, then the text ones. */
 const CASES: [TextCase; 13] = [
     TextCase::Camel,
     TextCase::Pascal,
     TextCase::Snake,
-    TextCase::Kebab,
     TextCase::Constant,
-    TextCase::Title,
-    TextCase::Sentence,
+    TextCase::Kebab,
+    TextCase::Train,
     TextCase::Dot,
     TextCase::Path,
-    TextCase::Train,
-    TextCase::Lower,
-    TextCase::Upper,
     TextCase::Flat,
+    TextCase::Title,
+    TextCase::Sentence,
+    TextCase::Upper,
+    TextCase::Lower,
 ];
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum TitleLanguage {
+    /// Every word capitalised.
+    English,
+    /// The small words stay in lower case, but at the start.
+    French,
+}
+
+#[derive(Debug, Clone, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct CaseRequest {
+    pub text: String,
+    /// The code cases only: `été` is `ete` in `snake_case` and stays `été` in a title.
+    pub strip_accents: bool,
+    /// Each line on its own; off, the whole text is one phrase.
+    pub per_line: bool,
+    pub title_case_language: TitleLanguage,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct CaseConversion {
     pub case: TextCase,
+    pub group: CaseGroup,
     pub value: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct CaseAnswer {
+    /// Empty for a text without a word.
+    pub conversions: Vec<CaseConversion>,
+    /// What the converters work from: the first line holding a word, or the whole phrase.
+    pub words: Vec<String>,
+}
+
+const APOSTROPHES: [char; 2] = ['\'', '’'];
+
+/// French words a title leaves in lower case, the elided `l'` and `d'` included.
+const FRENCH_SMALL_WORDS: [&str; 26] = [
+    "de", "du", "des", "la", "le", "les", "l", "d", "un", "une", "et", "ou", "à", "au", "aux",
+    "en", "sur", "sous", "par", "pour", "dans", "avec", "sans", "ni", "chez", "vers",
+];
+
+/// What elides into the word after it in French: `l'été`, `qu'il`. The word after one of these
+/// takes a capital in a French title; the second half of `aujourd'hui` or `don't` never does.
+const FRENCH_ELISIONS: [&str; 12] = [
+    "l", "d", "j", "m", "n", "s", "t", "c", "qu", "jusqu", "lorsqu", "puisqu",
+];
+
+/// A word, and the apostrophe that binds it to the one before it, if one does.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Word<'a> {
+    text: &'a str,
+    bound_by: Option<char>,
 }
 
 /// Words as a reader sees them: apart at anything but a letter or a digit, at a lower case or a
 /// digit followed by a capital (`fooBar`, `v2Beta`), and at the end of an acronym (`HTTPServer`
-/// is `HTTP` and `Server`). A digit stays with what it follows.
-fn words(text: &str) -> Vec<&str> {
+/// is `HTTP` and `Server`). A digit stays with what it follows. An apostrophe between two letters
+/// parts them too, and is remembered on the second.
+fn words(text: &str) -> Vec<Word<'_>> {
     let mut words = Vec::new();
     let mut start: Option<usize> = None;
     let mut previous: Option<char> = None;
+    // Of the word being read, and of the one about to start.
+    let mut bond: Option<char> = None;
+    let mut pending: Option<char> = None;
     let mut chars = text.char_indices().peekable();
 
     while let Some((index, current)) = chars.next() {
         if !current.is_alphanumeric() {
+            let next_is_word = chars
+                .peek()
+                .is_some_and(|&(_, next)| next.is_alphanumeric());
+            pending = None;
             if let Some(begun) = start.take() {
-                words.push(&text[begun..index]);
+                words.push(Word {
+                    text: &text[begun..index],
+                    bound_by: bond.take(),
+                });
+                pending = (APOSTROPHES.contains(&current) && next_is_word).then_some(current);
             }
             previous = None;
             continue;
@@ -72,15 +154,28 @@ fn words(text: &str) -> Vec<&str> {
                     || before.is_numeric()
                     || (before.is_uppercase() && next_is_lower)
             });
-        if boundary && let Some(begun) = start.replace(index) {
-            words.push(&text[begun..index]);
+        match start {
+            None => {
+                start = Some(index);
+                bond = pending.take();
+            }
+            Some(begun) if boundary => {
+                words.push(Word {
+                    text: &text[begun..index],
+                    bound_by: bond.take(),
+                });
+                start = Some(index);
+            }
+            Some(_) => {}
         }
-        start.get_or_insert(index);
         previous = Some(current);
     }
 
     if let Some(begun) = start {
-        words.push(&text[begun..]);
+        words.push(Word {
+            text: &text[begun..],
+            bound_by: bond,
+        });
     }
     words
 }
@@ -96,7 +191,15 @@ fn capitalised(word: &str) -> String {
     })
 }
 
-fn in_case(words: &[&str], case: TextCase) -> String {
+/// Accents only: `é` is `e`, but `ß` and `ø` are letters of their own and stay.
+fn without_accents(word: &str) -> String {
+    word.nfd()
+        .filter(|character| !unicode_normalization::char::is_combining_mark(*character))
+        .nfc()
+        .collect()
+}
+
+fn code_case(words: &[String], case: TextCase) -> String {
     let lower = || words.iter().map(|word| word.to_lowercase());
     let upper = || words.iter().map(|word| word.to_uppercase());
     let capital = || words.iter().map(|word| capitalised(word));
@@ -107,41 +210,101 @@ fn in_case(words: &[&str], case: TextCase) -> String {
         TextCase::Snake => joined(lower().collect(), "_"),
         TextCase::Kebab => joined(lower().collect(), "-"),
         TextCase::Constant => joined(upper().collect(), "_"),
-        TextCase::Title => joined(capital().collect(), " "),
-        TextCase::Sentence => joined(capital().take(1).chain(lower().skip(1)).collect(), " "),
         TextCase::Dot => joined(lower().collect(), "."),
         TextCase::Path => joined(lower().collect(), "/"),
         TextCase::Train => joined(capital().collect(), "-"),
-        TextCase::Lower => joined(lower().collect(), " "),
-        TextCase::Upper => joined(upper().collect(), " "),
         TextCase::Flat => lower().collect(),
+        TextCase::Title | TextCase::Sentence | TextCase::Lower | TextCase::Upper => {
+            unreachable!("a text case is written by text_case")
+        }
+    }
+}
+
+fn text_case(words: &[Word<'_>], case: TextCase, language: TitleLanguage) -> String {
+    let french = language == TitleLanguage::French;
+    let mut written = String::new();
+    let mut previous: Option<String> = None;
+    for (at, word) in words.iter().enumerate() {
+        let lower = word.text.to_lowercase();
+        let small = french && at > 0 && FRENCH_SMALL_WORDS.contains(&lower.as_str());
+        let after_elision = french
+            && previous
+                .as_deref()
+                .is_some_and(|before| FRENCH_ELISIONS.contains(&before));
+        let part = match case {
+            TextCase::Title if word.bound_by.is_some() && at > 0 && !after_elision => lower.clone(),
+            TextCase::Title if small => lower.clone(),
+            TextCase::Title => capitalised(word.text),
+            TextCase::Sentence if at == 0 => capitalised(word.text),
+            TextCase::Upper => word.text.to_uppercase(),
+            _ => lower.clone(),
+        };
+        match word.bound_by {
+            Some(apostrophe) if at > 0 => written.push(apostrophe),
+            _ if at > 0 => written.push(' '),
+            _ => {}
+        }
+        written.push_str(&part);
+        previous = Some(lower);
+    }
+    written
+}
+
+fn in_case(words: &[Word<'_>], case: TextCase, request: &CaseRequest) -> String {
+    match case.group() {
+        CaseGroup::Text => text_case(words, case, request.title_case_language),
+        CaseGroup::Code => {
+            let parts: Vec<String> = words
+                .iter()
+                .map(|word| {
+                    if request.strip_accents {
+                        without_accents(word.text)
+                    } else {
+                        word.text.to_owned()
+                    }
+                })
+                .collect();
+            code_case(&parts, case)
+        }
     }
 }
 
 /// Every case at once, line by line — a list of identifiers comes back as a list; blank lines at
 /// either end are dropped, those inside kept so each line keeps its place. Nothing for no word.
-pub fn convert_case(text: &str) -> Vec<CaseConversion> {
-    let lines: Vec<Vec<&str>> = text.lines().map(words).collect();
+pub fn convert_case(request: &CaseRequest) -> CaseAnswer {
+    let lines: Vec<Vec<Word<'_>>> = if request.per_line {
+        request.text.lines().map(words).collect()
+    } else {
+        vec![words(&request.text)]
+    };
     let (Some(first), Some(last)) = (
         lines.iter().position(|words| !words.is_empty()),
         lines.iter().rposition(|words| !words.is_empty()),
     ) else {
-        return Vec::new();
+        return CaseAnswer {
+            conversions: Vec::new(),
+            words: Vec::new(),
+        };
     };
-    CASES
+    let conversions = CASES
         .into_iter()
         .map(|case| CaseConversion {
             case,
+            group: case.group(),
             value: lines[first..=last]
                 .iter()
-                .map(|words| in_case(words, case))
+                .map(|words| in_case(words, case, request))
                 .collect::<Vec<_>>()
-                .join(
-                    "
-",
-                ),
+                .join("\n"),
         })
-        .collect()
+        .collect();
+    CaseAnswer {
+        conversions,
+        words: lines[first]
+            .iter()
+            .map(|word| word.text.to_owned())
+            .collect(),
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Type)]
@@ -383,29 +546,50 @@ fn settle_final_newline(
 mod tests {
     use super::*;
 
-    fn case(text: &str, wanted: TextCase) -> String {
-        convert_case(text)
+    fn request(text: &str) -> CaseRequest {
+        CaseRequest {
+            text: text.to_owned(),
+            strip_accents: false,
+            per_line: true,
+            title_case_language: TitleLanguage::English,
+        }
+    }
+
+    fn case_of(request: &CaseRequest, wanted: TextCase) -> String {
+        convert_case(request)
+            .conversions
             .into_iter()
             .find(|conversion| conversion.case == wanted)
             .map(|conversion| conversion.value)
             .unwrap_or_default()
     }
 
+    fn case(text: &str, wanted: TextCase) -> String {
+        case_of(&request(text), wanted)
+    }
+
+    fn texts<'a>(words: &[Word<'a>]) -> Vec<&'a str> {
+        words.iter().map(|word| word.text).collect()
+    }
+
     #[test]
     fn words_split_at_separators_steps_and_acronyms() {
         assert_eq!(
-            words("fooBar baz_qux-quux"),
+            texts(&words("fooBar baz_qux-quux")),
             ["foo", "Bar", "baz", "qux", "quux"]
         );
-        assert_eq!(words("HTTPServerError"), ["HTTP", "Server", "Error"]);
-        assert_eq!(words("version2Beta"), ["version2", "Beta"]);
-        assert_eq!(words("  été 2026 ! "), ["été", "2026"]);
+        assert_eq!(
+            texts(&words("HTTPServerError")),
+            ["HTTP", "Server", "Error"]
+        );
+        assert_eq!(texts(&words("version2Beta")), ["version2", "Beta"]);
+        assert_eq!(texts(&words("  été 2026 ! ")), ["été", "2026"]);
         assert!(words("--- !").is_empty());
     }
 
     #[test]
     fn every_case_is_given_in_order() {
-        let all = convert_case("parse HTTP response");
+        let all = convert_case(&request("parse HTTP response")).conversions;
         let cases: Vec<TextCase> = all.iter().map(|conversion| conversion.case).collect();
         assert_eq!(
             cases,
@@ -413,16 +597,16 @@ mod tests {
                 TextCase::Camel,
                 TextCase::Pascal,
                 TextCase::Snake,
-                TextCase::Kebab,
                 TextCase::Constant,
-                TextCase::Title,
-                TextCase::Sentence,
+                TextCase::Kebab,
+                TextCase::Train,
                 TextCase::Dot,
                 TextCase::Path,
-                TextCase::Train,
-                TextCase::Lower,
-                TextCase::Upper,
                 TextCase::Flat,
+                TextCase::Title,
+                TextCase::Sentence,
+                TextCase::Upper,
+                TextCase::Lower,
             ]
         );
         let values: Vec<&str> = all
@@ -435,16 +619,16 @@ mod tests {
                 "parseHttpResponse",
                 "ParseHttpResponse",
                 "parse_http_response",
-                "parse-http-response",
                 "PARSE_HTTP_RESPONSE",
-                "Parse Http Response",
-                "Parse http response",
+                "parse-http-response",
+                "Parse-Http-Response",
                 "parse.http.response",
                 "parse/http/response",
-                "Parse-Http-Response",
-                "parse http response",
-                "PARSE HTTP RESPONSE",
                 "parsehttpresponse",
+                "Parse Http Response",
+                "Parse http response",
+                "PARSE HTTP RESPONSE",
+                "parse http response",
             ]
         );
     }
@@ -514,11 +698,12 @@ fooBar
             "foo-bar"
         );
         assert!(
-            convert_case(
+            convert_case(&request(
                 "
- - 
+ -
 "
-            )
+            ))
+            .conversions
             .is_empty()
         );
     }
@@ -531,7 +716,95 @@ fooBar
 
     #[test]
     fn a_text_without_a_word_converts_to_nothing() {
-        assert!(convert_case("  -_- ").is_empty());
+        let answer = convert_case(&request("  -_- "));
+        assert!(answer.conversions.is_empty());
+        assert!(answer.words.is_empty());
+    }
+
+    mod with_options {
+        use super::*;
+
+        fn with(text: &str, edit: impl FnOnce(&mut CaseRequest)) -> CaseRequest {
+            let mut asked = request(text);
+            asked.strip_accents = true;
+            edit(&mut asked);
+            asked
+        }
+
+        #[test]
+        fn the_code_cases_strip_accents_and_the_text_cases_keep_them() {
+            let asked = with("Été à Noël", |_| {});
+            assert_eq!(case_of(&asked, TextCase::Snake), "ete_a_noel");
+            assert_eq!(case_of(&asked, TextCase::Camel), "eteANoel");
+            assert_eq!(case_of(&asked, TextCase::Title), "Été À Noël");
+            assert_eq!(case_of(&asked, TextCase::Upper), "ÉTÉ À NOËL");
+        }
+
+        /// Accents only: a letter of its own is no accent, and the slug is what transliterates.
+        #[test]
+        fn stripping_accents_leaves_other_letters_alone() {
+            let asked = with("Straße Øre", |_| {});
+            assert_eq!(case_of(&asked, TextCase::Snake), "straße_øre");
+            assert_eq!(case_of(&asked, TextCase::Constant), "STRASSE_ØRE");
+        }
+
+        #[test]
+        fn accents_stay_in_the_code_cases_when_asked_to() {
+            let asked = with("déjà vu", |asked| asked.strip_accents = false);
+            assert_eq!(case_of(&asked, TextCase::Pascal), "DéjàVu");
+        }
+
+        #[test]
+        fn every_conversion_says_which_group_it_belongs_to() {
+            let answer = convert_case(&with("a b", |_| {}));
+            let groups: Vec<CaseGroup> = answer.conversions.iter().map(|c| c.group).collect();
+            assert_eq!(groups[..9], [CaseGroup::Code; 9]);
+            assert_eq!(groups[9..], [CaseGroup::Text; 4]);
+        }
+
+        #[test]
+        fn a_french_title_keeps_its_small_words_in_lower_case_but_the_first() {
+            let asked = with("le guide de la mer et des îles", |asked| {
+                asked.title_case_language = TitleLanguage::French;
+            });
+            assert_eq!(
+                case_of(&asked, TextCase::Title),
+                "Le Guide de la Mer et des Îles"
+            );
+
+            let english = with("le guide de la mer", |_| {});
+            assert_eq!(case_of(&english, TextCase::Title), "Le Guide De La Mer");
+        }
+
+        #[test]
+        fn an_apostrophe_is_kept_in_the_text_cases_and_parts_the_code_ones() {
+            let french = with("l'été de l’année", |asked| {
+                asked.title_case_language = TitleLanguage::French;
+            });
+            assert_eq!(case_of(&french, TextCase::Title), "L'Été de l’Année");
+            assert_eq!(case_of(&french, TextCase::Sentence), "L'été de l’année");
+            assert_eq!(case_of(&french, TextCase::Snake), "l_ete_de_l_annee");
+
+            let english = with("don't stop aujourd'hui", |_| {});
+            assert_eq!(case_of(&english, TextCase::Title), "Don't Stop Aujourd'hui");
+            assert_eq!(case_of(&english, TextCase::Upper), "DON'T STOP AUJOURD'HUI");
+        }
+
+        #[test]
+        fn one_phrase_when_the_lines_are_not_converted_apart() {
+            let asked = with("user id\nand name", |asked| asked.per_line = false);
+            assert_eq!(case_of(&asked, TextCase::Camel), "userIdAndName");
+            assert_eq!(convert_case(&asked).words, ["user", "id", "and", "name"]);
+
+            let lines = with("user id\nand name", |_| {});
+            assert_eq!(case_of(&lines, TextCase::Camel), "userId\nandName");
+        }
+
+        #[test]
+        fn the_words_are_those_of_the_first_line_holding_one() {
+            let answer = convert_case(&with("\n  \nparseURL et HTTPServer\nnext", |_| {}));
+            assert_eq!(answer.words, ["parse", "URL", "et", "HTTP", "Server"]);
+        }
     }
 
     fn slug(text: &str, separator: SlugSeparator, lowercase: bool) -> String {

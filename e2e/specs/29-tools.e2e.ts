@@ -116,21 +116,55 @@ describe('The tools', () => {
       await setField(testid('case-input'), 'parse HTTP response');
 
       await eventually(outputValues, (values) => values.length === 13, 'the thirteen cases');
+      // For the code, then for the text: two groups in one card.
       expect(await outputValues()).toEqual([
         'parseHttpResponse',
         'ParseHttpResponse',
         'parse_http_response',
-        'parse-http-response',
         'PARSE_HTTP_RESPONSE',
-        'Parse Http Response',
-        'Parse http response',
+        'parse-http-response',
+        'Parse-Http-Response',
         'parse.http.response',
         'parse/http/response',
-        'Parse-Http-Response',
-        'parse http response',
-        'PARSE HTTP RESPONSE',
         'parsehttpresponse',
+        'Parse Http Response',
+        'Parse http response',
+        'PARSE HTTP RESPONSE',
+        'parse http response',
       ]);
+      expect(await readEach(testid('case-group'), '@data-group')).toEqual(['code', 'text']);
+      expect(await readEach(`${testid('case-words')} li`, 'text')).toEqual(['parse', 'HTTP', 'response']);
+    });
+
+    /** Rust's options, through the bridge: accents leave the code cases alone, French titles. */
+    it('strips accents from the code cases only, and writes a French title', async () => {
+      await setField(testid('case-input'), "le guide de l'été");
+      const value = (name: string) =>
+        $(`${testid('output-row')}[data-name="${name}"] ${testid('output-value')}`).getText();
+
+      await eventually(
+        () => value('snake_case'),
+        (snake) => snake === 'le_guide_de_l_ete',
+        'accents stripped',
+      );
+      expect(await value('Title Case')).toBe("Le Guide De L'été");
+
+      await $(`${testid('segmented-case-title-language')} [data-segment-id="french"]`).click();
+      await eventually(
+        () => value('Title Case'),
+        (title) => title === "Le Guide de l'Été",
+        'a French title',
+      );
+
+      await $(testid('case-strip-accents')).click();
+      await eventually(
+        () => value('snake_case'),
+        (snake) => snake === 'le_guide_de_l_été',
+        'accents kept',
+      );
+
+      await $(testid('case-strip-accents')).click();
+      await $(`${testid('segmented-case-title-language')} [data-segment-id="english"]`).click();
     });
 
     it('converts a list line by line', async () => {

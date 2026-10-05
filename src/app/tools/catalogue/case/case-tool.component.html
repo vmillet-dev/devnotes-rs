@@ -1,24 +1,84 @@
 <div class="columns">
   <section class="column" aria-labelledby="case-input-title">
-    <h2 id="case-input-title" class="section-title">{{ 'tools.input' | transloco }}</h2>
+    <h2 id="case-input-title" class="section-title">{{ 'tools.case.text' | transloco }}</h2>
     <label class="field">
       <span class="visually-hidden">{{ 'tools.case.inputLabel' | transloco }}</span>
       <textarea
         class="text"
         data-testid="case-input"
-        rows="6"
+        rows="3"
         [value]="text()"
         [placeholder]="'tools.case.placeholder' | transloco"
         (input)="onInput($event)"
       ></textarea>
     </label>
+
+    @if (words().length > 0) {
+      <div class="group">
+        <h3 id="case-words-title" class="label">{{ 'tools.case.words' | transloco }}</h3>
+        <ul class="chips" data-testid="case-words" aria-labelledby="case-words-title">
+          @for (word of words(); track $index) {
+            <li class="chip">{{ word }}</li>
+          }
+        </ul>
+      </div>
+    }
+
+    <h2 class="section-title options-title">{{ 'tools.case.options' | transloco }}</h2>
+    <label class="check">
+      <input
+        type="checkbox"
+        data-testid="case-strip-accents"
+        [checked]="stripAccents()"
+        (change)="onStripAccents($event)"
+      />
+      {{ 'tools.case.stripAccents' | transloco }}
+    </label>
+    <label class="check">
+      <input type="checkbox" data-testid="case-per-line" [checked]="perLine()" (change)="onPerLine($event)" />
+      {{ 'tools.case.perLine' | transloco }}
+    </label>
+
+    <div class="group">
+      <span class="label">{{ 'tools.case.titleCase' | transloco }}</span>
+      <app-segmented-choice
+        kind="case-title-language"
+        [label]="'tools.case.titleCase' | transloco"
+        [segments]="languages"
+        [currentId]="titleLanguage()"
+        (chosen)="onTitleLanguage($event)"
+      />
+      <p class="hint">{{ 'tools.case.titleCaseHint' | transloco }}</p>
+    </div>
+
+    <!-- Identifiers, so in no language: only the sentences around them are translated. -->
+    <aside class="acronyms" data-testid="case-acronyms">
+      <p>
+        {{ 'tools.case.acronyms' | transloco }} <code>parseURL</code> → <code>parse_url</code>,
+        <code>HTTPServer</code> → <code>http_server</code>.
+      </p>
+      <p>{{ 'tools.case.acronymsDigits' | transloco }} <code>v2Api</code>.</p>
+    </aside>
   </section>
 
-  <section class="column" aria-labelledby="case-output-title">
-    <h2 id="case-output-title" class="section-title">{{ 'tools.results' | transloco }}</h2>
-    @for (conversion of conversions.value() ?? []; track conversion.case) {
-      <app-output-row [name]="caseNames[conversion.case]" [value]="conversion.value" />
-    } @empty {
+  <section class="column results" aria-labelledby="case-output-title">
+    <h2 id="case-output-title" class="visually-hidden">{{ 'tools.results' | transloco }}</h2>
+    @if (forCode().length > 0) {
+      <div class="card" data-testid="case-results">
+        <h3 class="card-group" data-testid="case-group" data-group="code">
+          {{ 'tools.case.forCode' | transloco }}
+        </h3>
+        @for (conversion of forCode(); track conversion.case) {
+          <app-result-row [name]="shownName(conversion.case)" [value]="conversion.value" />
+        }
+        <h3 class="card-group" data-testid="case-group" data-group="text">
+          {{ 'tools.case.forText' | transloco }}
+        </h3>
+        @for (conversion of forText(); track conversion.case) {
+          <app-result-row [name]="shownName(conversion.case)" [value]="conversion.value" />
+        }
+      </div>
+    } @else {
       <p class="empty">{{ 'tools.case.empty' | transloco }}</p>
     }
   </section>

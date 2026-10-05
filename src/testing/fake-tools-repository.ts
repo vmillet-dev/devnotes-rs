@@ -4,7 +4,8 @@ import {
   Base64FileAnswer,
   Base64Options,
   Base64Saved,
-  CaseConversion,
+  CaseAnswer,
+  CaseRequest,
   CheckAnswer,
   CheckRequest,
   ColourAnswer,
@@ -52,7 +53,7 @@ import {
 export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRepository> {
   readonly asked: { readonly command: string; readonly request: unknown }[] = [];
 
-  cases: CaseConversion[] = [];
+  caseAnswer: CaseAnswer = { conversions: [], words: [] };
   slug = '';
   lineBreaks: LineBreaksAnswer = {
     found: { lf: 0, crlf: 0, cr: 0 },
@@ -121,8 +122,8 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
     before: { kind: 'empty' },
   };
 
-  convertCase(text: string): Promise<CaseConversion[]> {
-    return this.answer('convert_case', text, this.cases);
+  convertCase(request: CaseRequest): Promise<CaseAnswer> {
+    return this.answer('convert_case', request, this.caseAnswer);
   }
 
   slugify(request: SlugRequest): Promise<string> {

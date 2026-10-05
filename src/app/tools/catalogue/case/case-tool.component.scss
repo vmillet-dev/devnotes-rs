@@ -1,16 +1,30 @@
 @use 'mixins' as *;
 
+:host {
+  @include tool-fills-frame;
+}
+
 .columns {
   @include tool-columns;
+  @include tool-columns-fill;
 }
 
 .column {
   @include tool-column;
   gap: 10px;
+  overflow-y: auto;
+}
+
+.results {
+  overflow: visible;
 }
 
 .section-title {
   @include tool-section-title;
+}
+
+.options-title {
+  margin-top: 8px;
 }
 
 .field {
@@ -20,6 +34,72 @@
 .text {
   @include tool-text-area;
   resize: vertical;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.label {
+  margin: 0;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-2);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  @include surface(var(--bg-2), 6px);
+  padding: 2px 8px;
+  font-family: var(--font-mono), monospace;
+  font-size: 11.5px;
+  color: var(--text-0);
+}
+
+.check {
+  @include tool-check;
+}
+
+.hint {
+  @include tool-note;
+  font-family: inherit;
+}
+
+.acronyms {
+  @include surface(rgba(var(--amber-rgb), 0.06), 8px, var(--amber-dim));
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-1);
+
+  p {
+    margin: 0;
+  }
+
+  code {
+    font-family: var(--font-mono), monospace;
+    font-size: 11.5px;
+    color: var(--text-0);
+  }
+}
+
+.card {
+  @include tool-result-card;
+}
+
+.card-group {
+  @include tool-result-group;
 }
 
 .empty {
