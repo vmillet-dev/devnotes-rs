@@ -10,6 +10,13 @@ import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
  * Every field goes through one `applyPatch`. What a unit spec cannot see is the wire: an
  * omitted key must stay omitted, and `targetSpaceId` is the one argument Tauri renames.
  */
+/** TipTap hangs its editor on the surface it draws; the few members a scenario reads. */
+interface RichEditor {
+  view: { focus(): void };
+  commands: { setTextSelection(at: number): boolean };
+  state: { selection: { from: number; $from: { parent: { type: { name: string } } } } };
+}
+
 describe('Editing a note', () => {
   // Not a sample note's title: `reread()` takes the first hit of a search, so a shared
   // title makes the assertions depend on which of the two sorts first.
@@ -229,12 +236,32 @@ describe('Editing a note', () => {
       expect(await keyword.getText()).toBe('SELECT');
       expect(await $(`${testid('editor-rich')} pre`).getAttribute('data-language')).toBe('SQL');
 
-      // From the themed menu, and the caret is still in the block once it has chosen.
-      await $(`${testid('editor-rich')} pre code`).click();
+      // From the themed menu, and the caret is still in the block once it has chosen. Placed
+      // through the editor: the driver's click reaches the element but moves no caret.
+      await browser.execute((selector: string) => {
+        const surface = document.querySelector(selector) as HTMLElement & { editor: RichEditor };
+        surface.editor.view.focus();
+        surface.editor.commands.setTextSelection(14);
+      }, testid('editor-rich'));
       await $(testid('rich-code-language')).click();
-      await $(`${testid('choice-panel-rich-code-language')} [data-option-id="py"]`).click();
+      // The DOM's own click: the driver's focuses what it clicked afterwards, which a mouse never
+      // does, and the entry leaves the page with the focus on it.
+      await browser.execute(
+        (selector: string) => (document.querySelector(selector) as HTMLElement).click(),
+        `${testid('choice-panel-rich-code-language')} [data-option-id="py"]`,
+      );
       await $(`${testid('editor-rich')} pre[data-language="PY"]`).waitForExist({ timeout: 5_000 });
-      await browser.keys(['End', ' ', '#', ' ', 'o', 'k']);
+
+      const caret = await browser.execute((selector: string) => {
+        const surface = document.querySelector(selector) as HTMLElement & { editor: RichEditor };
+        const selection = surface.editor.state.selection;
+        return {
+          at: selection.from,
+          in: selection.$from.parent.type.name,
+          focused: surface.contains(document.activeElement),
+        };
+      }, testid('editor-rich'));
+      expect(caret).toEqual({ at: 14, in: 'codeBlock', focused: true });
       await editor.close();
 
       const stored = await eventually(
@@ -242,7 +269,7 @@ describe('Editing a note', () => {
         (written) => written.includes('```py'),
         'the chosen language to reach the database',
       );
-      expect(stored).toBe('Run it:\n\n```py\nSELECT pg_is_in_recovery(); # ok\n```');
+      expect(stored).toBe('Run it:\n\n```py\nSELECT pg_is_in_recovery();\n```');
       await bridge.deleteNotes([id]);
       await bridge.purgeNotes([id]);
       await reloadCanvas();
