@@ -913,6 +913,8 @@ describe('The tools', () => {
       );
       expect(await $(testid('sizes-reading')).getAttribute('data-unit')).toBe('gigabyte');
       expect(digits(await $(testid('sizes-gap')).getText())).toBe('10931');
+      expect(await sizeValue('petabyte')).toContain('× 10⁻⁶');
+      expect(await readEach(testid('sizes-group'), '@data-group')).toEqual(['bytes', 'decimal', 'binary']);
 
       await setField(testid('sizes-decimals'), '6');
       await eventually(

@@ -6,11 +6,13 @@ import { SizeRow, SizeUnit, SizesAnswer } from '@core/model/tool-answers.model';
 import { liveResult } from '@core/services/tools/live-result';
 import { Tool, ToolResult } from '@core/services/tools/tool.model';
 import { toolState } from '@core/services/tools/tool-sessions';
-import { formatDecimal } from '@core/utils/decimal-format.util';
+import { formatDecimal, formatScientific } from '@core/utils/decimal-format.util';
 import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
-import { OutputRowComponent } from '@tools/ui/output-row/output-row.component';
+import { ResultRowComponent } from '@tools/ui/result-row/result-row.component';
 
 type Converted = Extract<SizesAnswer, { kind: 'converted' }>;
+
+const isZero = (value: string): boolean => /^-?0(\.0*)?$/.test(value);
 
 const GROUPS: readonly { readonly id: string; readonly units: readonly SizeUnit[] }[] = [
   { id: 'bytes', units: ['byte', 'bit', 'kilobit', 'megabit', 'gigabit', 'terabit'] },
@@ -25,7 +27,7 @@ const UNITS: readonly ChoiceOption[] = GROUPS.flatMap((group) =>
 /** Every value is Rust's, exact; the page rounds nothing, it only writes the digits in its language. */
 @Component({
   selector: 'app-sizes-tool',
-  imports: [ChoiceMenuComponent, OutputRowComponent, TranslocoPipe],
+  imports: [ChoiceMenuComponent, ResultRowComponent, TranslocoPipe],
   templateUrl: './sizes-tool.component.html',
   styleUrl: './sizes-tool.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -122,13 +124,13 @@ export class SizesToolComponent implements Tool {
     if (Number.isFinite(decimals)) this.decimals.set(Math.min(Math.max(decimals, 0), 12));
   }
 
+  /** « ≈ » before what rounding changed; a power of ten where it would have left a bare 0. */
   private shown(row: SizeRow): { unit: SizeUnit; value: string; exact: string } {
-    const approximate = row.rounded !== row.exact;
-    return {
-      unit: row.unit,
-      value: `${approximate ? '≈ ' : ''}${this.format(row.rounded)}`,
-      exact: row.exact,
-    };
+    const scientific = isZero(row.rounded) ? formatScientific(row.exact, this.lang(), this.decimals()) : null;
+    const [text, exact] = scientific
+      ? [scientific.text, scientific.exact]
+      : [this.format(row.rounded), row.rounded === row.exact];
+    return { unit: row.unit, value: `${exact ? '' : '≈ '}${text}`, exact: row.exact };
   }
 
   private format(value: string): string {

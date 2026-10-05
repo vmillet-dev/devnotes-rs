@@ -1624,7 +1624,6 @@
       "placeholder": "1.5 GB · 750 KiB · 100 Mbit",
       "unit": "Unit when none is typed",
       "decimals": "Decimals",
-      "readAs": "Read as {{value}} {{unit}}",
       "unitInText": "The unit typed wins over the one chosen.",
       "gap": "1 {{decimal}} = {{ratio}} {{binary}}",
       "conventions": "Decimal (SI): 1 kB = 1,000 B. Binary (IEC): 1 KiB = 1,024 B. A disk is sold in GB; a system often counts in GiB.",
@@ -1674,7 +1673,8 @@
       "negative": "A size cannot be negative (character {{at}}).",
       "tooLarge": "Too large to count exactly: 28 digits at most.",
       "empty": "Type a quantity, with its unit or without: every unit shows here.",
-      "noteTitle": "{{value}} {{unit}} in every unit"
+      "noteTitle": "{{value}} {{unit}} in every unit",
+      "value": "Value"
     },
     "percentages": {
       "name": "Percentages",

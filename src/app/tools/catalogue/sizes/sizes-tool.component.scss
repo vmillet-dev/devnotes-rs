@@ -1,43 +1,49 @@
 @use 'mixins' as *;
 
+:host {
+  @include tool-fills-frame;
+}
+
 .columns {
   @include tool-columns;
+  @include tool-columns-fill;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 32px;
 }
 
 .column {
   @include tool-column;
-  gap: 10px;
+  gap: 12px;
+  min-height: 0;
+}
+
+.results {
+  overflow-y: auto;
 }
 
 .section-title {
   @include tool-section-title;
 }
 
-.group-title {
-  @include tool-section-title;
-  margin-top: 6px;
-  font-size: 10.5px;
+.value {
+  display: grid;
+  grid-template-columns: minmax(0, 0.75fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
 }
 
 .field {
   @include tool-field;
-  height: 40px;
+  height: 42px;
   font-size: 15px;
-}
-
-.options {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 14px;
 }
 
 .option {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--text-1);
+  gap: 10px;
+  font-size: 12.5px;
+  color: var(--text-2);
 }
 
 .number {
@@ -45,16 +51,33 @@
 }
 
 .reading {
-  margin: 0;
-  font-size: 13px;
-  color: var(--text-0);
+  @include surface(var(--bg-1), 10px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 20px;
 }
 
 .gap {
   margin: 0;
   font-family: var(--font-mono), monospace;
-  font-size: 14px;
+  font-size: 18px;
   color: var(--text-0);
+}
+
+.conventions {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-2);
+}
+
+.card {
+  @include tool-result-card;
+}
+
+.card-group {
+  @include tool-result-group;
 }
 
 .note {
