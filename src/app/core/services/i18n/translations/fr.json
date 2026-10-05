@@ -1054,38 +1054,6 @@
       "slugHint": "Le slug translittère tout (Straße → strasse, Привет → privet) ; les formats de code ne font que retirer les accents.",
       "forUrl": "Pour les URL"
     },
-    "url-parser": {
-      "name": "Analyseur d’URL",
-      "description": "Protocole, hôte, chemin, paramètres",
-      "inputLabel": "URL à analyser",
-      "placeholder": "https://api.exemple.fr/v1/factures?statut=payée&page=2",
-      "parts": "Composants",
-      "labels": {
-        "scheme": "Protocole",
-        "username": "Utilisateur",
-        "password": "Mot de passe",
-        "host": "Hôte",
-        "port": "Port",
-        "path": "Chemin",
-        "query": "Requête",
-        "fragment": "Fragment"
-      },
-      "defaultPort": "par défaut",
-      "parameters": "{count, plural, one {Paramètre · #} other {Paramètres · #}}",
-      "parameterName": "Nom",
-      "parameterValue": "Valeur",
-      "empty": "Les composants de l’URL s’affichent ici.",
-      "noteTitle": "URL de {{host}}",
-      "problems": {
-        "empty": "Collez une URL.",
-        "noScheme": "Il manque le protocole : une URL commence par https:// ou un autre schéma.",
-        "emptyHost": "L’hôte est vide.",
-        "invalidPort": "Le port n’est pas un nombre entre 0 et 65535.",
-        "invalidAddress": "L’adresse IP est mal formée.",
-        "invalidDomain": "Le nom de domaine contient un caractère interdit.",
-        "other": "Cette URL n’est pas valide."
-      }
-    },
     "line-breaks": {
       "name": "Sauts de ligne",
       "description": "CRLF ↔ LF, espaces en fin de ligne",
@@ -1141,7 +1109,7 @@
     },
     "url-codec": {
       "name": "URL",
-      "description": "Encoder, décoder, composant par composant",
+      "description": "Encoder, décoder, analyser",
       "scope": "Portée",
       "scopes": {
         "component": "Composant",
@@ -1158,7 +1126,41 @@
       "malformed": "Échappement incomplet au caractère {{at}} : un % attend deux chiffres hexadécimaux.",
       "notUtf8": "Ces octets ne forment pas du texte UTF-8.",
       "noteEncoded": "Texte encodé pour une URL",
-      "noteDecoded": "URL décodée"
+      "noteDecoded": "URL décodée",
+      "tab": "Onglet",
+      "tabs": {
+        "codec": "Encoder / décoder",
+        "parse": "Analyser"
+      },
+      "analyseThis": "Analyser cette URL",
+      "inputLabel": "URL à analyser",
+      "placeholder": "https://api.exemple.fr/v1/factures?statut=payée&page=2",
+      "parts": "Composants",
+      "labels": {
+        "scheme": "Protocole",
+        "username": "Utilisateur",
+        "password": "Mot de passe",
+        "host": "Hôte",
+        "port": "Port",
+        "path": "Chemin",
+        "query": "Requête",
+        "fragment": "Fragment"
+      },
+      "defaultPort": "par défaut",
+      "parameters": "{count, plural, one {Paramètre · #} other {Paramètres · #}}",
+      "parameterName": "Nom",
+      "parameterValue": "Valeur",
+      "empty": "Les composants de l’URL s’affichent ici.",
+      "problems": {
+        "empty": "Collez une URL.",
+        "noScheme": "Il manque le protocole : une URL commence par https:// ou un autre schéma.",
+        "emptyHost": "L’hôte est vide.",
+        "invalidPort": "Le port n’est pas un nombre entre 0 et 65535.",
+        "invalidAddress": "L’adresse IP est mal formée.",
+        "invalidDomain": "Le nom de domaine contient un caractère interdit.",
+        "other": "Cette URL n’est pas valide."
+      },
+      "noteParsed": "URL de {{host}}"
     },
     "base64": {
       "name": "Base64",

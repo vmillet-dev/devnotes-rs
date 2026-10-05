@@ -99,14 +99,14 @@ describe('The tools', () => {
       await setField(testid('tools-search'), '');
     });
 
-    /** The slug is one of the case converter's rows now: a tool whose answer is one line joins a neighbour. */
-    it('lays the Texte panel out with its four tools', async () => {
+    /** The slug is a row of the case converter, and the URL parser a tab of the URL tool. */
+    it('lays the Texte panel out with its three tools', async () => {
       expect(
         await readEach(
           `${testid('tools-panel')}[data-category="text"] ${testid('tools-entry')}`,
           '@data-tool',
         ),
-      ).toEqual(['case', 'url-parser', 'line-breaks', 'text-stats']);
+      ).toEqual(['case', 'line-breaks', 'text-stats']);
     });
   });
 
@@ -222,18 +222,6 @@ describe('The tools', () => {
       await $(`${testid('segmented-case-slug-separator')} [data-segment-id="dash"]`).click();
     });
 
-    it('takes a URL apart, and says why another is refused', async () => {
-      await $(`${testid('tools-rail-tool')}[data-tool="url-parser"]`).click();
-
-      await setField(testid('url-parser-input'), 'https://api.exemple.fr:8443/v1?statut=pay%C3%A9e#bas');
-      await $(testid('url-parser-parameters')).waitForDisplayed({ timeout: 5_000 });
-      expect(await $(testid('url-parser-parameters')).getText()).toContain('payée');
-      expect(await $('[data-part="port"]').getText()).toContain('8443');
-
-      await setField(testid('url-parser-input'), 'exemple.fr/chemin');
-      await $(testid('url-parser-problem')).waitForDisplayed({ timeout: 5_000 });
-    });
-
     it('answers a mixture of line endings from Rust, counted by kind', async () => {
       const answer = await bridge.fixLineBreaks({
         text: 'a  \r\nb\nc',
@@ -296,7 +284,7 @@ describe('The tools', () => {
 
       await eventually(
         () => readEach(testid('tools-recent'), '@data-tool'),
-        (tools) => tools.slice(0, 3).join() === 'text-stats,line-breaks,url-parser',
+        (tools) => tools.slice(0, 3).join() === 'text-stats,line-breaks,case',
         'the recent tools',
       );
     });
@@ -315,6 +303,31 @@ describe('The tools', () => {
 
       await setField(testid('url-codec-encoded'), '50%2');
       await $(testid('url-codec-problem')).waitForDisplayed({ timeout: 5_000 });
+    });
+
+    it('offers a decoded URL to its Analyser tab, which takes it apart', async () => {
+      await setField(
+        testid('url-codec-encoded'),
+        'https%3A%2F%2Fapi.exemple.fr%3A8443%2Fv1%3Fstatut%3Dpay%25C3%25A9e%23bas',
+      );
+      await $(testid('url-analyse-this')).waitForDisplayed({ timeout: 5_000 });
+      await $(testid('url-analyse-this')).click();
+
+      await $(testid('url-parser-parameters')).waitForDisplayed({ timeout: 5_000 });
+      expect(await $(testid('url-parser-input')).getValue()).toBe(
+        'https://api.exemple.fr:8443/v1?statut=pay%C3%A9e#bas',
+      );
+      expect(await $(testid('url-parser-parameters')).getText()).toContain('payée');
+      expect(await $('[data-part="port"]').getText()).toContain('8443');
+    });
+
+    it('says why a URL is refused, and keeps the text on the way back', async () => {
+      await setField(testid('url-parser-input'), 'exemple.fr/chemin');
+      await $(testid('url-parser-problem')).waitForDisplayed({ timeout: 5_000 });
+
+      await $(`${testid('segmented-url-tab')} [data-segment-id="codec"]`).click();
+      expect(await $(testid('url-codec-decoded')).getValue()).toBe('exemple.fr/chemin');
+      await $(testid('tool-clear')).click();
     });
 
     it('writes Base64 in either alphabet, padded or not', async () => {
