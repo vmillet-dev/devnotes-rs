@@ -21,7 +21,7 @@ const FOLDERS: readonly Folder[] = [
 ];
 
 const RESULT: ToolResult = {
-  title: { key: 'tools.slug.noteTitle', params: { text: 'Été 2026' } },
+  title: { key: 'tools.case.noteTitle', params: { text: 'Été 2026' } },
   kind: 'snippet',
   language: 'json',
   content: '{ "slug": "ete-2026" }',
@@ -48,7 +48,7 @@ describe('SaveAsNoteDialogComponent', () => {
 
     fixture = TestBed.createComponent(SaveAsNoteDialogComponent);
     fixture.componentRef.setInput('result', RESULT);
-    fixture.componentRef.setInput('toolId', 'slug');
+    fixture.componentRef.setInput('toolId', 'case');
     closed = 0;
     fixture.componentInstance.closed.subscribe(() => closed++);
     fixture.autoDetectChanges();
@@ -73,7 +73,7 @@ describe('SaveAsNoteDialogComponent', () => {
   it('proposes the tool title, in the space and the folder open in the notes', async () => {
     await open('work', 'scripts');
 
-    expect(field('save-as-note-title').value).toBe('Slug de « Été 2026 »');
+    expect(field('save-as-note-title').value).toBe('Casses de « Été 2026 »');
     expect(menuText('save-as-note-space')).toContain('Travail');
     expect(menuText('save-as-note-folder')).toContain('Scripts');
     expect(fixture.nativeElement.querySelector('[data-testid="save-as-note-what"]').textContent).toContain(
@@ -106,7 +106,7 @@ describe('SaveAsNoteDialogComponent', () => {
         kind: 'snippet',
         language: 'json',
         content: '{ "slug": "ete-2026" }',
-        source: 'Outils / Générateur de slug',
+        source: 'Outils / Convertisseur de casse',
       }),
     );
     expect(bump).toHaveBeenCalled();

@@ -1,4 +1,4 @@
-//! The Texte panel: the case converter, the slug generator and the line breaks.
+//! The Texte panel: the case converter, whose slug is one of its rows, and the line breaks.
 
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -77,6 +77,7 @@ pub struct CaseRequest {
     /// Each line on its own; off, the whole text is one phrase.
     pub per_line: bool,
     pub title_case_language: TitleLanguage,
+    pub slug: SlugOptions,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
@@ -94,6 +95,8 @@ pub struct CaseAnswer {
     pub conversions: Vec<CaseConversion>,
     /// What the converters work from: the first line holding a word, or the whole phrase.
     pub words: Vec<String>,
+    /// For a URL: transliterated, where the code cases only strip accents. Empty for no word.
+    pub slug: String,
 }
 
 const APOSTROPHES: [char; 2] = ['\'', '’'];
@@ -284,7 +287,13 @@ pub fn convert_case(request: &CaseRequest) -> CaseAnswer {
         return CaseAnswer {
             conversions: Vec::new(),
             words: Vec::new(),
+            slug: String::new(),
         };
+    };
+    let texts: Vec<&str> = if request.per_line {
+        request.text.lines().collect()
+    } else {
+        vec![request.text.as_str()]
     };
     let conversions = CASES
         .into_iter()
@@ -304,6 +313,11 @@ pub fn convert_case(request: &CaseRequest) -> CaseAnswer {
             .iter()
             .map(|word| word.text.to_owned())
             .collect(),
+        slug: texts[first..=last]
+            .iter()
+            .map(|text| slugify(text, request.slug))
+            .collect::<Vec<_>>()
+            .join("\n"),
     }
 }
 
@@ -325,18 +339,17 @@ impl SlugSeparator {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
-pub struct SlugRequest {
-    pub text: String,
+pub struct SlugOptions {
     pub separator: SlugSeparator,
     pub lowercase: bool,
 }
 
 /// Transliterated, never dropped: "Été" is `ete`, "Straße" `strasse`, "Привет" `privet`.
-pub fn slugify(request: &SlugRequest) -> String {
-    let ascii = deunicode::deunicode(&request.text);
-    let separator = request.separator.as_char();
+fn slugify(text: &str, options: SlugOptions) -> String {
+    let ascii = deunicode::deunicode(text);
+    let separator = options.separator.as_char();
     let mut slug = String::with_capacity(ascii.len());
     let mut apart = false;
 
@@ -346,7 +359,7 @@ pub fn slugify(request: &SlugRequest) -> String {
                 slug.push(separator);
             }
             apart = false;
-            slug.push(if request.lowercase {
+            slug.push(if options.lowercase {
                 character.to_ascii_lowercase()
             } else {
                 character
@@ -552,6 +565,10 @@ mod tests {
             strip_accents: false,
             per_line: true,
             title_case_language: TitleLanguage::English,
+            slug: SlugOptions {
+                separator: SlugSeparator::Dash,
+                lowercase: true,
+            },
         }
     }
 
@@ -808,11 +825,48 @@ fooBar
     }
 
     fn slug(text: &str, separator: SlugSeparator, lowercase: bool) -> String {
-        slugify(&SlugRequest {
-            text: text.to_owned(),
+        let mut asked = request(text);
+        asked.per_line = false;
+        asked.slug = SlugOptions {
             separator,
             lowercase,
-        })
+        };
+        convert_case(&asked).slug
+    }
+
+    #[test]
+    fn the_slug_comes_with_the_cases_one_per_line() {
+        let answer = convert_case(&request(
+            "Été 2026
+
+Straße Nummer",
+        ));
+        assert_eq!(
+            answer.slug,
+            "ete-2026
+
+strasse-nummer"
+        );
+        assert!(!answer.conversions.is_empty());
+    }
+
+    #[test]
+    fn the_slug_transliterates_where_the_code_cases_only_strip_accents() {
+        let mut asked = request("Привет Straße");
+        asked.strip_accents = true;
+        let answer = convert_case(&asked);
+        assert_eq!(answer.slug, "privet-strasse");
+        let snake = answer
+            .conversions
+            .iter()
+            .find(|c| c.case == TextCase::Snake)
+            .unwrap();
+        assert_eq!(snake.value, "привет_straße");
+    }
+
+    #[test]
+    fn no_slug_for_a_text_without_a_word() {
+        assert_eq!(convert_case(&request(" !! ")).slug, "");
     }
 
     #[test]

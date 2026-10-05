@@ -51,7 +51,7 @@ describe('ToolsHomeComponent', () => {
 
   it('lays the tools out in their category panels, in the categories order', () => {
     expect(panels()).toEqual(['text', 'crypto']);
-    expect(entries()).toEqual(['case', 'slug', 'hash']);
+    expect(entries()).toEqual(['case', 'line-breaks', 'hash']);
   });
 
   it('shows one category when the rail chose it', async () => {
@@ -100,9 +100,9 @@ describe('ToolsHomeComponent', () => {
   });
 
   it('opens a tool from its panel', () => {
-    fixture.nativeElement.querySelector('[data-tool="slug"]').click();
+    fixture.nativeElement.querySelector('[data-tool="line-breaks"]').click();
 
-    expect(store.openId()).toBe('slug');
+    expect(store.openId()).toBe('line-breaks');
   });
 
   it('takes the search field when Ctrl+Shift+T asks for it', async () => {

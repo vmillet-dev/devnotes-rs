@@ -13,6 +13,7 @@ const ANSWER: CaseAnswer = {
     { case: 'upper', group: 'text', value: 'PARSE HTTP RESPONSE' },
   ],
   words: ['parse', 'HTTP', 'response'],
+  slug: 'parse-http-response',
 };
 
 describe('CaseToolComponent', () => {
@@ -20,7 +21,7 @@ describe('CaseToolComponent', () => {
     tools.caseAnswer = ANSWER;
   };
 
-  const names = (harness: { all(selector: string): HTMLElement[] }, group: 'code' | 'text') => {
+  const names = (harness: { all(selector: string): HTMLElement[] }, group: 'code' | 'text' | 'url') => {
     const rows = harness.all('[data-testid="case-results"] > *');
     const start = rows.findIndex((row) => row.dataset['group'] === group);
     const after = rows.slice(start + 1);
@@ -36,11 +37,38 @@ describe('CaseToolComponent', () => {
     await harness.type('case-input', 'parse HTTP response', 'convert_case');
 
     expect(harness.tools.requestsOf('convert_case')).toEqual([
-      { text: 'parse HTTP response', stripAccents: true, perLine: true, titleCaseLanguage: 'english' },
+      {
+        text: 'parse HTTP response',
+        stripAccents: true,
+        perLine: true,
+        titleCaseLanguage: 'english',
+        slug: { separator: 'dash', lowercase: true },
+      },
     ]);
     expect(names(harness, 'code')).toEqual(['camelCase', 'CONSTANT_CASE']);
     // The two named by a word of the language are named in it.
     expect(names(harness, 'text')).toEqual(['Title Case', 'MAJUSCULES']);
+    expect(names(harness, 'url')).toEqual(['Slug']);
+    expect(harness.element('[data-name="Slug"] [data-testid="output-value"]').textContent).toBe(
+      'parse-http-response',
+    );
+  });
+
+  /** One call: the slug's options are part of the case request, and Rust answers both. */
+  it("asks again with the slug's separator and case", async () => {
+    const harness = await renderTool(CaseToolComponent, answer);
+    await harness.type('case-input', 'Été 2026', 'convert_case');
+    const asked = () => harness.tools.requestsOf('convert_case').at(-1);
+
+    harness.element('[data-testid="segmented-case-slug-separator"] [data-segment-id="underscore"]').click();
+    await vi.waitFor(() =>
+      expect(asked()).toMatchObject({ slug: { separator: 'underscore', lowercase: true } }),
+    );
+
+    harness.element<HTMLInputElement>('[data-testid="case-slug-lowercase"]').click();
+    await vi.waitFor(() =>
+      expect(asked()).toMatchObject({ slug: { separator: 'underscore', lowercase: false } }),
+    );
   });
 
   it('shows the words the converters work from, and none before there are some', async () => {
@@ -81,7 +109,8 @@ describe('CaseToolComponent', () => {
       language: 'txt',
       content:
         'camelCase      parseHttpResponse\nCONSTANT_CASE  PARSE_HTTP_RESPONSE\n' +
-        'Title Case     Parse Http Response\nUPPERCASE      PARSE HTTP RESPONSE',
+        'Title Case     Parse Http Response\nUPPERCASE      PARSE HTTP RESPONSE\n' +
+        'slug           parse-http-response',
     });
   });
 
@@ -93,6 +122,7 @@ describe('CaseToolComponent', () => {
           { case: 'train', group: 'code', value: 'User-Id\nHttp-Server' },
         ],
         words: ['user', 'Id'],
+        slug: 'userid\nhttpserver',
       };
     });
 
@@ -101,7 +131,9 @@ describe('CaseToolComponent', () => {
     expect(harness.element('[data-testid="output-value"]').textContent).toBe('user.id\nhttp.server');
     expect(harness.tool.result()).toMatchObject({
       title: { key: 'tools.case.noteTitle', params: { text: 'userId' } },
-      content: 'dot.case    user.id\n            http.server\nTrain-Case  User-Id\n            Http-Server',
+      content:
+        'dot.case    user.id\n            http.server\nTrain-Case  User-Id\n            Http-Server\n' +
+        'slug        userid\n            httpserver',
     });
   });
 

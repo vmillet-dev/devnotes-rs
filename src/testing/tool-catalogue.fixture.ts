@@ -34,6 +34,6 @@ const load = async () => FakeToolComponent;
 
 export const FAKE_TOOLS: readonly ToolDefinition[] = [
   { id: 'case', category: 'text', keywords: ['camelCase'], load },
-  { id: 'slug', category: 'text', keywords: [], load },
+  { id: 'line-breaks', category: 'text', keywords: [], load },
   { id: 'hash', category: 'crypto', keywords: ['sha256', 'hmac'], load },
 ];

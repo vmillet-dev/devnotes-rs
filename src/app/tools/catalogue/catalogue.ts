@@ -21,14 +21,11 @@ export const TOOLS: readonly ToolDefinition[] = [
       'lowercase',
       'UPPERCASE',
       'flatcase',
+      'slug',
+      'permalink',
+      'ascii',
     ],
     load: () => import('./case/case-tool.component').then((m) => m.CaseToolComponent),
-  },
-  {
-    id: 'slug',
-    category: 'text',
-    keywords: ['slug', 'permalink', 'ascii'],
-    load: () => import('./slug/slug-tool.component').then((m) => m.SlugToolComponent),
   },
   {
     id: 'url-parser',

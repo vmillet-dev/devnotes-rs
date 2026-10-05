@@ -51,6 +51,29 @@
       <p class="hint">{{ 'tools.case.titleCaseHint' | transloco }}</p>
     </div>
 
+    <div class="group">
+      <span class="label">{{ 'tools.case.slug' | transloco }}</span>
+      <div class="slug-options">
+        <app-segmented-choice
+          kind="case-slug-separator"
+          [label]="'tools.case.separator' | transloco"
+          [segments]="separators"
+          [currentId]="slugSeparator()"
+          (chosen)="onSlugSeparator($event)"
+        />
+        <label class="check">
+          <input
+            type="checkbox"
+            data-testid="case-slug-lowercase"
+            [checked]="slugLowercase()"
+            (change)="onSlugLowercase($event)"
+          />
+          {{ 'tools.case.lowercase' | transloco }}
+        </label>
+      </div>
+      <p class="hint">{{ 'tools.case.slugHint' | transloco }}</p>
+    </div>
+
     <!-- Identifiers, so in no language: only the sentences around them are translated. -->
     <aside class="acronyms" data-testid="case-acronyms">
       <p>
@@ -77,6 +100,10 @@
         @for (conversion of forText(); track conversion.case) {
           <app-result-row [name]="shownName(conversion.case)" [value]="conversion.value" />
         }
+        <h3 class="card-group" data-testid="case-group" data-group="url">
+          {{ 'tools.case.forUrl' | transloco }}
+        </h3>
+        <app-result-row name="Slug" [value]="slug()" />
       </div>
     } @else {
       <p class="empty">{{ 'tools.case.empty' | transloco }}</p>

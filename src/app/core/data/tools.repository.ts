@@ -40,7 +40,6 @@ import {
   PasswordRequest,
   SizesAnswer,
   SizesRequest,
-  SlugRequest,
   StatsRequest,
   TextStats,
   UrlAnswer,
@@ -56,10 +55,6 @@ import {
 export class ToolsRepository {
   async convertCase(request: CaseRequest): Promise<CaseAnswer> {
     return unwrap('convert_case', await commands.convertCase(request));
-  }
-
-  async slugify(request: SlugRequest): Promise<string> {
-    return unwrap('slugify', await commands.slugify(request));
   }
 
   async fixLineBreaks(request: LineBreaksRequest): Promise<LineBreaksAnswer> {

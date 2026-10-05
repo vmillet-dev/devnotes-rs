@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { ToolsRepository } from '@core/data/tools.repository';
-import { CaseConversion, TextCase, TitleLanguage } from '@core/model/tool-answers.model';
+import { CaseConversion, SlugSeparator, TextCase, TitleLanguage } from '@core/model/tool-answers.model';
 import { liveResult } from '@core/services/tools/live-result';
 import { Tool, ToolResult } from '@core/services/tools/tool.model';
 import { toolState } from '@core/services/tools/tool-sessions';
@@ -34,6 +34,11 @@ const SHOWN_NAME_KEYS: Partial<Record<TextCase, string>> = {
   lower: 'tools.case.lower',
 };
 
+const SEPARATORS: readonly Segment[] = (['dash', 'underscore', 'dot'] as const).map((id) => ({
+  id,
+  labelKey: `tools.case.separators.${id}`,
+}));
+
 const LANGUAGES: readonly Segment[] = (['english', 'french'] as const).map((id) => ({
   id,
   labelKey: `tools.case.${id}`,
@@ -54,6 +59,8 @@ export class CaseToolComponent implements Tool {
   protected readonly stripAccents = toolState('case.stripAccents', true);
   protected readonly perLine = toolState('case.perLine', true);
   protected readonly titleLanguage = toolState<TitleLanguage>('case.titleLanguage', 'english');
+  protected readonly slugSeparator = toolState<SlugSeparator>('case.slugSeparator', 'dash');
+  protected readonly slugLowercase = toolState('case.slugLowercase', true);
 
   protected readonly answer = liveResult(
     () =>
@@ -64,11 +71,14 @@ export class CaseToolComponent implements Tool {
             stripAccents: this.stripAccents(),
             perLine: this.perLine(),
             titleCaseLanguage: this.titleLanguage(),
+            slug: { separator: this.slugSeparator(), lowercase: this.slugLowercase() },
           },
     (request) => this.repository.convertCase(request),
   );
 
   protected readonly languages = LANGUAGES;
+  protected readonly separators = SEPARATORS;
+  protected readonly slug = computed(() => this.answer.value()?.slug ?? '');
 
   protected readonly words = computed(() => this.answer.value()?.words ?? []);
   protected readonly forCode = computed(() => this.rowsOf('code'));
@@ -78,7 +88,11 @@ export class CaseToolComponent implements Tool {
     const conversions = this.answer.value()?.conversions;
     if (!conversions?.length) return null;
 
-    const width = Math.max(...conversions.map(({ case: kind }) => CASE_NAMES[kind].length));
+    const rows = [
+      ...conversions.map(({ case: kind, value }) => ({ name: CASE_NAMES[kind], value })),
+      { name: 'slug', value: this.answer.value()!.slug },
+    ];
+    const width = Math.max(...rows.map(({ name }) => name.length));
     return {
       title: {
         key: 'tools.case.noteTitle',
@@ -87,11 +101,11 @@ export class CaseToolComponent implements Tool {
       },
       kind: 'snippet',
       language: 'txt',
-      content: conversions
+      content: rows
         .map(
-          ({ case: kind, value }) =>
+          ({ name, value }) =>
             // A list converted line by line keeps its lines under the first, past the names.
-            `${CASE_NAMES[kind].padEnd(width)}  ${value.split('\n').join(`\n${' '.repeat(width + 2)}`)}`,
+            `${name.padEnd(width)}  ${value.split('\n').join(`\n${' '.repeat(width + 2)}`)}`,
         )
         .join('\n'),
     };
@@ -120,6 +134,14 @@ export class CaseToolComponent implements Tool {
 
   protected onPerLine(event: Event): void {
     this.perLine.set((event.target as HTMLInputElement).checked);
+  }
+
+  protected onSlugSeparator(separator: string): void {
+    this.slugSeparator.set(separator as SlugSeparator);
+  }
+
+  protected onSlugLowercase(event: Event): void {
+    this.slugLowercase.set((event.target as HTMLInputElement).checked);
   }
 
   protected onTitleLanguage(language: string): void {

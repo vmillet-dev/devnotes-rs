@@ -49,11 +49,11 @@ describe('ToolsRailComponent', () => {
 
   it("shows a tool's category, and the recent tools that are not in it", async () => {
     store.open('hash');
-    store.open('slug');
+    store.open('line-breaks');
     await fixture.whenStable();
 
-    expect(ids('tools-rail-tool', 'tool')).toEqual(['case', 'slug']);
-    expect(link('[data-tool="slug"]').getAttribute('aria-current')).toBe('page');
+    expect(ids('tools-rail-tool', 'tool')).toEqual(['case', 'line-breaks']);
+    expect(link('[data-tool="line-breaks"]').getAttribute('aria-current')).toBe('page');
     expect(ids('tools-rail-recent', 'tool')).toEqual(['hash']);
 
     link('[data-testid="tools-rail-recent"]').click();
@@ -63,7 +63,7 @@ describe('ToolsRailComponent', () => {
   /** Three things told apart: « Tous les outils », the section's tools, then the recents. */
   it('heads the section and the recents apart, and highlights the open tool alone', async () => {
     store.open('hash');
-    store.open('slug');
+    store.open('line-breaks');
     await fixture.whenStable();
 
     const rail: HTMLElement = fixture.nativeElement.querySelector('[data-testid="tools-rail"]');
@@ -86,7 +86,7 @@ describe('ToolsRailComponent', () => {
     ]);
     // The area switch above says which area is on screen; among the rows, one says which tool.
     const current = rail.querySelectorAll('[data-testid^="tools-rail-"][aria-current="page"]');
-    expect([...current].map((row) => row.getAttribute('data-tool'))).toEqual(['slug']);
+    expect([...current].map((row) => row.getAttribute('data-tool'))).toEqual(['line-breaks']);
     expect(rail.querySelectorAll('.rail-link.on')).toHaveLength(1);
   });
 
