@@ -705,6 +705,7 @@
     },
     "editor": {
       "title": "Éditeur",
+      "defaultKind": "Type de note par défaut",
       "indent": "Indenter avec Tab"
     },
     "indent": {
@@ -712,6 +713,11 @@
       "two-spaces": "2 espaces",
       "four-spaces": "4 espaces",
       "tab": "Une tabulation"
+    },
+    "noteKind": {
+      "note": "Note",
+      "snippet": "Snippet",
+      "checklist": "Liste de tâches"
     },
     "behavior": {
       "title": "Comportement",

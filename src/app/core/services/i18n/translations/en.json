@@ -705,6 +705,7 @@
     },
     "editor": {
       "title": "Editor",
+      "defaultKind": "Default note type",
       "indent": "Indent with Tab"
     },
     "indent": {
@@ -712,6 +713,11 @@
       "two-spaces": "2 spaces",
       "four-spaces": "4 spaces",
       "tab": "A tab"
+    },
+    "noteKind": {
+      "note": "Note",
+      "snippet": "Snippet",
+      "checklist": "To-do list"
     },
     "behavior": {
       "title": "Behavior",

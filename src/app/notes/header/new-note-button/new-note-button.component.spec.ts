@@ -6,7 +6,7 @@ import { NewNoteButtonComponent } from './new-note-button.component';
 
 describe('NewNoteButtonComponent', () => {
   let fixture: ComponentFixture<NewNoteButtonComponent>;
-  let created: NoteKind[];
+  let created: (NoteKind | null)[];
 
   function click(selector: string): void {
     (fixture.nativeElement.querySelector(selector) as HTMLElement).click();
@@ -33,10 +33,11 @@ describe('NewNoteButtonComponent', () => {
     fixture.componentInstance.created.subscribe((kind) => created.push(kind));
   });
 
-  it('creates an ordinary note without opening anything', () => {
+  /** No kind: the store opens the one the preferences name. */
+  it('creates a note of the default kind without opening anything', () => {
     click('.new-note-btn');
 
-    expect(created).toEqual(['snippet']);
+    expect(created).toEqual([null]);
     expect(fixture.nativeElement.querySelector('.new-note-menu')).toBeNull();
   });
 

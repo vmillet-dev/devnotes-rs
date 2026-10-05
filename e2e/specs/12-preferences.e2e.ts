@@ -1,9 +1,10 @@
 import { $, $$, browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
+import { editor } from '../pageobjects/editor.page.js';
 import { rail } from '../pageobjects/sidebar.page.js';
 import { aboutMenu, fileMenu, settings, titlebar } from '../pageobjects/titlebar.page.js';
-import { cursorOf, eventually, press, reopenSession, testid } from '../support/app.js';
+import { cursorOf, eventually, pickSegment, press, reopenSession, testid } from '../support/app.js';
 
 /**
  * A preference applies on a button; only the theme and the density show while chosen.
@@ -161,6 +162,37 @@ describe('Preferences', () => {
     expect(await browser.$('html').getAttribute('data-theme')).toBe('light');
     expect(await browser.$('html').getAttribute('data-density')).toBe('compact');
     expect(await titlebar.activeLocale()).toBe('en');
+  });
+
+  /** « Nouvelle note » follows the preference; the menu beside it still picks any kind. */
+  describe('the kind a new note opens as', () => {
+    after(async () => {
+      await fileMenu.openPreferences();
+      await pickSegment('setting-note-kind', 'snippet');
+      await settings.close();
+    });
+
+    it('opens a Note from « Nouvelle note » once Note is the default', async () => {
+      await fileMenu.openPreferences();
+      await pickSegment('setting-note-kind', 'note');
+      await settings.close();
+
+      await canvas.createSnippet();
+      expect(await $(testid('editor-rich')).isExisting()).toBe(true);
+      expect(await $(testid('editor-body')).isExisting()).toBe(false);
+      // Empty, so closing writes nothing.
+      await editor.close();
+    });
+
+    it('goes back to a snippet with the preference', async () => {
+      await fileMenu.openPreferences();
+      await pickSegment('setting-note-kind', 'snippet');
+      await settings.close();
+
+      await canvas.createSnippet();
+      expect(await $(testid('editor-body')).isExisting()).toBe(true);
+      await editor.close();
+    });
   });
 
   describe('the keys', () => {

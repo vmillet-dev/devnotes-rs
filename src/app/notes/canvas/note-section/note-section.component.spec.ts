@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { SettingsStore } from '@core/services/settings/settings.store';
 import { NotesStore } from '@core/state/notes.store';
 import { SpacesStore } from '@core/state/spaces.store';
 import { createNote } from '@testing/note.fixture';
@@ -122,5 +123,16 @@ describe('NoteSectionComponent', () => {
     fixture.debugElement.query(By.css('.ghost')).triggerEventHandler('click');
 
     await vi.waitFor(() => expect(TestBed.inject(NotesStore).selectedNote()).not.toBeNull());
+  });
+
+  it('opens the kind the preferences name from the create-ghost button', async () => {
+    TestBed.inject(SettingsStore).defaultNoteKind.write('checklist');
+    fixture.componentRef.setInput('section', createSection('week', [], { showCreateGhost: true }));
+    await fixture.whenStable();
+    await vi.waitFor(() => expect(TestBed.inject(SpacesStore).spaces()).toHaveLength(1));
+
+    fixture.debugElement.query(By.css('.ghost')).triggerEventHandler('click');
+
+    await vi.waitFor(() => expect(TestBed.inject(NotesStore).selectedNote()?.kind).toBe('checklist'));
   });
 });

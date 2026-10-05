@@ -551,6 +551,28 @@ describe('NotesStore', () => {
       expect(store.selectedNote()?.kind).toBe('note');
     });
 
+    /** « Nouvelle note », the « + » card and the global shortcut ask for no kind. */
+    it('opens the kind the preferences name when asked for none', async () => {
+      const { store } = await createNotesHarness([]);
+      const settings = TestBed.inject(SettingsStore);
+      expect(settings.defaultNoteKind()).toBe('snippet');
+
+      for (const kind of ['note', 'snippet', 'checklist'] as const) {
+        settings.defaultNoteKind.write(kind);
+        store.createNote();
+        expect(store.selectedNote()?.kind).toBe(kind);
+      }
+    });
+
+    it('opens the kind asked for whatever the preferences name', async () => {
+      const { store } = await createNotesHarness([]);
+      TestBed.inject(SettingsStore).defaultNoteKind.write('checklist');
+
+      store.createNote('note');
+
+      expect(store.selectedNote()?.kind).toBe('note');
+    });
+
     it('writes nothing until the note is worth keeping', async () => {
       const { store, repository } = await createNotesHarness([]);
       const create = vi.spyOn(repository, 'create');

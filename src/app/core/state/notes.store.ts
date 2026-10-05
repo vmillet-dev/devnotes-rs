@@ -310,10 +310,13 @@ export class NotesStore {
   /**
    * Opens the editor on a local draft; a note with no space at all is refused. A note made
    * inside an open folder arrives filed; the palette's never does, being the fastest path.
+   * Without a kind, the one the preferences name.
    */
-  createNote(kind: NoteKind = 'snippet'): void {
+  createNote(wanted: NoteKind | null = null): void {
     const spaceId = this.spaceForNewNote();
     if (!spaceId) return;
+
+    const kind = wanted ?? this.settings.defaultNoteKind();
 
     this.materialisedNote = null;
     this._selectedNote.set(null);
