@@ -9,7 +9,7 @@
   @let allShown = openTool() === null && store.category() === null;
   <button
     type="button"
-    class="rail-link"
+    class="rail-link rail-all"
     data-testid="tools-rail-all"
     [class.on]="allShown"
     [attr.aria-current]="allShown ? 'page' : null"
@@ -20,7 +20,9 @@
   </button>
 
   @if (openTool(); as tool) {
-    <h2 class="rail-heading">{{ 'tools.categories.' + tool.category | transloco }}</h2>
+    <h2 class="rail-heading" data-testid="tools-rail-heading">
+      {{ 'tools.categories.' + tool.category | transloco }}
+    </h2>
     @for (sibling of siblings(); track sibling.id) {
       <button
         type="button"
@@ -36,7 +38,9 @@
     }
 
     @if (recents().length > 0) {
-      <h2 class="rail-heading">{{ 'tools.recents' | transloco }}</h2>
+      <!-- A group of their own, not more tools of the section above. -->
+      <hr class="rail-separator" />
+      <h2 class="rail-heading" data-testid="tools-rail-heading">{{ 'tools.recents' | transloco }}</h2>
       @for (recent of recents(); track recent.id) {
         <button
           type="button"

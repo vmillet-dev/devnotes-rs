@@ -60,6 +60,36 @@ describe('ToolsRailComponent', () => {
     expect(store.openId()).toBe('hash');
   });
 
+  /** Three things told apart: « Tous les outils », the section's tools, then the recents. */
+  it('heads the section and the recents apart, and highlights the open tool alone', async () => {
+    store.open('hash');
+    store.open('slug');
+    await fixture.whenStable();
+
+    const rail: HTMLElement = fixture.nativeElement.querySelector('[data-testid="tools-rail"]');
+    const order = [...rail.querySelectorAll('[data-testid^="tools-rail-"], hr')].map(
+      (element) => element.getAttribute('data-testid') ?? element.localName,
+    );
+    expect(order).toEqual([
+      'tools-rail-all',
+      'tools-rail-heading',
+      'tools-rail-tool',
+      'tools-rail-tool',
+      'hr',
+      'tools-rail-heading',
+      'tools-rail-recent',
+    ]);
+    // A heading is a label, not a row to click.
+    expect([...rail.querySelectorAll('[data-testid="tools-rail-heading"]')].map((h) => h.localName)).toEqual([
+      'h2',
+      'h2',
+    ]);
+    // The area switch above says which area is on screen; among the rows, one says which tool.
+    const current = rail.querySelectorAll('[data-testid^="tools-rail-"][aria-current="page"]');
+    expect([...current].map((row) => row.getAttribute('data-tool'))).toEqual(['slug']);
+    expect(rail.querySelectorAll('.rail-link.on')).toHaveLength(1);
+  });
+
   it('is headed by the switch between areas', () => {
     link('[data-area="notes"]').click();
 

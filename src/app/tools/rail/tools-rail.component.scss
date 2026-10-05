@@ -33,19 +33,24 @@
   padding: 7px 10px;
   border-radius: 7px;
   font-size: 13px;
-  color: var(--text-1);
+  color: var(--text-0);
   cursor: pointer;
 
   &:hover {
-    background: var(--bg-3);
-    color: var(--text-0);
+    background: var(--bg-2);
   }
 
+  // The one highlighted row: the tool, or the view, on screen.
   &.on {
     background: var(--bg-3);
     color: var(--amber-text);
     font-weight: 600;
   }
+}
+
+// Set apart from the section under it.
+.rail-all {
+  margin-bottom: 6px;
 }
 
 // Wrapped rather than cut: the rail opens at 160px, and "Convertisseur de casse" is longer.
@@ -74,7 +79,17 @@
   background: var(--tool-hue);
 }
 
+// A label over its rows, not one of them: small, muted, mixed case, with air above.
 .rail-heading {
-  @include tool-section-title;
-  padding: 12px 10px 4px;
+  margin: 0;
+  padding: 14px 10px 4px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-2);
+}
+
+.rail-separator {
+  margin: 12px 10px 0;
+  border: none;
+  border-top: 1px solid var(--line-soft);
 }
