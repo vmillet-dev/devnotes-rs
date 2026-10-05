@@ -25,7 +25,7 @@ struct Element {
 impl Element {
     fn open(start: &BytesStart<'_>) -> Result<Self, ()> {
         let mut element = Self {
-            name: String::from_utf8_lossy(start.name().as_ref()).into_owned(),
+            name: start.name().as_ref().to_owned(),
             ..Self::default()
         };
         for attribute in start.attributes() {
@@ -34,7 +34,7 @@ impl Element {
                 .normalized_value(XmlVersion::Implicit1_0)
                 .map_err(|_| ())?
                 .into_owned();
-            let key = format!("@{}", String::from_utf8_lossy(attribute.key.as_ref()));
+            let key = format!("@{}", attribute.key.as_ref());
             element.fields.insert(key, Value::String(value));
         }
         Ok(element)
@@ -96,8 +96,7 @@ fn resolve(reference: &BytesRef<'_>) -> Option<String> {
             .flatten()
             .map(String::from);
     }
-    let name = reference.decode().ok()?;
-    resolve_predefined_entity(&name).map(str::to_owned)
+    resolve_predefined_entity(reference).map(str::to_owned)
 }
 
 /// The document's one root, as an object of one key; a byte offset where it stops parsing.
@@ -141,7 +140,7 @@ pub(super) fn read(text: &str) -> Result<Value, usize> {
                 }
             }
             Event::Text(text) => {
-                let text = text.xml10_content().map_err(|_| at(&reader))?;
+                let text = text.xml10_content();
                 push_text(&mut open, &text).map_err(|()| at(&reader))?;
             }
             Event::GeneralRef(reference) => {
@@ -151,7 +150,7 @@ pub(super) fn read(text: &str) -> Result<Value, usize> {
             Event::CData(data) => {
                 if let Some(element) = open.last_mut() {
                     element.empty = false;
-                    element.text.push_str(&String::from_utf8_lossy(&data));
+                    element.text.push_str(data.as_ref());
                 }
             }
             Event::Eof => break,

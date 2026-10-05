@@ -239,7 +239,9 @@ fn bytes_of(text: &str, options: Base64Options) -> Result<Vec<u8>, Base64Decoded
     options.engine().decode(kept.as_bytes()).map_err(|error| {
         let (problem, offset) = match error {
             DecodeError::InvalidByte(offset, _) => (Base64Problem::Character, Some(offset)),
-            DecodeError::InvalidLastSymbol(offset, _) => (Base64Problem::Truncated, Some(offset)),
+            DecodeError::InvalidLastSymbol { offset, .. } => {
+                (Base64Problem::Truncated, Some(offset))
+            }
             DecodeError::InvalidLength(_) => (Base64Problem::Length, None),
             DecodeError::InvalidPadding => (Base64Problem::Character, kept.find('=')),
         };

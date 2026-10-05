@@ -157,7 +157,7 @@ fn object(text: &str, offset: usize) -> Result<Map<String, Value>, (JwtProblem, 
     let bytes = BASE64URL.decode(text).map_err(|problem| {
         let at = match problem {
             base64::DecodeError::InvalidByte(index, _)
-            | base64::DecodeError::InvalidLastSymbol(index, _) => offset + index,
+            | base64::DecodeError::InvalidLastSymbol { offset: index, .. } => offset + index,
             _ => offset,
         };
         (JwtProblem::NotBase64, Some(at))
