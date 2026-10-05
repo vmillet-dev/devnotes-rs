@@ -10,9 +10,15 @@
   color: var(--text-1);
 }
 
+// ⚠️ A flex item with `overflow: hidden` may shrink below its content: without
+// `flex-shrink: 0` the lines squeeze into one another instead of the host clipping them.
+:host > * {
+  flex-shrink: 0;
+}
+
 .outline-heading,
 .outline-text,
-.outline-item {
+.outline-item-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -23,10 +29,16 @@
   color: var(--text-0);
 }
 
+// A flex row swallows `text-overflow`: the ellipsis belongs to the text inside it.
 .outline-item {
   display: flex;
   gap: 6px;
+  min-width: 0;
   padding-left: calc(var(--depth, 0) * 12px);
+}
+
+.outline-item-text {
+  min-width: 0;
 }
 
 .outline-marker {
