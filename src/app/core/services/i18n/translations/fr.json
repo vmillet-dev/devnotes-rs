@@ -1003,8 +1003,7 @@
     "clear": "Vider",
     "promise": {
       "title": "Tout reste sur cette machine",
-      "offline": "Aucun outil n’appelle le réseau. Ce que vous collez ne quitte pas l’application.",
-      "keep": "Chaque outil propose « Enregistrer comme note » : le résultat rejoint un espace, avec ses tags."
+      "offline": "Aucun outil n’appelle le réseau. Ce que vous collez ne quitte pas l’application."
     },
     "categories": {
       "text": "Texte",

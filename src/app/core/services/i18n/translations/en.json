@@ -1003,8 +1003,7 @@
     "clear": "Clear",
     "promise": {
       "title": "Everything stays on this machine",
-      "offline": "No tool reaches the network. What you paste never leaves the application.",
-      "keep": "Every tool offers “Save as note”: the result joins a space, with its tags."
+      "offline": "No tool reaches the network. What you paste never leaves the application."
     },
     "categories": {
       "text": "Text",

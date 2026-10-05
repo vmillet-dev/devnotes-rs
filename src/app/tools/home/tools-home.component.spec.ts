@@ -37,6 +37,18 @@ describe('ToolsHomeComponent', () => {
     );
   });
 
+  /** A promise about every tool: above them all, not a block at the end that reads as one more. */
+  it('makes the promise a note above the panels, and leaves no block among them', () => {
+    const promise: HTMLElement = fixture.nativeElement.querySelector('[data-testid="tools-promise"]');
+    const panels: HTMLElement = fixture.nativeElement.querySelector('.panels');
+
+    expect(promise.getAttribute('role')).toBe('note');
+    expect(promise.textContent).toContain('Tout reste sur cette machine');
+    expect(panels.contains(promise)).toBe(false);
+    expect(promise.compareDocumentPosition(panels) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(fixture.nativeElement.querySelectorAll('[data-testid="tools-promise"]')).toHaveLength(1);
+  });
+
   it('lays the tools out in their category panels, in the categories order', () => {
     expect(panels()).toEqual(['text', 'crypto']);
     expect(entries()).toEqual(['case', 'slug', 'hash']);
