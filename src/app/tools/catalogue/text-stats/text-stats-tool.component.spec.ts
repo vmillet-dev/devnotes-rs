@@ -41,7 +41,7 @@ describe('TextStatsToolComponent', () => {
     expect(harness.tool.result()).toBeNull();
   });
 
-  it('counts as a reader and as a program does, each figure copyable', async () => {
+  it('counts as a reader and as a program does, figures to read and not to copy', async () => {
     const harness = await renderTool(TextStatsToolComponent, answering(STATS));
 
     await harness.type('text-stats-input', 'eee e é', 'text_stats');
@@ -50,8 +50,8 @@ describe('TextStatsToolComponent', () => {
     expect(value(harness, 'characters')).toBe('7');
     expect(value(harness, 'utf16Units')).toBe('8');
     expect(harness.element('[data-count="characters"]').textContent).toContain('comme on les voit');
-    harness.element<HTMLButtonElement>('[data-count="utf8Bytes"] [data-testid="copy-value"]').click();
-    await vi.waitFor(() => expect(harness.clipboard.content).toBe('10'));
+    expect(harness.all('[data-testid="text-stats-count"]')).toHaveLength(9);
+    expect(harness.all('[data-testid="text-stats-count"] [data-testid="copy-value"]')).toEqual([]);
   });
 
   it('lists the characters most frequent first, the invisible ones named', async () => {
