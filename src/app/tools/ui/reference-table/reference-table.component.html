@@ -1,0 +1,66 @@
+<div class="head">
+  <label class="search">
+    <app-icon name="search" />
+    <span class="visually-hidden">{{ 'tools.reference.searchLabel' | transloco: { what: caption() } }}</span>
+    <input
+      type="search"
+      class="search-field"
+      data-testid="reference-search"
+      spellcheck="false"
+      autocomplete="off"
+      [value]="query()"
+      [placeholder]="placeholder()"
+      (input)="onSearch($event)"
+    />
+  </label>
+  <p class="count" data-testid="reference-count" role="status">
+    @if (searching()) {
+      {{ 'tools.reference.found' | transloco: { count: shown().length, total: rows().length } }}
+    } @else {
+      {{ 'tools.reference.count' | transloco: { count: rows().length } }}
+    }
+  </p>
+</div>
+
+@if (sections().length > 0) {
+  <div class="frame">
+    <table class="table" data-testid="reference-table">
+      <caption class="visually-hidden">
+        {{
+          caption()
+        }}
+      </caption>
+      <thead>
+        <tr>
+          @for (column of columns(); track column.id) {
+            <th scope="col" [attr.data-column]="column.id">{{ column.labelKey | transloco }}</th>
+          }
+          <th scope="col" class="copy-head">
+            <span class="visually-hidden">{{ 'tools.copy' | transloco }}</span>
+          </th>
+        </tr>
+      </thead>
+      @for (section of sections(); track section.id) {
+        <tbody data-testid="reference-group" [attr.data-group]="section.id">
+          <tr class="group-row">
+            <th scope="colgroup" [attr.colspan]="columns().length + 1">
+              {{ section.label }}<span class="group-count">{{ section.rows.length }}</span>
+            </th>
+          </tr>
+          @for (row of section.rows; track row.key) {
+            <tr class="row" data-testid="reference-row" [attr.data-key]="row.key">
+              <ng-container *ngTemplateOutlet="cells().template; context: { $implicit: row }" />
+              <td class="copy-cell">
+                <app-copy-value [value]="row.key" [what]="row.key" [compact]="true" />
+              </td>
+            </tr>
+          }
+        </tbody>
+      }
+    </table>
+  </div>
+} @else if (searching()) {
+  <p class="empty" data-testid="reference-empty">
+    {{ 'tools.reference.empty' | transloco: { query: query().trim() } }}
+  </p>
+}

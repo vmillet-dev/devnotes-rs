@@ -440,6 +440,11 @@
     --tool-hue: var(--pink);
     --tool-hue-rgb: var(--pink-rgb);
   }
+
+  &[data-category='reference'] {
+    --tool-hue: var(--olive);
+    --tool-hue-rgb: var(--olive-rgb);
+  }
 }
 
 // A section's title inside a tool or the tools' home: "ENTRÉE", "RÉCENTS".
@@ -642,4 +647,12 @@
     border-color: var(--amber-dim);
     color: var(--text-0);
   }
+}
+
+// A reference's own cells: its template draws them inside `app-reference-table`'s rows, so its
+// stylesheet, not the table's, reaches them.
+@mixin reference-cell {
+  padding: 8px 12px;
+  line-height: 1.5;
+  color: var(--text-1);
 }

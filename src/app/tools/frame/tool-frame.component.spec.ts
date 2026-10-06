@@ -10,13 +10,13 @@ import { provideAppTesting } from '@testing/testing.providers';
 import { SaveAsNoteDialogComponent } from './save-as-note/save-as-note-dialog.component';
 import { ToolFrameComponent } from './tool-frame.component';
 
-/** A tool with nothing to fill: the frame offers it no sample. */
+/** A tool with nothing to fill and nothing to keep, a reference: the frame offers it neither. */
 @Component({ selector: 'app-bare-tool', template: '', changeDetection: ChangeDetectionStrategy.OnPush })
 class BareToolComponent implements Tool {
-  readonly result = signal(null);
+  readonly cleared = signal(false);
 
   clear(): void {
-    this.result.set(null);
+    this.cleared.set(true);
   }
 }
 
@@ -72,12 +72,13 @@ describe('ToolFrameComponent', () => {
     expect(TestBed.inject(StatusNotifier).status()).toEqual({ key: 'tools.sampleLoaded' });
   });
 
-  it('offers no sample to a tool that has none', async () => {
+  it('offers no sample and nothing to keep to a tool that has neither', async () => {
     fixture.componentRef.setInput('tool', BARE);
     await vi.waitFor(() => expect(tool()).toBeNull());
     await fixture.whenStable();
 
     expect(button('tool-sample')).toBeNull();
+    expect(button('tool-save-as-note')).toBeNull();
     expect(button('tool-clear')).not.toBeNull();
   });
 

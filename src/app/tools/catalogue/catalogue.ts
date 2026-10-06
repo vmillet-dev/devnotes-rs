@@ -181,4 +181,10 @@ export const TOOLS: readonly ToolDefinition[] = [
     keywords: ['luhn', 'iban', 'mod 97', 'credit card', 'carte', 'checksum', 'bic', 'visa', 'mastercard'],
     load: () => import('./checks/checks-tool.component').then((m) => m.ChecksToolComponent),
   },
+  {
+    id: 'http-status',
+    category: 'reference',
+    keywords: ['http', 'status', 'statut', 'code', 'rfc 9110', '404', '500', 'redirect', 'nginx'],
+    load: () => import('./http-status/http-status-tool.component').then((m) => m.HttpStatusToolComponent),
+  },
 ];
