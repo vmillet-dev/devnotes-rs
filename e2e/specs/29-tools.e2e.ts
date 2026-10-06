@@ -1241,6 +1241,56 @@ describe('The tools', () => {
       );
       await $(testid('tool-clear')).click();
     });
+
+    const cidrRow = (id: string) => $(`${testid('cidr-facts')} [data-row="${id}"]`).getText();
+
+    it('describes a /21, finds an address inside at its host number, and splits it', async () => {
+      await openTool('cidr');
+      await $(testid('tool-clear')).click();
+      await setField(testid('cidr-network'), '10.24.8.5/21');
+
+      await eventually(
+        () => cidrRow('broadcast'),
+        (row) => row.includes('10.24.15.255'),
+        'the broadcast',
+      );
+      expect(await $(testid('cidr-normalised')).getText()).toContain('10.24.8.0/21');
+      expect(await $(testid('cidr-kind')).getAttribute('data-kind')).toBe('private');
+      expect((await cidrRow('usable')).replace(/\D/g, '')).toBe('20462048');
+
+      await setField(testid('cidr-member'), '10.24.12.40');
+      await eventually(
+        () => $(testid('cidr-membership')).getAttribute('data-inside'),
+        (inside) => inside === 'true',
+        'the address inside',
+      );
+      expect((await $(testid('cidr-membership')).getText()).replace(/\D/g, '')).toBe('1064');
+
+      await $(`${testid('cidr-split-choice')}[data-prefix="23"]`).click();
+      await eventually(
+        () => readEach(testid('cidr-subnet'), '@data-cidr'),
+        (subnets) => subnets.join() === '10.24.8.0/23,10.24.10.0/23,10.24.12.0/23,10.24.14.0/23',
+        'four /23',
+      );
+    });
+
+    it('refuses a mask with holes, and reads an IPv6 block', async () => {
+      await setField(testid('cidr-network'), '10.0.0.0 255.0.255.0');
+      await eventually(
+        () => $(testid('cidr-problem')).getAttribute('data-problem'),
+        (problem) => problem === 'maskWithHoles',
+        'the refusal',
+      );
+
+      await setField(testid('cidr-network'), '2001:db8::/32');
+      await eventually(
+        () => $(testid('cidr-facts')).getAttribute('data-family'),
+        (family) => family === 'v6',
+        'an IPv6 block',
+      );
+      expect(await $(testid('cidr-kind')).getAttribute('data-kind')).toBe('documentation');
+      await $(testid('tool-clear')).click();
+    });
   });
 
   describe('the references', () => {
