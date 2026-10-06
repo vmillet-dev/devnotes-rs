@@ -41,6 +41,11 @@ pub enum StorageError {
     DuplicateFolderName(String),
     #[error("Attachment not found: {0}")]
     AttachmentNotFound(String),
+    #[error("HTTP collection, folder or request not found: {0}")]
+    HttpItemNotFound(String),
+    /// A rule that needs the database to be checked: a folder moved into itself.
+    #[error(transparent)]
+    Invalid(#[from] ValidationError),
     #[error("Revision not found: {0}")]
     RevisionNotFound(String),
     #[error("Library not found: {0}")]
@@ -114,6 +119,7 @@ pub enum ErrorCode {
     FolderNotFound,
     DuplicateFolderName,
     AttachmentNotFound,
+    HttpItemNotFound,
     RevisionNotFound,
     LibraryNotFound,
     LibraryOpen,
@@ -204,6 +210,10 @@ impl From<StorageError> for AppError {
             StorageError::AttachmentNotFound(id) => {
                 Self::with(ErrorCode::AttachmentNotFound, detail, "id", &id)
             }
+            StorageError::HttpItemNotFound(id) => {
+                Self::with(ErrorCode::HttpItemNotFound, detail, "id", &id)
+            }
+            StorageError::Invalid(error) => error.into(),
             StorageError::RevisionNotFound(id) => {
                 Self::with(ErrorCode::RevisionNotFound, detail, "id", &id)
             }

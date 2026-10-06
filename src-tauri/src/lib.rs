@@ -7,6 +7,7 @@ pub mod db;
 pub mod desktop;
 pub mod error;
 pub mod folders;
+pub mod http;
 pub mod json;
 pub mod libraries;
 pub mod notes;
@@ -36,6 +37,11 @@ use desktop::{set_global_shortcuts, set_window_behavior, sync_tray};
 use folders::{
     arrange_board, board_view, create_folder, delete_folder, file_notes, file_notes_back,
     list_folders, recolour_folder, rename_folder, save_board_layout,
+};
+use http::{
+    count_http_contents, create_http_collection, create_http_folder, create_http_request,
+    delete_http_item, duplicate_http_item, get_http_request, http_tree, move_http_item,
+    rename_http_item, reorder_http_collection, save_http_request,
 };
 use json::explore_json;
 use libraries::{create_library, delete_library, list_libraries, open_library, rename_library};
@@ -149,6 +155,18 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             list_global_placeholders::<tauri::Wry>,
             set_global_placeholders::<tauri::Wry>,
             list_folders::<tauri::Wry>,
+            http_tree::<tauri::Wry>,
+            create_http_collection::<tauri::Wry>,
+            create_http_folder::<tauri::Wry>,
+            create_http_request::<tauri::Wry>,
+            get_http_request::<tauri::Wry>,
+            save_http_request::<tauri::Wry>,
+            rename_http_item::<tauri::Wry>,
+            count_http_contents::<tauri::Wry>,
+            delete_http_item::<tauri::Wry>,
+            duplicate_http_item::<tauri::Wry>,
+            move_http_item::<tauri::Wry>,
+            reorder_http_collection::<tauri::Wry>,
             board_view::<tauri::Wry>,
             save_board_layout::<tauri::Wry>,
             arrange_board::<tauri::Wry>,
