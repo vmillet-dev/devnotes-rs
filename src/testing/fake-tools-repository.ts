@@ -39,6 +39,8 @@ import {
   SizesAnswer,
   SizesRequest,
   StatsRequest,
+  TextDiffAnswer,
+  TextDiffRequest,
   TextStats,
   UrlAnswer,
   UrlCodecAnswer,
@@ -87,6 +89,15 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
     rows: [],
     rowsTruncated: false,
     patch: '[]',
+  };
+  textDiff: TextDiffAnswer = {
+    added: 0,
+    removed: 0,
+    rows: [],
+    rowsTruncated: false,
+    unified: '',
+    identical: true,
+    bothJson: false,
   };
   instant: InstantAnswer = { kind: 'unreadable', at: 1 };
   now = '2026-09-29T12:03:12.000Z';
@@ -186,6 +197,10 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
 
   diffJson(request: JsonDiffRequest): Promise<JsonDiffAnswer> {
     return this.answer('diff_json', request, this.diffAnswer);
+  }
+
+  diffText(request: TextDiffRequest): Promise<TextDiffAnswer> {
+    return this.answer('diff_text', request, this.textDiff);
   }
 
   describeInstant(request: InstantRequest): Promise<InstantAnswer> {

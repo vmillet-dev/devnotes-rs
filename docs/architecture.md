@@ -722,7 +722,13 @@ list (`UNDERSTOOD`); any other is listed back with its path, so a document that 
 `pattern` is never passed off as one that honours it. From an example, each value is redrawn in
 its kind — a UUID, an email, an instant, a URL, words — at its magnitude.
 
-**JSON Diff compares values** (`tools/diff.rs`): objects key by key, lists by a longest
+**The Diff compares texts, or values** (`tools/text_diff.rs`, `tools/diff.rs`). Its text mode
+pairs lines on what they are compared as — the options strip what they ignore from that key alone,
+so every line is drawn as typed — and a modified line is diffed again by words or characters to
+mark what changed inside it. Both modes share their two texts; when both parse as JSON the text
+mode offers the structured one rather than switching to it.
+
+**The structured mode compares values** (`tools/diff.rs`): objects key by key, lists by a longest
 common sequence of their elements — one element inserted at the top is one change, not a change
 of every element below it. Each change carries its `JSONPath`, the patch is RFC 6902 from A to
 B (checked in the tests by applying it), and the two documents come back as aligned rows,

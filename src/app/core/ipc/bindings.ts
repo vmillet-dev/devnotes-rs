@@ -44,6 +44,7 @@ export const commands = {
 	generateJson: (request: GenerateRequest) => typedError<GenerateAnswer, AppError>(__TAURI_INVOKE("generate_json", { request })),
 	loremIpsum: (request: LoremRequest) => typedError<LoremAnswer, AppError>(__TAURI_INVOKE("lorem_ipsum", { request })),
 	diffJson: (request: JsonDiffRequest) => typedError<JsonDiffAnswer, AppError>(__TAURI_INVOKE("diff_json", { request })),
+	diffText: (request: TextDiffRequest) => typedError<TextDiffAnswer, AppError>(__TAURI_INVOKE("diff_text", { request })),
 	/**  A date written without an offset is read in the machine's zone, as the person typing it means. */
 	describeInstant: (request: InstantRequest) => typedError<InstantAnswer, AppError>(__TAURI_INVOKE("describe_instant", { request })),
 	currentInstant: () => typedError<string, AppError>(__TAURI_INVOKE("current_instant")),
@@ -808,6 +809,8 @@ export type GenerateRequest = {
  *  a silently inert subscription, and a new variant here stops the front compiling.
  */
 export type GlobalAction = "capture" | "new-note" | "palette";
+
+export type Granularity = "lines" | "words" | "characters";
 
 /**  How the date view gathers its cards. A search or a facet still makes one flat list. */
 export type Grouping = "date" | "priority" | "format" | "none";
@@ -1693,6 +1696,51 @@ export type TagUsage = {
 };
 
 export type TextCase = "camel" | "pascal" | "snake" | "kebab" | "constant" | "title" | "sentence" | "dot" | "path" | "train" | "lower" | "upper" | "flat";
+
+export type TextDiffAnswer = {
+	/**  In the unit asked: lines, words or characters. */
+	added: number,
+	removed: number,
+	rows: TextDiffRow[],
+	rowsTruncated: boolean,
+	/**  From A to B, three lines of context, as `diff -u` writes it. */
+	unified: string,
+	identical: boolean,
+	/**  Both sides are JSON: they can be compared as values instead. */
+	bothJson: boolean,
+};
+
+export type TextDiffLine = {
+	/**  One-based, in that side's own text. */
+	number: number,
+	pieces: TextPiece[],
+};
+
+export type TextDiffRequest = {
+	a: string,
+	b: string,
+	granularity: Granularity,
+	ignoreTrailingWhitespace: boolean,
+	ignoreAllWhitespace: boolean,
+	ignoreCase: boolean,
+	/**  CRLF against LF is the commonest difference nobody meant. */
+	ignoreLineEndings: boolean,
+};
+
+/**  One row of the side-by-side view: a side without a line is a gap. */
+export type TextDiffRow = {
+	kind: TextRowKind,
+	left: TextDiffLine | null,
+	right: TextDiffLine | null,
+};
+
+/**  A piece of a line, marked when it is what changed. */
+export type TextPiece = {
+	text: string,
+	changed: boolean,
+};
+
+export type TextRowKind = "same" | "added" | "removed" | "modified";
 
 export type TextSizes = {
 	normal: boolean,

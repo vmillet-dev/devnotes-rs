@@ -1,0 +1,121 @@
+<div class="inputs">
+  @for (side of ['a', 'b']; track side) {
+    @let name = side === 'a' ? aName() : bName();
+    <section class="input" [attr.aria-labelledby]="'text-diff-input-' + side">
+      <div class="input-head">
+        <span class="side" [id]="'text-diff-input-' + side">{{ side.toUpperCase() }}</span>
+        <span class="name">{{ name ?? ('tools.diff.pasted' | transloco) }}</span>
+      </div>
+      <textarea
+        class="text"
+        rows="6"
+        spellcheck="false"
+        [attr.data-testid]="'text-diff-' + side"
+        [attr.aria-label]="'tools.diff.text.inputLabel' | transloco: { side: side.toUpperCase() }"
+        [value]="side === 'a' ? a() : b()"
+        [placeholder]="'tools.diff.text.placeholder' | transloco"
+        (input)="onInput(side === 'a' ? 'a' : 'b', $event)"
+      ></textarea>
+    </section>
+  }
+</div>
+
+<div class="settings">
+  <app-segmented-choice
+    kind="text-diff-granularity"
+    [label]="'tools.diff.text.granularity' | transloco"
+    [segments]="granularities"
+    [currentId]="granularity()"
+    (chosen)="onGranularity($event)"
+  />
+  @for (option of options; track option) {
+    <label class="check">
+      <input
+        type="checkbox"
+        [attr.data-testid]="'text-diff-ignore-' + option"
+        [checked]="ignores(option)"
+        (change)="onOption(option, $event)"
+      />
+      {{ 'tools.diff.text.ignore.' + option | transloco }}
+    </label>
+  }
+</div>
+
+@if (answer.value(); as answer) {
+  @if (answer.bothJson) {
+    <p class="offer" data-testid="text-diff-json">
+      {{ 'tools.diff.text.bothJson' | transloco }}
+      <button type="button" class="as-values" data-testid="text-diff-as-values" (click)="asValues.emit()">
+        {{ 'tools.diff.text.asValues' | transloco }}
+      </button>
+    </p>
+  }
+
+  @if (answer.identical) {
+    <p class="identical" data-testid="text-diff-identical">{{ 'tools.diff.text.identical' | transloco }}</p>
+  } @else {
+    <div class="bar">
+      <span class="count added" data-testid="text-diff-added">
+        {{ 'tools.diff.text.added.' + granularity() | transloco: { count: answer.added } }}
+      </span>
+      <span class="count removed" data-testid="text-diff-removed">
+        {{ 'tools.diff.text.removed.' + granularity() | transloco: { count: answer.removed } }}
+      </span>
+      <span class="spacer"></span>
+      <app-segmented-choice
+        kind="text-diff-layout"
+        [label]="'tools.diff.text.layout' | transloco"
+        [segments]="layouts"
+        [currentId]="layout()"
+        (chosen)="onLayout($event)"
+      />
+    </div>
+
+    @if (layout() === 'split') {
+      <div class="rows" data-testid="text-diff-rows">
+        <div class="head">
+          <span><b>A</b> {{ aName() ?? ('tools.diff.pasted' | transloco) }}</span>
+          <span><b>B</b> {{ bName() ?? ('tools.diff.pasted' | transloco) }}</span>
+        </div>
+        @for (row of answer.rows; track $index) {
+          <div class="row" data-testid="text-diff-row" [attr.data-kind]="row.kind">
+            @for (line of [row.left, row.right]; track $index; let right = $last) {
+              @if (line) {
+                <div class="cell" [attr.data-side]="right ? 'b' : 'a'">
+                  <span class="mark" aria-hidden="true">{{
+                    row.kind === 'modified' ? marks.modified : row.kind === 'same' ? '' : right ? '+' : '−'
+                  }}</span>
+                  <span class="number">{{ line.number }}</span>
+                  <span class="code">
+                    @for (piece of line.pieces; track $index) {
+                      <span
+                        [class.changed]="piece.changed && row.kind === 'modified'"
+                        [attr.data-testid]="
+                          piece.changed && row.kind === 'modified' ? 'text-diff-changed' : null
+                        "
+                        >{{ piece.text }}</span
+                      >
+                    }
+                  </span>
+                </div>
+              } @else {
+                <div class="cell gap" [attr.data-side]="right ? 'b' : 'a'"></div>
+              }
+            }
+          </div>
+        }
+        @if (answer.rowsTruncated) {
+          <p class="truncated">{{ 'tools.diff.text.truncated' | transloco }}</p>
+        }
+      </div>
+    } @else {
+      <div class="unified" data-testid="text-diff-unified">
+        @for (line of unifiedLines(); track $index) {
+          <span class="unified-line" [attr.data-kind]="line.kind">{{ line.text }}</span>
+        }
+      </div>
+    }
+  }
+} @else {
+  <p class="note">{{ 'tools.diff.text.empty' | transloco }}</p>
+}

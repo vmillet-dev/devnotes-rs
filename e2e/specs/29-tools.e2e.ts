@@ -99,14 +99,14 @@ describe('The tools', () => {
       await setField(testid('tools-search'), '');
     });
 
-    /** The slug is a row of the case converter, and the URL parser a tab of the URL tool. */
-    it('lays the Texte panel out with its three tools', async () => {
+    /** The slug is a row of the case converter, and the URL parser a tab of the URL tool; the diff joined from Comparer. */
+    it('lays the Texte panel out with its four tools', async () => {
       expect(
         await readEach(
           `${testid('tools-panel')}[data-category="text"] ${testid('tools-entry')}`,
           '@data-tool',
         ),
-      ).toEqual(['case', 'line-breaks', 'text-stats']);
+      ).toEqual(['case', 'line-breaks', 'text-stats', 'diff']);
     });
   });
 
@@ -1140,7 +1140,7 @@ describe('The tools', () => {
     });
   });
 
-  describe('comparing JSON', () => {
+  describe('comparing two texts, or two documents as values', () => {
     const STAGING = JSON.stringify({
       service: 'billing',
       replicas: 2,
@@ -1177,17 +1177,57 @@ describe('The tools', () => {
       expect(JSON.parse(answer.patch)).toContainEqual({ op: 'replace', path: '/replicas', value: 6 });
     });
 
-    it('lists the mockup’s seven changes, and brings one into view', async () => {
-      await openTool('json-diff');
-      await setField(testid('json-diff-a'), STAGING);
-      await setField(testid('json-diff-b'), PRODUCTION);
+    it('writes the unified diff of two texts from Rust, line endings aside', async () => {
+      const answer = await bridge.diffText({
+        a: 'host = db\r\nport = 5432\r\n',
+        b: 'host = db\nport = 6432\n',
+        granularity: 'lines',
+        ignoreTrailingWhitespace: false,
+        ignoreAllWhitespace: false,
+        ignoreCase: false,
+        ignoreLineEndings: true,
+      });
+
+      expect([answer.added, answer.removed]).toEqual([1, 1]);
+      expect(answer.unified).toBe('--- a\n+++ b\n@@ -1,2 +1,2 @@\n host = db\n-port = 5432\n+port = 6432\n');
+    });
+
+    it('marks the words that changed inside a line, and shows the unified diff', async () => {
+      await openTool('diff');
+      await $(`${testid('segmented-diff-mode')} [data-segment-id="text"]`).click();
+      await setField(testid('text-diff-a'), 'host = db\nport = 5432\npool = 10\n');
+      await setField(testid('text-diff-b'), 'host = db\nport = 6432\npool = 10\nssl = on\n');
+      await $(`${testid('segmented-text-diff-granularity')} [data-segment-id="words"]`).click();
 
       await eventually(
-        () => readEach(testid('json-diff-change'), '@data-path'),
+        () => readEach(testid('text-diff-changed'), 'text'),
+        (pieces) => pieces.join(',') === '5432,6432',
+        'the changed words',
+      );
+      expect(await readEach(testid('text-diff-row'), '@data-kind')).toEqual([
+        'same',
+        'modified',
+        'same',
+        'added',
+      ]);
+
+      await $(`${testid('segmented-text-diff-layout')} [data-segment-id="unified"]`).click();
+      await $(testid('text-diff-unified')).waitForDisplayed({ timeout: 5_000 });
+      expect(await $(testid('text-diff-unified')).getText()).toContain('+ssl = on');
+    });
+
+    it('offers to compare two JSON texts as values, and lists the mockup’s seven changes', async () => {
+      await setField(testid('text-diff-a'), STAGING);
+      await setField(testid('text-diff-b'), PRODUCTION);
+      await $(testid('text-diff-as-values')).waitForDisplayed({ timeout: 5_000 });
+      await $(testid('text-diff-as-values')).click();
+
+      await eventually(
+        () => readEach(testid('structured-diff-change'), '@data-path'),
         (paths) => paths.length === 7,
         'seven changes',
       );
-      expect(await readEach(testid('json-diff-change'), '@data-path')).toEqual([
+      expect(await readEach(testid('structured-diff-change'), '@data-path')).toEqual([
         '$.replicas',
         '$.database.host',
         '$.database.pool',
@@ -1197,19 +1237,19 @@ describe('The tools', () => {
         '$.sentry',
       ]);
 
-      await $(`${testid('json-diff-change')}[data-path="$.database.pool"]`).click();
-      await $(`${testid('json-diff-row')}.selected`).waitForExist({ timeout: 5_000 });
+      await $(`${testid('structured-diff-change')}[data-path="$.database.pool"]`).click();
+      await $(`${testid('structured-diff-row')}.selected`).waitForExist({ timeout: 5_000 });
     });
 
     it('counts a new key order only when asked', async () => {
-      await $(testid('json-diff-ignore-order')).click();
+      await $(testid('structured-diff-ignore-order')).click();
 
       await eventually(
-        () => readEach(testid('json-diff-change'), '@data-kind'),
+        () => readEach(testid('structured-diff-change'), '@data-kind'),
         (kinds) => kinds.includes('reordered'),
         'the reordering',
       );
-      await $(testid('json-diff-ignore-order')).click();
+      await $(testid('structured-diff-ignore-order')).click();
     });
 
     it('opens a JSON snippet into A, under its title', async () => {
@@ -1219,12 +1259,12 @@ describe('The tools', () => {
         )
       ).id;
 
-      await $(testid('json-diff-open-a')).click();
+      await $(testid('structured-diff-open-a')).click();
       await setField(testid('json-note-search'), 'config.staging');
       await $(`${testid('json-note-option')}[data-note-id="${noteId}"]`).click();
 
       await eventually(
-        () => readEach(testid('json-diff-name-a'), 'text'),
+        () => readEach(testid('structured-diff-name-a'), 'text'),
         (names) => names[0] === 'config.staging.json',
         'the snippet in A',
       );

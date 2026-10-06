@@ -28,7 +28,6 @@ const CATEGORY_ICONS: Record<ToolCategory, IconName> = {
   text: 'type',
   crypto: 'lock',
   encode: 'code',
-  compare: 'compare',
   generate: 'sparkle',
   time: 'clock',
   calc: 'calculator',

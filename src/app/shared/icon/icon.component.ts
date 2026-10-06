@@ -63,7 +63,6 @@ const PATHS = {
   // The tool categories, drawn to the mockups in the same stroke.
   type: ['M4 7V5h16v2', 'M12 5v14', 'M9 19h6'],
   lock: ['M6 11h12v10H6z', 'M8 11V7a4 4 0 0 1 8 0v4'],
-  compare: ['M8 3v18', 'M16 3v18', 'M3 8h5', 'M16 16h5'],
   sparkle: [
     'M12 3v4',
     'M12 17v4',

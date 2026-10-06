@@ -426,11 +426,6 @@
     --tool-hue-rgb: var(--green-rgb);
   }
 
-  &[data-category='compare'] {
-    --tool-hue: var(--amber-text);
-    --tool-hue-rgb: var(--amber-rgb);
-  }
-
   &[data-category='generate'] {
     --tool-hue: var(--red);
     --tool-hue-rgb: var(--red-rgb);

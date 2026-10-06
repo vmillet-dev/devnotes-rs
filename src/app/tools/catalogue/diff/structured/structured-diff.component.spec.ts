@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { JsonDiffAnswer } from '@core/model/tool-answers.model';
 import { FakeToolsRepository } from '@testing/fake-tools-repository';
 import { ToolHarness, renderTool } from '@testing/tool-harness';
-import { JsonDiffToolComponent } from './json-diff-tool.component';
+import { StructuredDiffComponent } from './structured-diff.component';
 
 const COMPARED: JsonDiffAnswer = {
   kind: 'compared',
@@ -32,24 +32,24 @@ const COMPARED: JsonDiffAnswer = {
   patch: '[\n  { "op": "replace", "path": "/replicas", "value": 6 }\n]',
 };
 
-describe('JsonDiffToolComponent', () => {
+describe('StructuredDiffComponent', () => {
   const answer = (tools: FakeToolsRepository): void => {
     tools.diffAnswer = COMPARED;
   };
 
-  async function compared(prepare = answer): Promise<ToolHarness<JsonDiffToolComponent>> {
-    const harness = await renderTool(JsonDiffToolComponent, prepare);
+  async function compared(prepare = answer): Promise<ToolHarness<StructuredDiffComponent>> {
+    const harness = await renderTool(StructuredDiffComponent, prepare);
     const type = (testid: string, text: string) => {
       const field = harness.element<HTMLTextAreaElement>(`[data-testid="${testid}"]`);
       field.value = text;
       field.dispatchEvent(new Event('input'));
     };
-    type('json-diff-a', '{"replicas":2,"beta":true}');
-    await harness.type('json-diff-b', '{"replicas":6,"sentry":{}}', 'diff_json');
+    type('structured-diff-a', '{"replicas":2,"beta":true}');
+    await harness.type('structured-diff-b', '{"replicas":6,"sentry":{}}', 'diff_json');
     return harness;
   }
 
-  const text = (harness: ToolHarness<JsonDiffToolComponent>, testid: string) =>
+  const text = (harness: ToolHarness<StructuredDiffComponent>, testid: string) =>
     harness.element(`[data-testid="${testid}"]`)?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
 
   it('compares both documents once both are there, key order and spaces ignored', async () => {
@@ -64,16 +64,16 @@ describe('JsonDiffToolComponent', () => {
       },
     ]);
     expect([
-      text(harness, 'json-diff-added'),
-      text(harness, 'json-diff-removed'),
-      text(harness, 'json-diff-modified'),
+      text(harness, 'structured-diff-added'),
+      text(harness, 'structured-diff-removed'),
+      text(harness, 'structured-diff-modified'),
     ]).toEqual(['+ 1 ajout', '− 1 suppression', '~ 1 modification']);
   });
 
   it('lays the rows side by side, a missing line drawn as a gap', async () => {
     const harness = await compared();
 
-    const rows = harness.all('[data-testid="json-diff-row"]');
+    const rows = harness.all('[data-testid="structured-diff-row"]');
     expect(rows.map((row) => row.dataset['kind'])).toEqual(['same', 'modified', 'removed', 'added']);
     expect(rows[2]!.querySelector('[data-side="b"]')!.classList).toContain('gap');
     expect(rows[3]!.querySelector('[data-side="a"]')!.classList).toContain('gap');
@@ -83,11 +83,13 @@ describe('JsonDiffToolComponent', () => {
     const harness = await compared();
 
     harness
-      .element<HTMLButtonElement>('[data-testid="segmented-json-diff-layout"] [data-segment-id="unified"]')
+      .element<HTMLButtonElement>(
+        '[data-testid="segmented-structured-diff-layout"] [data-segment-id="unified"]',
+      )
       .click();
     await harness.settle();
 
-    expect(harness.all('[data-testid="json-diff-line"]').map((line) => line.dataset['kind'])).toEqual([
+    expect(harness.all('[data-testid="structured-diff-line"]').map((line) => line.dataset['kind'])).toEqual([
       'same',
       'removed',
       'added',
@@ -99,7 +101,7 @@ describe('JsonDiffToolComponent', () => {
   it('lists the changes by their path, with what they were and became', async () => {
     const harness = await compared();
 
-    const changes = harness.all('[data-testid="json-diff-change"]');
+    const changes = harness.all('[data-testid="structured-diff-change"]');
     expect(changes.map((change) => change.dataset['path'])).toEqual(['$.replicas', '$.sentry', '$.beta']);
     const shown = (change: HTMLElement) => change.textContent?.replace(/\s+/g, ' ') ?? '';
     expect(shown(changes[0]!)).toContain('2 → 6');
@@ -120,7 +122,7 @@ describe('JsonDiffToolComponent', () => {
     await vi.waitFor(() => expect(harness.clipboard.content).toBe(COMPARED.patch));
 
     expect(harness.tool.result()).toMatchObject({
-      title: { key: 'tools.json-diff.noteTitle', params: { a: 'A', b: 'B' } },
+      title: { key: 'tools.diff.structured.noteTitle', params: { a: 'A', b: 'B' } },
       language: 'json',
       content: COMPARED.patch,
     });
@@ -135,10 +137,10 @@ describe('JsonDiffToolComponent', () => {
       .run();
     await harness.settle();
 
-    expect(harness.element<HTMLTextAreaElement>('[data-testid="json-diff-a"]').value).toBe(
+    expect(harness.element<HTMLTextAreaElement>('[data-testid="structured-diff-a"]').value).toBe(
       '{"replicas":6,"sentry":{}}',
     );
-    expect(harness.element<HTMLTextAreaElement>('[data-testid="json-diff-b"]').value).toBe(
+    expect(harness.element<HTMLTextAreaElement>('[data-testid="structured-diff-b"]').value).toBe(
       '{"replicas":2,"beta":true}',
     );
   });
@@ -148,8 +150,10 @@ describe('JsonDiffToolComponent', () => {
       tools.diffAnswer = { kind: 'unreadable', side: 'b', line: 1, column: 12 };
     });
 
-    expect(text(harness, 'json-diff-unreadable-b')).toBe('Ce JSON ne se lit pas : ligne 1, colonne 12.');
-    expect(harness.element('[data-testid="json-diff-unreadable-a"]')).toBeNull();
+    expect(text(harness, 'structured-diff-unreadable-b')).toBe(
+      'Ce JSON ne se lit pas : ligne 1, colonne 12.',
+    );
+    expect(harness.element('[data-testid="structured-diff-unreadable-a"]')).toBeNull();
     expect(harness.tool.result()).toBeNull();
   });
 
@@ -163,7 +167,7 @@ describe('JsonDiffToolComponent', () => {
       };
     });
 
-    expect(harness.element('[data-testid="json-diff-identical"]')).not.toBeNull();
+    expect(harness.element('[data-testid="structured-diff-identical"]')).not.toBeNull();
     expect(harness.tool.result()).toBeNull();
   });
 });

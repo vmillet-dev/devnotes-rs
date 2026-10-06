@@ -25,7 +25,7 @@ type Layout = 'split' | 'unified';
 
 const LAYOUTS: readonly Segment[] = (['split', 'unified'] as const).map((id) => ({
   id,
-  labelKey: `tools.json-diff.layouts.${id}`,
+  labelKey: `tools.diff.structured.layouts.${id}`,
 }));
 
 const MARKS: Record<JsonChange['kind'], string> = { added: '+', removed: '−', modified: '~', reordered: '~' };
@@ -69,23 +69,23 @@ const SAMPLE = {
 };
 
 @Component({
-  selector: 'app-json-diff-tool',
+  selector: 'app-structured-diff',
   imports: [JsonNotePickerComponent, SegmentedChoiceComponent, TranslocoPipe],
-  templateUrl: './json-diff-tool.component.html',
-  styleUrl: './json-diff-tool.component.scss',
+  templateUrl: './structured-diff.component.html',
+  styleUrl: './structured-diff.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class JsonDiffToolComponent implements Tool {
+export class StructuredDiffComponent implements Tool {
   private readonly repository = inject(ToolsRepository);
   private readonly clipboard = inject(ClipboardService);
 
-  protected readonly a = toolState('json-diff.a', '');
-  protected readonly b = toolState('json-diff.b', '');
-  protected readonly aName = toolState<string | null>('json-diff.aName', null);
-  protected readonly bName = toolState<string | null>('json-diff.bName', null);
-  protected readonly ignoreKeyOrder = toolState('json-diff.ignoreKeyOrder', true);
-  protected readonly ignoreWhitespace = toolState('json-diff.ignoreWhitespace', true);
-  protected readonly layout = toolState<Layout>('json-diff.layout', 'split');
+  protected readonly a = toolState('diff.a', '');
+  protected readonly b = toolState('diff.b', '');
+  protected readonly aName = toolState<string | null>('diff.aName', null);
+  protected readonly bName = toolState<string | null>('diff.bName', null);
+  protected readonly ignoreKeyOrder = toolState('diff.ignoreKeyOrder', true);
+  protected readonly ignoreWhitespace = toolState('diff.ignoreWhitespace', true);
+  protected readonly layout = toolState<Layout>('diff.structuredLayout', 'split');
 
   protected readonly picking = signal<JsonDiffSide | null>(null);
   protected readonly selectedPath = signal<string | null>(null);
@@ -128,10 +128,10 @@ export class JsonDiffToolComponent implements Tool {
   });
 
   readonly actions = computed<readonly ToolAction[]>(() => [
-    { id: 'swap', labelKey: 'tools.json-diff.swap', disabled: false, run: () => this.swap() },
+    { id: 'swap', labelKey: 'tools.diff.swap', disabled: false, run: () => this.swap() },
     {
       id: 'copy-patch',
-      labelKey: 'tools.json-diff.copyPatch',
+      labelKey: 'tools.diff.structured.copyPatch',
       disabled: this.patch() === null,
       run: () => void this.copyPatch(),
     },
@@ -142,7 +142,7 @@ export class JsonDiffToolComponent implements Tool {
     return patch
       ? {
           title: {
-            key: 'tools.json-diff.noteTitle',
+            key: 'tools.diff.structured.noteTitle',
             params: { a: this.aName() ?? 'A', b: this.bName() ?? 'B' },
           },
           kind: 'snippet',
@@ -226,11 +226,11 @@ export class JsonDiffToolComponent implements Tool {
   protected described(summary: ValueSummary): TranslationRef {
     switch (summary.kind) {
       case 'scalar':
-        return { key: 'tools.json-diff.scalar', params: { text: summary.text } };
+        return { key: 'tools.diff.structured.scalar', params: { text: summary.text } };
       case 'object':
-        return { key: 'tools.json-diff.object', params: { count: summary.keys } };
+        return { key: 'tools.diff.structured.object', params: { count: summary.keys } };
       case 'array':
-        return { key: 'tools.json-diff.array', params: { count: summary.items } };
+        return { key: 'tools.diff.structured.array', params: { count: summary.items } };
     }
   }
 }

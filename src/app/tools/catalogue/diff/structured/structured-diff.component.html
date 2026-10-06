@@ -1,36 +1,36 @@
 <div class="inputs">
   @for (side of ['a', 'b']; track side) {
     @let name = side === 'a' ? aName() : bName();
-    <section class="input" [attr.aria-labelledby]="'json-diff-input-' + side">
+    <section class="input" [attr.aria-labelledby]="'structured-diff-input-' + side">
       <div class="input-head">
-        <span class="side" [id]="'json-diff-input-' + side">{{ side.toUpperCase() }}</span>
-        <span class="name" [attr.data-testid]="'json-diff-name-' + side">
-          {{ name ?? ('tools.json-diff.pasted' | transloco) }}
+        <span class="side" [id]="'structured-diff-input-' + side">{{ side.toUpperCase() }}</span>
+        <span class="name" [attr.data-testid]="'structured-diff-name-' + side">
+          {{ name ?? ('tools.diff.pasted' | transloco) }}
         </span>
         <span class="spacer"></span>
         <button
           type="button"
           class="open"
-          [attr.data-testid]="'json-diff-open-' + side"
+          [attr.data-testid]="'structured-diff-open-' + side"
           (click)="picking.set(side === 'a' ? 'a' : 'b')"
         >
-          {{ 'tools.json-diff.openNote' | transloco }}
+          {{ 'tools.diff.structured.openNote' | transloco }}
         </button>
       </div>
       <textarea
         class="text"
         rows="6"
         spellcheck="false"
-        [attr.data-testid]="'json-diff-' + side"
-        [attr.aria-label]="'tools.json-diff.inputLabel' | transloco: { side: side.toUpperCase() }"
+        [attr.data-testid]="'structured-diff-' + side"
+        [attr.aria-label]="'tools.diff.structured.inputLabel' | transloco: { side: side.toUpperCase() }"
         [value]="side === 'a' ? a() : b()"
-        [placeholder]="'tools.json-diff.placeholder' | transloco"
+        [placeholder]="'tools.diff.structured.placeholder' | transloco"
         (input)="onInput(side === 'a' ? 'a' : 'b', $event)"
       ></textarea>
       @if (unreadable()?.side === side) {
-        <p class="problem" role="status" [attr.data-testid]="'json-diff-unreadable-' + side">
+        <p class="problem" role="status" [attr.data-testid]="'structured-diff-unreadable-' + side">
           {{
-            'tools.json-diff.unreadable'
+            'tools.diff.structured.unreadable'
               | transloco: { line: unreadable()!.line, column: unreadable()!.column }
           }}
         </p>
@@ -41,37 +41,37 @@
 
 @if (compared(); as compared) {
   <div class="bar">
-    <span class="count added" data-testid="json-diff-added">
-      {{ 'tools.json-diff.added' | transloco: { count: compared.counts.added } }}
+    <span class="count added" data-testid="structured-diff-added">
+      {{ 'tools.diff.structured.added' | transloco: { count: compared.counts.added } }}
     </span>
-    <span class="count removed" data-testid="json-diff-removed">
-      {{ 'tools.json-diff.removed' | transloco: { count: compared.counts.removed } }}
+    <span class="count removed" data-testid="structured-diff-removed">
+      {{ 'tools.diff.structured.removed' | transloco: { count: compared.counts.removed } }}
     </span>
-    <span class="count modified" data-testid="json-diff-modified">
-      {{ 'tools.json-diff.modified' | transloco: { count: compared.counts.modified } }}
+    <span class="count modified" data-testid="structured-diff-modified">
+      {{ 'tools.diff.structured.modified' | transloco: { count: compared.counts.modified } }}
     </span>
     <span class="spacer"></span>
     <label class="check">
       <input
         type="checkbox"
-        data-testid="json-diff-ignore-order"
+        data-testid="structured-diff-ignore-order"
         [checked]="ignoreKeyOrder()"
         (change)="onOption('order', $event)"
       />
-      {{ 'tools.json-diff.ignoreKeyOrder' | transloco }}
+      {{ 'tools.diff.structured.ignoreKeyOrder' | transloco }}
     </label>
     <label class="check">
       <input
         type="checkbox"
-        data-testid="json-diff-ignore-spaces"
+        data-testid="structured-diff-ignore-spaces"
         [checked]="ignoreWhitespace()"
         (change)="onOption('spaces', $event)"
       />
-      {{ 'tools.json-diff.ignoreWhitespace' | transloco }}
+      {{ 'tools.diff.structured.ignoreWhitespace' | transloco }}
     </label>
     <app-segmented-choice
-      kind="json-diff-layout"
-      [label]="'tools.json-diff.layout' | transloco"
+      kind="structured-diff-layout"
+      [label]="'tools.diff.structured.layout' | transloco"
       [segments]="layouts"
       [currentId]="layout()"
       (chosen)="onLayout($event)"
@@ -79,19 +79,21 @@
   </div>
 
   @if (compared.changes.length === 0) {
-    <p class="identical" data-testid="json-diff-identical">{{ 'tools.json-diff.identical' | transloco }}</p>
+    <p class="identical" data-testid="structured-diff-identical">
+      {{ 'tools.diff.structured.identical' | transloco }}
+    </p>
   } @else {
     <div class="comparison">
-      <div class="rows" #rowsBox data-testid="json-diff-rows" [class.unified]="layout() === 'unified'">
+      <div class="rows" #rowsBox data-testid="structured-diff-rows" [class.unified]="layout() === 'unified'">
         @if (layout() === 'split') {
           <div class="head">
-            <span><b>A</b> {{ aName() ?? ('tools.json-diff.pasted' | transloco) }}</span>
-            <span><b>B</b> {{ bName() ?? ('tools.json-diff.pasted' | transloco) }}</span>
+            <span><b>A</b> {{ aName() ?? ('tools.diff.pasted' | transloco) }}</span>
+            <span><b>B</b> {{ bName() ?? ('tools.diff.pasted' | transloco) }}</span>
           </div>
           @for (row of compared.rows; track $index) {
             <div
               class="row"
-              data-testid="json-diff-row"
+              data-testid="structured-diff-row"
               [attr.data-row]="$index"
               [attr.data-kind]="row.kind"
               [class.selected]="row.path === selectedPath()"
@@ -115,7 +117,7 @@
           @for (line of unifiedLines(); track $index) {
             <div
               class="line"
-              data-testid="json-diff-line"
+              data-testid="structured-diff-line"
               [attr.data-row]="line.row"
               [attr.data-kind]="line.kind"
             >
@@ -126,19 +128,19 @@
           }
         }
         @if (compared.rowsTruncated) {
-          <p class="truncated">{{ 'tools.json-diff.truncated' | transloco }}</p>
+          <p class="truncated">{{ 'tools.diff.structured.truncated' | transloco }}</p>
         }
       </div>
 
-      <aside class="changes" [attr.aria-label]="'tools.json-diff.changes' | transloco">
+      <aside class="changes" [attr.aria-label]="'tools.diff.structured.changes' | transloco">
         <p class="changes-title">
-          {{ 'tools.json-diff.changesCount' | transloco: { count: compared.changes.length } }}
+          {{ 'tools.diff.structured.changesCount' | transloco: { count: compared.changes.length } }}
         </p>
         @for (change of compared.changes; track $index) {
           <button
             type="button"
             class="change"
-            data-testid="json-diff-change"
+            data-testid="structured-diff-change"
             [attr.data-path]="change.path"
             [attr.data-kind]="change.kind"
             [class.selected]="change.path === selectedPath()"
@@ -150,7 +152,7 @@
             </span>
             <span class="change-detail">
               @if (change.kind === 'reordered') {
-                {{ 'tools.json-diff.reordered' | transloco }}
+                {{ 'tools.diff.structured.reordered' | transloco }}
               } @else {
                 @if (change.before; as before) {
                   @let shown = described(before);
@@ -171,7 +173,7 @@
     </div>
   }
 } @else if (!unreadable()) {
-  <p class="note">{{ 'tools.json-diff.empty' | transloco }}</p>
+  <p class="note">{{ 'tools.diff.structured.empty' | transloco }}</p>
 }
 
 @if (picking()) {

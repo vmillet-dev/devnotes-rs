@@ -1009,7 +1009,6 @@
       "text": "Text",
       "crypto": "Crypto",
       "encode": "Encoders",
-      "compare": "Compare",
       "generate": "Generators",
       "time": "Time",
       "calc": "Calculate"
@@ -1390,40 +1389,6 @@
         "sentences": "At most {count, plural, other {# sentences}} at a time: the count asked is brought down to it.",
         "paragraphs": "At most {count, plural, other {# paragraphs}} at a time: the count asked is brought down to it."
       }
-    },
-    "json-diff": {
-      "name": "JSON Diff",
-      "description": "Semantic: key order does not count",
-      "pasted": "pasted text",
-      "openNote": "Open a note",
-      "inputLabel": "Document {{side}}",
-      "placeholder": "Paste a JSON document, or open a snippet",
-      "unreadable": "This JSON does not parse: line {{line}}, column {{column}}.",
-      "added": "{count, plural, one {+ # addition} other {+ # additions}}",
-      "removed": "{count, plural, one {− # removal} other {− # removals}}",
-      "modified": "{count, plural, one {~ # change} other {~ # changes}}",
-      "ignoreKeyOrder": "Ignore key order",
-      "ignoreWhitespace": "Ignore spaces",
-      "layout": "Layout",
-      "layouts": {
-        "split": "Side by side",
-        "unified": "Unified"
-      },
-      "identical": "The two documents are identical.",
-      "truncated": "The rest is not shown: the changes and the patch stay whole.",
-      "changes": "Changes",
-      "changesCount": "Changes · {{count}}",
-      "reordered": "key order",
-      "scalar": "{{text}}",
-      "object": "object · {count, plural, one {# key} other {# keys}}",
-      "array": "list · {count, plural, one {# item} other {# items}}",
-      "swap": "Swap A and B",
-      "copyPatch": "Copy the JSON patch",
-      "empty": "Paste two documents: their differences show here.",
-      "noteTitle": "JSON patch from {{a}} to {{b}}",
-      "pickTitle": "Open a JSON snippet",
-      "pickSearch": "Search for a JSON snippet",
-      "pickNone": "No JSON snippet."
     },
     "dates": {
       "name": "Dates and timestamps",
@@ -2091,6 +2056,85 @@
       "empty": "The counts show here.",
       "noteTitle": "Statistics of a text",
       "sample": "Summer in Paris: 30 °C, a café crème and 🇫🇷 everywhere.\n\nA naïve question: where is the œuvre?"
+    },
+    "diff": {
+      "name": "Diff",
+      "description": "Two texts line by line, or two documents compared as values",
+      "mode": "Mode",
+      "modes": {
+        "text": "Text",
+        "structured": "Structured"
+      },
+      "pasted": "pasted text",
+      "swap": "Swap A and B",
+      "text": {
+        "inputLabel": "Text {{side}}",
+        "placeholder": "Paste a text",
+        "granularity": "Granularity",
+        "granularities": {
+          "lines": "Lines",
+          "words": "Words",
+          "characters": "Characters"
+        },
+        "ignore": {
+          "trailing": "Ignore trailing spaces",
+          "whitespace": "Ignore all whitespace",
+          "case": "Ignore case",
+          "endings": "Ignore line endings (CRLF, LF)"
+        },
+        "added": {
+          "lines": "{count, plural, one {+ # line} other {+ # lines}}",
+          "words": "{count, plural, one {+ # word} other {+ # words}}",
+          "characters": "{count, plural, one {+ # character} other {+ # characters}}"
+        },
+        "removed": {
+          "lines": "{count, plural, one {− # line} other {− # lines}}",
+          "words": "{count, plural, one {− # word} other {− # words}}",
+          "characters": "{count, plural, one {− # character} other {− # characters}}"
+        },
+        "layout": "Layout",
+        "layouts": {
+          "split": "Side by side",
+          "unified": "Unified"
+        },
+        "identical": "The two texts are identical.",
+        "truncated": "The rest is not shown: the counts and the unified diff stay complete.",
+        "empty": "Paste two texts: their differences show here.",
+        "bothJson": "Both texts are JSON.",
+        "asValues": "Compare as values",
+        "copyUnified": "Copy the unified diff",
+        "noteTitle": "Diff from {{a}} to {{b}}"
+      },
+      "structured": {
+        "openNote": "Open a note",
+        "inputLabel": "Document {{side}}",
+        "placeholder": "Paste a JSON document, or open a snippet",
+        "unreadable": "This JSON does not parse: line {{line}}, column {{column}}.",
+        "added": "{count, plural, one {+ # addition} other {+ # additions}}",
+        "removed": "{count, plural, one {− # removal} other {− # removals}}",
+        "modified": "{count, plural, one {~ # change} other {~ # changes}}",
+        "ignoreKeyOrder": "Ignore key order",
+        "ignoreWhitespace": "Ignore spaces",
+        "layout": "Layout",
+        "layouts": {
+          "split": "Side by side",
+          "unified": "Unified"
+        },
+        "identical": "The two documents are identical.",
+        "truncated": "The rest is not shown: the changes and the patch stay whole.",
+        "changes": "Changes",
+        "changesCount": "Changes · {{count}}",
+        "reordered": "key order",
+        "scalar": "{{text}}",
+        "object": "object · {count, plural, one {# key} other {# keys}}",
+        "array": "list · {count, plural, one {# item} other {# items}}",
+        "copyPatch": "Copy the JSON patch",
+        "empty": "Paste two documents: their differences show here.",
+        "noteTitle": "JSON patch from {{a}} to {{b}}",
+        "pickTitle": "Open a JSON snippet",
+        "pickSearch": "Search for a JSON snippet",
+        "pickNone": "No JSON snippet."
+      }
     },
     "sample": "Example",
     "sampleLoaded": "Example loaded",

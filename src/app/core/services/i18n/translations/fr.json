@@ -1009,7 +1009,6 @@
       "text": "Texte",
       "crypto": "Crypto",
       "encode": "Encodeurs",
-      "compare": "Comparer",
       "generate": "Générateurs",
       "time": "Temps",
       "calc": "Calcul"
@@ -1390,40 +1389,6 @@
         "sentences": "Au plus {count, plural, other {# phrases}} à la fois : le nombre demandé y est ramené.",
         "paragraphs": "Au plus {count, plural, other {# paragraphes}} à la fois : le nombre demandé y est ramené."
       }
-    },
-    "json-diff": {
-      "name": "JSON Diff",
-      "description": "Sémantique : l’ordre des clés ne compte pas",
-      "pasted": "texte collé",
-      "openNote": "Ouvrir une note",
-      "inputLabel": "Document {{side}}",
-      "placeholder": "Collez un document JSON, ou ouvrez un snippet",
-      "unreadable": "Ce JSON ne se lit pas : ligne {{line}}, colonne {{column}}.",
-      "added": "{count, plural, one {+ # ajout} other {+ # ajouts}}",
-      "removed": "{count, plural, one {− # suppression} other {− # suppressions}}",
-      "modified": "{count, plural, one {~ # modification} other {~ # modifications}}",
-      "ignoreKeyOrder": "Ignorer l’ordre des clés",
-      "ignoreWhitespace": "Ignorer les espaces",
-      "layout": "Présentation",
-      "layouts": {
-        "split": "Côte à côte",
-        "unified": "Unifié"
-      },
-      "identical": "Les deux documents sont identiques.",
-      "truncated": "La suite n’est pas affichée : les changements et le patch restent complets.",
-      "changes": "Changements",
-      "changesCount": "Changements · {{count}}",
-      "reordered": "ordre des clés",
-      "scalar": "{{text}}",
-      "object": "objet · {count, plural, one {# clé} other {# clés}}",
-      "array": "liste · {count, plural, one {# élément} other {# éléments}}",
-      "swap": "Échanger A et B",
-      "copyPatch": "Copier le patch JSON",
-      "empty": "Collez deux documents : leurs différences s’affichent ici.",
-      "noteTitle": "Patch JSON de {{a}} vers {{b}}",
-      "pickTitle": "Ouvrir un snippet JSON",
-      "pickSearch": "Rechercher un snippet JSON",
-      "pickNone": "Aucun snippet JSON."
     },
     "dates": {
       "name": "Dates et timestamps",
@@ -2091,6 +2056,85 @@
       "empty": "Les comptes s’affichent ici.",
       "noteTitle": "Statistiques d’un texte",
       "sample": "L'été à Paris : 30 °C, un café crème et des 🇫🇷 partout.\n\nNaïve question : où est l'œuvre ?"
+    },
+    "diff": {
+      "name": "Diff",
+      "description": "Deux textes ligne à ligne, ou deux documents comparés comme des valeurs",
+      "mode": "Mode",
+      "modes": {
+        "text": "Texte",
+        "structured": "Structuré"
+      },
+      "pasted": "texte collé",
+      "swap": "Échanger A et B",
+      "text": {
+        "inputLabel": "Texte {{side}}",
+        "placeholder": "Collez un texte",
+        "granularity": "Granularité",
+        "granularities": {
+          "lines": "Lignes",
+          "words": "Mots",
+          "characters": "Caractères"
+        },
+        "ignore": {
+          "trailing": "Ignorer les espaces en fin de ligne",
+          "whitespace": "Ignorer tous les espaces",
+          "case": "Ignorer la casse",
+          "endings": "Ignorer les fins de ligne (CRLF, LF)"
+        },
+        "added": {
+          "lines": "{count, plural, one {+ # ligne} other {+ # lignes}}",
+          "words": "{count, plural, one {+ # mot} other {+ # mots}}",
+          "characters": "{count, plural, one {+ # caractère} other {+ # caractères}}"
+        },
+        "removed": {
+          "lines": "{count, plural, one {− # ligne} other {− # lignes}}",
+          "words": "{count, plural, one {− # mot} other {− # mots}}",
+          "characters": "{count, plural, one {− # caractère} other {− # caractères}}"
+        },
+        "layout": "Présentation",
+        "layouts": {
+          "split": "Côte à côte",
+          "unified": "Unifié"
+        },
+        "identical": "Les deux textes sont identiques.",
+        "truncated": "La suite n’est pas affichée : les compteurs et le diff unifié restent complets.",
+        "empty": "Collez deux textes : leurs différences s’affichent ici.",
+        "bothJson": "Les deux textes sont du JSON.",
+        "asValues": "Comparer comme des valeurs",
+        "copyUnified": "Copier le diff unifié",
+        "noteTitle": "Diff de {{a}} vers {{b}}"
+      },
+      "structured": {
+        "openNote": "Ouvrir une note",
+        "inputLabel": "Document {{side}}",
+        "placeholder": "Collez un document JSON, ou ouvrez un snippet",
+        "unreadable": "Ce JSON ne se lit pas : ligne {{line}}, colonne {{column}}.",
+        "added": "{count, plural, one {+ # ajout} other {+ # ajouts}}",
+        "removed": "{count, plural, one {− # suppression} other {− # suppressions}}",
+        "modified": "{count, plural, one {~ # modification} other {~ # modifications}}",
+        "ignoreKeyOrder": "Ignorer l’ordre des clés",
+        "ignoreWhitespace": "Ignorer les espaces",
+        "layout": "Présentation",
+        "layouts": {
+          "split": "Côte à côte",
+          "unified": "Unifié"
+        },
+        "identical": "Les deux documents sont identiques.",
+        "truncated": "La suite n’est pas affichée : les changements et le patch restent complets.",
+        "changes": "Changements",
+        "changesCount": "Changements · {{count}}",
+        "reordered": "ordre des clés",
+        "scalar": "{{text}}",
+        "object": "objet · {count, plural, one {# clé} other {# clés}}",
+        "array": "liste · {count, plural, one {# élément} other {# éléments}}",
+        "copyPatch": "Copier le patch JSON",
+        "empty": "Collez deux documents : leurs différences s’affichent ici.",
+        "noteTitle": "Patch JSON de {{a}} vers {{b}}",
+        "pickTitle": "Ouvrir un snippet JSON",
+        "pickSearch": "Rechercher un snippet JSON",
+        "pickNone": "Aucun snippet JSON."
+      }
     },
     "sample": "Exemple",
     "sampleLoaded": "Exemple chargé",
