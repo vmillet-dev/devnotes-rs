@@ -1218,7 +1218,7 @@
       "verify": "Check a signature",
       "expectedPlaceholder": "The expected digest, in hex or base64",
       "matches": "Matches {{name}}, in {{encoding}}",
-      "noMatch": "Matches no digest of this text.",
+      "noMatch": "No match",
       "algorithms": "Algorithms",
       "encoding": "Output format",
       "encodings": {
@@ -1227,8 +1227,20 @@
       },
       "bits": "{{count}} bits",
       "empty": "Choose an algorithm and type a text.",
-      "weak": "MD5 and SHA-1 protect nothing any more: the tool keeps them to compare existing digests.",
-      "noteTitle": "Digests"
+      "weak": "MD5 and SHA-1 no longer protect anything: the tool keeps them to compare existing digests. To store passwords, use Argon2 or bcrypt, not a plain hash.",
+      "noteTitle": "Digests",
+      "noNewlineCommand": "(echo -n)",
+      "noMatchHints": "Check the final newlines, the encoding (hex or base64) and whether HMAC should be on.",
+      "hmacShape": "An HMAC has the shape of the hash it uses. Type the text to find out which.",
+      "or": "or",
+      "shapes": {
+        "hex": "{count, plural, one {# hexadecimal character} other {# hexadecimal characters}}: {{names}}",
+        "hexNone": "{count, plural, one {# hexadecimal character} other {# hexadecimal characters}}: no digest of the tool has this length.",
+        "base64": "Base64 of {count, plural, one {# byte} other {# bytes}}: {{names}}",
+        "base64None": "Base64 of {count, plural, one {# byte} other {# bytes}}: no digest of the tool has this length.",
+        "unknown": "Neither hexadecimal nor Base64: this is not a digest."
+      },
+      "obsolete": "obsolete"
     },
     "password": {
       "name": "Passwords",

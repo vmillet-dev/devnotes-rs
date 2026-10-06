@@ -13,7 +13,7 @@ const HASHED: HashAnswer = {
     { algorithm: 'sha1', bits: 160, value: '1fbd6946' },
     { algorithm: 'sha256', bits: 256, value: 'bfc0d2dc' },
   ],
-  recognised: null,
+  verdict: null,
 };
 
 describe('HashToolComponent', () => {
@@ -36,7 +36,7 @@ describe('HashToolComponent', () => {
     await harness.type('hash-key', key, 'hash_input');
   }
 
-  it('digests a text in the algorithms of the mockup, in hex, and measures it', async () => {
+  it('digests a text in every algorithm, in hex, and measures it', async () => {
     const harness = await renderTool(HashToolComponent, answer);
 
     await harness.type('hash-input', 'payload', 'hash_input');
@@ -44,14 +44,25 @@ describe('HashToolComponent', () => {
     expect(harness.tools.requestsOf('hash_input')).toEqual([
       {
         input: { kind: 'text', text: 'payload' },
-        algorithms: ['sha1', 'sha256', 'sha512'],
+        algorithms: ['md5', 'sha1', 'sha256', 'sha384', 'sha512', 'sha3-256'],
         encoding: 'hex',
         key: null,
         expected: null,
       },
     ]);
     expect(rows(harness)).toEqual(['SHA-1', 'SHA-256']);
-    expect(text(harness, 'hash-measure')).toBe('62 octets · UTF-8 · sans saut de ligne final');
+    expect(text(harness, 'hash-measure')).toBe('62 octets · UTF-8 · aucun saut de ligne final (echo -n)');
+  });
+
+  it('marks MD5 and SHA-1 obsolete, and gives each digest its length', async () => {
+    const harness = await renderTool(HashToolComponent, answer);
+
+    await harness.type('hash-input', 'payload', 'hash_input');
+
+    const row = (name: string) => harness.element(`[data-name="${name}"]`);
+    expect(row('SHA-1').querySelector('[data-testid="hash-obsolete"]')?.textContent?.trim()).toBe('obsolète');
+    expect(row('SHA-256').querySelector('[data-testid="hash-obsolete"]')).toBeNull();
+    expect(row('SHA-256').querySelector('.meta')?.textContent).toBe('256 bits');
   });
 
   it('keys the digests once a key is typed, and names them HMAC', async () => {
@@ -111,9 +122,9 @@ describe('HashToolComponent', () => {
     expect(again.nativeElement.querySelector('[data-testid="hash-key"]').value).toBe('');
   });
 
-  it('says which digest a pasted signature is, and outlines it', async () => {
+  it('says which digest a pasted signature is, and marks its row', async () => {
     const harness = await renderTool(HashToolComponent, (tools) => {
-      tools.hashAnswer = { ...HASHED, recognised: { algorithm: 'sha256', encoding: 'hex' } };
+      tools.hashAnswer = { ...HASHED, verdict: { kind: 'matches', algorithm: 'sha256', encoding: 'hex' } };
     });
     await harness.type('hash-input', 'payload', 'hash_input');
     await typeKey(harness, 'whsec_9f2c');
@@ -121,9 +132,62 @@ describe('HashToolComponent', () => {
     await harness.type('hash-expected', 'BFC0D2DC', 'hash_input');
 
     expect(text(harness, 'hash-verdict')).toBe('Correspond à HMAC-SHA256, en hex');
-    expect(harness.element('[data-name="HMAC-SHA256"]').closest('app-output-row')!.classList).toContain(
+    expect(harness.element('[data-name="HMAC-SHA256"]').closest('app-result-row')!.classList).toContain(
       'matched',
     );
+  });
+
+  it('says a signature matches nothing, what it looks like, and what to check', async () => {
+    const harness = await renderTool(HashToolComponent, (tools) => {
+      tools.hashAnswer = {
+        ...HASHED,
+        verdict: {
+          kind: 'noMatch',
+          shape: { kind: 'hex', characters: 64, algorithms: ['sha256', 'sha3-256'] },
+        },
+      };
+    });
+    await harness.type('hash-input', 'payload', 'hash_input');
+
+    await harness.type('hash-expected', 'e94cbc7c', 'hash_input');
+
+    expect(text(harness, 'hash-verdict')).toBe('Aucune correspondance');
+    expect(text(harness, 'hash-shape')).toBe('64 caractères hexadécimaux : SHA-256 ou SHA3-256');
+    expect(harness.fixture.nativeElement.textContent).toContain('si HMAC doit être activé');
+  });
+
+  /** Nothing to hash yet: a pasted digest is still read, by its shape alone, and no key goes. */
+  it('reads a digest pasted over an empty input by its shape', async () => {
+    const harness = await renderTool(HashToolComponent, (tools) => {
+      tools.hashAnswer = { kind: 'shaped', shape: { kind: 'base64', bytes: 7, algorithms: [] } };
+    });
+    harness.element<HTMLInputElement>('[data-testid="hash-hmac"]').click();
+    await harness.settle();
+    harness.element<HTMLInputElement>('[data-testid="hash-key"]').value = 'whsec_9f2c';
+    harness.element('[data-testid="hash-key"]').dispatchEvent(new Event('input'));
+
+    await harness.type('hash-expected', 'qZk+NkcGgW', 'hash_input');
+
+    expect(harness.tools.requestsOf('hash_input').at(-1)).toMatchObject({
+      input: null,
+      key: null,
+      expected: 'qZk+NkcGgW',
+    });
+    expect(text(harness, 'hash-shape')).toBe(
+      'Base64 de 7 octets : aucune empreinte de l’outil n’a cette longueur.',
+    );
+    expect(harness.element('[data-testid="hash-verdict"]')).toBeNull();
+    expect(harness.fixture.nativeElement.textContent).toContain('Une HMAC a la forme du hash');
+  });
+
+  it('says a text is no digest at all', async () => {
+    const harness = await renderTool(HashToolComponent, (tools) => {
+      tools.hashAnswer = { kind: 'shaped', shape: { kind: 'unknown' } };
+    });
+
+    await harness.type('hash-expected', 'pas une empreinte', 'hash_input');
+
+    expect(text(harness, 'hash-shape')).toBe('Ni hexadécimal ni base64 : ce n’est pas une empreinte.');
   });
 
   it('adds and removes algorithms in their own order, and warns about the weak ones', async () => {
@@ -135,12 +199,22 @@ describe('HashToolComponent', () => {
     pill('md5').click();
     await vi.waitFor(() =>
       expect(harness.tools.requestsOf('hash_input').at(-1)).toMatchObject({
-        algorithms: ['md5', 'sha256', 'sha512'],
+        algorithms: ['sha256', 'sha384', 'sha512', 'sha3-256'],
+      }),
+    );
+    await harness.settle();
+    expect(harness.fixture.nativeElement.textContent).not.toContain('MD5 et SHA-1 ne protègent plus rien');
+
+    pill('md5').click();
+    await vi.waitFor(() =>
+      expect(harness.tools.requestsOf('hash_input').at(-1)).toMatchObject({
+        algorithms: ['md5', 'sha256', 'sha384', 'sha512', 'sha3-256'],
       }),
     );
     await harness.settle();
 
     expect(pill('md5').getAttribute('aria-pressed')).toBe('true');
+    expect(pill('sha1').getAttribute('aria-pressed')).toBe('false');
     expect(harness.fixture.nativeElement.textContent).toContain('MD5 et SHA-1 ne protègent plus rien');
   });
 

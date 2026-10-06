@@ -1,5 +1,10 @@
 <div class="row" data-testid="output-row" [attr.data-name]="name()">
-  <span class="name">{{ name() }}<ng-content select="[rowBadge]" /></span>
+  <span class="label">
+    <span class="name">{{ name() }}<ng-content select="[rowBadge]" /></span>
+    @if (meta()) {
+      <span class="meta">{{ meta() }}</span>
+    }
+  </span>
   <code class="value" data-testid="output-value">{{ value() }}</code>
   @if (copyable()) {
     <app-copy-value [value]="copied() ?? value()" [what]="name()" [compact]="true" />

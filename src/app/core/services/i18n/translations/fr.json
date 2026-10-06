@@ -1211,14 +1211,14 @@
       "fileHint": "Le fichier est lu sur place, par blocs : sa taille n’a pas de limite.",
       "bytes": "{count, plural, one {# octet} other {# octets}}",
       "withNewline": "avec saut de ligne final",
-      "withoutNewline": "sans saut de ligne final",
+      "withoutNewline": "aucun saut de ligne final",
       "key": "Clé",
       "showKey": "Afficher la clé",
       "keyNeverKept": "La clé n’est jamais enregistrée avec la note.",
       "verify": "Vérifier une signature",
       "expectedPlaceholder": "L’empreinte attendue, en hex ou en base64",
       "matches": "Correspond à {{name}}, en {{encoding}}",
-      "noMatch": "Ne correspond à aucune empreinte de ce texte.",
+      "noMatch": "Aucune correspondance",
       "algorithms": "Algorithmes",
       "encoding": "Format de sortie",
       "encodings": {
@@ -1227,8 +1227,20 @@
       },
       "bits": "{{count}} bits",
       "empty": "Choisissez un algorithme et saisissez un texte.",
-      "weak": "MD5 et SHA-1 ne protègent plus rien : l’outil les garde pour comparer des empreintes existantes.",
-      "noteTitle": "Empreintes"
+      "weak": "MD5 et SHA-1 ne protègent plus rien : l’outil les garde pour comparer des empreintes existantes. Pour stocker des mots de passe, utilisez Argon2 ou bcrypt, pas un hash simple.",
+      "noteTitle": "Empreintes",
+      "noNewlineCommand": "(echo -n)",
+      "noMatchHints": "Vérifiez les sauts de ligne finaux, l’encodage (hex ou base64) et si HMAC doit être activé.",
+      "hmacShape": "Une HMAC a la forme du hash qu’elle utilise. Saisissez le texte pour savoir lequel.",
+      "or": "ou",
+      "shapes": {
+        "hex": "{count, plural, one {# caractère hexadécimal} other {# caractères hexadécimaux}} : {{names}}",
+        "hexNone": "{count, plural, one {# caractère hexadécimal} other {# caractères hexadécimaux}} : aucune empreinte de l’outil n’a cette longueur.",
+        "base64": "Base64 de {count, plural, one {# octet} other {# octets}} : {{names}}",
+        "base64None": "Base64 de {count, plural, one {# octet} other {# octets}} : aucune empreinte de l’outil n’a cette longueur.",
+        "unknown": "Ni hexadécimal ni base64 : ce n’est pas une empreinte."
+      },
+      "obsolete": "obsolète"
     },
     "password": {
       "name": "Mots de passe",

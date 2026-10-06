@@ -665,7 +665,9 @@ chooses, never to a note.
 ⚠️ **The HMAC key never outlives the tool**: it is a plain `signal` of the component, never a
 `toolState`, and Rust zeroes its copy once the digests are computed. The switch alone is
 remembered. A file is hashed a block at a time, so its size has no limit, and a pasted
-signature is compared with every algorithm in both encodings, whichever are shown.
+signature is compared with every algorithm in both encodings, whichever are shown. With nothing
+to hash it is still read, by its length alone (`DigestShape`): 64 hex characters are SHA-256 or
+SHA3-256, and an HMAC has the shape of the hash it uses.
 
 **Randomness is the system's** (`getrandom`), never a seeded generator: a character is drawn by
 rejection, so none comes up more often than another, and a system that gives no randomness is

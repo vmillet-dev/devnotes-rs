@@ -639,11 +639,20 @@ export type DiffLine =
 
 export type DigestEncoding = "hex" | "base64";
 
+/**  What a digest is from its length alone: an HMAC has the shape of the hash it uses. */
+export type DigestShape = { kind: "hex"; characters: number; 
+/**  Empty when no digest has this length. */
+algorithms: HashAlgorithm[] } | { kind: "base64"; bytes: number; algorithms: HashAlgorithm[] } | 
+/**  Neither alphabet. */
+{ kind: "unknown" };
+
 export type DigestValue = {
 	algorithm: HashAlgorithm,
 	bits: number,
 	value: string,
 };
+
+export type DigestVerdict = { kind: "matches"; algorithm: HashAlgorithm; encoding: DigestEncoding } | { kind: "noMatch"; shape: DigestShape };
 
 /**  `flatten`: the front end has a single note type. */
 export type DisplayNote = {
@@ -794,15 +803,18 @@ export type Grouping = "date" | "priority" | "format" | "none";
 export type HashAlgorithm = "md5" | "sha1" | "sha256" | "sha384" | "sha512" | "sha3-256";
 
 export type HashAnswer = { kind: "hashed"; bytes: number; endsWithNewline: boolean; digests: DigestValue[]; 
-/**  `None` with an expected digest given: it is none of them. */
-recognised: Recognised | null } | { kind: "failed"; problem: FileProblem };
+/**  `None` when no digest was pasted. */
+verdict: DigestVerdict | null } | 
+/**  No input: what the pasted digest is, by its shape. */
+{ kind: "shaped"; shape: DigestShape } | { kind: "failed"; problem: FileProblem };
 
 export type HashInput = { kind: "text"; text: string } | 
 /**  Read here, a block at a time: its bytes never cross the bridge, whatever its size. */
 { kind: "file"; path: string };
 
 export type HashRequest = {
-	input: HashInput,
+	/**  `None` to read a pasted digest's shape alone. */
+	input: HashInput | null,
 	algorithms: HashAlgorithm[],
 	encoding: DigestEncoding,
 	/**  An HMAC when present. ⚠️ Zeroed once the digests are computed, and never stored. */
@@ -1480,11 +1492,6 @@ export type QueryParameter = {
 };
 
 export type ReadAs = "unix" | "iso8601" | "weekDate" | "ordinalDate" | "rfc2822";
-
-export type Recognised = {
-	algorithm: HashAlgorithm,
-	encoding: DigestEncoding,
-};
 
 /**  What the File menu draws: the libraries, and which of them is open. */
 export type Registry = {
