@@ -2371,6 +2371,57 @@
         "description": "Description"
       },
       "noExtension": "none"
+    },
+    "ports": {
+      "name": "Common ports",
+      "description": "22, 443, 5432, 6379: which service listens where",
+      "placeholder": "A number or a service: 5432, redis, ssh…",
+      "columns": {
+        "port": "Port",
+        "transport": "Protocol",
+        "service": "Service",
+        "note": "Note"
+      },
+      "transports": {
+        "tcp": "TCP",
+        "udp": "UDP",
+        "both": "TCP and UDP"
+      },
+      "ranges": {
+        "well-known": "Well-known ports · 0 to 1023",
+        "registered": "Registered ports · 1024 to 49151",
+        "dynamic": "Dynamic ports · 49152 to 65535"
+      }
+    },
+    "signals": {
+      "name": "Unix signals",
+      "description": "SIGTERM, SIGKILL, SIGHUP: numbers, action and use",
+      "placeholder": "A number, a name or words: 9, SIGTERM, Ctrl+C…",
+      "columns": {
+        "number": "No.",
+        "name": "Signal",
+        "action": "Default",
+        "catchable": "Catchable",
+        "use": "Use",
+        "macos": "macOS"
+      },
+      "actions": {
+        "terminate": "Terminates",
+        "core": "Terminates, core dump",
+        "ignore": "Ignored",
+        "stop": "Stops",
+        "continue": "Continues"
+      },
+      "groups": {
+        "terminal": "Terminal and jobs",
+        "stopping": "Stopping and resuming",
+        "faults": "Program faults",
+        "timers": "Timers and limits",
+        "events": "Children, pipes and I/O",
+        "application": "For the application"
+      },
+      "yes": "Yes",
+      "no": "No"
     }
   }
 }

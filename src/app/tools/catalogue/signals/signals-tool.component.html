@@ -1,0 +1,29 @@
+<app-reference-table
+  [rows]="rows()"
+  [groups]="groups()"
+  [columns]="columns"
+  [matches]="matches"
+  [caption]="'tools.signals.name' | transloco"
+  [placeholder]="'tools.signals.placeholder' | transloco"
+  [(query)]="query"
+>
+  <ng-template [appReferenceCells]="rows()" let-row>
+    <td class="number">{{ row.signal.linux ?? '—' }}</td>
+    <td class="name">{{ row.key }}</td>
+    <td class="action" [attr.data-action]="row.signal.action">
+      {{ 'tools.signals.actions.' + row.signal.action | transloco }}
+    </td>
+    <td class="catchable" data-testid="signals-catchable" [attr.data-catchable]="!row.signal.uncatchable">
+      {{ (row.signal.uncatchable ? 'tools.signals.no' : 'tools.signals.yes') | transloco }}
+    </td>
+    <td class="use">{{ row.use }}</td>
+    <td
+      class="macos"
+      data-testid="signals-macos"
+      [class.differs]="row.signal.macos !== undefined"
+      [attr.data-differs]="row.signal.macos !== undefined"
+    >
+      {{ row.macos ?? '—' }}
+    </td>
+  </ng-template>
+</app-reference-table>

@@ -1,0 +1,18 @@
+<app-reference-table
+  [rows]="rows()"
+  [groups]="groups()"
+  [columns]="columns"
+  [matches]="matches"
+  [caption]="'tools.ports.name' | transloco"
+  [placeholder]="'tools.ports.placeholder' | transloco"
+  [(query)]="query"
+>
+  <ng-template [appReferenceCells]="rows()" let-row>
+    <td class="number">{{ row.key }}</td>
+    <td class="transport" [attr.data-transport]="row.port.transport">
+      {{ 'tools.ports.transports.' + row.port.transport | transloco }}
+    </td>
+    <td class="service">{{ row.port.service }}</td>
+    <td class="note">{{ row.note }}</td>
+  </ng-template>
+</app-reference-table>
