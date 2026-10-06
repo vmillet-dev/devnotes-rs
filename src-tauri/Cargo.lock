@@ -1313,7 +1313,7 @@ dependencies = [
  "deunicode",
  "diesel",
  "diesel_migrations",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "hmac",
  "iana-time-zone",
  "iban_validate",
