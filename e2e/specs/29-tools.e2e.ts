@@ -725,6 +725,41 @@ describe('The tools', () => {
       );
       expect((await $(testid('lorem-counted')).getText()).replace(/\D/g, '')).toBe('5');
     });
+
+    const qrVersion = () => $(testid('qr-code')).getAttribute('data-version');
+
+    it('draws a URL as a QR code, and a larger one at a higher correction level', async () => {
+      await openTool('qr');
+      await $(testid('tool-clear')).click();
+      await $(`${testid('segmented-qr-kind')} [data-segment-id="url"]`).click();
+      await $(`${testid('segmented-qr-correction')} [data-segment-id="medium"]`).click();
+      await setField(testid('qr-url'), 'https://exemple.fr/doc');
+
+      await eventually(qrVersion, (version) => version === '2', 'a version 2 code');
+      expect(await $(testid('qr-facts')).getText()).toMatch(/22\D+26/);
+      expect(await $(`${testid('qr-code')} path`).getAttribute('d')).toMatch(/^M4,4h7v1h-7z/);
+
+      await $(`${testid('segmented-qr-correction')} [data-segment-id="high"]`).click();
+      await eventually(qrVersion, (version) => version === '3', 'a version 3 code');
+    });
+
+    it('warns before a Wi-Fi password is kept as a note, and forgets it once the tool is left', async () => {
+      await $(`${testid('segmented-qr-kind')} [data-segment-id="wifi"]`).click();
+      await setField(testid('qr-ssid'), 'Maison');
+      await setField(testid('qr-password'), 'secret');
+      await $(testid('qr-code')).waitForExist({ timeout: 5_000 });
+
+      await $(testid('tool-save-as-note')).click();
+      await $(testid('save-as-note-warning')).waitForDisplayed({ timeout: 5_000 });
+      await $(testid('save-as-note-cancel')).click();
+      await $(testid('save-as-note')).waitForExist({ reverse: true, timeout: 5_000 });
+
+      await openTool('lorem');
+      await openTool('qr');
+      expect(await $(testid('qr-ssid')).getValue()).toBe('Maison');
+      expect(await $(testid('qr-password')).getValue()).toBe('');
+      await $(testid('tool-clear')).click();
+    });
   });
 
   describe('the time tools', () => {
