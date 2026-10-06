@@ -1156,9 +1156,20 @@ export type ModeProblem =
 
 export type ModeReading = { kind: "empty" } | { kind: "read"; mode: Mode; 
 /**  Named by the letter a mode string of `ls -l` starts with. */
-fileType: FileType | null } | { kind: "refused"; problem: ModeProblem; 
+fileType: FileType | null; warnings: ModeWarning[] } | { kind: "refused"; problem: ModeProblem; 
 /**  One-based, in characters. */
 at: number };
+
+/**  A mode that is probably a mistake: legal, but rarely what was meant. */
+export type ModeWarning = 
+/**  The group holds less than everybody: the others have a right it lacks. */
+"othersOverGroup" | 
+/**  The owner holds less than its group. */
+"groupOverOwner" | 
+/**  Anyone may write, and no sticky bit keeps each to their own files. */
+"worldWritable" | 
+/**  Setuid or setgid without the execute right it acts on: `S` in `ls -l`. */
+"specialWithoutExecute";
 
 export type NanoAlphabet = 
 /**  `A-Za-z0-9_-`, `NanoID`'s own. */

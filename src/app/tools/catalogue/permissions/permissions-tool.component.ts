@@ -6,7 +6,8 @@ import { Class, ClassRights, ModeReading } from '@core/model/tool-answers.model'
 import { liveResult } from '@core/services/tools/live-result';
 import { Tool, ToolResult } from '@core/services/tools/tool.model';
 import { toolState } from '@core/services/tools/tool-sessions';
-import { OutputRowComponent } from '@tools/ui/output-row/output-row.component';
+import { CopyValueComponent } from '@tools/ui/copy-value/copy-value.component';
+import { ResultRowComponent } from '@tools/ui/result-row/result-row.component';
 
 type Read = Extract<ModeReading, { kind: 'read' }>;
 type Field = 'octal' | 'symbolic';
@@ -34,7 +35,7 @@ interface Typed {
 /** Three ways into one mode — octal, letters, boxes — each written back from Rust's answer. */
 @Component({
   selector: 'app-permissions-tool',
-  imports: [OutputRowComponent, TranslocoPipe],
+  imports: [CopyValueComponent, ResultRowComponent, TranslocoPipe],
   templateUrl: './permissions-tool.component.html',
   styleUrl: './permissions-tool.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

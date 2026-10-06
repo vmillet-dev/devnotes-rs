@@ -1787,7 +1787,15 @@
         "length": "Un mode en lettres en compte neuf, dix avec le type de fichier en tête."
       },
       "empty": "Tapez un mode en octal ou en lettres, ou cochez les cases.",
-      "noteTitle": "Mode {{octal}}"
+      "noteTitle": "Mode {{octal}}",
+      "specialBits": "Bits spéciaux",
+      "directoryExecute": "Sur un dossier, « exécuter » signifie le traverser et accéder à son contenu.",
+      "warnings": {
+        "othersOverGroup": "Les autres ont un droit que le groupe n’a pas : le groupe a moins de droits que tout le monde. Vérifiez que c’est voulu.",
+        "groupOverOwner": "Le groupe a un droit que le propriétaire n’a pas. Vérifiez que c’est voulu.",
+        "worldWritable": "Tout le monde peut écrire, et aucun bit sticky ne réserve à chacun ses propres fichiers.",
+        "specialWithoutExecute": "setuid ou setgid sans le droit d’exécution sur lequel il agit (S dans ls -l) : il ne fait rien."
+      }
     },
     "checks": {
       "name": "Numéros de contrôle",

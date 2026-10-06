@@ -115,6 +115,44 @@ pub enum ModeProblem {
     Length,
 }
 
+/// A mode that is probably a mistake: legal, but rarely what was meant.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum ModeWarning {
+    /// The group holds less than everybody: the others have a right it lacks.
+    OthersOverGroup,
+    /// The owner holds less than its group.
+    GroupOverOwner,
+    /// Anyone may write, and no sticky bit keeps each to their own files.
+    WorldWritable,
+    /// Setuid or setgid without the execute right it acts on: `S` in `ls -l`.
+    SpecialWithoutExecute,
+}
+
+fn warnings(bits: u32) -> Vec<ModeWarning> {
+    let rights = |class: Class| (bits >> class.shift()) & 0o7;
+    let (owner, group, others) = (
+        rights(Class::Owner),
+        rights(Class::Group),
+        rights(Class::Others),
+    );
+    [
+        (others & !group != 0, ModeWarning::OthersOverGroup),
+        (group & !owner != 0, ModeWarning::GroupOverOwner),
+        (
+            others & 2 != 0 && bits & STICKY == 0,
+            ModeWarning::WorldWritable,
+        ),
+        (
+            (bits & SETUID != 0 && owner & 1 == 0) || (bits & SETGID != 0 && group & 1 == 0),
+            ModeWarning::SpecialWithoutExecute,
+        ),
+    ]
+    .into_iter()
+    .filter_map(|(holds, warning)| holds.then_some(warning))
+    .collect()
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
 #[serde(
     tag = "kind",
@@ -127,6 +165,7 @@ pub enum ModeReading {
         mode: Mode,
         /// Named by the letter a mode string of `ls -l` starts with.
         file_type: Option<FileType>,
+        warnings: Vec<ModeWarning>,
     },
     Refused {
         problem: ModeProblem,
@@ -329,6 +368,7 @@ pub fn describe(request: &PermissionsRequest) -> PermissionsAnswer {
         Ok(Some((bits, file_type))) => ModeReading::Read {
             mode: describe_mode(bits),
             file_type,
+            warnings: warnings(bits),
         },
         Err((problem, at)) => ModeReading::Refused { problem, at },
     };
@@ -354,7 +394,9 @@ mod tests {
         })
         .mode
         {
-            ModeReading::Read { mode, file_type } => (mode, file_type),
+            ModeReading::Read {
+                mode, file_type, ..
+            } => (mode, file_type),
             other => panic!("{text} was not read: {other:?}"),
         }
     }
@@ -368,6 +410,62 @@ mod tests {
         {
             ModeReading::Refused { problem, at } => (problem, at),
             other => panic!("{text} was not refused: {other:?}"),
+        }
+    }
+
+    fn warned(text: &str) -> Vec<ModeWarning> {
+        match describe(&PermissionsRequest {
+            mode: text.to_owned(),
+            umask: String::new(),
+        })
+        .mode
+        {
+            ModeReading::Read { warnings, .. } => warnings,
+            other => panic!("{text} was not read: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn a_mode_that_is_probably_a_mistake_is_said() {
+        assert_eq!(warned("501"), [ModeWarning::OthersOverGroup]);
+        assert_eq!(
+            warned("467"),
+            [
+                ModeWarning::OthersOverGroup,
+                ModeWarning::GroupOverOwner,
+                ModeWarning::WorldWritable
+            ]
+        );
+        assert_eq!(warned("666"), [ModeWarning::WorldWritable]);
+        assert_eq!(
+            warned("4644"),
+            [ModeWarning::SpecialWithoutExecute],
+            "rwSr--r--"
+        );
+        assert_eq!(
+            warned("2745"),
+            [
+                ModeWarning::OthersOverGroup,
+                ModeWarning::SpecialWithoutExecute
+            ]
+        );
+    }
+
+    #[test]
+    fn the_usual_modes_draw_no_warning() {
+        for usual in [
+            "755",
+            "644",
+            "600",
+            "700",
+            "750",
+            "640",
+            "4755",
+            "2775",
+            "1777",
+            "rwxr-xr-x",
+        ] {
+            assert_eq!(warned(usual), [], "{usual}");
         }
     }
 

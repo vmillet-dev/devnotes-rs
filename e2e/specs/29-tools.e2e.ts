@@ -1010,6 +1010,12 @@ describe('The tools', () => {
         (problem) => problem === 'notOctal',
         'the digit refused',
       );
+      await setField(testid('permissions-octal'), '501');
+      await eventually(
+        () => readEach(testid('permissions-warning'), '@data-warning'),
+        (warnings) => warnings.join() === 'othersOverGroup',
+        'the group poorer than everybody',
+      );
       await $(testid('tool-clear')).click();
     });
 

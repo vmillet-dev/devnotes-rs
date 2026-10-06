@@ -762,7 +762,9 @@ answered with `∞`, and the formula beside each result is the page's, from tran
 prints (its file-type letter read and named, `s`/`S` and `t`/`T` telling a special bit with and
 without the execute one), and the grid of boxes. A field shows what was typed in it, or else
 Rust's writing of the mode; a box flips one bit and writes the mode back as octal, which Rust
-reads again — the page keeps no mode of its own.
+reads again — the page keeps no mode of its own. A mode that is probably a mistake — the others
+richer than the group, anyone writing without the sticky bit, a setuid with no execute to act on —
+is named by Rust as a typed warning and phrased by the page.
 
 **Check digits are Rust's** (`tools/checks.rs`): Luhn in a few lines, a card's network named from
 its prefix and length as a hint, and an IBAN's mod 97 with its country's BBAN format checked by
