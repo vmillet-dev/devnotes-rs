@@ -1213,7 +1213,7 @@ describe('The tools', () => {
           `${testid('tools-panel')}[data-category="reference"] ${testid('tools-entry')}`,
           '@data-tool',
         ),
-      ).toEqual(['http-status', 'http-headers', 'mime-types']);
+      ).toEqual(['http-status', 'http-headers', 'mime-types', 'ports', 'signals']);
     });
 
     it('opens the category from the rail, and finds a status code by its number', async () => {
@@ -1273,6 +1273,23 @@ describe('The tools', () => {
 
       await setField(testid('reference-search'), 'json');
       await eventually(rows, (keys) => keys.includes('application/json'), 'application/json by json');
+      await $(testid('tool-clear')).click();
+    });
+
+    it('finds a port by the start of its number, and a signal by its number exactly', async () => {
+      await openTool('ports');
+      await eventually(rows, (keys) => keys.length > 60, 'every port');
+      await setField(testid('reference-search'), '54');
+      await eventually(rows, (keys) => keys.join() === '5432', 'PostgreSQL by 54');
+      await $(testid('tool-clear')).click();
+
+      await openTool('signals');
+      await eventually(rows, (keys) => keys.length > 30, 'every signal');
+      await setField(testid('reference-search'), '9');
+      await eventually(rows, (keys) => keys.join() === 'SIGKILL', 'SIGKILL by 9');
+      expect(
+        await $(`[data-key="SIGKILL"] ${testid('signals-catchable')}`).getAttribute('data-catchable'),
+      ).toBe('false');
       await $(testid('tool-clear')).click();
     });
   });
