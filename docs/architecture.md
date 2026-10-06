@@ -831,7 +831,9 @@ translated text — the groups, the count, each row's key to copy. A row is sear
 heading too (« redirection » finds every 3xx), so headings are translated in code
 (`referenceHeadings`), not in the template. The reference draws its own
 `<td>`s through `appReferenceCells`, and so styles them itself (`reference-cell`): the table's
-stylesheet cannot reach them. A spec holds both files of words to the same keys.
+stylesheet cannot reach them. A spec holds both files of words to the same keys. Each group is a
+table of its own, a card, and the cards flow into as many columns as the width holds, each never
+narrower than the reference's `--reference-column`; a card is never cut between two columns.
 
 A cheat sheet's claims are checked where an engine is at hand: every JavaScript example of the
 regex sheet runs through `RegExp` in its spec. ⚠️ The Mustache sheet's `{{…}}` are constants and

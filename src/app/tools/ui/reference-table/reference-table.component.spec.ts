@@ -125,15 +125,21 @@ describe('ReferenceTableComponent', () => {
     await fixture.whenStable();
   }
 
-  it('draws every row under its group, in a table that names its columns', () => {
+  it('draws every group as a table of its own, named, its columns named', () => {
     expect(keys()).toEqual(['1', '2', '3', '4', '5']);
     expect(groups()).toEqual(['red', 'yellow', 'green']);
-    expect(all('thead th[scope="col"]').map((th) => th.textContent?.trim())).toEqual([
+    expect(all('[data-group="red"] thead th[scope="col"]').map((th) => th.textContent?.trim())).toEqual([
       'Code',
       'Nom',
       'Copier',
     ]);
-    expect(one('caption').textContent?.trim()).toBe('Fruits');
+    expect(all('[data-testid="reference-group"] table')).toHaveLength(3);
+    expect(all('caption').map((caption) => caption.textContent?.trim())).toEqual([
+      'Rouges2',
+      'Jaunes2',
+      'Verts1',
+    ]);
+    expect(one('[data-testid="reference-table"]').getAttribute('aria-label')).toBe('Fruits');
     expect(all('[data-testid="fruit-name"]').map((cell) => cell.textContent)).toContain('Citron');
     expect(count()).toBe('5 entrées');
   });

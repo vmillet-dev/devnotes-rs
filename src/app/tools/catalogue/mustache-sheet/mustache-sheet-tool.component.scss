@@ -2,7 +2,7 @@
 
 :host {
   @include tool-fills-frame;
-  max-width: 1100px;
+  --reference-column: 600px;
 }
 
 app-reference-table {

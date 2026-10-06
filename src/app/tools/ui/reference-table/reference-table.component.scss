@@ -52,9 +52,23 @@
 }
 
 .frame {
-  @include surface(var(--bg-1), 10px);
   min-height: 0;
   overflow: auto;
+}
+
+// Each group a card, the cards flowing in as many columns as the width holds; a reference sets
+// how narrow one may be with `--reference-column`. ⚠️ The scrolling stays on the frame: a
+// multicolumn box of a set height adds columns sideways instead of growing down.
+.sections {
+  column-width: var(--reference-column, 560px);
+  column-gap: 16px;
+}
+
+.section {
+  @include surface(var(--bg-1), 10px);
+  margin-bottom: 16px;
+  overflow: hidden;
+  break-inside: avoid;
 }
 
 .table {
@@ -63,28 +77,24 @@
   font-size: 12.5px;
 }
 
+.section-title {
+  padding: 12px 12px 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--text-0);
+}
+
 thead th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  padding: 9px 12px;
+  padding: 6px 12px;
   border-bottom: 1px solid var(--line-soft);
-  background: var(--bg-1);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-align: left;
   text-transform: uppercase;
   white-space: nowrap;
   color: var(--text-2);
-}
-
-.group-row th {
-  padding: 16px 12px 6px;
-  font-size: 12px;
-  font-weight: 600;
-  text-align: left;
-  color: var(--text-0);
 }
 
 .group-count {
