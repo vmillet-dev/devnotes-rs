@@ -741,7 +741,10 @@ nothing is read from the system but the name of its own zone (`iana-time-zone`),
 Linux answer alike. A time is read by `dates::parse` and placed in the zone it was typed in: one
 the clocks skipped says between which offsets, one they went through twice gives both readings
 and places the one chosen. The machine's zone and the one typed in are always listed, whatever
-the list holds. An abbreviation the database writes as an offset (`+0545`) is no name.
+the list holds. An abbreviation the database writes as an offset (`+0545`) is no name. ⚠️ The
+list is the one thing a tool keeps on disk (`timeZones`, an application preference): a list of
+zones is a preference, not something typed. It is read back name by name, and a zone Rust says it
+does not know leaves it. An abbreviation several zones use lists them all rather than guessing.
 
 **A cron expression is read twice** (`tools/cron.rs`): by hand, field by field, so that a
 refusal names its field and its token and the page can light the field under the caret; then by

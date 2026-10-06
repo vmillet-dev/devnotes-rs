@@ -80,6 +80,22 @@ describe('SettingsStore', () => {
     expect(createStore().recentTools()).toEqual([{ id: 'hash', at: '2026-09-29T10:00:00.000Z' }]);
   });
 
+  /** A list of zones is the one thing a tool keeps: read back name by name, each once. */
+  it('reads the zones of the zones tool back, dropping what is no zone name', () => {
+    preferences().write(
+      SETTINGS_KEYS.timeZones,
+      JSON.stringify(['Asia/Kolkata', 42, '', 'UTC', 'Asia/Kolkata', '../etc', 'Etc/GMT+5']),
+    );
+
+    expect(createStore().timeZones()).toEqual(['Asia/Kolkata', 'UTC', 'Etc/GMT+5']);
+  });
+
+  it('keeps the default zones when the file holds no list', () => {
+    preferences().write(SETTINGS_KEYS.timeZones, '{"UTC": true}');
+
+    expect(createStore().timeZones()).toEqual(['UTC', 'America/New_York', 'Asia/Tokyo']);
+  });
+
   it('starts with no recent tool when the file holds no list', () => {
     preferences().write(SETTINGS_KEYS.recentTools, '{not json');
 

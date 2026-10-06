@@ -1470,7 +1470,6 @@
       "inputLabel": "Date and time",
       "placeholder": "2026-09-29 14:30",
       "now": "Now",
-      "typedIn": "Typed in {{zone}} time.",
       "zones": "Zones",
       "add": "Add a zone",
       "addPlaceholder": "City, zone or abbreviation: Tokyo, CEST…",
@@ -1491,7 +1490,10 @@
       "unknownZone": "Unknown zone: {{zone}}.",
       "unknown": "Unknown zones, left aside: {{zones}}.",
       "empty": "Type a date and a time, or take the present time: every zone shows it here.",
-      "noteTitle": "{{time}} in every zone"
+      "noteTitle": "{{time}} in every zone",
+      "typedInBefore": "Typed in the time of ",
+      "typedInAfter": ".",
+      "notAmbiguous": "No daylight-saving ambiguity on this date."
     },
     "cron": {
       "name": "Cron",
