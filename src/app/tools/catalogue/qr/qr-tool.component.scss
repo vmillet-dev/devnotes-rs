@@ -134,6 +134,9 @@
 .secondary {
   @include unstyled-control;
   @include focus-ring;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex: 1;
   height: 38px;
   border-radius: 8px;
@@ -163,7 +166,4 @@
 
 .icon {
   flex: 0 0 46px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
