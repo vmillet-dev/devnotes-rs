@@ -39,6 +39,10 @@ export const commands = {
 	generateIdentifiers: (request: IdentifiersRequest) => typedError<string[], AppError>(__TAURI_INVOKE("generate_identifiers", { request })),
 	inspectIdentifier: (text: string) => typedError<IdInspection, AppError>(__TAURI_INVOKE("inspect_identifier", { text })),
 	textStats: (request: StatsRequest) => typedError<TextStats, AppError>(__TAURI_INVOKE("text_stats", { request })),
+	describeQrCode: (request: QrRequest) => typedError<QrAnswer, AppError>(__TAURI_INVOKE("describe_qr_code", { request })),
+	saveQrCode: (request: QrRequest, format: QrFormat, path: string) => typedError<SavedCode, AppError>(__TAURI_INVOKE("save_qr_code", { request, format, path })),
+	/**  The image is written natively: its pixels never cross the bridge. `false` when there is no code. */
+	copyQrCode: (request: QrRequest) => typedError<boolean, AppError>(__TAURI_INVOKE("copy_qr_code", { request })),
 	describeColour: (request: ColourRequest) => typedError<ColourAnswer, AppError>(__TAURI_INVOKE("describe_colour", { request })),
 	convertData: (request: ConvertRequest) => typedError<ConvertAnswer, AppError>(__TAURI_INVOKE("convert_data", { request })),
 	generateJson: (request: GenerateRequest) => typedError<GenerateAnswer, AppError>(__TAURI_INVOKE("generate_json", { request })),
@@ -1666,6 +1670,26 @@ export type Placeholder = {
  */
 export type Priority = "none" | "low" | "medium" | "high" | "urgent";
 
+export type QrAnswer = { kind: "empty" } | { kind: "tooLong"; bytes: number; maximum: number } | { kind: "code"; payload: string; version: number; 
+/**  Modules on a side, margin left out. */
+modules: number; bytes: number; capacity: number; recoverable: number; 
+/**  Modules on a side, margin included: the `viewBox` of `path`. */
+side: number; 
+/**  The dark modules as one SVG path, a rectangle per horizontal run. */
+path: string; missingScheme: boolean };
+
+export type QrContent = { kind: "text"; text: string } | { kind: "url"; url: string } | { kind: "wifi"; ssid: string; password: string; security: WifiSecurity; hidden: boolean } | { kind: "email"; to: string; subject: string; body: string } | { kind: "contact"; name: string; phone: string; email: string; organisation: string };
+
+export type QrCorrection = "low" | "medium" | "quartile" | "high";
+
+export type QrFormat = "svg" | "png";
+
+export type QrRequest = {
+	content: QrContent,
+	correction: QrCorrection,
+	margin: number,
+};
+
 export type QueryParameter = {
 	name: string,
 	value: string,
@@ -1730,6 +1754,8 @@ export type SampleNote = {
 };
 
 export type SavedBytes = { kind: "saved"; bytes: number } | { kind: "invalid" } | { kind: "failed"; problem: FileProblem };
+
+export type SavedCode = { kind: "saved"; bytes: number } | { kind: "nothing" } | { kind: "failed"; problem: FileProblem };
 
 /**
  *  No `Title` variant: a note found by its own title needs no excerpt, which would repeat the
@@ -2079,6 +2105,8 @@ export type WideCharacter = {
 	character: string,
 	bytes: number,
 };
+
+export type WifiSecurity = "wpa" | "wep" | "open";
 
 /**  Pushed from the preferences panel as it changes, like the tray labels. */
 export type WindowBehavior = {

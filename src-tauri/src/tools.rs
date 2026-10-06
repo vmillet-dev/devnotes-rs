@@ -19,6 +19,7 @@ pub mod jwt;
 pub(crate) mod numbers;
 pub mod percentages;
 pub mod permissions;
+pub mod qr;
 pub mod random;
 pub mod sizes;
 pub mod stats;
@@ -27,6 +28,8 @@ pub mod text_diff;
 pub mod transfer;
 pub mod url_parts;
 pub mod zones;
+
+use tauri::{AppHandle, Runtime};
 
 use crate::error::{AppError, StorageError};
 
@@ -275,4 +278,36 @@ pub async fn decode_jwt(request: jwt::JwtRequest) -> Result<jwt::JwtAnswer, AppE
 #[specta::specta]
 pub async fn text_stats(request: stats::StatsRequest) -> Result<stats::TextStats, AppError> {
     off_thread(move || stats::count(&request)).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn describe_qr_code(request: qr::QrRequest) -> Result<qr::QrAnswer, AppError> {
+    off_thread(move || qr::describe(&request)).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn save_qr_code(
+    request: qr::QrRequest,
+    format: qr::QrFormat,
+    path: String,
+) -> Result<qr::SavedCode, AppError> {
+    off_thread(move || qr::save(&request, format, &path)).await
+}
+
+/// The image is written natively: its pixels never cross the bridge. `false` when there is no code.
+#[tauri::command]
+#[specta::specta]
+pub async fn copy_qr_code<R: Runtime>(
+    request: qr::QrRequest,
+    app: AppHandle<R>,
+) -> Result<bool, AppError> {
+    let Some((pixels, rgba)) = off_thread(move || qr::rgba(&request)).await? else {
+        return Ok(false);
+    };
+    tauri_plugin_clipboard_manager::ClipboardExt::clipboard(&app)
+        .write_image(&tauri::image::Image::new_owned(rgba, pixels, pixels))
+        .map_err(|_| StorageError::Unavailable)?;
+    Ok(true)
 }

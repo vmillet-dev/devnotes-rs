@@ -50,12 +50,12 @@ use notes::{
 use recovery::{archive_locked_library, set_aside_damaged_library};
 use spaces::{create_space, delete_space, list_spaces, pin_space, rename_space};
 use tools::{
-    answer_percentages, check_digits, convert_case, convert_data, convert_size, current_instant,
-    decode_bytes, decode_jwt, describe_colour, describe_cron, describe_instant,
-    describe_permissions, diff_json, diff_text, encode_base64_file, encode_bytes,
+    answer_percentages, check_digits, convert_case, convert_data, convert_size, copy_qr_code,
+    current_instant, decode_bytes, decode_jwt, describe_colour, describe_cron, describe_instant,
+    describe_permissions, describe_qr_code, diff_json, diff_text, encode_base64_file, encode_bytes,
     estimate_transfer, fix_line_breaks, generate_identifiers, generate_json, generate_passwords,
     hash_input, inspect_identifier, lorem_ipsum, measure_durations, parse_url, place_in_zones,
-    save_bytes, search_time_zones, text_stats, time_in_zone, url_codec,
+    save_bytes, save_qr_code, search_time_zones, text_stats, time_in_zone, url_codec,
 };
 use transfer::{export_is_protected, export_notes, import_notes, share_notes};
 use vault::{change_passphrase, create_vault, unlock_vault, vault_state};
@@ -99,6 +99,9 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             generate_identifiers,
             inspect_identifier,
             text_stats,
+            describe_qr_code,
+            save_qr_code,
+            copy_qr_code::<tauri::Wry>,
             describe_colour,
             convert_data,
             generate_json,

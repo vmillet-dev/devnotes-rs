@@ -1,0 +1,235 @@
+<div class="columns">
+  <section class="column" aria-labelledby="qr-content-title">
+    <h2 id="qr-content-title" class="section-title">{{ 'tools.qr.content' | transloco }}</h2>
+    <app-segmented-choice
+      kind="qr-kind"
+      [label]="'tools.qr.content' | transloco"
+      [segments]="kinds"
+      [currentId]="kind()"
+      (chosen)="onKind($event)"
+    />
+
+    @switch (kind()) {
+      @case ('text') {
+        <textarea
+          class="area"
+          rows="4"
+          data-testid="qr-text"
+          spellcheck="false"
+          [attr.aria-label]="'tools.qr.fields.text' | transloco"
+          [placeholder]="'tools.qr.placeholders.text' | transloco"
+          [value]="value('text')"
+          (input)="onField('text', $event)"
+        ></textarea>
+      }
+      @case ('url') {
+        <input
+          type="text"
+          class="field"
+          data-testid="qr-url"
+          spellcheck="false"
+          [attr.aria-label]="'tools.qr.fields.url' | transloco"
+          [placeholder]="'tools.qr.placeholders.url' | transloco"
+          [value]="value('url')"
+          (input)="onField('url', $event)"
+        />
+        @if (code()?.missingScheme) {
+          <p class="note" role="status" data-testid="qr-missing-scheme">
+            {{ 'tools.qr.missingScheme' | transloco }}
+          </p>
+        }
+      }
+      @case ('wifi') {
+        <div class="form">
+          <label class="labelled">
+            <span class="label">{{ 'tools.qr.fields.ssid' | transloco }}</span>
+            <input
+              type="text"
+              class="field"
+              data-testid="qr-ssid"
+              spellcheck="false"
+              [value]="value('ssid')"
+              (input)="onField('ssid', $event)"
+            />
+          </label>
+          <label class="labelled">
+            <span class="label">{{ 'tools.qr.fields.password' | transloco }}</span>
+            <input
+              type="password"
+              class="field"
+              data-testid="qr-password"
+              autocomplete="off"
+              [disabled]="forms().security === 'open'"
+              [value]="value('password')"
+              (input)="onField('password', $event)"
+            />
+          </label>
+          <div class="inline">
+            <app-segmented-choice
+              kind="qr-security"
+              [label]="'tools.qr.fields.security' | transloco"
+              [segments]="securities"
+              [currentId]="forms().security"
+              (chosen)="onSecurity($event)"
+            />
+            <label class="check">
+              <input
+                type="checkbox"
+                data-testid="qr-hidden"
+                [checked]="forms().hidden"
+                (change)="onHidden($event)"
+              />
+              {{ 'tools.qr.fields.hidden' | transloco }}
+            </label>
+          </div>
+        </div>
+      }
+      @case ('email') {
+        <div class="form">
+          @for (field of emailFields; track field) {
+            <label class="labelled">
+              <span class="label">{{ 'tools.qr.fields.' + field | transloco }}</span>
+              <input
+                type="text"
+                class="field"
+                spellcheck="false"
+                [attr.data-testid]="'qr-' + field"
+                [value]="value(field)"
+                (input)="onField(field, $event)"
+              />
+            </label>
+          }
+          <label class="labelled">
+            <span class="label">{{ 'tools.qr.fields.body' | transloco }}</span>
+            <textarea
+              class="area"
+              rows="3"
+              data-testid="qr-body"
+              [value]="value('body')"
+              (input)="onField('body', $event)"
+            ></textarea>
+          </label>
+        </div>
+      }
+      @case ('contact') {
+        <div class="form">
+          @for (field of contactFields; track field) {
+            <label class="labelled">
+              <span class="label">{{ 'tools.qr.fields.' + field | transloco }}</span>
+              <input
+                type="text"
+                class="field"
+                spellcheck="false"
+                [attr.data-testid]="'qr-' + field"
+                [value]="value(field)"
+                (input)="onField(field, $event)"
+              />
+            </label>
+          }
+        </div>
+      }
+    }
+
+    <div class="inline">
+      <app-segmented-choice
+        kind="qr-correction"
+        [label]="'tools.qr.correction' | transloco"
+        [segments]="corrections"
+        [currentId]="correction()"
+        (chosen)="onCorrection($event)"
+      />
+      <label class="option">
+        {{ 'tools.qr.margin' | transloco }}
+        <input
+          type="number"
+          class="number"
+          data-testid="qr-margin"
+          min="0"
+          [max]="maxMargin"
+          [value]="margin()"
+          (input)="onMargin($event)"
+        />
+      </label>
+    </div>
+
+    @if (code(); as code) {
+      <div class="card" data-testid="qr-facts">
+        <app-result-row
+          [name]="'tools.qr.version' | transloco"
+          [value]="'tools.qr.versionValue' | transloco: { version: code.version, modules: code.modules }"
+          [copyable]="false"
+        />
+        <app-result-row
+          [name]="'tools.qr.capacity' | transloco"
+          [value]="'tools.qr.capacityValue' | transloco: { bytes: code.bytes, capacity: code.capacity }"
+          [copyable]="false"
+        />
+        <app-result-row
+          [name]="'tools.qr.recoverable' | transloco"
+          [value]="'tools.qr.recoverableValue' | transloco: { percent: code.recoverable }"
+          [copyable]="false"
+        />
+      </div>
+    } @else if (tooLong(); as tooLong) {
+      <p class="problem" role="status" data-testid="qr-too-long">
+        {{ 'tools.qr.tooLong' | transloco: { bytes: tooLong.bytes, maximum: tooLong.maximum } }}
+      </p>
+    }
+    <p class="advice">{{ 'tools.qr.advice' | transloco }}</p>
+  </section>
+
+  <section class="column" aria-labelledby="qr-preview-title">
+    <h2 id="qr-preview-title" class="section-title">{{ 'tools.qr.preview' | transloco }}</h2>
+    <!-- Black on white in both themes: an inverted code is not read by every scanner. -->
+    <div class="plate" data-testid="qr-preview" [class.empty]="!code()">
+      @if (code(); as code) {
+        <svg
+          class="code"
+          xmlns="http://www.w3.org/2000/svg"
+          role="img"
+          shape-rendering="crispEdges"
+          data-testid="qr-code"
+          [attr.viewBox]="viewBox()"
+          [attr.data-version]="code.version"
+          [attr.data-bytes]="code.bytes"
+          [attr.aria-label]="'tools.qr.codeLabel' | transloco: { version: code.version }"
+        >
+          <path [attr.d]="code.path" />
+        </svg>
+      } @else {
+        <p class="placeholder">{{ 'tools.qr.nothing' | transloco }}</p>
+      }
+    </div>
+    <div class="actions">
+      <button
+        type="button"
+        class="primary"
+        data-testid="qr-svg"
+        [disabled]="!code()"
+        (click)="download('svg')"
+      >
+        {{ 'tools.qr.downloadSvg' | transloco }}
+      </button>
+      <button
+        type="button"
+        class="secondary"
+        data-testid="qr-png"
+        [disabled]="!code()"
+        (click)="download('png')"
+      >
+        {{ 'tools.qr.png' | transloco }}
+      </button>
+      <button
+        type="button"
+        class="secondary icon"
+        data-testid="qr-copy"
+        [disabled]="!code()"
+        [attr.aria-label]="'tools.qr.copyImage' | transloco"
+        [attr.title]="'tools.qr.copyImage' | transloco"
+        (click)="copyImage()"
+      >
+        <app-icon name="copy" />
+      </button>
+    </div>
+  </section>
+</div>

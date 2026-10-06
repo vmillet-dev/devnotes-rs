@@ -99,6 +99,7 @@ croner = "4.0.0"
 rust_decimal = { version = "1.43.0", default-features = false, features = ["std"] }
 iban_validate = "5.0.1"
 unicode-segmentation = "1.13.3"
+qrcode = { version = "0.14.1", default-features = false }
 
 [dev-dependencies]
 # The mock runtime `tests/commands` calls the commands through.

@@ -705,6 +705,15 @@ is read by its shape, narrowest alphabet first — binary, hexadecimal (each gro
 the other readings its shape allows are named, any of them forced on request. A file keeps the
 two Base64 alone.
 
+**A QR code is Rust's, the front draws a path** (`tools/qr.rs`, the `qrcode` crate): the form
+becomes a payload there (Wi-Fi in the ZXing format, `mailto:`, a vCard 3.0 folded at 75 octets),
+always in byte mode, so the capacity reads in the bytes typed. The answer carries the dark
+modules as one SVG path, drawn inline (no data URL, CSP-safe); the SVG file is written around the
+same path and the PNG from the same modules, so a download is the preview. ⚠️ The plate is white
+and the modules black in both themes: an inverted code is not read by every scanner. A copy puts
+the image on the clipboard natively, its pixels never crossing the bridge. The Wi-Fi password is
+a plain `signal`, and a note keeping it is warned against, as a password is.
+
 **A colour is Rust's to read** (`tools/colour.rs`): the four notations, `OKLab` and `OKLCH`,
 the gamut, and the WCAG ratio — with the `0.03928` of `scripts/palette.test.mjs`, so the tool
 and the palette's own check agree. The page paints the swatch Rust hands it. An `OKLCH` colour

@@ -39,9 +39,13 @@ import {
   PercentagesAnswer,
   PercentagesRequest,
   PermissionsAnswer,
+  QrAnswer,
+  QrFormat,
+  QrRequest,
   PermissionsRequest,
   PasswordRequest,
   SavedBytes,
+  SavedCode,
   SizesAnswer,
   SizesRequest,
   StatsRequest,
@@ -198,5 +202,18 @@ export class ToolsRepository {
   /** The wall clock of a zone now, as the field takes it. */
   async timeInZone(zone: string | null): Promise<string> {
     return unwrap('time_in_zone', await commands.timeInZone(zone));
+  }
+
+  async describeQrCode(request: QrRequest): Promise<QrAnswer> {
+    return unwrap('describe_qr_code', await commands.describeQrCode(request));
+  }
+
+  async saveQrCode(request: QrRequest, format: QrFormat, path: string): Promise<SavedCode> {
+    return unwrap('save_qr_code', await commands.saveQrCode(request, format, path));
+  }
+
+  /** Written to the clipboard natively, as an image: `false` when there is no code to copy. */
+  async copyQrCode(request: QrRequest): Promise<boolean> {
+    return unwrap('copy_qr_code', await commands.copyQrCode(request));
   }
 }
