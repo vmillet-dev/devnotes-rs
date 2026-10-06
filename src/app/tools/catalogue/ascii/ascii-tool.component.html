@@ -1,0 +1,33 @@
+<app-reference-table
+  [rows]="rows()"
+  [groups]="groups()"
+  [columns]="columns"
+  [matches]="matches"
+  [caption]="'tools.ascii.name' | transloco"
+  [placeholder]="'tools.ascii.placeholder' | transloco"
+  [(query)]="query"
+>
+  <ng-template [appReferenceCells]="rows()" let-row>
+    <td class="code decimal">{{ row.key }}</td>
+    <td class="code">{{ row.hex }}</td>
+    <td class="code">{{ row.octal }}</td>
+    <td class="code binary">{{ row.binary }}</td>
+    <td class="character" data-testid="ascii-character">
+      @if (row.control; as control) {
+        <span class="abbreviation">{{ control.abbreviation }}</span>
+      } @else if (row.code === 32) {
+        <span class="abbreviation">SP</span>
+      } @else {
+        {{ row.character }}
+      }
+    </td>
+    <td class="name">
+      @if (row.control; as control) {
+        <span class="standard">{{ control.name }}</span>
+      }
+      <span class="words">{{ row.words }}</span>
+    </td>
+    <td class="code">{{ row.control?.escape ?? '' }}</td>
+    <td class="code">{{ row.ctrl ?? '' }}</td>
+  </ng-template>
+</app-reference-table>

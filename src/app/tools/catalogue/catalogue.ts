@@ -211,4 +211,10 @@ export const TOOLS: readonly ToolDefinition[] = [
     keywords: ['signal', 'kill', 'sigterm', 'sigkill', 'sighup', 'sigint', 'posix', 'trap'],
     load: () => import('./signals/signals-tool.component').then((m) => m.SignalsToolComponent),
   },
+  {
+    id: 'ascii',
+    category: 'reference',
+    keywords: ['ascii', 'character', 'caractère', 'code', 'hex', 'control', 'newline', 'escape'],
+    load: () => import('./ascii/ascii-tool.component').then((m) => m.AsciiToolComponent),
+  },
 ];
