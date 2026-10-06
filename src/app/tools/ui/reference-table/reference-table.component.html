@@ -33,6 +33,12 @@
                 section.label
               }}<span class="group-count">{{ section.rows.length }}</span>
             </caption>
+            <colgroup>
+              @for (column of columns(); track column.id) {
+                <col [style.width]="column.width ?? null" />
+              }
+              <col class="copy-column" />
+            </colgroup>
             <thead>
               <tr>
                 @for (column of columns(); track column.id) {

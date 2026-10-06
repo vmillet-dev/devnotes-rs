@@ -5,9 +5,9 @@ import { Tool } from '@core/services/tools/tool.model';
 import { toolState } from '@core/services/tools/tool-sessions';
 import {
   ReferenceCellsDirective,
-  ReferenceColumn,
   ReferenceRow,
   ReferenceTableComponent,
+  referenceColumns,
 } from '@tools/ui/reference-table/reference-table.component';
 import { MUSTACHE_ENTRIES, MUSTACHE_GROUPS, MustacheEntry, MustacheWords } from './mustache-sheet.data';
 
@@ -16,10 +16,11 @@ interface MustacheRow extends ReferenceRow {
   readonly what: string;
 }
 
-const COLUMNS: readonly ReferenceColumn[] = ['syntax', 'what', 'example'].map((id) => ({
-  id,
-  labelKey: `tools.mustache-sheet.columns.${id}`,
-}));
+const COLUMNS = referenceColumns('tools.mustache-sheet.columns', {
+  syntax: '25%',
+  what: '32%',
+  example: null,
+});
 
 /**
  * ⚠️ Every `{{…}}` here is a constant or a word of the chunk, never a main translation string:

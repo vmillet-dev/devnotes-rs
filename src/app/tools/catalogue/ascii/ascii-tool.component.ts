@@ -5,9 +5,9 @@ import { Tool } from '@core/services/tools/tool.model';
 import { toolState } from '@core/services/tools/tool-sessions';
 import {
   ReferenceCellsDirective,
-  ReferenceColumn,
   ReferenceRow,
   ReferenceTableComponent,
+  referenceColumns,
   matchesSearchable,
 } from '@tools/ui/reference-table/reference-table.component';
 import {
@@ -34,16 +34,16 @@ export interface AsciiRow extends ReferenceRow {
   readonly words: string;
 }
 
-const COLUMNS: readonly ReferenceColumn[] = [
-  'decimal',
-  'hex',
-  'octal',
-  'binary',
-  'character',
-  'name',
-  'escape',
-  'ctrl',
-].map((id) => ({ id, labelKey: `tools.ascii.columns.${id}` }));
+const COLUMNS = referenceColumns('tools.ascii.columns', {
+  decimal: '56px',
+  hex: '56px',
+  octal: '56px',
+  binary: '96px',
+  character: '60px',
+  name: null,
+  escape: '84px',
+  ctrl: '60px',
+});
 
 const SPACE = 32;
 

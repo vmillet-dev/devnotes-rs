@@ -6,9 +6,9 @@ import { toolState } from '@core/services/tools/tool-sessions';
 import { IconComponent } from '@shared/icon/icon.component';
 import {
   ReferenceCellsDirective,
-  ReferenceColumn,
   ReferenceRow,
   ReferenceTableComponent,
+  referenceColumns,
   matchesSearchable,
 } from '@tools/ui/reference-table/reference-table.component';
 import { REGEX_ENTRIES, REGEX_GROUPS, RegexEntry, RegexWords } from './regex-sheet.data';
@@ -20,10 +20,13 @@ export interface RegexRow extends ReferenceRow {
   readonly pcreNote: string | null;
 }
 
-const COLUMNS: readonly ReferenceColumn[] = ['syntax', 'what', 'example', 'js', 'pcre'].map((id) => ({
-  id,
-  labelKey: `tools.regex-sheet.columns.${id}`,
-}));
+const COLUMNS = referenceColumns('tools.regex-sheet.columns', {
+  syntax: '18%',
+  what: null,
+  example: '31%',
+  js: '112px',
+  pcre: '112px',
+});
 
 const METACHARACTERS = /[\\^$.*+?()[\]{}|]/;
 

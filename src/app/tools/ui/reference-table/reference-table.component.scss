@@ -74,7 +74,12 @@
 .table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
   font-size: 12.5px;
+}
+
+.copy-column {
+  width: 44px;
 }
 
 .section-title {
@@ -94,6 +99,8 @@ thead th {
   text-align: left;
   text-transform: uppercase;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--text-2);
 }
 
@@ -110,11 +117,6 @@ thead th {
   &:hover {
     background: var(--bg-2);
   }
-}
-
-.copy-head,
-.copy-cell {
-  width: 1%;
 }
 
 .copy-cell {

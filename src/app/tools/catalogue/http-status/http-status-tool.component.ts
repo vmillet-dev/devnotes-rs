@@ -5,9 +5,9 @@ import { Tool } from '@core/services/tools/tool.model';
 import { toolState } from '@core/services/tools/tool-sessions';
 import {
   ReferenceCellsDirective,
-  ReferenceColumn,
   ReferenceRow,
   ReferenceTableComponent,
+  referenceColumns,
 } from '@tools/ui/reference-table/reference-table.component';
 import { HTTP_STATUSES, HttpStatus, HttpStatusWords, STATUS_CLASSES, statusClass } from './http-status.data';
 
@@ -17,10 +17,12 @@ interface StatusRow extends ReferenceRow {
   readonly use: string | null;
 }
 
-const COLUMNS: readonly ReferenceColumn[] = ['code', 'name', 'meaning', 'by'].map((id) => ({
-  id,
-  labelKey: `tools.http-status.columns.${id}`,
-}));
+const COLUMNS = referenceColumns('tools.http-status.columns', {
+  code: '60px',
+  name: '27%',
+  meaning: null,
+  by: '104px',
+});
 
 /** A reference: nothing typed to keep, so no result and no sample. */
 @Component({

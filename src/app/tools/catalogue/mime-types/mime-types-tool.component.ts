@@ -5,10 +5,10 @@ import { Tool } from '@core/services/tools/tool.model';
 import { toolState } from '@core/services/tools/tool-sessions';
 import {
   ReferenceCellsDirective,
-  ReferenceColumn,
   ReferenceGroup,
   ReferenceRow,
   ReferenceTableComponent,
+  referenceColumns,
 } from '@tools/ui/reference-table/reference-table.component';
 import { MIME_GROUPS, MIME_TYPES, MimeType, MimeTypeWords, mimeGroup } from './mime-types.data';
 
@@ -17,10 +17,11 @@ interface MimeRow extends ReferenceRow {
   readonly description: string;
 }
 
-const COLUMNS: readonly ReferenceColumn[] = ['type', 'extensions', 'description'].map((id) => ({
-  id,
-  labelKey: `tools.mime-types.columns.${id}`,
-}));
+const COLUMNS = referenceColumns('tools.mime-types.columns', {
+  type: '36%',
+  extensions: '24%',
+  description: null,
+});
 
 /** The top-level type is its own heading, in no language. */
 const GROUPS: readonly ReferenceGroup[] = MIME_GROUPS.map((id) => ({ id, label: `${id}/*` }));

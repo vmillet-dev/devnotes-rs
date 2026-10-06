@@ -20,10 +20,6 @@ td {
   color: var(--text-0);
 }
 
-.what {
-  min-width: 220px;
-}
-
 .example {
   font-size: 12px;
 }
@@ -52,6 +48,7 @@ td {
 }
 
 .match {
+  white-space: nowrap;
   margin-right: 4px;
   padding: 0 4px;
   border-radius: 4px;

@@ -5,9 +5,9 @@ import { Tool } from '@core/services/tools/tool.model';
 import { toolState } from '@core/services/tools/tool-sessions';
 import {
   ReferenceCellsDirective,
-  ReferenceColumn,
   ReferenceRow,
   ReferenceTableComponent,
+  referenceColumns,
   matchesSearchable,
 } from '@tools/ui/reference-table/reference-table.component';
 import { SIGNALS, SIGNAL_GROUPS, SignalAction, SignalWords, UnixSignal } from './signals.data';
@@ -21,9 +21,14 @@ interface SignalRow extends ReferenceRow {
 
 const ACTIONS: readonly SignalAction[] = ['terminate', 'core', 'ignore', 'stop', 'continue'];
 
-const COLUMNS: readonly ReferenceColumn[] = ['number', 'name', 'action', 'catchable', 'use', 'macos'].map(
-  (id) => ({ id, labelKey: `tools.signals.columns.${id}` }),
-);
+const COLUMNS = referenceColumns('tools.signals.columns', {
+  number: '64px',
+  name: '104px',
+  action: '136px',
+  catchable: '128px',
+  use: null,
+  macos: '68px',
+});
 
 const DIGITS = /^\d+$/;
 
