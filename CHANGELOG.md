@@ -12,6 +12,78 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [0.9.2] - 2026-10-06
+
+### ✨ Added
+
+- Compare YAML, TOML and XML as values in the diff's structured mode (#681)
+- Give the data sizes a second tab (#675)
+- Give the dates tool a second tab (#674)
+- Make the diff a text tool, with a text mode beside the structured one (#678)
+- A sample for every tool (#651)
+- Open a new note as the kind the preferences name (#644)
+- Show the update prompt's notes as formatted text, read by Rust (#647)
+- Count a text as a reader and as a program do, and its characters' frequencies (#554)
+- Draw and read back ULID, NanoID, CUID2, ObjectId and KSUID beside UUIDs (#553)
+- Six more cases, and a list converted line by line (#552)
+- Decode a JWT, read its dates and verify an HMAC signature (#551)
+- Check a Luhn number and an IBAN, and give the right check digits (#550)
+- Keep a Unix mode's octal, letters and boxes in step (#549)
+- Answer the usual questions about a percentage, exactly (#548)
+- Write a data size in every unit, exactly (#547)
+- Read a cron expression aloud and list its next runs (#546)
+- Place one time in several zones (#545)
+- Read a date or a timestamp in every form (#544)
+
+### 🔧 Changed
+
+- Write a text in every base at once, and read a pasted one by its shape (#677)
+- Convert between two equal panels with a swap, and leave out a key TOML has no null for, naming it (#676)
+- Lay the colours out as in the mockup, and offer the nearest text colour that reaches the contrast (#673)
+- Lay the Unix permissions out as in the mockup, and warn of a mode that is probably a mistake (#672)
+- Lay the check digits out as in the mockup, read a French IBAN in its parts, and keep it out of notes (#671)
+- Hold the Lorem ipsum in one card that says what it holds, and say its bound rather than clamp quietly (#670)
+- Lay the time zones out as in the mockup, and keep their list in the preferences (#669)
+- Lay the data sizes out as in the mockup, and write a value too small for its decimals as a power of ten (#668)
+- Lay the dates tool out as in the mockup (#667)
+- Make the URL parser a tab of the URL tool, over one shared text (#666)
+- Lay the identifiers out as in the mockup (#665)
+- Show every digest at once, and read a pasted one by its shape before comparing it (#664)
+- Read the text statistics' counts without a copy button on each (#663)
+- Make the slug a row of the case converter, and drop its own tool (#662)
+- Lay the case converter out in two columns, its cases in two groups, with options (#661)
+- Tell the rail's section title, its tools and the recents apart (#660)
+- Put the tools' promise in a banner at the top of their home (#659)
+- Move the priority, the pin and the marks to the card's footer (#645)
+
+### 🐛 Fixed
+
+- Keep the bindings exporter out of the installers (#658)
+- Pick a code block's language from the themed menu (#643)
+- Keep every line of a Note's preview whole (#646)
+
+### 🧰 Under the hood
+
+- Read the .deb's executables without a leading ./ in the release check
+- Revert "chore(release): v0.9.2"
+- Bump the version to 0.9.2
+- Wait for the copied row's tint in the identifiers spec (#679)
+- Port the XML reader to quick-xml 0.42 and the decoders to base64 0.23 (#650)
+- Bump Tauri's two halves as one, and keep Dependabot from splitting them (#649)
+- Give Dependabot's pull requests a section of their own in the changelog (#648)
+- Bump the version to 0.9.1
+
+### 📦 Dependencies
+
+- Bump getrandom from 0.3.4 to 0.4.3 in /src-tauri (#559)
+- Bump sha3 from 0.11.0 to 0.12.0 in /src-tauri (#655)
+- Bump the angular group across 1 directory with 8 updates (#653)
+- Bump the npm-minor group across 1 directory with 17 updates (#657)
+- Bump the actions group across 1 directory with 2 updates (#642)
+- Bump the rust-minor group across 1 directory with 3 updates (#680)
+- Bump the tauri group across 1 directory with 2 updates (#656)
+- Bump jsdom from 29.1.1 to 30.1.1 (#562)
+
 ## [0.9.0] - 2026-09-29
 
 ### ✨ Added
