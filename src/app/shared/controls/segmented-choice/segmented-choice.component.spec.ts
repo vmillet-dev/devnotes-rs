@@ -35,6 +35,19 @@ describe('SegmentedChoiceComponent', () => {
     await fixture.whenStable();
   });
 
+  it('shows a disabled segment, and chooses nothing from it', async () => {
+    const chosen: string[] = [];
+    fixture.componentInstance.chosen.subscribe((id) => chosen.push(id));
+    fixture.componentRef.setInput('disabledIds', ['compact']);
+    await fixture.whenStable();
+
+    segments()[1]!.click();
+
+    expect(segments()[1]!.getAttribute('aria-disabled')).toBe('true');
+    expect(segments()[0]!.getAttribute('aria-disabled')).toBeNull();
+    expect(chosen).toEqual([]);
+  });
+
   it('checks exactly the current segment', () => {
     expect(segments().map((segment) => segment.getAttribute('aria-checked'))).toEqual(['true', 'false']);
   });

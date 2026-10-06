@@ -32,4 +32,13 @@
     background: var(--bg-3);
     color: var(--text-0);
   }
+
+  &[aria-disabled='true'] {
+    cursor: default;
+    opacity: 0.4;
+
+    &:hover {
+      color: var(--text-2);
+    }
+  }
 }

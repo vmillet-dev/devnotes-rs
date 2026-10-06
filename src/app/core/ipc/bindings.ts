@@ -591,7 +591,9 @@ export type ContrastFix = { kind: "found"; level: WcagLevel; hex: string } |
 /**  Neither black nor white reaches it on this background. */
 { kind: "unreachable"; level: WcagLevel };
 
-export type ConvertAnswer = { kind: "converted"; text: string } | 
+export type ConvertAnswer = { kind: "converted"; text: string; 
+/**  The keys left out, as `JSONPath`s: a `null` TOML cannot write. */
+dropped: string[] } | 
 /**  The text given does not parse: one-based line and column, in characters. */
 { kind: "unreadable"; line: number; column: number } | 
 /**  It parses, but the other format cannot hold it: `path` is a `JSONPath`. */
@@ -632,7 +634,7 @@ export type CronRequest = {
 };
 
 export type Crossing = 
-/**  TOML has no `null`. */
+/**  TOML has no `null`, and one in a list cannot be left out without moving the others. */
 "tomlNull" | 
 /**  A TOML document is a table: its root cannot be a list or a value. */
 "tomlRoot" | 

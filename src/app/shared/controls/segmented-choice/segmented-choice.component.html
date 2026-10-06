@@ -13,6 +13,7 @@
       [attr.data-segment-id]="segment.id"
       [class.on]="segment.id === currentId()"
       [attr.aria-checked]="segment.id === currentId()"
+      [attr.aria-disabled]="disabledIds().includes(segment.id) || null"
       (click)="pick(segment.id)"
     >
       {{ segment.labelKey | transloco }}

@@ -1,5 +1,6 @@
 //! JSON to and from TOML, XML and YAML, through one value: what one format cannot hold is said,
-//! with where it stands, rather than guessed.
+//! with where it stands, rather than guessed — or, for a key TOML has no `null` for, left out
+//! and named.
 
 mod xml;
 
@@ -31,7 +32,7 @@ pub struct ConvertRequest {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub enum Crossing {
-    /// TOML has no `null`.
+    /// TOML has no `null`, and one in a list cannot be left out without moving the others.
     TomlNull,
     /// A TOML document is a table: its root cannot be a list or a value.
     TomlRoot,
@@ -48,17 +49,13 @@ pub enum Crossing {
 pub enum ConvertAnswer {
     Converted {
         text: String,
+        /// The keys left out, as `JSONPath`s: a `null` TOML cannot write.
+        dropped: Vec<String>,
     },
     /// The text given does not parse: one-based line and column, in characters.
-    Unreadable {
-        line: u32,
-        column: u32,
-    },
+    Unreadable { line: u32, column: u32 },
     /// It parses, but the other format cannot hold it: `path` is a `JSONPath`.
-    Impossible {
-        crossing: Crossing,
-        path: String,
-    },
+    Impossible { crossing: Crossing, path: String },
 }
 
 pub(super) struct Blocked {
@@ -118,7 +115,8 @@ fn from_toml(value: toml::Value) -> Value {
     }
 }
 
-fn to_toml(value: &Value, path: &str) -> Result<toml::Value, Blocked> {
+/// A key holding `null` is left out and named in `dropped`; a `null` in a list is refused.
+fn to_toml(value: &Value, path: &str, dropped: &mut Vec<String>) -> Result<toml::Value, Blocked> {
     Ok(match value {
         Value::Null => {
             return Err(Blocked {
@@ -136,14 +134,21 @@ fn to_toml(value: &Value, path: &str) -> Result<toml::Value, Blocked> {
             items
                 .iter()
                 .enumerate()
-                .map(|(index, item)| to_toml(item, &format!("{path}[{index}]")))
+                .map(|(index, item)| to_toml(item, &format!("{path}[{index}]"), dropped))
                 .collect::<Result<_, _>>()?,
         ),
-        Value::Object(map) => toml::Value::Table(
-            map.iter()
-                .map(|(key, item)| Ok((key.clone(), to_toml(item, &child(path, key))?)))
-                .collect::<Result<_, _>>()?,
-        ),
+        Value::Object(map) => {
+            let mut table = toml::Table::new();
+            for (key, item) in map {
+                let at = child(path, key);
+                if item.is_null() {
+                    dropped.push(at);
+                } else {
+                    table.insert(key.clone(), to_toml(item, &at, dropped)?);
+                }
+            }
+            toml::Value::Table(table)
+        }
     })
 }
 
@@ -223,9 +228,13 @@ fn read(text: &str, format: DataFormat) -> Result<Value, ConvertAnswer> {
     }
 }
 
-fn write(value: &Value, format: DataFormat) -> Result<String, Blocked> {
+/// The text, and the keys left out on the way.
+fn write(value: &Value, format: DataFormat) -> Result<(String, Vec<String>), Blocked> {
+    let whole = |text: String| (text, Vec::new());
     match format {
-        DataFormat::Json => Ok(serde_json::to_string_pretty(value).unwrap_or_default()),
+        DataFormat::Json => Ok(whole(
+            serde_json::to_string_pretty(value).unwrap_or_default(),
+        )),
         DataFormat::Toml => {
             if !value.is_object() {
                 return Err(Blocked {
@@ -233,15 +242,19 @@ fn write(value: &Value, format: DataFormat) -> Result<String, Blocked> {
                     path: "$".to_owned(),
                 });
             }
-            Ok(toml::to_string_pretty(&to_toml(value, "$")?).unwrap_or_default())
+            let mut dropped = Vec::new();
+            let table = to_toml(value, "$", &mut dropped)?;
+            Ok((toml::to_string_pretty(&table).unwrap_or_default(), dropped))
         }
         DataFormat::Yaml => {
             let mut out = String::new();
             // The emitter writes to a `String`, which cannot fail.
             let _ = YamlEmitter::new(&mut out).dump(&to_yaml(value));
-            Ok(out.strip_prefix("---\n").unwrap_or(&out).to_owned() + "\n")
+            Ok(whole(
+                out.strip_prefix("---\n").unwrap_or(&out).to_owned() + "\n",
+            ))
         }
-        DataFormat::Xml => xml::write(value),
+        DataFormat::Xml => xml::write(value).map(whole),
     }
 }
 
@@ -251,7 +264,7 @@ pub fn convert(request: &ConvertRequest) -> ConvertAnswer {
         Err(answer) => return answer,
     };
     match write(&value, request.to) {
-        Ok(text) => ConvertAnswer::Converted { text },
+        Ok((text, dropped)) => ConvertAnswer::Converted { text, dropped },
         Err(Blocked { crossing, path }) => ConvertAnswer::Impossible { crossing, path },
     }
 }
@@ -266,7 +279,7 @@ mod tests {
             from,
             to,
         }) {
-            ConvertAnswer::Converted { text } => text,
+            ConvertAnswer::Converted { text, .. } => text,
             other => panic!("{other:?}"),
         }
     }
@@ -293,16 +306,40 @@ mod tests {
     }
 
     #[test]
-    fn toml_refuses_a_null_and_says_where() {
+    fn toml_leaves_out_a_key_holding_null_and_names_it() {
         assert_eq!(
             answer(
-                r#"{"a":{"b key":null}}"#,
+                r#"{"name":"Dupont","telephone":null}"#,
+                DataFormat::Json,
+                DataFormat::Toml
+            ),
+            ConvertAnswer::Converted {
+                text: "name = \"Dupont\"\n".to_owned(),
+                dropped: vec!["$.telephone".to_owned()]
+            }
+        );
+        let ConvertAnswer::Converted { text, dropped } = answer(
+            r#"{"a":{"b key":null,"c":1},"d":null}"#,
+            DataFormat::Json,
+            DataFormat::Toml,
+        ) else {
+            panic!()
+        };
+        assert_eq!(dropped, [r#"$.a["b key"]"#, "$.d"]);
+        assert!(text.contains("c = 1"), "{text}");
+    }
+
+    #[test]
+    fn toml_refuses_a_null_in_a_list_and_says_where() {
+        assert_eq!(
+            answer(
+                r#"{"replicas":[1,null,3]}"#,
                 DataFormat::Json,
                 DataFormat::Toml
             ),
             ConvertAnswer::Impossible {
                 crossing: Crossing::TomlNull,
-                path: r#"$.a["b key"]"#.to_owned()
+                path: "$.replicas[1]".to_owned()
             }
         );
         assert_eq!(

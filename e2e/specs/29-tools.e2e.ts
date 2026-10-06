@@ -429,7 +429,7 @@ describe('The tools', () => {
         'the YAML',
       );
 
-      await $(testid('tool-action-swap')).click();
+      await $(testid('convert-swap')).click();
       await eventually(
         () => $(testid('convert-output')).getText(),
         (json) => json.startsWith('{') && json.indexOf('service') < json.indexOf('replicas'),
@@ -437,14 +437,23 @@ describe('The tools', () => {
       );
     });
 
-    it('says what TOML cannot hold, and where', async () => {
-      await $(`${testid('segmented-convert-from')} [data-segment-id="json"]`).click();
+    it('leaves out a key TOML has no null for, and says where a list holds one', async () => {
+      // Back from the swap, JSON is on the right: it goes left once TOML has taken its place.
       await $(`${testid('segmented-convert-to')} [data-segment-id="toml"]`).click();
-      await setField(testid('convert-input'), '{"database":{"replica":null}}');
+      await $(`${testid('segmented-convert-from')} [data-segment-id="json"]`).click();
+      await setField(testid('convert-input'), '{"database":{"replica":null,"pool":10}}');
 
       await eventually(
-        () => $(testid('convert-impossible')).getText(),
+        () => $(testid('convert-dropped')).getText(),
         (text) => text.includes('$.database.replica'),
+        'the key left out',
+      );
+      expect(await $(testid('convert-output')).getText()).toContain('pool = 10');
+
+      await setField(testid('convert-input'), '{"replicas":[1,null]}');
+      await eventually(
+        () => $(testid('convert-impossible')).getText(),
+        (text) => text.includes('$.replicas[1]'),
         'the refusal',
       );
     });
@@ -1342,7 +1351,7 @@ describe('The tools', () => {
 
       await eventually(
         () => $(testid('convert-output')).getText(),
-        (converted) => converted.includes('name: DevNotes') && !converted.includes('typed'),
+        (converted) => converted.includes('nom = "Dupont"') && !converted.includes('typed'),
         'the sample converted',
       );
     });

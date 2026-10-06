@@ -34,11 +34,13 @@ export class SegmentedChoiceComponent {
   readonly kind = input.required<string>();
   readonly segments = input.required<readonly Segment[]>();
   readonly currentId = input.required<string>();
+  /** Shown and announced, but not chosen: the format the other side of a converter holds. */
+  readonly disabledIds = input<readonly string[]>([]);
 
   readonly chosen = output<string>();
 
   protected pick(id: string): void {
-    if (id === this.currentId()) return;
+    if (id === this.currentId() || this.disabledIds().includes(id)) return;
 
     this.chosen.emit(id);
   }
