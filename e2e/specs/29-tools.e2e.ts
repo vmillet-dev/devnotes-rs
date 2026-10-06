@@ -747,7 +747,12 @@ describe('The tools', () => {
       await $(`${testid('segmented-qr-kind')} [data-segment-id="wifi"]`).click();
       await setField(testid('qr-ssid'), 'Maison');
       await setField(testid('qr-password'), 'secret');
-      await $(testid('qr-code')).waitForExist({ timeout: 5_000 });
+      // The URL's code is still drawn until Rust answers: wait for the network's payload, 30 bytes.
+      await eventually(
+        () => $(testid('qr-code')).getAttribute('data-bytes'),
+        (bytes) => bytes === '30',
+        'the Wi-Fi network drawn',
+      );
 
       await $(testid('tool-save-as-note')).click();
       await $(testid('save-as-note-warning')).waitForDisplayed({ timeout: 5_000 });

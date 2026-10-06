@@ -191,6 +191,7 @@
           data-testid="qr-code"
           [attr.viewBox]="viewBox()"
           [attr.data-version]="code.version"
+          [attr.data-bytes]="code.bytes"
           [attr.aria-label]="'tools.qr.codeLabel' | transloco: { version: code.version }"
         >
           <path [attr.d]="code.path" />
