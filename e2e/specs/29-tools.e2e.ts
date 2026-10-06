@@ -1319,7 +1319,7 @@ describe('The tools', () => {
 
       await eventually(
         () => $(testid('convert-output')).getText(),
-        (converted) => converted.includes('name: DevNotes') && !converted.includes('typed'),
+        (converted) => converted.includes('nom = "Dupont"') && !converted.includes('typed'),
         'the sample converted',
       );
     });
