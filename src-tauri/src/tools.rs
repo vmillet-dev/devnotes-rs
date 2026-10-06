@@ -21,6 +21,7 @@ pub mod random;
 pub mod sizes;
 pub mod stats;
 pub mod text;
+pub mod text_diff;
 pub mod url_parts;
 pub mod zones;
 
@@ -164,6 +165,14 @@ pub async fn lorem_ipsum(
     request: generate::LoremRequest,
 ) -> Result<generate::LoremAnswer, AppError> {
     off_thread(move || generate::lorem(&request)).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn diff_text(
+    request: text_diff::TextDiffRequest,
+) -> Result<text_diff::TextDiffAnswer, AppError> {
+    off_thread(move || text_diff::diff(&request)).await
 }
 
 #[tauri::command]

@@ -10,7 +10,7 @@ use specta::Type;
 use crate::count::saturating_u32;
 
 /// Past this, the rows are cut: the changes and the patch stay whole.
-const MAX_ROWS: usize = 20_000;
+pub(crate) const MAX_ROWS: usize = 20_000;
 /// A value in the list of changes is cut to this many characters.
 const SUMMARY_CHARS: usize = 40;
 

@@ -1,13 +1,13 @@
 <app-dialog [layer]="'app'" labelledBy="json-note-picker-title" (closed)="closed.emit()">
   <div class="picker" data-testid="json-note-picker">
-    <h2 id="json-note-picker-title" class="title">{{ 'tools.json-diff.pickTitle' | transloco }}</h2>
+    <h2 id="json-note-picker-title" class="title">{{ 'tools.diff.structured.pickTitle' | transloco }}</h2>
     <input
       #searchField
       type="search"
       class="search"
       data-testid="json-note-search"
-      [attr.aria-label]="'tools.json-diff.pickSearch' | transloco"
-      [placeholder]="'tools.json-diff.pickSearch' | transloco"
+      [attr.aria-label]="'tools.diff.structured.pickSearch' | transloco"
+      [placeholder]="'tools.diff.structured.pickSearch' | transloco"
       [value]="search()"
       (input)="onSearch($event)"
     />
@@ -28,7 +28,7 @@
           </button>
         </li>
       } @empty {
-        <li class="none">{{ 'tools.json-diff.pickNone' | transloco }}</li>
+        <li class="none">{{ 'tools.diff.structured.pickNone' | transloco }}</li>
       }
     </ul>
     <div class="actions">

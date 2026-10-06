@@ -50,6 +50,12 @@ export const TOOLS: readonly ToolDefinition[] = [
     load: () => import('./text-stats/text-stats-tool.component').then((m) => m.TextStatsToolComponent),
   },
   {
+    id: 'diff',
+    category: 'text',
+    keywords: ['diff', 'compare', 'patch', 'diff -u', 'unified', 'json', 'rfc 6902'],
+    load: () => import('./diff/diff-tool.component').then((m) => m.DiffToolComponent),
+  },
+  {
     id: 'hash',
     category: 'crypto',
     keywords: ['md5', 'sha1', 'sha256', 'sha512', 'sha3', 'hmac', 'digest', 'checksum', 'webhook'],
@@ -108,12 +114,6 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: 'encode',
     keywords: ['color', 'hex', 'rgb', 'hsl', 'oklch', 'contrast', 'wcag'],
     load: () => import('./colour/colour-tool.component').then((m) => m.ColourToolComponent),
-  },
-  {
-    id: 'json-diff',
-    category: 'compare',
-    keywords: ['json', 'diff', 'compare', 'patch', 'rfc 6902'],
-    load: () => import('./json-diff/json-diff-tool.component').then((m) => m.JsonDiffToolComponent),
   },
   {
     id: 'json-generator',

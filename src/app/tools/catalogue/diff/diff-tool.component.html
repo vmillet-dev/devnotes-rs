@@ -1,0 +1,13 @@
+<app-segmented-choice
+  kind="diff-mode"
+  [label]="'tools.diff.mode' | transloco"
+  [segments]="modes"
+  [currentId]="mode()"
+  (chosen)="onMode($event)"
+/>
+
+@if (mode() === 'text') {
+  <app-text-diff (asValues)="mode.set('structured')" />
+} @else {
+  <app-structured-diff />
+}

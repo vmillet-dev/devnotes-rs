@@ -41,6 +41,8 @@ import {
   SizesAnswer,
   SizesRequest,
   StatsRequest,
+  TextDiffAnswer,
+  TextDiffRequest,
   TextStats,
   UrlAnswer,
   UrlCodecAnswer,
@@ -121,6 +123,10 @@ export class ToolsRepository {
 
   async diffJson(request: JsonDiffRequest): Promise<JsonDiffAnswer> {
     return unwrap('diff_json', await commands.diffJson(request));
+  }
+
+  async diffText(request: TextDiffRequest): Promise<TextDiffAnswer> {
+    return unwrap('diff_text', await commands.diffText(request));
   }
 
   /** Read in the machine's zone when written without an offset. */
