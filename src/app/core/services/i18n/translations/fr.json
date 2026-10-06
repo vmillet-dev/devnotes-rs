@@ -2468,6 +2468,45 @@
       "noMatch": "aucune correspondance",
       "yes": "Pris en charge",
       "no": "Non pris en charge"
+    },
+    "markdown-sheet": {
+      "name": "Aide-mémoire Markdown",
+      "description": "Titres, listes, liens, tableaux : la syntaxe, en CommonMark et sur GitHub",
+      "placeholder": "Une syntaxe ou des mots : **, tableau, lien, note…",
+      "columns": {
+        "syntax": "Syntaxe",
+        "what": "Signification",
+        "example": "Exemple",
+        "commonmark": "CommonMark",
+        "github": "GitHub"
+      },
+      "groups": {
+        "headings": "Titres",
+        "emphasis": "Emphase",
+        "lists": "Listes",
+        "links": "Liens et images",
+        "code": "Code",
+        "blocks": "Citations, séparateurs et tableaux",
+        "raw": "Retours, échappements, HTML et extensions"
+      },
+      "yes": "Pris en charge",
+      "no": "Non pris en charge"
+    },
+    "mustache-sheet": {
+      "name": "Aide-mémoire Mustache",
+      "description": "Variables, sections, partiels : les balises, avec ce qu’elles rendent",
+      "placeholder": "Une balise ou des mots : section, partial, échappement…",
+      "columns": {
+        "syntax": "Balise",
+        "what": "Signification",
+        "example": "Exemple"
+      },
+      "groups": {
+        "values": "Valeurs",
+        "sections": "Sections",
+        "more": "Commentaires, partiels et délimiteurs"
+      },
+      "with": "avec"
     }
   }
 }

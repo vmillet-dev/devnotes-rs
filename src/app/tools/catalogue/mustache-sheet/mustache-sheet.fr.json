@@ -1,0 +1,17 @@
+{
+  "entries": {
+    "{{name}}": "La valeur de name, échappée pour le HTML : < devient &lt;.",
+    "{{{name}}}": "La valeur telle quelle, sans échappement HTML.",
+    "{{& name}}": "La valeur sans échappement HTML, autre écriture ; utile quand les délimiteurs ont changé.",
+    "{{a.b}}": "Une valeur imbriquée, par un chemin pointé.",
+    "{{missing}}": "Une valeur absente de la vue ne donne rien, sans erreur.",
+    "{{#list}}…{{/list}}": "Une section répétée pour chaque élément d’une liste non vide.",
+    "{{#flag}}…{{/flag}}": "Une section affichée si la valeur est vraie, cachée si elle est fausse, nulle ou vide.",
+    "{{#object}}…{{/object}}": "Une section qui entre dans un objet : ses clés se lisent sans préfixe.",
+    "{{^list}}…{{/list}}": "Une section inversée : affichée si la liste est vide ou la valeur fausse.",
+    "{{.}}": "L’élément courant d’une liste de valeurs simples.",
+    "{{! … }}": "Un commentaire, jamais rendu.",
+    "{{> partial}}": "Un gabarit partiel, inclus à cet endroit avec la même vue.",
+    "{{=<% %>=}}": "Change les délimiteurs, quand {{ }} sert déjà au texte."
+  }
+}

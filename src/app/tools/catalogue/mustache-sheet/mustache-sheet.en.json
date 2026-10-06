@@ -1,0 +1,17 @@
+{
+  "entries": {
+    "{{name}}": "The value of name, escaped for HTML: < becomes &lt;.",
+    "{{{name}}}": "The value as it is, with no HTML escaping.",
+    "{{& name}}": "The value with no HTML escaping, another spelling; handy once the delimiters have changed.",
+    "{{a.b}}": "A nested value, by a dotted path.",
+    "{{missing}}": "A value the view does not hold gives nothing, and no error.",
+    "{{#list}}…{{/list}}": "A section repeated for each item of a non-empty list.",
+    "{{#flag}}…{{/flag}}": "A section shown if the value is true, hidden if it is false, null or empty.",
+    "{{#object}}…{{/object}}": "A section that steps into an object: its keys are read without a prefix.",
+    "{{^list}}…{{/list}}": "An inverted section: shown if the list is empty or the value false.",
+    "{{.}}": "The current item of a list of plain values.",
+    "{{! … }}": "A comment, never rendered.",
+    "{{> partial}}": "A partial template, included here with the same view.",
+    "{{=<% %>=}}": "Changes the delimiters, when {{ }} already belongs to the text."
+  }
+}

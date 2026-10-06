@@ -1,0 +1,20 @@
+<app-reference-table
+  [rows]="rows()"
+  [groups]="groups()"
+  [columns]="columns"
+  [caption]="'tools.mustache-sheet.name' | transloco"
+  [placeholder]="'tools.mustache-sheet.placeholder' | transloco"
+  [(query)]="query"
+>
+  <ng-template [appReferenceCells]="rows()" let-row>
+    <td class="syntax">{{ row.key }}</td>
+    <td class="what">{{ row.what }}</td>
+    <td class="example" data-testid="mustache-sheet-example">
+      <code class="template">{{ row.entry.template }}</code>
+      <span class="with">{{ 'tools.mustache-sheet.with' | transloco }}</span>
+      <code class="view">{{ row.entry.view }}</code>
+      <span class="with" aria-hidden="true">→</span>
+      <code class="output" data-testid="mustache-sheet-output">{{ row.entry.output }}</code>
+    </td>
+  </ng-template>
+</app-reference-table>
