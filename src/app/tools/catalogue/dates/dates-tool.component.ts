@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { ToolsRepository } from '@core/data/tools.repository';
 import { InstantAnswer, InstantForms, Magnitude } from '@core/model/tool-answers.model';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
@@ -13,7 +14,7 @@ import {
   Segment,
   SegmentedChoiceComponent,
 } from '@shared/controls/segmented-choice/segmented-choice.component';
-import { OutputRowComponent } from '@tools/ui/output-row/output-row.component';
+import { ResultRowComponent } from '@tools/ui/result-row/result-row.component';
 
 type Read = Extract<InstantAnswer, { kind: 'read' }>;
 
@@ -28,44 +29,74 @@ interface FormRow {
   readonly id: string;
   readonly value?: string;
   readonly words?: TranslationRef;
-  readonly meta?: TranslationRef;
+  /** How long ago reads as of now, and is pasted nowhere. */
+  readonly copyable: boolean;
 }
 
-function rowsOf(forms: InstantForms, now: Date): FormRow[] {
-  const optional = (id: string, value: string | null): FormRow[] => (value === null ? [] : [{ id, value }]);
+interface FormGroup {
+  readonly id: 'unix' | 'formats' | 'landmarks';
+  readonly rows: readonly FormRow[];
+}
+
+function groupsOf(forms: InstantForms, now: Date): FormGroup[] {
+  const value = (id: string, text: string | null): FormRow[] =>
+    text === null ? [] : [{ id, value: text, copyable: true }];
   return [
-    { id: 'unixSeconds', value: forms.unixSeconds },
-    { id: 'unixMilliseconds', value: forms.unixMilliseconds },
-    { id: 'unixMicroseconds', value: forms.unixMicroseconds },
-    ...optional('unixNanoseconds', forms.unixNanoseconds),
-    { id: 'isoUtc', value: forms.isoUtc },
     {
-      id: 'isoLocal',
-      value: forms.isoLocal,
-      meta: { key: 'tools.dates.localMeta', params: { offset: forms.localOffset } },
-    },
-    ...optional('rfc2822', forms.rfc2822),
-    ...(forms.epochMilliseconds === null
-      ? []
-      : [{ id: 'relative', words: spanRef(forms.epochMilliseconds, now) }]),
-    { id: 'weekday', words: { key: `tools.dates.weekdays.${forms.weekday}` } },
-    {
-      id: 'week',
-      value: forms.weekDate,
-      meta: { key: 'tools.dates.weekMeta', params: { week: forms.week } },
+      id: 'unix',
+      rows: [
+        ...value('unixSeconds', forms.unixSeconds),
+        ...value('unixMilliseconds', forms.unixMilliseconds),
+        ...value('unixMicroseconds', forms.unixMicroseconds),
+        ...value('unixNanoseconds', forms.unixNanoseconds),
+      ],
     },
     {
-      id: 'dayOfYear',
-      value: forms.ordinalDate,
-      meta: { key: 'tools.dates.dayMeta', params: { day: forms.dayOfYear } },
+      id: 'formats',
+      rows: [
+        ...value('isoUtc', forms.isoUtc),
+        ...value('isoLocal', forms.isoLocal),
+        ...value('rfc2822', forms.rfc2822),
+      ],
+    },
+    {
+      id: 'landmarks',
+      rows: [
+        ...(forms.epochMilliseconds === null
+          ? []
+          : [{ id: 'relative', words: spanRef(forms.epochMilliseconds, now), copyable: false }]),
+        { id: 'weekday', words: { key: `tools.dates.weekdays.${forms.weekday}` }, copyable: true },
+        ...value('weekDate', forms.weekDate),
+        ...value('week', String(forms.week)),
+        ...value('ordinalDate', forms.ordinalDate),
+        ...value('dayOfYear', String(forms.dayOfYear)),
+      ],
     },
   ];
+}
+
+/** "Lundi 8 novembre 1971, 05:25:55": the display of the instant, in the language on screen. */
+function longDate(epochMilliseconds: number, lang: string): string {
+  const at = new Date(epochMilliseconds);
+  const day = new Intl.DateTimeFormat(lang, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(at);
+  const time = new Intl.DateTimeFormat(lang, {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).format(at);
+  return `${day.charAt(0).toLocaleUpperCase(lang)}${day.slice(1)}, ${time}`;
 }
 
 /** Every reading and every form is Rust's; how long ago is the front's, so it ages without a round trip. */
 @Component({
   selector: 'app-dates-tool',
-  imports: [OutputRowComponent, SegmentedChoiceComponent, TranslocoPipe],
+  imports: [ResultRowComponent, SegmentedChoiceComponent, TranslocoPipe],
   templateUrl: './dates-tool.component.html',
   styleUrl: './dates-tool.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -74,6 +105,11 @@ export class DatesToolComponent implements Tool {
   private readonly repository = inject(ToolsRepository);
   private readonly notifier = inject(ErrorNotifier);
   private readonly clock = inject(ClockService);
+  private readonly transloco = inject(TranslocoService);
+
+  private readonly lang = toSignal(this.transloco.langChanges$, {
+    initialValue: this.transloco.getActiveLang(),
+  });
 
   protected readonly text = toolState('dates.text', '');
   protected readonly magnitude = toolState<Magnitude | null>('dates.magnitude', null);
@@ -105,9 +141,20 @@ export class DatesToolComponent implements Tool {
   /** Offered for a number, and kept while one is forced so it can be set back. */
   protected readonly numeric = computed(() => this.magnitude() !== null || this.read()?.readAs === 'unix');
 
-  protected readonly rows = computed(() => {
+  protected readonly groups = computed(() => {
     const read = this.read();
-    return read ? rowsOf(read.forms, this.clock.now()) : [];
+    return read ? groupsOf(read.forms, this.clock.now()) : [];
+  });
+
+  /** The card's title: the local date in words, or its ISO form past what `Date` can hold. */
+  protected readonly heading = computed(() => {
+    const forms = this.read()?.forms;
+    if (!forms) return null;
+    return {
+      date:
+        forms.epochMilliseconds === null ? forms.isoLocal : longDate(forms.epochMilliseconds, this.lang()),
+      offset: forms.localOffset,
+    };
   });
 
   readonly result = computed<ToolResult | null>(() => {

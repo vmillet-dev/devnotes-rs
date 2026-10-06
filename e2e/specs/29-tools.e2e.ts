@@ -742,6 +742,8 @@ describe('The tools', () => {
       );
       expect(await $(testid('dates-reading')).getAttribute('data-reading')).toBe('milliseconds');
       expect(await form('unixSeconds')).toBe('1790000000');
+      expect(await readEach(testid('dates-group'), '@data-group')).toEqual(['unix', 'formats', 'landmarks']);
+      expect(await $(testid('dates-heading')).getText()).toMatch(/2026, \d{2}:\d{2}:20$/);
 
       await $(`${testid('segmented-dates-magnitude')} [data-segment-id="microseconds"]`).click();
       await eventually(

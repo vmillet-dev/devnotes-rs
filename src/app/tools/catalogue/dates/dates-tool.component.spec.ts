@@ -49,7 +49,7 @@ describe('DatesToolComponent', () => {
     expect(harness.tool.result()).toBeNull();
   });
 
-  it('shows every form of a timestamp, and how it read it', async () => {
+  it('shows every form of a timestamp in three groups, and how it read it', async () => {
     const harness = await renderTool(DatesToolComponent, answering(READ));
 
     await harness.type('dates-input', '1790000000', 'describe_instant');
@@ -66,14 +66,49 @@ describe('DatesToolComponent', () => {
       'il y a 3 jours',
       'lundi',
       '2026-W39-1',
+      '39',
       '2026-264',
+      '264',
     ]);
-    expect(harness.element('[data-form="isoLocal"]').textContent).toContain('UTC+02:00');
-    expect(harness.element('[data-form="dayOfYear"]').textContent).toContain('264ᵉ jour');
+    expect(harness.all('[data-testid="dates-group"]').map((group) => group.dataset['group'])).toEqual([
+      'unix',
+      'formats',
+      'landmarks',
+    ]);
+    expect(harness.element('[data-form="relative"] [data-testid="copy-value"]')).toBeNull();
+    expect(harness.element('[data-form="weekDate"] [data-testid="copy-value"]')).not.toBeNull();
+    expect(harness.all('[data-testid="copy-value"]')).toHaveLength(12);
     expect(harness.element('[data-testid="dates-reading"]').textContent).toContain(
       'timestamp Unix en secondes',
     );
     expect(harness.element('[data-testid="dates-reading"]').textContent).toContain('d’après sa taille');
+  });
+
+  it('titles the card with the local date in words, and the offset it is read at', async () => {
+    const harness = await renderTool(
+      DatesToolComponent,
+      answering({ ...READ, forms: { ...FORMS, epochMilliseconds: Date.UTC(1971, 10, 8, 4, 25, 55) } }),
+    );
+
+    await harness.type('dates-input', '58422355', 'describe_instant');
+
+    expect(harness.element('[data-testid="dates-heading"]').textContent?.trim()).toMatch(
+      /^[A-Z][a-z]+ \d{1,2} novembre 1971, \d{2}:\d{2}:55$/,
+    );
+    expect(harness.element('.card-zone').textContent?.trim()).toBe('heure locale · UTC+02:00');
+  });
+
+  it('titles a date past what the page can hold with its ISO form', async () => {
+    const harness = await renderTool(
+      DatesToolComponent,
+      answering({ ...READ, forms: { ...FORMS, epochMilliseconds: null } }),
+    );
+
+    await harness.type('dates-input', '2026-09-21T16:13:20+02:00', 'describe_instant');
+
+    expect(harness.element('[data-testid="dates-heading"]').textContent?.trim()).toBe(
+      '2026-09-21T16:13:20+02:00',
+    );
   });
 
   it('forces a unit, and lets the guess come back', async () => {

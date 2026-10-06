@@ -1,16 +1,15 @@
 @use 'mixins' as *;
 
-.columns {
-  @include tool-columns;
+:host {
+  @include tool-fills-frame;
+  gap: 14px;
+  max-width: 860px;
 }
 
-.column {
-  @include tool-column;
+.input {
+  display: flex;
+  flex-direction: column;
   gap: 10px;
-}
-
-.section-title {
-  @include tool-section-title;
 }
 
 .entry {
@@ -23,11 +22,21 @@
   @include tool-field;
   flex: 1;
   min-width: 0;
+  height: 42px;
+  font-size: 14px;
 }
 
 .button {
   @include tool-button;
-  height: 34px;
+  height: 42px;
+}
+
+.reading-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
 }
 
 .reading {
@@ -60,4 +69,34 @@
   @include tool-note;
   font-family: var(--font-sans);
   font-size: 12px;
+}
+
+.card {
+  @include tool-result-card;
+}
+
+.card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.card-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-0);
+}
+
+.card-zone {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.card-group {
+  @include tool-result-group;
 }

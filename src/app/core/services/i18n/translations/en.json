@@ -1406,7 +1406,6 @@
       "inputLabel": "Date or timestamp",
       "placeholder": "1790000000, 2026-09-29T14:03:12+02:00, 2026-W40-2…",
       "now": "Now",
-      "forms": "Forms",
       "readAs": "Read as",
       "guessed": "· from its size",
       "readings": {
@@ -1434,21 +1433,20 @@
       "outOfRange": "Beyond what a date can represent: some 262,000 years either side of year 0.",
       "empty": "Type a timestamp or a date, or take the present instant: every form shows here.",
       "rows": {
-        "unixSeconds": "Unix · s",
-        "unixMilliseconds": "Unix · ms",
-        "unixMicroseconds": "Unix · µs",
-        "unixNanoseconds": "Unix · ns",
+        "unixSeconds": "Seconds",
+        "unixMilliseconds": "Milliseconds",
+        "unixMicroseconds": "Microseconds",
+        "unixNanoseconds": "Nanoseconds",
         "isoUtc": "ISO 8601 · UTC",
-        "isoLocal": "ISO 8601 · local time",
+        "isoLocal": "ISO 8601 · local",
         "rfc2822": "RFC 2822",
-        "relative": "From now",
+        "relative": "Relative to now",
         "weekday": "Day of the week",
+        "weekDate": "Week date",
         "week": "ISO week",
+        "ordinalDate": "Ordinal date",
         "dayOfYear": "Day of the year"
       },
-      "weekMeta": "week {{week}}",
-      "dayMeta": "day {{day}}",
-      "localMeta": "UTC{{offset}}",
       "weekdays": {
         "1": "Monday",
         "2": "Tuesday",
@@ -1458,7 +1456,13 @@
         "6": "Saturday",
         "7": "Sunday"
       },
-      "noteTitle": "Instant {{instant}}"
+      "noteTitle": "Instant {{instant}}",
+      "groups": {
+        "unix": "Unix timestamp",
+        "formats": "Date formats",
+        "landmarks": "Landmarks"
+      },
+      "localZone": "local time · UTC{{offset}}"
     },
     "zones": {
       "name": "Time zones",
