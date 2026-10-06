@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ToolsRepository } from '@core/data/tools.repository';
-import { Base64Alphabet, Base64Options } from '@core/model/tool-answers.model';
+import { ByteEncoding, Encodings } from '@core/model/tool-answers.model';
 import { FileDialogService } from '@core/services/dialogs/file-dialog.service';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { StatusNotifier } from '@core/services/notifications/status.service';
@@ -13,19 +13,38 @@ import {
   SegmentedChoiceComponent,
 } from '@shared/controls/segmented-choice/segmented-choice.component';
 import { CopyValueComponent } from '@tools/ui/copy-value/copy-value.component';
+import { ResultRowComponent } from '@tools/ui/result-row/result-row.component';
 
 type Direction = 'encode' | 'decode';
 type Source = 'text' | 'file';
 
+const AUTO = 'auto';
+
 const segments = <T extends string>(ids: readonly T[], prefix: string): readonly Segment[] =>
   ids.map((id) => ({ id, labelKey: `${prefix}.${id}` }));
+
+/** The six rows, in the order they are drawn. */
+const ROWS = [
+  'base64',
+  'base64Url',
+  'base32',
+  'hex',
+  'binary',
+  'decimal',
+] as const satisfies readonly (keyof Encodings)[];
+
+const READINGS: readonly ByteEncoding[] = ['base64', 'base64Url', 'base32', 'hex', 'binary', 'decimal'];
 
 /** What the page draws of a long result; the copy button still copies it whole. */
 const SHOWN_CHARACTERS = 4000;
 
+const shown = (text: string): string =>
+  text.length > SHOWN_CHARACTERS ? `${text.slice(0, SHOWN_CHARACTERS)}…` : text;
+
+/** A text in six encodings at once, and back from whichever one Rust recognises. */
 @Component({
   selector: 'app-base64-tool',
-  imports: [CopyValueComponent, SegmentedChoiceComponent, TranslocoPipe],
+  imports: [CopyValueComponent, ResultRowComponent, SegmentedChoiceComponent, TranslocoPipe],
   templateUrl: './base64-tool.component.html',
   styleUrl: './base64-tool.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -40,90 +59,92 @@ export class Base64ToolComponent implements Tool {
   protected readonly source = toolState<Source>('base64.source', 'text');
   protected readonly text = toolState('base64.text', '');
   protected readonly path = toolState<string | null>('base64.path', null);
-  protected readonly alphabet = toolState<Base64Alphabet>('base64.alphabet', 'standard');
-  protected readonly padded = toolState('base64.padded', true);
+  protected readonly spaced = toolState('base64.spaced', true);
+  protected readonly uppercase = toolState('base64.uppercase', false);
+  protected readonly reading = toolState<ByteEncoding | null>('base64.reading', null);
 
   protected readonly directions = segments(['encode', 'decode'] as const, 'tools.base64.directions');
   protected readonly sources = segments(['text', 'file'] as const, 'tools.base64.sources');
-  protected readonly alphabets = segments(['standard', 'urlSafe'] as const, 'tools.base64.alphabets');
+  protected readonly readings = segments([AUTO, ...READINGS], 'tools.base64.readings');
 
-  private readonly options = computed<Base64Options>(() => ({
-    alphabet: this.alphabet(),
-    padded: this.padded(),
-  }));
-
-  private readonly encodedText = liveResult(
+  protected readonly encodedText = liveResult(
     () =>
       this.direction() === 'encode' && this.source() === 'text' && this.text() !== ''
-        ? { text: this.text(), options: this.options() }
+        ? { text: this.text(), spaced: this.spaced(), uppercase: this.uppercase() }
         : undefined,
-    ({ text, options }) => this.repository.encodeBase64(text, options),
+    (request) => this.repository.encodeBytes(request),
   );
 
   protected readonly encodedFile = liveResult(
     () => {
       const path = this.path();
-      return this.direction() === 'encode' && this.source() === 'file' && path !== null
-        ? { path, options: this.options() }
-        : undefined;
+      return this.direction() === 'encode' && this.source() === 'file' && path !== null ? path : undefined;
     },
-    ({ path, options }) => this.repository.encodeBase64File(path, options),
+    (path) => this.repository.encodeBase64File(path),
   );
 
   protected readonly decoded = liveResult(
     () =>
       this.direction() === 'decode' && this.text().trim() !== ''
-        ? { text: this.text(), options: this.options() }
+        ? { text: this.text(), reading: this.reading() }
         : undefined,
-    ({ text, options }) => this.repository.decodeBase64(text, options),
+    (request) => this.repository.decodeBytes(request),
   );
 
-  /** What the encoding gave, from a text or from a file. */
-  protected readonly encoded = computed(() => {
-    const file = this.encodedFile.value();
-    return this.source() === 'file'
-      ? file?.kind === 'encoded'
-        ? file.text
-        : null
-      : this.encodedText.value();
+  /** The rows of a text's encodings, or a file's two Base64. */
+  protected readonly rows = computed(() => {
+    if (this.source() === 'file') {
+      const file = this.encodedFile.value();
+      return file?.kind === 'encoded'
+        ? [
+            { id: 'base64', value: file.base64 },
+            { id: 'base64Url', value: file.base64Url },
+          ].map((row) => ({ ...row, shown: shown(row.value) }))
+        : [];
+    }
+    const encodings = this.encodedText.value();
+    return encodings ? ROWS.map((id) => ({ id, value: encodings[id], shown: shown(encodings[id]) })) : [];
   });
 
-  protected readonly shown = computed(() => {
-    const encoded = this.encoded() ?? '';
-    return encoded.length > SHOWN_CHARACTERS ? `${encoded.slice(0, SHOWN_CHARACTERS)}…` : encoded;
-  });
+  protected readonly facts = computed(() => (this.source() === 'text' ? this.encodedText.value() : null));
 
   protected readonly decodedText = computed(() => {
-    const decoded = this.decoded.value();
+    const decoded = this.decoded.value()?.decoded;
     return decoded?.kind === 'text' ? decoded.text : null;
   });
 
   protected readonly decodedBinary = computed(() => {
-    const decoded = this.decoded.value();
+    const decoded = this.decoded.value()?.decoded;
     return decoded?.kind === 'binary' ? decoded : null;
   });
 
   protected readonly decodingProblem = computed(() => {
-    const decoded = this.decoded.value();
+    const decoded = this.decoded.value()?.decoded;
     return decoded?.kind === 'invalid' ? decoded : null;
   });
 
   readonly result = computed<ToolResult | null>(() => {
-    const content = this.direction() === 'encode' ? this.encoded() : this.decodedText();
-    if (!content) return null;
-
+    if (this.direction() === 'decode') {
+      const text = this.decodedText();
+      return text
+        ? { title: { key: 'tools.base64.noteDecoded' }, kind: 'snippet', language: 'txt', content: text }
+        : null;
+    }
+    const rows = this.rows();
+    if (rows.length === 0) return null;
+    const width = Math.max(...rows.map((row) => row.id.length));
     return {
-      title: { key: this.direction() === 'encode' ? 'tools.base64.noteEncoded' : 'tools.base64.noteDecoded' },
+      title: { key: 'tools.base64.noteEncoded' },
       kind: 'snippet',
       language: 'txt',
-      content,
+      content: rows.map((row) => `${row.id.padEnd(width)}  ${row.value}`).join('\n'),
     };
   });
 
   sample(): void {
     this.direction.set('encode');
     this.source.set('text');
-    this.text.set('Bonjour, monde ! 👋');
+    this.text.set('Café');
   }
 
   clear(): void {
@@ -135,14 +156,18 @@ export class Base64ToolComponent implements Tool {
     this.text.set((event.target as HTMLTextAreaElement).value);
   }
 
-  protected onPadded(event: Event): void {
-    this.padded.set((event.target as HTMLInputElement).checked);
+  protected onSpaced(event: Event): void {
+    this.spaced.set((event.target as HTMLInputElement).checked);
   }
 
-  protected choose(state: 'direction' | 'source' | 'alphabet', id: string): void {
+  protected onUppercase(event: Event): void {
+    this.uppercase.set((event.target as HTMLInputElement).checked);
+  }
+
+  protected choose(state: 'direction' | 'source' | 'reading', id: string): void {
     if (state === 'direction') this.direction.set(id as Direction);
     if (state === 'source') this.source.set(id as Source);
-    if (state === 'alphabet') this.alphabet.set(id as Base64Alphabet);
+    if (state === 'reading') this.reading.set(id === AUTO ? null : (id as ByteEncoding));
   }
 
   protected async pickFile(): Promise<void> {
@@ -158,7 +183,7 @@ export class Base64ToolComponent implements Tool {
     if (path === null) return;
 
     const saved = await this.notifier.attempt('errors.toolFailed', () =>
-      this.repository.saveBase64(this.text(), this.options(), path),
+      this.repository.saveBytes({ text: this.text(), reading: this.reading() }, path),
     );
     if (saved?.kind === 'saved') {
       this.status.notify({ key: 'tools.base64.saved', params: { count: saved.bytes } });

@@ -28,11 +28,11 @@ export const commands = {
 	fixLineBreaks: (request: LineBreaksRequest) => typedError<LineBreaksAnswer, AppError>(__TAURI_INVOKE("fix_line_breaks", { request })),
 	parseUrl: (text: string) => typedError<UrlAnswer, AppError>(__TAURI_INVOKE("parse_url", { text })),
 	urlCodec: (request: UrlCodecRequest) => typedError<UrlCodecAnswer, AppError>(__TAURI_INVOKE("url_codec", { request })),
-	encodeBase64: (text: string, options: Base64Options) => typedError<string, AppError>(__TAURI_INVOKE("encode_base64", { text, options })),
+	encodeBytes: (request: EncodeRequest) => typedError<Encodings, AppError>(__TAURI_INVOKE("encode_bytes", { request })),
 	/**  By its path: the bytes are read here and never cross the bridge. */
-	encodeBase64File: (path: string, options: Base64Options) => typedError<Base64FileAnswer, AppError>(__TAURI_INVOKE("encode_base64_file", { path, options })),
-	decodeBase64: (text: string, options: Base64Options) => typedError<Base64Decoded, AppError>(__TAURI_INVOKE("decode_base64", { text, options })),
-	saveBase64: (text: string, options: Base64Options, path: string) => typedError<Base64Saved, AppError>(__TAURI_INVOKE("save_base64", { text, options, path })),
+	encodeBase64File: (path: string) => typedError<Base64FileAnswer, AppError>(__TAURI_INVOKE("encode_base64_file", { path })),
+	decodeBytes: (request: DecodeRequest) => typedError<DecodeAnswer, AppError>(__TAURI_INVOKE("decode_bytes", { request })),
+	saveBytes: (request: DecodeRequest, path: string) => typedError<SavedBytes, AppError>(__TAURI_INVOKE("save_bytes", { request, path })),
 	hashInput: (request: HashRequest) => typedError<HashAnswer, AppError>(__TAURI_INVOKE("hash_input", { request })),
 	/**  No randomness from the system is the unexpected: nothing weaker is drawn in its place. */
 	generatePasswords: (request: PasswordRequest) => typedError<PasswordAnswer, AppError>(__TAURI_INVOKE("generate_passwords", { request })),
@@ -326,33 +326,9 @@ export type Backup = {
 	openable: boolean,
 };
 
-export type Base64Alphabet = "standard" | 
-/**  `-` and `_` for `+` and `/`: what a URL or a JWT carries. */
-"urlSafe";
-
-export type Base64Decoded = { kind: "text"; text: string; bytes: number } | 
-/**  Not UTF-8: what it starts with, in hexadecimal, and an offer to save it. */
-{ kind: "binary"; bytes: number; preview: string } | 
-/**  `at` counts characters of the text as given, spaces and line breaks included. */
-{ kind: "invalid"; problem: Base64Problem; at: number | null; character: string | null };
-
-export type Base64FileAnswer = { kind: "encoded"; name: string; bytes: number; text: string } | { kind: "failed"; problem: FileProblem };
-
-export type Base64Options = {
-	alphabet: Base64Alphabet,
-	/**  Encoding only: a decoding takes a text padded or not. */
-	padded: boolean,
-};
-
-export type Base64Problem = 
-/**  A character outside the alphabet, or padding in the middle. */
-"character" | 
-/**  A final group one character long: nothing can end that way. */
-"length" | 
-/**  A last character whose bits say the text was cut. */
-"truncated";
-
-export type Base64Saved = { kind: "saved"; bytes: number } | { kind: "invalid" } | { kind: "failed"; problem: FileProblem };
+export type Base64FileAnswer = 
+/**  A file keeps the two Base64 alone: the other encodings of a megabyte are noise. */
+{ kind: "encoded"; name: string; bytes: number; base64: string; base64Url: string } | { kind: "failed"; problem: FileProblem };
 
 /**  What a tidy-up did, and what it takes to walk it back. */
 export type BoardArrangement = {
@@ -441,6 +417,10 @@ export type BoardZone = {
 	frame: BoardFrame,
 	notes: BoardNote[],
 };
+
+export type ByteEncoding = "base64" | 
+/**  `-` and `_` for `+` and `/`, without padding: what a URL or a JWT carries. */
+"base64Url" | "base32" | "hex" | "binary" | "decimal";
 
 /**  What a calendar counts: whole months first, each of its own length, then the wall clock. */
 export type CalendarGap = {
@@ -666,6 +646,40 @@ export type DatedClaim = {
 	epochMilliseconds: number | null,
 };
 
+export type DecodeAnswer = {
+	readAs: ByteEncoding,
+	/**  Read by its shape rather than as asked. */
+	guessed: boolean,
+	/**  The other readings its shape allows: `deadbeef` is hexadecimal and Base64 alike. */
+	also: ByteEncoding[],
+	decoded: DecodedBytes,
+};
+
+export type DecodeProblem = 
+/**  A character outside the alphabet, or padding in the middle. */
+"character" | 
+/**
+ *  A length nothing of this encoding ends on: one Base64 character past a group, an odd
+ *  number of hex digits, bits that are no whole byte.
+ */
+"length" | 
+/**  A last character whose bits say the text was cut. */
+"truncated" | 
+/**  A decimal byte past 255. */
+"tooLarge";
+
+export type DecodeRequest = {
+	text: string,
+	/**  `None` reads it by its shape. */
+	reading: ByteEncoding | null,
+};
+
+export type DecodedBytes = { kind: "text"; text: string; bytes: number } | 
+/**  Not UTF-8: what it starts with, in hexadecimal, and an offer to save it. */
+{ kind: "binary"; bytes: number; preview: string } | 
+/**  `at` counts characters of the text as given, spaces and line breaks included. */
+{ kind: "invalid"; problem: DecodeProblem; at: number | null; character: string | null };
+
 /**  One line of a kept body, compared with the text restoring it would replace. */
 export type DiffLine = 
 /**  In both: restoring leaves it where it is. */
@@ -786,6 +800,25 @@ export type Elapsed = {
 	weekDays: number,
 	totalHours: number,
 	totalMinutes: number,
+};
+
+export type EncodeRequest = {
+	text: string,
+	/**  Hexadecimal and binary, a space between bytes. Decimal always has one. */
+	spaced: boolean,
+	uppercase: boolean,
+};
+
+export type Encodings = {
+	characters: number,
+	bytes: number,
+	wide: WideCharacter | null,
+	base64: string,
+	base64Url: string,
+	base32: string,
+	hex: string,
+	binary: string,
+	decimal: string,
 };
 
 export type EndingCounts = {
@@ -1696,6 +1729,8 @@ export type SampleNote = {
 	draft: NoteDraft,
 };
 
+export type SavedBytes = { kind: "saved"; bytes: number } | { kind: "invalid" } | { kind: "failed"; problem: FileProblem };
+
 /**
  *  No `Title` variant: a note found by its own title needs no excerpt, which would repeat the
  *  biggest thing on the card. That case is `SearchMatch::Title`.
@@ -2038,6 +2073,12 @@ export type WcagLevel =
 "aa" | 
 /**  7:1 for body text. */
 "aaa";
+
+/**  The first character UTF-8 writes in more than one byte: « é » takes 2. */
+export type WideCharacter = {
+	character: string,
+	bytes: number,
+};
 
 /**  Pushed from the preferences panel as it changes, like the tray labels. */
 export type WindowBehavior = {

@@ -1,9 +1,6 @@
 import { ToolsRepository } from '@core/data/tools.repository';
 import {
-  Base64Decoded,
   Base64FileAnswer,
-  Base64Options,
-  Base64Saved,
   CaseAnswer,
   CaseRequest,
   CheckAnswer,
@@ -16,6 +13,10 @@ import {
   CronRequest,
   DurationsAnswer,
   DurationsRequest,
+  DecodeAnswer,
+  DecodeRequest,
+  EncodeRequest,
+  Encodings,
   GenerateAnswer,
   GenerateRequest,
   HashAnswer,
@@ -38,6 +39,7 @@ import {
   PermissionsAnswer,
   PermissionsRequest,
   PasswordRequest,
+  SavedBytes,
   SizesAnswer,
   SizesRequest,
   StatsRequest,
@@ -68,10 +70,25 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
   };
   url: UrlAnswer = { kind: 'invalid', problem: 'empty' };
   urlCodecAnswer: UrlCodecAnswer = { kind: 'done', text: '' };
-  base64 = '';
+  encodings: Encodings = {
+    characters: 0,
+    bytes: 0,
+    wide: null,
+    base64: '',
+    base64Url: '',
+    base32: '',
+    hex: '',
+    binary: '',
+    decimal: '',
+  };
   base64File: Base64FileAnswer = { kind: 'failed', problem: 'notFound' };
-  base64Decoded: Base64Decoded = { kind: 'text', text: '', bytes: 0 };
-  base64Saved: Base64Saved = { kind: 'saved', bytes: 0 };
+  decodedBytes: DecodeAnswer = {
+    readAs: 'base64',
+    guessed: true,
+    also: [],
+    decoded: { kind: 'text', text: '', bytes: 0 },
+  };
+  savedBytes: SavedBytes = { kind: 'saved', bytes: 0 };
   hashAnswer: HashAnswer = {
     kind: 'hashed',
     bytes: 0,
@@ -155,20 +172,20 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
     return this.answer('url_codec', request, this.urlCodecAnswer);
   }
 
-  encodeBase64(text: string, options: Base64Options): Promise<string> {
-    return this.answer('encode_base64', { text, options }, this.base64);
+  encodeBytes(request: EncodeRequest): Promise<Encodings> {
+    return this.answer('encode_bytes', request, this.encodings);
   }
 
-  encodeBase64File(path: string, options: Base64Options): Promise<Base64FileAnswer> {
-    return this.answer('encode_base64_file', { path, options }, this.base64File);
+  encodeBase64File(path: string): Promise<Base64FileAnswer> {
+    return this.answer('encode_base64_file', path, this.base64File);
   }
 
-  decodeBase64(text: string, options: Base64Options): Promise<Base64Decoded> {
-    return this.answer('decode_base64', { text, options }, this.base64Decoded);
+  decodeBytes(request: DecodeRequest): Promise<DecodeAnswer> {
+    return this.answer('decode_bytes', request, this.decodedBytes);
   }
 
-  saveBase64(text: string, options: Base64Options, path: string): Promise<Base64Saved> {
-    return this.answer('save_base64', { text, options, path }, this.base64Saved);
+  saveBytes(request: DecodeRequest, path: string): Promise<SavedBytes> {
+    return this.answer('save_bytes', { request, path }, this.savedBytes);
   }
 
   hash(request: HashRequest): Promise<HashAnswer> {

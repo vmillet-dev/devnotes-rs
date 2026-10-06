@@ -2,10 +2,7 @@ import { Injectable } from '@angular/core';
 import { commands } from '@core/ipc/bindings';
 import { unwrap } from '@core/ipc/ipc.error';
 import {
-  Base64Decoded,
   Base64FileAnswer,
-  Base64Options,
-  Base64Saved,
   CaseAnswer,
   CaseRequest,
   CheckAnswer,
@@ -18,6 +15,10 @@ import {
   CronRequest,
   DurationsAnswer,
   DurationsRequest,
+  DecodeAnswer,
+  DecodeRequest,
+  EncodeRequest,
+  Encodings,
   GenerateAnswer,
   GenerateRequest,
   HashAnswer,
@@ -40,6 +41,7 @@ import {
   PermissionsAnswer,
   PermissionsRequest,
   PasswordRequest,
+  SavedBytes,
   SizesAnswer,
   SizesRequest,
   StatsRequest,
@@ -75,17 +77,17 @@ export class ToolsRepository {
     return unwrap('url_codec', await commands.urlCodec(request));
   }
 
-  async encodeBase64(text: string, options: Base64Options): Promise<string> {
-    return unwrap('encode_base64', await commands.encodeBase64(text, options));
+  async encodeBytes(request: EncodeRequest): Promise<Encodings> {
+    return unwrap('encode_bytes', await commands.encodeBytes(request));
   }
 
   /** By its path: Rust reads the file, and its bytes never cross. */
-  async encodeBase64File(path: string, options: Base64Options): Promise<Base64FileAnswer> {
-    return unwrap('encode_base64_file', await commands.encodeBase64File(path, options));
+  async encodeBase64File(path: string): Promise<Base64FileAnswer> {
+    return unwrap('encode_base64_file', await commands.encodeBase64File(path));
   }
 
-  async decodeBase64(text: string, options: Base64Options): Promise<Base64Decoded> {
-    return unwrap('decode_base64', await commands.decodeBase64(text, options));
+  async decodeBytes(request: DecodeRequest): Promise<DecodeAnswer> {
+    return unwrap('decode_bytes', await commands.decodeBytes(request));
   }
 
   /** A file by its path, read in Rust a block at a time; the HMAC key is zeroed there. */
@@ -93,8 +95,8 @@ export class ToolsRepository {
     return unwrap('hash_input', await commands.hashInput(request));
   }
 
-  async saveBase64(text: string, options: Base64Options, path: string): Promise<Base64Saved> {
-    return unwrap('save_base64', await commands.saveBase64(text, options, path));
+  async saveBytes(request: DecodeRequest, path: string): Promise<SavedBytes> {
+    return unwrap('save_bytes', await commands.saveBytes(request, path));
   }
 
   async generatePasswords(request: PasswordRequest): Promise<PasswordAnswer> {

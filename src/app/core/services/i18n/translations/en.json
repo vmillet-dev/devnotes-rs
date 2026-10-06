@@ -1162,8 +1162,8 @@
       "noteParsed": "URL of {{host}}"
     },
     "base64": {
-      "name": "Base64",
-      "description": "Text or file, URL variant",
+      "name": "Base64 and bases",
+      "description": "Base64, Base32, hexadecimal, binary, bytes — and the format recognised when decoding",
       "direction": "Direction",
       "directions": {
         "encode": "Encode",
@@ -1174,30 +1174,53 @@
         "text": "Text",
         "file": "File"
       },
-      "alphabet": "Alphabet",
-      "alphabets": {
-        "standard": "Standard",
-        "urlSafe": "URL (- _)"
-      },
-      "padded": "With = padding",
       "inputLabel": "Text to encode or decode",
       "encodePlaceholder": "The text to encode",
-      "decodePlaceholder": "SGVsbG8sIHdvcmxkIQ==",
+      "decodePlaceholder": "Q2Fmw6k=, 43 61 66 c3 a9, 01000011…",
       "pickFile": "Choose a file…",
       "fileHint": "The file is read where it lies: its content never crosses the interface.",
       "fileRead": "{{name}} · {count, plural, one {# byte} other {# bytes}}",
-      "encodeEmpty": "The Base64 shows here.",
+      "encodeEmpty": "The text shows here in Base64, Base64 URL, Base32, hexadecimal, binary and bytes.",
       "decodeEmpty": "The decoded text shows here.",
       "binary": "{count, plural, one {# byte} other {# bytes}} that are no text. Here they are in hexadecimal:",
       "saveFile": "Save as a file…",
       "saved": "{count, plural, one {File saved: # byte.} other {File saved: # bytes.}}",
       "problems": {
-        "character": "“{{character}}” is not in the alphabet, at character {{at}}.",
-        "truncated": "The text looks cut: “{{character}}” at character {{at}} cannot end a Base64.",
-        "length": "Characters are missing: a Base64 cannot end this way."
+        "character": "“{{character}}” does not belong to this format, at character {{at}}.",
+        "truncated": "The text seems cut: “{{character}}” at character {{at}} cannot end it.",
+        "length": "The length does not add up: characters are missing or left over.",
+        "tooLarge": "“{{character}}…” at character {{at}} is past 255: a decimal byte goes from 0 to 255."
       },
-      "noteEncoded": "Text in Base64",
-      "noteDecoded": "Decoded Base64"
+      "noteEncoded": "Text in Base64 and other bases",
+      "noteDecoded": "Decoded text",
+      "encodings": {
+        "base64": "Base64",
+        "base64Url": "Base64 URL",
+        "base32": "Base32",
+        "hex": "Hexadecimal",
+        "binary": "Binary",
+        "decimal": "Decimal bytes"
+      },
+      "readings": {
+        "auto": "Auto",
+        "base64": "Base64",
+        "base64Url": "Base64 URL",
+        "base32": "Base32",
+        "hex": "Hex",
+        "binary": "Binary",
+        "decimal": "Bytes"
+      },
+      "reading": "Read as",
+      "readAs": "Read as",
+      "guessed": "· by its shape",
+      "also": "Also reads as",
+      "characters": "{count, plural, one {# character} other {# characters}}",
+      "bytes": "{count, plural, one {# byte} other {# bytes}} in UTF-8",
+      "wide": "(“{{character}}” takes {{bytes}})",
+      "spaced": "Separate the bytes with spaces",
+      "uppercase": "Upper-case hexadecimal",
+      "fileOnlyBase64": "A file keeps Base64 and Base64 URL: its other bases, for a megabyte, would only be noise.",
+      "explain": "In “Decode”, paste any format: the tool recognises Base64, Base64 URL, Base32, hexadecimal, binary or bytes. Base64 URL is written without padding, as in a JWT. Base64 is no encryption: anyone can decode it."
     },
     "hash": {
       "name": "Hash / HMAC",

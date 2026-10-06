@@ -1162,8 +1162,8 @@
       "noteParsed": "URL de {{host}}"
     },
     "base64": {
-      "name": "Base64",
-      "description": "Texte ou fichier, variante URL",
+      "name": "Base64 et bases",
+      "description": "Base64, Base32, hexadécimal, binaire, octets — et le format reconnu au décodage",
       "direction": "Sens",
       "directions": {
         "encode": "Encoder",
@@ -1174,30 +1174,53 @@
         "text": "Texte",
         "file": "Fichier"
       },
-      "alphabet": "Alphabet",
-      "alphabets": {
-        "standard": "Standard",
-        "urlSafe": "URL (- _)"
-      },
-      "padded": "Avec remplissage =",
       "inputLabel": "Texte à encoder ou à décoder",
       "encodePlaceholder": "Le texte à encoder",
-      "decodePlaceholder": "SGVsbG8sIHdvcmxkIQ==",
+      "decodePlaceholder": "Q2Fmw6k=, 43 61 66 c3 a9, 01000011…",
       "pickFile": "Choisir un fichier…",
       "fileHint": "Le fichier est lu sur place : son contenu ne transite pas par l’interface.",
       "fileRead": "{{name}} · {count, plural, one {# octet} other {# octets}}",
-      "encodeEmpty": "Le Base64 s’affiche ici.",
+      "encodeEmpty": "Le texte s’affiche ici en Base64, Base64 URL, Base32, hexadécimal, binaire et octets.",
       "decodeEmpty": "Le texte décodé s’affiche ici.",
       "binary": "{count, plural, one {# octet} other {# octets}} qui ne forment pas du texte. Les voici en hexadécimal :",
       "saveFile": "Enregistrer comme fichier…",
       "saved": "{count, plural, one {Fichier enregistré : # octet.} other {Fichier enregistré : # octets.}}",
       "problems": {
-        "character": "« {{character}} » n’appartient pas à l’alphabet, au caractère {{at}}.",
-        "truncated": "Le texte semble coupé : « {{character}} » au caractère {{at}} ne peut pas finir un Base64.",
-        "length": "Il manque des caractères : un Base64 ne peut pas finir ainsi."
+        "character": "« {{character}} » n’appartient pas à ce format, au caractère {{at}}.",
+        "truncated": "Le texte semble coupé : « {{character}} » au caractère {{at}} ne peut pas le finir.",
+        "length": "La longueur ne tombe pas juste : il manque ou il reste des caractères.",
+        "tooLarge": "« {{character}}… » au caractère {{at}} dépasse 255 : un octet décimal va de 0 à 255."
       },
-      "noteEncoded": "Texte en Base64",
-      "noteDecoded": "Base64 décodé"
+      "noteEncoded": "Texte en Base64 et autres bases",
+      "noteDecoded": "Texte décodé",
+      "encodings": {
+        "base64": "Base64",
+        "base64Url": "Base64 URL",
+        "base32": "Base32",
+        "hex": "Hexadécimal",
+        "binary": "Binaire",
+        "decimal": "Octets décimaux"
+      },
+      "readings": {
+        "auto": "Auto",
+        "base64": "Base64",
+        "base64Url": "Base64 URL",
+        "base32": "Base32",
+        "hex": "Hex",
+        "binary": "Binaire",
+        "decimal": "Octets"
+      },
+      "reading": "Lire comme",
+      "readAs": "Lu comme",
+      "guessed": "· d’après sa forme",
+      "also": "Se lit aussi comme",
+      "characters": "{count, plural, one {# caractère} other {# caractères}}",
+      "bytes": "{count, plural, one {# octet} other {# octets}} en UTF-8",
+      "wide": "(« {{character}} » en occupe {{bytes}})",
+      "spaced": "Séparer les octets par des espaces",
+      "uppercase": "Hexadécimal en majuscules",
+      "fileOnlyBase64": "Un fichier garde Base64 et Base64 URL : ses autres bases, pour un mégaoctet, ne seraient que du bruit.",
+      "explain": "En mode « Décoder », collez n’importe quel format : l’outil reconnaît Base64, Base64 URL, Base32, hexadécimal, binaire ou octets. Base64 URL s’écrit sans remplissage, comme dans un JWT. Base64 n’est pas un chiffrement : tout le monde peut le décoder."
     },
     "hash": {
       "name": "Hash / HMAC",

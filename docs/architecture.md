@@ -698,6 +698,13 @@ of it that was drawn, with its bits; NanoID and CUID2 carry none, and are only n
 The page dims a UUID's hyphens and picks out its version digit by position alone: the 8-4-4-4-12
 layout is fixed, so this is presentation, not a rule.
 
+**Bytes are written in six bases at once** (`tools/bases.rs`): Base64 padded, Base64 URL not
+(the JWT convention), Base32 by hand to RFC 4648, hexadecimal, binary and decimal. A pasted text
+is read by its shape, narrowest alphabet first — binary, hexadecimal (each group whole bytes, so
+`67 97 102` is decimal), decimal, Base32 in capitals, Base64 URL by a `-` or a `_`, Base64 — and
+the other readings its shape allows are named, any of them forced on request. A file keeps the
+two Base64 alone.
+
 **A colour is Rust's to read** (`tools/colour.rs`): the four notations, `OKLab` and `OKLCH`,
 the gamut, and the WCAG ratio — with the `0.03928` of `scripts/palette.test.mjs`, so the tool
 and the palette's own check agree. The page paints the swatch Rust hands it. An `OKLCH` colour

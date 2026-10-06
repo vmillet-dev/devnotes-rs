@@ -100,7 +100,18 @@ export const TOOLS: readonly ToolDefinition[] = [
   {
     id: 'base64',
     category: 'encode',
-    keywords: ['base64', 'b64', 'jwt', 'data uri'],
+    keywords: [
+      'base64',
+      'b64',
+      'base32',
+      'hex',
+      'hexadecimal',
+      'binary',
+      'binaire',
+      'bytes',
+      'jwt',
+      'data uri',
+    ],
     load: () => import('./base64/base64-tool.component').then((m) => m.Base64ToolComponent),
   },
   {

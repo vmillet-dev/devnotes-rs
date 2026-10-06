@@ -6,7 +6,6 @@ import { homeSpaceMarker } from './profile.js';
 import type {
   Attachment,
   Base64FileAnswer,
-  Base64Options,
   DisplayNote,
   BoardQuery,
   BoardView,
@@ -102,8 +101,7 @@ export const bridge = {
   decodeJwt: (request: JwtRequest) => invoke<JwtAnswer>('decode_jwt', { request }),
   textStats: (request: StatsRequest) => invoke<TextStats>('text_stats', { request }),
   searchTimeZones: (query: string) => invoke<ZoneEntry[]>('search_time_zones', { query }),
-  encodeBase64File: (path: string, options: Base64Options) =>
-    invoke<Base64FileAnswer>('encode_base64_file', { path, options }),
+  encodeBase64File: (path: string) => invoke<Base64FileAnswer>('encode_base64_file', { path }),
   listSpaces: () => invoke<Space[]>('list_spaces'),
   createSpace: (draft: SpaceDraft) => invoke<Space>('create_space', { draft }),
   renameSpace: (id: string, draft: SpaceDraft) => invoke<Space>('rename_space', { id, draft }),
