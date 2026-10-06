@@ -1,0 +1,61 @@
+@use 'mixins' as *;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.page {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.workspace {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  padding: var(--space-card) 24px;
+}
+
+.request {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.request-name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-0);
+}
+
+.method {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  font-weight: 700;
+  @include http-method-hues;
+}
+
+.request-url {
+  margin: 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+  color: var(--text-1);
+}
+
+.empty {
+  margin: auto;
+  max-width: 360px;
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: center;
+  color: var(--text-2);
+}

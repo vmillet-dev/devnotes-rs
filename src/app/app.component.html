@@ -21,6 +21,11 @@
       <app-tools-page />
     }
   }
+  @if (vault.isUnlocked() && areas.current() === 'http') {
+    @defer (on immediate) {
+      <app-http-page />
+    }
+  }
   @if (!vault.isUnlocked() && vault.state() !== null) {
     <app-vault-gate />
   }

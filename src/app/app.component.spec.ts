@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ErrorBannerComponent } from '@banners/error-banner/error-banner.component';
 import { NotesPageComponent } from '@notes/notes-page.component';
 import { TitlebarComponent } from '@titlebar/titlebar.component';
@@ -46,7 +46,10 @@ describe('AppComponent', () => {
   it('shows the notes page once the library is unlocked', async () => {
     await withVault('unlocked');
 
-    expect(fixture.debugElement.query(By.directive(NotesPageComponent))).not.toBeNull();
+    // Deferred: its chunk can land after the first stable render.
+    await vi.waitFor(() =>
+      expect(fixture.debugElement.query(By.directive(NotesPageComponent))).not.toBeNull(),
+    );
     expect(fixture.debugElement.query(By.directive(VaultGateComponent))).toBeNull();
   });
 

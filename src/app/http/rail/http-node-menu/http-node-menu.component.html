@@ -1,0 +1,32 @@
+<button
+  appMenuAnchor
+  type="button"
+  class="node-menu"
+  data-testid="http-node-menu"
+  aria-haspopup="menu"
+  [attr.data-id]="row().id"
+  [attr.aria-expanded]="menu.open()"
+  [attr.aria-label]="'http.rail.options' | transloco: { name: row().name }"
+  [attr.title]="'http.rail.options' | transloco: { name: row().name }"
+  (click)="menu.toggle()"
+>
+  <span aria-hidden="true">⋯</span>
+</button>
+
+@if (menu.open()) {
+  <div appMenuPanel class="panel" data-testid="http-node-menu-panel">
+    @for (action of actions(); track action) {
+      <button
+        appMenuItem
+        type="button"
+        class="option"
+        data-testid="http-node-action"
+        [class.destructive]="action === 'delete'"
+        [attr.data-action]="action"
+        (click)="choose(action)"
+      >
+        {{ 'http.rail.actions.' + action | transloco }}
+      </button>
+    }
+  </div>
+}

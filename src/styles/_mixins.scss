@@ -658,3 +658,37 @@
   font-variant-ligatures: none;
   color: var(--text-1);
 }
+
+// A request's method in its colour, as the HTTP rail and the open request write it: a word, not a
+// filled badge. `QUERY` is GraphQL's, `WS` a WebSocket's.
+@mixin http-method-hues {
+  color: var(--text-2);
+
+  &[data-method='GET'] {
+    color: var(--green);
+  }
+
+  &[data-method='POST'] {
+    color: var(--amber-text);
+  }
+
+  &[data-method='PUT'] {
+    color: var(--blue);
+  }
+
+  &[data-method='PATCH'] {
+    color: var(--purple);
+  }
+
+  &[data-method='DELETE'] {
+    color: var(--red);
+  }
+
+  &[data-method='QUERY'] {
+    color: var(--pink);
+  }
+
+  &[data-method='WS'] {
+    color: var(--teal);
+  }
+}

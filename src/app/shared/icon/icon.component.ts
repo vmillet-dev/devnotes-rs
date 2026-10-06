@@ -7,6 +7,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
  * every machine, `▤` barely renders in most fonts, and neither follows `color`.
  */
 const PATHS = {
+  'arrow-left-right': ['m8 3-4 4 4 4', 'M4 7h16', 'm16 21 4-4-4-4', 'M20 17H4'],
   sidebar: ['M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z', 'M9 3v18'],
   trash: [
     'M3 6h18',

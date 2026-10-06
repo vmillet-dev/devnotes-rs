@@ -1,0 +1,170 @@
+<nav class="rail" data-testid="http-rail" aria-labelledby="http-rail-title">
+  <app-area-switch class="rail-switch" [current]="areas.current()" (chosen)="areas.show($event)" />
+
+  <div class="rail-head">
+    <h2 id="http-rail-title" class="rail-title">{{ 'http.rail.title' | transloco }}</h2>
+    <button
+      type="button"
+      class="rail-add"
+      data-testid="http-collection-create-open"
+      [attr.aria-label]="'http.rail.newCollection' | transloco"
+      [attr.title]="'http.rail.newCollection' | transloco"
+      (click)="startCollection()"
+    >
+      <span aria-hidden="true">＋</span>
+    </button>
+  </div>
+
+  <ng-template #createForm let-creating>
+    <form class="rail-form" [style.--depth]="creating.depth" (submit)="submitCreate($event, field.value)">
+      <input
+        #field
+        type="text"
+        class="rail-input"
+        data-testid="http-create-input"
+        [attr.data-kind]="creating.kind"
+        [attr.aria-label]="'http.rail.placeholders.' + creating.kind | transloco"
+        [placeholder]="'http.rail.placeholders.' + creating.kind | transloco"
+        (keydown.escape)="closeForms()"
+      />
+      <button type="submit" class="rail-submit" data-testid="http-create-submit">
+        {{ 'http.rail.create' | transloco }}
+      </button>
+    </form>
+  </ng-template>
+
+  @if (creating(); as creating) {
+    @if (creating.underId === null) {
+      <ng-container *ngTemplateOutlet="createForm; context: { $implicit: creating }" />
+    }
+  }
+
+  @let rows = store.rows();
+  @if (rows.length === 0 && creating() === null) {
+    <p class="rail-empty" data-testid="http-rail-empty">{{ 'http.rail.empty' | transloco }}</p>
+  }
+
+  <ul class="tree" (pointermove)="moveDrag($event)">
+    @for (row of rows; track row.kind + row.id) {
+      @let dropping = drop()?.id === row.id ? drop()?.zone : null;
+      <li
+        class="node"
+        data-rail-row
+        data-testid="http-node"
+        [attr.data-id]="row.id"
+        [attr.data-kind]="row.kind"
+        [class.dragging]="dragged() === row.id"
+        [class.drop-before]="dropping === 'before'"
+        [class.drop-after]="dropping === 'after'"
+        [class.drop-inside]="dropping === 'inside'"
+        [style.--depth]="row.depth"
+      >
+        <div class="node-row">
+          @if (row.kind === 'request') {
+            <span class="node-twisty-space" aria-hidden="true"></span>
+          } @else {
+            <button
+              type="button"
+              class="node-twisty"
+              data-testid="http-node-twisty"
+              [attr.aria-expanded]="row.expanded"
+              [attr.aria-label]="
+                (row.expanded ? 'http.rail.collapse' : 'http.rail.expand') | transloco: { name: row.name }
+              "
+              [attr.title]="
+                (row.expanded ? 'http.rail.collapse' : 'http.rail.expand') | transloco: { name: row.name }
+              "
+              (click)="store.toggle(row.id)"
+            >
+              <span aria-hidden="true">{{ row.expanded ? '▾' : '▸' }}</span>
+            </button>
+          }
+
+          @if (renaming() === row.id) {
+            <form class="rail-form inline" (submit)="submitRename($event, row, field.value)">
+              <input
+                #field
+                type="text"
+                class="rail-input"
+                data-testid="http-rename-input"
+                [value]="row.name"
+                [attr.aria-label]="'http.rail.renameLabel' | transloco: { name: row.name }"
+                (keydown.escape)="closeForms()"
+              />
+              <button type="submit" class="rail-submit" data-testid="http-rename-submit">
+                {{ 'http.rail.actions.rename' | transloco }}
+              </button>
+            </form>
+          } @else {
+            <button
+              type="button"
+              class="node-name"
+              data-testid="http-node-name"
+              [class.collection]="row.kind === 'collection'"
+              [class.active]="row.id === store.openId()"
+              [attr.aria-current]="row.id === store.openId() ? 'true' : null"
+              [attr.aria-expanded]="row.kind === 'request' ? null : row.expanded"
+              (click)="activate(row)"
+              (keydown)="onRowKeydown($event, row)"
+              (pointerdown)="startDrag($event, row)"
+              (pointerup)="endDrag($event)"
+              (pointercancel)="cancelDrag()"
+            >
+              @if (row.badge; as badge) {
+                <span class="method" data-testid="http-node-badge" [attr.data-method]="badge">{{
+                  badge
+                }}</span>
+              }
+              <span class="node-label">{{ row.name }}</span>
+            </button>
+            <app-http-node-menu [row]="row" (chosen)="onAction(row, $event)" />
+          }
+        </div>
+
+        @if (confirming(); as confirming) {
+          @if (confirming.row.id === row.id) {
+            <div
+              class="confirm"
+              role="alertdialog"
+              data-testid="http-delete-confirm"
+              aria-labelledby="http-delete-question"
+            >
+              <p id="http-delete-question" class="confirm-question">
+                {{ 'http.rail.confirm' | transloco: { name: row.name } }}
+                @if (confirming.contents.folders + confirming.contents.requests > 0) {
+                  <span class="confirm-count" data-testid="http-delete-count">{{
+                    noun(confirming.contents)
+                  }}</span>
+                }
+              </p>
+              <div class="confirm-actions">
+                <button
+                  type="button"
+                  class="confirm-delete"
+                  data-testid="http-delete-submit"
+                  (click)="confirmDelete()"
+                >
+                  {{ 'http.rail.actions.delete' | transloco }}
+                </button>
+                <button
+                  type="button"
+                  class="confirm-cancel"
+                  data-testid="http-delete-cancel"
+                  (click)="closeForms()"
+                >
+                  {{ 'http.rail.cancel' | transloco }}
+                </button>
+              </div>
+            </div>
+          }
+        }
+
+        @if (creating(); as creating) {
+          @if (creating.underId === row.id) {
+            <ng-container *ngTemplateOutlet="createForm; context: { $implicit: creating }" />
+          }
+        }
+      </li>
+    }
+  </ul>
+</nav>
