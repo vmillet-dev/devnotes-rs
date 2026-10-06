@@ -563,7 +563,14 @@ export type Contrast = {
 	ratio: number | null,
 	aa: TextSizes,
 	aaa: TextSizes,
+	/**  `None` once AAA holds for body text: nothing left to reach. */
+	fix: ContrastFix | null,
 };
+
+/**  The nearest text colour that reaches the next level on this background, for body text. */
+export type ContrastFix = { kind: "found"; level: WcagLevel; hex: string } | 
+/**  Neither black nor white reaches it on this background. */
+{ kind: "unreachable"; level: WcagLevel };
 
 export type ConvertAnswer = { kind: "converted"; text: string } | 
 /**  The text given does not parse: one-based line and column, in characters. */
@@ -1765,6 +1772,12 @@ export type Verification =
 "notVerifiedHere" | "unsigned" | 
 /**  A secret said to be base64 that is not. */
 "unreadableSecret";
+
+export type WcagLevel = 
+/**  4.5:1 for body text. */
+"aa" | 
+/**  7:1 for body text. */
+"aaa";
 
 /**  Pushed from the preferences panel as it changes, like the tray labels. */
 export type WindowBehavior = {

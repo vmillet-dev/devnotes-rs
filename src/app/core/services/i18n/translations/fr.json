@@ -1268,15 +1268,30 @@
       "outOfGamut": "Hors de sRGB : l’écran ne peut pas l’afficher. Ramenée dans le gamut à luminosité et teinte égales — c’est elle que montrent l’aperçu, HEX, RGB et HSL.",
       "contrast": "Contraste",
       "background": "Fond",
-      "pickBackground": "Choisir le fond",
       "backgroundPlaceholder": "La couleur de fond, #ffffff",
       "sampleText": "Le texte courant sur ce fond",
       "normalText": "Texte courant",
       "largeText": "Grand texte",
-      "pass": "✓ passe",
-      "fail": "✗ échoue",
-      "wcag": "WCAG 2.2 : AA demande 4,5:1 (3:1 en grand texte), AAA 7:1 (4,5:1). Le calcul est celui de la palette de l’application.",
-      "noteTitle": "Couleur {{hex}}"
+      "pass": "passe",
+      "fail": "échoue",
+      "wcag": "WCAG 2.2 : AA demande 4,5:1 (3:1 en grand texte), AAA demande 7:1 (4,5:1).",
+      "noteTitle": "Couleur {{hex}}",
+      "text": "Texte",
+      "swap": "Échanger le texte et le fond",
+      "verdicts": {
+        "failsAll": "Insuffisant, même en grand texte",
+        "failsNormal": "Insuffisant pour le texte courant",
+        "aa": "Suffisant pour le texte courant (AA)",
+        "aaa": "Excellent pour le texte courant (AAA)"
+      },
+      "fix": {
+        "aa": "Ajuster le texte pour atteindre 4,5:1",
+        "aaa": "Ajuster le texte pour atteindre 7:1"
+      },
+      "unreachable": {
+        "aa": "Aucune couleur de texte n’atteint 4,5:1 sur ce fond, ni vers le noir ni vers le blanc.",
+        "aaa": "Aucune couleur de texte n’atteint 7:1 sur ce fond, ni vers le noir ni vers le blanc."
+      }
     },
     "convert": {
       "name": "JSON → TOML / XML / YAML",

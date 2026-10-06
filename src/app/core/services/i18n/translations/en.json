@@ -1268,15 +1268,30 @@
       "outOfGamut": "Outside sRGB: the screen cannot show it. Brought inside at the same lightness and hue — that is what the preview, HEX, RGB and HSL show.",
       "contrast": "Contrast",
       "background": "Background",
-      "pickBackground": "Pick the background",
       "backgroundPlaceholder": "The background colour, #ffffff",
       "sampleText": "Body text on this background",
       "normalText": "Body text",
       "largeText": "Large text",
-      "pass": "✓ passes",
-      "fail": "✗ fails",
-      "wcag": "WCAG 2.2: AA asks 4.5:1 (3:1 for large text), AAA 7:1 (4.5:1). The formula is the one the application's palette is checked with.",
-      "noteTitle": "Colour {{hex}}"
+      "pass": "passes",
+      "fail": "fails",
+      "wcag": "WCAG 2.2: AA asks for 4.5:1 (3:1 for large text), AAA asks for 7:1 (4.5:1).",
+      "noteTitle": "Colour {{hex}}",
+      "text": "Text",
+      "swap": "Swap the text and the background",
+      "verdicts": {
+        "failsAll": "Not enough, even for large text",
+        "failsNormal": "Not enough for body text",
+        "aa": "Enough for body text (AA)",
+        "aaa": "Excellent for body text (AAA)"
+      },
+      "fix": {
+        "aa": "Adjust the text to reach 4.5:1",
+        "aaa": "Adjust the text to reach 7:1"
+      },
+      "unreachable": {
+        "aa": "No text colour reaches 4.5:1 on this background, toward black or toward white.",
+        "aaa": "No text colour reaches 7:1 on this background, toward black or toward white."
+      }
     },
     "convert": {
       "name": "JSON → TOML / XML / YAML",

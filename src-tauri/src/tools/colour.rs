@@ -56,12 +56,50 @@ pub struct TextSizes {
     pub large: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum WcagLevel {
+    /// 4.5:1 for body text.
+    Aa,
+    /// 7:1 for body text.
+    Aaa,
+}
+
+impl WcagLevel {
+    fn ratio(self) -> f64 {
+        match self {
+            Self::Aa => 4.5,
+            Self::Aaa => 7.0,
+        }
+    }
+}
+
+/// The nearest text colour that reaches the next level on this background, for body text.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum ContrastFix {
+    Found {
+        level: WcagLevel,
+        hex: String,
+    },
+    /// Neither black nor white reaches it on this background.
+    Unreachable {
+        level: WcagLevel,
+    },
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct Contrast {
     pub ratio: f64,
     pub aa: TextSizes,
     pub aaa: TextSizes,
+    /// `None` once AAA holds for body text: nothing left to reach.
+    pub fix: Option<ContrastFix>,
 }
 
 #[derive(Debug, Clone, Deserialize, Type)]
@@ -426,21 +464,92 @@ fn over(front: Rgba, back: Rgba) -> Rgba {
     }
 }
 
-fn contrast(text: Rgba, background: Rgba) -> Contrast {
-    let white = Rgba {
-        r: 1.0,
-        g: 1.0,
-        b: 1.0,
+/// How finely a fix walks toward black or white before halving down to the first step that reaches.
+const FIX_STEPS: u32 = 200;
+
+const WHITE: Rgba = Rgba {
+    r: 1.0,
+    g: 1.0,
+    b: 1.0,
+    a: 1.0,
+};
+
+fn ratio_of(text: Rgba, background: Rgba) -> f64 {
+    let (a, b) = (luminance(text), luminance(background));
+    (a.max(b) + 0.05) / (a.min(b) + 0.05)
+}
+
+/// The text at another lightness, its hue and chroma kept as far as sRGB lets them, and rounded
+/// to the bytes its HEX writes: the colour given back must reach the level, not a neighbour of it.
+fn at_lightness(lightness: f64, chroma: f64, hue: f64) -> Rgba {
+    let (r, g, b) = oklch_to_rgb(lightness, chroma, hue);
+    let shown = into_gamut(Rgba { r, g, b, a: 1.0 });
+    let rounded = |channel: f64| f64::from(byte(channel)) / 255.0;
+    Rgba {
+        r: rounded(shown.r),
+        g: rounded(shown.g),
+        b: rounded(shown.b),
         a: 1.0,
+    }
+}
+
+/// Lightness moved toward black or toward white, whichever reaches `level` with the smaller move:
+/// stepped to the first lightness that does, then halved down to it.
+fn fix(text: Rgba, background: Rgba, level: WcagLevel) -> ContrastFix {
+    let target = level.ratio();
+    let (lightness, chroma, hue) = rgb_to_oklch(text.r, text.g, text.b);
+    let reaches =
+        |candidate: f64| ratio_of(at_lightness(candidate, chroma, hue), background) >= target;
+    let nearest = |end: f64| -> Option<f64> {
+        if !reaches(end) {
+            return None;
+        }
+        let step = (end - lightness) / f64::from(FIX_STEPS);
+        let mut before = lightness;
+        for at in 1..=FIX_STEPS {
+            let candidate = lightness + step * f64::from(at);
+            if reaches(candidate) {
+                let (mut far, mut near) = (candidate, before);
+                for _ in 0..30 {
+                    let middle = f64::midpoint(far, near);
+                    if reaches(middle) {
+                        far = middle;
+                    } else {
+                        near = middle;
+                    }
+                }
+                return Some(far);
+            }
+            before = candidate;
+        }
+        Some(end)
     };
-    let background = over(background, white);
+    let found = [nearest(0.0), nearest(1.0)]
+        .into_iter()
+        .flatten()
+        .min_by(|a, b| (a - lightness).abs().total_cmp(&(b - lightness).abs()));
+    match found {
+        Some(found) => ContrastFix::Found {
+            level,
+            hex: write_hex(at_lightness(found, chroma, hue)),
+        },
+        None => ContrastFix::Unreachable { level },
+    }
+}
+
+fn contrast(text: Rgba, background: Rgba) -> Contrast {
+    let background = over(background, WHITE);
     let text = over(text, background);
-    let (lighter, darker) = {
-        let (a, b) = (luminance(text), luminance(background));
-        (a.max(b), a.min(b))
+    let ratio = ratio_of(text, background);
+    let level = if ratio < WcagLevel::Aa.ratio() {
+        Some(WcagLevel::Aa)
+    } else if ratio < WcagLevel::Aaa.ratio() {
+        Some(WcagLevel::Aaa)
+    } else {
+        None
     };
-    let ratio = (lighter + 0.05) / (darker + 0.05);
     Contrast {
+        fix: level.map(|level| fix(text, background, level)),
         ratio,
         aa: TextSizes {
             normal: ratio >= 4.5,
@@ -601,5 +710,77 @@ mod tests {
 
         assert_eq!(answer.contrast, None);
         assert_eq!(answer.against, ColourReading::Empty);
+    }
+
+    fn contrast_of(text: &str, background: &str) -> Contrast {
+        describe(&ColourRequest {
+            colour: text.to_owned(),
+            against: background.to_owned(),
+        })
+        .contrast
+        .expect("both read")
+    }
+
+    fn fixed(text: &str, background: &str) -> (WcagLevel, String) {
+        match contrast_of(text, background).fix {
+            Some(ContrastFix::Found { level, hex }) => (level, hex),
+            other => panic!("{text} on {background}: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn the_fix_reaches_its_level_and_moves_no_further_than_it_must() {
+        let (level, hex) = fixed("#1e90ff", "#ffffff");
+        assert_eq!(level, WcagLevel::Aa);
+
+        let reached = contrast_of(&hex, "#ffffff").ratio;
+        assert!((4.5..4.6).contains(&reached), "{hex}: {reached}");
+        let (lightness, ..) = {
+            let (_, colour) = read(&hex);
+            let colour = colour.unwrap();
+            rgb_to_oklch(colour.r, colour.g, colour.b)
+        };
+        let (_, original) = read("#1e90ff");
+        let original = original.unwrap();
+        let (start, chroma, hue) = rgb_to_oklch(original.r, original.g, original.b);
+        let a_little_less = at_lightness(lightness + (start - lightness) * 0.02, chroma, hue);
+        assert!(
+            ratio_of(a_little_less, WHITE) < 4.5,
+            "a step back toward the original falls short"
+        );
+        let (_, shown) = read(&hex);
+        let shown = shown.unwrap();
+        let (_, _, kept_hue) = rgb_to_oklch(shown.r, shown.g, shown.b);
+        assert!(
+            (kept_hue - hue).abs() < 2.0,
+            "the hue is kept: {kept_hue} vs {hue}"
+        );
+    }
+
+    #[test]
+    fn a_dark_background_lightens_the_text() {
+        let (level, hex) = fixed("#334455", "#101418");
+
+        assert_eq!(level, WcagLevel::Aa);
+        let (_, text) = read(&hex);
+        let (_, original) = read("#334455");
+        assert!(luminance(text.unwrap()) > luminance(original.unwrap()));
+        assert!(contrast_of(&hex, "#101418").ratio >= 4.5);
+    }
+
+    #[test]
+    fn past_aa_the_fix_aims_at_aaa_and_past_aaa_there_is_none() {
+        assert_eq!(fixed("#666666", "#ffffff").0, WcagLevel::Aaa, "7:1 is next");
+        assert_eq!(contrast_of("#000000", "#ffffff").fix, None);
+    }
+
+    #[test]
+    fn a_level_no_text_reaches_on_a_mid_grey_is_said() {
+        assert_eq!(
+            contrast_of("#000000", "#777777").fix,
+            Some(ContrastFix::Unreachable {
+                level: WcagLevel::Aaa
+            })
+        );
     }
 }
