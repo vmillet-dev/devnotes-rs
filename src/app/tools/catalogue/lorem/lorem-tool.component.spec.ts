@@ -5,7 +5,7 @@ import { LoremToolComponent } from './lorem-tool.component';
 
 describe('LoremToolComponent', () => {
   const answer = (tools: FakeToolsRepository): void => {
-    tools.loremAnswer = { text: 'Lorem ipsum dolor.\n\nSed do eiusmod.', seed: 9 };
+    tools.loremAnswer = { text: 'Lorem ipsum dolor.\n\nSed do eiusmod.', seed: 9, count: 2, atMost: 200 };
   };
 
   const requests = (harness: ToolHarness<LoremToolComponent>) => harness.tools.requestsOf('lorem_ipsum');
@@ -24,6 +24,24 @@ describe('LoremToolComponent', () => {
       'Lorem ipsum dolor.',
       'Sed do eiusmod.',
     ]);
+    expect(harness.element('[data-testid="lorem-counted"]').textContent?.trim()).toBe('2 paragraphes');
+    expect(harness.element('[data-testid="lorem-held"]')).toBeNull();
+  });
+
+  /** Rust holds the count to its bound; the page says so rather than lowering it quietly. */
+  it('says the count asked was held to its bound', async () => {
+    const harness = await renderTool(LoremToolComponent, (tools) => {
+      tools.loremAnswer = { text: 'Lorem ipsum.', seed: 9, count: 200, atMost: 200 };
+    });
+    await drawn(harness, 1);
+
+    await harness.type('lorem-count', '1000', 'lorem_ipsum');
+
+    expect(harness.element('[data-testid="lorem-held"]').textContent?.trim()).toBe(
+      'Au plus 200 paragraphes à la fois : le nombre demandé y est ramené.',
+    );
+    expect(harness.element('[data-testid="lorem-counted"]').textContent?.trim()).toBe('200 paragraphes');
+    expect(harness.element<HTMLInputElement>('[data-testid="lorem-count"]').max).toBe('200');
   });
 
   it('asks again for the unit and the count chosen, and on request', async () => {
@@ -34,7 +52,7 @@ describe('LoremToolComponent', () => {
       .element<HTMLButtonElement>('[data-testid="segmented-lorem-unit"] [data-segment-id="words"]')
       .click();
     await drawn(harness, 2);
-    harness.tool.actions()[0]!.run();
+    harness.element<HTMLButtonElement>('[data-testid="lorem-again"]').click();
     await drawn(harness, 3);
 
     expect(requests(harness).slice(1)).toEqual([

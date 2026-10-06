@@ -1363,8 +1363,18 @@
       },
       "count": "Nombre",
       "opening": "Commencer par « Lorem ipsum »",
-      "again": "Tirer à nouveau",
-      "noteTitle": "Lorem ipsum"
+      "again": "Générer à nouveau",
+      "noteTitle": "Lorem ipsum",
+      "counted": {
+        "words": "{count, plural, one {# mot} other {# mots}}",
+        "sentences": "{count, plural, one {# phrase} other {# phrases}}",
+        "paragraphs": "{count, plural, one {# paragraphe} other {# paragraphes}}"
+      },
+      "heldTo": {
+        "words": "Au plus {count, plural, other {# mots}} à la fois : le nombre demandé y est ramené.",
+        "sentences": "Au plus {count, plural, other {# phrases}} à la fois : le nombre demandé y est ramené.",
+        "paragraphs": "Au plus {count, plural, other {# paragraphes}} à la fois : le nombre demandé y est ramené."
+      }
     },
     "json-diff": {
       "name": "JSON Diff",

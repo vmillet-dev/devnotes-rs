@@ -1363,8 +1363,18 @@
       },
       "count": "Count",
       "opening": "Start with “Lorem ipsum”",
-      "again": "Draw again",
-      "noteTitle": "Lorem ipsum"
+      "again": "Generate again",
+      "noteTitle": "Lorem ipsum",
+      "counted": {
+        "words": "{count, plural, one {# word} other {# words}}",
+        "sentences": "{count, plural, one {# sentence} other {# sentences}}",
+        "paragraphs": "{count, plural, one {# paragraph} other {# paragraphs}}"
+      },
+      "heldTo": {
+        "words": "At most {count, plural, other {# words}} at a time: the count asked is brought down to it.",
+        "sentences": "At most {count, plural, other {# sentences}} at a time: the count asked is brought down to it.",
+        "paragraphs": "At most {count, plural, other {# paragraphs}} at a time: the count asked is brought down to it."
+      }
     },
     "json-diff": {
       "name": "JSON Diff",
