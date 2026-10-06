@@ -397,11 +397,20 @@ describe('The tools', () => {
       await setField(testid('colour-against'), '#ffffff');
 
       await eventually(
-        () => $(testid('colour-ratio')).getText(),
+        async () => (await $(testid('colour-ratio')).getText()).replace(',', '.'),
         (ratio) => ratio === '4.48:1',
         'the ratio',
       );
+      expect(await $(testid('colour-verdict')).getAttribute('data-verdict')).toBe('failsNormal');
       expect(await readEach(`${testid('colour-verdicts')} td`, '@class')).toEqual(['', 'pass', '', '']);
+
+      await $(testid('colour-fix')).click();
+      await eventually(
+        async () => Number((await $(testid('colour-ratio')).getText()).replace(',', '.').replace(':1', '')),
+        (ratio) => ratio >= 4.5 && ratio < 4.7,
+        'the fix reaching 4.5:1',
+      );
+      expect(await $(testid('colour-input')).getValue()).toMatch(/^#[0-9a-f]{6}$/);
     });
 
     it('brings a colour sRGB cannot show inside, and says so', async () => {

@@ -701,7 +701,10 @@ layout is fixed, so this is presentation, not a rule.
 **A colour is Rust's to read** (`tools/colour.rs`): the four notations, `OKLab` and `OKLCH`,
 the gamut, and the WCAG ratio — with the `0.03928` of `scripts/palette.test.mjs`, so the tool
 and the palette's own check agree. The page paints the swatch Rust hands it. An `OKLCH` colour
-sRGB cannot show gives up chroma, at the same lightness and hue, until it can, and says so.
+sRGB cannot show gives up chroma, at the same lightness and hue, until it can, and says so. A
+contrast that falls short is offered a fix: the nearest text colour reaching the next level for
+body text, its OKLCH lightness alone moved toward black or white — whichever moves it less —
+checked after rounding to the bytes its HEX writes, or said to be out of reach.
 
 **A conversion goes through one value** (`tools/convert.rs`): each format is read into a
 `serde_json::Value` and written out of it, so any format reaches any other. ⚠️ `serde_json`

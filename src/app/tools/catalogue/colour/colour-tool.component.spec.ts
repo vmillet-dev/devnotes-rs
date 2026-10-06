@@ -24,7 +24,12 @@ const DODGER: ColourAnswer = {
     swatch: '#ffffff',
     outOfGamut: false,
   },
-  contrast: { ratio: 3.24, aa: { normal: false, large: true }, aaa: { normal: false, large: false } },
+  contrast: {
+    ratio: 3.24,
+    aa: { normal: false, large: true },
+    aaa: { normal: false, large: false },
+    fix: { kind: 'found', level: 'aa', hex: '#0076d9' },
+  },
 };
 
 describe('ColourToolComponent', () => {
@@ -64,17 +69,58 @@ describe('ColourToolComponent', () => {
     });
   });
 
-  it('takes a colour from the system picker as if it had been typed', async () => {
+  it('takes a colour from the system picker under the swatch as if it had been typed', async () => {
     const harness = await rendered();
-    const picker = harness.element<HTMLInputElement>('[data-testid="colour-against-picker"]');
+    const picker = harness.element<HTMLInputElement>('[data-testid="colour-picker"]');
 
-    expect(picker.value).toBe('#ffffff');
+    expect(picker.value).toBe('#1e90ff');
     picker.value = '#15171c';
     picker.dispatchEvent(new Event('input'));
     await vi.waitFor(() => expect(harness.tools.requestsOf('describe_colour')).toHaveLength(2));
 
-    expect(harness.tools.requestsOf('describe_colour')[1]).toEqual({ colour: '#1e90ff', against: '#15171c' });
-    expect(harness.element<HTMLInputElement>('[data-testid="colour-against"]').value).toBe('#15171c');
+    expect(harness.tools.requestsOf('describe_colour')[1]).toEqual({ colour: '#15171c', against: '#ffffff' });
+    expect(harness.element<HTMLInputElement>('[data-testid="colour-input"]').value).toBe('#15171c');
+    expect(harness.element<HTMLInputElement>('[data-testid="colour-text"]').value).toBe('#15171c');
+  });
+
+  it('swaps the text and the background', async () => {
+    const harness = await rendered();
+
+    harness.element<HTMLButtonElement>('[data-testid="colour-swap"]').click();
+    await vi.waitFor(() => expect(harness.tools.requestsOf('describe_colour')).toHaveLength(2));
+
+    expect(harness.tools.requestsOf('describe_colour')[1]).toEqual({ colour: '#ffffff', against: '#1e90ff' });
+  });
+
+  /** Rust found the nearest text colour that reaches 4.5:1; the button puts it in « Texte ». */
+  it('offers the fix Rust found, and takes it into the text', async () => {
+    const harness = await rendered();
+
+    expect(harness.element('[data-testid="colour-fix"]').textContent?.trim()).toBe(
+      'Ajuster le texte pour atteindre 4,5:1',
+    );
+    harness.element<HTMLButtonElement>('[data-testid="colour-fix"]').click();
+    await vi.waitFor(() => expect(harness.tools.requestsOf('describe_colour')).toHaveLength(2));
+
+    expect(harness.tools.requestsOf('describe_colour')[1]).toEqual({ colour: '#0076d9', against: '#ffffff' });
+  });
+
+  it('says no text reaches the level, and offers no fix past AAA', async () => {
+    const harness = await rendered((tools) => {
+      tools.colour = {
+        ...DODGER,
+        contrast: {
+          ratio: 4.68,
+          aa: { normal: true, large: true },
+          aaa: { normal: false, large: true },
+          fix: { kind: 'unreachable', level: 'aaa' },
+        },
+      };
+    });
+
+    expect(harness.element('[data-testid="colour-fix"]')).toBeNull();
+    expect(harness.element('[data-testid="colour-unreachable"]').textContent).toContain('7:1');
+    expect(harness.element('[data-testid="colour-verdict"]').dataset['verdict']).toBe('aa');
   });
 
   it('empties both colours on Vider', async () => {
@@ -90,7 +136,10 @@ describe('ColourToolComponent', () => {
   it('gives the ratio and the WCAG verdicts', async () => {
     const harness = await rendered();
 
-    expect(harness.element('[data-testid="colour-ratio"]').textContent).toBe('3.24:1');
+    expect(harness.element('[data-testid="colour-ratio"]').textContent).toBe('3,24:1');
+    expect(harness.element('[data-testid="colour-verdict"]').textContent?.trim()).toBe(
+      'Insuffisant pour le texte courant',
+    );
     const cells = harness
       .all('[data-testid="colour-verdicts"] td')
       .map((cell) => cell.classList.contains('pass'));

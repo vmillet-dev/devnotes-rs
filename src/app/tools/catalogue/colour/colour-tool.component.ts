@@ -1,11 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { ToolsRepository } from '@core/data/tools.repository';
 import { ColourReading, Notations } from '@core/model/tool-answers.model';
 import { liveResult } from '@core/services/tools/live-result';
 import { Tool, ToolResult } from '@core/services/tools/tool.model';
 import { toolState } from '@core/services/tools/tool-sessions';
-import { OutputRowComponent } from '@tools/ui/output-row/output-row.component';
+import { ResultRowComponent } from '@tools/ui/result-row/result-row.component';
 
 type Read = Extract<ColourReading, { kind: 'read' }>;
 
@@ -23,13 +24,18 @@ function read(reading: ColourReading | undefined): Read | null {
 /** Everything is computed in Rust; the swatches are all the page paints. */
 @Component({
   selector: 'app-colour-tool',
-  imports: [OutputRowComponent, TranslocoPipe],
+  imports: [ResultRowComponent, TranslocoPipe],
   templateUrl: './colour-tool.component.html',
   styleUrl: './colour-tool.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ColourToolComponent implements Tool {
   private readonly repository = inject(ToolsRepository);
+  private readonly transloco = inject(TranslocoService);
+
+  private readonly lang = toSignal(this.transloco.langChanges$, {
+    initialValue: this.transloco.getActiveLang(),
+  });
 
   protected readonly colour = toolState('colour.colour', '#1e90ff');
   protected readonly against = toolState('colour.against', '#ffffff');
@@ -44,8 +50,23 @@ export class ColourToolComponent implements Tool {
   protected readonly first = computed(() => read(this.answer.value()?.colour));
   protected readonly second = computed(() => read(this.answer.value()?.against));
   protected readonly contrast = computed(() => this.answer.value()?.contrast ?? null);
-  /** An `f64` crosses as `number | null`: JSON has no NaN. */
-  protected readonly ratio = computed(() => (this.contrast()?.ratio ?? 0).toFixed(2));
+  /** An `f64` crosses as `number | null`: JSON has no NaN. « 3,24 » in French. */
+  protected readonly ratio = computed(() =>
+    new Intl.NumberFormat(this.lang(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
+      this.contrast()?.ratio ?? 0,
+    ),
+  );
+
+  /** The one line a reader wants: whether body text can sit on this background. */
+  protected readonly verdict = computed(() => {
+    const contrast = this.contrast();
+    if (!contrast) return 'failsAll';
+    if (!contrast.aa.large) return 'failsAll';
+    if (!contrast.aa.normal) return 'failsNormal';
+    return contrast.aaa.normal ? 'aaa' : 'aa';
+  });
+
+  protected readonly fixLevel = computed(() => this.contrast()?.fix?.level ?? 'aa');
 
   protected readonly invalid = computed(() => this.answer.value()?.colour.kind === 'invalid');
   protected readonly againstInvalid = computed(() => this.answer.value()?.against.kind === 'invalid');
@@ -70,6 +91,19 @@ export class ColourToolComponent implements Tool {
   clear(): void {
     this.colour.set('');
     this.against.set('');
+  }
+
+  /** The text and the background trade places. */
+  protected swap(): void {
+    const [colour, against] = [this.colour(), this.against()];
+    this.colour.set(against);
+    this.against.set(colour);
+  }
+
+  /** The nearest text colour Rust found that reaches the next level, in the « Texte » field. */
+  protected applyFix(): void {
+    const fix = this.contrast()?.fix;
+    if (fix?.kind === 'found') this.colour.set(fix.hex);
   }
 
   protected onText(which: 'colour' | 'against', event: Event): void {
