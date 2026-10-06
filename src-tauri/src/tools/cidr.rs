@@ -1,5 +1,11 @@
-//! A CIDR block: what it holds, what it is, whether an address falls in it, and how it splits.
+//! A CIDR block: what it holds, what it is, whether an address falls in it, and how it splits;
+//! with it, a plan placing needs in the block and a list brought to its fewest blocks.
 //! Both families are computed on `u128`, an IPv4 address in its low 32 bits.
+
+mod forms;
+mod masks;
+mod plan;
+mod summary;
 
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::str::FromStr;
@@ -7,6 +13,11 @@ use std::str::FromStr;
 use ipnet::{IpNet, ipv4_mask_to_prefix, ipv6_mask_to_prefix};
 use serde::{Deserialize, Serialize};
 use specta::Type;
+
+pub use forms::{CidrForms, ReverseDns};
+pub use masks::MaskRow;
+pub use plan::{CidrPlan, PlanLine};
+pub use summary::{CidrSummary, FamilySummary};
 
 /// Past this, a split says how many more there are rather than listing them.
 pub const SUBNETS_SHOWN: usize = 256;
@@ -30,7 +41,7 @@ impl IpFamily {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Type)]
+#[derive(Debug, Clone, Default, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct CidrRequest {
     pub network: String,
@@ -38,6 +49,10 @@ pub struct CidrRequest {
     pub family: Option<IpFamily>,
     pub member: String,
     pub split: Option<u8>,
+    /// One need a line, a name and a host count, placed in the block.
+    pub plan: String,
+    /// Blocks, addresses and ranges, one a line, summarised whatever the block.
+    pub list: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
@@ -77,6 +92,8 @@ pub enum BlockKind {
 pub struct CidrBlock {
     pub family: IpFamily,
     pub cidr: String,
+    /// The address as typed, host bits and all: what a prefix chosen in the table applies to.
+    pub typed: String,
     pub prefix: u8,
     pub host_bits: u8,
     /// The address had host bits set: `cidr` is its network.
@@ -98,6 +115,7 @@ pub struct CidrBlock {
     /// Decimal digits: an IPv6 count passes what a JSON number holds.
     pub addresses: String,
     pub usable: String,
+    pub forms: CidrForms,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
@@ -141,6 +159,9 @@ pub struct CidrAnswer {
     /// The prefixes offered as chips: the next three.
     pub split_choices: Vec<u8>,
     pub split: Option<CidrSplit>,
+    pub masks: Vec<MaskRow>,
+    pub plan: Option<CidrPlan>,
+    pub summary: Option<CidrSummary>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -208,44 +229,41 @@ fn split_ip(ip: IpAddr) -> (IpFamily, u128) {
 }
 
 pub fn describe(request: &CidrRequest) -> CidrAnswer {
+    let mut answer = CidrAnswer {
+        block: None,
+        problem: None,
+        membership: CidrMembership::Empty,
+        split_choices: Vec::new(),
+        split: None,
+        masks: Vec::new(),
+        plan: None,
+        summary: summary::summarise(&request.list),
+    };
     let text = request.network.trim();
     if text.is_empty() {
-        return CidrAnswer {
-            block: None,
-            problem: None,
-            membership: CidrMembership::Empty,
-            split_choices: Vec::new(),
-            split: None,
-        };
+        return answer;
     }
     let read = parse(text).and_then(|(net, address)| forced(net, address, request.family));
     let (net, typed) = match read {
         Ok(read) => read,
         Err(problem) => {
-            return CidrAnswer {
-                block: None,
-                problem: Some(problem),
-                membership: CidrMembership::Empty,
-                split_choices: Vec::new(),
-                split: None,
-            };
+            answer.problem = Some(problem);
+            return answer;
         }
     };
-    let split_choices: Vec<u8> = (net.prefix + 1..=net.bits())
+    answer.split_choices = (net.prefix + 1..=net.bits())
         .take(usize::from(SPLIT_CHOICES))
         .collect();
-    let split = request
+    answer.split = request
         .split
         .filter(|prefix| (net.prefix + 1..=net.bits()).contains(prefix))
-        .or_else(|| split_choices.first().copied())
+        .or_else(|| answer.split_choices.first().copied())
         .map(|prefix| split(net, prefix));
-    CidrAnswer {
-        block: Some(block(net, typed != net.network)),
-        problem: None,
-        membership: membership(net, &request.member),
-        split_choices,
-        split,
-    }
+    answer.block = Some(block(net, typed));
+    answer.membership = membership(net, &request.member);
+    answer.masks = masks::masks(net);
+    answer.plan = plan::plan(net, &request.plan);
+    answer
 }
 
 /// The block and the address as typed: `10.24.8.5/21` is `10.24.8.0/21`, host bits set.
@@ -323,17 +341,18 @@ fn forced(net: Net, typed: u128, family: Option<IpFamily>) -> Result<(Net, u128)
     }
 }
 
-fn block(net: Net, normalised: bool) -> CidrBlock {
+fn block(net: Net, typed: u128) -> CidrBlock {
     let (binary_network, binary_host) = binary(net);
     let (kind, range) = classify(net);
     let v4 = net.family == IpFamily::V4;
-    let usable_hosts = v4 && net.host_bits() >= 2;
+    let (first, last) = host_range(net);
     CidrBlock {
         family: net.family,
         cidr: net.cidr(),
+        typed: address(net.family, typed),
         prefix: net.prefix,
         host_bits: net.host_bits(),
-        normalised,
+        normalised: typed != net.network,
         binary_network,
         binary_host,
         kind,
@@ -341,12 +360,23 @@ fn block(net: Net, normalised: bool) -> CidrBlock {
         network: address(net.family, net.network),
         mask: v4.then(|| address(net.family, net.net_mask())),
         inverse_mask: v4.then(|| address(net.family, net.host_mask())),
-        first: address(net.family, net.network + u128::from(usable_hosts)),
-        last: address(net.family, net.last() - u128::from(usable_hosts)),
-        broadcast: usable_hosts.then(|| address(net.family, net.last())),
+        first: address(net.family, first),
+        last: address(net.family, last),
+        broadcast: has_broadcast(net).then(|| address(net.family, net.last())),
         addresses: count(net.host_bits()),
         usable: usable(net),
+        forms: forms::forms(net),
     }
+}
+
+fn has_broadcast(net: Net) -> bool {
+    net.family == IpFamily::V4 && net.host_bits() >= 2
+}
+
+/// The first and last addresses a host can take: all of them but on an IPv4 `/30` and wider.
+fn host_range(net: Net) -> (u128, u128) {
+    let ends = u128::from(has_broadcast(net));
+    (net.network + ends, net.last() - ends)
 }
 
 /// `2^bits`, in digits: `::/0` holds one more than a `u128`.
@@ -363,6 +393,38 @@ fn usable(net: Net) -> String {
     match (net.family, net.host_bits()) {
         (IpFamily::V4, bits @ 2..) => ((1_u128 << bits) - 2).to_string(),
         (_, bits) => count(bits),
+    }
+}
+
+/// `usable` as a number, `u128::MAX` standing for the one more of `::/0`.
+fn usable_count(net: Net) -> u128 {
+    let all = net.host_mask().saturating_add(1);
+    all - u128::from(has_broadcast(net)) * 2
+}
+
+/// The fewest blocks covering `start..=end` exactly, each the largest its start allows.
+fn blocks_between(family: IpFamily, mut start: u128, end: u128) -> Vec<Net> {
+    let bits = family.bits();
+    let mut blocks = Vec::new();
+    loop {
+        let mut host_bits = u8::try_from(start.trailing_zeros().min(u32::from(bits))).unwrap_or(0);
+        while host_bits > 0
+            && start
+                .checked_add(ones(host_bits))
+                .is_none_or(|last| last > end)
+        {
+            host_bits -= 1;
+        }
+        let block = Net {
+            family,
+            network: start,
+            prefix: bits - host_bits,
+        };
+        blocks.push(block);
+        if block.last() >= end {
+            return blocks;
+        }
+        start = block.last() + 1;
     }
 }
 
@@ -520,6 +582,7 @@ mod tests {
             family: None,
             member: String::new(),
             split: None,
+            ..CidrRequest::default()
         })
     }
 
@@ -535,6 +598,7 @@ mod tests {
             family: None,
             member: member.to_owned(),
             split: None,
+            ..CidrRequest::default()
         })
         .membership
     }
@@ -545,6 +609,7 @@ mod tests {
             family: None,
             member: String::new(),
             split: Some(prefix),
+            ..CidrRequest::default()
         })
         .split
         .unwrap()
@@ -705,6 +770,7 @@ mod tests {
                 family: Some(family),
                 member: String::new(),
                 split: None,
+                ..CidrRequest::default()
             })
         };
 

@@ -2573,7 +2573,7 @@
     },
     "cidr": {
       "name": "CIDR subnets",
-      "description": "Mask, hosts, membership and splitting, IPv4 and IPv6",
+      "description": "Masks, hosts, splitting, address plans and summarised blocks, IPv4 and IPv6",
       "network": "Network",
       "family": "Read as",
       "families": {
@@ -2654,7 +2654,66 @@
       },
       "more": "And {{more}} more, not listed.",
       "empty": "Type a network: an address and its prefix, or its mask.",
-      "noteTitle": "CIDR subnet"
+      "noteTitle": "CIDR subnet",
+      "writtenTitle": "Other notations",
+      "written": {
+        "integer": {
+          "v4": "As an integer",
+          "v6": "As an integer"
+        },
+        "expanded": {
+          "v4": "In hexadecimal",
+          "v6": "Written in full"
+        },
+        "reverse": {
+          "v4": "Reverse DNS",
+          "v6": "Reverse DNS"
+        }
+      },
+      "reverse": {
+        "zones": "{{count}} zones, from {{first}} to {{last}}",
+        "classless": "{{zone}}, by classless delegation (RFC 2317)"
+      },
+      "masks": {
+        "title": "Masks",
+        "hint": "Every prefix, its mask and its size. Choosing one applies it to the address typed.",
+        "prefix": "Prefix",
+        "mask": "Mask",
+        "wildcard": "Inverse mask",
+        "addresses": "Addresses",
+        "hosts": "Hosts",
+        "networks64": "/64 networks",
+        "apply": "Apply /{{prefix}} to the address"
+      },
+      "plan": {
+        "title": "Address plan",
+        "hint": "One need a line: a name and a host count. The largest are placed first in the network, each on its own boundary.",
+        "placeholder": "Offices 500\nGuest Wi-Fi 120\nWAN link 2",
+        "need": "Need",
+        "asked": "Asked",
+        "subnet": "Subnet",
+        "usable": "Hosts",
+        "range": "Range",
+        "unnamed": "Unnamed",
+        "noRoom": "Not enough room left in the network",
+        "unreadable": "Line without a host count: “{{text}}”",
+        "free": "Left free:",
+        "full": "The network is fully allocated.",
+        "waiting": "Type a valid network first: the plan is placed in it."
+      },
+      "list": {
+        "title": "Summarise a list",
+        "hint": "Blocks, addresses or ranges “a - b”, one a line: the blocks covering exactly the same addresses, and the smallest block holding them all.",
+        "placeholder": "10.24.8.0/24\n10.24.9.0/24\n10.24.13.5 - 10.24.13.20",
+        "supernet": "Common block",
+        "exact": "Exactly the list",
+        "extra": "{{extra}} {count, plural, one {address} other {addresses}} beyond the list",
+        "blocks": {
+          "v4": "IPv4, fewest blocks · {count, plural, one {# block} other {# blocks}}",
+          "v6": "IPv6, fewest blocks · {count, plural, one {# block} other {# blocks}}"
+        },
+        "unreadable": "Cannot be read: {{entries}}"
+      }
     }
   }
 }

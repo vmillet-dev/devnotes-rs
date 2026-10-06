@@ -2573,7 +2573,7 @@
     },
     "cidr": {
       "name": "Sous-réseaux CIDR",
-      "description": "Masque, hôtes, appartenance et découpage, IPv4 et IPv6",
+      "description": "Masques, hôtes, découpage, plan d’adressage et résumé de blocs, IPv4 et IPv6",
       "network": "Réseau",
       "family": "Lire comme",
       "families": {
@@ -2654,7 +2654,66 @@
       },
       "more": "Et {{more}} de plus, non listés.",
       "empty": "Saisissez un réseau : une adresse et son préfixe, ou son masque.",
-      "noteTitle": "Sous-réseau CIDR"
+      "noteTitle": "Sous-réseau CIDR",
+      "writtenTitle": "Autres écritures",
+      "written": {
+        "integer": {
+          "v4": "En entier",
+          "v6": "En entier"
+        },
+        "expanded": {
+          "v4": "En hexadécimal",
+          "v6": "Forme complète"
+        },
+        "reverse": {
+          "v4": "DNS inverse",
+          "v6": "DNS inverse"
+        }
+      },
+      "reverse": {
+        "zones": "{{count}} zones, de {{first}} à {{last}}",
+        "classless": "{{zone}}, en délégation sans classe (RFC 2317)"
+      },
+      "masks": {
+        "title": "Masques",
+        "hint": "Chaque préfixe, son masque et sa taille. En choisir un l’applique à l’adresse saisie.",
+        "prefix": "Préfixe",
+        "mask": "Masque",
+        "wildcard": "Masque inverse",
+        "addresses": "Adresses",
+        "hosts": "Hôtes",
+        "networks64": "Réseaux /64",
+        "apply": "Appliquer /{{prefix}} à l’adresse"
+      },
+      "plan": {
+        "title": "Plan d’adressage",
+        "hint": "Un besoin par ligne : un nom et un nombre d’hôtes. Les plus grands sont placés d’abord dans le réseau, chacun sur sa frontière.",
+        "placeholder": "Bureaux 500\nWi-Fi invités 120\nLien WAN 2",
+        "need": "Besoin",
+        "asked": "Demandés",
+        "subnet": "Sous-réseau",
+        "usable": "Hôtes",
+        "range": "Plage",
+        "unnamed": "Sans nom",
+        "noRoom": "Plus assez de place dans le réseau",
+        "unreadable": "Ligne sans nombre d’hôtes : « {{text}} »",
+        "free": "Reste libre :",
+        "full": "Le réseau est entièrement attribué.",
+        "waiting": "Saisissez d’abord un réseau valide : le plan se place dedans."
+      },
+      "list": {
+        "title": "Résumer une liste",
+        "hint": "Des blocs, des adresses ou des plages « a - b », un par ligne : les blocs qui couvrent exactement les mêmes adresses, et le plus petit bloc qui les contient tous.",
+        "placeholder": "10.24.8.0/24\n10.24.9.0/24\n10.24.13.5 - 10.24.13.20",
+        "supernet": "Bloc commun",
+        "exact": "Exactement la liste",
+        "extra": "{{extra}} {count, plural, one {adresse} other {adresses}} hors de la liste",
+        "blocks": {
+          "v4": "IPv4 au plus juste · {count, plural, one {# bloc} other {# blocs}}",
+          "v6": "IPv6 au plus juste · {count, plural, one {# bloc} other {# blocs}}"
+        },
+        "unreadable": "Illisible : {{entries}}"
+      }
     }
   }
 }

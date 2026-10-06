@@ -1,9 +1,47 @@
 @use 'mixins' as *;
 
-.columns {
-  @include tool-columns;
+// Wide, the masks run down a third column beside everything else; narrower, they come last.
+.layout {
+  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 32px;
+  grid-template-areas:
+    'network facts'
+    'plan list'
+    'masks masks';
+  gap: 28px 32px;
+  align-items: start;
+
+  @media (width >= 1600px) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(420px, 0.9fr);
+    grid-template-areas:
+      'network facts masks'
+      'plan list masks';
+  }
+
+  @media (width < 960px) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'network' 'facts' 'masks' 'plan' 'list';
+  }
+}
+
+.network-area {
+  grid-area: network;
+}
+
+.facts-area {
+  grid-area: facts;
+}
+
+.masks-area {
+  grid-area: masks;
+}
+
+.plan-area {
+  grid-area: plan;
+}
+
+.list-area {
+  grid-area: list;
 }
 
 .column {
@@ -160,4 +198,149 @@
   margin: 0;
   font-size: 12px;
   color: var(--text-2);
+}
+
+.hint {
+  margin: -6px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.area {
+  @include tool-text-area;
+  resize: vertical;
+}
+
+.table-card {
+  @include surface(var(--bg-1), 10px);
+  @include ring-room;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12px;
+
+  th,
+  td {
+    padding: 6px 12px;
+    text-align: left;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  thead th {
+    font-weight: 500;
+    color: var(--text-2);
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .number {
+    text-align: right;
+    font-family: var(--font-mono), monospace;
+  }
+
+  .mono {
+    font-family: var(--font-mono), monospace;
+    color: var(--text-1);
+  }
+
+  .strong {
+    color: var(--text-0);
+  }
+
+  .copy {
+    width: 1px;
+    padding: 0 8px;
+  }
+
+  .refused {
+    color: var(--red);
+  }
+}
+
+.masks {
+  tr.current td {
+    background: rgba(var(--amber-rgb), 0.08);
+  }
+
+  tr.current .prefix {
+    @include accent-state;
+  }
+}
+
+.prefix {
+  @include unstyled-control;
+  @include focus-ring;
+  @include hit-target;
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-family: var(--font-mono), monospace;
+  font-weight: 600;
+  color: var(--text-0);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--bg-3);
+  }
+}
+
+.none {
+  color: var(--text-2);
+}
+
+.free {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.block-name {
+  @include surface(var(--bg-2), 6px, var(--line));
+  padding: 1px 6px;
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  color: var(--text-1);
+}
+
+.blocks-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px 0 18px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.blocks-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.blocks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 8px 18px 12px;
+  list-style: none;
+
+  li {
+    @include surface(var(--bg-2), 6px, var(--line));
+    padding: 2px 8px;
+    font-family: var(--font-mono), monospace;
+    font-size: 12.5px;
+    color: var(--text-0);
+  }
 }

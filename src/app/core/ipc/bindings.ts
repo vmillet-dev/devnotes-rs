@@ -543,11 +543,16 @@ export type CidrAnswer = {
 	/**  The prefixes offered as chips: the next three. */
 	splitChoices: number[],
 	split: CidrSplit | null,
+	masks: MaskRow[],
+	plan: CidrPlan | null,
+	summary: CidrSummary | null,
 };
 
 export type CidrBlock = {
 	family: IpFamily,
 	cidr: string,
+	/**  The address as typed, host bits and all: what a prefix chosen in the table applies to. */
+	typed: string,
 	prefix: number,
 	hostBits: number,
 	/**  The address had host bits set: `cidr` is its network. */
@@ -569,11 +574,26 @@ export type CidrBlock = {
 	/**  Decimal digits: an IPv6 count passes what a JSON number holds. */
 	addresses: string,
 	usable: string,
+	forms: CidrForms,
+};
+
+export type CidrForms = {
+	integer: string,
+	/**  IPv4 in hexadecimal, IPv6 with every zero written out. */
+	expanded: string,
+	reverse: ReverseDns,
 };
 
 export type CidrMembership = { kind: "empty" } | { kind: "unreadable" } | { kind: "outside" } | 
 /**  Counted from the network address, which is host 0. */
 { kind: "inside"; host: string };
+
+export type CidrPlan = {
+	/**  In address order, which is the largest need first; the unreadable lines last. */
+	lines: PlanLine[],
+	/**  What is left of the block, as the fewest blocks. */
+	free: string[],
+};
 
 export type CidrProblem = "unreadable" | "prefixTooLong" | "maskWithHoles" | "wrongFamily";
 
@@ -583,6 +603,10 @@ export type CidrRequest = {
 	family: IpFamily | null,
 	member: string,
 	split: number | null,
+	/**  One need a line, a name and a host count, placed in the block. */
+	plan: string,
+	/**  Blocks, addresses and ranges, one a line, summarised whatever the block. */
+	list: string,
 };
 
 export type CidrSplit = {
@@ -590,6 +614,12 @@ export type CidrSplit = {
 	subnets: Subnet[],
 	/**  How many past `SUBNETS_SHOWN`, in decimal digits. */
 	more: string,
+};
+
+export type CidrSummary = {
+	/**  IPv4 first, then IPv6, each when the list holds some. */
+	families: FamilySummary[],
+	unreadable: string[],
 };
 
 export type Class = "owner" | "group" | "others";
@@ -929,6 +959,15 @@ export type ExportScope = { kind: "library" } | { kind: "space"; spaceId: string
 export type FacetCount<T> = {
 	value: T,
 	count: number,
+};
+
+export type FamilySummary = {
+	family: IpFamily,
+	blocks: string[],
+	/**  The smallest single block holding every address listed. */
+	supernet: string,
+	/**  What the supernet holds beyond the list, in digits. */
+	extra: string,
 };
 
 export type FieldReading = {
@@ -1379,6 +1418,18 @@ export type LoremUnit = "words" | "sentences" | "paragraphs";
 
 export type Magnitude = "seconds" | "milliseconds" | "microseconds" | "nanoseconds";
 
+export type MaskRow = {
+	prefix: number,
+	hostBits: number,
+	/**  IPv4 only. */
+	mask: string | null,
+	wildcard: string | null,
+	addresses: string,
+	usable: string,
+	/**  IPv6 only, up to `/64`: the `/64` networks, a LAN each, it holds. */
+	networks64: string | null,
+};
+
 export type Mode = {
 	/**  The twelve bits, `0o7777` at most. */
 	bits: number,
@@ -1727,6 +1778,12 @@ export type Placeholder = {
 	value: string,
 };
 
+export type PlanLine = { kind: "placed"; name: string; hosts: string; cidr: string; usable: string; first: string; last: string } | 
+/**  What is left of the block is too small for it. */
+{ kind: "noRoom"; name: string; hosts: string } | 
+/**  No host count on that line. */
+{ kind: "unreadable"; text: string };
+
 /**
  *  Not sealed: SQL filters and sorts on it. Declared from the least to the most pressing,
  *  the order of the keys 0 to 4.
@@ -1773,6 +1830,14 @@ export type Registry = {
 	libraries: LibraryEntry[],
 	open: string | null,
 };
+
+export type ReverseDns = 
+/**  One address: the name its PTR record goes under. */
+{ kind: "record"; name: string } | 
+/**  The zones the block covers whole. */
+{ kind: "zones"; first: string; last: string; count: number } | 
+/**  Smaller than the zone it lies in: delegated through RFC 2317's aliases. */
+{ kind: "classless"; zone: string };
 
 /**
  *  One kept body, as the panel lists it.

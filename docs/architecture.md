@@ -721,7 +721,13 @@ said; a forced family reads IPv4 as its IPv4-mapped IPv6 block and back. What th
 from the IANA special-purpose ranges, the most specific holding it, or « mixed » when it is wider
 than one. ⚠️ Counts cross as decimal digits: an IPv6 one passes 2⁵³, and `::/0` holds 2¹²⁸, one
 more than a `u128` — the page groups them with `BigInt`. A split offers the next three prefixes and
-lists the first 256 subnets.
+lists the first 256 subnets. Beside the block, in the same answer (`cidr/`): the address as one
+integer, in full and under `in-addr.arpa` / `ip6.arpa` (past a `/24`, RFC 2317's classless zone);
+the masks of the family, a choice applying its prefix to the address _as typed_, so going back finds
+the same block; an address plan, needs placed the largest first so that each subnet starts on its
+own boundary with nothing lost between two, what is left given as the fewest blocks; and a list —
+blocks, addresses, `a - b` ranges — merged per family into the fewest blocks covering exactly the
+same addresses, with the one block holding them all and what it holds beyond them.
 
 **A colour is Rust's to read** (`tools/colour.rs`): the four notations, `OKLab` and `OKLCH`,
 the gamut, and the WCAG ratio — with the `0.03928` of `scripts/palette.test.mjs`, so the tool

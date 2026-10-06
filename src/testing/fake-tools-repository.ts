@@ -144,6 +144,9 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
     membership: { kind: 'empty' },
     splitChoices: [],
     split: null,
+    masks: [],
+    plan: null,
+    summary: null,
   };
   stats: TextStats = {
     characters: 0,
