@@ -1,0 +1,169 @@
+@use 'mixins' as *;
+
+.columns {
+  @include tool-columns;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 32px;
+}
+
+.column {
+  @include tool-column;
+  gap: 12px;
+}
+
+.section-title {
+  @include tool-section-title;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.labelled {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label,
+.option {
+  font-size: 12px;
+  color: var(--text-1);
+}
+
+.option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field {
+  @include tool-field;
+
+  &:disabled {
+    opacity: 0.5;
+  }
+}
+
+.area {
+  @include tool-text-area;
+  resize: vertical;
+}
+
+.inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.check {
+  @include tool-check;
+}
+
+.number {
+  @include tool-number(64px);
+}
+
+.card {
+  @include surface(var(--bg-1), 10px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--amber-text);
+}
+
+.problem {
+  @include tool-problem;
+}
+
+.advice {
+  @include surface(rgba(var(--amber-rgb), 0.06), 10px, var(--amber-dim));
+  margin: 0;
+  padding: 12px 16px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-1);
+}
+
+// White in both themes, with black modules: the plate is the code's quiet zone, not a theme surface.
+.plate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  background: #fff;
+
+  &.empty {
+    background: var(--bg-1);
+    border: 1px dashed var(--line);
+  }
+}
+
+.code {
+  width: 100%;
+  height: 100%;
+
+  path {
+    fill: #000;
+  }
+}
+
+.placeholder {
+  margin: 0;
+  padding: 24px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.primary,
+.secondary {
+  @include unstyled-control;
+  @include focus-ring;
+  flex: 1;
+  height: 38px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.primary {
+  background: var(--amber-fill);
+  color: var(--amber-ink);
+}
+
+.secondary {
+  @include surface(var(--bg-2), 8px, var(--line));
+  color: var(--text-0);
+
+  &:hover:not(:disabled) {
+    border-color: var(--amber-dim);
+  }
+}
+
+.icon {
+  flex: 0 0 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

@@ -2507,6 +2507,69 @@
         "more": "Commentaires, partiels et délimiteurs"
       },
       "with": "avec"
+    },
+    "qr": {
+      "name": "QR code",
+      "description": "Texte, URL, Wi-Fi, e-mail ou contact, en SVG ou PNG",
+      "content": "Contenu",
+      "kinds": {
+        "text": "Texte",
+        "url": "URL",
+        "wifi": "Wi-Fi",
+        "email": "E-mail",
+        "contact": "Contact"
+      },
+      "fields": {
+        "text": "Texte",
+        "url": "URL",
+        "ssid": "Nom du réseau (SSID)",
+        "password": "Mot de passe",
+        "security": "Sécurité",
+        "hidden": "Réseau masqué",
+        "to": "Destinataire",
+        "subject": "Objet",
+        "body": "Message",
+        "name": "Nom",
+        "phone": "Téléphone",
+        "email": "E-mail",
+        "organisation": "Organisation"
+      },
+      "placeholders": {
+        "text": "Un texte à encoder",
+        "url": "https://exemple.fr/doc"
+      },
+      "securities": {
+        "wpa": "WPA/WPA2",
+        "wep": "WEP",
+        "open": "Aucune"
+      },
+      "missingScheme": "Cette adresse n’a pas de schéma (https://…) : certains lecteurs la liront comme du texte.",
+      "correction": "Correction d’erreur",
+      "levels": {
+        "low": "L",
+        "medium": "M",
+        "quartile": "Q",
+        "high": "H"
+      },
+      "margin": "Marge",
+      "version": "Version",
+      "versionValue": "{{version}} · {{modules}} × {{modules}} modules",
+      "capacity": "Capacité",
+      "capacityValue": "{bytes, plural, one {# octet} other {# octets}} sur {{capacity}}",
+      "recoverable": "Récupérable si abîmé",
+      "recoverableValue": "jusqu’à {{percent}} %",
+      "tooLong": "{bytes, plural, one {# octet} other {# octets}} : c’est trop pour ce niveau de correction, qui en tient {{maximum}} au plus.",
+      "advice": "Gardez la marge blanche et un fort contraste : un QR clair sur fond sombre n’est pas lu par tous les lecteurs. Pour une impression, visez au moins 2 cm de côté.",
+      "preview": "Aperçu",
+      "nothing": "Le code apparaît ici dès qu’il y a quelque chose à encoder.",
+      "codeLabel": "QR code, version {{version}}",
+      "downloadSvg": "Télécharger SVG",
+      "png": "PNG",
+      "copyImage": "Copier l’image",
+      "copied": "Image du QR code copiée.",
+      "saved": "{count, plural, one {QR code enregistré : # octet.} other {QR code enregistré : # octets.}}",
+      "noteTitle": "Contenu d’un QR code",
+      "saveWarning": "Ce contenu porte le mot de passe du réseau Wi-Fi. Une note est chiffrée avec la bibliothèque, mais elle se copie, se partage et s’exporte : un gestionnaire de mots de passe le garde mieux."
     }
   }
 }

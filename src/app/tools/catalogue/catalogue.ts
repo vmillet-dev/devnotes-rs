@@ -140,6 +140,12 @@ export const TOOLS: readonly ToolDefinition[] = [
     load: () => import('./lorem/lorem-tool.component').then((m) => m.LoremToolComponent),
   },
   {
+    id: 'qr',
+    category: 'generate',
+    keywords: ['qr', 'qr code', 'qrcode', 'wifi', 'vcard', 'mailto', 'svg', 'png', 'barcode'],
+    load: () => import('./qr/qr-tool.component').then((m) => m.QrToolComponent),
+  },
+  {
     id: 'dates',
     category: 'time',
     keywords: ['timestamp', 'unix', 'epoch', 'iso 8601', 'rfc 3339', 'rfc 2822', 'date', 'now'],

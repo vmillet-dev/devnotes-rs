@@ -37,9 +37,13 @@ import {
   PercentagesAnswer,
   PercentagesRequest,
   PermissionsAnswer,
+  QrAnswer,
+  QrFormat,
+  QrRequest,
   PermissionsRequest,
   PasswordRequest,
   SavedBytes,
+  SavedCode,
   SizesAnswer,
   SizesRequest,
   StatsRequest,
@@ -148,6 +152,9 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
   };
   jwt: JwtAnswer = { kind: 'malformed', problem: 'segmentCount', segment: null, segments: 1, at: null };
   permissions: PermissionsAnswer = { mode: { kind: 'empty' }, umask: { kind: 'empty' } };
+  qr: QrAnswer = { kind: 'empty' };
+  savedCode: SavedCode = { kind: 'saved', bytes: 0 };
+  copiedCode = true;
   percentages: PercentagesAnswer = {
     of: { kind: 'empty' },
     share: { kind: 'empty' },
@@ -282,6 +289,18 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
 
   textStats(request: StatsRequest): Promise<TextStats> {
     return this.answer('text_stats', request, this.stats);
+  }
+
+  describeQrCode(request: QrRequest): Promise<QrAnswer> {
+    return this.answer('describe_qr_code', request, this.qr);
+  }
+
+  saveQrCode(request: QrRequest, format: QrFormat, path: string): Promise<SavedCode> {
+    return this.answer('save_qr_code', { request, format, path }, this.savedCode);
+  }
+
+  copyQrCode(request: QrRequest): Promise<boolean> {
+    return this.answer('copy_qr_code', request, this.copiedCode);
   }
 
   requestsOf(command: string): unknown[] {

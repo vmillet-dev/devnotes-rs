@@ -2507,6 +2507,69 @@
         "more": "Comments, partials and delimiters"
       },
       "with": "with"
+    },
+    "qr": {
+      "name": "QR code",
+      "description": "Text, URL, Wi-Fi, e-mail or contact, as SVG or PNG",
+      "content": "Content",
+      "kinds": {
+        "text": "Text",
+        "url": "URL",
+        "wifi": "Wi-Fi",
+        "email": "E-mail",
+        "contact": "Contact"
+      },
+      "fields": {
+        "text": "Text",
+        "url": "URL",
+        "ssid": "Network name (SSID)",
+        "password": "Password",
+        "security": "Security",
+        "hidden": "Hidden network",
+        "to": "To",
+        "subject": "Subject",
+        "body": "Message",
+        "name": "Name",
+        "phone": "Phone",
+        "email": "E-mail",
+        "organisation": "Organisation"
+      },
+      "placeholders": {
+        "text": "A text to encode",
+        "url": "https://example.com/doc"
+      },
+      "securities": {
+        "wpa": "WPA/WPA2",
+        "wep": "WEP",
+        "open": "None"
+      },
+      "missingScheme": "This address has no scheme (https://…): some readers will take it as text.",
+      "correction": "Error correction",
+      "levels": {
+        "low": "L",
+        "medium": "M",
+        "quartile": "Q",
+        "high": "H"
+      },
+      "margin": "Margin",
+      "version": "Version",
+      "versionValue": "{{version}} · {{modules}} × {{modules}} modules",
+      "capacity": "Capacity",
+      "capacityValue": "{bytes, plural, one {# byte} other {# bytes}} of {{capacity}}",
+      "recoverable": "Recoverable if damaged",
+      "recoverableValue": "up to {{percent}} %",
+      "tooLong": "{bytes, plural, one {# byte} other {# bytes}}: too many for this correction level, which holds {{maximum}} at most.",
+      "advice": "Keep the white margin and a strong contrast: a light code on a dark background is not read by every scanner. For print, aim for at least 2 cm a side.",
+      "preview": "Preview",
+      "nothing": "The code shows here as soon as there is something to encode.",
+      "codeLabel": "QR code, version {{version}}",
+      "downloadSvg": "Download SVG",
+      "png": "PNG",
+      "copyImage": "Copy the image",
+      "copied": "QR code image copied.",
+      "saved": "{count, plural, one {QR code saved: # byte.} other {QR code saved: # bytes.}}",
+      "noteTitle": "Content of a QR code",
+      "saveWarning": "This content carries the Wi-Fi network's password. A note is encrypted with the library, but it gets copied, shared and exported: a password manager keeps it better."
     }
   }
 }
