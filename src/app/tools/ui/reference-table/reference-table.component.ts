@@ -21,6 +21,8 @@ export interface ReferenceRow {
   readonly group: string;
   /** What a search reads, case and accents folded: the key, the name, the words on screen. */
   readonly searchable: readonly string[];
+  /** What the row's button copies instead of the key, and its name aloud: a character, keyed by its code. */
+  readonly copy?: { readonly value: string; readonly what: string };
 }
 
 export interface ReferenceGroup {

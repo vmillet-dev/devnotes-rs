@@ -2422,6 +2422,28 @@
       },
       "yes": "Yes",
       "no": "No"
+    },
+    "ascii": {
+      "name": "ASCII table",
+      "description": "The 128 characters, in decimal, hexadecimal, octal and binary",
+      "placeholder": "A character, a code or a name: A, 65, 0x41, newline…",
+      "columns": {
+        "decimal": "Dec",
+        "hex": "Hex",
+        "octal": "Oct",
+        "binary": "Binary",
+        "character": "Char",
+        "name": "Name",
+        "escape": "Escape",
+        "ctrl": "Ctrl"
+      },
+      "groups": {
+        "control": "Control characters",
+        "punctuation": "Punctuation and symbols",
+        "digits": "Digits",
+        "upper": "Upper case",
+        "lower": "Lower case"
+      }
     }
   }
 }

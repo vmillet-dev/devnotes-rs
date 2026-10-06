@@ -2422,6 +2422,28 @@
       },
       "yes": "Oui",
       "no": "Non"
+    },
+    "ascii": {
+      "name": "Table ASCII",
+      "description": "Les 128 caractères, en décimal, hexadécimal, octal et binaire",
+      "placeholder": "Un caractère, un code ou un nom : A, 65, 0x41, saut de ligne…",
+      "columns": {
+        "decimal": "Déc.",
+        "hex": "Hex.",
+        "octal": "Oct.",
+        "binary": "Binaire",
+        "character": "Car.",
+        "name": "Nom",
+        "escape": "Échapp.",
+        "ctrl": "Ctrl"
+      },
+      "groups": {
+        "control": "Caractères de contrôle",
+        "punctuation": "Ponctuation et symboles",
+        "digits": "Chiffres",
+        "upper": "Majuscules",
+        "lower": "Minuscules"
+      }
     }
   }
 }

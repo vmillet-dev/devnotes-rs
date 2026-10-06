@@ -51,7 +51,11 @@
             <tr class="row" data-testid="reference-row" [attr.data-key]="row.key">
               <ng-container *ngTemplateOutlet="cells().template; context: { $implicit: row }" />
               <td class="copy-cell">
-                <app-copy-value [value]="row.key" [what]="row.key" [compact]="true" />
+                <app-copy-value
+                  [value]="row.copy?.value ?? row.key"
+                  [what]="row.copy?.what ?? row.key"
+                  [compact]="true"
+                />
               </td>
             </tr>
           }
