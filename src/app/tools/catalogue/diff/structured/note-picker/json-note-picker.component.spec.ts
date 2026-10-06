@@ -33,14 +33,18 @@ describe('JsonNotePickerComponent', () => {
     return { fixture, notes, picked };
   }
 
-  it('asks for the JSON snippets of every space', async () => {
+  it('asks for the JSON, YAML, TOML and XML snippets of every space', async () => {
     const query = vi.spyOn(FakeNotesRepository.prototype, 'query');
     await open();
 
     await vi.waitFor(() => expect(query).toHaveBeenCalled());
     const asked = query.mock.calls[0]![0] as NotesQuery;
     query.mockRestore();
-    expect([asked.spaceId, asked.languages, asked.kinds]).toEqual([null, ['json'], ['snippet']]);
+    expect([asked.spaceId, asked.languages, asked.kinds]).toEqual([
+      null,
+      ['json', 'yml', 'toml', 'xml'],
+      ['snippet'],
+    ]);
   });
 
   it('hands over the snippet chosen, read whole', async () => {

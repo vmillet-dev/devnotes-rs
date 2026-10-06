@@ -1043,7 +1043,9 @@ export type JsonChangeKind = "added" | "removed" | "modified" |
 
 export type JsonDiffAnswer = { kind: "compared"; changes: JsonChange[]; counts: JsonDiffCounts; rows: JsonDiffRow[]; rowsTruncated: boolean; 
 /**  RFC 6902, from A to B, as JSON. */
-patch: string } | { kind: "unreadable"; side: JsonDiffSide; line: number; column: number };
+patch: string; 
+/**  What each side was read as. */
+formatA: DataFormat; formatB: DataFormat } | { kind: "unreadable"; side: JsonDiffSide; format: DataFormat; line: number; column: number };
 
 export type JsonDiffCounts = {
 	added: number,
@@ -1060,6 +1062,9 @@ export type JsonDiffLine = {
 export type JsonDiffRequest = {
 	a: string,
 	b: string,
+	/**  `None` reads the side by its shape. */
+	formatA: DataFormat | null,
+	formatB: DataFormat | null,
 	/**  On, `{"a":1,"b":2}` and `{"b":2,"a":1}` are the same document. */
 	ignoreKeyOrder: boolean,
 	/**  On, two strings that differ only by their spaces are the same. */

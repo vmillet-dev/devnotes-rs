@@ -52,7 +52,7 @@ export class JsonNotePickerComponent {
         search,
         filter: 'all',
         tags: [],
-        languages: ['json'],
+        languages: ['json', 'yml', 'toml', 'xml'],
         kinds: ['snippet'],
         priorities: [],
         now: this.clock.now(),

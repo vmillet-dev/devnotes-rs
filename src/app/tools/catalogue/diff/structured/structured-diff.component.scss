@@ -309,3 +309,10 @@
   color: var(--text-2);
   word-break: break-all;
 }
+
+.read {
+  flex-shrink: 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  color: var(--text-2);
+}

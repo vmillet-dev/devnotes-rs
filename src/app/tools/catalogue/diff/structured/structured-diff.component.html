@@ -8,6 +8,18 @@
           {{ name ?? ('tools.diff.pasted' | transloco) }}
         </span>
         <span class="spacer"></span>
+        @if (formatOf(side === 'a' ? 'a' : 'b') === 'auto' && readAs()[side === 'a' ? 'a' : 'b']; as read) {
+          <span class="read" [attr.data-testid]="'structured-diff-read-' + side" [attr.data-format]="read">
+            {{ 'tools.diff.structured.readAs' | transloco: { format: formatNames[read] } }}
+          </span>
+        }
+        <app-choice-menu
+          [kind]="'structured-diff-format-' + side"
+          [label]="'tools.diff.structured.format' | transloco: { side: side.toUpperCase() }"
+          [options]="formats"
+          [currentId]="formatOf(side === 'a' ? 'a' : 'b')"
+          (chosen)="onFormat(side === 'a' ? 'a' : 'b', $event)"
+        />
         <button
           type="button"
           class="open"
@@ -31,7 +43,12 @@
         <p class="problem" role="status" [attr.data-testid]="'structured-diff-unreadable-' + side">
           {{
             'tools.diff.structured.unreadable'
-              | transloco: { line: unreadable()!.line, column: unreadable()!.column }
+              | transloco
+                : {
+                    format: formatNames[unreadable()!.format],
+                    line: unreadable()!.line,
+                    column: unreadable()!.column,
+                  }
           }}
         </p>
       }
@@ -171,6 +188,17 @@
         }
       </aside>
     </div>
+    <p class="note" data-testid="structured-diff-as-json">{{ 'tools.diff.structured.asJson' | transloco }}</p>
+  }
+  @if (compared.formatA === 'yaml' || compared.formatB === 'yaml') {
+    <p class="note" data-testid="structured-diff-yaml-note">
+      {{ 'tools.diff.structured.yamlNote' | transloco }}
+    </p>
+  }
+  @if (compared.formatA === 'xml' || compared.formatB === 'xml') {
+    <p class="note" data-testid="structured-diff-xml-note">
+      {{ 'tools.diff.structured.xmlNote' | transloco }}
+    </p>
   }
 } @else if (!unreadable()) {
   <p class="note">{{ 'tools.diff.structured.empty' | transloco }}</p>

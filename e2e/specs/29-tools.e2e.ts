@@ -1208,6 +1208,8 @@ describe('The tools', () => {
       const answer = await bridge.diffJson({
         a: STAGING,
         b: PRODUCTION,
+        formatA: null,
+        formatB: null,
         ignoreKeyOrder: true,
         ignoreWhitespace: true,
       });
@@ -1309,6 +1311,34 @@ describe('The tools', () => {
         (names) => names[0] === 'config.staging.json',
         'the snippet in A',
       );
+    });
+
+    it('compares a YAML with its JSON twin, each read by its shape, by value', async () => {
+      await setField(testid('structured-diff-a'), '# the API\nservice: billing\nreplicas: 2\n');
+      await setField(testid('structured-diff-b'), '{ "replicas": 3, "service": "billing" }');
+
+      await eventually(
+        () => readEach(testid('structured-diff-change'), '@data-path'),
+        (paths) => paths.join() === '$.replicas',
+        'the one change',
+      );
+      expect(await readEach(`[data-testid^="structured-diff-read-"]`, '@data-format')).toEqual([
+        'yaml',
+        'json',
+      ]);
+      await $(testid('structured-diff-yaml-note')).waitForDisplayed({ timeout: 5_000 });
+    });
+
+    it('reads a side in the format forced on it, and says where it stops', async () => {
+      await $(testid('choice-structured-diff-format-b')).click();
+      await $(`${testid('choice-panel-structured-diff-format-b')} [data-option-id="xml"]`).click();
+
+      await $(testid('structured-diff-unreadable-b')).waitForDisplayed({ timeout: 5_000 });
+      expect(await $(testid('structured-diff-unreadable-b')).getText()).toContain('XML');
+
+      await $(testid('choice-structured-diff-format-b')).click();
+      await $(`${testid('choice-panel-structured-diff-format-b')} [data-option-id="auto"]`).click();
+      await $(testid('structured-diff-unreadable-b')).waitForDisplayed({ timeout: 5_000, reverse: true });
     });
   });
 

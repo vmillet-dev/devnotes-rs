@@ -30,6 +30,8 @@ const COMPARED: JsonDiffAnswer = {
   ],
   rowsTruncated: false,
   patch: '[\n  { "op": "replace", "path": "/replicas", "value": 6 }\n]',
+  formatA: 'json',
+  formatB: 'json',
 };
 
 describe('StructuredDiffComponent', () => {
@@ -59,6 +61,8 @@ describe('StructuredDiffComponent', () => {
       {
         a: '{"replicas":2,"beta":true}',
         b: '{"replicas":6,"sentry":{}}',
+        formatA: null,
+        formatB: null,
         ignoreKeyOrder: true,
         ignoreWhitespace: true,
       },
@@ -145,14 +149,15 @@ describe('StructuredDiffComponent', () => {
     );
   });
 
-  it('says which side does not parse, and where', async () => {
+  it('says which side does not parse, in what format, and where', async () => {
     const harness = await compared((tools) => {
-      tools.diffAnswer = { kind: 'unreadable', side: 'b', line: 1, column: 12 };
+      tools.diffAnswer = { kind: 'unreadable', side: 'b', format: 'toml', line: 1, column: 12 };
     });
 
     expect(text(harness, 'structured-diff-unreadable-b')).toBe(
-      'Ce JSON ne se lit pas : ligne 1, colonne 12.',
+      'Ce TOML ne se lit pas : ligne 1, colonne 12.',
     );
+    expect(text(harness, 'structured-diff-read-b')).toBe('lu comme TOML');
     expect(harness.element('[data-testid="structured-diff-unreadable-a"]')).toBeNull();
     expect(harness.tool.result()).toBeNull();
   });
@@ -169,5 +174,38 @@ describe('StructuredDiffComponent', () => {
 
     expect(harness.element('[data-testid="structured-diff-identical"]')).not.toBeNull();
     expect(harness.tool.result()).toBeNull();
+  });
+
+  it('reads each side by its shape, and says what it read', async () => {
+    const harness = await compared((tools) => {
+      tools.diffAnswer = { ...COMPARED, formatA: 'yaml', formatB: 'xml' };
+    });
+
+    expect([text(harness, 'structured-diff-read-a'), text(harness, 'structured-diff-read-b')]).toEqual([
+      'lu comme YAML',
+      'lu comme XML',
+    ]);
+    expect(harness.element('[data-testid="structured-diff-as-json"]')).not.toBeNull();
+    expect(harness.element('[data-testid="structured-diff-yaml-note"]')).not.toBeNull();
+    expect(harness.element('[data-testid="structured-diff-xml-note"]')).not.toBeNull();
+  });
+
+  it('sends a format forced on a side, and no longer says what it detected there', async () => {
+    const harness = await compared();
+    expect(harness.element('[data-testid="structured-diff-yaml-note"]')).toBeNull();
+
+    harness.element<HTMLButtonElement>('[data-testid="choice-structured-diff-format-a"]').click();
+    await harness.settle();
+    harness
+      .all('[data-testid="choice-panel-structured-diff-format-a"] [role="menuitem"]')
+      .find((item) => item.textContent?.trim() === 'YAML')!
+      .click();
+    await harness.settle();
+
+    await expect
+      .poll(() => harness.tools.requestsOf('diff_json').at(-1))
+      .toMatchObject({ formatA: 'yaml', formatB: null });
+    expect(harness.element('[data-testid="structured-diff-read-a"]')).toBeNull();
+    expect(text(harness, 'structured-diff-read-b')).toBe('lu comme JSON');
   });
 });
