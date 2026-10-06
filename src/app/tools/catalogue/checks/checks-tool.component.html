@@ -1,146 +1,199 @@
-<div class="columns">
-  <section class="column" aria-labelledby="checks-input-title">
-    <div class="section-head">
-      <h2 id="checks-input-title" class="section-title">{{ 'tools.input' | transloco }}</h2>
-      <app-segmented-choice
-        kind="checks-kind"
-        [label]="'tools.checks.kind' | transloco"
-        [segments]="kinds"
-        [currentId]="kind() ?? 'auto'"
-        (chosen)="onKind($event)"
-      />
-    </div>
-    <input
-      type="text"
-      class="field"
-      data-testid="checks-input"
-      spellcheck="false"
-      autocomplete="off"
-      [attr.aria-label]="'tools.checks.inputLabel' | transloco"
-      [value]="text()"
-      [placeholder]="'tools.checks.placeholder' | transloco"
-      (input)="onInput($event)"
+<div class="body">
+  <div class="intro">
+    <p class="description">{{ 'tools.checks.intro' | transloco }}</p>
+    <app-segmented-choice
+      kind="checks-kind"
+      [label]="'tools.checks.kind' | transloco"
+      [segments]="kinds"
+      [currentId]="kind() ?? 'auto'"
+      (chosen)="onKind($event)"
     />
-    <p class="note">{{ 'tools.checks.secret' | transloco }}</p>
-    @if (problem(); as problem) {
-      <p class="problem" role="status" data-testid="checks-problem" [attr.data-problem]="problem.kind">
-        @if (problem.kind === 'unreadable') {
-          {{ 'tools.checks.unreadable' | transloco: { at: problem.at } }}
-        } @else {
-          {{ 'tools.checks.tooShort' | transloco }}
-        }
-      </p>
-    }
-  </section>
-
-  <section class="column" aria-labelledby="checks-output-title">
-    <h2 id="checks-output-title" class="section-title">{{ 'tools.result' | transloco }}</h2>
-    @if (luhn(); as luhn) {
-      <p class="reading" data-testid="checks-reading" data-kind="luhn">
-        {{ 'tools.checks.readAs.luhn' | transloco }}
-        @if (luhn.guessed) {
-          <span class="guessed">{{ 'tools.checks.guessed' | transloco }}</span>
-        }
-      </p>
-      <p
-        class="verdict"
-        data-testid="checks-verdict"
-        [attr.data-valid]="luhn.valid"
-        [class.valid]="luhn.valid"
-      >
-        <strong>{{ (luhn.valid ? 'tools.checks.valid' : 'tools.checks.invalid') | transloco }}</strong>
-        ·
-        @if (luhn.valid) {
-          {{ 'tools.checks.luhnValid' | transloco }}
-        } @else {
-          {{ 'tools.checks.luhnInvalid' | transloco: { digit: luhn.expectedLast } }}
-        }
-      </p>
-      @if (luhn.network; as network) {
-        <p class="note" data-testid="checks-network" [attr.data-network]="network">
-          {{
-            'tools.checks.network' | transloco: { network: ('tools.checks.networks.' + network | transloco) }
-          }}
-        </p>
+  </div>
+  <input
+    type="text"
+    class="field"
+    data-testid="checks-input"
+    spellcheck="false"
+    autocomplete="off"
+    [attr.aria-label]="'tools.checks.inputLabel' | transloco"
+    [value]="text()"
+    [placeholder]="'tools.checks.placeholder' | transloco"
+    (input)="onInput($event)"
+  />
+  <p class="banner" role="note" data-testid="checks-private">{{ 'tools.checks.private' | transloco }}</p>
+  @if (problem(); as problem) {
+    <p class="problem" role="status" data-testid="checks-problem" [attr.data-problem]="problem.kind">
+      @if (problem.kind === 'unreadable') {
+        {{ 'tools.checks.unreadable' | transloco: { at: problem.at } }}
+      } @else {
+        {{ 'tools.checks.tooShort' | transloco }}
       }
-      <app-output-row data-row="number" [name]="'tools.checks.number' | transloco" [value]="luhn.grouped" />
-      <app-output-row
+    </p>
+  }
+
+  @if (luhn(); as luhn) {
+    <section class="card" data-testid="checks-result" aria-labelledby="checks-title">
+      <div class="card-head" data-testid="checks-verdict" [attr.data-valid]="luhn.valid">
+        <h2 id="checks-title" class="card-title" data-testid="checks-reading" data-kind="luhn">
+          {{ (luhn.network ? 'tools.checks.titles.card' : 'tools.checks.titles.luhn') | transloco }}
+        </h2>
+        <span class="badge" [class.valid]="luhn.valid">
+          {{ (luhn.valid ? 'tools.checks.valid' : 'tools.checks.invalid') | transloco }}
+        </span>
+        @if (!luhn.valid) {
+          <p class="reason">{{ 'tools.checks.luhnInvalid' | transloco: { digit: luhn.expectedLast } }}</p>
+        }
+      </div>
+      <h3 class="card-group">{{ 'tools.checks.checksTitle' | transloco }}</h3>
+      <app-result-row
+        data-row="length"
+        [name]="'tools.checks.length' | transloco"
+        [value]="'tools.checks.digits' | transloco: { count: luhn.length }"
+        [copyable]="false"
+      />
+      <app-result-row
+        data-row="key"
+        [name]="'tools.checks.key' | transloco"
+        [value]="
+          (luhn.valid ? 'tools.checks.luhnKeyRight' : 'tools.checks.luhnKeyWrong')
+            | transloco: { given: lastDigit(luhn.grouped), expected: luhn.expectedLast }
+        "
+        [copyable]="false"
+      />
+      @if (luhn.network; as network) {
+        <app-result-row
+          data-testid="checks-network"
+          [attr.data-network]="network"
+          [name]="'tools.checks.network' | transloco"
+          [value]="'tools.checks.networks.' + network | transloco"
+          [copyable]="false"
+        />
+      }
+      <h3 class="card-group">{{ 'tools.checks.content' | transloco }}</h3>
+      <app-result-row data-row="number" [name]="'tools.checks.number' | transloco" [value]="luhn.grouped" />
+      <app-result-row
         data-row="completed"
         [name]="'tools.checks.completed' | transloco"
-        [meta]="'tools.checks.completedMeta' | transloco"
         [value]="luhn.completed"
       />
-    } @else if (iban(); as iban) {
-      <p class="reading" data-testid="checks-reading" data-kind="iban">
-        {{ 'tools.checks.readAs.iban' | transloco }}
-        @if (iban.guessed) {
-          <span class="guessed">{{ 'tools.checks.guessed' | transloco }}</span>
-        }
-      </p>
-      @switch (iban.verdict.kind) {
-        @case ('valid') {
-          <p class="verdict valid" data-testid="checks-verdict" data-valid="true">
-            <strong>{{ 'tools.checks.valid' | transloco }}</strong>
-          </p>
-        }
-        @default {
-          <p
-            class="verdict"
-            data-testid="checks-verdict"
-            data-valid="false"
-            [attr.data-problem]="iban.verdict.kind"
-          >
-            <strong>{{ 'tools.checks.invalid' | transloco }}</strong>
-            ·
+    </section>
+  } @else if (iban(); as iban) {
+    <section class="card" data-testid="checks-result" aria-labelledby="checks-title">
+      <div
+        class="card-head"
+        data-testid="checks-verdict"
+        [attr.data-valid]="iban.verdict.kind === 'valid'"
+        [attr.data-problem]="iban.verdict.kind === 'valid' ? null : iban.verdict.kind"
+      >
+        <h2 id="checks-title" class="card-title" data-testid="checks-reading" data-kind="iban">
+          {{ 'tools.checks.titles.iban' | transloco }}
+        </h2>
+        <span class="badge" [class.valid]="iban.verdict.kind === 'valid'">
+          {{ (iban.verdict.kind === 'valid' ? 'tools.checks.valid' : 'tools.checks.invalid') | transloco }}
+        </span>
+        @switch (iban.verdict.kind) {
+          @case ('wrongChecksum') {
             @if (iban.verdict.kind === 'wrongChecksum') {
-              {{ 'tools.checks.wrongChecksum' | transloco: { expected: iban.verdict.expected } }}
-            } @else if (iban.verdict.kind === 'wrongLength') {
-              {{
-                'tools.checks.wrongLength'
-                  | transloco: { expected: iban.verdict.expected, found: iban.verdict.found }
-              }}
-            } @else if (iban.verdict.kind === 'wrongFormat') {
-              {{ 'tools.checks.wrongFormat' | transloco }}
-            } @else {
-              {{ 'tools.checks.unknownCountry' | transloco: { country: iban.country } }}
+              <p class="reason">
+                {{ 'tools.checks.wrongChecksum' | transloco: { expected: iban.verdict.expected } }}
+              </p>
             }
-          </p>
+          }
+          @case ('wrongLength') {
+            @if (iban.verdict.kind === 'wrongLength') {
+              <p class="reason">
+                {{
+                  'tools.checks.wrongLength'
+                    | transloco: { expected: iban.verdict.expected, found: iban.verdict.found }
+                }}
+              </p>
+            }
+          }
+          @case ('wrongFormat') {
+            <p class="reason">{{ 'tools.checks.wrongFormat' | transloco }}</p>
+          }
+          @case ('unknownCountry') {
+            <p class="reason">{{ 'tools.checks.unknownCountry' | transloco: { country: iban.country } }}</p>
+          }
+        }
+      </div>
+      <h3 class="card-group">{{ 'tools.checks.checksTitle' | transloco }}</h3>
+      <app-result-row
+        data-row="length"
+        [name]="'tools.checks.length' | transloco"
+        [value]="ibanLength()"
+        [copyable]="false"
+      />
+      <app-result-row
+        data-row="key"
+        [name]="'tools.checks.key' | transloco"
+        [value]="ibanKey()"
+        [copyable]="false"
+      />
+      <h3 class="card-group">{{ 'tools.checks.content' | transloco }}</h3>
+      <app-result-row
+        data-testid="checks-country"
+        [name]="'tools.checks.country' | transloco"
+        [value]="countryName() + ' (' + iban.country + ')'"
+        [copyable]="false"
+      />
+      @if (iban.verdict.kind === 'valid') {
+        @if (iban.verdict.bank; as bank) {
+          <app-result-row
+            data-testid="checks-bank"
+            [name]="'tools.checks.bank' | transloco"
+            [value]="bank"
+            [copyable]="false"
+          />
+        }
+        @if (iban.verdict.branch; as branch) {
+          <app-result-row
+            data-row="branch"
+            [name]="'tools.checks.branch' | transloco"
+            [value]="branch"
+            [copyable]="false"
+          />
+        }
+        @if (iban.verdict.account; as account) {
+          <app-result-row
+            data-row="account"
+            [name]="'tools.checks.account' | transloco"
+            [value]="account"
+            [copyable]="false"
+          />
+        } @else {
+          <app-result-row
+            data-row="bban"
+            [name]="'tools.checks.bban' | transloco"
+            [value]="iban.verdict.bban"
+            [copyable]="false"
+          />
+        }
+        @if (iban.verdict.ribKey; as rib) {
+          <app-result-row
+            data-testid="checks-rib"
+            [attr.data-valid]="rib.given === rib.expected"
+            [name]="'tools.checks.rib' | transloco"
+            [value]="rib.given === rib.expected ? rib.given : ('tools.checks.ribWrong' | transloco: rib)"
+            [copyable]="false"
+          />
         }
       }
-      <dl class="facts">
-        <div class="fact">
-          <dt>{{ 'tools.checks.country' | transloco }}</dt>
-          <dd data-testid="checks-country">{{ countryName() }} ({{ iban.country }})</dd>
-        </div>
-        @if (iban.verdict.kind === 'valid') {
-          <div class="fact">
-            <dt>{{ 'tools.checks.bban' | transloco }}</dt>
-            <dd>{{ iban.verdict.bban }}</dd>
-          </div>
-          @if (iban.verdict.bank; as bank) {
-            <div class="fact">
-              <dt>{{ 'tools.checks.bank' | transloco }}</dt>
-              <dd data-testid="checks-bank">{{ bank }}</dd>
-            </div>
-          }
-          @if (iban.verdict.branch; as branch) {
-            <div class="fact">
-              <dt>{{ 'tools.checks.branch' | transloco }}</dt>
-              <dd>{{ branch }}</dd>
-            </div>
-          }
-        }
-      </dl>
-      <app-output-row data-row="iban" [name]="'tools.checks.iban' | transloco" [value]="iban.printed" />
+      <app-result-row
+        data-row="compact"
+        [name]="'tools.checks.compact' | transloco"
+        [value]="compact(iban.printed)"
+      />
       @if (iban.verdict.kind === 'wrongChecksum') {
-        <app-output-row
+        <app-result-row
           data-row="corrected"
           [name]="'tools.checks.corrected' | transloco"
           [value]="iban.verdict.corrected"
         />
       }
-    } @else if (!problem()) {
-      <p class="note">{{ 'tools.checks.empty' | transloco }}</p>
-    }
-  </section>
+    </section>
+  } @else if (!problem()) {
+    <p class="note">{{ 'tools.checks.empty' | transloco }}</p>
+  }
+  <p class="footnote">{{ 'tools.checks.footnote' | transloco }}</p>
 </div>

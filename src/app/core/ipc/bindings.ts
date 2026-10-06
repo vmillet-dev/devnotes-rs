@@ -502,11 +502,17 @@ export type ChangelogSpan = {
 
 export type CharacterSet = "lowercase" | "uppercase" | "digits" | "symbols";
 
-export type CheckAnswer = { kind: "luhn"; grouped: string; valid: boolean; 
+export type CheckAnswer = { kind: "luhn"; grouped: string; 
+/**  Its digits, counted. */
+length: number; valid: boolean; 
 /**  The last digit the rest asks for. */
 expectedLast: number; 
 /**  The number with a check digit appended, as if it had none yet. */
-completed: string; network: CardNetwork | null; guessed: boolean } | { kind: "iban"; country: string; printed: string; verdict: IbanVerdict; guessed: boolean } | 
+completed: string; network: CardNetwork | null; guessed: boolean } | { kind: "iban"; country: string; printed: string; 
+/**  The two digits after the country, as typed. */
+checkDigits: string; 
+/**  Its characters, spaces left out. */
+length: number; verdict: IbanVerdict; guessed: boolean } | 
 /**  One-based, in characters. */
 { kind: "unreadable"; at: number } | { kind: "tooShort" };
 
@@ -811,7 +817,9 @@ export type HashRequest = {
 	expected: string | null,
 };
 
-export type IbanVerdict = { kind: "valid"; bban: string; bank: string | null; branch: string | null } | 
+export type IbanVerdict = { kind: "valid"; bban: string; bank: string | null; branch: string | null; 
+/**  Where the country's format names one: France and Monaco. */
+account: string | null; ribKey: RibKey | null } | 
 /**  The check digits the rest asks for, and the IBAN written with them. */
 { kind: "wrongChecksum"; expected: string; corrected: string } | { kind: "wrongLength"; expected: number; found: number } | 
 /**  The length is right, the characters are not the country's: letters where digits go. */
@@ -1503,6 +1511,15 @@ export type Revision = {
 	takenAt: string,
 	/**  So a row can say how much a version held without carrying it. */
 	characters: number,
+};
+
+/**
+ *  The French RIB's key, over the bank, the branch and the account, a letter of the account read
+ *  as a digit (`A` and `J` as 1, `B`, `K` and `S` as 2…).
+ */
+export type RibKey = {
+	given: string,
+	expected: string,
 };
 
 export type Run = {

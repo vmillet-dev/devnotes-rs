@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Signal, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { ToolsRepository } from '@core/data/tools.repository';
@@ -10,7 +10,7 @@ import {
   Segment,
   SegmentedChoiceComponent,
 } from '@shared/controls/segmented-choice/segmented-choice.component';
-import { OutputRowComponent } from '@tools/ui/output-row/output-row.component';
+import { ResultRowComponent } from '@tools/ui/result-row/result-row.component';
 
 type Luhn = Extract<CheckAnswer, { kind: 'luhn' }>;
 type Iban = Extract<CheckAnswer, { kind: 'iban' }>;
@@ -22,26 +22,13 @@ const KINDS: readonly Segment[] = ([AUTO, 'luhn', 'iban'] as const).map((id) => 
   labelKey: `tools.checks.kinds.${id}`,
 }));
 
-/** Every digit but the last four hidden: what a note keeps of a card number. */
-export function masked(grouped: string): string {
-  const total = [...grouped].filter((character) => /\d/.test(character)).length;
-  let seen = 0;
-  return [...grouped]
-    .map((character) => {
-      if (!/\d/.test(character)) return character;
-      seen += 1;
-      return seen > total - 4 ? character : '•';
-    })
-    .join('');
-}
-
 /** The published French example IBAN: valid, and nobody's account. */
 const SAMPLE = 'FR76 3000 6000 0112 3456 7890 189';
 
 /** Luhn and IBAN are Rust's; the page names the country in the language on screen. */
 @Component({
   selector: 'app-checks-tool',
-  imports: [OutputRowComponent, SegmentedChoiceComponent, TranslocoPipe],
+  imports: [ResultRowComponent, SegmentedChoiceComponent, TranslocoPipe],
   templateUrl: './checks-tool.component.html',
   styleUrl: './checks-tool.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -87,32 +74,44 @@ export class ChecksToolComponent implements Tool {
     return new Intl.DisplayNames([this.lang()], { type: 'region' }).of(iban.country) ?? iban.country;
   });
 
-  readonly result = computed<ToolResult | null>(() => {
-    this.lang();
-    const t = (key: string, params?: Record<string, unknown>) =>
-      this.transloco.translate<string>(key, params);
-    const luhn = this.luhn();
-    if (luhn) {
-      const verdict = luhn.valid ? t('tools.checks.valid') : t('tools.checks.invalid');
-      const network = luhn.network ? ` · ${t(`tools.checks.networks.${luhn.network}`)}` : '';
-      const shown = masked(luhn.grouped);
-      return {
-        title: { key: 'tools.checks.cardNoteTitle', params: { last: shown.replace(/\D/g, '') } },
-        kind: 'snippet',
-        language: 'txt',
-        content: `${shown}\n${verdict} (Luhn)${network}`,
-      };
-    }
+  /** « 27 caractères, conforme pour la France ». */
+  protected readonly ibanLength = computed(() => {
     const iban = this.iban();
-    return iban
-      ? {
-          title: { key: 'tools.checks.ibanNoteTitle', params: { country: iban.country } },
-          kind: 'snippet',
-          language: 'txt',
-          content: `${iban.printed}\n${iban.verdict.kind === 'valid' ? t('tools.checks.valid') : t('tools.checks.invalid')}`,
-        }
-      : null;
+    if (!iban) return '';
+    const country = iban.country;
+    if (iban.verdict.kind === 'wrongLength') {
+      return this.say('tools.checks.lengthWrong', {
+        found: iban.verdict.found,
+        expected: iban.verdict.expected,
+        country,
+      });
+    }
+    return iban.verdict.kind === 'unknownCountry'
+      ? this.say('tools.checks.characters', { count: iban.length })
+      : this.say('tools.checks.lengthRight', { count: iban.length, country });
   });
+
+  /** « 14 · modulo 97 correct », or the digits the rest asks for. */
+  protected readonly ibanKey = computed(() => {
+    const iban = this.iban();
+    if (!iban) return '';
+    switch (iban.verdict.kind) {
+      case 'valid':
+      case 'wrongFormat':
+        return this.say('tools.checks.ibanKeyRight', { given: iban.checkDigits });
+      case 'wrongChecksum':
+        return this.say('tools.checks.ibanKeyWrong', {
+          given: iban.checkDigits,
+          expected: iban.verdict.expected,
+        });
+      case 'wrongLength':
+      case 'unknownCountry':
+        return iban.checkDigits;
+    }
+  });
+
+  /** ⚠️ Never: a card number or an IBAN must not end up in a note in clear, so there is nothing to save. */
+  readonly result: Signal<ToolResult | null> = signal(null).asReadonly();
 
   sample(): void {
     this.kind.set(null);
@@ -127,7 +126,21 @@ export class ChecksToolComponent implements Tool {
     this.text.set((event.target as HTMLInputElement).value);
   }
 
+  protected lastDigit(grouped: string): string {
+    return grouped.at(-1) ?? '';
+  }
+
+  /** The electronic format: the printed one without its spaces. */
+  protected compact(printed: string): string {
+    return printed.replaceAll(' ', '');
+  }
+
   protected onKind(id: string): void {
     this.kind.set(id === AUTO ? null : (id as CheckKind));
+  }
+
+  private say(key: string, params: Record<string, unknown> = {}): string {
+    this.lang();
+    return this.transloco.translate(key, params);
   }
 }

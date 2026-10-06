@@ -1187,6 +1187,9 @@ describe('The tools', () => {
         (valid) => valid === 'true',
         'the sample IBAN found valid',
       );
+      expect(await $(testid('checks-rib')).getAttribute('data-valid')).toBe('true');
+      // A card number or an IBAN never ends up in a note in clear.
+      expect(await $(testid('tool-save-as-note')).getAttribute('aria-disabled')).toBe('true');
     });
 
     it('converts its document, which replaces what was typed', async () => {

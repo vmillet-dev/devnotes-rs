@@ -1800,22 +1800,13 @@
         "luhn": "Luhn",
         "iban": "IBAN"
       },
-      "secret": "A card number is not kept: it is gone once the tool is left.",
-      "readAs": {
-        "luhn": "Read as a Luhn number",
-        "iban": "Read as an IBAN"
-      },
-      "guessed": "· from its shape",
       "valid": "Valid",
       "invalid": "Invalid",
-      "luhnValid": "The Luhn sum comes out right.",
       "luhnInvalid": "The last digit should be {{digit}}.",
-      "network": "A {{network}} prefix, as a hint.",
+      "network": "Network",
       "number": "Number",
       "completed": "With a check digit added",
-      "completedMeta": "if this number has none yet",
       "country": "Country",
-      "iban": "IBAN",
       "bban": "BBAN",
       "bank": "Bank code",
       "branch": "Branch code",
@@ -1837,8 +1828,30 @@
         "maestro": "Maestro"
       },
       "empty": "Type a card number, an IBAN, or any number with a Luhn check digit.",
-      "cardNoteTitle": "Number ending in {{last}}",
-      "ibanNoteTitle": "IBAN {{country}}"
+      "intro": "Bank card (Luhn), IBAN or any number with a Luhn check digit.",
+      "private": "Nothing is kept in memory and saving as a note is off: a card number or an IBAN must not end up in clear in a note.",
+      "titles": {
+        "card": "Bank card recognised",
+        "luhn": "Number with a Luhn check digit",
+        "iban": "IBAN recognised"
+      },
+      "checksTitle": "Checks",
+      "content": "Content",
+      "length": "Length",
+      "key": "Check digits",
+      "digits": "{count, plural, one {# digit} other {# digits}}",
+      "characters": "{count, plural, one {# character} other {# characters}}",
+      "lengthRight": "{count, plural, one {# character} other {# characters}}, the length of a {{country}} IBAN",
+      "lengthWrong": "{{found}} characters, {{expected}} expected for a {{country}} IBAN",
+      "luhnKeyRight": "{{given}} · Luhn check digit right",
+      "luhnKeyWrong": "{{given}} · {{expected}} expected",
+      "ibanKeyRight": "{{given}} · modulo 97 right",
+      "ibanKeyWrong": "{{given}} · {{expected}} expected",
+      "account": "Account number",
+      "rib": "RIB key",
+      "ribWrong": "{{given}} · {{expected}} expected",
+      "compact": "Compact format",
+      "footnote": "A valid number follows the format and the check digits. It does not prove the account or the card exists."
     },
     "jwt": {
       "name": "JWT",

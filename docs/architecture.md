@@ -767,8 +767,9 @@ reads again — the page keeps no mode of its own.
 **Check digits are Rust's** (`tools/checks.rs`): Luhn in a few lines, a card's network named from
 its prefix and length as a hint, and an IBAN's mod 97 with its country's BBAN format checked by
 `iban_validate`. That crate keeps its formats to itself, so the length each country expects is
-a table summed from its registry, held to it by a test. ⚠️ A card number is a secret: a plain
-`signal`, and a note keeps it masked but for its last four digits.
+a table summed from its registry, held to it by a test. A French or Monégasque IBAN is read in its
+parts — bank, branch, account — and its RIB key checked apart from the IBAN's own. ⚠️ A card
+number or an IBAN is a secret: a plain `signal`, and the tool has nothing to save as a note.
 
 **A JWT is taken apart in Rust** (`tools/jwt.rs`), without a JWT crate — `jsonwebtoken` brings
 `ring`: its header and payload decoded, `exp`, `nbf`, `iat` and `auth_time` read against now,

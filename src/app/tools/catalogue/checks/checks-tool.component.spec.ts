@@ -3,11 +3,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { CheckAnswer } from '@core/model/tool-answers.model';
 import { FakeToolsRepository } from '@testing/fake-tools-repository';
 import { ToolHarness, renderTool } from '@testing/tool-harness';
-import { ChecksToolComponent, masked } from './checks-tool.component';
+import { ChecksToolComponent } from './checks-tool.component';
 
 const VISA: CheckAnswer = {
   kind: 'luhn',
   grouped: '4111 1111 1111 1111',
+  length: 16,
   valid: true,
   expectedLast: 1,
   completed: '4111 1111 1111 1111 7',
@@ -19,7 +20,16 @@ const FRENCH_IBAN: CheckAnswer = {
   kind: 'iban',
   country: 'FR',
   printed: 'FR14 2004 1010 0505 0001 3M02 606',
-  verdict: { kind: 'valid', bban: '20041010050500013M02606', bank: '20041', branch: null },
+  checkDigits: '14',
+  length: 27,
+  verdict: {
+    kind: 'valid',
+    bban: '20041010050500013M02606',
+    bank: '20041',
+    branch: '01005',
+    account: '0500013M026',
+    ribKey: { given: '06', expected: '06' },
+  },
   guessed: true,
 };
 
@@ -33,6 +43,8 @@ describe('ChecksToolComponent', () => {
   const asked = (harness: ToolHarness<ChecksToolComponent>) => harness.tools.requestsOf('check_digits');
   const text = (harness: ToolHarness<ChecksToolComponent>, testid: string) =>
     harness.element(`[data-testid="${testid}"]`)?.textContent?.replace(/\s+/g, ' ').trim();
+  const row = (harness: ToolHarness<ChecksToolComponent>, selector: string) =>
+    harness.element(`${selector} [data-testid="output-value"]`)?.textContent?.replace(/\s+/g, ' ').trim();
 
   it('asks nothing of an empty field', async () => {
     const harness = await renderTool(ChecksToolComponent);
@@ -52,7 +64,9 @@ describe('ChecksToolComponent', () => {
     expect(harness.element('[data-row="completed"] [data-testid="output-value"]').textContent).toBe(
       '4111 1111 1111 1111 7',
     );
-    expect(text(harness, 'checks-reading')).toContain('d’après sa forme');
+    expect(text(harness, 'checks-reading')).toBe('Carte bancaire reconnue');
+    expect(row(harness, '[data-row="length"]')).toBe('16 chiffres');
+    expect(row(harness, '[data-row="key"]')).toBe('1 · clé de Luhn correcte');
   });
 
   it('says which last digit a wrong number asks for', async () => {
@@ -65,7 +79,8 @@ describe('ChecksToolComponent', () => {
 
     expect(text(harness, 'checks-verdict')).toContain('Le dernier chiffre devrait être 1.');
     expect(harness.element('[data-testid="checks-network"]')).toBeNull();
-    expect(harness.element('[data-testid="checks-reading"] .guessed')).toBeNull();
+    expect(text(harness, 'checks-reading')).toBe('Numéro à clé de Luhn');
+    expect(row(harness, '[data-row="key"]')).toBe('2 · 1 attendu');
   });
 
   it('checks an IBAN and names its country in the language on screen', async () => {
@@ -74,11 +89,29 @@ describe('ChecksToolComponent', () => {
     await harness.type('checks-input', 'FR1420041010050500013M02606', 'check_digits');
 
     expect(harness.element('[data-testid="checks-reading"]').dataset['kind']).toBe('iban');
-    expect(text(harness, 'checks-country')).toBe('France (FR)');
-    expect(text(harness, 'checks-bank')).toBe('20041');
-    expect(harness.element('[data-row="iban"] [data-testid="output-value"]').textContent).toBe(
-      'FR14 2004 1010 0505 0001 3M02 606',
-    );
+    expect(row(harness, '[data-testid="checks-country"]')).toBe('France (FR)');
+    expect(row(harness, '[data-testid="checks-bank"]')).toBe('20041');
+    expect(row(harness, '[data-row="branch"]')).toBe('01005');
+    expect(row(harness, '[data-row="account"]')).toBe('0500013M026');
+    expect(row(harness, '[data-testid="checks-rib"]')).toBe('06');
+    expect(row(harness, '[data-row="length"]')).toBe('27 caractères, la longueur d’un IBAN FR');
+    expect(row(harness, '[data-row="key"]')).toBe('14 · modulo 97 correct');
+    expect(row(harness, '[data-row="compact"]')).toBe('FR1420041010050500013M02606');
+    expect(harness.element('[data-row="bban"]')).toBeNull();
+  });
+
+  it('says a RIB key that is wrong though the IBAN adds up', async () => {
+    const harness = await renderTool(ChecksToolComponent, (tools) => {
+      tools.checks = {
+        ...FRENCH_IBAN,
+        verdict: { ...FRENCH_IBAN.verdict, ribKey: { given: '07', expected: '06' } } as never,
+      };
+    });
+
+    await harness.type('checks-input', 'FR', 'check_digits');
+
+    expect(harness.element('[data-testid="checks-rib"]').dataset['valid']).toBe('false');
+    expect(row(harness, '[data-testid="checks-rib"]')).toBe('07 · 06 attendue');
   });
 
   it('gives the right check digits, the right length, or says what else is wrong', async () => {
@@ -87,6 +120,7 @@ describe('ChecksToolComponent', () => {
       answering({
         ...FRENCH_IBAN,
         printed: 'FR15 2004 1010 0505 0001 3M02 606',
+        checkDigits: '15',
         verdict: { kind: 'wrongChecksum', expected: '14', corrected: 'FR14 2004 1010 0505 0001 3M02 606' },
       }),
     );
@@ -97,6 +131,12 @@ describe('ChecksToolComponent', () => {
     expect(harness.element('[data-row="corrected"] [data-testid="output-value"]').textContent).toBe(
       'FR14 2004 1010 0505 0001 3M02 606',
     );
+
+    expect(row(harness, '[data-row="key"]')).toBe('15 · 14 attendu');
+
+    harness.tools.checks = { ...FRENCH_IBAN, verdict: { kind: 'wrongLength', expected: 27, found: 26 } };
+    await harness.type('checks-input', 'FR wrong length', 'check_digits');
+    expect(row(harness, '[data-row="length"]')).toBe('26 caractères, 27 attendus pour un IBAN FR');
 
     for (const [answer, problem] of [
       [{ kind: 'wrongLength', expected: 27, found: 26 }, 'wrongLength'],
@@ -141,32 +181,17 @@ describe('ChecksToolComponent', () => {
     expect(harness.element('[data-testid="checks-problem"]').dataset['problem']).toBe('tooShort');
   });
 
-  it('keeps a card number as a note masked but for its last four digits', async () => {
+  /** The banner is true, not decoration: nothing to save, so « Enregistrer comme note » is off. */
+  it('offers nothing to save, a card number or an IBAN alike', async () => {
     const harness = await renderTool(ChecksToolComponent, answering(VISA));
 
     await harness.type('checks-input', '4111 1111 1111 1111', 'check_digits');
+    expect(harness.tool.result()).toBeNull();
 
-    expect(harness.tool.result()).toEqual({
-      title: { key: 'tools.checks.cardNoteTitle', params: { last: '1111' } },
-      kind: 'snippet',
-      language: 'txt',
-      content: '•••• •••• •••• 1111\nValide (Luhn) · Visa',
-    });
-    expect(masked('3782 822463 10005')).toBe('•••• •••••• •0005');
-  });
-
-  it('keeps an IBAN as a note with its verdict', async () => {
-    const harness = await renderTool(
-      ChecksToolComponent,
-      answering({ ...FRENCH_IBAN, verdict: { kind: 'unknownCountry' } }),
-    );
-
+    harness.tools.checks = FRENCH_IBAN;
     await harness.type('checks-input', 'FR14', 'check_digits');
-
-    expect(harness.tool.result()).toMatchObject({
-      title: { key: 'tools.checks.ibanNoteTitle', params: { country: 'FR' } },
-      content: 'FR14 2004 1010 0505 0001 3M02 606\nInvalide',
-    });
+    expect(harness.tool.result()).toBeNull();
+    expect(text(harness, 'checks-private')).toContain('l’enregistrement en note est désactivé');
   });
 
   it('never keeps the number for the session: a second opening finds the field empty', async () => {
