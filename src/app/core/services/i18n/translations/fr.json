@@ -1830,22 +1830,13 @@
         "luhn": "Luhn",
         "iban": "IBAN"
       },
-      "secret": "Un numéro de carte ne reste pas en mémoire : il disparaît quand on quitte l’outil.",
-      "readAs": {
-        "luhn": "Lu comme un numéro à clé de Luhn",
-        "iban": "Lu comme un IBAN"
-      },
-      "guessed": "· d’après sa forme",
       "valid": "Valide",
       "invalid": "Invalide",
-      "luhnValid": "La somme de Luhn tombe juste.",
       "luhnInvalid": "Le dernier chiffre devrait être {{digit}}.",
-      "network": "Préfixe de {{network}}, à titre d’indice.",
+      "network": "Réseau",
       "number": "Numéro",
       "completed": "Avec une clé ajoutée",
-      "completedMeta": "si ce numéro n’en a pas encore",
       "country": "Pays",
-      "iban": "IBAN",
       "bban": "BBAN",
       "bank": "Code banque",
       "branch": "Code guichet",
@@ -1867,8 +1858,30 @@
         "maestro": "Maestro"
       },
       "empty": "Tapez un numéro de carte, un IBAN ou tout numéro à clé de Luhn.",
-      "cardNoteTitle": "Numéro se terminant par {{last}}",
-      "ibanNoteTitle": "IBAN {{country}}"
+      "intro": "Carte bancaire (Luhn), IBAN ou tout numéro à clé de Luhn.",
+      "private": "Rien n’est gardé en mémoire et l’enregistrement en note est désactivé : un numéro de carte ou d’IBAN ne doit pas finir en clair dans une note.",
+      "titles": {
+        "card": "Carte bancaire reconnue",
+        "luhn": "Numéro à clé de Luhn",
+        "iban": "IBAN reconnu"
+      },
+      "checksTitle": "Contrôles",
+      "content": "Contenu",
+      "length": "Longueur",
+      "key": "Clé de contrôle",
+      "digits": "{count, plural, one {# chiffre} other {# chiffres}}",
+      "characters": "{count, plural, one {# caractère} other {# caractères}}",
+      "lengthRight": "{count, plural, one {# caractère} other {# caractères}}, la longueur d’un IBAN {{country}}",
+      "lengthWrong": "{{found}} caractères, {{expected}} attendus pour un IBAN {{country}}",
+      "luhnKeyRight": "{{given}} · clé de Luhn correcte",
+      "luhnKeyWrong": "{{given}} · {{expected}} attendu",
+      "ibanKeyRight": "{{given}} · modulo 97 correct",
+      "ibanKeyWrong": "{{given}} · {{expected}} attendu",
+      "account": "Numéro de compte",
+      "rib": "Clé RIB",
+      "ribWrong": "{{given}} · {{expected}} attendue",
+      "compact": "Format compact",
+      "footnote": "Un numéro valide respecte le format et la clé de contrôle. Cela ne prouve pas que le compte ou la carte existe."
     },
     "jwt": {
       "name": "JWT",

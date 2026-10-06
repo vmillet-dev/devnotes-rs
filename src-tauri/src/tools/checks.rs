@@ -222,6 +222,55 @@ pub(crate) fn iban_check_digits(country: &str, bban: &str) -> String {
     format!("{:02}", 98 - remainder)
 }
 
+/// The French RIB's key, over the bank, the branch and the account, a letter of the account read
+/// as a digit (`A` and `J` as 1, `B`, `K` and `S` as 2…).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct RibKey {
+    pub given: String,
+    pub expected: String,
+}
+
+fn rib_digit(character: char) -> Option<u64> {
+    let digit = match character {
+        '0'..='9' => return character.to_digit(10).map(u64::from),
+        'A' | 'J' => 1,
+        'B' | 'K' | 'S' => 2,
+        'C' | 'L' | 'T' => 3,
+        'D' | 'M' | 'U' => 4,
+        'E' | 'N' | 'V' => 5,
+        'F' | 'O' | 'W' => 6,
+        'G' | 'P' | 'X' => 7,
+        'H' | 'Q' | 'Y' => 8,
+        'I' | 'R' | 'Z' => 9,
+        _ => return None,
+    };
+    Some(digit)
+}
+
+fn rib_number(text: &str) -> Option<u64> {
+    text.chars().try_fold(0u64, |number, character| {
+        Some(number * 10 + rib_digit(character)?)
+    })
+}
+
+/// The account and the RIB key of a French (or Monégasque) BBAN: 5 + 5 + 11 + 2 characters.
+fn french_account(bban: &str) -> Option<(String, RibKey)> {
+    if bban.len() != 23 || !bban.is_ascii() {
+        return None;
+    }
+    let (bank, branch, account, given) = (&bban[..5], &bban[5..10], &bban[10..21], &bban[21..]);
+    let sum = 89 * rib_number(bank)? + 15 * rib_number(branch)? + 3 * rib_number(account)?;
+    let expected = format!("{:02}", 97 - sum % 97);
+    Some((
+        account.to_owned(),
+        RibKey {
+            given: given.to_owned(),
+            expected,
+        },
+    ))
+}
+
 #[derive(Debug, Clone, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct CheckRequest {
@@ -241,6 +290,9 @@ pub enum IbanVerdict {
         bban: String,
         bank: Option<String>,
         branch: Option<String>,
+        /// Where the country's format names one: France and Monaco.
+        account: Option<String>,
+        rib_key: Option<RibKey>,
     },
     /// The check digits the rest asks for, and the IBAN written with them.
     WrongChecksum {
@@ -265,6 +317,8 @@ pub enum IbanVerdict {
 pub enum CheckAnswer {
     Luhn {
         grouped: String,
+        /// Its digits, counted.
+        length: u32,
         valid: bool,
         /// The last digit the rest asks for.
         expected_last: u32,
@@ -276,6 +330,10 @@ pub enum CheckAnswer {
     Iban {
         country: String,
         printed: String,
+        /// The two digits after the country, as typed.
+        check_digits: String,
+        /// Its characters, spaces left out.
+        length: u32,
         verdict: IbanVerdict,
         guessed: bool,
     },
@@ -323,6 +381,7 @@ fn luhn(text: &str, guessed: bool) -> CheckAnswer {
     let completed = format!("{digits_text}{}", luhn_check_digit(&digits));
     CheckAnswer::Luhn {
         grouped: network.map_or_else(|| by_four(&digits_text), |n| n.grouped(&digits_text)),
+        length: saturating_u32(digits_text.len()),
         valid: passes_luhn(&digits),
         expected_last: luhn_check_digit(&digits[..digits.len() - 1]),
         completed: by_four(&completed),
@@ -355,11 +414,24 @@ fn iban(text: &str, guessed: bool) -> CheckAnswer {
             let expected = iban_check_digits(&country, bban);
             if expected == given {
                 match Iban::from_str(&electronic) {
-                    Ok(iban) => IbanVerdict::Valid {
-                        bban: iban.bban().to_owned(),
-                        bank: iban.bank_identifier().map(str::to_owned),
-                        branch: iban.branch_identifier().map(str::to_owned),
-                    },
+                    Ok(iban) => {
+                        let french = matches!(country.as_str(), "FR" | "MC")
+                            .then(|| french_account(iban.bban()))
+                            .flatten();
+                        // The registry names no branch for France; its BBAN always carries one.
+                        let branch = iban
+                            .branch_identifier()
+                            .map(str::to_owned)
+                            .or_else(|| french.as_ref().map(|_| iban.bban()[5..10].to_owned()));
+                        let (account, rib_key) = french.unzip();
+                        IbanVerdict::Valid {
+                            bban: iban.bban().to_owned(),
+                            bank: iban.bank_identifier().map(str::to_owned),
+                            branch,
+                            account,
+                            rib_key,
+                        }
+                    }
                     Err(ParseIbanError::UnknownCountry(_)) => IbanVerdict::UnknownCountry,
                     Err(_) => IbanVerdict::WrongFormat,
                 }
@@ -372,6 +444,8 @@ fn iban(text: &str, guessed: bool) -> CheckAnswer {
         }
     };
     CheckAnswer::Iban {
+        check_digits: given.to_owned(),
+        length: saturating_u32(electronic.len()),
         country,
         printed,
         verdict,
@@ -514,8 +588,68 @@ mod tests {
                 bban: "370400440532013000".into(),
                 bank: Some("37040044".into()),
                 branch: None,
+                account: None,
+                rib_key: None,
             }
         );
+    }
+
+    #[test]
+    fn a_french_iban_gives_its_bank_branch_account_and_rib_key() {
+        let CheckAnswer::Iban {
+            check_digits,
+            length,
+            verdict: french,
+            ..
+        } = ask("FR14 2004 1010 0505 0001 3M02 606")
+        else {
+            panic!("iban");
+        };
+
+        assert_eq!((check_digits.as_str(), length), ("14", 27));
+        assert_eq!(
+            french,
+            IbanVerdict::Valid {
+                bban: "20041010050500013M02606".into(),
+                bank: Some("20041".into()),
+                branch: Some("01005".into()),
+                account: Some("0500013M026".into()),
+                rib_key: Some(RibKey {
+                    given: "06".into(),
+                    expected: "06".into()
+                }),
+            }
+        );
+        let IbanVerdict::Valid { rib_key, .. } = verdict("FR76 3000 6000 0112 3456 7890 189")
+        else {
+            panic!("valid");
+        };
+        assert_eq!(rib_key.map(|key| key.expected), Some("89".into()));
+    }
+
+    #[test]
+    fn a_wrong_rib_key_is_said_where_the_iban_still_adds_up() {
+        let bban = "20041010050500013M02607";
+        let iban = format!("FR{}{bban}", iban_check_digits("FR", bban));
+
+        let IbanVerdict::Valid { rib_key, .. } = verdict(&iban) else {
+            panic!("the IBAN's own key is right");
+        };
+        assert_eq!(
+            rib_key,
+            Some(RibKey {
+                given: "07".into(),
+                expected: "06".into()
+            })
+        );
+    }
+
+    #[test]
+    fn a_card_says_how_many_digits_it_has() {
+        let CheckAnswer::Luhn { length, .. } = ask("4111 1111 1111 1111") else {
+            panic!("luhn");
+        };
+        assert_eq!(length, 16);
     }
 
     #[test]
