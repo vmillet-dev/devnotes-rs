@@ -50,6 +50,15 @@
   }
 
   &.compact.copied {
-    color: var(--amber-text);
+    color: var(--green);
+  }
+
+  // Its word shows on hover and once copied, never as a frame sitting at the end of every row.
+  &.compact .label {
+    display: none;
+  }
+
+  &.compact:is(:hover, :focus-visible, .copied) .label {
+    display: inline;
   }
 }

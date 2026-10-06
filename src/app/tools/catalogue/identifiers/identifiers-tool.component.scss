@@ -1,26 +1,41 @@
 @use 'mixins' as *;
 
-.columns {
-  @include tool-columns;
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  max-width: 860px;
 }
 
-.column {
-  @include tool-column;
+.generate,
+.check {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
 }
 
-.section-head {
-  @include tool-section-head;
+.check {
+  padding-top: 28px;
+  border-top: 1px solid var(--line-soft);
 }
 
 .section-title {
   @include tool-section-title;
 }
 
-.options {
+.description {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.controls {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 14px;
+  gap: 10px 18px;
 }
 
 .option {
@@ -35,38 +50,155 @@
   @include tool-number(64px);
 }
 
-.check {
-  @include tool-check;
+.stepper {
+  @include surface(var(--bg-1), 8px, var(--line));
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
 }
 
-.generate {
+.step {
   @include unstyled-control;
-  @include surface(var(--bg-2), 7px, var(--line));
-  @include focus-ring;
-  height: 30px;
-  padding: 0 12px;
-  font-size: 12px;
+  @include hit-target(32px);
+  @include focus-ring(-2px);
+  justify-content: center;
+  font-size: 15px;
   color: var(--text-1);
   cursor: pointer;
 
-  &:hover {
-    border-color: var(--amber-dim);
+  &:hover:not(:disabled) {
     color: var(--text-0);
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.45;
   }
 }
 
-.list {
-  @include tool-text-area;
-  margin: 0;
-  max-height: 360px;
-  overflow: auto;
-  white-space: pre;
+.count {
+  @include text-field;
+  @include focus-ring;
+  width: 44px;
+  font-family: var(--font-mono), monospace;
+  font-size: 12.5px;
+  text-align: center;
+  color: var(--text-0);
+  appearance: textfield;
+
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button {
+    appearance: none;
+  }
 }
 
-.note {
-  @include tool-note;
-  font-family: var(--font-sans);
-  font-size: 11.5px;
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--text-1);
+  cursor: pointer;
+}
+
+.switch {
+  @include setting-switch;
+}
+
+.generate-again {
+  @include unstyled-control;
+  @include surface(rgba(var(--amber-rgb), 0.08), 8px, var(--amber-dim));
+  @include focus-ring;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  margin-left: auto;
+  padding: 0 8px 0 14px;
+  font-size: 12.5px;
+  color: var(--amber-text);
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--amber-edge);
+  }
+
+  kbd {
+    @include surface(var(--bg-2), 4px, var(--line));
+    padding: 1px 5px;
+    font-family: var(--font-mono), monospace;
+    font-size: 10.5px;
+    color: var(--text-2);
+  }
+}
+
+.card {
+  @include surface(var(--bg-1), 10px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px 8px 16px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.card-count {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.ids {
+  max-height: 50vh;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.id-row {
+  @include eases(background);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 40px;
+  padding: 4px 10px 4px 16px;
+  border-bottom: 1px solid var(--line-soft);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: var(--bg-2);
+  }
+
+  &.copied {
+    background: rgba(var(--green-rgb), 0.08);
+  }
+}
+
+.id {
+  min-width: 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+  color: var(--text-0);
+  overflow-wrap: anywhere;
+
+  .hyphen {
+    color: var(--text-2);
+  }
+
+  .version {
+    font-weight: 600;
+    color: var(--amber-text);
+  }
 }
 
 .field {
@@ -78,15 +210,21 @@
   @include surface(var(--bg-1), 8px, var(--line));
   @include focus-ring;
   width: 100%;
-  height: 34px;
-  padding: 0 12px;
+  height: 40px;
+  padding: 0 14px;
   font-family: var(--font-mono), monospace;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--text-0);
 
   &::placeholder {
     color: var(--text-2);
   }
+}
+
+.note {
+  @include tool-note;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
 }
 
 .facts {
@@ -99,11 +237,13 @@
 
 .fact {
   display: grid;
-  grid-template-columns: 110px minmax(0, 1fr);
-  gap: 10px;
-  padding: 8px 12px;
+  grid-template-columns: 150px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 6px 16px;
   border-bottom: 1px solid var(--line-soft);
-  font-size: 12px;
+  font-size: 12.5px;
 
   &:last-child {
     border-bottom: none;
@@ -114,10 +254,23 @@
   }
 
   dd {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
     margin: 0;
     font-family: var(--font-mono), monospace;
     color: var(--text-0);
+    overflow-wrap: anywhere;
   }
+}
+
+.badge {
+  @include tint-badge(--purple-rgb, 0.18);
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-family: var(--font-sans);
+  font-size: 11px;
 }
 
 .problem {

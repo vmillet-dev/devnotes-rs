@@ -1,52 +1,21 @@
-<div class="columns">
-  <section class="column" aria-labelledby="identifiers-generate-title">
-    <div class="section-head">
-      <h2 id="identifiers-generate-title" class="section-title">
-        {{ 'tools.identifiers.generate' | transloco }}
-      </h2>
-      <app-copy-value [value]="list()" [what]="'tools.identifiers.all' | transloco" />
-    </div>
+<div class="body">
+  <section class="generate" aria-labelledby="identifiers-generate-title">
+    <h2 id="identifiers-generate-title" class="visually-hidden">
+      {{ 'tools.identifiers.generate' | transloco }}
+    </h2>
+    <app-segmented-choice
+      kind="identifiers-kind"
+      [label]="'tools.identifiers.kind' | transloco"
+      [segments]="kinds"
+      [currentId]="kind()"
+      (chosen)="onKind($event)"
+    />
+    <p class="description" data-testid="identifiers-hint">
+      {{ 'tools.identifiers.hints.' + kind() | transloco: { name: kindNames[kind()] } }}
+    </p>
 
-    <div class="options">
-      <span class="option">
-        {{ 'tools.identifiers.kind' | transloco }}
-        <app-choice-menu
-          kind="identifiers-kind"
-          [label]="'tools.identifiers.kind' | transloco"
-          [options]="kinds"
-          [currentId]="kind()"
-          (chosen)="onKind($event)"
-        />
-      </span>
-      <label class="option">
-        {{ 'tools.identifiers.count' | transloco }}
-        <input
-          type="number"
-          class="number"
-          data-testid="identifiers-count"
-          min="1"
-          max="500"
-          [value]="count()"
-          (input)="onCount($event)"
-        />
-      </label>
-      @if (caseless()) {
-        <label class="check">
-          <input
-            type="checkbox"
-            data-testid="identifiers-uppercase"
-            [checked]="uppercase()"
-            (change)="onUppercase($event)"
-          />
-          {{ 'tools.identifiers.uppercase' | transloco }}
-        </label>
-      }
-      <button type="button" class="generate" data-testid="identifiers-generate" (click)="regenerate()">
-        {{ 'tools.identifiers.again' | transloco }}
-      </button>
-    </div>
     @if (kind() === 'nanoId') {
-      <div class="options" data-testid="identifiers-nano">
+      <div class="controls" data-testid="identifiers-nano">
         <label class="option">
           {{ 'tools.identifiers.length' | transloco }}
           <input
@@ -69,12 +38,111 @@
       </div>
     }
 
-    <pre class="list" data-testid="identifiers-list">{{ list() }}</pre>
-    <p class="note" data-testid="identifiers-hint">{{ 'tools.identifiers.hints.' + kind() | transloco }}</p>
+    <div class="controls">
+      <div class="stepper" role="group" [attr.aria-label]="'tools.identifiers.count' | transloco">
+        <button
+          type="button"
+          class="step"
+          data-testid="identifiers-fewer"
+          [attr.aria-label]="'tools.identifiers.fewer' | transloco"
+          [disabled]="count() <= bounds.min"
+          (click)="step(-1)"
+        >
+          −
+        </button>
+        <input
+          type="number"
+          class="count"
+          data-testid="identifiers-count"
+          [min]="bounds.min"
+          [max]="bounds.max"
+          [attr.aria-label]="'tools.identifiers.count' | transloco"
+          [value]="count()"
+          (input)="onCount($event)"
+        />
+        <button
+          type="button"
+          class="step"
+          data-testid="identifiers-more"
+          [attr.aria-label]="'tools.identifiers.more' | transloco"
+          [disabled]="count() >= bounds.max"
+          (click)="step(1)"
+        >
+          +
+        </button>
+      </div>
+      @if (caseless()) {
+        <label class="toggle">
+          <input
+            type="checkbox"
+            role="switch"
+            class="switch"
+            data-testid="identifiers-uppercase"
+            [checked]="uppercase()"
+            (change)="onUppercase($event)"
+          />
+          {{ 'tools.identifiers.uppercase' | transloco }}
+        </label>
+      }
+      @if (isUuid()) {
+        <label class="toggle">
+          <input
+            type="checkbox"
+            role="switch"
+            class="switch"
+            data-testid="identifiers-without-hyphens"
+            [checked]="!hyphens()"
+            (change)="onWithoutHyphens($event)"
+          />
+          {{ 'tools.identifiers.withoutHyphens' | transloco }}
+        </label>
+      }
+      <button
+        type="button"
+        class="generate-again"
+        data-testid="identifiers-generate"
+        aria-keyshortcuts="R"
+        (click)="regenerate()"
+      >
+        {{ 'tools.identifiers.again' | transloco }}
+        <kbd aria-hidden="true">R</kbd>
+      </button>
+    </div>
+
+    <div class="card" data-testid="identifiers-list">
+      <div class="card-head">
+        <span class="card-count" data-testid="identifiers-counted">
+          {{ 'tools.identifiers.counted' | transloco: { count: ids().length } }}
+        </span>
+        <app-copy-value
+          [value]="list()"
+          [what]="'tools.identifiers.all' | transloco"
+          labelKey="tools.copyAll"
+        />
+      </div>
+      <ol class="ids">
+        @for (id of ids(); track $index) {
+          <li class="id-row" data-testid="identifiers-row" [class.copied]="copiedRow() === $index">
+            <code class="id" data-testid="identifiers-value">
+              @for (part of id.parts; track $index) {
+                <span [class]="part.kind">{{ part.text }}</span>
+              }
+            </code>
+            <app-copy-value
+              [value]="id.text"
+              [what]="id.text"
+              [compact]="true"
+              (copiedChange)="onRowCopied($index, $event)"
+            />
+          </li>
+        }
+      </ol>
+    </div>
   </section>
 
-  <section class="column" aria-labelledby="identifiers-check-title">
+  <section class="check" aria-labelledby="identifiers-check-title">
     <h2 id="identifiers-check-title" class="section-title">{{ 'tools.identifiers.check' | transloco }}</h2>
+    <p class="description">{{ 'tools.identifiers.checkHint' | transloco }}</p>
     <label class="field">
       <span class="visually-hidden">{{ 'tools.identifiers.checkLabel' | transloco }}</span>
       <input
@@ -114,9 +182,12 @@
         @default {
           <dl class="facts" data-testid="identifiers-facts" [attr.data-kind]="inspection.kind">
             <div class="fact">
-              <dt>{{ 'tools.identifiers.kind' | transloco }}</dt>
-              <dd data-testid="identifiers-recognised">
-                {{ 'tools.identifiers.recognised.' + inspection.kind | transloco }}
+              <dt>{{ 'tools.identifiers.format' | transloco }}</dt>
+              <dd>
+                <span class="badge" data-testid="identifiers-recognised">{{
+                  'tools.identifiers.recognised.' + inspection.kind | transloco
+                }}</span>
+                {{ 'tools.identifiers.formats.' + inspection.kind | transloco: { count: characters() } }}
               </dd>
             </div>
             @if (inspection.kind === 'uuid') {
@@ -137,16 +208,18 @@
                 <dd data-testid="identifiers-created">{{ created }}</dd>
               </div>
             }
+            @if (random(); as random) {
+              <div class="fact">
+                <dt>{{ 'tools.identifiers.random' | transloco }}</dt>
+                <dd data-testid="identifiers-random">
+                  {{ 'tools.identifiers.randomPart' | transloco: { text: random.text, bits: random.bits } }}
+                </dd>
+              </div>
+            }
             @if (inspection.kind === 'objectId') {
               <div class="fact">
                 <dt>{{ 'tools.identifiers.counter' | transloco }}</dt>
                 <dd>{{ inspection.counter }}</dd>
-              </div>
-            }
-            @if (inspection.kind === 'ksuid') {
-              <div class="fact">
-                <dt>{{ 'tools.identifiers.payload' | transloco }}</dt>
-                <dd>{{ inspection.payload }}</dd>
               </div>
             }
           </dl>
