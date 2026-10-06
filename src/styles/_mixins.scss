@@ -651,8 +651,10 @@
 
 // A reference's own cells: its template draws them inside `app-reference-table`'s rows, so its
 // stylesheet, not the table's, reaches them.
+// No ligatures: a reference shows what to type, and JetBrains Mono draws `===` or `~~` as one glyph.
 @mixin reference-cell {
   padding: 8px 12px;
   line-height: 1.5;
+  font-variant-ligatures: none;
   color: var(--text-1);
 }

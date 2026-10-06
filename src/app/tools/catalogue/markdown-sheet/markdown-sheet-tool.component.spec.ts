@@ -62,7 +62,7 @@ describe('MarkdownSheetToolComponent', () => {
   it('copies spaces, not the symbols that draw them', async () => {
     const harness = await render();
 
-    row(harness, '…␠␠').querySelector<HTMLButtonElement>('[data-testid="copy-value"]')!.click();
+    row(harness, '…␣␣').querySelector<HTMLButtonElement>('[data-testid="copy-value"]')!.click();
     await expect.poll(() => harness.clipboard.content).toBe('…  ');
 
     row(harness, '**…**').querySelector<HTMLButtonElement>('[data-testid="copy-value"]')!.click();

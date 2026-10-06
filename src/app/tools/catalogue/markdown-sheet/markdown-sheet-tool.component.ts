@@ -24,8 +24,8 @@ const COLUMNS: readonly ReferenceColumn[] = ['syntax', 'what', 'example', 'commo
   }),
 );
 
-/** A space that matters is drawn `␠`, and copied as a space. */
-const SPACE = '␠';
+/** A space that matters is drawn `␣`, and copied as a space. */
+const SPACE = '␣';
 
 @Component({
   selector: 'app-markdown-sheet-tool',
