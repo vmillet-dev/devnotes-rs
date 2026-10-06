@@ -217,4 +217,10 @@ export const TOOLS: readonly ToolDefinition[] = [
     keywords: ['ascii', 'character', 'caractère', 'code', 'hex', 'control', 'newline', 'escape'],
     load: () => import('./ascii/ascii-tool.component').then((m) => m.AsciiToolComponent),
   },
+  {
+    id: 'regex-sheet',
+    category: 'reference',
+    keywords: ['regex', 'regexp', 'expression régulière', 'pcre', 'lookbehind', 'lookahead', 'cheat sheet'],
+    load: () => import('./regex-sheet/regex-sheet-tool.component').then((m) => m.RegexSheetToolComponent),
+  },
 ];

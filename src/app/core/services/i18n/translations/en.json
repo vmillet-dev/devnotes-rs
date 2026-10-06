@@ -2444,6 +2444,30 @@
         "upper": "Upper case",
         "lower": "Lower case"
       }
+    },
+    "regex-sheet": {
+      "name": "Regex cheat sheet",
+      "description": "Regular expression syntax, in JavaScript and in PCRE",
+      "placeholder": "A syntax or words: \\b, (?<=, lookbehind, lazy…",
+      "columns": {
+        "syntax": "Syntax",
+        "what": "Meaning",
+        "example": "Example",
+        "js": "JavaScript",
+        "pcre": "PCRE"
+      },
+      "groups": {
+        "anchors": "Anchors",
+        "classes": "Character classes",
+        "quantifiers": "Quantifiers",
+        "groups": "Groups and assertions",
+        "flags": "Flags",
+        "escapes": "Escapes"
+      },
+      "on": "on",
+      "noMatch": "no match",
+      "yes": "Supported",
+      "no": "Not supported"
     }
   }
 }

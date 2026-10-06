@@ -1214,7 +1214,7 @@ describe('The tools', () => {
           `${testid('tools-panel')}[data-category="reference"] ${testid('tools-entry')}`,
           '@data-tool',
         ),
-      ).toEqual(['http-status', 'http-headers', 'mime-types', 'ports', 'signals', 'ascii']);
+      ).toEqual(['http-status', 'http-headers', 'mime-types', 'ports', 'signals', 'ascii', 'regex-sheet']);
     });
 
     it('opens the category from the rail, and finds a status code by its number', async () => {
@@ -1323,6 +1323,21 @@ describe('The tools', () => {
         return;
       }
       expect(copied).toBe('A');
+    });
+
+    it('finds a regex construct by its syntax, case and all, with its support in each flavour', async () => {
+      await openTool('regex-sheet');
+      await eventually(rows, (keys) => keys.length > 60, 'every construct');
+
+      await setField(testid('reference-search'), '(?>');
+      await eventually(rows, (keys) => keys.join() === '(?>…)', 'the atomic group');
+      expect(
+        await $(`${testid('reference-row')} ${testid('regex-sheet-js')}`).getAttribute('data-support'),
+      ).toBe('no');
+
+      await setField(testid('reference-search'), 'lookbehind');
+      await eventually(rows, (keys) => keys.length === 2, 'both lookbehinds');
+      await $(testid('tool-clear')).click();
     });
   });
 
