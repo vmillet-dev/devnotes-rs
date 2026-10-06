@@ -1,0 +1,58 @@
+@use 'mixins' as *;
+
+:host {
+  @include tool-fills-frame;
+  max-width: 1100px;
+}
+
+app-reference-table {
+  flex: 1;
+}
+
+td {
+  @include reference-cell;
+}
+
+.syntax {
+  font-family: var(--font-mono), monospace;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--text-0);
+}
+
+.what {
+  min-width: 220px;
+}
+
+.template,
+.view,
+.output {
+  font-family: var(--font-mono), monospace;
+  font-size: 11.5px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.template {
+  display: block;
+  color: var(--text-0);
+}
+
+.view {
+  color: var(--text-1);
+}
+
+.with {
+  margin: 0 4px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.output {
+  display: inline-block;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgba(var(--amber-rgb), 0.15);
+  vertical-align: top;
+  color: var(--text-0);
+}

@@ -2468,6 +2468,45 @@
       "noMatch": "no match",
       "yes": "Supported",
       "no": "Not supported"
+    },
+    "markdown-sheet": {
+      "name": "Markdown cheat sheet",
+      "description": "Headings, lists, links, tables: the syntax, in CommonMark and on GitHub",
+      "placeholder": "A syntax or words: **, table, link, footnote…",
+      "columns": {
+        "syntax": "Syntax",
+        "what": "Meaning",
+        "example": "Example",
+        "commonmark": "CommonMark",
+        "github": "GitHub"
+      },
+      "groups": {
+        "headings": "Headings",
+        "emphasis": "Emphasis",
+        "lists": "Lists",
+        "links": "Links and images",
+        "code": "Code",
+        "blocks": "Quotes, rules and tables",
+        "raw": "Breaks, escapes, HTML and extensions"
+      },
+      "yes": "Supported",
+      "no": "Not supported"
+    },
+    "mustache-sheet": {
+      "name": "Mustache cheat sheet",
+      "description": "Variables, sections, partials: the tags, with what they render",
+      "placeholder": "A tag or words: section, partial, escaping…",
+      "columns": {
+        "syntax": "Tag",
+        "what": "Meaning",
+        "example": "Example"
+      },
+      "groups": {
+        "values": "Values",
+        "sections": "Sections",
+        "more": "Comments, partials and delimiters"
+      },
+      "with": "with"
     }
   }
 }

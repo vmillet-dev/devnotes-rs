@@ -117,7 +117,7 @@ describe('ToolFrameComponent', () => {
   it('puts one tool in place of the other', async () => {
     const first = tool();
     fixture.componentRef.setInput('tool', FAKE_TOOLS[0]);
-    await vi.waitFor(() => expect(tool()).not.toBe(first));
+    await vi.waitFor(() => expect(tool() ?? first).not.toBe(first));
 
     expect(fixture.debugElement.queryAll(By.directive(FakeToolComponent))).toHaveLength(1);
   });

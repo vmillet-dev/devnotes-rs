@@ -223,4 +223,18 @@ export const TOOLS: readonly ToolDefinition[] = [
     keywords: ['regex', 'regexp', 'expression régulière', 'pcre', 'lookbehind', 'lookahead', 'cheat sheet'],
     load: () => import('./regex-sheet/regex-sheet-tool.component').then((m) => m.RegexSheetToolComponent),
   },
+  {
+    id: 'markdown-sheet',
+    category: 'reference',
+    keywords: ['markdown', 'md', 'gfm', 'commonmark', 'readme', 'cheat sheet'],
+    load: () =>
+      import('./markdown-sheet/markdown-sheet-tool.component').then((m) => m.MarkdownSheetToolComponent),
+  },
+  {
+    id: 'mustache-sheet',
+    category: 'reference',
+    keywords: ['mustache', 'handlebars', 'template', 'gabarit', '{{', 'partial', 'cheat sheet'],
+    load: () =>
+      import('./mustache-sheet/mustache-sheet-tool.component').then((m) => m.MustacheSheetToolComponent),
+  },
 ];

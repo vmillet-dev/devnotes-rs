@@ -1,0 +1,28 @@
+<app-reference-table
+  [rows]="rows()"
+  [groups]="groups()"
+  [columns]="columns"
+  [caption]="'tools.markdown-sheet.name' | transloco"
+  [placeholder]="'tools.markdown-sheet.placeholder' | transloco"
+  [(query)]="query"
+>
+  <ng-template [appReferenceCells]="rows()" let-row>
+    <td class="syntax">{{ row.key }}</td>
+    <td class="what">{{ row.what }}</td>
+    <td class="example">
+      <code class="source">{{ row.entry.example }}</code>
+    </td>
+    @for (flavour of ['commonmark', 'github']; track flavour) {
+      @let works = flavour === 'commonmark' ? row.entry.commonmark : row.entry.github;
+      <td class="support" [attr.data-testid]="'markdown-sheet-' + flavour" [attr.data-works]="works">
+        @if (works) {
+          <app-icon name="check" />
+          <span class="visually-hidden">{{ 'tools.markdown-sheet.yes' | transloco }}</span>
+        } @else {
+          <span aria-hidden="true">—</span>
+          <span class="visually-hidden">{{ 'tools.markdown-sheet.no' | transloco }}</span>
+        }
+      </td>
+    }
+  </ng-template>
+</app-reference-table>

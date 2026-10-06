@@ -833,6 +833,11 @@ heading too (« redirection » finds every 3xx), so headings are translated in c
 `<td>`s through `appReferenceCells`, and so styles them itself (`reference-cell`): the table's
 stylesheet cannot reach them. A spec holds both files of words to the same keys.
 
+A cheat sheet's claims are checked where an engine is at hand: every JavaScript example of the
+regex sheet runs through `RegExp` in its spec. ⚠️ The Mustache sheet's `{{…}}` are constants and
+chunk words, never main translation strings: Transloco would replace an unknown `{{name}}` with
+nothing.
+
 **Adding a tool**, the whole of it:
 
 1. `src-tauri/src/tools/<module>.rs`: the function, its request and answer types, its tests.
