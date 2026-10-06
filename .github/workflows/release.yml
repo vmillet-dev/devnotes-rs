@@ -264,8 +264,8 @@ jobs:
 
       # The bundler packages every binary Cargo builds, which is how 0.9.1's installers came to
       # carry `export-bindings` beside the application. The MSI is unpacked by an administrative
-      # install, which installs nothing, and the .deb listed; NSIS, RPM and the AppImage are
-      # made from the same list of binaries.
+      # install, which installs nothing, and the .deb listed (Tauri writes its entries without a
+      # leading `./`); NSIS, RPM and the AppImage are made from the same list of binaries.
       - name: Each bundle holds the application alone
         run: |
           if [ '${{ matrix.target }}' = 'windows' ]; then
@@ -275,7 +275,7 @@ jobs:
             expected='devnotes.exe'
           else
             found=$(dpkg-deb -c src-tauri/target/release/bundle/deb/*.deb \
-              | awk '$6 ~ /^\.\/usr\/bin\/[^\/]+$/ { n = split($6, part, "/"); print part[n] }' | sort)
+              | awk '$6 ~ /^(\.\/)?usr\/bin\/[^\/]+$/ { n = split($6, part, "/"); print part[n] }' | sort)
             expected='devnotes'
           fi
           echo "executables: $found"
