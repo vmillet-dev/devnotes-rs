@@ -1214,7 +1214,17 @@ describe('The tools', () => {
           `${testid('tools-panel')}[data-category="reference"] ${testid('tools-entry')}`,
           '@data-tool',
         ),
-      ).toEqual(['http-status', 'http-headers', 'mime-types', 'ports', 'signals', 'ascii', 'regex-sheet']);
+      ).toEqual([
+        'http-status',
+        'http-headers',
+        'mime-types',
+        'ports',
+        'signals',
+        'ascii',
+        'regex-sheet',
+        'markdown-sheet',
+        'mustache-sheet',
+      ]);
     });
 
     it('opens the category from the rail, and finds a status code by its number', async () => {
@@ -1337,6 +1347,33 @@ describe('The tools', () => {
 
       await setField(testid('reference-search'), 'lookbehind');
       await eventually(rows, (keys) => keys.length === 2, 'both lookbehinds');
+      await $(testid('tool-clear')).click();
+    });
+
+    it('finds a Markdown construct by its syntax, with where it works', async () => {
+      await openTool('markdown-sheet');
+      await eventually(rows, (keys) => keys.length > 30, 'every construct');
+
+      await setField(testid('reference-search'), '~~…');
+      await eventually(rows, (keys) => keys.join() === '~~…~~', 'strikethrough');
+      expect(
+        await $(`${testid('reference-row')} ${testid('markdown-sheet-commonmark')}`).getAttribute(
+          'data-works',
+        ),
+      ).toBe('false');
+      await $(testid('tool-clear')).click();
+    });
+
+    it('shows a Mustache tag with a template, its view and what comes out, braces intact', async () => {
+      await openTool('mustache-sheet');
+      await eventually(rows, (keys) => keys.length > 10, 'every tag');
+
+      await setField(testid('reference-search'), '{{#');
+      await eventually(rows, (keys) => keys.length === 3, 'the three kinds of section');
+      // Never through Transloco, which would have emptied every unknown {{name}}.
+      expect(
+        await $(`[data-key="{{#list}}…{{/list}}"] ${testid('mustache-sheet-example')}`).getText(),
+      ).toContain('{{label}}');
       await $(testid('tool-clear')).click();
     });
   });
