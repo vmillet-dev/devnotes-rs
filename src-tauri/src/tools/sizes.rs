@@ -67,7 +67,7 @@ const BINARY: [SizeUnit; 5] = [
 ];
 
 impl SizeUnit {
-    fn bits(self) -> Decimal {
+    pub(crate) fn bits(self) -> Decimal {
         let thousand = |power: u32| Decimal::from(1000u64.pow(power));
         let kibi = |power: u32| Decimal::from(1u64 << (10 * power));
         match self {
@@ -192,40 +192,51 @@ fn rank(unit: SizeUnit, bytes: Decimal) -> usize {
         .unwrap_or(0)
 }
 
-pub fn convert(request: &SizesRequest) -> SizesAnswer {
-    let decimals = request.decimals.min(MAX_DECIMALS);
-    let (value, end) = match numbers::leading_number(&request.text) {
-        Ok(read) => read,
-        Err(NumberProblem::Unreadable(at)) => {
-            return SizesAnswer::Unreadable {
-                at: saturating_u32(at) + 1,
-            };
-        }
-        Err(NumberProblem::TooLarge) => return SizesAnswer::TooLarge,
-    };
+/// Why a quantity cannot be read; the places are one-based, in characters.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum QuantityProblem {
+    Unreadable(u32),
+    Negative(u32),
+    TooLarge,
+}
+
+/// A quantity of data as typed: its bits, the unit it was read in, and whether the text named it.
+pub(crate) fn read_quantity(
+    text: &str,
+    unit: SizeUnit,
+) -> Result<(Decimal, SizeUnit, bool), QuantityProblem> {
+    let (value, end) = numbers::leading_number(text).map_err(|problem| match problem {
+        NumberProblem::Unreadable(at) => QuantityProblem::Unreadable(saturating_u32(at) + 1),
+        NumberProblem::TooLarge => QuantityProblem::TooLarge,
+    })?;
     if value.is_sign_negative() && !value.is_zero() {
-        let at = request.text.chars().position(|c| c == '-').unwrap_or(0);
-        return SizesAnswer::Negative {
-            at: saturating_u32(at) + 1,
-        };
+        let at = text.chars().position(|c| c == '-').unwrap_or(0);
+        return Err(QuantityProblem::Negative(saturating_u32(at) + 1));
     }
 
-    let rest: String = request.text.chars().skip(end).collect();
+    let rest: String = text.chars().skip(end).collect();
     let symbol = rest.trim();
     let (unit, unit_in_text) = if symbol.is_empty() {
-        (request.unit, false)
+        (unit, false)
     } else {
-        let Some(unit) = SizeUnit::read(symbol) else {
-            let at = end + rest.chars().take_while(|c| c.is_whitespace()).count();
-            return SizesAnswer::Unreadable {
-                at: saturating_u32(at) + 1,
-            };
-        };
+        let at = end + rest.chars().take_while(|c| c.is_whitespace()).count();
+        let unit =
+            SizeUnit::read(symbol).ok_or(QuantityProblem::Unreadable(saturating_u32(at) + 1))?;
         (unit, true)
     };
+    let bits = value
+        .checked_mul(unit.bits())
+        .ok_or(QuantityProblem::TooLarge)?;
+    Ok((bits, unit, unit_in_text))
+}
 
-    let Some(bits) = value.checked_mul(unit.bits()) else {
-        return SizesAnswer::TooLarge;
+pub fn convert(request: &SizesRequest) -> SizesAnswer {
+    let decimals = request.decimals.min(MAX_DECIMALS);
+    let (bits, unit, unit_in_text) = match read_quantity(&request.text, request.unit) {
+        Ok(read) => read,
+        Err(QuantityProblem::Unreadable(at)) => return SizesAnswer::Unreadable { at },
+        Err(QuantityProblem::Negative(at)) => return SizesAnswer::Negative { at },
+        Err(QuantityProblem::TooLarge) => return SizesAnswer::TooLarge,
     };
     let rows: Option<Vec<SizeRow>> = ALL
         .iter()

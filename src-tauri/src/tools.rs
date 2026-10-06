@@ -23,6 +23,7 @@ pub mod sizes;
 pub mod stats;
 pub mod text;
 pub mod text_diff;
+pub mod transfer;
 pub mod url_parts;
 pub mod zones;
 
@@ -234,6 +235,14 @@ pub async fn time_in_zone(zone: Option<String>) -> Result<String, AppError> {
 #[specta::specta]
 pub async fn describe_cron(request: cron::CronRequest) -> Result<cron::CronAnswer, AppError> {
     off_thread(move || cron::describe(&request, local_zone().as_deref(), chrono::Utc::now())).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn estimate_transfer(
+    request: transfer::TransferRequest,
+) -> Result<transfer::TransferAnswer, AppError> {
+    off_thread(move || transfer::estimate(&request)).await
 }
 
 #[tauri::command]

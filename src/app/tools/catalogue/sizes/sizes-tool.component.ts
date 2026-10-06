@@ -1,33 +1,42 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { ToolsRepository } from '@core/data/tools.repository';
-import { SizeRow, SizeUnit, SizesAnswer } from '@core/model/tool-answers.model';
+import { RateUnit, SizeRow, SizeUnit, SizesAnswer } from '@core/model/tool-answers.model';
 import { liveResult } from '@core/services/tools/live-result';
 import { Tool, ToolResult } from '@core/services/tools/tool.model';
 import { toolState } from '@core/services/tools/tool-sessions';
 import { formatDecimal, formatScientific } from '@core/utils/decimal-format.util';
-import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
+import { ChoiceMenuComponent } from '@shared/controls/choice-menu/choice-menu.component';
+import {
+  Segment,
+  SegmentedChoiceComponent,
+} from '@shared/controls/segmented-choice/segmented-choice.component';
 import { ResultRowComponent } from '@tools/ui/result-row/result-row.component';
+import { SIZE_GROUPS, SIZE_UNITS } from './size-units';
+import { TransferComponent } from './transfer/transfer.component';
 
 type Converted = Extract<SizesAnswer, { kind: 'converted' }>;
 
 const isZero = (value: string): boolean => /^-?0(\.0*)?$/.test(value);
 
-const GROUPS: readonly { readonly id: string; readonly units: readonly SizeUnit[] }[] = [
-  { id: 'bytes', units: ['byte', 'bit', 'kilobit', 'megabit', 'gigabit', 'terabit'] },
-  { id: 'decimal', units: ['kilobyte', 'megabyte', 'gigabyte', 'terabyte', 'petabyte'] },
-  { id: 'binary', units: ['kibibyte', 'mebibyte', 'gibibyte', 'tebibyte', 'pebibyte'] },
-];
+type Tab = 'conversion' | 'transfer';
 
-const UNITS: readonly ChoiceOption[] = GROUPS.flatMap((group) =>
-  group.units.map((unit) => ({ id: unit, name: `tools.sizes.unitNames.${unit}`, nameIsKey: true })),
-);
+const TABS: readonly Segment[] = (['conversion', 'transfer'] as const).map((id) => ({
+  id,
+  labelKey: `tools.sizes.tabs.${id}`,
+}));
 
 /** Every value is Rust's, exact; the page rounds nothing, it only writes the digits in its language. */
 @Component({
   selector: 'app-sizes-tool',
-  imports: [ChoiceMenuComponent, ResultRowComponent, TranslocoPipe],
+  imports: [
+    ChoiceMenuComponent,
+    ResultRowComponent,
+    SegmentedChoiceComponent,
+    TransferComponent,
+    TranslocoPipe,
+  ],
   templateUrl: './sizes-tool.component.html',
   styleUrl: './sizes-tool.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -36,11 +45,22 @@ export class SizesToolComponent implements Tool {
   private readonly repository = inject(ToolsRepository);
   private readonly transloco = inject(TranslocoService);
 
+  protected readonly tab = toolState<Tab>('sizes.tab', 'conversion');
   protected readonly text = toolState('sizes.text', '');
   protected readonly unit = toolState<SizeUnit>('sizes.unit', 'megabyte');
   protected readonly decimals = toolState('sizes.decimals', 3);
 
-  protected readonly units = UNITS;
+  protected readonly units = SIZE_UNITS;
+  protected readonly tabs = TABS;
+
+  /** The other tab's fields, filled by the sample and emptied by Vider from here. */
+  private readonly transferSize = toolState('sizes.transferSize', '');
+  private readonly transferUnit = toolState<SizeUnit>('sizes.transferUnit', 'gigabyte');
+  private readonly rate = toolState('sizes.rate', '');
+  private readonly rateUnit = toolState<RateUnit>('sizes.rateUnit', 'megabitPerSecond');
+  private readonly efficiency = toolState('sizes.efficiency', 90);
+
+  private readonly transfer = viewChild(TransferComponent);
 
   /** Digits are written in the language on screen, so the rows follow it. */
   private readonly lang = toSignal(this.transloco.langChanges$, {
@@ -69,7 +89,7 @@ export class SizesToolComponent implements Tool {
     const converted = this.converted();
     if (!converted) return [];
     const byUnit = new Map(converted.rows.map((row) => [row.unit, row]));
-    return GROUPS.map((group) => ({
+    return SIZE_GROUPS.map((group) => ({
       id: group.id,
       rows: group.units.map((unit) => this.shown(byUnit.get(unit)!)),
     }));
@@ -89,7 +109,11 @@ export class SizesToolComponent implements Tool {
     return gap ? { ...gap, ratio: this.format(gap.rounded) } : null;
   });
 
-  readonly result = computed<ToolResult | null>(() => {
+  readonly result = computed<ToolResult | null>(() =>
+    this.tab() === 'transfer' ? (this.transfer()?.result() ?? null) : this.conversionResult(),
+  );
+
+  private readonly conversionResult = computed<ToolResult | null>(() => {
     const reading = this.reading();
     const converted = this.converted();
     if (!reading || !converted) return null;
@@ -105,10 +129,21 @@ export class SizesToolComponent implements Tool {
   sample(): void {
     this.unit.set('gigabyte');
     this.text.set('4,7');
+    this.transferSize.set('4,7');
+    this.transferUnit.set('gigabyte');
+    this.rate.set('100');
+    this.rateUnit.set('megabitPerSecond');
+    this.efficiency.set(90);
   }
 
   clear(): void {
     this.text.set('');
+    this.transferSize.set('');
+    this.rate.set('');
+  }
+
+  protected onTab(id: string): void {
+    this.tab.set(id as Tab);
   }
 
   protected onInput(event: Event): void {

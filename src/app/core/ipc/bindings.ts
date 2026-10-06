@@ -55,6 +55,7 @@ export const commands = {
 	timeInZone: (zone: string | null) => typedError<string, AppError>(__TAURI_INVOKE("time_in_zone", { zone })),
 	describeCron: (request: CronRequest) => typedError<CronAnswer, AppError>(__TAURI_INVOKE("describe_cron", { request })),
 	convertSize: (request: SizesRequest) => typedError<SizesAnswer, AppError>(__TAURI_INVOKE("convert_size", { request })),
+	estimateTransfer: (request: TransferRequest) => typedError<TransferAnswer, AppError>(__TAURI_INVOKE("estimate_transfer", { request })),
 	answerPercentages: (request: PercentagesRequest) => typedError<PercentagesAnswer, AppError>(__TAURI_INVOKE("answer_percentages", { request })),
 	describePermissions: (request: PermissionsRequest) => typedError<PermissionsAnswer, AppError>(__TAURI_INVOKE("describe_permissions", { request })),
 	checkDigits: (request: CheckRequest) => typedError<CheckAnswer, AppError>(__TAURI_INVOKE("check_digits", { request })),
@@ -576,6 +577,17 @@ export type ColourRequest = {
 	colour: string,
 	/**  The background the contrast is measured on; empty for none. */
 	against: string,
+};
+
+/**  The connections every estimate is also given for, by their rate in bits per second. */
+export type Connection = "fibre" | "mobile4g" | "adsl";
+
+export type ConnectionEstimate = {
+	/**  `None` for the rate typed. */
+	connection: Connection | null,
+	/**  In bits per second, exact. */
+	rate: string,
+	span: TransferTime,
 };
 
 export type Contrast = {
@@ -1627,6 +1639,8 @@ export type RandomPart = {
 	bits: number,
 };
 
+export type RateUnit = "bitPerSecond" | "kilobitPerSecond" | "megabitPerSecond" | "gigabitPerSecond" | "bytePerSecond" | "kilobytePerSecond" | "megabytePerSecond" | "gigabytePerSecond";
+
 export type ReadAs = "unix" | "iso8601" | "weekDate" | "ordinalDate" | "rfc2822";
 
 /**  What the File menu draws: the libraries, and which of them is open. */
@@ -1865,6 +1879,45 @@ export type TitleLanguage =
 export type TokenState = "valid" | "expired" | "notYetValid" | 
 /**  Neither `exp` nor `nbf`: nothing to be valid against. */
 "undated";
+
+export type TransferAnswer = { kind: "estimated"; 
+/**  At the rate typed, slowed by the efficiency. */
+estimate: TransferTime; 
+/**  At the full rate. */
+theoretical: TransferTime; 
+/**  The efficiency used, once held within its bounds. */
+efficiency: number; 
+/**  Fastest first, the rate typed among the common ones. */
+connections: ConnectionEstimate[] } | 
+/**  One-based, in characters. */
+{ kind: "unreadable"; field: TransferField; at: number } | { kind: "negative"; field: TransferField; at: number } | 
+/**  A rate of nothing carries nothing, ever. */
+{ kind: "zeroRate" } | 
+/**  Past the 28 digits exact arithmetic holds. */
+{ kind: "tooLarge" };
+
+export type TransferField = "size" | "rate";
+
+export type TransferRequest = {
+	/**  A quantity, with its unit or without one. */
+	size: string,
+	/**  The unit of a quantity typed without one. */
+	sizeUnit: SizeUnit,
+	rate: string,
+	rateUnit: RateUnit,
+	/**  The share of the rate a link really carries, in percent; held between 50 and 100. */
+	efficiency: number,
+};
+
+/**  A length of time to the nearest second, for the front to spell. Past a year it stays in days. */
+export type TransferTime = {
+	days: number,
+	hours: number,
+	minutes: number,
+	seconds: number,
+	/**  More than nothing, but less than half a second. */
+	underASecond: boolean,
+};
 
 /**  The two counts part when the zone's offset differs at either end: a daylight-saving change. */
 export type Transition = {

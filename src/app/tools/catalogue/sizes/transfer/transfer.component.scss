@@ -1,0 +1,120 @@
+@use 'mixins' as *;
+
+:host {
+  display: block;
+}
+
+.columns {
+  @include tool-columns;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 32px;
+}
+
+.column {
+  @include tool-column;
+  gap: 12px;
+}
+
+.section-title {
+  @include tool-section-title;
+}
+
+.value {
+  display: grid;
+  grid-template-columns: minmax(0, 0.75fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.field {
+  @include tool-field;
+  height: 42px;
+  font-size: 15px;
+}
+
+.efficiency {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.efficiency-label {
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+
+.slider {
+  @include focus-ring;
+  width: 100%;
+  accent-color: var(--amber);
+}
+
+.percent {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+  color: var(--text-1);
+}
+
+.number {
+  @include tool-number(56px);
+}
+
+.caption {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.explain {
+  @include surface(rgba(var(--amber-rgb), 0.06), 8px, var(--amber-dim));
+  margin: 0;
+  padding: 12px 14px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-1);
+}
+
+.estimate {
+  @include surface(var(--bg-1), 10px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 22px;
+}
+
+.estimate-caption {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+
+.estimate-time {
+  margin: 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 34px;
+  font-weight: 600;
+  color: var(--text-0);
+}
+
+.card {
+  @include tool-result-card;
+
+  > app-result-row:first-child {
+    margin-top: -1px;
+  }
+}
+
+.problem {
+  @include tool-problem;
+}
+
+.empty {
+  @include tool-note;
+  font-family: var(--font-sans);
+  font-size: 12px;
+}

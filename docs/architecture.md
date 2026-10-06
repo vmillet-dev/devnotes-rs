@@ -780,7 +780,11 @@ grouping thousands — spaces or underscores between thousands, an exponent. **A
 counted in bits** (`tools/sizes.rs`), every unit divided out of that one figure, so `1 GB` is
 `1000000000` bytes and never nearly: each value comes back exact and rounded to the decimals
 asked. The page writes the digits in its language (`formatDecimal`) and copies the exact value
-(`app-output-row`'s `copied`). An all-lowercase `gb` is read as bytes, `Gb` as bits. The
+(`app-result-row`'s `copied`); a value its rounding would write as 0 is written as a power of
+ten instead (`formatScientific`). An all-lowercase `gb` is read as bytes, `Gb` as bits. A
+transfer is the same bits over a rate (`tools/transfer.rs`), slowed by an efficiency held
+between 50 and 100 %, answered to the second as typed parts and in days past a year; the common
+connections it is also given for are Rust constants, their names translation keys. The
 percentages are five questions answered at once, each on its own two fields
 (`tools/percentages.rs`): a division by zero, or a change from zero, is said rather than
 answered with `∞`, and the formula beside each result is the page's, from translation keys.

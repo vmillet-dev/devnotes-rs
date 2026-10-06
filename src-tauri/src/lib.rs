@@ -52,10 +52,10 @@ use spaces::{create_space, delete_space, list_spaces, pin_space, rename_space};
 use tools::{
     answer_percentages, check_digits, convert_case, convert_data, convert_size, current_instant,
     decode_base64, decode_jwt, describe_colour, describe_cron, describe_instant,
-    describe_permissions, diff_json, diff_text, encode_base64, encode_base64_file, fix_line_breaks,
-    generate_identifiers, generate_json, generate_passwords, hash_input, inspect_identifier,
-    lorem_ipsum, measure_durations, parse_url, place_in_zones, save_base64, search_time_zones,
-    text_stats, time_in_zone, url_codec,
+    describe_permissions, diff_json, diff_text, encode_base64, encode_base64_file,
+    estimate_transfer, fix_line_breaks, generate_identifiers, generate_json, generate_passwords,
+    hash_input, inspect_identifier, lorem_ipsum, measure_durations, parse_url, place_in_zones,
+    save_base64, search_time_zones, text_stats, time_in_zone, url_codec,
 };
 use transfer::{export_is_protected, export_notes, import_notes, share_notes};
 use vault::{change_passphrase, create_vault, unlock_vault, vault_state};
@@ -113,6 +113,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             time_in_zone,
             describe_cron,
             convert_size,
+            estimate_transfer,
             answer_percentages,
             describe_permissions,
             check_digits,

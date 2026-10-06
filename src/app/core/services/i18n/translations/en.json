@@ -1711,8 +1711,8 @@
       }
     },
     "sizes": {
-      "name": "Data sizes",
-      "description": "B, kB, MB, GB ↔ KiB, MiB, GiB, and bits",
+      "name": "Sizes and transfer",
+      "description": "B, kB, MB, GB ↔ KiB, MiB, GiB, bits, and how long a transfer takes",
       "inputLabel": "Quantity",
       "placeholder": "1.5 GB · 750 KiB · 100 Mbit",
       "unit": "Unit when none is typed",
@@ -1767,7 +1767,55 @@
       "tooLarge": "Too large to count exactly: 28 digits at most.",
       "empty": "Type a quantity, with its unit or without: every unit shows here.",
       "noteTitle": "{{value}} {{unit}} in every unit",
-      "value": "Value"
+      "value": "Value",
+      "tab": "Tab",
+      "tabs": {
+        "conversion": "Conversion",
+        "transfer": "Transfer"
+      },
+      "transferSize": "Size to transfer",
+      "rate": "Rate",
+      "rateUnit": "Rate unit",
+      "efficiency": "Efficiency",
+      "efficiencyHint": "A link never reaches its nominal rate: protocols, encryption and latency take 5 to 15 % off it.",
+      "bitsAndBytes": "Rates are said in bits per second, files in bytes: 100 Mbit/s ≈ 12.5 MB/s at best. And 4.7 GB (decimal) are 4.377 GiB.",
+      "estimateAt": "Estimated time at {{rate}}, {{efficiency}} % efficiency",
+      "theoretical": "{{time}} in theory, at the full rate.",
+      "byConnection": "By connection",
+      "connections": {
+        "fibre": "Fibre · 1 Gbit/s",
+        "mobile4g": "4G · 30 Mbit/s",
+        "adsl": "ADSL · 10 Mbit/s"
+      },
+      "rateUnits": {
+        "bitPerSecond": "bit/s",
+        "kilobitPerSecond": "kbit/s",
+        "megabitPerSecond": "Mbit/s",
+        "gigabitPerSecond": "Gbit/s",
+        "bytePerSecond": "B/s",
+        "kilobytePerSecond": "kB/s",
+        "megabytePerSecond": "MB/s",
+        "gigabytePerSecond": "GB/s"
+      },
+      "time": {
+        "days": "{{value}} d",
+        "hours": "{{value}} h",
+        "minutes": "{{value}} min",
+        "seconds": "{{value}} s",
+        "underASecond": "< 1 s"
+      },
+      "fields": {
+        "size": "Size",
+        "rate": "Rate"
+      },
+      "transferProblems": {
+        "unreadable": "{{field}}: unreadable from character {{at}}.",
+        "negative": "{{field}}: cannot be negative (character {{at}}).",
+        "zeroRate": "A rate of nothing transfers nothing.",
+        "tooLarge": "Too large to count exactly: 28 digits at most."
+      },
+      "transferEmpty": "Type a size and a rate: the time shows here, and by connection.",
+      "noteTransfer": "{{size}} at {{rate}}, {{efficiency}} % efficiency"
     },
     "percentages": {
       "name": "Percentages",
