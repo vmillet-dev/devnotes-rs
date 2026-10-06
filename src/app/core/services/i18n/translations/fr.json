@@ -2444,6 +2444,30 @@
         "upper": "Majuscules",
         "lower": "Minuscules"
       }
+    },
+    "regex-sheet": {
+      "name": "Aide-mémoire regex",
+      "description": "La syntaxe des expressions régulières, en JavaScript et en PCRE",
+      "placeholder": "Une syntaxe ou des mots : \\b, (?<=, lookbehind, paresseux…",
+      "columns": {
+        "syntax": "Syntaxe",
+        "what": "Signification",
+        "example": "Exemple",
+        "js": "JavaScript",
+        "pcre": "PCRE"
+      },
+      "groups": {
+        "anchors": "Ancres",
+        "classes": "Classes de caractères",
+        "quantifiers": "Quantificateurs",
+        "groups": "Groupes et assertions",
+        "flags": "Drapeaux",
+        "escapes": "Échappements"
+      },
+      "on": "sur",
+      "noMatch": "aucune correspondance",
+      "yes": "Pris en charge",
+      "no": "Non pris en charge"
     }
   }
 }

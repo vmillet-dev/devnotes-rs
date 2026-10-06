@@ -1,0 +1,41 @@
+<app-reference-table
+  [rows]="rows()"
+  [groups]="groups()"
+  [columns]="columns"
+  [matches]="matches"
+  [caption]="'tools.regex-sheet.name' | transloco"
+  [placeholder]="'tools.regex-sheet.placeholder' | transloco"
+  [(query)]="query"
+>
+  <ng-template [appReferenceCells]="rows()" let-row>
+    <td class="syntax">{{ row.key }}</td>
+    <td class="what">{{ row.what }}</td>
+    <td class="example" data-testid="regex-sheet-example">
+      <code class="pattern">{{ row.entry.example.pattern }}</code>
+      <span class="on">{{ 'tools.regex-sheet.on' | transloco }}</span>
+      <code class="text">{{ row.entry.example.text }}</code>
+      <span class="gives" aria-hidden="true">→</span>
+      @for (match of row.entry.example.matches; track $index) {
+        <mark class="match">{{ match }}</mark>
+      } @empty {
+        <span class="nothing">{{ 'tools.regex-sheet.noMatch' | transloco }}</span>
+      }
+    </td>
+    @for (flavour of ['js', 'pcre']; track flavour) {
+      @let support = flavour === 'js' ? row.entry.js : row.entry.pcre;
+      @let note = flavour === 'js' ? row.jsNote : row.pcreNote;
+      <td class="support" [attr.data-testid]="'regex-sheet-' + flavour" [attr.data-support]="support">
+        @if (support === 'no') {
+          <span aria-hidden="true">—</span>
+          <span class="visually-hidden">{{ 'tools.regex-sheet.no' | transloco }}</span>
+        } @else {
+          <app-icon name="check" />
+          <span class="visually-hidden">{{ 'tools.regex-sheet.yes' | transloco }}</span>
+          @if (note) {
+            <span class="note">{{ note }}</span>
+          }
+        }
+      </td>
+    }
+  </ng-template>
+</app-reference-table>
