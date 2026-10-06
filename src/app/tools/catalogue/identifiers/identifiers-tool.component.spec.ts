@@ -192,10 +192,11 @@ describe('IdentifiersToolComponent', () => {
 
     harness.all('[data-testid="identifiers-row"] [data-testid="copy-value"]')[1].click();
     await vi.waitFor(() => expect(harness.clipboard.content).toBe(SECOND));
-    await harness.settle();
 
     const rows = harness.all('[data-testid="identifiers-row"]');
-    expect(rows.map((row) => row.classList.contains('copied'))).toEqual([false, true]);
+    await vi.waitFor(() =>
+      expect(rows.map((row) => row.classList.contains('copied'))).toEqual([false, true]),
+    );
     expect(rows[1].textContent).toContain('Copié');
   });
 
