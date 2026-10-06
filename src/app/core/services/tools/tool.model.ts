@@ -4,7 +4,7 @@ import { NoteKind } from '@core/model/note.model';
 import { TranslationRef } from '@core/services/i18n/translation-ref.model';
 
 /** In the home's order, which the rail follows. */
-export const TOOL_CATEGORIES = ['text', 'crypto', 'encode', 'generate', 'time', 'calc'] as const;
+export const TOOL_CATEGORIES = ['text', 'crypto', 'encode', 'generate', 'time', 'calc', 'reference'] as const;
 export type ToolCategory = (typeof TOOL_CATEGORIES)[number];
 
 /** Its name and its line are the keys `tools.<id>.name` and `tools.<id>.description`. */
@@ -40,7 +40,8 @@ export interface ToolAction {
  * password typed into a tool cannot reach a note, because nothing here carries one.
  */
 export interface Tool {
-  readonly result: Signal<ToolResult | null>;
+  /** Absent on a tool that never has anything to keep, a reference: the frame offers no button. */
+  readonly result?: Signal<ToolResult | null>;
   readonly actions?: Signal<readonly ToolAction[]>;
   /**
    * Fills the inputs with test data through the tool's own signals, as typing would, and

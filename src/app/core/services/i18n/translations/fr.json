@@ -1011,7 +1011,8 @@
       "encode": "Encodeurs",
       "generate": "Générateurs",
       "time": "Temps",
-      "calc": "Calcul"
+      "calc": "Calcul",
+      "reference": "Références"
     },
     "input": "Entrée",
     "result": "Résultat",
@@ -2300,6 +2301,35 @@
     },
     "sample": "Exemple",
     "sampleLoaded": "Exemple chargé",
-    "copyAll": "Copier tout"
+    "copyAll": "Copier tout",
+    "reference": {
+      "searchLabel": "Chercher dans : {{what}}",
+      "count": "{count, plural, one {# entrée} other {# entrées}}",
+      "found": "{count, plural, =0 {Aucune entrée} one {# entrée} other {# entrées}} sur {{total}}",
+      "empty": "Rien ne correspond à « {{query}} »."
+    },
+    "http-status": {
+      "name": "Codes de statut HTTP",
+      "description": "404, 429, 503 : ce qu’ils veulent dire, et quand les renvoyer",
+      "placeholder": "Un code, un nom ou des mots : 404, not found, redirection…",
+      "columns": {
+        "code": "Code",
+        "name": "Nom",
+        "meaning": "Signification",
+        "by": "Défini par"
+      },
+      "groups": {
+        "1xx": "1xx · Information",
+        "2xx": "2xx · Succès",
+        "3xx": "3xx · Redirection",
+        "4xx": "4xx · Erreur du client",
+        "5xx": "5xx · Erreur du serveur"
+      },
+      "use": "Quand :",
+      "standing": {
+        "unofficial": "Non standard",
+        "obsolete": "Obsolète"
+      }
+    }
   }
 }

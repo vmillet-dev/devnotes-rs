@@ -821,6 +821,16 @@ and its signature verified for HS256, HS384 and HS512 alone, in constant time
 ⚠️ The token and the secret are plain `signal`s, zeroed in Rust once the answer is made; a note
 keeps the decoded header and payload as one JSON document, after a warning, never the token.
 
+**A reference is a tool that is read, never typed into** (the « Références » category): no
+`result` — the frame then offers no "Enregistrer comme note" — no `sample()`, and no Rust. Its
+facts are typed constants beside the component; its words are a JSON per language beside them,
+imported with the tool's chunk by `referenceWords` rather than merged into the main translations,
+so sixty descriptions weigh nothing until the tool opens. `app-reference-table` (`tools/ui/`) is
+the rest: the search, folded like the catalogue's — a front-end exception of the same kind,
+translated text — the groups, the count, each row's key to copy. The reference draws its own
+`<td>`s through `appReferenceCells`, and so styles them itself (`reference-cell`): the table's
+stylesheet cannot reach them. A spec holds both files of words to the same keys.
+
 **Adding a tool**, the whole of it:
 
 1. `src-tauri/src/tools/<module>.rs`: the function, its request and answer types, its tests.

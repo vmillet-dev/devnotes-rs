@@ -49,7 +49,8 @@ export class ToolFrameComponent {
   private readonly created = signal<ComponentRef<Tool> | null>(null);
 
   protected readonly actions = computed(() => this.created()?.instance.actions?.() ?? []);
-  protected readonly result = computed(() => this.created()?.instance.result() ?? null);
+  protected readonly result = computed(() => this.created()?.instance.result?.() ?? null);
+  protected readonly keepsResult = computed(() => this.created()?.instance.result !== undefined);
   protected readonly hasSample = computed(() => typeof this.created()?.instance.sample === 'function');
 
   /** Taken when the dialog opens: typing on underneath does not change what is being saved. */

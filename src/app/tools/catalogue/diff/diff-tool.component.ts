@@ -34,7 +34,7 @@ export class DiffToolComponent implements Tool {
     this.mode() === 'text' ? this.text() : this.structured(),
   );
 
-  readonly result = computed<ToolResult | null>(() => this.shown()?.result() ?? null);
+  readonly result = computed<ToolResult | null>(() => this.shown()?.result?.() ?? null);
   readonly actions = computed<readonly ToolAction[]>(() => this.shown()?.actions?.() ?? []);
 
   sample(): void {

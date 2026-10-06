@@ -1202,6 +1202,53 @@ describe('The tools', () => {
     });
   });
 
+  describe('the references', () => {
+    const rows = () => readEach(testid('reference-row'), '@data-key');
+
+    it('sit in a Références panel of their own', async () => {
+      await $(testid('tools-rail-all')).click();
+
+      expect(
+        await readEach(
+          `${testid('tools-panel')}[data-category="reference"] ${testid('tools-entry')}`,
+          '@data-tool',
+        ),
+      ).toEqual(['http-status']);
+    });
+
+    it('opens the category from the rail, and finds a status code by its number', async () => {
+      await $(`${testid('tools-rail-category')}[data-category="reference"]`).click();
+      await entry('http-status').click();
+      await eventually(rows, (keys) => keys.length > 70, 'every code, its words loaded with the tool');
+
+      await setField(testid('reference-search'), '404');
+
+      await eventually(rows, (keys) => keys.join() === '404', 'the search to narrow');
+      expect(await $(testid('reference-count')).getText()).toMatch(/1\D+\d{2}/);
+    });
+
+    it('finds a code by its words, and says when nothing matches', async () => {
+      await setField(testid('reference-search'), 'teapot');
+      await eventually(rows, (keys) => keys.join() === '418', 'the teapot');
+      expect(
+        await $(`[data-key="418"] ${testid('http-status-standing')}`).getAttribute('data-standing'),
+      ).toBe('unofficial');
+
+      await setField(testid('reference-search'), 'zzz');
+      await $(testid('reference-empty')).waitForDisplayed({ timeout: 5_000 });
+    });
+
+    it('keeps nothing as a note and offers no sample, and Vider empties the search', async () => {
+      expect(await $(testid('tool-save-as-note')).isExisting()).toBe(false);
+      expect(await $(testid('tool-sample')).isExisting()).toBe(false);
+
+      await $(testid('tool-clear')).click();
+
+      await eventually(rows, (keys) => keys.length > 70, 'every code again');
+      expect(await $(testid('reference-search')).getValue()).toBe('');
+    });
+  });
+
   describe('comparing two texts, or two documents as values', () => {
     const STAGING = JSON.stringify({
       service: 'billing',

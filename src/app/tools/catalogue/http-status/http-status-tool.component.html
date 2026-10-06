@@ -1,0 +1,29 @@
+<app-reference-table
+  [rows]="rows()"
+  [groups]="groups()"
+  [columns]="columns"
+  [caption]="'tools.http-status.name' | transloco"
+  [placeholder]="'tools.http-status.placeholder' | transloco"
+  [(query)]="query"
+>
+  <ng-template [appReferenceCells]="rows()" let-row>
+    <td class="code" [attr.data-class]="row.group">{{ row.key }}</td>
+    <td class="name">
+      {{ row.status.name }}
+      @if (row.status.standing; as standing) {
+        <span class="standing" data-testid="http-status-standing" [attr.data-standing]="standing">
+          {{ 'tools.http-status.standing.' + standing | transloco }}
+        </span>
+      }
+    </td>
+    <td class="meaning">
+      {{ row.meaning }}
+      @if (row.use) {
+        <span class="use"
+          ><span class="use-lead">{{ 'tools.http-status.use' | transloco }}</span> {{ row.use }}</span
+        >
+      }
+    </td>
+    <td class="by">{{ row.status.by }}</td>
+  </ng-template>
+</app-reference-table>
