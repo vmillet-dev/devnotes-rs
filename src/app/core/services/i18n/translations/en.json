@@ -2239,8 +2239,8 @@
       "structured": {
         "openNote": "Open a note",
         "inputLabel": "Document {{side}}",
-        "placeholder": "Paste a JSON document, or open a snippet",
-        "unreadable": "This JSON does not parse: line {{line}}, column {{column}}.",
+        "placeholder": "Paste a JSON, YAML, TOML or XML document, or open a snippet",
+        "unreadable": "This {{format}} does not read: line {{line}}, column {{column}}.",
         "added": "{count, plural, one {+ # addition} other {+ # additions}}",
         "removed": "{count, plural, one {− # removal} other {− # removals}}",
         "modified": "{count, plural, one {~ # change} other {~ # changes}}",
@@ -2259,12 +2259,20 @@
         "scalar": "{{text}}",
         "object": "object · {count, plural, one {# key} other {# keys}}",
         "array": "list · {count, plural, one {# item} other {# items}}",
-        "copyPatch": "Copy the JSON patch",
+        "copyPatch": "Copy the JSON patch (RFC 6902)",
         "empty": "Paste two documents: their differences show here.",
         "noteTitle": "JSON patch from {{a}} to {{b}}",
-        "pickTitle": "Open a JSON snippet",
-        "pickSearch": "Search for a JSON snippet",
-        "pickNone": "No JSON snippet."
+        "pickTitle": "Open a snippet",
+        "pickSearch": "Search a JSON, YAML, TOML or XML snippet",
+        "pickNone": "No JSON, YAML, TOML or XML snippet.",
+        "format": "Format of {{side}}",
+        "formats": {
+          "auto": "Detect"
+        },
+        "readAs": "read as {{format}}",
+        "asJson": "Paths are JSONPath, and both documents show in their JSON form, whatever their format.",
+        "yamlNote": "YAML comments, anchors and tags are not values: they are not compared.",
+        "xmlNote": "XML has no types: against it, 5432 and \"5432\" are the same value."
       }
     },
     "sample": "Example",

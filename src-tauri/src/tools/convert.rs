@@ -205,26 +205,73 @@ fn to_yaml(value: &Value) -> Yaml {
 
 // --- Reading into the pivot, writing out of it.
 
-fn read(text: &str, format: DataFormat) -> Result<Value, ConvertAnswer> {
+/// Into the one value every format meets in; a refusal is the line and column it stops at.
+pub(crate) fn read_value(text: &str, format: DataFormat) -> Result<Value, (u32, u32)> {
     match format {
-        DataFormat::Json => serde_json::from_str(text).map_err(|error| ConvertAnswer::Unreadable {
-            line: saturating_u32(error.line()),
-            column: saturating_u32(error.column()),
-        }),
+        DataFormat::Json => serde_json::from_str(text)
+            .map_err(|error| (saturating_u32(error.line()), saturating_u32(error.column()))),
         DataFormat::Toml => text
             .parse::<toml::Table>()
             .map(|table| from_toml(toml::Value::Table(table)))
-            .map_err(|error| unreadable(position(text, error.span().map_or(0, |span| span.start)))),
+            .map_err(|error| position(text, error.span().map_or(0, |span| span.start))),
         DataFormat::Yaml => YamlLoader::load_from_str(text)
             .map(|documents| documents.into_iter().next().map_or(Value::Null, from_yaml))
             .map_err(|error| {
                 let marker = error.marker();
-                ConvertAnswer::Unreadable {
-                    line: saturating_u32(marker.line()),
-                    column: saturating_u32(marker.col() + 1),
-                }
+                (
+                    saturating_u32(marker.line()),
+                    saturating_u32(marker.col() + 1),
+                )
             }),
-        DataFormat::Xml => xml::read(text).map_err(|offset| unreadable(position(text, offset))),
+        DataFormat::Xml => xml::read(text).map_err(|offset| position(text, offset)),
+    }
+}
+
+fn read(text: &str, format: DataFormat) -> Result<Value, ConvertAnswer> {
+    read_value(text, format).map_err(unreadable)
+}
+
+fn is_toml_header(line: &str) -> bool {
+    let line = line.split(" #").next().unwrap_or_default().trim_end();
+    line.len() > 2 && line.starts_with('[') && line.ends_with(']') && !line.contains(',')
+}
+
+fn is_toml_pair(line: &str) -> bool {
+    line.split_once('=').is_some_and(|(key, _)| {
+        let key = key.trim();
+        !key.is_empty()
+            && key
+                .chars()
+                .all(|c| c.is_alphanumeric() || "_-.\"' ".contains(c))
+    })
+}
+
+/// A format by the shape of what was written: `<` is XML, `{` JSON, a `[table]` or a
+/// `key = value` line TOML, anything else YAML. A `[` is JSON unless it does not parse as JSON
+/// and opens a TOML table.
+pub(crate) fn detect(text: &str) -> DataFormat {
+    let start = text.trim_start();
+    if start.starts_with('<') {
+        return DataFormat::Xml;
+    }
+    if start.starts_with('{') {
+        return DataFormat::Json;
+    }
+    if start.starts_with('[') {
+        let header = start.lines().next().unwrap_or_default();
+        return if is_toml_header(header) && serde_json::from_str::<Value>(text).is_err() {
+            DataFormat::Toml
+        } else {
+            DataFormat::Json
+        };
+    }
+    let first = start
+        .lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty() && !line.starts_with('#'));
+    match first {
+        Some(line) if is_toml_header(line) || is_toml_pair(line) => DataFormat::Toml,
+        _ => DataFormat::Yaml,
     }
 }
 

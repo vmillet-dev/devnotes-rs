@@ -735,7 +735,10 @@ common sequence of their elements — one element inserted at the top is one cha
 of every element below it. Each change carries its `JSONPath`, the patch is RFC 6902 from A to
 B (checked in the tests by applying it), and the two documents come back as aligned rows,
 pretty-printed with B's keys in A's order when order is ignored, so the same keys meet on the
-same row. The unified view is the same rows read one after the other, on the front.
+same row. The unified view is the same rows read one after the other, on the front. Each side
+is read in its own format — by its shape (`convert::detect`) unless one is forced — through the
+converter's readers, so a YAML and its JSON twin compare equal and the rows show both as JSON;
+against XML, which has no types, `5432` and `"5432"` are the same value.
 
 **An instant is read from whatever was typed** (`tools/dates.rs`): a number by its magnitude
 (seconds below 10¹¹, then milliseconds, microseconds, nanoseconds — each unit read from 1973

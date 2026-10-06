@@ -42,7 +42,7 @@ describe('DiffToolComponent', () => {
     harness.tool.sample();
     await harness.settle();
     expect(harness.element<HTMLTextAreaElement>('[data-testid="structured-diff-a"]').value).toContain(
-      '"devnotes"',
+      'name: devnotes',
     );
 
     harness.tool.clear();

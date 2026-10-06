@@ -2239,8 +2239,8 @@
       "structured": {
         "openNote": "Ouvrir une note",
         "inputLabel": "Document {{side}}",
-        "placeholder": "Collez un document JSON, ou ouvrez un snippet",
-        "unreadable": "Ce JSON ne se lit pas : ligne {{line}}, colonne {{column}}.",
+        "placeholder": "Collez un document JSON, YAML, TOML ou XML, ou ouvrez un snippet",
+        "unreadable": "Ce {{format}} ne se lit pas : ligne {{line}}, colonne {{column}}.",
         "added": "{count, plural, one {+ # ajout} other {+ # ajouts}}",
         "removed": "{count, plural, one {− # suppression} other {− # suppressions}}",
         "modified": "{count, plural, one {~ # modification} other {~ # modifications}}",
@@ -2259,12 +2259,20 @@
         "scalar": "{{text}}",
         "object": "objet · {count, plural, one {# clé} other {# clés}}",
         "array": "liste · {count, plural, one {# élément} other {# éléments}}",
-        "copyPatch": "Copier le patch JSON",
+        "copyPatch": "Copier le patch JSON (RFC 6902)",
         "empty": "Collez deux documents : leurs différences s’affichent ici.",
         "noteTitle": "Patch JSON de {{a}} vers {{b}}",
-        "pickTitle": "Ouvrir un snippet JSON",
-        "pickSearch": "Rechercher un snippet JSON",
-        "pickNone": "Aucun snippet JSON."
+        "pickTitle": "Ouvrir un snippet",
+        "pickSearch": "Rechercher un snippet JSON, YAML, TOML ou XML",
+        "pickNone": "Aucun snippet JSON, YAML, TOML ou XML.",
+        "format": "Format de {{side}}",
+        "formats": {
+          "auto": "Détecter"
+        },
+        "readAs": "lu comme {{format}}",
+        "asJson": "Les chemins sont en JSONPath et les deux documents s’affichent sous leur forme JSON, quel que soit leur format.",
+        "yamlNote": "Les commentaires, ancres et étiquettes YAML ne sont pas des valeurs : ils ne sont pas comparés.",
+        "xmlNote": "Le XML n’a pas de types : face à lui, 5432 et \"5432\" sont la même valeur."
       }
     },
     "sample": "Exemple",

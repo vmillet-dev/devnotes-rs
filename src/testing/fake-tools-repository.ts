@@ -94,6 +94,8 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
     rows: [],
     rowsTruncated: false,
     patch: '[]',
+    formatA: 'json',
+    formatB: 'json',
   };
   textDiff: TextDiffAnswer = {
     added: 0,

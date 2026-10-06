@@ -1,12 +1,13 @@
-//! Two JSON documents compared as values, not as the characters that wrote them: the changes by
-//! their `JSONPath`, the two documents laid side by side on aligned rows, and the RFC 6902 patch
-//! that turns the first into the second.
+//! Two documents compared as values, not as the characters that wrote them — JSON, YAML, TOML or
+//! XML, each side in its own: the changes by their `JSONPath`, the two values laid side by side
+//! in their JSON form on aligned rows, and the RFC 6902 patch that turns the first into the second.
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use similar::{Algorithm, DiffOp, capture_diff_slices};
 use specta::Type;
 
+use super::convert::{DataFormat, detect, read_value};
 use crate::count::saturating_u32;
 
 /// Past this, the rows are cut: the changes and the patch stay whole.
@@ -19,6 +20,9 @@ const SUMMARY_CHARS: usize = 40;
 pub struct JsonDiffRequest {
     pub a: String,
     pub b: String,
+    /// `None` reads the side by its shape.
+    pub format_a: Option<DataFormat>,
+    pub format_b: Option<DataFormat>,
     /// On, `{"a":1,"b":2}` and `{"b":2,"a":1}` are the same document.
     pub ignore_key_order: bool,
     /// On, two strings that differ only by their spaces are the same.
@@ -110,9 +114,13 @@ pub enum JsonDiffAnswer {
         rows_truncated: bool,
         /// RFC 6902, from A to B, as JSON.
         patch: String,
+        /// What each side was read as.
+        format_a: DataFormat,
+        format_b: DataFormat,
     },
     Unreadable {
         side: JsonDiffSide,
+        format: DataFormat,
         line: u32,
         column: u32,
     },
@@ -143,6 +151,8 @@ fn pointer(parent: &str, key: &str) -> String {
 struct Differ {
     ignore_key_order: bool,
     ignore_whitespace: bool,
+    /// XML has no types: against it, `5432` and `"5432"` are the same value.
+    untyped: bool,
     changes: Vec<JsonChange>,
     patch: Vec<Value>,
 }
@@ -179,6 +189,9 @@ impl Differ {
         match value {
             Value::String(text) if self.ignore_whitespace => {
                 Value::String(collapsed(text)).to_string()
+            }
+            Value::Number(_) | Value::Bool(_) if self.untyped => {
+                Value::String(value.to_string()).to_string()
             }
             Value::Object(map) => {
                 let mut entries: Vec<(&String, String)> = map
@@ -524,16 +537,20 @@ fn rows(left: &[Line], right: &[Line]) -> Vec<JsonDiffRow> {
 }
 
 pub fn diff(request: &JsonDiffRequest) -> JsonDiffAnswer {
-    let parse = |text: &str, side| {
-        serde_json::from_str::<Value>(text).map_err(|error| JsonDiffAnswer::Unreadable {
-            side,
-            line: saturating_u32(error.line()),
-            column: saturating_u32(error.column()),
-        })
+    let parse = |text: &str, forced: Option<DataFormat>, side| {
+        let format = forced.unwrap_or_else(|| detect(text));
+        read_value(text, format)
+            .map(|value| (value, format))
+            .map_err(|(line, column)| JsonDiffAnswer::Unreadable {
+                side,
+                format,
+                line,
+                column,
+            })
     };
-    let (a, b) = match (
-        parse(&request.a, JsonDiffSide::A),
-        parse(&request.b, JsonDiffSide::B),
+    let ((a, format_a), (b, format_b)) = match (
+        parse(&request.a, request.format_a, JsonDiffSide::A),
+        parse(&request.b, request.format_b, JsonDiffSide::B),
     ) {
         (Ok(a), Ok(b)) => (a, b),
         (Err(unreadable), _) | (_, Err(unreadable)) => return unreadable,
@@ -542,6 +559,7 @@ pub fn diff(request: &JsonDiffRequest) -> JsonDiffAnswer {
     let mut differ = Differ {
         ignore_key_order: request.ignore_key_order,
         ignore_whitespace: request.ignore_whitespace,
+        untyped: format_a == DataFormat::Xml || format_b == DataFormat::Xml,
         changes: Vec::new(),
         patch: Vec::new(),
     };
@@ -568,6 +586,8 @@ pub fn diff(request: &JsonDiffRequest) -> JsonDiffAnswer {
         counts,
         rows,
         rows_truncated,
+        format_a,
+        format_b,
     }
 }
 
@@ -601,6 +621,8 @@ mod tests {
         match diff(&JsonDiffRequest {
             a: a.to_owned(),
             b: b.to_owned(),
+            format_a: None,
+            format_b: None,
             ignore_key_order,
             ignore_whitespace,
         }) {
@@ -611,7 +633,9 @@ mod tests {
                 patch,
                 ..
             } => (changes, counts, rows, serde_json::from_str(&patch).unwrap()),
-            JsonDiffAnswer::Unreadable { side, line, column } => panic!("{side:?} {line}:{column}"),
+            JsonDiffAnswer::Unreadable {
+                side, line, column, ..
+            } => panic!("{side:?} {line}:{column}"),
         }
     }
 
@@ -786,14 +810,139 @@ mod tests {
             diff(&JsonDiffRequest {
                 a: "{}".to_owned(),
                 b: "{\n  \"a\": ,\n}".to_owned(),
+                format_a: None,
+                format_b: None,
                 ignore_key_order: true,
                 ignore_whitespace: true
             }),
             JsonDiffAnswer::Unreadable {
                 side: JsonDiffSide::B,
+                format: DataFormat::Json,
                 line: 2,
                 column: 8
             }
         );
+    }
+
+    fn read_as(
+        a: &str,
+        b: &str,
+        format_a: Option<DataFormat>,
+        format_b: Option<DataFormat>,
+    ) -> JsonDiffAnswer {
+        diff(&JsonDiffRequest {
+            a: a.to_owned(),
+            b: b.to_owned(),
+            format_a,
+            format_b,
+            ignore_key_order: true,
+            ignore_whitespace: true,
+        })
+    }
+
+    const SAME: [(DataFormat, &str); 4] = [
+        (
+            DataFormat::Json,
+            r#"{ "server": { "host": "db", "port": 5432, "tls": true } }"#,
+        ),
+        (
+            DataFormat::Yaml,
+            "# the database\nserver:\n  host: db\n  port: 5432 # default\n  tls: true\n",
+        ),
+        (
+            DataFormat::Toml,
+            "[server]\nhost = \"db\"\nport = 5432\ntls = true\n",
+        ),
+        (
+            DataFormat::Xml,
+            "<server><host>db</host><port>5432</port><tls>true</tls></server>",
+        ),
+    ];
+
+    #[test]
+    fn every_pair_of_formats_is_equal_when_its_values_are() {
+        for (format_a, a) in SAME {
+            for (format_b, b) in SAME {
+                match read_as(a, b, None, None) {
+                    JsonDiffAnswer::Compared {
+                        changes,
+                        format_a: read_a,
+                        format_b: read_b,
+                        ..
+                    } => {
+                        assert!(changes.is_empty(), "{format_a:?} against {format_b:?}");
+                        assert_eq!((read_a, read_b), (format_a, format_b));
+                    }
+                    unreadable @ JsonDiffAnswer::Unreadable { .. } => {
+                        panic!("{format_a:?} against {format_b:?}: {unreadable:?}")
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn a_format_is_detected_by_its_shape() {
+        for (text, format) in [
+            ("<config/>", DataFormat::Xml),
+            ("  {}", DataFormat::Json),
+            ("[1, 2]", DataFormat::Json),
+            ("[server]\nport = 1", DataFormat::Toml),
+            ("[[items]]\nname = \"a\"", DataFormat::Toml),
+            ("# a comment\nkey = \"v\"", DataFormat::Toml),
+            ("key: value", DataFormat::Yaml),
+            ("---\na: 1", DataFormat::Yaml),
+            ("- a\n- b", DataFormat::Yaml),
+        ] {
+            assert_eq!(detect(text), format, "{text}");
+        }
+    }
+
+    #[test]
+    fn a_forced_format_overrides_the_shape_and_its_refusal_names_it() {
+        let json = r#"{ "a": 1 }"#;
+        assert!(matches!(
+            read_as(json, json, Some(DataFormat::Yaml), None),
+            JsonDiffAnswer::Compared {
+                format_a: DataFormat::Yaml,
+                format_b: DataFormat::Json,
+                ..
+            }
+        ));
+        assert!(matches!(
+            read_as(json, json, None, Some(DataFormat::Toml)),
+            JsonDiffAnswer::Unreadable {
+                side: JsonDiffSide::B,
+                format: DataFormat::Toml,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn a_change_of_an_xml_attribute_has_its_path() {
+        let (changes, counts, _, _) = compared(
+            r#"<server port="5432"><host>db</host></server>"#,
+            r#"<server port="6432"><host>db</host></server>"#,
+            true,
+            true,
+        );
+
+        assert_eq!(
+            counts,
+            JsonDiffCounts {
+                added: 0,
+                removed: 0,
+                modified: 1
+            }
+        );
+        assert_eq!(changes[0].path, r#"$.server["@port"]"#);
+    }
+
+    #[test]
+    fn against_json_a_yaml_number_stays_a_number() {
+        let (changes, ..) = compared(r#"{ "port": "5432" }"#, "port: 5432", true, true);
+
+        assert_eq!(summaries(&changes), [(JsonChangeKind::Modified, "$.port")]);
     }
 }
