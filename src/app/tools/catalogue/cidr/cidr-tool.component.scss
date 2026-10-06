@@ -233,7 +233,7 @@
 
   th,
   td {
-    padding: 6px 12px;
+    padding: 6px 8px;
     text-align: left;
     white-space: nowrap;
     border-bottom: 1px solid var(--line-soft);
@@ -262,6 +262,10 @@
     color: var(--text-0);
   }
 
+  .range {
+    white-space: normal;
+  }
+
   .copy {
     width: 1px;
     padding: 0 8px;
@@ -273,11 +277,6 @@
 }
 
 .masks {
-  th,
-  td {
-    padding-inline: 8px;
-  }
-
   tr.current td {
     background: rgba(var(--amber-rgb), 0.08);
   }

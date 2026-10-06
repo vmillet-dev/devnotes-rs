@@ -262,7 +262,7 @@
                   <td class="number">{{ grouped(line.hosts) }}</td>
                   <td class="mono strong">{{ line.cidr }}</td>
                   <td class="number">{{ grouped(line.usable) }}</td>
-                  <td class="mono">{{ line.first }} – {{ line.last }}</td>
+                  <td class="mono range">{{ line.first }} – {{ line.last }}</td>
                   <td class="copy">
                     <app-copy-value [value]="line.cidr" [what]="line.cidr" [compact]="true" />
                   </td>
