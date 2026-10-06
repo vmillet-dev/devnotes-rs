@@ -1025,7 +1025,7 @@
       "description": "camelCase, snake_case, dot.case, Train-Case…",
       "inputLabel": "Texte à convertir",
       "placeholder": "Un nom de variable, une phrase, ou une liste, un par ligne : parse HTTP response",
-      "empty": "Les treize casses s’affichent ici, en deux groupes.",
+      "empty": "Les treize casses et le slug s’affichent ici, en trois groupes.",
       "noteTitle": "Casses de « {{text}} »",
       "sample": "Nombre d'articles par page\nuser account ID\nparseURL et HTTPServer",
       "text": "Texte",
@@ -1042,23 +1042,17 @@
       "forCode": "Pour le code",
       "forText": "Pour le texte",
       "upper": "MAJUSCULES",
-      "lower": "minuscules"
-    },
-    "slug": {
-      "name": "Générateur de slug",
-      "description": "« Été 2026 ! » → ete-2026",
-      "inputLabel": "Texte à transformer en slug",
-      "placeholder": "Été 2026 !",
-      "separator": "Séparateur",
+      "lower": "minuscules",
+      "slug": "Slug",
+      "separator": "Séparateur du slug",
       "separators": {
         "dash": "Tiret -",
         "underscore": "Souligné _",
         "dot": "Point ."
       },
       "lowercase": "En minuscules",
-      "empty": "Le slug s’affiche ici.",
-      "noteTitle": "Slug de « {{text}} »",
-      "sample": "Les 10 meilleures crêpes de Bretagne : guide 2026 !"
+      "slugHint": "Le slug translittère tout (Straße → strasse, Привет → privet) ; les formats de code ne font que retirer les accents.",
+      "forUrl": "Pour les URL"
     },
     "url-parser": {
       "name": "Analyseur d’URL",

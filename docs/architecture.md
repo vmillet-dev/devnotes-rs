@@ -674,6 +674,9 @@ an `AppError` rather than a weaker fallback. Generated passwords are the answer 
 but the tool's `ToolResult.warning` makes the dialog say why they had better not be, and its
 button read "Enregistrer quand même".
 
+**A tool whose answer is one line is merged into a neighbour or enriched** (#564): the slug is a row
+of the case converter, answered in the same call, and the URL codec and parser are one tool.
+
 **A case is written from words** (`tools/text.rs`): split at separators, at a capital after a
 lower case or a digit, at the end of an acronym. The code cases strip accents when asked (`été` →
 `ete`, `ß` stays a letter: transliterating is the slug's), the text cases keep them, and keep the

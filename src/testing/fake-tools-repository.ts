@@ -38,7 +38,6 @@ import {
   PasswordRequest,
   SizesAnswer,
   SizesRequest,
-  SlugRequest,
   StatsRequest,
   TextStats,
   UrlAnswer,
@@ -53,8 +52,7 @@ import {
 export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRepository> {
   readonly asked: { readonly command: string; readonly request: unknown }[] = [];
 
-  caseAnswer: CaseAnswer = { conversions: [], words: [] };
-  slug = '';
+  caseAnswer: CaseAnswer = { conversions: [], words: [], slug: '' };
   lineBreaks: LineBreaksAnswer = {
     found: { lf: 0, crlf: 0, cr: 0 },
     text: '',
@@ -124,10 +122,6 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
 
   convertCase(request: CaseRequest): Promise<CaseAnswer> {
     return this.answer('convert_case', request, this.caseAnswer);
-  }
-
-  slugify(request: SlugRequest): Promise<string> {
-    return this.answer('slugify', request, this.slug);
   }
 
   fixLineBreaks(request: LineBreaksRequest): Promise<LineBreaksAnswer> {

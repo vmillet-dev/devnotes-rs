@@ -21,7 +21,7 @@ class BareToolComponent implements Tool {
 }
 
 const BARE: ToolDefinition = {
-  id: 'slug',
+  id: 'line-breaks',
   category: 'text',
   keywords: [],
   load: async () => BareToolComponent,

@@ -43,12 +43,6 @@ pub async fn convert_case(request: text::CaseRequest) -> Result<text::CaseAnswer
 
 #[tauri::command]
 #[specta::specta]
-pub async fn slugify(request: text::SlugRequest) -> Result<String, AppError> {
-    off_thread(move || text::slugify(&request)).await
-}
-
-#[tauri::command]
-#[specta::specta]
 pub async fn fix_line_breaks(
     request: text::LineBreaksRequest,
 ) -> Result<text::LineBreaksAnswer, AppError> {

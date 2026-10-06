@@ -25,7 +25,6 @@ export const commands = {
 	/**  No lock, but off the window's thread: a document of a few megabytes takes a while. */
 	exploreJson: (query: JsonQuery) => typedError<JsonView, AppError>(__TAURI_INVOKE("explore_json", { query })),
 	convertCase: (request: CaseRequest) => typedError<CaseAnswer, AppError>(__TAURI_INVOKE("convert_case", { request })),
-	slugify: (request: SlugRequest) => typedError<string, AppError>(__TAURI_INVOKE("slugify", { request })),
 	fixLineBreaks: (request: LineBreaksRequest) => typedError<LineBreaksAnswer, AppError>(__TAURI_INVOKE("fix_line_breaks", { request })),
 	parseUrl: (text: string) => typedError<UrlAnswer, AppError>(__TAURI_INVOKE("parse_url", { text })),
 	urlCodec: (request: UrlCodecRequest) => typedError<UrlCodecAnswer, AppError>(__TAURI_INVOKE("url_codec", { request })),
@@ -455,6 +454,8 @@ export type CaseAnswer = {
 	conversions: CaseConversion[],
 	/**  What the converters work from: the first line holding a word, or the whole phrase. */
 	words: string[],
+	/**  For a URL: transliterated, where the code cases only strip accents. Empty for no word. */
+	slug: string,
 };
 
 export type CaseConversion = {
@@ -476,6 +477,7 @@ export type CaseRequest = {
 	/**  Each line on its own; off, the whole text is one phrase. */
 	perLine: boolean,
 	titleCaseLanguage: TitleLanguage,
+	slug: SlugOptions,
 };
 
 export type ChangelogRelease = {
@@ -1583,8 +1585,7 @@ export type SizesRequest = {
 	decimals: number,
 };
 
-export type SlugRequest = {
-	text: string,
+export type SlugOptions = {
 	separator: SlugSeparator,
 	lowercase: boolean,
 };

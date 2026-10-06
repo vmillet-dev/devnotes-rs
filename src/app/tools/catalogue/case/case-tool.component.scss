@@ -50,6 +50,13 @@
   color: var(--text-2);
 }
 
+.slug-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
 .chips {
   display: flex;
   flex-wrap: wrap;

@@ -54,7 +54,7 @@ use tools::{
     decode_base64, decode_jwt, describe_colour, describe_cron, describe_instant,
     describe_permissions, diff_json, encode_base64, encode_base64_file, fix_line_breaks,
     generate_identifiers, generate_json, generate_passwords, hash_input, inspect_identifier,
-    lorem_ipsum, parse_url, place_in_zones, save_base64, search_time_zones, slugify, text_stats,
+    lorem_ipsum, parse_url, place_in_zones, save_base64, search_time_zones, text_stats,
     time_in_zone, url_codec,
 };
 use transfer::{export_is_protected, export_notes, import_notes, share_notes};
@@ -87,7 +87,6 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             detect_language,
             explore_json,
             convert_case,
-            slugify,
             fix_line_breaks,
             parse_url,
             url_codec,

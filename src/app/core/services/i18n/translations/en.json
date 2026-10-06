@@ -1025,7 +1025,7 @@
       "description": "camelCase, snake_case, dot.case, Train-Case…",
       "inputLabel": "Text to convert",
       "placeholder": "A variable name, a sentence, or a list, one per line: parse HTTP response",
-      "empty": "The thirteen cases show here, in two groups.",
+      "empty": "The thirteen cases and the slug show here, in three groups.",
       "noteTitle": "Cases of “{{text}}”",
       "sample": "Number of items per page\nuser account ID\nparseURL and HTTPServer",
       "text": "Text",
@@ -1042,23 +1042,17 @@
       "forCode": "For code",
       "forText": "For text",
       "upper": "UPPERCASE",
-      "lower": "lowercase"
-    },
-    "slug": {
-      "name": "Slug generator",
-      "description": "“Summer 2026!” → summer-2026",
-      "inputLabel": "Text to turn into a slug",
-      "placeholder": "Été 2026 !",
-      "separator": "Separator",
+      "lower": "lowercase",
+      "slug": "Slug",
+      "separator": "Slug separator",
       "separators": {
         "dash": "Dash -",
         "underscore": "Underscore _",
         "dot": "Dot ."
       },
       "lowercase": "Lower case",
-      "empty": "The slug shows here.",
-      "noteTitle": "Slug of “{{text}}”",
-      "sample": "The 10 best crêpes in Brittany: a 2026 guide!"
+      "slugHint": "The slug transliterates everything (Straße → strasse, Привет → privet); the code formats only strip accents.",
+      "forUrl": "For URLs"
     },
     "url-parser": {
       "name": "URL parser",

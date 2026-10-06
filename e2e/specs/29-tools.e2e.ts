@@ -99,13 +99,14 @@ describe('The tools', () => {
       await setField(testid('tools-search'), '');
     });
 
-    it('lays the Texte panel out with its five tools', async () => {
+    /** The slug is one of the case converter's rows now: a tool whose answer is one line joins a neighbour. */
+    it('lays the Texte panel out with its four tools', async () => {
       expect(
         await readEach(
           `${testid('tools-panel')}[data-category="text"] ${testid('tools-entry')}`,
           '@data-tool',
         ),
-      ).toEqual(['case', 'slug', 'url-parser', 'line-breaks', 'text-stats']);
+      ).toEqual(['case', 'url-parser', 'line-breaks', 'text-stats']);
     });
   });
 
@@ -115,8 +116,8 @@ describe('The tools', () => {
 
       await setField(testid('case-input'), 'parse HTTP response');
 
-      await eventually(outputValues, (values) => values.length === 13, 'the thirteen cases');
-      // For the code, then for the text: two groups in one card.
+      await eventually(outputValues, (values) => values.length === 14, 'the thirteen cases and the slug');
+      // For the code, for the text, then for a URL: three groups in one card.
       expect(await outputValues()).toEqual([
         'parseHttpResponse',
         'ParseHttpResponse',
@@ -131,8 +132,9 @@ describe('The tools', () => {
         'Parse http response',
         'PARSE HTTP RESPONSE',
         'parse http response',
+        'parse-http-response',
       ]);
-      expect(await readEach(testid('case-group'), '@data-group')).toEqual(['code', 'text']);
+      expect(await readEach(testid('case-group'), '@data-group')).toEqual(['code', 'text', 'url']);
       expect(await readEach(`${testid('case-words')} li`, 'text')).toEqual(['parse', 'HTTP', 'response']);
     });
 
@@ -199,12 +201,25 @@ describe('The tools', () => {
       await eventually(outputValues, (values) => values.length === 0, 'the cases to go');
     });
 
-    it('transliterates a slug rather than dropping its accents', async () => {
-      await $(`${testid('tools-rail-tool')}[data-tool="slug"]`).click();
+    it('transliterates the slug where the code cases only strip accents', async () => {
+      await setField(testid('case-input'), 'Été 2026 ! Straße');
+      const value = (name: string) =>
+        $(`${testid('output-row')}[data-name="${name}"] ${testid('output-value')}`).getText();
 
-      await setField(testid('slug-input'), 'Été 2026 ! Straße');
+      await eventually(
+        () => value('Slug'),
+        (slug) => slug === 'ete-2026-strasse',
+        'the slug',
+      );
+      expect(await value('snake_case')).toBe('ete_2026_straße');
 
-      await eventually(outputValues, (values) => values[0] === 'ete-2026-strasse', 'the slug');
+      await $(`${testid('segmented-case-slug-separator')} [data-segment-id="underscore"]`).click();
+      await eventually(
+        () => value('Slug'),
+        (slug) => slug === 'ete_2026_strasse',
+        'the slug with underscores',
+      );
+      await $(`${testid('segmented-case-slug-separator')} [data-segment-id="dash"]`).click();
     });
 
     it('takes a URL apart, and says why another is refused', async () => {
@@ -1198,7 +1213,7 @@ describe('The tools', () => {
     });
 
     it('asks nothing before the tool has computed something', async () => {
-      await openTool('slug');
+      await openTool('case');
       await $(testid('tool-clear')).click();
 
       await eventually(
@@ -1209,8 +1224,12 @@ describe('The tools', () => {
     });
 
     it('goes where the dialog puts it, with its tags, as the tool shaped it', async () => {
-      await setField(testid('slug-input'), 'Été 2026 !');
-      await eventually(outputValues, (values) => values[0] === 'ete-2026', 'the slug');
+      await setField(testid('case-input'), 'Été 2026 !');
+      await eventually(
+        () => $(`${testid('output-row')}[data-name="Slug"] ${testid('output-value')}`).getText(),
+        (slug) => slug === 'ete-2026',
+        'the slug',
+      );
 
       await $(testid('tool-save-as-note')).click();
       await $(testid('save-as-note')).waitForDisplayed({ timeout: 5_000 });
@@ -1221,12 +1240,11 @@ describe('The tools', () => {
       await $(testid('save-as-note')).waitForExist({ reverse: true, timeout: 10_000 });
 
       const [note] = await inSpace();
-      expect(note).toMatchObject({
-        title: 'Slug de la page été',
-        content: 'ete-2026',
-        language: 'txt',
-        kind: 'snippet',
-      });
+      expect(note).toMatchObject({ title: 'Slug de la page été', language: 'txt', kind: 'snippet' });
+      // The tool shaped it: every case named, the slug last.
+      const body = (await bridge.getNote(note!.id)).content;
+      expect(body).toMatch(/^snake_case +ete_2026$/m);
+      expect(body).toMatch(/^slug +ete-2026$/m);
       expect([...(note?.tags ?? [])].sort()).toEqual(['seo', 'web']);
       expect(note?.source).toContain('/');
     });
