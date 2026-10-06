@@ -827,7 +827,9 @@ facts are typed constants beside the component; its words are a JSON per languag
 imported with the tool's chunk by `referenceWords` rather than merged into the main translations,
 so sixty descriptions weigh nothing until the tool opens. `app-reference-table` (`tools/ui/`) is
 the rest: the search, folded like the catalogue's — a front-end exception of the same kind,
-translated text — the groups, the count, each row's key to copy. The reference draws its own
+translated text — the groups, the count, each row's key to copy. A row is searched by its group's
+heading too (« redirection » finds every 3xx), so headings are translated in code
+(`referenceHeadings`), not in the template. The reference draws its own
 `<td>`s through `appReferenceCells`, and so styles them itself (`reference-cell`): the table's
 stylesheet cannot reach them. A spec holds both files of words to the same keys.
 

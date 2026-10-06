@@ -2330,6 +2330,47 @@
         "unofficial": "Unofficial",
         "obsolete": "Obsolete"
       }
+    },
+    "http-headers": {
+      "name": "HTTP headers",
+      "description": "Content-Type, Cache-Control, CORS, CSP: what they are for",
+      "placeholder": "A name or words: cache, cors, cookie, Content-Type…",
+      "columns": {
+        "name": "Header",
+        "direction": "Direction",
+        "does": "What it does",
+        "by": "Defined by"
+      },
+      "directions": {
+        "request": "Request",
+        "response": "Response",
+        "both": "Both"
+      },
+      "groups": {
+        "content": "Content and negotiation",
+        "caching": "Caching and conditions",
+        "range": "Partial requests",
+        "auth": "Authentication",
+        "cookies": "Cookies",
+        "security": "Security",
+        "cors": "CORS",
+        "connection": "Connection and proxies",
+        "request": "Request",
+        "response": "Response"
+      },
+      "security": "Security",
+      "deprecated": "Deprecated"
+    },
+    "mime-types": {
+      "name": "MIME types",
+      "description": "The type of an extension, and the extensions of a type",
+      "placeholder": "A type or an extension: json, .webp, image/png…",
+      "columns": {
+        "type": "Type",
+        "extensions": "Extensions",
+        "description": "Description"
+      },
+      "noExtension": "none"
     }
   }
 }

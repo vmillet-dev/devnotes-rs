@@ -29,5 +29,34 @@ export function referenceWords<W>(loaders: ReferenceWordLoaders<W>): Signal<W | 
     computation: (fresh, previous) => fresh ?? previous?.value ?? null,
   });
 
-  return computed(() => kept());
+  return kept.asReadonly();
+}
+
+export interface ReferenceHeading<G extends string> {
+  readonly id: G;
+  readonly label: string;
+}
+
+/**
+ * A reference's group headings in the language on screen, translated here rather than in the
+ * template because a search reads them: « redirection » finds every 3xx. Built in an injection
+ * context.
+ */
+export function referenceHeadings<G extends string>(
+  ids: readonly G[],
+  key: (id: G) => string,
+): Signal<readonly ReferenceHeading<G>[]> {
+  const transloco = inject(TranslocoService);
+  // Read so that the headings follow the language, and the file once it has landed.
+  const translation = toSignal(transloco.selectTranslation());
+
+  return computed(() => {
+    translation();
+    return ids.map((id) => ({ id, label: transloco.translate(key(id)) }));
+  });
+}
+
+/** Where a search finds a row by its group: its heading. */
+export function headingOf<G extends string>(headings: readonly ReferenceHeading<G>[], id: G): string {
+  return headings.find((heading) => heading.id === id)?.label ?? '';
 }

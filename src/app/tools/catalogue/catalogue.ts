@@ -187,4 +187,16 @@ export const TOOLS: readonly ToolDefinition[] = [
     keywords: ['http', 'status', 'statut', 'code', 'rfc 9110', '404', '500', 'redirect', 'nginx'],
     load: () => import('./http-status/http-status-tool.component').then((m) => m.HttpStatusToolComponent),
   },
+  {
+    id: 'http-headers',
+    category: 'reference',
+    keywords: ['header', 'en-tête', 'cors', 'csp', 'hsts', 'cookie', 'cache-control', 'content-type'],
+    load: () => import('./http-headers/http-headers-tool.component').then((m) => m.HttpHeadersToolComponent),
+  },
+  {
+    id: 'mime-types',
+    category: 'reference',
+    keywords: ['mime', 'media type', 'content-type', 'extension', 'json', 'png', 'pdf'],
+    load: () => import('./mime-types/mime-types-tool.component').then((m) => m.MimeTypesToolComponent),
+  },
 ];
