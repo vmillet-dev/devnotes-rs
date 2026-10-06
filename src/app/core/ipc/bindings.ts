@@ -43,6 +43,7 @@ export const commands = {
 	saveQrCode: (request: QrRequest, format: QrFormat, path: string) => typedError<SavedCode, AppError>(__TAURI_INVOKE("save_qr_code", { request, format, path })),
 	/**  The image is written natively: its pixels never cross the bridge. `false` when there is no code. */
 	copyQrCode: (request: QrRequest) => typedError<boolean, AppError>(__TAURI_INVOKE("copy_qr_code", { request })),
+	describeCidr: (request: CidrRequest) => typedError<CidrAnswer, AppError>(__TAURI_INVOKE("describe_cidr", { request })),
 	describeColour: (request: ColourRequest) => typedError<ColourAnswer, AppError>(__TAURI_INVOKE("describe_colour", { request })),
 	convertData: (request: ConvertRequest) => typedError<ConvertAnswer, AppError>(__TAURI_INVOKE("convert_data", { request })),
 	generateJson: (request: GenerateRequest) => typedError<GenerateAnswer, AppError>(__TAURI_INVOKE("generate_json", { request })),
@@ -334,6 +335,10 @@ export type Base64FileAnswer =
 /**  A file keeps the two Base64 alone: the other encodings of a megabyte are noise. */
 { kind: "encoded"; name: string; bytes: number; base64: string; base64Url: string } | { kind: "failed"; problem: FileProblem };
 
+export type BlockKind = "thisNetwork" | "private" | "sharedAddressSpace" | "loopback" | "linkLocal" | "documentation" | "benchmarking" | "multicast" | "reserved" | "broadcast" | "public" | "unspecified" | "ipv4Mapped" | "nat64" | "uniqueLocal" | "global" | 
+/**  Wider than a special range it holds: no one sentence describes it. */
+"mixed";
+
 /**  What a tidy-up did, and what it takes to walk it back. */
 export type BoardArrangement = {
 	/**  What actually moved: a board already in order moves nothing, and opens no undo. */
@@ -529,6 +534,62 @@ export type CheckRequest = {
 export type ChecklistItem = {
 	text: string,
 	done: boolean,
+};
+
+export type CidrAnswer = {
+	block: CidrBlock | null,
+	problem: CidrProblem | null,
+	membership: CidrMembership,
+	/**  The prefixes offered as chips: the next three. */
+	splitChoices: number[],
+	split: CidrSplit | null,
+};
+
+export type CidrBlock = {
+	family: IpFamily,
+	cidr: string,
+	prefix: number,
+	hostBits: number,
+	/**  The address had host bits set: `cidr` is its network. */
+	normalised: boolean,
+	/**  The network address in binary, cut where the host bits start. */
+	binaryNetwork: string,
+	binaryHost: string,
+	kind: BlockKind,
+	/**  The special range the block lies in, when it names one: `10.0.0.0/8`. */
+	range: string | null,
+	network: string,
+	/**  IPv4 only. */
+	mask: string | null,
+	inverseMask: string | null,
+	first: string,
+	last: string,
+	/**  IPv4 from `/30` up: `/31` and `/32` have none, nor IPv6. */
+	broadcast: string | null,
+	/**  Decimal digits: an IPv6 count passes what a JSON number holds. */
+	addresses: string,
+	usable: string,
+};
+
+export type CidrMembership = { kind: "empty" } | { kind: "unreadable" } | { kind: "outside" } | 
+/**  Counted from the network address, which is host 0. */
+{ kind: "inside"; host: string };
+
+export type CidrProblem = "unreadable" | "prefixTooLong" | "maskWithHoles" | "wrongFamily";
+
+export type CidrRequest = {
+	network: string,
+	/**  `None` reads the family from the text. */
+	family: IpFamily | null,
+	member: string,
+	split: number | null,
+};
+
+export type CidrSplit = {
+	prefix: number,
+	subnets: Subnet[],
+	/**  How many past `SUBNETS_SHOWN`, in decimal digits. */
+	more: string,
 };
 
 export type Class = "owner" | "group" | "others";
@@ -1078,6 +1139,8 @@ export type InstantRequest = {
 
 /**  What a reader cannot see, or would take for something else. */
 export type Invisible = "space" | "tab" | "lineBreak" | "noBreakSpace" | "narrowNoBreakSpace" | "otherSpace" | "zeroWidthSpace" | "zeroWidthJoiner" | "zeroWidthNonJoiner" | "byteOrderMark" | "softHyphen" | "control";
+
+export type IpFamily = "v4" | "v6";
 
 export type JsonChange = {
 	kind: JsonChangeKind,
@@ -1861,6 +1924,11 @@ export type StatsRequest = {
 };
 
 export type Strength = "veryWeak" | "weak" | "fair" | "strong" | "veryStrong";
+
+export type Subnet = {
+	cidr: string,
+	usable: string,
+};
 
 export type TagUsage = {
 	tag: string,

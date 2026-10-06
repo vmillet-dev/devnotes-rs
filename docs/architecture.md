@@ -714,6 +714,15 @@ and the modules black in both themes: an inverted code is not read by every scan
 the image on the clipboard natively, its pixels never crossing the bridge. The Wi-Fi password is
 a plain `signal`, and a note keeping it is warned against, as a password is.
 
+**A CIDR block is computed on a `u128`** (`tools/cidr.rs`, `ipnet` for the reading): an IPv4
+address sits in its low 32 bits, so one set of arithmetic serves both families. A block is read
+from `a/prefix`, `a mask` (a mask with holes refused) or a bare address, its host bits cleared and
+said; a forced family reads IPv4 as its IPv4-mapped IPv6 block and back. What the block is comes
+from the IANA special-purpose ranges, the most specific holding it, or « mixed » when it is wider
+than one. ⚠️ Counts cross as decimal digits: an IPv6 one passes 2⁵³, and `::/0` holds 2¹²⁸, one
+more than a `u128` — the page groups them with `BigInt`. A split offers the next three prefixes and
+lists the first 256 subnets.
+
 **A colour is Rust's to read** (`tools/colour.rs`): the four notations, `OKLab` and `OKLCH`,
 the gamut, and the WCAG ratio — with the `0.03928` of `scripts/palette.test.mjs`, so the tool
 and the palette's own check agree. The page paints the swatch Rust hands it. An `OKLCH` colour

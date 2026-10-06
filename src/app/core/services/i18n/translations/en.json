@@ -2570,6 +2570,91 @@
       "saved": "{count, plural, one {QR code saved: # byte.} other {QR code saved: # bytes.}}",
       "noteTitle": "Content of a QR code",
       "saveWarning": "This content carries the Wi-Fi network's password. A note is encrypted with the library, but it gets copied, shared and exported: a password manager keeps it better."
+    },
+    "cidr": {
+      "name": "CIDR subnets",
+      "description": "Mask, hosts, membership and splitting, IPv4 and IPv6",
+      "network": "Network",
+      "family": "Read as",
+      "families": {
+        "auto": "Auto",
+        "v4": "IPv4",
+        "v6": "IPv6"
+      },
+      "placeholder": "10.24.8.0/21, 192.168.1.0 255.255.255.0, 2001:db8::/32",
+      "problems": {
+        "unreadable": "This network cannot be read: an address, then /prefix or a mask.",
+        "prefixTooLong": "This prefix is longer than the address: /32 at most in IPv4, /128 in IPv6.",
+        "maskWithHoles": "This mask has holes: its 1 bits must follow each other (255.255.240.0, not 255.0.255.0).",
+        "wrongFamily": "This address cannot be read in the family asked for."
+      },
+      "normalised": "Host bits were set: the network is {{cidr}}.",
+      "bits": "{network, plural, one {# network bit} other {# network bits}} · {hosts, plural, =0 {no host bit} one {# host bit} other {# host bits}}",
+      "kinds": {
+        "thisNetwork": "“This network” (RFC 1122, block {{range}}): never a destination.",
+        "private": "Private network (RFC 1918, block {{range}}).",
+        "sharedAddressSpace": "Carrier-grade NAT shared space (RFC 6598, block {{range}}).",
+        "loopback": "Loopback (block {{range}}): never leaves the machine.",
+        "linkLocal": "Link-local (block {{range}}): assigned without DHCP, never routed.",
+        "documentation": "Reserved for documentation (block {{range}}): exists on no network.",
+        "benchmarking": "Reserved for benchmarking (RFC 2544, block {{range}}).",
+        "multicast": "Multicast (block {{range}}).",
+        "reserved": "Reserved range, with no use assigned.",
+        "broadcast": "Limited broadcast: the whole local network.",
+        "public": "Public addresses, routed on the Internet.",
+        "unspecified": "Unspecified address: “no address”.",
+        "ipv4Mapped": "IPv4-mapped IPv6 (block {{range}}): an IPv4 address written as IPv6.",
+        "nat64": "NAT64 prefix (RFC 6052, block {{range}}).",
+        "uniqueLocal": "Unique local addresses (block {{range}}): IPv6’s private networks.",
+        "global": "Global unicast (block {{range}}): routed on the Internet.",
+        "mixed": "This block spans ranges of different uses."
+      },
+      "caveat": "For /31 and /32 there is no network nor broadcast address to take away; IPv6 has no broadcast.",
+      "memberTitle": "Is this address in the network?",
+      "memberPlaceholder": "10.24.12.40",
+      "inside": "Yes · host no. {{host}}",
+      "outside": "No",
+      "memberUnreadable": "This address cannot be read.",
+      "facts": "The block",
+      "rows": {
+        "network": {
+          "v4": "Network address",
+          "v6": "Prefix"
+        },
+        "mask": {
+          "v4": "Mask"
+        },
+        "inverseMask": {
+          "v4": "Inverse mask"
+        },
+        "first": {
+          "v4": "First host address",
+          "v6": "First address"
+        },
+        "last": {
+          "v4": "Last host address",
+          "v6": "Last address"
+        },
+        "broadcast": {
+          "v4": "Broadcast"
+        },
+        "usable": {
+          "v4": "Usable hosts",
+          "v6": "Addresses"
+        }
+      },
+      "usableOf": {
+        "v4": "{{usable}} of {{total}} {count, plural, one {address} other {addresses}}",
+        "v6": "{{total}} {count, plural, one {address} other {addresses}}"
+      },
+      "splitTitle": "Split into subnets",
+      "subnetHosts": {
+        "v4": "{{hosts}} {count, plural, one {host} other {hosts}}",
+        "v6": "{{hosts}} {count, plural, one {address} other {addresses}}"
+      },
+      "more": "And {{more}} more, not listed.",
+      "empty": "Type a network: an address and its prefix, or its mask.",
+      "noteTitle": "CIDR subnet"
     }
   }
 }

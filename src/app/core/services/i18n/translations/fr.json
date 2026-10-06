@@ -2570,6 +2570,91 @@
       "saved": "{count, plural, one {QR code enregistré : # octet.} other {QR code enregistré : # octets.}}",
       "noteTitle": "Contenu d’un QR code",
       "saveWarning": "Ce contenu porte le mot de passe du réseau Wi-Fi. Une note est chiffrée avec la bibliothèque, mais elle se copie, se partage et s’exporte : un gestionnaire de mots de passe le garde mieux."
+    },
+    "cidr": {
+      "name": "Sous-réseaux CIDR",
+      "description": "Masque, hôtes, appartenance et découpage, IPv4 et IPv6",
+      "network": "Réseau",
+      "family": "Lire comme",
+      "families": {
+        "auto": "Auto",
+        "v4": "IPv4",
+        "v6": "IPv6"
+      },
+      "placeholder": "10.24.8.0/21, 192.168.1.0 255.255.255.0, 2001:db8::/32",
+      "problems": {
+        "unreadable": "Ce réseau ne se lit pas : une adresse, puis /préfixe ou un masque.",
+        "prefixTooLong": "Ce préfixe dépasse la taille de l’adresse : /32 au plus en IPv4, /128 en IPv6.",
+        "maskWithHoles": "Ce masque a des trous : ses bits à 1 doivent se suivre (255.255.240.0, pas 255.0.255.0).",
+        "wrongFamily": "Cette adresse ne se lit pas dans la famille demandée."
+      },
+      "normalised": "Des bits d’hôte étaient à 1 : le réseau est {{cidr}}.",
+      "bits": "{network, plural, one {# bit de réseau} other {# bits de réseau}} · {hosts, plural, =0 {aucun bit d’hôte} one {# bit d’hôte} other {# bits d’hôtes}}",
+      "kinds": {
+        "thisNetwork": "« Ce réseau » (RFC 1122, bloc {{range}}) : jamais une destination.",
+        "private": "Réseau privé (RFC 1918, bloc {{range}}).",
+        "sharedAddressSpace": "Espace partagé du CGNAT des opérateurs (RFC 6598, bloc {{range}}).",
+        "loopback": "Boucle locale (bloc {{range}}) : ne quitte jamais la machine.",
+        "linkLocal": "Lien-local (bloc {{range}}) : attribuées sans DHCP, jamais routées.",
+        "documentation": "Réservé à la documentation (bloc {{range}}) : n’existe sur aucun réseau.",
+        "benchmarking": "Réservé aux tests de performance (RFC 2544, bloc {{range}}).",
+        "multicast": "Multidiffusion (bloc {{range}}).",
+        "reserved": "Plage réservée, sans usage attribué.",
+        "broadcast": "Diffusion limitée : tout le réseau local.",
+        "public": "Adresses publiques, routées sur Internet.",
+        "unspecified": "Adresse non spécifiée : « aucune adresse ».",
+        "ipv4Mapped": "IPv6 mappée IPv4 (bloc {{range}}) : une adresse IPv4 écrite en IPv6.",
+        "nat64": "Préfixe NAT64 (RFC 6052, bloc {{range}}).",
+        "uniqueLocal": "Adresses locales uniques (bloc {{range}}) : les réseaux privés d’IPv6.",
+        "global": "Unicast global (bloc {{range}}) : routé sur Internet.",
+        "mixed": "Ce bloc englobe des plages d’usages différents."
+      },
+      "caveat": "Pour /31 et /32, il n’y a ni adresse réseau ni diffusion à retirer ; en IPv6, il n’y a pas de diffusion.",
+      "memberTitle": "Cette adresse est-elle dans le réseau ?",
+      "memberPlaceholder": "10.24.12.40",
+      "inside": "Oui · hôte n° {{host}}",
+      "outside": "Non",
+      "memberUnreadable": "Cette adresse ne se lit pas.",
+      "facts": "Le bloc",
+      "rows": {
+        "network": {
+          "v4": "Adresse réseau",
+          "v6": "Préfixe"
+        },
+        "mask": {
+          "v4": "Masque"
+        },
+        "inverseMask": {
+          "v4": "Masque inverse"
+        },
+        "first": {
+          "v4": "Première adresse hôte",
+          "v6": "Première adresse"
+        },
+        "last": {
+          "v4": "Dernière adresse hôte",
+          "v6": "Dernière adresse"
+        },
+        "broadcast": {
+          "v4": "Diffusion"
+        },
+        "usable": {
+          "v4": "Hôtes utilisables",
+          "v6": "Adresses"
+        }
+      },
+      "usableOf": {
+        "v4": "{{usable}} sur {{total}} {count, plural, one {adresse} other {adresses}}",
+        "v6": "{{total}} {count, plural, one {adresse} other {adresses}}"
+      },
+      "splitTitle": "Découper en sous-réseaux",
+      "subnetHosts": {
+        "v4": "{{hosts}} {count, plural, one {hôte} other {hôtes}}",
+        "v6": "{{hosts}} {count, plural, one {adresse} other {adresses}}"
+      },
+      "more": "Et {{more}} de plus, non listés.",
+      "empty": "Saisissez un réseau : une adresse et son préfixe, ou son masque.",
+      "noteTitle": "Sous-réseau CIDR"
     }
   }
 }

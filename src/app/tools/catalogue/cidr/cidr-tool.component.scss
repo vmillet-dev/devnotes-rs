@@ -1,0 +1,163 @@
+@use 'mixins' as *;
+
+.columns {
+  @include tool-columns;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 32px;
+}
+
+.column {
+  @include tool-column;
+  gap: 12px;
+}
+
+.head {
+  @include tool-section-head;
+}
+
+.title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-0);
+}
+
+.field {
+  @include tool-field;
+
+  &.large {
+    height: 42px;
+    font-size: 16px;
+  }
+}
+
+.problem {
+  @include tool-problem;
+}
+
+.note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--amber-text);
+}
+
+.binary-card {
+  @include surface(var(--bg-1), 10px);
+  padding: 12px 18px;
+}
+
+.bits {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.binary {
+  margin: 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  overflow-wrap: anywhere;
+}
+
+.network-bits {
+  color: var(--amber-text);
+}
+
+.host-bits {
+  color: var(--text-2);
+}
+
+.kind {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-1);
+}
+
+.verdict {
+  align-self: flex-start;
+  margin: 0;
+  padding: 4px 10px;
+  border-radius: 7px;
+  font-size: 12.5px;
+
+  &.inside {
+    @include tint-badge(--green-rgb);
+  }
+
+  &.outside {
+    @include tint-badge(--red-rgb);
+  }
+}
+
+.card {
+  @include surface(var(--bg-1), 10px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chips {
+  display: flex;
+  gap: 6px;
+}
+
+.chip {
+  @include unstyled-control;
+  @include surface(var(--bg-2), 7px, var(--line));
+  @include focus-ring;
+  height: 30px;
+  padding: 0 12px;
+  font-family: var(--font-mono), monospace;
+  font-size: 12.5px;
+  color: var(--text-1);
+  cursor: pointer;
+
+  &.on {
+    @include accent-state;
+  }
+}
+
+.subnets {
+  @include surface(var(--bg-1), 10px);
+  display: flex;
+  flex-direction: column;
+  max-height: 420px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.subnet {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px 8px 18px;
+  border-top: 1px solid var(--line-soft);
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+
+  &:first-child {
+    border-top: none;
+  }
+}
+
+.subnet-cidr {
+  flex: 1;
+  color: var(--text-0);
+}
+
+.subnet-hosts {
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+
+.more,
+.empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-2);
+}
