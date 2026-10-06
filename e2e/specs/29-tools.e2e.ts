@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { canvas } from '../pageobjects/canvas.page.js';
 import {
   activeTestId,
+  clipboardText,
   eventually,
   pickChoice,
   press,
@@ -1213,7 +1214,7 @@ describe('The tools', () => {
           `${testid('tools-panel')}[data-category="reference"] ${testid('tools-entry')}`,
           '@data-tool',
         ),
-      ).toEqual(['http-status', 'http-headers', 'mime-types', 'ports', 'signals']);
+      ).toEqual(['http-status', 'http-headers', 'mime-types', 'ports', 'signals', 'ascii']);
     });
 
     it('opens the category from the rail, and finds a status code by its number', async () => {
@@ -1291,6 +1292,37 @@ describe('The tools', () => {
         await $(`[data-key="SIGKILL"] ${testid('signals-catchable')}`).getAttribute('data-catchable'),
       ).toBe('false');
       await $(testid('tool-clear')).click();
+    });
+
+    it('finds a character by its code in any base, or by a name', async () => {
+      await openTool('ascii');
+      await eventually(rows, (keys) => keys.length === 128, 'the 128 characters');
+
+      await setField(testid('reference-search'), '0x41');
+      await eventually(rows, (keys) => keys.join() === '65', 'A by 0x41');
+
+      await setField(testid('reference-search'), 'newline');
+      await eventually(rows, (keys) => keys.join() === '10', 'LF by newline');
+    });
+
+    it('copies the character itself', async function () {
+      await setField(testid('reference-search'), 'A');
+      await eventually(rows, (keys) => keys.join() === '65', 'A alone');
+      await $(`[data-key="65"] ${testid('copy-value')}`).click();
+
+      // An unreadable clipboard answers null at once, so only the readable case waits.
+      const copied = await eventually(
+        () => clipboardText(),
+        (text) => text === null || text === 'A',
+        'the character to reach the clipboard',
+      );
+      await $(testid('tool-clear')).click();
+      if (copied === null) {
+        // No readable clipboard on this runner; see `clipboardText`.
+        this.skip();
+        return;
+      }
+      expect(copied).toBe('A');
     });
   });
 
