@@ -26,13 +26,7 @@
                 <span class="hint">{{ 'tools.text-stats.hints.' + count | transloco }}</span>
               }
             </dt>
-            <dd>
-              <span class="figure" data-testid="text-stats-value">{{ stats[count] }}</span>
-              <app-copy-value
-                [value]="'' + stats[count]"
-                [what]="'tools.text-stats.rows.' + count | transloco"
-              />
-            </dd>
+            <dd class="figure" data-testid="text-stats-value">{{ stats[count] }}</dd>
           </div>
         }
       </dl>
