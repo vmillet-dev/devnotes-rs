@@ -330,29 +330,32 @@ describe('The tools', () => {
       await $(testid('tool-clear')).click();
     });
 
-    it('writes Base64 in either alphabet, padded or not', async () => {
+    const encoding = (id: string) => $(`[data-encoding="${id}"] ${testid('output-value')}`).getText();
+
+    it('writes a text in every encoding at once, Base64 padded and Base64 URL not', async () => {
       await openTool('base64');
       await setField(testid('base64-input'), 'été?>');
       await eventually(
-        () => $(testid('base64-output')).getText(),
+        () => encoding('base64'),
         (text) => text === 'w6l0w6k/Pg==',
         'standard',
       );
 
-      await $(`${testid('segmented-base64-alphabet')} [data-segment-id="urlSafe"]`).click();
-      await $(testid('base64-padded')).click();
-
-      await eventually(
-        () => $(testid('base64-output')).getText(),
-        (text) => text === 'w6l0w6k_Pg',
-        'URL-safe',
-      );
+      expect(await encoding('base64Url')).toBe('w6l0w6k_Pg');
+      expect(await encoding('hex')).toBe('c3 a9 74 c3 a9 3f 3e');
     });
 
-    it('names the character a decoding stops at', async () => {
+    it('decodes what it recognises, and names the character a decoding stops at', async () => {
       await $(`${testid('segmented-base64-direction')} [data-segment-id="decode"]`).click();
-      await setField(testid('base64-input'), 'QUJD#');
+      await setField(testid('base64-input'), '43 61 66 c3 a9');
+      await eventually(
+        () => $(testid('base64-reading')).getAttribute('data-reading'),
+        (reading) => reading === 'hex',
+        'read as hexadecimal',
+      );
+      expect(await $(testid('base64-output')).getText()).toBe('Café');
 
+      await setField(testid('base64-input'), 'QUJD#');
       await $(testid('base64-problem')).waitForDisplayed({ timeout: 5_000 });
       expect(await $(testid('base64-problem')).getText()).toContain('#');
       await $(testid('tool-clear')).click();
@@ -364,15 +367,14 @@ describe('The tools', () => {
       const path = join(folder, 'logo.bin');
       writeFileSync(path, Buffer.from([0, 255, 16]));
 
-      expect(await bridge.encodeBase64File(path, { alphabet: 'standard', padded: true })).toEqual({
+      expect(await bridge.encodeBase64File(path)).toEqual({
         kind: 'encoded',
         name: 'logo.bin',
         bytes: 3,
-        text: 'AP8Q',
+        base64: 'AP8Q',
+        base64Url: 'AP8Q',
       });
-      expect(
-        await bridge.encodeBase64File(join(folder, 'absent.bin'), { alphabet: 'standard', padded: true }),
-      ).toEqual({
+      expect(await bridge.encodeBase64File(join(folder, 'absent.bin'))).toEqual({
         kind: 'failed',
         problem: 'notFound',
       });

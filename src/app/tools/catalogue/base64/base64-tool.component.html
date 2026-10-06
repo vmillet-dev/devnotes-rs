@@ -1,16 +1,12 @@
-<div class="columns">
-  <section class="column" aria-labelledby="base64-input-title">
-    <div class="section-head">
-      <h2 id="base64-input-title" class="section-title">{{ 'tools.input' | transloco }}</h2>
-      <app-segmented-choice
-        kind="base64-direction"
-        [label]="'tools.base64.direction' | transloco"
-        [segments]="directions"
-        [currentId]="direction()"
-        (chosen)="choose('direction', $event)"
-      />
-    </div>
-
+<div class="body">
+  <div class="bar">
+    <app-segmented-choice
+      kind="base64-direction"
+      [label]="'tools.base64.direction' | transloco"
+      [segments]="directions"
+      [currentId]="direction()"
+      (chosen)="choose('direction', $event)"
+    />
     @if (direction() === 'encode') {
       <app-segmented-choice
         kind="base64-source"
@@ -20,108 +16,154 @@
         (chosen)="choose('source', $event)"
       />
     }
+  </div>
 
-    @if (direction() === 'encode' && source() === 'file') {
-      <div class="file">
-        <button type="button" class="pick" data-testid="base64-pick-file" (click)="pickFile()">
-          {{ 'tools.base64.pickFile' | transloco }}
-        </button>
-        @if (encodedFile.value(); as file) {
-          @if (file.kind === 'encoded') {
-            <p class="note" data-testid="base64-file">
-              {{ 'tools.base64.fileRead' | transloco: { name: file.name, count: file.bytes } }}
-            </p>
-          } @else {
-            <p class="problem" role="status" data-testid="base64-file-problem">
-              {{ 'tools.files.' + file.problem | transloco }}
-            </p>
-          }
+  @if (direction() === 'encode' && source() === 'file') {
+    <div class="file">
+      <button type="button" class="pick" data-testid="base64-pick-file" (click)="pickFile()">
+        {{ 'tools.base64.pickFile' | transloco }}
+      </button>
+      @if (encodedFile.value(); as file) {
+        @if (file.kind === 'encoded') {
+          <p class="note" data-testid="base64-file">
+            {{ 'tools.base64.fileRead' | transloco: { name: file.name, count: file.bytes } }}
+          </p>
         } @else {
-          <p class="note">{{ 'tools.base64.fileHint' | transloco }}</p>
+          <p class="problem" role="status" data-testid="base64-file-problem">
+            {{ 'tools.files.' + file.problem | transloco }}
+          </p>
+        }
+      } @else {
+        <p class="note">{{ 'tools.base64.fileHint' | transloco }}</p>
+      }
+    </div>
+  } @else {
+    <label class="field">
+      <span class="visually-hidden">{{ 'tools.base64.inputLabel' | transloco }}</span>
+      <textarea
+        class="text"
+        data-testid="base64-input"
+        rows="3"
+        spellcheck="false"
+        [value]="text()"
+        [placeholder]="
+          (direction() === 'encode' ? 'tools.base64.encodePlaceholder' : 'tools.base64.decodePlaceholder')
+            | transloco
+        "
+        (input)="onInput($event)"
+      ></textarea>
+    </label>
+  }
+
+  @if (direction() === 'encode') {
+    @if (facts(); as facts) {
+      <p class="facts" data-testid="base64-facts">
+        {{ 'tools.base64.characters' | transloco: { count: facts.characters } }} ·
+        {{ 'tools.base64.bytes' | transloco: { count: facts.bytes } }}
+        @if (facts.wide; as wide) {
+          {{ 'tools.base64.wide' | transloco: { character: wide.character, bytes: wide.bytes } }}
+        }
+      </p>
+    }
+    @if (rows().length > 0) {
+      <div class="card" data-testid="base64-encodings">
+        @for (row of rows(); track row.id) {
+          <app-result-row
+            [attr.data-encoding]="row.id"
+            [name]="'tools.base64.encodings.' + row.id | transloco"
+            [value]="row.shown"
+            [copied]="row.value"
+          />
         }
       </div>
+      @if (source() === 'file') {
+        <p class="note">{{ 'tools.base64.fileOnlyBase64' | transloco }}</p>
+      }
     } @else {
-      <label class="field">
-        <span class="visually-hidden">{{ 'tools.base64.inputLabel' | transloco }}</span>
-        <textarea
-          class="text"
-          data-testid="base64-input"
-          rows="8"
-          spellcheck="false"
-          [value]="text()"
-          [placeholder]="
-            (direction() === 'encode' ? 'tools.base64.encodePlaceholder' : 'tools.base64.decodePlaceholder')
-              | transloco
-          "
-          (input)="onInput($event)"
-        ></textarea>
-      </label>
+      <p class="note">{{ 'tools.base64.encodeEmpty' | transloco }}</p>
     }
-
-    <div class="options">
-      <app-segmented-choice
-        kind="base64-alphabet"
-        [label]="'tools.base64.alphabet' | transloco"
-        [segments]="alphabets"
-        [currentId]="alphabet()"
-        (chosen)="choose('alphabet', $event)"
-      />
-      @if (direction() === 'encode') {
+    @if (source() === 'text') {
+      <div class="options">
         <label class="check">
           <input
             type="checkbox"
-            data-testid="base64-padded"
-            [checked]="padded()"
-            (change)="onPadded($event)"
+            data-testid="base64-spaced"
+            [checked]="spaced()"
+            (change)="onSpaced($event)"
           />
-          {{ 'tools.base64.padded' | transloco }}
+          {{ 'tools.base64.spaced' | transloco }}
         </label>
-      }
-    </div>
-  </section>
-
-  <section class="column" aria-labelledby="base64-output-title">
-    <div class="section-head">
-      <h2 id="base64-output-title" class="section-title">{{ 'tools.result' | transloco }}</h2>
-      @if (direction() === 'encode' && encoded(); as encoded) {
-        <app-copy-value [value]="encoded" what="Base64" />
-      }
-      @if (direction() === 'decode' && decodedText(); as text) {
-        <app-copy-value [value]="text" [what]="'tools.result' | transloco" />
-      }
-    </div>
-
-    @if (direction() === 'encode') {
-      @if (encoded()) {
-        <pre class="output" data-testid="base64-output">{{ shown() }}</pre>
-      } @else {
-        <p class="note">{{ 'tools.base64.encodeEmpty' | transloco }}</p>
-      }
-    } @else {
-      @if (decodedText() !== null) {
-        <pre class="output" data-testid="base64-output">{{ decodedText() }}</pre>
-      } @else if (decodedBinary(); as binary) {
-        <p class="note" data-testid="base64-binary">
-          {{ 'tools.base64.binary' | transloco: { count: binary.bytes } }}
-        </p>
-        <pre class="output hex">{{ binary.preview }}</pre>
-        <button type="button" class="pick" data-testid="base64-save-file" (click)="saveAsFile()">
-          {{ 'tools.base64.saveFile' | transloco }}
-        </button>
-      } @else if (decodingProblem(); as invalid) {
-        <p class="problem" role="status" data-testid="base64-problem">
-          @if (invalid.character !== null && invalid.at !== null) {
-            {{
-              'tools.base64.problems.' + invalid.problem
-                | transloco: { character: invalid.character, at: invalid.at + 1 }
-            }}
-          } @else {
-            {{ 'tools.base64.problems.length' | transloco }}
+        <label class="check">
+          <input
+            type="checkbox"
+            data-testid="base64-uppercase"
+            [checked]="uppercase()"
+            (change)="onUppercase($event)"
+          />
+          {{ 'tools.base64.uppercase' | transloco }}
+        </label>
+      </div>
+    }
+  } @else {
+    <div class="reading-line">
+      @if (decoded.value(); as answer) {
+        <p class="reading" data-testid="base64-reading" [attr.data-reading]="answer.readAs">
+          {{ 'tools.base64.readAs' | transloco }}
+          <strong>{{ 'tools.base64.encodings.' + answer.readAs | transloco }}</strong>
+          @if (answer.guessed) {
+            &ngsp;<span class="guessed">{{ 'tools.base64.guessed' | transloco }}</span>
           }
         </p>
-      } @else {
-        <p class="note">{{ 'tools.base64.decodeEmpty' | transloco }}</p>
+      }
+      <app-segmented-choice
+        kind="base64-reading"
+        [label]="'tools.base64.reading' | transloco"
+        [segments]="readings"
+        [currentId]="reading() ?? 'auto'"
+        (chosen)="choose('reading', $event)"
+      />
+    </div>
+    @if (decoded.value(); as answer) {
+      @if (answer.also.length > 0) {
+        <p class="note" data-testid="base64-also">
+          {{ 'tools.base64.also' | transloco }}
+          @for (other of answer.also; track other; let last = $last) {
+            {{ 'tools.base64.encodings.' + other | transloco }}{{ last ? '.' : ',' }}
+          }
+        </p>
       }
     }
-  </section>
+    @if (decodedText() !== null) {
+      <div class="card decoded">
+        <div class="card-head">
+          <span class="card-title">{{ 'tools.result' | transloco }}</span>
+          <app-copy-value [value]="decodedText() ?? ''" [what]="'tools.result' | transloco" />
+        </div>
+        <pre class="output" data-testid="base64-output">{{ decodedText() }}</pre>
+      </div>
+    } @else if (decodedBinary(); as binary) {
+      <p class="note" data-testid="base64-binary">
+        {{ 'tools.base64.binary' | transloco: { count: binary.bytes } }}
+      </p>
+      <pre class="output hex">{{ binary.preview }}</pre>
+      <button type="button" class="pick" data-testid="base64-save-file" (click)="saveAsFile()">
+        {{ 'tools.base64.saveFile' | transloco }}
+      </button>
+    } @else if (decodingProblem(); as invalid) {
+      <p class="problem" role="status" data-testid="base64-problem">
+        @if (invalid.character !== null && invalid.at !== null) {
+          {{
+            'tools.base64.problems.' + invalid.problem
+              | transloco: { character: invalid.character, at: invalid.at + 1 }
+          }}
+        } @else {
+          {{ 'tools.base64.problems.length' | transloco }}
+        }
+      </p>
+    } @else {
+      <p class="note">{{ 'tools.base64.decodeEmpty' | transloco }}</p>
+    }
+  }
+
+  <p class="explain">{{ 'tools.base64.explain' | transloco }}</p>
 </div>
