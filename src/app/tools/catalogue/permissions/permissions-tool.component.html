@@ -1,12 +1,12 @@
 <div class="columns">
   <section class="column" aria-labelledby="permissions-input-title">
-    <h2 id="permissions-input-title" class="section-title">{{ 'tools.input' | transloco }}</h2>
+    <h2 id="permissions-input-title" class="visually-hidden">{{ 'tools.input' | transloco }}</h2>
     <div class="fields">
       <label class="labelled">
         <span class="label">{{ 'tools.permissions.octal' | transloco }}</span>
         <input
           type="text"
-          class="field"
+          class="field octal"
           data-testid="permissions-octal"
           spellcheck="false"
           [value]="shown('octal')"
@@ -45,15 +45,17 @@
       </p>
     }
 
-    <h2 id="permissions-grid-title" class="section-title">{{ 'tools.permissions.grid' | transloco }}</h2>
-    <table class="grid" aria-labelledby="permissions-grid-title" data-testid="permissions-grid">
+    <table
+      class="grid"
+      [attr.aria-label]="'tools.permissions.grid' | transloco"
+      data-testid="permissions-grid"
+    >
       <thead>
         <tr>
           <td></td>
           @for (right of rights; track right) {
             <th scope="col">{{ 'tools.permissions.rights.' + right | transloco }}</th>
           }
-          <th scope="col" class="special-head"></th>
         </tr>
       </thead>
       <tbody>
@@ -79,22 +81,29 @@
                 />
               </td>
             }
-            <td>
-              <label class="special">
-                <input
-                  type="checkbox"
-                  class="box"
-                  [attr.data-testid]="'permissions-' + row.class + '-special'"
-                  [checked]="checked(row, 'special')"
-                  (change)="toggle(row.class, 'special')"
-                />
-                {{ 'tools.permissions.specials.' + row.class | transloco }}
-              </label>
-            </td>
           </tr>
         }
       </tbody>
     </table>
+    <div class="chips" role="group" [attr.aria-label]="'tools.permissions.specialBits' | transloco">
+      @for (row of grid(); track row.class) {
+        <button
+          type="button"
+          class="chip"
+          [attr.data-testid]="'permissions-' + row.class + '-special'"
+          [attr.aria-pressed]="row.special"
+          [attr.title]="'tools.permissions.specialWords.' + row.class | transloco"
+          (click)="toggle(row.class, 'special')"
+        >
+          {{ 'tools.permissions.specials.' + row.class | transloco }}
+        </button>
+      }
+    </div>
+    @for (warning of read()?.warnings ?? []; track warning) {
+      <p class="warning" role="status" data-testid="permissions-warning" [attr.data-warning]="warning">
+        {{ 'tools.permissions.warnings.' + warning | transloco }}
+      </p>
+    }
 
     <h2 id="permissions-umask-title" class="section-title">{{ 'tools.permissions.umask' | transloco }}</h2>
     <input
@@ -111,18 +120,20 @@
       @switch (umask.kind) {
         @case ('read') {
           @if (umask.kind === 'read') {
-            <dl class="facts" data-testid="permissions-umask-result">
-              <div class="fact">
-                <dt>{{ 'tools.permissions.newFile' | transloco }}</dt>
-                <dd data-testid="permissions-new-file">{{ umask.file.octal }} · {{ umask.file.symbolic }}</dd>
-              </div>
-              <div class="fact">
-                <dt>{{ 'tools.permissions.newDirectory' | transloco }}</dt>
-                <dd data-testid="permissions-new-directory">
-                  {{ umask.directory.octal }} · {{ umask.directory.symbolic }}
-                </dd>
-              </div>
-            </dl>
+            <div class="card" data-testid="permissions-umask-result">
+              <app-result-row
+                data-testid="permissions-new-file"
+                [name]="'tools.permissions.newFile' | transloco"
+                [value]="umask.file.octal + ' · ' + umask.file.symbolic"
+                [copyable]="false"
+              />
+              <app-result-row
+                data-testid="permissions-new-directory"
+                [name]="'tools.permissions.newDirectory' | transloco"
+                [value]="umask.directory.octal + ' · ' + umask.directory.symbolic"
+                [copyable]="false"
+              />
+            </div>
           }
         }
         @case ('refused') {
@@ -141,29 +152,44 @@
       {{ 'tools.permissions.commands' | transloco }}
     </h2>
     @if (read(); as read) {
-      <app-output-row
-        data-command="octal"
-        name="chmod"
-        [value]="'chmod ' + read.mode.octal + ' ' + ('tools.permissions.file' | transloco)"
-      />
-      <app-output-row
-        data-command="symbolic"
-        name="chmod"
-        [value]="'chmod ' + read.mode.chmodSymbolic + ' ' + ('tools.permissions.file' | transloco)"
-      />
+      <div class="card commands">
+        <div class="command" data-command="octal">
+          <code data-testid="output-value">{{
+            'chmod ' + read.mode.octal + ' ' + ('tools.permissions.file' | transloco)
+          }}</code>
+          <app-copy-value
+            [value]="'chmod ' + read.mode.octal + ' ' + ('tools.permissions.file' | transloco)"
+            what="chmod"
+            [compact]="true"
+          />
+        </div>
+        <div class="command" data-command="symbolic">
+          <code data-testid="output-value">{{
+            'chmod ' + read.mode.chmodSymbolic + ' ' + ('tools.permissions.file' | transloco)
+          }}</code>
+          <app-copy-value
+            [value]="'chmod ' + read.mode.chmodSymbolic + ' ' + ('tools.permissions.file' | transloco)"
+            what="chmod"
+            [compact]="true"
+          />
+        </div>
+      </div>
       <h2 class="section-title">{{ 'tools.permissions.can' | transloco }}</h2>
-      <ul class="words" data-testid="permissions-words">
+      <div class="card" data-testid="permissions-words">
         @for (words of words(); track words.class) {
-          <li [attr.data-class]="words.class">
-            <strong>{{ 'tools.permissions.classes.' + words.class | transloco }}</strong> : {{ words.text }}
-            @if (words.special) {
-              <span class="special-words"
-                >— {{ 'tools.permissions.specialWords.' + words.class | transloco }}</span
-              >
-            }
-          </li>
+          <app-result-row
+            [attr.data-class]="words.class"
+            [name]="'tools.permissions.classes.' + words.class | transloco"
+            [value]="
+              words.special
+                ? words.text + ' — ' + ('tools.permissions.specialWords.' + words.class | transloco)
+                : words.text
+            "
+            [copyable]="false"
+          />
         }
-      </ul>
+      </div>
+      <p class="note">{{ 'tools.permissions.directoryExecute' | transloco }}</p>
     } @else {
       <p class="note">{{ 'tools.permissions.empty' | transloco }}</p>
     }

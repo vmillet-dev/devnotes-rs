@@ -36,7 +36,10 @@ const UMASK: PermissionsAnswer['umask'] = {
   directory: MODE_755,
 };
 
-const ANSWER: PermissionsAnswer = { mode: { kind: 'read', mode: MODE_755, fileType: null }, umask: UMASK };
+const ANSWER: PermissionsAnswer = {
+  mode: { kind: 'read', mode: MODE_755, fileType: null, warnings: [] },
+  umask: UMASK,
+};
 
 describe('PermissionsToolComponent', () => {
   const answering =
@@ -60,10 +63,12 @@ describe('PermissionsToolComponent', () => {
 
     expect(asked(harness)[0]).toEqual({ mode: '', umask: '022' });
     expect(harness.all('[data-testid="permissions-grid"] input:checked')).toHaveLength(0);
-    expect(harness.element('[data-testid="permissions-new-file"]').textContent).toBe('644 · rw-r--r--');
-    expect(harness.element('[data-testid="permissions-new-directory"]').textContent?.trim()).toBe(
-      '755 · rwxr-xr-x',
-    );
+    expect(
+      harness.element('[data-testid="permissions-new-file"] [data-testid="output-value"]').textContent,
+    ).toBe('644 · rw-r--r--');
+    expect(
+      harness.element('[data-testid="permissions-new-directory"] [data-testid="output-value"]').textContent,
+    ).toBe('755 · rwxr-xr-x');
     expect(harness.tool.result()).toBeNull();
   });
 
@@ -89,7 +94,7 @@ describe('PermissionsToolComponent', () => {
   it('reads letters typed, and writes them back as octal', async () => {
     const harness = await renderTool(
       PermissionsToolComponent,
-      answering({ ...ANSWER, mode: { kind: 'read', mode: MODE_755, fileType: 'directory' } }),
+      answering({ ...ANSWER, mode: { kind: 'read', mode: MODE_755, fileType: 'directory', warnings: [] } }),
     );
 
     await harness.type('permissions-symbolic', 'drwxr-xr-x', 'describe_permissions');
@@ -106,7 +111,7 @@ describe('PermissionsToolComponent', () => {
 
     field(harness, 'permissions-group-write').dispatchEvent(new Event('change'));
     await vi.waitFor(() => expect(asked(harness).at(-1)).toMatchObject({ mode: '775' }));
-    field(harness, 'permissions-owner-special').dispatchEvent(new Event('change'));
+    harness.element<HTMLButtonElement>('[data-testid="permissions-owner-special"]').click();
     await vi.waitFor(() => expect(asked(harness).at(-1)).toMatchObject({ mode: '4755' }));
 
     expect(field(harness, 'permissions-octal').value).toBe('4755');
@@ -137,7 +142,7 @@ describe('PermissionsToolComponent', () => {
     };
     const harness = await renderTool(
       PermissionsToolComponent,
-      answering({ ...ANSWER, mode: { kind: 'read', mode: special, fileType: null } }),
+      answering({ ...ANSWER, mode: { kind: 'read', mode: special, fileType: null, warnings: [] } }),
     );
 
     await harness.type('permissions-octal', '1777', 'describe_permissions');
@@ -145,7 +150,35 @@ describe('PermissionsToolComponent', () => {
     expect(harness.element('[data-testid="permissions-words"] [data-class="others"]').textContent).toContain(
       'sticky',
     );
-    expect(field(harness, 'permissions-others-special').checked).toBe(true);
+    expect(harness.element('[data-testid="permissions-others-special"]').getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(harness.element('[data-testid="permissions-owner-special"]').getAttribute('aria-pressed')).toBe(
+      'false',
+    );
+  });
+
+  it('says why a mode is probably a mistake, in the words of the warning Rust names', async () => {
+    const harness = await renderTool(PermissionsToolComponent, (tools) => {
+      tools.permissions = {
+        ...ANSWER,
+        mode: {
+          kind: 'read',
+          mode: MODE_755,
+          fileType: null,
+          warnings: ['othersOverGroup', 'worldWritable'],
+        },
+      };
+    });
+
+    await harness.type('permissions-octal', '501', 'describe_permissions');
+
+    expect(
+      harness.all('[data-testid="permissions-warning"]').map((warning) => warning.dataset['warning']),
+    ).toEqual(['othersOverGroup', 'worldWritable']);
+    expect(harness.element('[data-testid="permissions-warning"]').textContent).toContain(
+      'le groupe a moins de droits que tout le monde',
+    );
   });
 
   it('says where a mode or a umask stops making sense', async () => {

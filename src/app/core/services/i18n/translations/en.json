@@ -1817,7 +1817,15 @@
         "length": "A mode in letters has nine of them, ten with the file type in front."
       },
       "empty": "Type a mode in octal or in letters, or tick the boxes.",
-      "noteTitle": "Mode {{octal}}"
+      "noteTitle": "Mode {{octal}}",
+      "specialBits": "Special bits",
+      "directoryExecute": "On a directory, “execute” means going through it and reaching what it holds.",
+      "warnings": {
+        "othersOverGroup": "The others hold a right the group lacks: the group has less than everybody. Check that this is meant.",
+        "groupOverOwner": "The group holds a right the owner lacks. Check that this is meant.",
+        "worldWritable": "Anyone may write, and no sticky bit keeps each to their own files.",
+        "specialWithoutExecute": "setuid or setgid without the execute right it acts on (S in ls -l): it does nothing."
+      }
     },
     "checks": {
       "name": "Check digits",
