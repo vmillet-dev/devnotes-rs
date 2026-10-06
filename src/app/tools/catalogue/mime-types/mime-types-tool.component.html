@@ -1,0 +1,20 @@
+<app-reference-table
+  [rows]="rows()"
+  [groups]="groups"
+  [columns]="columns"
+  [caption]="'tools.mime-types.name' | transloco"
+  [placeholder]="'tools.mime-types.placeholder' | transloco"
+  [(query)]="query"
+>
+  <ng-template [appReferenceCells]="rows()" let-row>
+    <td class="type">{{ row.key }}</td>
+    <td class="extensions">
+      @for (extension of row.mime.extensions; track extension) {
+        <code class="extension" data-testid="mime-types-extension">{{ extension }}</code>
+      } @empty {
+        <span class="none">{{ 'tools.mime-types.noExtension' | transloco }}</span>
+      }
+    </td>
+    <td class="description">{{ row.description }}</td>
+  </ng-template>
+</app-reference-table>

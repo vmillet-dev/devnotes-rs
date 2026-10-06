@@ -1,13 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { referenceWords } from '@core/services/tools/reference-words';
+import { ChangeDetectionStrategy, Component, computed } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { headingOf, referenceHeadings, referenceWords } from '@core/services/tools/reference-words';
 import { Tool } from '@core/services/tools/tool.model';
 import { toolState } from '@core/services/tools/tool-sessions';
 import {
   ReferenceCellsDirective,
   ReferenceColumn,
-  ReferenceGroup,
   ReferenceRow,
   ReferenceTableComponent,
 } from '@tools/ui/reference-table/reference-table.component';
@@ -33,8 +31,6 @@ const COLUMNS: readonly ReferenceColumn[] = ['code', 'name', 'meaning', 'by'].ma
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HttpStatusToolComponent implements Tool {
-  private readonly transloco = inject(TranslocoService);
-
   protected readonly query = toolState('http-status.query', '');
   protected readonly columns = COLUMNS;
 
@@ -43,22 +39,12 @@ export class HttpStatusToolComponent implements Tool {
     en: () => import('./http-status.en.json'),
   });
 
-  /** Read so that the headings follow the language, and the file once it has landed. */
-  private readonly translation = toSignal(this.transloco.selectTranslation());
-
-  /** Translated here rather than in the template: « redirection » finds every 3xx by its heading. */
-  protected readonly groups = computed<readonly ReferenceGroup[]>(() => {
-    this.translation();
-    return STATUS_CLASSES.map((id) => ({
-      id,
-      label: this.transloco.translate(`tools.http-status.groups.${id}`),
-    }));
-  });
+  protected readonly groups = referenceHeadings(STATUS_CLASSES, (id) => `tools.http-status.groups.${id}`);
 
   protected readonly rows = computed<readonly StatusRow[]>(() => {
     const words = this.words();
     if (words === null) return [];
-    const headings = new Map(this.groups().map((group) => [group.id, group.label]));
+    const headings = this.groups();
 
     return HTTP_STATUSES.map((status) => {
       const group = statusClass(status.code);
@@ -77,7 +63,7 @@ export class HttpStatusToolComponent implements Tool {
           meaning,
           use ?? '',
           status.by,
-          headings.get(group) ?? '',
+          headingOf(headings, group),
         ],
       };
     });

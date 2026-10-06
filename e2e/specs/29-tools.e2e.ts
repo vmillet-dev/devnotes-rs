@@ -1213,7 +1213,7 @@ describe('The tools', () => {
           `${testid('tools-panel')}[data-category="reference"] ${testid('tools-entry')}`,
           '@data-tool',
         ),
-      ).toEqual(['http-status']);
+      ).toEqual(['http-status', 'http-headers', 'mime-types']);
     });
 
     it('opens the category from the rail, and finds a status code by its number', async () => {
@@ -1246,6 +1246,34 @@ describe('The tools', () => {
 
       await eventually(rows, (keys) => keys.length > 70, 'every code again');
       expect(await $(testid('reference-search')).getValue()).toBe('');
+    });
+
+    it('finds the CORS headers by a word, each tagged as a matter of security', async () => {
+      await openTool('http-headers');
+      await eventually(rows, (keys) => keys.length > 70, 'every header');
+
+      await setField(testid('reference-search'), 'cors');
+
+      await eventually(
+        rows,
+        (keys) => keys.includes('Access-Control-Allow-Origin') && keys.length < 20,
+        'the CORS headers',
+      );
+      expect(
+        await $(`[data-key="Access-Control-Allow-Origin"] ${testid('http-headers-security')}`).isExisting(),
+      ).toBe(true);
+    });
+
+    it('finds a MIME type by its extension, with or without its dot', async () => {
+      await openTool('mime-types');
+      await eventually(rows, (keys) => keys.length > 80, 'every type');
+
+      await setField(testid('reference-search'), '.webp');
+      await eventually(rows, (keys) => keys.join() === 'image/webp', 'image/webp by .webp');
+
+      await setField(testid('reference-search'), 'json');
+      await eventually(rows, (keys) => keys.includes('application/json'), 'application/json by json');
+      await $(testid('tool-clear')).click();
     });
   });
 

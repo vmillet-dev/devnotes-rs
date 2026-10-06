@@ -1,0 +1,32 @@
+<app-reference-table
+  [rows]="rows()"
+  [groups]="groups()"
+  [columns]="columns"
+  [caption]="'tools.http-headers.name' | transloco"
+  [placeholder]="'tools.http-headers.placeholder' | transloco"
+  [(query)]="query"
+>
+  <ng-template [appReferenceCells]="rows()" let-row>
+    <td class="name">
+      <span class="header-name">{{ row.key }}</span>
+      @if (row.header.security) {
+        <span class="tag security" data-testid="http-headers-security">
+          {{ 'tools.http-headers.security' | transloco }}
+        </span>
+      }
+      @if (row.header.deprecated) {
+        <span class="tag" data-testid="http-headers-deprecated">
+          {{ 'tools.http-headers.deprecated' | transloco }}
+        </span>
+      }
+    </td>
+    <td class="direction" [attr.data-direction]="row.header.direction">
+      {{ 'tools.http-headers.directions.' + row.header.direction | transloco }}
+    </td>
+    <td class="does">
+      {{ row.does }}
+      <code class="example">{{ row.header.example }}</code>
+    </td>
+    <td class="by">{{ row.header.by }}</td>
+  </ng-template>
+</app-reference-table>
