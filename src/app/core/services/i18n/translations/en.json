@@ -1391,8 +1391,8 @@
       }
     },
     "dates": {
-      "name": "Dates and timestamps",
-      "description": "Unix ↔ ISO 8601, in s, ms, µs or ns",
+      "name": "Dates and durations",
+      "description": "Unix ↔ ISO 8601, gaps and ISO durations",
       "inputLabel": "Date or timestamp",
       "placeholder": "1790000000, 2026-09-29T14:03:12+02:00, 2026-W40-2…",
       "now": "Now",
@@ -1452,7 +1452,88 @@
         "formats": "Date formats",
         "landmarks": "Landmarks"
       },
-      "localZone": "local time · UTC{{offset}}"
+      "localZone": "local time · UTC{{offset}}",
+      "tab": "Tab",
+      "tabs": {
+        "convert": "Convert",
+        "durations": "Gap and durations"
+      },
+      "gapTitle": "Gap between two dates",
+      "fields": {
+        "from": "From",
+        "to": "To"
+      },
+      "datePlaceholder": "2026-03-12 09:00",
+      "typedIn": "Times typed in {{zone}}.",
+      "elapsedTitle": "Total elapsed",
+      "elapsedRows": {
+        "days": "Days",
+        "weeks": "Weeks",
+        "hours": "Hours",
+        "minutes": "Minutes",
+        "iso": "ISO 8601"
+      },
+      "elapsed": {
+        "days": "{{days}} d {{hours}} h {{minutes}}",
+        "weeks": "{{weeks}} wk {{days}} d",
+        "hours": "{{hours}} h {{minutes}}"
+      },
+      "calendar": {
+        "years": "{count, plural, one {# year} other {# years}}",
+        "months": "{count, plural, one {# month} other {# months}}",
+        "days": "{count, plural, one {# day} other {# days}}",
+        "none": "No gap"
+      },
+      "clock": {
+        "hours": "{{value}} h",
+        "minutes": "{{value}} min",
+        "seconds": "{{value}} s"
+      },
+      "negative": "To falls before From: the gap is counted backwards.",
+      "ambiguousField": "{{field}}: this time happens twice, when the clocks go back; the first is taken.",
+      "transition": {
+        "forward": "The change to summer time on {{date}} falls between the two dates: the calendar gap ({{wall}}) counts {{difference}} more than the time actually elapsed ({{elapsed}}).",
+        "backward": "The change back to winter time on {{date}} falls between the two dates: the calendar gap ({{wall}}) counts {{difference}} less than the time actually elapsed ({{elapsed}}).",
+        "forwardUndated": "A change of time falls between the two dates: the calendar gap ({{wall}}) counts {{difference}} more than the time actually elapsed ({{elapsed}}).",
+        "backwardUndated": "A change of time falls between the two dates: the calendar gap ({{wall}}) counts {{difference}} less than the time actually elapsed ({{elapsed}}).",
+        "hoursApart": "{count, plural, one {one hour} other {# hours}}",
+        "minutesApart": "{{minutes}} min"
+      },
+      "gapProblems": {
+        "unreadable": "{{field}}: unreadable from character {{at}}.",
+        "skipped": "{{field}}: this time does not exist here, the clocks skipped it when they went forward.",
+        "outOfRange": "{{field}}: past the year 9999."
+      },
+      "durationTitle": "ISO 8601 duration",
+      "units": {
+        "years": "{count, plural, one {year} other {years}}",
+        "months": "{count, plural, one {month} other {months}}",
+        "weeks": "{count, plural, one {week} other {weeks}}",
+        "days": "{count, plural, one {day} other {days}}",
+        "hours": "{count, plural, one {hour} other {hours}}",
+        "minutes": "{count, plural, one {minute} other {minutes}}",
+        "seconds": "{count, plural, one {second} other {seconds}}",
+        "none": "No duration"
+      },
+      "totals": {
+        "iso": "ISO 8601",
+        "seconds": "Seconds",
+        "minutes": "Minutes",
+        "hours": "Hours"
+      },
+      "noTotals": "A month or a year has no fixed length: no total in seconds.",
+      "durationProblems": {
+        "unexpected": "Character {{at}}: neither a number nor a unit expected here.",
+        "empty": "Character {{at}}: nothing after “P” or “T”.",
+        "outOfOrder": "Character {{at}}: this unit comes before the previous one; the order is Y M W D, then T H M S.",
+        "repeated": "Character {{at}}: this unit is already given.",
+        "fractionNotLast": "Character {{at}}: only the last part may have decimals."
+      },
+      "durationHint": "Also type “1h30” or “90 min”: the tool gives the ISO form.",
+      "explainMonth": "is a month,",
+      "explainMinute": "is a minute: the",
+      "explainT": "separates the date from the time. A month or a year has no fixed length in seconds.",
+      "noteDurations": "Gap and duration"
     },
     "zones": {
       "name": "Time zones",

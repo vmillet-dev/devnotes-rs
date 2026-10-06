@@ -16,6 +16,8 @@ import {
   ConvertRequest,
   CronAnswer,
   CronRequest,
+  DurationsAnswer,
+  DurationsRequest,
   GenerateAnswer,
   GenerateRequest,
   HashAnswer,
@@ -132,6 +134,10 @@ export class ToolsRepository {
   /** Read in the machine's zone when written without an offset. */
   async describeInstant(request: InstantRequest): Promise<InstantAnswer> {
     return unwrap('describe_instant', await commands.describeInstant(request));
+  }
+
+  async measureDurations(request: DurationsRequest): Promise<DurationsAnswer> {
+    return unwrap('measure_durations', await commands.measureDurations(request));
   }
 
   /** ISO 8601 in UTC, to the millisecond. */

@@ -745,6 +745,15 @@ twice is read as the earlier. ⚠️ chrono panics on a local time past its rang
 can push its edges into — `within_range` refuses it first. How long ago or how far off is the
 front's (`spanRef`), so it ages with the clock.
 
+**A gap between two dates is counted twice** (`tools/durations.rs`), each read by `dates::parse`
+in the machine's IANA zone: by the calendar — whole months first, a day past a month's end
+landing on its last (31 January plus a month is 28 February), then the wall clock — and by the
+clock, in real seconds. The two part when the zone's offset differs at either end; the answer
+then names the last change, found a day at a time back from the later date, then to the second.
+An ISO 8601 duration is parsed by hand, so a refusal is located; « 1h30 » or « 90 min » are read
+too and written back in ISO. A month or a year has no length in seconds: such a duration has no
+total. The words that spell either aloud are the front's, from typed parts.
+
 **A zone is the IANA database's**, compiled into the binary (`tools/zones.rs`, `chrono-tz`):
 nothing is read from the system but the name of its own zone (`iana-time-zone`), so Windows and
 Linux answer alike. A time is read by `dates::parse` and placed in the zone it was typed in: one

@@ -792,6 +792,38 @@ describe('The tools', () => {
       await $(testid('tool-clear')).click();
     });
 
+    it('measures a gap on its second tab by the clock, and reads an ISO duration or words', async () => {
+      const row = async (attribute: string, id: string) =>
+        (await $(`[${attribute}="${id}"] ${testid('output-value')}`).getText()).trim();
+      await $(`${testid('segmented-dates-tab')} [data-segment-id="durations"]`).click();
+
+      // Offsets written out: what the clock counts does not depend on the runner's zone.
+      await setField(testid('dates-from'), '2026-03-12T08:00:00Z');
+      await setField(testid('dates-to'), '2026-10-04T14:41:00Z');
+      await eventually(
+        () => row('data-elapsed', 'days'),
+        (days) => /^206 [jd] 6 h 41$/.test(days),
+        'the elapsed days',
+      );
+      expect(await row('data-elapsed', 'iso')).toMatch(/^P6M22DT\d+H41M$/);
+
+      await setField(testid('dates-duration'), 'PT1H30M');
+      await eventually(
+        () => row('data-total', 'minutes'),
+        (minutes) => minutes === '90',
+        'ninety minutes',
+      );
+      await setField(testid('dates-duration'), '1h30');
+      await eventually(
+        () => row('data-total', 'iso'),
+        (iso) => iso === 'PT1H30M',
+        'the ISO form of words',
+      );
+
+      await $(testid('tool-clear')).click();
+      await $(`${testid('segmented-dates-tab')} [data-segment-id="convert"]`).click();
+    });
+
     const zoneRow = (zone: string) => `${testid('zones-row')}[data-zone="${zone}"]`;
     const zoneTime = (zone: string) => $(`${zoneRow(zone)} ${testid('zones-time')}`).getText();
 
