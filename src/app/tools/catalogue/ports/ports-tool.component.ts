@@ -5,9 +5,9 @@ import { Tool } from '@core/services/tools/tool.model';
 import { toolState } from '@core/services/tools/tool-sessions';
 import {
   ReferenceCellsDirective,
-  ReferenceColumn,
   ReferenceRow,
   ReferenceTableComponent,
+  referenceColumns,
   matchesSearchable,
 } from '@tools/ui/reference-table/reference-table.component';
 import { PORTS, PORT_RANGES, Port, PortWords, portRange } from './ports.data';
@@ -17,10 +17,12 @@ interface PortRow extends ReferenceRow {
   readonly note: string;
 }
 
-const COLUMNS: readonly ReferenceColumn[] = ['port', 'transport', 'service', 'note'].map((id) => ({
-  id,
-  labelKey: `tools.ports.columns.${id}`,
-}));
+const COLUMNS = referenceColumns('tools.ports.columns', {
+  port: '68px',
+  transport: '100px',
+  service: '30%',
+  note: null,
+});
 
 const DIGITS = /^\d+$/;
 

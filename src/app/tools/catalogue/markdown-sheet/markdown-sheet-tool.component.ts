@@ -6,9 +6,9 @@ import { toolState } from '@core/services/tools/tool-sessions';
 import { IconComponent } from '@shared/icon/icon.component';
 import {
   ReferenceCellsDirective,
-  ReferenceColumn,
   ReferenceRow,
   ReferenceTableComponent,
+  referenceColumns,
 } from '@tools/ui/reference-table/reference-table.component';
 import { MARKDOWN_ENTRIES, MARKDOWN_GROUPS, MarkdownEntry, MarkdownWords } from './markdown-sheet.data';
 
@@ -17,12 +17,13 @@ interface MarkdownRow extends ReferenceRow {
   readonly what: string;
 }
 
-const COLUMNS: readonly ReferenceColumn[] = ['syntax', 'what', 'example', 'commonmark', 'github'].map(
-  (id) => ({
-    id,
-    labelKey: `tools.markdown-sheet.columns.${id}`,
-  }),
-);
+const COLUMNS = referenceColumns('tools.markdown-sheet.columns', {
+  syntax: '15%',
+  what: null,
+  example: '30%',
+  commonmark: '116px',
+  github: '88px',
+});
 
 /** A space that matters is drawn `␣`, and copied as a space. */
 const SPACE = '␣';

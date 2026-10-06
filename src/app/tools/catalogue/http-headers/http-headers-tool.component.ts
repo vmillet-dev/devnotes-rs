@@ -5,9 +5,9 @@ import { Tool } from '@core/services/tools/tool.model';
 import { toolState } from '@core/services/tools/tool-sessions';
 import {
   ReferenceCellsDirective,
-  ReferenceColumn,
   ReferenceRow,
   ReferenceTableComponent,
+  referenceColumns,
 } from '@tools/ui/reference-table/reference-table.component';
 import { HEADER_GROUPS, HTTP_HEADERS, HttpHeader, HttpHeaderWords } from './http-headers.data';
 
@@ -16,10 +16,12 @@ interface HeaderRow extends ReferenceRow {
   readonly does: string;
 }
 
-const COLUMNS: readonly ReferenceColumn[] = ['name', 'direction', 'does', 'by'].map((id) => ({
-  id,
-  labelKey: `tools.http-headers.columns.${id}`,
-}));
+const COLUMNS = referenceColumns('tools.http-headers.columns', {
+  name: '31%',
+  direction: '96px',
+  does: null,
+  by: '136px',
+});
 
 @Component({
   selector: 'app-http-headers-tool',

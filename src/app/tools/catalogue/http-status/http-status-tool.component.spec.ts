@@ -86,7 +86,7 @@ describe('HttpStatusToolComponent', () => {
     await search(harness, 'redirect');
 
     expect(keys(harness)).toContain('301');
-    expect(harness.element('[data-group="3xx"] th')?.textContent).toContain('Redirection');
+    expect(harness.element('[data-group="3xx"] caption')?.textContent).toContain('Redirection');
     TestBed.inject(TranslocoService).setActiveLang('fr');
   });
 

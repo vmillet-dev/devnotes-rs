@@ -30,7 +30,7 @@ describe('MimeTypesToolComponent', () => {
     expect(harness.all('[data-testid="reference-group"]').map((group) => group.dataset['group'])).toEqual([
       ...MIME_GROUPS,
     ]);
-    expect(harness.element('[data-group="font"] th')?.textContent).toContain('font/*');
+    expect(harness.element('[data-group="font"] caption')?.textContent).toContain('font/*');
   });
 
   it.each([

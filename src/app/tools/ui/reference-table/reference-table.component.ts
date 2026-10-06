@@ -33,6 +33,23 @@ export interface ReferenceGroup {
 export interface ReferenceColumn {
   readonly id: string;
   readonly labelKey: string;
+  /** A share of the card or a length; none takes what is left. */
+  readonly width?: string;
+}
+
+/**
+ * The columns in their order, each sized: every group is a table of its own, and only widths
+ * set the same way line their columns up from one card to the next.
+ */
+export function referenceColumns(
+  prefix: string,
+  widths: Readonly<Record<string, string | null>>,
+): readonly ReferenceColumn[] {
+  return Object.entries(widths).map(([id, width]) => ({
+    id,
+    labelKey: `${prefix}.${id}`,
+    ...(width === null ? {} : { width }),
+  }));
 }
 
 export interface ReferenceCellsContext<T> {

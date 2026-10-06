@@ -2,7 +2,7 @@
 
 :host {
   @include tool-fills-frame;
-  max-width: 1100px;
+  --reference-column: 540px;
 }
 
 app-reference-table {
@@ -18,10 +18,6 @@ td {
   font-weight: 600;
   color: var(--text-0);
   overflow-wrap: anywhere;
-}
-
-.extensions {
-  min-width: 120px;
 }
 
 .extension {

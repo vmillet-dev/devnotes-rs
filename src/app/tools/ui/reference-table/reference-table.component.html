@@ -23,45 +23,50 @@
 </div>
 
 @if (sections().length > 0) {
-  <div class="frame">
-    <table class="table" data-testid="reference-table">
-      <caption class="visually-hidden">
-        {{
-          caption()
-        }}
-      </caption>
-      <thead>
-        <tr>
-          @for (column of columns(); track column.id) {
-            <th scope="col" [attr.data-column]="column.id">{{ column.labelKey | transloco }}</th>
-          }
-          <th scope="col" class="copy-head">
-            <span class="visually-hidden">{{ 'tools.copy' | transloco }}</span>
-          </th>
-        </tr>
-      </thead>
+  <div class="frame" role="region" data-testid="reference-table" [attr.aria-label]="caption()">
+    <div class="sections">
       @for (section of sections(); track section.id) {
-        <tbody data-testid="reference-group" [attr.data-group]="section.id">
-          <tr class="group-row">
-            <th scope="colgroup" [attr.colspan]="columns().length + 1">
-              {{ section.label }}<span class="group-count">{{ section.rows.length }}</span>
-            </th>
-          </tr>
-          @for (row of section.rows; track row.key) {
-            <tr class="row" data-testid="reference-row" [attr.data-key]="row.key">
-              <ng-container *ngTemplateOutlet="cells().template; context: { $implicit: row }" />
-              <td class="copy-cell">
-                <app-copy-value
-                  [value]="row.copy?.value ?? row.key"
-                  [what]="row.copy?.what ?? row.key"
-                  [compact]="true"
-                />
-              </td>
-            </tr>
-          }
-        </tbody>
+        <div class="section" data-testid="reference-group" [attr.data-group]="section.id">
+          <table class="table">
+            <caption class="section-title">
+              {{
+                section.label
+              }}<span class="group-count">{{ section.rows.length }}</span>
+            </caption>
+            <colgroup>
+              @for (column of columns(); track column.id) {
+                <col [style.width]="column.width ?? null" />
+              }
+              <col class="copy-column" />
+            </colgroup>
+            <thead>
+              <tr>
+                @for (column of columns(); track column.id) {
+                  <th scope="col" [attr.data-column]="column.id">{{ column.labelKey | transloco }}</th>
+                }
+                <th scope="col" class="copy-head">
+                  <span class="visually-hidden">{{ 'tools.copy' | transloco }}</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of section.rows; track row.key) {
+                <tr class="row" data-testid="reference-row" [attr.data-key]="row.key">
+                  <ng-container *ngTemplateOutlet="cells().template; context: { $implicit: row }" />
+                  <td class="copy-cell">
+                    <app-copy-value
+                      [value]="row.copy?.value ?? row.key"
+                      [what]="row.copy?.what ?? row.key"
+                      [compact]="true"
+                    />
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
       }
-    </table>
+    </div>
   </div>
 } @else if (searching()) {
   <p class="empty" data-testid="reference-empty">
