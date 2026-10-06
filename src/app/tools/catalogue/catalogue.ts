@@ -199,4 +199,16 @@ export const TOOLS: readonly ToolDefinition[] = [
     keywords: ['mime', 'media type', 'content-type', 'extension', 'json', 'png', 'pdf'],
     load: () => import('./mime-types/mime-types-tool.component').then((m) => m.MimeTypesToolComponent),
   },
+  {
+    id: 'ports',
+    category: 'reference',
+    keywords: ['port', 'tcp', 'udp', 'iana', 'ssh', 'postgresql', 'redis', 'firewall', 'pare-feu'],
+    load: () => import('./ports/ports-tool.component').then((m) => m.PortsToolComponent),
+  },
+  {
+    id: 'signals',
+    category: 'reference',
+    keywords: ['signal', 'kill', 'sigterm', 'sigkill', 'sighup', 'sigint', 'posix', 'trap'],
+    load: () => import('./signals/signals-tool.component').then((m) => m.SignalsToolComponent),
+  },
 ];

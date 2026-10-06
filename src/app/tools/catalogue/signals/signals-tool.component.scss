@@ -1,0 +1,50 @@
+@use 'mixins' as *;
+
+:host {
+  @include tool-fills-frame;
+  max-width: 1100px;
+}
+
+app-reference-table {
+  flex: 1;
+}
+
+td {
+  @include reference-cell;
+}
+
+.number,
+.macos {
+  font-family: var(--font-mono), monospace;
+  white-space: nowrap;
+}
+
+.number {
+  font-weight: 600;
+  color: var(--text-0);
+}
+
+.name {
+  font-family: var(--font-mono), monospace;
+  font-weight: 600;
+  color: var(--text-0);
+}
+
+.action,
+.catchable {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.catchable[data-catchable='false'] {
+  color: var(--red);
+}
+
+.macos {
+  color: var(--text-2);
+
+  &.differs {
+    font-weight: 600;
+    color: var(--amber-text);
+  }
+}
