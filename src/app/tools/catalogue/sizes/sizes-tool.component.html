@@ -1,65 +1,58 @@
 <div class="columns">
   <section class="column" aria-labelledby="sizes-input-title">
-    <h2 id="sizes-input-title" class="section-title">{{ 'tools.input' | transloco }}</h2>
-    <input
-      type="text"
-      class="field"
-      data-testid="sizes-input"
-      spellcheck="false"
-      [attr.aria-label]="'tools.sizes.inputLabel' | transloco"
-      [value]="text()"
-      [placeholder]="'tools.sizes.placeholder' | transloco"
-      (input)="onInput($event)"
-    />
-    <div class="options">
-      <span class="option">
-        {{ 'tools.sizes.unit' | transloco }}
-        <app-choice-menu
-          kind="sizes-unit"
-          [label]="'tools.sizes.unit' | transloco"
-          [options]="units"
-          [currentId]="unit()"
-          (chosen)="onUnit($event)"
-        />
-      </span>
-      <label class="option">
-        {{ 'tools.sizes.decimals' | transloco }}
-        <input
-          type="number"
-          class="number"
-          data-testid="sizes-decimals"
-          min="0"
-          max="12"
-          [value]="decimals()"
-          (input)="onDecimals($event)"
-        />
-      </label>
+    <h2 id="sizes-input-title" class="section-title">{{ 'tools.sizes.value' | transloco }}</h2>
+    <div class="value">
+      <input
+        type="text"
+        class="field"
+        data-testid="sizes-input"
+        spellcheck="false"
+        [attr.aria-label]="'tools.sizes.inputLabel' | transloco"
+        [value]="text()"
+        [placeholder]="'tools.sizes.placeholder' | transloco"
+        (input)="onInput($event)"
+      />
+      <app-choice-menu
+        kind="sizes-unit"
+        [label]="'tools.sizes.unit' | transloco"
+        [options]="units"
+        [currentId]="unit()"
+        (chosen)="onUnit($event)"
+      />
     </div>
+    <label class="option">
+      {{ 'tools.sizes.decimals' | transloco }}
+      <input
+        type="number"
+        class="number"
+        data-testid="sizes-decimals"
+        min="0"
+        max="12"
+        [value]="decimals()"
+        (input)="onDecimals($event)"
+      />
+    </label>
 
     @if (reading(); as reading) {
-      <p class="reading" data-testid="sizes-reading" [attr.data-unit]="reading.unit">
-        {{
-          'tools.sizes.readAs'
-            | transloco: { value: reading.value, unit: ('tools.sizes.units.' + reading.unit | transloco) }
-        }}
-      </p>
       @if (reading.inText) {
         <p class="note" data-testid="sizes-unit-in-text">{{ 'tools.sizes.unitInText' | transloco }}</p>
       }
-    }
-    @if (gap(); as gap) {
-      <p class="gap" data-testid="sizes-gap">
-        {{
-          'tools.sizes.gap'
-            | transloco
-              : {
-                  decimal: ('tools.sizes.units.' + gap.decimal | transloco),
-                  binary: ('tools.sizes.units.' + gap.binary | transloco),
-                  ratio: gap.ratio,
-                }
-        }}
-      </p>
-      <p class="note">{{ 'tools.sizes.conventions' | transloco }}</p>
+      <div class="reading" data-testid="sizes-reading" [attr.data-unit]="reading.unit">
+        @if (gap(); as gap) {
+          <p class="gap" data-testid="sizes-gap">
+            {{
+              'tools.sizes.gap'
+                | transloco
+                  : {
+                      decimal: ('tools.sizes.units.' + gap.decimal | transloco),
+                      binary: ('tools.sizes.units.' + gap.binary | transloco),
+                      ratio: gap.ratio,
+                    }
+            }}
+          </p>
+        }
+        <p class="conventions">{{ 'tools.sizes.conventions' | transloco }}</p>
+      </div>
     }
     @if (problem(); as problem) {
       <p class="problem" role="status" data-testid="sizes-problem" [attr.data-problem]="problem.kind">
@@ -78,25 +71,27 @@
     }
   </section>
 
-  <section class="column" aria-labelledby="sizes-output-title">
-    <h2 id="sizes-output-title" class="section-title">{{ 'tools.result' | transloco }}</h2>
-    @for (group of groups(); track group.id) {
-      <h3 class="group-title" [attr.data-group]="group.id">
-        {{ 'tools.sizes.groups.' + group.id | transloco }}
-      </h3>
-      @for (row of group.rows; track row.unit) {
-        <app-output-row
-          [attr.data-unit]="row.unit"
-          [name]="'tools.sizes.units.' + row.unit | transloco"
-          [value]="row.value"
-          [copied]="row.exact"
-        />
-      }
-    } @empty {
-      <p class="empty">{{ 'tools.sizes.empty' | transloco }}</p>
-    }
-    @if (converted()) {
+  <section class="column results" aria-labelledby="sizes-output-title">
+    <h2 id="sizes-output-title" class="visually-hidden">{{ 'tools.result' | transloco }}</h2>
+    @if (groups().length > 0) {
+      <div class="card" data-testid="sizes-results">
+        @for (group of groups(); track group.id) {
+          <h3 class="card-group" data-testid="sizes-group" [attr.data-group]="group.id">
+            {{ 'tools.sizes.groups.' + group.id | transloco }}
+          </h3>
+          @for (row of group.rows; track row.unit) {
+            <app-result-row
+              [attr.data-unit]="row.unit"
+              [name]="'tools.sizes.units.' + row.unit | transloco"
+              [value]="row.value"
+              [copied]="row.exact"
+            />
+          }
+        }
+      </div>
       <p class="note">{{ 'tools.sizes.rounded' | transloco }}</p>
+    } @else {
+      <p class="empty">{{ 'tools.sizes.empty' | transloco }}</p>
     }
   </section>
 </div>

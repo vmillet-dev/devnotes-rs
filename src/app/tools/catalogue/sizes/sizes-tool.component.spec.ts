@@ -62,13 +62,16 @@ describe('SizesToolComponent', () => {
     expect(value(harness, 'byte')).toBe(`1${NNBSP}500${NNBSP}000${NNBSP}000`);
     expect(value(harness, 'gigabyte')).toBe('1,5');
     expect(value(harness, 'gibibyte')).toBe('≈ 1,397');
+    // Too small for three decimals: a power of ten rather than a bare 0.
+    expect(value(harness, 'petabyte')).toBe('1,5 × 10⁻⁶');
+    expect(value(harness, 'pebibyte')).toBe('≈ 1,332 × 10⁻⁶');
     expect(harness.element('[data-unit="gibibyte"]').textContent).toContain('Gio');
-    expect(harness.all('.group-title').map((title) => title.dataset['group'])).toEqual([
+    expect(harness.all('[data-testid="sizes-group"]').map((title) => title.dataset['group'])).toEqual([
       'bytes',
       'decimal',
       'binary',
     ]);
-    expect(harness.element('[data-testid="sizes-reading"]').textContent).toContain('1,5 Go');
+    expect(harness.element('[data-testid="sizes-reading"]').dataset['unit']).toBe('gigabyte');
     expect(harness.element('[data-testid="sizes-unit-in-text"]')).not.toBeNull();
     expect(harness.element('[data-testid="sizes-gap"]').textContent?.trim()).toBe('1 Go = 0,931 Gio');
   });
