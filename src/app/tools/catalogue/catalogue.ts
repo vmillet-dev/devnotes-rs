@@ -28,12 +28,6 @@ export const TOOLS: readonly ToolDefinition[] = [
     load: () => import('./case/case-tool.component').then((m) => m.CaseToolComponent),
   },
   {
-    id: 'url-parser',
-    category: 'text',
-    keywords: ['url', 'uri', 'query', 'querystring'],
-    load: () => import('./url-parser/url-parser-tool.component').then((m) => m.UrlParserToolComponent),
-  },
-  {
     id: 'line-breaks',
     category: 'text',
     keywords: ['crlf', 'lf', 'eol', 'newline', 'whitespace'],
@@ -94,7 +88,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   {
     id: 'url-codec',
     category: 'encode',
-    keywords: ['url', 'percent', 'encodeURIComponent', 'escape'],
+    keywords: ['url', 'uri', 'query', 'querystring', 'percent', 'encodeURIComponent', 'escape', 'parse'],
     load: () => import('./url-codec/url-codec-tool.component').then((m) => m.UrlCodecToolComponent),
   },
   {

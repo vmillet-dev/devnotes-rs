@@ -1,60 +1,153 @@
-<div class="scope">
-  <span class="scope-label">{{ 'tools.url-codec.scope' | transloco }}</span>
+<div class="bar">
   <app-segmented-choice
-    kind="url-codec-scope"
-    [label]="'tools.url-codec.scope' | transloco"
-    [segments]="scopes"
-    [currentId]="scope()"
-    (chosen)="onScope($event)"
+    kind="url-tab"
+    [label]="'tools.url-codec.tab' | transloco"
+    [segments]="tabs"
+    [currentId]="tab()"
+    (chosen)="onTab($event)"
   />
-  <span class="scope-hint">{{ 'tools.url-codec.scopeHints.' + scope() | transloco }}</span>
+  @if (tab() === 'codec') {
+    <div class="scope">
+      <span class="scope-label">{{ 'tools.url-codec.scope' | transloco }}</span>
+      <app-segmented-choice
+        kind="url-codec-scope"
+        [label]="'tools.url-codec.scope' | transloco"
+        [segments]="scopes"
+        [currentId]="scope()"
+        (chosen)="onScope($event)"
+      />
+      <span class="scope-hint">{{ 'tools.url-codec.scopeHints.' + scope() | transloco }}</span>
+    </div>
+  }
 </div>
 
-<div class="columns">
-  <section class="column" aria-labelledby="url-codec-decoded-title">
-    <div class="section-head">
-      <h2 id="url-codec-decoded-title" class="section-title">{{ 'tools.url-codec.decoded' | transloco }}</h2>
-      <app-copy-value [value]="decoded()" [what]="'tools.url-codec.decoded' | transloco" />
-    </div>
-    <label class="field">
-      <span class="visually-hidden">{{ 'tools.url-codec.decoded' | transloco }}</span>
-      <textarea
-        class="text"
-        data-testid="url-codec-decoded"
-        rows="8"
-        spellcheck="false"
-        [value]="decoded()"
-        [placeholder]="'tools.url-codec.decodedPlaceholder' | transloco"
-        (input)="onInput('decoded', $event)"
-      ></textarea>
-    </label>
-  </section>
+@if (tab() === 'codec') {
+  <div class="columns" data-testid="url-codec">
+    <section class="column" aria-labelledby="url-codec-decoded-title">
+      <div class="section-head">
+        <h2 id="url-codec-decoded-title" class="section-title">
+          {{ 'tools.url-codec.decoded' | transloco }}
+        </h2>
+        <app-copy-value [value]="decoded()" [what]="'tools.url-codec.decoded' | transloco" />
+      </div>
+      <label class="field">
+        <span class="visually-hidden">{{ 'tools.url-codec.decoded' | transloco }}</span>
+        <textarea
+          class="text"
+          data-testid="url-codec-decoded"
+          spellcheck="false"
+          [value]="decoded()"
+          [placeholder]="'tools.url-codec.decodedPlaceholder' | transloco"
+          (input)="onInput('decoded', $event)"
+        ></textarea>
+      </label>
+      @if (offersAnalysis()) {
+        <button type="button" class="analyse" data-testid="url-analyse-this" (click)="analyse()">
+          {{ 'tools.url-codec.analyseThis' | transloco }} →
+        </button>
+      }
+    </section>
 
-  <section class="column" aria-labelledby="url-codec-encoded-title">
-    <div class="section-head">
-      <h2 id="url-codec-encoded-title" class="section-title">{{ 'tools.url-codec.encoded' | transloco }}</h2>
-      <app-copy-value [value]="encoded()" [what]="'tools.url-codec.encoded' | transloco" />
-    </div>
-    <label class="field">
-      <span class="visually-hidden">{{ 'tools.url-codec.encoded' | transloco }}</span>
-      <textarea
-        class="text"
-        data-testid="url-codec-encoded"
-        rows="8"
-        spellcheck="false"
-        [value]="encoded()"
-        [placeholder]="'tools.url-codec.encodedPlaceholder' | transloco"
-        (input)="onInput('encoded', $event)"
-      ></textarea>
-    </label>
-    @if (problem(); as problem) {
-      <p class="problem" role="status" data-testid="url-codec-problem">
-        @if (problem.kind === 'malformedEscape') {
-          {{ 'tools.url-codec.malformed' | transloco: { at: problem.at + 1 } }}
-        } @else {
-          {{ 'tools.url-codec.notUtf8' | transloco }}
+    <section class="column" aria-labelledby="url-codec-encoded-title">
+      <div class="section-head">
+        <h2 id="url-codec-encoded-title" class="section-title">
+          {{ 'tools.url-codec.encoded' | transloco }}
+        </h2>
+        <app-copy-value [value]="encoded()" [what]="'tools.url-codec.encoded' | transloco" />
+      </div>
+      <label class="field">
+        <span class="visually-hidden">{{ 'tools.url-codec.encoded' | transloco }}</span>
+        <textarea
+          class="text"
+          data-testid="url-codec-encoded"
+          spellcheck="false"
+          [value]="encoded()"
+          [placeholder]="'tools.url-codec.encodedPlaceholder' | transloco"
+          (input)="onInput('encoded', $event)"
+        ></textarea>
+      </label>
+      @if (problem(); as problem) {
+        <p class="problem" role="status" data-testid="url-codec-problem">
+          @if (problem.kind === 'malformedEscape') {
+            {{ 'tools.url-codec.malformed' | transloco: { at: problem.at + 1 } }}
+          } @else {
+            {{ 'tools.url-codec.notUtf8' | transloco }}
+          }
+        </p>
+      }
+    </section>
+  </div>
+} @else {
+  <div class="columns" data-testid="url-parser">
+    <section class="column" aria-labelledby="url-input-title">
+      <h2 id="url-input-title" class="section-title">{{ 'tools.input' | transloco }}</h2>
+      <label class="field">
+        <span class="visually-hidden">{{ 'tools.url-codec.inputLabel' | transloco }}</span>
+        <textarea
+          class="text"
+          data-testid="url-parser-input"
+          spellcheck="false"
+          [value]="text()"
+          [placeholder]="'tools.url-codec.placeholder' | transloco"
+          (input)="onParsed($event)"
+        ></textarea>
+      </label>
+      @if (parseProblem(); as problem) {
+        <p class="problem" role="status" data-testid="url-parser-problem">
+          {{ 'tools.url-codec.problems.' + problem | transloco }}
+        </p>
+      }
+    </section>
+
+    <section class="column results" aria-labelledby="url-output-title">
+      <h2 id="url-output-title" class="section-title">{{ 'tools.url-codec.parts' | transloco }}</h2>
+      @if (parts(); as parts) {
+        <dl class="parts" data-testid="url-parser-parts">
+          @for (row of rows(); track row.id) {
+            @let label = 'tools.url-codec.labels.' + row.id | transloco;
+            <div class="part" [attr.data-part]="row.id">
+              <dt class="part-name">{{ label }}</dt>
+              <dd class="part-value">
+                <code>{{ row.value }}</code>
+                @if (row.id === 'port' && parts.portIsDefault) {
+                  <span class="aside">{{ 'tools.url-codec.defaultPort' | transloco }}</span>
+                }
+              </dd>
+              @if (row.id !== 'password') {
+                <app-copy-value [value]="row.value" [what]="label" [compact]="true" />
+              }
+            </div>
+          }
+        </dl>
+
+        @if (parts.parameters.length > 0) {
+          <h2 class="section-title">
+            {{ 'tools.url-codec.parameters' | transloco: { count: parts.parameters.length } }}
+          </h2>
+          <table class="parameters" data-testid="url-parser-parameters">
+            <thead>
+              <tr>
+                <th scope="col">{{ 'tools.url-codec.parameterName' | transloco }}</th>
+                <th scope="col">{{ 'tools.url-codec.parameterValue' | transloco }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (parameter of parts.parameters; track $index) {
+                <tr>
+                  <td>
+                    <code>{{ parameter.name }}</code>
+                  </td>
+                  <td>
+                    <code>{{ parameter.value }}</code>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
         }
-      </p>
-    }
-  </section>
-</div>
+      } @else if (parseProblem() === null) {
+        <p class="empty">{{ 'tools.url-codec.empty' | transloco }}</p>
+      }
+    </section>
+  </div>
+}

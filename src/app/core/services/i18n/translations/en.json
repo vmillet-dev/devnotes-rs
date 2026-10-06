@@ -1054,38 +1054,6 @@
       "slugHint": "The slug transliterates everything (Straße → strasse, Привет → privet); the code formats only strip accents.",
       "forUrl": "For URLs"
     },
-    "url-parser": {
-      "name": "URL parser",
-      "description": "Scheme, host, path, parameters",
-      "inputLabel": "URL to parse",
-      "placeholder": "https://api.example.com/v1/invoices?status=paid&page=2",
-      "parts": "Parts",
-      "labels": {
-        "scheme": "Scheme",
-        "username": "User",
-        "password": "Password",
-        "host": "Host",
-        "port": "Port",
-        "path": "Path",
-        "query": "Query",
-        "fragment": "Fragment"
-      },
-      "defaultPort": "default",
-      "parameters": "{count, plural, one {Parameter · #} other {Parameters · #}}",
-      "parameterName": "Name",
-      "parameterValue": "Value",
-      "empty": "The URL's parts show here.",
-      "noteTitle": "URL of {{host}}",
-      "problems": {
-        "empty": "Paste a URL.",
-        "noScheme": "The scheme is missing: a URL starts with https:// or another scheme.",
-        "emptyHost": "The host is empty.",
-        "invalidPort": "The port is not a number between 0 and 65535.",
-        "invalidAddress": "The IP address is malformed.",
-        "invalidDomain": "The domain name holds a forbidden character.",
-        "other": "This URL is not valid."
-      }
-    },
     "line-breaks": {
       "name": "Line breaks",
       "description": "CRLF ↔ LF, trailing spaces",
@@ -1141,7 +1109,7 @@
     },
     "url-codec": {
       "name": "URL",
-      "description": "Encode, decode, component by component",
+      "description": "Encode, decode, take apart",
       "scope": "Scope",
       "scopes": {
         "component": "Component",
@@ -1158,7 +1126,41 @@
       "malformed": "Incomplete escape at character {{at}}: a % expects two hexadecimal digits.",
       "notUtf8": "These bytes are no UTF-8 text.",
       "noteEncoded": "Text encoded for a URL",
-      "noteDecoded": "Decoded URL"
+      "noteDecoded": "Decoded URL",
+      "tab": "Tab",
+      "tabs": {
+        "codec": "Encode / decode",
+        "parse": "Analyse"
+      },
+      "analyseThis": "Analyse this URL",
+      "inputLabel": "URL to parse",
+      "placeholder": "https://api.example.com/v1/invoices?status=paid&page=2",
+      "parts": "Parts",
+      "labels": {
+        "scheme": "Scheme",
+        "username": "User",
+        "password": "Password",
+        "host": "Host",
+        "port": "Port",
+        "path": "Path",
+        "query": "Query",
+        "fragment": "Fragment"
+      },
+      "defaultPort": "default",
+      "parameters": "{count, plural, one {Parameter · #} other {Parameters · #}}",
+      "parameterName": "Name",
+      "parameterValue": "Value",
+      "empty": "The URL's parts show here.",
+      "problems": {
+        "empty": "Paste a URL.",
+        "noScheme": "The scheme is missing: a URL starts with https:// or another scheme.",
+        "emptyHost": "The host is empty.",
+        "invalidPort": "The port is not a number between 0 and 65535.",
+        "invalidAddress": "The IP address is malformed.",
+        "invalidDomain": "The domain name holds a forbidden character.",
+        "other": "This URL is not valid."
+      },
+      "noteParsed": "URL of {{host}}"
     },
     "base64": {
       "name": "Base64",
