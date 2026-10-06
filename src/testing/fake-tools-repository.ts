@@ -79,7 +79,7 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
   identifiers: string[] = [];
   inspection: IdInspection = { kind: 'unrecognised' };
   colour: ColourAnswer = { colour: { kind: 'empty' }, against: { kind: 'empty' }, contrast: null };
-  conversion: ConvertAnswer = { kind: 'converted', text: '' };
+  conversion: ConvertAnswer = { kind: 'converted', text: '', dropped: [] };
   generated: GenerateAnswer = { kind: 'generated', text: '{}', seed: 1, unsupported: [] };
   loremAnswer: LoremAnswer = { text: '', seed: 1, count: 3, atMost: 200 };
   diffAnswer: JsonDiffAnswer = {

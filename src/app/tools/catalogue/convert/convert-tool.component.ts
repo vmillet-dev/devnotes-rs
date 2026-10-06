@@ -4,7 +4,7 @@ import { ToolsRepository } from '@core/data/tools.repository';
 import { LanguageTag } from '@core/model/language.model';
 import { DataFormat } from '@core/model/tool-answers.model';
 import { liveResult } from '@core/services/tools/live-result';
-import { Tool, ToolAction, ToolResult } from '@core/services/tools/tool.model';
+import { Tool, ToolResult } from '@core/services/tools/tool.model';
 import { toolState } from '@core/services/tools/tool-sessions';
 import {
   Segment,
@@ -19,12 +19,22 @@ const SEGMENTS: readonly Segment[] = FORMATS.map((id) => ({ id, labelKey: `tools
 /** What a note keeps the result as, so it is highlighted in its own language. */
 const LANGUAGES: Record<DataFormat, LanguageTag> = { json: 'json', toml: 'toml', xml: 'xml', yaml: 'yml' };
 
+/** The mockup's document: its `null` is what TOML leaves out and names. */
 const SAMPLE = `{
-  "name": "DevNotes",
-  "version": "0.9.2",
-  "features": ["notes", "tools"],
-  "window": { "width": 1440, "height": 900, "maximised": false }
+  "nom": "Dupont",
+  "prenom": "Jean",
+  "age": 30,
+  "estActif": true,
+  "competences": ["JavaScript", "Python", "JSON"],
+  "adresse": {
+    "ville": "Paris",
+    "codePostal": "75001"
+  },
+  "telephone": null
 }`;
+
+/** How many dropped keys are named before « … ». */
+const NAMED = 3;
 
 /** Any format to any other, through one value in Rust; the conventions are said beside the result. */
 @Component({
@@ -53,6 +63,14 @@ export class ConvertToolComponent implements Tool {
     return answer?.kind === 'converted' ? answer.text : null;
   });
 
+  /** « telephone, adresse.fax, … »: the first keys TOML left out. */
+  protected readonly dropped = computed(() => {
+    const answer = this.answer.value();
+    const paths = answer?.kind === 'converted' ? answer.dropped : [];
+    const named = paths.slice(0, NAMED).join(', ');
+    return { count: paths.length, paths: paths.length > NAMED ? `${named}, …` : named };
+  });
+
   protected readonly unreadable = computed(() => {
     const [answer, asked] = [this.answer.value(), this.answer.answered()];
     return answer?.kind === 'unreadable' && asked ? { ...answer, format: asked.from } : null;
@@ -67,10 +85,6 @@ export class ConvertToolComponent implements Tool {
   protected readonly conventions = computed(() =>
     (['xml', 'toml'] as const).filter((format) => this.from() === format || this.to() === format),
   );
-
-  readonly actions = computed<readonly ToolAction[]>(() => [
-    { id: 'swap', labelKey: 'tools.convert.swap', disabled: false, run: () => this.swap() },
-  ]);
 
   readonly result = computed<ToolResult | null>(() => {
     const [converted, asked] = [this.converted(), this.answer.answered()];
@@ -89,7 +103,7 @@ export class ConvertToolComponent implements Tool {
 
   sample(): void {
     this.from.set('json');
-    this.to.set('yaml');
+    this.to.set('toml');
     this.text.set(SAMPLE);
   }
 
@@ -97,7 +111,7 @@ export class ConvertToolComponent implements Tool {
     this.text.set('');
   }
 
-  /** The result becomes what is converted back: the way to check a round trip. */
+  /** The formats trade sides, and the result becomes what is converted back: a round trip. */
   protected swap(): void {
     const [converted, asked] = [this.converted(), this.answer.answered()];
     const [from, to] = converted !== null && asked ? [asked.from, asked.to] : [this.from(), this.to()];
@@ -112,11 +126,12 @@ export class ConvertToolComponent implements Tool {
     this.text.set((event.target as HTMLTextAreaElement).value);
   }
 
+  /** The format the other side holds is disabled there: a format is never converted to itself. */
   protected onFrom(id: string): void {
-    this.from.set(id as DataFormat);
+    if (id !== this.to()) this.from.set(id as DataFormat);
   }
 
   protected onTo(id: string): void {
-    this.to.set(id as DataFormat);
+    if (id !== this.from()) this.to.set(id as DataFormat);
   }
 }

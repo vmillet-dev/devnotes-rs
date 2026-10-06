@@ -712,8 +712,10 @@ has `preserve_order` on: without it a `Map` sorts its keys, and a converted docu
 come back in alphabetical order. YAML is `yaml-rust2`, maintained and pure Rust — `serde_yaml`
 is archived — and XML is read and written by hand around `quick-xml`, to one convention the
 tool states beside its result (`@name`, `#text`, a repeated element as a list). What a format
-cannot hold — a TOML `null`, a list at a TOML root, two XML roots, a name XML refuses — is an
-answer carrying its `JSONPath`, never a guess.
+cannot hold — a TOML `null` in a list, a list at a TOML root, two XML roots, a name XML
+refuses — is an answer carrying its `JSONPath`, never a guess. A key holding `null` is the one
+exception: TOML leaves it out and the answer names it, since dropping it moves nothing else. The
+two sides never hold the same format.
 
 **A generation is drawn from a seed** (`tools/generate.rs`, a `SplitMix64` — never for a
 secret): the same seed and source give the same documents, and a generation without one draws a

@@ -1,44 +1,101 @@
 @use 'mixins' as *;
 
-.columns {
-  @include tool-columns;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+:host {
+  @include tool-fills-frame;
 }
 
-.column {
+// Two equal panels, the swap between them; one column when the window is narrow.
+.panels {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+  gap: 12px;
+  min-height: 0;
+
+  @media (width < 960px) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+  }
+}
+
+.panel {
   @include tool-column;
   gap: 10px;
+  min-height: 0;
 }
 
-.section-head {
-  @include tool-section-head;
-  flex-wrap: wrap;
-}
-
-.head-end {
+.panel-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 8px 10px;
 }
 
-.section-title {
+.title {
   @include tool-section-title;
+  margin-right: auto;
+}
+
+.panel:last-child .title {
+  margin-right: 0;
+}
+
+.spacer {
+  flex: 1;
 }
 
 .field {
   display: flex;
+  flex: 1;
+  min-height: 160px;
 }
 
 .text {
   @include tool-text-area;
-  resize: vertical;
+  resize: none;
+}
+
+.swap {
+  @include tool-button;
+  @include hit-target(40px);
+  align-self: start;
+  justify-content: center;
+  height: 40px;
+  margin-top: 42px;
+  font-size: 16px;
+
+  @media (width < 960px) {
+    margin-top: 0;
+    justify-self: center;
+  }
+}
+
+.banner {
+  @include surface(rgba(var(--amber-rgb), 0.06), 8px, var(--amber-dim));
+  margin: 0;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-1);
+
+  strong {
+    color: var(--text-0);
+  }
+
+  code {
+    font-family: var(--font-mono), monospace;
+    font-size: 11.5px;
+    color: var(--text-0);
+  }
 }
 
 .output {
   @include tool-text-area;
+  flex: 1;
   margin: 0;
-  min-height: 120px;
-  max-height: 520px;
+  min-height: 160px;
   overflow: auto;
   white-space: pre;
 }

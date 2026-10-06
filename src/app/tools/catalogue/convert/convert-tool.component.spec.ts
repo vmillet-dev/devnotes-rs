@@ -5,7 +5,7 @@ import { ConvertToolComponent } from './convert-tool.component';
 
 describe('ConvertToolComponent', () => {
   const answer = (tools: FakeToolsRepository): void => {
-    tools.conversion = { kind: 'converted', text: 'service: billing\n' };
+    tools.conversion = { kind: 'converted', text: 'service: billing\n', dropped: [] };
   };
 
   const text = (harness: ToolHarness<ConvertToolComponent>, testid: string): string =>
@@ -46,7 +46,7 @@ describe('ConvertToolComponent', () => {
     const harness = await renderTool(ConvertToolComponent, answer);
     await harness.type('convert-input', '{"service":"billing"}', 'convert_data');
 
-    harness.tool.actions()[0]!.run();
+    harness.element<HTMLButtonElement>('[data-testid="convert-swap"]').click();
     await harness.settle();
 
     expect(harness.element<HTMLTextAreaElement>('[data-testid="convert-input"]').value).toBe(
@@ -67,17 +67,51 @@ describe('ConvertToolComponent', () => {
     expect(harness.tool.result()).toBeNull();
   });
 
+  /** A format is never converted to itself: the one the other side holds is disabled. */
+  it('disables on each side the format the other holds', async () => {
+    const harness = await renderTool(ConvertToolComponent, answer);
+    const segment = (side: string, id: string) =>
+      harness.element<HTMLButtonElement>(
+        `[data-testid="segmented-convert-${side}"] [data-segment-id="${id}"]`,
+      );
+
+    expect(segment('from', 'yaml').getAttribute('aria-disabled')).toBe('true');
+    expect(segment('to', 'json').getAttribute('aria-disabled')).toBe('true');
+    segment('to', 'json').click();
+    await harness.type('convert-input', '{"a":1}', 'convert_data');
+
+    expect(harness.tools.requestsOf('convert_data').at(-1)).toMatchObject({ from: 'json', to: 'yaml' });
+  });
+
+  it('names the keys TOML left out, the first three and « … »', async () => {
+    const harness = await renderTool(ConvertToolComponent, (tools) => {
+      tools.conversion = {
+        kind: 'converted',
+        text: 'nom = "Dupont"\n',
+        dropped: ['$.telephone', '$.fax', '$.adresse.etage', '$.mobile'],
+      };
+    });
+
+    await harness.type('convert-input', '{"nom":"Dupont","telephone":null}', 'convert_data');
+
+    expect(text(harness, 'convert-dropped')).toBe(
+      '4 clés ignorées : $.telephone, $.fax, $.adresse.etage, …. TOML n’a pas de valeur null.',
+    );
+  });
+
   it('says what the other format cannot hold, and where, with its convention', async () => {
     const harness = await renderTool(ConvertToolComponent, (tools) => {
-      tools.conversion = { kind: 'impossible', crossing: 'tomlNull', path: '$.database.replica' };
+      tools.conversion = { kind: 'impossible', crossing: 'tomlNull', path: '$.replicas[1]' };
     });
     harness
       .element<HTMLButtonElement>('[data-testid="segmented-convert-to"] [data-segment-id="toml"]')
       .click();
 
-    await harness.type('convert-input', '{"database":{"replica":null}}', 'convert_data');
+    await harness.type('convert-input', '{"replicas":[1,null]}', 'convert_data');
 
-    expect(text(harness, 'convert-impossible')).toBe('TOML n’a pas de null : $.database.replica');
+    expect(text(harness, 'convert-impossible')).toBe(
+      'TOML n’a pas de null, et une liste ne peut pas en perdre un sans décaler les autres : $.replicas[1]',
+    );
     expect(harness.element('[data-testid="convert-convention-toml"]')).not.toBeNull();
     expect(harness.element('[data-testid="convert-convention-xml"]')).toBeNull();
   });

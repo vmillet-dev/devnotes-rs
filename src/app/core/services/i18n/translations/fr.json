@@ -1317,7 +1317,7 @@
         "xml": "XML",
         "yaml": "YAML"
       },
-      "swap": "Échanger les formats",
+      "swap": "Échanger les formats et les textes",
       "inputLabel": "Texte à convertir",
       "placeholders": {
         "json": "{ \"service\": \"billing\", \"replicas\": 2 }",
@@ -1327,7 +1327,7 @@
       },
       "unreadable": "Le {{format}} ne se lit pas : ligne {{line}}, colonne {{column}}.",
       "crossings": {
-        "tomlNull": "TOML n’a pas de null :",
+        "tomlNull": "TOML n’a pas de null, et une liste ne peut pas en perdre un sans décaler les autres :",
         "tomlRoot": "Un document TOML est une table : sa racine ne peut pas être une liste ou une valeur.",
         "xmlRoot": "Un document XML a un seul élément racine : il faut un objet d’une seule clé.",
         "xmlName": "XML n’accepte pas ce nom d’élément ou d’attribut :",
@@ -1338,7 +1338,9 @@
         "xml": "Convention XML : @nom pour un attribut, #text pour le texte à côté d’éléments, un élément répété devient une liste, un élément vide devient null. XML n’a pas de types : tout ce qu’il donne est du texte.",
         "toml": "TOML n’a pas de null et veut une table à sa racine ; une date TOML devient une chaîne en JSON."
       },
-      "noteTitle": "{{from}} converti en {{to}}"
+      "noteTitle": "{{from}} converti en {{to}}",
+      "dropped": "{count, plural, one {# clé ignorée :} other {# clés ignorées :}}",
+      "noTomlNull": "TOML n’a pas de valeur null."
     },
     "json-generator": {
       "name": "JSON",

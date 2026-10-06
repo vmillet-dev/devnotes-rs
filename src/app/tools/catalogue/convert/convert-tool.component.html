@@ -1,12 +1,13 @@
-<div class="columns">
-  <section class="column" aria-labelledby="convert-from-title">
-    <div class="section-head">
-      <h2 id="convert-from-title" class="section-title">{{ 'tools.convert.from' | transloco }}</h2>
+<div class="panels">
+  <section class="panel" aria-labelledby="convert-from-title">
+    <div class="panel-head">
+      <h2 id="convert-from-title" class="title">{{ 'tools.convert.from' | transloco }}</h2>
       <app-segmented-choice
         kind="convert-from"
         [label]="'tools.convert.from' | transloco"
         [segments]="formats"
         [currentId]="from()"
+        [disabledIds]="[to()]"
         (chosen)="onFrom($event)"
       />
     </div>
@@ -15,7 +16,6 @@
       <textarea
         class="text"
         data-testid="convert-input"
-        rows="16"
         spellcheck="false"
         [value]="text()"
         [placeholder]="'tools.convert.placeholders.' + from() | transloco"
@@ -33,22 +33,40 @@
     }
   </section>
 
-  <section class="column" aria-labelledby="convert-to-title">
-    <div class="section-head">
-      <h2 id="convert-to-title" class="section-title">{{ 'tools.convert.to' | transloco }}</h2>
-      <div class="head-end">
-        <app-segmented-choice
-          kind="convert-to"
-          [label]="'tools.convert.to' | transloco"
-          [segments]="formats"
-          [currentId]="to()"
-          (chosen)="onTo($event)"
-        />
-        @if (converted(); as converted) {
-          <app-copy-value [value]="converted" [what]="'tools.result' | transloco" />
-        }
-      </div>
+  <button
+    type="button"
+    class="swap"
+    data-testid="convert-swap"
+    [attr.aria-label]="'tools.convert.swap' | transloco"
+    [attr.title]="'tools.convert.swap' | transloco"
+    (click)="swap()"
+  >
+    ⇄
+  </button>
+
+  <section class="panel" aria-labelledby="convert-to-title">
+    <div class="panel-head">
+      <h2 id="convert-to-title" class="title">{{ 'tools.convert.to' | transloco }}</h2>
+      @if (converted(); as converted) {
+        <app-copy-value [value]="converted" [what]="'tools.result' | transloco" />
+      }
+      <span class="spacer"></span>
+      <app-segmented-choice
+        kind="convert-to"
+        [label]="'tools.convert.to' | transloco"
+        [segments]="formats"
+        [currentId]="to()"
+        [disabledIds]="[from()]"
+        (chosen)="onTo($event)"
+      />
     </div>
+    @if (dropped().count > 0) {
+      <p class="banner" role="status" data-testid="convert-dropped">
+        <strong>{{ 'tools.convert.dropped' | transloco: { count: dropped().count } }}</strong
+        >&ngsp; <code>{{ dropped().paths }}</code
+        >. {{ 'tools.convert.noTomlNull' | transloco }}
+      </p>
+    }
     @if (converted(); as converted) {
       <pre class="output" data-testid="convert-output">{{ converted }}</pre>
     } @else if (impossible(); as impossible) {
