@@ -11,8 +11,11 @@
   gap: 28px 32px;
   align-items: start;
 
-  @media (width >= 1600px) {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(420px, 0.9fr);
+  // The masks are taller than the first row: the second takes what they add, so the plan and
+  // the list follow the card instead of waiting below an empty band.
+  @media (width >= 1700px) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(540px, 1fr);
+    grid-template-rows: auto 1fr;
     grid-template-areas:
       'network facts masks'
       'plan list masks';
@@ -34,6 +37,10 @@
 
 .masks-area {
   grid-area: masks;
+
+  @media (width < 1700px) {
+    max-width: 720px;
+  }
 }
 
 .plan-area {
@@ -266,6 +273,11 @@
 }
 
 .masks {
+  th,
+  td {
+    padding-inline: 8px;
+  }
+
   tr.current td {
     background: rgba(var(--amber-rgb), 0.08);
   }
