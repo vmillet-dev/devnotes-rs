@@ -19,6 +19,7 @@ import {
   requestBadge,
 } from '@core/model/http.model';
 import { HttpCollectionsStore } from '@core/services/http/http-collections.store';
+import { HttpSendStore } from '@core/services/http/http-send.store';
 import { HttpTabsStore, RequestTab } from '@core/services/http/http-tabs.store';
 import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
 import { HTTP_HEADERS } from '@tools/catalogue/http-headers/http-headers.data';
@@ -57,6 +58,7 @@ export class RequestEditorComponent {
   readonly saveAsked = output<void>();
 
   protected readonly tabs = inject(HttpTabsStore);
+  protected readonly sending = inject(HttpSendStore);
   private readonly repository = inject(HttpRepository);
   private readonly collections = inject(HttpCollectionsStore);
 
@@ -100,6 +102,9 @@ export class RequestEditorComponent {
     return typed ? null : type;
   });
   protected readonly dirty = computed(() => this.tabs.isDirty(this.tab()));
+  protected readonly inFlight = computed(
+    () => this.sending.states().get(this.tab().key)?.phase === 'sending',
+  );
   protected readonly counts = computed<Record<Section, number>>(() => ({
     params: counted(this.tab().draft.parts.params),
     headers: counted(this.tab().draft.parts.headers),
@@ -133,6 +138,11 @@ export class RequestEditorComponent {
 
   protected onBody(body: RequestBodyDraft): void {
     this.tabs.editParts(this.tab().key, { body });
+  }
+
+  protected send(): void {
+    if (this.inFlight()) void this.sending.cancel(this.tab().key);
+    else void this.sending.send(this.tab());
   }
 
   protected save(): void {

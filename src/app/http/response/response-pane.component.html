@@ -1,0 +1,58 @@
+<section
+  class="response"
+  data-testid="http-response"
+  [attr.data-phase]="phase()"
+  [attr.aria-label]="'http.response.label' | transloco"
+  aria-live="polite"
+>
+  @if (response(); as answer) {
+    <header class="bar">
+      <span class="status" data-testid="http-response-status" [attr.data-class]="statusClass()"
+        >{{ answer.status }} {{ answer.reason }}</span
+      >
+      @if (millis(); as time) {
+        <span class="metric" data-testid="http-response-time">{{ time.key | transloco: time.params }}</span>
+      }
+      @if (size(); as bytes) {
+        <span class="metric" data-testid="http-response-size">{{ bytes.key | transloco: bytes.params }}</span>
+      }
+      @if (answer.redirects.length > 0) {
+        <span class="metric redirects" data-testid="http-response-redirects">{{
+          'http.response.redirects' | transloco: { count: answer.redirects.length }
+        }}</span>
+      }
+      @if (answer.cut) {
+        <button type="button" class="save" data-testid="http-response-save" (click)="save()">
+          {{ 'http.response.saveFile' | transloco }}
+        </button>
+      }
+    </header>
+
+    @if (answer.binary) {
+      <p class="note" data-testid="http-response-binary">
+        {{ 'http.response.binary' | transloco: { type: type() } }}
+      </p>
+    } @else if (answer.body === '') {
+      <p class="placeholder" data-testid="http-response-empty">{{ 'http.response.empty' | transloco }}</p>
+    } @else {
+      @if (answer.cut) {
+        <p class="note" data-testid="http-response-cut">
+          {{ (answer.incomplete ? 'http.response.incomplete' : 'http.response.cut') | transloco }}
+        </p>
+      }
+      <pre class="body" data-testid="http-response-body" tabindex="0">{{ answer.body }}</pre>
+    }
+  } @else if (failure(); as ref) {
+    <p class="failure" role="alert" data-testid="http-response-failure">
+      {{ ref.key | transloco: ref.params }}
+    </p>
+  } @else if (phase() === 'sending') {
+    <p class="placeholder" data-testid="http-response-sending">{{ 'http.response.sending' | transloco }}</p>
+  } @else if (phase() === 'cancelled') {
+    <p class="placeholder" data-testid="http-response-cancelled">
+      {{ 'http.response.cancelled' | transloco }}
+    </p>
+  } @else {
+    <p class="placeholder" data-testid="http-response-idle">{{ 'http.response.idle' | transloco }}</p>
+  }
+</section>

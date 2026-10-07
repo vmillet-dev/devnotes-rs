@@ -7,6 +7,7 @@
     <app-request-tabs (closeAsked)="closing.set($event)" />
     @if (tabs.active(); as tab) {
       <app-request-editor [tab]="tab" (saveAsked)="askSave(tab)" />
+      <app-response-pane [tabKey]="tab.key" />
     } @else {
       <p class="empty" data-testid="http-workspace-empty">{{ 'http.workspace.empty' | transloco }}</p>
     }

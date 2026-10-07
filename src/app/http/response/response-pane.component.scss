@@ -1,0 +1,109 @@
+@use 'mixins' as *;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 160px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.response {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.status {
+  @include tint-badge(--green-rgb);
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-family: var(--font-mono), monospace;
+  font-size: 12.5px;
+  font-weight: 700;
+
+  &[data-class='3'] {
+    @include tint-badge(--blue-rgb);
+  }
+
+  &[data-class='4'] {
+    @include tint-badge(--amber-rgb);
+  }
+
+  &[data-class='5'],
+  &[data-class='0'],
+  &[data-class='1'] {
+    @include tint-badge(--red-rgb);
+  }
+}
+
+.metric {
+  font-family: var(--font-mono), monospace;
+  font-size: 12.5px;
+  color: var(--text-1);
+}
+
+.redirects {
+  font-family: inherit;
+  color: var(--text-2);
+}
+
+.save {
+  @include unstyled-control;
+  @include surface(var(--bg-2), 8px, var(--line));
+  @include focus-ring;
+  margin-left: auto;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  color: var(--text-0);
+  cursor: pointer;
+
+  &:hover {
+    @include accent-state;
+  }
+}
+
+.note {
+  margin: 10px 20px 0;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+
+.body {
+  @include focus-ring(-2px);
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 12px 20px;
+  overflow: auto;
+  font-family: var(--font-mono), monospace;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-0);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.placeholder,
+.failure {
+  margin: auto;
+  max-width: 420px;
+  padding: 0 20px;
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: center;
+  color: var(--text-2);
+}
+
+.failure {
+  color: var(--red);
+}

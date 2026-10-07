@@ -1,3 +1,6 @@
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
+
 import { $, $$, expect } from '@wdio/globals';
 
 import type { HttpNode, HttpRequestDraft, HttpTree } from '@core/ipc/bindings';
@@ -228,6 +231,56 @@ describe('HTTP collections', () => {
       await $(`${tab} ${testid('http-tab-close')}`).click();
       await $(tab).waitForExist({ reverse: true, timeout: 10_000 });
       await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+    });
+
+    it('sends the request from Rust on Ctrl+Enter and shows its status, time, size and body', async () => {
+      const heard: string[] = [];
+      const server = createServer((request, response) => {
+        heard.push(`${request.method} ${request.url}`);
+        response.writeHead(201, { 'Content-Type': 'application/json' });
+        response.end('{"id":7}');
+      });
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      const { port } = server.address() as AddressInfo;
+      try {
+        const api = await bridge.createHttpCollection('Local');
+        const created = await bridge.createHttpRequest({
+          ...draft(api.id, null, 'Créer'),
+          method: 'POST',
+          document: { url: `http://127.0.0.1:${port}/users?page=1`, description: '' },
+        });
+        await press('1', ['Control']);
+        await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+        await press('3', ['Control']);
+        await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+        if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
+        await $(`${testid('http-node')}[data-id="${created.id}"] ${testid('http-node-name')}`).click();
+        await $(testid('http-response-idle')).waitForDisplayed({ timeout: 10_000 });
+
+        await press('Enter', ['Control']);
+        await eventually(
+          () => $(testid('http-response-status')).getText(),
+          (text) => text === '201 Created',
+          'the status of the answer',
+        );
+        expect(await $(testid('http-response-body')).getText()).toBe('{"id":7}');
+        expect(await $(testid('http-response-size')).isDisplayed()).toBe(true);
+        expect(await $(testid('http-response-time')).isDisplayed()).toBe(true);
+        expect(heard).toEqual(['POST /users?page=1']);
+
+        await setField(testid('http-url'), '{{baseUrl}}/users');
+        await $(testid('http-send')).click();
+        await $(testid('http-response-failure')).waitForDisplayed({ timeout: 10_000 });
+        expect(heard).toHaveLength(1);
+
+        const tab = `${testid('http-tab')}[data-key="${created.id}"]`;
+        await $(`${tab} ${testid('http-tab-close')}`).click();
+        await $(testid('http-close-discard')).click();
+        await $(tab).waitForExist({ reverse: true, timeout: 10_000 });
+        await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+      } finally {
+        server.close();
+      }
     });
   });
 });

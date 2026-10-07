@@ -39,10 +39,11 @@ use folders::{
     list_folders, recolour_folder, rename_folder, save_board_layout,
 };
 use http::{
-    count_http_contents, create_http_collection, create_http_folder, create_http_request,
-    delete_http_item, describe_http_body, duplicate_http_item, get_http_request, http_settings,
-    http_tree, inherited_http_settings, move_http_item, rename_http_item, reorder_http_collection,
-    save_http_request, save_http_settings, sync_http_query,
+    cancel_http_send, count_http_contents, create_http_collection, create_http_folder,
+    create_http_request, delete_http_item, describe_http_body, duplicate_http_item,
+    forget_http_response, get_http_request, http_settings, http_tree, inherited_http_settings,
+    move_http_item, rename_http_item, reorder_http_collection, save_http_request,
+    save_http_response, save_http_settings, send_http_request, sync_http_query,
 };
 use json::explore_json;
 use libraries::{create_library, delete_library, list_libraries, open_library, rename_library};
@@ -173,6 +174,10 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             save_http_settings::<tauri::Wry>,
             inherited_http_settings::<tauri::Wry>,
             describe_http_body,
+            send_http_request::<tauri::Wry>,
+            cancel_http_send::<tauri::Wry>,
+            save_http_response::<tauri::Wry>,
+            forget_http_response::<tauri::Wry>,
             board_view::<tauri::Wry>,
             save_board_layout::<tauri::Wry>,
             arrange_board::<tauri::Wry>,
@@ -319,6 +324,7 @@ fn setup(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
     // Empty until `vault::unlock` fills it with the connection and the key.
     app.manage(db::Db::new(None));
+    app.manage(http::send::Sending::default());
 
     Ok(())
 }

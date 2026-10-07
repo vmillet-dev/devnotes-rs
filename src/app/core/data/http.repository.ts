@@ -11,6 +11,7 @@ import {
   HttpRequestDraft,
   HttpRequestPatch,
   HttpTree,
+  SentResponse,
   BodyAnswer,
   ContainerSettingsDraft,
   InheritedParts,
@@ -90,6 +91,37 @@ export class HttpRepository {
 
   async describeBody(body: RequestBodyDraft): Promise<BodyAnswer> {
     return unwrap('describe_http_body', await commands.describeHttpBody(toBodyWire(body)));
+  }
+
+  /** `id` is the caller's: what `cancel` and `saveResponse` name the send by. */
+  async send(
+    id: string,
+    draft: RequestDraft,
+    place: { collectionId: string; folderId: string | null } | null,
+  ): Promise<SentResponse> {
+    return unwrap(
+      'send_http_request',
+      await commands.sendHttpRequest({
+        id,
+        method: draft.method,
+        document: toDocument(draft.parts),
+        collectionId: place?.collectionId ?? null,
+        folderId: place?.folderId ?? null,
+      }),
+    );
+  }
+
+  async cancel(id: string): Promise<boolean> {
+    return unwrap('cancel_http_send', await commands.cancelHttpSend(id));
+  }
+
+  /** The whole body, not the text shown: `false` when Rust holds none for `id`. */
+  async saveResponse(id: string, path: string): Promise<boolean> {
+    return unwrap('save_http_response', await commands.saveHttpResponse(id, path));
+  }
+
+  async forgetResponse(id: string): Promise<void> {
+    unwrap('forget_http_response', await commands.forgetHttpResponse(id));
   }
 
   async rename(item: HttpItem, name: string): Promise<void> {

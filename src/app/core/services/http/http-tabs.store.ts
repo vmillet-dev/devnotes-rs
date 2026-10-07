@@ -12,6 +12,7 @@ import {
 } from '@core/model/http.model';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
+import { HttpSendStore } from './http-send.store';
 import { holdsRequest } from './http-tree';
 
 /** In the library's preferences: which requests were open, and which one was in front. */
@@ -58,6 +59,7 @@ export class HttpTabsStore {
   private readonly errors = inject(ErrorNotifier);
   private readonly preferences = inject(LibraryPreferencesService);
   private readonly transloco = inject(TranslocoService);
+  private readonly sending = inject(HttpSendStore);
 
   private readonly _tabs = signal<readonly RequestTab[]>([]);
   readonly tabs = this._tabs.asReadonly();
@@ -191,6 +193,7 @@ export class HttpTabsStore {
       saved: draftOf(created),
       draft: draftOf(created),
     });
+    this.sending.rekey(key, created.id);
     if (this._activeKey() === key) this._activeKey.set(created.id);
     this.persist();
     return created.id;
@@ -202,6 +205,7 @@ export class HttpTabsStore {
     if (at < 0) return;
     const rest = tabs.filter((tab) => tab.key !== key);
     this._tabs.set(rest);
+    this.sending.forget(key);
     if (this._activeKey() === key) this._activeKey.set(rest[Math.min(at, rest.length - 1)]?.key ?? null);
     this.persist();
   }

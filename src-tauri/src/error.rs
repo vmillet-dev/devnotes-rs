@@ -7,6 +7,8 @@ use serde::Serialize;
 use specta::Type;
 use thiserror::Error;
 
+use crate::http::send::SendError;
+
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 #[error("Invalid field \"{field}\": {detail}")]
 pub struct ValidationError {
@@ -142,6 +144,19 @@ pub enum ErrorCode {
     /// SQLite says the file is corrupt: the one code the interface answers with an action.
     LibraryDamaged,
     Storage,
+    /// The `name` parameter names the `{{variable}}` with no value.
+    HttpVariable,
+    HttpInvalidUrl,
+    HttpUnresolved,
+    HttpRefused,
+    HttpTls,
+    HttpTimeout,
+    HttpTooManyRedirects,
+    /// The `path` parameter names the file a body or a part would have sent.
+    HttpFileUnreadable,
+    /// What « Annuler » answers: the front, which asked, says nothing.
+    HttpCancelled,
+    HttpNetwork,
 }
 
 #[derive(Debug, Serialize, Type)]
@@ -184,6 +199,27 @@ impl From<ValidationError> for AppError {
             "field",
             error.field,
         )
+    }
+}
+
+impl From<SendError> for AppError {
+    fn from(error: SendError) -> Self {
+        let detail = error.to_string();
+
+        match error {
+            SendError::Variable(name) => Self::with(ErrorCode::HttpVariable, detail, "name", &name),
+            SendError::InvalidUrl(_) => Self::new(ErrorCode::HttpInvalidUrl, detail),
+            SendError::Unresolved(_) => Self::new(ErrorCode::HttpUnresolved, detail),
+            SendError::Refused(_) => Self::new(ErrorCode::HttpRefused, detail),
+            SendError::Tls(_) => Self::new(ErrorCode::HttpTls, detail),
+            SendError::Timeout => Self::new(ErrorCode::HttpTimeout, detail),
+            SendError::TooManyRedirects => Self::new(ErrorCode::HttpTooManyRedirects, detail),
+            SendError::FileUnreadable(path) => {
+                Self::with(ErrorCode::HttpFileUnreadable, detail, "path", &path)
+            }
+            SendError::Cancelled => Self::new(ErrorCode::HttpCancelled, detail),
+            SendError::Network(_) => Self::new(ErrorCode::HttpNetwork, detail),
+        }
     }
 }
 

@@ -1658,6 +1658,31 @@ the next launch without those deleted since.
   `HttpCollectionsStore.settingsRevision`, so an open tab reads it again. The secret half of an
   auth is masked until asked for, and in a summary unless it is a `{{variable}}`.
 
+### Sending a request, and its answer
+
+**Rust sends; the WebView never will** — `connect-src` allows the IPC and nothing else.
+`send_http_request` (`http/send.rs`) reads what the request inherits under the lock, reads its
+files outside it, and sends with `reqwest` on rustls (the `ring` provider the updater already
+brings, the system's roots through the platform verifier): ⚠️ **a send never holds the lock**,
+or a 30-second request would stall every command.
+
+- **What leaves is composed first** (`compose`, tested without a network): the inherited headers,
+  its own over them by name, the auth — Basic, Bearer, a key in a header or the query — unless an
+  `Authorization` is typed, the body and the `Content-Type` it implies. A URL without a scheme is
+  sent over `http://`. A `{{variable}}` left anywhere stops it, by name, until environments give
+  one a value.
+- **A failure is a code** — the variable, the URL, the name not resolving, refused, TLS, timeout
+  (30 s), too many redirects (10), an unreadable file, cancelled — read off reqwest's error and
+  the chain under it. ⚠️ `io::Error::source` skips the error it wraps, where rustls puts its
+  own: the walk follows `get_ref`.
+- **A send runs as a task of its own, under an id the front chose** (`HttpSendStore`: the tab's
+  key and a counter), which `cancel_http_send` aborts. The answer's text crosses up to 1 MB; the
+  bytes, up to 64 MB, stay in Rust under that id, for **Enregistrer dans un fichier**
+  (`save_http_response`, staged then renamed), until the tab closes or sends again.
+- **`Ctrl+Enter` sends the tab in front**, and **Envoyer** becomes **Annuler** while it waits.
+  Below the request, `ResponsePaneComponent` shows the status coloured by its class, the time,
+  the size, the redirects followed, and the body as text — or why there is none.
+
 ### Managing spaces from the switcher
 
 The space switcher's dropdown has three mutually exclusive states: the menu, the creation

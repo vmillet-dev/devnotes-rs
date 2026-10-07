@@ -1,12 +1,14 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { HttpCollectionsStore } from '@core/services/http/http-collections.store';
+import { HttpSendStore } from '@core/services/http/http-send.store';
 import { HttpTabsStore, RequestTab } from '@core/services/http/http-tabs.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { CloseChoice, CloseRequestDialogComponent } from './close-request/close-request-dialog.component';
 import { HttpRailComponent } from './rail/http-rail.component';
 import { RequestEditorComponent } from './request/request-editor/request-editor.component';
 import { RequestTabsComponent } from './request/request-tabs/request-tabs.component';
+import { ResponsePaneComponent } from './response/response-pane.component';
 import { SaveAnswer, SaveRequestDialogComponent } from './save-request/save-request-dialog.component';
 
 /**
@@ -20,6 +22,7 @@ import { SaveAnswer, SaveRequestDialogComponent } from './save-request/save-requ
     HttpRailComponent,
     RequestEditorComponent,
     RequestTabsComponent,
+    ResponsePaneComponent,
     SaveRequestDialogComponent,
     TranslocoPipe,
   ],
@@ -32,6 +35,7 @@ export class HttpPageComponent implements OnInit {
   protected readonly collections = inject(HttpCollectionsStore);
   protected readonly tabs = inject(HttpTabsStore);
   protected readonly settings = inject(SettingsStore);
+  private readonly sending = inject(HttpSendStore);
 
   /** The tab a never-saved request is being placed for, and whether it closes once saved. */
   protected readonly placing = signal<{ readonly tab: RequestTab; readonly thenClose: boolean } | null>(null);
@@ -81,6 +85,10 @@ export class HttpPageComponent implements OnInit {
     if (key === 'b') {
       event.preventDefault();
       this.settings.showLibraryRail.write(!this.settings.showLibraryRail());
+    } else if (key === 'enter') {
+      event.preventDefault();
+      const tab = this.tabs.active();
+      if (tab !== null) void this.sending.send(tab);
     } else if (key === 's') {
       event.preventDefault();
       const tab = this.tabs.active();

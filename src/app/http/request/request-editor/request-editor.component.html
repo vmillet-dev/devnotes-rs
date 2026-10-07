@@ -31,6 +31,21 @@
     />
     <button
       type="button"
+      class="send"
+      data-testid="http-send"
+      [class.cancel]="inFlight()"
+      [attr.title]="inFlight() ? null : ('http.send.sendHint' | transloco)"
+      (click)="send()"
+    >
+      @if (inFlight()) {
+        {{ 'http.send.cancel' | transloco }}
+      } @else {
+        {{ 'http.send.send' | transloco }}
+        <kbd class="keys" aria-hidden="true">Ctrl ↵</kbd>
+      }
+    </button>
+    <button
+      type="button"
       class="save"
       data-testid="http-save"
       [disabled]="!dirty()"

@@ -2,8 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpTabsStore } from '@core/services/http/http-tabs.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
-import { EMPTY_PARTS } from '@core/model/http.model';
-import { FakeHttpRepository } from '@testing/fake-http-repository';
+import { EMPTY_PARTS, SentResponse } from '@core/model/http.model';
+import { FakeHttpRepository, sentResponse } from '@testing/fake-http-repository';
 import { sampleTree } from '@testing/http-tree.fixture';
 import { provideAppTesting } from '@testing/testing.providers';
 import { HttpPageComponent } from './http-page.component';
@@ -203,6 +203,31 @@ describe('HttpPageComponent', () => {
           .map((tab) => tab.key),
       ).toEqual(['Login']),
     );
+  });
+
+  it('sends the open request on Ctrl+Enter, offers to cancel while it waits, then shows the answer', async () => {
+    await tabs().open('Login');
+    await fixture.whenStable();
+    let answer!: (response: SentResponse) => void;
+    http.pendingSend = new Promise((resolve) => (answer = resolve));
+
+    key({ key: 'Enter' });
+    await fixture.whenStable();
+    expect(http.callsOf('send')[0]?.[2]).toEqual({ collectionId: 'API', folderId: null });
+    expect(el('[data-testid="http-send"]').textContent?.trim()).toBe('Annuler');
+    expect(el('[data-testid="http-response-sending"]')).not.toBeNull();
+
+    el<HTMLButtonElement>('[data-testid="http-send"]').click();
+    await vi.waitFor(() => expect(http.callsOf('cancel')).toHaveLength(1));
+    answer(sentResponse({ status: 201, reason: 'Created' }));
+    await vi.waitFor(() =>
+      expect(el('[data-testid="http-response-status"]')?.textContent).toContain('201 Created'),
+    );
+    expect(el('[data-testid="http-send"]').textContent).toContain('Envoyer');
+
+    el<HTMLButtonElement>('[data-testid="http-tab-close"]').click();
+    await fixture.whenStable();
+    expect(http.callsOf('forgetResponse')).toHaveLength(1);
   });
 
   it('closes an unmodified tab at once, and hides the rail on Ctrl+B', async () => {
