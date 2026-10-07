@@ -112,6 +112,63 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    http_collections (id) {
+        id -> Text,
+        name -> Text,
+        settings -> Text,
+        position -> Integer,
+        created_at -> Text,
+    }
+}
+
+diesel::table! {
+    http_folders (id) {
+        id -> Text,
+        collection_id -> Text,
+        parent_id -> Nullable<Text>,
+        name -> Text,
+        settings -> Text,
+        position -> Integer,
+        created_at -> Text,
+    }
+}
+
+diesel::table! {
+    http_requests (id) {
+        id -> Text,
+        collection_id -> Text,
+        folder_id -> Nullable<Text>,
+        name -> Text,
+        kind -> Text,
+        method -> Text,
+        document -> Text,
+        position -> Integer,
+        created_at -> Text,
+        updated_at -> Text,
+    }
+}
+
+diesel::table! {
+    http_history (id) {
+        id -> Text,
+        sent_at -> Text,
+        request_id -> Nullable<Text>,
+        method -> Text,
+        status -> Nullable<Integer>,
+        summary -> Text,
+        record -> Text,
+    }
+}
+
+diesel::table! {
+    http_cookies (id) {
+        id -> Text,
+        expires_at -> Nullable<Text>,
+        cookie -> Text,
+    }
+}
+
 diesel::joinable!(folders -> spaces (space_id));
 diesel::joinable!(notes -> spaces (space_id));
 diesel::joinable!(note_positions -> notes (note_id));
@@ -120,6 +177,10 @@ diesel::joinable!(note_items -> notes (note_id));
 diesel::joinable!(note_revisions -> notes (note_id));
 diesel::joinable!(note_placeholders -> notes (note_id));
 diesel::joinable!(attachments -> notes (note_id));
+diesel::joinable!(http_folders -> http_collections (collection_id));
+diesel::joinable!(http_requests -> http_collections (collection_id));
+diesel::joinable!(http_requests -> http_folders (folder_id));
+diesel::joinable!(http_history -> http_requests (request_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     spaces,
@@ -131,5 +192,10 @@ diesel::allow_tables_to_appear_in_same_query!(
     note_revisions,
     note_placeholders,
     global_placeholders,
-    attachments
+    attachments,
+    http_collections,
+    http_folders,
+    http_requests,
+    http_history,
+    http_cookies
 );

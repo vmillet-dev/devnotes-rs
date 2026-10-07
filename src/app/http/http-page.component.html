@@ -1,0 +1,38 @@
+<div class="page" data-testid="http-page">
+  @if (settings.showLibraryRail()) {
+    <app-http-rail />
+  }
+
+  <main class="workspace">
+    @if (history.isOpen()) {
+      <app-history-page />
+    } @else {
+      <app-request-tabs (closeAsked)="closing.set($event)" />
+      @if (tabs.active(); as tab) {
+        <app-request-editor [tab]="tab" (saveAsked)="askSave(tab)" />
+        @if (tab.draft.kind === 'websocket') {
+          <app-socket-log [tabKey]="tab.key" />
+        } @else {
+          <app-response-pane [tabKey]="tab.key" [requestName]="tab.draft.name" />
+        }
+      } @else {
+        <p class="empty" data-testid="http-workspace-empty">{{ 'http.workspace.empty' | transloco }}</p>
+      }
+    }
+  </main>
+</div>
+
+@if (placing(); as asked) {
+  <app-save-request-dialog
+    [name]="asked.tab.draft.name"
+    (saved)="place($event)"
+    (cancelled)="placing.set(null)"
+  />
+}
+@if (closing(); as modified) {
+  <app-close-request-dialog
+    [name]="modified.draft.name"
+    (chosen)="onCloseChoice($event)"
+    (cancelled)="closing.set(null)"
+  />
+}

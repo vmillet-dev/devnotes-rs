@@ -1,0 +1,113 @@
+@let current = auth();
+<div class="auth" data-testid="http-auth" [attr.data-kind]="current.kind">
+  <div class="line">
+    <span class="label">{{ 'http.auth.kind' | transloco }}</span>
+    <app-choice-menu
+      kind="http-auth"
+      triggerTestId="http-auth-kind"
+      [label]="'http.auth.kind' | transloco"
+      [options]="kinds()"
+      [currentId]="current.kind"
+      (chosen)="onKind($event)"
+    />
+  </div>
+
+  @switch (current.kind) {
+    @case ('inherit') {
+      @let above = inherited();
+      <p class="inherited" data-testid="http-auth-inherited">
+        @if (above === null) {
+          {{ 'http.auth.placeFirst' | transloco }}
+        } @else {
+          @if (above.authFrom; as from) {
+            <code class="summary">{{ summary(above.auth) }}</code>
+            {{ 'http.auth.from.' + from.kind | transloco: { name: from.name } }}
+          } @else {
+            {{ 'http.auth.nothingAbove' | transloco }}
+          }
+        }
+      </p>
+    }
+    @case ('none') {
+      <p class="hint">{{ 'http.auth.noneHint' | transloco }}</p>
+    }
+  }
+
+  @if (current.kind === 'basic') {
+    <label class="field">
+      <span class="label">{{ 'http.auth.username' | transloco }}</span>
+      <input
+        type="text"
+        class="input"
+        data-testid="http-auth-username"
+        autocomplete="off"
+        spellcheck="false"
+        [value]="current.username"
+        (input)="onField('username', $event)"
+      />
+    </label>
+  }
+  @if (current.kind === 'basic' || current.kind === 'bearer' || current.kind === 'apiKey') {
+    @if (current.kind === 'apiKey') {
+      <label class="field">
+        <span class="label">{{ 'http.auth.keyName' | transloco }}</span>
+        <input
+          type="text"
+          class="input"
+          data-testid="http-auth-key-name"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="X-Api-Key"
+          [value]="current.name"
+          (input)="onField('name', $event)"
+        />
+      </label>
+    }
+    @let secretField = current.kind === 'basic' ? 'password' : current.kind === 'bearer' ? 'token' : 'value';
+    <div class="field">
+      <label class="label" for="http-auth-secret">{{ 'http.auth.secrets.' + secretField | transloco }}</label>
+      <div class="secret">
+        <input
+          id="http-auth-secret"
+          class="input"
+          data-testid="http-auth-secret"
+          autocomplete="off"
+          spellcheck="false"
+          [type]="revealed() ? 'text' : 'password'"
+          [value]="
+            current.kind === 'basic'
+              ? current.password
+              : current.kind === 'bearer'
+                ? current.token
+                : current.value
+          "
+          (input)="onField(secretField, $event)"
+        />
+        <button
+          type="button"
+          class="reveal"
+          data-testid="http-auth-reveal"
+          [attr.aria-pressed]="revealed()"
+          [attr.aria-label]="(revealed() ? 'http.auth.hide' : 'http.auth.show') | transloco"
+          [attr.title]="(revealed() ? 'http.auth.hide' : 'http.auth.show') | transloco"
+          (click)="revealed.set(!revealed())"
+        >
+          <app-icon [name]="revealed() ? 'eye-off' : 'eye'" />
+        </button>
+      </div>
+    </div>
+    @if (current.kind === 'apiKey') {
+      <div class="line">
+        <span class="label">{{ 'http.auth.place' | transloco }}</span>
+        <app-choice-menu
+          kind="http-auth-place"
+          triggerTestId="http-auth-place"
+          [label]="'http.auth.place' | transloco"
+          [options]="places"
+          [currentId]="current.place"
+          (chosen)="onPlace($event)"
+        />
+      </div>
+    }
+  }
+</div>

@@ -32,9 +32,9 @@ export class TitlebarComponent {
   protected readonly vault = inject(VaultStore);
   protected readonly areas = inject(AreaStore);
 
-  /** Only the notes can hide their rail, and the switch heads it. */
+  /** The notes and HTTP can hide their rail, and the switch heads it. */
   protected readonly switchInBar = computed(
-    () => this.vault.isUnlocked() && this.areas.current() === 'notes' && !this.settings.showLibraryRail(),
+    () => this.vault.isUnlocked() && this.areas.current() !== 'tools' && !this.settings.showLibraryRail(),
   );
 
   protected toggleTheme(): void {

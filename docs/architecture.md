@@ -245,8 +245,9 @@ front, and that knowledge cannot be handed down an `input()` from twelve callers
 
 ### Imports
 
-**One alias per area of the screen**: `@notes/*`, `@tools/*`, `@titlebar/*`, `@banners/*`, plus `@core/*`,
-`@shared/*` and `@testing/*` (declared in `tsconfig.json`, and nowhere else). An import says
+**One alias per area of the screen**: `@notes/*`, `@tools/*`, `@http/*`, `@titlebar/*`, `@banners/*`, plus
+`@core/*`, `@shared/*`, `@testing/*`, and `@app/*` for what two areas draw and sits at the root
+(declared in `tsconfig.json`, and nowhere else). An import says
 which part of the interface it reaches into before it says which file.
 
 The linter holds three conventions that used to be kept by taste: two `../` are refused
@@ -438,7 +439,7 @@ therefore goes **below** that line, never above it.
 ### Syntax highlighting
 
 `CodeViewerComponent` renders read-only coloured code — a card excerpt, or the layer under the
-editor's textarea. It delegates to `notes/ui/code-viewer/highlighter.ts`, the **only** module
+editor's textarea. It delegates to `shared/code-viewer/highlighter.ts`, the **only** module
 that imports highlight.js.
 
 - **Grammars are imported one by one** from `highlight.js/lib/`, never the default bundle,
@@ -643,13 +644,13 @@ reads. It folds case and accents, as `view::fold` does.
 nothing typed into them. Ctrl+Shift+T opens the home on its search from any area — the home
 takes `ToolsStore.searchWanted` whether it already existed or not.
 
-**"Enregistrer comme note" belongs to the frame**: one dialog for every tool
-(`tools/frame/save-as-note/`). It asks for a title (the tool proposes one, as a
+**"Enregistrer comme note" belongs to the frame**: one dialog for every tool and for an HTTP
+response, at their common ancestor (`save-as-note/`, reached as `@app/…`). It asks for a title (the tool proposes one, as a
 `TranslationRef`), a space and a folder (those open in the notes by default) and tags; the kind
 and the language are the tool's own. It takes the result as it stood on the click. `ToolNotes`
-creates the note through `NotesRepository` like any other, with "Outils / <tool>" as its source,
-bumps `NotesRevision` for the canvas behind, and `StatusNotifier` says where it went. The HTTP
-client will open the same dialog, which then rises to the two areas' common ancestor.
+creates the note through `NotesRepository` like any other, with the source its caller names —
+"Outils / <tool>", "HTTP / <request>" — bumps `NotesRevision` for the canvas behind, and
+`StatusNotifier` says where it went.
 
 **In Rust, a tool is a module of `tools/`** (`text`, `url_parts`, …): pure functions and
 their types, tested in place, no Tauri. `tools.rs` holds the commands, three lines each
@@ -1604,6 +1605,188 @@ launch and nothing else.
 property of a block container and `.node-name` is a flex one, which ignores it outright: the
 name was cut mid-letter. Nothing said so for as long as the rail could not be narrow enough to
 cut one.
+
+### The HTTP rail
+
+The third area (`Ctrl+3`, `http/`) opens on the collections of the library: `HttpRailComponent`
+in the library rail's frame — its width, its `Ctrl+B`, the titlebar carrying the switch while it
+is hidden — and the open request beside it. The tree is Rust's (`http_tree`); the rail lays it
+flat (`railRows`, `core/services/http/http-tree.ts`), each row at its depth, a request after its
+method in its colour (`http-method-hues`), `QUERY` for GraphQL and `WS` for a WebSocket.
+
+- **A row's `⋯` is a component of its own** (`HttpNodeMenuComponent`, `MenuTriggerDirective` as a
+  host directive), so a row listens to the document only while its menu is open. Creating and
+  renaming are a field in place; deleting first shows what goes with it, counted by Rust.
+- **Moving is pointer events and `Alt` with the arrows**, never HTML5 drag and drop. `↑`/`↓`
+  within the parent, `→` into the folder above, `←` out of the folder; a drag lands before or
+  after a row, or inside a folder or a collection when it is let go mid-row. Both turn into one
+  `RailMove` (`keyMove`, `dropMove`), refused when it would change nothing or put a folder into
+  itself — Rust refuses that too. The click that ends a drag opens nothing.
+- **What is folded is the library's**, in its preferences (`devnotes.notes.http.collapsed`), and
+  read the way a file written by hand is read: anything but a list of ids folds nothing.
+- Every write is persisted, then the tree read again: a move or a copy renumbers what it touched,
+  and the front never guesses the order.
+
+### A request in its tab
+
+Opening a request gives it a tab (`HttpTabsStore`, `http/request/`): its method and name, a dot
+while modified, a `×`. A tab edits a **draft** — name, method and the request's parts — beside
+what Rust holds; modified is the two differing, and saving (`Ctrl+S`) writes the draft whole. A
+request made from the tabs' `+` is a draft alone, like a new note: it writes nothing until it is
+saved, and the first save asks where it goes. Closing a modified tab asks first. Which requests
+were open, and which was in front, is the library's (`devnotes.notes.http.tabs`), reopened at
+the next launch without those deleted since.
+
+- **The query and its table are kept in step by Rust** (`sync_http_query`, `http/query.rs`):
+  the side that was edited wins, nothing is decoded — `{{page}}` and `%20` read back as typed —
+  a disabled row stays in the table and out of the URL, and a description follows its key. The
+  answer is applied only if nothing was typed meanwhile.
+- **The URL is a real input drawn transparent over a copy that lights its `{{variables}}`**
+  (`UrlFieldComponent`): caret, selection and undo stay the browser's. ⚠️ Both layers carry the
+  same metrics, declared after `text-field`, whose `all: unset` would otherwise zero the field's
+  padding and put every glyph a padding off the copy.
+- The headers' names are proposed from the HTTP headers reference, those a server alone writes
+  left out. Settings, scripts and tests join the tabs with their tickets.
+- **A body is a kind and its content** — none, JSON, text, a form, multipart, a file. A file is a
+  **path**, read by Rust when the request is sent: its bytes never enter the library.
+  `describe_http_body` answers the `Content-Type` the body implies — shown among the headers,
+  sent unless one is typed — and, for JSON, why it does not read (the JSON explorer's own parser
+  and words). Prettier formats it, as it does a snippet.
+- **An auth is inherited by default.** A collection and a folder carry settings of their own —
+  an auth and headers, sealed like a request's document — and `inherited_http_settings` resolves
+  what a request at a place gets: the nearest auth set, every header above, a folder's overriding
+  its collection's by name, each with **where it comes from**. Saving settings moves
+  `HttpCollectionsStore.settingsRevision`, so an open tab reads it again. The secret half of an
+  auth is masked until asked for, and in a summary unless it is a `{{variable}}`.
+
+### Sending a request, and its answer
+
+**Rust sends; the WebView never will** — `connect-src` allows the IPC and nothing else.
+`send_http_request` (`http/send.rs`) reads what the request inherits under the lock, reads its
+files outside it, and sends with `reqwest` on rustls (the `ring` provider the updater already
+brings, the system's roots through the platform verifier): ⚠️ **a send never holds the lock**,
+or a 30-second request would stall every command.
+
+- **What leaves is composed first** (`compose`, tested without a network): the inherited headers,
+  its own over them by name, the auth — Basic, Bearer, a key in a header or the query — unless an
+  `Authorization` is typed, the body and the `Content-Type` it implies. A URL without a scheme is
+  sent over `http://`. A `{{variable}}` left anywhere stops it, by name, until environments give
+  one a value.
+- **A failure is a code** — the variable, the URL, the name not resolving, refused, TLS, timeout
+  (30 s), too many redirects (10), an unreadable file, cancelled — read off reqwest's error and
+  the chain under it. ⚠️ `io::Error::source` skips the error it wraps, where rustls puts its
+  own: the walk follows `get_ref`.
+- **A send runs as a task of its own, under an id the front chose** (`HttpSendStore`: the tab's
+  key and a counter), which `cancel_http_send` aborts. The answer's text crosses up to 1 MB; the
+  bytes, up to 64 MB, stay in Rust under that id, for **Enregistrer dans un fichier**
+  (`save_http_response`, staged then renamed), until the tab closes or sends again.
+- **`Ctrl+Enter` sends the tab in front**, and **Envoyer** becomes **Annuler** while it waits.
+  Below the request, `ResponsePaneComponent` shows the status coloured by its class, the time,
+  the size, and the answer in four tabs — or why there is none.
+
+**Reading the answer is Rust's too** (`http/response.rs`). The body's language comes from its
+`Content-Type` (or, without one, from reading as JSON); the cookies are the `Set-Cookie`
+headers parsed; the exchange is the request as composed. JSON is laid out by **re-indenting its
+tokens**, never by re-serialising: `serde_json` would round `12345678901234567890` and write
+`1.10` as `1.1`.
+
+- **Corps**: formatted (coloured by the shared `CodeViewerComponent`, plain past 256 KB), raw,
+  and for JSON the visualiser's graph and tree — the explorer's store provided by
+  `ResponseBodyComponent`, explored only once asked. An image comes back from Rust as a
+  `data:` URI (`http_response_image`, 10 MB at most), which the CSP's `img-src` allows.
+- **En-têtes**, **Cookies** with their counts, and **Chronologie**: the redirects, then the
+  request as it left and the response as it came, as text. Not a DNS, connect and TLS
+  breakdown: reqwest measures none.
+- **Copier** copies the body as it came; **Enregistrer comme note** opens the tools' dialog with a
+  snippet in the body's language, laid out.
+
+The view of an answer is `ResponseViewComponent` (`http/ui/`): the response pane draws it for a
+tab's last send, the history for an entry.
+
+### The history of what was sent
+
+**Every send that left is written** (`http_history`, migration 15), after the answer and under
+the lock again; a request refused before leaving — a `{{variable}}`, a bad URL — and a cancelled
+one are not. A failed send is kept with its code. The write never costs the answer: a failure
+is logged.
+
+- **Sealed, in two parts**: the summary a list shows (name, URL, time, size, failure) and the
+  record an entry opens (the exchange, and the answer with its body cut to 256 KB). The
+  instant, the method, the status and the request it came from stay in the clear, for the
+  order and the retention; `request_id` is `ON DELETE SET NULL`.
+- ⚠️ **Secrets are masked before they are sealed** (`history::mask`): `Authorization` keeps its
+  scheme (`Bearer ••••••••`), `Proxy-Authorization` and `Cookie` lose their value, and so does
+  the API key, by the name `compose` hands on (`Outgoing::secrets`), in a header or the query.
+  The live timeline shows what really left; only the history masks.
+- **Kept 30 days and 500 entries**, purged as each is written and at launch
+  (`history::sweep_at_startup`). « Vider l'historique » asks Rust how many it removes first.
+- **Listed by local day** (`by_day`, the offset the notes send), newest first. **Rouvrir dans un
+  onglet** asks Rust for the request rebuilt (`http_history_draft`): the masked values and the
+  implied `Content-Type` left out, the parameters read off the URL — a new draft tab, to send
+  again or save into a collection.
+- The history replaces the workspace while open (`HttpHistoryStore.isOpen`, from the rail's
+  foot), and closes for a request opened from the tree. It reads again whenever a send ends
+  (`HttpSendStore.sent`).
+
+### A GraphQL request
+
+**A GraphQL request is an HTTP one whose body Rust writes** (`http/graphql.rs`). Its document
+carries a `graphql` part — the query, the variables as typed, the operation chosen, and whether
+it goes as a GET — read only when the request's kind is `graphql`; `kind` now crosses in the
+patch, chosen from the method menu (« GraphQL » beside the methods).
+
+- **Sent as a POST with a JSON body**, or as a GET with `query`, `variables` and
+  `operationName` in the query string. ⚠️ The variables are copied into the body as typed
+  (`RawValue`), never re-serialised: a number past `f64` would come out rounded. They must be
+  a JSON object, or the send fails with `httpGraphqlVariables`.
+- **`describe_graphql` reads the document**: its named operations, past strings, comments and
+  selections — a menu appears when there are several — and why the variables do not parse.
+- **The answer is read apart** (`SentResponse::graphql`): **Corps** lays out `data`, an
+  **Erreurs** tab lists the errors with their path and location; **Brut** keeps the whole
+  answer.
+- `{{variables}}` in the query and the variables stop the send like anywhere else, until
+  environments resolve them. Introspection and completion from the schema are out of scope.
+
+### A WebSocket
+
+**The socket lives in Rust** (`http/websocket.rs`, `tokio-tungstenite` on rustls with the same
+platform verifier as reqwest), a task a socket, under an id the front chose
+(`HttpSocketsStore`: the tab's key and a counter). The document carries a `websocket` part —
+the subprotocols asked for, and the messages kept to send again.
+
+- **Connecting reuses `compose`**: the URL is read as `http(s)` and sent back on `ws(s)`, so the
+  headers inherited, the auth and the `{{variable}}` check are a request's. `connect_websocket`
+  answers once the handshake did; a refusal crosses as `httpWebsocketRefused` with its
+  `status`, the rest as a send's codes.
+- **What follows comes as events, on one topic** (`WEBSOCKET_EVENT`, its payload generated, like
+  `GlobalAction`): opened (with the subprotocol taken), sent, received (cut at 64 KB, a binary
+  message only sized), closed, failed. The front listens through `WEBSOCKET_SUBSCRIBER`, a
+  token a spec replaces to play events.
+- **Writing goes through a channel** to the task, which writes and says so (`sent`) only once
+  the frame left. A close asked for ends the task after 3 s whatever the server answers, and
+  a server cutting it short still reads as closed.
+- ⚠️ **Closing the tab closes the socket, and switching library closes them all**
+  (`open_library` calls `Sockets::close_all`): the page reloads, but the tasks are Rust's.
+- The lower half is a **log** (`SocketLogComponent`): each event's time, direction and size,
+  filterable, the newest 500 kept.
+
+### How a request travels, and the cookie jar
+
+**Transport settings inherit field by field** (`http/transport.rs`): a collection, its folders
+and the request each hold a `TransportSettings` whose fields are optional, and
+`transport::resolve` lays them over `Transport::default()` (crossing as `DEFAULT_TRANSPORT`)
+from the collection down. `compose` resolves them, and `send` builds its client from them:
+timeout (never under 100 ms), redirects followed or not and how many, TLS verified or not, the
+jar used or not. The Réglages tab (`TransportEditorComponent`) shows beside each unset field
+what it takes from above.
+
+**The jar is the library's, sealed whole** (`http_cookies`, `http/cookies.rs`): the domain is
+sealed with the rest — which sites one talks to is not for the file to say — so matching
+(domain, path, `Secure`, expiry) runs in Rust over the jar read entire, and only `expires_at`
+stays clear for the purge. The jar is read under the lock before the send and written with the
+history after it; a `Cookie` header typed by hand wins over the jar. The manager
+(`CookieJarDialogComponent`, from the rail's foot) lists by domain and deletes one, a domain's
+or all, the count asked of Rust first.
 
 ### Managing spaces from the switcher
 
@@ -3358,7 +3541,8 @@ CI build. On a realistic library (~2 MB) the sealing costs well under a millisec
 ### What is sealed, and what is not
 
 Sealed: note titles, bodies and sources, the bodies kept as revisions, checklist item texts,
-space and folder names, `{{field}}` values and their global defaults, attachment file names — and the attachment files
+space and folder names, `{{field}}` values and their global defaults, attachment file names, the
+HTTP collections' names, requests' documents and containers' settings — and the attachment files
 themselves, bytes and all.
 
 Not sealed, deliberately: tags, instants, ids, `kind`, `language` and the foreign keys.
@@ -3817,6 +4001,29 @@ is not the WebView's thread's to parse.
   node, and a child level with the row that opens it whenever the nodes above leave room.
 - **The matches cover the whole document**, open or not, in its order: stepping to one opens
   its ancestors.
+
+### HTTP collections in the library
+
+The HTTP client's requests live in collections that belong to the **library**, not to a space
+(`http/`, migration `000014`): `http_collections`, `http_folders` nested by `parent_id`, and
+`http_requests` in a collection and possibly a folder. Sealed: every name, a request's
+**document** — its URL and, ticket by ticket, its parameters, headers, body, auth and settings —
+and a collection's or folder's **settings**, what its requests inherit. Each is one JSON document
+whose every field is `#[serde(default)]`, so a part added later needs no migration. In the clear:
+ids, parents, positions, the request's kind (`http`, `graphql`, `websocket`) and method, instants.
+
+- **One order under a parent.** Folders and requests under the same parent share `position`, so a
+  folder can sit between two requests; a move or a copy renumbers the parent it touches, never
+  the others. `http_tree` answers the whole tree, built in Rust, requests without their
+  document, which `get_http_request` reads when one opens.
+- **What goes with a deletion is `ON DELETE CASCADE`** — a collection's folders and requests, a
+  folder's subfolders and theirs — and `count_http_contents` says it first. A folder cannot move
+  into itself or below itself, nor a request into another collection's folder: both are refused
+  as `invalidInput` on `folderId`, rules that need the database (`StorageError::Invalid`).
+- **A copy is named by the front** (« (copie) » is a word, never Rust's) and lands right after its
+  original, a folder or a collection with everything below it.
+- The launch copy and a restore carry them, being in the database; the library export
+  (`transfer::Bundle`) does not — a collection travels in a file of its own.
 
 ## Persistence (Rust)
 

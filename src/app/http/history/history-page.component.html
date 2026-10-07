@@ -1,0 +1,104 @@
+<section class="history" data-testid="http-history" aria-labelledby="http-history-title">
+  <header class="head">
+    <h2 id="http-history-title" class="title">{{ 'http.history.title' | transloco }}</h2>
+    <span class="hint">{{ 'http.history.kept' | transloco }}</span>
+
+    <div class="head-actions">
+      @if (confirming(); as count) {
+        <span class="confirm" data-testid="http-history-clear-count">{{
+          'http.history.confirm' | transloco: { count }
+        }}</span>
+        <button
+          type="button"
+          class="action danger"
+          data-testid="http-history-clear-confirm"
+          (click)="clear()"
+        >
+          {{ 'http.history.clear' | transloco }}
+        </button>
+        <button
+          type="button"
+          class="action"
+          data-testid="http-history-clear-cancel"
+          (click)="confirming.set(null)"
+        >
+          {{ 'http.rail.cancel' | transloco }}
+        </button>
+      } @else {
+        <button
+          type="button"
+          class="action"
+          data-testid="http-history-clear"
+          [disabled]="total() === 0"
+          (click)="askClear()"
+        >
+          {{ 'http.history.clear' | transloco }}
+        </button>
+      }
+    </div>
+  </header>
+
+  <div class="body">
+    <div class="list" data-testid="http-history-list">
+      @for (day of history.days(); track day.day) {
+        <h3 class="day" data-testid="http-history-day">{{ dayLabel(day.day) }}</h3>
+        <ul class="items">
+          @for (item of day.items; track item.id) {
+            <li>
+              <button
+                type="button"
+                class="item"
+                data-testid="http-history-item"
+                [attr.data-id]="item.id"
+                [class.on]="history.selectedId() === item.id"
+                [attr.aria-pressed]="history.selectedId() === item.id"
+                (click)="history.select(item.id)"
+              >
+                <span class="method" [attr.data-method]="item.method">{{ item.method }}</span>
+                <span class="what">
+                  <span class="name">{{ item.summary.name }}</span>
+                  <span class="url">{{ item.summary.url }}</span>
+                </span>
+                <span
+                  class="status"
+                  data-testid="http-history-status"
+                  [attr.data-class]="statusClass(item)"
+                  >{{ item.status ?? ('http.history.noAnswer' | transloco) }}</span
+                >
+                <span class="time">{{ time(item) }}</span>
+              </button>
+            </li>
+          }
+        </ul>
+      } @empty {
+        @if (history.loaded()) {
+          <p class="placeholder" data-testid="http-history-empty">{{ 'http.history.empty' | transloco }}</p>
+        }
+      }
+    </div>
+
+    <div class="detail">
+      @if (history.entry(); as entry) {
+        <div class="entry-head">
+          <span class="method" [attr.data-method]="entry.item.method">{{ entry.item.method }}</span>
+          <code class="entry-url" data-testid="http-history-url">{{ entry.record.exchange.url }}</code>
+          <button
+            type="button"
+            class="action"
+            data-testid="http-history-reopen"
+            (click)="history.reopen(entry.item.id)"
+          >
+            {{ 'http.history.reopen' | transloco }}
+          </button>
+        </div>
+        @if (entry.record.response; as response) {
+          <app-response-view [response]="response" [requestName]="entry.item.summary.name" />
+        } @else {
+          <p class="failure" data-testid="http-history-failure">{{ failureKey(entry.item) | transloco }}</p>
+        }
+      } @else {
+        <p class="placeholder">{{ 'http.history.choose' | transloco }}</p>
+      }
+    </div>
+  </div>
+</section>

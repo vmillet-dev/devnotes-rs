@@ -1,0 +1,26 @@
+<div class="field">
+  <div #mirror class="mirror" aria-hidden="true" data-testid="http-url-mirror">
+    @for (piece of pieces(); track $index) {
+      @if (piece.variable) {
+        <span class="variable" data-testid="http-url-variable">{{ piece.text }}</span>
+      } @else {
+        <span>{{ piece.text }}</span>
+      }
+    }
+  </div>
+  <input
+    #field
+    type="text"
+    class="input"
+    data-testid="http-url"
+    spellcheck="false"
+    autocomplete="off"
+    [attr.aria-label]="label()"
+    [placeholder]="placeholder()"
+    [value]="value()"
+    (input)="onInput($event)"
+    (scroll)="follow(field)"
+    (keyup)="follow(field)"
+    (click)="follow(field)"
+  />
+</div>

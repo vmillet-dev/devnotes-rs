@@ -1,7 +1,7 @@
 import { ShortcutGroup } from '@core/services/shortcuts/shortcut.model';
 
-/** In the switch's order, which is also the order of their keys. HTTP joins with its client. */
-export const AREAS = ['notes', 'tools'] as const;
+/** In the switch's order, which is also the order of their keys. */
+export const AREAS = ['notes', 'tools', 'http'] as const;
 export type Area = (typeof AREAS)[number];
 
 /** Read by position, not by character: on AZERTY, the digit row types `&é"` unshifted. */

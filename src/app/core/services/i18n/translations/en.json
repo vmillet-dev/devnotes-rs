@@ -434,7 +434,20 @@
     "revisionDiffFailed": "This version could not be compared with the current text.",
     "librariesListFailed": "The list of libraries could not be read.",
     "libraryActionFailed": "That library operation failed.",
-    "toolFailed": "The tool could not compute its result."
+    "toolFailed": "The tool could not compute its result.",
+    "httpItemGone": "This collection item no longer exists.",
+    "httpVariable": "The variable “{{name}}” has no value: the request cannot leave.",
+    "httpInvalidUrl": "This URL cannot be sent: it needs http:// or https:// and a host.",
+    "httpUnresolved": "The host name does not resolve.",
+    "httpRefused": "The connection was refused: nothing listens at this address.",
+    "httpTls": "The secure connection failed: certificate refused or unexpected protocol.",
+    "httpTimeout": "No answer after 30 seconds.",
+    "httpTooManyRedirects": "Too many redirects: more than 10.",
+    "httpFileUnreadable": "The file {{path}} cannot be read.",
+    "httpCancelled": "Send cancelled.",
+    "httpNetwork": "Network error.",
+    "httpGraphqlVariables": "The GraphQL variables are not a JSON object.",
+    "httpWebsocketRefused": "The server refused the WebSocket (status {{status}})."
   },
   "tray": {
     "open": "Open {{app}}",
@@ -987,8 +1000,10 @@
     "tools": "Tools",
     "go": {
       "notes": "Go to the notes",
-      "tools": "Go to the tools"
-    }
+      "tools": "Go to the tools",
+      "http": "Go to the HTTP client"
+    },
+    "http": "HTTP"
   },
   "tools": {
     "title": "Tools",
@@ -2714,6 +2729,297 @@
         },
         "unreadable": "Cannot be read: {{entries}}"
       }
+    }
+  },
+  "http": {
+    "failed": "The operation on the collections failed.",
+    "rail": {
+      "title": "Collections",
+      "newCollection": "New collection",
+      "empty": "No collection yet: create one with ＋.",
+      "placeholders": {
+        "collection": "Collection name",
+        "folder": "Folder name",
+        "request": "Request name"
+      },
+      "create": "Create",
+      "renameLabel": "New name for {{name}}",
+      "options": "Options for {{name}}",
+      "actions": {
+        "newRequest": "New request",
+        "newFolder": "New folder",
+        "rename": "Rename",
+        "duplicate": "Duplicate",
+        "delete": "Delete",
+        "settings": "Settings…"
+      },
+      "copyName": "{{name}} (copy)",
+      "expand": "Expand {{name}}",
+      "collapse": "Collapse {{name}}",
+      "confirm": "Delete “{{name}}”?",
+      "cancel": "Cancel",
+      "takes": {
+        "requests": "{requests, plural, one {Its request goes with it.} other {Its # requests go with it.}}",
+        "folders": "{folders, plural, one {Its folder goes with it.} other {Its # folders go with it.}}",
+        "both": "{folders, plural, one {# folder} other {# folders}} and {requests, plural, one {# request} other {# requests}} go with it."
+      }
+    },
+    "workspace": {
+      "empty": "Open a request from the rail, or start one with the tabs' ＋."
+    },
+    "tabs": {
+      "label": "Open requests",
+      "untitled": "New request",
+      "modified": "modified",
+      "close": "Close {{name}}",
+      "new": "New request"
+    },
+    "editor": {
+      "name": "Request name",
+      "method": "Method",
+      "url": "URL",
+      "urlPlaceholder": "https://api.example.com/resource",
+      "save": "Save",
+      "saveHint": "Save (Ctrl+S)",
+      "parts": "Parts of the request",
+      "sections": {
+        "params": "Params",
+        "headers": "Headers",
+        "auth": "Auth",
+        "body": "Body",
+        "query": "Query",
+        "message": "Messages",
+        "protocols": "Protocols",
+        "settings": "Settings"
+      }
+    },
+    "table": {
+      "enabled": "Sent",
+      "enable": "Send {{key}}",
+      "key": "Key",
+      "value": "Value",
+      "description": "Description",
+      "newKey": "New key",
+      "remove": "Remove",
+      "removeRow": "Remove {{key}}"
+    },
+    "save": {
+      "title": "Save the request",
+      "name": "Name",
+      "place": "In",
+      "nowhere": "No collection yet: create one in the rail, with ＋."
+    },
+    "close": {
+      "title": "“{{name}}” has changes",
+      "hint": "They are not saved yet.",
+      "discard": "Close without saving"
+    },
+    "headers": {
+      "fromBody": "from the body"
+    },
+    "auth": {
+      "kind": "Type",
+      "kinds": {
+        "inherit": "Inherited",
+        "none": "None",
+        "basic": "Basic",
+        "bearer": "Bearer",
+        "apiKey": "API key"
+      },
+      "inheritsShort": "inherited",
+      "from": {
+        "collection": "inherited from the collection {{name}}",
+        "folder": "inherited from the folder {{name}}"
+      },
+      "nothingAbove": "Nothing above sets an auth: none is sent.",
+      "placeFirst": "Once the request is saved, it takes the auth of its collection or folder.",
+      "noneHint": "No auth is sent.",
+      "username": "Username",
+      "keyName": "Name",
+      "secrets": {
+        "password": "Password",
+        "token": "Token",
+        "value": "Value"
+      },
+      "place": "Sent in",
+      "places": {
+        "header": "a header",
+        "query": "the query"
+      },
+      "show": "Show the secret",
+      "hide": "Hide the secret"
+    },
+    "body": {
+      "kind": "Body type",
+      "kinds": {
+        "none": "None",
+        "json": "JSON",
+        "text": "Text",
+        "form": "Form",
+        "multipart": "Multipart",
+        "binary": "File"
+      },
+      "sentAs": "Sent as {{type}}",
+      "format": "Format",
+      "noneHint": "The request goes without a body.",
+      "partKind": "Type",
+      "partText": "Text",
+      "partFile": "File",
+      "chooseFile": "Choose a file…",
+      "noFile": "No file chosen",
+      "fileHint": "The file is read when the request is sent: its bytes are never kept in the library."
+    },
+    "settings": {
+      "title": {
+        "collection": "Settings of the collection {{name}}",
+        "folder": "Settings of the folder {{name}}"
+      },
+      "hint": "Its requests inherit them: a request whose auth is “Inherited” takes this one, and these headers add to theirs."
+    },
+    "send": {
+      "send": "Send",
+      "sendHint": "Send (Ctrl+Enter)",
+      "cancel": "Cancel",
+      "failed": "The request could not be sent."
+    },
+    "response": {
+      "label": "Response",
+      "idle": "Send the request to read its response here.",
+      "sending": "Sending…",
+      "cancelled": "Send cancelled.",
+      "millis": "{{value}} ms",
+      "bytes": "{{value}} B",
+      "kilobytes": "{{value}} KB",
+      "megabytes": "{{value}} MB",
+      "empty": "Response without a body.",
+      "binary": "Binary body ({{type}}): it is not shown.",
+      "cut": "Only the first MB is shown.",
+      "incomplete": "Reading stopped at 64 MB: the file will hold only those.",
+      "saveFile": "Save to a file…",
+      "saved": "Response saved to {{path}}.",
+      "saveFailed": "The response could not be saved.",
+      "redirects": "{count, plural, one {after # redirect} other {after # redirects}}",
+      "parts": "Parts of the response",
+      "sections": {
+        "body": "Body",
+        "headers": "Headers",
+        "cookies": "Cookies",
+        "timeline": "Timeline",
+        "errors": "Errors"
+      },
+      "view": "Body view",
+      "views": {
+        "pretty": "Formatted",
+        "raw": "Raw",
+        "graph": "Graph",
+        "tree": "Tree"
+      },
+      "imageAlt": "Image received ({{type}})",
+      "copy": "Copy",
+      "noteTitle": "Response from {{name}}",
+      "noCookies": "The response sets no cookie.",
+      "cookie": {
+        "name": "Name",
+        "value": "Value",
+        "domain": "Domain",
+        "path": "Path",
+        "expires": "Expires",
+        "flags": "Attributes",
+        "session": "end of session"
+      },
+      "timeline": {
+        "redirects": "Redirects",
+        "request": "Request sent",
+        "response": "Response received",
+        "bytes": "Binary body of {{size}} bytes.",
+        "multipart": "Multipart body: {{fields}}."
+      },
+      "noteWhat": "A {{language}} snippet, holding the response's body laid out."
+    },
+    "history": {
+      "title": "History",
+      "kept": "30 days, 500 sends at most",
+      "clear": "Clear the history",
+      "confirm": "{count, plural, one {Remove the entry?} other {Remove the # entries?}}",
+      "cleared": "{count, plural, =0 {The history was already empty.} one {One entry removed from the history.} other {# entries removed from the history.}}",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "noAnswer": "failed",
+      "empty": "Nothing sent yet: every send is written here.",
+      "choose": "Choose a send to read it again.",
+      "reopen": "Reopen in a tab",
+      "failed": "The history could not be read."
+    },
+    "graphql": {
+      "query": "Query",
+      "queryPlaceholder": "query { … }",
+      "variables": "Variables",
+      "operation": "Operation sent",
+      "asGet": "Send as GET",
+      "at": "line:column {{location}}"
+    },
+    "socket": {
+      "connect": "Connect",
+      "disconnect": "Disconnect",
+      "failed": "The WebSocket could not open.",
+      "message": "Message to send",
+      "messagePlaceholder": "Text or JSON",
+      "send": "Send",
+      "notOpen": "Connect the WebSocket to send.",
+      "keep": "Keep",
+      "saved": "Kept messages",
+      "noneSaved": "Keep a message to send it again in one click.",
+      "remove": "Remove {{name}}",
+      "protocols": "Subprotocols asked for",
+      "protocolsHint": "Comma-separated, in order of preference: Sec-WebSocket-Protocol.",
+      "log": "WebSocket log",
+      "filter": "Filter the messages",
+      "clear": "Clear",
+      "protocol": "protocol {{protocol}}",
+      "opened": "Connected to {{url}}",
+      "closed": "Closed",
+      "binary": "Binary message",
+      "empty": "Connect the WebSocket: its messages are written here.",
+      "phases": {
+        "connecting": "Connecting…",
+        "open": "Connected",
+        "closing": "Closing…",
+        "closed": "Disconnected"
+      }
+    },
+    "transport": {
+      "timeoutMs": "Timeout",
+      "followRedirects": "Follow redirects",
+      "maxRedirects": "Most redirects",
+      "verifyTls": "Verify TLS certificates",
+      "useCookies": "Send and keep cookies",
+      "inherited": "Inherited",
+      "byDefault": "Default",
+      "on": "Yes",
+      "off": "No",
+      "insecure": "Certificates are not verified: any server can pass itself off as this one. Keep it for development."
+    },
+    "cookies": {
+      "open": "Cookies",
+      "title": "Cookies",
+      "hint": "What answers have set, kept encrypted in the library and sent back to the same domains.",
+      "clear": "Empty the jar",
+      "confirm": "{count, plural, one {Delete the cookie?} other {Delete the # cookies?}}",
+      "removed": "{count, plural, =0 {No cookie deleted.} one {One cookie deleted.} other {# cookies deleted.}}",
+      "count": "{count, plural, one {# cookie} other {# cookies}}",
+      "removeDomain": "Delete the domain",
+      "removeOne": "Delete the cookie {{name}}",
+      "remove": "Delete",
+      "name": "Name",
+      "value": "Value",
+      "path": "Path",
+      "expires": "Expires",
+      "flags": "Attributes",
+      "session": "Session",
+      "hostOnly": "Host only",
+      "empty": "No cookies: those the answers set will show here.",
+      "close": "Close",
+      "failed": "The cookies could not be read or deleted."
     }
   }
 }

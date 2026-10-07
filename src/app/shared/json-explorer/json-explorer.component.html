@@ -7,14 +7,16 @@
           {{ 'json.invalidAt' | transloco: { line: error.line, column: error.column } }}
           {{ 'json.reasons.' + error.reason | transloco }}
         </p>
-        <button
-          type="button"
-          class="tool"
-          data-testid="json-error-show"
-          (click)="shownInCode.emit({ start: error.offset, end: error.offset })"
-        >
-          {{ 'json.showInCode' | transloco }}
-        </button>
+        @if (withCode()) {
+          <button
+            type="button"
+            class="tool"
+            data-testid="json-error-show"
+            (click)="shownInCode.emit({ start: error.offset, end: error.offset })"
+          >
+            {{ 'json.showInCode' | transloco }}
+          </button>
+        }
       </div>
     } @else {
       @if (mode() === 'graph') {
@@ -132,14 +134,16 @@
         <button type="button" class="action" data-testid="json-copy-value" (click)="copyValue(selected.span)">
           {{ 'json.copyValue' | transloco }}
         </button>
-        <button
-          type="button"
-          class="action"
-          data-testid="json-show-in-code"
-          (click)="shownInCode.emit(selected.span)"
-        >
-          {{ 'json.showInCode' | transloco }}
-        </button>
+        @if (withCode()) {
+          <button
+            type="button"
+            class="action"
+            data-testid="json-show-in-code"
+            (click)="shownInCode.emit(selected.span)"
+          >
+            {{ 'json.showInCode' | transloco }}
+          </button>
+        }
       </div>
       <span class="aside-rule" aria-hidden="true"></span>
     }

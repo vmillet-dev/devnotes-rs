@@ -434,7 +434,20 @@
     "revisionDiffFailed": "Impossible de comparer cette version au texte actuel.",
     "librariesListFailed": "Impossible de lire la liste des bibliothèques.",
     "libraryActionFailed": "L'opération sur la bibliothèque a échoué.",
-    "toolFailed": "L’outil n’a pas pu calculer son résultat."
+    "toolFailed": "L’outil n’a pas pu calculer son résultat.",
+    "httpItemGone": "Cet élément de collection n'existe plus.",
+    "httpVariable": "La variable « {{name}} » n'a pas de valeur : la requête ne peut pas partir.",
+    "httpInvalidUrl": "Cette URL ne peut pas être envoyée : il lui faut http:// ou https:// et un hôte.",
+    "httpUnresolved": "Le nom d'hôte ne se résout pas.",
+    "httpRefused": "La connexion a été refusée : rien n'écoute à cette adresse.",
+    "httpTls": "La connexion sécurisée a échoué : certificat refusé ou protocole inattendu.",
+    "httpTimeout": "Pas de réponse au bout de 30 secondes.",
+    "httpTooManyRedirects": "Trop de redirections : plus de 10.",
+    "httpFileUnreadable": "Le fichier {{path}} ne peut pas être lu.",
+    "httpCancelled": "Envoi annulé.",
+    "httpNetwork": "Erreur réseau.",
+    "httpGraphqlVariables": "Les variables GraphQL ne sont pas un objet JSON.",
+    "httpWebsocketRefused": "Le serveur a refusé la connexion WebSocket (statut {{status}})."
   },
   "tray": {
     "open": "Ouvrir {{app}}",
@@ -987,8 +1000,10 @@
     "tools": "Outils",
     "go": {
       "notes": "Aller aux notes",
-      "tools": "Aller aux outils"
-    }
+      "tools": "Aller aux outils",
+      "http": "Aller au client HTTP"
+    },
+    "http": "HTTP"
   },
   "tools": {
     "title": "Outils",
@@ -2714,6 +2729,297 @@
         },
         "unreadable": "Illisible : {{entries}}"
       }
+    }
+  },
+  "http": {
+    "failed": "L'opération sur les collections a échoué.",
+    "rail": {
+      "title": "Collections",
+      "newCollection": "Nouvelle collection",
+      "empty": "Aucune collection pour l'instant : créez-en une avec ＋.",
+      "placeholders": {
+        "collection": "Nom de la collection",
+        "folder": "Nom du dossier",
+        "request": "Nom de la requête"
+      },
+      "create": "Créer",
+      "renameLabel": "Nouveau nom de {{name}}",
+      "options": "Options de {{name}}",
+      "actions": {
+        "newRequest": "Nouvelle requête",
+        "newFolder": "Nouveau dossier",
+        "rename": "Renommer",
+        "duplicate": "Dupliquer",
+        "delete": "Supprimer",
+        "settings": "Réglages…"
+      },
+      "copyName": "{{name}} (copie)",
+      "expand": "Déplier {{name}}",
+      "collapse": "Replier {{name}}",
+      "confirm": "Supprimer « {{name}} » ?",
+      "cancel": "Annuler",
+      "takes": {
+        "requests": "{requests, plural, one {Sa requête part avec.} other {Ses # requêtes partent avec.}}",
+        "folders": "{folders, plural, one {Son dossier part avec.} other {Ses # dossiers partent avec.}}",
+        "both": "{folders, plural, one {# dossier} other {# dossiers}} et {requests, plural, one {# requête} other {# requêtes}} partent avec."
+      }
+    },
+    "workspace": {
+      "empty": "Ouvrez une requête depuis le rail, ou commencez-en une avec le ＋ des onglets."
+    },
+    "tabs": {
+      "label": "Requêtes ouvertes",
+      "untitled": "Nouvelle requête",
+      "modified": "modifiée",
+      "close": "Fermer {{name}}",
+      "new": "Nouvelle requête"
+    },
+    "editor": {
+      "name": "Nom de la requête",
+      "method": "Méthode",
+      "url": "URL",
+      "urlPlaceholder": "https://api.exemple.fr/ressource",
+      "save": "Enregistrer",
+      "saveHint": "Enregistrer (Ctrl+S)",
+      "parts": "Parties de la requête",
+      "sections": {
+        "params": "Paramètres",
+        "headers": "En-têtes",
+        "auth": "Auth",
+        "body": "Corps",
+        "query": "Requête",
+        "message": "Messages",
+        "protocols": "Protocoles",
+        "settings": "Réglages"
+      }
+    },
+    "table": {
+      "enabled": "Envoyé",
+      "enable": "Envoyer {{key}}",
+      "key": "Clé",
+      "value": "Valeur",
+      "description": "Description",
+      "newKey": "Nouvelle clé",
+      "remove": "Retirer",
+      "removeRow": "Retirer {{key}}"
+    },
+    "save": {
+      "title": "Enregistrer la requête",
+      "name": "Nom",
+      "place": "Dans",
+      "nowhere": "Aucune collection pour l'instant : créez-en une dans le rail, avec ＋."
+    },
+    "close": {
+      "title": "« {{name}} » a des modifications",
+      "hint": "Elles ne sont pas encore enregistrées.",
+      "discard": "Fermer sans enregistrer"
+    },
+    "headers": {
+      "fromBody": "d'après le corps"
+    },
+    "auth": {
+      "kind": "Type",
+      "kinds": {
+        "inherit": "Héritée",
+        "none": "Aucune",
+        "basic": "Basic",
+        "bearer": "Bearer",
+        "apiKey": "Clé d'API"
+      },
+      "inheritsShort": "héritée",
+      "from": {
+        "collection": "héritée de la collection {{name}}",
+        "folder": "héritée du dossier {{name}}"
+      },
+      "nothingAbove": "Rien au-dessus ne fixe d'authentification : aucune n'est envoyée.",
+      "placeFirst": "Une fois la requête enregistrée, elle prendra l'authentification de sa collection ou de son dossier.",
+      "noneHint": "Aucune authentification n'est envoyée.",
+      "username": "Utilisateur",
+      "keyName": "Nom",
+      "secrets": {
+        "password": "Mot de passe",
+        "token": "Jeton",
+        "value": "Valeur"
+      },
+      "place": "Envoyée dans",
+      "places": {
+        "header": "un en-tête",
+        "query": "la query"
+      },
+      "show": "Afficher le secret",
+      "hide": "Masquer le secret"
+    },
+    "body": {
+      "kind": "Type de corps",
+      "kinds": {
+        "none": "Aucun",
+        "json": "JSON",
+        "text": "Texte",
+        "form": "Formulaire",
+        "multipart": "Multipart",
+        "binary": "Fichier"
+      },
+      "sentAs": "Envoyé en {{type}}",
+      "format": "Formater",
+      "noneHint": "La requête part sans corps.",
+      "partKind": "Type",
+      "partText": "Texte",
+      "partFile": "Fichier",
+      "chooseFile": "Choisir un fichier…",
+      "noFile": "Aucun fichier choisi",
+      "fileHint": "Le fichier est lu au moment de l'envoi : ses octets ne sont jamais gardés dans la bibliothèque."
+    },
+    "settings": {
+      "title": {
+        "collection": "Réglages de la collection {{name}}",
+        "folder": "Réglages du dossier {{name}}"
+      },
+      "hint": "Ses requêtes en héritent : une requête dont l'auth est « Héritée » prend celle-ci, et ses en-têtes s'ajoutent aux leurs."
+    },
+    "send": {
+      "send": "Envoyer",
+      "sendHint": "Envoyer (Ctrl+Entrée)",
+      "cancel": "Annuler",
+      "failed": "La requête n'a pas pu être envoyée."
+    },
+    "response": {
+      "label": "Réponse",
+      "idle": "Envoyez la requête pour lire sa réponse ici.",
+      "sending": "Envoi en cours…",
+      "cancelled": "Envoi annulé.",
+      "millis": "{{value}} ms",
+      "bytes": "{{value}} o",
+      "kilobytes": "{{value}} Ko",
+      "megabytes": "{{value}} Mo",
+      "empty": "Réponse sans corps.",
+      "binary": "Corps binaire ({{type}}) : il n'est pas affiché.",
+      "cut": "Seul le premier Mo est affiché.",
+      "incomplete": "La lecture s'est arrêtée à 64 Mo : le fichier n'aura que ceux-là.",
+      "saveFile": "Enregistrer dans un fichier…",
+      "saved": "Réponse enregistrée dans {{path}}.",
+      "saveFailed": "La réponse n'a pas pu être enregistrée.",
+      "redirects": "{count, plural, one {après # redirection} other {après # redirections}}",
+      "parts": "Parties de la réponse",
+      "sections": {
+        "body": "Corps",
+        "headers": "En-têtes",
+        "cookies": "Cookies",
+        "timeline": "Chronologie",
+        "errors": "Erreurs"
+      },
+      "view": "Affichage du corps",
+      "views": {
+        "pretty": "Formaté",
+        "raw": "Brut",
+        "graph": "Graphe",
+        "tree": "Arbre"
+      },
+      "imageAlt": "Image reçue ({{type}})",
+      "copy": "Copier",
+      "noteTitle": "Réponse de {{name}}",
+      "noCookies": "La réponse ne pose aucun cookie.",
+      "cookie": {
+        "name": "Nom",
+        "value": "Valeur",
+        "domain": "Domaine",
+        "path": "Chemin",
+        "expires": "Expire",
+        "flags": "Attributs",
+        "session": "fin de session"
+      },
+      "timeline": {
+        "redirects": "Redirections",
+        "request": "Requête envoyée",
+        "response": "Réponse reçue",
+        "bytes": "Corps binaire de {{size}} octets.",
+        "multipart": "Corps multipart : {{fields}}."
+      },
+      "noteWhat": "Un snippet {{language}}, avec le corps de la réponse mis en forme."
+    },
+    "history": {
+      "title": "Historique",
+      "kept": "30 jours, 500 envois au plus",
+      "clear": "Vider l'historique",
+      "confirm": "{count, plural, one {Effacer l'entrée ?} other {Effacer les # entrées ?}}",
+      "cleared": "{count, plural, =0 {L'historique était déjà vide.} one {Une entrée effacée de l'historique.} other {# entrées effacées de l'historique.}}",
+      "today": "Aujourd'hui",
+      "yesterday": "Hier",
+      "noAnswer": "échec",
+      "empty": "Rien d'envoyé pour l'instant : chaque envoi s'inscrit ici.",
+      "choose": "Choisissez un envoi pour le relire.",
+      "reopen": "Rouvrir dans un onglet",
+      "failed": "L'historique n'a pas pu être lu."
+    },
+    "graphql": {
+      "query": "Requête",
+      "queryPlaceholder": "query { … }",
+      "variables": "Variables",
+      "operation": "Opération envoyée",
+      "asGet": "Envoyer en GET",
+      "at": "ligne:colonne {{location}}"
+    },
+    "socket": {
+      "connect": "Connecter",
+      "disconnect": "Déconnecter",
+      "failed": "Le WebSocket n'a pas pu s'ouvrir.",
+      "message": "Message à envoyer",
+      "messagePlaceholder": "Texte ou JSON",
+      "send": "Envoyer",
+      "notOpen": "Connectez le WebSocket pour envoyer.",
+      "keep": "Garder",
+      "saved": "Messages gardés",
+      "noneSaved": "Gardez un message pour le renvoyer d'un clic.",
+      "remove": "Retirer {{name}}",
+      "protocols": "Sous-protocoles demandés",
+      "protocolsHint": "Séparés par des virgules, dans l'ordre de préférence : Sec-WebSocket-Protocol.",
+      "log": "Journal du WebSocket",
+      "filter": "Filtrer les messages",
+      "clear": "Effacer",
+      "protocol": "protocole {{protocol}}",
+      "opened": "Connecté à {{url}}",
+      "closed": "Fermé",
+      "binary": "Message binaire",
+      "empty": "Connectez le WebSocket : ses messages s'inscrivent ici.",
+      "phases": {
+        "connecting": "Connexion…",
+        "open": "Connecté",
+        "closing": "Fermeture…",
+        "closed": "Déconnecté"
+      }
+    },
+    "transport": {
+      "timeoutMs": "Délai d'attente",
+      "followRedirects": "Suivre les redirections",
+      "maxRedirects": "Redirections au plus",
+      "verifyTls": "Vérifier les certificats TLS",
+      "useCookies": "Envoyer et garder les cookies",
+      "inherited": "Hérité",
+      "byDefault": "Par défaut",
+      "on": "Oui",
+      "off": "Non",
+      "insecure": "Les certificats ne sont pas vérifiés : n'importe quel serveur peut se faire passer pour celui-ci. À réserver au développement."
+    },
+    "cookies": {
+      "open": "Cookies",
+      "title": "Cookies",
+      "hint": "Ce que les réponses ont déposé, gardé chiffré dans la bibliothèque et renvoyé aux mêmes domaines.",
+      "clear": "Vider le bocal",
+      "confirm": "{count, plural, one {Supprimer le cookie ?} other {Supprimer les # cookies ?}}",
+      "removed": "{count, plural, =0 {Aucun cookie supprimé.} one {Un cookie supprimé.} other {# cookies supprimés.}}",
+      "count": "{count, plural, one {# cookie} other {# cookies}}",
+      "removeDomain": "Supprimer le domaine",
+      "removeOne": "Supprimer le cookie {{name}}",
+      "remove": "Supprimer",
+      "name": "Nom",
+      "value": "Valeur",
+      "path": "Chemin",
+      "expires": "Expire",
+      "flags": "Attributs",
+      "session": "Session",
+      "hostOnly": "Hôte seul",
+      "empty": "Aucun cookie : ceux que les réponses déposent apparaîtront ici.",
+      "close": "Fermer",
+      "failed": "Les cookies n'ont pas pu être lus ou supprimés."
     }
   }
 }

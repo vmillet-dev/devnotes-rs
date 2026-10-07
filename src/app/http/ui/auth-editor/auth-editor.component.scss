@@ -1,0 +1,72 @@
+@use 'mixins' as *;
+
+.auth {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 560px;
+}
+
+.line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.label {
+  min-width: 90px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.input {
+  @include text-field;
+  @include surface(var(--bg-1), 8px, var(--line));
+  @include focus-ring(1px);
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+  color: var(--text-0);
+}
+
+.secret {
+  display: flex;
+  gap: 6px;
+}
+
+.reveal {
+  @include unstyled-control;
+  @include surface(var(--bg-2), 8px, var(--line));
+  @include focus-ring(1px);
+  @include hit-target(34px);
+  justify-content: center;
+  color: var(--text-1);
+  cursor: pointer;
+  --icon-size: 15px;
+
+  &:hover {
+    @include accent-state;
+  }
+}
+
+.inherited,
+.hint {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-1);
+}
+
+.summary {
+  font-family: var(--font-mono), monospace;
+  color: var(--amber-text);
+}

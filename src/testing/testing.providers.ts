@@ -9,6 +9,7 @@ import { BackupsRepository } from '@core/data/backups.repository';
 import { LibrariesRepository } from '@core/data/libraries.repository';
 import { BoardRepository } from '@core/data/board.repository';
 import { FoldersRepository } from '@core/data/folders.repository';
+import { HttpRepository } from '@core/data/http.repository';
 import { JsonRepository } from '@core/data/json.repository';
 import { ToolsRepository } from '@core/data/tools.repository';
 import { NotesRepository } from '@core/data/notes.repository';
@@ -30,6 +31,7 @@ import { FakeClipboard } from './fake-clipboard';
 import { FakeDesktopNotifications } from './fake-desktop-notifications';
 import { FakeFileDialog } from './fake-file-dialog';
 import { FakeFoldersRepository } from './fake-folders-repository';
+import { FakeHttpRepository } from './fake-http-repository';
 import { FakeJsonRepository } from './fake-json-repository';
 import { FakeToolsRepository } from './fake-tools-repository';
 import { FakeNotesRepository } from './fake-notes-repository';
@@ -53,6 +55,7 @@ interface DataDoubles {
   readonly transferRepository?: FakeTransferRepository;
   readonly jsonRepository?: FakeJsonRepository;
   readonly toolsRepository?: FakeToolsRepository;
+  readonly httpRepository?: FakeHttpRepository;
   readonly vaultRepository?: FakeVaultRepository;
   readonly backupsRepository?: FakeBackupsRepository;
   readonly librariesRepository?: FakeLibrariesRepository;
@@ -106,6 +109,7 @@ export function provideAppTesting(doubles: DataDoubles = {}): Provider[] {
     },
     { provide: JsonRepository, useValue: doubles.jsonRepository ?? new FakeJsonRepository() },
     { provide: ToolsRepository, useValue: doubles.toolsRepository ?? new FakeToolsRepository() },
+    { provide: HttpRepository, useValue: doubles.httpRepository ?? new FakeHttpRepository() },
     // The shell hosts the update prompt and the about menu, so every spec reaching it
     // pulls the Tauri bridge, absent under jsdom.
     { provide: UpdaterService, useValue: doubles.updater ?? new FakeUpdater() },

@@ -1,0 +1,50 @@
+<div class="strip" role="tablist" data-testid="http-tabs" [attr.aria-label]="'http.tabs.label' | transloco">
+  @for (tab of tabs.tabs(); track tab.key) {
+    @let active = tab.key === tabs.activeKey();
+    @let dirty = tabs.isDirty(tab);
+    <div
+      class="tab"
+      data-testid="http-tab"
+      [attr.data-key]="tab.key"
+      [class.on]="active"
+      [class.dirty]="dirty"
+    >
+      <button
+        type="button"
+        role="tab"
+        class="tab-open"
+        data-testid="http-tab-open"
+        [attr.aria-selected]="active"
+        (click)="tabs.activate(tab.key)"
+        (auxclick)="onAuxClick($event, tab)"
+      >
+        <span class="method" [attr.data-method]="badge(tab)">{{ badge(tab) }}</span>
+        <span class="tab-name">{{ tab.draft.name }}</span>
+        @if (dirty) {
+          <span class="dot" data-testid="http-tab-dirty" aria-hidden="true">●</span>
+          <span class="visually-hidden">{{ 'http.tabs.modified' | transloco }}</span>
+        }
+      </button>
+      <button
+        type="button"
+        class="tab-close"
+        data-testid="http-tab-close"
+        [attr.aria-label]="'http.tabs.close' | transloco: { name: tab.draft.name }"
+        [attr.title]="'http.tabs.close' | transloco: { name: tab.draft.name }"
+        (click)="close(tab)"
+      >
+        <span aria-hidden="true">×</span>
+      </button>
+    </div>
+  }
+  <button
+    type="button"
+    class="tab-new"
+    data-testid="http-tab-new"
+    [attr.aria-label]="'http.tabs.new' | transloco"
+    [attr.title]="'http.tabs.new' | transloco"
+    (click)="tabs.newRequest()"
+  >
+    <span aria-hidden="true">＋</span>
+  </button>
+</div>

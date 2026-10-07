@@ -1,0 +1,28 @@
+<section
+  class="response"
+  data-testid="http-response"
+  [attr.data-phase]="phase()"
+  [attr.aria-label]="'http.response.label' | transloco"
+  aria-live="polite"
+>
+  @if (response(); as answer) {
+    <app-response-view
+      [response]="answer"
+      [sendId]="sendId()"
+      [requestName]="requestName()"
+      (fileAsked)="saveFile()"
+    />
+  } @else if (failure(); as ref) {
+    <p class="failure" role="alert" data-testid="http-response-failure">
+      {{ ref.key | transloco: ref.params }}
+    </p>
+  } @else if (phase() === 'sending') {
+    <p class="placeholder" data-testid="http-response-sending">{{ 'http.response.sending' | transloco }}</p>
+  } @else if (phase() === 'cancelled') {
+    <p class="placeholder" data-testid="http-response-cancelled">
+      {{ 'http.response.cancelled' | transloco }}
+    </p>
+  } @else {
+    <p class="placeholder" data-testid="http-response-idle">{{ 'http.response.idle' | transloco }}</p>
+  }
+</section>

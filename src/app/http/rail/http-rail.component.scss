@@ -1,0 +1,310 @@
+@use 'mixins' as *;
+
+// The library rail's frame: its width, its background, its line.
+:host {
+  display: flex;
+  flex: 0 0 auto;
+  min-height: 0;
+  background: var(--bg-1);
+}
+
+.rail {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--space-card) 10px var(--space-canvas);
+  border-right: 1px solid var(--line-soft);
+  overflow-y: auto;
+}
+
+.rail-switch {
+  margin-bottom: 8px;
+}
+
+.rail-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+}
+
+.rail-title {
+  flex: 1;
+  margin: 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-2);
+}
+
+.rail-add {
+  @include unstyled-control;
+  @include hit-target;
+  @include focus-ring(1px);
+  justify-content: center;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--text-2);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--bg-3);
+    color: var(--text-0);
+  }
+}
+
+.rail-empty {
+  margin: 4px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.rail-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 2px 4px 2px calc(4px + var(--depth, 0) * 12px);
+
+  &.inline {
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+  }
+}
+
+.rail-input {
+  @include text-field;
+  @include surface(var(--bg-0), 6px);
+  @include focus-ring(1px);
+  // A basis and not 0: what makes the row wrap rather than squeeze both onto one line.
+  flex: 1 1 96px;
+  min-width: 0;
+  padding: 5px 7px;
+  font-size: 12.5px;
+  font-family: var(--font-sans);
+  color: var(--text-0);
+}
+
+.rail-submit {
+  @include unstyled-control;
+  @include surface($radius: 6px);
+  @include focus-ring(1px);
+  padding: 5px 8px;
+  font-size: 11.5px;
+  color: var(--text-1);
+  cursor: pointer;
+
+  &:hover {
+    @include accent-state;
+  }
+}
+
+.tree {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.node {
+  position: relative;
+
+  &.dragging {
+    opacity: 0.45;
+  }
+
+  // Where a drop would land: a line between two rows, or the row lit when it would hold it.
+  &.drop-before::before,
+  &.drop-after::after {
+    content: '';
+    position: absolute;
+    right: 4px;
+    left: calc(var(--depth, 0) * 12px + 4px);
+    height: 2px;
+    border-radius: 1px;
+    background: var(--amber-text);
+    pointer-events: none;
+  }
+
+  &.drop-before::before {
+    top: -1px;
+  }
+
+  &.drop-after::after {
+    bottom: -1px;
+  }
+
+  &.drop-inside > .node-row {
+    border-radius: 6px;
+    box-shadow: inset 0 0 0 1px var(--amber-dim);
+    background: rgba(var(--amber-rgb), 0.08);
+  }
+}
+
+// The indent is the row's alone: what opens under it — a confirmation — takes the rail's width.
+.node-row {
+  @include eases(background, border-color, color);
+  padding-left: calc(var(--depth, 0) * 12px);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.node-twisty,
+.node-twisty-space {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+}
+
+// ▾ reads as a triangle from 16px; smaller, it is a speck.
+.node-twisty {
+  @include unstyled-control;
+  @include focus-ring(1px);
+  min-height: 24px;
+  border-radius: 5px;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--text-2);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text-0);
+  }
+}
+
+.node-name {
+  @include unstyled-control;
+  @include focus-ring(1px);
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  // 5px, 4px compact: a row stays above the 24px target either way.
+  padding: calc(var(--space-grid) / 4 + 2px) 8px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: var(--text-1);
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  touch-action: none;
+
+  &:hover {
+    background: var(--bg-3);
+    color: var(--text-0);
+  }
+
+  &.collection {
+    font-weight: 600;
+    color: var(--text-0);
+  }
+
+  &.active {
+    color: var(--amber-text);
+    background: rgba(var(--amber-rgb), 0.08);
+  }
+}
+
+// The ellipsis needs a block container: a flex one ignores `text-overflow`.
+.node-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// The method in its colour, as the mockup draws it: a word, not a badge with a fill.
+.method {
+  flex-shrink: 0;
+  min-width: 30px;
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  @include http-method-hues;
+}
+
+.confirm {
+  @include surface(var(--bg-2), 8px);
+  margin: 4px 4px 6px;
+  padding: 8px 10px;
+}
+
+.confirm-question {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-0);
+}
+
+.confirm-count {
+  display: block;
+  color: var(--text-2);
+}
+
+.confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.confirm-delete,
+.confirm-cancel {
+  @include unstyled-control;
+  @include surface($radius: 6px);
+  @include focus-ring(1px);
+  padding: 5px 9px;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.confirm-delete {
+  @include destructive;
+}
+
+.confirm-cancel {
+  color: var(--text-1);
+
+  &:hover {
+    @include accent-state;
+  }
+}
+
+.rail-foot {
+  display: flex;
+  flex-direction: column;
+  margin-top: auto;
+  padding-top: 12px;
+}
+
+.rail-foot-item {
+  @include unstyled-control;
+  @include focus-ring(-2px);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  text-align: left;
+  color: var(--text-1);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--bg-2);
+    color: var(--text-0);
+  }
+
+  &.on {
+    background: rgba(var(--amber-rgb), 0.12);
+    color: var(--amber-text);
+    font-weight: 600;
+  }
+}

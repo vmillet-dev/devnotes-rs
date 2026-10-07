@@ -2,7 +2,7 @@
   <form class="form" data-testid="save-as-note" (submit)="save($event)">
     <h2 id="save-as-note-title" class="title">{{ 'tools.saveAsNote.title' | transloco }}</h2>
     <p class="what" data-testid="save-as-note-what">
-      {{ 'tools.saveAsNote.what' | transloco: { language: languageLabel() } }}
+      {{ whatKey() | transloco: { language: languageLabel() } }}
     </p>
 
     <label class="field">

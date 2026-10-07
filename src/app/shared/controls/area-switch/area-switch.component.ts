@@ -3,7 +3,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { AREAS, Area } from '@core/services/areas/area.model';
 import { IconComponent, IconName } from '@shared/icon/icon.component';
 
-const ICONS: Record<Area, IconName> = { notes: 'file-text', tools: 'wrench' };
+const ICONS: Record<Area, IconName> = { notes: 'file-text', tools: 'wrench', http: 'arrow-left-right' };
 
 /**
  * Heads each area's rail, a label under each icon; `bar` is the same switch in the titlebar,

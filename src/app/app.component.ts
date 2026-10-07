@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { ErrorBannerComponent } from '@banners/error-banner/error-banner.component';
 import { NotesPageComponent } from '@notes/notes-page.component';
 import { ToolsPageComponent } from '@tools/tools-page.component';
+import { HttpPageComponent } from '@http/http-page.component';
 import { StatusToastComponent } from '@banners/status-toast/status-toast.component';
 import { TitlebarComponent } from '@titlebar/titlebar.component';
 import { UpdatePromptComponent } from '@banners/update-prompt/update-prompt.component';
@@ -19,6 +20,7 @@ import { AreaKeysDirective } from './area-keys.directive';
     StatusToastComponent,
     NotesPageComponent,
     ToolsPageComponent,
+    HttpPageComponent,
     UpdatePromptComponent,
     VaultGateComponent,
     PassphrasePromptComponent,

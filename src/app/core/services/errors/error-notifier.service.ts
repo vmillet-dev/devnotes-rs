@@ -23,6 +23,7 @@ const CODE_KEYS: Record<IpcErrorCode, string | null> = {
   folderNotFound: 'errors.folderGone',
   duplicateFolderName: 'errors.folderNameTaken',
   attachmentNotFound: 'errors.attachmentGone',
+  httpItemNotFound: 'errors.httpItemGone',
   revisionNotFound: 'errors.revisionGone',
   libraryNotFound: 'errors.libraryGone',
   libraryOpen: 'errors.libraryOpen',
@@ -39,7 +40,24 @@ const CODE_KEYS: Record<IpcErrorCode, string | null> = {
   passphraseRequired: 'errors.passphraseRequired',
   libraryDamaged: 'errors.libraryDamaged',
   storage: null,
+  httpVariable: 'errors.httpVariable',
+  httpInvalidUrl: 'errors.httpInvalidUrl',
+  httpUnresolved: 'errors.httpUnresolved',
+  httpRefused: 'errors.httpRefused',
+  httpTls: 'errors.httpTls',
+  httpTimeout: 'errors.httpTimeout',
+  httpTooManyRedirects: 'errors.httpTooManyRedirects',
+  httpFileUnreadable: 'errors.httpFileUnreadable',
+  httpCancelled: 'errors.httpCancelled',
+  httpGraphqlVariables: 'errors.httpGraphqlVariables',
+  httpWebsocketRefused: 'errors.httpWebsocketRefused',
+  httpNetwork: 'errors.httpNetwork',
 };
+
+/** What a code says, for an error kept as its code: a failed send in the history. */
+export function errorKeyOf(code: IpcErrorCode): string | null {
+  return CODE_KEYS[code];
+}
 
 /** `fallback` carries the action attempted, used when the cause adds nothing. */
 export function ipcNotice(

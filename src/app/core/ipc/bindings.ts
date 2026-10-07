@@ -134,6 +134,67 @@ export const commands = {
 	setGlobalPlaceholders: (values: { [key in string]: string }) => typedError<{ [key in string]: string }, AppError>(__TAURI_INVOKE("set_global_placeholders", { values })),
 	/**  `None` = every space, like [`crate::notes::view::NotesQuery::space_id`]. */
 	listFolders: (spaceId: string | null) => typedError<Folder[], AppError>(__TAURI_INVOKE("list_folders", { spaceId })),
+	httpTree: () => typedError<HttpTree, AppError>(__TAURI_INVOKE("http_tree")),
+	createHttpCollection: (name: string) => typedError<HttpCollection, AppError>(__TAURI_INVOKE("create_http_collection", { name })),
+	/**  `parent_id` `None` puts it at the collection's root. */
+	createHttpFolder: (collectionId: string, parentId: string | null, name: string) => typedError<HttpFolder, AppError>(__TAURI_INVOKE("create_http_folder", { collectionId, parentId, name })),
+	createHttpRequest: (draft: HttpRequestDraft) => typedError<HttpRequest, AppError>(__TAURI_INVOKE("create_http_request", { draft })),
+	getHttpRequest: (id: string) => typedError<HttpRequest, AppError>(__TAURI_INVOKE("get_http_request", { id })),
+	saveHttpRequest: (id: string, patch: HttpRequestPatch) => typedError<HttpRequest, AppError>(__TAURI_INVOKE("save_http_request", { id, patch })),
+	renameHttpItem: (item: HttpItem, name: string) => typedError<null, AppError>(__TAURI_INVOKE("rename_http_item", { item, name })),
+	/**  What a deletion would take with it, for the confirmation that comes first. */
+	countHttpContents: (item: HttpItem) => typedError<HttpContents, AppError>(__TAURI_INVOKE("count_http_contents", { item })),
+	deleteHttpItem: (item: HttpItem) => typedError<null, AppError>(__TAURI_INVOKE("delete_http_item", { item })),
+	/**  The copy's name comes from the front: no user-visible word is Rust's. */
+	duplicateHttpItem: (item: HttpItem, name: string) => typedError<HttpItem, AppError>(__TAURI_INVOKE("duplicate_http_item", { item, name })),
+	moveHttpItem: (item: HttpItem, place: HttpPlace) => typedError<null, AppError>(__TAURI_INVOKE("move_http_item", { item, place })),
+	reorderHttpCollection: (id: string, index: number) => typedError<null, AppError>(__TAURI_INVOKE("reorder_http_collection", { id, index })),
+	/**  The edited side wins: the query string rewritten from the table, or the table from the URL. */
+	syncHttpQuery: (url: string, params: KeyValue[], edited: QuerySide) => typedError<SyncedQuery, AppError>(__TAURI_INVOKE("sync_http_query", { url, params, edited })),
+	httpSettings: (item: HttpItem) => typedError<ContainerSettings, AppError>(__TAURI_INVOKE("http_settings", { item })),
+	saveHttpSettings: (item: HttpItem, settings: ContainerSettings) => typedError<null, AppError>(__TAURI_INVOKE("save_http_settings", { item, settings })),
+	/**  What a request placed there inherits, and from where: « héritée de la collection … ». */
+	inheritedHttpSettings: (collectionId: string, folderId: string | null) => typedError<Inherited, AppError>(__TAURI_INVOKE("inherited_http_settings", { collectionId, folderId })),
+	/**  What a body implies, and whether a JSON one reads: the editor says both as it is typed. */
+	describeHttpBody: (body: RequestBody) => typedError<BodyAnswer, AppError>(__TAURI_INVOKE("describe_http_body", { body })),
+	/**  The operations a GraphQL document names, and why its variables do not read. */
+	describeGraphql: (document: GraphqlDocument) => typedError<GraphqlAnswer, AppError>(__TAURI_INVOKE("describe_graphql", { document })),
+	/**
+	 *  Its headers and auth composed like a request's, under the lock for what it inherits; the
+	 *  handshake waited on without it. Answers once the socket is open.
+	 */
+	connectWebsocket: (request: WebsocketRequest) => typedError<null, AppError>(__TAURI_INVOKE("connect_websocket", { request })),
+	/**  `false` when no socket is open under that id. */
+	sendWebsocket: (id: string, text: string) => typedError<boolean, AppError>(__TAURI_INVOKE("send_websocket", { id, text })),
+	closeWebsocket: (id: string) => typedError<boolean, AppError>(__TAURI_INVOKE("close_websocket", { id })),
+	/**
+	 *  What it inherits is read under the lock, its files outside it, and the send waits on nothing
+	 *  but the network: a 30-second request stalls no other command.
+	 */
+	sendHttpRequest: (request: SendRequest) => typedError<SentResponse, AppError>(__TAURI_INVOKE("send_http_request", { request })),
+	/**  `false` when that send had already ended. */
+	cancelHttpSend: (id: string) => typedError<boolean, AppError>(__TAURI_INVOKE("cancel_http_send", { id })),
+	/**  The whole body of the last answer to `id`, not the text shown: `false` when there is none. */
+	saveHttpResponse: (id: string, path: string) => typedError<boolean, AppError>(__TAURI_INVOKE("save_http_response", { id, path })),
+	/**  A closed tab lets its last body go. */
+	forgetHttpResponse: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("forget_http_response", { id })),
+	/**  The last answer to `id` as an image to show, when it is one. */
+	httpResponseImage: (id: string) => typedError<string | null, AppError>(__TAURI_INVOKE("http_response_image", { id })),
+	/**  What was sent, newest first, a group a local day. */
+	httpHistory: (tzOffsetMinutes: number) => typedError<HistoryDay[], AppError>(__TAURI_INVOKE("http_history", { tzOffsetMinutes })),
+	httpHistoryEntry: (id: string) => typedError<HistoryEntry, AppError>(__TAURI_INVOKE("http_history_entry", { id })),
+	/**  An entry rebuilt as a request to send again or save: its secrets are typed again. */
+	httpHistoryDraft: (id: string) => typedError<HistoryDraft, AppError>(__TAURI_INVOKE("http_history_draft", { id })),
+	/**  What « Vider l'historique » says it removes. */
+	countHttpHistory: () => typedError<number, AppError>(__TAURI_INVOKE("count_http_history")),
+	clearHttpHistory: () => typedError<number, AppError>(__TAURI_INVOKE("clear_http_history")),
+	/**  The jar by domain, for the manager. */
+	httpCookies: () => typedError<CookieDomain[], AppError>(__TAURI_INVOKE("http_cookies")),
+	deleteHttpCookie: (id: string) => typedError<number, AppError>(__TAURI_INVOKE("delete_http_cookie", { id })),
+	deleteHttpCookieDomain: (domain: string) => typedError<number, AppError>(__TAURI_INVOKE("delete_http_cookie_domain", { domain })),
+	/**  What « Vider le bocal » says it removes. */
+	countHttpCookies: () => typedError<number, AppError>(__TAURI_INVOKE("count_http_cookies")),
+	clearHttpCookies: () => typedError<number, AppError>(__TAURI_INVOKE("clear_http_cookies")),
 	/**
 	 *  The second way to look at a space: folders as zones, their notes inside, the loose ones
 	 *  beside them. It reads the whole space and marks what matches rather than narrowing, and
@@ -286,6 +347,8 @@ export const AUTOMATIC_BACKUPS_KEY = "devnotes.automaticBackups" as const;
 
 export const DEFAULT_SHORTCUTS = {"capture":"Ctrl+Alt+V","newNote":"Ctrl+Alt+N","palette":"Ctrl+Alt+P"} as const;
 
+export const DEFAULT_TRANSPORT = {"timeoutMs":30000,"followRedirects":true,"maxRedirects":10,"verifyTls":true,"useCookies":true} as const;
+
 export const FIELD_NAME_PATTERN = "^[A-Za-z0-9_-]+$" as const;
 
 export const GLOBAL_ACTION_EVENT = "devnotes:action" as const;
@@ -293,6 +356,8 @@ export const GLOBAL_ACTION_EVENT = "devnotes:action" as const;
 export const MINIMUM_PASSPHRASE_LENGTH = 12 as const;
 
 export const PREFERENCES_FILE = "preferences.json" as const;
+
+export const WEBSOCKET_EVENT = "devnotes://websocket" as const;
 
 /* Types */
 export type AlgorithmFamily = "hmac" | "rsa" | "rsaPss" | "ecdsa" | "edDsa" | 
@@ -425,6 +490,11 @@ export type BoardZone = {
 	folder: Folder,
 	frame: BoardFrame,
 	notes: BoardNote[],
+};
+
+export type BodyAnswer = {
+	contentType: string | null,
+	problem: JsonError | null,
 };
 
 export type ByteEncoding = "base64" | 
@@ -665,6 +735,17 @@ export type ConnectionEstimate = {
 	span: TransferTime,
 };
 
+/**
+ *  What a collection or a folder hands its requests (#478, #484). Each field is
+ *  `#[serde(default)]`: one added later needs no migration.
+ */
+export type ContainerSettings = {
+	/**  `Inherit` on a collection is no auth at all: nothing is above it. */
+	auth?: RequestAuth,
+	headers?: KeyValue[],
+	transport?: TransportSettings,
+};
+
 export type Contrast = {
 	ratio: number | null,
 	aa: TextSizes,
@@ -690,6 +771,24 @@ export type ConvertRequest = {
 	text: string,
 	from: DataFormat,
 	to: DataFormat,
+};
+
+/**  A `Set-Cookie`, its attributes named. */
+export type Cookie = {
+	name: string,
+	value: string,
+	domain: string | null,
+	path: string | null,
+	/**  As the server wrote it: `Max-Age` or `Expires`, whichever came. */
+	expires: string | null,
+	httpOnly: boolean,
+	secure: boolean,
+	sameSite: string | null,
+};
+
+export type CookieDomain = {
+	domain: string,
+	cookies: StoredCookie[],
 };
 
 export type CronAnswer = { kind: "read"; 
@@ -926,7 +1025,7 @@ export type EndingCounts = {
  *  ⚠️ A new variant breaks the front-end build until `CODE_KEYS`
  *  (`core/services/errors/error-notifier.service.ts`) and both locales have its key.
  */
-export type ErrorCode = "noteNotFound" | "spaceNotFound" | "duplicateSpaceName" | "folderNotFound" | "duplicateFolderName" | "attachmentNotFound" | "revisionNotFound" | "libraryNotFound" | "libraryOpen" | "lastLibrary" | "nothingToSetAside" | "backupNotFound" | "backupUnopenable" | "fileAccess" | "importFormat" | 
+export type ErrorCode = "noteNotFound" | "spaceNotFound" | "duplicateSpaceName" | "folderNotFound" | "duplicateFolderName" | "attachmentNotFound" | "httpItemNotFound" | "revisionNotFound" | "libraryNotFound" | "libraryOpen" | "lastLibrary" | "nothingToSetAside" | "backupNotFound" | "backupUnopenable" | "fileAccess" | "importFormat" | 
 /**  The `field` parameter names the offending field. */
 "invalidInput" | 
 /**  Poisoned mutex: a command panicked while holding the connection. */
@@ -938,7 +1037,22 @@ export type ErrorCode = "noteNotFound" | "spaceNotFound" | "duplicateSpaceName" 
 /**  The import needs the phrase the export was protected with. */
 "passphraseRequired" | 
 /**  SQLite says the file is corrupt: the one code the interface answers with an action. */
-"libraryDamaged" | "storage";
+"libraryDamaged" | "storage" | 
+/**  The `name` parameter names the `{{variable}}` with no value. */
+"httpVariable" | "httpInvalidUrl" | "httpUnresolved" | "httpRefused" | "httpTls" | "httpTimeout" | "httpTooManyRedirects" | 
+/**  The `path` parameter names the file a body or a part would have sent. */
+"httpFileUnreadable" | 
+/**  What « Annuler » answers: the front, which asked, says nothing. */
+"httpCancelled" | "httpGraphqlVariables" | 
+/**  The `status` parameter is what the server answered instead of switching protocols. */
+"httpWebsocketRefused" | "httpNetwork";
+
+export type Exchange = {
+	method: HttpMethod,
+	url: string,
+	headers: KeyValue[],
+	body: SentBody,
+};
 
 export type ExportReport = {
 	notes: number,
@@ -1007,6 +1121,15 @@ export type FolderDraft = {
 	name: string,
 };
 
+export type FormPart = {
+	enabled?: boolean,
+	key?: string,
+	/**  The text sent, or the path of the file sent. */
+	value?: string,
+	file?: boolean,
+	description?: string,
+};
+
 export type Frequency = {
 	character: string,
 	/**  `U+0065 U+0301`: every code point of a character written with several. */
@@ -1053,6 +1176,36 @@ export type GlobalAction = "capture" | "new-note" | "palette";
 
 export type Granularity = "lines" | "words" | "characters";
 
+export type GraphqlAnswer = {
+	/**  The named operations, in the order written. */
+	operations: string[],
+	variablesProblem: JsonError | null,
+};
+
+export type GraphqlDocument = {
+	query?: string,
+	/**  A JSON object as typed; empty sends none. */
+	variables?: string,
+	/**  Which operation, when the query holds several; `None` lets the server take the only one. */
+	operationName?: string | null,
+	/**  Sent as a GET, its parts in the query string, rather than a POST with a JSON body. */
+	asGet?: boolean,
+};
+
+export type GraphqlError = {
+	message: string,
+	/**  `invoices[0].amount`, joined from the error's `path`. */
+	path: string | null,
+	/**  `3:5`, the first of its `locations`. */
+	location: string | null,
+};
+
+export type GraphqlResult = {
+	/**  `data` laid out, its numbers as they came; `None` when the answer had none. */
+	data: string | null,
+	errors: GraphqlError[],
+};
+
 /**  How the date view gathers its cards. A search or a facet still makes one flat list. */
 export type Grouping = "date" | "priority" | "format" | "none";
 
@@ -1078,6 +1231,143 @@ export type HashRequest = {
 	key: string | null,
 	/**  A digest to recognise, in any of the algorithms and either encoding. */
 	expected: string | null,
+};
+
+export type HistoryDay = {
+	/**  `2026-10-07`, the local day. */
+	day: string,
+	items: HistoryItem[],
+};
+
+/**  An entry sent again: what it was called, and the request it rebuilds. */
+export type HistoryDraft = {
+	name: string,
+	method: HttpMethod,
+	document: RequestDocument,
+};
+
+export type HistoryEntry = {
+	item: HistoryItem,
+	record: HistoryRecord,
+};
+
+export type HistoryItem = {
+	id: string,
+	sentAt: string,
+	method: HttpMethod,
+	status: number | null,
+	requestId: string | null,
+	summary: HistorySummary,
+};
+
+export type HistoryRecord = {
+	exchange: Exchange,
+	response: SentResponse | null,
+};
+
+/**  What a list shows, sealed apart from the record so a list opens no body. */
+export type HistorySummary = {
+	name: string,
+	url: string,
+	millis: number | null,
+	size: number | null,
+	failure: ErrorCode | null,
+};
+
+export type HttpCollection = {
+	id: string,
+	name: string,
+	position: number,
+	createdAt: string,
+};
+
+export type HttpCollectionNode = {
+	collection: HttpCollection,
+	children: HttpNode[],
+};
+
+/**  What a deletion takes with it, said before it happens. */
+export type HttpContents = {
+	folders: number,
+	requests: number,
+};
+
+export type HttpFolder = {
+	id: string,
+	collectionId: string,
+	parentId: string | null,
+	name: string,
+	position: number,
+};
+
+export type HttpItem = {
+	kind: HttpItemKind,
+	id: string,
+};
+
+export type HttpItemKind = "collection" | "folder" | "request";
+
+export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS";
+
+export type HttpNode = { kind: "folder"; folder: HttpFolder; children: HttpNode[] } | { kind: "request"; request: HttpRequestSummary };
+
+/**  Where an inherited value was set: what the request says it comes from. */
+export type HttpOrigin = {
+	kind: HttpItemKind,
+	id: string,
+	name: string,
+};
+
+/**  Under which parent, and at which rank among its folders and requests. */
+export type HttpPlace = {
+	collectionId: string,
+	folderId: string | null,
+	index: number,
+};
+
+export type HttpRequest = {
+	id: string,
+	collectionId: string,
+	folderId: string | null,
+	name: string,
+	kind: RequestKind,
+	method: HttpMethod,
+	document: RequestDocument,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type HttpRequestDraft = {
+	collectionId: string,
+	folderId: string | null,
+	name: string,
+	kind: RequestKind,
+	method: HttpMethod,
+	document: RequestDocument,
+};
+
+/**  A field left out is untouched. */
+export type HttpRequestPatch = {
+	name?: string | null,
+	kind?: RequestKind | null,
+	method?: HttpMethod | null,
+	document?: RequestDocument | null,
+};
+
+/**  A request as the tree lists it: no document, which is read by id when it opens. */
+export type HttpRequestSummary = {
+	id: string,
+	collectionId: string,
+	folderId: string | null,
+	name: string,
+	kind: RequestKind,
+	method: HttpMethod,
+	position: number,
+};
+
+/**  Built by Rust: the front draws it and never joins a request to its folder itself. */
+export type HttpTree = {
+	collections: HttpCollectionNode[],
 };
 
 export type IbanVerdict = { kind: "valid"; bban: string; bank: string | null; branch: string | null; 
@@ -1135,6 +1425,21 @@ export type ImportReport = {
 	attachmentsMissing: number,
 };
 
+export type Inherited = {
+	/**  Never `Inherit`: what a request inheriting gets, `None` when nothing above sets one. */
+	auth: RequestAuth,
+	authFrom: HttpOrigin | null,
+	/**  Enabled and named, one a name: a folder's overrides its collection's. */
+	headers: InheritedHeader[],
+	/**  Resolved from the collection down; a request's own settings go over it. */
+	transport: Transport,
+};
+
+export type InheritedHeader = {
+	header: KeyValue,
+	from: HttpOrigin,
+};
+
 export type InstantAnswer = { kind: "read"; readAs: ReadAs; 
 /**  The unit a number was read in, guessed from its magnitude or forced. */
 magnitude: Magnitude | null; guessed: boolean; 
@@ -1180,6 +1485,21 @@ export type InstantRequest = {
 export type Invisible = "space" | "tab" | "lineBreak" | "noBreakSpace" | "narrowNoBreakSpace" | "otherSpace" | "zeroWidthSpace" | "zeroWidthJoiner" | "zeroWidthNonJoiner" | "byteOrderMark" | "softHyphen" | "control";
 
 export type IpFamily = "v4" | "v6";
+
+export type JarCookie = {
+	name: string,
+	value: string,
+	/**  Lowercased, without a leading dot. */
+	domain: string,
+	/**  Set without `Domain`: sent to that host alone, not its subdomains. */
+	hostOnly: boolean,
+	path: string,
+	/**  `None` lasts the session — here, until removed. */
+	expires: string | null,
+	secure: boolean,
+	httpOnly: boolean,
+	sameSite: string | null,
+};
 
 export type JsonChange = {
 	kind: JsonChangeKind,
@@ -1358,6 +1678,16 @@ export type JwtRequest = {
 	/**  Empty asks for no verification. Zeroed once used. */
 	secret: string,
 	secretIsBase64: boolean,
+};
+
+export type KeyPlace = "header" | "query";
+
+/**  A row of a request's parameters or headers. */
+export type KeyValue = {
+	enabled?: boolean,
+	key?: string,
+	value?: string,
+	description?: string,
 };
 
 /**
@@ -1815,6 +2145,8 @@ export type QueryParameter = {
 	value: string,
 };
 
+export type QuerySide = "url" | "params";
+
 /**  What was drawn rather than stamped: the characters as pasted, and the bits they hold. */
 export type RandomPart = {
 	text: string,
@@ -1825,11 +2157,52 @@ export type RateUnit = "bitPerSecond" | "kilobitPerSecond" | "megabitPerSecond" 
 
 export type ReadAs = "unix" | "iso8601" | "weekDate" | "ordinalDate" | "rfc2822";
 
+export type Redirect = {
+	status: number,
+	url: string,
+};
+
 /**  What the File menu draws: the libraries, and which of them is open. */
 export type Registry = {
 	libraries: LibraryEntry[],
 	open: string | null,
 };
+
+/**  `Inherit` takes the auth of the nearest folder, then the collection, that sets one. */
+export type RequestAuth = { kind: "inherit" } | { kind: "none" } | { kind: "basic"; username: string; password: string } | { kind: "bearer"; token: string } | { kind: "apiKey"; name: string; value: string; place: KeyPlace };
+
+/**
+ *  What a request sends as its body. A file is a path, read by Rust when the request is sent:
+ *  its bytes never enter the library.
+ */
+export type RequestBody = { kind: "none" } | { kind: "json"; text: string } | { kind: "text"; text: string } | 
+/**  `application/x-www-form-urlencoded`. */
+{ kind: "form"; fields: KeyValue[] } | 
+/**  `multipart/form-data`: a text field, or a file by its path. */
+{ kind: "multipart"; parts: FormPart[] } | { kind: "binary"; path: string };
+
+/**
+ *  A request's parts, sealed as one document. Each field is `#[serde(default)]`: one added
+ *  later needs no migration, and a document written by an older version still opens.
+ */
+export type RequestDocument = {
+	url?: string,
+	/**  In step with the URL's query: an enabled row is in it, a disabled one is kept aside. */
+	params?: KeyValue[],
+	headers?: KeyValue[],
+	body?: RequestBody,
+	auth?: RequestAuth,
+	description?: string,
+	/**  Read only for a GraphQL request, which sends it in place of the body. */
+	graphql?: GraphqlDocument,
+	/**  Read only for a WebSocket. */
+	websocket?: WebsocketDocument,
+	/**  Over what the folders and the collection set. */
+	transport?: TransportSettings,
+};
+
+/**  What the rail writes before a name: the method, or `QUERY` and `WS` for the other two. */
+export type RequestKind = "http" | "graphql" | "websocket";
 
 export type ReverseDns = 
 /**  One address: the name its PTR record goes under. */
@@ -1885,6 +2258,11 @@ export type SavedBytes = { kind: "saved"; bytes: number } | { kind: "invalid" } 
 
 export type SavedCode = { kind: "saved"; bytes: number } | { kind: "nothing" } | { kind: "failed"; problem: FileProblem };
 
+export type SavedMessage = {
+	name?: string,
+	text?: string,
+};
+
 /**
  *  No `Title` variant: a note found by its own title needs no excerpt, which would repeat the
  *  biggest thing on the card. That case is `SearchMatch::Title`.
@@ -1904,6 +2282,53 @@ export type SectionGroup = { group: "language"; language: Language } |
 { group: "kind"; kind: NoteKind } | { group: "priority"; priority: Priority };
 
 export type Segment = "header" | "payload" | "signature";
+
+export type SendRequest = {
+	/**  Chosen by the front, so it can cancel the send it started and save what came back. */
+	id: string,
+	kind: RequestKind,
+	method: HttpMethod,
+	document: RequestDocument,
+	/**  Where the request sits, for what it inherits; `None` for a draft not placed yet. */
+	collectionId: string | null,
+	folderId: string | null,
+	/**  For the history: what the request is called, and which one it is once saved. */
+	name: string,
+	requestId: string | null,
+};
+
+export type SentBody = { kind: "none" } | 
+/**  Up to `SHOWN_LIMIT`. */
+{ kind: "text"; text: string } | { kind: "bytes"; size: number } | { kind: "multipart"; fields: string[] };
+
+export type SentResponse = {
+	status: number,
+	/**  The status's canonical words, « OK »; empty for a code with none. */
+	reason: string,
+	millis: number,
+	/**  Bytes received. */
+	size: number,
+	/**  Where the answer came from, after the redirects. */
+	url: string,
+	headers: KeyValue[],
+	/**  The body as text, up to `SHOWN_LIMIT`; empty when it is not text. */
+	body: string,
+	binary: boolean,
+	/**  The text shown is not the whole body. */
+	cut: boolean,
+	/**  The reading stopped at `KEPT_LIMIT`: even the file is not the whole body. */
+	incomplete: boolean,
+	redirects: Redirect[],
+	/**  What the body is coloured and saved as. */
+	language: Language,
+	/**  A JSON body laid out; `None` for another, or one cut short. */
+	pretty: string | null,
+	cookies: Cookie[],
+	/**  The request as it left, for the timeline. */
+	exchange: Exchange,
+	/**  A GraphQL answer read apart: its `data` and its `errors`. */
+	graphql: GraphqlResult | null,
+};
 
 /**  Three fields rather than a map, so a missing shortcut is a compile error. */
 export type ShortcutBindings = {
@@ -1952,6 +2377,14 @@ export type SlugOptions = {
 
 export type SlugSeparator = "dash" | "underscore" | "dot";
 
+export type SocketEvent = { kind: "opened"; url: string; 
+/**  The subprotocol the server chose. */
+protocol: string | null } | { kind: "sent"; text: string; size: number } | { kind: "received"; 
+/**  Empty for a binary message. */
+text: string; size: number; binary: boolean; cut: boolean } | { kind: "closed"; code: number | null; reason: string } | 
+/**  The connection broke after it opened. */
+{ kind: "failed"; code: ErrorCode; detail: string };
+
 export type SortDirection = "descending" | "ascending";
 
 export type SortKey = "modified" | "created" | "priority" | 
@@ -1988,11 +2421,21 @@ export type StatsRequest = {
 	countWhitespace: boolean,
 };
 
+export type StoredCookie = {
+	id: string,
+	cookie: JarCookie,
+};
+
 export type Strength = "veryWeak" | "weak" | "fair" | "strong" | "veryStrong";
 
 export type Subnet = {
 	cidr: string,
 	usable: string,
+};
+
+export type SyncedQuery = {
+	url: string,
+	params: KeyValue[],
 };
 
 export type TagUsage = {
@@ -2130,6 +2573,25 @@ export type Transition = {
 	wallMinutes: number,
 };
 
+/**  The settings resolved, every field decided. */
+export type Transport = {
+	timeoutMs: number,
+	followRedirects: boolean,
+	maxRedirects: number,
+	verifyTls: boolean,
+	useCookies: boolean,
+};
+
+/**  Each field unset inherits: from the folder above, the collection, then `Transport::default`. */
+export type TransportSettings = {
+	timeoutMs?: number | null,
+	followRedirects?: boolean | null,
+	maxRedirects?: number | null,
+	verifyTls?: boolean | null,
+	/**  The library's jar: sent from, and filled by the answer. */
+	useCookies?: boolean | null,
+};
+
 export type TrashedNote = {
 	deletedAt: string,
 	/**  Derived, never stored: retention can change between versions. */
@@ -2232,6 +2694,28 @@ export type WcagLevel =
 "aa" | 
 /**  7:1 for body text. */
 "aaa";
+
+/**  A request's own WebSocket part: what it asks the server, and what it keeps to send again. */
+export type WebsocketDocument = {
+	/**  `Sec-WebSocket-Protocol`, in the order of preference. */
+	protocols?: string[],
+	messages?: SavedMessage[],
+};
+
+export type WebsocketEvent = {
+	/**  The id the front connected under. */
+	id: string,
+	at: string,
+	event: SocketEvent,
+};
+
+export type WebsocketRequest = {
+	/**  Chosen by the front: what it sends on and closes, and what each event names. */
+	id: string,
+	document: RequestDocument,
+	collectionId: string | null,
+	folderId: string | null,
+};
 
 /**  The first character UTF-8 writes in more than one byte: « é » takes 2. */
 export type WideCharacter = {

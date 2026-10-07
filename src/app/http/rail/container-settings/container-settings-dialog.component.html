@@ -1,0 +1,49 @@
+<app-dialog [layer]="'app'" labelledBy="http-settings-title" (closed)="closed.emit()">
+  <div class="body" data-testid="http-settings-dialog">
+    <h2 id="http-settings-title" class="title">
+      {{ 'http.settings.title.' + row().kind | transloco: { name: row().name } }}
+    </h2>
+    <p class="hint">{{ 'http.settings.hint' | transloco }}</p>
+
+    @if (settings(); as current) {
+      <h3 class="section">{{ 'http.editor.sections.auth' | transloco }}</h3>
+      <app-auth-editor
+        [auth]="current.auth"
+        [inherited]="above()"
+        [allowInherit]="row().kind === 'folder'"
+        (authChange)="onAuth($event)"
+      />
+
+      <h3 class="section">{{ 'http.editor.sections.headers' | transloco }}</h3>
+      <app-key-value-table
+        kind="settings-headers"
+        [label]="'http.editor.sections.headers' | transloco"
+        [rows]="current.headers"
+        (rowsChange)="onHeaders($event)"
+      />
+
+      <h3 class="section">{{ 'http.editor.sections.settings' | transloco }}</h3>
+      <app-transport-editor
+        [settings]="current.transport"
+        [above]="above()?.transport ?? defaultTransport"
+        [aboveIsDefault]="row().kind === 'collection'"
+        (settingsChange)="onTransport($event)"
+      />
+    }
+
+    <div class="actions">
+      <button type="button" class="action" data-testid="http-settings-cancel" (click)="closed.emit()">
+        {{ 'http.rail.cancel' | transloco }}
+      </button>
+      <button
+        type="button"
+        class="action primary"
+        data-testid="http-settings-save"
+        [disabled]="settings() === null"
+        (click)="save()"
+      >
+        {{ 'http.editor.save' | transloco }}
+      </button>
+    </div>
+  </div>
+</app-dialog>

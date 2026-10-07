@@ -611,7 +611,7 @@ const MAX_TZ_OFFSET_MINUTES: u32 = 14 * 60;
 
 /// ⚠️ The sign flips: JavaScript counts the minutes to add to local time to reach UTC (−120 for
 /// UTC+2), chrono the offset east. The bound is checked before the multiplication overflows.
-fn offset_from_minutes(tz_offset_minutes: i32) -> FixedOffset {
+pub(crate) fn offset_from_minutes(tz_offset_minutes: i32) -> FixedOffset {
     let utc = FixedOffset::east_opt(0).expect("UTC is a valid offset");
 
     if tz_offset_minutes.unsigned_abs() > MAX_TZ_OFFSET_MINUTES {

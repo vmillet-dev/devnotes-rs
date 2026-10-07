@@ -1,0 +1,167 @@
+@let draft = tab().draft;
+<div class="editor" data-testid="http-request-editor" [attr.data-key]="tab().key">
+  <input
+    type="text"
+    class="name"
+    data-testid="http-request-name"
+    [attr.aria-label]="'http.editor.name' | transloco"
+    [value]="draft.name"
+    (input)="onName($event)"
+  />
+
+  <div class="line">
+    <app-choice-menu
+      class="method"
+      kind="http-method"
+      triggerTestId="http-method"
+      [label]="'http.editor.method' | transloco"
+      [options]="methods"
+      [currentId]="methodId()"
+      (chosen)="onMethod($event)"
+    />
+    <app-url-field
+      [value]="draft.parts.url"
+      [label]="'http.editor.url' | transloco"
+      [placeholder]="'http.editor.urlPlaceholder' | transloco"
+      (valueChange)="onUrl($event)"
+    />
+    @if (draft.kind === 'websocket') {
+      <button
+        type="button"
+        class="send"
+        data-testid="http-socket-connect"
+        [class.cancel]="socketLive()"
+        (click)="send()"
+      >
+        {{ (socketLive() ? 'http.socket.disconnect' : 'http.socket.connect') | transloco }}
+      </button>
+    } @else {
+      <button
+        type="button"
+        class="send"
+        data-testid="http-send"
+        [class.cancel]="inFlight()"
+        [attr.title]="inFlight() ? null : ('http.send.sendHint' | transloco)"
+        (click)="send()"
+      >
+        @if (inFlight()) {
+          {{ 'http.send.cancel' | transloco }}
+        } @else {
+          {{ 'http.send.send' | transloco }}
+          <kbd class="keys" aria-hidden="true">Ctrl ↵</kbd>
+        }
+      </button>
+    }
+    <button
+      type="button"
+      class="save"
+      data-testid="http-save"
+      [disabled]="!dirty()"
+      [attr.title]="'http.editor.saveHint' | transloco"
+      (click)="save()"
+    >
+      {{ 'http.editor.save' | transloco }}
+    </button>
+  </div>
+
+  <div class="sections" role="tablist" [attr.aria-label]="'http.editor.parts' | transloco">
+    @for (id of sections(); track id) {
+      <button
+        type="button"
+        role="tab"
+        class="section"
+        data-testid="http-section"
+        [attr.data-section]="id"
+        [class.on]="section() === id"
+        [attr.aria-selected]="section() === id"
+        (click)="choose(id)"
+      >
+        {{ 'http.editor.sections.' + id | transloco }}
+        @if (counts()[id] > 0) {
+          <span class="count" data-testid="http-section-count">{{ counts()[id] }}</span>
+        } @else if (id === 'auth' && draft.parts.auth.kind === 'inherit') {
+          <span class="count" data-testid="http-auth-inherits">{{
+            'http.auth.inheritsShort' | transloco
+          }}</span>
+        }
+      </button>
+    }
+  </div>
+
+  <div class="panel" role="tabpanel">
+    @if (section() === 'params') {
+      <app-key-value-table
+        kind="params"
+        [label]="'http.editor.sections.params' | transloco"
+        [rows]="draft.parts.params"
+        (rowsChange)="onParams($event)"
+      />
+    } @else if (section() === 'headers') {
+      @let above = inherited()?.headers ?? [];
+      @if (impliedType() !== null || above.length > 0) {
+        <ul class="implied" data-testid="http-implied-headers">
+          @if (impliedType(); as type) {
+            <li class="implied-row" data-testid="http-implied-header">
+              <code class="implied-name">Content-Type</code>
+              <code class="implied-value">{{ type }}</code>
+              <span class="implied-from">{{ 'http.headers.fromBody' | transloco }}</span>
+            </li>
+          }
+          @for (known of above; track known.header.key) {
+            <li class="implied-row" data-testid="http-implied-header">
+              <code class="implied-name">{{ known.header.key }}</code>
+              <code class="implied-value">{{ known.header.value }}</code>
+              <span class="implied-from">{{
+                'http.auth.from.' + known.from.kind | transloco: { name: known.from.name }
+              }}</span>
+            </li>
+          }
+        </ul>
+      }
+      <app-key-value-table
+        kind="headers"
+        [label]="'http.editor.sections.headers' | transloco"
+        [rows]="draft.parts.headers"
+        [suggestions]="headerNames"
+        (rowsChange)="onHeaders($event)"
+      />
+    } @else if (section() === 'auth') {
+      <app-auth-editor
+        [auth]="draft.parts.auth"
+        [inherited]="tab().place === null ? null : inherited()"
+        (authChange)="onAuth($event)"
+      />
+    } @else if (section() === 'message') {
+      <app-websocket-composer
+        [websocket]="draft.parts.websocket"
+        [open]="socket()?.phase === 'open'"
+        (websocketChange)="onWebsocket($event)"
+        (sent)="sendMessage($event)"
+      />
+    } @else if (section() === 'protocols') {
+      <label class="protocols">
+        <span class="protocols-label">{{ 'http.socket.protocols' | transloco }}</span>
+        <input
+          type="text"
+          class="protocols-field"
+          data-testid="http-socket-protocols"
+          placeholder="chat, json"
+          [value]="draft.parts.websocket.protocols.join(', ')"
+          (change)="onProtocols($event)"
+        />
+        <span class="protocols-hint">{{ 'http.socket.protocolsHint' | transloco }}</span>
+      </label>
+    } @else if (section() === 'settings') {
+      <app-transport-editor
+        [settings]="draft.parts.transport"
+        [above]="transportAbove()"
+        [aboveIsDefault]="tab().place === null"
+        (settingsChange)="onTransport($event)"
+      />
+    } @else if (section() === 'query') {
+      <app-graphql-editor [graphql]="draft.parts.graphql" (graphqlChange)="onGraphql($event)" />
+    } @else {
+      <app-body-editor [body]="draft.parts.body" [answer]="bodyAnswer()" (bodyChange)="onBody($event)" />
+    }
+  </div>
+</div>

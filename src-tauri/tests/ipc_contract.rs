@@ -699,3 +699,83 @@ fn a_json_view_serializes_with_camel_case_keys() {
         serde_json::json!({ "reason": "unexpectedEnd", "line": 1, "column": 2, "offset": 1 })
     );
 }
+
+#[test]
+fn an_http_tree_tags_its_nodes_by_kind_in_camel_case() {
+    use devnotes_lib::http::model::{
+        HttpCollection, HttpCollectionNode, HttpFolder, HttpMethod, HttpNode, HttpRequestSummary,
+        HttpTree, RequestKind,
+    };
+
+    let tree = HttpTree {
+        collections: vec![HttpCollectionNode {
+            collection: HttpCollection {
+                id: "c-1".to_string(),
+                name: "API".to_string(),
+                position: 0,
+                created_at: at(NOW),
+            },
+            children: vec![HttpNode::Folder {
+                folder: HttpFolder {
+                    id: "f-1".to_string(),
+                    collection_id: "c-1".to_string(),
+                    parent_id: None,
+                    name: "Auth".to_string(),
+                    position: 0,
+                },
+                children: vec![HttpNode::Request {
+                    request: HttpRequestSummary {
+                        id: "r-1".to_string(),
+                        collection_id: "c-1".to_string(),
+                        folder_id: Some("f-1".to_string()),
+                        name: "Login".to_string(),
+                        kind: RequestKind::Graphql,
+                        method: HttpMethod::Post,
+                        position: 0,
+                    },
+                }],
+            }],
+        }],
+    };
+    let json = serde_json::to_value(&tree).unwrap();
+
+    let folder = &json["collections"][0]["children"][0];
+    assert_eq!(folder["kind"], "folder");
+    assert_eq!(folder["folder"]["collectionId"], "c-1");
+    assert_eq!(folder["folder"]["parentId"], serde_json::Value::Null);
+    let request = &folder["children"][0];
+    assert_eq!(request["kind"], "request");
+    assert_eq!(request["request"]["folderId"], "f-1");
+    assert_eq!(request["request"]["kind"], "graphql");
+    assert_eq!(request["request"]["method"], "POST");
+}
+
+#[test]
+fn an_http_patch_omitting_a_field_leaves_it_untouched() {
+    use devnotes_lib::http::model::{HttpItem, HttpItemKind, HttpMethod, HttpRequestPatch};
+
+    let patch: HttpRequestPatch = serde_json::from_str(r#"{"method":"DELETE"}"#).unwrap();
+    assert_eq!(patch.method, Some(HttpMethod::Delete));
+    assert!(patch.name.is_none() && patch.document.is_none());
+
+    let item: HttpItem = serde_json::from_str(r#"{"kind":"folder","id":"f-1"}"#).unwrap();
+    assert_eq!(item.kind, HttpItemKind::Folder);
+}
+
+#[test]
+fn a_missing_http_item_and_a_folder_moved_into_itself_have_their_codes() {
+    let missing = serde_json::to_value(AppError::from(StorageError::HttpItemNotFound(
+        "r-1".to_string(),
+    )))
+    .unwrap();
+    assert_eq!(missing["code"], "httpItemNotFound");
+    assert_eq!(missing["params"]["id"], "r-1");
+
+    let refused = serde_json::to_value(AppError::from(StorageError::from(ValidationError::new(
+        "folderId",
+        "a folder cannot move into itself",
+    ))))
+    .unwrap();
+    assert_eq!(refused["code"], "invalidInput");
+    assert_eq!(refused["params"]["field"], "folderId");
+}

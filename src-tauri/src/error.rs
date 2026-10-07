@@ -3,9 +3,11 @@
 
 use std::collections::BTreeMap;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use specta::Type;
 use thiserror::Error;
+
+use crate::http::send::SendError;
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 #[error("Invalid field \"{field}\": {detail}")]
@@ -41,6 +43,11 @@ pub enum StorageError {
     DuplicateFolderName(String),
     #[error("Attachment not found: {0}")]
     AttachmentNotFound(String),
+    #[error("HTTP collection, folder or request not found: {0}")]
+    HttpItemNotFound(String),
+    /// A rule that needs the database to be checked: a folder moved into itself.
+    #[error(transparent)]
+    Invalid(#[from] ValidationError),
     #[error("Revision not found: {0}")]
     RevisionNotFound(String),
     #[error("Library not found: {0}")]
@@ -105,7 +112,7 @@ impl<T, E: std::fmt::Display> FileContext<T> for Result<T, E> {
 
 /// ⚠️ A new variant breaks the front-end build until `CODE_KEYS`
 /// (`core/services/errors/error-notifier.service.ts`) and both locales have its key.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub enum ErrorCode {
     NoteNotFound,
@@ -114,6 +121,7 @@ pub enum ErrorCode {
     FolderNotFound,
     DuplicateFolderName,
     AttachmentNotFound,
+    HttpItemNotFound,
     RevisionNotFound,
     LibraryNotFound,
     LibraryOpen,
@@ -136,6 +144,22 @@ pub enum ErrorCode {
     /// SQLite says the file is corrupt: the one code the interface answers with an action.
     LibraryDamaged,
     Storage,
+    /// The `name` parameter names the `{{variable}}` with no value.
+    HttpVariable,
+    HttpInvalidUrl,
+    HttpUnresolved,
+    HttpRefused,
+    HttpTls,
+    HttpTimeout,
+    HttpTooManyRedirects,
+    /// The `path` parameter names the file a body or a part would have sent.
+    HttpFileUnreadable,
+    /// What « Annuler » answers: the front, which asked, says nothing.
+    HttpCancelled,
+    HttpGraphqlVariables,
+    /// The `status` parameter is what the server answered instead of switching protocols.
+    HttpWebsocketRefused,
+    HttpNetwork,
 }
 
 #[derive(Debug, Serialize, Type)]
@@ -181,6 +205,34 @@ impl From<ValidationError> for AppError {
     }
 }
 
+impl From<SendError> for AppError {
+    fn from(error: SendError) -> Self {
+        let detail = error.to_string();
+
+        match error {
+            SendError::Variable(name) => Self::with(ErrorCode::HttpVariable, detail, "name", &name),
+            SendError::InvalidUrl(_) => Self::new(ErrorCode::HttpInvalidUrl, detail),
+            SendError::Unresolved(_) => Self::new(ErrorCode::HttpUnresolved, detail),
+            SendError::Refused(_) => Self::new(ErrorCode::HttpRefused, detail),
+            SendError::Tls(_) => Self::new(ErrorCode::HttpTls, detail),
+            SendError::Timeout => Self::new(ErrorCode::HttpTimeout, detail),
+            SendError::TooManyRedirects => Self::new(ErrorCode::HttpTooManyRedirects, detail),
+            SendError::FileUnreadable(path) => {
+                Self::with(ErrorCode::HttpFileUnreadable, detail, "path", &path)
+            }
+            SendError::Cancelled => Self::new(ErrorCode::HttpCancelled, detail),
+            SendError::GraphqlVariables(_) => Self::new(ErrorCode::HttpGraphqlVariables, detail),
+            SendError::Handshake(status) => Self::with(
+                ErrorCode::HttpWebsocketRefused,
+                detail,
+                "status",
+                &status.to_string(),
+            ),
+            SendError::Network(_) => Self::new(ErrorCode::HttpNetwork, detail),
+        }
+    }
+}
+
 impl From<StorageError> for AppError {
     fn from(error: StorageError) -> Self {
         let detail = error.to_string();
@@ -204,6 +256,10 @@ impl From<StorageError> for AppError {
             StorageError::AttachmentNotFound(id) => {
                 Self::with(ErrorCode::AttachmentNotFound, detail, "id", &id)
             }
+            StorageError::HttpItemNotFound(id) => {
+                Self::with(ErrorCode::HttpItemNotFound, detail, "id", &id)
+            }
+            StorageError::Invalid(error) => error.into(),
             StorageError::RevisionNotFound(id) => {
                 Self::with(ErrorCode::RevisionNotFound, detail, "id", &id)
             }

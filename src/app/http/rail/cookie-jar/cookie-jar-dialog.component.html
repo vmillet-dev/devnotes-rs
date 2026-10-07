@@ -1,0 +1,118 @@
+<app-dialog [layer]="'app'" labelledBy="http-cookies-title" (closed)="closed.emit()">
+  <div class="body" data-testid="http-cookies-dialog">
+    <header class="head">
+      <h2 id="http-cookies-title" class="title">{{ 'http.cookies.title' | transloco }}</h2>
+      @if (confirming(); as count) {
+        <span class="confirm" data-testid="http-cookies-clear-count">{{
+          'http.cookies.confirm' | transloco: { count }
+        }}</span>
+        <button
+          type="button"
+          class="action danger"
+          data-testid="http-cookies-clear-confirm"
+          (click)="clear()"
+        >
+          {{ 'http.cookies.clear' | transloco }}
+        </button>
+        <button
+          type="button"
+          class="action"
+          data-testid="http-cookies-clear-cancel"
+          (click)="confirming.set(null)"
+        >
+          {{ 'http.rail.cancel' | transloco }}
+        </button>
+      } @else {
+        <button
+          type="button"
+          class="action"
+          data-testid="http-cookies-clear"
+          [disabled]="(domains()?.length ?? 0) === 0"
+          (click)="askClear()"
+        >
+          {{ 'http.cookies.clear' | transloco }}
+        </button>
+      }
+    </header>
+    <p class="hint">{{ 'http.cookies.hint' | transloco }}</p>
+
+    @if (domains(); as domains) {
+      @for (domain of domains; track domain.domain) {
+        <section class="domain" data-testid="http-cookies-domain" [attr.data-domain]="domain.domain">
+          <header class="domain-head">
+            <h3 class="domain-name">{{ domain.domain }}</h3>
+            <span class="domain-count">{{
+              'http.cookies.count' | transloco: { count: domain.cookies.length }
+            }}</span>
+            <button
+              type="button"
+              class="action danger small"
+              data-testid="http-cookies-domain-remove"
+              (click)="removeDomain(domain.domain)"
+            >
+              {{ 'http.cookies.removeDomain' | transloco }}
+            </button>
+          </header>
+          <table class="cookies">
+            <thead>
+              <tr>
+                <th scope="col">{{ 'http.cookies.name' | transloco }}</th>
+                <th scope="col">{{ 'http.cookies.value' | transloco }}</th>
+                <th scope="col">{{ 'http.cookies.path' | transloco }}</th>
+                <th scope="col">{{ 'http.cookies.expires' | transloco }}</th>
+                <th scope="col">{{ 'http.cookies.flags' | transloco }}</th>
+                <th scope="col">
+                  <span class="visually-hidden">{{ 'http.cookies.remove' | transloco }}</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (stored of domain.cookies; track stored.id) {
+                @let cookie = stored.cookie;
+                <tr data-testid="http-cookie">
+                  <td class="mono">{{ cookie.name }}</td>
+                  <td class="mono value" [attr.title]="cookie.value">{{ cookie.value }}</td>
+                  <td class="mono">{{ cookie.path }}</td>
+                  <td>{{ expiry(cookie) }}</td>
+                  <td class="flags">
+                    @if (cookie.secure) {
+                      <span class="flag">Secure</span>
+                    }
+                    @if (cookie.httpOnly) {
+                      <span class="flag">HttpOnly</span>
+                    }
+                    @if (cookie.sameSite; as sameSite) {
+                      <span class="flag">SameSite={{ sameSite }}</span>
+                    }
+                    @if (cookie.hostOnly) {
+                      <span class="flag">{{ 'http.cookies.hostOnly' | transloco }}</span>
+                    }
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="remove"
+                      data-testid="http-cookie-remove"
+                      [attr.aria-label]="'http.cookies.removeOne' | transloco: { name: cookie.name }"
+                      (click)="remove(stored.id)"
+                    >
+                      ×
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </section>
+      } @empty {
+        <p class="empty" data-testid="http-cookies-empty">{{ 'http.cookies.empty' | transloco }}</p>
+      }
+    }
+
+    <div class="actions">
+      <button type="button" class="action" data-testid="http-cookies-close" (click)="closed.emit()">
+        {{ 'http.cookies.close' | transloco }}
+      </button>
+    </div>
+  </div>
+</app-dialog>

@@ -17,7 +17,7 @@ import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { StatusNotifier } from '@core/services/notifications/status.service';
 import { Tool, ToolDefinition, ToolResult } from '@core/services/tools/tool.model';
 import { ToolsStore } from '@core/services/tools/tools.store';
-import { SaveAsNoteDialogComponent } from './save-as-note/save-as-note-dialog.component';
+import { SaveAsNoteDialogComponent } from '@app/save-as-note/save-as-note-dialog.component';
 
 /**
  * What every tool is drawn in: the breadcrumb, the tool's own actions, Vider and "Enregistrer

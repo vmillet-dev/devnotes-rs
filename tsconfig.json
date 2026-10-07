@@ -28,6 +28,8 @@
       "@titlebar/*": ["./src/app/titlebar/*"],
       "@banners/*": ["./src/app/banners/*"],
       "@tools/*": ["./src/app/tools/*"],
+      "@http/*": ["./src/app/http/*"],
+      "@app/*": ["./src/app/*"],
       "@testing/*": ["./src/testing/*"]
     }
   },

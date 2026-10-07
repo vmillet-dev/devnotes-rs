@@ -658,3 +658,126 @@
   font-variant-ligatures: none;
   color: var(--text-1);
 }
+
+// A request's method in its colour, as the HTTP rail and the open request write it: a word, not a
+// filled badge. `QUERY` is GraphQL's, `WS` a WebSocket's.
+@mixin http-method-hues {
+  color: var(--text-2);
+
+  &[data-method='GET'] {
+    color: var(--green);
+  }
+
+  &[data-method='POST'] {
+    color: var(--amber-text);
+  }
+
+  &[data-method='PUT'] {
+    color: var(--blue);
+  }
+
+  &[data-method='PATCH'] {
+    color: var(--purple);
+  }
+
+  &[data-method='DELETE'] {
+    color: var(--red);
+  }
+
+  &[data-method='QUERY'] {
+    color: var(--pink);
+  }
+
+  &[data-method='WS'] {
+    color: var(--teal);
+  }
+}
+
+// A request's rows to tick, type and remove: its parameters, headers, form and multipart fields.
+@mixin http-rows-table {
+  .table {
+    @include surface(var(--bg-1), 10px);
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: fixed;
+    font-size: 12.5px;
+
+    th {
+      padding: 7px 12px;
+      border-bottom: 1px solid var(--line-soft);
+      font-size: 11.5px;
+      font-weight: 600;
+      text-align: left;
+      color: var(--text-2);
+    }
+
+    td {
+      padding: 0;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    td + td {
+      border-left: 1px solid var(--line-soft);
+    }
+  }
+
+  .check-column {
+    width: 40px;
+    text-align: center;
+  }
+
+  .remove-column {
+    width: 40px;
+  }
+
+  .check {
+    @include focus-ring(1px);
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    accent-color: var(--amber-fill);
+    cursor: pointer;
+  }
+
+  .cell {
+    @include text-field;
+    @include focus-ring(-2px);
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 12.5px;
+    color: var(--text-0);
+
+    &.mono {
+      font-family: var(--font-mono), monospace;
+    }
+
+    &::placeholder {
+      color: var(--text-2);
+    }
+  }
+
+  // A row not sent reads as set aside, never as gone.
+  .off .cell {
+    color: var(--text-2);
+  }
+
+  .remove {
+    @include unstyled-control;
+    @include hit-target;
+    @include focus-ring(-2px);
+    justify-content: center;
+    width: 100%;
+    font-size: 15px;
+    color: var(--text-2);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--red);
+    }
+  }
+}

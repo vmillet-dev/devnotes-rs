@@ -20,9 +20,12 @@ mod common;
 
 mod attachments;
 mod folders;
+mod http;
+mod http_send;
 mod notes;
 mod spaces;
 mod transfer;
+mod websocket;
 
 /// The app is kept, not only its handle: the state goes with it.
 struct Session(App<MockRuntime>);
@@ -31,6 +34,8 @@ impl Session {
     fn with(library: Option<Library>) -> Self {
         let app = mock_app();
         app.manage(Db::new(library));
+        app.manage(devnotes_lib::http::send::Sending::default());
+        app.manage(devnotes_lib::http::websocket::Sockets::default());
         Self(app)
     }
 

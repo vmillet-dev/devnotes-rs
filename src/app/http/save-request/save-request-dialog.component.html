@@ -1,0 +1,43 @@
+<app-dialog [layer]="'app'" labelledBy="http-save-title" (closed)="cancelled.emit()">
+  <form class="form" data-testid="http-save-dialog" (submit)="submit($event, nameInput.value)">
+    <h2 id="http-save-title" class="title">{{ 'http.save.title' | transloco }}</h2>
+
+    <label class="label" for="http-save-name">{{ 'http.save.name' | transloco }}</label>
+    <input
+      #nameInput
+      id="http-save-name"
+      type="text"
+      class="input"
+      data-testid="http-save-name"
+      [value]="name()"
+    />
+
+    @if (options().length > 0) {
+      <span class="label">{{ 'http.save.place' | transloco }}</span>
+      <app-choice-menu
+        kind="http-save-place"
+        triggerTestId="http-save-place"
+        [label]="'http.save.place' | transloco"
+        [options]="options()"
+        [currentId]="placeId()"
+        (chosen)="placeId.set($event)"
+      />
+    } @else {
+      <p class="hint" data-testid="http-save-nowhere">{{ 'http.save.nowhere' | transloco }}</p>
+    }
+
+    <div class="actions">
+      <button type="button" class="action" data-testid="http-save-cancel" (click)="cancelled.emit()">
+        {{ 'http.rail.cancel' | transloco }}
+      </button>
+      <button
+        type="submit"
+        class="action primary"
+        data-testid="http-save-submit"
+        [disabled]="options().length === 0"
+      >
+        {{ 'http.editor.save' | transloco }}
+      </button>
+    </div>
+  </form>
+</app-dialog>

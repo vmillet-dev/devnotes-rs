@@ -66,6 +66,9 @@ pub async fn open_library<R: Runtime>(id: String, app: AppHandle<R>) -> Result<(
 
         let mut open = db.lock().map_err(|_| StorageError::Unavailable)?;
         *open = None;
+        if let Some(sockets) = app.try_state::<crate::http::websocket::Sockets>() {
+            sockets.close_all();
+        }
 
         Ok(point_at(&profile, &id)?)
     })
