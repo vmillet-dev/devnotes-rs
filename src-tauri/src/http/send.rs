@@ -140,6 +140,9 @@ pub enum SendError {
     Cancelled,
     #[error("The GraphQL variables are not a JSON object: {0}")]
     GraphqlVariables(String),
+    /// The server answered the WebSocket handshake with this status instead of 101.
+    #[error("The server refused the WebSocket: {0}")]
+    Handshake(u16),
     #[error("Network error: {0}")]
     Network(String),
 }
@@ -492,7 +495,7 @@ fn wire_method(method: HttpMethod) -> reqwest::Method {
     }
 }
 
-fn install_crypto() {
+pub(crate) fn install_crypto() {
     static ONCE: Once = Once::new();
     ONCE.call_once(|| {
         // `Err` is another provider already installed: one is all a process needs.

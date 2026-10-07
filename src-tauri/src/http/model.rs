@@ -2,6 +2,7 @@
 //! requests, a request's sealed document, and where an item can be moved to.
 
 use super::graphql::GraphqlDocument;
+use super::websocket::WebsocketDocument;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -157,6 +158,8 @@ pub struct RequestDocument {
     pub description: String,
     /// Read only for a GraphQL request, which sends it in place of the body.
     pub graphql: GraphqlDocument,
+    /// Read only for a WebSocket.
+    pub websocket: WebsocketDocument,
 }
 
 /// A row of a request's parameters or headers.

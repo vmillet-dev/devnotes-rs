@@ -160,6 +160,14 @@ export const commands = {
 	/**  The operations a GraphQL document names, and why its variables do not read. */
 	describeGraphql: (document: GraphqlDocument) => typedError<GraphqlAnswer, AppError>(__TAURI_INVOKE("describe_graphql", { document })),
 	/**
+	 *  Its headers and auth composed like a request's, under the lock for what it inherits; the
+	 *  handshake waited on without it. Answers once the socket is open.
+	 */
+	connectWebsocket: (request: WebsocketRequest) => typedError<null, AppError>(__TAURI_INVOKE("connect_websocket", { request })),
+	/**  `false` when no socket is open under that id. */
+	sendWebsocket: (id: string, text: string) => typedError<boolean, AppError>(__TAURI_INVOKE("send_websocket", { id, text })),
+	closeWebsocket: (id: string) => typedError<boolean, AppError>(__TAURI_INVOKE("close_websocket", { id })),
+	/**
 	 *  What it inherits is read under the lock, its files outside it, and the send waits on nothing
 	 *  but the network: a 30-second request stalls no other command.
 	 */
@@ -339,6 +347,8 @@ export const GLOBAL_ACTION_EVENT = "devnotes:action" as const;
 export const MINIMUM_PASSPHRASE_LENGTH = 12 as const;
 
 export const PREFERENCES_FILE = "preferences.json" as const;
+
+export const WEBSOCKET_EVENT = "devnotes://websocket" as const;
 
 /* Types */
 export type AlgorithmFamily = "hmac" | "rsa" | "rsaPss" | "ecdsa" | "edDsa" | 
@@ -1018,7 +1028,9 @@ export type ErrorCode = "noteNotFound" | "spaceNotFound" | "duplicateSpaceName" 
 /**  The `path` parameter names the file a body or a part would have sent. */
 "httpFileUnreadable" | 
 /**  What « Annuler » answers: the front, which asked, says nothing. */
-"httpCancelled" | "httpGraphqlVariables" | "httpNetwork";
+"httpCancelled" | "httpGraphqlVariables" | 
+/**  The `status` parameter is what the server answered instead of switching protocols. */
+"httpWebsocketRefused" | "httpNetwork";
 
 export type Exchange = {
 	method: HttpMethod,
@@ -2151,6 +2163,8 @@ export type RequestDocument = {
 	description?: string,
 	/**  Read only for a GraphQL request, which sends it in place of the body. */
 	graphql?: GraphqlDocument,
+	/**  Read only for a WebSocket. */
+	websocket?: WebsocketDocument,
 };
 
 /**  What the rail writes before a name: the method, or `QUERY` and `WS` for the other two. */
@@ -2209,6 +2223,11 @@ export type SampleNote = {
 export type SavedBytes = { kind: "saved"; bytes: number } | { kind: "invalid" } | { kind: "failed"; problem: FileProblem };
 
 export type SavedCode = { kind: "saved"; bytes: number } | { kind: "nothing" } | { kind: "failed"; problem: FileProblem };
+
+export type SavedMessage = {
+	name?: string,
+	text?: string,
+};
 
 /**
  *  No `Title` variant: a note found by its own title needs no excerpt, which would repeat the
@@ -2323,6 +2342,14 @@ export type SlugOptions = {
 };
 
 export type SlugSeparator = "dash" | "underscore" | "dot";
+
+export type SocketEvent = { kind: "opened"; url: string; 
+/**  The subprotocol the server chose. */
+protocol: string | null } | { kind: "sent"; text: string; size: number } | { kind: "received"; 
+/**  Empty for a binary message. */
+text: string; size: number; binary: boolean; cut: boolean } | { kind: "closed"; code: number | null; reason: string } | 
+/**  The connection broke after it opened. */
+{ kind: "failed"; code: ErrorCode; detail: string };
 
 export type SortDirection = "descending" | "ascending";
 
@@ -2609,6 +2636,28 @@ export type WcagLevel =
 "aa" | 
 /**  7:1 for body text. */
 "aaa";
+
+/**  A request's own WebSocket part: what it asks the server, and what it keeps to send again. */
+export type WebsocketDocument = {
+	/**  `Sec-WebSocket-Protocol`, in the order of preference. */
+	protocols?: string[],
+	messages?: SavedMessage[],
+};
+
+export type WebsocketEvent = {
+	/**  The id the front connected under. */
+	id: string,
+	at: string,
+	event: SocketEvent,
+};
+
+export type WebsocketRequest = {
+	/**  Chosen by the front: what it sends on and closes, and what each event names. */
+	id: string,
+	document: RequestDocument,
+	collectionId: string | null,
+	folderId: string | null,
+};
 
 /**  The first character UTF-8 writes in more than one byte: « é » takes 2. */
 export type WideCharacter = {

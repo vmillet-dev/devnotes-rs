@@ -23,6 +23,11 @@ describe('the HTTP wire shapes', () => {
       auth: { kind: 'inherit' },
       description: '',
       graphql: { query: '', variables: '', operationName: null, asGet: false },
+      websocket: { protocols: [], messages: [] },
+    });
+    expect(toParts({ websocket: { messages: [{ name: 'Ping' }] } }).websocket).toEqual({
+      protocols: [],
+      messages: [{ name: 'Ping', text: '' }],
     });
     expect(toParts({}).body).toEqual({ kind: 'none' });
     expect(toParts({ graphql: { query: 'query A { a }', asGet: true } }).graphql).toEqual({

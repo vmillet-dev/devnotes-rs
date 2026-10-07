@@ -1747,6 +1747,29 @@ patch, chosen from the method menu (« GraphQL » beside the methods).
 - `{{variables}}` in the query and the variables stop the send like anywhere else, until
   environments resolve them. Introspection and completion from the schema are out of scope.
 
+### A WebSocket
+
+**The socket lives in Rust** (`http/websocket.rs`, `tokio-tungstenite` on rustls with the same
+platform verifier as reqwest), a task a socket, under an id the front chose
+(`HttpSocketsStore`: the tab's key and a counter). The document carries a `websocket` part —
+the subprotocols asked for, and the messages kept to send again.
+
+- **Connecting reuses `compose`**: the URL is read as `http(s)` and sent back on `ws(s)`, so the
+  headers inherited, the auth and the `{{variable}}` check are a request's. `connect_websocket`
+  answers once the handshake did; a refusal crosses as `httpWebsocketRefused` with its
+  `status`, the rest as a send's codes.
+- **What follows comes as events, on one topic** (`WEBSOCKET_EVENT`, its payload generated, like
+  `GlobalAction`): opened (with the subprotocol taken), sent, received (cut at 64 KB, a binary
+  message only sized), closed, failed. The front listens through `WEBSOCKET_SUBSCRIBER`, a
+  token a spec replaces to play events.
+- **Writing goes through a channel** to the task, which writes and says so (`sent`) only once
+  the frame left. A close asked for ends the task after 3 s whatever the server answers, and
+  a server cutting it short still reads as closed.
+- ⚠️ **Closing the tab closes the socket, and switching library closes them all**
+  (`open_library` calls `Sockets::close_all`): the page reloads, but the tasks are Rust's.
+- The lower half is a **log** (`SocketLogComponent`): each event's time, direction and size,
+  filterable, the newest 500 kept.
+
 ### Managing spaces from the switcher
 
 The space switcher's dropdown has three mutually exclusive states: the menu, the creation

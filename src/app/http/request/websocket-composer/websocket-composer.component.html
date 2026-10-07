@@ -1,0 +1,64 @@
+<div class="composer" data-testid="http-socket-composer">
+  <div class="compose">
+    <textarea
+      class="text"
+      rows="8"
+      data-testid="http-socket-message"
+      spellcheck="false"
+      [attr.aria-label]="'http.socket.message' | transloco"
+      [placeholder]="'http.socket.messagePlaceholder' | transloco"
+      [value]="text()"
+      (input)="onText($event)"
+    ></textarea>
+    <div class="actions">
+      <button
+        type="button"
+        class="button primary"
+        data-testid="http-socket-send"
+        [disabled]="!open() || text().trim() === ''"
+        [attr.title]="open() ? null : ('http.socket.notOpen' | transloco)"
+        (click)="send(text())"
+      >
+        {{ 'http.socket.send' | transloco }}
+      </button>
+      <button
+        type="button"
+        class="button"
+        data-testid="http-socket-keep"
+        [disabled]="text().trim() === ''"
+        (click)="keep()"
+      >
+        {{ 'http.socket.keep' | transloco }}
+      </button>
+    </div>
+  </div>
+
+  <div class="saved">
+    <span class="label">{{ 'http.socket.saved' | transloco }}</span>
+    @for (message of websocket().messages; track $index) {
+      <div class="message" data-testid="http-socket-saved">
+        <button type="button" class="message-name" (click)="load(message)">{{ message.name }}</button>
+        <button
+          type="button"
+          class="button small"
+          data-testid="http-socket-saved-send"
+          [disabled]="!open()"
+          (click)="send(message.text)"
+        >
+          {{ 'http.socket.send' | transloco }}
+        </button>
+        <button
+          type="button"
+          class="remove"
+          data-testid="http-socket-saved-remove"
+          [attr.aria-label]="'http.socket.remove' | transloco: { name: message.name }"
+          (click)="remove($index)"
+        >
+          ×
+        </button>
+      </div>
+    } @empty {
+      <p class="empty">{{ 'http.socket.noneSaved' | transloco }}</p>
+    }
+  </div>
+</div>

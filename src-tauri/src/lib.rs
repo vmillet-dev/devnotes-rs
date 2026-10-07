@@ -39,13 +39,13 @@ use folders::{
     list_folders, recolour_folder, rename_folder, save_board_layout,
 };
 use http::{
-    cancel_http_send, clear_http_history, count_http_contents, count_http_history,
-    create_http_collection, create_http_folder, create_http_request, delete_http_item,
-    describe_graphql, describe_http_body, duplicate_http_item, forget_http_response,
-    get_http_request, http_history, http_history_draft, http_history_entry, http_response_image,
-    http_settings, http_tree, inherited_http_settings, move_http_item, rename_http_item,
-    reorder_http_collection, save_http_request, save_http_response, save_http_settings,
-    send_http_request, sync_http_query,
+    cancel_http_send, clear_http_history, close_websocket, connect_websocket, count_http_contents,
+    count_http_history, create_http_collection, create_http_folder, create_http_request,
+    delete_http_item, describe_graphql, describe_http_body, duplicate_http_item,
+    forget_http_response, get_http_request, http_history, http_history_draft, http_history_entry,
+    http_response_image, http_settings, http_tree, inherited_http_settings, move_http_item,
+    rename_http_item, reorder_http_collection, save_http_request, save_http_response,
+    save_http_settings, send_http_request, send_websocket, sync_http_query,
 };
 use json::explore_json;
 use libraries::{create_library, delete_library, list_libraries, open_library, rename_library};
@@ -177,6 +177,9 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             inherited_http_settings::<tauri::Wry>,
             describe_http_body,
             describe_graphql,
+            connect_websocket::<tauri::Wry>,
+            send_websocket::<tauri::Wry>,
+            close_websocket::<tauri::Wry>,
             send_http_request::<tauri::Wry>,
             cancel_http_send::<tauri::Wry>,
             save_http_response::<tauri::Wry>,
@@ -234,6 +237,8 @@ fn ipc_builder() -> Builder<tauri::Wry> {
         // Reachable from no command, so exported on its own, with the topic it travels on.
         .typ::<desktop::GlobalAction>()
         .constant("GLOBAL_ACTION_EVENT", desktop::ACTION_EVENT)
+        .typ::<http::websocket::WebsocketEvent>()
+        .constant("WEBSOCKET_EVENT", http::websocket::WEBSOCKET_EVENT)
         .constant("APP_METADATA", app_info::METADATA)
         // The native side registers them before the front end exists; the front reads them.
         .constant("DEFAULT_SHORTCUTS", desktop::ShortcutBindings::defaults())
@@ -334,6 +339,7 @@ fn setup(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     // Empty until `vault::unlock` fills it with the connection and the key.
     app.manage(db::Db::new(None));
     app.manage(http::send::Sending::default());
+    app.manage(http::websocket::Sockets::default());
 
     Ok(())
 }

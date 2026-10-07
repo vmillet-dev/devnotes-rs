@@ -10,40 +10,48 @@
   />
 
   <div class="line">
-    @if (draft.kind !== 'websocket') {
-      <app-choice-menu
-        class="method"
-        kind="http-method"
-        triggerTestId="http-method"
-        [label]="'http.editor.method' | transloco"
-        [options]="methods"
-        [currentId]="methodId()"
-        (chosen)="onMethod($event)"
-      />
-    } @else {
-      <span class="kind" data-testid="http-kind-badge" [attr.data-method]="badge()">{{ badge() }}</span>
-    }
+    <app-choice-menu
+      class="method"
+      kind="http-method"
+      triggerTestId="http-method"
+      [label]="'http.editor.method' | transloco"
+      [options]="methods"
+      [currentId]="methodId()"
+      (chosen)="onMethod($event)"
+    />
     <app-url-field
       [value]="draft.parts.url"
       [label]="'http.editor.url' | transloco"
       [placeholder]="'http.editor.urlPlaceholder' | transloco"
       (valueChange)="onUrl($event)"
     />
-    <button
-      type="button"
-      class="send"
-      data-testid="http-send"
-      [class.cancel]="inFlight()"
-      [attr.title]="inFlight() ? null : ('http.send.sendHint' | transloco)"
-      (click)="send()"
-    >
-      @if (inFlight()) {
-        {{ 'http.send.cancel' | transloco }}
-      } @else {
-        {{ 'http.send.send' | transloco }}
-        <kbd class="keys" aria-hidden="true">Ctrl ↵</kbd>
-      }
-    </button>
+    @if (draft.kind === 'websocket') {
+      <button
+        type="button"
+        class="send"
+        data-testid="http-socket-connect"
+        [class.cancel]="socketLive()"
+        (click)="send()"
+      >
+        {{ (socketLive() ? 'http.socket.disconnect' : 'http.socket.connect') | transloco }}
+      </button>
+    } @else {
+      <button
+        type="button"
+        class="send"
+        data-testid="http-send"
+        [class.cancel]="inFlight()"
+        [attr.title]="inFlight() ? null : ('http.send.sendHint' | transloco)"
+        (click)="send()"
+      >
+        @if (inFlight()) {
+          {{ 'http.send.cancel' | transloco }}
+        } @else {
+          {{ 'http.send.send' | transloco }}
+          <kbd class="keys" aria-hidden="true">Ctrl ↵</kbd>
+        }
+      </button>
+    }
     <button
       type="button"
       class="save"
@@ -123,6 +131,26 @@
         [inherited]="tab().place === null ? null : inherited()"
         (authChange)="onAuth($event)"
       />
+    } @else if (section() === 'message') {
+      <app-websocket-composer
+        [websocket]="draft.parts.websocket"
+        [open]="socket()?.phase === 'open'"
+        (websocketChange)="onWebsocket($event)"
+        (sent)="sendMessage($event)"
+      />
+    } @else if (section() === 'protocols') {
+      <label class="protocols">
+        <span class="protocols-label">{{ 'http.socket.protocols' | transloco }}</span>
+        <input
+          type="text"
+          class="protocols-field"
+          data-testid="http-socket-protocols"
+          placeholder="chat, json"
+          [value]="draft.parts.websocket.protocols.join(', ')"
+          (change)="onProtocols($event)"
+        />
+        <span class="protocols-hint">{{ 'http.socket.protocolsHint' | transloco }}</span>
+      </label>
     } @else if (section() === 'query') {
       <app-graphql-editor [graphql]="draft.parts.graphql" (graphqlChange)="onGraphql($event)" />
     } @else {

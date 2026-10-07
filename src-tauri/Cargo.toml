@@ -86,7 +86,10 @@ deunicode = "1.6.2"
 url = "2.5.8"
 reqwest = { version = "0.13.4", default-features = false, features = ["rustls-no-provider", "http2", "form", "multipart", "charset"] }
 rustls = { version = "0.23.45", default-features = false, features = ["ring", "std", "tls12"] }
-tokio = { version = "1.53.1", default-features = false, features = ["rt"] }
+tokio = { version = "1.53.1", default-features = false, features = ["rt", "sync", "macros", "time"] }
+tokio-tungstenite = { version = "0.30.0", default-features = false, features = ["connect", "__rustls-tls"] }
+rustls-platform-verifier = "0.7.0"
+futures-util = { version = "0.3.33", default-features = false, features = ["sink", "std"] }
 percent-encoding = "2.3.2"
 md-5 = "0.11"
 sha1 = "0.11"

@@ -11,6 +11,7 @@ pub mod response;
 pub mod send;
 pub mod settings;
 pub mod store;
+pub mod websocket;
 
 use std::path::Path;
 
@@ -513,4 +514,72 @@ pub async fn describe_graphql(
     document: graphql::GraphqlDocument,
 ) -> Result<graphql::GraphqlAnswer, AppError> {
     off_thread(move || graphql::describe(&document)).await
+}
+
+#[derive(Debug, Clone, serde::Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct WebsocketRequest {
+    /// Chosen by the front: what it sends on and closes, and what each event names.
+    pub id: String,
+    pub document: model::RequestDocument,
+    pub collection_id: Option<String>,
+    pub folder_id: Option<String>,
+}
+
+/// Its headers and auth composed like a request's, under the lock for what it inherits; the
+/// handshake waited on without it. Answers once the socket is open.
+#[tauri::command]
+#[specta::specta]
+pub async fn connect_websocket<R: Runtime>(
+    request: WebsocketRequest,
+    app: AppHandle<R>,
+) -> Result<(), AppError> {
+    let WebsocketRequest {
+        id,
+        mut document,
+        collection_id,
+        folder_id,
+    } = request;
+    document.url = websocket::socket_url(&document.url);
+    document.body = model::RequestBody::None;
+    let outgoing = blocking(app.clone(), move |_, db| {
+        let inherited = match collection_id {
+            Some(collection_id) => {
+                let mut connection = lock(db)?;
+                store::inherited(&mut connection, &collection_id, folder_id.as_deref())?
+            }
+            None => settings::inherit(&[]),
+        };
+        Ok(send::compose(
+            model::RequestKind::Http,
+            model::HttpMethod::Get,
+            &document,
+            &inherited,
+        )
+        .map(|outgoing| (outgoing, document.websocket.protocols))?)
+    })
+    .await?;
+
+    let (outgoing, protocols) = outgoing;
+    Ok(app
+        .state::<websocket::Sockets>()
+        .connect(app.clone(), id, outgoing, &protocols)
+        .await?)
+}
+
+/// `false` when no socket is open under that id.
+#[tauri::command]
+#[specta::specta]
+pub async fn send_websocket<R: Runtime>(
+    id: String,
+    text: String,
+    app: AppHandle<R>,
+) -> Result<bool, AppError> {
+    Ok(app.state::<websocket::Sockets>().send(&id, text))
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn close_websocket<R: Runtime>(id: String, app: AppHandle<R>) -> Result<bool, AppError> {
+    Ok(app.state::<websocket::Sockets>().close(&id))
 }

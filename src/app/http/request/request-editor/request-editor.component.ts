@@ -17,23 +17,26 @@ import {
   KeyValueRow,
   RequestAuth,
   RequestBodyDraft,
-  requestBadge,
+  WebsocketParts,
 } from '@core/model/http.model';
 import { HttpCollectionsStore } from '@core/services/http/http-collections.store';
 import { HttpSendStore } from '@core/services/http/http-send.store';
+import { HttpSocketsStore } from '@core/services/http/http-sockets.store';
 import { HttpTabsStore, RequestTab } from '@core/services/http/http-tabs.store';
 import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
 import { HTTP_HEADERS } from '@tools/catalogue/http-headers/http-headers.data';
 import { AuthEditorComponent } from '@http/ui/auth-editor/auth-editor.component';
 import { BodyEditorComponent } from '../body-editor/body-editor.component';
 import { GraphqlEditorComponent } from '../graphql-editor/graphql-editor.component';
+import { WebsocketComposerComponent } from '../websocket-composer/websocket-composer.component';
 import { KeyValueTableComponent } from '@http/ui/key-value-table/key-value-table.component';
 import { UrlFieldComponent } from '../url-field/url-field.component';
 
-type Section = 'params' | 'headers' | 'auth' | 'body' | 'query';
+type Section = 'params' | 'headers' | 'auth' | 'body' | 'query' | 'message' | 'protocols';
 
-/** The choice that turns a request into a GraphQL one, beside the methods. */
+/** The choices that turn a request into a GraphQL one or a socket, beside the methods. */
 const GRAPHQL = 'GRAPHQL';
+const WEBSOCKET = 'WEBSOCKET';
 
 /** A header a request may send: the reference's own list, those a server alone writes left out. */
 const REQUEST_HEADERS = HTTP_HEADERS.filter((header) => header.direction !== 'response').map(
@@ -53,6 +56,7 @@ const counted = (rows: readonly KeyValueRow[]) => rows.filter((row) => row.enabl
     KeyValueTableComponent,
     TranslocoPipe,
     UrlFieldComponent,
+    WebsocketComposerComponent,
   ],
   templateUrl: './request-editor.component.html',
   styleUrl: './request-editor.component.scss',
@@ -65,14 +69,18 @@ export class RequestEditorComponent {
 
   protected readonly tabs = inject(HttpTabsStore);
   protected readonly sending = inject(HttpSendStore);
+  private readonly sockets = inject(HttpSocketsStore);
   private readonly repository = inject(HttpRepository);
   private readonly collections = inject(HttpCollectionsStore);
 
   private readonly chosen = signal<Section>('params');
-  protected readonly sections = computed<readonly Section[]>(() =>
-    this.tab().draft.kind === 'graphql'
-      ? ['query', 'headers', 'auth']
-      : ['params', 'headers', 'auth', 'body'],
+  protected readonly sections = computed<readonly Section[]>(
+    () =>
+      ({
+        http: ['params', 'headers', 'auth', 'body'] as const,
+        graphql: ['query', 'headers', 'auth'] as const,
+        websocket: ['message', 'headers', 'auth', 'protocols'] as const,
+      })[this.tab().draft.kind],
   );
   /** The section chosen, or the first when the kind left it behind. */
   protected readonly section = computed<Section>(() =>
@@ -83,12 +91,12 @@ export class RequestEditorComponent {
   protected readonly methods: readonly ChoiceOption[] = [
     ...HTTP_METHODS.map((method) => ({ id: method, name: method })),
     { id: GRAPHQL, name: 'GraphQL' },
+    { id: WEBSOCKET, name: 'WebSocket' },
   ];
-  protected readonly methodId = computed(() =>
-    this.tab().draft.kind === 'graphql' ? GRAPHQL : this.tab().draft.method,
-  );
-
-  protected readonly badge = computed(() => requestBadge(this.tab().draft));
+  protected readonly methodId = computed(() => {
+    const draft = this.tab().draft;
+    return { http: draft.method, graphql: GRAPHQL, websocket: WEBSOCKET }[draft.kind];
+  });
 
   /** What the folders and the collection above hand down; nothing yet for a draft not placed. */
   private readonly inheritedResource = resource({
@@ -128,17 +136,27 @@ export class RequestEditorComponent {
   protected readonly inFlight = computed(
     () => this.sending.states().get(this.tab().key)?.phase === 'sending',
   );
+  protected readonly socket = computed(() => this.sockets.states().get(this.tab().key) ?? null);
+  /** Connected or on the way: the button disconnects. */
+  protected readonly socketLive = computed(() => {
+    const phase = this.socket()?.phase;
+    return phase === 'open' || phase === 'connecting';
+  });
   protected readonly counts = computed<Record<Section, number>>(() => ({
     params: counted(this.tab().draft.parts.params),
     headers: counted(this.tab().draft.parts.headers),
     auth: 0,
     body: 0,
     query: 0,
+    message: this.tab().draft.parts.websocket.messages.length,
+    protocols: this.tab().draft.parts.websocket.protocols.length,
   }));
 
   protected onMethod(method: string | null): void {
     if (method === GRAPHQL) {
       this.tabs.edit(this.tab().key, { kind: 'graphql' });
+    } else if (method === WEBSOCKET) {
+      this.tabs.edit(this.tab().key, { kind: 'websocket' });
     } else if (method !== null) {
       this.tabs.edit(this.tab().key, { kind: 'http', method: method as HttpMethod });
     }
@@ -177,8 +195,30 @@ export class RequestEditorComponent {
   }
 
   protected send(): void {
-    if (this.inFlight()) void this.sending.cancel(this.tab().key);
-    else void this.sending.send(this.tab());
+    if (this.tab().draft.kind === 'websocket') {
+      if (this.socketLive()) void this.sockets.close(this.tab().key);
+      else void this.sockets.connect(this.tab());
+    } else if (this.inFlight()) {
+      void this.sending.cancel(this.tab().key);
+    } else {
+      void this.sending.send(this.tab());
+    }
+  }
+
+  protected onWebsocket(websocket: WebsocketParts): void {
+    this.tabs.editParts(this.tab().key, { websocket });
+  }
+
+  protected sendMessage(text: string): void {
+    void this.sockets.send(this.tab().key, text);
+  }
+
+  protected onProtocols(event: Event): void {
+    const protocols = (event.target as HTMLInputElement).value
+      .split(',')
+      .map((protocol) => protocol.trim())
+      .filter((protocol) => protocol !== '');
+    this.onWebsocket({ ...this.tab().draft.parts.websocket, protocols });
   }
 
   protected save(): void {

@@ -10,7 +10,11 @@
       <app-request-tabs (closeAsked)="closing.set($event)" />
       @if (tabs.active(); as tab) {
         <app-request-editor [tab]="tab" (saveAsked)="askSave(tab)" />
-        <app-response-pane [tabKey]="tab.key" [requestName]="tab.draft.name" />
+        @if (tab.draft.kind === 'websocket') {
+          <app-socket-log [tabKey]="tab.key" />
+        } @else {
+          <app-response-pane [tabKey]="tab.key" [requestName]="tab.draft.name" />
+        }
       } @else {
         <p class="empty" data-testid="http-workspace-empty">{{ 'http.workspace.empty' | transloco }}</p>
       }

@@ -157,6 +157,8 @@ pub enum ErrorCode {
     /// What « Annuler » answers: the front, which asked, says nothing.
     HttpCancelled,
     HttpGraphqlVariables,
+    /// The `status` parameter is what the server answered instead of switching protocols.
+    HttpWebsocketRefused,
     HttpNetwork,
 }
 
@@ -220,6 +222,12 @@ impl From<SendError> for AppError {
             }
             SendError::Cancelled => Self::new(ErrorCode::HttpCancelled, detail),
             SendError::GraphqlVariables(_) => Self::new(ErrorCode::HttpGraphqlVariables, detail),
+            SendError::Handshake(status) => Self::with(
+                ErrorCode::HttpWebsocketRefused,
+                detail,
+                "status",
+                &status.to_string(),
+            ),
             SendError::Network(_) => Self::new(ErrorCode::HttpNetwork, detail),
         }
     }
