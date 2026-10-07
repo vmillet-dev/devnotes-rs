@@ -3,6 +3,7 @@ import {
   Component,
   ElementRef,
   afterRenderEffect,
+  computed,
   inject,
   signal,
   viewChild,
@@ -45,6 +46,9 @@ interface Drop {
   readonly zone: DropZone;
 }
 
+/** The library rail's floor is 160px; a method, an indent and a name need more. */
+const NARROWEST_PX = 240;
+
 /** Past this, a press on a row is a drag and no longer a click. */
 const DRAG_THRESHOLD_PX = 4;
 
@@ -68,7 +72,7 @@ const item = (row: RailRow): HttpItem => ({ kind: row.kind, id: row.id });
   templateUrl: './http-rail.component.html',
   styleUrl: './http-rail.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[style.width.px]': 'settings.libraryRailWidth()' },
+  host: { '[style.width.px]': 'width()' },
 })
 export class HttpRailComponent {
   protected readonly areas = inject(AreaStore);
@@ -76,6 +80,8 @@ export class HttpRailComponent {
   protected readonly store = inject(HttpCollectionsStore);
   private readonly transloco = inject(TranslocoService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+
+  protected readonly width = computed(() => Math.max(this.settings.libraryRailWidth(), NARROWEST_PX));
 
   protected readonly creating = signal<Creating | null>(null);
   protected readonly renaming = signal<string | null>(null);
@@ -236,8 +242,10 @@ export class HttpRailComponent {
     this.dragged.set(null);
   }
 
+  /** Says only what is there: « aucun dossier » is noise in a sentence about loss. */
   protected noun(contents: HttpContents): string {
-    return this.transloco.translate('http.rail.takesWith', {
+    const which = contents.folders === 0 ? 'requests' : contents.requests === 0 ? 'folders' : 'both';
+    return this.transloco.translate(`http.rail.takes.${which}`, {
       folders: contents.folders,
       requests: contents.requests,
     });

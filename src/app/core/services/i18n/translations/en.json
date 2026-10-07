@@ -2744,8 +2744,12 @@
       "expand": "Expand {{name}}",
       "collapse": "Collapse {{name}}",
       "confirm": "Delete “{{name}}”?",
-      "takesWith": "With {folders, plural, =0 {no folder} one {# folder} other {# folders}} and {requests, plural, =0 {no request} one {# request} other {# requests}}.",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "takes": {
+        "requests": "{requests, plural, one {Its request goes with it.} other {Its # requests go with it.}}",
+        "folders": "{folders, plural, one {Its folder goes with it.} other {Its # folders go with it.}}",
+        "both": "{folders, plural, one {# folder} other {# folders}} and {requests, plural, one {# request} other {# requests}} go with it."
+      }
     },
     "workspace": {
       "empty": "Choose a request in the rail, or create a collection with ＋.",

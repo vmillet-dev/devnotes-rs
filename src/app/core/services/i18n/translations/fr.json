@@ -2744,8 +2744,12 @@
       "expand": "Déplier {{name}}",
       "collapse": "Replier {{name}}",
       "confirm": "Supprimer « {{name}} » ?",
-      "takesWith": "Avec {folders, plural, =0 {aucun dossier} one {# dossier} other {# dossiers}} et {requests, plural, =0 {aucune requête} one {# requête} other {# requêtes}}.",
-      "cancel": "Annuler"
+      "cancel": "Annuler",
+      "takes": {
+        "requests": "{requests, plural, one {Sa requête part avec.} other {Ses # requêtes partent avec.}}",
+        "folders": "{folders, plural, one {Son dossier part avec.} other {Ses # dossiers partent avec.}}",
+        "both": "{folders, plural, one {# dossier} other {# dossiers}} et {requests, plural, one {# requête} other {# requêtes}} partent avec."
+      }
     },
     "workspace": {
       "empty": "Choisissez une requête dans le rail, ou créez une collection avec ＋.",

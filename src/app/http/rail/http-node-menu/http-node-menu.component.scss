@@ -31,10 +31,8 @@
 .panel {
   @include enters;
   @include surface(var(--bg-2), 8px);
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  z-index: 3;
+  position: fixed;
+  z-index: 30;
   width: 200px;
   padding: 6px;
   box-shadow: 0 8px 20px rgb(0 0 0 / 32%);

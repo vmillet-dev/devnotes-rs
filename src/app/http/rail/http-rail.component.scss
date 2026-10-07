@@ -69,7 +69,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 2px 4px 2px calc(4px + var(--depth, 0) * 14px);
+  padding: 2px 4px 2px calc(4px + var(--depth, 0) * 12px);
 
   &.inline {
     flex: 1;
@@ -113,7 +113,6 @@
 
 .node {
   position: relative;
-  padding-left: calc(var(--depth, 0) * 14px);
 
   &.dragging {
     opacity: 0.45;
@@ -125,7 +124,7 @@
     content: '';
     position: absolute;
     right: 4px;
-    left: calc(var(--depth, 0) * 14px + 4px);
+    left: calc(var(--depth, 0) * 12px + 4px);
     height: 2px;
     border-radius: 1px;
     background: var(--amber-text);
@@ -147,8 +146,10 @@
   }
 }
 
+// The indent is the row's alone: what opens under it — a confirmation — takes the rail's width.
 .node-row {
   @include eases(background, border-color, color);
+  padding-left: calc(var(--depth, 0) * 12px);
   display: flex;
   align-items: center;
   gap: 2px;
@@ -225,7 +226,7 @@
 // The method in its colour, as the mockup draws it: a word, not a badge with a fill.
 .method {
   flex-shrink: 0;
-  min-width: 34px;
+  min-width: 30px;
   font-family: var(--font-mono), monospace;
   font-size: 10px;
   font-weight: 700;
@@ -253,6 +254,7 @@
 
 .confirm-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 

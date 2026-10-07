@@ -120,10 +120,19 @@ describe('HttpRailComponent', () => {
   });
 
   it('says what a deletion takes with it before deleting', async () => {
+    const count = () => el('[data-testid="http-delete-count"]').textContent?.trim();
+    http.contentsAnswer = { folders: 0, requests: 3 };
+    await action('Auth', 'delete');
+    expect(count()).toBe('Ses 3 requêtes partent avec.');
+    el<HTMLButtonElement>('[data-testid="http-delete-cancel"]').click();
+
+    http.contentsAnswer = { folders: 1, requests: 0 };
+    await action('API', 'delete');
+    expect(count()).toBe('Son dossier part avec.');
+
     http.contentsAnswer = { folders: 1, requests: 1 };
     await action('Factures', 'delete');
-
-    expect(el('[data-testid="http-delete-count"]').textContent?.trim()).toBe('Avec 1 dossier et 1 requête.');
+    expect(count()).toBe('1 dossier et 1 requête partent avec.');
     expect(http.callsOf('delete')).toEqual([]);
 
     el<HTMLButtonElement>('[data-testid="http-delete-submit"]').click();

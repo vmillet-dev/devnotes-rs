@@ -8,13 +8,13 @@
   [attr.aria-expanded]="menu.open()"
   [attr.aria-label]="'http.rail.options' | transloco: { name: row().name }"
   [attr.title]="'http.rail.options' | transloco: { name: row().name }"
-  (click)="menu.toggle()"
+  (click)="toggle()"
 >
   <span aria-hidden="true">⋯</span>
 </button>
 
 @if (menu.open()) {
-  <div appMenuPanel class="panel" data-testid="http-node-menu-panel">
+  <div appMenuPanel class="panel" data-testid="http-node-menu-panel" [style]="panelStyle()">
     @for (action of actions(); track action) {
       <button
         appMenuItem
