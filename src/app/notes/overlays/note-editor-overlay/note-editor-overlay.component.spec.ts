@@ -3,7 +3,7 @@ import { By } from '@angular/platform-browser';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
 import { SettingsStore } from '@core/services/settings/settings.store';
-import { CodeViewerComponent } from '@notes/ui/code-viewer/code-viewer.component';
+import { CodeViewerComponent } from '@shared/code-viewer/code-viewer.component';
 import { LifecycleBadgeComponent } from './lifecycle-badge/lifecycle-badge.component';
 import { TagPillComponent } from '@notes/ui/tag-pill/tag-pill.component';
 import { LANGUAGE_LABELS } from '@core/model/language.model';

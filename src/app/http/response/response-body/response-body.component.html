@@ -1,0 +1,67 @@
+@let answer = response();
+@if (answer.binary) {
+  @if (image(); as source) {
+    <div class="image" data-testid="http-response-image">
+      <img [src]="source" [alt]="'http.response.imageAlt' | transloco: { type: type() }" />
+    </div>
+  } @else {
+    <p class="note" data-testid="http-response-binary">
+      {{ 'http.response.binary' | transloco: { type: type() } }}
+    </p>
+  }
+} @else if (answer.body === '') {
+  <p class="placeholder" data-testid="http-response-empty">{{ 'http.response.empty' | transloco }}</p>
+} @else {
+  <div class="views">
+    <app-segmented-choice
+      kind="http-response-view"
+      [label]="'http.response.view' | transloco"
+      [segments]="views()"
+      [currentId]="view()"
+      (chosen)="choose($event)"
+    />
+    @if (answer.cut) {
+      <span class="note" data-testid="http-response-cut">
+        {{ (answer.incomplete ? 'http.response.incomplete' : 'http.response.cut') | transloco }}
+      </span>
+    }
+  </div>
+
+  @switch (view()) {
+    @case ('pretty') {
+      <app-code-viewer
+        class="code"
+        data-testid="http-response-pretty"
+        tabindex="0"
+        [content]="shown()"
+        [language]="language()"
+      />
+    }
+    @case ('raw') {
+      <pre class="raw" data-testid="http-response-body" tabindex="0">{{ answer.body }}</pre>
+    }
+    @default {
+      @if (explorer.view(); as explored) {
+        <div class="explorer" data-testid="http-response-explorer">
+          <app-json-explorer
+            [view]="explored"
+            [mode]="view() === 'tree' ? 'tree' : 'graph'"
+            [text]="explorer.text() ?? ''"
+            [selectedPath]="explorer.selectedPath()"
+            [search]="explorer.search()"
+            [matchIndex]="explorer.matchIndex()"
+            [locale]="locale()"
+            [withCode]="false"
+            (searchChanged)="explorer.setSearch($event)"
+            (stepped)="explorer.step($event)"
+            (toggled)="explorer.toggle($event)"
+            (selected)="explorer.select($event)"
+            (openedAll)="explorer.openAll()"
+            (copied)="copy($event)"
+            (treeProposed)="choose('tree')"
+          />
+        </div>
+      }
+    }
+  }
+}

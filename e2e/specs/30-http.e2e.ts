@@ -263,6 +263,8 @@ describe('HTTP collections', () => {
           (text) => text === '201 Created',
           'the status of the answer',
         );
+        expect(await $(testid('http-response-pretty')).getText()).toContain('"id": 7');
+        await $(`${testid('segmented-http-response-view')} [data-segment-id="raw"]`).click();
         expect(await $(testid('http-response-body')).getText()).toBe('{"id":7}');
         expect(await $(testid('http-response-size')).isDisplayed()).toBe(true);
         expect(await $(testid('http-response-time')).isDisplayed()).toBe(true);

@@ -36,7 +36,7 @@ import { ClockService } from '@core/services/time/clock.service';
 import { endOfLocalDay, toDateInputValue } from '@core/utils/local-day.util';
 import { relativeTimeRef } from '@core/utils/relative-time.util';
 import { DialogComponent } from '@shared/layout/dialog/dialog.component';
-import { CodeViewerComponent } from '@notes/ui/code-viewer/code-viewer.component';
+import { CodeViewerComponent } from '@shared/code-viewer/code-viewer.component';
 import { AttachmentStripComponent } from './attachment-strip/attachment-strip.component';
 import { ChecklistEditorComponent } from './checklist-editor/checklist-editor.component';
 import { FormatButtonComponent } from './format-button/format-button.component';

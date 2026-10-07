@@ -52,6 +52,8 @@ export class JsonExplorerComponent {
   readonly matchIndex = input(-1);
   /** For the document's size, written the way the interface's language writes numbers. */
   readonly locale = input('fr');
+  /** `false` where no code is beside the explorer to show a span in: an HTTP response. */
+  readonly withCode = input(true);
 
   readonly searchChanged = output<string>();
   readonly stepped = output<1 | -1>();

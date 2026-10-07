@@ -20,7 +20,7 @@ import { SpacesStore } from '@core/state/spaces.store';
 import { TranslationRef } from '@core/services/i18n/translation-ref.model';
 import { ClockService } from '@core/services/time/clock.service';
 import { expiryRef, relativeTimeRef } from '@core/utils/relative-time.util';
-import { CodeViewerComponent } from '@notes/ui/code-viewer/code-viewer.component';
+import { CodeViewerComponent } from '@shared/code-viewer/code-viewer.component';
 import { KindBadgeComponent } from '@notes/ui/kind-badge/kind-badge.component';
 import { PriorityPillComponent } from '@notes/ui/priority-pill/priority-pill.component';
 import { CopyButtonComponent } from '@notes/ui/copy-button/copy-button.component';

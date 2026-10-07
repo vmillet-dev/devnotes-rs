@@ -2892,7 +2892,42 @@
       "saveFile": "Save to a file…",
       "saved": "Response saved to {{path}}.",
       "saveFailed": "The response could not be saved.",
-      "redirects": "{count, plural, one {after # redirect} other {after # redirects}}"
+      "redirects": "{count, plural, one {after # redirect} other {after # redirects}}",
+      "parts": "Parts of the response",
+      "sections": {
+        "body": "Body",
+        "headers": "Headers",
+        "cookies": "Cookies",
+        "timeline": "Timeline"
+      },
+      "view": "Body view",
+      "views": {
+        "pretty": "Formatted",
+        "raw": "Raw",
+        "graph": "Graph",
+        "tree": "Tree"
+      },
+      "imageAlt": "Image received ({{type}})",
+      "copy": "Copy",
+      "noteTitle": "Response from {{name}}",
+      "noCookies": "The response sets no cookie.",
+      "cookie": {
+        "name": "Name",
+        "value": "Value",
+        "domain": "Domain",
+        "path": "Path",
+        "expires": "Expires",
+        "flags": "Attributes",
+        "session": "end of session"
+      },
+      "timeline": {
+        "redirects": "Redirects",
+        "request": "Request sent",
+        "response": "Response received",
+        "bytes": "Binary body of {{size}} bytes.",
+        "multipart": "Multipart body: {{fields}}."
+      },
+      "noteWhat": "A {{language}} snippet, holding the response's body laid out."
     }
   }
 }

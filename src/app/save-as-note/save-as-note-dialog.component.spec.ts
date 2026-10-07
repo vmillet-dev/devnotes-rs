@@ -48,7 +48,7 @@ describe('SaveAsNoteDialogComponent', () => {
 
     fixture = TestBed.createComponent(SaveAsNoteDialogComponent);
     fixture.componentRef.setInput('result', RESULT);
-    fixture.componentRef.setInput('toolId', 'case');
+    fixture.componentRef.setInput('source', 'Outils / Convertisseur de casse');
     closed = 0;
     fixture.componentInstance.closed.subscribe(() => closed++);
     fixture.autoDetectChanges();

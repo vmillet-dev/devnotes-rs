@@ -224,5 +224,16 @@ describe('JsonExplorerComponent', () => {
     );
     query('json-error-show').click();
     expect(events.shown).toEqual([{ start: 12, end: 12 }]);
+
+    await set('withCode', false);
+    expect(query('json-error-show')).toBeNull();
+  });
+
+  it('offers no way to the code where there is none beside it', async () => {
+    await set('withCode', false);
+    await set('selectedPath', '$.data');
+
+    expect(query('json-copy-value')).not.toBeNull();
+    expect(query('json-show-in-code')).toBeNull();
   });
 });

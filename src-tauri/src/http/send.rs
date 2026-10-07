@@ -15,7 +15,9 @@ use url::Url;
 use uuid::Uuid;
 
 use super::model::{HttpMethod, KeyPlace, KeyValue, RequestAuth, RequestBody, RequestDocument};
+use super::response::{self, Cookie};
 use super::settings::{Inherited, implied_content_type};
+use crate::notes::language::Language;
 use crate::notes::placeholder;
 
 /// What crosses to be shown: past it the text is cut, and the whole is offered as a file.
@@ -64,7 +66,46 @@ pub struct SentResponse {
     /// The reading stopped at `KEPT_LIMIT`: even the file is not the whole body.
     pub incomplete: bool,
     pub redirects: Vec<Redirect>,
+    /// What the body is coloured and saved as.
+    pub language: Language,
+    /// A JSON body laid out; `None` for another, or one cut short.
+    pub pretty: Option<String>,
+    pub cookies: Vec<Cookie>,
+    /// The request as it left, for the timeline.
+    pub exchange: Exchange,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct Exchange {
+    pub method: HttpMethod,
+    pub url: String,
+    pub headers: Vec<KeyValue>,
+    pub body: SentBody,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum SentBody {
+    None,
+    /// Up to `SHOWN_LIMIT`.
+    Text {
+        text: String,
+    },
+    Bytes {
+        size: u32,
+    },
+    Multipart {
+        fields: Vec<String>,
+    },
+}
+
+/// The image an answer's bytes make, inline: past this, it is saved rather than shown.
+const IMAGE_LIMIT: usize = 10 * 1024 * 1024;
 
 /// Why nothing came back, each a code the front translates.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -387,7 +428,66 @@ fn install_crypto() {
 /// The answer, and every byte of its body that was read.
 struct Received {
     response: SentResponse,
+    kept: Kept,
+}
+
+struct Kept {
+    content_type: Option<String>,
     bytes: Vec<u8>,
+}
+
+fn exchange(outgoing: &Outgoing) -> Exchange {
+    let body = match &outgoing.body {
+        OutgoingBody::None => SentBody::None,
+        OutgoingBody::Bytes(bytes) => match std::str::from_utf8(bytes) {
+            Ok(text) => SentBody::Text {
+                text: text.chars().take(SHOWN_LIMIT).collect(),
+            },
+            Err(_) => SentBody::Bytes {
+                size: u32::try_from(bytes.len()).unwrap_or(u32::MAX),
+            },
+        },
+        OutgoingBody::Multipart(parts) => SentBody::Multipart {
+            fields: parts.iter().map(|(key, _)| key.clone()).collect(),
+        },
+    };
+    Exchange {
+        method: outgoing.method,
+        url: outgoing.url.to_string(),
+        headers: outgoing
+            .headers
+            .iter()
+            .map(|(key, value)| KeyValue {
+                key: key.clone(),
+                value: value.clone(),
+                ..KeyValue::default()
+            })
+            .collect(),
+        body,
+    }
+}
+
+fn request(client: &reqwest::Client, outgoing: Outgoing) -> reqwest::RequestBuilder {
+    let mut request = client.request(wire_method(outgoing.method), outgoing.url);
+    for (key, value) in &outgoing.headers {
+        request = request.header(key, value);
+    }
+    match outgoing.body {
+        OutgoingBody::None => request,
+        OutgoingBody::Bytes(bytes) => request.body(bytes),
+        OutgoingBody::Multipart(parts) => {
+            let mut form = reqwest::multipart::Form::new();
+            for (key, part) in parts {
+                form = match part {
+                    Part::Text(text) => form.text(key, text),
+                    Part::File { name, bytes } => {
+                        form.part(key, reqwest::multipart::Part::bytes(bytes).file_name(name))
+                    }
+                };
+            }
+            request.multipart(form)
+        }
+    }
 }
 
 async fn send(outgoing: Outgoing) -> Result<Received, SendError> {
@@ -411,26 +511,8 @@ async fn send(outgoing: Outgoing) -> Result<Received, SendError> {
         .build()
         .map_err(|error| SendError::Network(error.to_string()))?;
 
-    let mut request = client.request(wire_method(outgoing.method), outgoing.url);
-    for (key, value) in &outgoing.headers {
-        request = request.header(key, value);
-    }
-    request = match outgoing.body {
-        OutgoingBody::None => request,
-        OutgoingBody::Bytes(bytes) => request.body(bytes),
-        OutgoingBody::Multipart(parts) => {
-            let mut form = reqwest::multipart::Form::new();
-            for (key, part) in parts {
-                form = match part {
-                    Part::Text(text) => form.text(key, text),
-                    Part::File { name, bytes } => {
-                        form.part(key, reqwest::multipart::Part::bytes(bytes).file_name(name))
-                    }
-                };
-            }
-            request.multipart(form)
-        }
-    };
+    let exchange = exchange(&outgoing);
+    let request = request(&client, outgoing);
 
     let started = Instant::now();
     let mut response = request.send().await.map_err(|error| failure(&error))?;
@@ -471,6 +553,11 @@ async fn send(outgoing: Outgoing) -> Result<Received, SendError> {
         let text = String::from_utf8_lossy(&bytes[..bytes.len().min(SHOWN_LIMIT)]).into_owned();
         text.trim_end_matches('\u{FFFD}').to_string()
     };
+    let cut = binary || bytes.len() > SHOWN_LIMIT || incomplete;
+    let language = response::language(content_type.as_deref(), &shown);
+    let pretty = (language == Language::Json && !cut)
+        .then(|| response::pretty_json(&shown))
+        .flatten();
 
     Ok(Received {
         response: SentResponse {
@@ -479,8 +566,9 @@ async fn send(outgoing: Outgoing) -> Result<Received, SendError> {
             millis,
             size: u32::try_from(bytes.len()).unwrap_or(u32::MAX),
             url,
+            cookies: response::cookies(&headers),
             headers,
-            cut: binary || bytes.len() > SHOWN_LIMIT || incomplete,
+            cut,
             body: shown,
             binary,
             incomplete,
@@ -488,8 +576,14 @@ async fn send(outgoing: Outgoing) -> Result<Received, SendError> {
                 .lock()
                 .map(|seen| seen.clone())
                 .unwrap_or_default(),
+            language,
+            pretty,
+            exchange,
         },
-        bytes,
+        kept: Kept {
+            content_type,
+            bytes,
+        },
     })
 }
 
@@ -500,7 +594,7 @@ pub struct Sending {
     /// Numbered, so a send replaced under the same id does not clear its successor's entry.
     running: Mutex<HashMap<String, (u64, AbortHandle)>>,
     started: AtomicU64,
-    bodies: Mutex<HashMap<String, Vec<u8>>>,
+    bodies: Mutex<HashMap<String, Arc<Kept>>>,
 }
 
 impl Sending {
@@ -524,7 +618,7 @@ impl Sending {
         }
         let received = answer.map_err(|_| SendError::Cancelled)??;
         if let Ok(mut bodies) = self.bodies.lock() {
-            bodies.insert(id.to_string(), received.bytes);
+            bodies.insert(id.to_string(), Arc::new(received.kept));
         }
         Ok(received.response)
     }
@@ -540,21 +634,32 @@ impl Sending {
 
     /// Staged then renamed: a half-written file never takes the name.
     pub fn save(&self, id: &str, path: &Path) -> Result<bool, std::io::Error> {
-        let Some(bytes) = self
-            .bodies
-            .lock()
-            .ok()
-            .and_then(|bodies| bodies.get(id).cloned())
-        else {
+        let Some(kept) = self.kept(id) else {
             return Ok(false);
         };
         let mut staged = path.as_os_str().to_owned();
         staged.push(format!(".{}.tmp", Uuid::new_v4()));
-        std::fs::write(&staged, bytes)?;
+        std::fs::write(&staged, &kept.bytes)?;
         std::fs::rename(&staged, path).inspect_err(|_| {
             let _ = std::fs::remove_file(&staged);
         })?;
         Ok(true)
+    }
+
+    /// An image answer as a `data:` URI, which the page shows; `None` for anything else.
+    pub fn image(&self, id: &str) -> Option<String> {
+        let kept = self.kept(id)?;
+        let kind = kept.content_type.as_deref()?.split(';').next()?.trim();
+        (kind.to_ascii_lowercase().starts_with("image/") && kept.bytes.len() <= IMAGE_LIMIT).then(
+            || {
+                let encoded = base64::engine::general_purpose::STANDARD.encode(&kept.bytes);
+                format!("data:{kind};base64,{encoded}")
+            },
+        )
+    }
+
+    fn kept(&self, id: &str) -> Option<Arc<Kept>> {
+        self.bodies.lock().ok()?.get(id).cloned()
     }
 
     pub fn forget(&self, id: &str) {

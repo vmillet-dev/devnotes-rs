@@ -5,6 +5,7 @@
 
 pub mod model;
 pub mod query;
+pub mod response;
 pub mod send;
 pub mod settings;
 pub mod store;
@@ -381,4 +382,14 @@ pub async fn forget_http_response<R: Runtime>(
 ) -> Result<(), AppError> {
     app.state::<send::Sending>().forget(&id);
     Ok(())
+}
+
+/// The last answer to `id` as an image to show, when it is one.
+#[tauri::command]
+#[specta::specta]
+pub async fn http_response_image<R: Runtime>(
+    id: String,
+    app: AppHandle<R>,
+) -> Result<Option<String>, AppError> {
+    off_thread(move || app.state::<send::Sending>().image(&id)).await
 }
