@@ -52,6 +52,11 @@ const CODE_KEYS: Record<IpcErrorCode, string | null> = {
   httpNetwork: 'errors.httpNetwork',
 };
 
+/** What a code says, for an error kept as its code: a failed send in the history. */
+export function errorKeyOf(code: IpcErrorCode): string | null {
+  return CODE_KEYS[code];
+}
+
 /** `fallback` carries the action attempted, used when the cause adds nothing. */
 export function ipcNotice(
   error: unknown,

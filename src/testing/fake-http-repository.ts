@@ -8,6 +8,9 @@ import {
   HttpPlace,
   HttpRequestDraft,
   HttpTree,
+  HistoryDay,
+  HistoryDraft,
+  HistoryEntry,
   SentResponse,
   BodyAnswer,
   ContainerSettingsDraft,
@@ -47,6 +50,10 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
   pendingSend: Promise<SentResponse> | null = null;
   saveAnswer = true;
   imageAnswer: string | null = null;
+  historyAnswer: HistoryDay[] = [];
+  /** By entry id; a missing one rejects, as Rust answers a purged entry. */
+  readonly entries = new Map<string, HistoryEntry>();
+  draftAnswer: HistoryDraft | null = null;
   /** What `syncQuery` answers; unset, it hands back what it was given. */
   synced: Synced | null = null;
   readonly requests = new Map<string, OpenedRequest>();
@@ -157,10 +164,46 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
     id: string,
     draft: RequestDraft,
     place: { collectionId: string; folderId: string | null } | null,
+    requestId: string | null = null,
   ): Promise<SentResponse> {
     const pending = this.pendingSend;
     this.pendingSend = null;
-    return this.record('send', [id, draft, place], () => this.response).then((answer) => pending ?? answer);
+    return this.record('send', [id, draft, place, requestId], () => this.response).then(
+      (answer) => pending ?? answer,
+    );
+  }
+
+  history(tzOffsetMinutes: number): Promise<HistoryDay[]> {
+    return this.record('history', [tzOffsetMinutes], () => this.historyAnswer);
+  }
+
+  historyEntry(id: string): Promise<HistoryEntry> {
+    return this.record('historyEntry', [id], () => {
+      const entry = this.entries.get(id);
+      if (!entry) throw new Error(`no entry ${id}`);
+      return entry;
+    });
+  }
+
+  historyDraft(id: string): Promise<HistoryDraft> {
+    return this.record('historyDraft', [id], () => {
+      if (!this.draftAnswer) throw new Error(`no draft ${id}`);
+      return this.draftAnswer;
+    });
+  }
+
+  countHistory(): Promise<number> {
+    return this.record('countHistory', [], () =>
+      this.historyAnswer.reduce((count, day) => count + day.items.length, 0),
+    );
+  }
+
+  clearHistory(): Promise<number> {
+    return this.record('clearHistory', [], () => {
+      const count = this.historyAnswer.reduce((sum, day) => sum + day.items.length, 0);
+      this.historyAnswer = [];
+      return count;
+    });
   }
 
   cancel(id: string): Promise<boolean> {

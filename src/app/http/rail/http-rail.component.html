@@ -167,6 +167,19 @@
       </li>
     }
   </ul>
+
+  <div class="rail-foot">
+    <button
+      type="button"
+      class="rail-foot-item"
+      data-testid="http-history-open"
+      [class.on]="history.isOpen()"
+      [attr.aria-pressed]="history.isOpen()"
+      (click)="history.toggle()"
+    >
+      {{ 'http.history.title' | transloco }}
+    </button>
+  </div>
 </nav>
 
 @if (settingsFor(); as row) {

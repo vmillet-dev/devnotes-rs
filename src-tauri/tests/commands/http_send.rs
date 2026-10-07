@@ -102,6 +102,8 @@ fn request(url: &str) -> SendRequest {
         },
         collection_id: None,
         folder_id: None,
+        name: "Ping".to_string(),
+        request_id: None,
     }
 }
 
@@ -342,4 +344,80 @@ fn a_send_under_way_is_cancelled_by_its_id() {
             .unwrap()
     );
     drop(silent);
+}
+
+#[test]
+fn every_send_that_left_is_recorded_masked_and_the_history_clears() {
+    use devnotes_lib::http::model::KeyPlace;
+    use devnotes_lib::http::{
+        clear_http_history, count_http_history, http_history, http_history_draft,
+        http_history_entry,
+    };
+
+    let session = Session::open();
+    let (port, _seen) = serve(1, |_, _| {
+        response("200 OK", &[("Content-Type", "text/plain")], b"pong")
+    });
+    let mut keyed = request(&format!("http://127.0.0.1:{port}/ping?key=s3cret"));
+    keyed.document.auth = RequestAuth::ApiKey {
+        name: "key".to_string(),
+        value: "s3cret".to_string(),
+        place: KeyPlace::Query,
+    };
+    keyed.document.headers = vec![KeyValue {
+        key: "Authorization".to_string(),
+        value: "Bearer t0ken".to_string(),
+        ..KeyValue::default()
+    }];
+    session.call(|app| send_http_request(keyed, app)).unwrap();
+
+    let closed = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = closed.local_addr().unwrap().port();
+    drop(closed);
+    let refused =
+        session.call(|app| send_http_request(request(&format!("http://127.0.0.1:{port}/")), app));
+    assert!(refused.is_err());
+    let never_left = session.call(|app| send_http_request(request("{{baseUrl}}/x"), app));
+    assert!(never_left.is_err());
+
+    let days = session.call(|app| http_history(0, app)).unwrap();
+    assert_eq!(days.len(), 1);
+    let items = &days[0].items;
+    assert_eq!(items.len(), 2);
+    assert_eq!(
+        (items[0].status, items[0].summary.failure),
+        (None, Some(ErrorCode::HttpRefused))
+    );
+    assert_eq!(items[1].status, Some(200));
+    assert_eq!(items[1].summary.name, "Ping");
+    assert!(
+        items[1]
+            .summary
+            .url
+            .ends_with("/ping?key=••••••••&key=••••••••")
+    );
+
+    let entry = session
+        .call(|app| http_history_entry(items[1].id.clone(), app))
+        .unwrap();
+    let response = entry.record.response.unwrap();
+    assert_eq!(response.body, "pong");
+    assert!(
+        entry
+            .record
+            .exchange
+            .headers
+            .iter()
+            .any(|header| header.key == "Authorization" && header.value == "Bearer ••••••••")
+    );
+
+    let draft = session
+        .call(|app| http_history_draft(items[1].id.clone(), app))
+        .unwrap();
+    assert!(draft.document.url.ends_with("/ping"));
+    assert!(draft.document.headers.is_empty());
+
+    assert_eq!(session.call(count_http_history).unwrap(), 2);
+    assert_eq!(session.call(clear_http_history).unwrap(), 2);
+    assert!(session.call(|app| http_history(0, app)).unwrap().is_empty());
 }

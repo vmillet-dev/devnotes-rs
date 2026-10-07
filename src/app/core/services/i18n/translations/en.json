@@ -2928,6 +2928,20 @@
         "multipart": "Multipart body: {{fields}}."
       },
       "noteWhat": "A {{language}} snippet, holding the response's body laid out."
+    },
+    "history": {
+      "title": "History",
+      "kept": "30 days, 500 sends at most",
+      "clear": "Clear the history",
+      "confirm": "{count, plural, one {Remove the entry?} other {Remove the # entries?}}",
+      "cleared": "{count, plural, =0 {The history was already empty.} one {One entry removed from the history.} other {# entries removed from the history.}}",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "noAnswer": "failed",
+      "empty": "Nothing sent yet: every send is written here.",
+      "choose": "Choose a send to read it again.",
+      "reopen": "Reopen in a tab",
+      "failed": "The history could not be read."
     }
   }
 }

@@ -21,6 +21,8 @@ export interface Sendable {
   readonly key: string;
   readonly place: { readonly collectionId: string; readonly folderId: string | null } | null;
   readonly draft: RequestDraft;
+  /** For the history: the request it came from, once saved. */
+  readonly requestId: string | null;
 }
 
 const EXTENSIONS: readonly (readonly [string, string])[] = [
@@ -60,6 +62,9 @@ export class HttpSendStore {
 
   private readonly _states = signal<ReadonlyMap<string, SendState>>(new Map());
   readonly states = this._states.asReadonly();
+  /** Moves each time a send that left ends: the history has an entry more. */
+  private readonly _sent = signal(0);
+  readonly sent = this._sent.asReadonly();
 
   private sends = 0;
 
@@ -72,11 +77,12 @@ export class HttpSendStore {
     const previous = this._states().get(tab.key);
     const sendId = `${tab.key}#${++this.sends}`;
     this.set(tab.key, { phase: 'sending', sendId });
-    const sent = this.repository.send(sendId, tab.draft, tab.place);
+    const sent = this.repository.send(sendId, tab.draft, tab.place, tab.requestId);
     if (previous) void this.release(previous.sendId);
     try {
       const response = await sent;
       this.settle(sendId, { phase: 'answered', sendId, response });
+      this._sent.update((count) => count + 1);
     } catch (error) {
       if (error instanceof IpcError && error.code === 'httpCancelled') {
         this.settle(sendId, { phase: 'cancelled', sendId });
@@ -87,6 +93,7 @@ export class HttpSendStore {
           sendId,
           notice: ipcNotice(error, { key: 'http.send.failed' }),
         });
+        this._sent.update((count) => count + 1);
       }
     }
   }

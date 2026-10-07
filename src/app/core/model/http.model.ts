@@ -1,6 +1,10 @@
 import type {
   BodyAnswer,
   ContainerSettings,
+  HistoryDay,
+  HistoryDraft,
+  HistoryEntry,
+  HistoryItem,
   FormPart,
   HttpOrigin,
   Inherited,
@@ -32,6 +36,10 @@ import type {
 
 export type {
   BodyAnswer,
+  HistoryDay,
+  HistoryDraft,
+  HistoryEntry,
+  HistoryItem,
   HttpOrigin,
   KeyPlace,
   RequestAuth,

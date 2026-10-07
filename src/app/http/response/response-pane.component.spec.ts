@@ -45,6 +45,7 @@ describe('ResponsePaneComponent', () => {
     await TestBed.inject(HttpSendStore).send({
       key: 'Login',
       place: null,
+      requestId: null,
       draft: { name: 'Login', kind: 'http', method: 'GET', parts: EMPTY_PARTS },
     });
     await fixture.whenStable();

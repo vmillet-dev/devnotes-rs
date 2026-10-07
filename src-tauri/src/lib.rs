@@ -39,9 +39,10 @@ use folders::{
     list_folders, recolour_folder, rename_folder, save_board_layout,
 };
 use http::{
-    cancel_http_send, count_http_contents, create_http_collection, create_http_folder,
-    create_http_request, delete_http_item, describe_http_body, duplicate_http_item,
-    forget_http_response, get_http_request, http_response_image, http_settings, http_tree,
+    cancel_http_send, clear_http_history, count_http_contents, count_http_history,
+    create_http_collection, create_http_folder, create_http_request, delete_http_item,
+    describe_http_body, duplicate_http_item, forget_http_response, get_http_request, http_history,
+    http_history_draft, http_history_entry, http_response_image, http_settings, http_tree,
     inherited_http_settings, move_http_item, rename_http_item, reorder_http_collection,
     save_http_request, save_http_response, save_http_settings, send_http_request, sync_http_query,
 };
@@ -179,6 +180,11 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             save_http_response::<tauri::Wry>,
             forget_http_response::<tauri::Wry>,
             http_response_image::<tauri::Wry>,
+            http_history::<tauri::Wry>,
+            http_history_entry::<tauri::Wry>,
+            http_history_draft::<tauri::Wry>,
+            count_http_history::<tauri::Wry>,
+            clear_http_history::<tauri::Wry>,
             board_view::<tauri::Wry>,
             save_board_layout::<tauri::Wry>,
             arrange_board::<tauri::Wry>,
@@ -339,6 +345,7 @@ pub(crate) fn sweep<R: tauri::Runtime>(handle: &tauri::AppHandle<R>) {
     backup::take(handle, &db);
 
     notes::trash::sweep_at_startup(&db);
+    http::history::sweep_at_startup(&db);
     if let Err(error) = attachments::files::sweep_orphan_files(&db) {
         log::warn!("Orphan attachment files not swept: {error}");
     }

@@ -1700,6 +1700,34 @@ tokens**, never by re-serialising: `serde_json` would round `1234567890123456789
 - **Copier** copies the body as it came; **Enregistrer comme note** opens the tools' dialog with a
   snippet in the body's language, laid out.
 
+The view of an answer is `ResponseViewComponent` (`http/ui/`): the response pane draws it for a
+tab's last send, the history for an entry.
+
+### The history of what was sent
+
+**Every send that left is written** (`http_history`, migration 15), after the answer and under
+the lock again; a request refused before leaving — a `{{variable}}`, a bad URL — and a cancelled
+one are not. A failed send is kept with its code. The write never costs the answer: a failure
+is logged.
+
+- **Sealed, in two parts**: the summary a list shows (name, URL, time, size, failure) and the
+  record an entry opens (the exchange, and the answer with its body cut to 256 KB). The
+  instant, the method, the status and the request it came from stay in the clear, for the
+  order and the retention; `request_id` is `ON DELETE SET NULL`.
+- ⚠️ **Secrets are masked before they are sealed** (`history::mask`): `Authorization` keeps its
+  scheme (`Bearer ••••••••`), `Proxy-Authorization` and `Cookie` lose their value, and so does
+  the API key, by the name `compose` hands on (`Outgoing::secrets`), in a header or the query.
+  The live timeline shows what really left; only the history masks.
+- **Kept 30 days and 500 entries**, purged as each is written and at launch
+  (`history::sweep_at_startup`). « Vider l'historique » asks Rust how many it removes first.
+- **Listed by local day** (`by_day`, the offset the notes send), newest first. **Rouvrir dans un
+  onglet** asks Rust for the request rebuilt (`http_history_draft`): the masked values and the
+  implied `Content-Type` left out, the parameters read off the URL — a new draft tab, to send
+  again or save into a collection.
+- The history replaces the workspace while open (`HttpHistoryStore.isOpen`, from the rail's
+  foot), and closes for a request opened from the tree. It reads again whenever a send ends
+  (`HttpSendStore.sent`).
+
 ### Managing spaces from the switcher
 
 The space switcher's dropdown has three mutually exclusive states: the menu, the creation

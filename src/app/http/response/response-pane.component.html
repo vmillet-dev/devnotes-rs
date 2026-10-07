@@ -6,130 +6,12 @@
   aria-live="polite"
 >
   @if (response(); as answer) {
-    <header class="bar">
-      <span class="status" data-testid="http-response-status" [attr.data-class]="statusClass()"
-        >{{ answer.status }} {{ answer.reason }}</span
-      >
-      @if (millis(); as time) {
-        <span class="metric" data-testid="http-response-time">{{ time.key | transloco: time.params }}</span>
-      }
-      @if (size(); as bytes) {
-        <span class="metric" data-testid="http-response-size">{{ bytes.key | transloco: bytes.params }}</span>
-      }
-
-      <div class="sections" role="tablist" [attr.aria-label]="'http.response.parts' | transloco">
-        @for (id of sections; track id) {
-          <button
-            type="button"
-            role="tab"
-            class="section"
-            data-testid="http-response-section"
-            [attr.data-section]="id"
-            [class.on]="section() === id"
-            [attr.aria-selected]="section() === id"
-            (click)="section.set(id)"
-          >
-            {{ 'http.response.sections.' + id | transloco }}
-            @if (counts()[id] > 0) {
-              <span class="count" data-testid="http-response-count">{{ counts()[id] }}</span>
-            } @else if (id === 'timeline' && answer.redirects.length > 0) {
-              <span class="count" data-testid="http-response-redirects">{{
-                'http.response.redirects' | transloco: { count: answer.redirects.length }
-              }}</span>
-            }
-          </button>
-        }
-      </div>
-
-      <div class="actions">
-        @if (answer.cut) {
-          <button type="button" class="action" data-testid="http-response-save" (click)="saveFile()">
-            {{ 'http.response.saveFile' | transloco }}
-          </button>
-        }
-        <button
-          type="button"
-          class="action"
-          data-testid="http-response-copy"
-          [disabled]="!hasText()"
-          (click)="copy()"
-        >
-          {{ 'http.response.copy' | transloco }}
-        </button>
-        <button
-          type="button"
-          class="action note"
-          data-testid="http-response-save-note"
-          [disabled]="!hasText()"
-          (click)="saveAsNote()"
-        >
-          {{ 'tools.saveAsNote.open' | transloco }}
-        </button>
-      </div>
-    </header>
-
-    <div class="panel" role="tabpanel">
-      @switch (section()) {
-        @case ('body') {
-          <app-response-body [response]="answer" [sendId]="sendId()" />
-        }
-        @case ('headers') {
-          <table class="rows" data-testid="http-response-headers">
-            <tbody>
-              @for (header of answer.headers; track $index) {
-                <tr>
-                  <th scope="row" class="key">{{ header.key }}</th>
-                  <td class="value">{{ header.value }}</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        }
-        @case ('cookies') {
-          @if (answer.cookies.length === 0) {
-            <p class="placeholder">{{ 'http.response.noCookies' | transloco }}</p>
-          } @else {
-            <table class="rows" data-testid="http-response-cookies">
-              <thead>
-                <tr>
-                  <th scope="col">{{ 'http.response.cookie.name' | transloco }}</th>
-                  <th scope="col">{{ 'http.response.cookie.value' | transloco }}</th>
-                  <th scope="col">{{ 'http.response.cookie.domain' | transloco }}</th>
-                  <th scope="col">{{ 'http.response.cookie.path' | transloco }}</th>
-                  <th scope="col">{{ 'http.response.cookie.expires' | transloco }}</th>
-                  <th scope="col">{{ 'http.response.cookie.flags' | transloco }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (cookie of answer.cookies; track $index) {
-                  <tr data-testid="http-response-cookie">
-                    <td class="key">{{ cookie.name }}</td>
-                    <td class="value">{{ cookie.value }}</td>
-                    <td>{{ cookie.domain ?? '—' }}</td>
-                    <td>{{ cookie.path ?? '—' }}</td>
-                    <td>{{ cookie.expires ?? ('http.response.cookie.session' | transloco) }}</td>
-                    <td class="flags">
-                      @if (cookie.httpOnly) {
-                        <span class="flag">HttpOnly</span>
-                      }
-                      @if (cookie.secure) {
-                        <span class="flag">Secure</span>
-                      }
-                      @if (cookie.sameSite; as sameSite) {
-                        <span class="flag">SameSite={{ sameSite }}</span>
-                      }
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          }
-        }
-        @case ('timeline') {
-          <app-response-timeline [response]="answer" />
-        }
-      }
-    </div>
+    <app-response-view
+      [response]="answer"
+      [sendId]="sendId()"
+      [requestName]="requestName()"
+      (fileAsked)="saveFile()"
+    />
   } @else if (failure(); as ref) {
     <p class="failure" role="alert" data-testid="http-response-failure">
       {{ ref.key | transloco: ref.params }}
@@ -144,12 +26,3 @@
     <p class="placeholder" data-testid="http-response-idle">{{ 'http.response.idle' | transloco }}</p>
   }
 </section>
-
-@if (saving(); as result) {
-  <app-save-as-note-dialog
-    [result]="result"
-    [source]="noteSource()"
-    whatKey="http.response.noteWhat"
-    (closed)="saving.set(null)"
-  />
-}
