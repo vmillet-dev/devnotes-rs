@@ -434,7 +434,8 @@
     "revisionDiffFailed": "This version could not be compared with the current text.",
     "librariesListFailed": "The list of libraries could not be read.",
     "libraryActionFailed": "That library operation failed.",
-    "toolFailed": "The tool could not compute its result."
+    "toolFailed": "The tool could not compute its result.",
+    "httpItemGone": "This collection item no longer exists."
   },
   "tray": {
     "open": "Open {{app}}",

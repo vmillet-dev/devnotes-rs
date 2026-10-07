@@ -21,6 +21,7 @@ const IPC_ERROR_CODES: Record<IpcErrorCode, true> = {
   folderNotFound: true,
   duplicateFolderName: true,
   attachmentNotFound: true,
+  httpItemNotFound: true,
   revisionNotFound: true,
   libraryNotFound: true,
   libraryOpen: true,

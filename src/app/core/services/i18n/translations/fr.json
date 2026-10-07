@@ -434,7 +434,8 @@
     "revisionDiffFailed": "Impossible de comparer cette version au texte actuel.",
     "librariesListFailed": "Impossible de lire la liste des bibliothèques.",
     "libraryActionFailed": "L'opération sur la bibliothèque a échoué.",
-    "toolFailed": "L’outil n’a pas pu calculer son résultat."
+    "toolFailed": "L’outil n’a pas pu calculer son résultat.",
+    "httpItemGone": "Cet élément de collection n'existe plus."
   },
   "tray": {
     "open": "Ouvrir {{app}}",

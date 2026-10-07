@@ -50,7 +50,7 @@ Run all commands from the repo root (`package.json` there wraps both Angular and
 - `cargo clippy --all-targets -- -D warnings` and `cargo fmt --check` from `src-tauri/` — `Cargo.toml` forbids `unsafe_code`, denies `clippy::all` and `clippy::pedantic`, and warns on `rust_2018_idioms` and `unreachable_pub`, which `-D warnings` turns into errors. The toolchain is pinned in `rust-toolchain.toml`.
 - `npm run bindings` — regenerates `src/app/core/ipc/bindings.ts` from the Rust signatures without launching the app.
 - `npm run icons` — regenerates `src-tauri/icons` from `devnotes.svg`. ⚠️ The `.ico`'s 16, 24 and 32 px come from the pixel-aligned drawings in `icons/source/`, not from the master: scaled, they blur in the tray and the taskbar.
-- `npm run e2e:build` then `npm run test:e2e` — WebdriverIO + `tauri-driver`, twenty-nine spec files under `e2e/specs/`, against the **assembled** application: rebuild after any change to `src/` or `src-tauri/`.
+- `npm run e2e:build` then `npm run test:e2e` — WebdriverIO + `tauri-driver`, thirty spec files under `e2e/specs/`, against the **assembled** application: rebuild after any change to `src/` or `src-tauri/`.
 - `cargo bench` from `src-tauri/` — criterion against a file-backed library of 8000 notes of ~13 kB. Not in CI, not in `cargo test`. `--save-baseline main` then `--baseline main` compares locally; the durable record is the table in `docs/architecture.md`. ⚠️ `autobenches = false`, `bench = false` on the lib and both bins, and no `Drop` on `Corpus` are all load-bearing. → "Benchmarks".
 - **Releasing is a `workflow_dispatch`.** Bump the version in `src-tauri/Cargo.toml`, `package.json` and both lockfiles, merge to `main`, then Actions → Release, `dry_run` first. → "Releasing".
 

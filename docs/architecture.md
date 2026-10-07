@@ -3358,7 +3358,8 @@ CI build. On a realistic library (~2 MB) the sealing costs well under a millisec
 ### What is sealed, and what is not
 
 Sealed: note titles, bodies and sources, the bodies kept as revisions, checklist item texts,
-space and folder names, `{{field}}` values and their global defaults, attachment file names — and the attachment files
+space and folder names, `{{field}}` values and their global defaults, attachment file names, the
+HTTP collections' names, requests' documents and containers' settings — and the attachment files
 themselves, bytes and all.
 
 Not sealed, deliberately: tags, instants, ids, `kind`, `language` and the foreign keys.
@@ -3817,6 +3818,29 @@ is not the WebView's thread's to parse.
   node, and a child level with the row that opens it whenever the nodes above leave room.
 - **The matches cover the whole document**, open or not, in its order: stepping to one opens
   its ancestors.
+
+### HTTP collections in the library
+
+The HTTP client's requests live in collections that belong to the **library**, not to a space
+(`http/`, migration `000014`): `http_collections`, `http_folders` nested by `parent_id`, and
+`http_requests` in a collection and possibly a folder. Sealed: every name, a request's
+**document** — its URL and, ticket by ticket, its parameters, headers, body, auth and settings —
+and a collection's or folder's **settings**, what its requests inherit. Each is one JSON document
+whose every field is `#[serde(default)]`, so a part added later needs no migration. In the clear:
+ids, parents, positions, the request's kind (`http`, `graphql`, `websocket`) and method, instants.
+
+- **One order under a parent.** Folders and requests under the same parent share `position`, so a
+  folder can sit between two requests; a move or a copy renumbers the parent it touches, never
+  the others. `http_tree` answers the whole tree, built in Rust, requests without their
+  document, which `get_http_request` reads when one opens.
+- **What goes with a deletion is `ON DELETE CASCADE`** — a collection's folders and requests, a
+  folder's subfolders and theirs — and `count_http_contents` says it first. A folder cannot move
+  into itself or below itself, nor a request into another collection's folder: both are refused
+  as `invalidInput` on `folderId`, rules that need the database (`StorageError::Invalid`).
+- **A copy is named by the front** (« (copie) » is a word, never Rust's) and lands right after its
+  original, a folder or a collection with everything below it.
+- The launch copy and a restore carry them, being in the database; the library export
+  (`transfer::Bundle`) does not — a collection travels in a file of its own.
 
 ## Persistence (Rust)
 

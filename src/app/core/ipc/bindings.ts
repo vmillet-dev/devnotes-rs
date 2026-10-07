@@ -134,6 +134,21 @@ export const commands = {
 	setGlobalPlaceholders: (values: { [key in string]: string }) => typedError<{ [key in string]: string }, AppError>(__TAURI_INVOKE("set_global_placeholders", { values })),
 	/**  `None` = every space, like [`crate::notes::view::NotesQuery::space_id`]. */
 	listFolders: (spaceId: string | null) => typedError<Folder[], AppError>(__TAURI_INVOKE("list_folders", { spaceId })),
+	httpTree: () => typedError<HttpTree, AppError>(__TAURI_INVOKE("http_tree")),
+	createHttpCollection: (name: string) => typedError<HttpCollection, AppError>(__TAURI_INVOKE("create_http_collection", { name })),
+	/**  `parent_id` `None` puts it at the collection's root. */
+	createHttpFolder: (collectionId: string, parentId: string | null, name: string) => typedError<HttpFolder, AppError>(__TAURI_INVOKE("create_http_folder", { collectionId, parentId, name })),
+	createHttpRequest: (draft: HttpRequestDraft) => typedError<HttpRequest, AppError>(__TAURI_INVOKE("create_http_request", { draft })),
+	getHttpRequest: (id: string) => typedError<HttpRequest, AppError>(__TAURI_INVOKE("get_http_request", { id })),
+	saveHttpRequest: (id: string, patch: HttpRequestPatch) => typedError<HttpRequest, AppError>(__TAURI_INVOKE("save_http_request", { id, patch })),
+	renameHttpItem: (item: HttpItem, name: string) => typedError<null, AppError>(__TAURI_INVOKE("rename_http_item", { item, name })),
+	/**  What a deletion would take with it, for the confirmation that comes first. */
+	countHttpContents: (item: HttpItem) => typedError<HttpContents, AppError>(__TAURI_INVOKE("count_http_contents", { item })),
+	deleteHttpItem: (item: HttpItem) => typedError<null, AppError>(__TAURI_INVOKE("delete_http_item", { item })),
+	/**  The copy's name comes from the front: no user-visible word is Rust's. */
+	duplicateHttpItem: (item: HttpItem, name: string) => typedError<HttpItem, AppError>(__TAURI_INVOKE("duplicate_http_item", { item, name })),
+	moveHttpItem: (item: HttpItem, place: HttpPlace) => typedError<null, AppError>(__TAURI_INVOKE("move_http_item", { item, place })),
+	reorderHttpCollection: (id: string, index: number) => typedError<null, AppError>(__TAURI_INVOKE("reorder_http_collection", { id, index })),
 	/**
 	 *  The second way to look at a space: folders as zones, their notes inside, the loose ones
 	 *  beside them. It reads the whole space and marks what matches rather than narrowing, and
@@ -926,7 +941,7 @@ export type EndingCounts = {
  *  ⚠️ A new variant breaks the front-end build until `CODE_KEYS`
  *  (`core/services/errors/error-notifier.service.ts`) and both locales have its key.
  */
-export type ErrorCode = "noteNotFound" | "spaceNotFound" | "duplicateSpaceName" | "folderNotFound" | "duplicateFolderName" | "attachmentNotFound" | "revisionNotFound" | "libraryNotFound" | "libraryOpen" | "lastLibrary" | "nothingToSetAside" | "backupNotFound" | "backupUnopenable" | "fileAccess" | "importFormat" | 
+export type ErrorCode = "noteNotFound" | "spaceNotFound" | "duplicateSpaceName" | "folderNotFound" | "duplicateFolderName" | "attachmentNotFound" | "httpItemNotFound" | "revisionNotFound" | "libraryNotFound" | "libraryOpen" | "lastLibrary" | "nothingToSetAside" | "backupNotFound" | "backupUnopenable" | "fileAccess" | "importFormat" | 
 /**  The `field` parameter names the offending field. */
 "invalidInput" | 
 /**  Poisoned mutex: a command panicked while holding the connection. */
@@ -1078,6 +1093,94 @@ export type HashRequest = {
 	key: string | null,
 	/**  A digest to recognise, in any of the algorithms and either encoding. */
 	expected: string | null,
+};
+
+export type HttpCollection = {
+	id: string,
+	name: string,
+	position: number,
+	createdAt: string,
+};
+
+export type HttpCollectionNode = {
+	collection: HttpCollection,
+	children: HttpNode[],
+};
+
+/**  What a deletion takes with it, said before it happens. */
+export type HttpContents = {
+	folders: number,
+	requests: number,
+};
+
+export type HttpFolder = {
+	id: string,
+	collectionId: string,
+	parentId: string | null,
+	name: string,
+	position: number,
+};
+
+export type HttpItem = {
+	kind: HttpItemKind,
+	id: string,
+};
+
+export type HttpItemKind = "collection" | "folder" | "request";
+
+export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS";
+
+export type HttpNode = { kind: "folder"; folder: HttpFolder; children: HttpNode[] } | { kind: "request"; request: HttpRequestSummary };
+
+/**  Under which parent, and at which rank among its folders and requests. */
+export type HttpPlace = {
+	collectionId: string,
+	folderId: string | null,
+	index: number,
+};
+
+export type HttpRequest = {
+	id: string,
+	collectionId: string,
+	folderId: string | null,
+	name: string,
+	kind: RequestKind,
+	method: HttpMethod,
+	document: RequestDocument,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type HttpRequestDraft = {
+	collectionId: string,
+	folderId: string | null,
+	name: string,
+	kind: RequestKind,
+	method: HttpMethod,
+	document: RequestDocument,
+};
+
+/**  A field left out is untouched. */
+export type HttpRequestPatch = {
+	name?: string | null,
+	method?: HttpMethod | null,
+	document?: RequestDocument | null,
+};
+
+/**  A request as the tree lists it: no document, which is read by id when it opens. */
+export type HttpRequestSummary = {
+	id: string,
+	collectionId: string,
+	folderId: string | null,
+	name: string,
+	kind: RequestKind,
+	method: HttpMethod,
+	position: number,
+};
+
+/**  Built by Rust: the front draws it and never joins a request to its folder itself. */
+export type HttpTree = {
+	collections: HttpCollectionNode[],
 };
 
 export type IbanVerdict = { kind: "valid"; bban: string; bank: string | null; branch: string | null; 
@@ -1830,6 +1933,18 @@ export type Registry = {
 	libraries: LibraryEntry[],
 	open: string | null,
 };
+
+/**
+ *  A request's parts, sealed as one document. Each field is `#[serde(default)]`: one added
+ *  later needs no migration, and a document written by an older version still opens.
+ */
+export type RequestDocument = {
+	url?: string,
+	description?: string,
+};
+
+/**  What the rail writes before a name: the method, or `QUERY` and `WS` for the other two. */
+export type RequestKind = "http" | "graphql" | "websocket";
 
 export type ReverseDns = 
 /**  One address: the name its PTR record goes under. */

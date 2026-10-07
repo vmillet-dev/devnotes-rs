@@ -23,6 +23,7 @@ const CODE_KEYS: Record<IpcErrorCode, string | null> = {
   folderNotFound: 'errors.folderGone',
   duplicateFolderName: 'errors.folderNameTaken',
   attachmentNotFound: 'errors.attachmentGone',
+  httpItemNotFound: 'errors.httpItemGone',
   revisionNotFound: 'errors.revisionGone',
   libraryNotFound: 'errors.libraryGone',
   libraryOpen: 'errors.libraryOpen',
