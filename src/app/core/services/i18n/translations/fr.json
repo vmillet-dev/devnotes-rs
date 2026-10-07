@@ -2789,7 +2789,8 @@
         "body": "Corps",
         "query": "Requête",
         "message": "Messages",
-        "protocols": "Protocoles"
+        "protocols": "Protocoles",
+        "settings": "Réglages"
       }
     },
     "table": {
@@ -2985,6 +2986,40 @@
         "closing": "Fermeture…",
         "closed": "Déconnecté"
       }
+    },
+    "transport": {
+      "timeoutMs": "Délai d'attente",
+      "followRedirects": "Suivre les redirections",
+      "maxRedirects": "Redirections au plus",
+      "verifyTls": "Vérifier les certificats TLS",
+      "useCookies": "Envoyer et garder les cookies",
+      "inherited": "Hérité",
+      "byDefault": "Par défaut",
+      "on": "Oui",
+      "off": "Non",
+      "insecure": "Les certificats ne sont pas vérifiés : n'importe quel serveur peut se faire passer pour celui-ci. À réserver au développement."
+    },
+    "cookies": {
+      "open": "Cookies",
+      "title": "Cookies",
+      "hint": "Ce que les réponses ont déposé, gardé chiffré dans la bibliothèque et renvoyé aux mêmes domaines.",
+      "clear": "Vider le bocal",
+      "confirm": "{count, plural, one {Supprimer le cookie ?} other {Supprimer les # cookies ?}}",
+      "removed": "{count, plural, =0 {Aucun cookie supprimé.} one {Un cookie supprimé.} other {# cookies supprimés.}}",
+      "count": "{count, plural, one {# cookie} other {# cookies}}",
+      "removeDomain": "Supprimer le domaine",
+      "removeOne": "Supprimer le cookie {{name}}",
+      "remove": "Supprimer",
+      "name": "Nom",
+      "value": "Valeur",
+      "path": "Chemin",
+      "expires": "Expire",
+      "flags": "Attributs",
+      "session": "Session",
+      "hostOnly": "Hôte seul",
+      "empty": "Aucun cookie : ceux que les réponses déposent apparaîtront ici.",
+      "close": "Fermer",
+      "failed": "Les cookies n'ont pas pu être lus ou supprimés."
     }
   }
 }

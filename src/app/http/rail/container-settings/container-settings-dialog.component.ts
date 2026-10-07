@@ -1,17 +1,31 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, input, output, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { HttpRepository } from '@core/data/http.repository';
-import { ContainerSettingsDraft, InheritedParts, KeyValueRow, RequestAuth } from '@core/model/http.model';
+import {
+  ContainerSettingsDraft,
+  DEFAULT_TRANSPORT,
+  InheritedParts,
+  KeyValueRow,
+  RequestAuth,
+  TransportSettings,
+} from '@core/model/http.model';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { RailRow } from '@core/services/http/http-tree';
 import { DialogComponent } from '@shared/layout/dialog/dialog.component';
 import { AuthEditorComponent } from '@http/ui/auth-editor/auth-editor.component';
 import { KeyValueTableComponent } from '@http/ui/key-value-table/key-value-table.component';
+import { TransportEditorComponent } from '@http/ui/transport-editor/transport-editor.component';
 
 /** A collection's or a folder's auth and headers: what every request under it inherits. */
 @Component({
   selector: 'app-container-settings-dialog',
-  imports: [AuthEditorComponent, DialogComponent, KeyValueTableComponent, TranslocoPipe],
+  imports: [
+    AuthEditorComponent,
+    DialogComponent,
+    KeyValueTableComponent,
+    TranslocoPipe,
+    TransportEditorComponent,
+  ],
   templateUrl: './container-settings-dialog.component.html',
   styleUrl: './container-settings-dialog.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -26,6 +40,7 @@ export class ContainerSettingsDialogComponent implements OnInit {
   protected readonly settings = signal<ContainerSettingsDraft | null>(null);
   /** What a folder's « Héritée » takes: the folders and the collection above it. */
   protected readonly above = signal<InheritedParts | null>(null);
+  protected readonly defaultTransport = DEFAULT_TRANSPORT;
 
   ngOnInit(): void {
     void this.load();
@@ -50,6 +65,10 @@ export class ContainerSettingsDialogComponent implements OnInit {
 
   protected onHeaders(headers: readonly KeyValueRow[]): void {
     this.settings.update((settings) => settings && { ...settings, headers });
+  }
+
+  protected onTransport(transport: TransportSettings): void {
+    this.settings.update((settings) => settings && { ...settings, transport });
   }
 
   protected async save(): Promise<void> {

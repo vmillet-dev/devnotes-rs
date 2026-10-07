@@ -19,6 +19,7 @@ import { DropZone, KeyMove, RailRow, dropMove, keyMove } from '@core/services/ht
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { AreaSwitchComponent } from '@shared/controls/area-switch/area-switch.component';
 import { ContainerSettingsDialogComponent } from './container-settings/container-settings-dialog.component';
+import { CookieJarDialogComponent } from './cookie-jar/cookie-jar-dialog.component';
 import { HttpNodeAction, HttpNodeMenuComponent } from './http-node-menu/http-node-menu.component';
 
 /** A name typed under a row: a collection at the head, a folder or a request inside one. */
@@ -74,6 +75,7 @@ const item = (row: RailRow): HttpItem => ({ kind: row.kind, id: row.id });
   imports: [
     AreaSwitchComponent,
     ContainerSettingsDialogComponent,
+    CookieJarDialogComponent,
     HttpNodeMenuComponent,
     NgTemplateOutlet,
     TranslocoPipe,
@@ -101,6 +103,7 @@ export class HttpRailComponent {
   protected readonly dragged = signal<string | null>(null);
   /** The collection or folder whose settings are open. */
   protected readonly settingsFor = signal<RailRow | null>(null);
+  protected readonly cookiesOpen = signal(false);
 
   private drag: Drag | null = null;
   /** The click a drag ends with is not a click on the row it started from. */

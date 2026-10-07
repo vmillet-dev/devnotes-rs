@@ -245,6 +245,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
         .constant("GLOBAL_ACTION_EVENT", desktop::ACTION_EVENT)
         .typ::<http::websocket::WebsocketEvent>()
         .constant("WEBSOCKET_EVENT", http::websocket::WEBSOCKET_EVENT)
+        .constant("DEFAULT_TRANSPORT", http::transport::Transport::default())
         .constant("APP_METADATA", app_info::METADATA)
         // The native side registers them before the front end exists; the front reads them.
         .constant("DEFAULT_SHORTCUTS", desktop::ShortcutBindings::defaults())

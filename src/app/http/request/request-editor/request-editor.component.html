@@ -151,6 +151,13 @@
         />
         <span class="protocols-hint">{{ 'http.socket.protocolsHint' | transloco }}</span>
       </label>
+    } @else if (section() === 'settings') {
+      <app-transport-editor
+        [settings]="draft.parts.transport"
+        [above]="transportAbove()"
+        [aboveIsDefault]="tab().place === null"
+        (settingsChange)="onTransport($event)"
+      />
     } @else if (section() === 'query') {
       <app-graphql-editor [graphql]="draft.parts.graphql" (graphqlChange)="onGraphql($event)" />
     } @else {

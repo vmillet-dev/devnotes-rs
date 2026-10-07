@@ -2789,7 +2789,8 @@
         "body": "Body",
         "query": "Query",
         "message": "Messages",
-        "protocols": "Protocols"
+        "protocols": "Protocols",
+        "settings": "Settings"
       }
     },
     "table": {
@@ -2985,6 +2986,40 @@
         "closing": "Closing…",
         "closed": "Disconnected"
       }
+    },
+    "transport": {
+      "timeoutMs": "Timeout",
+      "followRedirects": "Follow redirects",
+      "maxRedirects": "Most redirects",
+      "verifyTls": "Verify TLS certificates",
+      "useCookies": "Send and keep cookies",
+      "inherited": "Inherited",
+      "byDefault": "Default",
+      "on": "Yes",
+      "off": "No",
+      "insecure": "Certificates are not verified: any server can pass itself off as this one. Keep it for development."
+    },
+    "cookies": {
+      "open": "Cookies",
+      "title": "Cookies",
+      "hint": "What answers have set, kept encrypted in the library and sent back to the same domains.",
+      "clear": "Empty the jar",
+      "confirm": "{count, plural, one {Delete the cookie?} other {Delete the # cookies?}}",
+      "removed": "{count, plural, =0 {No cookie deleted.} one {One cookie deleted.} other {# cookies deleted.}}",
+      "count": "{count, plural, one {# cookie} other {# cookies}}",
+      "removeDomain": "Delete the domain",
+      "removeOne": "Delete the cookie {{name}}",
+      "remove": "Delete",
+      "name": "Name",
+      "value": "Value",
+      "path": "Path",
+      "expires": "Expires",
+      "flags": "Attributes",
+      "session": "Session",
+      "hostOnly": "Host only",
+      "empty": "No cookies: those the answers set will show here.",
+      "close": "Close",
+      "failed": "The cookies could not be read or deleted."
     }
   }
 }

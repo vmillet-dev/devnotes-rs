@@ -179,9 +179,22 @@
     >
       {{ 'http.history.title' | transloco }}
     </button>
+    <button
+      type="button"
+      class="rail-foot-item"
+      data-testid="http-cookies-open"
+      aria-haspopup="dialog"
+      (click)="cookiesOpen.set(true)"
+    >
+      {{ 'http.cookies.open' | transloco }}
+    </button>
   </div>
 </nav>
 
 @if (settingsFor(); as row) {
   <app-container-settings-dialog [row]="row" (closed)="closeSettings()" />
+}
+
+@if (cookiesOpen()) {
+  <app-cookie-jar-dialog (closed)="cookiesOpen.set(false)" />
 }

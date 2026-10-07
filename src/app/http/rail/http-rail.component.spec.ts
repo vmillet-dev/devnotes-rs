@@ -243,4 +243,14 @@ describe('HttpRailComponent', () => {
     await fixture.whenStable();
     expect(history.isOpen()).toBe(false);
   });
+
+  it('opens the cookie jar from its foot, and closes it', async () => {
+    el<HTMLButtonElement>('[data-testid="http-cookies-open"]').click();
+    await vi.waitFor(() =>
+      expect(document.body.querySelector('[data-testid="http-cookies-dialog"]')).not.toBeNull(),
+    );
+    document.body.querySelector<HTMLButtonElement>('[data-testid="http-cookies-close"]')!.click();
+    await fixture.whenStable();
+    expect(document.body.querySelector('[data-testid="http-cookies-dialog"]')).toBeNull();
+  });
 });

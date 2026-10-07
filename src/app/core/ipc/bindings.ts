@@ -188,6 +188,13 @@ export const commands = {
 	/**  What « Vider l'historique » says it removes. */
 	countHttpHistory: () => typedError<number, AppError>(__TAURI_INVOKE("count_http_history")),
 	clearHttpHistory: () => typedError<number, AppError>(__TAURI_INVOKE("clear_http_history")),
+	/**  The jar by domain, for the manager. */
+	httpCookies: () => typedError<CookieDomain[], AppError>(__TAURI_INVOKE("http_cookies")),
+	deleteHttpCookie: (id: string) => typedError<number, AppError>(__TAURI_INVOKE("delete_http_cookie", { id })),
+	deleteHttpCookieDomain: (domain: string) => typedError<number, AppError>(__TAURI_INVOKE("delete_http_cookie_domain", { domain })),
+	/**  What « Vider le bocal » says it removes. */
+	countHttpCookies: () => typedError<number, AppError>(__TAURI_INVOKE("count_http_cookies")),
+	clearHttpCookies: () => typedError<number, AppError>(__TAURI_INVOKE("clear_http_cookies")),
 	/**
 	 *  The second way to look at a space: folders as zones, their notes inside, the loose ones
 	 *  beside them. It reads the whole space and marks what matches rather than narrowing, and
@@ -339,6 +346,8 @@ export const APP_METADATA = {"name":"DevNotes","repository":"https://github.com/
 export const AUTOMATIC_BACKUPS_KEY = "devnotes.automaticBackups" as const;
 
 export const DEFAULT_SHORTCUTS = {"capture":"Ctrl+Alt+V","newNote":"Ctrl+Alt+N","palette":"Ctrl+Alt+P"} as const;
+
+export const DEFAULT_TRANSPORT = {"timeoutMs":30000,"followRedirects":true,"maxRedirects":10,"verifyTls":true,"useCookies":true} as const;
 
 export const FIELD_NAME_PATTERN = "^[A-Za-z0-9_-]+$" as const;
 
@@ -734,6 +743,7 @@ export type ContainerSettings = {
 	/**  `Inherit` on a collection is no auth at all: nothing is above it. */
 	auth?: RequestAuth,
 	headers?: KeyValue[],
+	transport?: TransportSettings,
 };
 
 export type Contrast = {
@@ -774,6 +784,11 @@ export type Cookie = {
 	httpOnly: boolean,
 	secure: boolean,
 	sameSite: string | null,
+};
+
+export type CookieDomain = {
+	domain: string,
+	cookies: StoredCookie[],
 };
 
 export type CronAnswer = { kind: "read"; 
@@ -1416,6 +1431,8 @@ export type Inherited = {
 	authFrom: HttpOrigin | null,
 	/**  Enabled and named, one a name: a folder's overrides its collection's. */
 	headers: InheritedHeader[],
+	/**  Resolved from the collection down; a request's own settings go over it. */
+	transport: Transport,
 };
 
 export type InheritedHeader = {
@@ -1468,6 +1485,21 @@ export type InstantRequest = {
 export type Invisible = "space" | "tab" | "lineBreak" | "noBreakSpace" | "narrowNoBreakSpace" | "otherSpace" | "zeroWidthSpace" | "zeroWidthJoiner" | "zeroWidthNonJoiner" | "byteOrderMark" | "softHyphen" | "control";
 
 export type IpFamily = "v4" | "v6";
+
+export type JarCookie = {
+	name: string,
+	value: string,
+	/**  Lowercased, without a leading dot. */
+	domain: string,
+	/**  Set without `Domain`: sent to that host alone, not its subdomains. */
+	hostOnly: boolean,
+	path: string,
+	/**  `None` lasts the session — here, until removed. */
+	expires: string | null,
+	secure: boolean,
+	httpOnly: boolean,
+	sameSite: string | null,
+};
 
 export type JsonChange = {
 	kind: JsonChangeKind,
@@ -2165,6 +2197,8 @@ export type RequestDocument = {
 	graphql?: GraphqlDocument,
 	/**  Read only for a WebSocket. */
 	websocket?: WebsocketDocument,
+	/**  Over what the folders and the collection set. */
+	transport?: TransportSettings,
 };
 
 /**  What the rail writes before a name: the method, or `QUERY` and `WS` for the other two. */
@@ -2387,6 +2421,11 @@ export type StatsRequest = {
 	countWhitespace: boolean,
 };
 
+export type StoredCookie = {
+	id: string,
+	cookie: JarCookie,
+};
+
 export type Strength = "veryWeak" | "weak" | "fair" | "strong" | "veryStrong";
 
 export type Subnet = {
@@ -2532,6 +2571,25 @@ export type Transition = {
 	minutes: number,
 	/**  The wall clock's total, beside `Elapsed::total_minutes`. */
 	wallMinutes: number,
+};
+
+/**  The settings resolved, every field decided. */
+export type Transport = {
+	timeoutMs: number,
+	followRedirects: boolean,
+	maxRedirects: number,
+	verifyTls: boolean,
+	useCookies: boolean,
+};
+
+/**  Each field unset inherits: from the folder above, the collection, then `Transport::default`. */
+export type TransportSettings = {
+	timeoutMs?: number | null,
+	followRedirects?: boolean | null,
+	maxRedirects?: number | null,
+	verifyTls?: boolean | null,
+	/**  The library's jar: sent from, and filled by the answer. */
+	useCookies?: boolean | null,
 };
 
 export type TrashedNote = {

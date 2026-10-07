@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { InheritedParts, RequestAuth } from '@core/model/http.model';
+import { DEFAULT_TRANSPORT, InheritedParts, RequestAuth } from '@core/model/http.model';
 import { provideAppTesting } from '@testing/testing.providers';
 import { AuthEditorComponent } from './auth-editor.component';
 
@@ -8,6 +8,7 @@ const FROM_API: InheritedParts = {
   auth: { kind: 'bearer', token: '{{accessToken}}' },
   authFrom: { kind: 'collection', id: 'api', name: 'API Paiements' },
   headers: [],
+  transport: DEFAULT_TRANSPORT,
 };
 
 describe('AuthEditorComponent', () => {
@@ -45,7 +46,15 @@ describe('AuthEditorComponent', () => {
   });
 
   it('says when nothing above sets one, and when the request has no place yet', async () => {
-    await render({ kind: 'inherit' }, { auth: { kind: 'none' }, authFrom: null, headers: [] });
+    await render(
+      { kind: 'inherit' },
+      {
+        auth: { kind: 'none' },
+        authFrom: null,
+        headers: [],
+        transport: DEFAULT_TRANSPORT,
+      },
+    );
     expect(el('[data-testid="http-auth-inherited"]').textContent).toContain('Rien au-dessus');
 
     await render({ kind: 'inherit' }, null);
