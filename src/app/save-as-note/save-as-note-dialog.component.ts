@@ -29,8 +29,8 @@ function tagsOf(text: string): string[] {
 }
 
 /**
- * One dialog for every tool. It asks where the note goes and what it is called; what it holds,
- * and in which language, the tool has already decided.
+ * One dialog for every tool and for an HTTP response. It asks where the note goes and what it is
+ * called; what it holds, and in which language, the caller has already decided.
  */
 @Component({
   selector: 'app-save-as-note-dialog',
@@ -46,7 +46,10 @@ export class SaveAsNoteDialogComponent {
   private readonly transloco = inject(TranslocoService);
 
   readonly result = input.required<ToolResult>();
-  readonly toolId = input.required<string>();
+  /** Where the note came from, as its card says: « Outils / Hash ». */
+  readonly source = input.required<string>();
+  /** The line under the title, which says what is kept: a tool's result, a response's body. */
+  readonly whatKey = input('tools.saveAsNote.what');
 
   readonly closed = output<void>();
 
@@ -123,10 +126,7 @@ export class SaveAsNoteDialogComponent {
       spaceId,
       folderId: this.folderId(),
       tags: tagsOf(this.tags()),
-      source: [
-        this.transloco.translate('tools.title'),
-        this.transloco.translate(`tools.${this.toolId()}.name`),
-      ].join(' / '),
+      source: this.source(),
       place: this.place(spaceId),
     });
     this.saving.set(false);

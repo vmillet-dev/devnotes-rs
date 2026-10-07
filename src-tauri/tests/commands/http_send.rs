@@ -11,11 +11,12 @@ use devnotes_lib::http::model::{
     ContainerSettings, HttpItem, HttpItemKind, HttpMethod, KeyValue, RequestAuth, RequestBody,
     RequestDocument,
 };
-use devnotes_lib::http::send::{SHOWN_LIMIT, SendRequest};
+use devnotes_lib::http::send::{SHOWN_LIMIT, SendRequest, SentBody};
 use devnotes_lib::http::{
-    cancel_http_send, create_http_collection, forget_http_response, save_http_response,
-    save_http_settings, send_http_request,
+    cancel_http_send, create_http_collection, forget_http_response, http_response_image,
+    save_http_response, save_http_settings, send_http_request,
 };
+use devnotes_lib::notes::language::Language;
 
 use super::{Session, code};
 
@@ -135,7 +136,10 @@ fn a_request_leaves_with_what_its_collection_hands_down_and_its_answer_comes_bac
     let (port, seen) = serve(1, |_, _| {
         response(
             "201 Created",
-            &[("Content-Type", "application/json")],
+            &[
+                ("Content-Type", "application/json"),
+                ("Set-Cookie", "session=abc; Path=/; HttpOnly"),
+            ],
             b"{\"id\":7}",
         )
     });
@@ -151,6 +155,24 @@ fn a_request_leaves_with_what_its_collection_hands_down_and_its_answer_comes_bac
     assert_eq!((answer.status, answer.reason.as_str()), (201, "Created"));
     assert_eq!((answer.body.as_str(), answer.size), ("{\"id\":7}", 8));
     assert!(!answer.binary && !answer.cut && !answer.incomplete);
+    assert_eq!(answer.language, Language::Json);
+    assert_eq!(answer.pretty.as_deref(), Some("{\n  \"id\": 7\n}"));
+    assert_eq!(answer.cookies.len(), 1);
+    assert!(answer.cookies[0].http_only);
+    assert_eq!(answer.exchange.method, HttpMethod::Post);
+    assert_eq!(
+        answer.exchange.body,
+        SentBody::Text {
+            text: "{\"name\":\"Ada\"}".to_string()
+        }
+    );
+    assert!(
+        answer
+            .exchange
+            .headers
+            .iter()
+            .any(|header| header.key == "Authorization" && header.value == "Bearer s3cret")
+    );
     assert!(
         answer
             .headers
@@ -246,6 +268,13 @@ fn an_image_is_kept_as_bytes_not_shown_as_text() {
 
     assert!(answer.binary && answer.cut);
     assert_eq!((answer.body.as_str(), answer.size), ("", 4));
+    assert_eq!(
+        session
+            .call(|app| http_response_image("tab-1".to_string(), app))
+            .unwrap()
+            .as_deref(),
+        Some("data:image/png;base64,iVBORw==")
+    );
 }
 
 #[test]

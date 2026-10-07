@@ -1,0 +1,31 @@
+@let answer = response();
+<div class="timeline" data-testid="http-response-timeline">
+  @if (answer.redirects.length > 0) {
+    <h3 class="heading">{{ 'http.response.timeline.redirects' | transloco }}</h3>
+    <ol class="redirects">
+      @for (redirect of answer.redirects; track $index) {
+        <li class="redirect" data-testid="http-response-redirect">
+          <span class="code">{{ redirect.status }}</span>
+          <span class="arrow" aria-hidden="true">→</span>
+          <code class="url">{{ redirect.url }}</code>
+        </li>
+      }
+    </ol>
+  }
+
+  <h3 class="heading">{{ 'http.response.timeline.request' | transloco }}</h3>
+  @let request = sent();
+  <pre class="exchange" data-testid="http-response-sent">{{ request.head }}</pre>
+  @if (request.body.kind === 'text') {
+    <pre class="exchange body" data-testid="http-response-sent-body">{{ request.body.text }}</pre>
+  } @else if (request.body.kind === 'bytes') {
+    <p class="note">{{ 'http.response.timeline.bytes' | transloco: { size: request.body.size } }}</p>
+  } @else if (request.body.kind === 'multipart') {
+    <p class="note">
+      {{ 'http.response.timeline.multipart' | transloco: { fields: request.body.fields.join(', ') } }}
+    </p>
+  }
+
+  <h3 class="heading">{{ 'http.response.timeline.response' | transloco }}</h3>
+  <pre class="exchange" data-testid="http-response-received">{{ received() }}</pre>
+</div>

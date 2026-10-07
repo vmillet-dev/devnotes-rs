@@ -7,7 +7,7 @@ import { Tool, ToolDefinition } from '@core/services/tools/tool.model';
 import { ToolsStore } from '@core/services/tools/tools.store';
 import { FAKE_TOOLS, FakeToolComponent } from '@testing/tool-catalogue.fixture';
 import { provideAppTesting } from '@testing/testing.providers';
-import { SaveAsNoteDialogComponent } from './save-as-note/save-as-note-dialog.component';
+import { SaveAsNoteDialogComponent } from '@app/save-as-note/save-as-note-dialog.component';
 import { ToolFrameComponent } from './tool-frame.component';
 
 /** A tool with nothing to fill and nothing to keep, a reference: the frame offers it neither. */
@@ -102,7 +102,7 @@ describe('ToolFrameComponent', () => {
 
     const dialog = fixture.debugElement.query(By.directive(SaveAsNoteDialogComponent));
     expect((dialog.componentInstance as SaveAsNoteDialogComponent).result().content).toBe('typed');
-    expect((dialog.componentInstance as SaveAsNoteDialogComponent).toolId()).toBe('hash');
+    expect((dialog.componentInstance as SaveAsNoteDialogComponent).source()).toBe('Outils / Hash / HMAC');
   });
 
   it('goes back to the home from the breadcrumb', () => {

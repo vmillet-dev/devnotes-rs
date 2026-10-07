@@ -120,6 +120,11 @@ export class HttpRepository {
     return unwrap('save_http_response', await commands.saveHttpResponse(id, path));
   }
 
+  /** The last answer to `id` as a `data:` URI, when it is an image. */
+  async responseImage(id: string): Promise<string | null> {
+    return unwrap('http_response_image', await commands.httpResponseImage(id));
+  }
+
   async forgetResponse(id: string): Promise<void> {
     unwrap('forget_http_response', await commands.forgetHttpResponse(id));
   }

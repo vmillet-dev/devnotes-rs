@@ -43,5 +43,9 @@
 </div>
 
 @if (saving(); as result) {
-  <app-save-as-note-dialog [result]="result" [toolId]="id" (closed)="saving.set(null)" />
+  <app-save-as-note-dialog
+    [result]="result"
+    [source]="('tools.title' | transloco) + ' / ' + ('tools.' + id + '.name' | transloco)"
+    (closed)="saving.set(null)"
+  />
 }

@@ -8,7 +8,7 @@ import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import StarterKit from '@tiptap/starter-kit';
 import { LANGUAGE_LABELS, LanguageTag, isLanguageTag } from '@core/model/language.model';
-import { highlightRanges } from '@notes/ui/code-viewer/highlighter';
+import { highlightRanges } from '@shared/code-viewer/highlighter';
 import { escapeMarkdownText } from './markdown-text';
 
 export interface RichEditorHooks {

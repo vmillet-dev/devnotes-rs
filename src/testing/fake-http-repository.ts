@@ -46,6 +46,7 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
   response: SentResponse = sentResponse();
   pendingSend: Promise<SentResponse> | null = null;
   saveAnswer = true;
+  imageAnswer: string | null = null;
   /** What `syncQuery` answers; unset, it hands back what it was given. */
   synced: Synced | null = null;
   readonly requests = new Map<string, OpenedRequest>();
@@ -170,6 +171,10 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
     return this.record('saveResponse', [id, path], () => this.saveAnswer);
   }
 
+  responseImage(id: string): Promise<string | null> {
+    return this.record('responseImage', [id], () => this.imageAnswer);
+  }
+
   forgetResponse(id: string): Promise<void> {
     return this.record('forgetResponse', [id], () => undefined);
   }
@@ -220,6 +225,15 @@ export function sentResponse(overrides: Partial<SentResponse> = {}): SentRespons
     cut: false,
     incomplete: false,
     redirects: [],
+    language: 'json',
+    pretty: '{\n  "data": []\n}',
+    cookies: [],
+    exchange: {
+      method: 'GET',
+      url: 'https://api.exemple.fr/users',
+      headers: [{ enabled: true, key: 'Accept', value: 'application/json', description: '' }],
+      body: { kind: 'none' },
+    },
     ...overrides,
   };
 }

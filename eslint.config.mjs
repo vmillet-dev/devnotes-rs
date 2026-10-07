@@ -64,7 +64,7 @@ export default tseslint.config(
             {
               group: ['../../*'],
               message:
-                'Reach across the tree with an alias (@notes, @tools, @http, @core, @shared, @titlebar, @banners), not with ../../',
+                'Reach across the tree with an alias (@notes, @tools, @http, @core, @shared, @titlebar, @banners, @app), not with ../../',
             },
           ],
         },

@@ -1,0 +1,75 @@
+:host {
+  display: block;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.timeline {
+  padding: 4px 20px 16px;
+}
+
+.heading {
+  margin: 14px 0 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.redirects {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.redirect {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 3px 0;
+  font-size: 12.5px;
+}
+
+.code {
+  font-family: var(--font-mono), monospace;
+  font-weight: 700;
+  color: var(--blue);
+}
+
+.arrow {
+  color: var(--text-2);
+}
+
+.url {
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono), monospace;
+  color: var(--text-1);
+}
+
+.exchange {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--bg-1);
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-0);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+
+  &.body {
+    margin-top: 6px;
+    max-height: 240px;
+    overflow: auto;
+  }
+}
+
+.note {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  color: var(--text-2);
+}

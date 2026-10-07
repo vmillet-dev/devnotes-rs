@@ -168,6 +168,8 @@ export const commands = {
 	saveHttpResponse: (id: string, path: string) => typedError<boolean, AppError>(__TAURI_INVOKE("save_http_response", { id, path })),
 	/**  A closed tab lets its last body go. */
 	forgetHttpResponse: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("forget_http_response", { id })),
+	/**  The last answer to `id` as an image to show, when it is one. */
+	httpResponseImage: (id: string) => typedError<string | null, AppError>(__TAURI_INVOKE("http_response_image", { id })),
 	/**
 	 *  The second way to look at a space: folders as zones, their notes inside, the loose ones
 	 *  beside them. It reads the whole space and marks what matches rather than narrowing, and
@@ -741,6 +743,19 @@ export type ConvertRequest = {
 	to: DataFormat,
 };
 
+/**  A `Set-Cookie`, its attributes named. */
+export type Cookie = {
+	name: string,
+	value: string,
+	domain: string | null,
+	path: string | null,
+	/**  As the server wrote it: `Max-Age` or `Expires`, whichever came. */
+	expires: string | null,
+	httpOnly: boolean,
+	secure: boolean,
+	sameSite: string | null,
+};
+
 export type CronAnswer = { kind: "read"; 
 /**  What a macro stands for: `@daily` is `0 0 * * *`. */
 expanded: string | null; fields: FieldReading[]; 
@@ -994,6 +1009,13 @@ export type ErrorCode = "noteNotFound" | "spaceNotFound" | "duplicateSpaceName" 
 "httpFileUnreadable" | 
 /**  What « Annuler » answers: the front, which asked, says nothing. */
 "httpCancelled" | "httpNetwork";
+
+export type Exchange = {
+	method: HttpMethod,
+	url: string,
+	headers: KeyValue[],
+	body: SentBody,
+};
 
 export type ExportReport = {
 	notes: number,
@@ -2134,6 +2156,10 @@ export type SendRequest = {
 	folderId: string | null,
 };
 
+export type SentBody = { kind: "none" } | 
+/**  Up to `SHOWN_LIMIT`. */
+{ kind: "text"; text: string } | { kind: "bytes"; size: number } | { kind: "multipart"; fields: string[] };
+
 export type SentResponse = {
 	status: number,
 	/**  The status's canonical words, « OK »; empty for a code with none. */
@@ -2152,6 +2178,13 @@ export type SentResponse = {
 	/**  The reading stopped at `KEPT_LIMIT`: even the file is not the whole body. */
 	incomplete: boolean,
 	redirects: Redirect[],
+	/**  What the body is coloured and saved as. */
+	language: Language,
+	/**  A JSON body laid out; `None` for another, or one cut short. */
+	pretty: string | null,
+	cookies: Cookie[],
+	/**  The request as it left, for the timeline. */
+	exchange: Exchange,
 };
 
 /**  Three fields rather than a map, so a missing shortcut is a compile error. */

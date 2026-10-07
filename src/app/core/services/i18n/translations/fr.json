@@ -2892,7 +2892,42 @@
       "saveFile": "Enregistrer dans un fichier…",
       "saved": "Réponse enregistrée dans {{path}}.",
       "saveFailed": "La réponse n'a pas pu être enregistrée.",
-      "redirects": "{count, plural, one {après # redirection} other {après # redirections}}"
+      "redirects": "{count, plural, one {après # redirection} other {après # redirections}}",
+      "parts": "Parties de la réponse",
+      "sections": {
+        "body": "Corps",
+        "headers": "En-têtes",
+        "cookies": "Cookies",
+        "timeline": "Chronologie"
+      },
+      "view": "Affichage du corps",
+      "views": {
+        "pretty": "Formaté",
+        "raw": "Brut",
+        "graph": "Graphe",
+        "tree": "Arbre"
+      },
+      "imageAlt": "Image reçue ({{type}})",
+      "copy": "Copier",
+      "noteTitle": "Réponse de {{name}}",
+      "noCookies": "La réponse ne pose aucun cookie.",
+      "cookie": {
+        "name": "Nom",
+        "value": "Valeur",
+        "domain": "Domaine",
+        "path": "Chemin",
+        "expires": "Expire",
+        "flags": "Attributs",
+        "session": "fin de session"
+      },
+      "timeline": {
+        "redirects": "Redirections",
+        "request": "Requête envoyée",
+        "response": "Réponse reçue",
+        "bytes": "Corps binaire de {{size}} octets.",
+        "multipart": "Corps multipart : {{fields}}."
+      },
+      "noteWhat": "Un snippet {{language}}, avec le corps de la réponse mis en forme."
     }
   }
 }
