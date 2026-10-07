@@ -1605,6 +1605,27 @@ property of a block container and `.node-name` is a flex one, which ignores it o
 name was cut mid-letter. Nothing said so for as long as the rail could not be narrow enough to
 cut one.
 
+### The HTTP rail
+
+The third area (`Ctrl+3`, `http/`) opens on the collections of the library: `HttpRailComponent`
+in the library rail's frame — its width, its `Ctrl+B`, the titlebar carrying the switch while it
+is hidden — and the open request beside it. The tree is Rust's (`http_tree`); the rail lays it
+flat (`railRows`, `core/services/http/http-tree.ts`), each row at its depth, a request after its
+method in its colour (`http-method-hues`), `QUERY` for GraphQL and `WS` for a WebSocket.
+
+- **A row's `⋯` is a component of its own** (`HttpNodeMenuComponent`, `MenuTriggerDirective` as a
+  host directive), so a row listens to the document only while its menu is open. Creating and
+  renaming are a field in place; deleting first shows what goes with it, counted by Rust.
+- **Moving is pointer events and `Alt` with the arrows**, never HTML5 drag and drop. `↑`/`↓`
+  within the parent, `→` into the folder above, `←` out of the folder; a drag lands before or
+  after a row, or inside a folder or a collection when it is let go mid-row. Both turn into one
+  `RailMove` (`keyMove`, `dropMove`), refused when it would change nothing or put a folder into
+  itself — Rust refuses that too. The click that ends a drag opens nothing.
+- **What is folded is the library's**, in its preferences (`devnotes.notes.http.collapsed`), and
+  read the way a file written by hand is read: anything but a list of ids folds nothing.
+- Every write is persisted, then the tree read again: a move or a copy renumbers what it touched,
+  and the front never guesses the order.
+
 ### Managing spaces from the switcher
 
 The space switcher's dropdown has three mutually exclusive states: the menu, the creation

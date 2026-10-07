@@ -1,0 +1,59 @@
+@use 'mixins' as *;
+
+:host {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.node-menu {
+  @include unstyled-control;
+  @include hit-target;
+  @include focus-ring(1px);
+  justify-content: center;
+  padding: 4px 6px;
+  border-radius: 5px;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--text-2);
+  cursor: pointer;
+  // Quiet at rest but never hidden: `visibility: hidden` would take it out of the tab order.
+  opacity: 0.35;
+
+  &:hover,
+  &:focus-visible,
+  &[aria-expanded='true'] {
+    opacity: 1;
+    background: var(--bg-3);
+    color: var(--text-0);
+  }
+}
+
+.panel {
+  @include enters;
+  @include surface(var(--bg-2), 8px);
+  position: fixed;
+  z-index: 30;
+  width: 200px;
+  padding: 6px;
+  box-shadow: 0 8px 20px rgb(0 0 0 / 32%);
+}
+
+.option {
+  @include unstyled-control;
+  @include hit-target;
+  @include focus-ring(-2px);
+  width: 100%;
+  padding: 6px 9px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: var(--text-0);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--bg-3);
+  }
+
+  &.destructive {
+    color: var(--red);
+  }
+}

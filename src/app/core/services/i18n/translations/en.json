@@ -988,8 +988,10 @@
     "tools": "Tools",
     "go": {
       "notes": "Go to the notes",
-      "tools": "Go to the tools"
-    }
+      "tools": "Go to the tools",
+      "http": "Go to the HTTP client"
+    },
+    "http": "HTTP"
   },
   "tools": {
     "title": "Tools",
@@ -2715,6 +2717,43 @@
         },
         "unreadable": "Cannot be read: {{entries}}"
       }
+    }
+  },
+  "http": {
+    "failed": "The operation on the collections failed.",
+    "rail": {
+      "title": "Collections",
+      "newCollection": "New collection",
+      "empty": "No collection yet: create one with ＋.",
+      "placeholders": {
+        "collection": "Collection name",
+        "folder": "Folder name",
+        "request": "Request name"
+      },
+      "create": "Create",
+      "renameLabel": "New name for {{name}}",
+      "options": "Options for {{name}}",
+      "actions": {
+        "newRequest": "New request",
+        "newFolder": "New folder",
+        "rename": "Rename",
+        "duplicate": "Duplicate",
+        "delete": "Delete"
+      },
+      "copyName": "{{name}} (copy)",
+      "expand": "Expand {{name}}",
+      "collapse": "Collapse {{name}}",
+      "confirm": "Delete “{{name}}”?",
+      "cancel": "Cancel",
+      "takes": {
+        "requests": "{requests, plural, one {Its request goes with it.} other {Its # requests go with it.}}",
+        "folders": "{folders, plural, one {Its folder goes with it.} other {Its # folders go with it.}}",
+        "both": "{folders, plural, one {# folder} other {# folders}} and {requests, plural, one {# request} other {# requests}} go with it."
+      }
+    },
+    "workspace": {
+      "empty": "Choose a request in the rail, or create a collection with ＋.",
+      "noUrl": "No URL yet"
     }
   }
 }

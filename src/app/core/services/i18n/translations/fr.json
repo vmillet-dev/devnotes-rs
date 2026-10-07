@@ -988,8 +988,10 @@
     "tools": "Outils",
     "go": {
       "notes": "Aller aux notes",
-      "tools": "Aller aux outils"
-    }
+      "tools": "Aller aux outils",
+      "http": "Aller au client HTTP"
+    },
+    "http": "HTTP"
   },
   "tools": {
     "title": "Outils",
@@ -2715,6 +2717,43 @@
         },
         "unreadable": "Illisible : {{entries}}"
       }
+    }
+  },
+  "http": {
+    "failed": "L'opération sur les collections a échoué.",
+    "rail": {
+      "title": "Collections",
+      "newCollection": "Nouvelle collection",
+      "empty": "Aucune collection pour l'instant : créez-en une avec ＋.",
+      "placeholders": {
+        "collection": "Nom de la collection",
+        "folder": "Nom du dossier",
+        "request": "Nom de la requête"
+      },
+      "create": "Créer",
+      "renameLabel": "Nouveau nom de {{name}}",
+      "options": "Options de {{name}}",
+      "actions": {
+        "newRequest": "Nouvelle requête",
+        "newFolder": "Nouveau dossier",
+        "rename": "Renommer",
+        "duplicate": "Dupliquer",
+        "delete": "Supprimer"
+      },
+      "copyName": "{{name}} (copie)",
+      "expand": "Déplier {{name}}",
+      "collapse": "Replier {{name}}",
+      "confirm": "Supprimer « {{name}} » ?",
+      "cancel": "Annuler",
+      "takes": {
+        "requests": "{requests, plural, one {Sa requête part avec.} other {Ses # requêtes partent avec.}}",
+        "folders": "{folders, plural, one {Son dossier part avec.} other {Ses # dossiers partent avec.}}",
+        "both": "{folders, plural, one {# dossier} other {# dossiers}} et {requests, plural, one {# requête} other {# requêtes}} partent avec."
+      }
+    },
+    "workspace": {
+      "empty": "Choisissez une requête dans le rail, ou créez une collection avec ＋.",
+      "noUrl": "Pas encore d'URL"
     }
   }
 }

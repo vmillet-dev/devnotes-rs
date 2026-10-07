@@ -1,0 +1,19 @@
+<div class="page" data-testid="http-page">
+  @if (settings.showLibraryRail()) {
+    <app-http-rail />
+  }
+
+  <main class="workspace">
+    @if (request(); as request) {
+      <header class="request" data-testid="http-open-request" [attr.data-id]="request.id">
+        <span class="method" [attr.data-method]="badge()">{{ badge() }}</span>
+        <h1 class="request-name">{{ request.name }}</h1>
+      </header>
+      <p class="request-url" data-testid="http-open-url">
+        {{ request.document.url || ('http.workspace.noUrl' | transloco) }}
+      </p>
+    } @else {
+      <p class="empty" data-testid="http-workspace-empty">{{ 'http.workspace.empty' | transloco }}</p>
+    }
+  </main>
+</div>
