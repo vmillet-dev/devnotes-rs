@@ -158,6 +158,17 @@ export const commands = {
 	/**  What a body implies, and whether a JSON one reads: the editor says both as it is typed. */
 	describeHttpBody: (body: RequestBody) => typedError<BodyAnswer, AppError>(__TAURI_INVOKE("describe_http_body", { body })),
 	/**
+	 *  What it inherits is read under the lock, its files outside it, and the send waits on nothing
+	 *  but the network: a 30-second request stalls no other command.
+	 */
+	sendHttpRequest: (request: SendRequest) => typedError<SentResponse, AppError>(__TAURI_INVOKE("send_http_request", { request })),
+	/**  `false` when that send had already ended. */
+	cancelHttpSend: (id: string) => typedError<boolean, AppError>(__TAURI_INVOKE("cancel_http_send", { id })),
+	/**  The whole body of the last answer to `id`, not the text shown: `false` when there is none. */
+	saveHttpResponse: (id: string, path: string) => typedError<boolean, AppError>(__TAURI_INVOKE("save_http_response", { id, path })),
+	/**  A closed tab lets its last body go. */
+	forgetHttpResponse: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("forget_http_response", { id })),
+	/**
 	 *  The second way to look at a space: folders as zones, their notes inside, the loose ones
 	 *  beside them. It reads the whole space and marks what matches rather than narrowing, and
 	 *  draws no folder chips — a chip naming the zone a card sits in is noise.
@@ -976,7 +987,13 @@ export type ErrorCode = "noteNotFound" | "spaceNotFound" | "duplicateSpaceName" 
 /**  The import needs the phrase the export was protected with. */
 "passphraseRequired" | 
 /**  SQLite says the file is corrupt: the one code the interface answers with an action. */
-"libraryDamaged" | "storage";
+"libraryDamaged" | "storage" | 
+/**  The `name` parameter names the `{{variable}}` with no value. */
+"httpVariable" | "httpInvalidUrl" | "httpUnresolved" | "httpRefused" | "httpTls" | "httpTimeout" | "httpTooManyRedirects" | 
+/**  The `path` parameter names the file a body or a part would have sent. */
+"httpFileUnreadable" | 
+/**  What « Annuler » answers: the front, which asked, says nothing. */
+"httpCancelled" | "httpNetwork";
 
 export type ExportReport = {
 	notes: number,
@@ -1992,6 +2009,11 @@ export type RateUnit = "bitPerSecond" | "kilobitPerSecond" | "megabitPerSecond" 
 
 export type ReadAs = "unix" | "iso8601" | "weekDate" | "ordinalDate" | "rfc2822";
 
+export type Redirect = {
+	status: number,
+	url: string,
+};
+
 /**  What the File menu draws: the libraries, and which of them is open. */
 export type Registry = {
 	libraries: LibraryEntry[],
@@ -2101,6 +2123,36 @@ export type SectionGroup = { group: "language"; language: Language } |
 { group: "kind"; kind: NoteKind } | { group: "priority"; priority: Priority };
 
 export type Segment = "header" | "payload" | "signature";
+
+export type SendRequest = {
+	/**  Chosen by the front, so it can cancel the send it started and save what came back. */
+	id: string,
+	method: HttpMethod,
+	document: RequestDocument,
+	/**  Where the request sits, for what it inherits; `None` for a draft not placed yet. */
+	collectionId: string | null,
+	folderId: string | null,
+};
+
+export type SentResponse = {
+	status: number,
+	/**  The status's canonical words, « OK »; empty for a code with none. */
+	reason: string,
+	millis: number,
+	/**  Bytes received. */
+	size: number,
+	/**  Where the answer came from, after the redirects. */
+	url: string,
+	headers: KeyValue[],
+	/**  The body as text, up to `SHOWN_LIMIT`; empty when it is not text. */
+	body: string,
+	binary: boolean,
+	/**  The text shown is not the whole body. */
+	cut: boolean,
+	/**  The reading stopped at `KEPT_LIMIT`: even the file is not the whole body. */
+	incomplete: boolean,
+	redirects: Redirect[],
+};
 
 /**  Three fields rather than a map, so a missing shortcut is a compile error. */
 export type ShortcutBindings = {

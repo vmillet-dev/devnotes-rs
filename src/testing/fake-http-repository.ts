@@ -8,6 +8,7 @@ import {
   HttpPlace,
   HttpRequestDraft,
   HttpTree,
+  SentResponse,
   BodyAnswer,
   ContainerSettingsDraft,
   EMPTY_PARTS,
@@ -41,6 +42,10 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
   settingsAnswer: ContainerSettingsDraft = { auth: { kind: 'inherit' }, headers: [] };
   inheritedAnswer: InheritedParts = { auth: { kind: 'none' }, authFrom: null, headers: [] };
   bodyAnswer: BodyAnswer = { contentType: null, problem: null };
+  /** What `send` answers; a spec holding `pendingSend` decides when. */
+  response: SentResponse = sentResponse();
+  pendingSend: Promise<SentResponse> | null = null;
+  saveAnswer = true;
   /** What `syncQuery` answers; unset, it hands back what it was given. */
   synced: Synced | null = null;
   readonly requests = new Map<string, OpenedRequest>();
@@ -147,6 +152,28 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
     return this.record('describeBody', [body], () => this.bodyAnswer);
   }
 
+  send(
+    id: string,
+    draft: RequestDraft,
+    place: { collectionId: string; folderId: string | null } | null,
+  ): Promise<SentResponse> {
+    const pending = this.pendingSend;
+    this.pendingSend = null;
+    return this.record('send', [id, draft, place], () => this.response).then((answer) => pending ?? answer);
+  }
+
+  cancel(id: string): Promise<boolean> {
+    return this.record('cancel', [id], () => true);
+  }
+
+  saveResponse(id: string, path: string): Promise<boolean> {
+    return this.record('saveResponse', [id, path], () => this.saveAnswer);
+  }
+
+  forgetResponse(id: string): Promise<void> {
+    return this.record('forgetResponse', [id], () => undefined);
+  }
+
   rename(item: HttpItem, name: string): Promise<void> {
     return this.record('rename', [item, name], () => undefined);
   }
@@ -177,4 +204,22 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
     this.calls.push({ command, args });
     return guard(this, answer);
   }
+}
+
+/** An answer as Rust shapes it, `200 OK` with a small JSON body unless told otherwise. */
+export function sentResponse(overrides: Partial<SentResponse> = {}): SentResponse {
+  return {
+    status: 200,
+    reason: 'OK',
+    millis: 142,
+    size: 3277,
+    url: 'https://api.exemple.fr/users',
+    headers: [{ enabled: true, key: 'content-type', value: 'application/json', description: '' }],
+    body: '{"data":[]}',
+    binary: false,
+    cut: false,
+    incomplete: false,
+    redirects: [],
+    ...overrides,
+  };
 }

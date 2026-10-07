@@ -26,6 +26,7 @@ import type {
   QuerySide,
   RequestDocument,
   RequestKind,
+  SentResponse,
   SyncedQuery,
 } from '@core/ipc/bindings';
 
@@ -51,6 +52,7 @@ export type {
   QuerySide,
   RequestDocument,
   RequestKind,
+  SentResponse,
 };
 
 /** A row of parameters or headers, every field present: the wire leaves out a default. */

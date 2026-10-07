@@ -20,6 +20,11 @@
   min-height: 0;
 }
 
+app-request-editor {
+  flex: 0 1 auto;
+  max-height: 60%;
+}
+
 .empty {
   margin: auto;
   max-width: 360px;

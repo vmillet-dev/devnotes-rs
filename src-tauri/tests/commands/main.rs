@@ -21,6 +21,7 @@ mod common;
 mod attachments;
 mod folders;
 mod http;
+mod http_send;
 mod notes;
 mod spaces;
 mod transfer;
@@ -32,6 +33,7 @@ impl Session {
     fn with(library: Option<Library>) -> Self {
         let app = mock_app();
         app.manage(Db::new(library));
+        app.manage(devnotes_lib::http::send::Sending::default());
         Self(app)
     }
 

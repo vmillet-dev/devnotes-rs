@@ -435,7 +435,17 @@
     "librariesListFailed": "Impossible de lire la liste des bibliothèques.",
     "libraryActionFailed": "L'opération sur la bibliothèque a échoué.",
     "toolFailed": "L’outil n’a pas pu calculer son résultat.",
-    "httpItemGone": "Cet élément de collection n'existe plus."
+    "httpItemGone": "Cet élément de collection n'existe plus.",
+    "httpVariable": "La variable « {{name}} » n'a pas de valeur : la requête ne peut pas partir.",
+    "httpInvalidUrl": "Cette URL ne peut pas être envoyée : il lui faut http:// ou https:// et un hôte.",
+    "httpUnresolved": "Le nom d'hôte ne se résout pas.",
+    "httpRefused": "La connexion a été refusée : rien n'écoute à cette adresse.",
+    "httpTls": "La connexion sécurisée a échoué : certificat refusé ou protocole inattendu.",
+    "httpTimeout": "Pas de réponse au bout de 30 secondes.",
+    "httpTooManyRedirects": "Trop de redirections : plus de 10.",
+    "httpFileUnreadable": "Le fichier {{path}} ne peut pas être lu.",
+    "httpCancelled": "Envoi annulé.",
+    "httpNetwork": "Erreur réseau."
   },
   "tray": {
     "open": "Ouvrir {{app}}",
@@ -2859,6 +2869,30 @@
         "folder": "Réglages du dossier {{name}}"
       },
       "hint": "Ses requêtes en héritent : une requête dont l'auth est « Héritée » prend celle-ci, et ses en-têtes s'ajoutent aux leurs."
+    },
+    "send": {
+      "send": "Envoyer",
+      "sendHint": "Envoyer (Ctrl+Entrée)",
+      "cancel": "Annuler",
+      "failed": "La requête n'a pas pu être envoyée."
+    },
+    "response": {
+      "label": "Réponse",
+      "idle": "Envoyez la requête pour lire sa réponse ici.",
+      "sending": "Envoi en cours…",
+      "cancelled": "Envoi annulé.",
+      "millis": "{{value}} ms",
+      "bytes": "{{value}} o",
+      "kilobytes": "{{value}} Ko",
+      "megabytes": "{{value}} Mo",
+      "empty": "Réponse sans corps.",
+      "binary": "Corps binaire ({{type}}) : il n'est pas affiché.",
+      "cut": "Seul le premier Mo est affiché.",
+      "incomplete": "La lecture s'est arrêtée à 64 Mo : le fichier n'aura que ceux-là.",
+      "saveFile": "Enregistrer dans un fichier…",
+      "saved": "Réponse enregistrée dans {{path}}.",
+      "saveFailed": "La réponse n'a pas pu être enregistrée.",
+      "redirects": "{count, plural, one {après # redirection} other {après # redirections}}"
     }
   }
 }

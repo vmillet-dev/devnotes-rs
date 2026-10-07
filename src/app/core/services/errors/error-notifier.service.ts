@@ -40,6 +40,16 @@ const CODE_KEYS: Record<IpcErrorCode, string | null> = {
   passphraseRequired: 'errors.passphraseRequired',
   libraryDamaged: 'errors.libraryDamaged',
   storage: null,
+  httpVariable: 'errors.httpVariable',
+  httpInvalidUrl: 'errors.httpInvalidUrl',
+  httpUnresolved: 'errors.httpUnresolved',
+  httpRefused: 'errors.httpRefused',
+  httpTls: 'errors.httpTls',
+  httpTimeout: 'errors.httpTimeout',
+  httpTooManyRedirects: 'errors.httpTooManyRedirects',
+  httpFileUnreadable: 'errors.httpFileUnreadable',
+  httpCancelled: 'errors.httpCancelled',
+  httpNetwork: 'errors.httpNetwork',
 };
 
 /** `fallback` carries the action attempted, used when the cause adds nothing. */

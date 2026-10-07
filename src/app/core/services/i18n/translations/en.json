@@ -435,7 +435,17 @@
     "librariesListFailed": "The list of libraries could not be read.",
     "libraryActionFailed": "That library operation failed.",
     "toolFailed": "The tool could not compute its result.",
-    "httpItemGone": "This collection item no longer exists."
+    "httpItemGone": "This collection item no longer exists.",
+    "httpVariable": "The variable “{{name}}” has no value: the request cannot leave.",
+    "httpInvalidUrl": "This URL cannot be sent: it needs http:// or https:// and a host.",
+    "httpUnresolved": "The host name does not resolve.",
+    "httpRefused": "The connection was refused: nothing listens at this address.",
+    "httpTls": "The secure connection failed: certificate refused or unexpected protocol.",
+    "httpTimeout": "No answer after 30 seconds.",
+    "httpTooManyRedirects": "Too many redirects: more than 10.",
+    "httpFileUnreadable": "The file {{path}} cannot be read.",
+    "httpCancelled": "Send cancelled.",
+    "httpNetwork": "Network error."
   },
   "tray": {
     "open": "Open {{app}}",
@@ -2859,6 +2869,30 @@
         "folder": "Settings of the folder {{name}}"
       },
       "hint": "Its requests inherit them: a request whose auth is “Inherited” takes this one, and these headers add to theirs."
+    },
+    "send": {
+      "send": "Send",
+      "sendHint": "Send (Ctrl+Enter)",
+      "cancel": "Cancel",
+      "failed": "The request could not be sent."
+    },
+    "response": {
+      "label": "Response",
+      "idle": "Send the request to read its response here.",
+      "sending": "Sending…",
+      "cancelled": "Send cancelled.",
+      "millis": "{{value}} ms",
+      "bytes": "{{value}} B",
+      "kilobytes": "{{value}} KB",
+      "megabytes": "{{value}} MB",
+      "empty": "Response without a body.",
+      "binary": "Binary body ({{type}}): it is not shown.",
+      "cut": "Only the first MB is shown.",
+      "incomplete": "Reading stopped at 64 MB: the file will hold only those.",
+      "saveFile": "Save to a file…",
+      "saved": "Response saved to {{path}}.",
+      "saveFailed": "The response could not be saved.",
+      "redirects": "{count, plural, one {after # redirect} other {after # redirects}}"
     }
   }
 }

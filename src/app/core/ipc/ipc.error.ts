@@ -38,6 +38,16 @@ const IPC_ERROR_CODES: Record<IpcErrorCode, true> = {
   passphraseRequired: true,
   libraryDamaged: true,
   storage: true,
+  httpVariable: true,
+  httpInvalidUrl: true,
+  httpUnresolved: true,
+  httpRefused: true,
+  httpTls: true,
+  httpTimeout: true,
+  httpTooManyRedirects: true,
+  httpFileUnreadable: true,
+  httpCancelled: true,
+  httpNetwork: true,
 };
 
 function isAppError(cause: unknown): cause is AppError {
