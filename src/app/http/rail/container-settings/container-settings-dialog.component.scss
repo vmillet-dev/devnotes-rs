@@ -1,0 +1,65 @@
+@use 'mixins' as *;
+
+:host {
+  --dialog-width: 640px;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-0);
+}
+
+.hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.section {
+  margin: 8px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-2);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.action {
+  @include unstyled-control;
+  @include surface($radius: 6px);
+  @include focus-ring(1px);
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-1);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    @include accent-state;
+  }
+
+  &.primary {
+    background: var(--amber-fill);
+    border-color: var(--amber-edge);
+    color: var(--amber-ink);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}

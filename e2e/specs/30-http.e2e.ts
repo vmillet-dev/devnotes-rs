@@ -180,5 +180,54 @@ describe('HTTP collections', () => {
       await $(tab).waitForExist({ reverse: true, timeout: 10_000 });
       await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
     });
+
+    it('inherits the auth its collection sets, takes a JSON body, and keeps both', async () => {
+      const api = await bridge.createHttpCollection('Paiements');
+      const created = await bridge.createHttpRequest(draft(api.id, null, 'Payer'));
+      await press('1', ['Control']);
+      await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+      await press('3', ['Control']);
+      await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+      if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
+
+      await $(`${testid('http-node')}[data-id="${api.id}"] ${testid('http-node-menu')}`).click();
+      await $(`${testid('http-node-action')}[data-action="settings"]`).click();
+      await $(testid('http-settings-dialog')).waitForDisplayed({ timeout: 10_000 });
+      await $(testid('http-auth-kind')).click();
+      await $(`${testid('choice-option')}[data-option-id="bearer"]`).click();
+      await setField(testid('http-auth-secret'), '{{accessToken}}');
+      await $(testid('http-settings-save')).click();
+      await $(testid('http-settings-dialog')).waitForExist({ reverse: true, timeout: 10_000 });
+
+      await $(`${testid('http-node')}[data-id="${created.id}"] ${testid('http-node-name')}`).click();
+      await $(`${testid('http-section')}[data-section="auth"]`).click();
+      await eventually(
+        () => $(testid('http-auth-inherited')).getText(),
+        (text) => text.includes('{{accessToken}}') && text.includes('Paiements'),
+        'the bearer inherited from the collection',
+      );
+
+      await $(`${testid('http-section')}[data-section="body"]`).click();
+      await $(`${testid('segmented-http-body')} [data-segment-id="json"]`).click();
+      await setField(testid('http-body-text'), '{"amount": 4900}');
+      await $(testid('http-body-valid')).waitForDisplayed({ timeout: 10_000 });
+      await $(`${testid('http-section')}[data-section="headers"]`).click();
+      await eventually(
+        () => readEach(testid('http-implied-header'), 'text'),
+        (rows) => rows.some((row) => row.includes('application/json')),
+        'the Content-Type the body implies',
+      );
+
+      await press('s', ['Control']);
+      await $(testid('http-tab-dirty')).waitForExist({ reverse: true, timeout: 10_000 });
+      const saved = await bridge.httpRequest(created.id);
+      expect(saved.document.body).toEqual({ kind: 'json', text: '{"amount": 4900}' });
+      expect(saved.document.auth).toEqual({ kind: 'inherit' });
+
+      const tab = `${testid('http-tab')}[data-key="${created.id}"]`;
+      await $(`${tab} ${testid('http-tab-close')}`).click();
+      await $(tab).waitForExist({ reverse: true, timeout: 10_000 });
+      await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+    });
   });
 });

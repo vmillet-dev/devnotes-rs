@@ -361,3 +361,76 @@ fn collections_are_reordered_and_a_rank_past_the_end_is_the_end() {
         vec!["Premier[]", "Deux[]", "Trois[]"]
     );
 }
+
+#[test]
+fn a_request_inherits_the_nearest_auth_and_every_header_above_it() {
+    use devnotes_lib::http::model::{ContainerSettings, KeyValue, RequestAuth};
+
+    let mut connection = open_in_memory().unwrap();
+    let api = collection(&mut connection, "API Paiements");
+    let factures = folder(&mut connection, &api, None, "Factures");
+    let archives = folder(&mut connection, &api, Some(&factures), "Archives");
+    let bearer = RequestAuth::Bearer {
+        token: "{{accessToken}}".to_string(),
+    };
+    store::save_settings(
+        &mut connection,
+        &item(HttpItemKind::Collection, &api),
+        &ContainerSettings {
+            auth: bearer.clone(),
+            headers: vec![KeyValue {
+                key: "Accept".to_string(),
+                value: "application/json".to_string(),
+                ..KeyValue::default()
+            }],
+        },
+    )
+    .unwrap();
+
+    let inherited = store::inherited(&mut connection, &api, Some(&archives)).unwrap();
+    assert_eq!(inherited.auth, bearer);
+    assert_eq!(
+        inherited.auth_from.map(|from| (from.kind, from.name)),
+        Some((HttpItemKind::Collection, "API Paiements".to_string()))
+    );
+    assert_eq!(inherited.headers[0].header.key, "Accept");
+
+    let saved = store::settings(&mut connection, &item(HttpItemKind::Collection, &api)).unwrap();
+    assert_eq!(saved.auth, bearer);
+    assert!(matches!(
+        store::settings(&mut connection, &item(HttpItemKind::Request, "r")),
+        Err(StorageError::Invalid(_))
+    ));
+}
+
+#[test]
+fn a_body_and_an_auth_are_kept_in_the_sealed_document() {
+    use devnotes_lib::http::model::{KeyPlace, RequestAuth, RequestBody};
+
+    let mut connection = open_in_memory().unwrap();
+    let api = collection(&mut connection, "API");
+    let id = request(&mut connection, &api, None, "Payer");
+    let document = RequestDocument {
+        url: "/pay".to_string(),
+        body: RequestBody::Json {
+            text: r#"{"amount": 4900}"#.to_string(),
+        },
+        auth: RequestAuth::ApiKey {
+            name: "X-Api-Key".to_string(),
+            value: "secret".to_string(),
+            place: KeyPlace::Header,
+        },
+        ..RequestDocument::default()
+    };
+    let patch = HttpRequestPatch {
+        document: Some(document.clone()),
+        ..HttpRequestPatch::default()
+    };
+
+    store::save_request(&mut connection, &id, &patch, None, t1()).unwrap();
+
+    assert_eq!(
+        store::get_request(&mut connection, &id).unwrap().document,
+        document
+    );
+}

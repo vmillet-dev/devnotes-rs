@@ -11,7 +11,15 @@ import {
   HttpRequestDraft,
   HttpRequestPatch,
   HttpTree,
+  BodyAnswer,
+  ContainerSettingsDraft,
+  InheritedParts,
   KeyValueRow,
+  RequestBodyDraft,
+  fromSettings,
+  toBodyWire,
+  toInherited,
+  toSettings,
   OpenedRequest,
   QuerySide,
   RequestDraft,
@@ -63,6 +71,25 @@ export class HttpRepository {
     edited: QuerySide,
   ): Promise<{ readonly url: string; readonly params: readonly KeyValueRow[] }> {
     return toSynced(unwrap('sync_http_query', await commands.syncHttpQuery(url, [...params], edited)));
+  }
+
+  async settings(item: HttpItem): Promise<ContainerSettingsDraft> {
+    return toSettings(unwrap('http_settings', await commands.httpSettings(item)));
+  }
+
+  async saveSettings(item: HttpItem, settings: ContainerSettingsDraft): Promise<void> {
+    unwrap('save_http_settings', await commands.saveHttpSettings(item, fromSettings(settings)));
+  }
+
+  /** What a request placed there inherits, and from where. */
+  async inherited(collectionId: string, folderId: string | null): Promise<InheritedParts> {
+    return toInherited(
+      unwrap('inherited_http_settings', await commands.inheritedHttpSettings(collectionId, folderId)),
+    );
+  }
+
+  async describeBody(body: RequestBodyDraft): Promise<BodyAnswer> {
+    return unwrap('describe_http_body', await commands.describeHttpBody(toBodyWire(body)));
   }
 
   async rename(item: HttpItem, name: string): Promise<void> {

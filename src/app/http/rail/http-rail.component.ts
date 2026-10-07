@@ -17,6 +17,7 @@ import { HttpTabsStore } from '@core/services/http/http-tabs.store';
 import { DropZone, KeyMove, RailRow, dropMove, keyMove } from '@core/services/http/http-tree';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { AreaSwitchComponent } from '@shared/controls/area-switch/area-switch.component';
+import { ContainerSettingsDialogComponent } from './container-settings/container-settings-dialog.component';
 import { HttpNodeAction, HttpNodeMenuComponent } from './http-node-menu/http-node-menu.component';
 
 /** A name typed under a row: a collection at the head, a folder or a request inside one. */
@@ -69,7 +70,13 @@ const item = (row: RailRow): HttpItem => ({ kind: row.kind, id: row.id });
  */
 @Component({
   selector: 'app-http-rail',
-  imports: [AreaSwitchComponent, HttpNodeMenuComponent, NgTemplateOutlet, TranslocoPipe],
+  imports: [
+    AreaSwitchComponent,
+    ContainerSettingsDialogComponent,
+    HttpNodeMenuComponent,
+    NgTemplateOutlet,
+    TranslocoPipe,
+  ],
   templateUrl: './http-rail.component.html',
   styleUrl: './http-rail.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -90,6 +97,8 @@ export class HttpRailComponent {
   protected readonly confirming = signal<Confirming | null>(null);
   protected readonly drop = signal<Drop | null>(null);
   protected readonly dragged = signal<string | null>(null);
+  /** The collection or folder whose settings are open. */
+  protected readonly settingsFor = signal<RailRow | null>(null);
 
   private drag: Drag | null = null;
   /** The click a drag ends with is not a click on the row it started from. */
@@ -134,6 +143,9 @@ export class HttpRailComponent {
           underId: row.id,
           depth: row.depth + 1,
         });
+        return;
+      case 'settings':
+        this.settingsFor.set(row);
         return;
       case 'rename':
         this.renaming.set(row.id);
@@ -238,6 +250,11 @@ export class HttpRailComponent {
     const target = drop === null ? undefined : this.store.rows().find((row) => row.id === drop.id);
     const move = target && drop ? dropMove(this.store.tree(), item(drag.row), item(target), drop.zone) : null;
     if (move !== null) await this.store.apply(move);
+  }
+
+  protected closeSettings(): void {
+    this.settingsFor.set(null);
+    this.store.settingsSaved();
   }
 
   protected cancelDrag(): void {

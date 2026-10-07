@@ -1,0 +1,70 @@
+@let current = body();
+@let said = answer();
+<div class="body" data-testid="http-body" [attr.data-kind]="current.kind">
+  <div class="head">
+    <app-segmented-choice
+      kind="http-body"
+      [label]="'http.body.kind' | transloco"
+      [segments]="kinds"
+      [currentId]="current.kind"
+      (chosen)="onKind($event)"
+    />
+    @if (said?.contentType; as type) {
+      <span class="type" data-testid="http-body-type">{{ 'http.body.sentAs' | transloco: { type } }}</span>
+    }
+  </div>
+
+  @if (current.kind === 'json' || current.kind === 'text') {
+    <textarea
+      class="text"
+      rows="12"
+      data-testid="http-body-text"
+      spellcheck="false"
+      [attr.aria-label]="'http.body.kinds.' + current.kind | transloco"
+      [value]="current.text"
+      (input)="onText($event)"
+    ></textarea>
+    @if (current.kind === 'json') {
+      <div class="status">
+        @if (said?.problem; as problem) {
+          <p class="invalid" role="status" data-testid="http-body-problem">
+            {{ 'json.invalidAt' | transloco: { line: problem.line, column: problem.column } }}
+            {{ 'json.reasons.' + problem.reason | transloco }}
+          </p>
+        } @else if (current.text.trim() !== '') {
+          <p class="valid" data-testid="http-body-valid">{{ 'json.valid' | transloco }}</p>
+        }
+        <button
+          type="button"
+          class="button"
+          data-testid="http-body-format"
+          [disabled]="!!said?.problem || current.text.trim() === ''"
+          (click)="format()"
+        >
+          {{ 'http.body.format' | transloco }}
+        </button>
+      </div>
+    }
+  } @else if (current.kind === 'form') {
+    <app-key-value-table
+      kind="form"
+      [label]="'http.body.kinds.form' | transloco"
+      [rows]="current.fields"
+      (rowsChange)="onFields($event)"
+    />
+  } @else if (current.kind === 'multipart') {
+    <app-form-parts-table [parts]="current.parts" (partsChange)="onParts($event)" />
+  } @else if (current.kind === 'binary') {
+    <div class="file">
+      <code class="path" data-testid="http-body-path">{{
+        current.path || ('http.body.noFile' | transloco)
+      }}</code>
+      <button type="button" class="button" data-testid="http-body-choose" (click)="chooseFile()">
+        {{ 'http.body.chooseFile' | transloco }}
+      </button>
+    </div>
+    <p class="hint">{{ 'http.body.fileHint' | transloco }}</p>
+  } @else {
+    <p class="hint">{{ 'http.body.noneHint' | transloco }}</p>
+  }
+</div>

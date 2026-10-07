@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
 import { HttpRepository } from '@core/data/http.repository';
 import {
+  EMPTY_PARTS,
   HttpTree,
   KeyValueRow,
   OpenedRequest,
@@ -20,6 +21,8 @@ export interface RequestTab {
   /** The request's id once saved; `draft-n` for one that never was. */
   readonly key: string;
   readonly requestId: string | null;
+  /** Where it is saved, what it inherits from; `null` until a draft is placed. */
+  readonly place: SaveTarget | null;
   /** What Rust holds: `null` for a request never saved, which writes nothing until it is. */
   readonly saved: RequestDraft | null;
   readonly draft: RequestDraft;
@@ -102,9 +105,9 @@ export class HttpTabsStore {
       name: this.transloco.translate('http.tabs.untitled'),
       kind: 'http',
       method: 'GET',
-      parts: { url: '', params: [], headers: [], description: '' },
+      parts: EMPTY_PARTS,
     };
-    this._tabs.update((tabs) => [...tabs, { key, requestId: null, saved: null, draft }]);
+    this._tabs.update((tabs) => [...tabs, { key, requestId: null, place: null, saved: null, draft }]);
     this.activate(key);
   }
 
@@ -117,7 +120,10 @@ export class HttpTabsStore {
     this.update(key, (draft) => ({ ...draft, ...change }));
   }
 
-  editParts(key: string, change: Partial<Pick<RequestParts, 'headers' | 'description'>>): void {
+  editParts(
+    key: string,
+    change: Partial<Pick<RequestParts, 'headers' | 'description' | 'body' | 'auth'>>,
+  ): void {
     this.update(key, (draft) => ({ ...draft, parts: { ...draft.parts, ...change } }));
   }
 
@@ -181,6 +187,7 @@ export class HttpTabsStore {
     this.replace(key, {
       key: created.id,
       requestId: created.id,
+      place: target,
       saved: draftOf(created),
       draft: draftOf(created),
     });
@@ -208,7 +215,16 @@ export class HttpTabsStore {
 
   private adopt(request: OpenedRequest): void {
     const draft = draftOf(request);
-    this._tabs.update((tabs) => [...tabs, { key: request.id, requestId: request.id, saved: draft, draft }]);
+    this._tabs.update((tabs) => [
+      ...tabs,
+      {
+        key: request.id,
+        requestId: request.id,
+        place: { collectionId: request.collectionId, folderId: request.folderId },
+        saved: draft,
+        draft,
+      },
+    ]);
   }
 
   private find(key: string): RequestTab | undefined {

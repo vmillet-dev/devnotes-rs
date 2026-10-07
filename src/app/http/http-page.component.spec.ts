@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpTabsStore } from '@core/services/http/http-tabs.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
+import { EMPTY_PARTS } from '@core/model/http.model';
 import { FakeHttpRepository } from '@testing/fake-http-repository';
 import { sampleTree } from '@testing/http-tree.fixture';
 import { provideAppTesting } from '@testing/testing.providers';
@@ -17,7 +18,7 @@ describe('HttpPageComponent', () => {
     http.tree$ = sampleTree();
     http.seed('Login', {
       method: 'POST',
-      parts: { url: '{{baseUrl}}/login', params: [], headers: [], description: '' },
+      parts: { ...EMPTY_PARTS, url: '{{baseUrl}}/login' },
     });
     TestBed.configureTestingModule({
       imports: [HttpPageComponent],
@@ -144,6 +145,47 @@ describe('HttpPageComponent', () => {
     el<HTMLButtonElement>('[data-testid="http-close-discard"]').click();
     await fixture.whenStable();
     expect(tabs().tabs()).toEqual([]);
+  });
+
+  it('shows the auth a request inherits, its body, and the headers both hand it', async () => {
+    http.inheritedAnswer = {
+      auth: { kind: 'bearer', token: '{{accessToken}}' },
+      authFrom: { kind: 'collection', id: 'API', name: 'API Paiements' },
+      headers: [
+        {
+          header: { enabled: true, key: 'Accept', value: 'application/json', description: '' },
+          from: { kind: 'collection', id: 'API', name: 'API Paiements' },
+        },
+      ],
+    };
+    http.bodyAnswer = { contentType: 'application/json', problem: null };
+    await tabs().open('Login');
+    await fixture.whenStable();
+    expect(el('[data-testid="http-auth-inherits"]')?.textContent?.trim()).toBe('héritée');
+
+    el<HTMLButtonElement>('[data-testid="http-section"][data-section="auth"]').click();
+    await vi.waitFor(() =>
+      expect(el('[data-testid="http-auth-inherited"]')?.textContent).toContain(
+        'héritée de la collection API Paiements',
+      ),
+    );
+    expect(http.callsOf('inherited')[0]).toEqual(['API', null]);
+
+    el<HTMLButtonElement>('[data-testid="http-section"][data-section="body"]').click();
+    await fixture.whenStable();
+    el<HTMLButtonElement>('[data-testid="segmented-http-body"] [data-segment-id="json"]').click();
+    await vi.waitFor(() => expect(tabs().active()!.draft.parts.body).toEqual({ kind: 'json', text: '' }));
+
+    el<HTMLButtonElement>('[data-testid="http-section"][data-section="headers"]').click();
+    await vi.waitFor(() => expect(all('[data-testid="http-implied-header"]')).toHaveLength(2));
+    expect(
+      all('[data-testid="http-implied-header"]').map((row) =>
+        [...row.children].map((cell) => cell.textContent?.trim()).join(' · '),
+      ),
+    ).toEqual([
+      "Content-Type · application/json · d'après le corps",
+      'Accept · application/json · héritée de la collection API Paiements',
+    ]);
   });
 
   it('closes an unmodified tab at once, and hides the rail on Ctrl+B', async () => {

@@ -1,0 +1,84 @@
+@use 'mixins' as *;
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.type {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.text {
+  @include tool-text-area;
+  resize: vertical;
+}
+
+.status,
+.file {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.valid,
+.invalid {
+  flex: 1;
+  margin: 0;
+  font-size: 12px;
+}
+
+.valid {
+  color: var(--green);
+}
+
+.invalid {
+  color: var(--red);
+}
+
+.path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--font-mono), monospace;
+  font-size: 12.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text-1);
+}
+
+.button {
+  @include unstyled-control;
+  @include surface(var(--bg-2), 7px, var(--line));
+  @include focus-ring;
+  flex-shrink: 0;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-1);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    @include accent-state;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-2);
+}

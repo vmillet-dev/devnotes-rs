@@ -2738,7 +2738,8 @@
         "newFolder": "New folder",
         "rename": "Rename",
         "duplicate": "Duplicate",
-        "delete": "Delete"
+        "delete": "Delete",
+        "settings": "Settings…"
       },
       "copyName": "{{name}} (copy)",
       "expand": "Expand {{name}}",
@@ -2771,7 +2772,9 @@
       "parts": "Parts of the request",
       "sections": {
         "params": "Params",
-        "headers": "Headers"
+        "headers": "Headers",
+        "auth": "Auth",
+        "body": "Body"
       }
     },
     "table": {
@@ -2794,6 +2797,68 @@
       "title": "“{{name}}” has changes",
       "hint": "They are not saved yet.",
       "discard": "Close without saving"
+    },
+    "headers": {
+      "fromBody": "from the body"
+    },
+    "auth": {
+      "kind": "Type",
+      "kinds": {
+        "inherit": "Inherited",
+        "none": "None",
+        "basic": "Basic",
+        "bearer": "Bearer",
+        "apiKey": "API key"
+      },
+      "inheritsShort": "inherited",
+      "from": {
+        "collection": "inherited from the collection {{name}}",
+        "folder": "inherited from the folder {{name}}"
+      },
+      "nothingAbove": "Nothing above sets an auth: none is sent.",
+      "placeFirst": "Once the request is saved, it takes the auth of its collection or folder.",
+      "noneHint": "No auth is sent.",
+      "username": "Username",
+      "keyName": "Name",
+      "secrets": {
+        "password": "Password",
+        "token": "Token",
+        "value": "Value"
+      },
+      "place": "Sent in",
+      "places": {
+        "header": "a header",
+        "query": "the query"
+      },
+      "show": "Show the secret",
+      "hide": "Hide the secret"
+    },
+    "body": {
+      "kind": "Body type",
+      "kinds": {
+        "none": "None",
+        "json": "JSON",
+        "text": "Text",
+        "form": "Form",
+        "multipart": "Multipart",
+        "binary": "File"
+      },
+      "sentAs": "Sent as {{type}}",
+      "format": "Format",
+      "noneHint": "The request goes without a body.",
+      "partKind": "Type",
+      "partText": "Text",
+      "partFile": "File",
+      "chooseFile": "Choose a file…",
+      "noFile": "No file chosen",
+      "fileHint": "The file is read when the request is sent: its bytes are never kept in the library."
+    },
+    "settings": {
+      "title": {
+        "collection": "Settings of the collection {{name}}",
+        "folder": "Settings of the folder {{name}}"
+      },
+      "hint": "Its requests inherit them: a request whose auth is “Inherited” takes this one, and these headers add to theirs."
     }
   }
 }

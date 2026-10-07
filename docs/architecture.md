@@ -1645,7 +1645,18 @@ the next launch without those deleted since.
   same metrics, declared after `text-field`, whose `all: unset` would otherwise zero the field's
   padding and put every glyph a padding off the copy.
 - The headers' names are proposed from the HTTP headers reference, those a server alone writes
-  left out. Auth, body, settings, scripts and tests join the tabs with their tickets.
+  left out. Settings, scripts and tests join the tabs with their tickets.
+- **A body is a kind and its content** — none, JSON, text, a form, multipart, a file. A file is a
+  **path**, read by Rust when the request is sent: its bytes never enter the library.
+  `describe_http_body` answers the `Content-Type` the body implies — shown among the headers,
+  sent unless one is typed — and, for JSON, why it does not read (the JSON explorer's own parser
+  and words). Prettier formats it, as it does a snippet.
+- **An auth is inherited by default.** A collection and a folder carry settings of their own —
+  an auth and headers, sealed like a request's document — and `inherited_http_settings` resolves
+  what a request at a place gets: the nearest auth set, every header above, a folder's overriding
+  its collection's by name, each with **where it comes from**. Saving settings moves
+  `HttpCollectionsStore.settingsRevision`, so an open tab reads it again. The secret half of an
+  auth is masked until asked for, and in a summary unless it is a `{{variable}}`.
 
 ### Managing spaces from the switcher
 

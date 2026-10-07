@@ -175,3 +175,75 @@ fn a_blank_name_a_missing_item_and_a_locked_library_are_refused_by_code() {
 
     assert_eq!(code(Session::locked().call(http_tree)), ErrorCode::Locked);
 }
+
+#[test]
+fn a_folder_hands_its_settings_down_and_a_body_says_what_it_implies() {
+    use devnotes_lib::http::model::{ContainerSettings, RequestAuth, RequestBody};
+    use devnotes_lib::http::{
+        describe_http_body, http_settings, inherited_http_settings, save_http_settings,
+    };
+
+    let session = Session::open();
+    let api = session
+        .call(|app| create_http_collection("API".to_string(), app))
+        .unwrap();
+    let factures = session
+        .call(|app| create_http_folder(api.id.clone(), None, "Factures".to_string(), app))
+        .unwrap();
+    let bearer = RequestAuth::Bearer {
+        token: "{{accessToken}}".to_string(),
+    };
+    let settings = ContainerSettings {
+        auth: bearer.clone(),
+        headers: Vec::new(),
+    };
+    session
+        .call(|app| {
+            save_http_settings(
+                item(HttpItemKind::Folder, &factures.id),
+                settings.clone(),
+                app,
+            )
+        })
+        .unwrap();
+
+    let read = session
+        .call(|app| http_settings(item(HttpItemKind::Folder, &factures.id), app))
+        .unwrap();
+    assert_eq!(read, settings);
+    let inherited = session
+        .call(|app| inherited_http_settings(api.id.clone(), Some(factures.id.clone()), app))
+        .unwrap();
+    assert_eq!(inherited.auth, bearer);
+    assert_eq!(
+        code(session.call(|app| http_settings(item(HttpItemKind::Request, "r"), app))),
+        ErrorCode::InvalidInput
+    );
+
+    let broken = session
+        .call(|_| {
+            describe_http_body(RequestBody::Json {
+                text: "{\"a\":".to_string(),
+            })
+        })
+        .unwrap();
+    assert_eq!(broken.content_type.as_deref(), Some("application/json"));
+    assert!(broken.problem.is_some());
+    let none = session
+        .call(|_| describe_http_body(RequestBody::None))
+        .unwrap();
+    assert_eq!((none.content_type, none.problem), (None, None));
+}
+
+#[test]
+fn the_query_and_its_table_are_kept_in_step_through_the_command() {
+    use devnotes_lib::http::query::QuerySide;
+    use devnotes_lib::http::sync_http_query;
+
+    let session = Session::open();
+    let synced = session
+        .call(|_| sync_http_query("/x?a=1".to_string(), Vec::new(), QuerySide::Url))
+        .unwrap();
+
+    assert_eq!(synced.params[0].key, "a");
+}

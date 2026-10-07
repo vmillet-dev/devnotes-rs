@@ -105,6 +105,20 @@ describe('HttpRailComponent', () => {
     await vi.waitFor(() => expect(TestBed.inject(HttpTabsStore).activeRequestId()).toMatch(/^request-/));
   });
 
+  it('opens a collection’s settings, and has open tabs read what they inherit again once saved', async () => {
+    const store = TestBed.inject(HttpCollectionsStore);
+    const revision = store.settingsRevision();
+    await action('API', 'settings');
+    await vi.waitFor(() =>
+      expect(document.body.querySelector('[data-testid="http-settings-dialog"]')).not.toBeNull(),
+    );
+
+    document.body.querySelector<HTMLButtonElement>('[data-testid="http-settings-cancel"]')!.click();
+    await fixture.whenStable();
+    expect(document.body.querySelector('[data-testid="http-settings-dialog"]')).toBeNull();
+    expect(store.settingsRevision()).toBe(revision + 1);
+  });
+
   it('renames in place, copies with a translated name, and offers a request no children', async () => {
     await action('Login', 'rename');
     await type('http-rename-input', 'Se connecter', 'http-rename-submit');

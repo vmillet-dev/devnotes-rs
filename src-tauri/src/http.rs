@@ -5,6 +5,7 @@
 
 pub mod model;
 pub mod query;
+pub mod settings;
 pub mod store;
 
 use chrono::Utc;
@@ -213,6 +214,78 @@ pub async fn move_http_item<R: Runtime>(
         Ok(store::move_item(&mut connection, &item, &place)?)
     })
     .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn http_settings<R: Runtime>(
+    item: HttpItem,
+    app: AppHandle<R>,
+) -> Result<model::ContainerSettings, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(store::settings(&mut connection, &item)?)
+    })
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn save_http_settings<R: Runtime>(
+    item: HttpItem,
+    settings: model::ContainerSettings,
+    app: AppHandle<R>,
+) -> Result<(), AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(store::save_settings(&mut connection, &item, &settings)?)
+    })
+    .await
+}
+
+/// What a request placed there inherits, and from where: « héritée de la collection … ».
+#[tauri::command]
+#[specta::specta]
+pub async fn inherited_http_settings<R: Runtime>(
+    collection_id: String,
+    folder_id: Option<String>,
+    app: AppHandle<R>,
+) -> Result<settings::Inherited, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(store::inherited(
+            &mut connection,
+            &collection_id,
+            folder_id.as_deref(),
+        )?)
+    })
+    .await
+}
+
+/// What a body implies, and whether a JSON one reads: the editor says both as it is typed.
+#[tauri::command]
+#[specta::specta]
+pub async fn describe_http_body(body: model::RequestBody) -> Result<BodyAnswer, AppError> {
+    off_thread(move || BodyAnswer {
+        content_type: settings::implied_content_type(&body).map(str::to_string),
+        problem: match &body {
+            model::RequestBody::Json { text } if !text.trim().is_empty() => {
+                crate::json::parse::parse(text).err()
+            }
+            _ => None,
+        },
+    })
+    .await
+}
+
+#[derive(Debug, Clone, serde::Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct BodyAnswer {
+    pub content_type: Option<String>,
+    pub problem: Option<crate::json::parse::JsonError>,
 }
 
 /// The edited side wins: the query string rewritten from the table, or the table from the URL.

@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
+import { EMPTY_PARTS } from '@core/model/http.model';
 import { FakeHttpRepository } from '@testing/fake-http-repository';
 import { TranslocoService } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
@@ -21,7 +22,7 @@ describe('HttpTabsStore', () => {
     http = new FakeHttpRepository();
     http.seed('Login', {
       method: 'POST',
-      parts: { url: '/login', params: [], headers: [], description: '' },
+      parts: { ...EMPTY_PARTS, url: '/login' },
     });
     http.seed('Health');
     TestBed.configureTestingModule({ providers: [provideAppTesting({ httpRepository: http })] });

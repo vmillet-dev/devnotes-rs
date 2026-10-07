@@ -56,6 +56,10 @@
         {{ 'http.editor.sections.' + id | transloco }}
         @if (counts()[id] > 0) {
           <span class="count" data-testid="http-section-count">{{ counts()[id] }}</span>
+        } @else if (id === 'auth' && draft.parts.auth.kind === 'inherit') {
+          <span class="count" data-testid="http-auth-inherits">{{
+            'http.auth.inheritsShort' | transloco
+          }}</span>
         }
       </button>
     }
@@ -69,7 +73,28 @@
         [rows]="draft.parts.params"
         (rowsChange)="onParams($event)"
       />
-    } @else {
+    } @else if (section() === 'headers') {
+      @let above = inherited()?.headers ?? [];
+      @if (impliedType() !== null || above.length > 0) {
+        <ul class="implied" data-testid="http-implied-headers">
+          @if (impliedType(); as type) {
+            <li class="implied-row" data-testid="http-implied-header">
+              <code class="implied-name">Content-Type</code>
+              <code class="implied-value">{{ type }}</code>
+              <span class="implied-from">{{ 'http.headers.fromBody' | transloco }}</span>
+            </li>
+          }
+          @for (known of above; track known.header.key) {
+            <li class="implied-row" data-testid="http-implied-header">
+              <code class="implied-name">{{ known.header.key }}</code>
+              <code class="implied-value">{{ known.header.value }}</code>
+              <span class="implied-from">{{
+                'http.auth.from.' + known.from.kind | transloco: { name: known.from.name }
+              }}</span>
+            </li>
+          }
+        </ul>
+      }
       <app-key-value-table
         kind="headers"
         [label]="'http.editor.sections.headers' | transloco"
@@ -77,6 +102,14 @@
         [suggestions]="headerNames"
         (rowsChange)="onHeaders($event)"
       />
+    } @else if (section() === 'auth') {
+      <app-auth-editor
+        [auth]="draft.parts.auth"
+        [inherited]="tab().place === null ? null : inherited()"
+        (authChange)="onAuth($event)"
+      />
+    } @else {
+      <app-body-editor [body]="draft.parts.body" [answer]="bodyAnswer()" (bodyChange)="onBody($event)" />
     }
   </div>
 </div>

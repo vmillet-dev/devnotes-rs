@@ -26,6 +26,14 @@ export class HttpCollectionsStore {
 
   readonly rows = computed(() => railRows(this._tree(), this._collapsed()));
 
+  private readonly _settingsRevision = signal(0);
+  /** Moves when a collection's or folder's settings were saved: what a request inherits is read again. */
+  readonly settingsRevision = this._settingsRevision.asReadonly();
+
+  settingsSaved(): void {
+    this._settingsRevision.update((revision) => revision + 1);
+  }
+
   async load(): Promise<void> {
     await this.attempt(async () => this._tree.set(await this.repository.tree()));
   }
