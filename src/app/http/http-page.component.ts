@@ -3,6 +3,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { HttpCollectionsStore } from '@core/services/http/http-collections.store';
 import { HttpHistoryStore } from '@core/services/http/http-history.store';
 import { HttpSendStore } from '@core/services/http/http-send.store';
+import { HttpSocketsStore } from '@core/services/http/http-sockets.store';
 import { HttpTabsStore, RequestTab } from '@core/services/http/http-tabs.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { CloseChoice, CloseRequestDialogComponent } from './close-request/close-request-dialog.component';
@@ -11,6 +12,7 @@ import { HttpRailComponent } from './rail/http-rail.component';
 import { RequestEditorComponent } from './request/request-editor/request-editor.component';
 import { RequestTabsComponent } from './request/request-tabs/request-tabs.component';
 import { ResponsePaneComponent } from './response/response-pane.component';
+import { SocketLogComponent } from './socket-log/socket-log.component';
 import { SaveAnswer, SaveRequestDialogComponent } from './save-request/save-request-dialog.component';
 
 /**
@@ -27,6 +29,7 @@ import { SaveAnswer, SaveRequestDialogComponent } from './save-request/save-requ
     RequestTabsComponent,
     ResponsePaneComponent,
     SaveRequestDialogComponent,
+    SocketLogComponent,
     TranslocoPipe,
   ],
   templateUrl: './http-page.component.html',
@@ -40,6 +43,7 @@ export class HttpPageComponent implements OnInit {
   protected readonly settings = inject(SettingsStore);
   protected readonly history = inject(HttpHistoryStore);
   private readonly sending = inject(HttpSendStore);
+  private readonly sockets = inject(HttpSocketsStore);
 
   /** The tab a never-saved request is being placed for, and whether it closes once saved. */
   protected readonly placing = signal<{ readonly tab: RequestTab; readonly thenClose: boolean } | null>(null);
@@ -94,7 +98,8 @@ export class HttpPageComponent implements OnInit {
     } else if (key === 'enter') {
       event.preventDefault();
       const tab = this.tabs.active();
-      if (tab !== null) void this.sending.send(tab);
+      if (tab?.draft.kind === 'websocket') void this.sockets.connect(tab);
+      else if (tab !== null) void this.sending.send(tab);
     } else if (key === 's') {
       event.preventDefault();
       const tab = this.tabs.active();

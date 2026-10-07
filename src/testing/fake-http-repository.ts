@@ -23,6 +23,7 @@ import {
   OpenedRequest,
   QuerySide,
   RequestDraft,
+  RequestParts,
   toParts,
 } from '@core/model/http.model';
 
@@ -229,6 +230,22 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
 
   forgetResponse(id: string): Promise<void> {
     return this.record('forgetResponse', [id], () => undefined);
+  }
+
+  connectWebsocket(
+    id: string,
+    parts: RequestParts,
+    place: { collectionId: string; folderId: string | null } | null,
+  ): Promise<void> {
+    return this.record('connectWebsocket', [id, parts, place], () => undefined);
+  }
+
+  sendWebsocket(id: string, text: string): Promise<boolean> {
+    return this.record('sendWebsocket', [id, text], () => true);
+  }
+
+  closeWebsocket(id: string): Promise<boolean> {
+    return this.record('closeWebsocket', [id], () => true);
   }
 
   describeGraphql(graphql: GraphqlParts): Promise<GraphqlAnswer> {

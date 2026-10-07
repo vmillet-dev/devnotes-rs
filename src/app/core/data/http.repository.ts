@@ -30,6 +30,7 @@ import {
   OpenedRequest,
   QuerySide,
   RequestDraft,
+  RequestParts,
   toDocument,
   toParts,
   toSynced,
@@ -160,6 +161,32 @@ export class HttpRepository {
 
   async forgetResponse(id: string): Promise<void> {
     unwrap('forget_http_response', await commands.forgetHttpResponse(id));
+  }
+
+  /** Answers once the socket is open; what follows comes as events, under `id`. */
+  async connectWebsocket(
+    id: string,
+    parts: RequestParts,
+    place: { collectionId: string; folderId: string | null } | null,
+  ): Promise<void> {
+    unwrap(
+      'connect_websocket',
+      await commands.connectWebsocket({
+        id,
+        document: toDocument(parts),
+        collectionId: place?.collectionId ?? null,
+        folderId: place?.folderId ?? null,
+      }),
+    );
+  }
+
+  /** `false` when no socket is open under `id`. */
+  async sendWebsocket(id: string, text: string): Promise<boolean> {
+    return unwrap('send_websocket', await commands.sendWebsocket(id, text));
+  }
+
+  async closeWebsocket(id: string): Promise<boolean> {
+    return unwrap('close_websocket', await commands.closeWebsocket(id));
   }
 
   async describeGraphql(graphql: GraphqlParts): Promise<GraphqlAnswer> {

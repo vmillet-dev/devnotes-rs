@@ -1,0 +1,145 @@
+@use 'mixins' as *;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 160px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.log {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.phase {
+  @include tint-badge(--red-rgb);
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+
+  &[data-phase='open'] {
+    @include tint-badge(--green-rgb);
+  }
+
+  &[data-phase='connecting'],
+  &[data-phase='closing'] {
+    @include tint-badge(--amber-rgb);
+  }
+}
+
+.protocol {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.filter {
+  @include text-field;
+  @include focus-ring;
+  margin-left: auto;
+  width: 220px;
+  padding: 5px 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--bg-1);
+  font-size: 12.5px;
+  color: var(--text-0);
+}
+
+.clear {
+  @include unstyled-control;
+  @include surface(var(--bg-2), 8px, var(--line));
+  @include focus-ring;
+  padding: 5px 12px;
+  font-size: 12.5px;
+  color: var(--text-0);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    @include accent-state;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.failure {
+  margin: 10px 20px 0;
+  font-size: 12.5px;
+  color: var(--red);
+}
+
+.entries {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 6px 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.entry {
+  display: grid;
+  grid-template-columns: auto 16px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 10px;
+  padding: 4px 20px;
+  font-size: 12.5px;
+
+  &[data-kind='opened'],
+  &[data-kind='closed'] {
+    color: var(--text-2);
+  }
+
+  &[data-kind='failed'] {
+    color: var(--red);
+  }
+}
+
+.time,
+.size {
+  font-family: var(--font-mono), monospace;
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+
+.direction {
+  font-family: var(--font-mono), monospace;
+  color: var(--blue);
+
+  .entry[data-kind='received'] & {
+    color: var(--green);
+  }
+}
+
+.message {
+  margin: 0;
+  max-height: 160px;
+  overflow: auto;
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  color: var(--text-0);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.placeholder {
+  padding: 30px 20px;
+  font-size: 13px;
+  text-align: center;
+  color: var(--text-2);
+}

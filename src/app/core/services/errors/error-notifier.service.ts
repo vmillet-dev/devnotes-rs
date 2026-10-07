@@ -50,6 +50,7 @@ const CODE_KEYS: Record<IpcErrorCode, string | null> = {
   httpFileUnreadable: 'errors.httpFileUnreadable',
   httpCancelled: 'errors.httpCancelled',
   httpGraphqlVariables: 'errors.httpGraphqlVariables',
+  httpWebsocketRefused: 'errors.httpWebsocketRefused',
   httpNetwork: 'errors.httpNetwork',
 };
 

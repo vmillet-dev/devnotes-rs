@@ -13,6 +13,7 @@ import {
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
 import { HttpSendStore } from './http-send.store';
+import { HttpSocketsStore } from './http-sockets.store';
 import { holdsRequest } from './http-tree';
 
 /** In the library's preferences: which requests were open, and which one was in front. */
@@ -60,6 +61,7 @@ export class HttpTabsStore {
   private readonly preferences = inject(LibraryPreferencesService);
   private readonly transloco = inject(TranslocoService);
   private readonly sending = inject(HttpSendStore);
+  private readonly sockets = inject(HttpSocketsStore);
 
   private readonly _tabs = signal<readonly RequestTab[]>([]);
   readonly tabs = this._tabs.asReadonly();
@@ -131,7 +133,9 @@ export class HttpTabsStore {
 
   editParts(
     key: string,
-    change: Partial<Pick<RequestParts, 'headers' | 'description' | 'body' | 'auth' | 'graphql'>>,
+    change: Partial<
+      Pick<RequestParts, 'headers' | 'description' | 'body' | 'auth' | 'graphql' | 'websocket'>
+    >,
   ): void {
     this.update(key, (draft) => ({ ...draft, parts: { ...draft.parts, ...change } }));
   }
@@ -201,6 +205,7 @@ export class HttpTabsStore {
       draft: draftOf(created),
     });
     this.sending.rekey(key, created.id);
+    this.sockets.rekey(key, created.id);
     if (this._activeKey() === key) this._activeKey.set(created.id);
     this.persist();
     return created.id;
@@ -213,6 +218,7 @@ export class HttpTabsStore {
     const rest = tabs.filter((tab) => tab.key !== key);
     this._tabs.set(rest);
     this.sending.forget(key);
+    this.sockets.forget(key);
     if (this._activeKey() === key) this._activeKey.set(rest[Math.min(at, rest.length - 1)]?.key ?? null);
     this.persist();
   }

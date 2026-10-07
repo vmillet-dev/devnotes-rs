@@ -1,0 +1,74 @@
+<section class="log" data-testid="http-socket-log" [attr.aria-label]="'http.socket.log' | transloco">
+  <header class="bar">
+    <span class="phase" data-testid="http-socket-phase" [attr.data-phase]="phase()">{{
+      'http.socket.phases.' + phase() | transloco
+    }}</span>
+    @if (state()?.protocol; as protocol) {
+      <span class="protocol">{{ 'http.socket.protocol' | transloco: { protocol } }}</span>
+    }
+    <input
+      type="search"
+      class="filter"
+      data-testid="http-socket-filter"
+      [attr.aria-label]="'http.socket.filter' | transloco"
+      [placeholder]="'http.socket.filter' | transloco"
+      [value]="filter()"
+      (input)="onFilter($event)"
+    />
+    <button
+      type="button"
+      class="clear"
+      data-testid="http-socket-clear"
+      [disabled]="(state()?.log?.length ?? 0) === 0"
+      (click)="sockets.clearLog(tabKey())"
+    >
+      {{ 'http.socket.clear' | transloco }}
+    </button>
+  </header>
+
+  @if (state()?.notice; as notice) {
+    <p class="failure" role="alert" data-testid="http-socket-failure">
+      {{ notice.ref.key | transloco: notice.ref.params }}
+    </p>
+  }
+
+  <ol class="entries">
+    @for (entry of entries(); track entry.number) {
+      <li class="entry" data-testid="http-socket-entry" [attr.data-kind]="entry.event.kind">
+        <span class="time">{{ time(entry) }}</span>
+        <span class="direction" aria-hidden="true">{{
+          entry.event.kind === 'sent' ? '↑' : entry.event.kind === 'received' ? '↓' : '•'
+        }}</span>
+        <span class="what">
+          @switch (entry.event.kind) {
+            @case ('opened') {
+              {{ 'http.socket.opened' | transloco: { url: text(entry) } }}
+            }
+            @case ('closed') {
+              {{ 'http.socket.closed' | transloco }}
+              @if (entry.event.kind === 'closed' && entry.event.code !== null) {
+                <code>{{ entry.event.code }}</code>
+              }
+              {{ text(entry) }}
+            }
+            @case ('failed') {
+              {{ text(entry) }}
+            }
+            @default {
+              @if (entry.event.kind === 'received' && entry.event.binary) {
+                {{ 'http.socket.binary' | transloco }}
+              } @else {
+                <pre class="message">{{ text(entry) }}</pre>
+              }
+            }
+          }
+        </span>
+        @if (entry.event.kind === 'sent' || entry.event.kind === 'received') {
+          <span class="size">{{ 'http.response.bytes' | transloco: { value: entry.event.size } }}</span>
+        }
+      </li>
+    } @empty {
+      <li class="placeholder" data-testid="http-socket-empty">{{ 'http.socket.empty' | transloco }}</li>
+    }
+  </ol>
+</section>

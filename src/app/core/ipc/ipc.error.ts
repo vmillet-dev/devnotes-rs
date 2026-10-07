@@ -48,6 +48,7 @@ const IPC_ERROR_CODES: Record<IpcErrorCode, true> = {
   httpFileUnreadable: true,
   httpCancelled: true,
   httpGraphqlVariables: true,
+  httpWebsocketRefused: true,
   httpNetwork: true,
 };
 

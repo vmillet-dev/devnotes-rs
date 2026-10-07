@@ -250,6 +250,30 @@ describe('HttpPageComponent', () => {
     expect(el('[data-testid="http-implied-header"]')?.textContent).toContain('application/json');
   });
 
+  it('turns a request into a WebSocket, connected from its button, its log below', async () => {
+    await tabs().open('Login');
+    await fixture.whenStable();
+    el<HTMLButtonElement>('[data-testid="http-method"]').click();
+    await fixture.whenStable();
+    el<HTMLButtonElement>('[data-testid="choice-option"][data-option-id="WEBSOCKET"]').click();
+    await fixture.whenStable();
+
+    expect(all('[data-testid="http-section"]').map((section) => section.dataset['section'])).toEqual([
+      'message',
+      'headers',
+      'auth',
+      'protocols',
+    ]);
+    expect(el('[data-testid="http-send"]')).toBeNull();
+    expect(el('[data-testid="http-socket-log"]')).not.toBeNull();
+
+    el<HTMLButtonElement>('[data-testid="http-socket-connect"]').click();
+    await vi.waitFor(() => expect(http.callsOf('connectWebsocket')).toHaveLength(1));
+    await vi.waitFor(() =>
+      expect(el('[data-testid="http-socket-connect"]').textContent?.trim()).toBe('Déconnecter'),
+    );
+  });
+
   it('closes an unmodified tab at once, and hides the rail on Ctrl+B', async () => {
     await tabs().open('Login');
     await fixture.whenStable();

@@ -446,7 +446,8 @@
     "httpFileUnreadable": "Le fichier {{path}} ne peut pas être lu.",
     "httpCancelled": "Envoi annulé.",
     "httpNetwork": "Erreur réseau.",
-    "httpGraphqlVariables": "Les variables GraphQL ne sont pas un objet JSON."
+    "httpGraphqlVariables": "Les variables GraphQL ne sont pas un objet JSON.",
+    "httpWebsocketRefused": "Le serveur a refusé la connexion WebSocket (statut {{status}})."
   },
   "tray": {
     "open": "Ouvrir {{app}}",
@@ -2786,7 +2787,9 @@
         "headers": "En-têtes",
         "auth": "Auth",
         "body": "Corps",
-        "query": "Requête"
+        "query": "Requête",
+        "message": "Messages",
+        "protocols": "Protocoles"
       }
     },
     "table": {
@@ -2953,6 +2956,35 @@
       "operation": "Opération envoyée",
       "asGet": "Envoyer en GET",
       "at": "ligne:colonne {{location}}"
+    },
+    "socket": {
+      "connect": "Connecter",
+      "disconnect": "Déconnecter",
+      "failed": "Le WebSocket n'a pas pu s'ouvrir.",
+      "message": "Message à envoyer",
+      "messagePlaceholder": "Texte ou JSON",
+      "send": "Envoyer",
+      "notOpen": "Connectez le WebSocket pour envoyer.",
+      "keep": "Garder",
+      "saved": "Messages gardés",
+      "noneSaved": "Gardez un message pour le renvoyer d'un clic.",
+      "remove": "Retirer {{name}}",
+      "protocols": "Sous-protocoles demandés",
+      "protocolsHint": "Séparés par des virgules, dans l'ordre de préférence : Sec-WebSocket-Protocol.",
+      "log": "Journal du WebSocket",
+      "filter": "Filtrer les messages",
+      "clear": "Effacer",
+      "protocol": "protocole {{protocol}}",
+      "opened": "Connecté à {{url}}",
+      "closed": "Fermé",
+      "binary": "Message binaire",
+      "empty": "Connectez le WebSocket : ses messages s'inscrivent ici.",
+      "phases": {
+        "connecting": "Connexion…",
+        "open": "Connecté",
+        "closing": "Fermeture…",
+        "closed": "Déconnecté"
+      }
     }
   }
 }

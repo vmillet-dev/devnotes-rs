@@ -8,6 +8,7 @@ import type { HttpNode, HttpRequestDraft, HttpTree } from '@core/ipc/bindings';
 import { canvas } from '../pageobjects/canvas.page.js';
 import { eventually, press, readEach, setField, testid } from '../support/app.js';
 import { bridge } from '../support/bridge.js';
+import { echoSocket } from '../support/echo-socket.js';
 
 /** The tree as names, a folder's children in brackets: `API[Auth[Login] Factures]`. */
 function outline(tree: HttpTree): string[] {
@@ -347,6 +348,45 @@ describe('HTTP collections', () => {
         await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
       } finally {
         server.close();
+      }
+    });
+
+    it('opens a WebSocket from Rust, sends a message, reads the echo, and closes it', async () => {
+      const echo = await echoSocket();
+      try {
+        const api = await bridge.createHttpCollection('Temps réel');
+        const created = await bridge.createHttpRequest({
+          ...draft(api.id, null, 'Flux'),
+          kind: 'websocket',
+          document: { url: `ws://127.0.0.1:${echo.port}/`, description: '' },
+        });
+        await press('1', ['Control']);
+        await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+        await press('3', ['Control']);
+        await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+        if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
+        await $(`${testid('http-node')}[data-id="${created.id}"] ${testid('http-node-name')}`).click();
+        await $(testid('http-socket-connect')).waitForDisplayed({ timeout: 10_000 });
+
+        await $(testid('http-socket-connect')).click();
+        await $(`${testid('http-socket-phase')}[data-phase="open"]`).waitForDisplayed({ timeout: 10_000 });
+        await setField(testid('http-socket-message'), 'hello');
+        await $(testid('http-socket-send')).click();
+        await eventually(
+          () => readEach(testid('http-socket-entry'), 'text'),
+          (rows) => rows.some((row) => row.includes('echo: hello')),
+          'the echo in the log',
+        );
+
+        await $(testid('http-socket-connect')).click();
+        await $(`${testid('http-socket-phase')}[data-phase="closed"]`).waitForDisplayed({ timeout: 10_000 });
+
+        const tab = `${testid('http-tab')}[data-key="${created.id}"]`;
+        await $(`${tab} ${testid('http-tab-close')}`).click();
+        await $(tab).waitForExist({ reverse: true, timeout: 10_000 });
+        await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+      } finally {
+        echo.close();
       }
     });
   });

@@ -4,6 +4,9 @@ import type {
   GraphqlAnswer,
   GraphqlDocument,
   GraphqlResult,
+  SocketEvent,
+  WebsocketDocument,
+  WebsocketEvent,
   HistoryDay,
   HistoryDraft,
   HistoryEntry,
@@ -41,6 +44,8 @@ export type {
   BodyAnswer,
   GraphqlAnswer,
   GraphqlResult,
+  SocketEvent,
+  WebsocketEvent,
   HistoryDay,
   HistoryDraft,
   HistoryEntry,
@@ -103,6 +108,18 @@ export interface GraphqlParts {
   readonly asGet: boolean;
 }
 
+/** A message kept to send again, both fields present. */
+export interface SavedMessageRow {
+  readonly name: string;
+  readonly text: string;
+}
+
+/** A WebSocket's own part: the subprotocols it asks for, and the messages kept to send again. */
+export interface WebsocketParts {
+  readonly protocols: readonly string[];
+  readonly messages: readonly SavedMessageRow[];
+}
+
 /** A request's document as the editor holds it, every part present. */
 export interface RequestParts {
   readonly url: string;
@@ -112,6 +129,7 @@ export interface RequestParts {
   readonly auth: RequestAuth;
   readonly description: string;
   readonly graphql: GraphqlParts;
+  readonly websocket: WebsocketParts;
 }
 
 /** A collection's or a folder's own auth and headers, what its requests inherit. */
@@ -139,6 +157,7 @@ export const EMPTY_PARTS: RequestParts = {
   auth: { kind: 'inherit' },
   description: '',
   graphql: { query: '', variables: '', operationName: null, asGet: false },
+  websocket: { protocols: [], messages: [] },
 };
 
 /** What a request tab edits, and what saving writes. */
@@ -215,6 +234,17 @@ export function toParts(document: RequestDocument): RequestParts {
     auth: document.auth ?? { kind: 'inherit' },
     description: document.description ?? '',
     graphql: toGraphql(document.graphql),
+    websocket: toWebsocket(document.websocket),
+  };
+}
+
+function toWebsocket(websocket: WebsocketDocument | undefined): WebsocketParts {
+  return {
+    protocols: websocket?.protocols ?? [],
+    messages: (websocket?.messages ?? []).map((message) => ({
+      name: message.name ?? '',
+      text: message.text ?? '',
+    })),
   };
 }
 
@@ -240,6 +270,7 @@ export function toDocument(parts: RequestParts): RequestDocument {
     auth: parts.auth,
     description: parts.description,
     graphql: toGraphqlWire(parts.graphql),
+    websocket: { protocols: [...parts.websocket.protocols], messages: [...parts.websocket.messages] },
   };
 }
 
