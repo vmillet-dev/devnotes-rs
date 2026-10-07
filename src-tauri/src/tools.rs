@@ -4,6 +4,7 @@
 
 pub mod bases;
 pub mod checks;
+pub mod cidr;
 pub mod colour;
 pub mod convert;
 pub mod cron;
@@ -310,4 +311,10 @@ pub async fn copy_qr_code<R: Runtime>(
         .write_image(&tauri::image::Image::new_owned(rgba, pixels, pixels))
         .map_err(|_| StorageError::Unavailable)?;
     Ok(true)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn describe_cidr(request: cidr::CidrRequest) -> Result<cidr::CidrAnswer, AppError> {
+    off_thread(move || cidr::describe(&request)).await
 }

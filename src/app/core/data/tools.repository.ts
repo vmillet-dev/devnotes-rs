@@ -7,6 +7,8 @@ import {
   CaseRequest,
   CheckAnswer,
   CheckRequest,
+  CidrAnswer,
+  CidrRequest,
   ColourAnswer,
   ColourRequest,
   ConvertAnswer,
@@ -215,5 +217,9 @@ export class ToolsRepository {
   /** Written to the clipboard natively, as an image: `false` when there is no code to copy. */
   async copyQrCode(request: QrRequest): Promise<boolean> {
     return unwrap('copy_qr_code', await commands.copyQrCode(request));
+  }
+
+  async describeCidr(request: CidrRequest): Promise<CidrAnswer> {
+    return unwrap('describe_cidr', await commands.describeCidr(request));
   }
 }

@@ -5,6 +5,8 @@ import {
   CaseRequest,
   CheckAnswer,
   CheckRequest,
+  CidrAnswer,
+  CidrRequest,
   ColourAnswer,
   ColourRequest,
   ConvertAnswer,
@@ -136,6 +138,16 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
   sizes: SizesAnswer = { kind: 'tooLarge' };
   transfer: TransferAnswer = { kind: 'zeroRate' };
   checks: CheckAnswer = { kind: 'tooShort' };
+  cidr: CidrAnswer = {
+    block: null,
+    problem: null,
+    membership: { kind: 'empty' },
+    splitChoices: [],
+    split: null,
+    masks: [],
+    plan: null,
+    summary: null,
+  };
   stats: TextStats = {
     characters: 0,
     codePoints: 0,
@@ -301,6 +313,10 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
 
   copyQrCode(request: QrRequest): Promise<boolean> {
     return this.answer('copy_qr_code', request, this.copiedCode);
+  }
+
+  describeCidr(request: CidrRequest): Promise<CidrAnswer> {
+    return this.answer('describe_cidr', request, this.cidr);
   }
 
   requestsOf(command: string): unknown[] {

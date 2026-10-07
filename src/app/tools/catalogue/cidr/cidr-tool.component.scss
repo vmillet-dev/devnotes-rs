@@ -1,0 +1,357 @@
+@use 'mixins' as *;
+
+// Wide, the masks run down a third column beside everything else; narrower, they come last.
+.layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-areas:
+    'network facts'
+    'plan list'
+    'masks masks';
+  gap: 28px 32px;
+  align-items: start;
+
+  // The masks are taller than the first row: the second takes what they add, so the plan and
+  // the list follow the card instead of waiting below an empty band.
+  @media (width >= 1700px) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(540px, 1fr);
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      'network facts masks'
+      'plan list masks';
+  }
+
+  @media (width < 960px) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'network' 'facts' 'masks' 'plan' 'list';
+  }
+}
+
+.network-area {
+  grid-area: network;
+}
+
+.facts-area {
+  grid-area: facts;
+}
+
+.masks-area {
+  grid-area: masks;
+
+  @media (width < 1700px) {
+    max-width: 720px;
+  }
+}
+
+.plan-area {
+  grid-area: plan;
+}
+
+.list-area {
+  grid-area: list;
+}
+
+.column {
+  @include tool-column;
+  gap: 12px;
+}
+
+.head {
+  @include tool-section-head;
+}
+
+.title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-0);
+}
+
+.field {
+  @include tool-field;
+
+  &.large {
+    height: 42px;
+    font-size: 16px;
+  }
+}
+
+.problem {
+  @include tool-problem;
+}
+
+.note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--amber-text);
+}
+
+.binary-card {
+  @include surface(var(--bg-1), 10px);
+  padding: 12px 18px;
+}
+
+.bits {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.binary {
+  margin: 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  overflow-wrap: anywhere;
+}
+
+.network-bits {
+  color: var(--amber-text);
+}
+
+.host-bits {
+  color: var(--text-2);
+}
+
+.kind {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-1);
+}
+
+.verdict {
+  align-self: flex-start;
+  margin: 0;
+  padding: 4px 10px;
+  border-radius: 7px;
+  font-size: 12.5px;
+
+  &.inside {
+    @include tint-badge(--green-rgb);
+  }
+
+  &.outside {
+    @include tint-badge(--red-rgb);
+  }
+}
+
+.card {
+  @include surface(var(--bg-1), 10px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chips {
+  display: flex;
+  gap: 6px;
+}
+
+.chip {
+  @include unstyled-control;
+  @include surface(var(--bg-2), 7px, var(--line));
+  @include focus-ring;
+  height: 30px;
+  padding: 0 12px;
+  font-family: var(--font-mono), monospace;
+  font-size: 12.5px;
+  color: var(--text-1);
+  cursor: pointer;
+
+  &.on {
+    @include accent-state;
+  }
+}
+
+.subnets {
+  @include surface(var(--bg-1), 10px);
+  display: flex;
+  flex-direction: column;
+  max-height: 420px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.subnet {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px 8px 18px;
+  border-top: 1px solid var(--line-soft);
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+
+  &:first-child {
+    border-top: none;
+  }
+}
+
+.subnet-cidr {
+  flex: 1;
+  color: var(--text-0);
+}
+
+.subnet-hosts {
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+
+.more,
+.empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.hint {
+  margin: -6px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.area {
+  @include tool-text-area;
+  resize: vertical;
+}
+
+.table-card {
+  @include surface(var(--bg-1), 10px);
+  @include ring-room;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12px;
+
+  th,
+  td {
+    padding: 6px 8px;
+    text-align: left;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  thead th {
+    font-weight: 500;
+    color: var(--text-2);
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .number {
+    text-align: right;
+    font-family: var(--font-mono), monospace;
+  }
+
+  .mono {
+    font-family: var(--font-mono), monospace;
+    color: var(--text-1);
+  }
+
+  .strong {
+    color: var(--text-0);
+  }
+
+  .range {
+    white-space: normal;
+  }
+
+  .copy {
+    width: 1px;
+    padding: 0 8px;
+  }
+
+  .refused {
+    color: var(--red);
+  }
+}
+
+.masks {
+  tr.current td {
+    background: rgba(var(--amber-rgb), 0.08);
+  }
+
+  tr.current .prefix {
+    @include accent-state;
+  }
+}
+
+.prefix {
+  @include unstyled-control;
+  @include focus-ring;
+  @include hit-target;
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-family: var(--font-mono), monospace;
+  font-weight: 600;
+  color: var(--text-0);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--bg-3);
+  }
+}
+
+.none {
+  color: var(--text-2);
+}
+
+.free {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.block-name {
+  @include surface(var(--bg-2), 6px, var(--line));
+  padding: 1px 6px;
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  color: var(--text-1);
+}
+
+.blocks-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px 0 18px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.blocks-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.blocks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 8px 18px 12px;
+  list-style: none;
+
+  li {
+    @include surface(var(--bg-2), 6px, var(--line));
+    padding: 2px 8px;
+    font-family: var(--font-mono), monospace;
+    font-size: 12.5px;
+    color: var(--text-0);
+  }
+}

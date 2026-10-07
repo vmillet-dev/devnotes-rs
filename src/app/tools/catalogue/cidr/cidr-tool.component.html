@@ -1,0 +1,353 @@
+<div class="layout" [class.with-block]="block() !== null">
+  <section class="column network-area" aria-labelledby="cidr-network-title">
+    <div class="head">
+      <h2 id="cidr-network-title" class="title">{{ 'tools.cidr.network' | transloco }}</h2>
+      <app-segmented-choice
+        kind="cidr-family"
+        [label]="'tools.cidr.family' | transloco"
+        [segments]="families"
+        [currentId]="family() ?? 'auto'"
+        (chosen)="onFamily($event)"
+      />
+    </div>
+    <input
+      type="text"
+      class="field large"
+      data-testid="cidr-network"
+      spellcheck="false"
+      autocomplete="off"
+      [attr.aria-label]="'tools.cidr.network' | transloco"
+      [placeholder]="'tools.cidr.placeholder' | transloco"
+      [value]="network()"
+      (input)="onNetwork($event)"
+    />
+    @if (problem(); as problem) {
+      <p class="problem" role="status" data-testid="cidr-problem" [attr.data-problem]="problem">
+        {{ 'tools.cidr.problems.' + problem | transloco }}
+      </p>
+    }
+
+    @if (block(); as block) {
+      @if (block.normalised) {
+        <p class="note" role="status" data-testid="cidr-normalised">
+          {{ 'tools.cidr.normalised' | transloco: { cidr: block.cidr } }}
+        </p>
+      }
+      <div class="binary-card">
+        <p class="bits">
+          {{ 'tools.cidr.bits' | transloco: { network: block.prefix, hosts: block.hostBits } }}
+        </p>
+        <p class="binary" data-testid="cidr-binary">
+          <span class="network-bits" data-testid="cidr-binary-network">{{ block.binaryNetwork }}</span
+          ><span class="host-bits">{{ block.binaryHost }}</span>
+        </p>
+      </div>
+      <p class="kind" data-testid="cidr-kind" [attr.data-kind]="block.kind">
+        {{ 'tools.cidr.kinds.' + block.kind | transloco: { range: block.range ?? '' } }}
+        {{ 'tools.cidr.caveat' | transloco }}
+      </p>
+
+      <h2 class="title" id="cidr-member-title">{{ 'tools.cidr.memberTitle' | transloco }}</h2>
+      <input
+        type="text"
+        class="field"
+        data-testid="cidr-member"
+        spellcheck="false"
+        autocomplete="off"
+        aria-labelledby="cidr-member-title"
+        [placeholder]="'tools.cidr.memberPlaceholder' | transloco"
+        [value]="member()"
+        (input)="onMember($event)"
+      />
+      @if (membership(); as membership) {
+        @if (membership.kind === 'inside') {
+          <p class="verdict inside" role="status" data-testid="cidr-membership" data-inside="true">
+            {{ 'tools.cidr.inside' | transloco: { host: grouped(membership.host) } }}
+          </p>
+        } @else if (membership.kind === 'outside') {
+          <p class="verdict outside" role="status" data-testid="cidr-membership" data-inside="false">
+            {{ 'tools.cidr.outside' | transloco }}
+          </p>
+        } @else if (membership.kind === 'unreadable') {
+          <p class="problem" role="status" data-testid="cidr-membership">
+            {{ 'tools.cidr.memberUnreadable' | transloco }}
+          </p>
+        }
+      }
+
+      <h2 class="title" id="cidr-written-title">{{ 'tools.cidr.writtenTitle' | transloco }}</h2>
+      <div class="card" data-testid="cidr-written" aria-labelledby="cidr-written-title" role="group">
+        @for (form of written(); track form.id) {
+          <app-result-row
+            [attr.data-row]="form.id"
+            [name]="'tools.cidr.written.' + form.id + '.' + block.family | transloco"
+            [value]="form.value"
+            [copyable]="form.copyable"
+          />
+        }
+      </div>
+    }
+  </section>
+
+  <section class="column facts-area" aria-labelledby="cidr-facts-title">
+    <h2 id="cidr-facts-title" class="visually-hidden">{{ 'tools.cidr.facts' | transloco }}</h2>
+    @if (block(); as block) {
+      <div class="card" data-testid="cidr-facts" [attr.data-family]="block.family">
+        @for (row of rows(); track row.id) {
+          <app-result-row
+            [attr.data-row]="row.id"
+            [name]="'tools.cidr.rows.' + row.id + '.' + block.family | transloco"
+            [value]="row.value"
+          />
+        }
+        <app-result-row
+          data-row="usable"
+          [name]="'tools.cidr.rows.usable.' + block.family | transloco"
+          [value]="
+            'tools.cidr.usableOf.' + block.family
+              | transloco
+                : {
+                    usable: grouped(block.usable),
+                    total: grouped(block.addresses),
+                    count: block.addresses === '1' ? 1 : 2,
+                  }
+          "
+          [copyable]="false"
+        />
+      </div>
+
+      @if (splitAnswer(); as split) {
+        <div class="head">
+          <h2 class="title" id="cidr-split-title">{{ 'tools.cidr.splitTitle' | transloco }}</h2>
+          <div
+            class="chips"
+            role="radiogroup"
+            aria-labelledby="cidr-split-title"
+            data-testid="cidr-split-choices"
+          >
+            @for (prefix of splitChoices(); track prefix) {
+              <button
+                type="button"
+                role="radio"
+                class="chip"
+                data-testid="cidr-split-choice"
+                [attr.data-prefix]="prefix"
+                [class.on]="prefix === split.prefix"
+                [attr.aria-checked]="prefix === split.prefix"
+                (click)="chooseSplit(prefix)"
+              >
+                /{{ prefix }}
+              </button>
+            }
+          </div>
+        </div>
+        <ul class="subnets" data-testid="cidr-subnets">
+          @for (subnet of split.subnets; track subnet.cidr) {
+            <li class="subnet" data-testid="cidr-subnet" [attr.data-cidr]="subnet.cidr">
+              <span class="subnet-cidr">{{ subnet.cidr }}</span>
+              <span class="subnet-hosts">
+                {{
+                  'tools.cidr.subnetHosts.' + block.family
+                    | transloco: { count: subnet.usable === '1' ? 1 : 2, hosts: grouped(subnet.usable) }
+                }}
+              </span>
+              <app-copy-value [value]="subnet.cidr" [what]="subnet.cidr" [compact]="true" />
+            </li>
+          }
+        </ul>
+        @if (split.more !== '0') {
+          <p class="more" data-testid="cidr-more">
+            {{ 'tools.cidr.more' | transloco: { count: 2, more: grouped(split.more) } }}
+          </p>
+        }
+      }
+    } @else {
+      <p class="empty">{{ 'tools.cidr.empty' | transloco }}</p>
+    }
+  </section>
+
+  @if (block(); as block) {
+    <section class="column masks-area" aria-labelledby="cidr-masks-title">
+      <h2 class="title" id="cidr-masks-title">{{ 'tools.cidr.masks.title' | transloco }}</h2>
+      <p class="hint">{{ 'tools.cidr.masks.hint' | transloco }}</p>
+      <div class="table-card">
+        <table class="table masks" data-testid="cidr-masks" [attr.data-family]="block.family">
+          <thead>
+            <tr>
+              <th scope="col">{{ 'tools.cidr.masks.prefix' | transloco }}</th>
+              @if (block.family === 'v4') {
+                <th scope="col">{{ 'tools.cidr.masks.mask' | transloco }}</th>
+                <th scope="col">{{ 'tools.cidr.masks.wildcard' | transloco }}</th>
+              }
+              <th scope="col" class="number">{{ 'tools.cidr.masks.addresses' | transloco }}</th>
+              <th scope="col" class="number">
+                {{ 'tools.cidr.masks.' + (block.family === 'v4' ? 'hosts' : 'networks64') | transloco }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of masks(); track row.prefix) {
+              <tr
+                data-testid="cidr-mask"
+                [attr.data-prefix]="row.prefix"
+                [class.current]="row.prefix === block.prefix"
+                [attr.aria-current]="row.prefix === block.prefix ? 'true' : null"
+              >
+                <td>
+                  <button
+                    type="button"
+                    class="prefix"
+                    data-testid="cidr-mask-apply"
+                    [attr.aria-label]="'tools.cidr.masks.apply' | transloco: { prefix: row.prefix }"
+                    (click)="applyPrefix(row.prefix)"
+                  >
+                    /{{ row.prefix }}
+                  </button>
+                </td>
+                @if (row.mask !== null) {
+                  <td class="mono">{{ row.mask }}</td>
+                  <td class="mono">{{ row.wildcard }}</td>
+                }
+                <td class="number">{{ maskAddresses(row, block.family) }}</td>
+                <td class="number">
+                  @if (block.family === 'v4') {
+                    {{ grouped(row.usable) }}
+                  } @else if (row.networks64 !== null) {
+                    {{ grouped(row.networks64) }}
+                  } @else {
+                    <span class="none">—</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+
+  <section class="column plan-area" aria-labelledby="cidr-plan-title">
+    <h2 class="title" id="cidr-plan-title">{{ 'tools.cidr.plan.title' | transloco }}</h2>
+    <p class="hint">{{ 'tools.cidr.plan.hint' | transloco }}</p>
+    <textarea
+      class="area"
+      rows="5"
+      data-testid="cidr-plan"
+      spellcheck="false"
+      aria-labelledby="cidr-plan-title"
+      [placeholder]="'tools.cidr.plan.placeholder' | transloco"
+      [value]="plan()"
+      (input)="onPlan($event)"
+    ></textarea>
+    @if (planAnswer(); as plan) {
+      <div class="table-card">
+        <table class="table" data-testid="cidr-plan-lines">
+          <thead>
+            <tr>
+              <th scope="col">{{ 'tools.cidr.plan.need' | transloco }}</th>
+              <th scope="col" class="number">{{ 'tools.cidr.plan.asked' | transloco }}</th>
+              <th scope="col">{{ 'tools.cidr.plan.subnet' | transloco }}</th>
+              <th scope="col" class="number">{{ 'tools.cidr.plan.usable' | transloco }}</th>
+              <th scope="col">{{ 'tools.cidr.plan.range' | transloco }}</th>
+              <th scope="col">
+                <span class="visually-hidden">{{ 'tools.copy' | transloco }}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of plan.lines; track $index) {
+              @if (line.kind === 'placed') {
+                <tr data-testid="cidr-plan-line" data-kind="placed" [attr.data-cidr]="line.cidr">
+                  <td>{{ line.name || ('tools.cidr.plan.unnamed' | transloco) }}</td>
+                  <td class="number">{{ grouped(line.hosts) }}</td>
+                  <td class="mono strong">{{ line.cidr }}</td>
+                  <td class="number">{{ grouped(line.usable) }}</td>
+                  <td class="mono range">{{ line.first }} – {{ line.last }}</td>
+                  <td class="copy">
+                    <app-copy-value [value]="line.cidr" [what]="line.cidr" [compact]="true" />
+                  </td>
+                </tr>
+              } @else if (line.kind === 'noRoom') {
+                <tr data-testid="cidr-plan-line" data-kind="noRoom">
+                  <td>{{ line.name || ('tools.cidr.plan.unnamed' | transloco) }}</td>
+                  <td class="number">{{ grouped(line.hosts) }}</td>
+                  <td colspan="4" class="refused">{{ 'tools.cidr.plan.noRoom' | transloco }}</td>
+                </tr>
+              } @else {
+                <tr data-testid="cidr-plan-line" data-kind="unreadable">
+                  <td colspan="6" class="refused">
+                    {{ 'tools.cidr.plan.unreadable' | transloco: { text: line.text } }}
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="free" data-testid="cidr-plan-free">
+        @if (plan.free.length === 0) {
+          {{ 'tools.cidr.plan.full' | transloco }}
+        } @else {
+          {{ 'tools.cidr.plan.free' | transloco }}
+          @for (free of plan.free; track free) {
+            <code class="block-name">{{ free }}</code>
+          }
+        }
+      </p>
+    } @else if (!block() && plan().trim() !== '') {
+      <p class="hint" data-testid="cidr-plan-waiting">{{ 'tools.cidr.plan.waiting' | transloco }}</p>
+    }
+  </section>
+
+  <section class="column list-area" aria-labelledby="cidr-list-title">
+    <h2 class="title" id="cidr-list-title">{{ 'tools.cidr.list.title' | transloco }}</h2>
+    <p class="hint">{{ 'tools.cidr.list.hint' | transloco }}</p>
+    <textarea
+      class="area"
+      rows="5"
+      data-testid="cidr-list"
+      spellcheck="false"
+      aria-labelledby="cidr-list-title"
+      [placeholder]="'tools.cidr.list.placeholder' | transloco"
+      [value]="list()"
+      (input)="onList($event)"
+    ></textarea>
+    @if (summary(); as summary) {
+      @for (family of summary.families; track family.family) {
+        <div class="card" data-testid="cidr-summary" [attr.data-family]="family.family">
+          <app-result-row
+            data-row="supernet"
+            [name]="'tools.cidr.list.supernet' | transloco"
+            [value]="family.supernet"
+            [meta]="
+              family.extra === '0'
+                ? ('tools.cidr.list.exact' | transloco)
+                : ('tools.cidr.list.extra'
+                  | transloco: { extra: grouped(family.extra), count: family.extra === '1' ? 1 : 2 })
+            "
+          />
+          <div class="blocks-head">
+            <span class="blocks-title">
+              {{ 'tools.cidr.list.blocks.' + family.family | transloco: { count: family.blocks.length } }}
+            </span>
+            <app-copy-value
+              [value]="asLines(family.blocks)"
+              [what]="'tools.cidr.list.blocks.' + family.family | transloco: { count: family.blocks.length }"
+              [compact]="true"
+            />
+          </div>
+          <ul class="blocks" data-testid="cidr-summary-blocks">
+            @for (cidr of family.blocks; track cidr) {
+              <li data-testid="cidr-summary-block">{{ cidr }}</li>
+            }
+          </ul>
+        </div>
+      }
+      @if (summary.unreadable.length > 0) {
+        <p class="problem" role="status" data-testid="cidr-list-unreadable">
+          {{ 'tools.cidr.list.unreadable' | transloco: { entries: summary.unreadable.join(', ') } }}
+        </p>
+      }
+    }
+  </section>
+</div>
