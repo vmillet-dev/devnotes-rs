@@ -6,7 +6,7 @@ name: Security
 # merged, which no push would ever surface.
 on:
   pull_request:
-    branches: [main]
+    branches: [main, 'dev/**']
     paths:
       - 'src-tauri/Cargo.toml'
       - 'src-tauri/Cargo.lock'

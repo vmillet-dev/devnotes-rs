@@ -1,10 +1,11 @@
 name: CI
 
+# A milestone's work merges into its `dev/x.y.z` branch first, then into main: both are checked alike.
 on:
   push:
-    branches: [main]
+    branches: [main, 'dev/**']
   pull_request:
-    branches: [main]
+    branches: [main, 'dev/**']
 
 # Stacked runs on a branch are cancelled. No tag run to spare any more: publishing lives
 # in `release.yml`, which has a concurrency group of its own.
