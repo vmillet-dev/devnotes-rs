@@ -7,7 +7,7 @@
   <span class="metric" data-testid="http-response-size">{{ size().key | transloco: size().params }}</span>
 
   <div class="sections" role="tablist" [attr.aria-label]="'http.response.parts' | transloco">
-    @for (id of sections; track id) {
+    @for (id of sections(); track id) {
       <button
         type="button"
         role="tab"
@@ -16,7 +16,7 @@
         [attr.data-section]="id"
         [class.on]="section() === id"
         [attr.aria-selected]="section() === id"
-        (click)="section.set(id)"
+        (click)="choose(id)"
       >
         {{ 'http.response.sections.' + id | transloco }}
         @if (counts()[id] > 0) {
@@ -60,7 +60,22 @@
 <div class="panel" role="tabpanel">
   @switch (section()) {
     @case ('body') {
-      <app-response-body [response]="answer" [sendId]="sendId()" />
+      <app-response-body [response]="shown()" [sendId]="sendId()" />
+    }
+    @case ('errors') {
+      <ul class="errors" data-testid="http-response-errors">
+        @for (error of answer.graphql?.errors ?? []; track $index) {
+          <li class="error" data-testid="http-response-error">
+            <span class="error-message">{{ error.message }}</span>
+            @if (error.path; as path) {
+              <code class="error-where">{{ path }}</code>
+            }
+            @if (error.location; as location) {
+              <code class="error-where">{{ 'http.graphql.at' | transloco: { location } }}</code>
+            }
+          </li>
+        }
+      </ul>
     }
     @case ('headers') {
       <table class="rows" data-testid="http-response-headers">

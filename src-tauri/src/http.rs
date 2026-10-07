@@ -3,6 +3,7 @@
 //! The HTTP client's collections: they belong to the library, not to a space, and are sealed
 //! like the notes. A collection travels in a file of its own, never in the library export.
 
+pub mod graphql;
 pub mod history;
 pub mod model;
 pub mod query;
@@ -329,6 +330,7 @@ pub async fn send_http_request<R: Runtime>(
 ) -> Result<send::SentResponse, AppError> {
     let send::SendRequest {
         id,
+        kind,
         method,
         document,
         collection_id,
@@ -344,7 +346,7 @@ pub async fn send_http_request<R: Runtime>(
             }
             None => settings::inherit(&[]),
         };
-        Ok(send::compose(method, &document, &inherited)?)
+        Ok(send::compose(kind, method, &document, &inherited)?)
     })
     .await?;
 
@@ -502,4 +504,13 @@ pub async fn http_history_draft<R: Runtime>(
         )?))
     })
     .await
+}
+
+/// The operations a GraphQL document names, and why its variables do not read.
+#[tauri::command]
+#[specta::specta]
+pub async fn describe_graphql(
+    document: graphql::GraphqlDocument,
+) -> Result<graphql::GraphqlAnswer, AppError> {
+    off_thread(move || graphql::describe(&document)).await
 }

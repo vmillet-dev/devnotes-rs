@@ -125,13 +125,13 @@ export class HttpTabsStore {
     this.persist();
   }
 
-  edit(key: string, change: Partial<Pick<RequestDraft, 'name' | 'method'>>): void {
+  edit(key: string, change: Partial<Pick<RequestDraft, 'name' | 'kind' | 'method'>>): void {
     this.update(key, (draft) => ({ ...draft, ...change }));
   }
 
   editParts(
     key: string,
-    change: Partial<Pick<RequestParts, 'headers' | 'description' | 'body' | 'auth'>>,
+    change: Partial<Pick<RequestParts, 'headers' | 'description' | 'body' | 'auth' | 'graphql'>>,
   ): void {
     this.update(key, (draft) => ({ ...draft, parts: { ...draft.parts, ...change } }));
   }

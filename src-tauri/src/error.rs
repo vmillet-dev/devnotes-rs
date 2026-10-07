@@ -156,6 +156,7 @@ pub enum ErrorCode {
     HttpFileUnreadable,
     /// What « Annuler » answers: the front, which asked, says nothing.
     HttpCancelled,
+    HttpGraphqlVariables,
     HttpNetwork,
 }
 
@@ -218,6 +219,7 @@ impl From<SendError> for AppError {
                 Self::with(ErrorCode::HttpFileUnreadable, detail, "path", &path)
             }
             SendError::Cancelled => Self::new(ErrorCode::HttpCancelled, detail),
+            SendError::GraphqlVariables(_) => Self::new(ErrorCode::HttpGraphqlVariables, detail),
             SendError::Network(_) => Self::new(ErrorCode::HttpNetwork, detail),
         }
     }

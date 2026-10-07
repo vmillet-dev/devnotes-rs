@@ -1,6 +1,9 @@
 import type {
   BodyAnswer,
   ContainerSettings,
+  GraphqlAnswer,
+  GraphqlDocument,
+  GraphqlResult,
   HistoryDay,
   HistoryDraft,
   HistoryEntry,
@@ -36,6 +39,8 @@ import type {
 
 export type {
   BodyAnswer,
+  GraphqlAnswer,
+  GraphqlResult,
   HistoryDay,
   HistoryDraft,
   HistoryEntry,
@@ -89,6 +94,15 @@ export const BODY_KINDS: readonly BodyKind[] = ['none', 'json', 'text', 'form', 
 export type AuthKind = RequestAuth['kind'];
 export const AUTH_KINDS: readonly AuthKind[] = ['inherit', 'none', 'basic', 'bearer', 'apiKey'];
 
+/** A GraphQL request's own part, sent in place of the body. */
+export interface GraphqlParts {
+  readonly query: string;
+  /** A JSON object as typed; empty sends none. */
+  readonly variables: string;
+  readonly operationName: string | null;
+  readonly asGet: boolean;
+}
+
 /** A request's document as the editor holds it, every part present. */
 export interface RequestParts {
   readonly url: string;
@@ -97,6 +111,7 @@ export interface RequestParts {
   readonly body: RequestBodyDraft;
   readonly auth: RequestAuth;
   readonly description: string;
+  readonly graphql: GraphqlParts;
 }
 
 /** A collection's or a folder's own auth and headers, what its requests inherit. */
@@ -123,6 +138,7 @@ export const EMPTY_PARTS: RequestParts = {
   body: { kind: 'none' },
   auth: { kind: 'inherit' },
   description: '',
+  graphql: { query: '', variables: '', operationName: null, asGet: false },
 };
 
 /** What a request tab edits, and what saving writes. */
@@ -198,7 +214,21 @@ export function toParts(document: RequestDocument): RequestParts {
     body: toBody(document.body),
     auth: document.auth ?? { kind: 'inherit' },
     description: document.description ?? '',
+    graphql: toGraphql(document.graphql),
   };
+}
+
+function toGraphql(graphql: GraphqlDocument | undefined): GraphqlParts {
+  return {
+    query: graphql?.query ?? '',
+    variables: graphql?.variables ?? '',
+    operationName: graphql?.operationName ?? null,
+    asGet: graphql?.asGet ?? false,
+  };
+}
+
+export function toGraphqlWire(graphql: GraphqlParts): GraphqlDocument {
+  return { ...graphql };
 }
 
 export function toDocument(parts: RequestParts): RequestDocument {
@@ -209,6 +239,7 @@ export function toDocument(parts: RequestParts): RequestDocument {
     body: fromBody(parts.body),
     auth: parts.auth,
     description: parts.description,
+    graphql: toGraphqlWire(parts.graphql),
   };
 }
 

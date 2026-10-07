@@ -11,6 +11,7 @@ import {
 import { TranslocoPipe } from '@jsverse/transloco';
 import { HttpRepository } from '@core/data/http.repository';
 import {
+  GraphqlParts,
   HTTP_METHODS,
   HttpMethod,
   KeyValueRow,
@@ -25,10 +26,14 @@ import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/
 import { HTTP_HEADERS } from '@tools/catalogue/http-headers/http-headers.data';
 import { AuthEditorComponent } from '@http/ui/auth-editor/auth-editor.component';
 import { BodyEditorComponent } from '../body-editor/body-editor.component';
+import { GraphqlEditorComponent } from '../graphql-editor/graphql-editor.component';
 import { KeyValueTableComponent } from '@http/ui/key-value-table/key-value-table.component';
 import { UrlFieldComponent } from '../url-field/url-field.component';
 
-type Section = 'params' | 'headers' | 'auth' | 'body';
+type Section = 'params' | 'headers' | 'auth' | 'body' | 'query';
+
+/** The choice that turns a request into a GraphQL one, beside the methods. */
+const GRAPHQL = 'GRAPHQL';
 
 /** A header a request may send: the reference's own list, those a server alone writes left out. */
 const REQUEST_HEADERS = HTTP_HEADERS.filter((header) => header.direction !== 'response').map(
@@ -44,6 +49,7 @@ const counted = (rows: readonly KeyValueRow[]) => rows.filter((row) => row.enabl
     AuthEditorComponent,
     BodyEditorComponent,
     ChoiceMenuComponent,
+    GraphqlEditorComponent,
     KeyValueTableComponent,
     TranslocoPipe,
     UrlFieldComponent,
@@ -62,14 +68,25 @@ export class RequestEditorComponent {
   private readonly repository = inject(HttpRepository);
   private readonly collections = inject(HttpCollectionsStore);
 
-  protected readonly section = signal<Section>('params');
-  protected readonly sections: readonly Section[] = ['params', 'headers', 'auth', 'body'];
+  private readonly chosen = signal<Section>('params');
+  protected readonly sections = computed<readonly Section[]>(() =>
+    this.tab().draft.kind === 'graphql'
+      ? ['query', 'headers', 'auth']
+      : ['params', 'headers', 'auth', 'body'],
+  );
+  /** The section chosen, or the first when the kind left it behind. */
+  protected readonly section = computed<Section>(() =>
+    this.sections().includes(this.chosen()) ? this.chosen() : this.sections()[0]!,
+  );
   protected readonly headerNames = REQUEST_HEADERS;
 
-  protected readonly methods: readonly ChoiceOption[] = HTTP_METHODS.map((method) => ({
-    id: method,
-    name: method,
-  }));
+  protected readonly methods: readonly ChoiceOption[] = [
+    ...HTTP_METHODS.map((method) => ({ id: method, name: method })),
+    { id: GRAPHQL, name: 'GraphQL' },
+  ];
+  protected readonly methodId = computed(() =>
+    this.tab().draft.kind === 'graphql' ? GRAPHQL : this.tab().draft.method,
+  );
 
   protected readonly badge = computed(() => requestBadge(this.tab().draft));
 
@@ -95,7 +112,13 @@ export class RequestEditorComponent {
 
   /** The `Content-Type` the body implies, sent unless a header sets one by hand. */
   protected readonly impliedType = computed(() => {
-    const type = this.bodyAnswer()?.contentType ?? null;
+    const draft = this.tab().draft;
+    const type =
+      draft.kind === 'graphql'
+        ? draft.parts.graphql.asGet
+          ? null
+          : 'application/json'
+        : (this.bodyAnswer()?.contentType ?? null);
     const typed = this.tab().draft.parts.headers.some(
       (row) => row.enabled && row.key.toLowerCase() === 'content-type',
     );
@@ -110,10 +133,23 @@ export class RequestEditorComponent {
     headers: counted(this.tab().draft.parts.headers),
     auth: 0,
     body: 0,
+    query: 0,
   }));
 
   protected onMethod(method: string | null): void {
-    if (method !== null) this.tabs.edit(this.tab().key, { method: method as HttpMethod });
+    if (method === GRAPHQL) {
+      this.tabs.edit(this.tab().key, { kind: 'graphql' });
+    } else if (method !== null) {
+      this.tabs.edit(this.tab().key, { kind: 'http', method: method as HttpMethod });
+    }
+  }
+
+  protected choose(section: Section): void {
+    this.chosen.set(section);
+  }
+
+  protected onGraphql(graphql: GraphqlParts): void {
+    this.tabs.editParts(this.tab().key, { graphql });
   }
 
   protected onName(event: Event): void {

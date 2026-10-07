@@ -11,6 +11,9 @@ import {
   HttpRequestDraft,
   HttpRequestPatch,
   HttpTree,
+  GraphqlAnswer,
+  GraphqlParts,
+  toGraphqlWire,
   HistoryDay,
   HistoryDraft,
   HistoryEntry,
@@ -63,6 +66,7 @@ export class HttpRepository {
   async saveRequest(id: string, draft: RequestDraft): Promise<OpenedRequest> {
     const patch: HttpRequestPatch = {
       name: draft.name,
+      kind: draft.kind,
       method: draft.method,
       document: toDocument(draft.parts),
     };
@@ -107,6 +111,7 @@ export class HttpRepository {
       'send_http_request',
       await commands.sendHttpRequest({
         id,
+        kind: draft.kind,
         method: draft.method,
         document: toDocument(draft.parts),
         collectionId: place?.collectionId ?? null,
@@ -155,6 +160,10 @@ export class HttpRepository {
 
   async forgetResponse(id: string): Promise<void> {
     unwrap('forget_http_response', await commands.forgetHttpResponse(id));
+  }
+
+  async describeGraphql(graphql: GraphqlParts): Promise<GraphqlAnswer> {
+    return unwrap('describe_graphql', await commands.describeGraphql(toGraphqlWire(graphql)));
   }
 
   async rename(item: HttpItem, name: string): Promise<void> {

@@ -1728,6 +1728,25 @@ is logged.
   foot), and closes for a request opened from the tree. It reads again whenever a send ends
   (`HttpSendStore.sent`).
 
+### A GraphQL request
+
+**A GraphQL request is an HTTP one whose body Rust writes** (`http/graphql.rs`). Its document
+carries a `graphql` part — the query, the variables as typed, the operation chosen, and whether
+it goes as a GET — read only when the request's kind is `graphql`; `kind` now crosses in the
+patch, chosen from the method menu (« GraphQL » beside the methods).
+
+- **Sent as a POST with a JSON body**, or as a GET with `query`, `variables` and
+  `operationName` in the query string. ⚠️ The variables are copied into the body as typed
+  (`RawValue`), never re-serialised: a number past `f64` would come out rounded. They must be
+  a JSON object, or the send fails with `httpGraphqlVariables`.
+- **`describe_graphql` reads the document**: its named operations, past strings, comments and
+  selections — a menu appears when there are several — and why the variables do not parse.
+- **The answer is read apart** (`SentResponse::graphql`): **Corps** lays out `data`, an
+  **Erreurs** tab lists the errors with their path and location; **Brut** keeps the whole
+  answer.
+- `{{variables}}` in the query and the variables stop the send like anywhere else, until
+  environments resolve them. Introspection and completion from the schema are out of scope.
+
 ### Managing spaces from the switcher
 
 The space switcher's dropdown has three mutually exclusive states: the menu, the creation

@@ -299,5 +299,55 @@ describe('HTTP collections', () => {
         server.close();
       }
     });
+
+    it('posts a GraphQL query as JSON, and reads its errors apart from its data', async () => {
+      const bodies: string[] = [];
+      const server = createServer((request, response) => {
+        let body = '';
+        request.on('data', (chunk: Buffer) => (body += chunk.toString()));
+        request.on('end', () => {
+          bodies.push(body);
+          response.writeHead(200, { 'Content-Type': 'application/json' });
+          response.end('{"data":{"products":[]},"errors":[{"message":"Partial","path":["products"]}]}');
+        });
+      });
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      const { port } = server.address() as AddressInfo;
+      try {
+        const api = await bridge.createHttpCollection('Catalogue');
+        const created = await bridge.createHttpRequest({
+          ...draft(api.id, null, 'Produits'),
+          kind: 'graphql',
+          document: {
+            url: `http://127.0.0.1:${port}/graphql`,
+            description: '',
+            graphql: { query: '{ products { id } }' },
+          },
+        });
+        await press('1', ['Control']);
+        await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+        await press('3', ['Control']);
+        await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+        if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
+        await $(`${testid('http-node')}[data-id="${created.id}"] ${testid('http-node-name')}`).click();
+        await $(testid('http-graphql-query')).waitForDisplayed({ timeout: 10_000 });
+
+        await press('Enter', ['Control']);
+        await $(`${testid('http-response-section')}[data-section="errors"]`).waitForDisplayed({
+          timeout: 10_000,
+        });
+        expect(JSON.parse(bodies[0]!)).toEqual({ query: '{ products { id } }' });
+        expect(await $(testid('http-response-pretty')).getText()).toContain('"products": []');
+        await $(`${testid('http-response-section')}[data-section="errors"]`).click();
+        expect(await $(testid('http-response-error')).getText()).toContain('Partial');
+
+        const tab = `${testid('http-tab')}[data-key="${created.id}"]`;
+        await $(`${tab} ${testid('http-tab-close')}`).click();
+        await $(tab).waitForExist({ reverse: true, timeout: 10_000 });
+        await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+      } finally {
+        server.close();
+      }
+    });
   });
 });

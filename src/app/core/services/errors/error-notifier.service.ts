@@ -49,6 +49,7 @@ const CODE_KEYS: Record<IpcErrorCode, string | null> = {
   httpTooManyRedirects: 'errors.httpTooManyRedirects',
   httpFileUnreadable: 'errors.httpFileUnreadable',
   httpCancelled: 'errors.httpCancelled',
+  httpGraphqlVariables: 'errors.httpGraphqlVariables',
   httpNetwork: 'errors.httpNetwork',
 };
 
