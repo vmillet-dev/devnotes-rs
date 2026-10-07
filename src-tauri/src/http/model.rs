@@ -2,6 +2,7 @@
 //! requests, a request's sealed document, and where an item can be moved to.
 
 use super::graphql::GraphqlDocument;
+use super::transport::TransportSettings;
 use super::websocket::WebsocketDocument;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -56,6 +57,7 @@ pub struct ContainerSettings {
     /// `Inherit` on a collection is no auth at all: nothing is above it.
     pub auth: RequestAuth,
     pub headers: Vec<KeyValue>,
+    pub transport: TransportSettings,
 }
 
 /// What a request sends as its body. A file is a path, read by Rust when the request is sent:
@@ -160,6 +162,8 @@ pub struct RequestDocument {
     pub graphql: GraphqlDocument,
     /// Read only for a WebSocket.
     pub websocket: WebsocketDocument,
+    /// Over what the folders and the collection set.
+    pub transport: TransportSettings,
 }
 
 /// A row of a request's parameters or headers.

@@ -196,6 +196,7 @@ fn a_folder_hands_its_settings_down_and_a_body_says_what_it_implies() {
     let settings = ContainerSettings {
         auth: bearer.clone(),
         headers: Vec::new(),
+        ..ContainerSettings::default()
     };
     session
         .call(|app| {

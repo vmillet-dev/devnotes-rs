@@ -383,6 +383,7 @@ fn a_request_inherits_the_nearest_auth_and_every_header_above_it() {
                 value: "application/json".to_string(),
                 ..KeyValue::default()
             }],
+            ..ContainerSettings::default()
         },
     )
     .unwrap();

@@ -123,6 +123,7 @@ fn a_request_leaves_with_what_its_collection_hands_down_and_its_answer_comes_bac
             value: "application/json".to_string(),
             ..KeyValue::default()
         }],
+        ..ContainerSettings::default()
     };
     session
         .call(|app| {
@@ -461,4 +462,80 @@ fn a_graphql_request_is_posted_as_json_and_its_errors_read_apart_from_its_data()
 
     let described = session.call(|_| describe_graphql(document)).unwrap();
     assert_eq!(described.operations, ["Me", "Other"]);
+}
+
+#[test]
+fn an_answer_fills_the_jar_the_next_request_carries_it_and_the_manager_empties_it() {
+    use devnotes_lib::http::{
+        clear_http_cookies, count_http_cookies, delete_http_cookie, delete_http_cookie_domain,
+        http_cookies,
+    };
+
+    let session = Session::open();
+    let (port, seen) = serve(3, |seen, _| {
+        if seen.head.starts_with("GET /login ") {
+            response(
+                "200 OK",
+                &[
+                    ("Set-Cookie", "session=abc; Path=/; HttpOnly"),
+                    ("Set-Cookie", "theme=dark; Path=/"),
+                ],
+                b"",
+            )
+        } else {
+            response("200 OK", &[], b"")
+        }
+    });
+    let base = format!("http://127.0.0.1:{port}");
+
+    session
+        .call(|app| send_http_request(request(&format!("{base}/login")), app))
+        .unwrap();
+    session
+        .call(|app| send_http_request(request(&format!("{base}/me")), app))
+        .unwrap();
+    let mut alone = request(&format!("{base}/me"));
+    alone.document.transport.use_cookies = Some(false);
+    session.call(|app| send_http_request(alone, app)).unwrap();
+
+    let heads: Vec<String> = seen.iter().take(3).map(|seen| seen.head).collect();
+    assert!(!heads[0].to_ascii_lowercase().contains("cookie:"));
+    let carried = heads[1].to_ascii_lowercase();
+    assert!(carried.contains("cookie: "), "{carried}");
+    assert!(carried.contains("session=abc") && carried.contains("theme=dark"));
+    assert!(!heads[2].to_ascii_lowercase().contains("cookie:"));
+
+    let domains = session.call(http_cookies).unwrap();
+    assert_eq!(domains.len(), 1);
+    assert_eq!(domains[0].domain, "127.0.0.1");
+    assert_eq!(domains[0].cookies.len(), 2);
+    let id = domains[0].cookies[0].id.clone();
+    assert_eq!(session.call(|app| delete_http_cookie(id, app)).unwrap(), 1);
+    assert_eq!(session.call(count_http_cookies).unwrap(), 1);
+    assert_eq!(
+        session
+            .call(|app| delete_http_cookie_domain("127.0.0.1".to_string(), app))
+            .unwrap(),
+        1
+    );
+    assert_eq!(session.call(clear_http_cookies).unwrap(), 0);
+}
+
+#[test]
+fn a_request_set_not_to_follow_redirects_answers_the_redirect_itself() {
+    let session = Session::open();
+    let (port, _seen) = serve(1, |_, port| {
+        response(
+            "302 Found",
+            &[("Location", &format!("http://127.0.0.1:{port}/new"))],
+            b"",
+        )
+    });
+    let mut sent = request(&format!("http://127.0.0.1:{port}/old"));
+    sent.document.transport.follow_redirects = Some(false);
+
+    let answer = session.call(|app| send_http_request(sent, app)).unwrap();
+
+    assert_eq!(answer.status, 302);
+    assert!(answer.redirects.is_empty());
 }
