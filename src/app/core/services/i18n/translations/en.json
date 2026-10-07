@@ -2752,8 +2752,48 @@
       }
     },
     "workspace": {
-      "empty": "Choose a request in the rail, or create a collection with ＋.",
-      "noUrl": "No URL yet"
+      "empty": "Open a request from the rail, or start one with the tabs' ＋."
+    },
+    "tabs": {
+      "label": "Open requests",
+      "untitled": "New request",
+      "modified": "modified",
+      "close": "Close {{name}}",
+      "new": "New request"
+    },
+    "editor": {
+      "name": "Request name",
+      "method": "Method",
+      "url": "URL",
+      "urlPlaceholder": "https://api.example.com/resource",
+      "save": "Save",
+      "saveHint": "Save (Ctrl+S)",
+      "parts": "Parts of the request",
+      "sections": {
+        "params": "Params",
+        "headers": "Headers"
+      }
+    },
+    "table": {
+      "enabled": "Sent",
+      "enable": "Send {{key}}",
+      "key": "Key",
+      "value": "Value",
+      "description": "Description",
+      "newKey": "New key",
+      "remove": "Remove",
+      "removeRow": "Remove {{key}}"
+    },
+    "save": {
+      "title": "Save the request",
+      "name": "Name",
+      "place": "In",
+      "nowhere": "No collection yet: create one in the rail, with ＋."
+    },
+    "close": {
+      "title": "“{{name}}” has changes",
+      "hint": "They are not saved yet.",
+      "discard": "Close without saving"
     }
   }
 }

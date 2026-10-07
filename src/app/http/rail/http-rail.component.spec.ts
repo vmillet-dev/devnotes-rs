@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpCollectionsStore } from '@core/services/http/http-collections.store';
+import { HttpTabsStore } from '@core/services/http/http-tabs.store';
 import { FakeHttpRepository } from '@testing/fake-http-repository';
 import { sampleTree } from '@testing/http-tree.fixture';
 import { provideAppTesting } from '@testing/testing.providers';
@@ -14,6 +15,7 @@ describe('HttpRailComponent', () => {
     TestBed.resetTestingModule();
     http = new FakeHttpRepository();
     http.tree$ = sampleTree();
+    http.seed('Login');
     TestBed.configureTestingModule({
       imports: [HttpRailComponent],
       providers: [provideAppTesting({ httpRepository: http })],
@@ -66,8 +68,8 @@ describe('HttpRailComponent', () => {
     expect(row('Archives')).toBeNull();
 
     name('Login').click();
+    await vi.waitFor(() => expect(TestBed.inject(HttpTabsStore).activeRequestId()).toBe('Login'));
     await fixture.whenStable();
-    expect(TestBed.inject(HttpCollectionsStore).openId()).toBe('Login');
     expect(name('Login').getAttribute('aria-current')).toBe('true');
 
     name('Auth').click();
@@ -100,6 +102,7 @@ describe('HttpRailComponent', () => {
       folderId: null,
       name: 'Santé',
     });
+    await vi.waitFor(() => expect(TestBed.inject(HttpTabsStore).activeRequestId()).toMatch(/^request-/));
   });
 
   it('renames in place, copies with a translated name, and offers a request no children', async () => {
@@ -203,7 +206,7 @@ describe('HttpRailComponent', () => {
       { kind: 'request', id: 'Health' },
       { collectionId: 'API', folderId: 'Auth', index: 1 },
     ]);
-    expect(TestBed.inject(HttpCollectionsStore).openId()).toBeNull();
+    expect(TestBed.inject(HttpTabsStore).tabs()).toEqual([]);
   });
 
   it('says how to begin when the library holds no collection', async () => {

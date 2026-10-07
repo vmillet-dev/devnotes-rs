@@ -6,10 +6,13 @@ import {
   HttpFolder,
   HttpItem,
   HttpPlace,
-  HttpRequest,
   HttpRequestDraft,
-  HttpRequestPatch,
   HttpTree,
+  KeyValueRow,
+  OpenedRequest,
+  QuerySide,
+  RequestDraft,
+  toParts,
 } from '@core/model/http.model';
 
 export interface HttpCall {
@@ -17,14 +20,22 @@ export interface HttpCall {
   readonly args: readonly unknown[];
 }
 
+interface Synced {
+  readonly url: string;
+  readonly params: readonly KeyValueRow[];
+}
+
 /**
- * Answers what a spec set and records what it was asked: the tree is Rust's to build, so a spec
- * sets `tree` to what Rust would answer after a write rather than this fake rebuilding it.
+ * Answers what a spec set and records what it was asked: the tree and the query's sync are
+ * Rust's, so a spec sets `tree$` and `synced` to what Rust would answer rather than this fake
+ * computing them.
  */
 export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpRepository> {
   tree$: HttpTree = { collections: [] };
   contentsAnswer: HttpContents = { folders: 0, requests: 0 };
-  readonly requests = new Map<string, HttpRequest>();
+  /** What `syncQuery` answers; unset, it hands back what it was given. */
+  synced: Synced | null = null;
+  readonly requests = new Map<string, OpenedRequest>();
   readonly calls: HttpCall[] = [];
   failNext: Error | null = null;
   private nextId = 0;
@@ -32,6 +43,28 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
   /** The calls of one command, their arguments in order. */
   callsOf(command: string): (readonly unknown[])[] {
     return this.calls.filter((call) => call.command === command).map((call) => call.args);
+  }
+
+  /** A request Rust would hold, for a spec to open. */
+  seed(
+    id: string,
+    draft: Partial<RequestDraft> = {},
+    collectionId = 'API',
+    folderId: string | null = null,
+  ): OpenedRequest {
+    const request: OpenedRequest = {
+      id,
+      collectionId,
+      folderId,
+      name: draft.name ?? id,
+      kind: draft.kind ?? 'http',
+      method: draft.method ?? 'GET',
+      parts: draft.parts ?? { url: '', params: [], headers: [], description: '' },
+      createdAt: '2026-10-07T00:00:00.000Z',
+      updatedAt: '2026-10-07T00:00:00.000Z',
+    };
+    this.requests.set(id, request);
+    return request;
   }
 
   tree(): Promise<HttpTree> {
@@ -57,25 +90,18 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
     }));
   }
 
-  createRequest(draft: HttpRequestDraft): Promise<HttpRequest> {
-    return this.record('createRequest', [draft], () => {
-      const request: HttpRequest = {
-        id: `request-${++this.nextId}`,
-        collectionId: draft.collectionId,
-        folderId: draft.folderId,
-        name: draft.name,
-        kind: draft.kind,
-        method: draft.method,
-        document: draft.document,
-        createdAt: '2026-10-07T00:00:00.000Z',
-        updatedAt: '2026-10-07T00:00:00.000Z',
-      };
-      this.requests.set(request.id, request);
-      return request;
-    });
+  createRequest(draft: HttpRequestDraft): Promise<OpenedRequest> {
+    return this.record('createRequest', [draft], () =>
+      this.seed(
+        `request-${++this.nextId}`,
+        { name: draft.name, kind: draft.kind, method: draft.method, parts: toParts(draft.document) },
+        draft.collectionId,
+        draft.folderId,
+      ),
+    );
   }
 
-  request(id: string): Promise<HttpRequest> {
+  request(id: string): Promise<OpenedRequest> {
     return this.record('request', [id], () => {
       const request = this.requests.get(id);
       if (!request) throw new Error(`no request ${id}`);
@@ -83,14 +109,18 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
     });
   }
 
-  saveRequest(id: string, patch: HttpRequestPatch): Promise<HttpRequest> {
-    return this.record('saveRequest', [id, patch], () => {
+  saveRequest(id: string, draft: RequestDraft): Promise<OpenedRequest> {
+    return this.record('saveRequest', [id, draft], () => {
       const request = this.requests.get(id);
       if (!request) throw new Error(`no request ${id}`);
-      const saved = { ...request, ...patch } as HttpRequest;
+      const saved: OpenedRequest = { ...request, name: draft.name, method: draft.method, parts: draft.parts };
       this.requests.set(id, saved);
       return saved;
     });
+  }
+
+  syncQuery(url: string, params: readonly KeyValueRow[], edited: QuerySide): Promise<Synced> {
+    return this.record('syncQuery', [url, params, edited], () => this.synced ?? { url, params });
   }
 
   rename(item: HttpItem, name: string): Promise<void> {
@@ -102,7 +132,9 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
   }
 
   delete(item: HttpItem): Promise<void> {
-    return this.record('delete', [item], () => undefined);
+    return this.record('delete', [item], () => {
+      this.requests.delete(item.id);
+    });
   }
 
   duplicate(item: HttpItem, name: string): Promise<HttpItem> {

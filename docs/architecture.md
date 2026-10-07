@@ -1626,6 +1626,27 @@ method in its colour (`http-method-hues`), `QUERY` for GraphQL and `WS` for a We
 - Every write is persisted, then the tree read again: a move or a copy renumbers what it touched,
   and the front never guesses the order.
 
+### A request in its tab
+
+Opening a request gives it a tab (`HttpTabsStore`, `http/request/`): its method and name, a dot
+while modified, a `×`. A tab edits a **draft** — name, method and the request's parts — beside
+what Rust holds; modified is the two differing, and saving (`Ctrl+S`) writes the draft whole. A
+request made from the tabs' `+` is a draft alone, like a new note: it writes nothing until it is
+saved, and the first save asks where it goes. Closing a modified tab asks first. Which requests
+were open, and which was in front, is the library's (`devnotes.notes.http.tabs`), reopened at
+the next launch without those deleted since.
+
+- **The query and its table are kept in step by Rust** (`sync_http_query`, `http/query.rs`):
+  the side that was edited wins, nothing is decoded — `{{page}}` and `%20` read back as typed —
+  a disabled row stays in the table and out of the URL, and a description follows its key. The
+  answer is applied only if nothing was typed meanwhile.
+- **The URL is a real input drawn transparent over a copy that lights its `{{variables}}`**
+  (`UrlFieldComponent`): caret, selection and undo stay the browser's. ⚠️ Both layers carry the
+  same metrics, declared after `text-field`, whose `all: unset` would otherwise zero the field's
+  padding and put every glyph a padding off the copy.
+- The headers' names are proposed from the HTTP headers reference, those a server alone writes
+  left out. Auth, body, settings, scripts and tests join the tabs with their tickets.
+
 ### Managing spaces from the switcher
 
 The space switcher's dropdown has three mutually exclusive states: the menu, the creation

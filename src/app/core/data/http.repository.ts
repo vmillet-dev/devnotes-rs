@@ -11,7 +11,18 @@ import {
   HttpRequestDraft,
   HttpRequestPatch,
   HttpTree,
+  KeyValueRow,
+  OpenedRequest,
+  QuerySide,
+  RequestDraft,
+  toDocument,
+  toParts,
+  toSynced,
 } from '@core/model/http.model';
+
+function opened({ document, ...request }: HttpRequest): OpenedRequest {
+  return { ...request, parts: toParts(document) };
+}
 
 /** The HTTP collections, which belong to the library: the tree is Rust's, built and ordered. */
 @Injectable({ providedIn: 'root' })
@@ -28,16 +39,30 @@ export class HttpRepository {
     return unwrap('create_http_folder', await commands.createHttpFolder(collectionId, parentId, name));
   }
 
-  async createRequest(draft: HttpRequestDraft): Promise<HttpRequest> {
-    return unwrap('create_http_request', await commands.createHttpRequest(draft));
+  async createRequest(draft: HttpRequestDraft): Promise<OpenedRequest> {
+    return opened(unwrap('create_http_request', await commands.createHttpRequest(draft)));
   }
 
-  async request(id: string): Promise<HttpRequest> {
-    return unwrap('get_http_request', await commands.getHttpRequest(id));
+  async request(id: string): Promise<OpenedRequest> {
+    return opened(unwrap('get_http_request', await commands.getHttpRequest(id)));
   }
 
-  async saveRequest(id: string, patch: HttpRequestPatch): Promise<HttpRequest> {
-    return unwrap('save_http_request', await commands.saveHttpRequest(id, patch));
+  /** Writes the whole draft: a tab saves what it shows. */
+  async saveRequest(id: string, draft: RequestDraft): Promise<OpenedRequest> {
+    const patch: HttpRequestPatch = {
+      name: draft.name,
+      method: draft.method,
+      document: toDocument(draft.parts),
+    };
+    return opened(unwrap('save_http_request', await commands.saveHttpRequest(id, patch)));
+  }
+
+  async syncQuery(
+    url: string,
+    params: readonly KeyValueRow[],
+    edited: QuerySide,
+  ): Promise<{ readonly url: string; readonly params: readonly KeyValueRow[] }> {
+    return toSynced(unwrap('sync_http_query', await commands.syncHttpQuery(url, [...params], edited)));
   }
 
   async rename(item: HttpItem, name: string): Promise<void> {

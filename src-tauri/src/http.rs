@@ -4,6 +4,7 @@
 //! like the notes. A collection travels in a file of its own, never in the library export.
 
 pub mod model;
+pub mod query;
 pub mod store;
 
 use chrono::Utc;
@@ -11,6 +12,7 @@ use tauri::{AppHandle, Runtime};
 
 use crate::db::{blocking, lock};
 use crate::error::AppError;
+use crate::tools::off_thread;
 use model::{
     HttpCollection, HttpContents, HttpFolder, HttpItem, HttpPlace, HttpRequest, HttpRequestDraft,
     HttpRequestPatch, HttpTree,
@@ -211,6 +213,17 @@ pub async fn move_http_item<R: Runtime>(
         Ok(store::move_item(&mut connection, &item, &place)?)
     })
     .await
+}
+
+/// The edited side wins: the query string rewritten from the table, or the table from the URL.
+#[tauri::command]
+#[specta::specta]
+pub async fn sync_http_query(
+    url: String,
+    params: Vec<model::KeyValue>,
+    edited: query::QuerySide,
+) -> Result<query::SyncedQuery, AppError> {
+    off_thread(move || query::sync(&url, &params, edited)).await
 }
 
 #[tauri::command]

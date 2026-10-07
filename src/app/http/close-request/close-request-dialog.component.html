@@ -1,0 +1,27 @@
+<app-dialog [layer]="'app'" labelledBy="http-close-title" (closed)="cancelled.emit()">
+  <div class="body" data-testid="http-close-dialog">
+    <h2 id="http-close-title" class="title">{{ 'http.close.title' | transloco: { name: name() } }}</h2>
+    <p class="hint">{{ 'http.close.hint' | transloco }}</p>
+    <div class="actions">
+      <button type="button" class="action" data-testid="http-close-cancel" (click)="cancelled.emit()">
+        {{ 'http.rail.cancel' | transloco }}
+      </button>
+      <button
+        type="button"
+        class="action discard"
+        data-testid="http-close-discard"
+        (click)="chosen.emit('discard')"
+      >
+        {{ 'http.close.discard' | transloco }}
+      </button>
+      <button
+        type="button"
+        class="action primary"
+        data-testid="http-close-save"
+        (click)="chosen.emit('save')"
+      >
+        {{ 'http.editor.save' | transloco }}
+      </button>
+    </div>
+  </div>
+</app-dialog>

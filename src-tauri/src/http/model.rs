@@ -58,7 +58,32 @@ pub struct ContainerSettings {}
 #[serde(rename_all = "camelCase", default)]
 pub struct RequestDocument {
     pub url: String,
+    /// In step with the URL's query: an enabled row is in it, a disabled one is kept aside.
+    pub params: Vec<KeyValue>,
+    pub headers: Vec<KeyValue>,
     pub description: String,
+}
+
+/// A row of a request's parameters or headers.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase", default)]
+pub struct KeyValue {
+    pub enabled: bool,
+    pub key: String,
+    pub value: String,
+    pub description: String,
+}
+
+/// Enabled: a row is typed to be sent.
+impl Default for KeyValue {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            key: String::new(),
+            value: String::new(),
+            description: String::new(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]

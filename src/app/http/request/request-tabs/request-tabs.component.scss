@@ -1,0 +1,91 @@
+@use 'mixins' as *;
+
+:host {
+  display: block;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.strip {
+  @include ring-room;
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  max-width: 240px;
+  border-right: 1px solid var(--line-soft);
+  border-bottom: 2px solid transparent;
+
+  &.on {
+    border-bottom-color: var(--amber-fill);
+    background: var(--bg-1);
+  }
+}
+
+.tab-open {
+  @include unstyled-control;
+  @include focus-ring(-2px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 4px 10px 14px;
+  font-size: 13px;
+  color: var(--text-1);
+  cursor: pointer;
+
+  .on & {
+    color: var(--text-0);
+  }
+}
+
+.method {
+  @include http-method-hues;
+  flex-shrink: 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.tab-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.dot {
+  font-size: 9px;
+  color: var(--amber-text);
+}
+
+.tab-close,
+.tab-new {
+  @include unstyled-control;
+  @include hit-target;
+  @include focus-ring(-2px);
+  justify-content: center;
+  border-radius: 5px;
+  color: var(--text-2);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--bg-3);
+    color: var(--text-0);
+  }
+}
+
+.tab-close {
+  margin-right: 6px;
+  font-size: 15px;
+}
+
+.tab-new {
+  margin: auto 8px;
+  padding: 0 6px;
+  font-size: 14px;
+}
