@@ -158,7 +158,9 @@ function toBody(body: RequestBody | undefined): RequestBodyDraft {
       return { kind: 'form', fields: body.fields.map(toRow) };
     case 'multipart':
       return { kind: 'multipart', parts: body.parts.map(toPart) };
-    default:
+    case 'json':
+    case 'text':
+    case 'binary':
       return body;
   }
 }
@@ -169,7 +171,10 @@ function fromBody(body: RequestBodyDraft): RequestBody {
       return { kind: 'form', fields: [...body.fields] };
     case 'multipart':
       return { kind: 'multipart', parts: [...body.parts] };
-    default:
+    case 'none':
+    case 'json':
+    case 'text':
+    case 'binary':
       return body;
   }
 }
