@@ -20,6 +20,7 @@ mod common;
 
 mod attachments;
 mod folders;
+mod http;
 mod notes;
 mod spaces;
 mod transfer;
