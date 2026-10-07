@@ -389,5 +389,66 @@ describe('HTTP collections', () => {
         echo.close();
       }
     });
+
+    it('keeps the cookies an answer sets, sends them back, and empties the jar after saying how many', async () => {
+      const heard: (string | undefined)[] = [];
+      const server = createServer((request, response) => {
+        heard.push(request.headers.cookie);
+        if (request.url === '/login') response.setHeader('Set-Cookie', ['session=abc; Path=/; HttpOnly']);
+        response.end('ok');
+      });
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      const { port } = server.address() as AddressInfo;
+      try {
+        const api = await bridge.createHttpCollection('Bocal');
+        const created = await bridge.createHttpRequest({
+          ...draft(api.id, null, 'Login'),
+          document: { url: `http://127.0.0.1:${port}/login`, description: '' },
+        });
+        await press('1', ['Control']);
+        await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+        await press('3', ['Control']);
+        await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+        if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
+        await $(`${testid('http-node')}[data-id="${created.id}"] ${testid('http-node-name')}`).click();
+        await $(testid('http-response-idle')).waitForDisplayed({ timeout: 10_000 });
+
+        await $(testid('http-send')).click();
+        await $(testid('http-response-status')).waitForDisplayed({ timeout: 10_000 });
+        await setField(testid('http-url'), `http://127.0.0.1:${port}/me`);
+        await $(testid('http-send')).click();
+        await eventually(
+          () => Promise.resolve(heard),
+          (seen) => seen.length === 2,
+          'the second send',
+        );
+        expect(heard).toEqual([undefined, 'session=abc']);
+
+        await $(testid('http-cookies-open')).click();
+        await eventually(
+          () =>
+            readEach(
+              `${testid('http-cookies-domain')}[data-domain="127.0.0.1"] ${testid('http-cookie')}`,
+              'text',
+            ),
+          (rows) => rows.length === 1 && rows[0]!.includes('session'),
+          'the cookie in the jar',
+        );
+        await $(testid('http-cookies-clear')).click();
+        await $(testid('http-cookies-clear-count')).waitForDisplayed({ timeout: 10_000 });
+        await $(testid('http-cookies-clear-confirm')).click();
+        await $(testid('http-cookies-empty')).waitForDisplayed({ timeout: 10_000 });
+        await $(testid('http-cookies-close')).click();
+        await $(testid('http-cookies-dialog')).waitForExist({ reverse: true, timeout: 10_000 });
+
+        const tab = `${testid('http-tab')}[data-key="${created.id}"]`;
+        await $(`${tab} ${testid('http-tab-close')}`).click();
+        await $(testid('http-close-discard')).click();
+        await $(tab).waitForExist({ reverse: true, timeout: 10_000 });
+        await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+      } finally {
+        server.close();
+      }
+    });
   });
 });

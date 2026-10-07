@@ -82,6 +82,16 @@
     color: var(--text-2);
   }
 
+  th:nth-child(1),
+  th:nth-child(3) {
+    width: 16%;
+  }
+
+  th:nth-child(2),
+  th:nth-child(4) {
+    width: 20%;
+  }
+
   th:last-child {
     width: 36px;
   }
@@ -100,8 +110,9 @@
   color: var(--text-0);
 }
 
-.flags {
+.cookies td.flags {
   white-space: normal;
+  text-overflow: clip;
 }
 
 .flag {

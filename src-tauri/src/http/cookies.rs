@@ -117,6 +117,10 @@ fn parse(line: &str, url: &Url, now: DateTime<Utc>) -> Option<Change> {
             _ => {}
         }
     }
+    // As browsers do: a plain connection cannot set what only a secure one may read.
+    if cookie.secure && !is_secure(url) {
+        return None;
+    }
     if let Some(seconds) = max_age {
         cookie.expires = Some(now + TimeDelta::seconds(seconds.max(0)));
     }
@@ -125,6 +129,10 @@ fn parse(line: &str, url: &Url, now: DateTime<Utc>) -> Option<Change> {
     } else {
         Change::Set(cookie)
     })
+}
+
+fn is_secure(url: &Url) -> bool {
+    url.scheme() == "https" || url.scheme() == "wss"
 }
 
 /// What the answer's `Set-Cookie` headers do to the jar, in their order.
@@ -139,7 +147,7 @@ pub fn received(headers: &[KeyValue], url: &Url, now: DateTime<Utc>) -> Vec<Chan
 /// The `Cookie` header a request to `url` carries, the longest paths first; `None` for none.
 pub fn header_for(jar: &[JarCookie], url: &Url, now: DateTime<Utc>) -> Option<String> {
     let host = url.host_str()?.to_ascii_lowercase();
-    let secure = url.scheme() == "https" || url.scheme() == "wss";
+    let secure = is_secure(url);
     let mut sent: Vec<&JarCookie> = jar
         .iter()
         .filter(|cookie| !cookie.expired(now))
@@ -217,6 +225,9 @@ mod tests {
         );
         assert_eq!(theme.expires, Some(now() + TimeDelta::hours(1)));
         assert!(matches!(&changes[2], Change::Remove(cookie) if cookie.name == "old"));
+
+        let plain = Url::parse("http://api.exemple.fr/").unwrap();
+        assert!(received(&[set_cookie("csrf=1; Secure")], &plain, now()).is_empty());
     }
 
     #[test]
