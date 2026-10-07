@@ -12,6 +12,12 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [0.10.0] - 2026-10-07
+
+### 🧰 Under the hood
+
+- Bump the version to 0.10.0
+
 ## [0.9.3] - 2026-10-07
 
 ### ✨ Added
