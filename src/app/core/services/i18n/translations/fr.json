@@ -2738,7 +2738,8 @@
         "newFolder": "Nouveau dossier",
         "rename": "Renommer",
         "duplicate": "Dupliquer",
-        "delete": "Supprimer"
+        "delete": "Supprimer",
+        "settings": "Réglages…"
       },
       "copyName": "{{name}} (copie)",
       "expand": "Déplier {{name}}",
@@ -2771,7 +2772,9 @@
       "parts": "Parties de la requête",
       "sections": {
         "params": "Paramètres",
-        "headers": "En-têtes"
+        "headers": "En-têtes",
+        "auth": "Auth",
+        "body": "Corps"
       }
     },
     "table": {
@@ -2794,6 +2797,68 @@
       "title": "« {{name}} » a des modifications",
       "hint": "Elles ne sont pas encore enregistrées.",
       "discard": "Fermer sans enregistrer"
+    },
+    "headers": {
+      "fromBody": "d'après le corps"
+    },
+    "auth": {
+      "kind": "Type",
+      "kinds": {
+        "inherit": "Héritée",
+        "none": "Aucune",
+        "basic": "Basic",
+        "bearer": "Bearer",
+        "apiKey": "Clé d'API"
+      },
+      "inheritsShort": "héritée",
+      "from": {
+        "collection": "héritée de la collection {{name}}",
+        "folder": "héritée du dossier {{name}}"
+      },
+      "nothingAbove": "Rien au-dessus ne fixe d'authentification : aucune n'est envoyée.",
+      "placeFirst": "Une fois la requête enregistrée, elle prendra l'authentification de sa collection ou de son dossier.",
+      "noneHint": "Aucune authentification n'est envoyée.",
+      "username": "Utilisateur",
+      "keyName": "Nom",
+      "secrets": {
+        "password": "Mot de passe",
+        "token": "Jeton",
+        "value": "Valeur"
+      },
+      "place": "Envoyée dans",
+      "places": {
+        "header": "un en-tête",
+        "query": "la query"
+      },
+      "show": "Afficher le secret",
+      "hide": "Masquer le secret"
+    },
+    "body": {
+      "kind": "Type de corps",
+      "kinds": {
+        "none": "Aucun",
+        "json": "JSON",
+        "text": "Texte",
+        "form": "Formulaire",
+        "multipart": "Multipart",
+        "binary": "Fichier"
+      },
+      "sentAs": "Envoyé en {{type}}",
+      "format": "Formater",
+      "noneHint": "La requête part sans corps.",
+      "partKind": "Type",
+      "partText": "Texte",
+      "partFile": "Fichier",
+      "chooseFile": "Choisir un fichier…",
+      "noFile": "Aucun fichier choisi",
+      "fileHint": "Le fichier est lu au moment de l'envoi : ses octets ne sont jamais gardés dans la bibliothèque."
+    },
+    "settings": {
+      "title": {
+        "collection": "Réglages de la collection {{name}}",
+        "folder": "Réglages du dossier {{name}}"
+      },
+      "hint": "Ses requêtes en héritent : une requête dont l'auth est « Héritée » prend celle-ci, et ses en-têtes s'ajoutent aux leurs."
     }
   }
 }

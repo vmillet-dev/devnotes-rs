@@ -40,8 +40,9 @@ use folders::{
 };
 use http::{
     count_http_contents, create_http_collection, create_http_folder, create_http_request,
-    delete_http_item, duplicate_http_item, get_http_request, http_tree, move_http_item,
-    rename_http_item, reorder_http_collection, save_http_request, sync_http_query,
+    delete_http_item, describe_http_body, duplicate_http_item, get_http_request, http_settings,
+    http_tree, inherited_http_settings, move_http_item, rename_http_item, reorder_http_collection,
+    save_http_request, save_http_settings, sync_http_query,
 };
 use json::explore_json;
 use libraries::{create_library, delete_library, list_libraries, open_library, rename_library};
@@ -168,6 +169,10 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             move_http_item::<tauri::Wry>,
             reorder_http_collection::<tauri::Wry>,
             sync_http_query,
+            http_settings::<tauri::Wry>,
+            save_http_settings::<tauri::Wry>,
+            inherited_http_settings::<tauri::Wry>,
+            describe_http_body,
             board_view::<tauri::Wry>,
             save_board_layout::<tauri::Wry>,
             arrange_board::<tauri::Wry>,

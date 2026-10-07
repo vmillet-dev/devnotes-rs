@@ -13,6 +13,7 @@ use super::model::{
     HttpItemKind, HttpNode, HttpPlace, HttpRequest, HttpRequestDraft, HttpRequestPatch,
     HttpRequestSummary, HttpTree,
 };
+use super::settings::{HttpOrigin, Inherited};
 use crate::db::schema::{http_collections, http_folders, http_requests};
 use crate::db::{Library, iso8601};
 use crate::error::{StorageError, ValidationError};
@@ -880,6 +881,95 @@ fn copy_children(
         copy_folder(connection, &folder, to_collection, to_folder, now)?;
     }
     Ok(())
+}
+
+fn open_settings(vault: &Vault, id: &str, sealed: &str) -> Result<ContainerSettings, StorageError> {
+    serde_json::from_str(&vault.open(sealed)?).map_err(|_| StorageError::CorruptRow {
+        id: id.to_string(),
+        field: "settings",
+    })
+}
+
+/// A collection's or a folder's own settings, what its requests inherit.
+pub fn settings(
+    connection: &mut Library,
+    item: &HttpItem,
+) -> Result<ContainerSettings, StorageError> {
+    let (connection, vault) = connection.split();
+    let sealed = match item.kind {
+        HttpItemKind::Collection => find_collection(connection, &item.id)?.settings,
+        HttpItemKind::Folder => find_folder(connection, &item.id)?.settings,
+        HttpItemKind::Request => {
+            return Err(
+                ValidationError::new("kind", "a request has no settings of its own").into(),
+            );
+        }
+    };
+    open_settings(vault, &item.id, &sealed)
+}
+
+pub fn save_settings(
+    connection: &mut Library,
+    item: &HttpItem,
+    settings: &ContainerSettings,
+) -> Result<(), StorageError> {
+    let (connection, vault) = connection.split();
+    let sealed = seal_json(vault, settings)?;
+    let changed = match item.kind {
+        HttpItemKind::Collection => diesel::update(http_collections::table.find(&item.id))
+            .set(http_collections::settings.eq(sealed))
+            .execute(connection)?,
+        HttpItemKind::Folder => diesel::update(http_folders::table.find(&item.id))
+            .set(http_folders::settings.eq(sealed))
+            .execute(connection)?,
+        HttpItemKind::Request => {
+            return Err(
+                ValidationError::new("kind", "a request has no settings of its own").into(),
+            );
+        }
+    };
+    if changed == 0 {
+        return Err(not_found(&item.id));
+    }
+    Ok(())
+}
+
+/// What a request in `folder_id` of `collection_id` inherits: the collection, then each folder
+/// down to its own.
+pub fn inherited(
+    connection: &mut Library,
+    collection_id: &str,
+    folder_id: Option<&str>,
+) -> Result<Inherited, StorageError> {
+    let (connection, vault) = connection.split();
+    let collection = find_collection(connection, collection_id)?;
+    let mut folders = Vec::new();
+    let mut next = folder_id.map(str::to_string);
+    while let Some(id) = next.take() {
+        let folder = find_folder(connection, &id)?;
+        next.clone_from(&folder.parent_id);
+        folders.push(folder);
+    }
+
+    let mut levels = vec![(
+        HttpOrigin {
+            kind: HttpItemKind::Collection,
+            id: collection.id.clone(),
+            name: vault.open(&collection.name)?,
+        },
+        open_settings(vault, &collection.id, &collection.settings)?,
+    )];
+    for folder in folders.into_iter().rev() {
+        levels.push((
+            HttpOrigin {
+                kind: HttpItemKind::Folder,
+                id: folder.id.clone(),
+                name: vault.open(&folder.name)?,
+            },
+            open_settings(vault, &folder.id, &folder.settings)?,
+        ));
+    }
+    Ok(super::settings::inherit(&levels))
 }
 
 #[cfg(test)]

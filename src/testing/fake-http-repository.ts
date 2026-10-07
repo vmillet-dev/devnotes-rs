@@ -8,7 +8,12 @@ import {
   HttpPlace,
   HttpRequestDraft,
   HttpTree,
+  BodyAnswer,
+  ContainerSettingsDraft,
+  EMPTY_PARTS,
+  InheritedParts,
   KeyValueRow,
+  RequestBodyDraft,
   OpenedRequest,
   QuerySide,
   RequestDraft,
@@ -33,6 +38,9 @@ interface Synced {
 export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpRepository> {
   tree$: HttpTree = { collections: [] };
   contentsAnswer: HttpContents = { folders: 0, requests: 0 };
+  settingsAnswer: ContainerSettingsDraft = { auth: { kind: 'inherit' }, headers: [] };
+  inheritedAnswer: InheritedParts = { auth: { kind: 'none' }, authFrom: null, headers: [] };
+  bodyAnswer: BodyAnswer = { contentType: null, problem: null };
   /** What `syncQuery` answers; unset, it hands back what it was given. */
   synced: Synced | null = null;
   readonly requests = new Map<string, OpenedRequest>();
@@ -59,7 +67,7 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
       name: draft.name ?? id,
       kind: draft.kind ?? 'http',
       method: draft.method ?? 'GET',
-      parts: draft.parts ?? { url: '', params: [], headers: [], description: '' },
+      parts: draft.parts ?? EMPTY_PARTS,
       createdAt: '2026-10-07T00:00:00.000Z',
       updatedAt: '2026-10-07T00:00:00.000Z',
     };
@@ -121,6 +129,22 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
 
   syncQuery(url: string, params: readonly KeyValueRow[], edited: QuerySide): Promise<Synced> {
     return this.record('syncQuery', [url, params, edited], () => this.synced ?? { url, params });
+  }
+
+  settings(item: HttpItem): Promise<ContainerSettingsDraft> {
+    return this.record('settings', [item], () => this.settingsAnswer);
+  }
+
+  saveSettings(item: HttpItem, settings: ContainerSettingsDraft): Promise<void> {
+    return this.record('saveSettings', [item, settings], () => undefined);
+  }
+
+  inherited(collectionId: string, folderId: string | null): Promise<InheritedParts> {
+    return this.record('inherited', [collectionId, folderId], () => this.inheritedAnswer);
+  }
+
+  describeBody(body: RequestBodyDraft): Promise<BodyAnswer> {
+    return this.record('describeBody', [body], () => this.bodyAnswer);
   }
 
   rename(item: HttpItem, name: string): Promise<void> {

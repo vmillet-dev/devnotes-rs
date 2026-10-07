@@ -50,7 +50,97 @@ pub struct HttpItem {
 /// `#[serde(default)]`: one added later needs no migration.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase", default)]
-pub struct ContainerSettings {}
+pub struct ContainerSettings {
+    /// `Inherit` on a collection is no auth at all: nothing is above it.
+    pub auth: RequestAuth,
+    pub headers: Vec<KeyValue>,
+}
+
+/// What a request sends as its body. A file is a path, read by Rust when the request is sent:
+/// its bytes never enter the library.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum RequestBody {
+    #[default]
+    None,
+    Json {
+        text: String,
+    },
+    Text {
+        text: String,
+    },
+    /// `application/x-www-form-urlencoded`.
+    Form {
+        fields: Vec<KeyValue>,
+    },
+    /// `multipart/form-data`: a text field, or a file by its path.
+    Multipart {
+        parts: Vec<FormPart>,
+    },
+    Binary {
+        path: String,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase", default)]
+pub struct FormPart {
+    pub enabled: bool,
+    pub key: String,
+    /// The text sent, or the path of the file sent.
+    pub value: String,
+    pub file: bool,
+    pub description: String,
+}
+
+impl Default for FormPart {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            key: String::new(),
+            value: String::new(),
+            file: false,
+            description: String::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum KeyPlace {
+    #[default]
+    Header,
+    Query,
+}
+
+/// `Inherit` takes the auth of the nearest folder, then the collection, that sets one.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum RequestAuth {
+    #[default]
+    Inherit,
+    None,
+    Basic {
+        username: String,
+        password: String,
+    },
+    Bearer {
+        token: String,
+    },
+    ApiKey {
+        name: String,
+        value: String,
+        place: KeyPlace,
+    },
+}
 
 /// A request's parts, sealed as one document. Each field is `#[serde(default)]`: one added
 /// later needs no migration, and a document written by an older version still opens.
@@ -61,6 +151,8 @@ pub struct RequestDocument {
     /// In step with the URL's query: an enabled row is in it, a disabled one is kept aside.
     pub params: Vec<KeyValue>,
     pub headers: Vec<KeyValue>,
+    pub body: RequestBody,
+    pub auth: RequestAuth,
     pub description: String,
 }
 

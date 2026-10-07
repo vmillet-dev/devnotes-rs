@@ -151,6 +151,12 @@ export const commands = {
 	reorderHttpCollection: (id: string, index: number) => typedError<null, AppError>(__TAURI_INVOKE("reorder_http_collection", { id, index })),
 	/**  The edited side wins: the query string rewritten from the table, or the table from the URL. */
 	syncHttpQuery: (url: string, params: KeyValue[], edited: QuerySide) => typedError<SyncedQuery, AppError>(__TAURI_INVOKE("sync_http_query", { url, params, edited })),
+	httpSettings: (item: HttpItem) => typedError<ContainerSettings, AppError>(__TAURI_INVOKE("http_settings", { item })),
+	saveHttpSettings: (item: HttpItem, settings: ContainerSettings) => typedError<null, AppError>(__TAURI_INVOKE("save_http_settings", { item, settings })),
+	/**  What a request placed there inherits, and from where: « héritée de la collection … ». */
+	inheritedHttpSettings: (collectionId: string, folderId: string | null) => typedError<Inherited, AppError>(__TAURI_INVOKE("inherited_http_settings", { collectionId, folderId })),
+	/**  What a body implies, and whether a JSON one reads: the editor says both as it is typed. */
+	describeHttpBody: (body: RequestBody) => typedError<BodyAnswer, AppError>(__TAURI_INVOKE("describe_http_body", { body })),
 	/**
 	 *  The second way to look at a space: folders as zones, their notes inside, the loose ones
 	 *  beside them. It reads the whole space and marks what matches rather than narrowing, and
@@ -444,6 +450,11 @@ export type BoardZone = {
 	notes: BoardNote[],
 };
 
+export type BodyAnswer = {
+	contentType: string | null,
+	problem: JsonError | null,
+};
+
 export type ByteEncoding = "base64" | 
 /**  `-` and `_` for `+` and `/`, without padding: what a URL or a JWT carries. */
 "base64Url" | "base32" | "hex" | "binary" | "decimal";
@@ -680,6 +691,16 @@ export type ConnectionEstimate = {
 	/**  In bits per second, exact. */
 	rate: string,
 	span: TransferTime,
+};
+
+/**
+ *  What a collection or a folder hands its requests (#478, #484). Each field is
+ *  `#[serde(default)]`: one added later needs no migration.
+ */
+export type ContainerSettings = {
+	/**  `Inherit` on a collection is no auth at all: nothing is above it. */
+	auth?: RequestAuth,
+	headers?: KeyValue[],
 };
 
 export type Contrast = {
@@ -1024,6 +1045,15 @@ export type FolderDraft = {
 	name: string,
 };
 
+export type FormPart = {
+	enabled?: boolean,
+	key?: string,
+	/**  The text sent, or the path of the file sent. */
+	value?: string,
+	file?: boolean,
+	description?: string,
+};
+
 export type Frequency = {
 	character: string,
 	/**  `U+0065 U+0301`: every code point of a character written with several. */
@@ -1134,6 +1164,13 @@ export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | 
 
 export type HttpNode = { kind: "folder"; folder: HttpFolder; children: HttpNode[] } | { kind: "request"; request: HttpRequestSummary };
 
+/**  Where an inherited value was set: what the request says it comes from. */
+export type HttpOrigin = {
+	kind: HttpItemKind,
+	id: string,
+	name: string,
+};
+
 /**  Under which parent, and at which rank among its folders and requests. */
 export type HttpPlace = {
 	collectionId: string,
@@ -1238,6 +1275,19 @@ export type ImportReport = {
 	 *  will never load.
 	 */
 	attachmentsMissing: number,
+};
+
+export type Inherited = {
+	/**  Never `Inherit`: what a request inheriting gets, `None` when nothing above sets one. */
+	auth: RequestAuth,
+	authFrom: HttpOrigin | null,
+	/**  Enabled and named, one a name: a folder's overrides its collection's. */
+	headers: InheritedHeader[],
+};
+
+export type InheritedHeader = {
+	header: KeyValue,
+	from: HttpOrigin,
 };
 
 export type InstantAnswer = { kind: "read"; readAs: ReadAs; 
@@ -1464,6 +1514,8 @@ export type JwtRequest = {
 	secret: string,
 	secretIsBase64: boolean,
 };
+
+export type KeyPlace = "header" | "query";
 
 /**  A row of a request's parameters or headers. */
 export type KeyValue = {
@@ -1946,6 +1998,19 @@ export type Registry = {
 	open: string | null,
 };
 
+/**  `Inherit` takes the auth of the nearest folder, then the collection, that sets one. */
+export type RequestAuth = { kind: "inherit" } | { kind: "none" } | { kind: "basic"; username: string; password: string } | { kind: "bearer"; token: string } | { kind: "apiKey"; name: string; value: string; place: KeyPlace };
+
+/**
+ *  What a request sends as its body. A file is a path, read by Rust when the request is sent:
+ *  its bytes never enter the library.
+ */
+export type RequestBody = { kind: "none" } | { kind: "json"; text: string } | { kind: "text"; text: string } | 
+/**  `application/x-www-form-urlencoded`. */
+{ kind: "form"; fields: KeyValue[] } | 
+/**  `multipart/form-data`: a text field, or a file by its path. */
+{ kind: "multipart"; parts: FormPart[] } | { kind: "binary"; path: string };
+
 /**
  *  A request's parts, sealed as one document. Each field is `#[serde(default)]`: one added
  *  later needs no migration, and a document written by an older version still opens.
@@ -1955,6 +2020,8 @@ export type RequestDocument = {
 	/**  In step with the URL's query: an enabled row is in it, a disabled one is kept aside. */
 	params?: KeyValue[],
 	headers?: KeyValue[],
+	body?: RequestBody,
+	auth?: RequestAuth,
 	description?: string,
 };
 

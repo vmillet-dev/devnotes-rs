@@ -168,3 +168,7 @@
     }
   </ul>
 </nav>
+
+@if (settingsFor(); as row) {
+  <app-container-settings-dialog [row]="row" (closed)="closeSettings()" />
+}

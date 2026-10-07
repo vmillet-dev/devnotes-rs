@@ -1,0 +1,94 @@
+<table
+  class="table"
+  data-testid="http-multipart-table"
+  [attr.aria-label]="'http.body.kinds.multipart' | transloco"
+>
+  <thead>
+    <tr>
+      <th scope="col" class="check-column">
+        <span class="visually-hidden">{{ 'http.table.enabled' | transloco }}</span>
+      </th>
+      <th scope="col">{{ 'http.table.key' | transloco }}</th>
+      <th scope="col" class="kind-column">{{ 'http.body.partKind' | transloco }}</th>
+      <th scope="col">{{ 'http.table.value' | transloco }}</th>
+      <th scope="col" class="remove-column">
+        <span class="visually-hidden">{{ 'http.table.remove' | transloco }}</span>
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    @for (part of shown(); track $index) {
+      @let blank = isBlank($index);
+      <tr data-testid="http-part-row" [class.blank]="blank" [class.off]="!part.enabled">
+        <td class="check-column">
+          @if (!blank) {
+            <input
+              type="checkbox"
+              class="check"
+              data-testid="http-part-enabled"
+              [checked]="part.enabled"
+              [attr.aria-label]="'http.table.enable' | transloco: { key: part.key }"
+              (change)="onToggle($index, $event)"
+            />
+          }
+        </td>
+        <td>
+          <input
+            type="text"
+            class="cell mono"
+            data-testid="http-part-key"
+            spellcheck="false"
+            autocomplete="off"
+            [attr.aria-label]="'http.table.key' | transloco"
+            [placeholder]="blank ? ('http.table.newKey' | transloco) : ''"
+            [value]="part.key"
+            (input)="onInput($index, 'key', $event)"
+          />
+        </td>
+        <td class="kind-column">
+          <button
+            type="button"
+            class="kind"
+            data-testid="http-part-kind"
+            [attr.aria-pressed]="part.file"
+            (click)="switchKind($index)"
+          >
+            {{ (part.file ? 'http.body.partFile' : 'http.body.partText') | transloco }}
+          </button>
+        </td>
+        <td>
+          @if (part.file) {
+            <button type="button" class="cell pick" data-testid="http-part-choose" (click)="choose($index)">
+              {{ part.value || ('http.body.chooseFile' | transloco) }}
+            </button>
+          } @else {
+            <input
+              type="text"
+              class="cell mono"
+              data-testid="http-part-value"
+              spellcheck="false"
+              autocomplete="off"
+              [attr.aria-label]="'http.table.value' | transloco"
+              [value]="part.value"
+              (input)="onInput($index, 'value', $event)"
+            />
+          }
+        </td>
+        <td class="remove-column">
+          @if (!blank) {
+            <button
+              type="button"
+              class="remove"
+              data-testid="http-part-remove"
+              [attr.aria-label]="'http.table.removeRow' | transloco: { key: part.key }"
+              [attr.title]="'http.table.removeRow' | transloco: { key: part.key }"
+              (click)="remove($index)"
+            >
+              <span aria-hidden="true">×</span>
+            </button>
+          }
+        </td>
+      </tr>
+    }
+  </tbody>
+</table>

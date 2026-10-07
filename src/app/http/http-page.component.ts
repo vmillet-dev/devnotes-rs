@@ -38,8 +38,13 @@ export class HttpPageComponent implements OnInit {
   protected readonly closing = signal<RequestTab | null>(null);
 
   ngOnInit(): void {
-    void this.collections.load();
-    void this.tabs.restore();
+    void this.open();
+  }
+
+  /** A tab whose request went while the page was away closes; one never read is left alone. */
+  private async open(): Promise<void> {
+    const [read] = await Promise.all([this.collections.load(), this.tabs.restore()]);
+    if (read) this.tabs.prune(this.collections.tree());
   }
 
   protected askSave(tab: RequestTab, thenClose = false): void {
