@@ -12,6 +12,25 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [0.9.3] - 2026-10-07
+
+### ✨ Added
+
+- Add a CIDR subnet calculator to the tools (#690)
+- Add a QR code generator to the tools (#689)
+- Add Markdown and Mustache cheat sheets to the references (#685)
+- Add a regex cheat sheet to the references (#688)
+- Add the ASCII table to the references (#687)
+- Add common ports and Unix signals to the references (#686)
+- Add HTTP headers and MIME types to the references (#684)
+- Open the References category with HTTP status codes (#682)
+
+### 🧰 Under the hood
+
+- Check the milestone branches in CI (#694)
+- Bump the version to 0.9.3
+- Lay the references out in columns, one card a group (#692)
+
 ## [0.9.2] - 2026-10-06
 
 ### ✨ Added
