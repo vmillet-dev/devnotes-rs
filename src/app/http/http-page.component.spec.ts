@@ -196,7 +196,13 @@ describe('HttpPageComponent', () => {
 
     fixture = TestBed.createComponent(HttpPageComponent);
     fixture.autoDetectChanges();
-    await vi.waitFor(() => expect(tabs().tabs().map((tab) => tab.key)).toEqual(['Login']));
+    await vi.waitFor(() =>
+      expect(
+        tabs()
+          .tabs()
+          .map((tab) => tab.key),
+      ).toEqual(['Login']),
+    );
   });
 
   it('closes an unmodified tab at once, and hides the rail on Ctrl+B', async () => {
