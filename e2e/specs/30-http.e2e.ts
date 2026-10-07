@@ -56,7 +56,8 @@ describe('HTTP collections', () => {
       requests: 3,
     });
     await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
-    expect(outline(await bridge.httpTree()).some((line) => line.startsWith('API Paiements'))).toBe(false);
+    const left = (await bridge.httpTree()).collections.map((node) => node.collection.id);
+    expect(left).not.toContain(api.id);
   });
 
   describe('the rail', () => {
@@ -102,7 +103,7 @@ describe('HTTP collections', () => {
         await eventually(rowNames, (names) => names.some((name) => name.endsWith(request)), request);
       }
       await eventually(
-        () => $(`${testid('http-open-request')} h1`).getText(),
+        () => $(testid('http-request-name')).getValue(),
         (text) => text === 'Annuler',
         'the new request opened',
       );
@@ -133,6 +134,50 @@ describe('HTTP collections', () => {
       expect((await $(testid('http-delete-count')).getText()).replace(/\D/g, '')).toBe('12');
       await $(testid('http-delete-submit')).click();
       await eventually(rowNames, (names) => !names.includes('Boutique'), 'the collection gone');
+    });
+  });
+
+  describe('a request in its tab', () => {
+    after(async () => {
+      await press('1', ['Control']);
+      await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+    });
+
+    it('keeps the query and its table in step, takes a header, and saves on Ctrl+S', async () => {
+      const api = await bridge.createHttpCollection('Facturation');
+      const created = await bridge.createHttpRequest(draft(api.id, null, 'Factures'));
+      await press('3', ['Control']);
+      await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+      if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
+      await $(`${testid('http-node')}[data-id="${created.id}"] ${testid('http-node-name')}`).click();
+      await eventually(
+        () => $(testid('http-request-name')).getValue(),
+        (name) => name === 'Factures',
+        'the request in its tab',
+      );
+
+      await setField(testid('http-url'), '{{baseUrl}}/invoices?page=1&limit=50');
+      await eventually(
+        () => readEach(`${testid('http-params-table')} ${testid('http-kv-key')}`, 'value'),
+        (keys) => keys.join() === 'page,limit,',
+        'the table read from the query',
+      );
+      expect(await readEach(testid('http-url-variable'), 'text')).toEqual(['{{baseUrl}}']);
+      expect(await $(testid('http-tab-dirty')).isExisting()).toBe(true);
+
+      await $(`${testid('http-section')}[data-section="headers"]`).click();
+      await setField(`${testid('http-headers-table')} ${testid('http-kv-key')}`, 'Accept');
+      await press('s', ['Control']);
+      await $(testid('http-tab-dirty')).waitForExist({ reverse: true, timeout: 10_000 });
+
+      const saved = await bridge.httpRequest(created.id);
+      expect(saved.document.url).toBe('{{baseUrl}}/invoices?page=1&limit=50');
+      expect(saved.document.params?.map((row) => row.key)).toEqual(['page', 'limit']);
+      expect(saved.document.headers?.map((row) => row.key)).toEqual(['Accept']);
+
+      await $(testid('http-tab-close')).click();
+      await $(testid('http-workspace-empty')).waitForDisplayed({ timeout: 10_000 });
+      await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
     });
   });
 });

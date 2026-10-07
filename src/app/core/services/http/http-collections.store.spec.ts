@@ -59,12 +59,12 @@ describe('HttpCollectionsStore', () => {
     expect(store().collapsed().size).toBe(0);
   });
 
-  it('creates under a parent it unfolds, reads the tree again, and opens a new request', async () => {
+  it('creates under a parent it unfolds, reads the tree again, and answers a new request’s id', async () => {
     await store().load();
     store().toggle('Auth');
 
     await store().createFolder('API', null, 'Webhooks');
-    await store().createRequest('API', 'Auth', 'Refresh');
+    const id = await store().createRequest('API', 'Auth', 'Refresh');
 
     expect(http.callsOf('createFolder')).toEqual([['API', null, 'Webhooks']]);
     expect(http.callsOf('createRequest')[0]?.[0]).toMatchObject({
@@ -75,19 +75,20 @@ describe('HttpCollectionsStore', () => {
       method: 'GET',
     });
     expect(store().collapsed().has('Auth')).toBe(false);
-    expect(store().openId()).toMatch(/^request-/);
+    expect(id).toMatch(/^request-/);
     expect(http.callsOf('tree').length).toBeGreaterThanOrEqual(3);
+
+    http.failNext = new Error('disk');
+    expect(await store().createRequest('API', null, 'Perdue')).toBeNull();
   });
 
-  it('closes the open request when a deletion took it, and keeps it otherwise', async () => {
+  it('deletes through Rust and reads the tree again', async () => {
     await store().load();
-    store().open('Old');
-    await store().delete({ kind: 'request', id: 'Health' });
-    expect(store().openId()).toBe('Old');
-
     http.tree$ = { collections: [] };
     await store().delete({ kind: 'collection', id: 'API' });
-    expect(store().openId()).toBeNull();
+
+    expect(http.callsOf('delete')).toEqual([[{ kind: 'collection', id: 'API' }]]);
+    expect(store().rows()).toEqual([]);
   });
 
   it('sends a move or a reorder to Rust, unfolding the folder it lands in', async () => {

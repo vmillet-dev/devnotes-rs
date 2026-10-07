@@ -1,0 +1,82 @@
+@let draft = tab().draft;
+<div class="editor" data-testid="http-request-editor" [attr.data-key]="tab().key">
+  <input
+    type="text"
+    class="name"
+    data-testid="http-request-name"
+    [attr.aria-label]="'http.editor.name' | transloco"
+    [value]="draft.name"
+    (input)="onName($event)"
+  />
+
+  <div class="line">
+    @if (draft.kind === 'http') {
+      <app-choice-menu
+        class="method"
+        kind="http-method"
+        triggerTestId="http-method"
+        [label]="'http.editor.method' | transloco"
+        [options]="methods"
+        [currentId]="draft.method"
+        (chosen)="onMethod($event)"
+      />
+    } @else {
+      <span class="kind" data-testid="http-kind-badge" [attr.data-method]="badge()">{{ badge() }}</span>
+    }
+    <app-url-field
+      [value]="draft.parts.url"
+      [label]="'http.editor.url' | transloco"
+      [placeholder]="'http.editor.urlPlaceholder' | transloco"
+      (valueChange)="onUrl($event)"
+    />
+    <button
+      type="button"
+      class="save"
+      data-testid="http-save"
+      [disabled]="!dirty()"
+      [attr.title]="'http.editor.saveHint' | transloco"
+      (click)="save()"
+    >
+      {{ 'http.editor.save' | transloco }}
+    </button>
+  </div>
+
+  <div class="sections" role="tablist" [attr.aria-label]="'http.editor.parts' | transloco">
+    @for (id of sections; track id) {
+      <button
+        type="button"
+        role="tab"
+        class="section"
+        data-testid="http-section"
+        [attr.data-section]="id"
+        [class.on]="section() === id"
+        [attr.aria-selected]="section() === id"
+        (click)="section.set(id)"
+      >
+        {{ 'http.editor.sections.' + id | transloco }}
+        @if (counts()[id] > 0) {
+          <span class="count" data-testid="http-section-count">{{ counts()[id] }}</span>
+        }
+      </button>
+    }
+  </div>
+
+  <div class="panel" role="tabpanel">
+    @if (section() === 'params') {
+      <app-key-value-table
+        kind="params"
+        [label]="'http.editor.sections.params' | transloco"
+        [rows]="draft.parts.params"
+        (rowsChange)="onParams($event)"
+      />
+    } @else {
+      <app-key-value-table
+        kind="headers"
+        [label]="'http.editor.sections.headers' | transloco"
+        [rows]="draft.parts.headers"
+        [suggestions]="headerNames"
+        (rowsChange)="onHeaders($event)"
+      />
+    }
+  </div>
+</div>

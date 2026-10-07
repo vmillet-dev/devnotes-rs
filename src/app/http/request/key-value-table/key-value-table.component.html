@@ -1,0 +1,92 @@
+<table class="table" [attr.data-testid]="'http-' + kind() + '-table'" [attr.aria-label]="label()">
+  <thead>
+    <tr>
+      <th scope="col" class="check-column">
+        <span class="visually-hidden">{{ 'http.table.enabled' | transloco }}</span>
+      </th>
+      <th scope="col">{{ 'http.table.key' | transloco }}</th>
+      <th scope="col">{{ 'http.table.value' | transloco }}</th>
+      <th scope="col">{{ 'http.table.description' | transloco }}</th>
+      <th scope="col" class="remove-column">
+        <span class="visually-hidden">{{ 'http.table.remove' | transloco }}</span>
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    @for (row of shown(); track $index) {
+      @let blank = isBlank($index);
+      <tr data-testid="http-kv-row" [class.blank]="blank" [class.off]="!row.enabled">
+        <td class="check-column">
+          @if (!blank) {
+            <input
+              type="checkbox"
+              class="check"
+              data-testid="http-kv-enabled"
+              [checked]="row.enabled"
+              [attr.aria-label]="'http.table.enable' | transloco: { key: row.key }"
+              (change)="onToggle($index, $event)"
+            />
+          }
+        </td>
+        <td>
+          <input
+            type="text"
+            class="cell mono"
+            data-testid="http-kv-key"
+            spellcheck="false"
+            autocomplete="off"
+            [attr.list]="suggestions().length > 0 ? listId() : null"
+            [attr.aria-label]="'http.table.key' | transloco"
+            [placeholder]="blank ? ('http.table.newKey' | transloco) : ''"
+            [value]="row.key"
+            (input)="onInput($index, 'key', $event)"
+          />
+        </td>
+        <td>
+          <input
+            type="text"
+            class="cell mono"
+            data-testid="http-kv-value"
+            spellcheck="false"
+            autocomplete="off"
+            [attr.aria-label]="'http.table.value' | transloco"
+            [value]="row.value"
+            (input)="onInput($index, 'value', $event)"
+          />
+        </td>
+        <td>
+          <input
+            type="text"
+            class="cell"
+            data-testid="http-kv-description"
+            [attr.aria-label]="'http.table.description' | transloco"
+            [value]="row.description"
+            (input)="onInput($index, 'description', $event)"
+          />
+        </td>
+        <td class="remove-column">
+          @if (!blank) {
+            <button
+              type="button"
+              class="remove"
+              data-testid="http-kv-remove"
+              [attr.aria-label]="'http.table.removeRow' | transloco: { key: row.key }"
+              [attr.title]="'http.table.removeRow' | transloco: { key: row.key }"
+              (click)="remove($index)"
+            >
+              <span aria-hidden="true">×</span>
+            </button>
+          }
+        </td>
+      </tr>
+    }
+  </tbody>
+</table>
+
+@if (suggestions().length > 0) {
+  <datalist [id]="listId()">
+    @for (name of suggestions(); track name) {
+      <option [value]="name"></option>
+    }
+  </datalist>
+}

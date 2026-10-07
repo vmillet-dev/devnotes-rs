@@ -4,16 +4,26 @@
   }
 
   <main class="workspace">
-    @if (request(); as request) {
-      <header class="request" data-testid="http-open-request" [attr.data-id]="request.id">
-        <span class="method" [attr.data-method]="badge()">{{ badge() }}</span>
-        <h1 class="request-name">{{ request.name }}</h1>
-      </header>
-      <p class="request-url" data-testid="http-open-url">
-        {{ request.document.url || ('http.workspace.noUrl' | transloco) }}
-      </p>
+    <app-request-tabs (closeAsked)="closing.set($event)" />
+    @if (tabs.active(); as tab) {
+      <app-request-editor [tab]="tab" (saveAsked)="askSave(tab)" />
     } @else {
       <p class="empty" data-testid="http-workspace-empty">{{ 'http.workspace.empty' | transloco }}</p>
     }
   </main>
 </div>
+
+@if (placing(); as asked) {
+  <app-save-request-dialog
+    [name]="asked.tab.draft.name"
+    (saved)="place($event)"
+    (cancelled)="placing.set(null)"
+  />
+}
+@if (closing(); as modified) {
+  <app-close-request-dialog
+    [name]="modified.draft.name"
+    (chosen)="onCloseChoice($event)"
+    (cancelled)="closing.set(null)"
+  />
+}

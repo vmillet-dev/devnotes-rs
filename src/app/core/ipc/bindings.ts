@@ -149,6 +149,8 @@ export const commands = {
 	duplicateHttpItem: (item: HttpItem, name: string) => typedError<HttpItem, AppError>(__TAURI_INVOKE("duplicate_http_item", { item, name })),
 	moveHttpItem: (item: HttpItem, place: HttpPlace) => typedError<null, AppError>(__TAURI_INVOKE("move_http_item", { item, place })),
 	reorderHttpCollection: (id: string, index: number) => typedError<null, AppError>(__TAURI_INVOKE("reorder_http_collection", { id, index })),
+	/**  The edited side wins: the query string rewritten from the table, or the table from the URL. */
+	syncHttpQuery: (url: string, params: KeyValue[], edited: QuerySide) => typedError<SyncedQuery, AppError>(__TAURI_INVOKE("sync_http_query", { url, params, edited })),
 	/**
 	 *  The second way to look at a space: folders as zones, their notes inside, the loose ones
 	 *  beside them. It reads the whole space and marks what matches rather than narrowing, and
@@ -1463,6 +1465,14 @@ export type JwtRequest = {
 	secretIsBase64: boolean,
 };
 
+/**  A row of a request's parameters or headers. */
+export type KeyValue = {
+	enabled?: boolean,
+	key?: string,
+	value?: string,
+	description?: string,
+};
+
 /**
  *  Closed: the front receives a generated union, so an unknown value stops compiling
  *  there instead of being refused at runtime.
@@ -1918,6 +1928,8 @@ export type QueryParameter = {
 	value: string,
 };
 
+export type QuerySide = "url" | "params";
+
 /**  What was drawn rather than stamped: the characters as pasted, and the bits they hold. */
 export type RandomPart = {
 	text: string,
@@ -1940,6 +1952,9 @@ export type Registry = {
  */
 export type RequestDocument = {
 	url?: string,
+	/**  In step with the URL's query: an enabled row is in it, a disabled one is kept aside. */
+	params?: KeyValue[],
+	headers?: KeyValue[],
 	description?: string,
 };
 
@@ -2108,6 +2123,11 @@ export type Strength = "veryWeak" | "weak" | "fair" | "strong" | "veryStrong";
 export type Subnet = {
 	cidr: string,
 	usable: string,
+};
+
+export type SyncedQuery = {
+	url: string,
+	params: KeyValue[],
 };
 
 export type TagUsage = {

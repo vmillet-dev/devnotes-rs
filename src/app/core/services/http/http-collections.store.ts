@@ -3,7 +3,7 @@ import { HttpRepository } from '@core/data/http.repository';
 import { HttpContents, HttpItem, HttpTree } from '@core/model/http.model';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
-import { RailMove, holdsRequest, railRows } from './http-tree';
+import { RailMove, railRows } from './http-tree';
 
 /** In the library's preferences: which folds were left closed belongs to its collections. */
 const COLLAPSED_KEY = 'devnotes.notes.http.collapsed';
@@ -24,10 +24,6 @@ export class HttpCollectionsStore {
   private readonly _collapsed = signal<ReadonlySet<string>>(this.readCollapsed());
   readonly collapsed = this._collapsed.asReadonly();
 
-  private readonly _openId = signal<string | null>(null);
-  /** The request highlighted in the rail and shown beside it. */
-  readonly openId = this._openId.asReadonly();
-
   readonly rows = computed(() => railRows(this._tree(), this._collapsed()));
 
   async load(): Promise<void> {
@@ -41,10 +37,6 @@ export class HttpCollectionsStore {
     this.preferences.write(COLLAPSED_KEY, JSON.stringify([...next]));
   }
 
-  open(id: string | null): void {
-    this._openId.set(id);
-  }
-
   async createCollection(name: string): Promise<void> {
     await this.write(() => this.repository.createCollection(name));
   }
@@ -55,7 +47,8 @@ export class HttpCollectionsStore {
     await this.write(() => this.repository.createFolder(collectionId, parentId, name));
   }
 
-  async createRequest(collectionId: string, folderId: string | null, name: string): Promise<void> {
+  /** Answers the new request's id, for its tab to open. */
+  async createRequest(collectionId: string, folderId: string | null, name: string): Promise<string | null> {
     this.unfold(folderId ?? collectionId);
     const created = await this.write(() =>
       this.repository.createRequest({
@@ -64,10 +57,10 @@ export class HttpCollectionsStore {
         name,
         kind: 'http',
         method: 'GET',
-        document: { url: '', description: '' },
+        document: { url: '', params: [], headers: [], description: '' },
       }),
     );
-    if (created) this._openId.set(created.id);
+    return created?.id ?? null;
   }
 
   async rename(item: HttpItem, name: string): Promise<void> {
@@ -84,12 +77,7 @@ export class HttpCollectionsStore {
   }
 
   async delete(item: HttpItem): Promise<void> {
-    const done = await this.write(async () => {
-      await this.repository.delete(item);
-      return true;
-    });
-    const open = this._openId();
-    if (done && open !== null && !holdsRequest(this._tree(), open)) this._openId.set(null);
+    await this.write(() => this.repository.delete(item));
   }
 
   async apply(move: RailMove): Promise<void> {

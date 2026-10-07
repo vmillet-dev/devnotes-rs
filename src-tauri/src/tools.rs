@@ -35,7 +35,7 @@ use tauri::{AppHandle, Runtime};
 use crate::error::{AppError, StorageError};
 
 /// Off the window's thread even for a tool that answers in a microsecond: a large paste does not.
-async fn off_thread<T: Send + 'static>(
+pub(crate) async fn off_thread<T: Send + 'static>(
     work: impl FnOnce() -> T + Send + 'static,
 ) -> Result<T, AppError> {
     tauri::async_runtime::spawn_blocking(work)

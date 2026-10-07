@@ -230,3 +230,28 @@ export function dropMove(
 export function holdsRequest(tree: HttpTree, requestId: string): boolean {
   return index(tree).located.get(requestId)?.item.kind === 'request';
 }
+
+/** Where a request may be saved: each collection, then each of its folders, named by its path. */
+export interface SavePlace {
+  readonly id: string;
+  readonly collectionId: string;
+  readonly folderId: string | null;
+  readonly path: readonly string[];
+}
+
+export function savePlaces(tree: HttpTree): SavePlace[] {
+  const places: SavePlace[] = [];
+  const walk = (nodes: readonly HttpNode[], collectionId: string, path: readonly string[]) => {
+    for (const node of nodes) {
+      if (node.kind !== 'folder') continue;
+      const here = [...path, node.folder.name];
+      places.push({ id: node.folder.id, collectionId, folderId: node.folder.id, path: here });
+      walk(node.children, collectionId, here);
+    }
+  };
+  for (const { collection, children } of tree.collections) {
+    places.push({ id: collection.id, collectionId: collection.id, folderId: null, path: [collection.name] });
+    walk(children, collection.id, [collection.name]);
+  }
+  return places;
+}

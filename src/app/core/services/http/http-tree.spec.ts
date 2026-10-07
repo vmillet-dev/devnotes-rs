@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { HttpItem } from '@core/model/http.model';
 import { sampleTree } from '@testing/http-tree.fixture';
-import { dropMove, holdsRequest, keyMove, railRows } from './http-tree';
+import { dropMove, holdsRequest, keyMove, railRows, savePlaces } from './http-tree';
 
 const folder = (id: string): HttpItem => ({ kind: 'folder', id });
 const request = (id: string): HttpItem => ({ kind: 'request', id });
@@ -141,5 +141,19 @@ describe('holdsRequest', () => {
     expect(holdsRequest(sampleTree(), 'Old')).toBe(true);
     expect(holdsRequest(sampleTree(), 'Auth')).toBe(false);
     expect(holdsRequest(sampleTree(), 'Gone')).toBe(false);
+  });
+});
+
+describe('savePlaces', () => {
+  it('offers each collection, then each of its folders by its path', () => {
+    expect(savePlaces(sampleTree()).map((place) => place.path.join(' / '))).toEqual([
+      'API',
+      'API / Auth',
+      'API / Factures',
+      'API / Factures / Archives',
+      'Catalogue',
+      'Flux',
+    ]);
+    expect(savePlaces(sampleTree())[3]).toMatchObject({ collectionId: 'API', folderId: 'Archives' });
   });
 });

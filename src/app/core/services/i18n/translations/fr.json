@@ -2752,8 +2752,48 @@
       }
     },
     "workspace": {
-      "empty": "Choisissez une requête dans le rail, ou créez une collection avec ＋.",
-      "noUrl": "Pas encore d'URL"
+      "empty": "Ouvrez une requête depuis le rail, ou commencez-en une avec le ＋ des onglets."
+    },
+    "tabs": {
+      "label": "Requêtes ouvertes",
+      "untitled": "Nouvelle requête",
+      "modified": "modifiée",
+      "close": "Fermer {{name}}",
+      "new": "Nouvelle requête"
+    },
+    "editor": {
+      "name": "Nom de la requête",
+      "method": "Méthode",
+      "url": "URL",
+      "urlPlaceholder": "https://api.exemple.fr/ressource",
+      "save": "Enregistrer",
+      "saveHint": "Enregistrer (Ctrl+S)",
+      "parts": "Parties de la requête",
+      "sections": {
+        "params": "Paramètres",
+        "headers": "En-têtes"
+      }
+    },
+    "table": {
+      "enabled": "Envoyé",
+      "enable": "Envoyer {{key}}",
+      "key": "Clé",
+      "value": "Valeur",
+      "description": "Description",
+      "newKey": "Nouvelle clé",
+      "remove": "Retirer",
+      "removeRow": "Retirer {{key}}"
+    },
+    "save": {
+      "title": "Enregistrer la requête",
+      "name": "Nom",
+      "place": "Dans",
+      "nowhere": "Aucune collection pour l'instant : créez-en une dans le rail, avec ＋."
+    },
+    "close": {
+      "title": "« {{name}} » a des modifications",
+      "hint": "Elles ne sont pas encore enregistrées.",
+      "discard": "Fermer sans enregistrer"
     }
   }
 }
