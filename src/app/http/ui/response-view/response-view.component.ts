@@ -8,7 +8,7 @@ import { SaveAsNoteDialogComponent } from '@app/save-as-note/save-as-note-dialog
 import { ResponseBodyComponent } from './response-body/response-body.component';
 import { ResponseTimelineComponent } from './response-timeline/response-timeline.component';
 
-type Section = 'body' | 'headers' | 'cookies' | 'timeline';
+type Section = 'body' | 'errors' | 'headers' | 'cookies' | 'timeline';
 
 /** An answer read: its bar, then its body, headers, cookies and timeline. */
 @Component({
@@ -28,13 +28,27 @@ export class ResponseViewComponent {
   private readonly transloco = inject(TranslocoService);
   private readonly clipboard = inject(ClipboardService);
 
-  protected readonly sections: readonly Section[] = ['body', 'headers', 'cookies', 'timeline'];
-  protected readonly section = signal<Section>('body');
+  /** A GraphQL answer's errors have a tab of their own, beside its data. */
+  protected readonly sections = computed<readonly Section[]>(() =>
+    (this.response().graphql?.errors.length ?? 0) > 0
+      ? ['body', 'errors', 'headers', 'cookies', 'timeline']
+      : ['body', 'headers', 'cookies', 'timeline'],
+  );
+  private readonly chosen = signal<Section>('body');
+  protected readonly section = computed<Section>(() =>
+    this.sections().includes(this.chosen()) ? this.chosen() : 'body',
+  );
+  /** What Corps lays out: a GraphQL answer's `data`, any other answer whole. */
+  protected readonly shown = computed(() => {
+    const response = this.response();
+    return response.graphql ? { ...response, pretty: response.graphql.data ?? 'null' } : response;
+  });
   /** Taken on the click, like a tool's result: a send meanwhile does not change what is saved. */
   protected readonly saving = signal<ToolResult | null>(null);
 
   protected readonly counts = computed<Record<Section, number>>(() => ({
     body: 0,
+    errors: this.response().graphql?.errors.length ?? 0,
     headers: this.response().headers.length,
     cookies: this.response().cookies.length,
     timeline: 0,
@@ -57,6 +71,10 @@ export class ResponseViewComponent {
     }
     return { key: 'http.response.megabytes', params: { value: this.format(bytes / 1024 / 1024, 1) } };
   });
+
+  protected choose(section: Section): void {
+    this.chosen.set(section);
+  }
 
   protected copy(): void {
     void this.clipboard.copy(this.response().body);

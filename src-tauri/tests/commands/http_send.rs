@@ -9,7 +9,7 @@ use std::time::Duration;
 use devnotes_lib::error::ErrorCode;
 use devnotes_lib::http::model::{
     ContainerSettings, HttpItem, HttpItemKind, HttpMethod, KeyValue, RequestAuth, RequestBody,
-    RequestDocument,
+    RequestDocument, RequestKind,
 };
 use devnotes_lib::http::send::{SHOWN_LIMIT, SendRequest, SentBody};
 use devnotes_lib::http::{
@@ -95,6 +95,7 @@ fn response(status: &str, headers: &[(&str, &str)], body: &[u8]) -> Vec<u8> {
 fn request(url: &str) -> SendRequest {
     SendRequest {
         id: "tab-1".to_string(),
+        kind: RequestKind::Http,
         method: HttpMethod::Get,
         document: RequestDocument {
             url: url.to_string(),
@@ -420,4 +421,44 @@ fn every_send_that_left_is_recorded_masked_and_the_history_clears() {
     assert_eq!(session.call(count_http_history).unwrap(), 2);
     assert_eq!(session.call(clear_http_history).unwrap(), 2);
     assert!(session.call(|app| http_history(0, app)).unwrap().is_empty());
+}
+
+#[test]
+fn a_graphql_request_is_posted_as_json_and_its_errors_read_apart_from_its_data() {
+    use devnotes_lib::http::describe_graphql;
+    use devnotes_lib::http::graphql::GraphqlDocument;
+
+    let session = Session::open();
+    let (port, seen) = serve(1, |_, _| {
+        response(
+            "200 OK",
+            &[("Content-Type", "application/json")],
+            br#"{"data":{"me":null},"errors":[{"message":"Unauthorised","path":["me"]}]}"#,
+        )
+    });
+    let mut sent = request(&format!("http://127.0.0.1:{port}/graphql"));
+    sent.kind = RequestKind::Graphql;
+    sent.document.graphql = GraphqlDocument {
+        query: "query Me { me { id } } query Other { x }".to_string(),
+        operation_name: Some("Me".to_string()),
+        ..GraphqlDocument::default()
+    };
+    let document = sent.document.graphql.clone();
+
+    let answer = session.call(|app| send_http_request(sent, app)).unwrap();
+
+    let read = answer.graphql.unwrap();
+    assert_eq!(read.data.as_deref(), Some("{\n  \"me\": null\n}"));
+    assert_eq!(read.errors[0].message, "Unauthorised");
+    assert_eq!(read.errors[0].path.as_deref(), Some("me"));
+    let seen = seen.recv().unwrap();
+    assert!(seen.head.starts_with("POST /graphql HTTP/1.1\r\n"));
+    assert!(
+        String::from_utf8(seen.body)
+            .unwrap()
+            .contains("\"operationName\":\"Me\"")
+    );
+
+    let described = session.call(|_| describe_graphql(document)).unwrap();
+    assert_eq!(described.operations, ["Me", "Other"]);
 }

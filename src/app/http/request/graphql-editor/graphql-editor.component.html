@@ -1,0 +1,60 @@
+@let current = graphql();
+@let said = answer();
+<div class="graphql" data-testid="http-graphql">
+  <div class="column query">
+    <div class="head">
+      <span class="label">{{ 'http.graphql.query' | transloco }}</span>
+      @if (operations().length > 1) {
+        <app-choice-menu
+          kind="http-graphql-operation"
+          triggerTestId="http-graphql-operation"
+          [label]="'http.graphql.operation' | transloco"
+          [options]="operations()"
+          [currentId]="current.operationName ?? operations()[0]!.id"
+          (chosen)="onOperation($event)"
+        />
+      }
+    </div>
+    <textarea
+      class="text"
+      rows="14"
+      data-testid="http-graphql-query"
+      spellcheck="false"
+      [attr.aria-label]="'http.graphql.query' | transloco"
+      [placeholder]="'http.graphql.queryPlaceholder' | transloco"
+      [value]="current.query"
+      (input)="onQuery($event)"
+    ></textarea>
+  </div>
+
+  <div class="column variables">
+    <div class="head">
+      <span class="label">{{ 'http.graphql.variables' | transloco }}</span>
+    </div>
+    <textarea
+      class="text"
+      rows="14"
+      data-testid="http-graphql-variables"
+      spellcheck="false"
+      [attr.aria-label]="'http.graphql.variables' | transloco"
+      placeholder="{ }"
+      [value]="current.variables"
+      (input)="onVariables($event)"
+    ></textarea>
+    @if (said?.variablesProblem; as problem) {
+      <p class="invalid" role="status" data-testid="http-graphql-problem">
+        {{ 'json.invalidAt' | transloco: { line: problem.line, column: problem.column } }}
+        {{ 'json.reasons.' + problem.reason | transloco }}
+      </p>
+    }
+    <label class="get">
+      <input
+        type="checkbox"
+        data-testid="http-graphql-get"
+        [checked]="current.asGet"
+        (change)="onGet($event)"
+      />
+      {{ 'http.graphql.asGet' | transloco }}
+    </label>
+  </div>
+</div>

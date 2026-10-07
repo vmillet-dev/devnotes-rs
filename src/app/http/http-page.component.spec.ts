@@ -229,6 +229,27 @@ describe('HttpPageComponent', () => {
     expect(http.callsOf('forgetResponse')).toHaveLength(1);
   });
 
+  it('turns a request into a GraphQL one from the method menu, its query in place of the body', async () => {
+    await tabs().open('Login');
+    await fixture.whenStable();
+
+    el<HTMLButtonElement>('[data-testid="http-method"]').click();
+    await fixture.whenStable();
+    el<HTMLButtonElement>('[data-testid="choice-option"][data-option-id="GRAPHQL"]').click();
+    await fixture.whenStable();
+
+    expect(tabs().active()!.draft.kind).toBe('graphql');
+    expect(all('[data-testid="http-section"]').map((section) => section.dataset['section'])).toEqual([
+      'query',
+      'headers',
+      'auth',
+    ]);
+    expect(el('[data-testid="http-graphql"]')).not.toBeNull();
+    el<HTMLButtonElement>('[data-testid="http-section"][data-section="headers"]').click();
+    await fixture.whenStable();
+    expect(el('[data-testid="http-implied-header"]')?.textContent).toContain('application/json');
+  });
+
   it('closes an unmodified tab at once, and hides the rail on Ctrl+B', async () => {
     await tabs().open('Login');
     await fixture.whenStable();

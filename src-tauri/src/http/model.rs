@@ -1,6 +1,7 @@
 //! The HTTP collections as the interface sees them: a tree of collections, folders and
 //! requests, a request's sealed document, and where an item can be moved to.
 
+use super::graphql::GraphqlDocument;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -154,6 +155,8 @@ pub struct RequestDocument {
     pub body: RequestBody,
     pub auth: RequestAuth,
     pub description: String,
+    /// Read only for a GraphQL request, which sends it in place of the body.
+    pub graphql: GraphqlDocument,
 }
 
 /// A row of a request's parameters or headers.
@@ -241,6 +244,8 @@ pub struct HttpRequestDraft {
 pub struct HttpRequestPatch {
     #[specta(optional)]
     pub name: Option<String>,
+    #[specta(optional)]
+    pub kind: Option<RequestKind>,
     #[specta(optional)]
     pub method: Option<HttpMethod>,
     #[specta(optional)]

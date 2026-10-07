@@ -47,6 +47,7 @@ const IPC_ERROR_CODES: Record<IpcErrorCode, true> = {
   httpTooManyRedirects: true,
   httpFileUnreadable: true,
   httpCancelled: true,
+  httpGraphqlVariables: true,
   httpNetwork: true,
 };
 

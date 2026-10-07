@@ -247,3 +247,37 @@ fn the_query_and_its_table_are_kept_in_step_through_the_command() {
 
     assert_eq!(synced.params[0].key, "a");
 }
+
+#[test]
+fn a_request_turned_into_graphql_keeps_its_kind_and_its_query() {
+    use devnotes_lib::http::graphql::GraphqlDocument;
+
+    let session = Session::open();
+    let api = session
+        .call(|app| create_http_collection("API".to_string(), app))
+        .unwrap();
+    let created = session
+        .call(|app| create_http_request(draft(&api.id, None, "Produits"), app))
+        .unwrap();
+    let patch = HttpRequestPatch {
+        kind: Some(RequestKind::Graphql),
+        document: Some(RequestDocument {
+            graphql: GraphqlDocument {
+                query: "{ products { id } }".to_string(),
+                ..GraphqlDocument::default()
+            },
+            ..RequestDocument::default()
+        }),
+        ..HttpRequestPatch::default()
+    };
+
+    let saved = session
+        .call(|app| save_http_request(created.id.clone(), patch, app))
+        .unwrap();
+
+    assert_eq!(saved.kind, RequestKind::Graphql);
+    let read = session
+        .call(|app| get_http_request(created.id.clone(), app))
+        .unwrap();
+    assert_eq!(read.document.graphql.query, "{ products { id } }");
+}

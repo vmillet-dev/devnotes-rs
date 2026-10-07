@@ -14,7 +14,10 @@ use tokio::task::AbortHandle;
 use url::Url;
 use uuid::Uuid;
 
-use super::model::{HttpMethod, KeyPlace, KeyValue, RequestAuth, RequestBody, RequestDocument};
+use super::graphql::{self, GraphqlResult};
+use super::model::{
+    HttpMethod, KeyPlace, KeyValue, RequestAuth, RequestBody, RequestDocument, RequestKind,
+};
 use super::response::{self, Cookie};
 use super::settings::{Inherited, implied_content_type};
 use crate::notes::language::Language;
@@ -32,6 +35,7 @@ const MAX_REDIRECTS: usize = 10;
 pub struct SendRequest {
     /// Chosen by the front, so it can cancel the send it started and save what came back.
     pub id: String,
+    pub kind: RequestKind,
     pub method: HttpMethod,
     pub document: RequestDocument,
     /// Where the request sits, for what it inherits; `None` for a draft not placed yet.
@@ -76,6 +80,8 @@ pub struct SentResponse {
     pub cookies: Vec<Cookie>,
     /// The request as it left, for the timeline.
     pub exchange: Exchange,
+    /// A GraphQL answer read apart: its `data` and its `errors`.
+    pub graphql: Option<GraphqlResult>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -132,6 +138,8 @@ pub enum SendError {
     FileUnreadable(String),
     #[error("The send was cancelled")]
     Cancelled,
+    #[error("The GraphQL variables are not a JSON object: {0}")]
+    GraphqlVariables(String),
     #[error("Network error: {0}")]
     Network(String),
 }
@@ -145,6 +153,8 @@ pub struct Outgoing {
     pub body: OutgoingBody,
     /// The API key's name, lowercased: a header or a query pair the history masks.
     pub secrets: Vec<String>,
+    /// Its answer is read as GraphQL.
+    pub graphql: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -171,7 +181,11 @@ fn read(path: &str) -> Result<Vec<u8>, SendError> {
 }
 
 /// The first `{{variable}}` of what will be sent, in reading order.
-fn first_variable(document: &RequestDocument, inherited: &Inherited) -> Option<String> {
+fn first_variable(
+    kind: RequestKind,
+    document: &RequestDocument,
+    inherited: &Inherited,
+) -> Option<String> {
     let none = BTreeMap::new();
     let mut texts: Vec<&str> = vec![&document.url];
     for row in inherited
@@ -193,6 +207,16 @@ fn first_variable(document: &RequestDocument, inherited: &Inherited) -> Option<S
         RequestAuth::Bearer { token } => texts.push(token),
         RequestAuth::ApiKey { name, value, .. } => texts.extend([name.as_str(), value.as_str()]),
         RequestAuth::Inherit | RequestAuth::None => {}
+    }
+    if kind == RequestKind::Graphql {
+        texts.extend([
+            document.graphql.query.as_str(),
+            document.graphql.variables.as_str(),
+        ]);
+        return texts
+            .into_iter()
+            .find_map(|text| placeholder::parse(text, &none).into_iter().next())
+            .map(|found| found.name);
     }
     match &document.body {
         RequestBody::Json { text } | RequestBody::Text { text } => texts.push(text),
@@ -232,14 +256,21 @@ fn parse_url(typed: &str) -> Result<Url, SendError> {
 /// The request as it will be sent: the headers inherited, then its own over them by name, the
 /// auth resolved, the body built and its files read.
 pub fn compose(
+    kind: RequestKind,
     method: HttpMethod,
     document: &RequestDocument,
     inherited: &Inherited,
 ) -> Result<Outgoing, SendError> {
-    if let Some(name) = first_variable(document, inherited) {
+    if let Some(name) = first_variable(kind, document, inherited) {
         return Err(SendError::Variable(name));
     }
     let mut url = parse_url(&document.url)?;
+    let graphql = (kind == RequestKind::Graphql).then_some(&document.graphql);
+    let method = match graphql {
+        Some(graphql) if graphql.as_get => HttpMethod::Get,
+        Some(_) => HttpMethod::Post,
+        None => method,
+    };
 
     let mut headers: Vec<(String, String)> = Vec::new();
     let mut set = |key: &str, value: &str| {
@@ -286,7 +317,60 @@ pub fn compose(
         _ => {}
     }
 
-    let body = match &document.body {
+    let (body, implied) = match graphql {
+        Some(graphql) => {
+            let variables = graphql::variables(graphql).map_err(SendError::GraphqlVariables)?;
+            if graphql.as_get {
+                let mut pairs = url.query_pairs_mut();
+                pairs.append_pair("query", &graphql.query);
+                if let Some(variables) = variables {
+                    pairs.append_pair("variables", variables);
+                }
+                if let Some(name) = graphql
+                    .operation_name
+                    .as_deref()
+                    .filter(|name| !name.is_empty())
+                {
+                    pairs.append_pair("operationName", name);
+                }
+                (OutgoingBody::None, None)
+            } else {
+                let body = graphql::body(graphql, variables).into_bytes();
+                (OutgoingBody::Bytes(body), Some("application/json"))
+            }
+        }
+        // A multipart type carries its boundary, which reqwest alone knows.
+        None => (
+            body_of(&document.body)?,
+            implied_content_type(&document.body)
+                .filter(|_| !matches!(document.body, RequestBody::Multipart { .. })),
+        ),
+    };
+    if let Some(implied) = implied
+        && !typed(&headers, "content-type")
+    {
+        headers.push(("Content-Type".to_string(), implied.to_string()));
+    }
+
+    let secrets = match auth {
+        RequestAuth::ApiKey { name, .. } if !name.trim().is_empty() => {
+            vec![name.trim().to_ascii_lowercase()]
+        }
+        _ => Vec::new(),
+    };
+
+    Ok(Outgoing {
+        method,
+        url,
+        headers,
+        body,
+        secrets,
+        graphql: graphql.is_some(),
+    })
+}
+
+fn body_of(body: &RequestBody) -> Result<OutgoingBody, SendError> {
+    Ok(match body {
         RequestBody::None => OutgoingBody::None,
         RequestBody::Json { text } | RequestBody::Text { text } => {
             OutgoingBody::Bytes(text.clone().into_bytes())
@@ -318,28 +402,6 @@ pub fn compose(
             OutgoingBody::Multipart(fields)
         }
         RequestBody::Binary { path } => OutgoingBody::Bytes(read(path)?),
-    };
-    // A multipart type carries its boundary, which reqwest alone knows.
-    if !matches!(document.body, RequestBody::Multipart { .. })
-        && let Some(implied) = implied_content_type(&document.body)
-        && !typed(&headers, "content-type")
-    {
-        headers.push(("Content-Type".to_string(), implied.to_string()));
-    }
-
-    let secrets = match auth {
-        RequestAuth::ApiKey { name, .. } if !name.trim().is_empty() => {
-            vec![name.trim().to_ascii_lowercase()]
-        }
-        _ => Vec::new(),
-    };
-
-    Ok(Outgoing {
-        method,
-        url,
-        headers,
-        body,
-        secrets,
     })
 }
 
@@ -525,6 +587,7 @@ async fn send(outgoing: Outgoing) -> Result<Received, SendError> {
         .map_err(|error| SendError::Network(error.to_string()))?;
 
     let exchange = exchange(&outgoing);
+    let is_graphql = outgoing.graphql;
     let request = request(&client, outgoing);
 
     let started = Instant::now();
@@ -571,6 +634,9 @@ async fn send(outgoing: Outgoing) -> Result<Received, SendError> {
     let pretty = (language == Language::Json && !cut)
         .then(|| response::pretty_json(&shown))
         .flatten();
+    let graphql = (is_graphql && !cut)
+        .then(|| graphql::result(&shown))
+        .flatten();
 
     Ok(Received {
         response: SentResponse {
@@ -592,6 +658,7 @@ async fn send(outgoing: Outgoing) -> Result<Received, SendError> {
             language,
             pretty,
             exchange,
+            graphql,
         },
         kept: Kept {
             content_type,
@@ -685,6 +752,7 @@ impl Sending {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::http::graphql::GraphqlDocument;
     use crate::http::model::{FormPart, HttpItemKind};
     use crate::http::settings::{HttpOrigin, InheritedHeader};
 
@@ -722,6 +790,7 @@ mod tests {
     #[test]
     fn a_url_without_a_scheme_is_sent_over_http_and_any_other_scheme_is_refused() {
         let outgoing = compose(
+            RequestKind::Http,
             HttpMethod::Get,
             &document("api.example.com/users?page=1"),
             &nothing(),
@@ -731,7 +800,12 @@ mod tests {
 
         for refused in ["ftp://example.com", "http://", "  "] {
             assert!(matches!(
-                compose(HttpMethod::Get, &document(refused), &nothing()),
+                compose(
+                    RequestKind::Http,
+                    HttpMethod::Get,
+                    &document(refused),
+                    &nothing()
+                ),
                 Err(SendError::InvalidUrl(_))
             ));
         }
@@ -740,7 +814,12 @@ mod tests {
     #[test]
     fn a_variable_left_anywhere_stops_the_request_by_its_name() {
         assert_eq!(
-            compose(HttpMethod::Get, &document("{{baseUrl}}/users"), &nothing()),
+            compose(
+                RequestKind::Http,
+                HttpMethod::Get,
+                &document("{{baseUrl}}/users"),
+                &nothing()
+            ),
             Err(SendError::Variable("baseUrl".to_string()))
         );
 
@@ -749,7 +828,12 @@ mod tests {
             token: "{{accessToken}}".to_string(),
         };
         assert_eq!(
-            compose(HttpMethod::Get, &document("https://example.com"), &bearer),
+            compose(
+                RequestKind::Http,
+                HttpMethod::Get,
+                &document("https://example.com"),
+                &bearer
+            ),
             Err(SendError::Variable("accessToken".to_string()))
         );
 
@@ -758,7 +842,7 @@ mod tests {
         templated.body = RequestBody::Text {
             text: "{{ user.name }}".to_string(),
         };
-        assert!(compose(HttpMethod::Post, &templated, &nothing()).is_ok());
+        assert!(compose(RequestKind::Http, HttpMethod::Post, &templated, &nothing()).is_ok());
     }
 
     #[test]
@@ -781,7 +865,7 @@ mod tests {
             },
         ];
 
-        let outgoing = compose(HttpMethod::Get, &own, &inherited).unwrap();
+        let outgoing = compose(RequestKind::Http, HttpMethod::Get, &own, &inherited).unwrap();
         assert_eq!(
             outgoing.headers,
             vec![("accept".to_string(), "application/json".to_string())]
@@ -796,6 +880,7 @@ mod tests {
             password: "lovelace".to_string(),
         };
         let outgoing = compose(
+            RequestKind::Http,
             HttpMethod::Get,
             &document("https://example.com"),
             &inherited,
@@ -812,7 +897,7 @@ mod tests {
             value: "s e".to_string(),
             place: KeyPlace::Query,
         };
-        let outgoing = compose(HttpMethod::Get, &keyed, &inherited).unwrap();
+        let outgoing = compose(RequestKind::Http, HttpMethod::Get, &keyed, &inherited).unwrap();
         assert_eq!(outgoing.url.as_str(), "https://example.com/?a=1&key=s+e");
         assert_eq!(header(&outgoing, "authorization"), None);
 
@@ -821,7 +906,7 @@ mod tests {
             token: "t".to_string(),
         };
         typed.headers = vec![row("Authorization", "Token mine")];
-        let outgoing = compose(HttpMethod::Get, &typed, &nothing()).unwrap();
+        let outgoing = compose(RequestKind::Http, HttpMethod::Get, &typed, &nothing()).unwrap();
         assert_eq!(header(&outgoing, "authorization"), Some("Token mine"));
     }
 
@@ -831,12 +916,12 @@ mod tests {
         json.body = RequestBody::Json {
             text: "{\"a\":1}".to_string(),
         };
-        let outgoing = compose(HttpMethod::Post, &json, &nothing()).unwrap();
+        let outgoing = compose(RequestKind::Http, HttpMethod::Post, &json, &nothing()).unwrap();
         assert_eq!(header(&outgoing, "content-type"), Some("application/json"));
         assert_eq!(outgoing.body, OutgoingBody::Bytes(b"{\"a\":1}".to_vec()));
 
         json.headers = vec![row("Content-Type", "application/vnd.api+json")];
-        let outgoing = compose(HttpMethod::Post, &json, &nothing()).unwrap();
+        let outgoing = compose(RequestKind::Http, HttpMethod::Post, &json, &nothing()).unwrap();
         assert_eq!(
             header(&outgoing, "content-type"),
             Some("application/vnd.api+json")
@@ -846,7 +931,7 @@ mod tests {
         form.body = RequestBody::Form {
             fields: vec![row("q", "a b&c"), row("lang", "fr")],
         };
-        let outgoing = compose(HttpMethod::Post, &form, &nothing()).unwrap();
+        let outgoing = compose(RequestKind::Http, HttpMethod::Post, &form, &nothing()).unwrap();
         assert_eq!(
             outgoing.body,
             OutgoingBody::Bytes(b"q=a+b%26c&lang=fr".to_vec())
@@ -876,7 +961,8 @@ mod tests {
                 },
             ],
         };
-        let outgoing = compose(HttpMethod::Post, &multipart, &nothing()).unwrap();
+        let outgoing =
+            compose(RequestKind::Http, HttpMethod::Post, &multipart, &nothing()).unwrap();
         assert_eq!(
             outgoing.body,
             OutgoingBody::Multipart(vec![
@@ -902,9 +988,51 @@ mod tests {
             path: missing.clone(),
         };
         assert_eq!(
-            compose(HttpMethod::Put, &binary, &nothing()),
+            compose(RequestKind::Http, HttpMethod::Put, &binary, &nothing()),
             Err(SendError::FileUnreadable(missing))
         );
+    }
+
+    #[test]
+    fn a_graphql_request_is_a_json_post_or_its_parts_in_the_query_of_a_get() {
+        let mut query = document("https://api.exemple.fr/graphql");
+        query.body = RequestBody::Text {
+            text: "ignored".to_string(),
+        };
+        query.graphql = GraphqlDocument {
+            query: "query A { a }".to_string(),
+            variables: "{\"n\": 1}".to_string(),
+            operation_name: Some("A".to_string()),
+            as_get: false,
+        };
+
+        let post = compose(RequestKind::Graphql, HttpMethod::Delete, &query, &nothing()).unwrap();
+        assert_eq!(post.method, HttpMethod::Post);
+        assert_eq!(header(&post, "content-type"), Some("application/json"));
+        assert_eq!(
+            post.body,
+            OutgoingBody::Bytes(
+                br#"{"query":"query A { a }","variables":{"n": 1},"operationName":"A"}"#.to_vec()
+            )
+        );
+        assert!(post.graphql);
+
+        query.graphql.as_get = true;
+        let get = compose(RequestKind::Graphql, HttpMethod::Post, &query, &nothing()).unwrap();
+        assert_eq!(
+            (get.method, &get.body),
+            (HttpMethod::Get, &OutgoingBody::None)
+        );
+        assert_eq!(
+            get.url.as_str(),
+            "https://api.exemple.fr/graphql?query=query+A+%7B+a+%7D&variables=%7B%22n%22%3A+1%7D&operationName=A"
+        );
+
+        query.graphql.variables = "[1]".to_string();
+        assert!(matches!(
+            compose(RequestKind::Graphql, HttpMethod::Post, &query, &nothing()),
+            Err(SendError::GraphqlVariables(_))
+        ));
     }
 
     #[test]

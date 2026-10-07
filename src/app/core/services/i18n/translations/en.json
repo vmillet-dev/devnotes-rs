@@ -445,7 +445,8 @@
     "httpTooManyRedirects": "Too many redirects: more than 10.",
     "httpFileUnreadable": "The file {{path}} cannot be read.",
     "httpCancelled": "Send cancelled.",
-    "httpNetwork": "Network error."
+    "httpNetwork": "Network error.",
+    "httpGraphqlVariables": "The GraphQL variables are not a JSON object."
   },
   "tray": {
     "open": "Open {{app}}",
@@ -2784,7 +2785,8 @@
         "params": "Params",
         "headers": "Headers",
         "auth": "Auth",
-        "body": "Body"
+        "body": "Body",
+        "query": "Query"
       }
     },
     "table": {
@@ -2898,7 +2900,8 @@
         "body": "Body",
         "headers": "Headers",
         "cookies": "Cookies",
-        "timeline": "Timeline"
+        "timeline": "Timeline",
+        "errors": "Errors"
       },
       "view": "Body view",
       "views": {
@@ -2942,6 +2945,14 @@
       "choose": "Choose a send to read it again.",
       "reopen": "Reopen in a tab",
       "failed": "The history could not be read."
+    },
+    "graphql": {
+      "query": "Query",
+      "queryPlaceholder": "query { … }",
+      "variables": "Variables",
+      "operation": "Operation sent",
+      "asGet": "Send as GET",
+      "at": "line:column {{location}}"
     }
   }
 }

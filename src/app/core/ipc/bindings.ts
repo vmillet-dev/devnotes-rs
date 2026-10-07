@@ -157,6 +157,8 @@ export const commands = {
 	inheritedHttpSettings: (collectionId: string, folderId: string | null) => typedError<Inherited, AppError>(__TAURI_INVOKE("inherited_http_settings", { collectionId, folderId })),
 	/**  What a body implies, and whether a JSON one reads: the editor says both as it is typed. */
 	describeHttpBody: (body: RequestBody) => typedError<BodyAnswer, AppError>(__TAURI_INVOKE("describe_http_body", { body })),
+	/**  The operations a GraphQL document names, and why its variables do not read. */
+	describeGraphql: (document: GraphqlDocument) => typedError<GraphqlAnswer, AppError>(__TAURI_INVOKE("describe_graphql", { document })),
 	/**
 	 *  What it inherits is read under the lock, its files outside it, and the send waits on nothing
 	 *  but the network: a 30-second request stalls no other command.
@@ -1016,7 +1018,7 @@ export type ErrorCode = "noteNotFound" | "spaceNotFound" | "duplicateSpaceName" 
 /**  The `path` parameter names the file a body or a part would have sent. */
 "httpFileUnreadable" | 
 /**  What « Annuler » answers: the front, which asked, says nothing. */
-"httpCancelled" | "httpNetwork";
+"httpCancelled" | "httpGraphqlVariables" | "httpNetwork";
 
 export type Exchange = {
 	method: HttpMethod,
@@ -1146,6 +1148,36 @@ export type GenerateRequest = {
 export type GlobalAction = "capture" | "new-note" | "palette";
 
 export type Granularity = "lines" | "words" | "characters";
+
+export type GraphqlAnswer = {
+	/**  The named operations, in the order written. */
+	operations: string[],
+	variablesProblem: JsonError | null,
+};
+
+export type GraphqlDocument = {
+	query?: string,
+	/**  A JSON object as typed; empty sends none. */
+	variables?: string,
+	/**  Which operation, when the query holds several; `None` lets the server take the only one. */
+	operationName?: string | null,
+	/**  Sent as a GET, its parts in the query string, rather than a POST with a JSON body. */
+	asGet?: boolean,
+};
+
+export type GraphqlError = {
+	message: string,
+	/**  `invoices[0].amount`, joined from the error's `path`. */
+	path: string | null,
+	/**  `3:5`, the first of its `locations`. */
+	location: string | null,
+};
+
+export type GraphqlResult = {
+	/**  `data` laid out, its numbers as they came; `None` when the answer had none. */
+	data: string | null,
+	errors: GraphqlError[],
+};
 
 /**  How the date view gathers its cards. A search or a facet still makes one flat list. */
 export type Grouping = "date" | "priority" | "format" | "none";
@@ -1290,6 +1322,7 @@ export type HttpRequestDraft = {
 /**  A field left out is untouched. */
 export type HttpRequestPatch = {
 	name?: string | null,
+	kind?: RequestKind | null,
 	method?: HttpMethod | null,
 	document?: RequestDocument | null,
 };
@@ -2116,6 +2149,8 @@ export type RequestDocument = {
 	body?: RequestBody,
 	auth?: RequestAuth,
 	description?: string,
+	/**  Read only for a GraphQL request, which sends it in place of the body. */
+	graphql?: GraphqlDocument,
 };
 
 /**  What the rail writes before a name: the method, or `QUERY` and `WS` for the other two. */
@@ -2198,6 +2233,7 @@ export type Segment = "header" | "payload" | "signature";
 export type SendRequest = {
 	/**  Chosen by the front, so it can cancel the send it started and save what came back. */
 	id: string,
+	kind: RequestKind,
 	method: HttpMethod,
 	document: RequestDocument,
 	/**  Where the request sits, for what it inherits; `None` for a draft not placed yet. */
@@ -2237,6 +2273,8 @@ export type SentResponse = {
 	cookies: Cookie[],
 	/**  The request as it left, for the timeline. */
 	exchange: Exchange,
+	/**  A GraphQL answer read apart: its `data` and its `errors`. */
+	graphql: GraphqlResult | null,
 };
 
 /**  Three fields rather than a map, so a missing shortcut is a compile error. */

@@ -8,6 +8,8 @@ import {
   HttpPlace,
   HttpRequestDraft,
   HttpTree,
+  GraphqlAnswer,
+  GraphqlParts,
   HistoryDay,
   HistoryDraft,
   HistoryEntry,
@@ -45,6 +47,7 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
   settingsAnswer: ContainerSettingsDraft = { auth: { kind: 'inherit' }, headers: [] };
   inheritedAnswer: InheritedParts = { auth: { kind: 'none' }, authFrom: null, headers: [] };
   bodyAnswer: BodyAnswer = { contentType: null, problem: null };
+  graphqlAnswer: GraphqlAnswer = { operations: [], variablesProblem: null };
   /** What `send` answers; a spec holding `pendingSend` decides when. */
   response: SentResponse = sentResponse();
   pendingSend: Promise<SentResponse> | null = null;
@@ -134,7 +137,13 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
     return this.record('saveRequest', [id, draft], () => {
       const request = this.requests.get(id);
       if (!request) throw new Error(`no request ${id}`);
-      const saved: OpenedRequest = { ...request, name: draft.name, method: draft.method, parts: draft.parts };
+      const saved: OpenedRequest = {
+        ...request,
+        name: draft.name,
+        kind: draft.kind,
+        method: draft.method,
+        parts: draft.parts,
+      };
       this.requests.set(id, saved);
       return saved;
     });
@@ -222,6 +231,10 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
     return this.record('forgetResponse', [id], () => undefined);
   }
 
+  describeGraphql(graphql: GraphqlParts): Promise<GraphqlAnswer> {
+    return this.record('describeGraphql', [graphql], () => this.graphqlAnswer);
+  }
+
   rename(item: HttpItem, name: string): Promise<void> {
     return this.record('rename', [item, name], () => undefined);
   }
@@ -268,6 +281,7 @@ export function sentResponse(overrides: Partial<SentResponse> = {}): SentRespons
     cut: false,
     incomplete: false,
     redirects: [],
+    graphql: null,
     language: 'json',
     pretty: '{\n  "data": []\n}',
     cookies: [],

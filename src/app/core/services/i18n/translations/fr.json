@@ -445,7 +445,8 @@
     "httpTooManyRedirects": "Trop de redirections : plus de 10.",
     "httpFileUnreadable": "Le fichier {{path}} ne peut pas être lu.",
     "httpCancelled": "Envoi annulé.",
-    "httpNetwork": "Erreur réseau."
+    "httpNetwork": "Erreur réseau.",
+    "httpGraphqlVariables": "Les variables GraphQL ne sont pas un objet JSON."
   },
   "tray": {
     "open": "Ouvrir {{app}}",
@@ -2784,7 +2785,8 @@
         "params": "Paramètres",
         "headers": "En-têtes",
         "auth": "Auth",
-        "body": "Corps"
+        "body": "Corps",
+        "query": "Requête"
       }
     },
     "table": {
@@ -2898,7 +2900,8 @@
         "body": "Corps",
         "headers": "En-têtes",
         "cookies": "Cookies",
-        "timeline": "Chronologie"
+        "timeline": "Chronologie",
+        "errors": "Erreurs"
       },
       "view": "Affichage du corps",
       "views": {
@@ -2942,6 +2945,14 @@
       "choose": "Choisissez un envoi pour le relire.",
       "reopen": "Rouvrir dans un onglet",
       "failed": "L'historique n'a pas pu être lu."
+    },
+    "graphql": {
+      "query": "Requête",
+      "queryPlaceholder": "query { … }",
+      "variables": "Variables",
+      "operation": "Opération envoyée",
+      "asGet": "Envoyer en GET",
+      "at": "ligne:colonne {{location}}"
     }
   }
 }

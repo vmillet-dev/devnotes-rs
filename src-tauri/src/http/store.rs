@@ -488,6 +488,11 @@ pub fn save_request(
                 .set(http_requests::name.eq(vault.seal(name)?))
                 .execute(connection)?;
         }
+        if let Some(kind) = patch.kind {
+            diesel::update(http_requests::table.find(id))
+                .set(http_requests::kind.eq(kind.as_str()))
+                .execute(connection)?;
+        }
         if let Some(method) = patch.method {
             diesel::update(http_requests::table.find(id))
                 .set(http_requests::method.eq(method.as_str()))

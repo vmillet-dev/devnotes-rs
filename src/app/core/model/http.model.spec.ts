@@ -22,8 +22,15 @@ describe('the HTTP wire shapes', () => {
       },
       auth: { kind: 'inherit' },
       description: '',
+      graphql: { query: '', variables: '', operationName: null, asGet: false },
     });
     expect(toParts({}).body).toEqual({ kind: 'none' });
+    expect(toParts({ graphql: { query: 'query A { a }', asGet: true } }).graphql).toEqual({
+      query: 'query A { a }',
+      variables: '',
+      operationName: null,
+      asGet: true,
+    });
   });
 
   it('writes each kind of body back as it reads it', () => {

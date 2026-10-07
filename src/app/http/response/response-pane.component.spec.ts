@@ -127,6 +127,25 @@ describe('ResponsePaneComponent', () => {
     expect(text('save-as-note-what')).toBe('Un snippet JSON, avec le corps de la réponse mis en forme.');
   });
 
+  it('reads a GraphQL answer as its data, its errors in a tab of their own', async () => {
+    await answer(
+      sentResponse({
+        body: '{"data":{"me":null},"errors":[{"message":"Unauthorised"}]}',
+        graphql: {
+          data: '{\n  "me": null\n}',
+          errors: [{ message: 'Unauthorised', path: 'me', location: '1:3' }],
+        },
+      }),
+    );
+
+    expect(el('http-response-pretty')?.textContent).toContain('"me": null');
+    expect(el('http-response-pretty')?.textContent).not.toContain('errors');
+    await section('errors');
+    expect(
+      all('http-response-error').map((error) => [...error.children].map((part) => part.textContent?.trim())),
+    ).toEqual([['Unauthorised', 'me', 'ligne:colonne 1:3']]);
+  });
+
   it('says why nothing came back', async () => {
     http.failNext = new IpcError('send_http_request', { code: 'httpRefused', params: {}, detail: 'refused' });
     await answer(sentResponse());
