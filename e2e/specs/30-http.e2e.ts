@@ -175,8 +175,9 @@ describe('HTTP collections', () => {
       expect(saved.document.params?.map((row) => row.key)).toEqual(['page', 'limit']);
       expect(saved.document.headers?.map((row) => row.key)).toEqual(['Accept']);
 
-      await $(testid('http-tab-close')).click();
-      await $(testid('http-workspace-empty')).waitForDisplayed({ timeout: 10_000 });
+      const tab = `${testid('http-tab')}[data-key="${created.id}"]`;
+      await $(`${tab} ${testid('http-tab-close')}`).click();
+      await $(tab).waitForExist({ reverse: true, timeout: 10_000 });
       await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
     });
   });
