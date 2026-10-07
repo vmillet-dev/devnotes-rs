@@ -294,19 +294,17 @@ fn a_send_under_way_is_cancelled_by_its_id() {
     let silent = thread::spawn(move || listener.accept().map(|(stream, _)| stream));
 
     let app = session.0.handle().clone();
-    let cancelled = tauri::async_runtime::block_on(async move {
-        let sending = tauri::async_runtime::spawn(send_http_request(
-            request(&format!("http://127.0.0.1:{port}/slow")),
-            app.clone(),
-        ));
-        while !cancel_http_send("tab-1".to_string(), app.clone())
-            .await
-            .unwrap()
-        {
-            thread::sleep(Duration::from_millis(10));
-        }
-        sending.await.unwrap()
-    });
+    let sending = tauri::async_runtime::spawn(send_http_request(
+        request(&format!("http://127.0.0.1:{port}/slow")),
+        app.clone(),
+    ));
+    // Polled from the test's own thread: the send is under way once there is one to cancel.
+    while !tauri::async_runtime::block_on(cancel_http_send("tab-1".to_string(), app.clone()))
+        .unwrap()
+    {
+        thread::sleep(Duration::from_millis(10));
+    }
+    let cancelled = tauri::async_runtime::block_on(sending).unwrap();
 
     assert_eq!(cancelled.unwrap_err().code, ErrorCode::HttpCancelled);
     assert!(

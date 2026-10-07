@@ -80,8 +80,7 @@ describe('HttpPageComponent', () => {
 
     key({ key: 's' });
     await vi.waitFor(() => expect(http.callsOf('saveRequest')).toHaveLength(1));
-    await fixture.whenStable();
-    expect(el('[data-testid="http-tab-dirty"]')).toBeNull();
+    await vi.waitFor(() => expect(el('[data-testid="http-tab-dirty"]')).toBeNull());
   });
 
   it('switches to the headers, proposing the names a request sends', async () => {
