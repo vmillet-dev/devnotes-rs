@@ -34,8 +34,12 @@ export class HttpCollectionsStore {
     this._settingsRevision.update((revision) => revision + 1);
   }
 
-  async load(): Promise<void> {
-    await this.attempt(async () => this._tree.set(await this.repository.tree()));
+  /** `false` when the tree could not be read: what was shown stays. */
+  async load(): Promise<boolean> {
+    const tree = await this.attempt(() => this.repository.tree());
+    if (tree === null) return false;
+    this._tree.set(tree);
+    return true;
   }
 
   toggle(id: string): void {

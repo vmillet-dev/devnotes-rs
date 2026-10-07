@@ -188,6 +188,17 @@ describe('HttpPageComponent', () => {
     ]);
   });
 
+  it('closes, when it opens again, the tab of a request the library no longer holds', async () => {
+    http.seed('Gone');
+    await tabs().open('Gone');
+    await tabs().open('Login');
+    fixture.destroy();
+
+    fixture = TestBed.createComponent(HttpPageComponent);
+    fixture.autoDetectChanges();
+    await vi.waitFor(() => expect(tabs().tabs().map((tab) => tab.key)).toEqual(['Login']));
+  });
+
   it('closes an unmodified tab at once, and hides the rail on Ctrl+B', async () => {
     await tabs().open('Login');
     await fixture.whenStable();
