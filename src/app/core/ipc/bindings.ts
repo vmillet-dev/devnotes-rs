@@ -170,6 +170,14 @@ export const commands = {
 	forgetHttpResponse: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("forget_http_response", { id })),
 	/**  The last answer to `id` as an image to show, when it is one. */
 	httpResponseImage: (id: string) => typedError<string | null, AppError>(__TAURI_INVOKE("http_response_image", { id })),
+	/**  What was sent, newest first, a group a local day. */
+	httpHistory: (tzOffsetMinutes: number) => typedError<HistoryDay[], AppError>(__TAURI_INVOKE("http_history", { tzOffsetMinutes })),
+	httpHistoryEntry: (id: string) => typedError<HistoryEntry, AppError>(__TAURI_INVOKE("http_history_entry", { id })),
+	/**  An entry rebuilt as a request to send again or save: its secrets are typed again. */
+	httpHistoryDraft: (id: string) => typedError<HistoryDraft, AppError>(__TAURI_INVOKE("http_history_draft", { id })),
+	/**  What « Vider l'historique » says it removes. */
+	countHttpHistory: () => typedError<number, AppError>(__TAURI_INVOKE("count_http_history")),
+	clearHttpHistory: () => typedError<number, AppError>(__TAURI_INVOKE("clear_http_history")),
 	/**
 	 *  The second way to look at a space: folders as zones, their notes inside, the loose ones
 	 *  beside them. It reads the whole space and marks what matches rather than narrowing, and
@@ -1166,6 +1174,47 @@ export type HashRequest = {
 	expected: string | null,
 };
 
+export type HistoryDay = {
+	/**  `2026-10-07`, the local day. */
+	day: string,
+	items: HistoryItem[],
+};
+
+/**  An entry sent again: what it was called, and the request it rebuilds. */
+export type HistoryDraft = {
+	name: string,
+	method: HttpMethod,
+	document: RequestDocument,
+};
+
+export type HistoryEntry = {
+	item: HistoryItem,
+	record: HistoryRecord,
+};
+
+export type HistoryItem = {
+	id: string,
+	sentAt: string,
+	method: HttpMethod,
+	status: number | null,
+	requestId: string | null,
+	summary: HistorySummary,
+};
+
+export type HistoryRecord = {
+	exchange: Exchange,
+	response: SentResponse | null,
+};
+
+/**  What a list shows, sealed apart from the record so a list opens no body. */
+export type HistorySummary = {
+	name: string,
+	url: string,
+	millis: number | null,
+	size: number | null,
+	failure: ErrorCode | null,
+};
+
 export type HttpCollection = {
 	id: string,
 	name: string,
@@ -2154,6 +2203,9 @@ export type SendRequest = {
 	/**  Where the request sits, for what it inherits; `None` for a draft not placed yet. */
 	collectionId: string | null,
 	folderId: string | null,
+	/**  For the history: what the request is called, and which one it is once saved. */
+	name: string,
+	requestId: string | null,
 };
 
 export type SentBody = { kind: "none" } | 

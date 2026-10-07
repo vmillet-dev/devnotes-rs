@@ -11,6 +11,9 @@ import {
   HttpRequestDraft,
   HttpRequestPatch,
   HttpTree,
+  HistoryDay,
+  HistoryDraft,
+  HistoryEntry,
   SentResponse,
   BodyAnswer,
   ContainerSettingsDraft,
@@ -98,6 +101,7 @@ export class HttpRepository {
     id: string,
     draft: RequestDraft,
     place: { collectionId: string; folderId: string | null } | null,
+    requestId: string | null = null,
   ): Promise<SentResponse> {
     return unwrap(
       'send_http_request',
@@ -107,8 +111,32 @@ export class HttpRepository {
         document: toDocument(draft.parts),
         collectionId: place?.collectionId ?? null,
         folderId: place?.folderId ?? null,
+        name: draft.name,
+        requestId,
       }),
     );
+  }
+
+  /** What was sent, newest first, a group a local day. */
+  async history(tzOffsetMinutes: number): Promise<HistoryDay[]> {
+    return unwrap('http_history', await commands.httpHistory(tzOffsetMinutes));
+  }
+
+  async historyEntry(id: string): Promise<HistoryEntry> {
+    return unwrap('http_history_entry', await commands.httpHistoryEntry(id));
+  }
+
+  async historyDraft(id: string): Promise<HistoryDraft> {
+    return unwrap('http_history_draft', await commands.httpHistoryDraft(id));
+  }
+
+  async countHistory(): Promise<number> {
+    return unwrap('count_http_history', await commands.countHttpHistory());
+  }
+
+  /** Answers how many entries went. */
+  async clearHistory(): Promise<number> {
+    return unwrap('clear_http_history', await commands.clearHttpHistory());
   }
 
   async cancel(id: string): Promise<boolean> {

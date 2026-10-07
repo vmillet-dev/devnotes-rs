@@ -279,3 +279,32 @@
     @include accent-state;
   }
 }
+
+.rail-foot {
+  display: flex;
+  flex-direction: column;
+  margin-top: auto;
+  padding-top: 12px;
+}
+
+.rail-foot-item {
+  @include unstyled-control;
+  @include focus-ring(-2px);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  text-align: left;
+  color: var(--text-1);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--bg-2);
+    color: var(--text-0);
+  }
+
+  &.on {
+    background: rgba(var(--amber-rgb), 0.12);
+    color: var(--amber-text);
+    font-weight: 600;
+  }
+}

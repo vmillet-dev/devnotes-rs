@@ -275,6 +275,21 @@ describe('HTTP collections', () => {
         await $(testid('http-response-failure')).waitForDisplayed({ timeout: 10_000 });
         expect(heard).toHaveLength(1);
 
+        await $(testid('http-history-open')).click();
+        await eventually(
+          () => readEach(testid('http-history-status'), 'text'),
+          (statuses) => statuses.join() === '201',
+          'the one send that left, in the history',
+        );
+        await $(testid('http-history-item')).click();
+        await eventually(
+          () => $(testid('http-response-status')).getText(),
+          (text) => text === '201 Created',
+          'the entry read like a response',
+        );
+        await $(testid('http-history-open')).click();
+        await $(testid('http-history')).waitForExist({ reverse: true, timeout: 10_000 });
+
         const tab = `${testid('http-tab')}[data-key="${created.id}"]`;
         await $(`${tab} ${testid('http-tab-close')}`).click();
         await $(testid('http-close-discard')).click();

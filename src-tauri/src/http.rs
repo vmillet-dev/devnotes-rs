@@ -3,6 +3,7 @@
 //! The HTTP client's collections: they belong to the library, not to a space, and are sealed
 //! like the notes. A collection travels in a file of its own, never in the library export.
 
+pub mod history;
 pub mod model;
 pub mod query;
 pub mod response;
@@ -332,6 +333,8 @@ pub async fn send_http_request<R: Runtime>(
         document,
         collection_id,
         folder_id,
+        name,
+        request_id,
     } = request;
     let outgoing = blocking(app.clone(), move |_, db| {
         let inherited = match collection_id {
@@ -345,7 +348,41 @@ pub async fn send_http_request<R: Runtime>(
     })
     .await?;
 
-    Ok(app.state::<send::Sending>().run(&id, outgoing).await?)
+    let exchange = send::exchange(&outgoing);
+    let secrets = outgoing.secrets.clone();
+    let answer = app.state::<send::Sending>().run(&id, outgoing).await;
+    let outcome = match &answer {
+        Ok(response) => Ok(response.clone()),
+        Err(send::SendError::Cancelled) => return Err(send::SendError::Cancelled.into()),
+        Err(error) => Err(AppError::from(error.clone()).code),
+    };
+    let sent = history::Sent {
+        name,
+        request_id,
+        exchange,
+        secrets,
+        outcome,
+    };
+    // Written under the lock again, and never at the answer's expense.
+    let recorded = blocking(app, move |_, db| {
+        let (summary, record) = history::record_of(&sent);
+        let mut connection = lock(db)?;
+        history::store::record(
+            &mut connection,
+            method,
+            sent.request_id.as_deref(),
+            &summary,
+            &record,
+            Utc::now(),
+        )?;
+        Ok(())
+    })
+    .await;
+    if let Err(error) = recorded {
+        log::warn!("A send was not recorded in the history: {}", error.detail);
+    }
+
+    Ok(answer?)
 }
 
 /// `false` when that send had already ended.
@@ -392,4 +429,77 @@ pub async fn http_response_image<R: Runtime>(
     app: AppHandle<R>,
 ) -> Result<Option<String>, AppError> {
     off_thread(move || app.state::<send::Sending>().image(&id)).await
+}
+
+/// What was sent, newest first, a group a local day.
+#[tauri::command]
+#[specta::specta]
+pub async fn http_history<R: Runtime>(
+    tz_offset_minutes: i32,
+    app: AppHandle<R>,
+) -> Result<Vec<history::HistoryDay>, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(history::by_day(
+            history::store::list(&mut connection)?,
+            tz_offset_minutes,
+        ))
+    })
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn http_history_entry<R: Runtime>(
+    id: String,
+    app: AppHandle<R>,
+) -> Result<history::HistoryEntry, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(history::store::entry(&mut connection, &id)?)
+    })
+    .await
+}
+
+/// What « Vider l'historique » says it removes.
+#[tauri::command]
+#[specta::specta]
+pub async fn count_http_history<R: Runtime>(app: AppHandle<R>) -> Result<u32, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(history::store::count(&mut connection)?)
+    })
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn clear_http_history<R: Runtime>(app: AppHandle<R>) -> Result<u32, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(history::store::clear(&mut connection)?)
+    })
+    .await
+}
+
+/// An entry rebuilt as a request to send again or save: its secrets are typed again.
+#[tauri::command]
+#[specta::specta]
+pub async fn http_history_draft<R: Runtime>(
+    id: String,
+    app: AppHandle<R>,
+) -> Result<history::HistoryDraft, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(history::draft_of(&history::store::entry(
+            &mut connection,
+            &id,
+        )?))
+    })
+    .await
 }

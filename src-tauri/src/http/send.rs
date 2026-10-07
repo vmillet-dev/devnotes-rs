@@ -37,16 +37,19 @@ pub struct SendRequest {
     /// Where the request sits, for what it inherits; `None` for a draft not placed yet.
     pub collection_id: Option<String>,
     pub folder_id: Option<String>,
+    /// For the history: what the request is called, and which one it is once saved.
+    pub name: String,
+    pub request_id: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct Redirect {
     pub status: u16,
     pub url: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct SentResponse {
     pub status: u16,
@@ -75,7 +78,7 @@ pub struct SentResponse {
     pub exchange: Exchange,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct Exchange {
     pub method: HttpMethod,
@@ -84,7 +87,7 @@ pub struct Exchange {
     pub body: SentBody,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -140,6 +143,8 @@ pub struct Outgoing {
     pub url: Url,
     pub headers: Vec<(String, String)>,
     pub body: OutgoingBody,
+    /// The API key's name, lowercased: a header or a query pair the history masks.
+    pub secrets: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -322,11 +327,19 @@ pub fn compose(
         headers.push(("Content-Type".to_string(), implied.to_string()));
     }
 
+    let secrets = match auth {
+        RequestAuth::ApiKey { name, .. } if !name.trim().is_empty() => {
+            vec![name.trim().to_ascii_lowercase()]
+        }
+        _ => Vec::new(),
+    };
+
     Ok(Outgoing {
         method,
         url,
         headers,
         body,
+        secrets,
     })
 }
 
@@ -436,7 +449,7 @@ struct Kept {
     bytes: Vec<u8>,
 }
 
-fn exchange(outgoing: &Outgoing) -> Exchange {
+pub fn exchange(outgoing: &Outgoing) -> Exchange {
     let body = match &outgoing.body {
         OutgoingBody::None => SentBody::None,
         OutgoingBody::Bytes(bytes) => match std::str::from_utf8(bytes) {

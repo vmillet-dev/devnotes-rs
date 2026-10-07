@@ -2928,6 +2928,20 @@
         "multipart": "Corps multipart : {{fields}}."
       },
       "noteWhat": "Un snippet {{language}}, avec le corps de la réponse mis en forme."
+    },
+    "history": {
+      "title": "Historique",
+      "kept": "30 jours, 500 envois au plus",
+      "clear": "Vider l'historique",
+      "confirm": "{count, plural, one {Effacer l'entrée ?} other {Effacer les # entrées ?}}",
+      "cleared": "{count, plural, =0 {L'historique était déjà vide.} one {Une entrée effacée de l'historique.} other {# entrées effacées de l'historique.}}",
+      "today": "Aujourd'hui",
+      "yesterday": "Hier",
+      "noAnswer": "échec",
+      "empty": "Rien d'envoyé pour l'instant : chaque envoi s'inscrit ici.",
+      "choose": "Choisissez un envoi pour le relire.",
+      "reopen": "Rouvrir dans un onglet",
+      "failed": "L'historique n'a pas pu être lu."
     }
   }
 }

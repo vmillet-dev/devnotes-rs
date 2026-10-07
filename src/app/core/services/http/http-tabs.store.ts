@@ -113,6 +113,13 @@ export class HttpTabsStore {
     this.activate(key);
   }
 
+  /** A request rebuilt from elsewhere — the history — as a draft: nothing written until saved. */
+  openDraft(draft: RequestDraft): void {
+    const key = `draft-${++this.drafts}`;
+    this._tabs.update((tabs) => [...tabs, { key, requestId: null, place: null, saved: null, draft }]);
+    this.activate(key);
+  }
+
   activate(key: string): void {
     this._activeKey.set(key);
     this.persist();

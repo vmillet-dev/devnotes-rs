@@ -43,8 +43,8 @@ const TEXT_VIEWS = (['pretty', 'raw'] as const).map(segment);
 })
 export class ResponseBodyComponent {
   readonly response = input.required<SentResponse>();
-  /** What Rust keeps the bytes under, for an image. */
-  readonly sendId = input.required<string>();
+  /** What Rust keeps the bytes under, for an image; `null` when it kept none. */
+  readonly sendId = input<string | null>(null);
 
   protected readonly explorer = inject(JsonExplorerStore);
   private readonly repository = inject(HttpRepository);
@@ -73,8 +73,9 @@ export class ResponseBodyComponent {
   private readonly imageResource = resource({
     params: () => {
       const response = this.response();
+      const id = this.sendId();
       const image = response.binary && this.type().toLowerCase().startsWith('image/');
-      return image ? { id: this.sendId(), size: response.size } : undefined;
+      return image && id !== null ? { id, size: response.size } : undefined;
     },
     loader: ({ params }) => this.repository.responseImage(params.id),
   });

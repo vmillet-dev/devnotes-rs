@@ -13,6 +13,7 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { HttpContents, HttpItem } from '@core/model/http.model';
 import { AreaStore } from '@core/services/areas/area.store';
 import { HttpCollectionsStore } from '@core/services/http/http-collections.store';
+import { HttpHistoryStore } from '@core/services/http/http-history.store';
 import { HttpTabsStore } from '@core/services/http/http-tabs.store';
 import { DropZone, KeyMove, RailRow, dropMove, keyMove } from '@core/services/http/http-tree';
 import { SettingsStore } from '@core/services/settings/settings.store';
@@ -87,6 +88,7 @@ export class HttpRailComponent {
   protected readonly settings = inject(SettingsStore);
   protected readonly store = inject(HttpCollectionsStore);
   protected readonly tabs = inject(HttpTabsStore);
+  protected readonly history = inject(HttpHistoryStore);
   private readonly transloco = inject(TranslocoService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
@@ -125,6 +127,7 @@ export class HttpRailComponent {
       return;
     }
     if (row.kind === 'request') {
+      this.history.close();
       void this.tabs.open(row.id);
     } else {
       this.store.toggle(row.id);
@@ -174,7 +177,10 @@ export class HttpRailComponent {
       await this.store.createFolder(creating.collectionId ?? '', creating.folderId, trimmed);
     } else {
       const id = await this.store.createRequest(creating.collectionId ?? '', creating.folderId, trimmed);
-      if (id !== null) await this.tabs.open(id);
+      if (id !== null) {
+        this.history.close();
+        await this.tabs.open(id);
+      }
     }
   }
 

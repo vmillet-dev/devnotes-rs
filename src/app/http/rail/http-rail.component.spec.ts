@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpCollectionsStore } from '@core/services/http/http-collections.store';
+import { HttpHistoryStore } from '@core/services/http/http-history.store';
 import { HttpTabsStore } from '@core/services/http/http-tabs.store';
 import { FakeHttpRepository } from '@testing/fake-http-repository';
 import { sampleTree } from '@testing/http-tree.fixture';
@@ -229,5 +230,17 @@ describe('HttpRailComponent', () => {
     await fixture.whenStable();
 
     expect(el('[data-testid="http-rail-empty"]')).not.toBeNull();
+  });
+
+  it('opens the history from its foot, and leaves it for a request opened from the tree', async () => {
+    const history = TestBed.inject(HttpHistoryStore);
+    el<HTMLButtonElement>('[data-testid="http-history-open"]').click();
+    await fixture.whenStable();
+    expect(history.isOpen()).toBe(true);
+    expect(el('[data-testid="http-history-open"]').getAttribute('aria-pressed')).toBe('true');
+
+    name('Login').click();
+    await fixture.whenStable();
+    expect(history.isOpen()).toBe(false);
   });
 });

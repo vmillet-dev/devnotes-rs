@@ -10,7 +10,12 @@ import { provideAppTesting } from '@testing/testing.providers';
 import { HttpSendStore, Sendable, responseFileName } from './http-send.store';
 
 const draft: RequestDraft = { name: 'Login', kind: 'http', method: 'POST', parts: EMPTY_PARTS };
-const tab = (key: string, place: Sendable['place'] = null): Sendable => ({ key, place, draft });
+const tab = (key: string, place: Sendable['place'] = null): Sendable => ({
+  key,
+  place,
+  draft,
+  requestId: null,
+});
 
 function deferred<T>(): {
   promise: Promise<T>;
