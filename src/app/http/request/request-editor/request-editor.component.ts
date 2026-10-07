@@ -11,12 +11,14 @@ import {
 import { TranslocoPipe } from '@jsverse/transloco';
 import { HttpRepository } from '@core/data/http.repository';
 import {
+  DEFAULT_TRANSPORT,
   GraphqlParts,
   HTTP_METHODS,
   HttpMethod,
   KeyValueRow,
   RequestAuth,
   RequestBodyDraft,
+  TransportSettings,
   WebsocketParts,
 } from '@core/model/http.model';
 import { HttpCollectionsStore } from '@core/services/http/http-collections.store';
@@ -30,9 +32,10 @@ import { BodyEditorComponent } from '../body-editor/body-editor.component';
 import { GraphqlEditorComponent } from '../graphql-editor/graphql-editor.component';
 import { WebsocketComposerComponent } from '../websocket-composer/websocket-composer.component';
 import { KeyValueTableComponent } from '@http/ui/key-value-table/key-value-table.component';
+import { TransportEditorComponent } from '@http/ui/transport-editor/transport-editor.component';
 import { UrlFieldComponent } from '../url-field/url-field.component';
 
-type Section = 'params' | 'headers' | 'auth' | 'body' | 'query' | 'message' | 'protocols';
+type Section = 'params' | 'headers' | 'auth' | 'body' | 'query' | 'message' | 'protocols' | 'settings';
 
 /** The choices that turn a request into a GraphQL one or a socket, beside the methods. */
 const GRAPHQL = 'GRAPHQL';
@@ -55,6 +58,7 @@ const counted = (rows: readonly KeyValueRow[]) => rows.filter((row) => row.enabl
     GraphqlEditorComponent,
     KeyValueTableComponent,
     TranslocoPipe,
+    TransportEditorComponent,
     UrlFieldComponent,
     WebsocketComposerComponent,
   ],
@@ -77,8 +81,8 @@ export class RequestEditorComponent {
   protected readonly sections = computed<readonly Section[]>(
     () =>
       ({
-        http: ['params', 'headers', 'auth', 'body'] as const,
-        graphql: ['query', 'headers', 'auth'] as const,
+        http: ['params', 'headers', 'auth', 'body', 'settings'] as const,
+        graphql: ['query', 'headers', 'auth', 'settings'] as const,
         websocket: ['message', 'headers', 'auth', 'protocols'] as const,
       })[this.tab().draft.kind],
   );
@@ -109,6 +113,7 @@ export class RequestEditorComponent {
   protected readonly inherited = computed(() =>
     this.inheritedResource.hasValue() ? this.inheritedResource.value() : null,
   );
+  protected readonly transportAbove = computed(() => this.inherited()?.transport ?? DEFAULT_TRANSPORT);
 
   private readonly bodyResource = resource({
     params: () => this.tab().draft.parts.body,
@@ -150,6 +155,9 @@ export class RequestEditorComponent {
     query: 0,
     message: this.tab().draft.parts.websocket.messages.length,
     protocols: this.tab().draft.parts.websocket.protocols.length,
+    settings: Object.values(this.tab().draft.parts.transport).filter(
+      (value) => value !== null && value !== undefined,
+    ).length,
   }));
 
   protected onMethod(method: string | null): void {
@@ -188,6 +196,10 @@ export class RequestEditorComponent {
 
   protected onAuth(auth: RequestAuth): void {
     this.tabs.editParts(this.tab().key, { auth });
+  }
+
+  protected onTransport(transport: TransportSettings): void {
+    this.tabs.editParts(this.tab().key, { transport });
   }
 
   protected onBody(body: RequestBodyDraft): void {

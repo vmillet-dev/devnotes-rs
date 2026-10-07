@@ -134,7 +134,7 @@ export class HttpTabsStore {
   editParts(
     key: string,
     change: Partial<
-      Pick<RequestParts, 'headers' | 'description' | 'body' | 'auth' | 'graphql' | 'websocket'>
+      Pick<RequestParts, 'headers' | 'description' | 'body' | 'auth' | 'graphql' | 'websocket' | 'transport'>
     >,
   ): void {
     this.update(key, (draft) => ({ ...draft, parts: { ...draft.parts, ...change } }));

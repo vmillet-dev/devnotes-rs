@@ -16,6 +16,8 @@ import {
   SentResponse,
   BodyAnswer,
   ContainerSettingsDraft,
+  CookieDomain,
+  DEFAULT_TRANSPORT,
   EMPTY_PARTS,
   InheritedParts,
   KeyValueRow,
@@ -45,8 +47,15 @@ interface Synced {
 export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpRepository> {
   tree$: HttpTree = { collections: [] };
   contentsAnswer: HttpContents = { folders: 0, requests: 0 };
-  settingsAnswer: ContainerSettingsDraft = { auth: { kind: 'inherit' }, headers: [] };
-  inheritedAnswer: InheritedParts = { auth: { kind: 'none' }, authFrom: null, headers: [] };
+  settingsAnswer: ContainerSettingsDraft = { auth: { kind: 'inherit' }, headers: [], transport: {} };
+  inheritedAnswer: InheritedParts = {
+    auth: { kind: 'none' },
+    authFrom: null,
+    headers: [],
+    transport: DEFAULT_TRANSPORT,
+  };
+  /** The jar by domain; the deletes take from it as Rust would. */
+  jar: CookieDomain[] = [];
   bodyAnswer: BodyAnswer = { contentType: null, problem: null };
   graphqlAnswer: GraphqlAnswer = { operations: [], variablesProblem: null };
   /** What `send` answers; a spec holding `pendingSend` decides when. */
@@ -206,6 +215,44 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
     return this.record('countHistory', [], () =>
       this.historyAnswer.reduce((count, day) => count + day.items.length, 0),
     );
+  }
+
+  cookies(): Promise<CookieDomain[]> {
+    return this.record('cookies', [], () => this.jar);
+  }
+
+  deleteCookie(id: string): Promise<number> {
+    return this.record('deleteCookie', [id], () => {
+      const before = this.countJar();
+      this.jar = this.jar
+        .map((domain) => ({ ...domain, cookies: domain.cookies.filter((stored) => stored.id !== id) }))
+        .filter((domain) => domain.cookies.length > 0);
+      return before - this.countJar();
+    });
+  }
+
+  deleteCookieDomain(domain: string): Promise<number> {
+    return this.record('deleteCookieDomain', [domain], () => {
+      const before = this.countJar();
+      this.jar = this.jar.filter((known) => known.domain !== domain);
+      return before - this.countJar();
+    });
+  }
+
+  countCookies(): Promise<number> {
+    return this.record('countCookies', [], () => this.countJar());
+  }
+
+  clearCookies(): Promise<number> {
+    return this.record('clearCookies', [], () => {
+      const count = this.countJar();
+      this.jar = [];
+      return count;
+    });
+  }
+
+  private countJar(): number {
+    return this.jar.reduce((count, domain) => count + domain.cookies.length, 0);
   }
 
   clearHistory(): Promise<number> {

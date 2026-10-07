@@ -21,6 +21,14 @@
         [rows]="current.headers"
         (rowsChange)="onHeaders($event)"
       />
+
+      <h3 class="section">{{ 'http.editor.sections.settings' | transloco }}</h3>
+      <app-transport-editor
+        [settings]="current.transport"
+        [above]="above()?.transport ?? defaultTransport"
+        [aboveIsDefault]="row().kind === 'collection'"
+        (settingsChange)="onTransport($event)"
+      />
     }
 
     <div class="actions">

@@ -77,6 +77,7 @@ Run all commands from the repo root (`package.json` there wraps both Angular and
 - **⚠️ An HTTP send never holds the lock** (`send_http_request`): what it inherits is read under it, the network waited on without it, and a failure crosses as a code. → "Sending a request, and its answer".
 - **The HTTP history masks before it seals** (`history::mask`: `Authorization` keeps its scheme, the API key goes by the name `compose` hands on); the live timeline does not. → "The history of what was sent".
 - **⚠️ A WebSocket is a Rust task, not the page's**: its events cross on one generated topic (`WEBSOCKET_EVENT`), and `open_library` closes every socket — reloading the page alone would leave them open. → "A WebSocket".
+- **The cookie jar is sealed whole, domain included**, so matching is Rust's over the jar read entire; transport settings inherit field by field, like the auth. → "How a request travels, and the cookie jar".
 - **A module holding commands is `pub`; the rest is `pub(crate)`,** so `dead_code` and `unreachable_pub` can speak. `#[specta::specta]` resolves its macro from the crate root.
 - **Migrations are append-only** (`src-tauri/migrations/`, `embed_migrations!`), and `db/schema.rs` is written by hand: a column is added in both, and `check_for_backend` on `NoteRow` catches a divergence. Libraries from 0.2.0 on open; 0.1.0's `PRAGMA user_version` is refused by name. → "How far back an upgrade reaches".
 - **`PRAGMA foreign_keys` is per connection** (`db::configure`): without it every `ON DELETE CASCADE` is inert.

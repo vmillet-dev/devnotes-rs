@@ -38,10 +38,22 @@ import type {
   RequestKind,
   SentResponse,
   SyncedQuery,
+  CookieDomain,
+  JarCookie,
+  StoredCookie,
+  Transport,
+  TransportSettings,
 } from '@core/ipc/bindings';
+
+export { DEFAULT_TRANSPORT } from '@core/ipc/bindings';
 
 export type {
   BodyAnswer,
+  CookieDomain,
+  JarCookie,
+  StoredCookie,
+  Transport,
+  TransportSettings,
   GraphqlAnswer,
   GraphqlResult,
   SocketEvent,
@@ -130,12 +142,14 @@ export interface RequestParts {
   readonly description: string;
   readonly graphql: GraphqlParts;
   readonly websocket: WebsocketParts;
+  readonly transport: TransportSettings;
 }
 
 /** A collection's or a folder's own auth and headers, what its requests inherit. */
 export interface ContainerSettingsDraft {
   readonly auth: RequestAuth;
   readonly headers: readonly KeyValueRow[];
+  readonly transport: TransportSettings;
 }
 
 export interface InheritedHeaderRow {
@@ -147,6 +161,7 @@ export interface InheritedParts {
   readonly auth: RequestAuth;
   readonly authFrom: HttpOrigin | null;
   readonly headers: readonly InheritedHeaderRow[];
+  readonly transport: Transport;
 }
 
 export const EMPTY_PARTS: RequestParts = {
@@ -158,6 +173,7 @@ export const EMPTY_PARTS: RequestParts = {
   description: '',
   graphql: { query: '', variables: '', operationName: null, asGet: false },
   websocket: { protocols: [], messages: [] },
+  transport: {},
 };
 
 /** What a request tab edits, and what saving writes. */
@@ -235,6 +251,7 @@ export function toParts(document: RequestDocument): RequestParts {
     description: document.description ?? '',
     graphql: toGraphql(document.graphql),
     websocket: toWebsocket(document.websocket),
+    transport: document.transport ?? {},
   };
 }
 
@@ -271,15 +288,20 @@ export function toDocument(parts: RequestParts): RequestDocument {
     description: parts.description,
     graphql: toGraphqlWire(parts.graphql),
     websocket: { protocols: [...parts.websocket.protocols], messages: [...parts.websocket.messages] },
+    transport: { ...parts.transport },
   };
 }
 
 export function toSettings(settings: ContainerSettings): ContainerSettingsDraft {
-  return { auth: settings.auth ?? { kind: 'inherit' }, headers: (settings.headers ?? []).map(toRow) };
+  return {
+    auth: settings.auth ?? { kind: 'inherit' },
+    headers: (settings.headers ?? []).map(toRow),
+    transport: settings.transport ?? {},
+  };
 }
 
 export function fromSettings(settings: ContainerSettingsDraft): ContainerSettings {
-  return { auth: settings.auth, headers: [...settings.headers] };
+  return { auth: settings.auth, headers: [...settings.headers], transport: { ...settings.transport } };
 }
 
 export function toInherited(inherited: Inherited): InheritedParts {
@@ -290,6 +312,7 @@ export function toInherited(inherited: Inherited): InheritedParts {
       header: toRow(known.header),
       from: known.from,
     })),
+    transport: inherited.transport,
   };
 }
 

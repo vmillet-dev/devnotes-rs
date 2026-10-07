@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpTabsStore } from '@core/services/http/http-tabs.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
-import { EMPTY_PARTS, SentResponse } from '@core/model/http.model';
+import { DEFAULT_TRANSPORT, EMPTY_PARTS, SentResponse } from '@core/model/http.model';
 import { FakeHttpRepository, sentResponse } from '@testing/fake-http-repository';
 import { sampleTree } from '@testing/http-tree.fixture';
 import { provideAppTesting } from '@testing/testing.providers';
@@ -156,6 +156,7 @@ describe('HttpPageComponent', () => {
           from: { kind: 'collection', id: 'API', name: 'API Paiements' },
         },
       ],
+      transport: DEFAULT_TRANSPORT,
     };
     http.bodyAnswer = { contentType: 'application/json', problem: null };
     await tabs().open('Login');
@@ -185,6 +186,27 @@ describe('HttpPageComponent', () => {
       "Content-Type · application/json · d'après le corps",
       'Accept · application/json · héritée de la collection API Paiements',
     ]);
+  });
+
+  it('sets how a request travels in its Réglages, over what its collection hands down', async () => {
+    http.inheritedAnswer = { ...http.inheritedAnswer, transport: { ...DEFAULT_TRANSPORT, timeoutMs: 5000 } };
+    await tabs().open('Login');
+    await fixture.whenStable();
+    el<HTMLButtonElement>('[data-testid="http-section"][data-section="settings"]').click();
+    await vi.waitFor(() =>
+      expect(el('[data-testid="http-transport-from"]')?.textContent).toContain('5000 ms'),
+    );
+
+    const timeout = el<HTMLInputElement>('[data-testid="http-transport-timeoutMs"]');
+    timeout.value = '2000';
+    timeout.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+
+    expect(tabs().active()!.draft.parts.transport).toEqual({ timeoutMs: 2000 });
+    expect(
+      el('[data-testid="http-section"][data-section="settings"] [data-testid="http-section-count"]')
+        ?.textContent,
+    ).toBe('1');
   });
 
   it('closes, when it opens again, the tab of a request the library no longer holds', async () => {
@@ -243,6 +265,7 @@ describe('HttpPageComponent', () => {
       'query',
       'headers',
       'auth',
+      'settings',
     ]);
     expect(el('[data-testid="http-graphql"]')).not.toBeNull();
     el<HTMLButtonElement>('[data-testid="http-section"][data-section="headers"]').click();

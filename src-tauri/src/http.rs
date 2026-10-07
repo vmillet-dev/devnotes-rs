@@ -3,6 +3,7 @@
 //! The HTTP client's collections: they belong to the library, not to a space, and are sealed
 //! like the notes. A collection travels in a file of its own, never in the library export.
 
+pub mod cookies;
 pub mod graphql;
 pub mod history;
 pub mod model;
@@ -11,6 +12,7 @@ pub mod response;
 pub mod send;
 pub mod settings;
 pub mod store;
+pub mod transport;
 pub mod websocket;
 
 use std::path::Path;
@@ -340,19 +342,25 @@ pub async fn send_http_request<R: Runtime>(
         request_id,
     } = request;
     let outgoing = blocking(app.clone(), move |_, db| {
+        let mut connection = lock(db)?;
         let inherited = match collection_id {
             Some(collection_id) => {
-                let mut connection = lock(db)?;
                 store::inherited(&mut connection, &collection_id, folder_id.as_deref())?
             }
             None => settings::inherit(&[]),
         };
-        Ok(send::compose(kind, method, &document, &inherited)?)
+        let mut outgoing = send::compose(kind, method, &document, &inherited)?;
+        if outgoing.transport.use_cookies {
+            let jar = cookies::store::jar(&mut connection, Utc::now())?;
+            outgoing.add_cookies(cookies::header_for(&jar, &outgoing.url, Utc::now()));
+        }
+        Ok(outgoing)
     })
     .await?;
 
     let exchange = send::exchange(&outgoing);
     let secrets = outgoing.secrets.clone();
+    let keeps_cookies = outgoing.transport.use_cookies;
     let answer = app.state::<send::Sending>().run(&id, outgoing).await;
     let outcome = match &answer {
         Ok(response) => Ok(response.clone()),
@@ -366,8 +374,20 @@ pub async fn send_http_request<R: Runtime>(
         secrets,
         outcome,
     };
-    // Written under the lock again, and never at the answer's expense.
-    let recorded = blocking(app, move |_, db| {
+    keep(app, method, sent, keeps_cookies).await;
+
+    Ok(answer?)
+}
+
+/// The history and the jar, written under the lock again, and never at the answer's expense.
+async fn keep<R: Runtime>(
+    app: AppHandle<R>,
+    method: model::HttpMethod,
+    sent: history::Sent,
+    keeps_cookies: bool,
+) {
+    let kept = blocking(app, move |_, db| {
+        let now = Utc::now();
         let (summary, record) = history::record_of(&sent);
         let mut connection = lock(db)?;
         history::store::record(
@@ -376,16 +396,27 @@ pub async fn send_http_request<R: Runtime>(
             sent.request_id.as_deref(),
             &summary,
             &record,
-            Utc::now(),
+            now,
         )?;
+        if let Ok(response) = &sent.outcome
+            && keeps_cookies
+            && let Ok(url) = url::Url::parse(&response.url)
+        {
+            cookies::store::apply(
+                &mut connection,
+                &cookies::received(&response.headers, &url, now),
+                now,
+            )?;
+        }
         Ok(())
     })
     .await;
-    if let Err(error) = recorded {
-        log::warn!("A send was not recorded in the history: {}", error.detail);
+    if let Err(error) = kept {
+        log::warn!(
+            "A send's history or cookies were not kept: {}",
+            error.detail
+        );
     }
-
-    Ok(answer?)
 }
 
 /// `false` when that send had already ended.
@@ -582,4 +613,69 @@ pub async fn send_websocket<R: Runtime>(
 #[specta::specta]
 pub async fn close_websocket<R: Runtime>(id: String, app: AppHandle<R>) -> Result<bool, AppError> {
     Ok(app.state::<websocket::Sockets>().close(&id))
+}
+
+/// The jar by domain, for the manager.
+#[tauri::command]
+#[specta::specta]
+pub async fn http_cookies<R: Runtime>(
+    app: AppHandle<R>,
+) -> Result<Vec<cookies::store::CookieDomain>, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(cookies::store::by_domain(&mut connection)?)
+    })
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn delete_http_cookie<R: Runtime>(
+    id: String,
+    app: AppHandle<R>,
+) -> Result<u32, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(cookies::store::delete(&mut connection, &id)?)
+    })
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn delete_http_cookie_domain<R: Runtime>(
+    domain: String,
+    app: AppHandle<R>,
+) -> Result<u32, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(cookies::store::delete_domain(&mut connection, &domain)?)
+    })
+    .await
+}
+
+/// What « Vider le bocal » says it removes.
+#[tauri::command]
+#[specta::specta]
+pub async fn count_http_cookies<R: Runtime>(app: AppHandle<R>) -> Result<u32, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(cookies::store::count(&mut connection)?)
+    })
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn clear_http_cookies<R: Runtime>(app: AppHandle<R>) -> Result<u32, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(cookies::store::clear(&mut connection)?)
+    })
+    .await
 }

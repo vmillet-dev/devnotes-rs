@@ -1,5 +1,6 @@
 //! What a request takes from the folders and the collection above it, and what its body implies.
 
+use super::transport::{self, Transport};
 use serde::Serialize;
 use specta::Type;
 
@@ -29,6 +30,8 @@ pub struct Inherited {
     pub auth_from: Option<HttpOrigin>,
     /// Enabled and named, one a name: a folder's overrides its collection's.
     pub headers: Vec<InheritedHeader>,
+    /// Resolved from the collection down; a request's own settings go over it.
+    pub transport: Transport,
 }
 
 /// `levels` from the collection down to the request's own folder: the nearest auth set wins.
@@ -66,6 +69,7 @@ pub fn inherit(levels: &[(HttpOrigin, ContainerSettings)]) -> Inherited {
         auth,
         auth_from,
         headers,
+        transport: transport::resolve(levels.iter().map(|(_, settings)| &settings.transport)),
     }
 }
 
@@ -114,6 +118,7 @@ mod tests {
                 ContainerSettings {
                     auth: bearer.clone(),
                     headers: Vec::new(),
+                    ..ContainerSettings::default()
                 },
             ),
             (
@@ -148,6 +153,7 @@ mod tests {
                         header("X-Trace", "1", false),
                         header("X-Client", "web", true),
                     ],
+                    ..ContainerSettings::default()
                 },
             ),
             (
@@ -155,6 +161,7 @@ mod tests {
                 ContainerSettings {
                     auth: RequestAuth::Inherit,
                     headers: vec![header("accept", "text/csv", true)],
+                    ..ContainerSettings::default()
                 },
             ),
         ];

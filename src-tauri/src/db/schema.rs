@@ -161,6 +161,14 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    http_cookies (id) {
+        id -> Text,
+        expires_at -> Nullable<Text>,
+        cookie -> Text,
+    }
+}
+
 diesel::joinable!(folders -> spaces (space_id));
 diesel::joinable!(notes -> spaces (space_id));
 diesel::joinable!(note_positions -> notes (note_id));
@@ -188,5 +196,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     http_collections,
     http_folders,
     http_requests,
-    http_history
+    http_history,
+    http_cookies
 );

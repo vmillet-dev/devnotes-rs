@@ -14,12 +14,13 @@ use tokio::task::AbortHandle;
 use url::Url;
 use uuid::Uuid;
 
-use super::graphql::{self, GraphqlResult};
+use super::graphql::{self, GraphqlDocument, GraphqlResult};
 use super::model::{
     HttpMethod, KeyPlace, KeyValue, RequestAuth, RequestBody, RequestDocument, RequestKind,
 };
 use super::response::{self, Cookie};
 use super::settings::{Inherited, implied_content_type};
+use super::transport::Transport;
 use crate::notes::language::Language;
 use crate::notes::placeholder;
 
@@ -27,8 +28,6 @@ use crate::notes::placeholder;
 pub const SHOWN_LIMIT: usize = 1024 * 1024;
 /// What is read at all: past it the reading stops.
 pub const KEPT_LIMIT: usize = 64 * 1024 * 1024;
-const DEFAULT_TIMEOUT_MS: u32 = 30_000;
-const MAX_REDIRECTS: usize = 10;
 
 #[derive(Debug, Clone, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
@@ -158,6 +157,22 @@ pub struct Outgoing {
     pub secrets: Vec<String>,
     /// Its answer is read as GraphQL.
     pub graphql: bool,
+    /// Its timeout, redirects and TLS: the defaults until the command sets what is inherited.
+    pub transport: Transport,
+}
+
+impl Outgoing {
+    /// The jar's `Cookie`, unless one is typed: what is typed wins, as for `Authorization`.
+    pub fn add_cookies(&mut self, header: Option<String>) {
+        if let Some(header) = header
+            && !self
+                .headers
+                .iter()
+                .any(|(key, _)| key.eq_ignore_ascii_case("cookie"))
+        {
+            self.headers.push(("Cookie".to_string(), header));
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -321,27 +336,7 @@ pub fn compose(
     }
 
     let (body, implied) = match graphql {
-        Some(graphql) => {
-            let variables = graphql::variables(graphql).map_err(SendError::GraphqlVariables)?;
-            if graphql.as_get {
-                let mut pairs = url.query_pairs_mut();
-                pairs.append_pair("query", &graphql.query);
-                if let Some(variables) = variables {
-                    pairs.append_pair("variables", variables);
-                }
-                if let Some(name) = graphql
-                    .operation_name
-                    .as_deref()
-                    .filter(|name| !name.is_empty())
-                {
-                    pairs.append_pair("operationName", name);
-                }
-                (OutgoingBody::None, None)
-            } else {
-                let body = graphql::body(graphql, variables).into_bytes();
-                (OutgoingBody::Bytes(body), Some("application/json"))
-            }
-        }
+        Some(graphql) => graphql_body(graphql, &mut url)?,
         // A multipart type carries its boundary, which reqwest alone knows.
         None => (
             body_of(&document.body)?,
@@ -369,7 +364,33 @@ pub fn compose(
         body,
         secrets,
         graphql: graphql.is_some(),
+        transport: inherited.transport.over(&document.transport),
     })
+}
+
+/// A GraphQL operation as a JSON body, or in the query of a `GET`.
+fn graphql_body<'a>(
+    graphql: &GraphqlDocument,
+    url: &mut Url,
+) -> Result<(OutgoingBody, Option<&'a str>), SendError> {
+    let variables = graphql::variables(graphql).map_err(SendError::GraphqlVariables)?;
+    if !graphql.as_get {
+        let body = graphql::body(graphql, variables).into_bytes();
+        return Ok((OutgoingBody::Bytes(body), Some("application/json")));
+    }
+    let mut pairs = url.query_pairs_mut();
+    pairs.append_pair("query", &graphql.query);
+    if let Some(variables) = variables {
+        pairs.append_pair("variables", variables);
+    }
+    if let Some(name) = graphql
+        .operation_name
+        .as_deref()
+        .filter(|name| !name.is_empty())
+    {
+        pairs.append_pair("operationName", name);
+    }
+    Ok((OutgoingBody::None, None))
 }
 
 fn body_of(body: &RequestBody) -> Result<OutgoingBody, SendError> {
@@ -568,14 +589,16 @@ fn request(client: &reqwest::Client, outgoing: Outgoing) -> reqwest::RequestBuil
     }
 }
 
-async fn send(outgoing: Outgoing) -> Result<Received, SendError> {
-    install_crypto();
-    let redirects: Arc<Mutex<Vec<Redirect>>> = Arc::default();
-    let seen = Arc::clone(&redirects);
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_millis(u64::from(DEFAULT_TIMEOUT_MS)))
-        .redirect(reqwest::redirect::Policy::custom(move |attempt| {
-            if attempt.previous().len() > MAX_REDIRECTS {
+/// A client per send: its timeout, redirects and TLS are the request's, and each redirect
+/// followed is written down in `seen`.
+fn client(
+    transport: Transport,
+    seen: Arc<Mutex<Vec<Redirect>>>,
+) -> Result<reqwest::Client, SendError> {
+    let policy = if transport.follow_redirects {
+        let most = usize::try_from(transport.max_redirects).unwrap_or(usize::MAX);
+        reqwest::redirect::Policy::custom(move |attempt| {
+            if attempt.previous().len() > most {
                 return attempt.error("too many redirects");
             }
             if let Ok(mut seen) = seen.lock() {
@@ -585,9 +608,22 @@ async fn send(outgoing: Outgoing) -> Result<Received, SendError> {
                 });
             }
             attempt.follow()
-        }))
+        })
+    } else {
+        reqwest::redirect::Policy::none()
+    };
+    reqwest::Client::builder()
+        .timeout(Duration::from_millis(u64::from(transport.timeout_ms)))
+        .redirect(policy)
+        .tls_danger_accept_invalid_certs(!transport.verify_tls)
         .build()
-        .map_err(|error| SendError::Network(error.to_string()))?;
+        .map_err(|error| SendError::Network(error.to_string()))
+}
+
+async fn send(outgoing: Outgoing) -> Result<Received, SendError> {
+    install_crypto();
+    let redirects: Arc<Mutex<Vec<Redirect>>> = Arc::default();
+    let client = client(outgoing.transport, Arc::clone(&redirects))?;
 
     let exchange = exchange(&outgoing);
     let is_graphql = outgoing.graphql;
@@ -779,6 +815,7 @@ mod tests {
             auth: RequestAuth::None,
             auth_from: None,
             headers: Vec::new(),
+            transport: crate::http::transport::Transport::default(),
         }
     }
 

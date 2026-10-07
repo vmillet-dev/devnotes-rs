@@ -1,0 +1,72 @@
+@let current = settings();
+@let base = above();
+<div class="transport" data-testid="http-transport">
+  <label class="row">
+    <span class="label">{{ 'http.transport.timeoutMs' | transloco }}</span>
+    <span class="value">
+      <input
+        type="number"
+        class="number"
+        min="100"
+        step="1000"
+        data-testid="http-transport-timeoutMs"
+        [placeholder]="base.timeoutMs"
+        [value]="current.timeoutMs ?? ''"
+        (change)="onNumber('timeoutMs', $event)"
+      />
+      <span class="unit">ms</span>
+    </span>
+    <span class="from" data-testid="http-transport-from">
+      @if (!owns('timeoutMs')) {
+        {{ inheritKey() | transloco }} · {{ base.timeoutMs }} ms
+      }
+    </span>
+  </label>
+
+  @for (field of switches; track field) {
+    <div class="row">
+      <span class="label">{{ 'http.transport.' + field | transloco }}</span>
+      <app-choice-menu
+        class="value"
+        [kind]="'http-transport-' + field"
+        [triggerTestId]="'http-transport-' + field"
+        [label]="'http.transport.' + field | transloco"
+        [options]="options()"
+        [currentId]="switchId(field)"
+        (chosen)="onSwitch(field, $event)"
+      />
+      <span class="from" data-testid="http-transport-from">
+        @if (!owns(field)) {
+          {{ inheritKey() | transloco }} ·
+          {{ (base[field] ? 'http.transport.on' : 'http.transport.off') | transloco }}
+        }
+      </span>
+    </div>
+
+    @if (field === 'followRedirects') {
+      <label class="row">
+        <span class="label">{{ 'http.transport.maxRedirects' | transloco }}</span>
+        <span class="value">
+          <input
+            type="number"
+            class="number"
+            min="0"
+            data-testid="http-transport-maxRedirects"
+            [placeholder]="base.maxRedirects"
+            [value]="current.maxRedirects ?? ''"
+            (change)="onNumber('maxRedirects', $event)"
+          />
+        </span>
+        <span class="from" data-testid="http-transport-from">
+          @if (!owns('maxRedirects')) {
+            {{ inheritKey() | transloco }} · {{ base.maxRedirects }}
+          }
+        </span>
+      </label>
+    }
+  }
+
+  @if (insecure()) {
+    <p class="warning" data-testid="http-transport-insecure">{{ 'http.transport.insecure' | transloco }}</p>
+  }
+</div>

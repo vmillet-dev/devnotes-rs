@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { commands } from '@core/ipc/bindings';
 import { unwrap } from '@core/ipc/ipc.error';
 import {
+  CookieDomain,
   HttpCollection,
   HttpContents,
   HttpFolder,
@@ -138,6 +139,27 @@ export class HttpRepository {
 
   async countHistory(): Promise<number> {
     return unwrap('count_http_history', await commands.countHttpHistory());
+  }
+
+  async cookies(): Promise<CookieDomain[]> {
+    return unwrap('http_cookies', await commands.httpCookies());
+  }
+
+  /** Each answers how many cookies went. */
+  async deleteCookie(id: string): Promise<number> {
+    return unwrap('delete_http_cookie', await commands.deleteHttpCookie(id));
+  }
+
+  async deleteCookieDomain(domain: string): Promise<number> {
+    return unwrap('delete_http_cookie_domain', await commands.deleteHttpCookieDomain(domain));
+  }
+
+  async countCookies(): Promise<number> {
+    return unwrap('count_http_cookies', await commands.countHttpCookies());
+  }
+
+  async clearCookies(): Promise<number> {
+    return unwrap('clear_http_cookies', await commands.clearHttpCookies());
   }
 
   /** Answers how many entries went. */

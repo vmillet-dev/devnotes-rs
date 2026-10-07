@@ -1770,6 +1770,24 @@ the subprotocols asked for, and the messages kept to send again.
 - The lower half is a **log** (`SocketLogComponent`): each event's time, direction and size,
   filterable, the newest 500 kept.
 
+### How a request travels, and the cookie jar
+
+**Transport settings inherit field by field** (`http/transport.rs`): a collection, its folders
+and the request each hold a `TransportSettings` whose fields are optional, and
+`transport::resolve` lays them over `Transport::default()` (crossing as `DEFAULT_TRANSPORT`)
+from the collection down. `compose` resolves them, and `send` builds its client from them:
+timeout (never under 100 ms), redirects followed or not and how many, TLS verified or not, the
+jar used or not. The Réglages tab (`TransportEditorComponent`) shows beside each unset field
+what it takes from above.
+
+**The jar is the library's, sealed whole** (`http_cookies`, `http/cookies.rs`): the domain is
+sealed with the rest — which sites one talks to is not for the file to say — so matching
+(domain, path, `Secure`, expiry) runs in Rust over the jar read entire, and only `expires_at`
+stays clear for the purge. The jar is read under the lock before the send and written with the
+history after it; a `Cookie` header typed by hand wins over the jar. The manager
+(`CookieJarDialogComponent`, from the rail's foot) lists by domain and deletes one, a domain's
+or all, the count asked of Rust first.
+
 ### Managing spaces from the switcher
 
 The space switcher's dropdown has three mutually exclusive states: the menu, the creation

@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_TRANSPORT } from '@core/model/http.model';
 import { RailRow } from '@core/services/http/http-tree';
 import { FakeHttpRepository } from '@testing/fake-http-repository';
 import { provideAppTesting } from '@testing/testing.providers';
@@ -28,11 +29,13 @@ describe('ContainerSettingsDialogComponent', () => {
     http.settingsAnswer = {
       auth: { kind: 'inherit' },
       headers: [{ enabled: true, key: 'Accept', value: 'text/csv', description: '' }],
+      transport: {},
     };
     http.inheritedAnswer = {
       auth: { kind: 'bearer', token: '{{accessToken}}' },
       authFrom: { kind: 'collection', id: 'api', name: 'API' },
       headers: [],
+      transport: DEFAULT_TRANSPORT,
     };
     TestBed.configureTestingModule({
       imports: [ContainerSettingsDialogComponent],
@@ -63,6 +66,9 @@ describe('ContainerSettingsDialogComponent', () => {
     const value = el<HTMLInputElement>('[data-testid="http-kv-value"]');
     value.value = 'application/json';
     value.dispatchEvent(new Event('input'));
+    const timeout = el<HTMLInputElement>('[data-testid="http-transport-timeoutMs"]');
+    timeout.value = '8000';
+    timeout.dispatchEvent(new Event('change'));
     await fixture.whenStable();
 
     el<HTMLButtonElement>('[data-testid="http-settings-save"]').click();
@@ -73,6 +79,7 @@ describe('ContainerSettingsDialogComponent', () => {
         {
           auth: { kind: 'inherit' },
           headers: [{ enabled: true, key: 'Accept', value: 'application/json', description: '' }],
+          transport: { timeoutMs: 8000 },
         },
       ],
     ]);
@@ -81,6 +88,9 @@ describe('ContainerSettingsDialogComponent', () => {
   it('asks a collection nothing about what is above it, and closes on Annuler', async () => {
     await render({ ...FOLDER, kind: 'collection', id: 'api', name: 'API', collectionId: 'api', depth: 0 });
     expect(http.callsOf('inherited')).toEqual([]);
+    await vi.waitFor(() =>
+      expect(el('[data-testid="http-transport-from"]')?.textContent).toContain('Par défaut'),
+    );
 
     el<HTMLButtonElement>('[data-testid="http-settings-cancel"]').click();
     expect(closed).toBe(1);

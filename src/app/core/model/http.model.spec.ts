@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { fromSettings, requestBadge, toDocument, toInherited, toParts, toSettings } from './http.model';
+import {
+  DEFAULT_TRANSPORT,
+  fromSettings,
+  requestBadge,
+  toDocument,
+  toInherited,
+  toParts,
+  toSettings,
+} from './http.model';
 
 describe('the HTTP wire shapes', () => {
   it('fills what a document left out, and gives every row and part its defaults', () => {
@@ -24,6 +32,7 @@ describe('the HTTP wire shapes', () => {
       description: '',
       graphql: { query: '', variables: '', operationName: null, asGet: false },
       websocket: { protocols: [], messages: [] },
+      transport: {},
     });
     expect(toParts({ websocket: { messages: [{ name: 'Ping' }] } }).websocket).toEqual({
       protocols: [],
@@ -52,16 +61,21 @@ describe('the HTTP wire shapes', () => {
   });
 
   it('reads settings and what is inherited, their rows filled', () => {
-    expect(toSettings({})).toEqual({ auth: { kind: 'inherit' }, headers: [] });
-    expect(fromSettings({ auth: { kind: 'none' }, headers: [] })).toEqual({
+    expect(toSettings({})).toEqual({ auth: { kind: 'inherit' }, headers: [], transport: {} });
+    expect(fromSettings({ auth: { kind: 'none' }, headers: [], transport: { timeoutMs: 500 } })).toEqual({
       auth: { kind: 'none' },
       headers: [],
+      transport: { timeoutMs: 500 },
     });
 
     const from = { kind: 'collection' as const, id: 'api', name: 'API' };
     expect(
-      toInherited({ auth: { kind: 'none' }, authFrom: null, headers: [{ header: { key: 'Accept' }, from }] })
-        .headers,
+      toInherited({
+        auth: { kind: 'none' },
+        authFrom: null,
+        headers: [{ header: { key: 'Accept' }, from }],
+        transport: DEFAULT_TRANSPORT,
+      }).headers,
     ).toEqual([{ header: { enabled: true, key: 'Accept', value: '', description: '' }, from }]);
   });
 
