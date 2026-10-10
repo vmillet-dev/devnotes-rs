@@ -17,9 +17,9 @@ Principles:
 
 - `npm install` · `npm run tauri dev` (hot reload, regenerates `bindings.ts`) · `npm start` (Angular alone, port **1420**) · `npm run build` (run before `e2e:build`; `npm test` does not type-check) · `npm run tauri build`.
 - `npm test` (Vitest, jsdom; `test:watch`, `test:coverage` 80 %) · `npm run lint` (ESLint, Prettier check, `tsc` over `e2e/`; `lint:fix`, `format`) · `npm run test:scripts` (⚠️ test files are named one by one in `package.json`; add new ones there).
-- From `src-tauri/`: `cargo check|build|test`, `cargo clippy --all-targets -- -D warnings`, `cargo fmt --check`, `cargo bench` (not in CI; `autobenches = false` is load-bearing; → "Benchmarks"). Toolchain pinned in `rust-toolchain.toml`; `unsafe_code` forbidden, `clippy::pedantic` denied.
+- From `src-tauri/`: `cargo check|build|test`, `cargo clippy --all-targets --all-features -- -D warnings` (⚠️ `--all-features` is what compiles the `e2e` feature), `cargo fmt --check`, `cargo bench` (not in CI; `autobenches = false` is load-bearing; → "Benchmarks"). Toolchain pinned in `rust-toolchain.toml`; `unsafe_code` forbidden, `clippy::pedantic` denied.
 - `npm run bindings` regenerates `src/app/core/ipc/bindings.ts` from Rust signatures. `npm run icons` regenerates icons (⚠️ small `.ico` sizes come from `icons/source/`).
-- E2E: `npm run e2e:build` then `npm run test:e2e` (WebdriverIO + `tauri-driver`, specs in `e2e/specs/`, against the assembled app: rebuild after any change).
+- E2E: `npm run e2e:build` then `npm run test:e2e` (WebdriverIO, its server inside the `e2e` build; specs in `e2e/specs/`, against the assembled app: rebuild after any change).
 - Release is a `workflow_dispatch` after a version bump (`Cargo.toml`, `package.json`, both lockfiles). → "Releasing", `docs/releasing.md`.
 
 ## Things that will bite you
@@ -108,7 +108,7 @@ Principles:
 
 ## Claude Code setup
 
-- `.claude/skills/` is versioned. Local: `add-feature`, `angular-ui`, `tauri-integration`, `database-migration`, `devnotes-security-review`, `verify-change`, `desktop-e2e-testing`, `backup-restore`, `bug-investigation`, `release-packaging`, `marketing-site`, `performance-profiling`, `dependency-audit`. Vendored, unmodified and pinned in `.claude/skills/PROVENANCE.md`: `frontend-design`, `webapp-testing` (`anthropics/skills`); `angular-developer` (`angular/skills`); `seo`, `core-web-vitals`, `accessibility` (`addyosmani/web-quality-skills`, for the marketing site). A vendored skill is generic: where it disagrees with this file or a local skill, the project wins. `settings.local.json` and `launch.json` stay ignored.
+- `.claude/skills/` is versioned. Local: `add-feature`, `angular-ui`, `tauri-integration`, `database-migration`, `devnotes-security-review`, `verify-change`, `desktop-e2e-testing`, `backup-restore`, `bug-investigation`, `release-packaging`, `marketing-site`, `performance-profiling`, `dependency-audit`. Vendored, unmodified and pinned in `.claude/skills/PROVENANCE.md`: `frontend-design`, `webapp-testing` (`anthropics/skills`); `angular-developer` (`angular/skills`); `seo`, `core-web-vitals`, `accessibility` (`addyosmani/web-quality-skills`). A vendored skill is generic: where it disagrees with this file or a local skill, the project wins. All but `angular-developer` are for the website: the app's UI follows its own tokens, mockups and `angular-ui`. `settings.local.json` and `launch.json` stay ignored.
 
 ## Design reference
 

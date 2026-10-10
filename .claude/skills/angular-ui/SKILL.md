@@ -1,6 +1,6 @@
 ---
 name: angular-ui
-description: Use when creating or editing Angular components, templates, styles, stores or translations in src/app (Angular 22, standalone, signals, zoneless, OnPush). For the marketing site use marketing-site.
+description: Use when creating or editing Angular components, templates, styles, stores or translations in src/app (standalone, signals, zoneless, OnPush). For the website use marketing-site.
 ---
 
 # Angular UI

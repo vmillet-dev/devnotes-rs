@@ -11,6 +11,6 @@
 
 Unmodified copies, each read in full before it was added; see each `LICENSE.txt`. Every other folder here is local to DevNotes. The copies are listed in `.prettierignore` so that formatting never makes them differ from their source. To update one: read the new version in full, replace the folder whole, then change its commit and date here.
 
-- **`anthropics/skills`**: `webapp-testing` needs Python + Playwright and targets the future marketing site, not the Tauri app (see `desktop-e2e-testing`).
+- **`anthropics/skills`**: `webapp-testing` needs Python + Playwright and is for looking at the website in a real browser: it drives neither the Tauri app (see `desktop-e2e-testing`) nor a test suite (see `marketing-site`).
 - **`angular/skills`** is a daily snapshot of `angular/angular` (`skills/dev-skills/`), here built from `458f1d76b8a44c1b091e4239e1f95ec949390e73`. Markdown only. The snapshot ships no licence file, so `LICENSE.txt` is `angular/angular`'s at that commit: the one file added. It is generic Angular; `angular-ui` and `CLAUDE.md` win where they disagree.
 - **`addyosmani/web-quality-skills`**: Markdown only, meant for the marketing site. `LICENSE.txt` is the repository's `LICENSE`. Their links into `../performance/` and `../web-quality-audit/` point at two skills that are not vendored (the second ships a shell script).

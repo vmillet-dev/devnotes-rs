@@ -7,7 +7,7 @@ description: DevNotes-specific security review for encryption, vault/passphrase,
 
 **Hard rules**: never rewrite or "improve" the cryptography, key derivation or file formats on your own; propose and ask. Do not log, print or persist passphrases, keys, tokens or note content. Passphrase buffers are `zeroize`d before the command returns.
 
-Checklist on the diff (`git diff main...`):
+Checklist on the change (`git diff main...`, and `git diff HEAD` for what is not committed yet):
 
 1. **Sealed line**: titles, bodies, sources, items, names, field values, attachments stay sealed; no new plaintext copy (logs, temp files, `open/`, caches, error messages, history that skips `mask`).
 2. **Lock/unlock**: nothing answers while `Db` is empty; no command bypasses the lock; HTTP sends never hold the lock.

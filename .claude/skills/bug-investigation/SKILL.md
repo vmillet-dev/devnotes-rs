@@ -1,6 +1,6 @@
 ---
 name: bug-investigation
-description: Use when a DevNotes bug, crash, wrong result or flaky test must be diagnosed: find the root cause, fix it minimally, add a regression test.
+description: Use when a DevNotes bug, crash, wrong result or flaky test must be diagnosed, to find the root cause, fix it minimally and add a regression test.
 ---
 
 # Bug investigation
