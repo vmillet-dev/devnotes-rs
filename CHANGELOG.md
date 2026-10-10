@@ -14,9 +14,18 @@ the release notes the updater hands over.
 
 ## [0.10.0] - 2026-10-07
 
-### 🧰 Under the hood
+### ✨ Added
 
-- Bump the version to 0.10.0
+- Manage cookies and transport settings (#704)
+- Exchange WebSocket messages from Rust, with a live log and messages kept to send again (#703)
+- Send GraphQL requests, and read their errors apart from their data (#702)
+- Keep the history of what was sent, masked and sealed, to read again or reopen (#701)
+- Read the response (#700)
+- Send a request from Rust, and show its status, time, size and body (#699)
+- Give a request a body and an authentication, and its folders and collection settings to inherit (#698)
+- Compose a request in a tab of its own (#697)
+- Browse HTTP collections in their rail (#696)
+- Store HTTP collections in the library (#695)
 
 ## [0.9.3] - 2026-10-07
 

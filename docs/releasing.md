@@ -22,13 +22,37 @@ state to clean up if it stops.
 3. **Run it again unchecked.** It writes the `CHANGELOG.md` section, commits it, tags,
    builds the bundles and publishes the release.
 
+## A version on a branch of its own
+
+A version that takes weeks lives on `dev/x.y.z`, while `main` goes on releasing.
+
+- Pull requests are **squashed into `dev/x.y.z`**, each with its `Closes #42`, exactly as into
+  `main`. CI runs on both.
+- When `main` moves under it — a fix, a release — **merge `main` into the branch**. A fix
+  already released sits behind its tag and does not come back in the version's notes.
+- The branch reaches `main` by **a merge commit, never a squash**:
+  `git merge --no-ff dev/x.y.z`. The notes read what that merge brings. Squashed, the version
+  is one commit and one line, and the dry run says so.
+- Then the three steps above, from `main`.
+
+To read what a version holds so far, run this from its branch — it prints the section and
+writes nothing:
+
+```bash
+node scripts/release-notes.mjs generate --version x.y.z
+```
+
 ## Where the notes come from
 
-Release notes are generated from the pull requests merged since the last tag, and what sorts
-them is **labels**.
+Release notes are generated from the pull requests the release carries and the last tag does
+not — merged into `main`, or into a version branch merged since — and what sorts them is
+**labels**. A pull request an older section already lists is left out: nothing is released
+twice.
 
 GitHub propagates nothing on its own, so a pull request inherits the labels of the issue it
-closes — which only works if the body says `Closes #42`. From there:
+closes — which only works if the body says `Closes #42`. GitHub does not always record that
+link for a pull request aimed at a version branch, so the description is read when it is
+missing. From there:
 
 | what decides the section                   | when                                                      |
 | ------------------------------------------ | --------------------------------------------------------- |
