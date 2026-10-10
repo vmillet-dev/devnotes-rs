@@ -30,10 +30,12 @@ yarn-error.log
 /libpeerconnection.log
 testem.log
 /typings
-# Claude Code: skills and rules are versioned, local state is not.
+# Claude Code: skills, rules and the shared permissions are versioned, local state is not.
 .claude/*
 !.claude/skills/
 !.claude/rules/
+!.claude/settings.json
+.mcp.json
 
 # Signature — clés privées de l'updater et certificats de signature de code.
 # Filet de sécurité : ces fichiers vivent normalement hors du dépôt.
