@@ -4593,16 +4593,27 @@ on the very commit being released and stops if it did not; the work was already 
 release that replayed it would pay for it twice.
 
 - **The notes come from the merged pull requests.** `scripts/release-notes.mjs` reads the
-  squash subjects between the last tag and `HEAD`, pulls the `(#NN)` out of each, then asks
-  GraphQL for the title, the labels **and the labels of the issues the pull request closes**
-  (`closingIssuesReferences`, which REST does not expose). GitHub propagates nothing from an
-  issue to its pull request, and in this repository the issues are the labelled half — hence
-  the chain: label on the pull request, then label on the closed ticket, then the `(feat)` /
-  `(fix)` prefix of the title, then "Under the hood". Nothing is dropped for want of a class,
-  and the dry run prints which link of the chain filed each entry.
-- **Asked by number, never listed.** Several pull requests here were merged into intermediate
-  branches and never landed as a commit on `main`; any listing by date reports work the
-  release does not carry.
+  squash subjects `HEAD` carries and the last tag does not, pulls the `(#NN)` out of each,
+  then asks GraphQL for the title, the labels **and the labels of the issues the pull request
+  closes** (`closingIssuesReferences`, which REST does not expose). GitHub propagates nothing
+  from an issue to its pull request, and in this repository the issues are the labelled half
+  — hence the chain: label on the pull request, then label on the closed ticket, then the
+  `(feat)` / `(fix)` prefix of the title, then "Under the hood". Nothing is dropped for want
+  of a class, and the dry run prints which link of the chain filed each entry.
+- ⚠️ **Every parent is read, not `main`'s own line.** A version branch (`dev/x.y.z`) reaches
+  `main` through one merge commit, and the pull requests squashed into it are that commit's
+  second parent: read with `--first-parent`, 0.10.0 shipped a one-line changelog for ten pull
+  requests. The range still leaves out what the tag carries, so a fix released from `main`
+  and merged back into the branch is not listed again; one picked rather than merged is
+  caught by its number, which an older section of `CHANGELOG.md` already names. The branch
+  must not be squashed into `main` — its pull requests would fold into one commit — and the
+  dry run flags a pull request whose head is `dev/*`.
+- **The ticket is also read from the description.** GitHub does not always record the link
+  for a pull request aimed at a branch other than `main`: four of the ten of 0.10.0 said
+  `Closes #N` and were linked to nothing. When `closingIssuesReferences` is empty, the closing
+  keywords of the body name the issues whose labels are asked for.
+- **Asked by number, never listed.** A pull request merged into a version branch that has
+  not reached `main` is not in the release; any listing by date would report it.
 - **The body of the GitHub release is re-extracted from the committed file** at the tag, rather
   than passed along as a job output. The file baked into the binary and the page on github.com
   then cannot say two different things.

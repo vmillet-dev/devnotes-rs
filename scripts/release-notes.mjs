@@ -42,10 +42,17 @@ export const SECTIONS = [
  * not `\b`: after `chore(release)` comes a `:`, and two non-word characters carry no word
  * boundary between them.
  */
-const RELEASE_COMMIT = /^(chore\(release\)|chore: release|release:|bump version|bump to)(?![A-Za-z])/i;
+const RELEASE_COMMIT =
+  /^(chore\(release\)|chore: release|release:|bump version|bump the version to|bump to)(?![A-Za-z])/i;
 
 /** The squash subject GitHub writes: the number is at the end, or it is not the merge. */
 const PR_NUMBER = /\(#(\d+)\)\s*$/;
+
+/** GitHub's closing keywords, read here because it links no issue to some pull requests aimed at a version branch. */
+const CLOSING = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?):?\s+#(\d+)/gi;
+
+/** `dev/x.y.z` holds a version until it is merged; squashed, its pull requests fold into one commit. */
+const VERSION_BRANCH = /^dev\//;
 
 /** Spellings met in this history, folded onto the kind the table knows. */
 const KINDS = new Map([
@@ -95,6 +102,15 @@ export function isReleaseCommit(subject) {
   return RELEASE_COMMIT.test(subject.trim());
 }
 
+export function closingIssues(body) {
+  return [...new Set([...body.matchAll(CLOSING)].map((match) => Number(match[1])))];
+}
+
+/** Every pull request a section already written names: none is released twice. */
+export function publishedNumbers(markdown) {
+  return new Set([...markdown.matchAll(/\(#(\d+)\)/g)].map((match) => Number(match[1])));
+}
+
 /**
  * `(refactor) Drop the DTO aliases (#56)` → `Drop the DTO aliases`. A `summary: details`
  * title is cut at the colon, since the panel renders an entry as one line of plain text.
@@ -141,6 +157,62 @@ export function sectionFor({ labels = [], issueLabels = [], title = '' }) {
   }
 
   return { section: 'internal', via: 'défaut' };
+}
+
+/**
+ * One entry per pull request the range carries. `issues` holds the labels of the tickets a
+ * description names, `published` the numbers older sections already list.
+ */
+export function entriesFor(subjects, index, { issues = new Map(), published = new Set() } = {}) {
+  const entries = [];
+  const skipped = new Set();
+  const seen = new Set();
+
+  for (const subject of subjects) {
+    if (isReleaseCommit(subject)) {
+      continue;
+    }
+
+    const number = parsePrNumber(subject);
+    if (number !== null && published.has(number)) {
+      skipped.add(number);
+      continue;
+    }
+    if (number !== null && seen.has(number)) {
+      continue;
+    }
+    seen.add(number);
+
+    const pr = number === null ? null : index.get(number);
+    const title = pr ? pr.title : subject;
+    // The hand-made "Bump version to 0.1.3" sits inside the range of the release it names.
+    if (isReleaseCommit(title)) {
+      continue;
+    }
+
+    const labels = pr ? pr.labels.nodes.map((label) => label.name) : [];
+    const linked = pr
+      ? pr.closingIssuesReferences.nodes.map((issue) => ({
+          number: issue.number,
+          labels: issue.labels.nodes.map((label) => label.name),
+        }))
+      : [];
+    const named =
+      pr && linked.length === 0
+        ? closingIssues(pr.body ?? '')
+            .filter((issue) => issues.has(issue))
+            .map((issue) => ({ number: issue, labels: issues.get(issue) }))
+        : [];
+    const issueLabels = [...linked, ...named].flatMap((issue) =>
+      issue.labels.map((label) => ({ issue: issue.number, label })),
+    );
+
+    const { section, via } = sectionFor({ labels, issueLabels, title });
+    const text = number === null ? cleanTitle(title) : `${cleanTitle(title)} (#${number})`;
+    const squashed = pr && VERSION_BRANCH.test(pr.headRefName ?? '') ? pr.headRefName : null;
+    entries.push({ section, via, text, number, title, squashed });
+  }
+  return { entries, skipped: [...skipped] };
 }
 
 export function groupEntries(entries) {
@@ -211,7 +283,8 @@ export function extractSection(markdown, version) {
 // Everything below talks to git and to GitHub; nothing above does, which is what makes the
 // table, the chain and the splice testable without a network.
 
-const run = (command, args) => execFileSync(command, args, { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
+const run = (command, args, cwd) =>
+  execFileSync(command, args, { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024, cwd });
 
 /** `gh` exits non-zero on a partial GraphQL answer; a NOT_FOUND alias is one, and survivable. */
 function graphql(query) {
@@ -248,47 +321,61 @@ function lastTag() {
   }
 }
 
-function subjectsSince(tag) {
+/**
+ * ⚠️ No `--first-parent`: a version branch reaches `main` through one merge commit, and the
+ * pull requests squashed into it are that commit's second parent. The range alone keeps out
+ * what the tag already carries, a fix merged back into the branch included.
+ */
+export function subjectsSince(tag, cwd) {
   const range = tag ? `${tag}..HEAD` : 'HEAD';
-  return run('git', ['log', '--first-parent', '--no-merges', '--format=%s', range])
+  return run('git', ['log', '--no-merges', '--format=%s', range], cwd)
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean);
 }
 
 /**
- * Asked for by number rather than listed: a pull request merged into an intermediate
- * branch never lands as a commit on `main`, so any listing reports work this release does
- * not carry. `closingIssuesReferences` is GraphQL-only and is the point of the call — the
- * issues are labelled here, the pull requests almost never are.
+ * Batched to stay under the node limit, and asked by alias so a number that resolves to
+ * nothing comes back as one null instead of failing the whole call.
  */
-function pullRequests(numbers) {
-  const index = new Map();
+function byNumber(numbers, field) {
+  const nodes = [];
   if (numbers.length === 0) {
-    return index;
+    return nodes;
   }
 
   const { owner, name } = repositorySlug();
-  const fields = `
-    number
-    title
-    labels(first: 20) { nodes { name } }
-    closingIssuesReferences(first: 5) { nodes { number labels(first: 20) { nodes { name } } } }`;
-
-  // Batched to stay under the node limit, and asked by alias so a number that is not a
-  // pull request comes back as one null instead of failing the whole call.
   for (let start = 0; start < numbers.length; start += 50) {
     const batch = numbers.slice(start, start + 50);
     const query = `{ repository(owner: "${owner}", name: "${name}") {
-      ${batch.map((number) => `pr${number}: pullRequest(number: ${number}) { ${fields} }`).join('\n')}
+      ${batch.map((number) => `n${number}: ${field(number)}`).join('\n')}
     } }`;
-
-    for (const node of Object.values(graphql(query).data?.repository ?? {})) {
-      if (node) {
-        index.set(node.number, node);
-      }
-    }
+    nodes.push(...Object.values(graphql(query).data?.repository ?? {}).filter(Boolean));
   }
+  return nodes;
+}
+
+/**
+ * Asked for by number rather than listed: a pull request merged into a branch that has not
+ * reached `main` is not in this release, and a listing by date would report it.
+ * `closingIssuesReferences` is GraphQL-only and is the point of the call — the issues are
+ * labelled here, the pull requests almost never are.
+ */
+function pullRequests(numbers) {
+  const fields = `
+    number
+    title
+    body
+    headRefName
+    labels(first: 20) { nodes { name } }
+    closingIssuesReferences(first: 5) { nodes { number labels(first: 20) { nodes { name } } } }`;
+
+  const index = new Map(
+    byNumber(numbers, (number) => `pullRequest(number: ${number}) { ${fields} }`).map((node) => [
+      node.number,
+      node,
+    ]),
+  );
 
   const missing = numbers.filter((number) => !index.has(number));
   if (missing.length) {
@@ -299,45 +386,38 @@ function pullRequests(numbers) {
   return index;
 }
 
-function entriesFor(subjects, index) {
-  const entries = [];
-  for (const subject of subjects) {
-    if (isReleaseCommit(subject)) {
-      continue;
-    }
+/** The labels of the tickets a description names, for the pull requests GitHub linked to none. */
+function namedIssues(index) {
+  const numbers = [...index.values()]
+    .filter((pr) => pr.closingIssuesReferences.nodes.length === 0)
+    .flatMap((pr) => closingIssues(pr.body ?? ''));
 
-    const number = parsePrNumber(subject);
-    const pr = number === null ? null : index.get(number);
-    const title = pr ? pr.title : subject;
-    // The hand-made "Bump version to 0.1.3" sits inside the range of the release it names.
-    if (isReleaseCommit(title)) {
-      continue;
-    }
-
-    const labels = pr ? pr.labels.nodes.map((label) => label.name) : [];
-    const issueLabels = pr
-      ? pr.closingIssuesReferences.nodes.flatMap((issue) =>
-          issue.labels.nodes.map((label) => ({ issue: issue.number, label: label.name })),
-        )
-      : [];
-
-    const { section, via } = sectionFor({ labels, issueLabels, title });
-    const text = number === null ? cleanTitle(title) : `${cleanTitle(title)} (#${number})`;
-    entries.push({ section, via, text, number, title });
-  }
-  return entries;
+  const fields = 'number labels(first: 20) { nodes { name } }';
+  return new Map(
+    byNumber([...new Set(numbers)], (number) => `issue(number: ${number}) { ${fields} }`).map((node) => [
+      node.number,
+      node.labels.nodes.map((label) => label.name),
+    ]),
+  );
 }
 
 /** What the dry run is for: every entry, where it landed, and what put it there. */
-function renderSummary({ version, date, since, section, entries }) {
+function renderSummary({ version, date, since, section, entries, skipped }) {
   const rows = entries
     .map((entry) => `| ${entry.number ? `#${entry.number}` : '—'} | ${entry.text} | ${entry.via} |`)
     .join('\n');
+  const number = (value) => `#${value}`;
+  const squashed = entries.filter((entry) => entry.squashed);
 
   return [
     `## ${version} — ${date}`,
     '',
     `Depuis \`${since ?? 'le premier commit'}\`, ${entries.length} entrée(s).`,
+    ...(skipped.length ? ['', `Déjà publiées, laissées de côté : ${skipped.map(number).join(', ')}.`] : []),
+    ...squashed.flatMap((entry) => [
+      '',
+      `⚠️ ${number(entry.number)} a squashé la branche de version \`${entry.squashed}\` : ses pull requests tiennent en cette seule entrée.`,
+    ]),
     '',
     section,
     '',
@@ -396,7 +476,16 @@ function main() {
   const since = options.get('since') ?? lastTag();
   const date = options.get('date') ?? new Date().toISOString().slice(0, 10);
   const subjects = subjectsSince(typeof since === 'string' ? since : null);
-  const entries = entriesFor(subjects, pullRequests(subjects.map(parsePrNumber).filter(Boolean)));
+  const index = pullRequests([...new Set(subjects.map(parsePrNumber).filter(Boolean))]);
+  const { entries, skipped } = entriesFor(subjects, index, {
+    issues: namedIssues(index),
+    published: publishedNumbers(readFileSync(changelog, 'utf8')),
+  });
+  for (const entry of entries.filter((candidate) => candidate.squashed)) {
+    console.warn(
+      `::warning::#${entry.number} squashed the version branch ${entry.squashed}: its pull requests are one entry. Merge a version branch with a merge commit.`,
+    );
+  }
 
   const groups = groupEntries(entries);
   assertRenderable(groups);
@@ -406,7 +495,7 @@ function main() {
 
   const summary = options.get('summary');
   if (typeof summary === 'string') {
-    writeFileSync(summary, renderSummary({ version, date, since, section: release, entries }));
+    writeFileSync(summary, renderSummary({ version, date, since, section: release, entries, skipped }));
   }
 
   if (options.get('write') === true) {

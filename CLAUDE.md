@@ -20,7 +20,7 @@ Principles:
 - From `src-tauri/`: `cargo check|build|test`, `cargo clippy --all-targets --all-features -- -D warnings` (⚠️ `--all-features` is what compiles the `e2e` feature), `cargo fmt --check`, `cargo bench` (not in CI; `autobenches = false` is load-bearing; → "Benchmarks"). Toolchain pinned in `rust-toolchain.toml`; `unsafe_code` forbidden, `clippy::pedantic` denied.
 - `npm run bindings` regenerates `src/app/core/ipc/bindings.ts` from Rust signatures. `npm run icons` regenerates icons (⚠️ small `.ico` sizes come from `icons/source/`).
 - E2E: `npm run e2e:build` then `npm run test:e2e` (WebdriverIO, its server inside the `e2e` build; specs in `e2e/specs/`, against the assembled app: rebuild after any change).
-- Release is a `workflow_dispatch` after a version bump (`Cargo.toml`, `package.json`, both lockfiles). → "Releasing", `docs/releasing.md`.
+- Release is a `workflow_dispatch` after a version bump (`Cargo.toml`, `package.json`, both lockfiles). ⚠️ A version branch (`dev/x.y.z`) reaches `main` by a merge commit, never a squash: the release notes read what the merge brings. → "Releasing", `docs/releasing.md`.
 
 ## Things that will bite you
 
