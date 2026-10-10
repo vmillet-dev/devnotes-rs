@@ -1,188 +1,115 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code in this repository. `docs/architecture.md` is the detailed reference (headings quoted as → "Heading"): read the relevant section before a structural change and keep it in sync. Not this file, not the README.
 
 ## Project
 
-DevNotes — a desktop notes application for developers. Front-end **Angular 22** (standalone components, signals, zoneless change detection), native engine **Rust / Tauri v2**, SQLite through Diesel.
+DevNotes — desktop notes app for developers. **Angular 22** (standalone, signals, zoneless), **Rust / Tauri v2**, SQLite via Diesel. Notes are snippets (body + language + `{{fields}}`), Notes (Markdown, written formatted) or todo lists; they live in spaces and folders, with search, tags, a canvas and a board, trash with undo, revisions, bulk actions, attachments, import/export, a quick-paste palette, and tools (JSON, HTTP, WebSocket…). Libraries are **encrypted**, several, each behind its own passphrase.
 
-A note is a snippet (a body with a language, a source, `{{fields}}`), a Note (prose, written formatted and stored as Markdown) or a todo list (ordered items). Notes live in spaces and folders, are searched, filtered and tagged, and can be seen as a dated canvas or as a board. Around them: a 30-day trash with undo, revisions of a body, multiple selection with bulk actions, corpus-wide tag management, a quick-paste palette on a global shortcut, attachments, import / export / share, and help panels in the "À propos" menu. The library is **encrypted**, there can be several, each behind its own passphrase, and a fresh install opens on sample notes.
+Principles:
 
-**Data processing belongs to Rust.** Filtering, grouping into sections, facets, tag normalisation, search matching and what a card's footer shows all run in `src-tauri/src/notes/`: `query_notes` returns a ready-to-render `NotesView`, and the front end describes the query and displays the answer. Deliberate exceptions: relative-time **formatting** (labels age without a round trip), the ISO ↔ `Date` conversion at the boundary, syntax highlighting (it colours the unsaved draft), Prettier formatting (the same draft), searching the tools' catalogue and the references (translated words), and pure UI concerns.
+- **Data processing belongs to Rust** (`src-tauri/src/notes/`): `query_notes` returns a ready-to-render `NotesView`. Front-end exceptions: relative-time formatting, ISO↔`Date`, syntax highlighting, Prettier, searching the tools catalogue/references, pure UI.
+- **Rust is feature-first**: `<feature>.rs` = `#[tauri::command]`s (validate, lock, delegate, translate error); `<feature>/model.rs` = types and rules (no Diesel, no Tauri); `<feature>/store.rs` = SQL (no rules). Root keeps `error`, `db`, `desktop`, and library plumbing (`vault`, `libraries`, `layout`, `backup`, `recovery`). → "Feature-first, not layer-first".
+- **The front-end tree is the shape of the screen**: `notes/{sidebar,header,canvas,overlays,ui}`, `tools/`, `http/`, `titlebar/`, `banners/` hold components only; everything without a place on screen is in `core/` (`model`, `data`, `state`, `ipc`, `utils`, `services/<subject>`); `shared/` crosses areas and injects nothing (except `DialogComponent`). ⚠️ `core/ipc/` stays at the root of `core/` (`bindings.ts` is written there). → "Where a file goes".
+- Language: English for code, comments and UI strings in code. **Comments record decisions, not narration**: only a load-bearing ordering, platform trap, non-obvious invariant, or a rejected approach; one or two lines, ~10 % of a file at most; no issue numbers; ⚠️ only for traps that cost a day.
 
-**The Rust back-end is feature-first.** `notes/`, `spaces/`, `folders/`, `attachments/`, `transfer/`, `json/` and `tools/` each own their model, their SQL and their commands: `<feature>.rs` holds the `#[tauri::command]`s (validate, lock, delegate, translate the error — a command that grows means a rule landed in the wrong place), `<feature>/model.rs` the types and rules (no Diesel, no Tauri), `<feature>/store.rs` the SQL (no rules). What belongs to no feature stays at the root: `error.rs`, `db.rs` (the connection `Mutex`, `db::schema`, `db::migration`, `db::iso8601`), `desktop.rs` (tray and global shortcuts), and the library plumbing (`vault`, `libraries`, `layout`, `backup`, `recovery`). → `docs/architecture.md` → "Feature-first, not layer-first".
+## Commands (repo root unless noted)
 
-**The front-end tree is the shape of the interface.** `notes/`, `tools/`, `http/`, `titlebar/` and `banners/` hold components only, and a folder's path is its address on screen: a component lives in its parent's folder, one with two parents rises to their nearest common ancestor. `notes/` puts the page and its keyboard at its root, what several zones draw in `notes/ui/`, then its four zones — `sidebar/`, `header/`, `canvas/`, `overlays/` — each with a container that injects what it draws. **Everything without a place on screen lives in `core/`**: `model/`, `data/` (repositories and the wire mapper), `state/` (the domain's stores, flat), `ipc/`, `utils/`, and one folder per subject under `services/`, which keeps that subject's own store and model. `shared/` crosses areas of the screen and **injects nothing**, except `DialogComponent`, which injects its neighbour `DialogStack`. ⚠️ `core/ipc/` stays at the root of `core/`: `src-tauri/src/lib.rs` writes `bindings.ts` to that exact path. → "Where a file goes".
-
-Primary language for code comments, docstrings, and UI strings in this repo is **English**.
-
-**Comments record decisions, not narration.** Keep a comment only when it says
-something the code cannot: a load-bearing ordering, a platform trap, a
-non-obvious invariant, or why the obvious approach was rejected. Delete anything
-that restates a signature, narrates the next line, or repeats what
-`docs/architecture.md` already says.
-
-**There is a budget, and it is about 10% of a file's lines.** Past that, a file
-is explaining itself instead of reading. Two rules keep it there: a comment
-answers "what would a reader get wrong here?" and nothing else, and it says so in
-**one or two lines**, four at the very most. What a pull request explained — what
-was tried, what broke, which run caught it, how many milliseconds the rejected
-version cost — belongs in the pull request: it describes a state of the code that
-no longer exists, and nothing fails when it goes stale. No issue numbers in code.
-⚠️ is for the expensive ones only: a trap that costs a reader a day.
-
-`docs/architecture.md` is the detailed reference, and the canonical place for it — not this file and not the README. Read it before a structural change, and keep it in sync with one. Every bullet below is a trap in one or two lines; the explanation is there, under the heading named after the arrow.
-
-## Commands
-
-Run all commands from the repo root (`package.json` there wraps both Angular and Tauri).
-
-- `npm install` — JS dependencies, also required before the first Rust build (Tauri's build script reads front-end config).
-- `npm run tauri dev` — the dev loop: `ng serve` with hot reload, and the Tauri window rebuilt on Rust changes. It also regenerates `bindings.ts` at every launch.
-- `npm start` / `ng serve` — Angular alone, on port **1420** (fixed in `angular.json`; `devUrl` in `tauri.conf.json` depends on it).
-- `npm run build` — production Angular build into `dist/devnotes/browser` (`frontendDist`). Run it before `e2e:build`: `npm test` does not type-check like the build does.
-- `npm run tauri build` — the native executable and installer, in `src-tauri/target/release`.
-- `cargo build` / `cargo check` from `src-tauri/` — Rust alone, faster than a full `tauri build`.
-- `npm test` — unit tests with **Vitest** through `@angular/build:unit-test` (jsdom). `npm run test:watch`, and `npm run test:coverage` with 80% thresholds.
-- `npm run lint` — ESLint (`angular-eslint` with its template accessibility rules, member order, one import style), a Prettier check, and `tsc` over `e2e/`, whose scenarios `tsx` runs without type-checking. `npm run lint:fix`, `npm run format`.
-- `cargo test` from `src-tauri/` — inline `#[cfg(test)] mod tests`, plus the integration binaries in `src-tauri/tests/` (`notes/` one module per subject, `spaces`, `folders`, `transfer`, `commands/` on Tauri's mock runtime, `ipc_contract`, `language_corpus`) sharing `tests/common/mod.rs`. In-memory SQLite; a test writing to disk holds a `tempfile::TempDir`.
-- `npm run test:scripts` — `node --test` on the seven sweeps and scripts under `scripts/` that read shipped files off disk (release notes, palette contrast, e2e waits, focus rings, language hues, board geometry, motion). ⚠️ The files are named one by one in `package.json`: Node 24 (`.nvmrc`, CI) does not expand a directory. A new test file has to be added there.
-- `cargo clippy --all-targets -- -D warnings` and `cargo fmt --check` from `src-tauri/` — `Cargo.toml` forbids `unsafe_code`, denies `clippy::all` and `clippy::pedantic`, and warns on `rust_2018_idioms` and `unreachable_pub`, which `-D warnings` turns into errors. The toolchain is pinned in `rust-toolchain.toml`.
-- `npm run bindings` — regenerates `src/app/core/ipc/bindings.ts` from the Rust signatures without launching the app.
-- `npm run icons` — regenerates `src-tauri/icons` from `devnotes.svg`. ⚠️ The `.ico`'s 16, 24 and 32 px come from the pixel-aligned drawings in `icons/source/`, not from the master: scaled, they blur in the tray and the taskbar.
-- `npm run e2e:build` then `npm run test:e2e` — WebdriverIO + `tauri-driver`, thirty spec files under `e2e/specs/`, against the **assembled** application: rebuild after any change to `src/` or `src-tauri/`.
-- `cargo bench` from `src-tauri/` — criterion against a file-backed library of 8000 notes of ~13 kB. Not in CI, not in `cargo test`. `--save-baseline main` then `--baseline main` compares locally; the durable record is the table in `docs/architecture.md`. ⚠️ `autobenches = false`, `bench = false` on the lib and both bins, and no `Drop` on `Corpus` are all load-bearing. → "Benchmarks".
-- **Releasing is a `workflow_dispatch`.** Bump the version in `src-tauri/Cargo.toml`, `package.json` and both lockfiles, merge to `main`, then Actions → Release, `dry_run` first. → "Releasing".
+- `npm install` · `npm run tauri dev` (hot reload, regenerates `bindings.ts`) · `npm start` (Angular alone, port **1420**) · `npm run build` (run before `e2e:build`; `npm test` does not type-check) · `npm run tauri build`.
+- `npm test` (Vitest, jsdom; `test:watch`, `test:coverage` 80 %) · `npm run lint` (ESLint, Prettier check, `tsc` over `e2e/`; `lint:fix`, `format`) · `npm run test:scripts` (⚠️ test files are named one by one in `package.json`; add new ones there).
+- From `src-tauri/`: `cargo check|build|test`, `cargo clippy --all-targets --all-features -- -D warnings` (⚠️ `--all-features` is what compiles the `e2e` feature), `cargo fmt --check`, `cargo bench` (not in CI; `autobenches = false` is load-bearing; → "Benchmarks"). Toolchain pinned in `rust-toolchain.toml`; `unsafe_code` forbidden, `clippy::pedantic` denied.
+- `npm run bindings` regenerates `src/app/core/ipc/bindings.ts` from Rust signatures. `npm run icons` regenerates icons (⚠️ small `.ico` sizes come from `icons/source/`).
+- E2E: `npm run e2e:build` then `npm run test:e2e` (WebdriverIO, its server inside the `e2e` build; specs in `e2e/specs/`, against the assembled app: rebuild after any change).
+- Release is a `workflow_dispatch` after a version bump (`Cargo.toml`, `package.json`, both lockfiles). → "Releasing", `docs/releasing.md`.
 
 ## Things that will bite you
 
-### Libraries, the vault and the disk
+### Libraries, vault, disk
 
-- **⚠️ Nothing answers until the library is unlocked.** `Db = Mutex<Option<Library>>` is empty until `unlock_vault` fills it, and a command run first answers `Locked`; the front end never creates the notes page before then, so no store has a "locked" branch. → "Encryption at rest".
-- **Sealed and not sealed is a line.** Titles, bodies, sources, items, space and folder names, field values and attachments are sealed; what SQL filters, sorts or joins on (tags, instants, ids, `kind`, `language`, `priority`) is not. Never SQLCipher (measured 4× slower, vendored OpenSSL). → "What is sealed, and what is not".
-- **The passphrase wraps the key, it does not derive it**, and is `zeroize`d before a command returns. ⚠️ Changing it rewrites every retained backup's `vault.json` too (`backup::copies::rewrap`), or the old phrase still opens them. → "Changing the passphrase".
-- **The 12-character floor is for choosing a phrase** (`vault::MINIMUM_LENGTH`, crossing as `MINIMUM_PASSPHRASE_LENGTH`): a new library, a changed phrase, a protected export. Unlocking checks nothing but emptiness — the key file refuses a wrong phrase. → "The floor".
-- **⚠️ An open library answers `Library::directory()`.** `libraries::open_directory(app)` reads the registry off disk and is only for what runs while none is open; `app_data_dir()` is the profile, which holds no library. The names in `layout.rs` are the address of an installed library — renaming one loses it. → "Several libraries, and the registry beside them".
-- **Switching library reloads the page.** `open_library` empties the `Mutex` and `LibrariesStore` calls `AppWindowService.reload()`: every store is `providedIn: 'root'` and would carry the other library's state past the gate. Neither the open library nor the last one can be deleted, refused in Rust and in the store.
-- **Two `preferences.json`, one prefix apart.** `devnotes.notes.*` is the library's (`LibraryPreferencesService`, re-opened on every switch), everything else the application's; `automaticBackups` stays with the application because Rust reads it before the front boots. → "Two scopes of preference, one prefix apart".
-- **Files that must not be half-written are staged then renamed**: the registry, the key file, an export. `fs::write` truncates first.
-- **The launch copy is taken before the sweeps** (`backup::copies::rotate`, `VACUUM INTO` — under WAL the file alone is no snapshot), with its key file and `attachments/` **hard-linked** (`backup::copies::link_files`, which never copies over a name already there), at most one a day. **Restoring** empties the `Mutex` before a file moves, sets the live pair and `attachments/` aside in `replaced/` and matches the id against the listing. → "The copies, and putting one back".
-- **Every open runs `db::quick_check` before the migrations.** A damaged or forgotten library is set aside by `recovery::set_aside`, whose two reasons treat `vault.json` in opposite ways. → "The gate".
-- **An attachment's bytes live in the library's `attachments/`** under `model::stored_name`, which filters both halves of the name: an imported id decides it. Write the file, then the record; a purge collects the file names before the `DELETE`. `open_attachment` writes its one decrypted copy under the profile's `open/`. → "Attachments".
+- ⚠️ **Nothing answers until unlocked**: `Db = Mutex<Option<Library>>` is empty until `unlock_vault`; commands answer `Locked`. → "Encryption at rest".
+- **Sealed vs plain**: titles, bodies, sources, items, names, field values, attachments are sealed; what SQL filters/sorts/joins on (tags, instants, ids, `kind`, `language`, `priority`) is not. Never SQLCipher. → "What is sealed, and what is not".
+- **Passphrase wraps the key** and is `zeroize`d before a command returns. ⚠️ Changing it re-wraps every retained backup's `vault.json`. The 12-char floor applies only when _choosing_ a phrase, not unlocking. → "Changing the passphrase", "The floor".
+- ⚠️ An open library answers `Library::directory()`; `libraries::open_directory` is only for when none is open. Names in `layout.rs` are the address of an installed library — never rename. → "Several libraries, and the registry beside them".
+- **Switching library reloads the page**; neither the open nor the last library can be deleted.
+- **Two `preferences.json`**: `devnotes.notes.*` is per library, the rest per application (`automaticBackups` stays application-level). → "Two scopes of preference, one prefix apart".
+- **Half-written files are staged then renamed** (registry, key file, export).
+- **Backups**: launch copy via `VACUUM INTO` before sweeps, key file and `attachments/` hard-linked, ≤ 1/day; restore empties the `Mutex` first and sets files aside in `replaced/`. Every open runs `db::quick_check` before migrations; damaged libraries go through `recovery::set_aside`. → "The copies, and putting one back", "The gate".
+- **Attachments** live in `attachments/` under `model::stored_name` (filters imported ids); write the file, then the record. → "Attachments".
 
-### The Rust back-end
+### Rust back-end
 
-- **⚠️ A command taking the lock is an `async fn` whose body runs in `db::blocking`** (Tokio's blocking pool). A plain `#[tauri::command]` runs on the WebView's thread and freezes the window; `(async)` alone parks a runtime worker while it waits on the lock. `desktop.rs` is the exception. A command handed an `AppHandle` is generic over `R: Runtime`, registered as `name::<tauri::Wry>`, so `tests/commands` can call it. → "Persistence (Rust)".
-- **One lock serialises every command**, and that is measured: `query_notes` holds it for 90 % of its cost, so only a read connection would change it. → "Who holds the lock".
-- **⚠️ An HTTP send never holds the lock** (`send_http_request`): what it inherits is read under it, the network waited on without it, and a failure crosses as a code. → "Sending a request, and its answer".
-- **The HTTP history masks before it seals** (`history::mask`: `Authorization` keeps its scheme, the API key goes by the name `compose` hands on); the live timeline does not. → "The history of what was sent".
-- **⚠️ A WebSocket is a Rust task, not the page's**: its events cross on one generated topic (`WEBSOCKET_EVENT`), and `open_library` closes every socket — reloading the page alone would leave them open. → "A WebSocket".
-- **The cookie jar is sealed whole, domain included**, so matching is Rust's over the jar read entire; transport settings inherit field by field, like the auth. → "How a request travels, and the cookie jar".
-- **A module holding commands is `pub`; the rest is `pub(crate)`,** so `dead_code` and `unreachable_pub` can speak. `#[specta::specta]` resolves its macro from the crate root.
-- **Migrations are append-only** (`src-tauri/migrations/`, `embed_migrations!`), and `db/schema.rs` is written by hand: a column is added in both, and `check_for_backend` on `NoteRow` catches a divergence. Libraries from 0.2.0 on open; 0.1.0's `PRAGMA user_version` is refused by name. → "How far back an upgrade reaches".
-- **`PRAGMA foreign_keys` is per connection** (`db::configure`): without it every `ON DELETE CASCADE` is inert.
-- **`db::iso8601` always writes milliseconds.** The TEXT columns sort lexicographically, and `.` precedes `Z`.
-- **Every read filters `deleted_at IS NULL`**: deleting a note stamps it, `notes::trash::RETENTION` (30 days) decides when it goes, and `purge` only touches trashed rows. → "The trash, and undoing a deletion".
-- **`updated_at` moves only when the user edited the note.** Deleting a space, a retag, restoring, undoing, filling a field and restoring a revision all leave it: the canvas sorts on it.
-- **Search matching is Rust, not SQL** (`view::fold` lowercases and strips accents; SQLite's `LOWER()` is ASCII-only). Coarse filters stay in SQL.
-- **Tag normalisation is `notes::model::normalize_tags`'s alone**, and `replace_tags` re-reads rather than sorts (`COLLATE NOCASE`). A rename onto an existing tag is a merge (`store::retag`).
-- **A batch answers what it changed**, and its undo reverses exactly that: `move_notes` the placements left, `tag_notes` the pairs added (compared ASCII-only, like `NOCASE`), `set_priority` each note's previous level. Never rebuilt from the selection. → "Multiple selection and bulk actions".
-- **A priority never goes through a patch**: `set_priority` leaves `updated_at` alone, and `NotePatch::apply` moves it for every field.
-- **Side tables are read by bound ids up to `BIND_AT_MOST` (500), by the space's subquery past it** (`related::attach_related`).
-- **A body before an edit is kept** (`note_revisions`, the last 20, never a checklist's, never exported), taken inside `store::update` before the row moves; `restore_revision` goes back to that point and drops the newer ones. → "Revisions: the body before the edit".
-- **A fresh install is seeded in one transaction** (`seed_samples`: the space, two folders, four notes), guarded by the samples marker **and** "no space at all", instants a millisecond apart in opposite directions. → "The first launch".
-- **Input is validated in the model**, before locking (`ValidationError`, `SpaceDraft::validated_name`, `validate_move_target`): a rule held only by a form is not held.
-- **A `{{field}}` is decided in `notes::placeholder` alone.** Names are `[A-Za-z0-9_-]` (Angular's `{{ user.name }}` is not a field); values live in `note_placeholders`, written only by `set_placeholder_values`; a global variable is a proposed default (note value → global → the text's default), never copied into `value`. → "`{{fields}}` in a snippet".
-- **A todo list has items, not a body** (`note_items`, keyed by position, rewritten whole). `kind` and `items` carry `#[serde(default)]` for older exports; the search scans items, export writes `- [x]`, and language detection is skipped. Only a snippet has a language (`NoteKind::has_language`): the language rail counts snippets alone. → "The three kinds of note".
-- **A Note is Markdown** (`NoteKind::Note`, `Note::is_rich_text`), written by the rich editor; a snippet in `txt` is plain text. A list sends its words (`notes::markdown::plain`), marked `truncated`; the search matches the Markdown and quotes the words. A Note is never read for a language: `detect_language` is asked on a paste into an empty one, which code turns into a snippet. → "A Note is written formatted, and stored as Markdown".
-- **A folder cuts one space into regions**: deleting it leaves its notes unfiled (`ON DELETE SET NULL`), filing is a batch command of its own (`file_notes`), and a note moving space leaves its folder. → "Folders inside a space".
-- **Pinning is the only order a space has** (`spaces.pinned`, then the name in Rust, the names being sealed); `pinned` is `#[serde(default)]` for older exports. → "Managing spaces from the switcher".
-- **The application describes itself from `Cargo.toml`** at compile time (`app_info::METADATA`, with `[package.metadata.devnotes]` read by `build.rs`); its version is asked of the running binary.
-- **A tool is a pure Rust function and a component implementing `Tool`** (`result`, `actions`, `clear`); the area around it is written once, and the catalogue is one list (`tools/catalogue/catalogue.ts`), a chunk per tool. ⚠️ `result` is an output, never an input, so a key cannot reach a note; what a tool holds is a `toolState` for the session, but a secret is a plain `signal` that dies with the tool. Every tool calls Rust through `liveResult`, and what describes the answer on screen (a label, a language) reads its `answered()`, never the inputs; one command per tool (`tools.rs`, through `off_thread`); adding one is the five steps listed there. A reference (« Références ») has no `result`, no sample and no Rust: its words are a JSON per language loaded with its chunk (`referenceWords`). → "The tools: one contract, and the rest written once".
-- **The JSON explorer takes inputs only** (`shared/json-explorer/`); its store is provided by the editor, not the root, and what is open is read back from each answer — the front never takes a JSONPath apart (`reveal` asks Rust to open what is above a match). → "Exploring a JSON snippet".
-- **The JSON visualiser's model is Rust's** (`explore_json`): a text in — never a note id — positions out, in grid units. Its own parser keeps UTF-16 offsets, ⚠️ nesting is capped at 256, and nothing past 2,000 nodes / 20,000 rows is sent: arrays fold and the tree is proposed. → "The JSON visualiser's model".
-- **A closed enum is declared once** (`closed_enum!`: `Language`, `NoteKind`, `FolderColour`, `GlobalAction`): one literal per variant for serde, the column, `Display` and `FromStr`.
-- **An import degrades rather than fails** (`transfer::model::read_bundle` brings an unknown enum value to the default and counts it), and runs in one transaction. An added variant does not bump `FORMAT_VERSION`. → "Import, export and copying out".
-- **Folders and their board geometry are separate**: `Note` and `Folder` carry no coordinates, since `transfer::Bundle` deserialises both. On import a folder is matched by name in its space, and a `folderId` the file did not carry is dropped. → "A folder travels; its coordinates do not".
+- ⚠️ **A command taking the lock is `async` and runs its body in `db::blocking`**; with an `AppHandle`, generic over `R: Runtime`, registered as `name::<tauri::Wry>`. One lock serialises everything. ⚠️ HTTP sends and WebSockets never hold it; `open_library` closes every socket. → "Persistence (Rust)", "Who holds the lock", "Sending a request, and its answer", "A WebSocket".
+- HTTP history masks before sealing; the cookie jar is sealed whole and matched in Rust. → "The history of what was sent", "How a request travels, and the cookie jar".
+- A module holding commands is `pub`, the rest `pub(crate)`.
+- **Migrations are append-only** (`src-tauri/migrations/`); `db/schema.rs` is hand-written, so add a column in both. `PRAGMA foreign_keys` is per connection (`db::configure`); `db::iso8601` always writes milliseconds. → "Persistence (Rust)", "How far back an upgrade reaches".
+- Every read filters `deleted_at IS NULL`; trash retention 30 days. `updated_at` moves only when the user edited the note (deleting a space, retag, restore, undo, field fill, priority never touch it). → "The trash, and undoing a deletion".
+- **Search is Rust** (`view::fold` lowercases and strips accents). **Tags**: `notes::model::normalize_tags` only; renaming onto an existing tag merges. **Batches** answer what they changed and undo exactly that. → "Multiple selection and bulk actions".
+- Side tables read by bound ids up to `BIND_AT_MOST` (500), by subquery past it. Revisions: last 20 bodies, never for checklists, never exported. → "Revisions: the body before the edit".
+- **Fresh install seeds samples in one transaction.** → "The first launch". **Input is validated in the model**, before locking. → "Input validation".
+- **`{{field}}`** is decided in `notes::placeholder` alone (`[A-Za-z0-9_-]`); values in `note_placeholders`; global variable = proposed default, never copied. → "`{{fields}}` in a snippet".
+- **Kinds**: a todo list has items, not a body; only a snippet has a language; a Note is Markdown (`notes::markdown::plain` for list previews). → "The three kinds of note", "A Note is written formatted, and stored as Markdown".
+- **Folders** cut one space; deleting leaves notes unfiled; board geometry is separate from `Note`/`Folder`. Pinning is the only space order. → "Folders inside a space", "A folder travels; its coordinates do not", "Managing spaces from the switcher".
+- **Tools**: a pure Rust function plus a component implementing `Tool`; catalogue in `tools/catalogue/catalogue.ts`; one command per tool via `off_thread`; `result` is an output, never an input; secrets are plain signals. → "The tools: one contract…".
+- **JSON explorer/visualiser**: inputs only; Rust owns the model (`explore_json`, nesting capped at 256, node/row caps). → "Exploring a JSON snippet", "The JSON visualiser's model".
+- `closed_enum!` declares enums once. **Imports degrade rather than fail**, in one transaction; an added variant does not bump `FORMAT_VERSION`. → "Import, export and copying out".
+- App metadata is read from `Cargo.toml` at compile time; the changelog is baked in (`include_str!`).
 
-### The IPC boundary
+### IPC boundary
 
-- **The IPC surface is generated.** A command is annotated `#[tauri::command]` and `#[specta::specta]`, added to `collect_commands!` in `lib.rs`, then `npm run bindings`. Specta refuses `usize`/`i64`, hence `u32`. Not wired as a `#[test]`: on Windows the test exe cannot load `WebView2Loader.dll`. → "IPC boundary".
-- **Calls return a Result**, which repositories `unwrap()` into an `IpcError`. Only `core/data/` and `core/ipc/` call a generated command.
-- **Repositories are the data-source seam**: plain `providedIn: 'root'` classes, no interface, substituted by class in specs. `NotesRepository` has no method returning a raw list — one would invite re-filtering on the front.
-- **Errors are codes.** A new `ErrorCode` variant needs `CODE_KEYS` (`error-notifier.service.ts`, both locales) and `IPC_ERROR_CODES`; an unknown command rejects with a plain string, so `IpcError.code` can be `null`. → "Error contract".
-- **⚠️ `rename_all` on an enum renames its variants, not the fields of a struct variant**: a tagged answer carrying a two-word field (`endsWithNewline`) takes `rename_all_fields = "camelCase"` too, or the field crosses in snake case and only the front's type-check says so.
-- **A conversion exists only where the wire shape differs** (`note.mapper.ts`: dates, the patch). A `NotePatch` field left out is untouched, which `#[specta(optional)]` allows; `null` would overwrite. → "Serialisation contract".
-- **A list sends previews; the body is read by id.** `query_notes` and `board_view` cut bodies to `PREVIEW_LINES` as their last pass; ⚠️ `NotesStore.openNote` always reads with `get_note`, and a copy or fill goes through `NotesRepository.whole`. → "A list sends previews, and the body is read by id".
-- **The native side asks for an action** through one event carrying a generated `GlobalAction`, and constants cross by `.constant(…)` (`APP_METADATA`, `DEFAULT_SHORTCUTS`, `FIELD_NAME_PATTERN`, `PREFERENCES_FILE`). → "The downward direction: events".
-- **A rule lives on one side.** A checklist's Markdown is Rust's (`copy_text`); `isVariableName` builds its pattern from `FIELD_NAME_PATTERN`, held to `is_field_name` by one test.
-- **CSP is on.** `ipc:` and `http://ipc.localhost` must stay in `connect-src`; fonts are self-hosted; nothing may compile code at runtime (`new Function`).
+- **Generated**: `#[tauri::command]` + `#[specta::specta]`, add to `collect_commands!` in `lib.rs`, run `npm run bindings`; `u32`, not `usize`/`i64`. Only `core/data/` and `core/ipc/` call generated commands; repositories `unwrap()` the `Result` into `IpcError`. → "IPC boundary".
+- **Errors are codes**: a new `ErrorCode` needs `CODE_KEYS` (both locales) and `IPC_ERROR_CODES`. → "Error contract".
+- ⚠️ `rename_all` on an enum does not rename struct-variant fields: add `rename_all_fields = "camelCase"`.
+- `NotePatch`: a missing field is untouched (`#[specta(optional)]`), `null` overwrites. Conversion only where the wire shape differs (`note.mapper.ts`). → "Serialisation contract".
+- **Lists send previews** (`PREVIEW_LINES`); ⚠️ `NotesStore.openNote` always reads with `get_note`; copy/fill use `NotesRepository.whole`. → "A list sends previews, and the body is read by id".
+- Native→front actions go through one event carrying `GlobalAction`; constants cross via `.constant(…)`. → "The downward direction: events". A rule lives on one side only.
+- **CSP is on**: keep `ipc:` and `http://ipc.localhost` in `connect-src`; self-hosted fonts; nothing compiles code at runtime.
 
 ### Front-end state
 
-- **No host `(document:*)` listener on what is drawn per card.** Angular marks a listener's view dirty before calling it, so one per card re-rendered every card on every click; `MenuTriggerDirective` listens only while open.
-- **Zoneless, `OnPush`, signals.** Writable signals in a store are private (`_x`) behind `.asReadonly()`; derived state is `computed()`. Writes are not optimistic: persist, adopt the answer, bump.
-- **Nothing reloads a view by hand.** Every writer bumps `NotesRevision`; the canvas and the board both read it.
-- **A `computed` feeding a `resource` needs an `equal` comparator**, or a fresh literal fires a query on every clock tick. `resource.value()` throws in error: read behind `hasValue()`.
-- **A loader over the whole corpus runs through `OneInFlight`**: `resource` drops a stale answer, but Rust still computes it behind the lock.
-- **`NotesQueryStore.view` is a retained `linkedSignal`**: read everything through it, and read it first in an `&&`.
-- **Time comes from `ClockService`**: a `new Date()` inside a `computed()` freezes it. In specs, fake `Date` (or `setTimeout`/`clearTimeout`) only — a bare `useFakeTimers()` fakes `requestAnimationFrame` and hangs `whenStable()`.
-- **The canvas stores, one way**: `NotesQueryStore` (which notes), `NoteSelectionStore` (which one is pointed at), `NotesStore` (the note itself), `NoteBatchStore`, `UndoStore`. One method writes a note's fields (`applyPatch`, with an exhaustive `UNCHANGED` table). → "State".
-- **Creating a note writes nothing** until it is worth keeping; ⚠️ `draftMaterialisation` holds the **promise** of the write, or one close creates two notes. → "Creating a note writes nothing".
-- **The editor keeps local drafts** keyed on the note id (and the restore counter), committed on blur and on every closing path.
-- **⚠️ A `@defer`red component is imported on a line of its own** (the notes page, the board, TipTap, the titlebar's dialogs): the compiler defers an import only when every symbol on it serves the block, so a type shares nothing with it (`import type`), and nothing else names the class. There is no router: the areas (Notes, Outils), the date view and the board are state (`AreaStore`, `BoardStore`), not routes. → "No router".
-- **⚠️ TipTap is its own chunk**, behind `@defer`: query the rich editor by template reference, never `viewChild(RichTextEditorComponent)`. On WebKit (Linux) `chain().focus()` throws a mismatched transaction: `focusFirst`, then the chain. Its Markdown escaping is ours (`escapeMarkdownText`), or `{{db_host}}` is stored as `{{db\_host}}`.
-- **Tab stays in the text.** The code field indents through `execCommand('insertText')`, the textarea's own undo, by `codeIndent`; its `preventDefault` is what the focus trap reads. The rich editor stores a tab starting a line as `&#9;`, which `MarkdownWithTabs` turns back. → "Editing a note".
-- **⚠️ The notes page is hidden behind another area, never destroyed**: a document listener of its own asks `AreaStore` first, and a native action brings the notes back before it opens anything. The area keys are read from `KeyboardEvent.code` (AZERTY). → "No router".
-- **`null` space means "all spaces"**, a choice and not a loading state. Deleting a space needs a refuge; there is no one-argument variant.
-- **The undo banner and the undo record differ**: the timer hides `banner()`, `Ctrl+Z` reads `last()`. `Reversible` is exhaustive.
-- **Nothing corpus-wide runs before saying what it touches** (tag changes, emptying the trash, deleting a library): the count comes from the back end, and the confirm button is not the trigger.
-- **Sections are exhaustive and local-day based**: `tzOffsetMinutes` travels with the query, with the sign flipped. A search or a facet switches to one flat `results` section; a quick filter does not. The search is debounced 150 ms.
-- **"À trier" is a note with a deadline**, set at the end of the local day (`endOfLocalDay`).
-- **`pinnedFirst` hoists pinned notes in every shape of view**, and is the user's choice ("Épinglées en tête"); the palette always sends `false`.
-- **The order and the grouping are the library's** (`devnotes.notes.arrangement`, read back by `readArrangement` no further than it can trust the file), and not criteria: the board, which spreads the criteria, keeps its own geometry.
-- **Every library operation reports, including when it changed nothing** (`file.importedNothing`), through `StatusNotifier` under the titlebar — the menu closes on the click.
-- **The File menu owns its entries** as an array, in screen order; the trash and tag management deliberately live next to the canvas instead.
-- **A startup initialiser injects everything before its first `await`** (`startApplication()`): an `inject()` after one fails with NG0203 and a black window.
+- **Zoneless, `OnPush`, signals.** Store signals are private `_x` behind `.asReadonly()`; derived = `computed()`. Writes are not optimistic: persist, adopt the answer, bump `NotesRevision`; nothing reloads a view by hand.
+- A `computed` feeding a `resource` needs an `equal` comparator; read `resource.value()` behind `hasValue()`; whole-corpus loaders go through `OneInFlight`; read `NotesQueryStore.view` first in an `&&`.
+- **Time comes from `ClockService`** (no `new Date()` in `computed`). In specs fake `Date` only; a bare `useFakeTimers()` hangs `whenStable()`.
+- **Canvas stores**: `NotesQueryStore` (which notes), `NoteSelectionStore`, `NotesStore` (the note; `applyPatch` is the one writer), `NoteBatchStore`, `UndoStore` (banner timer ≠ `Ctrl+Z` record). → "State".
+- Creating a note writes nothing until worth keeping; ⚠️ `draftMaterialisation` holds the promise of the write. → "Creating a note writes nothing". Editor drafts are keyed on note id and committed on blur and every closing path.
+- ⚠️ A `@defer`red component is imported on a line of its own (`import type` for types). There is no router: areas, date view and board are state. The notes page is hidden, never destroyed; area keys use `KeyboardEvent.code` (AZERTY). → "No router".
+- ⚠️ TipTap is its own chunk: query the rich editor by template reference. On WebKit use `focusFirst` before `chain().focus()`. Markdown escaping is ours (`escapeMarkdownText`). Tab stays in the text (`codeIndent`). → "Editing a note".
+- `null` space = "all spaces". Nothing corpus-wide runs before saying what it touches (count from Rust). Sections are exhaustive and local-day based (`tzOffsetMinutes` sign flipped); search debounce 150 ms; "À trier" ends at `endOfLocalDay`; `pinnedFirst` is the user's choice.
+- Every library operation reports through `StatusNotifier`, even when nothing changed. A startup initialiser injects everything before its first `await`.
 
-### The canvas, the board and folders
+### Canvas, board, folders
 
-- **A card is not a `<button>`**: its click surface (`.card-open`) is a layer underneath, and the card is `pointer-events: none`. → "A card is two layers".
-- **⚠️ HTML5 drag & drop does not reach this WebView** (`dragDropEnabled` stays on for the native file drop): every drag is pointer events, doubled by a keyboard twin. A dropped file is a native event (`FileDropService`).
-- **The board dims, it never narrows**, and every gesture commits on `pointerup` alone, snapped to `GRID_PX` (the background's lattice), written as one debounced `save_board_layout`. → "The board: the second view of a space".
-- **A card flows inside a zone and is placed outside one**: a `note_positions` row means "loose", and `file_many` deletes it. `store::board::geometry` is a read that writes.
-- **Opening a folder is one state** (`FoldersStore.activeFolderId`); inside, the view is a flat grid, and Escape falls through selection → search → folder, asking `hasUserFilters`. → "Descending into a folder".
-- **The library rail is the navigation**: while it shows, the two switchers leave the topbar. `FoldersStore` loads every space's folders. → "The library rail".
-- **The canvas keyboard is one table** (`CANVAS_KEYS`, in `notes/canvas-keys.ts` apart from the directive, so the titlebar imports data and not stores): the sheet is derived from it, and a `run` answers whether it acted.
+- A card is not a `<button>`: `.card-open` is a layer underneath. → "A card is two layers". No host `(document:*)` listener per card.
+- ⚠️ HTML5 drag & drop does not reach the WebView: every drag is pointer events plus a keyboard twin; file drops are native (`FileDropService`).
+- The board dims, never narrows; gestures commit on `pointerup`, snapped to `GRID_PX`, saved debounced (`save_board_layout`). A `note_positions` row means "loose". Opening a folder is `FoldersStore.activeFolderId`; Escape falls through selection → search → folder. → "The board: the second view of a space", "Descending into a folder".
+- The canvas keyboard is one table (`CANVAS_KEYS`). Arrangement is the library's (`devnotes.notes.arrangement`).
 
-### Preferences, shortcuts and the window
+### Preferences, shortcuts, window
 
-- **A preference is applied on a button** through `SettingsDraftStore`; only the theme and density preview. The native services read `SettingsStore`, never the draft, in effects built with an explicit injector. A setting is one line (`SettingsStore.setting`). → "Preferences".
-- **A global shortcut is first come, first served** across the machine; the loser gets no error, so `set_global_shortcuts` answers what it could not take and the front says so. The defaults are Rust's (`DEFAULT_SHORTCUTS`), registered before the front starts. → "Shortcuts: two vocabularies, two storage paths".
-- **A shortcut is captured, not typed**: `KeyboardEvent.code` for a global one (the position), the printed key for a canvas one; a global one needs a modifier.
-- **The window's geometry is remembered without `VISIBLE`** (`WINDOW_STATE_FLAGS`), and the window is declared hidden, then shown from `setup`. → "Window geometry".
-- **A silenced update is a version written down** (`skippedUpdate`); the About dot reads `UpdateStore.hasPendingUpdate`. → "Application updates".
-- **The changelog is baked into the binary** (`include_str!`), with a thin grammar a test holds; its newest section is generated by `release.yml`.
+- A preference is applied on a button via `SettingsDraftStore` (only theme and density preview); native services read `SettingsStore`, never the draft. Global shortcuts are first come, first served (`set_global_shortcuts` answers what it could not take) and captured by `KeyboardEvent.code`. → "Preferences", "Shortcuts: two vocabularies, two storage paths".
+- Window geometry is remembered without `VISIBLE` (`WINDOW_STATE_FLAGS`); the window starts hidden and is shown from `setup`. A silenced update is a version written down (`skippedUpdate`). → "Window geometry", "Application updates".
 
-### i18n, accessibility and theming
+### i18n, accessibility, theming
 
-- **Translation keys, not strings**: code returns `{ key, params }`, and a string goes into **both** `src/app/core/services/i18n/translations/fr.json` and `en.json`. No user-visible string in Rust. → "i18n".
-- **⚠️ Transloco replaces an unknown `{{name}}` with nothing**: no translated string can carry a snippet's `{{fields}}`. The application's name is `{{app}}`, a sibling key the loader adds.
-- **A count is an ICU plural read by our own transpiler** (`plural-transpiler.ts`); ⚠️ `transloco-messageformat` breaks the CSP. Tiny grammar; `=0` written out where zero reads badly.
-- **Prettier formats in a worker** (`core/services/format/`), loaded by the first format, one chunk per plugin. ⚠️ The worker has no CSP (Tauri sets it on the HTML only): hand it text, never code. Every `{{…}}` is shielded as a same-length identifier and must come back intact, or nothing is applied. → "Formatting a snippet with Prettier".
-- **Syntax highlighting is highlight.js in one module** (`shared/code-viewer/highlighter.ts`, grammars imported one by one), and its theme is global (`_code-theme.scss`): `[innerHTML]` carries no `_ngcontent`.
-- **⚠️ CSS variables stay on `:root` in `src/styles/styles.scss`**: in a component's SCSS, `:root` never matches. The `--*-rgb` triplets are comma-separated. A parent's CSS cannot reach a child component: pass a custom property. → "Theming".
-- **The light theme has its own amber**, three variables for three jobs, and dark stays the base (no white flash). `scripts/palette.test.mjs` holds every text colour to 4.5:1. `tint-badge` is for a state, `hue-badge` when the hue is the information.
-- **Accessibility is linted, except what the linter cannot see**: contrast, a 24×24 target (`hit-target`), and a destructive control red at rest (`destructive`). → "Accessibility".
-- **A modal is a shell** (`DialogComponent`, `shared/layout/dialog/`): the rung in `dialog.model.ts` is both the `z-index` and the Escape priority. → "The modal frame".
+- **Translation keys, not strings**: code returns `{ key, params }`; add every string to **both** `core/services/i18n/translations/fr.json` and `en.json`. No user-visible string in Rust. → "i18n".
+- ⚠️ Transloco drops an unknown `{{name}}`: no translated string can carry a snippet's `{{fields}}`. Counts are ICU plurals read by our own transpiler (`transloco-messageformat` breaks the CSP).
+- Prettier runs in a worker (hand it text, never code; every `{{…}}` must come back intact). Highlighting is highlight.js in one module; its theme is global. → "Formatting a snippet with Prettier", "Syntax highlighting".
+- ⚠️ CSS variables stay on `:root` in `src/styles/styles.scss`; `--*-rgb` triplets are comma-separated; a parent's CSS cannot reach a child component (pass a custom property). Dark is the base; light has its own amber; `scripts/palette.test.mjs` holds text to 4.5:1. → "Theming".
+- Accessibility: linted, plus contrast, 24×24 targets and destructive controls red at rest. Modals are `DialogComponent` (the rung in `dialog.model.ts` is `z-index` and Escape priority). → "Accessibility", "The modal frame".
 
 ### Tests
 
-- **Specs substitute repositories by class** through `provideAppTesting()`; the fakes keep `implements Pick<…, keyof …>` and reimplement no rule Rust owns. `AppWindowService` and `FileDialogService` are always faked. → "Testing".
-- **⚠️ The e2e runs share one process, one database and one preferences file.** The profile is wiped once, before wdio starts; each spec file seeds its own preconditions, and the numeric prefix is the run order. `reopenSession()` is not a restart. → "One application, every spec file".
-- **The e2e harness is a build flavour** (`e2e:build`: `tauri.e2e.conf.json`, the `e2e` feature and the polyfill, which go together), with its own identifier and so its own profile.
-- **⚠️ A scenario waits on a condition, never a duration** (`eventually` in `support/app.ts`); a `browser.pause` stays only for "nothing happened", marked `deliberately`, which `scripts/e2e-waits.test.mjs` checks. Address controls by `data-testid`: the suite switches language.
+- Specs substitute repositories by class through `provideAppTesting()`; fakes use `implements Pick<…, keyof …>` and reimplement no Rust rule; `AppWindowService` and `FileDialogService` are always faked. → "Testing".
+- ⚠️ E2E runs share one process, DB and preferences file; the numeric prefix is the run order; each spec seeds its own state; `reopenSession()` is not a restart. The harness is a build flavour (`tauri.e2e.conf.json`, `e2e` feature). ⚠️ Wait on conditions (`eventually`), never durations; address controls by `data-testid`. → "One application, every spec file".
+
+## Security and verification
+
+- Never rewrite cryptography, key derivation or file formats unasked. Never log or commit passphrases, keys or note content. Add Tauri permissions narrowest-first (`src-tauri/capabilities/default.json`). `.claude/rules/security.md` holds the agent limits.
+- Before saying a change is done, run the checks for what changed (`verify-change`) and report only what actually ran.
+
+## Claude Code setup
+
+- `.claude/skills/` is versioned. Local: `add-feature`, `angular-ui`, `tauri-integration`, `database-migration`, `devnotes-security-review`, `verify-change`, `desktop-e2e-testing`, `backup-restore`, `bug-investigation`, `release-packaging`, `marketing-site`, `performance-profiling`, `dependency-audit`. Vendored, unmodified and pinned in `.claude/skills/PROVENANCE.md`: `frontend-design`, `webapp-testing` (`anthropics/skills`); `angular-developer` (`angular/skills`); `seo`, `core-web-vitals`, `accessibility` (`addyosmani/web-quality-skills`). A vendored skill is generic: where it disagrees with this file or a local skill, the project wins. All but `angular-developer` are for the website: the app's UI follows its own tokens, mockups and `angular-ui`. `.claude/settings.json` holds the permission rules that back `.claude/rules/security.md`; `settings.local.json`, `launch.json` and `.mcp.json` stay local.
 
 ## Design reference
 
-`docs/scratch-mockup-v2.html` and `docs/scratch-folders.html` are static HTML/CSS mockups of the intended UI (the canvas; folders and the board). Visual references, not code to run or import.
+`docs/scratch-mockup-v2.html` and `docs/scratch-folders.html` are static mockups of the intended UI (canvas; folders and board). Visual references, not code to import.

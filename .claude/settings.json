@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "deny": ["Read(**/*.key)", "Read(**/*.pfx)", "Read(/.tauri/**)"],
+    "ask": [
+      "Bash(git tag *)",
+      "Bash(gh release *)",
+      "Bash(gh workflow run *)",
+      "PowerShell(git tag *)",
+      "PowerShell(gh release *)",
+      "PowerShell(gh workflow run *)"
+    ]
+  }
+}

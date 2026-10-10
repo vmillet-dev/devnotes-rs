@@ -13,3 +13,10 @@ package-lock.json
 # Maquette statique de référence : conservée telle quelle, hors périmètre du formatage.
 docs/scratch-mockup-v2.html
 docs/scratch-folders.html
+# Vendored skills (.claude/skills/PROVENANCE.md): kept byte-identical to their source.
+.claude/skills/frontend-design
+.claude/skills/webapp-testing
+.claude/skills/angular-developer
+.claude/skills/seo
+.claude/skills/core-web-vitals
+.claude/skills/accessibility
