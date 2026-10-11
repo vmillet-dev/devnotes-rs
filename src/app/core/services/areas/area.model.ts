@@ -1,4 +1,4 @@
-import { ShortcutGroup } from '@core/services/shortcuts/shortcut.model';
+import { Rebindable, ShortcutGroup, acceleratorKeys } from '@core/services/shortcuts/shortcut.model';
 
 /** In the switch's order, which is also the order of their keys. */
 export const AREAS = ['notes', 'tools', 'http'] as const;
@@ -19,11 +19,21 @@ export function isToolSearchKey(event: KeyboardEvent): boolean {
   );
 }
 
+/**
+ * Hides and shows the rail of whichever area is on screen. It was the canvas's key, and HTTP
+ * had a copy of it; the tools had none.
+ */
+export const RAIL_ACTION: Rebindable = { id: 'areas.rail', labelKey: 'areas.rail', fallback: 'Ctrl+B' };
+
+/** What the preferences let be moved among the keys that act in every area. */
+export const AREA_ACTIONS: readonly Rebindable[] = [RAIL_ACTION];
+
 export const AREA_SHORTCUT_GROUP: ShortcutGroup = {
   id: 'areas',
   labelKey: 'shortcuts.groups.areas',
   shortcuts: [
     ...AREAS.map((area, index) => ({ keys: ['Ctrl', String(index + 1)], labelKey: `areas.go.${area}` })),
     { keys: ['Ctrl', 'Shift', 'T'], labelKey: 'tools.searchShortcut' },
+    { keys: acceleratorKeys(RAIL_ACTION.fallback), labelKey: RAIL_ACTION.labelKey, action: RAIL_ACTION },
   ],
 };

@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { SettingsStore } from '@core/services/settings/settings.store';
 import { ClockService } from '@core/services/time/clock.service';
 import {
   TOOL_CATALOGUE,
@@ -22,6 +23,7 @@ import {
 } from '@core/services/tools/tool.model';
 import { ToolsStore } from '@core/services/tools/tools.store';
 import { relativeTimeRef } from '@core/utils/relative-time.util';
+import { RailToggleComponent } from '@shared/controls/rail-toggle/rail-toggle.component';
 import { IconComponent, IconName } from '@shared/icon/icon.component';
 
 const CATEGORY_ICONS: Record<ToolCategory, IconName> = {
@@ -37,7 +39,7 @@ const CATEGORY_ICONS: Record<ToolCategory, IconName> = {
 /** The catalogue in its panels, the recent tools above it, and a search over both names and lines. */
 @Component({
   selector: 'app-tools-home',
-  imports: [IconComponent, TranslocoPipe],
+  imports: [IconComponent, RailToggleComponent, TranslocoPipe],
   templateUrl: './tools-home.component.html',
   styleUrl: './tools-home.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -45,6 +47,7 @@ const CATEGORY_ICONS: Record<ToolCategory, IconName> = {
 export class ToolsHomeComponent {
   protected readonly store = inject(ToolsStore);
   protected readonly catalogue = inject(TOOL_CATALOGUE);
+  protected readonly settings = inject(SettingsStore);
   private readonly transloco = inject(TranslocoService);
   private readonly clock = inject(ClockService);
   private readonly injector = inject(Injector);
@@ -55,6 +58,11 @@ export class ToolsHomeComponent {
   private readonly translation = toSignal(this.transloco.selectTranslation());
 
   protected readonly searching = computed(() => this.store.search().trim() !== '');
+
+  /** The category showing while nothing on screen says so: the rail is hidden, and no search overrides it. */
+  protected readonly hiddenCategory = computed(() =>
+    this.settings.showLibraryRail() || this.searching() ? null : this.store.category(),
+  );
 
   protected readonly panels = computed(() => {
     this.translation();

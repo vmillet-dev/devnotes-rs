@@ -20,26 +20,6 @@
 }
 
 // First in the row: the rail it toggles is what changes space.
-.rail-toggle {
-  @include unstyled-control;
-  @include surface(var(--bg-2), 8px);
-  cursor: pointer;
-}
-
-.rail-toggle[aria-pressed='true'] {
-  color: var(--amber-text);
-}
-
-.rail-toggle:hover {
-  border-color: var(--amber-dim);
-  color: var(--text-0);
-}
-
-.rail-toggle:focus-visible {
-  outline: 2px solid var(--amber-edge);
-  outline-offset: 2px;
-}
-
 // Icon-only, beside the rail toggle: a view on the notes, not a filter. Its name is on the
 // tooltip and on the accessible label.
 .trash-btn {
@@ -92,7 +72,6 @@
 
 // One box for the three icon buttons, as tall as the row around them: they were 24, 28
 // and 30 px of three different glyph sizes, and the icon was the smallest thing in each.
-.rail-toggle,
 .trash-btn,
 .facets-toggle {
   display: inline-flex;

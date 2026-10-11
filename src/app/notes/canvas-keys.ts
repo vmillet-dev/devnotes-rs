@@ -113,15 +113,6 @@ export const CANVAS_KEYS: readonly CanvasKey[] = [
   creating('note'),
   creating('checklist'),
   {
-    id: 'canvas.library',
-    accelerator: 'Ctrl+B',
-    labelKey: 'shortcuts.canvas.library',
-    run: ({ settings }) => {
-      settings.showLibraryRail.write(!settings.showLibraryRail());
-      return true;
-    },
-  },
-  {
     keys: ['↑ ↓ ← →'],
     labelKey: 'shortcuts.canvas.move',
     on: Object.keys(DIRECTIONS),

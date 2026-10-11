@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { SettingsStore } from '@core/services/settings/settings.store';
 import { TOOL_CATALOGUE } from '@core/services/tools/tool.model';
 import { ToolsStore } from '@core/services/tools/tools.store';
 import { TOOLS } from './catalogue/catalogue';
@@ -18,6 +19,7 @@ import { ToolsRailComponent } from './rail/tools-rail.component';
 export class ToolsPageComponent {
   private readonly store = inject(ToolsStore);
   private readonly catalogue = inject(TOOL_CATALOGUE);
+  protected readonly settings = inject(SettingsStore);
 
   protected readonly openTool = computed(
     () => this.catalogue.find((tool) => tool.id === this.store.openId()) ?? null,

@@ -1,5 +1,10 @@
 <section class="history" data-testid="http-history" aria-labelledby="http-history-title">
   <header class="head">
+    <app-rail-toggle
+      testId="http-rail-toggle"
+      [shown]="settings.showLibraryRail()"
+      (toggled)="settings.toggleLibraryRail()"
+    />
     <h2 id="http-history-title" class="title">{{ 'http.history.title' | transloco }}</h2>
     <span class="hint">{{ 'http.history.kept' | transloco }}</span>
 

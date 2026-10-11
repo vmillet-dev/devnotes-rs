@@ -1,5 +1,10 @@
 @let id = tool().id;
 <header class="topbar">
+  <app-rail-toggle
+    testId="tools-rail-toggle"
+    [shown]="settings.showLibraryRail()"
+    (toggled)="settings.toggleLibraryRail()"
+  />
   <button type="button" class="crumb" data-testid="tool-back" (click)="store.home()">
     {{ 'tools.title' | transloco }} <span aria-hidden="true">›</span>
   </button>

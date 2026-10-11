@@ -1,5 +1,7 @@
 <div class="page" data-testid="tools-page">
-  <app-tools-rail />
+  @if (settings.showLibraryRail()) {
+    <app-tools-rail />
+  }
 
   <main class="workspace">
     @if (openTool(); as tool) {

@@ -199,6 +199,11 @@ export class SettingsStore {
     }
   }
 
+  /** One state for the three areas: a rail hidden in the notes is hidden in the tools and HTTP. */
+  toggleLibraryRail(): void {
+    this.showLibraryRail.write(!this.showLibraryRail());
+  }
+
   setLocale(locale: LocaleChoice): void {
     this.locale.write(locale);
   }

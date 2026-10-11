@@ -90,10 +90,7 @@ export class HttpPageComponent implements OnInit {
   protected onKeydown(event: KeyboardEvent): void {
     if (event.defaultPrevented || event.altKey || event.shiftKey || !(event.ctrlKey || event.metaKey)) return;
     const key = event.key.toLowerCase();
-    if (key === 'b') {
-      event.preventDefault();
-      this.settings.showLibraryRail.write(!this.settings.showLibraryRail());
-    } else if (this.history.isOpen()) {
+    if (this.history.isOpen()) {
       return;
     } else if (key === 'enter') {
       event.preventDefault();

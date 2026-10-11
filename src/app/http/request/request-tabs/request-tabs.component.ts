@@ -3,6 +3,8 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { requestBadge } from '@core/model/http.model';
 import { HttpSendStore } from '@core/services/http/http-send.store';
 import { HttpTabsStore, RequestTab } from '@core/services/http/http-tabs.store';
+import { SettingsStore } from '@core/services/settings/settings.store';
+import { RailToggleComponent } from '@shared/controls/rail-toggle/rail-toggle.component';
 import { SpinnerComponent } from '@shared/spinner/spinner.component';
 
 /**
@@ -11,7 +13,7 @@ import { SpinnerComponent } from '@shared/spinner/spinner.component';
  */
 @Component({
   selector: 'app-request-tabs',
-  imports: [SpinnerComponent, TranslocoPipe],
+  imports: [RailToggleComponent, SpinnerComponent, TranslocoPipe],
   templateUrl: './request-tabs.component.html',
   styleUrl: './request-tabs.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -19,6 +21,7 @@ import { SpinnerComponent } from '@shared/spinner/spinner.component';
 export class RequestTabsComponent {
   protected readonly tabs = inject(HttpTabsStore);
   protected readonly sending = inject(HttpSendStore);
+  protected readonly settings = inject(SettingsStore);
 
   /** A modified tab is not closed here: the page asks first. */
   readonly closeAsked = output<RequestTab>();

@@ -162,7 +162,7 @@
   },
   "sidebar": {
     "library": "Spaces",
-    "toggle": "Show or hide the spaces",
+    "toggle": "Show or hide the side rail",
     "expand": "Expand space {{name}}",
     "collapse": "Collapse space {{name}}",
     "noFolders": "No folder",
@@ -671,7 +671,6 @@
       "newSnippet": "New code snippet",
       "newNote": "New formatted note",
       "newChecklist": "New to-do list",
-      "library": "Show or hide the library",
       "move": "Move from card to card",
       "open": "Open the focused card",
       "copy": "Copy the card, or ask for its fields",
@@ -796,6 +795,7 @@
       "reset": "Reset",
       "globalNote": "These three work everywhere, window closed included, so each needs at least one modifier — without one the key would be swallowed in every application you use. A shortcut another application already holds is reported at startup.",
       "canvasNote": "These only act on the canvas, never while typing, so a bare letter is enough. Click the field, then press the combination.",
+      "areasNote": "This one acts in the three areas — Notes, Tools and HTTP — and, with Ctrl or Alt, while typing too.",
       "fixedNote": "The arrows, Escape, Tab and the Ctrl or Shift clicks do not move: they are the navigation, the way out and the selection, and a library you cannot step back through would be worse than a badly placed key.",
       "taken": "{{accelerator}} is already held by \"{{action}}\".",
       "needsModifier": "A global shortcut needs at least Ctrl, Alt, Shift or Super.",
@@ -1008,6 +1008,7 @@
     "hint": "{{area}} ({{key}})",
     "notes": "Notes",
     "tools": "Tools",
+    "rail": "Show or hide the side rail",
     "go": {
       "notes": "Go to the notes",
       "tools": "Go to the tools",

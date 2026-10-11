@@ -302,17 +302,28 @@ describe('HttpPageComponent', () => {
     );
   });
 
-  it('closes an unmodified tab at once, and hides the rail on Ctrl+B', async () => {
+  it('closes an unmodified tab at once', async () => {
     await tabs().open('Login');
     await fixture.whenStable();
     el<HTMLButtonElement>('[data-testid="http-tab-close"]').click();
     await fixture.whenStable();
     expect(tabs().tabs()).toEqual([]);
+  });
 
+  /** Hidden, the rail left no control to bring it back: only a key nobody is told about. */
+  it('hides its rail with the others, and carries the button that brings it back', async () => {
     const settings = TestBed.inject(SettingsStore);
-    const shown = settings.showLibraryRail();
-    key({ key: 'b' });
+    const toggle = () => el<HTMLButtonElement>('[data-testid="http-rail-toggle"]');
+    expect(toggle().getAttribute('aria-pressed')).toBe('true');
+
+    toggle().click();
     await fixture.whenStable();
-    expect(settings.showLibraryRail()).toBe(!shown);
+    expect(settings.showLibraryRail()).toBe(false);
+    expect(el('[data-testid="http-rail"]')).toBeNull();
+    expect(toggle().getAttribute('aria-pressed')).toBe('false');
+
+    toggle().click();
+    await fixture.whenStable();
+    expect(el('[data-testid="http-rail"]')).not.toBeNull();
   });
 });
