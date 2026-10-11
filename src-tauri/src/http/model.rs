@@ -352,6 +352,17 @@ pub struct HttpRequestDraft {
     pub document: RequestDocument,
 }
 
+/// What a request's first save creates on its way: the collection to put it in, a folder
+/// under the place it names, or both — the folder then goes in the new collection.
+#[derive(Debug, Clone, Default, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct NewPlace {
+    #[specta(optional)]
+    pub collection: Option<String>,
+    #[specta(optional)]
+    pub folder: Option<String>,
+}
+
 /// A field left out is untouched. ⚠️ No `kind`: it is chosen when a request is created, so
 /// there is nothing here to refuse.
 #[derive(Debug, Clone, Default, Deserialize, Type)]

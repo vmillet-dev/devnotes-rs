@@ -309,6 +309,100 @@ describe('HTTP collections', () => {
       }
     });
 
+    /**
+     * On a library with no collection, saving a first request answered « créez-en une dans le
+     * rail » and could only be cancelled. The dialog creates what it lacks.
+     */
+    it('saves a first request by naming its collection, then others into a new folder and a new collection', async () => {
+      for (const node of (await bridge.httpTree()).collections) {
+        await bridge.deleteHttpItem({ kind: 'collection', id: node.collection.id });
+      }
+      await press('1', ['Control']);
+      await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+      await press('3', ['Control']);
+      await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+      if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
+      await $(testid('http-rail-empty')).waitForDisplayed({ timeout: 10_000 });
+      const held = async () => outline(await bridge.httpTree());
+      const ends = (names: string[], expected: string[]) =>
+        names.length === expected.length && names.every((name, at) => name.endsWith(expected[at]!));
+      const begin = async () => {
+        await $(testid('http-tab-new')).click();
+        await press('s', ['Control']);
+        await $(testid('http-save-dialog')).waitForDisplayed({ timeout: 10_000 });
+      };
+      const save = async () => {
+        await $(testid('http-save-submit')).click();
+        await $(testid('http-save-dialog')).waitForExist({ reverse: true, timeout: 10_000 });
+      };
+
+      // « Nouvelle requête », a URL, Ctrl+S: nothing to choose among, a collection to name.
+      await $(testid('http-tab-new')).click();
+      await setField(testid('http-url'), 'https://api.exemple.fr/sante');
+      await press('s', ['Control']);
+      await $(testid('http-save-dialog')).waitForDisplayed({ timeout: 10_000 });
+      expect(await $(testid('http-save-place')).isExisting()).toBe(false);
+      // Left without a name it is refused in place, and nothing is written.
+      await $(testid('http-save-submit')).click();
+      await $(testid('http-save-missing')).waitForDisplayed({ timeout: 10_000 });
+      expect(await $(testid('http-save-collection')).getAttribute('aria-invalid')).toBe('true');
+      expect(await held()).toEqual([]);
+      await setField(testid('http-save-name'), 'Santé');
+      await setField(testid('http-save-collection'), 'Boutique');
+      await save();
+      // One gesture: the collection unfolded in the rail, the request in it, lit, with its URL.
+      await eventually(
+        rowNames,
+        (names) => ends(names, ['Boutique', 'Santé']),
+        'the collection and its request',
+      );
+      expect(await held()).toEqual(['Boutique[Santé]']);
+      expect(
+        await readEach(`${testid('http-node-name')}[aria-current="true"]`, 'text').then((names) =>
+          ends(names, ['Santé']),
+        ),
+      ).toBe(true);
+      expect(await $(testid('http-url')).getValue()).toBe('https://api.exemple.fr/sante');
+      expect(await $(testid('http-tab-dirty')).isExisting()).toBe(false);
+
+      // With a collection there, a new folder under it — folded, and unfolded to show what it got.
+      const twisty = `${testid('http-node')}[data-kind="collection"] ${testid('http-node-twisty')}`;
+      await $(twisty).click();
+      await eventually(rowNames, (names) => ends(names, ['Boutique']), 'the collection folded');
+      await begin();
+      await $(testid('http-save-new-folder')).click();
+      await setField(testid('http-save-name'), 'Lister');
+      await setField(testid('http-save-folder'), 'Commandes');
+      await save();
+      await eventually(
+        rowNames,
+        (names) => ends(names, ['Boutique', 'Santé', 'Commandes', 'Lister']),
+        'the folder and its request, shown',
+      );
+      expect(await held()).toEqual(['Boutique[Santé Commandes[Lister]]']);
+
+      // And a new collection from the end of the menu of places.
+      await begin();
+      await $(testid('http-save-place')).click();
+      await $(
+        `${testid('choice-panel-http-save-place')} ${testid('choice-option')}[data-option-id="new-collection"]`,
+      ).click();
+      await setField(testid('http-save-name'), 'Chercher');
+      await setField(testid('http-save-collection'), 'Catalogue');
+      await save();
+      await eventually(held, (seen) => seen.length === 2, 'the second collection');
+      expect(await held()).toEqual(['Boutique[Santé Commandes[Lister]]', 'Catalogue[Chercher]']);
+
+      const tabCount = async () => (await $$(testid('http-tab')).getElements()).length;
+      for (let left = await tabCount(); left > 0; left = await tabCount()) {
+        await $(`${testid('http-tab')}:last-of-type ${testid('http-tab-close')}`).click();
+        await eventually(tabCount, (count) => count === left - 1, 'a saved tab closed without a question');
+      }
+      for (const node of (await bridge.httpTree()).collections) {
+        await bridge.deleteHttpItem({ kind: 'collection', id: node.collection.id });
+      }
+    });
+
     it('builds a collection from the rail: a folder, two requests, one moved above the other', async () => {
       await press('3', ['Control']);
       await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });

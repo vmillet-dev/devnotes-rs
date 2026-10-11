@@ -7,6 +7,7 @@ import {
   EMPTY_PARTS,
   HttpTree,
   KeyValueRow,
+  NewPlace,
   OpenedRequest,
   RequestDraft,
   RequestKind,
@@ -40,6 +41,11 @@ export interface RequestTab {
 export interface SaveTarget {
   readonly collectionId: string;
   readonly folderId: string | null;
+  /**
+   * What the save creates on its way, when the place does not exist yet: a collection, which
+   * takes the request at its root whatever the ids above say, or a folder under them.
+   */
+  readonly create?: NewPlace;
 }
 
 interface StoredTabs {
@@ -242,21 +248,25 @@ export class HttpTabsStore {
       return key;
     }
     if (!target) return null;
+    const draft = {
+      collectionId: target.collectionId,
+      folderId: target.folderId,
+      name: tab.draft.name,
+      kind: tab.draft.kind,
+      method: tab.draft.method,
+      document: toDocument(tab.draft.parts),
+    };
+    const create = target.create;
+    // One write for the request and what it lacks: a request that is refused leaves no
+    // empty collection behind it.
     const created = await this.errors.attempt('http.failed', () =>
-      this.repository.createRequest({
-        collectionId: target.collectionId,
-        folderId: target.folderId,
-        name: tab.draft.name,
-        kind: tab.draft.kind,
-        method: tab.draft.method,
-        document: toDocument(tab.draft.parts),
-      }),
+      create ? this.repository.createRequestIn(draft, create) : this.repository.createRequest(draft),
     );
     if (!created) return null;
     this.replace(key, {
       key: created.id,
       requestId: created.id,
-      place: target,
+      place: { collectionId: created.collectionId, folderId: created.folderId },
       saved: draftOf(created),
       draft: draftOf(created),
     });
@@ -270,6 +280,7 @@ export class HttpTabsStore {
     if (this._activeKey() === key) this._activeKey.set(created.id);
     this.persist();
     await this.collections.load();
+    this.collections.reveal(created.id);
     return created.id;
   }
 

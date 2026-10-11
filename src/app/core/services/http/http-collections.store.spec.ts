@@ -91,6 +91,26 @@ describe('HttpCollectionsStore', () => {
     expect(await store().createRequest('API', null, 'Perdue')).toBeNull();
   });
 
+  /** A request saved into a folded folder was lit where nobody could see it. */
+  it('unfolds what hides a request, down to its folder, and nothing else', async () => {
+    await store().load();
+    store().toggle('API');
+    store().toggle('Archives');
+    store().toggle('Catalogue');
+
+    store().reveal('Old');
+
+    expect([...store().collapsed()]).toEqual(['Catalogue']);
+    expect(
+      store()
+        .rows()
+        .map((row) => row.id),
+    ).toContain('Old');
+    // Gone from the tree: nothing to unfold, and nothing breaks.
+    store().reveal('Absente');
+    expect([...store().collapsed()]).toEqual(['Catalogue']);
+  });
+
   it('deletes through Rust and reads the tree again', async () => {
     await store().load();
     http.tree$ = { collections: [] };

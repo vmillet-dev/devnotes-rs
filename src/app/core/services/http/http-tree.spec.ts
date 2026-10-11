@@ -7,6 +7,7 @@ import {
   sampleTree,
 } from '@testing/http-tree.fixture';
 import {
+  ancestors,
   dropMove,
   findRequest,
   keyMove,
@@ -243,6 +244,16 @@ describe('what a deletion takes', () => {
     expect(taken(request('Absente'))).toEqual([]);
     expect(taken(folder('Absent'))).toEqual([]);
     expect(taken(collection('Absente'))).toEqual([]);
+  });
+});
+
+describe('what a request sits under', () => {
+  it('is its collection, then its folders, outermost first', () => {
+    expect(ancestors(sampleTree(), 'Old')).toEqual(['API', 'Factures', 'Archives']);
+    expect(ancestors(sampleTree(), 'Login')).toEqual(['API', 'Auth']);
+    expect(ancestors(sampleTree(), 'Health')).toEqual(['API']);
+    expect(ancestors(sampleTree(), 'Live')).toEqual(['Flux']);
+    expect(ancestors(sampleTree(), 'Absente')).toEqual([]);
   });
 });
 

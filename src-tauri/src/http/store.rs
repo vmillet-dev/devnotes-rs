@@ -364,30 +364,114 @@ fn collections_in_order(connection: &mut SqliteConnection) -> Result<Vec<HttpIte
         .collect())
 }
 
+fn insert_collection(
+    connection: &mut SqliteConnection,
+    vault: &Vault,
+    name: &str,
+    now: DateTime<Utc>,
+) -> Result<HttpCollection, StorageError> {
+    let order = collections_in_order(connection)?;
+    let collection = HttpCollection {
+        id: Uuid::new_v4().to_string(),
+        name: name.to_string(),
+        position: u32::try_from(order.len()).unwrap_or(u32::MAX),
+        created_at: now,
+    };
+    diesel::insert_into(http_collections::table)
+        .values((
+            http_collections::id.eq(&collection.id),
+            http_collections::name.eq(vault.seal(name)?),
+            http_collections::settings.eq(seal_json(vault, &ContainerSettings::default())?),
+            http_collections::position.eq(i32::try_from(order.len()).unwrap_or(i32::MAX)),
+            http_collections::created_at.eq(iso8601::format(now)),
+        ))
+        .execute(connection)?;
+    Ok(collection)
+}
+
+fn insert_folder(
+    connection: &mut SqliteConnection,
+    vault: &Vault,
+    collection_id: &str,
+    parent_id: Option<&str>,
+    name: &str,
+    now: DateTime<Utc>,
+) -> Result<HttpFolder, StorageError> {
+    folder_of_collection(connection, collection_id, parent_id)?;
+    let others = siblings(connection, collection_id, parent_id)?;
+    let folder = HttpFolder {
+        id: Uuid::new_v4().to_string(),
+        collection_id: collection_id.to_string(),
+        parent_id: parent_id.map(str::to_string),
+        name: name.to_string(),
+        position: u32::try_from(others.len()).unwrap_or(u32::MAX),
+    };
+    diesel::insert_into(http_folders::table)
+        .values((
+            http_folders::id.eq(&folder.id),
+            http_folders::collection_id.eq(collection_id),
+            http_folders::parent_id.eq(parent_id),
+            http_folders::name.eq(vault.seal(name)?),
+            http_folders::settings.eq(seal_json(vault, &ContainerSettings::default())?),
+            http_folders::position.eq(i32::MAX),
+            http_folders::created_at.eq(iso8601::format(now)),
+        ))
+        .execute(connection)?;
+    insert_at(
+        connection,
+        others,
+        HttpItem {
+            kind: HttpItemKind::Folder,
+            id: folder.id.clone(),
+        },
+        usize::MAX,
+    )?;
+    Ok(folder)
+}
+
+fn insert_request(
+    connection: &mut SqliteConnection,
+    vault: &Vault,
+    draft: &HttpRequestDraft,
+    name: &str,
+    now: DateTime<Utc>,
+) -> Result<HttpRequest, StorageError> {
+    let folder_id = draft.folder_id.as_deref();
+    folder_of_collection(connection, &draft.collection_id, folder_id)?;
+    let others = siblings(connection, &draft.collection_id, folder_id)?;
+    let id = Uuid::new_v4().to_string();
+    diesel::insert_into(http_requests::table)
+        .values((
+            http_requests::id.eq(&id),
+            http_requests::collection_id.eq(&draft.collection_id),
+            http_requests::folder_id.eq(folder_id),
+            http_requests::name.eq(vault.seal(name)?),
+            http_requests::kind.eq(draft.kind.as_str()),
+            http_requests::method.eq(draft.method.as_str()),
+            http_requests::document.eq(seal_json(vault, &draft.document)?),
+            http_requests::position.eq(i32::MAX),
+            http_requests::created_at.eq(iso8601::format(now)),
+            http_requests::updated_at.eq(iso8601::format(now)),
+        ))
+        .execute(connection)?;
+    insert_at(
+        connection,
+        others,
+        HttpItem {
+            kind: HttpItemKind::Request,
+            id: id.clone(),
+        },
+        usize::MAX,
+    )?;
+    find_request(connection, &id)?.open(vault)
+}
+
 pub fn create_collection(
     connection: &mut Library,
     name: &str,
     now: DateTime<Utc>,
 ) -> Result<HttpCollection, StorageError> {
-    connection.transaction(|connection, vault| {
-        let order = collections_in_order(connection)?;
-        let collection = HttpCollection {
-            id: Uuid::new_v4().to_string(),
-            name: name.to_string(),
-            position: u32::try_from(order.len()).unwrap_or(u32::MAX),
-            created_at: now,
-        };
-        diesel::insert_into(http_collections::table)
-            .values((
-                http_collections::id.eq(&collection.id),
-                http_collections::name.eq(vault.seal(name)?),
-                http_collections::settings.eq(seal_json(vault, &ContainerSettings::default())?),
-                http_collections::position.eq(i32::try_from(order.len()).unwrap_or(i32::MAX)),
-                http_collections::created_at.eq(iso8601::format(now)),
-            ))
-            .execute(connection)?;
-        Ok(collection)
-    })
+    connection.transaction(|connection, vault| insert_collection(connection, vault, name, now))
 }
 
 pub fn create_folder(
@@ -398,36 +482,7 @@ pub fn create_folder(
     now: DateTime<Utc>,
 ) -> Result<HttpFolder, StorageError> {
     connection.transaction(|connection, vault| {
-        folder_of_collection(connection, collection_id, parent_id)?;
-        let others = siblings(connection, collection_id, parent_id)?;
-        let folder = HttpFolder {
-            id: Uuid::new_v4().to_string(),
-            collection_id: collection_id.to_string(),
-            parent_id: parent_id.map(str::to_string),
-            name: name.to_string(),
-            position: u32::try_from(others.len()).unwrap_or(u32::MAX),
-        };
-        diesel::insert_into(http_folders::table)
-            .values((
-                http_folders::id.eq(&folder.id),
-                http_folders::collection_id.eq(collection_id),
-                http_folders::parent_id.eq(parent_id),
-                http_folders::name.eq(vault.seal(name)?),
-                http_folders::settings.eq(seal_json(vault, &ContainerSettings::default())?),
-                http_folders::position.eq(i32::MAX),
-                http_folders::created_at.eq(iso8601::format(now)),
-            ))
-            .execute(connection)?;
-        insert_at(
-            connection,
-            others,
-            HttpItem {
-                kind: HttpItemKind::Folder,
-                id: folder.id.clone(),
-            },
-            usize::MAX,
-        )?;
-        Ok(folder)
+        insert_folder(connection, vault, collection_id, parent_id, name, now)
     })
 }
 
@@ -437,35 +492,39 @@ pub fn create_request(
     name: &str,
     now: DateTime<Utc>,
 ) -> Result<HttpRequest, StorageError> {
+    connection.transaction(|connection, vault| insert_request(connection, vault, draft, name, now))
+}
+
+/// A request with the collection or the folder it is saved into, created together: one
+/// transaction, so a request that is refused leaves no empty collection behind it. A new
+/// collection takes the request at its root, a new folder goes under the place the draft names.
+pub fn create_request_in(
+    connection: &mut Library,
+    draft: &HttpRequestDraft,
+    name: &str,
+    collection: Option<&str>,
+    folder: Option<&str>,
+    now: DateTime<Utc>,
+) -> Result<HttpRequest, StorageError> {
     connection.transaction(|connection, vault| {
-        let folder_id = draft.folder_id.as_deref();
-        folder_of_collection(connection, &draft.collection_id, folder_id)?;
-        let others = siblings(connection, &draft.collection_id, folder_id)?;
-        let id = Uuid::new_v4().to_string();
-        diesel::insert_into(http_requests::table)
-            .values((
-                http_requests::id.eq(&id),
-                http_requests::collection_id.eq(&draft.collection_id),
-                http_requests::folder_id.eq(folder_id),
-                http_requests::name.eq(vault.seal(name)?),
-                http_requests::kind.eq(draft.kind.as_str()),
-                http_requests::method.eq(draft.method.as_str()),
-                http_requests::document.eq(seal_json(vault, &draft.document)?),
-                http_requests::position.eq(i32::MAX),
-                http_requests::created_at.eq(iso8601::format(now)),
-                http_requests::updated_at.eq(iso8601::format(now)),
-            ))
-            .execute(connection)?;
-        insert_at(
-            connection,
-            others,
-            HttpItem {
-                kind: HttpItemKind::Request,
-                id: id.clone(),
-            },
-            usize::MAX,
-        )?;
-        find_request(connection, &id)?.open(vault)
+        let mut placed = draft.clone();
+        if let Some(collection) = collection {
+            placed.collection_id = insert_collection(connection, vault, collection, now)?.id;
+            placed.folder_id = None;
+        }
+        if let Some(folder) = folder {
+            let parent = placed.folder_id.as_deref();
+            let created = insert_folder(
+                connection,
+                vault,
+                &placed.collection_id,
+                parent,
+                folder,
+                now,
+            )?;
+            placed.folder_id = Some(created.id);
+        }
+        insert_request(connection, vault, &placed, name, now)
     })
 }
 

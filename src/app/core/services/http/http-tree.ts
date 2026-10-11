@@ -316,6 +316,26 @@ export function requestsUnder(tree: HttpTree, item: HttpItem): ReadonlySet<strin
   return found;
 }
 
+/** The collection and the folders a request sits under, outermost first; none once it is gone. */
+export function ancestors(tree: HttpTree, requestId: string): string[] {
+  const under = (nodes: readonly HttpNode[]): string[] | null => {
+    for (const node of nodes) {
+      if (node.kind === 'request') {
+        if (node.request.id === requestId) return [];
+      } else {
+        const below = under(node.children);
+        if (below) return [node.folder.id, ...below];
+      }
+    }
+    return null;
+  };
+  for (const { collection, children } of tree.collections) {
+    const below = under(children);
+    if (below) return [collection.id, ...below];
+  }
+  return [];
+}
+
 /** A request as the tree holds it — its name and where it sits — or `null` once it is gone. */
 export function findRequest(tree: HttpTree, requestId: string): HttpRequestSummary | null {
   const walk = (nodes: readonly HttpNode[]): HttpRequestSummary | null => {

@@ -10,32 +10,77 @@
       class="input"
       data-testid="http-save-name"
       [value]="name()"
+      [attr.aria-invalid]="missing() === 'name' ? 'true' : null"
+      [attr.aria-describedby]="missing() === 'name' ? 'http-save-missing' : null"
+      (input)="missing.set(null)"
     />
 
-    @if (options().length > 0) {
-      <span class="label">{{ 'http.save.place' | transloco }}</span>
+    <span class="label">{{ 'http.save.place' | transloco }}</span>
+    @if (places().length > 0) {
       <app-choice-menu
         kind="http-save-place"
         triggerTestId="http-save-place"
         [label]="'http.save.place' | transloco"
         [options]="options()"
         [currentId]="placeId()"
-        (chosen)="placeId.set($event)"
+        (chosen)="choosePlace($event)"
       />
+    }
+
+    <!-- What the place lacks is named here: no trip to the rail and back. -->
+    @if (newCollection()) {
+      <input
+        #collectionInput
+        type="text"
+        class="input"
+        data-testid="http-save-collection"
+        [placeholder]="'http.save.collectionName' | transloco"
+        [attr.aria-label]="'http.save.collectionName' | transloco"
+        [attr.aria-invalid]="missing() === 'collection' ? 'true' : null"
+        [attr.aria-describedby]="missing() === 'collection' ? 'http-save-missing' : null"
+        (input)="missing.set(null)"
+      />
+    } @else if (newFolder()) {
+      <div class="new-folder">
+        <input
+          #folderInput
+          type="text"
+          class="input"
+          data-testid="http-save-folder"
+          [placeholder]="'http.save.folderName' | transloco"
+          [attr.aria-label]="'http.save.folderName' | transloco"
+          [attr.aria-invalid]="missing() === 'folder' ? 'true' : null"
+          [attr.aria-describedby]="missing() === 'folder' ? 'http-save-missing' : null"
+          (input)="missing.set(null)"
+        />
+        <button
+          type="button"
+          class="remove"
+          data-testid="http-save-folder-cancel"
+          [attr.aria-label]="'http.save.noFolder' | transloco"
+          [attr.title]="'http.save.noFolder' | transloco"
+          (click)="askFolder(false)"
+        >
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
     } @else {
-      <p class="hint" data-testid="http-save-nowhere">{{ 'http.save.nowhere' | transloco }}</p>
+      <button type="button" class="more" data-testid="http-save-new-folder" (click)="askFolder(true)">
+        {{ 'http.save.newFolder' | transloco }}
+      </button>
+    }
+
+    @if (missing(); as what) {
+      <p id="http-save-missing" class="missing" role="alert" data-testid="http-save-missing">
+        {{ 'http.save.missing.' + what | transloco }}
+      </p>
     }
 
     <div class="actions">
       <button type="button" class="action" data-testid="http-save-cancel" (click)="cancelled.emit()">
         {{ 'http.rail.cancel' | transloco }}
       </button>
-      <button
-        type="submit"
-        class="action primary"
-        data-testid="http-save-submit"
-        [disabled]="options().length === 0"
-      >
+      <button type="submit" class="action primary" data-testid="http-save-submit">
         {{ 'http.editor.save' | transloco }}
       </button>
     </div>

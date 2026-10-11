@@ -1707,8 +1707,13 @@ method in its colour (`http-method-hues`), `GQL` for GraphQL and `WS` for a WebS
 Opening a request gives it a tab (`HttpTabsStore`, `http/request/`): its method and name, a dot
 while modified, a `×`. A tab edits a **draft** — name, method and the request's parts — beside
 what Rust holds; modified is the two differing, and saving (`Ctrl+S`) writes the draft whole. A
-request made from the tabs' `+` is a draft alone, like a new note: it writes nothing until it is
-saved, and the first save asks where it goes. Closing a modified tab asks first. Which requests
+request made from « Nouvelle requête » is a draft alone, like a new note: it writes nothing until
+it is saved, and the first save asks where it goes — and **creates what that place lacks**
+(`SaveRequestDialogComponent`): with no collection the place is a name to type, the menu of
+places ends with « Nouvelle collection… », and a folder can be named under the place chosen.
+⚠️ One write, `create_http_request_in` (`store::create_request_in`, one transaction, every
+name checked before it): a request that is refused leaves no empty collection behind it. The
+tab takes the place Rust answers, and `HttpCollectionsStore.reveal` unfolds what would hide it. Closing a modified tab asks first. Which requests
 were open, and which was in front, is the library's (`devnotes.notes.http.tabs`), reopened at
 the next launch without those deleted since.
 
