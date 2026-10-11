@@ -221,7 +221,9 @@ describe('The tools', () => {
       const panels = await eventually(boxes, (found) => found.length === 1, 'one category to show');
 
       expect(panels[0]!.pieces).toBe(1);
-      expect(Math.abs(panels[0]!.width - columnWidth)).toBeLessThanOrEqual(1);
+      // The whole home scrolls and one category does not: the scrollbar's width, shared out
+      // between the columns, is all that may separate the two.
+      expect(Math.abs(panels[0]!.width - columnWidth)).toBeLessThanOrEqual(8);
     });
   });
 
