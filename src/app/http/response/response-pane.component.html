@@ -15,6 +15,9 @@
   } @else if (failure(); as ref) {
     <p class="failure" role="alert" data-testid="http-response-failure" [attr.data-key]="ref.key">
       {{ ref.key | transloco: ref.params }}
+      @if (ref.params?.['cause']; as cause) {
+        <span class="cause" data-testid="http-response-cause">{{ cause }}</span>
+      }
     </p>
   } @else if (phase() === 'sending') {
     <p class="placeholder sending" data-testid="http-response-sending">

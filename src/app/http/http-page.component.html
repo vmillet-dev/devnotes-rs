@@ -29,9 +29,11 @@
     (cancelled)="placing.set(null)"
   />
 }
-@if (closing(); as modified) {
+@if (closingWhat(); as asked) {
   <app-close-request-dialog
-    [name]="modified.draft.name"
+    [name]="asked.tab.draft.name"
+    [modified]="asked.modified"
+    [connected]="asked.connected"
     (chosen)="onCloseChoice($event)"
     (cancelled)="closing.set(null)"
   />

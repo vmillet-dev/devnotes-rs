@@ -1903,6 +1903,24 @@ the subprotocols asked for, and the messages kept to send again.
   headers inherited, the auth and the `{{variable}}` check are a request's. `connect_websocket`
   answers once the handshake did; a refusal crosses as `httpWebsocketRefused` with its
   `status`, the rest as a send's codes.
+- **A socket opens on `ws://` or `wss://`, or on a bare host** (`websocket::socket_url`): any
+  other scheme is refused before anything is tried (`httpWebsocketScheme`). `https://` used
+  to be dialled as `wss://` without a word; it is now said, with its twin on a socket's scheme
+  (`twin`) a click away in the log.
+- ⚠️ **A failure is read by one function for a request and for a socket** (`send::cause_of`,
+  the chain of causes walked whoever built it): a host that does not resolve read « Erreur
+  réseau » from a socket and « Le nom d'hôte ne se résout pas » from a request. By its code
+  before its words — Windows words its errors in the system's language, and « Hôte inconnu »
+  matches no wording (`WSAHOST_NOT_FOUND` and its three neighbours). When « network » is all
+  that can be said, the last cause's own words cross as `cause` and are shown after the
+  sentence, for a request too.
+- **`Ctrl+Entrée` in the message sends the message** (`WebsocketComposerComponent`, which stops
+  the key: the page answers it by connecting, whatever holds the focus). On a socket that is
+  not open it says « Connectez le WebSocket pour envoyer » and connects nothing; Enter alone
+  stays a new line.
+- **Closing the tab of a socket that is open or opening asks first**
+  (`HttpSocketsStore.isLive`, `CloseRequestDialogComponent`): one dialog, which says the
+  unsaved changes too when there are some, never two in a row.
 - **What follows comes as events, on one topic** (`WEBSOCKET_EVENT`, its payload generated, like
   `GlobalAction`): opened (with the subprotocol taken), sent, received (cut at 64 KB, a binary
   message only sized), closed, failed. The front listens through `WEBSOCKET_SUBSCRIBER`, a

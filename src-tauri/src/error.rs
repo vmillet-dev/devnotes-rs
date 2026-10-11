@@ -162,6 +162,8 @@ pub enum ErrorCode {
     /// The `status` parameter is what the server answered instead of switching protocols.
     HttpWebsocketRefused,
     HttpNetwork,
+    /// A socket's URL on another scheme; `twin` is the same on `ws(s)://`, when it has one.
+    HttpWebsocketScheme,
     /// `header` is its name as written; `source` and `name` say who wrote it, as for a limit.
     HttpHeaderName,
     HttpHeaderValue,
@@ -262,7 +264,17 @@ impl From<SendError> for AppError {
                 "status",
                 &status.to_string(),
             ),
-            SendError::Network(_) => Self::new(ErrorCode::HttpNetwork, detail),
+            // The cause's own words: « Erreur réseau » alone tells nothing.
+            SendError::Network(cause) => {
+                Self::with(ErrorCode::HttpNetwork, detail, "cause", &cause)
+            }
+            SendError::SocketScheme { twin } => {
+                let refused = Self::new(ErrorCode::HttpWebsocketScheme, detail);
+                match twin {
+                    Some(twin) => refused.and("twin", &twin),
+                    None => refused,
+                }
+            }
             SendError::Header {
                 name,
                 fault,

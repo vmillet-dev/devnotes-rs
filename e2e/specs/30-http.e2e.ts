@@ -1177,6 +1177,93 @@ describe('HTTP collections', () => {
       }
     });
 
+    /**
+     * `Ctrl+Entrée` in the message did nothing of what was meant, closing the tab of an open
+     * socket cut it without a word, and `https://` in a socket failed « Erreur réseau ».
+     */
+    it('sends a message on Ctrl+Entrée, asks before closing a connected tab, and names the scheme a socket opens on', async () => {
+      const echo = await echoSocket();
+      try {
+        const api = await bridge.createHttpCollection('Messages');
+        const live = await bridge.createHttpRequest({
+          ...draft(api.id, null, 'En direct'),
+          kind: 'websocket',
+          document: { url: `ws://127.0.0.1:${echo.port}/`, description: '' },
+        });
+        const secure = await bridge.createHttpRequest({
+          ...draft(api.id, null, 'Mauvais schéma'),
+          kind: 'websocket',
+          document: { url: `https://127.0.0.1:${echo.port}/live`, description: '' },
+        });
+        await press('1', ['Control']);
+        await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+        await press('3', ['Control']);
+        await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+        if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
+        await $(`${testid('http-node')}[data-id="${live.id}"] ${testid('http-node-name')}`).click();
+        await $(testid('http-socket-connect')).waitForDisplayed({ timeout: 10_000 });
+        const tab = `${testid('http-tab')}[data-key="${live.id}"]`;
+        const phase = () => $(testid('http-socket-phase')).getAttribute('data-phase');
+        const echoed = (text: string, what: string) =>
+          eventually(
+            () => readEach(testid('http-socket-entry'), 'text'),
+            (rows) => rows.some((row) => row.includes(`echo: ${text}`)),
+            what,
+          );
+
+        // Not connected: the key says so, and connects nothing behind one's back.
+        await setField(testid('http-socket-message'), 'hello');
+        await press('Enter', ['Control']);
+        await $(testid('http-socket-not-open')).waitForDisplayed({ timeout: 10_000 });
+        expect(await phase()).toBe('closed');
+
+        await $(testid('http-socket-connect')).click();
+        await $(`${testid('http-socket-phase')}[data-phase="open"]`).waitForDisplayed({ timeout: 10_000 });
+        await $(testid('http-socket-message')).click();
+        await press('Enter', ['Control']);
+        await echoed('hello', 'the echo of the message the key sent');
+        expect(echo.handshakes).toHaveLength(1);
+
+        // Closing asks; « Annuler » keeps the connection: a further message is echoed.
+        await $(`${tab} ${testid('http-tab-close')}`).click();
+        await $(testid('http-close-connected')).waitForDisplayed({ timeout: 10_000 });
+        expect(await $(testid('http-close-save')).isExisting()).toBe(false);
+        await $(testid('http-close-cancel')).click();
+        await $(testid('http-close-dialog')).waitForExist({ reverse: true, timeout: 10_000 });
+        expect(await phase()).toBe('open');
+        await setField(testid('http-socket-message'), 'again');
+        await press('Enter', ['Control']);
+        await echoed('again', 'a further echo on the connection that was kept');
+
+        await $(`${tab} ${testid('http-tab-close')}`).click();
+        await $(testid('http-close-discard')).click();
+        await $(tab).waitForExist({ reverse: true, timeout: 10_000 });
+
+        // `https://` is not dialled: said for what it is, its twin one click away.
+        await $(`${testid('http-node')}[data-id="${secure.id}"] ${testid('http-node-name')}`).click();
+        await $(testid('http-socket-connect')).waitForDisplayed({ timeout: 10_000 });
+        await $(testid('http-socket-connect')).click();
+        await $(`${testid('http-socket-failure')}[data-key="errors.httpWebsocketScheme"]`).waitForDisplayed({
+          timeout: 10_000,
+        });
+        expect(echo.handshakes).toHaveLength(1);
+        await $(testid('http-socket-twin')).click();
+        await eventually(
+          () => $(testid('http-url')).getValue(),
+          (url) => url === `wss://127.0.0.1:${echo.port}/live`,
+          'the twin written in the URL',
+        );
+
+        const other = `${testid('http-tab')}[data-key="${secure.id}"]`;
+        await $(`${other} ${testid('http-tab-close')}`).click();
+        await $(testid('http-close-discard')).click();
+        await $(other).waitForExist({ reverse: true, timeout: 10_000 });
+        await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+      } finally {
+        echo.close();
+      }
+    });
+
     it('keeps the cookies an answer sets, sends them back, and empties the jar after saying how many', async () => {
       const heard: (string | undefined)[] = [];
       const server = createServer((request, response) => {

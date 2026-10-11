@@ -30,8 +30,17 @@
   </header>
 
   @if (state()?.notice; as notice) {
-    <p class="failure" role="alert" data-testid="http-socket-failure">
+    <p class="failure" role="alert" data-testid="http-socket-failure" [attr.data-key]="notice.ref.key">
       {{ notice.ref.key | transloco: notice.ref.params }}
+      <!-- « Erreur réseau » alone tells nothing: the cause's own words go with it. -->
+      @if (notice.ref.params?.['cause']; as cause) {
+        <span class="cause" data-testid="http-socket-cause">{{ cause }}</span>
+      }
+      @if (notice.ref.params?.['twin']; as twin) {
+        <button type="button" class="twin" data-testid="http-socket-twin" (click)="useTwin($any(twin))">
+          {{ 'http.socket.useTwin' | transloco: { url: twin } }}
+        </button>
+      }
     </p>
   }
 

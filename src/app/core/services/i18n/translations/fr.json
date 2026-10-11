@@ -456,6 +456,7 @@
     "httpFileUnreadable": "Le fichier {{path}} ne peut pas être lu.",
     "httpCancelled": "Envoi annulé.",
     "httpNetwork": "Erreur réseau.",
+    "httpWebsocketScheme": "Un WebSocket s'ouvre sur ws:// ou wss://.",
     "httpHeaderName": {
       "request": "L'en-tête « {{header}} » ne peut pas être envoyé : son nom n'est pas valide.",
       "folder": "L'en-tête « {{header}} », hérité du dossier « {{name}} », ne peut pas être envoyé : son nom n'est pas valide.",
@@ -2838,7 +2839,10 @@
     "close": {
       "title": "« {{name}} » a des modifications",
       "hint": "Elles ne sont pas encore enregistrées.",
-      "discard": "Fermer sans enregistrer"
+      "discard": "Fermer sans enregistrer",
+      "connectedTitle": "Fermer « {{name}} » ?",
+      "connected": "Le WebSocket est connecté : fermer l'onglet coupe la connexion.",
+      "close": "Fermer"
     },
     "headers": {
       "implied": "Envoyés sans avoir été saisis",
@@ -3016,6 +3020,7 @@
       "messagePlaceholder": "Texte ou JSON",
       "send": "Envoyer",
       "notOpen": "Connectez le WebSocket pour envoyer.",
+      "useTwin": "Utiliser {{url}}",
       "keep": "Garder",
       "saved": "Messages gardés",
       "noneSaved": "Gardez un message pour le renvoyer d'un clic.",
