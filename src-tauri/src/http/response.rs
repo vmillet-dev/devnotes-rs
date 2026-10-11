@@ -20,6 +20,10 @@ pub struct Cookie {
     pub http_only: bool,
     pub secure: bool,
     pub same_site: Option<String>,
+    /// The URL that answered with it, when it was set by a redirect on the way; `None` for one
+    /// the answer itself set.
+    #[serde(default)]
+    pub from: Option<String>,
 }
 
 fn essence(content_type: Option<&str>) -> String {
@@ -225,6 +229,7 @@ mod tests {
                     http_only: true,
                     secure: true,
                     same_site: Some("Lax".to_string()),
+                    from: None,
                 },
                 Cookie {
                     name: "theme".to_string(),

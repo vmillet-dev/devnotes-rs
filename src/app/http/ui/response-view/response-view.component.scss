@@ -152,6 +152,21 @@
   }
 }
 
+// Seven columns: the name gives the value and « Posé par » the room a header's name needs not.
+.cookies {
+  .key {
+    width: 16%;
+  }
+
+  .set-by {
+    width: 24%;
+    overflow-wrap: anywhere;
+    color: var(--text-1);
+  }
+}
+
+// ⚠️ Inside its cell, not the cell itself: a cell laid out as a flex box is no table cell, and
+// its row's rule no longer meets its neighbours'.
 .flags {
   display: flex;
   flex-wrap: wrap;

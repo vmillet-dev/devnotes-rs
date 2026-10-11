@@ -2959,7 +2959,9 @@
         "path": "Chemin",
         "expires": "Expire",
         "flags": "Attributs",
-        "session": "fin de session"
+        "session": "fin de session",
+        "setBy": "Posé par",
+        "byAnswer": "la réponse"
       },
       "timeline": {
         "redirects": "Redirections",

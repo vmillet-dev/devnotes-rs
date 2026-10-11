@@ -42,10 +42,24 @@
   color: var(--text-2);
 }
 
+.hop {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
 .url {
   overflow-wrap: anywhere;
   font-family: var(--font-mono), monospace;
   color: var(--text-1);
+}
+
+.set {
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  color: var(--text-2);
 }
 
 .exchange {

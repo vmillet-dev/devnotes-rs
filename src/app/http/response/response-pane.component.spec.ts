@@ -120,6 +120,7 @@ describe('ResponsePaneComponent', () => {
         ],
       }),
     );
+    expect(all('http-response-redirect-cookie')).toEqual([]);
 
     expect(text('http-response-status')).toBe('200 OK');
     expect(el('http-response-status')!.dataset['class']).toBe('2');
@@ -138,6 +139,52 @@ describe('ResponsePaneComponent', () => {
     await section('timeline');
     expect(text('http-response-sent')).toBe('GET https://api.exemple.fr/users\nAccept: application/json');
     expect(text('http-response-received')).toBe('200 OK\ncontent-type: application/json');
+  });
+
+  /**
+   * A login sets its cookie on the redirect: the tab read « La réponse ne pose aucun cookie »,
+   * the last answer's headers being all that was looked at.
+   */
+  it('lists the cookies set along the chain with the hop that set each, and shows them on its redirect', async () => {
+    const cookie = (name: string, from: string | null) => ({
+      name,
+      value: 'v',
+      domain: null,
+      path: '/',
+      expires: null,
+      httpOnly: false,
+      secure: false,
+      sameSite: null,
+      from,
+    });
+    const login = 'https://api.exemple.fr/login';
+    await answer(
+      sentResponse({
+        redirects: [
+          { status: 302, from: login, url: 'https://api.exemple.fr/me', cookies: [cookie('session', login)] },
+          { status: 301, from: 'https://api.exemple.fr/me', url: 'https://api.exemple.fr/moi', cookies: [] },
+        ],
+        cookies: [cookie('session', login), cookie('seen', null)],
+      }),
+    );
+
+    await section('cookies');
+    const rows = all('http-response-cookie');
+    expect(rows.map((row) => row.dataset['setBy'])).toEqual(['redirect', 'answer']);
+    expect(rows.map((row) => row.querySelector('.set-by')?.textContent?.trim())).toEqual([
+      login,
+      'la réponse',
+    ]);
+
+    await section('timeline');
+    expect(
+      all('http-response-redirect').map((hop) =>
+        [...hop.querySelectorAll('.code, .url, .set')].map((piece) => piece.textContent?.trim()),
+      ),
+    ).toEqual([
+      ['302', 'https://api.exemple.fr/me', 'Set-Cookie: session=v'],
+      ['301', 'https://api.exemple.fr/moi'],
+    ]);
   });
 
   it('offers a cut body whole as a file, and keeps a binary one out of the clipboard and the notes', async () => {

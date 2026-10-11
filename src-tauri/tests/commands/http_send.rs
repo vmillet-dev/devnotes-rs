@@ -69,12 +69,22 @@ fn serve(
         for stream in listener.incoming().take(connections) {
             let mut stream = stream.unwrap();
             let request = read_request(&mut stream);
-            stream.write_all(&answer(&request, port)).unwrap();
-            stream.flush().unwrap();
+            // A client that gave up — its delay ran out, it was cancelled — is not waited for.
+            let _ = stream.write_all(&answer(&request, port));
+            let _ = stream.flush();
             let _ = seen.send(request);
         }
     });
     (port, received)
+}
+
+/// A header of what the server read, by its name whatever its case.
+fn header_of(seen: &Seen, name: &str) -> Option<String> {
+    seen.head.lines().find_map(|line| {
+        let (key, value) = line.split_once(':')?;
+        key.eq_ignore_ascii_case(name)
+            .then(|| value.trim().to_string())
+    })
 }
 
 fn response(status: &str, headers: &[(&str, &str)], body: &[u8]) -> Vec<u8> {
@@ -732,6 +742,222 @@ fn an_answer_fills_the_jar_the_next_request_carries_it_and_the_manager_empties_i
         1
     );
     assert_eq!(session.call(clear_http_cookies).unwrap(), 0);
+}
+
+/// `/cookies/set?session=abc123` answers a 302 that sets the cookie and leads to a page that
+/// echoes what it received: it received none, and the jar stayed empty. Nearly every login.
+#[test]
+fn a_cookie_set_on_a_redirect_is_sent_to_the_hop_that_follows_and_kept_in_the_jar() {
+    use devnotes_lib::http::{clear_http_cookies, count_http_cookies, http_cookies};
+
+    let session = Session::open();
+    let (port, seen) = serve(4, |seen, _| {
+        if seen.head.starts_with("GET /cookies/set ") {
+            response(
+                "302 Found",
+                &[
+                    ("Location", "/cookies"),
+                    ("Set-Cookie", "session=abc123; Path=/"),
+                ],
+                b"",
+            )
+        } else {
+            let sent = header_of(seen, "cookie").unwrap_or_default();
+            response(
+                "200 OK",
+                &[
+                    ("Content-Type", "text/plain"),
+                    ("Set-Cookie", "seen=1; Path=/"),
+                ],
+                sent.as_bytes(),
+            )
+        }
+    });
+    let set = format!("http://127.0.0.1:{port}/cookies/set");
+    let landing = format!("http://127.0.0.1:{port}/cookies");
+
+    let answer = session
+        .call(|app| send_http_request(request(&set), app))
+        .unwrap();
+
+    assert_eq!(answer.body, "session=abc123");
+    assert_eq!(answer.url, landing);
+    assert_eq!(header_of(&seen.recv().unwrap(), "cookie"), None);
+    assert_eq!(
+        header_of(&seen.recv().unwrap(), "cookie").as_deref(),
+        Some("session=abc123")
+    );
+    // The answer lists what was set along the chain, the redirect's first, with who set it.
+    assert_eq!(
+        answer
+            .cookies
+            .iter()
+            .map(|cookie| (cookie.name.as_str(), cookie.from.clone()))
+            .collect::<Vec<_>>(),
+        vec![("session", Some(set.clone())), ("seen", None)]
+    );
+    assert_eq!(answer.redirects.len(), 1);
+    let redirect = &answer.redirects[0];
+    assert_eq!(
+        (
+            redirect.status,
+            redirect.from.as_str(),
+            redirect.url.as_str()
+        ),
+        (302, set.as_str(), landing.as_str())
+    );
+    assert_eq!(redirect.cookies.len(), 1);
+    assert_eq!(redirect.cookies[0].name, "session");
+
+    let domains = session.call(http_cookies).unwrap();
+    let mut kept: Vec<&str> = domains[0]
+        .cookies
+        .iter()
+        .map(|stored| stored.cookie.name.as_str())
+        .collect();
+    kept.sort_unstable();
+    assert_eq!(kept, ["seen", "session"]);
+
+    // « Envoyer et garder les cookies : Non »: none sent at any hop, none kept.
+    assert_eq!(session.call(clear_http_cookies).unwrap(), 2);
+    let mut alone = request(&set);
+    alone.document.transport.use_cookies = Some(false);
+    let answer = session.call(|app| send_http_request(alone, app)).unwrap();
+    assert_eq!(answer.body, "");
+    assert_eq!(session.call(count_http_cookies).unwrap(), 0);
+    // What the answers set is still read, as it always was.
+    assert_eq!(answer.cookies.len(), 2);
+}
+
+#[test]
+fn a_redirect_to_another_host_carries_neither_a_cookie_nor_the_authorization() {
+    let row = |key: &str, value: &str| KeyValue {
+        key: key.to_string(),
+        value: value.to_string(),
+        ..KeyValue::default()
+    };
+    let session = Session::open();
+    let (elsewhere, landed) = serve(2, |_, _| response("200 OK", &[], b"there"));
+    let (port, seen) = serve(2, move |_, _| {
+        response(
+            "302 Found",
+            &[
+                ("Location", &format!("http://localhost:{elsewhere}/landing")),
+                ("Set-Cookie", "session=abc; Path=/"),
+            ],
+            b"",
+        )
+    });
+    let login = format!("http://127.0.0.1:{port}/login");
+
+    let mut sent = request(&login);
+    sent.document.headers = vec![row("Authorization", "Bearer t0ken"), row("X-Trace", "1")];
+    let answer = session.call(|app| send_http_request(sent, app)).unwrap();
+
+    assert_eq!(answer.body, "there");
+    assert_eq!(
+        header_of(&seen.recv().unwrap(), "authorization").as_deref(),
+        Some("Bearer t0ken")
+    );
+    let there = landed.recv().unwrap();
+    assert_eq!(header_of(&there, "authorization"), None);
+    assert_eq!(header_of(&there, "cookie"), None);
+    // What is not a secret travels, and the page says where it was sent from.
+    assert_eq!(header_of(&there, "x-trace").as_deref(), Some("1"));
+    assert_eq!(header_of(&there, "referer"), Some(login.clone()));
+
+    // A `Cookie` typed wins over the jar's for the host it is typed for, and stays there too.
+    let mut typed = request(&login);
+    typed.document.headers = vec![row("Cookie", "typed=1")];
+    session.call(|app| send_http_request(typed, app)).unwrap();
+    assert_eq!(
+        header_of(&seen.recv().unwrap(), "cookie").as_deref(),
+        Some("typed=1")
+    );
+    assert_eq!(header_of(&landed.recv().unwrap(), "cookie"), None);
+}
+
+#[test]
+fn a_303_after_a_post_becomes_a_get_without_its_body_and_a_307_sends_it_again() {
+    let session = Session::open();
+    let (port, seen) = serve(4, |seen, _| {
+        if seen.head.starts_with("POST /see-other ") {
+            response("303 See Other", &[("Location", "done")], b"")
+        } else if seen.head.starts_with("POST /temporary ") {
+            response("307 Temporary Redirect", &[("Location", "/kept")], b"")
+        } else {
+            response("200 OK", &[], b"ok")
+        }
+    });
+    let posting = |path: &str| {
+        let mut sent = request(&format!("http://127.0.0.1:{port}/{path}"));
+        sent.method = HttpMethod::Post;
+        sent.document.body = RequestBody::Json {
+            text: "{\"a\":1}".to_string(),
+        };
+        session.call(|app| send_http_request(sent, app)).unwrap()
+    };
+
+    let answer = posting("see-other");
+    assert_eq!(answer.url, format!("http://127.0.0.1:{port}/done"));
+    assert_eq!(seen.recv().unwrap().body, b"{\"a\":1}");
+    let after = seen.recv().unwrap();
+    assert!(after.head.starts_with("GET /done "), "{}", after.head);
+    assert!(after.body.is_empty());
+    assert_eq!(header_of(&after, "content-type"), None);
+
+    posting("temporary");
+    seen.recv().unwrap();
+    let after = seen.recv().unwrap();
+    assert!(after.head.starts_with("POST /kept "), "{}", after.head);
+    assert_eq!(after.body, b"{\"a\":1}");
+    assert_eq!(
+        header_of(&after, "content-type").as_deref(),
+        Some("application/json")
+    );
+}
+
+#[test]
+fn the_delay_is_the_whole_chain_s_and_a_cancel_ends_it_on_the_way() {
+    let session = Session::open();
+    // Each hop answers after 400 ms: within 600 ms a hop, not within 600 ms in all.
+    let (port, _seen) = serve(2, |seen, _| {
+        thread::sleep(Duration::from_millis(400));
+        if seen.head.starts_with("GET /first ") {
+            response("302 Found", &[("Location", "/second")], b"")
+        } else {
+            response("200 OK", &[], b"late")
+        }
+    });
+    let mut slow = request(&format!("http://127.0.0.1:{port}/first"));
+    slow.document.transport.timeout_ms = Some(600);
+    assert_eq!(
+        code(session.call(|app| send_http_request(slow, app))),
+        ErrorCode::HttpTimeout
+    );
+
+    // Redirected at once, then never answered: cancelled once the first hop is behind.
+    let (port, seen) = serve(2, |seen, _| {
+        if seen.head.starts_with("GET /first ") {
+            response("302 Found", &[("Location", "/second")], b"")
+        } else {
+            thread::sleep(Duration::from_secs(5));
+            Vec::new()
+        }
+    });
+    let app = session.0.handle().clone();
+    let sending = tauri::async_runtime::spawn(send_http_request(
+        request(&format!("http://127.0.0.1:{port}/first")),
+        app.clone(),
+    ));
+    seen.recv().unwrap();
+    while !tauri::async_runtime::block_on(cancel_http_send("tab-1".to_string(), app.clone()))
+        .unwrap()
+    {
+        thread::sleep(Duration::from_millis(10));
+    }
+    let cancelled = tauri::async_runtime::block_on(sending).unwrap();
+    assert_eq!(cancelled.unwrap_err().code, ErrorCode::HttpCancelled);
 }
 
 #[test]
