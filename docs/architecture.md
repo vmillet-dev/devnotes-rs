@@ -1649,11 +1649,24 @@ request's row for a caret it does not have, the long methods in three letters (`
 instead of holding its width at rest — the row says when through `--node-menu-opacity`, since
 its stylesheet cannot reach into the menu's. The tree is Rust's (`http_tree`); the rail lays it
 flat (`railRows`, `core/services/http/http-tree.ts`), each row at its depth, a request after its
-method in its colour (`http-method-hues`), `QUERY` for GraphQL and `WS` for a WebSocket.
+method in its colour (`http-method-hues`), `GQL` for GraphQL and `WS` for a WebSocket.
 
 - **A row's `⋯` is a component of its own** (`HttpNodeMenuComponent`, `MenuTriggerDirective` as a
   host directive), so a row listens to the document only while its menu is open. Creating and
   renaming are a field in place; deleting first shows what goes with it, counted by Rust.
+  ⚠️ Its panel is `position: fixed`, measured from the viewport: nothing between it and the
+  page may carry a `transform`, which would become the box it is measured from — the host is
+  centred on its row with a flex box for that reason.
+- **A name field left keeps what was typed**, as a file explorer does: `focusout` on the form,
+  for anything outside it, creates or renames; left empty or with the same name, it closes and
+  writes nothing; Escape cancels. ⚠️ Enter, the form's button and the field left can each arrive
+  for one name — a field removed while focused loses its focus too — so `settleCreate` and
+  `settleRename` take the form before they await anything, and act only for the form that is
+  still the open one. From the field to its own button is not leaving.
+- **The head's button is not the tabs' « + »**, which begins a request a few pixels away: it
+  draws what it makes (`folder-plus`) and names it, « ＋ Collection », once the rail is wide
+  enough to hold it beside the title (`WORDED_FROM_PX`). An empty rail offers « Nouvelle
+  collection » as a button rather than pointing at a glyph.
 - **Moving is pointer events and `Alt` with the arrows**, never HTML5 drag and drop. `↑`/`↓`
   within the parent, `→` into the folder above, `←` out of the folder; a drag lands before or
   after a row, or inside a folder or a collection when it is let go mid-row. Both turn into one

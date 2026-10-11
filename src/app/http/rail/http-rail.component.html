@@ -13,16 +13,27 @@
         type="button"
         class="rail-add"
         data-testid="http-collection-create-open"
+        [class.worded]="worded()"
+        [attr.data-worded]="worded()"
         [attr.aria-label]="'http.rail.newCollection' | transloco"
         [attr.title]="'http.rail.newCollection' | transloco"
         (click)="startCollection()"
       >
-        <span aria-hidden="true">＋</span>
+        @if (worded()) {
+          <span aria-hidden="true">＋ {{ 'http.rail.collection' | transloco }}</span>
+        } @else {
+          <app-icon name="folder-plus" />
+        }
       </button>
     </div>
 
     <ng-template #createForm let-creating>
-      <form class="rail-form" [style.--depth]="creating.depth" (submit)="submitCreate($event, field.value)">
+      <form
+        class="rail-form"
+        [style.--depth]="creating.depth"
+        (submit)="submitCreate($event, creating, field.value)"
+        (focusout)="leaveCreate($event, creating, field.value)"
+      >
         <input
           #field
           type="text"
@@ -47,7 +58,17 @@
 
     @let rows = store.rows();
     @if (rows.length === 0 && creating() === null) {
-      <p class="rail-empty" data-testid="http-rail-empty">{{ 'http.rail.empty' | transloco }}</p>
+      <div class="rail-empty" data-testid="http-rail-empty">
+        <p class="rail-empty-text">{{ 'http.rail.empty' | transloco }}</p>
+        <button
+          type="button"
+          class="rail-empty-create"
+          data-testid="http-rail-empty-create"
+          (click)="startCollection()"
+        >
+          {{ 'http.rail.newCollection' | transloco }}
+        </button>
+      </div>
     }
 
     <ul class="tree" (pointermove)="moveDrag($event)">
@@ -85,7 +106,11 @@
             }
 
             @if (renaming() === row.id) {
-              <form class="rail-form inline" (submit)="submitRename($event, row, field.value)">
+              <form
+                class="rail-form inline"
+                (submit)="submitRename($event, row, field.value)"
+                (focusout)="leaveRename($event, row, field.value)"
+              >
                 <input
                   #field
                   type="text"

@@ -6,7 +6,16 @@ import { $, $$, browser, expect } from '@wdio/globals';
 import type { HttpNode, HttpRequestDraft, HttpTree } from '@core/ipc/bindings';
 
 import { canvas } from '../pageobjects/canvas.page.js';
-import { eventually, press, readEach, reloadCanvas, setField, testid, viewportSize } from '../support/app.js';
+import {
+  blurField,
+  eventually,
+  press,
+  readEach,
+  reloadCanvas,
+  setField,
+  testid,
+  viewportSize,
+} from '../support/app.js';
 import { bridge } from '../support/bridge.js';
 import { echoSocket } from '../support/echo-socket.js';
 
@@ -180,6 +189,88 @@ describe('HTTP collections', () => {
         await eventually(tabCount, (count) => count === left - 1, 'a tab closed');
       }
       await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+    });
+
+    /**
+     * Two « + » a few pixels apart, one glyph for two jobs, and a name field that stayed open,
+     * unfocused, once left by a click: the rail's first steps hesitated.
+     */
+    it('offers the first collection from the empty rail, and keeps a name whose field is left', async () => {
+      // A library with no collection: what the scenarios before this one left is taken out.
+      for (const node of (await bridge.httpTree()).collections) {
+        await bridge.deleteHttpItem({ kind: 'collection', id: node.collection.id });
+      }
+      await press('1', ['Control']);
+      await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+      await press('3', ['Control']);
+      await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+      if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
+      const held = async () => outline(await bridge.httpTree());
+      const edge = async (key: 'ArrowLeft' | 'ArrowRight', times: number) => {
+        await browser.execute(
+          (selector: string) => (document.querySelector(selector) as HTMLElement | null)?.focus(),
+          testid('http-rail-edge'),
+        );
+        await browser.keys(Array.from({ length: times }, () => key));
+      };
+      const worded = () => $(testid('http-collection-create-open')).getAttribute('data-worded');
+
+      // The head's button is not the tabs' « + »: an icon at the floor, its name once it fits.
+      await edge('ArrowLeft', 30);
+      await eventually(worded, (seen) => seen === 'false', 'the icon at the floor of the rail');
+      await edge('ArrowRight', 4);
+      await eventually(worded, (seen) => seen === 'true', 'the button named on a wider rail');
+      expect(
+        await browser.execute(
+          (button: string, rail: string) =>
+            document.querySelector(button)!.getBoundingClientRect().right <=
+            document.querySelector(rail)!.getBoundingClientRect().right,
+          testid('http-collection-create-open'),
+          testid('http-rail'),
+        ),
+      ).toBe(true);
+      await edge('ArrowLeft', 30);
+
+      // The empty rail offers the action itself, and not a pointer to a glyph.
+      await $(testid('http-rail-empty-create')).click();
+      await create('Premiers pas');
+      await eventually(rowNames, (names) => names.includes('Premiers pas'), 'the first collection');
+      expect(await $(testid('http-rail-empty')).isExisting()).toBe(false);
+
+      // A name typed, then the field left for the rest of the window: created, once.
+      await $(testid('http-collection-create-open')).click();
+      await setField(testid('http-create-input'), 'Laissée');
+      await blurField();
+      await eventually(rowNames, (names) => names.includes('Laissée'), 'the collection whose field was left');
+      await $(testid('http-create-input')).waitForExist({ reverse: true, timeout: 10_000 });
+      expect(await held()).toEqual(['Premiers pas[]', 'Laissée[]']);
+
+      // A rename left the same way is written, and still there once the front end is rebuilt.
+      await choose((await named('Laissée'))!, 'rename');
+      await setField(testid('http-rename-input'), 'Gardée');
+      await blurField();
+      await eventually(rowNames, (names) => names.includes('Gardée'), 'the rename kept');
+      await $(testid('http-rename-input')).waitForExist({ reverse: true, timeout: 10_000 });
+      await reloadCanvas();
+      await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+      await eventually(rowNames, (names) => names.includes('Gardée'), 'the rename after a reload');
+      expect(await held()).toEqual(['Premiers pas[]', 'Gardée[]']);
+
+      // Escape is the way to cancel, whatever was typed: the tree is as it was.
+      await $(testid('http-collection-create-open')).click();
+      await setField(testid('http-create-input'), 'Jamais');
+      await press('Escape');
+      await $(testid('http-create-input')).waitForExist({ reverse: true, timeout: 10_000 });
+      await choose((await named('Gardée'))!, 'rename');
+      await setField(testid('http-rename-input'), 'Jamais');
+      await press('Escape');
+      await $(testid('http-rename-input')).waitForExist({ reverse: true, timeout: 10_000 });
+      expect(await rowNames()).toEqual(['Premiers pas', 'Gardée']);
+      expect(await held()).toEqual(['Premiers pas[]', 'Gardée[]']);
+
+      for (const node of (await bridge.httpTree()).collections) {
+        await bridge.deleteHttpItem({ kind: 'collection', id: node.collection.id });
+      }
     });
 
     it('builds a collection from the rail: a folder, two requests, one moved above the other', async () => {

@@ -2762,7 +2762,8 @@
     "rail": {
       "title": "Collections",
       "newCollection": "New collection",
-      "empty": "No collection yet: create one with ＋.",
+      "collection": "Collection",
+      "empty": "No collection yet.",
       "placeholders": {
         "collection": "Collection name",
         "folder": "Folder name",

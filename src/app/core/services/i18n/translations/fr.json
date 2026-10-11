@@ -2762,7 +2762,8 @@
     "rail": {
       "title": "Collections",
       "newCollection": "Nouvelle collection",
-      "empty": "Aucune collection pour l'instant : créez-en une avec ＋.",
+      "collection": "Collection",
+      "empty": "Aucune collection pour l'instant.",
       "placeholders": {
         "collection": "Nom de la collection",
         "folder": "Nom du dossier",
