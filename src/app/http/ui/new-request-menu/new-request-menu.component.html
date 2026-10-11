@@ -1,0 +1,30 @@
+<button
+  appMenuAnchor
+  type="button"
+  class="new"
+  data-testid="http-tab-new"
+  aria-haspopup="menu"
+  [attr.aria-expanded]="menu.open()"
+  [attr.aria-label]="'http.tabs.new' | transloco"
+  [attr.title]="'http.tabs.new' | transloco"
+  (click)="toggle()"
+>
+  <span aria-hidden="true">＋</span>
+</button>
+
+@if (menu.open()) {
+  <div appMenuPanel class="panel" data-testid="http-new-kind-panel" [style]="panelStyle()">
+    @for (kind of kinds; track kind) {
+      <button
+        appMenuItem
+        type="button"
+        class="option"
+        data-testid="http-new-kind"
+        [attr.data-kind]="kind"
+        (click)="choose(kind)"
+      >
+        {{ 'http.kinds.new.' + kind | transloco }}
+      </button>
+    }
+  </div>
+}

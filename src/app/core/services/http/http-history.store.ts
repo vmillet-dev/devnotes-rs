@@ -170,7 +170,7 @@ export class HttpHistoryStore {
     }).format(new Date(entry.item.sentAt));
     this.tabs.openDraft({
       name: `${draft.name} · ${time}`,
-      kind: 'http',
+      kind: draft.kind,
       method: draft.method,
       parts: toParts(draft.document),
     });

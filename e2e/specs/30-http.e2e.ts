@@ -87,6 +87,101 @@ describe('HTTP collections', () => {
       await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
     });
 
+    /**
+     * GraphQL and WebSocket shipped and were not found: the last two entries of the method
+     * menu, a kind filed among verbs. A request is begun as what it is.
+     */
+    it('begins a request as HTTP, GraphQL or a WebSocket, from the tabs and from a collection', async () => {
+      const api = await bridge.createHttpCollection('Trois types');
+      await press('1', ['Control']);
+      await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+      await press('3', ['Control']);
+      await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+      if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
+      const kinds = () => readEach(testid('http-tab'), '@data-kind');
+      const tabCount = async () => (await $$(testid('http-tab')).getElements()).length;
+      const before = await tabCount();
+
+      // The « + » of the tabs: three kinds, the first in focus — « + » then Enter is HTTP.
+      await $(testid('http-tab-new')).click();
+      expect(await readEach(testid('http-new-kind'), '@data-kind')).toEqual(['http', 'graphql', 'websocket']);
+      await eventually(
+        () => browser.execute(() => document.activeElement?.getAttribute('data-kind') ?? null),
+        (kind) => kind === 'http',
+        'the HTTP entry in focus',
+      );
+      await $(`${testid('http-new-kind')}[data-kind="http"]`).click();
+      await eventually(tabCount, (count) => count === before + 1, 'the HTTP request begun');
+      await $(testid('http-method')).waitForDisplayed({ timeout: 10_000 });
+      expect(await $(testid('http-kind-badge')).isExisting()).toBe(false);
+
+      await $(testid('http-tab-new')).click();
+      await $(`${testid('http-new-kind')}[data-kind="graphql"]`).click();
+      await $(testid('http-graphql')).waitForDisplayed({ timeout: 10_000 });
+      // Its kind is said where a method would be chosen, and there is no menu to change it.
+      expect(await $(testid('http-kind-badge')).getAttribute('data-kind')).toBe('graphql');
+      expect(await $(testid('http-method')).isExisting()).toBe(false);
+
+      await $(testid('http-tab-new')).click();
+      await $(`${testid('http-new-kind')}[data-kind="websocket"]`).click();
+      await $(testid('http-socket-connect')).waitForDisplayed({ timeout: 10_000 });
+      expect(await $(testid('http-kind-badge')).getAttribute('data-kind')).toBe('websocket');
+      expect((await kinds()).slice(-3)).toEqual(['http', 'graphql', 'websocket']);
+
+      // From a collection's menu: the kind first, then the name; Rust holds it as that kind.
+      const collection = `${testid('http-node')}[data-id="${api.id}"]`;
+      await $(collection).waitForDisplayed({ timeout: 10_000 });
+      // Its menu opens under its `⋯`, whole: it once opened a row's width away, cut by the rail.
+      await $(`${collection} ${testid('http-node-menu')}`).click();
+      await $(testid('http-node-menu-panel')).waitForDisplayed({ timeout: 10_000 });
+      expect(
+        await browser.execute(
+          (trigger: string, panel: string) => {
+            const from = document.querySelector(trigger)!.getBoundingClientRect();
+            const box = document.querySelector(panel)!.getBoundingClientRect();
+            const under = box.top - from.bottom;
+            return {
+              atTrigger: Math.abs(box.left - from.left) <= 1 && under >= 0 && under <= 12,
+              whole: box.width >= 200 && box.right <= window.innerWidth && box.bottom <= window.innerHeight,
+            };
+          },
+          `${collection} ${testid('http-node-menu')}`,
+          testid('http-node-menu-panel'),
+        ),
+      ).toEqual({ atTrigger: true, whole: true });
+      await press('Escape');
+      await $(testid('http-node-menu-panel')).waitForExist({ reverse: true, timeout: 10_000 });
+      await choose(await $(collection).getElement(), 'newGraphql');
+      await create('Produits');
+      await eventually(
+        rowNames,
+        (names) => names.some((name) => name.endsWith('Produits')),
+        'the GraphQL request in the rail',
+      );
+      await choose(await $(collection).getElement(), 'newWebsocket');
+      await create('Flux');
+      await eventually(
+        rowNames,
+        (names) => names.some((name) => name.endsWith('Flux')),
+        'the socket in the rail',
+      );
+      const held = (await bridge.httpTree()).collections
+        .find((node) => node.collection.id === api.id)!
+        .children.map((node) => (node.kind === 'request' ? [node.request.name, node.request.kind] : []));
+      expect(held).toEqual([
+        ['Produits', 'graphql'],
+        ['Flux', 'websocket'],
+      ]);
+
+      // The three drafts and the two requests the rail opened are closed, nothing kept of them.
+      for (let left = await tabCount(); left > before; left = await tabCount()) {
+        await $(`${testid('http-tab')}:last-of-type ${testid('http-tab-close')}`).click();
+        if (await $(testid('http-close-discard')).isExisting()) await $(testid('http-close-discard')).click();
+        await eventually(tabCount, (count) => count === left - 1, 'a tab closed');
+      }
+      await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+    });
+
     it('builds a collection from the rail: a folder, two requests, one moved above the other', async () => {
       await press('3', ['Control']);
       await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
@@ -102,7 +197,7 @@ describe('HTTP collections', () => {
       await eventually(rowNames, (names) => names.includes('Commandes'), 'the folder');
 
       for (const request of ['Lister', 'Annuler']) {
-        await choose((await named('Commandes'))!, 'newRequest');
+        await choose((await named('Commandes'))!, 'newHttp');
         await create(request);
         await eventually(rowNames, (names) => names.some((name) => name.endsWith(request)), request);
       }
@@ -415,6 +510,7 @@ describe('HTTP collections', () => {
       try {
         await eventually(viewportSize, (size) => size.width > 1500, 'a wide window');
         await $(testid('http-tab-new')).click();
+        await $(`${testid('http-new-kind')}[data-kind="http"]`).click();
         await $(`${testid('http-section')}[data-section="auth"]`).click();
         await $(testid('http-auth-inherited')).waitForDisplayed({ timeout: 10_000 });
         expect(await linesOf(testid('http-auth-inherited'))).toBe(1);

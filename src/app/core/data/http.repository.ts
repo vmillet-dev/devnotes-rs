@@ -72,7 +72,6 @@ export class HttpRepository {
   async saveRequest(id: string, draft: RequestDraft): Promise<OpenedRequest> {
     const patch: HttpRequestPatch = {
       name: draft.name,
-      kind: draft.kind,
       method: draft.method,
       document: toDocument(draft.parts),
     };

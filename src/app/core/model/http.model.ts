@@ -375,11 +375,14 @@ export function shortBadge(badge: string): string {
   return SHORT_BADGES[badge] ?? badge;
 }
 
+/** The three a request is created as, in the order they are offered: HTTP first. */
+export const REQUEST_KINDS: readonly RequestKind[] = ['http', 'graphql', 'websocket'];
+
 /** What the rail writes before a request's name: its method, or the kind's own word. */
 export function requestBadge(request: Pick<HttpRequestSummary, 'kind' | 'method'>): string {
   switch (request.kind) {
     case 'graphql':
-      return 'QUERY';
+      return 'GQL';
     case 'websocket':
       return 'WS';
     case 'http':

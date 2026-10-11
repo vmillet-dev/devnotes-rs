@@ -111,6 +111,21 @@ describe('HttpTabsStore', () => {
     expect(body()).toEqual({ kind: 'json', text: '' });
   });
 
+  /** GraphQL and WebSocket were the last two entries of the method menu, and were not found. */
+  it('begins a request as the kind asked, HTTP unless told, and saves it as that kind', async () => {
+    store().newRequest();
+    store().newRequest('graphql');
+    store().newRequest('websocket');
+    expect(
+      store()
+        .tabs()
+        .map((tab) => tab.draft.kind),
+    ).toEqual(['http', 'graphql', 'websocket']);
+
+    await store().save(store().activeKey()!, { collectionId: 'API', folderId: null });
+    expect(http.callsOf('createRequest').at(-1)?.[0]).toMatchObject({ kind: 'websocket' });
+  });
+
   it('keeps the bodies set aside when a request never saved takes its id', async () => {
     store().newRequest();
     const draft = store().activeKey()!;

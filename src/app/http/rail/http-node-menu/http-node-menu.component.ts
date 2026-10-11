@@ -13,10 +13,12 @@ import { RailRow } from '@core/services/http/http-tree';
 import { MenuPanelDirective } from '@shared/directives/menu-panel.directive';
 import { MenuTriggerDirective } from '@shared/directives/menu-trigger.directive';
 
-export type HttpNodeAction = 'newRequest' | 'newFolder' | 'settings' | 'rename' | 'duplicate' | 'delete';
+/** A request is begun as one of its three kinds: there is no « Nouvelle requête » to turn into one later. */
+export type HttpNodeAction =
+  'newHttp' | 'newGraphql' | 'newWebsocket' | 'newFolder' | 'settings' | 'rename' | 'duplicate' | 'delete';
 
-/** Six entries and the panel's padding, with room to spare. */
-const PANEL_HEIGHT = 220;
+/** Eight entries and the panel's padding, with room to spare. */
+const PANEL_HEIGHT = 290;
 
 /** A row's `⋯`: one menu a row, open only while it is used. */
 @Component({
@@ -41,7 +43,7 @@ export class HttpNodeMenuComponent {
   protected readonly actions = computed<readonly HttpNodeAction[]>(() =>
     this.row().kind === 'request'
       ? ['rename', 'duplicate', 'delete']
-      : ['newRequest', 'newFolder', 'settings', 'rename', 'duplicate', 'delete'],
+      : ['newHttp', 'newGraphql', 'newWebsocket', 'newFolder', 'settings', 'rename', 'duplicate', 'delete'],
   );
 
   protected toggle(): void {

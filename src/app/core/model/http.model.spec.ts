@@ -115,7 +115,7 @@ describe('the HTTP wire shapes', () => {
 
   it('names a request by its method, or by its kind', () => {
     expect(requestBadge({ kind: 'http', method: 'PATCH' })).toBe('PATCH');
-    expect(requestBadge({ kind: 'graphql', method: 'POST' })).toBe('QUERY');
+    expect(requestBadge({ kind: 'graphql', method: 'POST' })).toBe('GQL');
     expect(requestBadge({ kind: 'websocket', method: 'GET' })).toBe('WS');
   });
 
@@ -123,11 +123,11 @@ describe('the HTTP wire shapes', () => {
   it('cuts the long methods to three letters, and leaves the others whole', () => {
     expect(shortBadge('DELETE')).toBe('DEL');
     expect(shortBadge('OPTIONS')).toBe('OPT');
-    expect(['GET', 'POST', 'PATCH', 'QUERY', 'WS'].map(shortBadge)).toEqual([
+    expect(['GET', 'POST', 'PATCH', 'GQL', 'WS'].map(shortBadge)).toEqual([
       'GET',
       'POST',
       'PATCH',
-      'QUERY',
+      'GQL',
       'WS',
     ]);
   });

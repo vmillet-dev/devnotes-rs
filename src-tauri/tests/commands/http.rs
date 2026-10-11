@@ -350,36 +350,58 @@ fn the_query_and_its_table_are_kept_in_step_through_the_command() {
     assert_eq!(synced.params[0].key, "a");
 }
 
+/// GraphQL and WebSocket were the last two entries of the method menu: a kind filed among
+/// verbs. It is chosen when the request is created, and nothing changes it afterwards.
 #[test]
-fn a_request_turned_into_graphql_keeps_its_kind_and_its_query() {
+fn a_request_is_created_of_its_kind_and_keeps_it_through_an_update_and_a_copy() {
     use devnotes_lib::http::graphql::GraphqlDocument;
 
     let session = Session::open();
     let api = session
         .call(|app| create_http_collection("API".to_string(), app))
         .unwrap();
-    let created = session
-        .call(|app| create_http_request(draft(&api.id, None, "Produits"), app))
-        .unwrap();
-    let patch = HttpRequestPatch {
-        kind: Some(RequestKind::Graphql),
-        document: Some(RequestDocument {
-            graphql: GraphqlDocument {
-                query: "{ products { id } }".to_string(),
-                ..GraphqlDocument::default()
-            },
-            ..RequestDocument::default()
-        }),
-        ..HttpRequestPatch::default()
+    let asked = HttpRequestDraft {
+        kind: RequestKind::Graphql,
+        ..draft(&api.id, None, "Produits")
     };
+    let created = session.call(|app| create_http_request(asked, app)).unwrap();
+    assert_eq!(created.kind, RequestKind::Graphql);
 
+    // An update has no kind to carry: one written on the wire all the same is not read.
+    let mut patch: HttpRequestPatch =
+        serde_json::from_str(r#"{"kind":"websocket","method":"POST"}"#).unwrap();
+    patch.document = Some(RequestDocument {
+        graphql: GraphqlDocument {
+            query: "{ products { id } }".to_string(),
+            ..GraphqlDocument::default()
+        },
+        ..RequestDocument::default()
+    });
     let saved = session
         .call(|app| save_http_request(created.id.clone(), patch, app))
         .unwrap();
-
-    assert_eq!(saved.kind, RequestKind::Graphql);
+    assert_eq!(
+        (saved.kind, saved.method),
+        (RequestKind::Graphql, HttpMethod::Post)
+    );
     let read = session
         .call(|app| get_http_request(created.id.clone(), app))
         .unwrap();
+    assert_eq!(read.kind, RequestKind::Graphql);
     assert_eq!(read.document.graphql.query, "{ products { id } }");
+
+    let copy = session
+        .call(|app| {
+            duplicate_http_item(
+                item(HttpItemKind::Request, &created.id),
+                "Produits (copie)".to_string(),
+                app,
+            )
+        })
+        .unwrap();
+    let copied = session
+        .call(|app| get_http_request(copy.id.clone(), app))
+        .unwrap();
+    assert_eq!(copied.kind, RequestKind::Graphql);
+    assert_eq!(copied.document.graphql.query, "{ products { id } }");
 }

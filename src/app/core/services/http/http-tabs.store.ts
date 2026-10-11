@@ -9,6 +9,7 @@ import {
   KeyValueRow,
   OpenedRequest,
   RequestDraft,
+  RequestKind,
   RequestParts,
   bodyOfKind,
   setBodyAside,
@@ -125,11 +126,12 @@ export class HttpTabsStore {
     this.activate(requestId);
   }
 
-  newRequest(): void {
+  /** Of the kind asked, for good: a request is not turned into a socket afterwards. */
+  newRequest(kind: RequestKind = 'http'): void {
     const key = `draft-${++this.drafts}`;
     const draft: RequestDraft = {
       name: this.transloco.translate('http.tabs.untitled'),
-      kind: 'http',
+      kind,
       method: 'GET',
       parts: EMPTY_PARTS,
     };
@@ -149,7 +151,7 @@ export class HttpTabsStore {
     this.persist();
   }
 
-  edit(key: string, change: Partial<Pick<RequestDraft, 'name' | 'kind' | 'method'>>): void {
+  edit(key: string, change: Partial<Pick<RequestDraft, 'name' | 'method'>>): void {
     this.update(key, (draft) => ({ ...draft, ...change }));
   }
 

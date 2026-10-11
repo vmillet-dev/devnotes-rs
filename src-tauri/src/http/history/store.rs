@@ -209,6 +209,7 @@ mod tests {
 
     fn summary() -> HistorySummary {
         HistorySummary {
+            kind: crate::http::model::RequestKind::Http,
             name: "Ping".to_string(),
             url: "https://api.exemple.fr".to_string(),
             millis: Some(1),

@@ -57,7 +57,7 @@ describe('HttpRailComponent', () => {
       'GET',
       'GET',
       'POST',
-      'QUERY',
+      'GQL',
       'WS',
     ]);
     expect(row('Old').style.getPropertyValue('--depth')).toBe('3');
@@ -132,7 +132,7 @@ describe('HttpRailComponent', () => {
     expect(el('[data-testid="http-create-input"]').dataset['kind']).toBe('folder');
     await type('http-create-input', 'Jetons', 'http-create-submit');
 
-    await action('API', 'newRequest');
+    await action('API', 'newHttp');
     await type('http-create-input', 'Santé', 'http-create-submit');
 
     expect(http.callsOf('createFolder')).toEqual([['API', 'Auth', 'Jetons']]);
@@ -140,8 +140,32 @@ describe('HttpRailComponent', () => {
       collectionId: 'API',
       folderId: null,
       name: 'Santé',
+      kind: 'http',
     });
     await vi.waitFor(() => expect(TestBed.inject(HttpTabsStore).activeRequestId()).toMatch(/^request-/));
+  });
+
+  /** « Nouvelle requête » made an HTTP `GET`, whatever was meant: its kind is chosen first. */
+  it('offers the three kinds of request in a row’s menu, and creates the one chosen under its name', async () => {
+    el<HTMLButtonElement>('[data-testid="http-node"][data-id="Auth"] [data-testid="http-node-menu"]').click();
+    await fixture.whenStable();
+    expect(
+      all('[data-testid="http-node-action"]')
+        .map((entry) => entry.dataset['action'])
+        .slice(0, 4),
+    ).toEqual(['newHttp', 'newGraphql', 'newWebsocket', 'newFolder']);
+    el<HTMLButtonElement>('[data-testid="http-node-action"][data-action="newGraphql"]').click();
+    await fixture.whenStable();
+    await type('http-create-input', 'Produits', 'http-create-submit');
+
+    await action('API', 'newWebsocket');
+    await type('http-create-input', 'Flux', 'http-create-submit');
+
+    await vi.waitFor(() => expect(http.callsOf('createRequest')).toHaveLength(2));
+    expect(http.callsOf('createRequest').map((call) => call[0])).toMatchObject([
+      { collectionId: 'API', folderId: 'Auth', name: 'Produits', kind: 'graphql' },
+      { collectionId: 'API', folderId: null, name: 'Flux', kind: 'websocket' },
+    ]);
   });
 
   it('opens a collection’s settings, and has open tabs read what they inherit again once saved', async () => {

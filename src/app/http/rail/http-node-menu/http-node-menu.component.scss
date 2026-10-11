@@ -1,11 +1,15 @@
 @use 'mixins' as *;
 
 // Over the end of its row, not beside it: at the rail's floor the name needs that width.
+// ⚠️ Centred without a `transform`: one here would make this host the box the panel's
+// `position: fixed` is measured from, and the panel would open a row's width off its `⋯`.
 :host {
   position: absolute;
-  top: 50%;
+  top: 0;
   right: 2px;
-  transform: translateY(-50%);
+  bottom: 0;
+  display: flex;
+  align-items: center;
 }
 
 .node-menu {

@@ -865,6 +865,10 @@
       "transfer": {
         "title": "In and out",
         "body": "The File menu exports everything, one space or the selection to a file it can read back, and re-imports it without ever making a duplicate. “Copy as Markdown” puts the selection on the clipboard."
+      },
+      "http": {
+        "title": "Requests: HTTP, GraphQL, WebSocket",
+        "body": "The HTTP area keeps your requests in collections, sealed like your notes. What you begin is chosen as you create it — an HTTP request, a GraphQL request or a WebSocket — from the tabs' ＋ or a collection's menu."
       }
     },
     "chaptersLabel": "Guide chapters",
@@ -2768,7 +2772,9 @@
       "renameLabel": "New name for {{name}}",
       "options": "Options for {{name}}",
       "actions": {
-        "newRequest": "New request",
+        "newHttp": "New HTTP request",
+        "newGraphql": "New GraphQL request",
+        "newWebsocket": "New WebSocket",
         "newFolder": "New folder",
         "rename": "Rename",
         "duplicate": "Duplicate",
@@ -2787,7 +2793,18 @@
       }
     },
     "workspace": {
-      "empty": "Open a request from the rail, or start one with the tabs' ＋."
+      "empty": "Open a request from the rail, or start one:"
+    },
+    "kinds": {
+      "new": {
+        "http": "HTTP request",
+        "graphql": "GraphQL request",
+        "websocket": "WebSocket"
+      },
+      "badge": {
+        "graphql": "GraphQL",
+        "websocket": "WS"
+      }
     },
     "tabs": {
       "label": "Open requests",
@@ -2802,6 +2819,7 @@
       "method": "Method",
       "url": "URL",
       "urlPlaceholder": "https://api.example.com/resource",
+      "socketPlaceholder": "wss://api.example.com/stream",
       "save": "Save",
       "saveHint": "Save (Ctrl+S)",
       "parts": "Parts of the request",

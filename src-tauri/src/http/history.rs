@@ -39,6 +39,9 @@ pub struct HistorySummary {
     /// What the failure's sentence states: the delay that ran out, and who set it.
     #[serde(default)]
     pub failure_params: BTreeMap<String, String>,
+    /// What was sent, for a send reopened as a draft to be of the same kind.
+    #[serde(default)]
+    pub kind: RequestKind,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -100,6 +103,7 @@ pub struct HistoryEntry {
 /// What a send leaves to be recorded.
 #[derive(Debug, Clone)]
 pub struct Sent {
+    pub kind: RequestKind,
     pub name: String,
     pub request_id: Option<String>,
     pub exchange: Exchange,
@@ -204,6 +208,7 @@ pub fn record_of(sent: &Sent) -> (HistorySummary, HistoryRecord) {
         }
     });
     let summary = HistorySummary {
+        kind: sent.kind,
         name: sent.name.clone(),
         url: exchange.url.clone(),
         millis: response.as_ref().map(|response| response.millis),
@@ -224,6 +229,8 @@ pub fn record_of(sent: &Sent) -> (HistorySummary, HistoryRecord) {
 #[serde(rename_all = "camelCase")]
 pub struct HistoryDraft {
     pub name: String,
+    /// The kind of what was sent: a draft is created of it, as any request is of its own.
+    pub kind: RequestKind,
     pub method: HttpMethod,
     pub document: RequestDocument,
 }
@@ -282,8 +289,9 @@ pub fn draft_of(entry: &HistoryEntry) -> HistoryDraft {
         SentBody::None | SentBody::Bytes { .. } | SentBody::Multipart { .. } => RequestBody::None,
     };
     let params = query::sync(&url, &[], QuerySide::Url).params;
-    HistoryDraft {
+    let mut draft = HistoryDraft {
         name: entry.item.summary.name.clone(),
+        kind: RequestKind::Http,
         method: exchange.method,
         document: RequestDocument {
             url,
@@ -292,7 +300,18 @@ pub fn draft_of(entry: &HistoryEntry) -> HistoryDraft {
             body,
             ..RequestDocument::default()
         },
+    };
+    // A GraphQL send back in its two boxes, when it still reads as one.
+    if entry.item.summary.kind == RequestKind::Graphql
+        && let Some((graphql, url)) = graphql_of(exchange)
+    {
+        draft.kind = RequestKind::Graphql;
+        draft.document.url = draft_url(&url);
+        draft.document.params = query::sync(&draft.document.url, &[], QuerySide::Url).params;
+        draft.document.body = RequestBody::None;
+        draft.document.graphql = graphql;
     }
+    draft
 }
 
 #[derive(Deserialize)]
@@ -420,6 +439,7 @@ pub fn onto(
     }
     HistoryDraft {
         name: current.name.clone(),
+        kind: current.kind,
         method,
         document,
     }
@@ -515,6 +535,7 @@ mod tests {
     fn a_record_cuts_long_bodies_and_says_how_it_ended() {
         let long = "é".repeat(BODY_KEPT);
         let sent = Sent {
+            kind: RequestKind::Http,
             name: "Login".to_string(),
             request_id: None,
             exchange: exchange(
@@ -552,6 +573,7 @@ mod tests {
                 status: Some(201),
                 request_id: None,
                 summary: HistorySummary {
+                    kind: RequestKind::Http,
                     name: "Payer".to_string(),
                     url: String::new(),
                     millis: None,
@@ -638,6 +660,7 @@ mod tests {
                 status: Some(200),
                 request_id: Some("r".to_string()),
                 summary: HistorySummary {
+                    kind: RequestKind::Http,
                     name: "Payer".to_string(),
                     url: String::new(),
                     millis: None,
@@ -761,6 +784,37 @@ mod tests {
         assert!(!format!("{draft:?}").contains(MASK));
     }
 
+    /// Reopened as a draft, a GraphQL send was an HTTP `POST` with a JSON body.
+    #[test]
+    fn a_send_reopened_as_a_draft_is_of_the_kind_that_was_sent() {
+        let mut posted = sent(
+            "https://api.exemple.fr/graphql",
+            vec![header("X-Trace", "1")],
+            SentBody::Text {
+                text: r#"{"query":"{ me }"}"#.to_string(),
+            },
+            &[],
+        );
+        assert_eq!(draft_of(&posted).kind, RequestKind::Http);
+
+        posted.item.summary.kind = RequestKind::Graphql;
+        let draft = draft_of(&posted);
+        assert_eq!(draft.kind, RequestKind::Graphql);
+        assert_eq!(draft.document.graphql.query, "{ me }");
+        assert_eq!(draft.document.body, RequestBody::None);
+        assert_eq!(draft.document.headers.len(), 1);
+
+        // Said to be GraphQL and not reading as one: sent again as what it was on the wire.
+        let odd = HistoryEntry {
+            item: posted.item.clone(),
+            record: HistoryRecord {
+                exchange: exchange("https://api.exemple.fr/graphql", Vec::new(), SentBody::None),
+                response: None,
+            },
+        };
+        assert_eq!(draft_of(&odd).kind, RequestKind::Http);
+    }
+
     #[test]
     fn a_graphql_send_goes_back_into_its_query_and_variables_and_a_file_is_left_alone() {
         let posted = sent(
@@ -834,6 +888,7 @@ mod tests {
             status: Some(200),
             request_id: None,
             summary: HistorySummary {
+                kind: RequestKind::Http,
                 name: id.to_string(),
                 url: String::new(),
                 millis: None,

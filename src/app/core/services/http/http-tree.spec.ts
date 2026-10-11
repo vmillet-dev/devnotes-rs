@@ -23,7 +23,7 @@ describe('the HTTP rail rows', () => {
       '      GET Old',
       '  POST Health',
       'Catalogue',
-      '  QUERY Produits',
+      '  GQL Produits',
       'Flux',
       '  WS Live',
     ]);
