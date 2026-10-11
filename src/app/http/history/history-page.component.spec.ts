@@ -19,13 +19,25 @@ describe('HistoryPageComponent', () => {
       status: null,
       summary: { name: 'Payer', url: 'https://x', millis: null, size: null, failure: 'httpRefused' },
     });
+    const slow = historyItem('Lent', {
+      status: null,
+      summary: {
+        name: 'Lent',
+        url: 'https://x',
+        millis: null,
+        size: null,
+        failure: 'httpTimeout',
+        failureParams: { amount: '2', unit: 's', source: 'folder', name: 'Auth' },
+      },
+    });
     http.historyAnswer = [
-      { day: '2026-10-07', items: [historyItem('Login'), failed] },
+      { day: '2026-10-07', items: [historyItem('Login'), failed, slow] },
       { day: '2026-10-06', items: [historyItem('Health', { status: 404 })] },
       { day: '2026-10-01', items: [historyItem('Old')] },
     ];
     http.entries.set('Login', historyEntry(historyItem('Login')));
     http.entries.set('Payer', historyEntry(failed, false));
+    http.entries.set('Lent', historyEntry(slow, false));
     TestBed.configureTestingModule({
       imports: [HistoryPageComponent],
       providers: [provideAppTesting({ httpRepository: http })],
@@ -34,7 +46,7 @@ describe('HistoryPageComponent', () => {
     TestBed.inject(HttpHistoryStore).open();
     fixture = TestBed.createComponent(HistoryPageComponent);
     fixture.autoDetectChanges();
-    await vi.waitFor(() => expect(all('http-history-item')).toHaveLength(4));
+    await vi.waitFor(() => expect(all('http-history-item')).toHaveLength(5));
   });
 
   const el = (testId: string) =>
@@ -56,6 +68,7 @@ describe('HistoryPageComponent', () => {
     ).toEqual([
       ['200', '2'],
       ['échec', 'failed'],
+      ['échec', 'failed'],
       ['404', '4'],
       ['200', '2'],
     ]);
@@ -75,10 +88,21 @@ describe('HistoryPageComponent', () => {
     );
   });
 
+  /** The values are kept with the code: the sentence is the one the send showed. */
+  it('says a timeout with the delay that ran out and who had set it', async () => {
+    item('Lent').click();
+
+    await vi.waitFor(() =>
+      expect(el('http-history-failure')?.textContent?.trim()).toBe(
+        'Pas de réponse au bout de 2 s (réglage hérité du dossier « Auth »).',
+      ),
+    );
+  });
+
   it('says how many entries it empties before it does', async () => {
     el('http-history-clear')!.click();
     await vi.waitFor(() =>
-      expect(el('http-history-clear-count')?.textContent?.trim()).toBe('Effacer les 4 entrées ?'),
+      expect(el('http-history-clear-count')?.textContent?.trim()).toBe('Effacer les 5 entrées ?'),
     );
     expect(http.callsOf('clearHistory')).toEqual([]);
 

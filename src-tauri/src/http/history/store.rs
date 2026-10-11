@@ -173,6 +173,7 @@ mod tests {
             millis: Some(1),
             size: Some(0),
             failure: None,
+            failure_params: std::collections::BTreeMap::new(),
         }
     }
 

@@ -13,7 +13,7 @@
       (fileAsked)="saveFile()"
     />
   } @else if (failure(); as ref) {
-    <p class="failure" role="alert" data-testid="http-response-failure">
+    <p class="failure" role="alert" data-testid="http-response-failure" [attr.data-key]="ref.key">
       {{ ref.key | transloco: ref.params }}
     </p>
   } @else if (phase() === 'sending') {

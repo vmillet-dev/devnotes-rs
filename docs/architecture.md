@@ -1672,10 +1672,18 @@ or a 30-second request would stall every command.
   `Authorization` is typed, the body and the `Content-Type` it implies. A URL without a scheme is
   sent over `http://`. A `{{variable}}` left anywhere stops it, by name, until environments give
   one a value.
-- **A failure is a code** — the variable, the URL, the name not resolving, refused, TLS, timeout
-  (30 s), too many redirects (10), an unreadable file, cancelled — read off reqwest's error and
-  the chain under it. ⚠️ `io::Error::source` skips the error it wraps, where rustls puts its
-  own: the walk follows `get_ref`.
+- **A failure is a code** — the variable, the URL, the name not resolving, refused, TLS, timeout,
+  too many redirects, an unreadable file, cancelled — read off reqwest's error and the chain
+  under it. ⚠️ `io::Error::source` skips the error it wraps, where rustls puts its own: the
+  walk follows `get_ref`.
+- **A timeout and a redirect too many carry the value in force, and who set it**
+  (`transport::Limit`): no number is written in a translation, which used to state the
+  defaults whatever the request was sent with. The delay crosses as `amount` and `unit`, the
+  largest SI unit that says it whole (`readable_delay`); the redirects as `count`, a plural.
+  `source` — `request`, `folder`, `collection` or `default` — picks the sentence
+  (`errorKeyOf`: the sub-key `errors.httpTimeout.<source>`) and `name` is the folder or the
+  collection: the Réglages tab shows an inherited value greyed, and its cause is one level up.
+  The history keeps those values beside the code (`HistorySummary::failure_params`).
 - **A send runs as a task of its own, under an id the front chose** (`HttpSendStore`: the tab's
   key and a counter), which `cancel_http_send` aborts. The answer's text crosses up to 1 MB; the
   bytes, up to 64 MB, stay in Rust under that id, for **Enregistrer dans un fichier**
@@ -1778,7 +1786,9 @@ and the request each hold a `TransportSettings` whose fields are optional, and
 from the collection down. `compose` resolves them, and `send` builds its client from them:
 timeout (never under 100 ms), redirects followed or not and how many, TLS verified or not, the
 jar used or not. The Réglages tab (`TransportEditorComponent`) shows beside each unset field
-what it takes from above.
+what it takes from above. `settings::inherit` also answers which level set the timeout and the
+redirects (`Inherited::limits`, kept off the wire), for the failure that names it. A
+WebSocket's handshake waits the same timeout.
 
 **The jar is the library's, sealed whole** (`http_cookies`, `http/cookies.rs`): the domain is
 sealed with the rest — which sites one talks to is not for the file to say — so matching

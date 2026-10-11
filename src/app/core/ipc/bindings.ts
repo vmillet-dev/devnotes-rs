@@ -1272,6 +1272,8 @@ export type HistorySummary = {
 	millis: number | null,
 	size: number | null,
 	failure: ErrorCode | null,
+	/**  What the failure's sentence states: the delay that ran out, and who set it. */
+	failureParams?: { [key in string]: string },
 };
 
 export type HttpCollection = {
