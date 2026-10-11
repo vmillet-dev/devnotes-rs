@@ -1,12 +1,12 @@
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
-import { $, $$, expect } from '@wdio/globals';
+import { $, $$, browser, expect } from '@wdio/globals';
 
 import type { HttpNode, HttpRequestDraft, HttpTree } from '@core/ipc/bindings';
 
 import { canvas } from '../pageobjects/canvas.page.js';
-import { eventually, press, readEach, setField, testid } from '../support/app.js';
+import { eventually, press, readEach, setField, testid, viewportSize } from '../support/app.js';
 import { bridge } from '../support/bridge.js';
 import { echoSocket } from '../support/echo-socket.js';
 
@@ -183,6 +183,45 @@ describe('HTTP collections', () => {
       await $(`${tab} ${testid('http-tab-close')}`).click();
       await $(tab).waitForExist({ reverse: true, timeout: 10_000 });
       await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+    });
+
+    /**
+     * Held to the width of the fields above them, these sentences broke one word before
+     * their end, beside a thousand pixels of empty panel.
+     */
+    it('writes the sentences under Auth and Réglages on one line of a wide window', async () => {
+      /** The lines a text is laid out on: one rectangle a line box. */
+      const linesOf = (selector: string): Promise<number> =>
+        browser.execute((target: string) => {
+          const range = document.createRange();
+          range.selectNodeContents(document.querySelector(target)!);
+          return new Set([...range.getClientRects()].map((box) => Math.round(box.top))).size;
+        }, selector);
+
+      await press('3', ['Control']);
+      await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+      const restore = await browser.getWindowSize();
+      await browser.setWindowSize(1600, 900);
+
+      try {
+        await eventually(viewportSize, (size) => size.width > 1500, 'a wide window');
+        await $(testid('http-tab-new')).click();
+        await $(`${testid('http-section')}[data-section="auth"]`).click();
+        await $(testid('http-auth-inherited')).waitForDisplayed({ timeout: 10_000 });
+        expect(await linesOf(testid('http-auth-inherited'))).toBe(1);
+
+        await $(`${testid('http-section')}[data-section="settings"]`).click();
+        await $(testid('http-transport-verifyTls')).click();
+        await $(`${testid('choice-option')}[data-option-id="off"]`).click();
+        await $(testid('http-transport-insecure')).waitForDisplayed({ timeout: 10_000 });
+        expect(await linesOf(testid('http-transport-insecure'))).toBe(1);
+      } finally {
+        await browser.setWindowSize(restore.width, restore.height);
+      }
+
+      await $(`${testid('http-tab')}.on ${testid('http-tab-close')}`).click();
+      await $(testid('http-close-discard')).click();
+      await $(testid('http-close-dialog')).waitForExist({ reverse: true, timeout: 10_000 });
     });
 
     it('inherits the auth its collection sets, takes a JSON body, and keeps both', async () => {

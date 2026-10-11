@@ -74,6 +74,13 @@
   color: $color;
 }
 
+// A sentence under fields. Its measure is its own: held to the fields' width, it broke one
+// word before its end with an empty panel beside it. Balanced when it does have to wrap.
+@mixin reading-measure {
+  max-width: 110ch;
+  text-wrap: balance;
+}
+
 // Where the keyboard is. The declaration was written out in fifteen stylesheets and
 // missing from four controls, the tag rail among them — the keyboard walked it invisibly.
 //
