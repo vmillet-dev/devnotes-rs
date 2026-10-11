@@ -15,6 +15,7 @@ import {
   reloadCanvas,
   setField,
   testid,
+  viewportSize,
 } from '../support/app.js';
 import { bridge, draft, query } from '../support/bridge.js';
 
@@ -139,6 +140,121 @@ describe('The tools', () => {
           '@data-tool',
         ),
       ).toEqual(['case', 'line-breaks', 'text-stats', 'diff']);
+    });
+  });
+
+  /**
+   * The panels pack by column. A grid left a hole under every panel shorter than its row's
+   * tallest; jsdom measures no layout, so only the assembled window can say.
+   */
+  describe('their home, at any width', () => {
+    const GAP = 14;
+    let restore = { width: 1100, height: 720 };
+
+    interface PanelBox {
+      readonly left: number;
+      readonly top: number;
+      readonly bottom: number;
+      readonly width: number;
+      /** More than one is a panel cut across two columns. */
+      readonly pieces: number;
+    }
+
+    const boxes = (): Promise<PanelBox[]> =>
+      browser.execute(
+        (selector: string) =>
+          [...document.querySelectorAll(selector)].map((panel) => {
+            const box = panel.getBoundingClientRect();
+            return {
+              left: Math.round(box.left),
+              top: box.top,
+              bottom: box.bottom,
+              width: box.width,
+              pieces: panel.getClientRects().length,
+            };
+          }),
+        testid('tools-panel'),
+      );
+
+    const columnsOf = (panels: readonly PanelBox[]): PanelBox[][] => {
+      const columns = new Map<number, PanelBox[]>();
+      for (const panel of panels) {
+        columns.set(panel.left, [...(columns.get(panel.left) ?? []), panel]);
+      }
+      return [...columns.values()].map((column) => column.sort((a, b) => a.top - b.top));
+    };
+
+    /** Where a panel does not start right under the one above it. */
+    const holes = (panels: readonly PanelBox[]): number[] =>
+      columnsOf(panels).flatMap((column) =>
+        column
+          .slice(1)
+          .map((panel, index) => panel.top - column[index]!.bottom)
+          .filter((space) => Math.abs(space - GAP) > 1),
+      );
+
+    async function resizeTo(width: number): Promise<PanelBox[]> {
+      await browser.setWindowSize(width, 800);
+      await eventually(
+        viewportSize,
+        (size) => size.width <= width && size.width > width - 60,
+        `the window to be ${width}px wide`,
+      );
+      return boxes();
+    }
+
+    before(async () => {
+      restore = await browser.getWindowSize();
+      await $(testid('tools-rail-all')).click();
+      await setField(testid('tools-search'), '');
+    });
+
+    after(async () => {
+      await $(testid('tools-rail-all')).click();
+      await browser.setWindowSize(restore.width, restore.height);
+    });
+
+    it('leaves no hole between two panels of a column, and cuts none in two', async () => {
+      const columnCounts: number[] = [];
+
+      for (const width of [700, 1000, 1280]) {
+        const panels = await resizeTo(width);
+
+        expect(panels.length).toBeGreaterThan(5);
+        expect(holes(panels)).toEqual([]);
+        expect(panels.filter((panel) => panel.pieces !== 1)).toEqual([]);
+        columnCounts.push(columnsOf(panels).length);
+      }
+
+      expect(columnCounts[0]).toBe(1);
+      expect(columnCounts[2]).toBeGreaterThanOrEqual(3);
+    });
+
+    it('packs what a search leaves the same way', async () => {
+      await resizeTo(1000);
+      await setField(testid('tools-search'), 'json');
+      const panels = await eventually(
+        boxes,
+        (found) => found.length >= 2 && found.length < 7,
+        'the search to leave a few panels',
+      );
+
+      expect(holes(panels)).toEqual([]);
+      expect(panels.filter((panel) => panel.pieces !== 1)).toEqual([]);
+      await setField(testid('tools-search'), '');
+    });
+
+    it('keeps one category to a column, not stretched over the page', async () => {
+      const whole = await resizeTo(1280);
+      const columnWidth = whole[0]!.width;
+
+      await $(`${testid('tools-rail-category')}[data-category="calc"]`).click();
+      const panels = await eventually(boxes, (found) => found.length === 1, 'one category to show');
+
+      expect(panels[0]!.pieces).toBe(1);
+      // The whole home scrolls and one category does not: the scrollbar's width, shared out
+      // between the columns, is all that may separate the two.
+      expect(Math.abs(panels[0]!.width - columnWidth)).toBeLessThanOrEqual(8);
     });
   });
 
