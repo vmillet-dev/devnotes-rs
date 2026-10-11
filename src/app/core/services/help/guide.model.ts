@@ -15,6 +15,7 @@ export const GUIDE_CHAPTERS = [
   'attachments',
   'trash',
   'transfer',
+  'http',
 ] as const;
 
 export type GuideChapter = (typeof GUIDE_CHAPTERS)[number];

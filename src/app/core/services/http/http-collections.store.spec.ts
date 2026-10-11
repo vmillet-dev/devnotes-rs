@@ -78,6 +78,15 @@ describe('HttpCollectionsStore', () => {
     expect(id).toMatch(/^request-/);
     expect(http.callsOf('tree').length).toBeGreaterThanOrEqual(3);
 
+    // Of the kind asked: a request is created as what it is, and stays so.
+    await store().createRequest('API', null, 'Produits', 'graphql');
+    await store().createRequest('API', null, 'Flux', 'websocket');
+    expect(http.callsOf('createRequest').map((call) => (call[0] as { kind: string }).kind)).toEqual([
+      'http',
+      'graphql',
+      'websocket',
+    ]);
+
     http.failNext = new Error('disk');
     expect(await store().createRequest('API', null, 'Perdue')).toBeNull();
   });

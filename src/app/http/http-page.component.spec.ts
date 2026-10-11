@@ -119,6 +119,8 @@ describe('HttpPageComponent', () => {
   it('places a new request the first time it is saved, then reads the tree again', async () => {
     el<HTMLButtonElement>('[data-testid="http-tab-new"]').click();
     await fixture.whenStable();
+    el<HTMLButtonElement>('[data-testid="http-new-kind"][data-kind="http"]').click();
+    await fixture.whenStable();
     el<HTMLButtonElement>('[data-testid="http-save"]').click();
     await fixture.whenStable();
 
@@ -385,16 +387,67 @@ describe('HttpPageComponent', () => {
     expect(http.callsOf('forgetResponse')).toHaveLength(1);
   });
 
-  it('turns a request into a GraphQL one from the method menu, its query in place of the body', async () => {
-    await tabs().open('Login');
+  /**
+   * GraphQL and WebSocket were the last two entries of the method menu — a kind filed among
+   * verbs, and not found. A request is begun as one of the three, from the « + » of the tabs.
+   */
+  it('begins a request of the kind chosen from the « + », the first entry in focus', async () => {
+    const begin = async (kind: string) => {
+      el<HTMLButtonElement>('[data-testid="http-tab-new"]').click();
+      await fixture.whenStable();
+      el<HTMLButtonElement>(`[data-testid="http-new-kind"][data-kind="${kind}"]`).click();
+      await fixture.whenStable();
+    };
+
+    el<HTMLButtonElement>('[data-testid="http-tab-new"]').click();
+    await fixture.whenStable();
+    expect(all('[data-testid="http-new-kind"]').map((entry) => entry.textContent?.trim())).toEqual([
+      'Requête HTTP',
+      'Requête GraphQL',
+      'WebSocket',
+    ]);
+    // « + » then Enter is an HTTP request, as fast as before.
+    await vi.waitFor(() => expect(document.activeElement?.getAttribute('data-kind')).toBe('http'));
+    el<HTMLButtonElement>('[data-testid="http-new-kind"][data-kind="http"]').click();
+    await fixture.whenStable();
+    expect(el('[data-testid="http-new-kind-panel"]')).toBeNull();
+
+    await begin('graphql');
+    await begin('websocket');
+    expect(
+      tabs()
+        .tabs()
+        .map((tab) => tab.draft.kind),
+    ).toEqual(['http', 'graphql', 'websocket']);
+  });
+
+  it('says what the area can do while no tab is open: the three kinds, a button each', async () => {
+    expect(all('[data-testid="http-workspace-new"]').map((button) => button.dataset['kind'])).toEqual([
+      'http',
+      'graphql',
+      'websocket',
+    ]);
+
+    el<HTMLButtonElement>('[data-testid="http-workspace-new"][data-kind="graphql"]').click();
     await fixture.whenStable();
 
-    el<HTMLButtonElement>('[data-testid="http-method"]').click();
-    await fixture.whenStable();
-    el<HTMLButtonElement>('[data-testid="choice-option"][data-option-id="GRAPHQL"]').click();
+    expect(tabs().active()?.draft.kind).toBe('graphql');
+    expect(el('[data-testid="http-workspace-empty"]')).toBeNull();
+    expect(el('[data-testid="http-graphql"]')).not.toBeNull();
+  });
+
+  it('shows a GraphQL request with its kind where a method would be chosen, its query in place of the body', async () => {
+    http.seed(
+      'Produits',
+      { kind: 'graphql', parts: { ...EMPTY_PARTS, url: 'https://x/graphql' } },
+      'Catalogue',
+    );
+    await tabs().open('Produits');
     await fixture.whenStable();
 
-    expect(tabs().active()!.draft.kind).toBe('graphql');
+    // Its kind is its own for good: a label, and no menu to turn it into something else.
+    expect(el('[data-testid="http-kind-badge"]').textContent?.trim()).toBe('GraphQL');
+    expect(el('[data-testid="http-method"]')).toBeNull();
     expect(all('[data-testid="http-section"]').map((section) => section.dataset['section'])).toEqual([
       'query',
       'headers',
@@ -408,14 +461,14 @@ describe('HttpPageComponent', () => {
     );
   });
 
-  it('turns a request into a WebSocket, connected from its button, its log below', async () => {
-    await tabs().open('Login');
-    await fixture.whenStable();
-    el<HTMLButtonElement>('[data-testid="http-method"]').click();
-    await fixture.whenStable();
-    el<HTMLButtonElement>('[data-testid="choice-option"][data-option-id="WEBSOCKET"]').click();
+  it('shows a WebSocket with its kind, a socket’s URL as its example, connected from its button', async () => {
+    http.seed('Live', { kind: 'websocket' }, 'Flux');
+    await tabs().open('Live');
     await fixture.whenStable();
 
+    expect(el('[data-testid="http-kind-badge"]').textContent?.trim()).toBe('WS');
+    expect(el('[data-testid="http-method"]')).toBeNull();
+    expect(el<HTMLInputElement>('[data-testid="http-url"]').placeholder).toBe('wss://api.exemple.fr/flux');
     expect(all('[data-testid="http-section"]').map((section) => section.dataset['section'])).toEqual([
       'message',
       'headers',
@@ -430,6 +483,28 @@ describe('HttpPageComponent', () => {
     await vi.waitFor(() =>
       expect(el('[data-testid="http-socket-connect"]').textContent?.trim()).toBe('Déconnecter'),
     );
+  });
+
+  /** The methods' menu holds methods: what is chosen there never changes what the request is. */
+  it('keeps the method menu to methods, on an HTTP request alone', async () => {
+    await tabs().open('Login');
+    await fixture.whenStable();
+    expect(el('[data-testid="http-kind-badge"]')).toBeNull();
+
+    el<HTMLButtonElement>('[data-testid="http-method"]').click();
+    await fixture.whenStable();
+    expect(all('[data-testid="choice-option"]').map((option) => option.dataset['optionId'])).toEqual([
+      'GET',
+      'POST',
+      'PUT',
+      'PATCH',
+      'DELETE',
+      'HEAD',
+      'OPTIONS',
+    ]);
+    el<HTMLButtonElement>('[data-testid="choice-option"][data-option-id="PUT"]').click();
+    await fixture.whenStable();
+    expect(tabs().active()!.draft).toMatchObject({ kind: 'http', method: 'PUT' });
   });
 
   /** Closing the tab of an open socket cut it without a word. */

@@ -45,10 +45,6 @@ import { UrlFieldComponent } from '../url-field/url-field.component';
 
 type Section = 'params' | 'headers' | 'auth' | 'body' | 'query' | 'message' | 'protocols' | 'settings';
 
-/** The choices that turn a request into a GraphQL one or a socket, beside the methods. */
-const GRAPHQL = 'GRAPHQL';
-const WEBSOCKET = 'WEBSOCKET';
-
 /** A header a request may send: the reference's own list, those a server alone writes left out. */
 const REQUEST_HEADERS = HTTP_HEADERS.filter((header) => header.direction !== 'response').map(
   (header) => header.name,
@@ -104,15 +100,11 @@ export class RequestEditorComponent {
   );
   protected readonly headerNames = REQUEST_HEADERS;
 
-  protected readonly methods: readonly ChoiceOption[] = [
-    ...HTTP_METHODS.map((method) => ({ id: method, name: method })),
-    { id: GRAPHQL, name: 'GraphQL' },
-    { id: WEBSOCKET, name: 'WebSocket' },
-  ];
-  protected readonly methodId = computed(() => {
-    const draft = this.tab().draft;
-    return { http: draft.method, graphql: GRAPHQL, websocket: WEBSOCKET }[draft.kind];
-  });
+  /** Methods only: what a request is — HTTP, GraphQL, a socket — is chosen when it is created. */
+  protected readonly methods: readonly ChoiceOption[] = HTTP_METHODS.map((method) => ({
+    id: method,
+    name: method,
+  }));
 
   /** What the folders and the collection above hand down; nothing yet for a draft not placed. */
   private readonly inheritedResource = resource({
@@ -194,13 +186,7 @@ export class RequestEditorComponent {
   }
 
   protected onMethod(method: string | null): void {
-    if (method === GRAPHQL) {
-      this.tabs.edit(this.tab().key, { kind: 'graphql' });
-    } else if (method === WEBSOCKET) {
-      this.tabs.edit(this.tab().key, { kind: 'websocket' });
-    } else if (method !== null) {
-      this.tabs.edit(this.tab().key, { kind: 'http', method: method as HttpMethod });
-    }
+    if (method !== null) this.tabs.edit(this.tab().key, { method: method as HttpMethod });
   }
 
   protected choose(section: Section): void {

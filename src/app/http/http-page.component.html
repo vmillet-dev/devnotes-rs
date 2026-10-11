@@ -16,7 +16,23 @@
           <app-response-pane [tabKey]="tab.key" [requestName]="tab.draft.name" />
         }
       } @else {
-        <p class="empty" data-testid="http-workspace-empty">{{ 'http.workspace.empty' | transloco }}</p>
+        <!-- The first screen of the area says what it can do: the three kinds, as buttons. -->
+        <div class="empty" data-testid="http-workspace-empty">
+          <p class="empty-text">{{ 'http.workspace.empty' | transloco }}</p>
+          <div class="empty-kinds">
+            @for (kind of kinds; track kind) {
+              <button
+                type="button"
+                class="empty-kind"
+                data-testid="http-workspace-new"
+                [attr.data-kind]="kind"
+                (click)="tabs.newRequest(kind)"
+              >
+                {{ 'http.kinds.new.' + kind | transloco }}
+              </button>
+            }
+          </div>
+        </div>
       }
     }
   </main>

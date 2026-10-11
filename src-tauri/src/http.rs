@@ -432,6 +432,7 @@ pub async fn send_http_request<R: Runtime>(
         }
     };
     let sent = history::Sent {
+        kind,
         name,
         request_id,
         exchange,

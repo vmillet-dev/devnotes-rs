@@ -1692,6 +1692,15 @@ bumps `settingsRevision`: its name is in what its requests inherit « from ».
   (`UrlFieldComponent`): caret, selection and undo stay the browser's. ⚠️ Both layers carry the
   same metrics, declared after `text-field`, whose `all: unset` would otherwise zero the field's
   padding and put every glyph a padding off the copy.
+- ⚠️ **A request is created as what it is — HTTP, GraphQL, a WebSocket — and stays so.** The two
+  others were the last entries of the method menu, a kind filed among verbs, and were not
+  found. The kind is chosen where a request begins: the tabs' « + » (`NewRequestMenuComponent`,
+  three entries, the first in focus so that « + » then Enter is HTTP as before), a
+  collection's or a folder's menu, the buttons of the empty workspace. `kind` is not in
+  `HttpRequestPatch`: an update has nothing to change it by, so there is nothing to refuse. The
+  method menu holds methods and shows on an HTTP request alone; the two others say their kind
+  in its place, a label. A copy keeps it, and so does a send reopened as a draft
+  (`HistorySummary::kind`).
 - The headers' names are proposed from the HTTP headers reference, those a server alone writes
   left out. Settings, scripts and tests join the tabs with their tickets.
 - ⚠️ **A header that cannot be sent is refused where it is typed.** Nothing checked a name: key

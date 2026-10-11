@@ -865,6 +865,10 @@
       "transfer": {
         "title": "Entrer et sortir",
         "body": "Le menu Fichier exporte tout, un espace ou la sélection dans un fichier relisible, et le réimporte sans jamais créer de doublon. « Copier en Markdown » met la sélection dans le presse-papier."
+      },
+      "http": {
+        "title": "Des requêtes : HTTP, GraphQL, WebSocket",
+        "body": "La zone HTTP garde vos requêtes en collections, scellées comme vos notes. On choisit ce qu'on commence au moment de le créer — une requête HTTP, une requête GraphQL ou un WebSocket — depuis le ＋ des onglets ou le menu d'une collection."
       }
     },
     "chaptersLabel": "Chapitres du guide",
@@ -2768,7 +2772,9 @@
       "renameLabel": "Nouveau nom de {{name}}",
       "options": "Options de {{name}}",
       "actions": {
-        "newRequest": "Nouvelle requête",
+        "newHttp": "Nouvelle requête HTTP",
+        "newGraphql": "Nouvelle requête GraphQL",
+        "newWebsocket": "Nouveau WebSocket",
         "newFolder": "Nouveau dossier",
         "rename": "Renommer",
         "duplicate": "Dupliquer",
@@ -2787,7 +2793,18 @@
       }
     },
     "workspace": {
-      "empty": "Ouvrez une requête depuis le rail, ou commencez-en une avec le ＋ des onglets."
+      "empty": "Ouvrez une requête depuis le rail, ou commencez-en une :"
+    },
+    "kinds": {
+      "new": {
+        "http": "Requête HTTP",
+        "graphql": "Requête GraphQL",
+        "websocket": "WebSocket"
+      },
+      "badge": {
+        "graphql": "GraphQL",
+        "websocket": "WS"
+      }
     },
     "tabs": {
       "label": "Requêtes ouvertes",
@@ -2802,6 +2819,7 @@
       "method": "Méthode",
       "url": "URL",
       "urlPlaceholder": "https://api.exemple.fr/ressource",
+      "socketPlaceholder": "wss://api.exemple.fr/flux",
       "save": "Enregistrer",
       "saveHint": "Enregistrer (Ctrl+S)",
       "parts": "Parties de la requête",

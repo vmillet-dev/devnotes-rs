@@ -163,6 +163,7 @@ describe('HistoryPageComponent', () => {
     http.historyAnswer = [{ day: '2026-10-07', items: [login.item, historyItem('Payer')] }];
     http.ontoAnswer = {
       name: 'Connexion',
+      kind: 'http',
       method: 'GET',
       document: { url: 'https://x/then', description: '' },
     };

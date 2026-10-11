@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpRepository } from '@core/data/http.repository';
-import { HttpContents, HttpItem, HttpTree } from '@core/model/http.model';
+import { HttpContents, HttpItem, HttpTree, RequestKind } from '@core/model/http.model';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
 import { RailMove, railRows } from './http-tree';
@@ -65,14 +65,19 @@ export class HttpCollectionsStore {
   }
 
   /** Answers the new request's id, for its tab to open. */
-  async createRequest(collectionId: string, folderId: string | null, name: string): Promise<string | null> {
+  async createRequest(
+    collectionId: string,
+    folderId: string | null,
+    name: string,
+    kind: RequestKind = 'http',
+  ): Promise<string | null> {
     this.unfold(folderId ?? collectionId);
     const created = await this.write(() =>
       this.repository.createRequest({
         collectionId,
         folderId,
         name,
-        kind: 'http',
+        kind,
         method: 'GET',
         document: { url: '', params: [], headers: [], description: '' },
       }),

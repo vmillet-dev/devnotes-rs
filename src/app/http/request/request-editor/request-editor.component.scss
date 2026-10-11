@@ -64,6 +64,20 @@
   }
 }
 
+// Where the method's menu stands on an HTTP request, at its height: a label, not a control.
+.kind {
+  @include surface(var(--bg-2), 8px, var(--line));
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: 38px;
+  padding: 0 12px;
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+
 .keys {
   font-family: var(--font-mono), monospace;
   font-size: 10.5px;

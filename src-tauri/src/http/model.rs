@@ -37,7 +37,8 @@ impl HttpMethod {
 }
 
 closed_enum! {
-    /// What the rail writes before a name: the method, or `QUERY` and `WS` for the other two.
+    /// Chosen when the request is created, and its own for good: a request is not turned into
+    /// a socket. The rail writes the method before its name, or `GQL` and `WS`.
     pub enum RequestKind {
         #[default]
         Http = "http",
@@ -351,14 +352,13 @@ pub struct HttpRequestDraft {
     pub document: RequestDocument,
 }
 
-/// A field left out is untouched.
+/// A field left out is untouched. ⚠️ No `kind`: it is chosen when a request is created, so
+/// there is nothing here to refuse.
 #[derive(Debug, Clone, Default, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct HttpRequestPatch {
     #[specta(optional)]
     pub name: Option<String>,
-    #[specta(optional)]
-    pub kind: Option<RequestKind>,
     #[specta(optional)]
     pub method: Option<HttpMethod>,
     #[specta(optional)]

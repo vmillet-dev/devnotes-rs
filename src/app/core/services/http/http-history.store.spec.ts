@@ -24,6 +24,7 @@ describe('HttpHistoryStore', () => {
     await TestBed.inject(HttpCollectionsStore).load();
     http.ontoAnswer = {
       name: 'Login',
+      kind: 'http',
       method: 'POST',
       document: { url: 'https://api.exemple.fr/then', description: '' },
     };
@@ -162,6 +163,7 @@ describe('HttpHistoryStore', () => {
   it('opens a draft named after the send when its request is gone, or when it came from none', async () => {
     http.draftAnswer = {
       name: 'Payer',
+      kind: 'http',
       method: 'POST',
       document: { url: 'https://api.exemple.fr/pay', description: '' },
     };

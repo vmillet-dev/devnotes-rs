@@ -210,6 +210,8 @@ export const commands = {
 	 */
 	httpHistoryOntoRequest: (id: string) => typedError<{
 	name: string,
+	/**  The kind of what was sent: a draft is created of it, as any request is of its own. */
+	kind: RequestKind,
 	method: HttpMethod,
 	document: RequestDocument,
 } | null, AppError>(__TAURI_INVOKE("http_history_onto_request", { id })),
@@ -1296,6 +1298,8 @@ export type HistoryDay = {
 /**  An entry sent again: what it was called, and the request it rebuilds. */
 export type HistoryDraft = {
 	name: string,
+	/**  The kind of what was sent: a draft is created of it, as any request is of its own. */
+	kind: RequestKind,
 	method: HttpMethod,
 	document: RequestDocument,
 };
@@ -1335,6 +1339,8 @@ export type HistorySummary = {
 	failure: ErrorCode | null,
 	/**  What the failure's sentence states: the delay that ran out, and who set it. */
 	failureParams?: { [key in string]: string },
+	/**  What was sent, for a send reopened as a draft to be of the same kind. */
+	kind?: RequestKind,
 };
 
 export type HttpCollection = {
@@ -1409,10 +1415,12 @@ export type HttpRequestDraft = {
 	document: RequestDocument,
 };
 
-/**  A field left out is untouched. */
+/**
+ *  A field left out is untouched. ⚠️ No `kind`: it is chosen when a request is created, so
+ *  there is nothing here to refuse.
+ */
 export type HttpRequestPatch = {
 	name?: string | null,
-	kind?: RequestKind | null,
 	method?: HttpMethod | null,
 	document?: RequestDocument | null,
 };
@@ -2297,7 +2305,10 @@ export type RequestDocument = {
 	transport?: TransportSettings,
 };
 
-/**  What the rail writes before a name: the method, or `QUERY` and `WS` for the other two. */
+/**
+ *  Chosen when the request is created, and its own for good: a request is not turned into
+ *  a socket. The rail writes the method before its name, or `GQL` and `WS`.
+ */
 export type RequestKind = "http" | "graphql" | "websocket";
 
 export type ReverseDns = 

@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { HttpContents, HttpItem, shortBadge } from '@core/model/http.model';
+import { HttpContents, HttpItem, RequestKind, shortBadge } from '@core/model/http.model';
 import { AreaStore } from '@core/services/areas/area.store';
 import { HttpCollectionsStore } from '@core/services/http/http-collections.store';
 import { HttpHistoryStore } from '@core/services/http/http-history.store';
@@ -26,6 +26,8 @@ import { HttpNodeAction, HttpNodeMenuComponent } from './http-node-menu/http-nod
 /** A name typed under a row: a collection at the head, a folder or a request inside one. */
 interface Creating {
   readonly kind: 'collection' | 'folder' | 'request';
+  /** What a request is created as, chosen in the menu before its name is typed; `null` otherwise. */
+  readonly requestKind: RequestKind | null;
   readonly collectionId: string | null;
   readonly folderId: string | null;
   /** The row it is typed under, `null` at the head of the rail. */
@@ -62,6 +64,13 @@ const MOVE_KEYS: Readonly<Record<string, KeyMove>> = {
 };
 
 const item = (row: RailRow): HttpItem => ({ kind: row.kind, id: row.id });
+
+/** The kind each « nouvelle requête » of a row's menu creates. */
+const NEW_KINDS: Partial<Record<HttpNodeAction, RequestKind>> = {
+  newHttp: 'http',
+  newGraphql: 'graphql',
+  newWebsocket: 'websocket',
+};
 
 /**
  * The collections, their folders and requests, in the library rail's frame. Moving is pointer
@@ -120,7 +129,14 @@ export class HttpRailComponent {
 
   protected startCollection(): void {
     this.closeForms();
-    this.creating.set({ kind: 'collection', collectionId: null, folderId: null, underId: null, depth: 0 });
+    this.creating.set({
+      kind: 'collection',
+      requestKind: null,
+      collectionId: null,
+      folderId: null,
+      underId: null,
+      depth: 0,
+    });
   }
 
   protected activate(row: RailRow): void {
@@ -139,10 +155,13 @@ export class HttpRailComponent {
   protected async onAction(row: RailRow, action: HttpNodeAction): Promise<void> {
     this.closeForms();
     switch (action) {
-      case 'newRequest':
+      case 'newHttp':
+      case 'newGraphql':
+      case 'newWebsocket':
       case 'newFolder':
         this.creating.set({
-          kind: action === 'newRequest' ? 'request' : 'folder',
+          kind: action === 'newFolder' ? 'folder' : 'request',
+          requestKind: NEW_KINDS[action] ?? null,
           collectionId: row.collectionId,
           folderId: row.kind === 'folder' ? row.id : null,
           underId: row.id,
@@ -178,7 +197,12 @@ export class HttpRailComponent {
     } else if (creating.kind === 'folder') {
       await this.store.createFolder(creating.collectionId ?? '', creating.folderId, trimmed);
     } else {
-      const id = await this.store.createRequest(creating.collectionId ?? '', creating.folderId, trimmed);
+      const id = await this.store.createRequest(
+        creating.collectionId ?? '',
+        creating.folderId,
+        trimmed,
+        creating.requestKind ?? 'http',
+      );
       if (id !== null) {
         this.history.close();
         await this.tabs.open(id);

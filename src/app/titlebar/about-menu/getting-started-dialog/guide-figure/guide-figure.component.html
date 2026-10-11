@@ -1,4 +1,4 @@
-<!-- One `viewBox` for all ten, so the panel's geometry does not move between chapters:
+<!-- One `viewBox` for them all, so the panel's geometry does not move between chapters:
      the figure is a fixed band and only its contents change. -->
 <svg viewBox="0 0 320 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
   <rect class="paper" x="0" y="0" width="320" height="120" rx="8" />
@@ -183,6 +183,34 @@
       <rect class="accent" x="214" y="44" width="28" height="8" rx="3" />
       <rect class="ink" x="214" y="62" width="76" height="4" rx="2" opacity="0.5" />
       <rect class="ink" x="214" y="74" width="58" height="4" rx="2" opacity="0.5" />
+    }
+
+    @case ('http') {
+      <!-- The collections on the left, the tabs' « + » open on its three kinds of request. -->
+      <rect class="panel" x="14" y="16" width="70" height="88" rx="6" />
+      <rect class="line" x="14" y="16" width="70" height="88" rx="6" />
+      <rect class="ink" x="24" y="28" width="40" height="4" rx="2" />
+      <rect class="ink" x="30" y="40" width="36" height="3" rx="1.5" opacity="0.5" />
+      <rect class="ink" x="30" y="50" width="42" height="3" rx="1.5" opacity="0.5" />
+      <rect class="ink" x="24" y="64" width="34" height="4" rx="2" />
+      <rect class="ink" x="30" y="76" width="38" height="3" rx="1.5" opacity="0.5" />
+
+      <rect class="panel" x="96" y="16" width="64" height="16" rx="4" />
+      <rect class="line" x="96" y="16" width="64" height="16" rx="4" />
+      <rect class="ink" x="104" y="22" width="34" height="4" rx="2" />
+      <path class="accent-line" d="M172 19 v10 M167 24 h10" />
+
+      <rect class="panel" x="182" y="16" width="124" height="66" rx="6" />
+      <rect class="accent-line" x="182" y="16" width="124" height="66" rx="6" />
+      <rect class="accent" x="192" y="27" width="20" height="6" rx="3" />
+      <rect class="ink" x="218" y="28" width="56" height="4" rx="2" />
+      <rect class="accent" x="192" y="46" width="20" height="6" rx="3" opacity="0.6" />
+      <rect class="ink" x="218" y="47" width="68" height="4" rx="2" opacity="0.6" />
+      <rect class="accent" x="192" y="65" width="20" height="6" rx="3" opacity="0.6" />
+      <rect class="ink" x="218" y="66" width="48" height="4" rx="2" opacity="0.6" />
+
+      <rect class="ink" x="96" y="46" width="72" height="4" rx="2" opacity="0.35" />
+      <rect class="ink" x="96" y="58" width="56" height="4" rx="2" opacity="0.35" />
     }
   }
 </svg>

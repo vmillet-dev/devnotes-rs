@@ -5,6 +5,7 @@ import { HttpSendStore } from '@core/services/http/http-send.store';
 import { HttpSocketsStore } from '@core/services/http/http-sockets.store';
 import { HttpTabsStore, RequestTab } from '@core/services/http/http-tabs.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
+import { NewRequestMenuComponent } from '@http/ui/new-request-menu/new-request-menu.component';
 import { RailToggleComponent } from '@shared/controls/rail-toggle/rail-toggle.component';
 import { SpinnerComponent } from '@shared/spinner/spinner.component';
 
@@ -14,7 +15,7 @@ import { SpinnerComponent } from '@shared/spinner/spinner.component';
  */
 @Component({
   selector: 'app-request-tabs',
-  imports: [RailToggleComponent, SpinnerComponent, TranslocoPipe],
+  imports: [NewRequestMenuComponent, RailToggleComponent, SpinnerComponent, TranslocoPipe],
   templateUrl: './request-tabs.component.html',
   styleUrl: './request-tabs.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
