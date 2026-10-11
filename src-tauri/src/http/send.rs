@@ -16,7 +16,8 @@ use uuid::Uuid;
 
 use super::graphql::{self, GraphqlDocument, GraphqlResult};
 use super::model::{
-    HttpMethod, KeyPlace, KeyValue, RequestAuth, RequestBody, RequestDocument, RequestKind,
+    HeaderFault, HttpMethod, KeyPlace, KeyValue, RequestAuth, RequestBody, RequestDocument,
+    RequestKind, header_fault,
 };
 use super::response::{self, Cookie};
 use super::settings::{HttpOrigin, Inherited, implied_content_type, switches_off};
@@ -156,6 +157,13 @@ pub enum SendError {
     Handshake(u16),
     #[error("Network error: {0}")]
     Network(String),
+    /// A header that cannot be built: named, with who wrote it, rather than blamed on the URL.
+    #[error("The header {name} cannot be sent: its {fault:?} is not valid")]
+    Header {
+        name: String,
+        fault: HeaderFault,
+        set_by: SetBy,
+    },
 }
 
 /// Who put a header on a request that no row of its own wrote.
@@ -521,7 +529,22 @@ pub fn compose(
     // A multipart type carries its boundary, which reqwest alone knows.
     let implied =
         content_type(kind, document).filter(|_| !matches!(body, OutgoingBody::Multipart(_)));
-    let headers = written(document, inherited, implied)
+    let headers = written(document, inherited, implied);
+    // ⚠️ Before the client builds it: its builder says « invalid URL » for a header it refuses.
+    if let Some((header, fault)) = headers
+        .iter()
+        .find_map(|header| Some((header, header_fault(&header.name, &header.value)?)))
+    {
+        return Err(SendError::Header {
+            name: header.name.clone(),
+            fault,
+            set_by: match &header.by {
+                Wrote::Above(origin) => SetBy::Above(origin.clone()),
+                _ => SetBy::Request,
+            },
+        });
+    }
+    let headers = headers
         .into_iter()
         .map(|header| (header.name, header.value))
         .collect();
@@ -1162,6 +1185,64 @@ mod tests {
         assert_eq!(header(&outgoing, "user-agent"), Some("curl/8.5.0"));
         assert_eq!(header(&outgoing, "accept"), Some("text/csv"));
         assert_eq!(outgoing.headers.len(), 2);
+    }
+
+    /// « Cette URL ne peut pas être envoyée », on a good URL, for a header its folder set.
+    #[test]
+    fn a_header_that_cannot_be_built_stops_the_request_by_its_name_and_who_wrote_it() {
+        let auth = from(HttpItemKind::Folder, "Auth");
+        let mut inherited = nothing();
+        inherited.headers = vec![InheritedHeader {
+            header: row("X-Recette: 1", "rsgfdregr"),
+            from: auth.clone(),
+        }];
+        let plain = document("https://api.exemple.fr");
+        assert_eq!(
+            compose(RequestKind::Http, HttpMethod::Get, &plain, &inherited),
+            Err(SendError::Header {
+                name: "X-Recette: 1".to_string(),
+                fault: HeaderFault::Name,
+                set_by: SetBy::Above(auth),
+            })
+        );
+
+        let mut own = plain.clone();
+        own.headers = vec![row("X-Trace", "a\nb")];
+        assert_eq!(
+            compose(RequestKind::Http, HttpMethod::Get, &own, &nothing()),
+            Err(SendError::Header {
+                name: "X-Trace".to_string(),
+                fault: HeaderFault::Value,
+                set_by: SetBy::Request,
+            })
+        );
+
+        // Its own row of the same name replaces the inherited one, fault and all.
+        own.headers = vec![row("x-recette: 1", "ok"), off("X Off")];
+        assert!(matches!(
+            compose(RequestKind::Http, HttpMethod::Get, &own, &inherited),
+            Err(SendError::Header {
+                set_by: SetBy::Request,
+                ..
+            })
+        ));
+        own.headers = vec![off("X Off")];
+        assert!(compose(RequestKind::Http, HttpMethod::Get, &own, &nothing()).is_ok());
+
+        // The key's own name, when the auth writes the header.
+        let mut keyed = plain;
+        keyed.auth = RequestAuth::ApiKey {
+            name: "X Key".to_string(),
+            value: "s3cret".to_string(),
+            place: KeyPlace::Header,
+        };
+        assert!(matches!(
+            compose(RequestKind::Http, HttpMethod::Get, &keyed, &nothing()),
+            Err(SendError::Header {
+                fault: HeaderFault::Name,
+                ..
+            })
+        ));
     }
 
     #[test]

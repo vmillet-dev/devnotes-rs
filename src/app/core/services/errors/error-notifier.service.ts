@@ -52,6 +52,8 @@ const CODE_KEYS: Record<IpcErrorCode, string | null> = {
   httpGraphqlVariables: 'errors.httpGraphqlVariables',
   httpWebsocketRefused: 'errors.httpWebsocketRefused',
   httpNetwork: 'errors.httpNetwork',
+  httpHeaderName: 'errors.httpHeaderName',
+  httpHeaderValue: 'errors.httpHeaderValue',
 };
 
 /**
@@ -61,6 +63,8 @@ const CODE_KEYS: Record<IpcErrorCode, string | null> = {
 const VARIANT_PARAM: Partial<Record<IpcErrorCode, string>> = {
   httpTimeout: 'source',
   httpTooManyRedirects: 'source',
+  httpHeaderName: 'source',
+  httpHeaderValue: 'source',
 };
 
 /** What a code says, for an error kept as its code and its values: a failed send in the history. */

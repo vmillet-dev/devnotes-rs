@@ -50,6 +50,8 @@ const IPC_ERROR_CODES: Record<IpcErrorCode, true> = {
   httpGraphqlVariables: true,
   httpWebsocketRefused: true,
   httpNetwork: true,
+  httpHeaderName: true,
+  httpHeaderValue: true,
 };
 
 function isAppError(cause: unknown): cause is AppError {

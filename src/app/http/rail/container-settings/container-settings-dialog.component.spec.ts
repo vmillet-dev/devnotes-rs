@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { IpcError } from '@core/ipc/ipc.error';
 import { DEFAULT_TRANSPORT } from '@core/model/http.model';
+import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { RailRow } from '@core/services/http/http-tree';
 import { FakeHttpRepository } from '@testing/fake-http-repository';
 import { provideAppTesting } from '@testing/testing.providers';
@@ -83,6 +85,38 @@ describe('ContainerSettingsDialogComponent', () => {
         },
       ],
     ]);
+  });
+
+  /**
+   * A header stored with its value in its name failed every request under the folder, on
+   * « this URL cannot be sent ». Refused here, where it is typed, and said for what it is.
+   */
+  it('marks a header that cannot be sent, and stays open when Rust refuses to keep it', async () => {
+    await vi.waitFor(() => expect(el('[data-testid="http-kv-key"]')).not.toBeNull());
+    http.headerFaults = ['name'];
+    const name = el<HTMLInputElement>('[data-testid="http-kv-key"]');
+    name.value = 'X Recette';
+    name.dispatchEvent(new Event('input'));
+    await vi.waitFor(() => expect(el('[data-testid="http-kv-row"]').dataset['fault']).toBe('name'));
+    expect(el('[data-testid="http-kv-fault"]').textContent).toContain(
+      "Un nom d'en-tête ne contient ni espace",
+    );
+    await fixture.whenStable();
+
+    http.failNext = new IpcError('save_http_settings', {
+      code: 'httpHeaderName',
+      params: { header: 'X Recette', source: 'request' },
+      detail: 'The header X Recette cannot be sent',
+    });
+    el<HTMLButtonElement>('[data-testid="http-settings-save"]').click();
+    await vi.waitFor(() =>
+      expect(TestBed.inject(ErrorNotifier).notice()?.ref).toEqual({
+        key: 'errors.httpHeaderName.request',
+        params: { header: 'X Recette', source: 'request' },
+      }),
+    );
+    expect(closed).toBe(0);
+    expect(el('[data-testid="http-settings-dialog"]')).not.toBeNull();
   });
 
   it('asks a collection nothing about what is above it, and closes on Annuler', async () => {

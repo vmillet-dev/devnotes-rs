@@ -131,6 +131,7 @@
         kind="headers"
         [label]="'http.editor.sections.headers' | transloco"
         [rows]="draft.parts.headers"
+        [headers]="true"
         [suggestions]="headerNames"
         (rowsChange)="onHeaders($event)"
       />

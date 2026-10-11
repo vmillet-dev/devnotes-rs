@@ -7,9 +7,9 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 use thiserror::Error;
 
-use crate::http::model::HttpItemKind;
+use crate::http::model::{HeaderFault, HttpItemKind};
 use crate::http::send::SendError;
-use crate::http::transport::{Limit, SetBy, readable_delay};
+use crate::http::transport::{SetBy, readable_delay};
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 #[error("Invalid field \"{field}\": {detail}")]
@@ -162,6 +162,9 @@ pub enum ErrorCode {
     /// The `status` parameter is what the server answered instead of switching protocols.
     HttpWebsocketRefused,
     HttpNetwork,
+    /// `header` is its name as written; `source` and `name` say who wrote it, as for a limit.
+    HttpHeaderName,
+    HttpHeaderValue,
 }
 
 #[derive(Debug, Serialize, Type)]
@@ -193,8 +196,8 @@ impl AppError {
 
     /// `source` picks the sentence — the request's own value, a folder's, the collection's or
     /// the default — and `name` is the folder or the collection that set it.
-    fn set_by(self, limit: &Limit) -> Self {
-        match &limit.set_by {
+    fn set_by(self, set_by: &SetBy) -> Self {
+        match set_by {
             SetBy::Request => self.and("source", "request"),
             SetBy::Default => self.and("source", "default"),
             SetBy::Above(origin) => {
@@ -241,12 +244,12 @@ impl From<SendError> for AppError {
                 Self::new(ErrorCode::HttpTimeout, detail)
                     .and("amount", &amount.to_string())
                     .and("unit", unit)
-                    .set_by(&limit)
+                    .set_by(&limit.set_by)
             }
             SendError::TooManyRedirects(limit) => {
                 Self::new(ErrorCode::HttpTooManyRedirects, detail)
                     .and("count", &limit.value.to_string())
-                    .set_by(&limit)
+                    .set_by(&limit.set_by)
             }
             SendError::FileUnreadable(path) => {
                 Self::with(ErrorCode::HttpFileUnreadable, detail, "path", &path)
@@ -260,6 +263,17 @@ impl From<SendError> for AppError {
                 &status.to_string(),
             ),
             SendError::Network(_) => Self::new(ErrorCode::HttpNetwork, detail),
+            SendError::Header {
+                name,
+                fault,
+                set_by,
+            } => {
+                let code = match fault {
+                    HeaderFault::Name => ErrorCode::HttpHeaderName,
+                    HeaderFault::Value => ErrorCode::HttpHeaderValue,
+                };
+                Self::with(code, detail, "header", &name).set_by(&set_by)
+            }
         }
     }
 }

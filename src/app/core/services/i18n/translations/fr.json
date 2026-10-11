@@ -456,6 +456,16 @@
     "httpFileUnreadable": "Le fichier {{path}} ne peut pas être lu.",
     "httpCancelled": "Envoi annulé.",
     "httpNetwork": "Erreur réseau.",
+    "httpHeaderName": {
+      "request": "L'en-tête « {{header}} » ne peut pas être envoyé : son nom n'est pas valide.",
+      "folder": "L'en-tête « {{header}} », hérité du dossier « {{name}} », ne peut pas être envoyé : son nom n'est pas valide.",
+      "collection": "L'en-tête « {{header}} », hérité de la collection « {{name}} », ne peut pas être envoyé : son nom n'est pas valide."
+    },
+    "httpHeaderValue": {
+      "request": "L'en-tête « {{header}} » ne peut pas être envoyé : sa valeur n'est pas valide.",
+      "folder": "L'en-tête « {{header}} », hérité du dossier « {{name}} », ne peut pas être envoyé : sa valeur n'est pas valide.",
+      "collection": "L'en-tête « {{header}} », hérité de la collection « {{name}} », ne peut pas être envoyé : sa valeur n'est pas valide."
+    },
     "httpGraphqlVariables": "Les variables GraphQL ne sont pas un objet JSON.",
     "httpWebsocketRefused": "Le serveur a refusé la connexion WebSocket (statut {{status}})."
   },
@@ -2813,7 +2823,11 @@
       "description": "Description",
       "newKey": "Nouvelle clé",
       "remove": "Retirer",
-      "removeRow": "Retirer {{key}}"
+      "removeRow": "Retirer {{key}}",
+      "faults": {
+        "name": "Un nom d'en-tête ne contient ni espace, ni deux-points, ni accent : la ligne marquée ne peut pas être envoyée.",
+        "value": "Une valeur d'en-tête tient sur une ligne, sans caractère de contrôle : la ligne marquée ne peut pas être envoyée."
+      }
     },
     "save": {
       "title": "Enregistrer la requête",

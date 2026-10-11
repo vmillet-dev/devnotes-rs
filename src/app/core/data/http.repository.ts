@@ -22,6 +22,7 @@ import {
   SentResponse,
   BodyAnswer,
   ContainerSettingsDraft,
+  HeaderFault,
   ImpliedHeader,
   InheritedParts,
   KeyValueRow,
@@ -36,6 +37,7 @@ import {
   RequestParts,
   toDocument,
   toParts,
+  toRows,
   toSynced,
 } from '@core/model/http.model';
 
@@ -103,6 +105,16 @@ export class HttpRepository {
   /** With its method: a body on a `GET` is sent all the same, and Rust says it is unusual. */
   async describeBody(body: RequestBodyDraft, method: HttpMethod): Promise<BodyAnswer> {
     return unwrap('describe_http_body', await commands.describeHttpBody(toBodyWire(body), method));
+  }
+
+  /** What stops each header from being sent, by its rank: the rule is Rust's. */
+  async checkHeaders(rows: readonly KeyValueRow[]): Promise<(HeaderFault | null)[]> {
+    return unwrap('check_http_headers', await commands.checkHttpHeaders([...rows]));
+  }
+
+  /** `Nom: valeur` typed in a name, or lines pasted from a browser's network tab, as rows. */
+  async readHeaders(text: string): Promise<KeyValueRow[]> {
+    return toRows(unwrap('read_http_headers', await commands.readHttpHeaders(text)));
   }
 
   /** What it sends without a row of its own, and who put it there: composed as a send is. */
