@@ -40,6 +40,11 @@ describe('HttpRailComponent', () => {
       `[data-testid="http-node"][data-id="${id}"] [data-testid="http-node-menu"]`,
     ).click();
     await fixture.whenStable();
+    // The three kinds of request are one entry of the menu, and a submenu beside it.
+    if (/^new(Http|Graphql|Websocket)$/.test(which)) {
+      el<HTMLButtonElement>('[data-testid="http-node-new"]').click();
+      await fixture.whenStable();
+    }
     el<HTMLButtonElement>(`[data-testid="http-node-action"][data-action="${which}"]`).click();
     await fixture.whenStable();
   };
@@ -270,17 +275,54 @@ describe('HttpRailComponent', () => {
     await vi.waitFor(() => expect(TestBed.inject(HttpTabsStore).activeRequestId()).toMatch(/^request-/));
   });
 
-  /** « Nouvelle requête » made an HTTP `GET`, whatever was meant: its kind is chosen first. */
-  it('offers the three kinds of request in a row’s menu, and creates the one chosen under its name', async () => {
+  /**
+   * « Nouvelle requête » made an HTTP `GET`, whatever was meant: its kind is chosen first.
+   * Listed flat, the three kinds made eight entries of a menu opened to rename something:
+   * they are one entry, and a submenu beside it.
+   */
+  it('offers the three kinds of request behind one entry of a row’s menu, and creates the one chosen', async () => {
+    const actions = () => all('[data-testid="http-node-action"]').map((entry) => entry.dataset['action']);
     el<HTMLButtonElement>('[data-testid="http-node"][data-id="Auth"] [data-testid="http-node-menu"]').click();
     await fixture.whenStable();
-    expect(
-      all('[data-testid="http-node-action"]')
-        .map((entry) => entry.dataset['action'])
-        .slice(0, 4),
-    ).toEqual(['newHttp', 'newGraphql', 'newWebsocket', 'newFolder']);
+    const parent = el<HTMLButtonElement>('[data-testid="http-node-new"]');
+    expect(parent.textContent).toContain('Nouvelle requête');
+    expect(parent.getAttribute('aria-expanded')).toBe('false');
+    expect(actions()).toEqual(['newFolder', 'settings', 'rename', 'duplicate', 'delete']);
+
+    // The right arrow opens it as a click does, on its first kind; the left one comes back.
+    parent.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await fixture.whenStable();
+    expect(parent.getAttribute('aria-expanded')).toBe('true');
+    const kinds = () =>
+      all('[data-testid="http-node-new-menu"] [data-testid="http-node-action"]').map((entry) => [
+        entry.dataset['action'],
+        entry.textContent?.trim(),
+      ]);
+    expect(kinds()).toEqual([
+      ['newHttp', 'Requête HTTP'],
+      ['newGraphql', 'Requête GraphQL'],
+      ['newWebsocket', 'WebSocket'],
+    ]);
+    await vi.waitFor(() => expect(document.activeElement?.getAttribute('data-action')).toBe('newHttp'));
+    document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    await fixture.whenStable();
+    expect(el('[data-testid="http-node-new-menu"]')).toBeNull();
+    expect(document.activeElement).toBe(parent);
+
+    // Escape folds the submenu first, the menu next.
+    parent.click();
+    await fixture.whenStable();
+    await vi.waitFor(() => expect(document.activeElement?.getAttribute('data-action')).toBe('newHttp'));
+    document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await fixture.whenStable();
+    expect(el('[data-testid="http-node-new-menu"]')).toBeNull();
+    expect(el('[data-testid="http-node-menu-panel"]')).not.toBeNull();
+
+    parent.click();
+    await fixture.whenStable();
     el<HTMLButtonElement>('[data-testid="http-node-action"][data-action="newGraphql"]').click();
     await fixture.whenStable();
+    expect(el('[data-testid="http-node-menu-panel"]')).toBeNull();
     await type('http-create-input', 'Produits', 'http-create-submit');
 
     await action('API', 'newWebsocket');

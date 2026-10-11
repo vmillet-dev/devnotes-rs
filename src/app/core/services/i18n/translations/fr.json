@@ -868,7 +868,7 @@
       },
       "http": {
         "title": "Des requêtes : HTTP, GraphQL, WebSocket",
-        "body": "La zone HTTP garde vos requêtes en collections, scellées comme vos notes. On choisit ce qu'on commence au moment de le créer — une requête HTTP, une requête GraphQL ou un WebSocket — depuis le ＋ des onglets ou le menu d'une collection."
+        "body": "La zone HTTP garde vos requêtes en collections, scellées comme vos notes. On choisit ce qu'on commence au moment de le créer — une requête HTTP, une requête GraphQL ou un WebSocket — depuis « Nouvelle requête », au bout des onglets, ou le menu d'une collection."
       }
     },
     "chaptersLabel": "Chapitres du guide",
@@ -2773,9 +2773,7 @@
       "renameLabel": "Nouveau nom de {{name}}",
       "options": "Options de {{name}}",
       "actions": {
-        "newHttp": "Nouvelle requête HTTP",
-        "newGraphql": "Nouvelle requête GraphQL",
-        "newWebsocket": "Nouveau WebSocket",
+        "newRequest": "Nouvelle requête",
         "newFolder": "Nouveau dossier",
         "rename": "Renommer",
         "duplicate": "Dupliquer",
@@ -2797,6 +2795,12 @@
       "empty": "Ouvrez une requête depuis le rail, ou commencez-en une :"
     },
     "kinds": {
+      "menuTitle": "Commencer",
+      "lines": {
+        "http": "Une méthode, une URL, des en-têtes et un corps.",
+        "graphql": "Une requête et ses variables, envoyées en POST.",
+        "websocket": "Une connexion ouverte : des messages dans les deux sens."
+      },
       "new": {
         "http": "Requête HTTP",
         "graphql": "Requête GraphQL",
@@ -2813,7 +2817,8 @@
       "modified": "modifiée",
       "sending": "envoi en cours",
       "close": "Fermer {{name}}",
-      "new": "Nouvelle requête"
+      "new": "+ Nouvelle requête",
+      "newKind": "Choisir le type de requête"
     },
     "editor": {
       "name": "Nom de la requête",

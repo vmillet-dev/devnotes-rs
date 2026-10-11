@@ -82,8 +82,10 @@ describe('HTTP collections', () => {
       return undefined;
     };
     const rowNames = () => readEach(`${testid('http-node')} ${testid('http-node-name')}`, 'text');
+    /** The three kinds of request are one entry of a row's menu, and a submenu beside it. */
     const choose = async (row: WebdriverIO.Element, action: string) => {
       await row.$(testid('http-node-menu')).click();
+      if (/^new(Http|Graphql|Websocket)$/.test(action)) await $(testid('http-node-new')).click();
       await $(`${testid('http-node-action')}[data-action="${action}"]`).click();
     };
     const create = async (text: string) => {
@@ -111,27 +113,34 @@ describe('HTTP collections', () => {
       const tabCount = async () => (await $$(testid('http-tab')).getElements()).length;
       const before = await tabCount();
 
-      // The « + » of the tabs: three kinds, the first in focus — « + » then Enter is HTTP.
+      // « Nouvelle requête », at the end of the tabs: an HTTP request in one click, no menu.
       await $(testid('http-tab-new')).click();
+      await eventually(tabCount, (count) => count === before + 1, 'the HTTP request begun');
+      expect(await $(testid('http-new-kind-panel')).isExisting()).toBe(false);
+      await $(testid('http-method')).waitForDisplayed({ timeout: 10_000 });
+      expect(await $(testid('http-kind-badge')).isExisting()).toBe(false);
+
+      // Its chevron: the three kinds, the first in focus, the panel whole in the window.
+      await $(testid('http-tab-new-kind')).click();
       expect(await readEach(testid('http-new-kind'), '@data-kind')).toEqual(['http', 'graphql', 'websocket']);
       await eventually(
         () => browser.execute(() => document.activeElement?.getAttribute('data-kind') ?? null),
         (kind) => kind === 'http',
         'the HTTP entry in focus',
       );
-      await $(`${testid('http-new-kind')}[data-kind="http"]`).click();
-      await eventually(tabCount, (count) => count === before + 1, 'the HTTP request begun');
-      await $(testid('http-method')).waitForDisplayed({ timeout: 10_000 });
-      expect(await $(testid('http-kind-badge')).isExisting()).toBe(false);
-
-      await $(testid('http-tab-new')).click();
+      expect(
+        await browser.execute((panel: string) => {
+          const box = document.querySelector(panel)!.getBoundingClientRect();
+          return box.left >= 0 && box.right <= window.innerWidth && box.bottom <= window.innerHeight;
+        }, testid('http-new-kind-panel')),
+      ).toBe(true);
       await $(`${testid('http-new-kind')}[data-kind="graphql"]`).click();
       await $(testid('http-graphql')).waitForDisplayed({ timeout: 10_000 });
       // Its kind is said where a method would be chosen, and there is no menu to change it.
       expect(await $(testid('http-kind-badge')).getAttribute('data-kind')).toBe('graphql');
       expect(await $(testid('http-method')).isExisting()).toBe(false);
 
-      await $(testid('http-tab-new')).click();
+      await $(testid('http-tab-new-kind')).click();
       await $(`${testid('http-new-kind')}[data-kind="websocket"]`).click();
       await $(testid('http-socket-connect')).waitForDisplayed({ timeout: 10_000 });
       expect(await $(testid('http-kind-badge')).getAttribute('data-kind')).toBe('websocket');
@@ -158,6 +167,33 @@ describe('HTTP collections', () => {
           testid('http-node-menu-panel'),
         ),
       ).toEqual({ atTrigger: true, whole: true });
+      // The three kinds of request are one entry of it — listed flat they made eight — and
+      // a submenu beside the panel, on the workspace's side.
+      expect(
+        await readEach(`${testid('http-node-menu-panel')} ${testid('http-node-action')}`, '@data-action'),
+      ).toEqual(['newFolder', 'settings', 'rename', 'duplicate', 'delete']);
+      await $(testid('http-node-new')).click();
+      await $(testid('http-node-new-menu')).waitForDisplayed({ timeout: 10_000 });
+      expect(
+        await readEach(`${testid('http-node-new-menu')} ${testid('http-node-action')}`, '@data-action'),
+      ).toEqual(['newHttp', 'newGraphql', 'newWebsocket']);
+      expect(
+        await browser.execute(
+          (panel: string, submenu: string) => {
+            const beside = document.querySelector(panel)!.getBoundingClientRect();
+            const box = document.querySelector(submenu)!.getBoundingClientRect();
+            return (
+              box.left >= beside.right && box.right <= window.innerWidth && box.bottom <= window.innerHeight
+            );
+          },
+          testid('http-node-menu-panel'),
+          testid('http-node-new-menu'),
+        ),
+      ).toBe(true);
+      // Escape folds the submenu first, the menu next.
+      await press('Escape');
+      await $(testid('http-node-new-menu')).waitForExist({ reverse: true, timeout: 10_000 });
+      expect(await $(testid('http-node-menu-panel')).isExisting()).toBe(true);
       await press('Escape');
       await $(testid('http-node-menu-panel')).waitForExist({ reverse: true, timeout: 10_000 });
       await choose(await $(collection).getElement(), 'newGraphql');
@@ -601,7 +637,6 @@ describe('HTTP collections', () => {
       try {
         await eventually(viewportSize, (size) => size.width > 1500, 'a wide window');
         await $(testid('http-tab-new')).click();
-        await $(`${testid('http-new-kind')}[data-kind="http"]`).click();
         await $(`${testid('http-section')}[data-section="auth"]`).click();
         await $(testid('http-auth-inherited')).waitForDisplayed({ timeout: 10_000 });
         expect(await linesOf(testid('http-auth-inherited'))).toBe(1);

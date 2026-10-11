@@ -73,8 +73,16 @@
   color: var(--amber-text);
 }
 
-.tab-close,
-.tab-new {
+// At the end of the bar and held there: the tabs scroll under it, as many as they are.
+.new-request {
+  position: sticky;
+  right: 0;
+  margin-left: auto;
+  padding: 0 10px;
+  background: var(--bg-0);
+}
+
+.tab-close {
   @include unstyled-control;
   @include hit-target;
   @include focus-ring(-2px);

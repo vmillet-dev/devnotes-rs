@@ -868,7 +868,7 @@
       },
       "http": {
         "title": "Requests: HTTP, GraphQL, WebSocket",
-        "body": "The HTTP area keeps your requests in collections, sealed like your notes. What you begin is chosen as you create it — an HTTP request, a GraphQL request or a WebSocket — from the tabs' ＋ or a collection's menu."
+        "body": "The HTTP area keeps your requests in collections, sealed like your notes. What you begin is chosen as you create it — an HTTP request, a GraphQL request or a WebSocket — from “New request”, at the end of the tabs, or a collection's menu."
       }
     },
     "chaptersLabel": "Guide chapters",
@@ -2773,9 +2773,7 @@
       "renameLabel": "New name for {{name}}",
       "options": "Options for {{name}}",
       "actions": {
-        "newHttp": "New HTTP request",
-        "newGraphql": "New GraphQL request",
-        "newWebsocket": "New WebSocket",
+        "newRequest": "New request",
         "newFolder": "New folder",
         "rename": "Rename",
         "duplicate": "Duplicate",
@@ -2797,6 +2795,12 @@
       "empty": "Open a request from the rail, or start one:"
     },
     "kinds": {
+      "menuTitle": "Begin",
+      "lines": {
+        "http": "A method, a URL, headers and a body.",
+        "graphql": "A query and its variables, sent as a POST.",
+        "websocket": "An open connection: messages both ways."
+      },
       "new": {
         "http": "HTTP request",
         "graphql": "GraphQL request",
@@ -2813,7 +2817,8 @@
       "modified": "modified",
       "sending": "being sent",
       "close": "Close {{name}}",
-      "new": "New request"
+      "new": "+ New request",
+      "newKind": "Choose the kind of request"
     },
     "editor": {
       "name": "Request name",

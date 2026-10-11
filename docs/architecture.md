@@ -1663,10 +1663,16 @@ method in its colour (`http-method-hues`), `GQL` for GraphQL and `WS` for a WebS
   for one name — a field removed while focused loses its focus too — so `settleCreate` and
   `settleRename` take the form before they await anything, and act only for the form that is
   still the open one. From the field to its own button is not leaving.
-- **The head's button is not the tabs' « + »**, which begins a request a few pixels away: it
-  draws what it makes (`folder-plus`) and names it, « ＋ Collection », once the rail is wide
-  enough to hold it beside the title (`WORDED_FROM_PX`). An empty rail offers « Nouvelle
-  collection » as a button rather than pointing at a glyph.
+- **Two things are begun here, and neither behind a bare « + »**: they were a few pixels
+  apart, the same glyph at the same size. The rail's head draws what it makes (`folder-plus`)
+  and names it, « ＋ Collection », once the rail is wide enough to hold it beside the title
+  (`WORDED_FROM_PX`); an empty rail offers « Nouvelle collection » as a button rather than
+  pointing at a glyph; and the tab bar ends with « + Nouvelle requête ».
+- **A row's menu keeps the three kinds of request behind one entry**, « Nouvelle requête › »,
+  and a submenu beside the panel — the idiom of a card's « Priorité › »: a sibling panel, so
+  the first one's arrows do not walk into it, opened by a click or `→`, folded by `←` and
+  first on Escape (`MenuTriggerDirective.handleEscape`). Listed flat they made eight entries
+  of a menu opened to rename something.
 - **Moving is pointer events and `Alt` with the arrows**, never HTML5 drag and drop. `↑`/`↓`
   within the parent, `→` into the folder above, `←` out of the folder; a drag lands before or
   after a row, or inside a folder or a collection when it is let go mid-row. Both turn into one
@@ -1707,9 +1713,11 @@ bumps `settingsRevision`: its name is in what its requests inherit « from ».
   padding and put every glyph a padding off the copy.
 - ⚠️ **A request is created as what it is — HTTP, GraphQL, a WebSocket — and stays so.** The two
   others were the last entries of the method menu, a kind filed among verbs, and were not
-  found. The kind is chosen where a request begins: the tabs' « + » (`NewRequestMenuComponent`,
-  three entries, the first in focus so that « + » then Enter is HTTP as before), a
-  collection's or a folder's menu, the buttons of the empty workspace. `kind` is not in
+  found. The kind is chosen where a request begins: « + Nouvelle requête » at the end of the
+  tab bar (`NewRequestMenuComponent`, a split button as the notes' « Nouvelle note » is —
+  HTTP in one click, the three kinds behind its chevron, each with its badge and a line that
+  says what it is for; ⚠️ in the surface colour, not the amber fill: here that one is
+  « Envoyer »), a collection's or a folder's menu, the buttons of the empty workspace. `kind` is not in
   `HttpRequestPatch`: an update has nothing to change it by, so there is nothing to refuse. The
   method menu holds methods and shows on an HTTP request alone; the two others say their kind
   in its place, a label. A copy keeps it, and so does a send reopened as a draft
