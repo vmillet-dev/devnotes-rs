@@ -20,6 +20,10 @@
       >
         <span class="method" [attr.data-method]="badge(tab)">{{ badge(tab) }}</span>
         <span class="tab-name">{{ tab.draft.name }}</span>
+        @if (sending.isSending(tab.key)) {
+          <app-spinner class="tab-sending" data-testid="http-tab-sending" />
+          <span class="visually-hidden">{{ 'http.tabs.sending' | transloco }}</span>
+        }
         @if (dirty) {
           <span class="dot" data-testid="http-tab-dirty" aria-hidden="true">●</span>
           <span class="visually-hidden">{{ 'http.tabs.modified' | transloco }}</span>

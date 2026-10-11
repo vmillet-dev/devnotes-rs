@@ -2771,6 +2771,7 @@
       "label": "Requêtes ouvertes",
       "untitled": "Nouvelle requête",
       "modified": "modifiée",
+      "sending": "envoi en cours",
       "close": "Fermer {{name}}",
       "new": "Nouvelle requête"
     },

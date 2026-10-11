@@ -58,6 +58,11 @@
   text-overflow: ellipsis;
 }
 
+.tab-sending {
+  --spinner-size: 11px;
+  color: var(--amber-text);
+}
+
 .dot {
   font-size: 9px;
   color: var(--amber-text);

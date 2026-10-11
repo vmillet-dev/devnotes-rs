@@ -27,3 +27,18 @@
 .failure {
   color: var(--red);
 }
+
+.sending {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-1);
+}
+
+// Digits of one width: the sentence does not shake as the tenths go by.
+.elapsed {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+}

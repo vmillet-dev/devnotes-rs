@@ -1,18 +1,24 @@
 import { ChangeDetectionStrategy, Component, inject, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { requestBadge } from '@core/model/http.model';
+import { HttpSendStore } from '@core/services/http/http-send.store';
 import { HttpTabsStore, RequestTab } from '@core/services/http/http-tabs.store';
+import { SpinnerComponent } from '@shared/spinner/spinner.component';
 
-/** One tab an open request: its method and name, a dot while modified, a × to close. */
+/**
+ * One tab an open request: its method and name, a dot while modified, a × to close, and a
+ * spinner while its send is under way — a request sent then left behind still says it runs.
+ */
 @Component({
   selector: 'app-request-tabs',
-  imports: [TranslocoPipe],
+  imports: [SpinnerComponent, TranslocoPipe],
   templateUrl: './request-tabs.component.html',
   styleUrl: './request-tabs.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RequestTabsComponent {
   protected readonly tabs = inject(HttpTabsStore);
+  protected readonly sending = inject(HttpSendStore);
 
   /** A modified tab is not closed here: the page asks first. */
   readonly closeAsked = output<RequestTab>();

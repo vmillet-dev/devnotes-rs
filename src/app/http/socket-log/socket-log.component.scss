@@ -25,7 +25,11 @@
 
 .phase {
   @include tint-badge(--red-rgb);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   padding: 3px 10px;
+  --spinner-size: 10px;
   border-radius: 6px;
   font-size: 12px;
   font-weight: 600;

@@ -8,10 +8,11 @@ import { StatusNotifier } from '@core/services/notifications/status.service';
 
 /**
  * Where a tab's send stands. `sendId` is the name Rust keeps the body under, fixed at the send:
- * a draft saved meanwhile changes its tab's key, not that.
+ * a draft saved meanwhile changes its tab's key, not that. `startedAt` is here and not in the
+ * pane that counts from it: leaving the tab and coming back must not restart the count.
  */
 export type SendState =
-  | { readonly phase: 'sending'; readonly sendId: string }
+  | { readonly phase: 'sending'; readonly sendId: string; readonly startedAt: number }
   | { readonly phase: 'answered'; readonly sendId: string; readonly response: SentResponse }
   | { readonly phase: 'failed'; readonly sendId: string; readonly notice: AppNotice }
   | { readonly phase: 'cancelled'; readonly sendId: string };
@@ -76,7 +77,7 @@ export class HttpSendStore {
     if (this.isSending(tab.key)) return;
     const previous = this._states().get(tab.key);
     const sendId = `${tab.key}#${++this.sends}`;
-    this.set(tab.key, { phase: 'sending', sendId });
+    this.set(tab.key, { phase: 'sending', sendId, startedAt: Date.now() });
     const sent = this.repository.send(sendId, tab.draft, tab.place, tab.requestId);
     if (previous) void this.release(previous.sendId);
     try {

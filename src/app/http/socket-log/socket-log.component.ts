@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { HttpSocketsStore, SocketEntry } from '@core/services/http/http-sockets.store';
+import { SpinnerComponent } from '@shared/spinner/spinner.component';
 
 /** What a row reads as: its direction, and the words the filter looks in. */
 function textOf(entry: SocketEntry): string {
@@ -20,7 +21,7 @@ function textOf(entry: SocketEntry): string {
 /** The lower half of a WebSocket's tab: where the socket stands, and what went each way. */
 @Component({
   selector: 'app-socket-log',
-  imports: [TranslocoPipe],
+  imports: [SpinnerComponent, TranslocoPipe],
   templateUrl: './socket-log.component.html',
   styleUrl: './socket-log.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

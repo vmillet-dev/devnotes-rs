@@ -1473,6 +1473,12 @@ change was a hard cut. That is not a defect; it is the difference a reader regis
 pointer — hover fills, chip states, the card's action pill. `--motion` (160ms) is what
 **enters**: a menu, a dialog, the selection bar, the undo banner, the status toast.
 
+**One motion lasts: the spinner's turn** (`--motion-turn`, the `turn` keyframes, `app-spinner`
+in `shared/spinner/`), shown while something is waited for — a request on its way, a socket
+connecting. One shared piece, sized by `--spinner-size` and coloured by the text. The
+reduced-motion block below stops it without naming it; what says "alive" then is whatever
+ticks beside it.
+
 ⚠️ **`transform` and `opacity` only.** A transition on `height`, `width` or a colour over
 a list of cards is what makes a canvas feel heavy, and this canvas renders every note with
 no virtualisation. `@mixin eases` therefore names its properties and never takes `all`.
@@ -1683,6 +1689,11 @@ or a 30-second request would stall every command.
 - **`Ctrl+Enter` sends the tab in front**, and **Envoyer** becomes **Annuler** while it waits.
   Below the request, `ResponsePaneComponent` shows the status coloured by its class, the time,
   the size, and the answer in four tabs — or why there is none.
+- **A request on its way says so in three places**: a spinner and the time elapsed in the pane,
+  a spinner in **Annuler**, and one on its tab. A still sentence made a slow server and a frozen
+  window look the same. The count starts at `SendState.startedAt`, the store's and not the
+  pane's, so coming back to the tab does not restart it; it ticks only while a send is under
+  way, and is `aria-hidden` in a pane that is a live region.
 
 **Reading the answer is Rust's too** (`http/response.rs`). The body's language comes from its
 `Content-Type` (or, without one, from reading as JSON); the cookies are the `Set-Cookie`
