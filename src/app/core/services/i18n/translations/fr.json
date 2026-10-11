@@ -670,7 +670,17 @@
       "canvas": "Canevas",
       "editor": "Éditeur",
       "palette": "Collage rapide",
-      "areas": "Zones"
+      "areas": "Zones",
+      "http": "HTTP"
+    },
+    "http": {
+      "send": "Envoyer la requête, ou connecter le WebSocket",
+      "save": "Enregistrer la requête",
+      "moveRow": "Déplacer une ligne du rail parmi ses voisines",
+      "moveIn": "Ranger la ligne dans le dossier juste au-dessus",
+      "moveOut": "Sortir la ligne de son dossier",
+      "rename": "Renommer la ligne du rail",
+      "delete": "Supprimer la ligne du rail, après confirmation"
     },
     "global": {
       "palette": "Ouvrir la palette de collage rapide",
@@ -2763,6 +2773,19 @@
       "title": "Collections",
       "newCollection": "Nouvelle collection",
       "collection": "Collection",
+      "moved": {
+        "into": "{{name}} est maintenant dans {{other}}.",
+        "root": "{{name}} est maintenant à la racine de {{other}}.",
+        "before": "{{name}} est maintenant avant {{other}}.",
+        "after": "{{name}} est maintenant après {{other}}.",
+        "refused": {
+          "first": "{{name}} est déjà en premier.",
+          "last": "{{name}} est déjà en dernier.",
+          "noFolderAbove": "Aucun dossier juste au-dessus de {{name}} où entrer.",
+          "atRoot": "{{name}} est déjà à la racine de sa collection.",
+          "collection": "Une collection ne se range pas dans une autre."
+        }
+      },
       "empty": "Aucune collection pour l'instant.",
       "placeholders": {
         "collection": "Nom de la collection",

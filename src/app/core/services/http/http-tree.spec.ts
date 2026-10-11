@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { HttpItem } from '@core/model/http.model';
-import { sampleTree } from '@testing/http-tree.fixture';
-import { dropMove, findRequest, keyMove, railRows, savePlaces } from './http-tree';
+import { HttpItem, HttpTree } from '@core/model/http.model';
+import {
+  collection as collectionNode,
+  folder as folderNode,
+  request as requestNode,
+  sampleTree,
+} from '@testing/http-tree.fixture';
+import { dropMove, findRequest, keyMove, landing, railRows, refusal, savePlaces } from './http-tree';
 
 const folder = (id: string): HttpItem => ({ kind: 'folder', id });
 const request = (id: string): HttpItem => ({ kind: 'request', id });
@@ -88,6 +93,82 @@ describe('a keyboard move', () => {
     expect(keyMove(sampleTree(), collection('Flux'), 'down')).toBeNull();
     expect(keyMove(sampleTree(), collection('API'), 'in')).toBeNull();
     expect(keyMove(sampleTree(), request('Absent'), 'up')).toBeNull();
+  });
+});
+
+/** Read from the tree as it is after the move: Rust renumbered it, and the front never guesses. */
+describe('where a keyboard move landed', () => {
+  it('names the folder a row went into, and the collection it came out to the root of', () => {
+    const inside: HttpTree = {
+      collections: [
+        collectionNode('API', [
+          folderNode('Factures', 'API', [
+            requestNode('Old', 'API', 'Factures'),
+            requestNode('Health', 'API', 'Factures'),
+          ]),
+        ]),
+      ],
+    };
+    expect(landing(inside, request('Health'), 'in')).toEqual({
+      parentId: 'Factures',
+      where: 'into',
+      other: 'Factures',
+    });
+    // Out of a folder that is itself in a folder: still inside something, and said so.
+    expect(landing(inside, request('Old'), 'out')).toEqual({
+      parentId: 'Factures',
+      where: 'into',
+      other: 'Factures',
+    });
+
+    const out: HttpTree = {
+      collections: [collectionNode('API', [folderNode('Factures', 'API'), requestNode('Old', 'API')])],
+    };
+    expect(landing(out, request('Old'), 'out')).toEqual({ parentId: 'API', where: 'root', other: 'API' });
+  });
+
+  it('names the row that was passed, going up or down', () => {
+    expect(landing(sampleTree(), request('Login'), 'up')).toEqual({
+      parentId: 'Auth',
+      where: 'before',
+      other: 'Logout',
+    });
+    expect(landing(sampleTree(), request('Logout'), 'down')).toEqual({
+      parentId: 'Auth',
+      where: 'after',
+      other: 'Login',
+    });
+    expect(landing(sampleTree(), folder('Factures'), 'down')).toEqual({
+      parentId: 'API',
+      where: 'after',
+      other: 'Auth',
+    });
+  });
+
+  it('reads a collection against its neighbour, held by nothing', () => {
+    expect(landing(sampleTree(), collection('API'), 'up')).toEqual({
+      parentId: null,
+      where: 'before',
+      other: 'Catalogue',
+    });
+    expect(landing(sampleTree(), collection('Flux'), 'down')).toEqual({
+      parentId: null,
+      where: 'after',
+      other: 'Catalogue',
+    });
+    expect(landing(sampleTree(), collection('Absente'), 'up')).toBeNull();
+    expect(landing({ collections: [collectionNode('Seule')] }, collection('Seule'), 'up')).toBeNull();
+  });
+
+  /** A key that does nothing looks unheard: the reason is what the rail says instead. */
+  it('says why a move was not made', () => {
+    expect(refusal(request('Login'), 'up')).toBe('first');
+    expect(refusal(request('Health'), 'down')).toBe('last');
+    expect(refusal(folder('Auth'), 'in')).toBe('noFolderAbove');
+    expect(refusal(request('Health'), 'out')).toBe('atRoot');
+    expect(refusal(collection('API'), 'up')).toBe('first');
+    expect(refusal(collection('API'), 'in')).toBe('collection');
+    expect(refusal(collection('API'), 'out')).toBe('collection');
   });
 });
 

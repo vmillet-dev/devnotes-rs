@@ -61,6 +61,8 @@
   --motion: 160ms;
   /* The one motion that lasts: a spinner's turn, while something is waited for. */
   --motion-turn: 800ms;
+  /* Not a motion: how long a mark left by an action takes to fade, so the eye can find it. */
+  --motion-mark: 2000ms;
 
   // A full-screen editor starts under it, so the titlebar stays in reach.
   --titlebar-height: 38px;

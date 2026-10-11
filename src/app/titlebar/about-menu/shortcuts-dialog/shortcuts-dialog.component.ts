@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, output } from '@a
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ShortcutBindingsStore } from '@core/services/shortcuts/shortcut-bindings.store';
 import { GLOBAL_ACTIONS, ShortcutGroup, acceleratorKeys } from '@core/services/shortcuts/shortcut.model';
+import { HTTP_SHORTCUT_GROUP } from '@titlebar/about-menu/shortcuts-dialog/http-shortcuts';
 import { NOTES_SHORTCUT_GROUPS } from '@titlebar/about-menu/shortcuts-dialog/notes-shortcuts';
 import { AREA_SHORTCUT_GROUP } from '@core/services/areas/area.model';
 import { DialogComponent } from '@shared/layout/dialog/dialog.component';
@@ -37,6 +38,7 @@ export class ShortcutsDialogComponent {
       },
       AREA_SHORTCUT_GROUP,
       ...NOTES_SHORTCUT_GROUPS,
+      HTTP_SHORTCUT_GROUP,
     ].map((group) => ({
       ...group,
       shortcuts: group.shortcuts.map((entry) => ({
