@@ -409,10 +409,12 @@ describe('HttpRailComponent', () => {
       http.contentsAnswer = { folders: 0, requests: 2 };
       await action('Auth', 'delete');
 
-      expect(warning().textContent).toContain(
-        'Une requête ouverte a des modifications non enregistrées : elles seront perdues.',
+      // A few words and the tab by name: a paragraph of it was a wall at the rail's floor.
+      expect(warning().querySelector('.confirm-unsaved-caption')?.textContent?.trim()).toBe(
+        'Modifications non enregistrées :',
       );
       expect(names()).toEqual(['Se connecter']);
+      expect(el('[data-testid="http-delete-confirm"]').getAttribute('aria-describedby')).toBe(warning().id);
       expect(all('[data-testid="http-delete-confirm"]')).toHaveLength(1);
       expect(el('[data-testid="http-delete-count"]').textContent?.trim()).toBe(
         'Ses 2 requêtes partent avec.',
@@ -434,7 +436,6 @@ describe('HttpRailComponent', () => {
 
       await modify('Login', 'Se connecter');
       await action('API', 'delete');
-      expect(warning().textContent).toContain('2 requêtes ouvertes ont des modifications non enregistrées');
       expect(names()).toEqual(['Vieille', 'Se connecter']);
     });
 
@@ -442,9 +443,7 @@ describe('HttpRailComponent', () => {
       await modify('Login', 'Se connecter');
       await action('Login', 'delete');
 
-      expect(warning().textContent?.trim()).toBe(
-        'Elle est ouverte avec des modifications non enregistrées : elles seront perdues.',
-      );
+      expect(warning().textContent?.replace('●', '').trim()).toBe('Modifications non enregistrées.');
       expect(names()).toEqual([]);
     });
 

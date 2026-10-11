@@ -2809,8 +2809,8 @@
       "confirm": "Supprimer « {{name}} » ?",
       "cancel": "Annuler",
       "unsaved": {
-        "self": "Elle est ouverte avec des modifications non enregistrées : elles seront perdues.",
-        "inside": "{count, plural, one {Une requête ouverte a des modifications non enregistrées : elles seront perdues.} other {# requêtes ouvertes ont des modifications non enregistrées : elles seront perdues.}}"
+        "self": "Modifications non enregistrées.",
+        "inside": "Modifications non enregistrées :"
       },
       "takes": {
         "requests": "{requests, plural, one {Sa requête part avec.} other {Ses # requêtes partent avec.}}",
