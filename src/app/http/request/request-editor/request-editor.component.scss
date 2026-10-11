@@ -126,6 +126,10 @@
   font-size: 11.5px;
   font-weight: 400;
   color: var(--text-2);
+
+  &.warns {
+    color: var(--amber-text);
+  }
 }
 
 .implied {

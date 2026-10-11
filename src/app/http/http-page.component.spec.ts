@@ -175,7 +175,7 @@ describe('HttpPageComponent', () => {
       ],
       transport: DEFAULT_TRANSPORT,
     };
-    http.bodyAnswer = { contentType: 'application/json', problem: null };
+    http.bodyAnswer = { contentType: 'application/json', problem: null, unusual: false };
     http.impliedAnswer = [
       implied('Content-Type', 'application/json', 'body'),
       implied('Accept', 'application/json', 'above', {
@@ -269,6 +269,52 @@ describe('HttpPageComponent', () => {
     await typeInto('[data-testid="http-url"]', 'https://api.exemple.fr');
     await vi.waitFor(() => expect(el('[data-testid="http-implied-headers"]')).toBeNull());
     expect(asked()).toBe(before + 3);
+  });
+
+  /**
+   * A `POST` switched to `GET` kept its JSON body and sent it, and nothing said so — least of
+   * all from « Paramètres », the tab in front when the method changes.
+   */
+  it('marks « Corps » when the method changes over a body, and loses no text on the way to « Aucun »', async () => {
+    const mark = () => el('[data-testid="http-body-unusual-mark"]');
+    const section = (id: string) =>
+      el<HTMLButtonElement>(`[data-testid="http-section"][data-section="${id}"]`).click();
+    const method = async (id: string) => {
+      el<HTMLButtonElement>('[data-testid="http-method"]').click();
+      await fixture.whenStable();
+      el<HTMLButtonElement>(`[data-testid="choice-option"][data-option-id="${id}"]`).click();
+    };
+    await tabs().open('Login');
+    await fixture.whenStable();
+    tabs().editParts('Login', { body: { kind: 'json', text: '{"a":1}' } });
+    await fixture.whenStable();
+    expect(mark()).toBeNull();
+
+    // Rust is asked with the method, and says what the mark and the line show.
+    http.bodyAnswer = { contentType: 'application/json', problem: null, unusual: true };
+    await method('GET');
+    await vi.waitFor(() => expect(mark()?.textContent?.trim()).toBe('sur un GET'));
+    expect(http.callsOf('describeBody').at(-1)).toEqual([{ kind: 'json', text: '{"a":1}' }, 'GET']);
+    expect(mark()!.getAttribute('title')).toContain('Un GET avec un corps');
+
+    section('body');
+    await vi.waitFor(() => expect(el('[data-testid="http-body-unusual"]')).not.toBeNull());
+    http.bodyAnswer = { contentType: null, problem: null, unusual: false };
+    el<HTMLButtonElement>('[data-testid="http-body-to-none"]').click();
+    await vi.waitFor(() => expect(mark()).toBeNull());
+    expect(tabs().active()!.draft.parts.body).toEqual({ kind: 'none' });
+    expect(el('[data-testid="http-body-unusual"]')).toBeNull();
+
+    http.bodyAnswer = { contentType: 'application/json', problem: null, unusual: true };
+    el<HTMLButtonElement>('[data-testid="segmented-http-body"] [data-segment-id="json"]').click();
+    await vi.waitFor(() => expect(mark()).not.toBeNull());
+    expect(tabs().active()!.draft.parts.body).toEqual({ kind: 'json', text: '{"a":1}' });
+    expect(el<HTMLTextAreaElement>('[data-testid="http-body-text"]').value).toBe('{"a":1}');
+
+    http.bodyAnswer = { contentType: 'application/json', problem: null, unusual: false };
+    await method('POST');
+    await vi.waitFor(() => expect(mark()).toBeNull());
+    expect(http.callsOf('describeBody').at(-1)).toEqual([{ kind: 'json', text: '{"a":1}' }, 'POST']);
   });
 
   it('sets how a request travels in its Réglages, over what its collection hands down', async () => {

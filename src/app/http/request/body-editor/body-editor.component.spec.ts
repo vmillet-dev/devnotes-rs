@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { BodyAnswer, RequestBodyDraft } from '@core/model/http.model';
+import { BodyAnswer, BodyKind, HttpMethod, RequestBodyDraft } from '@core/model/http.model';
 import { FakeFileDialog } from '@testing/fake-file-dialog';
 import { FakePrettier } from '@testing/fake-prettier';
 import { provideAppTesting } from '@testing/testing.providers';
@@ -9,10 +9,22 @@ import { BodyEditorComponent } from './body-editor.component';
 describe('BodyEditorComponent', () => {
   let fixture: ComponentFixture<BodyEditorComponent>;
   let emitted: RequestBodyDraft[];
+  let chosen: BodyKind[];
   let fileDialog: FakeFileDialog;
   let prettier: FakePrettier;
 
-  async function render(body: RequestBodyDraft, answer: BodyAnswer | null = null) {
+  const said = (answer: Partial<BodyAnswer>): BodyAnswer => ({
+    contentType: null,
+    problem: null,
+    unusual: false,
+    ...answer,
+  });
+
+  async function render(
+    body: RequestBodyDraft,
+    answer: BodyAnswer | null = null,
+    method: HttpMethod = 'POST',
+  ) {
     TestBed.resetTestingModule();
     fileDialog = new FakeFileDialog();
     prettier = new FakePrettier();
@@ -23,8 +35,11 @@ describe('BodyEditorComponent', () => {
     fixture = TestBed.createComponent(BodyEditorComponent);
     fixture.componentRef.setInput('body', body);
     fixture.componentRef.setInput('answer', answer);
+    fixture.componentRef.setInput('method', method);
     emitted = [];
+    chosen = [];
     fixture.componentInstance.bodyChange.subscribe((next) => emitted.push(next));
+    fixture.componentInstance.kindChosen.subscribe((next) => chosen.push(next));
     fixture.autoDetectChanges();
     await fixture.whenStable();
   }
@@ -36,31 +51,42 @@ describe('BodyEditorComponent', () => {
 
   beforeEach(() => render({ kind: 'none' }));
 
-  it('switches kind, keeping the text between JSON and plain text alone', async () => {
-    kind('json');
-    kind('form');
-    kind('multipart');
-    kind('binary');
-    expect(emitted).toEqual([
-      { kind: 'json', text: '' },
-      { kind: 'form', fields: [] },
-      { kind: 'multipart', parts: [] },
-      { kind: 'binary', path: '' },
-    ]);
-
-    await render({ kind: 'json', text: '{"a":1}' });
-    kind('text');
+  /** What the kind starts with is the tab's to say: it holds what each one had when left. */
+  it('asks for another kind without building its body, and not for the one it shows', async () => {
     kind('none');
-    expect(emitted).toEqual([{ kind: 'text', text: '{"a":1}' }, { kind: 'none' }]);
+    kind('json');
+    kind('binary');
+    expect(chosen).toEqual(['json', 'binary']);
+    expect(emitted).toEqual([]);
+  });
+
+  /** A `POST` switched to `GET` kept its body and sent it: nothing said so. */
+  it('says a body is unusual on its method, and offers to send none without emptying it', async () => {
+    await render({ kind: 'json', text: '{"a":1}' }, said({ contentType: 'application/json' }));
+    expect(el('[data-testid="http-body-unusual"]')).toBeNull();
+
+    await render({ kind: 'json', text: '{"a":1}' }, said({ unusual: true }), 'GET');
+    expect(el('[data-testid="http-body-unusual"]').textContent).toContain(
+      "Un GET avec un corps : beaucoup de serveurs l'ignorent ou le refusent.",
+    );
+
+    el<HTMLButtonElement>('[data-testid="http-body-to-none"]').click();
+    expect(chosen).toEqual(['none']);
+    // The text is not touched: it is set aside by whoever holds the tab.
+    expect(emitted).toEqual([]);
+    expect(el<HTMLTextAreaElement>('[data-testid="http-body-text"]').value).toBe('{"a":1}');
+
+    await render({ kind: 'text', text: 'a' }, said({ unusual: true }), 'HEAD');
+    expect(el('[data-testid="http-body-unusual"]').textContent).toContain('Un HEAD avec un corps');
   });
 
   it('says what the body is sent as, and why a JSON one does not read', async () => {
     await render(
       { kind: 'json', text: '{"a":' },
-      {
+      said({
         contentType: 'application/json',
         problem: { reason: 'unexpectedEnd', line: 1, column: 6, offset: 5 },
-      },
+      }),
     );
 
     expect(el('[data-testid="http-body-type"]').textContent?.trim()).toBe('Envoyé en application/json');
@@ -71,7 +97,7 @@ describe('BodyEditorComponent', () => {
   });
 
   it('formats a JSON body through Prettier, and hands on what is typed', async () => {
-    await render({ kind: 'json', text: '{"a":1}' }, { contentType: 'application/json', problem: null });
+    await render({ kind: 'json', text: '{"a":1}' }, said({ contentType: 'application/json' }));
     expect(el('[data-testid="http-body-valid"]')).not.toBeNull();
     prettier.answer = { kind: 'formatted', text: '{ "a": 1 }\n', cursor: 0, changedLines: [0] };
 

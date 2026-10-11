@@ -5,6 +5,7 @@ import {
   HttpContents,
   HttpFolder,
   HttpItem,
+  HttpMethod,
   HttpPlace,
   HttpRequestDraft,
   HttpTree,
@@ -57,7 +58,7 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
   };
   /** The jar by domain; the deletes take from it as Rust would. */
   jar: CookieDomain[] = [];
-  bodyAnswer: BodyAnswer = { contentType: null, problem: null };
+  bodyAnswer: BodyAnswer = { contentType: null, problem: null, unusual: false };
   /** What a request sends unasked; a spec holding `pendingImplied` decides when it is answered. */
   impliedAnswer: ImpliedHeader[] = [];
   pendingImplied: Promise<ImpliedHeader[]> | null = null;
@@ -179,8 +180,8 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
     return this.record('inherited', [collectionId, folderId], () => this.inheritedAnswer);
   }
 
-  describeBody(body: RequestBodyDraft): Promise<BodyAnswer> {
-    return this.record('describeBody', [body], () => this.bodyAnswer);
+  describeBody(body: RequestBodyDraft, method: HttpMethod): Promise<BodyAnswer> {
+    return this.record('describeBody', [body, method], () => this.bodyAnswer);
   }
 
   async impliedHeaders(

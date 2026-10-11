@@ -274,11 +274,16 @@ pub async fn inherited_http_settings<R: Runtime>(
     .await
 }
 
-/// What a body implies, and whether a JSON one reads: the editor says both as it is typed.
+/// What a body implies, whether a JSON one reads, and whether its method seldom carries one:
+/// the editor says the three as it is typed, and decides none of them.
 #[tauri::command]
 #[specta::specta]
-pub async fn describe_http_body(body: model::RequestBody) -> Result<BodyAnswer, AppError> {
+pub async fn describe_http_body(
+    body: model::RequestBody,
+    method: model::HttpMethod,
+) -> Result<BodyAnswer, AppError> {
     off_thread(move || BodyAnswer {
+        unusual: body.is_unusual_on(method),
         content_type: settings::implied_content_type(&body).map(str::to_string),
         problem: match &body {
             model::RequestBody::Json { text } if !text.trim().is_empty() => {
@@ -295,6 +300,8 @@ pub async fn describe_http_body(body: model::RequestBody) -> Result<BodyAnswer, 
 pub struct BodyAnswer {
     pub content_type: Option<String>,
     pub problem: Option<crate::json::parse::JsonError>,
+    /// Something is sent as the body of a `GET` or a `HEAD`: sent all the same, and said.
+    pub unusual: bool,
 }
 
 /// What a request sends without a row of its own — the body's type, what it inherits, the

@@ -408,6 +408,102 @@ describe('HTTP collections', () => {
      * A menu's panel used to be cut by the editor it opened in, which scrolls: on a short
      * window the response pane hid all but its first entry.
      */
+    /**
+     * A `POST` with a JSON body, switched to `GET`: the body stayed in its tab and was sent —
+     * `Content-Length: 24` on a `GET` — and nothing on screen said so.
+     */
+    it('says a GET carries a body, on its tab and above it, and sends it all the same', async () => {
+      const heard: { method: string | undefined; type: string | undefined; body: string }[] = [];
+      const server = createServer((request, response) => {
+        let body = '';
+        request.on('data', (chunk: Buffer) => (body += chunk.toString()));
+        request.on('end', () => {
+          heard.push({ method: request.method, type: request.headers['content-type'], body });
+          response.writeHead(200, { 'Content-Type': 'text/plain' });
+          response.end('ok');
+        });
+      });
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      const { port } = server.address() as AddressInfo;
+      try {
+        const text = '{"q":"devnotes"}';
+        const api = await bridge.createHttpCollection('Recherche');
+        const created = await bridge.createHttpRequest({
+          ...draft(api.id, null, 'Chercher'),
+          method: 'POST',
+          document: { url: `http://127.0.0.1:${port}/search`, description: '', body: { kind: 'json', text } },
+        });
+        await press('1', ['Control']);
+        await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+        await press('3', ['Control']);
+        await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+        if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
+        await $(`${testid('http-node')}[data-id="${created.id}"] ${testid('http-node-name')}`).click();
+        await $(testid('http-response-idle')).waitForDisplayed({ timeout: 10_000 });
+        const mark = testid('http-body-unusual-mark');
+        const method = async (id: string) => {
+          await $(testid('http-method')).click();
+          await $(
+            `${testid('choice-panel-http-method')} ${testid('choice-option')}[data-option-id="${id}"]`,
+          ).click();
+        };
+
+        // Seen from « Paramètres », the tab in front: a POST's body is marked by nothing.
+        await $(`${testid('http-section')}[data-section="params"]`).click();
+        expect(await $(mark).isExisting()).toBe(false);
+        await method('GET');
+        await $(mark).waitForDisplayed({ timeout: 10_000 });
+        expect(await $(testid('http-body-unusual')).isExisting()).toBe(false);
+
+        await $(`${testid('http-section')}[data-section="body"]`).click();
+        await $(testid('http-body-unusual')).waitForDisplayed({ timeout: 10_000 });
+
+        // Sent as typed all the same: some APIs do read it.
+        await $(testid('http-send')).click();
+        await eventually(
+          async () => heard.length,
+          (reached) => reached === 1,
+          'the GET to reach the server',
+        );
+        expect(heard[0]).toEqual({ method: 'GET', type: 'application/json', body: text });
+        await $(testid('http-response-sending')).waitForExist({ reverse: true, timeout: 10_000 });
+
+        // « Passer à Aucun » sends none and empties nothing: the text is back under its type.
+        await $(testid('http-body-to-none')).click();
+        await $(mark).waitForExist({ reverse: true, timeout: 10_000 });
+        expect(await $(testid('http-body')).getAttribute('data-kind')).toBe('none');
+        expect(await $(testid('http-body-unusual')).isExisting()).toBe(false);
+        await $(testid('http-send')).click();
+        await eventually(
+          async () => heard.length,
+          (reached) => reached === 2,
+          'the bare GET to reach the server',
+        );
+        expect(heard[1]).toEqual({ method: 'GET', type: undefined, body: '' });
+        await $(testid('http-response-sending')).waitForExist({ reverse: true, timeout: 10_000 });
+
+        await $(`${testid('segmented-http-body')} [data-segment-id="json"]`).click();
+        await eventually(
+          () => $(testid('http-body-text')).getValue(),
+          (kept) => kept === text,
+          'the text back as it was',
+        );
+        await $(mark).waitForDisplayed({ timeout: 10_000 });
+
+        await method('POST');
+        await $(mark).waitForExist({ reverse: true, timeout: 10_000 });
+        expect(await $(testid('http-body-unusual')).isExisting()).toBe(false);
+
+        const tab = `${testid('http-tab')}[data-key="${created.id}"]`;
+        await $(`${tab} ${testid('http-tab-close')}`).click();
+        if (await $(testid('http-close-discard')).isExisting()) await $(testid('http-close-discard')).click();
+        await $(tab).waitForExist({ reverse: true, timeout: 10_000 });
+        await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+      } finally {
+        server.close();
+      }
+    });
+
     it('opens the auth menu whole on a short window, down to its last entry', async () => {
       /**
        * Where a panel is and how wide: out of the flow, nothing holds it to its trigger's
@@ -492,6 +588,8 @@ describe('HTTP collections', () => {
     });
 
     it('sends the request from Rust on Ctrl+Enter and shows its status, time, size and body', async () => {
+      // Its own history: the scenarios before it send too, and it counts what it sent.
+      await bridge.clearHttpHistory();
       const heard: string[] = [];
       const server = createServer((request, response) => {
         heard.push(`${request.method} ${request.url}`);

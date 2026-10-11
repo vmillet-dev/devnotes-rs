@@ -110,6 +110,39 @@ export type RequestBodyDraft =
 
 export type BodyKind = RequestBodyDraft['kind'];
 export const BODY_KINDS: readonly BodyKind[] = ['none', 'json', 'text', 'form', 'multipart', 'binary'];
+
+/** What each kind of body held when another was chosen. */
+export type BodiesLeft = Readonly<Partial<Record<BodyKind, RequestBodyDraft>>>;
+
+/**
+ * Sets a body aside under its kind when another is chosen. JSON or plain, a text is one text:
+ * it is kept under both, so it travels between the two as it always did.
+ */
+export function setBodyAside(left: BodiesLeft, body: RequestBodyDraft): BodiesLeft {
+  return body.kind === 'json' || body.kind === 'text'
+    ? { ...left, json: { kind: 'json', text: body.text }, text: { kind: 'text', text: body.text } }
+    : { ...left, [body.kind]: body };
+}
+
+/** The body a kind starts with: what it held when it was left, or nothing yet. */
+export function bodyOfKind(kind: BodyKind, left: BodiesLeft = {}): RequestBodyDraft {
+  const kept = left[kind];
+  if (kept !== undefined) return kept;
+  switch (kind) {
+    case 'json':
+    case 'text':
+      return { kind, text: '' };
+    case 'form':
+      return { kind, fields: [] };
+    case 'multipart':
+      return { kind, parts: [] };
+    case 'binary':
+      return { kind, path: '' };
+    case 'none':
+      return { kind };
+  }
+}
+
 export type AuthKind = RequestAuth['kind'];
 export const AUTH_KINDS: readonly AuthKind[] = ['inherit', 'none', 'basic', 'bearer', 'apiKey'];
 

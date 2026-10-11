@@ -83,6 +83,47 @@ describe('HttpTabsStore', () => {
     expect(store().isDirty(store().active()!)).toBe(false);
   });
 
+  /** A kind left is set aside, not emptied: it is how a body leaves a `GET` without being lost. */
+  it('keeps what each kind of body held while its tab is open, and gives it back', async () => {
+    await store().open('Login');
+    const key = store().activeKey()!;
+    const body = () => store().active()!.draft.parts.body;
+
+    store().chooseBodyKind(key, 'json');
+    store().editParts(key, { body: { kind: 'json', text: '{"q":"devnotes"}' } });
+    store().chooseBodyKind(key, 'none');
+    expect(body()).toEqual({ kind: 'none' });
+
+    store().chooseBodyKind(key, 'json');
+    expect(body()).toEqual({ kind: 'json', text: '{"q":"devnotes"}' });
+    // The same kind again changes nothing; an unknown tab neither.
+    store().chooseBodyKind(key, 'json');
+    store().chooseBodyKind('nowhere', 'form');
+    expect(body()).toEqual({ kind: 'json', text: '{"q":"devnotes"}' });
+
+    // Not another tab's, and not once the tab was closed.
+    await store().open('Health');
+    store().chooseBodyKind('Health', 'json');
+    expect(body()).toEqual({ kind: 'json', text: '' });
+    store().close('Login');
+    await store().open('Login');
+    store().chooseBodyKind('Login', 'json');
+    expect(body()).toEqual({ kind: 'json', text: '' });
+  });
+
+  it('keeps the bodies set aside when a request never saved takes its id', async () => {
+    store().newRequest();
+    const draft = store().activeKey()!;
+    store().chooseBodyKind(draft, 'text');
+    store().editParts(draft, { body: { kind: 'text', text: 'bonjour' } });
+    store().chooseBodyKind(draft, 'none');
+
+    const key = (await store().save(draft, { collectionId: 'API', folderId: null }))!;
+    store().chooseBodyKind(key, 'text');
+
+    expect(store().active()!.draft.parts.body).toEqual({ kind: 'text', text: 'bonjour' });
+  });
+
   it('rewrites the table from a typed URL, and the URL from the table, through Rust', async () => {
     await store().open('Login');
     const key = store().activeKey()!;

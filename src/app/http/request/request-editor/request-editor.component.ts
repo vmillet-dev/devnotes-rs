@@ -1,6 +1,8 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ResourceRef,
+  Signal,
   computed,
   inject,
   input,
@@ -12,6 +14,8 @@ import {
 import { TranslocoPipe } from '@jsverse/transloco';
 import { HttpRepository } from '@core/data/http.repository';
 import {
+  BodyAnswer,
+  BodyKind,
   DEFAULT_TRANSPORT,
   GraphqlParts,
   HTTP_METHODS,
@@ -123,13 +127,16 @@ export class RequestEditorComponent {
   );
   protected readonly transportAbove = computed(() => this.inherited()?.transport ?? DEFAULT_TRANSPORT);
 
-  private readonly bodyResource = resource({
-    params: () => this.tab().draft.parts.body,
-    loader: ({ params }) => this.repository.describeBody(params),
-  });
-  protected readonly bodyAnswer = computed(() =>
-    this.bodyResource.hasValue() ? this.bodyResource.value() : null,
+  /** Asked with its method: a body is unusual on a `GET`, and that is Rust's to say. */
+  private readonly bodyQuestion = computed(
+    () => ({ body: this.tab().draft.parts.body, method: this.tab().draft.method }),
+    { equal: sameFields },
   );
+  private readonly bodyResource = resource({
+    params: () => this.bodyQuestion(),
+    loader: ({ params }) => this.repository.describeBody(params.body, params.method),
+  });
+  protected readonly bodyAnswer = this.lastOf<BodyAnswer | null>(this.bodyResource, null);
 
   /** What the headers sent unasked depend on: not the body's text, nor the description. */
   private readonly impliedQuestion = computed(
@@ -155,11 +162,7 @@ export class RequestEditorComponent {
     params: () => this.impliedQuestion(),
     loader: () => this.repository.impliedHeaders(this.tab().draft, this.tab().place),
   });
-  /** The last answer stays while the next is read: emptied between two, the table under it jumps at each key. */
-  protected readonly implied = linkedSignal<readonly ImpliedHeader[] | undefined, readonly ImpliedHeader[]>({
-    source: () => (this.impliedResource.hasValue() ? this.impliedResource.value() : undefined),
-    computation: (fresh, previous) => fresh ?? previous?.value ?? [],
-  });
+  protected readonly implied = this.lastOf<readonly ImpliedHeader[]>(this.impliedResource, []);
   protected readonly dirty = computed(() => this.tabs.isDirty(this.tab()));
   protected readonly inFlight = computed(
     () => this.sending.states().get(this.tab().key)?.phase === 'sending',
@@ -236,6 +239,10 @@ export class RequestEditorComponent {
     this.tabs.editParts(this.tab().key, { body });
   }
 
+  protected onBodyKind(kind: BodyKind): void {
+    this.tabs.chooseBodyKind(this.tab().key, kind);
+  }
+
   protected send(): void {
     if (this.tab().draft.kind === 'websocket') {
       if (this.socketLive()) void this.sockets.close(this.tab().key);
@@ -266,5 +273,18 @@ export class RequestEditorComponent {
   protected save(): void {
     if (this.tab().requestId === null) this.saveAsked.emit();
     else void this.tabs.save(this.tab().key);
+  }
+
+  /**
+   * What Rust last answered for this tab, kept while the next answer is read: emptied between
+   * two, what it draws — a list above a table, a line above the body, a mark on a tab — would
+   * blink and push what is under it at each key. Another tab starts from `none`.
+   */
+  private lastOf<T>(answers: ResourceRef<T | undefined>, none: T): Signal<T> {
+    return linkedSignal<{ key: string; fresh: T | undefined }, T>({
+      source: () => ({ key: this.tab().key, fresh: answers.hasValue() ? answers.value() : undefined }),
+      computation: ({ key, fresh }, previous) =>
+        fresh ?? (previous?.source.key === key ? previous.value : none),
+    });
   }
 }

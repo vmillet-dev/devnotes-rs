@@ -5,6 +5,7 @@ import {
   BodyAnswer,
   BodyKind,
   FormPartRow,
+  HttpMethod,
   KeyValueRow,
   RequestBodyDraft,
 } from '@core/model/http.model';
@@ -30,10 +31,17 @@ import { KeyValueTableComponent } from '@http/ui/key-value-table/key-value-table
 })
 export class BodyEditorComponent {
   readonly body = input.required<RequestBodyDraft>();
-  /** What Rust says of it: the `Content-Type` it implies, and why a JSON one does not read. */
+  /**
+   * What Rust says of it: the `Content-Type` it implies, why a JSON one does not read, and
+   * whether its method seldom carries one.
+   */
   readonly answer = input<BodyAnswer | null>(null);
+  /** Named in the line that says a body is unusual on it. */
+  readonly method = input<HttpMethod>('GET');
 
   readonly bodyChange = output<RequestBodyDraft>();
+  /** Another kind is the tab's to build: it holds what each kind had when it was left. */
+  readonly kindChosen = output<BodyKind>();
 
   private readonly formatter = inject(FormatterService);
   private readonly files = inject(FileDialogService);
@@ -43,29 +51,9 @@ export class BodyEditorComponent {
     labelKey: `http.body.kinds.${id}`,
   }));
 
-  /** A text survives a switch between JSON and plain text; anything else starts empty. */
   protected onKind(id: string): void {
     const kind = id as BodyKind;
-    const body = this.body();
-    if (kind === body.kind) return;
-    const text = body.kind === 'json' || body.kind === 'text' ? body.text : '';
-    switch (kind) {
-      case 'json':
-      case 'text':
-        this.bodyChange.emit({ kind, text });
-        return;
-      case 'form':
-        this.bodyChange.emit({ kind, fields: [] });
-        return;
-      case 'multipart':
-        this.bodyChange.emit({ kind, parts: [] });
-        return;
-      case 'binary':
-        this.bodyChange.emit({ kind, path: '' });
-        return;
-      case 'none':
-        this.bodyChange.emit({ kind });
-    }
+    if (kind !== this.body().kind) this.kindChosen.emit(kind);
   }
 
   protected onText(event: Event): void {

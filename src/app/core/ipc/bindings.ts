@@ -155,8 +155,11 @@ export const commands = {
 	saveHttpSettings: (item: HttpItem, settings: ContainerSettings) => typedError<null, AppError>(__TAURI_INVOKE("save_http_settings", { item, settings })),
 	/**  What a request placed there inherits, and from where: « héritée de la collection … ». */
 	inheritedHttpSettings: (collectionId: string, folderId: string | null) => typedError<Inherited, AppError>(__TAURI_INVOKE("inherited_http_settings", { collectionId, folderId })),
-	/**  What a body implies, and whether a JSON one reads: the editor says both as it is typed. */
-	describeHttpBody: (body: RequestBody) => typedError<BodyAnswer, AppError>(__TAURI_INVOKE("describe_http_body", { body })),
+	/**
+	 *  What a body implies, whether a JSON one reads, and whether its method seldom carries one:
+	 *  the editor says the three as it is typed, and decides none of them.
+	 */
+	describeHttpBody: (body: RequestBody, method: HttpMethod) => typedError<BodyAnswer, AppError>(__TAURI_INVOKE("describe_http_body", { body, method })),
 	/**
 	 *  What a request sends without a row of its own — the body's type, what it inherits, the
 	 *  application's `User-Agent` — read as a send reads it: the editor lists the answer and
@@ -501,6 +504,8 @@ export type BoardZone = {
 export type BodyAnswer = {
 	contentType: string | null,
 	problem: JsonError | null,
+	/**  Something is sent as the body of a `GET` or a `HEAD`: sent all the same, and said. */
+	unusual: boolean,
 };
 
 export type ByteEncoding = "base64" | 
