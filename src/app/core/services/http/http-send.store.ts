@@ -127,7 +127,7 @@ export class HttpSendStore {
     this._states.set(next);
   }
 
-  /** A tab closed: what it sent, and what Rust kept of the answer, go. */
+  /** A tab closed, or its pane cleared: what it sent, and what Rust kept of the answer, go. */
   forget(key: string): void {
     const state = this._states().get(key);
     if (!state) return;

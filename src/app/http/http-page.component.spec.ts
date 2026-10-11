@@ -439,6 +439,39 @@ describe('HttpPageComponent', () => {
     ).toEqual(['http', 'http', 'graphql', 'websocket']);
   });
 
+  /**
+   * The request took what it needed up to 60% and its answer the rest, with no way to move
+   * the line. The share is the area's, stored with the application — not one tab's.
+   */
+  it('gives the request the share its line was dragged to, a socket and its log as well, and back', async () => {
+    const settings = TestBed.inject(SettingsStore);
+    const editor = () => el('app-request-editor');
+    const line = () => el('[data-testid="http-split-handle"]');
+    await tabs().open('Login');
+    await fixture.whenStable();
+    expect(editor().classList.contains('shared')).toBe(false);
+    expect(line().getAttribute('role')).toBe('separator');
+    expect(line().getAttribute('aria-valuetext')).toBe('automatique');
+
+    settings.httpRequestShare.write(35);
+    await fixture.whenStable();
+    expect(editor().classList.contains('shared')).toBe(true);
+    expect(editor().style.flexBasis).toBe('35%');
+    expect(line().getAttribute('aria-valuetext')).toBe('35 % pour la requête');
+
+    http.seed('Live', { kind: 'websocket' }, 'Flux');
+    await tabs().open('Live');
+    await fixture.whenStable();
+    expect(el('[data-testid="http-socket-log"]')).not.toBeNull();
+    expect(editor().style.flexBasis).toBe('35%');
+
+    line().dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    await fixture.whenStable();
+    expect(settings.httpRequestShare()).toBe(0);
+    expect(editor().classList.contains('shared')).toBe(false);
+    expect(editor().style.flexBasis).toBe('');
+  });
+
   it('says what the area can do while no tab is open: the three kinds, a button each', async () => {
     expect(all('[data-testid="http-workspace-new"]').map((button) => button.dataset['kind'])).toEqual([
       'http',

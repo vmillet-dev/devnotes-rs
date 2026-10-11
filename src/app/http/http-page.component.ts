@@ -14,6 +14,7 @@ import { RequestEditorComponent } from './request/request-editor/request-editor.
 import { RequestTabsComponent } from './request/request-tabs/request-tabs.component';
 import { ResponsePaneComponent } from './response/response-pane.component';
 import { SocketLogComponent } from './socket-log/socket-log.component';
+import { SplitHandleComponent } from '@shared/layout/split-handle/split-handle.component';
 import { SaveAnswer, SaveRequestDialogComponent } from './save-request/save-request-dialog.component';
 
 /**
@@ -31,6 +32,7 @@ import { SaveAnswer, SaveRequestDialogComponent } from './save-request/save-requ
     ResponsePaneComponent,
     SaveRequestDialogComponent,
     SocketLogComponent,
+    SplitHandleComponent,
     TranslocoPipe,
   ],
   templateUrl: './http-page.component.html',
@@ -50,6 +52,12 @@ export class HttpPageComponent implements OnInit {
   protected readonly placing = signal<{ readonly tab: RequestTab; readonly thenClose: boolean } | null>(null);
   protected readonly closing = signal<RequestTab | null>(null);
   protected readonly kinds = REQUEST_KINDS;
+  /**
+   * What the line between a request and its answer leaves each, in pixels: the request line
+   * and its tabs above, the status line and a few lines of body below. ⚠️ The same two as the
+   * `min-height` of the editor here and of the pane's and the log's hosts.
+   */
+  protected readonly floors = { request: 148, response: 160 } as const;
   /** What the closing dialog says: what is not saved, what is still connected, or both at once. */
   protected readonly closingWhat = computed(() => {
     const tab = this.closing();

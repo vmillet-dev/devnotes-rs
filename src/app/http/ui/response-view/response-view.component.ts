@@ -33,6 +33,8 @@ export class ResponseViewComponent {
   readonly sendId = input<string | null>(null);
   readonly requestName = input.required<string>();
   readonly fileAsked = output<void>();
+  /** The pane goes back to waiting for a send; the history keeps this one. */
+  readonly clearAsked = output<void>();
 
   private readonly transloco = inject(TranslocoService);
   private readonly clipboard = inject(ClipboardService);
@@ -77,8 +79,8 @@ export class ResponseViewComponent {
   /** A 200 that carries errors is no success: GraphQL servers answer so all the time. */
   protected readonly graphqlErrors = computed(() => this.response().graphql?.errors.length ?? 0);
 
-  /** `2` for a 2xx: the hue of the status. */
-  protected readonly statusClass = computed(() => String(Math.floor(this.response().status / 100)));
+  /** `2xx`, `4xx`…: what the badge's hue says, and what reads it when a colour cannot. */
+  protected readonly family = computed(() => `${Math.floor(this.response().status / 100)}xx`);
   protected readonly hasText = computed(() => !this.response().binary && this.response().body !== '');
 
   protected readonly millis = computed<TranslationRef>(() => ({

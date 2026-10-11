@@ -2997,8 +2997,14 @@
       "cancel": "Annuler",
       "failed": "La requête n'a pas pu être envoyée."
     },
+    "split": {
+      "label": "Hauteur de la requête — flèches pour la changer, double-clic ou Entrée pour l'automatique",
+      "auto": "automatique",
+      "value": "{{share}} % pour la requête"
+    },
     "response": {
       "label": "Réponse",
+      "clear": "Effacer",
       "idle": "Envoyez la requête pour lire sa réponse ici.",
       "sending": "Envoi en cours…",
       "cancelled": "Envoi annulé.",

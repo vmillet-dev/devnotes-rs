@@ -1804,6 +1804,22 @@ files outside it, and sends with `reqwest` on rustls (the `ring` provider the up
 brings, the system's roots through the platform verifier): ⚠️ **a send never holds the lock**,
 or a 30-second request would stall every command.
 
+- **The height is shared between a request and what answers it, from the line between them**
+  (`SplitHandleComponent`, `shared/layout/split-handle/`): a separator that takes the focus —
+  pointer events, the arrows, `Home`/`End` to either floor — which measures its parent and
+  the pane before it, and emits a share it does not keep. The share is the area's, not a
+  tab's (`AppSettings.httpRequestShare`, a percentage; the WebSocket log has the same line):
+  `0` is « automatic », the request taking what it holds up to 60% as it always did, and it is
+  where a double-click or Enter puts the line back. ⚠️ Each side has a floor — the request line
+  and its tabs, the status line and a few lines of body — written twice: `floors` in
+  `HttpPageComponent` for the line, `min-height` in the stylesheets for a window that shrinks.
+- **« Effacer » clears the pane, not the record**: `HttpSendStore.forget`, what closing the tab
+  does — the state goes, Rust lets go of the body it kept, and the history keeps the send. A
+  failure and a cancelled send stay on screen as an answer does, and are put away the same way.
+- **A status is drawn to be read as a signal**: `@mixin status-badge`, twice the fill of a
+  tint, a ring in the hue, the text at full strength — `palette.test.mjs` holds that text to
+  4.5:1 on the four fills in both themes — and `data-family` (`2xx`…`5xx`) says it to what
+  cannot read a colour.
 - **What leaves is composed first** (`compose`, tested without a network): the inherited headers,
   its own over them by name, the auth — Basic, Bearer, a key in a header or the query — unless an
   `Authorization` is typed, the body and the `Content-Type` it implies. A URL without a scheme is

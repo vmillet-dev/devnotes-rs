@@ -1,0 +1,19 @@
+// A hit area taller than the line it sits on: a 1px target is not one. Drawn over the
+// border of the pane below, taking no height of its own from either.
+:host {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 7px;
+  margin: -3px 0 -4px;
+  cursor: row-resize;
+  touch-action: none;
+}
+
+:host(:hover),
+:host(:focus-visible) {
+  background: var(--amber-dim);
+}
+
+:host(:focus-visible) {
+  outline: none;
+}

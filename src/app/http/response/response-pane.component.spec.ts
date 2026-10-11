@@ -123,7 +123,7 @@ describe('ResponsePaneComponent', () => {
     expect(all('http-response-redirect-cookie')).toEqual([]);
 
     expect(text('http-response-status')).toBe('200 OK');
-    expect(el('http-response-status')!.dataset['class']).toBe('2');
+    expect(el('http-response-status')!.dataset['family']).toBe('2xx');
     expect(text('http-response-time')).toBe('142 ms');
     expect(text('http-response-size')).toBe('3,2 Ko');
     expect(all('http-response-count').map((count) => count.textContent?.trim())).toEqual(['1', '1']);
@@ -203,7 +203,7 @@ describe('ResponsePaneComponent', () => {
         pretty: null,
       }),
     );
-    expect(el('http-response-status')!.dataset['class']).toBe('4');
+    expect(el('http-response-status')!.dataset['family']).toBe('4xx');
     expect(text('http-response-size')).toBe('12 o');
     expect((el('http-response-copy') as HTMLButtonElement).disabled).toBe(true);
     expect((el('http-response-save-note') as HTMLButtonElement).disabled).toBe(true);
@@ -286,6 +286,69 @@ describe('ResponsePaneComponent', () => {
     await section('headers');
     await answer(sentResponse());
     expect(el('http-response-headers')).not.toBeNull();
+  });
+
+  /** The colour hardly read as a signal: each family is said, for what cannot read a colour. */
+  it('says the family of a status, the three that are not a success as much as it', async () => {
+    const family = () => el('http-response-status')!.dataset['family'];
+    await answer({ ...sentResponse(), status: 301, reason: 'Moved Permanently' });
+    expect(family()).toBe('3xx');
+    await answer({ ...sentResponse(), status: 404, reason: 'Not Found' });
+    expect(family()).toBe('4xx');
+    await answer({ ...sentResponse(), status: 503, reason: 'Service Unavailable' });
+    expect(family()).toBe('5xx');
+  });
+
+  /**
+   * Once a request had answered, its pane showed that answer until the next send or until
+   * the tab closed. « Effacer » clears the pane, not the record: the history keeps the send.
+   */
+  it('clears an answer back to the idle sentence, and lets go of what Rust kept of it', async () => {
+    await answer(sentResponse());
+    expect(el('http-response-idle')).toBeNull();
+
+    el('http-response-clear')!.click();
+    await fixture.whenStable();
+
+    expect(text('http-response-idle')).toBe('Envoyez la requête pour lire sa réponse ici.');
+    expect(el('http-response-status')).toBeNull();
+    expect(http.callsOf('forgetResponse')).toHaveLength(1);
+    expect(http.callsOf('clearHistory')).toEqual([]);
+    expect(http.callsOf('deleteHistoryEntry')).toEqual([]);
+  });
+
+  it('clears a failure and a cancelled send the same way: they stay on screen as an answer does', async () => {
+    http.failNext = new IpcError('send_http_request', { code: 'httpRefused', params: {}, detail: 'refused' });
+    await answer(sentResponse());
+    expect(el('http-response-failure')).not.toBeNull();
+    expect(text('http-response-clear')).toBe('Effacer');
+    el('http-response-clear')!.click();
+    await fixture.whenStable();
+    expect(el('http-response-failure')).toBeNull();
+    expect(el('http-response-idle')).not.toBeNull();
+
+    http.failNext = new IpcError('send_http_request', { code: 'httpCancelled', params: {}, detail: '' });
+    await answer(sentResponse());
+    expect(el('http-response-cancelled')).not.toBeNull();
+    el('http-response-clear')!.click();
+    await fixture.whenStable();
+    expect(el('http-response-cancelled')).toBeNull();
+    expect(el('http-response-idle')).not.toBeNull();
+  });
+
+  it('offers nothing to clear while nothing was sent, nor while a send is on its way', async () => {
+    expect(el('http-response-clear')).toBeNull();
+
+    http.pendingSend = new Promise(() => undefined);
+    void TestBed.inject(HttpSendStore).send({
+      key: 'Login',
+      place: null,
+      requestId: null,
+      draft: { name: 'Login', kind: 'http', method: 'GET', parts: EMPTY_PARTS },
+    });
+    await fixture.whenStable();
+    expect(el('http-response-sending')).not.toBeNull();
+    expect(el('http-response-clear')).toBeNull();
   });
 
   it('says why nothing came back', async () => {
