@@ -103,6 +103,16 @@ export class HttpTabsStore {
     return tab.saved === null || !same(tab.saved, tab.draft);
   }
 
+  /**
+   * The names of the open tabs, among these requests, whose changes are not saved: what a
+   * deletion would lose. Only the front knows it — Rust counts what is deleted, not what is typed.
+   */
+  unsavedAmong(requestIds: ReadonlySet<string>): string[] {
+    return this._tabs()
+      .filter((tab) => tab.requestId !== null && requestIds.has(tab.requestId) && this.isDirty(tab))
+      .map((tab) => tab.draft.name);
+  }
+
   /** Once a page's life: the tabs left open last time, those still in the library. */
   async restore(): Promise<void> {
     if (this.restored) return;

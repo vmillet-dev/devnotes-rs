@@ -2808,6 +2808,10 @@
       "collapse": "Collapse {{name}}",
       "confirm": "Delete “{{name}}”?",
       "cancel": "Cancel",
+      "unsaved": {
+        "self": "It is open with unsaved changes: they will be lost.",
+        "inside": "{count, plural, one {One open request has unsaved changes: they will be lost.} other {# open requests have unsaved changes: they will be lost.}}"
+      },
       "takes": {
         "requests": "{requests, plural, one {Its request goes with it.} other {Its # requests go with it.}}",
         "folders": "{folders, plural, one {Its folder goes with it.} other {Its # folders go with it.}}",

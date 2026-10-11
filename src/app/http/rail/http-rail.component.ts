@@ -24,6 +24,7 @@ import {
   keyMove,
   landing,
   refusal,
+  requestsUnder,
 } from '@core/services/http/http-tree';
 import { RAIL_WIDTH } from '@core/services/settings/app-settings.model';
 import { SettingsStore } from '@core/services/settings/settings.store';
@@ -339,6 +340,14 @@ export class HttpRailComponent {
     this.drag = null;
     this.drop.set(null);
     this.dragged.set(null);
+  }
+
+  /**
+   * The open tabs a deletion would close with changes in them. Read as the confirmation is
+   * drawn, not when it was asked: a tab saved in between is no longer a loss.
+   */
+  protected unsaved(row: RailRow): string[] {
+    return this.tabs.unsavedAmong(requestsUnder(this.store.tree(), item(row)));
   }
 
   /** Says only what is there: « aucun dossier » is noise in a sentence about loss. */

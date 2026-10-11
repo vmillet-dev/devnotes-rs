@@ -167,6 +167,23 @@
                       noun(confirming.contents)
                     }}</span>
                   }
+                  <!-- What Rust cannot count: a tab closed by the deletion took what was typed
+                       in it without a word. One more sentence, not a second question. -->
+                  @let lost = unsaved(row);
+                  @if (lost.length > 0) {
+                    <span class="confirm-unsaved" data-testid="http-delete-unsaved">
+                      @if (row.kind === 'request') {
+                        {{ 'http.rail.unsaved.self' | transloco }}
+                      } @else {
+                        {{ 'http.rail.unsaved.inside' | transloco: { count: lost.length } }}
+                        @for (name of lost; track $index) {
+                          <span class="confirm-unsaved-name" data-testid="http-delete-unsaved-name">{{
+                            name
+                          }}</span>
+                        }
+                      }
+                    </span>
+                  }
                 </p>
                 <div class="confirm-actions">
                   <button

@@ -356,6 +356,26 @@
   color: var(--text-2);
 }
 
+// What is typed and not saved goes for good, unlike what the trash would hold: in the
+// colour of the button that does it.
+.confirm-unsaved {
+  display: block;
+  margin-top: 4px;
+  color: var(--red);
+}
+
+.confirm-unsaved-name {
+  display: block;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &::before {
+    content: '· ';
+  }
+}
+
 .confirm-actions {
   display: flex;
   flex-wrap: wrap;
