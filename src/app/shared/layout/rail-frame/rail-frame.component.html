@@ -1,0 +1,22 @@
+<ng-content />
+
+<!-- Pointer events and not HTML5 drag & drop, which this WebView never sees. A slider
+     rather than a button: the arrow keys move it and the value is the width, which is what
+     a screen reader announces. Outside what it frames, which scrolls — an edge inside it would
+     only cover the first screenful. -->
+<div
+  class="rail-edge"
+  role="slider"
+  tabindex="0"
+  aria-orientation="horizontal"
+  [attr.data-testid]="edgeTestId()"
+  [attr.aria-label]="'sidebar.resize' | transloco"
+  [attr.aria-valuenow]="width()"
+  [attr.aria-valuemin]="bounds().min"
+  [attr.aria-valuemax]="bounds().max"
+  (pointerdown)="startResize($event)"
+  (pointermove)="onResizeMove($event)"
+  (pointerup)="endResize($event)"
+  (pointercancel)="endResize($event)"
+  (keydown)="onResizeKey($event)"
+></div>

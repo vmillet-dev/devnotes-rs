@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { requestBadge } from '@core/model/http.model';
+import { requestBadge, shortBadge } from '@core/model/http.model';
 import { HttpSendStore } from '@core/services/http/http-send.store';
 import { HttpTabsStore, RequestTab } from '@core/services/http/http-tabs.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
@@ -25,6 +25,8 @@ export class RequestTabsComponent {
 
   /** A modified tab is not closed here: the page asks first. */
   readonly closeAsked = output<RequestTab>();
+
+  protected readonly short = shortBadge;
 
   protected badge(tab: RequestTab): string {
     return requestBadge(tab.draft);

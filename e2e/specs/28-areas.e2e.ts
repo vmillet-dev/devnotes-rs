@@ -1,9 +1,9 @@
-import { $, expect } from '@wdio/globals';
+import { $, browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
 import { rail } from '../pageobjects/sidebar.page.js';
-import { emitGlobalAction, press, reloadCanvas, testid } from '../support/app.js';
+import { emitGlobalAction, eventually, press, reloadCanvas, testid } from '../support/app.js';
 
 /**
  * The notes page stays in the DOM behind another area, switch included: every selector
@@ -21,6 +21,22 @@ async function showsTools(): Promise<void> {
 async function showsNotes(): Promise<void> {
   await $(testid('tools-page')).waitForExist({ reverse: true, timeout: 10_000 });
   await $(testid('canvas')).waitForDisplayed({ timeout: 10_000 });
+}
+
+/** Measured, not read off the preference: the rail has to actually be that wide. */
+const railWidth = (rail: string): Promise<number> =>
+  browser.execute(
+    (selector: string) => Math.round(document.querySelector(selector)?.getBoundingClientRect().width ?? 0),
+    testid(rail),
+  );
+
+/** The edge's keyboard twin. Focused from script: its own `pointerdown` starts a drag instead. */
+async function nudge(edge: string, key: 'ArrowLeft' | 'ArrowRight', times: number): Promise<void> {
+  await browser.execute(
+    (selector: string) => (document.querySelector(selector) as HTMLElement | null)?.focus(),
+    testid(edge),
+  );
+  await browser.keys(Array.from({ length: times }, () => key));
 }
 
 describe('Switching between areas', () => {
@@ -119,6 +135,50 @@ describe('Switching between areas', () => {
     await press('1', ['Control']);
     await showsNotes();
     expect(await rail.isShowing()).toBe(true);
+  });
+
+  /**
+   * One width for the three rails, and an edge on each. HTTP's used to take 240px whatever
+   * was stored, so the rail jumped on the way in from the notes and back on the way out.
+   */
+  it('keeps the rail as wide from one area to the next, and lets each of them resize it', async () => {
+    await rail.narrow();
+    const floor = await eventually(
+      () => rail.width(),
+      (width) => width === 160,
+      'the rail at its floor',
+    );
+
+    await press('3', ['Control']);
+    await $(testid('http-rail')).waitForDisplayed({ timeout: 10_000 });
+    expect(await railWidth('http-rail')).toBe(floor);
+
+    await nudge('http-rail-edge', 'ArrowRight', 5);
+    const widened = await eventually(
+      () => railWidth('http-rail'),
+      (width) => width === floor + 80,
+      'the HTTP rail widened from its own edge',
+    );
+
+    await press('2', ['Control']);
+    await showsTools();
+    expect(await railWidth('tools-rail')).toBe(widened);
+    await nudge('tools-rail-edge', 'ArrowLeft', 2);
+    await eventually(
+      () => railWidth('tools-rail'),
+      (width) => width === widened - 32,
+      'the tools rail narrowed',
+    );
+
+    await press('1', ['Control']);
+    await showsNotes();
+    expect(await rail.width()).toBe(widened - 32);
+    await rail.narrow();
+    await eventually(
+      () => rail.width(),
+      (width) => width === floor,
+      'the rail back at its floor',
+    );
   });
 
   /** One key for the three: the canvas had it, HTTP a copy of it, the tools none. */

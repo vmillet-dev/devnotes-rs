@@ -3,21 +3,22 @@ import {
   Component,
   ElementRef,
   afterRenderEffect,
-  computed,
   inject,
   signal,
   viewChild,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { HttpContents, HttpItem } from '@core/model/http.model';
+import { HttpContents, HttpItem, shortBadge } from '@core/model/http.model';
 import { AreaStore } from '@core/services/areas/area.store';
 import { HttpCollectionsStore } from '@core/services/http/http-collections.store';
 import { HttpHistoryStore } from '@core/services/http/http-history.store';
 import { HttpTabsStore } from '@core/services/http/http-tabs.store';
 import { DropZone, KeyMove, RailRow, dropMove, keyMove } from '@core/services/http/http-tree';
+import { RAIL_WIDTH } from '@core/services/settings/app-settings.model';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { AreaSwitchComponent } from '@shared/controls/area-switch/area-switch.component';
+import { RailFrameComponent } from '@shared/layout/rail-frame/rail-frame.component';
 import { ContainerSettingsDialogComponent } from './container-settings/container-settings-dialog.component';
 import { CookieJarDialogComponent } from './cookie-jar/cookie-jar-dialog.component';
 import { HttpNodeAction, HttpNodeMenuComponent } from './http-node-menu/http-node-menu.component';
@@ -50,9 +51,6 @@ interface Drop {
   readonly zone: DropZone;
 }
 
-/** The library rail's floor is 160px; a method, an indent and a name need more. */
-const NARROWEST_PX = 240;
-
 /** Past this, a press on a row is a drag and no longer a click. */
 const DRAG_THRESHOLD_PX = 4;
 
@@ -78,12 +76,12 @@ const item = (row: RailRow): HttpItem => ({ kind: row.kind, id: row.id });
     CookieJarDialogComponent,
     HttpNodeMenuComponent,
     NgTemplateOutlet,
+    RailFrameComponent,
     TranslocoPipe,
   ],
   templateUrl: './http-rail.component.html',
   styleUrl: './http-rail.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[style.width.px]': 'width()' },
 })
 export class HttpRailComponent {
   protected readonly areas = inject(AreaStore);
@@ -94,7 +92,8 @@ export class HttpRailComponent {
   private readonly transloco = inject(TranslocoService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
-  protected readonly width = computed(() => Math.max(this.settings.libraryRailWidth(), NARROWEST_PX));
+  protected readonly bounds = RAIL_WIDTH;
+  protected readonly short = shortBadge;
 
   protected readonly creating = signal<Creating | null>(null);
   protected readonly renaming = signal<string | null>(null);

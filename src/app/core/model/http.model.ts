@@ -327,6 +327,13 @@ export function toSynced(answer: SyncedQuery): {
   return { url: answer.url, params: answer.params.map(toRow) };
 }
 
+const SHORT_BADGES: Readonly<Record<string, string>> = { DELETE: 'DEL', OPTIONS: 'OPT' };
+
+/** A long method in three letters, where room is counted: the rail at its floor, a tab. */
+export function shortBadge(badge: string): string {
+  return SHORT_BADGES[badge] ?? badge;
+}
+
 /** What the rail writes before a request's name: its method, or the kind's own word. */
 export function requestBadge(request: Pick<HttpRequestSummary, 'kind' | 'method'>): string {
   switch (request.kind) {

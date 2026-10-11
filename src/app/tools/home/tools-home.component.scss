@@ -19,19 +19,28 @@
 }
 
 .title {
+  flex-shrink: 0;
   margin: 0;
   font-size: 17px;
   font-weight: 700;
 }
 
+// What gives way when the bar runs short, with the rail's button now at its head: cut, never
+// wrapped under the title, and never at the search's expense.
 .subtitle {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-size: 12px;
   color: var(--text-2);
 }
 
 .filtered {
   display: inline-flex;
+  flex-shrink: 0;
   gap: 8px;
+  white-space: nowrap;
   font-size: 14px;
   font-weight: 600;
   color: var(--text-0);
@@ -45,6 +54,7 @@
   font-size: 12.5px;
   color: var(--text-2);
   text-decoration: underline;
+  white-space: nowrap;
   cursor: pointer;
 
   &:hover {
@@ -61,6 +71,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
   width: min(380px, 40%);
   height: 34px;
   box-sizing: border-box;

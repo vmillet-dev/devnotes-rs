@@ -230,6 +230,18 @@ describe('The tools', () => {
       expect(columnCounts[2]).toBeGreaterThanOrEqual(3);
     });
 
+    /** The count gives way first: cut on its line, not wrapped under the title. */
+    it('keeps its top bar on one line at the narrowest', async () => {
+      await resizeTo(700);
+
+      const lines = await browser.execute((count: string) => {
+        const text = document.querySelector<HTMLElement>(count)!;
+        return Math.round(text.getBoundingClientRect().height / parseFloat(getComputedStyle(text).fontSize));
+      }, testid('tools-count'));
+
+      expect(lines).toBe(1);
+    });
+
     it('packs what a search leaves the same way', async () => {
       await resizeTo(1000);
       await setField(testid('tools-search'), 'json');

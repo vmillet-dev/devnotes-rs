@@ -1,25 +1,16 @@
 @use 'mixins' as *;
 
+// The frame is the box in the page: this element only holds it.
 :host {
-  display: flex;
-  flex: 0 0 auto;
-  min-height: 0;
-  background: var(--bg-1);
+  display: contents;
 }
 
 .rail {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: var(--space-card) 10px var(--space-canvas);
-  border-right: 1px solid var(--line-soft);
-  overflow-y: auto;
+  @include rail-body(2px);
 }
 
 .rail-switch {
-  margin-bottom: 12px;
+  @include rail-switch;
 }
 
 .rail-link {

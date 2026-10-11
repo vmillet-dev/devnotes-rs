@@ -1,206 +1,192 @@
-<nav class="rail" data-testid="library-rail" aria-labelledby="library-rail-title">
-  <!-- What heads the rail, above the library: the switch between areas. -->
-  <ng-content />
+<app-rail-frame
+  [width]="width()"
+  [bounds]="bounds"
+  edgeTestId="library-rail-edge"
+  (widthChanged)="widthChanged.emit($event)"
+>
+  <nav class="rail" data-testid="library-rail" aria-labelledby="library-rail-title">
+    <!-- What heads the rail, above the library: the switch between areas. -->
+    <ng-content />
 
-  <div class="rail-head">
-    <h2 id="library-rail-title" class="rail-title">{{ 'sidebar.library' | transloco }}</h2>
-    <button
-      type="button"
-      class="rail-add"
-      data-testid="space-create-open"
-      [attr.aria-label]="'notes.newSpace' | transloco"
-      [attr.title]="'notes.newSpace' | transloco"
-      (click)="startCreatingSpace()"
-    >
-      <span aria-hidden="true">＋</span>
-    </button>
-  </div>
-
-  @if (creatingSpace()) {
-    <form class="rail-form" (submit)="submitNewSpace($event, spaceInput.value)">
-      <input
-        #spaceInput
-        type="text"
-        class="rail-input"
-        data-testid="space-create-input"
-        [attr.aria-label]="'notes.newSpaceLabel' | transloco"
-        [placeholder]="'notes.newSpacePlaceholder' | transloco"
-      />
-      <button type="submit" class="rail-submit" data-testid="space-create-submit">
-        {{ 'notes.newSpaceSubmit' | transloco }}
+    <div class="rail-head">
+      <h2 id="library-rail-title" class="rail-title">{{ 'sidebar.library' | transloco }}</h2>
+      <button
+        type="button"
+        class="rail-add"
+        data-testid="space-create-open"
+        [attr.aria-label]="'notes.newSpace' | transloco"
+        [attr.title]="'notes.newSpace' | transloco"
+        (click)="startCreatingSpace()"
+      >
+        <span aria-hidden="true">＋</span>
       </button>
-    </form>
-  }
+    </div>
 
-  <ul class="tree">
-    <li>
-      <div class="node-row">
-        <span class="node-twisty-space node-icon" aria-hidden="true">✦</span>
-        <button
-          type="button"
-          class="node-name"
-          data-testid="space-option-all"
-          [class.active]="activeSpaceId() === null"
-          [attr.aria-current]="activeSpaceId() === null ? 'true' : null"
-          (click)="chooseSpace(null)"
-        >
-          <span class="node-label">{{ 'notes.allSpaces' | transloco }}</span>
+    @if (creatingSpace()) {
+      <form class="rail-form" (submit)="submitNewSpace($event, spaceInput.value)">
+        <input
+          #spaceInput
+          type="text"
+          class="rail-input"
+          data-testid="space-create-input"
+          [attr.aria-label]="'notes.newSpaceLabel' | transloco"
+          [placeholder]="'notes.newSpacePlaceholder' | transloco"
+        />
+        <button type="submit" class="rail-submit" data-testid="space-create-submit">
+          {{ 'notes.newSpaceSubmit' | transloco }}
         </button>
-      </div>
-    </li>
+      </form>
+    }
 
-    @for (node of nodes(); track node.space.id) {
-      @let space = node.space;
-      @let open = isExpanded(space.id);
-
-      <li class="space-node">
+    <ul class="tree">
+      <li>
         <div class="node-row">
-          <button
-            type="button"
-            class="node-twisty"
-            data-testid="space-twisty"
-            [attr.data-space-id]="space.id"
-            [attr.aria-expanded]="open"
-            [attr.aria-controls]="folderListId(space.id)"
-            [attr.aria-label]="
-              (open ? 'sidebar.collapse' : 'sidebar.expand') | transloco: { name: space.name }
-            "
-            [attr.title]="(open ? 'sidebar.collapse' : 'sidebar.expand') | transloco: { name: space.name }"
-            (click)="toggleExpanded(space.id)"
-          >
-            <span aria-hidden="true">{{ open ? '▾' : '▸' }}</span>
-          </button>
+          <span class="node-twisty-space node-icon" aria-hidden="true">✦</span>
           <button
             type="button"
             class="node-name"
-            data-testid="space-option"
-            [attr.data-space-id]="space.id"
-            [class.active]="space.id === activeSpaceId() && activeFolderId() === null"
-            [attr.aria-current]="space.id === activeSpaceId() ? 'true' : null"
-            (click)="chooseSpace(space.id)"
+            data-testid="space-option-all"
+            [class.active]="activeSpaceId() === null"
+            [attr.aria-current]="activeSpaceId() === null ? 'true' : null"
+            (click)="chooseSpace(null)"
           >
-            @if (space.pinned) {
-              <span class="node-pin" aria-hidden="true">📌</span>
-              <span class="visually-hidden">{{ 'notes.pinnedSpace' | transloco }}</span>
-            }
-            <span class="node-label">{{ space.name }}</span>
-          </button>
-          <button
-            type="button"
-            class="node-menu"
-            data-testid="space-edit"
-            [attr.data-space-id]="space.id"
-            [attr.aria-expanded]="editedSpace() === space.id"
-            [attr.aria-label]="'notes.spaceOptionsLabel' | transloco: { name: space.name }"
-            [attr.title]="'notes.spaceOptionsLabel' | transloco: { name: space.name }"
-            (click)="editSpace(space.id)"
-          >
-            <span aria-hidden="true">⋯</span>
+            <span class="node-label">{{ 'notes.allSpaces' | transloco }}</span>
           </button>
         </div>
-
-        @if (editedSpace() === space.id) {
-          <app-space-editor [space]="space" [moveTargets]="moveTargets()" (finished)="closePanels()" />
-        }
-
-        @if (open) {
-          <ul class="folders" [id]="folderListId(space.id)">
-            @for (folder of node.folders; track folder.id) {
-              <li>
-                <div class="node-row">
-                  <button
-                    type="button"
-                    class="node-name node-folder"
-                    data-testid="folder-option"
-                    [attr.data-folder-id]="folder.id"
-                    [class.active]="folder.id === activeFolderId()"
-                    [attr.aria-current]="folder.id === activeFolderId() ? 'true' : null"
-                    (click)="chooseFolder(folder)"
-                  >
-                    <i
-                      class="folder-swatch"
-                      [class]="'folder-swatch is-' + folder.colour"
-                      aria-hidden="true"
-                    ></i>
-                    <span class="node-label">{{ folder.name }}</span>
-                  </button>
-                  <button
-                    type="button"
-                    class="node-menu"
-                    data-testid="folder-edit"
-                    [attr.data-folder-id]="folder.id"
-                    [attr.aria-expanded]="editedFolder() === folder.id"
-                    [attr.aria-label]="'folders.optionsLabel' | transloco: { name: folder.name }"
-                    [attr.title]="'folders.optionsLabel' | transloco: { name: folder.name }"
-                    (click)="editFolder(folder.id)"
-                  >
-                    <span aria-hidden="true">⋯</span>
-                  </button>
-                </div>
-
-                @if (editedFolder() === folder.id) {
-                  <app-folder-editor [folder]="folder" (finished)="closePanels()" />
-                }
-              </li>
-            }
-
-            <!-- Under the active space alone: a folder is created in the space one is in,
-                 and the row above is one click away from making that so. -->
-            @if (space.id === activeSpaceId()) {
-              <li>
-                @if (creatingFolder()) {
-                  <form class="rail-form" (submit)="submitNewFolder($event, folderInput.value)">
-                    <input
-                      #folderInput
-                      type="text"
-                      class="rail-input"
-                      data-testid="folder-create-input"
-                      [attr.aria-label]="'folders.newFolderLabel' | transloco"
-                      [placeholder]="'folders.newFolderPlaceholder' | transloco"
-                    />
-                    <button type="submit" class="rail-submit" data-testid="folder-create-submit">
-                      {{ 'folders.newFolderSubmit' | transloco }}
-                    </button>
-                  </form>
-                } @else {
-                  <button
-                    type="button"
-                    class="node-name node-add"
-                    data-testid="folder-create-open"
-                    (click)="startCreatingFolder()"
-                  >
-                    <span aria-hidden="true">＋</span>
-                    <span class="node-label">{{ 'folders.newFolder' | transloco }}</span>
-                  </button>
-                }
-              </li>
-            } @else if (node.folders.length === 0) {
-              <li class="node-empty">{{ 'sidebar.noFolders' | transloco }}</li>
-            }
-          </ul>
-        }
       </li>
-    }
-  </ul>
-</nav>
 
-<!-- Pointer events and not HTML5 drag & drop, which this WebView never sees. A slider
-     rather than a button: the arrow keys move it and the value is the width, which is what
-     a screen reader announces. Outside the tree, which scrolls — an edge inside it would
-     only cover the first screenful. -->
-<div
-  class="rail-edge"
-  data-testid="library-rail-edge"
-  role="slider"
-  tabindex="0"
-  aria-orientation="horizontal"
-  [attr.aria-label]="'sidebar.resize' | transloco"
-  [attr.aria-valuenow]="width()"
-  [attr.aria-valuemin]="bounds.min"
-  [attr.aria-valuemax]="bounds.max"
-  (pointerdown)="startResize($event)"
-  (pointermove)="onResizeMove($event)"
-  (pointerup)="endResize($event)"
-  (pointercancel)="endResize($event)"
-  (keydown)="onResizeKey($event)"
-></div>
+      @for (node of nodes(); track node.space.id) {
+        @let space = node.space;
+        @let open = isExpanded(space.id);
+
+        <li class="space-node">
+          <div class="node-row">
+            <button
+              type="button"
+              class="node-twisty"
+              data-testid="space-twisty"
+              [attr.data-space-id]="space.id"
+              [attr.aria-expanded]="open"
+              [attr.aria-controls]="folderListId(space.id)"
+              [attr.aria-label]="
+                (open ? 'sidebar.collapse' : 'sidebar.expand') | transloco: { name: space.name }
+              "
+              [attr.title]="(open ? 'sidebar.collapse' : 'sidebar.expand') | transloco: { name: space.name }"
+              (click)="toggleExpanded(space.id)"
+            >
+              <span aria-hidden="true">{{ open ? '▾' : '▸' }}</span>
+            </button>
+            <button
+              type="button"
+              class="node-name"
+              data-testid="space-option"
+              [attr.data-space-id]="space.id"
+              [class.active]="space.id === activeSpaceId() && activeFolderId() === null"
+              [attr.aria-current]="space.id === activeSpaceId() ? 'true' : null"
+              (click)="chooseSpace(space.id)"
+            >
+              @if (space.pinned) {
+                <span class="node-pin" aria-hidden="true">📌</span>
+                <span class="visually-hidden">{{ 'notes.pinnedSpace' | transloco }}</span>
+              }
+              <span class="node-label">{{ space.name }}</span>
+            </button>
+            <button
+              type="button"
+              class="node-menu"
+              data-testid="space-edit"
+              [attr.data-space-id]="space.id"
+              [attr.aria-expanded]="editedSpace() === space.id"
+              [attr.aria-label]="'notes.spaceOptionsLabel' | transloco: { name: space.name }"
+              [attr.title]="'notes.spaceOptionsLabel' | transloco: { name: space.name }"
+              (click)="editSpace(space.id)"
+            >
+              <span aria-hidden="true">⋯</span>
+            </button>
+          </div>
+
+          @if (editedSpace() === space.id) {
+            <app-space-editor [space]="space" [moveTargets]="moveTargets()" (finished)="closePanels()" />
+          }
+
+          @if (open) {
+            <ul class="folders" [id]="folderListId(space.id)">
+              @for (folder of node.folders; track folder.id) {
+                <li>
+                  <div class="node-row">
+                    <button
+                      type="button"
+                      class="node-name node-folder"
+                      data-testid="folder-option"
+                      [attr.data-folder-id]="folder.id"
+                      [class.active]="folder.id === activeFolderId()"
+                      [attr.aria-current]="folder.id === activeFolderId() ? 'true' : null"
+                      (click)="chooseFolder(folder)"
+                    >
+                      <i
+                        class="folder-swatch"
+                        [class]="'folder-swatch is-' + folder.colour"
+                        aria-hidden="true"
+                      ></i>
+                      <span class="node-label">{{ folder.name }}</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="node-menu"
+                      data-testid="folder-edit"
+                      [attr.data-folder-id]="folder.id"
+                      [attr.aria-expanded]="editedFolder() === folder.id"
+                      [attr.aria-label]="'folders.optionsLabel' | transloco: { name: folder.name }"
+                      [attr.title]="'folders.optionsLabel' | transloco: { name: folder.name }"
+                      (click)="editFolder(folder.id)"
+                    >
+                      <span aria-hidden="true">⋯</span>
+                    </button>
+                  </div>
+
+                  @if (editedFolder() === folder.id) {
+                    <app-folder-editor [folder]="folder" (finished)="closePanels()" />
+                  }
+                </li>
+              }
+
+              <!-- Under the active space alone: a folder is created in the space one is in,
+                 and the row above is one click away from making that so. -->
+              @if (space.id === activeSpaceId()) {
+                <li>
+                  @if (creatingFolder()) {
+                    <form class="rail-form" (submit)="submitNewFolder($event, folderInput.value)">
+                      <input
+                        #folderInput
+                        type="text"
+                        class="rail-input"
+                        data-testid="folder-create-input"
+                        [attr.aria-label]="'folders.newFolderLabel' | transloco"
+                        [placeholder]="'folders.newFolderPlaceholder' | transloco"
+                      />
+                      <button type="submit" class="rail-submit" data-testid="folder-create-submit">
+                        {{ 'folders.newFolderSubmit' | transloco }}
+                      </button>
+                    </form>
+                  } @else {
+                    <button
+                      type="button"
+                      class="node-name node-add"
+                      data-testid="folder-create-open"
+                      (click)="startCreatingFolder()"
+                    >
+                      <span aria-hidden="true">＋</span>
+                      <span class="node-label">{{ 'folders.newFolder' | transloco }}</span>
+                    </button>
+                  }
+                </li>
+              } @else if (node.folders.length === 0) {
+                <li class="node-empty">{{ 'sidebar.noFolders' | transloco }}</li>
+              }
+            </ul>
+          }
+        </li>
+      }
+    </ul>
+  </nav>
+</app-rail-frame>

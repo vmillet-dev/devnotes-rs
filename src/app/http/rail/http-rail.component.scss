@@ -1,26 +1,19 @@
 @use 'mixins' as *;
 
-// The library rail's frame: its width, its background, its line.
+// The frame is the box in the page: this element only holds it.
 :host {
-  display: flex;
-  flex: 0 0 auto;
-  min-height: 0;
-  background: var(--bg-1);
+  display: contents;
 }
 
 .rail {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: var(--space-card) 10px var(--space-canvas);
-  border-right: 1px solid var(--line-soft);
-  overflow-y: auto;
+  @include rail-body;
+  // What a level of the tree is set in by. 8px, so that a request two folders deep still
+  // shows a dozen characters of its name at the rail's floor of 160px.
+  --indent: 8px;
 }
 
 .rail-switch {
-  margin-bottom: 8px;
+  @include rail-switch;
 }
 
 .rail-head {
@@ -69,7 +62,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 2px 4px 2px calc(4px + var(--depth, 0) * 12px);
+  padding: 2px 4px 2px calc(4px + var(--depth, 0) * var(--indent));
 
   &.inline {
     flex: 1;
@@ -105,8 +98,10 @@
   }
 }
 
+// Wider than the head and the foot by what the rail's padding can spare: the rows are what
+// run out of room.
 .tree {
-  margin: 0;
+  margin: 0 -6px;
   padding: 0;
   list-style: none;
 }
@@ -124,7 +119,7 @@
     content: '';
     position: absolute;
     right: 4px;
-    left: calc(var(--depth, 0) * 12px + 4px);
+    left: calc(var(--depth, 0) * var(--indent) + 4px);
     height: 2px;
     border-radius: 1px;
     background: var(--amber-text);
@@ -147,16 +142,23 @@
 }
 
 // The indent is the row's alone: what opens under it — a confirmation — takes the rail's width.
+// Nothing is kept on a request's row for a caret it does not have, nor at rest for the menu:
+// `⋯` is drawn over the end of the row once the pointer or the keyboard is on it.
 .node-row {
   @include eases(background, border-color, color);
-  padding-left: calc(var(--depth, 0) * 12px);
+  position: relative;
+  padding-left: calc(var(--depth, 0) * var(--indent));
   display: flex;
   align-items: center;
-  gap: 2px;
+  --node-menu-opacity: 0;
+
+  &:hover,
+  &:focus-within {
+    --node-menu-opacity: 1;
+  }
 }
 
-.node-twisty,
-.node-twisty-space {
+.node-twisty {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -187,9 +189,9 @@
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   // 5px, 4px compact: a row stays above the 24px target either way.
-  padding: calc(var(--space-grid) / 4 + 2px) 8px;
+  padding: calc(var(--space-grid) / 4 + 2px) 5px;
   border-radius: 6px;
   font-size: 12.5px;
   color: var(--text-1);
@@ -226,7 +228,6 @@
 // The method in its colour, as the mockup draws it: a word, not a badge with a fill.
 .method {
   flex-shrink: 0;
-  min-width: 30px;
   font-family: var(--font-mono), monospace;
   font-size: 10px;
   font-weight: 700;

@@ -3,8 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpCollectionsStore } from '@core/services/http/http-collections.store';
 import { HttpHistoryStore } from '@core/services/http/http-history.store';
 import { HttpTabsStore } from '@core/services/http/http-tabs.store';
+import { RAIL_WIDTH } from '@core/services/settings/app-settings.model';
+import { SettingsStore } from '@core/services/settings/settings.store';
 import { FakeHttpRepository } from '@testing/fake-http-repository';
-import { sampleTree } from '@testing/http-tree.fixture';
+import { collection, request, sampleTree } from '@testing/http-tree.fixture';
 import { provideAppTesting } from '@testing/testing.providers';
 import { HttpRailComponent } from './http-rail.component';
 
@@ -59,6 +61,42 @@ describe('HttpRailComponent', () => {
       'WS',
     ]);
     expect(row('Old').style.getPropertyValue('--depth')).toBe('3');
+  });
+
+  /**
+   * It used to take at least 240px whatever was stored, so the rail jumped on the way in from
+   * the notes and back on the way out. Now it is the one width, and it can be dragged here too.
+   */
+  it("is as wide as the other areas' rails, down to their floor, and is widened from its own edge", async () => {
+    const settings = TestBed.inject(SettingsStore);
+    const frame = () => el('app-rail-frame');
+    expect(settings.libraryRailWidth()).toBe(RAIL_WIDTH.min);
+    expect(frame().style.width).toBe(`${RAIL_WIDTH.min}px`);
+
+    el('[data-testid="http-rail-edge"]').dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }),
+    );
+    await fixture.whenStable();
+
+    expect(settings.libraryRailWidth()).toBe(RAIL_WIDTH.min + 16);
+    expect(frame().style.width).toBe(`${RAIL_WIDTH.min + 16}px`);
+  });
+
+  /** What lets a name show at the floor: no room held for a caret a request has not, a short method. */
+  it('keeps a request row to its method and its name, whole in its title', async () => {
+    http.tree$ = {
+      collections: [collection('API', [request('Supprimer la facture 2026', 'API', null, 'DELETE')])],
+    };
+    await TestBed.inject(HttpCollectionsStore).load();
+    await fixture.whenStable();
+    const id = 'Supprimer la facture 2026';
+
+    expect(row(id).querySelector('.node-twisty-space')).toBeNull();
+    expect(row(id).querySelector('[data-testid="http-node-twisty"]')).toBeNull();
+    const badge = row(id).querySelector<HTMLElement>('[data-testid="http-node-badge"]')!;
+    expect(badge.textContent?.trim()).toBe('DEL');
+    expect(badge.dataset['method']).toBe('DELETE');
+    expect(name(id).getAttribute('title')).toBe(id);
   });
 
   it('folds a folder from its twisty, and opens a request from its row', async () => {

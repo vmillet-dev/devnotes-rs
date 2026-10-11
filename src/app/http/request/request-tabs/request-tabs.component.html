@@ -24,7 +24,7 @@
         (click)="tabs.activate(tab.key)"
         (auxclick)="onAuxClick($event, tab)"
       >
-        <span class="method" [attr.data-method]="badge(tab)">{{ badge(tab) }}</span>
+        <span class="method" [attr.data-method]="badge(tab)">{{ short(badge(tab)) }}</span>
         <span class="tab-name">{{ tab.draft.name }}</span>
         @if (sending.isSending(tab.key)) {
           <app-spinner class="tab-sending" data-testid="http-tab-sending" />

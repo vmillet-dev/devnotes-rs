@@ -81,6 +81,26 @@
   text-wrap: balance;
 }
 
+// What `app-rail-frame` holds, in each of the three areas: the same box, so that going from
+// one to another moves nothing. Its line is here and not on the frame: the rail is measured
+// by this element, and has to be as wide as the frame is told.
+@mixin rail-body($gap: 6px) {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $gap;
+  padding: var(--space-card) 10px var(--space-canvas);
+  border-right: 1px solid var(--line-soft);
+  overflow-y: auto;
+}
+
+// The switch between areas at the head of a rail: at the same place in the three.
+@mixin rail-switch {
+  flex-shrink: 0;
+  margin-bottom: 10px;
+}
+
 // Where the keyboard is. The declaration was written out in fifteen stylesheets and
 // missing from four controls, the tag rail among them — the keyboard walked it invisibly.
 //
