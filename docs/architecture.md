@@ -356,12 +356,13 @@ ticking, extending a range or opening depends on the visible list, which is the 
 Three menus (space switcher, card actions, about) share their interaction rules through
 directives in `shared/directives/`, applied with `hostDirectives` so no wrapper element is needed:
 
-| Directive              | Selector                                  | Owns                                                                                |
-| ---------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------- |
-| `MenuTriggerDirective` | `[appMenuTrigger]`, `exportAs: 'appMenu'` | open state, outside click (while open), Escape, focus returned to `[appMenuAnchor]` |
-| `MenuPanelDirective`   | `[appMenuPanel]`                          | `role="menu"`, focus on the first entry, arrows and Home/End over `[appMenuItem]`   |
+| Directive                | Selector                                  | Owns                                                                                      |
+| ------------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `MenuTriggerDirective`   | `[appMenuTrigger]`, `exportAs: 'appMenu'` | open state, outside click (while open), Escape, focus returned to `[appMenuAnchor]`       |
+| `MenuPanelDirective`     | `[appMenuPanel]`                          | `role="menu"`, focus on the first entry, arrows and Home/End over `[appMenuItem]`         |
+| `FloatingPanelDirective` | `[appFloatingPanel]`                      | the panel in the top layer, placed from its anchor, above it when the room under is short |
 
-Three details are load-bearing:
+Four details are load-bearing:
 
 - `MenuPanelDirective` walks `[appMenuItem]` rather than every button, because a menu may
   carry a secondary action deliberately outside the arrow cycle — the `⋯` that opens a
@@ -372,6 +373,13 @@ Three details are load-bearing:
 - `MenuTriggerDirective` **closes on Escape by default**, and a host that needs more hands it
   a handler with `handleEscape()` — the switchers first collapse their create/edit panel and
   only close on the second press. One handler, so nothing depends on listener order.
+- ⚠️ A choice menu's panel is **not drawn under its trigger in the flow**: the request editor
+  scrolls, and a panel `position: absolute` inside it was cut at its bottom edge, leaving one
+  entry of five in view. `FloatingPanelDirective` makes it a `popover="manual"` — the top
+  layer, which no `overflow` and no transformed ancestor reaches — and places it from the
+  anchor's rectangle. It shows the popover in the `write` phase of `afterNextRender`, ahead of
+  `MenuPanelDirective`'s focus: a panel still `display: none` refuses it. A scroll of what holds
+  the anchor, or a resize, closes the menu.
 
 Putting the click listener in a directive also removes the `click-events-have-key-events`
 suppressions the three modal templates used to carry: the keyboard equivalent exists, it is

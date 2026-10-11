@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import type { FolderColour } from '@core/model/folder.model';
+import { FloatingPanelDirective } from '@shared/directives/floating-panel.directive';
 import { MenuPanelDirective } from '@shared/directives/menu-panel.directive';
 import { MenuTriggerDirective } from '@shared/directives/menu-trigger.directive';
 
@@ -21,7 +22,7 @@ export interface ChoiceOption {
  */
 @Component({
   selector: 'app-choice-menu',
-  imports: [MenuPanelDirective, TranslocoPipe],
+  imports: [FloatingPanelDirective, MenuPanelDirective, TranslocoPipe],
   hostDirectives: [MenuTriggerDirective],
   // Used inside dialogs, whose own listener is the next one up for Escape: swallowed while the
   // panel is open, so one Escape does not close both.
