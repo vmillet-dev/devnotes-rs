@@ -414,8 +414,7 @@ pub async fn send_http_request<R: Runtime>(
         };
         let mut outgoing = send::compose(kind, method, &document, &inherited)?;
         if outgoing.transport.use_cookies {
-            let jar = cookies::store::jar(&mut connection, Utc::now())?;
-            outgoing.add_cookies(cookies::header_for(&jar, &outgoing.url, Utc::now()));
+            outgoing.jar = Some(cookies::store::jar(&mut connection, Utc::now())?);
         }
         Ok(outgoing)
     })
@@ -423,8 +422,7 @@ pub async fn send_http_request<R: Runtime>(
 
     let exchange = send::exchange(&outgoing);
     let secrets = outgoing.secrets.clone();
-    let keeps_cookies = outgoing.transport.use_cookies;
-    let answer = app.state::<send::Sending>().run(&id, outgoing).await;
+    let (answer, cookies_set) = app.state::<send::Sending>().run(&id, outgoing).await;
     let outcome = match &answer {
         Ok(response) => Ok(response.clone()),
         Err(send::SendError::Cancelled) => return Err(send::SendError::Cancelled.into()),
@@ -440,7 +438,7 @@ pub async fn send_http_request<R: Runtime>(
         secrets,
         outcome,
     };
-    keep(app, method, sent, keeps_cookies).await;
+    keep(app, method, sent, cookies_set).await;
 
     Ok(answer?)
 }
@@ -450,7 +448,7 @@ async fn keep<R: Runtime>(
     app: AppHandle<R>,
     method: model::HttpMethod,
     sent: history::Sent,
-    keeps_cookies: bool,
+    cookies_set: Vec<cookies::Change>,
 ) {
     let kept = blocking(app, move |_, db| {
         let now = Utc::now();
@@ -464,16 +462,7 @@ async fn keep<R: Runtime>(
             &record,
             now,
         )?;
-        if let Ok(response) = &sent.outcome
-            && keeps_cookies
-            && let Ok(url) = url::Url::parse(&response.url)
-        {
-            cookies::store::apply(
-                &mut connection,
-                &cookies::received(&response.headers, &url, now),
-                now,
-            )?;
-        }
+        cookies::store::apply(&mut connection, &cookies_set, now)?;
         Ok(())
     })
     .await;

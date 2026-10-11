@@ -2959,7 +2959,9 @@
         "path": "Path",
         "expires": "Expires",
         "flags": "Attributes",
-        "session": "end of session"
+        "session": "end of session",
+        "setBy": "Set by",
+        "byAnswer": "the answer"
       },
       "timeline": {
         "redirects": "Redirects",

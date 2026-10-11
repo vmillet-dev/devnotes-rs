@@ -1148,5 +1148,109 @@ describe('HTTP collections', () => {
         server.close();
       }
     });
+
+    /**
+     * `/cookies/set?session=abc123` answers a 302 that sets the cookie and leads to a page
+     * that echoes what it received: it received none, « Cookies » read « La réponse ne pose
+     * aucun cookie », and the jar stayed empty. The shape of nearly every login.
+     */
+    it('sends a cookie set on a redirect to the page it leads to, lists and keeps it, unless cookies are off', async () => {
+      const server = createServer((request, response) => {
+        if (request.url?.startsWith('/cookies/set')) {
+          response.writeHead(302, { Location: '/cookies', 'Set-Cookie': 'session=abc123; Path=/' });
+          response.end();
+          return;
+        }
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify({ cookies: request.headers.cookie ?? null }));
+      });
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      const { port } = server.address() as AddressInfo;
+      try {
+        await bridge.clearHttpCookies();
+        const api = await bridge.createHttpCollection('Connexion');
+        const created = await bridge.createHttpRequest({
+          ...draft(api.id, null, 'Se connecter'),
+          document: { url: `http://127.0.0.1:${port}/cookies/set?session=abc123`, description: '' },
+        });
+        await press('1', ['Control']);
+        await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+        await press('3', ['Control']);
+        await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+        if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
+        await $(`${testid('http-node')}[data-id="${created.id}"] ${testid('http-node-name')}`).click();
+        await $(testid('http-response-idle')).waitForDisplayed({ timeout: 10_000 });
+        /** Sends, and answers what the page the redirect leads to says it received. */
+        const echoed = async () => {
+          await $(testid('http-send')).click();
+          await $(testid('http-response-sending')).waitForExist({ reverse: true, timeout: 10_000 });
+          await $(`${testid('http-response-section')}[data-section="body"]`).click();
+          await $(`${testid('segmented-http-response-view')} [data-segment-id="raw"]`).click();
+          return eventually(
+            () => $(testid('http-response-body')).getText(),
+            (body) => body.startsWith('{"cookies":'),
+            'the echo of the page the redirect leads to',
+          );
+        };
+        const jarRows = () =>
+          readEach(
+            `${testid('http-cookies-domain')}[data-domain="127.0.0.1"] ${testid('http-cookie')}`,
+            'text',
+          );
+
+        expect(await echoed()).toBe('{"cookies":"session=abc123"}');
+
+        // Set by the redirect, not by the answer: the tab says which, the timeline shows it there.
+        await $(`${testid('http-response-section')}[data-section="cookies"]`).click();
+        expect(
+          await eventually(
+            () =>
+              browser.execute(
+                (row: string) =>
+                  [...document.querySelectorAll<HTMLElement>(row)].map((cookie) => [
+                    cookie.querySelector('.key')?.textContent?.trim(),
+                    cookie.dataset['setBy'],
+                  ]),
+                testid('http-response-cookie'),
+              ),
+            (rows) => rows.length > 0,
+            'the cookie of the redirect, listed',
+          ),
+        ).toEqual([['session', 'redirect']]);
+        await $(`${testid('http-response-section')}[data-section="timeline"]`).click();
+        expect(await readEach(testid('http-response-redirect-cookie'), 'text')).toEqual([
+          'Set-Cookie: session=abc123',
+        ]);
+
+        await $(testid('http-cookies-open')).click();
+        await eventually(
+          jarRows,
+          (rows) => rows.length === 1 && rows[0]!.includes('session'),
+          'the cookie in the jar',
+        );
+        await $(testid('http-cookies-close')).click();
+        await $(testid('http-cookies-dialog')).waitForExist({ reverse: true, timeout: 10_000 });
+
+        // « Envoyer et garder les cookies : Non »: none at any hop, none kept.
+        await bridge.clearHttpCookies();
+        await $(`${testid('http-section')}[data-section="settings"]`).click();
+        await $(testid('http-transport-useCookies')).click();
+        await $(`${testid('choice-option')}[data-option-id="off"]`).click();
+        expect(await echoed()).toBe('{"cookies":null}');
+        await $(testid('http-cookies-open')).click();
+        await $(testid('http-cookies-empty')).waitForDisplayed({ timeout: 10_000 });
+        await $(testid('http-cookies-close')).click();
+        await $(testid('http-cookies-dialog')).waitForExist({ reverse: true, timeout: 10_000 });
+
+        const tab = `${testid('http-tab')}[data-key="${created.id}"]`;
+        await $(`${tab} ${testid('http-tab-close')}`).click();
+        await $(testid('http-close-discard')).click();
+        await $(tab).waitForExist({ reverse: true, timeout: 10_000 });
+        await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+      } finally {
+        await bridge.clearHttpCookies();
+        server.close();
+      }
+    });
   });
 });

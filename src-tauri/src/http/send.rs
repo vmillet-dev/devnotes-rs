@@ -8,12 +8,14 @@ use std::sync::{Arc, Mutex, Once};
 use std::time::{Duration, Instant};
 
 use base64::Engine;
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use tokio::task::AbortHandle;
 use url::Url;
 use uuid::Uuid;
 
+use super::cookies::{self, Change, JarCookie};
 use super::graphql::{self, GraphqlDocument, GraphqlResult};
 use super::model::{
     HeaderFault, HttpMethod, KeyPlace, KeyValue, RequestAuth, RequestBody, RequestDocument,
@@ -62,7 +64,14 @@ pub struct SendRequest {
 #[serde(rename_all = "camelCase")]
 pub struct Redirect {
     pub status: u16,
+    /// Where it sends to.
     pub url: String,
+    /// The URL that answered with it.
+    #[serde(default)]
+    pub from: String,
+    /// What it set: a login's cookie is set here, not by the page it leads to.
+    #[serde(default)]
+    pub cookies: Vec<Cookie>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -218,6 +227,9 @@ pub struct Outgoing {
     /// Its timeout, redirects and TLS: the defaults until the command sets what is inherited.
     pub transport: Transport,
     pub limits: Limits,
+    /// The jar as the command read it under the lock, for the hops to read and fill. `None`
+    /// sends no cookie and keeps none, at any hop.
+    pub jar: Option<Vec<JarCookie>>,
 }
 
 impl Outgoing {
@@ -232,18 +244,6 @@ impl Outgoing {
         Limit {
             value: self.transport.max_redirects,
             set_by: self.limits.redirects.clone(),
-        }
-    }
-
-    /// The jar's `Cookie`, unless one is typed: what is typed wins, as for `Authorization`.
-    pub fn add_cookies(&mut self, header: Option<String>) {
-        if let Some(header) = header
-            && !self
-                .headers
-                .iter()
-                .any(|(key, _)| key.eq_ignore_ascii_case("cookie"))
-        {
-            self.headers.push(("Cookie".to_string(), header));
         }
     }
 }
@@ -567,6 +567,7 @@ pub fn compose(
         body,
         secrets,
         graphql: graphql.is_some(),
+        jar: None,
         transport: inherited.transport.over(&document.transport),
         limits: Limits {
             timeout: set_by(
@@ -672,12 +673,9 @@ fn is_text(content_type: Option<&str>, bytes: &[u8]) -> bool {
 }
 
 /// What failed, read from the error and the chain under it: reqwest names neither DNS nor TLS.
-fn failure(error: &reqwest::Error, timeout: &Limit, redirects: &Limit) -> SendError {
+fn failure(error: &reqwest::Error, timeout: &Limit) -> SendError {
     if error.is_timeout() {
         return SendError::Timeout(timeout.clone());
-    }
-    if error.is_redirect() {
-        return SendError::TooManyRedirects(redirects.clone());
     }
     if error.is_builder() {
         return SendError::InvalidUrl(error.to_string());
@@ -776,22 +774,126 @@ pub fn exchange(outgoing: &Outgoing) -> Exchange {
     }
 }
 
-fn request(client: &reqwest::Client, outgoing: Outgoing) -> reqwest::RequestBuilder {
-    let mut request = client.request(wire_method(outgoing.method), outgoing.url);
-    for (key, value) in &outgoing.headers {
+/// One request of a send: the first as composed, then one a redirect followed.
+struct Hop {
+    method: reqwest::Method,
+    url: Url,
+    /// Without the jar's `Cookie`, read again for each hop's own URL.
+    headers: Vec<(String, String)>,
+    body: OutgoingBody,
+}
+
+/// What a redirect to another host does not carry over, as a browser drops them.
+const NOT_ACROSS_HOSTS: [&str; 5] = [
+    "authorization",
+    "cookie",
+    "cookie2",
+    "proxy-authorization",
+    "www-authenticate",
+];
+/// What describes a body a 301, 302 or 303 leaves behind.
+const OF_THE_BODY: [&str; 4] = [
+    "content-type",
+    "content-length",
+    "content-encoding",
+    "transfer-encoding",
+];
+
+fn without(headers: &mut Vec<(String, String)>, names: &[&str]) {
+    headers.retain(|(name, _)| !names.iter().any(|gone| name.eq_ignore_ascii_case(gone)));
+}
+
+/// The page a redirect comes from, as the client said it when it followed them itself: never
+/// from `https` to `http`, and without its credentials or its fragment.
+fn referer(from: &Url, to: &Url) -> Option<String> {
+    if from.scheme() == "https" && to.scheme() == "http" {
+        return None;
+    }
+    let mut referer = from.clone();
+    let _ = referer.set_username("");
+    let _ = referer.set_password(None);
+    referer.set_fragment(None);
+    Some(referer.to_string())
+}
+
+impl Hop {
+    /// The request a redirect asks for, or `None` when the answer is not one to follow. The
+    /// client's own rules, kept: a 301, 302 or 303 becomes a `GET` without its body, a 307 or
+    /// 308 keeps both; another host gets neither the `Authorization` nor a typed `Cookie`; a
+    /// `Location` is read against the URL that answered.
+    fn after(&self, status: u16, headers: &[KeyValue]) -> Option<Self> {
+        let keeps_body = match status {
+            301..=303 => false,
+            307 | 308 => true,
+            _ => return None,
+        };
+        let location = headers
+            .iter()
+            .find(|header| header.key.eq_ignore_ascii_case("location"))?;
+        let url = self.url.join(location.value.trim()).ok()?;
+        if !matches!(url.scheme(), "http" | "https") {
+            return None;
+        }
+        let mut next = Self {
+            method: self.method.clone(),
+            url,
+            headers: self.headers.clone(),
+            body: self.body.clone(),
+        };
+        if !keeps_body {
+            next.body = OutgoingBody::None;
+            without(&mut next.headers, &OF_THE_BODY);
+            if !matches!(next.method, reqwest::Method::GET | reqwest::Method::HEAD) {
+                next.method = reqwest::Method::GET;
+            }
+        }
+        if next.url.host_str() != self.url.host_str()
+            || next.url.port_or_known_default() != self.url.port_or_known_default()
+        {
+            without(&mut next.headers, &NOT_ACROSS_HOSTS);
+        }
+        without(&mut next.headers, &["referer"]);
+        if let Some(referer) = referer(&self.url, &next.url) {
+            next.headers.push(("Referer".to_string(), referer));
+        }
+        Some(next)
+    }
+
+    /// The jar's `Cookie` for this hop's URL, unless one is typed: what is typed wins, as for
+    /// `Authorization`.
+    fn cookie(&self, jar: Option<&[JarCookie]>) -> Option<String> {
+        if self
+            .headers
+            .iter()
+            .any(|(name, _)| name.eq_ignore_ascii_case("cookie"))
+        {
+            return None;
+        }
+        cookies::header_for(jar?, &self.url, Utc::now())
+    }
+}
+
+fn request(client: &reqwest::Client, hop: &Hop, cookie: Option<&str>) -> reqwest::RequestBuilder {
+    let mut request = client.request(hop.method.clone(), hop.url.clone());
+    for (key, value) in &hop.headers {
         request = request.header(key, value);
     }
-    match outgoing.body {
+    if let Some(cookie) = cookie {
+        request = request.header("Cookie", cookie);
+    }
+    // Copied: a 307 sends the same body again.
+    match &hop.body {
         OutgoingBody::None => request,
-        OutgoingBody::Bytes(bytes) => request.body(bytes),
+        OutgoingBody::Bytes(bytes) => request.body(bytes.clone()),
         OutgoingBody::Multipart(parts) => {
             let mut form = reqwest::multipart::Form::new();
             for (key, part) in parts {
                 form = match part {
-                    Part::Text(text) => form.text(key, text),
-                    Part::File { name, bytes } => {
-                        form.part(key, reqwest::multipart::Part::bytes(bytes).file_name(name))
-                    }
+                    Part::Text(text) => form.text(key.clone(), text.clone()),
+                    Part::File { name, bytes } => form.part(
+                        key.clone(),
+                        reqwest::multipart::Part::bytes(bytes.clone()).file_name(name.clone()),
+                    ),
                 };
             }
             request.multipart(form)
@@ -799,53 +901,17 @@ fn request(client: &reqwest::Client, outgoing: Outgoing) -> reqwest::RequestBuil
     }
 }
 
-/// A client per send: its timeout, redirects and TLS are the request's, and each redirect
-/// followed is written down in `seen`.
-fn client(
-    transport: Transport,
-    seen: Arc<Mutex<Vec<Redirect>>>,
-) -> Result<reqwest::Client, SendError> {
-    let policy = if transport.follow_redirects {
-        let most = usize::try_from(transport.max_redirects).unwrap_or(usize::MAX);
-        reqwest::redirect::Policy::custom(move |attempt| {
-            if attempt.previous().len() > most {
-                return attempt.error("too many redirects");
-            }
-            if let Ok(mut seen) = seen.lock() {
-                seen.push(Redirect {
-                    status: attempt.status().as_u16(),
-                    url: attempt.url().to_string(),
-                });
-            }
-            attempt.follow()
-        })
-    } else {
-        reqwest::redirect::Policy::none()
-    };
+/// A client per send, for its TLS. It follows no redirect: `send` does, a hop at a time.
+fn client(transport: Transport) -> Result<reqwest::Client, SendError> {
     reqwest::Client::builder()
-        .timeout(Duration::from_millis(u64::from(transport.timeout_ms)))
-        .redirect(policy)
+        .redirect(reqwest::redirect::Policy::none())
         .tls_danger_accept_invalid_certs(!transport.verify_tls)
         .build()
         .map_err(|error| SendError::Network(error.to_string()))
 }
 
-async fn send(outgoing: Outgoing) -> Result<Received, SendError> {
-    install_crypto();
-    let redirects: Arc<Mutex<Vec<Redirect>>> = Arc::default();
-    let client = client(outgoing.transport, Arc::clone(&redirects))?;
-
-    let exchange = exchange(&outgoing);
-    let is_graphql = outgoing.graphql;
-    let (timeout, most) = (outgoing.timeout(), outgoing.redirects());
-    let failure = |error: reqwest::Error| failure(&error, &timeout, &most);
-    let request = request(&client, outgoing);
-
-    let started = Instant::now();
-    let mut response = request.send().await.map_err(failure)?;
-    let status = response.status();
-    let url = response.url().to_string();
-    let headers: Vec<KeyValue> = response
+fn headers_of(response: &reqwest::Response) -> Vec<KeyValue> {
+    response
         .headers()
         .iter()
         .map(|(key, value)| KeyValue {
@@ -853,7 +919,133 @@ async fn send(outgoing: Outgoing) -> Result<Received, SendError> {
             value: String::from_utf8_lossy(value.as_bytes()).into_owned(),
             ..KeyValue::default()
         })
-        .collect();
+        .collect()
+}
+
+/// Where a chain of redirects ended, and what was met on the way.
+struct Arrival {
+    response: reqwest::Response,
+    headers: Vec<KeyValue>,
+    redirects: Vec<Redirect>,
+    /// What the redirects set, each with the hop that set it.
+    cookies: Vec<Cookie>,
+}
+
+/// What a chain is followed under: the request's own limits, and the jar its hops share.
+struct Chain {
+    client: reqwest::Client,
+    follows: bool,
+    timeout: Limit,
+    most: Limit,
+    deadline: Instant,
+    jar: Option<Vec<JarCookie>>,
+    changes: Arc<Mutex<Vec<Change>>>,
+}
+
+impl Chain {
+    /// ⚠️ The redirects are followed here, one request a hop, and not by the client: it has no
+    /// jar, so a cookie set on a 302 — nearly every login — was neither kept nor sent to the
+    /// page it leads to. Each hop's `Set-Cookie` goes through the jar's rules as it arrives,
+    /// and each hop is sent the line the jar gives for its own URL. The jar is a copy:
+    /// `changes` is what the command merges under the lock once the send is over, however it
+    /// ended. The delay is the whole chain's, and a cancel aborts it between two hops as
+    /// anywhere else.
+    async fn follow(mut self, mut hop: Hop) -> Result<Arrival, SendError> {
+        let mut redirects: Vec<Redirect> = Vec::new();
+        let mut cookies: Vec<Cookie> = Vec::new();
+        loop {
+            let left = self.deadline.saturating_duration_since(Instant::now());
+            if left.is_zero() {
+                return Err(SendError::Timeout(self.timeout));
+            }
+            let cookie = hop.cookie(self.jar.as_deref());
+            let response = request(&self.client, &hop, cookie.as_deref())
+                .timeout(left)
+                .send()
+                .await
+                .map_err(|error| failure(&error, &self.timeout))?;
+            let headers = headers_of(&response);
+            if let Some(jar) = self.jar.as_mut() {
+                let set = cookies::received(&headers, &hop.url, Utc::now());
+                cookies::apply(jar, &set);
+                if let Ok(mut changes) = self.changes.lock() {
+                    changes.extend(set);
+                }
+            }
+            let status = response.status().as_u16();
+            let Some(next) = self.follows.then(|| hop.after(status, &headers)).flatten() else {
+                return Ok(Arrival {
+                    response,
+                    headers,
+                    redirects,
+                    cookies,
+                });
+            };
+            if redirects.len() >= usize::try_from(self.most.value).unwrap_or(usize::MAX) {
+                return Err(SendError::TooManyRedirects(self.most));
+            }
+            let set: Vec<Cookie> = response::cookies(&headers)
+                .into_iter()
+                .map(|cookie| Cookie {
+                    from: Some(hop.url.to_string()),
+                    ..cookie
+                })
+                .collect();
+            redirects.push(Redirect {
+                status,
+                url: next.url.to_string(),
+                from: hop.url.to_string(),
+                cookies: set.clone(),
+            });
+            cookies.extend(set);
+            hop = next;
+        }
+    }
+}
+
+async fn send(
+    mut outgoing: Outgoing,
+    changes: Arc<Mutex<Vec<Change>>>,
+) -> Result<Received, SendError> {
+    install_crypto();
+    let jar = outgoing.jar.take();
+    let mut exchange = exchange(&outgoing);
+    let is_graphql = outgoing.graphql;
+    let timeout = outgoing.timeout();
+    let started = Instant::now();
+    let chain = Chain {
+        client: client(outgoing.transport)?,
+        follows: outgoing.transport.follow_redirects,
+        most: outgoing.redirects(),
+        deadline: started + Duration::from_millis(u64::from(timeout.value)),
+        timeout: timeout.clone(),
+        jar,
+        changes,
+    };
+    let hop = Hop {
+        method: wire_method(outgoing.method),
+        url: outgoing.url,
+        headers: outgoing.headers,
+        body: outgoing.body,
+    };
+    // The request as it left: with the line its first hop carries.
+    if let Some(line) = hop.cookie(chain.jar.as_deref()) {
+        exchange.headers.push(KeyValue {
+            key: "Cookie".to_string(),
+            value: line,
+            ..KeyValue::default()
+        });
+    }
+
+    let Arrival {
+        mut response,
+        headers,
+        redirects,
+        cookies: set_on_the_way,
+    } = chain.follow(hop).await?;
+    let failure = |error: reqwest::Error| failure(&error, &timeout);
+    let status = response.status();
+    let url = response.url().to_string();
     let content_type = response
         .headers()
         .get(reqwest::header::CONTENT_TYPE)
@@ -896,16 +1088,16 @@ async fn send(outgoing: Outgoing) -> Result<Received, SendError> {
             millis,
             size: u32::try_from(bytes.len()).unwrap_or(u32::MAX),
             url,
-            cookies: response::cookies(&headers),
+            cookies: set_on_the_way
+                .into_iter()
+                .chain(response::cookies(&headers))
+                .collect(),
             headers,
             cut,
             body: shown,
             binary,
             incomplete,
-            redirects: redirects
-                .lock()
-                .map(|seen| seen.clone())
-                .unwrap_or_default(),
+            redirects,
             language,
             pretty,
             exchange,
@@ -929,9 +1121,16 @@ pub struct Sending {
 }
 
 impl Sending {
-    /// A task of its own, so cancelling aborts it wherever it waits.
-    pub async fn run(&self, id: &str, outgoing: Outgoing) -> Result<SentResponse, SendError> {
-        let task = tauri::async_runtime::spawn(send(outgoing));
+    /// A task of its own, so cancelling aborts it wherever it waits. Beside the answer, what
+    /// the hops did to the jar: kept even when the chain ended on a failure, as a browser keeps
+    /// the cookie of a login whose landing page did not load.
+    pub async fn run(
+        &self,
+        id: &str,
+        outgoing: Outgoing,
+    ) -> (Result<SentResponse, SendError>, Vec<Change>) {
+        let changes: Arc<Mutex<Vec<Change>>> = Arc::default();
+        let task = tauri::async_runtime::spawn(send(outgoing, Arc::clone(&changes)));
         let number = self.started.fetch_add(1, Ordering::Relaxed);
         if let Ok(mut running) = self.running.lock()
             && let Some((_, previous)) =
@@ -947,11 +1146,20 @@ impl Sending {
         {
             running.remove(id);
         }
-        let received = answer.map_err(|_| SendError::Cancelled)??;
-        if let Ok(mut bodies) = self.bodies.lock() {
-            bodies.insert(id.to_string(), Arc::new(received.kept));
-        }
-        Ok(received.response)
+        let answer = answer
+            .map_err(|_| SendError::Cancelled)
+            .flatten()
+            .map(|received| {
+                if let Ok(mut bodies) = self.bodies.lock() {
+                    bodies.insert(id.to_string(), Arc::new(received.kept));
+                }
+                received.response
+            });
+        let changes = changes
+            .lock()
+            .map(|mut set| std::mem::take(&mut *set))
+            .unwrap_or_default();
+        (answer, changes)
     }
 
     /// `false` when nothing was under way under that id.
@@ -1243,6 +1451,145 @@ mod tests {
                 ..
             })
         ));
+    }
+
+    fn hop(method: reqwest::Method, url: &str, headers: &[(&str, &str)]) -> Hop {
+        Hop {
+            method,
+            url: Url::parse(url).unwrap(),
+            headers: headers
+                .iter()
+                .map(|(name, value)| ((*name).to_string(), (*value).to_string()))
+                .collect(),
+            body: OutgoingBody::Bytes(b"{}".to_vec()),
+        }
+    }
+
+    fn to(location: &str) -> Vec<KeyValue> {
+        vec![row("location", location)]
+    }
+
+    /// What the client did when it followed the redirects itself, now that a hop is ours.
+    #[test]
+    fn a_redirect_is_followed_by_its_status_its_location_read_against_what_answered() {
+        let posted = hop(
+            reqwest::Method::POST,
+            "https://api.exemple.fr/v1/login?next=1#top",
+            &[("Content-Type", "application/json"), ("X-Trace", "1")],
+        );
+
+        for status in [301, 302, 303] {
+            let next = posted.after(status, &to("../me")).unwrap();
+            assert_eq!(next.url.as_str(), "https://api.exemple.fr/me");
+            assert_eq!(next.method, reqwest::Method::GET);
+            assert_eq!(next.body, OutgoingBody::None);
+            assert_eq!(
+                next.headers,
+                vec![
+                    ("X-Trace".to_string(), "1".to_string()),
+                    (
+                        "Referer".to_string(),
+                        "https://api.exemple.fr/v1/login?next=1".to_string()
+                    ),
+                ]
+            );
+        }
+        for status in [307, 308] {
+            let next = posted.after(status, &to("/v2/login")).unwrap();
+            assert_eq!(next.method, reqwest::Method::POST);
+            assert_eq!(next.body, posted.body);
+            assert!(next.headers.iter().any(|(name, _)| name == "Content-Type"));
+        }
+        // A `HEAD` stays one; what is no redirect, or leads nowhere a request goes, is the answer.
+        let head = hop(reqwest::Method::HEAD, "https://exemple.fr/", &[]);
+        assert_eq!(
+            head.after(302, &to("/a")).unwrap().method,
+            reqwest::Method::HEAD
+        );
+        for status in [200, 300, 304, 305, 404] {
+            assert!(posted.after(status, &to("/a")).is_none(), "{status}");
+        }
+        assert!(posted.after(302, &[]).is_none());
+        assert!(posted.after(302, &to("ftp://exemple.fr/a")).is_none());
+        assert!(posted.after(302, &to("http://")).is_none());
+    }
+
+    #[test]
+    fn another_host_or_port_gets_no_secret_and_a_plain_page_no_referer_from_a_secure_one() {
+        let secret = hop(
+            reqwest::Method::GET,
+            "https://ada:pw@api.exemple.fr/login",
+            &[
+                ("authorization", "Bearer t"),
+                ("Cookie", "typed=1"),
+                ("Proxy-Authorization", "Basic x"),
+                ("Accept", "*/*"),
+                ("Referer", "https://ailleurs.fr/"),
+            ],
+        );
+        let names = |next: &Hop| -> Vec<String> {
+            next.headers.iter().map(|(name, _)| name.clone()).collect()
+        };
+
+        let same = secret.after(302, &to("/me")).unwrap();
+        assert_eq!(
+            names(&same),
+            [
+                "authorization",
+                "Cookie",
+                "Proxy-Authorization",
+                "Accept",
+                "Referer"
+            ]
+        );
+        // Its credentials are not in what it says it comes from.
+        assert_eq!(
+            same.headers.last().map(|(_, value)| value.as_str()),
+            Some("https://api.exemple.fr/login")
+        );
+
+        for elsewhere in [
+            "https://autre.exemple.fr/me",
+            "https://api.exemple.fr:8443/me",
+        ] {
+            assert_eq!(
+                names(&secret.after(302, &to(elsewhere)).unwrap()),
+                ["Accept", "Referer"],
+                "{elsewhere}"
+            );
+        }
+        assert_eq!(
+            names(&secret.after(302, &to("http://api.exemple.fr/me")).unwrap()),
+            ["Accept"]
+        );
+    }
+
+    #[test]
+    fn a_hop_carries_the_jar_s_line_for_its_own_url_unless_a_cookie_is_typed() {
+        let jar = vec![JarCookie {
+            name: "session".to_string(),
+            value: "abc".to_string(),
+            domain: "api.exemple.fr".to_string(),
+            host_only: true,
+            path: "/".to_string(),
+            expires: None,
+            secure: false,
+            http_only: false,
+            same_site: None,
+        }];
+        let get = |url: &str, headers: &[(&str, &str)]| hop(reqwest::Method::GET, url, headers);
+
+        assert_eq!(
+            get("https://api.exemple.fr/me", &[]).cookie(Some(&jar)),
+            Some("session=abc".to_string())
+        );
+        assert_eq!(get("https://autre.fr/", &[]).cookie(Some(&jar)), None);
+        assert_eq!(
+            get("https://api.exemple.fr/me", &[("cookie", "typed=1")]).cookie(Some(&jar)),
+            None
+        );
+        // No jar: the request neither sends nor keeps a cookie.
+        assert_eq!(get("https://api.exemple.fr/me", &[]).cookie(None), None);
     }
 
     #[test]

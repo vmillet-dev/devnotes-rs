@@ -123,6 +123,7 @@ export const bridge = {
   moveHttpItem: (item: HttpItem, place: HttpPlace) => invoke<null>('move_http_item', { item, place }),
   /** Answers how many entries went. */
   clearHttpHistory: () => invoke<number>('clear_http_history'),
+  clearHttpCookies: () => invoke<number>('clear_http_cookies'),
   countHttpContents: (item: HttpItem) => invoke<HttpContents>('count_http_contents', { item }),
   deleteHttpItem: (item: HttpItem) => invoke<null>('delete_http_item', { item }),
   listSpaces: () => invoke<Space[]>('list_spaces'),

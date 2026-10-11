@@ -1763,6 +1763,22 @@ or a 30-second request would stall every command.
   sets, which leaves like any inherited header. `Accept: */*` is written the same way, though
   the client would add it by itself, so that the history and the timeline show it as sent. A
   WebSocket's handshake is composed by the same function and carries both.
+- ⚠️ **The redirects are followed by `send`, one request a hop, not by the client**
+  (`Policy::none()`). `reqwest` has no jar: followed by it, a cookie set on a 302 — nearly every
+  login — was neither kept nor sent to the page it leads to, the jar being filled from the last
+  answer's headers alone. Each hop's `Set-Cookie` goes through the jar's rules as it arrives
+  (`cookies::received`, then `cookies::apply` on the copy the command read under the lock),
+  and each hop is sent the line the jar gives **for its own URL** (`Hop::cookie`); what the
+  hops did to the jar comes back beside the answer (`Sending::run`) and is merged under the
+  lock afterwards, even when the chain ended on a failure. What the client did is kept in
+  `Hop::after`, tested one rule a line: a 301, 302 or 303 becomes a `GET` without its body, a
+  307 or 308 sends both again; another host or port gets neither `Authorization` nor a typed
+  `Cookie`; a `Location` is read against the URL that answered; a `Referer` names the page
+  left, never from `https` to `http`. The delay is the whole chain's (each hop is given what is
+  left of it), « Redirections au plus » is counted here, and a cancel aborts the task between
+  two hops as anywhere. `Redirect` carries where it came from and what it set, `Cookie::from`
+  the hop that set it: the « Cookies » tab says « Posé par », the timeline shows the
+  `Set-Cookie` under its redirect.
 - **A failure is a code** — the variable, the URL, the name not resolving, refused, TLS, timeout,
   too many redirects, an unreadable file, cancelled — read off reqwest's error and the chain
   under it. ⚠️ `io::Error::source` skips the error it wraps, where rustls puts its own: the
@@ -1881,9 +1897,9 @@ the subprotocols asked for, and the messages kept to send again.
 **Transport settings inherit field by field** (`http/transport.rs`): a collection, its folders
 and the request each hold a `TransportSettings` whose fields are optional, and
 `transport::resolve` lays them over `Transport::default()` (crossing as `DEFAULT_TRANSPORT`)
-from the collection down. `compose` resolves them, and `send` builds its client from them:
-timeout (never under 100 ms), redirects followed or not and how many, TLS verified or not, the
-jar used or not. The Réglages tab (`TransportEditorComponent`) shows beside each unset field
+from the collection down. `compose` resolves them, and `send` reads them: the timeout (never
+under 100 ms) is the whole chain's, redirects are followed or not and how many, TLS is verified
+or not, the jar is used or not. The Réglages tab (`TransportEditorComponent`) shows beside each unset field
 what it takes from above. `settings::inherit` also answers which level set the timeout and the
 redirects (`Inherited::limits`, kept off the wire), for the failure that names it. A
 WebSocket's handshake waits the same timeout.
@@ -1891,8 +1907,10 @@ WebSocket's handshake waits the same timeout.
 **The jar is the library's, sealed whole** (`http_cookies`, `http/cookies.rs`): the domain is
 sealed with the rest — which sites one talks to is not for the file to say — so matching
 (domain, path, `Secure`, expiry) runs in Rust over the jar read entire, and only `expires_at`
-stays clear for the purge. The jar is read under the lock before the send and written with the
-history after it; a `Cookie` header typed by hand wins over the jar. The manager
+stays clear for the purge. The jar is read under the lock before the send, handed to it as a
+copy the hops read and fill (→ "Sending a request, and its answer"), and what they did to it is
+written with the history after it; a `Cookie` header typed by hand wins over the jar, for the
+host it was typed for. The manager
 (`CookieJarDialogComponent`, from the rail's foot) lists by domain and deletes one, a domain's
 or all, the count asked of Rust first.
 

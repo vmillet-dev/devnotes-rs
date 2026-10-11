@@ -802,6 +802,11 @@ export type Cookie = {
 	httpOnly: boolean,
 	secure: boolean,
 	sameSite: string | null,
+	/**
+	 *  The URL that answered with it, when it was set by a redirect on the way; `None` for one
+	 *  the answer itself set.
+	 */
+	from?: string | null,
 };
 
 export type CookieDomain = {
@@ -2201,7 +2206,12 @@ export type ReadAs = "unix" | "iso8601" | "weekDate" | "ordinalDate" | "rfc2822"
 
 export type Redirect = {
 	status: number,
+	/**  Where it sends to. */
 	url: string,
+	/**  The URL that answered with it. */
+	from?: string,
+	/**  What it set: a login's cookie is set here, not by the page it leads to. */
+	cookies?: Cookie[],
 };
 
 /**  What the File menu draws: the libraries, and which of them is open. */

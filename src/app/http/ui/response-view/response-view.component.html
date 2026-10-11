@@ -93,7 +93,7 @@
       @if (answer.cookies.length === 0) {
         <p class="placeholder">{{ 'http.response.noCookies' | transloco }}</p>
       } @else {
-        <table class="rows" data-testid="http-response-cookies">
+        <table class="rows cookies" data-testid="http-response-cookies">
           <thead>
             <tr>
               <th scope="col">{{ 'http.response.cookie.name' | transloco }}</th>
@@ -102,26 +102,33 @@
               <th scope="col">{{ 'http.response.cookie.path' | transloco }}</th>
               <th scope="col">{{ 'http.response.cookie.expires' | transloco }}</th>
               <th scope="col">{{ 'http.response.cookie.flags' | transloco }}</th>
+              <th scope="col">{{ 'http.response.cookie.setBy' | transloco }}</th>
             </tr>
           </thead>
           <tbody>
             @for (cookie of answer.cookies; track $index) {
-              <tr data-testid="http-response-cookie">
+              <tr data-testid="http-response-cookie" [attr.data-set-by]="cookie.from ? 'redirect' : 'answer'">
                 <td class="key">{{ cookie.name }}</td>
                 <td class="value">{{ cookie.value }}</td>
                 <td>{{ cookie.domain ?? '—' }}</td>
                 <td>{{ cookie.path ?? '—' }}</td>
                 <td>{{ cookie.expires ?? ('http.response.cookie.session' | transloco) }}</td>
-                <td class="flags">
-                  @if (cookie.httpOnly) {
-                    <span class="flag">HttpOnly</span>
-                  }
-                  @if (cookie.secure) {
-                    <span class="flag">Secure</span>
-                  }
-                  @if (cookie.sameSite; as sameSite) {
-                    <span class="flag">SameSite={{ sameSite }}</span>
-                  }
+                <td>
+                  <span class="flags">
+                    @if (cookie.httpOnly) {
+                      <span class="flag">HttpOnly</span>
+                    }
+                    @if (cookie.secure) {
+                      <span class="flag">Secure</span>
+                    }
+                    @if (cookie.sameSite; as sameSite) {
+                      <span class="flag">SameSite={{ sameSite }}</span>
+                    }
+                  </span>
+                </td>
+                <!-- A login's cookie is set by the redirect, not by the page it leads to. -->
+                <td class="set-by" [attr.title]="cookie.from ?? null">
+                  {{ cookie.from ?? ('http.response.cookie.byAnswer' | transloco) }}
                 </td>
               </tr>
             }
