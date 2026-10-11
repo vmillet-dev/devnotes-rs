@@ -1572,8 +1572,18 @@ listed the spaces, and beside it the folder switcher listed the folders of which
 active. The two lists are a **tree**, and they were drawn as two flat menus opened one after
 the other. `notes/sidebar/library-tree/` draws that tree instead — every space, its folders
 under it, the way an editor holds a project — and the toolbar keeps the toggle that shows and
-hides it (`Ctrl+B`, and an entry in the shortcuts sheet, because the table that binds a key is
-the table that documents it).
+hides it.
+
+⚠️ **Shown or hidden is one state for the three areas.** The tools drew their rail whatever had
+been chosen, and HTTP honoured the choice with no control to undo it. `showLibraryRail` now
+hides the rail in the notes, the tools and HTTP alike; the titlebar carries the switch between
+areas whenever it is hidden; and the same button (`app-rail-toggle`, `shared/controls/`) sits
+at the left end of each area's top bar — the notes' header, the tools' home and frame, HTTP's
+tab bar and history — under a test id of its own page, since the notes page stays in the
+document behind the others. Its key, `Ctrl+B`, is answered once, by `AreaKeysDirective`
+(`RAIL_ACTION`, rebindable, listed under « Zones » in the sheet and the preferences): from a
+field too when it carries a modifier, never from an editor that formats with it. A tools home
+held to one category while its rail is hidden says so in its top bar, with the way back.
 
 ⚠️ **The rail replaces the two switchers while it is open**, and they come back when it is
 closed. Two places to change space is how a tree and a dropdown drift apart; the `@if` in the
@@ -1623,8 +1633,8 @@ cut one.
 ### The HTTP rail
 
 The third area (`Ctrl+3`, `http/`) opens on the collections of the library: `HttpRailComponent`
-in the library rail's frame — its width, its `Ctrl+B`, the titlebar carrying the switch while it
-is hidden — and the open request beside it. The tree is Rust's (`http_tree`); the rail lays it
+in the library rail's frame — its width, its hidden state, the titlebar carrying the switch
+while it is hidden — and the open request beside it. The tree is Rust's (`http_tree`); the rail lays it
 flat (`railRows`, `core/services/http/http-tree.ts`), each row at its depth, a request after its
 method in its colour (`http-method-hues`), `QUERY` for GraphQL and `WS` for a WebSocket.
 

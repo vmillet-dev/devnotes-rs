@@ -8,6 +8,9 @@ export const rail = {
 
   toggle: () => $(testid('library-rail-toggle')).click(),
 
+  /** The same button in the tools and in HTTP, each under a test id of its own page. */
+  toggleIn: (area: 'tools' | 'http') => $(testid(`${area}-rail-toggle`)).click(),
+
   async show(): Promise<void> {
     if (await rail.isShowing()) return;
 

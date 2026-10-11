@@ -4,20 +4,23 @@ import { HistoryItem } from '@core/model/http.model';
 import { errorKeyOf } from '@core/services/errors/error-notifier.service';
 import { TranslationRef } from '@core/services/i18n/translation-ref.model';
 import { HttpHistoryStore } from '@core/services/http/http-history.store';
+import { SettingsStore } from '@core/services/settings/settings.store';
 import { ClockService } from '@core/services/time/clock.service';
 import { endOfLocalDay, toDateInputValue } from '@core/utils/local-day.util';
 import { ResponseViewComponent } from '@http/ui/response-view/response-view.component';
+import { RailToggleComponent } from '@shared/controls/rail-toggle/rail-toggle.component';
 
 /** What was sent, by day, beside the entry chosen read like a response. */
 @Component({
   selector: 'app-history-page',
-  imports: [ResponseViewComponent, TranslocoPipe],
+  imports: [RailToggleComponent, ResponseViewComponent, TranslocoPipe],
   templateUrl: './history-page.component.html',
   styleUrl: './history-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HistoryPageComponent {
   protected readonly history = inject(HttpHistoryStore);
+  protected readonly settings = inject(SettingsStore);
   private readonly clock = inject(ClockService);
   private readonly transloco = inject(TranslocoService);
 

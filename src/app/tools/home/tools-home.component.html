@@ -1,8 +1,24 @@
 <header class="topbar">
+  <app-rail-toggle
+    testId="tools-rail-toggle"
+    [shown]="settings.showLibraryRail()"
+    (toggled)="settings.toggleLibraryRail()"
+  />
   <h1 class="title">{{ 'tools.title' | transloco }}</h1>
-  <span class="subtitle" data-testid="tools-count">{{
-    'tools.count' | transloco: { count: catalogue.length }
-  }}</span>
+  <!-- The rail is what says which category is showing: without it, the filter would be invisible. -->
+  @if (hiddenCategory(); as category) {
+    <span class="filtered" data-testid="tools-category-shown">
+      <span aria-hidden="true">›</span>
+      {{ 'tools.categories.' + category | transloco }}
+    </span>
+    <button type="button" class="back" data-testid="tools-category-clear" (click)="store.home()">
+      {{ 'tools.all' | transloco }}
+    </button>
+  } @else {
+    <span class="subtitle" data-testid="tools-count">{{
+      'tools.count' | transloco: { count: catalogue.length }
+    }}</span>
+  }
   <span class="spacer"></span>
   <label class="search">
     <app-icon name="search" />

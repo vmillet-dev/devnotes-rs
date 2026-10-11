@@ -15,9 +15,11 @@ import {
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { StatusNotifier } from '@core/services/notifications/status.service';
+import { SettingsStore } from '@core/services/settings/settings.store';
 import { Tool, ToolDefinition, ToolResult } from '@core/services/tools/tool.model';
 import { ToolsStore } from '@core/services/tools/tools.store';
 import { SaveAsNoteDialogComponent } from '@app/save-as-note/save-as-note-dialog.component';
+import { RailToggleComponent } from '@shared/controls/rail-toggle/rail-toggle.component';
 
 /**
  * What every tool is drawn in: the breadcrumb, the tool's own actions, Vider and "Enregistrer
@@ -27,13 +29,14 @@ import { SaveAsNoteDialogComponent } from '@app/save-as-note/save-as-note-dialog
  */
 @Component({
   selector: 'app-tool-frame',
-  imports: [SaveAsNoteDialogComponent, TranslocoPipe],
+  imports: [RailToggleComponent, SaveAsNoteDialogComponent, TranslocoPipe],
   templateUrl: './tool-frame.component.html',
   styleUrl: './tool-frame.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ToolFrameComponent {
   protected readonly store = inject(ToolsStore);
+  protected readonly settings = inject(SettingsStore);
   private readonly notifier = inject(ErrorNotifier);
   private readonly status = inject(StatusNotifier);
 

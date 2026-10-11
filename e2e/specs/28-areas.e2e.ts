@@ -84,10 +84,57 @@ describe('Switching between areas', () => {
 
     await inTitlebar('tools').click();
     await showsTools();
-    await option('tools-rail', 'notes').click();
+    await inTitlebar('notes').click();
     await showsNotes();
 
     await rail.show();
     expect(await inTitlebar('tools').isExisting()).toBe(false);
+  });
+
+  /**
+   * One state for the three areas. Hidden in the notes, the rail used to come back in the
+   * tools, and to stay hidden in HTTP with nothing on screen to show it again.
+   */
+  it('hides the rail in the three areas at once, and shows it again from any of them', async () => {
+    await rail.hide();
+
+    await press('2', ['Control']);
+    await showsTools();
+    expect(await $(testid('tools-rail')).isExisting()).toBe(false);
+    expect(await inTitlebar('http').isDisplayed()).toBe(true);
+    expect(await $(testid('tools-rail-toggle')).getAttribute('aria-pressed')).toBe('false');
+
+    await press('3', ['Control']);
+    await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+    expect(await $(testid('http-rail')).isExisting()).toBe(false);
+
+    await rail.toggleIn('http');
+    await $(testid('http-rail')).waitForDisplayed({ timeout: 10_000 });
+    expect(await inTitlebar('tools').isExisting()).toBe(false);
+
+    await press('2', ['Control']);
+    await showsTools();
+    await $(testid('tools-rail')).waitForDisplayed({ timeout: 10_000 });
+
+    await press('1', ['Control']);
+    await showsNotes();
+    expect(await rail.isShowing()).toBe(true);
+  });
+
+  /** One key for the three: the canvas had it, HTTP a copy of it, the tools none. */
+  it('hides and shows the rail on Ctrl+B from the tools, a field focused or not', async () => {
+    await press('2', ['Control']);
+    await showsTools();
+    await $(testid('tools-rail')).waitForDisplayed({ timeout: 10_000 });
+
+    await $(testid('tools-search')).click();
+    await press('b', ['Control']);
+    await $(testid('tools-rail')).waitForExist({ reverse: true, timeout: 10_000 });
+
+    await press('b', ['Control']);
+    await $(testid('tools-rail')).waitForDisplayed({ timeout: 10_000 });
+
+    await press('1', ['Control']);
+    await showsNotes();
   });
 });

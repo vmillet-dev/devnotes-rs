@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { AREAS, AREA_SHORTCUT_GROUP, areaForKey, isToolSearchKey } from './area.model';
+import {
+  AREAS,
+  AREA_ACTIONS,
+  AREA_SHORTCUT_GROUP,
+  RAIL_ACTION,
+  areaForKey,
+  isToolSearchKey,
+} from './area.model';
 
 describe('areaForKey', () => {
   const key = (code: string, init: KeyboardEventInit = {}) =>
@@ -26,11 +33,18 @@ describe('areaForKey', () => {
     expect(key('KeyA')).toBeNull();
   });
 
-  it('documents one key per area, in the switch order, then the tools search', () => {
+  it('documents one key per area, in the switch order, then the tools search and the rail', () => {
     expect(AREA_SHORTCUT_GROUP.shortcuts.map((entry) => entry.keys)).toEqual([
       ...AREAS.map((_, index) => ['Ctrl', String(index + 1)]),
       ['Ctrl', 'Shift', 'T'],
+      ['Ctrl', 'B'],
     ]);
+  });
+
+  /** The rail's key can be moved, and the sheet then draws the key it is bound to. */
+  it('lists the rail once, as an action of every area that can be rebound', () => {
+    expect(AREA_ACTIONS).toEqual([RAIL_ACTION]);
+    expect(AREA_SHORTCUT_GROUP.shortcuts.at(-1)?.action).toBe(RAIL_ACTION);
   });
 
   it('knows the tools search by its letter, whatever the layout puts under it', () => {

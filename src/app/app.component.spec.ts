@@ -10,7 +10,10 @@ import { VaultGateComponent } from './vault-gate/vault-gate.component';
 import { VaultStore } from '@core/state/vault.store';
 import { VaultRepository } from '@core/data/vault.repository';
 import { FakeVaultRepository } from '@testing/fake-vault-repository';
+import { RAIL_ACTION } from '@core/services/areas/area.model';
 import { AreaStore } from '@core/services/areas/area.store';
+import { SettingsStore } from '@core/services/settings/settings.store';
+import { ShortcutBindingsStore } from '@core/services/shortcuts/shortcut-bindings.store';
 import { ToolsStore } from '@core/services/tools/tools.store';
 import { ToolsHomeComponent } from '@tools/home/tools-home.component';
 import { ToolsPageComponent } from '@tools/tools-page.component';
@@ -97,6 +100,103 @@ describe('AppComponent', () => {
 
       expect(fixture.debugElement.query(By.directive(ToolsPageComponent))).toBeNull();
       expect(notesPage().nativeElement.classList).not.toContain('away');
+    });
+
+    /**
+     * One state, one key, three areas: the canvas had the key, HTTP a copy of it, the tools
+     * neither — and they drew their rail whatever had been chosen.
+     */
+    it('hides and shows the rail on Ctrl+B in the three areas alike', async () => {
+      await withVault('unlocked');
+      const settings = TestBed.inject(SettingsStore);
+      const ctrlB = (target: EventTarget = document) =>
+        target.dispatchEvent(
+          new KeyboardEvent('keydown', {
+            key: 'b',
+            code: 'KeyB',
+            ctrlKey: true,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+
+      for (const [code, shown] of [
+        ['Digit1', false],
+        ['Digit2', true],
+        ['Digit3', false],
+      ] as const) {
+        press(code);
+        await fixture.whenStable();
+        ctrlB();
+        await fixture.whenStable();
+
+        expect(settings.showLibraryRail()).toBe(shown);
+      }
+
+      press('Digit2');
+      await fixture.whenStable();
+      expect(fixture.nativeElement.querySelector('[data-testid="tools-rail"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="tools-rail-toggle"]')).not.toBeNull();
+    });
+
+    /** From a field too, where the key types nothing — but not where it means bold. */
+    it('answers Ctrl+B from a field, and leaves it to an editor that formats with it', async () => {
+      await withVault('unlocked');
+      const settings = TestBed.inject(SettingsStore);
+      const pressIn = (target: HTMLElement) => {
+        document.body.appendChild(target);
+        const event = new KeyboardEvent('keydown', {
+          key: 'b',
+          code: 'KeyB',
+          ctrlKey: true,
+          bubbles: true,
+          cancelable: true,
+        });
+        target.dispatchEvent(event);
+        target.remove();
+        return event.defaultPrevented;
+      };
+
+      const field = document.createElement('input');
+      expect(pressIn(field)).toBe(true);
+      expect(settings.showLibraryRail()).toBe(false);
+
+      const editor = document.createElement('div');
+      // jsdom computes no `isContentEditable`: the editor's own answer is given to it.
+      Object.defineProperty(editor, 'isContentEditable', { value: true });
+      expect(pressIn(editor)).toBe(false);
+      expect(settings.showLibraryRail()).toBe(false);
+    });
+
+    /** Moved onto a bare letter, it must not fire while that letter is being typed. */
+    it('follows the key the rail is bound to, and never takes a bare letter from a field', async () => {
+      await withVault('unlocked');
+      const settings = TestBed.inject(SettingsStore);
+      TestBed.inject(ShortcutBindingsStore).store(RAIL_ACTION, 'L');
+      const letter = (target: EventTarget) =>
+        target.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'l', code: 'KeyL', bubbles: true, cancelable: true }),
+        );
+
+      const field = document.createElement('input');
+      document.body.appendChild(field);
+      letter(field);
+      field.remove();
+      expect(settings.showLibraryRail()).toBe(true);
+
+      letter(document);
+      expect(settings.showLibraryRail()).toBe(false);
+
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'b',
+          code: 'KeyB',
+          ctrlKey: true,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+      expect(settings.showLibraryRail()).toBe(false);
     });
 
     it('opens the tools on their search from the notes, on Ctrl+Shift+T', async () => {

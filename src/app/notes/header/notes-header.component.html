@@ -1,15 +1,9 @@
 <div class="topbar">
-  <button
-    type="button"
-    class="rail-toggle"
-    data-testid="library-rail-toggle"
-    [attr.aria-pressed]="settings.showLibraryRail()"
-    [attr.aria-label]="'sidebar.toggle' | transloco"
-    [attr.title]="'sidebar.toggle' | transloco"
-    (click)="toggleLibraryRail()"
-  >
-    <app-icon name="sidebar" />
-  </button>
+  <app-rail-toggle
+    testId="library-rail-toggle"
+    [shown]="settings.showLibraryRail()"
+    (toggled)="settings.toggleLibraryRail()"
+  />
   <!-- Away from the filters and from the primary action: it is a view on the notes, not a
        filter. -->
   <button

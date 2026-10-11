@@ -162,7 +162,7 @@
   },
   "sidebar": {
     "library": "Espaces",
-    "toggle": "Afficher ou masquer les espaces",
+    "toggle": "Afficher ou masquer la barre latérale",
     "expand": "Ouvrir l'espace {{name}}",
     "collapse": "Replier l'espace {{name}}",
     "noFolders": "Aucun dossier",
@@ -671,7 +671,6 @@
       "newSnippet": "Nouveau snippet de code",
       "newNote": "Nouvelle note mise en forme",
       "newChecklist": "Nouvelle liste de tâches",
-      "library": "Afficher ou masquer la bibliothèque",
       "move": "Se déplacer de carte en carte",
       "open": "Ouvrir la carte sous le focus",
       "copy": "Copier la carte, ou demander ses champs",
@@ -796,6 +795,7 @@
       "reset": "Rétablir",
       "globalNote": "Ces trois-là agissent partout, fenêtre fermée comprise : ils demandent donc au moins un modificateur, sans quoi la touche serait avalée dans toutes vos applications. Un raccourci déjà pris par une autre application est signalé au démarrage.",
       "canvasNote": "Ceux-ci n'agissent que sur le canevas, jamais pendant une saisie : une lettre nue suffit. Cliquez dans le champ puis composez la combinaison.",
+      "areasNote": "Celui-ci agit dans les trois zones — Notes, Outils et HTTP — et, avec Ctrl ou Alt, pendant une saisie aussi.",
       "fixedNote": "Les flèches, Échap, Tab et les clics avec Ctrl ou Maj ne se déplacent pas : ce sont la navigation, la sortie et la sélection, et une bibliothèque où l'on ne peut plus reculer serait pire qu'une touche mal placée.",
       "taken": "{{accelerator}} est déjà pris par « {{action}} ».",
       "needsModifier": "Un raccourci global demande au moins Ctrl, Alt, Maj ou Super.",
@@ -1008,6 +1008,7 @@
     "hint": "{{area}} ({{key}})",
     "notes": "Notes",
     "tools": "Outils",
+    "rail": "Afficher ou masquer la barre latérale",
     "go": {
       "notes": "Aller aux notes",
       "tools": "Aller aux outils",

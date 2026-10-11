@@ -258,12 +258,16 @@ describe('NotesPageComponent', () => {
       expect(maybeChild(FolderSwitcherComponent)).not.toBeNull();
     });
 
-    it('is toggled from the topbar and from Ctrl+B', async () => {
-      fixture.debugElement.query(By.css('[data-testid="library-rail-toggle"]')).nativeElement.click();
+    it('is toggled from the topbar', async () => {
+      const toggle = () =>
+        fixture.debugElement.query(By.css('[data-testid="library-rail-toggle"]'))
+          .nativeElement as HTMLElement;
+      toggle().click();
       await fixture.whenStable();
       expect(settings.showLibraryRail()).toBe(false);
+      expect(toggle().getAttribute('aria-pressed')).toBe('false');
 
-      press('b', { ctrlKey: true });
+      toggle().click();
       await fixture.whenStable();
       expect(settings.showLibraryRail()).toBe(true);
     });
@@ -315,10 +319,11 @@ describe('NotesPageComponent', () => {
     TestBed.inject(AreaStore).show('tools');
     await fixture.whenStable();
     expect(child(SearchBoxComponent).shortcutEnabled()).toBe(false);
+    const createNote = vi.spyOn(store, 'createNote').mockResolvedValue();
 
-    press('b', { ctrlKey: true });
+    press('n', { ctrlKey: true });
 
-    expect(settings.showLibraryRail()).toBe(true);
+    expect(createNote).not.toHaveBeenCalled();
   });
 
   it('disables the search shortcut while the editor overlay is open', async () => {

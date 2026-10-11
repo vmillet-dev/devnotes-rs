@@ -1,0 +1,29 @@
+@use 'mixins' as *;
+
+:host {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.rail-toggle {
+  @include unstyled-control;
+  @include surface(var(--bg-2), 8px);
+  @include focus-ring;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0 7px;
+  color: var(--text-1);
+  cursor: pointer;
+
+  &[aria-pressed='true'] {
+    color: var(--amber-text);
+  }
+
+  &:hover {
+    border-color: var(--amber-dim);
+    color: var(--text-0);
+  }
+}

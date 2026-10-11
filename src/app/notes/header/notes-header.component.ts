@@ -22,6 +22,7 @@ import { FacetsPanelComponent } from './facets-panel/facets-panel.component';
 import { SortMenuComponent } from './sort-menu/sort-menu.component';
 import { FolderBreadcrumbComponent } from './folder-breadcrumb/folder-breadcrumb.component';
 import { FolderSwitcherComponent } from './folder-switcher/folder-switcher.component';
+import { RailToggleComponent } from '@shared/controls/rail-toggle/rail-toggle.component';
 import { NewNoteButtonComponent } from './new-note-button/new-note-button.component';
 import { SearchBoxComponent } from './search-box/search-box.component';
 import { SpaceSwitcherComponent } from './space-switcher/space-switcher.component';
@@ -48,6 +49,7 @@ const QUICK_FILTERS: readonly Segment[] = (['all', 'pinned', 'untriaged'] as con
     FolderBreadcrumbComponent,
     ViewSwitchComponent,
     NewNoteButtonComponent,
+    RailToggleComponent,
     TranslocoPipe,
   ],
   templateUrl: './notes-header.component.html',
@@ -98,10 +100,6 @@ export class NotesHeaderComponent {
   protected readonly searchShortcutEnabled = computed(
     () => !this.dialogs.hasOpenDialog() && this.areas.current() === 'notes',
   );
-
-  protected toggleLibraryRail(): void {
-    this.settings.showLibraryRail.write(!this.settings.showLibraryRail());
-  }
 
   /** The segmented control speaks in strings; the store speaks in `NoteFilter`. */
   protected onQuickFilter(key: string): void {

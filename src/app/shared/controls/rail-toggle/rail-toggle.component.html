@@ -1,0 +1,11 @@
+<button
+  type="button"
+  class="rail-toggle"
+  [attr.data-testid]="testId()"
+  [attr.aria-pressed]="shown()"
+  [attr.aria-label]="'sidebar.toggle' | transloco"
+  [attr.title]="'sidebar.toggle' | transloco"
+  (click)="toggled.emit()"
+>
+  <app-icon name="sidebar" />
+</button>

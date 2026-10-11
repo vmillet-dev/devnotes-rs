@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { SettingsStore } from '@core/services/settings/settings.store';
 import { TOOL_CATALOGUE } from '@core/services/tools/tool.model';
 import { ToolsStore } from '@core/services/tools/tools.store';
 import { FAKE_TOOLS } from '@testing/tool-catalogue.fixture';
@@ -59,6 +60,37 @@ describe('ToolsHomeComponent', () => {
     await fixture.whenStable();
 
     expect(panels()).toEqual(['crypto']);
+  });
+
+  /**
+   * The rail is what says which category is showing. Hidden, the choice is kept — and said
+   * in the top bar with the way back, or the catalogue would look as if it had lost tools.
+   */
+  it('says the category it is held to while the rail is hidden, with the way back', async () => {
+    const settings = TestBed.inject(SettingsStore);
+    const shown = () => fixture.nativeElement.querySelector('[data-testid="tools-category-shown"]');
+    store.home('crypto');
+    await fixture.whenStable();
+    expect(shown()).toBeNull();
+
+    (fixture.nativeElement.querySelector('[data-testid="tools-rail-toggle"]') as HTMLElement).click();
+    await fixture.whenStable();
+    expect(settings.showLibraryRail()).toBe(false);
+    expect(panels()).toEqual(['crypto']);
+    expect(shown().textContent).toContain('Crypto');
+    expect(fixture.nativeElement.querySelector('[data-testid="tools-count"]')).toBeNull();
+
+    // A search looks through every category: nothing is held back, so nothing is said.
+    store.setSearch('case');
+    await fixture.whenStable();
+    expect(shown()).toBeNull();
+    store.setSearch('');
+    await fixture.whenStable();
+
+    (fixture.nativeElement.querySelector('[data-testid="tools-category-clear"]') as HTMLElement).click();
+    await fixture.whenStable();
+    expect(panels()).toEqual(['text', 'crypto']);
+    expect(shown()).toBeNull();
   });
 
   it('searches the keywords too, across every category', async () => {
