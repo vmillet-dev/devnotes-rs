@@ -12,6 +12,7 @@ import type {
   HistoryEntry,
   HistoryItem,
   FormPart,
+  HeaderFault,
   HttpOrigin,
   ImpliedHeader,
   Inherited,
@@ -50,6 +51,7 @@ export { DEFAULT_TRANSPORT } from '@core/ipc/bindings';
 
 export type {
   BodyAnswer,
+  HeaderFault,
   ImpliedHeader,
   CookieDomain,
   JarCookie,
@@ -353,6 +355,10 @@ export function toInherited(inherited: Inherited): InheritedParts {
 
 export function toBodyWire(body: RequestBodyDraft): RequestBody {
   return fromBody(body);
+}
+
+export function toRows(rows: readonly KeyValue[]): KeyValueRow[] {
+  return rows.map(toRow);
 }
 
 export function toSynced(answer: SyncedQuery): {

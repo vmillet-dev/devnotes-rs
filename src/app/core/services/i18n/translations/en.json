@@ -456,6 +456,16 @@
     "httpFileUnreadable": "The file {{path}} cannot be read.",
     "httpCancelled": "Send cancelled.",
     "httpNetwork": "Network error.",
+    "httpHeaderName": {
+      "request": "The header “{{header}}” cannot be sent: its name is not valid.",
+      "folder": "The header “{{header}}”, inherited from the folder “{{name}}”, cannot be sent: its name is not valid.",
+      "collection": "The header “{{header}}”, inherited from the collection “{{name}}”, cannot be sent: its name is not valid."
+    },
+    "httpHeaderValue": {
+      "request": "The header “{{header}}” cannot be sent: its value is not valid.",
+      "folder": "The header “{{header}}”, inherited from the folder “{{name}}”, cannot be sent: its value is not valid.",
+      "collection": "The header “{{header}}”, inherited from the collection “{{name}}”, cannot be sent: its value is not valid."
+    },
     "httpGraphqlVariables": "The GraphQL variables are not a JSON object.",
     "httpWebsocketRefused": "The server refused the WebSocket (status {{status}})."
   },
@@ -2813,7 +2823,11 @@
       "description": "Description",
       "newKey": "New key",
       "remove": "Remove",
-      "removeRow": "Remove {{key}}"
+      "removeRow": "Remove {{key}}",
+      "faults": {
+        "name": "A header name holds no space, no colon and no accent: the marked row cannot be sent.",
+        "value": "A header value fits on one line, with no control character: the marked row cannot be sent."
+      }
     },
     "save": {
       "title": "Save the request",

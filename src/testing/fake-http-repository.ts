@@ -20,6 +20,7 @@ import {
   CookieDomain,
   DEFAULT_TRANSPORT,
   EMPTY_PARTS,
+  HeaderFault,
   ImpliedHeader,
   InheritedParts,
   KeyValueRow,
@@ -59,6 +60,9 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
   /** The jar by domain; the deletes take from it as Rust would. */
   jar: CookieDomain[] = [];
   bodyAnswer: BodyAnswer = { contentType: null, problem: null, unusual: false };
+  /** What `checkHeaders` answers, by rank; and the rows `readHeaders` reads from a text. */
+  headerFaults: (HeaderFault | null)[] = [];
+  headersRead: KeyValueRow[] = [];
   /** What a request sends unasked; a spec holding `pendingImplied` decides when it is answered. */
   impliedAnswer: ImpliedHeader[] = [];
   pendingImplied: Promise<ImpliedHeader[]> | null = null;
@@ -182,6 +186,14 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
 
   describeBody(body: RequestBodyDraft, method: HttpMethod): Promise<BodyAnswer> {
     return this.record('describeBody', [body, method], () => this.bodyAnswer);
+  }
+
+  checkHeaders(rows: readonly KeyValueRow[]): Promise<(HeaderFault | null)[]> {
+    return this.record('checkHeaders', [rows], () => this.headerFaults);
+  }
+
+  readHeaders(text: string): Promise<KeyValueRow[]> {
+    return this.record('readHeaders', [text], () => this.headersRead);
   }
 
   async impliedHeaders(

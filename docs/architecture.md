@@ -1694,6 +1694,22 @@ bumps `settingsRevision`: its name is in what its requests inherit « from ».
   padding and put every glyph a padding off the copy.
 - The headers' names are proposed from the HTTP headers reference, those a server alone writes
   left out. Settings, scripts and tests join the tabs with their tickets.
+- ⚠️ **A header that cannot be sent is refused where it is typed.** Nothing checked a name: key
+  `X-Recette: 1` in a folder's settings was stored as typed, and every request under the folder
+  failed « this URL cannot be sent » — the client's builder says so for a header it refuses.
+  The rule is the model's (`http::model::header_fault`): a name is an HTTP token, a value holds
+  no line break nor control character, a `{{variable}}` stands for a letter until it is filled,
+  and a row switched off is not judged. Three places apply it:
+  - `KeyValueTableComponent` as `headers` asks `check_http_headers` and marks the row, with the
+    reason under the table; a parameter or a form field takes any character and is asked
+    nothing. `Nom: valeur` typed in a name is split by `read_http_headers` — what follows the
+    first colon goes to the value when there is none, and the caret with it — and several lines
+    pasted there fill a row each (the field alone would take them on one line);
+  - `save_http_settings` refuses it: stored, it failed requests one by one. A request's own
+    rows are saved as typed — a tab is a draft, and it shows the mark;
+  - `compose` checks every header before the client builds it and answers `SendError::Header`,
+    with who wrote it: its own code (`httpHeaderName`, `httpHeaderValue`), the sentence picked
+    by `source` as for a timeout — « L'en-tête « X-Recette: 1 », hérité du dossier « Recette » ».
 - **A body is a kind and its content** — none, JSON, text, a form, multipart, a file. A file is a
   **path**, read by Rust when the request is sent: its bytes never enter the library.
   `describe_http_body` answers the `Content-Type` the body implies and, for JSON, why it does

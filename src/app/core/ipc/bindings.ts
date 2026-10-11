@@ -166,6 +166,13 @@ export const commands = {
 	 *  decides none of it.
 	 */
 	impliedHttpHeaders: (kind: RequestKind, document: RequestDocument, collectionId: string | null, folderId: string | null) => typedError<ImpliedHeader[], AppError>(__TAURI_INVOKE("implied_http_headers", { kind, document, collectionId, folderId })),
+	/**
+	 *  Each header's fault by its rank, or none: the table marks the row and says why. The rule is
+	 *  the model's; the table holds none.
+	 */
+	checkHttpHeaders: (rows: KeyValue[]) => typedError<(HeaderFault | null)[], AppError>(__TAURI_INVOKE("check_http_headers", { rows })),
+	/**  `Nom: valeur` typed in a name, or lines pasted from a browser's network tab, as rows. */
+	readHttpHeaders: (text: string) => typedError<KeyValue[], AppError>(__TAURI_INVOKE("read_http_headers", { text })),
 	/**  The operations a GraphQL document names, and why its variables do not read. */
 	describeGraphql: (document: GraphqlDocument) => typedError<GraphqlAnswer, AppError>(__TAURI_INVOKE("describe_graphql", { document })),
 	/**
@@ -1056,7 +1063,9 @@ export type ErrorCode = "noteNotFound" | "spaceNotFound" | "duplicateSpaceName" 
 /**  What « Annuler » answers: the front, which asked, says nothing. */
 "httpCancelled" | "httpGraphqlVariables" | 
 /**  The `status` parameter is what the server answered instead of switching protocols. */
-"httpWebsocketRefused" | "httpNetwork";
+"httpWebsocketRefused" | "httpNetwork" | 
+/**  `header` is its name as written; `source` and `name` say who wrote it, as for a limit. */
+"httpHeaderName" | "httpHeaderValue";
 
 export type Exchange = {
 	method: HttpMethod,
@@ -1243,6 +1252,9 @@ export type HashRequest = {
 	/**  A digest to recognise, in any of the algorithms and either encoding. */
 	expected: string | null,
 };
+
+/**  What stops a header from being sent: the editor marks its row by it, a send names it. */
+export type HeaderFault = "name" | "value";
 
 export type HistoryDay = {
 	/**  `2026-10-07`, the local day. */

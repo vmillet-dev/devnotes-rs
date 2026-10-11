@@ -246,6 +246,20 @@ pub async fn save_http_settings<R: Runtime>(
     settings: model::ContainerSettings,
     app: AppHandle<R>,
 ) -> Result<(), AppError> {
+    // Refused where it is typed: stored, it failed every request under it, one by one.
+    if let Some((row, fault)) = settings
+        .headers
+        .iter()
+        .zip(model::header_faults(&settings.headers))
+        .find_map(|(row, fault)| Some((row, fault?)))
+    {
+        return Err(send::SendError::Header {
+            name: row.key.trim().to_string(),
+            fault,
+            set_by: transport::SetBy::Request,
+        }
+        .into());
+    }
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
 
@@ -302,6 +316,23 @@ pub struct BodyAnswer {
     pub problem: Option<crate::json::parse::JsonError>,
     /// Something is sent as the body of a `GET` or a `HEAD`: sent all the same, and said.
     pub unusual: bool,
+}
+
+/// Each header's fault by its rank, or none: the table marks the row and says why. The rule is
+/// the model's; the table holds none.
+#[tauri::command]
+#[specta::specta]
+pub async fn check_http_headers(
+    rows: Vec<model::KeyValue>,
+) -> Result<Vec<Option<model::HeaderFault>>, AppError> {
+    off_thread(move || model::header_faults(&rows)).await
+}
+
+/// `Nom: valeur` typed in a name, or lines pasted from a browser's network tab, as rows.
+#[tauri::command]
+#[specta::specta]
+pub async fn read_http_headers(text: String) -> Result<Vec<model::KeyValue>, AppError> {
+    off_thread(move || model::headers_from_text(&text)).await
 }
 
 /// What a request sends without a row of its own — the body's type, what it inherits, the

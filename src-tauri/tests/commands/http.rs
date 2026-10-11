@@ -251,6 +251,92 @@ fn a_folder_hands_its_settings_down_and_a_body_says_what_it_implies() {
     );
 }
 
+/// Key `X-Recette: 1` in a folder's settings was stored as typed, and every request under the
+/// folder then failed « this URL cannot be sent ».
+#[test]
+fn a_header_that_cannot_be_sent_is_refused_in_the_settings_marked_and_read_from_its_line() {
+    use devnotes_lib::http::model::{ContainerSettings, HeaderFault, KeyValue};
+    use devnotes_lib::http::{
+        check_http_headers, http_settings, read_http_headers, save_http_settings,
+    };
+
+    let session = Session::open();
+    let api = session
+        .call(|app| create_http_collection("API".to_string(), app))
+        .unwrap();
+    let recette = session
+        .call(|app| create_http_folder(api.id.clone(), None, "Recette".to_string(), app))
+        .unwrap();
+    let row = |key: &str, value: &str, enabled: bool| KeyValue {
+        enabled,
+        key: key.to_string(),
+        value: value.to_string(),
+        ..KeyValue::default()
+    };
+    let save = |headers: Vec<KeyValue>| {
+        let settings = ContainerSettings {
+            headers,
+            ..ContainerSettings::default()
+        };
+        session
+            .call(|app| save_http_settings(item(HttpItemKind::Folder, &recette.id), settings, app))
+    };
+    let kept = || {
+        session
+            .call(|app| http_settings(item(HttpItemKind::Folder, &recette.id), app))
+            .unwrap()
+            .headers
+    };
+
+    let refused = save(vec![row("X-Recette: 1", "rsgfdregr", true)]).unwrap_err();
+    assert_eq!(refused.code, ErrorCode::HttpHeaderName);
+    assert_eq!(
+        (
+            refused.params.get("header").map(String::as_str),
+            refused.params.get("source").map(String::as_str)
+        ),
+        (Some("X-Recette: 1"), Some("request"))
+    );
+    assert!(kept().is_empty());
+
+    let refused = save(vec![row("X-Trace", "a\nb", true)]).unwrap_err();
+    assert_eq!(refused.code, ErrorCode::HttpHeaderValue);
+    assert_eq!(
+        refused.params.get("header").map(String::as_str),
+        Some("X-Trace")
+    );
+
+    // Switched off, it is not sent: kept as typed, beside the one that is.
+    save(vec![
+        row("X-Recette: 1", "rsgfdregr", false),
+        row("X-Recette", "1", true),
+        row("X-{{tenant}}", "{{token}}", true),
+    ])
+    .unwrap();
+    assert_eq!(kept().len(), 3);
+
+    let faults = session
+        .call(|_| {
+            check_http_headers(vec![
+                row("Accept", "*/*", true),
+                row("X Recette", "1", true),
+                row("X Recette", "1", false),
+            ])
+        })
+        .unwrap();
+    assert_eq!(faults, vec![None, Some(HeaderFault::Name), None]);
+
+    let read = session
+        .call(|_| {
+            read_http_headers(":authority: api.exemple.fr\nX-Recette: 1\naccept: */*".to_string())
+        })
+        .unwrap();
+    assert_eq!(
+        read,
+        vec![row("X-Recette", "1", true), row("accept", "*/*", true)]
+    );
+}
+
 #[test]
 fn the_query_and_its_table_are_kept_in_step_through_the_command() {
     use devnotes_lib::http::query::QuerySide;

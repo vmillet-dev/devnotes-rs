@@ -117,6 +117,7 @@ export const bridge = {
     invoke<HttpFolder>('create_http_folder', { collectionId, parentId, name }),
   createHttpRequest: (draft: HttpRequestDraft) => invoke<HttpRequest>('create_http_request', { draft }),
   httpRequest: (id: string) => invoke<HttpRequest>('get_http_request', { id }),
+  httpSettings: (item: HttpItem) => invoke<ContainerSettings>('http_settings', { item }),
   saveHttpSettings: (item: HttpItem, settings: ContainerSettings) =>
     invoke<null>('save_http_settings', { item, settings }),
   moveHttpItem: (item: HttpItem, place: HttpPlace) => invoke<null>('move_http_item', { item, place }),

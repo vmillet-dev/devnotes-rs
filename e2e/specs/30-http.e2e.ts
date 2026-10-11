@@ -270,6 +270,92 @@ describe('HTTP collections', () => {
       await $(tab).waitForExist({ reverse: true, timeout: 10_000 });
       await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
     });
+
+    /**
+     * Key `X-Recette: 1`, value `rsgfdregr`, in a folder's settings: accepted as typed, and
+     * every request under the folder then failed « Cette URL ne peut pas être envoyée », on a
+     * good URL.
+     */
+    it('splits a header typed with its value, refuses a name that cannot be sent, and still sends under the folder', async () => {
+      const heard: (string | undefined)[] = [];
+      const server = createServer((request, response) => {
+        heard.push(request.headers['x-recette']?.toString());
+        response.writeHead(200, { 'Content-Type': 'text/plain' });
+        response.end('ok');
+      });
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      const { port } = server.address() as AddressInfo;
+      try {
+        const api = await bridge.createHttpCollection('Recette');
+        const folder = await bridge.createHttpFolder(api.id, null, 'Sous test');
+        const created = await bridge.createHttpRequest({
+          ...draft(api.id, folder.id, 'Ping'),
+          document: { url: `http://127.0.0.1:${port}/ping`, description: '' },
+        });
+        await press('1', ['Control']);
+        await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+        await press('3', ['Control']);
+        await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+        if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
+        const kept = async () => (await bridge.httpSettings({ kind: 'folder', id: folder.id })).headers ?? [];
+        const row = `${testid('http-settings-headers-table')} ${testid('http-kv-row')}:first-child`;
+        const name = `${row} ${testid('http-kv-key')}`;
+        const cells = async () => [
+          await $(name).getValue(),
+          (await $(`${row} ${testid('http-kv-value')}`).getValue()).trim(),
+        ];
+
+        const node = `${testid('http-node')}[data-id="${folder.id}"]`;
+        await $(node).waitForDisplayed({ timeout: 10_000 });
+        await choose(await $(node).getElement(), 'settings');
+        await $(testid('http-settings-dialog')).waitForDisplayed({ timeout: 10_000 });
+
+        // Key by key, as it is typed: at the colon the caret goes on to the value.
+        await $(name).click();
+        await browser.keys([...'X-Recette: 1']);
+        await eventually(cells, (read) => read.join('|') === 'X-Recette|1', 'the header in its two cells');
+        expect(await $(`${row}[data-fault]`).isExisting()).toBe(false);
+
+        // A name that no split mends: marked, said, and refused when it is kept.
+        await setField(name, 'X Recette');
+        await $(`${row}[data-fault="name"]`).waitForExist({ timeout: 10_000 });
+        await $(`${testid('http-kv-fault')}[data-fault="name"]`).waitForDisplayed({ timeout: 10_000 });
+        await $(testid('http-settings-save')).click();
+        await eventually(
+          () => $(testid('error-banner')).getText(),
+          (said) => said.includes('X Recette'),
+          'the refusal, naming the header',
+        );
+        expect(await $(testid('http-settings-dialog')).isDisplayed()).toBe(true);
+        expect(await kept()).toEqual([]);
+        await $(testid('error-dismiss')).click();
+
+        await setField(name, 'X-Recette');
+        await $(`${row}[data-fault]`).waitForExist({ reverse: true, timeout: 10_000 });
+        await $(testid('http-settings-save')).click();
+        await $(testid('http-settings-dialog')).waitForExist({ reverse: true, timeout: 10_000 });
+        expect((await kept()).map((header) => header.key)).toEqual(['X-Recette']);
+
+        // The request under the folder leaves, the header with it.
+        await $(`${testid('http-node')}[data-id="${created.id}"] ${testid('http-node-name')}`).click();
+        await $(testid('http-response-idle')).waitForDisplayed({ timeout: 10_000 });
+        await $(testid('http-send')).click();
+        await eventually(
+          async () => heard.length,
+          (reached) => reached === 1,
+          'the request under the folder to reach the server',
+        );
+        expect(heard).toEqual(['1']);
+        await $(testid('http-response-sending')).waitForExist({ reverse: true, timeout: 10_000 });
+
+        const tab = `${testid('http-tab')}[data-key="${created.id}"]`;
+        await $(`${tab} ${testid('http-tab-close')}`).click();
+        await $(tab).waitForExist({ reverse: true, timeout: 10_000 });
+        await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+      } finally {
+        server.close();
+      }
+    });
   });
 
   describe('a request in its tab', () => {

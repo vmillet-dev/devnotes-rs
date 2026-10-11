@@ -84,6 +84,19 @@ describe('a limit a send ran into', () => {
     );
   });
 
+  /** It used to be blamed on the URL, whoever had written the header. */
+  it('names a header that cannot be sent, and the folder or the collection it comes from', () => {
+    expect(said('httpHeaderName', { header: 'X-Recette: 1', source: 'folder', name: 'Recette' })).toBe(
+      "L'en-tête « X-Recette: 1 », hérité du dossier « Recette », ne peut pas être envoyé : son nom n'est pas valide.",
+    );
+    expect(said('httpHeaderName', { header: 'X Recette', source: 'request' })).toBe(
+      "L'en-tête « X Recette » ne peut pas être envoyé : son nom n'est pas valide.",
+    );
+    expect(said('httpHeaderValue', { header: 'X-Trace', source: 'collection', name: 'API' }, 'en')).toBe(
+      'The header “X-Trace”, inherited from the collection “API”, cannot be sent: its value is not valid.',
+    );
+  });
+
   it("reads an error kept without its values as the request's own", () => {
     expect(errorKeyOf('httpTimeout')).toBe('errors.httpTimeout.request');
     expect(errorKeyOf('httpRefused', { source: 'folder' })).toBe('errors.httpRefused');
