@@ -647,6 +647,111 @@ fn every_send_that_left_is_recorded_masked_and_the_history_clears() {
     assert!(session.call(|app| http_history(0, app)).unwrap().is_empty());
 }
 
+/// « Vider l'historique » was the only way to remove the one send made with the wrong token,
+/// and « Rouvrir » opened a stranger with no tie to the request the send came from.
+#[test]
+fn one_send_is_removed_and_put_back_and_goes_back_onto_the_request_it_came_from() {
+    use devnotes_lib::http::model::HttpRequestDraft;
+    use devnotes_lib::http::{
+        create_http_request, delete_http_history_entry, delete_http_item, http_history,
+        http_history_onto_request, restore_http_history_entry,
+    };
+
+    let session = Session::open();
+    let (port, _seen) = serve(2, |_, _| response("200 OK", &[], b"ok"));
+    let api = session
+        .call(|app| create_http_collection("API".to_string(), app))
+        .unwrap();
+    let token = KeyValue {
+        key: "Authorization".to_string(),
+        value: "Bearer t0ken".to_string(),
+        ..KeyValue::default()
+    };
+    let held = session
+        .call(|app| {
+            create_http_request(
+                HttpRequestDraft {
+                    collection_id: api.id.clone(),
+                    folder_id: None,
+                    name: "ma req".to_string(),
+                    kind: RequestKind::Http,
+                    method: HttpMethod::Get,
+                    document: RequestDocument {
+                        url: format!("http://127.0.0.1:{port}/now"),
+                        headers: vec![token.clone()],
+                        ..RequestDocument::default()
+                    },
+                },
+                app,
+            )
+        })
+        .unwrap();
+    for path in ["first", "second?page=2"] {
+        let mut sent = request(&format!("http://127.0.0.1:{port}/{path}"));
+        sent.collection_id = Some(api.id.clone());
+        sent.request_id = Some(held.id.clone());
+        sent.document.headers = vec![token.clone()];
+        session.call(|app| send_http_request(sent, app)).unwrap();
+    }
+    let listed = || {
+        let days = session.call(|app| http_history(0, app)).unwrap();
+        days.into_iter()
+            .flat_map(|day| day.items)
+            .collect::<Vec<_>>()
+    };
+
+    // Newest first, each URL in its two parts: the host, and what tells the two apart.
+    let before = listed();
+    assert_eq!(
+        before
+            .iter()
+            .map(|item| (item.url_head.clone(), item.url_tail.as_str()))
+            .collect::<Vec<_>>(),
+        vec![
+            (format!("127.0.0.1:{port}"), "/second?page=2"),
+            (format!("127.0.0.1:{port}"), "/first"),
+        ]
+    );
+
+    let removed = session
+        .call(|app| delete_http_history_entry(before[0].id.clone(), app))
+        .unwrap();
+    assert_eq!(listed(), before[1..]);
+    session
+        .call(|app| restore_http_history_entry(removed, app))
+        .unwrap();
+    assert_eq!(listed(), before);
+
+    // Back onto its request: the send's URL, and the request's own secret where the record
+    // holds a mask.
+    let onto = session
+        .call(|app| http_history_onto_request(before[1].id.clone(), app))
+        .unwrap()
+        .unwrap();
+    assert_eq!(onto.name, "ma req");
+    assert_eq!(onto.document.url, format!("http://127.0.0.1:{port}/first"));
+    assert_eq!(onto.document.headers, vec![token]);
+
+    // The request gone, there is nothing to go back onto: a draft it is.
+    session
+        .call(|app| {
+            delete_http_item(
+                HttpItem {
+                    kind: HttpItemKind::Request,
+                    id: held.id.clone(),
+                },
+                app,
+            )
+        })
+        .unwrap();
+    assert_eq!(
+        session
+            .call(|app| http_history_onto_request(before[1].id.clone(), app))
+            .unwrap(),
+        None
+    );
+}
+
 #[test]
 fn a_graphql_request_is_posted_as_json_and_its_errors_read_apart_from_its_data() {
     use devnotes_lib::http::graphql::GraphqlDocument;

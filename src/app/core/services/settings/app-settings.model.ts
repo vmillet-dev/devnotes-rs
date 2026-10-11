@@ -36,6 +36,9 @@ export const NOTE_KIND_CHOICES = ['note', 'snippet', 'checklist'] as const satis
  */
 export const RAIL_WIDTH = { min: 160, max: 520, default: 160 } as const;
 
+/** The history's list beside the send it reads: wide enough for a URL at its ceiling. */
+export const HISTORY_LIST_WIDTH = { min: 280, max: 760, default: 380 } as const;
+
 export interface AppSettings {
   readonly locale: LocaleChoice;
   readonly theme: ThemeChoice;
@@ -57,6 +60,8 @@ export interface AppSettings {
   readonly showLibraryRail: boolean;
   /** Its width, dragged from its edge and clamped on the way in and out. */
   readonly libraryRailWidth: number;
+  /** The width of the HTTP history's list, dragged the same way. */
+  readonly historyListWidth: number;
   /** Which area shows — Notes or Outils — and the one the window reopens on. */
   readonly area: Area;
   /** The tools opened last, newest first: which and when, nothing typed into them. */
@@ -98,6 +103,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   newNoteShortcut: DEFAULT_SHORTCUTS.newNote,
   showLibraryRail: true,
   libraryRailWidth: RAIL_WIDTH.default,
+  historyListWidth: HISTORY_LIST_WIDTH.default,
   area: AREAS[0],
   recentTools: [],
   showPinnedFirst: true,

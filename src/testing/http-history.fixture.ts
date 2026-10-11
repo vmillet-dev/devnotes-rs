@@ -10,6 +10,9 @@ export function historyItem(id: string, overrides: Partial<HistoryItem> = {}): H
     status: 200,
     requestId: null,
     summary: { name: id, url: `https://api.exemple.fr/${id}`, millis: 142, size: 3277, failure: null },
+    // As Rust reads the URL in two: the host, and what tells two sends apart.
+    urlHead: 'api.exemple.fr',
+    urlTail: `/${id}`,
     ...overrides,
   };
 }

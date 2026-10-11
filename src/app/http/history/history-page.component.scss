@@ -76,12 +76,75 @@
   min-height: 0;
 }
 
+// The list's width is the frame's, dragged from its edge and remembered with the application.
+.list-frame {
+  --rail-frame-bg: transparent;
+  border-right: 1px solid var(--line-soft);
+}
+
 .list {
-  flex: 0 0 380px;
+  position: relative;
+  flex: 1;
+  min-width: 0;
   min-height: 0;
   padding: 4px 10px 16px;
-  border-right: 1px solid var(--line-soft);
   overflow-y: auto;
+}
+
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+// Over the end of its row, shown as the row is pointed at or holds the focus.
+.remove {
+  @include unstyled-control;
+  @include hit-target;
+  @include focus-ring(-2px);
+  position: absolute;
+  right: 4px;
+  justify-content: center;
+  width: 26px;
+  border-radius: 6px;
+  background: var(--bg-2);
+  font-size: 15px;
+  color: var(--text-1);
+  opacity: 0;
+  cursor: pointer;
+
+  .row:hover &,
+  &:focus-visible,
+  &.shown {
+    opacity: 1;
+  }
+
+  &:hover {
+    color: var(--red);
+  }
+
+  &.shown {
+    position: static;
+    flex-shrink: 0;
+  }
+}
+
+.undo {
+  @include surface(var(--bg-2), 10px, var(--line));
+  position: sticky;
+  bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 6px 0;
+  padding: 8px 8px 8px 12px;
+  font-size: 12.5px;
+  color: var(--text-0);
+}
+
+.undo-text {
+  flex: 1;
+  min-width: 0;
 }
 
 .day {
@@ -144,12 +207,32 @@
 }
 
 .url {
-  overflow: hidden;
+  display: flex;
+  min-width: 0;
   font-family: var(--font-mono), monospace;
   font-size: 11px;
   white-space: nowrap;
-  text-overflow: ellipsis;
   color: var(--text-2);
+}
+
+// ⚠️ The host is what gives way: fourteen sends to one host differ by what follows it, and a
+// URL cut at its end hid exactly that.
+.url-head {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// Wider than the row all by itself, it is its start that goes: the query is what was typed
+// last. ⚠️ Right to left for where the cut falls, its text isolated so that it still reads
+// left to right — a slash at either end would otherwise change sides.
+.url-tail {
+  flex: 0 0 auto;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  direction: rtl;
 }
 
 .status {

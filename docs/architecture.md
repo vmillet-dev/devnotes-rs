@@ -1863,8 +1863,27 @@ is logged.
   The live timeline shows what really left; only the history masks.
 - **Kept 30 days and 500 entries**, purged as each is written and at launch
   (`history::sweep_at_startup`). « Vider l'historique » asks Rust how many it removes first.
-- **Listed by local day** (`by_day`, the offset the notes send), newest first. **Rouvrir dans un
-  onglet** asks Rust for the request rebuilt (`http_history_draft`): the masked values left
+- **A row ends on what tells it from the next.** Fourteen sends to one host read alike, each
+  URL cut at its end. Rust answers the URL in two parts (`history::url_parts`: the host, then
+  the path and the query) and the row lets the first give way, the second stay; the whole URL
+  is the row's `title`. The list is `RailFrameComponent` again — dragged from its edge or moved
+  with the arrows, its width an application setting (`historyListWidth`).
+- **One send is deleted without being asked, and put back from the bar that follows**
+  (`delete_http_history_entry` answers the entry whole, `restore_http_history_entry` writes it
+  back under its id and at its instant): no trash and no column for it — what is handed back
+  is what the front could read anyway. The offer lasts as long as a note's. « Vider
+  l'historique » keeps its confirmation.
+- ⚠️ **« Rouvrir » puts a send back onto the request it came from** (`http_history_onto_request`
+  → `history::onto`), in that request's **own tab**, as changes not saved: it used to open a
+  stranger, a draft with no tie to it. What was sent — method, URL, parameters, headers, body,
+  or a GraphQL send read back into its query and variables — goes over what the request holds,
+  which keeps its auth, its settings and **every secret**: a header the record holds masked
+  takes the request's own row of that name back, never the dots as a value, and one handed
+  down today with the value that was sent is no change of the request's. A tab already open
+  with changes of its own is asked about first. The request gone, or the send made from a
+  draft, it is a draft named after the send and its time; the button says which it will be.
+- **Listed by local day** (`by_day`, the offset the notes send), newest first. A draft
+  asks Rust for the request rebuilt (`http_history_draft`): the masked values left
   out, and what is written again by itself — the implied `Content-Type`, the application's own
   `User-Agent` and `Accept` (`send::is_default`), which as rows would name this version for
   ever — the parameters read off the URL: a new draft tab, to send again or save into a

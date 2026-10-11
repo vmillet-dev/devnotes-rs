@@ -168,6 +168,20 @@ export class HttpRepository {
     return unwrap('http_history_draft', await commands.httpHistoryDraft(id));
   }
 
+  /** A send put back onto the request it came from; `null` when that request is gone. */
+  async historyOnto(id: string): Promise<HistoryDraft | null> {
+    return unwrap('http_history_onto_request', await commands.httpHistoryOntoRequest(id));
+  }
+
+  /** One send gone, answered whole: what its undo hands back. */
+  async deleteHistoryEntry(id: string): Promise<HistoryEntry> {
+    return unwrap('delete_http_history_entry', await commands.deleteHttpHistoryEntry(id));
+  }
+
+  async restoreHistoryEntry(entry: HistoryEntry): Promise<void> {
+    unwrap('restore_http_history_entry', await commands.restoreHttpHistoryEntry(entry));
+  }
+
   async countHistory(): Promise<number> {
     return unwrap('count_http_history', await commands.countHttpHistory());
   }

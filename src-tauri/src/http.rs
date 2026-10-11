@@ -575,6 +575,65 @@ pub async fn clear_http_history<R: Runtime>(app: AppHandle<R>) -> Result<u32, Ap
     .await
 }
 
+/// One entry gone, answered whole: its undo hands it back to `restore_http_history_entry`.
+#[tauri::command]
+#[specta::specta]
+pub async fn delete_http_history_entry<R: Runtime>(
+    id: String,
+    app: AppHandle<R>,
+) -> Result<history::HistoryEntry, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(history::store::delete(&mut connection, &id)?)
+    })
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn restore_http_history_entry<R: Runtime>(
+    entry: history::HistoryEntry,
+    app: AppHandle<R>,
+) -> Result<(), AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(history::store::restore(&mut connection, &entry)?)
+    })
+    .await
+}
+
+/// A send put back onto the request it came from, as changes to save or not, the request's own
+/// secrets where the record holds a mask. `None` when that request is gone, or the send came
+/// from a draft: the front then opens one, as `http_history_draft` rebuilds it.
+#[tauri::command]
+#[specta::specta]
+pub async fn http_history_onto_request<R: Runtime>(
+    id: String,
+    app: AppHandle<R>,
+) -> Result<Option<history::HistoryDraft>, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+        let entry = history::store::entry(&mut connection, &id)?;
+        let Some(request_id) = entry.item.request_id.as_deref() else {
+            return Ok(None);
+        };
+        let current = match store::get_request(&mut connection, request_id) {
+            Ok(current) => current,
+            Err(crate::error::StorageError::HttpItemNotFound(_)) => return Ok(None),
+            Err(error) => return Err(error.into()),
+        };
+        let above = store::inherited(
+            &mut connection,
+            &current.collection_id,
+            current.folder_id.as_deref(),
+        )?;
+        Ok(Some(history::onto(&entry, &current, &above.headers)))
+    })
+    .await
+}
+
 /// An entry rebuilt as a request to send again or save: its secrets are typed again.
 #[tauri::command]
 #[specta::specta]

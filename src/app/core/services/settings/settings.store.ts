@@ -12,6 +12,7 @@ import {
   LocaleChoice,
   MAX_TIME_ZONES,
   NOTE_KIND_CHOICES,
+  HISTORY_LIST_WIDTH,
   RAIL_WIDTH,
   ResolvedTheme,
   SETTINGS_KEYS,
@@ -126,6 +127,7 @@ export class SettingsStore {
   readonly newNoteShortcut = this.setting('newNoteShortcut', asAccelerator);
   readonly showLibraryRail = this.setting('showLibraryRail', asBoolean);
   readonly libraryRailWidth = this.setting('libraryRailWidth', asPixels(RAIL_WIDTH));
+  readonly historyListWidth = this.setting('historyListWidth', asPixels(HISTORY_LIST_WIDTH));
   readonly area = this.setting('area', asOneOf(AREAS));
   readonly recentTools = this.setting('recentTools', asRecentTools);
   readonly showPinnedFirst = this.setting('showPinnedFirst', asBoolean);

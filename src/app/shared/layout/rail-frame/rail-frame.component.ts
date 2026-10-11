@@ -28,6 +28,8 @@ export class RailFrameComponent {
   readonly bounds = input.required<RailBounds>();
   /** One a page: the notes' rail stays in the document behind the other areas. */
   readonly edgeTestId = input('rail-edge');
+  /** What the edge is called: the rail's width, unless it frames something else. */
+  readonly labelKey = input('sidebar.resize');
 
   readonly widthChanged = output<number>();
 
