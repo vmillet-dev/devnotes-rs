@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { AreaStore } from '@core/services/areas/area.store';
+import { RAIL_WIDTH } from '@core/services/settings/app-settings.model';
+import { SettingsStore } from '@core/services/settings/settings.store';
 import { TOOL_CATALOGUE } from '@core/services/tools/tool.model';
 import { ToolsStore } from '@core/services/tools/tools.store';
 import { FAKE_TOOLS } from '@testing/tool-catalogue.fixture';
@@ -29,6 +31,22 @@ describe('ToolsRailComponent', () => {
       (element: HTMLElement) => element.dataset[attribute]!,
     );
   const link = (selector: string): HTMLButtonElement => fixture.nativeElement.querySelector(selector);
+
+  /** Only the notes' rail had an edge: this one took the width and could not change it. */
+  it("is as wide as the other areas' rails, and is widened from its own edge", async () => {
+    const settings = TestBed.inject(SettingsStore);
+    const frame: HTMLElement = fixture.nativeElement.querySelector('app-rail-frame');
+    settings.libraryRailWidth.write(240);
+    await fixture.whenStable();
+    expect(frame.style.width).toBe('240px');
+
+    const edge: HTMLElement = fixture.nativeElement.querySelector('[data-testid="tools-rail-edge"]');
+    edge.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    await fixture.whenStable();
+
+    expect(settings.libraryRailWidth()).toBe(224);
+    expect(edge.getAttribute('aria-valuemin')).toBe(String(RAIL_WIDTH.min));
+  });
 
   it('lists the categories that hold something, with their counts', () => {
     expect(ids('tools-rail-category', 'category')).toEqual(['text', 'crypto']);

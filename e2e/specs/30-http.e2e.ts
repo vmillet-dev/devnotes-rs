@@ -125,6 +125,62 @@ describe('HTTP collections', () => {
       expect(await annuler.$(testid('http-node-badge')).getText()).toBe('GET');
     });
 
+    /**
+     * The rail's floor is 160px, and HTTP took 240 because its rows did not fit. Made compact —
+     * a narrower indent, no room held for a caret or for `⋯` at rest, a short method — a
+     * request two folders deep keeps a dozen characters of its name.
+     */
+    it('shows a request two folders deep at the floor of the rail, a dozen characters of its name', async () => {
+      const api = await bridge.createHttpCollection('Étroit');
+      const outer = await bridge.createHttpFolder(api.id, null, 'Commandes');
+      const inner = await bridge.createHttpFolder(api.id, outer.id, 'Archives');
+      const deep = await bridge.createHttpRequest({
+        ...draft(api.id, inner.id, 'Supprimer la commande archivée'),
+        method: 'DELETE',
+      });
+      await press('1', ['Control']);
+      await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+      await press('3', ['Control']);
+      await $(testid('http-rail')).waitForDisplayed({ timeout: 10_000 });
+      await browser.execute(
+        (selector: string) => (document.querySelector(selector) as HTMLElement | null)?.focus(),
+        testid('http-rail-edge'),
+      );
+      await browser.keys(Array.from({ length: 30 }, () => 'ArrowLeft'));
+      const row = `${testid('http-node')}[data-id="${deep.id}"]`;
+      await $(row).waitForDisplayed({ timeout: 10_000 });
+
+      const measured = await eventually(
+        () =>
+          browser.execute(
+            (rail: string, target: string) => {
+              const name = document.querySelector<HTMLElement>(`${target} [data-testid="http-node-name"]`)!;
+              const label = name.querySelector<HTMLElement>('.node-label')!;
+              const style = getComputedStyle(label);
+              // A dozen characters of this very font: what the label has to hold.
+              const ruler = document.createElement('canvas').getContext('2d')!;
+              ruler.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+              return {
+                rail: Math.round(document.querySelector(rail)!.getBoundingClientRect().width),
+                label: label.getBoundingClientRect().width,
+                dozen: ruler.measureText('Supprimer la').width,
+                badge: name.querySelector('[data-testid="http-node-badge"]')?.textContent?.trim(),
+                title: name.getAttribute('title'),
+              };
+            },
+            testid('http-rail'),
+            row,
+          ),
+        (seen) => seen.rail === 160,
+        'the rail at its floor',
+      );
+
+      expect(measured.badge).toBe('DEL');
+      expect(measured.title).toBe('Supprimer la commande archivée');
+      expect(measured.label).toBeGreaterThanOrEqual(measured.dozen);
+      await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+    });
+
     it('folds a folder and keeps it folded, then deletes the collection after saying what goes', async () => {
       await (await named('Commandes'))!.$(testid('http-node-twisty')).click();
       await eventually(

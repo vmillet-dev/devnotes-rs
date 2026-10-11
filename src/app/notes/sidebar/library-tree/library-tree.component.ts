@@ -15,15 +15,13 @@ import { RAIL_WIDTH } from '@core/services/settings/app-settings.model';
 import { Space } from '@core/model/space.model';
 import { FolderEditorComponent } from '@notes/header/folder-editor/folder-editor.component';
 import { SpaceEditorComponent } from '@notes/header/space-editor/space-editor.component';
+import { RailFrameComponent } from '@shared/layout/rail-frame/rail-frame.component';
 
 /** A space and the folders drawn under it. */
 interface SpaceNode {
   readonly space: Space;
   readonly folders: readonly Folder[];
 }
-
-/** What one arrow key moves the edge by: a nudge, not a jump. */
-const RESIZE_STEP_PX = 16;
 
 /**
  * The library as a tree: every space, its folders under it, the way an editor holds a
@@ -35,9 +33,7 @@ const RESIZE_STEP_PX = 16;
  */
 @Component({
   selector: 'app-library-tree',
-  imports: [TranslocoPipe, FolderEditorComponent, SpaceEditorComponent],
-  // The width is the host's: the tree scrolls inside it and the edge is drawn against it.
-  host: { '[style.width.px]': 'width()' },
+  imports: [FolderEditorComponent, RailFrameComponent, SpaceEditorComponent, TranslocoPipe],
   templateUrl: './library-tree.component.html',
   styleUrl: './library-tree.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -100,48 +96,6 @@ export class LibraryTreeComponent {
         this.folderInput()?.nativeElement.focus();
       }
     });
-  }
-
-  /**
-   * Pointer events, like every other drag in this application: HTML5 drag and drop
-   * does not work in this WebView and cannot be turned on. The edge is a `separator`, so
-   * the arrow keys move it too — the same rule the board's grips follow.
-   */
-  protected startResize(event: PointerEvent): void {
-    if (event.button !== 0) return;
-
-    event.preventDefault();
-    const handle = event.target as HTMLElement;
-    handle.setPointerCapture?.(event.pointerId);
-  }
-
-  protected onResizeMove(event: PointerEvent): void {
-    const handle = event.target as HTMLElement;
-    if (!handle.hasPointerCapture?.(event.pointerId)) return;
-
-    // Measured from the rail's own left edge, so a window that is not at x=0 is no trap.
-    const left = handle.parentElement?.getBoundingClientRect().left ?? 0;
-    this.emitWidth(event.clientX - left);
-  }
-
-  protected endResize(event: PointerEvent): void {
-    (event.target as HTMLElement).releasePointerCapture?.(event.pointerId);
-  }
-
-  protected onResizeKey(event: KeyboardEvent): void {
-    const step =
-      event.key === 'ArrowRight' ? RESIZE_STEP_PX : event.key === 'ArrowLeft' ? -RESIZE_STEP_PX : 0;
-    if (step === 0) return;
-
-    event.preventDefault();
-    this.emitWidth(this.width() + step);
-  }
-
-  private emitWidth(width: number): void {
-    const clamped = Math.min(RAIL_WIDTH.max, Math.max(RAIL_WIDTH.min, Math.round(width)));
-    if (clamped !== this.width()) {
-      this.widthChanged.emit(clamped);
-    }
   }
 
   protected isExpanded(spaceId: string): boolean {

@@ -166,7 +166,7 @@
     "expand": "Expand space {{name}}",
     "collapse": "Collapse space {{name}}",
     "noFolders": "No folder",
-    "resize": "Width of the spaces rail"
+    "resize": "Width of the side rail"
   },
   "board": {
     "viewSwitchLabel": "Choose the view",

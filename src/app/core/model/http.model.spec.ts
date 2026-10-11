@@ -3,6 +3,7 @@ import {
   DEFAULT_TRANSPORT,
   fromSettings,
   requestBadge,
+  shortBadge,
   toDocument,
   toInherited,
   toParts,
@@ -83,5 +84,18 @@ describe('the HTTP wire shapes', () => {
     expect(requestBadge({ kind: 'http', method: 'PATCH' })).toBe('PATCH');
     expect(requestBadge({ kind: 'graphql', method: 'POST' })).toBe('QUERY');
     expect(requestBadge({ kind: 'websocket', method: 'GET' })).toBe('WS');
+  });
+
+  /** Where room is counted, the rail at 160px and a tab: three letters for the long methods. */
+  it('cuts the long methods to three letters, and leaves the others whole', () => {
+    expect(shortBadge('DELETE')).toBe('DEL');
+    expect(shortBadge('OPTIONS')).toBe('OPT');
+    expect(['GET', 'POST', 'PATCH', 'QUERY', 'WS'].map(shortBadge)).toEqual([
+      'GET',
+      'POST',
+      'PATCH',
+      'QUERY',
+      'WS',
+    ]);
   });
 });

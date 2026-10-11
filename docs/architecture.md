@@ -1612,8 +1612,16 @@ line each in `SettingsStore`, restored at launch like every other preference, an
 absent from the preferences panel: they are states the window is in, not decisions to go and
 make. ⚠️ The width is dragged from the rail's edge with **pointer events**, like every other
 drag in this application — HTML5 drag and drop does not work in this WebView — and the edge is
-a `role="separator"` so the arrow keys move it too. It is clamped on the way in _and_ on the
+a `role="slider"` so the arrow keys move it too. It is clamped on the way in _and_ on the
 way out (`RAIL_WIDTH`), because a preferences file written by hand is an input like any other.
+
+⚠️ **One frame for the three rails** (`app-rail-frame`, `shared/layout/rail-frame/`): the
+width, the background and the edge that drags it, drawn once. It takes a width and its bounds
+and emits the new one — it injects nothing — and each rail (`library-tree`, `tools-rail`,
+`http-rail`) holds its `<nav>` in it, its own host `display: contents`. Before it, only the
+notes' rail could be resized, and HTTP's took `max(width, 240px)`: the rail jumped on the way
+in and back on the way out. The `<nav>` keeps the line on its right (`@mixin rail-body`): it
+is the element a rail is measured by, and has to be as wide as the frame is told.
 
 **The floor is the tree's own, not the panels'.** It stopped at 220px, and that number had
 nothing to do with the rows: `space-editor` and `folder-editor` carry a `min-width` of 240px,
@@ -1634,7 +1642,12 @@ cut one.
 
 The third area (`Ctrl+3`, `http/`) opens on the collections of the library: `HttpRailComponent`
 in the library rail's frame — its width, its hidden state, the titlebar carrying the switch
-while it is hidden — and the open request beside it. The tree is Rust's (`http_tree`); the rail lays it
+while it is hidden — and the open request beside it. ⚠️ Its rows are compact so that the rail's
+floor of 160px is enough, not merely allowed: 8px a level (`--indent`), nothing held on a
+request's row for a caret it does not have, the long methods in three letters (`shortBadge`:
+`DEL`, `OPT`, in the tabs too), and `⋯` drawn over the end of the row on hover or focus
+instead of holding its width at rest — the row says when through `--node-menu-opacity`, since
+its stylesheet cannot reach into the menu's. The tree is Rust's (`http_tree`); the rail lays it
 flat (`railRows`, `core/services/http/http-tree.ts`), each row at its depth, a request after its
 method in its colour (`http-method-hues`), `QUERY` for GraphQL and `WS` for a WebSocket.
 

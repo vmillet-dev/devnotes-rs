@@ -12,7 +12,7 @@ import { LibraryTreeComponent } from './library-tree/library-tree.component';
   selector: 'app-notes-sidebar',
   imports: [LibraryTreeComponent, AreaSwitchComponent],
   templateUrl: './notes-sidebar.component.html',
-  styles: ':host { display: contents; } .rail-switch { margin-bottom: 10px; }',
+  styles: ':host { display: contents; } .rail-switch { flex-shrink: 0; margin-bottom: 10px; }',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NotesSidebarComponent {

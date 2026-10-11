@@ -1,18 +1,20 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AreaStore } from '@core/services/areas/area.store';
+import { RAIL_WIDTH } from '@core/services/settings/app-settings.model';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { TOOL_CATALOGUE, TOOL_CATEGORIES, ToolDefinition } from '@core/services/tools/tool.model';
 import { ToolsStore } from '@core/services/tools/tools.store';
 import { AreaSwitchComponent } from '@shared/controls/area-switch/area-switch.component';
+import { RailFrameComponent } from '@shared/layout/rail-frame/rail-frame.component';
 
 /**
  * At home, the categories and their counts; in a tool, its category's tools and the recent
- * ones. The library rail's width, so going from one area to the other moves nothing.
+ * ones. In the frame the three areas share, so going from one to the other moves nothing.
  */
 @Component({
   selector: 'app-tools-rail',
-  imports: [AreaSwitchComponent, TranslocoPipe],
+  imports: [AreaSwitchComponent, RailFrameComponent, TranslocoPipe],
   templateUrl: './tools-rail.component.html',
   styleUrl: './tools-rail.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -22,6 +24,7 @@ export class ToolsRailComponent {
   protected readonly settings = inject(SettingsStore);
   protected readonly store = inject(ToolsStore);
   protected readonly catalogue = inject(TOOL_CATALOGUE);
+  protected readonly bounds = RAIL_WIDTH;
 
   protected readonly openTool = computed(
     () => this.catalogue.find((tool) => tool.id === this.store.openId()) ?? null,
