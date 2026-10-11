@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { HttpItem } from '@core/model/http.model';
 import { sampleTree } from '@testing/http-tree.fixture';
-import { dropMove, holdsRequest, keyMove, railRows, savePlaces } from './http-tree';
+import { dropMove, findRequest, keyMove, railRows, savePlaces } from './http-tree';
 
 const folder = (id: string): HttpItem => ({ kind: 'folder', id });
 const request = (id: string): HttpItem => ({ kind: 'request', id });
@@ -136,11 +136,19 @@ describe('a drop', () => {
   });
 });
 
-describe('holdsRequest', () => {
-  it('says whether a request is still in the tree', () => {
-    expect(holdsRequest(sampleTree(), 'Old')).toBe(true);
-    expect(holdsRequest(sampleTree(), 'Auth')).toBe(false);
-    expect(holdsRequest(sampleTree(), 'Gone')).toBe(false);
+describe('findRequest', () => {
+  it('answers a request with its name and where it sits, at any depth', () => {
+    expect(findRequest(sampleTree(), 'Old')).toMatchObject({
+      name: 'Old',
+      collectionId: 'API',
+      folderId: 'Archives',
+    });
+    expect(findRequest(sampleTree(), 'Live')).toMatchObject({ collectionId: 'Flux', folderId: null });
+  });
+
+  it('answers nothing for a folder, or for a request that is gone', () => {
+    expect(findRequest(sampleTree(), 'Auth')).toBeNull();
+    expect(findRequest(sampleTree(), 'Gone')).toBeNull();
   });
 });
 

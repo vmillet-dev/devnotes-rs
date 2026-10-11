@@ -53,10 +53,9 @@ export class HttpPageComponent implements OnInit {
     void this.open();
   }
 
-  /** A tab whose request went while the page was away closes; one never read is left alone. */
+  /** The tabs follow the tree once it is read: one whose request went while the page was away closes. */
   private async open(): Promise<void> {
-    const [read] = await Promise.all([this.collections.load(), this.tabs.restore()]);
-    if (read) this.tabs.prune(this.collections.tree());
+    await Promise.all([this.collections.load(), this.tabs.restore()]);
   }
 
   protected askSave(tab: RequestTab, thenClose = false): void {
@@ -70,7 +69,6 @@ export class HttpPageComponent implements OnInit {
     this.tabs.edit(placing.tab.key, { name: answer.name });
     const key = await this.tabs.save(placing.tab.key, answer);
     if (key === null) return;
-    await this.collections.load();
     if (placing.thenClose) this.tabs.close(key);
   }
 

@@ -201,7 +201,6 @@ export class HttpRailComponent {
     if (confirming === null) return;
     this.confirming.set(null);
     await this.store.delete(item(confirming.row));
-    this.tabs.prune(this.store.tree());
   }
 
   protected closeForms(): void {

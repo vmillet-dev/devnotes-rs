@@ -3,6 +3,7 @@ import {
   HttpItemKind,
   HttpNode,
   HttpPlace,
+  HttpRequestSummary,
   HttpTree,
   RequestKind,
   requestBadge,
@@ -226,9 +227,24 @@ export function dropMove(
   return unchanged ? null : { kind: 'move', item: dragged, place: { collectionId, folderId, index: at } };
 }
 
-/** Whether the tree still holds that request, after a deletion that may have taken it. */
-export function holdsRequest(tree: HttpTree, requestId: string): boolean {
-  return index(tree).located.get(requestId)?.item.kind === 'request';
+/** A request as the tree holds it — its name and where it sits — or `null` once it is gone. */
+export function findRequest(tree: HttpTree, requestId: string): HttpRequestSummary | null {
+  const walk = (nodes: readonly HttpNode[]): HttpRequestSummary | null => {
+    for (const node of nodes) {
+      if (node.kind === 'request') {
+        if (node.request.id === requestId) return node.request;
+      } else {
+        const found = walk(node.children);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+  for (const { children } of tree.collections) {
+    const found = walk(children);
+    if (found) return found;
+  }
+  return null;
 }
 
 /** Where a request may be saved: each collection, then each of its folders, named by its path. */
