@@ -103,7 +103,11 @@ describe('HttpSendStore', () => {
     http.pendingSend = pending.promise;
     const sending = store().send(tab('draft-1'));
     await Promise.resolve();
+    const before = store().states().get('draft-1');
     store().rekey('draft-1', 'request-7');
+    // The instant it left follows it: what counts from it does not start again.
+    expect(before?.phase === 'sending' && before.startedAt).toBeGreaterThan(0);
+    expect(store().states().get('request-7')).toBe(before);
     pending.resolve(sentResponse());
     await sending;
 

@@ -26,6 +26,7 @@ import { HttpSendStore } from '@core/services/http/http-send.store';
 import { HttpSocketsStore } from '@core/services/http/http-sockets.store';
 import { HttpTabsStore, RequestTab } from '@core/services/http/http-tabs.store';
 import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
+import { SpinnerComponent } from '@shared/spinner/spinner.component';
 import { HTTP_HEADERS } from '@tools/catalogue/http-headers/http-headers.data';
 import { AuthEditorComponent } from '@http/ui/auth-editor/auth-editor.component';
 import { BodyEditorComponent } from '../body-editor/body-editor.component';
@@ -57,6 +58,7 @@ const counted = (rows: readonly KeyValueRow[]) => rows.filter((row) => row.enabl
     ChoiceMenuComponent,
     GraphqlEditorComponent,
     KeyValueTableComponent,
+    SpinnerComponent,
     TranslocoPipe,
     TransportEditorComponent,
     UrlFieldComponent,

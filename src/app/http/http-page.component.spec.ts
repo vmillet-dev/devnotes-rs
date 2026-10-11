@@ -236,7 +236,10 @@ describe('HttpPageComponent', () => {
     await fixture.whenStable();
     expect(http.callsOf('send')[0]?.[2]).toEqual({ collectionId: 'API', folderId: null });
     expect(el('[data-testid="http-send"]').textContent?.trim()).toBe('Annuler');
+    expect(el('[data-testid="http-send"] app-spinner')).not.toBeNull();
     expect(el('[data-testid="http-response-sending"]')).not.toBeNull();
+    // Its tab says it too: a request sent then left behind still says it runs.
+    expect(el('[data-testid="http-tab"] [data-testid="http-tab-sending"]')).not.toBeNull();
 
     el<HTMLButtonElement>('[data-testid="http-send"]').click();
     await vi.waitFor(() => expect(http.callsOf('cancel')).toHaveLength(1));
@@ -245,6 +248,8 @@ describe('HttpPageComponent', () => {
       expect(el('[data-testid="http-response-status"]')?.textContent).toContain('201 Created'),
     );
     expect(el('[data-testid="http-send"]').textContent).toContain('Envoyer');
+    expect(el('[data-testid="http-send"] app-spinner')).toBeNull();
+    expect(el('[data-testid="http-tab-sending"]')).toBeNull();
 
     el<HTMLButtonElement>('[data-testid="http-tab-close"]').click();
     await fixture.whenStable();

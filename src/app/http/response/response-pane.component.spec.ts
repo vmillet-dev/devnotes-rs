@@ -51,6 +51,53 @@ describe('ResponsePaneComponent', () => {
     await fixture.whenStable();
   };
 
+  /**
+   * A still sentence made a slow server and a frozen window look the same. The count starts at
+   * the store's instant: a pane drawn later, on coming back to the tab, does not restart it.
+   */
+  it('turns and counts the time since the send while it waits, then stops', async () => {
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] });
+    vi.setSystemTime(new Date(2026, 9, 11, 10, 0, 0));
+    try {
+      let answered!: (response: SentResponse) => void;
+      http.pendingSend = new Promise((resolve) => (answered = resolve));
+      const sent = TestBed.inject(HttpSendStore).send({
+        key: 'Login',
+        place: null,
+        requestId: null,
+        draft: { name: 'Login', kind: 'http', method: 'GET', parts: EMPTY_PARTS },
+      });
+      await fixture.whenStable();
+
+      expect(el('http-response-sending')?.querySelector('app-spinner')).not.toBeNull();
+      expect(text('http-response-elapsed')).toBe('0,0 s');
+      expect(el('http-response-elapsed')?.getAttribute('aria-hidden')).toBe('true');
+
+      vi.advanceTimersByTime(2_400);
+      await fixture.whenStable();
+      expect(text('http-response-elapsed')).toBe('2,4 s');
+
+      const back = TestBed.createComponent(ResponsePaneComponent);
+      back.componentRef.setInput('tabKey', 'Login');
+      back.componentRef.setInput('requestName', 'Lister les factures');
+      back.autoDetectChanges();
+      await back.whenStable();
+      expect(
+        (back.nativeElement as HTMLElement).querySelector('[data-testid="http-response-elapsed"]')
+          ?.textContent,
+      ).toBe('2,4 s');
+
+      answered(sentResponse());
+      await sent;
+      await fixture.whenStable();
+      await back.whenStable();
+      expect(el('http-response-sending')).toBeNull();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('says how to begin before anything was sent', () => {
     expect(text('http-response-idle')).toBe('Envoyez la requête pour lire sa réponse ici.');
   });

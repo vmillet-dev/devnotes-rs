@@ -17,7 +17,12 @@
       {{ ref.key | transloco: ref.params }}
     </p>
   } @else if (phase() === 'sending') {
-    <p class="placeholder" data-testid="http-response-sending">{{ 'http.response.sending' | transloco }}</p>
+    <p class="placeholder sending" data-testid="http-response-sending">
+      <app-spinner />
+      {{ 'http.response.sending' | transloco }}
+      <!-- The pane is a live region: a number that ticks would be read at every tick. -->
+      <span class="elapsed" aria-hidden="true" data-testid="http-response-elapsed">{{ elapsed() }}</span>
+    </p>
   } @else if (phase() === 'cancelled') {
     <p class="placeholder" data-testid="http-response-cancelled">
       {{ 'http.response.cancelled' | transloco }}

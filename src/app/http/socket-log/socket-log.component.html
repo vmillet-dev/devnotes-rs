@@ -1,8 +1,11 @@
 <section class="log" data-testid="http-socket-log" [attr.aria-label]="'http.socket.log' | transloco">
   <header class="bar">
-    <span class="phase" data-testid="http-socket-phase" [attr.data-phase]="phase()">{{
-      'http.socket.phases.' + phase() | transloco
-    }}</span>
+    <span class="phase" data-testid="http-socket-phase" [attr.data-phase]="phase()">
+      @if (phase() === 'connecting') {
+        <app-spinner />
+      }
+      {{ 'http.socket.phases.' + phase() | transloco }}
+    </span>
     @if (state()?.protocol; as protocol) {
       <span class="protocol">{{ 'http.socket.protocol' | transloco: { protocol } }}</span>
     }

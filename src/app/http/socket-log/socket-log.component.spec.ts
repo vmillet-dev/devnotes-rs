@@ -50,7 +50,9 @@ describe('SocketLogComponent', () => {
 
   it('says where the socket stands, and logs each message with its direction and size', async () => {
     expect(el('http-socket-phase')?.textContent?.trim()).toBe('Connexion…');
+    expect(el('http-socket-phase')?.querySelector('app-spinner')).not.toBeNull();
     await event({ kind: 'opened', url: 'wss://flux.exemple.fr', protocol: 'chat' });
+    expect(el('http-socket-phase')?.querySelector('app-spinner')).toBeNull();
     await event({ kind: 'sent', text: 'ping', size: 4 });
     await event({ kind: 'received', text: '', size: 12, binary: true, cut: false });
 

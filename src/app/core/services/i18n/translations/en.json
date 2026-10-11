@@ -2781,6 +2781,7 @@
       "label": "Open requests",
       "untitled": "New request",
       "modified": "modified",
+      "sending": "being sent",
       "close": "Close {{name}}",
       "new": "New request"
     },

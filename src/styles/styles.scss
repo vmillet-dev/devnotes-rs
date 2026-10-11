@@ -59,6 +59,8 @@
      that is used in bursts. */
   --motion-fast: 120ms;
   --motion: 160ms;
+  /* The one motion that lasts: a spinner's turn, while something is waited for. */
+  --motion-turn: 800ms;
 
   // A full-screen editor starts under it, so the titlebar stays in reach.
   --titlebar-height: 38px;
@@ -224,6 +226,12 @@ body {
 @keyframes enter-fade {
   from {
     opacity: 0;
+  }
+}
+
+@keyframes turn {
+  to {
+    transform: rotate(360deg);
   }
 }
 

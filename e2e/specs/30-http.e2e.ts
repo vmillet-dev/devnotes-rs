@@ -527,6 +527,63 @@ describe('HTTP collections', () => {
       }
     });
 
+    /** A still « Envoi en cours… » made a slow server and a frozen application look the same. */
+    it('shows a request on its way: a spinner, the time going by, its tab marked', async () => {
+      let answer: () => void = () => undefined;
+      const held = new Promise<void>((resolve) => (answer = resolve));
+      const server = createServer((_, response) => {
+        void held.then(() => {
+          response.writeHead(200, { 'Content-Type': 'text/plain' });
+          response.end('late');
+        });
+      });
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      const { port } = server.address() as AddressInfo;
+      try {
+        const api = await bridge.createHttpCollection('Lenteur');
+        const created = await bridge.createHttpRequest({
+          ...draft(api.id, null, 'Tarde'),
+          document: { url: `http://127.0.0.1:${port}/late`, description: '' },
+        });
+        await press('1', ['Control']);
+        await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+        await press('3', ['Control']);
+        await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+        if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
+        await $(`${testid('http-node')}[data-id="${created.id}"] ${testid('http-node-name')}`).click();
+        await $(testid('http-response-idle')).waitForDisplayed({ timeout: 10_000 });
+        const tab = `${testid('http-tab')}[data-key="${created.id}"]`;
+
+        await $(testid('http-send')).click();
+        await $(`${testid('http-response-sending')} app-spinner`).waitForDisplayed({ timeout: 10_000 });
+        expect(await $(`${testid('http-send')} app-spinner`).isDisplayed()).toBe(true);
+        expect(await $(`${tab} ${testid('http-tab-sending')}`).isDisplayed()).toBe(true);
+        const first = await $(testid('http-response-elapsed')).getText();
+        await eventually(
+          () => $(testid('http-response-elapsed')).getText(),
+          (elapsed) => elapsed !== first,
+          'the elapsed time to move',
+        );
+
+        answer();
+        await eventually(
+          () => $(testid('http-response-status')).getText(),
+          (text) => text === '200 OK',
+          'the late answer',
+        );
+        expect(await $(`${tab} ${testid('http-tab-sending')}`).isExisting()).toBe(false);
+        expect(await $(`${testid('http-send')} app-spinner`).isExisting()).toBe(false);
+
+        await $(`${tab} ${testid('http-tab-close')}`).click();
+        await $(tab).waitForExist({ reverse: true, timeout: 10_000 });
+        await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+      } finally {
+        answer();
+        server.close();
+        server.closeAllConnections();
+      }
+    });
+
     it('opens a WebSocket from Rust, sends a message, reads the echo, and closes it', async () => {
       const echo = await echoSocket();
       try {

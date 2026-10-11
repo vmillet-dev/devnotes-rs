@@ -45,6 +45,7 @@
         (click)="send()"
       >
         @if (inFlight()) {
+          <app-spinner />
           {{ 'http.send.cancel' | transloco }}
         } @else {
           {{ 'http.send.send' | transloco }}
