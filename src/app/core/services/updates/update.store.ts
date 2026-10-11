@@ -1,5 +1,6 @@
 import { Injectable, Signal, computed, inject, signal } from '@angular/core';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
+import { HttpLeaveStore } from '@core/services/http/http-leave.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { AvailableUpdate, DownloadProgress, UpdaterService } from './updater.service';
 
@@ -20,6 +21,7 @@ export class UpdateStore {
   private readonly updater = inject(UpdaterService);
   private readonly notifier = inject(ErrorNotifier);
   private readonly settings = inject(SettingsStore);
+  private readonly leave = inject(HttpLeaveStore);
 
   private readonly _update = signal<AvailableUpdate | null>(null);
   private readonly _status = signal<UpdateStatus>('idle');
@@ -87,6 +89,8 @@ export class UpdateStore {
   /** On Windows the installer stops the app before `relaunch()`; it is still needed elsewhere. */
   async accept(): Promise<void> {
     if (this._status() !== 'available') return;
+    // The installer stops the application, or `relaunch` does: asked before either.
+    if (!(await this.leave.confirm('update'))) return;
 
     this._status.set('installing');
     this._progress.set(null);

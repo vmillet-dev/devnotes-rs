@@ -691,6 +691,18 @@ describe('NotesPageComponent', () => {
       expect(store.selectedNote()).not.toBeNull();
     });
 
+    /** A quit asked from the tray is answered by the shell: it is no reason to change area. */
+    it('leaves a quit asked from outside to the shell, and stays on the area it was on', async () => {
+      const areas = TestBed.inject(AreaStore);
+      areas.show('http');
+
+      fireAction('quit');
+      await fixture.whenStable();
+
+      expect(areas.current()).toBe('http');
+      expect(store.selectedNote()).toBeNull();
+    });
+
     it('opens the quick palette when the palette event fires', async () => {
       fireAction('palette');
 

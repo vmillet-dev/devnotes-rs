@@ -1,0 +1,48 @@
+@if (leave.placing(); as tab) {
+  <!-- « Tout enregistrer » reaches a request never saved: it is asked where it goes. -->
+  <app-save-request-dialog
+    layer="fields"
+    [name]="tab.draft.name"
+    (saved)="place($event)"
+    (cancelled)="leave.cancelPlace()"
+  />
+} @else if (leave.asking(); as reason) {
+  @let modified = leave.modified();
+  <app-dialog [layer]="'fields'" labelledBy="http-leave-title" (closed)="leave.cancel()">
+    <div class="body" data-testid="http-leave-dialog" [attr.data-reason]="reason">
+      <h2 id="http-leave-title" class="title">
+        {{ 'http.leave.title' | transloco: { count: modified.length } }}
+      </h2>
+      <p class="hint">{{ 'http.leave.hint.' + reason | transloco }}</p>
+      <ul class="names">
+        @for (tab of modified; track tab.key) {
+          <li class="name" [attr.title]="tab.draft.name">
+            <span class="dot" aria-hidden="true">●</span>
+            <span class="label" data-testid="http-leave-name">{{ tab.draft.name }}</span>
+          </li>
+        }
+      </ul>
+      @if (leave.connected(); as connected) {
+        <p class="hint" data-testid="http-leave-connected">
+          {{ 'http.leave.connected' | transloco: { count: connected } }}
+        </p>
+      }
+      <div class="actions">
+        <button type="button" class="action" data-testid="http-leave-cancel" (click)="leave.cancel()">
+          {{ 'http.rail.cancel' | transloco }}
+        </button>
+        <button
+          type="button"
+          class="action discard"
+          data-testid="http-leave-discard"
+          (click)="leave.discard()"
+        >
+          {{ 'http.leave.discard.' + reason | transloco }}
+        </button>
+        <button type="button" class="action primary" data-testid="http-leave-save" (click)="leave.saveAll()">
+          {{ 'http.leave.saveAll' | transloco }}
+        </button>
+      </div>
+    </div>
+  </app-dialog>
+}

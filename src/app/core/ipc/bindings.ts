@@ -376,6 +376,11 @@ export const commands = {
 	/**  The native side can only fail silently, and a log line is not an interface. */
 	setGlobalShortcuts: (bindings: ShortcutBindings) => __TAURI_INVOKE<string[]>("set_global_shortcuts", { bindings }),
 	setWindowBehavior: (behavior: WindowBehavior) => __TAURI_INVOKE<void>("set_window_behavior", { behavior }),
+	/**
+	 *  The page's answer to `GlobalAction::Quit` when it has something to ask first: the timer
+	 *  stands down, and the window comes up — it may be hidden in the tray, where no dialog shows.
+	 */
+	holdQuit: () => __TAURI_INVOKE<void>("hold_quit"),
 };
 
 /* Constants */
@@ -1221,7 +1226,9 @@ export type GenerateRequest = {
  *  One event carrying a closed value rather than a topic per action: a mistyped topic is
  *  a silently inert subscription, and a new variant here stops the front compiling.
  */
-export type GlobalAction = "capture" | "new-note" | "palette";
+export type GlobalAction = "capture" | "new-note" | "palette" | 
+/**  Not something to do but something to answer: a quit asked from outside the page. */
+"quit";
 
 export type Granularity = "lines" | "words" | "characters";
 

@@ -2896,6 +2896,23 @@
         "folder": "Give the folder a name, or remove it."
       }
     },
+    "leave": {
+      "title": "{count, plural, one {One request has changes} other {# requests have changes}}",
+      "hint": {
+        "quit": "They are not saved: quitting loses them.",
+        "switch": "They are not saved: switching library loses them.",
+        "restore": "They are not saved: restoring the backup loses them.",
+        "update": "They are not saved: installing the update loses them."
+      },
+      "connected": "{count, plural, one {One connected WebSocket will be closed.} other {# connected WebSockets will be closed.}}",
+      "saveAll": "Save all",
+      "discard": {
+        "quit": "Quit without saving",
+        "switch": "Switch without saving",
+        "restore": "Restore without saving",
+        "update": "Install without saving"
+      }
+    },
     "close": {
       "title": "“{{name}}” has changes",
       "hint": "They are not saved yet.",

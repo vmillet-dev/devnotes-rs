@@ -3580,7 +3580,8 @@ subscription that was silently inert and that nothing reported. Now `desktop::Gl
 `closed_enum!` and the topic is a single constant, and **both are generated**: `lib.rs` exports
 them with `.typ::<GlobalAction>()` and `.constant("GLOBAL_ACTION_EVENT", …)`, neither of which
 needs a command to hang off. The front imports both from `bindings.ts`, and its `switch` over
-the action is exhaustive — a variant added in Rust stops the front compiling.
+the action is exhaustive — a variant added in Rust stops the front compiling. `Quit` is the
+one that is a question rather than something to do (→ "Leaving with requests not saved").
 
 **Application metadata travels the same way.** `app_info::METADATA` is exported with
 `.constant("APP_METADATA", …)` and holds what the front used to spell out: the display name,
@@ -3691,6 +3692,36 @@ default; minimising to the tray is the same idea, off by default. Tauri emits no
   front can act on, and giving it an `ErrorCode` would add a branch no UI would ever render —
   it is logged natively, like an unavailable global shortcut.
 
+### Leaving with requests not saved
+
+A request typed in a tab and never saved, or a saved one with changes, does not survive the
+page: `HttpTabsStore` keeps the ids of the saved requests that are open, nothing else. They are
+**not** kept across a restart; the application **asks before they are lost**
+(`HttpLeaveStore`, `core/services/http/`, and `LeaveRequestsDialogComponent`, drawn by the
+shell because any area can be the one on screen).
+
+- **Everything that takes the page away goes through `HttpLeaveStore.confirm(reason)`** and goes
+  on only on `true`: « Quitter » in the File menu, a library opened or created
+  (`LibrariesStore`, which reloads), a backup restored (`BackupsStore`), an update installed
+  (`UpdateStore`). ⚠️ Nothing is asked when no tab is modified: leaving stays instant.
+- **One dialog**: how many requests, their names under the dot a modified tab wears, a sentence
+  for the WebSockets that will be cut, then « Annuler », « … sans enregistrer » and « Tout
+  enregistrer ». That last one writes the requests that have a place, then walks those never
+  saved through the save dialog, one at a time; a place not given comes back to the question,
+  and a write that fails leaves it standing.
+- **A quit asked from outside the page asks the page.** The tray's « Quitter » called
+  `app.exit(0)`, and closing the window when that does not hide it ended the process as well.
+  Both now go through `desktop::request_quit`: one `GlobalAction::Quit` down, and the page
+  answers — at once with `exit` when nothing would be lost; otherwise `hold_quit` first, which
+  stops Rust waiting and shows the window (it may be hidden in the tray, where no dialog is
+  seen), then its question, and the process ends from the page or not at all.
+- ⚠️ **The wait is bounded** (`QUIT_PATIENCE`, 3 s): a page that never answers — hung, not
+  loaded — must not make the application impossible to quit. Questions are numbered
+  (`PendingQuit`), so the timer of one never quits for the next.
+- ⚠️ `HttpLeaveStore` exists from the first render and resolves the HTTP stores **when asked**,
+  never at construction: they read the library's preferences as they are built — what is
+  folded, which tabs were open — and would read nothing before the library is open.
+
 The commands, grouped by the feature that owns them:
 
 | Feature       | Commands                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
@@ -3705,7 +3736,7 @@ The commands, grouped by the feature that owns them:
 | `backup`      | `list_backups`, `restore_backup`                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `recovery`    | `archive_locked_library`, `set_aside_damaged_library`                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `changelog`   | `app_changelog`                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `desktop`     | `set_global_shortcuts`, `set_window_behavior`, `sync_tray`                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `desktop`     | `hold_quit`, `set_global_shortcuts`, `set_window_behavior`, `sync_tray`                                                                                                                                                                                                                                                                                                                                                                                        |
 
 The guarantees the front-end relies on (persisted value returned, `Err` on an unknown id,
 "absent field means unchanged" for patches) are implemented in each feature, and tested there.

@@ -11,6 +11,8 @@ import { FakeClipboard } from '@testing/fake-clipboard';
 import { FakeFileDialog } from '@testing/fake-file-dialog';
 import { FakeTransferRepository } from '@testing/fake-transfer-repository';
 import { createNote } from '@testing/note.fixture';
+import { HttpLeaveStore } from '@core/services/http/http-leave.store';
+import { HttpTabsStore } from '@core/services/http/http-tabs.store';
 import { provideAppTesting } from '@testing/testing.providers';
 import { FileMenuComponent } from './file-menu.component';
 
@@ -209,6 +211,31 @@ describe('FileMenuComponent', () => {
     await fixture.whenStable();
 
     expect(appWindow.exitedWith).toBe(0);
+  });
+
+  /** « Quitter » ended the process with what was typed in a request and never saved. */
+  it('asks before quitting over unsaved requests, and stays when told to', async () => {
+    const leave = TestBed.inject(HttpLeaveStore);
+    TestBed.inject(HttpTabsStore).newRequest();
+    await openMenu();
+    optionLabelled('Quitter').click();
+    await fixture.whenStable();
+    optionLabelled('Confirmer').click();
+    await fixture.whenStable();
+
+    expect(leave.asking()).toBe('quit');
+    expect(appWindow.exitedWith).toBeNull();
+    leave.cancel();
+    await fixture.whenStable();
+    expect(appWindow.exitedWith).toBeNull();
+
+    await openMenu();
+    optionLabelled('Quitter').click();
+    await fixture.whenStable();
+    optionLabelled('Confirmer').click();
+    await fixture.whenStable();
+    leave.discard();
+    await vi.waitFor(() => expect(appWindow.exitedWith).toBe(0));
   });
 
   it('forgets a pending quit confirmation when the menu closes', async () => {
