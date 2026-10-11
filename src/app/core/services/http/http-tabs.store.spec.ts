@@ -2,11 +2,13 @@ import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
-import { EMPTY_PARTS } from '@core/model/http.model';
+import { EMPTY_PARTS, HttpTree } from '@core/model/http.model';
 import { FakeHttpRepository } from '@testing/fake-http-repository';
 import { TranslocoService } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
+import { collection, folder, request } from '@testing/http-tree.fixture';
 import { provideAppTesting } from '@testing/testing.providers';
+import { HttpCollectionsStore } from './http-collections.store';
 import { HttpTabsStore } from './http-tabs.store';
 
 const KEY = 'devnotes.notes.http.tabs';
@@ -15,6 +17,30 @@ describe('HttpTabsStore', () => {
   let http: FakeHttpRepository;
 
   const store = () => TestBed.inject(HttpTabsStore);
+  const collections = () => TestBed.inject(HttpCollectionsStore);
+
+  /** API: Login (named as told, at the root or in `Auth`), Health. What Rust answers after a rail's write. */
+  const treeWith = (login: { name?: string; folderId?: string | null } | null): HttpTree => {
+    const node = request('Login', 'API', login?.folderId ?? null, 'POST');
+    if (node.kind === 'request') node.request.name = login?.name ?? 'Login';
+    const held = login === null ? [] : [node];
+    return {
+      collections: [
+        collection('API', [
+          folder('Auth', 'API', login?.folderId === 'Auth' ? held : []),
+          ...(login?.folderId === 'Auth' ? [] : held),
+          request('Health', 'API'),
+        ]),
+      ],
+    };
+  };
+
+  /** The tree as it reads after a write of the rail, and the tabs once they followed it. */
+  const read = async (tree: HttpTree) => {
+    http.tree$ = tree;
+    await collections().load();
+    TestBed.tick();
+  };
   const stored = () => JSON.parse(TestBed.inject(LibraryPreferencesService).read(KEY) ?? 'null');
 
   beforeEach(() => {
@@ -90,14 +116,90 @@ describe('HttpTabsStore', () => {
   });
 
   it('closes a tab for its neighbour, and those of requests the tree no longer holds', async () => {
+    await read(treeWith({}));
     await store().open('Login');
     await store().open('Health');
     store().close('Health');
     expect(store().activeKey()).toBe('Login');
 
-    store().prune({ collections: [] });
+    await read(treeWith(null));
     expect(store().tabs()).toEqual([]);
     expect(store().active()).toBeNull();
+  });
+
+  /** An empty tree before a first read is no deletion; a draft never saved is in no tree. */
+  it('closes nothing before the tree was read, and never a request that was not saved yet', async () => {
+    await store().open('Login');
+    store().newRequest();
+    TestBed.tick();
+    expect(store().tabs()).toHaveLength(2);
+
+    await read(treeWith({}));
+    expect(
+      store()
+        .tabs()
+        .map((tab) => tab.requestId),
+    ).toEqual(['Login', null]);
+  });
+
+  /**
+   * A request's name lived in two places. Renamed from the rail, its tab kept the name it was
+   * opened with — and the next save wrote the whole draft, old name included, over the new one.
+   */
+  it('takes the name the rail gave an open request, and saves that one', async () => {
+    await read(treeWith({}));
+    await store().open('Login');
+    const key = store().activeKey()!;
+    store().editParts(key, { description: 'en cours' });
+
+    await read(treeWith({ name: 'Connexion' }));
+
+    const tab = store().active()!;
+    expect([tab.saved?.name, tab.draft.name]).toEqual(['Connexion', 'Connexion']);
+    // What was being edited is still there, and still to save.
+    expect(tab.draft.parts.description).toBe('en cours');
+    expect(store().isDirty(tab)).toBe(true);
+
+    await store().save(key);
+    expect(http.callsOf('saveRequest').at(-1)?.[1]).toMatchObject({ name: 'Connexion' });
+  });
+
+  it('leaves an unmodified tab unmodified by a rename from the rail', async () => {
+    await read(treeWith({}));
+    await store().open('Login');
+
+    await read(treeWith({ name: 'Connexion' }));
+
+    expect(store().active()!.draft.name).toBe('Connexion');
+    expect(store().isDirty(store().active()!)).toBe(false);
+  });
+
+  /** The other direction: the rail shows the name and the method, and reads what a save wrote. */
+  it('has the tree read again once a tab is saved, an existing request or a new one', async () => {
+    await read(treeWith({}));
+    await store().open('Login');
+    const reads = () => http.callsOf('tree').length;
+    const before = reads();
+
+    store().edit('Login', { name: 'Se connecter' });
+    await store().save('Login');
+    expect(reads()).toBe(before + 1);
+
+    store().newRequest();
+    await store().save(store().activeKey()!, { collectionId: 'API', folderId: null });
+    expect(reads()).toBe(before + 2);
+  });
+
+  /** Moved by the rail, it inherits from where it now sits — not from the folder it was opened in. */
+  it('follows an open request moved to another folder', async () => {
+    await read(treeWith({}));
+    await store().open('Login');
+    expect(store().active()!.place).toEqual({ collectionId: 'API', folderId: null });
+
+    await read(treeWith({ folderId: 'Auth' }));
+
+    expect(store().active()!.place).toEqual({ collectionId: 'API', folderId: 'Auth' });
+    expect(store().isDirty(store().active()!)).toBe(false);
   });
 
   it('reopens what was open last time, skipping what is gone or was written by hand', async () => {

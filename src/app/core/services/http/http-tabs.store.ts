@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
 import { HttpRepository } from '@core/data/http.repository';
 import {
@@ -12,9 +12,10 @@ import {
 } from '@core/model/http.model';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
+import { HttpCollectionsStore } from './http-collections.store';
 import { HttpSendStore } from './http-send.store';
 import { HttpSocketsStore } from './http-sockets.store';
-import { holdsRequest } from './http-tree';
+import { findRequest } from './http-tree';
 
 /** In the library's preferences: which requests were open, and which one was in front. */
 const TABS_KEY = 'devnotes.notes.http.tabs';
@@ -53,6 +54,10 @@ function same(a: RequestDraft, b: RequestDraft): boolean {
 /**
  * The open requests, one tab each. A tab edits a draft and saving writes it whole; a request
  * made from the `+` is a draft alone until saved, like a new note.
+ *
+ * ⚠️ A saved request's name and place are the tree's: the rail renames, moves and deletes there,
+ * and a tab follows each tree that is read. A tab that kept the name it was opened with showed
+ * the old one after a rename from the rail — and its next save wrote it back over the new one.
  */
 @Injectable({ providedIn: 'root' })
 export class HttpTabsStore {
@@ -62,6 +67,7 @@ export class HttpTabsStore {
   private readonly transloco = inject(TranslocoService);
   private readonly sending = inject(HttpSendStore);
   private readonly sockets = inject(HttpSocketsStore);
+  private readonly collections = inject(HttpCollectionsStore);
 
   private readonly _tabs = signal<readonly RequestTab[]>([]);
   readonly tabs = this._tabs.asReadonly();
@@ -75,6 +81,16 @@ export class HttpTabsStore {
 
   private drafts = 0;
   private restored = false;
+
+  constructor() {
+    effect(() => {
+      const tree = this.collections.tree();
+      // Not before a first read: an empty tree would close every tab.
+      if (!this.collections.loaded()) return;
+      // The tabs are not a reason to run again: only a tree read after a write is.
+      untracked(() => this.follow(tree));
+    });
+  }
 
   isDirty(tab: RequestTab): boolean {
     return tab.saved === null || !same(tab.saved, tab.draft);
@@ -183,6 +199,8 @@ export class HttpTabsStore {
         saved: draftOf(saved),
         draft: current === tab.draft ? draftOf(saved) : current,
       });
+      // The rail shows its name and its method: it reads what was just written.
+      await this.collections.load();
       return key;
     }
     if (!target) return null;
@@ -208,6 +226,7 @@ export class HttpTabsStore {
     this.sockets.rekey(key, created.id);
     if (this._activeKey() === key) this._activeKey.set(created.id);
     this.persist();
+    await this.collections.load();
     return created.id;
   }
 
@@ -223,10 +242,29 @@ export class HttpTabsStore {
     this.persist();
   }
 
-  /** Closes the tabs of requests the tree no longer holds: deleted from the rail. */
-  prune(tree: HttpTree): void {
+  /**
+   * What the rail did to an open request reaches its tab: deleted, the tab closes; moved, it
+   * inherits from where it now sits; renamed, it takes the name — in what is saved and in what
+   * is being edited, so the next save does not write the old one back.
+   */
+  private follow(tree: HttpTree): void {
     for (const tab of this._tabs()) {
-      if (tab.requestId !== null && !holdsRequest(tree, tab.requestId)) this.close(tab.key);
+      if (tab.requestId === null || tab.saved === null) continue;
+      const held = findRequest(tree, tab.requestId);
+      if (held === null) {
+        this.close(tab.key);
+        continue;
+      }
+      const at = tab.place;
+      const moved = at === null || at.collectionId !== held.collectionId || at.folderId !== held.folderId;
+      const renamed = tab.saved.name !== held.name;
+      if (!moved && !renamed) continue;
+      this.replace(tab.key, {
+        ...tab,
+        place: { collectionId: held.collectionId, folderId: held.folderId },
+        saved: renamed ? { ...tab.saved, name: held.name } : tab.saved,
+        draft: renamed ? { ...tab.draft, name: held.name } : tab.draft,
+      });
     }
   }
 

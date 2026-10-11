@@ -1651,6 +1651,16 @@ saved, and the first save asks where it goes. Closing a modified tab asks first.
 were open, and which was in front, is the library's (`devnotes.notes.http.tabs`), reopened at
 the next launch without those deleted since.
 
+⚠️ **A saved request's name and place are the tree's, and a tab follows it.** The rail renames,
+moves and deletes in the tree; a tab that kept the name it was opened with showed the old one
+after a rename from the rail, and its next save — which writes the draft whole — put it back
+over the new one. `HttpTabsStore` follows every tree that is read (an effect on
+`HttpCollectionsStore.tree`, once `loaded`, the tabs read untracked): a request gone closes its
+tab, one moved inherits from where it now sits, one renamed takes the name in what is saved
+_and_ in what is being edited, the rest of the draft untouched. The other way, a save reads the
+tree again, since the rail shows the name and the method. Renaming a folder or a collection
+bumps `settingsRevision`: its name is in what its requests inherit « from ».
+
 - **The query and its table are kept in step by Rust** (`sync_http_query`, `http/query.rs`):
   the side that was edited wins, nothing is decoded — `{{page}}` and `%20` read back as typed —
   a disabled row stays in the table and out of the URL, and a description follows its key. The

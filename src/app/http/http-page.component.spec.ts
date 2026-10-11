@@ -16,10 +16,16 @@ describe('HttpPageComponent', () => {
     TestBed.resetTestingModule();
     http = new FakeHttpRepository();
     http.tree$ = sampleTree();
-    http.seed('Login', {
-      method: 'POST',
-      parts: { ...EMPTY_PARTS, url: '{{baseUrl}}/login' },
-    });
+    // Where the tree holds it: a tab follows the tree for its request's name and place.
+    http.seed(
+      'Login',
+      {
+        method: 'POST',
+        parts: { ...EMPTY_PARTS, url: '{{baseUrl}}/login' },
+      },
+      'API',
+      'Auth',
+    );
     TestBed.configureTestingModule({
       imports: [HttpPageComponent],
       providers: [provideAppTesting({ httpRepository: http })],
@@ -169,7 +175,7 @@ describe('HttpPageComponent', () => {
         'héritée de la collection API Paiements',
       ),
     );
-    expect(http.callsOf('inherited')[0]).toEqual(['API', null]);
+    expect(http.callsOf('inherited')[0]).toEqual(['API', 'Auth']);
 
     el<HTMLButtonElement>('[data-testid="http-section"][data-section="body"]').click();
     await fixture.whenStable();
@@ -234,7 +240,7 @@ describe('HttpPageComponent', () => {
 
     key({ key: 'Enter' });
     await fixture.whenStable();
-    expect(http.callsOf('send')[0]?.[2]).toEqual({ collectionId: 'API', folderId: null });
+    expect(http.callsOf('send')[0]?.[2]).toEqual({ collectionId: 'API', folderId: 'Auth' });
     expect(el('[data-testid="http-send"]').textContent?.trim()).toBe('Annuler');
     expect(el('[data-testid="http-send"] app-spinner')).not.toBeNull();
     expect(el('[data-testid="http-response-sending"]')).not.toBeNull();

@@ -6,7 +6,15 @@ import { $, $$, browser, expect } from '@wdio/globals';
 import type { HttpNode, HttpRequestDraft, HttpTree } from '@core/ipc/bindings';
 
 import { canvas } from '../pageobjects/canvas.page.js';
-import { eventually, press, readEach, setField, testid, viewportSize } from '../support/app.js';
+import {
+  eventually,
+  press,
+  readEach,
+  reopenSession,
+  setField,
+  testid,
+  viewportSize,
+} from '../support/app.js';
 import { bridge } from '../support/bridge.js';
 import { echoSocket } from '../support/echo-socket.js';
 
@@ -138,6 +146,73 @@ describe('HTTP collections', () => {
       expect((await $(testid('http-delete-count')).getText()).replace(/\D/g, '')).toBe('12');
       await $(testid('http-delete-submit')).click();
       await eventually(rowNames, (names) => !names.includes('Boutique'), 'the collection gone');
+    });
+
+    /**
+     * A request's name lived in two places: renamed from the rail, its open tab and its title
+     * kept the old one, and the next save wrote it back over the new one.
+     */
+    it('renames an open request from the rail or from its tab, and keeps one name everywhere', async () => {
+      const api = await bridge.createHttpCollection('Renommage');
+      const created = await bridge.createHttpRequest(draft(api.id, null, 'Avant'));
+      await press('1', ['Control']);
+      await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+      await press('3', ['Control']);
+      await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+      if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
+      const row = `${testid('http-node')}[data-id="${created.id}"]`;
+      const tab = `${testid('http-tab')}[data-key="${created.id}"]`;
+      /** The three places a request's name is written, and the one Rust holds. */
+      const names = async () => ({
+        row: (await $(`${row} ${testid('http-node-name')}`).getText()).replace(/^GET\s*/, ''),
+        title: await $(testid('http-request-name')).getValue(),
+        tab: (await $(`${tab} ${testid('http-tab-open')}`).getText()).includes(
+          await $(testid('http-request-name')).getValue(),
+        ),
+        kept: (await bridge.httpRequest(created.id)).name,
+      });
+      const everywhere = (name: string) => ({ row: name, title: name, tab: true, kept: name });
+
+      await $(`${row} ${testid('http-node-name')}`).click();
+      await eventually(names, (seen) => seen.title === 'Avant', 'the request in its tab');
+
+      await choose(await $(row).getElement(), 'rename');
+      await setField(testid('http-rename-input'), 'Après');
+      await $(testid('http-rename-submit')).click();
+      expect(
+        await eventually(names, (seen) => seen.title === 'Après', 'the title to follow the rail'),
+      ).toEqual(everywhere('Après'));
+      expect(await $(`${tab} ${testid('http-tab-dirty')}`).isExisting()).toBe(false);
+
+      // The save that used to write « Avant » back: something else modified, then Ctrl+S.
+      await setField(testid('http-url'), 'https://api.exemple.fr/apres');
+      await press('s', ['Control']);
+      await $(`${tab} ${testid('http-tab-dirty')}`).waitForExist({ reverse: true, timeout: 10_000 });
+      expect(await names()).toEqual(everywhere('Après'));
+
+      // The other way: a name typed in the title reaches the rail once saved.
+      await setField(testid('http-request-name'), 'Encore');
+      await press('s', ['Control']);
+      expect(await eventually(names, (seen) => seen.row === 'Encore', 'the rail to follow the tab')).toEqual(
+        everywhere('Encore'),
+      );
+
+      await press('1', ['Control']);
+      await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+      await press('3', ['Control']);
+      await $(row).waitForDisplayed({ timeout: 10_000 });
+      expect(await names()).toEqual(everywhere('Encore'));
+
+      await reopenSession();
+      await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+      await $(row).waitForDisplayed({ timeout: 10_000 });
+      expect(await eventually(names, (seen) => seen.title === 'Encore', 'the tab restored')).toEqual(
+        everywhere('Encore'),
+      );
+
+      await $(`${tab} ${testid('http-tab-close')}`).click();
+      await $(tab).waitForExist({ reverse: true, timeout: 10_000 });
+      await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
     });
   });
 
