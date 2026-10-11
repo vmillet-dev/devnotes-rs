@@ -22,7 +22,7 @@ describe('First launch', () => {
    */
   /** A scenario that throws on the board would leave every later one reading it. */
   afterEach(async () => {
-    await board.show('date');
+    await board.show('list');
   });
 
   before(async () => {

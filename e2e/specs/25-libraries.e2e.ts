@@ -166,7 +166,7 @@ describe('Several libraries', () => {
 
     expect(await board.looseTitles()).toEqual([HOME_NOTE]);
 
-    await board.show('date');
+    await board.show('list');
   });
 
   /**

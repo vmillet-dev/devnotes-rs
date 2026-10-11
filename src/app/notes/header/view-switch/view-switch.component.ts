@@ -3,7 +3,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { NotesViewMode } from '@core/model/board.model';
 
 /**
- * Two views, not a replacement: the date view stays the default, and the board is another
+ * Two views, not a replacement: the list view stays the default, and the board is another
  * way to look at the same notes.
  */
 @Component({

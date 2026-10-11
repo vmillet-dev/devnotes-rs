@@ -338,7 +338,7 @@ describe('NoteSelectionStore', () => {
 
   /**
    * The board **dims** where the canvas **narrows**. A card the search filtered out of
-   * the date view is still drawn on the board and still in its folder — resolved against
+   * the list view is still drawn on the board and still in its folder — resolved against
    * the canvas it left the selection the instant it was ticked, and the bar said nothing
    * was selected.
    */
@@ -448,7 +448,7 @@ describe('NoteSelectionStore', () => {
       expect(selection.focusedIndex()).toBe(-1);
     });
 
-    /** By id, never by position: the board and the date view order the same notes differently. */
+    /** By id, never by position: the board and the list view order the same notes differently. */
     it('focuses a note, and still knows where it sits', async () => {
       const { selection } = await createNotesHarness([createNote({ id: 'a' }), createNote({ id: 'b' })]);
 

@@ -30,7 +30,7 @@ export class NoteSelectionStore {
 
   /**
    * The cards on screen, whichever view draws them: the board dims where the canvas narrows,
-   * so a card filtered out of the date view can still be ticked on the board.
+   * so a card filtered out of the list view can still be ticked on the board.
    */
   private readonly onScreen = computed<readonly Note[]>(() =>
     this.board.isShowing() ? this.board.visibleNotes() : this.notes.visibleNotes(),

@@ -290,9 +290,9 @@ else a router offers has a use in a desktop window — no link to share, no deep
 [#23](https://github.com/vmillet-dev/devnotes-rs/issues/23) had settled that there would be no
 second tool; the tools of v0.9.0 reversed that, and the answer stayed state.
 
-⚠️ **The areas, the date view and the board are state, not routes.** The area is an
+⚠️ **The areas, the list view and the board are state, not routes.** The area is an
 application preference (`AreaStore.current`, `devnotes.area`), a state the window is in like
-the rail, so the window reopens on it. The date view or board switch is remembered per space and
+the rail, so the window reopens on it. The list view or board switch is remembered per space and
 falls back on "all spaces" and inside a folder (`BoardStore.mode`, `isShowing`). A URL would be
 a second source of truth to keep in step, and history a trap — a mouse's back button would
 switch views. The board has a `@defer` of its own instead.
@@ -1079,13 +1079,13 @@ rail — its facet and its filter — counts snippets alone, where a Note or a l
 "Text" on it.
 
 **A kind is a facet with a count.** `NotesQuery.kinds` narrows like a tag or a language — the
-date view turns into one flat `results` section, the board dims — and the kind rail
+list view turns into one flat `results` section, the board dims — and the kind rail
 (`kind-rail/`, first in the facets panel) says how many notes of each kind the space holds:
 `NotesView.kind_counts`, built by `view::count_kinds` from one `GROUP BY`, every kind in
 `NoteKind`'s declared order and zeros included. Counted over the space and not the filter,
 for the reason `available_tags` is: counted over the selection, pressing one chip would zero
 the others. "All" is no kind selected, and an empty kind is offered only while pressed.
-**The date view is ordered in Rust** (`NotesQuery.order`, `view::order_notes`): by the last
+**The list view is ordered in Rust** (`NotesQuery.order`, `view::order_notes`): by the last
 edit (the default), the creation, the priority, the format (the kind, then the language) or
 the title, either way. ⚠️ Titles are sealed, so SQL cannot order them: they are folded once
 per query and compared in Rust. Ties fall on the last edit, then the id, whichever way the
@@ -1095,7 +1095,7 @@ the card's age names the date it is sorted by: "modifiée il y a 4 h", or "cré�
 sorted by creation (`NoteFooter::Created`, set after the sections by `dated_by_creation`).
 The closed enums derive `Ord` in declared order, which is what ranks a priority and a kind.
 
-**The date view gathers its cards four ways** (`NotesQuery.grouping`): by date, by priority,
+**The list view gathers its cards four ways** (`NotesQuery.grouping`): by date, by priority,
 by format, or all in one section. ⚠️ The dated sections split on **the date the list is
 sorted by** — the creation date under the creation sort, the last edit otherwise — where they
 used to split on the creation date while the list ran on the last edit, so the two could
@@ -1299,7 +1299,7 @@ pointer is also one nobody finds.
 
 **The card's ⋯ menu is the complete one.** Open, pin, copy, duplicate, file into…, move to…, delete —
 a note's properties used to be spread over four surfaces with none of them complete: filing
-one from the date view took three clicks through the selection bar plus a fourth to clear
+one from the list view took three clicks through the selection bar plus a fourth to clear
 it, and pinning with the mouse took a full-screen modal for a boolean that has its own
 filter chip in the header. The editor gained the two placements it was missing, as
 `placement-menu` used twice.
@@ -1873,11 +1873,11 @@ every export and land on top of the receiving machine's own arrangement.
 
 ### The board: the second view of a space
 
-A switch in the header chooses between **Date** and **Tableau**. The date view is not
+A switch in the header chooses between **Liste** and **Tableau**. The list view is not
 replaced and stays the default; the board is another way to look at the same notes, and it
 is remembered **per space** — one key each, `devnotes.notes.view.<spaceId>`, so arranging one
 space does not switch the others. ⚠️ It is unavailable on "all spaces", where a folder
-belongs to no board: the switch disables rather than disappears, and falls back to the date
+belongs to no board: the switch disables rather than disappears, and falls back to the list
 view.
 
 **The board is a chunk of its own**, behind `@defer (on immediate)` in the canvas: most
@@ -1890,7 +1890,7 @@ sections — `build_sections` must never learn about a folder. It reads the whol
 marks each note `matches`, because the search, the quick filter and the kind, tag and
 language rails all **dim** on the board rather than narrow it. ⚠️ Reflowing the survivors
 into a list would throw away the spatial memory the board exists for, which is the one
-thing the date view cannot give.
+thing the list view cannot give.
 
 **Cards flow inside a zone and sit freely outside it.** That is the whole geometry:
 
@@ -1981,7 +1981,7 @@ sits in is noise, and a loose card has no folder to name. The card component is
 the same one the canvas draws, so it renders no chip simply because `folder` is `None`.
 
 On the front end, `notes/canvas/` is the region and the two views are alternatives inside
-it — `note-section/` for the date view, `board/` for the board, and `note-card/` risen to
+it — `note-section/` for the list view, `board/` for the board, and `note-card/` risen to
 their nearest common ancestor. ⚠️ The region keeps the `canvas` test hook whichever view
 fills it: it is the address on screen, and the e2e helpers wait on it.
 
@@ -2096,7 +2096,7 @@ arithmetic, half-open on the far edges like `contains`, and touching is enough.
 `NoteSelectionStore.onScreen` reads `BoardStore.visibleNotes` while the board is showing
 and `NotesQueryStore.visibleNotes` otherwise, and the ticks, the range and the keyboard
 focus all go through it. ⚠️ The board **dims** where the canvas **narrows**, so a card the
-search filtered out of the date view is still drawn on the board and still filed in its
+search filtered out of the list view is still drawn on the board and still filed in its
 folder — resolved against the canvas it left the selection the instant it was ticked, and
 the bar said nothing was selected.
 
@@ -2175,7 +2175,7 @@ be a second set of positions to maintain for nothing.
 **It is a flat grid, and that is decided in Rust.** `notes::view::build` counts an opened
 folder as filtering, so the view comes back as a single `results` section. ⚠️
 `build_sections` still knows nothing about a folder — this is the only place the two meet,
-and the date view's own sections are untouched, because nothing sends a `folder_id` unless
+and the list view's own sections are untouched, because nothing sends a `folder_id` unless
 a folder has actually been opened.
 
 **A note created here arrives already filed.** That and a drop on the board are the only two

@@ -122,7 +122,7 @@ pub struct BoardNote {
     #[serde(flatten)]
     pub note: DisplayNote,
     /// Dimmed in place rather than reflowed: spatial memory is what the board has that the
-    /// date view does not.
+    /// list view does not.
     pub matches: bool,
     /// `None` inside a zone, where a card flows; `Some` only on the free background.
     pub position: Option<BoardPoint>,
@@ -490,7 +490,7 @@ pub fn build<S: std::hash::BuildHasher>(
         }
     }
 
-    // The quick filter counts on the board, which dims on it; the date view keeps its sections.
+    // The quick filter counts on the board, which dims on it; the list view keeps its sections.
     let is_filtering = criteria.narrows() || request.filter != NoteFilter::All;
 
     let (width, height) = surface(&zones, &loose);
