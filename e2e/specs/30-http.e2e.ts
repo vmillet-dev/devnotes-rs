@@ -559,6 +559,120 @@ describe('HTTP collections', () => {
     });
 
     /**
+     * `api.github.com` answered « Please make sure your request has a User-Agent header »: none
+     * was sent, and nothing in the editor said what leaves without having been typed.
+     */
+    it('names the application to the server unless a row says otherwise, and lists what leaves unasked', async () => {
+      const agents: (string | undefined)[] = [];
+      const server = createServer((request, response) => {
+        agents.push(request.headers['user-agent']);
+        response.writeHead(200, { 'Content-Type': 'text/plain' });
+        response.end('ok');
+      });
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      const { port } = server.address() as AddressInfo;
+      try {
+        const api = await bridge.createHttpCollection('Agent');
+        const created = await bridge.createHttpRequest({
+          ...draft(api.id, null, 'Qui'),
+          document: { url: `http://127.0.0.1:${port}/who`, description: '' },
+        });
+        await press('1', ['Control']);
+        await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+        await press('3', ['Control']);
+        await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+        if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
+        await $(`${testid('http-node')}[data-id="${created.id}"] ${testid('http-node-name')}`).click();
+        await $(testid('http-response-idle')).waitForDisplayed({ timeout: 10_000 });
+        await $(`${testid('http-section')}[data-section="headers"]`).click();
+
+        /** The list under the table, in its order: « name (who put it there) » and its value. */
+        const implied = () =>
+          browser.execute(
+            (row: string, value: string) =>
+              [...document.querySelectorAll<HTMLElement>(row)].map((item) => [
+                `${item.dataset['name']} (${item.dataset['source']})`,
+                item.querySelector(value)?.textContent ?? '',
+              ]),
+            testid('http-implied-header'),
+            testid('http-implied-value'),
+          );
+        const names = async () => (await implied()).map(([name]) => name);
+        /** Sends, and answers the agent the server read once the answer is shown. */
+        const sent = async (count: number) => {
+          await $(testid('http-send')).click();
+          await eventually(
+            async () => agents.length,
+            (reached) => reached === count,
+            `send ${count} to reach the server`,
+          );
+          await $(testid('http-response-sending')).waitForExist({ reverse: true, timeout: 10_000 });
+          return agents[count - 1];
+        };
+        const firstRow = `${testid('http-headers-table')} ${testid('http-kv-row')}:first-child`;
+
+        const listed = await eventually(implied, (rows) => rows.length === 3, 'what leaves unasked, listed');
+        const agent = listed[0]![1]!;
+        expect(listed).toEqual([
+          ['User-Agent (default)', expect.stringMatching(/^DevNotes\/\d+\.\d+\.\d+$/)],
+          ['Accept (default)', '*/*'],
+          ['Host (url)', `127.0.0.1:${port}`],
+        ]);
+
+        // What the server read is what the list said, and the timeline says it too.
+        expect(await sent(1)).toBe(agent);
+        await $(`${testid('http-response-section')}[data-section="timeline"]`).click();
+        expect(await $(testid('http-response-sent')).getText()).toContain(`User-Agent: ${agent}`);
+
+        // A row of the request's own replaces it, and leaves the list.
+        await setField(`${firstRow} ${testid('http-kv-key')}`, 'User-Agent');
+        await setField(`${firstRow} ${testid('http-kv-value')}`, 'curl/8.5.0');
+        await eventually(
+          names,
+          (seen) => seen.join() === 'Accept (default),Host (url)',
+          'the default off the list',
+        );
+        expect(await sent(2)).toBe('curl/8.5.0');
+
+        // The same row switched off: none at all, and none listed.
+        await $(`${firstRow} ${testid('http-kv-enabled')}`).click();
+        expect(await sent(3)).toBeUndefined();
+        expect(await names()).toEqual(['Accept (default)', 'Host (url)']);
+
+        // Handed down by the collection, once the request's own row is gone: listed as inherited.
+        await bridge.saveHttpSettings(
+          { kind: 'collection', id: api.id },
+          {
+            auth: { kind: 'inherit' },
+            headers: [{ enabled: true, key: 'User-Agent', value: 'Equipe/1', description: '' }],
+            transport: {},
+          },
+        );
+        await $(`${firstRow} ${testid('http-kv-remove')}`).click();
+        expect(
+          await eventually(
+            implied,
+            (rows) => rows[0]?.[0] === 'User-Agent (above)',
+            'the inherited one, listed',
+          ),
+        ).toEqual([
+          ['User-Agent (above)', 'Equipe/1'],
+          ['Accept (default)', '*/*'],
+          ['Host (url)', `127.0.0.1:${port}`],
+        ]);
+        expect(await sent(4)).toBe('Equipe/1');
+
+        const tab = `${testid('http-tab')}[data-key="${created.id}"]`;
+        await $(`${tab} ${testid('http-tab-close')}`).click();
+        if (await $(testid('http-close-discard')).isExisting()) await $(testid('http-close-discard')).click();
+        await $(tab).waitForExist({ reverse: true, timeout: 10_000 });
+        await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+      } finally {
+        server.close();
+      }
+    });
+
+    /**
      * The sentences stated the defaults, « 30 secondes » and « plus de 10 », for a request
      * cut after one second or stopped at its first redirect.
      */
@@ -766,6 +880,10 @@ describe('HTTP collections', () => {
 
         await $(testid('http-socket-connect')).click();
         await $(`${testid('http-socket-phase')}[data-phase="open"]`).waitForDisplayed({ timeout: 10_000 });
+        // The handshake is composed like a request: it names the application too.
+        expect(echo.handshakes.map((headers) => headers['user-agent'])).toEqual([
+          expect.stringMatching(/^DevNotes\/\d+\.\d+\.\d+$/),
+        ]);
         await setField(testid('http-socket-message'), 'hello');
         await $(testid('http-socket-send')).click();
         await eventually(

@@ -98,23 +98,23 @@
         (rowsChange)="onParams($event)"
       />
     } @else if (section() === 'headers') {
-      @let above = inherited()?.headers ?? [];
-      @if (impliedType() !== null || above.length > 0) {
-        <ul class="implied" data-testid="http-implied-headers">
-          @if (impliedType(); as type) {
-            <li class="implied-row" data-testid="http-implied-header">
-              <code class="implied-name">Content-Type</code>
-              <code class="implied-value">{{ type }}</code>
-              <span class="implied-from">{{ 'http.headers.fromBody' | transloco }}</span>
-            </li>
-          }
-          @for (known of above; track known.header.key) {
-            <li class="implied-row" data-testid="http-implied-header">
-              <code class="implied-name">{{ known.header.key }}</code>
-              <code class="implied-value">{{ known.header.value }}</code>
-              <span class="implied-from">{{
-                'http.auth.from.' + known.from.kind | transloco: { name: known.from.name }
-              }}</span>
+      @if (implied().length > 0) {
+        <ul
+          class="implied"
+          data-testid="http-implied-headers"
+          [attr.aria-label]="'http.headers.implied' | transloco"
+        >
+          @for (header of implied(); track header.name) {
+            @let from = origin(header);
+            <li
+              class="implied-row"
+              data-testid="http-implied-header"
+              [attr.data-name]="header.name"
+              [attr.data-source]="header.source"
+            >
+              <code class="implied-name">{{ header.name }}</code>
+              <code class="implied-value" data-testid="http-implied-value">{{ header.value }}</code>
+              <span class="implied-from">{{ from.key | transloco: from.params }}</span>
             </li>
           }
         </ul>

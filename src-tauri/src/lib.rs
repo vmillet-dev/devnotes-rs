@@ -44,9 +44,10 @@ use http::{
     create_http_folder, create_http_request, delete_http_cookie, delete_http_cookie_domain,
     delete_http_item, describe_graphql, describe_http_body, duplicate_http_item,
     forget_http_response, get_http_request, http_cookies, http_history, http_history_draft,
-    http_history_entry, http_response_image, http_settings, http_tree, inherited_http_settings,
-    move_http_item, rename_http_item, reorder_http_collection, save_http_request,
-    save_http_response, save_http_settings, send_http_request, send_websocket, sync_http_query,
+    http_history_entry, http_response_image, http_settings, http_tree, implied_http_headers,
+    inherited_http_settings, move_http_item, rename_http_item, reorder_http_collection,
+    save_http_request, save_http_response, save_http_settings, send_http_request, send_websocket,
+    sync_http_query,
 };
 use json::explore_json;
 use libraries::{create_library, delete_library, list_libraries, open_library, rename_library};
@@ -177,6 +178,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             save_http_settings::<tauri::Wry>,
             inherited_http_settings::<tauri::Wry>,
             describe_http_body,
+            implied_http_headers::<tauri::Wry>,
             describe_graphql,
             connect_websocket::<tauri::Wry>,
             send_websocket::<tauri::Wry>,

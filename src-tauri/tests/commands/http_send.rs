@@ -11,11 +11,11 @@ use devnotes_lib::http::model::{
     ContainerSettings, HttpItem, HttpItemKind, HttpMethod, KeyValue, RequestAuth, RequestBody,
     RequestDocument, RequestKind,
 };
-use devnotes_lib::http::send::{SHOWN_LIMIT, SendRequest, SentBody};
+use devnotes_lib::http::send::{ImpliedSource, SHOWN_LIMIT, SendRequest, SentBody, USER_AGENT};
 use devnotes_lib::http::transport::TransportSettings;
 use devnotes_lib::http::{
     cancel_http_send, create_http_collection, forget_http_response, http_response_image,
-    save_http_response, save_http_settings, send_http_request,
+    implied_http_headers, save_http_response, save_http_settings, send_http_request,
 };
 use devnotes_lib::notes::language::Language;
 
@@ -192,6 +192,124 @@ fn a_request_leaves_with_what_its_collection_hands_down_and_its_answer_comes_bac
     assert!(head.contains("accept: application/json\r\n"));
     assert!(head.contains("content-type: application/json\r\n"));
     assert_eq!(seen.body, b"{\"name\":\"Ada\"}");
+}
+
+/// `api.github.com` answers 403 to a request that names no agent: none was sent.
+#[test]
+fn a_request_names_the_application_unless_a_row_says_otherwise_or_switches_it_off() {
+    let session = Session::open();
+    let (port, seen) = serve(5, |_, _| response("200 OK", &[], b"ok"));
+    let url = format!("http://127.0.0.1:{port}/events");
+    let agent = |seen: &Seen| {
+        seen.head.lines().find_map(|line| {
+            let (name, value) = line.split_once(':')?;
+            name.eq_ignore_ascii_case("user-agent")
+                .then(|| value.trim().to_string())
+        })
+    };
+    let row = |value: &str, enabled: bool| KeyValue {
+        enabled,
+        key: "User-Agent".to_string(),
+        value: value.to_string(),
+        ..KeyValue::default()
+    };
+    let hand_down = |id: &str, headers: Vec<KeyValue>| {
+        let item = HttpItem {
+            kind: HttpItemKind::Collection,
+            id: id.to_string(),
+        };
+        let settings = ContainerSettings {
+            headers,
+            ..ContainerSettings::default()
+        };
+        session
+            .call(|app| save_http_settings(item, settings, app))
+            .unwrap();
+    };
+
+    // Nothing said: the application and its version, as the editor lists them.
+    let answer = session
+        .call(|app| send_http_request(request(&url), app))
+        .unwrap();
+    let left = seen.recv().unwrap();
+    assert_eq!(agent(&left).as_deref(), Some(USER_AGENT));
+    assert!(left.head.to_ascii_lowercase().contains("accept: */*\r\n"));
+    assert!(
+        answer
+            .exchange
+            .headers
+            .iter()
+            .any(|header| header.key == "User-Agent" && header.value == USER_AGENT)
+    );
+    let listed = session
+        .call(|app| {
+            implied_http_headers(RequestKind::Http, request(&url).document, None, None, app)
+        })
+        .unwrap();
+    assert_eq!(
+        listed
+            .iter()
+            .map(|header| (header.name.as_str(), header.value.clone(), header.source))
+            .collect::<Vec<_>>(),
+        vec![
+            ("User-Agent", USER_AGENT.to_string(), ImpliedSource::Default),
+            ("Accept", "*/*".to_string(), ImpliedSource::Default),
+            ("Host", format!("127.0.0.1:{port}"), ImpliedSource::Url),
+        ]
+    );
+    for header in &listed {
+        let line = format!("{}: {}\r\n", header.name, header.value).to_ascii_lowercase();
+        assert!(left.head.to_ascii_lowercase().contains(&line), "{line}");
+    }
+
+    // Its collection names another, then the request its own over it.
+    let api = session
+        .call(|app| create_http_collection("API".to_string(), app))
+        .unwrap();
+    hand_down(&api.id, vec![row("Equipe/1", true)]);
+    let mut placed = request(&url);
+    placed.collection_id = Some(api.id.clone());
+    session
+        .call(|app| send_http_request(placed.clone(), app))
+        .unwrap();
+    assert_eq!(agent(&seen.recv().unwrap()).as_deref(), Some("Equipe/1"));
+    let listed = session
+        .call(|app| {
+            implied_http_headers(
+                RequestKind::Http,
+                placed.document.clone(),
+                Some(api.id.clone()),
+                None,
+                app,
+            )
+        })
+        .unwrap();
+    assert_eq!(
+        listed
+            .iter()
+            .map(|header| (header.value.as_str(), header.source))
+            .next(),
+        Some(("Equipe/1", ImpliedSource::Above))
+    );
+    assert_eq!(
+        listed[0].from.as_ref().map(|from| from.name.as_str()),
+        Some("API")
+    );
+
+    let mut own = placed.clone();
+    own.document.headers = vec![row("curl/8.5.0", true)];
+    session.call(|app| send_http_request(own, app)).unwrap();
+    assert_eq!(agent(&seen.recv().unwrap()).as_deref(), Some("curl/8.5.0"));
+
+    // Switched off, in the request or above it: none at all.
+    let mut silent = request(&url);
+    silent.document.headers = vec![row("", false)];
+    session.call(|app| send_http_request(silent, app)).unwrap();
+    assert_eq!(agent(&seen.recv().unwrap()), None);
+
+    hand_down(&api.id, vec![row("Equipe/1", false)]);
+    session.call(|app| send_http_request(placed, app)).unwrap();
+    assert_eq!(agent(&seen.recv().unwrap()), None);
 }
 
 #[test]

@@ -4,6 +4,7 @@ import {
   computed,
   inject,
   input,
+  linkedSignal,
   output,
   resource,
   signal,
@@ -15,6 +16,7 @@ import {
   GraphqlParts,
   HTTP_METHODS,
   HttpMethod,
+  ImpliedHeader,
   KeyValueRow,
   RequestAuth,
   RequestBodyDraft,
@@ -25,6 +27,7 @@ import { HttpCollectionsStore } from '@core/services/http/http-collections.store
 import { HttpSendStore } from '@core/services/http/http-send.store';
 import { HttpSocketsStore } from '@core/services/http/http-sockets.store';
 import { HttpTabsStore, RequestTab } from '@core/services/http/http-tabs.store';
+import { TranslationRef } from '@core/services/i18n/translation-ref.model';
 import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
 import { SpinnerComponent } from '@shared/spinner/spinner.component';
 import { HTTP_HEADERS } from '@tools/catalogue/http-headers/http-headers.data';
@@ -48,6 +51,9 @@ const REQUEST_HEADERS = HTTP_HEADERS.filter((header) => header.direction !== 're
 );
 
 const counted = (rows: readonly KeyValueRow[]) => rows.filter((row) => row.enabled && row.key !== '').length;
+
+const sameFields = <T extends object>(a: T, b: T) =>
+  (Object.keys(a) as (keyof T)[]).every((field) => a[field] === b[field]);
 
 /** The open request: its method, its URL, and its parts a tab each. */
 @Component({
@@ -125,19 +131,34 @@ export class RequestEditorComponent {
     this.bodyResource.hasValue() ? this.bodyResource.value() : null,
   );
 
-  /** The `Content-Type` the body implies, sent unless a header sets one by hand. */
-  protected readonly impliedType = computed(() => {
-    const draft = this.tab().draft;
-    const type =
-      draft.kind === 'graphql'
-        ? draft.parts.graphql.asGet
-          ? null
-          : 'application/json'
-        : (this.bodyAnswer()?.contentType ?? null);
-    const typed = this.tab().draft.parts.headers.some(
-      (row) => row.enabled && row.key.toLowerCase() === 'content-type',
-    );
-    return typed ? null : type;
+  /** What the headers sent unasked depend on: not the body's text, nor the description. */
+  private readonly impliedQuestion = computed(
+    () => {
+      const { draft, place } = this.tab();
+      const { url, headers, auth, body, graphql } = draft.parts;
+      return {
+        kind: draft.kind,
+        url,
+        headers,
+        auth,
+        body: body.kind,
+        asGet: graphql.asGet,
+        collectionId: place?.collectionId ?? null,
+        folderId: place?.folderId ?? null,
+        revision: this.collections.settingsRevision(),
+      };
+    },
+    { equal: sameFields },
+  );
+  /** Rust composes the request, so Rust says what leaves with it: nothing is decided here. */
+  private readonly impliedResource = resource({
+    params: () => this.impliedQuestion(),
+    loader: () => this.repository.impliedHeaders(this.tab().draft, this.tab().place),
+  });
+  /** The last answer stays while the next is read: emptied between two, the table under it jumps at each key. */
+  protected readonly implied = linkedSignal<readonly ImpliedHeader[] | undefined, readonly ImpliedHeader[]>({
+    source: () => (this.impliedResource.hasValue() ? this.impliedResource.value() : undefined),
+    computation: (fresh, previous) => fresh ?? previous?.value ?? [],
   });
   protected readonly dirty = computed(() => this.tabs.isDirty(this.tab()));
   protected readonly inFlight = computed(
@@ -161,6 +182,13 @@ export class RequestEditorComponent {
       (value) => value !== null && value !== undefined,
     ).length,
   }));
+
+  /** « par défaut », « d'après le corps », or the folder or collection that hands it down. */
+  protected origin(header: ImpliedHeader): TranslationRef {
+    return header.from === null
+      ? { key: `http.headers.from.${header.source}` }
+      : { key: `http.auth.from.${header.from.kind}`, params: { name: header.from.name } };
+  }
 
   protected onMethod(method: string | null): void {
     if (method === GRAPHQL) {

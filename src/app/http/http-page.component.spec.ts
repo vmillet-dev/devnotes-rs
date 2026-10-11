@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpTabsStore } from '@core/services/http/http-tabs.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
-import { DEFAULT_TRANSPORT, EMPTY_PARTS, SentResponse } from '@core/model/http.model';
+import { DEFAULT_TRANSPORT, EMPTY_PARTS, ImpliedHeader, SentResponse } from '@core/model/http.model';
 import { FakeHttpRepository, sentResponse } from '@testing/fake-http-repository';
 import { sampleTree } from '@testing/http-tree.fixture';
 import { provideAppTesting } from '@testing/testing.providers';
@@ -41,6 +41,17 @@ describe('HttpPageComponent', () => {
   const tabs = () => TestBed.inject(HttpTabsStore);
   const key = (event: Partial<KeyboardEventInit>) =>
     document.dispatchEvent(new KeyboardEvent('keydown', { ctrlKey: true, cancelable: true, ...event }));
+  /** A header Rust says leaves unasked; `from` only for one handed down. */
+  const implied = (
+    name: string,
+    value: string,
+    source: ImpliedHeader['source'],
+    from: ImpliedHeader['from'] = null,
+  ): ImpliedHeader => ({ name, value, source, from });
+  const impliedRows = () =>
+    all('[data-testid="http-implied-header"]').map((row) =>
+      [...row.children].map((cell) => cell.textContent?.trim()).join(' · '),
+    );
   const typeInto = async (selector: string, text: string) => {
     const field = el<HTMLInputElement>(selector);
     field.value = text;
@@ -165,6 +176,17 @@ describe('HttpPageComponent', () => {
       transport: DEFAULT_TRANSPORT,
     };
     http.bodyAnswer = { contentType: 'application/json', problem: null };
+    http.impliedAnswer = [
+      implied('Content-Type', 'application/json', 'body'),
+      implied('Accept', 'application/json', 'above', {
+        kind: 'collection',
+        id: 'API',
+        name: 'API Paiements',
+      }),
+      implied('X-Trace', '1', 'above', { kind: 'folder', id: 'Auth', name: 'Auth' }),
+      implied('User-Agent', 'DevNotes/0.10.1', 'default'),
+      implied('Host', 'api.exemple.fr', 'url'),
+    ];
     await tabs().open('Login');
     await fixture.whenStable();
     expect(el('[data-testid="http-auth-inherits"]')?.textContent?.trim()).toBe('héritée');
@@ -183,15 +205,70 @@ describe('HttpPageComponent', () => {
     await vi.waitFor(() => expect(tabs().active()!.draft.parts.body).toEqual({ kind: 'json', text: '' }));
 
     el<HTMLButtonElement>('[data-testid="http-section"][data-section="headers"]').click();
-    await vi.waitFor(() => expect(all('[data-testid="http-implied-header"]')).toHaveLength(2));
-    expect(
-      all('[data-testid="http-implied-header"]').map((row) =>
-        [...row.children].map((cell) => cell.textContent?.trim()).join(' · '),
-      ),
-    ).toEqual([
+    await vi.waitFor(() => expect(all('[data-testid="http-implied-header"]')).toHaveLength(5));
+    expect(impliedRows()).toEqual([
       "Content-Type · application/json · d'après le corps",
       'Accept · application/json · héritée de la collection API Paiements',
+      'X-Trace · 1 · héritée du dossier Auth',
+      'User-Agent · DevNotes/0.10.1 · par défaut',
+      "Host · api.exemple.fr · d'après l'URL",
     ]);
+    expect(all('[data-testid="http-implied-header"]').map((row) => row.dataset['source'])).toEqual([
+      'body',
+      'above',
+      'above',
+      'default',
+      'url',
+    ]);
+    // Asked of Rust with the request as it stands and where it sits: what a send would read.
+    expect(http.callsOf('impliedHeaders').at(-1)).toEqual([
+      tabs().active()!.draft,
+      { collectionId: 'API', folderId: 'Auth' },
+    ]);
+  });
+
+  /**
+   * The list was decided here, from the body alone: a request left with no `User-Agent`, and
+   * nothing said so. Rust composes the request, so the list is read from it — again each time
+   * what it depends on changes, and only then.
+   */
+  it('asks Rust what leaves unasked when the URL, a header or the kind changes, not for the rest', async () => {
+    http.impliedAnswer = [implied('User-Agent', 'DevNotes/0.10.1', 'default')];
+    await tabs().open('Login');
+    await fixture.whenStable();
+    el<HTMLButtonElement>('[data-testid="http-section"][data-section="headers"]').click();
+    await vi.waitFor(() => expect(impliedRows()).toEqual(['User-Agent · DevNotes/0.10.1 · par défaut']));
+    const asked = () => http.callsOf('impliedHeaders').length;
+    const settled = async () => {
+      await fixture.whenStable();
+      return asked();
+    };
+    const before = await settled();
+
+    tabs().editParts('Login', { description: 'Se connecter' });
+    tabs().editParts('Login', { body: { kind: 'json', text: '{' } });
+    expect(await settled()).toBe(before + 1);
+    tabs().editParts('Login', { body: { kind: 'json', text: '{"a":1}' } });
+    expect(await settled()).toBe(before + 1);
+
+    // The answer on its way: the list keeps what it showed, the table under it does not jump.
+    let answer!: (headers: ImpliedHeader[]) => void;
+    http.pendingImplied = new Promise((resolve) => (answer = resolve));
+    // Not `typeInto`: nothing is stable while Rust has not answered.
+    const name = el<HTMLInputElement>('[data-testid="http-headers-table"] [data-testid="http-kv-key"]');
+    name.value = 'User-Agent';
+    name.dispatchEvent(new Event('input'));
+    await vi.waitFor(() => expect(asked()).toBe(before + 2));
+    expect(impliedRows()).toEqual(['User-Agent · DevNotes/0.10.1 · par défaut']);
+
+    answer([implied('Accept', '*/*', 'default')]);
+    await vi.waitFor(() => expect(impliedRows()).toEqual(['Accept · */* · par défaut']));
+
+    http.pendingImplied = null;
+    http.impliedAnswer = [];
+    await typeInto('[data-testid="http-url"]', 'https://api.exemple.fr');
+    await vi.waitFor(() => expect(el('[data-testid="http-implied-headers"]')).toBeNull());
+    expect(asked()).toBe(before + 3);
   });
 
   it('sets how a request travels in its Réglages, over what its collection hands down', async () => {
@@ -279,9 +356,10 @@ describe('HttpPageComponent', () => {
       'settings',
     ]);
     expect(el('[data-testid="http-graphql"]')).not.toBeNull();
-    el<HTMLButtonElement>('[data-testid="http-section"][data-section="headers"]').click();
-    await fixture.whenStable();
-    expect(el('[data-testid="http-implied-header"]')?.textContent).toContain('application/json');
+    // What a GraphQL request implies is Rust's to say: it is asked as one.
+    await vi.waitFor(() =>
+      expect(http.callsOf('impliedHeaders').at(-1)).toMatchObject([{ kind: 'graphql' }, {}]),
+    );
   });
 
   it('turns a request into a WebSocket, connected from its button, its log below', async () => {

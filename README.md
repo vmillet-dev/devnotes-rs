@@ -35,7 +35,7 @@ Write a command once, find it in a keystroke, paste it anywhere.
 
 ### Private by design
 
-Everything stays on your machine, sealed with a passphrase only you know. No account, no cloud, no telemetry, and it works with the network off.
+Everything stays on your machine, sealed with a passphrase only you know. No account, no cloud, no telemetry, and it works with the network off. A request you send from the HTTP client goes to the server you name and nowhere else, and tells it `DevNotes/<version>` as its `User-Agent` unless you set another, or none. The tools call nothing.
 
 </td>
 <td width="33%" valign="top">

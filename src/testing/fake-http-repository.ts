@@ -19,6 +19,7 @@ import {
   CookieDomain,
   DEFAULT_TRANSPORT,
   EMPTY_PARTS,
+  ImpliedHeader,
   InheritedParts,
   KeyValueRow,
   RequestBodyDraft,
@@ -57,6 +58,9 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
   /** The jar by domain; the deletes take from it as Rust would. */
   jar: CookieDomain[] = [];
   bodyAnswer: BodyAnswer = { contentType: null, problem: null };
+  /** What a request sends unasked; a spec holding `pendingImplied` decides when it is answered. */
+  impliedAnswer: ImpliedHeader[] = [];
+  pendingImplied: Promise<ImpliedHeader[]> | null = null;
   graphqlAnswer: GraphqlAnswer = { operations: [], variablesProblem: null };
   /** What `send` answers; a spec holding `pendingSend` decides when. */
   response: SentResponse = sentResponse();
@@ -177,6 +181,14 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
 
   describeBody(body: RequestBodyDraft): Promise<BodyAnswer> {
     return this.record('describeBody', [body], () => this.bodyAnswer);
+  }
+
+  async impliedHeaders(
+    draft: RequestDraft,
+    place: { collectionId: string; folderId: string | null } | null,
+  ): Promise<ImpliedHeader[]> {
+    const answer = await this.record('impliedHeaders', [draft, place], () => this.impliedAnswer);
+    return this.pendingImplied ?? answer;
   }
 
   send(

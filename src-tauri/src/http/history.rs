@@ -12,7 +12,7 @@ use specta::Type;
 
 use super::model::{HttpMethod, KeyValue, RequestBody, RequestDocument};
 use super::query::{self, QuerySide};
-use super::send::{Exchange, SentBody, SentResponse};
+use super::send::{self, Exchange, SentBody, SentResponse};
 use crate::error::ErrorCode;
 use crate::notes::view::offset_from_minutes;
 
@@ -200,7 +200,8 @@ pub struct HistoryDraft {
 }
 
 /// The request as it left, minus what was masked — a secret is typed again, never replayed as
-/// dots — and minus the `Content-Type` the body implies again.
+/// dots — and minus what is written again by itself: the `Content-Type` the body implies, and
+/// the application's own headers, which would otherwise name this version for ever.
 pub fn draft_of(entry: &HistoryEntry) -> HistoryDraft {
     let exchange = &entry.record.exchange;
     let url = match exchange.url.split_once('?') {
@@ -230,7 +231,9 @@ pub fn draft_of(entry: &HistoryEntry) -> HistoryDraft {
         .headers
         .iter()
         .filter(|header| {
-            !header.value.contains(MASK) && !header.key.eq_ignore_ascii_case("content-type")
+            !header.value.contains(MASK)
+                && !header.key.eq_ignore_ascii_case("content-type")
+                && !send::is_default(&header.key, &header.value)
         })
         .map(|header| KeyValue {
             enabled: true,
@@ -401,6 +404,8 @@ mod tests {
                             header("Authorization", "Bearer t"),
                             header("Accept", "application/json"),
                             header("Content-Type", "application/json"),
+                            header("User-Agent", "DevNotes/0.10.1"),
+                            header("X-Agent", "DevNotes/0.10.1"),
                         ],
                         SentBody::Text {
                             text: "{\"a\":1}".to_string(),
@@ -426,7 +431,7 @@ mod tests {
                 .iter()
                 .map(|header| header.key.as_str())
                 .collect::<Vec<_>>(),
-            ["Accept"]
+            ["Accept", "X-Agent"]
         );
         assert_eq!(
             draft.document.body,

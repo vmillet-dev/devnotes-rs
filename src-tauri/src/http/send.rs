@@ -19,10 +19,22 @@ use super::model::{
     HttpMethod, KeyPlace, KeyValue, RequestAuth, RequestBody, RequestDocument, RequestKind,
 };
 use super::response::{self, Cookie};
-use super::settings::{Inherited, implied_content_type};
+use super::settings::{HttpOrigin, Inherited, implied_content_type, switches_off};
 use super::transport::{Limit, Limits, SetBy, Transport};
+use super::websocket;
 use crate::notes::language::Language;
 use crate::notes::placeholder;
+
+/// What a request says it comes from when it says nothing: many APIs refuse one that is silent.
+pub const USER_AGENT: &str = concat!("DevNotes/", env!("CARGO_PKG_VERSION"));
+const ACCEPT_ANYTHING: &str = "*/*";
+
+/// Whether a header that left is one the application writes by itself, whatever its version:
+/// what is rebuilt from the history leaves it out, and it is written again when sent.
+pub fn is_default(name: &str, value: &str) -> bool {
+    (name.eq_ignore_ascii_case("user-agent") && value.starts_with("DevNotes/"))
+        || (name.eq_ignore_ascii_case("accept") && value == ACCEPT_ANYTHING)
+}
 
 /// What crosses to be shown: past it the text is cut, and the whole is offered as a file.
 pub const SHOWN_LIMIT: usize = 1024 * 1024;
@@ -144,6 +156,44 @@ pub enum SendError {
     Handshake(u16),
     #[error("Network error: {0}")]
     Network(String),
+}
+
+/// Who put a header on a request that no row of its own wrote.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum ImpliedSource {
+    Body,
+    /// A folder or the collection, named in `from`.
+    Above,
+    /// The application's own: `User-Agent`, `Accept`.
+    Default,
+    /// `Host`, which the client writes from the URL.
+    Url,
+}
+
+/// A header sent without a row of the request's own: the editor lists them under its table.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ImpliedHeader {
+    pub name: String,
+    pub value: String,
+    pub source: ImpliedSource,
+    pub from: Option<HttpOrigin>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Wrote {
+    Request,
+    Auth,
+    Above(HttpOrigin),
+    Body,
+    Default,
+}
+
+struct Written {
+    name: String,
+    value: String,
+    by: Wrote,
 }
 
 /// What will go on the wire, composed before anything is sent.
@@ -286,6 +336,154 @@ fn parse_url(typed: &str) -> Result<Url, SendError> {
     Ok(url)
 }
 
+/// The `Content-Type` its kind and its body imply: a socket has no body, nor a GraphQL `GET`.
+fn content_type(kind: RequestKind, document: &RequestDocument) -> Option<&'static str> {
+    match kind {
+        RequestKind::Http => implied_content_type(&document.body),
+        RequestKind::Graphql => (!document.graphql.as_get).then_some("application/json"),
+        RequestKind::Websocket => None,
+    }
+}
+
+/// Every header of a request and who wrote it: the inherited ones, its own over them by name,
+/// then, each only where no row sets it, the auth's, the body's type and the application's own.
+fn written(
+    document: &RequestDocument,
+    inherited: &Inherited,
+    content_type: Option<&str>,
+) -> Vec<Written> {
+    let mut headers: Vec<Written> = Vec::new();
+    let mut set = |name: &str, value: &str, by: Wrote| {
+        headers.retain(|known| !known.name.eq_ignore_ascii_case(name));
+        headers.push(Written {
+            name: name.to_string(),
+            value: value.to_string(),
+            by,
+        });
+    };
+    for known in &inherited.headers {
+        set(
+            known.header.key.trim(),
+            &known.header.value,
+            Wrote::Above(known.from.clone()),
+        );
+    }
+    for row in sent(&document.headers) {
+        set(row.key.trim(), &row.value, Wrote::Request);
+    }
+
+    let mut unless_set = |name: &str, value: String, by: Wrote| {
+        if !headers
+            .iter()
+            .any(|known| known.name.eq_ignore_ascii_case(name))
+        {
+            headers.push(Written {
+                name: name.to_string(),
+                value,
+                by,
+            });
+        }
+    };
+    match auth_of(document, inherited) {
+        RequestAuth::Basic { username, password } => {
+            let pair =
+                base64::engine::general_purpose::STANDARD.encode(format!("{username}:{password}"));
+            unless_set("Authorization", format!("Basic {pair}"), Wrote::Auth);
+        }
+        RequestAuth::Bearer { token } => {
+            unless_set(
+                "Authorization",
+                format!("Bearer {}", token.trim()),
+                Wrote::Auth,
+            );
+        }
+        RequestAuth::ApiKey {
+            name,
+            value,
+            place: KeyPlace::Header,
+        } if !name.trim().is_empty() => unless_set(name.trim(), value.clone(), Wrote::Auth),
+        _ => {}
+    }
+    if let Some(content_type) = content_type {
+        unless_set("Content-Type", content_type.to_string(), Wrote::Body);
+    }
+    // Its row switched off, here or above, is how a request is sent without any.
+    if !inherited.user_agent_off && !switches_off(&document.headers, "user-agent") {
+        unless_set("User-Agent", USER_AGENT.to_string(), Wrote::Default);
+    }
+    // The client would add it by itself: written here, it is in what the history shows as sent.
+    unless_set("Accept", ACCEPT_ANYTHING.to_string(), Wrote::Default);
+    headers
+}
+
+fn auth_of<'a>(document: &'a RequestDocument, inherited: &'a Inherited) -> &'a RequestAuth {
+    match &document.auth {
+        RequestAuth::Inherit => &inherited.auth,
+        own => own,
+    }
+}
+
+/// `api.example.com:8443`, the port only when it is not its scheme's own. A `{{variable}}`
+/// reads as a host name, and is not one until it is filled.
+fn host_of(url: &Url) -> Option<String> {
+    let host = url.host_str()?;
+    if placeholder::parse(host, &BTreeMap::new())
+        .into_iter()
+        .next()
+        .is_some()
+    {
+        return None;
+    }
+    Some(
+        url.port()
+            .map_or_else(|| host.to_string(), |port| format!("{host}:{port}")),
+    )
+}
+
+/// What a request sends without a row of its own, read from what `compose` writes: the two
+/// cannot disagree. Nothing is refused here: a URL that does not read yet has no `Host`.
+pub fn implied(
+    kind: RequestKind,
+    document: &RequestDocument,
+    inherited: &Inherited,
+) -> Vec<ImpliedHeader> {
+    let headers = written(document, inherited, content_type(kind, document));
+    let typed_host = headers
+        .iter()
+        .any(|known| known.name.eq_ignore_ascii_case("host"));
+    let mut listed: Vec<ImpliedHeader> = headers
+        .into_iter()
+        .filter_map(|header| {
+            let (source, from) = match header.by {
+                Wrote::Request | Wrote::Auth => return None,
+                Wrote::Above(origin) => (ImpliedSource::Above, Some(origin)),
+                Wrote::Body => (ImpliedSource::Body, None),
+                Wrote::Default => (ImpliedSource::Default, None),
+            };
+            Some(ImpliedHeader {
+                name: header.name,
+                value: header.value,
+                source,
+                from,
+            })
+        })
+        .collect();
+    let url = match kind {
+        RequestKind::Websocket => websocket::socket_url(&document.url),
+        RequestKind::Http | RequestKind::Graphql => document.url.clone(),
+    };
+    if !typed_host && let Some(host) = parse_url(&url).ok().as_ref().and_then(host_of) {
+        listed.push(ImpliedHeader {
+            name: "Host".to_string(),
+            value: host,
+            source: ImpliedSource::Url,
+            from: None,
+        });
+    }
+    listed.sort_by_key(|header| header.source);
+    listed
+}
+
 /// The request as it will be sent: the headers inherited, then its own over them by name, the
 /// auth resolved, the body built and its files read.
 pub fn compose(
@@ -305,65 +503,28 @@ pub fn compose(
         None => method,
     };
 
-    let mut headers: Vec<(String, String)> = Vec::new();
-    let mut set = |key: &str, value: &str| {
-        headers.retain(|(known, _)| !known.eq_ignore_ascii_case(key));
-        headers.push((key.to_string(), value.to_string()));
-    };
-    for known in &inherited.headers {
-        set(known.header.key.trim(), &known.header.value);
-    }
-    for row in sent(&document.headers) {
-        set(row.key.trim(), &row.value);
-    }
-    let typed = |headers: &[(String, String)], name: &str| {
-        headers
-            .iter()
-            .any(|(key, _)| key.eq_ignore_ascii_case(name))
-    };
-
-    let auth = match &document.auth {
-        RequestAuth::Inherit => &inherited.auth,
-        own => own,
-    };
-    match auth {
-        RequestAuth::Basic { username, password } if !typed(&headers, "authorization") => {
-            let pair =
-                base64::engine::general_purpose::STANDARD.encode(format!("{username}:{password}"));
-            headers.push(("Authorization".to_string(), format!("Basic {pair}")));
-        }
-        RequestAuth::Bearer { token } if !typed(&headers, "authorization") => {
-            headers.push((
-                "Authorization".to_string(),
-                format!("Bearer {}", token.trim()),
-            ));
-        }
-        RequestAuth::ApiKey { name, value, place } if !name.trim().is_empty() => match place {
-            KeyPlace::Header if !typed(&headers, name.trim()) => {
-                headers.push((name.trim().to_string(), value.clone()));
-            }
-            KeyPlace::Header => {}
-            KeyPlace::Query => {
-                url.query_pairs_mut().append_pair(name.trim(), value);
-            }
-        },
-        _ => {}
-    }
-
-    let (body, implied) = match graphql {
-        Some(graphql) => graphql_body(graphql, &mut url)?,
-        // A multipart type carries its boundary, which reqwest alone knows.
-        None => (
-            body_of(&document.body)?,
-            implied_content_type(&document.body)
-                .filter(|_| !matches!(document.body, RequestBody::Multipart { .. })),
-        ),
-    };
-    if let Some(implied) = implied
-        && !typed(&headers, "content-type")
+    let auth = auth_of(document, inherited);
+    if let RequestAuth::ApiKey {
+        name,
+        value,
+        place: KeyPlace::Query,
+    } = auth
+        && !name.trim().is_empty()
     {
-        headers.push(("Content-Type".to_string(), implied.to_string()));
+        url.query_pairs_mut().append_pair(name.trim(), value);
     }
+
+    let body = match graphql {
+        Some(graphql) => graphql_body(graphql, &mut url)?,
+        None => body_of(&document.body)?,
+    };
+    // A multipart type carries its boundary, which reqwest alone knows.
+    let implied =
+        content_type(kind, document).filter(|_| !matches!(body, OutgoingBody::Multipart(_)));
+    let headers = written(document, inherited, implied)
+        .into_iter()
+        .map(|header| (header.name, header.value))
+        .collect();
 
     let secrets = match auth {
         RequestAuth::ApiKey { name, .. } if !name.trim().is_empty() => {
@@ -398,14 +559,11 @@ pub fn compose(
 }
 
 /// A GraphQL operation as a JSON body, or in the query of a `GET`.
-fn graphql_body<'a>(
-    graphql: &GraphqlDocument,
-    url: &mut Url,
-) -> Result<(OutgoingBody, Option<&'a str>), SendError> {
+fn graphql_body(graphql: &GraphqlDocument, url: &mut Url) -> Result<OutgoingBody, SendError> {
     let variables = graphql::variables(graphql).map_err(SendError::GraphqlVariables)?;
     if !graphql.as_get {
         let body = graphql::body(graphql, variables).into_bytes();
-        return Ok((OutgoingBody::Bytes(body), Some("application/json")));
+        return Ok(OutgoingBody::Bytes(body));
     }
     let mut pairs = url.query_pairs_mut();
     pairs.append_pair("query", &graphql.query);
@@ -419,7 +577,7 @@ fn graphql_body<'a>(
     {
         pairs.append_pair("operationName", name);
     }
-    Ok((OutgoingBody::None, None))
+    Ok(OutgoingBody::None)
 }
 
 fn body_of(body: &RequestBody) -> Result<OutgoingBody, SendError> {
@@ -848,7 +1006,27 @@ mod tests {
             headers: Vec::new(),
             transport: crate::http::transport::Transport::default(),
             limits: Limits::default(),
+            user_agent_off: false,
         }
+    }
+
+    fn from(kind: HttpItemKind, name: &str) -> HttpOrigin {
+        HttpOrigin {
+            kind,
+            id: name.to_lowercase(),
+            name: name.to_string(),
+        }
+    }
+
+    fn off(key: &str) -> KeyValue {
+        KeyValue {
+            enabled: false,
+            ..row(key, "")
+        }
+    }
+
+    fn get(document: &RequestDocument, inherited: &Inherited) -> Outgoing {
+        compose(RequestKind::Http, HttpMethod::Get, document, inherited).unwrap()
     }
 
     fn header<'a>(outgoing: &'a Outgoing, name: &str) -> Option<&'a str> {
@@ -940,7 +1118,180 @@ mod tests {
         let outgoing = compose(RequestKind::Http, HttpMethod::Get, &own, &inherited).unwrap();
         assert_eq!(
             outgoing.headers,
-            vec![("accept".to_string(), "application/json".to_string())]
+            vec![
+                ("accept".to_string(), "application/json".to_string()),
+                ("User-Agent".to_string(), USER_AGENT.to_string()),
+            ]
+        );
+    }
+
+    /// `api.github.com` answers 403 to a request that names no agent, and none was sent.
+    #[test]
+    fn a_request_names_the_application_unless_a_row_says_otherwise_at_any_level() {
+        let plain = document("https://api.github.com/events");
+        let outgoing = get(&plain, &nothing());
+        assert!(USER_AGENT.starts_with("DevNotes/"));
+        assert_eq!(
+            USER_AGENT.strip_prefix("DevNotes/"),
+            Some(env!("CARGO_PKG_VERSION"))
+        );
+        assert_eq!(header(&outgoing, "user-agent"), Some(USER_AGENT));
+        assert_eq!(header(&outgoing, "accept"), Some("*/*"));
+        assert!(
+            outgoing
+                .headers
+                .iter()
+                .all(|(name, value)| is_default(name, value))
+        );
+        assert!(is_default("user-agent", "DevNotes/0.9.0"));
+        assert!(!is_default("User-Agent", "curl/8.5.0") && !is_default("Accept", "text/csv"));
+
+        let mut collection = nothing();
+        collection.headers = vec![InheritedHeader {
+            header: row("user-agent", "Équipe/1"),
+            from: from(HttpItemKind::Collection, "API"),
+        }];
+        assert_eq!(
+            header(&get(&plain, &collection), "user-agent"),
+            Some("Équipe/1")
+        );
+
+        let mut own = plain.clone();
+        own.headers = vec![row(" User-Agent ", "curl/8.5.0"), row("Accept", "text/csv")];
+        let outgoing = get(&own, &collection);
+        assert_eq!(header(&outgoing, "user-agent"), Some("curl/8.5.0"));
+        assert_eq!(header(&outgoing, "accept"), Some("text/csv"));
+        assert_eq!(outgoing.headers.len(), 2);
+    }
+
+    #[test]
+    fn a_user_agent_row_switched_off_sends_none_and_never_removes_one_set_above() {
+        let mut own = document("https://example.com");
+        own.headers = vec![off("user-agent")];
+        assert_eq!(header(&get(&own, &nothing()), "user-agent"), None);
+
+        let silent = Inherited {
+            user_agent_off: true,
+            ..nothing()
+        };
+        let plain = document("https://example.com");
+        assert_eq!(header(&get(&plain, &silent), "user-agent"), None);
+        assert_eq!(header(&get(&plain, &silent), "accept"), Some("*/*"));
+
+        // Off here, set above: the inherited one still leaves, as any other header would.
+        let mut collection = nothing();
+        collection.headers = vec![InheritedHeader {
+            header: row("User-Agent", "Équipe/1"),
+            from: from(HttpItemKind::Collection, "API"),
+        }];
+        assert_eq!(
+            header(&get(&own, &collection), "user-agent"),
+            Some("Équipe/1")
+        );
+    }
+
+    /// The editor's list is read from what `compose` writes: the same headers, less its own rows.
+    #[test]
+    fn what_leaves_without_a_row_is_listed_with_who_put_it_there() {
+        let api = from(HttpItemKind::Collection, "API");
+        let mut inherited = nothing();
+        inherited.auth = RequestAuth::Bearer {
+            token: "t".to_string(),
+        };
+        inherited.headers = vec![
+            InheritedHeader {
+                header: row("X-Client", "web"),
+                from: api.clone(),
+            },
+            InheritedHeader {
+                header: row("X-Trace", "1"),
+                from: api.clone(),
+            },
+        ];
+        let mut posted = document("https://api.exemple.fr:8443/users");
+        posted.headers = vec![row("x-trace", "2")];
+        posted.body = RequestBody::Json {
+            text: "{}".to_string(),
+        };
+
+        let listed = implied(RequestKind::Http, &posted, &inherited);
+
+        let seen: Vec<(&str, &str, ImpliedSource)> = listed
+            .iter()
+            .map(|header| (header.name.as_str(), header.value.as_str(), header.source))
+            .collect();
+        assert_eq!(
+            seen,
+            vec![
+                ("Content-Type", "application/json", ImpliedSource::Body),
+                ("X-Client", "web", ImpliedSource::Above),
+                ("User-Agent", USER_AGENT, ImpliedSource::Default),
+                ("Accept", "*/*", ImpliedSource::Default),
+                ("Host", "api.exemple.fr:8443", ImpliedSource::Url),
+            ]
+        );
+        assert_eq!(listed[1].from, Some(api));
+
+        // Each one written by the request leaves the list; so does the default once switched off.
+        posted.headers = vec![
+            row("Content-Type", "application/vnd.api+json"),
+            row("Accept", "text/csv"),
+            row("Host", "autre.exemple.fr"),
+            off("User-Agent"),
+        ];
+        let names: Vec<String> = implied(RequestKind::Http, &posted, &inherited)
+            .into_iter()
+            .map(|header| header.name)
+            .collect();
+        assert_eq!(names, vec!["X-Client", "X-Trace"]);
+    }
+
+    #[test]
+    fn a_url_that_does_not_read_yet_has_no_host_and_a_socket_or_a_graphql_get_no_type() {
+        let names = |kind, document: &RequestDocument| -> Vec<String> {
+            implied(kind, document, &nothing())
+                .into_iter()
+                .map(|header| header.name)
+                .collect()
+        };
+
+        for unread in [
+            "{{baseUrl}}/users",
+            "https://{{host}}.exemple.fr",
+            "",
+            "ftp://x",
+        ] {
+            assert_eq!(
+                names(RequestKind::Http, &document(unread)),
+                vec!["User-Agent", "Accept"]
+            );
+        }
+        assert_eq!(
+            names(RequestKind::Http, &document("https://example.com")),
+            vec!["User-Agent", "Accept", "Host"]
+        );
+
+        let mut socket = document("wss://echo.exemple.fr/live");
+        socket.body = RequestBody::Json {
+            text: "{}".to_string(),
+        };
+        let listed = implied(RequestKind::Websocket, &socket, &nothing());
+        assert_eq!(
+            listed.last().map(|header| header.value.as_str()),
+            Some("echo.exemple.fr")
+        );
+        assert!(listed.iter().all(|header| header.name != "Content-Type"));
+
+        let mut query = document("https://example.com/graphql");
+        query.graphql.query = "{ viewer { login } }".to_string();
+        assert_eq!(
+            names(RequestKind::Graphql, &query),
+            vec!["Content-Type", "User-Agent", "Accept", "Host"]
+        );
+        query.graphql.as_get = true;
+        assert_eq!(
+            names(RequestKind::Graphql, &query),
+            vec!["User-Agent", "Accept", "Host"]
         );
     }
 

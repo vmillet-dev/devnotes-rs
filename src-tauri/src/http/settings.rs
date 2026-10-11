@@ -35,6 +35,10 @@ pub struct Inherited {
     /// Which level set the timeout and the redirects: Rust's, for the failure that names it.
     #[serde(skip)]
     pub limits: Limits,
+    /// A level holds a `User-Agent` row switched off: the application's own is not sent in
+    /// its place.
+    #[serde(skip)]
+    pub user_agent_off: bool,
 }
 
 /// `levels` from the collection down to the request's own folder: the nearest auth set wins.
@@ -85,7 +89,16 @@ pub fn inherit(levels: &[(HttpOrigin, ContainerSettings)]) -> Inherited {
             timeout: set_by(|transport| transport.timeout_ms.is_some()),
             redirects: set_by(|transport| transport.max_redirects.is_some()),
         },
+        user_agent_off: levels
+            .iter()
+            .any(|(_, settings)| switches_off(&settings.headers, "user-agent")),
     }
+}
+
+/// Whether a row of that name is written and switched off.
+pub fn switches_off(rows: &[KeyValue], name: &str) -> bool {
+    rows.iter()
+        .any(|row| !row.enabled && row.key.trim().eq_ignore_ascii_case(name))
 }
 
 /// The `Content-Type` a body implies, sent unless the request sets one by hand. A multipart one
@@ -225,6 +238,30 @@ mod tests {
         assert_eq!(inherited.limits.timeout, SetBy::Above(auth));
         assert_eq!(inherited.limits.redirects, SetBy::Above(api));
         assert_eq!(inherit(&[]).limits, Limits::default());
+    }
+
+    /// Off anywhere above, and no level sets another: none is sent, not the application's.
+    #[test]
+    fn a_user_agent_row_switched_off_at_any_level_is_remembered() {
+        let holds = |rows: Vec<KeyValue>| ContainerSettings {
+            headers: rows,
+            ..ContainerSettings::default()
+        };
+        let api = origin(HttpItemKind::Collection, "API");
+        let auth = origin(HttpItemKind::Folder, "Auth");
+
+        let off = inherit(&[
+            (api.clone(), holds(vec![header(" user-agent ", "x", false)])),
+            (auth.clone(), holds(Vec::new())),
+        ]);
+        assert!(off.user_agent_off);
+        assert!(off.headers.is_empty());
+
+        let on = inherit(&[
+            (api, holds(vec![header("User-Agent", "Équipe/1", true)])),
+            (auth, holds(vec![header("X-Debug", "1", false)])),
+        ]);
+        assert!(!on.user_agent_off);
     }
 
     #[test]

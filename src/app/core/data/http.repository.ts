@@ -21,6 +21,7 @@ import {
   SentResponse,
   BodyAnswer,
   ContainerSettingsDraft,
+  ImpliedHeader,
   InheritedParts,
   KeyValueRow,
   RequestBodyDraft,
@@ -100,6 +101,22 @@ export class HttpRepository {
 
   async describeBody(body: RequestBodyDraft): Promise<BodyAnswer> {
     return unwrap('describe_http_body', await commands.describeHttpBody(toBodyWire(body)));
+  }
+
+  /** What it sends without a row of its own, and who put it there: composed as a send is. */
+  async impliedHeaders(
+    draft: RequestDraft,
+    place: { collectionId: string; folderId: string | null } | null,
+  ): Promise<ImpliedHeader[]> {
+    return unwrap(
+      'implied_http_headers',
+      await commands.impliedHttpHeaders(
+        draft.kind,
+        toDocument(draft.parts),
+        place?.collectionId ?? null,
+        place?.folderId ?? null,
+      ),
+    );
   }
 
   /** `id` is the caller's: what `cancel` and `saveResponse` name the send by. */

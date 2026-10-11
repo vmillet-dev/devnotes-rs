@@ -2827,7 +2827,12 @@
       "discard": "Fermer sans enregistrer"
     },
     "headers": {
-      "fromBody": "d'après le corps"
+      "implied": "Envoyés sans avoir été saisis",
+      "from": {
+        "body": "d'après le corps",
+        "default": "par défaut",
+        "url": "d'après l'URL"
+      }
     },
     "auth": {
       "kind": "Type",
