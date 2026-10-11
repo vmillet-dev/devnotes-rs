@@ -602,6 +602,13 @@ pub async fn describe_graphql(
     off_thread(move || graphql::describe(&document)).await
 }
 
+/// The variables with a `null` for each one the operation declares and they lack: « Ajouter ».
+#[tauri::command]
+#[specta::specta]
+pub async fn add_graphql_variables(document: graphql::GraphqlDocument) -> Result<String, AppError> {
+    off_thread(move || graphql::with_missing(&document)).await
+}
+
 #[derive(Debug, Clone, serde::Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct WebsocketRequest {

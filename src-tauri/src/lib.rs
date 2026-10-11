@@ -39,15 +39,16 @@ use folders::{
     list_folders, recolour_folder, rename_folder, save_board_layout,
 };
 use http::{
-    cancel_http_send, check_http_headers, clear_http_cookies, clear_http_history, close_websocket,
-    connect_websocket, count_http_contents, count_http_cookies, count_http_history,
-    create_http_collection, create_http_folder, create_http_request, delete_http_cookie,
-    delete_http_cookie_domain, delete_http_item, describe_graphql, describe_http_body,
-    duplicate_http_item, forget_http_response, get_http_request, http_cookies, http_history,
-    http_history_draft, http_history_entry, http_response_image, http_settings, http_tree,
-    implied_http_headers, inherited_http_settings, move_http_item, read_http_headers,
-    rename_http_item, reorder_http_collection, save_http_request, save_http_response,
-    save_http_settings, send_http_request, send_websocket, sync_http_query,
+    add_graphql_variables, cancel_http_send, check_http_headers, clear_http_cookies,
+    clear_http_history, close_websocket, connect_websocket, count_http_contents,
+    count_http_cookies, count_http_history, create_http_collection, create_http_folder,
+    create_http_request, delete_http_cookie, delete_http_cookie_domain, delete_http_item,
+    describe_graphql, describe_http_body, duplicate_http_item, forget_http_response,
+    get_http_request, http_cookies, http_history, http_history_draft, http_history_entry,
+    http_response_image, http_settings, http_tree, implied_http_headers, inherited_http_settings,
+    move_http_item, read_http_headers, rename_http_item, reorder_http_collection,
+    save_http_request, save_http_response, save_http_settings, send_http_request, send_websocket,
+    sync_http_query,
 };
 use json::explore_json;
 use libraries::{create_library, delete_library, list_libraries, open_library, rename_library};
@@ -182,6 +183,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             check_http_headers,
             read_http_headers,
             describe_graphql,
+            add_graphql_variables,
             connect_websocket::<tauri::Wry>,
             send_websocket::<tauri::Wry>,
             close_websocket::<tauri::Wry>,

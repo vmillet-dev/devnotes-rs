@@ -2933,6 +2933,7 @@
       "saved": "Response saved to {{path}}.",
       "saveFailed": "The response could not be saved.",
       "redirects": "{count, plural, one {after # redirect} other {after # redirects}}",
+      "graphqlErrors": "{count, plural, one {# error} other {# errors}}",
       "parts": "Parts of the response",
       "sections": {
         "body": "Body",
@@ -2992,7 +2993,20 @@
       "variables": "Variables",
       "operation": "Operation sent",
       "asGet": "Send as GET",
-      "at": "line:column {{location}}"
+      "at": "line:column {{location}}",
+      "format": "Format",
+      "variablesHint": "A JSON object: a value for each $variable of the query.",
+      "problemAt": "Line {{line}}, column {{column}}:",
+      "problems": {
+        "unclosedBrace": "this brace is not closed.",
+        "unclosedParenthesis": "this parenthesis is not closed.",
+        "unclosedString": "this string is not closed.",
+        "strayBrace": "this brace closes nothing.",
+        "strayParenthesis": "this parenthesis closes nothing."
+      },
+      "missing": "Without a value:",
+      "add": "Add",
+      "unknown": "The query does not declare:"
     },
     "socket": {
       "connect": "Connect",

@@ -3,6 +3,11 @@
   <span class="status" data-testid="http-response-status" [attr.data-class]="statusClass()"
     >{{ answer.status }} {{ answer.reason }}</span
   >
+  @if (graphqlErrors() > 0) {
+    <span class="status failing" data-testid="http-response-graphql-errors">{{
+      'http.response.graphqlErrors' | transloco: { count: graphqlErrors() }
+    }}</span>
+  }
   <span class="metric" data-testid="http-response-time">{{ millis().key | transloco: millis().params }}</span>
   <span class="metric" data-testid="http-response-size">{{ size().key | transloco: size().params }}</span>
 
@@ -20,7 +25,9 @@
       >
         {{ 'http.response.sections.' + id | transloco }}
         @if (counts()[id] > 0) {
-          <span class="count" data-testid="http-response-count">{{ counts()[id] }}</span>
+          <span class="count" data-testid="http-response-count" [class.failing]="id === 'errors'">{{
+            counts()[id]
+          }}</span>
         } @else if (id === 'timeline' && answer.redirects.length > 0) {
           <span class="count" data-testid="http-response-redirects">{{
             'http.response.redirects' | transloco: { count: answer.redirects.length }

@@ -246,6 +246,11 @@ export class HttpRepository {
     return unwrap('describe_graphql', await commands.describeGraphql(toGraphqlWire(graphql)));
   }
 
+  /** The variables with a `null` for each one the operation declares and they lack. */
+  async addGraphqlVariables(graphql: GraphqlParts): Promise<string> {
+    return unwrap('add_graphql_variables', await commands.addGraphqlVariables(toGraphqlWire(graphql)));
+  }
+
   async rename(item: HttpItem, name: string): Promise<void> {
     unwrap('rename_http_item', await commands.renameHttpItem(item, name));
   }

@@ -1823,6 +1823,29 @@ tokens**, never by re-serialising: `serde_json` would round `1234567890123456789
 The view of an answer is `ResponseViewComponent` (`http/ui/`): the response pane draws it for a
 tab's last send, the history for an entry.
 
+**A GraphQL request says what it can before it is sent, and its errors when it is answered.**
+One pass over the query (`graphql::scan`, past strings, block strings and comments) reads its
+operations with the variables each declares, and the first brace, parenthesis or string that
+does not pair, by line and column. `describe_graphql` answers it with each keystroke:
+
+- ⚠️ **Above each box, not under it**: the editor is taller than what the response pane leaves
+  of the window, and a line under a box was out of sight — the very thing being fixed. The two
+  boxes share one grid, what is said of each in a row of its own that keeps two lines whether
+  or not something is said: a line that comes and goes with each brace typed would push the
+  text being typed.
+- **For the query**, the sign at fault and where. It warns and stops nothing — the server
+  stays the judge of the schema; only « Formater » waits for a query that pairs.
+- **For the variables**, what they are (« Un objet JSON : une valeur pour chaque `$variable`
+  de la requête »), why they do not read, and how they compare with the operation sent — the
+  one named, else the first: « Sans valeur » for a variable declared without a default and
+  given none, with « Ajouter » (`add_graphql_variables` writes a `null` for each at the end of
+  the object **as typed**, its numbers untouched), and the keys the operation does not declare.
+- « Formater » on both boxes is Prettier's, as for a snippet.
+- **An answer that is errors and no data opens on « Erreurs »** (`ResponseViewComponent.chosen`,
+  a `linkedSignal` on the answer): on « Corps » it read `null`, the errors in a tab nothing
+  pointed to. With data it opens on the body, the tab's count in red. A badge beside the status
+  counts the errors whatever the status: a 200 that carries some is no success.
+
 ### The history of what was sent
 
 **Every send that left is written** (`http_history`, migration 15), after the answer and under

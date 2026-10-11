@@ -34,7 +34,8 @@
 
   &[data-class='5'],
   &[data-class='0'],
-  &[data-class='1'] {
+  &[data-class='1'],
+  &.failing {
     @include tint-badge(--red-rgb);
   }
 }
@@ -78,6 +79,11 @@
   font-size: 11.5px;
   font-weight: 400;
   color: var(--text-2);
+
+  &.failing {
+    font-weight: 700;
+    color: var(--red);
+  }
 }
 
 .actions {
