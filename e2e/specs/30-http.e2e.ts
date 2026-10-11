@@ -278,6 +278,24 @@ describe('HTTP collections', () => {
      * window the response pane hid all but its first entry.
      */
     it('opens the auth menu whole on a short window, down to its last entry', async () => {
+      /**
+       * Where a panel is and how wide: out of the flow, nothing holds it to its trigger's
+       * width any more, and its entries were once measured side by side — the whole window.
+       */
+      const panelUnder = (trigger: string, panel: string) =>
+        browser.execute(
+          (triggerSelector: string, panelSelector: string) => {
+            const from = document.querySelector(triggerSelector)!.getBoundingClientRect();
+            const box = document.querySelector(panelSelector)!.getBoundingClientRect();
+            return {
+              atTrigger: Math.abs(box.left - from.left) <= 1,
+              narrow: box.width <= 320,
+            };
+          },
+          testid(trigger),
+          testid(panel),
+        );
+
       const api = await bridge.createHttpCollection('Menus');
       const created = await bridge.createHttpRequest(draft(api.id, null, 'Courte'));
       await press('1', ['Control']);
@@ -310,6 +328,10 @@ describe('HTTP collections', () => {
           };
         }, options);
         expect(last).toEqual({ id: 'apiKey', inWindow: true, onTop: true });
+        expect(await panelUnder('http-auth-kind', 'choice-panel-http-auth')).toEqual({
+          atTrigger: true,
+          narrow: true,
+        });
 
         await $(`${options}[data-option-id="apiKey"]`).click();
         await eventually(
@@ -317,6 +339,16 @@ describe('HTTP collections', () => {
           (kind) => kind === 'apiKey',
           'the last entry of the menu to be chosen',
         );
+
+        // The longest menu of the editor: its entries side by side would be 500px wide.
+        await $(testid('http-method')).click();
+        await $(testid('choice-panel-http-method')).waitForDisplayed({ timeout: 10_000 });
+        expect(await panelUnder('http-method', 'choice-panel-http-method')).toEqual({
+          atTrigger: true,
+          narrow: true,
+        });
+        await press('Escape');
+        await $(testid('choice-panel-http-method')).waitForExist({ reverse: true, timeout: 10_000 });
       } finally {
         await browser.setWindowSize(restore.width, restore.height);
       }

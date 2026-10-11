@@ -44,6 +44,8 @@
   z-index: 10;
   margin: 0;
   min-width: 180px;
+  // Its own bounds: under its trigger it was held to the trigger's width, which is gone.
+  max-width: min(320px, calc(100vw - 16px));
   max-height: 240px;
   overflow-y: auto;
   padding: 4px;
@@ -54,6 +56,9 @@
   @include unstyled-control;
   @include hit-target;
   @include focus-ring(-2px);
+  // ⚠️ A row each, not `hit-target`'s inline box: inline, the entries are measured side by
+  // side, and the panel took the width of them all — the whole window for a long list.
+  display: flex;
   gap: 6px;
   width: 100%;
   padding: 5px 8px;
