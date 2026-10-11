@@ -395,6 +395,88 @@ describe('HTTP collections', () => {
       }
     });
 
+    /**
+     * The sentences stated the defaults, « 30 secondes » and « plus de 10 », for a request
+     * cut after one second or stopped at its first redirect.
+     */
+    it('says a timeout and a redirect too many with the value the request was sent with', async () => {
+      const server = createServer((request, response) => {
+        if (request.url === '/slow') return; // never answered: the delay runs out
+        response.writeHead(302, { Location: '/around' });
+        response.end();
+      });
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      const { port } = server.address() as AddressInfo;
+      try {
+        const api = await bridge.createHttpCollection('Limites');
+        await bridge.saveHttpSettings(
+          { kind: 'collection', id: api.id },
+          { auth: { kind: 'inherit' }, headers: [], transport: { timeoutMs: 400 } },
+        );
+        const slow = await bridge.createHttpRequest({
+          ...draft(api.id, null, 'Lente'),
+          document: { url: `http://127.0.0.1:${port}/slow`, description: '' },
+        });
+        const around = await bridge.createHttpRequest({
+          ...draft(api.id, null, 'En rond'),
+          document: {
+            url: `http://127.0.0.1:${port}/around`,
+            description: '',
+            transport: { maxRedirects: 1 },
+          },
+        });
+        await press('1', ['Control']);
+        await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+        await press('3', ['Control']);
+        await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+        if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
+        const failure = async () => ({
+          key: await $(testid('http-response-failure')).getAttribute('data-key'),
+          text: await $(testid('http-response-failure')).getText(),
+        });
+
+        await $(`${testid('http-node')}[data-id="${slow.id}"] ${testid('http-node-name')}`).click();
+        await $(testid('http-response-idle')).waitForDisplayed({ timeout: 10_000 });
+        await $(testid('http-send')).click();
+        await eventually(
+          failure,
+          ({ key, text }) =>
+            key === 'errors.httpTimeout.collection' && text.includes('400 ms') && text.includes('Limites'),
+          'the delay that ran out, and the collection that set it',
+        );
+
+        await $(`${testid('http-section')}[data-section="settings"]`).click();
+        await setField(testid('http-transport-timeoutMs'), '1000');
+        await $(testid('http-send')).click();
+        await eventually(
+          failure,
+          ({ key, text }) => key === 'errors.httpTimeout.request' && text.includes('1 s'),
+          "the request's own delay, in seconds",
+        );
+
+        await $(`${testid('http-node')}[data-id="${around.id}"] ${testid('http-node-name')}`).click();
+        await $(testid('http-response-idle')).waitForDisplayed({ timeout: 10_000 });
+        await $(testid('http-send')).click();
+        // « plus d'une », « more than one »: said in words, and never as the default's 10.
+        await eventually(
+          failure,
+          ({ key, text }) => key === 'errors.httpTooManyRedirects.request' && !/\d/.test(text),
+          'the limit the request set, not the default',
+        );
+
+        for (const request of [slow, around]) {
+          const tab = `${testid('http-tab')}[data-key="${request.id}"]`;
+          await $(`${tab} ${testid('http-tab-close')}`).click();
+          if (request === slow) await $(testid('http-close-discard')).click();
+          await $(tab).waitForExist({ reverse: true, timeout: 10_000 });
+        }
+        await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+      } finally {
+        server.close();
+        server.closeAllConnections();
+      }
+    });
+
     it('posts a GraphQL query as JSON, and reads its errors apart from its data', async () => {
       const bodies: string[] = [];
       const server = createServer((request, response) => {

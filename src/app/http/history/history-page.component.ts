@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { HistoryItem } from '@core/model/http.model';
 import { errorKeyOf } from '@core/services/errors/error-notifier.service';
+import { TranslationRef } from '@core/services/i18n/translation-ref.model';
 import { HttpHistoryStore } from '@core/services/http/http-history.store';
 import { ClockService } from '@core/services/time/clock.service';
 import { endOfLocalDay, toDateInputValue } from '@core/utils/local-day.util';
@@ -53,9 +54,10 @@ export class HistoryPageComponent {
     return item.status === null ? 'failed' : String(Math.floor(item.status / 100));
   }
 
-  protected failureKey(item: HistoryItem): string {
-    const code = item.summary.failure;
-    return (code !== null && errorKeyOf(code)) || 'http.send.failed';
+  /** The sentence the send itself showed: the code, and the values it stated. */
+  protected failure(item: HistoryItem): TranslationRef {
+    const { failure: code, failureParams: params = {} } = item.summary;
+    return { key: (code !== null && errorKeyOf(code, params)) || 'http.send.failed', params };
   }
 
   protected async askClear(): Promise<void> {

@@ -441,8 +441,18 @@
     "httpUnresolved": "Le nom d'hôte ne se résout pas.",
     "httpRefused": "La connexion a été refusée : rien n'écoute à cette adresse.",
     "httpTls": "La connexion sécurisée a échoué : certificat refusé ou protocole inattendu.",
-    "httpTimeout": "Pas de réponse au bout de 30 secondes.",
-    "httpTooManyRedirects": "Trop de redirections : plus de 10.",
+    "httpTimeout": {
+      "request": "Pas de réponse au bout de {{amount}} {{unit}}.",
+      "folder": "Pas de réponse au bout de {{amount}} {{unit}} (réglage hérité du dossier « {{name}} »).",
+      "collection": "Pas de réponse au bout de {{amount}} {{unit}} (réglage hérité de la collection « {{name}} »).",
+      "default": "Pas de réponse au bout de {{amount}} {{unit}} (réglage par défaut)."
+    },
+    "httpTooManyRedirects": {
+      "request": "{count, plural, =0 {Redirection refusée : le réglage n'en permet aucune.} one {Trop de redirections : plus d'une.} other {Trop de redirections : plus de #.}}",
+      "folder": "{count, plural, =0 {Redirection refusée : le réglage n'en permet aucune (réglage hérité du dossier « {{name}} »).} one {Trop de redirections : plus d'une (réglage hérité du dossier « {{name}} »).} other {Trop de redirections : plus de # (réglage hérité du dossier « {{name}} »).}}",
+      "collection": "{count, plural, =0 {Redirection refusée : le réglage n'en permet aucune (réglage hérité de la collection « {{name}} »).} one {Trop de redirections : plus d'une (réglage hérité de la collection « {{name}} »).} other {Trop de redirections : plus de # (réglage hérité de la collection « {{name}} »).}}",
+      "default": "{count, plural, =0 {Redirection refusée : le réglage n'en permet aucune (réglage par défaut).} one {Trop de redirections : plus d'une (réglage par défaut).} other {Trop de redirections : plus de # (réglage par défaut).}}"
+    },
     "httpFileUnreadable": "Le fichier {{path}} ne peut pas être lu.",
     "httpCancelled": "Envoi annulé.",
     "httpNetwork": "Erreur réseau.",

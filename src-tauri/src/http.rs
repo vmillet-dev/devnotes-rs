@@ -365,7 +365,10 @@ pub async fn send_http_request<R: Runtime>(
     let outcome = match &answer {
         Ok(response) => Ok(response.clone()),
         Err(send::SendError::Cancelled) => return Err(send::SendError::Cancelled.into()),
-        Err(error) => Err(AppError::from(error.clone()).code),
+        Err(error) => {
+            let error = AppError::from(error.clone());
+            Err((error.code, error.params))
+        }
     };
     let sent = history::Sent {
         name,

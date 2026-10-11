@@ -12,6 +12,7 @@ use devnotes_lib::http::model::{
     RequestDocument, RequestKind,
 };
 use devnotes_lib::http::send::{SHOWN_LIMIT, SendRequest, SentBody};
+use devnotes_lib::http::transport::TransportSettings;
 use devnotes_lib::http::{
     cancel_http_send, create_http_collection, forget_http_response, http_response_image,
     save_http_response, save_http_settings, send_http_request,
@@ -315,6 +316,100 @@ fn a_variable_a_bad_url_a_closed_port_and_a_plain_server_over_tls_each_fail_by_c
     assert_eq!(
         failed(&format!("https://127.0.0.1:{port}/")),
         ErrorCode::HttpTls
+    );
+}
+
+/// The sentence states the value in force and who set it: it used to state the defaults,
+/// « 30 secondes » for a request cut after one.
+#[test]
+fn a_timeout_and_a_redirect_too_many_say_the_value_in_force_and_who_set_it() {
+    use devnotes_lib::http::http_history;
+
+    let session = Session::open();
+    let api = session
+        .call(|app| create_http_collection("API".to_string(), app))
+        .unwrap();
+    session
+        .call(|app| {
+            save_http_settings(
+                HttpItem {
+                    kind: HttpItemKind::Collection,
+                    id: api.id.clone(),
+                },
+                ContainerSettings {
+                    transport: TransportSettings {
+                        timeout_ms: Some(300),
+                        ..TransportSettings::default()
+                    },
+                    ..ContainerSettings::default()
+                },
+                app,
+            )
+        })
+        .unwrap();
+    let params = |failed: &devnotes_lib::error::AppError| {
+        failed
+            .params
+            .iter()
+            .map(|(key, value)| format!("{key}={value}"))
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+    // Accepts each connection and answers none of them until the test is over.
+    let silent = thread::spawn(move || listener.incoming().take(2).collect::<Result<Vec<_>, _>>());
+    let slow = format!("http://127.0.0.1:{port}/slow");
+
+    let mut inherited = request(&slow);
+    inherited.collection_id = Some(api.id.clone());
+    let failed = session
+        .call(|app| send_http_request(inherited, app))
+        .unwrap_err();
+    assert_eq!(failed.code, ErrorCode::HttpTimeout);
+    assert_eq!(
+        params(&failed),
+        "amount=300 name=API source=collection unit=ms"
+    );
+
+    let mut own = request(&slow);
+    own.collection_id = Some(api.id.clone());
+    own.document.transport.timeout_ms = Some(1_000);
+    let failed = session.call(|app| send_http_request(own, app)).unwrap_err();
+    assert_eq!(failed.code, ErrorCode::HttpTimeout);
+    assert_eq!(params(&failed), "amount=1 source=request unit=s");
+    drop(silent);
+
+    let (port, _seen) = serve(13, |_, port| {
+        response(
+            "302 Found",
+            &[("Location", &format!("http://127.0.0.1:{port}/again"))],
+            b"",
+        )
+    });
+    let around = format!("http://127.0.0.1:{port}/around");
+    let mut once = request(&around);
+    once.document.transport.max_redirects = Some(1);
+    let failed = session
+        .call(|app| send_http_request(once, app))
+        .unwrap_err();
+    assert_eq!(failed.code, ErrorCode::HttpTooManyRedirects);
+    assert_eq!(params(&failed), "count=1 source=request");
+
+    let failed = session
+        .call(|app| send_http_request(request(&around), app))
+        .unwrap_err();
+    assert_eq!(failed.code, ErrorCode::HttpTooManyRedirects);
+    assert_eq!(params(&failed), "count=10 source=default");
+
+    // The history says the same sentence: it keeps the values with the code.
+    let days = session.call(|app| http_history(0, app)).unwrap();
+    let last = &days[0].items[0].summary;
+    assert_eq!(last.failure, Some(ErrorCode::HttpTooManyRedirects));
+    assert_eq!(
+        last.failure_params.get("count").map(String::as_str),
+        Some("10")
     );
 }
 

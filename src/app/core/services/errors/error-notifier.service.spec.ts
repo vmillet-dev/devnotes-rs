@@ -1,13 +1,95 @@
 import { signal } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { TranslocoService } from '@jsverse/transloco';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { IpcError } from '@core/ipc/ipc.error';
-import { ErrorNotifier, ipcNotice } from './error-notifier.service';
+import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
+import { ErrorNotifier, errorKeyOf, ipcNotice } from './error-notifier.service';
 
 const FALLBACK = { key: 'errors.noteSaveFailed' };
 
 function failure(code: string, params: Record<string, string> = {}): IpcError {
   return new IpcError('update_note', { code, params, detail: 'détail technique' });
 }
+
+/**
+ * Both sentences used to state the defaults — « 30 secondes », « plus de 10 » — whatever the
+ * request was sent with. No number is written in a translation any more.
+ */
+describe('a limit a send ran into', () => {
+  let transloco: TranslocoService;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({ providers: [provideTranslocoTesting()] });
+    transloco = TestBed.inject(TranslocoService);
+    // The testing loader answers at once: both languages are there before the first sentence.
+    for (const lang of ['fr', 'en']) transloco.load(lang).subscribe();
+  });
+
+  function said(code: string, params: Record<string, string>, lang = 'fr'): string {
+    const { ref } = ipcNotice(failure(code, params), FALLBACK);
+    return transloco.translate(ref.key, ref.params, lang);
+  }
+
+  it.each([
+    [{ amount: '1', unit: 's', source: 'request' }, 'Pas de réponse au bout de 1 s.'],
+    [
+      { amount: '1500', unit: 'ms', source: 'default' },
+      'Pas de réponse au bout de 1500 ms (réglage par défaut).',
+    ],
+    [
+      { amount: '2', unit: 'min', source: 'folder', name: 'un ss-dossier' },
+      'Pas de réponse au bout de 2 min (réglage hérité du dossier « un ss-dossier »).',
+    ],
+    [
+      { amount: '30', unit: 's', source: 'collection', name: 'API' },
+      'Pas de réponse au bout de 30 s (réglage hérité de la collection « API »).',
+    ],
+  ])('says the delay that ran out, and who set it: %o', (params, sentence) => {
+    expect(said('httpTimeout', params)).toBe(sentence);
+  });
+
+  it.each([
+    [{ count: '1', source: 'request' }, "Trop de redirections : plus d'une."],
+    [{ count: '4', source: 'request' }, 'Trop de redirections : plus de 4.'],
+    [{ count: '0', source: 'request' }, "Redirection refusée : le réglage n'en permet aucune."],
+    [{ count: '10', source: 'default' }, 'Trop de redirections : plus de 10 (réglage par défaut).'],
+    [
+      { count: '1', source: 'collection', name: 'API' },
+      "Trop de redirections : plus d'une (réglage hérité de la collection « API »).",
+    ],
+    [
+      { count: '3', source: 'folder', name: 'Auth' },
+      'Trop de redirections : plus de 3 (réglage hérité du dossier « Auth »).',
+    ],
+  ])('says how many redirections were allowed: %o', (params, sentence) => {
+    expect(said('httpTooManyRedirects', params)).toBe(sentence);
+  });
+
+  it('says both in English too', () => {
+    expect(said('httpTimeout', { amount: '1', unit: 's', source: 'request' }, 'en')).toBe(
+      'No answer after 1 s.',
+    );
+    expect(said('httpTimeout', { amount: '5', unit: 's', source: 'folder', name: 'Auth' }, 'en')).toBe(
+      'No answer after 5 s (setting inherited from the folder “Auth”).',
+    );
+    expect(said('httpTooManyRedirects', { count: '1', source: 'request' }, 'en')).toBe(
+      'Too many redirects: more than one.',
+    );
+    expect(said('httpTooManyRedirects', { count: '10', source: 'default' }, 'en')).toBe(
+      'Too many redirects: more than 10 (default setting).',
+    );
+    expect(said('httpTooManyRedirects', { count: '0', source: 'collection', name: 'API' }, 'en')).toBe(
+      'Redirect refused: the setting allows none (setting inherited from the collection “API”).',
+    );
+  });
+
+  it("reads an error kept without its values as the request's own", () => {
+    expect(errorKeyOf('httpTimeout')).toBe('errors.httpTimeout.request');
+    expect(errorKeyOf('httpRefused', { source: 'folder' })).toBe('errors.httpRefused');
+    expect(errorKeyOf('storage')).toBeNull();
+  });
+});
 
 describe('ipcNotice', () => {
   it('prefers the message naming the cause over the one naming the attempted action', () => {

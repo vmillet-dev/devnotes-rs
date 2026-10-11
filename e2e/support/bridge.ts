@@ -16,6 +16,7 @@ import type {
   Folder,
   FolderColour,
   FolderDraft,
+  ContainerSettings,
   HttpCollection,
   HttpContents,
   HttpFolder,
@@ -116,6 +117,8 @@ export const bridge = {
     invoke<HttpFolder>('create_http_folder', { collectionId, parentId, name }),
   createHttpRequest: (draft: HttpRequestDraft) => invoke<HttpRequest>('create_http_request', { draft }),
   httpRequest: (id: string) => invoke<HttpRequest>('get_http_request', { id }),
+  saveHttpSettings: (item: HttpItem, settings: ContainerSettings) =>
+    invoke<null>('save_http_settings', { item, settings }),
   moveHttpItem: (item: HttpItem, place: HttpPlace) => invoke<null>('move_http_item', { item, place }),
   countHttpContents: (item: HttpItem) => invoke<HttpContents>('count_http_contents', { item }),
   deleteHttpItem: (item: HttpItem) => invoke<null>('delete_http_item', { item }),

@@ -20,7 +20,7 @@ use super::model::{
 };
 use super::response::{self, Cookie};
 use super::settings::{Inherited, implied_content_type};
-use super::transport::Transport;
+use super::transport::{Limit, Limits, SetBy, Transport};
 use crate::notes::language::Language;
 use crate::notes::placeholder;
 
@@ -129,10 +129,10 @@ pub enum SendError {
     Refused(String),
     #[error("The secure connection failed: {0}")]
     Tls(String),
-    #[error("No answer before the timeout")]
-    Timeout,
-    #[error("Too many redirects")]
-    TooManyRedirects,
+    #[error("No answer within {} ms", .0.value)]
+    Timeout(Limit),
+    #[error("More than {} redirects", .0.value)]
+    TooManyRedirects(Limit),
     #[error("The file {0} cannot be read")]
     FileUnreadable(String),
     #[error("The send was cancelled")]
@@ -159,9 +159,24 @@ pub struct Outgoing {
     pub graphql: bool,
     /// Its timeout, redirects and TLS: the defaults until the command sets what is inherited.
     pub transport: Transport,
+    pub limits: Limits,
 }
 
 impl Outgoing {
+    pub fn timeout(&self) -> Limit {
+        Limit {
+            value: self.transport.timeout_ms,
+            set_by: self.limits.timeout.clone(),
+        }
+    }
+
+    pub fn redirects(&self) -> Limit {
+        Limit {
+            value: self.transport.max_redirects,
+            set_by: self.limits.redirects.clone(),
+        }
+    }
+
     /// The jar's `Cookie`, unless one is typed: what is typed wins, as for `Authorization`.
     pub fn add_cookies(&mut self, header: Option<String>) {
         if let Some(header) = header
@@ -357,6 +372,10 @@ pub fn compose(
         _ => Vec::new(),
     };
 
+    let set_by = |own: bool, above: &SetBy| {
+        if own { SetBy::Request } else { above.clone() }
+    };
+
     Ok(Outgoing {
         method,
         url,
@@ -365,6 +384,16 @@ pub fn compose(
         secrets,
         graphql: graphql.is_some(),
         transport: inherited.transport.over(&document.transport),
+        limits: Limits {
+            timeout: set_by(
+                document.transport.timeout_ms.is_some(),
+                &inherited.limits.timeout,
+            ),
+            redirects: set_by(
+                document.transport.max_redirects.is_some(),
+                &inherited.limits.redirects,
+            ),
+        },
     })
 }
 
@@ -462,12 +491,12 @@ fn is_text(content_type: Option<&str>, bytes: &[u8]) -> bool {
 }
 
 /// What failed, read from the error and the chain under it: reqwest names neither DNS nor TLS.
-fn failure(error: &reqwest::Error) -> SendError {
+fn failure(error: &reqwest::Error, timeout: &Limit, redirects: &Limit) -> SendError {
     if error.is_timeout() {
-        return SendError::Timeout;
+        return SendError::Timeout(timeout.clone());
     }
     if error.is_redirect() {
-        return SendError::TooManyRedirects;
+        return SendError::TooManyRedirects(redirects.clone());
     }
     if error.is_builder() {
         return SendError::InvalidUrl(error.to_string());
@@ -480,7 +509,7 @@ fn failure(error: &reqwest::Error) -> SendError {
         if let Some(io) = current.downcast_ref::<std::io::Error>() {
             match io.kind() {
                 std::io::ErrorKind::ConnectionRefused => return SendError::Refused(io.to_string()),
-                std::io::ErrorKind::TimedOut => return SendError::Timeout,
+                std::io::ErrorKind::TimedOut => return SendError::Timeout(timeout.clone()),
                 _ => {}
             }
             // ⚠️ `io::Error::source` skips the error it wraps, where rustls puts its own.
@@ -627,10 +656,12 @@ async fn send(outgoing: Outgoing) -> Result<Received, SendError> {
 
     let exchange = exchange(&outgoing);
     let is_graphql = outgoing.graphql;
+    let (timeout, most) = (outgoing.timeout(), outgoing.redirects());
+    let failure = |error: reqwest::Error| failure(&error, &timeout, &most);
     let request = request(&client, outgoing);
 
     let started = Instant::now();
-    let mut response = request.send().await.map_err(|error| failure(&error))?;
+    let mut response = request.send().await.map_err(failure)?;
     let status = response.status();
     let url = response.url().to_string();
     let headers: Vec<KeyValue> = response
@@ -650,7 +681,7 @@ async fn send(outgoing: Outgoing) -> Result<Received, SendError> {
 
     let mut bytes = Vec::new();
     let mut incomplete = false;
-    while let Some(chunk) = response.chunk().await.map_err(|error| failure(&error))? {
+    while let Some(chunk) = response.chunk().await.map_err(failure)? {
         let room = KEPT_LIMIT - bytes.len();
         if chunk.len() > room {
             bytes.extend_from_slice(&chunk[..room]);
@@ -816,6 +847,7 @@ mod tests {
             auth_from: None,
             headers: Vec::new(),
             transport: crate::http::transport::Transport::default(),
+            limits: Limits::default(),
         }
     }
 
@@ -975,6 +1007,49 @@ mod tests {
         assert_eq!(
             outgoing.body,
             OutgoingBody::Bytes(b"q=a+b%26c&lang=fr".to_vec())
+        );
+    }
+
+    /// Its own value is the request's; one left unset is whoever set it above, or nobody.
+    #[test]
+    fn a_request_knows_who_set_its_timeout_and_its_redirects() {
+        use crate::http::model::HttpItemKind;
+        use crate::http::settings::HttpOrigin;
+
+        let folder = SetBy::Above(HttpOrigin {
+            kind: HttpItemKind::Folder,
+            id: "f".to_string(),
+            name: "Auth".to_string(),
+        });
+        let above = Inherited {
+            transport: Transport {
+                timeout_ms: 2_000,
+                ..Transport::default()
+            },
+            limits: Limits {
+                timeout: folder.clone(),
+                redirects: SetBy::Default,
+            },
+            ..nothing()
+        };
+        let mut own = document("https://api.exemple.fr");
+        own.transport.max_redirects = Some(1);
+
+        let outgoing = compose(RequestKind::Http, HttpMethod::Get, &own, &above).unwrap();
+
+        assert_eq!(
+            outgoing.timeout(),
+            Limit {
+                value: 2_000,
+                set_by: folder
+            }
+        );
+        assert_eq!(
+            outgoing.redirects(),
+            Limit {
+                value: 1,
+                set_by: SetBy::Request
+            }
         );
     }
 

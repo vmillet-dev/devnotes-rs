@@ -94,7 +94,10 @@
         @if (entry.record.response; as response) {
           <app-response-view [response]="response" [requestName]="entry.item.summary.name" />
         } @else {
-          <p class="failure" data-testid="http-history-failure">{{ failureKey(entry.item) | transloco }}</p>
+          @let failed = failure(entry.item);
+          <p class="failure" data-testid="http-history-failure">
+            {{ failed.key | transloco: failed.params }}
+          </p>
         }
       } @else {
         <p class="placeholder">{{ 'http.history.choose' | transloco }}</p>

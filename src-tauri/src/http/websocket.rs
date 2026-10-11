@@ -23,6 +23,7 @@ use tokio_tungstenite::{Connector, connect_async_tls_with_config};
 use url::Url;
 
 use super::send::{Outgoing, SendError, install_crypto};
+use super::transport::Limit;
 use crate::error::{AppError, ErrorCode};
 
 pub const WEBSOCKET_EVENT: &str = "devnotes://websocket";
@@ -140,14 +141,19 @@ fn cut(text: &str) -> (String, bool) {
     (text[..end].to_string(), true)
 }
 
-fn failure(error: &tungstenite::Error) -> SendError {
+/// `timeout` is the handshake's: once open, a socket that times out is the network's doing,
+/// not a delay the request sets.
+fn failure(error: &tungstenite::Error, timeout: Option<&Limit>) -> SendError {
     match error {
         tungstenite::Error::Http(response) => SendError::Handshake(response.status().as_u16()),
         tungstenite::Error::Url(error) => SendError::InvalidUrl(error.to_string()),
         tungstenite::Error::Tls(error) => SendError::Tls(error.to_string()),
         tungstenite::Error::Io(io) => match io.kind() {
             std::io::ErrorKind::ConnectionRefused => SendError::Refused(io.to_string()),
-            std::io::ErrorKind::TimedOut => SendError::Timeout,
+            std::io::ErrorKind::TimedOut => timeout.map_or_else(
+                || SendError::Network(io.to_string()),
+                |limit| SendError::Timeout(limit.clone()),
+            ),
             _ => {
                 let text = io.to_string().to_ascii_lowercase();
                 if text.contains("lookup")
@@ -192,10 +198,11 @@ impl Sockets {
     ) -> Result<(), SendError> {
         install_crypto();
         let url = as_socket(&outgoing.url);
+        let timeout = outgoing.timeout();
         let mut request = url
             .as_str()
             .into_client_request()
-            .map_err(|error| failure(&error))?;
+            .map_err(|error| failure(&error, Some(&timeout)))?;
         for (key, value) in &outgoing.headers {
             let name = tungstenite::http::HeaderName::from_bytes(key.as_bytes())
                 .map_err(|error| SendError::Network(error.to_string()))?;
@@ -218,7 +225,7 @@ impl Sockets {
         let tls = rustls::ClientConfig::with_platform_verifier()
             .map_err(|error| SendError::Tls(error.to_string()))?;
         let (stream, response) = tokio::time::timeout(
-            Duration::from_secs(30),
+            Duration::from_millis(u64::from(timeout.value)),
             connect_async_tls_with_config(
                 request,
                 None,
@@ -227,8 +234,8 @@ impl Sockets {
             ),
         )
         .await
-        .map_err(|_| SendError::Timeout)?
-        .map_err(|error| failure(&error))?;
+        .map_err(|_| SendError::Timeout(timeout.clone()))?
+        .map_err(|error| failure(&error, Some(&timeout)))?;
 
         let protocol = response
             .headers()
@@ -328,7 +335,7 @@ async fn run<R: Runtime>(
                     break;
                 }
                 Some(Err(error)) => {
-                    let failed = AppError::from(failure(&error));
+                    let failed = AppError::from(failure(&error, None));
                     emit(&app, &id, SocketEvent::Failed { code: failed.code, detail: failed.detail });
                     break;
                 }
@@ -344,7 +351,7 @@ async fn run<R: Runtime>(
                     match write.send(Message::text(text)).await {
                         Ok(()) => emit(&app, &id, SocketEvent::Sent { text: shown, size }),
                         Err(error) => {
-                            let failed = AppError::from(failure(&error));
+                            let failed = AppError::from(failure(&error, None));
                             emit(&app, &id, SocketEvent::Failed { code: failed.code, detail: failed.detail });
                             break;
                         }

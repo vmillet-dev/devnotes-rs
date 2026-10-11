@@ -4,6 +4,8 @@
 
 pub mod store;
 
+use std::collections::BTreeMap;
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -28,6 +30,9 @@ pub struct HistorySummary {
     pub millis: Option<u32>,
     pub size: Option<u32>,
     pub failure: Option<ErrorCode>,
+    /// What the failure's sentence states: the delay that ran out, and who set it.
+    #[serde(default)]
+    pub failure_params: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -71,7 +76,8 @@ pub struct Sent {
     pub exchange: Exchange,
     /// The API key's name, as `Outgoing::secrets` holds it.
     pub secrets: Vec<String>,
-    pub outcome: Result<SentResponse, ErrorCode>,
+    /// A failure as its code and the values its sentence states.
+    pub outcome: Result<SentResponse, (ErrorCode, BTreeMap<String, String>)>,
 }
 
 fn is_secret(name: &str, secrets: &[String]) -> bool {
@@ -173,7 +179,13 @@ pub fn record_of(sent: &Sent) -> (HistorySummary, HistoryRecord) {
         url: exchange.url.clone(),
         millis: response.as_ref().map(|response| response.millis),
         size: response.as_ref().map(|response| response.size),
-        failure: sent.outcome.as_ref().err().copied(),
+        failure: sent.outcome.as_ref().err().map(|(code, _)| *code),
+        failure_params: sent
+            .outcome
+            .as_ref()
+            .err()
+            .map(|(_, params)| params.clone())
+            .unwrap_or_default(),
     };
     (summary, HistoryRecord { exchange, response })
 }
@@ -344,11 +356,18 @@ mod tests {
                 SentBody::Text { text: long.clone() },
             ),
             secrets: Vec::new(),
-            outcome: Err(ErrorCode::HttpRefused),
+            outcome: Err((
+                ErrorCode::HttpTimeout,
+                BTreeMap::from([("amount".to_string(), "2".to_string())]),
+            )),
         };
 
         let (summary, record) = record_of(&sent);
-        assert_eq!(summary.failure, Some(ErrorCode::HttpRefused));
+        assert_eq!(summary.failure, Some(ErrorCode::HttpTimeout));
+        assert_eq!(
+            summary.failure_params.get("amount").map(String::as_str),
+            Some("2")
+        );
         assert_eq!((summary.millis, record.response), (None, None));
         let SentBody::Text { text } = record.exchange.body else {
             panic!("a text body");
@@ -371,6 +390,7 @@ mod tests {
                     millis: None,
                     size: None,
                     failure: None,
+                    failure_params: BTreeMap::new(),
                 },
             },
             record: HistoryRecord {
@@ -430,6 +450,7 @@ mod tests {
                 millis: None,
                 size: None,
                 failure: None,
+                failure_params: BTreeMap::new(),
             },
         };
         let days = by_day(

@@ -441,8 +441,18 @@
     "httpUnresolved": "The host name does not resolve.",
     "httpRefused": "The connection was refused: nothing listens at this address.",
     "httpTls": "The secure connection failed: certificate refused or unexpected protocol.",
-    "httpTimeout": "No answer after 30 seconds.",
-    "httpTooManyRedirects": "Too many redirects: more than 10.",
+    "httpTimeout": {
+      "request": "No answer after {{amount}} {{unit}}.",
+      "folder": "No answer after {{amount}} {{unit}} (setting inherited from the folder “{{name}}”).",
+      "collection": "No answer after {{amount}} {{unit}} (setting inherited from the collection “{{name}}”).",
+      "default": "No answer after {{amount}} {{unit}} (default setting)."
+    },
+    "httpTooManyRedirects": {
+      "request": "{count, plural, =0 {Redirect refused: the setting allows none.} one {Too many redirects: more than one.} other {Too many redirects: more than #.}}",
+      "folder": "{count, plural, =0 {Redirect refused: the setting allows none (setting inherited from the folder “{{name}}”).} one {Too many redirects: more than one (setting inherited from the folder “{{name}}”).} other {Too many redirects: more than # (setting inherited from the folder “{{name}}”).}}",
+      "collection": "{count, plural, =0 {Redirect refused: the setting allows none (setting inherited from the collection “{{name}}”).} one {Too many redirects: more than one (setting inherited from the collection “{{name}}”).} other {Too many redirects: more than # (setting inherited from the collection “{{name}}”).}}",
+      "default": "{count, plural, =0 {Redirect refused: the setting allows none (default setting).} one {Too many redirects: more than one (default setting).} other {Too many redirects: more than # (default setting).}}"
+    },
     "httpFileUnreadable": "The file {{path}} cannot be read.",
     "httpCancelled": "Send cancelled.",
     "httpNetwork": "Network error.",

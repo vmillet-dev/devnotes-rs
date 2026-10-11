@@ -7,7 +7,9 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 use thiserror::Error;
 
+use crate::http::model::HttpItemKind;
 use crate::http::send::SendError;
+use crate::http::transport::{Limit, SetBy, readable_delay};
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 #[error("Invalid field \"{field}\": {detail}")]
@@ -181,9 +183,28 @@ impl AppError {
     }
 
     fn with(code: ErrorCode, detail: String, key: &str, value: &str) -> Self {
-        let mut error = Self::new(code, detail);
-        error.params.insert(key.to_string(), value.to_string());
-        error
+        Self::new(code, detail).and(key, value)
+    }
+
+    fn and(mut self, key: &str, value: &str) -> Self {
+        self.params.insert(key.to_string(), value.to_string());
+        self
+    }
+
+    /// `source` picks the sentence — the request's own value, a folder's, the collection's or
+    /// the default — and `name` is the folder or the collection that set it.
+    fn set_by(self, limit: &Limit) -> Self {
+        match &limit.set_by {
+            SetBy::Request => self.and("source", "request"),
+            SetBy::Default => self.and("source", "default"),
+            SetBy::Above(origin) => {
+                let source = match origin.kind {
+                    HttpItemKind::Collection => "collection",
+                    HttpItemKind::Folder | HttpItemKind::Request => "folder",
+                };
+                self.and("source", source).and("name", &origin.name)
+            }
+        }
     }
 
     pub fn storage_unavailable() -> Self {
@@ -215,8 +236,18 @@ impl From<SendError> for AppError {
             SendError::Unresolved(_) => Self::new(ErrorCode::HttpUnresolved, detail),
             SendError::Refused(_) => Self::new(ErrorCode::HttpRefused, detail),
             SendError::Tls(_) => Self::new(ErrorCode::HttpTls, detail),
-            SendError::Timeout => Self::new(ErrorCode::HttpTimeout, detail),
-            SendError::TooManyRedirects => Self::new(ErrorCode::HttpTooManyRedirects, detail),
+            SendError::Timeout(limit) => {
+                let (amount, unit) = readable_delay(limit.value);
+                Self::new(ErrorCode::HttpTimeout, detail)
+                    .and("amount", &amount.to_string())
+                    .and("unit", unit)
+                    .set_by(&limit)
+            }
+            SendError::TooManyRedirects(limit) => {
+                Self::new(ErrorCode::HttpTooManyRedirects, detail)
+                    .and("count", &limit.value.to_string())
+                    .set_by(&limit)
+            }
             SendError::FileUnreadable(path) => {
                 Self::with(ErrorCode::HttpFileUnreadable, detail, "path", &path)
             }
