@@ -34,13 +34,15 @@
   color: var(--text-2);
 }
 
+// Placed by `appFloatingPanel`, in the top layer: a panel under its trigger was cut by the
+// first scrolling ancestor. `inset` and `margin` undo what the browser gives a popover.
 .choice-menu {
   @include enters;
   @include surface(var(--bg-2), 8px);
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
+  position: fixed;
+  inset: auto;
   z-index: 10;
+  margin: 0;
   min-width: 180px;
   max-height: 240px;
   overflow-y: auto;

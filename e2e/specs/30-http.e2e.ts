@@ -1,12 +1,12 @@
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
-import { $, $$, expect } from '@wdio/globals';
+import { $, $$, browser, expect } from '@wdio/globals';
 
 import type { HttpNode, HttpRequestDraft, HttpTree } from '@core/ipc/bindings';
 
 import { canvas } from '../pageobjects/canvas.page.js';
-import { eventually, press, readEach, setField, testid } from '../support/app.js';
+import { eventually, press, readEach, setField, testid, viewportSize } from '../support/app.js';
 import { bridge } from '../support/bridge.js';
 import { echoSocket } from '../support/echo-socket.js';
 
@@ -230,6 +230,61 @@ describe('HTTP collections', () => {
 
       const tab = `${testid('http-tab')}[data-key="${created.id}"]`;
       await $(`${tab} ${testid('http-tab-close')}`).click();
+      await $(tab).waitForExist({ reverse: true, timeout: 10_000 });
+      await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+    });
+
+    /**
+     * A menu's panel used to be cut by the editor it opened in, which scrolls: on a short
+     * window the response pane hid all but its first entry.
+     */
+    it('opens the auth menu whole on a short window, down to its last entry', async () => {
+      const api = await bridge.createHttpCollection('Menus');
+      const created = await bridge.createHttpRequest(draft(api.id, null, 'Courte'));
+      await press('1', ['Control']);
+      await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+      await press('3', ['Control']);
+      await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+      if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
+      const restore = await browser.getWindowSize();
+      await browser.setWindowSize(1100, 500);
+
+      try {
+        // The resize itself closes an open menu: settled before one is opened.
+        await eventually(viewportSize, (size) => size.height <= 500 && size.height > 420, 'a short window');
+        await $(`${testid('http-node')}[data-id="${created.id}"] ${testid('http-node-name')}`).click();
+        await $(`${testid('http-section')}[data-section="auth"]`).click();
+        await $(testid('http-auth-kind')).click();
+        const options = `${testid('choice-panel-http-auth')} ${testid('choice-option')}`;
+        await $(options).waitForDisplayed({ timeout: 10_000 });
+
+        // Hit-tested at its centre: an entry under the response pane is in the page and takes no click.
+        const last = await browser.execute((selector: string) => {
+          const entries = document.querySelectorAll<HTMLElement>(selector);
+          const entry = entries[entries.length - 1]!;
+          const box = entry.getBoundingClientRect();
+          const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+          return {
+            id: entry.dataset['optionId'],
+            inWindow: box.top >= 0 && box.bottom <= window.innerHeight,
+            onTop: hit !== null && entry.contains(hit),
+          };
+        }, options);
+        expect(last).toEqual({ id: 'apiKey', inWindow: true, onTop: true });
+
+        await $(`${options}[data-option-id="apiKey"]`).click();
+        await eventually(
+          () => $(testid('http-auth')).getAttribute('data-kind'),
+          (kind) => kind === 'apiKey',
+          'the last entry of the menu to be chosen',
+        );
+      } finally {
+        await browser.setWindowSize(restore.width, restore.height);
+      }
+
+      const tab = `${testid('http-tab')}[data-key="${created.id}"]`;
+      await $(`${tab} ${testid('http-tab-close')}`).click();
+      await $(testid('http-close-discard')).click();
       await $(tab).waitForExist({ reverse: true, timeout: 10_000 });
       await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
     });

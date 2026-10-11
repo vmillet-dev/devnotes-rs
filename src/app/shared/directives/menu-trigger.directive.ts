@@ -60,8 +60,12 @@ export class MenuTriggerDirective {
     }
   }
 
+  anchor(): HTMLElement | null {
+    return this.host.nativeElement.querySelector<HTMLElement>('[appMenuAnchor]');
+  }
+
   focusAnchor(): void {
-    this.host.nativeElement.querySelector<HTMLElement>('[appMenuAnchor]')?.focus();
+    this.anchor()?.focus();
   }
 
   /** An open menu takes the whole keystroke: a dialog behind it, the editor, must not close too. */
