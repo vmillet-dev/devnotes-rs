@@ -7,6 +7,7 @@ import {
   HttpContents,
   HttpFolder,
   HttpItem,
+  HttpMethod,
   HttpPlace,
   HttpRequest,
   HttpRequestDraft,
@@ -99,8 +100,9 @@ export class HttpRepository {
     );
   }
 
-  async describeBody(body: RequestBodyDraft): Promise<BodyAnswer> {
-    return unwrap('describe_http_body', await commands.describeHttpBody(toBodyWire(body)));
+  /** With its method: a body on a `GET` is sent all the same, and Rust says it is unusual. */
+  async describeBody(body: RequestBodyDraft, method: HttpMethod): Promise<BodyAnswer> {
+    return unwrap('describe_http_body', await commands.describeHttpBody(toBodyWire(body), method));
   }
 
   /** What it sends without a row of its own, and who put it there: composed as a send is. */

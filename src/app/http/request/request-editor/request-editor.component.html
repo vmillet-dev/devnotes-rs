@@ -84,6 +84,14 @@
           <span class="count" data-testid="http-auth-inherits">{{
             'http.auth.inheritsShort' | transloco
           }}</span>
+        } @else if (id === 'body' && bodyAnswer()?.unusual) {
+          <!-- Seen from the other tabs: the method changes while « Corps » is not the one in front. -->
+          <span
+            class="count warns"
+            data-testid="http-body-unusual-mark"
+            [attr.title]="'http.body.unusual' | transloco: { method: draft.method }"
+            >{{ 'http.body.unusualShort' | transloco: { method: draft.method } }}</span
+          >
         }
       </button>
     }
@@ -162,7 +170,13 @@
     } @else if (section() === 'query') {
       <app-graphql-editor [graphql]="draft.parts.graphql" (graphqlChange)="onGraphql($event)" />
     } @else {
-      <app-body-editor [body]="draft.parts.body" [answer]="bodyAnswer()" (bodyChange)="onBody($event)" />
+      <app-body-editor
+        [body]="draft.parts.body"
+        [answer]="bodyAnswer()"
+        [method]="draft.method"
+        (bodyChange)="onBody($event)"
+        (kindChosen)="onBodyKind($event)"
+      />
     }
   </div>
 </div>

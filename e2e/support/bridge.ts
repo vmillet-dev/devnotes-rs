@@ -120,6 +120,8 @@ export const bridge = {
   saveHttpSettings: (item: HttpItem, settings: ContainerSettings) =>
     invoke<null>('save_http_settings', { item, settings }),
   moveHttpItem: (item: HttpItem, place: HttpPlace) => invoke<null>('move_http_item', { item, place }),
+  /** Answers how many entries went. */
+  clearHttpHistory: () => invoke<number>('clear_http_history'),
   countHttpContents: (item: HttpItem) => invoke<HttpContents>('count_http_contents', { item }),
   deleteHttpItem: (item: HttpItem) => invoke<null>('delete_http_item', { item }),
   listSpaces: () => invoke<Space[]>('list_spaces'),

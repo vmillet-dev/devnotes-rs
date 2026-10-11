@@ -8,6 +8,8 @@ import {
   toInherited,
   toParts,
   toSettings,
+  bodyOfKind,
+  setBodyAside,
 } from './http.model';
 
 describe('the HTTP wire shapes', () => {
@@ -78,6 +80,37 @@ describe('the HTTP wire shapes', () => {
         transport: DEFAULT_TRANSPORT,
       }).headers,
     ).toEqual([{ header: { enabled: true, key: 'Accept', value: '', description: '' }, from }]);
+  });
+
+  /** « Passer à Aucun » on a `GET` would otherwise cost the text it warns about. */
+  it('sets a body aside when another kind is chosen, and hands it back as it was', () => {
+    const form = {
+      kind: 'form',
+      fields: [{ enabled: true, key: 'q', value: 'a', description: '' }],
+    } as const;
+    let left = setBodyAside({}, form);
+    expect(bodyOfKind('none', left)).toEqual({ kind: 'none' });
+    expect(bodyOfKind('form', left)).toBe(form);
+
+    // JSON or plain, a text is one text: the last one typed, under either kind.
+    left = setBodyAside(left, { kind: 'json', text: '{"a":1}' });
+    expect(bodyOfKind('text', left)).toEqual({ kind: 'text', text: '{"a":1}' });
+    left = setBodyAside(left, { kind: 'text', text: 'bonjour' });
+    expect(bodyOfKind('json', left)).toEqual({ kind: 'json', text: 'bonjour' });
+    expect(bodyOfKind('form', left)).toBe(form);
+  });
+
+  it('starts a kind never chosen empty', () => {
+    expect(
+      ['none', 'json', 'text', 'form', 'multipart', 'binary'].map((kind) => bodyOfKind(kind as never)),
+    ).toEqual([
+      { kind: 'none' },
+      { kind: 'json', text: '' },
+      { kind: 'text', text: '' },
+      { kind: 'form', fields: [] },
+      { kind: 'multipart', parts: [] },
+      { kind: 'binary', path: '' },
+    ]);
   });
 
   it('names a request by its method, or by its kind', () => {

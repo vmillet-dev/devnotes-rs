@@ -221,19 +221,34 @@ fn a_folder_hands_its_settings_down_and_a_body_says_what_it_implies() {
         ErrorCode::InvalidInput
     );
 
+    let json = || RequestBody::Json {
+        text: "{\"a\":".to_string(),
+    };
     let broken = session
-        .call(|_| {
-            describe_http_body(RequestBody::Json {
-                text: "{\"a\":".to_string(),
-            })
-        })
+        .call(|_| describe_http_body(json(), HttpMethod::Post))
         .unwrap();
     assert_eq!(broken.content_type.as_deref(), Some("application/json"));
     assert!(broken.problem.is_some());
+    assert!(!broken.unusual);
+    // The same body once the method is a `GET`: sent all the same, and said.
+    for (method, unusual) in [
+        (HttpMethod::Get, true),
+        (HttpMethod::Head, true),
+        (HttpMethod::Delete, false),
+        (HttpMethod::Options, false),
+    ] {
+        let said = session
+            .call(|_| describe_http_body(json(), method))
+            .unwrap();
+        assert_eq!(said.unusual, unusual, "{method:?}");
+    }
     let none = session
-        .call(|_| describe_http_body(RequestBody::None))
+        .call(|_| describe_http_body(RequestBody::None, HttpMethod::Get))
         .unwrap();
-    assert_eq!((none.content_type, none.problem), (None, None));
+    assert_eq!(
+        (none.content_type, none.problem, none.unusual),
+        (None, None, false)
+    );
 }
 
 #[test]

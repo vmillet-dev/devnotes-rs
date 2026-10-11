@@ -1698,6 +1698,17 @@ bumps `settingsRevision`: its name is in what its requests inherit « from ».
   **path**, read by Rust when the request is sent: its bytes never enter the library.
   `describe_http_body` answers the `Content-Type` the body implies and, for JSON, why it does
   not read (the JSON explorer's own parser and words). Prettier formats it, as it does a snippet.
+- **A body is sent whatever the method, and a `GET` that carries one says so.** A `POST` switched
+  to `GET` keeps its body and sends it — some APIs do read one — and nothing said it.
+  `describe_http_body` is asked with the method and answers `unusual`
+  (`RequestBody::is_unusual_on`: a `GET` or a `HEAD`, and something that leaves — a kind chosen
+  and left empty is no body; `DELETE` and `OPTIONS` do not warn): the rule is Rust's, the editor
+  keeps no list of methods. It shows as a line above the body, with « Passer à Aucun », and as a
+  mark on the « Corps » tab — the method changes while another tab is in front.
+- **Choosing another kind of body empties none** (`HttpTabsStore.chooseBodyKind`): the one left
+  is set aside by tab and comes back as it was — « Passer à Aucun » would otherwise cost the
+  text it warns about. A text is kept under JSON and plain alike, so it still travels between
+  the two. For as long as the tab is open, never written: a request saves the body it shows.
 - **What leaves without a row of its own is listed above the headers' table, and the list is
   Rust's** (`implied_http_headers` → `send::implied`): the body's `Content-Type`, the headers
   handed down with where from, the application's `User-Agent` and `Accept` « par défaut », the
@@ -1705,8 +1716,9 @@ bumps `settingsRevision`: its name is in what its requests inherit « from ».
   (`written`, each header with who wrote it), so the list cannot say something a send does not
   do — it once was decided in the editor, from the body alone. Asked again when the kind, the
   URL, a header, the auth, the body's kind or the place changes, not at each key of the body;
-  the last answer stays on screen while the next is read (a `linkedSignal`), or the table under
-  it would jump. The auth's own header is not in it: its tab says it, and it is a secret.
+  the last answer stays on screen while the next is read (`RequestEditorComponent.lastOf`, a
+  `linkedSignal` by tab, which the body's answer goes through too), or the table under it would
+  jump. The auth's own header is not in it: its tab says it, and it is a secret.
 - **An auth is inherited by default.** A collection and a folder carry settings of their own —
   an auth and headers, sealed like a request's document — and `inherited_http_settings` resolves
   what a request at a place gets: the nearest auth set, every header above, a folder's overriding

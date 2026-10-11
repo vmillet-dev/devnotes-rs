@@ -2,12 +2,16 @@ import { Injectable, computed, effect, inject, signal, untracked } from '@angula
 import { TranslocoService } from '@jsverse/transloco';
 import { HttpRepository } from '@core/data/http.repository';
 import {
+  BodiesLeft,
+  BodyKind,
   EMPTY_PARTS,
   HttpTree,
   KeyValueRow,
   OpenedRequest,
   RequestDraft,
   RequestParts,
+  bodyOfKind,
+  setBodyAside,
   toDocument,
 } from '@core/model/http.model';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
@@ -81,6 +85,8 @@ export class HttpTabsStore {
 
   private drafts = 0;
   private restored = false;
+  /** By tab, for as long as it is open: never written, a request saves the body it shows. */
+  private readonly bodiesLeft = new Map<string, BodiesLeft>();
 
   constructor() {
     effect(() => {
@@ -156,6 +162,18 @@ export class HttpTabsStore {
     this.update(key, (draft) => ({ ...draft, parts: { ...draft.parts, ...change } }));
   }
 
+  /**
+   * Another kind of body. The one left is set aside, and comes back as it was when its kind is
+   * chosen again: « Passer à Aucun » on a `GET` would otherwise cost the text it warns about.
+   */
+  chooseBodyKind(key: string, kind: BodyKind): void {
+    const current = this.find(key)?.draft.parts.body;
+    if (current === undefined || current.kind === kind) return;
+    const left = setBodyAside(this.bodiesLeft.get(key) ?? {}, current);
+    this.bodiesLeft.set(key, left);
+    this.editParts(key, { body: bodyOfKind(kind, left) });
+  }
+
   /** The URL as typed, then the table rewritten from it by Rust, unless typing went on. */
   async editUrl(key: string, url: string): Promise<void> {
     this.update(key, (draft) => ({ ...draft, parts: { ...draft.parts, url } }));
@@ -224,6 +242,11 @@ export class HttpTabsStore {
     });
     this.sending.rekey(key, created.id);
     this.sockets.rekey(key, created.id);
+    const left = this.bodiesLeft.get(key);
+    if (left !== undefined) {
+      this.bodiesLeft.delete(key);
+      this.bodiesLeft.set(created.id, left);
+    }
     if (this._activeKey() === key) this._activeKey.set(created.id);
     this.persist();
     await this.collections.load();
@@ -238,6 +261,7 @@ export class HttpTabsStore {
     this._tabs.set(rest);
     this.sending.forget(key);
     this.sockets.forget(key);
+    this.bodiesLeft.delete(key);
     if (this._activeKey() === key) this._activeKey.set(rest[Math.min(at, rest.length - 1)]?.key ?? null);
     this.persist();
   }
