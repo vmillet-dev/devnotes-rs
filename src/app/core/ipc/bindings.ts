@@ -203,6 +203,19 @@ export const commands = {
 	httpHistoryEntry: (id: string) => typedError<HistoryEntry, AppError>(__TAURI_INVOKE("http_history_entry", { id })),
 	/**  An entry rebuilt as a request to send again or save: its secrets are typed again. */
 	httpHistoryDraft: (id: string) => typedError<HistoryDraft, AppError>(__TAURI_INVOKE("http_history_draft", { id })),
+	/**
+	 *  A send put back onto the request it came from, as changes to save or not, the request's own
+	 *  secrets where the record holds a mask. `None` when that request is gone, or the send came
+	 *  from a draft: the front then opens one, as `http_history_draft` rebuilds it.
+	 */
+	httpHistoryOntoRequest: (id: string) => typedError<{
+	name: string,
+	method: HttpMethod,
+	document: RequestDocument,
+} | null, AppError>(__TAURI_INVOKE("http_history_onto_request", { id })),
+	/**  One entry gone, answered whole: its undo hands it back to `restore_http_history_entry`. */
+	deleteHttpHistoryEntry: (id: string) => typedError<HistoryEntry, AppError>(__TAURI_INVOKE("delete_http_history_entry", { id })),
+	restoreHttpHistoryEntry: (entry: HistoryEntry) => typedError<null, AppError>(__TAURI_INVOKE("restore_http_history_entry", { entry })),
 	/**  What « Vider l'historique » says it removes. */
 	countHttpHistory: () => typedError<number, AppError>(__TAURI_INVOKE("count_http_history")),
 	clearHttpHistory: () => typedError<number, AppError>(__TAURI_INVOKE("clear_http_history")),
@@ -1287,6 +1300,7 @@ export type HistoryDraft = {
 	document: RequestDocument,
 };
 
+/**  Read to be shown; and handed back as it was read to undo its deletion. */
 export type HistoryEntry = {
 	item: HistoryItem,
 	record: HistoryRecord,
@@ -1299,6 +1313,12 @@ export type HistoryItem = {
 	status: number | null,
 	requestId: string | null,
 	summary: HistorySummary,
+	/**
+	 *  The URL in two parts for a list (`url_parts`): the host, which a narrow row cuts, and
+	 *  what follows it, which it keeps.
+	 */
+	urlHead?: string,
+	urlTail?: string,
 };
 
 export type HistoryRecord = {

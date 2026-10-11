@@ -4,7 +4,7 @@
   display: flex;
   flex: 0 0 auto;
   min-height: 0;
-  background: var(--bg-1);
+  background: var(--rail-frame-bg, var(--bg-1));
 }
 
 // A hit area wider than the line it draws: a 1px target is not one.

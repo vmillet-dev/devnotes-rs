@@ -174,6 +174,14 @@ export class HttpTabsStore {
     this.editParts(key, { body: bodyOfKind(kind, left) });
   }
 
+  /**
+   * What a tab edits, replaced by a send put back onto its request: what is saved is not
+   * touched, so the tab reads as modified and « Enregistrer » is what writes it.
+   */
+  replaceDraft(key: string, change: Pick<RequestDraft, 'method' | 'parts'>): void {
+    this.update(key, (draft) => ({ ...draft, ...change }));
+  }
+
   /** The URL as typed, then the table rewritten from it by Rust, unless typing went on. */
   async editUrl(key: string, url: string): Promise<void> {
     this.update(key, (draft) => ({ ...draft, parts: { ...draft.parts, url } }));

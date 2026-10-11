@@ -84,6 +84,8 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
   /** By entry id; a missing one rejects, as Rust answers a purged entry. */
   readonly entries = new Map<string, HistoryEntry>();
   draftAnswer: HistoryDraft | null = null;
+  /** What a send put back onto its request reads as; `null` for a request that is gone. */
+  ontoAnswer: HistoryDraft | null = null;
   /** What `syncQuery` answers; unset, it hands back what it was given. */
   synced: Synced | null = null;
   readonly requests = new Map<string, OpenedRequest>();
@@ -242,6 +244,26 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
       if (!this.draftAnswer) throw new Error(`no draft ${id}`);
       return this.draftAnswer;
     });
+  }
+
+  historyOnto(id: string): Promise<HistoryDraft | null> {
+    return this.record('historyOnto', [id], () => this.ontoAnswer);
+  }
+
+  /** Takes the entry out of the days, as Rust would; a missing one rejects. */
+  deleteHistoryEntry(id: string): Promise<HistoryEntry> {
+    return this.record('deleteHistoryEntry', [id], () => {
+      const entry = this.entries.get(id);
+      if (!entry) throw new Error(`no history entry ${id}`);
+      this.historyAnswer = this.historyAnswer
+        .map((day) => ({ ...day, items: day.items.filter((item) => item.id !== id) }))
+        .filter((day) => day.items.length > 0);
+      return entry;
+    });
+  }
+
+  restoreHistoryEntry(entry: HistoryEntry): Promise<void> {
+    return this.record('restoreHistoryEntry', [entry], () => undefined);
   }
 
   countHistory(): Promise<number> {

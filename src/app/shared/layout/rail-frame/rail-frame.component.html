@@ -10,7 +10,7 @@
   tabindex="0"
   aria-orientation="horizontal"
   [attr.data-testid]="edgeTestId()"
-  [attr.aria-label]="'sidebar.resize' | transloco"
+  [attr.aria-label]="labelKey() | transloco"
   [attr.aria-valuenow]="width()"
   [attr.aria-valuemin]="bounds().min"
   [attr.aria-valuemax]="bounds().max"

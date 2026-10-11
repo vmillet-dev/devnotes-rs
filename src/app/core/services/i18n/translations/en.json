@@ -2988,7 +2988,13 @@
       "noAnswer": "failed",
       "empty": "Nothing sent yet: every send is written here.",
       "choose": "Choose a send to read it again.",
-      "reopen": "Reopen in a tab",
+      "reopenInto": "Reopen in {{name}}",
+      "reopenDraft": "Reopen as a draft",
+      "replace": "“{{name}}” has changes: replace them with this send?",
+      "replaceConfirm": "Replace",
+      "delete": "Delete the send {{name}}",
+      "deleted": "Send “{{name}}” deleted from the history.",
+      "resize": "Width of the list of sends",
       "failed": "The history could not be read."
     },
     "graphql": {

@@ -2988,7 +2988,13 @@
       "noAnswer": "échec",
       "empty": "Rien d'envoyé pour l'instant : chaque envoi s'inscrit ici.",
       "choose": "Choisissez un envoi pour le relire.",
-      "reopen": "Rouvrir dans un onglet",
+      "reopenInto": "Rouvrir dans {{name}}",
+      "reopenDraft": "Rouvrir en brouillon",
+      "replace": "« {{name}} » a des modifications : les remplacer par cet envoi ?",
+      "replaceConfirm": "Remplacer",
+      "delete": "Supprimer l'envoi {{name}}",
+      "deleted": "Envoi « {{name}} » supprimé de l'historique.",
+      "resize": "Largeur de la liste des envois",
       "failed": "L'historique n'a pas pu être lu."
     },
     "graphql": {

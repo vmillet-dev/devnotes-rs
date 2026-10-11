@@ -6,15 +6,7 @@ import { $, $$, browser, expect } from '@wdio/globals';
 import type { HttpNode, HttpRequestDraft, HttpTree } from '@core/ipc/bindings';
 
 import { canvas } from '../pageobjects/canvas.page.js';
-import {
-  eventually,
-  press,
-  readEach,
-  reopenSession,
-  setField,
-  testid,
-  viewportSize,
-} from '../support/app.js';
+import { eventually, press, readEach, reloadCanvas, setField, testid, viewportSize } from '../support/app.js';
 import { bridge } from '../support/bridge.js';
 import { echoSocket } from '../support/echo-socket.js';
 
@@ -259,7 +251,7 @@ describe('HTTP collections', () => {
       await $(row).waitForDisplayed({ timeout: 10_000 });
       expect(await names()).toEqual(everywhere('Encore'));
 
-      await reopenSession();
+      await reloadCanvas();
       await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
       await $(row).waitForDisplayed({ timeout: 10_000 });
       expect(await eventually(names, (seen) => seen.title === 'Encore', 'the tab restored')).toEqual(
@@ -1131,6 +1123,117 @@ describe('HTTP collections', () => {
         answer();
         server.close();
         server.closeAllConnections();
+      }
+    });
+
+    /**
+     * Fourteen sends to one host looked alike in a list that could not be widened, one send
+     * could not be removed alone, and « Rouvrir » opened a stranger instead of its request.
+     */
+    it('widens the history, deletes one send and puts it back, and reopens a send in its own request', async () => {
+      const server = createServer((_, response) => {
+        response.writeHead(200, { 'Content-Type': 'text/plain' });
+        response.end('ok');
+      });
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      const { port } = server.address() as AddressInfo;
+      try {
+        await bridge.clearHttpHistory();
+        const api = await bridge.createHttpCollection('Journal');
+        const created = await bridge.createHttpRequest({
+          ...draft(api.id, null, 'Lire'),
+          document: { url: `http://127.0.0.1:${port}/first`, description: '' },
+        });
+        await press('1', ['Control']);
+        await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+        await press('3', ['Control']);
+        await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+        if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
+        await $(`${testid('http-node')}[data-id="${created.id}"] ${testid('http-node-name')}`).click();
+        await $(testid('http-response-idle')).waitForDisplayed({ timeout: 10_000 });
+        const tab = `${testid('http-tab')}[data-key="${created.id}"]`;
+        const sends = async () => {
+          await $(testid('http-send')).click();
+          await $(testid('http-response-status')).waitForDisplayed({ timeout: 10_000 });
+          await $(testid('http-response-sending')).waitForExist({ reverse: true, timeout: 10_000 });
+        };
+        const paths = () => readEach(testid('http-history-item-path'), 'text');
+        const width = () =>
+          browser.execute(
+            (list: string) => Math.round(document.querySelector(list)!.getBoundingClientRect().width),
+            testid('http-history-list'),
+          );
+        const nudge = async (key: 'ArrowLeft' | 'ArrowRight') => {
+          await browser.execute(
+            (edge: string) => (document.querySelector(edge) as HTMLElement | null)?.focus(),
+            testid('http-history-edge'),
+          );
+          await browser.keys(Array.from({ length: 5 }, () => key));
+        };
+
+        // Two sends, the second saved as what the request now is.
+        await sends();
+        await setField(testid('http-url'), `http://127.0.0.1:${port}/second?page=2`);
+        await sends();
+        await press('s', ['Control']);
+        await $(`${tab} ${testid('http-tab-dirty')}`).waitForExist({ reverse: true, timeout: 10_000 });
+
+        // Each row ends on what tells it from the next; the list is widened, and stays so.
+        await $(testid('http-history-open')).click();
+        await eventually(
+          paths,
+          (seen) => seen.join() === '/second?page=2,/first',
+          'the two sends, the newest first',
+        );
+        const narrow = await width();
+        await nudge('ArrowRight');
+        await eventually(width, (wide) => wide === narrow + 80, 'the list widened from its edge');
+        await reloadCanvas();
+        await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+        await $(testid('http-history')).waitForExist({ reverse: true, timeout: 10_000 });
+        await $(testid('http-history-open')).click();
+        await eventually(paths, (seen) => seen.length === 2, 'the history read again');
+        expect(await width()).toBe(narrow + 80);
+
+        // One send goes, and comes back to its place from the bar that follows.
+        await $(`${testid('http-history-row')} ${testid('http-history-delete')}`).click();
+        await eventually(paths, (seen) => seen.join() === '/first', 'the newest send gone');
+        await $(testid('http-history-undo-restore')).click();
+        await eventually(
+          paths,
+          (seen) => seen.join() === '/second?page=2,/first',
+          'the send back in its place',
+        );
+
+        // The older send goes back into the request it came from: its tab, marked modified.
+        await $(`${testid('http-history-row')}:nth-child(2) ${testid('http-history-item')}`).click();
+        await $(`${testid('http-history-reopen')}[data-into="request"]`).waitForDisplayed({
+          timeout: 10_000,
+        });
+        await $(testid('http-history-reopen')).click();
+        await $(testid('http-history')).waitForExist({ reverse: true, timeout: 10_000 });
+        await $(`${tab} ${testid('http-tab-dirty')}`).waitForExist({ timeout: 10_000 });
+        expect(await $(testid('http-url')).getValue()).toBe(`http://127.0.0.1:${port}/first`);
+        expect(await readEach(testid('http-tab'), '@data-key')).toEqual([created.id]);
+        // Nothing is written until it is saved.
+        expect((await bridge.httpRequest(created.id)).document.url).toBe(
+          `http://127.0.0.1:${port}/second?page=2`,
+        );
+
+        await $(testid('http-history-open')).click();
+        await $(testid('http-history-edge')).waitForExist({ timeout: 10_000 });
+        await nudge('ArrowLeft');
+        await eventually(width, (back) => back === narrow, 'the list back to its width');
+        await $(testid('http-history-open')).click();
+        await $(testid('http-history')).waitForExist({ reverse: true, timeout: 10_000 });
+
+        await $(`${tab} ${testid('http-tab-close')}`).click();
+        await $(testid('http-close-discard')).click();
+        await $(tab).waitForExist({ reverse: true, timeout: 10_000 });
+        await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+        await bridge.clearHttpHistory();
+      } finally {
+        server.close();
       }
     });
 
