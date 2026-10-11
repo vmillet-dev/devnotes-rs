@@ -32,13 +32,28 @@ fn take_chat(
     Ok(response)
 }
 
-/// Echoes each text as `echo: …`, and says which subprotocol it took.
-fn echo() -> u16 {
+/// Echoes each text as `echo: …`, says which subprotocol it took, and what the handshake
+/// named as its agent.
+#[allow(clippy::result_large_err)] // tungstenite's callback signature
+fn echo() -> (u16, mpsc::Receiver<Option<String>>) {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let port = listener.local_addr().unwrap().port();
+    let (named, agent) = mpsc::channel();
     thread::spawn(move || {
         let (stream, _) = listener.accept().unwrap();
-        let mut socket = tungstenite::accept_hdr(stream, take_chat).unwrap();
+        let mut socket = tungstenite::accept_hdr(
+            stream,
+            |request: &tungstenite::handshake::server::Request, response| {
+                let agent = request.headers().get("user-agent");
+                let _ = named.send(
+                    agent
+                        .and_then(|value| value.to_str().ok())
+                        .map(str::to_string),
+                );
+                take_chat(request, response)
+            },
+        )
+        .unwrap();
         while let Ok(message) = socket.read() {
             match message {
                 Message::Text(text) => socket.send(Message::text(format!("echo: {text}"))).unwrap(),
@@ -47,7 +62,7 @@ fn echo() -> u16 {
             }
         }
     });
-    port
+    (port, agent)
 }
 
 fn request(url: &str) -> WebsocketRequest {
@@ -74,11 +89,19 @@ fn a_socket_opens_echoes_and_closes_each_step_an_event() {
         let _ = heard.send(serde_json::from_str(event.payload()).unwrap());
     });
     let next = || events.recv_timeout(Duration::from_secs(5)).unwrap().event;
-    let port = echo();
+    let (port, agent) = echo();
 
     session
         .call(|app| connect_websocket(request(&format!("ws://127.0.0.1:{port}/")), app))
         .unwrap();
+    // The handshake is composed like a request: it names the application too.
+    assert_eq!(
+        agent
+            .recv_timeout(Duration::from_secs(5))
+            .unwrap()
+            .as_deref(),
+        Some(devnotes_lib::http::send::USER_AGENT)
+    );
     assert_eq!(
         next(),
         SocketEvent::Opened {

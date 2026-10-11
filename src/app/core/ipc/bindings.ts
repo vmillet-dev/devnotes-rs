@@ -157,6 +157,12 @@ export const commands = {
 	inheritedHttpSettings: (collectionId: string, folderId: string | null) => typedError<Inherited, AppError>(__TAURI_INVOKE("inherited_http_settings", { collectionId, folderId })),
 	/**  What a body implies, and whether a JSON one reads: the editor says both as it is typed. */
 	describeHttpBody: (body: RequestBody) => typedError<BodyAnswer, AppError>(__TAURI_INVOKE("describe_http_body", { body })),
+	/**
+	 *  What a request sends without a row of its own — the body's type, what it inherits, the
+	 *  application's `User-Agent` — read as a send reads it: the editor lists the answer and
+	 *  decides none of it.
+	 */
+	impliedHttpHeaders: (kind: RequestKind, document: RequestDocument, collectionId: string | null, folderId: string | null) => typedError<ImpliedHeader[], AppError>(__TAURI_INVOKE("implied_http_headers", { kind, document, collectionId, folderId })),
 	/**  The operations a GraphQL document names, and why its variables do not read. */
 	describeGraphql: (document: GraphqlDocument) => typedError<GraphqlAnswer, AppError>(__TAURI_INVOKE("describe_graphql", { document })),
 	/**
@@ -1406,6 +1412,23 @@ export type IdentifiersRequest = {
 	nanoLength: number,
 	nanoAlphabet: NanoAlphabet,
 };
+
+/**  A header sent without a row of the request's own: the editor lists them under its table. */
+export type ImpliedHeader = {
+	name: string,
+	value: string,
+	source: ImpliedSource,
+	from: HttpOrigin | null,
+};
+
+/**  Who put a header on a request that no row of its own wrote. */
+export type ImpliedSource = "body" | 
+/**  A folder or the collection, named in `from`. */
+"above" | 
+/**  The application's own: `User-Agent`, `Accept`. */
+"default" | 
+/**  `Host`, which the client writes from the URL. */
+"url";
 
 /**  `skipped`: notes already present or whose space is missing, so an import can be replayed. */
 export type ImportReport = {

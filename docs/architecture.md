@@ -1696,9 +1696,17 @@ bumps `settingsRevision`: its name is in what its requests inherit « from ».
   left out. Settings, scripts and tests join the tabs with their tickets.
 - **A body is a kind and its content** — none, JSON, text, a form, multipart, a file. A file is a
   **path**, read by Rust when the request is sent: its bytes never enter the library.
-  `describe_http_body` answers the `Content-Type` the body implies — shown among the headers,
-  sent unless one is typed — and, for JSON, why it does not read (the JSON explorer's own parser
-  and words). Prettier formats it, as it does a snippet.
+  `describe_http_body` answers the `Content-Type` the body implies and, for JSON, why it does
+  not read (the JSON explorer's own parser and words). Prettier formats it, as it does a snippet.
+- **What leaves without a row of its own is listed above the headers' table, and the list is
+  Rust's** (`implied_http_headers` → `send::implied`): the body's `Content-Type`, the headers
+  handed down with where from, the application's `User-Agent` and `Accept` « par défaut », the
+  `Host` « d'après l'URL ». It is read from the very function `compose` writes the headers with
+  (`written`, each header with who wrote it), so the list cannot say something a send does not
+  do — it once was decided in the editor, from the body alone. Asked again when the kind, the
+  URL, a header, the auth, the body's kind or the place changes, not at each key of the body;
+  the last answer stays on screen while the next is read (a `linkedSignal`), or the table under
+  it would jump. The auth's own header is not in it: its tab says it, and it is a secret.
 - **An auth is inherited by default.** A collection and a folder carry settings of their own —
   an auth and headers, sealed like a request's document — and `inherited_http_settings` resolves
   what a request at a place gets: the nearest auth set, every header above, a folder's overriding
@@ -1719,6 +1727,14 @@ or a 30-second request would stall every command.
   `Authorization` is typed, the body and the `Content-Type` it implies. A URL without a scheme is
   sent over `http://`. A `{{variable}}` left anywhere stops it, by name, until environments give
   one a value.
+- **A request names the application**: `User-Agent: DevNotes/<version>` (`send::USER_AGENT`, the
+  version read from `Cargo.toml`) unless a `User-Agent` row is written — `reqwest` adds none, and
+  many APIs answer 403 to a request without. An enabled row, the request's own or one handed
+  down, replaces it; a row **switched off**, in the request or at any level above
+  (`Inherited::user_agent_off`), sends none at all — though never at the expense of one a level
+  sets, which leaves like any inherited header. `Accept: */*` is written the same way, though
+  the client would add it by itself, so that the history and the timeline show it as sent. A
+  WebSocket's handshake is composed by the same function and carries both.
 - **A failure is a code** — the variable, the URL, the name not resolving, refused, TLS, timeout,
   too many redirects, an unreadable file, cancelled — read off reqwest's error and the chain
   under it. ⚠️ `io::Error::source` skips the error it wraps, where rustls puts its own: the
@@ -1781,9 +1797,11 @@ is logged.
 - **Kept 30 days and 500 entries**, purged as each is written and at launch
   (`history::sweep_at_startup`). « Vider l'historique » asks Rust how many it removes first.
 - **Listed by local day** (`by_day`, the offset the notes send), newest first. **Rouvrir dans un
-  onglet** asks Rust for the request rebuilt (`http_history_draft`): the masked values and the
-  implied `Content-Type` left out, the parameters read off the URL — a new draft tab, to send
-  again or save into a collection.
+  onglet** asks Rust for the request rebuilt (`http_history_draft`): the masked values left
+  out, and what is written again by itself — the implied `Content-Type`, the application's own
+  `User-Agent` and `Accept` (`send::is_default`), which as rows would name this version for
+  ever — the parameters read off the URL: a new draft tab, to send again or save into a
+  collection.
 - The history replaces the workspace while open (`HttpHistoryStore.isOpen`, from the rail's
   foot), and closes for a request opened from the tree. It reads again whenever a send ends
   (`HttpSendStore.sent`).

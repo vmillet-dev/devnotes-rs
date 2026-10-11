@@ -13,6 +13,7 @@ import type {
   HistoryItem,
   FormPart,
   HttpOrigin,
+  ImpliedHeader,
   Inherited,
   InheritedHeader,
   KeyPlace,
@@ -49,6 +50,7 @@ export { DEFAULT_TRANSPORT } from '@core/ipc/bindings';
 
 export type {
   BodyAnswer,
+  ImpliedHeader,
   CookieDomain,
   JarCookie,
   StoredCookie,

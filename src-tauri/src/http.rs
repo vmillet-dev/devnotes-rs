@@ -297,6 +297,31 @@ pub struct BodyAnswer {
     pub problem: Option<crate::json::parse::JsonError>,
 }
 
+/// What a request sends without a row of its own — the body's type, what it inherits, the
+/// application's `User-Agent` — read as a send reads it: the editor lists the answer and
+/// decides none of it.
+#[tauri::command]
+#[specta::specta]
+pub async fn implied_http_headers<R: Runtime>(
+    kind: model::RequestKind,
+    document: model::RequestDocument,
+    collection_id: Option<String>,
+    folder_id: Option<String>,
+    app: AppHandle<R>,
+) -> Result<Vec<send::ImpliedHeader>, AppError> {
+    blocking(app, move |_, db| {
+        let inherited = match collection_id {
+            Some(collection_id) => {
+                let mut connection = lock(db)?;
+                store::inherited(&mut connection, &collection_id, folder_id.as_deref())?
+            }
+            None => settings::inherit(&[]),
+        };
+        Ok(send::implied(kind, &document, &inherited))
+    })
+    .await
+}
+
 /// The edited side wins: the query string rewritten from the table, or the table from the URL.
 #[tauri::command]
 #[specta::specta]

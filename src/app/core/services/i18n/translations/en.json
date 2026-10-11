@@ -2827,7 +2827,12 @@
       "discard": "Close without saving"
     },
     "headers": {
-      "fromBody": "from the body"
+      "implied": "Sent without being typed",
+      "from": {
+        "body": "from the body",
+        "default": "by default",
+        "url": "from the URL"
+      }
     },
     "auth": {
       "kind": "Type",
