@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { SavedMessageRow, WebsocketParts } from '@core/model/http.model';
 
@@ -21,9 +21,26 @@ export class WebsocketComposerComponent {
   readonly sent = output<string>();
 
   protected readonly text = signal('');
+  /** `Ctrl+Entrée` was pressed on a socket that is not open: said, never connected unasked. */
+  protected readonly refused = signal(false);
+  /** What « not connected » is said by: gone as soon as the socket opens. */
+  protected readonly notOpen = computed(() => this.refused() && !this.open());
 
   protected onText(event: Event): void {
     this.text.set((event.target as HTMLTextAreaElement).value);
+  }
+
+  /**
+   * `Ctrl+Entrée` in the message sends the message. ⚠️ Stopped here: the page answers the same
+   * key by connecting, whatever holds the focus, and did nothing of what was meant. Enter
+   * alone stays a new line — a message is often several lines of JSON.
+   */
+  protected onKeydown(event: KeyboardEvent): void {
+    if (event.key !== 'Enter' || !(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.refused.set(!this.open());
+    this.send(this.text());
   }
 
   protected send(text: string): void {

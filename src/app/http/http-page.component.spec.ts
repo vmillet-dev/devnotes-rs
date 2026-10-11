@@ -432,6 +432,45 @@ describe('HttpPageComponent', () => {
     );
   });
 
+  /** Closing the tab of an open socket cut it without a word. */
+  it('asks before closing a tab whose WebSocket is connected, in one dialog with what is not saved', async () => {
+    const close = () => el<HTMLButtonElement>('[data-testid="http-tab-close"]').click();
+    // Where the tree holds it: a tab whose request is in no tree closes.
+    http.seed('Live', { kind: 'websocket', parts: { ...EMPTY_PARTS, url: 'ws://flux.exemple.fr' } }, 'Flux');
+    await tabs().open('Live');
+    await fixture.whenStable();
+    el<HTMLButtonElement>('[data-testid="http-socket-connect"]').click();
+    await vi.waitFor(() => expect(http.callsOf('connectWebsocket')).toHaveLength(1));
+
+    // Connected and nothing to save: one sentence, « Fermer » or « Annuler ».
+    close();
+    await fixture.whenStable();
+    expect(el('[data-testid="http-close-connected"]').textContent?.trim()).toBe(
+      "Le WebSocket est connecté : fermer l'onglet coupe la connexion.",
+    );
+    expect(el('[data-testid="http-close-modified"]')).toBeNull();
+    expect(el('[data-testid="http-close-save"]')).toBeNull();
+    expect(el('[data-testid="http-close-discard"]').textContent?.trim()).toBe('Fermer');
+    el<HTMLButtonElement>('[data-testid="http-close-cancel"]').click();
+    await fixture.whenStable();
+    expect(tabs().tabs()).toHaveLength(1);
+    expect(http.callsOf('closeWebsocket')).toEqual([]);
+
+    // With changes too: both are said at once, not one dialog after the other.
+    tabs().edit('Live', { name: 'Flux temps réel' });
+    await fixture.whenStable();
+    close();
+    await fixture.whenStable();
+    expect(el('[data-testid="http-close-connected"]')).not.toBeNull();
+    expect(el('[data-testid="http-close-modified"]')).not.toBeNull();
+    expect(el('[data-testid="http-close-save"]')).not.toBeNull();
+    expect(el('[data-testid="http-close-discard"]').textContent?.trim()).toBe('Fermer sans enregistrer');
+
+    el<HTMLButtonElement>('[data-testid="http-close-discard"]').click();
+    await vi.waitFor(() => expect(tabs().tabs()).toEqual([]));
+    expect(http.callsOf('closeWebsocket')).toHaveLength(1);
+  });
+
   it('closes an unmodified tab at once', async () => {
     await tabs().open('Login');
     await fixture.whenStable();

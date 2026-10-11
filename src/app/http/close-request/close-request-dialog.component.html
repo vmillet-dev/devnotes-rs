@@ -1,7 +1,14 @@
 <app-dialog [layer]="'app'" labelledBy="http-close-title" (closed)="cancelled.emit()">
   <div class="body" data-testid="http-close-dialog">
-    <h2 id="http-close-title" class="title">{{ 'http.close.title' | transloco: { name: name() } }}</h2>
-    <p class="hint">{{ 'http.close.hint' | transloco }}</p>
+    <h2 id="http-close-title" class="title">
+      {{ (modified() ? 'http.close.title' : 'http.close.connectedTitle') | transloco: { name: name() } }}
+    </h2>
+    @if (modified()) {
+      <p class="hint" data-testid="http-close-modified">{{ 'http.close.hint' | transloco }}</p>
+    }
+    @if (connected()) {
+      <p class="hint" data-testid="http-close-connected">{{ 'http.close.connected' | transloco }}</p>
+    }
     <div class="actions">
       <button type="button" class="action" data-testid="http-close-cancel" (click)="cancelled.emit()">
         {{ 'http.rail.cancel' | transloco }}
@@ -12,16 +19,18 @@
         data-testid="http-close-discard"
         (click)="chosen.emit('discard')"
       >
-        {{ 'http.close.discard' | transloco }}
+        {{ (modified() ? 'http.close.discard' : 'http.close.close') | transloco }}
       </button>
-      <button
-        type="button"
-        class="action primary"
-        data-testid="http-close-save"
-        (click)="chosen.emit('save')"
-      >
-        {{ 'http.editor.save' | transloco }}
-      </button>
+      @if (modified()) {
+        <button
+          type="button"
+          class="action primary"
+          data-testid="http-close-save"
+          (click)="chosen.emit('save')"
+        >
+          {{ 'http.editor.save' | transloco }}
+        </button>
+      }
     </div>
   </div>
 </app-dialog>

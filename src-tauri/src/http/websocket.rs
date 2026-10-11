@@ -22,7 +22,7 @@ use tokio_tungstenite::tungstenite::{self, Message};
 use tokio_tungstenite::{Connector, connect_async_tls_with_config};
 use url::Url;
 
-use super::send::{Outgoing, SendError, install_crypto};
+use super::send::{Outgoing, SendError, cause_of, innermost, install_crypto};
 use super::transport::Limit;
 use crate::error::{AppError, ErrorCode};
 
@@ -86,6 +86,9 @@ pub enum SocketEvent {
     /// The connection broke after it opened.
     Failed {
         code: ErrorCode,
+        /// What its sentence interpolates, as an error answered by a command carries them.
+        #[serde(default)]
+        params: std::collections::BTreeMap<String, String>,
         detail: String,
     },
 }
@@ -106,15 +109,25 @@ pub struct Sockets {
     open: Mutex<HashMap<String, Socket>>,
 }
 
-/// `wss://` and `ws://` as typed, `http(s)://` too; no scheme is `ws://`.
-pub fn socket_url(typed: &str) -> String {
+/// The URL `compose` checks, as `http(s)://`: `ws://` and `wss://` as typed, no scheme is
+/// `ws://`. Any other scheme is refused before anything is tried — `https://` in a socket
+/// was dialled as `wss://` without a word, and failed « Erreur réseau » — and its twin on a
+/// socket's scheme is offered when it has one.
+pub fn socket_url(typed: &str) -> Result<String, SendError> {
     let typed = typed.trim();
-    if let Some(rest) = typed.strip_prefix("wss://") {
-        format!("https://{rest}")
-    } else if let Some(rest) = typed.strip_prefix("ws://") {
-        format!("http://{rest}")
-    } else {
-        typed.to_string()
+    let Some((scheme, rest)) = typed.split_once("://") else {
+        return Ok(typed.to_string());
+    };
+    match scheme.to_ascii_lowercase().as_str() {
+        "wss" => Ok(format!("https://{rest}")),
+        "ws" => Ok(format!("http://{rest}")),
+        "https" => Err(SendError::SocketScheme {
+            twin: Some(format!("wss://{rest}")),
+        }),
+        "http" => Err(SendError::SocketScheme {
+            twin: Some(format!("ws://{rest}")),
+        }),
+        _ => Err(SendError::SocketScheme { twin: None }),
     }
 }
 
@@ -148,30 +161,8 @@ fn failure(error: &tungstenite::Error, timeout: Option<&Limit>) -> SendError {
         tungstenite::Error::Http(response) => SendError::Handshake(response.status().as_u16()),
         tungstenite::Error::Url(error) => SendError::InvalidUrl(error.to_string()),
         tungstenite::Error::Tls(error) => SendError::Tls(error.to_string()),
-        tungstenite::Error::Io(io) => match io.kind() {
-            std::io::ErrorKind::ConnectionRefused => SendError::Refused(io.to_string()),
-            std::io::ErrorKind::TimedOut => timeout.map_or_else(
-                || SendError::Network(io.to_string()),
-                |limit| SendError::Timeout(limit.clone()),
-            ),
-            _ => {
-                let text = io.to_string().to_ascii_lowercase();
-                if text.contains("lookup")
-                    || text.contains("no such host")
-                    || text.contains("resolve")
-                {
-                    SendError::Unresolved(io.to_string())
-                } else if io
-                    .get_ref()
-                    .is_some_and(|inner| inner.downcast_ref::<rustls::Error>().is_some())
-                {
-                    SendError::Tls(io.to_string())
-                } else {
-                    SendError::Network(io.to_string())
-                }
-            }
-        },
-        other => SendError::Network(other.to_string()),
+        // Read as a request's failure is, by the one function: the same cause, the same name.
+        other => cause_of(other, timeout).unwrap_or_else(|| SendError::Network(innermost(other))),
     }
 }
 
@@ -336,7 +327,7 @@ async fn run<R: Runtime>(
                 }
                 Some(Err(error)) => {
                     let failed = AppError::from(failure(&error, None));
-                    emit(&app, &id, SocketEvent::Failed { code: failed.code, detail: failed.detail });
+                    emit(&app, &id, SocketEvent::Failed { code: failed.code, params: failed.params, detail: failed.detail });
                     break;
                 }
                 None => {
@@ -352,7 +343,7 @@ async fn run<R: Runtime>(
                         Ok(()) => emit(&app, &id, SocketEvent::Sent { text: shown, size }),
                         Err(error) => {
                             let failed = AppError::from(failure(&error, None));
-                            emit(&app, &id, SocketEvent::Failed { code: failed.code, detail: failed.detail });
+                            emit(&app, &id, SocketEvent::Failed { code: failed.code, params: failed.params, detail: failed.detail });
                             break;
                         }
                     }
@@ -387,12 +378,14 @@ mod tests {
 
     #[test]
     fn a_socket_url_is_checked_as_http_and_sent_back_on_its_scheme() {
+        let checked = |typed: &str| socket_url(typed).unwrap();
         assert_eq!(
-            socket_url(" wss://echo.exemple.fr/ws "),
+            checked(" wss://echo.exemple.fr/ws "),
             "https://echo.exemple.fr/ws"
         );
-        assert_eq!(socket_url("ws://localhost:8080"), "http://localhost:8080");
-        assert_eq!(socket_url("echo.exemple.fr"), "echo.exemple.fr");
+        assert_eq!(checked("WS://localhost:8080"), "http://localhost:8080");
+        assert_eq!(checked("echo.exemple.fr"), "echo.exemple.fr");
+        assert_eq!(checked("{{socket}}/live"), "{{socket}}/live");
 
         assert_eq!(
             as_socket(&Url::parse("https://a.fr/ws?x=1").unwrap()),
@@ -401,6 +394,64 @@ mod tests {
         assert_eq!(
             as_socket(&Url::parse("http://a.fr/").unwrap()),
             "ws://a.fr/"
+        );
+    }
+
+    /// `https://` in a socket was dialled as `wss://` without a word, and failed « Erreur réseau ».
+    #[test]
+    fn a_scheme_a_socket_does_not_open_on_is_refused_with_its_twin_when_it_has_one() {
+        let twin = |typed: &str| match socket_url(typed) {
+            Err(SendError::SocketScheme { twin }) => twin,
+            other => panic!("{typed}: {other:?}"),
+        };
+
+        assert_eq!(
+            twin("https://echo.exemple.fr/ws?x=1").as_deref(),
+            Some("wss://echo.exemple.fr/ws?x=1")
+        );
+        assert_eq!(
+            twin(" HTTP://localhost:8080 ").as_deref(),
+            Some("ws://localhost:8080")
+        );
+        assert_eq!(twin("ftp://exemple.fr"), None);
+    }
+
+    #[test]
+    fn a_failure_of_a_socket_is_named_as_a_request_s_is() {
+        use std::io::{Error, ErrorKind};
+
+        let limit = Limit {
+            value: 2_000,
+            set_by: crate::http::transport::SetBy::Default,
+        };
+        let read = |error: Error| failure(&tungstenite::Error::Io(error), Some(&limit));
+
+        assert!(matches!(
+            read(Error::other(
+                "failed to lookup address information: Name or service not known"
+            )),
+            SendError::Unresolved(_)
+        ));
+        assert!(matches!(
+            read(Error::from(ErrorKind::ConnectionRefused)),
+            SendError::Refused(_)
+        ));
+        assert_eq!(
+            read(Error::from(ErrorKind::TimedOut)),
+            SendError::Timeout(limit.clone())
+        );
+        assert!(matches!(
+            read(Error::other(rustls::Error::HandshakeNotComplete)),
+            SendError::Tls(_)
+        ));
+        // All that is left is « network », and the cause's own words go with it.
+        assert_eq!(
+            read(Error::other("connection reset by peer")),
+            SendError::Network("connection reset by peer".to_string())
+        );
+        assert_eq!(
+            failure(&tungstenite::Error::ConnectionClosed, None),
+            SendError::Network("Connection closed normally".to_string())
         );
     }
 

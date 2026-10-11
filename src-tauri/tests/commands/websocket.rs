@@ -145,6 +145,32 @@ fn a_socket_opens_echoes_and_closes_each_step_an_event() {
     );
 }
 
+/// `wss://nexistepas.invalid` answered « Erreur réseau » where the same host over HTTP answered
+/// « Le nom d'hôte ne se résout pas »; and `https://` in a socket was dialled without a word.
+#[test]
+fn a_socket_names_a_host_that_does_not_resolve_and_refuses_a_scheme_that_is_not_its_own() {
+    let session = Session::open();
+    // `.invalid` is reserved never to resolve.
+    assert_eq!(
+        code(session.call(|app| connect_websocket(request("ws://devnotes.invalid/"), app))),
+        ErrorCode::HttpUnresolved
+    );
+
+    let refused = session
+        .call(|app| connect_websocket(request("https://echo.exemple.fr/live?x=1"), app))
+        .unwrap_err();
+    assert_eq!(refused.code, ErrorCode::HttpWebsocketScheme);
+    assert_eq!(
+        refused.params.get("twin").map(String::as_str),
+        Some("wss://echo.exemple.fr/live?x=1")
+    );
+    let refused = session
+        .call(|app| connect_websocket(request("ftp://exemple.fr"), app))
+        .unwrap_err();
+    assert_eq!(refused.code, ErrorCode::HttpWebsocketScheme);
+    assert_eq!(refused.params.get("twin"), None);
+}
+
 #[test]
 fn a_closed_port_and_a_refused_handshake_fail_by_code() {
     let session = Session::open();

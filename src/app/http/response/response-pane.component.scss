@@ -28,6 +28,14 @@
   color: var(--red);
 }
 
+.cause {
+  display: block;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
 .sending {
   display: flex;
   align-items: center;

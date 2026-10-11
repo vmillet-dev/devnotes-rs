@@ -49,6 +49,51 @@ describe('WebsocketComposerComponent', () => {
     expect(sent).toEqual(['hello', '{"type":"ping"}']);
   });
 
+  /**
+   * `Ctrl+Entrée` in the message did nothing of what was meant: the page answered the key by
+   * connecting, whatever held the focus.
+   */
+  it('sends the message on Ctrl+Entrée when the socket is open, and says to connect when it is not', async () => {
+    const reached: KeyboardEvent[] = [];
+    const listen = (event: KeyboardEvent) => reached.push(event);
+    document.addEventListener('keydown', listen);
+    const press = (init: KeyboardEventInit) => {
+      const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true, ...init });
+      el('http-socket-message').dispatchEvent(event);
+      return event;
+    };
+    try {
+      await type('{"type":"ping"}');
+
+      // Not open: said, and the page is not left to connect behind the user's back.
+      expect(press({ ctrlKey: true }).defaultPrevented).toBe(true);
+      await fixture.whenStable();
+      expect(sent).toEqual([]);
+      expect(reached).toEqual([]);
+      expect(el('http-socket-not-open').textContent?.trim()).toBe('Connectez le WebSocket pour envoyer.');
+
+      fixture.componentRef.setInput('open', true);
+      await fixture.whenStable();
+      expect(el('http-socket-not-open')).toBeNull();
+      press({ metaKey: true });
+      expect(sent).toEqual(['{"type":"ping"}']);
+      expect(reached).toEqual([]);
+
+      // Enter alone is a new line — a message is often several lines of JSON — and is the field's.
+      const plain = press({});
+      expect(plain.defaultPrevented).toBe(false);
+      expect(press({ ctrlKey: true, shiftKey: true }).defaultPrevented).toBe(false);
+      expect(sent).toHaveLength(1);
+      expect(reached).toHaveLength(2);
+    } finally {
+      document.removeEventListener('keydown', listen);
+    }
+  });
+
+  it('carries the key on its button, as a request does', () => {
+    expect(el('http-socket-send').querySelector('kbd')?.textContent).toBe('Ctrl ↵');
+  });
+
   it('keeps a message under its first line, and lets one go', async () => {
     await type('{"type":"subscribe",\n "channel":"ticks"}');
     el('http-socket-keep').click();

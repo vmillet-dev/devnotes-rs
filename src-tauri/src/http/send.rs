@@ -166,6 +166,10 @@ pub enum SendError {
     Handshake(u16),
     #[error("Network error: {0}")]
     Network(String),
+    /// A socket's URL on a scheme that is not one a socket opens on; `twin` is the same URL on
+    /// `ws://` or `wss://`, when it was typed on `http://` or `https://`.
+    #[error("A WebSocket opens on ws:// or wss://")]
+    SocketScheme { twin: Option<String> },
     /// A header that cannot be built: named, with who wrote it, rather than blamed on the URL.
     #[error("The header {name} cannot be sent: its {fault:?} is not valid")]
     Header {
@@ -477,7 +481,7 @@ pub fn implied(
         })
         .collect();
     let url = match kind {
-        RequestKind::Websocket => websocket::socket_url(&document.url),
+        RequestKind::Websocket => websocket::socket_url(&document.url).unwrap_or_default(),
         RequestKind::Http | RequestKind::Graphql => document.url.clone(),
     };
     if !typed_host && let Some(host) = parse_url(&url).ok().as_ref().and_then(host_of) {
@@ -673,23 +677,43 @@ fn is_text(content_type: Option<&str>, bytes: &[u8]) -> bool {
 }
 
 /// What failed, read from the error and the chain under it: reqwest names neither DNS nor TLS.
-fn failure(error: &reqwest::Error, timeout: &Limit) -> SendError {
-    if error.is_timeout() {
-        return SendError::Timeout(timeout.clone());
-    }
-    if error.is_builder() {
-        return SendError::InvalidUrl(error.to_string());
-    }
-    let mut cause: Option<&(dyn std::error::Error + 'static)> = Some(error);
+/// Windows' own codes for a name that does not resolve: `WSAHOST_NOT_FOUND`, `WSATRY_AGAIN`,
+/// `WSANO_RECOVERY`, `WSANO_DATA`.
+const NAME_NOT_FOUND: std::ops::RangeInclusive<i32> = 11001..=11004;
+
+/// What a connection that failed ran into, read off the chain of its causes: one reading for
+/// a request and for a socket, so the same failure has the same name on both. `None` when the
+/// chain names nothing known. `timeout` is the delay that was waited, when one was.
+///
+/// ⚠️ By its code before its words: Windows words its errors in the system's language, and
+/// « Hôte inconnu » matches no wording — a socket said « Erreur réseau » where a request,
+/// whose client prefixes the same failure with `dns error`, named it.
+pub(crate) fn cause_of(
+    error: &(dyn std::error::Error + 'static),
+    timeout: Option<&Limit>,
+) -> Option<SendError> {
+    let mut cause = Some(error);
     while let Some(current) = cause {
         if current.downcast_ref::<rustls::Error>().is_some() {
-            return SendError::Tls(current.to_string());
+            return Some(SendError::Tls(current.to_string()));
         }
         if let Some(io) = current.downcast_ref::<std::io::Error>() {
             match io.kind() {
-                std::io::ErrorKind::ConnectionRefused => return SendError::Refused(io.to_string()),
-                std::io::ErrorKind::TimedOut => return SendError::Timeout(timeout.clone()),
+                std::io::ErrorKind::ConnectionRefused => {
+                    return Some(SendError::Refused(io.to_string()));
+                }
+                std::io::ErrorKind::TimedOut => {
+                    if let Some(limit) = timeout {
+                        return Some(SendError::Timeout(limit.clone()));
+                    }
+                }
                 _ => {}
+            }
+            if io
+                .raw_os_error()
+                .is_some_and(|code| cfg!(windows) && NAME_NOT_FOUND.contains(&code))
+            {
+                return Some(SendError::Unresolved(io.to_string()));
             }
             // ⚠️ `io::Error::source` skips the error it wraps, where rustls puts its own.
             if let Some(inner) = io.get_ref() {
@@ -702,14 +726,34 @@ fn failure(error: &reqwest::Error, timeout: &Limit) -> SendError {
             || text.contains("failed to lookup")
             || text.contains("no such host")
         {
-            return SendError::Unresolved(current.to_string());
+            return Some(SendError::Unresolved(current.to_string()));
         }
         if text.contains("certificate") || text.contains("invalid peer") {
-            return SendError::Tls(current.to_string());
+            return Some(SendError::Tls(current.to_string()));
         }
         cause = current.source();
     }
-    SendError::Network(error.to_string())
+    None
+}
+
+fn failure(error: &reqwest::Error, timeout: &Limit) -> SendError {
+    if error.is_timeout() {
+        return SendError::Timeout(timeout.clone());
+    }
+    if error.is_builder() {
+        return SendError::InvalidUrl(error.to_string());
+    }
+    cause_of(error, Some(timeout)).unwrap_or_else(|| SendError::Network(innermost(error)))
+}
+
+/// The last cause of a chain, in its own words: what « Erreur réseau » is followed by, when it
+/// is all that can be said.
+pub(crate) fn innermost(error: &(dyn std::error::Error + 'static)) -> String {
+    let mut last = error;
+    while let Some(next) = last.source() {
+        last = next;
+    }
+    last.to_string()
 }
 
 fn wire_method(method: HttpMethod) -> reqwest::Method {
@@ -1353,6 +1397,93 @@ mod tests {
                 ("accept".to_string(), "application/json".to_string()),
                 ("User-Agent".to_string(), USER_AGENT.to_string()),
             ]
+        );
+    }
+
+    /// « Erreur réseau » for a socket, « Le nom d'hôte ne se résout pas » for a request: the
+    /// same failure, read by two functions. One reads a chain now, whoever built it.
+    #[test]
+    fn a_cause_is_read_the_same_whatever_wraps_it() {
+        use std::io::{Error, ErrorKind};
+
+        #[derive(Debug)]
+        struct Wrapped(Box<dyn std::error::Error + Send + Sync>);
+        impl std::fmt::Display for Wrapped {
+            fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(formatter, "error sending request")
+            }
+        }
+        impl std::error::Error for Wrapped {
+            fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+                Some(self.0.as_ref())
+            }
+        }
+        let limit = Limit {
+            value: 5_000,
+            set_by: SetBy::Request,
+        };
+        let read = |error: Error| {
+            let plain = cause_of(&error, Some(&limit));
+            let kind = error.kind();
+            let wrapped = Wrapped(Box::new(Error::new(kind, Wrapped(Box::new(error)))));
+            assert_eq!(
+                cause_of(&wrapped, Some(&limit)).map(|found| std::mem::discriminant(&found)),
+                plain.as_ref().map(std::mem::discriminant),
+            );
+            plain
+        };
+
+        // The three wordings of a name that does not resolve.
+        for wording in [
+            "dns error: failed to lookup address information",
+            "failed to lookup address information: Name or service not known",
+            "No such host is known. (os error 11001)",
+        ] {
+            assert!(
+                matches!(read(Error::other(wording)), Some(SendError::Unresolved(_))),
+                "{wording}"
+            );
+        }
+        assert!(matches!(
+            read(Error::from(ErrorKind::ConnectionRefused)),
+            Some(SendError::Refused(_))
+        ));
+        assert_eq!(
+            read(Error::from(ErrorKind::TimedOut)),
+            Some(SendError::Timeout(limit.clone()))
+        );
+        assert!(matches!(
+            read(Error::other(rustls::Error::HandshakeNotComplete)),
+            Some(SendError::Tls(_))
+        ));
+        assert!(matches!(
+            read(Error::other("invalid peer certificate: UnknownIssuer")),
+            Some(SendError::Tls(_))
+        ));
+        // Nothing known: the caller says « network », with the last cause's own words.
+        assert_eq!(read(Error::other("connection reset by peer")), None);
+        assert_eq!(
+            innermost(&Wrapped(Box::new(Error::other("connection reset by peer")))),
+            "connection reset by peer"
+        );
+        // Once open, a socket has no delay of its own to name.
+        assert_eq!(cause_of(&Error::from(ErrorKind::TimedOut), None), None);
+    }
+
+    /// Windows says it in the system's language: « Hôte inconnu » matches no wording.
+    #[cfg(windows)]
+    #[test]
+    fn a_name_that_does_not_resolve_is_read_by_its_code_on_windows() {
+        for code in [11001, 11002, 11004] {
+            let error = std::io::Error::from_raw_os_error(code);
+            assert!(
+                matches!(cause_of(&error, None), Some(SendError::Unresolved(_))),
+                "{code}"
+            );
+        }
+        assert_eq!(
+            cause_of(&std::io::Error::from_raw_os_error(10054), None),
+            None
         );
     }
 

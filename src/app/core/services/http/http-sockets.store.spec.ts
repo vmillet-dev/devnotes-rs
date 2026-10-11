@@ -74,8 +74,20 @@ describe('HttpSocketsStore', () => {
 
     await store().connect(tab);
     event({ kind: 'opened', url: 'ws://a', protocol: null });
-    event({ kind: 'failed', code: 'httpNetwork', detail: 'reset' });
-    expect(state()).toMatchObject({ phase: 'closed', notice: { ref: { key: 'errors.httpNetwork' } } });
+    expect(store().isLive('Flux')).toBe(true);
+    event({
+      kind: 'failed',
+      code: 'httpNetwork',
+      params: { cause: 'reset' },
+      detail: 'Network error: reset',
+    });
+    // The cause travels with the code: « Erreur réseau » alone tells nothing.
+    expect(state()).toMatchObject({
+      phase: 'closed',
+      notice: { ref: { key: 'errors.httpNetwork', params: { cause: 'reset' } } },
+    });
+    expect(store().isLive('Flux')).toBe(false);
+    expect(store().isLive('Nowhere')).toBe(false);
   });
 
   it('keeps the newest of a long log, follows a draft saved, and closes with its tab', async () => {

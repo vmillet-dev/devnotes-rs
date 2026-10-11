@@ -633,7 +633,7 @@ pub async fn connect_websocket<R: Runtime>(
         collection_id,
         folder_id,
     } = request;
-    document.url = websocket::socket_url(&document.url);
+    document.url = websocket::socket_url(&document.url)?;
     document.body = model::RequestBody::None;
     let outgoing = blocking(app.clone(), move |_, db| {
         let inherited = match collection_id {

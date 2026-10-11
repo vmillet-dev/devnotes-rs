@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { HttpCollectionsStore } from '@core/services/http/http-collections.store';
 import { HttpHistoryStore } from '@core/services/http/http-history.store';
@@ -48,6 +48,13 @@ export class HttpPageComponent implements OnInit {
   /** The tab a never-saved request is being placed for, and whether it closes once saved. */
   protected readonly placing = signal<{ readonly tab: RequestTab; readonly thenClose: boolean } | null>(null);
   protected readonly closing = signal<RequestTab | null>(null);
+  /** What the closing dialog says: what is not saved, what is still connected, or both at once. */
+  protected readonly closingWhat = computed(() => {
+    const tab = this.closing();
+    return tab === null
+      ? null
+      : { tab, modified: this.tabs.isDirty(tab), connected: this.sockets.isLive(tab.key) };
+  });
 
   ngOnInit(): void {
     void this.open();

@@ -9,7 +9,13 @@
       [placeholder]="'http.socket.messagePlaceholder' | transloco"
       [value]="text()"
       (input)="onText($event)"
+      (keydown)="onKeydown($event)"
     ></textarea>
+    @if (notOpen()) {
+      <p class="not-open" role="status" data-testid="http-socket-not-open">
+        {{ 'http.socket.notOpen' | transloco }}
+      </p>
+    }
     <div class="actions">
       <button
         type="button"
@@ -20,6 +26,7 @@
         (click)="send(text())"
       >
         {{ 'http.socket.send' | transloco }}
+        <kbd class="keys" aria-hidden="true">Ctrl ↵</kbd>
       </button>
       <button
         type="button"

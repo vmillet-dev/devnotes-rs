@@ -50,6 +50,7 @@ const IPC_ERROR_CODES: Record<IpcErrorCode, true> = {
   httpGraphqlVariables: true,
   httpWebsocketRefused: true,
   httpNetwork: true,
+  httpWebsocketScheme: true,
   httpHeaderName: true,
   httpHeaderValue: true,
 };

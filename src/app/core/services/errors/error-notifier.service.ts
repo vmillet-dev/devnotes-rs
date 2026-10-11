@@ -52,6 +52,7 @@ const CODE_KEYS: Record<IpcErrorCode, string | null> = {
   httpGraphqlVariables: 'errors.httpGraphqlVariables',
   httpWebsocketRefused: 'errors.httpWebsocketRefused',
   httpNetwork: 'errors.httpNetwork',
+  httpWebsocketScheme: 'errors.httpWebsocketScheme',
   httpHeaderName: 'errors.httpHeaderName',
   httpHeaderValue: 'errors.httpHeaderValue',
 };

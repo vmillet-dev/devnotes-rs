@@ -1071,6 +1071,8 @@ export type ErrorCode = "noteNotFound" | "spaceNotFound" | "duplicateSpaceName" 
 "httpCancelled" | "httpGraphqlVariables" | 
 /**  The `status` parameter is what the server answered instead of switching protocols. */
 "httpWebsocketRefused" | "httpNetwork" | 
+/**  A socket's URL on another scheme; `twin` is the same on `ws(s)://`, when it has one. */
+"httpWebsocketScheme" | 
 /**  `header` is its name as written; `source` and `name` say who wrote it, as for a limit. */
 "httpHeaderName" | "httpHeaderValue";
 
@@ -2457,7 +2459,9 @@ protocol: string | null } | { kind: "sent"; text: string; size: number } | { kin
 /**  Empty for a binary message. */
 text: string; size: number; binary: boolean; cut: boolean } | { kind: "closed"; code: number | null; reason: string } | 
 /**  The connection broke after it opened. */
-{ kind: "failed"; code: ErrorCode; detail: string };
+{ kind: "failed"; code: ErrorCode; 
+/**  What its sentence interpolates, as an error answered by a command carries them. */
+params?: { [key in string]: string }; detail: string };
 
 export type SortDirection = "descending" | "ascending";
 

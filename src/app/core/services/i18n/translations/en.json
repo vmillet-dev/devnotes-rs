@@ -456,6 +456,7 @@
     "httpFileUnreadable": "The file {{path}} cannot be read.",
     "httpCancelled": "Send cancelled.",
     "httpNetwork": "Network error.",
+    "httpWebsocketScheme": "A WebSocket opens on ws:// or wss://.",
     "httpHeaderName": {
       "request": "The header “{{header}}” cannot be sent: its name is not valid.",
       "folder": "The header “{{header}}”, inherited from the folder “{{name}}”, cannot be sent: its name is not valid.",
@@ -2838,7 +2839,10 @@
     "close": {
       "title": "“{{name}}” has changes",
       "hint": "They are not saved yet.",
-      "discard": "Close without saving"
+      "discard": "Close without saving",
+      "connectedTitle": "Close “{{name}}”?",
+      "connected": "The WebSocket is connected: closing the tab cuts the connection.",
+      "close": "Close"
     },
     "headers": {
       "implied": "Sent without being typed",
@@ -3016,6 +3020,7 @@
       "messagePlaceholder": "Text or JSON",
       "send": "Send",
       "notOpen": "Connect the WebSocket to send.",
+      "useTwin": "Use {{url}}",
       "keep": "Keep",
       "saved": "Kept messages",
       "noneSaved": "Keep a message to send it again in one click.",
