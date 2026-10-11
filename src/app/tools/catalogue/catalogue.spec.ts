@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it } from 'vitest';
-import { Tool } from '@core/services/tools/tool.model';
+import { Tool, toolMatches } from '@core/services/tools/tool.model';
 import { renderTool } from '@testing/tool-harness';
 import { TOOLS } from './catalogue';
 
@@ -10,6 +10,16 @@ const [REFERENCES, TOOLS_THAT_ASK] = [
 ];
 
 describe('TOOLS', () => {
+  /** « Numéros de contrôle » became « Luhn et IBAN »: the words one typed for it still find it. */
+  it.each(['contrôle', 'controle', 'clé', 'checksum', 'check digits'])(
+    'finds the check digits by « %s »',
+    (word) => {
+      const checks = TOOLS.find((tool) => tool.id === 'checks')!;
+
+      expect(toolMatches(word, checks.keywords)).toBe(true);
+    },
+  );
+
   /** What a sample fills reaches Rust as typing would: the tool asks with it. */
   it.each(TOOLS_THAT_ASK.map((tool) => [tool.id, tool] as const))(
     '%s offers a sample that the tool asks Rust with',

@@ -184,7 +184,20 @@ export const TOOLS: readonly ToolDefinition[] = [
   {
     id: 'checks',
     category: 'calc',
-    keywords: ['luhn', 'iban', 'mod 97', 'credit card', 'carte', 'checksum', 'bic', 'visa', 'mastercard'],
+    keywords: [
+      'luhn',
+      'iban',
+      'mod 97',
+      'credit card',
+      'carte',
+      'checksum',
+      'check digits',
+      'contrôle',
+      'clé',
+      'bic',
+      'visa',
+      'mastercard',
+    ],
     load: () => import('./checks/checks-tool.component').then((m) => m.ChecksToolComponent),
   },
   {

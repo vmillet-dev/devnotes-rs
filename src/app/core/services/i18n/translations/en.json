@@ -1178,7 +1178,7 @@
       "noteParsed": "URL of {{host}}"
     },
     "base64": {
-      "name": "Base64 and bases",
+      "name": "Base64 and other bases",
       "description": "Base64, Base32, hexadecimal, binary, bytes — and the format recognised when decoding",
       "direction": "Direction",
       "directions": {
@@ -1346,8 +1346,8 @@
       }
     },
     "convert": {
-      "name": "JSON → TOML / XML / YAML",
-      "description": "And back again",
+      "name": "JSON ↔ YAML ↔ TOML ↔ XML",
+      "description": "From one format to another, in every direction",
       "from": "From",
       "to": "To",
       "formats": {
@@ -1978,8 +1978,8 @@
       }
     },
     "checks": {
-      "name": "Check digits",
-      "description": "Luhn and IBAN: valid or not, and the right check digits",
+      "name": "Luhn and IBAN",
+      "description": "Bank card, IBAN: valid or not, and the right check digits",
       "inputLabel": "Number to check",
       "placeholder": "4111 1111 1111 1111 or FR14 2004 1010 0505 0001 3M02 606",
       "kind": "Read as",
