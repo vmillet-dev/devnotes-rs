@@ -431,7 +431,7 @@ export type BoardLayout = {
 export type BoardNote = {
 	/**
 	 *  Dimmed in place rather than reflowed: spatial memory is what the board has that the
-	 *  date view does not.
+	 *  list view does not.
 	 */
 	matches: boolean,
 	/**  `None` inside a zone, where a card flows; `Some` only on the free background. */
@@ -1206,7 +1206,7 @@ export type GraphqlResult = {
 	errors: GraphqlError[],
 };
 
-/**  How the date view gathers its cards. A search or a facet still makes one flat list. */
+/**  How the list view gathers its cards. A search or a facet still makes one flat list. */
 export type Grouping = "date" | "priority" | "format" | "none";
 
 /**  In the order the tool lists them. */
@@ -1901,7 +1901,7 @@ export type NoteKind =
 
 export type NoteLifecycle = { kind: "permanent" } | { kind: "expires"; at: string };
 
-/**  What the date view is ordered by. The board keeps the places its cards were given. */
+/**  What the list view is ordered by. The board keeps the places its cards were given. */
 export type NoteOrder = {
 	key: SortKey,
 	direction: SortDirection,

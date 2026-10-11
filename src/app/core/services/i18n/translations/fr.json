@@ -170,7 +170,7 @@
   },
   "board": {
     "viewSwitchLabel": "Choisir la vue",
-    "dateView": "Date",
+    "listView": "Liste",
     "boardView": "Tableau",
     "needsASpace": "Choisissez un espace pour voir son tableau.",
     "emptyZone": "Aucune note ici.",

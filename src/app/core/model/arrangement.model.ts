@@ -1,6 +1,6 @@
 import type { Grouping, NoteOrder, SortDirection, SortKey } from './note.model';
 
-/** How the date view is laid out: the library's choice, remembered between launches. */
+/** How the list view is laid out: the library's choice, remembered between launches. */
 export interface Arrangement {
   readonly order: NoteOrder;
   readonly grouping: Grouping;

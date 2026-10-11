@@ -64,7 +64,7 @@ describe('LibraryPreferencesService', () => {
 
   it('keeps what the library already holds over what the application carried', async () => {
     files.set(`libraries/a/${PREFERENCES_FILE}`, fakeStore([['devnotes.notes.view.s-1', 'board']]));
-    await upgradeFrom([['devnotes.notes.view.s-1', 'date']]);
+    await upgradeFrom([['devnotes.notes.view.s-1', 'list']]);
 
     await library.hydrate('libraries/a');
 

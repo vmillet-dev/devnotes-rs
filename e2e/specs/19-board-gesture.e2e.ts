@@ -80,7 +80,7 @@ describe('Arranging the board', () => {
   });
 
   after(async () => {
-    await board.show('date');
+    await board.show('list');
     await bridge.deleteSpace(spaceId, homeId);
     await reloadCanvas();
     await spaces.open();
@@ -436,7 +436,7 @@ describe('Arranging the board', () => {
    * Eleven cards in a zone was eleven clicks, and the zone already knows what it holds.
    *
    * It ticks what the zone is **showing**, dimmed cards included: the board dims rather
-   * than narrowing, so a card the search filtered out of the date view is still filed here.
+   * than narrowing, so a card the search filtered out of the list view is still filed here.
    */
   describe('selecting a whole folder', () => {
     it('ticks every card of a zone in one gesture', async () => {

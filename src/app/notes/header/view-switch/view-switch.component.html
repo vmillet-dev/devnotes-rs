@@ -2,12 +2,12 @@
   <button
     type="button"
     class="view-option"
-    data-testid="view-date"
-    [class.on]="mode() === 'date'"
-    [attr.aria-pressed]="mode() === 'date'"
-    (click)="modeChanged.emit('date')"
+    data-testid="view-list"
+    [class.on]="mode() === 'list'"
+    [attr.aria-pressed]="mode() === 'list'"
+    (click)="modeChanged.emit('list')"
   >
-    {{ 'board.dateView' | transloco }}
+    {{ 'board.listView' | transloco }}
   </button>
   <!-- Disabled rather than hidden: a control that vanishes on "all spaces" reads as a
        bug, where a disabled one with a reason reads as an explanation. -->

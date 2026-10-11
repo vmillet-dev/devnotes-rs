@@ -4,9 +4,9 @@ import { readEach, setField, testid, waitForCanvas } from '../support/app.js';
 
 /** The Date / Tableau switch and the board it draws. */
 export const board = {
-  option: (mode: 'date' | 'board') => $(testid(`view-${mode}`)),
+  option: (mode: 'list' | 'board') => $(testid(`view-${mode}`)),
 
-  pressed: (mode: 'date' | 'board') => $(testid(`view-${mode}`)).getAttribute('aria-pressed'),
+  pressed: (mode: 'list' | 'board') => $(testid(`view-${mode}`)).getAttribute('aria-pressed'),
 
   isShowing: () => $(testid('board')).isExisting(),
 
@@ -17,7 +17,7 @@ export const board = {
   },
 
   /** Idempotent: clicking the showing view again would change nothing but still re-render. */
-  async show(mode: 'date' | 'board'): Promise<void> {
+  async show(mode: 'list' | 'board'): Promise<void> {
     if ((await board.pressed(mode)) === 'true') return;
 
     await board.option(mode).click();

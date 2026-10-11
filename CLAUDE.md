@@ -71,7 +71,7 @@ Principles:
 - **Time comes from `ClockService`** (no `new Date()` in `computed`). In specs fake `Date` only; a bare `useFakeTimers()` hangs `whenStable()`.
 - **Canvas stores**: `NotesQueryStore` (which notes), `NoteSelectionStore`, `NotesStore` (the note; `applyPatch` is the one writer), `NoteBatchStore`, `UndoStore` (banner timer ≠ `Ctrl+Z` record). → "State".
 - Creating a note writes nothing until worth keeping; ⚠️ `draftMaterialisation` holds the promise of the write. → "Creating a note writes nothing". Editor drafts are keyed on note id and committed on blur and every closing path.
-- ⚠️ A `@defer`red component is imported on a line of its own (`import type` for types). There is no router: areas, date view and board are state. The notes page is hidden, never destroyed; area keys use `KeyboardEvent.code` (AZERTY). → "No router".
+- ⚠️ A `@defer`red component is imported on a line of its own (`import type` for types). There is no router: areas, list view and board are state. The notes page is hidden, never destroyed; area keys use `KeyboardEvent.code` (AZERTY). → "No router".
 - ⚠️ TipTap is its own chunk: query the rich editor by template reference. On WebKit use `focusFirst` before `chain().focus()`. Markdown escaping is ours (`escapeMarkdownText`). Tab stays in the text (`codeIndent`). → "Editing a note".
 - `null` space = "all spaces". Nothing corpus-wide runs before saying what it touches (count from Rust). Sections are exhaustive and local-day based (`tzOffsetMinutes` sign flipped); search debounce 150 ms; "À trier" ends at `endOfLocalDay`; `pinnedFirst` is the user's choice.
 - Every library operation reports through `StatusNotifier`, even when nothing changed. A startup initialiser injects everything before its first `await`.
