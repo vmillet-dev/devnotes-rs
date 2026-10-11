@@ -25,8 +25,14 @@ describe('HttpLeaveStore', () => {
     leave()
       .modified()
       .map((tab) => tab.draft.name);
-  /** Lets the promise chain of a click run: the stores await the fake, which answers at once. */
-  const settled = () => new Promise<void>((resolve) => setTimeout(resolve));
+  /**
+   * Lets the promise chains run out: the stores await the fake, which answers at once.
+   * ⚠️ Microtasks, not a timer: a `setTimeout` here never fired on CI, where this file can
+   * share its worker with one that fakes the clock.
+   */
+  const settled = async (): Promise<void> => {
+    for (let turn = 0; turn < 100; turn += 1) await Promise.resolve();
+  };
 
   beforeEach(async () => {
     TestBed.resetTestingModule();
