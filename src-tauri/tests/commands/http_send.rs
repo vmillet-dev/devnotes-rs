@@ -649,8 +649,9 @@ fn every_send_that_left_is_recorded_masked_and_the_history_clears() {
 
 #[test]
 fn a_graphql_request_is_posted_as_json_and_its_errors_read_apart_from_its_data() {
-    use devnotes_lib::http::describe_graphql;
     use devnotes_lib::http::graphql::GraphqlDocument;
+    use devnotes_lib::http::graphql::QueryFault;
+    use devnotes_lib::http::{add_graphql_variables, describe_graphql};
 
     let session = Session::open();
     let (port, seen) = serve(1, |_, _| {
@@ -685,6 +686,26 @@ fn a_graphql_request_is_posted_as_json_and_its_errors_read_apart_from_its_data()
 
     let described = session.call(|_| describe_graphql(document)).unwrap();
     assert_eq!(described.operations, ["Me", "Other"]);
+    assert_eq!(described.query_problem, None);
+
+    // What the editor says before a send: a brace left open, a variable without a value.
+    let open = GraphqlDocument {
+        query: "query Country($code: ID!) { country(code: $code) { name }".to_string(),
+        ..GraphqlDocument::default()
+    };
+    let described = session.call(|_| describe_graphql(open.clone())).unwrap();
+    let problem = described.query_problem.unwrap();
+    assert_eq!(
+        (problem.fault, problem.line, problem.column),
+        (QueryFault::UnclosedBrace, 1, 27)
+    );
+    assert_eq!(described.missing, ["code"]);
+    assert_eq!(
+        session.call(|_| add_graphql_variables(open)).unwrap(),
+        "{
+  \"code\": null
+}"
+    );
 }
 
 #[test]

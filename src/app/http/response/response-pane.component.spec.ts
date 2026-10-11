@@ -234,10 +234,58 @@ describe('ResponsePaneComponent', () => {
 
     expect(el('http-response-pretty')?.textContent).toContain('"me": null');
     expect(el('http-response-pretty')?.textContent).not.toContain('errors');
+    // With its data it opens on the body: the errors' tab is marked, and the 200 is not alone.
+    expect(text('http-response-status')).toBe('200 OK');
+    expect(text('http-response-graphql-errors')).toBe('1 erreur');
+    const marked = all('http-response-count').find((count) => count.classList.contains('failing'));
+    expect(marked?.textContent?.trim()).toBe('1');
     await section('errors');
     expect(
       all('http-response-error').map((error) => [...error.children].map((part) => part.textContent?.trim())),
     ).toEqual([['Unauthorised', 'me', 'ligne:colonne 1:3']]);
+  });
+
+  /**
+   * A query missing a brace: the server answers 400 with its errors, the pane opened on
+   * « Corps », which read `null`, and the errors waited in a tab nothing pointed to.
+   */
+  it('opens on the errors of a GraphQL answer that carries no data, and on the body of the next one', async () => {
+    const errors = [
+      { message: 'Syntax Error: Expected Name, found <EOF>.', path: null, location: '4:1' },
+      { message: 'Unknown field', path: null, location: null },
+    ];
+    await answer(
+      sentResponse({
+        status: 400,
+        reason: 'Bad Request',
+        body: '{"errors":[]}',
+        graphql: { data: null, errors },
+      }),
+    );
+
+    expect(el('http-response-errors')).not.toBeNull();
+    expect(all('http-response-error')).toHaveLength(2);
+    expect(text('http-response-graphql-errors')).toBe('2 erreurs');
+    expect(
+      all('http-response-section').find((tab) => tab.getAttribute('aria-selected') === 'true')?.dataset[
+        'section'
+      ],
+    ).toBe('errors');
+    // « Brut » still shows the answer as it came.
+    await section('body');
+    expect(el('http-response-errors')).toBeNull();
+
+    // An answer that reads opens on its body, the errors of the last one behind it.
+    await section('errors');
+    await answer(sentResponse({ graphql: { data: '{\n  "me": 1\n}', errors: [] } }));
+    expect(el('http-response-errors')).toBeNull();
+    expect(el('http-response-pretty')?.textContent).toContain('"me": 1');
+    expect(text('http-response-graphql-errors')).toBeNull();
+
+    // And one that is no GraphQL answer keeps the tab that was being read.
+    await section('headers');
+    await answer(sentResponse());
+    expect(el('http-response-headers')).not.toBeNull();
   });
 
   it('says why nothing came back', async () => {

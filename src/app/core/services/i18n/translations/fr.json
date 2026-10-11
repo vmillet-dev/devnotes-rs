@@ -2933,6 +2933,7 @@
       "saved": "Réponse enregistrée dans {{path}}.",
       "saveFailed": "La réponse n'a pas pu être enregistrée.",
       "redirects": "{count, plural, one {après # redirection} other {après # redirections}}",
+      "graphqlErrors": "{count, plural, one {# erreur} other {# erreurs}}",
       "parts": "Parties de la réponse",
       "sections": {
         "body": "Corps",
@@ -2992,7 +2993,20 @@
       "variables": "Variables",
       "operation": "Opération envoyée",
       "asGet": "Envoyer en GET",
-      "at": "ligne:colonne {{location}}"
+      "at": "ligne:colonne {{location}}",
+      "format": "Formater",
+      "variablesHint": "Un objet JSON : une valeur pour chaque $variable de la requête.",
+      "problemAt": "Ligne {{line}}, colonne {{column}} :",
+      "problems": {
+        "unclosedBrace": "cette accolade n'est pas refermée.",
+        "unclosedParenthesis": "cette parenthèse n'est pas refermée.",
+        "unclosedString": "cette chaîne n'est pas refermée.",
+        "strayBrace": "cette accolade ne ferme rien.",
+        "strayParenthesis": "cette parenthèse ne ferme rien."
+      },
+      "missing": "Sans valeur :",
+      "add": "Ajouter",
+      "unknown": "La requête ne déclare pas :"
     },
     "socket": {
       "connect": "Connecter",

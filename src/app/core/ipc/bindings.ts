@@ -175,6 +175,8 @@ export const commands = {
 	readHttpHeaders: (text: string) => typedError<KeyValue[], AppError>(__TAURI_INVOKE("read_http_headers", { text })),
 	/**  The operations a GraphQL document names, and why its variables do not read. */
 	describeGraphql: (document: GraphqlDocument) => typedError<GraphqlAnswer, AppError>(__TAURI_INVOKE("describe_graphql", { document })),
+	/**  The variables with a `null` for each one the operation declares and they lack: « Ajouter ». */
+	addGraphqlVariables: (document: GraphqlDocument) => typedError<string, AppError>(__TAURI_INVOKE("add_graphql_variables", { document })),
 	/**
 	 *  Its headers and auth composed like a request's, under the lock for what it inherits; the
 	 *  handshake waited on without it. Answers once the socket is open.
@@ -1205,6 +1207,15 @@ export type GraphqlAnswer = {
 	/**  The named operations, in the order written. */
 	operations: string[],
 	variablesProblem: JsonError | null,
+	/**
+	 *  A brace, a parenthesis or a string the query leaves open: said where it is typed. It
+	 *  warns and stops nothing — the server stays the judge of the rest.
+	 */
+	queryProblem: QueryProblem | null,
+	/**  What the operation sent declares without a default and the variables give no value. */
+	missing: string[],
+	/**  The keys of the variables the operation sent does not declare. */
+	unknown: string[],
 };
 
 export type GraphqlDocument = {
@@ -2187,9 +2198,20 @@ export type QrRequest = {
 	margin: number,
 };
 
+export type QueryFault = "unclosedBrace" | "unclosedParenthesis" | "unclosedString" | 
+/**  Closes nothing, or what another sign opened. */
+"strayBrace" | "strayParenthesis";
+
 export type QueryParameter = {
 	name: string,
 	value: string,
+};
+
+/**  Where a query stops reading: the sign at fault, by its line and column from 1. */
+export type QueryProblem = {
+	fault: QueryFault,
+	line: number,
+	column: number,
 };
 
 export type QuerySide = "url" | "params";

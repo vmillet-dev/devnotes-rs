@@ -66,7 +66,15 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
   /** What a request sends unasked; a spec holding `pendingImplied` decides when it is answered. */
   impliedAnswer: ImpliedHeader[] = [];
   pendingImplied: Promise<ImpliedHeader[]> | null = null;
-  graphqlAnswer: GraphqlAnswer = { operations: [], variablesProblem: null };
+  graphqlAnswer: GraphqlAnswer = {
+    operations: [],
+    variablesProblem: null,
+    queryProblem: null,
+    missing: [],
+    unknown: [],
+  };
+  /** What « Ajouter » answers: the variables as Rust would write them. */
+  variablesAdded = '';
   /** What `send` answers; a spec holding `pendingSend` decides when. */
   response: SentResponse = sentResponse();
   pendingSend: Promise<SentResponse> | null = null;
@@ -322,6 +330,10 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
 
   describeGraphql(graphql: GraphqlParts): Promise<GraphqlAnswer> {
     return this.record('describeGraphql', [graphql], () => this.graphqlAnswer);
+  }
+
+  addGraphqlVariables(graphql: GraphqlParts): Promise<string> {
+    return this.record('addGraphqlVariables', [graphql], () => this.variablesAdded);
   }
 
   rename(item: HttpItem, name: string): Promise<void> {

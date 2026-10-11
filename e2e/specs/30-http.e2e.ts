@@ -989,6 +989,95 @@ describe('HTTP collections', () => {
     });
 
     /** A still « Envoi en cours… » made a slow server and a frozen application look the same. */
+    /**
+     * A query missing a brace was sent without a word and answered by a 400 whose errors waited
+     * in a tab nothing pointed to; and the variables were typed after the query, in its box.
+     */
+    it('warns of a brace left open and lands on the errors, then names a variable without a value and adds it', async () => {
+      const bodies: string[] = [];
+      const server = createServer((request, response) => {
+        let body = '';
+        request.on('data', (chunk: Buffer) => (body += chunk.toString()));
+        request.on('end', () => {
+          bodies.push(body);
+          const sent = JSON.parse(body) as { query: string; variables?: { code?: string | null } };
+          if (!sent.query.trim().endsWith('} }')) {
+            response.writeHead(400, { 'Content-Type': 'application/json' });
+            response.end(
+              '{"errors":[{"message":"Syntax Error: Expected Name, found <EOF>.","locations":[{"line":1,"column":58}]}]}',
+            );
+            return;
+          }
+          response.writeHead(200, { 'Content-Type': 'application/json' });
+          response.end(JSON.stringify({ data: { country: { name: sent.variables?.code ?? null } } }));
+        });
+      });
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      const { port } = server.address() as AddressInfo;
+      try {
+        const open = 'query Country($code: ID!) { country(code: $code) { name }';
+        const api = await bridge.createHttpCollection('Pays');
+        const created = await bridge.createHttpRequest({
+          ...draft(api.id, null, 'Pays'),
+          kind: 'graphql',
+          document: { url: `http://127.0.0.1:${port}/graphql`, description: '', graphql: { query: open } },
+        });
+        await press('1', ['Control']);
+        await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+        await press('3', ['Control']);
+        await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+        if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
+        await $(`${testid('http-node')}[data-id="${created.id}"] ${testid('http-node-name')}`).click();
+        await $(testid('http-graphql-query')).waitForDisplayed({ timeout: 10_000 });
+
+        // Said where it is typed — and sent all the same: the server stays the judge.
+        await $(testid('http-graphql-query-problem')).waitForDisplayed({ timeout: 10_000 });
+        expect(await $(testid('http-graphql-query-problem')).getAttribute('data-fault')).toBe(
+          'unclosedBrace',
+        );
+        await $(testid('http-send')).click();
+        await $(testid('http-response-errors')).waitForDisplayed({ timeout: 10_000 });
+        expect(await $(testid('http-response-status')).getText()).toBe('400 Bad Request');
+        expect(await $(testid('http-response-graphql-errors')).isDisplayed()).toBe(true);
+        expect(await $(testid('http-response-error')).getText()).toContain('Syntax Error');
+
+        // The brace closed, what is left to say is the variable the operation declares.
+        await setField(testid('http-graphql-query'), `${open} }`);
+        await $(testid('http-graphql-query-problem')).waitForExist({ reverse: true, timeout: 10_000 });
+        await $(testid('http-graphql-missing')).waitForDisplayed({ timeout: 10_000 });
+        expect(
+          await readEach(`${testid('http-graphql-missing')} ${testid('http-graphql-variable')}`, 'text'),
+        ).toEqual(['$code']);
+        await $(testid('http-graphql-add')).click();
+        await eventually(
+          () => $(testid('http-graphql-variables')).getValue(),
+          (variables) => variables.includes('"code": null'),
+          'the variable added to the object',
+        );
+        await $(testid('http-graphql-missing')).waitForExist({ reverse: true, timeout: 10_000 });
+
+        await setField(testid('http-graphql-variables'), '{ "code": "FR" }');
+        await $(testid('http-send')).click();
+        await eventually(
+          () => $(testid('http-response-status')).getText(),
+          (status) => status === '200 OK',
+          'the answer to the query that reads',
+        );
+        // An answer with its data opens on it, no error beside its status.
+        expect(await $(testid('http-response-pretty')).getText()).toContain('"name": "FR"');
+        expect(await $(testid('http-response-graphql-errors')).isExisting()).toBe(false);
+        expect((JSON.parse(bodies.at(-1)!) as { variables: unknown }).variables).toEqual({ code: 'FR' });
+
+        const tab = `${testid('http-tab')}[data-key="${created.id}"]`;
+        await $(`${tab} ${testid('http-tab-close')}`).click();
+        await $(testid('http-close-discard')).click();
+        await $(tab).waitForExist({ reverse: true, timeout: 10_000 });
+        await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+      } finally {
+        server.close();
+      }
+    });
+
     it('shows a request on its way: a spinner, the time going by, its tab marked', async () => {
       let answer: () => void = () => undefined;
       const held = new Promise<void>((resolve) => (answer = resolve));
