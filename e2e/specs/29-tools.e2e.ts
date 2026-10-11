@@ -1,7 +1,8 @@
 import { $, $$, browser, expect } from '@wdio/globals';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import {
@@ -28,6 +29,14 @@ async function openTool(tool: string): Promise<void> {
     (shown) => shown === tool,
     `${tool} to open`,
   );
+}
+
+/** The names as the application says them: read from its own files, so a rename never touches a spec. */
+function toolNames(locale: string): Record<string, { name: string }> {
+  const file = new URL(`../../src/app/core/services/i18n/translations/${locale}.json`, import.meta.url);
+  return (
+    JSON.parse(readFileSync(fileURLToPath(file), 'utf8')) as { tools: Record<string, { name: string }> }
+  ).tools;
 }
 
 /** A paste as the system makes it, CRs included: a textarea's value would lose them. */
@@ -90,6 +99,28 @@ describe('The tools', () => {
         (tools) => tools.includes('case'),
         'Train-Case to find it',
       );
+      await setField(testid('tools-search'), '');
+    });
+
+    /** A word of the name a tool had before its rename still leads to it, as its new name does. */
+    it('finds a renamed tool by a word of its old name and by its new one', async () => {
+      const names = toolNames(await browser.execute(() => document.documentElement.lang));
+      const renamed = [
+        ['checks', 'contrôle'],
+        ['base64', 'bases'],
+        ['convert', 'toml'],
+      ] as const;
+
+      for (const [tool, oldWord] of renamed) {
+        for (const wanted of [oldWord, names[tool]!.name]) {
+          await setField(testid('tools-search'), wanted);
+          await eventually(
+            () => readEach(testid('tools-entry'), '@data-tool'),
+            (tools) => tools.includes(tool),
+            `« ${wanted} » to find ${tool}`,
+          );
+        }
+      }
       await setField(testid('tools-search'), '');
     });
 

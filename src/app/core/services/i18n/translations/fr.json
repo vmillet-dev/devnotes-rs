@@ -1178,7 +1178,7 @@
       "noteParsed": "URL de {{host}}"
     },
     "base64": {
-      "name": "Base64 et bases",
+      "name": "Base64 et autres bases",
       "description": "Base64, Base32, hexadécimal, binaire, octets — et le format reconnu au décodage",
       "direction": "Sens",
       "directions": {
@@ -1346,8 +1346,8 @@
       }
     },
     "convert": {
-      "name": "JSON → TOML / XML / YAML",
-      "description": "Et dans l’autre sens",
+      "name": "JSON ↔ YAML ↔ TOML ↔ XML",
+      "description": "D’un format à l’autre, dans tous les sens",
       "from": "Depuis",
       "to": "Vers",
       "formats": {
@@ -1978,8 +1978,8 @@
       }
     },
     "checks": {
-      "name": "Numéros de contrôle",
-      "description": "Luhn et IBAN : valide ou non, et la bonne clé",
+      "name": "Luhn et IBAN",
+      "description": "Carte bancaire, IBAN : valide ou non, et la bonne clé",
       "inputLabel": "Numéro à vérifier",
       "placeholder": "4111 1111 1111 1111 ou FR14 2004 1010 0505 0001 3M02 606",
       "kind": "Lire comme",
