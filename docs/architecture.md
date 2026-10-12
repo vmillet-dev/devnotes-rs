@@ -379,7 +379,10 @@ Four details are load-bearing:
   layer, which no `overflow` and no transformed ancestor reaches — and places it from the
   anchor's rectangle. It shows the popover in the `write` phase of `afterNextRender`, ahead of
   `MenuPanelDirective`'s focus: a panel still `display: none` refuses it. A scroll of what holds
-  the anchor, or a resize, closes the menu.
+  the anchor, or a resize, closes the menu. ⚠️ The same for a panel whose host is a stacking
+  context — `position: sticky`, a `transform`, a `filter`: its `z-index` only counts inside it,
+  and what is positioned after the host is painted over the panel. « + Nouvelle requête » is
+  sticky at the end of the HTTP tabs, and the URL field covered its menu until it floated too.
 
 Putting the click listener in a directive also removes the `click-events-have-key-events`
 suppressions the three modal templates used to carry: the keyboard equivalent exists, it is

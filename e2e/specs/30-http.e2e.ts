@@ -135,6 +135,22 @@ describe('HTTP collections', () => {
           return box.left >= 0 && box.right <= window.innerWidth && box.bottom <= window.innerHeight;
         }, testid('http-new-kind-panel')),
       ).toBe(true);
+      // Above the request it opens over, edge to edge: the URL field once covered its badges.
+      expect(
+        await browser.execute(
+          (panel: string, entry: string) => {
+            const menu = document.querySelector(panel)!;
+            return [...menu.querySelectorAll(entry)].every((option) => {
+              const box = option.getBoundingClientRect();
+              return [0.05, 0.5, 0.95].every((at) =>
+                menu.contains(document.elementFromPoint(box.left + box.width * at, box.top + box.height / 2)),
+              );
+            });
+          },
+          testid('http-new-kind-panel'),
+          testid('http-new-kind'),
+        ),
+      ).toBe(true);
       await $(`${testid('http-new-kind')}[data-kind="graphql"]`).click();
       await $(testid('http-graphql')).waitForDisplayed({ timeout: 10_000 });
       // Its kind is said where a method would be chosen, and there is no menu to change it.

@@ -411,6 +411,8 @@ describe('HttpPageComponent', () => {
     chevron.click();
     await fixture.whenStable();
     expect(chevron.getAttribute('aria-expanded')).toBe('true');
+    // In the top layer: its sticky host is a stacking context the URL field was painted over.
+    expect(el('[data-testid="http-new-kind-panel"]').getAttribute('popover')).toBe('manual');
     expect(
       all('[data-testid="http-new-kind"]').map((entry) => [
         entry.querySelector('.glyph')?.textContent?.trim(),
