@@ -48,14 +48,19 @@ describe('ShortcutsDialogComponent', () => {
     expect(keysFor('palette de collage rapide')).toEqual(['Ctrl', 'Shift', 'K']);
   });
 
-  it('lists the areas, then the groups of the notes, after the global one', async () => {
+  it('lists the areas, then the groups of the notes and of HTTP, after the global one', async () => {
     expect(groupTitles()).toEqual([
       'Globaux (même fenêtre fermée)',
       'Zones',
       'Canevas',
       'Éditeur',
       'Collage rapide',
+      'HTTP',
     ]);
+    // A row of the rail is moved with the keys too, and nothing on screen said so.
+    expect(keysFor('Déplacer une ligne du rail parmi ses voisines')).toEqual(['Alt', '↑ ↓']);
+    expect(keysFor('Ranger la ligne dans le dossier juste au-dessus')).toEqual(['Alt', '→']);
+    expect(keysFor('Sortir la ligne de son dossier')).toEqual(['Alt', '←']);
     expect(keysFor('Aller aux outils')).toEqual(['Ctrl', '2']);
     expect(keysFor('champ de recherche')).toEqual(['Ctrl', 'K']);
   });

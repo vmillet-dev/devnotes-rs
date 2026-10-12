@@ -71,7 +71,7 @@
       </div>
     }
 
-    <ul class="tree" (pointermove)="moveDrag($event)">
+    <ul class="tree" [attr.data-beat]="beat() % 2" (pointermove)="moveDrag($event)">
       @for (row of rows; track row.kind + row.id) {
         @let dropping = drop()?.id === row.id ? drop()?.zone : null;
         <li
@@ -80,6 +80,7 @@
           data-testid="http-node"
           [attr.data-id]="row.id"
           [attr.data-kind]="row.kind"
+          [attr.data-moved]="markOf(row.id)"
           [class.dragging]="dragged() === row.id"
           [class.drop-before]="dropping === 'before'"
           [class.drop-after]="dropping === 'after'"
@@ -197,6 +198,18 @@
         </li>
       }
     </ul>
+
+    <!-- Always there, so that what it comes to say is a change a screen reader announces. -->
+    <p
+      class="visually-hidden"
+      role="status"
+      data-testid="http-rail-moved"
+      [attr.data-said]="said()[0]?.sentence"
+    >
+      @for (line of said(); track line.beat) {
+        {{ line.key | transloco: line.params }}
+      }
+    </p>
 
     <div class="rail-foot">
       <button

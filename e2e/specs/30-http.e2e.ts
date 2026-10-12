@@ -348,6 +348,119 @@ describe('HTTP collections', () => {
     });
 
     /**
+     * Moving a row with `Alt` and the arrows worked, and was hard to follow: after a press,
+     * nothing said which folder the row was now in. Each move is marked on the row and on what
+     * holds it, and said; one that cannot be made is said too.
+     */
+    it('follows a request moved with the keys: into a folder, out of it, into a folded one', async () => {
+      const api = await bridge.createHttpCollection('Déplacements');
+      const folded = await bridge.createHttpFolder(api.id, null, 'Repliée');
+      await bridge.createHttpRequest(draft(api.id, folded.id, 'Résidente'));
+      const open = await bridge.createHttpFolder(api.id, null, 'Ouverte');
+      const moved = await bridge.createHttpRequest(draft(api.id, null, 'Voyageuse'));
+      await press('1', ['Control']);
+      await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+      await press('3', ['Control']);
+      await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+      if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
+      const row = `${testid('http-node')}[data-id="${moved.id}"]`;
+      await $(row).waitForDisplayed({ timeout: 10_000 });
+
+      /** What the rail shows of the last move, read in one pass: the marks last a moment. */
+      const shown = () =>
+        browser.execute(
+          (node: string, status: string, id: string) => {
+            const said = document.querySelector(status)!;
+            const box = document.querySelector(`${node}[data-id="${id}"]`)?.getBoundingClientRect();
+            const rail = document.querySelector('[data-testid="http-rail"]')!.getBoundingClientRect();
+            return {
+              marks: Object.fromEntries(
+                [...document.querySelectorAll(`${node}[data-moved]`)].map((element) => [
+                  element.getAttribute('data-id'),
+                  element.getAttribute('data-moved'),
+                ]),
+              ),
+              said: said.getAttribute('data-said'),
+              sentence: (said.textContent ?? '').trim(),
+              inView: box !== undefined && box.top >= rail.top && box.bottom <= rail.bottom,
+              focused: document.activeElement?.closest(node)?.getAttribute('data-id') ?? null,
+            };
+          },
+          testid('http-node'),
+          testid('http-rail-moved'),
+          moved.id,
+        );
+      const parentOf = async () => (await bridge.httpRequest(moved.id)).folderId;
+      /** One press, then the row marked, its new parent marked, the sentence, and where Rust holds it. */
+      const move = async (
+        key: string,
+        said: string,
+        parent: string,
+        beside: string,
+        folderId: string | null,
+      ) => {
+        await press(key, ['Alt']);
+        const seen = await eventually(
+          shown,
+          (now) => now.said === said && now.marks[moved.id] === 'row' && now.focused === moved.id,
+          `the move said as « ${said} »`,
+        );
+        expect(seen.marks).toEqual({ [moved.id]: 'row', [parent]: 'parent' });
+        expect(seen.sentence).toContain('Voyageuse');
+        expect(seen.sentence).toContain(beside);
+        expect(seen.inView).toBe(true);
+        expect(await parentOf()).toBe(folderId);
+      };
+
+      await browser.execute(
+        (selector: string) => (document.querySelector(selector) as HTMLElement | null)?.focus(),
+        `${row} ${testid('http-node-name')}`,
+      );
+      // Into the folder above it, out of it again, then up past it.
+      await move('ArrowRight', 'into', open.id, 'Ouverte', open.id);
+      await move('ArrowLeft', 'root', api.id, 'Déplacements', null);
+      await move('ArrowUp', 'before', api.id, 'Ouverte', null);
+
+      // The folder now above it is folded: it opens to show what it receives.
+      const twisty = `${testid('http-node')}[data-id="${folded.id}"] ${testid('http-node-twisty')}`;
+      await $(twisty).click();
+      await eventually(
+        () => $(twisty).getAttribute('aria-expanded'),
+        (expanded) => expanded === 'false',
+        'the folder folded',
+      );
+      await browser.execute(
+        (selector: string) => (document.querySelector(selector) as HTMLElement | null)?.focus(),
+        `${row} ${testid('http-node-name')}`,
+      );
+      await move('ArrowRight', 'into', folded.id, 'Repliée', folded.id);
+      expect(await $(twisty).getAttribute('aria-expanded')).toBe('true');
+
+      // Last of its folder: going down cannot be made, and that is said rather than nothing.
+      const before = outline(await bridge.httpTree());
+      await press('ArrowDown', ['Alt']);
+      const refused = await eventually(shown, (now) => now.said === 'refused.last', 'the refusal said');
+      expect(refused.sentence).toContain('Voyageuse');
+      expect(outline(await bridge.httpTree())).toEqual(before);
+      expect(before).toContain('Déplacements[Repliée[Résidente Voyageuse] Ouverte[]]');
+
+      // The order is Rust's: still there once the front end is rebuilt.
+      await reloadCanvas();
+      await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+      await $(row).waitForDisplayed({ timeout: 10_000 });
+      const names = await rowNames();
+      const at = (name: string) => names.findIndex((seen) => seen.endsWith(name));
+      expect([at('Repliée'), at('Résidente'), at('Voyageuse'), at('Ouverte')]).toEqual([
+        at('Repliée'),
+        at('Repliée') + 1,
+        at('Repliée') + 2,
+        at('Repliée') + 3,
+      ]);
+
+      await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+    });
+
+    /**
      * The rail's floor is 160px, and HTTP took 240 because its rows did not fit. Made compact —
      * a narrower indent, no room held for a caret or for `⋯` at rest, a short method — a
      * request two folders deep keeps a dozen characters of its name.

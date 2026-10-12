@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
   afterRenderEffect,
   computed,
@@ -15,7 +16,15 @@ import { AreaStore } from '@core/services/areas/area.store';
 import { HttpCollectionsStore } from '@core/services/http/http-collections.store';
 import { HttpHistoryStore } from '@core/services/http/http-history.store';
 import { HttpTabsStore } from '@core/services/http/http-tabs.store';
-import { DropZone, KeyMove, RailRow, dropMove, keyMove } from '@core/services/http/http-tree';
+import {
+  DropZone,
+  KeyMove,
+  RailRow,
+  dropMove,
+  keyMove,
+  landing,
+  refusal,
+} from '@core/services/http/http-tree';
 import { RAIL_WIDTH } from '@core/services/settings/app-settings.model';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { AreaSwitchComponent } from '@shared/controls/area-switch/area-switch.component';
@@ -54,6 +63,25 @@ interface Drop {
   readonly id: string;
   readonly zone: DropZone;
 }
+
+/** A keyboard move on screen: the row, and what now holds it. */
+interface Moved {
+  readonly id: string;
+  readonly parentId: string | null;
+}
+
+/** What the live region says of a move, made or refused. */
+interface Said {
+  /** `into`, `refused.last`…: the sentence without its words, for what reads it in no language. */
+  readonly sentence: string;
+  readonly key: string;
+  readonly params: Readonly<Record<string, string>>;
+  /** Told apart from the one before: the same sentence twice is still two things said. */
+  readonly beat: number;
+}
+
+/** How long a keyboard move stays marked: as long as its fade, `--motion-mark`. */
+const MARK_MS = 2000;
 
 /** From this width the head has room for « ＋ Collection » beside its title; under it, an icon. */
 const WORDED_FROM_PX = 216;
@@ -120,7 +148,15 @@ export class HttpRailComponent {
   protected readonly cookiesOpen = signal(false);
   /** The tabs' « + » begins a request a few pixels away: this one says what it makes. */
   protected readonly worded = computed(() => this.settings.libraryRailWidth() >= WORDED_FROM_PX);
+  /**
+   * The pointer shows where a drop would land; the keys showed nothing, and a row above a
+   * folder looks like a row inside it. Each move is marked, on the row and on what holds it.
+   */
+  protected readonly moved = signal<Moved | null>(null);
+  protected readonly beat = signal(0);
+  protected readonly said = signal<readonly Said[]>([]);
 
+  private markTimer: ReturnType<typeof setTimeout> | undefined;
   private drag: Drag | null = null;
   /** The click a drag ends with is not a click on the row it started from. */
   private swallowClick = false;
@@ -128,6 +164,7 @@ export class HttpRailComponent {
   private readonly field = viewChild<ElementRef<HTMLInputElement>>('field');
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => clearTimeout(this.markTimer));
     afterRenderEffect(() => {
       if (this.creating() !== null || this.renaming() !== null) {
         this.field()?.nativeElement.focus();
@@ -234,10 +271,17 @@ export class HttpRailComponent {
     if (event.altKey && !event.ctrlKey && !event.metaKey && move !== undefined) {
       event.preventDefault();
       const answer = keyMove(this.store.tree(), item(row), move);
-      if (answer !== null) {
-        await this.store.apply(answer);
-        this.focusRow(row.id);
+      if (answer === null) {
+        this.say(`refused.${refusal(item(row), move)}`, { name: row.name });
+        return;
       }
+      await this.store.apply(answer);
+      const landed = landing(this.store.tree(), item(row), move);
+      if (landed !== null) {
+        this.mark({ id: row.id, parentId: landed.parentId });
+        this.say(landed.where, { name: row.name, other: landed.other });
+      }
+      this.focusRow(row.id);
     } else if (event.key === 'F2') {
       event.preventDefault();
       this.closeForms();
@@ -278,6 +322,12 @@ export class HttpRailComponent {
     const target = drop === null ? undefined : this.store.rows().find((row) => row.id === drop.id);
     const move = target && drop ? dropMove(this.store.tree(), item(drag.row), item(target), drop.zone) : null;
     if (move !== null) await this.store.apply(move);
+  }
+
+  protected markOf(id: string): 'row' | 'parent' | null {
+    const moved = this.moved();
+    if (moved === null) return null;
+    return moved.id === id ? 'row' : moved.parentId === id ? 'parent' : null;
   }
 
   protected closeSettings(): void {
@@ -372,11 +422,28 @@ export class HttpRailComponent {
     if (contents !== null) this.confirming.set({ row, contents });
   }
 
+  /** ⚠️ The beat changes with every move: it is what starts the fade again on a row already marked. */
+  private mark(moved: Moved): void {
+    clearTimeout(this.markTimer);
+    this.moved.set(moved);
+    this.beat.update((beat) => beat + 1);
+    this.markTimer = setTimeout(() => this.moved.set(null), MARK_MS);
+  }
+
+  private say(sentence: string, params: Readonly<Record<string, string>>): void {
+    this.said.update(([last]) => [
+      { sentence, key: `http.rail.moved.${sentence}`, params, beat: (last?.beat ?? 0) + 1 },
+    ]);
+  }
+
   private focusRow(id: string): void {
-    requestAnimationFrame(() =>
-      this.host.nativeElement
-        .querySelector<HTMLElement>(`[data-rail-row][data-id="${id}"] .node-name`)
-        ?.focus(),
-    );
+    requestAnimationFrame(() => {
+      const name = this.host.nativeElement.querySelector<HTMLElement>(
+        `[data-rail-row][data-id="${id}"] .node-name`,
+      );
+      name?.focus();
+      // Absent from jsdom, and from nothing else this runs on.
+      name?.scrollIntoView?.({ block: 'nearest' });
+    });
   }
 }

@@ -1487,6 +1487,10 @@ connecting. One shared piece, sized by `--spinner-size` and coloured by the text
 reduced-motion block below stops it without naming it; what says "alive" then is whatever
 ticks beside it.
 
+**One mark fades** (`--motion-mark`, 2000ms): what a keyboard move leaves on a row of the HTTP
+rail and on what now holds it. It is a colour coming down to a style that is already the mark,
+on two rows, not a motion — the reduced-motion block cuts the fade and leaves the mark.
+
 ⚠️ **`transform` and `opacity` only.** A transition on `height`, `width` or a colour over
 a list of cards is what makes a canvas feel heavy, and this canvas renders every note with
 no virtualisation. `@mixin eases` therefore names its properties and never takes `all`.
@@ -1678,6 +1682,18 @@ method in its colour (`http-method-hues`), `GQL` for GraphQL and `WS` for a WebS
   after a row, or inside a folder or a collection when it is let go mid-row. Both turn into one
   `RailMove` (`keyMove`, `dropMove`), refused when it would change nothing or put a folder into
   itself — Rust refuses that too. The click that ends a drag opens nothing.
+- **A move made with the keys is shown and said.** The pointer shows where a drop would land;
+  the keys showed nothing, and at 8px a level a row above a folder looks like a row inside it.
+  After each one, `landing` (`http-tree.ts`) reads the tree **as Rust answered it** — never the
+  move that was asked — and the rail marks the row and what now holds it (`data-moved="row"`,
+  `"parent"`) for `MARK_MS`, scrolls the row into view, and says where it went in a live
+  region (`role="status"`, kept in the page so that its change is announced): « … est
+  maintenant dans Auth », « … à la racine de API », « … avant Login ». A move that cannot be
+  made is said the same way (`refusal`). ⚠️ The mark is a style the fade comes down to, so it
+  shows where animations are cut short; and a row moved twice keeps its attribute, so the
+  tree's `data-beat` swaps the animation's name — the only thing that starts one again.
+- **A line a level** is drawn in each row's indent (`.node-row::before`), so depth is read at
+  rest and not only during a move.
 - **What is folded is the library's**, in its preferences (`devnotes.notes.http.collapsed`), and
   read the way a file written by hand is read: anything but a list of ids folds nothing.
 - Every write is persisted, then the tree read again: a move or a copy renumbers what it touched,
@@ -3182,7 +3198,9 @@ The groups of the notes — the canvas arrows, `X` to check a card, `Alt+↑` to
 checklist item — come from `shortcuts-dialog/notes-shortcuts.ts`, which the sheet imports.
 They live with the notes rather than in the sheet because the canvas group is **derived from
 the key table that binds them** (`CANVAS_SHORTCUT_GROUP`, from `notes/canvas-keys.ts`): a
-key documented but not bound, or the reverse, is not possible.
+key documented but not bound, or the reverse, is not possible. The **HTTP** group
+(`http-shortcuts.ts`, beside it) is documentation only, as the editor's and the palette's are:
+sending, saving, and what a row of the rail does under `Alt` and the arrows, `F2` and `Delete`.
 
 The **global** group is the exception and is built by the dialog itself: those three
 combinations are the application's, they work with the window closed, and the quick-paste one

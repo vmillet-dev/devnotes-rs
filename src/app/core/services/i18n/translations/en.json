@@ -670,7 +670,17 @@
       "canvas": "Canvas",
       "editor": "Editor",
       "palette": "Quick paste",
-      "areas": "Areas"
+      "areas": "Areas",
+      "http": "HTTP"
+    },
+    "http": {
+      "send": "Send the request, or connect the WebSocket",
+      "save": "Save the request",
+      "moveRow": "Move a row of the rail among its neighbours",
+      "moveIn": "Put the row into the folder right above",
+      "moveOut": "Take the row out of its folder",
+      "rename": "Rename the row of the rail",
+      "delete": "Delete the row of the rail, once confirmed"
     },
     "global": {
       "palette": "Open the quick-paste palette",
@@ -2763,6 +2773,19 @@
       "title": "Collections",
       "newCollection": "New collection",
       "collection": "Collection",
+      "moved": {
+        "into": "{{name}} is now in {{other}}.",
+        "root": "{{name}} is now at the root of {{other}}.",
+        "before": "{{name}} is now before {{other}}.",
+        "after": "{{name}} is now after {{other}}.",
+        "refused": {
+          "first": "{{name}} is already first.",
+          "last": "{{name}} is already last.",
+          "noFolderAbove": "No folder right above {{name}} to move into.",
+          "atRoot": "{{name}} is already at the root of its collection.",
+          "collection": "A collection does not go inside another."
+        }
+      },
       "empty": "No collection yet.",
       "placeholders": {
         "collection": "Collection name",

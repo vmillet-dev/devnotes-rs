@@ -6,7 +6,7 @@ import { HttpTabsStore } from '@core/services/http/http-tabs.store';
 import { RAIL_WIDTH } from '@core/services/settings/app-settings.model';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { FakeHttpRepository } from '@testing/fake-http-repository';
-import { collection, request, sampleTree } from '@testing/http-tree.fixture';
+import { collection, folder, request, sampleTree } from '@testing/http-tree.fixture';
 import { provideAppTesting } from '@testing/testing.providers';
 import { HttpRailComponent } from './http-rail.component';
 
@@ -412,6 +412,165 @@ describe('HttpRailComponent', () => {
     await vi.waitFor(() => expect(el('[data-testid="http-delete-confirm"]')).not.toBeNull());
     expect(el('[data-testid="http-delete-count"]')).toBeNull();
     el<HTMLButtonElement>('[data-testid="http-delete-cancel"]').click();
+  });
+
+  /**
+   * With the pointer the drop target is shown; the keys showed nothing, and at one indent a
+   * row above a folder looks like a row inside it. The fake keeps no tree: the one Rust would
+   * answer after the move is set before the key.
+   */
+  describe('a move made with the keys', () => {
+    const alt = (id: string, key: string) =>
+      name(id).dispatchEvent(new KeyboardEvent('keydown', { key, altKey: true, bubbles: true }));
+    const marks = () =>
+      Object.fromEntries(
+        all('[data-testid="http-node"][data-moved]').map((node) => [
+          node.dataset['id'],
+          node.dataset['moved'],
+        ]),
+      );
+    const said = () => el('[data-testid="http-rail-moved"]').textContent?.trim();
+    /** Health in Factures, after Archives: what `Alt+→` on Health asks for. */
+    const healthInFactures = () => ({
+      collections: [
+        collection('API', [
+          folder('Auth', 'API', [request('Login', 'API', 'Auth'), request('Logout', 'API', 'Auth')]),
+          folder('Factures', 'API', [
+            folder('Archives', 'API', [request('Old', 'API', 'Archives')], 'Factures'),
+            request('Health', 'API', 'Factures', 'POST'),
+          ]),
+        ]),
+      ],
+    });
+
+    it('marks the row and the folder that now holds it, and says where it went', async () => {
+      expect(el('[data-testid="http-rail-moved"]').getAttribute('role')).toBe('status');
+      expect(said()).toBe('');
+
+      http.tree$ = healthInFactures();
+      alt('Health', 'ArrowRight');
+
+      await vi.waitFor(() => expect(marks()).toEqual({ Health: 'row', Factures: 'parent' }));
+      expect(said()).toBe('Health est maintenant dans Factures.');
+      expect(el('[data-testid="http-rail-moved"]').dataset['said']).toBe('into');
+      expect(row('Health').style.getPropertyValue('--depth')).toBe('2');
+    });
+
+    it('unfolds a folded folder that receives the row, instead of letting it vanish', async () => {
+      el<HTMLButtonElement>(
+        '[data-testid="http-node"][data-id="Factures"] [data-testid="http-node-twisty"]',
+      ).click();
+      await fixture.whenStable();
+      expect(row('Archives')).toBeNull();
+
+      http.tree$ = healthInFactures();
+      alt('Health', 'ArrowRight');
+
+      await vi.waitFor(() => expect(marks()).toEqual({ Health: 'row', Factures: 'parent' }));
+      expect(row('Archives')).not.toBeNull();
+    });
+
+    it('says the root of a collection, the row passed going up or down, and marks a collection alone', async () => {
+      http.tree$ = {
+        collections: [
+          collection('API', [
+            folder('Auth', 'API', [request('Logout', 'API', 'Auth')]),
+            request('Login', 'API'),
+          ]),
+        ],
+      };
+      alt('Login', 'ArrowLeft');
+      await vi.waitFor(() => expect(said()).toBe('Login est maintenant à la racine de API.'));
+      expect(marks()).toEqual({ Login: 'row', API: 'parent' });
+
+      http.tree$ = sampleTree();
+      await TestBed.inject(HttpCollectionsStore).load();
+      http.tree$ = {
+        collections: [
+          collection('API', [
+            folder('Auth', 'API', [request('Logout', 'API', 'Auth'), request('Login', 'API', 'Auth')]),
+          ]),
+        ],
+      };
+      alt('Logout', 'ArrowUp');
+      await vi.waitFor(() => expect(said()).toBe('Logout est maintenant avant Login.'));
+      expect(marks()).toEqual({ Logout: 'row', Auth: 'parent' });
+
+      http.tree$ = sampleTree();
+      await TestBed.inject(HttpCollectionsStore).load();
+      http.tree$ = { collections: [collection('Catalogue'), collection('API'), collection('Flux')] };
+      alt('API', 'ArrowDown');
+      await vi.waitFor(() => expect(said()).toBe('API est maintenant après Catalogue.'));
+      expect(marks()).toEqual({ API: 'row' });
+    });
+
+    it('says why a move cannot be made instead of doing nothing, each time it is asked', async () => {
+      const sentence = () => el('[data-testid="http-rail-moved"]').firstChild;
+
+      alt('Login', 'ArrowUp');
+      await fixture.whenStable();
+      expect(said()).toBe('Login est déjà en premier.');
+      // The same sentence twice is two things said: a new node, or no reader hears the second.
+      const first = sentence();
+      alt('Login', 'ArrowUp');
+      await fixture.whenStable();
+      expect(said()).toBe('Login est déjà en premier.');
+      expect(sentence()).not.toBe(first);
+
+      alt('Health', 'ArrowDown');
+      await fixture.whenStable();
+      expect(said()).toBe('Health est déjà en dernier.');
+      alt('Auth', 'ArrowRight');
+      await fixture.whenStable();
+      expect(said()).toBe('Aucun dossier juste au-dessus de Auth où entrer.');
+      alt('Health', 'ArrowLeft');
+      await fixture.whenStable();
+      expect(said()).toBe('Health est déjà à la racine de sa collection.');
+      alt('API', 'ArrowRight');
+      await fixture.whenStable();
+      expect(said()).toBe('Une collection ne se range pas dans une autre.');
+
+      expect(http.callsOf('move')).toEqual([]);
+      expect(http.callsOf('reorderCollection')).toEqual([]);
+      expect(marks()).toEqual({});
+    });
+
+    it('keeps the mark a moment, and starts its fade again for a row moved twice', async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      try {
+        const beat = () => el('.tree').dataset['beat'];
+        const before = beat();
+        http.tree$ = healthInFactures();
+        alt('Health', 'ArrowRight');
+        await vi.waitFor(() => expect(marks()).toEqual({ Health: 'row', Factures: 'parent' }));
+        expect(beat()).not.toBe(before);
+
+        // Up past Archives: the row keeps its mark, and only a change of beat fades it again.
+        const once = beat();
+        http.tree$ = {
+          collections: [
+            collection('API', [
+              folder('Factures', 'API', [
+                request('Health', 'API', 'Factures', 'POST'),
+                folder('Archives', 'API', [], 'Factures'),
+              ]),
+            ]),
+          ],
+        };
+        alt('Health', 'ArrowUp');
+        await vi.waitFor(() => expect(said()).toBe('Health est maintenant avant Archives.'));
+        expect(marks()).toEqual({ Health: 'row', Factures: 'parent' });
+        expect(beat()).not.toBe(once);
+
+        vi.advanceTimersByTime(2000);
+        await fixture.whenStable();
+        expect(marks()).toEqual({});
+        // What was said stays: a live region is heard when it changes, not while it lasts.
+        expect(said()).toBe('Health est maintenant avant Archives.');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 
   it('moves a row dragged onto another, and the click that ends the drag opens nothing', async () => {
