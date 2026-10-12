@@ -13,7 +13,7 @@
           "identifier": "e2e",
           "description": "The WebDriver harness. Declared inline so no file under capabilities/ can reach a release build.",
           "windows": ["main"],
-          "permissions": ["wdio:default", "wdio-webdriver:default"]
+          "permissions": ["wdio:default", "wdio-webdriver:default", "core:window:allow-set-focus"]
         }
       ]
     }

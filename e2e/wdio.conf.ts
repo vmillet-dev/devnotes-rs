@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -32,6 +33,42 @@ const logLevel = (process.env['E2E_LOG_LEVEL'] ?? 'warn') as NonNullable<Webdriv
 
 /** The refresh below undoes what a previous file left behind, and there is none yet. */
 let aFileHasRun = false;
+
+/**
+ * ⚠️ macOS does not bring forward an application another process started, and WebKit matches
+ * `:focus` in the active window only: a focused field would wear its resting style.
+ */
+async function activate(browser: WebdriverIO.Browser): Promise<void> {
+  if (process.platform !== 'darwin') return;
+
+  const active = () => browser.execute(() => document.hasFocus());
+  const settled = () => browser.waitUntil(active, { timeout: 3_000 }).catch(() => false);
+  console.log(`[activate] before: ${await active()}`);
+
+  await browser.executeAsync((done: (value: unknown) => void) => {
+    const tauri = (window as unknown as Record<string, any>)['__TAURI__'];
+    tauri.window
+      .getCurrentWindow()
+      .setFocus()
+      .then(() => done(null))
+      .catch((error: unknown) => done(String(error)));
+  });
+  await settled();
+  console.log(`[activate] after setFocus: ${await active()}`);
+
+  if (!(await active())) {
+    try {
+      execFileSync('osascript', [
+        '-e',
+        'tell application "System Events" to set frontmost of (first process whose name is "devnotes") to true',
+      ]);
+    } catch (error) {
+      console.log(`[activate] System Events refused: ${String(error)}`);
+    }
+    await settled();
+    console.log(`[activate] after System Events: ${await active()}`);
+  }
+}
 
 export const config: WebdriverIO.Config = {
   runner: 'local',
@@ -74,6 +111,8 @@ export const config: WebdriverIO.Config = {
    */
   async before() {
     const { browser } = await import('@wdio/globals');
+
+    await activate(browser);
 
     // Never before the first file: there is nothing to clear, and the application is
     // still seeding its samples. `SampleNotesService` writes its marker before the notes,
