@@ -160,13 +160,19 @@ export async function eventually<T>(
 ): Promise<T> {
   let seen: T | undefined;
 
-  await browser.waitUntil(
-    async () => {
-      seen = await read();
-      return matches(seen);
-    },
-    { timeout: 10_000, timeoutMsg: `${what} — last saw ${JSON.stringify(seen)}` },
-  );
+  try {
+    await browser.waitUntil(
+      async () => {
+        seen = await read();
+        return matches(seen);
+      },
+      { timeout: 10_000 },
+    );
+  } catch (cause) {
+    // Written once the wait is over: a `timeoutMsg` is built before it starts, and only ever
+    // said « last saw undefined ».
+    throw new Error(`${what} — last saw ${JSON.stringify(seen)}`, { cause });
+  }
 
   return read();
 }
