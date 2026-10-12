@@ -39,6 +39,19 @@
         [placeholder]="'tools.diff.structured.placeholder' | transloco"
         (input)="onInput(side === 'a' ? 'a' : 'b', $event)"
       ></textarea>
+      @if (notStructured().includes(side === 'a' ? 'a' : 'b')) {
+        <p class="offer" role="status" [attr.data-testid]="'structured-diff-not-structured-' + side">
+          {{ 'tools.diff.structured.notStructured' | transloco }}
+          <button
+            type="button"
+            class="as-text"
+            [attr.data-testid]="'structured-diff-as-text-' + side"
+            (click)="asText.emit()"
+          >
+            {{ 'tools.diff.structured.asText' | transloco }}
+          </button>
+        </p>
+      }
       @if (unreadable()?.side === side) {
         <p class="problem" role="status" [attr.data-testid]="'structured-diff-unreadable-' + side">
           {{
@@ -200,8 +213,8 @@
       {{ 'tools.diff.structured.xmlNote' | transloco }}
     </p>
   }
-} @else if (!unreadable()) {
-  <p class="note">{{ 'tools.diff.structured.empty' | transloco }}</p>
+} @else if (!unreadable() && notStructured().length === 0) {
+  <p class="note" data-testid="structured-diff-empty">{{ 'tools.diff.structured.empty' | transloco }}</p>
 }
 
 @if (picking()) {

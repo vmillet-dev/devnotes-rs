@@ -1968,6 +1968,51 @@ describe('The tools', () => {
       await $(`${testid('choice-panel-structured-diff-format-b')} [data-option-id="auto"]`).click();
       await $(testid('structured-diff-unreadable-b')).waitForDisplayed({ timeout: 5_000, reverse: true });
     });
+
+    /**
+     * The text tab's sample — an nginx file — left under « Structuré » was announced « lu comme
+     * YAML » and answered « 1 modification »: one string changed into another.
+     */
+    it('says a text is no structure rather than reading it as YAML, and loads the sample of the tab on screen', async () => {
+      const tab = (id: string) => $(`${testid('segmented-diff-mode')} [data-segment-id="${id}"]`);
+      await tab('text').click();
+      await $(testid('tool-sample')).click();
+      await eventually(
+        () => $(testid('text-diff-a')).getValue(),
+        (text) => text.includes('server {'),
+        'the sample of the text tab',
+      );
+
+      // The same two texts under « Données », which says what it compares: nothing here is a document.
+      await tab('structured').click();
+      await $(testid('diff-data-line')).waitForDisplayed({ timeout: 5_000 });
+      await $(testid('structured-diff-not-structured-a')).waitForDisplayed({ timeout: 10_000 });
+      expect(await $(testid('structured-diff-not-structured-b')).isExisting()).toBe(true);
+      expect(await $(testid('structured-diff-read-a')).isExisting()).toBe(false);
+      expect(await $(testid('structured-diff-modified')).isExisting()).toBe(false);
+
+      // Its button goes back to the text diff, both sides kept.
+      await $(testid('structured-diff-as-text-a')).click();
+      await $(testid('text-diff-a')).waitForDisplayed({ timeout: 5_000 });
+      expect(await $(testid('text-diff-a')).getValue()).toContain('server {');
+      expect(await $(testid('text-diff-b')).getValue()).toContain('server {');
+
+      // « Exemple » under « Données » is that tab's own: a YAML against its JSON, one value apart.
+      await tab('structured').click();
+      await $(testid('tool-sample')).click();
+      await eventually(
+        async () =>
+          [
+            ...(await readEach(testid('structured-diff-read-a'), '@data-format')),
+            ...(await readEach(testid('structured-diff-read-b'), '@data-format')),
+          ].join(),
+        (formats) => formats === 'yaml,json',
+        'each side of the sample read by its shape',
+      );
+      expect(await $(testid('structured-diff-a')).getValue()).not.toContain('server {');
+      expect(await readEach(testid('structured-diff-change'), '@data-path')).toEqual(['$.version']);
+      await $(testid('tool-clear')).click();
+    });
   });
 
   /** Filled through the tool's own fields, so Rust answers it as it would answer typing. */
