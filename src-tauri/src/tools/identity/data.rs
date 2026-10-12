@@ -1,5 +1,8 @@
-//! The lists an identity is drawn from: pools of names an origin, and a country's places and
-//! streets. ⚠️ Files shipped beside the application (`resources/identity/`, a Tauri resource),
+//! The lists an identity is drawn from: the names, and a country's places and streets.
+//! ⚠️ **The names are one list**: no origin and no country is attached to a name — not in the
+//! data, not in a file's name, not in the order of the file, which is alphabetical. Sorting
+//! people's names by where they come from is not something this tool does; what is a
+//! country's own is its places, its formats and its numbers. ⚠️ Files shipped beside the application (`resources/identity/`, a Tauri resource),
 //! read once and kept for the session: a name is corrected or a list completed without
 //! building the application again. What was a constant is a file someone can remove, so each
 //! list is checked when read, and a missing or damaged one is said — nothing divides by the
@@ -16,8 +19,8 @@ use super::Country;
 use crate::closed_enum::closed_enum;
 
 /// Every list together, in bytes. A megabyte of names a country was the obvious way, and
-/// refused: a pool of two hundred names gives thousands of people, and a country is a mix of
-/// pools, not a list of its own.
+/// refused: a few hundred given names and a thousand surnames give hundreds of thousands of
+/// people.
 #[cfg(test)]
 pub(super) const BUDGET: u64 = 100 * 1024;
 
@@ -34,81 +37,22 @@ closed_enum! {
 #[serde(rename_all = "camelCase")]
 pub struct UnreadableList {
     pub problem: ListProblem,
-    /// As it is named under the folder: `pools/french.txt`.
+    /// As it is named under the folder: `names.txt`, `places/fr.txt`.
     pub file: String,
     pub folder: String,
 }
 
-/// Names follow languages and histories, not borders: a pool an origin, shared by every
-/// country whose profile draws from it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(super) enum Pool {
-    French,
-    Arabic,
-    Portuguese,
-    WestAfrican,
-    Vietnamese,
-    English,
-    German,
-    Dutch,
-    Spanish,
-    Italian,
-    Polish,
-    Nordic,
-    Turkish,
-    SouthAsian,
-}
+/// The one file of names, under the folder.
+const NAMES: &str = "names.txt";
 
-impl Pool {
-    pub(super) const ALL: [Self; 14] = [
-        Self::French,
-        Self::Arabic,
-        Self::Portuguese,
-        Self::WestAfrican,
-        Self::Vietnamese,
-        Self::English,
-        Self::German,
-        Self::Dutch,
-        Self::Spanish,
-        Self::Italian,
-        Self::Polish,
-        Self::Nordic,
-        Self::Turkish,
-        Self::SouthAsian,
-    ];
-
-    fn file(self) -> &'static str {
-        match self {
-            Self::French => "pools/french.txt",
-            Self::Arabic => "pools/arabic.txt",
-            Self::Portuguese => "pools/portuguese.txt",
-            Self::WestAfrican => "pools/west_african.txt",
-            Self::Vietnamese => "pools/vietnamese.txt",
-            Self::English => "pools/english.txt",
-            Self::German => "pools/german.txt",
-            Self::Dutch => "pools/dutch.txt",
-            Self::Spanish => "pools/spanish.txt",
-            Self::Italian => "pools/italian.txt",
-            Self::Polish => "pools/polish.txt",
-            Self::Nordic => "pools/nordic.txt",
-            Self::Turkish => "pools/turkish.txt",
-            Self::SouthAsian => "pools/south_asian.txt",
+/// The surname as the person bears it. ⚠️ One in `-ski`, `-cki` or `-dzki` is an adjective:
+/// a woman's ends in `-a`. The grammar of the name, read off its ending and nothing else.
+pub(super) fn borne(surname: &str, female: bool) -> String {
+    match surname.strip_suffix('i') {
+        Some(stem) if female && ["sk", "ck", "dzk"].iter().any(|end| stem.ends_with(end)) => {
+            format!("{stem}a")
         }
-    }
-
-    /// The surname as the person bears it. ⚠️ A Polish surname in `-ski`, `-cki` or `-dzki` is
-    /// an adjective: a woman's ends in `-a`, in Poland and wherever she went.
-    pub(super) fn borne(self, surname: &str, female: bool) -> String {
-        match surname.strip_suffix('i') {
-            Some(stem)
-                if self == Self::Polish
-                    && female
-                    && ["sk", "ck", "dzk"].iter().any(|end| stem.ends_with(end)) =>
-            {
-                format!("{stem}a")
-            }
-            _ => surname.to_owned(),
-        }
+        _ => surname.to_owned(),
     }
 }
 
@@ -223,18 +167,11 @@ fn land(text: &'static str) -> Land {
 
 /// Every list, as read from the folder the application ships.
 pub(super) struct Library {
-    pools: Vec<(Pool, Names)>,
+    pub(super) names: Names,
     lands: Vec<(Country, Land)>,
 }
 
 impl Library {
-    pub(super) fn names(&self, wanted: Pool) -> &Names {
-        self.pools
-            .iter()
-            .find(|(pool, _)| *pool == wanted)
-            .map_or(&self.pools[0].1, |(_, names)| names)
-    }
-
     pub(super) fn land(&self, wanted: Country) -> &Land {
         self.lands
             .iter()
@@ -272,13 +209,9 @@ pub(super) fn read(root: &Path) -> Result<Library, UnreadableList> {
         folder: shown(root),
     };
     let mut library = Library {
-        pools: Vec::new(),
+        names: names(text(root, NAMES)?).ok_or_else(|| damaged(NAMES))?,
         lands: Vec::new(),
     };
-    for pool in Pool::ALL {
-        let names = names(text(root, pool.file())?).ok_or_else(|| damaged(pool.file()))?;
-        library.pools.push((pool, names));
-    }
     for country in Country::ALL {
         let file = land_file(country);
         let land = land(text(root, &file)?);
@@ -319,16 +252,13 @@ pub(super) fn shipped() -> &'static Library {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::{HashMap, HashSet};
     use std::fs;
 
     use super::*;
 
     /// Every file the application ships, with its name under the folder.
     fn files() -> Vec<String> {
-        Pool::ALL
-            .iter()
-            .map(|pool| pool.file().to_owned())
+        std::iter::once(NAMES.to_owned())
             .chain(Country::ALL.iter().map(|country| land_file(*country)))
             .collect()
     }
@@ -336,9 +266,7 @@ mod tests {
     /// A copy of the shipped folder, to damage.
     fn copy() -> tempfile::TempDir {
         let folder = tempfile::tempdir().unwrap();
-        for directory in ["pools", "places"] {
-            fs::create_dir(folder.path().join(directory)).unwrap();
-        }
+        fs::create_dir(folder.path().join("places")).unwrap();
         for file in files() {
             fs::copy(shipped_folder().join(&file), folder.path().join(&file)).unwrap();
         }
@@ -358,17 +286,25 @@ mod tests {
         );
     }
 
-    /// ⚠️ What is shipped is what is read: a file beside the others that no pool and no country
-    /// names would be dead weight in every installer.
+    /// ⚠️ What is shipped is what is read — and the names are **one file**: a second one beside
+    /// it would be names sorted by something, which is what this folder does not do.
     #[test]
-    fn the_shipped_folder_holds_the_lists_and_nothing_else() {
-        let mut found = Vec::new();
-        for directory in ["pools", "places"] {
-            for entry in fs::read_dir(shipped_folder().join(directory)).unwrap() {
-                let name = entry.unwrap().file_name().to_string_lossy().into_owned();
-                found.push(format!("{directory}/{name}"));
-            }
-        }
+    fn the_shipped_folder_holds_one_file_of_names_a_file_a_country_and_nothing_else() {
+        let entries = |folder: std::path::PathBuf| -> Vec<String> {
+            fs::read_dir(folder)
+                .unwrap()
+                .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+                .collect()
+        };
+        let mut found: Vec<String> = entries(shipped_folder())
+            .into_iter()
+            .filter(|name| name != "places")
+            .chain(
+                entries(shipped_folder().join("places"))
+                    .into_iter()
+                    .map(|name| format!("places/{name}")),
+            )
+            .collect();
         let mut expected = files();
         found.sort();
         expected.sort();
@@ -380,16 +316,16 @@ mod tests {
     #[test]
     fn a_list_that_is_missing_is_named_with_where_it_was_looked_for() {
         let folder = copy();
-        fs::remove_file(folder.path().join("pools/italian.txt")).unwrap();
+        fs::remove_file(folder.path().join("places/it.txt")).unwrap();
 
         let Err(unreadable) = read(folder.path()) else {
-            panic!("a pool is missing");
+            panic!("a country's places are missing");
         };
         assert_eq!(
             unreadable,
             UnreadableList {
                 problem: ListProblem::Missing,
-                file: "pools/italian.txt".to_owned(),
+                file: "places/it.txt".to_owned(),
                 folder: folder.path().to_string_lossy().into_owned(),
             }
         );
@@ -409,16 +345,13 @@ mod tests {
             })
         };
 
-        // A pool with no surname, one with a list left empty, and one that is no text.
+        // Names with no surname, with a list left empty, and a file that is no text.
         for content in [
             &b"f:Anna\nm:Jan\n"[..],
             b"f:Anna\nm: , \ns:Nowak\n",
             &[0xff, 0xfe],
         ] {
-            assert_eq!(
-                damaged_by("pools/polish.txt", content).as_deref(),
-                Some("pools/polish.txt")
-            );
+            assert_eq!(damaged_by(NAMES, content).as_deref(), Some(NAMES));
         }
         // A country with no place, a place cut short, and a place whose streets are not there.
         for content in [
@@ -438,7 +371,7 @@ mod tests {
     #[test]
     fn a_list_saved_by_an_editor_is_still_read() {
         let folder = copy();
-        let file = folder.path().join("pools/nordic.txt");
+        let file = folder.path().join(NAMES);
         let saved = format!(
             "\u{feff}{}",
             fs::read_to_string(&file).unwrap().replace('\n', "\r\n")
@@ -446,53 +379,45 @@ mod tests {
         fs::write(&file, saved).unwrap();
 
         let library = read(folder.path()).ok().unwrap();
-        assert_eq!(library.names(Pool::Nordic).female[0], "Anna");
-        assert_eq!(
-            library.names(Pool::Nordic).surnames,
-            shipped().names(Pool::Nordic).surnames
-        );
+        assert_eq!(library.names.female, shipped().names.female);
+        assert_eq!(library.names.surnames, shipped().names.surnames);
     }
 
+    /// The order a list is kept in: its letters, an accent or a stroke aside.
+    fn rank(name: &str) -> (String, &str) {
+        (deunicode::deunicode(name).to_lowercase(), name)
+    }
+
+    /// ⚠️ Alphabetical, and nothing else: an order that groups the names would say where they
+    /// come from, in a file that says it of none. Each name is there once.
     #[test]
-    fn a_pool_has_enough_names_of_each_kind_each_once_and_none_empty() {
-        for pool in Pool::ALL {
-            let names = shipped().names(pool);
-            for (kind, list) in [
-                ("female", &names.female),
-                ("male", &names.male),
-                ("surnames", &names.surnames),
-            ] {
-                assert!(list.len() >= 40, "{pool:?} has {} {kind}", list.len());
-                assert_eq!(
-                    list.iter().collect::<HashSet<_>>().len(),
-                    list.len(),
-                    "{pool:?} repeats one of its {kind}"
+    fn the_names_are_in_alphabetical_order_each_once_and_enough_of_each_kind() {
+        let names = &shipped().names;
+        for (kind, list, at_least) in [
+            ("female", &names.female, 400),
+            ("male", &names.male, 400),
+            ("surnames", &names.surnames, 800),
+        ] {
+            assert!(list.len() >= at_least, "{} {kind}", list.len());
+            for pair in list.windows(2) {
+                assert!(
+                    rank(pair[0]) < rank(pair[1]),
+                    "{kind}: « {} » is before « {} »",
+                    pair[0],
+                    pair[1]
                 );
             }
         }
     }
 
-    /// A surname says which pool it came from: that is how a mix is counted.
     #[test]
-    fn no_surname_sits_in_two_pools() {
-        let mut seen: HashMap<&str, Pool> = HashMap::new();
-        for pool in Pool::ALL {
-            for surname in &shipped().names(pool).surnames {
-                if let Some(other) = seen.insert(surname, pool) {
-                    panic!("{surname} is in {other:?} and in {pool:?}");
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn a_polish_surname_that_is_an_adjective_follows_the_person() {
-        assert_eq!(Pool::Polish.borne("Kowalski", true), "Kowalska");
-        assert_eq!(Pool::Polish.borne("Nowicki", true), "Nowicka");
-        assert_eq!(Pool::Polish.borne("Zawadzki", true), "Zawadzka");
-        assert_eq!(Pool::Polish.borne("Kowalski", false), "Kowalski");
-        assert_eq!(Pool::Polish.borne("Nowak", true), "Nowak");
-        assert_eq!(Pool::Italian.borne("Rossi", true), "Rossi");
+    fn a_surname_that_is_an_adjective_follows_the_person() {
+        assert_eq!(borne("Kowalski", true), "Kowalska");
+        assert_eq!(borne("Nowicki", true), "Nowicka");
+        assert_eq!(borne("Zawadzki", true), "Zawadzka");
+        assert_eq!(borne("Kowalski", false), "Kowalski");
+        assert_eq!(borne("Nowak", true), "Nowak");
+        assert_eq!(borne("Rossi", true), "Rossi");
     }
 
     #[test]

@@ -2914,7 +2914,7 @@ export type UmaskReading = { kind: "empty" } | { kind: "read"; file: Mode; direc
 /**  A list that could not be used: which one, and where it was looked for. */
 export type UnreadableList = {
 	problem: ListProblem,
-	/**  As it is named under the folder: `pools/french.txt`. */
+	/**  As it is named under the folder: `names.txt`, `places/fr.txt`. */
 	file: string,
 	folder: string,
 };

@@ -983,34 +983,32 @@ regex sheet runs through `RegExp` in its spec. ⚠️ The Mustache sheet's `{{�
 chunk words, never main translation strings: Transloco would replace an unknown `{{name}}` with
 nothing.
 
-**A fictitious identity is drawn from pools of names and a profile a country** — decided by a
-spike before any list was written, because the obvious way was refused: a few thousand names a
-country, hard-coded, is a megabyte of test data in the binary.
+**A fictitious identity is drawn from one list of names and a profile a country** — decided by
+a spike before any list was written, because the obvious way was refused: a few thousand names
+a country, hard-coded, is a megabyte of test data in the binary.
 
-- **Pools shared between countries, not a pile of lists a country.** Names follow languages and
-  histories, not borders: a pool an origin (French, English, German, Dutch, Spanish, Portuguese,
-  Italian, Polish, Nordic, Arabic, Turkish, West African, Vietnamese, South Asian), sixty given
-  names a sex and eighty surnames each — 60 × 80 is 4 800 full names a sex from one pool, far
-  more than test data asks; the lists do not have to be long, they have to be well chosen. **A
-  country is a profile**: a weighted mix of pools (France draws mostly from the French one, and
-  from the Arabic, the Portuguese, the West African and the Vietnamese in proportion), about
-  twenty-five places of its own (postcode, city, region), thirty street names, and its formats
-  — postcode, phone, the order of an address, its account number and its identifiers.
-  Diversity inside a country is the mix itself, and one more country costs a profile and its
-  places, not three hundred names.
-- **The budget is 100 KB for every list together**, held by a test that sums the files. What
-  the design comes to, counted on the lists as planned: fourteen pools of 200 names at about
-  eight bytes a name, 22 KB; thirteen countries of 25 places and 30 streets, 16 KB; under
-  40 KB in all, so the 150 KB first put forward was twice what is needed and 100 KB leaves
-  room for the countries that follow. ⚠️ These are sums over planned lists, not a measured
-  binary: the test of the tool measures the real files.
+- ⚠️ **One list of names, with no origin and no country attached to any.** The given names of
+  women, those of men and the surnames are a list each, in one file, in alphabetical order:
+  every country draws from it, and any name may come out anywhere. The spike had first sorted
+  them into « pools » an origin, a country drawing from a weighted mix of pools, with tests
+  holding each origin to its share. **That was withdrawn**: sorting people's names by where
+  they come from, or by the country they live in, is not something this tool does. Nothing
+  says it of a name any more — not the data, not a file's name, not the order of a file, not
+  a test. **A country is a profile** of what is its own: about twenty-five places (postcode,
+  city, region), thirty street names, and its formats — postcode, phone, the order of an
+  address, its account number and its identifiers. One more country costs a profile and its
+  places, not a list of names.
+- **The budget is 100 KB for every list together**, held by a test that sums the files: about
+  2 500 names at seven bytes a name, 18 KB, and thirteen countries of 25 places and 30
+  streets, 18 KB — 36 KB in all, so the 150 KB first put forward was four times what is
+  needed and 100 KB leaves room for the countries that follow.
 - **What was ruled out, and on what.** One pack a country (150 given names a sex, 150 surnames,
-  40 places): about 5 KB a country and the same French or Arabic names written again under
-  every country that has them — and no diversity inside a country but what each pack repeats.
-  Made-up names (syllables, Markov chains) cost nothing and look like nobody: kept for nothing.
-  The `fake` crate: about ten locales, none of the identifiers this tool exists for, and its
-  own generator beside the seeded `Draw` the tools already have. ⚠️ Its cost in the binary was
-  **not** measured: that needs a dependency added, which is not done unasked.
+  40 places): about 5 KB a country, the same names written again under every country — and
+  names sorted by country, which is not done. Made-up names (syllables, Markov chains) cost
+  nothing and look like nobody: kept for nothing. The `fake` crate: about ten locales, none
+  of the identifiers this tool exists for, and its own generator beside the seeded `Draw` the
+  tools already have. ⚠️ Its cost in the binary was **not** measured: that needs a dependency
+  added, which is not done unasked.
 - **Plain text, read once.** A list is a text file — its bytes and nothing more — split when
   read. The same names as a Rust table of `&str` cost sixteen bytes a name on top of the
   text, half as much again. The spike took them into the binary with `include_str!`; they
@@ -1020,9 +1018,9 @@ country, hard-coded, is a megabyte of test data in the binary.
   copied. The script that would cut the open data of the statistics offices (INSEE, ONS,
   Destatis, the US Census) to its most frequent names is **not written**: it downloads files,
   which is asked for first. Until then a name's frequency is a judgement, not a figure.
-- **Latin script only**, said plainly: an Arabic, a Vietnamese or a South Asian name is
-  written as it is romanised. Japan, China and Greece wait for names in their own script with
-  a romanisation beside them — the second one feeding the e-mail address.
+- **Latin script only**, said plainly: a name from a language written otherwise is written as
+  it is romanised. Names in their own script wait for a romanisation beside them — the second
+  one feeding the e-mail address.
 - **Valid means computed, and derived from the person where the number encodes them**: an
   identifier is never drawn beside the identity it belongs to. The IBAN's mod 97 everywhere,
   and the national key inside it where there is one (France's RIB key, Belgium, Spain, Italy,
@@ -1044,20 +1042,20 @@ country, hard-coded, is a megabyte of test data in the binary.
 `tools/catalogue/identity/`). A pure function of the options and a seed behind one command.
 Four files under `tools/identity/`, each one thing:
 
-| File         | What it holds                                                                                            |
-| ------------ | -------------------------------------------------------------------------------------------------------- |
-| `data.rs`    | The lists — fourteen pools of names, a file of places and streets a country — read from files it checks  |
-| `profile.rs` | A country in a few lines: its mix of pools, the order of an address, the shape of a phone number, a firm |
-| `numbers.rs` | The keys, a function each, each held to an example its country publishes                                 |
-| `papers.rs`  | The numbers of a person, a firm and an account, a country at a time, built on `numbers.rs`               |
+| File         | What it holds                                                                                              |
+| ------------ | ---------------------------------------------------------------------------------------------------------- |
+| `data.rs`    | The lists — one file of names, a file of places and streets a country — read from files it checks          |
+| `profile.rs` | A country in a few lines: the order of an address, the shape of a phone number, a firm — nothing of a name |
+| `numbers.rs` | The keys, a function each, each held to an example its country publishes                                   |
+| `papers.rs`  | The numbers of a person, a firm and an account, a country at a time, built on `numbers.rs`                 |
 
-The lists weigh **37 KB** for the thirteen countries, held under `BUDGET` by a test that
+The lists weigh **36 KB** for the thirteen countries, held under `BUDGET` by a test that
 sums the files.
 
 ⚠️ **The lists are files beside the application, not part of it** — asked for so that a name
 is corrected or a list completed without building the application again.
 
-- **A Tauri resource**: `src-tauri/resources/identity/` (`pools/*.txt`, `places/*.txt`) is
+- **A Tauri resource**: `src-tauri/resources/identity/` (`names.txt`, `places/*.txt`) is
   declared in `bundle.resources` and lands in `<resources>/identity/` — beside the executable
   on Windows and in a development or e2e build (`tauri-build` copies it into the target
   directory), under the package's own folder on Linux. The two commands take the
@@ -1068,15 +1066,15 @@ is corrected or a list completed without building the application again.
   pointing into it. ⚠️ Only a reading that was whole is kept: a file put back is found at the
   next draw, without a restart; a file edited while the application runs waits for the next
   launch.
-- ⚠️ **A list can now be missing or damaged, and is checked when read** (`data::read`): a
-  pool has names of each kind, a country has places — every part of each — and streets under
+- ⚠️ **A list can now be missing or damaged, and is checked when read** (`data::read`): the
+  names have a list of each kind, a country has places — every part of each — and streets under
   each place's own tag. The first file that fails is answered with where it was looked for
   (`UnreadableList`: `missing` or `damaged`, the file, the folder), and the tool says so in
   place of a card (`IdentityOutcome::Unreadable`) — an export writes nothing
   (`PeopleExport::Unreadable`). Nothing divides by the length of an empty list. A byte-order
   mark and Windows line endings, which an editor leaves, are read through.
-- **What is shipped is what is read**: a test holds the folder to the files a pool or a
-  country names, and nothing else; the tests draw from the very files that are shipped. The
+- **What is shipped is what is read**: a test holds the folder to one file of names and a
+  file a country, and nothing else; the tests draw from the very files that are shipped. The
   e2e scenario of the tool runs against the assembled application: it fails if they are not.
 - **Not done**: lists of the user's own beside the shipped ones.
 
@@ -1095,9 +1093,10 @@ is corrected or a list completed without building the application again.
   streets and « SRL », Antwerp Dutch ones and « BV ». **An address is written in the
   country's order** (`Address::formatted`): « Hauptstraße 12, 10115 Berlin », « 12 High
   Street, Manchester M1 4BT », « 12 Main Street, Chicago, IL 60601 ».
-- ⚠️ **A Polish surname in `-ski`, `-cki` or `-dzki` follows the person** (`Pool::borne`): a
-  woman's ends in `-a`, in Poland and in every country whose mix draws from that pool. **No
-  surname sits in two pools** — a test holds it — which is how a mix is counted.
+- ⚠️ **A surname in `-ski`, `-cki` or `-dzki` follows the person** (`data::borne`): a
+  woman's ends in `-a`. The grammar of the name, read off its ending and nothing else — it
+  sorts no one. **The same seed gives the same names whatever the country** — a test holds
+  it: the names are drawn before anything a country has of its own.
 - **One implementation generates and verifies**: the IBAN's two digits and the Luhn digit are
   `tools/checks.rs`'s own functions, and the test asks the checks tool whether each IBAN is
   valid — its length for the country and, in France, the RIB key — in every country that has

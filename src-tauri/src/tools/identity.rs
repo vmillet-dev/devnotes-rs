@@ -1,7 +1,7 @@
 //! A fictitious person whose every identifier passes its own check: test data for a form or a
-//! database, drawn from a seed so that the same one comes back. Names come from pools shared
-//! between countries — files shipped beside the application and read there
-//! (`identity/data.rs`) — and a country is a profile — a mix of pools, its
+//! database, drawn from a seed so that the same one comes back. ⚠️ The names are one list for
+//! every country, with no origin attached to any — a file shipped beside the application and
+//! read there (`identity/data.rs`) — and a country is a profile — its
 //! places, its formats (`identity/profile.rs`) — with the numbers it gives a person, a firm
 //! and an account (`identity/papers.rs`), each key computed in `identity/numbers.rs`. ⚠️ An
 //! identifier that encodes the person is computed from them, never drawn beside them: the
@@ -18,7 +18,7 @@ use chrono::{Datelike, NaiveDate};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-use self::data::{Land, Library, Names, Place, Pool};
+use self::data::{Land, Library, Place};
 pub use self::data::{ListProblem, UnreadableList};
 use self::papers::Bearer;
 use self::profile::Profile;
@@ -261,23 +261,6 @@ impl<'a> Lists<'a> {
             land: library.land(country),
         }
     }
-
-    fn names(&self, wanted: Pool) -> &Names {
-        self.library.names(wanted)
-    }
-}
-
-/// One of the pools the country draws from, by its share.
-fn pool(mix: &[(Pool, u32)], draw: &mut Draw) -> Pool {
-    let total: u32 = mix.iter().map(|(_, share)| share).sum();
-    let mut at = u32::try_from(draw.below(usize::try_from(total).unwrap_or(1))).unwrap_or(0);
-    for (pool, share) in mix {
-        if at < *share {
-            return *pool;
-        }
-        at -= share;
-    }
-    mix[0].0
 }
 
 fn days_in(year: i32, month: u32) -> u32 {
@@ -314,17 +297,12 @@ fn person(lists: &Lists<'_>, request: &IdentityRequest, year: i32, draw: &mut Dr
     };
     let sex = request.sex.unwrap_or(drawn_sex);
 
-    let origin = pool(profile.pools, draw);
-    let surname = origin.borne(draw.pick(&lists.names(origin).surnames), sex == Sex::Female);
-    // A given name mostly of the surname's own pool, sometimes of the country's first one.
-    let given_from = if draw.chance(0.25) {
-        profile.pools[0].0
-    } else {
-        origin
-    };
+    // ⚠️ From the one list, whatever the country: a name says nothing of where its bearer lives.
+    let names = &lists.library.names;
+    let surname = data::borne(draw.pick(&names.surnames), sex == Sex::Female);
     let given = match sex {
-        Sex::Female => &lists.names(given_from).female,
-        Sex::Male => &lists.names(given_from).male,
+        Sex::Female => &names.female,
+        Sex::Male => &names.male,
     };
     // Three draws whatever the list and however many names are kept: one already taken is
     // stepped past, not drawn again.
@@ -1344,49 +1322,59 @@ mod tests {
         assert!(women.iter().all(|sex| *sex == Sex::Female));
     }
 
-    /// Diversity is checked, not hoped for: in every country, every pool its profile mixes
-    /// shows, in about the stated proportions.
+    /// ⚠️ A name does not follow the country: the same seed gives the same names in each, and
+    /// nothing a country has of its own — its places, its numbers — is drawn before them.
     #[test]
-    fn two_thousand_people_of_each_country_carry_surnames_from_every_pool_in_about_its_share() {
-        let pools: Vec<(Pool, &Names)> = Pool::ALL
-            .iter()
-            .map(|pool| (*pool, data::shipped().names(*pool)))
-            .collect();
-        // A Polish woman's surname is looked up as the list writes it.
-        let origin = |surname: &str| {
-            let listed = surname
-                .strip_suffix('a')
-                .map_or_else(|| surname.to_owned(), |stem| format!("{stem}i"));
-            let Some((pool, _)) = pools.iter().find(|(_, names)| {
-                names.surnames.contains(&surname) || names.surnames.contains(&listed.as_str())
-            }) else {
-                panic!("{surname} is in no pool");
-            };
-            *pool
+    fn the_same_seed_gives_the_same_names_whatever_the_country() {
+        let named = |country| -> Vec<(String, Vec<String>)> {
+            crowd(country, 200)
+                .into_iter()
+                .map(|person| (person.surname, person.given_names))
+                .collect()
         };
+        let french = named(Country::Fr);
 
         for country in Country::ALL {
-            let mut counts: HashMap<Pool, u32> = HashMap::new();
-            for person in crowd(country, 2000) {
-                *counts.entry(origin(&person.surname)).or_default() += 1;
-            }
-
-            let mix = profile::of(country).pools;
-            assert_eq!(counts.len(), mix.len(), "{country}: {counts:?}");
-            for (pool, share) in mix {
-                let seen = counts.get(pool).copied().unwrap_or(0);
-                let expected = share * 20;
-                assert!(
-                    seen * 2 > expected && seen < expected * 2,
-                    "{country} {pool:?}: {seen} of 2000, about {expected} expected"
-                );
-            }
+            assert_eq!(named(country), french, "{country}");
         }
     }
 
+    /// The whole list is there to be drawn: most of it comes out in a few thousand people.
     #[test]
-    fn a_polish_woman_bears_the_surname_in_its_feminine() {
-        let women: Vec<String> = crowd(Country::Pl, 400)
+    fn a_few_thousand_people_bring_out_most_of_the_names() {
+        let names = &data::shipped().names;
+        let people = crowd(Country::Fr, 4000);
+        let surnames: HashSet<&str> = people
+            .iter()
+            .map(|person| person.surname.as_str())
+            .collect();
+        let given: HashSet<&str> = people
+            .iter()
+            .flat_map(|person| person.given_names.iter().map(String::as_str))
+            .collect();
+
+        assert!(
+            surnames.len() * 10 > names.surnames.len() * 9,
+            "{} of {} surnames",
+            surnames.len(),
+            names.surnames.len()
+        );
+        let all = names
+            .female
+            .iter()
+            .chain(&names.male)
+            .collect::<HashSet<_>>()
+            .len();
+        assert!(
+            given.len() * 10 > all * 9,
+            "{} of {all} given names",
+            given.len()
+        );
+    }
+
+    #[test]
+    fn a_woman_bears_a_surname_in_ski_in_its_feminine() {
+        let women: Vec<String> = crowd(Country::Fr, 4000)
             .into_iter()
             .filter(|person| person.sex == Sex::Female)
             .map(|person| person.surname)
@@ -1606,7 +1594,7 @@ mod tests {
             panic!("an empty folder holds no list");
         };
         assert_eq!(list.problem, ListProblem::Missing);
-        assert_eq!(list.file, "pools/french.txt");
+        assert_eq!(list.file, "names.txt");
         assert_eq!(list.folder, empty.path().to_string_lossy());
     }
 }

@@ -227,6 +227,9 @@ describe('IdentityToolComponent', () => {
 
     expect(card.dataset['country']).toBe('FR');
     expect(card.dataset['seed']).toBe('2676318943');
+    // A document number that is made up, and called so.
+    expect(card.textContent).toContain('N° de document (fictif)');
+    expect(text(harness, 'identity-document')).toBe('F7K2M9P4X');
     expect(text(harness, 'identity-monogram')).toBe('ÉL');
     expect(text(harness, 'identity-surname')).toContain('Lefèvre');
     expect(text(harness, 'identity-given')).toContain('Élise, Marie');
@@ -313,15 +316,15 @@ describe('IdentityToolComponent', () => {
    */
   it('says which list cannot be read, and where it was looked for, in place of a card', async () => {
     const harness = await renderTool(IdentityToolComponent, (tools) => {
-      tools.unreadableList = { problem: 'missing', file: 'pools/italian.txt', folder: 'C:/app/identity' };
+      tools.unreadableList = { problem: 'missing', file: 'places/it.txt', folder: 'C:/app/identity' };
     });
     await vi.waitFor(() => expect(requests(harness)).toHaveLength(1));
     await harness.settle();
     const said = harness.element('[data-testid="identity-unreadable"]');
 
     expect(said.getAttribute('role')).toBe('alert');
-    expect([said.dataset['problem'], said.dataset['file']]).toEqual(['missing', 'pools/italian.txt']);
-    expect(said.textContent).toContain('Liste introuvable : pools/italian.txt.');
+    expect([said.dataset['problem'], said.dataset['file']]).toEqual(['missing', 'places/it.txt']);
+    expect(said.textContent).toContain('Liste introuvable : places/it.txt.');
     expect(said.textContent).toContain('Les listes sont lues dans C:/app/identity');
     expect(harness.all('[data-testid="identity-card"]')).toEqual([]);
     expect(harness.all('[data-testid="identity-warning"]')).toEqual([]);
