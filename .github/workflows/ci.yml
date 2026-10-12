@@ -50,9 +50,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # ⚠️ A key of its own: a cache entry has one writer and never changes afterwards, and
+      # Clippy's check artifacts are in nobody else's build.
       - uses: ./.github/actions/setup-rust
         with:
-          shared-key: rust-ubuntu
+          shared-key: lint-ubuntu-22.04
+          save-if: 'true'
 
       # `generate_context!` reads frontendDist at compile time. Making this job depend on the
       # front-end build would serialise it for nothing: it validates Rust, not the bundle.
@@ -79,14 +82,6 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
-      - uses: actions/cache@v6
-        with:
-          path: .angular/cache
-          key: angular-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
-          restore-keys: |
-            angular-${{ hashFiles('package-lock.json') }}-
-            angular-
-
       - run: npm ci
 
       - name: Build
@@ -103,30 +98,6 @@ jobs:
           path: dist/devnotes/browser
           retention-days: 1
 
-  build-rust:
-    name: Build Rust
-    runs-on: ubuntu-22.04
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v7
-
-      # The only job allowed to write the cargo cache, so `test-rust` reads it without racing.
-      - uses: ./.github/actions/setup-rust
-        with:
-          shared-key: rust-ubuntu
-          save-if: 'true'
-
-      - name: Placeholder frontendDist
-        run: |
-          mkdir -p dist/devnotes/browser
-          printf '<!doctype html><title>ci</title>' > dist/devnotes/browser/index.html
-
-      - name: Build
-        run: |
-          start=$(date +%s)
-          cargo build --manifest-path src-tauri/Cargo.toml --locked
-          echo "\`build-rust\` — $(($(date +%s) - start)) s" >> "$GITHUB_STEP_SUMMARY"
-
   test-front:
     name: Test front
     needs: build-front
@@ -139,15 +110,6 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-
-      # Read-only: the cache was written by `build-front`, whose post-step has finished.
-      - uses: actions/cache/restore@v6
-        with:
-          path: .angular/cache
-          key: angular-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
-          restore-keys: |
-            angular-${{ hashFiles('package-lock.json') }}-
-            angular-
 
       - run: npm ci
 
@@ -202,7 +164,6 @@ jobs:
 
   test-rust:
     name: Test Rust (${{ matrix.os }})
-    needs: build-rust
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
 
@@ -213,22 +174,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-22.04
-            cache-key: rust-ubuntu
-            save-cache: 'false'
-
-          - os: windows-latest
-            cache-key: rust-windows
-            save-cache: 'true'
+        os: [ubuntu-22.04, windows-latest]
 
     steps:
       - uses: actions/checkout@v7
 
+      # Its own key on each platform: on Linux it holds the instrumented build coverage wants,
+      # which no other job produces.
       - uses: ./.github/actions/setup-rust
         with:
-          shared-key: ${{ matrix.cache-key }}
-          save-if: ${{ matrix.save-cache }}
+          shared-key: test-${{ matrix.os }}
+          save-if: 'true'
 
       - name: Placeholder frontendDist
         run: |
