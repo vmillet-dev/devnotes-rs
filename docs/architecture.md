@@ -983,6 +983,61 @@ regex sheet runs through `RegExp` in its spec. ⚠️ The Mustache sheet's `{{�
 chunk words, never main translation strings: Transloco would replace an unknown `{{name}}` with
 nothing.
 
+**A fictitious identity is drawn from pools of names and a profile a country** — decided by a
+spike before any list was written, because the obvious way was refused: a few thousand names a
+country, hard-coded, is a megabyte of test data in the binary.
+
+- **Pools shared between countries, not a pile of lists a country.** Names follow languages and
+  histories, not borders: a pool an origin (French, English, German, Dutch, Spanish, Portuguese,
+  Italian, Polish, Nordic, Arabic, Turkish, West African, Vietnamese, South Asian), sixty given
+  names a sex and eighty surnames each — 60 × 80 is 4 800 full names a sex from one pool, far
+  more than test data asks; the lists do not have to be long, they have to be well chosen. **A
+  country is a profile**: a weighted mix of pools (France draws mostly from the French one, and
+  from the Arabic, the Portuguese, the West African and the Vietnamese in proportion), about
+  twenty-five places of its own (postcode, city, region), thirty street names, and its formats
+  — postcode, phone, the order of an address, its account number and its identifiers.
+  Diversity inside a country is the mix itself, and one more country costs a profile and its
+  places, not three hundred names.
+- **The budget is 100 KB for every list together**, held by a test that sums the files. What
+  the design comes to, counted on the lists as planned: fourteen pools of 200 names at about
+  eight bytes a name, 22 KB; thirteen countries of 25 places and 30 streets, 16 KB; under
+  40 KB in all, so the 150 KB first put forward was twice what is needed and 100 KB leaves
+  room for the countries that follow. ⚠️ These are sums over planned lists, not a measured
+  binary: the test of the tool measures the real files.
+- **What was ruled out, and on what.** One pack a country (150 given names a sex, 150 surnames,
+  40 places): about 5 KB a country and the same French or Arabic names written again under
+  every country that has them — and no diversity inside a country but what each pack repeats.
+  Made-up names (syllables, Markov chains) cost nothing and look like nobody: kept for nothing.
+  The `fake` crate: about ten locales, none of the identifiers this tool exists for, and its
+  own generator beside the seeded `Draw` the tools already have. ⚠️ Its cost in the binary was
+  **not** measured: that needs a dependency added, which is not done unasked.
+- **Plain text, read once.** A list is a file taken with `include_str!` — its bytes and nothing
+  more — split on first use. The same names as a Rust table of `&str` cost sixteen bytes a
+  name on top of the text, half as much again.
+- ⚠️ **Where the lists come from.** Written by hand, from what is commonly known of the most
+  frequent names and of the larger towns of each country: no dataset and no library was
+  copied. The script that would cut the open data of the statistics offices (INSEE, ONS,
+  Destatis, the US Census) to its most frequent names is **not written**: it downloads files,
+  which is asked for first. Until then a name's frequency is a judgement, not a figure.
+- **Latin script only**, said plainly: an Arabic, a Vietnamese or a South Asian name is
+  written as it is romanised. Japan, China and Greece wait for names in their own script with
+  a romanisation beside them — the second one feeding the e-mail address.
+- **Valid means computed, and derived from the person where the number encodes them**: an
+  identifier is never drawn beside the identity it belongs to. The IBAN's mod 97 everywhere,
+  and the national key inside it where there is one (France's RIB key, Belgium, Spain, Italy,
+  Portugal). France: SIREN and SIRET (Luhn), the VAT key from the SIREN, the NIR with its
+  key — sex, year, month and department taken from the person. Belgium: national and company
+  numbers (mod 97). Germany: Steuer-ID and USt-IdNr (ISO 7064). Spain: DNI, NIE, NIF (the
+  letter of the remainder). Italy: codice fiscale — from the name, the birth and the place —
+  and partita IVA. The Netherlands: BSN (the « elfproef »). Portugal: NIF (mod 11).
+  Switzerland: AHV (EAN-13). Poland: PESEL, the date and the sex in it. Sweden:
+  personnummer (Luhn). The United Kingdom: NINO and VAT. Canada: SIN (Luhn). ⚠️ A number
+  that passes its key may belong to someone: no range is reserved for fiction but for a few
+  phone numbers and an e-mail domain, and the tool says so.
+- **First version: France**, complete. **Then**: Belgium, Germany, Spain, Italy, Portugal, the
+  Netherlands, Switzerland, the United Kingdom, Poland, Sweden, the United States and Canada.
+  Whatever the budget still holds comes after, and is written in the tool's note.
+
 **Adding a tool**, the whole of it:
 
 1. `src-tauri/src/tools/<module>.rs`: the function, its request and answer types, its tests.
