@@ -47,6 +47,8 @@ export const commands = {
 	describeColour: (request: ColourRequest) => typedError<ColourAnswer, AppError>(__TAURI_INVOKE("describe_colour", { request })),
 	convertData: (request: ConvertRequest) => typedError<ConvertAnswer, AppError>(__TAURI_INVOKE("convert_data", { request })),
 	generateJson: (request: GenerateRequest) => typedError<GenerateAnswer, AppError>(__TAURI_INVOKE("generate_json", { request })),
+	generateIdentity: (request: IdentityRequest) => typedError<IdentityAnswer, AppError>(__TAURI_INVOKE("generate_identity", { request })),
+	exportIdentities: (request: IdentityRequest, count: number, format: PeopleFormat, path: string) => typedError<PeopleExport, AppError>(__TAURI_INVOKE("export_identities", { request, count, format, path })),
 	loremIpsum: (request: LoremRequest) => typedError<LoremAnswer, AppError>(__TAURI_INVOKE("lorem_ipsum", { request })),
 	diffJson: (request: JsonDiffRequest) => typedError<JsonDiffAnswer, AppError>(__TAURI_INVOKE("diff_json", { request })),
 	diffText: (request: TextDiffRequest) => typedError<TextDiffAnswer, AppError>(__TAURI_INVOKE("diff_text", { request })),
@@ -403,6 +405,13 @@ export const PREFERENCES_FILE = "preferences.json" as const;
 export const WEBSOCKET_EVENT = "devnotes://websocket" as const;
 
 /* Types */
+export type Address = {
+	street: string,
+	postcode: string,
+	city: string,
+	region: string,
+};
+
 export type AlgorithmFamily = "hmac" | "rsa" | "rsaPss" | "ecdsa" | "edDsa" | 
 /**  `alg: none`: nothing signs it. */
 "unsigned" | "unknown";
@@ -439,9 +448,22 @@ export type Backup = {
 	openable: boolean,
 };
 
+export type Bank = {
+	name: string,
+	iban: string,
+	bic: string,
+};
+
 export type Base64FileAnswer = 
 /**  A file keeps the two Base64 alone: the other encodings of a megabyte are noise. */
 { kind: "encoded"; name: string; bytes: number; base64: string; base64Url: string } | { kind: "failed"; problem: FileProblem };
+
+export type Birth = {
+	/**  `YYYY-MM-DD`. */
+	date: string,
+	city: string,
+	region: string,
+};
 
 export type BlockKind = "thisNetwork" | "private" | "sharedAddressSpace" | "loopback" | "linkLocal" | "documentation" | "benchmarking" | "multicast" | "reserved" | "broadcast" | "public" | "unspecified" | "ipv4Mapped" | "nat64" | "uniqueLocal" | "global" | 
 /**  Wider than a special range it holds: no one sentence describes it. */
@@ -769,6 +791,11 @@ export type ColourRequest = {
 	against: string,
 };
 
+export type Company = {
+	name: string,
+	identifiers: Identifier[],
+};
+
 /**  The connections every estimate is also given for, by their rate in bits per second. */
 export type Connection = "fibre" | "mobile4g" | "adsl";
 
@@ -840,6 +867,8 @@ export type CookieDomain = {
 	domain: string,
 	cookies: StoredCookie[],
 };
+
+export type Country = "FR";
 
 export type CronAnswer = { kind: "read"; 
 /**  What a macro stands for: `@daily` is `0 0 * * *`. */
@@ -1525,6 +1554,14 @@ random: RandomPart } | { kind: "ksuid"; created: string; random: RandomPart } |
 
 export type IdKind = "uuidV4" | "uuidV7" | "ulid" | "nanoId" | "cuid2" | "objectId" | "ksuid";
 
+export type Identifier = {
+	kind: IdentifierKind,
+	value: string,
+};
+
+/**  Their own names in their own country: a label, never a translation. */
+export type IdentifierKind = "nir" | "siren" | "siret" | "vat";
+
 export type IdentifiersRequest = {
 	kind: IdKind,
 	count: number,
@@ -1534,6 +1571,46 @@ export type IdentifiersRequest = {
 	hyphens: boolean,
 	nanoLength: number,
 	nanoAlphabet: NanoAlphabet,
+};
+
+/**
+ *  ⚠️ These names are what « Copier en JSON » and an export write: renaming one breaks whoever
+ *  reads the files.
+ */
+export type Identity = {
+	country: Country,
+	sex: Sex,
+	surname: string,
+	givenNames: string[],
+	birth: Birth,
+	/**  A number as a card would carry one: nine characters, of no format that exists. */
+	document: string,
+	address: Address,
+	phone: string,
+	mobile: string,
+	email: string,
+	bank: Bank,
+	identifiers: Identifier[],
+	company: Company,
+};
+
+export type IdentityAnswer = {
+	/**  The seed that was used: the one given, or the one drawn. */
+	seed: string,
+	person: Identity,
+	/**  The person as an export writes one, for the clipboard and for a note. */
+	json: string,
+};
+
+export type IdentityRequest = {
+	country: Country,
+	/**  `None` draws it. */
+	sex: Sex | null,
+	/**  The age reached this year, between the two. */
+	ageMin: number,
+	ageMax: number,
+	/**  The same seed and options give the same person; none draws one, and says which. */
+	seed: string | null,
 };
 
 /**  The five the page draws from a `data:` URL. Its name is the extension it is saved under. */
@@ -2206,6 +2283,10 @@ export type PasswordRequest = {
 	count: number,
 };
 
+export type PeopleExport = { kind: "written"; people: number } | { kind: "failed"; problem: FileProblem };
+
+export type PeopleFormat = "json" | "csv";
+
 /**  The two numbers of one question, as typed. */
 export type PercentPair = {
 	x: string,
@@ -2521,6 +2602,8 @@ export type SentResponse = {
 	/**  A GraphQL answer read apart: its `data` and its `errors`. */
 	graphql: GraphqlResult | null,
 };
+
+export type Sex = "F" | "M";
 
 /**  Three fields rather than a map, so a missing shortcut is a compile error. */
 export type ShortcutBindings = {

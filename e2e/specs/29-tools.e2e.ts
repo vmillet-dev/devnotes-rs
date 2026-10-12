@@ -1181,6 +1181,78 @@ describe('The tools', () => {
       await $(testid('tool-clear')).click();
     });
 
+    /**
+     * A form or a test database was filled with « Jean Dupont » and an IBAN found on a forum: a
+     * person whose every number passes its own check, the same again from the same seed.
+     */
+    it('draws a fictitious person as a card, the same from the same seed, whose IBAN the checks tool finds valid', async () => {
+      interface Drawn {
+        sex: string;
+        surname: string;
+        birth: { date: string };
+        bank: { iban: string };
+        identifiers: { kind: string; value: string }[];
+      }
+      const iban = () => $(`[data-field="iban"] ${testid('output-value')}`).getText();
+      const person = async (): Promise<Drawn> => {
+        await $(testid('identity-copy-json')).click();
+        const json = await eventually(
+          clipboardText,
+          (text) => text?.startsWith('{') === true,
+          'the person as JSON',
+        );
+        return JSON.parse(json ?? '{}') as Drawn;
+      };
+      await openTool('identity');
+      await $(testid('identity-card')).waitForDisplayed({ timeout: 10_000 });
+
+      // The sample's seed draws the same person for everyone; « Spécimen » is printed across the card.
+      await $(testid('tool-sample')).click();
+      await eventually(
+        () => $(testid('identity-seed')).getValue(),
+        (seed) => seed === 'devnotes',
+        'the seed of the sample',
+      );
+      await $(testid('identity-seed-pinned')).waitForDisplayed({ timeout: 10_000 });
+      expect(await $(testid('identity-specimen')).isExisting()).toBe(true);
+      const first = await eventually(
+        iban,
+        (text) => /^FR\d{2}( [0-9A-Z]{4}){5} [0-9A-Z]{3}$/.test(text),
+        'an IBAN',
+      );
+      const drawn = await person();
+      expect(drawn.bank.iban).toBe(first);
+      expect(await $(testid('identity-surname')).getText()).toContain(drawn.surname);
+
+      // The card does not contradict itself: the social security number is read off the person.
+      const nir = drawn.identifiers.find((identifier) => identifier.kind === 'nir')!.value.replace(/ /g, '');
+      expect(nir).toHaveLength(15);
+      expect(nir[0]).toBe(drawn.sex === 'M' ? '1' : '2');
+      expect(nir.slice(1, 3)).toBe(drawn.birth.date.slice(2, 4));
+      expect(nir.slice(3, 5)).toBe(drawn.birth.date.slice(5, 7));
+
+      // A value is copied with a click.
+      await $(`[data-field="iban"] ${testid('copy-value')}`).click();
+      await eventually(clipboardText, (text) => text === first, 'the IBAN copied');
+
+      // Another seed is another person; the first seed, the first person again.
+      await setField(testid('identity-seed'), 'another');
+      await eventually(iban, (text) => text !== first, 'someone else');
+      await setField(testid('identity-seed'), 'devnotes');
+      await eventually(iban, (text) => text === first, 'the same person again');
+
+      // What it generates is what « Luhn et IBAN » verifies: one implementation, asked twice.
+      await openTool('checks');
+      await setField(testid('checks-input'), first);
+      await eventually(
+        () => $(testid('checks-verdict')).getAttribute('data-valid'),
+        (valid) => valid === 'true',
+        'the generated IBAN found valid',
+      );
+      expect(await $(testid('checks-rib')).getAttribute('data-valid')).toBe('true');
+      await $(testid('tool-clear')).click();
+    });
+
     it('opens Lorem ipsum on the classic words', async () => {
       await openTool('lorem');
       await $(`${testid('segmented-lorem-unit')} [data-segment-id="words"]`).click();

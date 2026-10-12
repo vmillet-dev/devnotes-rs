@@ -1038,6 +1038,37 @@ country, hard-coded, is a megabyte of test data in the binary.
   Netherlands, Switzerland, the United Kingdom, Poland, Sweden, the United States and Canada.
   Whatever the budget still holds comes after, and is written in the tool's note.
 
+**The identity tool is that design, with France complete** (`tools/identity.rs`,
+`identity/data.rs`, `identity/france.rs`; `tools/catalogue/identity/`). A pure function of
+the options and a seed behind one command; the lists are files under `identity/data/`, 8 KB
+for France's five pools, forty places and thirty streets, and `data::weight` is held under
+`BUDGET` by a test.
+
+- **The seed is text** — « devnotes » is one — hashed to the number the tools' `Draw` takes;
+  none given, one is drawn and said, and typing it back gives that person again. ⚠️ Only the
+  **year** of today is read: the ages are the ones reached during it, so the same seed gives
+  the same person all year rather than a birth date that moves with the day.
+- ⚠️ **Every draw is made in one order whatever the options**: a sex that is imposed still
+  costs its draw, the given names are three draws however many are kept. Changing an option
+  changes what it names and nothing else of the person.
+- **One implementation generates and verifies**: the IBAN's two digits and the Luhn digit are
+  `tools/checks.rs`'s own functions, and the test asks the checks tool whether each IBAN is
+  valid — RIB key included — over a thousand seeds. The social security number is formed from
+  the person: sex, year and month of birth, and the INSEE code of the commune they were born
+  in, Corsica's `2A` counted as 19 for the key.
+- **Harmless where a range is kept for it**: `example.com`, `.org`, `.net`, and the blocks
+  ARCEP keeps for fiction (`01 99 00`, `06 39 98`…), the landline in the zone of the town. ⚠️
+  No such range exists for an IBAN, a SIREN or a social security number: the tool's note says
+  a number that passes its key may be someone's.
+- ⚠️ **The card evokes one and imitates none**: a monogram where a photo would be, no emblem,
+  no flag bar, no machine-readable zone, and « Spécimen » printed across it. A number that
+  is the person's own is on the card; the rest is three blocks — contact, bank, company —
+  each value copied with a click.
+- **Out**: « Copier en JSON » and the note take the JSON Rust wrote (`IdentityAnswer::json`,
+  the field names of `Identity`, which an export shares); a batch of one to a hundred people
+  is a file, JSON or CSV, written by Rust where the file dialog says and starting from the
+  person on screen.
+
 **Adding a tool**, the whole of it:
 
 1. `src-tauri/src/tools/<module>.rs`: the function, its request and answer types, its tests.

@@ -1,0 +1,71 @@
+75056;75011;Paris;Paris;1
+13055;13001;Marseille;Bouches-du-Rhône;4
+69123;69003;Lyon;Rhône;4
+31555;31000;Toulouse;Haute-Garonne;5
+06088;06000;Nice;Alpes-Maritimes;4
+44109;44000;Nantes;Loire-Atlantique;2
+34172;34000;Montpellier;Hérault;4
+67482;67000;Strasbourg;Bas-Rhin;3
+33063;33000;Bordeaux;Gironde;5
+59350;59000;Lille;Nord;3
+35238;35000;Rennes;Ille-et-Vilaine;2
+51454;51100;Reims;Marne;3
+42218;42000;Saint-Étienne;Loire;4
+76351;76600;Le Havre;Seine-Maritime;2
+83137;83000;Toulon;Var;4
+38185;38000;Grenoble;Isère;4
+21231;21000;Dijon;Côte-d'Or;3
+49007;49000;Angers;Maine-et-Loire;2
+30189;30000;Nîmes;Gard;4
+63113;63000;Clermont-Ferrand;Puy-de-Dôme;4
+72181;72000;Le Mans;Sarthe;2
+13001;13100;Aix-en-Provence;Bouches-du-Rhône;4
+29019;29200;Brest;Finistère;2
+37261;37000;Tours;Indre-et-Loire;2
+80021;80000;Amiens;Somme;3
+87085;87000;Limoges;Haute-Vienne;5
+57463;57000;Metz;Moselle;3
+25056;25000;Besançon;Doubs;3
+66136;66000;Perpignan;Pyrénées-Orientales;4
+45234;45000;Orléans;Loiret;2
+76540;76000;Rouen;Seine-Maritime;2
+68224;68100;Mulhouse;Haut-Rhin;3
+14118;14000;Caen;Calvados;2
+54395;54000;Nancy;Meurthe-et-Moselle;3
+2A004;20000;Ajaccio;Corse-du-Sud;4
+64445;64000;Pau;Pyrénées-Atlantiques;5
+86194;86000;Poitiers;Vienne;5
+17300;17000;La Rochelle;Charente-Maritime;5
+74010;74000;Annecy;Haute-Savoie;4
+56260;56000;Vannes;Morbihan;2
+---
+rue de la République
+rue Victor Hugo
+avenue Jean Jaurès
+rue Pasteur
+rue Gambetta
+avenue du Général de Gaulle
+rue de l'Église
+place de la Mairie
+rue des Écoles
+rue Jules Ferry
+boulevard Voltaire
+rue Émile Zola
+rue de la Gare
+rue du Moulin
+rue des Lilas
+allée des Tilleuls
+rue de la Paix
+rue Nationale
+avenue de la Liberté
+rue Jean Moulin
+rue du 8 Mai 1945
+rue des Rosiers
+chemin des Vignes
+impasse des Acacias
+rue Carnot
+rue Lafayette
+avenue Aristide Briand
+rue Saint-Exupéry
+rue des Jardins
+rue du Château

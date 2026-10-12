@@ -16,6 +16,7 @@ pub(crate) mod files;
 pub mod generate;
 pub mod hash;
 pub mod identifiers;
+pub mod identity;
 pub mod image;
 pub mod jwt;
 pub(crate) mod numbers;
@@ -83,6 +84,34 @@ pub async fn encode_bytes(request: bases::EncodeRequest) -> Result<bases::Encodi
 #[specta::specta]
 pub async fn encode_base64_file(path: String) -> Result<bases::Base64FileAnswer, AppError> {
     off_thread(move || bases::encode_file(&path)).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn generate_identity(
+    request: identity::IdentityRequest,
+) -> Result<identity::IdentityAnswer, AppError> {
+    off_thread(move || identity::generate(&request, chrono::Local::now().date_naive())).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn export_identities(
+    request: identity::IdentityRequest,
+    count: u32,
+    format: identity::PeopleFormat,
+    path: String,
+) -> Result<identity::PeopleExport, AppError> {
+    off_thread(move || {
+        identity::export(
+            &request,
+            count,
+            format,
+            &path,
+            chrono::Local::now().date_naive(),
+        )
+    })
+    .await
 }
 
 #[tauri::command]

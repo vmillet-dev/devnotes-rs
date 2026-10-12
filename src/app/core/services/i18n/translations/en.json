@@ -1473,6 +1473,84 @@
       "seedPinned": "Seed pinned: “Regenerate” gives the same documents again.",
       "unsupportedAt": "at"
     },
+    "identity": {
+      "name": "Fictitious identity",
+      "description": "A test person whose every number passes its check",
+      "options": "Options",
+      "country": "Country",
+      "countries": {
+        "FR": "France"
+      },
+      "nationalities": {
+        "FR": "French"
+      },
+      "sex": "Sex",
+      "sexes": {
+        "any": "Any",
+        "F": "Female",
+        "M": "Male"
+      },
+      "age": "Age reached this year",
+      "ageMin": "Youngest",
+      "ageMax": "Oldest",
+      "years": "years",
+      "seed": "Seed",
+      "seedPlaceholder": "random",
+      "seedUsed": "· {{seed}} used",
+      "pinSeed": "Pin the seed",
+      "keepSeed": "Pin this seed: the same person will come back",
+      "freeSeed": "Let the seed go: each draw will give someone else",
+      "seedPinned": "Seed pinned: the same person comes back, all year.",
+      "batch": "Batch",
+      "people": "People",
+      "format": "Format",
+      "formats": {
+        "json": "JSON",
+        "csv": "CSV"
+      },
+      "export": "Export…",
+      "batchHint": "From 1 to 100 people in a file, the first being the one of the card.",
+      "exported": "{count, plural, one {# person exported.} other {# people exported.}}",
+      "person": "Person",
+      "copyJson": "Copy as JSON",
+      "jsonCopied": "Person copied as JSON.",
+      "again": "Regenerate",
+      "noteTitle": "Fictitious identity of {{name}}",
+      "specimen": "Specimen",
+      "cardKind": "Fictitious identity",
+      "aged": "({count, plural, one {# year} other {# years}})",
+      "fields": {
+        "surname": "Surname",
+        "givenNames": "Given names",
+        "nationality": "Nationality",
+        "bornOn": "Date of birth",
+        "bornIn": "Place of birth",
+        "document": "Specimen no.",
+        "address": "Address",
+        "phone": "Phone",
+        "mobile": "Mobile",
+        "email": "E-mail",
+        "bank": "Bank",
+        "iban": "IBAN",
+        "bic": "BIC",
+        "company": "Company name"
+      },
+      "identifiers": {
+        "nir": "N° de sécurité sociale",
+        "siren": "SIREN",
+        "siret": "SIRET",
+        "vat": "TVA intracommunautaire"
+      },
+      "blocks": {
+        "contact": "Contact",
+        "bank": "Bank",
+        "company": "Company"
+      },
+      "warning": "Test data: do not use it to pass yourself off as someone.",
+      "harmless": "The e-mail is at example.com, .org or .net and the phones are in the ranges ARCEP keeps for fiction: they reach nobody. No range is kept for an IBAN, a SIREN or a social security number: a number that passes its check may belong to someone.",
+      "valid": "Valid means computed: the IBAN’s key and the RIB’s, SIREN and SIRET by Luhn, the VAT key from the SIREN, and the social security number read off the person — sex, year, month and commune of birth.",
+      "jsonFields": "Fields of the JSON and of the export: country, sex, surname, givenNames, birth (date, city, region), document, address (street, postcode, city, region), phone, mobile, email, bank (name, iban, bic), identifiers and company (name, identifiers)."
+    },
     "lorem": {
       "name": "Lorem ipsum",
       "description": "Words, sentences, paragraphs",
