@@ -93,6 +93,8 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
     guessed: true,
     also: [],
     decoded: { kind: 'text', text: '', bytes: 0 },
+    dataUri: null,
+    image: null,
   };
   savedBytes: SavedBytes = { kind: 'saved', bytes: 0 };
   hashAnswer: HashAnswer = {

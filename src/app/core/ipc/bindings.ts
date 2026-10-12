@@ -897,6 +897,9 @@ export type DecodeAnswer = {
 	/**  The other readings its shape allows: `deadbeef` is hexadecimal and Base64 alike. */
 	also: ByteEncoding[],
 	decoded: DecodedBytes,
+	/**  The media type its header declared, for a `data:` URI pasted whole. */
+	dataUri: string | null,
+	image: DecodedImage | null,
 };
 
 export type DecodeProblem = 
@@ -923,6 +926,14 @@ export type DecodedBytes = { kind: "text"; text: string; bytes: number } |
 { kind: "binary"; bytes: number; preview: string } | 
 /**  `at` counts characters of the text as given, spaces and line breaks included. */
 { kind: "invalid"; problem: DecodeProblem; at: number | null; character: string | null };
+
+/**  The decoded bytes are a picture: which kind, how large when its header says, and itself. */
+export type DecodedImage = {
+	format: ImageFormat,
+	width: number | null,
+	height: number | null,
+	preview: ImagePreview,
+};
 
 /**  One line of a kept body, compared with the text restoring it would replace. */
 export type DiffLine = 
@@ -1493,6 +1504,16 @@ export type IdentifiersRequest = {
 	nanoLength: number,
 	nanoAlphabet: NanoAlphabet,
 };
+
+/**  The five the page draws from a `data:` URL. Its name is the extension it is saved under. */
+export type ImageFormat = "png" | "jpg" | "gif" | "webp" | "svg";
+
+export type ImagePreview = 
+/**
+ *  ⚠️ A `data:` URL for an `<img>`: what the CSP already lets a picture be, and where
+ *  nothing an SVG holds can run. Never inlined as markup.
+ */
+{ kind: "shown"; dataUrl: string } | { kind: "tooLarge"; limit: number };
 
 /**  A header sent without a row of the request's own: the editor lists them under its table. */
 export type ImpliedHeader = {

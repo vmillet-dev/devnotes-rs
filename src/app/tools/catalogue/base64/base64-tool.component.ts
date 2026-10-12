@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ToolsRepository } from '@core/data/tools.repository';
-import { ByteEncoding, Encodings } from '@core/model/tool-answers.model';
+import { ByteEncoding, Encodings, ImageFormat } from '@core/model/tool-answers.model';
 import { FileDialogService } from '@core/services/dialogs/file-dialog.service';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { StatusNotifier } from '@core/services/notifications/status.service';
@@ -35,6 +35,18 @@ const ROWS = [
 
 const READINGS: readonly ByteEncoding[] = ['base64', 'base64Url', 'base32', 'hex', 'binary', 'decimal'];
 
+/** Under this many pixels on its longer side, a picture is drawn enlarged. */
+const SMALL = 64;
+
+/** Their own names in every language; the key is also the extension a file of it is saved under. */
+const FORMAT_NAMES: Record<ImageFormat, string> = {
+  png: 'PNG',
+  jpg: 'JPEG',
+  gif: 'GIF',
+  webp: 'WebP',
+  svg: 'SVG',
+};
+
 /** What the page draws of a long result; the copy button still copies it whole. */
 const SHOWN_CHARACTERS = 4000;
 
@@ -66,6 +78,7 @@ export class Base64ToolComponent implements Tool {
   protected readonly directions = segments(['encode', 'decode'] as const, 'tools.base64.directions');
   protected readonly sources = segments(['text', 'file'] as const, 'tools.base64.sources');
   protected readonly readings = segments([AUTO, ...READINGS], 'tools.base64.readings');
+  protected readonly formatNames = FORMAT_NAMES;
 
   protected readonly encodedText = liveResult(
     () =>
@@ -116,6 +129,20 @@ export class Base64ToolComponent implements Tool {
   protected readonly decodedBinary = computed(() => {
     const decoded = this.decoded.value()?.decoded;
     return decoded?.kind === 'binary' ? decoded : null;
+  });
+
+  /** The decoded bytes are a picture, text or not: an SVG is both. */
+  protected readonly image = computed(() => this.decoded.value()?.image ?? null);
+
+  /** An icon of a few pixels is drawn larger, pixel by pixel: at its own size it is a dot. */
+  protected readonly small = computed(() => {
+    const image = this.image();
+    return image !== null && Math.max(image.width ?? SMALL, image.height ?? SMALL) < SMALL;
+  });
+
+  protected readonly decodedBytes = computed(() => {
+    const decoded = this.decoded.value()?.decoded;
+    return decoded?.kind === 'text' || decoded?.kind === 'binary' ? decoded.bytes : 0;
   });
 
   protected readonly decodingProblem = computed(() => {
@@ -177,9 +204,16 @@ export class Base64ToolComponent implements Tool {
     }
   }
 
-  /** Bytes that are no text cannot be a note, nor shown: they are written where the user says. */
+  protected megabytes(bytes: number): number {
+    return Math.round(bytes / (1024 * 1024));
+  }
+
+  /**
+   * Bytes that are no text cannot be a note: they are written where the user says, under the
+   * extension of what they were recognised as.
+   */
   protected async saveAsFile(): Promise<void> {
-    const path = await this.files.chooseDestination('decoded.bin');
+    const path = await this.files.chooseDestination(`decoded.${this.image()?.format ?? 'bin'}`);
     if (path === null) return;
 
     const saved = await this.notifier.attempt('errors.toolFailed', () =>

@@ -12,7 +12,12 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 
 use super::files::{self, FileProblem};
+use super::image::{self, ImageFormat};
 use crate::count::saturating_u32;
+
+/// Past this, a decoded picture is named and sized but not drawn: its `data:` URL would cross
+/// the bridge whole, a third heavier than the bytes.
+pub(crate) const PREVIEW_LIMIT: usize = 2 * 1024 * 1024;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
@@ -223,6 +228,33 @@ pub struct DecodeRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum ImagePreview {
+    /// ⚠️ A `data:` URL for an `<img>`: what the CSP already lets a picture be, and where
+    /// nothing an SVG holds can run. Never inlined as markup.
+    Shown {
+        data_url: String,
+    },
+    TooLarge {
+        limit: u32,
+    },
+}
+
+/// The decoded bytes are a picture: which kind, how large when its header says, and itself.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct DecodedImage {
+    pub format: ImageFormat,
+    pub width: Option<u32>,
+    pub height: Option<u32>,
+    pub preview: ImagePreview,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DecodeAnswer {
     pub read_as: ByteEncoding,
@@ -231,6 +263,9 @@ pub struct DecodeAnswer {
     /// The other readings its shape allows: `deadbeef` is hexadecimal and Base64 alike.
     pub also: Vec<ByteEncoding>,
     pub decoded: DecodedBytes,
+    /// The media type its header declared, for a `data:` URI pasted whole.
+    pub data_uri: Option<String>,
+    pub image: Option<DecodedImage>,
 }
 
 /// A refusal before any byte: where, in the text as given, and which character.
@@ -454,10 +489,11 @@ fn as_decoded(bytes: Vec<u8>) -> DecodedBytes {
     }
 }
 
-fn refused(text: &str, refusal: Refused) -> DecodedBytes {
+/// `skipped` is what stood before `text` in what was given: a refusal counts from there.
+fn refused(text: &str, refusal: Refused, skipped: usize) -> DecodedBytes {
     DecodedBytes::Invalid {
         problem: refusal.problem,
-        at: refusal.at.map(saturating_u32),
+        at: refusal.at.map(|at| saturating_u32(at + skipped)),
         character: refusal
             .at
             .and_then(|at| text.chars().nth(at))
@@ -465,19 +501,85 @@ fn refused(text: &str, refusal: Refused) -> DecodedBytes {
     }
 }
 
+/// A `data:` URI pasted whole and whose payload is Base64.
+struct DataUri<'text> {
+    payload: &'text str,
+    media_type: String,
+    /// The characters its header took, the comma included.
+    header: usize,
+}
+
+/// `data:image/png;base64,iVBOR…`: its header is read, not refused as a character Base64 does
+/// not have. One whose payload is percent-encoded is no bytes to decode here.
+fn data_uri(text: &str) -> Option<DataUri<'_>> {
+    let start = text.trim_start();
+    let scheme = start.get(..5)?;
+    scheme.eq_ignore_ascii_case("data:").then_some(())?;
+    let (header, payload) = start[5..].split_once(',')?;
+    let declared = header
+        .get(header.len().checked_sub(7)?..)
+        .filter(|tail| tail.eq_ignore_ascii_case(";base64"))
+        .map(|_| &header[..header.len() - 7])?;
+    Some(DataUri {
+        payload,
+        media_type: declared
+            .split(';')
+            .next()
+            .unwrap_or_default()
+            .trim()
+            .to_owned(),
+        header: text[..text.len() - payload.len()].chars().count(),
+    })
+}
+
+fn image_of(bytes: &[u8]) -> Option<DecodedImage> {
+    let found = image::recognise(bytes)?;
+    let preview = if bytes.len() > PREVIEW_LIMIT {
+        ImagePreview::TooLarge {
+            limit: saturating_u32(PREVIEW_LIMIT),
+        }
+    } else {
+        ImagePreview::Shown {
+            data_url: format!(
+                "data:{};base64,{}",
+                found.format.media_type(),
+                base64_engine(false).encode(bytes)
+            ),
+        }
+    };
+    Some(DecodedImage {
+        format: found.format,
+        width: found.width,
+        height: found.height,
+        preview,
+    })
+}
+
 pub fn decode(request: &DecodeRequest) -> DecodeAnswer {
-    let shapes = shapes(&request.text);
-    let (read_as, guessed) = match request.reading {
-        Some(encoding) => (encoding, false),
+    let uri = data_uri(&request.text);
+    let (text, skipped) = uri
+        .as_ref()
+        .map_or((request.text.as_str(), 0), |uri| (uri.payload, uri.header));
+    // A `data:` URI says what it holds: its payload is Base64, whatever else it looks like.
+    let shapes = if uri.is_some() {
+        Vec::new()
+    } else {
+        shapes(text)
+    };
+    let (read_as, guessed) = match (request.reading, &uri) {
+        (_, Some(_)) => (ByteEncoding::Base64, false),
+        (Some(encoding), None) => (encoding, false),
         // Nothing fits: Base64, the commonest, says where it breaks.
-        None => (
+        (None, None) => (
             shapes.first().copied().unwrap_or(ByteEncoding::Base64),
             true,
         ),
     };
-    let decoded = match decode_as(&request.text, read_as) {
+    let bytes = decode_as(text, read_as);
+    let image = bytes.as_deref().ok().and_then(image_of);
+    let decoded = match bytes {
         Ok(bytes) => as_decoded(bytes),
-        Err(refusal) => refused(&request.text, refusal),
+        Err(refusal) => refused(text, refusal, skipped),
     };
     DecodeAnswer {
         read_as,
@@ -487,6 +589,8 @@ pub fn decode(request: &DecodeRequest) -> DecodeAnswer {
             .filter(|encoding| *encoding != read_as)
             .collect(),
         decoded,
+        data_uri: uri.map(|uri| uri.media_type),
+        image,
     }
 }
 
@@ -500,11 +604,14 @@ pub enum SavedBytes {
 
 /// The bytes a decoding gave, written where the user chose: never a note.
 pub fn save(request: &DecodeRequest, path: &str) -> SavedBytes {
-    let reading = request
-        .reading
-        .or_else(|| shapes(&request.text).first().copied())
+    let (text, reading) = match data_uri(&request.text) {
+        Some(uri) => (uri.payload, Some(ByteEncoding::Base64)),
+        None => (request.text.as_str(), request.reading),
+    };
+    let reading = reading
+        .or_else(|| shapes(text).first().copied())
         .unwrap_or(ByteEncoding::Base64);
-    match decode_as(&request.text, reading) {
+    match decode_as(text, reading) {
         Ok(bytes) => match files::write(path, &bytes) {
             Ok(()) => SavedBytes::Saved {
                 bytes: saturating_u32(bytes.len()),
@@ -539,6 +646,169 @@ mod tests {
             DecodedBytes::Text { text, .. } => text,
             other => panic!("{other:?}"),
         }
+    }
+
+    fn base64_of(bytes: &[u8]) -> String {
+        base64_engine(false).encode(bytes)
+    }
+
+    /// Decoded bytes that are a picture could be saved to a file, then opened elsewhere to see
+    /// what they were.
+    #[test]
+    fn a_decoded_picture_is_named_sized_and_handed_over_to_be_drawn() {
+        let png = crate::tools::image::png_of(32, 20);
+        let answer = read(&base64_of(&png), None);
+
+        assert!(matches!(
+            answer.decoded,
+            DecodedBytes::Binary { bytes: 29, .. }
+        ));
+        assert_eq!(answer.data_uri, None);
+        assert_eq!(
+            answer.image,
+            Some(DecodedImage {
+                format: ImageFormat::Png,
+                width: Some(32),
+                height: Some(20),
+                preview: ImagePreview::Shown {
+                    data_url: format!("data:image/png;base64,{}", base64_of(&png)),
+                },
+            })
+        );
+    }
+
+    /// An SVG is text: shown as text above, and as a picture under it — in an `<img>`, where
+    /// its script would run nowhere.
+    #[test]
+    fn a_decoded_svg_is_a_text_and_a_picture() {
+        let svg = r#"<svg xmlns="http://www.w3.org/2000/svg" width="24" height="16"><script>alert(1)</script></svg>"#;
+        let answer = read(&base64_of(svg.as_bytes()), None);
+
+        assert_eq!(text_of(&answer), svg);
+        let image = answer.image.unwrap();
+        assert_eq!(
+            (image.format, image.width, image.height),
+            (ImageFormat::Svg, Some(24), Some(16))
+        );
+        assert!(matches!(
+            image.preview,
+            ImagePreview::Shown { data_url } if data_url.starts_with("data:image/svg+xml;base64,")
+        ));
+    }
+
+    #[test]
+    fn a_decoding_that_is_no_picture_has_none() {
+        assert_eq!(read("Q2Fmw6k=", None).image, None);
+        assert_eq!(read("deadbeef", Some(ByteEncoding::Hex)).image, None);
+        assert_eq!(read("not base64 !", None).image, None);
+    }
+
+    /// Past the limit the picture is still named and sized: only its drawing is left out, and
+    /// said.
+    #[test]
+    fn a_picture_past_the_limit_is_named_but_not_drawn() {
+        let mut png = crate::tools::image::png_of(4000, 3000);
+        png.resize(PREVIEW_LIMIT + 1, 0);
+
+        let image = read(&base64_of(&png), Some(ByteEncoding::Base64))
+            .image
+            .unwrap();
+
+        assert_eq!(
+            (image.format, image.width, image.height),
+            (ImageFormat::Png, Some(4000), Some(3000))
+        );
+        assert_eq!(
+            image.preview,
+            ImagePreview::TooLarge {
+                limit: 2 * 1024 * 1024
+            }
+        );
+        png.truncate(PREVIEW_LIMIT);
+        assert!(matches!(
+            read(&base64_of(&png), Some(ByteEncoding::Base64))
+                .image
+                .unwrap()
+                .preview,
+            ImagePreview::Shown { .. }
+        ));
+    }
+
+    /// Pasted whole, it was refused: « : » is no character of Base64.
+    #[test]
+    fn a_data_uri_pasted_whole_is_read_by_its_header() {
+        let png = crate::tools::image::png_of(2, 2);
+        let uri = format!("  data:image/png;base64,{}", base64_of(&png));
+
+        // Whatever reading was asked: the header says what the payload is.
+        for reading in [None, Some(ByteEncoding::Hex)] {
+            let answer = read(&uri, reading);
+            assert_eq!(answer.data_uri.as_deref(), Some("image/png"));
+            assert_eq!(
+                (answer.read_as, answer.guessed),
+                (ByteEncoding::Base64, false)
+            );
+            assert_eq!(answer.also, []);
+            assert_eq!(answer.image.as_ref().unwrap().format, ImageFormat::Png);
+        }
+        // Parameters before `;base64`, capitals, and no media type at all.
+        assert_eq!(
+            text_of(&read("DATA:text/plain;charset=utf-8;BASE64,Q2Fmw6k=", None)),
+            "Café"
+        );
+        assert_eq!(
+            read("data:text/plain;charset=utf-8;base64,Q2Fmw6k=", None)
+                .data_uri
+                .as_deref(),
+            Some("text/plain")
+        );
+        assert_eq!(
+            read("data:;base64,Q2Fmw6k=", None).data_uri.as_deref(),
+            Some("")
+        );
+    }
+
+    #[test]
+    fn a_refusal_inside_a_data_uri_counts_from_the_text_as_given() {
+        let answer = read("data:image/png;base64,Q2F*w6k=", None);
+
+        assert_eq!(
+            answer.decoded,
+            DecodedBytes::Invalid {
+                problem: DecodeProblem::Character,
+                // Twenty-two characters of header, then the fourth of the payload.
+                at: Some(25),
+                character: Some("*".into()),
+            }
+        );
+    }
+
+    /// Percent-encoded, a `data:` URI holds no Base64: it is read as any other text.
+    #[test]
+    fn a_data_uri_that_is_not_base64_is_no_data_uri_here() {
+        let answer = read("data:text/plain,hello%20world", None);
+
+        assert_eq!(answer.data_uri, None);
+        assert!(matches!(answer.decoded, DecodedBytes::Invalid { .. }));
+        assert_eq!(read("data", None).data_uri, None);
+        assert_eq!(read("data:;base64", None).data_uri, None);
+    }
+
+    #[test]
+    fn the_bytes_of_a_data_uri_are_saved_without_its_header() {
+        let folder = tempfile::tempdir().unwrap();
+        let path = folder.path().join("decoded.png");
+        let png = crate::tools::image::png_of(2, 2);
+        let request = DecodeRequest {
+            text: format!("data:image/png;base64,{}", base64_of(&png)),
+            reading: Some(ByteEncoding::Hex),
+        };
+
+        assert_eq!(
+            save(&request, &path.to_string_lossy()),
+            SavedBytes::Saved { bytes: 29 }
+        );
+        assert_eq!(std::fs::read(&path).unwrap(), png);
     }
 
     #[test]
