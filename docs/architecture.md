@@ -822,8 +822,25 @@ two sides never hold the same format.
 secret): the same seed and source give the same documents, and a generation without one draws a
 seed and says which, so it can be kept. From a JSON Schema, the keywords it draws from are one
 list (`UNDERSTOOD`); any other is listed back with its path, so a document that ignores a
-`pattern` is never passed off as one that honours it. From an example, each value is redrawn in
-its kind — a UUID, an email, an instant, a URL, words — at its magnitude.
+`pattern` is never passed off as one that honours it. From an example — « Modèle », on screen —
+each value is redrawn in its kind — a UUID, an email, an instant, a URL, words — at its
+magnitude.
+
+- ⚠️ **An example read as a schema is said to be one, and draws nothing** (`AnExample`,
+  `schema::reads_as_a_schema`). Its keys were taken for keywords nobody knows, and a schema
+  with no known keyword allows anything: three strings of lorem ipsum, and a warning about
+  `email` and `createdAt`. An object reads as a schema when one of its keys is a keyword
+  **holding what that keyword holds** — `"type": "string"`, not `"type": "user"`; `properties`
+  over schemas, `required` over names — or when it holds nothing but the vocabulary
+  (`UNDERSTOOD` and `NOT_DRAWN`); `{}` is the schema that allows anything. The page offers to
+  read the text as a model, the same text under the other switch.
+- **Each mode says what it expects** in a line under the switch, and « Exemple » fills the
+  sample of the mode on screen: a schema under « Schéma », a document under « Modèle ». The
+  mode is called « Modèle » because the button that loads a sample is « Exemple ».
+- **The seed has one place, its field**: the one just drawn is said beside it (« · 3634897658
+  utilisée ») with a pin, a toggle, that writes it there; pinned, « Régénérer » stays offered
+  and a line says it gives the same documents. « Régénérer » is the one name of that action in
+  the four tools that draw (JSON, Lorem ipsum, the passwords, the identifiers).
 
 **The Diff compares texts, or values** (`tools/text_diff.rs`, `tools/diff.rs`). Its text mode
 pairs lines on what they are compared as — the options strip what they ignore from that key alone,

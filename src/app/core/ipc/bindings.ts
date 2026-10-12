@@ -1223,7 +1223,12 @@ export type GapField = "from" | "to";
 
 export type GenerateAnswer = { kind: "generated"; text: string; seed: number; unsupported: Unsupported[] } | { kind: "unreadable"; line: number; column: number } | 
 /**  A schema is an object, or `true`. */
-{ kind: "notASchema" };
+{ kind: "notASchema" } | 
+/**
+ *  An object, but none of what it holds is a schema's: a document to draw others like,
+ *  read under the wrong switch. Nothing is generated from it.
+ */
+{ kind: "anExample" };
 
 export type GenerateRequest = {
 	source: JsonSource,

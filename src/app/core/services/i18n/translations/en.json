@@ -1352,7 +1352,7 @@
       },
       "lookAlikes": "No characters that look alike",
       "count": "Count",
-      "generate": "Generate",
+      "generate": "Regenerate",
       "passwords": "Passwords",
       "entropy": "≈ {{bits}} bits of entropy",
       "strengths": {
@@ -1439,13 +1439,13 @@
     },
     "json-generator": {
       "name": "JSON",
-      "description": "From a schema or an example",
+      "description": "From a schema or from a template document",
       "source": "Source",
       "sources": {
         "schema": "Schema",
-        "example": "Example"
+        "example": "Template"
       },
-      "inputLabel": "JSON Schema or example document",
+      "inputLabel": "JSON Schema or template document",
       "placeholders": {
         "schema": "{ \"type\": \"object\", \"required\": [\"id\"], \"properties\": { \"id\": { \"type\": \"string\", \"format\": \"uuid\" } } }",
         "example": "{ \"id\": \"9b2f6c1e-3d4a-4f8b-9e2c-7a1d5b6c8e90\", \"email\": \"ana@example.com\", \"amount\": 49.9 }"
@@ -1456,12 +1456,22 @@
       "seed": "Seed",
       "seedPlaceholder": "random",
       "documents": "Documents",
-      "seedUsed": "Seed used: {{seed}}",
-      "keepSeed": "Keep it",
-      "again": "Draw again",
-      "unsupported": "The generator did not take these keywords into account: the documents may not honour them.",
-      "empty": "Paste a schema or an example: the documents show here.",
-      "noteTitle": "Generated JSON documents"
+      "seedUsed": "· {{seed}} used",
+      "keepSeed": "Pin this seed: the same documents will come back",
+      "again": "Regenerate",
+      "unsupported": "Schema keywords not supported, ignored:",
+      "empty": "Paste a schema or a template document: the documents show here.",
+      "noteTitle": "Generated JSON documents",
+      "expects": {
+        "schema": "Schema: a JSON Schema describes the documents.",
+        "example": "Template: a model document, whose values are replaced by others of the same kind."
+      },
+      "anExample": "This looks like an example document, not a schema.",
+      "asExample": "Read it as a template",
+      "pinSeed": "Pin the seed",
+      "freeSeed": "Let the seed go: each draw will take a new one",
+      "seedPinned": "Seed pinned: “Regenerate” gives the same documents again.",
+      "unsupportedAt": "at"
     },
     "lorem": {
       "name": "Lorem ipsum",
@@ -1474,7 +1484,7 @@
       },
       "count": "Count",
       "opening": "Start with “Lorem ipsum”",
-      "again": "Generate again",
+      "again": "Regenerate",
       "noteTitle": "Lorem ipsum",
       "counted": {
         "words": "{count, plural, one {# word} other {# words}}",
@@ -2175,7 +2185,7 @@
         "hexLower": "Hex",
         "digits": "Digits"
       },
-      "again": "Generate again",
+      "again": "Regenerate",
       "hints": {
         "uuidV4": "{{name}}: 122 random bits, drawn from the system’s generator.",
         "uuidV7": "{{name}}: 48 bits of milliseconds then 74 drawn bits; sorted, they line up in the order they were made.",

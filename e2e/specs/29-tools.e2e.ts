@@ -1123,6 +1123,64 @@ describe('The tools', () => {
       );
     });
 
+    /**
+     * The sample document, with « Schéma » chosen above it, answered three strings of lorem
+     * ipsum and a warning nobody understood; and « La garder » stood far from the seed it kept.
+     */
+    it('says an example is no schema and reads it as a model, loads the sample of the mode, and pins the seed it drew', async () => {
+      const source = (id: string) =>
+        $(`${testid('segmented-json-generator-source')} [data-segment-id="${id}"]`);
+      const documents = async () => JSON.parse(await output()) as unknown[];
+      await $(testid('tool-clear')).click();
+
+      // The sample of « Modèle » is a document, and documents like it come out.
+      await source('example').click();
+      await $(testid('tool-sample')).click();
+      await eventually(output, (text) => text.includes('"createdAt"'), 'documents like the sample');
+
+      // « Schéma » does not take it for a schema: nothing is drawn, and the way back is offered.
+      await source('schema').click();
+      await $(testid('json-generator-an-example')).waitForDisplayed({ timeout: 10_000 });
+      expect(await $(testid('json-generator-output')).isExisting()).toBe(false);
+      expect(await $(testid('json-generator-unsupported')).isExisting()).toBe(false);
+      await $(testid('json-generator-as-example')).click();
+      await eventually(output, (text) => text.includes('"createdAt"'), 'the documents, read as a model');
+      expect(await $(testid('json-generator-expects')).getAttribute('data-source')).toBe('example');
+
+      // « Exemple » under « Schéma » fills a schema: documents come out of it, with no warning.
+      await source('schema').click();
+      await $(testid('json-generator-an-example')).waitForDisplayed({ timeout: 10_000 });
+      await $(testid('tool-sample')).click();
+      await eventually(
+        () => $(testid('json-generator-input')).getValue(),
+        (text) => text.includes('"properties"'),
+        'the sample of the schema mode',
+      );
+      // A required property: the others are drawn one time in two, and three documents may have none.
+      await eventually(output, (text) => text.includes('"email"'), 'documents drawn from the schema');
+      expect(await $(testid('json-generator-unsupported')).isExisting()).toBe(false);
+
+      // « Régénérer » draws others while no seed is pinned…
+      const first = await output();
+      await $(testid('tool-action-draw')).click();
+      const second = await eventually(output, (text) => text !== first, 'other documents');
+
+      // …and the seed just used is said at its own field, with the pin that fixes it there.
+      await $(testid('json-generator-seed-used')).waitForDisplayed({ timeout: 5_000 });
+      await $(testid('json-generator-keep-seed')).click();
+      await $(testid('json-generator-seed-pinned')).waitForDisplayed({ timeout: 5_000 });
+      expect(await $(testid('json-generator-seed')).getValue()).toMatch(/^\d+$/);
+
+      // Pinned, « Régénérer » draws the same: two documents asked next are the first two again.
+      await $(testid('tool-action-draw')).click();
+      await setField(testid('json-generator-count'), '2');
+      await eventually(documents, (drawn) => drawn.length === 2, 'two documents');
+      expect(await documents()).toEqual((JSON.parse(second) as unknown[]).slice(0, 2));
+
+      await setField(testid('json-generator-count'), '3');
+      await $(testid('tool-clear')).click();
+    });
+
     it('opens Lorem ipsum on the classic words', async () => {
       await openTool('lorem');
       await $(`${testid('segmented-lorem-unit')} [data-segment-id="words"]`).click();
