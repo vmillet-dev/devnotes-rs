@@ -763,6 +763,18 @@ is read by its shape, narrowest alphabet first — binary, hexadecimal (each gro
 the other readings its shape allows are named, any of them forced on request. A file keeps the
 two Base64 alone.
 
+**A decoding that is a picture is shown** (`tools/image.rs`, read by `bases::decode`): PNG,
+JPEG, GIF, WebP and SVG are known by their first bytes and sized by their header — no decoder,
+nothing draws a pixel in Rust — and the answer carries the picture as a `data:` URL
+(`DecodedImage`). ⚠️ The CSP is unchanged: `img-src 'self' data:` already lets a picture be a
+`data:` URL, which is how a response's image is drawn too. ⚠️ An SVG goes into an `<img>` like
+the others, **never inlined**: nothing in it runs there. Past 2 MB (`PREVIEW_LIMIT`) the picture
+is still named and sized, and the page says it is not drawn rather than drawing nothing.
+« Enregistrer comme fichier » proposes the extension of what was recognised. A
+`data:image/png;base64,…` URI pasted whole is read by its header — its payload is Base64
+whatever reading was asked — and a refusal inside it still counts characters from the text as
+given.
+
 **A QR code is Rust's, the front draws a path** (`tools/qr.rs`, the `qrcode` crate): the form
 becomes a payload there (Wi-Fi in the ZXing format, `mailto:`, a vCard 3.0 folded at 75 octets),
 always in byte mode, so the capacity reads in the bytes typed. The answer carries the dark
@@ -947,8 +959,14 @@ nothing.
    `<id>.reference.ts`, named by the entry's `reference`.
 5. `tools.<id>.*` in both locales, and a scenario in `29-tools.e2e.ts`.
 
-What every tool draws alike is the kit: `tools/ui/` (`app-output-row`, `app-copy-value`) and
-the `tool-*` mixins.
+What every tool draws alike is the kit: `tools/ui/` (`app-output-row`, `app-result-row`,
+`app-copy-value`) and the `tool-*` mixins. ⚠️ A row of a results card gives its value two
+thirds of the card beside its name, which a long one turned into a strip running down the
+page with its copy icon at mid-height: past `LONG_RESULT` characters a value takes the card's
+width **under** its name, held to eight lines it scrolls in — focusable, so the keyboard
+scrolls it — and its icon stays at its top; `app-output-row` holds its value to a height the
+same way. A tool whose results are long takes the width it is given (`tool-columns`) rather
+than a width of its own.
 
 ⚠️ **The line breaks tool has no `<textarea>`**: a textarea's value turns every CRLF and CR
 into LF, the very thing it is asked about. A paste is read raw from its `clipboardData`, Coller

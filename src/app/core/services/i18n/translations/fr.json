@@ -1227,7 +1227,7 @@
     },
     "base64": {
       "name": "Base64 et autres bases",
-      "description": "Base64, Base32, hexadécimal, binaire, octets — et le format reconnu au décodage",
+      "description": "Base64, Base32, hexadécimal, binaire, octets — le format reconnu au décodage, et l’aperçu d’une image",
       "direction": "Sens",
       "directions": {
         "encode": "Encoder",
@@ -1248,6 +1248,14 @@
       "decodeEmpty": "Le texte décodé s’affiche ici.",
       "binary": "{count, plural, one {# octet} other {# octets}} qui ne forment pas du texte. Les voici en hexadécimal :",
       "saveFile": "Enregistrer comme fichier…",
+      "decodedText": "Texte décodé",
+      "dataUri": "· URI data: de type {{type}}",
+      "dataUriUntyped": "· URI data:",
+      "image": {
+        "alt": "Aperçu de l’image décodée ({{format}})",
+        "weight": "{count, plural, one {# octet} other {# octets}}",
+        "tooLarge": "Image trop lourde pour un aperçu : au-delà de {{limit}} Mo, elle n’est pas affichée. Enregistrez-la comme fichier pour la voir."
+      },
       "saved": "{count, plural, one {Fichier enregistré : # octet.} other {Fichier enregistré : # octets.}}",
       "problems": {
         "character": "« {{character}} » n’appartient pas à ce format, au caractère {{at}}.",

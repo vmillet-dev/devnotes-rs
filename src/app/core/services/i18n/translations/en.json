@@ -1227,7 +1227,7 @@
     },
     "base64": {
       "name": "Base64 and other bases",
-      "description": "Base64, Base32, hexadecimal, binary, bytes — and the format recognised when decoding",
+      "description": "Base64, Base32, hexadecimal, binary, bytes — the format recognised on decoding, and a preview of an image",
       "direction": "Direction",
       "directions": {
         "encode": "Encode",
@@ -1248,6 +1248,14 @@
       "decodeEmpty": "The decoded text shows here.",
       "binary": "{count, plural, one {# byte} other {# bytes}} that are no text. Here they are in hexadecimal:",
       "saveFile": "Save as a file…",
+      "decodedText": "Decoded text",
+      "dataUri": "· data: URI of type {{type}}",
+      "dataUriUntyped": "· data: URI",
+      "image": {
+        "alt": "Preview of the decoded image ({{format}})",
+        "weight": "{count, plural, one {# byte} other {# bytes}}",
+        "tooLarge": "Too large an image for a preview: past {{limit}} MB it is not drawn. Save it as a file to see it."
+      },
       "saved": "{count, plural, one {File saved: # byte.} other {File saved: # bytes.}}",
       "problems": {
         "character": "“{{character}}” does not belong to this format, at character {{at}}.",

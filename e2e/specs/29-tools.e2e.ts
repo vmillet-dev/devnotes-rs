@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { deflateSync } from 'node:zlib';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import {
@@ -39,6 +40,38 @@ function toolNames(locale: string): Record<string, { name: string }> {
   return (
     JSON.parse(readFileSync(fileURLToPath(file), 'utf8')) as { tools: Record<string, { name: string }> }
   ).tools;
+}
+
+/** A real PNG of that size, opaque white: what a WebView draws, and what Rust sizes by its header. */
+function pngOf(width: number, height: number): Buffer {
+  const crc = (bytes: Buffer): number => {
+    let sum = 0xffffffff;
+    for (const byte of bytes) {
+      sum ^= byte;
+      for (let bit = 0; bit < 8; bit += 1) sum = (sum >>> 1) ^ (sum & 1 ? 0xedb88320 : 0);
+    }
+    return (sum ^ 0xffffffff) >>> 0;
+  };
+  const chunk = (type: string, data: Buffer): Buffer => {
+    const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+    const [length, sum] = [Buffer.alloc(4), Buffer.alloc(4)];
+    length.writeUInt32BE(data.length);
+    sum.writeUInt32BE(crc(body));
+    return Buffer.concat([length, body, sum]);
+  };
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header.set([8, 6, 0, 0, 0], 8);
+  // Each row: its filter byte, none, then four bytes a pixel.
+  const rows = Buffer.alloc(height * (1 + width * 4), 0xff);
+  for (let row = 0; row < height; row += 1) rows[row * (1 + width * 4)] = 0;
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', header),
+    chunk('IDAT', deflateSync(rows)),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
 }
 
 /** A paste as the system makes it, CRs included: a textarea's value would lose them. */
@@ -672,6 +705,72 @@ describe('The tools', () => {
       expect(await $(testid('base64-problem')).getText()).toContain('#');
       await $(testid('tool-clear')).click();
       await $(`${testid('segmented-base64-direction')} [data-segment-id="encode"]`).click();
+    });
+
+    /**
+     * Decoded bytes that are a picture could only be saved, then opened elsewhere to see what
+     * they were; and a long result ran down a strip in the middle of an empty window.
+     */
+    it('shows the picture a decoding is, a data: URI included, and gives a long result the width of the window', async () => {
+      const picture = pngOf(24, 16).toString('base64');
+      const drawn = () =>
+        browser.execute((image: string) => {
+          const shown = document.querySelector(image) as HTMLImageElement | null;
+          return shown?.complete ? `${shown.naturalWidth} × ${shown.naturalHeight}` : '';
+        }, testid('base64-image-picture'));
+      await $(`${testid('segmented-base64-direction')} [data-segment-id="decode"]`).click();
+
+      // Rust names and sizes it by its header; the WebView draws it, under the CSP as it stands.
+      await setField(testid('base64-input'), picture);
+      await $(testid('base64-image')).waitForDisplayed({ timeout: 10_000 });
+      expect(await $(testid('base64-image')).getAttribute('data-format')).toBe('png');
+      expect(await $(testid('base64-image-size')).getText()).toBe('24 × 16 px');
+      await eventually(drawn, (size) => size === '24 × 16', 'the picture drawn at its own size');
+
+      // Pasted whole with its header, it is read by it rather than refused.
+      await setField(testid('base64-input'), `data:image/png;base64,${picture}`);
+      await $(testid('base64-data-uri')).waitForDisplayed({ timeout: 10_000 });
+      expect(await $(testid('base64-problem')).isExisting()).toBe(false);
+      expect(await $(testid('base64-image-size')).getText()).toBe('24 × 16 px');
+
+      // Text that is no picture shows none.
+      await setField(testid('base64-input'), 'Q2Fmw6k=');
+      await $(testid('base64-image')).waitForExist({ reverse: true, timeout: 10_000 });
+      await $(`${testid('segmented-base64-direction')} [data-segment-id="encode"]`).click();
+
+      // A long text on a wide window: the first result takes more than half the tool, held to
+      // a height, and the second encoding is still in view under it.
+      const before = await browser.getWindowSize();
+      await browser.setWindowSize(1400, 800);
+      await eventually(viewportSize, (size) => size.width > 1300, 'a wide window');
+      await setField(testid('base64-input'), 'DevNotes garde tout sur cette machine. '.repeat(120));
+      await eventually(
+        () => encoding('base64'),
+        (text) => text.length > 3000,
+        'a long Base64',
+      );
+      const boxes = await browser.execute(
+        (first: string, second: string, tool: string) => {
+          const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
+          const [long, next, whole] = [box(first), box(second), box(tool)];
+          return {
+            share: long.width / whole.width,
+            height: long.height,
+            nextTop: next.top,
+            nextBottom: next.bottom,
+            viewport: window.innerHeight,
+          };
+        },
+        `[data-encoding="base64"] ${testid('output-value')}`,
+        `[data-encoding="base64Url"] ${testid('output-row')}`,
+        'app-base64-tool',
+      );
+      expect(boxes.share).toBeGreaterThan(0.5);
+      expect(boxes.height).toBeLessThan(220);
+      expect(boxes.nextTop).toBeGreaterThan(0);
+      expect(boxes.nextBottom).toBeLessThanOrEqual(boxes.viewport);
+      await browser.setWindowSize(before.width, before.height);
+      await $(testid('tool-clear')).click();
     });
 
     it('reads a file where it lies, by its path', async () => {

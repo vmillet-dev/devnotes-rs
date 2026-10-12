@@ -54,4 +54,7 @@
   color: var(--text-0);
   white-space: pre-wrap;
   word-break: break-all;
+  // Held to a height: a long value scrolls in its own block, not the page past the others.
+  max-height: calc(10 * 1.55em);
+  overflow-y: auto;
 }

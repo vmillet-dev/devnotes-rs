@@ -16,6 +16,7 @@ pub(crate) mod files;
 pub mod generate;
 pub mod hash;
 pub mod identifiers;
+pub mod image;
 pub mod jwt;
 pub(crate) mod numbers;
 pub mod percentages;

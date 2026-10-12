@@ -1,18 +1,37 @@
 @use 'mixins' as *;
 
-.body {
+:host {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  max-width: 860px;
+}
+
+// What goes in on one side and what comes out on the other when the window has room for two
+// columns: held to 860px in one, a long result ran down a strip in the middle of an empty window.
+.columns {
+  @include tool-columns;
+
+  // What comes out is what is long here: it takes the larger share of the two.
+  @media (width >= 960px) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+  }
+}
+
+.column {
+  @include tool-column;
+}
+
+.section-title {
+  @include tool-section-title;
+  margin: 0 auto 0 0;
 }
 
 .bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px 16px;
+  gap: 8px 12px;
+  min-height: 30px;
 }
 
 .field {
@@ -134,6 +153,46 @@
   @include tool-note;
   font-family: var(--font-sans);
   font-size: 12px;
+}
+
+// The picture on a chequered ground, so that what is transparent in it reads as such, never
+// stretched past its own size — but an icon of a few pixels, drawn larger pixel by pixel.
+.preview {
+  @include surface(var(--bg-1), 10px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 14px;
+}
+
+.picture {
+  max-width: 100%;
+  max-height: 360px;
+  border-radius: 4px;
+  background: repeating-conic-gradient(var(--bg-2) 0% 25%, var(--bg-3) 0% 50%) 0 0 / 16px 16px;
+
+  &.small {
+    min-width: 64px;
+    min-height: 64px;
+    object-fit: contain;
+    image-rendering: pixelated;
+  }
+}
+
+.caption {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-family: var(--font-mono), monospace;
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+
+.format {
+  font-weight: 600;
+  color: var(--text-0);
 }
 
 .problem {

@@ -5,7 +5,14 @@
       <span class="meta">{{ meta() }}</span>
     }
   </span>
-  <code class="value" data-testid="output-value">{{ value() }}</code>
+  <!-- Scrolling inside its block, a long value is reached by the keyboard too. -->
+  <code
+    class="value"
+    data-testid="output-value"
+    [attr.tabindex]="long() ? 0 : null"
+    [attr.aria-label]="long() ? name() : null"
+    >{{ value() }}</code
+  >
   @if (copyable()) {
     <app-copy-value [value]="copied() ?? value()" [what]="name()" [compact]="true" />
   }
