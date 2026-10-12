@@ -2091,7 +2091,7 @@ describe('HTTP collections', () => {
       }
     });
 
-    it('keeps the cookies an answer sets, sends them back, and empties the jar after saying how many', async () => {
+    it('keeps the cookies an answer sets, sends them back, masks them in the history, and empties the jar after saying how many', async () => {
       const heard: (string | undefined)[] = [];
       const server = createServer((request, response) => {
         heard.push(request.headers.cookie);
@@ -2101,6 +2101,7 @@ describe('HTTP collections', () => {
       await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
       const { port } = server.address() as AddressInfo;
       try {
+        await bridge.clearHttpHistory();
         const api = await bridge.createHttpCollection('Bocal');
         const created = await bridge.createHttpRequest({
           ...draft(api.id, null, 'Login'),
@@ -2125,6 +2126,32 @@ describe('HTTP collections', () => {
         );
         expect(heard).toEqual([undefined, 'session=abc']);
 
+        // The history keeps neither side of it: what an answer sets is what the next request
+        // sends. The cookie's name and what it applies to stay, its value reads as dots.
+        const kept = (part: string) => `${testid('http-history')} ${part}`;
+        await $(testid('http-history-open')).click();
+        await $(`${testid('http-history-row')}:nth-child(2) ${testid('http-history-item')}`).click();
+        await $(kept(`${testid('http-response-section')}[data-section="headers"]`)).click();
+        const headers = await eventually(
+          () => readEach(kept(`${testid('http-response-headers')} tr`), 'text'),
+          (rows) => rows.some((row) => row.toLowerCase().includes('set-cookie')),
+          'the headers of the answer that was kept',
+        );
+        expect(headers.find((row) => row.toLowerCase().includes('set-cookie'))).toContain(
+          'session=••••••••; Path=/; HttpOnly',
+        );
+        expect(headers.join()).not.toContain('abc');
+        await $(kept(`${testid('http-response-section')}[data-section="cookies"]`)).click();
+        const cookies = await eventually(
+          () => readEach(kept(testid('http-response-cookie')), 'text'),
+          (rows) => rows.length === 1,
+          'the cookie the answer set, in the history',
+        );
+        expect(cookies[0]).toContain('session');
+        expect(cookies[0]).not.toContain('abc');
+        await $(testid('http-history-open')).click();
+        await $(testid('http-history')).waitForExist({ reverse: true, timeout: 10_000 });
+
         await $(testid('http-cookies-open')).click();
         await eventually(
           () =>
@@ -2147,6 +2174,7 @@ describe('HTTP collections', () => {
         await $(testid('http-close-discard')).click();
         await $(tab).waitForExist({ reverse: true, timeout: 10_000 });
         await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+        await bridge.clearHttpHistory();
       } finally {
         server.close();
       }
