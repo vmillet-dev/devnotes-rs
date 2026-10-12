@@ -25,9 +25,9 @@ const tauriIcon = (source, output, sizes) =>
   );
 
 try {
-  // Only the files already tracked: `tauri icon` also writes Android, iOS and macOS sets.
+  // Only the files already tracked: `tauri icon` also writes Android and iOS sets.
   tauriIcon(join(ICONS, 'devnotes.svg'), join(scratch, 'all'));
-  const tracked = readdirSync(ICONS).filter((name) => name.endsWith('.png'));
+  const tracked = readdirSync(ICONS).filter((name) => /\.(png|icns)$/.test(name));
   for (const name of tracked) {
     copyFileSync(join(scratch, 'all', name), join(ICONS, name));
   }

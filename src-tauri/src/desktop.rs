@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 
 use crate::closed_enum::closed_enum;
-use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+use tauri::menu::{Menu, MenuItem, MenuItemKind, PredefinedMenuItem, Submenu};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, State, Wry};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
@@ -197,6 +197,12 @@ pub(crate) fn init(app: &AppHandle) -> tauri::Result<()> {
             .build(),
     )?;
 
+    if cfg!(target_os = "macos")
+        && let Err(error) = ask_before_the_menu_bar_quits(app)
+    {
+        log::warn!("Menu bar left as Tauri built it: {error}");
+    }
+
     let taken = apply_shortcuts(app, &ShortcutBindings::defaults());
     if !taken.is_empty() {
         log::warn!(
@@ -204,6 +210,43 @@ pub(crate) fn init(app: &AppHandle) -> tauri::Result<()> {
             taken.join(", ")
         );
     }
+
+    Ok(())
+}
+
+const MENU_BAR_QUIT_ITEM: &str = "menu-bar-quit";
+
+/// The application's submenu and its last entry: « Quit », in the menu Tauri builds on macOS.
+fn menu_bar_quit(menu: &Menu<Wry>) -> Option<(Submenu<Wry>, PredefinedMenuItem<Wry>)> {
+    let MenuItemKind::Submenu(application) = menu.items().ok()?.into_iter().next()? else {
+        return None;
+    };
+    let MenuItemKind::Predefined(quit) = application.items().ok()?.into_iter().next_back()? else {
+        return None;
+    };
+    Some((application, quit))
+}
+
+/// macOS only. ⌘Q is the menu bar's « Quit », which ends the process with no
+/// `CloseRequested`. Tauri's own menu is kept and that one entry gives way to ours: the page
+/// is asked as everywhere else.
+fn ask_before_the_menu_bar_quits(app: &AppHandle) -> tauri::Result<()> {
+    let menu = Menu::default(app)?;
+    let Some((application, theirs)) = menu_bar_quit(&menu) else {
+        log::warn!("Menu bar left as Tauri built it: no quit entry where one was expected");
+        return Ok(());
+    };
+
+    let ours = MenuItem::with_id(app, MENU_BAR_QUIT_ITEM, theirs.text()?, true, Some("Cmd+Q"))?;
+    application.remove(&theirs)?;
+    application.append(&ours)?;
+    app.set_menu(menu)?;
+
+    app.on_menu_event(|app, event| {
+        if event.id.as_ref() == MENU_BAR_QUIT_ITEM {
+            request_quit(app);
+        }
+    });
 
     Ok(())
 }

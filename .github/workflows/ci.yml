@@ -176,6 +176,10 @@ jobs:
       matrix:
         os: [ubuntu-22.04, windows-latest]
 
+          - os: macos-latest
+            cache-key: rust-macos
+            save-cache: 'true'
+
     steps:
       - uses: actions/checkout@v7
 
@@ -211,7 +215,7 @@ jobs:
           echo "\`test-rust\` (${{ matrix.os }}) — $(($(date +%s) - start)) s" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Test
-        if: runner.os == 'Windows'
+        if: runner.os != 'Linux'
         run: |
           start=$(date +%s)
 
@@ -271,11 +275,11 @@ jobs:
             -Dsonar.qualitygate.wait=true
 
   # The only job that launches the assembled application: real binary, real WebView, real
-  # SQLite file on disk. Both platforms of the release matrix are covered, and they do not
-  # break the same way: the WebView is WebView2 on Windows and WebKitGTK on Linux, and above
-  # all Windows conflates `data_dir()` and `config_dir()` (both `%APPDATA%\<id>`) where Linux
-  # keeps them apart. It is the only runner able to disprove a path — it has already caught a
-  # `preferences.json` looked for in the wrong place.
+  # SQLite file on disk. The three platforms of the release matrix are covered, and they do not
+  # break the same way: the WebView is WebView2 on Windows, WebKitGTK on Linux and WKWebView on
+  # macOS, and above all Windows and macOS conflate `data_dir()` and `config_dir()` (one folder
+  # of the profile) where Linux keeps them apart. It is the only runner able to disprove a
+  # path — it has already caught a `preferences.json` looked for in the wrong place.
   test-e2e:
     name: Test E2E (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -283,7 +287,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-22.04]
+        os: [windows-latest, ubuntu-22.04, macos-latest]
     defaults:
       run:
         shell: bash
@@ -295,7 +299,7 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
-      # The action's apt step installs the Tauri dependencies on Linux; on Windows it only
+      # The action's apt step installs the Tauri dependencies on Linux; elsewhere it only
       # lays down the toolchain and the cargo cache.
       - uses: ./.github/actions/setup-rust
         with:

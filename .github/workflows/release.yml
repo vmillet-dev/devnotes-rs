@@ -215,6 +215,9 @@ jobs:
     environment: release
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
+    # ⚠️ The tag is out by the time this runs. A macOS leg that fails is a release without its
+    # macOS files, never a tag without a release: `publish` goes ahead with what was built.
+    continue-on-error: ${{ matrix.optional }}
     defaults:
       run:
         shell: bash
@@ -226,8 +229,23 @@ jobs:
           # produces then refuses to start on older distributions.
           - os: ubuntu-22.04
             target: linux
+            triple: ''
+            optional: false
           - os: windows-latest
             target: windows
+            triple: ''
+            optional: false
+          # Both from the Apple Silicon runner, whose toolchain builds for Intel as well.
+          - os: macos-latest
+            target: macos-aarch64
+            triple: aarch64-apple-darwin
+            arch: aarch64
+            optional: true
+          - os: macos-latest
+            target: macos-x64
+            triple: x86_64-apple-darwin
+            arch: x64
+            optional: true
     steps:
       # The SHA rather than the tag name: the tag was just created by `prepare`, and a SHA
       # cannot come to mean something else in between.
@@ -245,11 +263,16 @@ jobs:
           shared-key: release-${{ matrix.target }}
           save-if: 'true'
 
+      - name: Standard library of the named target
+        if: matrix.triple != ''
+        run: rustup target add ${{ matrix.triple }}
+
       - run: npm ci
 
-      # Without `tagName` the action only builds: it creates no release, so the two matrix
-      # jobs do not fight over the same one.
-      # `bundle.targets: "all"` produces NSIS + MSI on Windows, deb + rpm + AppImage on Linux.
+      # Without `tagName` the action only builds: it creates no release, so the matrix jobs
+      # do not fight over the same one.
+      # `bundle.targets: "all"` produces NSIS + MSI on Windows, deb + rpm + AppImage on Linux,
+      # the `.app` and its disk image on macOS.
       #
       # `bundle.createUpdaterArtifacts` being on, the bundler demands the private signing key:
       # without the secret this job fails instead of publishing binaries the updater would
@@ -260,12 +283,13 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          args: --verbose
+          args: --verbose ${{ matrix.triple != '' && format('--target {0}', matrix.triple) || '' }}
 
       # The bundler packages every binary Cargo builds, which is how 0.9.1's installers came to
       # carry `export-bindings` beside the application. The MSI is unpacked by an administrative
       # install, which installs nothing, and the .deb listed (Tauri writes its entries without a
-      # leading `./`); NSIS, RPM and the AppImage are made from the same list of binaries.
+      # leading `./`); NSIS, RPM and the AppImage are made from the same list of binaries. On
+      # macOS the `.app` is a folder, and the disk image and the updater's archive are copies of it.
       - name: Each bundle holds the application alone
         run: |
           if [ '${{ matrix.target }}' = 'windows' ]; then
@@ -273,9 +297,12 @@ jobs:
             pwsh -NoProfile -Command "Start-Process msiexec -ArgumentList '/a','$msi','/qn','TARGETDIR=$(cygpath -w "$RUNNER_TEMP/msi")' -Wait"
             found=$(find "$RUNNER_TEMP/msi" -type f -name '*.exe' -printf '%f\n' | sort)
             expected='devnotes.exe'
-          else
+          elif [ '${{ matrix.target }}' = 'linux' ]; then
             found=$(dpkg-deb -c src-tauri/target/release/bundle/deb/*.deb \
               | awk '$6 ~ /^(\.\/)?usr\/bin\/[^\/]+$/ { n = split($6, part, "/"); print part[n] }' | sort)
+            expected='devnotes'
+          else
+            found=$(ls 'src-tauri/target/${{ matrix.triple }}/release/bundle/macos/devnotes.app/Contents/MacOS' | sort)
             expected='devnotes'
           fi
           echo "executables: $found"
@@ -295,18 +322,27 @@ jobs:
       - name: Gather installers and the standalone executable
         env:
           VERSION: ${{ needs.prepare.outputs.version }}
+          TRIPLE: ${{ matrix.triple }}
+          ARCH: ${{ matrix.arch }}
         run: |
           mkdir -p release
-          find src-tauri/target/release/bundle -type f \
+          # A leg that names its target builds under a folder of that name.
+          out="src-tauri/target/${TRIPLE:+$TRIPLE/}release"
+          find "$out/bundle" -type f \
             \( -name '*.exe' -o -name '*.msi' -o -name '*.deb' -o -name '*.rpm' \
-               -o -name '*.AppImage' -o -name '*.sig' \) \
+               -o -name '*.AppImage' -o -name '*.dmg' -o -name '*.sig' \) \
             -exec cp {} release/ \;
-          # The bundler does not collect the bare binary; renaming it keeps the two operating
+          # The bundler does not collect the bare binary; renaming it keeps the operating
           # systems from overlapping in the release.
           if [ '${{ matrix.target }}' = 'windows' ]; then
-            cp src-tauri/target/release/devnotes.exe "release/devnotes-${VERSION}-windows.exe"
+            cp "$out/devnotes.exe" "release/devnotes-${VERSION}-windows.exe"
+          elif [ '${{ matrix.target }}' = 'linux' ]; then
+            cp "$out/devnotes" "release/devnotes-${VERSION}-linux"
           else
-            cp src-tauri/target/release/devnotes "release/devnotes-${VERSION}-linux"
+            # The updater's archive is `devnotes.app.tar.gz` on both architectures: it takes
+            # the name of the one it holds, as the disk image has, and its signature with it.
+            cp "$out/bundle/macos/devnotes.app.tar.gz" "release/devnotes_${VERSION}_${ARCH}.app.tar.gz"
+            mv release/devnotes.app.tar.gz.sig "release/devnotes_${VERSION}_${ARCH}.app.tar.gz.sig"
           fi
           ls -l release
 
@@ -366,11 +402,14 @@ jobs:
           const { TAG, REPO } = process.env;
 
           // The bundler signs everything it produces, system packages included. But the
-          // updater only knows how to install the NSIS installer and the AppImage: the
-          // other signatures (.deb, .rpm, .msi) are ignored, not fatal.
+          // updater only knows how to install the NSIS installer, the AppImage and, on macOS,
+          // the archive of the `.app`: the other signatures (.deb, .rpm, .msi) are ignored,
+          // not fatal.
           const TARGETS = [
             { suffix: '.exe', key: 'windows-x86_64' },
             { suffix: '.AppImage', key: 'linux-x86_64' },
+            { suffix: '_aarch64.app.tar.gz', key: 'darwin-aarch64' },
+            { suffix: '_x64.app.tar.gz', key: 'darwin-x86_64' },
           ];
 
           // Each .sig names the file it signs. That is what tells the NSIS installer from
@@ -410,13 +449,15 @@ jobs:
           }
 
           // Windows is the priority target: without it the manifest would serve nobody, so
-          // publication breaks. Linux ships if it is there, but its absence must not hold
-          // back an otherwise healthy Windows release.
+          // publication breaks. Linux and macOS ship if they are there, but their absence
+          // must not hold back an otherwise healthy Windows release.
           if (!platforms['windows-x86_64']) {
             throw new Error('no Windows update artifact in release/');
           }
-          if (!platforms['linux-x86_64']) {
-            console.log('::warning::No Linux update artifact: Windows-only manifest.');
+          for (const { key } of TARGETS) {
+            if (!platforms[key]) {
+              console.log(`::warning::No update artifact for ${key}: the manifest goes out without it.`);
+            }
           }
 
           // Without the "v": the updater compares the value as semver, and a prefix would

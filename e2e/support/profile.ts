@@ -4,6 +4,11 @@ import { join } from 'node:path';
 
 const IDENTIFIER = 'com.devnotes.app.e2e';
 
+/** macOS has one folder for data and configuration, as Windows does. */
+function applicationSupport(): string {
+  return join(process.env['HOME'] ?? '', 'Library/Application Support', IDENTIFIER);
+}
+
 /**
  * ⚠️ `app_data_dir()` is `data_dir()/identifier`, and the e2e build carries an identifier
  * of its own — which is what keeps this wipe off the library being dogfooded.
@@ -11,6 +16,9 @@ const IDENTIFIER = 'com.devnotes.app.e2e';
 function e2eDataDir(): string {
   if (process.platform === 'win32') {
     return join(process.env['APPDATA'] ?? '', IDENTIFIER);
+  }
+  if (process.platform === 'darwin') {
+    return applicationSupport();
   }
   const xdg = process.env['XDG_DATA_HOME'];
   return xdg ? join(xdg, IDENTIFIER) : join(process.env['HOME'] ?? '', '.local/share', IDENTIFIER);
@@ -25,6 +33,9 @@ function e2eDataDir(): string {
 function e2eConfigDir(): string {
   if (process.platform === 'win32') {
     return join(process.env['APPDATA'] ?? '', IDENTIFIER);
+  }
+  if (process.platform === 'darwin') {
+    return applicationSupport();
   }
   const xdg = process.env['XDG_CONFIG_HOME'];
   return xdg ? join(xdg, IDENTIFIER) : join(process.env['HOME'] ?? '', '.config', IDENTIFIER);
@@ -89,7 +100,7 @@ export function homeSpaceMarker(): string {
  * that against the config's hooks: a wipe from inside wdio meets a locked database.
  */
 export function resetProfile(): void {
-  // Both, and `new Set` because on Windows they are the same path.
+  // Both, and `new Set` because on Windows and macOS they are the same path.
   const directories = [...new Set([e2eDataDir(), e2eConfigDir()])];
 
   for (const directory of directories) {

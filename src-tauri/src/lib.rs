@@ -431,6 +431,12 @@ pub fn run() {
             if matches!(event, tauri::RunEvent::Exit) {
                 attachments::sealed::sweep_plaintext(handle);
             }
+            // The Dock's icon, clicked while the window is hidden: macOS starts no second
+            // process, so `single_instance` never hears of it.
+            #[cfg(target_os = "macos")]
+            if matches!(event, tauri::RunEvent::Reopen { .. }) {
+                desktop::reveal(handle);
+            }
         });
 }
 
