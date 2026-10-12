@@ -54,11 +54,13 @@ jobs:
 
       - run: npm ci
 
-      # A key of this run's own, never printed: the bundler refuses to build updater artifacts
-      # without one, and the release's key stays in its environment.
+      # A key of this run's own: the bundler refuses to build updater artifacts without one, and
+      # the release's key stays in its environment. ⚠️ Masked first — a value put in the
+      # environment is printed with every step that follows.
       - name: A signing key for this run alone
         run: |
           npx tauri signer generate --ci -p '' -w "$RUNNER_TEMP/rehearsal.key" > /dev/null 2>&1
+          echo "::add-mask::$(cat "$RUNNER_TEMP/rehearsal.key")"
           echo "TAURI_SIGNING_PRIVATE_KEY=$(cat "$RUNNER_TEMP/rehearsal.key")" >> "$GITHUB_ENV"
           echo 'TAURI_SIGNING_PRIVATE_KEY_PASSWORD=' >> "$GITHUB_ENV"
 
@@ -167,7 +169,8 @@ jobs:
 
           echo '--- what the application wrote'
           ls -la "$HOME/Library/Application Support/com.devnotes.app" 2>&1 || true
-          echo '--- its log'
+          echo '--- its log (a menu bar left as it was would be said here)'
+          ls -la "$HOME/Library/Logs/com.devnotes.app/" 2>&1 || true
           cat "$HOME/Library/Logs/com.devnotes.app/"*.log 2>&1 || true
           pkill -x devnotes || true
 
