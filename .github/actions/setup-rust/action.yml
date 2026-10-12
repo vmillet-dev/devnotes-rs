@@ -3,10 +3,10 @@ description: Tauri system dependencies, Rust toolchain and a cargo cache shared 
 
 inputs:
   shared-key:
-    description: Cargo cache key. Jobs compiling the same thing must share the same value.
+    description: Cargo cache key. One per job that compiles — a job reading another's finds none of its own artifacts.
     required: true
   save-if:
-    description: "'true' for the one job allowed to write the cache; the others read it."
+    description: "'true' for the job that owns the key. Never honoured on a pull request."
     required: false
     default: 'false'
 
@@ -40,6 +40,10 @@ runs:
 
     # `workspaces` is mandatory: the Cargo project lives in src-tauri/, not at the root.
     # Without it the action finds nothing and the cache stays empty without saying so.
+    #
+    # ⚠️ Nothing is saved from a pull request: an entry written there is readable by that pull
+    # request alone, and one that moves Cargo.lock would put a gigabyte per job in a quota of
+    # ten. It reads its base branch's and main's, which is where a new entry gets written.
     - uses: Swatinem/rust-cache@v2
       with:
         workspaces: src-tauri
