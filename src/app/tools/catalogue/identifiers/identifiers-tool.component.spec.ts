@@ -119,6 +119,10 @@ describe('IdentifiersToolComponent', () => {
     press(harness.element('[data-testid="identifiers-checked"]'));
     press(document.body, 'r', { ctrlKey: true });
     press(document.body, 'x');
+    // What Chromium fires on a field when a suggestion is picked: no key, nothing to draw.
+    harness
+      .element('[data-testid="identifiers-checked"]')
+      .dispatchEvent(new Event('keydown', { bubbles: true }));
     await harness.settle();
 
     expect(generated(harness)).toHaveLength(2);

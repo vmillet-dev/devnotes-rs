@@ -3431,6 +3431,13 @@ per row. `canvasKeystrokeFromEvent` upper-cases a single character, so a caps-lo
 answers the same key as a bare one, and folds the Command key into `Ctrl`: `Super` means
 something of its own only where a shortcut leaves the window.
 
+⚠️ **Not every `keydown` is a keystroke.** A suggestion picked from a `<datalist>` — the
+names of a request's headers — or from an autofill makes Chromium fire a bare `Event` named
+`keydown` on the field, without `key`, `code` or modifier, and it bubbles to the document.
+`isKeystroke` says so, and a listener on the document that reads `event.key` before anything
+else asks it first: `canvasKeystrokeFromEvent` answers `null`, the identifiers tool's `R`
+draws nothing. Read as a keystroke, it threw « reading 'length' » at every pick.
+
 **A refusal is a reason, not a boolean.** `rebind` answers `null`, `{ kind: 'illegal' }` or
 `{ kind: 'taken', by }`, and the page turns that into the sentence under the field. Deciding it
 twice — once in the store, once in the panel — is how the two drift. `conflicts(among)` exists

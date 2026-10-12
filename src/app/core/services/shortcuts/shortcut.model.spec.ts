@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SHORTCUTS, acceleratorFromEvent, acceleratorKeys, isAccelerator } from './shortcut.model';
+import {
+  DEFAULT_SHORTCUTS,
+  acceleratorFromEvent,
+  acceleratorKeys,
+  canvasKeystrokeFromEvent,
+  isAccelerator,
+} from './shortcut.model';
 
 function keydown(init: KeyboardEventInit): KeyboardEvent {
   return new KeyboardEvent('keydown', init);
@@ -35,6 +41,17 @@ describe('acceleratorFromEvent', () => {
 
   it('reads the key by position, not by the character it produces', () => {
     expect(acceleratorFromEvent(keydown({ code: 'KeyA', key: 'q', ctrlKey: true }))).toBe('Ctrl+A');
+  });
+});
+
+describe('canvasKeystrokeFromEvent', () => {
+  it('reads the printed key, modifiers first', () => {
+    expect(canvasKeystrokeFromEvent(keydown({ key: 'c', code: 'KeyC' }))).toBe('C');
+    expect(canvasKeystrokeFromEvent(keydown({ key: 'b', code: 'KeyB', ctrlKey: true }))).toBe('Ctrl+B');
+  });
+
+  it('reads no keystroke in the keydown Chromium fires when a suggestion is picked', () => {
+    expect(canvasKeystrokeFromEvent(new Event('keydown'))).toBeNull();
   });
 });
 
