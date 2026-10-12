@@ -14,9 +14,58 @@ the release notes the updater hands over.
 
 ## [0.10.1] - 2026-10-12
 
+### ✨ Added
+
+- Draw a fictitious person of twelve more countries, each under its own numbers (#781)
+- Draw a fictitious person as a card, every number passing its own check (#777)
+- Decide how a fictitious identity gets its names (#776)
+- List and count the runs of a cron expression between two moments (#775)
+- Give Base64 the width of the window, a long result a block of its own, and show a decoded picture (#773)
+- Star a tool (#771)
+- Search the tools by category and inside the references, open a result on Enter, and keep five recents in the rail (#770)
+- Move the line between a request and its answer, clear an answer, and draw its status to be read (#768)
+- Create the collection or the folder a first save lacks, from the save dialog (#766)
+- Show and say where a row lands when it is moved with the keys in the HTTP rail (#764)
+- Widen the history's list, delete one send, reopen a send in its own request (#761)
+- Show that a request is on its way (#750)
+
+### 🔧 Changed
+
+- Keep the names in one list (#784)
+- Ship the identity lists as files beside the application, and say when one cannot be read (#782)
+- Say an example is no schema, name what each mode expects, and keep the seed at its field (#774)
+- Tell the rail's « + » from the tabs', name « Nouvelle requête », and keep a name whose field is left (#763)
+- Choose GraphQL or a WebSocket when a request is created, not among the methods (#762)
+- Name a WebSocket's failures as a request's, send its message on Ctrl+Enter, ask before closing it (#760)
+- Say what a GraphQL query and its variables lack before it is sent, and open on its errors (#759)
+- Say it when a GET carries a body (#756)
+- Draw the three rails in one frame, at one width, resizable in each (#754)
+- Rename three tools after what they do (#745)
+- Call the notes' first view « Liste » (#744)
+
+### 🐛 Fixed
+
+- Start a header table's change from what it last emitted (#779)
+- Say when a text is no structure rather than read it as YAML, and call the tab « Données » (#772)
+- Ask before the page goes away with requests that are not saved (#767)
+- Say which open requests lose unsaved changes before a deletion takes them (#765)
+- Keep a cookie set on a redirect, and send it to the page it leads to (#758)
+- Refuse a header that cannot be sent where it is typed, and name it when it fails (#757)
+- Send a User-Agent by default, and list what a request sends unasked (#755)
+- Keep one name for a request, in the rail and in its tab (#753)
+- Hold a choice menu's panel to its entries' width (#752)
+- Hide and show the rail as one state in the three areas (#751)
+- Say a timeout and a redirect too many with the value in force, and who set it (#749)
+- Pack the tools home's panels by column (#746)
+- Let the sentences under a request's fields take their own width (#748)
+- Open a choice menu's panel in the top layer, above its trigger when the room under is short (#747)
+
+### 🔒 Security
+
+- Mask what the history kept of a secret, seal its method and status, and write down every column (#769)
+
 ### 🧰 Under the hood
 
-- Bump the version to 0.10.1
 - Version the Claude Code skills and the agent rules (#707)
 
 ## [0.10.0] - 2026-10-07
