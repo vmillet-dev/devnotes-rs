@@ -139,6 +139,11 @@ export const commands = {
 	/**  `parent_id` `None` puts it at the collection's root. */
 	createHttpFolder: (collectionId: string, parentId: string | null, name: string) => typedError<HttpFolder, AppError>(__TAURI_INVOKE("create_http_folder", { collectionId, parentId, name })),
 	createHttpRequest: (draft: HttpRequestDraft) => typedError<HttpRequest, AppError>(__TAURI_INVOKE("create_http_request", { draft })),
+	/**
+	 *  The first save of a request where nothing holds it yet: what `create` names is created
+	 *  with it, or nothing is. Every name is checked before anything is written.
+	 */
+	createHttpRequestIn: (draft: HttpRequestDraft, create: NewPlace) => typedError<HttpRequest, AppError>(__TAURI_INVOKE("create_http_request_in", { draft, create })),
 	getHttpRequest: (id: string) => typedError<HttpRequest, AppError>(__TAURI_INVOKE("get_http_request", { id })),
 	saveHttpRequest: (id: string, patch: HttpRequestPatch) => typedError<HttpRequest, AppError>(__TAURI_INVOKE("save_http_request", { id, patch })),
 	renameHttpItem: (item: HttpItem, name: string) => typedError<null, AppError>(__TAURI_INVOKE("rename_http_item", { item, name })),
@@ -1891,6 +1896,15 @@ export type ModeWarning =
 export type NanoAlphabet = 
 /**  `A-Za-z0-9_-`, `NanoID`'s own. */
 "urlSafe" | "alphanumeric" | "hexLower" | "digits";
+
+/**
+ *  What a request's first save creates on its way: the collection to put it in, a folder
+ *  under the place it names, or both — the folder then goes in the new collection.
+ */
+export type NewPlace = {
+	collection?: string | null,
+	folder?: string | null,
+};
 
 export type Notation = "hex" | "rgb" | "hsl" | "oklch";
 

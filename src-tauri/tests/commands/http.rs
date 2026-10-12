@@ -1,12 +1,12 @@
 use devnotes_lib::error::ErrorCode;
 use devnotes_lib::http::model::{
     HttpItem, HttpItemKind, HttpMethod, HttpNode, HttpPlace, HttpRequestDraft, HttpRequestPatch,
-    RequestDocument, RequestKind,
+    NewPlace, RequestDocument, RequestKind,
 };
 use devnotes_lib::http::{
     count_http_contents, create_http_collection, create_http_folder, create_http_request,
-    delete_http_item, duplicate_http_item, get_http_request, http_tree, move_http_item,
-    rename_http_item, reorder_http_collection, save_http_request,
+    create_http_request_in, delete_http_item, duplicate_http_item, get_http_request, http_tree,
+    move_http_item, rename_http_item, reorder_http_collection, save_http_request,
 };
 
 use super::{Session, code};
@@ -348,6 +348,107 @@ fn the_query_and_its_table_are_kept_in_step_through_the_command() {
         .unwrap();
 
     assert_eq!(synced.params[0].key, "a");
+}
+
+/// On a library with no collection, a first save sent its reader to the rail and back. The
+/// save creates what it lacks, in one write — or writes nothing at all.
+#[test]
+fn a_first_save_creates_the_collection_or_the_folder_it_lacks_or_nothing_at_all() {
+    let session = Session::open();
+    let before = names(&session).len();
+    let new = |collection: Option<&str>, folder: Option<&str>| NewPlace {
+        collection: collection.map(str::to_string),
+        folder: folder.map(str::to_string),
+    };
+
+    // A collection that does not exist yet: the request at its root, whatever place it named.
+    let first = session
+        .call(|app| {
+            create_http_request_in(
+                draft("nowhere", Some("nowhere"), "Santé"),
+                new(Some("  Boutique  "), None),
+                app,
+            )
+        })
+        .unwrap();
+    assert_eq!(first.folder_id, None);
+    assert_eq!(names(&session)[before..], ["Boutique", "Santé"]);
+
+    // A folder under the place the draft names — a collection's root, then a folder.
+    let second = session
+        .call(|app| {
+            create_http_request_in(
+                draft(&first.collection_id, None, "Lister"),
+                new(None, Some("Commandes")),
+                app,
+            )
+        })
+        .unwrap();
+    let commandes = second.folder_id.clone().unwrap();
+    session
+        .call(|app| {
+            create_http_request_in(
+                draft(&first.collection_id, Some(&commandes), "Anciennes"),
+                new(None, Some("Archives")),
+                app,
+            )
+        })
+        .unwrap();
+    assert_eq!(
+        names(&session)[before..],
+        [
+            "Boutique",
+            "Santé",
+            "Commandes",
+            "Lister",
+            "Archives",
+            "Anciennes"
+        ]
+    );
+
+    // Both at once: the folder goes in the new collection, the request in the folder.
+    let both = session
+        .call(|app| {
+            create_http_request_in(
+                draft(&first.collection_id, Some(&commandes), "Chercher"),
+                new(Some("Catalogue"), Some("Produits")),
+                app,
+            )
+        })
+        .unwrap();
+    assert_ne!(both.collection_id, first.collection_id);
+    assert_eq!(
+        names(&session)[before + 6..],
+        ["Catalogue", "Produits", "Chercher"]
+    );
+
+    // Refused whole: a request, a folder or a collection without a name, a place that is not
+    // there — and no collection is left behind, empty, by any of them.
+    let held = names(&session);
+    for (request, place) in [
+        (draft("nowhere", None, "   "), new(Some("Orpheline"), None)),
+        (
+            draft("nowhere", None, "Seule"),
+            new(Some("Orpheline"), Some("  ")),
+        ),
+        (draft("nowhere", None, "Seule"), new(Some(" "), None)),
+    ] {
+        assert_eq!(
+            code(session.call(|app| create_http_request_in(request, place, app))),
+            ErrorCode::InvalidInput
+        );
+    }
+    assert_eq!(
+        code(session.call(|app| {
+            create_http_request_in(
+                draft("absent", None, "Seule"),
+                new(None, Some("Dossier")),
+                app,
+            )
+        })),
+        ErrorCode::HttpItemNotFound
+    );
+    assert_eq!(names(&session), held);
 }
 
 /// GraphQL and WebSocket were the last two entries of the method menu: a kind filed among

@@ -2885,7 +2885,16 @@
       "title": "Save the request",
       "name": "Name",
       "place": "In",
-      "nowhere": "No collection yet: create one in the rail, with ＋."
+      "newCollection": "New collection…",
+      "collectionName": "Name of the new collection",
+      "newFolder": "＋ New folder…",
+      "folderName": "Name of the new folder",
+      "noFolder": "Do not create a folder",
+      "missing": {
+        "name": "Give the request a name.",
+        "collection": "Give the collection a name.",
+        "folder": "Give the folder a name, or remove it."
+      }
     },
     "close": {
       "title": "“{{name}}” has changes",

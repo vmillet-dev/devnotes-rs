@@ -2885,7 +2885,16 @@
       "title": "Enregistrer la requête",
       "name": "Nom",
       "place": "Dans",
-      "nowhere": "Aucune collection pour l'instant : créez-en une dans le rail, avec ＋."
+      "newCollection": "Nouvelle collection…",
+      "collectionName": "Nom de la nouvelle collection",
+      "newFolder": "＋ Nouveau dossier…",
+      "folderName": "Nom du nouveau dossier",
+      "noFolder": "Ne pas créer de dossier",
+      "missing": {
+        "name": "Donnez un nom à la requête.",
+        "collection": "Donnez un nom à la collection.",
+        "folder": "Donnez un nom au dossier, ou retirez-le."
+      }
     },
     "close": {
       "title": "« {{name}} » a des modifications",

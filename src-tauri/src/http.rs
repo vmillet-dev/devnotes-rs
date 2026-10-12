@@ -25,7 +25,7 @@ use crate::error::{AppError, FileContext};
 use crate::tools::off_thread;
 use model::{
     HttpCollection, HttpContents, HttpFolder, HttpItem, HttpPlace, HttpRequest, HttpRequestDraft,
-    HttpRequestPatch, HttpTree,
+    HttpRequestPatch, HttpTree, NewPlace,
 };
 
 #[tauri::command]
@@ -99,6 +99,42 @@ pub async fn create_http_request<R: Runtime>(
             &mut connection,
             &draft,
             &name,
+            Utc::now(),
+        )?)
+    })
+    .await
+}
+
+/// The first save of a request where nothing holds it yet: what `create` names is created
+/// with it, or nothing is. Every name is checked before anything is written.
+#[tauri::command]
+#[specta::specta]
+pub async fn create_http_request_in<R: Runtime>(
+    draft: HttpRequestDraft,
+    create: NewPlace,
+    app: AppHandle<R>,
+) -> Result<HttpRequest, AppError> {
+    blocking(app, move |_, db| {
+        let name = model::validated_name(&draft.name)?;
+        let collection = create
+            .collection
+            .as_deref()
+            .map(model::validated_name)
+            .transpose()?;
+        let folder = create
+            .folder
+            .as_deref()
+            .map(model::validated_name)
+            .transpose()?;
+
+        let mut connection = lock(db)?;
+
+        Ok(store::create_request_in(
+            &mut connection,
+            &draft,
+            &name,
+            collection.as_deref(),
+            folder.as_deref(),
             Utc::now(),
         )?)
     })

@@ -9,6 +9,7 @@ import {
   HttpPlace,
   HttpRequestDraft,
   HttpTree,
+  NewPlace,
   GraphqlAnswer,
   GraphqlParts,
   HistoryDay,
@@ -152,6 +153,19 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
         draft.folderId,
       ),
     );
+  }
+
+  createRequestIn(draft: HttpRequestDraft, create: NewPlace): Promise<OpenedRequest> {
+    return this.record('createRequestIn', [draft, create], () => {
+      const collectionId = create.collection ? `collection-${++this.nextId}` : draft.collectionId;
+      const folderId = create.folder ? `folder-${++this.nextId}` : create.collection ? null : draft.folderId;
+      return this.seed(
+        `request-${++this.nextId}`,
+        { name: draft.name, kind: draft.kind, method: draft.method, parts: toParts(draft.document) },
+        collectionId,
+        folderId,
+      );
+    });
   }
 
   request(id: string): Promise<OpenedRequest> {

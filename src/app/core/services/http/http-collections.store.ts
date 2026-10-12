@@ -3,7 +3,7 @@ import { HttpRepository } from '@core/data/http.repository';
 import { HttpContents, HttpItem, HttpTree, RequestKind } from '@core/model/http.model';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
-import { RailMove, railRows } from './http-tree';
+import { RailMove, ancestors, railRows } from './http-tree';
 
 /** In the library's preferences: which folds were left closed belongs to its collections. */
 const COLLAPSED_KEY = 'devnotes.notes.http.collapsed';
@@ -111,6 +111,11 @@ export class HttpCollectionsStore {
       if (move.place.folderId !== null) this.unfold(move.place.folderId);
       await this.write(() => this.repository.move(move.item, move.place));
     }
+  }
+
+  /** Unfolds what hides a request: one saved into a folded folder is lit where nobody sees it. */
+  reveal(requestId: string): void {
+    for (const id of ancestors(this._tree(), requestId)) this.unfold(id);
   }
 
   private unfold(id: string): void {

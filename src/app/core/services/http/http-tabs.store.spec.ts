@@ -126,6 +126,69 @@ describe('HttpTabsStore', () => {
     expect(http.callsOf('createRequest').at(-1)?.[0]).toMatchObject({ kind: 'websocket' });
   });
 
+  /**
+   * On a library with no collection the first save needed a trip to the rail. The save hands
+   * Rust the request **and** what it lacks, in one call: a request that is refused leaves no
+   * empty collection behind it.
+   */
+  it('saves a new request with the collection or the folder it lacks, in one write', async () => {
+    store().newRequest();
+    const key = store().activeKey()!;
+    store().edit(key, { name: 'Santé' });
+
+    await store().save(key, { collectionId: '', folderId: null, create: { collection: 'Boutique' } });
+
+    expect(http.callsOf('createCollection')).toEqual([]);
+    expect(http.callsOf('createRequest')).toEqual([]);
+    expect(http.callsOf('createRequestIn')).toHaveLength(1);
+    expect(http.callsOf('createRequestIn')[0]).toMatchObject([
+      { name: 'Santé', kind: 'http', method: 'GET' },
+      { collection: 'Boutique' },
+    ]);
+
+    store().newRequest('graphql');
+    await store().save(store().activeKey()!, {
+      collectionId: 'API',
+      folderId: 'Auth',
+      create: { folder: 'Jetons' },
+    });
+    expect(http.callsOf('createRequestIn')[1]).toMatchObject([
+      { collectionId: 'API', folderId: 'Auth', kind: 'graphql' },
+      { folder: 'Jetons' },
+    ]);
+    expect(http.callsOf('createFolder')).toEqual([]);
+  });
+
+  it('takes the place Rust answers, not the one it asked for, and says when the write failed', async () => {
+    store().newRequest();
+    const key = store().activeKey()!;
+    http.failNext = new Error('disk');
+    expect(
+      await store().save(key, { collectionId: '', folderId: null, create: { collection: 'X' } }),
+    ).toBeNull();
+    expect(store().tabs()[0]).toMatchObject({ key, requestId: null, place: null });
+
+    // The tree the save reads back holds the request: its tab stays, placed where Rust put it.
+    http.tree$ = {
+      collections: [
+        collection('collection-1', [
+          folder('folder-2', 'collection-1', [request('request-3', 'collection-1', 'folder-2')]),
+        ]),
+      ],
+    };
+    const saved = await store().save(key, {
+      collectionId: '',
+      folderId: null,
+      create: { collection: 'Boutique', folder: 'Commandes' },
+    });
+
+    expect(saved).toBe('request-3');
+    expect(store().active()).toMatchObject({
+      requestId: 'request-3',
+      place: { collectionId: 'collection-1', folderId: 'folder-2' },
+    });
+  });
+
   /** A tab closed by a deletion took what was typed in it: the rail asks for these first. */
   it('names the open tabs with unsaved changes among the requests a deletion takes', async () => {
     http.seed('Logout');

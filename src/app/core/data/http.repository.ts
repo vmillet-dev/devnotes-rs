@@ -13,6 +13,7 @@ import {
   HttpRequestDraft,
   HttpRequestPatch,
   HttpTree,
+  NewPlace,
   GraphqlAnswer,
   GraphqlParts,
   toGraphqlWire,
@@ -62,6 +63,11 @@ export class HttpRepository {
 
   async createRequest(draft: HttpRequestDraft): Promise<OpenedRequest> {
     return opened(unwrap('create_http_request', await commands.createHttpRequest(draft)));
+  }
+
+  /** With the collection or the folder it is saved into, created in the same write. */
+  async createRequestIn(draft: HttpRequestDraft, create: NewPlace): Promise<OpenedRequest> {
+    return opened(unwrap('create_http_request_in', await commands.createHttpRequestIn(draft, create)));
   }
 
   async request(id: string): Promise<OpenedRequest> {
