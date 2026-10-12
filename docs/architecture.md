@@ -1838,7 +1838,11 @@ bumps `settingsRevision`: its name is in what its requests inherit « from ».
     reason under the table; a parameter or a form field takes any character and is asked
     nothing. `Nom: valeur` typed in a name is split by `read_http_headers` — what follows the
     first colon goes to the value when there is none, and the caret with it — and several lines
-    pasted there fill a row each (the field alone would take them on one line);
+    pasted there fill a row each (the field alone would take them on one line). ⚠️ Every change
+    starts from `latest`, what the table last emitted, not from its `rows` input: the input
+    only follows at the next change detection, and a value typed right after the split — or an
+    answer from Rust arriving before the screen — started from a row already replaced and put
+    the colon back in the name;
   - `save_http_settings` refuses it: stored, it failed requests one by one. A request's own
     rows are saved as typed — a tab is a draft, and it shows the mark;
   - `compose` checks every header before the client builds it and answers `SendError::Header`,
@@ -5464,7 +5468,9 @@ Three things the embedded WebDriver server will not do, each with a helper in `s
   browser reserves that for real user input. `submitFormOf()` calls `requestSubmit()`.
 
 **A scenario waits on a condition, never on a duration.** `eventually(read, matches, what)` in
-`support/app.ts` hands the value back, so the assertion reads what it waited for. A
+`support/app.ts` hands the value back, so the assertion reads what it waited for, and says
+what it last saw when the wait runs out — in an error of its own, a `timeoutMsg` being built
+before the wait starts. A
 `browser.pause` before an `expect` is a guess at a round trip on a runner sharing a CPU with a
 WebView, and it is how one scenario went red on Windows and green on a re-run of the same commit.
 The one exception is an assertion that nothing happened, which no condition can wait on: those

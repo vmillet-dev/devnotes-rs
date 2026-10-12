@@ -15,8 +15,11 @@ describe('KeyValueTableComponent', () => {
   let emitted: (readonly KeyValueRow[])[];
   let http: FakeHttpRepository;
 
-  /** As its host would: what the table emits comes back as its rows. */
-  async function render(rows: readonly KeyValueRow[], headers = false) {
+  /**
+   * As its host would: what the table emits comes back as its rows — `answering` unset, not
+   * yet, which is a host whose screen has not caught up with what was typed.
+   */
+  async function render(rows: readonly KeyValueRow[], headers = false, answering = true) {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [KeyValueTableComponent],
@@ -30,7 +33,7 @@ describe('KeyValueTableComponent', () => {
     emitted = [];
     fixture.componentInstance.rowsChange.subscribe((next) => {
       emitted.push(next);
-      fixture.componentRef.setInput('rows', next);
+      if (answering) fixture.componentRef.setInput('rows', next);
     });
     fixture.autoDetectChanges();
     await fixture.whenStable();
@@ -140,6 +143,25 @@ describe('KeyValueTableComponent', () => {
     expect(http.callsOf('readHeaders')).toEqual([['X-Recette: 1']]);
     await fixture.whenStable();
     expect(document.activeElement).toBe(all('[data-testid="http-kv-value"]')[0]);
+  });
+
+  /**
+   * ⚠️ `rows` follows what was emitted only at the next change detection. Starting from it, a
+   * value typed right after the split put the colon back in the name, and an answer from Rust
+   * arriving first found no row to move.
+   */
+  it('starts from what it last emitted, the host not having answered yet', async () => {
+    await render([], true, false);
+    http.headersRead = [{ enabled: true, key: 'X-Recette', value: '', description: '' }];
+
+    type(all<HTMLInputElement>('[data-testid="http-kv-key"]')[0]!, 'X-Recette:');
+    await vi.waitFor(() => expect(emitted).toHaveLength(2));
+    type(all<HTMLInputElement>('[data-testid="http-kv-value"]')[0]!, ' 1');
+
+    expect(emitted.at(-1)).toEqual([{ enabled: true, key: 'X-Recette', value: ' 1', description: '' }]);
+
+    type(all<HTMLInputElement>('[data-testid="http-kv-key"]')[0]!, 'X-Autre');
+    expect(emitted.at(-1)).toEqual([{ enabled: true, key: 'X-Autre', value: ' 1', description: '' }]);
   });
 
   it('moves nothing when the row has a value already, or when Rust reads no header in it', async () => {

@@ -48,6 +48,13 @@ export class KeyValueTableComponent {
 
   private readonly repository = inject(HttpRepository);
 
+  /**
+   * ⚠️ What was last emitted, until the host answers. `rows` only follows at the next change
+   * detection: a key struck, or a header Rust has read, before it would start from a row
+   * already replaced — and put back the colon just taken out of a name.
+   */
+  private readonly latest = linkedSignal(() => this.rows());
+
   private readonly faultsResource = resource({
     params: () => (this.headers() ? this.rows() : undefined),
     loader: ({ params }) => this.repository.checkHeaders(params),
@@ -77,9 +84,9 @@ export class KeyValueTableComponent {
 
   protected onInput(index: number, field: Field, event: Event): void {
     const cell = event.target as HTMLInputElement;
-    const rows = [...this.rows()];
+    const rows = [...this.latest()];
     rows[index] = { ...(rows[index] ?? BLANK), [field]: cell.value };
-    this.rowsChange.emit(rows);
+    this.emit(rows);
     if (field === 'key' && this.headers() && cell.value.includes(':')) void this.split(index, cell);
   }
 
@@ -93,12 +100,12 @@ export class KeyValueTableComponent {
     event.preventDefault();
     const read = await this.repository.readHeaders(text);
     if (read.length === 0) return;
-    const rows = [...this.rows()];
+    const rows = [...this.latest()];
     const current = rows[index];
     // A row already written keeps its place: the lines pasted go after it.
     const taken = current === undefined || (current.key === '' && current.value === '') ? 1 : 0;
     rows.splice(taken === 1 ? index : index + 1, taken, ...read);
-    this.rowsChange.emit(rows);
+    this.emit(rows);
   }
 
   /**
@@ -108,22 +115,26 @@ export class KeyValueTableComponent {
   private async split(index: number, cell: HTMLInputElement): Promise<void> {
     const text = cell.value;
     const [read] = await this.repository.readHeaders(text);
-    const row = this.rows()[index];
+    const row = this.latest()[index];
     // Typed on meanwhile, or a value already there: nothing is moved.
     if (read === undefined || row?.key !== text || row.value !== '') return;
-    const rows = [...this.rows()];
+    const rows = [...this.latest()];
     rows[index] = { ...row, key: read.key, value: read.value };
-    this.rowsChange.emit(rows);
+    this.emit(rows);
     cell.closest('tr')?.querySelector<HTMLInputElement>('[data-testid="http-kv-value"]')?.focus();
   }
 
   protected onToggle(index: number, event: Event): void {
     const enabled = (event.target as HTMLInputElement).checked;
-    const rows = this.rows().map((row, at) => (at === index ? { ...row, enabled } : row));
-    this.rowsChange.emit(rows);
+    this.emit(this.latest().map((row, at) => (at === index ? { ...row, enabled } : row)));
   }
 
   protected remove(index: number): void {
-    this.rowsChange.emit(this.rows().filter((_, at) => at !== index));
+    this.emit(this.latest().filter((_, at) => at !== index));
+  }
+
+  private emit(rows: readonly KeyValueRow[]): void {
+    this.latest.set(rows);
+    this.rowsChange.emit(rows);
   }
 }
