@@ -34,6 +34,7 @@ import {
   LineBreaksAnswer,
   LineBreaksRequest,
   IdentityAnswer,
+  IdentityOutcome,
   IdentityRequest,
   LoremAnswer,
   LoremRequest,
@@ -58,6 +59,7 @@ import {
   TextStats,
   TransferAnswer,
   TransferRequest,
+  UnreadableList,
   UrlAnswer,
   UrlCodecAnswer,
   UrlCodecRequest,
@@ -143,6 +145,8 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
     fictionPhones: true,
     unkeyed: [],
   };
+  /** Set, the lists of the identity tool cannot be read: no person is answered. */
+  unreadableList: UnreadableList | null = null;
   peopleExport: PeopleExport = { kind: 'written', people: 0 };
   diffAnswer: JsonDiffAnswer = {
     kind: 'compared',
@@ -269,8 +273,14 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
     return this.answer('generate_json', request, this.generated);
   }
 
-  generateIdentity(request: IdentityRequest): Promise<IdentityAnswer> {
-    return this.answer('generate_identity', request, this.identity);
+  generateIdentity(request: IdentityRequest): Promise<IdentityOutcome> {
+    return this.answer(
+      'generate_identity',
+      request,
+      this.unreadableList === null
+        ? { kind: 'drawn', answer: this.identity }
+        : { kind: 'unreadable', list: this.unreadableList },
+    );
   }
 
   exportIdentities(request: IdentityRequest, batch: PeopleBatch, path: string): Promise<PeopleExport> {

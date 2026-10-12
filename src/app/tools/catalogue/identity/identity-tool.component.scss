@@ -147,6 +147,23 @@
   color: var(--text-2);
 }
 
+.unreadable {
+  @include surface(var(--bg-1), 10px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+}
+
+.problem {
+  @include tool-problem;
+}
+
+.where {
+  @include tool-note;
+  overflow-wrap: anywhere;
+}
+
 .action {
   @include tool-button;
 }

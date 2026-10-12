@@ -3,6 +3,7 @@ import { By } from '@angular/platform-browser';
 import { describe, expect, it, vi } from 'vitest';
 import { IdentityAnswer } from '@core/model/tool-answers.model';
 import { FILE_DIALOG_ADAPTER } from '@core/services/dialogs/file-dialog.service';
+import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { ChoiceMenuComponent } from '@shared/controls/choice-menu/choice-menu.component';
 import { StatusNotifier } from '@core/services/notifications/status.service';
 import { FakeFileDialog } from '@testing/fake-file-dialog';
@@ -304,6 +305,50 @@ describe('IdentityToolComponent', () => {
     expect(harness.all('[data-testid="identity-unkeyed"]')).toEqual([]);
     expect(harness.all('[data-testid="identity-countries"] .listed')).toHaveLength(13);
     expect(text(harness, 'identity-countries')).toContain('Pays : France, Belgique, Allemagne');
+  });
+
+  /**
+   * ⚠️ The lists are files beside the application, no longer part of it: one that cannot be
+   * read is said in place of a card — which one, and where it was looked for.
+   */
+  it('says which list cannot be read, and where it was looked for, in place of a card', async () => {
+    const harness = await renderTool(IdentityToolComponent, (tools) => {
+      tools.unreadableList = { problem: 'missing', file: 'pools/italian.txt', folder: 'C:/app/identity' };
+    });
+    await vi.waitFor(() => expect(requests(harness)).toHaveLength(1));
+    await harness.settle();
+    const said = harness.element('[data-testid="identity-unreadable"]');
+
+    expect(said.getAttribute('role')).toBe('alert');
+    expect([said.dataset['problem'], said.dataset['file']]).toEqual(['missing', 'pools/italian.txt']);
+    expect(said.textContent).toContain('Liste introuvable : pools/italian.txt.');
+    expect(said.textContent).toContain('Les listes sont lues dans C:/app/identity');
+    expect(harness.all('[data-testid="identity-card"]')).toEqual([]);
+    expect(harness.all('[data-testid="identity-warning"]')).toEqual([]);
+    expect(harness.element<HTMLButtonElement>('[data-testid="identity-copy-json"]').disabled).toBe(true);
+    expect(harness.tool.result()).toBeNull();
+  });
+
+  it('writes no batch when a list cannot be read, and says which', async () => {
+    const harness = await renderTool(IdentityToolComponent, (tools) => {
+      tools.identity = ADA;
+      tools.peopleExport = {
+        kind: 'unreadable',
+        list: { problem: 'damaged', file: 'places/gb.txt', folder: 'C:/app/identity' },
+      };
+    });
+    await vi.waitFor(() => expect(requests(harness)).toHaveLength(1));
+    await harness.settle();
+    (TestBed.inject(FILE_DIALOG_ADAPTER) as FakeFileDialog).savePath = 'C:/out/people.json';
+
+    harness.element<HTMLButtonElement>('[data-testid="identity-export"]').click();
+
+    await vi.waitFor(() =>
+      expect(TestBed.inject(ErrorNotifier).notice()?.ref).toEqual({
+        key: 'tools.identity.lists.damaged',
+        params: { file: 'places/gb.txt' },
+      }),
+    );
   });
 
   it('says a phone number may ring where no range is kept for fiction', async () => {

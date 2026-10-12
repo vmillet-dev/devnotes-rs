@@ -1011,9 +1011,10 @@ country, hard-coded, is a megabyte of test data in the binary.
   The `fake` crate: about ten locales, none of the identifiers this tool exists for, and its
   own generator beside the seeded `Draw` the tools already have. ⚠️ Its cost in the binary was
   **not** measured: that needs a dependency added, which is not done unasked.
-- **Plain text, read once.** A list is a file taken with `include_str!` — its bytes and nothing
-  more — split on first use. The same names as a Rust table of `&str` cost sixteen bytes a
-  name on top of the text, half as much again.
+- **Plain text, read once.** A list is a text file — its bytes and nothing more — split when
+  read. The same names as a Rust table of `&str` cost sixteen bytes a name on top of the
+  text, half as much again. The spike took them into the binary with `include_str!`; they
+  are **files shipped beside the application** since, read where they are (below).
 - ⚠️ **Where the lists come from.** Written by hand, from what is commonly known of the most
   frequent names and of the larger towns of each country: no dataset and no library was
   copied. The script that would cut the open data of the statistics offices (INSEE, ONS,
@@ -1045,13 +1046,39 @@ Four files under `tools/identity/`, each one thing:
 
 | File         | What it holds                                                                                            |
 | ------------ | -------------------------------------------------------------------------------------------------------- |
-| `data.rs`    | The lists — fourteen pools of names, a file of places and streets a country — read from `identity/data/` |
+| `data.rs`    | The lists — fourteen pools of names, a file of places and streets a country — read from files it checks  |
 | `profile.rs` | A country in a few lines: its mix of pools, the order of an address, the shape of a phone number, a firm |
 | `numbers.rs` | The keys, a function each, each held to an example its country publishes                                 |
 | `papers.rs`  | The numbers of a person, a firm and an account, a country at a time, built on `numbers.rs`               |
 
-The lists weigh **37 KB** for the thirteen countries, and `data::weight` is held under
-`BUDGET` by a test.
+The lists weigh **37 KB** for the thirteen countries, held under `BUDGET` by a test that
+sums the files.
+
+⚠️ **The lists are files beside the application, not part of it** — asked for so that a name
+is corrected or a list completed without building the application again.
+
+- **A Tauri resource**: `src-tauri/resources/identity/` (`pools/*.txt`, `places/*.txt`) is
+  declared in `bundle.resources` and lands in `<resources>/identity/` — beside the executable
+  on Windows and in a development or e2e build (`tauri-build` copies it into the target
+  directory), under the package's own folder on Linux. The two commands take the
+  `AppHandle` for nothing else: `resource_dir()`, joined with `identity`. No Tauri permission
+  is involved — Rust reads the files, the page never does.
+- **Read once, kept for the session** (`data::library`): every file is read at the first card
+  and its text given away for as long as the application runs, every name drawn afterwards
+  pointing into it. ⚠️ Only a reading that was whole is kept: a file put back is found at the
+  next draw, without a restart; a file edited while the application runs waits for the next
+  launch.
+- ⚠️ **A list can now be missing or damaged, and is checked when read** (`data::read`): a
+  pool has names of each kind, a country has places — every part of each — and streets under
+  each place's own tag. The first file that fails is answered with where it was looked for
+  (`UnreadableList`: `missing` or `damaged`, the file, the folder), and the tool says so in
+  place of a card (`IdentityOutcome::Unreadable`) — an export writes nothing
+  (`PeopleExport::Unreadable`). Nothing divides by the length of an empty list. A byte-order
+  mark and Windows line endings, which an editor leaves, are read through.
+- **What is shipped is what is read**: a test holds the folder to the files a pool or a
+  country names, and nothing else; the tests draw from the very files that are shipped. The
+  e2e scenario of the tool runs against the assembled application: it fails if they are not.
+- **Not done**: lists of the user's own beside the shipped ones.
 
 - **The seed is text** — « devnotes » is one — hashed to the number the tools' `Draw` takes;
   none given, one is drawn and said, and typing it back gives that person again. ⚠️ Only the
