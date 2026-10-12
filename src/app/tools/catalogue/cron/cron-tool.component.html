@@ -110,23 +110,119 @@
 
   <section class="column" aria-labelledby="cron-runs-title">
     <h2 id="cron-runs-title" class="section-title">{{ 'tools.cron.runs' | transloco }}</h2>
-    @if (read()) {
-      <ol class="runs">
-        @for (run of runs(); track $index) {
-          <li class="run" data-testid="cron-run">
-            <span class="day">{{ run.day | transloco }}</span>
-            <span class="date" data-testid="cron-run-at">{{ run.date }} {{ run.time }}</span>
-            <span class="offset">UTC{{ run.offset }}</span>
-            <span class="relative">
-              @if (run.relative) {
-                {{ run.relative.key | transloco: run.relative.params }}
-              }
-            </span>
-          </li>
-        } @empty {
-          <li class="note" data-testid="cron-no-runs">{{ 'tools.cron.noRuns' | transloco }}</li>
+    <!-- « Will this run on Friday afternoon? »: the runs between two moments, read in the zone. -->
+    <div class="window">
+      <label class="end">
+        <span class="end-name">{{ 'tools.cron.from' | transloco }}</span>
+        <input
+          type="text"
+          class="search"
+          data-testid="cron-from"
+          spellcheck="false"
+          [value]="from()"
+          [placeholder]="'tools.cron.fromPlaceholder' | transloco"
+          (input)="onEnd('from', $event)"
+        />
+      </label>
+      <label class="end">
+        <span class="end-name">{{ 'tools.cron.until' | transloco }}</span>
+        <input
+          type="text"
+          class="search"
+          data-testid="cron-until"
+          spellcheck="false"
+          [value]="until()"
+          [placeholder]="'tools.cron.untilPlaceholder' | transloco"
+          (input)="onEnd('until', $event)"
+        />
+      </label>
+    </div>
+    @if (read(); as read) {
+      <div class="shortcuts" role="group" [attr.aria-label]="'tools.cron.shortcuts' | transloco">
+        @for (shortcut of shortcuts; track shortcut) {
+          <button
+            type="button"
+            class="shortcut"
+            data-testid="cron-shortcut"
+            [attr.data-shortcut]="shortcut"
+            (click)="pick(shortcut, read.now)"
+          >
+            {{ 'tools.cron.shortcut.' + shortcut | transloco }}
+          </button>
         }
-      </ol>
+      </div>
+      @if (windowProblem(); as problem) {
+        <p class="verdict" role="status" data-testid="cron-window-problem" [attr.data-problem]="problem.kind">
+          @switch (problem.kind) {
+            @case ('unreadable') {
+              {{ 'tools.cron.windowProblems.unreadable.' + problem.end | transloco: { at: problem.at } }}
+            }
+            @case ('skipped') {
+              {{ 'tools.cron.windowProblems.skipped.' + problem.end | transloco }}
+            }
+            @case ('tooLong') {
+              {{ 'tools.cron.windowProblems.tooLong' | transloco: { years: problem.years } }}
+            }
+            @default {
+              {{ 'tools.cron.windowProblems.backwards' | transloco }}
+            }
+          }
+        </p>
+      }
+      @if (counted(); as window) {
+        <p
+          class="count"
+          role="status"
+          data-testid="cron-window-count"
+          [attr.data-total]="window.total"
+          [class.none]="window.total === 0"
+        >
+          @if (window.total === 0) {
+            {{ 'tools.cron.windowNone' | transloco }}
+          } @else {
+            {{
+              'tools.cron.windowCount'
+                | transloco: { count: window.total, from: ends()?.from, until: ends()?.until }
+            }}
+          }
+        </p>
+      }
+      @if (!counted() || counted()!.total > 0) {
+        <ol class="runs">
+          @for (run of runs(); track $index) {
+            <li class="run" data-testid="cron-run">
+              <span class="day">{{ run.day | transloco }}</span>
+              <span class="date" data-testid="cron-run-at">{{ run.date }} {{ run.time }}</span>
+              <span class="offset">UTC{{ run.offset }}</span>
+              <span class="relative">
+                @if (run.relative) {
+                  {{ run.relative.key | transloco: run.relative.params }}
+                }
+              </span>
+            </li>
+          } @empty {
+            <li class="note" data-testid="cron-no-runs">{{ 'tools.cron.noRuns' | transloco }}</li>
+          }
+          @if (between() > 0) {
+            <!-- Thousands of runs are counted, not listed: the first, the last, and how many between. -->
+            <li class="gap" data-testid="cron-window-gap" [attr.data-between]="between()">
+              {{ 'tools.cron.windowGap' | transloco: { count: between() } }}
+            </li>
+          }
+          @for (run of lastRuns(); track $index) {
+            <li class="run" data-testid="cron-run">
+              <span class="day">{{ run.day | transloco }}</span>
+              <span class="date" data-testid="cron-run-at">{{ run.date }} {{ run.time }}</span>
+              <span class="offset">UTC{{ run.offset }}</span>
+              <span class="relative">
+                @if (run.relative) {
+                  {{ run.relative.key | transloco: run.relative.params }}
+                }
+              </span>
+            </li>
+          }
+        </ol>
+      }
     }
 
     <h2 id="cron-check-title" class="section-title">{{ 'tools.cron.check' | transloco }}</h2>
@@ -163,6 +259,21 @@
           }
         }
       </p>
+      <!-- A « no » leaves one asking when, then: the nearest run on either side. -->
+      @if (nearest(); as nearest) {
+        <p class="nearest" data-testid="cron-nearest">
+          @if (nearest.before) {
+            <span data-testid="cron-nearest-before">{{
+              'tools.cron.nearestBefore' | transloco: { at: nearest.before }
+            }}</span>
+          }
+          @if (nearest.after) {
+            <span data-testid="cron-nearest-after">{{
+              'tools.cron.nearestAfter' | transloco: { at: nearest.after }
+            }}</span>
+          }
+        </p>
+      }
     }
   </section>
 </div>

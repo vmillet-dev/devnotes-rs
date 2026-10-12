@@ -1472,6 +1472,53 @@ describe('The tools', () => {
         (verdict) => verdict === 'false',
         'a Tuesday',
       );
+      // A « no » says when, then: the Monday before, at nine, and the Monday after.
+      expect(await $(testid('cron-nearest-before')).getText()).toContain('2026-09-28 09:00:00');
+      expect(await $(testid('cron-nearest-after')).getText()).toContain('2026-10-05 09:00:00');
+      await setField(testid('cron-check'), '');
+    });
+
+    /**
+     * « Will this run on Friday afternoon? »: the list was the next ten from now, and the check
+     * one exact minute. 2026-10-16 is a Friday, the 17th a Saturday.
+     */
+    it('counts the runs between two moments: none on a Saturday, seventy-two on a Friday afternoon', async () => {
+      const total = () => $(testid('cron-window-count')).getAttribute('data-total');
+      await setField(testid('cron-input'), '*/5 * * * 1-5');
+
+      // A Saturday, for an expression of the working days: the answer one came for.
+      await setField(testid('cron-from'), '2026-10-17 00:00');
+      await setField(testid('cron-until'), '2026-10-18 00:00');
+      await eventually(total, (count) => count === '0', 'no run on a Saturday');
+      expect(await readEach(testid('cron-run'), 'text')).toEqual([]);
+
+      // A Friday afternoon: counted, and listed by its two ends around how many lie between.
+      await setField(testid('cron-from'), '2026-10-16 12:00');
+      await setField(testid('cron-until'), '2026-10-16 18:00');
+      await eventually(total, (count) => count === '72', 'seventy-two runs on a Friday afternoon');
+      const listed = await readEach(testid('cron-run-at'), 'text');
+      expect(listed).toHaveLength(10);
+      expect(listed[0]).toBe('2026-10-16 12:00:00');
+      expect(listed.at(-1)).toBe('2026-10-16 17:55:00');
+      expect(await $(testid('cron-window-gap')).getAttribute('data-between')).toBe('62');
+
+      // The shortcut fills both ends with a Friday afternoon of its own: seventy-two again.
+      await setField(testid('cron-until'), '');
+      await $(testid('cron-window-count')).waitForExist({ reverse: true, timeout: 10_000 });
+      await $(`${testid('cron-shortcut')}[data-shortcut="fridayAfternoon"]`).click();
+      await eventually(total, (count) => count === '72', 'the Friday afternoon of the shortcut');
+      expect(await $(testid('cron-from')).getValue()).toMatch(/^\d{4}-\d{2}-\d{2} 12:00$/);
+      expect(await $(testid('cron-until')).getValue()).toMatch(/^\d{4}-\d{2}-\d{2} 18:00$/);
+
+      // An end before its start is said, not counted.
+      await setField(testid('cron-until'), '2020-01-01 00:00');
+      await eventually(
+        () => readEach(testid('cron-window-problem'), '@data-problem'),
+        (problems) => problems.join() === 'backwards',
+        'the end before the start',
+      );
+      await setField(testid('cron-from'), '');
+      await setField(testid('cron-until'), '');
     });
 
     it('names the field of a refusal, and says what @reboot means', async () => {

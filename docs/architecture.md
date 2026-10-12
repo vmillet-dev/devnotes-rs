@@ -842,6 +842,26 @@ magnitude.
   and a line says it gives the same documents. « Régénérer » is the one name of that action in
   the four tools that draw (JSON, Lorem ipsum, the passwords, the identifiers).
 
+**A cron expression's runs are listed between two moments, and counted** (`tools/cron.rs`,
+`croner`): « À partir de » and « jusqu'à », read in the zone chosen like the date that is
+checked. A start alone lists the ten from there; both ends answer `CronWindow::Counted` — the
+total, and every run up to fifty or the first and the last five past it — or why not (an end that does not read or
+that a change of clocks skipped, an end before its start, more than ten years).
+
+- ⚠️ **The count is not the length of a list**, and not a walk either: a year at every minute
+  is half a million runs. It goes **by the day** (`count`): a day that lies whole in the window
+  and that no change of clocks cuts holds the same number of runs whenever it holds one — the
+  time fields know nothing of the date (`runs_a_day`) — so the search jumps from one matching
+  day to the next. Only the two ends and a day the clocks change on are walked run by run,
+  where `croner` alone knows what a skipped or a repeated hour does. A test holds it to the
+  walk, expression by expression, over both changes of clocks.
+- **The shortcuts are typed for the user** (« aujourd'hui », « ce week-end », « vendredi
+  après-midi »): plain arithmetic on the date Rust says it is in the zone (`Read::now`), which
+  fills the two fields; no zone is computed in the page.
+- **A date that does not match says the nearest run on either side** (`CronCheck::Checked`'s
+  `before` and `after`): a window of one minute is that question, and « no » leaves one asking
+  when, then.
+
 **The Diff compares texts, or values** (`tools/text_diff.rs`, `tools/diff.rs`). Its text mode
 pairs lines on what they are compared as — the options strip what they ignore from that key alone,
 so every line is drawn as typed — and a modified line is diffed again by words or characters to
