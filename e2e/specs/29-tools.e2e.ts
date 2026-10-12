@@ -132,6 +132,98 @@ describe('The tools', () => {
       await setField(testid('tools-search'), '');
     });
 
+    /**
+     * « generateur » found nothing, though three tools sit under « Générateurs »; « 418 » found
+     * nothing, though the status reference holds it; Enter did nothing; and the rail of an open
+     * tool listed four recents where the home listed five.
+     */
+    it('finds a category by its name and an entry inside a reference, opens it on Enter, and keeps five recents in the rail', async () => {
+      const words = toolNames(await browser.execute(() => document.documentElement.lang)) as unknown as {
+        categories: Record<string, string>;
+      };
+      const folded = words.categories['generate']!.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+      const generators = await readEach(
+        `${testid('tools-panel')}[data-category="generate"] ${testid('tools-entry')}`,
+        '@data-tool',
+      );
+      expect(generators.length).toBeGreaterThan(2);
+
+      // The folded name of a category finds every tool filed under it.
+      await setField(testid('tools-search'), folded.slice(0, -1));
+      await eventually(
+        () => readEach(testid('tools-entry'), '@data-tool'),
+        (tools) => generators.every((tool) => tools.includes(tool)) && tools.length < 2 * generators.length,
+        'the generators found by the name of their category',
+      );
+
+      // « 418 » is no tool: it is a row of the status reference, listed under the tools.
+      const hit = `${testid('tools-reference-hit')}[data-tool="http-status"][data-key="418"]`;
+      await setField(testid('tools-search'), '418');
+      await $(hit).waitForDisplayed({ timeout: 10_000 });
+      expect(await $(hit).getText()).toContain('418');
+      expect(await readEach(testid('tools-entry'), '@data-tool')).toEqual([]);
+      expect(await $(`${hit}[data-first]`).isExisting()).toBe(true);
+      expect(await $(testid('tools-no-match')).isExisting()).toBe(false);
+
+      // The arrows go down into the results and back up; Enter opens the first from the field.
+      const focused = () =>
+        browser.execute(() => {
+          const active = document.activeElement as HTMLElement | null;
+          return active?.dataset['key'] ?? active?.dataset['testid'] ?? '';
+        });
+      await $(testid('tools-search')).click();
+      await press('ArrowDown');
+      await eventually(focused, (on) => on === '418', 'the first result focused');
+      await press('ArrowUp');
+      await eventually(focused, (on) => on === 'tools-search', 'the field focused again');
+      await press('Enter');
+
+      // The reference opens on that entry: its table whole, the row lit and in view.
+      await eventually(
+        () => $(testid('tool-body')).getAttribute('data-tool'),
+        (shown) => shown === 'http-status',
+        'the status reference to open',
+      );
+      const row = `${testid('reference-row')}[data-key="418"]`;
+      await $(`${row}[data-lit]`).waitForExist({ timeout: 10_000 });
+      expect(await $(testid('reference-search')).getValue()).toBe('');
+      await eventually(
+        () =>
+          browser.execute((lit: string) => {
+            const box = document.querySelector(lit)!.getBoundingClientRect();
+            return box.top >= 0 && box.bottom <= window.innerHeight;
+          }, row),
+        (inView) => inView,
+        'the row brought into view',
+      );
+      // Its table scrolled, not the window: the tool's header is where it was.
+      expect(
+        await browser.execute(
+          (back: string) => document.querySelector(back)!.getBoundingClientRect().top,
+          testid('tool-back'),
+        ),
+      ).toBeGreaterThanOrEqual(0);
+      await $(testid('tool-back')).click();
+      await setField(testid('tools-search'), '');
+
+      // Six tools of other categories, then a reference: its rail lists nine tools above, and
+      // still the five opened last under them — the home its own five, the open tool first.
+      const opened = ['case', 'hash', 'url-codec', 'lorem', 'dates', 'cidr'];
+      for (const tool of opened) await openTool(tool);
+      await openTool('http-status');
+      await eventually(
+        () => readEach(testid('tools-rail-recent'), '@data-tool'),
+        (recents) => recents.join() === [...opened].reverse().slice(0, 5).join(),
+        'five recents in the rail of a reference',
+      );
+      await $(testid('tool-back')).click();
+      await eventually(
+        () => readEach(testid('tools-recent'), '@data-tool'),
+        (recents) => recents.join() === ['http-status', ...[...opened].reverse().slice(0, 4)].join(),
+        'five recents on the home',
+      );
+    });
+
     /** The slug is a row of the case converter, and the URL parser a tab of the URL tool; the diff joined from Comparer. */
     it('lays the Texte panel out with its four tools', async () => {
       expect(

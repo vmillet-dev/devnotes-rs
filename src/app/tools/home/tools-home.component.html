@@ -80,24 +80,80 @@
           <span class="panel-count">{{ panel.tools.length }}</span>
         </h2>
         @for (tool of panel.tools; track tool.id) {
+          @let first = tool.id === firstTool();
           <button
             type="button"
             class="tool"
+            data-result
             data-testid="tools-entry"
             [attr.data-tool]="tool.id"
+            [attr.data-first]="first ? '' : null"
             (click)="store.open(tool.id)"
           >
-            <span class="tool-name">{{ 'tools.' + tool.id + '.name' | transloco }}</span>
+            <span class="tool-name"
+              >{{ 'tools.' + tool.id + '.name' | transloco }}
+              @if (first) {
+                <kbd class="enter" data-testid="tools-first-result" [title]="'tools.enterOpens' | transloco"
+                  >↵</kbd
+                >
+              }
+            </span>
             <span class="tool-line">{{ 'tools.' + tool.id + '.description' | transloco }}</span>
           </button>
         }
       </section>
     }
-
-    @if (searching() && panels().length === 0) {
-      <p class="no-match" data-testid="tools-no-match">
-        {{ 'tools.noMatch' | transloco: { query: store.search().trim() } }}
-      </p>
-    }
   </div>
+
+  <!-- Under the tools that match: what the search finds inside the references, a row an entry. -->
+  @if (references().length > 0) {
+    <section class="references" data-testid="tools-references" aria-labelledby="tools-references-title">
+      <h2 id="tools-references-title" class="section-title">{{ 'tools.references.title' | transloco }}</h2>
+      <div class="hits">
+        @for (found of references(); track found.tool.id) {
+          @let where = 'tools.' + found.tool.id + '.name' | transloco;
+          @for (hit of found.hits; track hit.key) {
+            @let first = firstHit()?.tool === found.tool && firstHit()?.hit === hit;
+            <button
+              type="button"
+              class="hit"
+              data-result
+              data-testid="tools-reference-hit"
+              [attr.data-tool]="found.tool.id"
+              [attr.data-key]="hit.key"
+              [attr.data-first]="first ? '' : null"
+              (click)="openHit(found.tool, hit)"
+            >
+              <span class="hit-title">{{ hit.title }}</span>
+              <span class="hit-line">{{ hit.line }}</span>
+              @if (first) {
+                <kbd class="enter" data-testid="tools-first-result" [title]="'tools.enterOpens' | transloco"
+                  >↵</kbd
+                >
+              }
+              <span class="hit-where">{{ where }}</span>
+            </button>
+          }
+          @if (found.more > 0) {
+            <button
+              type="button"
+              class="hit more"
+              data-result
+              data-testid="tools-reference-more"
+              [attr.data-tool]="found.tool.id"
+              (click)="openAll(found.tool)"
+            >
+              {{ 'tools.references.more' | transloco: { count: found.more, name: where } }}
+            </button>
+          }
+        }
+      </div>
+    </section>
+  }
+
+  @if (noMatch()) {
+    <p class="no-match" data-testid="tools-no-match">
+      {{ 'tools.noMatch' | transloco: { query: store.search().trim() } }}
+    </p>
+  }
 </div>

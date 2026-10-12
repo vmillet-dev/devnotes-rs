@@ -3,11 +3,12 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { provideAppTesting } from '@testing/testing.providers';
 import { FakeClipboard } from '@testing/fake-clipboard';
+import { ReferenceRow } from '@core/services/tools/reference.model';
+import { ToolsStore } from '@core/services/tools/tools.store';
 import {
   ReferenceCellsDirective,
   ReferenceColumn,
   ReferenceGroup,
-  ReferenceRow,
   ReferenceTableComponent,
 } from './reference-table.component';
 
@@ -186,6 +187,55 @@ describe('ReferenceTableComponent', () => {
 
     expect(keys()).toEqual(['5']);
     expect(one<HTMLInputElement>('[data-testid="reference-search"]').value).toBe('Kiwi');
+  });
+
+  /** Opened from the home's search: the row it found, in view and told from its neighbours. */
+  it('lights the row the reference was opened on and brings it into view, once', async () => {
+    const store = TestBed.inject(ToolsStore);
+    const frame = one('[data-testid="reference-table"]');
+    // A frame of 300px starting 100px down, the row 20px high and 700px down the page.
+    frame.getBoundingClientRect = () => ({ top: 100, height: 300 }) as DOMRect;
+    one('[data-key="4"]').getBoundingClientRect = () => ({ top: 700, height: 20 }) as DOMRect;
+    // ⚠️ The frame alone scrolls: `scrollIntoView` took the window's own page with it.
+    for (const row of all('[data-testid="reference-row"]')) {
+      row.scrollIntoView = () => {
+        throw new Error('the page is not to be scrolled');
+      };
+    }
+    expect(all('[data-lit]')).toEqual([]);
+
+    store.open('fruits', '4');
+    await fixture.whenStable();
+    expect(all('[data-lit]').map((row) => row.dataset['key'])).toEqual(['4']);
+    expect(one('[data-key="4"]').classList.contains('lit')).toBe(true);
+    // 600px under the frame's top, brought to its middle: (300 − 20) / 2 above it.
+    expect(frame.scrollTop).toBe(460);
+
+    // Drawn again for another reason, the table is not taken back to it.
+    frame.scrollTop = 0;
+    host().query.set('a');
+    await fixture.whenStable();
+    host().query.set('');
+    await fixture.whenStable();
+    expect(frame.scrollTop).toBe(0);
+
+    // A row that is not in the table lights nothing.
+    store.open('fruits', 'nowhere');
+    await fixture.whenStable();
+    expect(all('[data-lit]')).toEqual([]);
+    expect(frame.scrollTop).toBe(0);
+  });
+
+  it('forgets the row it was opened on once the reference is searched by hand', async () => {
+    const store = TestBed.inject(ToolsStore);
+    store.open('fruits', '4');
+    await fixture.whenStable();
+
+    await search('An');
+
+    expect(store.entry()).toBeNull();
+    expect(keys()).toEqual(['4']);
+    expect(all('[data-lit]')).toEqual([]);
   });
 
   it("copies a row's key", async () => {

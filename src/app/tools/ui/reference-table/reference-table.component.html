@@ -51,7 +51,13 @@
             </thead>
             <tbody>
               @for (row of section.rows; track row.key) {
-                <tr class="row" data-testid="reference-row" [attr.data-key]="row.key">
+                <tr
+                  class="row"
+                  data-testid="reference-row"
+                  [attr.data-key]="row.key"
+                  [class.lit]="row.key === lit()"
+                  [attr.data-lit]="row.key === lit() ? '' : null"
+                >
                   <ng-container *ngTemplateOutlet="cells().template; context: { $implicit: row }" />
                   <td class="copy-cell">
                     <app-copy-value

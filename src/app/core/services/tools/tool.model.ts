@@ -2,6 +2,7 @@ import { InjectionToken, Signal, Type } from '@angular/core';
 import { LanguageTag } from '@core/model/language.model';
 import { NoteKind } from '@core/model/note.model';
 import { TranslationRef } from '@core/services/i18n/translation-ref.model';
+import type { ReferenceRow, ReferenceSource } from './reference.model';
 
 /** In the home's order, which the rail follows. */
 export const TOOL_CATEGORIES = ['text', 'crypto', 'encode', 'generate', 'time', 'calc', 'reference'] as const;
@@ -14,6 +15,11 @@ export interface ToolDefinition {
   /** What a search also finds it by, in no language in particular: `md5`, `camelCase`. */
   readonly keywords: readonly string[];
   readonly load: () => Promise<Type<Tool>>;
+  /**
+   * A reference's rows as data, for the home's search to read without opening it. A chunk of
+   * its own: nothing of it is loaded before something is typed.
+   */
+  readonly reference?: () => Promise<ReferenceSource<unknown, ReferenceRow>>;
 }
 
 /** What "Enregistrer comme note" keeps: the tool decides, so the dialog asks nothing it could infer. */
@@ -60,7 +66,13 @@ export interface RecentTool {
   readonly at: string;
 }
 
+/** How many are shown, on the home and in the rail. */
 export const MAX_RECENT_TOOLS = 5;
+/**
+ * How many are kept: more than are shown, because the rail leaves out the ones its section
+ * above already lists — the open tool always among them — and still shows five.
+ */
+export const KEPT_RECENT_TOOLS = 16;
 
 export function isRecentTool(value: unknown): value is RecentTool {
   const candidate = value as Partial<RecentTool> | null;

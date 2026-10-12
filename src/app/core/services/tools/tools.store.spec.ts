@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { provideAppTesting } from '@testing/testing.providers';
-import { MAX_RECENT_TOOLS } from './tool.model';
+import { KEPT_RECENT_TOOLS, MAX_RECENT_TOOLS } from './tool.model';
 import { ToolSessions } from './tool-sessions';
 import { ToolsStore } from './tools.store';
 
@@ -25,13 +25,31 @@ describe('ToolsStore', () => {
     expect(Number.isNaN(Date.parse(store.recents()[0]!.at))).toBe(false);
   });
 
-  it('keeps no more than a handful', () => {
-    for (let index = 0; index < MAX_RECENT_TOOLS + 3; index++) {
+  /** More than are shown: the rail leaves out the ones its section lists, and still shows five. */
+  it('keeps more recents than it shows, and no more than that', () => {
+    for (let index = 0; index < KEPT_RECENT_TOOLS + 3; index++) {
       store.open(`tool-${index}`);
     }
 
-    expect(store.recents()).toHaveLength(MAX_RECENT_TOOLS);
-    expect(store.recents()[0]!.id).toBe(`tool-${MAX_RECENT_TOOLS + 2}`);
+    expect(KEPT_RECENT_TOOLS).toBeGreaterThan(MAX_RECENT_TOOLS);
+    expect(store.recents()).toHaveLength(KEPT_RECENT_TOOLS);
+    expect(store.recents()[0]!.id).toBe(`tool-${KEPT_RECENT_TOOLS + 2}`);
+  });
+
+  it('opens a reference on a row, until it is opened plainly, searched by hand or left', () => {
+    store.open('http-status', '418');
+    expect(store.entry()).toBe('418');
+
+    store.forgetEntry();
+    expect(store.entry()).toBeNull();
+
+    store.open('http-status', '404');
+    store.open('http-status');
+    expect(store.entry()).toBeNull();
+
+    store.open('http-status', '404');
+    store.home();
+    expect(store.entry()).toBeNull();
   });
 
   it('goes home, to the whole catalogue or to one category of it', () => {

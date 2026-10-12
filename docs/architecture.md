@@ -646,11 +646,43 @@ a plain digest would read "HMAC-SHA256" — on screen, in a copy, in a note.
 
 **Searching the catalogue runs on the front**, a deliberate exception to "data processing
 belongs to Rust": it matches the translated names and lines, and Rust knows no string the user
-reads. It folds case and accents, as `view::fold` does.
+reads. It folds case and accents, as `view::fold` does. A tool is found by its name, its line,
+its keywords and **the name of its category**: « generateur » finds the three tools filed under
+« Générateurs ».
+
+**The search reads inside the references too**, in a second group under the tools that match
+(« Dans les références »): a row an entry, what it is called, what it means and where it lives
+(« 418 I'm a teapot — Codes de statut HTTP »), four a reference then « n autres ».
+
+- **A reference is data apart from its component** (`ReferenceSource`, a
+  `<id>.reference.ts` beside its facts): its words in each language, the rows built from them,
+  what a row is called away from its table, and its own matcher when it reads a query its own
+  way. The reference's table draws those rows (`referenceRows`) and the home searches them
+  (`referenceSearch`): one function builds, one matcher finds, so « too many » finds the same
+  rows from either field.
+- ⚠️ **Loaded by the first thing typed, not by the home opening** (`ToolDefinition.reference`,
+  a chunk of its own): the nine sources and their words in the language on screen, once a
+  language. The tools answer at once and the second group arrives when it can; « nothing
+  matches » waits for it. A single character searches no reference — it is nearly every row of
+  each.
+- **Choosing a row opens the reference on it** (`ToolsStore.open(id, entry)`): its own search
+  emptied, the row brought into view once and lit (`ReferenceTableComponent` reads
+  `ToolsStore.entry`), until the reference is searched by hand. « n autres » opens it searched
+  for what was typed on the home — a reference's search is the session slot
+  `referenceQueryKey(id)`, which the home writes.
+
+**The keyboard reaches the results**: Enter in the field opens the first — a tool before a
+reference's row, marked `↵` — the down arrow goes into them and the arrows walk them in the
+order they are read, back up to the field; Escape empties the search, a second one leaves the
+field. One listener on the home's host, no handler a row.
 
 **The recent tools are an application preference** (`devnotes.recentTools`): which and when,
-nothing typed into them. Ctrl+Shift+T opens the home on its search from any area — the home
-takes `ToolsStore.searchWanted` whether it already existed or not.
+nothing typed into them. Sixteen are kept (`KEPT_RECENT_TOOLS`) and five shown
+(`MAX_RECENT_TOOLS`): the home shows the five opened last, and the rail of an open tool the
+first five that its section above does not already list — no tool twice in one rail, and five
+all the same. `catalogue.spec.ts` holds the first figure to the largest category. Ctrl+Shift+T
+opens the home on its search from any area — the home takes `ToolsStore.searchWanted` whether
+it already existed or not.
 
 **"Enregistrer comme note" belongs to the frame**: one dialog for every tool and for an HTTP
 response, at their common ancestor (`save-as-note/`, reached as `@app/…`). It asks for a title (the tool proposes one, as a
@@ -862,7 +894,9 @@ so sixty descriptions weigh nothing until the tool opens. `app-reference-table` 
 the rest: the search, folded like the catalogue's — a front-end exception of the same kind,
 translated text — the groups, the count, each row's key to copy. A row is searched by its group's
 heading too (« redirection » finds every 3xx), so headings are translated in code
-(`referenceHeadings`), not in the template. The reference draws its own
+(`referenceHeadings` for the table, the source's `label` for a row), not in the template. The
+rows themselves are built by the reference's `ReferenceSource`, which the home's search reads
+as well (above). The reference draws its own
 `<td>`s through `appReferenceCells`, and so styles them itself (`reference-cell`): the table's
 stylesheet cannot reach them. A spec holds both files of words to the same keys. Each group is a
 table of its own, a card, and the cards flow into as many columns as the width holds, each never
@@ -882,7 +916,8 @@ nothing.
    re-exported by `core/model/tool-answers.model.ts`.
 4. `tools/catalogue/catalogue.ts`: an entry; `tools/catalogue/<id>/`: the component
    implementing `Tool`, its `sample()` included (`catalogue.spec.ts` holds every tool to one),
-   and its spec through `renderTool`.
+   and its spec through `renderTool`. A reference has no `sample()` and a
+   `<id>.reference.ts`, named by the entry's `reference`.
 5. `tools.<id>.*` in both locales, and a scenario in `29-tools.e2e.ts`.
 
 What every tool draws alike is the kit: `tools/ui/` (`app-output-row`, `app-copy-value`) and

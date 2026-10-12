@@ -108,6 +108,41 @@ describe('ToolsRailComponent', () => {
     expect(rail.querySelectorAll('.rail-link.on')).toHaveLength(1);
   });
 
+  /**
+   * Five on the home, four or fewer in the rail of an open tool: the rail drops the recents its
+   * section already lists, and only five were kept — the open tool always one of them.
+   */
+  it('still shows five recents when some of the last opened are listed above them', async () => {
+    const elsewhere = ['a', 'b', 'c', 'd', 'e', 'f'].map((id) => ({
+      id,
+      category: 'crypto' as const,
+      keywords: [],
+      load: FAKE_TOOLS[0]!.load,
+    }));
+    TestBed.resetTestingModule();
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      imports: [ToolsRailComponent],
+      providers: [
+        provideAppTesting(),
+        {
+          provide: TOOL_CATALOGUE,
+          useValue: [...FAKE_TOOLS.filter((tool) => tool.category === 'text'), ...elsewhere],
+        },
+      ],
+    });
+    store = TestBed.inject(ToolsStore);
+    fixture = TestBed.createComponent(ToolsRailComponent);
+    fixture.autoDetectChanges();
+
+    for (const id of ['a', 'b', 'c', 'line-breaks', 'd', 'e', 'f', 'case']) store.open(id);
+    await fixture.whenStable();
+
+    // The two tools of the open one's section are above; the five others opened last follow.
+    expect(ids('tools-rail-tool', 'tool')).toEqual(['case', 'line-breaks']);
+    expect(ids('tools-rail-recent', 'tool')).toEqual(['f', 'e', 'd', 'c', 'b']);
+  });
+
   it('is headed by the switch between areas', () => {
     link('[data-area="notes"]').click();
 

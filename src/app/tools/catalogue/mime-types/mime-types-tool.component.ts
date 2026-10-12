@@ -1,21 +1,17 @@
-import { ChangeDetectionStrategy, Component, computed } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { referenceWords } from '@core/services/tools/reference-words';
+import { referenceRows } from '@core/services/tools/reference-words';
+import { referenceQueryKey } from '@core/services/tools/reference.model';
 import { Tool } from '@core/services/tools/tool.model';
 import { toolState } from '@core/services/tools/tool-sessions';
 import {
   ReferenceCellsDirective,
   ReferenceGroup,
-  ReferenceRow,
   ReferenceTableComponent,
   referenceColumns,
 } from '@tools/ui/reference-table/reference-table.component';
-import { MIME_GROUPS, MIME_TYPES, MimeType, MimeTypeWords, mimeGroup } from './mime-types.data';
-
-interface MimeRow extends ReferenceRow {
-  readonly mime: MimeType;
-  readonly description: string;
-}
+import { MIME_GROUPS } from './mime-types.data';
+import { MIME_TYPES_REFERENCE } from './mime-types.reference';
 
 const COLUMNS = referenceColumns('tools.mime-types.columns', {
   type: '36%',
@@ -34,36 +30,10 @@ const GROUPS: readonly ReferenceGroup[] = MIME_GROUPS.map((id) => ({ id, label: 
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MimeTypesToolComponent implements Tool {
-  protected readonly query = toolState('mime-types.query', '');
+  protected readonly query = toolState(referenceQueryKey('mime-types'), '');
   protected readonly columns = COLUMNS;
   protected readonly groups = GROUPS;
-
-  private readonly words = referenceWords<MimeTypeWords>({
-    fr: () => import('./mime-types.fr.json'),
-    en: () => import('./mime-types.en.json'),
-  });
-
-  /** `.webp` and `webp` both find image/webp: each extension is searched with its dot and without. */
-  protected readonly rows = computed<readonly MimeRow[]>(() => {
-    const words = this.words();
-    if (words === null) return [];
-
-    return MIME_TYPES.map((mime) => {
-      const description = words.types[mime.type] ?? '';
-      return {
-        key: mime.type,
-        group: mimeGroup(mime.type),
-        mime,
-        description,
-        searchable: [
-          mime.type,
-          description,
-          ...mime.extensions,
-          ...mime.extensions.map((extension) => extension.slice(1)),
-        ],
-      };
-    });
-  });
+  protected readonly rows = referenceRows(MIME_TYPES_REFERENCE);
 
   clear(): void {
     this.query.set('');

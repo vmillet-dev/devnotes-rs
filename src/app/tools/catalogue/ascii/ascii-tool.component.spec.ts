@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ToolHarness, renderTool } from '@testing/tool-harness';
-import { AsciiToolComponent, codeIn } from './ascii-tool.component';
+import { AsciiToolComponent } from './ascii-tool.component';
+import { codeIn } from './ascii.reference';
 import { ASCII_CODES, CONTROLS, asciiGroup, binary, ctrlKey, hex, octal } from './ascii.data';
 import en from './ascii.en.json';
 import fr from './ascii.fr.json';

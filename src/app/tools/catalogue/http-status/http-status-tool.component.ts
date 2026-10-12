@@ -1,21 +1,16 @@
-import { ChangeDetectionStrategy, Component, computed } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { headingOf, referenceHeadings, referenceWords } from '@core/services/tools/reference-words';
+import { referenceHeadings, referenceRows } from '@core/services/tools/reference-words';
+import { referenceQueryKey } from '@core/services/tools/reference.model';
 import { Tool } from '@core/services/tools/tool.model';
 import { toolState } from '@core/services/tools/tool-sessions';
 import {
   ReferenceCellsDirective,
-  ReferenceRow,
   ReferenceTableComponent,
   referenceColumns,
 } from '@tools/ui/reference-table/reference-table.component';
-import { HTTP_STATUSES, HttpStatus, HttpStatusWords, STATUS_CLASSES, statusClass } from './http-status.data';
-
-interface StatusRow extends ReferenceRow {
-  readonly status: HttpStatus;
-  readonly meaning: string;
-  readonly use: string | null;
-}
+import { STATUS_CLASSES } from './http-status.data';
+import { HTTP_STATUS_REFERENCE } from './http-status.reference';
 
 const COLUMNS = referenceColumns('tools.http-status.columns', {
   code: '60px',
@@ -33,43 +28,10 @@ const COLUMNS = referenceColumns('tools.http-status.columns', {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HttpStatusToolComponent implements Tool {
-  protected readonly query = toolState('http-status.query', '');
+  protected readonly query = toolState(referenceQueryKey('http-status'), '');
   protected readonly columns = COLUMNS;
-
-  private readonly words = referenceWords<HttpStatusWords>({
-    fr: () => import('./http-status.fr.json'),
-    en: () => import('./http-status.en.json'),
-  });
-
   protected readonly groups = referenceHeadings(STATUS_CLASSES, (id) => `tools.http-status.groups.${id}`);
-
-  protected readonly rows = computed<readonly StatusRow[]>(() => {
-    const words = this.words();
-    if (words === null) return [];
-    const headings = this.groups();
-
-    return HTTP_STATUSES.map((status) => {
-      const group = statusClass(status.code);
-      const said = words.codes[status.code];
-      const meaning = said?.meaning ?? '';
-      const use = said?.use ?? null;
-      return {
-        key: String(status.code),
-        group,
-        status,
-        meaning,
-        use,
-        searchable: [
-          String(status.code),
-          status.name,
-          meaning,
-          use ?? '',
-          status.by,
-          headingOf(headings, group),
-        ],
-      };
-    });
-  });
+  protected readonly rows = referenceRows(HTTP_STATUS_REFERENCE);
 
   clear(): void {
     this.query.set('');

@@ -1050,7 +1050,12 @@
     "searchPlaceholder": "Rechercher un outil…",
     "searchKeys": "Ctrl Maj T",
     "searchShortcut": "Chercher un outil",
-    "noMatch": "Aucun outil ne correspond à « {{query}} ».",
+    "noMatch": "Aucun outil ni aucune entrée de référence ne correspond à « {{query}} ».",
+    "enterOpens": "Entrée ouvre ce résultat",
+    "references": {
+      "title": "Dans les références",
+      "more": "{count, plural, one {# autre} other {# autres}} dans {{name}}"
+    },
     "clear": "Vider",
     "promise": {
       "title": "Tout reste sur cette machine",
