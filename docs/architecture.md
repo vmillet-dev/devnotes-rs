@@ -680,9 +680,26 @@ field. One listener on the home's host, no handler a row.
 nothing typed into them. Sixteen are kept (`KEPT_RECENT_TOOLS`) and five shown
 (`MAX_RECENT_TOOLS`): the home shows the five opened last, and the rail of an open tool the
 first five that its section above does not already list — no tool twice in one rail, and five
-all the same. `catalogue.spec.ts` holds the first figure to the largest category. Ctrl+Shift+T
-opens the home on its search from any area — the home takes `ToolsStore.searchWanted` whether
-it already existed or not.
+all the same. A favourite is left out of the home's recents: it has its chip above them.
+
+**A tool is starred, and that is kept with the application too** (`devnotes.favouriteTools`,
+`ToolsStore.toggleFavourite`): ids in the order they were starred, read like any input — an id
+the catalogue no longer has is dropped by whoever lists them (`favouritesAmong`), never
+written out of the file for it. The same exception to « the tools keep nothing on disk » that
+the recents and the zones are: an id, never what a tool holds.
+
+- **The star is a toggle** (`aria-pressed`) in the frame's header, and on each row of the home:
+  shown on the row's hover and on its own focus, always once on — full, in amber, so that on
+  is not said by a colour alone. ⚠️ A row of the home is a `<button>`: the star is its
+  **sibling**, laid over its end (`.tool-row`), as a note's card is two layers.
+- **« Favoris » is a section of the home above « Récents »**, the same chips, and an entry of
+  the rail above « Tous les outils » with its count; both are absent while there is none.
+- **The entry narrows the home as a category does** (`ToolFilter`: a category, or
+  `favourites`): the starred tools in their own panels. Unstarring the last one widens the
+  home again. A search still answers over the whole catalogue, in its order — a favourite
+  does not outrank a better match. `catalogue.spec.ts` holds the first figure to the largest category. Ctrl+Shift+T
+  opens the home on its search from any area — the home takes `ToolsStore.searchWanted` whether
+  it already existed or not.
 
 **"Enregistrer comme note" belongs to the frame**: one dialog for every tool and for an HTTP
 response, at their common ancestor (`save-as-note/`, reached as `@app/…`). It asks for a title (the tool proposes one, as a

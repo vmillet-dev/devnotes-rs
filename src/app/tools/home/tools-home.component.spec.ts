@@ -389,3 +389,143 @@ describe('ToolsHomeComponent, searching', () => {
     expect(all('[data-testid="tools-recent"]')).toHaveLength(MAX_RECENT_TOOLS);
   });
 });
+
+/**
+ * Thirty-two tools, and the five used every day were found again each time through a category
+ * or the search: « Récents » helps, but moves with every tool opened.
+ */
+describe('ToolsHomeComponent, the favourites', () => {
+  let fixture: ComponentFixture<ToolsHomeComponent>;
+  let store: ToolsStore;
+
+  beforeEach(async () => {
+    TestBed.resetTestingModule();
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      imports: [ToolsHomeComponent],
+      providers: [provideAppTesting(), { provide: TOOL_CATALOGUE, useValue: FAKE_TOOLS }],
+    });
+    store = TestBed.inject(ToolsStore);
+    fixture = TestBed.createComponent(ToolsHomeComponent);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.autoDetectChanges();
+    await fixture.whenStable();
+  });
+
+  const all = (selector: string): HTMLElement[] => [...fixture.nativeElement.querySelectorAll(selector)];
+  const tools = (testid: string) =>
+    all(`[data-testid="${testid}"]`).map((element) => element.dataset['tool']);
+  const star = (tool: string): HTMLButtonElement =>
+    fixture.nativeElement.querySelector(`[data-testid="tools-entry-star"][data-tool="${tool}"]`);
+
+  it('stars a tool from its row without opening it, the star beside the row and not inside it', async () => {
+    const row = star('hash').closest('.tool-row')!;
+    expect(star('hash').getAttribute('aria-pressed')).toBe('false');
+    expect(star('hash').getAttribute('aria-label')).toBe('Favori : Hash / HMAC');
+    // Two layers: the row opens the tool, the star is its sibling — and a button, so Tab reaches it.
+    expect(star('hash').localName).toBe('button');
+    expect(star('hash').tabIndex).toBe(0);
+    expect(row.querySelector('[data-testid="tools-entry"]')!.contains(star('hash'))).toBe(false);
+    expect(star('hash').hasAttribute('data-result')).toBe(false);
+
+    star('hash').click();
+    await fixture.whenStable();
+
+    expect(store.favourites()).toEqual(['hash']);
+    expect(store.openId()).toBeNull();
+    expect(star('hash').getAttribute('aria-pressed')).toBe('true');
+    expect(row.classList.contains('starred')).toBe(true);
+    expect(star('case').getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('shows the favourites above the recents once there is one, in the order they were starred', async () => {
+    expect(tools('tools-favourite')).toEqual([]);
+    expect(fixture.nativeElement.querySelector('#tools-favourites-title')).toBeNull();
+
+    star('hash').click();
+    star('case').click();
+    store.open('line-breaks');
+    store.home();
+    await fixture.whenStable();
+
+    expect(tools('tools-favourite')).toEqual(['hash', 'case']);
+    const titles = all('.section-title').map((title) => title.textContent!.trim());
+    expect(titles).toEqual(['Favoris', 'Récents']);
+
+    all('[data-testid="tools-favourite"]')[1]!.click();
+    expect(store.openId()).toBe('case');
+
+    // Gone with the last one.
+    store.home();
+    star('hash').click();
+    star('case').click();
+    await fixture.whenStable();
+    expect(tools('tools-favourite')).toEqual([]);
+    expect(all('.section-title').map((title) => title.textContent!.trim())).toEqual(['Récents']);
+  });
+
+  it('does not repeat a favourite among the recents', async () => {
+    store.open('hash');
+    store.open('case');
+    store.home();
+    await fixture.whenStable();
+    expect(tools('tools-recent')).toEqual(['case', 'hash']);
+
+    star('case').click();
+    await fixture.whenStable();
+
+    expect(tools('tools-favourite')).toEqual(['case']);
+    expect(tools('tools-recent')).toEqual(['hash']);
+  });
+
+  it('drops a starred tool the catalogue no longer has', async () => {
+    store.toggleFavourite('gone');
+    store.toggleFavourite('hash');
+    await fixture.whenStable();
+
+    expect(tools('tools-favourite')).toEqual(['hash']);
+  });
+
+  it('narrows the catalogue to the favourites, as a category does, and says so with the rail hidden', async () => {
+    star('hash').click();
+    star('line-breaks').click();
+    store.home('favourites');
+    await fixture.whenStable();
+
+    expect(tools('tools-entry')).toEqual(['line-breaks', 'hash']);
+    expect(all('[data-testid="tools-panel"]').map((panel) => panel.dataset['category'])).toEqual([
+      'text',
+      'crypto',
+    ]);
+
+    TestBed.inject(SettingsStore).toggleLibraryRail();
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('[data-testid="tools-category-shown"]').textContent).toContain(
+      'Favoris',
+    );
+
+    // A search still answers over the whole catalogue.
+    store.setSearch('camel');
+    await fixture.whenStable();
+    expect(tools('tools-entry')).toEqual(['case']);
+    store.setSearch('');
+
+    // Narrowed to favourites the file alone still names, the whole catalogue shows.
+    store.toggleFavourite('hash');
+    store.toggleFavourite('line-breaks');
+    store.toggleFavourite('gone');
+    store.home('favourites');
+    await fixture.whenStable();
+    expect(tools('tools-entry')).toEqual(['case', 'line-breaks', 'hash']);
+  });
+
+  it('leaves the search as it was: a favourite does not outrank a better match', async () => {
+    star('hash').click();
+    store.setSearch('a');
+    await fixture.whenStable();
+
+    // The catalogue's order, and no section of chips over the results.
+    expect(tools('tools-entry')).toEqual(['case', 'line-breaks', 'hash']);
+    expect(tools('tools-favourite')).toEqual([]);
+  });
+});

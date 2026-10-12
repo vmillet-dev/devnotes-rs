@@ -1046,6 +1046,13 @@
     "count": "{count, plural, =0 {No utility yet} one {# utility, offline} other {# utilities, all offline}}",
     "all": "All tools",
     "recents": "Recent",
+    "favourites": {
+      "title": "Favourites",
+      "toggle": "Favourite",
+      "of": "Favourite: {{name}}",
+      "add": "Add to favourites",
+      "remove": "Remove from favourites"
+    },
     "searchLabel": "Search for a tool",
     "searchPlaceholder": "Search for a tool…",
     "searchKeys": "Ctrl Shift T",

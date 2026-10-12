@@ -1046,6 +1046,13 @@
     "count": "{count, plural, =0 {Aucun utilitaire pour l’instant} one {# utilitaire, hors ligne} other {# utilitaires, tous hors ligne}}",
     "all": "Tous les outils",
     "recents": "Récents",
+    "favourites": {
+      "title": "Favoris",
+      "toggle": "Favori",
+      "of": "Favori : {{name}}",
+      "add": "Ajouter aux favoris",
+      "remove": "Retirer des favoris"
+    },
     "searchLabel": "Rechercher un outil",
     "searchPlaceholder": "Rechercher un outil…",
     "searchKeys": "Ctrl Maj T",

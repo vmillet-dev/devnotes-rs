@@ -7,6 +7,22 @@
   <nav class="rail" data-testid="tools-rail" [attr.aria-label]="'tools.title' | transloco">
     <app-area-switch class="rail-switch" [current]="areas.current()" (chosen)="areas.show($event)" />
 
+    @if (favourites().length > 0) {
+      @let starredShown = openTool() === null && store.category() === 'favourites';
+      <button
+        type="button"
+        class="rail-link"
+        data-testid="tools-rail-favourites"
+        [class.on]="starredShown"
+        [attr.aria-current]="starredShown ? 'page' : null"
+        (click)="store.home('favourites')"
+      >
+        <app-icon class="rail-star" name="star" [filled]="true" />
+        <span class="rail-label">{{ 'tools.favourites.title' | transloco }}</span>
+        <span class="rail-count">{{ favourites().length }}</span>
+      </button>
+    }
+
     @let allShown = openTool() === null && store.category() === null;
     <button
       type="button"

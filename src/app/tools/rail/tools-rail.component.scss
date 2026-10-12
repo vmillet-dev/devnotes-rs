@@ -44,6 +44,11 @@
   margin-bottom: 6px;
 }
 
+.rail-star {
+  color: var(--amber-text);
+  --icon-size: 13px;
+}
+
 // Wrapped rather than cut: the rail opens at 160px, and "Convertisseur de casse" is longer.
 .rail-label {
   flex: 1;

@@ -8,6 +8,10 @@ import type { ReferenceRow, ReferenceSource } from './reference.model';
 export const TOOL_CATEGORIES = ['text', 'crypto', 'encode', 'generate', 'time', 'calc', 'reference'] as const;
 export type ToolCategory = (typeof TOOL_CATEGORIES)[number];
 
+/** What the home is narrowed to: one category, or the tools that were starred. */
+export const FAVOURITES = 'favourites';
+export type ToolFilter = ToolCategory | typeof FAVOURITES;
+
 /** Its name and its line are the keys `tools.<id>.name` and `tools.<id>.description`. */
 export interface ToolDefinition {
   readonly id: string;
@@ -73,6 +77,17 @@ export const MAX_RECENT_TOOLS = 5;
  * above already lists — the open tool always among them — and still shows five.
  */
 export const KEPT_RECENT_TOOLS = 16;
+
+/** Read back from a file nobody checks: more than any catalogue holds. */
+export const MAX_FAVOURITE_TOOLS = 64;
+
+/** The starred tools the catalogue still has, in the order they were starred. */
+export function favouritesAmong(
+  catalogue: readonly ToolDefinition[],
+  ids: readonly string[],
+): readonly ToolDefinition[] {
+  return ids.flatMap((id) => catalogue.find((tool) => tool.id === id) ?? []);
+}
 
 export function isRecentTool(value: unknown): value is RecentTool {
   const candidate = value as Partial<RecentTool> | null;

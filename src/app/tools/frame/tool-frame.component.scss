@@ -38,6 +38,27 @@
   font-weight: 700;
 }
 
+// Muted until it is on: the amber of what is chosen, and a shape that is full.
+.star {
+  @include unstyled-control;
+  @include hit-target(28px);
+  @include focus-ring;
+  @include eases(color);
+  justify-content: center;
+  border-radius: 6px;
+  color: var(--text-2);
+  cursor: pointer;
+  --icon-size: 16px;
+
+  &:hover {
+    color: var(--text-0);
+  }
+
+  &.on {
+    color: var(--amber-text);
+  }
+}
+
 .spacer {
   flex: 1;
 }

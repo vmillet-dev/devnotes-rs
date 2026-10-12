@@ -17,6 +17,7 @@ const PATHS = {
     'M14 11v6',
   ],
   filter: ['M22 3H2l8 9.46V19l4 2v-8.54L22 3z'],
+  star: ['M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'],
   sun: [
     'M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8z',
     'M12 2v2',
@@ -122,7 +123,7 @@ export type IconName = keyof typeof PATHS;
   template: `
     <svg
       viewBox="0 0 24 24"
-      fill="none"
+      [attr.fill]="filled() ? 'currentColor' : 'none'"
       stroke="currentColor"
       stroke-width="2"
       stroke-linecap="round"
@@ -152,6 +153,8 @@ export type IconName = keyof typeof PATHS;
 })
 export class IconComponent {
   readonly name = input.required<IconName>();
+  /** A star that is on: the same drawing, full. */
+  readonly filled = input(false);
 
   protected readonly paths = computed(() => PATHS[this.name()]);
 }

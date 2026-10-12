@@ -8,9 +8,11 @@ import {
   TOOL_CATALOGUE,
   TOOL_CATEGORIES,
   ToolDefinition,
+  favouritesAmong,
 } from '@core/services/tools/tool.model';
 import { ToolsStore } from '@core/services/tools/tools.store';
 import { AreaSwitchComponent } from '@shared/controls/area-switch/area-switch.component';
+import { IconComponent } from '@shared/icon/icon.component';
 import { RailFrameComponent } from '@shared/layout/rail-frame/rail-frame.component';
 
 /**
@@ -19,7 +21,7 @@ import { RailFrameComponent } from '@shared/layout/rail-frame/rail-frame.compone
  */
 @Component({
   selector: 'app-tools-rail',
-  imports: [AreaSwitchComponent, RailFrameComponent, TranslocoPipe],
+  imports: [AreaSwitchComponent, IconComponent, RailFrameComponent, TranslocoPipe],
   templateUrl: './tools-rail.component.html',
   styleUrl: './tools-rail.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -40,6 +42,9 @@ export class ToolsRailComponent {
     id,
     count: this.catalogue.filter((tool) => tool.category === id).length,
   })).filter((category) => category.count > 0);
+
+  /** The starred tools the catalogue still has: their entry is absent while there is none. */
+  protected readonly favourites = computed(() => favouritesAmong(this.catalogue, this.store.favourites()));
 
   protected readonly siblings = computed(() => {
     const open = this.openTool();

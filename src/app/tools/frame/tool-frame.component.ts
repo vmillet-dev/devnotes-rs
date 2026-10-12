@@ -20,6 +20,7 @@ import { Tool, ToolDefinition, ToolResult } from '@core/services/tools/tool.mode
 import { ToolsStore } from '@core/services/tools/tools.store';
 import { SaveAsNoteDialogComponent } from '@app/save-as-note/save-as-note-dialog.component';
 import { RailToggleComponent } from '@shared/controls/rail-toggle/rail-toggle.component';
+import { IconComponent } from '@shared/icon/icon.component';
 
 /**
  * What every tool is drawn in: the breadcrumb, the tool's own actions, Vider and "Enregistrer
@@ -29,7 +30,7 @@ import { RailToggleComponent } from '@shared/controls/rail-toggle/rail-toggle.co
  */
 @Component({
   selector: 'app-tool-frame',
-  imports: [RailToggleComponent, SaveAsNoteDialogComponent, TranslocoPipe],
+  imports: [IconComponent, RailToggleComponent, SaveAsNoteDialogComponent, TranslocoPipe],
   templateUrl: './tool-frame.component.html',
   styleUrl: './tool-frame.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
