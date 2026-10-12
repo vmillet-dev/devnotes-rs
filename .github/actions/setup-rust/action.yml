@@ -48,4 +48,4 @@ runs:
       with:
         workspaces: src-tauri
         shared-key: ${{ inputs.shared-key }}
-        save-if: ${{ inputs.save-if }}
+        save-if: ${{ inputs.save-if == 'true' && github.event_name != 'pull_request' }}
