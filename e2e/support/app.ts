@@ -2,6 +2,8 @@ import { $, $$, browser } from '@wdio/globals';
 
 import type { GlobalAction } from '@core/ipc/bindings';
 
+import { storedPreferences } from './profile.js';
+
 /** `[data-testid="…"]`, in one place, so a spec never spells the attribute. */
 export function testid(name: string): string {
   return `[data-testid="${name}"]`;
@@ -430,6 +432,20 @@ export async function isInFront(selector: string): Promise<boolean> {
 /** Which control really holds the keyboard, by its test id — `null` for anything else. */
 export async function activeTestId(): Promise<string | null> {
   return browser.execute(() => document.activeElement?.getAttribute('data-testid') ?? null);
+}
+
+/**
+ * Waits for a setting to reach the preferences file, as the store wrote it. ⚠️ To be awaited
+ * before a `reloadCanvas()` that is to find the setting again: the page writes through the
+ * store plugin, a call a refresh can outrun — the front built again then reads the value
+ * before it, and a width dragged five steps came back four.
+ */
+export async function preferenceWritten(key: string, want: string): Promise<void> {
+  await eventually(
+    () => Promise.resolve(storedPreferences()[key]),
+    (stored) => stored === want,
+    `${key} to reach the preferences file as ${want}`,
+  );
 }
 
 export async function reloadCanvas(): Promise<void> {

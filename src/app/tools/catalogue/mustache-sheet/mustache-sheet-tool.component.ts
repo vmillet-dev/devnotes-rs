@@ -1,20 +1,16 @@
-import { ChangeDetectionStrategy, Component, computed } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { headingOf, referenceHeadings, referenceWords } from '@core/services/tools/reference-words';
+import { referenceHeadings, referenceRows } from '@core/services/tools/reference-words';
+import { referenceQueryKey } from '@core/services/tools/reference.model';
 import { Tool } from '@core/services/tools/tool.model';
 import { toolState } from '@core/services/tools/tool-sessions';
 import {
   ReferenceCellsDirective,
-  ReferenceRow,
   ReferenceTableComponent,
   referenceColumns,
 } from '@tools/ui/reference-table/reference-table.component';
-import { MUSTACHE_ENTRIES, MUSTACHE_GROUPS, MustacheEntry, MustacheWords } from './mustache-sheet.data';
-
-interface MustacheRow extends ReferenceRow {
-  readonly entry: MustacheEntry;
-  readonly what: string;
-}
+import { MUSTACHE_GROUPS } from './mustache-sheet.data';
+import { MUSTACHE_SHEET_REFERENCE } from './mustache-sheet.reference';
 
 const COLUMNS = referenceColumns('tools.mustache-sheet.columns', {
   syntax: '25%',
@@ -34,32 +30,10 @@ const COLUMNS = referenceColumns('tools.mustache-sheet.columns', {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MustacheSheetToolComponent implements Tool {
-  protected readonly query = toolState('mustache-sheet.query', '');
+  protected readonly query = toolState(referenceQueryKey('mustache-sheet'), '');
   protected readonly columns = COLUMNS;
-
-  private readonly words = referenceWords<MustacheWords>({
-    fr: () => import('./mustache-sheet.fr.json'),
-    en: () => import('./mustache-sheet.en.json'),
-  });
-
   protected readonly groups = referenceHeadings(MUSTACHE_GROUPS, (id) => `tools.mustache-sheet.groups.${id}`);
-
-  protected readonly rows = computed<readonly MustacheRow[]>(() => {
-    const words = this.words();
-    if (words === null) return [];
-    const headings = this.groups();
-
-    return MUSTACHE_ENTRIES.map((entry) => {
-      const what = words.entries[entry.syntax] ?? '';
-      return {
-        key: entry.syntax,
-        group: entry.group,
-        entry,
-        what,
-        searchable: [entry.syntax, what, headingOf(headings, entry.group)],
-      };
-    });
-  });
+  protected readonly rows = referenceRows(MUSTACHE_SHEET_REFERENCE);
 
   clear(): void {
     this.query.set('');

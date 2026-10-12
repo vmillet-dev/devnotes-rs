@@ -3,7 +3,12 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { AreaStore } from '@core/services/areas/area.store';
 import { RAIL_WIDTH } from '@core/services/settings/app-settings.model';
 import { SettingsStore } from '@core/services/settings/settings.store';
-import { TOOL_CATALOGUE, TOOL_CATEGORIES, ToolDefinition } from '@core/services/tools/tool.model';
+import {
+  MAX_RECENT_TOOLS,
+  TOOL_CATALOGUE,
+  TOOL_CATEGORIES,
+  ToolDefinition,
+} from '@core/services/tools/tool.model';
 import { ToolsStore } from '@core/services/tools/tools.store';
 import { AreaSwitchComponent } from '@shared/controls/area-switch/area-switch.component';
 import { RailFrameComponent } from '@shared/layout/rail-frame/rail-frame.component';
@@ -41,12 +46,16 @@ export class ToolsRailComponent {
     return open ? this.catalogue.filter((tool) => tool.category === open.category) : [];
   });
 
-  /** The ones not already listed above them. */
+  /**
+   * The ones not already listed above them — no tool twice in one rail — and five all the
+   * same: more are kept than shown, so that the open tool and its neighbours cost none.
+   */
   protected readonly recents = computed(() => {
     const listed = new Set(this.siblings().map((tool) => tool.id));
     return this.store
       .recents()
       .map((recent) => this.catalogue.find((tool) => tool.id === recent.id))
-      .filter((tool): tool is ToolDefinition => tool !== undefined && !listed.has(tool.id));
+      .filter((tool): tool is ToolDefinition => tool !== undefined && !listed.has(tool.id))
+      .slice(0, MAX_RECENT_TOOLS);
   });
 }

@@ -39,6 +39,15 @@ export function preferencesPath(): string {
   return join(e2eDataDir(), 'preferences.json');
 }
 
+/** What the preferences file holds now; nothing while it is absent or being written. */
+export function storedPreferences(): Record<string, unknown> {
+  try {
+    return JSON.parse(readFileSync(preferencesPath(), 'utf8')) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
 /**
  * Where the open library's files sit, read out of the registry: libraries live under
  * `libraries/<id>/`, and a helper that guessed would read the wrong `vault.json` the moment a

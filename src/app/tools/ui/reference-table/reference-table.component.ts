@@ -3,7 +3,9 @@ import {
   ChangeDetectionStrategy,
   Component,
   Directive,
+  ElementRef,
   TemplateRef,
+  afterRenderEffect,
   computed,
   contentChild,
   inject,
@@ -11,19 +13,10 @@ import {
   model,
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { toolMatches } from '@core/services/tools/tool.model';
+import { ReferenceRow, matchesSearchable } from '@core/services/tools/reference.model';
+import { ToolsStore } from '@core/services/tools/tools.store';
 import { IconComponent } from '@shared/icon/icon.component';
 import { CopyValueComponent } from '../copy-value/copy-value.component';
-
-export interface ReferenceRow {
-  /** Unique in its table, and what the row's button copies: `404`, `Content-Type`. */
-  readonly key: string;
-  readonly group: string;
-  /** What a search reads, case and accents folded: the key, the name, the words on screen. */
-  readonly searchable: readonly string[];
-  /** What the row's button copies instead of the key, and its name aloud: a character, keyed by its code. */
-  readonly copy?: { readonly value: string; readonly what: string };
-}
 
 export interface ReferenceGroup {
   readonly id: string;
@@ -71,10 +64,6 @@ export class ReferenceCellsDirective<T extends ReferenceRow> {
   }
 }
 
-export function matchesSearchable(row: ReferenceRow, query: string): boolean {
-  return toolMatches(query, row.searchable);
-}
-
 /**
  * A reference's table: a search that filters as it is typed, the rows under their groups, a
  * count, and each row's key to copy. The field sits outside everything that re-renders, so
@@ -100,6 +89,12 @@ export class ReferenceTableComponent<T extends ReferenceRow> {
 
   protected readonly cells = contentChild.required<ReferenceCellsDirective<T>>(ReferenceCellsDirective);
 
+  private readonly store = inject(ToolsStore);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  /** The row the home's search opened this reference on. */
+  protected readonly lit = this.store.entry;
+  private broughtIntoView: string | null = null;
+
   protected readonly searching = computed(() => this.query().trim() !== '');
 
   protected readonly shown = computed(() => {
@@ -115,7 +110,34 @@ export class ReferenceTableComponent<T extends ReferenceRow> {
       .filter((section) => section.rows.length > 0);
   });
 
+  constructor() {
+    // Once, when its row is drawn: the words land after the table does, and a language
+    // changed later must not take the page back to it.
+    afterRenderEffect(() => {
+      const key = this.lit();
+      if (key === null || key === this.broughtIntoView || this.sections().length === 0) return;
+      const row = [...this.host.nativeElement.querySelectorAll<HTMLElement>('tr.row')].find(
+        (candidate) => candidate.dataset['key'] === key,
+      );
+      if (row === undefined) return;
+      this.broughtIntoView = key;
+      this.centre(row);
+    });
+  }
+
+  /**
+   * ⚠️ Not `scrollIntoView`: it scrolls every ancestor that can be, and the window's own page
+   * can — the title bar went off the top. The frame alone scrolls here.
+   */
+  private centre(row: HTMLElement): void {
+    const frame = row.closest<HTMLElement>('.frame');
+    if (frame === null) return;
+    const [box, line] = [frame.getBoundingClientRect(), row.getBoundingClientRect()];
+    frame.scrollTop += line.top - box.top - (box.height - line.height) / 2;
+  }
+
   protected onSearch(event: Event): void {
+    this.store.forgetEntry();
     this.query.set((event.target as HTMLInputElement).value);
   }
 }

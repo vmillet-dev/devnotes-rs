@@ -1,7 +1,7 @@
 import { Injectable, Signal, computed, effect, inject, signal } from '@angular/core';
 import { AREAS } from '@core/services/areas/area.model';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
-import { MAX_RECENT_TOOLS, RecentTool, isRecentTool } from '@core/services/tools/tool.model';
+import { KEPT_RECENT_TOOLS, RecentTool, isRecentTool } from '@core/services/tools/tool.model';
 import {
   AppSettings,
   DEFAULT_SETTINGS,
@@ -73,7 +73,7 @@ const asRecentTools: SettingCodec<readonly RecentTool[]> = {
   parse: (stored) => {
     try {
       const value: unknown = JSON.parse(stored);
-      return Array.isArray(value) ? value.filter(isRecentTool).slice(0, MAX_RECENT_TOOLS) : null;
+      return Array.isArray(value) ? value.filter(isRecentTool).slice(0, KEPT_RECENT_TOOLS) : null;
     } catch {
       return null;
     }

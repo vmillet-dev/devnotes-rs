@@ -9,6 +9,7 @@ import { canvas } from '../pageobjects/canvas.page.js';
 import {
   blurField,
   eventually,
+  preferenceWritten,
   press,
   readEach,
   reloadCanvas,
@@ -1407,6 +1408,7 @@ describe('HTTP collections', () => {
         expect(await eventually(split, (now) => now.share === kept.share, 'the share after a trip')).toEqual(
           kept,
         );
+        await preferenceWritten('devnotes.httpRequestShare', String(kept.share));
         await reloadCanvas();
         await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
         await $(testid('http-split-handle')).waitForExist({ timeout: 10_000 });
@@ -1912,6 +1914,11 @@ describe('HTTP collections', () => {
         const narrow = await width();
         await nudge('ArrowRight');
         await eventually(width, (wide) => wide === narrow + 80, 'the list widened from its edge');
+        // As the setting holds it: the edge says the width it stores.
+        await preferenceWritten(
+          'devnotes.historyListWidth',
+          (await $(testid('http-history-edge')).getAttribute('aria-valuenow')) ?? '',
+        );
         await reloadCanvas();
         await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
         await $(testid('http-history')).waitForExist({ reverse: true, timeout: 10_000 });

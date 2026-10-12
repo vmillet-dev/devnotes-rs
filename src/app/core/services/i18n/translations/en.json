@@ -1050,7 +1050,12 @@
     "searchPlaceholder": "Search for a tool…",
     "searchKeys": "Ctrl Shift T",
     "searchShortcut": "Search for a tool",
-    "noMatch": "No tool matches “{{query}}”.",
+    "noMatch": "No tool and no reference entry matches “{{query}}”.",
+    "enterOpens": "Enter opens this result",
+    "references": {
+      "title": "In the references",
+      "more": "{count, plural, one {# more} other {# more}} in {{name}}"
+    },
     "clear": "Clear",
     "promise": {
       "title": "Everything stays on this machine",
