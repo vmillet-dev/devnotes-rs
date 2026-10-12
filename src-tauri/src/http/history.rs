@@ -16,8 +16,8 @@ use url::Url;
 use super::graphql::GraphqlDocument;
 use super::model::{HttpMethod, HttpRequest, KeyValue, RequestBody, RequestDocument, RequestKind};
 use super::query::{self, QuerySide};
-use super::response::pretty_json;
-use super::send::{self, Exchange, SentBody, SentResponse};
+use super::response::{Cookie, pretty_json};
+use super::send::{self, Exchange, Redirect, SentBody, SentResponse};
 use super::settings::InheritedHeader;
 use crate::error::ErrorCode;
 use crate::notes::view::offset_from_minutes;
@@ -42,6 +42,12 @@ pub struct HistorySummary {
     /// What was sent, for a send reopened as a draft to be of the same kind.
     #[serde(default)]
     pub kind: RequestKind,
+    /// ⚠️ Here and not in a column of their own: no query filters or sorts on them, and in
+    /// the clear they told a reader of the raw file « a DELETE answered 401 at 14:02 ».
+    #[serde(default)]
+    pub method: HttpMethod,
+    #[serde(default)]
+    pub status: Option<u16>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -131,10 +137,28 @@ fn masked_value(name: &str, value: &str) -> String {
     }
 }
 
-/// The query's secret values replaced as they are written, the rest of the URL untouched.
-fn masked_url(url: &str, secrets: &[String]) -> String {
-    let Some((head, rest)) = url.split_once('?') else {
+/// `https://user:secret@host` keeps who it was sent as, not the secret.
+fn without_password(url: &str) -> String {
+    let Some((scheme, rest)) = url.split_once("://") else {
         return url.to_string();
+    };
+    let end = rest.find(['/', '?', '#']).unwrap_or(rest.len());
+    let (authority, tail) = rest.split_at(end);
+    match authority
+        .rsplit_once('@')
+        .and_then(|(who, host)| Some((who.split_once(':')?.0, host)))
+    {
+        Some((user, host)) => format!("{scheme}://{user}:{MASK}@{host}{tail}"),
+        None => url.to_string(),
+    }
+}
+
+/// The password of the URL's user and the query's secret values replaced as they are written,
+/// the rest of the URL untouched.
+fn masked_url(url: &str, secrets: &[String]) -> String {
+    let url = without_password(url);
+    let Some((head, rest)) = url.split_once('?') else {
+        return url;
     };
     let (query, fragment) = rest
         .split_once('#')
@@ -176,6 +200,70 @@ pub fn mask(exchange: &Exchange, secrets: &[String]) -> Exchange {
     }
 }
 
+/// `session=abc; Path=/; HttpOnly` keeps its name and what it is set for.
+fn masked_set_cookie(value: &str) -> String {
+    let (pair, attributes) = value
+        .split_once(';')
+        .map_or((value, None), |(pair, rest)| (pair, Some(rest)));
+    let name = pair.split_once('=').map_or(pair, |(name, _)| name);
+    match attributes {
+        Some(rest) => format!("{name}={MASK};{rest}"),
+        None => format!("{name}={MASK}"),
+    }
+}
+
+fn masked_cookie(cookie: &Cookie, secrets: &[String]) -> Cookie {
+    Cookie {
+        value: MASK.to_string(),
+        from: cookie.from.as_deref().map(|url| masked_url(url, secrets)),
+        ..cookie.clone()
+    }
+}
+
+/// The answer as the history keeps it. ⚠️ What an answer sets is what the next request sends:
+/// a `Set-Cookie` kept whole would be the `Cookie` the request side masks. And every URL it
+/// names is the request's own again — where it came from, each hop of its redirects — with the
+/// key its query carried.
+fn masked_answer(response: &SentResponse, secrets: &[String]) -> SentResponse {
+    SentResponse {
+        url: masked_url(&response.url, secrets),
+        headers: response
+            .headers
+            .iter()
+            .map(|header| KeyValue {
+                value: if header.key.eq_ignore_ascii_case("set-cookie") {
+                    masked_set_cookie(&header.value)
+                } else if header.key.eq_ignore_ascii_case("location") {
+                    masked_url(&header.value, secrets)
+                } else {
+                    header.value.clone()
+                },
+                ..header.clone()
+            })
+            .collect(),
+        cookies: response
+            .cookies
+            .iter()
+            .map(|cookie| masked_cookie(cookie, secrets))
+            .collect(),
+        redirects: response
+            .redirects
+            .iter()
+            .map(|hop| Redirect {
+                url: masked_url(&hop.url, secrets),
+                from: masked_url(&hop.from, secrets),
+                cookies: hop
+                    .cookies
+                    .iter()
+                    .map(|cookie| masked_cookie(cookie, secrets))
+                    .collect(),
+                ..hop.clone()
+            })
+            .collect(),
+        ..response.clone()
+    }
+}
+
 fn cut(text: &str) -> (String, bool) {
     if text.len() <= BODY_KEPT {
         return (text.to_string(), false);
@@ -204,11 +292,13 @@ pub fn record_of(sent: &Sent) -> (HistorySummary, HistoryRecord) {
             cut: response.cut || shortened,
             body,
             exchange: exchange.clone(),
-            ..response.clone()
+            ..masked_answer(response, &sent.secrets)
         }
     });
     let summary = HistorySummary {
         kind: sent.kind,
+        method: sent.exchange.method,
+        status: response.as_ref().map(|response| response.status),
         name: sent.name.clone(),
         url: exchange.url.clone(),
         millis: response.as_ref().map(|response| response.millis),
@@ -235,8 +325,10 @@ pub struct HistoryDraft {
     pub document: RequestDocument,
 }
 
-/// A recorded URL without the query pairs it holds masked.
+/// A recorded URL without what it holds masked: the query pairs, and its user's password —
+/// the user stays, the secret is typed again.
 fn draft_url(url: &str) -> String {
+    let url = url.replacen(&format!(":{MASK}@"), "@", 1);
     match url.split_once('?') {
         Some((head, query)) => {
             let kept: Vec<&str> = query
@@ -253,7 +345,7 @@ fn draft_url(url: &str) -> String {
                 format!("{head}?{}", kept.join("&"))
             }
         }
-        None => url.to_string(),
+        None => url,
     }
 }
 
@@ -531,6 +623,190 @@ mod tests {
         );
     }
 
+    fn answered(exchange: Exchange, secrets: &[&str], response: SentResponse) -> Sent {
+        Sent {
+            kind: RequestKind::Http,
+            name: "Login".to_string(),
+            request_id: None,
+            exchange,
+            secrets: secrets.iter().map(ToString::to_string).collect(),
+            outcome: Ok(response),
+        }
+    }
+
+    fn answer() -> SentResponse {
+        SentResponse {
+            status: 200,
+            reason: "OK".to_string(),
+            millis: 12,
+            size: 2,
+            url: String::new(),
+            headers: Vec::new(),
+            body: "{}".to_string(),
+            binary: false,
+            cut: false,
+            incomplete: false,
+            redirects: Vec::new(),
+            language: crate::notes::language::Language::Json,
+            pretty: None,
+            cookies: Vec::new(),
+            exchange: exchange("https://api.exemple.fr", Vec::new(), SentBody::None),
+            graphql: None,
+        }
+    }
+
+    /// One auth a line: whatever kind left, its secret is not in what is kept.
+    #[test]
+    fn every_kind_of_auth_is_masked_in_the_request_that_is_kept() {
+        let kept = |name: &str, value: &str, secrets: &[&str]| {
+            let secrets: Vec<String> = secrets.iter().map(ToString::to_string).collect();
+            mask(
+                &exchange("https://x", vec![header(name, value)], SentBody::None),
+                &secrets,
+            )
+            .headers[0]
+                .value
+                .clone()
+        };
+
+        // Basic and Bearer keep their scheme: what kind of auth left is worth knowing.
+        assert_eq!(
+            kept("Authorization", "Basic dXNlcjpodW50ZXIy", &[]),
+            "Basic ••••••••"
+        );
+        assert_eq!(
+            kept("authorization", "Bearer eyJhbGciOi", &[]),
+            "Bearer ••••••••"
+        );
+        // A key in a header goes by the name the request gave it, whatever its case.
+        assert_eq!(kept("X-Api-Key", "k-123", &["x-api-key"]), "••••••••");
+        assert_eq!(kept("X-Api-Key", "k-123", &[]), "k-123");
+        assert_eq!(
+            kept("Proxy-Authorization", "Basic cHJveHk6cHc=", &[]),
+            "••••••••"
+        );
+        assert_eq!(kept("Cookie", "session=abc; theme=dark", &[]), "••••••••");
+    }
+
+    /// A password typed in the URL itself is as much a secret as one typed under « Auth ».
+    #[test]
+    fn a_password_in_the_url_is_masked_and_its_user_kept() {
+        let masked = |url: &str| mask(&exchange(url, Vec::new(), SentBody::None), &[]).url;
+
+        assert_eq!(
+            masked("https://ada:hunter2@api.exemple.fr/v1?page=2"),
+            "https://ada:••••••••@api.exemple.fr/v1?page=2"
+        );
+        // A user alone, an address with a port, a bracketed one: nothing to mask.
+        assert_eq!(
+            masked("https://ada@api.exemple.fr/v1"),
+            "https://ada@api.exemple.fr/v1"
+        );
+        assert_eq!(masked("http://[::1]:8080/x"), "http://[::1]:8080/x");
+        assert_eq!(
+            masked("http://127.0.0.1:8080/a@b"),
+            "http://127.0.0.1:8080/a@b"
+        );
+        // Reopened as a draft, the dots do not come back as a password.
+        assert_eq!(
+            draft_url("https://ada:••••••••@api.exemple.fr/v1?page=2"),
+            "https://ada@api.exemple.fr/v1?page=2"
+        );
+    }
+
+    /// The answer names the request's URL again — where it came from, each hop — and sets the
+    /// cookie the next request sends: each was kept whole beside a request that was masked.
+    #[test]
+    fn what_the_answer_repeats_of_the_secrets_is_masked_too() {
+        let cookie = |from: Option<&str>| Cookie {
+            name: "session".to_string(),
+            value: "abc123".to_string(),
+            from: from.map(str::to_string),
+            ..Cookie::default()
+        };
+        let response = SentResponse {
+            url: "https://api.exemple.fr/home?key=s3cret".to_string(),
+            headers: vec![
+                header("Set-Cookie", "session=abc123; Path=/; HttpOnly"),
+                header("set-cookie", "bare=zzz"),
+                header("Location", "/next?key=s3cret&page=1"),
+                header("Content-Type", "application/json"),
+            ],
+            cookies: vec![cookie(None)],
+            redirects: vec![Redirect {
+                status: 302,
+                url: "https://api.exemple.fr/home?key=s3cret".to_string(),
+                from: "https://ada:hunter2@api.exemple.fr/login?key=s3cret".to_string(),
+                cookies: vec![cookie(Some("https://api.exemple.fr/login?key=s3cret"))],
+            }],
+            ..answer()
+        };
+        let (summary, record) = record_of(&answered(
+            exchange(
+                "https://ada:hunter2@api.exemple.fr/login?key=s3cret",
+                Vec::new(),
+                SentBody::None,
+            ),
+            &["key"],
+            response,
+        ));
+
+        let written = serde_json::to_string(&(&summary, &record)).unwrap();
+        for secret in ["s3cret", "abc123", "hunter2", "zzz"] {
+            assert!(!written.contains(secret), "{secret} is kept in the history");
+        }
+        let kept = record.response.unwrap();
+        assert_eq!(kept.url, "https://api.exemple.fr/home?key=••••••••");
+        assert_eq!(
+            kept.headers
+                .iter()
+                .map(|header| header.value.as_str())
+                .collect::<Vec<_>>(),
+            [
+                "session=••••••••; Path=/; HttpOnly",
+                "bare=••••••••",
+                "/next?key=••••••••&page=1",
+                "application/json"
+            ]
+        );
+        // What it was called and where it applies is not the secret.
+        assert_eq!(kept.cookies[0].name, "session");
+        assert_eq!(
+            kept.redirects[0].from,
+            "https://ada:••••••••@api.exemple.fr/login?key=••••••••"
+        );
+        assert_eq!(
+            kept.redirects[0].cookies[0].from.as_deref(),
+            Some("https://api.exemple.fr/login?key=••••••••")
+        );
+    }
+
+    /// The limit, asserted rather than left to be discovered: the mask knows the secrets a
+    /// request declares — its auth, its cookies — not one typed by hand in a parameter or a
+    /// body. Those are kept, sealed like the rest of the record.
+    #[test]
+    fn a_secret_typed_by_hand_in_a_parameter_or_a_body_is_kept_as_it_was_sent() {
+        let (summary, record) = record_of(&answered(
+            exchange(
+                "https://api.exemple.fr/x?token=typed-by-hand",
+                Vec::new(),
+                SentBody::Text {
+                    text: r#"{"password":"in-the-body"}"#.to_string(),
+                },
+            ),
+            &[],
+            answer(),
+        ));
+
+        assert_eq!(summary.url, "https://api.exemple.fr/x?token=typed-by-hand");
+        assert_eq!(
+            record.exchange.body,
+            SentBody::Text {
+                text: r#"{"password":"in-the-body"}"#.to_string()
+            }
+        );
+    }
+
     #[test]
     fn a_record_cuts_long_bodies_and_says_how_it_ended() {
         let long = "é".repeat(BODY_KEPT);
@@ -580,6 +856,8 @@ mod tests {
                     size: None,
                     failure: None,
                     failure_params: BTreeMap::new(),
+                    method: HttpMethod::Post,
+                    status: None,
                 },
                 url_head: String::new(),
                 url_tail: String::new(),
@@ -667,6 +945,8 @@ mod tests {
                     size: None,
                     failure: None,
                     failure_params: BTreeMap::new(),
+                    method: HttpMethod::Post,
+                    status: None,
                 },
                 url_head: String::new(),
                 url_tail: String::new(),
@@ -895,6 +1175,8 @@ mod tests {
                 size: None,
                 failure: None,
                 failure_params: BTreeMap::new(),
+                method: HttpMethod::Get,
+                status: None,
             },
             url_head: String::new(),
             url_tail: String::new(),

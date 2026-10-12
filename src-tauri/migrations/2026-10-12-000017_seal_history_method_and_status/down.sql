@@ -1,0 +1,3 @@
+DELETE FROM http_history;
+ALTER TABLE http_history ADD COLUMN method TEXT NOT NULL DEFAULT 'GET';
+ALTER TABLE http_history ADD COLUMN status INTEGER;

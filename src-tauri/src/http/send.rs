@@ -342,8 +342,16 @@ fn parse_url(typed: &str) -> Result<Url, SendError> {
         Url::parse(&format!("http://{typed}"))
     };
     let url = url.map_err(|error| SendError::InvalidUrl(error.to_string()))?;
-    if !matches!(url.scheme(), "http" | "https") || url.host_str().is_none_or(str::is_empty) {
-        return Err(SendError::InvalidUrl(url.to_string()));
+    // ⚠️ Why, never the URL itself: a detail is shown and logged, and a URL carries a key in
+    // its query or a password before its host.
+    if !matches!(url.scheme(), "http" | "https") {
+        return Err(SendError::InvalidUrl(format!(
+            "the scheme {}",
+            url.scheme()
+        )));
+    }
+    if url.host_str().is_none_or(str::is_empty) {
+        return Err(SendError::InvalidUrl("no host".to_string()));
     }
     Ok(url)
 }
@@ -741,7 +749,8 @@ fn failure(error: &reqwest::Error, timeout: &Limit) -> SendError {
         return SendError::Timeout(timeout.clone());
     }
     if error.is_builder() {
-        return SendError::InvalidUrl(error.to_string());
+        // `reqwest` names the URL in its own message: the cause under it does not.
+        return SendError::InvalidUrl(innermost(error));
     }
     cause_of(error, Some(timeout)).unwrap_or_else(|| SendError::Network(innermost(error)))
 }
@@ -1222,10 +1231,13 @@ impl Sending {
         };
         let mut staged = path.as_os_str().to_owned();
         staged.push(format!(".{}.tmp", Uuid::new_v4()));
-        std::fs::write(&staged, &kept.bytes)?;
-        std::fs::rename(&staged, path).inspect_err(|_| {
-            let _ = std::fs::remove_file(&staged);
-        })?;
+        // Removed on either failure: a body cut short by a full disk is a response left in
+        // the clear under a name nobody chose.
+        std::fs::write(&staged, &kept.bytes)
+            .and_then(|()| std::fs::rename(&staged, path))
+            .inspect_err(|_| {
+                let _ = std::fs::remove_file(&staged);
+            })?;
         Ok(true)
     }
 

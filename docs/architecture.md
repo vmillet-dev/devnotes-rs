@@ -1923,14 +1923,26 @@ the lock again; a request refused before leaving — a `{{variable}}`, a bad URL
 one are not. A failed send is kept with its code. The write never costs the answer: a failure
 is logged.
 
-- **Sealed, in two parts**: the summary a list shows (name, URL, time, size, failure) and the
-  record an entry opens (the exchange, and the answer with its body cut to 256 KB). The
-  instant, the method, the status and the request it came from stay in the clear, for the
-  order and the retention; `request_id` is `ON DELETE SET NULL`.
-- ⚠️ **Secrets are masked before they are sealed** (`history::mask`): `Authorization` keeps its
-  scheme (`Bearer ••••••••`), `Proxy-Authorization` and `Cookie` lose their value, and so does
-  the API key, by the name `compose` hands on (`Outgoing::secrets`), in a header or the query.
-  The live timeline shows what really left; only the history masks.
+- **Sealed, in two parts**: the summary a list shows (name, URL, method, status, time, size,
+  failure) and the record an entry opens (the exchange, and the answer with its body cut to
+  256 KB). Only the instant and the request it came from stay in the clear, for the order and
+  the retention; `request_id` is `ON DELETE SET NULL`. ⚠️ The method and the status were
+  columns of their own until migration 17, which drops them and **empties the table**: SQL
+  holds no key to move them under, and an entry coming back as a `GET` it never was is worse
+  than thirty days of sends gone.
+- ⚠️ **Secrets are masked before they are sealed**, on both sides of the exchange. Sent
+  (`history::mask`): `Authorization` keeps its scheme (`Bearer ••••••••`),
+  `Proxy-Authorization` and `Cookie` lose their value, so does the API key, by the name
+  `compose` hands on (`Outgoing::secrets`), in a header or the query, and the password of a
+  URL's user (`https://ada:••••••••@host`). Answered (`masked_answer`): a `Set-Cookie` keeps its
+  name and its attributes, a cookie its name, and every URL the answer names again — where it
+  came from, a `Location`, each hop of the redirects — is masked like the one sent. What an
+  answer sets is what the next request sends: kept whole, it was the `Cookie` the other side
+  masks. The live timeline shows what really left; only the history masks.
+- ⚠️ **The limit of the mask**: it knows the secrets a request _declares_. A token typed by
+  hand as a parameter or in a body, or one a server answers in its body, is kept as it is —
+  sealed like the rest of the record, and shown to whoever opens the entry. A test a secret
+  in `http/history.rs`, and one that asserts this limit rather than leaving it to be found.
 - **Kept 30 days and 500 entries**, purged as each is written and at launch
   (`history::sweep_at_startup`). « Vider l'historique » asks Rust how many it removes first.
 - **A row ends on what tells it from the next.** Fourteen sends to one host read alike, each
@@ -3829,22 +3841,61 @@ CI build. On a realistic library (~2 MB) the sealing costs well under a millisec
 
 ### What is sealed, and what is not
 
-Sealed: note titles, bodies and sources, the bodies kept as revisions, checklist item texts,
-space and folder names, `{{field}}` values and their global defaults, attachment file names, the
-HTTP collections' names, requests' documents and containers' settings — and the attachment files
-themselves, bytes and all.
+**Sealed is what was typed or answered; plain is what SQL filters, sorts, groups and joins on.**
+Sealing the second would move every query into Rust over the whole corpus. The table is every
+column of `db/schema.rs`, read one by one: a column added there is added here.
 
-Not sealed, deliberately: tags, instants, ids, `kind`, `language` and the foreign keys.
-They are what SQL filters, sorts, groups and joins on, and sealing them would move every
-query into Rust over the whole corpus. ⚠️ Tag names are not the only cost of that line. A
-reader of the raw file, with no key, learns the number of notes and the shape of the spaces and
-folders they hang in, every instant, each note's language, kind, pin and item states, every tag
-and `{{field}}` name, each attachment's type and size, and the **length** of every sealed value
-— AES-GCM hides no length. `libraries.json` and both `preferences.json` are plain too. The
-README lists it for the people deciding what to keep here.
-`a_note_is_not_readable_in_the_file_it_was_written_to` (`tests/notes.rs`) greps a freshly
-written database and asserts exactly that split — the only test here that reads the file
-rather than the API.
+| Table                 | Sealed                                                                  | Plain                                                                                                                                                       |
+| --------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `spaces`              | `name`                                                                  | `id`, `pinned`                                                                                                                                              |
+| `folders`             | `name`                                                                  | `id`, `space_id`, `colour`, `created_at`, the board's `x`, `y`, `w`, `h`                                                                                    |
+| `notes`               | `title`, `content`, `source`                                            | `id`, `space_id`, `folder_id`, `kind`, `language`, `priority`, `pinned`, `created_at`, `updated_at`, `deleted_at`, `lifecycle_kind`, `lifecycle_expires_at` |
+| `note_positions`      | —                                                                       | `note_id`, `x`, `y`                                                                                                                                         |
+| `note_tags`           | —                                                                       | `note_id`, `tag`                                                                                                                                            |
+| `note_items`          | `text`                                                                  | `note_id`, `position`, `done`                                                                                                                               |
+| `note_revisions`      | `content`                                                               | `id`, `note_id`, `taken_at`                                                                                                                                 |
+| `note_placeholders`   | `value`                                                                 | `note_id`, `name`                                                                                                                                           |
+| `global_placeholders` | `value`                                                                 | `name`                                                                                                                                                      |
+| `attachments`         | `file_name`, and the file itself, bytes and all                         | `id`, `note_id`, `mime_type`, `byte_size`, `created_at`                                                                                                     |
+| `http_collections`    | `name`, `settings` (auth, headers, transport)                           | `id`, `position`, `created_at`                                                                                                                              |
+| `http_folders`        | `name`, `settings`                                                      | `id`, `collection_id`, `parent_id`, `position`, `created_at`                                                                                                |
+| `http_requests`       | `name`, `document` (URL, parameters, headers, body, auth, and the rest) | `id`, `collection_id`, `folder_id`, `position`, `created_at`, `updated_at`, and ⚠️ `kind`, `method`                                                         |
+| `http_history`        | `summary` (name, URL, method, status, time, size, failure), `record`    | `id`, `sent_at`, `request_id`                                                                                                                               |
+| `http_cookies`        | `cookie` (name, value, domain, path, flags)                             | `id`, `expires_at`                                                                                                                                          |
+
+⚠️ **What a reader of the raw file learns, with no key.** Of the notes: their number and the
+shape of the spaces and folders they hang in, every instant, each note's language, kind, pin
+and item states, every tag and `{{field}}` name, each attachment's type and size. Of the HTTP
+side: how many collections, folders and requests there are, how they nest and in which order,
+when each was created and each request last saved, and each request's kind and method; when
+each send was made and from which request — not to where, nor how it ended; how many cookies
+the jar holds and when each expires — not for which site. And everywhere the **length** of
+every sealed value: AES-GCM hides no length. The README lists it for the people deciding what
+to keep here.
+
+⚠️ **`http_requests.kind` and `.method` are plain for no query**: the tree is read whole and
+ordered in Rust. Sealing them is moving them into `document`, and the rows already written
+cannot follow by SQL, which holds no key: it is a pass in Rust at unlock, over every request.
+Left as it is, and written here so that it is a decision: what the two give away is « four
+`POST`s and a WebSocket in this folder ». The history's method and status were the same case
+with a cost of nothing — a history is thirty days of sends — and are sealed (migration 17).
+
+**Beside the database.** `libraries.json` (the libraries' names) and both `preferences.json`
+are plain. A preference holds a setting or an id, never what a note or a request holds:
+`devnotes.notes.http.tabs` is the ids of the requests left open — one never saved has no id
+and is not written at all —, `devnotes.notes.http.collapsed` those of the folded rows,
+`recentTools` those of the tools; a tool keeps none of its inputs. The logs carry no URL, no
+header, no body and no cookie; a failure names its code. An answer's body stays in memory: the
+only file is the one « Enregistrer dans un fichier » is asked for, staged beside it and removed
+when the write fails. A backup is the library copied: nothing more in the clear than in it. A
+`.devnotes` archive holds the notes, not the HTTP side.
+
+Two tests read the file rather than the API, and assert exactly this split:
+`a_note_is_not_readable_in_the_file_it_was_written_to` (`tests/notes.rs`) and
+`nothing_typed_or_answered_is_readable_in_the_file_it_was_written_to` (`tests/http.rs`) — a
+collection, a folder, a request for each kind of auth, a send with its answer and a cookie,
+every string of which carries one marker the raw bytes must not hold.
+`http-tabs.store.spec.ts` holds the same for the preferences.
 
 ### What this protects against, and what it does not
 
