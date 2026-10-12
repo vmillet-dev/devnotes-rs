@@ -1,0 +1,178 @@
+name: macOS rehearsal
+
+# ⚠️ Temporary, and removed before this branch merges: what `release.yml` does on a macOS
+# runner, without the tag, the secrets or the publication — a dry run of the release builds
+# nothing, so this is the only way to see a bundle before a real release. The three steps after
+# the build are `release.yml`'s own, word for word.
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    name: Rehearse ${{ matrix.target }}
+    runs-on: macos-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: macos-aarch64
+            triple: aarch64-apple-darwin
+            arch: aarch64
+          - target: macos-x64
+            triple: x86_64-apple-darwin
+            arch: x64
+    env:
+      APP: src-tauri/target/${{ matrix.triple }}/release/bundle/macos/devnotes.app
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - uses: ./.github/actions/setup-rust
+        with:
+          shared-key: rehearsal-${{ matrix.target }}
+          save-if: 'true'
+
+      - name: Standard library of the named target
+        if: matrix.triple != ''
+        run: rustup target add ${{ matrix.triple }}
+
+      - run: npm ci
+
+      # A key of this run's own, never printed: the bundler refuses to build updater artifacts
+      # without one, and the release's key stays in its environment.
+      - name: A signing key for this run alone
+        run: |
+          npx tauri signer generate --ci -p '' -w "$RUNNER_TEMP/rehearsal.key" > /dev/null 2>&1
+          echo "TAURI_SIGNING_PRIVATE_KEY=$(cat "$RUNNER_TEMP/rehearsal.key")" >> "$GITHUB_ENV"
+          echo 'TAURI_SIGNING_PRIVATE_KEY_PASSWORD=' >> "$GITHUB_ENV"
+
+      - uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: --verbose ${{ matrix.triple != '' && format('--target {0}', matrix.triple) || '' }}
+
+      - name: What the bundler wrote
+        run: |
+          find "src-tauri/target/${{ matrix.triple }}/release/bundle" -maxdepth 2 | sort
+          echo '--- the application'
+          find "$APP" | sort
+          echo '--- Info.plist'
+          plutil -p "$APP/Contents/Info.plist"
+          echo '--- architecture'
+          lipo -archs "$APP/Contents/MacOS/devnotes"
+          echo '--- signature'
+          codesign -dv --verbose=4 "$APP" 2>&1 || true
+          codesign --verify --deep --strict --verbose=2 "$APP" 2>&1 || true
+          echo '--- Gatekeeper, as for a downloaded copy'
+          spctl --assess --type execute -vv "$APP" 2>&1 || true
+          echo '--- the updater archive'
+          tar -tzf "src-tauri/target/${{ matrix.triple }}/release/bundle/macos/devnotes.app.tar.gz" | head -20
+
+      - name: Each bundle holds the application alone
+        run: |
+          if [ '${{ matrix.target }}' = 'windows' ]; then
+            msi=$(cygpath -w "$(ls src-tauri/target/release/bundle/msi/*.msi)")
+            pwsh -NoProfile -Command "Start-Process msiexec -ArgumentList '/a','$msi','/qn','TARGETDIR=$(cygpath -w "$RUNNER_TEMP/msi")' -Wait"
+            found=$(find "$RUNNER_TEMP/msi" -type f -name '*.exe' -printf '%f\n' | sort)
+            expected='devnotes.exe'
+          elif [ '${{ matrix.target }}' = 'linux' ]; then
+            found=$(dpkg-deb -c src-tauri/target/release/bundle/deb/*.deb \
+              | awk '$6 ~ /^(\.\/)?usr\/bin\/[^\/]+$/ { n = split($6, part, "/"); print part[n] }' | sort)
+            expected='devnotes'
+          else
+            found=$(ls 'src-tauri/target/${{ matrix.triple }}/release/bundle/macos/devnotes.app/Contents/MacOS' | sort)
+            expected='devnotes'
+          fi
+          echo "executables: $found"
+          if [ "$found" != "$expected" ]; then
+            echo "::error::a bundle carries more than the application: $found"
+            exit 1
+          fi
+
+      - name: Gather installers and the standalone executable
+        env:
+          VERSION: 9.9.9
+          TRIPLE: ${{ matrix.triple }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          mkdir -p release
+          # A leg that names its target builds under a folder of that name.
+          out="src-tauri/target/${TRIPLE:+$TRIPLE/}release"
+          find "$out/bundle" -type f \
+            \( -name '*.exe' -o -name '*.msi' -o -name '*.deb' -o -name '*.rpm' \
+               -o -name '*.AppImage' -o -name '*.dmg' -o -name '*.sig' \) \
+            -exec cp {} release/ \;
+          # The bundler does not collect the bare binary; renaming it keeps the operating
+          # systems from overlapping in the release.
+          if [ '${{ matrix.target }}' = 'windows' ]; then
+            cp "$out/devnotes.exe" "release/devnotes-${VERSION}-windows.exe"
+          elif [ '${{ matrix.target }}' = 'linux' ]; then
+            cp "$out/devnotes" "release/devnotes-${VERSION}-linux"
+          else
+            # The updater's archive is `devnotes.app.tar.gz` on both architectures: it takes
+            # the name of the one it holds, as the disk image has, and its signature with it.
+            cp "$out/bundle/macos/devnotes.app.tar.gz" "release/devnotes_${VERSION}_${ARCH}.app.tar.gz"
+            mv release/devnotes.app.tar.gz.sig "release/devnotes_${VERSION}_${ARCH}.app.tar.gz.sig"
+          fi
+          ls -l release
+
+      # Best effort, every line of it: the runner may refuse System Events to a script, and
+      # what it refuses is then said rather than guessed.
+      - name: The Dock, the close button and the menu bar's quit
+        if: matrix.arch == 'aarch64'
+        run: |
+          windows() { osascript -e 'tell application "System Events" to tell process "devnotes" to get count of windows' 2>&1 || true; }
+          alive() { pgrep -x devnotes > /dev/null && echo running || echo gone; }
+
+          open "$APP"
+          sleep 25
+          echo "after launch: $(alive), windows: $(windows)"
+          echo '--- menu bar'
+          osascript -e 'tell application "System Events" to tell process "devnotes" to get name of every menu bar item of menu bar 1' 2>&1 || true
+          osascript -e 'tell application "System Events" to tell process "devnotes" to get name of every menu item of menu 1 of menu bar item 2 of menu bar 1' 2>&1 || true
+
+          echo '--- the close button'
+          osascript -e 'tell application "System Events" to tell process "devnotes" to click (first button of window 1 whose subrole is "AXCloseButton")' 2>&1 || true
+          sleep 4
+          echo "after closing: $(alive), windows: $(windows)"
+
+          echo '--- the Dock (a second open of a running application is a reopen)'
+          open "$APP"
+          sleep 4
+          echo "after reopening: $(alive), windows: $(windows)"
+
+          echo '--- quit, from the menu bar'
+          osascript -e 'tell application "System Events" to tell process "devnotes" to click (last menu item of menu 1 of menu bar item 2 of menu bar 1)' 2>&1 || true
+          for second in 1 2 3 4 5 6 7 8; do
+            sleep 1
+            echo "  ${second}s after quit: $(alive)"
+          done
+
+          echo '--- what the application wrote'
+          ls -la "$HOME/Library/Application Support/com.devnotes.app" 2>&1 || true
+          echo '--- its log'
+          cat "$HOME/Library/Logs/com.devnotes.app/"*.log 2>&1 || true
+          pkill -x devnotes || true
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rehearsal-${{ matrix.target }}
+          path: release
+          retention-days: 7
