@@ -235,6 +235,16 @@ export const commands = {
 	/**  What « Vider le bocal » says it removes. */
 	countHttpCookies: () => typedError<number, AppError>(__TAURI_INVOKE("count_http_cookies")),
 	clearHttpCookies: () => typedError<number, AppError>(__TAURI_INVOKE("clear_http_cookies")),
+	/**  The globals and every environment, in their order. */
+	httpEnvironments: () => typedError<HttpEnvironments, AppError>(__TAURI_INVOKE("http_environments")),
+	createHttpEnvironment: (name: string) => typedError<Environment, AppError>(__TAURI_INVOKE("create_http_environment", { name })),
+	saveHttpEnvironment: (id: string, patch: EnvironmentPatch) => typedError<Environment, AppError>(__TAURI_INVOKE("save_http_environment", { id, patch })),
+	saveHttpGlobals: (variables: Variable[]) => typedError<Variable[], AppError>(__TAURI_INVOKE("save_http_globals", { variables })),
+	/**  The copy's name comes from the front: no user-visible word is Rust's. */
+	duplicateHttpEnvironment: (id: string, name: string) => typedError<Environment, AppError>(__TAURI_INVOKE("duplicate_http_environment", { id, name })),
+	deleteHttpEnvironment: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("delete_http_environment", { id })),
+	/**  Each variable's fault by its rank, or none: the table marks the row, the rule is the model's. */
+	checkHttpVariables: (variables: Variable[]) => typedError<(VariableFault | null)[], AppError>(__TAURI_INVOKE("check_http_variables", { variables })),
 	/**
 	 *  The second way to look at a space: folders as zones, their notes inside, the loose ones
 	 *  beside them. It reads the whole space and marks what matches rather than narrowing, and
@@ -1143,11 +1153,30 @@ export type EndingCounts = {
 	cr: number,
 };
 
+export type Environment = {
+	id: string,
+	name: string,
+	/**  One of the folders' five: a mark to tell Production from Staging at a glance. */
+	colour: FolderColour,
+	/**  Asks before sending anything that could change something. */
+	protected: boolean,
+	variables: Variable[],
+	position: number,
+};
+
+/**  A field left out is untouched. */
+export type EnvironmentPatch = {
+	name?: string | null,
+	colour?: FolderColour | null,
+	protected?: boolean | null,
+	variables?: Variable[] | null,
+};
+
 /**
  *  ⚠️ A new variant breaks the front-end build until `CODE_KEYS`
  *  (`core/services/errors/error-notifier.service.ts`) and both locales have its key.
  */
-export type ErrorCode = "noteNotFound" | "spaceNotFound" | "duplicateSpaceName" | "folderNotFound" | "duplicateFolderName" | "attachmentNotFound" | "httpItemNotFound" | "revisionNotFound" | "libraryNotFound" | "libraryOpen" | "lastLibrary" | "nothingToSetAside" | "backupNotFound" | "backupUnopenable" | "fileAccess" | "importFormat" | 
+export type ErrorCode = "noteNotFound" | "spaceNotFound" | "duplicateSpaceName" | "folderNotFound" | "duplicateFolderName" | "attachmentNotFound" | "httpItemNotFound" | "httpEnvironmentNotFound" | "duplicateEnvironmentName" | "revisionNotFound" | "libraryNotFound" | "libraryOpen" | "lastLibrary" | "nothingToSetAside" | "backupNotFound" | "backupUnopenable" | "fileAccess" | "importFormat" | 
 /**  The `field` parameter names the offending field. */
 "invalidInput" | 
 /**  Poisoned mutex: a command panicked while holding the connection. */
@@ -1454,6 +1483,11 @@ export type HttpCollectionNode = {
 export type HttpContents = {
 	folders: number,
 	requests: number,
+};
+
+export type HttpEnvironments = {
+	globals: Variable[],
+	environments: Environment[],
 };
 
 export type HttpFolder = {
@@ -2970,6 +3004,25 @@ export type UuidVariant = "ncs" |
 
 /**  What a value was, as the list of changes shows it: itself when short, its size otherwise. */
 export type ValueSummary = { kind: "scalar"; text: string } | { kind: "object"; keys: number } | { kind: "array"; items: number };
+
+export type Variable = {
+	enabled?: boolean,
+	name?: string,
+	value?: string,
+	kind?: VariableKind,
+};
+
+/**  What a set's table marks on a row: it is kept as typed, and left out when resolving. */
+export type VariableFault = 
+/**  Not a name a `{{…}}` can hold. */
+"name" | 
+/**  A number that does not read as one. */
+"number" | 
+/**  A name already set above it in the same table: the first one is the one used. */
+"duplicate";
+
+/**  A number is checked to be one; a secret is masked wherever it shows. */
+export type VariableKind = "text" | "number" | "secret";
 
 /**  What the front end renders before it renders anything else. */
 export type VaultState = 

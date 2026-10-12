@@ -4,8 +4,10 @@
   }
 
   <main class="workspace">
-    @if (history.isOpen()) {
+    @if (workspace.page() === 'history') {
       <app-history-page />
+    } @else if (workspace.page() === 'environments') {
+      <app-environments-page />
     } @else {
       <app-request-tabs (closeAsked)="closing.set($event)" />
       @if (tabs.active(); as tab) {

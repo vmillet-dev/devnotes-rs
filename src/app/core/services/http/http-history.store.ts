@@ -9,6 +9,7 @@ import { UNDO_WINDOW_MS } from '@core/state/undo.store';
 import { HttpCollectionsStore } from './http-collections.store';
 import { HttpSendStore } from './http-send.store';
 import { HttpTabsStore } from './http-tabs.store';
+import { HttpWorkspaceStore } from './http-workspace.store';
 import { findRequest } from './http-tree';
 
 /** What « Rouvrir » waits on: the request's tab is open with changes of its own. */
@@ -30,9 +31,9 @@ export class HttpHistoryStore {
   private readonly status = inject(StatusNotifier);
   private readonly collections = inject(HttpCollectionsStore);
   private readonly transloco = inject(TranslocoService);
+  private readonly workspace = inject(HttpWorkspaceStore);
 
-  private readonly _open = signal(false);
-  readonly isOpen = this._open.asReadonly();
+  readonly isOpen = computed(() => this.workspace.page() === 'history');
   private readonly _selectedId = signal<string | null>(null);
   readonly selectedId = this._selectedId.asReadonly();
   private readonly cleared = signal(0);
@@ -46,7 +47,7 @@ export class HttpHistoryStore {
   readonly replacing = this._replacing.asReadonly();
 
   private readonly daysResource = resource({
-    params: () => (this._open() ? { sent: this.sending.sent(), cleared: this.cleared() } : undefined),
+    params: () => (this.isOpen() ? { sent: this.sending.sent(), cleared: this.cleared() } : undefined),
     // The offset is read when the list is, not in a `computed`, which would keep the first one.
     loader: () => this.repository.history(new Date().getTimezoneOffset()),
   });
@@ -62,15 +63,15 @@ export class HttpHistoryStore {
   );
 
   open(): void {
-    this._open.set(true);
+    this.workspace.show('history');
   }
 
   close(): void {
-    this._open.set(false);
+    this.workspace.leave('history');
   }
 
   toggle(): void {
-    this._open.update((open) => !open);
+    this.workspace.toggle('history');
   }
 
   select(id: string): void {
@@ -179,6 +180,6 @@ export class HttpHistoryStore {
 
   private leave(): void {
     this._replacing.set(null);
-    this._open.set(false);
+    this.workspace.leave('history');
   }
 }

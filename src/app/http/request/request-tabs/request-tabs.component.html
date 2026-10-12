@@ -48,5 +48,9 @@
       </button>
     </div>
   }
-  <app-new-request-menu class="new-request" (chosen)="tabs.newRequest($event)" />
+  <!-- At the end of the bar and held there, the tabs scrolling under it: one environment for them all. -->
+  <div class="strip-end">
+    <app-new-request-menu (chosen)="tabs.newRequest($event)" />
+    <app-environment-picker />
+  </div>
 </div>

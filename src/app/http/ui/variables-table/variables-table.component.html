@@ -1,0 +1,131 @@
+<table class="table" [attr.data-testid]="'http-' + kind() + '-variables'" [attr.aria-label]="label()">
+  <thead>
+    <tr>
+      <th scope="col" class="check-column">
+        <span class="visually-hidden">{{ 'http.table.enabled' | transloco }}</span>
+      </th>
+      <th scope="col" class="name-column">{{ 'http.variables.name' | transloco }}</th>
+      <th scope="col">{{ 'http.variables.value' | transloco }}</th>
+      <th scope="col" class="kind-column">{{ 'http.variables.kind' | transloco }}</th>
+      <th scope="col" class="remove-column">
+        <span class="visually-hidden">{{ 'http.table.remove' | transloco }}</span>
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    @for (row of shown(); track $index) {
+      @let blank = isBlank($index);
+      @let fault = faults()[$index] ?? null;
+      @let hidden = masked(row, $index);
+      <tr
+        data-testid="http-variable-row"
+        [class.blank]="blank"
+        [class.off]="!row.enabled"
+        [class.secret]="row.kind === 'secret'"
+        [attr.data-fault]="fault"
+        [attr.data-kind]="row.kind"
+      >
+        <td class="check-column">
+          @if (!blank) {
+            <input
+              type="checkbox"
+              class="check"
+              data-testid="http-variable-enabled"
+              [checked]="row.enabled"
+              [attr.aria-label]="'http.table.enable' | transloco: { key: row.name }"
+              (change)="onToggle($index, $event)"
+            />
+          }
+        </td>
+        <td>
+          <input
+            type="text"
+            class="cell mono"
+            data-testid="http-variable-name"
+            spellcheck="false"
+            autocomplete="off"
+            [class.faulty]="fault === 'name' || fault === 'duplicate'"
+            [attr.aria-label]="'http.variables.name' | transloco"
+            [attr.aria-invalid]="fault === 'name' || fault === 'duplicate' ? 'true' : null"
+            [attr.aria-describedby]="fault === 'name' || fault === 'duplicate' ? faultId(fault) : null"
+            [placeholder]="blank ? ('http.variables.newName' | transloco) : ''"
+            [value]="row.name"
+            (input)="onInput($index, 'name', $event)"
+          />
+        </td>
+        <td>
+          <div class="value">
+            <!-- A password field: masked, and its text cannot be copied out while it is. -->
+            <input
+              class="cell mono"
+              data-testid="http-variable-value"
+              spellcheck="false"
+              autocomplete="off"
+              [attr.type]="hidden ? 'password' : 'text'"
+              [class.faulty]="fault === 'number'"
+              [attr.aria-label]="'http.variables.value' | transloco"
+              [attr.aria-invalid]="fault === 'number' ? 'true' : null"
+              [attr.aria-describedby]="fault === 'number' ? faultId('number') : null"
+              [value]="row.value"
+              (input)="onInput($index, 'value', $event)"
+            />
+            @if (row.kind === 'secret' && !blank) {
+              <button
+                type="button"
+                class="reveal"
+                data-testid="http-variable-reveal"
+                [attr.aria-pressed]="!hidden"
+                [attr.aria-label]="
+                  (hidden ? 'http.variables.reveal' : 'http.variables.hide') | transloco: { name: row.name }
+                "
+                [attr.title]="
+                  (hidden ? 'http.variables.reveal' : 'http.variables.hide') | transloco: { name: row.name }
+                "
+                (click)="toggleReveal($index)"
+              >
+                <app-icon [name]="hidden ? 'eye' : 'eye-off'" />
+              </button>
+            }
+          </div>
+        </td>
+        <td class="kind-column">
+          <app-choice-menu
+            class="kind"
+            triggerTestId="http-variable-kind"
+            [kind]="'http-variable-kind'"
+            [label]="'http.variables.kindOf' | transloco: { name: row.name }"
+            [options]="kinds"
+            [currentId]="row.kind"
+            (chosen)="onKind($index, $event)"
+          />
+        </td>
+        <td class="remove-column">
+          @if (!blank) {
+            <button
+              type="button"
+              class="remove"
+              data-testid="http-variable-remove"
+              [attr.aria-label]="'http.table.removeRow' | transloco: { key: row.name }"
+              [attr.title]="'http.table.removeRow' | transloco: { key: row.name }"
+              (click)="remove($index)"
+            >
+              <span aria-hidden="true">×</span>
+            </button>
+          }
+        </td>
+      </tr>
+    }
+  </tbody>
+</table>
+
+@for (fault of said(); track fault) {
+  <p
+    class="fault"
+    role="status"
+    data-testid="http-variable-fault"
+    [attr.data-fault]="fault"
+    [id]="faultId(fault)"
+  >
+    {{ 'http.variables.faults.' + fault | transloco }}
+  </p>
+}

@@ -47,6 +47,10 @@ pub enum StorageError {
     AttachmentNotFound(String),
     #[error("HTTP collection, folder or request not found: {0}")]
     HttpItemNotFound(String),
+    #[error("HTTP environment not found: {0}")]
+    HttpEnvironmentNotFound(String),
+    #[error("An environment named \"{0}\" already exists")]
+    DuplicateEnvironmentName(String),
     /// A rule that needs the database to be checked: a folder moved into itself.
     #[error(transparent)]
     Invalid(#[from] ValidationError),
@@ -124,6 +128,8 @@ pub enum ErrorCode {
     DuplicateFolderName,
     AttachmentNotFound,
     HttpItemNotFound,
+    HttpEnvironmentNotFound,
+    DuplicateEnvironmentName,
     RevisionNotFound,
     LibraryNotFound,
     LibraryOpen,
@@ -315,6 +321,12 @@ impl From<StorageError> for AppError {
             }
             StorageError::HttpItemNotFound(id) => {
                 Self::with(ErrorCode::HttpItemNotFound, detail, "id", &id)
+            }
+            StorageError::HttpEnvironmentNotFound(id) => {
+                Self::with(ErrorCode::HttpEnvironmentNotFound, detail, "id", &id)
+            }
+            StorageError::DuplicateEnvironmentName(name) => {
+                Self::with(ErrorCode::DuplicateEnvironmentName, detail, "name", &name)
             }
             StorageError::Invalid(error) => error.into(),
             StorageError::RevisionNotFound(id) => {

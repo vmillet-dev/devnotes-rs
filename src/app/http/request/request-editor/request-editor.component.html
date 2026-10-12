@@ -75,6 +75,40 @@
     </button>
   </div>
 
+  @if (environments.asking() === tab().key) {
+    @let protectedOne = environments.active();
+    <div
+      class="protected"
+      role="alertdialog"
+      data-testid="http-protected-confirm"
+      aria-labelledby="http-protected-question"
+    >
+      <p id="http-protected-question" class="protected-question">
+        <i [class]="'protected-dot is-' + (protectedOne?.colour ?? 'red')" aria-hidden="true"></i>
+        {{
+          (draft.kind === 'websocket' ? 'http.environments.askConnect' : 'http.environments.askSend')
+            | transloco: { name: protectedOne?.name ?? '', method: draft.method }
+        }}
+      </p>
+      <div class="protected-actions">
+        <button type="button" class="protected-go" data-testid="http-protected-send" (click)="sendAnyway()">
+          {{
+            (draft.kind === 'websocket' ? 'http.environments.connectAnyway' : 'http.environments.sendAnyway')
+              | transloco
+          }}
+        </button>
+        <button
+          type="button"
+          class="protected-cancel"
+          data-testid="http-protected-cancel"
+          (click)="environments.stopAsking()"
+        >
+          {{ 'http.rail.cancel' | transloco }}
+        </button>
+      </div>
+    </div>
+  }
+
   <div class="sections" role="tablist" [attr.aria-label]="'http.editor.parts' | transloco">
     @for (id of sections(); track id) {
       <button

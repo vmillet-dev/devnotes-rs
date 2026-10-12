@@ -1,0 +1,222 @@
+<section class="environments" data-testid="http-environments" aria-labelledby="http-environments-title">
+  <header class="head">
+    <app-rail-toggle
+      testId="http-rail-toggle"
+      [shown]="settings.showLibraryRail()"
+      (toggled)="settings.toggleLibraryRail()"
+    />
+    <h2 id="http-environments-title" class="title">{{ 'http.environments.title' | transloco }}</h2>
+    <span class="hint">{{ 'http.environments.order' | transloco }}</span>
+
+    <div class="head-actions">
+      @if (creating()) {
+        <form class="create" (submit)="submitCreate($event, createField.value)">
+          <input
+            #createField
+            type="text"
+            class="create-field"
+            data-testid="http-environment-create-input"
+            [attr.aria-label]="'http.environments.newName' | transloco"
+            [placeholder]="'http.environments.newName' | transloco"
+            (keydown.escape)="creating.set(false)"
+          />
+          <button type="submit" class="action primary" data-testid="http-environment-create-submit">
+            {{ 'http.environments.create' | transloco }}
+          </button>
+          <button type="button" class="action" (click)="creating.set(false)">
+            {{ 'http.rail.cancel' | transloco }}
+          </button>
+        </form>
+      } @else {
+        <button
+          type="button"
+          class="action primary"
+          data-testid="http-environment-create-open"
+          (click)="startCreate()"
+        >
+          {{ 'http.environments.new' | transloco }}
+        </button>
+      }
+    </div>
+  </header>
+
+  <div class="body">
+    <nav
+      class="list"
+      data-testid="http-environment-list"
+      [attr.aria-label]="'http.environments.title' | transloco"
+    >
+      @let globals = counts(store.globals());
+      <button
+        type="button"
+        class="entry globals"
+        data-testid="http-environment-entry"
+        data-id="globals"
+        [class.on]="store.target().kind === 'globals'"
+        [attr.aria-current]="store.target().kind === 'globals' ? 'true' : null"
+        (click)="select(null)"
+      >
+        <span class="entry-name">
+          <i class="dot globals-dot" aria-hidden="true"></i>
+          {{ 'http.environments.globals' | transloco }}
+        </span>
+        <span class="entry-meta">{{
+          'http.environments.globalsMeta' | transloco: { count: globals.count }
+        }}</span>
+      </button>
+
+      <p class="list-title">{{ 'http.environments.listTitle' | transloco }}</p>
+      @for (environment of store.environments(); track environment.id) {
+        @let count = counts(environment.variables);
+        <button
+          type="button"
+          class="entry"
+          data-testid="http-environment-entry"
+          [attr.data-id]="environment.id"
+          [class.on]="isShown(environment)"
+          [attr.aria-current]="isShown(environment) ? 'true' : null"
+          (click)="select(environment)"
+        >
+          <span class="entry-name">
+            <i [class]="'dot is-' + environment.colour" aria-hidden="true"></i>
+            <span class="entry-label">{{ environment.name }}</span>
+            @if (store.active()?.id === environment.id) {
+              <span class="badge active" data-testid="http-environment-active">{{
+                'http.environments.active' | transloco
+              }}</span>
+            } @else if (environment.protected) {
+              <span class="badge protected">{{ 'http.environments.protectedBadge' | transloco }}</span>
+            }
+          </span>
+          <span class="entry-meta">
+            {{ 'http.environments.count' | transloco: { count: count.count } }}
+            @if (count.secrets > 0) {
+              · {{ 'http.environments.secrets' | transloco: { count: count.secrets } }}
+            }
+          </span>
+        </button>
+      } @empty {
+        @if (store.loaded()) {
+          <p class="placeholder" data-testid="http-environments-empty">
+            {{ 'http.environments.empty' | transloco }}
+          </p>
+        }
+      }
+    </nav>
+
+    <div class="main">
+      @if (store.shown(); as environment) {
+        <div class="set-head" data-testid="http-environment-head">
+          <i [class]="'dot big is-' + environment.colour" aria-hidden="true"></i>
+          <input
+            type="text"
+            class="name"
+            data-testid="http-environment-name"
+            [attr.aria-label]="'http.environments.nameLabel' | transloco"
+            [value]="environment.name"
+            (change)="rename(environment, $event)"
+            (keydown.enter)="blur($event)"
+          />
+          @if (store.active()?.id === environment.id) {
+            <span class="chip">{{ 'http.environments.active' | transloco }}</span>
+          } @else {
+            <button
+              type="button"
+              class="action"
+              data-testid="http-environment-use"
+              (click)="store.choose(environment.id)"
+            >
+              {{ 'http.environments.use' | transloco }}
+            </button>
+          }
+
+          <div class="tools">
+            <div class="colours" role="radiogroup" [attr.aria-label]="'http.environments.colour' | transloco">
+              @for (colour of colours; track colour) {
+                <button
+                  type="button"
+                  role="radio"
+                  data-testid="http-environment-colour"
+                  [attr.data-colour]="colour"
+                  [class]="'swatch is-' + colour"
+                  [class.on]="environment.colour === colour"
+                  [attr.aria-checked]="environment.colour === colour"
+                  [attr.aria-label]="'folders.colour.' + colour | transloco"
+                  [attr.title]="'folders.colour.' + colour | transloco"
+                  (click)="recolour(environment, colour)"
+                ></button>
+              }
+            </div>
+            <label class="protect">
+              <input
+                type="checkbox"
+                class="switch"
+                data-testid="http-environment-protected"
+                [checked]="environment.protected"
+                (change)="protect(environment, $event)"
+              />
+              {{ 'http.environments.protected' | transloco }}
+            </label>
+            <button
+              type="button"
+              class="action"
+              data-testid="http-environment-duplicate"
+              (click)="duplicate(environment)"
+            >
+              {{ 'http.environments.duplicate' | transloco }}
+            </button>
+            @if (confirmingDelete()) {
+              <span class="confirm" data-testid="http-environment-delete-question">{{
+                'http.environments.confirmDelete' | transloco: { name: environment.name }
+              }}</span>
+              <button
+                type="button"
+                class="action danger"
+                data-testid="http-environment-delete-confirm"
+                (click)="delete(environment)"
+              >
+                {{ 'http.environments.delete' | transloco }}
+              </button>
+              <button type="button" class="action" (click)="confirmingDelete.set(false)">
+                {{ 'http.rail.cancel' | transloco }}
+              </button>
+            } @else {
+              <button
+                type="button"
+                class="action danger"
+                data-testid="http-environment-delete"
+                (click)="confirmingDelete.set(true)"
+              >
+                {{ 'http.environments.delete' | transloco }}
+              </button>
+            }
+          </div>
+        </div>
+        @if (environment.protected) {
+          <p class="note" data-testid="http-environment-protected-note">
+            {{ 'http.environments.protectedNote' | transloco }}
+          </p>
+        }
+      } @else {
+        <div class="set-head">
+          <i class="dot big globals-dot" aria-hidden="true"></i>
+          <h3 class="set-title">{{ 'http.environments.globals' | transloco }}</h3>
+          <span class="hint">{{ 'http.environments.globalsHint' | transloco }}</span>
+        </div>
+      }
+
+      @for (key of [tableKey()]; track key) {
+        <app-variables-table
+          kind="environment"
+          [label]="'http.environments.variables' | transloco"
+          [rows]="store.rows()"
+          (rowsChange)="store.editVariables($event)"
+        />
+      }
+      <p class="caption">
+        <app-icon name="lock" />
+        {{ 'http.environments.secretsCaption' | transloco }}
+      </p>
+    </div>
+  </div>
+</section>
