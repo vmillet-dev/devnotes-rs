@@ -845,13 +845,22 @@ export type CronAnswer = { kind: "read";
 /**  What a macro stands for: `@daily` is `0 0 * * *`. */
 expanded: string | null; fields: FieldReading[]; 
 /**  Both day fields restricted: either one matching is enough, as in cron. */
-bothDays: boolean; zone: string; runs: Run[]; check: CronCheck | null } | 
+bothDays: boolean; zone: string; runs: Run[]; check: CronCheck | null; 
+/**  Asked for by an end, or by a start that does not read. */
+window: CronWindow | null; 
+/**  Now, in `zone`: what « today » and « Friday afternoon » are counted from. */
+now: Run } | 
 /**  `@reboot` runs when the machine starts: no time to give. */
 { kind: "reboot" } | { kind: "refused"; field: CronField | null; token: string; 
 /**  One-based, in characters of the expression as typed. */
 at: number; problem: CronProblem } | { kind: "unknownZone"; zone: string };
 
-export type CronCheck = { kind: "checked"; matches: boolean; at: string } | { kind: "unreadable"; at: number } | { kind: "skipped" };
+export type CronCheck = 
+/**
+ *  `before` and `after` are the nearest runs around a moment that is none: what a « no »
+ *  leaves one asking.
+ */
+{ kind: "checked"; matches: boolean; at: string; before: Run | null; after: Run | null } | { kind: "unreadable"; at: number } | { kind: "skipped" };
 
 export type CronField = "second" | "minute" | "hour" | "dayOfMonth" | "month" | "dayOfWeek";
 
@@ -867,7 +876,24 @@ export type CronRequest = {
 	zone: string | null,
 	/**  A date to test against the expression, read in `zone`; empty asks nothing. */
 	check: string,
+	/**  Where the runs are listed from, read in `zone`; empty is now. */
+	from?: string,
+	/**  Where they stop; empty lists the next ten. */
+	until?: string,
 };
+
+/**  The runs between two moments: « will this run on Friday afternoon? ». */
+export type CronWindow = 
+/**
+ *  ⚠️ `total` is counted, never the length of a list: a window of a year at every minute
+ *  holds half a million runs, and ten of them cross the bridge. `last` is empty when
+ *  `first` is all of them.
+ */
+{ kind: "counted"; from: Run; until: Run; total: number; first: Run[]; last: Run[] } | { kind: "unreadable"; end: WindowEnd; at: number } | 
+/**  A date out of range, or an hour a change of clocks skipped. */
+{ kind: "skipped"; end: WindowEnd } | 
+/**  The end is not after the start. */
+{ kind: "backwards" } | { kind: "tooLong"; years: number };
 
 export type Crossing = 
 /**  TOML has no `null`, and one in a list cannot be left out without moving the others. */
@@ -2898,6 +2924,8 @@ export type WindowBehavior = {
 	closeToTray: boolean,
 	minimizeToTray: boolean,
 };
+
+export type WindowEnd = "from" | "until";
 
 export type ZoneEntry = {
 	zone: string,

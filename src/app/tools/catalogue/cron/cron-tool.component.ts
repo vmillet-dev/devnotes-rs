@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { ToolsRepository } from '@core/data/tools.repository';
-import { CronAnswer } from '@core/model/tool-answers.model';
+import { CronAnswer, Run } from '@core/model/tool-answers.model';
 import { ClockService } from '@core/services/time/clock.service';
 import { liveResult } from '@core/services/tools/live-result';
 import { Tool, ToolResult } from '@core/services/tools/tool.model';
@@ -11,6 +11,38 @@ import { spanRef } from '@core/utils/relative-time.util';
 import { cronSentence } from './cron-sentence';
 
 type Read = Extract<CronAnswer, { kind: 'read' }>;
+
+/** The windows one asks about, filled into the two fields from what « now » is in the zone. */
+const SHORTCUTS = ['today', 'tomorrow', 'weekend', 'fridayAfternoon'] as const;
+type Shortcut = (typeof SHORTCUTS)[number];
+
+/** A calendar date some days on: plain arithmetic on a date Rust gave, no zone in it. */
+function daysOn(date: string, days: number): string {
+  const [year = 0, month = 1, day = 1] = date.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}
+
+/**
+ * The two ends of a shortcut, as they are typed. `weekday` is 1 for Monday: on a Saturday or
+ * a Sunday « ce week-end » is the one under way, and « vendredi » the next.
+ */
+export function shortcutWindow(shortcut: Shortcut, now: Pick<Run, 'date' | 'weekday'>): [string, string] {
+  const at = (days: number, time: string) => `${daysOn(now.date, days)} ${time}`;
+  switch (shortcut) {
+    case 'today':
+      return [at(0, '00:00'), at(1, '00:00')];
+    case 'tomorrow':
+      return [at(1, '00:00'), at(2, '00:00')];
+    case 'weekend': {
+      const saturday = 6 - now.weekday;
+      return [at(saturday, '00:00'), at(saturday + 2, '00:00')];
+    }
+    case 'fridayAfternoon': {
+      const friday = now.weekday <= 5 ? 5 - now.weekday : 12 - now.weekday;
+      return [at(friday, '12:00'), at(friday, '18:00')];
+    }
+  }
+}
 
 /** Rust takes the expression apart and counts its runs; the sentence is built here, from keys. */
 @Component({
@@ -29,6 +61,10 @@ export class CronToolComponent implements Tool {
   /** `null` is the machine's zone. */
   protected readonly zone = toolState<string | null>('cron.zone', null);
   protected readonly check = toolState('cron.check', '');
+  /** The two ends of the window the runs are listed in; empty is now, and the next ten. */
+  protected readonly from = toolState('cron.from', '');
+  protected readonly until = toolState('cron.until', '');
+  protected readonly shortcuts = SHORTCUTS;
 
   /** Where the caret stands in the expression: the field around it is lit. */
   protected readonly caret = signal<number | null>(null);
@@ -41,7 +77,13 @@ export class CronToolComponent implements Tool {
     () =>
       this.expression().trim() === ''
         ? undefined
-        : { expression: this.expression(), zone: this.zone(), check: this.check() },
+        : {
+            expression: this.expression(),
+            zone: this.zone(),
+            check: this.check(),
+            from: this.from(),
+            until: this.until(),
+          },
     (request) => this.repository.describeCron(request),
   );
 
@@ -98,13 +140,44 @@ export class CronToolComponent implements Tool {
     return read.fields.find((field) => caret >= field.start && caret <= field.end)?.field ?? null;
   });
 
-  protected readonly runs = computed(() =>
-    (this.read()?.runs ?? []).map((run) => ({
-      ...run,
-      day: `tools.cron.days.${run.weekday % 7}`,
-      relative: run.epochMilliseconds === null ? null : spanRef(run.epochMilliseconds, this.clock.now()),
-    })),
-  );
+  /** The window as Rust counted it, or what stops it from being counted. */
+  protected readonly counted = computed(() => {
+    const window = this.read()?.window ?? null;
+    return window?.kind === 'counted' ? window : null;
+  });
+
+  protected readonly windowProblem = computed(() => {
+    const window = this.read()?.window ?? null;
+    return window !== null && window.kind !== 'counted' ? window : null;
+  });
+
+  /** A window lists its own runs: all of them, or its first and its last around a count. */
+  protected readonly runs = computed(() => this.shown(this.counted()?.first ?? this.read()?.runs ?? []));
+  protected readonly lastRuns = computed(() => this.shown(this.counted()?.last ?? []));
+
+  /** The runs a long window holds between the ones it lists. */
+  protected readonly between = computed(() => {
+    const window = this.counted();
+    return window && window.last.length > 0 ? window.total - window.first.length - window.last.length : 0;
+  });
+
+  /** The two ends in words, for the sentence that counts: « vendredi 2026-10-16 12:00 ». */
+  protected readonly ends = computed(() => {
+    this.translation();
+    const window = this.counted();
+    if (!window) return null;
+    const said = (end: Run) =>
+      `${this.transloco.translate<string>(`tools.cron.days.${end.weekday % 7}`)} ${end.date} ${end.time.slice(0, 5)}`;
+    return { from: said(window.from), until: said(window.until) };
+  });
+
+  /** The nearest runs around a moment that is none, as they are read: date and time. */
+  protected readonly nearest = computed(() => {
+    const verdict = this.read()?.check ?? null;
+    if (verdict?.kind !== 'checked' || verdict.matches) return null;
+    const said = (run: Run | null) => (run === null ? null : `${run.date} ${run.time}`);
+    return { before: said(verdict.before), after: said(verdict.after) };
+  });
 
   readonly result = computed<ToolResult | null>(() => {
     this.translation();
@@ -133,8 +206,29 @@ export class CronToolComponent implements Tool {
   clear(): void {
     this.expression.set('');
     this.check.set('');
+    this.from.set('');
+    this.until.set('');
     this.query.set('');
     this.caret.set(null);
+  }
+
+  protected onEnd(end: 'from' | 'until', event: Event): void {
+    (end === 'from' ? this.from : this.until).set((event.target as HTMLInputElement).value);
+  }
+
+  /** A shortcut fills the two fields, as typing would: they are read in the zone chosen. */
+  protected pick(shortcut: Shortcut, now: Run): void {
+    const [from, until] = shortcutWindow(shortcut, now);
+    this.from.set(from);
+    this.until.set(until);
+  }
+
+  private shown(runs: readonly Run[]) {
+    return runs.map((run) => ({
+      ...run,
+      day: `tools.cron.days.${run.weekday % 7}`,
+      relative: run.epochMilliseconds === null ? null : spanRef(run.epochMilliseconds, this.clock.now()),
+    }));
   }
 
   protected onInput(event: Event): void {

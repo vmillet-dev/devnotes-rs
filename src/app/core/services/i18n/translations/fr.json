@@ -1675,7 +1675,7 @@
     },
     "cron": {
       "name": "Cron",
-      "description": "Lu à voix haute, et ses prochaines exécutions",
+      "description": "Lu à voix haute, ses prochaines exécutions, et celles entre deux moments",
       "inputLabel": "Expression cron",
       "placeholder": "*/15 9-18 * * MON-FRI",
       "expanded": "Soit {{expression}}",
@@ -1813,7 +1813,35 @@
         "3": "troisième",
         "4": "quatrième",
         "5": "cinquième"
-      }
+      },
+      "from": "À partir de",
+      "fromPlaceholder": "maintenant",
+      "until": "jusqu’à",
+      "untilPlaceholder": "les dix prochaines",
+      "shortcuts": "Intervalles courants",
+      "shortcut": {
+        "today": "aujourd’hui",
+        "tomorrow": "demain",
+        "weekend": "ce week-end",
+        "fridayAfternoon": "vendredi après-midi"
+      },
+      "windowCount": "{count, plural, one {# exécution} other {# exécutions}} entre {{from}} et {{until}}",
+      "windowNone": "Aucune exécution dans cet intervalle.",
+      "windowGap": "… {count, plural, one {# autre} other {# autres}} …",
+      "windowProblems": {
+        "unreadable": {
+          "from": "Le début ne se lit pas, au caractère {{at}}.",
+          "until": "La fin ne se lit pas, au caractère {{at}}."
+        },
+        "skipped": {
+          "from": "Ce début n’existe pas dans ce fuseau.",
+          "until": "Cette fin n’existe pas dans ce fuseau."
+        },
+        "backwards": "La fin doit venir après le début.",
+        "tooLong": "Intervalle trop long : {{years}} ans au plus."
+      },
+      "nearestBefore": "Exécution la plus proche avant : {{at}}",
+      "nearestAfter": "Exécution la plus proche après : {{at}}"
     },
     "sizes": {
       "name": "Tailles et transfert",

@@ -1675,7 +1675,7 @@
     },
     "cron": {
       "name": "Cron",
-      "description": "Read aloud, and its next runs",
+      "description": "Read aloud, its next runs, and those between two moments",
       "inputLabel": "Cron expression",
       "placeholder": "*/15 9-18 * * MON-FRI",
       "expanded": "That is {{expression}}",
@@ -1813,7 +1813,35 @@
         "3": "third",
         "4": "fourth",
         "5": "fifth"
-      }
+      },
+      "from": "From",
+      "fromPlaceholder": "now",
+      "until": "until",
+      "untilPlaceholder": "the next ten",
+      "shortcuts": "Common windows",
+      "shortcut": {
+        "today": "today",
+        "tomorrow": "tomorrow",
+        "weekend": "this weekend",
+        "fridayAfternoon": "Friday afternoon"
+      },
+      "windowCount": "{count, plural, one {# run} other {# runs}} between {{from}} and {{until}}",
+      "windowNone": "No run in this window.",
+      "windowGap": "… {count, plural, one {# more} other {# more}} …",
+      "windowProblems": {
+        "unreadable": {
+          "from": "The start does not read, at character {{at}}.",
+          "until": "The end does not read, at character {{at}}."
+        },
+        "skipped": {
+          "from": "This start does not exist in this zone.",
+          "until": "This end does not exist in this zone."
+        },
+        "backwards": "The end has to come after the start.",
+        "tooLong": "Too long a window: {{years}} years at most."
+      },
+      "nearestBefore": "Nearest run before: {{at}}",
+      "nearestAfter": "Nearest run after: {{at}}"
     },
     "sizes": {
       "name": "Sizes and transfer",
