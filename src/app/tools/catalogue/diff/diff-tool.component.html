@@ -9,5 +9,7 @@
 @if (mode() === 'text') {
   <app-text-diff (asValues)="mode.set('structured')" />
 } @else {
-  <app-structured-diff />
+  <!-- « Données » alone does not say what is compared: the line under the tabs does. -->
+  <p class="what" data-testid="diff-data-line">{{ 'tools.diff.dataLine' | transloco }}</p>
+  <app-structured-diff (asText)="mode.set('text')" />
 }

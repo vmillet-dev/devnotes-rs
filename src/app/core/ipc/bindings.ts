@@ -1622,7 +1622,13 @@ export type JsonDiffAnswer = { kind: "compared"; changes: JsonChange[]; counts: 
 /**  RFC 6902, from A to B, as JSON. */
 patch: string; 
 /**  What each side was read as. */
-formatA: DataFormat; formatB: DataFormat } | { kind: "unreadable"; side: JsonDiffSide; format: DataFormat; line: number; column: number };
+formatA: DataFormat; formatB: DataFormat } | { kind: "unreadable"; side: JsonDiffSide; format: DataFormat; line: number; column: number } | 
+/**
+ *  A side read by its shape came out as one value and no structure. ⚠️ Nearly any text is
+ *  a YAML scalar: an nginx file was « read as YAML » and compared as one string changed
+ *  into another. A format chosen by hand is taken at its word instead.
+ */
+{ kind: "notStructured"; sides: JsonDiffSide[] };
 
 export type JsonDiffCounts = {
 	added: number,

@@ -2277,12 +2277,13 @@
     },
     "diff": {
       "name": "Diff",
-      "description": "Deux textes ligne à ligne, ou deux documents comparés comme des valeurs",
+      "description": "Deux textes ligne à ligne, ou deux documents JSON, YAML, TOML ou XML comparés par leurs valeurs",
       "mode": "Mode",
       "modes": {
         "text": "Texte",
-        "structured": "Structuré"
+        "structured": "Données"
       },
+      "dataLine": "Compare les valeurs, pas le texte : l’ordre des clés, l’indentation et le format (JSON, YAML, TOML, XML) ne comptent pas.",
       "pasted": "texte collé",
       "swap": "Échanger A et B",
       "text": {
@@ -2319,7 +2320,7 @@
         "truncated": "La suite n’est pas affichée : les compteurs et le diff unifié restent complets.",
         "empty": "Collez deux textes : leurs différences s’affichent ici.",
         "bothJson": "Les deux textes sont du JSON.",
-        "asValues": "Comparer comme des valeurs",
+        "asValues": "Comparer comme des données",
         "copyUnified": "Copier le diff unifié",
         "noteTitle": "Diff de {{a}} vers {{b}}"
       },
@@ -2327,6 +2328,8 @@
         "openNote": "Ouvrir une note",
         "inputLabel": "Document {{side}}",
         "placeholder": "Collez un document JSON, YAML, TOML ou XML, ou ouvrez un snippet",
+        "notStructured": "Ce texte n’est ni du JSON, ni du YAML, du TOML ou du XML structuré.",
+        "asText": "Comparer comme du texte",
         "unreadable": "Ce {{format}} ne se lit pas : ligne {{line}}, colonne {{column}}.",
         "added": "{count, plural, one {+ # ajout} other {+ # ajouts}}",
         "removed": "{count, plural, one {− # suppression} other {− # suppressions}}",

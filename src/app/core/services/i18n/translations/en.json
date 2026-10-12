@@ -2277,12 +2277,13 @@
     },
     "diff": {
       "name": "Diff",
-      "description": "Two texts line by line, or two documents compared as values",
+      "description": "Two texts line by line, or two JSON, YAML, TOML or XML documents compared by their values",
       "mode": "Mode",
       "modes": {
         "text": "Text",
-        "structured": "Structured"
+        "structured": "Data"
       },
+      "dataLine": "Compares the values, not the text: key order, indentation and format (JSON, YAML, TOML, XML) do not count.",
       "pasted": "pasted text",
       "swap": "Swap A and B",
       "text": {
@@ -2319,7 +2320,7 @@
         "truncated": "The rest is not shown: the counts and the unified diff stay complete.",
         "empty": "Paste two texts: their differences show here.",
         "bothJson": "Both texts are JSON.",
-        "asValues": "Compare as values",
+        "asValues": "Compare as data",
         "copyUnified": "Copy the unified diff",
         "noteTitle": "Diff from {{a}} to {{b}}"
       },
@@ -2327,6 +2328,8 @@
         "openNote": "Open a note",
         "inputLabel": "Document {{side}}",
         "placeholder": "Paste a JSON, YAML, TOML or XML document, or open a snippet",
+        "notStructured": "This text is no structured JSON, YAML, TOML or XML.",
+        "asText": "Compare as text",
         "unreadable": "This {{format}} does not read: line {{line}}, column {{column}}.",
         "added": "{count, plural, one {+ # addition} other {+ # additions}}",
         "removed": "{count, plural, one {− # removal} other {− # removals}}",

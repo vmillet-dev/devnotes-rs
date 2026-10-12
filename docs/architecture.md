@@ -903,6 +903,16 @@ and its signature verified for HS256, HS384 and HS512 alone, in constant time
 ⚠️ The token and the secret are plain `signal`s, zeroed in Rust once the answer is made; a note
 keeps the decoded header and payload as one JSON document, after a warning, never the token.
 
+**The diff's « Données » tab compares documents, and says when a text is none**
+(`tools/diff.rs`). ⚠️ Nearly any text is valid YAML — one plain scalar — so YAML accepted what
+the other formats refused: an nginx file was announced « lu comme YAML » and compared as one
+string changed into another. A side **read by its shape** that comes out as one value and no
+object nor list is answered `NotStructured`, with the way back to the text tab, whose two
+texts are the same two (`diff.a`, `diff.b`); a format **chosen by hand** is taken at its word.
+The detection answers the narrowest format that fits (`convert::detect`): every JSON document
+is YAML too, and one that parses as JSON is said to be JSON. « Exemple » belongs to the tab on
+screen and fills both sides, each read by its shape again.
+
 **A reference is a tool that is read, never typed into** (the « Références » category): no
 `result` — the frame then offers no "Enregistrer comme note" — no `sample()`, and no Rust. Its
 facts are typed constants beside the component; its words are a JSON per language beside them,
