@@ -43,6 +43,89 @@ const UNDERSTOOD: &[&str] = &[
     "format",
 ];
 
+/// The rest of the vocabulary: keywords of a schema this generator draws nothing from. Listed
+/// when met — and what tells a schema that only uses them from a document that is none.
+const NOT_DRAWN: &[&str] = &[
+    "$anchor",
+    "$dynamicAnchor",
+    "$dynamicRef",
+    "$vocabulary",
+    "allOf",
+    "not",
+    "if",
+    "then",
+    "else",
+    "pattern",
+    "patternProperties",
+    "propertyNames",
+    "multipleOf",
+    "uniqueItems",
+    "minProperties",
+    "maxProperties",
+    "dependentRequired",
+    "dependentSchemas",
+    "prefixItems",
+    "contains",
+    "minContains",
+    "maxContains",
+    "unevaluatedItems",
+    "unevaluatedProperties",
+    "contentEncoding",
+    "contentMediaType",
+    "contentSchema",
+];
+
+const TYPES: &[&str] = &[
+    "object", "array", "string", "number", "integer", "boolean", "null",
+];
+
+fn is_schema(value: &Value) -> bool {
+    value.is_object() || value.is_boolean()
+}
+
+/// A key that is a keyword **and** holds what that keyword holds: `"type": "string"` says
+/// schema, `"type": "user"` is a field of a document that happens to be called so.
+fn says_schema(key: &str, value: &Value) -> bool {
+    match key {
+        "$schema" | "$ref" => value.is_string(),
+        "type" => match value {
+            Value::String(name) => TYPES.contains(&name.as_str()),
+            Value::Array(names) => {
+                !names.is_empty()
+                    && names
+                        .iter()
+                        .all(|name| name.as_str().is_some_and(|name| TYPES.contains(&name)))
+            }
+            _ => false,
+        },
+        "properties" | "patternProperties" | "$defs" | "definitions" => value
+            .as_object()
+            .is_some_and(|schemas| schemas.values().all(is_schema)),
+        // ⚠️ `items` as one schema alone: a list of objects under it is what an example holds too.
+        "items" | "additionalProperties" | "not" | "contains" | "propertyNames" => is_schema(value),
+        "enum" => value.is_array(),
+        "oneOf" | "anyOf" | "allOf" | "prefixItems" => value
+            .as_array()
+            .is_some_and(|schemas| !schemas.is_empty() && schemas.iter().all(is_schema)),
+        "required" => value
+            .as_array()
+            .is_some_and(|names| names.iter().all(Value::is_string)),
+        _ => false,
+    }
+}
+
+/// Whether an object reads as a schema at all. ⚠️ An example read as one gave nonsense: its
+/// keys were taken for keywords nobody knows, and a schema with no known keyword allows
+/// anything — three strings of lorem ipsum, and a warning about `email` and `createdAt`.
+/// A schema says so by one keyword holding what it should, or by holding nothing else than
+/// the vocabulary; `{}` is the schema that allows anything.
+pub(super) fn reads_as_a_schema(map: &Map<String, Value>) -> bool {
+    map.iter().any(|(key, value)| says_schema(key, value))
+        || map
+            .keys()
+            .all(|key| UNDERSTOOD.contains(&key.as_str()) || NOT_DRAWN.contains(&key.as_str()))
+}
+
 const FORMATS: &[(&str, TextKind)] = &[
     ("email", TextKind::Email),
     ("uuid", TextKind::Uuid),

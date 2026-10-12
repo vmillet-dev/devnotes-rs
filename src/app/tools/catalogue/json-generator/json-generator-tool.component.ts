@@ -9,6 +9,7 @@ import {
   Segment,
   SegmentedChoiceComponent,
 } from '@shared/controls/segmented-choice/segmented-choice.component';
+import { IconComponent } from '@shared/icon/icon.component';
 import { CopyValueComponent } from '@tools/ui/copy-value/copy-value.component';
 
 const SOURCES: readonly Segment[] = (['schema', 'example'] as const).map((id) => ({
@@ -16,22 +17,44 @@ const SOURCES: readonly Segment[] = (['schema', 'example'] as const).map((id) =>
   labelKey: `tools.json-generator.sources.${id}`,
 }));
 
-const SAMPLE = `{
+/**
+ * One sample a mode: « Exemple » fills what the switch above it expects, never a document
+ * under « Schéma » — read as a schema, an example gave nonsense.
+ */
+const SAMPLES: Record<JsonSource, string> = {
+  example: `{
   "id": "0b1c2d3e-4f50-4612-8a7b-9c0d1e2f3a4b",
   "email": "ada@example.com",
   "name": "Ada Lovelace",
   "createdAt": "2026-01-15T09:30:00Z",
   "tags": ["admin", "beta"],
   "score": 42
-}`;
+}`,
+  schema: `{
+  "type": "object",
+  "required": ["id", "email"],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "email": { "type": "string", "format": "email" },
+    "name": { "type": "string", "minLength": 3, "maxLength": 24 },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "tags": {
+      "type": "array",
+      "maxItems": 3,
+      "items": { "enum": ["admin", "beta", "staff"] }
+    },
+    "score": { "type": "integer", "minimum": 0, "maximum": 100 }
+  }
+}`,
+};
 
 /**
- * Without a seed, each draw takes a new one and says which: keeping it makes the draw again.
- * The draw counter is only there to ask twice for the same thing.
+ * Without a seed, each draw takes a new one and says which, beside the field: pinned, it makes
+ * the draw again. The draw counter is only there to ask twice for the same thing.
  */
 @Component({
   selector: 'app-json-generator-tool',
-  imports: [CopyValueComponent, SegmentedChoiceComponent, TranslocoPipe],
+  imports: [CopyValueComponent, IconComponent, SegmentedChoiceComponent, TranslocoPipe],
   templateUrl: './json-generator-tool.component.html',
   styleUrl: './json-generator-tool.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -74,11 +97,15 @@ export class JsonGeneratorToolComponent implements Tool {
 
   protected readonly notASchema = computed(() => this.answer.value()?.kind === 'notASchema');
 
+  /** An object that holds nothing of a schema, under « Schéma »: nothing was drawn from it. */
+  protected readonly anExample = computed(() => this.answer.value()?.kind === 'anExample');
+
+  /** Never disabled: with a seed pinned it draws the same documents, and the page says so. */
   readonly actions = computed<readonly ToolAction[]>(() => [
     {
       id: 'draw',
       labelKey: 'tools.json-generator.again',
-      disabled: this.seed() !== null,
+      disabled: false,
       run: () => this.again(),
     },
   ]);
@@ -96,8 +123,7 @@ export class JsonGeneratorToolComponent implements Tool {
   });
 
   sample(): void {
-    this.source.set('example');
-    this.text.set(SAMPLE);
+    this.text.set(SAMPLES[this.source()]);
     this.count.set(3);
   }
 
@@ -110,9 +136,17 @@ export class JsonGeneratorToolComponent implements Tool {
     this.draw.update((draw) => draw + 1);
   }
 
-  /** The seed just used, written down: the same documents come back until it is let go. */
-  protected keepSeed(seed: number): void {
-    this.seed.set(seed);
+  /** « Le lire comme un modèle »: the same text, under the switch it was written for. */
+  protected asExample(): void {
+    this.source.set('example');
+  }
+
+  /**
+   * The seed just used, written down: the same documents come back until it is let go.
+   * Pinned already, the pin lets it go.
+   */
+  protected togglePin(drawn: number | null): void {
+    this.seed.set(this.seed() === null ? drawn : null);
   }
 
   protected onSeed(event: Event): void {

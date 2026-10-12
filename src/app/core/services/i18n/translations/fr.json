@@ -1352,7 +1352,7 @@
       },
       "lookAlikes": "Sans caractères qui se ressemblent",
       "count": "Nombre",
-      "generate": "Générer",
+      "generate": "Régénérer",
       "passwords": "Mots de passe",
       "entropy": "≈ {{bits}} bits d’entropie",
       "strengths": {
@@ -1439,13 +1439,13 @@
     },
     "json-generator": {
       "name": "JSON",
-      "description": "À partir d’un schéma ou d’un exemple",
+      "description": "À partir d’un schéma ou d’un document modèle",
       "source": "Source",
       "sources": {
         "schema": "Schéma",
-        "example": "Exemple"
+        "example": "Modèle"
       },
-      "inputLabel": "Schéma JSON ou document d’exemple",
+      "inputLabel": "Schéma JSON ou document modèle",
       "placeholders": {
         "schema": "{ \"type\": \"object\", \"required\": [\"id\"], \"properties\": { \"id\": { \"type\": \"string\", \"format\": \"uuid\" } } }",
         "example": "{ \"id\": \"9b2f6c1e-3d4a-4f8b-9e2c-7a1d5b6c8e90\", \"email\": \"ana@exemple.fr\", \"amount\": 49.9 }"
@@ -1456,12 +1456,22 @@
       "seed": "Graine",
       "seedPlaceholder": "au hasard",
       "documents": "Documents",
-      "seedUsed": "Graine utilisée : {{seed}}",
-      "keepSeed": "La garder",
-      "again": "Tirer à nouveau",
-      "unsupported": "Le générateur n’a pas tenu compte de ces mots-clés : les documents peuvent ne pas les respecter.",
-      "empty": "Collez un schéma ou un exemple : les documents s’affichent ici.",
-      "noteTitle": "Documents JSON générés"
+      "seedUsed": "· {{seed}} utilisée",
+      "keepSeed": "Fixer cette graine : les mêmes documents reviendront",
+      "again": "Régénérer",
+      "unsupported": "Mots-clés de schéma non pris en charge, ignorés :",
+      "empty": "Collez un schéma ou un document modèle : les documents s’affichent ici.",
+      "noteTitle": "Documents JSON générés",
+      "expects": {
+        "schema": "Schéma : un JSON Schema décrit les documents.",
+        "example": "Modèle : un document modèle, dont les valeurs sont remplacées par d’autres du même genre."
+      },
+      "anExample": "Ceci ressemble à un exemple de document, pas à un schéma.",
+      "asExample": "Le lire comme un modèle",
+      "pinSeed": "Fixer la graine",
+      "freeSeed": "Libérer la graine : chaque tirage en prendra une nouvelle",
+      "seedPinned": "Graine fixée : « Régénérer » redonne les mêmes documents.",
+      "unsupportedAt": "à"
     },
     "lorem": {
       "name": "Lorem ipsum",
@@ -1474,7 +1484,7 @@
       },
       "count": "Nombre",
       "opening": "Commencer par « Lorem ipsum »",
-      "again": "Générer à nouveau",
+      "again": "Régénérer",
       "noteTitle": "Lorem ipsum",
       "counted": {
         "words": "{count, plural, one {# mot} other {# mots}}",
@@ -2175,7 +2185,7 @@
         "hexLower": "Hexa",
         "digits": "Chiffres"
       },
-      "again": "Générer à nouveau",
+      "again": "Régénérer",
       "hints": {
         "uuidV4": "{{name}} : 122 bits aléatoires, tirés du générateur du système.",
         "uuidV7": "{{name}} : 48 bits de millisecondes puis 74 bits tirés ; triés, ils se rangent dans l’ordre où ils ont été faits.",
