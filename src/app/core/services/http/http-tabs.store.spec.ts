@@ -341,6 +341,28 @@ describe('HttpTabsStore', () => {
     expect(store().isDirty(store().active()!)).toBe(false);
   });
 
+  /** The preferences file is not sealed: it says which requests were open, never what they hold. */
+  it('writes the ids of the open requests to the preferences, and nothing that was typed', async () => {
+    await store().open('Login');
+    const key = store().activeKey()!;
+    store().edit(key, { name: 'zq-name' });
+    http.synced = { url: 'https://zq-host.exemple.fr/login?key=zq-key', params: [] };
+    await store().editUrl(key, 'https://zq-host.exemple.fr/login?key=zq-key');
+    store().editParts(key, {
+      headers: [{ enabled: true, key: 'X-Zq', value: 'zq-header', description: 'zq-description' }],
+      body: { kind: 'json', text: '{"password":"zq-body"}' },
+      auth: { kind: 'bearer', token: 'zq-token' },
+    });
+    // A request never saved is not written at all: it has no id to be reopened by.
+    store().newRequest();
+    store().editParts(store().activeKey()!, { description: 'zq-draft' });
+    store().activate(key);
+
+    const written = TestBed.inject(LibraryPreferencesService).read(KEY) ?? '';
+    expect(written).not.toContain('zq-');
+    expect(JSON.parse(written)).toEqual({ open: ['Login'], active: 'Login' });
+  });
+
   it('reopens what was open last time, skipping what is gone or was written by hand', async () => {
     TestBed.inject(LibraryPreferencesService).write(
       KEY,

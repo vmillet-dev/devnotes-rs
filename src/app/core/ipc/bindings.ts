@@ -1353,6 +1353,12 @@ export type HistorySummary = {
 	failureParams?: { [key in string]: string },
 	/**  What was sent, for a send reopened as a draft to be of the same kind. */
 	kind?: RequestKind,
+	/**
+	 *  ⚠️ Here and not in a column of their own: no query filters or sorts on them, and in
+	 *  the clear they told a reader of the raw file « a DELETE answered 401 at 14:02 ».
+	 */
+	method?: HttpMethod,
+	status?: number | null,
 };
 
 export type HttpCollection = {

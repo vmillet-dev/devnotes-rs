@@ -475,7 +475,7 @@ pub async fn send_http_request<R: Runtime>(
         secrets,
         outcome,
     };
-    keep(app, method, sent, cookies_set).await;
+    keep(app, sent, cookies_set).await;
 
     Ok(answer?)
 }
@@ -483,7 +483,6 @@ pub async fn send_http_request<R: Runtime>(
 /// The history and the jar, written under the lock again, and never at the answer's expense.
 async fn keep<R: Runtime>(
     app: AppHandle<R>,
-    method: model::HttpMethod,
     sent: history::Sent,
     cookies_set: Vec<cookies::Change>,
 ) {
@@ -493,7 +492,6 @@ async fn keep<R: Runtime>(
         let mut connection = lock(db)?;
         history::store::record(
             &mut connection,
-            method,
             sent.request_id.as_deref(),
             &summary,
             &record,

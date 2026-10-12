@@ -11,7 +11,6 @@ use super::{
 use crate::db::schema::http_history;
 use crate::db::{Library, iso8601};
 use crate::error::StorageError;
-use crate::http::model::HttpMethod;
 use crate::vault::key::Vault;
 
 #[derive(Queryable, Selectable)]
@@ -20,8 +19,6 @@ struct Row {
     id: String,
     sent_at: String,
     request_id: Option<String>,
-    method: String,
-    status: Option<i32>,
     summary: String,
 }
 
@@ -55,11 +52,8 @@ impl Row {
             url_head,
             url_tail,
             sent_at: iso8601::parse(&self.sent_at).map_err(|_| corrupt(&self.id, "sentAt"))?,
-            method: self
-                .method
-                .parse::<HttpMethod>()
-                .map_err(|()| corrupt(&self.id, "method"))?,
-            status: self.status.and_then(|status| u16::try_from(status).ok()),
+            method: summary.method,
+            status: summary.status,
             summary,
             request_id: self.request_id,
             id: self.id,
@@ -84,7 +78,6 @@ fn still_there<'a>(
 /// Writes the entry, then lets go of what is past the retention or the count.
 pub fn record(
     connection: &mut Library,
-    method: HttpMethod,
     request_id: Option<&str>,
     summary: &HistorySummary,
     record: &HistoryRecord,
@@ -98,11 +91,6 @@ pub fn record(
                 http_history::id.eq(&id),
                 http_history::sent_at.eq(iso8601::format(now)),
                 http_history::request_id.eq(request_id),
-                http_history::method.eq(method.as_str()),
-                http_history::status.eq(record
-                    .response
-                    .as_ref()
-                    .map(|response| i32::from(response.status))),
                 http_history::summary.eq(seal_json(vault, summary)?),
                 http_history::record.eq(seal_json(vault, record)?),
             ))
@@ -131,8 +119,6 @@ pub fn restore(connection: &mut Library, entry: &HistoryEntry) -> Result<(), Sto
                 http_history::id.eq(&item.id),
                 http_history::sent_at.eq(iso8601::format(item.sent_at)),
                 http_history::request_id.eq(request_id),
-                http_history::method.eq(item.method.as_str()),
-                http_history::status.eq(item.status.map(i32::from)),
                 http_history::summary.eq(seal_json(vault, &item.summary)?),
                 http_history::record.eq(seal_json(vault, &entry.record)?),
             ))
@@ -205,6 +191,7 @@ pub fn clear(connection: &mut Library) -> Result<u32, StorageError> {
 mod tests {
     use super::*;
     use crate::http::history::{HistoryRecord, HistorySummary};
+    use crate::http::model::HttpMethod;
     use crate::http::send::{Exchange, SentBody};
 
     fn summary() -> HistorySummary {
@@ -216,6 +203,8 @@ mod tests {
             size: Some(0),
             failure: None,
             failure_params: std::collections::BTreeMap::new(),
+            method: HttpMethod::Delete,
+            status: Some(401),
         }
     }
 
@@ -296,15 +285,22 @@ mod tests {
         assert!(!item.url_head.is_empty());
     }
 
+    /// Both were columns of their own, readable beside the instant of the send.
+    #[test]
+    fn the_method_and_the_status_of_a_send_are_read_from_its_sealed_summary() {
+        let mut library = crate::db::open_in_memory().unwrap();
+        record_at(&mut library, "2026-10-07T12:00:00Z".parse().unwrap());
+
+        let item = list(&mut library).unwrap().remove(0);
+        assert_eq!((item.method, item.status), (HttpMethod::Delete, Some(401)));
+
+        let removed = delete(&mut library, &item.id).unwrap();
+        restore(&mut library, &removed).unwrap();
+        let back = entry(&mut library, &item.id).unwrap().item;
+        assert_eq!((back.method, back.status), (HttpMethod::Delete, Some(401)));
+    }
+
     fn record_at(library: &mut Library, at: DateTime<Utc>) {
-        super::record(
-            library,
-            HttpMethod::Get,
-            Some("gone"),
-            &summary(),
-            &record(),
-            at,
-        )
-        .unwrap();
+        super::record(library, Some("gone"), &summary(), &record(), at).unwrap();
     }
 }
