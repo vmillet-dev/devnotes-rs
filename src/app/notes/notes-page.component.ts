@@ -49,6 +49,8 @@ export class NotesPageComponent implements OnInit {
    * this compiling until it is handled.
    */
   private runGlobalAction(action: GlobalAction): void {
+    // Not this page's: a quit is answered by `HttpLeaveStore`, whatever area is on screen.
+    if (action === 'quit') return;
     // Each one opens something drawn by this page, which another area hides.
     this.areas.show('notes');
     switch (action) {

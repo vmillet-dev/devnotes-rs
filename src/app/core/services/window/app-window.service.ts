@@ -1,12 +1,14 @@
 import { InjectionToken, Injectable, inject } from '@angular/core';
 import { exit } from '@tauri-apps/plugin-process';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { commands } from '@core/ipc/bindings';
 
 /** A token: a spec really calling `exit()` would take the test runner down. */
 export interface AppWindowAdapter {
   hide(): Promise<void>;
   exit(code: number): Promise<void>;
   reload(): void;
+  holdQuit(): Promise<void>;
 }
 
 export const APP_WINDOW_ADAPTER = new InjectionToken<AppWindowAdapter>('APP_WINDOW_ADAPTER', {
@@ -15,6 +17,7 @@ export const APP_WINDOW_ADAPTER = new InjectionToken<AppWindowAdapter>('APP_WIND
     hide: () => getCurrentWindow().hide(),
     exit: (code: number) => exit(code),
     reload: () => window.location.reload(),
+    holdQuit: () => commands.holdQuit(),
   }),
 });
 
@@ -42,6 +45,19 @@ export class AppWindowService {
    */
   reload(): void {
     this.adapter.reload();
+  }
+
+  /**
+   * Answers a quit asked from outside the page — the tray, the window's close button — when
+   * there is something to ask first: Rust stops waiting, and shows the window, which may be
+   * hidden in the tray where no dialog is seen.
+   */
+  async holdQuit(): Promise<void> {
+    try {
+      await this.adapter.holdQuit();
+    } catch {
+      // Outside Tauri there is no quit to hold.
+    }
   }
 
   async quit(): Promise<void> {

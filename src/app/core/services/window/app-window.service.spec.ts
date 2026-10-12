@@ -36,6 +36,14 @@ describe('AppWindowService', () => {
     expect(adapter.exitedWith).toBeNull();
   });
 
+  /** A quit asked from the tray or the close button: the page takes it, and Rust stops waiting. */
+  it('tells the native side it holds a quit asked from outside the page', async () => {
+    await service.holdQuit();
+
+    expect(adapter.quitsHeld).toBe(1);
+    expect(adapter.exitedWith).toBeNull();
+  });
+
   it('swallows a failure rather than surfacing one nothing can act on', async () => {
     adapter.throwOnHide = new Error('no bridge');
     adapter.throwOnExit = new Error('no bridge');

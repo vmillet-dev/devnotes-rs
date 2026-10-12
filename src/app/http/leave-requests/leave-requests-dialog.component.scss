@@ -1,0 +1,89 @@
+@use 'mixins' as *;
+
+:host {
+  --dialog-width: 420px;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-0);
+}
+
+.hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+// The requests by name, each under the dot its tab wears while it is modified.
+.names {
+  @include surface(var(--bg-1), 8px);
+  max-height: 168px;
+  margin: 0;
+  padding: 8px 10px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.name {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  min-width: 0;
+  padding: 2px 0;
+  font-size: 12.5px;
+  color: var(--text-0);
+}
+
+.dot {
+  flex-shrink: 0;
+  font-size: 9px;
+  color: var(--amber-text);
+}
+
+.label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.action {
+  @include unstyled-control;
+  @include surface($radius: 6px);
+  @include focus-ring(1px);
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-1);
+  cursor: pointer;
+
+  &:hover {
+    @include accent-state;
+  }
+
+  &.discard {
+    @include destructive;
+  }
+
+  &.primary {
+    background: var(--amber-fill);
+    border-color: var(--amber-edge);
+    color: var(--amber-ink);
+  }
+}

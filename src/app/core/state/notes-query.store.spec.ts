@@ -1,6 +1,6 @@
 import { WritableSignal, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NotesView } from '@core/model/note.model';
 import { ClockService } from '@core/services/time/clock.service';
 import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
@@ -348,6 +348,12 @@ describe('NotesQueryStore', () => {
       // Only Date and timers: faking requestAnimationFrame hangs the zoneless
       // scheduler in whenStable().
       vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    });
+
+    // ⚠️ Handed back: a worker runs several spec files, and a faked `setTimeout` left behind
+    // froze the first one after this that waited on a real one.
+    afterEach(() => {
+      vi.useRealTimers();
     });
 
     it('updates the field immediately so typing never lags', async () => {

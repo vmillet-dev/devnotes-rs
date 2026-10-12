@@ -33,7 +33,7 @@ use attachments::{
 };
 use backup::{list_backups, restore_backup};
 use changelog::{app_changelog, release_notes};
-use desktop::{set_global_shortcuts, set_window_behavior, sync_tray};
+use desktop::{hold_quit, set_global_shortcuts, set_window_behavior, sync_tray};
 use folders::{
     arrange_board, board_view, create_folder, delete_folder, file_notes, file_notes_back,
     list_folders, recolour_folder, rename_folder, save_board_layout,
@@ -250,6 +250,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             sync_tray,
             set_global_shortcuts,
             set_window_behavior,
+            hold_quit,
         ])
         // Reachable from no command, so exported on its own, with the topic it travels on.
         .typ::<desktop::GlobalAction>()
@@ -388,6 +389,12 @@ fn on_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
         {
             api.prevent_close();
             let _ = window.hide();
+        }
+        // Closing the last window ends the process: the page is asked first, as for the
+        // tray's « Quitter », and ends it itself.
+        tauri::WindowEvent::CloseRequested { api, .. } => {
+            api.prevent_close();
+            desktop::request_quit(window.app_handle());
         }
         // Tauri emits nothing for "minimized": `Resized` is the only way through.
         tauri::WindowEvent::Resized(_)

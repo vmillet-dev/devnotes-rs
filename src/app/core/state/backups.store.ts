@@ -2,6 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { BackupsRepository } from '@core/data/backups.repository';
 import { Backup } from '@core/model/backup.model';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
+import { HttpLeaveStore } from '@core/services/http/http-leave.store';
 import { StatusNotifier } from '@core/services/notifications/status.service';
 import { VaultStore } from './vault.store';
 
@@ -20,6 +21,7 @@ export class BackupsStore {
   private readonly notifier = inject(ErrorNotifier);
   private readonly status = inject(StatusNotifier);
   private readonly vault = inject(VaultStore);
+  private readonly leave = inject(HttpLeaveStore);
 
   private readonly _backups = signal<readonly Backup[]>([]);
   private readonly _isLoading = signal(false);
@@ -58,6 +60,7 @@ export class BackupsStore {
   async confirm(): Promise<void> {
     const backup = this._pending();
     if (backup === null || this._isRestoring()) return;
+    if (!(await this.leave.confirm('restore'))) return;
 
     await this.notifier.attemptWhile(this._isRestoring, 'errors.backupRestoreFailed', async () => {
       const aside = await this.repository.restore(backup.id);

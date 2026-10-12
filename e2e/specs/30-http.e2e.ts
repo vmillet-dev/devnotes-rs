@@ -403,6 +403,77 @@ describe('HTTP collections', () => {
       }
     });
 
+    /**
+     * A request typed in a tab and never saved, or a saved one with changes, was gone once
+     * the page went away — and nothing said so. Whatever takes the page away asks first. Here
+     * it is a library being created; the switch itself is in `25-libraries`, and a quit ends
+     * the process every spec file shares: the Rust tests of `desktop` hold that path.
+     */
+    it('asks before another library takes the page: saves what has a place, and stays when told to', async () => {
+      const api = await bridge.createHttpCollection('Avant de partir');
+      const saved = await bridge.createHttpRequest(draft(api.id, null, 'Modifiée'));
+      await press('1', ['Control']);
+      await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+      await press('3', ['Control']);
+      await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+      if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
+      const tab = `${testid('http-tab')}[data-key="${saved.id}"]`;
+      const libraries = async () => (await bridge.listLibraries()).libraries.length;
+      const before = await libraries();
+      const askToCreate = async () => {
+        await $(testid('file-menu')).click();
+        await $(testid('file-libraries')).click();
+        await setField(testid('library-new-name'), 'Jamais créée');
+        await $(testid('library-create')).click();
+        await $(`${testid('http-leave-dialog')}[data-reason="switch"]`).waitForDisplayed({ timeout: 10_000 });
+      };
+      const stay = async () => {
+        await $(testid('http-leave-cancel')).click();
+        await $(testid('http-leave-dialog')).waitForExist({ reverse: true, timeout: 10_000 });
+        await $(testid('libraries-close')).click();
+        await $(testid('library-row')).waitForExist({ reverse: true, timeout: 10_000 });
+      };
+
+      // A saved request with a URL typed and not saved, and a request never saved at all.
+      await $(`${testid('http-node')}[data-id="${saved.id}"] ${testid('http-node-name')}`).click();
+      await $(tab).waitForDisplayed({ timeout: 10_000 });
+      await setField(testid('http-url'), 'https://api.exemple.fr/pas-encore');
+      await $(`${tab} ${testid('http-tab-dirty')}`).waitForExist({ timeout: 10_000 });
+      await $(testid('http-tab-new')).click();
+      const tabCount = async () => (await $$(testid('http-tab')).getElements()).length;
+      await eventually(tabCount, (count) => count === 2, 'the request never saved');
+
+      // Both are named before anything is created; « Annuler » leaves them, and the library, alone.
+      await askToCreate();
+      expect((await readEach(testid('http-leave-name'), 'text'))[0]).toBe('Modifiée');
+      expect((await $$(testid('http-leave-name')).getElements()).length).toBe(2);
+      expect(await libraries()).toBe(before);
+      await stay();
+      expect(await libraries()).toBe(before);
+      expect(await $(`${tab} ${testid('http-tab-dirty')}`).isExisting()).toBe(true);
+      expect((await bridge.httpRequest(saved.id)).document.url).toBe('https://api.exemple.fr/Modifiée');
+
+      // « Tout enregistrer »: the one that has a place is written; the other is asked where
+      // it goes, above the question — and not placing it comes back to the question.
+      await askToCreate();
+      await $(testid('http-leave-save')).click();
+      await $(testid('http-save-dialog')).waitForDisplayed({ timeout: 10_000 });
+      expect((await bridge.httpRequest(saved.id)).document.url).toBe('https://api.exemple.fr/pas-encore');
+      await $(testid('http-save-cancel')).click();
+      await $(testid('http-leave-dialog')).waitForDisplayed({ timeout: 10_000 });
+      expect((await $$(testid('http-leave-name')).getElements()).length).toBe(1);
+      await stay();
+      expect(await libraries()).toBe(before);
+      expect(await $(`${tab} ${testid('http-tab-dirty')}`).isExisting()).toBe(false);
+
+      for (let left = await tabCount(); left > 0; left = await tabCount()) {
+        await $(`${testid('http-tab')}:last-of-type ${testid('http-tab-close')}`).click();
+        if (await $(testid('http-close-discard')).isExisting()) await $(testid('http-close-discard')).click();
+        await eventually(tabCount, (count) => count === left - 1, 'a tab closed');
+      }
+      await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+    });
+
     it('builds a collection from the rail: a folder, two requests, one moved above the other', async () => {
       await press('3', ['Control']);
       await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });

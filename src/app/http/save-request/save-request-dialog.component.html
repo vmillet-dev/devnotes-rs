@@ -1,4 +1,4 @@
-<app-dialog [layer]="'app'" labelledBy="http-save-title" (closed)="cancelled.emit()">
+<app-dialog [layer]="layer()" labelledBy="http-save-title" (closed)="cancelled.emit()">
   <form class="form" data-testid="http-save-dialog" (submit)="submit($event, nameInput.value)">
     <h2 id="http-save-title" class="title">{{ 'http.save.title' | transloco }}</h2>
 

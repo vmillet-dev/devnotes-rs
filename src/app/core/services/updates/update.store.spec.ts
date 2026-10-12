@@ -2,7 +2,10 @@ import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { SettingsStore } from '@core/services/settings/settings.store';
+import { HttpLeaveStore } from '@core/services/http/http-leave.store';
+import { HttpTabsStore } from '@core/services/http/http-tabs.store';
 import { FakeUpdater } from '@testing/fake-updater';
+import { provideAppTesting } from '@testing/testing.providers';
 import { UpdateStore } from './update.store';
 import { UpdaterService } from './updater.service';
 
@@ -15,8 +18,9 @@ describe('UpdateStore', () => {
   beforeEach(() => {
     TestBed.resetTestingModule();
     updater = new FakeUpdater();
+    // The whole set of doubles: accepting an update asks the HTTP tabs what would be lost.
     TestBed.configureTestingModule({
-      providers: [{ provide: UpdaterService, useValue: updater }],
+      providers: [provideAppTesting(), { provide: UpdaterService, useValue: updater }],
     });
     store = TestBed.inject(UpdateStore);
     notifier = TestBed.inject(ErrorNotifier);
@@ -61,6 +65,27 @@ describe('UpdateStore', () => {
     expect(updater.installCalls).toBe(1);
     expect(updater.relaunched).toBe(true);
     expect(store.status()).toBe('installed');
+  });
+
+  /** The installer stops the application: what was typed in a tab and not saved goes with it. */
+  it('asks before installing over unsaved requests, and installs nothing when told to stay', async () => {
+    updater.available = { version: '0.2.0', currentVersion: '0.1.0' };
+    await store.check();
+    TestBed.inject(HttpTabsStore).newRequest();
+    const leave = TestBed.inject(HttpLeaveStore);
+
+    const staying = store.accept();
+    expect(leave.asking()).toBe('update');
+    leave.cancel();
+    await staying;
+    expect(updater.installCalls).toBe(0);
+    expect(store.status()).toBe('available');
+
+    const going = store.accept();
+    leave.discard();
+    await going;
+    expect(updater.installCalls).toBe(1);
+    expect(updater.relaunched).toBe(true);
   });
 
   it('exposes download progress as a whole percentage', async () => {

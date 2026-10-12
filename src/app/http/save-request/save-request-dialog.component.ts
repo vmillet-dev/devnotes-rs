@@ -18,6 +18,7 @@ import { savePlaces } from '@core/services/http/http-tree';
 import { SaveTarget } from '@core/services/http/http-tabs.store';
 import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
 import { DialogComponent } from '@shared/layout/dialog/dialog.component';
+import { DialogLayer } from '@shared/layout/dialog/dialog.model';
 
 export interface SaveAnswer extends SaveTarget {
   readonly name: string;
@@ -43,6 +44,8 @@ const NEW_COLLECTION = 'new-collection';
 })
 export class SaveRequestDialogComponent {
   readonly name = input.required<string>();
+  /** Raised when it is asked from a question that already stands above the page's dialogs. */
+  readonly layer = input<DialogLayer>('app');
   readonly saved = output<SaveAnswer>();
   readonly cancelled = output<void>();
 

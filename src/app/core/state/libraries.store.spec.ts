@@ -2,6 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
 import { IpcError } from '@core/ipc/ipc.error';
+import { HttpLeaveStore } from '@core/services/http/http-leave.store';
+import { HttpTabsStore } from '@core/services/http/http-tabs.store';
 import { FakeAppWindow } from '@testing/fake-app-window';
 import { FakeLibrariesRepository } from '@testing/fake-libraries-repository';
 import { provideAppTesting } from '@testing/testing.providers';
@@ -74,6 +76,43 @@ describe('LibrariesStore', () => {
 
     expect((await repository.list()).open).toBe('lib-1');
     expect(appWindow.reloaded).toBe(1);
+  });
+
+  /**
+   * The reload takes every tab with it: a request typed and not saved was gone on the other
+   * side, without a word. The switch waits for the answer, and is not made on « Annuler ».
+   */
+  it('asks before a switch that would lose unsaved requests, and stays put when told to', async () => {
+    await store.load();
+    TestBed.inject(HttpTabsStore).newRequest();
+    const leave = TestBed.inject(HttpLeaveStore);
+
+    const staying = store.openLibrary('lib-1');
+    expect(leave.asking()).toBe('switch');
+    leave.cancel();
+    await staying;
+    expect((await repository.list()).open).toBe('lib-0');
+    expect(appWindow.reloaded).toBe(0);
+
+    const going = store.openLibrary('lib-1');
+    leave.discard();
+    await going;
+    expect((await repository.list()).open).toBe('lib-1');
+    expect(appWindow.reloaded).toBe(1);
+  });
+
+  it('asks before creating a library too, and creates none when told to stay', async () => {
+    await store.load();
+    TestBed.inject(HttpTabsStore).newRequest();
+    const leave = TestBed.inject(HttpLeaveStore);
+
+    const creating = store.create('Boulot');
+    expect(leave.asking()).toBe('switch');
+    leave.cancel();
+
+    expect(await creating).toBeNull();
+    expect((await repository.list()).libraries.map((entry) => entry.name)).toEqual(['Notes', 'Perso']);
+    expect(appWindow.reloaded).toBe(0);
   });
 
   it('does nothing when asked for the library already open', async () => {

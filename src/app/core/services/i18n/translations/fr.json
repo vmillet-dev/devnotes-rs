@@ -2896,6 +2896,23 @@
         "folder": "Donnez un nom au dossier, ou retirez-le."
       }
     },
+    "leave": {
+      "title": "{count, plural, one {Une requête a des modifications} other {# requêtes ont des modifications}}",
+      "hint": {
+        "quit": "Elles ne sont pas enregistrées : quitter les perd.",
+        "switch": "Elles ne sont pas enregistrées : changer de bibliothèque les perd.",
+        "restore": "Elles ne sont pas enregistrées : restaurer la sauvegarde les perd.",
+        "update": "Elles ne sont pas enregistrées : installer la mise à jour les perd."
+      },
+      "connected": "{count, plural, one {Un WebSocket connecté sera fermé.} other {# WebSockets connectés seront fermés.}}",
+      "saveAll": "Tout enregistrer",
+      "discard": {
+        "quit": "Quitter sans enregistrer",
+        "switch": "Changer sans enregistrer",
+        "restore": "Restaurer sans enregistrer",
+        "update": "Installer sans enregistrer"
+      }
+    },
     "close": {
       "title": "« {{name}} » a des modifications",
       "hint": "Elles ne sont pas encore enregistrées.",

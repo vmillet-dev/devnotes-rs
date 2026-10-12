@@ -3,6 +3,7 @@ import { LibrariesRepository, LibraryEntry } from '@core/data/libraries.reposito
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
 import { StatusNotifier } from '@core/services/notifications/status.service';
+import { HttpLeaveStore } from '@core/services/http/http-leave.store';
 import { AppWindowService } from '@core/services/window/app-window.service';
 
 /** What a deletion would take, named before it runs. */
@@ -21,6 +22,7 @@ export class LibrariesStore {
   private readonly status = inject(StatusNotifier);
   private readonly preferences = inject(LibraryPreferencesService);
   private readonly window = inject(AppWindowService);
+  private readonly leave = inject(HttpLeaveStore);
 
   private readonly _libraries = signal<readonly LibraryEntry[]>([]);
   private readonly _openId = signal<string | null>(null);
@@ -59,6 +61,9 @@ export class LibrariesStore {
 
   /** Creates and opens, in one gesture: the gate then asks for a phrase, as on a first launch. */
   async create(name: string): Promise<LibraryEntry | null> {
+    // Opening it rebuilds the front end: asked before the library exists, not after.
+    if (!(await this.leave.confirm('switch'))) return null;
+
     return this.attempt(async () => {
       const entry = await this.repository.create(name);
       await this.repository.open(entry.id);
@@ -72,13 +77,16 @@ export class LibrariesStore {
    * ⚠️ A reload, not a `vault.load()`: every store is `providedIn: 'root'` and would carry the
    * other library's spaces, board and undo record past the gate.
    */
-  async openLibrary(id: string): Promise<void> {
-    if (id === this._openId()) return;
+  async openLibrary(id: string): Promise<boolean> {
+    if (id === this._openId()) return false;
+    if (!(await this.leave.confirm('switch'))) return false;
 
-    await this.attempt(async () => {
+    const switched = await this.attempt(async () => {
       await this.repository.open(id);
       this.window.reload();
+      return true;
     });
+    return switched === true;
   }
 
   async rename(id: string, name: string): Promise<void> {
