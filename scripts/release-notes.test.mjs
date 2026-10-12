@@ -1,17 +1,25 @@
 import assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { after, describe, it } from 'node:test';
 
 import {
   assertRenderable,
   cleanTitle,
+  closingIssues,
+  entriesFor,
   extractSection,
   groupEntries,
   isReleaseCommit,
   kindOf,
   parsePrNumber,
+  publishedNumbers,
   renderSections,
   sectionFor,
   splice,
+  subjectsSince,
 } from './release-notes.mjs';
 
 describe('cleanTitle', () => {
@@ -65,6 +73,7 @@ describe('isReleaseCommit', () => {
   it('catches the release and bump commits', () => {
     assert.ok(isReleaseCommit('chore(release): v0.1.3'));
     assert.ok(isReleaseCommit('Bump version to 0.1.2'));
+    assert.ok(isReleaseCommit('Bump the version to 0.10.0'));
   });
 
   it('does not catch a dependency bump', () => {
@@ -240,5 +249,143 @@ describe('extractSection', () => {
 
   it('throws when the version is absent', () => {
     assert.throws(() => extractSection(FILE, '9.9.9'), /no section for 9\.9\.9/);
+  });
+});
+
+describe('closingIssues', () => {
+  it('reads the tickets a description says it closes', () => {
+    assert.deepEqual(closingIssues('Closes #484.\n\nHow a request travels.'), [484]);
+    assert.deepEqual(closingIssues('Fixes #12, and resolves: #13. Closes #12 again.'), [12, 13]);
+  });
+
+  it('ignores a number no keyword introduces', () => {
+    assert.deepEqual(closingIssues('Stacked on #483; merged into `dev/0.10.0`.'), []);
+    assert.deepEqual(closingIssues(''), []);
+  });
+});
+
+describe('publishedNumbers', () => {
+  it('reads every pull request the older sections name', () => {
+    const file = `${FILE}\n- Drop the DTO aliases (#56)\n- Move the menus (#52)\n`;
+    assert.deepEqual([...publishedNumbers(file)].sort(), [52, 56]);
+    assert.equal(publishedNumbers(FILE).size, 0);
+  });
+});
+
+const pullRequest = (number, title, extra = {}) => ({
+  number,
+  title,
+  body: '',
+  headRefName: 'a-branch',
+  labels: { nodes: [] },
+  closingIssuesReferences: { nodes: [] },
+  ...extra,
+});
+
+describe('entriesFor', () => {
+  it('files a pull request under the ticket its description names when GitHub linked none', () => {
+    // The real #704: merged into `dev/0.10.0`, « Closes #484. », and no link on GitHub's side.
+    const index = new Map([[704, pullRequest(704, 'Manage cookies', { body: 'Closes #484.' })]]);
+    const issues = new Map([[484, ['enhancement']]]);
+
+    const { entries } = entriesFor(['Manage cookies (#704)'], index, { issues });
+    assert.equal(entries[0].section, 'added');
+    assert.equal(entries[0].via, 'label ticket #484 (enhancement)');
+  });
+
+  it('leaves out what an older section lists, and lists a pull request once', () => {
+    const index = new Map([
+      [3, pullRequest(3, 'Fix the palette')],
+      [4, pullRequest(4, 'Add a board')],
+    ]);
+
+    const { entries, skipped } = entriesFor(
+      ['Add a board (#4)', 'Fix the palette (#3)', 'Add a board (#4)'],
+      index,
+      { published: new Set([3]) },
+    );
+    assert.deepEqual(
+      entries.map((entry) => entry.text),
+      ['Add a board (#4)'],
+    );
+    assert.deepEqual(skipped, [3]);
+  });
+
+  it('flags a version branch that reached main squashed', () => {
+    const index = new Map([[9, pullRequest(9, 'Version 0.2.0', { headRefName: 'dev/0.2.0' })]]);
+
+    const { entries } = entriesFor(['Version 0.2.0 (#9)'], index);
+    assert.equal(entries[0].squashed, 'dev/0.2.0');
+  });
+
+  it('steps over the commit that bumps the version', () => {
+    const { entries } = entriesFor(['Bump the version to 0.2.0', 'Tidy the scripts'], new Map());
+    assert.deepEqual(
+      entries.map((entry) => entry.text),
+      ['Tidy the scripts'],
+    );
+  });
+});
+
+describe('subjectsSince', () => {
+  const repositories = [];
+  after(() => {
+    for (const directory of repositories) {
+      rmSync(directory, { recursive: true, force: true, maxRetries: 3 });
+    }
+  });
+
+  /** A repository of empty commits: only the shape of the history is under test. */
+  function repository() {
+    const directory = mkdtempSync(join(tmpdir(), 'release-notes-'));
+    repositories.push(directory);
+    const git = (...args) => execFileSync('git', args, { cwd: directory, stdio: 'pipe' });
+    git('init', '--quiet', '--initial-branch', 'main');
+    git('config', 'user.name', 'A test');
+    git('config', 'user.email', 'test@example.invalid');
+    git('config', 'commit.gpgsign', 'false');
+    git('config', 'tag.gpgsign', 'false');
+    const commit = (subject) => git('commit', '--quiet', '--allow-empty', '-m', subject);
+    return { directory, git, commit };
+  }
+
+  it('reads the pull requests a version branch brings through its merge', () => {
+    // v0.10.0 as it happened: squashed into the branch, merged whole, then the bump.
+    const { directory, git, commit } = repository();
+    commit('Lay the references out in columns (#692)');
+    git('tag', 'v0.9.3');
+    git('switch', '--quiet', '-c', 'dev/0.10.0');
+    commit('Store HTTP collections in the library (#695)');
+    commit('Browse HTTP collections in their rail (#696)');
+    git('switch', '--quiet', 'main');
+    git('merge', '--quiet', '--no-ff', '-m', 'Merge dev/0.10.0 into main', 'dev/0.10.0');
+    commit('Bump the version to 0.10.0');
+
+    assert.deepEqual(subjectsSince('v0.9.3', directory).sort(), [
+      'Browse HTTP collections in their rail (#696)',
+      'Bump the version to 0.10.0',
+      'Store HTTP collections in the library (#695)',
+    ]);
+  });
+
+  it('leaves out a fix already released, once merged back into the version branch', () => {
+    const { directory, git, commit } = repository();
+    commit('Start');
+    git('tag', 'v0.10.0');
+    git('switch', '--quiet', '-c', 'dev/0.11.0');
+    commit('Add a board (#720)');
+    git('switch', '--quiet', 'main');
+    commit('Fix the palette (#722)');
+    git('tag', 'v0.10.1');
+    git('switch', '--quiet', 'dev/0.11.0');
+    git('merge', '--quiet', '--no-ff', '-m', 'Merge main into dev/0.11.0', 'main');
+    commit('Move a card (#721)');
+    git('switch', '--quiet', 'main');
+    git('merge', '--quiet', '--no-ff', '-m', 'Merge dev/0.11.0 into main', 'dev/0.11.0');
+
+    assert.deepEqual(subjectsSince('v0.10.1', directory).sort(), [
+      'Add a board (#720)',
+      'Move a card (#721)',
+    ]);
   });
 });
