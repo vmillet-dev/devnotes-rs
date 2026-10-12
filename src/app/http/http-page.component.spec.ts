@@ -119,8 +119,6 @@ describe('HttpPageComponent', () => {
   it('places a new request the first time it is saved, then reads the tree again', async () => {
     el<HTMLButtonElement>('[data-testid="http-tab-new"]').click();
     await fixture.whenStable();
-    el<HTMLButtonElement>('[data-testid="http-new-kind"][data-kind="http"]').click();
-    await fixture.whenStable();
     el<HTMLButtonElement>('[data-testid="http-save"]').click();
     await fixture.whenStable();
 
@@ -389,24 +387,44 @@ describe('HttpPageComponent', () => {
 
   /**
    * GraphQL and WebSocket were the last two entries of the method menu — a kind filed among
-   * verbs, and not found. A request is begun as one of the three, from the « + » of the tabs.
+   * verbs, and not found; then behind a bare « + » that named nothing. « Nouvelle requête » is
+   * a split button, as the notes' is: HTTP in one click, the two others behind its chevron.
    */
-  it('begins a request of the kind chosen from the « + », the first entry in focus', async () => {
+  it('begins an HTTP request from « Nouvelle requête », and the kind chosen from its chevron', async () => {
     const begin = async (kind: string) => {
-      el<HTMLButtonElement>('[data-testid="http-tab-new"]').click();
+      el<HTMLButtonElement>('[data-testid="http-tab-new-kind"]').click();
       await fixture.whenStable();
       el<HTMLButtonElement>(`[data-testid="http-new-kind"][data-kind="${kind}"]`).click();
       await fixture.whenStable();
     };
+    const main = el<HTMLButtonElement>('[data-testid="http-tab-new"]');
+    expect(main.textContent?.trim()).toBe('+ Nouvelle requête');
 
-    el<HTMLButtonElement>('[data-testid="http-tab-new"]').click();
+    // One click, and no menu on the way.
+    main.click();
     await fixture.whenStable();
-    expect(all('[data-testid="http-new-kind"]').map((entry) => entry.textContent?.trim())).toEqual([
-      'Requête HTTP',
-      'Requête GraphQL',
-      'WebSocket',
+    expect(el('[data-testid="http-new-kind-panel"]')).toBeNull();
+    expect(tabs().active()?.draft.kind).toBe('http');
+
+    const chevron = el<HTMLButtonElement>('[data-testid="http-tab-new-kind"]');
+    expect(chevron.getAttribute('aria-label')).toBe('Choisir le type de requête');
+    chevron.click();
+    await fixture.whenStable();
+    expect(chevron.getAttribute('aria-expanded')).toBe('true');
+    expect(
+      all('[data-testid="http-new-kind"]').map((entry) => [
+        entry.querySelector('.glyph')?.textContent?.trim(),
+        entry.querySelector('.name')?.textContent?.trim(),
+      ]),
+    ).toEqual([
+      ['GET', 'Requête HTTP'],
+      ['GQL', 'Requête GraphQL'],
+      ['WS', 'WebSocket'],
     ]);
-    // « + » then Enter is an HTTP request, as fast as before.
+    // Each says what it is for, as a kind of note does.
+    expect(el('[data-testid="http-new-kind"][data-kind="websocket"] .line').textContent?.trim()).toBe(
+      'Une connexion ouverte : des messages dans les deux sens.',
+    );
     await vi.waitFor(() => expect(document.activeElement?.getAttribute('data-kind')).toBe('http'));
     el<HTMLButtonElement>('[data-testid="http-new-kind"][data-kind="http"]').click();
     await fixture.whenStable();
@@ -418,7 +436,7 @@ describe('HttpPageComponent', () => {
       tabs()
         .tabs()
         .map((tab) => tab.draft.kind),
-    ).toEqual(['http', 'graphql', 'websocket']);
+    ).toEqual(['http', 'http', 'graphql', 'websocket']);
   });
 
   it('says what the area can do while no tab is open: the three kinds, a button each', async () => {

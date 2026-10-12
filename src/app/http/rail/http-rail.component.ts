@@ -3,6 +3,7 @@ import {
   Component,
   ElementRef,
   afterRenderEffect,
+  computed,
   inject,
   signal,
   viewChild,
@@ -18,6 +19,7 @@ import { DropZone, KeyMove, RailRow, dropMove, keyMove } from '@core/services/ht
 import { RAIL_WIDTH } from '@core/services/settings/app-settings.model';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { AreaSwitchComponent } from '@shared/controls/area-switch/area-switch.component';
+import { IconComponent } from '@shared/icon/icon.component';
 import { RailFrameComponent } from '@shared/layout/rail-frame/rail-frame.component';
 import { ContainerSettingsDialogComponent } from './container-settings/container-settings-dialog.component';
 import { CookieJarDialogComponent } from './cookie-jar/cookie-jar-dialog.component';
@@ -53,6 +55,9 @@ interface Drop {
   readonly zone: DropZone;
 }
 
+/** From this width the head has room for « ＋ Collection » beside its title; under it, an icon. */
+const WORDED_FROM_PX = 216;
+
 /** Past this, a press on a row is a drag and no longer a click. */
 const DRAG_THRESHOLD_PX = 4;
 
@@ -84,6 +89,7 @@ const NEW_KINDS: Partial<Record<HttpNodeAction, RequestKind>> = {
     ContainerSettingsDialogComponent,
     CookieJarDialogComponent,
     HttpNodeMenuComponent,
+    IconComponent,
     NgTemplateOutlet,
     RailFrameComponent,
     TranslocoPipe,
@@ -112,6 +118,8 @@ export class HttpRailComponent {
   /** The collection or folder whose settings are open. */
   protected readonly settingsFor = signal<RailRow | null>(null);
   protected readonly cookiesOpen = signal(false);
+  /** The tabs' « + » begins a request a few pixels away: this one says what it makes. */
+  protected readonly worded = computed(() => this.settings.libraryRailWidth() >= WORDED_FROM_PX);
 
   private drag: Drag | null = null;
   /** The click a drag ends with is not a click on the row it started from. */
@@ -186,37 +194,26 @@ export class HttpRailComponent {
     }
   }
 
-  protected async submitCreate(event: Event, name: string): Promise<void> {
+  protected async submitCreate(event: Event, form: Creating, name: string): Promise<void> {
     event.preventDefault();
-    const creating = this.creating();
-    const trimmed = name.trim();
-    if (creating === null || trimmed === '') return;
-    this.creating.set(null);
-    if (creating.kind === 'collection') {
-      await this.store.createCollection(trimmed);
-    } else if (creating.kind === 'folder') {
-      await this.store.createFolder(creating.collectionId ?? '', creating.folderId, trimmed);
-    } else {
-      const id = await this.store.createRequest(
-        creating.collectionId ?? '',
-        creating.folderId,
-        trimmed,
-        creating.requestKind ?? 'http',
-      );
-      if (id !== null) {
-        this.history.close();
-        await this.tabs.open(id);
-      }
-    }
+    if (name.trim() !== '') await this.settleCreate(form, name);
   }
 
   protected async submitRename(event: Event, row: RailRow, name: string): Promise<void> {
     event.preventDefault();
-    const trimmed = name.trim();
-    this.renaming.set(null);
-    if (trimmed !== '' && trimmed !== row.name) {
-      await this.store.rename(item(row), trimmed);
-    }
+    await this.settleRename(row, name);
+  }
+
+  /**
+   * A form left for anything outside it keeps what was typed, as a file explorer does; left
+   * empty, it closes. Escape is the way to cancel.
+   */
+  protected leaveCreate(event: FocusEvent, form: Creating, name: string): void {
+    if (this.leaves(event)) void this.settleCreate(form, name);
+  }
+
+  protected leaveRename(event: FocusEvent, row: RailRow, name: string): void {
+    if (this.leaves(event)) void this.settleRename(row, name);
   }
 
   protected async confirmDelete(): Promise<void> {
@@ -325,6 +322,49 @@ export class HttpRailComponent {
     return dropMove(this.store.tree(), item(dragged), item(target), zone) === null
       ? null
       : { id: target.id, zone };
+  }
+
+  /** From the field to its own button is not leaving: the press that follows is the submit. */
+  private leaves(event: FocusEvent): boolean {
+    const form = event.currentTarget as HTMLElement;
+    return !(event.relatedTarget instanceof Node && form.contains(event.relatedTarget));
+  }
+
+  /**
+   * ⚠️ The form is taken first, before anything is awaited: Enter, the button and the field
+   * left can each arrive for the same name — a removed field loses its focus — and whichever
+   * comes second finds its form gone, or another in its place, and writes nothing.
+   */
+  private async settleCreate(creating: Creating, name: string): Promise<void> {
+    if (this.creating() !== creating) return;
+    this.creating.set(null);
+    const trimmed = name.trim();
+    if (trimmed === '') return;
+    if (creating.kind === 'collection') {
+      await this.store.createCollection(trimmed);
+    } else if (creating.kind === 'folder') {
+      await this.store.createFolder(creating.collectionId ?? '', creating.folderId, trimmed);
+    } else {
+      const id = await this.store.createRequest(
+        creating.collectionId ?? '',
+        creating.folderId,
+        trimmed,
+        creating.requestKind ?? 'http',
+      );
+      if (id !== null) {
+        this.history.close();
+        await this.tabs.open(id);
+      }
+    }
+  }
+
+  private async settleRename(row: RailRow, name: string): Promise<void> {
+    if (this.renaming() !== row.id) return;
+    this.renaming.set(null);
+    const trimmed = name.trim();
+    if (trimmed !== '' && trimmed !== row.name) {
+      await this.store.rename(item(row), trimmed);
+    }
   }
 
   private async askDelete(row: RailRow): Promise<void> {

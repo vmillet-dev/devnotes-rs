@@ -40,6 +40,11 @@ describe('HttpRailComponent', () => {
       `[data-testid="http-node"][data-id="${id}"] [data-testid="http-node-menu"]`,
     ).click();
     await fixture.whenStable();
+    // The three kinds of request are one entry of the menu, and a submenu beside it.
+    if (/^new(Http|Graphql|Websocket)$/.test(which)) {
+      el<HTMLButtonElement>('[data-testid="http-node-new"]').click();
+      await fixture.whenStable();
+    }
     el<HTMLButtonElement>(`[data-testid="http-node-action"][data-action="${which}"]`).click();
     await fixture.whenStable();
   };
@@ -47,6 +52,13 @@ describe('HttpRailComponent', () => {
     const field = el<HTMLInputElement>(`[data-testid="${testid}"]`);
     field.value = text;
     el<HTMLButtonElement>(`[data-testid="${submit}"]`).click();
+    await fixture.whenStable();
+  };
+  /** jsdom moves no focus on a click: the field is left by the event a browser would fire. */
+  const leave = async (testid: string, text: string, to: HTMLElement | null = null) => {
+    const field = el<HTMLInputElement>(`[data-testid="${testid}"]`);
+    field.value = text;
+    field.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: to }));
     await fixture.whenStable();
   };
 
@@ -127,6 +139,124 @@ describe('HttpRailComponent', () => {
     expect(el('[data-testid="http-create-input"]')).toBeNull();
   });
 
+  /**
+   * The « + » of the tabs begins a request a few pixels from this one, the same glyph at the
+   * same size: this one draws what it makes, and names it once the rail has the room.
+   */
+  it('draws the head’s button as what it makes: an icon at the floor, « ＋ Collection » on a wider rail', async () => {
+    const button = () => el<HTMLButtonElement>('[data-testid="http-collection-create-open"]');
+    expect(button().dataset['worded']).toBe('false');
+    expect(button().querySelector('app-icon')).not.toBeNull();
+    expect(button().title).toBe('Nouvelle collection');
+    expect(button().getAttribute('aria-label')).toBe('Nouvelle collection');
+
+    TestBed.inject(SettingsStore).libraryRailWidth.write(240);
+    await fixture.whenStable();
+
+    expect(button().dataset['worded']).toBe('true');
+    expect(button().textContent?.trim()).toBe('＋ Collection');
+    expect(button().title).toBe('Nouvelle collection');
+  });
+
+  /**
+   * A field left by a click elsewhere stayed open, unfocused, its text belonging to nothing.
+   * Leaving it keeps what was typed, as a file explorer does.
+   */
+  it('creates what was typed when the field is left, once, and closes an empty one', async () => {
+    el<HTMLButtonElement>('[data-testid="http-collection-create-open"]').click();
+    await fixture.whenStable();
+    const submit = el<HTMLButtonElement>('[data-testid="http-create-submit"]');
+    await leave('http-create-input', '  Paiements  ');
+
+    expect(http.callsOf('createCollection')).toEqual([['Paiements']]);
+    expect(el('[data-testid="http-create-input"]')).toBeNull();
+    // The press that left the field ends on the button it was beside: no second write.
+    submit.click();
+    await fixture.whenStable();
+    expect(http.callsOf('createCollection')).toHaveLength(1);
+
+    el<HTMLButtonElement>('[data-testid="http-collection-create-open"]').click();
+    await fixture.whenStable();
+    await leave('http-create-input', '   ');
+    expect(el('[data-testid="http-create-input"]')).toBeNull();
+    expect(http.callsOf('createCollection')).toHaveLength(1);
+  });
+
+  it('keeps the same rule under a row: a folder and a request left by a click are created once', async () => {
+    await action('Auth', 'newFolder');
+    await leave('http-create-input', 'Jetons');
+    await action('API', 'newGraphql');
+    await leave('http-create-input', 'Produits');
+
+    await vi.waitFor(() => expect(http.callsOf('createRequest')).toHaveLength(1));
+    expect(http.callsOf('createFolder')).toEqual([['API', 'Auth', 'Jetons']]);
+    expect(http.callsOf('createRequest')[0]?.[0]).toMatchObject({ name: 'Produits', kind: 'graphql' });
+    expect(el('[data-testid="http-create-input"]')).toBeNull();
+  });
+
+  /** A press on « Créer » is not the field left and then a submit: it is one write. */
+  it('does not take a press on the form’s own button for the field left', async () => {
+    el<HTMLButtonElement>('[data-testid="http-collection-create-open"]').click();
+    await fixture.whenStable();
+    const submit = el<HTMLButtonElement>('[data-testid="http-create-submit"]');
+
+    await leave('http-create-input', 'Paiements', submit);
+    expect(http.callsOf('createCollection')).toEqual([]);
+    expect(el('[data-testid="http-create-input"]')).not.toBeNull();
+
+    submit.click();
+    await fixture.whenStable();
+    expect(http.callsOf('createCollection')).toEqual([['Paiements']]);
+
+    // From the button to the rest of the window, the form goes with what it holds.
+    el<HTMLButtonElement>('[data-testid="http-collection-create-open"]').click();
+    await fixture.whenStable();
+    el<HTMLInputElement>('[data-testid="http-create-input"]').value = 'Stocks';
+    el('[data-testid="http-create-submit"]').dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+    await fixture.whenStable();
+    expect(http.callsOf('createCollection')).toEqual([['Paiements'], ['Stocks']]);
+  });
+
+  it('renames to what was typed when the field is left, and writes nothing for the same name or none', async () => {
+    await action('Login', 'rename');
+    await leave('http-rename-input', 'Se connecter');
+    expect(http.callsOf('rename')).toEqual([[{ kind: 'request', id: 'Login' }, 'Se connecter']]);
+    expect(el('[data-testid="http-rename-input"]')).toBeNull();
+
+    await action('Factures', 'rename');
+    await leave('http-rename-input', 'Factures');
+    expect(el('[data-testid="http-rename-input"]')).toBeNull();
+
+    await action('Factures', 'rename');
+    await leave('http-rename-input', '  ');
+    expect(el('[data-testid="http-rename-input"]')).toBeNull();
+    expect(http.callsOf('rename')).toHaveLength(1);
+  });
+
+  it('cancels on Escape whatever was typed: nothing is written, the tree is as it was', async () => {
+    const escape = () => new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
+    const before = all('[data-testid="http-node"]').map((node) => node.dataset['id']);
+
+    el<HTMLButtonElement>('[data-testid="http-collection-create-open"]').click();
+    await fixture.whenStable();
+    const created = el<HTMLInputElement>('[data-testid="http-create-input"]');
+    created.value = 'Paiements';
+    created.dispatchEvent(escape());
+    await fixture.whenStable();
+
+    await action('Login', 'rename');
+    const renamed = el<HTMLInputElement>('[data-testid="http-rename-input"]');
+    renamed.value = 'Se connecter';
+    renamed.dispatchEvent(escape());
+    await fixture.whenStable();
+
+    expect(el('[data-testid="http-create-input"]')).toBeNull();
+    expect(el('[data-testid="http-rename-input"]')).toBeNull();
+    expect(http.callsOf('createCollection')).toEqual([]);
+    expect(http.callsOf('rename')).toEqual([]);
+    expect(all('[data-testid="http-node"]').map((node) => node.dataset['id'])).toEqual(before);
+  });
+
   it('creates a folder and a request under the row whose menu asked', async () => {
     await action('Auth', 'newFolder');
     expect(el('[data-testid="http-create-input"]').dataset['kind']).toBe('folder');
@@ -145,17 +275,54 @@ describe('HttpRailComponent', () => {
     await vi.waitFor(() => expect(TestBed.inject(HttpTabsStore).activeRequestId()).toMatch(/^request-/));
   });
 
-  /** « Nouvelle requête » made an HTTP `GET`, whatever was meant: its kind is chosen first. */
-  it('offers the three kinds of request in a row’s menu, and creates the one chosen under its name', async () => {
+  /**
+   * « Nouvelle requête » made an HTTP `GET`, whatever was meant: its kind is chosen first.
+   * Listed flat, the three kinds made eight entries of a menu opened to rename something:
+   * they are one entry, and a submenu beside it.
+   */
+  it('offers the three kinds of request behind one entry of a row’s menu, and creates the one chosen', async () => {
+    const actions = () => all('[data-testid="http-node-action"]').map((entry) => entry.dataset['action']);
     el<HTMLButtonElement>('[data-testid="http-node"][data-id="Auth"] [data-testid="http-node-menu"]').click();
     await fixture.whenStable();
-    expect(
-      all('[data-testid="http-node-action"]')
-        .map((entry) => entry.dataset['action'])
-        .slice(0, 4),
-    ).toEqual(['newHttp', 'newGraphql', 'newWebsocket', 'newFolder']);
+    const parent = el<HTMLButtonElement>('[data-testid="http-node-new"]');
+    expect(parent.textContent).toContain('Nouvelle requête');
+    expect(parent.getAttribute('aria-expanded')).toBe('false');
+    expect(actions()).toEqual(['newFolder', 'settings', 'rename', 'duplicate', 'delete']);
+
+    // The right arrow opens it as a click does, on its first kind; the left one comes back.
+    parent.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await fixture.whenStable();
+    expect(parent.getAttribute('aria-expanded')).toBe('true');
+    const kinds = () =>
+      all('[data-testid="http-node-new-menu"] [data-testid="http-node-action"]').map((entry) => [
+        entry.dataset['action'],
+        entry.textContent?.trim(),
+      ]);
+    expect(kinds()).toEqual([
+      ['newHttp', 'Requête HTTP'],
+      ['newGraphql', 'Requête GraphQL'],
+      ['newWebsocket', 'WebSocket'],
+    ]);
+    await vi.waitFor(() => expect(document.activeElement?.getAttribute('data-action')).toBe('newHttp'));
+    document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    await fixture.whenStable();
+    expect(el('[data-testid="http-node-new-menu"]')).toBeNull();
+    expect(document.activeElement).toBe(parent);
+
+    // Escape folds the submenu first, the menu next.
+    parent.click();
+    await fixture.whenStable();
+    await vi.waitFor(() => expect(document.activeElement?.getAttribute('data-action')).toBe('newHttp'));
+    document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await fixture.whenStable();
+    expect(el('[data-testid="http-node-new-menu"]')).toBeNull();
+    expect(el('[data-testid="http-node-menu-panel"]')).not.toBeNull();
+
+    parent.click();
+    await fixture.whenStable();
     el<HTMLButtonElement>('[data-testid="http-node-action"][data-action="newGraphql"]').click();
     await fixture.whenStable();
+    expect(el('[data-testid="http-node-menu-panel"]')).toBeNull();
     await type('http-create-input', 'Produits', 'http-create-submit');
 
     await action('API', 'newWebsocket');
@@ -286,12 +453,22 @@ describe('HttpRailComponent', () => {
     expect(TestBed.inject(HttpTabsStore).tabs()).toEqual([]);
   });
 
-  it('says how to begin when the library holds no collection', async () => {
+  /** « créez-en une avec ＋ » pointed at a glyph the area shows twice: the action is there itself. */
+  it('offers the first collection as a button when the library holds none', async () => {
     http.tree$ = { collections: [] };
     await TestBed.inject(HttpCollectionsStore).load();
     await fixture.whenStable();
 
-    expect(el('[data-testid="http-rail-empty"]')).not.toBeNull();
+    expect(el('[data-testid="http-rail-empty"]').textContent).toContain("Aucune collection pour l'instant.");
+    const create = el<HTMLButtonElement>('[data-testid="http-rail-empty-create"]');
+    expect(create.textContent?.trim()).toBe('Nouvelle collection');
+
+    create.click();
+    await fixture.whenStable();
+    expect(el('[data-testid="http-rail-empty"]')).toBeNull();
+    expect(document.activeElement).toBe(el('[data-testid="http-create-input"]'));
+    await type('http-create-input', 'Boutique', 'http-create-submit');
+    expect(http.callsOf('createCollection')).toEqual([['Boutique']]);
   });
 
   it('opens the history from its foot, and leaves it for a request opened from the tree', async () => {

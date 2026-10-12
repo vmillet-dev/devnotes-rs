@@ -6,7 +6,16 @@ import { $, $$, browser, expect } from '@wdio/globals';
 import type { HttpNode, HttpRequestDraft, HttpTree } from '@core/ipc/bindings';
 
 import { canvas } from '../pageobjects/canvas.page.js';
-import { eventually, press, readEach, reloadCanvas, setField, testid, viewportSize } from '../support/app.js';
+import {
+  blurField,
+  eventually,
+  press,
+  readEach,
+  reloadCanvas,
+  setField,
+  testid,
+  viewportSize,
+} from '../support/app.js';
 import { bridge } from '../support/bridge.js';
 import { echoSocket } from '../support/echo-socket.js';
 
@@ -73,8 +82,10 @@ describe('HTTP collections', () => {
       return undefined;
     };
     const rowNames = () => readEach(`${testid('http-node')} ${testid('http-node-name')}`, 'text');
+    /** The three kinds of request are one entry of a row's menu, and a submenu beside it. */
     const choose = async (row: WebdriverIO.Element, action: string) => {
       await row.$(testid('http-node-menu')).click();
+      if (/^new(Http|Graphql|Websocket)$/.test(action)) await $(testid('http-node-new')).click();
       await $(`${testid('http-node-action')}[data-action="${action}"]`).click();
     };
     const create = async (text: string) => {
@@ -102,27 +113,34 @@ describe('HTTP collections', () => {
       const tabCount = async () => (await $$(testid('http-tab')).getElements()).length;
       const before = await tabCount();
 
-      // The « + » of the tabs: three kinds, the first in focus — « + » then Enter is HTTP.
+      // « Nouvelle requête », at the end of the tabs: an HTTP request in one click, no menu.
       await $(testid('http-tab-new')).click();
+      await eventually(tabCount, (count) => count === before + 1, 'the HTTP request begun');
+      expect(await $(testid('http-new-kind-panel')).isExisting()).toBe(false);
+      await $(testid('http-method')).waitForDisplayed({ timeout: 10_000 });
+      expect(await $(testid('http-kind-badge')).isExisting()).toBe(false);
+
+      // Its chevron: the three kinds, the first in focus, the panel whole in the window.
+      await $(testid('http-tab-new-kind')).click();
       expect(await readEach(testid('http-new-kind'), '@data-kind')).toEqual(['http', 'graphql', 'websocket']);
       await eventually(
         () => browser.execute(() => document.activeElement?.getAttribute('data-kind') ?? null),
         (kind) => kind === 'http',
         'the HTTP entry in focus',
       );
-      await $(`${testid('http-new-kind')}[data-kind="http"]`).click();
-      await eventually(tabCount, (count) => count === before + 1, 'the HTTP request begun');
-      await $(testid('http-method')).waitForDisplayed({ timeout: 10_000 });
-      expect(await $(testid('http-kind-badge')).isExisting()).toBe(false);
-
-      await $(testid('http-tab-new')).click();
+      expect(
+        await browser.execute((panel: string) => {
+          const box = document.querySelector(panel)!.getBoundingClientRect();
+          return box.left >= 0 && box.right <= window.innerWidth && box.bottom <= window.innerHeight;
+        }, testid('http-new-kind-panel')),
+      ).toBe(true);
       await $(`${testid('http-new-kind')}[data-kind="graphql"]`).click();
       await $(testid('http-graphql')).waitForDisplayed({ timeout: 10_000 });
       // Its kind is said where a method would be chosen, and there is no menu to change it.
       expect(await $(testid('http-kind-badge')).getAttribute('data-kind')).toBe('graphql');
       expect(await $(testid('http-method')).isExisting()).toBe(false);
 
-      await $(testid('http-tab-new')).click();
+      await $(testid('http-tab-new-kind')).click();
       await $(`${testid('http-new-kind')}[data-kind="websocket"]`).click();
       await $(testid('http-socket-connect')).waitForDisplayed({ timeout: 10_000 });
       expect(await $(testid('http-kind-badge')).getAttribute('data-kind')).toBe('websocket');
@@ -149,6 +167,33 @@ describe('HTTP collections', () => {
           testid('http-node-menu-panel'),
         ),
       ).toEqual({ atTrigger: true, whole: true });
+      // The three kinds of request are one entry of it — listed flat they made eight — and
+      // a submenu beside the panel, on the workspace's side.
+      expect(
+        await readEach(`${testid('http-node-menu-panel')} ${testid('http-node-action')}`, '@data-action'),
+      ).toEqual(['newFolder', 'settings', 'rename', 'duplicate', 'delete']);
+      await $(testid('http-node-new')).click();
+      await $(testid('http-node-new-menu')).waitForDisplayed({ timeout: 10_000 });
+      expect(
+        await readEach(`${testid('http-node-new-menu')} ${testid('http-node-action')}`, '@data-action'),
+      ).toEqual(['newHttp', 'newGraphql', 'newWebsocket']);
+      expect(
+        await browser.execute(
+          (panel: string, submenu: string) => {
+            const beside = document.querySelector(panel)!.getBoundingClientRect();
+            const box = document.querySelector(submenu)!.getBoundingClientRect();
+            return (
+              box.left >= beside.right && box.right <= window.innerWidth && box.bottom <= window.innerHeight
+            );
+          },
+          testid('http-node-menu-panel'),
+          testid('http-node-new-menu'),
+        ),
+      ).toBe(true);
+      // Escape folds the submenu first, the menu next.
+      await press('Escape');
+      await $(testid('http-node-new-menu')).waitForExist({ reverse: true, timeout: 10_000 });
+      expect(await $(testid('http-node-menu-panel')).isExisting()).toBe(true);
       await press('Escape');
       await $(testid('http-node-menu-panel')).waitForExist({ reverse: true, timeout: 10_000 });
       await choose(await $(collection).getElement(), 'newGraphql');
@@ -180,6 +225,88 @@ describe('HTTP collections', () => {
         await eventually(tabCount, (count) => count === left - 1, 'a tab closed');
       }
       await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+    });
+
+    /**
+     * Two « + » a few pixels apart, one glyph for two jobs, and a name field that stayed open,
+     * unfocused, once left by a click: the rail's first steps hesitated.
+     */
+    it('offers the first collection from the empty rail, and keeps a name whose field is left', async () => {
+      // A library with no collection: what the scenarios before this one left is taken out.
+      for (const node of (await bridge.httpTree()).collections) {
+        await bridge.deleteHttpItem({ kind: 'collection', id: node.collection.id });
+      }
+      await press('1', ['Control']);
+      await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+      await press('3', ['Control']);
+      await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+      if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
+      const held = async () => outline(await bridge.httpTree());
+      const edge = async (key: 'ArrowLeft' | 'ArrowRight', times: number) => {
+        await browser.execute(
+          (selector: string) => (document.querySelector(selector) as HTMLElement | null)?.focus(),
+          testid('http-rail-edge'),
+        );
+        await browser.keys(Array.from({ length: times }, () => key));
+      };
+      const worded = () => $(testid('http-collection-create-open')).getAttribute('data-worded');
+
+      // The head's button is not the tabs' « + »: an icon at the floor, its name once it fits.
+      await edge('ArrowLeft', 30);
+      await eventually(worded, (seen) => seen === 'false', 'the icon at the floor of the rail');
+      await edge('ArrowRight', 4);
+      await eventually(worded, (seen) => seen === 'true', 'the button named on a wider rail');
+      expect(
+        await browser.execute(
+          (button: string, rail: string) =>
+            document.querySelector(button)!.getBoundingClientRect().right <=
+            document.querySelector(rail)!.getBoundingClientRect().right,
+          testid('http-collection-create-open'),
+          testid('http-rail'),
+        ),
+      ).toBe(true);
+      await edge('ArrowLeft', 30);
+
+      // The empty rail offers the action itself, and not a pointer to a glyph.
+      await $(testid('http-rail-empty-create')).click();
+      await create('Premiers pas');
+      await eventually(rowNames, (names) => names.includes('Premiers pas'), 'the first collection');
+      expect(await $(testid('http-rail-empty')).isExisting()).toBe(false);
+
+      // A name typed, then the field left for the rest of the window: created, once.
+      await $(testid('http-collection-create-open')).click();
+      await setField(testid('http-create-input'), 'Laissée');
+      await blurField();
+      await eventually(rowNames, (names) => names.includes('Laissée'), 'the collection whose field was left');
+      await $(testid('http-create-input')).waitForExist({ reverse: true, timeout: 10_000 });
+      expect(await held()).toEqual(['Premiers pas[]', 'Laissée[]']);
+
+      // A rename left the same way is written, and still there once the front end is rebuilt.
+      await choose((await named('Laissée'))!, 'rename');
+      await setField(testid('http-rename-input'), 'Gardée');
+      await blurField();
+      await eventually(rowNames, (names) => names.includes('Gardée'), 'the rename kept');
+      await $(testid('http-rename-input')).waitForExist({ reverse: true, timeout: 10_000 });
+      await reloadCanvas();
+      await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+      await eventually(rowNames, (names) => names.includes('Gardée'), 'the rename after a reload');
+      expect(await held()).toEqual(['Premiers pas[]', 'Gardée[]']);
+
+      // Escape is the way to cancel, whatever was typed: the tree is as it was.
+      await $(testid('http-collection-create-open')).click();
+      await setField(testid('http-create-input'), 'Jamais');
+      await press('Escape');
+      await $(testid('http-create-input')).waitForExist({ reverse: true, timeout: 10_000 });
+      await choose((await named('Gardée'))!, 'rename');
+      await setField(testid('http-rename-input'), 'Jamais');
+      await press('Escape');
+      await $(testid('http-rename-input')).waitForExist({ reverse: true, timeout: 10_000 });
+      expect(await rowNames()).toEqual(['Premiers pas', 'Gardée']);
+      expect(await held()).toEqual(['Premiers pas[]', 'Gardée[]']);
+
+      for (const node of (await bridge.httpTree()).collections) {
+        await bridge.deleteHttpItem({ kind: 'collection', id: node.collection.id });
+      }
     });
 
     it('builds a collection from the rail: a folder, two requests, one moved above the other', async () => {
@@ -510,7 +637,6 @@ describe('HTTP collections', () => {
       try {
         await eventually(viewportSize, (size) => size.width > 1500, 'a wide window');
         await $(testid('http-tab-new')).click();
-        await $(`${testid('http-new-kind')}[data-kind="http"]`).click();
         await $(`${testid('http-section')}[data-section="auth"]`).click();
         await $(testid('http-auth-inherited')).waitForDisplayed({ timeout: 10_000 });
         expect(await linesOf(testid('http-auth-inherited'))).toBe(1);

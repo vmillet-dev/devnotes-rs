@@ -15,18 +15,63 @@
 
 @if (menu.open()) {
   <div appMenuPanel class="panel" data-testid="http-node-menu-panel" [style]="panelStyle()">
-    @for (action of actions(); track action) {
-      <button
-        appMenuItem
-        type="button"
-        class="option"
-        data-testid="http-node-action"
-        [class.destructive]="action === 'delete'"
-        [attr.data-action]="action"
-        (click)="choose(action)"
-      >
-        {{ 'http.rail.actions.' + action | transloco }}
-      </button>
+    @for (entry of entries(); track entry) {
+      @if (entry === 'newRequest') {
+        <button
+          #parent
+          appMenuItem
+          type="button"
+          role="menuitem"
+          class="option parent"
+          data-testid="http-node-new"
+          aria-haspopup="menu"
+          [attr.aria-expanded]="submenuOpen()"
+          (click)="toggleSubmenu()"
+          (keydown.arrowright)="openSubmenu($event)"
+        >
+          <span class="option-label">{{ 'http.rail.actions.newRequest' | transloco }}</span>
+          <span aria-hidden="true">›</span>
+        </button>
+      } @else {
+        <button
+          appMenuItem
+          type="button"
+          role="menuitem"
+          class="option"
+          data-testid="http-node-action"
+          [class.destructive]="entry === 'delete'"
+          [attr.data-action]="entry"
+          (click)="choose(entry)"
+        >
+          {{ 'http.rail.actions.' + entry | transloco }}
+        </button>
+      }
     }
   </div>
+
+  <!-- A sibling of the panel, not a child: the panel's arrows would walk into it. -->
+  @if (submenuOpen()) {
+    <div
+      appMenuPanel
+      class="panel submenu"
+      data-testid="http-node-new-menu"
+      [attr.aria-label]="'http.rail.actions.newRequest' | transloco"
+      [style]="submenuStyle()"
+    >
+      @for (entry of kinds; track entry.kind) {
+        <button
+          appMenuItem
+          type="button"
+          role="menuitem"
+          class="option"
+          data-testid="http-node-action"
+          [attr.data-action]="entry.action"
+          (click)="choose(entry.action)"
+          (keydown.arrowleft)="closeSubmenu()"
+        >
+          {{ 'http.kinds.new.' + entry.kind | transloco }}
+        </button>
+      }
+    </div>
+  }
 }

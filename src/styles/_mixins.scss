@@ -687,7 +687,7 @@
 }
 
 // A request's method in its colour, as the HTTP rail and the open request write it: a word, not a
-// filled badge. `QUERY` is GraphQL's, `WS` a WebSocket's.
+// filled badge. `GQL` is GraphQL's, `WS` a WebSocket's.
 @mixin http-method-hues {
   color: var(--text-2);
 
@@ -711,7 +711,7 @@
     color: var(--red);
   }
 
-  &[data-method='QUERY'] {
+  &[data-method='GQL'] {
     color: var(--pink);
   }
 

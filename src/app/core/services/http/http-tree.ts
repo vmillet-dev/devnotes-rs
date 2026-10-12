@@ -19,7 +19,7 @@ export interface RailRow {
   /** The folder it sits in; `null` at a collection's root, and for a collection. */
   readonly folderId: string | null;
   readonly expanded: boolean;
-  /** A request's method, or `QUERY` and `WS`. */
+  /** A request's method, or `GQL` and `WS`. */
   readonly badge: string | null;
   readonly requestKind: RequestKind | null;
 }
