@@ -781,6 +781,20 @@ mod tests {
         );
     }
 
+    /// Its method and its status were columns the migration dropped, and nothing moved them
+    /// under the key: it opens all the same, as a `GET` with no status.
+    #[test]
+    fn a_summary_sealed_before_its_method_and_status_were_still_opens() {
+        let summary: HistorySummary = serde_json::from_str(
+            r#"{"name":"Ping","url":"https://api.exemple.fr","millis":12,"size":2,"failure":null}"#,
+        )
+        .unwrap();
+
+        assert_eq!(summary.method, HttpMethod::Get);
+        assert_eq!(summary.status, None);
+        assert_eq!(summary.name, "Ping");
+    }
+
     /// The limit, asserted rather than left to be discovered: the mask knows the secrets a
     /// request declares — its auth, its cookies — not one typed by hand in a parameter or a
     /// body. Those are kept, sealed like the rest of the record.

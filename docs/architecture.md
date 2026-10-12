@@ -1927,9 +1927,9 @@ is logged.
   failure) and the record an entry opens (the exchange, and the answer with its body cut to
   256 KB). Only the instant and the request it came from stay in the clear, for the order and
   the retention; `request_id` is `ON DELETE SET NULL`. ⚠️ The method and the status were
-  columns of their own until migration 17, which drops them and **empties the table**: SQL
-  holds no key to move them under, and an entry coming back as a `GET` it never was is worse
-  than thirty days of sends gone.
+  columns of their own until migration 17, which drops them. SQL holds no key to move them
+  under: an entry recorded before it reads as a `GET` with no status until the retention lets
+  go of it — thirty days at most, on an application nobody runs yet.
 - ⚠️ **Secrets are masked before they are sealed**, on both sides of the exchange. Sent
   (`history::mask`): `Authorization` keeps its scheme (`Bearer ••••••••`),
   `Proxy-Authorization` and `Cookie` lose their value, so does the API key, by the name
