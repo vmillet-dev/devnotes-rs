@@ -6,7 +6,16 @@ import {
   request as requestNode,
   sampleTree,
 } from '@testing/http-tree.fixture';
-import { dropMove, findRequest, keyMove, landing, railRows, refusal, savePlaces } from './http-tree';
+import {
+  dropMove,
+  findRequest,
+  keyMove,
+  landing,
+  railRows,
+  refusal,
+  requestsUnder,
+  savePlaces,
+} from './http-tree';
 
 const folder = (id: string): HttpItem => ({ kind: 'folder', id });
 const request = (id: string): HttpItem => ({ kind: 'request', id });
@@ -214,6 +223,26 @@ describe('a drop', () => {
     });
     expect(dropMove(sampleTree(), collection('API'), collection('Catalogue'), 'before')).toBeNull();
     expect(dropMove(sampleTree(), collection('API'), folder('Auth'), 'inside')).toBeNull();
+  });
+});
+
+describe('what a deletion takes', () => {
+  const taken = (item: HttpItem) => [...requestsUnder(sampleTree(), item)].sort();
+
+  it('is the request itself, all a folder holds at any depth, or all a collection holds', () => {
+    expect(taken(request('Login'))).toEqual(['Login']);
+    expect(taken(folder('Auth'))).toEqual(['Login', 'Logout']);
+    // Old sits in Archives, a folder of Factures.
+    expect(taken(folder('Factures'))).toEqual(['Old']);
+    expect(taken(folder('Archives'))).toEqual(['Old']);
+    expect(taken(collection('API'))).toEqual(['Health', 'Login', 'Logout', 'Old']);
+    expect(taken(collection('Flux'))).toEqual(['Live']);
+  });
+
+  it('is nothing for what the tree does not hold', () => {
+    expect(taken(request('Absente'))).toEqual([]);
+    expect(taken(folder('Absent'))).toEqual([]);
+    expect(taken(collection('Absente'))).toEqual([]);
   });
 });
 

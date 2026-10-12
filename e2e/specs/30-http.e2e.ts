@@ -348,6 +348,74 @@ describe('HTTP collections', () => {
     });
 
     /**
+     * Deleting a folder closed the tabs of its requests with what was typed in them, without a
+     * word: the confirmation counted what Rust deletes, and only the front knows what is unsaved.
+     */
+    it('warns that a deletion takes an open request with unsaved changes, and keeps it when cancelled', async () => {
+      const api = await bridge.createHttpCollection('Pertes');
+      const folder = await bridge.createHttpFolder(api.id, null, 'Brouillons');
+      const edited = await bridge.createHttpRequest(draft(api.id, folder.id, 'Ébauche'));
+      const calm = await bridge.createHttpRequest(draft(api.id, folder.id, 'Calme'));
+      await press('1', ['Control']);
+      await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+      await press('3', ['Control']);
+      await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+      if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
+      const node = (id: string) => `${testid('http-node')}[data-id="${id}"]`;
+      const tab = (id: string) => `${testid('http-tab')}[data-key="${id}"]`;
+      const ask = async (id: string) => {
+        await choose(await $(node(id)).getElement(), 'delete');
+        await $(testid('http-delete-confirm')).waitForDisplayed({ timeout: 10_000 });
+      };
+      const cancel = async () => {
+        await $(testid('http-delete-cancel')).click();
+        await $(testid('http-delete-confirm')).waitForExist({ reverse: true, timeout: 10_000 });
+      };
+
+      // One request open and left as it is, one open with a URL typed and not saved.
+      await $(`${node(calm.id)} ${testid('http-node-name')}`).click();
+      await $(tab(calm.id)).waitForDisplayed({ timeout: 10_000 });
+      await $(`${node(edited.id)} ${testid('http-node-name')}`).click();
+      await $(tab(edited.id)).waitForDisplayed({ timeout: 10_000 });
+      await setField(testid('http-url'), 'https://api.exemple.fr/pas-enregistree');
+      await $(`${tab(edited.id)} ${testid('http-tab-dirty')}`).waitForExist({ timeout: 10_000 });
+
+      // The folder: what Rust counts, and beside it the one tab that would lose its changes.
+      await ask(folder.id);
+      expect(await $(testid('http-delete-count')).isExisting()).toBe(true);
+      expect(await readEach(testid('http-delete-unsaved-name'), 'text')).toEqual(['Ébauche']);
+      expect((await $$(testid('http-delete-confirm')).getElements()).length).toBe(1);
+      await cancel();
+      // Cancelled: the tab is there, modified, with what was typed.
+      await $(tab(edited.id)).click();
+      expect(await $(testid('http-url')).getValue()).toBe('https://api.exemple.fr/pas-enregistree');
+      expect(await $(`${tab(edited.id)} ${testid('http-tab-dirty')}`).isExisting()).toBe(true);
+      expect(outline(await bridge.httpTree())).toContain('Pertes[Brouillons[Ébauche Calme]]');
+
+      // The whole collection says it too; the request's own row says it of itself, without a list.
+      await ask(api.id);
+      expect(await readEach(testid('http-delete-unsaved-name'), 'text')).toEqual(['Ébauche']);
+      await cancel();
+      await ask(edited.id);
+      expect(await $(testid('http-delete-unsaved')).isExisting()).toBe(true);
+      expect(await readEach(testid('http-delete-unsaved-name'), 'text')).toEqual([]);
+      await cancel();
+
+      // A tab that is open and not modified closes as before, without a word.
+      await ask(calm.id);
+      expect(await $(testid('http-delete-unsaved')).isExisting()).toBe(false);
+      await $(testid('http-delete-submit')).click();
+      await $(tab(calm.id)).waitForExist({ reverse: true, timeout: 10_000 });
+
+      // Told, and confirmed: the folder goes, and its tab with it.
+      await ask(folder.id);
+      await $(testid('http-delete-submit')).click();
+      await $(tab(edited.id)).waitForExist({ reverse: true, timeout: 10_000 });
+      expect(outline(await bridge.httpTree())).toContain('Pertes[]');
+      await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+    });
+
+    /**
      * Moving a row with `Alt` and the arrows worked, and was hard to follow: after a press,
      * nothing said which folder the row was now in. Each move is marked on the row and on what
      * holds it, and said; one that cannot be made is said too.

@@ -126,6 +126,26 @@ describe('HttpTabsStore', () => {
     expect(http.callsOf('createRequest').at(-1)?.[0]).toMatchObject({ kind: 'websocket' });
   });
 
+  /** A tab closed by a deletion took what was typed in it: the rail asks for these first. */
+  it('names the open tabs with unsaved changes among the requests a deletion takes', async () => {
+    http.seed('Logout');
+    await store().open('Login');
+    await store().open('Logout');
+    const among = (...ids: string[]) => store().unsavedAmong(new Set(ids));
+    expect(among('Login', 'Logout')).toEqual([]);
+
+    store().edit('Login', { name: 'Se connecter' });
+    expect(among('Login', 'Logout')).toEqual(['Se connecter']);
+    expect(among('Logout')).toEqual([]);
+
+    // A request never saved is in no folder: no deletion takes it.
+    store().newRequest();
+    expect(among('Login', 'Logout')).toEqual(['Se connecter']);
+
+    await store().save('Login');
+    expect(among('Login', 'Logout')).toEqual([]);
+  });
+
   it('keeps the bodies set aside when a request never saved takes its id', async () => {
     store().newRequest();
     const draft = store().activeKey()!;

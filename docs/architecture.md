@@ -1657,7 +1657,10 @@ method in its colour (`http-method-hues`), `GQL` for GraphQL and `WS` for a WebS
 
 - **A row's `⋯` is a component of its own** (`HttpNodeMenuComponent`, `MenuTriggerDirective` as a
   host directive), so a row listens to the document only while its menu is open. Creating and
-  renaming are a field in place; deleting first shows what goes with it, counted by Rust.
+  renaming are a field in place; deleting first shows what goes with it, counted by Rust —
+  and, **counted by the front**, the open tabs it would close with changes not saved
+  (`requestsUnder` in the tree, `HttpTabsStore.unsavedAmong`): Rust knows what is deleted,
+  only the front what is typed. One question, one more sentence, read as the question stands.
   ⚠️ Its panel is `position: fixed`, measured from the viewport: nothing between it and the
   page may carry a `transform`, which would become the box it is measured from — the host is
   centred on its row with a flex box for that reason.

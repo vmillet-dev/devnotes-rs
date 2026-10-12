@@ -388,6 +388,89 @@ describe('HttpRailComponent', () => {
     expect(el('[data-testid="http-delete-confirm"]')).toBeNull();
   });
 
+  /**
+   * Deleting a folder closed the tabs of its requests, a modified one like any other, with
+   * what was typed in it. Rust counts what is deleted; only the front knows what is unsaved.
+   */
+  describe('a deletion that takes open tabs with unsaved changes', () => {
+    const warning = () => el('[data-testid="http-delete-unsaved"]');
+    const names = () =>
+      all('[data-testid="http-delete-unsaved-name"]').map((entry) => entry.textContent?.trim());
+    const modify = async (id: string, renamed: string) => {
+      http.seed(id);
+      const tabs = TestBed.inject(HttpTabsStore);
+      await tabs.open(id);
+      tabs.edit(id, { name: renamed });
+      await fixture.whenStable();
+    };
+
+    it('says so for a folder, with the names, and still asks one question', async () => {
+      await modify('Login', 'Se connecter');
+      http.contentsAnswer = { folders: 0, requests: 2 };
+      await action('Auth', 'delete');
+
+      // A few words and the tab by name: a paragraph of it was a wall at the rail's floor.
+      expect(warning().querySelector('.confirm-unsaved-caption')?.textContent?.trim()).toBe(
+        'Modifications non enregistrées :',
+      );
+      expect(names()).toEqual(['Se connecter']);
+      expect(el('[data-testid="http-delete-confirm"]').getAttribute('aria-describedby')).toBe(warning().id);
+      expect(all('[data-testid="http-delete-confirm"]')).toHaveLength(1);
+      expect(el('[data-testid="http-delete-count"]').textContent?.trim()).toBe(
+        'Ses 2 requêtes partent avec.',
+      );
+
+      // Cancelled: the tab and what was typed in it are as they were.
+      el<HTMLButtonElement>('[data-testid="http-delete-cancel"]').click();
+      await fixture.whenStable();
+      expect(http.callsOf('delete')).toEqual([]);
+      expect(TestBed.inject(HttpTabsStore).active()?.draft.name).toBe('Se connecter');
+    });
+
+    it('counts a tab under a sub-folder, and every one a collection holds', async () => {
+      await modify('Old', 'Vieille');
+      await action('Factures', 'delete');
+      expect(names()).toEqual(['Vieille']);
+      el<HTMLButtonElement>('[data-testid="http-delete-cancel"]').click();
+      await fixture.whenStable();
+
+      await modify('Login', 'Se connecter');
+      await action('API', 'delete');
+      expect(names()).toEqual(['Vieille', 'Se connecter']);
+    });
+
+    it('says it of the request itself when its own row is deleted', async () => {
+      await modify('Login', 'Se connecter');
+      await action('Login', 'delete');
+
+      expect(warning().textContent?.replace('●', '').trim()).toBe('Modifications non enregistrées.');
+      expect(names()).toEqual([]);
+    });
+
+    it('says nothing for a tab that is open and not modified, nor for one elsewhere', async () => {
+      await TestBed.inject(HttpTabsStore).open('Login');
+      await fixture.whenStable();
+      await action('Auth', 'delete');
+      expect(warning()).toBeNull();
+      el<HTMLButtonElement>('[data-testid="http-delete-cancel"]').click();
+      await fixture.whenStable();
+
+      await modify('Login', 'Se connecter');
+      await action('Factures', 'delete');
+      expect(warning()).toBeNull();
+    });
+
+    it('reads the tabs as the question stands: one saved meanwhile is no longer a loss', async () => {
+      await modify('Login', 'Se connecter');
+      await action('Auth', 'delete');
+      expect(names()).toEqual(['Se connecter']);
+
+      await TestBed.inject(HttpTabsStore).save('Login');
+      await fixture.whenStable();
+      expect(warning()).toBeNull();
+    });
+  });
+
   it('moves a row with Alt and the arrows, renames on F2 and asks before Delete', async () => {
     name('Logout').dispatchEvent(
       new KeyboardEvent('keydown', { key: 'ArrowUp', altKey: true, bubbles: true }),

@@ -159,6 +159,7 @@
                 role="alertdialog"
                 data-testid="http-delete-confirm"
                 aria-labelledby="http-delete-question"
+                aria-describedby="http-delete-unsaved"
               >
                 <p id="http-delete-question" class="confirm-question">
                   {{ 'http.rail.confirm' | transloco: { name: row.name } }}
@@ -168,6 +169,31 @@
                     }}</span>
                   }
                 </p>
+                <!-- What Rust cannot count: a tab closed by the deletion took what was typed
+                     in it without a word. A note in the same question, not a second one. -->
+                @let lost = unsaved(row);
+                @if (lost.length > 0) {
+                  <div id="http-delete-unsaved" class="confirm-unsaved" data-testid="http-delete-unsaved">
+                    @if (row.kind === 'request') {
+                      <p class="confirm-unsaved-caption">
+                        <span class="confirm-unsaved-dot" aria-hidden="true">●</span>
+                        {{ 'http.rail.unsaved.self' | transloco }}
+                      </p>
+                    } @else {
+                      <p class="confirm-unsaved-caption">{{ 'http.rail.unsaved.inside' | transloco }}</p>
+                      <ul class="confirm-unsaved-names">
+                        @for (name of lost; track $index) {
+                          <li class="confirm-unsaved-name" [attr.title]="name">
+                            <span class="confirm-unsaved-dot" aria-hidden="true">●</span>
+                            <span class="confirm-unsaved-label" data-testid="http-delete-unsaved-name">{{
+                              name
+                            }}</span>
+                          </li>
+                        }
+                      </ul>
+                    }
+                  </div>
+                }
                 <div class="confirm-actions">
                   <button
                     type="button"

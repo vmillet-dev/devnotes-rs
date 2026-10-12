@@ -284,6 +284,38 @@ export function dropMove(
   return unchanged ? null : { kind: 'move', item: dragged, place: { collectionId, folderId, index: at } };
 }
 
+/** Every request a deletion takes: the request itself, or all a folder or a collection holds. */
+export function requestsUnder(tree: HttpTree, item: HttpItem): ReadonlySet<string> {
+  const found = new Set<string>();
+  const collect = (nodes: readonly HttpNode[]) => {
+    for (const node of nodes) {
+      if (node.kind === 'request') found.add(node.request.id);
+      else collect(node.children);
+    }
+  };
+  const within = (nodes: readonly HttpNode[]): boolean =>
+    nodes.some((node) => {
+      if (node.kind === 'request') {
+        if (item.kind !== 'request' || node.request.id !== item.id) return false;
+        found.add(node.request.id);
+        return true;
+      }
+      if (item.kind === 'folder' && node.folder.id === item.id) {
+        collect(node.children);
+        return true;
+      }
+      return within(node.children);
+    });
+  for (const { collection, children } of tree.collections) {
+    if (item.kind === 'collection') {
+      if (collection.id === item.id) collect(children);
+    } else if (within(children)) {
+      break;
+    }
+  }
+  return found;
+}
+
 /** A request as the tree holds it — its name and where it sits — or `null` once it is gone. */
 export function findRequest(tree: HttpTree, requestId: string): HttpRequestSummary | null {
   const walk = (nodes: readonly HttpNode[]): HttpRequestSummary | null => {
