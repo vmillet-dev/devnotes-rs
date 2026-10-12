@@ -925,7 +925,7 @@ describe('HTTP collections', () => {
       await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
     });
 
-    it('keeps the query and its table in step, takes a header, and saves on Ctrl+S', async () => {
+    it('keeps the query and its table in step, takes a header typed or picked from its list, and saves on Ctrl+S', async () => {
       const api = await bridge.createHttpCollection('Facturation');
       const created = await bridge.createHttpRequest(draft(api.id, null, 'Factures'));
       await press('3', ['Control']);
@@ -949,13 +949,31 @@ describe('HTTP collections', () => {
 
       await $(`${testid('http-section')}[data-section="headers"]`).click();
       await setField(`${testid('http-headers-table')} ${testid('http-kv-key')}`, 'Accept');
+      // Picked from the names' list as WebView2 does it: a keydown with no key, then the value.
+      await browser.execute(
+        (selector) => {
+          const field = document.querySelector<HTMLInputElement>(selector);
+          if (!field) return;
+          field.dispatchEvent(new Event('keydown', { bubbles: true }));
+          field.value = 'Content-Length';
+          field.dispatchEvent(new Event('input', { bubbles: true }));
+          field.dispatchEvent(new Event('keyup', { bubbles: true }));
+        },
+        `${testid('http-headers-table')} ${testid('http-kv-row')}:last-child ${testid('http-kv-key')}`,
+      );
+      await eventually(
+        () => readEach(`${testid('http-headers-table')} ${testid('http-kv-key')}`, 'value'),
+        (keys) => keys.join() === 'Accept,Content-Length,',
+        'the name picked from the list in its row',
+      );
+      expect(await $(testid('error-banner')).isExisting()).toBe(false);
       await press('s', ['Control']);
       await $(testid('http-tab-dirty')).waitForExist({ reverse: true, timeout: 10_000 });
 
       const saved = await bridge.httpRequest(created.id);
       expect(saved.document.url).toBe('{{baseUrl}}/invoices?page=1&limit=50');
       expect(saved.document.params?.map((row) => row.key)).toEqual(['page', 'limit']);
-      expect(saved.document.headers?.map((row) => row.key)).toEqual(['Accept']);
+      expect(saved.document.headers?.map((row) => row.key)).toEqual(['Accept', 'Content-Length']);
 
       const tab = `${testid('http-tab')}[data-key="${created.id}"]`;
       await $(`${tab} ${testid('http-tab-close')}`).click();

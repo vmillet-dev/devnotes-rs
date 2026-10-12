@@ -1,3 +1,4 @@
+import { ErrorHandler } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -217,6 +218,26 @@ describe('AppComponent', () => {
       expect(fixture.debugElement.query(By.directive(ToolsHomeComponent))).not.toBeNull();
       // The home took the request: its field has the focus, where a document holds it.
       expect(TestBed.inject(ToolsStore).searchWanted()).toBe(false);
+    });
+
+    /** Picking a header's name from its `<datalist>` threw « reading 'length' » from here. */
+    it('leaves alone the keyless keydown a suggestion picked from a list fires', async () => {
+      await withVault('unlocked');
+      const errors = vi.spyOn(TestBed.inject(ErrorHandler), 'handleError');
+      const settings = TestBed.inject(SettingsStore);
+      const railShown = settings.showLibraryRail();
+      press('Digit3');
+      await fixture.whenStable();
+
+      const field = document.createElement('input');
+      document.body.append(field);
+      field.dispatchEvent(new Event('keydown', { bubbles: true }));
+      field.remove();
+      await fixture.whenStable();
+
+      expect(errors).not.toHaveBeenCalled();
+      expect(TestBed.inject(AreaStore).current()).toBe('http');
+      expect(settings.showLibraryRail()).toBe(railShown);
     });
 
     it('answers no key behind the gate', async () => {

@@ -129,12 +129,20 @@ export function acceleratorFromEvent(event: KeyboardEvent): string | null {
 const MODIFIER_KEYS = new Set(['Control', 'Alt', 'AltGraph', 'Shift', 'Meta']);
 
 /**
+ * ⚠️ A suggestion picked from a `<datalist>` or an autofill makes Chromium fire a bare `Event`
+ * named `keydown` on the field: no `key`, no `code`, no modifier — and it bubbles to the document.
+ */
+export function isKeystroke(event: Event): event is KeyboardEvent {
+  return event instanceof KeyboardEvent;
+}
+
+/**
  * A canvas keystroke, modifiers first — `C`, `Ctrl+B`, `Delete`. The printed key, where a
  * global shortcut reads the position: someone looking at this window reads `C` off the keycap,
  * and on AZERTY position `KeyA` is the key labelled `Q`. `Ctrl` covers ⌘ too.
  */
-export function canvasKeystrokeFromEvent(event: KeyboardEvent): string | null {
-  if (MODIFIER_KEYS.has(event.key)) return null;
+export function canvasKeystrokeFromEvent(event: Event): string | null {
+  if (!isKeystroke(event) || MODIFIER_KEYS.has(event.key)) return null;
 
   const modifiers: string[] = [];
   if (event.ctrlKey || event.metaKey) modifiers.push('Ctrl');

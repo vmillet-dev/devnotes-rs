@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ToolsRepository } from '@core/data/tools.repository';
 import { IdInspection, IdKind, NanoAlphabet } from '@core/model/tool-answers.model';
+import { isKeystroke } from '@core/services/shortcuts/shortcut.model';
 import { liveResult } from '@core/services/tools/live-result';
 import { Tool, ToolResult } from '@core/services/tools/tool.model';
 import { toolState } from '@core/services/tools/tool-sessions';
@@ -180,9 +181,10 @@ export class IdentifiersToolComponent implements Tool {
     this.draw.update((draw) => draw + 1);
   }
 
-  protected onKeydown(event: KeyboardEvent): void {
-    if (event.key.toLowerCase() !== 'r' || event.ctrlKey || event.metaKey || event.altKey) return;
-    if (event.defaultPrevented || event.repeat || isTyping(event.target)) return;
+  protected onKeydown(event: Event): void {
+    if (!isKeystroke(event) || event.key.toLowerCase() !== 'r') return;
+    if (event.ctrlKey || event.metaKey || event.altKey || event.defaultPrevented) return;
+    if (event.repeat || isTyping(event.target)) return;
 
     event.preventDefault();
     this.regenerate();
