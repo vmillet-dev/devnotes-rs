@@ -1,6 +1,7 @@
 //! A fictitious person whose every identifier passes its own check: test data for a form or a
 //! database, drawn from a seed so that the same one comes back. Names come from pools shared
-//! between countries (`identity/data.rs`) and a country is a profile — a mix of pools, its
+//! between countries — files shipped beside the application and read there
+//! (`identity/data.rs`) — and a country is a profile — a mix of pools, its
 //! places, its formats (`identity/profile.rs`) — with the numbers it gives a person, a firm
 //! and an account (`identity/papers.rs`), each key computed in `identity/numbers.rs`. ⚠️ An
 //! identifier that encodes the person is computed from them, never drawn beside them: the
@@ -11,11 +12,14 @@ mod numbers;
 mod papers;
 mod profile;
 
+use std::path::Path;
+
 use chrono::{Datelike, NaiveDate};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-use self::data::{Land, Names, Place, Pool};
+use self::data::{Land, Library, Names, Place, Pool};
+pub use self::data::{ListProblem, UnreadableList};
 use self::papers::Bearer;
 use self::profile::Profile;
 use super::files::{self, FileProblem};
@@ -202,8 +206,24 @@ closed_enum! {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum PeopleExport {
-    Written { people: u32 },
-    Failed { problem: FileProblem },
+    Written {
+        people: u32,
+    },
+    Failed {
+        problem: FileProblem,
+    },
+    /// Nothing was written: a list the people are drawn from cannot be read.
+    Unreadable {
+        list: UnreadableList,
+    },
+}
+
+/// A person, or the list that kept one from being drawn.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum IdentityOutcome {
+    Drawn { answer: Box<IdentityAnswer> },
+    Unreadable { list: UnreadableList },
 }
 
 /// FNV-1a over the seed as it is written: « devnotes » is a seed like `42` is.
@@ -224,28 +244,26 @@ fn seed_text(seed: Option<&str>) -> String {
     u32::from_le_bytes(bytes).to_string()
 }
 
-struct Lists {
+/// What a person of one country is drawn from.
+struct Lists<'a> {
     country: Country,
     profile: &'static Profile,
-    names: Vec<(Pool, Names)>,
-    land: Land,
+    library: &'a Library,
+    land: &'a Land,
 }
 
-impl Lists {
-    fn of(country: Country) -> Self {
+impl<'a> Lists<'a> {
+    fn of(library: &'a Library, country: Country) -> Self {
         Self {
             country,
             profile: profile::of(country),
-            names: Pool::ALL.iter().map(|pool| (*pool, pool.names())).collect(),
-            land: data::land(country),
+            library,
+            land: library.land(country),
         }
     }
 
     fn names(&self, wanted: Pool) -> &Names {
-        self.names
-            .iter()
-            .find(|(pool, _)| *pool == wanted)
-            .map_or(&self.names[0].1, |(_, names)| names)
+        self.library.names(wanted)
     }
 }
 
@@ -287,7 +305,7 @@ fn email(given: &str, surname: &str, draw: &mut Draw) -> String {
 
 /// ⚠️ Every draw is made in one order, whatever was asked: a sex that is imposed still costs
 /// its draw, so that the same seed gives the same person but for what the options change.
-fn person(lists: &Lists, request: &IdentityRequest, year: i32, draw: &mut Draw) -> Identity {
+fn person(lists: &Lists<'_>, request: &IdentityRequest, year: i32, draw: &mut Draw) -> Identity {
     let profile = lists.profile;
     let drawn_sex = if draw.chance(0.5) {
         Sex::Female
@@ -405,6 +423,7 @@ fn people(
     countries: &[Country],
     count: u32,
     today: NaiveDate,
+    library: &Library,
 ) -> (String, Vec<Identity>) {
     let seed = seed_text(request.seed.as_deref());
     let mut draw = Draw::new(seed_number(&seed));
@@ -414,7 +433,10 @@ fn people(
             turns.push(*country);
         }
     }
-    let lists: Vec<Lists> = turns.into_iter().map(Lists::of).collect();
+    let lists: Vec<Lists<'_>> = turns
+        .into_iter()
+        .map(|country| Lists::of(library, country))
+        .collect();
     let count = usize::try_from(count.clamp(1, MAX_PEOPLE)).unwrap_or(1);
     let people = (0..count)
         .map(|at| person(&lists[at % lists.len()], request, today.year(), &mut draw))
@@ -424,8 +446,8 @@ fn people(
 
 /// `today` is handed in, so the tests fix it. ⚠️ Only its year is read: the same seed gives
 /// the same person all year, and the ages are the ones reached during it.
-pub fn generate(request: &IdentityRequest, today: NaiveDate) -> IdentityAnswer {
-    let (seed, mut people) = people(request, &[], 1, today);
+fn drawn(request: &IdentityRequest, today: NaiveDate, library: &Library) -> IdentityAnswer {
+    let (seed, mut people) = people(request, &[], 1, today, library);
     let person = people.remove(0);
     let unkeyed = person
         .identifiers
@@ -441,6 +463,17 @@ pub fn generate(request: &IdentityRequest, today: NaiveDate) -> IdentityAnswer {
         fiction_phones: profile::of(person.country).fiction_phones,
         unkeyed,
         person,
+    }
+}
+
+/// A person drawn from the lists in `lists`, the folder the application ships — or the list
+/// that cannot be read there.
+pub fn generate(request: &IdentityRequest, today: NaiveDate, lists: &Path) -> IdentityOutcome {
+    match data::library(lists) {
+        Ok(library) => IdentityOutcome::Drawn {
+            answer: Box::new(drawn(request, today, library)),
+        },
+        Err(list) => IdentityOutcome::Unreadable { list },
     }
 }
 
@@ -504,14 +537,14 @@ fn csv(people: &[Identity]) -> String {
 }
 
 /// What an export writes: a JSON array, or a CSV with its header.
-pub fn exported(
+fn exported(
     request: &IdentityRequest,
-    countries: &[Country],
-    count: u32,
-    format: PeopleFormat,
+    batch: &PeopleBatch,
     today: NaiveDate,
+    library: &Library,
 ) -> (String, u32) {
-    let (_, people) = people(request, countries, count, today);
+    let (_, people) = people(request, &batch.countries, batch.count, today, library);
+    let format = batch.format;
     let text = match format {
         PeopleFormat::Json => serde_json::to_string_pretty(&people).unwrap_or_default() + "\n",
         PeopleFormat::Csv => csv(&people),
@@ -535,8 +568,13 @@ pub fn export(
     batch: &PeopleBatch,
     path: &str,
     today: NaiveDate,
+    lists: &Path,
 ) -> PeopleExport {
-    let (text, people) = exported(request, &batch.countries, batch.count, batch.format, today);
+    let library = match data::library(lists) {
+        Ok(library) => library,
+        Err(list) => return PeopleExport::Unreadable { list },
+    };
+    let (text, people) = exported(request, batch, today, library);
     match files::write(path, text.as_bytes()) {
         Ok(()) => PeopleExport::Written { people },
         Err(problem) => PeopleExport::Failed { problem },
@@ -555,6 +593,26 @@ mod tests {
 
     fn today() -> NaiveDate {
         NaiveDate::from_ymd_opt(2026, 10, 12).unwrap()
+    }
+
+    /// A person from the lists the application ships.
+    fn generate(request: &IdentityRequest, today: NaiveDate) -> IdentityAnswer {
+        super::drawn(request, today, data::shipped())
+    }
+
+    fn exported(
+        request: &IdentityRequest,
+        countries: &[Country],
+        count: u32,
+        format: PeopleFormat,
+        today: NaiveDate,
+    ) -> (String, u32) {
+        let batch = PeopleBatch {
+            countries: countries.to_vec(),
+            count,
+            format,
+        };
+        super::exported(request, &batch, today, data::shipped())
     }
 
     fn asked_in(country: Country, seed: &str) -> IdentityRequest {
@@ -577,7 +635,7 @@ mod tests {
 
     /// As many people of a country as asked, a seed each, its lists read once.
     fn crowd(country: Country, count: u32) -> Vec<Identity> {
-        let lists = Lists::of(country);
+        let lists = Lists::of(data::shipped(), country);
         (0..count)
             .map(|seed| {
                 let seed = seed.to_string();
@@ -996,7 +1054,8 @@ mod tests {
     }
 
     fn place_of(country: Country, city: &str) -> Place {
-        *data::land(country)
+        *data::shipped()
+            .land(country)
             .places
             .iter()
             .find(|place| place.city == city)
@@ -1037,7 +1096,7 @@ mod tests {
             (Country::Ca, &["A9A 9A9"]),
         ];
         for (country, shapes) in POSTCODES {
-            let land = data::land(*country);
+            let land = data::shipped().land(*country);
             for person in &crowd(*country, 300) {
                 let address = &person.address;
                 assert!(
@@ -1289,8 +1348,10 @@ mod tests {
     /// shows, in about the stated proportions.
     #[test]
     fn two_thousand_people_of_each_country_carry_surnames_from_every_pool_in_about_its_share() {
-        let pools: Vec<(Pool, Names)> =
-            Pool::ALL.iter().map(|pool| (*pool, pool.names())).collect();
+        let pools: Vec<(Pool, &Names)> = Pool::ALL
+            .iter()
+            .map(|pool| (*pool, data::shipped().names(*pool)))
+            .collect();
         // A Polish woman's surname is looked up as the list writes it.
         let origin = |surname: &str| {
             let listed = surname
@@ -1352,7 +1413,11 @@ mod tests {
                 *born.entry(person.birth.city).or_default() += 1;
             }
 
-            assert_eq!(born.len(), data::land(country).places.len(), "{country}");
+            assert_eq!(
+                born.len(),
+                data::shipped().land(country).places.len(),
+                "{country}"
+            );
             let most = born.values().max().unwrap();
             assert!(*most < 80, "{country}: one place takes {most} of 1000");
             assert!(moved > 350 && moved < 650, "{country}: {moved} moved");
@@ -1493,12 +1558,14 @@ mod tests {
             format,
         };
 
+        let lists = data::shipped_folder();
         assert_eq!(
             export(
                 &asked("devnotes"),
                 &batch(PeopleFormat::Csv),
                 &path.to_string_lossy(),
-                today()
+                today(),
+                &lists
             ),
             PeopleExport::Written { people: 2 }
         );
@@ -1512,11 +1579,34 @@ mod tests {
                     .join("absent")
                     .join("people.json")
                     .to_string_lossy(),
-                today()
+                today(),
+                &lists
             ),
             PeopleExport::Failed {
                 problem: FileProblem::Unwritable
             }
         );
+    }
+
+    /// ⚠️ The lists are files beside the application, no longer part of it: a folder that does
+    /// not hold them is said — to the card and to an export, which then writes nothing.
+    #[test]
+    fn a_folder_without_its_lists_is_said_and_the_shipped_one_draws_the_same_person() {
+        let request = asked("devnotes");
+        assert_eq!(
+            super::generate(&request, today(), &data::shipped_folder()),
+            IdentityOutcome::Drawn {
+                answer: Box::new(generate(&request, today()))
+            }
+        );
+
+        // Asked first of a folder that holds nothing: nothing is kept of a failed reading.
+        let empty = tempfile::tempdir().unwrap();
+        let Err(list) = data::read(empty.path()) else {
+            panic!("an empty folder holds no list");
+        };
+        assert_eq!(list.problem, ListProblem::Missing);
+        assert_eq!(list.file, "pools/french.txt");
+        assert_eq!(list.folder, empty.path().to_string_lossy());
     }
 }

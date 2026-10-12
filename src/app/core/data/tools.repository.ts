@@ -35,7 +35,7 @@ import {
   JsonDiffRequest,
   LineBreaksAnswer,
   LineBreaksRequest,
-  IdentityAnswer,
+  IdentityOutcome,
   IdentityRequest,
   LoremAnswer,
   LoremRequest,
@@ -133,7 +133,7 @@ export class ToolsRepository {
     return unwrap('generate_json', await commands.generateJson(request));
   }
 
-  async generateIdentity(request: IdentityRequest): Promise<IdentityAnswer> {
+  async generateIdentity(request: IdentityRequest): Promise<IdentityOutcome> {
     return unwrap('generate_identity', await commands.generateIdentity(request));
   }
 

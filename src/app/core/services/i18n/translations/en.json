@@ -1610,7 +1610,12 @@
       "unkeyed": "No key to verify:",
       "countriesListed": "Countries:",
       "noFirmNumber": "No company number with a key in this country.",
-      "jsonFields": "Fields of the JSON and of the export: country, sex, surname, givenNames, birth (date, city, region), document, address (street, postcode, city, region, formatted), phone, mobile, email, bank (name, iban, bic, local), identifiers and company (name, identifiers)."
+      "jsonFields": "Fields of the JSON and of the export: country, sex, surname, givenNames, birth (date, city, region), document, address (street, postcode, city, region, formatted), phone, mobile, email, bank (name, iban, bic, local), identifiers and company (name, identifiers).",
+      "lists": {
+        "missing": "List not found: {{file}}.",
+        "damaged": "List unreadable: {{file}}.",
+        "where": "The lists are read from {{folder}}"
+      }
     },
     "lorem": {
       "name": "Lorem ipsum",

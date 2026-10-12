@@ -140,12 +140,23 @@ export class IdentityToolComponent implements Tool {
     seed: this.seed(),
   }));
 
-  protected readonly answer = liveResult(
+  private readonly outcome = liveResult(
     () => ({ ...this.request(), draw: this.draw() }),
     ({ draw: _draw, ...request }) => this.repository.generateIdentity(request),
   );
 
-  protected readonly person = computed(() => this.answer.value()?.person ?? null);
+  protected readonly answer = computed(() => {
+    const outcome = this.outcome.value();
+    return outcome?.kind === 'drawn' ? outcome.answer : null;
+  });
+
+  /** ⚠️ The lists are files beside the application: one that cannot be read is said, in place of a card. */
+  protected readonly unreadable = computed(() => {
+    const outcome = this.outcome.value();
+    return outcome?.kind === 'unreadable' ? outcome.list : null;
+  });
+
+  protected readonly person = computed(() => this.answer()?.person ?? null);
 
   /** Where a photo would be: the first letters of the first given name and of the surname. */
   protected readonly monogram = computed(() => {
@@ -214,7 +225,7 @@ export class IdentityToolComponent implements Tool {
   ]);
 
   readonly result = computed<ToolResult | null>(() => {
-    const answer = this.answer.value();
+    const answer = this.answer();
     if (!answer) return null;
     const { givenNames, surname } = answer.person;
     return {
@@ -298,7 +309,7 @@ export class IdentityToolComponent implements Tool {
   }
 
   protected async copyJson(): Promise<void> {
-    const json = this.answer.value()?.json;
+    const json = this.answer()?.json;
     if (json && (await this.clipboard.copy(json))) {
       this.status.notify({ key: 'tools.identity.jsonCopied' });
     }
@@ -306,7 +317,7 @@ export class IdentityToolComponent implements Tool {
 
   /** A batch is a file, written by Rust where the user says: a hundred people are no note. */
   protected async export(): Promise<void> {
-    const used = this.answer.value()?.seed ?? null;
+    const used = this.answer()?.seed ?? null;
     const path = await this.files.chooseDestination(`identities.${this.format()}`);
     if (path === null) return;
 
@@ -322,6 +333,10 @@ export class IdentityToolComponent implements Tool {
       this.status.notify({ key: 'tools.identity.exported', params: { count: written.people } });
     } else if (written?.kind === 'failed') {
       this.notifier.notify({ ref: { key: `tools.files.${written.problem}` } });
+    } else if (written?.kind === 'unreadable') {
+      this.notifier.notify({
+        ref: { key: `tools.identity.lists.${written.list.problem}`, params: { file: written.list.file } },
+      });
     }
   }
 

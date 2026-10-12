@@ -66,7 +66,7 @@
           [value]="seed() ?? ''"
           (input)="onSeed($event)"
         />
-        @let used = answer.value()?.seed ?? null;
+        @let used = answer()?.seed ?? null;
         @if (seed() === null && used !== null) {
           <span class="used" data-testid="identity-seed-used">{{
             'tools.identity.seedUsed' | transloco: { seed: used }
@@ -162,6 +162,19 @@
       </button>
     </div>
 
+    @if (unreadable(); as list) {
+      <div
+        class="unreadable"
+        role="alert"
+        data-testid="identity-unreadable"
+        [attr.data-problem]="list.problem"
+        [attr.data-file]="list.file"
+      >
+        <p class="problem">{{ 'tools.identity.lists.' + list.problem | transloco: { file: list.file } }}</p>
+        <p class="where">{{ 'tools.identity.lists.where' | transloco: { folder: list.folder } }}</p>
+      </div>
+    }
+
     @if (person(); as person) {
       <!-- ⚠️ It evokes a card and imitates none: no emblem, no flag, no machine-readable zone, no photo. -->
       <!-- The seed the person was drawn from: a typed seed is on screen before its person is. -->
@@ -169,7 +182,7 @@
         class="card"
         data-testid="identity-card"
         [attr.data-country]="person.country"
-        [attr.data-seed]="answer.value()?.seed"
+        [attr.data-seed]="answer()?.seed"
       >
         <span class="specimen" data-testid="identity-specimen" aria-hidden="true">{{
           'tools.identity.specimen' | transloco
@@ -275,14 +288,14 @@
       <div class="warning" role="note" data-testid="identity-warning">
         <p class="warning-title">{{ 'tools.identity.warning' | transloco }}</p>
         <p>{{ 'tools.identity.harmless' | transloco }}</p>
-        <p data-testid="identity-phones" [attr.data-fiction]="answer.value()?.fictionPhones">
+        <p data-testid="identity-phones" [attr.data-fiction]="answer()?.fictionPhones">
           {{
-            (answer.value()?.fictionPhones ? 'tools.identity.phonesFiction' : 'tools.identity.phonesMayRing')
+            (answer()?.fictionPhones ? 'tools.identity.phonesFiction' : 'tools.identity.phonesMayRing')
               | transloco
           }}
         </p>
         <p>{{ 'tools.identity.valid' | transloco }}</p>
-        @if (answer.value()?.unkeyed; as unkeyed) {
+        @if (answer()?.unkeyed; as unkeyed) {
           @if (unkeyed.length > 0) {
             <p class="listing" data-testid="identity-unkeyed">
               {{ 'tools.identity.unkeyed' | transloco }}

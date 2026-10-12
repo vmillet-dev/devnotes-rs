@@ -47,7 +47,7 @@ export const commands = {
 	describeColour: (request: ColourRequest) => typedError<ColourAnswer, AppError>(__TAURI_INVOKE("describe_colour", { request })),
 	convertData: (request: ConvertRequest) => typedError<ConvertAnswer, AppError>(__TAURI_INVOKE("convert_data", { request })),
 	generateJson: (request: GenerateRequest) => typedError<GenerateAnswer, AppError>(__TAURI_INVOKE("generate_json", { request })),
-	generateIdentity: (request: IdentityRequest) => typedError<IdentityAnswer, AppError>(__TAURI_INVOKE("generate_identity", { request })),
+	generateIdentity: (request: IdentityRequest) => typedError<IdentityOutcome, AppError>(__TAURI_INVOKE("generate_identity", { request })),
 	exportIdentities: (request: IdentityRequest, batch: PeopleBatch, path: string) => typedError<PeopleExport, AppError>(__TAURI_INVOKE("export_identities", { request, batch, path })),
 	loremIpsum: (request: LoremRequest) => typedError<LoremAnswer, AppError>(__TAURI_INVOKE("lorem_ipsum", { request })),
 	diffJson: (request: JsonDiffRequest) => typedError<JsonDiffAnswer, AppError>(__TAURI_INVOKE("diff_json", { request })),
@@ -1612,6 +1612,9 @@ export type IdentityAnswer = {
 	unkeyed: IdentifierKind[],
 };
 
+/**  A person, or the list that kept one from being drawn. */
+export type IdentityOutcome = { kind: "drawn"; answer: IdentityAnswer } | { kind: "unreadable"; list: UnreadableList };
+
 export type IdentityRequest = {
 	country: Country,
 	/**  `None` draws it. */
@@ -1979,6 +1982,8 @@ export type LineBreaksRequest = {
 
 export type LineEnding = "lf" | "crlf" | "cr";
 
+export type ListProblem = "missing" | "damaged";
+
 export type LoremAnswer = {
 	text: string,
 	seed: number,
@@ -2301,7 +2306,9 @@ export type PeopleBatch = {
 	format: PeopleFormat,
 };
 
-export type PeopleExport = { kind: "written"; people: number } | { kind: "failed"; problem: FileProblem };
+export type PeopleExport = { kind: "written"; people: number } | { kind: "failed"; problem: FileProblem } | 
+/**  Nothing was written: a list the people are drawn from cannot be read. */
+{ kind: "unreadable"; list: UnreadableList };
 
 export type PeopleFormat = "json" | "csv";
 
@@ -2903,6 +2910,14 @@ export type TrayLabels = {
 };
 
 export type UmaskReading = { kind: "empty" } | { kind: "read"; file: Mode; directory: Mode } | { kind: "refused"; problem: ModeProblem; at: number };
+
+/**  A list that could not be used: which one, and where it was looked for. */
+export type UnreadableList = {
+	problem: ListProblem,
+	/**  As it is named under the folder: `pools/french.txt`. */
+	file: string,
+	folder: string,
+};
 
 export type Unsupported = {
 	keyword: string,

@@ -1,6 +1,8 @@
 //! The Outils area: each tool a pure function of its module, a request in and an answer out.
 //! A tool's own failure — a line that does not parse — is part of its answer; `AppError` is left
-//! for the unexpected. No lock and no store: nothing here reads the library.
+//! for the unexpected. No lock and no store: nothing here reads the library. ⚠️ One tool reads
+//! files — the identity generator's lists, shipped as a resource — and takes the handle for
+//! where they are.
 
 pub mod bases;
 pub mod checks;
@@ -32,7 +34,9 @@ pub mod transfer;
 pub mod url_parts;
 pub mod zones;
 
-use tauri::{AppHandle, Runtime};
+use std::path::PathBuf;
+
+use tauri::{AppHandle, Manager, Runtime};
 
 use crate::error::{AppError, StorageError};
 
@@ -86,23 +90,45 @@ pub async fn encode_base64_file(path: String) -> Result<bases::Base64FileAnswer,
     off_thread(move || bases::encode_file(&path)).await
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn generate_identity(
-    request: identity::IdentityRequest,
-) -> Result<identity::IdentityAnswer, AppError> {
-    off_thread(move || identity::generate(&request, chrono::Local::now().date_naive())).await
+/// Where the lists of the identity tool are shipped: a folder of the application's resources.
+fn identity_lists<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, AppError> {
+    let resources = app
+        .path()
+        .resource_dir()
+        .map_err(|_| StorageError::Unavailable)?;
+    Ok(resources.join("identity"))
 }
 
 #[tauri::command]
 #[specta::specta]
-pub async fn export_identities(
+pub async fn generate_identity<R: Runtime>(
+    app: AppHandle<R>,
+    request: identity::IdentityRequest,
+) -> Result<identity::IdentityOutcome, AppError> {
+    let lists = identity_lists(&app)?;
+    off_thread(move || identity::generate(&request, chrono::Local::now().date_naive(), &lists))
+        .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn export_identities<R: Runtime>(
+    app: AppHandle<R>,
     request: identity::IdentityRequest,
     batch: identity::PeopleBatch,
     path: String,
 ) -> Result<identity::PeopleExport, AppError> {
-    off_thread(move || identity::export(&request, &batch, &path, chrono::Local::now().date_naive()))
-        .await
+    let lists = identity_lists(&app)?;
+    off_thread(move || {
+        identity::export(
+            &request,
+            &batch,
+            &path,
+            chrono::Local::now().date_naive(),
+            &lists,
+        )
+    })
+    .await
 }
 
 #[tauri::command]
