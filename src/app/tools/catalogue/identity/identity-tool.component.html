@@ -184,9 +184,6 @@
         [attr.data-country]="person.country"
         [attr.data-seed]="answer()?.seed"
       >
-        <span class="specimen" data-testid="identity-specimen" aria-hidden="true">{{
-          'tools.identity.specimen' | transloco
-        }}</span>
         <header class="card-head">
           <span class="card-kind">{{ 'tools.identity.cardKind' | transloco }}</span>
           <span class="card-country">{{ 'tools.identity.countries.' + person.country | transloco }}</span>
@@ -244,7 +241,18 @@
             </div>
             @for (row of personal(); track row.id) {
               <div class="fact wide">
-                <dt>{{ row.labelKey | transloco }}</dt>
+                <dt>
+                  {{ row.labelKey | transloco }}
+                  @if (row.mark; as mark) {
+                    <span
+                      class="mark"
+                      data-testid="identity-mark"
+                      [attr.data-mark]="mark"
+                      [attr.title]="'tools.identity.marks.' + mark + 'Title' | transloco"
+                      >{{ 'tools.identity.marks.' + mark | transloco }}</span
+                    >
+                  }
+                </dt>
                 <dd class="mono" data-testid="identity-personal" [attr.data-kind]="row.id">
                   {{ row.value }}
                   <app-copy-value [value]="row.value" [what]="row.labelKey | transloco" [compact]="true" />
@@ -270,11 +278,18 @@
         <section class="block" data-testid="identity-block" [attr.data-block]="block.id">
           <h3 class="block-title">{{ 'tools.identity.blocks.' + block.id | transloco }}</h3>
           @for (row of block.rows; track row.id) {
-            <app-result-row
-              [attr.data-field]="row.id"
-              [name]="row.labelKey | transloco"
-              [value]="row.value"
-            />
+            <app-result-row [attr.data-field]="row.id" [name]="row.labelKey | transloco" [value]="row.value">
+              @if (row.mark; as mark) {
+                <span
+                  rowBadge
+                  class="mark"
+                  data-testid="identity-mark"
+                  [attr.data-mark]="mark"
+                  [attr.title]="'tools.identity.marks.' + mark + 'Title' | transloco"
+                  >{{ 'tools.identity.marks.' + mark | transloco }}</span
+                >
+              }
+            </app-result-row>
           }
           @if (block.id === 'company' && firmHasNoNumber()) {
             <p class="none" data-testid="identity-no-firm-number">
@@ -283,40 +298,6 @@
           }
         </section>
       }
-
-      <!-- No range is kept for fiction but for a phone number and an e-mail domain: said, as the QR tool carries its own. -->
-      <div class="warning" role="note" data-testid="identity-warning">
-        <p class="warning-title">{{ 'tools.identity.warning' | transloco }}</p>
-        <p>{{ 'tools.identity.harmless' | transloco }}</p>
-        <p data-testid="identity-phones" [attr.data-fiction]="answer()?.fictionPhones">
-          {{
-            (answer()?.fictionPhones ? 'tools.identity.phonesFiction' : 'tools.identity.phonesMayRing')
-              | transloco
-          }}
-        </p>
-        <p>{{ 'tools.identity.valid' | transloco }}</p>
-        @if (answer()?.unkeyed; as unkeyed) {
-          @if (unkeyed.length > 0) {
-            <p class="listing" data-testid="identity-unkeyed">
-              {{ 'tools.identity.unkeyed' | transloco }}
-              @for (kind of unkeyed; track kind) {
-                <span class="listed">{{
-                  ('tools.identity.identifiers.' + kind | transloco) + ($last ? '' : ', ')
-                }}</span>
-              }
-            </p>
-          }
-        }
-        <p class="listing" data-testid="identity-countries">
-          {{ 'tools.identity.countriesListed' | transloco }}
-          @for (code of countryCodes; track code) {
-            <span class="listed">{{
-              ('tools.identity.countries.' + code | transloco) + ($last ? '' : ', ')
-            }}</span>
-          }
-        </p>
-        <p>{{ 'tools.identity.jsonFields' | transloco }}</p>
-      </div>
     }
   </section>
 </div>

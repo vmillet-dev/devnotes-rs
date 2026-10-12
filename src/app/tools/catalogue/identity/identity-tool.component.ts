@@ -61,11 +61,18 @@ export const PEOPLE_BOUNDS = { min: 1, max: 100 } as const;
 /** The seed a sample draws from: the same person for whoever opens the tool. */
 const SAMPLE_SEED = 'devnotes';
 
+/**
+ * What a developer does differently with the value: a phone that may ring at someone's, a
+ * number that is a format with no key to check it by. Said on its row, not in a note under all.
+ */
+type Mark = 'mayRing' | 'unkeyed';
+
 interface Row {
   readonly id: string;
   /** A translation key, or the identifier's own name: a « SIRET » is called so everywhere. */
   readonly labelKey: string;
   readonly value: string;
+  readonly mark: Mark | null;
 }
 
 /** The whole years between a birth date and now, read as calendar dates. */
@@ -78,7 +85,7 @@ export function ageOn(birth: string, now: Date): number {
 /**
  * Rust draws the person and computes every number; this draws the card. ⚠️ It **evokes** an
  * identity card and imitates none: a monogram where a photo would be, no emblem, no
- * machine-readable zone, and « Spécimen » printed across — test data, not a document to pass off.
+ * machine-readable zone.
  * Nothing here is a secret: the options are the session's, the person is an output.
  */
 @Component({
@@ -183,11 +190,17 @@ export class IdentityToolComponent implements Tool {
   protected readonly contact = computed<readonly Row[]>(() => {
     const person = this.person();
     if (!person) return [];
+    const phones = this.answer()?.fictionPhones ? null : 'mayRing';
     return [
-      { id: 'address', labelKey: 'tools.identity.fields.address', value: person.address.formatted },
-      { id: 'phone', labelKey: 'tools.identity.fields.phone', value: person.phone },
-      { id: 'mobile', labelKey: 'tools.identity.fields.mobile', value: person.mobile },
-      { id: 'email', labelKey: 'tools.identity.fields.email', value: person.email },
+      {
+        id: 'address',
+        labelKey: 'tools.identity.fields.address',
+        value: person.address.formatted,
+        mark: null,
+      },
+      { id: 'phone', labelKey: 'tools.identity.fields.phone', value: person.phone, mark: phones },
+      { id: 'mobile', labelKey: 'tools.identity.fields.mobile', value: person.mobile, mark: phones },
+      { id: 'email', labelKey: 'tools.identity.fields.email', value: person.email, mark: null },
     ];
   });
 
@@ -196,11 +209,13 @@ export class IdentityToolComponent implements Tool {
     if (!bank) return [];
     // A country without an IBAN shows what it writes instead, and no empty row.
     return [
-      { id: 'bank', labelKey: 'tools.identity.fields.bank', value: bank.name },
+      { id: 'bank', labelKey: 'tools.identity.fields.bank', value: bank.name, mark: null },
       ...(bank.iban === null
         ? []
-        : [{ id: 'iban', labelKey: 'tools.identity.fields.iban', value: bank.iban }]),
-      ...(bank.bic === null ? [] : [{ id: 'bic', labelKey: 'tools.identity.fields.bic', value: bank.bic }]),
+        : [{ id: 'iban', labelKey: 'tools.identity.fields.iban', value: bank.iban, mark: null }]),
+      ...(bank.bic === null
+        ? []
+        : [{ id: 'bic', labelKey: 'tools.identity.fields.bic', value: bank.bic, mark: null }]),
       ...this.named(bank.local),
     ];
   });
@@ -209,7 +224,7 @@ export class IdentityToolComponent implements Tool {
     const company = this.person()?.company;
     if (!company) return [];
     return [
-      { id: 'company', labelKey: 'tools.identity.fields.company', value: company.name },
+      { id: 'company', labelKey: 'tools.identity.fields.company', value: company.name, mark: null },
       ...this.named(company.identifiers),
     ];
   });
@@ -340,11 +355,14 @@ export class IdentityToolComponent implements Tool {
     }
   }
 
+  /** Rust names the numbers of this card that carry no key; this only marks their rows. */
   private named(identifiers: readonly Identifier[]): Row[] {
+    const unkeyed = this.answer()?.unkeyed ?? [];
     return identifiers.map((identifier) => ({
       id: identifier.kind,
       labelKey: `tools.identity.identifiers.${identifier.kind}`,
       value: identifier.value,
+      mark: unkeyed.includes(identifier.kind) ? 'unkeyed' : null,
     }));
   }
 }

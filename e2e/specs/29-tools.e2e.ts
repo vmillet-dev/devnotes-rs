@@ -1207,7 +1207,7 @@ describe('The tools', () => {
       await openTool('identity');
       await $(testid('identity-card')).waitForDisplayed({ timeout: 10_000 });
 
-      // The sample's seed draws the same person for everyone; « Spécimen » is printed across the card.
+      // The sample's seed draws the same person for everyone.
       await $(testid('tool-sample')).click();
       await eventually(
         () => $(testid('identity-seed')).getValue(),
@@ -1221,7 +1221,8 @@ describe('The tools', () => {
         (seed) => seed === 'devnotes',
         'the person of the sample',
       );
-      expect(await $(testid('identity-specimen')).isExisting()).toBe(true);
+      // France: its phones in a range kept for fiction, a key on every number — nothing marked.
+      expect(await $(testid('identity-mark')).isExisting()).toBe(false);
       const first = await eventually(
         iban,
         (text) => /^FR\d{2}( [0-9A-Z]{4}){5} [0-9A-Z]{3}$/.test(text),
@@ -1305,8 +1306,10 @@ describe('The tools', () => {
       const iban = await value('iban');
       expect(iban.startsWith('IT')).toBe(true);
       const italianNames = await named();
-      // No range is kept for fiction there: the note says a number may ring.
-      expect(await $(testid('identity-phones')).getAttribute('data-fiction')).toBe('false');
+      // No range is kept for fiction there: its phones are marked as ones that may ring.
+      expect(await $(`[data-field="phone"] ${testid('identity-mark')}`).getAttribute('data-mark')).toBe(
+        'mayRing',
+      );
 
       // The United States: a routing number where an IBAN would be, and no number with a key for a firm.
       await choose('US');
@@ -1316,7 +1319,11 @@ describe('The tools', () => {
       expect(await value('routingNumber')).toMatch(/^\d{9}$/);
       await $(testid('identity-no-firm-number')).waitForDisplayed({ timeout: 10_000 });
       expect(await $(`${testid('identity-personal')}[data-kind="ssn"]`).getText()).toMatch(/987-65-432\d/);
-      expect(await $(testid('identity-phones')).getAttribute('data-fiction')).toBe('true');
+      expect(await $(`[data-field="phone"] ${testid('identity-mark')}`).isExisting()).toBe(false);
+      // A social security number is a format with no key: marked so on the card.
+      expect(await $(`${testid('identity-card')} ${testid('identity-mark')}`).getAttribute('data-mark')).toBe(
+        'unkeyed',
+      );
 
       // The Italian IBAN is one « Luhn et IBAN » finds valid.
       await openTool('checks');

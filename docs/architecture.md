@@ -1116,8 +1116,8 @@ is corrected or a list completed without building the application again.
   organisationsnummer, the Canadian SIN.
 - ⚠️ **What has no key is said, not dressed up** (`papers::UNKEYED`,
   `IdentityAnswer::unkeyed`): a National Insurance number, a company number, a KvK-nummer, a
-  sort code and an account number are formats, and the tool's note names those the card
-  shows. A country whose firms have no number with a key — the United States, Canada —
+  sort code and an account number are formats, and each the card shows carries « sans clé »
+  on its row, its title saying why. A country whose firms have no number with a key — the United States, Canada —
   answers none, and the block says so rather than show a field made up.
 - **Harmless where a range is kept for it**: `example.com`, `.org`, `.net` everywhere; a
   phone number in the block the regulator keeps for fiction in **France** (ARCEP's blocks, one
@@ -1126,14 +1126,18 @@ is corrected or a list completed without building the application again.
   (`555-01xx` in the place's area code); the ten social security numbers the United States
   keeps for advertisements (`987-65-4320` to `4329`), and a Canadian number starting with a
   `0`, which Canada gives nobody. ⚠️ Elsewhere a phone number of the right shape may ring at
-  someone's (`Profile::fiction_phones`, said in the note), and no range exists for an IBAN or
-  a tax number: one that passes its key may be someone's.
+  someone's (`Profile::fiction_phones`): the phone and the mobile carry « peut sonner » on their
+  rows. No range exists for an IBAN or a tax number: one that passes its key may be someone's.
+- **Said where it changes something, not in a note under the card**: the tool is for
+  developers, and a band of warnings — the data is for tests, what « valide » means, the
+  countries, the JSON's fields — said what the card, the country menu and the JSON already
+  say. Two facts change what is done with a value, and they are marks on its row.
 - ⚠️ **Written from memory, not from a register**: the towns' codes — INSEE, the Italian land
   registry —, the area codes and the banks' codes were not checked against their official
   tables, which would mean fetching them. A wrong one leaves a number that still passes its
   key, and names another town.
 - ⚠️ **The card evokes one and imitates none**: a monogram where a photo would be, no emblem,
-  no flag bar, no machine-readable zone, and « Spécimen » printed across it. A number that
+  no flag bar, no machine-readable zone, and nothing printed across it. A number that
   is the person's own is on the card, **under the name its country gives it** — « Codice
   fiscale », « BSN », « Sort code » are names, written the same in both languages; the rest
   is three blocks — contact, bank, company — each value copied with a click.
