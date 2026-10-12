@@ -1194,11 +1194,12 @@ describe('The tools', () => {
         identifiers: { kind: string; value: string }[];
       }
       const iban = () => $(`[data-field="iban"] ${testid('output-value')}`).getText();
-      const person = async (): Promise<Drawn> => {
+      // ⚠️ The clipboard may still hold the JSON of a scenario before: this person's is the one with their IBAN.
+      const person = async (shown: string): Promise<Drawn> => {
         await $(testid('identity-copy-json')).click();
         const json = await eventually(
           clipboardText,
-          (text) => text?.startsWith('{') === true,
+          (text) => text?.includes(`"${shown}"`) === true,
           'the person as JSON',
         );
         return JSON.parse(json ?? '{}') as Drawn;
@@ -1214,13 +1215,19 @@ describe('The tools', () => {
         'the seed of the sample',
       );
       await $(testid('identity-seed-pinned')).waitForDisplayed({ timeout: 10_000 });
+      // ⚠️ The seed is in its field before its person is on the card: the card says whose it is.
+      await eventually(
+        () => $(testid('identity-card')).getAttribute('data-seed'),
+        (seed) => seed === 'devnotes',
+        'the person of the sample',
+      );
       expect(await $(testid('identity-specimen')).isExisting()).toBe(true);
       const first = await eventually(
         iban,
         (text) => /^FR\d{2}( [0-9A-Z]{4}){5} [0-9A-Z]{3}$/.test(text),
         'an IBAN',
       );
-      const drawn = await person();
+      const drawn = await person(first);
       expect(drawn.bank.iban).toBe(first);
       expect(await $(testid('identity-surname')).getText()).toContain(drawn.surname);
 

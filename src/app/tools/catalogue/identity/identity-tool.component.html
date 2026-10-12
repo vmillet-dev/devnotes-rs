@@ -164,7 +164,13 @@
 
     @if (person(); as person) {
       <!-- ⚠️ It evokes a card and imitates none: no emblem, no flag, no machine-readable zone, no photo. -->
-      <article class="card" data-testid="identity-card" [attr.data-country]="person.country">
+      <!-- The seed the person was drawn from: a typed seed is on screen before its person is. -->
+      <article
+        class="card"
+        data-testid="identity-card"
+        [attr.data-country]="person.country"
+        [attr.data-seed]="answer.value()?.seed"
+      >
         <span class="specimen" data-testid="identity-specimen" aria-hidden="true">{{
           'tools.identity.specimen' | transloco
         }}</span>

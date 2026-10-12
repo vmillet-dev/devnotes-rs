@@ -225,6 +225,7 @@ describe('IdentityToolComponent', () => {
     const card = harness.element('[data-testid="identity-card"]');
 
     expect(card.dataset['country']).toBe('FR');
+    expect(card.dataset['seed']).toBe('2676318943');
     expect(text(harness, 'identity-monogram')).toBe('ÉL');
     expect(text(harness, 'identity-surname')).toContain('Lefèvre');
     expect(text(harness, 'identity-given')).toContain('Élise, Marie');
