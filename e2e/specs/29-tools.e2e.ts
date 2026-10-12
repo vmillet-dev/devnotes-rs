@@ -10,6 +10,7 @@ import {
   clipboardText,
   eventually,
   pickChoice,
+  preferenceWritten,
   press,
   readEach,
   reloadCanvas,
@@ -222,6 +223,65 @@ describe('The tools', () => {
         (recents) => recents.join() === ['http-status', ...[...opened].reverse().slice(0, 4)].join(),
         'five recents on the home',
       );
+    });
+
+    /**
+     * Thirty-two tools, and the five used every day were found again each time through a
+     * category or the search: « Récents » moves with every tool opened.
+     */
+    it('stars a tool from its header and another from its row, finds them after a refresh, and narrows the home to them', async () => {
+      const favourites = () => readEach(testid('tools-favourite'), '@data-tool');
+      const entries = () => readEach(testid('tools-entry'), '@data-tool');
+      const star = (tool: string) => $(`${testid('tools-entry-star')}[data-tool="${tool}"]`);
+      const starred = () => readEach(`${testid('tools-entry-star')}[aria-pressed="true"]`, '@data-tool');
+
+      // Whatever a run before left, nothing is starred to begin with.
+      for (const tool of await starred()) await star(tool).click();
+      await eventually(starred, (none) => none.length === 0, 'nothing starred to begin with');
+      expect(await $(testid('tools-rail-favourites')).isExisting()).toBe(false);
+      expect(await favourites()).toEqual([]);
+
+      // From the tool's own header, then from a row of the home without opening that tool.
+      await openTool('hash');
+      await $(testid('tool-favourite')).click();
+      await eventually(
+        () => $(testid('tool-favourite')).getAttribute('aria-pressed'),
+        (pressed) => pressed === 'true',
+        'the star of the open tool on',
+      );
+      await $(testid('tool-back')).click();
+      await star('url-codec').click();
+      await eventually(
+        favourites,
+        (tools) => tools.join() === 'hash,url-codec',
+        'the two favourites, in the order they were starred',
+      );
+      expect(await $(testid('tool-body')).isExisting()).toBe(false);
+      // A favourite has its chip above: it is not repeated among the recents.
+      expect(await readEach(testid('tools-recent'), '@data-tool')).not.toContain('hash');
+
+      // Kept with the application: the page built again, they are where they were.
+      await preferenceWritten('devnotes.favouriteTools', JSON.stringify(['hash', 'url-codec']));
+      await reloadCanvas();
+      await $(testid('tools-page')).waitForDisplayed({ timeout: 10_000 });
+      await eventually(
+        favourites,
+        (tools) => tools.join() === 'hash,url-codec',
+        'the favourites after a refresh',
+      );
+
+      // The rail counts them, and narrows the home to them as a category does.
+      expect(await $(testid('tools-rail-favourites')).getText()).toContain('2');
+      await $(testid('tools-rail-favourites')).click();
+      await eventually(entries, (tools) => tools.join() === 'hash,url-codec', 'the home narrowed to them');
+
+      // Unstarred from their rows: the entry goes with the last one, and the catalogue is whole again.
+      await star('hash').click();
+      await eventually(entries, (tools) => tools.join() === 'url-codec', 'one favourite left');
+      await star('url-codec').click();
+      await $(testid('tools-rail-favourites')).waitForExist({ reverse: true, timeout: 10_000 });
+      await eventually(entries, (tools) => tools.length > 20, 'the whole catalogue again');
+      expect(await favourites()).toEqual([]);
     });
 
     /** The slug is a row of the case converter, and the URL parser a tab of the URL tool; the diff joined from Comparer. */

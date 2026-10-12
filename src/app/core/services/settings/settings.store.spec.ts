@@ -129,6 +129,24 @@ describe('SettingsStore', () => {
     expect(createStore().timeZones()).toEqual(['UTC', 'America/New_York', 'Asia/Tokyo']);
   });
 
+  /** Ids, never what a tool holds: read back one by one, each once. */
+  it('reads the starred tools back, dropping what is no id of a tool', () => {
+    preferences().write(
+      SETTINGS_KEYS.favouriteTools,
+      JSON.stringify(['hash', 42, '', 'url-codec', 'hash', '../etc', 'Has Spaces', { id: 'case' }]),
+    );
+
+    expect(createStore().favouriteTools()).toEqual(['hash', 'url-codec']);
+  });
+
+  it('starts with no favourite when the file holds no list', () => {
+    preferences().write(SETTINGS_KEYS.favouriteTools, '{"hash": true}');
+    expect(createStore().favouriteTools()).toEqual([]);
+
+    preferences().write(SETTINGS_KEYS.favouriteTools, '{not json');
+    expect(createStore().favouriteTools()).toEqual([]);
+  });
+
   it('starts with no recent tool when the file holds no list', () => {
     preferences().write(SETTINGS_KEYS.recentTools, '{not json');
 

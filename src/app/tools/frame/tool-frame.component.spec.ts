@@ -50,6 +50,29 @@ describe('ToolFrameComponent', () => {
     expect(fixture.nativeElement.querySelector('[data-testid="fake-tool"]').textContent).toBe('typed');
   });
 
+  it('stars the tool from its header, a toggle that says where it stands', async () => {
+    const store = TestBed.inject(ToolsStore);
+    const star = button('tool-favourite');
+    expect(star.getAttribute('aria-pressed')).toBe('false');
+    expect(star.getAttribute('aria-label')).toBe('Favori');
+    expect(star.getAttribute('title')).toBe('Ajouter aux favoris');
+    expect(star.querySelector('svg')!.getAttribute('fill')).toBe('none');
+
+    star.click();
+    await fixture.whenStable();
+    expect(store.favourites()).toEqual(['hash']);
+    expect(star.getAttribute('aria-pressed')).toBe('true');
+    expect(star.getAttribute('title')).toBe('Retirer des favoris');
+    expect(star.classList.contains('on')).toBe(true);
+    // The same drawing, full: on is not said by a colour alone.
+    expect(star.querySelector('svg')!.getAttribute('fill')).toBe('currentColor');
+
+    star.click();
+    await fixture.whenStable();
+    expect(store.favourites()).toEqual([]);
+    expect(star.getAttribute('aria-pressed')).toBe('false');
+  });
+
   it("carries the tool's own actions, as the tool says they stand", async () => {
     button('tool-action-swap').click();
     expect(tool()!.swapped()).toBe(true);

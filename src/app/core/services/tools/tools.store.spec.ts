@@ -1,5 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { PreferencesService } from '@core/services/preferences/preferences.service';
+import { SETTINGS_KEYS } from '@core/services/settings/app-settings.model';
 import { provideAppTesting } from '@testing/testing.providers';
 import { KEPT_RECENT_TOOLS, MAX_RECENT_TOOLS } from './tool.model';
 import { ToolSessions } from './tool-sessions';
@@ -50,6 +52,42 @@ describe('ToolsStore', () => {
     store.open('http-status', '404');
     store.home();
     expect(store.entry()).toBeNull();
+  });
+
+  /** « Récents » moves with every tool opened: the five used every day are starred instead. */
+  it('stars a tool and unstars it, in the order they were starred, kept with the application', () => {
+    store.toggleFavourite('hash');
+    store.toggleFavourite('case');
+    store.toggleFavourite('lorem');
+    expect(store.favourites()).toEqual(['hash', 'case', 'lorem']);
+
+    store.toggleFavourite('case');
+    expect(store.favourites()).toEqual(['hash', 'lorem']);
+    // Starred again, it goes last: the order is the order of starring.
+    store.toggleFavourite('case');
+    expect(store.favourites()).toEqual(['hash', 'lorem', 'case']);
+
+    // Ids, and nothing a tool holds.
+    expect(TestBed.inject(PreferencesService).read(SETTINGS_KEYS.favouriteTools)).toBe(
+      JSON.stringify(['hash', 'lorem', 'case']),
+    );
+  });
+
+  it('widens a home narrowed to the favourites once the last one is unstarred', () => {
+    store.toggleFavourite('hash');
+    store.toggleFavourite('case');
+    store.home('favourites');
+
+    store.toggleFavourite('hash');
+    expect(store.category()).toBe('favourites');
+    store.toggleFavourite('case');
+    expect(store.category()).toBeNull();
+
+    // A category chosen is left alone.
+    store.toggleFavourite('hash');
+    store.home('crypto');
+    store.toggleFavourite('hash');
+    expect(store.category()).toBe('crypto');
   });
 
   it('goes home, to the whole catalogue or to one category of it', () => {

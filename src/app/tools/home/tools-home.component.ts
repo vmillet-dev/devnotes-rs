@@ -17,11 +17,14 @@ import { ClockService } from '@core/services/time/clock.service';
 import { ReferenceHit, referenceSearch } from '@core/services/tools/reference-search';
 import { referenceQueryKey } from '@core/services/tools/reference.model';
 import {
+  FAVOURITES,
   MAX_RECENT_TOOLS,
   TOOL_CATALOGUE,
   TOOL_CATEGORIES,
   ToolCategory,
   ToolDefinition,
+  ToolFilter,
+  favouritesAmong,
   toolMatches,
 } from '@core/services/tools/tool.model';
 import { ToolSessions } from '@core/services/tools/tool-sessions';
@@ -69,35 +72,57 @@ export class ToolsHomeComponent {
 
   protected readonly searching = computed(() => this.store.search().trim() !== '');
 
-  /** The category showing while nothing on screen says so: the rail is hidden, and no search overrides it. */
+  /** In the order they were starred; an id the catalogue no longer has is dropped. */
+  protected readonly favourites = computed(() => favouritesAmong(this.catalogue, this.store.favourites()));
+  protected readonly starred = computed(() => new Set(this.favourites().map((tool) => tool.id)));
+
+  /** What the home is narrowed to, a search aside: the favourites only while there is one. */
+  private readonly only = computed<ToolFilter | null>(() => {
+    const filter = this.store.category();
+    return filter === FAVOURITES && this.favourites().length === 0 ? null : filter;
+  });
+
+  /** The filter showing while nothing on screen says so: the rail is hidden, and no search overrides it. */
   protected readonly hiddenCategory = computed(() =>
-    this.settings.showLibraryRail() || this.searching() ? null : this.store.category(),
+    this.settings.showLibraryRail() || this.searching() ? null : this.only(),
   );
 
   protected readonly panels = computed(() => {
     this.translation();
     const query = this.store.search();
-    const only = this.searching() ? null : this.store.category();
+    const only = this.searching() ? null : this.only();
+    const starred = this.starred();
 
-    return TOOL_CATEGORIES.filter((category) => only === null || category === only)
+    return TOOL_CATEGORIES.filter((category) => only === null || only === FAVOURITES || category === only)
       .map((category) => ({
         category,
         icon: CATEGORY_ICONS[category],
-        tools: this.catalogue.filter((tool) => tool.category === category && this.matches(tool, query)),
+        tools: this.catalogue.filter(
+          (tool) =>
+            tool.category === category &&
+            (only !== FAVOURITES || starred.has(tool.id)) &&
+            this.matches(tool, query),
+        ),
       }))
       .filter((panel) => panel.tools.length > 0);
   });
 
-  /** More are kept than shown, for the rail: here, the five opened last. */
-  protected readonly recents = computed(() =>
-    this.store
+  /**
+   * More are kept than shown, for the rail: here, the five opened last — a favourite aside,
+   * which has its chip above already.
+   */
+  protected readonly recents = computed(() => {
+    const starred = this.starred();
+    return this.store
       .recents()
       .flatMap((recent) => {
         const tool = this.catalogue.find((candidate) => candidate.id === recent.id);
-        return tool ? [{ tool, when: relativeTimeRef(new Date(recent.at), this.clock.now()) }] : [];
+        return tool && !starred.has(tool.id)
+          ? [{ tool, when: relativeTimeRef(new Date(recent.at), this.clock.now()) }]
+          : [];
       })
-      .slice(0, MAX_RECENT_TOOLS),
-  );
+      .slice(0, MAX_RECENT_TOOLS);
+  });
 
   private readonly inReferences = referenceSearch(this.catalogue, this.store.search);
   protected readonly references = this.inReferences.found;
@@ -132,6 +157,10 @@ export class ToolsHomeComponent {
         afterNextRender(() => this.searchField().nativeElement.focus(), { injector: this.injector });
       });
     });
+  }
+
+  protected filterLabel(filter: ToolFilter): string {
+    return filter === FAVOURITES ? 'tools.favourites.title' : `tools.categories.${filter}`;
   }
 
   protected onSearch(event: Event): void {

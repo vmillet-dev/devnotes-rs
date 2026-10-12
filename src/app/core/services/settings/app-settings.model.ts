@@ -75,6 +75,8 @@ export interface AppSettings {
   readonly area: Area;
   /** The tools opened last, newest first: which and when, nothing typed into them. */
   readonly recentTools: readonly RecentTool[];
+  /** The tools starred, in the order they were: ids, never what a tool holds. */
+  readonly favouriteTools: readonly string[];
   readonly showPinnedFirst: boolean;
   /** Read by Rust at launch, before the front end exists: `backup::wanted`. */
   readonly automaticBackups: boolean;
@@ -116,6 +118,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   httpRequestShare: HTTP_REQUEST_SHARE.auto,
   area: AREAS[0],
   recentTools: [],
+  favouriteTools: [],
   showPinnedFirst: true,
   automaticBackups: true,
   copyConfirmation: true,

@@ -1,7 +1,12 @@
 import { Injectable, Signal, computed, effect, inject, signal } from '@angular/core';
 import { AREAS } from '@core/services/areas/area.model';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
-import { KEPT_RECENT_TOOLS, RecentTool, isRecentTool } from '@core/services/tools/tool.model';
+import {
+  KEPT_RECENT_TOOLS,
+  MAX_FAVOURITE_TOOLS,
+  RecentTool,
+  isRecentTool,
+} from '@core/services/tools/tool.model';
 import {
   AppSettings,
   DEFAULT_SETTINGS,
@@ -81,6 +86,23 @@ const asRecentTools: SettingCodec<readonly RecentTool[]> = {
   format: (value) => JSON.stringify(value),
 };
 
+/** Ids alone, each once: which of them the catalogue still has is for whoever lists them to say. */
+const asToolIds: SettingCodec<readonly string[]> = {
+  parse: (stored) => {
+    try {
+      const value: unknown = JSON.parse(stored);
+      if (!Array.isArray(value)) return null;
+      const ids = value.filter(
+        (id): id is string => typeof id === 'string' && /^[a-z][a-z0-9-]{0,63}$/.test(id),
+      );
+      return [...new Set(ids)].slice(0, MAX_FAVOURITE_TOOLS);
+    } catch {
+      return null;
+    }
+  },
+  format: (value) => JSON.stringify(value),
+};
+
 /** Names alone, each once: which of them the database knows is Rust's to say, not the file's. */
 const asTimeZones: SettingCodec<readonly string[]> = {
   parse: (stored) => {
@@ -143,6 +165,7 @@ export class SettingsStore {
   readonly httpRequestShare = this.setting('httpRequestShare', asShare);
   readonly area = this.setting('area', asOneOf(AREAS));
   readonly recentTools = this.setting('recentTools', asRecentTools);
+  readonly favouriteTools = this.setting('favouriteTools', asToolIds);
   readonly showPinnedFirst = this.setting('showPinnedFirst', asBoolean);
   readonly automaticBackups = this.setting('automaticBackups', asBoolean);
   readonly copyConfirmation = this.setting('copyConfirmation', asBoolean);

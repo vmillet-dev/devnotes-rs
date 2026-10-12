@@ -143,6 +143,40 @@ describe('ToolsRailComponent', () => {
     expect(ids('tools-rail-recent', 'tool')).toEqual(['f', 'e', 'd', 'c', 'b']);
   });
 
+  it('offers the favourites above every tool once there is one, with their count', async () => {
+    const entry = () => link('[data-testid="tools-rail-favourites"]');
+    expect(entry()).toBeNull();
+
+    store.toggleFavourite('hash');
+    store.toggleFavourite('case');
+    // An id the catalogue no longer has is not counted.
+    store.toggleFavourite('gone');
+    await fixture.whenStable();
+    expect(entry().textContent).toContain('Favoris');
+    expect(entry().textContent).toContain('2');
+    const rail: HTMLElement = fixture.nativeElement.querySelector('[data-testid="tools-rail"]');
+    expect(
+      entry().compareDocumentPosition(rail.querySelector('[data-testid="tools-rail-all"]')!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    // It narrows the home as a category does, and is then the one row highlighted.
+    entry().click();
+    await fixture.whenStable();
+    expect(store.category()).toBe('favourites');
+    expect(entry().getAttribute('aria-current')).toBe('page');
+    expect(link('[data-testid="tools-rail-all"]').getAttribute('aria-current')).toBeNull();
+
+    // It stays with a tool open, and goes with the last favourite.
+    store.open('line-breaks');
+    await fixture.whenStable();
+    expect(entry().getAttribute('aria-current')).toBeNull();
+    store.toggleFavourite('hash');
+    store.toggleFavourite('case');
+    await fixture.whenStable();
+    expect(entry()).toBeNull();
+  });
+
   it('is headed by the switch between areas', () => {
     link('[data-area="notes"]').click();
 

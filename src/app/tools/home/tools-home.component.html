@@ -9,7 +9,7 @@
   @if (hiddenCategory(); as category) {
     <span class="filtered" data-testid="tools-category-shown">
       <span aria-hidden="true">›</span>
-      {{ 'tools.categories.' + category | transloco }}
+      {{ filterLabel(category) | transloco }}
     </span>
     <button type="button" class="back" data-testid="tools-category-clear" (click)="store.home()">
       {{ 'tools.all' | transloco }}
@@ -44,6 +44,27 @@
 </p>
 
 <div class="body">
+  @if (favourites().length > 0 && !searching()) {
+    <section class="recents" aria-labelledby="tools-favourites-title">
+      <h2 id="tools-favourites-title" class="section-title">{{ 'tools.favourites.title' | transloco }}</h2>
+      <div class="recent-row">
+        @for (tool of favourites(); track tool.id) {
+          <button
+            type="button"
+            class="recent"
+            data-testid="tools-favourite"
+            [attr.data-tool]="tool.id"
+            [attr.data-category]="tool.category"
+            (click)="store.open(tool.id)"
+          >
+            <span class="hue-dot" aria-hidden="true"></span>
+            {{ 'tools.' + tool.id + '.name' | transloco }}
+          </button>
+        }
+      </div>
+    </section>
+  }
+
   @if (recents().length > 0 && !searching()) {
     <section class="recents" aria-labelledby="tools-recents-title">
       <h2 id="tools-recents-title" class="section-title">{{ 'tools.recents' | transloco }}</h2>
@@ -81,25 +102,42 @@
         </h2>
         @for (tool of panel.tools; track tool.id) {
           @let first = tool.id === firstTool();
-          <button
-            type="button"
-            class="tool"
-            data-result
-            data-testid="tools-entry"
-            [attr.data-tool]="tool.id"
-            [attr.data-first]="first ? '' : null"
-            (click)="store.open(tool.id)"
-          >
-            <span class="tool-name"
-              >{{ 'tools.' + tool.id + '.name' | transloco }}
-              @if (first) {
-                <kbd class="enter" data-testid="tools-first-result" [title]="'tools.enterOpens' | transloco"
-                  >↵</kbd
-                >
-              }
-            </span>
-            <span class="tool-line">{{ 'tools.' + tool.id + '.description' | transloco }}</span>
-          </button>
+          @let isStarred = starred().has(tool.id);
+          @let name = 'tools.' + tool.id + '.name' | transloco;
+          <!-- Two layers, as a note's card: a button cannot sit inside the row's own. -->
+          <div class="tool-row" [class.starred]="isStarred">
+            <button
+              type="button"
+              class="tool"
+              data-result
+              data-testid="tools-entry"
+              [attr.data-tool]="tool.id"
+              [attr.data-first]="first ? '' : null"
+              (click)="store.open(tool.id)"
+            >
+              <span class="tool-name"
+                >{{ name }}
+                @if (first) {
+                  <kbd class="enter" data-testid="tools-first-result" [title]="'tools.enterOpens' | transloco"
+                    >↵</kbd
+                  >
+                }
+              </span>
+              <span class="tool-line">{{ 'tools.' + tool.id + '.description' | transloco }}</span>
+            </button>
+            <button
+              type="button"
+              class="star"
+              data-testid="tools-entry-star"
+              [attr.data-tool]="tool.id"
+              [attr.aria-pressed]="isStarred"
+              [attr.aria-label]="'tools.favourites.of' | transloco: { name: name }"
+              [attr.title]="(isStarred ? 'tools.favourites.remove' : 'tools.favourites.add') | transloco"
+              (click)="store.toggleFavourite(tool.id)"
+            >
+              <app-icon name="star" [filled]="isStarred" />
+            </button>
+          </div>
         }
       </section>
     }
