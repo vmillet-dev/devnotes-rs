@@ -10,6 +10,7 @@ import {
   clipboardText,
   eventually,
   pickChoice,
+  preferenceWritten,
   press,
   readEach,
   reloadCanvas,
@@ -260,6 +261,7 @@ describe('The tools', () => {
       expect(await readEach(testid('tools-recent'), '@data-tool')).not.toContain('hash');
 
       // Kept with the application: the page built again, they are where they were.
+      await preferenceWritten('devnotes.favouriteTools', JSON.stringify(['hash', 'url-codec']));
       await reloadCanvas();
       await $(testid('tools-page')).waitForDisplayed({ timeout: 10_000 });
       await eventually(
