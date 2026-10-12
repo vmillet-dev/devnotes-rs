@@ -1,4 +1,3 @@
-import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -41,33 +40,17 @@ let aFileHasRun = false;
 async function activate(browser: WebdriverIO.Browser): Promise<void> {
   if (process.platform !== 'darwin') return;
 
-  const active = () => browser.execute(() => document.hasFocus());
-  const settled = () => browser.waitUntil(active, { timeout: 3_000 }).catch(() => false);
-  console.log(`[activate] before: ${await active()}`);
-
   await browser.executeAsync((done: (value: unknown) => void) => {
     const tauri = (window as unknown as Record<string, any>)['__TAURI__'];
     tauri.window
       .getCurrentWindow()
       .setFocus()
       .then(() => done(null))
-      .catch((error: unknown) => done(String(error)));
+      .catch(() => done(null));
   });
-  await settled();
-  console.log(`[activate] after setFocus: ${await active()}`);
-
-  if (!(await active())) {
-    try {
-      execFileSync('osascript', [
-        '-e',
-        'tell application "System Events" to set frontmost of (first process whose name is "devnotes") to true',
-      ]);
-    } catch (error) {
-      console.log(`[activate] System Events refused: ${String(error)}`);
-    }
-    await settled();
-    console.log(`[activate] after System Events: ${await active()}`);
-  }
+  await browser.waitUntil(() => browser.execute(() => document.hasFocus()), {
+    timeoutMsg: 'the window never became the active one',
+  });
 }
 
 export const config: WebdriverIO.Config = {

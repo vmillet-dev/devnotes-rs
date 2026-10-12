@@ -5760,3 +5760,11 @@ On Linux the runner is wrapped in `xvfb-run`: WebKitGTK needs an X server, and i
 service that spawns the application, so the `DISPLAY` has to exist for the whole process rather
 than for one command. `logLevel` defaults to `warn`; a session that refuses to open is
 diagnosed by re-running the job with `E2E_LOG_LEVEL=trace`.
+
+On macOS nothing wraps the runner — a hosted Mac has a session of its own — but the
+application is started by another process, and macOS does not bring such a window forward.
+⚠️ WebKit matches `:focus` in the active window only: the search field took the caret and
+kept its resting border, and one scenario in 479 said so. `wdio.conf.ts` therefore asks for
+the focus before each file (`setFocus`, a permission only the e2e capability carries) and
+waits for `document.hasFocus()` — a window that never comes forward fails there, by name,
+rather than in whichever scenario reads a focus style.
