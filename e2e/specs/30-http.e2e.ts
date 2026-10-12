@@ -1333,7 +1333,7 @@ describe('HTTP collections', () => {
         await $(`${testid('http-node')}[data-id="${created.id}"] ${testid('http-node-name')}`).click();
         await $(testid('http-response-idle')).waitForDisplayed({ timeout: 10_000 });
 
-        /** The two heights and the share the line says, read in one pass. */
+        /** The two heights, the box they share and the share the line says, read in one pass. */
         const split = () =>
           browser.execute(
             (editor: string, pane: string, line: string) => ({
@@ -1343,6 +1343,7 @@ describe('HTTP collections', () => {
               response: Math.round(
                 document.querySelector(pane)!.parentElement!.getBoundingClientRect().height,
               ),
+              box: Math.round(document.querySelector(line)!.parentElement!.getBoundingClientRect().height),
               share: Number(document.querySelector(line)!.getAttribute('data-share')),
             }),
             testid('http-request-editor'),
@@ -1358,13 +1359,18 @@ describe('HTTP collections', () => {
           await press(key);
         };
         /**
-         * One key on the line, then the share it leads to. ⚠️ Waited for key by key: the page
-         * redraws after a key, not during it, and two keys read as one gave the state between.
+         * One key on the line, then where it leads. ⚠️ Waited for key by key, and for the panes
+         * as well as the share: the page redraws after a key, not during it, and a share read
+         * alone was answered before the two heights had followed it.
          */
         const move = async (key: string) => {
-          const before = (await split()).share;
+          const before = await split();
           await onLine(key);
-          return eventually(split, (now) => now.share !== before, `the line moved by ${key}`);
+          return eventually(
+            split,
+            (now) => now.share !== before.share && now.request !== before.request,
+            `the line moved by ${key} from ${JSON.stringify(before)}`,
+          );
         };
         // Whatever a run before left, it starts from the automatic share.
         await onLine('Enter');
@@ -1439,8 +1445,12 @@ describe('HTTP collections', () => {
         await $(testid('http-history')).waitForExist({ reverse: true, timeout: 10_000 });
 
         // Enter on the line is its double-click: back to the automatic share.
-        expect((await move('Enter')).share).toBe(0);
-        expect((await split()).request).toBe(auto.request);
+        await onLine('Enter');
+        await eventually(
+          split,
+          (now) => now.share === 0 && now.request === auto.request,
+          'the automatic share again',
+        );
 
         const tab = `${testid('http-tab')}[data-key="${created.id}"]`;
         await $(`${tab} ${testid('http-tab-close')}`).click();
