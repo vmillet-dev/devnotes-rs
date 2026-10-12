@@ -88,7 +88,7 @@ Principles:
 
 - A preference is applied on a button via `SettingsDraftStore` (only theme and density preview); native services read `SettingsStore`, never the draft. Global shortcuts are first come, first served (`set_global_shortcuts` answers what it could not take) and captured by `KeyboardEvent.code`. → "Preferences", "Shortcuts: two vocabularies, two storage paths".
 - Window geometry is remembered without `VISIBLE` (`WINDOW_STATE_FLAGS`); the window starts hidden and is shown from `setup`. A silenced update is a version written down (`skippedUpdate`). → "Window geometry", "Application updates".
-- **Three platforms** — Windows, Linux, macOS — each in the CI and release matrices. ⚠️ No Mac is at hand: macOS-only code sits behind `cfg!(target_os = "macos")` wherever the API exists elsewhere, so every platform compiles and lints it and only the macOS runners execute it. ⌘Q is our own entry in the menu bar (`desktop`), the Dock's icon is `RunEvent::Reopen`. → "System tray", "Leaving with requests not saved", "Releasing".
+- **Three platforms** — Windows, Linux, macOS — each in the CI and release matrices. ⚠️ No Mac is at hand: `#[cfg(target_os = "macos")]` code is compiled, linted and run by the macOS legs of CI alone (`test-rust` runs Clippy there too). ⌘Q is our own entry in the menu bar (`desktop`), the Dock's icon is `RunEvent::Reopen`. → "System tray", "Leaving with requests not saved", "Releasing".
 
 ### i18n, accessibility, theming
 

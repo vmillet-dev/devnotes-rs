@@ -4034,8 +4034,8 @@ shell because any area can be the one on screen).
   system's, so Rust still holds no string — and replaces that one entry, the last of the
   application's submenu, with ours: it goes through `request_quit` like the two above. A
   Tauri that lays its menu out otherwise is not guessed at: the swap is skipped and logged.
-  ⚠️ The function is called behind `cfg!(target_os = "macos")`, not `#[cfg]`: it is compiled
-  and linted on every platform, and only a Mac runs it.
+  ⚠️ That code is `#[cfg(target_os = "macos")]`, like the `Reopen` arm: no other platform
+  compiles it, so the macOS leg of `test-rust` runs Clippy as well — the lint job is Linux's.
 - ⚠️ `HttpLeaveStore` exists from the first render and resolves the HTTP stores **when asked**,
   never at construction: they read the library's preferences as they are built — what is
   folded, which tabs were open — and would read nothing before the library is open.

@@ -9,7 +9,9 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 
 use crate::closed_enum::closed_enum;
-use tauri::menu::{Menu, MenuItem, MenuItemKind, PredefinedMenuItem, Submenu};
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+#[cfg(target_os = "macos")]
+use tauri::menu::{MenuItemKind, Submenu};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, State, Wry};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
@@ -197,9 +199,8 @@ pub(crate) fn init(app: &AppHandle) -> tauri::Result<()> {
             .build(),
     )?;
 
-    if cfg!(target_os = "macos")
-        && let Err(error) = ask_before_the_menu_bar_quits(app)
-    {
+    #[cfg(target_os = "macos")]
+    if let Err(error) = ask_before_the_menu_bar_quits(app) {
         log::warn!("Menu bar left as Tauri built it: {error}");
     }
 
@@ -214,9 +215,11 @@ pub(crate) fn init(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
+#[cfg(target_os = "macos")]
 const MENU_BAR_QUIT_ITEM: &str = "menu-bar-quit";
 
 /// The application's submenu and its last entry: « Quit », in the menu Tauri builds on macOS.
+#[cfg(target_os = "macos")]
 fn menu_bar_quit(menu: &Menu<Wry>) -> Option<(Submenu<Wry>, PredefinedMenuItem<Wry>)> {
     let MenuItemKind::Submenu(application) = menu.items().ok()?.into_iter().next()? else {
         return None;
@@ -227,9 +230,10 @@ fn menu_bar_quit(menu: &Menu<Wry>) -> Option<(Submenu<Wry>, PredefinedMenuItem<W
     Some((application, quit))
 }
 
-/// macOS only. ⌘Q is the menu bar's « Quit », which ends the process with no
+/// ⌘Q is the menu bar's « Quit », which ends the process with no
 /// `CloseRequested`. Tauri's own menu is kept and that one entry gives way to ours: the page
 /// is asked as everywhere else.
+#[cfg(target_os = "macos")]
 fn ask_before_the_menu_bar_quits(app: &AppHandle) -> tauri::Result<()> {
     let menu = Menu::default(app)?;
     let Some((application, theirs)) = menu_bar_quit(&menu) else {

@@ -225,6 +225,11 @@ jobs:
 
           echo "\`test-rust\` (${{ matrix.os }}) — $(($(date +%s) - start)) s" >> "$GITHUB_STEP_SUMMARY"
 
+      # The lint job is Linux's: what only macOS compiles is linted here or nowhere.
+      - name: Clippy
+        if: runner.os == 'macOS'
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features --locked -- -D warnings
+
       - name: Upload Rust coverage
         if: runner.os == 'Linux'
         uses: actions/upload-artifact@v7
