@@ -12,6 +12,10 @@
         (chosen)="onSource($event)"
       />
     </div>
+    <!-- What the switch above expects: a schema read as an example, or the reverse, is nonsense. -->
+    <p class="expects" data-testid="json-generator-expects" [attr.data-source]="source()">
+      {{ 'tools.json-generator.expects.' + source() | transloco }}
+    </p>
     <label class="field">
       <span class="visually-hidden">{{ 'tools.json-generator.inputLabel' | transloco }}</span>
       <textarea
@@ -36,6 +40,19 @@
         {{ 'tools.json-generator.notASchema' | transloco }}
       </p>
     }
+    @if (anExample()) {
+      <p class="offer" role="status" data-testid="json-generator-an-example">
+        {{ 'tools.json-generator.anExample' | transloco }}
+        <button
+          type="button"
+          class="as-example"
+          data-testid="json-generator-as-example"
+          (click)="asExample()"
+        >
+          {{ 'tools.json-generator.asExample' | transloco }}
+        </button>
+      </p>
+    }
 
     <div class="options">
       <label class="option">
@@ -50,9 +67,11 @@
           (input)="onCount($event)"
         />
       </label>
-      <label class="option">
-        {{ 'tools.json-generator.seed' | transloco }}
+      <!-- One place for the seed: the one typed, or the one just drawn and the pin that fixes it. -->
+      <div class="option seed-option">
+        <label for="json-generator-seed">{{ 'tools.json-generator.seed' | transloco }}</label>
         <input
+          id="json-generator-seed"
           type="text"
           inputmode="numeric"
           class="number seed"
@@ -61,8 +80,36 @@
           [value]="seed() ?? ''"
           (input)="onSeed($event)"
         />
-      </label>
+        @let drawn = generated()?.seed ?? null;
+        @if (seed() === null && drawn !== null) {
+          <span class="used" data-testid="json-generator-seed-used">{{
+            'tools.json-generator.seedUsed' | transloco: { seed: drawn }
+          }}</span>
+        }
+        @if (seed() !== null || drawn !== null) {
+          <button
+            type="button"
+            class="pin"
+            data-testid="json-generator-keep-seed"
+            [class.on]="seed() !== null"
+            [attr.aria-pressed]="seed() !== null"
+            [attr.aria-label]="'tools.json-generator.pinSeed' | transloco"
+            [attr.title]="
+              (seed() === null ? 'tools.json-generator.keepSeed' : 'tools.json-generator.freeSeed')
+                | transloco
+            "
+            (click)="togglePin(drawn)"
+          >
+            <app-icon name="pin" [filled]="seed() !== null" />
+          </button>
+        }
+      </div>
     </div>
+    @if (seed() !== null) {
+      <p class="pinned" data-testid="json-generator-seed-pinned">
+        {{ 'tools.json-generator.seedPinned' | transloco }}
+      </p>
+    }
   </section>
 
   <section class="column" aria-labelledby="json-generator-output-title">
@@ -76,33 +123,25 @@
     </div>
     @if (generated(); as generated) {
       <pre class="output" data-testid="json-generator-output">{{ generated.text }}</pre>
-      <p class="seed-line" data-testid="json-generator-seed-used">
-        {{ 'tools.json-generator.seedUsed' | transloco: { seed: generated.seed } }}
-        @if (seed() === null) {
-          <button
-            type="button"
-            class="keep"
-            data-testid="json-generator-keep-seed"
-            (click)="keepSeed(generated.seed)"
-          >
-            {{ 'tools.json-generator.keepSeed' | transloco }}
-          </button>
-        }
-      </p>
       @if (generated.unsupported.length > 0) {
         <div class="unsupported" data-testid="json-generator-unsupported">
           <p class="unsupported-title">{{ 'tools.json-generator.unsupported' | transloco }}</p>
           <ul>
             @for (item of generated.unsupported; track item.path + item.keyword) {
-              <li>
-                <code>{{ item.keyword }}</code> · <code class="path">{{ item.path }}</code>
+              <li data-testid="json-generator-unsupported-item">
+                <code>{{ item.keyword }}</code
+                >&ngsp;<span class="at"
+                  >({{ 'tools.json-generator.unsupportedAt' | transloco }}
+                  <code class="path">{{ item.path }}</code
+                  >)</span
+                >
               </li>
             }
           </ul>
         </div>
       }
-    } @else {
-      <p class="note">{{ 'tools.json-generator.empty' | transloco }}</p>
+    } @else if (!anExample()) {
+      <p class="note" data-testid="json-generator-empty">{{ 'tools.json-generator.empty' | transloco }}</p>
     }
   </section>
 </div>

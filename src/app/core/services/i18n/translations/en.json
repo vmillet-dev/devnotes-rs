@@ -162,15 +162,15 @@
   },
   "sidebar": {
     "library": "Spaces",
-    "toggle": "Show or hide the spaces",
+    "toggle": "Show or hide the side rail",
     "expand": "Expand space {{name}}",
     "collapse": "Collapse space {{name}}",
     "noFolders": "No folder",
-    "resize": "Width of the spaces rail"
+    "resize": "Width of the side rail"
   },
   "board": {
     "viewSwitchLabel": "Choose the view",
-    "dateView": "Date",
+    "listView": "List",
     "boardView": "Board",
     "needsASpace": "Pick a space to see its board.",
     "emptyZone": "No note here.",
@@ -441,11 +441,32 @@
     "httpUnresolved": "The host name does not resolve.",
     "httpRefused": "The connection was refused: nothing listens at this address.",
     "httpTls": "The secure connection failed: certificate refused or unexpected protocol.",
-    "httpTimeout": "No answer after 30 seconds.",
-    "httpTooManyRedirects": "Too many redirects: more than 10.",
+    "httpTimeout": {
+      "request": "No answer after {{amount}} {{unit}}.",
+      "folder": "No answer after {{amount}} {{unit}} (setting inherited from the folder “{{name}}”).",
+      "collection": "No answer after {{amount}} {{unit}} (setting inherited from the collection “{{name}}”).",
+      "default": "No answer after {{amount}} {{unit}} (default setting)."
+    },
+    "httpTooManyRedirects": {
+      "request": "{count, plural, =0 {Redirect refused: the setting allows none.} one {Too many redirects: more than one.} other {Too many redirects: more than #.}}",
+      "folder": "{count, plural, =0 {Redirect refused: the setting allows none (setting inherited from the folder “{{name}}”).} one {Too many redirects: more than one (setting inherited from the folder “{{name}}”).} other {Too many redirects: more than # (setting inherited from the folder “{{name}}”).}}",
+      "collection": "{count, plural, =0 {Redirect refused: the setting allows none (setting inherited from the collection “{{name}}”).} one {Too many redirects: more than one (setting inherited from the collection “{{name}}”).} other {Too many redirects: more than # (setting inherited from the collection “{{name}}”).}}",
+      "default": "{count, plural, =0 {Redirect refused: the setting allows none (default setting).} one {Too many redirects: more than one (default setting).} other {Too many redirects: more than # (default setting).}}"
+    },
     "httpFileUnreadable": "The file {{path}} cannot be read.",
     "httpCancelled": "Send cancelled.",
     "httpNetwork": "Network error.",
+    "httpWebsocketScheme": "A WebSocket opens on ws:// or wss://.",
+    "httpHeaderName": {
+      "request": "The header “{{header}}” cannot be sent: its name is not valid.",
+      "folder": "The header “{{header}}”, inherited from the folder “{{name}}”, cannot be sent: its name is not valid.",
+      "collection": "The header “{{header}}”, inherited from the collection “{{name}}”, cannot be sent: its name is not valid."
+    },
+    "httpHeaderValue": {
+      "request": "The header “{{header}}” cannot be sent: its value is not valid.",
+      "folder": "The header “{{header}}”, inherited from the folder “{{name}}”, cannot be sent: its value is not valid.",
+      "collection": "The header “{{header}}”, inherited from the collection “{{name}}”, cannot be sent: its value is not valid."
+    },
     "httpGraphqlVariables": "The GraphQL variables are not a JSON object.",
     "httpWebsocketRefused": "The server refused the WebSocket (status {{status}})."
   },
@@ -649,7 +670,17 @@
       "canvas": "Canvas",
       "editor": "Editor",
       "palette": "Quick paste",
-      "areas": "Areas"
+      "areas": "Areas",
+      "http": "HTTP"
+    },
+    "http": {
+      "send": "Send the request, or connect the WebSocket",
+      "save": "Save the request",
+      "moveRow": "Move a row of the rail among its neighbours",
+      "moveIn": "Put the row into the folder right above",
+      "moveOut": "Take the row out of its folder",
+      "rename": "Rename the row of the rail",
+      "delete": "Delete the row of the rail, once confirmed"
     },
     "global": {
       "palette": "Open the quick-paste palette",
@@ -661,7 +692,6 @@
       "newSnippet": "New code snippet",
       "newNote": "New formatted note",
       "newChecklist": "New to-do list",
-      "library": "Show or hide the library",
       "move": "Move from card to card",
       "open": "Open the focused card",
       "copy": "Copy the card, or ask for its fields",
@@ -786,6 +816,7 @@
       "reset": "Reset",
       "globalNote": "These three work everywhere, window closed included, so each needs at least one modifier — without one the key would be swallowed in every application you use. A shortcut another application already holds is reported at startup.",
       "canvasNote": "These only act on the canvas, never while typing, so a bare letter is enough. Click the field, then press the combination.",
+      "areasNote": "This one acts in the three areas — Notes, Tools and HTTP — and, with Ctrl or Alt, while typing too.",
       "fixedNote": "The arrows, Escape, Tab and the Ctrl or Shift clicks do not move: they are the navigation, the way out and the selection, and a library you cannot step back through would be worse than a badly placed key.",
       "taken": "{{accelerator}} is already held by \"{{action}}\".",
       "needsModifier": "A global shortcut needs at least Ctrl, Alt, Shift or Super.",
@@ -844,6 +875,10 @@
       "transfer": {
         "title": "In and out",
         "body": "The File menu exports everything, one space or the selection to a file it can read back, and re-imports it without ever making a duplicate. “Copy as Markdown” puts the selection on the clipboard."
+      },
+      "http": {
+        "title": "Requests: HTTP, GraphQL, WebSocket",
+        "body": "The HTTP area keeps your requests in collections, sealed like your notes. What you begin is chosen as you create it — an HTTP request, a GraphQL request or a WebSocket — from “New request”, at the end of the tabs, or a collection's menu."
       }
     },
     "chaptersLabel": "Guide chapters",
@@ -998,6 +1033,7 @@
     "hint": "{{area}} ({{key}})",
     "notes": "Notes",
     "tools": "Tools",
+    "rail": "Show or hide the side rail",
     "go": {
       "notes": "Go to the notes",
       "tools": "Go to the tools",
@@ -1010,11 +1046,23 @@
     "count": "{count, plural, =0 {No utility yet} one {# utility, offline} other {# utilities, all offline}}",
     "all": "All tools",
     "recents": "Recent",
+    "favourites": {
+      "title": "Favourites",
+      "toggle": "Favourite",
+      "of": "Favourite: {{name}}",
+      "add": "Add to favourites",
+      "remove": "Remove from favourites"
+    },
     "searchLabel": "Search for a tool",
     "searchPlaceholder": "Search for a tool…",
     "searchKeys": "Ctrl Shift T",
     "searchShortcut": "Search for a tool",
-    "noMatch": "No tool matches “{{query}}”.",
+    "noMatch": "No tool and no reference entry matches “{{query}}”.",
+    "enterOpens": "Enter opens this result",
+    "references": {
+      "title": "In the references",
+      "more": "{count, plural, one {# more} other {# more}} in {{name}}"
+    },
     "clear": "Clear",
     "promise": {
       "title": "Everything stays on this machine",
@@ -1178,8 +1226,8 @@
       "noteParsed": "URL of {{host}}"
     },
     "base64": {
-      "name": "Base64 and bases",
-      "description": "Base64, Base32, hexadecimal, binary, bytes — and the format recognised when decoding",
+      "name": "Base64 and other bases",
+      "description": "Base64, Base32, hexadecimal, binary, bytes — the format recognised on decoding, and a preview of an image",
       "direction": "Direction",
       "directions": {
         "encode": "Encode",
@@ -1200,6 +1248,14 @@
       "decodeEmpty": "The decoded text shows here.",
       "binary": "{count, plural, one {# byte} other {# bytes}} that are no text. Here they are in hexadecimal:",
       "saveFile": "Save as a file…",
+      "decodedText": "Decoded text",
+      "dataUri": "· data: URI of type {{type}}",
+      "dataUriUntyped": "· data: URI",
+      "image": {
+        "alt": "Preview of the decoded image ({{format}})",
+        "weight": "{count, plural, one {# byte} other {# bytes}}",
+        "tooLarge": "Too large an image for a preview: past {{limit}} MB it is not drawn. Save it as a file to see it."
+      },
       "saved": "{count, plural, one {File saved: # byte.} other {File saved: # bytes.}}",
       "problems": {
         "character": "“{{character}}” does not belong to this format, at character {{at}}.",
@@ -1296,7 +1352,7 @@
       },
       "lookAlikes": "No characters that look alike",
       "count": "Count",
-      "generate": "Generate",
+      "generate": "Regenerate",
       "passwords": "Passwords",
       "entropy": "≈ {{bits}} bits of entropy",
       "strengths": {
@@ -1346,8 +1402,8 @@
       }
     },
     "convert": {
-      "name": "JSON → TOML / XML / YAML",
-      "description": "And back again",
+      "name": "JSON ↔ YAML ↔ TOML ↔ XML",
+      "description": "From one format to another, in every direction",
       "from": "From",
       "to": "To",
       "formats": {
@@ -1383,13 +1439,13 @@
     },
     "json-generator": {
       "name": "JSON",
-      "description": "From a schema or an example",
+      "description": "From a schema or from a template document",
       "source": "Source",
       "sources": {
         "schema": "Schema",
-        "example": "Example"
+        "example": "Template"
       },
-      "inputLabel": "JSON Schema or example document",
+      "inputLabel": "JSON Schema or template document",
       "placeholders": {
         "schema": "{ \"type\": \"object\", \"required\": [\"id\"], \"properties\": { \"id\": { \"type\": \"string\", \"format\": \"uuid\" } } }",
         "example": "{ \"id\": \"9b2f6c1e-3d4a-4f8b-9e2c-7a1d5b6c8e90\", \"email\": \"ana@example.com\", \"amount\": 49.9 }"
@@ -1400,12 +1456,166 @@
       "seed": "Seed",
       "seedPlaceholder": "random",
       "documents": "Documents",
-      "seedUsed": "Seed used: {{seed}}",
-      "keepSeed": "Keep it",
-      "again": "Draw again",
-      "unsupported": "The generator did not take these keywords into account: the documents may not honour them.",
-      "empty": "Paste a schema or an example: the documents show here.",
-      "noteTitle": "Generated JSON documents"
+      "seedUsed": "· {{seed}} used",
+      "keepSeed": "Pin this seed: the same documents will come back",
+      "again": "Regenerate",
+      "unsupported": "Schema keywords not supported, ignored:",
+      "empty": "Paste a schema or a template document: the documents show here.",
+      "noteTitle": "Generated JSON documents",
+      "expects": {
+        "schema": "Schema: a JSON Schema describes the documents.",
+        "example": "Template: a model document, whose values are replaced by others of the same kind."
+      },
+      "anExample": "This looks like an example document, not a schema.",
+      "asExample": "Read it as a template",
+      "pinSeed": "Pin the seed",
+      "freeSeed": "Let the seed go: each draw will take a new one",
+      "seedPinned": "Seed pinned: “Regenerate” gives the same documents again.",
+      "unsupportedAt": "at"
+    },
+    "identity": {
+      "name": "Fictitious identity",
+      "description": "A test person whose every number passes its check",
+      "options": "Options",
+      "country": "Country",
+      "countries": {
+        "FR": "France",
+        "BE": "Belgium",
+        "DE": "Germany",
+        "ES": "Spain",
+        "IT": "Italy",
+        "PT": "Portugal",
+        "NL": "Netherlands",
+        "CH": "Switzerland",
+        "GB": "United Kingdom",
+        "PL": "Poland",
+        "SE": "Sweden",
+        "US": "United States",
+        "CA": "Canada"
+      },
+      "nationalities": {
+        "FR": "French",
+        "BE": "Belgian",
+        "DE": "German",
+        "ES": "Spanish",
+        "IT": "Italian",
+        "PT": "Portuguese",
+        "NL": "Dutch",
+        "CH": "Swiss",
+        "GB": "British",
+        "PL": "Polish",
+        "SE": "Swedish",
+        "US": "American",
+        "CA": "Canadian"
+      },
+      "sex": "Sex",
+      "sexes": {
+        "any": "Any",
+        "F": "Female",
+        "M": "Male"
+      },
+      "age": "Age reached this year",
+      "ageMin": "Youngest",
+      "ageMax": "Oldest",
+      "years": "years",
+      "seed": "Seed",
+      "seedPlaceholder": "random",
+      "seedUsed": "· {{seed}} used",
+      "pinSeed": "Pin the seed",
+      "keepSeed": "Pin this seed: the same person will come back",
+      "freeSeed": "Let the seed go: each draw will give someone else",
+      "seedPinned": "Seed pinned: the same person comes back, all year.",
+      "batch": "Batch",
+      "batchCountries": "Countries of the batch",
+      "people": "People",
+      "format": "Format",
+      "formats": {
+        "json": "JSON",
+        "csv": "CSV"
+      },
+      "export": "Export…",
+      "batchHint": "1 to 100 people in a file, the first being the one on the card; the countries chosen take their turn.",
+      "exported": "{count, plural, one {# person exported.} other {# people exported.}}",
+      "person": "Person",
+      "copyJson": "Copy as JSON",
+      "jsonCopied": "Person copied as JSON.",
+      "again": "Regenerate",
+      "noteTitle": "Fictitious identity of {{name}}",
+      "specimen": "Specimen",
+      "cardKind": "Fictitious identity",
+      "aged": "({count, plural, one {# year} other {# years}})",
+      "fields": {
+        "surname": "Surname",
+        "givenNames": "Given names",
+        "nationality": "Nationality",
+        "bornOn": "Date of birth",
+        "bornIn": "Place of birth",
+        "document": "Document number (made up)",
+        "address": "Address",
+        "phone": "Phone",
+        "mobile": "Mobile",
+        "email": "E-mail",
+        "bank": "Bank",
+        "iban": "IBAN",
+        "bic": "BIC",
+        "company": "Company name"
+      },
+      "identifiers": {
+        "nir": "N° de sécurité sociale",
+        "siren": "SIREN",
+        "siret": "SIRET",
+        "vat": "TVA intracommunautaire",
+        "nrn": "Numéro national · Rijksregisternummer",
+        "bce": "N° d’entreprise · Ondernemingsnummer",
+        "beVat": "TVA · BTW",
+        "steuerId": "Steuer-ID",
+        "ustIdNr": "USt-IdNr.",
+        "dni": "DNI",
+        "nifEs": "NIF",
+        "codiceFiscale": "Codice fiscale",
+        "partitaIva": "Partita IVA",
+        "nifPt": "NIF",
+        "nipc": "NIPC",
+        "bsn": "BSN",
+        "kvk": "KvK-nummer",
+        "btw": "Btw-nummer",
+        "ahv": "AHV-Nr. · N° AVS",
+        "uid": "UID",
+        "nino": "National Insurance number",
+        "crn": "Company number",
+        "gbVat": "VAT number",
+        "pesel": "PESEL",
+        "nip": "NIP",
+        "regon": "REGON",
+        "personnummer": "Personnummer",
+        "orgnr": "Organisationsnummer",
+        "moms": "Momsnummer",
+        "ssn": "Social Security number",
+        "sin": "SIN · NAS",
+        "sortCode": "Sort code",
+        "accountNumber": "Account number",
+        "routingNumber": "Routing number",
+        "transitNumber": "Transit number"
+      },
+      "blocks": {
+        "contact": "Contact",
+        "bank": "Bank",
+        "company": "Company"
+      },
+      "warning": "Test data: do not use it to pass yourself off as someone.",
+      "harmless": "The e-mail is at example.com, .org or .net: it reaches nobody.",
+      "phonesFiction": "The phone numbers are in a range this country keeps for fiction.",
+      "phonesMayRing": "This country keeps no range for fiction: these phone numbers may ring at someone’s.",
+      "valid": "Valid means computed: each number carries the key its country computes for it, and one that encodes the person — birth, sex, name, town — is read off them. A number that passes its key may be someone’s.",
+      "unkeyed": "No key to verify:",
+      "countriesListed": "Countries:",
+      "noFirmNumber": "No company number with a key in this country.",
+      "jsonFields": "Fields of the JSON and of the export: country, sex, surname, givenNames, birth (date, city, region), document, address (street, postcode, city, region, formatted), phone, mobile, email, bank (name, iban, bic, local), identifiers and company (name, identifiers).",
+      "lists": {
+        "missing": "List not found: {{file}}.",
+        "damaged": "List unreadable: {{file}}.",
+        "where": "The lists are read from {{folder}}"
+      }
     },
     "lorem": {
       "name": "Lorem ipsum",
@@ -1418,7 +1628,7 @@
       },
       "count": "Count",
       "opening": "Start with “Lorem ipsum”",
-      "again": "Generate again",
+      "again": "Regenerate",
       "noteTitle": "Lorem ipsum",
       "counted": {
         "words": "{count, plural, one {# word} other {# words}}",
@@ -1609,7 +1819,7 @@
     },
     "cron": {
       "name": "Cron",
-      "description": "Read aloud, and its next runs",
+      "description": "Read aloud, its next runs, and those between two moments",
       "inputLabel": "Cron expression",
       "placeholder": "*/15 9-18 * * MON-FRI",
       "expanded": "That is {{expression}}",
@@ -1747,7 +1957,35 @@
         "3": "third",
         "4": "fourth",
         "5": "fifth"
-      }
+      },
+      "from": "From",
+      "fromPlaceholder": "now",
+      "until": "until",
+      "untilPlaceholder": "the next ten",
+      "shortcuts": "Common windows",
+      "shortcut": {
+        "today": "today",
+        "tomorrow": "tomorrow",
+        "weekend": "this weekend",
+        "fridayAfternoon": "Friday afternoon"
+      },
+      "windowCount": "{count, plural, one {# run} other {# runs}} between {{from}} and {{until}}",
+      "windowNone": "No run in this window.",
+      "windowGap": "… {count, plural, one {# more} other {# more}} …",
+      "windowProblems": {
+        "unreadable": {
+          "from": "The start does not read, at character {{at}}.",
+          "until": "The end does not read, at character {{at}}."
+        },
+        "skipped": {
+          "from": "This start does not exist in this zone.",
+          "until": "This end does not exist in this zone."
+        },
+        "backwards": "The end has to come after the start.",
+        "tooLong": "Too long a window: {{years}} years at most."
+      },
+      "nearestBefore": "Nearest run before: {{at}}",
+      "nearestAfter": "Nearest run after: {{at}}"
     },
     "sizes": {
       "name": "Sizes and transfer",
@@ -1978,8 +2216,8 @@
       }
     },
     "checks": {
-      "name": "Check digits",
-      "description": "Luhn and IBAN: valid or not, and the right check digits",
+      "name": "Luhn and IBAN",
+      "description": "Bank card, IBAN: valid or not, and the right check digits",
       "inputLabel": "Number to check",
       "placeholder": "4111 1111 1111 1111 or FR14 2004 1010 0505 0001 3M02 606",
       "kind": "Read as",
@@ -2119,7 +2357,7 @@
         "hexLower": "Hex",
         "digits": "Digits"
       },
-      "again": "Generate again",
+      "again": "Regenerate",
       "hints": {
         "uuidV4": "{{name}}: 122 random bits, drawn from the system’s generator.",
         "uuidV7": "{{name}}: 48 bits of milliseconds then 74 drawn bits; sorted, they line up in the order they were made.",
@@ -2229,12 +2467,13 @@
     },
     "diff": {
       "name": "Diff",
-      "description": "Two texts line by line, or two documents compared as values",
+      "description": "Two texts line by line, or two JSON, YAML, TOML or XML documents compared by their values",
       "mode": "Mode",
       "modes": {
         "text": "Text",
-        "structured": "Structured"
+        "structured": "Data"
       },
+      "dataLine": "Compares the values, not the text: key order, indentation and format (JSON, YAML, TOML, XML) do not count.",
       "pasted": "pasted text",
       "swap": "Swap A and B",
       "text": {
@@ -2271,7 +2510,7 @@
         "truncated": "The rest is not shown: the counts and the unified diff stay complete.",
         "empty": "Paste two texts: their differences show here.",
         "bothJson": "Both texts are JSON.",
-        "asValues": "Compare as values",
+        "asValues": "Compare as data",
         "copyUnified": "Copy the unified diff",
         "noteTitle": "Diff from {{a}} to {{b}}"
       },
@@ -2279,6 +2518,8 @@
         "openNote": "Open a note",
         "inputLabel": "Document {{side}}",
         "placeholder": "Paste a JSON, YAML, TOML or XML document, or open a snippet",
+        "notStructured": "This text is no structured JSON, YAML, TOML or XML.",
+        "asText": "Compare as text",
         "unreadable": "This {{format}} does not read: line {{line}}, column {{column}}.",
         "added": "{count, plural, one {+ # addition} other {+ # additions}}",
         "removed": "{count, plural, one {− # removal} other {− # removals}}",
@@ -2736,7 +2977,21 @@
     "rail": {
       "title": "Collections",
       "newCollection": "New collection",
-      "empty": "No collection yet: create one with ＋.",
+      "collection": "Collection",
+      "moved": {
+        "into": "{{name}} is now in {{other}}.",
+        "root": "{{name}} is now at the root of {{other}}.",
+        "before": "{{name}} is now before {{other}}.",
+        "after": "{{name}} is now after {{other}}.",
+        "refused": {
+          "first": "{{name}} is already first.",
+          "last": "{{name}} is already last.",
+          "noFolderAbove": "No folder right above {{name}} to move into.",
+          "atRoot": "{{name}} is already at the root of its collection.",
+          "collection": "A collection does not go inside another."
+        }
+      },
+      "empty": "No collection yet.",
       "placeholders": {
         "collection": "Collection name",
         "folder": "Folder name",
@@ -2758,6 +3013,10 @@
       "collapse": "Collapse {{name}}",
       "confirm": "Delete “{{name}}”?",
       "cancel": "Cancel",
+      "unsaved": {
+        "self": "Unsaved changes.",
+        "inside": "Unsaved changes:"
+      },
       "takes": {
         "requests": "{requests, plural, one {Its request goes with it.} other {Its # requests go with it.}}",
         "folders": "{folders, plural, one {Its folder goes with it.} other {Its # folders go with it.}}",
@@ -2765,20 +3024,40 @@
       }
     },
     "workspace": {
-      "empty": "Open a request from the rail, or start one with the tabs' ＋."
+      "empty": "Open a request from the rail, or start one:"
+    },
+    "kinds": {
+      "menuTitle": "Begin",
+      "lines": {
+        "http": "A method, a URL, headers and a body.",
+        "graphql": "A query and its variables, sent as a POST.",
+        "websocket": "An open connection: messages both ways."
+      },
+      "new": {
+        "http": "HTTP request",
+        "graphql": "GraphQL request",
+        "websocket": "WebSocket"
+      },
+      "badge": {
+        "graphql": "GraphQL",
+        "websocket": "WS"
+      }
     },
     "tabs": {
       "label": "Open requests",
       "untitled": "New request",
       "modified": "modified",
+      "sending": "being sent",
       "close": "Close {{name}}",
-      "new": "New request"
+      "new": "+ New request",
+      "newKind": "Choose the kind of request"
     },
     "editor": {
       "name": "Request name",
       "method": "Method",
       "url": "URL",
       "urlPlaceholder": "https://api.example.com/resource",
+      "socketPlaceholder": "wss://api.example.com/stream",
       "save": "Save",
       "saveHint": "Save (Ctrl+S)",
       "parts": "Parts of the request",
@@ -2801,21 +3080,59 @@
       "description": "Description",
       "newKey": "New key",
       "remove": "Remove",
-      "removeRow": "Remove {{key}}"
+      "removeRow": "Remove {{key}}",
+      "faults": {
+        "name": "A header name holds no space, no colon and no accent: the marked row cannot be sent.",
+        "value": "A header value fits on one line, with no control character: the marked row cannot be sent."
+      }
     },
     "save": {
       "title": "Save the request",
       "name": "Name",
       "place": "In",
-      "nowhere": "No collection yet: create one in the rail, with ＋."
+      "newCollection": "New collection…",
+      "collectionName": "Name of the new collection",
+      "newFolder": "＋ New folder…",
+      "folderName": "Name of the new folder",
+      "noFolder": "Do not create a folder",
+      "missing": {
+        "name": "Give the request a name.",
+        "collection": "Give the collection a name.",
+        "folder": "Give the folder a name, or remove it."
+      }
+    },
+    "leave": {
+      "title": "{count, plural, one {One request has changes} other {# requests have changes}}",
+      "hint": {
+        "quit": "They are not saved: quitting loses them.",
+        "switch": "They are not saved: switching library loses them.",
+        "restore": "They are not saved: restoring the backup loses them.",
+        "update": "They are not saved: installing the update loses them."
+      },
+      "connected": "{count, plural, one {One connected WebSocket will be closed.} other {# connected WebSockets will be closed.}}",
+      "saveAll": "Save all",
+      "discard": {
+        "quit": "Quit without saving",
+        "switch": "Switch without saving",
+        "restore": "Restore without saving",
+        "update": "Install without saving"
+      }
     },
     "close": {
       "title": "“{{name}}” has changes",
       "hint": "They are not saved yet.",
-      "discard": "Close without saving"
+      "discard": "Close without saving",
+      "connectedTitle": "Close “{{name}}”?",
+      "connected": "The WebSocket is connected: closing the tab cuts the connection.",
+      "close": "Close"
     },
     "headers": {
-      "fromBody": "from the body"
+      "implied": "Sent without being typed",
+      "from": {
+        "body": "from the body",
+        "default": "by default",
+        "url": "from the URL"
+      }
     },
     "auth": {
       "kind": "Type",
@@ -2862,6 +3179,9 @@
       "sentAs": "Sent as {{type}}",
       "format": "Format",
       "noneHint": "The request goes without a body.",
+      "unusual": "A {{method}} with a body: many servers ignore or refuse it.",
+      "unusualShort": "on a {{method}}",
+      "toNone": "Switch to None",
       "partKind": "Type",
       "partText": "Text",
       "partFile": "File",
@@ -2882,8 +3202,14 @@
       "cancel": "Cancel",
       "failed": "The request could not be sent."
     },
+    "split": {
+      "label": "Height of the request — arrows to change it, double-click or Enter for automatic",
+      "auto": "automatic",
+      "value": "{{share}}% for the request"
+    },
     "response": {
       "label": "Response",
+      "clear": "Clear",
       "idle": "Send the request to read its response here.",
       "sending": "Sending…",
       "cancelled": "Send cancelled.",
@@ -2899,6 +3225,7 @@
       "saved": "Response saved to {{path}}.",
       "saveFailed": "The response could not be saved.",
       "redirects": "{count, plural, one {after # redirect} other {after # redirects}}",
+      "graphqlErrors": "{count, plural, one {# error} other {# errors}}",
       "parts": "Parts of the response",
       "sections": {
         "body": "Body",
@@ -2925,7 +3252,9 @@
         "path": "Path",
         "expires": "Expires",
         "flags": "Attributes",
-        "session": "end of session"
+        "session": "end of session",
+        "setBy": "Set by",
+        "byAnswer": "the answer"
       },
       "timeline": {
         "redirects": "Redirects",
@@ -2947,7 +3276,13 @@
       "noAnswer": "failed",
       "empty": "Nothing sent yet: every send is written here.",
       "choose": "Choose a send to read it again.",
-      "reopen": "Reopen in a tab",
+      "reopenInto": "Reopen in {{name}}",
+      "reopenDraft": "Reopen as a draft",
+      "replace": "“{{name}}” has changes: replace them with this send?",
+      "replaceConfirm": "Replace",
+      "delete": "Delete the send {{name}}",
+      "deleted": "Send “{{name}}” deleted from the history.",
+      "resize": "Width of the list of sends",
       "failed": "The history could not be read."
     },
     "graphql": {
@@ -2956,7 +3291,20 @@
       "variables": "Variables",
       "operation": "Operation sent",
       "asGet": "Send as GET",
-      "at": "line:column {{location}}"
+      "at": "line:column {{location}}",
+      "format": "Format",
+      "variablesHint": "A JSON object: a value for each $variable of the query.",
+      "problemAt": "Line {{line}}, column {{column}}:",
+      "problems": {
+        "unclosedBrace": "this brace is not closed.",
+        "unclosedParenthesis": "this parenthesis is not closed.",
+        "unclosedString": "this string is not closed.",
+        "strayBrace": "this brace closes nothing.",
+        "strayParenthesis": "this parenthesis closes nothing."
+      },
+      "missing": "Without a value:",
+      "add": "Add",
+      "unknown": "The query does not declare:"
     },
     "socket": {
       "connect": "Connect",
@@ -2966,6 +3314,7 @@
       "messagePlaceholder": "Text or JSON",
       "send": "Send",
       "notOpen": "Connect the WebSocket to send.",
+      "useTwin": "Use {{url}}",
       "keep": "Keep",
       "saved": "Kept messages",
       "noneSaved": "Keep a message to send it again in one click.",

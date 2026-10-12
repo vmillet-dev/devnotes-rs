@@ -9,6 +9,7 @@ import {
   acceleratorFromEvent,
   canvasKeystrokeFromEvent,
 } from '@core/services/shortcuts/shortcut.model';
+import { AREA_ACTIONS } from '@core/services/areas/area.model';
 import { CANVAS_ACTIONS } from '@notes/canvas-keys';
 
 /** A refusal belongs to the field that caused it: two rows, two independent messages. */
@@ -41,6 +42,12 @@ const SECTIONS: readonly ShortcutSection[] = [
     labelKey: 'shortcuts.groups.canvas',
     noteKey: 'settings.shortcuts.canvasNote',
     actions: CANVAS_ACTIONS,
+  },
+  {
+    id: 'areas',
+    labelKey: 'shortcuts.groups.areas',
+    noteKey: 'settings.shortcuts.areasNote',
+    actions: AREA_ACTIONS,
   },
 ];
 

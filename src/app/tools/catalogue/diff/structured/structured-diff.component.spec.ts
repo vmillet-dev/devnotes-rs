@@ -162,6 +162,63 @@ describe('StructuredDiffComponent', () => {
     expect(harness.tool.result()).toBeNull();
   });
 
+  /**
+   * An nginx file left from the text tab was announced « lu comme YAML » and compared as one
+   * string changed into another: « 0 ajout, 0 suppression, 1 modification ».
+   */
+  it('says a side is no structure instead of comparing it, and offers to compare as text', async () => {
+    const harness = await compared((tools) => {
+      tools.diffAnswer = { kind: 'notStructured', sides: ['a'] };
+    });
+    const asked: number[] = [];
+    harness.tool.asText.subscribe(() => asked.push(1));
+
+    expect(text(harness, 'structured-diff-not-structured-a')).toBe(
+      'Ce texte n’est ni du JSON, ni du YAML, du TOML ou du XML structuré. Comparer comme du texte',
+    );
+    expect(harness.element('[data-testid="structured-diff-not-structured-b"]')).toBeNull();
+    // Nothing was compared, and nothing says what the text was « read as ».
+    expect(harness.element('[data-testid="structured-diff-read-a"]')).toBeNull();
+    expect(harness.element('[data-testid="structured-diff-modified"]')).toBeNull();
+    expect(harness.tool.result()).toBeNull();
+    // Two texts are there: nothing asks for them to be pasted.
+    expect(harness.element('[data-testid="structured-diff-empty"]')).toBeNull();
+
+    harness.element<HTMLButtonElement>('[data-testid="structured-diff-as-text-a"]').click();
+    expect(asked).toHaveLength(1);
+  });
+
+  it('says it of both sides when neither is a structure', async () => {
+    const harness = await compared((tools) => {
+      tools.diffAnswer = { kind: 'notStructured', sides: ['a', 'b'] };
+    });
+
+    expect(harness.element('[data-testid="structured-diff-not-structured-a"]')).not.toBeNull();
+    expect(harness.element('[data-testid="structured-diff-not-structured-b"]')).not.toBeNull();
+  });
+
+  /** A format left chosen by hand would misread the sample: YAML against JSON, each by its shape. */
+  it('fills both sides with its own sample, each read by its shape again', async () => {
+    const harness = await compared();
+    harness.element<HTMLButtonElement>('[data-testid="choice-structured-diff-format-b"]').click();
+    await harness.settle();
+    harness
+      .all('[data-testid="choice-panel-structured-diff-format-b"] [role="menuitem"]')
+      .find((item) => item.textContent?.trim() === 'TOML')!
+      .click();
+    await harness.settle();
+
+    harness.tool.sample();
+    await harness.settle();
+
+    const value = (testid: string) => harness.element<HTMLTextAreaElement>(`[data-testid="${testid}"]`).value;
+    expect(value('structured-diff-a')).toContain('name: devnotes');
+    expect(value('structured-diff-b')).toContain('"name": "devnotes"');
+    await expect
+      .poll(() => harness.tools.requestsOf('diff_json').at(-1))
+      .toMatchObject({ formatA: null, formatB: null });
+  });
+
   it('says so when the documents are the same', async () => {
     const harness = await compared((tools) => {
       tools.diffAnswer = {

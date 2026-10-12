@@ -47,7 +47,12 @@ export class LibrariesDialogComponent {
     if (name === '') return;
 
     this.newName.set('');
-    await this.store.create(name);
+    // Not created — told to stay with what is not saved, or refused: the panel stays, and
+    // the name with it.
+    if ((await this.store.create(name)) === null) {
+      this.newName.set(name);
+      return;
+    }
     // Creating opens it, and opening sends the shell to the gate: a panel left standing
     // over the unlock screen would be asking about a library nobody has opened yet.
     this.closed.emit();
@@ -56,8 +61,7 @@ export class LibrariesDialogComponent {
   protected async openLibrary(entry: LibraryEntry): Promise<void> {
     if (entry.id === this.store.open()?.id) return;
 
-    await this.store.openLibrary(entry.id);
-    this.closed.emit();
+    if (await this.store.openLibrary(entry.id)) this.closed.emit();
   }
 
   protected startRenaming(entry: LibraryEntry): void {

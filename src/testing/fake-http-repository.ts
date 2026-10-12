@@ -5,9 +5,11 @@ import {
   HttpContents,
   HttpFolder,
   HttpItem,
+  HttpMethod,
   HttpPlace,
   HttpRequestDraft,
   HttpTree,
+  NewPlace,
   GraphqlAnswer,
   GraphqlParts,
   HistoryDay,
@@ -19,6 +21,8 @@ import {
   CookieDomain,
   DEFAULT_TRANSPORT,
   EMPTY_PARTS,
+  HeaderFault,
+  ImpliedHeader,
   InheritedParts,
   KeyValueRow,
   RequestBodyDraft,
@@ -56,8 +60,22 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
   };
   /** The jar by domain; the deletes take from it as Rust would. */
   jar: CookieDomain[] = [];
-  bodyAnswer: BodyAnswer = { contentType: null, problem: null };
-  graphqlAnswer: GraphqlAnswer = { operations: [], variablesProblem: null };
+  bodyAnswer: BodyAnswer = { contentType: null, problem: null, unusual: false };
+  /** What `checkHeaders` answers, by rank; and the rows `readHeaders` reads from a text. */
+  headerFaults: (HeaderFault | null)[] = [];
+  headersRead: KeyValueRow[] = [];
+  /** What a request sends unasked; a spec holding `pendingImplied` decides when it is answered. */
+  impliedAnswer: ImpliedHeader[] = [];
+  pendingImplied: Promise<ImpliedHeader[]> | null = null;
+  graphqlAnswer: GraphqlAnswer = {
+    operations: [],
+    variablesProblem: null,
+    queryProblem: null,
+    missing: [],
+    unknown: [],
+  };
+  /** What « Ajouter » answers: the variables as Rust would write them. */
+  variablesAdded = '';
   /** What `send` answers; a spec holding `pendingSend` decides when. */
   response: SentResponse = sentResponse();
   pendingSend: Promise<SentResponse> | null = null;
@@ -67,6 +85,8 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
   /** By entry id; a missing one rejects, as Rust answers a purged entry. */
   readonly entries = new Map<string, HistoryEntry>();
   draftAnswer: HistoryDraft | null = null;
+  /** What a send put back onto its request reads as; `null` for a request that is gone. */
+  ontoAnswer: HistoryDraft | null = null;
   /** What `syncQuery` answers; unset, it hands back what it was given. */
   synced: Synced | null = null;
   readonly requests = new Map<string, OpenedRequest>();
@@ -135,6 +155,19 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
     );
   }
 
+  createRequestIn(draft: HttpRequestDraft, create: NewPlace): Promise<OpenedRequest> {
+    return this.record('createRequestIn', [draft, create], () => {
+      const collectionId = create.collection ? `collection-${++this.nextId}` : draft.collectionId;
+      const folderId = create.folder ? `folder-${++this.nextId}` : create.collection ? null : draft.folderId;
+      return this.seed(
+        `request-${++this.nextId}`,
+        { name: draft.name, kind: draft.kind, method: draft.method, parts: toParts(draft.document) },
+        collectionId,
+        folderId,
+      );
+    });
+  }
+
   request(id: string): Promise<OpenedRequest> {
     return this.record('request', [id], () => {
       const request = this.requests.get(id);
@@ -175,8 +208,24 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
     return this.record('inherited', [collectionId, folderId], () => this.inheritedAnswer);
   }
 
-  describeBody(body: RequestBodyDraft): Promise<BodyAnswer> {
-    return this.record('describeBody', [body], () => this.bodyAnswer);
+  describeBody(body: RequestBodyDraft, method: HttpMethod): Promise<BodyAnswer> {
+    return this.record('describeBody', [body, method], () => this.bodyAnswer);
+  }
+
+  checkHeaders(rows: readonly KeyValueRow[]): Promise<(HeaderFault | null)[]> {
+    return this.record('checkHeaders', [rows], () => this.headerFaults);
+  }
+
+  readHeaders(text: string): Promise<KeyValueRow[]> {
+    return this.record('readHeaders', [text], () => this.headersRead);
+  }
+
+  async impliedHeaders(
+    draft: RequestDraft,
+    place: { collectionId: string; folderId: string | null } | null,
+  ): Promise<ImpliedHeader[]> {
+    const answer = await this.record('impliedHeaders', [draft, place], () => this.impliedAnswer);
+    return this.pendingImplied ?? answer;
   }
 
   send(
@@ -209,6 +258,26 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
       if (!this.draftAnswer) throw new Error(`no draft ${id}`);
       return this.draftAnswer;
     });
+  }
+
+  historyOnto(id: string): Promise<HistoryDraft | null> {
+    return this.record('historyOnto', [id], () => this.ontoAnswer);
+  }
+
+  /** Takes the entry out of the days, as Rust would; a missing one rejects. */
+  deleteHistoryEntry(id: string): Promise<HistoryEntry> {
+    return this.record('deleteHistoryEntry', [id], () => {
+      const entry = this.entries.get(id);
+      if (!entry) throw new Error(`no history entry ${id}`);
+      this.historyAnswer = this.historyAnswer
+        .map((day) => ({ ...day, items: day.items.filter((item) => item.id !== id) }))
+        .filter((day) => day.items.length > 0);
+      return entry;
+    });
+  }
+
+  restoreHistoryEntry(entry: HistoryEntry): Promise<void> {
+    return this.record('restoreHistoryEntry', [entry], () => undefined);
   }
 
   countHistory(): Promise<number> {
@@ -297,6 +366,10 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
 
   describeGraphql(graphql: GraphqlParts): Promise<GraphqlAnswer> {
     return this.record('describeGraphql', [graphql], () => this.graphqlAnswer);
+  }
+
+  addGraphqlVariables(graphql: GraphqlParts): Promise<string> {
+    return this.record('addGraphqlVariables', [graphql], () => this.variablesAdded);
   }
 
   rename(item: HttpItem, name: string): Promise<void> {

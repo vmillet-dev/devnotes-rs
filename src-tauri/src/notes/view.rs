@@ -44,7 +44,7 @@ pub struct NotesQuery {
     pub pinned_first: bool,
 }
 
-/// What the date view is ordered by. The board keeps the places its cards were given.
+/// What the list view is ordered by. The board keeps the places its cards were given.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct NoteOrder {
@@ -64,7 +64,7 @@ pub enum SortKey {
     Title,
 }
 
-/// How the date view gathers its cards. A search or a facet still makes one flat list.
+/// How the list view gathers its cards. A search or a facet still makes one flat list.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub enum Grouping {
@@ -93,7 +93,7 @@ pub enum NoteFilter {
 }
 
 /// What the search, the quick filter and the four rails ask of a note, normalised once: the
-/// date view narrows on it and the board dims on it, so the two cannot disagree on a match.
+/// list view narrows on it and the board dims on it, so the two cannot disagree on a match.
 #[derive(Debug, Clone)]
 pub struct Criteria {
     needle: String,
@@ -129,7 +129,7 @@ impl Criteria {
     }
 
     /// Whether the search or a rail narrows the notes. Not the quick filter, under which the
-    /// date view keeps its sections.
+    /// list view keeps its sections.
     pub fn narrows(&self) -> bool {
         !self.needle.is_empty()
             || !self.tags.is_empty()
@@ -145,7 +145,7 @@ impl Criteria {
             NoteFilter::Untriaged => matches!(note.lifecycle, NoteLifecycle::Expires { .. }),
         };
 
-        // ASCII only, like the `COLLATE NOCASE` the date view filters with in SQL.
+        // ASCII only, like the `COLLATE NOCASE` the list view filters with in SQL.
         let tags = self.tags.is_empty()
             || self.tags.iter().any(|wanted| {
                 note.tags

@@ -435,3 +435,195 @@ fn a_body_and_an_auth_are_kept_in_the_sealed_document() {
         document
     );
 }
+
+/// A row of a table, every string of it marked.
+fn marked(key: &str, value: &str) -> devnotes_lib::http::model::KeyValue {
+    devnotes_lib::http::model::KeyValue {
+        key: key.to_string(),
+        value: value.to_string(),
+        description: "zq-row-description".to_string(),
+        ..Default::default()
+    }
+}
+
+/// A collection and a folder with settings of their own, then a request for each kind of
+/// auth and both places a key goes. Answers the last request.
+fn marked_tree(library: &mut Library) -> String {
+    use devnotes_lib::http::model::{ContainerSettings, KeyPlace, RequestAuth, RequestBody};
+
+    let api = collection(library, "zq-collection");
+    let payments = folder(library, &api, None, "zq-folder");
+    let settings = [
+        (
+            item(HttpItemKind::Collection, &api),
+            RequestAuth::Bearer {
+                token: "zq-collection-token".to_string(),
+            },
+        ),
+        (
+            item(HttpItemKind::Folder, &payments),
+            RequestAuth::Basic {
+                username: "zq-folder-user".to_string(),
+                password: "zq-folder-password".to_string(),
+            },
+        ),
+    ];
+    for (container, auth) in settings {
+        let own = ContainerSettings {
+            auth,
+            headers: vec![marked("X-Zq-Container", "zq-container-header")],
+            ..ContainerSettings::default()
+        };
+        store::save_settings(library, &container, &own).unwrap();
+    }
+
+    let auths = [
+        RequestAuth::Basic {
+            username: "zq-basic-user".to_string(),
+            password: "zq-basic-password".to_string(),
+        },
+        RequestAuth::Bearer {
+            token: "zq-bearer-token".to_string(),
+        },
+        RequestAuth::ApiKey {
+            name: "X-Zq-Key".to_string(),
+            value: "zq-header-key".to_string(),
+            place: KeyPlace::Header,
+        },
+        RequestAuth::ApiKey {
+            name: "zq-key-name".to_string(),
+            value: "zq-query-key".to_string(),
+            place: KeyPlace::Query,
+        },
+    ];
+    let mut last = String::new();
+    for (index, auth) in auths.into_iter().enumerate() {
+        let draft = HttpRequestDraft {
+            collection_id: api.clone(),
+            folder_id: Some(payments.clone()),
+            name: format!("zq-request-{index}"),
+            // The two columns left in the clear: nothing in them is what was typed.
+            kind: RequestKind::Graphql,
+            method: HttpMethod::Patch,
+            document: RequestDocument {
+                url: "https://zq-host.exemple.fr/v1?zq-param=zq-param-value".to_string(),
+                params: vec![marked("zq-param", "zq-param-value")],
+                headers: vec![marked("X-Zq-Header", "zq-header-value")],
+                body: RequestBody::Json {
+                    text: r#"{"password":"zq-body"}"#.to_string(),
+                },
+                auth,
+                description: "zq-description".to_string(),
+                ..RequestDocument::default()
+            },
+        };
+        last = store::create_request(library, &draft, "zq-request", t0())
+            .unwrap()
+            .id;
+    }
+    last
+}
+
+/// A send with its answer. What the mask replaces never reaches the vault: these are the
+/// strings it lets through — a parameter typed by hand, a body, what was answered.
+fn marked_send(library: &mut Library, request_id: &str) {
+    use devnotes_lib::http::history::{self, Sent};
+    use devnotes_lib::http::send::{Exchange, SentBody, SentResponse};
+    use devnotes_lib::notes::language::Language;
+
+    let exchange = Exchange {
+        method: HttpMethod::Options,
+        url: "https://zq-sent-host.exemple.fr/login?zq-sent-param=zq-sent-value".to_string(),
+        headers: vec![marked("X-Zq-Sent", "zq-sent-header")],
+        body: SentBody::Text {
+            text: "zq-sent-body".to_string(),
+        },
+    };
+    let sent = Sent {
+        kind: RequestKind::Http,
+        name: "zq-sent-name".to_string(),
+        request_id: Some(request_id.to_string()),
+        exchange: exchange.clone(),
+        secrets: Vec::new(),
+        outcome: Ok(SentResponse {
+            status: 418,
+            reason: "zq-reason".to_string(),
+            millis: 12,
+            size: 2,
+            url: "https://zq-answer-host.exemple.fr/home".to_string(),
+            headers: vec![marked("X-Zq-Answer", "zq-answer-header")],
+            body: "zq-answer-body".to_string(),
+            binary: false,
+            cut: false,
+            incomplete: false,
+            redirects: Vec::new(),
+            language: Language::Json,
+            pretty: Some("zq-pretty".to_string()),
+            cookies: Vec::new(),
+            exchange,
+            graphql: None,
+        }),
+    };
+    let (summary, record) = history::record_of(&sent);
+    history::store::record(library, Some(request_id), &summary, &record, t1()).unwrap();
+
+    // Read back whole before the file is looked at: sealed, not lost.
+    let entry = &history::store::list(library).unwrap()[0];
+    assert_eq!(entry.method, HttpMethod::Options);
+    assert_eq!(entry.status, Some(418));
+}
+
+fn marked_cookie(library: &mut Library) {
+    use devnotes_lib::http::cookies::{Change, JarCookie, store as jar};
+
+    let cookie = JarCookie {
+        name: "zq-cookie-name".to_string(),
+        value: "zq-cookie-value".to_string(),
+        domain: "zq-cookie-host.exemple.fr".to_string(),
+        host_only: true,
+        path: "/zq-cookie-path".to_string(),
+        expires: None,
+        secure: true,
+        http_only: true,
+        same_site: None,
+    };
+    jar::apply(library, &[Change::Set(cookie)], t1()).unwrap();
+    assert_eq!(jar::count(library).unwrap(), 1);
+}
+
+/// The notes' twin: what a reader of the file alone learns of the HTTP side. Every string typed
+/// or answered carries `zq-`, so one that leaks is named by the assertion that finds it.
+#[test]
+fn nothing_typed_or_answered_is_readable_in_the_file_it_was_written_to() {
+    use devnotes_lib::db;
+
+    let scratch = tempfile::tempdir().unwrap();
+    let path = scratch.path().join("sealed.sqlite3");
+    {
+        let mut library = db::open(&path, db::test_vault().unwrap()).unwrap();
+        let last = marked_tree(&mut library);
+        marked_send(&mut library, &last);
+        marked_cookie(&mut library);
+    }
+
+    let raw = std::fs::read(&path).unwrap();
+    let haystack = String::from_utf8_lossy(&raw);
+
+    let leaked: Vec<String> = raw
+        .windows(3)
+        .enumerate()
+        .filter(|(_, window)| *window == b"zq-")
+        .map(|(at, _)| String::from_utf8_lossy(&raw[at..(at + 24).min(raw.len())]).into_owned())
+        .collect();
+    assert!(leaked.is_empty(), "in the clear: {leaked:?}");
+    // The method of a send is in its sealed summary: no request here is an `OPTIONS`.
+    assert!(
+        !haystack.contains("OPTIONS"),
+        "the method of a send is in the clear"
+    );
+    // A request's own kind and method are columns, deliberately: a reader learns that four
+    // GraphQL `PATCH`es are filed in a folder of a collection, and when. This asserts the
+    // decision rather than an accident.
+    assert!(haystack.contains("PATCH"));
+    assert!(haystack.contains("graphql"));
+}

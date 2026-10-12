@@ -1,60 +1,117 @@
 @let current = graphql();
 @let said = answer();
+<!--
+  One grid for both boxes: what is said of each sits above it, in a row of its own that the two
+  share. Under the boxes it was out of sight, the editor being taller than what the response
+  leaves of the window.
+-->
 <div class="graphql" data-testid="http-graphql">
-  <div class="column query">
-    <div class="head">
-      <span class="label">{{ 'http.graphql.query' | transloco }}</span>
-      @if (operations().length > 1) {
-        <app-choice-menu
-          kind="http-graphql-operation"
-          triggerTestId="http-graphql-operation"
-          [label]="'http.graphql.operation' | transloco"
-          [options]="operations()"
-          [currentId]="current.operationName ?? operations()[0]!.id"
-          (chosen)="onOperation($event)"
-        />
-      }
-    </div>
-    <textarea
-      class="text"
-      rows="14"
-      data-testid="http-graphql-query"
-      spellcheck="false"
-      [attr.aria-label]="'http.graphql.query' | transloco"
-      [placeholder]="'http.graphql.queryPlaceholder' | transloco"
-      [value]="current.query"
-      (input)="onQuery($event)"
-    ></textarea>
+  <div class="head of-query">
+    <span class="label">{{ 'http.graphql.query' | transloco }}</span>
+    @if (operations().length > 1) {
+      <app-choice-menu
+        kind="http-graphql-operation"
+        triggerTestId="http-graphql-operation"
+        [label]="'http.graphql.operation' | transloco"
+        [options]="operations()"
+        [currentId]="current.operationName ?? operations()[0]!.id"
+        (chosen)="onOperation($event)"
+      />
+    }
+    <button
+      type="button"
+      class="button"
+      data-testid="http-graphql-format-query"
+      [disabled]="current.query.trim() === '' || !!said?.queryProblem"
+      (click)="format('query')"
+    >
+      {{ 'http.graphql.format' | transloco }}
+    </button>
   </div>
+  <div class="notes of-query">
+    @if (said?.queryProblem; as problem) {
+      <p
+        class="invalid"
+        role="status"
+        data-testid="http-graphql-query-problem"
+        [attr.data-fault]="problem.fault"
+      >
+        {{ 'http.graphql.problemAt' | transloco: { line: problem.line, column: problem.column } }}
+        {{ 'http.graphql.problems.' + problem.fault | transloco }}
+      </p>
+    }
+  </div>
+  <textarea
+    class="text of-query"
+    rows="12"
+    data-testid="http-graphql-query"
+    spellcheck="false"
+    [attr.aria-label]="'http.graphql.query' | transloco"
+    [placeholder]="'http.graphql.queryPlaceholder' | transloco"
+    [value]="current.query"
+    (input)="onQuery($event)"
+  ></textarea>
 
-  <div class="column variables">
-    <div class="head">
-      <span class="label">{{ 'http.graphql.variables' | transloco }}</span>
-    </div>
-    <textarea
-      class="text"
-      rows="14"
-      data-testid="http-graphql-variables"
-      spellcheck="false"
-      [attr.aria-label]="'http.graphql.variables' | transloco"
-      placeholder="{ }"
-      [value]="current.variables"
-      (input)="onVariables($event)"
-    ></textarea>
+  <div class="head of-variables">
+    <span class="label">{{ 'http.graphql.variables' | transloco }}</span>
+    <button
+      type="button"
+      class="button"
+      data-testid="http-graphql-format-variables"
+      [disabled]="current.variables.trim() === '' || !!said?.variablesProblem"
+      (click)="format('variables')"
+    >
+      {{ 'http.graphql.format' | transloco }}
+    </button>
+  </div>
+  <div class="notes of-variables">
+    <p class="hint" id="http-graphql-variables-hint" data-testid="http-graphql-variables-hint">
+      {{ 'http.graphql.variablesHint' | transloco }}
+    </p>
     @if (said?.variablesProblem; as problem) {
       <p class="invalid" role="status" data-testid="http-graphql-problem">
         {{ 'json.invalidAt' | transloco: { line: problem.line, column: problem.column } }}
         {{ 'json.reasons.' + problem.reason | transloco }}
       </p>
     }
-    <label class="get">
-      <input
-        type="checkbox"
-        data-testid="http-graphql-get"
-        [checked]="current.asGet"
-        (change)="onGet($event)"
-      />
-      {{ 'http.graphql.asGet' | transloco }}
-    </label>
+    @if (said?.missing?.length) {
+      <p class="named" role="status" data-testid="http-graphql-missing">
+        <span>{{ 'http.graphql.missing' | transloco }}</span>
+        @for (name of said!.missing; track name) {
+          <code class="variable" data-testid="http-graphql-variable">${{ name }}</code>
+        }
+        <button type="button" class="button" data-testid="http-graphql-add" (click)="addMissing()">
+          {{ 'http.graphql.add' | transloco }}
+        </button>
+      </p>
+    }
+    @if (said?.unknown?.length) {
+      <p class="named" role="status" data-testid="http-graphql-unknown">
+        <span>{{ 'http.graphql.unknown' | transloco }}</span>
+        @for (name of said!.unknown; track name) {
+          <code class="variable" data-testid="http-graphql-variable">{{ name }}</code>
+        }
+      </p>
+    }
   </div>
+  <textarea
+    class="text of-variables"
+    rows="12"
+    data-testid="http-graphql-variables"
+    spellcheck="false"
+    aria-describedby="http-graphql-variables-hint"
+    [attr.aria-label]="'http.graphql.variables' | transloco"
+    placeholder='{ "code": "FR" }'
+    [value]="current.variables"
+    (input)="onVariables($event)"
+  ></textarea>
+  <label class="get">
+    <input
+      type="checkbox"
+      data-testid="http-graphql-get"
+      [checked]="current.asGet"
+      (change)="onGet($event)"
+    />
+    {{ 'http.graphql.asGet' | transloco }}
+  </label>
 </div>

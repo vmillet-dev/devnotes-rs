@@ -43,7 +43,7 @@ describe('The board', () => {
   });
 
   after(async () => {
-    await board.show('date');
+    await board.show('list');
     // Takes its folders with it through the cascade, and its notes to the refuge.
     await bridge.deleteSpace(spaceId, homeId);
     await reloadCanvas();
@@ -52,9 +52,9 @@ describe('The board', () => {
     await reloadCanvas();
   });
 
-  it('starts on the date view, which stays the default', async () => {
+  it('starts on the list view, which stays the default', async () => {
     expect(await board.isShowing()).toBe(false);
-    expect(await board.pressed('date')).toBe('true');
+    expect(await board.pressed('list')).toBe('true');
   });
 
   /** A folder belongs to a space, so there would be no zones to draw. */
@@ -147,8 +147,8 @@ describe('The board', () => {
     expect(await board.isShowing()).toBe(true);
   });
 
-  it('leaves the date view exactly as it was when it switches back', async () => {
-    await board.show('date');
+  it('leaves the list view exactly as it was when it switches back', async () => {
+    await board.show('list');
 
     await canvas.waitForCard('Dump nocturne');
     expect((await canvas.titles()).sort()).toEqual(['Dump nocturne', 'EXPLAIN lent sur join']);
@@ -186,7 +186,7 @@ describe('The board', () => {
       'the tick to reach the note behind the board',
     );
     expect(view.sections[0]?.notes[0]?.items?.[0]?.done).toBe(true);
-    // Drawn from what the board re-read, not from the date view behind it.
+    // Drawn from what the board re-read, not from the list view behind it.
     expect(await card.$(testid('note-card-item')).getAttribute('aria-checked')).toBe('true');
   });
 
@@ -203,15 +203,15 @@ describe('The board', () => {
   });
 
   /**
-   * The board lays its cards out zone by zone, where the date view orders them pinned
+   * The board lays its cards out zone by zone, where the list view orders them pinned
    * first and then by `updated_at`. The arrows measured the grid in DOM order and resolved
-   * the answer through `visibleNotes` — the date view's list — so the first ArrowRight here
+   * the answer through `visibleNotes` — the list view's list — so the first ArrowRight here
    * jumped two cards sideways, onto one nowhere near the pointer.
    *
    * Asserted as a relationship rather than from a fixed start: these files share a session,
    * so what is focused when this runs is whatever the scenario before it left.
    */
-  it('walks the cards as they are on screen, not as the date view lists them', async () => {
+  it('walks the cards as they are on screen, not as the list view lists them', async () => {
     await board.show('board');
     const order = await canvas.titles();
     expect(order.length).toBeGreaterThan(1);
@@ -222,7 +222,7 @@ describe('The board', () => {
       await press('ArrowLeft');
     }
 
-    // The first card on screen. The date view lists the newest note first, and on this board
+    // The first card on screen. The list view lists the newest note first, and on this board
     // that is the last of the three.
     expect(await canvas.focusedCardTitle()).toBe(order[0]);
 

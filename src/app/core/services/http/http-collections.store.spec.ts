@@ -78,8 +78,37 @@ describe('HttpCollectionsStore', () => {
     expect(id).toMatch(/^request-/);
     expect(http.callsOf('tree').length).toBeGreaterThanOrEqual(3);
 
+    // Of the kind asked: a request is created as what it is, and stays so.
+    await store().createRequest('API', null, 'Produits', 'graphql');
+    await store().createRequest('API', null, 'Flux', 'websocket');
+    expect(http.callsOf('createRequest').map((call) => (call[0] as { kind: string }).kind)).toEqual([
+      'http',
+      'graphql',
+      'websocket',
+    ]);
+
     http.failNext = new Error('disk');
     expect(await store().createRequest('API', null, 'Perdue')).toBeNull();
+  });
+
+  /** A request saved into a folded folder was lit where nobody could see it. */
+  it('unfolds what hides a request, down to its folder, and nothing else', async () => {
+    await store().load();
+    store().toggle('API');
+    store().toggle('Archives');
+    store().toggle('Catalogue');
+
+    store().reveal('Old');
+
+    expect([...store().collapsed()]).toEqual(['Catalogue']);
+    expect(
+      store()
+        .rows()
+        .map((row) => row.id),
+    ).toContain('Old');
+    // Gone from the tree: nothing to unfold, and nothing breaks.
+    store().reveal('Absente');
+    expect([...store().collapsed()]).toEqual(['Catalogue']);
   });
 
   it('deletes through Rust and reads the tree again', async () => {
@@ -112,6 +141,30 @@ describe('HttpCollectionsStore', () => {
     expect(store().collapsed().has('Factures')).toBe(false);
   });
 
+  /** An empty tree means nothing before a first read: what follows the tree waits for one. */
+  it('says whether the tree was read at least once', async () => {
+    expect(store().loaded()).toBe(false);
+
+    http.failNext = new Error('disk');
+    await store().load();
+    expect(store().loaded()).toBe(false);
+
+    await store().load();
+    expect(store().loaded()).toBe(true);
+  });
+
+  /** « héritée du dossier Auth »: the name is in what its requests inherit from. */
+  it('has what is inherited read again once a folder or a collection is renamed, not a request', async () => {
+    const before = store().settingsRevision();
+
+    await store().rename({ kind: 'request', id: 'Login' }, 'Connexion');
+    expect(store().settingsRevision()).toBe(before);
+
+    await store().rename({ kind: 'folder', id: 'Auth' }, 'Authentification');
+    await store().rename({ kind: 'collection', id: 'API' }, 'API v2');
+    expect(store().settingsRevision()).toBe(before + 2);
+  });
+
   it('renames, copies and counts through Rust, and says when a write failed', async () => {
     await store().rename({ kind: 'folder', id: 'Auth' }, 'Authentification');
     await store().duplicate({ kind: 'folder', id: 'Auth' }, 'Auth (copie)');
@@ -121,7 +174,7 @@ describe('HttpCollectionsStore', () => {
     http.failNext = new Error('disk');
     await store().createCollection('Perdue');
 
-    expect(http.callsOf('rename')).toEqual([[{ kind: 'folder', id: 'Auth' }, 'Authentification']]);
+    expect(http.callsOf('rename').at(-1)).toEqual([{ kind: 'folder', id: 'Auth' }, 'Authentification']);
     expect(http.callsOf('duplicate')).toEqual([[{ kind: 'folder', id: 'Auth' }, 'Auth (copie)']]);
     expect(TestBed.inject(ErrorNotifier).notice()).not.toBeNull();
   });

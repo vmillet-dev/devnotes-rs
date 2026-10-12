@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { createServer } from 'node:http';
+import { createServer, type IncomingHttpHeaders } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import type { Duplex } from 'node:stream';
 
@@ -41,12 +41,21 @@ function serve(socket: Duplex): void {
   });
 }
 
-/** A WebSocket echo server on the loopback, just enough of RFC 6455 for a scenario. */
-export async function echoSocket(): Promise<{ readonly port: number; readonly close: () => void }> {
+/**
+ * A WebSocket echo server on the loopback, just enough of RFC 6455 for a scenario. It keeps
+ * the headers of each handshake it answered.
+ */
+export async function echoSocket(): Promise<{
+  readonly port: number;
+  readonly handshakes: readonly IncomingHttpHeaders[];
+  readonly close: () => void;
+}> {
   const server = createServer();
   const sockets: Duplex[] = [];
+  const handshakes: IncomingHttpHeaders[] = [];
   server.on('upgrade', (request, socket) => {
     sockets.push(socket);
+    handshakes.push(request.headers);
     const accept = createHash('sha1')
       .update(`${request.headers['sec-websocket-key'] ?? ''}${HANDSHAKE_GUID}`)
       .digest('base64');
@@ -65,6 +74,7 @@ export async function echoSocket(): Promise<{ readonly port: number; readonly cl
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   return {
     port: (server.address() as AddressInfo).port,
+    handshakes,
     close: () => {
       for (const socket of sockets) socket.destroy();
       server.close();

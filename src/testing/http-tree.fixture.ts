@@ -28,7 +28,7 @@ export const collection = (id: string, children: HttpNode[] = []) => ({
 });
 
 /**
- * API: Auth[Login, Logout], Factures[Archives[Old]], Health (POST) ; Catalogue: Produits (QUERY) ;
+ * API: Auth[Login, Logout], Factures[Archives[Old]], Health (POST) ; Catalogue: Produits (GQL) ;
  * Flux: Live (WS).
  */
 export function sampleTree(): HttpTree {

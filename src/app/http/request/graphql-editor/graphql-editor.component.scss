@@ -3,14 +3,41 @@
 .graphql {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-  gap: 16px;
+  // A head, what is said, the box: the two boxes start on one line whatever is said of each.
+  grid-template-rows: auto auto auto auto;
+  gap: 8px 16px;
 }
 
-.column {
+.of-query {
+  grid-column: 1;
+}
+
+.of-variables,
+.get {
+  grid-column: 2;
+}
+
+.head {
+  grid-row: 1;
+}
+
+.text {
+  grid-row: 3;
+}
+
+.get {
+  grid-row: 4;
+}
+
+// ⚠️ Two lines kept whether or not something is said: a line that comes and goes with each
+// brace typed would push the text being typed.
+.notes {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
+  grid-row: 2;
   min-width: 0;
+  min-height: 36px;
 }
 
 .head {
@@ -37,6 +64,53 @@
   margin: 0;
   font-size: 12px;
   color: var(--red);
+}
+
+.hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+// « Sans valeur : $code [Ajouter] »: the names on the line, the button after them.
+.named {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--amber-text);
+}
+
+.variable {
+  font-family: var(--font-mono), monospace;
+  color: var(--text-0);
+}
+
+.button {
+  @include unstyled-control;
+  @include surface(var(--bg-2), 7px, var(--line));
+  @include focus-ring;
+  flex-shrink: 0;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--text-1);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    @include accent-state;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  // In a head, it sits at the end of its line.
+  .head > & {
+    margin-left: auto;
+  }
 }
 
 .get {

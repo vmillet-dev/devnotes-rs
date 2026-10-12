@@ -65,8 +65,8 @@
       </label>
     }
   }
-
-  @if (insecure()) {
-    <p class="warning" data-testid="http-transport-insecure">{{ 'http.transport.insecure' | transloco }}</p>
-  }
 </div>
+<!-- Outside the grid, whose width is the fields': a sentence has a measure of its own. -->
+@if (insecure()) {
+  <p class="warning" data-testid="http-transport-insecure">{{ 'http.transport.insecure' | transloco }}</p>
+}

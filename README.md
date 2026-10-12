@@ -35,7 +35,7 @@ Write a command once, find it in a keystroke, paste it anywhere.
 
 ### Private by design
 
-Everything stays on your machine, sealed with a passphrase only you know. No account, no cloud, no telemetry, and it works with the network off.
+Everything stays on your machine, sealed with a passphrase only you know. No account, no cloud, no telemetry, and it works with the network off. A request you send from the HTTP client goes to the server you name and nowhere else, and tells it `DevNotes/<version>` as its `User-Agent` unless you set another, or none. The tools call nothing.
 
 </td>
 <td width="33%" valign="top">
@@ -141,6 +141,8 @@ What SQL filters, sorts and joins on is not sealed — sealing it would mean loa
 - each note's language and kind, how many items a list holds and which are ticked;
 - every tag and every `{{field}}` name, as typed — `prod`, `aws`, `client-acme`, `db_password`;
 - the length of every sealed value: AES-GCM hides what a title says, not how long it is;
+- how many HTTP collections, folders and requests there are and how they nest, each request's kind and method, and when each was saved;
+- when each request was sent and from which saved request — not to where, nor what was answered — and how many cookies are kept and when each expires, not for which site;
 - each attachment's type and size, the names of your libraries, and your preferences.
 
 Keep that in mind before a tag or a field name carries the secret itself.

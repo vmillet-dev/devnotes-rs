@@ -33,20 +33,23 @@ use attachments::{
 };
 use backup::{list_backups, restore_backup};
 use changelog::{app_changelog, release_notes};
-use desktop::{set_global_shortcuts, set_window_behavior, sync_tray};
+use desktop::{hold_quit, set_global_shortcuts, set_window_behavior, sync_tray};
 use folders::{
     arrange_board, board_view, create_folder, delete_folder, file_notes, file_notes_back,
     list_folders, recolour_folder, rename_folder, save_board_layout,
 };
 use http::{
-    cancel_http_send, clear_http_cookies, clear_http_history, close_websocket, connect_websocket,
-    count_http_contents, count_http_cookies, count_http_history, create_http_collection,
-    create_http_folder, create_http_request, delete_http_cookie, delete_http_cookie_domain,
-    delete_http_item, describe_graphql, describe_http_body, duplicate_http_item,
-    forget_http_response, get_http_request, http_cookies, http_history, http_history_draft,
-    http_history_entry, http_response_image, http_settings, http_tree, inherited_http_settings,
-    move_http_item, rename_http_item, reorder_http_collection, save_http_request,
-    save_http_response, save_http_settings, send_http_request, send_websocket, sync_http_query,
+    add_graphql_variables, cancel_http_send, check_http_headers, clear_http_cookies,
+    clear_http_history, close_websocket, connect_websocket, count_http_contents,
+    count_http_cookies, count_http_history, create_http_collection, create_http_folder,
+    create_http_request, create_http_request_in, delete_http_cookie, delete_http_cookie_domain,
+    delete_http_history_entry, delete_http_item, describe_graphql, describe_http_body,
+    duplicate_http_item, forget_http_response, get_http_request, http_cookies, http_history,
+    http_history_draft, http_history_entry, http_history_onto_request, http_response_image,
+    http_settings, http_tree, implied_http_headers, inherited_http_settings, move_http_item,
+    read_http_headers, rename_http_item, reorder_http_collection, restore_http_history_entry,
+    save_http_request, save_http_response, save_http_settings, send_http_request, send_websocket,
+    sync_http_query,
 };
 use json::explore_json;
 use libraries::{create_library, delete_library, list_libraries, open_library, rename_library};
@@ -64,10 +67,10 @@ use tools::{
     answer_percentages, check_digits, convert_case, convert_data, convert_size, copy_qr_code,
     current_instant, decode_bytes, decode_jwt, describe_cidr, describe_colour, describe_cron,
     describe_instant, describe_permissions, describe_qr_code, diff_json, diff_text,
-    encode_base64_file, encode_bytes, estimate_transfer, fix_line_breaks, generate_identifiers,
-    generate_json, generate_passwords, hash_input, inspect_identifier, lorem_ipsum,
-    measure_durations, parse_url, place_in_zones, save_bytes, save_qr_code, search_time_zones,
-    text_stats, time_in_zone, url_codec,
+    encode_base64_file, encode_bytes, estimate_transfer, export_identities, fix_line_breaks,
+    generate_identifiers, generate_identity, generate_json, generate_passwords, hash_input,
+    inspect_identifier, lorem_ipsum, measure_durations, parse_url, place_in_zones, save_bytes,
+    save_qr_code, search_time_zones, text_stats, time_in_zone, url_codec,
 };
 use transfer::{export_is_protected, export_notes, import_notes, share_notes};
 use vault::{change_passphrase, create_vault, unlock_vault, vault_state};
@@ -118,6 +121,8 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             describe_colour,
             convert_data,
             generate_json,
+            generate_identity::<tauri::Wry>,
+            export_identities::<tauri::Wry>,
             lorem_ipsum,
             diff_json,
             diff_text,
@@ -164,6 +169,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             create_http_collection::<tauri::Wry>,
             create_http_folder::<tauri::Wry>,
             create_http_request::<tauri::Wry>,
+            create_http_request_in::<tauri::Wry>,
             get_http_request::<tauri::Wry>,
             save_http_request::<tauri::Wry>,
             rename_http_item::<tauri::Wry>,
@@ -177,7 +183,11 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             save_http_settings::<tauri::Wry>,
             inherited_http_settings::<tauri::Wry>,
             describe_http_body,
+            implied_http_headers::<tauri::Wry>,
+            check_http_headers,
+            read_http_headers,
             describe_graphql,
+            add_graphql_variables,
             connect_websocket::<tauri::Wry>,
             send_websocket::<tauri::Wry>,
             close_websocket::<tauri::Wry>,
@@ -189,6 +199,9 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             http_history::<tauri::Wry>,
             http_history_entry::<tauri::Wry>,
             http_history_draft::<tauri::Wry>,
+            http_history_onto_request::<tauri::Wry>,
+            delete_http_history_entry::<tauri::Wry>,
+            restore_http_history_entry::<tauri::Wry>,
             count_http_history::<tauri::Wry>,
             clear_http_history::<tauri::Wry>,
             http_cookies::<tauri::Wry>,
@@ -239,6 +252,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             sync_tray,
             set_global_shortcuts,
             set_window_behavior,
+            hold_quit,
         ])
         // Reachable from no command, so exported on its own, with the topic it travels on.
         .typ::<desktop::GlobalAction>()
@@ -377,6 +391,12 @@ fn on_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
         {
             api.prevent_close();
             let _ = window.hide();
+        }
+        // Closing the last window ends the process: the page is asked first, as for the
+        // tray's « Quitter », and ends it itself.
+        tauri::WindowEvent::CloseRequested { api, .. } => {
+            api.prevent_close();
+            desktop::request_quit(window.app_handle());
         }
         // Tauri emits nothing for "minimized": `Resized` is the only way through.
         tauri::WindowEvent::Resized(_)

@@ -243,6 +243,9 @@ pub enum GenerateAnswer {
     },
     /// A schema is an object, or `true`.
     NotASchema,
+    /// An object, but none of what it holds is a schema's: a document to draw others like,
+    /// read under the wrong switch. Nothing is generated from it.
+    AnExample,
 }
 
 pub fn generate(request: &GenerateRequest) -> GenerateAnswer {
@@ -267,8 +270,12 @@ pub fn generate(request: &GenerateRequest) -> GenerateAnswer {
             Vec::new(),
         ),
         JsonSource::Schema => {
-            if !(source.is_object() || source == Value::Bool(true)) {
-                return GenerateAnswer::NotASchema;
+            match &source {
+                Value::Object(map) if !schema::reads_as_a_schema(map) => {
+                    return GenerateAnswer::AnExample;
+                }
+                Value::Object(_) | Value::Bool(true) => {}
+                _ => return GenerateAnswer::NotASchema,
             }
             let mut generator = schema::Generator::new(&source);
             let documents = (0..count)
@@ -313,6 +320,96 @@ mod tests {
             } => (serde_json::from_str(&text).unwrap(), unsupported),
             other => panic!("{other:?}"),
         }
+    }
+
+    fn answered(source: JsonSource, text: &str) -> GenerateAnswer {
+        generate(&GenerateRequest {
+            source,
+            text: text.to_owned(),
+            count: 3,
+            seed: Some(1),
+        })
+    }
+
+    /// The sample document, with « Schéma » chosen above it, answered three strings of lorem
+    /// ipsum and a warning about `createdAt`, `email`, `id`…
+    #[test]
+    fn an_example_read_as_a_schema_is_said_to_be_one_and_draws_nothing() {
+        for example in [
+            r#"{"id":"0b1c2d3e","email":"ada@example.com","name":"Ada","createdAt":"2026-01-15T09:30:00Z","tags":["admin"],"score":42}"#,
+            // Fields a document may well be called, holding what no keyword holds.
+            r#"{"type":"user","id":7}"#,
+            r#"{"items":[{"id":1},{"id":2}],"total":2}"#,
+            r#"{"required":true,"format":"A4","pages":3}"#,
+            r#"{"properties":{"colour":"red"},"name":"box"}"#,
+            r#"{"title":"A post","description":"Its line","author":"Ada"}"#,
+        ] {
+            assert_eq!(
+                answered(JsonSource::Schema, example),
+                GenerateAnswer::AnExample,
+                "{example}"
+            );
+            // Under its own switch it is drawn from.
+            assert!(matches!(
+                answered(JsonSource::Example, example),
+                GenerateAnswer::Generated { .. }
+            ));
+        }
+    }
+
+    #[test]
+    fn a_schema_is_read_as_one_by_a_keyword_that_holds_what_it_should_or_by_nothing_else() {
+        for schema in [
+            "{}",
+            "true",
+            r#"{"type":"string"}"#,
+            r#"{"type":["string","null"]}"#,
+            r#"{"properties":{}}"#,
+            r##"{"$ref":"#/$defs/a","$defs":{"a":{"type":"integer"}}}"##,
+            r#"{"enum":["a","b"]}"#,
+            r#"{"items":{"type":"number"}}"#,
+            r#"{"oneOf":[{"type":"string"},{"type":"null"}]}"#,
+            r#"{"required":["id"]}"#,
+            // Only the vocabulary, drawn from or not.
+            r#"{"minimum":1,"maximum":5}"#,
+            r#"{"title":"A user","description":"As the API answers it"}"#,
+            r#"{"pattern":"^[a-z]+$"}"#,
+            // One keyword that says schema, among words that are none: listed, not refused.
+            r#"{"type":"object","properties":{"id":{"type":"integer"}},"x-internal":true}"#,
+        ] {
+            assert!(
+                matches!(
+                    answered(JsonSource::Schema, schema),
+                    GenerateAnswer::Generated { .. }
+                ),
+                "{schema}"
+            );
+        }
+        assert_eq!(
+            answered(JsonSource::Schema, "[1, 2]"),
+            GenerateAnswer::NotASchema
+        );
+    }
+
+    /// The warning is deserved here, and names the keyword with the place it stands at.
+    #[test]
+    fn a_real_schema_with_a_keyword_it_does_not_draw_from_still_generates_and_names_it() {
+        let schema = r#"{
+            "type": "object",
+            "properties": {
+                "meta": { "type": "object", "patternProperties": { "^x-": { "type": "string" } } }
+            }
+        }"#;
+
+        let (_, unsupported) = generated(JsonSource::Schema, schema, 1, 3);
+
+        assert_eq!(
+            unsupported,
+            [Unsupported {
+                keyword: "patternProperties".to_owned(),
+                path: "$.properties.meta".to_owned(),
+            }]
+        );
     }
 
     #[test]

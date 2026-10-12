@@ -74,10 +74,10 @@ describe('BoardStore', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
   });
 
-  it('starts on the date view, which stays the default', async () => {
+  it('starts on the list view, which stays the default', async () => {
     const { store } = await createStore();
 
-    expect(store.mode()).toBe('date');
+    expect(store.mode()).toBe('list');
     expect(store.isBoard()).toBe(false);
   });
 
@@ -88,10 +88,10 @@ describe('BoardStore', () => {
     store.setMode('board');
 
     expect(store.canShowBoard()).toBe(false);
-    expect(store.mode()).toBe('date');
+    expect(store.mode()).toBe('list');
   });
 
-  it('asks nothing at all while the date view is showing', async () => {
+  it('asks nothing at all while the list view is showing', async () => {
     const { store, spaces, repository } = await createStore();
     spaces.selectSpace('sql');
     await vi.waitFor(() => expect(store.canShowBoard()).toBe(true));
@@ -175,7 +175,7 @@ describe('BoardStore', () => {
     await onBoard(harness, 'sql');
 
     harness.spaces.selectSpace('veille');
-    await vi.waitFor(() => expect(harness.store.mode()).toBe('date'));
+    await vi.waitFor(() => expect(harness.store.mode()).toBe('list'));
 
     harness.spaces.selectSpace('sql');
     await vi.waitFor(() => expect(harness.store.mode()).toBe('board'));

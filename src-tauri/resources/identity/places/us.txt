@@ -1,0 +1,55 @@
+NY;10001;New York;New York;212
+CA;90012;Los Angeles;California;213
+IL;60601;Chicago;Illinois;312
+TX;77002;Houston;Texas;713
+AZ;85004;Phoenix;Arizona;602
+PA;19103;Philadelphia;Pennsylvania;215
+TX;78205;San Antonio;Texas;210
+CA;92101;San Diego;California;619
+TX;75201;Dallas;Texas;214
+CA;95113;San Jose;California;408
+TX;78701;Austin;Texas;512
+FL;32202;Jacksonville;Florida;904
+OH;43215;Columbus;Ohio;614
+NC;28202;Charlotte;North Carolina;704
+CA;94103;San Francisco;California;415
+IN;46204;Indianapolis;Indiana;317
+WA;98101;Seattle;Washington;206
+CO;80202;Denver;Colorado;303
+DC;20001;Washington;District of Columbia;202
+MA;02108;Boston;Massachusetts;617
+TN;37203;Nashville;Tennessee;615
+MI;48226;Detroit;Michigan;313
+OR;97204;Portland;Oregon;503
+NV;89101;Las Vegas;Nevada;702
+GA;30303;Atlanta;Georgia;404
+FL;33130;Miami;Florida;305
+MN;55401;Minneapolis;Minnesota;612
+LA;70112;New Orleans;Louisiana;504
+MO;64106;Kansas City;Missouri;816
+UT;84101;Salt Lake City;Utah;801
+---
+Main Street
+Oak Street
+Maple Avenue
+Washington Street
+Park Avenue
+Elm Street
+Cedar Lane
+Pine Street
+Lake Drive
+Hill Road
+2nd Street
+3rd Avenue
+Lincoln Avenue
+Jefferson Street
+Sunset Drive
+Church Street
+Walnut Street
+Highland Avenue
+Franklin Street
+Jackson Street
+River Road
+Spring Street
+Madison Avenue
+Chestnut Street

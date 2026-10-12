@@ -9,14 +9,50 @@
     } @else {
       <app-request-tabs (closeAsked)="closing.set($event)" />
       @if (tabs.active(); as tab) {
-        <app-request-editor [tab]="tab" (saveAsked)="askSave(tab)" />
-        @if (tab.draft.kind === 'websocket') {
-          <app-socket-log [tabKey]="tab.key" />
-        } @else {
-          <app-response-pane [tabKey]="tab.key" [requestName]="tab.draft.name" />
-        }
+        <!-- The share is the area's, not a tab's: a request and its answer, or a socket and its log. -->
+        @let share = settings.httpRequestShare();
+        <div class="split" data-testid="http-split">
+          <app-request-editor
+            [tab]="tab"
+            [class.shared]="share > 0"
+            [style.flex-basis.%]="share > 0 ? share : null"
+            (saveAsked)="askSave(tab)"
+          />
+          <app-split-handle
+            testId="http-split-handle"
+            [share]="share"
+            [upperFloor]="floors.request"
+            [lowerFloor]="floors.response"
+            [label]="'http.split.label' | transloco"
+            [valueText]="
+              share > 0 ? ('http.split.value' | transloco: { share: share }) : ('http.split.auto' | transloco)
+            "
+            (shareChanged)="settings.httpRequestShare.write($event)"
+          />
+          @if (tab.draft.kind === 'websocket') {
+            <app-socket-log [tabKey]="tab.key" />
+          } @else {
+            <app-response-pane [tabKey]="tab.key" [requestName]="tab.draft.name" />
+          }
+        </div>
       } @else {
-        <p class="empty" data-testid="http-workspace-empty">{{ 'http.workspace.empty' | transloco }}</p>
+        <!-- The first screen of the area says what it can do: the three kinds, as buttons. -->
+        <div class="empty" data-testid="http-workspace-empty">
+          <p class="empty-text">{{ 'http.workspace.empty' | transloco }}</p>
+          <div class="empty-kinds">
+            @for (kind of kinds; track kind) {
+              <button
+                type="button"
+                class="empty-kind"
+                data-testid="http-workspace-new"
+                [attr.data-kind]="kind"
+                (click)="tabs.newRequest(kind)"
+              >
+                {{ 'http.kinds.new.' + kind | transloco }}
+              </button>
+            }
+          </div>
+        </div>
       }
     }
   </main>
@@ -29,9 +65,11 @@
     (cancelled)="placing.set(null)"
   />
 }
-@if (closing(); as modified) {
+@if (closingWhat(); as asked) {
   <app-close-request-dialog
-    [name]="modified.draft.name"
+    [name]="asked.tab.draft.name"
+    [modified]="asked.modified"
+    [connected]="asked.connected"
     (chosen)="onCloseChoice($event)"
     (cancelled)="closing.set(null)"
   />

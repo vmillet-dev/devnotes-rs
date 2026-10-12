@@ -1,0 +1,55 @@
+28;28013;Madrid;Madrid;91
+08;08002;Barcelona;Barcelona;93
+46;46002;Valencia;Valencia;96
+41;41001;Sevilla;Sevilla;95
+50;50001;Zaragoza;Zaragoza;976
+29;29005;Málaga;Málaga;95
+30;30001;Murcia;Murcia;968
+07;07001;Palma;Illes Balears;971
+35;35001;Las Palmas de Gran Canaria;Las Palmas;928
+48;48001;Bilbao;Bizkaia;94
+03;03001;Alicante;Alicante;96
+14;14001;Córdoba;Córdoba;957
+47;47001;Valladolid;Valladolid;983
+36;36201;Vigo;Pontevedra;986
+33;33201;Gijón;Asturias;98
+15;15001;A Coruña;A Coruña;981
+18;18001;Granada;Granada;958
+01;01001;Vitoria-Gasteiz;Álava;945
+38;38001;Santa Cruz de Tenerife;Santa Cruz de Tenerife;922
+31;31001;Pamplona;Navarra;948
+04;04001;Almería;Almería;950
+20;20001;San Sebastián;Gipuzkoa;943
+39;39001;Santander;Cantabria;942
+09;09001;Burgos;Burgos;947
+02;02001;Albacete;Albacete;967
+12;12001;Castellón de la Plana;Castellón;964
+26;26001;Logroño;La Rioja;941
+06;06001;Badajoz;Badajoz;924
+37;37001;Salamanca;Salamanca;923
+21;21001;Huelva;Huelva;959
+---
+Calle Mayor
+Calle Real
+Calle de la Iglesia
+Calle Nueva
+Calle del Sol
+Calle de la Fuente
+Avenida de la Constitución
+Calle San Juan
+Calle del Carmen
+Avenida de Andalucía
+Calle Cervantes
+Calle de la Paz
+Calle San José
+Calle del Pilar
+Calle Santa Ana
+Calle del Prado
+Avenida de Europa
+Calle Goya
+Calle Velázquez
+Calle de la Rosa
+Calle San Miguel
+Calle Colón
+Calle del Mar
+Ronda de Toledo

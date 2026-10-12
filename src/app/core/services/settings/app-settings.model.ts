@@ -36,6 +36,16 @@ export const NOTE_KIND_CHOICES = ['note', 'snippet', 'checklist'] as const satis
  */
 export const RAIL_WIDTH = { min: 160, max: 520, default: 160 } as const;
 
+/** The history's list beside the send it reads: wide enough for a URL at its ceiling. */
+export const HISTORY_LIST_WIDTH = { min: 280, max: 760, default: 380 } as const;
+
+/**
+ * How much of the HTTP workspace's height the request takes, in percent. `auto` leaves it to
+ * what the request holds, as before there was a line to drag; the two ends are a stale file's
+ * guard, the floors on screen being pixels the window decides.
+ */
+export const HTTP_REQUEST_SHARE = { auto: 0, min: 5, max: 95 } as const;
+
 export interface AppSettings {
   readonly locale: LocaleChoice;
   readonly theme: ThemeChoice;
@@ -57,10 +67,16 @@ export interface AppSettings {
   readonly showLibraryRail: boolean;
   /** Its width, dragged from its edge and clamped on the way in and out. */
   readonly libraryRailWidth: number;
+  /** The width of the HTTP history's list, dragged the same way. */
+  readonly historyListWidth: number;
+  /** The request's share of the height it has with its response; `0` leaves it automatic. */
+  readonly httpRequestShare: number;
   /** Which area shows — Notes or Outils — and the one the window reopens on. */
   readonly area: Area;
   /** The tools opened last, newest first: which and when, nothing typed into them. */
   readonly recentTools: readonly RecentTool[];
+  /** The tools starred, in the order they were: ids, never what a tool holds. */
+  readonly favouriteTools: readonly string[];
   readonly showPinnedFirst: boolean;
   /** Read by Rust at launch, before the front end exists: `backup::wanted`. */
   readonly automaticBackups: boolean;
@@ -98,8 +114,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
   newNoteShortcut: DEFAULT_SHORTCUTS.newNote,
   showLibraryRail: true,
   libraryRailWidth: RAIL_WIDTH.default,
+  historyListWidth: HISTORY_LIST_WIDTH.default,
+  httpRequestShare: HTTP_REQUEST_SHARE.auto,
   area: AREAS[0],
   recentTools: [],
+  favouriteTools: [],
   showPinnedFirst: true,
   automaticBackups: true,
   copyConfirmation: true,

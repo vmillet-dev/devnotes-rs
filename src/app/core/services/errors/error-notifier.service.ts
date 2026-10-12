@@ -52,11 +52,32 @@ const CODE_KEYS: Record<IpcErrorCode, string | null> = {
   httpGraphqlVariables: 'errors.httpGraphqlVariables',
   httpWebsocketRefused: 'errors.httpWebsocketRefused',
   httpNetwork: 'errors.httpNetwork',
+  httpWebsocketScheme: 'errors.httpWebsocketScheme',
+  httpHeaderName: 'errors.httpHeaderName',
+  httpHeaderValue: 'errors.httpHeaderValue',
 };
 
-/** What a code says, for an error kept as its code: a failed send in the history. */
-export function errorKeyOf(code: IpcErrorCode): string | null {
-  return CODE_KEYS[code];
+/**
+ * A code whose sentence depends on one of its values: a timeout says whose delay ran out.
+ * That param names the sub-key, `errors.httpTimeout.folder`, as `http.auth.from.<kind>` does.
+ */
+const VARIANT_PARAM: Partial<Record<IpcErrorCode, string>> = {
+  httpTimeout: 'source',
+  httpTooManyRedirects: 'source',
+  httpHeaderName: 'source',
+  httpHeaderValue: 'source',
+};
+
+/** What a code says, for an error kept as its code and its values: a failed send in the history. */
+export function errorKeyOf(
+  code: IpcErrorCode,
+  params: Readonly<Record<string, string | undefined>> = {},
+): string | null {
+  const key = CODE_KEYS[code];
+  const variant = VARIANT_PARAM[code];
+  if (key === null || variant === undefined) return key;
+
+  return `${key}.${params[variant] ?? 'request'}`;
 }
 
 /** `fallback` carries the action attempted, used when the cause adds nothing. */
@@ -68,7 +89,7 @@ export function ipcNotice(
   const detail = errorDetail(error);
 
   if (error instanceof IpcError && error.code !== null) {
-    const key = CODE_KEYS[error.code];
+    const key = errorKeyOf(error.code, error.params);
     if (key) {
       return { ref: { key, params: { ...params, ...error.params } }, detail };
     }

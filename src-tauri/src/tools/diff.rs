@@ -124,6 +124,10 @@ pub enum JsonDiffAnswer {
         line: u32,
         column: u32,
     },
+    /// A side read by its shape came out as one value and no structure. ⚠️ Nearly any text is
+    /// a YAML scalar: an nginx file was « read as YAML » and compared as one string changed
+    /// into another. A format chosen by hand is taken at its word instead.
+    NotStructured { sides: Vec<JsonDiffSide> },
 }
 
 // --- Paths.
@@ -555,6 +559,19 @@ pub fn diff(request: &JsonDiffRequest) -> JsonDiffAnswer {
         (Ok(a), Ok(b)) => (a, b),
         (Err(unreadable), _) | (_, Err(unreadable)) => return unreadable,
     };
+    let loose = |value: &Value, forced: Option<DataFormat>| {
+        forced.is_none() && !value.is_object() && !value.is_array()
+    };
+    let sides: Vec<JsonDiffSide> = [
+        (JsonDiffSide::A, loose(&a, request.format_a)),
+        (JsonDiffSide::B, loose(&b, request.format_b)),
+    ]
+    .into_iter()
+    .filter_map(|(side, loose)| loose.then_some(side))
+    .collect();
+    if !sides.is_empty() {
+        return JsonDiffAnswer::NotStructured { sides };
+    }
 
     let mut differ = Differ {
         ignore_key_order: request.ignore_key_order,
@@ -636,6 +653,7 @@ mod tests {
             JsonDiffAnswer::Unreadable {
                 side, line, column, ..
             } => panic!("{side:?} {line}:{column}"),
+            JsonDiffAnswer::NotStructured { sides } => panic!("no structure: {sides:?}"),
         }
     }
 
@@ -873,8 +891,9 @@ mod tests {
                         assert!(changes.is_empty(), "{format_a:?} against {format_b:?}");
                         assert_eq!((read_a, read_b), (format_a, format_b));
                     }
-                    unreadable @ JsonDiffAnswer::Unreadable { .. } => {
-                        panic!("{format_a:?} against {format_b:?}: {unreadable:?}")
+                    refused @ (JsonDiffAnswer::Unreadable { .. }
+                    | JsonDiffAnswer::NotStructured { .. }) => {
+                        panic!("{format_a:?} against {format_b:?}: {refused:?}")
                     }
                 }
             }
@@ -893,6 +912,84 @@ mod tests {
             ("key: value", DataFormat::Yaml),
             ("---\na: 1", DataFormat::Yaml),
             ("- a\n- b", DataFormat::Yaml),
+        ] {
+            assert_eq!(detect(text), format, "{text}");
+        }
+    }
+
+    /// An nginx file left there from the text tab was « read as YAML » and answered « 1
+    /// modification »: one string changed into another.
+    #[test]
+    fn a_side_that_is_one_value_and_no_structure_is_said_so_rather_than_compared() {
+        let nginx = "server {\n    listen 80;\n    server_name devnotes.fr;\n}\n";
+        let other = "server {\n    listen 443 ssl;\n    server_name devnotes.fr;\n}\n";
+        let document = r#"{ "a": 1 }"#;
+
+        assert_eq!(
+            read_as(nginx, other, None, None),
+            JsonDiffAnswer::NotStructured {
+                sides: vec![JsonDiffSide::A, JsonDiffSide::B]
+            }
+        );
+        assert_eq!(
+            read_as(document, nginx, None, None),
+            JsonDiffAnswer::NotStructured {
+                sides: vec![JsonDiffSide::B]
+            }
+        );
+        // A number, a quoted string, a word: one value each, whatever would read it.
+        for scalar in ["42", r#""a string""#, "true", "null", "just words"] {
+            assert_eq!(
+                read_as(scalar, document, None, None),
+                JsonDiffAnswer::NotStructured {
+                    sides: vec![JsonDiffSide::A]
+                },
+                "{scalar}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_format_chosen_by_hand_is_taken_at_its_word_even_for_one_value() {
+        assert!(matches!(
+            read_as("one", "two", Some(DataFormat::Yaml), Some(DataFormat::Yaml)),
+            JsonDiffAnswer::Compared {
+                counts: JsonDiffCounts { modified: 1, .. },
+                ..
+            }
+        ));
+        // Chosen on one side only, the other is still read by its shape.
+        assert_eq!(
+            read_as("one", "two", Some(DataFormat::Yaml), None),
+            JsonDiffAnswer::NotStructured {
+                sides: vec![JsonDiffSide::B]
+            }
+        );
+    }
+
+    /// Every JSON document is YAML too: the detection says the narrowest, and « lu comme »
+    /// with it.
+    #[test]
+    fn a_json_document_is_read_as_json_beside_a_yaml_one() {
+        let yaml = "name: devnotes\nversion: 0.9.1\n";
+        let json = "{\n  \"name\": \"devnotes\",\n  \"version\": \"0.9.2\"\n}";
+
+        assert!(matches!(
+            read_as(yaml, json, None, None),
+            JsonDiffAnswer::Compared {
+                format_a: DataFormat::Yaml,
+                format_b: DataFormat::Json,
+                counts: JsonDiffCounts { modified: 1, .. },
+                ..
+            }
+        ));
+        for (text, format) in [
+            ("42", DataFormat::Json),
+            (r#""a string""#, DataFormat::Json),
+            ("null", DataFormat::Json),
+            ("[\n  1,\n  2\n]", DataFormat::Json),
+            ("just words", DataFormat::Yaml),
+            ("a: 1", DataFormat::Yaml),
         ] {
             assert_eq!(detect(text), format, "{text}");
         }

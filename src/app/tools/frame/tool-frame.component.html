@@ -1,9 +1,27 @@
 @let id = tool().id;
 <header class="topbar">
+  <app-rail-toggle
+    testId="tools-rail-toggle"
+    [shown]="settings.showLibraryRail()"
+    (toggled)="settings.toggleLibraryRail()"
+  />
   <button type="button" class="crumb" data-testid="tool-back" (click)="store.home()">
     {{ 'tools.title' | transloco }} <span aria-hidden="true">›</span>
   </button>
   <h1 class="title" data-testid="tool-title">{{ 'tools.' + id + '.name' | transloco }}</h1>
+  @let starred = store.favourites().includes(id);
+  <button
+    type="button"
+    class="star"
+    data-testid="tool-favourite"
+    [class.on]="starred"
+    [attr.aria-pressed]="starred"
+    [attr.aria-label]="'tools.favourites.toggle' | transloco"
+    [attr.title]="(starred ? 'tools.favourites.remove' : 'tools.favourites.add') | transloco"
+    (click)="store.toggleFavourite(id)"
+  >
+    <app-icon name="star" [filled]="starred" />
+  </button>
   <span class="spacer"></span>
   @for (action of actions(); track action.id) {
     <button

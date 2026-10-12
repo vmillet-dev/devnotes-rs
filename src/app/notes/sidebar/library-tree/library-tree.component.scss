@@ -1,43 +1,12 @@
 @use 'mixins' as *;
 
-// The width is bound on the host; the tree scrolls inside it and the edge sits against it.
+// The frame is the box in the page: this element only holds it.
 :host {
-  position: relative;
-  display: flex;
-  flex: 0 0 auto;
-  min-height: 0;
-  background: var(--bg-1);
+  display: contents;
 }
 
 .rail {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: var(--space-card) 10px var(--space-canvas);
-  border-right: 1px solid var(--line-soft);
-  overflow-y: auto;
-}
-
-// A hit area wider than the line it draws: a 1px target is not one.
-.rail-edge {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 7px;
-  cursor: col-resize;
-  touch-action: none;
-}
-
-.rail-edge:hover,
-.rail-edge:focus-visible {
-  background: var(--amber-dim);
-}
-
-.rail-edge:focus-visible {
-  outline: none;
+  @include rail-body;
 }
 
 .rail-head {

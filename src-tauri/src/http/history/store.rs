@@ -6,11 +6,11 @@ use uuid::Uuid;
 
 use super::{
     HistoryEntry, HistoryItem, HistoryRecord, HistorySummary, KEPT_AT_MOST, RETENTION_DAYS,
+    url_parts,
 };
 use crate::db::schema::http_history;
 use crate::db::{Library, iso8601};
 use crate::error::StorageError;
-use crate::http::model::HttpMethod;
 use crate::vault::key::Vault;
 
 #[derive(Queryable, Selectable)]
@@ -19,8 +19,6 @@ struct Row {
     id: String,
     sent_at: String,
     request_id: Option<String>,
-    method: String,
-    status: Option<i32>,
     summary: String,
 }
 
@@ -48,24 +46,38 @@ fn seal_json<T: serde::Serialize>(vault: &Vault, value: &T) -> Result<String, St
 
 impl Row {
     fn open(self, vault: &Vault) -> Result<HistoryItem, StorageError> {
+        let summary: HistorySummary = open_json(vault, &self.id, "summary", &self.summary)?;
+        let (url_head, url_tail) = url_parts(&summary.url);
         Ok(HistoryItem {
+            url_head,
+            url_tail,
             sent_at: iso8601::parse(&self.sent_at).map_err(|_| corrupt(&self.id, "sentAt"))?,
-            method: self
-                .method
-                .parse::<HttpMethod>()
-                .map_err(|()| corrupt(&self.id, "method"))?,
-            status: self.status.and_then(|status| u16::try_from(status).ok()),
-            summary: open_json(vault, &self.id, "summary", &self.summary)?,
+            method: summary.method,
+            status: summary.status,
+            summary,
             request_id: self.request_id,
             id: self.id,
         })
     }
 }
 
+/// A request deleted since it was sent is history without its link.
+fn still_there<'a>(
+    connection: &mut SqliteConnection,
+    request_id: Option<&'a str>,
+) -> Option<&'a str> {
+    request_id.filter(|id| {
+        crate::db::schema::http_requests::table
+            .find(*id)
+            .count()
+            .get_result::<i64>(connection)
+            .is_ok_and(|count| count > 0)
+    })
+}
+
 /// Writes the entry, then lets go of what is past the retention or the count.
 pub fn record(
     connection: &mut Library,
-    method: HttpMethod,
     request_id: Option<&str>,
     summary: &HistorySummary,
     record: &HistoryRecord,
@@ -73,30 +85,45 @@ pub fn record(
 ) -> Result<String, StorageError> {
     connection.transaction(|connection, vault| {
         let id = Uuid::now_v7().to_string();
-        // A request deleted since it was sent is history without its link.
-        let request_id = request_id.filter(|id| {
-            crate::db::schema::http_requests::table
-                .find(*id)
-                .count()
-                .get_result::<i64>(connection)
-                .is_ok_and(|count| count > 0)
-        });
+        let request_id = still_there(connection, request_id);
         diesel::insert_into(http_history::table)
             .values((
                 http_history::id.eq(&id),
                 http_history::sent_at.eq(iso8601::format(now)),
                 http_history::request_id.eq(request_id),
-                http_history::method.eq(method.as_str()),
-                http_history::status.eq(record
-                    .response
-                    .as_ref()
-                    .map(|response| i32::from(response.status))),
                 http_history::summary.eq(seal_json(vault, summary)?),
                 http_history::record.eq(seal_json(vault, record)?),
             ))
             .execute(connection)?;
         purge(connection, now)?;
         Ok(id)
+    })
+}
+
+/// One entry gone, answered whole: what its undo hands back to `restore`.
+pub fn delete(connection: &mut Library, id: &str) -> Result<HistoryEntry, StorageError> {
+    let removed = entry(connection, id)?;
+    let (connection, _) = connection.split();
+    diesel::delete(http_history::table.find(id)).execute(connection)?;
+    Ok(removed)
+}
+
+/// Puts back an entry `delete` answered, under its id and at its instant: it takes its place
+/// in the list again. One still there is left as it is.
+pub fn restore(connection: &mut Library, entry: &HistoryEntry) -> Result<(), StorageError> {
+    connection.transaction(|connection, vault| {
+        let item = &entry.item;
+        let request_id = still_there(connection, item.request_id.as_deref());
+        diesel::insert_or_ignore_into(http_history::table)
+            .values((
+                http_history::id.eq(&item.id),
+                http_history::sent_at.eq(iso8601::format(item.sent_at)),
+                http_history::request_id.eq(request_id),
+                http_history::summary.eq(seal_json(vault, &item.summary)?),
+                http_history::record.eq(seal_json(vault, &entry.record)?),
+            ))
+            .execute(connection)?;
+        Ok(())
     })
 }
 
@@ -164,15 +191,20 @@ pub fn clear(connection: &mut Library) -> Result<u32, StorageError> {
 mod tests {
     use super::*;
     use crate::http::history::{HistoryRecord, HistorySummary};
+    use crate::http::model::HttpMethod;
     use crate::http::send::{Exchange, SentBody};
 
     fn summary() -> HistorySummary {
         HistorySummary {
+            kind: crate::http::model::RequestKind::Http,
             name: "Ping".to_string(),
             url: "https://api.exemple.fr".to_string(),
             millis: Some(1),
             size: Some(0),
             failure: None,
+            failure_params: std::collections::BTreeMap::new(),
+            method: HttpMethod::Delete,
+            status: Some(401),
         }
     }
 
@@ -209,15 +241,66 @@ mod tests {
         );
     }
 
+    /// « Vider l'historique » was the only way out for the one send made with the wrong token.
+    #[test]
+    fn one_entry_is_deleted_and_put_back_where_it_was() {
+        let mut library = crate::db::open_in_memory().unwrap();
+        let now: DateTime<Utc> = "2026-10-07T12:00:00Z".parse().unwrap();
+        for second in 0..3 {
+            record_at(&mut library, now + TimeDelta::seconds(second));
+        }
+        let before = list(&mut library).unwrap();
+        let middle = before[1].id.clone();
+
+        let removed = delete(&mut library, &middle).unwrap();
+        assert_eq!(removed.item, before[1]);
+        assert_eq!(
+            list(&mut library)
+                .unwrap()
+                .iter()
+                .map(|item| item.id.as_str())
+                .collect::<Vec<_>>(),
+            [before[0].id.as_str(), before[2].id.as_str()]
+        );
+        assert!(matches!(
+            delete(&mut library, &middle),
+            Err(StorageError::HttpItemNotFound(_))
+        ));
+
+        restore(&mut library, &removed).unwrap();
+        // Put back twice is put back once.
+        restore(&mut library, &removed).unwrap();
+        assert_eq!(list(&mut library).unwrap(), before);
+        assert_eq!(entry(&mut library, &middle).unwrap(), removed);
+    }
+
+    #[test]
+    fn a_list_reads_each_url_in_its_two_parts() {
+        let mut library = crate::db::open_in_memory().unwrap();
+        record_at(&mut library, "2026-10-07T12:00:00Z".parse().unwrap());
+
+        let item = &list(&mut library).unwrap()[0];
+        let (head, tail) = url_parts(&item.summary.url);
+        assert_eq!((&item.url_head, &item.url_tail), (&head, &tail));
+        assert!(!item.url_head.is_empty());
+    }
+
+    /// Both were columns of their own, readable beside the instant of the send.
+    #[test]
+    fn the_method_and_the_status_of_a_send_are_read_from_its_sealed_summary() {
+        let mut library = crate::db::open_in_memory().unwrap();
+        record_at(&mut library, "2026-10-07T12:00:00Z".parse().unwrap());
+
+        let item = list(&mut library).unwrap().remove(0);
+        assert_eq!((item.method, item.status), (HttpMethod::Delete, Some(401)));
+
+        let removed = delete(&mut library, &item.id).unwrap();
+        restore(&mut library, &removed).unwrap();
+        let back = entry(&mut library, &item.id).unwrap().item;
+        assert_eq!((back.method, back.status), (HttpMethod::Delete, Some(401)));
+    }
+
     fn record_at(library: &mut Library, at: DateTime<Utc>) {
-        super::record(
-            library,
-            HttpMethod::Get,
-            Some("gone"),
-            &summary(),
-            &record(),
-            at,
-        )
-        .unwrap();
+        super::record(library, Some("gone"), &summary(), &record(), at).unwrap();
     }
 }

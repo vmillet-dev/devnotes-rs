@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it, vi } from 'vitest';
-import { Encodings } from '@core/model/tool-answers.model';
+import { DecodeAnswer, Encodings } from '@core/model/tool-answers.model';
 import { FILE_DIALOG_ADAPTER } from '@core/services/dialogs/file-dialog.service';
 import { StatusNotifier } from '@core/services/notifications/status.service';
 import { FakeFileDialog } from '@testing/fake-file-dialog';
@@ -19,12 +19,31 @@ const CAFE: Encodings = {
   decimal: '67 97 102 195 169',
 };
 
+/** A PNG of 32 by 20, as Rust answers it: named, sized, and handed over as a `data:` URL. */
+const PICTURE: DecodeAnswer = {
+  readAs: 'base64',
+  guessed: true,
+  also: [],
+  decoded: { kind: 'binary', bytes: 1234, preview: '89 50 4e 47' },
+  dataUri: null,
+  image: {
+    format: 'png',
+    width: 32,
+    height: 20,
+    preview: { kind: 'shown', dataUrl: 'data:image/png;base64,iVBORw0KGgo=' },
+  },
+};
+
 describe('Base64ToolComponent', () => {
   const segment = (harness: ToolHarness<Base64ToolComponent>, kind: string, id: string) =>
     harness.element<HTMLButtonElement>(`[data-testid="segmented-${kind}"] [data-segment-id="${id}"]`);
 
   const text = (harness: ToolHarness<Base64ToolComponent>, testid: string) =>
     harness.element(`[data-testid="${testid}"]`)?.textContent?.replace(/\s+/g, ' ').trim();
+
+  /** The caption of a picture, part by part: its type, its size when stated, its weight. */
+  const facts = (harness: ToolHarness<Base64ToolComponent>) =>
+    harness.all('[data-testid="base64-image-facts"] span').map((part) => part.textContent?.trim());
 
   const rows = (harness: ToolHarness<Base64ToolComponent>) =>
     harness
@@ -99,6 +118,8 @@ describe('Base64ToolComponent', () => {
         guessed: true,
         also: ['base64'],
         decoded: { kind: 'text', text: 'Café', bytes: 5 },
+        dataUri: null,
+        image: null,
       };
     });
     segment(harness, 'base64-direction', 'decode').click();
@@ -127,6 +148,8 @@ describe('Base64ToolComponent', () => {
         guessed: true,
         also: [],
         decoded: { kind: 'invalid', problem: 'character', at: 6, character: '#' },
+        dataUri: null,
+        image: null,
       };
     });
     segment(harness, 'base64-direction', 'decode').click();
@@ -138,6 +161,135 @@ describe('Base64ToolComponent', () => {
     expect(harness.tool.result()).toBeNull();
   });
 
+  /**
+   * Held to 860px, a long result ran down a strip in the middle of an empty window: the tool
+   * takes the width it is given, what goes in on one side and what comes out on the other.
+   */
+  it('lays what goes in and what comes out in two columns, each under its title', async () => {
+    const harness = await renderTool(Base64ToolComponent, (tools) => {
+      tools.encodings = CAFE;
+    });
+    await harness.type('base64-input', 'Café', 'encode_bytes');
+
+    const columns = harness.all('.columns > .column');
+    expect(columns).toHaveLength(2);
+    expect(columns[0]!.querySelector('[data-testid="base64-input"]')).not.toBeNull();
+    expect(columns[0]!.querySelector('[data-testid="base64-encodings"]')).toBeNull();
+    expect(columns[1]!.querySelector('[data-testid="base64-encodings"]')).not.toBeNull();
+    expect(columns.map((column) => column.querySelector('h2')?.textContent?.trim())).toEqual([
+      'Entrée',
+      'Résultats',
+    ]);
+  });
+
+  /** Decoded bytes that are a picture could be saved, then opened elsewhere to see what they were. */
+  it('shows the picture a decoding is, with its type, its size and its weight', async () => {
+    const harness = await renderTool(Base64ToolComponent, (tools) => {
+      tools.decodedBytes = PICTURE;
+    });
+    segment(harness, 'base64-direction', 'decode').click();
+    await harness.type('base64-input', 'iVBORw0KGgo=', 'decode_bytes');
+
+    const picture = harness.element<HTMLImageElement>('[data-testid="base64-image-picture"]');
+    // ⚠️ An `<img>`: drawn, never inlined — nothing an SVG holds would run.
+    expect(picture.localName).toBe('img');
+    expect(picture.getAttribute('src')).toBe('data:image/png;base64,iVBORw0KGgo=');
+    expect(picture.getAttribute('alt')).toBe('Aperçu de l’image décodée (PNG)');
+    // A few pixels a side: drawn larger, or it is a dot.
+    expect(picture.classList.contains('small')).toBe(true);
+    expect(harness.element('[data-testid="base64-image"]').dataset['format']).toBe('png');
+    expect(facts(harness)).toEqual(['PNG', '32 × 20 px', '1234 octets']);
+    // Under the result, in the column of what comes out.
+    expect(harness.all('.columns > .column')[1]!.contains(picture)).toBe(true);
+  });
+
+  it('proposes the extension of the picture it recognised when saving it', async () => {
+    const harness = await renderTool(Base64ToolComponent, (tools) => {
+      tools.decodedBytes = PICTURE;
+      tools.savedBytes = { kind: 'saved', bytes: 1234 };
+    });
+    const dialog = TestBed.inject(FILE_DIALOG_ADAPTER) as FakeFileDialog;
+    dialog.savePath = 'C:/out/decoded.png';
+    segment(harness, 'base64-direction', 'decode').click();
+    await harness.type('base64-input', 'iVBORw0KGgo=', 'decode_bytes');
+
+    harness.element<HTMLButtonElement>('[data-testid="base64-save-file"]').click();
+    await vi.waitFor(() => expect(harness.tools.requestsOf('save_bytes')).toHaveLength(1));
+
+    expect(dialog.saveCalls.at(-1)?.defaultPath).toBe('decoded.png');
+  });
+
+  it('shows an SVG under its own text, and a picture of a size its header does not state', async () => {
+    const harness = await renderTool(Base64ToolComponent, (tools) => {
+      tools.decodedBytes = {
+        ...PICTURE,
+        decoded: { kind: 'text', text: '<svg/>', bytes: 6 },
+        image: {
+          format: 'svg',
+          width: null,
+          height: null,
+          preview: { kind: 'shown', dataUrl: 'data:image/svg+xml;base64,PHN2Zy8+' },
+        },
+      };
+    });
+    segment(harness, 'base64-direction', 'decode').click();
+    await harness.type('base64-input', 'PHN2Zy8+', 'decode_bytes');
+
+    expect(text(harness, 'base64-output')).toBe('<svg/>');
+    expect(harness.element('[data-testid="base64-image-picture"]').getAttribute('src')).toBe(
+      'data:image/svg+xml;base64,PHN2Zy8+',
+    );
+    expect(harness.element('[data-testid="base64-image-size"]')).toBeNull();
+    // Of no stated size, it is not taken for a small one.
+    expect(harness.element('[data-testid="base64-image-picture"]').classList.contains('small')).toBe(false);
+    expect(facts(harness)).toEqual(['SVG', '6 octets']);
+  });
+
+  it('says a picture is too large to be shown rather than showing nothing', async () => {
+    const harness = await renderTool(Base64ToolComponent, (tools) => {
+      tools.decodedBytes = {
+        ...PICTURE,
+        image: { ...PICTURE.image!, preview: { kind: 'tooLarge', limit: 2 * 1024 * 1024 } },
+      };
+    });
+    segment(harness, 'base64-direction', 'decode').click();
+    await harness.type('base64-input', 'iVBORw0KGgo=', 'decode_bytes');
+
+    expect(harness.element('[data-testid="base64-image-picture"]')).toBeNull();
+    expect(text(harness, 'base64-image-too-large')).toContain('au-delà de 2 Mo');
+    expect(facts(harness)).toContain('32 × 20 px');
+  });
+
+  it('shows no picture for bytes that are none', async () => {
+    const harness = await renderTool(Base64ToolComponent, (tools) => {
+      tools.decodedBytes = { ...PICTURE, image: null };
+    });
+    segment(harness, 'base64-direction', 'decode').click();
+    await harness.type('base64-input', 'AP8Q', 'decode_bytes');
+
+    expect(harness.element('[data-testid="base64-image"]')).toBeNull();
+    // Unrecognised, they are saved as what they are: bytes.
+    const dialog = TestBed.inject(FILE_DIALOG_ADAPTER) as FakeFileDialog;
+    harness.element<HTMLButtonElement>('[data-testid="base64-save-file"]').click();
+    await vi.waitFor(() => expect(dialog.saveCalls).toHaveLength(1));
+    expect(dialog.saveCalls[0]?.defaultPath).toBe('decoded.bin');
+  });
+
+  /** Pasted whole, « data:image/png;base64,… » was refused as invalid Base64. */
+  it('says a data: URI was read by its header, with the type it declares', async () => {
+    const harness = await renderTool(Base64ToolComponent, (tools) => {
+      tools.decodedBytes = { ...PICTURE, guessed: false, dataUri: 'image/png' };
+    });
+    segment(harness, 'base64-direction', 'decode').click();
+    await harness.type('base64-input', 'data:image/png;base64,iVBORw0KGgo=', 'decode_bytes');
+
+    expect(text(harness, 'base64-reading')).toBe('Lu comme Base64 · URI data: de type image/png');
+
+    harness.tools.decodedBytes = { ...PICTURE, guessed: false, dataUri: '' };
+    await harness.type('base64-input', 'data:;base64,iVBORw0KGgo=', 'decode_bytes');
+    expect(text(harness, 'base64-reading')).toBe('Lu comme Base64 · URI data:');
+  });
+
   it('offers to write bytes that are no text to a file, never to a note', async () => {
     const harness = await renderTool(Base64ToolComponent, (tools) => {
       tools.decodedBytes = {
@@ -145,6 +297,8 @@ describe('Base64ToolComponent', () => {
         guessed: true,
         also: [],
         decoded: { kind: 'binary', bytes: 3, preview: '00 ff 10' },
+        dataUri: null,
+        image: null,
       };
       tools.savedBytes = { kind: 'saved', bytes: 3 };
     });

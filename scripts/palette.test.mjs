@@ -101,6 +101,14 @@ const TINTED = [
 ];
 const BADGE_INK = '--text-1';
 
+/**
+ * The fill a status is drawn on — an answer's « 200 OK » — and its text. `status-badge` in
+ * `_mixins.scss` carries this alpha: twice a tint's, so that the hue reads as a signal.
+ */
+const STATUS_TINT = 0.3;
+const STATUS_HUES = ['--green', '--blue', '--amber-fill', '--red'];
+const STATUS_INK = '--text-0';
+
 function luminance(hex) {
   const value = Number.parseInt(hex.slice(1), 16);
   const channels = [(value >> 16) & 255, (value >> 8) & 255, value & 255].map((raw) => {
@@ -162,6 +170,21 @@ for (const theme of ['dark', 'light']) {
           assert.ok(
             ratio >= AA,
             `${BADGE_INK} on a ${MAX_TINT} ${hue} tint over ${surface} is ${ratio.toFixed(2)}:1, AA asks ${AA}:1`,
+          );
+        }
+      }
+    });
+
+    /** A denser fill takes more from the text than a tint does: held on its own. */
+    it('draws a status legibly on the fill of its family', () => {
+      for (const hue of STATUS_HUES) {
+        for (const surface of SURFACES) {
+          const filled = mix(of(hue), of(surface), STATUS_TINT);
+          const ratio = contrast(of(STATUS_INK), filled);
+
+          assert.ok(
+            ratio >= AA,
+            `${STATUS_INK} on a ${STATUS_TINT} ${hue} fill over ${surface} is ${ratio.toFixed(2)}:1, AA asks ${AA}:1`,
           );
         }
       }

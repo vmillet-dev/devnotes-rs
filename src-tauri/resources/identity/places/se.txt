@@ -1,0 +1,51 @@
+AB;111 22;Stockholm;Stockholms län;08
+O;411 03;Göteborg;Västra Götalands län;031
+M;211 20;Malmö;Skåne län;040
+C;753 20;Uppsala;Uppsala län;018
+U;722 11;Västerås;Västmanlands län;021
+T;702 10;Örebro;Örebro län;019
+E;582 22;Linköping;Östergötlands län;013
+M;252 21;Helsingborg;Skåne län;042
+F;553 20;Jönköping;Jönköpings län;036
+E;602 24;Norrköping;Östergötlands län;011
+M;222 22;Lund;Skåne län;046
+AC;903 26;Umeå;Västerbottens län;090
+X;803 20;Gävle;Gävleborgs län;026
+O;503 30;Borås;Västra Götalands län;033
+D;632 20;Eskilstuna;Södermanlands län;016
+AB;151 71;Södertälje;Stockholms län;08
+S;652 24;Karlstad;Värmlands län;054
+G;352 30;Växjö;Kronobergs län;0470
+N;302 42;Halmstad;Hallands län;035
+Y;852 30;Sundsvall;Västernorrlands län;060
+BD;972 31;Luleå;Norrbottens län;0920
+O;461 30;Trollhättan;Västra Götalands län;0520
+Z;831 30;Östersund;Jämtlands län;063
+H;392 31;Kalmar;Kalmar län;0480
+W;791 71;Falun;Dalarnas län;023
+M;291 31;Kristianstad;Skåne län;044
+---
+Storgatan
+Kyrkogatan
+Skolgatan
+Drottninggatan
+Kungsgatan
+Nygatan
+Järnvägsgatan
+Parkvägen
+Ringvägen
+Skogsvägen
+Björkvägen
+Granvägen
+Tallvägen
+Ängsvägen
+Långgatan
+Hamngatan
+Strandvägen
+Bruksgatan
+Industrigatan
+Villagatan
+Trädgårdsgatan
+Sveavägen
+Vasagatan
+Linnégatan

@@ -162,15 +162,15 @@
   },
   "sidebar": {
     "library": "Espaces",
-    "toggle": "Afficher ou masquer les espaces",
+    "toggle": "Afficher ou masquer la barre latérale",
     "expand": "Ouvrir l'espace {{name}}",
     "collapse": "Replier l'espace {{name}}",
     "noFolders": "Aucun dossier",
-    "resize": "Largeur du rail des espaces"
+    "resize": "Largeur de la barre latérale"
   },
   "board": {
     "viewSwitchLabel": "Choisir la vue",
-    "dateView": "Date",
+    "listView": "Liste",
     "boardView": "Tableau",
     "needsASpace": "Choisissez un espace pour voir son tableau.",
     "emptyZone": "Aucune note ici.",
@@ -441,11 +441,32 @@
     "httpUnresolved": "Le nom d'hôte ne se résout pas.",
     "httpRefused": "La connexion a été refusée : rien n'écoute à cette adresse.",
     "httpTls": "La connexion sécurisée a échoué : certificat refusé ou protocole inattendu.",
-    "httpTimeout": "Pas de réponse au bout de 30 secondes.",
-    "httpTooManyRedirects": "Trop de redirections : plus de 10.",
+    "httpTimeout": {
+      "request": "Pas de réponse au bout de {{amount}} {{unit}}.",
+      "folder": "Pas de réponse au bout de {{amount}} {{unit}} (réglage hérité du dossier « {{name}} »).",
+      "collection": "Pas de réponse au bout de {{amount}} {{unit}} (réglage hérité de la collection « {{name}} »).",
+      "default": "Pas de réponse au bout de {{amount}} {{unit}} (réglage par défaut)."
+    },
+    "httpTooManyRedirects": {
+      "request": "{count, plural, =0 {Redirection refusée : le réglage n'en permet aucune.} one {Trop de redirections : plus d'une.} other {Trop de redirections : plus de #.}}",
+      "folder": "{count, plural, =0 {Redirection refusée : le réglage n'en permet aucune (réglage hérité du dossier « {{name}} »).} one {Trop de redirections : plus d'une (réglage hérité du dossier « {{name}} »).} other {Trop de redirections : plus de # (réglage hérité du dossier « {{name}} »).}}",
+      "collection": "{count, plural, =0 {Redirection refusée : le réglage n'en permet aucune (réglage hérité de la collection « {{name}} »).} one {Trop de redirections : plus d'une (réglage hérité de la collection « {{name}} »).} other {Trop de redirections : plus de # (réglage hérité de la collection « {{name}} »).}}",
+      "default": "{count, plural, =0 {Redirection refusée : le réglage n'en permet aucune (réglage par défaut).} one {Trop de redirections : plus d'une (réglage par défaut).} other {Trop de redirections : plus de # (réglage par défaut).}}"
+    },
     "httpFileUnreadable": "Le fichier {{path}} ne peut pas être lu.",
     "httpCancelled": "Envoi annulé.",
     "httpNetwork": "Erreur réseau.",
+    "httpWebsocketScheme": "Un WebSocket s'ouvre sur ws:// ou wss://.",
+    "httpHeaderName": {
+      "request": "L'en-tête « {{header}} » ne peut pas être envoyé : son nom n'est pas valide.",
+      "folder": "L'en-tête « {{header}} », hérité du dossier « {{name}} », ne peut pas être envoyé : son nom n'est pas valide.",
+      "collection": "L'en-tête « {{header}} », hérité de la collection « {{name}} », ne peut pas être envoyé : son nom n'est pas valide."
+    },
+    "httpHeaderValue": {
+      "request": "L'en-tête « {{header}} » ne peut pas être envoyé : sa valeur n'est pas valide.",
+      "folder": "L'en-tête « {{header}} », hérité du dossier « {{name}} », ne peut pas être envoyé : sa valeur n'est pas valide.",
+      "collection": "L'en-tête « {{header}} », hérité de la collection « {{name}} », ne peut pas être envoyé : sa valeur n'est pas valide."
+    },
     "httpGraphqlVariables": "Les variables GraphQL ne sont pas un objet JSON.",
     "httpWebsocketRefused": "Le serveur a refusé la connexion WebSocket (statut {{status}})."
   },
@@ -649,7 +670,17 @@
       "canvas": "Canevas",
       "editor": "Éditeur",
       "palette": "Collage rapide",
-      "areas": "Zones"
+      "areas": "Zones",
+      "http": "HTTP"
+    },
+    "http": {
+      "send": "Envoyer la requête, ou connecter le WebSocket",
+      "save": "Enregistrer la requête",
+      "moveRow": "Déplacer une ligne du rail parmi ses voisines",
+      "moveIn": "Ranger la ligne dans le dossier juste au-dessus",
+      "moveOut": "Sortir la ligne de son dossier",
+      "rename": "Renommer la ligne du rail",
+      "delete": "Supprimer la ligne du rail, après confirmation"
     },
     "global": {
       "palette": "Ouvrir la palette de collage rapide",
@@ -661,7 +692,6 @@
       "newSnippet": "Nouveau snippet de code",
       "newNote": "Nouvelle note mise en forme",
       "newChecklist": "Nouvelle liste de tâches",
-      "library": "Afficher ou masquer la bibliothèque",
       "move": "Se déplacer de carte en carte",
       "open": "Ouvrir la carte sous le focus",
       "copy": "Copier la carte, ou demander ses champs",
@@ -786,6 +816,7 @@
       "reset": "Rétablir",
       "globalNote": "Ces trois-là agissent partout, fenêtre fermée comprise : ils demandent donc au moins un modificateur, sans quoi la touche serait avalée dans toutes vos applications. Un raccourci déjà pris par une autre application est signalé au démarrage.",
       "canvasNote": "Ceux-ci n'agissent que sur le canevas, jamais pendant une saisie : une lettre nue suffit. Cliquez dans le champ puis composez la combinaison.",
+      "areasNote": "Celui-ci agit dans les trois zones — Notes, Outils et HTTP — et, avec Ctrl ou Alt, pendant une saisie aussi.",
       "fixedNote": "Les flèches, Échap, Tab et les clics avec Ctrl ou Maj ne se déplacent pas : ce sont la navigation, la sortie et la sélection, et une bibliothèque où l'on ne peut plus reculer serait pire qu'une touche mal placée.",
       "taken": "{{accelerator}} est déjà pris par « {{action}} ».",
       "needsModifier": "Un raccourci global demande au moins Ctrl, Alt, Maj ou Super.",
@@ -844,6 +875,10 @@
       "transfer": {
         "title": "Entrer et sortir",
         "body": "Le menu Fichier exporte tout, un espace ou la sélection dans un fichier relisible, et le réimporte sans jamais créer de doublon. « Copier en Markdown » met la sélection dans le presse-papier."
+      },
+      "http": {
+        "title": "Des requêtes : HTTP, GraphQL, WebSocket",
+        "body": "La zone HTTP garde vos requêtes en collections, scellées comme vos notes. On choisit ce qu'on commence au moment de le créer — une requête HTTP, une requête GraphQL ou un WebSocket — depuis « Nouvelle requête », au bout des onglets, ou le menu d'une collection."
       }
     },
     "chaptersLabel": "Chapitres du guide",
@@ -998,6 +1033,7 @@
     "hint": "{{area}} ({{key}})",
     "notes": "Notes",
     "tools": "Outils",
+    "rail": "Afficher ou masquer la barre latérale",
     "go": {
       "notes": "Aller aux notes",
       "tools": "Aller aux outils",
@@ -1010,11 +1046,23 @@
     "count": "{count, plural, =0 {Aucun utilitaire pour l’instant} one {# utilitaire, hors ligne} other {# utilitaires, tous hors ligne}}",
     "all": "Tous les outils",
     "recents": "Récents",
+    "favourites": {
+      "title": "Favoris",
+      "toggle": "Favori",
+      "of": "Favori : {{name}}",
+      "add": "Ajouter aux favoris",
+      "remove": "Retirer des favoris"
+    },
     "searchLabel": "Rechercher un outil",
     "searchPlaceholder": "Rechercher un outil…",
     "searchKeys": "Ctrl Maj T",
     "searchShortcut": "Chercher un outil",
-    "noMatch": "Aucun outil ne correspond à « {{query}} ».",
+    "noMatch": "Aucun outil ni aucune entrée de référence ne correspond à « {{query}} ».",
+    "enterOpens": "Entrée ouvre ce résultat",
+    "references": {
+      "title": "Dans les références",
+      "more": "{count, plural, one {# autre} other {# autres}} dans {{name}}"
+    },
     "clear": "Vider",
     "promise": {
       "title": "Tout reste sur cette machine",
@@ -1178,8 +1226,8 @@
       "noteParsed": "URL de {{host}}"
     },
     "base64": {
-      "name": "Base64 et bases",
-      "description": "Base64, Base32, hexadécimal, binaire, octets — et le format reconnu au décodage",
+      "name": "Base64 et autres bases",
+      "description": "Base64, Base32, hexadécimal, binaire, octets — le format reconnu au décodage, et l’aperçu d’une image",
       "direction": "Sens",
       "directions": {
         "encode": "Encoder",
@@ -1200,6 +1248,14 @@
       "decodeEmpty": "Le texte décodé s’affiche ici.",
       "binary": "{count, plural, one {# octet} other {# octets}} qui ne forment pas du texte. Les voici en hexadécimal :",
       "saveFile": "Enregistrer comme fichier…",
+      "decodedText": "Texte décodé",
+      "dataUri": "· URI data: de type {{type}}",
+      "dataUriUntyped": "· URI data:",
+      "image": {
+        "alt": "Aperçu de l’image décodée ({{format}})",
+        "weight": "{count, plural, one {# octet} other {# octets}}",
+        "tooLarge": "Image trop lourde pour un aperçu : au-delà de {{limit}} Mo, elle n’est pas affichée. Enregistrez-la comme fichier pour la voir."
+      },
       "saved": "{count, plural, one {Fichier enregistré : # octet.} other {Fichier enregistré : # octets.}}",
       "problems": {
         "character": "« {{character}} » n’appartient pas à ce format, au caractère {{at}}.",
@@ -1296,7 +1352,7 @@
       },
       "lookAlikes": "Sans caractères qui se ressemblent",
       "count": "Nombre",
-      "generate": "Générer",
+      "generate": "Régénérer",
       "passwords": "Mots de passe",
       "entropy": "≈ {{bits}} bits d’entropie",
       "strengths": {
@@ -1346,8 +1402,8 @@
       }
     },
     "convert": {
-      "name": "JSON → TOML / XML / YAML",
-      "description": "Et dans l’autre sens",
+      "name": "JSON ↔ YAML ↔ TOML ↔ XML",
+      "description": "D’un format à l’autre, dans tous les sens",
       "from": "Depuis",
       "to": "Vers",
       "formats": {
@@ -1383,13 +1439,13 @@
     },
     "json-generator": {
       "name": "JSON",
-      "description": "À partir d’un schéma ou d’un exemple",
+      "description": "À partir d’un schéma ou d’un document modèle",
       "source": "Source",
       "sources": {
         "schema": "Schéma",
-        "example": "Exemple"
+        "example": "Modèle"
       },
-      "inputLabel": "Schéma JSON ou document d’exemple",
+      "inputLabel": "Schéma JSON ou document modèle",
       "placeholders": {
         "schema": "{ \"type\": \"object\", \"required\": [\"id\"], \"properties\": { \"id\": { \"type\": \"string\", \"format\": \"uuid\" } } }",
         "example": "{ \"id\": \"9b2f6c1e-3d4a-4f8b-9e2c-7a1d5b6c8e90\", \"email\": \"ana@exemple.fr\", \"amount\": 49.9 }"
@@ -1400,12 +1456,166 @@
       "seed": "Graine",
       "seedPlaceholder": "au hasard",
       "documents": "Documents",
-      "seedUsed": "Graine utilisée : {{seed}}",
-      "keepSeed": "La garder",
-      "again": "Tirer à nouveau",
-      "unsupported": "Le générateur n’a pas tenu compte de ces mots-clés : les documents peuvent ne pas les respecter.",
-      "empty": "Collez un schéma ou un exemple : les documents s’affichent ici.",
-      "noteTitle": "Documents JSON générés"
+      "seedUsed": "· {{seed}} utilisée",
+      "keepSeed": "Fixer cette graine : les mêmes documents reviendront",
+      "again": "Régénérer",
+      "unsupported": "Mots-clés de schéma non pris en charge, ignorés :",
+      "empty": "Collez un schéma ou un document modèle : les documents s’affichent ici.",
+      "noteTitle": "Documents JSON générés",
+      "expects": {
+        "schema": "Schéma : un JSON Schema décrit les documents.",
+        "example": "Modèle : un document modèle, dont les valeurs sont remplacées par d’autres du même genre."
+      },
+      "anExample": "Ceci ressemble à un exemple de document, pas à un schéma.",
+      "asExample": "Le lire comme un modèle",
+      "pinSeed": "Fixer la graine",
+      "freeSeed": "Libérer la graine : chaque tirage en prendra une nouvelle",
+      "seedPinned": "Graine fixée : « Régénérer » redonne les mêmes documents.",
+      "unsupportedAt": "à"
+    },
+    "identity": {
+      "name": "Identité fictive",
+      "description": "Une personne de test dont chaque numéro passe sa clé",
+      "options": "Options",
+      "country": "Pays",
+      "countries": {
+        "FR": "France",
+        "BE": "Belgique",
+        "DE": "Allemagne",
+        "ES": "Espagne",
+        "IT": "Italie",
+        "PT": "Portugal",
+        "NL": "Pays-Bas",
+        "CH": "Suisse",
+        "GB": "Royaume-Uni",
+        "PL": "Pologne",
+        "SE": "Suède",
+        "US": "États-Unis",
+        "CA": "Canada"
+      },
+      "nationalities": {
+        "FR": "Française",
+        "BE": "Belge",
+        "DE": "Allemande",
+        "ES": "Espagnole",
+        "IT": "Italienne",
+        "PT": "Portugaise",
+        "NL": "Néerlandaise",
+        "CH": "Suisse",
+        "GB": "Britannique",
+        "PL": "Polonaise",
+        "SE": "Suédoise",
+        "US": "Américaine",
+        "CA": "Canadienne"
+      },
+      "sex": "Sexe",
+      "sexes": {
+        "any": "Indifférent",
+        "F": "Féminin",
+        "M": "Masculin"
+      },
+      "age": "Âge atteint cette année",
+      "ageMin": "Âge minimum",
+      "ageMax": "Âge maximum",
+      "years": "ans",
+      "seed": "Graine",
+      "seedPlaceholder": "au hasard",
+      "seedUsed": "· {{seed}} utilisée",
+      "pinSeed": "Fixer la graine",
+      "keepSeed": "Fixer cette graine : la même personne reviendra",
+      "freeSeed": "Libérer la graine : chaque tirage donnera quelqu’un d’autre",
+      "seedPinned": "Graine fixée : la même personne revient, toute l’année.",
+      "batch": "Lot",
+      "batchCountries": "Pays du lot",
+      "people": "Personnes",
+      "format": "Format",
+      "formats": {
+        "json": "JSON",
+        "csv": "CSV"
+      },
+      "export": "Exporter…",
+      "batchHint": "De 1 à 100 personnes dans un fichier, la première étant celle de la carte ; les pays choisis y passent à tour de rôle.",
+      "exported": "{count, plural, one {# personne exportée.} other {# personnes exportées.}}",
+      "person": "Personne",
+      "copyJson": "Copier en JSON",
+      "jsonCopied": "Personne copiée en JSON.",
+      "again": "Régénérer",
+      "noteTitle": "Identité fictive de {{name}}",
+      "specimen": "Spécimen",
+      "cardKind": "Identité fictive",
+      "aged": "({count, plural, one {# an} other {# ans}})",
+      "fields": {
+        "surname": "Nom",
+        "givenNames": "Prénoms",
+        "nationality": "Nationalité",
+        "bornOn": "Date de naissance",
+        "bornIn": "Lieu de naissance",
+        "document": "N° de document (fictif)",
+        "address": "Adresse",
+        "phone": "Téléphone",
+        "mobile": "Mobile",
+        "email": "E-mail",
+        "bank": "Banque",
+        "iban": "IBAN",
+        "bic": "BIC",
+        "company": "Raison sociale"
+      },
+      "identifiers": {
+        "nir": "N° de sécurité sociale",
+        "siren": "SIREN",
+        "siret": "SIRET",
+        "vat": "TVA intracommunautaire",
+        "nrn": "Numéro national · Rijksregisternummer",
+        "bce": "N° d’entreprise · Ondernemingsnummer",
+        "beVat": "TVA · BTW",
+        "steuerId": "Steuer-ID",
+        "ustIdNr": "USt-IdNr.",
+        "dni": "DNI",
+        "nifEs": "NIF",
+        "codiceFiscale": "Codice fiscale",
+        "partitaIva": "Partita IVA",
+        "nifPt": "NIF",
+        "nipc": "NIPC",
+        "bsn": "BSN",
+        "kvk": "KvK-nummer",
+        "btw": "Btw-nummer",
+        "ahv": "AHV-Nr. · N° AVS",
+        "uid": "UID",
+        "nino": "National Insurance number",
+        "crn": "Company number",
+        "gbVat": "VAT number",
+        "pesel": "PESEL",
+        "nip": "NIP",
+        "regon": "REGON",
+        "personnummer": "Personnummer",
+        "orgnr": "Organisationsnummer",
+        "moms": "Momsnummer",
+        "ssn": "Social Security number",
+        "sin": "SIN · NAS",
+        "sortCode": "Sort code",
+        "accountNumber": "Account number",
+        "routingNumber": "Routing number",
+        "transitNumber": "Transit number"
+      },
+      "blocks": {
+        "contact": "Contact",
+        "bank": "Banque",
+        "company": "Entreprise"
+      },
+      "warning": "Données de test : ne les utilisez pas pour vous faire passer pour quelqu’un.",
+      "harmless": "L’e-mail est en example.com, .org ou .net : il n’atteint personne.",
+      "phonesFiction": "Les téléphones sont dans une tranche que ce pays réserve à la fiction.",
+      "phonesMayRing": "Ce pays ne réserve aucune tranche à la fiction : ces numéros de téléphone peuvent sonner chez quelqu’un.",
+      "valid": "Valide veut dire calculé : chaque numéro porte la clé que son pays lui calcule, et celui qui encode la personne — naissance, sexe, nom, commune — est lu sur elle. Un numéro qui passe sa clé peut appartenir à quelqu’un.",
+      "unkeyed": "Sans clé à vérifier :",
+      "countriesListed": "Pays :",
+      "noFirmNumber": "Aucun identifiant d’entreprise à clé dans ce pays.",
+      "jsonFields": "Champs du JSON et de l’export : country, sex, surname, givenNames, birth (date, city, region), document, address (street, postcode, city, region, formatted), phone, mobile, email, bank (name, iban, bic, local), identifiers et company (name, identifiers).",
+      "lists": {
+        "missing": "Liste introuvable : {{file}}.",
+        "damaged": "Liste illisible : {{file}}.",
+        "where": "Les listes sont lues dans {{folder}}"
+      }
     },
     "lorem": {
       "name": "Lorem ipsum",
@@ -1418,7 +1628,7 @@
       },
       "count": "Nombre",
       "opening": "Commencer par « Lorem ipsum »",
-      "again": "Générer à nouveau",
+      "again": "Régénérer",
       "noteTitle": "Lorem ipsum",
       "counted": {
         "words": "{count, plural, one {# mot} other {# mots}}",
@@ -1609,7 +1819,7 @@
     },
     "cron": {
       "name": "Cron",
-      "description": "Lu à voix haute, et ses prochaines exécutions",
+      "description": "Lu à voix haute, ses prochaines exécutions, et celles entre deux moments",
       "inputLabel": "Expression cron",
       "placeholder": "*/15 9-18 * * MON-FRI",
       "expanded": "Soit {{expression}}",
@@ -1747,7 +1957,35 @@
         "3": "troisième",
         "4": "quatrième",
         "5": "cinquième"
-      }
+      },
+      "from": "À partir de",
+      "fromPlaceholder": "maintenant",
+      "until": "jusqu’à",
+      "untilPlaceholder": "les dix prochaines",
+      "shortcuts": "Intervalles courants",
+      "shortcut": {
+        "today": "aujourd’hui",
+        "tomorrow": "demain",
+        "weekend": "ce week-end",
+        "fridayAfternoon": "vendredi après-midi"
+      },
+      "windowCount": "{count, plural, one {# exécution} other {# exécutions}} entre {{from}} et {{until}}",
+      "windowNone": "Aucune exécution dans cet intervalle.",
+      "windowGap": "… {count, plural, one {# autre} other {# autres}} …",
+      "windowProblems": {
+        "unreadable": {
+          "from": "Le début ne se lit pas, au caractère {{at}}.",
+          "until": "La fin ne se lit pas, au caractère {{at}}."
+        },
+        "skipped": {
+          "from": "Ce début n’existe pas dans ce fuseau.",
+          "until": "Cette fin n’existe pas dans ce fuseau."
+        },
+        "backwards": "La fin doit venir après le début.",
+        "tooLong": "Intervalle trop long : {{years}} ans au plus."
+      },
+      "nearestBefore": "Exécution la plus proche avant : {{at}}",
+      "nearestAfter": "Exécution la plus proche après : {{at}}"
     },
     "sizes": {
       "name": "Tailles et transfert",
@@ -1978,8 +2216,8 @@
       }
     },
     "checks": {
-      "name": "Numéros de contrôle",
-      "description": "Luhn et IBAN : valide ou non, et la bonne clé",
+      "name": "Luhn et IBAN",
+      "description": "Carte bancaire, IBAN : valide ou non, et la bonne clé",
       "inputLabel": "Numéro à vérifier",
       "placeholder": "4111 1111 1111 1111 ou FR14 2004 1010 0505 0001 3M02 606",
       "kind": "Lire comme",
@@ -2119,7 +2357,7 @@
         "hexLower": "Hexa",
         "digits": "Chiffres"
       },
-      "again": "Générer à nouveau",
+      "again": "Régénérer",
       "hints": {
         "uuidV4": "{{name}} : 122 bits aléatoires, tirés du générateur du système.",
         "uuidV7": "{{name}} : 48 bits de millisecondes puis 74 bits tirés ; triés, ils se rangent dans l’ordre où ils ont été faits.",
@@ -2229,12 +2467,13 @@
     },
     "diff": {
       "name": "Diff",
-      "description": "Deux textes ligne à ligne, ou deux documents comparés comme des valeurs",
+      "description": "Deux textes ligne à ligne, ou deux documents JSON, YAML, TOML ou XML comparés par leurs valeurs",
       "mode": "Mode",
       "modes": {
         "text": "Texte",
-        "structured": "Structuré"
+        "structured": "Données"
       },
+      "dataLine": "Compare les valeurs, pas le texte : l’ordre des clés, l’indentation et le format (JSON, YAML, TOML, XML) ne comptent pas.",
       "pasted": "texte collé",
       "swap": "Échanger A et B",
       "text": {
@@ -2271,7 +2510,7 @@
         "truncated": "La suite n’est pas affichée : les compteurs et le diff unifié restent complets.",
         "empty": "Collez deux textes : leurs différences s’affichent ici.",
         "bothJson": "Les deux textes sont du JSON.",
-        "asValues": "Comparer comme des valeurs",
+        "asValues": "Comparer comme des données",
         "copyUnified": "Copier le diff unifié",
         "noteTitle": "Diff de {{a}} vers {{b}}"
       },
@@ -2279,6 +2518,8 @@
         "openNote": "Ouvrir une note",
         "inputLabel": "Document {{side}}",
         "placeholder": "Collez un document JSON, YAML, TOML ou XML, ou ouvrez un snippet",
+        "notStructured": "Ce texte n’est ni du JSON, ni du YAML, du TOML ou du XML structuré.",
+        "asText": "Comparer comme du texte",
         "unreadable": "Ce {{format}} ne se lit pas : ligne {{line}}, colonne {{column}}.",
         "added": "{count, plural, one {+ # ajout} other {+ # ajouts}}",
         "removed": "{count, plural, one {− # suppression} other {− # suppressions}}",
@@ -2736,7 +2977,21 @@
     "rail": {
       "title": "Collections",
       "newCollection": "Nouvelle collection",
-      "empty": "Aucune collection pour l'instant : créez-en une avec ＋.",
+      "collection": "Collection",
+      "moved": {
+        "into": "{{name}} est maintenant dans {{other}}.",
+        "root": "{{name}} est maintenant à la racine de {{other}}.",
+        "before": "{{name}} est maintenant avant {{other}}.",
+        "after": "{{name}} est maintenant après {{other}}.",
+        "refused": {
+          "first": "{{name}} est déjà en premier.",
+          "last": "{{name}} est déjà en dernier.",
+          "noFolderAbove": "Aucun dossier juste au-dessus de {{name}} où entrer.",
+          "atRoot": "{{name}} est déjà à la racine de sa collection.",
+          "collection": "Une collection ne se range pas dans une autre."
+        }
+      },
+      "empty": "Aucune collection pour l'instant.",
       "placeholders": {
         "collection": "Nom de la collection",
         "folder": "Nom du dossier",
@@ -2758,6 +3013,10 @@
       "collapse": "Replier {{name}}",
       "confirm": "Supprimer « {{name}} » ?",
       "cancel": "Annuler",
+      "unsaved": {
+        "self": "Modifications non enregistrées.",
+        "inside": "Modifications non enregistrées :"
+      },
       "takes": {
         "requests": "{requests, plural, one {Sa requête part avec.} other {Ses # requêtes partent avec.}}",
         "folders": "{folders, plural, one {Son dossier part avec.} other {Ses # dossiers partent avec.}}",
@@ -2765,20 +3024,40 @@
       }
     },
     "workspace": {
-      "empty": "Ouvrez une requête depuis le rail, ou commencez-en une avec le ＋ des onglets."
+      "empty": "Ouvrez une requête depuis le rail, ou commencez-en une :"
+    },
+    "kinds": {
+      "menuTitle": "Commencer",
+      "lines": {
+        "http": "Une méthode, une URL, des en-têtes et un corps.",
+        "graphql": "Une requête et ses variables, envoyées en POST.",
+        "websocket": "Une connexion ouverte : des messages dans les deux sens."
+      },
+      "new": {
+        "http": "Requête HTTP",
+        "graphql": "Requête GraphQL",
+        "websocket": "WebSocket"
+      },
+      "badge": {
+        "graphql": "GraphQL",
+        "websocket": "WS"
+      }
     },
     "tabs": {
       "label": "Requêtes ouvertes",
       "untitled": "Nouvelle requête",
       "modified": "modifiée",
+      "sending": "envoi en cours",
       "close": "Fermer {{name}}",
-      "new": "Nouvelle requête"
+      "new": "+ Nouvelle requête",
+      "newKind": "Choisir le type de requête"
     },
     "editor": {
       "name": "Nom de la requête",
       "method": "Méthode",
       "url": "URL",
       "urlPlaceholder": "https://api.exemple.fr/ressource",
+      "socketPlaceholder": "wss://api.exemple.fr/flux",
       "save": "Enregistrer",
       "saveHint": "Enregistrer (Ctrl+S)",
       "parts": "Parties de la requête",
@@ -2801,21 +3080,59 @@
       "description": "Description",
       "newKey": "Nouvelle clé",
       "remove": "Retirer",
-      "removeRow": "Retirer {{key}}"
+      "removeRow": "Retirer {{key}}",
+      "faults": {
+        "name": "Un nom d'en-tête ne contient ni espace, ni deux-points, ni accent : la ligne marquée ne peut pas être envoyée.",
+        "value": "Une valeur d'en-tête tient sur une ligne, sans caractère de contrôle : la ligne marquée ne peut pas être envoyée."
+      }
     },
     "save": {
       "title": "Enregistrer la requête",
       "name": "Nom",
       "place": "Dans",
-      "nowhere": "Aucune collection pour l'instant : créez-en une dans le rail, avec ＋."
+      "newCollection": "Nouvelle collection…",
+      "collectionName": "Nom de la nouvelle collection",
+      "newFolder": "＋ Nouveau dossier…",
+      "folderName": "Nom du nouveau dossier",
+      "noFolder": "Ne pas créer de dossier",
+      "missing": {
+        "name": "Donnez un nom à la requête.",
+        "collection": "Donnez un nom à la collection.",
+        "folder": "Donnez un nom au dossier, ou retirez-le."
+      }
+    },
+    "leave": {
+      "title": "{count, plural, one {Une requête a des modifications} other {# requêtes ont des modifications}}",
+      "hint": {
+        "quit": "Elles ne sont pas enregistrées : quitter les perd.",
+        "switch": "Elles ne sont pas enregistrées : changer de bibliothèque les perd.",
+        "restore": "Elles ne sont pas enregistrées : restaurer la sauvegarde les perd.",
+        "update": "Elles ne sont pas enregistrées : installer la mise à jour les perd."
+      },
+      "connected": "{count, plural, one {Un WebSocket connecté sera fermé.} other {# WebSockets connectés seront fermés.}}",
+      "saveAll": "Tout enregistrer",
+      "discard": {
+        "quit": "Quitter sans enregistrer",
+        "switch": "Changer sans enregistrer",
+        "restore": "Restaurer sans enregistrer",
+        "update": "Installer sans enregistrer"
+      }
     },
     "close": {
       "title": "« {{name}} » a des modifications",
       "hint": "Elles ne sont pas encore enregistrées.",
-      "discard": "Fermer sans enregistrer"
+      "discard": "Fermer sans enregistrer",
+      "connectedTitle": "Fermer « {{name}} » ?",
+      "connected": "Le WebSocket est connecté : fermer l'onglet coupe la connexion.",
+      "close": "Fermer"
     },
     "headers": {
-      "fromBody": "d'après le corps"
+      "implied": "Envoyés sans avoir été saisis",
+      "from": {
+        "body": "d'après le corps",
+        "default": "par défaut",
+        "url": "d'après l'URL"
+      }
     },
     "auth": {
       "kind": "Type",
@@ -2862,6 +3179,9 @@
       "sentAs": "Envoyé en {{type}}",
       "format": "Formater",
       "noneHint": "La requête part sans corps.",
+      "unusual": "Un {{method}} avec un corps : beaucoup de serveurs l'ignorent ou le refusent.",
+      "unusualShort": "sur un {{method}}",
+      "toNone": "Passer à Aucun",
       "partKind": "Type",
       "partText": "Texte",
       "partFile": "Fichier",
@@ -2882,8 +3202,14 @@
       "cancel": "Annuler",
       "failed": "La requête n'a pas pu être envoyée."
     },
+    "split": {
+      "label": "Hauteur de la requête — flèches pour la changer, double-clic ou Entrée pour l'automatique",
+      "auto": "automatique",
+      "value": "{{share}} % pour la requête"
+    },
     "response": {
       "label": "Réponse",
+      "clear": "Effacer",
       "idle": "Envoyez la requête pour lire sa réponse ici.",
       "sending": "Envoi en cours…",
       "cancelled": "Envoi annulé.",
@@ -2899,6 +3225,7 @@
       "saved": "Réponse enregistrée dans {{path}}.",
       "saveFailed": "La réponse n'a pas pu être enregistrée.",
       "redirects": "{count, plural, one {après # redirection} other {après # redirections}}",
+      "graphqlErrors": "{count, plural, one {# erreur} other {# erreurs}}",
       "parts": "Parties de la réponse",
       "sections": {
         "body": "Corps",
@@ -2925,7 +3252,9 @@
         "path": "Chemin",
         "expires": "Expire",
         "flags": "Attributs",
-        "session": "fin de session"
+        "session": "fin de session",
+        "setBy": "Posé par",
+        "byAnswer": "la réponse"
       },
       "timeline": {
         "redirects": "Redirections",
@@ -2947,7 +3276,13 @@
       "noAnswer": "échec",
       "empty": "Rien d'envoyé pour l'instant : chaque envoi s'inscrit ici.",
       "choose": "Choisissez un envoi pour le relire.",
-      "reopen": "Rouvrir dans un onglet",
+      "reopenInto": "Rouvrir dans {{name}}",
+      "reopenDraft": "Rouvrir en brouillon",
+      "replace": "« {{name}} » a des modifications : les remplacer par cet envoi ?",
+      "replaceConfirm": "Remplacer",
+      "delete": "Supprimer l'envoi {{name}}",
+      "deleted": "Envoi « {{name}} » supprimé de l'historique.",
+      "resize": "Largeur de la liste des envois",
       "failed": "L'historique n'a pas pu être lu."
     },
     "graphql": {
@@ -2956,7 +3291,20 @@
       "variables": "Variables",
       "operation": "Opération envoyée",
       "asGet": "Envoyer en GET",
-      "at": "ligne:colonne {{location}}"
+      "at": "ligne:colonne {{location}}",
+      "format": "Formater",
+      "variablesHint": "Un objet JSON : une valeur pour chaque $variable de la requête.",
+      "problemAt": "Ligne {{line}}, colonne {{column}} :",
+      "problems": {
+        "unclosedBrace": "cette accolade n'est pas refermée.",
+        "unclosedParenthesis": "cette parenthèse n'est pas refermée.",
+        "unclosedString": "cette chaîne n'est pas refermée.",
+        "strayBrace": "cette accolade ne ferme rien.",
+        "strayParenthesis": "cette parenthèse ne ferme rien."
+      },
+      "missing": "Sans valeur :",
+      "add": "Ajouter",
+      "unknown": "La requête ne déclare pas :"
     },
     "socket": {
       "connect": "Connecter",
@@ -2966,6 +3314,7 @@
       "messagePlaceholder": "Texte ou JSON",
       "send": "Envoyer",
       "notOpen": "Connectez le WebSocket pour envoyer.",
+      "useTwin": "Utiliser {{url}}",
       "keep": "Garder",
       "saved": "Messages gardés",
       "noneSaved": "Gardez un message pour le renvoyer d'un clic.",

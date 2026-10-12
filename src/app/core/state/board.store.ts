@@ -129,7 +129,7 @@ function sameBoardParams(a: BoardParams | undefined, b: BoardParams | undefined)
 
 /**
  * Which of the two views is showing, and what the board draws. The board is unavailable on
- * "all spaces", which have no zones: the switch falls back to the date view.
+ * "all spaces", which have no zones: the switch falls back to the list view.
  */
 @Injectable({ providedIn: 'root' })
 export class BoardStore {
@@ -147,12 +147,12 @@ export class BoardStore {
   private readonly wanted = linkedSignal<string | null, NotesViewMode>({
     source: () => this.spaces.activeSpaceId(),
     computation: (spaceId) =>
-      spaceId !== null && this.preferences.read(preferenceKey(spaceId)) === 'board' ? 'board' : 'date',
+      spaceId !== null && this.preferences.read(preferenceKey(spaceId)) === 'board' ? 'board' : 'list',
   });
 
   readonly canShowBoard = computed(() => this.spaces.activeSpaceId() !== null);
 
-  readonly mode = computed<NotesViewMode>(() => (this.canShowBoard() ? this.wanted() : 'date'));
+  readonly mode = computed<NotesViewMode>(() => (this.canShowBoard() ? this.wanted() : 'list'));
 
   readonly isBoard = computed(() => this.mode() === 'board');
 
@@ -163,7 +163,7 @@ export class BoardStore {
   readonly isShowing = computed(() => this.isBoard() && this.openFolder.activeFolderId() === null);
 
   /**
-   * `undefined` keeps the board idle on the date view. The `equal` comparator keeps the
+   * `undefined` keeps the board idle on the list view. The `equal` comparator keeps the
    * fresh literal from firing a query on every clock tick.
    */
   private readonly queryParams = computed<BoardParams | undefined>(
@@ -248,7 +248,7 @@ export class BoardStore {
   });
   /**
    * Every card the board draws, dimmed ones included: the board dims where the canvas narrows,
-   * so a card the search hides from the date view is still on screen and in its folder.
+   * so a card the search hides from the list view is still on screen and in its folder.
    */
   readonly visibleNotes = computed<readonly Note[]>(() => [
     ...this.zones().flatMap((zone) => zone.notes.map((entry) => entry.note)),

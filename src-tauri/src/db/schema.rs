@@ -149,13 +149,12 @@ diesel::table! {
     }
 }
 
+// The method and the status are in the sealed `summary`: no query reads them.
 diesel::table! {
     http_history (id) {
         id -> Text,
         sent_at -> Text,
         request_id -> Nullable<Text>,
-        method -> Text,
-        status -> Nullable<Integer>,
         summary -> Text,
         record -> Text,
     }

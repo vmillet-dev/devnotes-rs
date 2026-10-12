@@ -7,11 +7,13 @@ import {
   HttpContents,
   HttpFolder,
   HttpItem,
+  HttpMethod,
   HttpPlace,
   HttpRequest,
   HttpRequestDraft,
   HttpRequestPatch,
   HttpTree,
+  NewPlace,
   GraphqlAnswer,
   GraphqlParts,
   toGraphqlWire,
@@ -21,6 +23,8 @@ import {
   SentResponse,
   BodyAnswer,
   ContainerSettingsDraft,
+  HeaderFault,
+  ImpliedHeader,
   InheritedParts,
   KeyValueRow,
   RequestBodyDraft,
@@ -34,6 +38,7 @@ import {
   RequestParts,
   toDocument,
   toParts,
+  toRows,
   toSynced,
 } from '@core/model/http.model';
 
@@ -60,6 +65,11 @@ export class HttpRepository {
     return opened(unwrap('create_http_request', await commands.createHttpRequest(draft)));
   }
 
+  /** With the collection or the folder it is saved into, created in the same write. */
+  async createRequestIn(draft: HttpRequestDraft, create: NewPlace): Promise<OpenedRequest> {
+    return opened(unwrap('create_http_request_in', await commands.createHttpRequestIn(draft, create)));
+  }
+
   async request(id: string): Promise<OpenedRequest> {
     return opened(unwrap('get_http_request', await commands.getHttpRequest(id)));
   }
@@ -68,7 +78,6 @@ export class HttpRepository {
   async saveRequest(id: string, draft: RequestDraft): Promise<OpenedRequest> {
     const patch: HttpRequestPatch = {
       name: draft.name,
-      kind: draft.kind,
       method: draft.method,
       document: toDocument(draft.parts),
     };
@@ -98,8 +107,35 @@ export class HttpRepository {
     );
   }
 
-  async describeBody(body: RequestBodyDraft): Promise<BodyAnswer> {
-    return unwrap('describe_http_body', await commands.describeHttpBody(toBodyWire(body)));
+  /** With its method: a body on a `GET` is sent all the same, and Rust says it is unusual. */
+  async describeBody(body: RequestBodyDraft, method: HttpMethod): Promise<BodyAnswer> {
+    return unwrap('describe_http_body', await commands.describeHttpBody(toBodyWire(body), method));
+  }
+
+  /** What stops each header from being sent, by its rank: the rule is Rust's. */
+  async checkHeaders(rows: readonly KeyValueRow[]): Promise<(HeaderFault | null)[]> {
+    return unwrap('check_http_headers', await commands.checkHttpHeaders([...rows]));
+  }
+
+  /** `Nom: valeur` typed in a name, or lines pasted from a browser's network tab, as rows. */
+  async readHeaders(text: string): Promise<KeyValueRow[]> {
+    return toRows(unwrap('read_http_headers', await commands.readHttpHeaders(text)));
+  }
+
+  /** What it sends without a row of its own, and who put it there: composed as a send is. */
+  async impliedHeaders(
+    draft: RequestDraft,
+    place: { collectionId: string; folderId: string | null } | null,
+  ): Promise<ImpliedHeader[]> {
+    return unwrap(
+      'implied_http_headers',
+      await commands.impliedHttpHeaders(
+        draft.kind,
+        toDocument(draft.parts),
+        place?.collectionId ?? null,
+        place?.folderId ?? null,
+      ),
+    );
   }
 
   /** `id` is the caller's: what `cancel` and `saveResponse` name the send by. */
@@ -135,6 +171,20 @@ export class HttpRepository {
 
   async historyDraft(id: string): Promise<HistoryDraft> {
     return unwrap('http_history_draft', await commands.httpHistoryDraft(id));
+  }
+
+  /** A send put back onto the request it came from; `null` when that request is gone. */
+  async historyOnto(id: string): Promise<HistoryDraft | null> {
+    return unwrap('http_history_onto_request', await commands.httpHistoryOntoRequest(id));
+  }
+
+  /** One send gone, answered whole: what its undo hands back. */
+  async deleteHistoryEntry(id: string): Promise<HistoryEntry> {
+    return unwrap('delete_http_history_entry', await commands.deleteHttpHistoryEntry(id));
+  }
+
+  async restoreHistoryEntry(entry: HistoryEntry): Promise<void> {
+    unwrap('restore_http_history_entry', await commands.restoreHttpHistoryEntry(entry));
   }
 
   async countHistory(): Promise<number> {
@@ -213,6 +263,11 @@ export class HttpRepository {
 
   async describeGraphql(graphql: GraphqlParts): Promise<GraphqlAnswer> {
     return unwrap('describe_graphql', await commands.describeGraphql(toGraphqlWire(graphql)));
+  }
+
+  /** The variables with a `null` for each one the operation declares and they lack. */
+  async addGraphqlVariables(graphql: GraphqlParts): Promise<string> {
+    return unwrap('add_graphql_variables', await commands.addGraphqlVariables(toGraphqlWire(graphql)));
   }
 
   async rename(item: HttpItem, name: string): Promise<void> {

@@ -1,9 +1,9 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpRepository } from '@core/data/http.repository';
-import { HttpContents, HttpItem, HttpTree } from '@core/model/http.model';
+import { HttpContents, HttpItem, HttpTree, RequestKind } from '@core/model/http.model';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
-import { RailMove, railRows } from './http-tree';
+import { RailMove, ancestors, railRows } from './http-tree';
 
 /** In the library's preferences: which folds were left closed belongs to its collections. */
 const COLLAPSED_KEY = 'devnotes.notes.http.collapsed';
@@ -20,6 +20,10 @@ export class HttpCollectionsStore {
 
   private readonly _tree = signal<HttpTree>({ collections: [] });
   readonly tree = this._tree.asReadonly();
+
+  private readonly _loaded = signal(false);
+  /** Read at least once: until then an empty tree says nothing about what the library holds. */
+  readonly loaded = this._loaded.asReadonly();
 
   private readonly _collapsed = signal<ReadonlySet<string>>(this.readCollapsed());
   readonly collapsed = this._collapsed.asReadonly();
@@ -39,6 +43,7 @@ export class HttpCollectionsStore {
     const tree = await this.attempt(() => this.repository.tree());
     if (tree === null) return false;
     this._tree.set(tree);
+    this._loaded.set(true);
     return true;
   }
 
@@ -60,14 +65,19 @@ export class HttpCollectionsStore {
   }
 
   /** Answers the new request's id, for its tab to open. */
-  async createRequest(collectionId: string, folderId: string | null, name: string): Promise<string | null> {
+  async createRequest(
+    collectionId: string,
+    folderId: string | null,
+    name: string,
+    kind: RequestKind = 'http',
+  ): Promise<string | null> {
     this.unfold(folderId ?? collectionId);
     const created = await this.write(() =>
       this.repository.createRequest({
         collectionId,
         folderId,
         name,
-        kind: 'http',
+        kind,
         method: 'GET',
         document: { url: '', params: [], headers: [], description: '' },
       }),
@@ -75,8 +85,10 @@ export class HttpCollectionsStore {
     return created?.id ?? null;
   }
 
+  /** A collection or a folder renamed is named in what its requests inherit « from »: read again. */
   async rename(item: HttpItem, name: string): Promise<void> {
     await this.write(() => this.repository.rename(item, name));
+    if (item.kind !== 'request') this.settingsSaved();
   }
 
   async duplicate(item: HttpItem, name: string): Promise<void> {
@@ -99,6 +111,11 @@ export class HttpCollectionsStore {
       if (move.place.folderId !== null) this.unfold(move.place.folderId);
       await this.write(() => this.repository.move(move.item, move.place));
     }
+  }
+
+  /** Unfolds what hides a request: one saved into a folded folder is lit where nobody sees it. */
+  reveal(requestId: string): void {
+    for (const id of ancestors(this._tree(), requestId)) this.unfold(id);
   }
 
   private unfold(id: string): void {

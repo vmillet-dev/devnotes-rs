@@ -7,7 +7,7 @@ import { ViewSwitchComponent } from './view-switch.component';
 describe('ViewSwitchComponent', () => {
   let fixture: ComponentFixture<ViewSwitchComponent>;
 
-  function option(which: 'date' | 'board'): HTMLButtonElement {
+  function option(which: 'list' | 'board'): HTMLButtonElement {
     return fixture.nativeElement.querySelector(`[data-testid="view-${which}"]`);
   }
 
@@ -18,12 +18,12 @@ describe('ViewSwitchComponent', () => {
       providers: [provideTranslocoTesting()],
     });
     fixture = TestBed.createComponent(ViewSwitchComponent);
-    fixture.componentRef.setInput('mode', 'date');
+    fixture.componentRef.setInput('mode', 'list');
     fixture.autoDetectChanges();
   });
 
   it('marks the showing view, and only it', () => {
-    expect(option('date').getAttribute('aria-pressed')).toBe('true');
+    expect(option('list').getAttribute('aria-pressed')).toBe('true');
     expect(option('board').getAttribute('aria-pressed')).toBe('false');
   });
 
@@ -36,7 +36,7 @@ describe('ViewSwitchComponent', () => {
 
     expect(seen).toEqual(['board']);
     // The store decides; the switch only asks.
-    expect(option('date').getAttribute('aria-pressed')).toBe('true');
+    expect(option('list').getAttribute('aria-pressed')).toBe('true');
   });
 
   /** Disabled with a reason, not hidden: a control that vanishes reads as a bug. */
@@ -46,6 +46,6 @@ describe('ViewSwitchComponent', () => {
 
     expect(option('board').disabled).toBe(true);
     expect(option('board').getAttribute('title')).toContain('espace');
-    expect(option('date').disabled).toBe(false);
+    expect(option('list').disabled).toBe(false);
   });
 });

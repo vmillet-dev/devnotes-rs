@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, Signal, computed, inject, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ClockService } from '@core/services/time/clock.service';
+import { HttpLeaveStore } from '@core/services/http/http-leave.store';
 import { AppWindowService } from '@core/services/window/app-window.service';
 import { TransferStore } from '@core/state/transfer.store';
 import { NoteSelectionStore } from '@core/state/note-selection.store';
@@ -32,6 +33,7 @@ export class FileMenuComponent {
   protected readonly menuRung = dialogRung('titlebar');
 
   private readonly window = inject(AppWindowService);
+  private readonly leave = inject(HttpLeaveStore);
   private readonly transfer = inject(TransferStore);
   private readonly selection = inject(NoteSelectionStore);
   private readonly spaces = inject(SpacesStore);
@@ -115,7 +117,13 @@ export class FileMenuComponent {
       this.confirmingQuit.set(true);
       return;
     }
-    void this.window.quit();
+    void this.quit();
+  }
+
+  /** The menu goes first: the question, when there is one, is not asked from under it. */
+  private async quit(): Promise<void> {
+    this.menu.close(false);
+    if (await this.leave.confirm('quit')) await this.window.quit();
   }
 
   /** Only the spaces reload: the canvas follows `NotesRevision`, which the library bumps. */

@@ -1,7 +1,9 @@
 import { $, $$, browser, expect } from '@wdio/globals';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { deflateSync } from 'node:zlib';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import {
@@ -9,11 +11,13 @@ import {
   clipboardText,
   eventually,
   pickChoice,
+  preferenceWritten,
   press,
   readEach,
   reloadCanvas,
   setField,
   testid,
+  viewportSize,
 } from '../support/app.js';
 import { bridge, draft, query } from '../support/bridge.js';
 
@@ -28,6 +32,46 @@ async function openTool(tool: string): Promise<void> {
     (shown) => shown === tool,
     `${tool} to open`,
   );
+}
+
+/** The names as the application says them: read from its own files, so a rename never touches a spec. */
+function toolNames(locale: string): Record<string, { name: string }> {
+  const file = new URL(`../../src/app/core/services/i18n/translations/${locale}.json`, import.meta.url);
+  return (
+    JSON.parse(readFileSync(fileURLToPath(file), 'utf8')) as { tools: Record<string, { name: string }> }
+  ).tools;
+}
+
+/** A real PNG of that size, opaque white: what a WebView draws, and what Rust sizes by its header. */
+function pngOf(width: number, height: number): Buffer {
+  const crc = (bytes: Buffer): number => {
+    let sum = 0xffffffff;
+    for (const byte of bytes) {
+      sum ^= byte;
+      for (let bit = 0; bit < 8; bit += 1) sum = (sum >>> 1) ^ (sum & 1 ? 0xedb88320 : 0);
+    }
+    return (sum ^ 0xffffffff) >>> 0;
+  };
+  const chunk = (type: string, data: Buffer): Buffer => {
+    const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+    const [length, sum] = [Buffer.alloc(4), Buffer.alloc(4)];
+    length.writeUInt32BE(data.length);
+    sum.writeUInt32BE(crc(body));
+    return Buffer.concat([length, body, sum]);
+  };
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header.set([8, 6, 0, 0, 0], 8);
+  // Each row: its filter byte, none, then four bytes a pixel.
+  const rows = Buffer.alloc(height * (1 + width * 4), 0xff);
+  for (let row = 0; row < height; row += 1) rows[row * (1 + width * 4)] = 0;
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', header),
+    chunk('IDAT', deflateSync(rows)),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
 }
 
 /** A paste as the system makes it, CRs included: a textarea's value would lose them. */
@@ -93,11 +137,184 @@ describe('The tools', () => {
       await setField(testid('tools-search'), '');
     });
 
+    /** A word of the name a tool had before its rename still leads to it, as its new name does. */
+    it('finds a renamed tool by a word of its old name and by its new one', async () => {
+      const names = toolNames(await browser.execute(() => document.documentElement.lang));
+      const renamed = [
+        ['checks', 'contrôle'],
+        ['base64', 'bases'],
+        ['convert', 'toml'],
+      ] as const;
+
+      for (const [tool, oldWord] of renamed) {
+        for (const wanted of [oldWord, names[tool]!.name]) {
+          await setField(testid('tools-search'), wanted);
+          await eventually(
+            () => readEach(testid('tools-entry'), '@data-tool'),
+            (tools) => tools.includes(tool),
+            `« ${wanted} » to find ${tool}`,
+          );
+        }
+      }
+      await setField(testid('tools-search'), '');
+    });
+
     it('says so when no tool answers a search', async () => {
       await setField(testid('tools-search'), 'zzz-no-such-tool');
 
       await $(testid('tools-no-match')).waitForDisplayed({ timeout: 5_000 });
       await setField(testid('tools-search'), '');
+    });
+
+    /**
+     * « generateur » found nothing, though three tools sit under « Générateurs »; « 418 » found
+     * nothing, though the status reference holds it; Enter did nothing; and the rail of an open
+     * tool listed four recents where the home listed five.
+     */
+    it('finds a category by its name and an entry inside a reference, opens it on Enter, and keeps five recents in the rail', async () => {
+      const words = toolNames(await browser.execute(() => document.documentElement.lang)) as unknown as {
+        categories: Record<string, string>;
+      };
+      const folded = words.categories['generate']!.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+      const generators = await readEach(
+        `${testid('tools-panel')}[data-category="generate"] ${testid('tools-entry')}`,
+        '@data-tool',
+      );
+      expect(generators.length).toBeGreaterThan(2);
+
+      // The folded name of a category finds every tool filed under it.
+      await setField(testid('tools-search'), folded.slice(0, -1));
+      await eventually(
+        () => readEach(testid('tools-entry'), '@data-tool'),
+        (tools) => generators.every((tool) => tools.includes(tool)) && tools.length < 2 * generators.length,
+        'the generators found by the name of their category',
+      );
+
+      // « 418 » is no tool: it is a row of the status reference, listed under the tools.
+      const hit = `${testid('tools-reference-hit')}[data-tool="http-status"][data-key="418"]`;
+      await setField(testid('tools-search'), '418');
+      await $(hit).waitForDisplayed({ timeout: 10_000 });
+      expect(await $(hit).getText()).toContain('418');
+      expect(await readEach(testid('tools-entry'), '@data-tool')).toEqual([]);
+      expect(await $(`${hit}[data-first]`).isExisting()).toBe(true);
+      expect(await $(testid('tools-no-match')).isExisting()).toBe(false);
+
+      // The arrows go down into the results and back up; Enter opens the first from the field.
+      const focused = () =>
+        browser.execute(() => {
+          const active = document.activeElement as HTMLElement | null;
+          return active?.dataset['key'] ?? active?.dataset['testid'] ?? '';
+        });
+      await $(testid('tools-search')).click();
+      await press('ArrowDown');
+      await eventually(focused, (on) => on === '418', 'the first result focused');
+      await press('ArrowUp');
+      await eventually(focused, (on) => on === 'tools-search', 'the field focused again');
+      await press('Enter');
+
+      // The reference opens on that entry: its table whole, the row lit and in view.
+      await eventually(
+        () => $(testid('tool-body')).getAttribute('data-tool'),
+        (shown) => shown === 'http-status',
+        'the status reference to open',
+      );
+      const row = `${testid('reference-row')}[data-key="418"]`;
+      await $(`${row}[data-lit]`).waitForExist({ timeout: 10_000 });
+      expect(await $(testid('reference-search')).getValue()).toBe('');
+      await eventually(
+        () =>
+          browser.execute((lit: string) => {
+            const box = document.querySelector(lit)!.getBoundingClientRect();
+            return box.top >= 0 && box.bottom <= window.innerHeight;
+          }, row),
+        (inView) => inView,
+        'the row brought into view',
+      );
+      // Its table scrolled, not the window: the tool's header is where it was.
+      expect(
+        await browser.execute(
+          (back: string) => document.querySelector(back)!.getBoundingClientRect().top,
+          testid('tool-back'),
+        ),
+      ).toBeGreaterThanOrEqual(0);
+      await $(testid('tool-back')).click();
+      await setField(testid('tools-search'), '');
+
+      // Six tools of other categories, then a reference: its rail lists nine tools above, and
+      // still the five opened last under them — the home its own five, the open tool first.
+      const opened = ['case', 'hash', 'url-codec', 'lorem', 'dates', 'cidr'];
+      for (const tool of opened) await openTool(tool);
+      await openTool('http-status');
+      await eventually(
+        () => readEach(testid('tools-rail-recent'), '@data-tool'),
+        (recents) => recents.join() === [...opened].reverse().slice(0, 5).join(),
+        'five recents in the rail of a reference',
+      );
+      await $(testid('tool-back')).click();
+      await eventually(
+        () => readEach(testid('tools-recent'), '@data-tool'),
+        (recents) => recents.join() === ['http-status', ...[...opened].reverse().slice(0, 4)].join(),
+        'five recents on the home',
+      );
+    });
+
+    /**
+     * Thirty-two tools, and the five used every day were found again each time through a
+     * category or the search: « Récents » moves with every tool opened.
+     */
+    it('stars a tool from its header and another from its row, finds them after a refresh, and narrows the home to them', async () => {
+      const favourites = () => readEach(testid('tools-favourite'), '@data-tool');
+      const entries = () => readEach(testid('tools-entry'), '@data-tool');
+      const star = (tool: string) => $(`${testid('tools-entry-star')}[data-tool="${tool}"]`);
+      const starred = () => readEach(`${testid('tools-entry-star')}[aria-pressed="true"]`, '@data-tool');
+
+      // Whatever a run before left, nothing is starred to begin with.
+      for (const tool of await starred()) await star(tool).click();
+      await eventually(starred, (none) => none.length === 0, 'nothing starred to begin with');
+      expect(await $(testid('tools-rail-favourites')).isExisting()).toBe(false);
+      expect(await favourites()).toEqual([]);
+
+      // From the tool's own header, then from a row of the home without opening that tool.
+      await openTool('hash');
+      await $(testid('tool-favourite')).click();
+      await eventually(
+        () => $(testid('tool-favourite')).getAttribute('aria-pressed'),
+        (pressed) => pressed === 'true',
+        'the star of the open tool on',
+      );
+      await $(testid('tool-back')).click();
+      await star('url-codec').click();
+      await eventually(
+        favourites,
+        (tools) => tools.join() === 'hash,url-codec',
+        'the two favourites, in the order they were starred',
+      );
+      expect(await $(testid('tool-body')).isExisting()).toBe(false);
+      // A favourite has its chip above: it is not repeated among the recents.
+      expect(await readEach(testid('tools-recent'), '@data-tool')).not.toContain('hash');
+
+      // Kept with the application: the page built again, they are where they were.
+      await preferenceWritten('devnotes.favouriteTools', JSON.stringify(['hash', 'url-codec']));
+      await reloadCanvas();
+      await $(testid('tools-page')).waitForDisplayed({ timeout: 10_000 });
+      await eventually(
+        favourites,
+        (tools) => tools.join() === 'hash,url-codec',
+        'the favourites after a refresh',
+      );
+
+      // The rail counts them, and narrows the home to them as a category does.
+      expect(await $(testid('tools-rail-favourites')).getText()).toContain('2');
+      await $(testid('tools-rail-favourites')).click();
+      await eventually(entries, (tools) => tools.join() === 'hash,url-codec', 'the home narrowed to them');
+
+      // Unstarred from their rows: the entry goes with the last one, and the catalogue is whole again.
+      await star('hash').click();
+      await eventually(entries, (tools) => tools.join() === 'url-codec', 'one favourite left');
+      await star('url-codec').click();
+      await $(testid('tools-rail-favourites')).waitForExist({ reverse: true, timeout: 10_000 });
+      await eventually(entries, (tools) => tools.length > 20, 'the whole catalogue again');
+      expect(await favourites()).toEqual([]);
     });
 
     /** The slug is a row of the case converter, and the URL parser a tab of the URL tool; the diff joined from Comparer. */
@@ -108,6 +325,133 @@ describe('The tools', () => {
           '@data-tool',
         ),
       ).toEqual(['case', 'line-breaks', 'text-stats', 'diff']);
+    });
+  });
+
+  /**
+   * The panels pack by column. A grid left a hole under every panel shorter than its row's
+   * tallest; jsdom measures no layout, so only the assembled window can say.
+   */
+  describe('their home, at any width', () => {
+    const GAP = 14;
+    let restore = { width: 1100, height: 720 };
+
+    interface PanelBox {
+      readonly left: number;
+      readonly top: number;
+      readonly bottom: number;
+      readonly width: number;
+      /** More than one is a panel cut across two columns. */
+      readonly pieces: number;
+    }
+
+    const boxes = (): Promise<PanelBox[]> =>
+      browser.execute(
+        (selector: string) =>
+          [...document.querySelectorAll(selector)].map((panel) => {
+            const box = panel.getBoundingClientRect();
+            return {
+              left: Math.round(box.left),
+              top: box.top,
+              bottom: box.bottom,
+              width: box.width,
+              pieces: panel.getClientRects().length,
+            };
+          }),
+        testid('tools-panel'),
+      );
+
+    const columnsOf = (panels: readonly PanelBox[]): PanelBox[][] => {
+      const columns = new Map<number, PanelBox[]>();
+      for (const panel of panels) {
+        columns.set(panel.left, [...(columns.get(panel.left) ?? []), panel]);
+      }
+      return [...columns.values()].map((column) => column.sort((a, b) => a.top - b.top));
+    };
+
+    /** Where a panel does not start right under the one above it. */
+    const holes = (panels: readonly PanelBox[]): number[] =>
+      columnsOf(panels).flatMap((column) =>
+        column
+          .slice(1)
+          .map((panel, index) => panel.top - column[index]!.bottom)
+          .filter((space) => Math.abs(space - GAP) > 1),
+      );
+
+    async function resizeTo(width: number): Promise<PanelBox[]> {
+      await browser.setWindowSize(width, 800);
+      await eventually(
+        viewportSize,
+        (size) => size.width <= width && size.width > width - 60,
+        `the window to be ${width}px wide`,
+      );
+      return boxes();
+    }
+
+    before(async () => {
+      restore = await browser.getWindowSize();
+      await $(testid('tools-rail-all')).click();
+      await setField(testid('tools-search'), '');
+    });
+
+    after(async () => {
+      await $(testid('tools-rail-all')).click();
+      await browser.setWindowSize(restore.width, restore.height);
+    });
+
+    it('leaves no hole between two panels of a column, and cuts none in two', async () => {
+      const columnCounts: number[] = [];
+
+      for (const width of [700, 1000, 1280]) {
+        const panels = await resizeTo(width);
+
+        expect(panels.length).toBeGreaterThan(5);
+        expect(holes(panels)).toEqual([]);
+        expect(panels.filter((panel) => panel.pieces !== 1)).toEqual([]);
+        columnCounts.push(columnsOf(panels).length);
+      }
+
+      expect(columnCounts[0]).toBe(1);
+      expect(columnCounts[2]).toBeGreaterThanOrEqual(3);
+    });
+
+    /** The count gives way first: cut on its line, not wrapped under the title. */
+    it('keeps its top bar on one line at the narrowest', async () => {
+      await resizeTo(700);
+
+      const lines = await browser.execute((count: string) => {
+        const text = document.querySelector<HTMLElement>(count)!;
+        return Math.round(text.getBoundingClientRect().height / parseFloat(getComputedStyle(text).fontSize));
+      }, testid('tools-count'));
+
+      expect(lines).toBe(1);
+    });
+
+    it('packs what a search leaves the same way', async () => {
+      await resizeTo(1000);
+      await setField(testid('tools-search'), 'json');
+      const panels = await eventually(
+        boxes,
+        (found) => found.length >= 2 && found.length < 7,
+        'the search to leave a few panels',
+      );
+
+      expect(holes(panels)).toEqual([]);
+      expect(panels.filter((panel) => panel.pieces !== 1)).toEqual([]);
+      await setField(testid('tools-search'), '');
+    });
+
+    it('keeps one category to a column, not stretched over the page', async () => {
+      const whole = await resizeTo(1280);
+      const columnWidth = whole[0]!.width;
+
+      await $(`${testid('tools-rail-category')}[data-category="calc"]`).click();
+      const panels = await eventually(boxes, (found) => found.length === 1, 'one category to show');
+
+      expect(panels[0]!.pieces).toBe(1);
+      // The whole home scrolls and one category does not: the scrollbar's width, shared out
+      // between the columns, is all that may separate the two.
+      expect(Math.abs(panels[0]!.width - columnWidth)).toBeLessThanOrEqual(8);
     });
   });
 
@@ -361,6 +705,72 @@ describe('The tools', () => {
       expect(await $(testid('base64-problem')).getText()).toContain('#');
       await $(testid('tool-clear')).click();
       await $(`${testid('segmented-base64-direction')} [data-segment-id="encode"]`).click();
+    });
+
+    /**
+     * Decoded bytes that are a picture could only be saved, then opened elsewhere to see what
+     * they were; and a long result ran down a strip in the middle of an empty window.
+     */
+    it('shows the picture a decoding is, a data: URI included, and gives a long result the width of the window', async () => {
+      const picture = pngOf(24, 16).toString('base64');
+      const drawn = () =>
+        browser.execute((image: string) => {
+          const shown = document.querySelector(image) as HTMLImageElement | null;
+          return shown?.complete ? `${shown.naturalWidth} × ${shown.naturalHeight}` : '';
+        }, testid('base64-image-picture'));
+      await $(`${testid('segmented-base64-direction')} [data-segment-id="decode"]`).click();
+
+      // Rust names and sizes it by its header; the WebView draws it, under the CSP as it stands.
+      await setField(testid('base64-input'), picture);
+      await $(testid('base64-image')).waitForDisplayed({ timeout: 10_000 });
+      expect(await $(testid('base64-image')).getAttribute('data-format')).toBe('png');
+      expect(await $(testid('base64-image-size')).getText()).toBe('24 × 16 px');
+      await eventually(drawn, (size) => size === '24 × 16', 'the picture drawn at its own size');
+
+      // Pasted whole with its header, it is read by it rather than refused.
+      await setField(testid('base64-input'), `data:image/png;base64,${picture}`);
+      await $(testid('base64-data-uri')).waitForDisplayed({ timeout: 10_000 });
+      expect(await $(testid('base64-problem')).isExisting()).toBe(false);
+      expect(await $(testid('base64-image-size')).getText()).toBe('24 × 16 px');
+
+      // Text that is no picture shows none.
+      await setField(testid('base64-input'), 'Q2Fmw6k=');
+      await $(testid('base64-image')).waitForExist({ reverse: true, timeout: 10_000 });
+      await $(`${testid('segmented-base64-direction')} [data-segment-id="encode"]`).click();
+
+      // A long text on a wide window: the first result takes more than half the tool, held to
+      // a height, and the second encoding is still in view under it.
+      const before = await browser.getWindowSize();
+      await browser.setWindowSize(1400, 800);
+      await eventually(viewportSize, (size) => size.width > 1300, 'a wide window');
+      await setField(testid('base64-input'), 'DevNotes garde tout sur cette machine. '.repeat(120));
+      await eventually(
+        () => encoding('base64'),
+        (text) => text.length > 3000,
+        'a long Base64',
+      );
+      const boxes = await browser.execute(
+        (first: string, second: string, tool: string) => {
+          const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
+          const [long, next, whole] = [box(first), box(second), box(tool)];
+          return {
+            share: long.width / whole.width,
+            height: long.height,
+            nextTop: next.top,
+            nextBottom: next.bottom,
+            viewport: window.innerHeight,
+          };
+        },
+        `[data-encoding="base64"] ${testid('output-value')}`,
+        `[data-encoding="base64Url"] ${testid('output-row')}`,
+        'app-base64-tool',
+      );
+      expect(boxes.share).toBeGreaterThan(0.5);
+      expect(boxes.height).toBeLessThan(220);
+      expect(boxes.nextTop).toBeGreaterThan(0);
+      expect(boxes.nextBottom).toBeLessThanOrEqual(boxes.viewport);
+      await browser.setWindowSize(before.width, before.height);
+      await $(testid('tool-clear')).click();
     });
 
     it('reads a file where it lies, by its path', async () => {
@@ -713,6 +1123,217 @@ describe('The tools', () => {
       );
     });
 
+    /**
+     * The sample document, with « Schéma » chosen above it, answered three strings of lorem
+     * ipsum and a warning nobody understood; and « La garder » stood far from the seed it kept.
+     */
+    it('says an example is no schema and reads it as a model, loads the sample of the mode, and pins the seed it drew', async () => {
+      const source = (id: string) =>
+        $(`${testid('segmented-json-generator-source')} [data-segment-id="${id}"]`);
+      const documents = async () => JSON.parse(await output()) as unknown[];
+      await $(testid('tool-clear')).click();
+
+      // The sample of « Modèle » is a document, and documents like it come out.
+      await source('example').click();
+      await $(testid('tool-sample')).click();
+      await eventually(output, (text) => text.includes('"createdAt"'), 'documents like the sample');
+
+      // « Schéma » does not take it for a schema: nothing is drawn, and the way back is offered.
+      await source('schema').click();
+      await $(testid('json-generator-an-example')).waitForDisplayed({ timeout: 10_000 });
+      expect(await $(testid('json-generator-output')).isExisting()).toBe(false);
+      expect(await $(testid('json-generator-unsupported')).isExisting()).toBe(false);
+      await $(testid('json-generator-as-example')).click();
+      await eventually(output, (text) => text.includes('"createdAt"'), 'the documents, read as a model');
+      expect(await $(testid('json-generator-expects')).getAttribute('data-source')).toBe('example');
+
+      // « Exemple » under « Schéma » fills a schema: documents come out of it, with no warning.
+      await source('schema').click();
+      await $(testid('json-generator-an-example')).waitForDisplayed({ timeout: 10_000 });
+      await $(testid('tool-sample')).click();
+      await eventually(
+        () => $(testid('json-generator-input')).getValue(),
+        (text) => text.includes('"properties"'),
+        'the sample of the schema mode',
+      );
+      // A required property: the others are drawn one time in two, and three documents may have none.
+      await eventually(output, (text) => text.includes('"email"'), 'documents drawn from the schema');
+      expect(await $(testid('json-generator-unsupported')).isExisting()).toBe(false);
+
+      // « Régénérer » draws others while no seed is pinned…
+      const first = await output();
+      await $(testid('tool-action-draw')).click();
+      const second = await eventually(output, (text) => text !== first, 'other documents');
+
+      // …and the seed just used is said at its own field, with the pin that fixes it there.
+      await $(testid('json-generator-seed-used')).waitForDisplayed({ timeout: 5_000 });
+      await $(testid('json-generator-keep-seed')).click();
+      await $(testid('json-generator-seed-pinned')).waitForDisplayed({ timeout: 5_000 });
+      expect(await $(testid('json-generator-seed')).getValue()).toMatch(/^\d+$/);
+
+      // Pinned, « Régénérer » draws the same: two documents asked next are the first two again.
+      await $(testid('tool-action-draw')).click();
+      await setField(testid('json-generator-count'), '2');
+      await eventually(documents, (drawn) => drawn.length === 2, 'two documents');
+      expect(await documents()).toEqual((JSON.parse(second) as unknown[]).slice(0, 2));
+
+      await setField(testid('json-generator-count'), '3');
+      await $(testid('tool-clear')).click();
+    });
+
+    /**
+     * A form or a test database was filled with « Jean Dupont » and an IBAN found on a forum: a
+     * person whose every number passes its own check, the same again from the same seed.
+     */
+    it('draws a fictitious person as a card, the same from the same seed, whose IBAN the checks tool finds valid', async () => {
+      interface Drawn {
+        sex: string;
+        surname: string;
+        birth: { date: string };
+        bank: { iban: string };
+        identifiers: { kind: string; value: string }[];
+      }
+      const iban = () => $(`[data-field="iban"] ${testid('output-value')}`).getText();
+      // ⚠️ The clipboard may still hold the JSON of a scenario before: this person's is the one with their IBAN.
+      const person = async (shown: string): Promise<Drawn> => {
+        await $(testid('identity-copy-json')).click();
+        const json = await eventually(
+          clipboardText,
+          (text) => text?.includes(`"${shown}"`) === true,
+          'the person as JSON',
+        );
+        return JSON.parse(json ?? '{}') as Drawn;
+      };
+      await openTool('identity');
+      await $(testid('identity-card')).waitForDisplayed({ timeout: 10_000 });
+
+      // The sample's seed draws the same person for everyone; « Spécimen » is printed across the card.
+      await $(testid('tool-sample')).click();
+      await eventually(
+        () => $(testid('identity-seed')).getValue(),
+        (seed) => seed === 'devnotes',
+        'the seed of the sample',
+      );
+      await $(testid('identity-seed-pinned')).waitForDisplayed({ timeout: 10_000 });
+      // ⚠️ The seed is in its field before its person is on the card: the card says whose it is.
+      await eventually(
+        () => $(testid('identity-card')).getAttribute('data-seed'),
+        (seed) => seed === 'devnotes',
+        'the person of the sample',
+      );
+      expect(await $(testid('identity-specimen')).isExisting()).toBe(true);
+      const first = await eventually(
+        iban,
+        (text) => /^FR\d{2}( [0-9A-Z]{4}){5} [0-9A-Z]{3}$/.test(text),
+        'an IBAN',
+      );
+      const drawn = await person(first);
+      expect(drawn.bank.iban).toBe(first);
+      expect(await $(testid('identity-surname')).getText()).toContain(drawn.surname);
+
+      // The card does not contradict itself: the social security number is read off the person.
+      const nir = drawn.identifiers.find((identifier) => identifier.kind === 'nir')!.value.replace(/ /g, '');
+      expect(nir).toHaveLength(15);
+      expect(nir[0]).toBe(drawn.sex === 'M' ? '1' : '2');
+      expect(nir.slice(1, 3)).toBe(drawn.birth.date.slice(2, 4));
+      expect(nir.slice(3, 5)).toBe(drawn.birth.date.slice(5, 7));
+
+      // A value is copied with a click.
+      await $(`[data-field="iban"] ${testid('copy-value')}`).click();
+      await eventually(clipboardText, (text) => text === first, 'the IBAN copied');
+
+      // Another seed is another person; the first seed, the first person again.
+      await setField(testid('identity-seed'), 'another');
+      await eventually(iban, (text) => text !== first, 'someone else');
+      await setField(testid('identity-seed'), 'devnotes');
+      await eventually(iban, (text) => text === first, 'the same person again');
+
+      // What it generates is what « Luhn et IBAN » verifies: one implementation, asked twice.
+      await openTool('checks');
+      await setField(testid('checks-input'), first);
+      await eventually(
+        () => $(testid('checks-verdict')).getAttribute('data-valid'),
+        (valid) => valid === 'true',
+        'the generated IBAN found valid',
+      );
+      expect(await $(testid('checks-rib')).getAttribute('data-valid')).toBe('true');
+      await $(testid('tool-clear')).click();
+    });
+
+    /**
+     * A country is a profile: its own numbers under its own names, each read off the person or
+     * carrying its key — and a country that has none for a firm says so rather than invent one.
+     */
+    it('draws a person of another country under that country’s own numbers, and says what a country does not have', async () => {
+      interface Drawn {
+        country: string;
+        sex: string;
+        birth: { date: string };
+        identifiers: { kind: string; value: string }[];
+      }
+      const shown = () => $(testid('identity-card')).getAttribute('data-country');
+      const choose = async (country: string) => {
+        await $(testid('choice-identity-country')).click();
+        await $(`${testid('choice-panel-identity-country')} [data-option-id="${country}"]`).click();
+        await eventually(shown, (now) => now === country, `a person of ${country}`);
+      };
+      const value = (field: string) => $(`[data-field="${field}"] ${testid('output-value')}`).getText();
+      const named = async () => [
+        await $(testid('identity-surname')).getText(),
+        await $(testid('identity-given')).getText(),
+      ];
+      await openTool('identity');
+      await $(testid('identity-card')).waitForDisplayed({ timeout: 10_000 });
+
+      // Italy: the codice fiscale is on the card, and says the year, the month and the sex of its bearer.
+      await choose('IT');
+      await $(testid('identity-copy-json')).click();
+      const italian = JSON.parse(
+        (await eventually(
+          clipboardText,
+          (text) => text?.includes('"country": "IT"') === true,
+          'an Italian',
+        )) ?? '{}',
+      ) as Drawn;
+      const code = italian.identifiers.find((identifier) => identifier.kind === 'codiceFiscale')!.value;
+      expect(await $(`${testid('identity-personal')}[data-kind="codiceFiscale"]`).getText()).toContain(code);
+      expect(code).toHaveLength(16);
+      expect(code.slice(6, 8)).toBe(italian.birth.date.slice(2, 4));
+      expect(code[8]).toBe('ABCDEHLMPRST'[Number(italian.birth.date.slice(5, 7)) - 1]);
+      expect(Number(code.slice(9, 11)) > 40).toBe(italian.sex === 'F');
+      expect(await value('partitaIva')).toMatch(/^\d{11}$/);
+      const iban = await value('iban');
+      expect(iban.startsWith('IT')).toBe(true);
+      const italianNames = await named();
+      // No range is kept for fiction there: the note says a number may ring.
+      expect(await $(testid('identity-phones')).getAttribute('data-fiction')).toBe('false');
+
+      // The United States: a routing number where an IBAN would be, and no number with a key for a firm.
+      await choose('US');
+      // ⚠️ The seed is pinned: the names are the same as in Italy. A name does not follow the country.
+      expect(await named()).toEqual(italianNames);
+      expect(await $('[data-field="iban"]').isExisting()).toBe(false);
+      expect(await value('routingNumber')).toMatch(/^\d{9}$/);
+      await $(testid('identity-no-firm-number')).waitForDisplayed({ timeout: 10_000 });
+      expect(await $(`${testid('identity-personal')}[data-kind="ssn"]`).getText()).toMatch(/987-65-432\d/);
+      expect(await $(testid('identity-phones')).getAttribute('data-fiction')).toBe('true');
+
+      // The Italian IBAN is one « Luhn et IBAN » finds valid.
+      await openTool('checks');
+      await setField(testid('checks-input'), iban);
+      await eventually(
+        () => $(testid('checks-verdict')).getAttribute('data-valid'),
+        (valid) => valid === 'true',
+        'the Italian IBAN found valid',
+      );
+      await $(testid('tool-clear')).click();
+
+      // Vider goes back to France.
+      await openTool('identity');
+      await $(testid('tool-clear')).click();
+      await eventually(shown, (now) => now === 'FR', 'France again');
+    });
+
     it('opens Lorem ipsum on the classic words', async () => {
       await openTool('lorem');
       await $(`${testid('segmented-lorem-unit')} [data-segment-id="words"]`).click();
@@ -1004,6 +1625,53 @@ describe('The tools', () => {
         (verdict) => verdict === 'false',
         'a Tuesday',
       );
+      // A « no » says when, then: the Monday before, at nine, and the Monday after.
+      expect(await $(testid('cron-nearest-before')).getText()).toContain('2026-09-28 09:00:00');
+      expect(await $(testid('cron-nearest-after')).getText()).toContain('2026-10-05 09:00:00');
+      await setField(testid('cron-check'), '');
+    });
+
+    /**
+     * « Will this run on Friday afternoon? »: the list was the next ten from now, and the check
+     * one exact minute. 2026-10-16 is a Friday, the 17th a Saturday.
+     */
+    it('counts the runs between two moments: none on a Saturday, seventy-two on a Friday afternoon', async () => {
+      const total = () => $(testid('cron-window-count')).getAttribute('data-total');
+      await setField(testid('cron-input'), '*/5 * * * 1-5');
+
+      // A Saturday, for an expression of the working days: the answer one came for.
+      await setField(testid('cron-from'), '2026-10-17 00:00');
+      await setField(testid('cron-until'), '2026-10-18 00:00');
+      await eventually(total, (count) => count === '0', 'no run on a Saturday');
+      expect(await readEach(testid('cron-run'), 'text')).toEqual([]);
+
+      // A Friday afternoon: counted, and listed by its two ends around how many lie between.
+      await setField(testid('cron-from'), '2026-10-16 12:00');
+      await setField(testid('cron-until'), '2026-10-16 18:00');
+      await eventually(total, (count) => count === '72', 'seventy-two runs on a Friday afternoon');
+      const listed = await readEach(testid('cron-run-at'), 'text');
+      expect(listed).toHaveLength(10);
+      expect(listed[0]).toBe('2026-10-16 12:00:00');
+      expect(listed.at(-1)).toBe('2026-10-16 17:55:00');
+      expect(await $(testid('cron-window-gap')).getAttribute('data-between')).toBe('62');
+
+      // The shortcut fills both ends with a Friday afternoon of its own: seventy-two again.
+      await setField(testid('cron-until'), '');
+      await $(testid('cron-window-count')).waitForExist({ reverse: true, timeout: 10_000 });
+      await $(`${testid('cron-shortcut')}[data-shortcut="fridayAfternoon"]`).click();
+      await eventually(total, (count) => count === '72', 'the Friday afternoon of the shortcut');
+      expect(await $(testid('cron-from')).getValue()).toMatch(/^\d{4}-\d{2}-\d{2} 12:00$/);
+      expect(await $(testid('cron-until')).getValue()).toMatch(/^\d{4}-\d{2}-\d{2} 18:00$/);
+
+      // An end before its start is said, not counted.
+      await setField(testid('cron-until'), '2020-01-01 00:00');
+      await eventually(
+        () => readEach(testid('cron-window-problem'), '@data-problem'),
+        (problems) => problems.join() === 'backwards',
+        'the end before the start',
+      );
+      await setField(testid('cron-from'), '');
+      await setField(testid('cron-until'), '');
     });
 
     it('names the field of a refusal, and says what @reboot means', async () => {
@@ -1656,6 +2324,51 @@ describe('The tools', () => {
       await $(testid('choice-structured-diff-format-b')).click();
       await $(`${testid('choice-panel-structured-diff-format-b')} [data-option-id="auto"]`).click();
       await $(testid('structured-diff-unreadable-b')).waitForDisplayed({ timeout: 5_000, reverse: true });
+    });
+
+    /**
+     * The text tab's sample — an nginx file — left under « Structuré » was announced « lu comme
+     * YAML » and answered « 1 modification »: one string changed into another.
+     */
+    it('says a text is no structure rather than reading it as YAML, and loads the sample of the tab on screen', async () => {
+      const tab = (id: string) => $(`${testid('segmented-diff-mode')} [data-segment-id="${id}"]`);
+      await tab('text').click();
+      await $(testid('tool-sample')).click();
+      await eventually(
+        () => $(testid('text-diff-a')).getValue(),
+        (text) => text.includes('server {'),
+        'the sample of the text tab',
+      );
+
+      // The same two texts under « Données », which says what it compares: nothing here is a document.
+      await tab('structured').click();
+      await $(testid('diff-data-line')).waitForDisplayed({ timeout: 5_000 });
+      await $(testid('structured-diff-not-structured-a')).waitForDisplayed({ timeout: 10_000 });
+      expect(await $(testid('structured-diff-not-structured-b')).isExisting()).toBe(true);
+      expect(await $(testid('structured-diff-read-a')).isExisting()).toBe(false);
+      expect(await $(testid('structured-diff-modified')).isExisting()).toBe(false);
+
+      // Its button goes back to the text diff, both sides kept.
+      await $(testid('structured-diff-as-text-a')).click();
+      await $(testid('text-diff-a')).waitForDisplayed({ timeout: 5_000 });
+      expect(await $(testid('text-diff-a')).getValue()).toContain('server {');
+      expect(await $(testid('text-diff-b')).getValue()).toContain('server {');
+
+      // « Exemple » under « Données » is that tab's own: a YAML against its JSON, one value apart.
+      await tab('structured').click();
+      await $(testid('tool-sample')).click();
+      await eventually(
+        async () =>
+          [
+            ...(await readEach(testid('structured-diff-read-a'), '@data-format')),
+            ...(await readEach(testid('structured-diff-read-b'), '@data-format')),
+          ].join(),
+        (formats) => formats === 'yaml,json',
+        'each side of the sample read by its shape',
+      );
+      expect(await $(testid('structured-diff-a')).getValue()).not.toContain('server {');
+      expect(await readEach(testid('structured-diff-change'), '@data-path')).toEqual(['$.version']);
+      await $(testid('tool-clear')).click();
     });
   });
 

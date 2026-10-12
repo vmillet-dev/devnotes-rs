@@ -1,0 +1,559 @@
+import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { describe, expect, it, vi } from 'vitest';
+import { IdentityAnswer } from '@core/model/tool-answers.model';
+import { FILE_DIALOG_ADAPTER } from '@core/services/dialogs/file-dialog.service';
+import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
+import { ChoiceMenuComponent } from '@shared/controls/choice-menu/choice-menu.component';
+import { StatusNotifier } from '@core/services/notifications/status.service';
+import { FakeFileDialog } from '@testing/fake-file-dialog';
+import { FakeToolsRepository } from '@testing/fake-tools-repository';
+import { ToolHarness, renderTool } from '@testing/tool-harness';
+import { IdentityToolComponent, ageOn } from './identity-tool.component';
+
+/** A person as Rust answers one: every number computed there, none here. */
+const ADA: IdentityAnswer = {
+  seed: '2676318943',
+  json: '{\n  "surname": "Lefèvre"\n}',
+  person: {
+    country: 'FR',
+    sex: 'F',
+    surname: 'Lefèvre',
+    givenNames: ['Élise', 'Marie'],
+    birth: { date: '1987-03-12', city: 'Lyon', region: 'Rhône' },
+    document: 'F7K2M9P4X',
+    address: {
+      street: '12 rue Pasteur',
+      postcode: '44000',
+      city: 'Nantes',
+      region: 'Loire-Atlantique',
+      formatted: '12 rue Pasteur, 44000 Nantes',
+    },
+    phone: '02 61 91 12 34',
+    mobile: '06 39 98 56 78',
+    email: 'elise.lefevre@example.org',
+    bank: { name: 'LCL', iban: 'FR76 3000 6000 0112 3456 7890 189', bic: 'CRLYFRPP', local: [] },
+    identifiers: [{ kind: 'nir', value: '2 87 03 69 123 456 07' }],
+    company: {
+      name: 'Lefèvre Conseil',
+      identifiers: [
+        { kind: 'siren', value: '404 833 048' },
+        { kind: 'siret', value: '404 833 048 00022' },
+        { kind: 'vat', value: 'FR83404833048' },
+      ],
+    },
+  },
+  fictionPhones: true,
+  unkeyed: [],
+};
+
+/** An IBAN and, beside it, what the country writes: the layout of the United Kingdom. */
+const GRACE: IdentityAnswer = {
+  ...ADA,
+  person: {
+    ...ADA.person,
+    country: 'GB',
+    surname: 'Hopper',
+    givenNames: ['Grace'],
+    address: {
+      street: '12 High Street',
+      postcode: 'M1 4BT',
+      city: 'Manchester',
+      region: 'Greater Manchester',
+      formatted: '12 High Street, Manchester M1 4BT',
+    },
+    bank: {
+      name: 'NatWest',
+      iban: 'GB29 NWBK 6016 1331 9268 19',
+      bic: 'NWBKGB2L',
+      local: [
+        { kind: 'sortCode', value: '60-16-13' },
+        { kind: 'accountNumber', value: '31926819' },
+      ],
+    },
+    identifiers: [{ kind: 'nino', value: 'AB 12 34 56 C' }],
+    company: {
+      name: 'Hopper Consulting Ltd',
+      identifiers: [
+        { kind: 'crn', value: '01234567' },
+        { kind: 'gbVat', value: 'GB 123 4567 82' },
+      ],
+    },
+  },
+  unkeyed: ['nino', 'sortCode', 'accountNumber', 'crn'],
+};
+
+/** No IBAN, and no number with a key for a firm: the layout of North America. */
+const KATHERINE: IdentityAnswer = {
+  ...ADA,
+  person: {
+    ...ADA.person,
+    country: 'US',
+    surname: 'Johnson',
+    givenNames: ['Katherine'],
+    bank: {
+      name: 'Wells Fargo',
+      iban: null,
+      bic: null,
+      local: [
+        { kind: 'routingNumber', value: '121000248' },
+        { kind: 'accountNumber', value: '4821093376' },
+      ],
+    },
+    identifiers: [{ kind: 'ssn', value: '987-65-4321' }],
+    company: { name: 'Johnson Consulting LLC', identifiers: [] },
+  },
+  unkeyed: ['ssn', 'accountNumber'],
+};
+
+describe('IdentityToolComponent', () => {
+  const answering = (tools: FakeToolsRepository): void => {
+    tools.identity = ADA;
+  };
+
+  const requests = (harness: ToolHarness<IdentityToolComponent>) =>
+    harness.tools.requestsOf('generate_identity');
+  const text = (harness: ToolHarness<IdentityToolComponent>, testid: string) =>
+    harness.element(`[data-testid="${testid}"]`)?.textContent?.replace(/\s+/g, ' ').trim();
+  const rows = (harness: ToolHarness<IdentityToolComponent>, block: string) =>
+    harness
+      .all(`[data-testid="identity-block"][data-block="${block}"] [data-testid="output-row"]`)
+      .map((row) => [row.dataset['name'], row.querySelector('[data-testid="output-value"]')?.textContent]);
+  const drawn = async (answer: IdentityAnswer = ADA) => {
+    const harness = await renderTool(IdentityToolComponent, (tools) => {
+      answering(tools);
+      tools.identity = answer;
+    });
+    await vi.waitFor(() => expect(requests(harness)).toHaveLength(1));
+    await harness.settle();
+    return harness;
+  };
+
+  it('draws someone on opening, with no seed and the ages of an adult', async () => {
+    const harness = await drawn();
+
+    expect(requests(harness)).toEqual([{ country: 'FR', sex: null, ageMin: 18, ageMax: 80, seed: null }]);
+    expect(text(harness, 'identity-seed-used')).toBe('· 2676318943 utilisée');
+  });
+
+  it('offers thirteen countries in a menu, asks for the one chosen, and keeps it when asked for another', async () => {
+    const harness = await drawn();
+    const menu = harness.fixture.debugElement.query(By.directive(ChoiceMenuComponent));
+
+    expect(text(harness, 'choice-identity-country')).toContain('France');
+    harness.element('[data-testid="choice-identity-country"]').click();
+    await harness.settle();
+    expect(harness.all('[data-testid="choice-option"]').map((option) => option.dataset['optionId'])).toEqual([
+      'FR',
+      'BE',
+      'DE',
+      'ES',
+      'IT',
+      'PT',
+      'NL',
+      'CH',
+      'GB',
+      'PL',
+      'SE',
+      'US',
+      'CA',
+    ]);
+
+    harness.element<HTMLButtonElement>('[data-testid="choice-option"][data-option-id="IT"]').click();
+    await vi.waitFor(() => expect(requests(harness).at(-1)).toMatchObject({ country: 'IT' }));
+    await harness.settle();
+    expect(text(harness, 'choice-identity-country')).toContain('Italie');
+
+    // A country it does not have changes nothing.
+    menu.triggerEventHandler('chosen', 'XX');
+    await harness.settle();
+    expect(requests(harness).at(-1)).toMatchObject({ country: 'IT' });
+  });
+
+  /**
+   * Their own names in their own country — « Sort code », « National Insurance number » are
+   * not translated — and the address in the order the country writes it.
+   */
+  it('adds what a country writes beside its IBAN, under its own names, and says which carry no key', async () => {
+    const harness = await drawn(GRACE);
+
+    expect(harness.element('[data-testid="identity-card"]').dataset['country']).toBe('GB');
+    expect(harness.element('[data-testid="identity-card"]').textContent).toContain('Britannique');
+    expect(text(harness, 'identity-personal')).toContain('AB 12 34 56 C');
+    expect(harness.element('[data-testid="identity-personal"]').dataset['kind']).toBe('nino');
+    expect(rows(harness, 'contact')[0]).toEqual(['Adresse', '12 High Street, Manchester M1 4BT']);
+    expect(rows(harness, 'bank')).toEqual([
+      ['Banque', 'NatWest'],
+      ['IBAN', 'GB29 NWBK 6016 1331 9268 19'],
+      ['BIC', 'NWBKGB2L'],
+      ['Sort code', '60-16-13'],
+      ['Account number', '31926819'],
+    ]);
+    expect(rows(harness, 'company')).toEqual([
+      ['Raison sociale', 'Hopper Consulting Ltd'],
+      ['Company number', '01234567'],
+      ['VAT number', 'GB 123 4567 82'],
+    ]);
+    expect(harness.all('[data-testid="identity-no-firm-number"]')).toEqual([]);
+    expect(text(harness, 'identity-unkeyed')).toBe(
+      'Sans clé à vérifier : National Insurance number, Sort code, Account number, Company number',
+    );
+  });
+
+  /** ⚠️ A country with none says so, rather than show a field made up. */
+  it('shows what a country without an IBAN has instead, and says its firms have no number with a key', async () => {
+    const harness = await drawn(KATHERINE);
+
+    expect(rows(harness, 'bank')).toEqual([
+      ['Banque', 'Wells Fargo'],
+      ['Routing number', '121000248'],
+      ['Account number', '4821093376'],
+    ]);
+    expect(harness.all('[data-field="iban"]')).toEqual([]);
+    expect(rows(harness, 'company')).toEqual([['Raison sociale', 'Johnson Consulting LLC']]);
+    expect(text(harness, 'identity-no-firm-number')).toBe(
+      'Aucun identifiant d’entreprise à clé dans ce pays.',
+    );
+    expect(text(harness, 'identity-personal')).toContain('987-65-4321');
+  });
+
+  /**
+   * ⚠️ It evokes a card and imitates none: a monogram where a photo would be, and « Spécimen »
+   * printed across — test data, not a document to pass off.
+   */
+  it('draws the person as a card: a monogram, the names large, and « Spécimen » across it', async () => {
+    const harness = await drawn();
+    const card = harness.element('[data-testid="identity-card"]');
+
+    expect(card.dataset['country']).toBe('FR');
+    expect(card.dataset['seed']).toBe('2676318943');
+    // A document number that is made up, and called so.
+    expect(card.textContent).toContain('N° de document (fictif)');
+    expect(text(harness, 'identity-document')).toBe('F7K2M9P4X');
+    expect(text(harness, 'identity-monogram')).toBe('ÉL');
+    expect(text(harness, 'identity-surname')).toContain('Lefèvre');
+    expect(text(harness, 'identity-given')).toContain('Élise, Marie');
+    expect(harness.element('[data-testid="identity-sex"]').dataset['sex']).toBe('F');
+    expect(text(harness, 'identity-sex')).toBe('Féminin');
+    expect(card.textContent).toContain('Française');
+    expect(harness.element('[data-testid="identity-birth"]').dataset['date']).toBe('1987-03-12');
+    expect(text(harness, 'identity-birth')).toContain('12 mars 1987');
+    expect(text(harness, 'identity-birth-place')).toBe('Lyon (Rhône)');
+    expect(text(harness, 'identity-document')).toBe('F7K2M9P4X');
+    // The number that is the person's own is on the card, under its own name.
+    const personal = harness.element('[data-testid="identity-personal"]');
+    expect(personal.dataset['kind']).toBe('nir');
+    expect(personal.textContent).toContain('2 87 03 69 123 456 07');
+
+    const specimen = harness.element('[data-testid="identity-specimen"]');
+    expect(specimen.textContent?.trim()).toBe('Spécimen');
+    expect(specimen.getAttribute('aria-hidden')).toBe('true');
+    expect(card.contains(specimen)).toBe(true);
+    // Nothing of a state's document: no image at all, a monogram alone.
+    expect(card.querySelector('img, svg image')).toBeNull();
+  });
+
+  it('lays the rest in three blocks: the contact, the bank, the company', async () => {
+    const harness = await drawn();
+
+    expect(harness.all('[data-testid="identity-block"]').map((block) => block.dataset['block'])).toEqual([
+      'contact',
+      'bank',
+      'company',
+    ]);
+    expect(rows(harness, 'contact')).toEqual([
+      ['Adresse', '12 rue Pasteur, 44000 Nantes'],
+      ['Téléphone', '02 61 91 12 34'],
+      ['Mobile', '06 39 98 56 78'],
+      ['E-mail', 'elise.lefevre@example.org'],
+    ]);
+    expect(rows(harness, 'bank')).toEqual([
+      ['Banque', 'LCL'],
+      ['IBAN', 'FR76 3000 6000 0112 3456 7890 189'],
+      ['BIC', 'CRLYFRPP'],
+    ]);
+    expect(rows(harness, 'company')).toEqual([
+      ['Raison sociale', 'Lefèvre Conseil'],
+      ['SIREN', '404 833 048'],
+      ['SIRET', '404 833 048 00022'],
+      ['TVA intracommunautaire', 'FR83404833048'],
+    ]);
+  });
+
+  it('copies each value with a click, from a block and from the card', async () => {
+    const harness = await drawn();
+
+    harness.element<HTMLButtonElement>('[data-field="iban"] [data-testid="copy-value"]').click();
+    await expect.poll(() => harness.clipboard.content).toBe('FR76 3000 6000 0112 3456 7890 189');
+
+    harness.element<HTMLButtonElement>('[data-testid="identity-surname"] [data-testid="copy-value"]').click();
+    await expect.poll(() => harness.clipboard.content).toBe('Lefèvre');
+
+    // The date is copied as a form takes it, not as the card writes it.
+    harness.element<HTMLButtonElement>('[data-testid="identity-birth"] [data-testid="copy-value"]').click();
+    await expect.poll(() => harness.clipboard.content).toBe('1987-03-12');
+  });
+
+  it('says what the data is for, and what in it could be someone’s', async () => {
+    const harness = await drawn();
+    const warning = harness.element('[data-testid="identity-warning"]');
+
+    expect(warning.getAttribute('role')).toBe('note');
+    expect(warning.textContent).toContain('ne les utilisez pas pour vous faire passer pour quelqu’un');
+    expect(warning.textContent).toContain('peut appartenir à quelqu’un');
+    expect(warning.textContent).toContain('givenNames');
+    // France keeps a range for fiction, has a key on every number, and is one of thirteen.
+    expect(harness.element('[data-testid="identity-phones"]').dataset['fiction']).toBe('true');
+    expect(text(harness, 'identity-phones')).toContain('réserve à la fiction');
+    expect(harness.all('[data-testid="identity-unkeyed"]')).toEqual([]);
+    expect(harness.all('[data-testid="identity-countries"] .listed')).toHaveLength(13);
+    expect(text(harness, 'identity-countries')).toContain('Pays : France, Belgique, Allemagne');
+  });
+
+  /**
+   * ⚠️ The lists are files beside the application, no longer part of it: one that cannot be
+   * read is said in place of a card — which one, and where it was looked for.
+   */
+  it('says which list cannot be read, and where it was looked for, in place of a card', async () => {
+    const harness = await renderTool(IdentityToolComponent, (tools) => {
+      tools.unreadableList = { problem: 'missing', file: 'places/it.txt', folder: 'C:/app/identity' };
+    });
+    await vi.waitFor(() => expect(requests(harness)).toHaveLength(1));
+    await harness.settle();
+    const said = harness.element('[data-testid="identity-unreadable"]');
+
+    expect(said.getAttribute('role')).toBe('alert');
+    expect([said.dataset['problem'], said.dataset['file']]).toEqual(['missing', 'places/it.txt']);
+    expect(said.textContent).toContain('Liste introuvable : places/it.txt.');
+    expect(said.textContent).toContain('Les listes sont lues dans C:/app/identity');
+    expect(harness.all('[data-testid="identity-card"]')).toEqual([]);
+    expect(harness.all('[data-testid="identity-warning"]')).toEqual([]);
+    expect(harness.element<HTMLButtonElement>('[data-testid="identity-copy-json"]').disabled).toBe(true);
+    expect(harness.tool.result()).toBeNull();
+  });
+
+  it('writes no batch when a list cannot be read, and says which', async () => {
+    const harness = await renderTool(IdentityToolComponent, (tools) => {
+      tools.identity = ADA;
+      tools.peopleExport = {
+        kind: 'unreadable',
+        list: { problem: 'damaged', file: 'places/gb.txt', folder: 'C:/app/identity' },
+      };
+    });
+    await vi.waitFor(() => expect(requests(harness)).toHaveLength(1));
+    await harness.settle();
+    (TestBed.inject(FILE_DIALOG_ADAPTER) as FakeFileDialog).savePath = 'C:/out/people.json';
+
+    harness.element<HTMLButtonElement>('[data-testid="identity-export"]').click();
+
+    await vi.waitFor(() =>
+      expect(TestBed.inject(ErrorNotifier).notice()?.ref).toEqual({
+        key: 'tools.identity.lists.damaged',
+        params: { file: 'places/gb.txt' },
+      }),
+    );
+  });
+
+  it('says a phone number may ring where no range is kept for fiction', async () => {
+    const harness = await drawn({ ...ADA, fictionPhones: false });
+
+    expect(harness.element('[data-testid="identity-phones"]').dataset['fiction']).toBe('false');
+    expect(text(harness, 'identity-phones')).toContain('peuvent sonner chez quelqu’un');
+  });
+
+  it('asks for the sex and the ages chosen, held to what a person lives', async () => {
+    const harness = await drawn();
+
+    harness
+      .element<HTMLButtonElement>('[data-testid="segmented-identity-sex"] [data-segment-id="M"]')
+      .click();
+    await vi.waitFor(() => expect(requests(harness).at(-1)).toMatchObject({ sex: 'M' }));
+    harness
+      .element<HTMLButtonElement>('[data-testid="segmented-identity-sex"] [data-segment-id="any"]')
+      .click();
+    await vi.waitFor(() => expect(requests(harness).at(-1)).toMatchObject({ sex: null }));
+
+    await harness.type('identity-age-min', '30', 'generate_identity');
+    await harness.type('identity-age-max', '500', 'generate_identity');
+    expect(requests(harness).at(-1)).toMatchObject({ ageMin: 30, ageMax: 110 });
+
+    // What is no number changes nothing.
+    const before = requests(harness).length;
+    const field = harness.element<HTMLInputElement>('[data-testid="identity-age-min"]');
+    field.value = '';
+    field.dispatchEvent(new Event('input'));
+    await harness.settle();
+    expect(requests(harness)).toHaveLength(before);
+  });
+
+  it('takes a seed that is typed, and pins the one it drew at its own field', async () => {
+    const harness = await drawn();
+    const pin = () => harness.element<HTMLButtonElement>('[data-testid="identity-pin-seed"]');
+    expect(pin().getAttribute('aria-pressed')).toBe('false');
+    expect(harness.element('[data-testid="identity-seed-pinned"]')).toBeNull();
+
+    pin().click();
+    await vi.waitFor(() => expect(requests(harness).at(-1)).toMatchObject({ seed: '2676318943' }));
+    await harness.settle();
+    expect(harness.element<HTMLInputElement>('[data-testid="identity-seed"]').value).toBe('2676318943');
+    expect(pin().getAttribute('aria-pressed')).toBe('true');
+    expect(text(harness, 'identity-seed-pinned')).toContain('la même personne revient');
+    expect(harness.element('[data-testid="identity-seed-used"]')).toBeNull();
+
+    pin().click();
+    await vi.waitFor(() => expect(requests(harness).at(-1)).toMatchObject({ seed: null }));
+
+    await harness.type('identity-seed', '  devnotes ', 'generate_identity');
+    expect(requests(harness).at(-1)).toMatchObject({ seed: 'devnotes' });
+    await harness.type('identity-seed', '   ', 'generate_identity');
+    expect(requests(harness).at(-1)).toMatchObject({ seed: null });
+  });
+
+  it('draws someone else on « Régénérer », with the same options', async () => {
+    const harness = await drawn();
+    const action = harness.tool.actions()[0]!;
+    expect(action).toMatchObject({ id: 'draw', labelKey: 'tools.identity.again', disabled: false });
+
+    action.run();
+    await vi.waitFor(() => expect(requests(harness)).toHaveLength(2));
+
+    expect(requests(harness)[1]).toEqual(requests(harness)[0]);
+  });
+
+  it('copies the person as JSON, and keeps that JSON as a note', async () => {
+    const harness = await drawn();
+
+    harness.element<HTMLButtonElement>('[data-testid="identity-copy-json"]').click();
+    await expect.poll(() => harness.clipboard.content).toBe(ADA.json);
+    await vi.waitFor(() =>
+      expect(TestBed.inject(StatusNotifier).status()?.key).toBe('tools.identity.jsonCopied'),
+    );
+
+    expect(harness.tool.result()).toEqual({
+      title: { key: 'tools.identity.noteTitle', params: { name: 'Élise Lefèvre' } },
+      kind: 'snippet',
+      language: 'json',
+      content: ADA.json,
+    });
+  });
+
+  it('exports a batch to the file chosen, starting from the person on screen', async () => {
+    const harness = await renderTool(IdentityToolComponent, (tools) => {
+      tools.identity = ADA;
+      tools.peopleExport = { kind: 'written', people: 25 };
+    });
+    await vi.waitFor(() => expect(requests(harness)).toHaveLength(1));
+    await harness.settle();
+    const dialog = TestBed.inject(FILE_DIALOG_ADAPTER) as FakeFileDialog;
+    const exported = () => harness.tools.requestsOf('export_identities');
+
+    // Nowhere chosen, nothing written.
+    dialog.savePath = null;
+    harness.element<HTMLButtonElement>('[data-testid="identity-export"]').click();
+    await vi.waitFor(() => expect(dialog.saveCalls).toHaveLength(1));
+    await harness.settle();
+    expect(exported()).toEqual([]);
+    expect(dialog.saveCalls[0]?.defaultPath).toBe('identities.json');
+
+    // The card's own country is of the batch whatever is ticked; others are added, and taken back.
+    const chip = (code: string) =>
+      harness.element<HTMLButtonElement>(`[data-testid="identity-batch-country"][data-country="${code}"]`);
+    expect(harness.all('[data-testid="identity-batch-country"]')).toHaveLength(13);
+    expect([chip('FR').disabled, chip('FR').getAttribute('aria-pressed')]).toEqual([true, 'true']);
+    expect(chip('IT').getAttribute('aria-pressed')).toBe('false');
+    expect(chip('IT').getAttribute('aria-label')).toBe('Italie');
+    for (const code of ['IT', 'DE', 'US', 'DE']) {
+      chip(code).click();
+      await harness.settle();
+    }
+    expect(['IT', 'DE', 'US'].map((code) => chip(code).getAttribute('aria-pressed'))).toEqual([
+      'true',
+      'false',
+      'true',
+    ]);
+
+    dialog.savePath = 'C:/out/people.csv';
+    const people = harness.element<HTMLInputElement>('[data-testid="identity-people"]');
+    people.value = '25';
+    people.dispatchEvent(new Event('input'));
+    harness
+      .element<HTMLButtonElement>('[data-testid="segmented-identity-format"] [data-segment-id="csv"]')
+      .click();
+    await harness.settle();
+    harness.element<HTMLButtonElement>('[data-testid="identity-export"]').click();
+    await vi.waitFor(() => expect(exported()).toHaveLength(1));
+
+    expect(dialog.saveCalls[1]?.defaultPath).toBe('identities.csv');
+    expect(exported()[0]).toEqual({
+      // No seed was pinned: the one the card was drawn from is the file's.
+      request: { country: 'FR', sex: null, ageMin: 18, ageMax: 80, seed: '2676318943' },
+      batch: { countries: ['IT', 'US'], count: 25, format: 'csv' },
+      path: 'C:/out/people.csv',
+    });
+    await vi.waitFor(() =>
+      expect(TestBed.inject(StatusNotifier).status()).toMatchObject({
+        key: 'tools.identity.exported',
+        params: { count: 25 },
+      }),
+    );
+  });
+
+  it('holds a batch between one person and a hundred', async () => {
+    const harness = await drawn();
+    const people = harness.element<HTMLInputElement>('[data-testid="identity-people"]');
+    const typed = async (value: string) => {
+      people.value = value;
+      people.dispatchEvent(new Event('input'));
+      await harness.settle();
+      return people.value;
+    };
+
+    expect(people.value).toBe('10');
+    expect(await typed('5000')).toBe('100');
+    expect(await typed('0')).toBe('1');
+  });
+
+  it('fills the sample’s seed, the same person for whoever opens the tool', async () => {
+    const harness = await drawn();
+
+    harness.tool.sample();
+    await vi.waitFor(() => expect(requests(harness).at(-1)).toMatchObject({ seed: 'devnotes', sex: null }));
+  });
+
+  it('goes back to the first options on Vider, and draws someone new', async () => {
+    const harness = await drawn();
+    await harness.type('identity-seed', 'devnotes', 'generate_identity');
+    await harness.type('identity-age-min', '40', 'generate_identity');
+    harness.fixture.debugElement.query(By.directive(ChoiceMenuComponent)).triggerEventHandler('chosen', 'SE');
+    harness.element<HTMLButtonElement>('[data-testid="identity-batch-country"][data-country="PL"]').click();
+    await vi.waitFor(() => expect(requests(harness).at(-1)).toMatchObject({ country: 'SE' }));
+    const before = requests(harness).length;
+
+    harness.tool.clear();
+    await vi.waitFor(() => expect(requests(harness).length).toBeGreaterThan(before));
+
+    expect(requests(harness).at(-1)).toEqual({
+      country: 'FR',
+      sex: null,
+      ageMin: 18,
+      ageMax: 80,
+      seed: null,
+    });
+    await harness.settle();
+    expect(harness.element<HTMLInputElement>('[data-testid="identity-seed"]').value).toBe('');
+    expect(
+      harness
+        .all('[data-testid="identity-batch-country"][aria-pressed="true"]')
+        .map((chip) => chip.dataset['country']),
+    ).toEqual(['FR']);
+  });
+});
+
+describe('ageOn', () => {
+  it('counts whole years, the birthday itself included', () => {
+    expect(ageOn('1987-03-12', new Date(2026, 2, 11))).toBe(38);
+    expect(ageOn('1987-03-12', new Date(2026, 2, 12))).toBe(39);
+    expect(ageOn('1987-03-12', new Date(2026, 11, 31))).toBe(39);
+    expect(ageOn('2026-10-12', new Date(2026, 9, 12))).toBe(0);
+  });
+});

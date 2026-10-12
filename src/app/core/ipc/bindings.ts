@@ -47,6 +47,8 @@ export const commands = {
 	describeColour: (request: ColourRequest) => typedError<ColourAnswer, AppError>(__TAURI_INVOKE("describe_colour", { request })),
 	convertData: (request: ConvertRequest) => typedError<ConvertAnswer, AppError>(__TAURI_INVOKE("convert_data", { request })),
 	generateJson: (request: GenerateRequest) => typedError<GenerateAnswer, AppError>(__TAURI_INVOKE("generate_json", { request })),
+	generateIdentity: (request: IdentityRequest) => typedError<IdentityOutcome, AppError>(__TAURI_INVOKE("generate_identity", { request })),
+	exportIdentities: (request: IdentityRequest, batch: PeopleBatch, path: string) => typedError<PeopleExport, AppError>(__TAURI_INVOKE("export_identities", { request, batch, path })),
 	loremIpsum: (request: LoremRequest) => typedError<LoremAnswer, AppError>(__TAURI_INVOKE("lorem_ipsum", { request })),
 	diffJson: (request: JsonDiffRequest) => typedError<JsonDiffAnswer, AppError>(__TAURI_INVOKE("diff_json", { request })),
 	diffText: (request: TextDiffRequest) => typedError<TextDiffAnswer, AppError>(__TAURI_INVOKE("diff_text", { request })),
@@ -139,6 +141,11 @@ export const commands = {
 	/**  `parent_id` `None` puts it at the collection's root. */
 	createHttpFolder: (collectionId: string, parentId: string | null, name: string) => typedError<HttpFolder, AppError>(__TAURI_INVOKE("create_http_folder", { collectionId, parentId, name })),
 	createHttpRequest: (draft: HttpRequestDraft) => typedError<HttpRequest, AppError>(__TAURI_INVOKE("create_http_request", { draft })),
+	/**
+	 *  The first save of a request where nothing holds it yet: what `create` names is created
+	 *  with it, or nothing is. Every name is checked before anything is written.
+	 */
+	createHttpRequestIn: (draft: HttpRequestDraft, create: NewPlace) => typedError<HttpRequest, AppError>(__TAURI_INVOKE("create_http_request_in", { draft, create })),
 	getHttpRequest: (id: string) => typedError<HttpRequest, AppError>(__TAURI_INVOKE("get_http_request", { id })),
 	saveHttpRequest: (id: string, patch: HttpRequestPatch) => typedError<HttpRequest, AppError>(__TAURI_INVOKE("save_http_request", { id, patch })),
 	renameHttpItem: (item: HttpItem, name: string) => typedError<null, AppError>(__TAURI_INVOKE("rename_http_item", { item, name })),
@@ -155,10 +162,28 @@ export const commands = {
 	saveHttpSettings: (item: HttpItem, settings: ContainerSettings) => typedError<null, AppError>(__TAURI_INVOKE("save_http_settings", { item, settings })),
 	/**  What a request placed there inherits, and from where: « héritée de la collection … ». */
 	inheritedHttpSettings: (collectionId: string, folderId: string | null) => typedError<Inherited, AppError>(__TAURI_INVOKE("inherited_http_settings", { collectionId, folderId })),
-	/**  What a body implies, and whether a JSON one reads: the editor says both as it is typed. */
-	describeHttpBody: (body: RequestBody) => typedError<BodyAnswer, AppError>(__TAURI_INVOKE("describe_http_body", { body })),
+	/**
+	 *  What a body implies, whether a JSON one reads, and whether its method seldom carries one:
+	 *  the editor says the three as it is typed, and decides none of them.
+	 */
+	describeHttpBody: (body: RequestBody, method: HttpMethod) => typedError<BodyAnswer, AppError>(__TAURI_INVOKE("describe_http_body", { body, method })),
+	/**
+	 *  What a request sends without a row of its own — the body's type, what it inherits, the
+	 *  application's `User-Agent` — read as a send reads it: the editor lists the answer and
+	 *  decides none of it.
+	 */
+	impliedHttpHeaders: (kind: RequestKind, document: RequestDocument, collectionId: string | null, folderId: string | null) => typedError<ImpliedHeader[], AppError>(__TAURI_INVOKE("implied_http_headers", { kind, document, collectionId, folderId })),
+	/**
+	 *  Each header's fault by its rank, or none: the table marks the row and says why. The rule is
+	 *  the model's; the table holds none.
+	 */
+	checkHttpHeaders: (rows: KeyValue[]) => typedError<(HeaderFault | null)[], AppError>(__TAURI_INVOKE("check_http_headers", { rows })),
+	/**  `Nom: valeur` typed in a name, or lines pasted from a browser's network tab, as rows. */
+	readHttpHeaders: (text: string) => typedError<KeyValue[], AppError>(__TAURI_INVOKE("read_http_headers", { text })),
 	/**  The operations a GraphQL document names, and why its variables do not read. */
 	describeGraphql: (document: GraphqlDocument) => typedError<GraphqlAnswer, AppError>(__TAURI_INVOKE("describe_graphql", { document })),
+	/**  The variables with a `null` for each one the operation declares and they lack: « Ajouter ». */
+	addGraphqlVariables: (document: GraphqlDocument) => typedError<string, AppError>(__TAURI_INVOKE("add_graphql_variables", { document })),
 	/**
 	 *  Its headers and auth composed like a request's, under the lock for what it inherits; the
 	 *  handshake waited on without it. Answers once the socket is open.
@@ -185,6 +210,21 @@ export const commands = {
 	httpHistoryEntry: (id: string) => typedError<HistoryEntry, AppError>(__TAURI_INVOKE("http_history_entry", { id })),
 	/**  An entry rebuilt as a request to send again or save: its secrets are typed again. */
 	httpHistoryDraft: (id: string) => typedError<HistoryDraft, AppError>(__TAURI_INVOKE("http_history_draft", { id })),
+	/**
+	 *  A send put back onto the request it came from, as changes to save or not, the request's own
+	 *  secrets where the record holds a mask. `None` when that request is gone, or the send came
+	 *  from a draft: the front then opens one, as `http_history_draft` rebuilds it.
+	 */
+	httpHistoryOntoRequest: (id: string) => typedError<{
+	name: string,
+	/**  The kind of what was sent: a draft is created of it, as any request is of its own. */
+	kind: RequestKind,
+	method: HttpMethod,
+	document: RequestDocument,
+} | null, AppError>(__TAURI_INVOKE("http_history_onto_request", { id })),
+	/**  One entry gone, answered whole: its undo hands it back to `restore_http_history_entry`. */
+	deleteHttpHistoryEntry: (id: string) => typedError<HistoryEntry, AppError>(__TAURI_INVOKE("delete_http_history_entry", { id })),
+	restoreHttpHistoryEntry: (entry: HistoryEntry) => typedError<null, AppError>(__TAURI_INVOKE("restore_http_history_entry", { entry })),
 	/**  What « Vider l'historique » says it removes. */
 	countHttpHistory: () => typedError<number, AppError>(__TAURI_INVOKE("count_http_history")),
 	clearHttpHistory: () => typedError<number, AppError>(__TAURI_INVOKE("clear_http_history")),
@@ -338,6 +378,11 @@ export const commands = {
 	/**  The native side can only fail silently, and a log line is not an interface. */
 	setGlobalShortcuts: (bindings: ShortcutBindings) => __TAURI_INVOKE<string[]>("set_global_shortcuts", { bindings }),
 	setWindowBehavior: (behavior: WindowBehavior) => __TAURI_INVOKE<void>("set_window_behavior", { behavior }),
+	/**
+	 *  The page's answer to `GlobalAction::Quit` when it has something to ask first: the timer
+	 *  stands down, and the window comes up — it may be hidden in the tray, where no dialog shows.
+	 */
+	holdQuit: () => __TAURI_INVOKE<void>("hold_quit"),
 };
 
 /* Constants */
@@ -360,6 +405,16 @@ export const PREFERENCES_FILE = "preferences.json" as const;
 export const WEBSOCKET_EVENT = "devnotes://websocket" as const;
 
 /* Types */
+export type Address = {
+	/**  The number and the street, in the order the country writes them. */
+	street: string,
+	postcode: string,
+	city: string,
+	region: string,
+	/**  The whole of it on one line, as an envelope of the country carries it. */
+	formatted: string,
+};
+
 export type AlgorithmFamily = "hmac" | "rsa" | "rsaPss" | "ecdsa" | "edDsa" | 
 /**  `alg: none`: nothing signs it. */
 "unsigned" | "unknown";
@@ -396,9 +451,25 @@ export type Backup = {
 	openable: boolean,
 };
 
+export type Bank = {
+	name: string,
+	/**  None in a country that has no IBAN. */
+	iban: string | null,
+	bic: string | null,
+	/**  What the country writes beside an IBAN or instead of one: a sort code, a routing number. */
+	local: Identifier[],
+};
+
 export type Base64FileAnswer = 
 /**  A file keeps the two Base64 alone: the other encodings of a megabyte are noise. */
 { kind: "encoded"; name: string; bytes: number; base64: string; base64Url: string } | { kind: "failed"; problem: FileProblem };
+
+export type Birth = {
+	/**  `YYYY-MM-DD`. */
+	date: string,
+	city: string,
+	region: string,
+};
 
 export type BlockKind = "thisNetwork" | "private" | "sharedAddressSpace" | "loopback" | "linkLocal" | "documentation" | "benchmarking" | "multicast" | "reserved" | "broadcast" | "public" | "unspecified" | "ipv4Mapped" | "nat64" | "uniqueLocal" | "global" | 
 /**  Wider than a special range it holds: no one sentence describes it. */
@@ -431,7 +502,7 @@ export type BoardLayout = {
 export type BoardNote = {
 	/**
 	 *  Dimmed in place rather than reflowed: spatial memory is what the board has that the
-	 *  date view does not.
+	 *  list view does not.
 	 */
 	matches: boolean,
 	/**  `None` inside a zone, where a card flows; `Some` only on the free background. */
@@ -495,6 +566,8 @@ export type BoardZone = {
 export type BodyAnswer = {
 	contentType: string | null,
 	problem: JsonError | null,
+	/**  Something is sent as the body of a `GET` or a `HEAD`: sent all the same, and said. */
+	unusual: boolean,
 };
 
 export type ByteEncoding = "base64" | 
@@ -724,6 +797,11 @@ export type ColourRequest = {
 	against: string,
 };
 
+export type Company = {
+	name: string,
+	identifiers: Identifier[],
+};
+
 /**  The connections every estimate is also given for, by their rate in bits per second. */
 export type Connection = "fibre" | "mobile4g" | "adsl";
 
@@ -784,6 +862,11 @@ export type Cookie = {
 	httpOnly: boolean,
 	secure: boolean,
 	sameSite: string | null,
+	/**
+	 *  The URL that answered with it, when it was set by a redirect on the way; `None` for one
+	 *  the answer itself set.
+	 */
+	from?: string | null,
 };
 
 export type CookieDomain = {
@@ -791,17 +874,28 @@ export type CookieDomain = {
 	cookies: StoredCookie[],
 };
 
+export type Country = "FR" | "BE" | "DE" | "ES" | "IT" | "PT" | "NL" | "CH" | "GB" | "PL" | "SE" | "US" | "CA";
+
 export type CronAnswer = { kind: "read"; 
 /**  What a macro stands for: `@daily` is `0 0 * * *`. */
 expanded: string | null; fields: FieldReading[]; 
 /**  Both day fields restricted: either one matching is enough, as in cron. */
-bothDays: boolean; zone: string; runs: Run[]; check: CronCheck | null } | 
+bothDays: boolean; zone: string; runs: Run[]; check: CronCheck | null; 
+/**  Asked for by an end, or by a start that does not read. */
+window: CronWindow | null; 
+/**  Now, in `zone`: what « today » and « Friday afternoon » are counted from. */
+now: Run } | 
 /**  `@reboot` runs when the machine starts: no time to give. */
 { kind: "reboot" } | { kind: "refused"; field: CronField | null; token: string; 
 /**  One-based, in characters of the expression as typed. */
 at: number; problem: CronProblem } | { kind: "unknownZone"; zone: string };
 
-export type CronCheck = { kind: "checked"; matches: boolean; at: string } | { kind: "unreadable"; at: number } | { kind: "skipped" };
+export type CronCheck = 
+/**
+ *  `before` and `after` are the nearest runs around a moment that is none: what a « no »
+ *  leaves one asking.
+ */
+{ kind: "checked"; matches: boolean; at: string; before: Run | null; after: Run | null } | { kind: "unreadable"; at: number } | { kind: "skipped" };
 
 export type CronField = "second" | "minute" | "hour" | "dayOfMonth" | "month" | "dayOfWeek";
 
@@ -817,7 +911,24 @@ export type CronRequest = {
 	zone: string | null,
 	/**  A date to test against the expression, read in `zone`; empty asks nothing. */
 	check: string,
+	/**  Where the runs are listed from, read in `zone`; empty is now. */
+	from?: string,
+	/**  Where they stop; empty lists the next ten. */
+	until?: string,
 };
+
+/**  The runs between two moments: « will this run on Friday afternoon? ». */
+export type CronWindow = 
+/**
+ *  ⚠️ `total` is counted, never the length of a list: a window of a year at every minute
+ *  holds half a million runs, and ten of them cross the bridge. `last` is empty when
+ *  `first` is all of them.
+ */
+{ kind: "counted"; from: Run; until: Run; total: number; first: Run[]; last: Run[] } | { kind: "unreadable"; end: WindowEnd; at: number } | 
+/**  A date out of range, or an hour a change of clocks skipped. */
+{ kind: "skipped"; end: WindowEnd } | 
+/**  The end is not after the start. */
+{ kind: "backwards" } | { kind: "tooLong"; years: number };
 
 export type Crossing = 
 /**  TOML has no `null`, and one in a list cannot be left out without moving the others. */
@@ -847,6 +958,9 @@ export type DecodeAnswer = {
 	/**  The other readings its shape allows: `deadbeef` is hexadecimal and Base64 alike. */
 	also: ByteEncoding[],
 	decoded: DecodedBytes,
+	/**  The media type its header declared, for a `data:` URI pasted whole. */
+	dataUri: string | null,
+	image: DecodedImage | null,
 };
 
 export type DecodeProblem = 
@@ -873,6 +987,14 @@ export type DecodedBytes = { kind: "text"; text: string; bytes: number } |
 { kind: "binary"; bytes: number; preview: string } | 
 /**  `at` counts characters of the text as given, spaces and line breaks included. */
 { kind: "invalid"; problem: DecodeProblem; at: number | null; character: string | null };
+
+/**  The decoded bytes are a picture: which kind, how large when its header says, and itself. */
+export type DecodedImage = {
+	format: ImageFormat,
+	width: number | null,
+	height: number | null,
+	preview: ImagePreview,
+};
 
 /**  One line of a kept body, compared with the text restoring it would replace. */
 export type DiffLine = 
@@ -1045,7 +1167,11 @@ export type ErrorCode = "noteNotFound" | "spaceNotFound" | "duplicateSpaceName" 
 /**  What « Annuler » answers: the front, which asked, says nothing. */
 "httpCancelled" | "httpGraphqlVariables" | 
 /**  The `status` parameter is what the server answered instead of switching protocols. */
-"httpWebsocketRefused" | "httpNetwork";
+"httpWebsocketRefused" | "httpNetwork" | 
+/**  A socket's URL on another scheme; `twin` is the same on `ws(s)://`, when it has one. */
+"httpWebsocketScheme" | 
+/**  `header` is its name as written; `source` and `name` say who wrote it, as for a limit. */
+"httpHeaderName" | "httpHeaderValue";
 
 export type Exchange = {
 	method: HttpMethod,
@@ -1158,7 +1284,12 @@ export type GapField = "from" | "to";
 
 export type GenerateAnswer = { kind: "generated"; text: string; seed: number; unsupported: Unsupported[] } | { kind: "unreadable"; line: number; column: number } | 
 /**  A schema is an object, or `true`. */
-{ kind: "notASchema" };
+{ kind: "notASchema" } | 
+/**
+ *  An object, but none of what it holds is a schema's: a document to draw others like,
+ *  read under the wrong switch. Nothing is generated from it.
+ */
+{ kind: "anExample" };
 
 export type GenerateRequest = {
 	source: JsonSource,
@@ -1172,7 +1303,9 @@ export type GenerateRequest = {
  *  One event carrying a closed value rather than a topic per action: a mistyped topic is
  *  a silently inert subscription, and a new variant here stops the front compiling.
  */
-export type GlobalAction = "capture" | "new-note" | "palette";
+export type GlobalAction = "capture" | "new-note" | "palette" | 
+/**  Not something to do but something to answer: a quit asked from outside the page. */
+"quit";
 
 export type Granularity = "lines" | "words" | "characters";
 
@@ -1180,6 +1313,15 @@ export type GraphqlAnswer = {
 	/**  The named operations, in the order written. */
 	operations: string[],
 	variablesProblem: JsonError | null,
+	/**
+	 *  A brace, a parenthesis or a string the query leaves open: said where it is typed. It
+	 *  warns and stops nothing — the server stays the judge of the rest.
+	 */
+	queryProblem: QueryProblem | null,
+	/**  What the operation sent declares without a default and the variables give no value. */
+	missing: string[],
+	/**  The keys of the variables the operation sent does not declare. */
+	unknown: string[],
 };
 
 export type GraphqlDocument = {
@@ -1206,7 +1348,7 @@ export type GraphqlResult = {
 	errors: GraphqlError[],
 };
 
-/**  How the date view gathers its cards. A search or a facet still makes one flat list. */
+/**  How the list view gathers its cards. A search or a facet still makes one flat list. */
 export type Grouping = "date" | "priority" | "format" | "none";
 
 /**  In the order the tool lists them. */
@@ -1233,6 +1375,9 @@ export type HashRequest = {
 	expected: string | null,
 };
 
+/**  What stops a header from being sent: the editor marks its row by it, a send names it. */
+export type HeaderFault = "name" | "value";
+
 export type HistoryDay = {
 	/**  `2026-10-07`, the local day. */
 	day: string,
@@ -1242,10 +1387,13 @@ export type HistoryDay = {
 /**  An entry sent again: what it was called, and the request it rebuilds. */
 export type HistoryDraft = {
 	name: string,
+	/**  The kind of what was sent: a draft is created of it, as any request is of its own. */
+	kind: RequestKind,
 	method: HttpMethod,
 	document: RequestDocument,
 };
 
+/**  Read to be shown; and handed back as it was read to undo its deletion. */
 export type HistoryEntry = {
 	item: HistoryItem,
 	record: HistoryRecord,
@@ -1258,6 +1406,12 @@ export type HistoryItem = {
 	status: number | null,
 	requestId: string | null,
 	summary: HistorySummary,
+	/**
+	 *  The URL in two parts for a list (`url_parts`): the host, which a narrow row cuts, and
+	 *  what follows it, which it keeps.
+	 */
+	urlHead?: string,
+	urlTail?: string,
 };
 
 export type HistoryRecord = {
@@ -1272,6 +1426,16 @@ export type HistorySummary = {
 	millis: number | null,
 	size: number | null,
 	failure: ErrorCode | null,
+	/**  What the failure's sentence states: the delay that ran out, and who set it. */
+	failureParams?: { [key in string]: string },
+	/**  What was sent, for a send reopened as a draft to be of the same kind. */
+	kind?: RequestKind,
+	/**
+	 *  ⚠️ Here and not in a column of their own: no query filters or sorts on them, and in
+	 *  the clear they told a reader of the raw file « a DELETE answered 401 at 14:02 ».
+	 */
+	method?: HttpMethod,
+	status?: number | null,
 };
 
 export type HttpCollection = {
@@ -1346,10 +1510,12 @@ export type HttpRequestDraft = {
 	document: RequestDocument,
 };
 
-/**  A field left out is untouched. */
+/**
+ *  A field left out is untouched. ⚠️ No `kind`: it is chosen when a request is created, so
+ *  there is nothing here to refuse.
+ */
 export type HttpRequestPatch = {
 	name?: string | null,
-	kind?: RequestKind | null,
 	method?: HttpMethod | null,
 	document?: RequestDocument | null,
 };
@@ -1394,6 +1560,14 @@ random: RandomPart } | { kind: "ksuid"; created: string; random: RandomPart } |
 
 export type IdKind = "uuidV4" | "uuidV7" | "ulid" | "nanoId" | "cuid2" | "objectId" | "ksuid";
 
+export type Identifier = {
+	kind: IdentifierKind,
+	value: string,
+};
+
+/**  Their own names in their own country: a label, never a translation. */
+export type IdentifierKind = "nir" | "siren" | "siret" | "vat" | "nrn" | "bce" | "beVat" | "steuerId" | "ustIdNr" | "dni" | "nifEs" | "codiceFiscale" | "partitaIva" | "nifPt" | "nipc" | "bsn" | "kvk" | "btw" | "ahv" | "uid" | "nino" | "crn" | "gbVat" | "pesel" | "nip" | "regon" | "personnummer" | "orgnr" | "moms" | "ssn" | "sin" | "sortCode" | "accountNumber" | "routingNumber" | "transitNumber";
+
 export type IdentifiersRequest = {
 	kind: IdKind,
 	count: number,
@@ -1404,6 +1578,80 @@ export type IdentifiersRequest = {
 	nanoLength: number,
 	nanoAlphabet: NanoAlphabet,
 };
+
+/**
+ *  ⚠️ These names are what « Copier en JSON » and an export write: renaming one breaks whoever
+ *  reads the files.
+ */
+export type Identity = {
+	country: Country,
+	sex: Sex,
+	surname: string,
+	givenNames: string[],
+	birth: Birth,
+	/**  A number as a card would carry one: nine characters, of no format that exists. */
+	document: string,
+	address: Address,
+	phone: string,
+	mobile: string,
+	email: string,
+	bank: Bank,
+	identifiers: Identifier[],
+	company: Company,
+};
+
+export type IdentityAnswer = {
+	/**  The seed that was used: the one given, or the one drawn. */
+	seed: string,
+	person: Identity,
+	/**  The person as an export writes one, for the clipboard and for a note. */
+	json: string,
+	/**  Whether the phone numbers are in a range the country keeps for fiction. */
+	fictionPhones: boolean,
+	/**  The numbers of this card that carry no key: a format, and nothing to verify it by. */
+	unkeyed: IdentifierKind[],
+};
+
+/**  A person, or the list that kept one from being drawn. */
+export type IdentityOutcome = { kind: "drawn"; answer: IdentityAnswer } | { kind: "unreadable"; list: UnreadableList };
+
+export type IdentityRequest = {
+	country: Country,
+	/**  `None` draws it. */
+	sex: Sex | null,
+	/**  The age reached this year, between the two. */
+	ageMin: number,
+	ageMax: number,
+	/**  The same seed and options give the same person; none draws one, and says which. */
+	seed: string | null,
+};
+
+/**  The five the page draws from a `data:` URL. Its name is the extension it is saved under. */
+export type ImageFormat = "png" | "jpg" | "gif" | "webp" | "svg";
+
+export type ImagePreview = 
+/**
+ *  ⚠️ A `data:` URL for an `<img>`: what the CSP already lets a picture be, and where
+ *  nothing an SVG holds can run. Never inlined as markup.
+ */
+{ kind: "shown"; dataUrl: string } | { kind: "tooLarge"; limit: number };
+
+/**  A header sent without a row of the request's own: the editor lists them under its table. */
+export type ImpliedHeader = {
+	name: string,
+	value: string,
+	source: ImpliedSource,
+	from: HttpOrigin | null,
+};
+
+/**  Who put a header on a request that no row of its own wrote. */
+export type ImpliedSource = "body" | 
+/**  A folder or the collection, named in `from`. */
+"above" | 
+/**  The application's own: `User-Agent`, `Accept`. */
+"default" | 
+/**  `Host`, which the client writes from the URL. */
+"url";
 
 /**  `skipped`: notes already present or whose space is missing, so an import can be replayed. */
 export type ImportReport = {
@@ -1516,7 +1764,13 @@ export type JsonDiffAnswer = { kind: "compared"; changes: JsonChange[]; counts: 
 /**  RFC 6902, from A to B, as JSON. */
 patch: string; 
 /**  What each side was read as. */
-formatA: DataFormat; formatB: DataFormat } | { kind: "unreadable"; side: JsonDiffSide; format: DataFormat; line: number; column: number };
+formatA: DataFormat; formatB: DataFormat } | { kind: "unreadable"; side: JsonDiffSide; format: DataFormat; line: number; column: number } | 
+/**
+ *  A side read by its shape came out as one value and no structure. ⚠️ Nearly any text is
+ *  a YAML scalar: an nginx file was « read as YAML » and compared as one string changed
+ *  into another. A format chosen by hand is taken at its word instead.
+ */
+{ kind: "notStructured"; sides: JsonDiffSide[] };
 
 export type JsonDiffCounts = {
 	added: number,
@@ -1728,6 +1982,8 @@ export type LineBreaksRequest = {
 
 export type LineEnding = "lf" | "crlf" | "cr";
 
+export type ListProblem = "missing" | "damaged";
+
 export type LoremAnswer = {
 	text: string,
 	seed: number,
@@ -1803,6 +2059,15 @@ export type ModeWarning =
 export type NanoAlphabet = 
 /**  `A-Za-z0-9_-`, `NanoID`'s own. */
 "urlSafe" | "alphanumeric" | "hexLower" | "digits";
+
+/**
+ *  What a request's first save creates on its way: the collection to put it in, a folder
+ *  under the place it names, or both — the folder then goes in the new collection.
+ */
+export type NewPlace = {
+	collection?: string | null,
+	folder?: string | null,
+};
 
 export type Notation = "hex" | "rgb" | "hsl" | "oklch";
 
@@ -1901,7 +2166,7 @@ export type NoteKind =
 
 export type NoteLifecycle = { kind: "permanent" } | { kind: "expires"; at: string };
 
-/**  What the date view is ordered by. The board keeps the places its cards were given. */
+/**  What the list view is ordered by. The board keeps the places its cards were given. */
 export type NoteOrder = {
 	key: SortKey,
 	direction: SortDirection,
@@ -2033,6 +2298,20 @@ export type PasswordRequest = {
 	count: number,
 };
 
+/**  What a batch is made of, beside the person asked for. */
+export type PeopleBatch = {
+	/**  The countries that take their turn after the request's own; none is that one alone. */
+	countries: Country[],
+	count: number,
+	format: PeopleFormat,
+};
+
+export type PeopleExport = { kind: "written"; people: number } | { kind: "failed"; problem: FileProblem } | 
+/**  Nothing was written: a list the people are drawn from cannot be read. */
+{ kind: "unreadable"; list: UnreadableList };
+
+export type PeopleFormat = "json" | "csv";
+
 /**  The two numbers of one question, as typed. */
 export type PercentPair = {
 	x: string,
@@ -2140,9 +2419,20 @@ export type QrRequest = {
 	margin: number,
 };
 
+export type QueryFault = "unclosedBrace" | "unclosedParenthesis" | "unclosedString" | 
+/**  Closes nothing, or what another sign opened. */
+"strayBrace" | "strayParenthesis";
+
 export type QueryParameter = {
 	name: string,
 	value: string,
+};
+
+/**  Where a query stops reading: the sign at fault, by its line and column from 1. */
+export type QueryProblem = {
+	fault: QueryFault,
+	line: number,
+	column: number,
 };
 
 export type QuerySide = "url" | "params";
@@ -2159,7 +2449,12 @@ export type ReadAs = "unix" | "iso8601" | "weekDate" | "ordinalDate" | "rfc2822"
 
 export type Redirect = {
 	status: number,
+	/**  Where it sends to. */
 	url: string,
+	/**  The URL that answered with it. */
+	from?: string,
+	/**  What it set: a login's cookie is set here, not by the page it leads to. */
+	cookies?: Cookie[],
 };
 
 /**  What the File menu draws: the libraries, and which of them is open. */
@@ -2201,7 +2496,10 @@ export type RequestDocument = {
 	transport?: TransportSettings,
 };
 
-/**  What the rail writes before a name: the method, or `QUERY` and `WS` for the other two. */
+/**
+ *  Chosen when the request is created, and its own for good: a request is not turned into
+ *  a socket. The rail writes the method before its name, or `GQL` and `WS`.
+ */
 export type RequestKind = "http" | "graphql" | "websocket";
 
 export type ReverseDns = 
@@ -2330,6 +2628,8 @@ export type SentResponse = {
 	graphql: GraphqlResult | null,
 };
 
+export type Sex = "F" | "M";
+
 /**  Three fields rather than a map, so a missing shortcut is a compile error. */
 export type ShortcutBindings = {
 	capture: string,
@@ -2383,7 +2683,9 @@ protocol: string | null } | { kind: "sent"; text: string; size: number } | { kin
 /**  Empty for a binary message. */
 text: string; size: number; binary: boolean; cut: boolean } | { kind: "closed"; code: number | null; reason: string } | 
 /**  The connection broke after it opened. */
-{ kind: "failed"; code: ErrorCode; detail: string };
+{ kind: "failed"; code: ErrorCode; 
+/**  What its sentence interpolates, as an error answered by a command carries them. */
+params?: { [key in string]: string }; detail: string };
 
 export type SortDirection = "descending" | "ascending";
 
@@ -2609,6 +2911,14 @@ export type TrayLabels = {
 
 export type UmaskReading = { kind: "empty" } | { kind: "read"; file: Mode; directory: Mode } | { kind: "refused"; problem: ModeProblem; at: number };
 
+/**  A list that could not be used: which one, and where it was looked for. */
+export type UnreadableList = {
+	problem: ListProblem,
+	/**  As it is named under the folder: `names.txt`, `places/fr.txt`. */
+	file: string,
+	folder: string,
+};
+
 export type Unsupported = {
 	keyword: string,
 	/**  A `JSONPath` into the schema. */
@@ -2730,6 +3040,8 @@ export type WindowBehavior = {
 	closeToTray: boolean,
 	minimizeToTray: boolean,
 };
+
+export type WindowEnd = "from" | "until";
 
 export type ZoneEntry = {
 	zone: string,

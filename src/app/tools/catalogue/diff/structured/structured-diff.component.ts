@@ -4,6 +4,7 @@ import {
   ElementRef,
   computed,
   inject,
+  output,
   signal,
   viewChild,
 } from '@angular/core';
@@ -103,6 +104,9 @@ export class StructuredDiffComponent implements Tool {
   private readonly repository = inject(ToolsRepository);
   private readonly clipboard = inject(ClipboardService);
 
+  /** « Comparer comme du texte »: the two texts are the other tab's too, and stay. */
+  readonly asText = output<void>();
+
   protected readonly a = toolState('diff.a', '');
   protected readonly b = toolState('diff.b', '');
   protected readonly aName = toolState<string | null>('diff.aName', null);
@@ -149,6 +153,12 @@ export class StructuredDiffComponent implements Tool {
     return answer?.kind === 'unreadable' ? answer : null;
   });
 
+  /** The sides that are one value and no structure: nothing was compared. */
+  protected readonly notStructured = computed<readonly JsonDiffSide[]>(() => {
+    const answer = this.answer.value();
+    return answer?.kind === 'notStructured' ? answer.sides : [];
+  });
+
   /** What each side was read as, once Rust has said. */
   protected readonly readAs = computed<Partial<Record<JsonDiffSide, DataFormat>>>(() => {
     const answer = this.answer.value();
@@ -190,11 +200,14 @@ export class StructuredDiffComponent implements Tool {
       : null;
   });
 
+  /** Both sides, and each read by its shape again: a format left chosen would misread them. */
   sample(): void {
     this.a.set(SAMPLE.a);
     this.b.set(SAMPLE.b);
     this.aName.set(null);
     this.bName.set(null);
+    this.formatA.set('auto');
+    this.formatB.set('auto');
   }
 
   clear(): void {

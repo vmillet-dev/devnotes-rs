@@ -11,10 +11,11 @@ use devnotes_lib::http::model::{
     ContainerSettings, HttpItem, HttpItemKind, HttpMethod, KeyValue, RequestAuth, RequestBody,
     RequestDocument, RequestKind,
 };
-use devnotes_lib::http::send::{SHOWN_LIMIT, SendRequest, SentBody};
+use devnotes_lib::http::send::{ImpliedSource, SHOWN_LIMIT, SendRequest, SentBody, USER_AGENT};
+use devnotes_lib::http::transport::TransportSettings;
 use devnotes_lib::http::{
     cancel_http_send, create_http_collection, forget_http_response, http_response_image,
-    save_http_response, save_http_settings, send_http_request,
+    implied_http_headers, save_http_response, save_http_settings, send_http_request,
 };
 use devnotes_lib::notes::language::Language;
 
@@ -68,12 +69,22 @@ fn serve(
         for stream in listener.incoming().take(connections) {
             let mut stream = stream.unwrap();
             let request = read_request(&mut stream);
-            stream.write_all(&answer(&request, port)).unwrap();
-            stream.flush().unwrap();
+            // A client that gave up — its delay ran out, it was cancelled — is not waited for.
+            let _ = stream.write_all(&answer(&request, port));
+            let _ = stream.flush();
             let _ = seen.send(request);
         }
     });
     (port, received)
+}
+
+/// A header of what the server read, by its name whatever its case.
+fn header_of(seen: &Seen, name: &str) -> Option<String> {
+    seen.head.lines().find_map(|line| {
+        let (key, value) = line.split_once(':')?;
+        key.eq_ignore_ascii_case(name)
+            .then(|| value.trim().to_string())
+    })
 }
 
 fn response(status: &str, headers: &[(&str, &str)], body: &[u8]) -> Vec<u8> {
@@ -191,6 +202,124 @@ fn a_request_leaves_with_what_its_collection_hands_down_and_its_answer_comes_bac
     assert!(head.contains("accept: application/json\r\n"));
     assert!(head.contains("content-type: application/json\r\n"));
     assert_eq!(seen.body, b"{\"name\":\"Ada\"}");
+}
+
+/// `api.github.com` answers 403 to a request that names no agent: none was sent.
+#[test]
+fn a_request_names_the_application_unless_a_row_says_otherwise_or_switches_it_off() {
+    let session = Session::open();
+    let (port, seen) = serve(5, |_, _| response("200 OK", &[], b"ok"));
+    let url = format!("http://127.0.0.1:{port}/events");
+    let agent = |seen: &Seen| {
+        seen.head.lines().find_map(|line| {
+            let (name, value) = line.split_once(':')?;
+            name.eq_ignore_ascii_case("user-agent")
+                .then(|| value.trim().to_string())
+        })
+    };
+    let row = |value: &str, enabled: bool| KeyValue {
+        enabled,
+        key: "User-Agent".to_string(),
+        value: value.to_string(),
+        ..KeyValue::default()
+    };
+    let hand_down = |id: &str, headers: Vec<KeyValue>| {
+        let item = HttpItem {
+            kind: HttpItemKind::Collection,
+            id: id.to_string(),
+        };
+        let settings = ContainerSettings {
+            headers,
+            ..ContainerSettings::default()
+        };
+        session
+            .call(|app| save_http_settings(item, settings, app))
+            .unwrap();
+    };
+
+    // Nothing said: the application and its version, as the editor lists them.
+    let answer = session
+        .call(|app| send_http_request(request(&url), app))
+        .unwrap();
+    let left = seen.recv().unwrap();
+    assert_eq!(agent(&left).as_deref(), Some(USER_AGENT));
+    assert!(left.head.to_ascii_lowercase().contains("accept: */*\r\n"));
+    assert!(
+        answer
+            .exchange
+            .headers
+            .iter()
+            .any(|header| header.key == "User-Agent" && header.value == USER_AGENT)
+    );
+    let listed = session
+        .call(|app| {
+            implied_http_headers(RequestKind::Http, request(&url).document, None, None, app)
+        })
+        .unwrap();
+    assert_eq!(
+        listed
+            .iter()
+            .map(|header| (header.name.as_str(), header.value.clone(), header.source))
+            .collect::<Vec<_>>(),
+        vec![
+            ("User-Agent", USER_AGENT.to_string(), ImpliedSource::Default),
+            ("Accept", "*/*".to_string(), ImpliedSource::Default),
+            ("Host", format!("127.0.0.1:{port}"), ImpliedSource::Url),
+        ]
+    );
+    for header in &listed {
+        let line = format!("{}: {}\r\n", header.name, header.value).to_ascii_lowercase();
+        assert!(left.head.to_ascii_lowercase().contains(&line), "{line}");
+    }
+
+    // Its collection names another, then the request its own over it.
+    let api = session
+        .call(|app| create_http_collection("API".to_string(), app))
+        .unwrap();
+    hand_down(&api.id, vec![row("Equipe/1", true)]);
+    let mut placed = request(&url);
+    placed.collection_id = Some(api.id.clone());
+    session
+        .call(|app| send_http_request(placed.clone(), app))
+        .unwrap();
+    assert_eq!(agent(&seen.recv().unwrap()).as_deref(), Some("Equipe/1"));
+    let listed = session
+        .call(|app| {
+            implied_http_headers(
+                RequestKind::Http,
+                placed.document.clone(),
+                Some(api.id.clone()),
+                None,
+                app,
+            )
+        })
+        .unwrap();
+    assert_eq!(
+        listed
+            .iter()
+            .map(|header| (header.value.as_str(), header.source))
+            .next(),
+        Some(("Equipe/1", ImpliedSource::Above))
+    );
+    assert_eq!(
+        listed[0].from.as_ref().map(|from| from.name.as_str()),
+        Some("API")
+    );
+
+    let mut own = placed.clone();
+    own.document.headers = vec![row("curl/8.5.0", true)];
+    session.call(|app| send_http_request(own, app)).unwrap();
+    assert_eq!(agent(&seen.recv().unwrap()).as_deref(), Some("curl/8.5.0"));
+
+    // Switched off, in the request or above it: none at all.
+    let mut silent = request(&url);
+    silent.document.headers = vec![row("", false)];
+    session.call(|app| send_http_request(silent, app)).unwrap();
+    assert_eq!(agent(&seen.recv().unwrap()), None);
+
+    hand_down(&api.id, vec![row("Equipe/1", false)]);
+    session.call(|app| send_http_request(placed, app)).unwrap();
+    assert_eq!(agent(&seen.recv().unwrap()), None);
 }
 
 #[test]
@@ -318,6 +447,100 @@ fn a_variable_a_bad_url_a_closed_port_and_a_plain_server_over_tls_each_fail_by_c
     );
 }
 
+/// The sentence states the value in force and who set it: it used to state the defaults,
+/// « 30 secondes » for a request cut after one.
+#[test]
+fn a_timeout_and_a_redirect_too_many_say_the_value_in_force_and_who_set_it() {
+    use devnotes_lib::http::http_history;
+
+    let session = Session::open();
+    let api = session
+        .call(|app| create_http_collection("API".to_string(), app))
+        .unwrap();
+    session
+        .call(|app| {
+            save_http_settings(
+                HttpItem {
+                    kind: HttpItemKind::Collection,
+                    id: api.id.clone(),
+                },
+                ContainerSettings {
+                    transport: TransportSettings {
+                        timeout_ms: Some(300),
+                        ..TransportSettings::default()
+                    },
+                    ..ContainerSettings::default()
+                },
+                app,
+            )
+        })
+        .unwrap();
+    let params = |failed: &devnotes_lib::error::AppError| {
+        failed
+            .params
+            .iter()
+            .map(|(key, value)| format!("{key}={value}"))
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+    // Accepts each connection and answers none of them until the test is over.
+    let silent = thread::spawn(move || listener.incoming().take(2).collect::<Result<Vec<_>, _>>());
+    let slow = format!("http://127.0.0.1:{port}/slow");
+
+    let mut inherited = request(&slow);
+    inherited.collection_id = Some(api.id.clone());
+    let failed = session
+        .call(|app| send_http_request(inherited, app))
+        .unwrap_err();
+    assert_eq!(failed.code, ErrorCode::HttpTimeout);
+    assert_eq!(
+        params(&failed),
+        "amount=300 name=API source=collection unit=ms"
+    );
+
+    let mut own = request(&slow);
+    own.collection_id = Some(api.id.clone());
+    own.document.transport.timeout_ms = Some(1_000);
+    let failed = session.call(|app| send_http_request(own, app)).unwrap_err();
+    assert_eq!(failed.code, ErrorCode::HttpTimeout);
+    assert_eq!(params(&failed), "amount=1 source=request unit=s");
+    drop(silent);
+
+    let (port, _seen) = serve(13, |_, port| {
+        response(
+            "302 Found",
+            &[("Location", &format!("http://127.0.0.1:{port}/again"))],
+            b"",
+        )
+    });
+    let around = format!("http://127.0.0.1:{port}/around");
+    let mut once = request(&around);
+    once.document.transport.max_redirects = Some(1);
+    let failed = session
+        .call(|app| send_http_request(once, app))
+        .unwrap_err();
+    assert_eq!(failed.code, ErrorCode::HttpTooManyRedirects);
+    assert_eq!(params(&failed), "count=1 source=request");
+
+    let failed = session
+        .call(|app| send_http_request(request(&around), app))
+        .unwrap_err();
+    assert_eq!(failed.code, ErrorCode::HttpTooManyRedirects);
+    assert_eq!(params(&failed), "count=10 source=default");
+
+    // The history says the same sentence: it keeps the values with the code.
+    let days = session.call(|app| http_history(0, app)).unwrap();
+    let last = &days[0].items[0].summary;
+    assert_eq!(last.failure, Some(ErrorCode::HttpTooManyRedirects));
+    assert_eq!(
+        last.failure_params.get("count").map(String::as_str),
+        Some("10")
+    );
+}
+
 #[test]
 fn a_send_under_way_is_cancelled_by_its_id() {
     let session = Session::open();
@@ -424,10 +647,116 @@ fn every_send_that_left_is_recorded_masked_and_the_history_clears() {
     assert!(session.call(|app| http_history(0, app)).unwrap().is_empty());
 }
 
+/// « Vider l'historique » was the only way to remove the one send made with the wrong token,
+/// and « Rouvrir » opened a stranger with no tie to the request the send came from.
+#[test]
+fn one_send_is_removed_and_put_back_and_goes_back_onto_the_request_it_came_from() {
+    use devnotes_lib::http::model::HttpRequestDraft;
+    use devnotes_lib::http::{
+        create_http_request, delete_http_history_entry, delete_http_item, http_history,
+        http_history_onto_request, restore_http_history_entry,
+    };
+
+    let session = Session::open();
+    let (port, _seen) = serve(2, |_, _| response("200 OK", &[], b"ok"));
+    let api = session
+        .call(|app| create_http_collection("API".to_string(), app))
+        .unwrap();
+    let token = KeyValue {
+        key: "Authorization".to_string(),
+        value: "Bearer t0ken".to_string(),
+        ..KeyValue::default()
+    };
+    let held = session
+        .call(|app| {
+            create_http_request(
+                HttpRequestDraft {
+                    collection_id: api.id.clone(),
+                    folder_id: None,
+                    name: "ma req".to_string(),
+                    kind: RequestKind::Http,
+                    method: HttpMethod::Get,
+                    document: RequestDocument {
+                        url: format!("http://127.0.0.1:{port}/now"),
+                        headers: vec![token.clone()],
+                        ..RequestDocument::default()
+                    },
+                },
+                app,
+            )
+        })
+        .unwrap();
+    for path in ["first", "second?page=2"] {
+        let mut sent = request(&format!("http://127.0.0.1:{port}/{path}"));
+        sent.collection_id = Some(api.id.clone());
+        sent.request_id = Some(held.id.clone());
+        sent.document.headers = vec![token.clone()];
+        session.call(|app| send_http_request(sent, app)).unwrap();
+    }
+    let listed = || {
+        let days = session.call(|app| http_history(0, app)).unwrap();
+        days.into_iter()
+            .flat_map(|day| day.items)
+            .collect::<Vec<_>>()
+    };
+
+    // Newest first, each URL in its two parts: the host, and what tells the two apart.
+    let before = listed();
+    assert_eq!(
+        before
+            .iter()
+            .map(|item| (item.url_head.clone(), item.url_tail.as_str()))
+            .collect::<Vec<_>>(),
+        vec![
+            (format!("127.0.0.1:{port}"), "/second?page=2"),
+            (format!("127.0.0.1:{port}"), "/first"),
+        ]
+    );
+
+    let removed = session
+        .call(|app| delete_http_history_entry(before[0].id.clone(), app))
+        .unwrap();
+    assert_eq!(listed(), before[1..]);
+    session
+        .call(|app| restore_http_history_entry(removed, app))
+        .unwrap();
+    assert_eq!(listed(), before);
+
+    // Back onto its request: the send's URL, and the request's own secret where the record
+    // holds a mask.
+    let onto = session
+        .call(|app| http_history_onto_request(before[1].id.clone(), app))
+        .unwrap()
+        .unwrap();
+    assert_eq!(onto.name, "ma req");
+    assert_eq!(onto.document.url, format!("http://127.0.0.1:{port}/first"));
+    assert_eq!(onto.document.headers, vec![token]);
+
+    // The request gone, there is nothing to go back onto: a draft it is.
+    session
+        .call(|app| {
+            delete_http_item(
+                HttpItem {
+                    kind: HttpItemKind::Request,
+                    id: held.id.clone(),
+                },
+                app,
+            )
+        })
+        .unwrap();
+    assert_eq!(
+        session
+            .call(|app| http_history_onto_request(before[1].id.clone(), app))
+            .unwrap(),
+        None
+    );
+}
+
 #[test]
 fn a_graphql_request_is_posted_as_json_and_its_errors_read_apart_from_its_data() {
-    use devnotes_lib::http::describe_graphql;
     use devnotes_lib::http::graphql::GraphqlDocument;
+    use devnotes_lib::http::graphql::QueryFault;
+    use devnotes_lib::http::{add_graphql_variables, describe_graphql};
 
     let session = Session::open();
     let (port, seen) = serve(1, |_, _| {
@@ -462,6 +791,26 @@ fn a_graphql_request_is_posted_as_json_and_its_errors_read_apart_from_its_data()
 
     let described = session.call(|_| describe_graphql(document)).unwrap();
     assert_eq!(described.operations, ["Me", "Other"]);
+    assert_eq!(described.query_problem, None);
+
+    // What the editor says before a send: a brace left open, a variable without a value.
+    let open = GraphqlDocument {
+        query: "query Country($code: ID!) { country(code: $code) { name }".to_string(),
+        ..GraphqlDocument::default()
+    };
+    let described = session.call(|_| describe_graphql(open.clone())).unwrap();
+    let problem = described.query_problem.unwrap();
+    assert_eq!(
+        (problem.fault, problem.line, problem.column),
+        (QueryFault::UnclosedBrace, 1, 27)
+    );
+    assert_eq!(described.missing, ["code"]);
+    assert_eq!(
+        session.call(|_| add_graphql_variables(open)).unwrap(),
+        "{
+  \"code\": null
+}"
+    );
 }
 
 #[test]
@@ -519,6 +868,222 @@ fn an_answer_fills_the_jar_the_next_request_carries_it_and_the_manager_empties_i
         1
     );
     assert_eq!(session.call(clear_http_cookies).unwrap(), 0);
+}
+
+/// `/cookies/set?session=abc123` answers a 302 that sets the cookie and leads to a page that
+/// echoes what it received: it received none, and the jar stayed empty. Nearly every login.
+#[test]
+fn a_cookie_set_on_a_redirect_is_sent_to_the_hop_that_follows_and_kept_in_the_jar() {
+    use devnotes_lib::http::{clear_http_cookies, count_http_cookies, http_cookies};
+
+    let session = Session::open();
+    let (port, seen) = serve(4, |seen, _| {
+        if seen.head.starts_with("GET /cookies/set ") {
+            response(
+                "302 Found",
+                &[
+                    ("Location", "/cookies"),
+                    ("Set-Cookie", "session=abc123; Path=/"),
+                ],
+                b"",
+            )
+        } else {
+            let sent = header_of(seen, "cookie").unwrap_or_default();
+            response(
+                "200 OK",
+                &[
+                    ("Content-Type", "text/plain"),
+                    ("Set-Cookie", "seen=1; Path=/"),
+                ],
+                sent.as_bytes(),
+            )
+        }
+    });
+    let set = format!("http://127.0.0.1:{port}/cookies/set");
+    let landing = format!("http://127.0.0.1:{port}/cookies");
+
+    let answer = session
+        .call(|app| send_http_request(request(&set), app))
+        .unwrap();
+
+    assert_eq!(answer.body, "session=abc123");
+    assert_eq!(answer.url, landing);
+    assert_eq!(header_of(&seen.recv().unwrap(), "cookie"), None);
+    assert_eq!(
+        header_of(&seen.recv().unwrap(), "cookie").as_deref(),
+        Some("session=abc123")
+    );
+    // The answer lists what was set along the chain, the redirect's first, with who set it.
+    assert_eq!(
+        answer
+            .cookies
+            .iter()
+            .map(|cookie| (cookie.name.as_str(), cookie.from.clone()))
+            .collect::<Vec<_>>(),
+        vec![("session", Some(set.clone())), ("seen", None)]
+    );
+    assert_eq!(answer.redirects.len(), 1);
+    let redirect = &answer.redirects[0];
+    assert_eq!(
+        (
+            redirect.status,
+            redirect.from.as_str(),
+            redirect.url.as_str()
+        ),
+        (302, set.as_str(), landing.as_str())
+    );
+    assert_eq!(redirect.cookies.len(), 1);
+    assert_eq!(redirect.cookies[0].name, "session");
+
+    let domains = session.call(http_cookies).unwrap();
+    let mut kept: Vec<&str> = domains[0]
+        .cookies
+        .iter()
+        .map(|stored| stored.cookie.name.as_str())
+        .collect();
+    kept.sort_unstable();
+    assert_eq!(kept, ["seen", "session"]);
+
+    // « Envoyer et garder les cookies : Non »: none sent at any hop, none kept.
+    assert_eq!(session.call(clear_http_cookies).unwrap(), 2);
+    let mut alone = request(&set);
+    alone.document.transport.use_cookies = Some(false);
+    let answer = session.call(|app| send_http_request(alone, app)).unwrap();
+    assert_eq!(answer.body, "");
+    assert_eq!(session.call(count_http_cookies).unwrap(), 0);
+    // What the answers set is still read, as it always was.
+    assert_eq!(answer.cookies.len(), 2);
+}
+
+#[test]
+fn a_redirect_to_another_host_carries_neither_a_cookie_nor_the_authorization() {
+    let row = |key: &str, value: &str| KeyValue {
+        key: key.to_string(),
+        value: value.to_string(),
+        ..KeyValue::default()
+    };
+    let session = Session::open();
+    let (elsewhere, landed) = serve(2, |_, _| response("200 OK", &[], b"there"));
+    let (port, seen) = serve(2, move |_, _| {
+        response(
+            "302 Found",
+            &[
+                ("Location", &format!("http://localhost:{elsewhere}/landing")),
+                ("Set-Cookie", "session=abc; Path=/"),
+            ],
+            b"",
+        )
+    });
+    let login = format!("http://127.0.0.1:{port}/login");
+
+    let mut sent = request(&login);
+    sent.document.headers = vec![row("Authorization", "Bearer t0ken"), row("X-Trace", "1")];
+    let answer = session.call(|app| send_http_request(sent, app)).unwrap();
+
+    assert_eq!(answer.body, "there");
+    assert_eq!(
+        header_of(&seen.recv().unwrap(), "authorization").as_deref(),
+        Some("Bearer t0ken")
+    );
+    let there = landed.recv().unwrap();
+    assert_eq!(header_of(&there, "authorization"), None);
+    assert_eq!(header_of(&there, "cookie"), None);
+    // What is not a secret travels, and the page says where it was sent from.
+    assert_eq!(header_of(&there, "x-trace").as_deref(), Some("1"));
+    assert_eq!(header_of(&there, "referer"), Some(login.clone()));
+
+    // A `Cookie` typed wins over the jar's for the host it is typed for, and stays there too.
+    let mut typed = request(&login);
+    typed.document.headers = vec![row("Cookie", "typed=1")];
+    session.call(|app| send_http_request(typed, app)).unwrap();
+    assert_eq!(
+        header_of(&seen.recv().unwrap(), "cookie").as_deref(),
+        Some("typed=1")
+    );
+    assert_eq!(header_of(&landed.recv().unwrap(), "cookie"), None);
+}
+
+#[test]
+fn a_303_after_a_post_becomes_a_get_without_its_body_and_a_307_sends_it_again() {
+    let session = Session::open();
+    let (port, seen) = serve(4, |seen, _| {
+        if seen.head.starts_with("POST /see-other ") {
+            response("303 See Other", &[("Location", "done")], b"")
+        } else if seen.head.starts_with("POST /temporary ") {
+            response("307 Temporary Redirect", &[("Location", "/kept")], b"")
+        } else {
+            response("200 OK", &[], b"ok")
+        }
+    });
+    let posting = |path: &str| {
+        let mut sent = request(&format!("http://127.0.0.1:{port}/{path}"));
+        sent.method = HttpMethod::Post;
+        sent.document.body = RequestBody::Json {
+            text: "{\"a\":1}".to_string(),
+        };
+        session.call(|app| send_http_request(sent, app)).unwrap()
+    };
+
+    let answer = posting("see-other");
+    assert_eq!(answer.url, format!("http://127.0.0.1:{port}/done"));
+    assert_eq!(seen.recv().unwrap().body, b"{\"a\":1}");
+    let after = seen.recv().unwrap();
+    assert!(after.head.starts_with("GET /done "), "{}", after.head);
+    assert!(after.body.is_empty());
+    assert_eq!(header_of(&after, "content-type"), None);
+
+    posting("temporary");
+    seen.recv().unwrap();
+    let after = seen.recv().unwrap();
+    assert!(after.head.starts_with("POST /kept "), "{}", after.head);
+    assert_eq!(after.body, b"{\"a\":1}");
+    assert_eq!(
+        header_of(&after, "content-type").as_deref(),
+        Some("application/json")
+    );
+}
+
+#[test]
+fn the_delay_is_the_whole_chain_s_and_a_cancel_ends_it_on_the_way() {
+    let session = Session::open();
+    // Each hop answers after 400 ms: within 600 ms a hop, not within 600 ms in all.
+    let (port, _seen) = serve(2, |seen, _| {
+        thread::sleep(Duration::from_millis(400));
+        if seen.head.starts_with("GET /first ") {
+            response("302 Found", &[("Location", "/second")], b"")
+        } else {
+            response("200 OK", &[], b"late")
+        }
+    });
+    let mut slow = request(&format!("http://127.0.0.1:{port}/first"));
+    slow.document.transport.timeout_ms = Some(600);
+    assert_eq!(
+        code(session.call(|app| send_http_request(slow, app))),
+        ErrorCode::HttpTimeout
+    );
+
+    // Redirected at once, then never answered: cancelled once the first hop is behind.
+    let (port, seen) = serve(2, |seen, _| {
+        if seen.head.starts_with("GET /first ") {
+            response("302 Found", &[("Location", "/second")], b"")
+        } else {
+            thread::sleep(Duration::from_secs(5));
+            Vec::new()
+        }
+    });
+    let app = session.0.handle().clone();
+    let sending = tauri::async_runtime::spawn(send_http_request(
+        request(&format!("http://127.0.0.1:{port}/first")),
+        app.clone(),
+    ));
+    seen.recv().unwrap();
+    while !tauri::async_runtime::block_on(cancel_http_send("tab-1".to_string(), app.clone()))
+        .unwrap()
+    {
+        thread::sleep(Duration::from_millis(10));
+    }
+    let cancelled = tauri::async_runtime::block_on(sending).unwrap();
+    assert_eq!(cancelled.unwrap_err().code, ErrorCode::HttpCancelled);
 }
 
 #[test]

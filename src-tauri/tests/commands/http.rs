@@ -1,12 +1,12 @@
 use devnotes_lib::error::ErrorCode;
 use devnotes_lib::http::model::{
     HttpItem, HttpItemKind, HttpMethod, HttpNode, HttpPlace, HttpRequestDraft, HttpRequestPatch,
-    RequestDocument, RequestKind,
+    NewPlace, RequestDocument, RequestKind,
 };
 use devnotes_lib::http::{
     count_http_contents, create_http_collection, create_http_folder, create_http_request,
-    delete_http_item, duplicate_http_item, get_http_request, http_tree, move_http_item,
-    rename_http_item, reorder_http_collection, save_http_request,
+    create_http_request_in, delete_http_item, duplicate_http_item, get_http_request, http_tree,
+    move_http_item, rename_http_item, reorder_http_collection, save_http_request,
 };
 
 use super::{Session, code};
@@ -221,19 +221,120 @@ fn a_folder_hands_its_settings_down_and_a_body_says_what_it_implies() {
         ErrorCode::InvalidInput
     );
 
+    let json = || RequestBody::Json {
+        text: "{\"a\":".to_string(),
+    };
     let broken = session
-        .call(|_| {
-            describe_http_body(RequestBody::Json {
-                text: "{\"a\":".to_string(),
-            })
-        })
+        .call(|_| describe_http_body(json(), HttpMethod::Post))
         .unwrap();
     assert_eq!(broken.content_type.as_deref(), Some("application/json"));
     assert!(broken.problem.is_some());
+    assert!(!broken.unusual);
+    // The same body once the method is a `GET`: sent all the same, and said.
+    for (method, unusual) in [
+        (HttpMethod::Get, true),
+        (HttpMethod::Head, true),
+        (HttpMethod::Delete, false),
+        (HttpMethod::Options, false),
+    ] {
+        let said = session
+            .call(|_| describe_http_body(json(), method))
+            .unwrap();
+        assert_eq!(said.unusual, unusual, "{method:?}");
+    }
     let none = session
-        .call(|_| describe_http_body(RequestBody::None))
+        .call(|_| describe_http_body(RequestBody::None, HttpMethod::Get))
         .unwrap();
-    assert_eq!((none.content_type, none.problem), (None, None));
+    assert_eq!(
+        (none.content_type, none.problem, none.unusual),
+        (None, None, false)
+    );
+}
+
+/// Key `X-Recette: 1` in a folder's settings was stored as typed, and every request under the
+/// folder then failed « this URL cannot be sent ».
+#[test]
+fn a_header_that_cannot_be_sent_is_refused_in_the_settings_marked_and_read_from_its_line() {
+    use devnotes_lib::http::model::{ContainerSettings, HeaderFault, KeyValue};
+    use devnotes_lib::http::{
+        check_http_headers, http_settings, read_http_headers, save_http_settings,
+    };
+
+    let session = Session::open();
+    let api = session
+        .call(|app| create_http_collection("API".to_string(), app))
+        .unwrap();
+    let recette = session
+        .call(|app| create_http_folder(api.id.clone(), None, "Recette".to_string(), app))
+        .unwrap();
+    let row = |key: &str, value: &str, enabled: bool| KeyValue {
+        enabled,
+        key: key.to_string(),
+        value: value.to_string(),
+        ..KeyValue::default()
+    };
+    let save = |headers: Vec<KeyValue>| {
+        let settings = ContainerSettings {
+            headers,
+            ..ContainerSettings::default()
+        };
+        session
+            .call(|app| save_http_settings(item(HttpItemKind::Folder, &recette.id), settings, app))
+    };
+    let kept = || {
+        session
+            .call(|app| http_settings(item(HttpItemKind::Folder, &recette.id), app))
+            .unwrap()
+            .headers
+    };
+
+    let refused = save(vec![row("X-Recette: 1", "rsgfdregr", true)]).unwrap_err();
+    assert_eq!(refused.code, ErrorCode::HttpHeaderName);
+    assert_eq!(
+        (
+            refused.params.get("header").map(String::as_str),
+            refused.params.get("source").map(String::as_str)
+        ),
+        (Some("X-Recette: 1"), Some("request"))
+    );
+    assert!(kept().is_empty());
+
+    let refused = save(vec![row("X-Trace", "a\nb", true)]).unwrap_err();
+    assert_eq!(refused.code, ErrorCode::HttpHeaderValue);
+    assert_eq!(
+        refused.params.get("header").map(String::as_str),
+        Some("X-Trace")
+    );
+
+    // Switched off, it is not sent: kept as typed, beside the one that is.
+    save(vec![
+        row("X-Recette: 1", "rsgfdregr", false),
+        row("X-Recette", "1", true),
+        row("X-{{tenant}}", "{{token}}", true),
+    ])
+    .unwrap();
+    assert_eq!(kept().len(), 3);
+
+    let faults = session
+        .call(|_| {
+            check_http_headers(vec![
+                row("Accept", "*/*", true),
+                row("X Recette", "1", true),
+                row("X Recette", "1", false),
+            ])
+        })
+        .unwrap();
+    assert_eq!(faults, vec![None, Some(HeaderFault::Name), None]);
+
+    let read = session
+        .call(|_| {
+            read_http_headers(":authority: api.exemple.fr\nX-Recette: 1\naccept: */*".to_string())
+        })
+        .unwrap();
+    assert_eq!(
+        read,
+        vec![row("X-Recette", "1", true), row("accept", "*/*", true)]
+    );
 }
 
 #[test]
@@ -249,36 +350,159 @@ fn the_query_and_its_table_are_kept_in_step_through_the_command() {
     assert_eq!(synced.params[0].key, "a");
 }
 
+/// On a library with no collection, a first save sent its reader to the rail and back. The
+/// save creates what it lacks, in one write — or writes nothing at all.
 #[test]
-fn a_request_turned_into_graphql_keeps_its_kind_and_its_query() {
+fn a_first_save_creates_the_collection_or_the_folder_it_lacks_or_nothing_at_all() {
+    let session = Session::open();
+    let before = names(&session).len();
+    let new = |collection: Option<&str>, folder: Option<&str>| NewPlace {
+        collection: collection.map(str::to_string),
+        folder: folder.map(str::to_string),
+    };
+
+    // A collection that does not exist yet: the request at its root, whatever place it named.
+    let first = session
+        .call(|app| {
+            create_http_request_in(
+                draft("nowhere", Some("nowhere"), "Santé"),
+                new(Some("  Boutique  "), None),
+                app,
+            )
+        })
+        .unwrap();
+    assert_eq!(first.folder_id, None);
+    assert_eq!(names(&session)[before..], ["Boutique", "Santé"]);
+
+    // A folder under the place the draft names — a collection's root, then a folder.
+    let second = session
+        .call(|app| {
+            create_http_request_in(
+                draft(&first.collection_id, None, "Lister"),
+                new(None, Some("Commandes")),
+                app,
+            )
+        })
+        .unwrap();
+    let commandes = second.folder_id.clone().unwrap();
+    session
+        .call(|app| {
+            create_http_request_in(
+                draft(&first.collection_id, Some(&commandes), "Anciennes"),
+                new(None, Some("Archives")),
+                app,
+            )
+        })
+        .unwrap();
+    assert_eq!(
+        names(&session)[before..],
+        [
+            "Boutique",
+            "Santé",
+            "Commandes",
+            "Lister",
+            "Archives",
+            "Anciennes"
+        ]
+    );
+
+    // Both at once: the folder goes in the new collection, the request in the folder.
+    let both = session
+        .call(|app| {
+            create_http_request_in(
+                draft(&first.collection_id, Some(&commandes), "Chercher"),
+                new(Some("Catalogue"), Some("Produits")),
+                app,
+            )
+        })
+        .unwrap();
+    assert_ne!(both.collection_id, first.collection_id);
+    assert_eq!(
+        names(&session)[before + 6..],
+        ["Catalogue", "Produits", "Chercher"]
+    );
+
+    // Refused whole: a request, a folder or a collection without a name, a place that is not
+    // there — and no collection is left behind, empty, by any of them.
+    let held = names(&session);
+    for (request, place) in [
+        (draft("nowhere", None, "   "), new(Some("Orpheline"), None)),
+        (
+            draft("nowhere", None, "Seule"),
+            new(Some("Orpheline"), Some("  ")),
+        ),
+        (draft("nowhere", None, "Seule"), new(Some(" "), None)),
+    ] {
+        assert_eq!(
+            code(session.call(|app| create_http_request_in(request, place, app))),
+            ErrorCode::InvalidInput
+        );
+    }
+    assert_eq!(
+        code(session.call(|app| {
+            create_http_request_in(
+                draft("absent", None, "Seule"),
+                new(None, Some("Dossier")),
+                app,
+            )
+        })),
+        ErrorCode::HttpItemNotFound
+    );
+    assert_eq!(names(&session), held);
+}
+
+/// GraphQL and WebSocket were the last two entries of the method menu: a kind filed among
+/// verbs. It is chosen when the request is created, and nothing changes it afterwards.
+#[test]
+fn a_request_is_created_of_its_kind_and_keeps_it_through_an_update_and_a_copy() {
     use devnotes_lib::http::graphql::GraphqlDocument;
 
     let session = Session::open();
     let api = session
         .call(|app| create_http_collection("API".to_string(), app))
         .unwrap();
-    let created = session
-        .call(|app| create_http_request(draft(&api.id, None, "Produits"), app))
-        .unwrap();
-    let patch = HttpRequestPatch {
-        kind: Some(RequestKind::Graphql),
-        document: Some(RequestDocument {
-            graphql: GraphqlDocument {
-                query: "{ products { id } }".to_string(),
-                ..GraphqlDocument::default()
-            },
-            ..RequestDocument::default()
-        }),
-        ..HttpRequestPatch::default()
+    let asked = HttpRequestDraft {
+        kind: RequestKind::Graphql,
+        ..draft(&api.id, None, "Produits")
     };
+    let created = session.call(|app| create_http_request(asked, app)).unwrap();
+    assert_eq!(created.kind, RequestKind::Graphql);
 
+    // An update has no kind to carry: one written on the wire all the same is not read.
+    let mut patch: HttpRequestPatch =
+        serde_json::from_str(r#"{"kind":"websocket","method":"POST"}"#).unwrap();
+    patch.document = Some(RequestDocument {
+        graphql: GraphqlDocument {
+            query: "{ products { id } }".to_string(),
+            ..GraphqlDocument::default()
+        },
+        ..RequestDocument::default()
+    });
     let saved = session
         .call(|app| save_http_request(created.id.clone(), patch, app))
         .unwrap();
-
-    assert_eq!(saved.kind, RequestKind::Graphql);
+    assert_eq!(
+        (saved.kind, saved.method),
+        (RequestKind::Graphql, HttpMethod::Post)
+    );
     let read = session
         .call(|app| get_http_request(created.id.clone(), app))
         .unwrap();
+    assert_eq!(read.kind, RequestKind::Graphql);
     assert_eq!(read.document.graphql.query, "{ products { id } }");
+
+    let copy = session
+        .call(|app| {
+            duplicate_http_item(
+                item(HttpItemKind::Request, &created.id),
+                "Produits (copie)".to_string(),
+                app,
+            )
+        })
+        .unwrap();
+    let copied = session
+        .call(|app| get_http_request(copy.id.clone(), app))
+        .unwrap();
+    assert_eq!(copied.kind, RequestKind::Graphql);
+    assert_eq!(copied.document.graphql.query, "{ products { id } }");
 }

@@ -1,3 +1,5 @@
+@use 'mixins' as *;
+
 :host {
   display: flex;
   flex-direction: column;
@@ -20,16 +22,63 @@
   min-height: 0;
 }
 
+.split {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+// Left to itself the request takes what it holds, up to 60%: sixteen headers left the answer
+// a third of the window, and a short request kept an empty panel a long JSON could not have.
+// Once the line is dragged the share is the one chosen, held between two floors — the request
+// line and its tabs here, `min-height` on the pane below — so neither goes out of reach.
 app-request-editor {
   flex: 0 1 auto;
+  min-height: 148px;
   max-height: 60%;
+
+  &.shared {
+    flex-grow: 0;
+    flex-shrink: 0;
+    max-height: none;
+  }
 }
 
 .empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
   margin: auto;
-  max-width: 360px;
+  max-width: 460px;
   font-size: 13px;
   line-height: 1.6;
   text-align: center;
   color: var(--text-2);
+}
+
+.empty-text {
+  margin: 0;
+}
+
+.empty-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.empty-kind {
+  @include unstyled-control;
+  @include surface(var(--bg-2), 8px, var(--line));
+  @include focus-ring;
+  padding: 7px 14px;
+  font-size: 12.5px;
+  color: var(--text-0);
+  cursor: pointer;
+
+  &:hover {
+    @include accent-state;
+  }
 }

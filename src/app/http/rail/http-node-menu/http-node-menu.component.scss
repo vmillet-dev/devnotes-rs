@@ -1,8 +1,15 @@
 @use 'mixins' as *;
 
+// Over the end of its row, not beside it: at the rail's floor the name needs that width.
+// ⚠️ Centred without a `transform`: one here would make this host the box the panel's
+// `position: fixed` is measured from, and the panel would open a row's width off its `⋯`.
 :host {
-  position: relative;
-  flex-shrink: 0;
+  position: absolute;
+  top: 0;
+  right: 2px;
+  bottom: 0;
+  display: flex;
+  align-items: center;
 }
 
 .node-menu {
@@ -16,14 +23,15 @@
   line-height: 1;
   color: var(--text-2);
   cursor: pointer;
-  // Quiet at rest but never hidden: `visibility: hidden` would take it out of the tab order.
-  opacity: 0.35;
+  // Unseen at rest but never hidden: `visibility: hidden` would take it out of the tab order.
+  // The row says when it shows, through a property: its stylesheet cannot reach in here.
+  opacity: var(--node-menu-opacity, 0);
+  background: var(--bg-3);
 
   &:hover,
   &:focus-visible,
   &[aria-expanded='true'] {
     opacity: 1;
-    background: var(--bg-3);
     color: var(--text-0);
   }
 }
@@ -36,6 +44,25 @@
   width: 200px;
   padding: 6px;
   box-shadow: 0 8px 20px rgb(0 0 0 / 32%);
+}
+
+.submenu {
+  width: 190px;
+}
+
+.parent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &[aria-expanded='true'] {
+    background: rgba(var(--amber-rgb), 0.12);
+  }
+}
+
+.option-label {
+  flex: 1;
+  text-align: left;
 }
 
 .option {

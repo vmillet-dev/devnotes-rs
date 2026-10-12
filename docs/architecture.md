@@ -290,9 +290,9 @@ else a router offers has a use in a desktop window — no link to share, no deep
 [#23](https://github.com/vmillet-dev/devnotes-rs/issues/23) had settled that there would be no
 second tool; the tools of v0.9.0 reversed that, and the answer stayed state.
 
-⚠️ **The areas, the date view and the board are state, not routes.** The area is an
+⚠️ **The areas, the list view and the board are state, not routes.** The area is an
 application preference (`AreaStore.current`, `devnotes.area`), a state the window is in like
-the rail, so the window reopens on it. The date view or board switch is remembered per space and
+the rail, so the window reopens on it. The list view or board switch is remembered per space and
 falls back on "all spaces" and inside a folder (`BoardStore.mode`, `isShowing`). A URL would be
 a second source of truth to keep in step, and history a trap — a mouse's back button would
 switch views. The board has a `@defer` of its own instead.
@@ -356,12 +356,13 @@ ticking, extending a range or opening depends on the visible list, which is the 
 Three menus (space switcher, card actions, about) share their interaction rules through
 directives in `shared/directives/`, applied with `hostDirectives` so no wrapper element is needed:
 
-| Directive              | Selector                                  | Owns                                                                                |
-| ---------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------- |
-| `MenuTriggerDirective` | `[appMenuTrigger]`, `exportAs: 'appMenu'` | open state, outside click (while open), Escape, focus returned to `[appMenuAnchor]` |
-| `MenuPanelDirective`   | `[appMenuPanel]`                          | `role="menu"`, focus on the first entry, arrows and Home/End over `[appMenuItem]`   |
+| Directive                | Selector                                  | Owns                                                                                      |
+| ------------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `MenuTriggerDirective`   | `[appMenuTrigger]`, `exportAs: 'appMenu'` | open state, outside click (while open), Escape, focus returned to `[appMenuAnchor]`       |
+| `MenuPanelDirective`     | `[appMenuPanel]`                          | `role="menu"`, focus on the first entry, arrows and Home/End over `[appMenuItem]`         |
+| `FloatingPanelDirective` | `[appFloatingPanel]`                      | the panel in the top layer, placed from its anchor, above it when the room under is short |
 
-Three details are load-bearing:
+Four details are load-bearing:
 
 - `MenuPanelDirective` walks `[appMenuItem]` rather than every button, because a menu may
   carry a secondary action deliberately outside the arrow cycle — the `⋯` that opens a
@@ -372,6 +373,13 @@ Three details are load-bearing:
 - `MenuTriggerDirective` **closes on Escape by default**, and a host that needs more hands it
   a handler with `handleEscape()` — the switchers first collapse their create/edit panel and
   only close on the second press. One handler, so nothing depends on listener order.
+- ⚠️ A choice menu's panel is **not drawn under its trigger in the flow**: the request editor
+  scrolls, and a panel `position: absolute` inside it was cut at its bottom edge, leaving one
+  entry of five in view. `FloatingPanelDirective` makes it a `popover="manual"` — the top
+  layer, which no `overflow` and no transformed ancestor reaches — and places it from the
+  anchor's rectangle. It shows the popover in the `write` phase of `afterNextRender`, ahead of
+  `MenuPanelDirective`'s focus: a panel still `display: none` refuses it. A scroll of what holds
+  the anchor, or a resize, closes the menu.
 
 Putting the click listener in a directive also removes the `click-events-have-key-events`
 suppressions the three modal templates used to carry: the keyboard equivalent exists, it is
@@ -638,11 +646,60 @@ a plain digest would read "HMAC-SHA256" — on screen, in a copy, in a note.
 
 **Searching the catalogue runs on the front**, a deliberate exception to "data processing
 belongs to Rust": it matches the translated names and lines, and Rust knows no string the user
-reads. It folds case and accents, as `view::fold` does.
+reads. It folds case and accents, as `view::fold` does. A tool is found by its name, its line,
+its keywords and **the name of its category**: « generateur » finds the three tools filed under
+« Générateurs ».
+
+**The search reads inside the references too**, in a second group under the tools that match
+(« Dans les références »): a row an entry, what it is called, what it means and where it lives
+(« 418 I'm a teapot — Codes de statut HTTP »), four a reference then « n autres ».
+
+- **A reference is data apart from its component** (`ReferenceSource`, a
+  `<id>.reference.ts` beside its facts): its words in each language, the rows built from them,
+  what a row is called away from its table, and its own matcher when it reads a query its own
+  way. The reference's table draws those rows (`referenceRows`) and the home searches them
+  (`referenceSearch`): one function builds, one matcher finds, so « too many » finds the same
+  rows from either field.
+- ⚠️ **Loaded by the first thing typed, not by the home opening** (`ToolDefinition.reference`,
+  a chunk of its own): the nine sources and their words in the language on screen, once a
+  language. The tools answer at once and the second group arrives when it can; « nothing
+  matches » waits for it. A single character searches no reference — it is nearly every row of
+  each.
+- **Choosing a row opens the reference on it** (`ToolsStore.open(id, entry)`): its own search
+  emptied, the row brought into view once and lit (`ReferenceTableComponent` reads
+  `ToolsStore.entry`), until the reference is searched by hand. « n autres » opens it searched
+  for what was typed on the home — a reference's search is the session slot
+  `referenceQueryKey(id)`, which the home writes.
+
+**The keyboard reaches the results**: Enter in the field opens the first — a tool before a
+reference's row, marked `↵` — the down arrow goes into them and the arrows walk them in the
+order they are read, back up to the field; Escape empties the search, a second one leaves the
+field. One listener on the home's host, no handler a row.
 
 **The recent tools are an application preference** (`devnotes.recentTools`): which and when,
-nothing typed into them. Ctrl+Shift+T opens the home on its search from any area — the home
-takes `ToolsStore.searchWanted` whether it already existed or not.
+nothing typed into them. Sixteen are kept (`KEPT_RECENT_TOOLS`) and five shown
+(`MAX_RECENT_TOOLS`): the home shows the five opened last, and the rail of an open tool the
+first five that its section above does not already list — no tool twice in one rail, and five
+all the same. A favourite is left out of the home's recents: it has its chip above them.
+
+**A tool is starred, and that is kept with the application too** (`devnotes.favouriteTools`,
+`ToolsStore.toggleFavourite`): ids in the order they were starred, read like any input — an id
+the catalogue no longer has is dropped by whoever lists them (`favouritesAmong`), never
+written out of the file for it. The same exception to « the tools keep nothing on disk » that
+the recents and the zones are: an id, never what a tool holds.
+
+- **The star is a toggle** (`aria-pressed`) in the frame's header, and on each row of the home:
+  shown on the row's hover and on its own focus, always once on — full, in amber, so that on
+  is not said by a colour alone. ⚠️ A row of the home is a `<button>`: the star is its
+  **sibling**, laid over its end (`.tool-row`), as a note's card is two layers.
+- **« Favoris » is a section of the home above « Récents »**, the same chips, and an entry of
+  the rail above « Tous les outils » with its count; both are absent while there is none.
+- **The entry narrows the home as a category does** (`ToolFilter`: a category, or
+  `favourites`): the starred tools in their own panels. Unstarring the last one widens the
+  home again. A search still answers over the whole catalogue, in its order — a favourite
+  does not outrank a better match. `catalogue.spec.ts` holds the first figure to the largest category. Ctrl+Shift+T
+  opens the home on its search from any area — the home takes `ToolsStore.searchWanted` whether
+  it already existed or not.
 
 **"Enregistrer comme note" belongs to the frame**: one dialog for every tool and for an HTTP
 response, at their common ancestor (`save-as-note/`, reached as `@app/…`). It asks for a title (the tool proposes one, as a
@@ -706,6 +763,18 @@ is read by its shape, narrowest alphabet first — binary, hexadecimal (each gro
 the other readings its shape allows are named, any of them forced on request. A file keeps the
 two Base64 alone.
 
+**A decoding that is a picture is shown** (`tools/image.rs`, read by `bases::decode`): PNG,
+JPEG, GIF, WebP and SVG are known by their first bytes and sized by their header — no decoder,
+nothing draws a pixel in Rust — and the answer carries the picture as a `data:` URL
+(`DecodedImage`). ⚠️ The CSP is unchanged: `img-src 'self' data:` already lets a picture be a
+`data:` URL, which is how a response's image is drawn too. ⚠️ An SVG goes into an `<img>` like
+the others, **never inlined**: nothing in it runs there. Past 2 MB (`PREVIEW_LIMIT`) the picture
+is still named and sized, and the page says it is not drawn rather than drawing nothing.
+« Enregistrer comme fichier » proposes the extension of what was recognised. A
+`data:image/png;base64,…` URI pasted whole is read by its header — its payload is Base64
+whatever reading was asked — and a refusal inside it still counts characters from the text as
+given.
+
 **A QR code is Rust's, the front draws a path** (`tools/qr.rs`, the `qrcode` crate): the form
 becomes a payload there (Wi-Fi in the ZXing format, `mailto:`, a vCard 3.0 folded at 75 octets),
 always in byte mode, so the capacity reads in the bytes typed. The answer carries the dark
@@ -753,8 +822,45 @@ two sides never hold the same format.
 secret): the same seed and source give the same documents, and a generation without one draws a
 seed and says which, so it can be kept. From a JSON Schema, the keywords it draws from are one
 list (`UNDERSTOOD`); any other is listed back with its path, so a document that ignores a
-`pattern` is never passed off as one that honours it. From an example, each value is redrawn in
-its kind — a UUID, an email, an instant, a URL, words — at its magnitude.
+`pattern` is never passed off as one that honours it. From an example — « Modèle », on screen —
+each value is redrawn in its kind — a UUID, an email, an instant, a URL, words — at its
+magnitude.
+
+- ⚠️ **An example read as a schema is said to be one, and draws nothing** (`AnExample`,
+  `schema::reads_as_a_schema`). Its keys were taken for keywords nobody knows, and a schema
+  with no known keyword allows anything: three strings of lorem ipsum, and a warning about
+  `email` and `createdAt`. An object reads as a schema when one of its keys is a keyword
+  **holding what that keyword holds** — `"type": "string"`, not `"type": "user"`; `properties`
+  over schemas, `required` over names — or when it holds nothing but the vocabulary
+  (`UNDERSTOOD` and `NOT_DRAWN`); `{}` is the schema that allows anything. The page offers to
+  read the text as a model, the same text under the other switch.
+- **Each mode says what it expects** in a line under the switch, and « Exemple » fills the
+  sample of the mode on screen: a schema under « Schéma », a document under « Modèle ». The
+  mode is called « Modèle » because the button that loads a sample is « Exemple ».
+- **The seed has one place, its field**: the one just drawn is said beside it (« · 3634897658
+  utilisée ») with a pin, a toggle, that writes it there; pinned, « Régénérer » stays offered
+  and a line says it gives the same documents. « Régénérer » is the one name of that action in
+  the four tools that draw (JSON, Lorem ipsum, the passwords, the identifiers).
+
+**A cron expression's runs are listed between two moments, and counted** (`tools/cron.rs`,
+`croner`): « À partir de » and « jusqu'à », read in the zone chosen like the date that is
+checked. A start alone lists the ten from there; both ends answer `CronWindow::Counted` — the
+total, and every run up to fifty or the first and the last five past it — or why not (an end that does not read or
+that a change of clocks skipped, an end before its start, more than ten years).
+
+- ⚠️ **The count is not the length of a list**, and not a walk either: a year at every minute
+  is half a million runs. It goes **by the day** (`count`): a day that lies whole in the window
+  and that no change of clocks cuts holds the same number of runs whenever it holds one — the
+  time fields know nothing of the date (`runs_a_day`) — so the search jumps from one matching
+  day to the next. Only the two ends and a day the clocks change on are walked run by run,
+  where `croner` alone knows what a skipped or a repeated hour does. A test holds it to the
+  walk, expression by expression, over both changes of clocks.
+- **The shortcuts are typed for the user** (« aujourd'hui », « ce week-end », « vendredi
+  après-midi »): plain arithmetic on the date Rust says it is in the zone (`Read::now`), which
+  fills the two fields; no zone is computed in the page.
+- **A date that does not match says the nearest run on either side** (`CronCheck::Checked`'s
+  `before` and `after`): a window of one minute is that question, and « no » leaves one asking
+  when, then.
 
 **The Diff compares texts, or values** (`tools/text_diff.rs`, `tools/diff.rs`). Its text mode
 pairs lines on what they are compared as — the options strip what they ignore from that key alone,
@@ -846,6 +952,16 @@ and its signature verified for HS256, HS384 and HS512 alone, in constant time
 ⚠️ The token and the secret are plain `signal`s, zeroed in Rust once the answer is made; a note
 keeps the decoded header and payload as one JSON document, after a warning, never the token.
 
+**The diff's « Données » tab compares documents, and says when a text is none**
+(`tools/diff.rs`). ⚠️ Nearly any text is valid YAML — one plain scalar — so YAML accepted what
+the other formats refused: an nginx file was announced « lu comme YAML » and compared as one
+string changed into another. A side **read by its shape** that comes out as one value and no
+object nor list is answered `NotStructured`, with the way back to the text tab, whose two
+texts are the same two (`diff.a`, `diff.b`); a format **chosen by hand** is taken at its word.
+The detection answers the narrowest format that fits (`convert::detect`): every JSON document
+is YAML too, and one that parses as JSON is said to be JSON. « Exemple » belongs to the tab on
+screen and fills both sides, each read by its shape again.
+
 **A reference is a tool that is read, never typed into** (the « Références » category): no
 `result` — the frame then offers no "Enregistrer comme note" — no `sample()`, and no Rust. Its
 facts are typed constants beside the component; its words are a JSON per language beside them,
@@ -854,7 +970,9 @@ so sixty descriptions weigh nothing until the tool opens. `app-reference-table` 
 the rest: the search, folded like the catalogue's — a front-end exception of the same kind,
 translated text — the groups, the count, each row's key to copy. A row is searched by its group's
 heading too (« redirection » finds every 3xx), so headings are translated in code
-(`referenceHeadings`), not in the template. The reference draws its own
+(`referenceHeadings` for the table, the source's `label` for a row), not in the template. The
+rows themselves are built by the reference's `ReferenceSource`, which the home's search reads
+as well (above). The reference draws its own
 `<td>`s through `appReferenceCells`, and so styles them itself (`reference-cell`): the table's
 stylesheet cannot reach them. A spec holds both files of words to the same keys. Each group is a
 table of its own, a card, and the cards flow into as many columns as the width holds, each never
@@ -865,6 +983,164 @@ regex sheet runs through `RegExp` in its spec. ⚠️ The Mustache sheet's `{{�
 chunk words, never main translation strings: Transloco would replace an unknown `{{name}}` with
 nothing.
 
+**A fictitious identity is drawn from one list of names and a profile a country** — decided by
+a spike before any list was written, because the obvious way was refused: a few thousand names
+a country, hard-coded, is a megabyte of test data in the binary.
+
+- ⚠️ **One list of names, with no origin and no country attached to any.** The given names of
+  women, those of men and the surnames are a list each, in one file, in alphabetical order:
+  every country draws from it, and any name may come out anywhere. The spike had first sorted
+  them into « pools » an origin, a country drawing from a weighted mix of pools, with tests
+  holding each origin to its share. **That was withdrawn**: sorting people's names by where
+  they come from, or by the country they live in, is not something this tool does. Nothing
+  says it of a name any more — not the data, not a file's name, not the order of a file, not
+  a test. **A country is a profile** of what is its own: about twenty-five places (postcode,
+  city, region), thirty street names, and its formats — postcode, phone, the order of an
+  address, its account number and its identifiers. One more country costs a profile and its
+  places, not a list of names.
+- **The budget is 100 KB for every list together**, held by a test that sums the files: about
+  2 500 names at seven bytes a name, 18 KB, and thirteen countries of 25 places and 30
+  streets, 18 KB — 36 KB in all, so the 150 KB first put forward was four times what is
+  needed and 100 KB leaves room for the countries that follow.
+- **What was ruled out, and on what.** One pack a country (150 given names a sex, 150 surnames,
+  40 places): about 5 KB a country, the same names written again under every country — and
+  names sorted by country, which is not done. Made-up names (syllables, Markov chains) cost
+  nothing and look like nobody: kept for nothing. The `fake` crate: about ten locales, none
+  of the identifiers this tool exists for, and its own generator beside the seeded `Draw` the
+  tools already have. ⚠️ Its cost in the binary was **not** measured: that needs a dependency
+  added, which is not done unasked.
+- **Plain text, read once.** A list is a text file — its bytes and nothing more — split when
+  read. The same names as a Rust table of `&str` cost sixteen bytes a name on top of the
+  text, half as much again. The spike took them into the binary with `include_str!`; they
+  are **files shipped beside the application** since, read where they are (below).
+- ⚠️ **Where the lists come from.** Written by hand, from what is commonly known of the most
+  frequent names and of the larger towns of each country: no dataset and no library was
+  copied. The script that would cut the open data of the statistics offices (INSEE, ONS,
+  Destatis, the US Census) to its most frequent names is **not written**: it downloads files,
+  which is asked for first. Until then a name's frequency is a judgement, not a figure.
+- **Latin script only**, said plainly: a name from a language written otherwise is written as
+  it is romanised. Names in their own script wait for a romanisation beside them — the second
+  one feeding the e-mail address.
+- **Valid means computed, and derived from the person where the number encodes them**: an
+  identifier is never drawn beside the identity it belongs to. The IBAN's mod 97 everywhere,
+  and the national key inside it where there is one (France's RIB key, Belgium, Spain, Italy,
+  Portugal). France: SIREN and SIRET (Luhn), the VAT key from the SIREN, the NIR with its
+  key — sex, year, month and department taken from the person. Belgium: national and company
+  numbers (mod 97). Germany: Steuer-ID and USt-IdNr (ISO 7064). Spain: DNI, NIE, NIF (the
+  letter of the remainder). Italy: codice fiscale — from the name, the birth and the place —
+  and partita IVA. The Netherlands: BSN (the « elfproef »). Portugal: NIF (mod 11).
+  Switzerland: AHV (EAN-13). Poland: PESEL, the date and the sex in it. Sweden:
+  personnummer (Luhn). The United Kingdom: NINO and VAT. Canada: SIN (Luhn). ⚠️ A number
+  that passes its key may belong to someone: no range is reserved for fiction but for a few
+  phone numbers and an e-mail domain, and the tool says so.
+- **First version: France**, complete. **Then**: Belgium, Germany, Spain, Italy, Portugal, the
+  Netherlands, Switzerland, the United Kingdom, Poland, Sweden, the United States and Canada.
+  All thirteen are in the tool, their list written in its note; the budget still holds
+  more than half of itself for the ones that follow.
+
+**The identity tool is that design, for thirteen countries** (`tools/identity.rs`;
+`tools/catalogue/identity/`). A pure function of the options and a seed behind one command.
+Four files under `tools/identity/`, each one thing:
+
+| File         | What it holds                                                                                              |
+| ------------ | ---------------------------------------------------------------------------------------------------------- |
+| `data.rs`    | The lists — one file of names, a file of places and streets a country — read from files it checks          |
+| `profile.rs` | A country in a few lines: the order of an address, the shape of a phone number, a firm — nothing of a name |
+| `numbers.rs` | The keys, a function each, each held to an example its country publishes                                   |
+| `papers.rs`  | The numbers of a person, a firm and an account, a country at a time, built on `numbers.rs`                 |
+
+The lists weigh **36 KB** for the thirteen countries, held under `BUDGET` by a test that
+sums the files.
+
+⚠️ **The lists are files beside the application, not part of it** — asked for so that a name
+is corrected or a list completed without building the application again.
+
+- **A Tauri resource**: `src-tauri/resources/identity/` (`names.txt`, `places/*.txt`) is
+  declared in `bundle.resources` and lands in `<resources>/identity/` — beside the executable
+  on Windows and in a development or e2e build (`tauri-build` copies it into the target
+  directory), under the package's own folder on Linux. The two commands take the
+  `AppHandle` for nothing else: `resource_dir()`, joined with `identity`. No Tauri permission
+  is involved — Rust reads the files, the page never does.
+- **Read once, kept for the session** (`data::library`): every file is read at the first card
+  and its text given away for as long as the application runs, every name drawn afterwards
+  pointing into it. ⚠️ Only a reading that was whole is kept: a file put back is found at the
+  next draw, without a restart; a file edited while the application runs waits for the next
+  launch.
+- ⚠️ **A list can now be missing or damaged, and is checked when read** (`data::read`): the
+  names have a list of each kind, a country has places — every part of each — and streets under
+  each place's own tag. The first file that fails is answered with where it was looked for
+  (`UnreadableList`: `missing` or `damaged`, the file, the folder), and the tool says so in
+  place of a card (`IdentityOutcome::Unreadable`) — an export writes nothing
+  (`PeopleExport::Unreadable`). Nothing divides by the length of an empty list. A byte-order
+  mark and Windows line endings, which an editor leaves, are read through.
+- **What is shipped is what is read**: a test holds the folder to one file of names and a
+  file a country, and nothing else; the tests draw from the very files that are shipped. The
+  e2e scenario of the tool runs against the assembled application: it fails if they are not.
+- **Not done**: lists of the user's own beside the shipped ones.
+
+- **The seed is text** — « devnotes » is one — hashed to the number the tools' `Draw` takes;
+  none given, one is drawn and said, and typing it back gives that person again. ⚠️ Only the
+  **year** of today is read: the ages are the ones reached during it, so the same seed gives
+  the same person all year rather than a birth date that moves with the day.
+- ⚠️ **Every draw is made in one order whatever the options**: a sex that is imposed still
+  costs its draw, the given names are three draws however many are kept. Changing an option
+  changes what it names and nothing else of the person.
+- **A place says what its country needs of it** (`Place`): a code — the INSEE code of a
+  French commune, the land-registry code an Italian codice fiscale ends on, a state's two
+  letters —, a postcode that may leave characters to draw (`#` a digit, `@` a letter, from
+  the letters the United Kingdom, the Netherlands and Canada all allow), the prefix of its
+  phone numbers, and a tag where a country speaks several languages: Brussels takes French
+  streets and « SRL », Antwerp Dutch ones and « BV ». **An address is written in the
+  country's order** (`Address::formatted`): « Hauptstraße 12, 10115 Berlin », « 12 High
+  Street, Manchester M1 4BT », « 12 Main Street, Chicago, IL 60601 ».
+- ⚠️ **A surname in `-ski`, `-cki` or `-dzki` follows the person** (`data::borne`): a
+  woman's ends in `-a`. The grammar of the name, read off its ending and nothing else — it
+  sorts no one. **The same seed gives the same names whatever the country** — a test holds
+  it: the names are drawn before anything a country has of its own.
+- **One implementation generates and verifies**: the IBAN's two digits and the Luhn digit are
+  `tools/checks.rs`'s own functions, and the test asks the checks tool whether each IBAN is
+  valid — its length for the country and, in France, the RIB key — in every country that has
+  one. The national key inside the account is computed where there is one: France, Belgium,
+  Spain, Italy's CIN, Portugal, the Dutch « elfproef », the digit of a Polish branch.
+- **A number that encodes its bearer is read off them** (`papers::Bearer`), never drawn
+  beside them: France's social security number (sex, year, month, commune, Corsica's `2A`
+  counted as 19 for the key), Belgium's national number (birth, and a serial odd for a man —
+  read behind a `2` for a birth from 2000 on), the codice fiscale (the names, the birth, a
+  woman's day forty higher, the commune), the PESEL (the century in the month), the
+  personnummer (a `+` for a hyphen from a hundred years on). The others are a drawn body and
+  its key: Steuer-ID and USt-IdNr (ISO 7064), DNI and a company's NIF, partita IVA, the
+  Portuguese NIF and NIPC, BSN, AHV (EAN-13) and UID, the British VAT number, NIP and REGON,
+  organisationsnummer, the Canadian SIN.
+- ⚠️ **What has no key is said, not dressed up** (`papers::UNKEYED`,
+  `IdentityAnswer::unkeyed`): a National Insurance number, a company number, a KvK-nummer, a
+  sort code and an account number are formats, and the tool's note names those the card
+  shows. A country whose firms have no number with a key — the United States, Canada —
+  answers none, and the block says so rather than show a field made up.
+- **Harmless where a range is kept for it**: `example.com`, `.org`, `.net` everywhere; a
+  phone number in the block the regulator keeps for fiction in **France** (ARCEP's blocks, one
+  a zone, written with each place), the **United Kingdom** (Ofcom's, a block a large town and
+  `01632 960` for the others, `07700 900` for a mobile), the **United States** and **Canada**
+  (`555-01xx` in the place's area code); the ten social security numbers the United States
+  keeps for advertisements (`987-65-4320` to `4329`), and a Canadian number starting with a
+  `0`, which Canada gives nobody. ⚠️ Elsewhere a phone number of the right shape may ring at
+  someone's (`Profile::fiction_phones`, said in the note), and no range exists for an IBAN or
+  a tax number: one that passes its key may be someone's.
+- ⚠️ **Written from memory, not from a register**: the towns' codes — INSEE, the Italian land
+  registry —, the area codes and the banks' codes were not checked against their official
+  tables, which would mean fetching them. A wrong one leaves a number that still passes its
+  key, and names another town.
+- ⚠️ **The card evokes one and imitates none**: a monogram where a photo would be, no emblem,
+  no flag bar, no machine-readable zone, and « Spécimen » printed across it. A number that
+  is the person's own is on the card, **under the name its country gives it** — « Codice
+  fiscale », « BSN », « Sort code » are names, written the same in both languages; the rest
+  is three blocks — contact, bank, company — each value copied with a click.
+- **Out**: « Copier en JSON » and the note take the JSON Rust wrote (`IdentityAnswer::json`,
+  the field names of `Identity`, which an export shares); a batch of one to a hundred people
+  is a file, JSON or CSV, written by Rust where the file dialog says and starting from the
+  person on screen. **Several countries take their turn in one file** (`PeopleBatch`), the
+  card's own first; a CSV holds the numbers of a person in one column, `kind:value` and a bar
+  between, since they differ from a country to the next.
+
 **Adding a tool**, the whole of it:
 
 1. `src-tauri/src/tools/<module>.rs`: the function, its request and answer types, its tests.
@@ -874,11 +1150,18 @@ nothing.
    re-exported by `core/model/tool-answers.model.ts`.
 4. `tools/catalogue/catalogue.ts`: an entry; `tools/catalogue/<id>/`: the component
    implementing `Tool`, its `sample()` included (`catalogue.spec.ts` holds every tool to one),
-   and its spec through `renderTool`.
+   and its spec through `renderTool`. A reference has no `sample()` and a
+   `<id>.reference.ts`, named by the entry's `reference`.
 5. `tools.<id>.*` in both locales, and a scenario in `29-tools.e2e.ts`.
 
-What every tool draws alike is the kit: `tools/ui/` (`app-output-row`, `app-copy-value`) and
-the `tool-*` mixins.
+What every tool draws alike is the kit: `tools/ui/` (`app-output-row`, `app-result-row`,
+`app-copy-value`) and the `tool-*` mixins. ⚠️ A row of a results card gives its value two
+thirds of the card beside its name, which a long one turned into a strip running down the
+page with its copy icon at mid-height: past `LONG_RESULT` characters a value takes the card's
+width **under** its name, held to eight lines it scrolls in — focusable, so the keyboard
+scrolls it — and its icon stays at its top; `app-output-row` holds its value to a height the
+same way. A tool whose results are long takes the width it is given (`tool-columns`) rather
+than a width of its own.
 
 ⚠️ **The line breaks tool has no `<textarea>`**: a textarea's value turns every CRLF and CR
 into LF, the very thing it is asked about. A paste is read raw from its `clipboardData`, Coller
@@ -1079,13 +1362,13 @@ rail — its facet and its filter — counts snippets alone, where a Note or a l
 "Text" on it.
 
 **A kind is a facet with a count.** `NotesQuery.kinds` narrows like a tag or a language — the
-date view turns into one flat `results` section, the board dims — and the kind rail
+list view turns into one flat `results` section, the board dims — and the kind rail
 (`kind-rail/`, first in the facets panel) says how many notes of each kind the space holds:
 `NotesView.kind_counts`, built by `view::count_kinds` from one `GROUP BY`, every kind in
 `NoteKind`'s declared order and zeros included. Counted over the space and not the filter,
 for the reason `available_tags` is: counted over the selection, pressing one chip would zero
 the others. "All" is no kind selected, and an empty kind is offered only while pressed.
-**The date view is ordered in Rust** (`NotesQuery.order`, `view::order_notes`): by the last
+**The list view is ordered in Rust** (`NotesQuery.order`, `view::order_notes`): by the last
 edit (the default), the creation, the priority, the format (the kind, then the language) or
 the title, either way. ⚠️ Titles are sealed, so SQL cannot order them: they are folded once
 per query and compared in Rust. Ties fall on the last edit, then the id, whichever way the
@@ -1095,7 +1378,7 @@ the card's age names the date it is sorted by: "modifiée il y a 4 h", or "cré�
 sorted by creation (`NoteFooter::Created`, set after the sections by `dated_by_creation`).
 The closed enums derive `Ord` in declared order, which is what ranks a priority and a kind.
 
-**The date view gathers its cards four ways** (`NotesQuery.grouping`): by date, by priority,
+**The list view gathers its cards four ways** (`NotesQuery.grouping`): by date, by priority,
 by format, or all in one section. ⚠️ The dated sections split on **the date the list is
 sorted by** — the creation date under the creation sort, the last edit otherwise — where they
 used to split on the creation date while the list ran on the last edit, so the two could
@@ -1299,7 +1582,7 @@ pointer is also one nobody finds.
 
 **The card's ⋯ menu is the complete one.** Open, pin, copy, duplicate, file into…, move to…, delete —
 a note's properties used to be spread over four surfaces with none of them complete: filing
-one from the date view took three clicks through the selection bar plus a fourth to clear
+one from the list view took three clicks through the selection bar plus a fourth to clear
 it, and pinning with the mouse took a full-screen modal for a boolean that has its own
 filter chip in the header. The editor gained the two placements it was missing, as
 `placement-menu` used twice.
@@ -1473,6 +1756,16 @@ change was a hard cut. That is not a defect; it is the difference a reader regis
 pointer — hover fills, chip states, the card's action pill. `--motion` (160ms) is what
 **enters**: a menu, a dialog, the selection bar, the undo banner, the status toast.
 
+**One motion lasts: the spinner's turn** (`--motion-turn`, the `turn` keyframes, `app-spinner`
+in `shared/spinner/`), shown while something is waited for — a request on its way, a socket
+connecting. One shared piece, sized by `--spinner-size` and coloured by the text. The
+reduced-motion block below stops it without naming it; what says "alive" then is whatever
+ticks beside it.
+
+**One mark fades** (`--motion-mark`, 2000ms): what a keyboard move leaves on a row of the HTTP
+rail and on what now holds it. It is a colour coming down to a style that is already the mark,
+on two rows, not a motion — the reduced-motion block cuts the fade and leaves the mark.
+
 ⚠️ **`transform` and `opacity` only.** A transition on `height`, `width` or a colour over
 a list of cards is what makes a canvas feel heavy, and this canvas renders every note with
 no virtualisation. `@mixin eases` therefore names its properties and never takes `all`.
@@ -1558,8 +1851,18 @@ listed the spaces, and beside it the folder switcher listed the folders of which
 active. The two lists are a **tree**, and they were drawn as two flat menus opened one after
 the other. `notes/sidebar/library-tree/` draws that tree instead — every space, its folders
 under it, the way an editor holds a project — and the toolbar keeps the toggle that shows and
-hides it (`Ctrl+B`, and an entry in the shortcuts sheet, because the table that binds a key is
-the table that documents it).
+hides it.
+
+⚠️ **Shown or hidden is one state for the three areas.** The tools drew their rail whatever had
+been chosen, and HTTP honoured the choice with no control to undo it. `showLibraryRail` now
+hides the rail in the notes, the tools and HTTP alike; the titlebar carries the switch between
+areas whenever it is hidden; and the same button (`app-rail-toggle`, `shared/controls/`) sits
+at the left end of each area's top bar — the notes' header, the tools' home and frame, HTTP's
+tab bar and history — under a test id of its own page, since the notes page stays in the
+document behind the others. Its key, `Ctrl+B`, is answered once, by `AreaKeysDirective`
+(`RAIL_ACTION`, rebindable, listed under « Zones » in the sheet and the preferences): from a
+field too when it carries a modifier, never from an editor that formats with it. A tools home
+held to one category while its rail is hidden says so in its top bar, with the way back.
 
 ⚠️ **The rail replaces the two switchers while it is open**, and they come back when it is
 closed. Two places to change space is how a tree and a dropdown drift apart; the `@if` in the
@@ -1588,8 +1891,16 @@ line each in `SettingsStore`, restored at launch like every other preference, an
 absent from the preferences panel: they are states the window is in, not decisions to go and
 make. ⚠️ The width is dragged from the rail's edge with **pointer events**, like every other
 drag in this application — HTML5 drag and drop does not work in this WebView — and the edge is
-a `role="separator"` so the arrow keys move it too. It is clamped on the way in _and_ on the
+a `role="slider"` so the arrow keys move it too. It is clamped on the way in _and_ on the
 way out (`RAIL_WIDTH`), because a preferences file written by hand is an input like any other.
+
+⚠️ **One frame for the three rails** (`app-rail-frame`, `shared/layout/rail-frame/`): the
+width, the background and the edge that drags it, drawn once. It takes a width and its bounds
+and emits the new one — it injects nothing — and each rail (`library-tree`, `tools-rail`,
+`http-rail`) holds its `<nav>` in it, its own host `display: contents`. Before it, only the
+notes' rail could be resized, and HTTP's took `max(width, 240px)`: the rail jumped on the way
+in and back on the way out. The `<nav>` keeps the line on its right (`@mixin rail-body`): it
+is the element a rail is measured by, and has to be as wide as the frame is told.
 
 **The floor is the tree's own, not the panels'.** It stopped at 220px, and that number had
 nothing to do with the rows: `space-editor` and `folder-editor` carry a `min-width` of 240px,
@@ -1609,19 +1920,58 @@ cut one.
 ### The HTTP rail
 
 The third area (`Ctrl+3`, `http/`) opens on the collections of the library: `HttpRailComponent`
-in the library rail's frame — its width, its `Ctrl+B`, the titlebar carrying the switch while it
-is hidden — and the open request beside it. The tree is Rust's (`http_tree`); the rail lays it
+in the library rail's frame — its width, its hidden state, the titlebar carrying the switch
+while it is hidden — and the open request beside it. ⚠️ Its rows are compact so that the rail's
+floor of 160px is enough, not merely allowed: 8px a level (`--indent`), nothing held on a
+request's row for a caret it does not have, the long methods in three letters (`shortBadge`:
+`DEL`, `OPT`, in the tabs too), and `⋯` drawn over the end of the row on hover or focus
+instead of holding its width at rest — the row says when through `--node-menu-opacity`, since
+its stylesheet cannot reach into the menu's. The tree is Rust's (`http_tree`); the rail lays it
 flat (`railRows`, `core/services/http/http-tree.ts`), each row at its depth, a request after its
-method in its colour (`http-method-hues`), `QUERY` for GraphQL and `WS` for a WebSocket.
+method in its colour (`http-method-hues`), `GQL` for GraphQL and `WS` for a WebSocket.
 
 - **A row's `⋯` is a component of its own** (`HttpNodeMenuComponent`, `MenuTriggerDirective` as a
   host directive), so a row listens to the document only while its menu is open. Creating and
-  renaming are a field in place; deleting first shows what goes with it, counted by Rust.
+  renaming are a field in place; deleting first shows what goes with it, counted by Rust —
+  and, **counted by the front**, the open tabs it would close with changes not saved
+  (`requestsUnder` in the tree, `HttpTabsStore.unsavedAmong`): Rust knows what is deleted,
+  only the front what is typed. One question, one more sentence, read as the question stands.
+  ⚠️ Its panel is `position: fixed`, measured from the viewport: nothing between it and the
+  page may carry a `transform`, which would become the box it is measured from — the host is
+  centred on its row with a flex box for that reason.
+- **A name field left keeps what was typed**, as a file explorer does: `focusout` on the form,
+  for anything outside it, creates or renames; left empty or with the same name, it closes and
+  writes nothing; Escape cancels. ⚠️ Enter, the form's button and the field left can each arrive
+  for one name — a field removed while focused loses its focus too — so `settleCreate` and
+  `settleRename` take the form before they await anything, and act only for the form that is
+  still the open one. From the field to its own button is not leaving.
+- **Two things are begun here, and neither behind a bare « + »**: they were a few pixels
+  apart, the same glyph at the same size. The rail's head draws what it makes (`folder-plus`)
+  and names it, « ＋ Collection », once the rail is wide enough to hold it beside the title
+  (`WORDED_FROM_PX`); an empty rail offers « Nouvelle collection » as a button rather than
+  pointing at a glyph; and the tab bar ends with « + Nouvelle requête ».
+- **A row's menu keeps the three kinds of request behind one entry**, « Nouvelle requête › »,
+  and a submenu beside the panel — the idiom of a card's « Priorité › »: a sibling panel, so
+  the first one's arrows do not walk into it, opened by a click or `→`, folded by `←` and
+  first on Escape (`MenuTriggerDirective.handleEscape`). Listed flat they made eight entries
+  of a menu opened to rename something.
 - **Moving is pointer events and `Alt` with the arrows**, never HTML5 drag and drop. `↑`/`↓`
   within the parent, `→` into the folder above, `←` out of the folder; a drag lands before or
   after a row, or inside a folder or a collection when it is let go mid-row. Both turn into one
   `RailMove` (`keyMove`, `dropMove`), refused when it would change nothing or put a folder into
   itself — Rust refuses that too. The click that ends a drag opens nothing.
+- **A move made with the keys is shown and said.** The pointer shows where a drop would land;
+  the keys showed nothing, and at 8px a level a row above a folder looks like a row inside it.
+  After each one, `landing` (`http-tree.ts`) reads the tree **as Rust answered it** — never the
+  move that was asked — and the rail marks the row and what now holds it (`data-moved="row"`,
+  `"parent"`) for `MARK_MS`, scrolls the row into view, and says where it went in a live
+  region (`role="status"`, kept in the page so that its change is announced): « … est
+  maintenant dans Auth », « … à la racine de API », « … avant Login ». A move that cannot be
+  made is said the same way (`refusal`). ⚠️ The mark is a style the fade comes down to, so it
+  shows where animations are cut short; and a row moved twice keeps its attribute, so the
+  tree's `data-beat` swaps the animation's name — the only thing that starts one again.
+- **A line a level** is drawn in each row's indent (`.node-row::before`), so depth is read at
+  rest and not only during a move.
 - **What is folded is the library's**, in its preferences (`devnotes.notes.http.collapsed`), and
   read the way a file written by hand is read: anything but a list of ids folds nothing.
 - Every write is persisted, then the tree read again: a move or a copy renumbers what it touched,
@@ -1632,10 +1982,25 @@ method in its colour (`http-method-hues`), `QUERY` for GraphQL and `WS` for a We
 Opening a request gives it a tab (`HttpTabsStore`, `http/request/`): its method and name, a dot
 while modified, a `×`. A tab edits a **draft** — name, method and the request's parts — beside
 what Rust holds; modified is the two differing, and saving (`Ctrl+S`) writes the draft whole. A
-request made from the tabs' `+` is a draft alone, like a new note: it writes nothing until it is
-saved, and the first save asks where it goes. Closing a modified tab asks first. Which requests
+request made from « Nouvelle requête » is a draft alone, like a new note: it writes nothing until
+it is saved, and the first save asks where it goes — and **creates what that place lacks**
+(`SaveRequestDialogComponent`): with no collection the place is a name to type, the menu of
+places ends with « Nouvelle collection… », and a folder can be named under the place chosen.
+⚠️ One write, `create_http_request_in` (`store::create_request_in`, one transaction, every
+name checked before it): a request that is refused leaves no empty collection behind it. The
+tab takes the place Rust answers, and `HttpCollectionsStore.reveal` unfolds what would hide it. Closing a modified tab asks first. Which requests
 were open, and which was in front, is the library's (`devnotes.notes.http.tabs`), reopened at
 the next launch without those deleted since.
+
+⚠️ **A saved request's name and place are the tree's, and a tab follows it.** The rail renames,
+moves and deletes in the tree; a tab that kept the name it was opened with showed the old one
+after a rename from the rail, and its next save — which writes the draft whole — put it back
+over the new one. `HttpTabsStore` follows every tree that is read (an effect on
+`HttpCollectionsStore.tree`, once `loaded`, the tabs read untracked): a request gone closes its
+tab, one moved inherits from where it now sits, one renamed takes the name in what is saved
+_and_ in what is being edited, the rest of the draft untouched. The other way, a save reads the
+tree again, since the rail shows the name and the method. Renaming a folder or a collection
+bumps `settingsRevision`: its name is in what its requests inherit « from ».
 
 - **The query and its table are kept in step by Rust** (`sync_http_query`, `http/query.rs`):
   the side that was edited wins, nothing is decoded — `{{page}}` and `%20` read back as typed —
@@ -1645,13 +2010,64 @@ the next launch without those deleted since.
   (`UrlFieldComponent`): caret, selection and undo stay the browser's. ⚠️ Both layers carry the
   same metrics, declared after `text-field`, whose `all: unset` would otherwise zero the field's
   padding and put every glyph a padding off the copy.
+- ⚠️ **A request is created as what it is — HTTP, GraphQL, a WebSocket — and stays so.** The two
+  others were the last entries of the method menu, a kind filed among verbs, and were not
+  found. The kind is chosen where a request begins: « + Nouvelle requête » at the end of the
+  tab bar (`NewRequestMenuComponent`, a split button as the notes' « Nouvelle note » is —
+  HTTP in one click, the three kinds behind its chevron, each with its badge and a line that
+  says what it is for; ⚠️ in the surface colour, not the amber fill: here that one is
+  « Envoyer »), a collection's or a folder's menu, the buttons of the empty workspace. `kind` is not in
+  `HttpRequestPatch`: an update has nothing to change it by, so there is nothing to refuse. The
+  method menu holds methods and shows on an HTTP request alone; the two others say their kind
+  in its place, a label. A copy keeps it, and so does a send reopened as a draft
+  (`HistorySummary::kind`).
 - The headers' names are proposed from the HTTP headers reference, those a server alone writes
   left out. Settings, scripts and tests join the tabs with their tickets.
+- ⚠️ **A header that cannot be sent is refused where it is typed.** Nothing checked a name: key
+  `X-Recette: 1` in a folder's settings was stored as typed, and every request under the folder
+  failed « this URL cannot be sent » — the client's builder says so for a header it refuses.
+  The rule is the model's (`http::model::header_fault`): a name is an HTTP token, a value holds
+  no line break nor control character, a `{{variable}}` stands for a letter until it is filled,
+  and a row switched off is not judged. Three places apply it:
+  - `KeyValueTableComponent` as `headers` asks `check_http_headers` and marks the row, with the
+    reason under the table; a parameter or a form field takes any character and is asked
+    nothing. `Nom: valeur` typed in a name is split by `read_http_headers` — what follows the
+    first colon goes to the value when there is none, and the caret with it — and several lines
+    pasted there fill a row each (the field alone would take them on one line). ⚠️ Every change
+    starts from `latest`, what the table last emitted, not from its `rows` input: the input
+    only follows at the next change detection, and a value typed right after the split — or an
+    answer from Rust arriving before the screen — started from a row already replaced and put
+    the colon back in the name;
+  - `save_http_settings` refuses it: stored, it failed requests one by one. A request's own
+    rows are saved as typed — a tab is a draft, and it shows the mark;
+  - `compose` checks every header before the client builds it and answers `SendError::Header`,
+    with who wrote it: its own code (`httpHeaderName`, `httpHeaderValue`), the sentence picked
+    by `source` as for a timeout — « L'en-tête « X-Recette: 1 », hérité du dossier « Recette » ».
 - **A body is a kind and its content** — none, JSON, text, a form, multipart, a file. A file is a
   **path**, read by Rust when the request is sent: its bytes never enter the library.
-  `describe_http_body` answers the `Content-Type` the body implies — shown among the headers,
-  sent unless one is typed — and, for JSON, why it does not read (the JSON explorer's own parser
-  and words). Prettier formats it, as it does a snippet.
+  `describe_http_body` answers the `Content-Type` the body implies and, for JSON, why it does
+  not read (the JSON explorer's own parser and words). Prettier formats it, as it does a snippet.
+- **A body is sent whatever the method, and a `GET` that carries one says so.** A `POST` switched
+  to `GET` keeps its body and sends it — some APIs do read one — and nothing said it.
+  `describe_http_body` is asked with the method and answers `unusual`
+  (`RequestBody::is_unusual_on`: a `GET` or a `HEAD`, and something that leaves — a kind chosen
+  and left empty is no body; `DELETE` and `OPTIONS` do not warn): the rule is Rust's, the editor
+  keeps no list of methods. It shows as a line above the body, with « Passer à Aucun », and as a
+  mark on the « Corps » tab — the method changes while another tab is in front.
+- **Choosing another kind of body empties none** (`HttpTabsStore.chooseBodyKind`): the one left
+  is set aside by tab and comes back as it was — « Passer à Aucun » would otherwise cost the
+  text it warns about. A text is kept under JSON and plain alike, so it still travels between
+  the two. For as long as the tab is open, never written: a request saves the body it shows.
+- **What leaves without a row of its own is listed above the headers' table, and the list is
+  Rust's** (`implied_http_headers` → `send::implied`): the body's `Content-Type`, the headers
+  handed down with where from, the application's `User-Agent` and `Accept` « par défaut », the
+  `Host` « d'après l'URL ». It is read from the very function `compose` writes the headers with
+  (`written`, each header with who wrote it), so the list cannot say something a send does not
+  do — it once was decided in the editor, from the body alone. Asked again when the kind, the
+  URL, a header, the auth, the body's kind or the place changes, not at each key of the body;
+  the last answer stays on screen while the next is read (`RequestEditorComponent.lastOf`, a
+  `linkedSignal` by tab, which the body's answer goes through too), or the table under it would
+  jump. The auth's own header is not in it: its tab says it, and it is a secret.
 - **An auth is inherited by default.** A collection and a folder carry settings of their own —
   an auth and headers, sealed like a request's document — and `inherited_http_settings` resolves
   what a request at a place gets: the nearest auth set, every header above, a folder's overriding
@@ -1667,15 +2083,63 @@ files outside it, and sends with `reqwest` on rustls (the `ring` provider the up
 brings, the system's roots through the platform verifier): ⚠️ **a send never holds the lock**,
 or a 30-second request would stall every command.
 
+- **The height is shared between a request and what answers it, from the line between them**
+  (`SplitHandleComponent`, `shared/layout/split-handle/`): a separator that takes the focus —
+  pointer events, the arrows, `Home`/`End` to either floor — which measures its parent and
+  the pane before it, and emits a share it does not keep. The share is the area's, not a
+  tab's (`AppSettings.httpRequestShare`, a percentage; the WebSocket log has the same line):
+  `0` is « automatic », the request taking what it holds up to 60% as it always did, and it is
+  where a double-click or Enter puts the line back. ⚠️ Each side has a floor — the request line
+  and its tabs, the status line and a few lines of body — written twice: `floors` in
+  `HttpPageComponent` for the line, `min-height` in the stylesheets for a window that shrinks.
+- **« Effacer » clears the pane, not the record**: `HttpSendStore.forget`, what closing the tab
+  does — the state goes, Rust lets go of the body it kept, and the history keeps the send. A
+  failure and a cancelled send stay on screen as an answer does, and are put away the same way.
+- **A status is drawn to be read as a signal**: `@mixin status-badge`, twice the fill of a
+  tint, a ring in the hue, the text at full strength — `palette.test.mjs` holds that text to
+  4.5:1 on the four fills in both themes — and `data-family` (`2xx`…`5xx`) says it to what
+  cannot read a colour.
 - **What leaves is composed first** (`compose`, tested without a network): the inherited headers,
   its own over them by name, the auth — Basic, Bearer, a key in a header or the query — unless an
   `Authorization` is typed, the body and the `Content-Type` it implies. A URL without a scheme is
   sent over `http://`. A `{{variable}}` left anywhere stops it, by name, until environments give
   one a value.
-- **A failure is a code** — the variable, the URL, the name not resolving, refused, TLS, timeout
-  (30 s), too many redirects (10), an unreadable file, cancelled — read off reqwest's error and
-  the chain under it. ⚠️ `io::Error::source` skips the error it wraps, where rustls puts its
-  own: the walk follows `get_ref`.
+- **A request names the application**: `User-Agent: DevNotes/<version>` (`send::USER_AGENT`, the
+  version read from `Cargo.toml`) unless a `User-Agent` row is written — `reqwest` adds none, and
+  many APIs answer 403 to a request without. An enabled row, the request's own or one handed
+  down, replaces it; a row **switched off**, in the request or at any level above
+  (`Inherited::user_agent_off`), sends none at all — though never at the expense of one a level
+  sets, which leaves like any inherited header. `Accept: */*` is written the same way, though
+  the client would add it by itself, so that the history and the timeline show it as sent. A
+  WebSocket's handshake is composed by the same function and carries both.
+- ⚠️ **The redirects are followed by `send`, one request a hop, not by the client**
+  (`Policy::none()`). `reqwest` has no jar: followed by it, a cookie set on a 302 — nearly every
+  login — was neither kept nor sent to the page it leads to, the jar being filled from the last
+  answer's headers alone. Each hop's `Set-Cookie` goes through the jar's rules as it arrives
+  (`cookies::received`, then `cookies::apply` on the copy the command read under the lock),
+  and each hop is sent the line the jar gives **for its own URL** (`Hop::cookie`); what the
+  hops did to the jar comes back beside the answer (`Sending::run`) and is merged under the
+  lock afterwards, even when the chain ended on a failure. What the client did is kept in
+  `Hop::after`, tested one rule a line: a 301, 302 or 303 becomes a `GET` without its body, a
+  307 or 308 sends both again; another host or port gets neither `Authorization` nor a typed
+  `Cookie`; a `Location` is read against the URL that answered; a `Referer` names the page
+  left, never from `https` to `http`. The delay is the whole chain's (each hop is given what is
+  left of it), « Redirections au plus » is counted here, and a cancel aborts the task between
+  two hops as anywhere. `Redirect` carries where it came from and what it set, `Cookie::from`
+  the hop that set it: the « Cookies » tab says « Posé par », the timeline shows the
+  `Set-Cookie` under its redirect.
+- **A failure is a code** — the variable, the URL, the name not resolving, refused, TLS, timeout,
+  too many redirects, an unreadable file, cancelled — read off reqwest's error and the chain
+  under it. ⚠️ `io::Error::source` skips the error it wraps, where rustls puts its own: the
+  walk follows `get_ref`.
+- **A timeout and a redirect too many carry the value in force, and who set it**
+  (`transport::Limit`): no number is written in a translation, which used to state the
+  defaults whatever the request was sent with. The delay crosses as `amount` and `unit`, the
+  largest SI unit that says it whole (`readable_delay`); the redirects as `count`, a plural.
+  `source` — `request`, `folder`, `collection` or `default` — picks the sentence
+  (`errorKeyOf`: the sub-key `errors.httpTimeout.<source>`) and `name` is the folder or the
+  collection: the Réglages tab shows an inherited value greyed, and its cause is one level up.
+  The history keeps those values beside the code (`HistorySummary::failure_params`).
 - **A send runs as a task of its own, under an id the front chose** (`HttpSendStore`: the tab's
   key and a counter), which `cancel_http_send` aborts. The answer's text crosses up to 1 MB; the
   bytes, up to 64 MB, stay in Rust under that id, for **Enregistrer dans un fichier**
@@ -1683,6 +2147,11 @@ or a 30-second request would stall every command.
 - **`Ctrl+Enter` sends the tab in front**, and **Envoyer** becomes **Annuler** while it waits.
   Below the request, `ResponsePaneComponent` shows the status coloured by its class, the time,
   the size, and the answer in four tabs — or why there is none.
+- **A request on its way says so in three places**: a spinner and the time elapsed in the pane,
+  a spinner in **Annuler**, and one on its tab. A still sentence made a slow server and a frozen
+  window look the same. The count starts at `SendState.startedAt`, the store's and not the
+  pane's, so coming back to the tab does not restart it; it ticks only while a send is under
+  way, and is `aria-hidden` in a pane that is a live region.
 
 **Reading the answer is Rust's too** (`http/response.rs`). The body's language comes from its
 `Content-Type` (or, without one, from reading as JSON); the cookies are the `Set-Cookie`
@@ -1703,6 +2172,29 @@ tokens**, never by re-serialising: `serde_json` would round `1234567890123456789
 The view of an answer is `ResponseViewComponent` (`http/ui/`): the response pane draws it for a
 tab's last send, the history for an entry.
 
+**A GraphQL request says what it can before it is sent, and its errors when it is answered.**
+One pass over the query (`graphql::scan`, past strings, block strings and comments) reads its
+operations with the variables each declares, and the first brace, parenthesis or string that
+does not pair, by line and column. `describe_graphql` answers it with each keystroke:
+
+- ⚠️ **Above each box, not under it**: the editor is taller than what the response pane leaves
+  of the window, and a line under a box was out of sight — the very thing being fixed. The two
+  boxes share one grid, what is said of each in a row of its own that keeps two lines whether
+  or not something is said: a line that comes and goes with each brace typed would push the
+  text being typed.
+- **For the query**, the sign at fault and where. It warns and stops nothing — the server
+  stays the judge of the schema; only « Formater » waits for a query that pairs.
+- **For the variables**, what they are (« Un objet JSON : une valeur pour chaque `$variable`
+  de la requête »), why they do not read, and how they compare with the operation sent — the
+  one named, else the first: « Sans valeur » for a variable declared without a default and
+  given none, with « Ajouter » (`add_graphql_variables` writes a `null` for each at the end of
+  the object **as typed**, its numbers untouched), and the keys the operation does not declare.
+- « Formater » on both boxes is Prettier's, as for a snippet.
+- **An answer that is errors and no data opens on « Erreurs »** (`ResponseViewComponent.chosen`,
+  a `linkedSignal` on the answer): on « Corps » it read `null`, the errors in a tab nothing
+  pointed to. With data it opens on the body, the tab's count in red. A badge beside the status
+  counts the errors whatever the status: a 200 that carries some is no success.
+
 ### The history of what was sent
 
 **Every send that left is written** (`http_history`, migration 15), after the answer and under
@@ -1710,20 +2202,53 @@ the lock again; a request refused before leaving — a `{{variable}}`, a bad URL
 one are not. A failed send is kept with its code. The write never costs the answer: a failure
 is logged.
 
-- **Sealed, in two parts**: the summary a list shows (name, URL, time, size, failure) and the
-  record an entry opens (the exchange, and the answer with its body cut to 256 KB). The
-  instant, the method, the status and the request it came from stay in the clear, for the
-  order and the retention; `request_id` is `ON DELETE SET NULL`.
-- ⚠️ **Secrets are masked before they are sealed** (`history::mask`): `Authorization` keeps its
-  scheme (`Bearer ••••••••`), `Proxy-Authorization` and `Cookie` lose their value, and so does
-  the API key, by the name `compose` hands on (`Outgoing::secrets`), in a header or the query.
-  The live timeline shows what really left; only the history masks.
+- **Sealed, in two parts**: the summary a list shows (name, URL, method, status, time, size,
+  failure) and the record an entry opens (the exchange, and the answer with its body cut to
+  256 KB). Only the instant and the request it came from stay in the clear, for the order and
+  the retention; `request_id` is `ON DELETE SET NULL`. ⚠️ The method and the status were
+  columns of their own until migration 17, which drops them. SQL holds no key to move them
+  under: an entry recorded before it reads as a `GET` with no status until the retention lets
+  go of it — thirty days at most, on an application nobody runs yet.
+- ⚠️ **Secrets are masked before they are sealed**, on both sides of the exchange. Sent
+  (`history::mask`): `Authorization` keeps its scheme (`Bearer ••••••••`),
+  `Proxy-Authorization` and `Cookie` lose their value, so does the API key, by the name
+  `compose` hands on (`Outgoing::secrets`), in a header or the query, and the password of a
+  URL's user (`https://ada:••••••••@host`). Answered (`masked_answer`): a `Set-Cookie` keeps its
+  name and its attributes, a cookie its name, and every URL the answer names again — where it
+  came from, a `Location`, each hop of the redirects — is masked like the one sent. What an
+  answer sets is what the next request sends: kept whole, it was the `Cookie` the other side
+  masks. The live timeline shows what really left; only the history masks.
+- ⚠️ **The limit of the mask**: it knows the secrets a request _declares_. A token typed by
+  hand as a parameter or in a body, or one a server answers in its body, is kept as it is —
+  sealed like the rest of the record, and shown to whoever opens the entry. A test a secret
+  in `http/history.rs`, and one that asserts this limit rather than leaving it to be found.
 - **Kept 30 days and 500 entries**, purged as each is written and at launch
   (`history::sweep_at_startup`). « Vider l'historique » asks Rust how many it removes first.
-- **Listed by local day** (`by_day`, the offset the notes send), newest first. **Rouvrir dans un
-  onglet** asks Rust for the request rebuilt (`http_history_draft`): the masked values and the
-  implied `Content-Type` left out, the parameters read off the URL — a new draft tab, to send
-  again or save into a collection.
+- **A row ends on what tells it from the next.** Fourteen sends to one host read alike, each
+  URL cut at its end. Rust answers the URL in two parts (`history::url_parts`: the host, then
+  the path and the query) and the row lets the first give way, the second stay; the whole URL
+  is the row's `title`. The list is `RailFrameComponent` again — dragged from its edge or moved
+  with the arrows, its width an application setting (`historyListWidth`).
+- **One send is deleted without being asked, and put back from the bar that follows**
+  (`delete_http_history_entry` answers the entry whole, `restore_http_history_entry` writes it
+  back under its id and at its instant): no trash and no column for it — what is handed back
+  is what the front could read anyway. The offer lasts as long as a note's. « Vider
+  l'historique » keeps its confirmation.
+- ⚠️ **« Rouvrir » puts a send back onto the request it came from** (`http_history_onto_request`
+  → `history::onto`), in that request's **own tab**, as changes not saved: it used to open a
+  stranger, a draft with no tie to it. What was sent — method, URL, parameters, headers, body,
+  or a GraphQL send read back into its query and variables — goes over what the request holds,
+  which keeps its auth, its settings and **every secret**: a header the record holds masked
+  takes the request's own row of that name back, never the dots as a value, and one handed
+  down today with the value that was sent is no change of the request's. A tab already open
+  with changes of its own is asked about first. The request gone, or the send made from a
+  draft, it is a draft named after the send and its time; the button says which it will be.
+- **Listed by local day** (`by_day`, the offset the notes send), newest first. A draft
+  asks Rust for the request rebuilt (`http_history_draft`): the masked values left
+  out, and what is written again by itself — the implied `Content-Type`, the application's own
+  `User-Agent` and `Accept` (`send::is_default`), which as rows would name this version for
+  ever — the parameters read off the URL: a new draft tab, to send again or save into a
+  collection.
 - The history replaces the workspace while open (`HttpHistoryStore.isOpen`, from the rail's
   foot), and closes for a request opened from the tree. It reads again whenever a send ends
   (`HttpSendStore.sent`).
@@ -1758,6 +2283,24 @@ the subprotocols asked for, and the messages kept to send again.
   headers inherited, the auth and the `{{variable}}` check are a request's. `connect_websocket`
   answers once the handshake did; a refusal crosses as `httpWebsocketRefused` with its
   `status`, the rest as a send's codes.
+- **A socket opens on `ws://` or `wss://`, or on a bare host** (`websocket::socket_url`): any
+  other scheme is refused before anything is tried (`httpWebsocketScheme`). `https://` used
+  to be dialled as `wss://` without a word; it is now said, with its twin on a socket's scheme
+  (`twin`) a click away in the log.
+- ⚠️ **A failure is read by one function for a request and for a socket** (`send::cause_of`,
+  the chain of causes walked whoever built it): a host that does not resolve read « Erreur
+  réseau » from a socket and « Le nom d'hôte ne se résout pas » from a request. By its code
+  before its words — Windows words its errors in the system's language, and « Hôte inconnu »
+  matches no wording (`WSAHOST_NOT_FOUND` and its three neighbours). When « network » is all
+  that can be said, the last cause's own words cross as `cause` and are shown after the
+  sentence, for a request too.
+- **`Ctrl+Entrée` in the message sends the message** (`WebsocketComposerComponent`, which stops
+  the key: the page answers it by connecting, whatever holds the focus). On a socket that is
+  not open it says « Connectez le WebSocket pour envoyer » and connects nothing; Enter alone
+  stays a new line.
+- **Closing the tab of a socket that is open or opening asks first**
+  (`HttpSocketsStore.isLive`, `CloseRequestDialogComponent`): one dialog, which says the
+  unsaved changes too when there are some, never two in a row.
 - **What follows comes as events, on one topic** (`WEBSOCKET_EVENT`, its payload generated, like
   `GlobalAction`): opened (with the subprotocol taken), sent, received (cut at 64 KB, a binary
   message only sized), closed, failed. The front listens through `WEBSOCKET_SUBSCRIBER`, a
@@ -1775,16 +2318,20 @@ the subprotocols asked for, and the messages kept to send again.
 **Transport settings inherit field by field** (`http/transport.rs`): a collection, its folders
 and the request each hold a `TransportSettings` whose fields are optional, and
 `transport::resolve` lays them over `Transport::default()` (crossing as `DEFAULT_TRANSPORT`)
-from the collection down. `compose` resolves them, and `send` builds its client from them:
-timeout (never under 100 ms), redirects followed or not and how many, TLS verified or not, the
-jar used or not. The Réglages tab (`TransportEditorComponent`) shows beside each unset field
-what it takes from above.
+from the collection down. `compose` resolves them, and `send` reads them: the timeout (never
+under 100 ms) is the whole chain's, redirects are followed or not and how many, TLS is verified
+or not, the jar is used or not. The Réglages tab (`TransportEditorComponent`) shows beside each unset field
+what it takes from above. `settings::inherit` also answers which level set the timeout and the
+redirects (`Inherited::limits`, kept off the wire), for the failure that names it. A
+WebSocket's handshake waits the same timeout.
 
 **The jar is the library's, sealed whole** (`http_cookies`, `http/cookies.rs`): the domain is
 sealed with the rest — which sites one talks to is not for the file to say — so matching
 (domain, path, `Secure`, expiry) runs in Rust over the jar read entire, and only `expires_at`
-stays clear for the purge. The jar is read under the lock before the send and written with the
-history after it; a `Cookie` header typed by hand wins over the jar. The manager
+stays clear for the purge. The jar is read under the lock before the send, handed to it as a
+copy the hops read and fill (→ "Sending a request, and its answer"), and what they did to it is
+written with the history after it; a `Cookie` header typed by hand wins over the jar, for the
+host it was typed for. The manager
 (`CookieJarDialogComponent`, from the rail's foot) lists by domain and deletes one, a domain's
 or all, the count asked of Rust first.
 
@@ -1873,11 +2420,11 @@ every export and land on top of the receiving machine's own arrangement.
 
 ### The board: the second view of a space
 
-A switch in the header chooses between **Date** and **Tableau**. The date view is not
+A switch in the header chooses between **Liste** and **Tableau**. The list view is not
 replaced and stays the default; the board is another way to look at the same notes, and it
 is remembered **per space** — one key each, `devnotes.notes.view.<spaceId>`, so arranging one
 space does not switch the others. ⚠️ It is unavailable on "all spaces", where a folder
-belongs to no board: the switch disables rather than disappears, and falls back to the date
+belongs to no board: the switch disables rather than disappears, and falls back to the list
 view.
 
 **The board is a chunk of its own**, behind `@defer (on immediate)` in the canvas: most
@@ -1890,7 +2437,7 @@ sections — `build_sections` must never learn about a folder. It reads the whol
 marks each note `matches`, because the search, the quick filter and the kind, tag and
 language rails all **dim** on the board rather than narrow it. ⚠️ Reflowing the survivors
 into a list would throw away the spatial memory the board exists for, which is the one
-thing the date view cannot give.
+thing the list view cannot give.
 
 **Cards flow inside a zone and sit freely outside it.** That is the whole geometry:
 
@@ -1981,7 +2528,7 @@ sits in is noise, and a loose card has no folder to name. The card component is
 the same one the canvas draws, so it renders no chip simply because `folder` is `None`.
 
 On the front end, `notes/canvas/` is the region and the two views are alternatives inside
-it — `note-section/` for the date view, `board/` for the board, and `note-card/` risen to
+it — `note-section/` for the list view, `board/` for the board, and `note-card/` risen to
 their nearest common ancestor. ⚠️ The region keeps the `canvas` test hook whichever view
 fills it: it is the address on screen, and the e2e helpers wait on it.
 
@@ -2096,7 +2643,7 @@ arithmetic, half-open on the far edges like `contains`, and touching is enough.
 `NoteSelectionStore.onScreen` reads `BoardStore.visibleNotes` while the board is showing
 and `NotesQueryStore.visibleNotes` otherwise, and the ticks, the range and the keyboard
 focus all go through it. ⚠️ The board **dims** where the canvas **narrows**, so a card the
-search filtered out of the date view is still drawn on the board and still filed in its
+search filtered out of the list view is still drawn on the board and still filed in its
 folder — resolved against the canvas it left the selection the instant it was ticked, and
 the bar said nothing was selected.
 
@@ -2175,7 +2722,7 @@ be a second set of positions to maintain for nothing.
 **It is a flat grid, and that is decided in Rust.** `notes::view::build` counts an opened
 folder as filtering, so the view comes back as a single `results` section. ⚠️
 `build_sections` still knows nothing about a folder — this is the only place the two meet,
-and the date view's own sections are untouched, because nothing sends a `folder_id` unless
+and the list view's own sections are untouched, because nothing sends a `folder_id` unless
 a folder has actually been opened.
 
 **A note created here arrives already filed.** That and a drop on the board are the only two
@@ -2966,7 +3513,9 @@ The groups of the notes — the canvas arrows, `X` to check a card, `Alt+↑` to
 checklist item — come from `shortcuts-dialog/notes-shortcuts.ts`, which the sheet imports.
 They live with the notes rather than in the sheet because the canvas group is **derived from
 the key table that binds them** (`CANVAS_SHORTCUT_GROUP`, from `notes/canvas-keys.ts`): a
-key documented but not bound, or the reverse, is not possible.
+key documented but not bound, or the reverse, is not possible. The **HTTP** group
+(`http-shortcuts.ts`, beside it) is documentation only, as the editor's and the palette's are:
+sending, saving, and what a row of the rail does under `Alt` and the arrows, `F2` and `Delete`.
 
 The **global** group is the exception and is built by the dialog itself: those three
 combinations are the application's, they work with the window closed, and the quick-paste one
@@ -3338,7 +3887,8 @@ subscription that was silently inert and that nothing reported. Now `desktop::Gl
 `closed_enum!` and the topic is a single constant, and **both are generated**: `lib.rs` exports
 them with `.typ::<GlobalAction>()` and `.constant("GLOBAL_ACTION_EVENT", …)`, neither of which
 needs a command to hang off. The front imports both from `bindings.ts`, and its `switch` over
-the action is exhaustive — a variant added in Rust stops the front compiling.
+the action is exhaustive — a variant added in Rust stops the front compiling. `Quit` is the
+one that is a question rather than something to do (→ "Leaving with requests not saved").
 
 **Application metadata travels the same way.** `app_info::METADATA` is exported with
 `.constant("APP_METADATA", …)` and holds what the front used to spell out: the display name,
@@ -3449,6 +3999,36 @@ default; minimising to the tray is the same idea, off by default. Tauri emits no
   front can act on, and giving it an `ErrorCode` would add a branch no UI would ever render —
   it is logged natively, like an unavailable global shortcut.
 
+### Leaving with requests not saved
+
+A request typed in a tab and never saved, or a saved one with changes, does not survive the
+page: `HttpTabsStore` keeps the ids of the saved requests that are open, nothing else. They are
+**not** kept across a restart; the application **asks before they are lost**
+(`HttpLeaveStore`, `core/services/http/`, and `LeaveRequestsDialogComponent`, drawn by the
+shell because any area can be the one on screen).
+
+- **Everything that takes the page away goes through `HttpLeaveStore.confirm(reason)`** and goes
+  on only on `true`: « Quitter » in the File menu, a library opened or created
+  (`LibrariesStore`, which reloads), a backup restored (`BackupsStore`), an update installed
+  (`UpdateStore`). ⚠️ Nothing is asked when no tab is modified: leaving stays instant.
+- **One dialog**: how many requests, their names under the dot a modified tab wears, a sentence
+  for the WebSockets that will be cut, then « Annuler », « … sans enregistrer » and « Tout
+  enregistrer ». That last one writes the requests that have a place, then walks those never
+  saved through the save dialog, one at a time; a place not given comes back to the question,
+  and a write that fails leaves it standing.
+- **A quit asked from outside the page asks the page.** The tray's « Quitter » called
+  `app.exit(0)`, and closing the window when that does not hide it ended the process as well.
+  Both now go through `desktop::request_quit`: one `GlobalAction::Quit` down, and the page
+  answers — at once with `exit` when nothing would be lost; otherwise `hold_quit` first, which
+  stops Rust waiting and shows the window (it may be hidden in the tray, where no dialog is
+  seen), then its question, and the process ends from the page or not at all.
+- ⚠️ **The wait is bounded** (`QUIT_PATIENCE`, 3 s): a page that never answers — hung, not
+  loaded — must not make the application impossible to quit. Questions are numbered
+  (`PendingQuit`), so the timer of one never quits for the next.
+- ⚠️ `HttpLeaveStore` exists from the first render and resolves the HTTP stores **when asked**,
+  never at construction: they read the library's preferences as they are built — what is
+  folded, which tabs were open — and would read nothing before the library is open.
+
 The commands, grouped by the feature that owns them:
 
 | Feature       | Commands                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
@@ -3463,7 +4043,7 @@ The commands, grouped by the feature that owns them:
 | `backup`      | `list_backups`, `restore_backup`                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `recovery`    | `archive_locked_library`, `set_aside_damaged_library`                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `changelog`   | `app_changelog`                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `desktop`     | `set_global_shortcuts`, `set_window_behavior`, `sync_tray`                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `desktop`     | `hold_quit`, `set_global_shortcuts`, `set_window_behavior`, `sync_tray`                                                                                                                                                                                                                                                                                                                                                                                        |
 
 The guarantees the front-end relies on (persisted value returned, `Err` on an unknown id,
 "absent field means unchanged" for patches) are implemented in each feature, and tested there.
@@ -3540,22 +4120,61 @@ CI build. On a realistic library (~2 MB) the sealing costs well under a millisec
 
 ### What is sealed, and what is not
 
-Sealed: note titles, bodies and sources, the bodies kept as revisions, checklist item texts,
-space and folder names, `{{field}}` values and their global defaults, attachment file names, the
-HTTP collections' names, requests' documents and containers' settings — and the attachment files
-themselves, bytes and all.
+**Sealed is what was typed or answered; plain is what SQL filters, sorts, groups and joins on.**
+Sealing the second would move every query into Rust over the whole corpus. The table is every
+column of `db/schema.rs`, read one by one: a column added there is added here.
 
-Not sealed, deliberately: tags, instants, ids, `kind`, `language` and the foreign keys.
-They are what SQL filters, sorts, groups and joins on, and sealing them would move every
-query into Rust over the whole corpus. ⚠️ Tag names are not the only cost of that line. A
-reader of the raw file, with no key, learns the number of notes and the shape of the spaces and
-folders they hang in, every instant, each note's language, kind, pin and item states, every tag
-and `{{field}}` name, each attachment's type and size, and the **length** of every sealed value
-— AES-GCM hides no length. `libraries.json` and both `preferences.json` are plain too. The
-README lists it for the people deciding what to keep here.
-`a_note_is_not_readable_in_the_file_it_was_written_to` (`tests/notes.rs`) greps a freshly
-written database and asserts exactly that split — the only test here that reads the file
-rather than the API.
+| Table                 | Sealed                                                                  | Plain                                                                                                                                                       |
+| --------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `spaces`              | `name`                                                                  | `id`, `pinned`                                                                                                                                              |
+| `folders`             | `name`                                                                  | `id`, `space_id`, `colour`, `created_at`, the board's `x`, `y`, `w`, `h`                                                                                    |
+| `notes`               | `title`, `content`, `source`                                            | `id`, `space_id`, `folder_id`, `kind`, `language`, `priority`, `pinned`, `created_at`, `updated_at`, `deleted_at`, `lifecycle_kind`, `lifecycle_expires_at` |
+| `note_positions`      | —                                                                       | `note_id`, `x`, `y`                                                                                                                                         |
+| `note_tags`           | —                                                                       | `note_id`, `tag`                                                                                                                                            |
+| `note_items`          | `text`                                                                  | `note_id`, `position`, `done`                                                                                                                               |
+| `note_revisions`      | `content`                                                               | `id`, `note_id`, `taken_at`                                                                                                                                 |
+| `note_placeholders`   | `value`                                                                 | `note_id`, `name`                                                                                                                                           |
+| `global_placeholders` | `value`                                                                 | `name`                                                                                                                                                      |
+| `attachments`         | `file_name`, and the file itself, bytes and all                         | `id`, `note_id`, `mime_type`, `byte_size`, `created_at`                                                                                                     |
+| `http_collections`    | `name`, `settings` (auth, headers, transport)                           | `id`, `position`, `created_at`                                                                                                                              |
+| `http_folders`        | `name`, `settings`                                                      | `id`, `collection_id`, `parent_id`, `position`, `created_at`                                                                                                |
+| `http_requests`       | `name`, `document` (URL, parameters, headers, body, auth, and the rest) | `id`, `collection_id`, `folder_id`, `position`, `created_at`, `updated_at`, and ⚠️ `kind`, `method`                                                         |
+| `http_history`        | `summary` (name, URL, method, status, time, size, failure), `record`    | `id`, `sent_at`, `request_id`                                                                                                                               |
+| `http_cookies`        | `cookie` (name, value, domain, path, flags)                             | `id`, `expires_at`                                                                                                                                          |
+
+⚠️ **What a reader of the raw file learns, with no key.** Of the notes: their number and the
+shape of the spaces and folders they hang in, every instant, each note's language, kind, pin
+and item states, every tag and `{{field}}` name, each attachment's type and size. Of the HTTP
+side: how many collections, folders and requests there are, how they nest and in which order,
+when each was created and each request last saved, and each request's kind and method; when
+each send was made and from which request — not to where, nor how it ended; how many cookies
+the jar holds and when each expires — not for which site. And everywhere the **length** of
+every sealed value: AES-GCM hides no length. The README lists it for the people deciding what
+to keep here.
+
+⚠️ **`http_requests.kind` and `.method` are plain for no query**: the tree is read whole and
+ordered in Rust. Sealing them is moving them into `document`, and the rows already written
+cannot follow by SQL, which holds no key: it is a pass in Rust at unlock, over every request.
+Left as it is, and written here so that it is a decision: what the two give away is « four
+`POST`s and a WebSocket in this folder ». The history's method and status were the same case
+with a cost of nothing — a history is thirty days of sends — and are sealed (migration 17).
+
+**Beside the database.** `libraries.json` (the libraries' names) and both `preferences.json`
+are plain. A preference holds a setting or an id, never what a note or a request holds:
+`devnotes.notes.http.tabs` is the ids of the requests left open — one never saved has no id
+and is not written at all —, `devnotes.notes.http.collapsed` those of the folded rows,
+`recentTools` those of the tools; a tool keeps none of its inputs. The logs carry no URL, no
+header, no body and no cookie; a failure names its code. An answer's body stays in memory: the
+only file is the one « Enregistrer dans un fichier » is asked for, staged beside it and removed
+when the write fails. A backup is the library copied: nothing more in the clear than in it. A
+`.devnotes` archive holds the notes, not the HTTP side.
+
+Two tests read the file rather than the API, and assert exactly this split:
+`a_note_is_not_readable_in_the_file_it_was_written_to` (`tests/notes.rs`) and
+`nothing_typed_or_answered_is_readable_in_the_file_it_was_written_to` (`tests/http.rs`) — a
+collection, a folder, a request for each kind of auth, a send with its answer and a cookie,
+every string of which carries one marker the raw bytes must not hold.
+`http-tabs.store.spec.ts` holds the same for the preferences.
 
 ### What this protects against, and what it does not
 
@@ -5044,7 +5663,9 @@ Three things the embedded WebDriver server will not do, each with a helper in `s
   browser reserves that for real user input. `submitFormOf()` calls `requestSubmit()`.
 
 **A scenario waits on a condition, never on a duration.** `eventually(read, matches, what)` in
-`support/app.ts` hands the value back, so the assertion reads what it waited for. A
+`support/app.ts` hands the value back, so the assertion reads what it waited for, and says
+what it last saw when the wait runs out — in an error of its own, a `timeoutMsg` being built
+before the wait starts. A
 `browser.pause` before an `expect` is a guess at a round trip on a runner sharing a CPU with a
 WebView, and it is how one scenario went red on Windows and green on a re-run of the same commit.
 The one exception is an assertion that nothing happened, which no condition can wait on: those

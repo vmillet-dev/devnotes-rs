@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { AreaStore } from '@core/services/areas/area.store';
+import { RAIL_WIDTH } from '@core/services/settings/app-settings.model';
+import { SettingsStore } from '@core/services/settings/settings.store';
 import { TOOL_CATALOGUE } from '@core/services/tools/tool.model';
 import { ToolsStore } from '@core/services/tools/tools.store';
 import { FAKE_TOOLS } from '@testing/tool-catalogue.fixture';
@@ -29,6 +31,22 @@ describe('ToolsRailComponent', () => {
       (element: HTMLElement) => element.dataset[attribute]!,
     );
   const link = (selector: string): HTMLButtonElement => fixture.nativeElement.querySelector(selector);
+
+  /** Only the notes' rail had an edge: this one took the width and could not change it. */
+  it("is as wide as the other areas' rails, and is widened from its own edge", async () => {
+    const settings = TestBed.inject(SettingsStore);
+    const frame: HTMLElement = fixture.nativeElement.querySelector('app-rail-frame');
+    settings.libraryRailWidth.write(240);
+    await fixture.whenStable();
+    expect(frame.style.width).toBe('240px');
+
+    const edge: HTMLElement = fixture.nativeElement.querySelector('[data-testid="tools-rail-edge"]');
+    edge.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    await fixture.whenStable();
+
+    expect(settings.libraryRailWidth()).toBe(224);
+    expect(edge.getAttribute('aria-valuemin')).toBe(String(RAIL_WIDTH.min));
+  });
 
   it('lists the categories that hold something, with their counts', () => {
     expect(ids('tools-rail-category', 'category')).toEqual(['text', 'crypto']);
@@ -88,6 +106,75 @@ describe('ToolsRailComponent', () => {
     const current = rail.querySelectorAll('[data-testid^="tools-rail-"][aria-current="page"]');
     expect([...current].map((row) => row.getAttribute('data-tool'))).toEqual(['line-breaks']);
     expect(rail.querySelectorAll('.rail-link.on')).toHaveLength(1);
+  });
+
+  /**
+   * Five on the home, four or fewer in the rail of an open tool: the rail drops the recents its
+   * section already lists, and only five were kept — the open tool always one of them.
+   */
+  it('still shows five recents when some of the last opened are listed above them', async () => {
+    const elsewhere = ['a', 'b', 'c', 'd', 'e', 'f'].map((id) => ({
+      id,
+      category: 'crypto' as const,
+      keywords: [],
+      load: FAKE_TOOLS[0]!.load,
+    }));
+    TestBed.resetTestingModule();
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      imports: [ToolsRailComponent],
+      providers: [
+        provideAppTesting(),
+        {
+          provide: TOOL_CATALOGUE,
+          useValue: [...FAKE_TOOLS.filter((tool) => tool.category === 'text'), ...elsewhere],
+        },
+      ],
+    });
+    store = TestBed.inject(ToolsStore);
+    fixture = TestBed.createComponent(ToolsRailComponent);
+    fixture.autoDetectChanges();
+
+    for (const id of ['a', 'b', 'c', 'line-breaks', 'd', 'e', 'f', 'case']) store.open(id);
+    await fixture.whenStable();
+
+    // The two tools of the open one's section are above; the five others opened last follow.
+    expect(ids('tools-rail-tool', 'tool')).toEqual(['case', 'line-breaks']);
+    expect(ids('tools-rail-recent', 'tool')).toEqual(['f', 'e', 'd', 'c', 'b']);
+  });
+
+  it('offers the favourites above every tool once there is one, with their count', async () => {
+    const entry = () => link('[data-testid="tools-rail-favourites"]');
+    expect(entry()).toBeNull();
+
+    store.toggleFavourite('hash');
+    store.toggleFavourite('case');
+    // An id the catalogue no longer has is not counted.
+    store.toggleFavourite('gone');
+    await fixture.whenStable();
+    expect(entry().textContent).toContain('Favoris');
+    expect(entry().textContent).toContain('2');
+    const rail: HTMLElement = fixture.nativeElement.querySelector('[data-testid="tools-rail"]');
+    expect(
+      entry().compareDocumentPosition(rail.querySelector('[data-testid="tools-rail-all"]')!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    // It narrows the home as a category does, and is then the one row highlighted.
+    entry().click();
+    await fixture.whenStable();
+    expect(store.category()).toBe('favourites');
+    expect(entry().getAttribute('aria-current')).toBe('page');
+    expect(link('[data-testid="tools-rail-all"]').getAttribute('aria-current')).toBeNull();
+
+    // It stays with a tool open, and goes with the last favourite.
+    store.open('line-breaks');
+    await fixture.whenStable();
+    expect(entry().getAttribute('aria-current')).toBeNull();
+    store.toggleFavourite('hash');
+    store.toggleFavourite('case');
+    await fixture.whenStable();
+    expect(entry()).toBeNull();
   });
 
   it('is headed by the switch between areas', () => {

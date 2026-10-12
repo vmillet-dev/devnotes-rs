@@ -3,6 +3,7 @@ import {
   HttpItemKind,
   HttpNode,
   HttpPlace,
+  HttpRequestSummary,
   HttpTree,
   RequestKind,
   requestBadge,
@@ -18,7 +19,7 @@ export interface RailRow {
   /** The folder it sits in; `null` at a collection's root, and for a collection. */
   readonly folderId: string | null;
   readonly expanded: boolean;
-  /** A request's method, or `QUERY` and `WS`. */
+  /** A request's method, or `GQL` and `WS`. */
   readonly badge: string | null;
   readonly requestKind: RequestKind | null;
 }
@@ -30,6 +31,18 @@ export type RailMove =
 
 export type KeyMove = 'up' | 'down' | 'in' | 'out';
 export type DropZone = 'before' | 'after' | 'inside';
+
+/** Where a keyboard move left a row, in the terms a reader follows it by. */
+export interface Landing {
+  /** The folder or collection that now holds it; `null` for a collection, held by nothing. */
+  readonly parentId: string | null;
+  readonly where: 'into' | 'root' | 'before' | 'after';
+  /** The name of what holds it for `into` and `root`, of the row it passed otherwise. */
+  readonly other: string;
+}
+
+/** Why a keyboard move was not made: said, since a key that does nothing looks unheard. */
+export type Refusal = 'first' | 'last' | 'noFolderAbove' | 'atRoot' | 'collection';
 
 interface Located {
   readonly item: HttpItem;
@@ -94,10 +107,17 @@ export function railRows(tree: HttpTree, collapsed: ReadonlySet<string>): RailRo
   return rows;
 }
 
-/** Every item with its parent, and every parent with what it holds, in order. */
-function index(tree: HttpTree): { located: Map<string, Located>; children: Map<string, HttpItem[]> } {
+interface Index {
+  readonly located: Map<string, Located>;
+  readonly children: Map<string, HttpItem[]>;
+  readonly names: Map<string, string>;
+}
+
+/** Every item with its parent and its name, and every parent with what it holds, in order. */
+function index(tree: HttpTree): Index {
   const located = new Map<string, Located>();
   const children = new Map<string, HttpItem[]>();
+  const names = new Map<string, string>();
   const walk = (nodes: readonly HttpNode[], collectionId: string, folderId: string | null) => {
     const items: HttpItem[] = [];
     for (const node of nodes) {
@@ -107,6 +127,7 @@ function index(tree: HttpTree): { located: Map<string, Located>; children: Map<s
           : { kind: 'request', id: node.request.id };
       items.push(item);
       located.set(item.id, { item, collectionId, folderId });
+      names.set(item.id, node.kind === 'folder' ? node.folder.name : node.request.name);
       if (node.kind === 'folder') walk(node.children, collectionId, node.folder.id);
     }
     children.set(folderId ?? collectionId, items);
@@ -117,9 +138,10 @@ function index(tree: HttpTree): { located: Map<string, Located>; children: Map<s
       collectionId: collection.id,
       folderId: null,
     });
+    names.set(collection.id, collection.name);
     walk(nodes, collection.id, null);
   }
-  return { located, children };
+  return { located, children, names };
 }
 
 const same = (a: HttpItem, b: HttpItem) => a.kind === b.kind && a.id === b.id;
@@ -183,6 +205,42 @@ export function keyMove(tree: HttpTree, item: HttpItem, move: KeyMove): RailMove
 }
 
 /**
+ * Read from the tree as it is **after** the move: where `item` now sits, and beside or inside
+ * what. `null` when it is no longer there.
+ */
+export function landing(tree: HttpTree, item: HttpItem, move: KeyMove): Landing | null {
+  const { located, children, names } = index(tree);
+  const here = located.get(item.id);
+  if (!here) return null;
+
+  const collection = item.kind === 'collection';
+  const parentId = collection ? null : (here.folderId ?? here.collectionId);
+  const around = collection
+    ? collectionOrder(tree)
+    : (children.get(parentId ?? '') ?? []).map(({ id }) => id);
+  const at = around.indexOf(item.id);
+  const name = (id: string | undefined) => (id === undefined ? undefined : names.get(id));
+
+  // Up and down are read against the row that was passed: it is the one the eye was on.
+  const passed = move === 'up' ? name(around[at + 1]) : move === 'down' ? name(around[at - 1]) : undefined;
+  if (passed !== undefined) return { parentId, where: move === 'up' ? 'before' : 'after', other: passed };
+  if (parentId === null) return null;
+  return {
+    parentId,
+    where: here.folderId === null ? 'root' : 'into',
+    other: names.get(parentId) ?? '',
+  };
+}
+
+/** Why `keyMove` answered `null`. */
+export function refusal(item: HttpItem, move: KeyMove): Refusal {
+  if (move === 'up') return 'first';
+  if (move === 'down') return 'last';
+  if (item.kind === 'collection') return 'collection';
+  return move === 'in' ? 'noFolderAbove' : 'atRoot';
+}
+
+/**
  * Where a drop on `target` sends `dragged`, or `null` when it would change nothing or cannot
  * be: a folder into itself, a collection among anything but collections.
  */
@@ -226,9 +284,76 @@ export function dropMove(
   return unchanged ? null : { kind: 'move', item: dragged, place: { collectionId, folderId, index: at } };
 }
 
-/** Whether the tree still holds that request, after a deletion that may have taken it. */
-export function holdsRequest(tree: HttpTree, requestId: string): boolean {
-  return index(tree).located.get(requestId)?.item.kind === 'request';
+/** Every request a deletion takes: the request itself, or all a folder or a collection holds. */
+export function requestsUnder(tree: HttpTree, item: HttpItem): ReadonlySet<string> {
+  const found = new Set<string>();
+  const collect = (nodes: readonly HttpNode[]) => {
+    for (const node of nodes) {
+      if (node.kind === 'request') found.add(node.request.id);
+      else collect(node.children);
+    }
+  };
+  const within = (nodes: readonly HttpNode[]): boolean =>
+    nodes.some((node) => {
+      if (node.kind === 'request') {
+        if (item.kind !== 'request' || node.request.id !== item.id) return false;
+        found.add(node.request.id);
+        return true;
+      }
+      if (item.kind === 'folder' && node.folder.id === item.id) {
+        collect(node.children);
+        return true;
+      }
+      return within(node.children);
+    });
+  for (const { collection, children } of tree.collections) {
+    if (item.kind === 'collection') {
+      if (collection.id === item.id) collect(children);
+    } else if (within(children)) {
+      break;
+    }
+  }
+  return found;
+}
+
+/** The collection and the folders a request sits under, outermost first; none once it is gone. */
+export function ancestors(tree: HttpTree, requestId: string): string[] {
+  const under = (nodes: readonly HttpNode[]): string[] | null => {
+    for (const node of nodes) {
+      if (node.kind === 'request') {
+        if (node.request.id === requestId) return [];
+      } else {
+        const below = under(node.children);
+        if (below) return [node.folder.id, ...below];
+      }
+    }
+    return null;
+  };
+  for (const { collection, children } of tree.collections) {
+    const below = under(children);
+    if (below) return [collection.id, ...below];
+  }
+  return [];
+}
+
+/** A request as the tree holds it — its name and where it sits — or `null` once it is gone. */
+export function findRequest(tree: HttpTree, requestId: string): HttpRequestSummary | null {
+  const walk = (nodes: readonly HttpNode[]): HttpRequestSummary | null => {
+    for (const node of nodes) {
+      if (node.kind === 'request') {
+        if (node.request.id === requestId) return node.request;
+      } else {
+        const found = walk(node.children);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+  for (const { children } of tree.collections) {
+    const found = walk(children);
+    if (found) return found;
+  }
+  return null;
 }
 
 /** Where a request may be saved: each collection, then each of its folders, named by its path. */

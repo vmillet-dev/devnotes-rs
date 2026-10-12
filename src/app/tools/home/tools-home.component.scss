@@ -19,14 +19,47 @@
 }
 
 .title {
+  flex-shrink: 0;
   margin: 0;
   font-size: 17px;
   font-weight: 700;
 }
 
+// What gives way when the bar runs short, with the rail's button now at its head: cut, never
+// wrapped under the title, and never at the search's expense.
 .subtitle {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-size: 12px;
   color: var(--text-2);
+}
+
+.filtered {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 8px;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-0);
+}
+
+.back {
+  @include unstyled-control;
+  @include hit-target;
+  @include focus-ring;
+  padding: 0 6px;
+  font-size: 12.5px;
+  color: var(--text-2);
+  text-decoration: underline;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text-0);
+  }
 }
 
 .spacer {
@@ -38,6 +71,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
   width: min(380px, 40%);
   height: 34px;
   box-sizing: border-box;
@@ -124,16 +158,19 @@
   background: var(--tool-hue);
 }
 
+// Columns, not a grid: a grid row is as tall as its tallest panel, and they go from three
+// tools to nine, which left holes under the short ones. Read down each column.
 .panels {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 14px;
-  align-items: start;
+  --panel-gap: 14px;
+  columns: 260px;
+  column-gap: var(--panel-gap);
 }
 
 .panel {
   @include surface(var(--bg-1), 12px);
   @include tool-hues;
+  break-inside: avoid;
+  margin-bottom: var(--panel-gap);
   overflow: hidden;
 }
 
@@ -171,6 +208,16 @@
   color: var(--text-2);
 }
 
+// The row's opening layer and, over its end, the star.
+.tool-row {
+  position: relative;
+  border-bottom: 1px solid var(--bg-2);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
 .tool {
   @include unstyled-control;
   @include focus-ring(-2px);
@@ -180,16 +227,44 @@
   align-items: flex-start;
   gap: 3px;
   width: 100%;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--bg-2);
+  box-sizing: border-box;
+  // Room for the star: a name never runs under it.
+  padding: 10px 44px 10px 14px;
   cursor: pointer;
-
-  &:last-child {
-    border-bottom: none;
-  }
 
   &:hover {
     background: var(--bg-2);
+  }
+}
+
+// Shown on the row's hover and on its own focus, and always once on.
+.star {
+  @include unstyled-control;
+  @include hit-target(28px);
+  @include focus-ring;
+  @include eases(color, opacity);
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  justify-content: center;
+  border-radius: 6px;
+  color: var(--text-2);
+  opacity: 0;
+  cursor: pointer;
+  --icon-size: 15px;
+
+  .tool-row:hover &,
+  &:focus-visible,
+  .starred & {
+    opacity: 1;
+  }
+
+  &:hover {
+    color: var(--text-0);
+  }
+
+  .starred & {
+    color: var(--amber-text);
   }
 }
 
@@ -200,6 +275,81 @@
 }
 
 .tool-line {
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+
+// What Enter opens from the field, said on the result itself.
+.enter {
+  @include key-cap;
+  margin-left: 6px;
+  font-weight: 400;
+}
+
+.references {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hits {
+  @include surface(var(--bg-1), 12px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.hit {
+  @include unstyled-control;
+  @include focus-ring(-2px);
+  @include eases(background);
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--bg-2);
+  text-align: left;
+  cursor: pointer;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: var(--bg-2);
+  }
+
+  &.more {
+    font-size: 12px;
+    color: var(--text-1);
+  }
+}
+
+.hit-title {
+  flex-shrink: 0;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono), monospace;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-0);
+}
+
+.hit-line {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--text-1);
+}
+
+.hit-where {
+  flex-shrink: 0;
   font-size: 11.5px;
   color: var(--text-2);
 }

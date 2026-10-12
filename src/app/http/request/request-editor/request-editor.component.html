@@ -10,19 +10,29 @@
   />
 
   <div class="line">
-    <app-choice-menu
-      class="method"
-      kind="http-method"
-      triggerTestId="http-method"
-      [label]="'http.editor.method' | transloco"
-      [options]="methods"
-      [currentId]="methodId()"
-      (chosen)="onMethod($event)"
-    />
+    @if (draft.kind === 'http') {
+      <app-choice-menu
+        class="method"
+        kind="http-method"
+        triggerTestId="http-method"
+        [label]="'http.editor.method' | transloco"
+        [options]="methods"
+        [currentId]="draft.method"
+        (chosen)="onMethod($event)"
+      />
+    } @else {
+      <!-- Its kind is its own for good: said where a method would be chosen, and not a control. -->
+      <span class="kind" data-testid="http-kind-badge" [attr.data-kind]="draft.kind">{{
+        'http.kinds.badge.' + draft.kind | transloco
+      }}</span>
+    }
     <app-url-field
       [value]="draft.parts.url"
       [label]="'http.editor.url' | transloco"
-      [placeholder]="'http.editor.urlPlaceholder' | transloco"
+      [placeholder]="
+        (draft.kind === 'websocket' ? 'http.editor.socketPlaceholder' : 'http.editor.urlPlaceholder')
+          | transloco
+      "
       (valueChange)="onUrl($event)"
     />
     @if (draft.kind === 'websocket') {
@@ -45,6 +55,7 @@
         (click)="send()"
       >
         @if (inFlight()) {
+          <app-spinner />
           {{ 'http.send.cancel' | transloco }}
         } @else {
           {{ 'http.send.send' | transloco }}
@@ -83,6 +94,14 @@
           <span class="count" data-testid="http-auth-inherits">{{
             'http.auth.inheritsShort' | transloco
           }}</span>
+        } @else if (id === 'body' && bodyAnswer()?.unusual) {
+          <!-- Seen from the other tabs: the method changes while « Corps » is not the one in front. -->
+          <span
+            class="count warns"
+            data-testid="http-body-unusual-mark"
+            [attr.title]="'http.body.unusual' | transloco: { method: draft.method }"
+            >{{ 'http.body.unusualShort' | transloco: { method: draft.method } }}</span
+          >
         }
       </button>
     }
@@ -97,23 +116,23 @@
         (rowsChange)="onParams($event)"
       />
     } @else if (section() === 'headers') {
-      @let above = inherited()?.headers ?? [];
-      @if (impliedType() !== null || above.length > 0) {
-        <ul class="implied" data-testid="http-implied-headers">
-          @if (impliedType(); as type) {
-            <li class="implied-row" data-testid="http-implied-header">
-              <code class="implied-name">Content-Type</code>
-              <code class="implied-value">{{ type }}</code>
-              <span class="implied-from">{{ 'http.headers.fromBody' | transloco }}</span>
-            </li>
-          }
-          @for (known of above; track known.header.key) {
-            <li class="implied-row" data-testid="http-implied-header">
-              <code class="implied-name">{{ known.header.key }}</code>
-              <code class="implied-value">{{ known.header.value }}</code>
-              <span class="implied-from">{{
-                'http.auth.from.' + known.from.kind | transloco: { name: known.from.name }
-              }}</span>
+      @if (implied().length > 0) {
+        <ul
+          class="implied"
+          data-testid="http-implied-headers"
+          [attr.aria-label]="'http.headers.implied' | transloco"
+        >
+          @for (header of implied(); track header.name) {
+            @let from = origin(header);
+            <li
+              class="implied-row"
+              data-testid="http-implied-header"
+              [attr.data-name]="header.name"
+              [attr.data-source]="header.source"
+            >
+              <code class="implied-name">{{ header.name }}</code>
+              <code class="implied-value" data-testid="http-implied-value">{{ header.value }}</code>
+              <span class="implied-from">{{ from.key | transloco: from.params }}</span>
             </li>
           }
         </ul>
@@ -122,6 +141,7 @@
         kind="headers"
         [label]="'http.editor.sections.headers' | transloco"
         [rows]="draft.parts.headers"
+        [headers]="true"
         [suggestions]="headerNames"
         (rowsChange)="onHeaders($event)"
       />
@@ -161,7 +181,13 @@
     } @else if (section() === 'query') {
       <app-graphql-editor [graphql]="draft.parts.graphql" (graphqlChange)="onGraphql($event)" />
     } @else {
-      <app-body-editor [body]="draft.parts.body" [answer]="bodyAnswer()" (bodyChange)="onBody($event)" />
+      <app-body-editor
+        [body]="draft.parts.body"
+        [answer]="bodyAnswer()"
+        [method]="draft.method"
+        (bodyChange)="onBody($event)"
+        (kindChosen)="onBodyKind($event)"
+      />
     }
   </div>
 </div>

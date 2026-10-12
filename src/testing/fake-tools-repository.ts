@@ -33,6 +33,9 @@ import {
   JsonDiffRequest,
   LineBreaksAnswer,
   LineBreaksRequest,
+  IdentityAnswer,
+  IdentityOutcome,
+  IdentityRequest,
   LoremAnswer,
   LoremRequest,
   PasswordAnswer,
@@ -44,6 +47,8 @@ import {
   QrRequest,
   PermissionsRequest,
   PasswordRequest,
+  PeopleBatch,
+  PeopleExport,
   SavedBytes,
   SavedCode,
   SizesAnswer,
@@ -54,6 +59,7 @@ import {
   TextStats,
   TransferAnswer,
   TransferRequest,
+  UnreadableList,
   UrlAnswer,
   UrlCodecAnswer,
   UrlCodecRequest,
@@ -93,6 +99,8 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
     guessed: true,
     also: [],
     decoded: { kind: 'text', text: '', bytes: 0 },
+    dataUri: null,
+    image: null,
   };
   savedBytes: SavedBytes = { kind: 'saved', bytes: 0 };
   hashAnswer: HashAnswer = {
@@ -110,6 +118,36 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
   conversion: ConvertAnswer = { kind: 'converted', text: '', dropped: [] };
   generated: GenerateAnswer = { kind: 'generated', text: '{}', seed: 1, unsupported: [] };
   loremAnswer: LoremAnswer = { text: '', seed: 1, count: 3, atMost: 200 };
+  identity: IdentityAnswer = {
+    seed: '42',
+    json: '{}',
+    person: {
+      country: 'FR',
+      sex: 'F',
+      surname: 'Martin',
+      givenNames: ['Jeanne'],
+      birth: { date: '1990-01-01', city: 'Lyon', region: 'Rhône' },
+      document: 'F7K2M9P4X',
+      address: {
+        street: '1 rue Pasteur',
+        postcode: '69003',
+        city: 'Lyon',
+        region: 'Rhône',
+        formatted: '1 rue Pasteur, 69003 Lyon',
+      },
+      phone: '04 65 71 00 00',
+      mobile: '06 39 98 00 00',
+      email: 'jeanne.martin@example.com',
+      bank: { name: 'LCL', iban: 'FR76 3000 6000 0112 3456 7890 189', bic: 'CRLYFRPP', local: [] },
+      identifiers: [],
+      company: { name: 'Martin Conseil', identifiers: [] },
+    },
+    fictionPhones: true,
+    unkeyed: [],
+  };
+  /** Set, the lists of the identity tool cannot be read: no person is answered. */
+  unreadableList: UnreadableList | null = null;
+  peopleExport: PeopleExport = { kind: 'written', people: 0 };
   diffAnswer: JsonDiffAnswer = {
     kind: 'compared',
     changes: [],
@@ -233,6 +271,20 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
 
   generateJson(request: GenerateRequest): Promise<GenerateAnswer> {
     return this.answer('generate_json', request, this.generated);
+  }
+
+  generateIdentity(request: IdentityRequest): Promise<IdentityOutcome> {
+    return this.answer(
+      'generate_identity',
+      request,
+      this.unreadableList === null
+        ? { kind: 'drawn', answer: this.identity }
+        : { kind: 'unreadable', list: this.unreadableList },
+    );
+  }
+
+  exportIdentities(request: IdentityRequest, batch: PeopleBatch, path: string): Promise<PeopleExport> {
+    return this.answer('export_identities', { request, batch, path }, this.peopleExport);
   }
 
   lorem(request: LoremRequest): Promise<LoremAnswer> {

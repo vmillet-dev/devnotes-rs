@@ -144,6 +144,18 @@ pub fn received(headers: &[KeyValue], url: &Url, now: DateTime<Utc>) -> Vec<Chan
         .collect()
 }
 
+/// What `changes` do to a jar held in memory. The hops of one send read and write a copy: the
+/// library's own is sealed, and the lock is nobody's while a request is on its way.
+pub fn apply(jar: &mut Vec<JarCookie>, changes: &[Change]) {
+    for change in changes {
+        let (Change::Set(cookie) | Change::Remove(cookie)) = change;
+        jar.retain(|known| !known.same_as(cookie));
+        if let Change::Set(cookie) = change {
+            jar.push(cookie.clone());
+        }
+    }
+}
+
 /// The `Cookie` header a request to `url` carries, the longest paths first; `None` for none.
 pub fn header_for(jar: &[JarCookie], url: &Url, now: DateTime<Utc>) -> Option<String> {
     let host = url.host_str()?.to_ascii_lowercase();
@@ -228,6 +240,38 @@ mod tests {
 
         let plain = Url::parse("http://api.exemple.fr/").unwrap();
         assert!(received(&[set_cookie("csrf=1; Secure")], &plain, now()).is_empty());
+    }
+
+    #[test]
+    fn a_jar_in_memory_takes_a_cookie_replaces_it_and_lets_it_go() {
+        let url = Url::parse("http://api.exemple.fr/login").unwrap();
+        let mut jar = Vec::new();
+        let line = |jar: &[JarCookie]| header_for(jar, &url, now());
+
+        apply(
+            &mut jar,
+            &received(&[set_cookie("session=abc; Path=/")], &url, now()),
+        );
+        assert_eq!(line(&jar).as_deref(), Some("session=abc"));
+
+        apply(
+            &mut jar,
+            &received(
+                &[
+                    set_cookie("session=def; Path=/"),
+                    set_cookie("theme=dark; Path=/"),
+                ],
+                &url,
+                now(),
+            ),
+        );
+        assert_eq!(line(&jar).as_deref(), Some("session=def; theme=dark"));
+
+        apply(
+            &mut jar,
+            &received(&[set_cookie("session=; Path=/; Max-Age=0")], &url, now()),
+        );
+        assert_eq!(line(&jar).as_deref(), Some("theme=dark"));
     }
 
     #[test]

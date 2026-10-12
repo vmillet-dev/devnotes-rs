@@ -1,0 +1,50 @@
+BRU;1000;Bruxelles;Bruxelles-Capitale;02;fr
+VAN;2000;Antwerpen;Antwerpen;03;nl
+VOV;9000;Gent;Oost-Vlaanderen;09;nl
+WHT;6000;Charleroi;Hainaut;071;fr
+WLG;4000;Liège;Liège;04;fr
+VWV;8000;Brugge;West-Vlaanderen;050;nl
+WNA;5000;Namur;Namur;081;fr
+VBR;3000;Leuven;Vlaams-Brabant;016;nl
+WHT;7000;Mons;Hainaut;065;fr
+VAN;2800;Mechelen;Antwerpen;015;nl
+VOV;9300;Aalst;Oost-Vlaanderen;053;nl
+VLI;3500;Hasselt;Limburg;011;nl
+VWV;8500;Kortrijk;West-Vlaanderen;056;nl
+VWV;8400;Oostende;West-Vlaanderen;059;nl
+WBR;1300;Wavre;Brabant wallon;010;fr
+WLX;6700;Arlon;Luxembourg;063;fr
+WLG;4800;Verviers;Liège;087;fr
+VLI;3600;Genk;Limburg;089;nl
+VWV;8800;Roeselare;West-Vlaanderen;051;nl
+VAN;2300;Turnhout;Antwerpen;014;nl
+WHT;7500;Tournai;Hainaut;069;fr
+VOV;9100;Sint-Niklaas;Oost-Vlaanderen;03;nl
+WHT;7100;La Louvière;Hainaut;064;fr
+WLG;4100;Seraing;Liège;04;fr
+---fr
+Rue de l'Église
+Rue de la Station
+Rue du Centre
+Chaussée de Bruxelles
+Rue Neuve
+Rue des Écoles
+Rue du Moulin
+Rue de la Gare
+Avenue des Combattants
+Rue Haute
+Rue du Château
+Rue de la Chapelle
+---nl
+Kerkstraat
+Stationsstraat
+Dorpsstraat
+Schoolstraat
+Molenstraat
+Nieuwstraat
+Veldstraat
+Hoogstraat
+Kapelstraat
+Bergstraat
+Brusselsesteenweg
+Leopoldlaan

@@ -1,24 +1,32 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { HistoryItem } from '@core/model/http.model';
+import { HistoryEntry, HistoryItem } from '@core/model/http.model';
 import { errorKeyOf } from '@core/services/errors/error-notifier.service';
+import { TranslationRef } from '@core/services/i18n/translation-ref.model';
 import { HttpHistoryStore } from '@core/services/http/http-history.store';
+import { HISTORY_LIST_WIDTH } from '@core/services/settings/app-settings.model';
+import { SettingsStore } from '@core/services/settings/settings.store';
 import { ClockService } from '@core/services/time/clock.service';
 import { endOfLocalDay, toDateInputValue } from '@core/utils/local-day.util';
 import { ResponseViewComponent } from '@http/ui/response-view/response-view.component';
+import { RailToggleComponent } from '@shared/controls/rail-toggle/rail-toggle.component';
+import { RailFrameComponent } from '@shared/layout/rail-frame/rail-frame.component';
 
 /** What was sent, by day, beside the entry chosen read like a response. */
 @Component({
   selector: 'app-history-page',
-  imports: [ResponseViewComponent, TranslocoPipe],
+  imports: [RailFrameComponent, RailToggleComponent, ResponseViewComponent, TranslocoPipe],
   templateUrl: './history-page.component.html',
   styleUrl: './history-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HistoryPageComponent {
   protected readonly history = inject(HttpHistoryStore);
+  protected readonly settings = inject(SettingsStore);
   private readonly clock = inject(ClockService);
   private readonly transloco = inject(TranslocoService);
+
+  protected readonly listWidth = HISTORY_LIST_WIDTH;
 
   /** The count Rust gave, while « Vider » asks; `null` otherwise. */
   protected readonly confirming = signal<number | null>(null);
@@ -53,9 +61,25 @@ export class HistoryPageComponent {
     return item.status === null ? 'failed' : String(Math.floor(item.status / 100));
   }
 
-  protected failureKey(item: HistoryItem): string {
-    const code = item.summary.failure;
-    return (code !== null && errorKeyOf(code)) || 'http.send.failed';
+  /** The sentence the send itself showed: the code, and the values it stated. */
+  protected failure(item: HistoryItem): TranslationRef {
+    const { failure: code, failureParams: params = {} } = item.summary;
+    return { key: (code !== null && errorKeyOf(code, params)) || 'http.send.failed', params };
+  }
+
+  /** Which « Rouvrir » it will be: back in its request while it exists, a draft otherwise. */
+  protected reopening(entry: HistoryEntry): TranslationRef {
+    const held = this.history.requestOf(entry.item);
+    return held === null
+      ? { key: 'http.history.reopenDraft' }
+      : { key: 'http.history.reopenInto', params: { name: held.name } };
+  }
+
+  /** `Suppr` on the focused row deletes it, as its button does. */
+  protected onItemKey(event: KeyboardEvent, item: HistoryItem): void {
+    if (event.key !== 'Delete' || event.ctrlKey || event.metaKey || event.altKey) return;
+    event.preventDefault();
+    void this.history.delete(item.id);
   }
 
   protected async askClear(): Promise<void> {

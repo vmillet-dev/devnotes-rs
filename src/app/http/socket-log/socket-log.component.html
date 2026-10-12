@@ -1,8 +1,11 @@
 <section class="log" data-testid="http-socket-log" [attr.aria-label]="'http.socket.log' | transloco">
   <header class="bar">
-    <span class="phase" data-testid="http-socket-phase" [attr.data-phase]="phase()">{{
-      'http.socket.phases.' + phase() | transloco
-    }}</span>
+    <span class="phase" data-testid="http-socket-phase" [attr.data-phase]="phase()">
+      @if (phase() === 'connecting') {
+        <app-spinner />
+      }
+      {{ 'http.socket.phases.' + phase() | transloco }}
+    </span>
     @if (state()?.protocol; as protocol) {
       <span class="protocol">{{ 'http.socket.protocol' | transloco: { protocol } }}</span>
     }
@@ -27,8 +30,17 @@
   </header>
 
   @if (state()?.notice; as notice) {
-    <p class="failure" role="alert" data-testid="http-socket-failure">
+    <p class="failure" role="alert" data-testid="http-socket-failure" [attr.data-key]="notice.ref.key">
       {{ notice.ref.key | transloco: notice.ref.params }}
+      <!-- « Erreur réseau » alone tells nothing: the cause's own words go with it. -->
+      @if (notice.ref.params?.['cause']; as cause) {
+        <span class="cause" data-testid="http-socket-cause">{{ cause }}</span>
+      }
+      @if (notice.ref.params?.['twin']; as twin) {
+        <button type="button" class="twin" data-testid="http-socket-twin" (click)="useTwin($any(twin))">
+          {{ 'http.socket.useTwin' | transloco: { url: twin } }}
+        </button>
+      }
     </p>
   }
 

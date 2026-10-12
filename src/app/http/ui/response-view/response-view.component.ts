@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  linkedSignal,
+  output,
+  signal,
+} from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { SentResponse } from '@core/model/http.model';
 import { ClipboardService } from '@core/services/clipboard/clipboard.service';
@@ -24,6 +33,8 @@ export class ResponseViewComponent {
   readonly sendId = input<string | null>(null);
   readonly requestName = input.required<string>();
   readonly fileAsked = output<void>();
+  /** The pane goes back to waiting for a send; the history keeps this one. */
+  readonly clearAsked = output<void>();
 
   private readonly transloco = inject(TranslocoService);
   private readonly clipboard = inject(ClipboardService);
@@ -34,7 +45,18 @@ export class ResponseViewComponent {
       ? ['body', 'errors', 'headers', 'cookies', 'timeline']
       : ['body', 'headers', 'cookies', 'timeline'],
   );
-  private readonly chosen = signal<Section>('body');
+  /**
+   * An answer that is errors and no data opens on them: on « Corps » it read `null`, the errors
+   * waiting in a tab nothing pointed to. Any other answer keeps the tab that was being read.
+   */
+  private readonly chosen = linkedSignal<SentResponse, Section>({
+    source: () => this.response(),
+    computation: (response, previous) => {
+      const graphql = response.graphql;
+      if (graphql && graphql.errors.length > 0 && graphql.data === null) return 'errors';
+      return previous === undefined || previous.value === 'errors' ? 'body' : previous.value;
+    },
+  });
   protected readonly section = computed<Section>(() =>
     this.sections().includes(this.chosen()) ? this.chosen() : 'body',
   );
@@ -54,8 +76,11 @@ export class ResponseViewComponent {
     timeline: 0,
   }));
 
-  /** `2` for a 2xx: the hue of the status. */
-  protected readonly statusClass = computed(() => String(Math.floor(this.response().status / 100)));
+  /** A 200 that carries errors is no success: GraphQL servers answer so all the time. */
+  protected readonly graphqlErrors = computed(() => this.response().graphql?.errors.length ?? 0);
+
+  /** `2xx`, `4xx`…: what the badge's hue says, and what reads it when a colour cannot. */
+  protected readonly family = computed(() => `${Math.floor(this.response().status / 100)}xx`);
   protected readonly hasText = computed(() => !this.response().binary && this.response().body !== '');
 
   protected readonly millis = computed<TranslationRef>(() => ({

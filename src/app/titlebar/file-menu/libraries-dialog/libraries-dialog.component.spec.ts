@@ -1,5 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { HttpLeaveStore } from '@core/services/http/http-leave.store';
+import { HttpTabsStore } from '@core/services/http/http-tabs.store';
 import { LibrariesStore } from '@core/state/libraries.store';
 import { FakeAppWindow } from '@testing/fake-app-window';
 import { FakeLibrariesRepository } from '@testing/fake-libraries-repository';
@@ -82,6 +84,40 @@ describe('LibrariesDialogComponent', () => {
 
       expect(appWindow.reloaded).toBe(1);
       expect(closed).toBe(1);
+    });
+
+    /** Told to stay with the requests that are not saved: the panel is still what was being used. */
+    it('stays open when the switch is called off, and closes once it is made', async () => {
+      const leave = TestBed.inject(HttpLeaveStore);
+      TestBed.inject(HttpTabsStore).newRequest();
+
+      await click(within('lib-1', 'library-switch'));
+      expect(leave.asking()).toBe('switch');
+      leave.cancel();
+      await fixture.whenStable();
+      expect(closed).toBe(0);
+      expect(appWindow.reloaded).toBe(0);
+
+      await click(within('lib-1', 'library-switch'));
+      leave.discard();
+      await vi.waitFor(() => expect(closed).toBe(1));
+      expect(appWindow.reloaded).toBe(1);
+    });
+
+    it('keeps the name typed when a creation is called off', async () => {
+      const leave = TestBed.inject(HttpLeaveStore);
+      TestBed.inject(HttpTabsStore).newRequest();
+      const name = root().querySelector<HTMLInputElement>('[data-testid="library-new-name"]')!;
+      name.value = 'Boulot';
+      name.dispatchEvent(new Event('input'));
+      await fixture.whenStable();
+
+      await click(root().querySelector<HTMLButtonElement>('[data-testid="library-create"]'));
+      expect(leave.asking()).toBe('switch');
+      leave.cancel();
+      await vi.waitFor(() => expect(name.value).toBe('Boulot'));
+      expect(closed).toBe(0);
+      expect(appWindow.reloaded).toBe(0);
     });
 
     it('renames a library from its row', async () => {

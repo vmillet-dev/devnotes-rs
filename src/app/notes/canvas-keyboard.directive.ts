@@ -105,7 +105,7 @@ export class CanvasKeyboardDirective {
     if (!first) return;
 
     // Found by id among what was just measured, never by a position in `visibleNotes`.
-    // That list is the date view's order — pinned first, then `updated_at` — and the board
+    // That list is the list view's order — pinned first, then `updated_at` — and the board
     // lays its cards out zone by zone, so an index resolved there landed the focus on an
     // unrelated card: the first ArrowRight on the board jumped two cards sideways.
     const focused = this.selection.focusedNoteId();

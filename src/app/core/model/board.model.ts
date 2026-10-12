@@ -68,6 +68,6 @@ export interface BoardQuery {
 }
 
 /** Per space, so arranging one does not switch the others. */
-export type NotesViewMode = 'date' | 'board';
+export type NotesViewMode = 'list' | 'board';
 
 export type { WireBoardNote, WireBoardView, WireBoardZone };

@@ -4,6 +4,8 @@
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
+use super::settings::HttpOrigin;
+
 /// Each field unset inherits: from the folder above, the collection, then `Transport::default`.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase", default)]
@@ -36,6 +38,45 @@ impl Default for Transport {
             verify_tls: true,
             use_cookies: true,
         }
+    }
+}
+
+/// Who set a value in force. A failure says it: the request's own tab shows an inherited
+/// value greyed, and its cause is one level up.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub enum SetBy {
+    /// Nobody: `Transport::default`.
+    #[default]
+    Default,
+    /// A folder, or the collection.
+    Above(HttpOrigin),
+    Request,
+}
+
+/// Who set the two values a send can fail on.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Limits {
+    pub timeout: SetBy,
+    pub redirects: SetBy,
+}
+
+/// The value a send ran into, and who set it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Limit {
+    pub value: u32,
+    pub set_by: SetBy,
+}
+
+/// A delay in the largest unit that says it whole: 30 000 ms is 30 s, 1 500 ms stays 1 500 ms.
+/// The units are SI symbols, the same in every language.
+#[must_use]
+pub fn readable_delay(millis: u32) -> (u32, &'static str) {
+    if millis > 0 && millis.is_multiple_of(60_000) {
+        (millis / 60_000, "min")
+    } else if millis > 0 && millis.is_multiple_of(1_000) {
+        (millis / 1_000, "s")
+    } else {
+        (millis, "ms")
     }
 }
 
@@ -100,5 +141,15 @@ mod tests {
             }
         );
         assert_eq!(resolve([]), Transport::default());
+    }
+
+    #[test]
+    fn a_delay_is_said_in_the_largest_unit_that_holds_it_whole() {
+        assert_eq!(readable_delay(1_000), (1, "s"));
+        assert_eq!(readable_delay(30_000), (30, "s"));
+        assert_eq!(readable_delay(120_000), (2, "min"));
+        assert_eq!(readable_delay(90_000), (90, "s"));
+        assert_eq!(readable_delay(1_500), (1_500, "ms"));
+        assert_eq!(readable_delay(100), (100, "ms"));
     }
 }

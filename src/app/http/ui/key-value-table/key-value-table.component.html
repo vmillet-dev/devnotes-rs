@@ -15,7 +15,13 @@
   <tbody>
     @for (row of shown(); track $index) {
       @let blank = isBlank($index);
-      <tr data-testid="http-kv-row" [class.blank]="blank" [class.off]="!row.enabled">
+      @let fault = faults()[$index] ?? null;
+      <tr
+        data-testid="http-kv-row"
+        [class.blank]="blank"
+        [class.off]="!row.enabled"
+        [attr.data-fault]="fault"
+      >
         <td class="check-column">
           @if (!blank) {
             <input
@@ -35,11 +41,15 @@
             data-testid="http-kv-key"
             spellcheck="false"
             autocomplete="off"
+            [class.faulty]="fault === 'name'"
             [attr.list]="suggestions().length > 0 ? listId() : null"
             [attr.aria-label]="'http.table.key' | transloco"
+            [attr.aria-invalid]="fault === 'name' ? 'true' : null"
+            [attr.aria-describedby]="fault === 'name' ? faultId('name') : null"
             [placeholder]="blank ? ('http.table.newKey' | transloco) : ''"
             [value]="row.key"
             (input)="onInput($index, 'key', $event)"
+            (paste)="onPaste($index, $event)"
           />
         </td>
         <td>
@@ -49,7 +59,10 @@
             data-testid="http-kv-value"
             spellcheck="false"
             autocomplete="off"
+            [class.faulty]="fault === 'value'"
             [attr.aria-label]="'http.table.value' | transloco"
+            [attr.aria-invalid]="fault === 'value' ? 'true' : null"
+            [attr.aria-describedby]="fault === 'value' ? faultId('value') : null"
             [value]="row.value"
             (input)="onInput($index, 'value', $event)"
           />
@@ -82,6 +95,12 @@
     }
   </tbody>
 </table>
+
+@for (fault of said(); track fault) {
+  <p class="fault" role="status" data-testid="http-kv-fault" [attr.data-fault]="fault" [id]="faultId(fault)">
+    {{ 'http.table.faults.' + fault | transloco }}
+  </p>
+}
 
 @if (suggestions().length > 0) {
   <datalist [id]="listId()">

@@ -71,6 +71,12 @@ export class HttpSocketsStore {
     }
   }
 
+  /** Connected or on its way: what closing its tab would cut. */
+  isLive(key: string): boolean {
+    const phase = this._states().get(key)?.phase;
+    return phase === 'open' || phase === 'connecting';
+  }
+
   async send(key: string, text: string): Promise<void> {
     const state = this._states().get(key);
     if (state?.phase !== 'open') return;
@@ -122,7 +128,11 @@ export class HttpSocketsStore {
             phase: 'closed',
             log,
             notice: ipcNotice(
-              new IpcError('websocket', { code: event.code, params: {}, detail: event.detail }),
+              new IpcError('websocket', {
+                code: event.code,
+                params: event.params ?? {},
+                detail: event.detail,
+              }),
               {
                 key: 'http.socket.failed',
               },

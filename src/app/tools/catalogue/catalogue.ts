@@ -134,6 +134,24 @@ export const TOOLS: readonly ToolDefinition[] = [
       import('./json-generator/json-generator-tool.component').then((m) => m.JsonGeneratorToolComponent),
   },
   {
+    id: 'identity',
+    category: 'generate',
+    keywords: [
+      'identity',
+      'identité',
+      'person',
+      'personne',
+      'fake',
+      'faker',
+      'test data',
+      'iban',
+      'siren',
+      'siret',
+      'nir',
+    ],
+    load: () => import('./identity/identity-tool.component').then((m) => m.IdentityToolComponent),
+  },
+  {
     id: 'lorem',
     category: 'generate',
     keywords: ['lorem', 'ipsum', 'placeholder', 'text'],
@@ -184,7 +202,20 @@ export const TOOLS: readonly ToolDefinition[] = [
   {
     id: 'checks',
     category: 'calc',
-    keywords: ['luhn', 'iban', 'mod 97', 'credit card', 'carte', 'checksum', 'bic', 'visa', 'mastercard'],
+    keywords: [
+      'luhn',
+      'iban',
+      'mod 97',
+      'credit card',
+      'carte',
+      'checksum',
+      'check digits',
+      'contrôle',
+      'clé',
+      'bic',
+      'visa',
+      'mastercard',
+    ],
     load: () => import('./checks/checks-tool.component').then((m) => m.ChecksToolComponent),
   },
   {
@@ -217,42 +248,49 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: 'reference',
     keywords: ['http', 'status', 'statut', 'code', 'rfc 9110', '404', '500', 'redirect', 'nginx'],
     load: () => import('./http-status/http-status-tool.component').then((m) => m.HttpStatusToolComponent),
+    reference: () => import('./http-status/http-status.reference').then((m) => m.HTTP_STATUS_REFERENCE),
   },
   {
     id: 'http-headers',
     category: 'reference',
     keywords: ['header', 'en-tête', 'cors', 'csp', 'hsts', 'cookie', 'cache-control', 'content-type'],
     load: () => import('./http-headers/http-headers-tool.component').then((m) => m.HttpHeadersToolComponent),
+    reference: () => import('./http-headers/http-headers.reference').then((m) => m.HTTP_HEADERS_REFERENCE),
   },
   {
     id: 'mime-types',
     category: 'reference',
     keywords: ['mime', 'media type', 'content-type', 'extension', 'json', 'png', 'pdf'],
     load: () => import('./mime-types/mime-types-tool.component').then((m) => m.MimeTypesToolComponent),
+    reference: () => import('./mime-types/mime-types.reference').then((m) => m.MIME_TYPES_REFERENCE),
   },
   {
     id: 'ports',
     category: 'reference',
     keywords: ['port', 'tcp', 'udp', 'iana', 'ssh', 'postgresql', 'redis', 'firewall', 'pare-feu'],
     load: () => import('./ports/ports-tool.component').then((m) => m.PortsToolComponent),
+    reference: () => import('./ports/ports.reference').then((m) => m.PORTS_REFERENCE),
   },
   {
     id: 'signals',
     category: 'reference',
     keywords: ['signal', 'kill', 'sigterm', 'sigkill', 'sighup', 'sigint', 'posix', 'trap'],
     load: () => import('./signals/signals-tool.component').then((m) => m.SignalsToolComponent),
+    reference: () => import('./signals/signals.reference').then((m) => m.SIGNALS_REFERENCE),
   },
   {
     id: 'ascii',
     category: 'reference',
     keywords: ['ascii', 'character', 'caractère', 'code', 'hex', 'control', 'newline', 'escape'],
     load: () => import('./ascii/ascii-tool.component').then((m) => m.AsciiToolComponent),
+    reference: () => import('./ascii/ascii.reference').then((m) => m.ASCII_REFERENCE),
   },
   {
     id: 'regex-sheet',
     category: 'reference',
     keywords: ['regex', 'regexp', 'expression régulière', 'pcre', 'lookbehind', 'lookahead', 'cheat sheet'],
     load: () => import('./regex-sheet/regex-sheet-tool.component').then((m) => m.RegexSheetToolComponent),
+    reference: () => import('./regex-sheet/regex-sheet.reference').then((m) => m.REGEX_SHEET_REFERENCE),
   },
   {
     id: 'markdown-sheet',
@@ -260,6 +298,8 @@ export const TOOLS: readonly ToolDefinition[] = [
     keywords: ['markdown', 'md', 'gfm', 'commonmark', 'readme', 'cheat sheet'],
     load: () =>
       import('./markdown-sheet/markdown-sheet-tool.component').then((m) => m.MarkdownSheetToolComponent),
+    reference: () =>
+      import('./markdown-sheet/markdown-sheet.reference').then((m) => m.MARKDOWN_SHEET_REFERENCE),
   },
   {
     id: 'mustache-sheet',
@@ -267,5 +307,7 @@ export const TOOLS: readonly ToolDefinition[] = [
     keywords: ['mustache', 'handlebars', 'template', 'gabarit', '{{', 'partial', 'cheat sheet'],
     load: () =>
       import('./mustache-sheet/mustache-sheet-tool.component').then((m) => m.MustacheSheetToolComponent),
+    reference: () =>
+      import('./mustache-sheet/mustache-sheet.reference').then((m) => m.MUSTACHE_SHEET_REFERENCE),
   },
 ];

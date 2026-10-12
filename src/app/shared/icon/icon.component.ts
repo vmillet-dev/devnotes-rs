@@ -17,6 +17,11 @@ const PATHS = {
     'M14 11v6',
   ],
   filter: ['M22 3H2l8 9.46V19l4 2v-8.54L22 3z'],
+  pin: [
+    'M12 17v5',
+    'M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z',
+  ],
+  star: ['M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'],
   sun: [
     'M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8z',
     'M12 2v2',
@@ -97,6 +102,11 @@ const PATHS = {
     'M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3',
   ],
   check: ['m5 12 5 5L20 7'],
+  'folder-plus': [
+    'M12 10v6',
+    'M9 13h6',
+    'M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z',
+  ],
   eye: ['M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z', 'M12 9a3 3 0 1 0 0 6a3 3 0 1 0 0-6z'],
   'eye-off': [
     'M9.88 9.88a3 3 0 1 0 4.24 4.24',
@@ -117,7 +127,7 @@ export type IconName = keyof typeof PATHS;
   template: `
     <svg
       viewBox="0 0 24 24"
-      fill="none"
+      [attr.fill]="filled() ? 'currentColor' : 'none'"
       stroke="currentColor"
       stroke-width="2"
       stroke-linecap="round"
@@ -147,6 +157,8 @@ export type IconName = keyof typeof PATHS;
 })
 export class IconComponent {
   readonly name = input.required<IconName>();
+  /** A star that is on: the same drawing, full. */
+  readonly filled = input(false);
 
   protected readonly paths = computed(() => PATHS[this.name()]);
 }

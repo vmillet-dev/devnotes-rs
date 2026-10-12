@@ -17,7 +17,7 @@ import { CanvasKeyboardDirective } from './canvas-keyboard.directive';
   hostDirectives: [CanvasKeyboardDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   // `data-note-id` and not only a class: the directive resolves what it measured back to
-  // a note through that attribute, which is what keeps the board's order out of the date
+  // a note through that attribute, which is what keeps the board's order out of the list
   // view's list. A stand-in without it is a card the grid cannot name.
   template: `
     <div class="card-shell" id="card-1" data-note-id="note-1"></div>
@@ -238,7 +238,7 @@ describe('CanvasKeyboardDirective', () => {
    * is the one address that cannot ask first.
    */
   describe('aligning the loose cards', () => {
-    it('does nothing on the date view, where there is no board', () => {
+    it('does nothing on the list view, where there is no board', () => {
       const board = TestBed.inject(BoardStore);
       const before = board.arrangements();
 

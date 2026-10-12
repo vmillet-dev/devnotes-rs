@@ -1,26 +1,19 @@
 @use 'mixins' as *;
 
-// The library rail's frame: its width, its background, its line.
+// The frame is the box in the page: this element only holds it.
 :host {
-  display: flex;
-  flex: 0 0 auto;
-  min-height: 0;
-  background: var(--bg-1);
+  display: contents;
 }
 
 .rail {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: var(--space-card) 10px var(--space-canvas);
-  border-right: 1px solid var(--line-soft);
-  overflow-y: auto;
+  @include rail-body;
+  // What a level of the tree is set in by. 8px, so that a request two folders deep still
+  // shows a dozen characters of its name at the rail's floor of 160px.
+  --indent: 8px;
 }
 
 .rail-switch {
-  margin-bottom: 8px;
+  @include rail-switch;
 }
 
 .rail-head {
@@ -40,15 +33,19 @@
   color: var(--text-2);
 }
 
+// Not the « + » of the tabs, a few pixels away: an icon of what it makes, its name when there is room.
 .rail-add {
   @include unstyled-control;
   @include hit-target;
   @include focus-ring(1px);
+  --icon-size: 15px;
   justify-content: center;
+  flex-shrink: 0;
   padding: 2px 6px;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 11.5px;
   line-height: 1;
+  white-space: nowrap;
   color: var(--text-2);
   cursor: pointer;
 
@@ -56,20 +53,48 @@
     background: var(--bg-3);
     color: var(--text-0);
   }
+
+  &.worded {
+    @include surface($radius: 6px);
+    padding: 3px 8px;
+    color: var(--text-1);
+  }
 }
 
 .rail-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
   margin: 4px;
   font-size: 11.5px;
   line-height: 1.5;
   color: var(--text-2);
 }
 
+.rail-empty-text {
+  margin: 0;
+}
+
+.rail-empty-create {
+  @include unstyled-control;
+  @include surface(var(--bg-2), 6px, var(--line));
+  @include focus-ring(1px);
+  padding: 5px 9px;
+  font-size: 12px;
+  color: var(--text-0);
+  cursor: pointer;
+
+  &:hover {
+    @include accent-state;
+  }
+}
+
 .rail-form {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 2px 4px 2px calc(4px + var(--depth, 0) * 12px);
+  padding: 2px 4px 2px calc(4px + var(--depth, 0) * var(--indent));
 
   &.inline {
     flex: 1;
@@ -105,8 +130,10 @@
   }
 }
 
+// Wider than the head and the foot by what the rail's padding can spare: the rows are what
+// run out of room.
 .tree {
-  margin: 0;
+  margin: 0 -6px;
   padding: 0;
   list-style: none;
 }
@@ -124,7 +151,7 @@
     content: '';
     position: absolute;
     right: 4px;
-    left: calc(var(--depth, 0) * 12px + 4px);
+    left: calc(var(--depth, 0) * var(--indent) + 4px);
     height: 2px;
     border-radius: 1px;
     background: var(--amber-text);
@@ -144,19 +171,97 @@
     box-shadow: inset 0 0 0 1px var(--amber-dim);
     background: rgba(var(--amber-rgb), 0.08);
   }
+
+  // A move made with the keys: the row in the accent, what now holds it ringed as a drop
+  // target is, for as long as `MARK_MS`. The mark is the style and the fade comes down to
+  // it: where animations are cut short, it is still there.
+  &[data-moved='row'] > .node-row {
+    border-radius: 6px;
+    background: rgba(var(--amber-rgb), 0.1);
+    animation: moved-row-a var(--motion-mark) ease-out;
+  }
+
+  &[data-moved='parent'] > .node-row {
+    border-radius: 6px;
+    box-shadow: inset 0 0 0 1px var(--amber-dim);
+    animation: moved-parent-a var(--motion-mark) ease-out;
+  }
+}
+
+// ⚠️ Two names for one fade: a row moved twice keeps its mark, and only a change of
+// `animation-name` starts an animation again.
+.tree[data-beat='1'] .node[data-moved='row'] > .node-row {
+  animation-name: moved-row-b;
+}
+
+.tree[data-beat='1'] .node[data-moved='parent'] > .node-row {
+  animation-name: moved-parent-b;
+}
+
+@mixin moved-row {
+  from {
+    background: rgba(var(--amber-rgb), 0.32);
+  }
+}
+
+@mixin moved-parent {
+  from {
+    background: rgba(var(--amber-rgb), 0.16);
+  }
+}
+
+@keyframes moved-row-a {
+  @include moved-row;
+}
+
+@keyframes moved-row-b {
+  @include moved-row;
+}
+
+@keyframes moved-parent-a {
+  @include moved-parent;
+}
+
+@keyframes moved-parent-b {
+  @include moved-parent;
 }
 
 // The indent is the row's alone: what opens under it — a confirmation — takes the rail's width.
+// Nothing is kept on a request's row for a caret it does not have, nor at rest for the menu:
+// `⋯` is drawn over the end of the row once the pointer or the keyboard is on it.
 .node-row {
   @include eases(background, border-color, color);
-  padding-left: calc(var(--depth, 0) * 12px);
+  position: relative;
+  padding-left: calc(var(--depth, 0) * var(--indent));
   display: flex;
   align-items: center;
-  gap: 2px;
+  --node-menu-opacity: 0;
+
+  // A line a level, so that depth is read at rest: at 8px a level, a row above a folder and a
+  // row inside it are one character apart. Drawn in the indent itself, mid-level.
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: calc(var(--depth, 0) * var(--indent));
+    background: repeating-linear-gradient(
+      to right,
+      transparent 0 calc(var(--indent) / 2),
+      var(--line) calc(var(--indent) / 2) calc(var(--indent) / 2 + 1px),
+      transparent calc(var(--indent) / 2 + 1px) var(--indent)
+    );
+    pointer-events: none;
+  }
+
+  &:hover,
+  &:focus-within {
+    --node-menu-opacity: 1;
+  }
 }
 
-.node-twisty,
-.node-twisty-space {
+.node-twisty {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -187,9 +292,9 @@
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   // 5px, 4px compact: a row stays above the 24px target either way.
-  padding: calc(var(--space-grid) / 4 + 2px) 8px;
+  padding: calc(var(--space-grid) / 4 + 2px) 5px;
   border-radius: 6px;
   font-size: 12.5px;
   color: var(--text-1);
@@ -226,7 +331,6 @@
 // The method in its colour, as the mockup draws it: a word, not a badge with a fill.
 .method {
   flex-shrink: 0;
-  min-width: 30px;
   font-family: var(--font-mono), monospace;
   font-size: 10px;
   font-weight: 700;
@@ -250,6 +354,49 @@
 .confirm-count {
   display: block;
   color: var(--text-2);
+}
+
+// A note, not an alarm: a paragraph in red was a wall of it at the rail's floor. A few
+// words, then the tabs by name with the dot a modified tab wears — red stays the button's.
+.confirm-unsaved {
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(var(--amber-rgb), 0.08);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+.confirm-unsaved-caption {
+  margin: 0;
+  color: var(--text-1);
+}
+
+.confirm-unsaved-names {
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.confirm-unsaved-name {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+  color: var(--text-0);
+}
+
+.confirm-unsaved-dot {
+  flex-shrink: 0;
+  font-size: 9px;
+  color: var(--amber-text);
+}
+
+.confirm-unsaved-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .confirm-actions {

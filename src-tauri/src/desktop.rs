@@ -1,8 +1,9 @@
-//! Its three commands are synchronous on purpose: the tray and the global shortcuts want
-//! the main thread.
+//! Its commands are synchronous on purpose: the tray and the global shortcuts want the main
+//! thread.
 
 use std::str::FromStr;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -21,6 +22,8 @@ closed_enum! {
         Capture = "capture",
         NewNote = "new-note",
         Palette = "palette",
+        /// Not something to do but something to answer: a quit asked from outside the page.
+        Quit = "quit",
     }
 }
 
@@ -41,6 +44,100 @@ pub(crate) fn reveal(app: &AppHandle) {
 fn reveal_and_emit(app: &AppHandle, action: GlobalAction) {
     reveal(app);
     let _ = app.emit(ACTION_EVENT, action);
+}
+
+/// How long a quit asked from outside the page waits for the page to take it. Long enough
+/// for a front end that is busy rendering, short enough that a dead one cannot keep the
+/// application from being quit at all.
+const QUIT_PATIENCE: Duration = Duration::from_secs(3);
+
+/// The questions put to the page, and the last one it took. Numbered: the timer of a question
+/// must not quit for a newer one, which has a timer of its own.
+#[derive(Debug, Default)]
+pub(crate) struct PendingQuit {
+    asked: u64,
+    heard: u64,
+}
+
+impl PendingQuit {
+    fn ask(&mut self) -> u64 {
+        self.asked += 1;
+        self.asked
+    }
+
+    /// The page holds the quit now: it asks its reader, and ends the process itself or not.
+    fn hear(&mut self) {
+        self.heard = self.asked;
+    }
+
+    fn unanswered(&self, question: u64) -> bool {
+        self.asked == question && self.heard < question
+    }
+}
+
+type QuitState = Arc<Mutex<PendingQuit>>;
+
+/// Asks, then gives up after `patience` if nobody took the question: `quit` runs on a
+/// thread of its own, and only then.
+fn quit_unless_heard(
+    state: &QuitState,
+    patience: Duration,
+    ask: impl FnOnce(),
+    quit: impl FnOnce() + Send + 'static,
+) {
+    let Ok(question) = state.lock().map(|mut pending| pending.ask()) else {
+        quit();
+        return;
+    };
+    ask();
+
+    let state = Arc::clone(state);
+    std::thread::spawn(move || {
+        std::thread::sleep(patience);
+        // A poisoned lock is a page that cannot answer either.
+        if state
+            .lock()
+            .map_or(true, |pending| pending.unanswered(question))
+        {
+            quit();
+        }
+    });
+}
+
+/// The tray's « Quitter » and the window's close button, when it does not hide: both ended the
+/// process on the spot, and a request typed and never saved went with it without a word. The
+/// page is asked instead — it alone knows what is unsaved — and quits itself, at once when
+/// nothing would be lost. ⚠️ The wait is bounded: a page that never answers must not make the
+/// application impossible to quit.
+pub(crate) fn request_quit(app: &AppHandle) {
+    let Some(state) = app.try_state::<QuitState>() else {
+        app.exit(0);
+        return;
+    };
+    let asked = app.clone();
+    let quitting = app.clone();
+    quit_unless_heard(
+        &state,
+        QUIT_PATIENCE,
+        move || {
+            let _ = asked.emit(ACTION_EVENT, GlobalAction::Quit);
+        },
+        move || quitting.exit(0),
+    );
+}
+
+/// The page's answer to `GlobalAction::Quit` when it has something to ask first: the timer
+/// stands down, and the window comes up — it may be hidden in the tray, where no dialog shows.
+#[tauri::command]
+#[specta::specta]
+#[allow(clippy::needless_pass_by_value)]
+pub fn hold_quit(app: AppHandle) {
+    if let Some(state) = app.try_state::<QuitState>()
+        && let Ok(mut pending) = state.lock()
+    {
+        pending.hear();
+    }
+    reveal(&app);
 }
 
 /// Three fields rather than a map, so a missing shortcut is a compile error.
@@ -81,6 +178,7 @@ type ActiveShortcuts = Mutex<Vec<(Shortcut, GlobalAction)>>;
 pub(crate) fn init(app: &AppHandle) -> tauri::Result<()> {
     app.manage(ActiveShortcuts::default());
     app.manage(WindowBehaviorState::default());
+    app.manage(QuitState::default());
 
     app.plugin(
         tauri_plugin_global_shortcut::Builder::new()
@@ -287,8 +385,8 @@ fn build_tray(app: &AppHandle, menu: &Menu<Wry>) -> tauri::Result<()> {
             NEW_NOTE_ITEM => reveal_and_emit(app, GlobalAction::NewNote),
             CAPTURE_ITEM => reveal_and_emit(app, GlobalAction::Capture),
             PALETTE_ITEM => reveal_and_emit(app, GlobalAction::Palette),
-            // The only path that terminates the process: the close button only hides.
-            QUIT_ITEM => app.exit(0),
+            // Asked of the page, which ends the process: the close button only hides.
+            QUIT_ITEM => request_quit(app),
             _ => {}
         })
         .on_tray_icon_event(|tray, event| {
@@ -304,4 +402,72 @@ fn build_tray(app: &AppHandle, menu: &Menu<Wry>) -> tauri::Result<()> {
         .build(app)?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::mpsc;
+
+    use super::*;
+
+    /// A page that never answers — hung, or not loaded yet — must not make the application
+    /// impossible to quit.
+    #[test]
+    fn a_quit_nobody_takes_ends_the_process_once_its_patience_is_spent() {
+        let state = QuitState::default();
+        let (said, done) = mpsc::channel();
+        let mut asked = false;
+
+        quit_unless_heard(
+            &state,
+            Duration::from_millis(20),
+            || asked = true,
+            move || {
+                let _ = said.send(());
+            },
+        );
+
+        assert!(asked);
+        assert_eq!(done.recv_timeout(Duration::from_secs(10)), Ok(()));
+    }
+
+    /// The page took the question — it has something to ask its reader first: ending the
+    /// process is its to do from then on, however long the answer takes.
+    #[test]
+    fn a_quit_the_page_holds_is_never_ended_by_the_timer() {
+        let state = QuitState::default();
+        let (said, done) = mpsc::channel::<()>();
+
+        quit_unless_heard(
+            &state,
+            Duration::from_millis(20),
+            || state.lock().unwrap().hear(),
+            move || {
+                let _ = said.send(());
+            },
+        );
+
+        // Never sent: the timer found the question taken and dropped its end of the channel.
+        assert_eq!(
+            done.recv_timeout(Duration::from_secs(10)),
+            Err(mpsc::RecvTimeoutError::Disconnected)
+        );
+    }
+
+    /// Held, cancelled by the reader, then asked again: the first question's timer has no say
+    /// over the second.
+    #[test]
+    fn the_timer_of_a_question_does_not_quit_for_the_next_one() {
+        let mut pending = PendingQuit::default();
+        let first = pending.ask();
+        assert!(pending.unanswered(first));
+        pending.hear();
+        assert!(!pending.unanswered(first));
+
+        let second = pending.ask();
+        assert!(!pending.unanswered(first));
+        assert!(pending.unanswered(second));
+        pending.hear();
+        assert!(!pending.unanswered(second));
+    }
 }

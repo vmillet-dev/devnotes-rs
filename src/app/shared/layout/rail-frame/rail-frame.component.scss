@@ -1,0 +1,28 @@
+// The width is bound on the host; what it frames scrolls inside it and the edge sits against it.
+:host {
+  position: relative;
+  display: flex;
+  flex: 0 0 auto;
+  min-height: 0;
+  background: var(--rail-frame-bg, var(--bg-1));
+}
+
+// A hit area wider than the line it draws: a 1px target is not one.
+.rail-edge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 7px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.rail-edge:hover,
+.rail-edge:focus-visible {
+  background: var(--amber-dim);
+}
+
+.rail-edge:focus-visible {
+  outline: none;
+}

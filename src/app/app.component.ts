@@ -3,6 +3,7 @@ import { ErrorBannerComponent } from '@banners/error-banner/error-banner.compone
 import { NotesPageComponent } from '@notes/notes-page.component';
 import { ToolsPageComponent } from '@tools/tools-page.component';
 import { HttpPageComponent } from '@http/http-page.component';
+import { LeaveRequestsDialogComponent } from '@http/leave-requests/leave-requests-dialog.component';
 import { StatusToastComponent } from '@banners/status-toast/status-toast.component';
 import { TitlebarComponent } from '@titlebar/titlebar.component';
 import { UpdatePromptComponent } from '@banners/update-prompt/update-prompt.component';
@@ -21,6 +22,7 @@ import { AreaKeysDirective } from './area-keys.directive';
     NotesPageComponent,
     ToolsPageComponent,
     HttpPageComponent,
+    LeaveRequestsDialogComponent,
     UpdatePromptComponent,
     VaultGateComponent,
     PassphrasePromptComponent,

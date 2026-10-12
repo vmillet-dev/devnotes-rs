@@ -1,0 +1,51 @@
+11;1100-###;Lisboa;Lisboa;21
+13;4000-###;Porto;Porto;22
+13;4400-###;Vila Nova de Gaia;Porto;22
+11;2700-###;Amadora;Lisboa;21
+03;4700-###;Braga;Braga;253
+06;3000-###;Coimbra;Coimbra;239
+31;9000-###;Funchal;Madeira;291
+15;2900-###;Setúbal;Setúbal;265
+15;2800-###;Almada;Setúbal;21
+01;3800-###;Aveiro;Aveiro;234
+08;8000-###;Faro;Faro;289
+07;7000-###;Évora;Évora;266
+18;3500-###;Viseu;Viseu;232
+10;2400-###;Leiria;Leiria;244
+03;4800-###;Guimarães;Braga;253
+16;4900-###;Viana do Castelo;Viana do Castelo;258
+14;2000-###;Santarém;Santarém;243
+05;6000-###;Castelo Branco;Castelo Branco;272
+17;5000-###;Vila Real;Vila Real;259
+04;5300-###;Bragança;Bragança;273
+09;6300-###;Guarda;Guarda;271
+02;7800-###;Beja;Beja;284
+12;7300-###;Portalegre;Portalegre;245
+42;9500-###;Ponta Delgada;Açores;296
+11;2710-###;Sintra;Lisboa;21
+11;2750-###;Cascais;Lisboa;21
+---
+Rua da Liberdade
+Rua do Comércio
+Rua Direita
+Rua da Igreja
+Avenida da República
+Rua 25 de Abril
+Rua 5 de Outubro
+Rua de Santo António
+Rua do Carmo
+Rua Nova
+Rua da Escola
+Rua das Flores
+Rua de São João
+Rua do Sol
+Rua da Fonte
+Travessa da Igreja
+Rua Dom Afonso Henriques
+Rua Luís de Camões
+Avenida da Liberdade
+Rua do Castelo
+Rua da Paz
+Rua Vasco da Gama
+Rua Fernando Pessoa
+Rua do Moinho

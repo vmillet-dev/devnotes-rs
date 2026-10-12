@@ -1,3 +1,5 @@
+@use 'mixins' as *;
+
 :host {
   display: flex;
   flex-direction: column;
@@ -26,4 +28,56 @@
 
 .failure {
   color: var(--red);
+}
+
+// A failure or a cancelled send, and the way to put it away: outside the sentence, which
+// is an alert and would read the button with it.
+.settled {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: auto;
+
+  .placeholder,
+  .failure {
+    margin: 0;
+  }
+}
+
+.clear {
+  @include unstyled-control;
+  @include surface($radius: 6px);
+  @include focus-ring(1px);
+  padding: 5px 12px;
+  font-size: 12px;
+  color: var(--text-1);
+  cursor: pointer;
+
+  &:hover {
+    @include accent-state;
+  }
+}
+
+.cause {
+  display: block;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.sending {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-1);
+}
+
+// Digits of one width: the sentence does not shake as the tenths go by.
+.elapsed {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
 }

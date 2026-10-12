@@ -1,7 +1,12 @@
 import { Injectable, Signal, computed, effect, inject, signal } from '@angular/core';
 import { AREAS } from '@core/services/areas/area.model';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
-import { MAX_RECENT_TOOLS, RecentTool, isRecentTool } from '@core/services/tools/tool.model';
+import {
+  KEPT_RECENT_TOOLS,
+  MAX_FAVOURITE_TOOLS,
+  RecentTool,
+  isRecentTool,
+} from '@core/services/tools/tool.model';
 import {
   AppSettings,
   DEFAULT_SETTINGS,
@@ -12,6 +17,8 @@ import {
   LocaleChoice,
   MAX_TIME_ZONES,
   NOTE_KIND_CHOICES,
+  HISTORY_LIST_WIDTH,
+  HTTP_REQUEST_SHARE,
   RAIL_WIDTH,
   ResolvedTheme,
   SETTINGS_KEYS,
@@ -55,12 +62,40 @@ function asPixels(bounds: { readonly min: number; readonly max: number }): Setti
   };
 }
 
+/** A share of a height, to a tenth of a point; `0` is « automatic », and stays it. */
+const asShare: SettingCodec<number> = {
+  parse: (stored) => {
+    const value = Number.parseFloat(stored);
+    if (Number.isNaN(value)) return null;
+    if (value <= HTTP_REQUEST_SHARE.auto) return HTTP_REQUEST_SHARE.auto;
+    return Math.min(HTTP_REQUEST_SHARE.max, Math.max(HTTP_REQUEST_SHARE.min, Math.round(value * 10) / 10));
+  },
+  format: String,
+};
+
 /** Whatever the file garbled is dropped entry by entry, not the whole list. */
 const asRecentTools: SettingCodec<readonly RecentTool[]> = {
   parse: (stored) => {
     try {
       const value: unknown = JSON.parse(stored);
-      return Array.isArray(value) ? value.filter(isRecentTool).slice(0, MAX_RECENT_TOOLS) : null;
+      return Array.isArray(value) ? value.filter(isRecentTool).slice(0, KEPT_RECENT_TOOLS) : null;
+    } catch {
+      return null;
+    }
+  },
+  format: (value) => JSON.stringify(value),
+};
+
+/** Ids alone, each once: which of them the catalogue still has is for whoever lists them to say. */
+const asToolIds: SettingCodec<readonly string[]> = {
+  parse: (stored) => {
+    try {
+      const value: unknown = JSON.parse(stored);
+      if (!Array.isArray(value)) return null;
+      const ids = value.filter(
+        (id): id is string => typeof id === 'string' && /^[a-z][a-z0-9-]{0,63}$/.test(id),
+      );
+      return [...new Set(ids)].slice(0, MAX_FAVOURITE_TOOLS);
     } catch {
       return null;
     }
@@ -126,8 +161,11 @@ export class SettingsStore {
   readonly newNoteShortcut = this.setting('newNoteShortcut', asAccelerator);
   readonly showLibraryRail = this.setting('showLibraryRail', asBoolean);
   readonly libraryRailWidth = this.setting('libraryRailWidth', asPixels(RAIL_WIDTH));
+  readonly historyListWidth = this.setting('historyListWidth', asPixels(HISTORY_LIST_WIDTH));
+  readonly httpRequestShare = this.setting('httpRequestShare', asShare);
   readonly area = this.setting('area', asOneOf(AREAS));
   readonly recentTools = this.setting('recentTools', asRecentTools);
+  readonly favouriteTools = this.setting('favouriteTools', asToolIds);
   readonly showPinnedFirst = this.setting('showPinnedFirst', asBoolean);
   readonly automaticBackups = this.setting('automaticBackups', asBoolean);
   readonly copyConfirmation = this.setting('copyConfirmation', asBoolean);
@@ -197,6 +235,11 @@ export class SettingsStore {
     for (const restore of this.restorers) {
       restore();
     }
+  }
+
+  /** One state for the three areas: a rail hidden in the notes is hidden in the tools and HTTP. */
+  toggleLibraryRail(): void {
+    this.showLibraryRail.write(!this.showLibraryRail());
   }
 
   setLocale(locale: LocaleChoice): void {

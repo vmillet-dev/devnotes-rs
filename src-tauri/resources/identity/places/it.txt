@@ -1,0 +1,55 @@
+H501;00184;Roma;RM;06
+F205;20121;Milano;MI;02
+F839;80133;Napoli;NA;081
+L219;10121;Torino;TO;011
+G273;90133;Palermo;PA;091
+D969;16121;Genova;GE;010
+A944;40121;Bologna;BO;051
+D612;50122;Firenze;FI;055
+A662;70121;Bari;BA;080
+C351;95124;Catania;CT;095
+L736;30121;Venezia;VE;041
+L781;37121;Verona;VR;045
+F158;98122;Messina;ME;090
+G224;35121;Padova;PD;049
+L424;34121;Trieste;TS;040
+B157;25121;Brescia;BS;030
+G337;43121;Parma;PR;0521
+L049;74121;Taranto;TA;099
+G999;59100;Prato;PO;0574
+F257;41121;Modena;MO;059
+H224;89125;Reggio Calabria;RC;0965
+H223;42121;Reggio Emilia;RE;0522
+G478;06121;Perugia;PG;075
+E625;57123;Livorno;LI;0586
+B354;09124;Cagliari;CA;070
+H199;48121;Ravenna;RA;0544
+D643;71121;Foggia;FG;0881
+H294;47921;Rimini;RN;0541
+H703;84121;Salerno;SA;089
+D548;44121;Ferrara;FE;0532
+---
+Via Roma
+Via Garibaldi
+Via Mazzini
+Via Dante
+Via Cavour
+Via Verdi
+Corso Italia
+Via Marconi
+Via Matteotti
+Via Manzoni
+Via XX Settembre
+Via Kennedy
+Via della Repubblica
+Via San Francesco
+Viale Europa
+Via Leopardi
+Via Gramsci
+Via Vittorio Veneto
+Via Piave
+Via della Libertà
+Via Colombo
+Via Galilei
+Via Carducci
+Via IV Novembre

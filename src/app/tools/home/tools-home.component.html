@@ -1,8 +1,24 @@
 <header class="topbar">
+  <app-rail-toggle
+    testId="tools-rail-toggle"
+    [shown]="settings.showLibraryRail()"
+    (toggled)="settings.toggleLibraryRail()"
+  />
   <h1 class="title">{{ 'tools.title' | transloco }}</h1>
-  <span class="subtitle" data-testid="tools-count">{{
-    'tools.count' | transloco: { count: catalogue.length }
-  }}</span>
+  <!-- The rail is what says which category is showing: without it, the filter would be invisible. -->
+  @if (hiddenCategory(); as category) {
+    <span class="filtered" data-testid="tools-category-shown">
+      <span aria-hidden="true">›</span>
+      {{ filterLabel(category) | transloco }}
+    </span>
+    <button type="button" class="back" data-testid="tools-category-clear" (click)="store.home()">
+      {{ 'tools.all' | transloco }}
+    </button>
+  } @else {
+    <span class="subtitle" data-testid="tools-count">{{
+      'tools.count' | transloco: { count: catalogue.length }
+    }}</span>
+  }
   <span class="spacer"></span>
   <label class="search">
     <app-icon name="search" />
@@ -28,6 +44,27 @@
 </p>
 
 <div class="body">
+  @if (favourites().length > 0 && !searching()) {
+    <section class="recents" aria-labelledby="tools-favourites-title">
+      <h2 id="tools-favourites-title" class="section-title">{{ 'tools.favourites.title' | transloco }}</h2>
+      <div class="recent-row">
+        @for (tool of favourites(); track tool.id) {
+          <button
+            type="button"
+            class="recent"
+            data-testid="tools-favourite"
+            [attr.data-tool]="tool.id"
+            [attr.data-category]="tool.category"
+            (click)="store.open(tool.id)"
+          >
+            <span class="hue-dot" aria-hidden="true"></span>
+            {{ 'tools.' + tool.id + '.name' | transloco }}
+          </button>
+        }
+      </div>
+    </section>
+  }
+
   @if (recents().length > 0 && !searching()) {
     <section class="recents" aria-labelledby="tools-recents-title">
       <h2 id="tools-recents-title" class="section-title">{{ 'tools.recents' | transloco }}</h2>
@@ -64,24 +101,97 @@
           <span class="panel-count">{{ panel.tools.length }}</span>
         </h2>
         @for (tool of panel.tools; track tool.id) {
-          <button
-            type="button"
-            class="tool"
-            data-testid="tools-entry"
-            [attr.data-tool]="tool.id"
-            (click)="store.open(tool.id)"
-          >
-            <span class="tool-name">{{ 'tools.' + tool.id + '.name' | transloco }}</span>
-            <span class="tool-line">{{ 'tools.' + tool.id + '.description' | transloco }}</span>
-          </button>
+          @let first = tool.id === firstTool();
+          @let isStarred = starred().has(tool.id);
+          @let name = 'tools.' + tool.id + '.name' | transloco;
+          <!-- Two layers, as a note's card: a button cannot sit inside the row's own. -->
+          <div class="tool-row" [class.starred]="isStarred">
+            <button
+              type="button"
+              class="tool"
+              data-result
+              data-testid="tools-entry"
+              [attr.data-tool]="tool.id"
+              [attr.data-first]="first ? '' : null"
+              (click)="store.open(tool.id)"
+            >
+              <span class="tool-name"
+                >{{ name }}
+                @if (first) {
+                  <kbd class="enter" data-testid="tools-first-result" [title]="'tools.enterOpens' | transloco"
+                    >↵</kbd
+                  >
+                }
+              </span>
+              <span class="tool-line">{{ 'tools.' + tool.id + '.description' | transloco }}</span>
+            </button>
+            <button
+              type="button"
+              class="star"
+              data-testid="tools-entry-star"
+              [attr.data-tool]="tool.id"
+              [attr.aria-pressed]="isStarred"
+              [attr.aria-label]="'tools.favourites.of' | transloco: { name: name }"
+              [attr.title]="(isStarred ? 'tools.favourites.remove' : 'tools.favourites.add') | transloco"
+              (click)="store.toggleFavourite(tool.id)"
+            >
+              <app-icon name="star" [filled]="isStarred" />
+            </button>
+          </div>
         }
       </section>
     }
-
-    @if (searching() && panels().length === 0) {
-      <p class="no-match" data-testid="tools-no-match">
-        {{ 'tools.noMatch' | transloco: { query: store.search().trim() } }}
-      </p>
-    }
   </div>
+
+  <!-- Under the tools that match: what the search finds inside the references, a row an entry. -->
+  @if (references().length > 0) {
+    <section class="references" data-testid="tools-references" aria-labelledby="tools-references-title">
+      <h2 id="tools-references-title" class="section-title">{{ 'tools.references.title' | transloco }}</h2>
+      <div class="hits">
+        @for (found of references(); track found.tool.id) {
+          @let where = 'tools.' + found.tool.id + '.name' | transloco;
+          @for (hit of found.hits; track hit.key) {
+            @let first = firstHit()?.tool === found.tool && firstHit()?.hit === hit;
+            <button
+              type="button"
+              class="hit"
+              data-result
+              data-testid="tools-reference-hit"
+              [attr.data-tool]="found.tool.id"
+              [attr.data-key]="hit.key"
+              [attr.data-first]="first ? '' : null"
+              (click)="openHit(found.tool, hit)"
+            >
+              <span class="hit-title">{{ hit.title }}</span>
+              <span class="hit-line">{{ hit.line }}</span>
+              @if (first) {
+                <kbd class="enter" data-testid="tools-first-result" [title]="'tools.enterOpens' | transloco"
+                  >↵</kbd
+                >
+              }
+              <span class="hit-where">{{ where }}</span>
+            </button>
+          }
+          @if (found.more > 0) {
+            <button
+              type="button"
+              class="hit more"
+              data-result
+              data-testid="tools-reference-more"
+              [attr.data-tool]="found.tool.id"
+              (click)="openAll(found.tool)"
+            >
+              {{ 'tools.references.more' | transloco: { count: found.more, name: where } }}
+            </button>
+          }
+        }
+      </div>
+    </section>
+  }
+
+  @if (noMatch()) {
+    <p class="no-match" data-testid="tools-no-match">
+      {{ 'tools.noMatch' | transloco: { query: store.search().trim() } }}
+    </p>
+  }
 </div>

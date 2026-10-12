@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { HttpSocketsStore, SocketEntry } from '@core/services/http/http-sockets.store';
+import { HttpTabsStore } from '@core/services/http/http-tabs.store';
+import { SpinnerComponent } from '@shared/spinner/spinner.component';
 
 /** What a row reads as: its direction, and the words the filter looks in. */
 function textOf(entry: SocketEntry): string {
@@ -20,7 +22,7 @@ function textOf(entry: SocketEntry): string {
 /** The lower half of a WebSocket's tab: where the socket stands, and what went each way. */
 @Component({
   selector: 'app-socket-log',
-  imports: [TranslocoPipe],
+  imports: [SpinnerComponent, TranslocoPipe],
   templateUrl: './socket-log.component.html',
   styleUrl: './socket-log.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -29,6 +31,7 @@ export class SocketLogComponent {
   readonly tabKey = input.required<string>();
 
   protected readonly sockets = inject(HttpSocketsStore);
+  private readonly tabs = inject(HttpTabsStore);
   private readonly transloco = inject(TranslocoService);
 
   protected readonly filter = signal('');
@@ -51,6 +54,11 @@ export class SocketLogComponent {
       second: '2-digit',
       fractionalSecondDigits: 3,
     }).format(entry.at);
+  }
+
+  /** `https://` typed in a socket: its twin on `wss://`, written in its place — one click. */
+  protected useTwin(url: string): void {
+    void this.tabs.editUrl(this.tabKey(), url);
   }
 
   protected onFilter(event: Event): void {

@@ -1,7 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { HttpItem } from '@core/model/http.model';
-import { sampleTree } from '@testing/http-tree.fixture';
-import { dropMove, holdsRequest, keyMove, railRows, savePlaces } from './http-tree';
+import { HttpItem, HttpTree } from '@core/model/http.model';
+import {
+  collection as collectionNode,
+  folder as folderNode,
+  request as requestNode,
+  sampleTree,
+} from '@testing/http-tree.fixture';
+import {
+  ancestors,
+  dropMove,
+  findRequest,
+  keyMove,
+  landing,
+  railRows,
+  refusal,
+  requestsUnder,
+  savePlaces,
+} from './http-tree';
 
 const folder = (id: string): HttpItem => ({ kind: 'folder', id });
 const request = (id: string): HttpItem => ({ kind: 'request', id });
@@ -23,7 +38,7 @@ describe('the HTTP rail rows', () => {
       '      GET Old',
       '  POST Health',
       'Catalogue',
-      '  QUERY Produits',
+      '  GQL Produits',
       'Flux',
       '  WS Live',
     ]);
@@ -91,6 +106,82 @@ describe('a keyboard move', () => {
   });
 });
 
+/** Read from the tree as it is after the move: Rust renumbered it, and the front never guesses. */
+describe('where a keyboard move landed', () => {
+  it('names the folder a row went into, and the collection it came out to the root of', () => {
+    const inside: HttpTree = {
+      collections: [
+        collectionNode('API', [
+          folderNode('Factures', 'API', [
+            requestNode('Old', 'API', 'Factures'),
+            requestNode('Health', 'API', 'Factures'),
+          ]),
+        ]),
+      ],
+    };
+    expect(landing(inside, request('Health'), 'in')).toEqual({
+      parentId: 'Factures',
+      where: 'into',
+      other: 'Factures',
+    });
+    // Out of a folder that is itself in a folder: still inside something, and said so.
+    expect(landing(inside, request('Old'), 'out')).toEqual({
+      parentId: 'Factures',
+      where: 'into',
+      other: 'Factures',
+    });
+
+    const out: HttpTree = {
+      collections: [collectionNode('API', [folderNode('Factures', 'API'), requestNode('Old', 'API')])],
+    };
+    expect(landing(out, request('Old'), 'out')).toEqual({ parentId: 'API', where: 'root', other: 'API' });
+  });
+
+  it('names the row that was passed, going up or down', () => {
+    expect(landing(sampleTree(), request('Login'), 'up')).toEqual({
+      parentId: 'Auth',
+      where: 'before',
+      other: 'Logout',
+    });
+    expect(landing(sampleTree(), request('Logout'), 'down')).toEqual({
+      parentId: 'Auth',
+      where: 'after',
+      other: 'Login',
+    });
+    expect(landing(sampleTree(), folder('Factures'), 'down')).toEqual({
+      parentId: 'API',
+      where: 'after',
+      other: 'Auth',
+    });
+  });
+
+  it('reads a collection against its neighbour, held by nothing', () => {
+    expect(landing(sampleTree(), collection('API'), 'up')).toEqual({
+      parentId: null,
+      where: 'before',
+      other: 'Catalogue',
+    });
+    expect(landing(sampleTree(), collection('Flux'), 'down')).toEqual({
+      parentId: null,
+      where: 'after',
+      other: 'Catalogue',
+    });
+    expect(landing(sampleTree(), collection('Absente'), 'up')).toBeNull();
+    expect(landing({ collections: [collectionNode('Seule')] }, collection('Seule'), 'up')).toBeNull();
+  });
+
+  /** A key that does nothing looks unheard: the reason is what the rail says instead. */
+  it('says why a move was not made', () => {
+    expect(refusal(request('Login'), 'up')).toBe('first');
+    expect(refusal(request('Health'), 'down')).toBe('last');
+    expect(refusal(folder('Auth'), 'in')).toBe('noFolderAbove');
+    expect(refusal(request('Health'), 'out')).toBe('atRoot');
+    expect(refusal(collection('API'), 'up')).toBe('first');
+    expect(refusal(collection('API'), 'in')).toBe('collection');
+    expect(refusal(collection('API'), 'out')).toBe('collection');
+  });
+});
+
 describe('a drop', () => {
   it('puts an item before or after a row, under that row’s parent', () => {
     expect(dropMove(sampleTree(), request('Health'), request('Login'), 'after')).toEqual({
@@ -136,11 +227,49 @@ describe('a drop', () => {
   });
 });
 
-describe('holdsRequest', () => {
-  it('says whether a request is still in the tree', () => {
-    expect(holdsRequest(sampleTree(), 'Old')).toBe(true);
-    expect(holdsRequest(sampleTree(), 'Auth')).toBe(false);
-    expect(holdsRequest(sampleTree(), 'Gone')).toBe(false);
+describe('what a deletion takes', () => {
+  const taken = (item: HttpItem) => [...requestsUnder(sampleTree(), item)].sort();
+
+  it('is the request itself, all a folder holds at any depth, or all a collection holds', () => {
+    expect(taken(request('Login'))).toEqual(['Login']);
+    expect(taken(folder('Auth'))).toEqual(['Login', 'Logout']);
+    // Old sits in Archives, a folder of Factures.
+    expect(taken(folder('Factures'))).toEqual(['Old']);
+    expect(taken(folder('Archives'))).toEqual(['Old']);
+    expect(taken(collection('API'))).toEqual(['Health', 'Login', 'Logout', 'Old']);
+    expect(taken(collection('Flux'))).toEqual(['Live']);
+  });
+
+  it('is nothing for what the tree does not hold', () => {
+    expect(taken(request('Absente'))).toEqual([]);
+    expect(taken(folder('Absent'))).toEqual([]);
+    expect(taken(collection('Absente'))).toEqual([]);
+  });
+});
+
+describe('what a request sits under', () => {
+  it('is its collection, then its folders, outermost first', () => {
+    expect(ancestors(sampleTree(), 'Old')).toEqual(['API', 'Factures', 'Archives']);
+    expect(ancestors(sampleTree(), 'Login')).toEqual(['API', 'Auth']);
+    expect(ancestors(sampleTree(), 'Health')).toEqual(['API']);
+    expect(ancestors(sampleTree(), 'Live')).toEqual(['Flux']);
+    expect(ancestors(sampleTree(), 'Absente')).toEqual([]);
+  });
+});
+
+describe('findRequest', () => {
+  it('answers a request with its name and where it sits, at any depth', () => {
+    expect(findRequest(sampleTree(), 'Old')).toMatchObject({
+      name: 'Old',
+      collectionId: 'API',
+      folderId: 'Archives',
+    });
+    expect(findRequest(sampleTree(), 'Live')).toMatchObject({ collectionId: 'Flux', folderId: null });
+  });
+
+  it('answers nothing for a folder, or for a request that is gone', () => {
+    expect(findRequest(sampleTree(), 'Auth')).toBeNull();
+    expect(findRequest(sampleTree(), 'Gone')).toBeNull();
   });
 });
 

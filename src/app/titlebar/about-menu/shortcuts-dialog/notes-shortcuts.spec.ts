@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CANVAS_SHORTCUT_GROUP } from '@notes/canvas-keys';
 import fr from '@core/services/i18n/translations/fr.json';
 import en from '@core/services/i18n/translations/en.json';
+import { HTTP_SHORTCUT_GROUP } from './http-shortcuts';
 import { NOTES_SHORTCUT_GROUPS } from './notes-shortcuts';
 
 function translation(file: Record<string, unknown>, key: string): unknown {
@@ -11,7 +12,7 @@ function translation(file: Record<string, unknown>, key: string): unknown {
 }
 
 describe('NOTES_SHORTCUT_GROUPS', () => {
-  const groups = NOTES_SHORTCUT_GROUPS;
+  const groups = [...NOTES_SHORTCUT_GROUPS, HTTP_SHORTCUT_GROUP];
   const shortcuts = groups.flatMap((group) => group.shortcuts);
 
   /**
@@ -21,7 +22,12 @@ describe('NOTES_SHORTCUT_GROUPS', () => {
    */
   it('takes its canvas group from the table that binds the keys', () => {
     expect(groups[0]).toBe(CANVAS_SHORTCUT_GROUP);
-    expect(groups.map((group) => group.id)).toEqual(['notes.canvas', 'notes.editor', 'notes.palette']);
+    expect(groups.map((group) => group.id)).toEqual([
+      'notes.canvas',
+      'notes.editor',
+      'notes.palette',
+      'http',
+    ]);
   });
 
   it('gives every group and every shortcut something to say', () => {

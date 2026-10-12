@@ -74,6 +74,33 @@
   color: $color;
 }
 
+// A sentence under fields. Its measure is its own: held to the fields' width, it broke one
+// word before its end with an empty panel beside it. Balanced when it does have to wrap.
+@mixin reading-measure {
+  max-width: 110ch;
+  text-wrap: balance;
+}
+
+// What `app-rail-frame` holds, in each of the three areas: the same box, so that going from
+// one to another moves nothing. Its line is here and not on the frame: the rail is measured
+// by this element, and has to be as wide as the frame is told.
+@mixin rail-body($gap: 6px) {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $gap;
+  padding: var(--space-card) 10px var(--space-canvas);
+  border-right: 1px solid var(--line-soft);
+  overflow-y: auto;
+}
+
+// The switch between areas at the head of a rail: at the same place in the three.
+@mixin rail-switch {
+  flex-shrink: 0;
+  margin-bottom: 10px;
+}
+
 // Where the keyboard is. The declaration was written out in fifteen stylesheets and
 // missing from four controls, the tag rail among them — the keyboard walked it invisibly.
 //
@@ -253,6 +280,15 @@
   @if $border-alpha {
     border: 1px solid rgba(var(#{$rgb-var}), $border-alpha);
   }
+}
+
+// A status that must read at a glance — an answer's « 200 OK », « 404 Not Found »: twice the
+// fill of `tint-badge`, a ring in the hue, the text at full strength. ⚠️ `STATUS_TINT` in
+// `scripts/palette.test.mjs` is this alpha: raise one, raise the other.
+@mixin status-badge($rgb-var) {
+  background: rgba(var(#{$rgb-var}), 0.3);
+  border: 1px solid rgba(var(#{$rgb-var}), 0.55);
+  color: var(--text-0);
 }
 
 // The opposite trade, for a badge whose **hue is the information** rather than a state: the
@@ -660,7 +696,7 @@
 }
 
 // A request's method in its colour, as the HTTP rail and the open request write it: a word, not a
-// filled badge. `QUERY` is GraphQL's, `WS` a WebSocket's.
+// filled badge. `GQL` is GraphQL's, `WS` a WebSocket's.
 @mixin http-method-hues {
   color: var(--text-2);
 
@@ -684,7 +720,7 @@
     color: var(--red);
   }
 
-  &[data-method='QUERY'] {
+  &[data-method='GQL'] {
     color: var(--pink);
   }
 

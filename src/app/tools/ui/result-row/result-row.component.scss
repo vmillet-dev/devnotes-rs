@@ -16,6 +16,40 @@
   background: rgba(var(--green-rgb), 0.08);
 }
 
+// A long value beside its name ran down a strip a third of the card wide, its copy icon
+// floating at mid-height: it takes the card's width under its name instead, held to a few
+// lines it scrolls in — the rows after it stay in reach — with its icon at its top.
+:host(.long) .row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'label copy'
+    'value value';
+  align-items: start;
+  row-gap: 6px;
+  padding-block: 8px 10px;
+}
+
+:host(.long) .label {
+  grid-area: label;
+  align-self: center;
+}
+
+:host(.long) app-copy-value {
+  grid-area: copy;
+}
+
+:host(.long) .value {
+  grid-area: value;
+  max-height: calc(8 * 1.55em);
+  overflow-y: auto;
+  border-radius: 4px;
+
+  &:focus-visible {
+    outline: 2px solid var(--amber-edge);
+    outline-offset: 2px;
+  }
+}
+
 .label {
   display: flex;
   flex-direction: column;

@@ -1,9 +1,12 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ResourceRef,
+  Signal,
   computed,
   inject,
   input,
+  linkedSignal,
   output,
   resource,
   signal,
@@ -11,10 +14,13 @@ import {
 import { TranslocoPipe } from '@jsverse/transloco';
 import { HttpRepository } from '@core/data/http.repository';
 import {
+  BodyAnswer,
+  BodyKind,
   DEFAULT_TRANSPORT,
   GraphqlParts,
   HTTP_METHODS,
   HttpMethod,
+  ImpliedHeader,
   KeyValueRow,
   RequestAuth,
   RequestBodyDraft,
@@ -25,7 +31,9 @@ import { HttpCollectionsStore } from '@core/services/http/http-collections.store
 import { HttpSendStore } from '@core/services/http/http-send.store';
 import { HttpSocketsStore } from '@core/services/http/http-sockets.store';
 import { HttpTabsStore, RequestTab } from '@core/services/http/http-tabs.store';
+import { TranslationRef } from '@core/services/i18n/translation-ref.model';
 import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
+import { SpinnerComponent } from '@shared/spinner/spinner.component';
 import { HTTP_HEADERS } from '@tools/catalogue/http-headers/http-headers.data';
 import { AuthEditorComponent } from '@http/ui/auth-editor/auth-editor.component';
 import { BodyEditorComponent } from '../body-editor/body-editor.component';
@@ -37,16 +45,15 @@ import { UrlFieldComponent } from '../url-field/url-field.component';
 
 type Section = 'params' | 'headers' | 'auth' | 'body' | 'query' | 'message' | 'protocols' | 'settings';
 
-/** The choices that turn a request into a GraphQL one or a socket, beside the methods. */
-const GRAPHQL = 'GRAPHQL';
-const WEBSOCKET = 'WEBSOCKET';
-
 /** A header a request may send: the reference's own list, those a server alone writes left out. */
 const REQUEST_HEADERS = HTTP_HEADERS.filter((header) => header.direction !== 'response').map(
   (header) => header.name,
 );
 
 const counted = (rows: readonly KeyValueRow[]) => rows.filter((row) => row.enabled && row.key !== '').length;
+
+const sameFields = <T extends object>(a: T, b: T) =>
+  (Object.keys(a) as (keyof T)[]).every((field) => a[field] === b[field]);
 
 /** The open request: its method, its URL, and its parts a tab each. */
 @Component({
@@ -57,6 +64,7 @@ const counted = (rows: readonly KeyValueRow[]) => rows.filter((row) => row.enabl
     ChoiceMenuComponent,
     GraphqlEditorComponent,
     KeyValueTableComponent,
+    SpinnerComponent,
     TranslocoPipe,
     TransportEditorComponent,
     UrlFieldComponent,
@@ -92,15 +100,11 @@ export class RequestEditorComponent {
   );
   protected readonly headerNames = REQUEST_HEADERS;
 
-  protected readonly methods: readonly ChoiceOption[] = [
-    ...HTTP_METHODS.map((method) => ({ id: method, name: method })),
-    { id: GRAPHQL, name: 'GraphQL' },
-    { id: WEBSOCKET, name: 'WebSocket' },
-  ];
-  protected readonly methodId = computed(() => {
-    const draft = this.tab().draft;
-    return { http: draft.method, graphql: GRAPHQL, websocket: WEBSOCKET }[draft.kind];
-  });
+  /** Methods only: what a request is — HTTP, GraphQL, a socket — is chosen when it is created. */
+  protected readonly methods: readonly ChoiceOption[] = HTTP_METHODS.map((method) => ({
+    id: method,
+    name: method,
+  }));
 
   /** What the folders and the collection above hand down; nothing yet for a draft not placed. */
   private readonly inheritedResource = resource({
@@ -115,28 +119,42 @@ export class RequestEditorComponent {
   );
   protected readonly transportAbove = computed(() => this.inherited()?.transport ?? DEFAULT_TRANSPORT);
 
-  private readonly bodyResource = resource({
-    params: () => this.tab().draft.parts.body,
-    loader: ({ params }) => this.repository.describeBody(params),
-  });
-  protected readonly bodyAnswer = computed(() =>
-    this.bodyResource.hasValue() ? this.bodyResource.value() : null,
+  /** Asked with its method: a body is unusual on a `GET`, and that is Rust's to say. */
+  private readonly bodyQuestion = computed(
+    () => ({ body: this.tab().draft.parts.body, method: this.tab().draft.method }),
+    { equal: sameFields },
   );
-
-  /** The `Content-Type` the body implies, sent unless a header sets one by hand. */
-  protected readonly impliedType = computed(() => {
-    const draft = this.tab().draft;
-    const type =
-      draft.kind === 'graphql'
-        ? draft.parts.graphql.asGet
-          ? null
-          : 'application/json'
-        : (this.bodyAnswer()?.contentType ?? null);
-    const typed = this.tab().draft.parts.headers.some(
-      (row) => row.enabled && row.key.toLowerCase() === 'content-type',
-    );
-    return typed ? null : type;
+  private readonly bodyResource = resource({
+    params: () => this.bodyQuestion(),
+    loader: ({ params }) => this.repository.describeBody(params.body, params.method),
   });
+  protected readonly bodyAnswer = this.lastOf<BodyAnswer | null>(this.bodyResource, null);
+
+  /** What the headers sent unasked depend on: not the body's text, nor the description. */
+  private readonly impliedQuestion = computed(
+    () => {
+      const { draft, place } = this.tab();
+      const { url, headers, auth, body, graphql } = draft.parts;
+      return {
+        kind: draft.kind,
+        url,
+        headers,
+        auth,
+        body: body.kind,
+        asGet: graphql.asGet,
+        collectionId: place?.collectionId ?? null,
+        folderId: place?.folderId ?? null,
+        revision: this.collections.settingsRevision(),
+      };
+    },
+    { equal: sameFields },
+  );
+  /** Rust composes the request, so Rust says what leaves with it: nothing is decided here. */
+  private readonly impliedResource = resource({
+    params: () => this.impliedQuestion(),
+    loader: () => this.repository.impliedHeaders(this.tab().draft, this.tab().place),
+  });
+  protected readonly implied = this.lastOf<readonly ImpliedHeader[]>(this.impliedResource, []);
   protected readonly dirty = computed(() => this.tabs.isDirty(this.tab()));
   protected readonly inFlight = computed(
     () => this.sending.states().get(this.tab().key)?.phase === 'sending',
@@ -160,14 +178,15 @@ export class RequestEditorComponent {
     ).length,
   }));
 
+  /** « par défaut », « d'après le corps », or the folder or collection that hands it down. */
+  protected origin(header: ImpliedHeader): TranslationRef {
+    return header.from === null
+      ? { key: `http.headers.from.${header.source}` }
+      : { key: `http.auth.from.${header.from.kind}`, params: { name: header.from.name } };
+  }
+
   protected onMethod(method: string | null): void {
-    if (method === GRAPHQL) {
-      this.tabs.edit(this.tab().key, { kind: 'graphql' });
-    } else if (method === WEBSOCKET) {
-      this.tabs.edit(this.tab().key, { kind: 'websocket' });
-    } else if (method !== null) {
-      this.tabs.edit(this.tab().key, { kind: 'http', method: method as HttpMethod });
-    }
+    if (method !== null) this.tabs.edit(this.tab().key, { method: method as HttpMethod });
   }
 
   protected choose(section: Section): void {
@@ -206,6 +225,10 @@ export class RequestEditorComponent {
     this.tabs.editParts(this.tab().key, { body });
   }
 
+  protected onBodyKind(kind: BodyKind): void {
+    this.tabs.chooseBodyKind(this.tab().key, kind);
+  }
+
   protected send(): void {
     if (this.tab().draft.kind === 'websocket') {
       if (this.socketLive()) void this.sockets.close(this.tab().key);
@@ -236,5 +259,18 @@ export class RequestEditorComponent {
   protected save(): void {
     if (this.tab().requestId === null) this.saveAsked.emit();
     else void this.tabs.save(this.tab().key);
+  }
+
+  /**
+   * What Rust last answered for this tab, kept while the next answer is read: emptied between
+   * two, what it draws — a list above a table, a line above the body, a mark on a tab — would
+   * blink and push what is under it at each key. Another tab starts from `none`.
+   */
+  private lastOf<T>(answers: ResourceRef<T | undefined>, none: T): Signal<T> {
+    return linkedSignal<{ key: string; fresh: T | undefined }, T>({
+      source: () => ({ key: this.tab().key, fresh: answers.hasValue() ? answers.value() : undefined }),
+      computation: ({ key, fresh }, previous) =>
+        fresh ?? (previous?.source.key === key ? previous.value : none),
+    });
   }
 }

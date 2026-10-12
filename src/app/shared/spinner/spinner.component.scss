@@ -1,0 +1,11 @@
+:host {
+  display: inline-block;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: var(--spinner-size, 14px);
+  height: var(--spinner-size, 14px);
+  border: 2px solid currentcolor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: turn var(--motion-turn) linear infinite;
+}

@@ -69,8 +69,11 @@ describe('TitlebarComponent', () => {
     expect(menus().querySelector('app-file-menu')).not.toBeNull();
   });
 
-  /** The notes' rail heads with the switch between areas; hidden, the switch comes here. */
-  it('carries the switch between areas while the notes hide their rail', async () => {
+  /**
+   * Each area's rail heads with the switch between areas; hidden, the switch comes here — in
+   * the tools too, which used to bring their rail back whatever had been chosen.
+   */
+  it('carries the switch between areas while the rail is hidden, in each of them', async () => {
     const settings = TestBed.inject(SettingsStore);
     const areas = TestBed.inject(AreaStore);
     await unlock();
@@ -78,10 +81,17 @@ describe('TitlebarComponent', () => {
 
     settings.showLibraryRail.write(false);
     await fixture.whenStable();
-    menus().querySelector<HTMLButtonElement>('[data-area="tools"]')!.click();
-    await fixture.whenStable();
 
-    expect(areas.current()).toBe('tools');
+    for (const area of ['tools', 'http', 'notes'] as const) {
+      menus().querySelector<HTMLButtonElement>(`[data-area="${area}"]`)!.click();
+      await fixture.whenStable();
+
+      expect(areas.current()).toBe(area);
+      expect(menus().querySelector('app-area-switch')).not.toBeNull();
+    }
+
+    settings.showLibraryRail.write(true);
+    await fixture.whenStable();
     expect(menus().querySelector('app-area-switch')).toBeNull();
   });
 

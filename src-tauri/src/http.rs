@@ -25,7 +25,7 @@ use crate::error::{AppError, FileContext};
 use crate::tools::off_thread;
 use model::{
     HttpCollection, HttpContents, HttpFolder, HttpItem, HttpPlace, HttpRequest, HttpRequestDraft,
-    HttpRequestPatch, HttpTree,
+    HttpRequestPatch, HttpTree, NewPlace,
 };
 
 #[tauri::command]
@@ -99,6 +99,42 @@ pub async fn create_http_request<R: Runtime>(
             &mut connection,
             &draft,
             &name,
+            Utc::now(),
+        )?)
+    })
+    .await
+}
+
+/// The first save of a request where nothing holds it yet: what `create` names is created
+/// with it, or nothing is. Every name is checked before anything is written.
+#[tauri::command]
+#[specta::specta]
+pub async fn create_http_request_in<R: Runtime>(
+    draft: HttpRequestDraft,
+    create: NewPlace,
+    app: AppHandle<R>,
+) -> Result<HttpRequest, AppError> {
+    blocking(app, move |_, db| {
+        let name = model::validated_name(&draft.name)?;
+        let collection = create
+            .collection
+            .as_deref()
+            .map(model::validated_name)
+            .transpose()?;
+        let folder = create
+            .folder
+            .as_deref()
+            .map(model::validated_name)
+            .transpose()?;
+
+        let mut connection = lock(db)?;
+
+        Ok(store::create_request_in(
+            &mut connection,
+            &draft,
+            &name,
+            collection.as_deref(),
+            folder.as_deref(),
             Utc::now(),
         )?)
     })
@@ -246,6 +282,20 @@ pub async fn save_http_settings<R: Runtime>(
     settings: model::ContainerSettings,
     app: AppHandle<R>,
 ) -> Result<(), AppError> {
+    // Refused where it is typed: stored, it failed every request under it, one by one.
+    if let Some((row, fault)) = settings
+        .headers
+        .iter()
+        .zip(model::header_faults(&settings.headers))
+        .find_map(|(row, fault)| Some((row, fault?)))
+    {
+        return Err(send::SendError::Header {
+            name: row.key.trim().to_string(),
+            fault,
+            set_by: transport::SetBy::Request,
+        }
+        .into());
+    }
     blocking(app, move |_, db| {
         let mut connection = lock(db)?;
 
@@ -274,11 +324,16 @@ pub async fn inherited_http_settings<R: Runtime>(
     .await
 }
 
-/// What a body implies, and whether a JSON one reads: the editor says both as it is typed.
+/// What a body implies, whether a JSON one reads, and whether its method seldom carries one:
+/// the editor says the three as it is typed, and decides none of them.
 #[tauri::command]
 #[specta::specta]
-pub async fn describe_http_body(body: model::RequestBody) -> Result<BodyAnswer, AppError> {
+pub async fn describe_http_body(
+    body: model::RequestBody,
+    method: model::HttpMethod,
+) -> Result<BodyAnswer, AppError> {
     off_thread(move || BodyAnswer {
+        unusual: body.is_unusual_on(method),
         content_type: settings::implied_content_type(&body).map(str::to_string),
         problem: match &body {
             model::RequestBody::Json { text } if !text.trim().is_empty() => {
@@ -295,6 +350,50 @@ pub async fn describe_http_body(body: model::RequestBody) -> Result<BodyAnswer, 
 pub struct BodyAnswer {
     pub content_type: Option<String>,
     pub problem: Option<crate::json::parse::JsonError>,
+    /// Something is sent as the body of a `GET` or a `HEAD`: sent all the same, and said.
+    pub unusual: bool,
+}
+
+/// Each header's fault by its rank, or none: the table marks the row and says why. The rule is
+/// the model's; the table holds none.
+#[tauri::command]
+#[specta::specta]
+pub async fn check_http_headers(
+    rows: Vec<model::KeyValue>,
+) -> Result<Vec<Option<model::HeaderFault>>, AppError> {
+    off_thread(move || model::header_faults(&rows)).await
+}
+
+/// `Nom: valeur` typed in a name, or lines pasted from a browser's network tab, as rows.
+#[tauri::command]
+#[specta::specta]
+pub async fn read_http_headers(text: String) -> Result<Vec<model::KeyValue>, AppError> {
+    off_thread(move || model::headers_from_text(&text)).await
+}
+
+/// What a request sends without a row of its own — the body's type, what it inherits, the
+/// application's `User-Agent` — read as a send reads it: the editor lists the answer and
+/// decides none of it.
+#[tauri::command]
+#[specta::specta]
+pub async fn implied_http_headers<R: Runtime>(
+    kind: model::RequestKind,
+    document: model::RequestDocument,
+    collection_id: Option<String>,
+    folder_id: Option<String>,
+    app: AppHandle<R>,
+) -> Result<Vec<send::ImpliedHeader>, AppError> {
+    blocking(app, move |_, db| {
+        let inherited = match collection_id {
+            Some(collection_id) => {
+                let mut connection = lock(db)?;
+                store::inherited(&mut connection, &collection_id, folder_id.as_deref())?
+            }
+            None => settings::inherit(&[]),
+        };
+        Ok(send::implied(kind, &document, &inherited))
+    })
+    .await
 }
 
 /// The edited side wins: the query string rewritten from the table, or the table from the URL.
@@ -351,8 +450,7 @@ pub async fn send_http_request<R: Runtime>(
         };
         let mut outgoing = send::compose(kind, method, &document, &inherited)?;
         if outgoing.transport.use_cookies {
-            let jar = cookies::store::jar(&mut connection, Utc::now())?;
-            outgoing.add_cookies(cookies::header_for(&jar, &outgoing.url, Utc::now()));
+            outgoing.jar = Some(cookies::store::jar(&mut connection, Utc::now())?);
         }
         Ok(outgoing)
     })
@@ -360,21 +458,24 @@ pub async fn send_http_request<R: Runtime>(
 
     let exchange = send::exchange(&outgoing);
     let secrets = outgoing.secrets.clone();
-    let keeps_cookies = outgoing.transport.use_cookies;
-    let answer = app.state::<send::Sending>().run(&id, outgoing).await;
+    let (answer, cookies_set) = app.state::<send::Sending>().run(&id, outgoing).await;
     let outcome = match &answer {
         Ok(response) => Ok(response.clone()),
         Err(send::SendError::Cancelled) => return Err(send::SendError::Cancelled.into()),
-        Err(error) => Err(AppError::from(error.clone()).code),
+        Err(error) => {
+            let error = AppError::from(error.clone());
+            Err((error.code, error.params))
+        }
     };
     let sent = history::Sent {
+        kind,
         name,
         request_id,
         exchange,
         secrets,
         outcome,
     };
-    keep(app, method, sent, keeps_cookies).await;
+    keep(app, sent, cookies_set).await;
 
     Ok(answer?)
 }
@@ -382,9 +483,8 @@ pub async fn send_http_request<R: Runtime>(
 /// The history and the jar, written under the lock again, and never at the answer's expense.
 async fn keep<R: Runtime>(
     app: AppHandle<R>,
-    method: model::HttpMethod,
     sent: history::Sent,
-    keeps_cookies: bool,
+    cookies_set: Vec<cookies::Change>,
 ) {
     let kept = blocking(app, move |_, db| {
         let now = Utc::now();
@@ -392,22 +492,12 @@ async fn keep<R: Runtime>(
         let mut connection = lock(db)?;
         history::store::record(
             &mut connection,
-            method,
             sent.request_id.as_deref(),
             &summary,
             &record,
             now,
         )?;
-        if let Ok(response) = &sent.outcome
-            && keeps_cookies
-            && let Ok(url) = url::Url::parse(&response.url)
-        {
-            cookies::store::apply(
-                &mut connection,
-                &cookies::received(&response.headers, &url, now),
-                now,
-            )?;
-        }
+        cookies::store::apply(&mut connection, &cookies_set, now)?;
         Ok(())
     })
     .await;
@@ -520,6 +610,65 @@ pub async fn clear_http_history<R: Runtime>(app: AppHandle<R>) -> Result<u32, Ap
     .await
 }
 
+/// One entry gone, answered whole: its undo hands it back to `restore_http_history_entry`.
+#[tauri::command]
+#[specta::specta]
+pub async fn delete_http_history_entry<R: Runtime>(
+    id: String,
+    app: AppHandle<R>,
+) -> Result<history::HistoryEntry, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(history::store::delete(&mut connection, &id)?)
+    })
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn restore_http_history_entry<R: Runtime>(
+    entry: history::HistoryEntry,
+    app: AppHandle<R>,
+) -> Result<(), AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(history::store::restore(&mut connection, &entry)?)
+    })
+    .await
+}
+
+/// A send put back onto the request it came from, as changes to save or not, the request's own
+/// secrets where the record holds a mask. `None` when that request is gone, or the send came
+/// from a draft: the front then opens one, as `http_history_draft` rebuilds it.
+#[tauri::command]
+#[specta::specta]
+pub async fn http_history_onto_request<R: Runtime>(
+    id: String,
+    app: AppHandle<R>,
+) -> Result<Option<history::HistoryDraft>, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+        let entry = history::store::entry(&mut connection, &id)?;
+        let Some(request_id) = entry.item.request_id.as_deref() else {
+            return Ok(None);
+        };
+        let current = match store::get_request(&mut connection, request_id) {
+            Ok(current) => current,
+            Err(crate::error::StorageError::HttpItemNotFound(_)) => return Ok(None),
+            Err(error) => return Err(error.into()),
+        };
+        let above = store::inherited(
+            &mut connection,
+            &current.collection_id,
+            current.folder_id.as_deref(),
+        )?;
+        Ok(Some(history::onto(&entry, &current, &above.headers)))
+    })
+    .await
+}
+
 /// An entry rebuilt as a request to send again or save: its secrets are typed again.
 #[tauri::command]
 #[specta::specta]
@@ -547,6 +696,13 @@ pub async fn describe_graphql(
     off_thread(move || graphql::describe(&document)).await
 }
 
+/// The variables with a `null` for each one the operation declares and they lack: « Ajouter ».
+#[tauri::command]
+#[specta::specta]
+pub async fn add_graphql_variables(document: graphql::GraphqlDocument) -> Result<String, AppError> {
+    off_thread(move || graphql::with_missing(&document)).await
+}
+
 #[derive(Debug, Clone, serde::Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct WebsocketRequest {
@@ -571,7 +727,7 @@ pub async fn connect_websocket<R: Runtime>(
         collection_id,
         folder_id,
     } = request;
-    document.url = websocket::socket_url(&document.url);
+    document.url = websocket::socket_url(&document.url)?;
     document.body = model::RequestBody::None;
     let outgoing = blocking(app.clone(), move |_, db| {
         let inherited = match collection_id {

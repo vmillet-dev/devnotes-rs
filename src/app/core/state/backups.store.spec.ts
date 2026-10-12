@@ -2,6 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Backup } from '@core/model/backup.model';
 import { IpcError } from '@core/ipc/ipc.error';
+import { HttpLeaveStore } from '@core/services/http/http-leave.store';
+import { HttpTabsStore } from '@core/services/http/http-tabs.store';
 import { FakeBackupsRepository } from '@testing/fake-backups-repository';
 import { FakeVaultRepository } from '@testing/fake-vault-repository';
 import { provideAppTesting } from '@testing/testing.providers';
@@ -93,6 +95,26 @@ describe('BackupsStore', () => {
 
     expect(repository.restored).toEqual(['2026-07-24_09-00-00']);
     expect(store.pending()).toBeNull();
+  });
+
+  /** The restore sends the shell back to the gate: what was typed in a tab and not saved goes. */
+  it('asks before a restore that would lose unsaved requests, and restores nothing when told to stay', async () => {
+    await store.load();
+    store.ask(store.backups()[0]);
+    TestBed.inject(HttpTabsStore).newRequest();
+    const leave = TestBed.inject(HttpLeaveStore);
+
+    const staying = store.confirm();
+    expect(leave.asking()).toBe('restore');
+    leave.cancel();
+    await staying;
+    expect(repository.restored).toEqual([]);
+    expect(store.pending()).not.toBeNull();
+
+    const going = store.confirm();
+    leave.discard();
+    await going;
+    expect(repository.restored).toEqual(['2026-07-25_09-00-00']);
   });
 
   it('does nothing when nothing was proposed', async () => {

@@ -51,6 +51,53 @@ describe('ResponsePaneComponent', () => {
     await fixture.whenStable();
   };
 
+  /**
+   * A still sentence made a slow server and a frozen window look the same. The count starts at
+   * the store's instant: a pane drawn later, on coming back to the tab, does not restart it.
+   */
+  it('turns and counts the time since the send while it waits, then stops', async () => {
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] });
+    vi.setSystemTime(new Date(2026, 9, 11, 10, 0, 0));
+    try {
+      let answered!: (response: SentResponse) => void;
+      http.pendingSend = new Promise((resolve) => (answered = resolve));
+      const sent = TestBed.inject(HttpSendStore).send({
+        key: 'Login',
+        place: null,
+        requestId: null,
+        draft: { name: 'Login', kind: 'http', method: 'GET', parts: EMPTY_PARTS },
+      });
+      await fixture.whenStable();
+
+      expect(el('http-response-sending')?.querySelector('app-spinner')).not.toBeNull();
+      expect(text('http-response-elapsed')).toBe('0,0 s');
+      expect(el('http-response-elapsed')?.getAttribute('aria-hidden')).toBe('true');
+
+      vi.advanceTimersByTime(2_400);
+      await fixture.whenStable();
+      expect(text('http-response-elapsed')).toBe('2,4 s');
+
+      const back = TestBed.createComponent(ResponsePaneComponent);
+      back.componentRef.setInput('tabKey', 'Login');
+      back.componentRef.setInput('requestName', 'Lister les factures');
+      back.autoDetectChanges();
+      await back.whenStable();
+      expect(
+        (back.nativeElement as HTMLElement).querySelector('[data-testid="http-response-elapsed"]')
+          ?.textContent,
+      ).toBe('2,4 s');
+
+      answered(sentResponse());
+      await sent;
+      await fixture.whenStable();
+      await back.whenStable();
+      expect(el('http-response-sending')).toBeNull();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('says how to begin before anything was sent', () => {
     expect(text('http-response-idle')).toBe('Envoyez la requête pour lire sa réponse ici.');
   });
@@ -73,9 +120,10 @@ describe('ResponsePaneComponent', () => {
         ],
       }),
     );
+    expect(all('http-response-redirect-cookie')).toEqual([]);
 
     expect(text('http-response-status')).toBe('200 OK');
-    expect(el('http-response-status')!.dataset['class']).toBe('2');
+    expect(el('http-response-status')!.dataset['family']).toBe('2xx');
     expect(text('http-response-time')).toBe('142 ms');
     expect(text('http-response-size')).toBe('3,2 Ko');
     expect(all('http-response-count').map((count) => count.textContent?.trim())).toEqual(['1', '1']);
@@ -91,6 +139,52 @@ describe('ResponsePaneComponent', () => {
     await section('timeline');
     expect(text('http-response-sent')).toBe('GET https://api.exemple.fr/users\nAccept: application/json');
     expect(text('http-response-received')).toBe('200 OK\ncontent-type: application/json');
+  });
+
+  /**
+   * A login sets its cookie on the redirect: the tab read « La réponse ne pose aucun cookie »,
+   * the last answer's headers being all that was looked at.
+   */
+  it('lists the cookies set along the chain with the hop that set each, and shows them on its redirect', async () => {
+    const cookie = (name: string, from: string | null) => ({
+      name,
+      value: 'v',
+      domain: null,
+      path: '/',
+      expires: null,
+      httpOnly: false,
+      secure: false,
+      sameSite: null,
+      from,
+    });
+    const login = 'https://api.exemple.fr/login';
+    await answer(
+      sentResponse({
+        redirects: [
+          { status: 302, from: login, url: 'https://api.exemple.fr/me', cookies: [cookie('session', login)] },
+          { status: 301, from: 'https://api.exemple.fr/me', url: 'https://api.exemple.fr/moi', cookies: [] },
+        ],
+        cookies: [cookie('session', login), cookie('seen', null)],
+      }),
+    );
+
+    await section('cookies');
+    const rows = all('http-response-cookie');
+    expect(rows.map((row) => row.dataset['setBy'])).toEqual(['redirect', 'answer']);
+    expect(rows.map((row) => row.querySelector('.set-by')?.textContent?.trim())).toEqual([
+      login,
+      'la réponse',
+    ]);
+
+    await section('timeline');
+    expect(
+      all('http-response-redirect').map((hop) =>
+        [...hop.querySelectorAll('.code, .url, .set')].map((piece) => piece.textContent?.trim()),
+      ),
+    ).toEqual([
+      ['302', 'https://api.exemple.fr/me', 'Set-Cookie: session=v'],
+      ['301', 'https://api.exemple.fr/moi'],
+    ]);
   });
 
   it('offers a cut body whole as a file, and keeps a binary one out of the clipboard and the notes', async () => {
@@ -109,7 +203,7 @@ describe('ResponsePaneComponent', () => {
         pretty: null,
       }),
     );
-    expect(el('http-response-status')!.dataset['class']).toBe('4');
+    expect(el('http-response-status')!.dataset['family']).toBe('4xx');
     expect(text('http-response-size')).toBe('12 o');
     expect((el('http-response-copy') as HTMLButtonElement).disabled).toBe(true);
     expect((el('http-response-save-note') as HTMLButtonElement).disabled).toBe(true);
@@ -140,10 +234,121 @@ describe('ResponsePaneComponent', () => {
 
     expect(el('http-response-pretty')?.textContent).toContain('"me": null');
     expect(el('http-response-pretty')?.textContent).not.toContain('errors');
+    // With its data it opens on the body: the errors' tab is marked, and the 200 is not alone.
+    expect(text('http-response-status')).toBe('200 OK');
+    expect(text('http-response-graphql-errors')).toBe('1 erreur');
+    const marked = all('http-response-count').find((count) => count.classList.contains('failing'));
+    expect(marked?.textContent?.trim()).toBe('1');
     await section('errors');
     expect(
       all('http-response-error').map((error) => [...error.children].map((part) => part.textContent?.trim())),
     ).toEqual([['Unauthorised', 'me', 'ligne:colonne 1:3']]);
+  });
+
+  /**
+   * A query missing a brace: the server answers 400 with its errors, the pane opened on
+   * « Corps », which read `null`, and the errors waited in a tab nothing pointed to.
+   */
+  it('opens on the errors of a GraphQL answer that carries no data, and on the body of the next one', async () => {
+    const errors = [
+      { message: 'Syntax Error: Expected Name, found <EOF>.', path: null, location: '4:1' },
+      { message: 'Unknown field', path: null, location: null },
+    ];
+    await answer(
+      sentResponse({
+        status: 400,
+        reason: 'Bad Request',
+        body: '{"errors":[]}',
+        graphql: { data: null, errors },
+      }),
+    );
+
+    expect(el('http-response-errors')).not.toBeNull();
+    expect(all('http-response-error')).toHaveLength(2);
+    expect(text('http-response-graphql-errors')).toBe('2 erreurs');
+    expect(
+      all('http-response-section').find((tab) => tab.getAttribute('aria-selected') === 'true')?.dataset[
+        'section'
+      ],
+    ).toBe('errors');
+    // « Brut » still shows the answer as it came.
+    await section('body');
+    expect(el('http-response-errors')).toBeNull();
+
+    // An answer that reads opens on its body, the errors of the last one behind it.
+    await section('errors');
+    await answer(sentResponse({ graphql: { data: '{\n  "me": 1\n}', errors: [] } }));
+    expect(el('http-response-errors')).toBeNull();
+    expect(el('http-response-pretty')?.textContent).toContain('"me": 1');
+    expect(text('http-response-graphql-errors')).toBeNull();
+
+    // And one that is no GraphQL answer keeps the tab that was being read.
+    await section('headers');
+    await answer(sentResponse());
+    expect(el('http-response-headers')).not.toBeNull();
+  });
+
+  /** The colour hardly read as a signal: each family is said, for what cannot read a colour. */
+  it('says the family of a status, the three that are not a success as much as it', async () => {
+    const family = () => el('http-response-status')!.dataset['family'];
+    await answer({ ...sentResponse(), status: 301, reason: 'Moved Permanently' });
+    expect(family()).toBe('3xx');
+    await answer({ ...sentResponse(), status: 404, reason: 'Not Found' });
+    expect(family()).toBe('4xx');
+    await answer({ ...sentResponse(), status: 503, reason: 'Service Unavailable' });
+    expect(family()).toBe('5xx');
+  });
+
+  /**
+   * Once a request had answered, its pane showed that answer until the next send or until
+   * the tab closed. « Effacer » clears the pane, not the record: the history keeps the send.
+   */
+  it('clears an answer back to the idle sentence, and lets go of what Rust kept of it', async () => {
+    await answer(sentResponse());
+    expect(el('http-response-idle')).toBeNull();
+
+    el('http-response-clear')!.click();
+    await fixture.whenStable();
+
+    expect(text('http-response-idle')).toBe('Envoyez la requête pour lire sa réponse ici.');
+    expect(el('http-response-status')).toBeNull();
+    expect(http.callsOf('forgetResponse')).toHaveLength(1);
+    expect(http.callsOf('clearHistory')).toEqual([]);
+    expect(http.callsOf('deleteHistoryEntry')).toEqual([]);
+  });
+
+  it('clears a failure and a cancelled send the same way: they stay on screen as an answer does', async () => {
+    http.failNext = new IpcError('send_http_request', { code: 'httpRefused', params: {}, detail: 'refused' });
+    await answer(sentResponse());
+    expect(el('http-response-failure')).not.toBeNull();
+    expect(text('http-response-clear')).toBe('Effacer');
+    el('http-response-clear')!.click();
+    await fixture.whenStable();
+    expect(el('http-response-failure')).toBeNull();
+    expect(el('http-response-idle')).not.toBeNull();
+
+    http.failNext = new IpcError('send_http_request', { code: 'httpCancelled', params: {}, detail: '' });
+    await answer(sentResponse());
+    expect(el('http-response-cancelled')).not.toBeNull();
+    el('http-response-clear')!.click();
+    await fixture.whenStable();
+    expect(el('http-response-cancelled')).toBeNull();
+    expect(el('http-response-idle')).not.toBeNull();
+  });
+
+  it('offers nothing to clear while nothing was sent, nor while a send is on its way', async () => {
+    expect(el('http-response-clear')).toBeNull();
+
+    http.pendingSend = new Promise(() => undefined);
+    void TestBed.inject(HttpSendStore).send({
+      key: 'Login',
+      place: null,
+      requestId: null,
+      draft: { name: 'Login', kind: 'http', method: 'GET', parts: EMPTY_PARTS },
+    });
+    await fixture.whenStable();
+    expect(el('http-response-sending')).not.toBeNull();
+    expect(el('http-response-clear')).toBeNull();
   });
 
   it('says why nothing came back', async () => {

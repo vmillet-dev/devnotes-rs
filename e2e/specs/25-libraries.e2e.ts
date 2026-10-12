@@ -2,7 +2,15 @@ import { $, $$, expect } from '@wdio/globals';
 
 import { board } from '../pageobjects/board.page.js';
 import { spaces } from '../pageobjects/sidebar.page.js';
-import { PASSPHRASE, eventually, pickChoice, setField, testid, waitForCanvas } from '../support/app.js';
+import {
+  PASSPHRASE,
+  eventually,
+  pickChoice,
+  press,
+  setField,
+  testid,
+  waitForCanvas,
+} from '../support/app.js';
 import { bridge, draft } from '../support/bridge.js';
 
 /**
@@ -100,8 +108,41 @@ describe('Several libraries', () => {
     expect(await rows().length).toBe(2);
   });
 
-  it('switches back through the gate', async () => {
-    await $(`${testid('library-switch')}`).click();
+  /**
+   * The switch rebuilds the front end: a request typed in a tab and never saved went with
+   * it, without a word. The shell asks first, whatever area is on screen — and the same
+   * question stands before a quit, which no scenario can make: it ends the one process every
+   * spec file shares, and is held by the Rust tests of `desktop` instead.
+   */
+  it('asks before a switch takes an unsaved request with it, then switches back through the gate', async () => {
+    await $(testid('libraries-close')).click();
+    await $(testid('library-row')).waitForExist({ reverse: true, timeout: 10_000 });
+    // A request begun in the HTTP area and left there, then back to the notes.
+    await press('3', ['Control']);
+    await $(testid('http-tab-new')).waitForDisplayed({ timeout: 10_000 });
+    await $(testid('http-tab-new')).click();
+    await $(testid('http-tab-dirty')).waitForExist({ timeout: 10_000 });
+    await press('1', ['Control']);
+    await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+    const open = async () => (await bridge.listLibraries()).open;
+    const here = await open();
+
+    await openPanel();
+    await $(testid('library-switch')).click();
+    await $(`${testid('http-leave-dialog')}[data-reason="switch"]`).waitForDisplayed({ timeout: 10_000 });
+    expect((await $$(testid('http-leave-name')).getElements()).length).toBe(1);
+    expect(await open()).toBe(here);
+
+    // « Annuler »: the library has not changed, and no gate came up.
+    await $(testid('http-leave-cancel')).click();
+    await $(testid('http-leave-dialog')).waitForExist({ reverse: true, timeout: 10_000 });
+    expect(await open()).toBe(here);
+    expect(await $(testid('vault-passphrase')).isExisting()).toBe(false);
+
+    // Asked again, and told to go without saving.
+    await $(testid('library-switch')).click();
+    await $(testid('http-leave-dialog')).waitForDisplayed({ timeout: 10_000 });
+    await $(testid('http-leave-discard')).click();
 
     expect(
       await eventually(
@@ -166,7 +207,7 @@ describe('Several libraries', () => {
 
     expect(await board.looseTitles()).toEqual([HOME_NOTE]);
 
-    await board.show('date');
+    await board.show('list');
   });
 
   /**

@@ -248,7 +248,8 @@ fn is_toml_pair(line: &str) -> bool {
 
 /// A format by the shape of what was written: `<` is XML, `{` JSON, a `[table]` or a
 /// `key = value` line TOML, anything else YAML. A `[` is JSON unless it does not parse as JSON
-/// and opens a TOML table.
+/// and opens a TOML table. ⚠️ The narrowest that fits: every JSON document is YAML too, so one
+/// that parses as JSON — `42`, `"a string"` — is said to be JSON, not what also accepts it.
 pub(crate) fn detect(text: &str) -> DataFormat {
     let start = text.trim_start();
     if start.starts_with('<') {
@@ -264,6 +265,9 @@ pub(crate) fn detect(text: &str) -> DataFormat {
         } else {
             DataFormat::Json
         };
+    }
+    if serde_json::from_str::<Value>(text).is_ok() {
+        return DataFormat::Json;
     }
     let first = start
         .lines()

@@ -12,6 +12,11 @@
   overflow-x: auto;
 }
 
+.rail-toggle {
+  align-self: center;
+  margin: 0 8px;
+}
+
 .tab {
   display: flex;
   align-items: center;
@@ -58,13 +63,26 @@
   text-overflow: ellipsis;
 }
 
+.tab-sending {
+  --spinner-size: 11px;
+  color: var(--amber-text);
+}
+
 .dot {
   font-size: 9px;
   color: var(--amber-text);
 }
 
-.tab-close,
-.tab-new {
+// At the end of the bar and held there: the tabs scroll under it, as many as they are.
+.new-request {
+  position: sticky;
+  right: 0;
+  margin-left: auto;
+  padding: 0 10px;
+  background: var(--bg-0);
+}
+
+.tab-close {
   @include unstyled-control;
   @include hit-target;
   @include focus-ring(-2px);
@@ -82,10 +100,4 @@
 .tab-close {
   margin-right: 6px;
   font-size: 15px;
-}
-
-.tab-new {
-  margin: auto 8px;
-  padding: 0 6px;
-  font-size: 14px;
 }

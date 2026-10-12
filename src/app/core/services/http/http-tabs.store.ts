@@ -1,20 +1,27 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
 import { HttpRepository } from '@core/data/http.repository';
 import {
+  BodiesLeft,
+  BodyKind,
   EMPTY_PARTS,
   HttpTree,
   KeyValueRow,
+  NewPlace,
   OpenedRequest,
   RequestDraft,
+  RequestKind,
   RequestParts,
+  bodyOfKind,
+  setBodyAside,
   toDocument,
 } from '@core/model/http.model';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
+import { HttpCollectionsStore } from './http-collections.store';
 import { HttpSendStore } from './http-send.store';
 import { HttpSocketsStore } from './http-sockets.store';
-import { holdsRequest } from './http-tree';
+import { findRequest } from './http-tree';
 
 /** In the library's preferences: which requests were open, and which one was in front. */
 const TABS_KEY = 'devnotes.notes.http.tabs';
@@ -34,6 +41,11 @@ export interface RequestTab {
 export interface SaveTarget {
   readonly collectionId: string;
   readonly folderId: string | null;
+  /**
+   * What the save creates on its way, when the place does not exist yet: a collection, which
+   * takes the request at its root whatever the ids above say, or a folder under them.
+   */
+  readonly create?: NewPlace;
 }
 
 interface StoredTabs {
@@ -53,6 +65,10 @@ function same(a: RequestDraft, b: RequestDraft): boolean {
 /**
  * The open requests, one tab each. A tab edits a draft and saving writes it whole; a request
  * made from the `+` is a draft alone until saved, like a new note.
+ *
+ * ⚠️ A saved request's name and place are the tree's: the rail renames, moves and deletes there,
+ * and a tab follows each tree that is read. A tab that kept the name it was opened with showed
+ * the old one after a rename from the rail — and its next save wrote it back over the new one.
  */
 @Injectable({ providedIn: 'root' })
 export class HttpTabsStore {
@@ -62,6 +78,7 @@ export class HttpTabsStore {
   private readonly transloco = inject(TranslocoService);
   private readonly sending = inject(HttpSendStore);
   private readonly sockets = inject(HttpSocketsStore);
+  private readonly collections = inject(HttpCollectionsStore);
 
   private readonly _tabs = signal<readonly RequestTab[]>([]);
   readonly tabs = this._tabs.asReadonly();
@@ -75,9 +92,31 @@ export class HttpTabsStore {
 
   private drafts = 0;
   private restored = false;
+  /** By tab, for as long as it is open: never written, a request saves the body it shows. */
+  private readonly bodiesLeft = new Map<string, BodiesLeft>();
+
+  constructor() {
+    effect(() => {
+      const tree = this.collections.tree();
+      // Not before a first read: an empty tree would close every tab.
+      if (!this.collections.loaded()) return;
+      // The tabs are not a reason to run again: only a tree read after a write is.
+      untracked(() => this.follow(tree));
+    });
+  }
 
   isDirty(tab: RequestTab): boolean {
     return tab.saved === null || !same(tab.saved, tab.draft);
+  }
+
+  /**
+   * The names of the open tabs, among these requests, whose changes are not saved: what a
+   * deletion would lose. Only the front knows it — Rust counts what is deleted, not what is typed.
+   */
+  unsavedAmong(requestIds: ReadonlySet<string>): string[] {
+    return this._tabs()
+      .filter((tab) => tab.requestId !== null && requestIds.has(tab.requestId) && this.isDirty(tab))
+      .map((tab) => tab.draft.name);
   }
 
   /** Once a page's life: the tabs left open last time, those still in the library. */
@@ -103,11 +142,12 @@ export class HttpTabsStore {
     this.activate(requestId);
   }
 
-  newRequest(): void {
+  /** Of the kind asked, for good: a request is not turned into a socket afterwards. */
+  newRequest(kind: RequestKind = 'http'): void {
     const key = `draft-${++this.drafts}`;
     const draft: RequestDraft = {
       name: this.transloco.translate('http.tabs.untitled'),
-      kind: 'http',
+      kind,
       method: 'GET',
       parts: EMPTY_PARTS,
     };
@@ -127,7 +167,7 @@ export class HttpTabsStore {
     this.persist();
   }
 
-  edit(key: string, change: Partial<Pick<RequestDraft, 'name' | 'kind' | 'method'>>): void {
+  edit(key: string, change: Partial<Pick<RequestDraft, 'name' | 'method'>>): void {
     this.update(key, (draft) => ({ ...draft, ...change }));
   }
 
@@ -138,6 +178,26 @@ export class HttpTabsStore {
     >,
   ): void {
     this.update(key, (draft) => ({ ...draft, parts: { ...draft.parts, ...change } }));
+  }
+
+  /**
+   * Another kind of body. The one left is set aside, and comes back as it was when its kind is
+   * chosen again: « Passer à Aucun » on a `GET` would otherwise cost the text it warns about.
+   */
+  chooseBodyKind(key: string, kind: BodyKind): void {
+    const current = this.find(key)?.draft.parts.body;
+    if (current === undefined || current.kind === kind) return;
+    const left = setBodyAside(this.bodiesLeft.get(key) ?? {}, current);
+    this.bodiesLeft.set(key, left);
+    this.editParts(key, { body: bodyOfKind(kind, left) });
+  }
+
+  /**
+   * What a tab edits, replaced by a send put back onto its request: what is saved is not
+   * touched, so the tab reads as modified and « Enregistrer » is what writes it.
+   */
+  replaceDraft(key: string, change: Pick<RequestDraft, 'method' | 'parts'>): void {
+    this.update(key, (draft) => ({ ...draft, ...change }));
   }
 
   /** The URL as typed, then the table rewritten from it by Rust, unless typing went on. */
@@ -183,31 +243,44 @@ export class HttpTabsStore {
         saved: draftOf(saved),
         draft: current === tab.draft ? draftOf(saved) : current,
       });
+      // The rail shows its name and its method: it reads what was just written.
+      await this.collections.load();
       return key;
     }
     if (!target) return null;
+    const draft = {
+      collectionId: target.collectionId,
+      folderId: target.folderId,
+      name: tab.draft.name,
+      kind: tab.draft.kind,
+      method: tab.draft.method,
+      document: toDocument(tab.draft.parts),
+    };
+    const create = target.create;
+    // One write for the request and what it lacks: a request that is refused leaves no
+    // empty collection behind it.
     const created = await this.errors.attempt('http.failed', () =>
-      this.repository.createRequest({
-        collectionId: target.collectionId,
-        folderId: target.folderId,
-        name: tab.draft.name,
-        kind: tab.draft.kind,
-        method: tab.draft.method,
-        document: toDocument(tab.draft.parts),
-      }),
+      create ? this.repository.createRequestIn(draft, create) : this.repository.createRequest(draft),
     );
     if (!created) return null;
     this.replace(key, {
       key: created.id,
       requestId: created.id,
-      place: target,
+      place: { collectionId: created.collectionId, folderId: created.folderId },
       saved: draftOf(created),
       draft: draftOf(created),
     });
     this.sending.rekey(key, created.id);
     this.sockets.rekey(key, created.id);
+    const left = this.bodiesLeft.get(key);
+    if (left !== undefined) {
+      this.bodiesLeft.delete(key);
+      this.bodiesLeft.set(created.id, left);
+    }
     if (this._activeKey() === key) this._activeKey.set(created.id);
     this.persist();
+    await this.collections.load();
+    this.collections.reveal(created.id);
     return created.id;
   }
 
@@ -219,14 +292,34 @@ export class HttpTabsStore {
     this._tabs.set(rest);
     this.sending.forget(key);
     this.sockets.forget(key);
+    this.bodiesLeft.delete(key);
     if (this._activeKey() === key) this._activeKey.set(rest[Math.min(at, rest.length - 1)]?.key ?? null);
     this.persist();
   }
 
-  /** Closes the tabs of requests the tree no longer holds: deleted from the rail. */
-  prune(tree: HttpTree): void {
+  /**
+   * What the rail did to an open request reaches its tab: deleted, the tab closes; moved, it
+   * inherits from where it now sits; renamed, it takes the name — in what is saved and in what
+   * is being edited, so the next save does not write the old one back.
+   */
+  private follow(tree: HttpTree): void {
     for (const tab of this._tabs()) {
-      if (tab.requestId !== null && !holdsRequest(tree, tab.requestId)) this.close(tab.key);
+      if (tab.requestId === null || tab.saved === null) continue;
+      const held = findRequest(tree, tab.requestId);
+      if (held === null) {
+        this.close(tab.key);
+        continue;
+      }
+      const at = tab.place;
+      const moved = at === null || at.collectionId !== held.collectionId || at.folderId !== held.folderId;
+      const renamed = tab.saved.name !== held.name;
+      if (!moved && !renamed) continue;
+      this.replace(tab.key, {
+        ...tab,
+        place: { collectionId: held.collectionId, folderId: held.folderId },
+        saved: renamed ? { ...tab.saved, name: held.name } : tab.saved,
+        draft: renamed ? { ...tab.draft, name: held.name } : tab.draft,
+      });
     }
   }
 

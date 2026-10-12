@@ -1,10 +1,8 @@
 import { Signal, computed, inject, linkedSignal, resource } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslocoService } from '@jsverse/transloco';
-import { AppLocale, DEFAULT_LOCALE, isAppLocale } from '@core/services/i18n/locale.model';
-
-/** A `Record`, so a language added to `APP_LOCALES` stops a reference compiling until it has its file. */
-export type ReferenceWordLoaders<W> = Readonly<Record<AppLocale, () => Promise<{ default: W }>>>;
+import { DEFAULT_LOCALE, isAppLocale } from '@core/services/i18n/locale.model';
+import { ReferenceRow, ReferenceSource, ReferenceWordLoaders } from './reference.model';
 
 /**
  * A reference's words in the language on screen, from a file of its own imported with the tool's
@@ -32,6 +30,26 @@ export function referenceWords<W>(loaders: ReferenceWordLoaders<W>): Signal<W | 
   return kept.asReadonly();
 }
 
+/**
+ * A reference's rows in the language on screen, none until its words have landed: what its
+ * table shows, and what the home's search reads through the same source. Built in an injection
+ * context.
+ */
+export function referenceRows<W, R extends ReferenceRow>(
+  source: ReferenceSource<W, R>,
+): Signal<readonly R[]> {
+  const transloco = inject(TranslocoService);
+  // Read so that the headings a row is found by follow the language, and its file once landed.
+  const translation = toSignal(transloco.selectTranslation());
+  const words = referenceWords(source.words);
+
+  return computed(() => {
+    translation();
+    const loaded = words();
+    return loaded === null ? [] : source.rows(loaded, (key) => transloco.translate(key));
+  });
+}
+
 export interface ReferenceHeading<G extends string> {
   readonly id: G;
   readonly label: string;
@@ -54,9 +72,4 @@ export function referenceHeadings<G extends string>(
     translation();
     return ids.map((id) => ({ id, label: transloco.translate(key(id)) }));
   });
-}
-
-/** Where a search finds a row by its group: its heading. */
-export function headingOf<G extends string>(headings: readonly ReferenceHeading<G>[], id: G): string {
-  return headings.find((heading) => heading.id === id)?.label ?? '';
 }

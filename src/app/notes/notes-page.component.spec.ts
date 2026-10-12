@@ -258,12 +258,16 @@ describe('NotesPageComponent', () => {
       expect(maybeChild(FolderSwitcherComponent)).not.toBeNull();
     });
 
-    it('is toggled from the topbar and from Ctrl+B', async () => {
-      fixture.debugElement.query(By.css('[data-testid="library-rail-toggle"]')).nativeElement.click();
+    it('is toggled from the topbar', async () => {
+      const toggle = () =>
+        fixture.debugElement.query(By.css('[data-testid="library-rail-toggle"]'))
+          .nativeElement as HTMLElement;
+      toggle().click();
       await fixture.whenStable();
       expect(settings.showLibraryRail()).toBe(false);
+      expect(toggle().getAttribute('aria-pressed')).toBe('false');
 
-      press('b', { ctrlKey: true });
+      toggle().click();
       await fixture.whenStable();
       expect(settings.showLibraryRail()).toBe(true);
     });
@@ -315,10 +319,11 @@ describe('NotesPageComponent', () => {
     TestBed.inject(AreaStore).show('tools');
     await fixture.whenStable();
     expect(child(SearchBoxComponent).shortcutEnabled()).toBe(false);
+    const createNote = vi.spyOn(store, 'createNote').mockResolvedValue();
 
-    press('b', { ctrlKey: true });
+    press('n', { ctrlKey: true });
 
-    expect(settings.showLibraryRail()).toBe(true);
+    expect(createNote).not.toHaveBeenCalled();
   });
 
   it('disables the search shortcut while the editor overlay is open', async () => {
@@ -684,6 +689,18 @@ describe('NotesPageComponent', () => {
 
       expect(help.panel()).toBeNull();
       expect(store.selectedNote()).not.toBeNull();
+    });
+
+    /** A quit asked from the tray is answered by the shell: it is no reason to change area. */
+    it('leaves a quit asked from outside to the shell, and stays on the area it was on', async () => {
+      const areas = TestBed.inject(AreaStore);
+      areas.show('http');
+
+      fireAction('quit');
+      await fixture.whenStable();
+
+      expect(areas.current()).toBe('http');
+      expect(store.selectedNote()).toBeNull();
     });
 
     it('opens the quick palette when the palette event fires', async () => {

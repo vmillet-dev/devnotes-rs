@@ -1,0 +1,322 @@
+<div class="columns">
+  <section class="column options" aria-labelledby="identity-options-title">
+    <h2 id="identity-options-title" class="section-title">{{ 'tools.identity.options' | transloco }}</h2>
+
+    <div class="option">
+      <span class="option-name">{{ 'tools.identity.country' | transloco }}</span>
+      <app-choice-menu
+        kind="identity-country"
+        [label]="'tools.identity.country' | transloco"
+        [options]="countries"
+        [currentId]="country()"
+        (chosen)="onCountry($event)"
+      />
+    </div>
+
+    <div class="option">
+      <span class="option-name" id="identity-sex-name">{{ 'tools.identity.sex' | transloco }}</span>
+      <app-segmented-choice
+        kind="identity-sex"
+        [label]="'tools.identity.sex' | transloco"
+        [segments]="sexes"
+        [currentId]="sex() ?? anySex"
+        (chosen)="onSex($event)"
+      />
+    </div>
+
+    <div class="option">
+      <span class="option-name">{{ 'tools.identity.age' | transloco }}</span>
+      <span class="ages">
+        <input
+          type="number"
+          class="number"
+          data-testid="identity-age-min"
+          [attr.aria-label]="'tools.identity.ageMin' | transloco"
+          [min]="ages.min"
+          [max]="ages.max"
+          [value]="ageMin()"
+          (input)="onAge('min', $event)"
+        />
+        <span aria-hidden="true">–</span>
+        <input
+          type="number"
+          class="number"
+          data-testid="identity-age-max"
+          [attr.aria-label]="'tools.identity.ageMax' | transloco"
+          [min]="ages.min"
+          [max]="ages.max"
+          [value]="ageMax()"
+          (input)="onAge('max', $event)"
+        />
+        <span class="unit">{{ 'tools.identity.years' | transloco }}</span>
+      </span>
+    </div>
+
+    <!-- One place for the seed: the one typed, or the one just drawn and the pin that fixes it. -->
+    <div class="option">
+      <label class="option-name" for="identity-seed">{{ 'tools.identity.seed' | transloco }}</label>
+      <span class="seed-line">
+        <input
+          id="identity-seed"
+          type="text"
+          class="field seed"
+          data-testid="identity-seed"
+          spellcheck="false"
+          [placeholder]="'tools.identity.seedPlaceholder' | transloco"
+          [value]="seed() ?? ''"
+          (input)="onSeed($event)"
+        />
+        @let used = answer()?.seed ?? null;
+        @if (seed() === null && used !== null) {
+          <span class="used" data-testid="identity-seed-used">{{
+            'tools.identity.seedUsed' | transloco: { seed: used }
+          }}</span>
+        }
+        @if (seed() !== null || used !== null) {
+          <button
+            type="button"
+            class="pin"
+            data-testid="identity-pin-seed"
+            [class.on]="seed() !== null"
+            [attr.aria-pressed]="seed() !== null"
+            [attr.aria-label]="'tools.identity.pinSeed' | transloco"
+            [attr.title]="
+              (seed() === null ? 'tools.identity.keepSeed' : 'tools.identity.freeSeed') | transloco
+            "
+            (click)="togglePin(used)"
+          >
+            <app-icon name="pin" [filled]="seed() !== null" />
+          </button>
+        }
+      </span>
+    </div>
+    @if (seed() !== null) {
+      <p class="hint" data-testid="identity-seed-pinned">{{ 'tools.identity.seedPinned' | transloco }}</p>
+    }
+
+    <h2 id="identity-export-title" class="section-title export-title">
+      {{ 'tools.identity.batch' | transloco }}
+    </h2>
+    <div class="export">
+      <label class="option inline">
+        <span class="option-name">{{ 'tools.identity.people' | transloco }}</span>
+        <input
+          type="number"
+          class="number"
+          data-testid="identity-people"
+          [min]="peopleBounds.min"
+          [max]="peopleBounds.max"
+          [value]="people()"
+          (input)="onPeople($event)"
+        />
+      </label>
+      <app-segmented-choice
+        kind="identity-format"
+        [label]="'tools.identity.format' | transloco"
+        [segments]="formats"
+        [currentId]="format()"
+        (chosen)="onFormat($event)"
+      />
+      <button type="button" class="action" data-testid="identity-export" (click)="export()">
+        {{ 'tools.identity.export' | transloco }}
+      </button>
+    </div>
+    <div class="option">
+      <span class="option-name" id="identity-batch-countries">{{
+        'tools.identity.batchCountries' | transloco
+      }}</span>
+      <div class="chips" role="group" aria-labelledby="identity-batch-countries">
+        @for (code of countryCodes; track code) {
+          <!-- The card's own country is always of the batch: it is the first person of the file. -->
+          <button
+            type="button"
+            class="chip"
+            data-testid="identity-batch-country"
+            [attr.data-country]="code"
+            [class.on]="inBatch(code)"
+            [attr.aria-pressed]="inBatch(code)"
+            [attr.aria-label]="'tools.identity.countries.' + code | transloco"
+            [attr.title]="'tools.identity.countries.' + code | transloco"
+            [disabled]="code === country()"
+            (click)="toggleBatch(code)"
+          >
+            {{ code }}
+          </button>
+        }
+      </div>
+    </div>
+    <p class="hint">{{ 'tools.identity.batchHint' | transloco }}</p>
+  </section>
+
+  <section class="column" aria-labelledby="identity-card-title">
+    <div class="section-head">
+      <h2 id="identity-card-title" class="section-title">{{ 'tools.identity.person' | transloco }}</h2>
+      <button
+        type="button"
+        class="action"
+        data-testid="identity-copy-json"
+        [disabled]="person() === null"
+        (click)="copyJson()"
+      >
+        {{ 'tools.identity.copyJson' | transloco }}
+      </button>
+    </div>
+
+    @if (unreadable(); as list) {
+      <div
+        class="unreadable"
+        role="alert"
+        data-testid="identity-unreadable"
+        [attr.data-problem]="list.problem"
+        [attr.data-file]="list.file"
+      >
+        <p class="problem">{{ 'tools.identity.lists.' + list.problem | transloco: { file: list.file } }}</p>
+        <p class="where">{{ 'tools.identity.lists.where' | transloco: { folder: list.folder } }}</p>
+      </div>
+    }
+
+    @if (person(); as person) {
+      <!-- ⚠️ It evokes a card and imitates none: no emblem, no flag, no machine-readable zone, no photo. -->
+      <!-- The seed the person was drawn from: a typed seed is on screen before its person is. -->
+      <article
+        class="card"
+        data-testid="identity-card"
+        [attr.data-country]="person.country"
+        [attr.data-seed]="answer()?.seed"
+      >
+        <span class="specimen" data-testid="identity-specimen" aria-hidden="true">{{
+          'tools.identity.specimen' | transloco
+        }}</span>
+        <header class="card-head">
+          <span class="card-kind">{{ 'tools.identity.cardKind' | transloco }}</span>
+          <span class="card-country">{{ 'tools.identity.countries.' + person.country | transloco }}</span>
+        </header>
+        <div class="card-body">
+          <div class="monogram" data-testid="identity-monogram" aria-hidden="true">{{ monogram() }}</div>
+          <dl class="facts">
+            <div class="fact wide">
+              <dt>{{ 'tools.identity.fields.surname' | transloco }}</dt>
+              <dd class="surname" data-testid="identity-surname">
+                {{ person.surname }}
+                <app-copy-value
+                  [value]="person.surname"
+                  [what]="'tools.identity.fields.surname' | transloco"
+                  [compact]="true"
+                />
+              </dd>
+            </div>
+            <div class="fact wide">
+              <dt>{{ 'tools.identity.fields.givenNames' | transloco }}</dt>
+              <dd class="given" data-testid="identity-given">
+                {{ person.givenNames.join(', ') }}
+                <app-copy-value
+                  [value]="person.givenNames.join(' ')"
+                  [what]="'tools.identity.fields.givenNames' | transloco"
+                  [compact]="true"
+                />
+              </dd>
+            </div>
+            <div class="fact">
+              <dt>{{ 'tools.identity.sex' | transloco }}</dt>
+              <dd data-testid="identity-sex" [attr.data-sex]="person.sex">
+                {{ 'tools.identity.sexes.' + person.sex | transloco }}
+              </dd>
+            </div>
+            <div class="fact">
+              <dt>{{ 'tools.identity.fields.nationality' | transloco }}</dt>
+              <dd>{{ 'tools.identity.nationalities.' + person.country | transloco }}</dd>
+            </div>
+            <div class="fact">
+              <dt>{{ 'tools.identity.fields.bornOn' | transloco }}</dt>
+              <dd data-testid="identity-birth" [attr.data-date]="person.birth.date">
+                {{ born()?.date }}
+                <span class="age">{{ 'tools.identity.aged' | transloco: { count: born()?.age } }}</span>
+                <app-copy-value
+                  [value]="person.birth.date"
+                  [what]="'tools.identity.fields.bornOn' | transloco"
+                  [compact]="true"
+                />
+              </dd>
+            </div>
+            <div class="fact">
+              <dt>{{ 'tools.identity.fields.bornIn' | transloco }}</dt>
+              <dd data-testid="identity-birth-place">{{ person.birth.city }} ({{ person.birth.region }})</dd>
+            </div>
+            @for (row of personal(); track row.id) {
+              <div class="fact wide">
+                <dt>{{ row.labelKey | transloco }}</dt>
+                <dd class="mono" data-testid="identity-personal" [attr.data-kind]="row.id">
+                  {{ row.value }}
+                  <app-copy-value [value]="row.value" [what]="row.labelKey | transloco" [compact]="true" />
+                </dd>
+              </div>
+            }
+            <div class="fact wide">
+              <dt>{{ 'tools.identity.fields.document' | transloco }}</dt>
+              <dd class="mono" data-testid="identity-document">{{ person.document }}</dd>
+            </div>
+          </dl>
+        </div>
+      </article>
+
+      @for (
+        block of [
+          { id: 'contact', rows: contact() },
+          { id: 'bank', rows: bank() },
+          { id: 'company', rows: company() },
+        ];
+        track block.id
+      ) {
+        <section class="block" data-testid="identity-block" [attr.data-block]="block.id">
+          <h3 class="block-title">{{ 'tools.identity.blocks.' + block.id | transloco }}</h3>
+          @for (row of block.rows; track row.id) {
+            <app-result-row
+              [attr.data-field]="row.id"
+              [name]="row.labelKey | transloco"
+              [value]="row.value"
+            />
+          }
+          @if (block.id === 'company' && firmHasNoNumber()) {
+            <p class="none" data-testid="identity-no-firm-number">
+              {{ 'tools.identity.noFirmNumber' | transloco }}
+            </p>
+          }
+        </section>
+      }
+
+      <!-- No range is kept for fiction but for a phone number and an e-mail domain: said, as the QR tool carries its own. -->
+      <div class="warning" role="note" data-testid="identity-warning">
+        <p class="warning-title">{{ 'tools.identity.warning' | transloco }}</p>
+        <p>{{ 'tools.identity.harmless' | transloco }}</p>
+        <p data-testid="identity-phones" [attr.data-fiction]="answer()?.fictionPhones">
+          {{
+            (answer()?.fictionPhones ? 'tools.identity.phonesFiction' : 'tools.identity.phonesMayRing')
+              | transloco
+          }}
+        </p>
+        <p>{{ 'tools.identity.valid' | transloco }}</p>
+        @if (answer()?.unkeyed; as unkeyed) {
+          @if (unkeyed.length > 0) {
+            <p class="listing" data-testid="identity-unkeyed">
+              {{ 'tools.identity.unkeyed' | transloco }}
+              @for (kind of unkeyed; track kind) {
+                <span class="listed">{{
+                  ('tools.identity.identifiers.' + kind | transloco) + ($last ? '' : ', ')
+                }}</span>
+              }
+            </p>
+          }
+        }
+        <p class="listing" data-testid="identity-countries">
+          {{ 'tools.identity.countriesListed' | transloco }}
+          @for (code of countryCodes; track code) {
+            <span class="listed">{{
+              ('tools.identity.countries.' + code | transloco) + ($last ? '' : ', ')
+            }}</span>
+          }
+        </p>
+        <p>{{ 'tools.identity.jsonFields' | transloco }}</p>
+      </div>
+    }
+  </section>
+</div>

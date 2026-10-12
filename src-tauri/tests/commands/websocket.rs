@@ -32,13 +32,28 @@ fn take_chat(
     Ok(response)
 }
 
-/// Echoes each text as `echo: …`, and says which subprotocol it took.
-fn echo() -> u16 {
+/// Echoes each text as `echo: …`, says which subprotocol it took, and what the handshake
+/// named as its agent.
+#[allow(clippy::result_large_err)] // tungstenite's callback signature
+fn echo() -> (u16, mpsc::Receiver<Option<String>>) {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let port = listener.local_addr().unwrap().port();
+    let (named, agent) = mpsc::channel();
     thread::spawn(move || {
         let (stream, _) = listener.accept().unwrap();
-        let mut socket = tungstenite::accept_hdr(stream, take_chat).unwrap();
+        let mut socket = tungstenite::accept_hdr(
+            stream,
+            |request: &tungstenite::handshake::server::Request, response| {
+                let agent = request.headers().get("user-agent");
+                let _ = named.send(
+                    agent
+                        .and_then(|value| value.to_str().ok())
+                        .map(str::to_string),
+                );
+                take_chat(request, response)
+            },
+        )
+        .unwrap();
         while let Ok(message) = socket.read() {
             match message {
                 Message::Text(text) => socket.send(Message::text(format!("echo: {text}"))).unwrap(),
@@ -47,7 +62,7 @@ fn echo() -> u16 {
             }
         }
     });
-    port
+    (port, agent)
 }
 
 fn request(url: &str) -> WebsocketRequest {
@@ -74,11 +89,19 @@ fn a_socket_opens_echoes_and_closes_each_step_an_event() {
         let _ = heard.send(serde_json::from_str(event.payload()).unwrap());
     });
     let next = || events.recv_timeout(Duration::from_secs(5)).unwrap().event;
-    let port = echo();
+    let (port, agent) = echo();
 
     session
         .call(|app| connect_websocket(request(&format!("ws://127.0.0.1:{port}/")), app))
         .unwrap();
+    // The handshake is composed like a request: it names the application too.
+    assert_eq!(
+        agent
+            .recv_timeout(Duration::from_secs(5))
+            .unwrap()
+            .as_deref(),
+        Some(devnotes_lib::http::send::USER_AGENT)
+    );
     assert_eq!(
         next(),
         SocketEvent::Opened {
@@ -120,6 +143,32 @@ fn a_socket_opens_echoes_and_closes_each_step_an_event() {
             .call(|app| send_websocket("socket-1".to_string(), "late".to_string(), app))
             .unwrap()
     );
+}
+
+/// `wss://nexistepas.invalid` answered « Erreur réseau » where the same host over HTTP answered
+/// « Le nom d'hôte ne se résout pas »; and `https://` in a socket was dialled without a word.
+#[test]
+fn a_socket_names_a_host_that_does_not_resolve_and_refuses_a_scheme_that_is_not_its_own() {
+    let session = Session::open();
+    // `.invalid` is reserved never to resolve.
+    assert_eq!(
+        code(session.call(|app| connect_websocket(request("ws://devnotes.invalid/"), app))),
+        ErrorCode::HttpUnresolved
+    );
+
+    let refused = session
+        .call(|app| connect_websocket(request("https://echo.exemple.fr/live?x=1"), app))
+        .unwrap_err();
+    assert_eq!(refused.code, ErrorCode::HttpWebsocketScheme);
+    assert_eq!(
+        refused.params.get("twin").map(String::as_str),
+        Some("wss://echo.exemple.fr/live?x=1")
+    );
+    let refused = session
+        .call(|app| connect_websocket(request("ftp://exemple.fr"), app))
+        .unwrap_err();
+    assert_eq!(refused.code, ErrorCode::HttpWebsocketScheme);
+    assert_eq!(refused.params.get("twin"), None);
 }
 
 #[test]
