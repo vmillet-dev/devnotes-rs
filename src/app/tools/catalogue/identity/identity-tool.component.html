@@ -121,6 +121,30 @@
         {{ 'tools.identity.export' | transloco }}
       </button>
     </div>
+    <div class="option">
+      <span class="option-name" id="identity-batch-countries">{{
+        'tools.identity.batchCountries' | transloco
+      }}</span>
+      <div class="chips" role="group" aria-labelledby="identity-batch-countries">
+        @for (code of countryCodes; track code) {
+          <!-- The card's own country is always of the batch: it is the first person of the file. -->
+          <button
+            type="button"
+            class="chip"
+            data-testid="identity-batch-country"
+            [attr.data-country]="code"
+            [class.on]="inBatch(code)"
+            [attr.aria-pressed]="inBatch(code)"
+            [attr.aria-label]="'tools.identity.countries.' + code | transloco"
+            [attr.title]="'tools.identity.countries.' + code | transloco"
+            [disabled]="code === country()"
+            (click)="toggleBatch(code)"
+          >
+            {{ code }}
+          </button>
+        }
+      </div>
+    </div>
     <p class="hint">{{ 'tools.identity.batchHint' | transloco }}</p>
   </section>
 
@@ -233,6 +257,11 @@
               [value]="row.value"
             />
           }
+          @if (block.id === 'company' && firmHasNoNumber()) {
+            <p class="none" data-testid="identity-no-firm-number">
+              {{ 'tools.identity.noFirmNumber' | transloco }}
+            </p>
+          }
         </section>
       }
 
@@ -240,7 +269,33 @@
       <div class="warning" role="note" data-testid="identity-warning">
         <p class="warning-title">{{ 'tools.identity.warning' | transloco }}</p>
         <p>{{ 'tools.identity.harmless' | transloco }}</p>
+        <p data-testid="identity-phones" [attr.data-fiction]="answer.value()?.fictionPhones">
+          {{
+            (answer.value()?.fictionPhones ? 'tools.identity.phonesFiction' : 'tools.identity.phonesMayRing')
+              | transloco
+          }}
+        </p>
         <p>{{ 'tools.identity.valid' | transloco }}</p>
+        @if (answer.value()?.unkeyed; as unkeyed) {
+          @if (unkeyed.length > 0) {
+            <p class="listing" data-testid="identity-unkeyed">
+              {{ 'tools.identity.unkeyed' | transloco }}
+              @for (kind of unkeyed; track kind) {
+                <span class="listed">{{
+                  ('tools.identity.identifiers.' + kind | transloco) + ($last ? '' : ', ')
+                }}</span>
+              }
+            </p>
+          }
+        }
+        <p class="listing" data-testid="identity-countries">
+          {{ 'tools.identity.countriesListed' | transloco }}
+          @for (code of countryCodes; track code) {
+            <span class="listed">{{
+              ('tools.identity.countries.' + code | transloco) + ($last ? '' : ', ')
+            }}</span>
+          }
+        </p>
         <p>{{ 'tools.identity.jsonFields' | transloco }}</p>
       </div>
     }

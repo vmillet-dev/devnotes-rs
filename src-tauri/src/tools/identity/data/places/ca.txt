@@ -1,0 +1,56 @@
+ON;M5H #@#;Toronto;Ontario;416;en
+QC;H2Y #@#;Montréal;Québec;514;fr
+BC;V6B #@#;Vancouver;British Columbia;604;en
+AB;T2P #@#;Calgary;Alberta;403;en
+AB;T5J #@#;Edmonton;Alberta;780;en
+ON;K1P #@#;Ottawa;Ontario;613;en
+MB;R3C #@#;Winnipeg;Manitoba;204;en
+QC;G1R #@#;Québec;Québec;418;fr
+ON;L8P #@#;Hamilton;Ontario;905;en
+ON;N2G #@#;Kitchener;Ontario;519;en
+ON;N6A #@#;London;Ontario;519;en
+NS;B3J #@#;Halifax;Nova Scotia;902;en
+BC;V8W #@#;Victoria;British Columbia;250;en
+SK;S7K #@#;Saskatoon;Saskatchewan;306;en
+SK;S4P #@#;Regina;Saskatchewan;306;en
+QC;J1H #@#;Sherbrooke;Québec;819;fr
+NL;A1C #@#;St. John's;Newfoundland and Labrador;709;en
+QC;H7N #@#;Laval;Québec;450;fr
+QC;J8X #@#;Gatineau;Québec;819;fr
+ON;L5B #@#;Mississauga;Ontario;905;en
+NB;E1C #@#;Moncton;New Brunswick;506;en
+NB;E3B #@#;Fredericton;New Brunswick;506;en
+PE;C1A #@#;Charlottetown;Prince Edward Island;902;en
+QC;G9A #@#;Trois-Rivières;Québec;819;fr
+ON;P3E #@#;Sudbury;Ontario;705;en
+BC;V1Y #@#;Kelowna;British Columbia;250;en
+---en
+King Street
+Queen Street
+Main Street
+Victoria Street
+Wellington Street
+Maple Avenue
+Church Street
+Albert Street
+George Street
+William Street
+Centre Street
+First Avenue
+Second Avenue
+Pine Street
+Cedar Avenue
+---fr
+rue Principale
+rue Saint-Jean
+rue Notre-Dame
+rue de l'Église
+rue Saint-Joseph
+rue Sainte-Catherine
+avenue du Parc
+chemin du Lac
+rue des Érables
+rue Saint-Pierre
+rue Laurier
+rue Cartier
+rue Champlain

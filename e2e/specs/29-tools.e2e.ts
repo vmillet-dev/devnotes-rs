@@ -1253,6 +1253,73 @@ describe('The tools', () => {
       await $(testid('tool-clear')).click();
     });
 
+    /**
+     * A country is a profile: its own numbers under its own names, each read off the person or
+     * carrying its key — and a country that has none for a firm says so rather than invent one.
+     */
+    it('draws a person of another country under that country’s own numbers, and says what a country does not have', async () => {
+      interface Drawn {
+        country: string;
+        sex: string;
+        birth: { date: string };
+        identifiers: { kind: string; value: string }[];
+      }
+      const shown = () => $(testid('identity-card')).getAttribute('data-country');
+      const choose = async (country: string) => {
+        await $(testid('choice-identity-country')).click();
+        await $(`${testid('choice-panel-identity-country')} [data-option-id="${country}"]`).click();
+        await eventually(shown, (now) => now === country, `a person of ${country}`);
+      };
+      const value = (field: string) => $(`[data-field="${field}"] ${testid('output-value')}`).getText();
+      await openTool('identity');
+      await $(testid('identity-card')).waitForDisplayed({ timeout: 10_000 });
+
+      // Italy: the codice fiscale is on the card, and says the year, the month and the sex of its bearer.
+      await choose('IT');
+      await $(testid('identity-copy-json')).click();
+      const italian = JSON.parse(
+        (await eventually(
+          clipboardText,
+          (text) => text?.includes('"country": "IT"') === true,
+          'an Italian',
+        )) ?? '{}',
+      ) as Drawn;
+      const code = italian.identifiers.find((identifier) => identifier.kind === 'codiceFiscale')!.value;
+      expect(await $(`${testid('identity-personal')}[data-kind="codiceFiscale"]`).getText()).toContain(code);
+      expect(code).toHaveLength(16);
+      expect(code.slice(6, 8)).toBe(italian.birth.date.slice(2, 4));
+      expect(code[8]).toBe('ABCDEHLMPRST'[Number(italian.birth.date.slice(5, 7)) - 1]);
+      expect(Number(code.slice(9, 11)) > 40).toBe(italian.sex === 'F');
+      expect(await value('partitaIva')).toMatch(/^\d{11}$/);
+      const iban = await value('iban');
+      expect(iban.startsWith('IT')).toBe(true);
+      // No range is kept for fiction there: the note says a number may ring.
+      expect(await $(testid('identity-phones')).getAttribute('data-fiction')).toBe('false');
+
+      // The United States: a routing number where an IBAN would be, and no number with a key for a firm.
+      await choose('US');
+      expect(await $('[data-field="iban"]').isExisting()).toBe(false);
+      expect(await value('routingNumber')).toMatch(/^\d{9}$/);
+      await $(testid('identity-no-firm-number')).waitForDisplayed({ timeout: 10_000 });
+      expect(await $(`${testid('identity-personal')}[data-kind="ssn"]`).getText()).toMatch(/987-65-432\d/);
+      expect(await $(testid('identity-phones')).getAttribute('data-fiction')).toBe('true');
+
+      // The Italian IBAN is one « Luhn et IBAN » finds valid.
+      await openTool('checks');
+      await setField(testid('checks-input'), iban);
+      await eventually(
+        () => $(testid('checks-verdict')).getAttribute('data-valid'),
+        (valid) => valid === 'true',
+        'the Italian IBAN found valid',
+      );
+      await $(testid('tool-clear')).click();
+
+      // Vider goes back to France.
+      await openTool('identity');
+      await $(testid('tool-clear')).click();
+      await eventually(shown, (now) => now === 'FR', 'France again');
+    });
+
     it('opens Lorem ipsum on the classic words', async () => {
       await openTool('lorem');
       await $(`${testid('segmented-lorem-unit')} [data-segment-id="words"]`).click();

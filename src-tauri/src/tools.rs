@@ -98,20 +98,11 @@ pub async fn generate_identity(
 #[specta::specta]
 pub async fn export_identities(
     request: identity::IdentityRequest,
-    count: u32,
-    format: identity::PeopleFormat,
+    batch: identity::PeopleBatch,
     path: String,
 ) -> Result<identity::PeopleExport, AppError> {
-    off_thread(move || {
-        identity::export(
-            &request,
-            count,
-            format,
-            &path,
-            chrono::Local::now().date_naive(),
-        )
-    })
-    .await
+    off_thread(move || identity::export(&request, &batch, &path, chrono::Local::now().date_naive()))
+        .await
 }
 
 #[tauri::command]

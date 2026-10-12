@@ -46,8 +46,8 @@ import {
   QrRequest,
   PermissionsRequest,
   PasswordRequest,
+  PeopleBatch,
   PeopleExport,
-  PeopleFormat,
   SavedBytes,
   SavedCode,
   SizesAnswer,
@@ -126,14 +126,22 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
       givenNames: ['Jeanne'],
       birth: { date: '1990-01-01', city: 'Lyon', region: 'Rhône' },
       document: 'F7K2M9P4X',
-      address: { street: '1 rue Pasteur', postcode: '69003', city: 'Lyon', region: 'Rhône' },
+      address: {
+        street: '1 rue Pasteur',
+        postcode: '69003',
+        city: 'Lyon',
+        region: 'Rhône',
+        formatted: '1 rue Pasteur, 69003 Lyon',
+      },
       phone: '04 65 71 00 00',
       mobile: '06 39 98 00 00',
       email: 'jeanne.martin@example.com',
-      bank: { name: 'LCL', iban: 'FR76 3000 6000 0112 3456 7890 189', bic: 'CRLYFRPP' },
+      bank: { name: 'LCL', iban: 'FR76 3000 6000 0112 3456 7890 189', bic: 'CRLYFRPP', local: [] },
       identifiers: [],
       company: { name: 'Martin Conseil', identifiers: [] },
     },
+    fictionPhones: true,
+    unkeyed: [],
   };
   peopleExport: PeopleExport = { kind: 'written', people: 0 };
   diffAnswer: JsonDiffAnswer = {
@@ -265,13 +273,8 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
     return this.answer('generate_identity', request, this.identity);
   }
 
-  exportIdentities(
-    request: IdentityRequest,
-    count: number,
-    format: PeopleFormat,
-    path: string,
-  ): Promise<PeopleExport> {
-    return this.answer('export_identities', { request, count, format, path }, this.peopleExport);
+  exportIdentities(request: IdentityRequest, batch: PeopleBatch, path: string): Promise<PeopleExport> {
+    return this.answer('export_identities', { request, batch, path }, this.peopleExport);
   }
 
   lorem(request: LoremRequest): Promise<LoremAnswer> {

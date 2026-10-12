@@ -1,0 +1,53 @@
+ENG;EC1A #@@;London;Greater London;020 7946 0
+ENG;M1 #@@;Manchester;Greater Manchester;0161 496 0
+ENG;B1 #@@;Birmingham;West Midlands;0121 496 0
+ENG;LS1 #@@;Leeds;West Yorkshire;0113 496 0
+SCT;G1 #@@;Glasgow;Scotland;0141 496 0
+ENG;L1 #@@;Liverpool;Merseyside;0151 496 0
+ENG;S1 #@@;Sheffield;South Yorkshire;0114 496 0
+SCT;EH1 #@@;Edinburgh;Scotland;0131 496 0
+ENG;BS1 #@@;Bristol;Bristol;0117 496 0
+WLS;CF10 #@@;Cardiff;Wales;029 2018 0
+ENG;NG1 #@@;Nottingham;Nottinghamshire;0115 496 0
+ENG;LE1 #@@;Leicester;Leicestershire;0116 496 0
+ENG;NE1 #@@;Newcastle upon Tyne;Tyne and Wear;0191 498 0
+NIR;BT1 #@@;Belfast;Northern Ireland;028 9649 6
+ENG;RG1 #@@;Reading;Berkshire;0118 496 0
+ENG;SR1 #@@;Sunderland;Tyne and Wear;0191 498 0
+ENG;CV1 #@@;Coventry;West Midlands;01632 960
+ENG;BD1 #@@;Bradford;West Yorkshire;01632 960
+ENG;SO14 #@@;Southampton;Hampshire;01632 960
+ENG;PL1 #@@;Plymouth;Devon;01632 960
+ENG;OX1 #@@;Oxford;Oxfordshire;01632 960
+ENG;CB1 #@@;Cambridge;Cambridgeshire;01632 960
+ENG;YO1 #@@;York;North Yorkshire;01632 960
+SCT;AB10 #@@;Aberdeen;Scotland;01632 960
+WLS;SA1 #@@;Swansea;Wales;01632 960
+ENG;NR1 #@@;Norwich;Norfolk;01632 960
+ENG;BN1 #@@;Brighton;East Sussex;01632 960
+ENG;PO1 #@@;Portsmouth;Hampshire;01632 960
+---
+High Street
+Station Road
+Main Street
+Park Road
+Church Road
+Church Street
+London Road
+Victoria Road
+Green Lane
+Manor Road
+Church Lane
+Park Avenue
+The Avenue
+The Crescent
+Queens Road
+New Road
+Grange Road
+Kings Road
+Kingsway
+Windsor Road
+Highfield Road
+Mill Lane
+Alexander Road
+York Road

@@ -1,0 +1,51 @@
+MZ;00-001;Warszawa;mazowieckie;22
+MA;30-001;Kraków;małopolskie;12
+LD;90-001;Łódź;łódzkie;42
+DS;50-001;Wrocław;dolnośląskie;71
+WP;60-001;Poznań;wielkopolskie;61
+PM;80-001;Gdańsk;pomorskie;58
+ZP;70-001;Szczecin;zachodniopomorskie;91
+KP;85-001;Bydgoszcz;kujawsko-pomorskie;52
+LU;20-001;Lublin;lubelskie;81
+PD;15-001;Białystok;podlaskie;85
+SL;40-001;Katowice;śląskie;32
+PM;81-301;Gdynia;pomorskie;58
+SL;42-200;Częstochowa;śląskie;34
+MZ;26-600;Radom;mazowieckie;48
+KP;87-100;Toruń;kujawsko-pomorskie;56
+SK;25-001;Kielce;świętokrzyskie;41
+PK;35-001;Rzeszów;podkarpackie;17
+SL;44-100;Gliwice;śląskie;32
+WN;10-001;Olsztyn;warmińsko-mazurskie;89
+OP;45-001;Opole;opolskie;77
+LB;65-001;Zielona Góra;lubuskie;68
+LB;66-400;Gorzów Wielkopolski;lubuskie;95
+SL;43-300;Bielsko-Biała;śląskie;33
+MZ;09-400;Płock;mazowieckie;24
+ZP;75-001;Koszalin;zachodniopomorskie;94
+DS;59-220;Legnica;dolnośląskie;76
+---
+ul. Polna
+ul. Leśna
+ul. Słoneczna
+ul. Krótka
+ul. Szkolna
+ul. Ogrodowa
+ul. Lipowa
+ul. Brzozowa
+ul. Łąkowa
+ul. Kwiatowa
+ul. Kościelna
+ul. Sosnowa
+ul. Zielona
+ul. Parkowa
+ul. Akacjowa
+ul. Długa
+ul. Mickiewicza
+ul. Kościuszki
+ul. Sienkiewicza
+ul. Słowackiego
+ul. 3 Maja
+ul. Wojska Polskiego
+ul. Piłsudskiego
+ul. Kopernika

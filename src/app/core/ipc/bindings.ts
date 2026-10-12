@@ -48,7 +48,7 @@ export const commands = {
 	convertData: (request: ConvertRequest) => typedError<ConvertAnswer, AppError>(__TAURI_INVOKE("convert_data", { request })),
 	generateJson: (request: GenerateRequest) => typedError<GenerateAnswer, AppError>(__TAURI_INVOKE("generate_json", { request })),
 	generateIdentity: (request: IdentityRequest) => typedError<IdentityAnswer, AppError>(__TAURI_INVOKE("generate_identity", { request })),
-	exportIdentities: (request: IdentityRequest, count: number, format: PeopleFormat, path: string) => typedError<PeopleExport, AppError>(__TAURI_INVOKE("export_identities", { request, count, format, path })),
+	exportIdentities: (request: IdentityRequest, batch: PeopleBatch, path: string) => typedError<PeopleExport, AppError>(__TAURI_INVOKE("export_identities", { request, batch, path })),
 	loremIpsum: (request: LoremRequest) => typedError<LoremAnswer, AppError>(__TAURI_INVOKE("lorem_ipsum", { request })),
 	diffJson: (request: JsonDiffRequest) => typedError<JsonDiffAnswer, AppError>(__TAURI_INVOKE("diff_json", { request })),
 	diffText: (request: TextDiffRequest) => typedError<TextDiffAnswer, AppError>(__TAURI_INVOKE("diff_text", { request })),
@@ -406,10 +406,13 @@ export const WEBSOCKET_EVENT = "devnotes://websocket" as const;
 
 /* Types */
 export type Address = {
+	/**  The number and the street, in the order the country writes them. */
 	street: string,
 	postcode: string,
 	city: string,
 	region: string,
+	/**  The whole of it on one line, as an envelope of the country carries it. */
+	formatted: string,
 };
 
 export type AlgorithmFamily = "hmac" | "rsa" | "rsaPss" | "ecdsa" | "edDsa" | 
@@ -450,8 +453,11 @@ export type Backup = {
 
 export type Bank = {
 	name: string,
-	iban: string,
-	bic: string,
+	/**  None in a country that has no IBAN. */
+	iban: string | null,
+	bic: string | null,
+	/**  What the country writes beside an IBAN or instead of one: a sort code, a routing number. */
+	local: Identifier[],
 };
 
 export type Base64FileAnswer = 
@@ -868,7 +874,7 @@ export type CookieDomain = {
 	cookies: StoredCookie[],
 };
 
-export type Country = "FR";
+export type Country = "FR" | "BE" | "DE" | "ES" | "IT" | "PT" | "NL" | "CH" | "GB" | "PL" | "SE" | "US" | "CA";
 
 export type CronAnswer = { kind: "read"; 
 /**  What a macro stands for: `@daily` is `0 0 * * *`. */
@@ -1560,7 +1566,7 @@ export type Identifier = {
 };
 
 /**  Their own names in their own country: a label, never a translation. */
-export type IdentifierKind = "nir" | "siren" | "siret" | "vat";
+export type IdentifierKind = "nir" | "siren" | "siret" | "vat" | "nrn" | "bce" | "beVat" | "steuerId" | "ustIdNr" | "dni" | "nifEs" | "codiceFiscale" | "partitaIva" | "nifPt" | "nipc" | "bsn" | "kvk" | "btw" | "ahv" | "uid" | "nino" | "crn" | "gbVat" | "pesel" | "nip" | "regon" | "personnummer" | "orgnr" | "moms" | "ssn" | "sin" | "sortCode" | "accountNumber" | "routingNumber" | "transitNumber";
 
 export type IdentifiersRequest = {
 	kind: IdKind,
@@ -1600,6 +1606,10 @@ export type IdentityAnswer = {
 	person: Identity,
 	/**  The person as an export writes one, for the clipboard and for a note. */
 	json: string,
+	/**  Whether the phone numbers are in a range the country keeps for fiction. */
+	fictionPhones: boolean,
+	/**  The numbers of this card that carry no key: a format, and nothing to verify it by. */
+	unkeyed: IdentifierKind[],
 };
 
 export type IdentityRequest = {
@@ -2281,6 +2291,14 @@ export type PasswordRequest = {
 	sets: CharacterSet[],
 	avoidLookAlikes: boolean,
 	count: number,
+};
+
+/**  What a batch is made of, beside the person asked for. */
+export type PeopleBatch = {
+	/**  The countries that take their turn after the request's own; none is that one alone. */
+	countries: Country[],
+	count: number,
+	format: PeopleFormat,
 };
 
 export type PeopleExport = { kind: "written"; people: number } | { kind: "failed"; problem: FileProblem };
