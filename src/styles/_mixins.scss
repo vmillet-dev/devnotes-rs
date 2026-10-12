@@ -282,6 +282,15 @@
   }
 }
 
+// A status that must read at a glance — an answer's « 200 OK », « 404 Not Found »: twice the
+// fill of `tint-badge`, a ring in the hue, the text at full strength. ⚠️ `STATUS_TINT` in
+// `scripts/palette.test.mjs` is this alpha: raise one, raise the other.
+@mixin status-badge($rgb-var) {
+  background: rgba(var(#{$rgb-var}), 0.3);
+  border: 1px solid rgba(var(#{$rgb-var}), 0.55);
+  color: var(--text-0);
+}
+
 // The opposite trade, for a badge whose **hue is the information** rather than a state: the
 // label keeps the colour and the fill goes neutral.
 //

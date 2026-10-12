@@ -14,6 +14,39 @@ function stubSystemTheme(prefersDark: boolean): void {
   }));
 }
 
+describe('the share of the HTTP workspace', () => {
+  /** `0` is « automatic », and a stale file is clamped rather than refused. */
+  it('is automatic until the line is dragged, kept to a tenth, and clamped when read back', () => {
+    TestBed.resetTestingModule();
+    const preferences = TestBed.inject(PreferencesService);
+    const store = TestBed.inject(SettingsStore);
+    expect(store.httpRequestShare()).toBe(0);
+
+    store.httpRequestShare.write(42.3);
+    expect(store.httpRequestShare()).toBe(42.3);
+    expect(preferences.read('devnotes.httpRequestShare')).toBe('42.3');
+
+    store.httpRequestShare.write(0);
+    expect(preferences.read('devnotes.httpRequestShare')).toBe('0');
+
+    for (const [stored, read] of [
+      ['33.3333', 33.3],
+      ['-4', 0],
+      ['400', 95],
+      ['2', 5],
+    ] as const) {
+      preferences.write('devnotes.httpRequestShare', stored);
+      store.restore();
+      expect(store.httpRequestShare()).toBe(read);
+    }
+
+    // What is not a number leaves the share where it was.
+    preferences.write('devnotes.httpRequestShare', 'beaucoup');
+    store.restore();
+    expect(store.httpRequestShare()).toBe(5);
+  });
+});
+
 describe('SettingsStore', () => {
   /** Mirrors the initializer: build it, then read back what was stored. */
   function createStore(): SettingsStore {

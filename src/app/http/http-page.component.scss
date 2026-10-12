@@ -22,9 +22,27 @@
   min-height: 0;
 }
 
+.split {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+// Left to itself the request takes what it holds, up to 60%: sixteen headers left the answer
+// a third of the window, and a short request kept an empty panel a long JSON could not have.
+// Once the line is dragged the share is the one chosen, held between two floors — the request
+// line and its tabs here, `min-height` on the pane below — so neither goes out of reach.
 app-request-editor {
   flex: 0 1 auto;
+  min-height: 148px;
   max-height: 60%;
+
+  &.shared {
+    flex-grow: 0;
+    flex-shrink: 0;
+    max-height: none;
+  }
 }
 
 .empty {

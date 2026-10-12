@@ -2997,8 +2997,14 @@
       "cancel": "Cancel",
       "failed": "The request could not be sent."
     },
+    "split": {
+      "label": "Height of the request — arrows to change it, double-click or Enter for automatic",
+      "auto": "automatic",
+      "value": "{{share}}% for the request"
+    },
     "response": {
       "label": "Response",
+      "clear": "Clear",
       "idle": "Send the request to read its response here.",
       "sending": "Sending…",
       "cancelled": "Send cancelled.",

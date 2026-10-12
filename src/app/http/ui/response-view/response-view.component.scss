@@ -16,27 +16,31 @@
   border-bottom: 1px solid var(--line-soft);
 }
 
+// A signal, so drawn as one: at the tint every other badge has, « 200 OK » hardly read as
+// green. A denser fill, a ring in the hue and the text at full strength; `palette.test.mjs`
+// holds that text to 4.5:1 on each of the four, in both themes.
 .status {
-  @include tint-badge(--green-rgb);
+  @include status-badge(--green-rgb);
   padding: 3px 10px;
   border-radius: 6px;
   font-family: var(--font-mono), monospace;
   font-size: 12.5px;
   font-weight: 700;
 
-  &[data-class='3'] {
-    @include tint-badge(--blue-rgb);
+  &[data-family='3xx'] {
+    @include status-badge(--blue-rgb);
   }
 
-  &[data-class='4'] {
-    @include tint-badge(--amber-rgb);
+  &[data-family='4xx'] {
+    @include status-badge(--amber-rgb);
   }
 
-  &[data-class='5'],
-  &[data-class='0'],
-  &[data-class='1'],
+  // What is not an answer in one of the three above is a failure, or reads as one.
+  &[data-family='5xx'],
+  &[data-family='0xx'],
+  &[data-family='1xx'],
   &.failing {
-    @include tint-badge(--red-rgb);
+    @include status-badge(--red-rgb);
   }
 }
 

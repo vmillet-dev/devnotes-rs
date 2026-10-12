@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { HttpSendStore } from '@core/services/http/http-send.store';
@@ -10,7 +11,7 @@ const ELAPSED_TICK_MS = 100;
 /** The lower half of a request's tab: where its last send stands, and what it answered. */
 @Component({
   selector: 'app-response-pane',
-  imports: [ResponseViewComponent, SpinnerComponent, TranslocoPipe],
+  imports: [NgTemplateOutlet, ResponseViewComponent, SpinnerComponent, TranslocoPipe],
   templateUrl: './response-pane.component.html',
   styleUrl: './response-pane.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -62,5 +63,10 @@ export class ResponsePaneComponent {
 
   protected saveFile(): void {
     void this.sending.saveBody(this.tabKey());
+  }
+
+  /** The pane, not the record: the history keeps the send. */
+  protected clear(): void {
+    this.sending.forget(this.tabKey());
   }
 }

@@ -39,6 +39,13 @@ export const RAIL_WIDTH = { min: 160, max: 520, default: 160 } as const;
 /** The history's list beside the send it reads: wide enough for a URL at its ceiling. */
 export const HISTORY_LIST_WIDTH = { min: 280, max: 760, default: 380 } as const;
 
+/**
+ * How much of the HTTP workspace's height the request takes, in percent. `auto` leaves it to
+ * what the request holds, as before there was a line to drag; the two ends are a stale file's
+ * guard, the floors on screen being pixels the window decides.
+ */
+export const HTTP_REQUEST_SHARE = { auto: 0, min: 5, max: 95 } as const;
+
 export interface AppSettings {
   readonly locale: LocaleChoice;
   readonly theme: ThemeChoice;
@@ -62,6 +69,8 @@ export interface AppSettings {
   readonly libraryRailWidth: number;
   /** The width of the HTTP history's list, dragged the same way. */
   readonly historyListWidth: number;
+  /** The request's share of the height it has with its response; `0` leaves it automatic. */
+  readonly httpRequestShare: number;
   /** Which area shows — Notes or Outils — and the one the window reopens on. */
   readonly area: Area;
   /** The tools opened last, newest first: which and when, nothing typed into them. */
@@ -104,6 +113,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   showLibraryRail: true,
   libraryRailWidth: RAIL_WIDTH.default,
   historyListWidth: HISTORY_LIST_WIDTH.default,
+  httpRequestShare: HTTP_REQUEST_SHARE.auto,
   area: AREAS[0],
   recentTools: [],
   showPinnedFirst: true,

@@ -1306,6 +1306,162 @@ describe('HTTP collections', () => {
      * `api.github.com` answered « Please make sure your request has a User-Agent header »: none
      * was sent, and nothing in the editor said what leaves without having been typed.
      */
+    /**
+     * Three things about the pane a request answers in: the line between the two could not
+     * be moved, an answer could not be put away, and « 200 OK » sat on a tint too light to
+     * read as a signal.
+     */
+    it('moves the line between a request and its answer, clears an answer, and says the family of a status', async () => {
+      await bridge.clearHttpHistory();
+      const server = createServer((request, response) => {
+        response.writeHead(Number((request.url ?? '/200').slice(1)), { 'Content-Type': 'application/json' });
+        response.end('{"ok":true}');
+      });
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      const { port } = server.address() as AddressInfo;
+      try {
+        const api = await bridge.createHttpCollection('Volet');
+        const created = await bridge.createHttpRequest({
+          ...draft(api.id, null, 'Statuts'),
+          document: { url: `http://127.0.0.1:${port}/200`, description: '' },
+        });
+        await press('1', ['Control']);
+        await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+        await press('3', ['Control']);
+        await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+        if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
+        await $(`${testid('http-node')}[data-id="${created.id}"] ${testid('http-node-name')}`).click();
+        await $(testid('http-response-idle')).waitForDisplayed({ timeout: 10_000 });
+
+        /** The two heights, the box they share and the share the line says, read in one pass. */
+        const split = () =>
+          browser.execute(
+            (editor: string, pane: string, line: string) => ({
+              request: Math.round(
+                document.querySelector(editor)!.parentElement!.getBoundingClientRect().height,
+              ),
+              response: Math.round(
+                document.querySelector(pane)!.parentElement!.getBoundingClientRect().height,
+              ),
+              box: Math.round(document.querySelector(line)!.parentElement!.getBoundingClientRect().height),
+              share: Number(document.querySelector(line)!.getAttribute('data-share')),
+            }),
+            testid('http-request-editor'),
+            testid('http-response'),
+            testid('http-split-handle'),
+          );
+        const onLine = async (key: string) => {
+          await browser.execute(
+            (line: string) => (document.querySelector(line) as HTMLElement | null)?.focus(),
+            testid('http-split-handle'),
+          );
+          // Through `press`: the embedded driver has no `Home` nor `End` to send.
+          await press(key);
+        };
+        /**
+         * One key on the line, then where it leads. ⚠️ Waited for key by key, and for the panes
+         * as well as the share: the page redraws after a key, not during it, and a share read
+         * alone was answered before the two heights had followed it.
+         */
+        const move = async (key: string) => {
+          const before = await split();
+          await onLine(key);
+          return eventually(
+            split,
+            (now) => now.share !== before.share && now.request !== before.request,
+            `the line moved by ${key} from ${JSON.stringify(before)}`,
+          );
+        };
+        // Whatever a run before left, it starts from the automatic share.
+        await onLine('Enter');
+        const auto = await eventually(split, (now) => now.share === 0, 'the automatic share');
+
+        // The arrows move the line: the request taller, its answer shorter by as much.
+        const once = await move('ArrowDown');
+        const lower = await move('ArrowDown');
+        expect(lower.share).toBeGreaterThan(once.share);
+        expect(lower.request).toBeGreaterThan(auto.request);
+        expect(lower.response).toBeLessThan(auto.response);
+        expect(lower.request + lower.response).toBe(auto.request + auto.response);
+
+        // Each end is a floor: the answer keeps its status line, the request its own line and tabs.
+        const least = await move('End');
+        expect(least.response).toBeGreaterThanOrEqual(158);
+        expect(least.response).toBeLessThanOrEqual(164);
+        await onLine('ArrowDown');
+        expect(await split()).toEqual(least);
+        const most = await move('Home');
+        expect(most.request).toBeGreaterThanOrEqual(146);
+        expect(most.request).toBeLessThanOrEqual(152);
+        await onLine('ArrowUp');
+        expect(await split()).toEqual(most);
+
+        // The share is the area's, kept with the application: a trip to the notes, then a refresh.
+        await move('ArrowDown');
+        await move('ArrowDown');
+        const kept = await move('ArrowDown');
+        await press('1', ['Control']);
+        await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+        await press('3', ['Control']);
+        await $(testid('http-split-handle')).waitForExist({ timeout: 10_000 });
+        expect(await eventually(split, (now) => now.share === kept.share, 'the share after a trip')).toEqual(
+          kept,
+        );
+        await reloadCanvas();
+        await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+        await $(testid('http-split-handle')).waitForExist({ timeout: 10_000 });
+        expect(
+          (await eventually(split, (now) => now.share === kept.share, 'the share after a refresh')).share,
+        ).toBe(kept.share);
+
+        // A status carries its family, for what cannot read a colour.
+        const family = () => $(testid('http-response-status')).getAttribute('data-family');
+        for (const [status, expected] of [
+          [200, '2xx'],
+          [404, '4xx'],
+          [500, '5xx'],
+        ] as const) {
+          await setField(testid('http-url'), `http://127.0.0.1:${port}/${status}`);
+          await $(testid('http-send')).click();
+          await eventually(
+            () => $(testid('http-response-status')).getText(),
+            (text) => text.startsWith(String(status)),
+            `the answer ${status}`,
+          );
+          expect(await family()).toBe(expected);
+        }
+
+        // « Effacer » puts the answer away: the pane waits again, the history kept the three sends.
+        await $(testid('http-response-clear')).click();
+        await $(testid('http-response-idle')).waitForDisplayed({ timeout: 10_000 });
+        expect(await $(testid('http-response-status')).isExisting()).toBe(false);
+        await $(testid('http-history-open')).click();
+        await eventually(
+          () => readEach(testid('http-history-status'), 'text'),
+          (statuses) => statuses.length === 3,
+          'the three sends still in the history',
+        );
+        await $(testid('http-history-open')).click();
+        await $(testid('http-history')).waitForExist({ reverse: true, timeout: 10_000 });
+
+        // Enter on the line is its double-click: back to the automatic share.
+        await onLine('Enter');
+        await eventually(
+          split,
+          (now) => now.share === 0 && now.request === auto.request,
+          'the automatic share again',
+        );
+
+        const tab = `${testid('http-tab')}[data-key="${created.id}"]`;
+        await $(`${tab} ${testid('http-tab-close')}`).click();
+        await $(testid('http-close-discard')).click();
+        await $(tab).waitForExist({ reverse: true, timeout: 10_000 });
+        await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+      } finally {
+        server.close();
+      }
+    });
+
     it('names the application to the server unless a row says otherwise, and lists what leaves unasked', async () => {
       const agents: (string | undefined)[] = [];
       const server = createServer((request, response) => {

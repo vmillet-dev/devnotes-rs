@@ -13,6 +13,7 @@ import {
   MAX_TIME_ZONES,
   NOTE_KIND_CHOICES,
   HISTORY_LIST_WIDTH,
+  HTTP_REQUEST_SHARE,
   RAIL_WIDTH,
   ResolvedTheme,
   SETTINGS_KEYS,
@@ -55,6 +56,17 @@ function asPixels(bounds: { readonly min: number; readonly max: number }): Setti
     format: String,
   };
 }
+
+/** A share of a height, to a tenth of a point; `0` is « automatic », and stays it. */
+const asShare: SettingCodec<number> = {
+  parse: (stored) => {
+    const value = Number.parseFloat(stored);
+    if (Number.isNaN(value)) return null;
+    if (value <= HTTP_REQUEST_SHARE.auto) return HTTP_REQUEST_SHARE.auto;
+    return Math.min(HTTP_REQUEST_SHARE.max, Math.max(HTTP_REQUEST_SHARE.min, Math.round(value * 10) / 10));
+  },
+  format: String,
+};
 
 /** Whatever the file garbled is dropped entry by entry, not the whole list. */
 const asRecentTools: SettingCodec<readonly RecentTool[]> = {
@@ -128,6 +140,7 @@ export class SettingsStore {
   readonly showLibraryRail = this.setting('showLibraryRail', asBoolean);
   readonly libraryRailWidth = this.setting('libraryRailWidth', asPixels(RAIL_WIDTH));
   readonly historyListWidth = this.setting('historyListWidth', asPixels(HISTORY_LIST_WIDTH));
+  readonly httpRequestShare = this.setting('httpRequestShare', asShare);
   readonly area = this.setting('area', asOneOf(AREAS));
   readonly recentTools = this.setting('recentTools', asRecentTools);
   readonly showPinnedFirst = this.setting('showPinnedFirst', asBoolean);

@@ -1,6 +1,6 @@
 @let answer = response();
 <header class="bar">
-  <span class="status" data-testid="http-response-status" [attr.data-class]="statusClass()"
+  <span class="status" data-testid="http-response-status" [attr.data-family]="family()"
     >{{ answer.status }} {{ answer.reason }}</span
   >
   @if (graphqlErrors() > 0) {
@@ -60,6 +60,9 @@
       (click)="saveAsNote()"
     >
       {{ 'tools.saveAsNote.open' | transloco }}
+    </button>
+    <button type="button" class="action" data-testid="http-response-clear" (click)="clearAsked.emit()">
+      {{ 'http.response.clear' | transloco }}
     </button>
   </div>
 </header>
