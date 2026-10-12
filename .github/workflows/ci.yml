@@ -174,17 +174,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, windows-latest]
-
-          - os: macos-latest
-            cache-key: rust-macos
-            save-cache: 'true'
+        os: [ubuntu-22.04, windows-latest, macos-latest]
 
     steps:
       - uses: actions/checkout@v7
 
       # Its own key on each platform: on Linux it holds the instrumented build coverage wants,
-      # which no other job produces.
+      # on macOS Clippy's check artifacts beside the tests', which no other job produces.
       - uses: ./.github/actions/setup-rust
         with:
           shared-key: test-${{ matrix.os }}
