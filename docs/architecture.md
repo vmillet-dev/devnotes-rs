@@ -1036,12 +1036,21 @@ country, hard-coded, is a megabyte of test data in the binary.
   phone numbers and an e-mail domain, and the tool says so.
 - **First version: France**, complete. **Then**: Belgium, Germany, Spain, Italy, Portugal, the
   Netherlands, Switzerland, the United Kingdom, Poland, Sweden, the United States and Canada.
-  Whatever the budget still holds comes after, and is written in the tool's note.
+  All thirteen are in the tool, their list written in its note; the budget still holds
+  more than half of itself for the ones that follow.
 
-**The identity tool is that design, with France complete** (`tools/identity.rs`,
-`identity/data.rs`, `identity/france.rs`; `tools/catalogue/identity/`). A pure function of
-the options and a seed behind one command; the lists are files under `identity/data/`, 8 KB
-for France's five pools, forty places and thirty streets, and `data::weight` is held under
+**The identity tool is that design, for thirteen countries** (`tools/identity.rs`;
+`tools/catalogue/identity/`). A pure function of the options and a seed behind one command.
+Four files under `tools/identity/`, each one thing:
+
+| File         | What it holds                                                                                            |
+| ------------ | -------------------------------------------------------------------------------------------------------- |
+| `data.rs`    | The lists — fourteen pools of names, a file of places and streets a country — read from `identity/data/` |
+| `profile.rs` | A country in a few lines: its mix of pools, the order of an address, the shape of a phone number, a firm |
+| `numbers.rs` | The keys, a function each, each held to an example its country publishes                                 |
+| `papers.rs`  | The numbers of a person, a firm and an account, a country at a time, built on `numbers.rs`               |
+
+The lists weigh **37 KB** for the thirteen countries, and `data::weight` is held under
 `BUDGET` by a test.
 
 - **The seed is text** — « devnotes » is one — hashed to the number the tools' `Draw` takes;
@@ -1051,23 +1060,60 @@ for France's five pools, forty places and thirty streets, and `data::weight` is 
 - ⚠️ **Every draw is made in one order whatever the options**: a sex that is imposed still
   costs its draw, the given names are three draws however many are kept. Changing an option
   changes what it names and nothing else of the person.
+- **A place says what its country needs of it** (`Place`): a code — the INSEE code of a
+  French commune, the land-registry code an Italian codice fiscale ends on, a state's two
+  letters —, a postcode that may leave characters to draw (`#` a digit, `@` a letter, from
+  the letters the United Kingdom, the Netherlands and Canada all allow), the prefix of its
+  phone numbers, and a tag where a country speaks several languages: Brussels takes French
+  streets and « SRL », Antwerp Dutch ones and « BV ». **An address is written in the
+  country's order** (`Address::formatted`): « Hauptstraße 12, 10115 Berlin », « 12 High
+  Street, Manchester M1 4BT », « 12 Main Street, Chicago, IL 60601 ».
+- ⚠️ **A Polish surname in `-ski`, `-cki` or `-dzki` follows the person** (`Pool::borne`): a
+  woman's ends in `-a`, in Poland and in every country whose mix draws from that pool. **No
+  surname sits in two pools** — a test holds it — which is how a mix is counted.
 - **One implementation generates and verifies**: the IBAN's two digits and the Luhn digit are
   `tools/checks.rs`'s own functions, and the test asks the checks tool whether each IBAN is
-  valid — RIB key included — over a thousand seeds. The social security number is formed from
-  the person: sex, year and month of birth, and the INSEE code of the commune they were born
-  in, Corsica's `2A` counted as 19 for the key.
-- **Harmless where a range is kept for it**: `example.com`, `.org`, `.net`, and the blocks
-  ARCEP keeps for fiction (`01 99 00`, `06 39 98`…), the landline in the zone of the town. ⚠️
-  No such range exists for an IBAN, a SIREN or a social security number: the tool's note says
-  a number that passes its key may be someone's.
+  valid — its length for the country and, in France, the RIB key — in every country that has
+  one. The national key inside the account is computed where there is one: France, Belgium,
+  Spain, Italy's CIN, Portugal, the Dutch « elfproef », the digit of a Polish branch.
+- **A number that encodes its bearer is read off them** (`papers::Bearer`), never drawn
+  beside them: France's social security number (sex, year, month, commune, Corsica's `2A`
+  counted as 19 for the key), Belgium's national number (birth, and a serial odd for a man —
+  read behind a `2` for a birth from 2000 on), the codice fiscale (the names, the birth, a
+  woman's day forty higher, the commune), the PESEL (the century in the month), the
+  personnummer (a `+` for a hyphen from a hundred years on). The others are a drawn body and
+  its key: Steuer-ID and USt-IdNr (ISO 7064), DNI and a company's NIF, partita IVA, the
+  Portuguese NIF and NIPC, BSN, AHV (EAN-13) and UID, the British VAT number, NIP and REGON,
+  organisationsnummer, the Canadian SIN.
+- ⚠️ **What has no key is said, not dressed up** (`papers::UNKEYED`,
+  `IdentityAnswer::unkeyed`): a National Insurance number, a company number, a KvK-nummer, a
+  sort code and an account number are formats, and the tool's note names those the card
+  shows. A country whose firms have no number with a key — the United States, Canada —
+  answers none, and the block says so rather than show a field made up.
+- **Harmless where a range is kept for it**: `example.com`, `.org`, `.net` everywhere; a
+  phone number in the block the regulator keeps for fiction in **France** (ARCEP's blocks, one
+  a zone, written with each place), the **United Kingdom** (Ofcom's, a block a large town and
+  `01632 960` for the others, `07700 900` for a mobile), the **United States** and **Canada**
+  (`555-01xx` in the place's area code); the ten social security numbers the United States
+  keeps for advertisements (`987-65-4320` to `4329`), and a Canadian number starting with a
+  `0`, which Canada gives nobody. ⚠️ Elsewhere a phone number of the right shape may ring at
+  someone's (`Profile::fiction_phones`, said in the note), and no range exists for an IBAN or
+  a tax number: one that passes its key may be someone's.
+- ⚠️ **Written from memory, not from a register**: the towns' codes — INSEE, the Italian land
+  registry —, the area codes and the banks' codes were not checked against their official
+  tables, which would mean fetching them. A wrong one leaves a number that still passes its
+  key, and names another town.
 - ⚠️ **The card evokes one and imitates none**: a monogram where a photo would be, no emblem,
   no flag bar, no machine-readable zone, and « Spécimen » printed across it. A number that
-  is the person's own is on the card; the rest is three blocks — contact, bank, company —
-  each value copied with a click.
+  is the person's own is on the card, **under the name its country gives it** — « Codice
+  fiscale », « BSN », « Sort code » are names, written the same in both languages; the rest
+  is three blocks — contact, bank, company — each value copied with a click.
 - **Out**: « Copier en JSON » and the note take the JSON Rust wrote (`IdentityAnswer::json`,
   the field names of `Identity`, which an export shares); a batch of one to a hundred people
   is a file, JSON or CSV, written by Rust where the file dialog says and starting from the
-  person on screen.
+  person on screen. **Several countries take their turn in one file** (`PeopleBatch`), the
+  card's own first; a CSV holds the numbers of a person in one column, `kind:value` and a bar
+  between, since they differ from a country to the next.
 
 **Adding a tool**, the whole of it:
 

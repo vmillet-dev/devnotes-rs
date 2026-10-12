@@ -48,8 +48,8 @@ import {
   QrRequest,
   PermissionsRequest,
   PasswordRequest,
+  PeopleBatch,
   PeopleExport,
-  PeopleFormat,
   SavedBytes,
   SavedCode,
   SizesAnswer,
@@ -137,13 +137,8 @@ export class ToolsRepository {
     return unwrap('generate_identity', await commands.generateIdentity(request));
   }
 
-  async exportIdentities(
-    request: IdentityRequest,
-    count: number,
-    format: PeopleFormat,
-    path: string,
-  ): Promise<PeopleExport> {
-    return unwrap('export_identities', await commands.exportIdentities(request, count, format, path));
+  async exportIdentities(request: IdentityRequest, batch: PeopleBatch, path: string): Promise<PeopleExport> {
+    return unwrap('export_identities', await commands.exportIdentities(request, batch, path));
   }
 
   async lorem(request: LoremRequest): Promise<LoremAnswer> {

@@ -32,7 +32,21 @@ const FORMATS: readonly Segment[] = (['json', 'csv'] as const).map((id) => ({
   labelKey: `tools.identity.formats.${id}`,
 }));
 
-const COUNTRY_CODES: readonly Country[] = ['FR'];
+const COUNTRY_CODES: readonly Country[] = [
+  'FR',
+  'BE',
+  'DE',
+  'ES',
+  'IT',
+  'PT',
+  'NL',
+  'CH',
+  'GB',
+  'PL',
+  'SE',
+  'US',
+  'CA',
+];
 const COUNTRIES: readonly ChoiceOption[] = COUNTRY_CODES.map((code) => ({
   id: code,
   name: `tools.identity.countries.${code}`,
@@ -99,6 +113,8 @@ export class IdentityToolComponent implements Tool {
   protected readonly seed = toolState<string | null>('identity.seed', null);
   protected readonly people = toolState<number>('identity.people', DEFAULTS.people);
   protected readonly format = toolState<PeopleFormat>('identity.format', 'json');
+  /** The countries a batch adds to the card's own, which is always in it. */
+  protected readonly batchCountries = toolState<readonly Country[]>('identity.batchCountries', []);
 
   /** A new draw with the same options: part of the request, so the request changes. */
   private readonly draw = signal(0);
@@ -106,6 +122,7 @@ export class IdentityToolComponent implements Tool {
   protected readonly sexes = SEXES;
   protected readonly formats = FORMATS;
   protected readonly countries = COUNTRIES;
+  protected readonly countryCodes = COUNTRY_CODES;
   protected readonly ages = AGE_BOUNDS;
   protected readonly peopleBounds = PEOPLE_BOUNDS;
   protected readonly anySex = ANY;
@@ -155,9 +172,8 @@ export class IdentityToolComponent implements Tool {
   protected readonly contact = computed<readonly Row[]>(() => {
     const person = this.person();
     if (!person) return [];
-    const { street, postcode, city } = person.address;
     return [
-      { id: 'address', labelKey: 'tools.identity.fields.address', value: `${street}, ${postcode} ${city}` },
+      { id: 'address', labelKey: 'tools.identity.fields.address', value: person.address.formatted },
       { id: 'phone', labelKey: 'tools.identity.fields.phone', value: person.phone },
       { id: 'mobile', labelKey: 'tools.identity.fields.mobile', value: person.mobile },
       { id: 'email', labelKey: 'tools.identity.fields.email', value: person.email },
@@ -167,10 +183,14 @@ export class IdentityToolComponent implements Tool {
   protected readonly bank = computed<readonly Row[]>(() => {
     const bank = this.person()?.bank;
     if (!bank) return [];
+    // A country without an IBAN shows what it writes instead, and no empty row.
     return [
       { id: 'bank', labelKey: 'tools.identity.fields.bank', value: bank.name },
-      { id: 'iban', labelKey: 'tools.identity.fields.iban', value: bank.iban },
-      { id: 'bic', labelKey: 'tools.identity.fields.bic', value: bank.bic },
+      ...(bank.iban === null
+        ? []
+        : [{ id: 'iban', labelKey: 'tools.identity.fields.iban', value: bank.iban }]),
+      ...(bank.bic === null ? [] : [{ id: 'bic', labelKey: 'tools.identity.fields.bic', value: bank.bic }]),
+      ...this.named(bank.local),
     ];
   });
 
@@ -182,6 +202,9 @@ export class IdentityToolComponent implements Tool {
       ...this.named(company.identifiers),
     ];
   });
+
+  /** A country whose firms have no number with a key says so, rather than show one made up. */
+  protected readonly firmHasNoNumber = computed(() => this.person()?.company.identifiers.length === 0);
 
   /** The numbers that are the person's own, on the card itself. */
   protected readonly personal = computed<readonly Row[]>(() => this.named(this.person()?.identifiers ?? []));
@@ -212,6 +235,8 @@ export class IdentityToolComponent implements Tool {
 
   /** Back to the options a first visit has, and a fresh draw. */
   clear(): void {
+    this.country.set('FR');
+    this.batchCountries.set([]);
     this.sex.set(null);
     this.ageMin.set(DEFAULTS.ageMin);
     this.ageMax.set(DEFAULTS.ageMax);
@@ -227,6 +252,16 @@ export class IdentityToolComponent implements Tool {
   protected onCountry(id: string | null): void {
     const country = COUNTRY_CODES.find((code) => code === id);
     if (country) this.country.set(country);
+  }
+
+  protected inBatch(code: Country): boolean {
+    return code === this.country() || this.batchCountries().includes(code);
+  }
+
+  protected toggleBatch(code: Country): void {
+    this.batchCountries.update((countries) =>
+      countries.includes(code) ? countries.filter((each) => each !== code) : [...countries, code],
+    );
   }
 
   protected onSex(id: string): void {
@@ -279,8 +314,7 @@ export class IdentityToolComponent implements Tool {
     const written = await this.notifier.attempt('errors.toolFailed', () =>
       this.repository.exportIdentities(
         { ...this.request(), seed: this.seed() ?? used },
-        this.people(),
-        this.format(),
+        { countries: [...this.batchCountries()], count: this.people(), format: this.format() },
         path,
       ),
     );

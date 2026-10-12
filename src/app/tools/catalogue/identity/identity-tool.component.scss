@@ -113,6 +113,40 @@
   gap: 10px;
 }
 
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.chip {
+  @include unstyled-control;
+  @include hit-target(26px);
+  @include surface(var(--bg-2), 6px);
+  @include focus-ring;
+  min-width: 34px;
+  padding: 0 6px;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  color: var(--text-2);
+  cursor: pointer;
+
+  &.on {
+    @include accent-state;
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+.none {
+  margin: 0;
+  padding: 9px 16px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
 .action {
   @include tool-button;
 }

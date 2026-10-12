@@ -21,11 +21,17 @@ const ADA: IdentityAnswer = {
     givenNames: ['Élise', 'Marie'],
     birth: { date: '1987-03-12', city: 'Lyon', region: 'Rhône' },
     document: 'F7K2M9P4X',
-    address: { street: '12 rue Pasteur', postcode: '44000', city: 'Nantes', region: 'Loire-Atlantique' },
+    address: {
+      street: '12 rue Pasteur',
+      postcode: '44000',
+      city: 'Nantes',
+      region: 'Loire-Atlantique',
+      formatted: '12 rue Pasteur, 44000 Nantes',
+    },
     phone: '02 61 91 12 34',
     mobile: '06 39 98 56 78',
     email: 'elise.lefevre@example.org',
-    bank: { name: 'LCL', iban: 'FR76 3000 6000 0112 3456 7890 189', bic: 'CRLYFRPP' },
+    bank: { name: 'LCL', iban: 'FR76 3000 6000 0112 3456 7890 189', bic: 'CRLYFRPP', local: [] },
     identifiers: [{ kind: 'nir', value: '2 87 03 69 123 456 07' }],
     company: {
       name: 'Lefèvre Conseil',
@@ -36,6 +42,67 @@ const ADA: IdentityAnswer = {
       ],
     },
   },
+  fictionPhones: true,
+  unkeyed: [],
+};
+
+/** An IBAN and, beside it, what the country writes: the layout of the United Kingdom. */
+const GRACE: IdentityAnswer = {
+  ...ADA,
+  person: {
+    ...ADA.person,
+    country: 'GB',
+    surname: 'Hopper',
+    givenNames: ['Grace'],
+    address: {
+      street: '12 High Street',
+      postcode: 'M1 4BT',
+      city: 'Manchester',
+      region: 'Greater Manchester',
+      formatted: '12 High Street, Manchester M1 4BT',
+    },
+    bank: {
+      name: 'NatWest',
+      iban: 'GB29 NWBK 6016 1331 9268 19',
+      bic: 'NWBKGB2L',
+      local: [
+        { kind: 'sortCode', value: '60-16-13' },
+        { kind: 'accountNumber', value: '31926819' },
+      ],
+    },
+    identifiers: [{ kind: 'nino', value: 'AB 12 34 56 C' }],
+    company: {
+      name: 'Hopper Consulting Ltd',
+      identifiers: [
+        { kind: 'crn', value: '01234567' },
+        { kind: 'gbVat', value: 'GB 123 4567 82' },
+      ],
+    },
+  },
+  unkeyed: ['nino', 'sortCode', 'accountNumber', 'crn'],
+};
+
+/** No IBAN, and no number with a key for a firm: the layout of North America. */
+const KATHERINE: IdentityAnswer = {
+  ...ADA,
+  person: {
+    ...ADA.person,
+    country: 'US',
+    surname: 'Johnson',
+    givenNames: ['Katherine'],
+    bank: {
+      name: 'Wells Fargo',
+      iban: null,
+      bic: null,
+      local: [
+        { kind: 'routingNumber', value: '121000248' },
+        { kind: 'accountNumber', value: '4821093376' },
+      ],
+    },
+    identifiers: [{ kind: 'ssn', value: '987-65-4321' }],
+    company: { name: 'Johnson Consulting LLC', identifiers: [] },
+  },
+  unkeyed: ['ssn', 'accountNumber'],
 };
 
 describe('IdentityToolComponent', () => {
@@ -51,8 +118,11 @@ describe('IdentityToolComponent', () => {
     harness
       .all(`[data-testid="identity-block"][data-block="${block}"] [data-testid="output-row"]`)
       .map((row) => [row.dataset['name'], row.querySelector('[data-testid="output-value"]')?.textContent]);
-  const drawn = async () => {
-    const harness = await renderTool(IdentityToolComponent, answering);
+  const drawn = async (answer: IdentityAnswer = ADA) => {
+    const harness = await renderTool(IdentityToolComponent, (tools) => {
+      answering(tools);
+      tools.identity = answer;
+    });
     await vi.waitFor(() => expect(requests(harness)).toHaveLength(1));
     await harness.settle();
     return harness;
@@ -65,7 +135,7 @@ describe('IdentityToolComponent', () => {
     expect(text(harness, 'identity-seed-used')).toBe('· 2676318943 utilisée');
   });
 
-  it('names the country in a menu, and keeps it when asked for one it does not have', async () => {
+  it('offers thirteen countries in a menu, asks for the one chosen, and keeps it when asked for another', async () => {
     const harness = await drawn();
     const menu = harness.fixture.debugElement.query(By.directive(ChoiceMenuComponent));
 
@@ -74,12 +144,76 @@ describe('IdentityToolComponent', () => {
     await harness.settle();
     expect(harness.all('[data-testid="choice-option"]').map((option) => option.dataset['optionId'])).toEqual([
       'FR',
+      'BE',
+      'DE',
+      'ES',
+      'IT',
+      'PT',
+      'NL',
+      'CH',
+      'GB',
+      'PL',
+      'SE',
+      'US',
+      'CA',
     ]);
 
-    menu.triggerEventHandler('chosen', 'XX');
-    menu.triggerEventHandler('chosen', 'FR');
+    harness.element<HTMLButtonElement>('[data-testid="choice-option"][data-option-id="IT"]').click();
+    await vi.waitFor(() => expect(requests(harness).at(-1)).toMatchObject({ country: 'IT' }));
     await harness.settle();
-    expect(requests(harness).at(-1)).toMatchObject({ country: 'FR' });
+    expect(text(harness, 'choice-identity-country')).toContain('Italie');
+
+    // A country it does not have changes nothing.
+    menu.triggerEventHandler('chosen', 'XX');
+    await harness.settle();
+    expect(requests(harness).at(-1)).toMatchObject({ country: 'IT' });
+  });
+
+  /**
+   * Their own names in their own country — « Sort code », « National Insurance number » are
+   * not translated — and the address in the order the country writes it.
+   */
+  it('adds what a country writes beside its IBAN, under its own names, and says which carry no key', async () => {
+    const harness = await drawn(GRACE);
+
+    expect(harness.element('[data-testid="identity-card"]').dataset['country']).toBe('GB');
+    expect(harness.element('[data-testid="identity-card"]').textContent).toContain('Britannique');
+    expect(text(harness, 'identity-personal')).toContain('AB 12 34 56 C');
+    expect(harness.element('[data-testid="identity-personal"]').dataset['kind']).toBe('nino');
+    expect(rows(harness, 'contact')[0]).toEqual(['Adresse', '12 High Street, Manchester M1 4BT']);
+    expect(rows(harness, 'bank')).toEqual([
+      ['Banque', 'NatWest'],
+      ['IBAN', 'GB29 NWBK 6016 1331 9268 19'],
+      ['BIC', 'NWBKGB2L'],
+      ['Sort code', '60-16-13'],
+      ['Account number', '31926819'],
+    ]);
+    expect(rows(harness, 'company')).toEqual([
+      ['Raison sociale', 'Hopper Consulting Ltd'],
+      ['Company number', '01234567'],
+      ['VAT number', 'GB 123 4567 82'],
+    ]);
+    expect(harness.all('[data-testid="identity-no-firm-number"]')).toEqual([]);
+    expect(text(harness, 'identity-unkeyed')).toBe(
+      'Sans clé à vérifier : National Insurance number, Sort code, Account number, Company number',
+    );
+  });
+
+  /** ⚠️ A country with none says so, rather than show a field made up. */
+  it('shows what a country without an IBAN has instead, and says its firms have no number with a key', async () => {
+    const harness = await drawn(KATHERINE);
+
+    expect(rows(harness, 'bank')).toEqual([
+      ['Banque', 'Wells Fargo'],
+      ['Routing number', '121000248'],
+      ['Account number', '4821093376'],
+    ]);
+    expect(harness.all('[data-field="iban"]')).toEqual([]);
+    expect(rows(harness, 'company')).toEqual([['Raison sociale', 'Johnson Consulting LLC']]);
+    expect(text(harness, 'identity-no-firm-number')).toBe(
+      'Aucun identifiant d’entreprise à clé dans ce pays.',
+    );
+    expect(text(harness, 'identity-personal')).toContain('987-65-4321');
   });
 
   /**
@@ -91,6 +225,7 @@ describe('IdentityToolComponent', () => {
     const card = harness.element('[data-testid="identity-card"]');
 
     expect(card.dataset['country']).toBe('FR');
+    expect(card.dataset['seed']).toBe('2676318943');
     expect(text(harness, 'identity-monogram')).toBe('ÉL');
     expect(text(harness, 'identity-surname')).toContain('Lefèvre');
     expect(text(harness, 'identity-given')).toContain('Élise, Marie');
@@ -163,6 +298,19 @@ describe('IdentityToolComponent', () => {
     expect(warning.textContent).toContain('ne les utilisez pas pour vous faire passer pour quelqu’un');
     expect(warning.textContent).toContain('peut appartenir à quelqu’un');
     expect(warning.textContent).toContain('givenNames');
+    // France keeps a range for fiction, has a key on every number, and is one of thirteen.
+    expect(harness.element('[data-testid="identity-phones"]').dataset['fiction']).toBe('true');
+    expect(text(harness, 'identity-phones')).toContain('réserve à la fiction');
+    expect(harness.all('[data-testid="identity-unkeyed"]')).toEqual([]);
+    expect(harness.all('[data-testid="identity-countries"] .listed')).toHaveLength(13);
+    expect(text(harness, 'identity-countries')).toContain('Pays : France, Belgique, Allemagne');
+  });
+
+  it('says a phone number may ring where no range is kept for fiction', async () => {
+    const harness = await drawn({ ...ADA, fictionPhones: false });
+
+    expect(harness.element('[data-testid="identity-phones"]').dataset['fiction']).toBe('false');
+    expect(text(harness, 'identity-phones')).toContain('peuvent sonner chez quelqu’un');
   });
 
   it('asks for the sex and the ages chosen, held to what a person lives', async () => {
@@ -259,6 +407,23 @@ describe('IdentityToolComponent', () => {
     expect(exported()).toEqual([]);
     expect(dialog.saveCalls[0]?.defaultPath).toBe('identities.json');
 
+    // The card's own country is of the batch whatever is ticked; others are added, and taken back.
+    const chip = (code: string) =>
+      harness.element<HTMLButtonElement>(`[data-testid="identity-batch-country"][data-country="${code}"]`);
+    expect(harness.all('[data-testid="identity-batch-country"]')).toHaveLength(13);
+    expect([chip('FR').disabled, chip('FR').getAttribute('aria-pressed')]).toEqual([true, 'true']);
+    expect(chip('IT').getAttribute('aria-pressed')).toBe('false');
+    expect(chip('IT').getAttribute('aria-label')).toBe('Italie');
+    for (const code of ['IT', 'DE', 'US', 'DE']) {
+      chip(code).click();
+      await harness.settle();
+    }
+    expect(['IT', 'DE', 'US'].map((code) => chip(code).getAttribute('aria-pressed'))).toEqual([
+      'true',
+      'false',
+      'true',
+    ]);
+
     dialog.savePath = 'C:/out/people.csv';
     const people = harness.element<HTMLInputElement>('[data-testid="identity-people"]');
     people.value = '25';
@@ -274,8 +439,7 @@ describe('IdentityToolComponent', () => {
     expect(exported()[0]).toEqual({
       // No seed was pinned: the one the card was drawn from is the file's.
       request: { country: 'FR', sex: null, ageMin: 18, ageMax: 80, seed: '2676318943' },
-      count: 25,
-      format: 'csv',
+      batch: { countries: ['IT', 'US'], count: 25, format: 'csv' },
       path: 'C:/out/people.csv',
     });
     await vi.waitFor(() =>
@@ -312,6 +476,9 @@ describe('IdentityToolComponent', () => {
     const harness = await drawn();
     await harness.type('identity-seed', 'devnotes', 'generate_identity');
     await harness.type('identity-age-min', '40', 'generate_identity');
+    harness.fixture.debugElement.query(By.directive(ChoiceMenuComponent)).triggerEventHandler('chosen', 'SE');
+    harness.element<HTMLButtonElement>('[data-testid="identity-batch-country"][data-country="PL"]').click();
+    await vi.waitFor(() => expect(requests(harness).at(-1)).toMatchObject({ country: 'SE' }));
     const before = requests(harness).length;
 
     harness.tool.clear();
@@ -326,6 +493,11 @@ describe('IdentityToolComponent', () => {
     });
     await harness.settle();
     expect(harness.element<HTMLInputElement>('[data-testid="identity-seed"]').value).toBe('');
+    expect(
+      harness
+        .all('[data-testid="identity-batch-country"][aria-pressed="true"]')
+        .map((chip) => chip.dataset['country']),
+    ).toEqual(['FR']);
   });
 });
 

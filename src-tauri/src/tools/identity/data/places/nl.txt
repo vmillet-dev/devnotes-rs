@@ -1,0 +1,51 @@
+NH;1012 @@;Amsterdam;Noord-Holland;020
+ZH;3011 @@;Rotterdam;Zuid-Holland;010
+ZH;2511 @@;Den Haag;Zuid-Holland;070
+UT;3511 @@;Utrecht;Utrecht;030
+NB;5611 @@;Eindhoven;Noord-Brabant;040
+GR;9711 @@;Groningen;Groningen;050
+NB;5038 @@;Tilburg;Noord-Brabant;013
+FL;1315 @@;Almere;Flevoland;036
+NB;4811 @@;Breda;Noord-Brabant;076
+GE;6511 @@;Nijmegen;Gelderland;024
+GE;7311 @@;Apeldoorn;Gelderland;055
+NH;2011 @@;Haarlem;Noord-Holland;023
+GE;6811 @@;Arnhem;Gelderland;026
+OV;7511 @@;Enschede;Overijssel;053
+UT;3811 @@;Amersfoort;Utrecht;033
+NH;1506 @@;Zaandam;Noord-Holland;075
+NB;5211 @@;'s-Hertogenbosch;Noord-Brabant;073
+OV;8011 @@;Zwolle;Overijssel;038
+ZH;2312 @@;Leiden;Zuid-Holland;071
+LI;6211 @@;Maastricht;Limburg;043
+ZH;3311 @@;Dordrecht;Zuid-Holland;078
+FR;8911 @@;Leeuwarden;Friesland;058
+ZH;2611 @@;Delft;Zuid-Holland;015
+ZE;4331 @@;Middelburg;Zeeland;0118
+DR;9401 @@;Assen;Drenthe;0592
+LI;5911 @@;Venlo;Limburg;077
+---
+Kerkstraat
+Dorpsstraat
+Schoolstraat
+Molenweg
+Julianastraat
+Beatrixstraat
+Wilhelminastraat
+Nieuwstraat
+Stationsweg
+Hoofdstraat
+Oranjestraat
+Parallelweg
+Prins Bernhardstraat
+Emmastraat
+Molenstraat
+Kastanjelaan
+Lindelaan
+Eikenlaan
+Beukenlaan
+Industrieweg
+Sportlaan
+Meidoornstraat
+Rembrandtlaan
+Vondelstraat

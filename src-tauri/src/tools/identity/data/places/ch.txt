@@ -1,0 +1,61 @@
+ZH;8001;Zürich;ZH;044;de
+GE;1201;Genève;GE;022;fr
+BS;4051;Basel;BS;061;de
+VD;1003;Lausanne;VD;021;fr
+BE;3011;Bern;BE;031;de
+ZH;8400;Winterthur;ZH;052;de
+LU;6003;Luzern;LU;041;de
+SG;9000;St. Gallen;SG;071;de
+TI;6900;Lugano;TI;091;it
+BE;2502;Biel/Bienne;BE;032;de
+BE;3600;Thun;BE;033;de
+TI;6500;Bellinzona;TI;091;it
+FR;1700;Fribourg;FR;026;fr
+SH;8200;Schaffhausen;SH;052;de
+GR;7000;Chur;GR;081;de
+NE;2000;Neuchâtel;NE;032;fr
+VS;1950;Sion;VS;027;fr
+ZG;6300;Zug;ZG;041;de
+AG;5000;Aarau;AG;062;de
+SO;4500;Solothurn;SO;032;de
+TG;8500;Frauenfeld;TG;052;de
+VD;1400;Yverdon-les-Bains;VD;024;fr
+TI;6600;Locarno;TI;091;it
+JU;2800;Delémont;JU;032;fr
+---de
+Bahnhofstrasse
+Hauptstrasse
+Dorfstrasse
+Kirchgasse
+Schulstrasse
+Birkenweg
+Poststrasse
+Industriestrasse
+Rosenweg
+Gartenstrasse
+Seestrasse
+Bergstrasse
+---fr
+Rue de la Gare
+Rue du Lac
+Grand-Rue
+Rue Centrale
+Avenue de la Gare
+Rue de l'Église
+Chemin des Vignes
+Rue du Collège
+Rue des Alpes
+Route de Lausanne
+Rue du Simplon
+Chemin du Moulin
+---it
+Via Cantonale
+Via San Gottardo
+Via alla Chiesa
+Via Stazione
+Via al Lago
+Via della Posta
+Via Nassa
+Via Lugano
+Via Motta
+Via delle Scuole
