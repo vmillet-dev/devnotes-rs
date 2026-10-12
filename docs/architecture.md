@@ -1058,7 +1058,8 @@ is corrected or a list completed without building the application again.
 - **A Tauri resource**: `src-tauri/resources/identity/` (`names.txt`, `places/*.txt`) is
   declared in `bundle.resources` and lands in `<resources>/identity/` — beside the executable
   on Windows and in a development or e2e build (`tauri-build` copies it into the target
-  directory), under the package's own folder on Linux. The two commands take the
+  directory), under the package's own folder on Linux, in the `.app`'s `Contents/Resources`
+  on macOS. The two commands take the
   `AppHandle` for nothing else: `resource_dir()`, joined with `identity`. No Tauri permission
   is involved — Rust reads the files, the page never does.
 - **Read once, kept for the session** (`data::library`): every file is read at the first card
@@ -3998,6 +3999,9 @@ default; minimising to the tray is the same idea, off by default. Tauri emits no
 - `sync_tray` is the one command that returns no `Result`. A missing tray is not a failure the
   front can act on, and giving it an `ErrorCode` would add a branch no UI would ever render —
   it is logged natively, like an unavailable global shortcut.
+- **On macOS the Dock's icon is the other way back.** Clicked while the window is hidden, it
+  starts no second process — `single_instance` hears nothing — and arrives as
+  `RunEvent::Reopen`, which `lib.rs` answers by revealing the window.
 
 ### Leaving with requests not saved
 
@@ -4025,6 +4029,13 @@ shell because any area can be the one on screen).
 - ⚠️ **The wait is bounded** (`QUIT_PATIENCE`, 3 s): a page that never answers — hung, not
   loaded — must not make the application impossible to quit. Questions are numbered
   (`PendingQuit`), so the timer of one never quits for the next.
+- ⚠️ **On macOS ⌘Q is the menu bar's « Quit »**, and Tauri's ends the process with no
+  `CloseRequested` at all. `desktop::init` keeps the menu Tauri builds — its wording is the
+  system's, so Rust still holds no string — and replaces that one entry, the last of the
+  application's submenu, with ours: it goes through `request_quit` like the two above. A
+  Tauri that lays its menu out otherwise is not guessed at: the swap is skipped and logged.
+  ⚠️ The function is called behind `cfg!(target_os = "macos")`, not `#[cfg]`: it is compiled
+  and linted on every platform, and only a Mac runs it.
 - ⚠️ `HttpLeaveStore` exists from the first render and resolves the HTTP stores **when asked**,
   never at construction: they read the library's preferences as they are built — what is
   folded, which tabs were open — and would read nothing before the library is open.
@@ -5162,16 +5173,19 @@ update.
 - **The download does not cross the CSP.** It runs in Rust through the plugin's HTTP client,
   not in the WebView, so pointing `endpoints` at GitHub needs no widening of `connect-src`.
 - `bundle.createUpdaterArtifacts` makes the bundler emit a `.sig` beside **every** bundle it
-  produces, `.deb` and `.rpm` included — but the updater can only install the NSIS installer
-  and the AppImage. System packages are updated by their package manager, by design, so the
-  manifest step ignores their signatures instead of choking on them.
+  produces, `.deb` and `.rpm` included — but the updater can only install the NSIS installer,
+  the AppImage and, on macOS, the archive of the `.app` (`*.app.tar.gz`). System packages are
+  updated by their package manager, by design, so the manifest step ignores their signatures
+  instead of choking on them.
 - The manifest (`latest.json`) is assembled by the `publish` job from those `.sig` files
   rather than by `tauri-action`, which only writes one when it creates the release itself —
   something the build matrix deliberately avoids. Windows is the one platform whose absence
-  fails the job; a missing Linux artifact only logs a warning, so a Linux bundling problem
-  cannot hold back an otherwise sound Windows release. The release is published straight
-  away, which is what keeps `releases/latest/download/latest.json` — the endpoint compiled
-  into the binary — resolvable.
+  stops the publication; a missing Linux or macOS artifact does not, so a bundling problem
+  there cannot hold back an otherwise sound Windows release. ⚠️ It is not a warning either:
+  once the release is out, the job's last step fails the run and names what the manifest
+  lacks — a platform that quietly stopped shipping would read as a pass. The release is
+  published straight away, which is what keeps `releases/latest/download/latest.json` — the
+  endpoint compiled into the binary — resolvable.
 - Building a bundle now requires `TAURI_SIGNING_PRIVATE_KEY` (and its password) in the
   environment. Without it `tauri build` fails, instead of shipping binaries the updater would
   later refuse. Both secrets live in the `release` **environment** rather than in the
@@ -5182,14 +5196,27 @@ update.
 One button: **Actions → Release → Run workflow**, with a `dry_run` checkbox. `release.yml`
 carries the whole path — `prepare`, `release-build`, `publish` — and `ci.yml` is only CI.
 
-**Two platforms, deliberately: Windows and Linux.** The release matrix builds
-`windows-latest` and `ubuntu-22.04`, the CI matrix tests the same two, and that is the whole
-list. macOS is out of scope and stays out: nothing here can test it, and Gatekeeper wants a
-paid Apple Developer account with no free bypass on recent versions — a build that can be
-neither tested nor distributed is a liability wearing the costume of a feature. The bundle
-therefore declares no `.icns`, and the README says which platforms it ships. ⚠️ One macOS
-name survives and is meant to: `tauri_plugin_autostart::init` takes a `MacosLauncher` on
-every platform and ignores it off macOS, so it is a required argument, not a dead branch.
+**Three platforms: Windows, Linux and macOS.** The release matrix builds `windows-latest`,
+`ubuntu-22.04` and `macos-latest` — twice, for Apple Silicon and for Intel, the second
+cross-compiled from the same runner — and the CI matrix tests the same three. macOS was out
+of scope while nothing could test it: `tauri-driver` has no WebDriver for it, and the
+embedded server that replaced it drives WKWebView as it does the other two.
+
+What macOS still lacks is Apple's blessing, and it is said rather than hidden:
+
+- **The bundle is signed ad hoc** (`bundle.macOS.signingIdentity: "-"`), which is the least an
+  Apple Silicon Mac accepts to start at all. It carries no Developer ID and is not notarised
+  — both want a paid Apple Developer account — so Gatekeeper stops a downloaded copy until
+  its reader allows it in System Settings; the README says how.
+- ⚠️ **A macOS leg is allowed to fail** (`continue-on-error`), and only those two are: the
+  tag is out by the time the bundles are built, and a leg that fails would skip `publish`
+  and leave a tag without a release. The release goes out with what was built, then the run
+  ends red (see _Application updates_).
+- **The two legs build the same file names** — `devnotes.app.tar.gz` and its signature — so
+  the gathering step names them after their architecture, as the bundler names the disk
+  image. The updater checks the signature against the bytes, not the name.
+- No bare executable is published for macOS: outside its `.app` it has neither icon nor
+  resources.
 
 Two facts shape that, and neither is negotiable:
 
@@ -5706,8 +5733,8 @@ case the control is asserted on — it exists, it is labelled — and never clic
 
 #### In CI
 
-The suite is a job of its own, on a matrix of `windows-latest` and `ubuntu-22.04`, and it
-**blocks**. It did not always: `continue-on-error: true` stood on it while it earned its
+The suite is a job of its own, on a matrix of `windows-latest`, `ubuntu-22.04` and
+`macos-latest`, and it **blocks**. It did not always: `continue-on-error: true` stood on it while it earned its
 keep, on the reasoning that a flaky E2E job everybody ignores is worse than no job. That
 reasoning turned out to have a worse failure mode than the one it was avoiding. On `main`
 at `e4ed5d9` the Ubuntu leg failed on a real bug — a note keeping its title and losing the
@@ -5717,10 +5744,11 @@ looked for by hand. ⚠️ A job whose failure reads as a pass is not a weak sig
 false one. The flag is gone, and the price it was paying — a flaky run blocking a merge
 until it is re-run — is the one worth paying.
 
-The two platforms do not break the same way, and **Linux is the one that
-can tell paths apart**: the WebView is WebView2 on one and WebKitGTK on the other, and
+The three platforms do not break the same way, and **Linux is the one that
+can tell paths apart**: the WebView is WebView2, WebKitGTK or WKWebView, and
 `dirs::data_dir()` and `dirs::config_dir()` are the same `%APPDATA%\<identifier>` on Windows
-but `~/.local/share` against `~/.config` on Linux.
+and the same `~/Library/Application Support/<identifier>` on macOS, but `~/.local/share`
+against `~/.config` on Linux. `e2e/support/profile.ts` names each of them.
 
 That is not theoretical. `preferences.json` goes to `app_data_dir()` — `tauri-plugin-store`
 resolves against `BaseDirectory::AppData` — and both the service's own comment and the first

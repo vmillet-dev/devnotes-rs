@@ -389,6 +389,7 @@ jobs:
       # `tauri-action`: that one only produces it when it creates the release itself, which
       # the build matrix avoids so as not to publish twice.
       - name: Assemble latest.json
+        id: manifest
         env:
           TAG: ${{ needs.prepare.outputs.tag }}
           REPO: ${{ github.repository }}
@@ -454,11 +455,11 @@ jobs:
           if (!platforms['windows-x86_64']) {
             throw new Error('no Windows update artifact in release/');
           }
-          for (const { key } of TARGETS) {
-            if (!platforms[key]) {
-              console.log(`::warning::No update artifact for ${key}: the manifest goes out without it.`);
-            }
+          const missing = TARGETS.map(({ key }) => key).filter((key) => !platforms[key]);
+          if (missing.length) {
+            console.log(`::warning::No update artifact for ${missing.join(', ')}.`);
           }
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `missing=${missing.join(', ')}\n`);
 
           // Without the "v": the updater compares the value as semver, and a prefix would
           // make it unreadable — no update would ever be offered.
@@ -527,3 +528,11 @@ jobs:
           body_path: ${{ runner.temp }}/release-body.md
           generate_release_notes: false
           files: release/*
+
+      # ⚠️ Last, once the release is out: a platform may be missing so that a tag never goes
+      # without a release, and a run that then read as a pass would hide that it stopped shipping.
+      - name: Every platform made it
+        if: steps.manifest.outputs.missing != ''
+        run: |
+          echo "::error::released without ${{ steps.manifest.outputs.missing }}"
+          exit 1

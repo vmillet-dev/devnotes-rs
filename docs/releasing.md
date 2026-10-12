@@ -89,6 +89,9 @@ Per platform, from one matrix build:
 - **Windows** — the NSIS installer (`*_x64-setup.exe`), the MSI (`*_x64_en-US.msi`) and the
   standalone executable (`devnotes-<version>-windows.exe`).
 - **Linux** — AppImage, `.deb`, `.rpm`, and the standalone binary (`devnotes-<version>-linux`).
+- **macOS** — a disk image and the updater's archive of the `.app`, once for Apple Silicon
+  (`*_aarch64.dmg`, `*_aarch64.app.tar.gz`) and once for Intel (`*_x64.dmg`,
+  `*_x64.app.tar.gz`). Signed ad hoc and not notarised: no Apple Developer account.
 
 Plus `SHA256SUMS.txt` over all of them, and `latest.json` — the manifest the in-app updater
 reads.
@@ -111,3 +114,8 @@ commit.
 
 A failure after the tag is the awkward one: delete the tag and the draft release, then run
 again. This is what the dry run exists to avoid.
+
+⚠️ The two macOS builds are the exception, and the only one: when one fails, the release is
+published without its files and **the run ends red, on its last step**, naming what the
+manifest lacks. Nothing is to be undone — the Macs of that architecture are simply not offered
+this version, and the next release offers them its own.

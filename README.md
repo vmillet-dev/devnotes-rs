@@ -11,7 +11,7 @@ Write a command once, find it in a keystroke, paste it anywhere.
 
 [![Latest release](https://img.shields.io/github/v/release/vmillet-dev/devnotes-rs?style=flat-square&color=e8a33d&label=release)](https://github.com/vmillet-dev/devnotes-rs/releases/latest)
 [![CI](https://img.shields.io/github/actions/workflow/status/vmillet-dev/devnotes-rs/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/vmillet-dev/devnotes-rs/actions/workflows/ci.yml)
-[![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-5b6b8c?style=flat-square)](#install)
+[![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-5b6b8c?style=flat-square)](#install)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-5b6b8c?style=flat-square)](LICENSE)
 
 [**Download**](https://github.com/vmillet-dev/devnotes-rs/releases/latest) · [Code quality](#code-quality) · [Features](#features) · [Security](#security) · [Build from source](#build-from-source)
@@ -78,7 +78,7 @@ Spaces, folders and tags. Browse notes by date or lay them out on a board. The k
 
 ## Install
 
-DevNotes runs on **Windows** and **Linux**. Get it from the [latest release](https://github.com/vmillet-dev/devnotes-rs/releases/latest); after that, updates are offered inside the application.
+DevNotes runs on **Windows**, **Linux** and **macOS**. Get it from the [latest release](https://github.com/vmillet-dev/devnotes-rs/releases/latest); after that, updates are offered inside the application.
 
 | Platform | File                                | Pick it if                                       |
 | -------- | ----------------------------------- | ------------------------------------------------ |
@@ -89,6 +89,8 @@ DevNotes runs on **Windows** and **Linux**. Get it from the [latest release](htt
 | Linux    | `devnotes_<version>_amd64.deb`      | Debian, Ubuntu and derivatives                   |
 | Linux    | `devnotes-<version>-1.x86_64.rpm`   | Fedora, RHEL and derivatives                     |
 | Linux    | `devnotes-<version>-linux`          | the bare executable                              |
+| macOS    | `devnotes_<version>_aarch64.dmg`    | an Apple Silicon Mac (M1 and later)              |
+| macOS    | `devnotes_<version>_x64.dmg`        | an Intel Mac                                     |
 
 ```bash
 chmod +x devnotes_*_amd64.AppImage        # then launch it
@@ -106,11 +108,13 @@ Choose **More info**, then **Run anyway**. The warning is about the publisher's 
 </details>
 
 <details>
-<summary><strong>Why there is no macOS build</strong></summary>
+<summary><strong>macOS refuses to open it the first time</strong></summary>
 
 <br>
 
-It cannot be tested here, and Gatekeeper wants a paid Apple Developer account with no free way around it on recent versions. Shipping for a platform that can be neither tested nor distributed would be a promise nobody can keep.
+Open it once, let macOS refuse, then go to **System Settings → Privacy & Security** and choose **Open Anyway**; it is asked only once. The refusal is about the publisher's identity, not the file: DevNotes is not notarised, which wants a paid Apple Developer account. Its updates are signed with minisign and verified before they install, like everywhere else.
+
+The macOS build is the youngest of the three: the same end-to-end suite passes on it, on a hosted runner, and it has not seen the daily use the other two have.
 
 </details>
 
@@ -164,10 +168,11 @@ Opening an attachment writes a decrypted copy inside your own profile, never the
 
 A library is a folder of your profile, and it is worth knowing where:
 
-| Platform    | Folder                             |
-| ----------- | ---------------------------------- |
-| **Windows** | `%APPDATA%\com.devnotes.app\`      |
-| **Linux**   | `~/.local/share/com.devnotes.app/` |
+| Platform    | Folder                                            |
+| ----------- | ------------------------------------------------- |
+| **Windows** | `%APPDATA%\com.devnotes.app\`                     |
+| **Linux**   | `~/.local/share/com.devnotes.app/`                |
+| **macOS**   | `~/Library/Application Support/com.devnotes.app/` |
 
 Each library lives in `libraries/<id>/`: the database, `vault.json` — the key file your passphrase opens — its attachments, and its backups. `libraries.json` lists your libraries and `preferences.json` holds the application's settings.
 
