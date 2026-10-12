@@ -33,6 +33,8 @@ import {
   JsonDiffRequest,
   LineBreaksAnswer,
   LineBreaksRequest,
+  IdentityAnswer,
+  IdentityRequest,
   LoremAnswer,
   LoremRequest,
   PasswordAnswer,
@@ -44,6 +46,8 @@ import {
   QrRequest,
   PermissionsRequest,
   PasswordRequest,
+  PeopleExport,
+  PeopleFormat,
   SavedBytes,
   SavedCode,
   SizesAnswer,
@@ -112,6 +116,26 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
   conversion: ConvertAnswer = { kind: 'converted', text: '', dropped: [] };
   generated: GenerateAnswer = { kind: 'generated', text: '{}', seed: 1, unsupported: [] };
   loremAnswer: LoremAnswer = { text: '', seed: 1, count: 3, atMost: 200 };
+  identity: IdentityAnswer = {
+    seed: '42',
+    json: '{}',
+    person: {
+      country: 'FR',
+      sex: 'F',
+      surname: 'Martin',
+      givenNames: ['Jeanne'],
+      birth: { date: '1990-01-01', city: 'Lyon', region: 'Rhône' },
+      document: 'F7K2M9P4X',
+      address: { street: '1 rue Pasteur', postcode: '69003', city: 'Lyon', region: 'Rhône' },
+      phone: '04 65 71 00 00',
+      mobile: '06 39 98 00 00',
+      email: 'jeanne.martin@example.com',
+      bank: { name: 'LCL', iban: 'FR76 3000 6000 0112 3456 7890 189', bic: 'CRLYFRPP' },
+      identifiers: [],
+      company: { name: 'Martin Conseil', identifiers: [] },
+    },
+  };
+  peopleExport: PeopleExport = { kind: 'written', people: 0 };
   diffAnswer: JsonDiffAnswer = {
     kind: 'compared',
     changes: [],
@@ -235,6 +259,19 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
 
   generateJson(request: GenerateRequest): Promise<GenerateAnswer> {
     return this.answer('generate_json', request, this.generated);
+  }
+
+  generateIdentity(request: IdentityRequest): Promise<IdentityAnswer> {
+    return this.answer('generate_identity', request, this.identity);
+  }
+
+  exportIdentities(
+    request: IdentityRequest,
+    count: number,
+    format: PeopleFormat,
+    path: string,
+  ): Promise<PeopleExport> {
+    return this.answer('export_identities', { request, count, format, path }, this.peopleExport);
   }
 
   lorem(request: LoremRequest): Promise<LoremAnswer> {

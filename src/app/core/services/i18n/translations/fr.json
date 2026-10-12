@@ -1473,6 +1473,84 @@
       "seedPinned": "Graine fixée : « Régénérer » redonne les mêmes documents.",
       "unsupportedAt": "à"
     },
+    "identity": {
+      "name": "Identité fictive",
+      "description": "Une personne de test dont chaque numéro passe sa clé",
+      "options": "Options",
+      "country": "Pays",
+      "countries": {
+        "FR": "France"
+      },
+      "nationalities": {
+        "FR": "Française"
+      },
+      "sex": "Sexe",
+      "sexes": {
+        "any": "Indifférent",
+        "F": "Féminin",
+        "M": "Masculin"
+      },
+      "age": "Âge atteint cette année",
+      "ageMin": "Âge minimum",
+      "ageMax": "Âge maximum",
+      "years": "ans",
+      "seed": "Graine",
+      "seedPlaceholder": "au hasard",
+      "seedUsed": "· {{seed}} utilisée",
+      "pinSeed": "Fixer la graine",
+      "keepSeed": "Fixer cette graine : la même personne reviendra",
+      "freeSeed": "Libérer la graine : chaque tirage donnera quelqu’un d’autre",
+      "seedPinned": "Graine fixée : la même personne revient, toute l’année.",
+      "batch": "Lot",
+      "people": "Personnes",
+      "format": "Format",
+      "formats": {
+        "json": "JSON",
+        "csv": "CSV"
+      },
+      "export": "Exporter…",
+      "batchHint": "De 1 à 100 personnes dans un fichier, la première étant celle de la carte.",
+      "exported": "{count, plural, one {# personne exportée.} other {# personnes exportées.}}",
+      "person": "Personne",
+      "copyJson": "Copier en JSON",
+      "jsonCopied": "Personne copiée en JSON.",
+      "again": "Régénérer",
+      "noteTitle": "Identité fictive de {{name}}",
+      "specimen": "Spécimen",
+      "cardKind": "Identité fictive",
+      "aged": "({count, plural, one {# an} other {# ans}})",
+      "fields": {
+        "surname": "Nom",
+        "givenNames": "Prénoms",
+        "nationality": "Nationalité",
+        "bornOn": "Date de naissance",
+        "bornIn": "Lieu de naissance",
+        "document": "N° du spécimen",
+        "address": "Adresse",
+        "phone": "Téléphone",
+        "mobile": "Mobile",
+        "email": "E-mail",
+        "bank": "Banque",
+        "iban": "IBAN",
+        "bic": "BIC",
+        "company": "Raison sociale"
+      },
+      "identifiers": {
+        "nir": "N° de sécurité sociale",
+        "siren": "SIREN",
+        "siret": "SIRET",
+        "vat": "TVA intracommunautaire"
+      },
+      "blocks": {
+        "contact": "Contact",
+        "bank": "Banque",
+        "company": "Entreprise"
+      },
+      "warning": "Données de test : ne les utilisez pas pour vous faire passer pour quelqu’un.",
+      "harmless": "L’e-mail est en example.com, .org ou .net et les téléphones dans les tranches que l’ARCEP réserve à la fiction : ils n’atteignent personne. Aucune tranche n’est réservée pour un IBAN, un SIREN ou un numéro de sécurité sociale : un numéro qui passe sa clé peut appartenir à quelqu’un.",
+      "valid": "Valide veut dire calculé : la clé de l’IBAN et celle du RIB, SIREN et SIRET par Luhn, la clé de TVA tirée du SIREN, et le numéro de sécurité sociale lu sur la personne — sexe, année, mois et commune de naissance.",
+      "jsonFields": "Champs du JSON et de l’export : country, sex, surname, givenNames, birth (date, city, region), document, address (street, postcode, city, region), phone, mobile, email, bank (name, iban, bic), identifiers et company (name, identifiers)."
+    },
     "lorem": {
       "name": "Lorem ipsum",
       "description": "Mots, phrases, paragraphes",

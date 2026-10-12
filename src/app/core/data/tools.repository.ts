@@ -35,6 +35,8 @@ import {
   JsonDiffRequest,
   LineBreaksAnswer,
   LineBreaksRequest,
+  IdentityAnswer,
+  IdentityRequest,
   LoremAnswer,
   LoremRequest,
   PasswordAnswer,
@@ -46,6 +48,8 @@ import {
   QrRequest,
   PermissionsRequest,
   PasswordRequest,
+  PeopleExport,
+  PeopleFormat,
   SavedBytes,
   SavedCode,
   SizesAnswer,
@@ -127,6 +131,19 @@ export class ToolsRepository {
 
   async generateJson(request: GenerateRequest): Promise<GenerateAnswer> {
     return unwrap('generate_json', await commands.generateJson(request));
+  }
+
+  async generateIdentity(request: IdentityRequest): Promise<IdentityAnswer> {
+    return unwrap('generate_identity', await commands.generateIdentity(request));
+  }
+
+  async exportIdentities(
+    request: IdentityRequest,
+    count: number,
+    format: PeopleFormat,
+    path: string,
+  ): Promise<PeopleExport> {
+    return unwrap('export_identities', await commands.exportIdentities(request, count, format, path));
   }
 
   async lorem(request: LoremRequest): Promise<LoremAnswer> {
