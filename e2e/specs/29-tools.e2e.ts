@@ -1149,13 +1149,15 @@ describe('The tools', () => {
 
       // « Exemple » under « Schéma » fills a schema: documents come out of it, with no warning.
       await source('schema').click();
+      await $(testid('json-generator-an-example')).waitForDisplayed({ timeout: 10_000 });
       await $(testid('tool-sample')).click();
       await eventually(
         () => $(testid('json-generator-input')).getValue(),
         (text) => text.includes('"properties"'),
         'the sample of the schema mode',
       );
-      await eventually(output, (text) => text.includes('"score"'), 'documents drawn from the schema');
+      // A required property: the others are drawn one time in two, and three documents may have none.
+      await eventually(output, (text) => text.includes('"email"'), 'documents drawn from the schema');
       expect(await $(testid('json-generator-unsupported')).isExisting()).toBe(false);
 
       // « Régénérer » draws others while no seed is pinned…
