@@ -13,7 +13,7 @@
     [attr.aria-expanded]="menu.open()"
     [attr.aria-label]="'http.tabs.newKind' | transloco"
     [attr.title]="'http.tabs.newKind' | transloco"
-    (click)="toggle()"
+    (click)="menu.toggle()"
   >
     <span aria-hidden="true">▾</span>
   </button>
@@ -22,10 +22,10 @@
 @if (menu.open()) {
   <div
     appMenuPanel
+    appFloatingPanel
     class="panel"
     data-testid="http-new-kind-panel"
     aria-labelledby="http-new-kind-title"
-    [style]="panelStyle()"
   >
     <p id="http-new-kind-title" class="panel-title">{{ 'http.kinds.menuTitle' | transloco }}</p>
     @for (entry of kinds; track entry.kind) {
