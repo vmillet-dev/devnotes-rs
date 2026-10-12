@@ -1550,7 +1550,7 @@
         "nationality": "Nationality",
         "bornOn": "Date of birth",
         "bornIn": "Place of birth",
-        "document": "Specimen no.",
+        "document": "Document number (made up)",
         "address": "Address",
         "phone": "Phone",
         "mobile": "Mobile",

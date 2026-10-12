@@ -1,15 +1,13 @@
-//! A country as the generator knows one: where its names come from, how it writes an address
-//! and a phone number, what its firms are called. A profile is a few lines — the lists are
-//! shared (`data.rs`) and the numbers are computed (`papers.rs`).
+//! A country as the generator knows one: how it writes an address and a phone number, what
+//! its firms are called. ⚠️ Nothing here says anything of a person's name: the names are one
+//! list for every country (`data.rs`). A profile is a few lines, and the numbers are computed
+//! (`papers.rs`).
 
 use super::Country;
-use super::data::{Place, Pool};
+use super::data::Place;
 use crate::tools::generate::Draw;
 
 pub(super) struct Profile {
-    /// Where the names of the people living there come from, in shares of a hundred: the mix
-    /// is the diversity, and nothing else lists it.
-    pub(super) pools: &'static [(Pool, u32)],
     /// `12 High Street` rather than `Hauptstraße 12`.
     number_first: bool,
     /// What follows the street: `{p}` the postcode, `{c}` the city, `{r}` the place's code.
@@ -30,13 +28,6 @@ pub(super) struct Profile {
 const POSTCODE_THEN_CITY: &str = "{p} {c}";
 
 const FRANCE: Profile = Profile {
-    pools: &[
-        (Pool::French, 78),
-        (Pool::Arabic, 9),
-        (Pool::Portuguese, 5),
-        (Pool::WestAfrican, 5),
-        (Pool::Vietnamese, 3),
-    ],
     number_first: true,
     locality: POSTCODE_THEN_CITY,
     // ⚠️ The blocks ARCEP keeps for fiction, one a zone, written with each place.
@@ -60,14 +51,6 @@ const FRANCE: Profile = Profile {
 };
 
 const BELGIUM: Profile = Profile {
-    pools: &[
-        (Pool::Dutch, 45),
-        (Pool::French, 32),
-        (Pool::Arabic, 9),
-        (Pool::Italian, 5),
-        (Pool::Turkish, 5),
-        (Pool::Portuguese, 4),
-    ],
     number_first: false,
     locality: POSTCODE_THEN_CITY,
     landline: &[(2, "~ ### ## ##"), (3, "~ ## ## ##")],
@@ -90,13 +73,6 @@ const BELGIUM: Profile = Profile {
 };
 
 const GERMANY: Profile = Profile {
-    pools: &[
-        (Pool::German, 76),
-        (Pool::Turkish, 9),
-        (Pool::Polish, 6),
-        (Pool::Arabic, 5),
-        (Pool::Italian, 4),
-    ],
     number_first: false,
     locality: POSTCODE_THEN_CITY,
     landline: &[(0, "~ #######")],
@@ -125,12 +101,6 @@ const GERMANY: Profile = Profile {
 };
 
 const SPAIN: Profile = Profile {
-    pools: &[
-        (Pool::Spanish, 87),
-        (Pool::Arabic, 7),
-        (Pool::Portuguese, 3),
-        (Pool::English, 3),
-    ],
     number_first: false,
     locality: POSTCODE_THEN_CITY,
     landline: &[(2, "~# ### ###"), (3, "~ ### ###")],
@@ -153,11 +123,6 @@ const SPAIN: Profile = Profile {
 };
 
 const ITALY: Profile = Profile {
-    pools: &[
-        (Pool::Italian, 91),
-        (Pool::Arabic, 5),
-        (Pool::SouthAsian, 4),
-    ],
     number_first: false,
     locality: POSTCODE_THEN_CITY,
     landline: &[(2, "~ ########"), (3, "~ #######"), (4, "~ ######")],
@@ -186,12 +151,6 @@ const ITALY: Profile = Profile {
 };
 
 const PORTUGAL: Profile = Profile {
-    pools: &[
-        (Pool::Portuguese, 91),
-        (Pool::French, 3),
-        (Pool::English, 3),
-        (Pool::SouthAsian, 3),
-    ],
     number_first: false,
     locality: POSTCODE_THEN_CITY,
     landline: &[(2, "~# ### ###"), (3, "~ ### ###")],
@@ -214,13 +173,6 @@ const PORTUGAL: Profile = Profile {
 };
 
 const NETHERLANDS: Profile = Profile {
-    pools: &[
-        (Pool::Dutch, 78),
-        (Pool::Turkish, 7),
-        (Pool::Arabic, 7),
-        (Pool::German, 4),
-        (Pool::English, 4),
-    ],
     number_first: false,
     locality: POSTCODE_THEN_CITY,
     landline: &[(3, "~ ### ####"), (4, "~ ## ## ##")],
@@ -243,14 +195,6 @@ const NETHERLANDS: Profile = Profile {
 };
 
 const SWITZERLAND: Profile = Profile {
-    pools: &[
-        (Pool::German, 57),
-        (Pool::French, 20),
-        (Pool::Italian, 10),
-        (Pool::Portuguese, 6),
-        (Pool::Turkish, 4),
-        (Pool::Spanish, 3),
-    ],
     number_first: false,
     locality: POSTCODE_THEN_CITY,
     landline: &[(0, "~ ### ## ##")],
@@ -278,13 +222,6 @@ const SWITZERLAND: Profile = Profile {
 };
 
 const UNITED_KINGDOM: Profile = Profile {
-    pools: &[
-        (Pool::English, 79),
-        (Pool::SouthAsian, 9),
-        (Pool::Polish, 5),
-        (Pool::WestAfrican, 4),
-        (Pool::Arabic, 3),
-    ],
     number_first: true,
     locality: "{c} {p}",
     // ⚠️ The numbers Ofcom keeps for drama: a block a large town, `01632 960` for the others.
@@ -308,7 +245,6 @@ const UNITED_KINGDOM: Profile = Profile {
 };
 
 const POLAND: Profile = Profile {
-    pools: &[(Pool::Polish, 100)],
     number_first: false,
     locality: POSTCODE_THEN_CITY,
     landline: &[(0, "~ ### ## ##")],
@@ -340,13 +276,6 @@ const POLAND: Profile = Profile {
 };
 
 const SWEDEN: Profile = Profile {
-    pools: &[
-        (Pool::Nordic, 80),
-        (Pool::Arabic, 9),
-        (Pool::Polish, 4),
-        (Pool::Turkish, 4),
-        (Pool::SouthAsian, 3),
-    ],
     number_first: false,
     locality: POSTCODE_THEN_CITY,
     landline: &[(2, "~-### ### ##"), (3, "~-### ## ##"), (4, "~-## ## ##")],
@@ -387,15 +316,6 @@ const NORTH_AMERICAN_TRADES: &[&str] = &[
 ];
 
 const UNITED_STATES: Profile = Profile {
-    pools: &[
-        (Pool::English, 62),
-        (Pool::Spanish, 19),
-        (Pool::German, 5),
-        (Pool::Italian, 4),
-        (Pool::SouthAsian, 4),
-        (Pool::Vietnamese, 3),
-        (Pool::WestAfrican, 3),
-    ],
     number_first: true,
     locality: "{c}, {r} {p}",
     // ⚠️ `555-0100` to `555-0199`, kept for fiction in every area code of North America.
@@ -408,15 +328,6 @@ const UNITED_STATES: Profile = Profile {
 };
 
 const CANADA: Profile = Profile {
-    pools: &[
-        (Pool::English, 55),
-        (Pool::French, 21),
-        (Pool::SouthAsian, 8),
-        (Pool::Italian, 5),
-        (Pool::Arabic, 4),
-        (Pool::Portuguese, 4),
-        (Pool::Vietnamese, 3),
-    ],
     number_first: true,
     locality: "{c} {r} {p}",
     landline: &[(0, "(~) 555-01##")],
@@ -526,22 +437,6 @@ impl Profile {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn every_mix_is_a_hundred_and_names_its_first_pool_first() {
-        for country in Country::ALL {
-            let pools = of(country).pools;
-            assert_eq!(
-                pools.iter().map(|(_, share)| share).sum::<u32>(),
-                100,
-                "{country}"
-            );
-            assert!(
-                pools.iter().all(|(_, share)| *share <= pools[0].1),
-                "{country}: its first pool is not its largest"
-            );
-        }
-    }
 
     #[test]
     fn an_address_is_written_in_the_order_of_its_country() {

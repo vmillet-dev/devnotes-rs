@@ -1550,7 +1550,7 @@
         "nationality": "Nationalité",
         "bornOn": "Date de naissance",
         "bornIn": "Lieu de naissance",
-        "document": "N° du spécimen",
+        "document": "N° de document (fictif)",
         "address": "Adresse",
         "phone": "Téléphone",
         "mobile": "Mobile",

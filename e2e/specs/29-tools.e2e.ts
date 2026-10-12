@@ -1278,6 +1278,10 @@ describe('The tools', () => {
         await eventually(shown, (now) => now === country, `a person of ${country}`);
       };
       const value = (field: string) => $(`[data-field="${field}"] ${testid('output-value')}`).getText();
+      const named = async () => [
+        await $(testid('identity-surname')).getText(),
+        await $(testid('identity-given')).getText(),
+      ];
       await openTool('identity');
       await $(testid('identity-card')).waitForDisplayed({ timeout: 10_000 });
 
@@ -1300,11 +1304,14 @@ describe('The tools', () => {
       expect(await value('partitaIva')).toMatch(/^\d{11}$/);
       const iban = await value('iban');
       expect(iban.startsWith('IT')).toBe(true);
+      const italianNames = await named();
       // No range is kept for fiction there: the note says a number may ring.
       expect(await $(testid('identity-phones')).getAttribute('data-fiction')).toBe('false');
 
       // The United States: a routing number where an IBAN would be, and no number with a key for a firm.
       await choose('US');
+      // ⚠️ The seed is pinned: the names are the same as in Italy. A name does not follow the country.
+      expect(await named()).toEqual(italianNames);
       expect(await $('[data-field="iban"]').isExisting()).toBe(false);
       expect(await value('routingNumber')).toMatch(/^\d{9}$/);
       await $(testid('identity-no-firm-number')).waitForDisplayed({ timeout: 10_000 });

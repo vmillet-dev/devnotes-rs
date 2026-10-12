@@ -1,3 +1,0 @@
-f:Lan,Hương,Mai,Linh,Thảo,Trang,Hà,Ngọc,Phương,Thu,Hoa,Yến,Nga,Hạnh,Thủy,Vân,Nhung,Hiền,Loan,Kim,Tuyết,Oanh,Diệp,My,Quỳnh,Trâm,Uyên,Như,Thanh,Xuân,Hằng,Giang,Châu,Bích,Cúc,Dung,Hồng,Liên,Ánh,Thư
-m:Minh,Hùng,Tuấn,Nam,Dũng,Hải,Long,Quang,Đức,Hoàng,Sơn,Thành,Trung,Khoa,Bảo,Phúc,Tâm,Vinh,Hiếu,Kiên,Cường,Bình,Duy,Huy,Khánh,Lâm,Nghĩa,Phong,Quân,Tài,Thắng,Tiến,Toàn,Trí,Việt,An,Đạt,Hưng,Lộc,Nhân
-s:Nguyễn,Trần,Lê,Phạm,Hoàng,Huỳnh,Phan,Vũ,Võ,Đặng,Bùi,Đỗ,Hồ,Ngô,Dương,Lý,Đinh,Trịnh,Đoàn,Lâm,Mai,Tô,Trương,Hà,Tạ,Châu,Cao,Thái,Lương,Vương,Quách,La,Tăng,Phùng,Kiều,Đào,Lưu,Tôn,Văn,Triệu
