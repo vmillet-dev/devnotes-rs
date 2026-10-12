@@ -1349,51 +1349,58 @@ describe('HTTP collections', () => {
             testid('http-response'),
             testid('http-split-handle'),
           );
-        const nudge = async (key: string, times = 1) => {
+        const onLine = async (key: string) => {
           await browser.execute(
             (line: string) => (document.querySelector(line) as HTMLElement | null)?.focus(),
             testid('http-split-handle'),
           );
           // Through `press`: the embedded driver has no `Home` nor `End` to send.
-          for (let turn = 0; turn < times; turn += 1) await press(key);
+          await press(key);
+        };
+        /**
+         * One key on the line, then the share it leads to. ⚠️ Waited for key by key: the page
+         * redraws after a key, not during it, and two keys read as one gave the state between.
+         */
+        const move = async (key: string) => {
+          const before = (await split()).share;
+          await onLine(key);
+          return eventually(split, (now) => now.share !== before, `the line moved by ${key}`);
         };
         // Whatever a run before left, it starts from the automatic share.
-        await nudge('Enter');
+        await onLine('Enter');
         const auto = await eventually(split, (now) => now.share === 0, 'the automatic share');
 
         // The arrows move the line: the request taller, its answer shorter by as much.
-        await nudge('ArrowDown', 2);
-        const lower = await eventually(split, (now) => now.share > 0, 'a share of its own');
+        const once = await move('ArrowDown');
+        const lower = await move('ArrowDown');
+        expect(lower.share).toBeGreaterThan(once.share);
         expect(lower.request).toBeGreaterThan(auto.request);
         expect(lower.response).toBeLessThan(auto.response);
         expect(lower.request + lower.response).toBe(auto.request + auto.response);
 
         // Each end is a floor: the answer keeps its status line, the request its own line and tabs.
-        await nudge('End');
-        const least = await eventually(split, (now) => now.share > lower.share, 'the answer at its floor');
+        const least = await move('End');
         expect(least.response).toBeGreaterThanOrEqual(158);
         expect(least.response).toBeLessThanOrEqual(164);
-        await nudge('ArrowDown');
+        await onLine('ArrowDown');
         expect(await split()).toEqual(least);
-        await nudge('Home');
-        const most = await eventually(split, (now) => now.share < lower.share, 'the request at its floor');
+        const most = await move('Home');
         expect(most.request).toBeGreaterThanOrEqual(146);
         expect(most.request).toBeLessThanOrEqual(152);
-        await nudge('ArrowUp');
+        await onLine('ArrowUp');
         expect(await split()).toEqual(most);
 
         // The share is the area's, kept with the application: a trip to the notes, then a refresh.
-        await nudge('ArrowDown', 3);
-        const kept = await eventually(
-          split,
-          (now) => now.share > most.share,
-          'a share between the two floors',
-        );
+        await move('ArrowDown');
+        await move('ArrowDown');
+        const kept = await move('ArrowDown');
         await press('1', ['Control']);
         await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
         await press('3', ['Control']);
         await $(testid('http-split-handle')).waitForExist({ timeout: 10_000 });
-        expect(await split()).toEqual(kept);
+        expect(await eventually(split, (now) => now.share === kept.share, 'the share after a trip')).toEqual(
+          kept,
+        );
         await reloadCanvas();
         await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
         await $(testid('http-split-handle')).waitForExist({ timeout: 10_000 });
@@ -1432,10 +1439,8 @@ describe('HTTP collections', () => {
         await $(testid('http-history')).waitForExist({ reverse: true, timeout: 10_000 });
 
         // Enter on the line is its double-click: back to the automatic share.
-        await nudge('Enter');
-        expect((await eventually(split, (now) => now.share === 0, 'the automatic share again')).request).toBe(
-          auto.request,
-        );
+        expect((await move('Enter')).share).toBe(0);
+        expect((await split()).request).toBe(auto.request);
 
         const tab = `${testid('http-tab')}[data-key="${created.id}"]`;
         await $(`${tab} ${testid('http-tab-close')}`).click();
