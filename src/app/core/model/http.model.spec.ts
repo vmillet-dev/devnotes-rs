@@ -36,6 +36,7 @@ describe('the HTTP wire shapes', () => {
       graphql: { query: '', variables: '', operationName: null, asGet: false },
       websocket: { protocols: [], messages: [] },
       transport: {},
+      variables: [],
     });
     expect(toParts({ websocket: { messages: [{ name: 'Ping' }] } }).websocket).toEqual({
       protocols: [],
@@ -64,11 +65,17 @@ describe('the HTTP wire shapes', () => {
   });
 
   it('reads settings and what is inherited, their rows filled', () => {
-    expect(toSettings({})).toEqual({ auth: { kind: 'inherit' }, headers: [], transport: {} });
-    expect(fromSettings({ auth: { kind: 'none' }, headers: [], transport: { timeoutMs: 500 } })).toEqual({
+    expect(toSettings({})).toEqual({ auth: { kind: 'inherit' }, headers: [], transport: {}, variables: [] });
+    expect(toSettings({ variables: [{ name: 'tenant' }] }).variables).toEqual([
+      { enabled: true, name: 'tenant', value: '', kind: 'text' },
+    ]);
+    expect(
+      fromSettings({ auth: { kind: 'none' }, headers: [], transport: { timeoutMs: 500 }, variables: [] }),
+    ).toEqual({
       auth: { kind: 'none' },
       headers: [],
       transport: { timeoutMs: 500 },
+      variables: [],
     });
 
     const from = { kind: 'collection' as const, id: 'api', name: 'API' };

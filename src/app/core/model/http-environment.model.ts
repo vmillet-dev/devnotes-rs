@@ -7,7 +7,14 @@ import type {
   VariableKind,
 } from '@core/ipc/bindings';
 
-export type { EnvironmentPatch, VariableFault, VariableKind } from '@core/ipc/bindings';
+export type {
+  EnvironmentPatch,
+  ScopedVariable,
+  UsedVariable,
+  VariableFault,
+  VariableKind,
+  VariableScope,
+} from '@core/ipc/bindings';
 
 /** A variable, every field present: the wire leaves out a default. */
 export interface VariableRow {

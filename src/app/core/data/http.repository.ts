@@ -41,6 +41,7 @@ import {
   toRows,
   toSynced,
 } from '@core/model/http.model';
+import { UsedVariable } from '@core/model/http-environment.model';
 
 function opened({ document, ...request }: HttpRequest): OpenedRequest {
   return { ...request, parts: toParts(document) };
@@ -138,12 +139,31 @@ export class HttpRepository {
     );
   }
 
+  /** Each `{{name}}` the request holds, with what it resolves to and from where: Rust's. */
+  async variables(
+    draft: RequestDraft,
+    place: { collectionId: string; folderId: string | null } | null,
+    environmentId: string | null,
+  ): Promise<UsedVariable[]> {
+    return unwrap(
+      'http_variables',
+      await commands.httpVariables({
+        kind: draft.kind,
+        document: toDocument(draft.parts),
+        collectionId: place?.collectionId ?? null,
+        folderId: place?.folderId ?? null,
+        environmentId,
+      }),
+    );
+  }
+
   /** `id` is the caller's: what `cancel` and `saveResponse` name the send by. */
   async send(
     id: string,
     draft: RequestDraft,
     place: { collectionId: string; folderId: string | null } | null,
     requestId: string | null = null,
+    environmentId: string | null = null,
   ): Promise<SentResponse> {
     return unwrap(
       'send_http_request',
@@ -156,6 +176,7 @@ export class HttpRepository {
         folderId: place?.folderId ?? null,
         name: draft.name,
         requestId,
+        environmentId,
       }),
     );
   }
@@ -240,6 +261,7 @@ export class HttpRepository {
     id: string,
     parts: RequestParts,
     place: { collectionId: string; folderId: string | null } | null,
+    environmentId: string | null = null,
   ): Promise<void> {
     unwrap(
       'connect_websocket',
@@ -248,6 +270,7 @@ export class HttpRepository {
         document: toDocument(parts),
         collectionId: place?.collectionId ?? null,
         folderId: place?.folderId ?? null,
+        environmentId,
       }),
     );
   }

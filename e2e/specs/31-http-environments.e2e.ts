@@ -7,8 +7,12 @@ import { canvas } from '../pageobjects/canvas.page.js';
 import { eventually, press, readEach, setField, testid } from '../support/app.js';
 import { bridge } from '../support/bridge.js';
 
-/** The HTTP area, its rail shown: the environments are at its foot. */
+/** The HTTP area opened afresh, its rail shown: what a scenario wrote through Rust is read. */
 async function openHttp(): Promise<void> {
+  if (await $(testid('http-page')).isExisting()) {
+    await press('1', ['Control']);
+    await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+  }
   await press('3', ['Control']);
   await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
   if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
@@ -146,6 +150,91 @@ describe('HTTP environments', () => {
       expect(await $(testid('error-banner')).isExisting()).toBe(false);
     } finally {
       server.close();
+      await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+    }
+  });
+
+  /**
+   * #486: the nearest level wins, resolved by Rust when the request leaves — the environment's
+   * host, the collection's tenant, the request's own page — and a name nothing sets stops it.
+   */
+  it('sends each variable as the nearest level sets it, and stops on one nothing sets', async () => {
+    const heard: string[] = [];
+    const server = createServer((request, response) => {
+      heard.push(`${request.method} ${request.url}`);
+      response.writeHead(200, { 'Content-Type': 'application/json' });
+      response.end('{}');
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address() as AddressInfo;
+    const api = await bridge.createHttpCollection('Variables');
+    await bridge.saveHttpSettings(
+      { kind: 'collection', id: api.id },
+      { auth: { kind: 'none' }, headers: [], transport: {}, variables: [{ name: 'tenant', value: 'acme' }] },
+    );
+    const local = await bridge.createHttpEnvironment('Local e2e');
+    await bridge.saveHttpEnvironment(local.id, {
+      variables: [
+        { name: 'baseUrl', value: `http://127.0.0.1:${port}` },
+        { name: 'tenant', value: 'not-this-one' },
+      ],
+    });
+    const created = await bridge.createHttpRequest({
+      collectionId: api.id,
+      folderId: null,
+      name: 'Lister',
+      kind: 'http',
+      method: 'GET',
+      document: {
+        url: '{{baseUrl}}/t/{{tenant}}?page={{page}}',
+        description: '',
+        variables: [{ name: 'page', value: '2' }],
+      },
+    });
+    try {
+      await openHttp();
+      await $(`${testid('http-node')}[data-id="${created.id}"] ${testid('http-node-name')}`).click();
+      await $(testid('http-request-editor')).waitForDisplayed({ timeout: 10_000 });
+      await pick(local.id);
+
+      const chips = `${testid('http-used-variables')} ${testid('http-used-variable')}`;
+      await eventually(
+        () => readEach(chips, '@data-scope'),
+        (scopes) => scopes.join() === 'environment,collection,request',
+        'each variable in the colour of where it resolves from',
+      );
+      expect(await readEach(testid('http-url-variable'), '@data-scope')).toEqual([
+        'environment',
+        'collection',
+        'request',
+      ]);
+
+      await $(testid('http-send')).click();
+      await eventually(
+        () => Promise.resolve(heard.join()),
+        (said) => said === 'GET /t/acme?page=2',
+        'the request sent with every variable filled',
+      );
+
+      await setField(testid('http-url'), '{{baseUrl}}/t/{{tenantId}}');
+      await eventually(
+        () => readEach(chips, '@data-scope'),
+        (scopes) => scopes.join() === 'environment,none',
+        'the name nothing sets, in red',
+      );
+      await $(testid('http-send')).click();
+      await $(testid('http-response-failure')).waitForDisplayed({ timeout: 10_000 });
+      expect(await $(testid('http-response-failure')).getText()).toContain('tenantId');
+      expect(heard).toHaveLength(1);
+
+      const tab = `${testid('http-tab')}[data-key="${created.id}"]`;
+      await $(`${tab} ${testid('http-tab-close')}`).click();
+      await $(testid('http-close-discard')).click();
+      await $(tab).waitForExist({ reverse: true, timeout: 10_000 });
+      await pick('none');
+    } finally {
+      server.close();
+      await bridge.deleteHttpEnvironment(local.id);
       await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
     }
   });

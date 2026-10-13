@@ -2105,8 +2105,8 @@ or a 30-second request would stall every command.
 - **What leaves is composed first** (`compose`, tested without a network): the inherited headers,
   its own over them by name, the auth — Basic, Bearer, a key in a header or the query — unless an
   `Authorization` is typed, the body and the `Content-Type` it implies. A URL without a scheme is
-  sent over `http://`. A `{{variable}}` left anywhere stops it, by name, until environments give
-  one a value.
+  sent over `http://`. A `{{variable}}` no level sets stops it, by name (→ "Variables, and where
+  each resolves from").
 - **A request names the application**: `User-Agent: DevNotes/<version>` (`send::USER_AGENT`, the
   version read from `Cargo.toml`) unless a `User-Agent` row is written — `reqwest` adds none, and
   many APIs answer 403 to a request without. An enabled row, the request's own or one handed
@@ -2272,8 +2272,8 @@ patch, chosen from the method menu (« GraphQL » beside the methods).
 - **The answer is read apart** (`SentResponse::graphql`): **Corps** lays out `data`, an
   **Erreurs** tab lists the errors with their path and location; **Brut** keeps the whole
   answer.
-- `{{variables}}` in the query and the variables stop the send like anywhere else, until
-  environments resolve them. Introspection and completion from the schema are out of scope.
+- `{{variables}}` in the query and the variables resolve like anywhere else, and stop the send
+  when nothing sets them. Introspection and completion from the schema are out of scope.
 
 ### A WebSocket
 
@@ -2366,6 +2366,34 @@ named by the front and sits right after its original, secrets included.
   what it is given). `HttpSendStore.send` and `HttpSocketsStore.connect` both ask
   `HttpEnvironmentsStore.mayLeave`, so `Ctrl+Enter` cannot go round it; the question is a line
   under the request's, the rail's idiom for a deletion, its one red the button.
+
+### Variables, and where each resolves from
+
+**A `{{name}}` is resolved by Rust when the request is sent, and nowhere else** (#486,
+`http/variables.rs`): `send_http_request` and `connect_websocket` read, under the lock, the
+levels in force — the request's own variables (`RequestDocument.variables`), its folders' and
+its collection's (`ContainerSettings.variables`, laid nearest first in `Inherited.variables`),
+the environment the front names (`environmentId`; one gone since counts as none), the globals
+— and fill the URL, the parameters, the headers, the body, the auth and the GraphQL query and
+variables before `compose`. The nearest level wins; a row switched off or one its table marks
+is left out; a value naming another is filled again, eight times at most.
+
+- ⚠️ **Not `notes::placeholder`.** A snippet's `{{field}}` looks alike; the two resolvers never
+  meet. The grammar is the same — `[A-Za-z0-9_-]` — and `http::variables::names_in` is the
+  HTTP side's only reader, header names judged by `as_letters` included.
+- **A name nothing sets refuses the send** (fork C): `compose` finds the first `{{name}}` left
+  in what `variables::texts` lists — what leaves, nothing that does not — and answers
+  `httpVariable` with it. Nothing is sent as typed.
+- **The editor asks Rust what each name resolves to** (`http_variables`, the same layers and
+  texts as a send): a chip a name under the URL, in the colour of its level — the request
+  green, a folder teal, the collection blue, the environment amber, the globals pink, red when
+  nothing sets it — and the URL's copy in the same hues. Pointed at or focused, a chip says
+  from where, the value (a secret's masked until « Afficher », masked again once left) and the
+  levels it hides; a name nothing sets offers « Définir dans … », which opens the environment
+  — the globals with none — on a row of that name. The answer is asked again when the request,
+  its place, the environment or a set changes, the last one kept while the next is read.
+- A send first writes what an environment's table still holds (`HttpEnvironmentsStore.flush`):
+  it resolves from what Rust has.
 
 ### Managing spaces from the switcher
 

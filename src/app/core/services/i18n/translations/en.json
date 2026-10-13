@@ -3071,7 +3071,8 @@
         "query": "Query",
         "message": "Messages",
         "protocols": "Protocols",
-        "settings": "Settings"
+        "settings": "Settings",
+        "variables": "Variables"
       }
     },
     "table": {
@@ -3196,7 +3197,9 @@
         "collection": "Settings of the collection {{name}}",
         "folder": "Settings of the folder {{name}}"
       },
-      "hint": "Its requests inherit them: a request whose auth is “Inherited” takes this one, and these headers add to theirs."
+      "hint": "Its requests inherit them: a request whose auth is “Inherited” takes this one, and these headers add to theirs.",
+      "variables": "Variables",
+      "variablesHint": "over the environment, under a folder and the request"
     },
     "send": {
       "send": "Send",
@@ -3404,6 +3407,30 @@
         "name": "A variable name holds only unaccented letters, digits, “_” and “-”.",
         "duplicate": "This name is already set above: only the first row counts.",
         "number": "A Number variable expects a number."
+      },
+      "used": {
+        "label": "Variables of the request",
+        "none": "not found",
+        "define": "Set in {{name}}",
+        "defineGlobals": "Set in the globals",
+        "shadows": "Also hides:",
+        "reveal": "Show",
+        "hide": "Hide",
+        "secret": "secret",
+        "scopes": {
+          "request": "request",
+          "folder": "folder",
+          "collection": "collection",
+          "environment": "environment",
+          "globals": "globals"
+        },
+        "from": {
+          "request": "this request",
+          "folder": "folder {{name}}",
+          "collection": "collection {{name}}",
+          "environment": "{{name}}",
+          "globals": "globals"
+        }
       }
     },
     "cookies": {

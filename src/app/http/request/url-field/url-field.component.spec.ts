@@ -30,6 +30,25 @@ describe('UrlFieldComponent', () => {
     expect(mirror.textContent).toBe('{{baseUrl}}/customers/{{customerId}}?page=1');
   });
 
+  it('colours each variable by where it resolves from, red when nothing sets it', async () => {
+    fixture.componentRef.setInput(
+      'scopes',
+      new Map([
+        ['baseUrl', 'environment'],
+        ['customerId', 'none'],
+      ]),
+    );
+    await fixture.whenStable();
+
+    expect(
+      [
+        ...el('[data-testid="http-url-mirror"]').querySelectorAll<HTMLElement>(
+          '[data-testid="http-url-variable"]',
+        ),
+      ].map((piece) => piece.dataset['scope']),
+    ).toEqual(['environment', 'none']);
+  });
+
   it('hands on what is typed, and keeps the copy scrolled with the field', () => {
     const field = el<HTMLInputElement>('[data-testid="http-url"]');
     field.value = '{{baseUrl}}/x';

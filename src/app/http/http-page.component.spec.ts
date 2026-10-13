@@ -513,6 +513,7 @@ describe('HttpPageComponent', () => {
       'query',
       'headers',
       'auth',
+      'variables',
       'settings',
     ]);
     expect(el('[data-testid="http-graphql"]')).not.toBeNull();
@@ -534,6 +535,7 @@ describe('HttpPageComponent', () => {
       'message',
       'headers',
       'auth',
+      'variables',
       'protocols',
     ]);
     expect(el('[data-testid="http-send"]')).toBeNull();
@@ -666,6 +668,87 @@ describe('HttpPageComponent', () => {
     await vi.waitFor(() => expect(http.callsOf('send')).toHaveLength(1));
     await fixture.whenStable();
     expect(el('[data-testid="http-protected-confirm"]')).toBeNull();
+  });
+
+  it('lists the variables a request holds, coloured by where they resolve from, and sends with the environment', async () => {
+    http.usedAnswer = [
+      {
+        name: 'baseUrl',
+        resolved: {
+          name: 'baseUrl',
+          value: 'https://api',
+          kind: 'text',
+          scope: 'environment',
+          from: 'Local',
+          shadows: [],
+        },
+      },
+    ];
+    await tabs().open('Login');
+    await fixture.whenStable();
+    el('[data-testid="http-environment-picker"]').click();
+    await fixture.whenStable();
+    all('[data-testid="http-environment-option"]')
+      .find((option) => option.dataset['id'] === 'env-local')
+      ?.click();
+
+    await vi.waitFor(() => expect(http.callsOf('variables').at(-1)?.[2]).toBe('env-local'));
+    await fixture.whenStable();
+    expect(all('[data-testid="http-used-variable"]').map((chip) => chip.dataset['scope'])).toEqual([
+      'environment',
+    ]);
+    expect(el('[data-testid="http-url-variable"]').dataset['scope']).toBe('environment');
+
+    el('[data-testid="http-send"]').click();
+    await vi.waitFor(() => expect(http.sentWith).toEqual(['env-local']));
+  });
+
+  it('keeps a request’s own variables in its section, and asks again what they resolve to', async () => {
+    await tabs().open('Login');
+    await fixture.whenStable();
+    el<HTMLButtonElement>('[data-testid="http-section"][data-section="variables"]').click();
+    await fixture.whenStable();
+    const asked = http.callsOf('variables').length;
+
+    const name = el<HTMLInputElement>(
+      '[data-testid="http-request-variables"] [data-testid="http-variable-name"]',
+    );
+    name.value = 'page';
+    name.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+
+    expect(tabs().active()?.draft.parts.variables).toEqual([
+      { enabled: true, name: 'page', value: '', kind: 'text' },
+    ]);
+    expect(
+      el(
+        '[data-testid="http-section"][data-section="variables"] [data-testid="http-section-count"]',
+      ).textContent?.trim(),
+    ).toBe('1');
+    await vi.waitFor(() => expect(http.callsOf('variables').length).toBeGreaterThan(asked));
+  });
+
+  it('offers to set a variable nothing sets, in the environment the request is sent with', async () => {
+    http.usedAnswer = [{ name: 'baseUrl', resolved: null }];
+    await tabs().open('Login');
+    el('[data-testid="http-environment-picker"]').click();
+    await fixture.whenStable();
+    all('[data-testid="http-environment-option"]')
+      .find((option) => option.dataset['id'] === 'env-local')
+      ?.click();
+    await vi.waitFor(() => expect(all('[data-testid="http-used-variable"]')).toHaveLength(1));
+    await fixture.whenStable();
+
+    el('[data-testid="http-used-variable-define"]').click();
+    await fixture.whenStable();
+
+    expect(el('[data-testid="http-environments"]')).not.toBeNull();
+    expect(el<HTMLInputElement>('[data-testid="http-environment-name"]').value).toBe('Local');
+    expect(
+      all('[data-testid="http-environment-variables"] [data-testid="http-variable-name"]').map(
+        (field) => (field as HTMLInputElement).value,
+      ),
+    ).toEqual(['baseUrl', '']);
   });
 
   it('closes an unmodified tab at once', async () => {

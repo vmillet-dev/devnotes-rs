@@ -3071,7 +3071,8 @@
         "query": "Requête",
         "message": "Messages",
         "protocols": "Protocoles",
-        "settings": "Réglages"
+        "settings": "Réglages",
+        "variables": "Variables"
       }
     },
     "table": {
@@ -3196,7 +3197,9 @@
         "collection": "Réglages de la collection {{name}}",
         "folder": "Réglages du dossier {{name}}"
       },
-      "hint": "Ses requêtes en héritent : une requête dont l'auth est « Héritée » prend celle-ci, et ses en-têtes s'ajoutent aux leurs."
+      "hint": "Ses requêtes en héritent : une requête dont l'auth est « Héritée » prend celle-ci, et ses en-têtes s'ajoutent aux leurs.",
+      "variables": "Variables",
+      "variablesHint": "au-dessus de l'environnement, sous un dossier et la requête"
     },
     "send": {
       "send": "Envoyer",
@@ -3404,6 +3407,30 @@
         "name": "Un nom de variable ne tient que des lettres sans accent, des chiffres, « _ » et « - ».",
         "duplicate": "Ce nom est déjà défini plus haut : seule la première ligne compte.",
         "number": "Une variable de type Nombre attend un nombre."
+      },
+      "used": {
+        "label": "Variables de la requête",
+        "none": "introuvable",
+        "define": "Définir dans {{name}}",
+        "defineGlobals": "Définir dans les globales",
+        "shadows": "Masque aussi :",
+        "reveal": "Afficher",
+        "hide": "Masquer",
+        "secret": "secret",
+        "scopes": {
+          "request": "requête",
+          "folder": "dossier",
+          "collection": "collection",
+          "environment": "environnement",
+          "globals": "globales"
+        },
+        "from": {
+          "request": "cette requête",
+          "folder": "dossier {{name}}",
+          "collection": "collection {{name}}",
+          "environment": "{{name}}",
+          "globals": "globales"
+        }
       }
     },
     "cookies": {

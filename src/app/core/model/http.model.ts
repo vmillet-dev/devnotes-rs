@@ -47,6 +47,7 @@ import type {
   Transport,
   TransportSettings,
 } from '@core/ipc/bindings';
+import { VariableRow, toVariableRow } from './http-environment.model';
 
 export { DEFAULT_TRANSPORT } from '@core/ipc/bindings';
 
@@ -182,13 +183,16 @@ export interface RequestParts {
   readonly graphql: GraphqlParts;
   readonly websocket: WebsocketParts;
   readonly transport: TransportSettings;
+  /** The nearest level a `{{name}}` resolves from. */
+  readonly variables: readonly VariableRow[];
 }
 
-/** A collection's or a folder's own auth and headers, what its requests inherit. */
+/** A collection's or a folder's own auth, headers and variables, what its requests inherit. */
 export interface ContainerSettingsDraft {
   readonly auth: RequestAuth;
   readonly headers: readonly KeyValueRow[];
   readonly transport: TransportSettings;
+  readonly variables: readonly VariableRow[];
 }
 
 export interface InheritedHeaderRow {
@@ -213,6 +217,7 @@ export const EMPTY_PARTS: RequestParts = {
   graphql: { query: '', variables: '', operationName: null, asGet: false },
   websocket: { protocols: [], messages: [] },
   transport: {},
+  variables: [],
 };
 
 /** What a request tab edits, and what saving writes. */
@@ -291,6 +296,7 @@ export function toParts(document: RequestDocument): RequestParts {
     graphql: toGraphql(document.graphql),
     websocket: toWebsocket(document.websocket),
     transport: document.transport ?? {},
+    variables: (document.variables ?? []).map(toVariableRow),
   };
 }
 
@@ -328,6 +334,7 @@ export function toDocument(parts: RequestParts): RequestDocument {
     graphql: toGraphqlWire(parts.graphql),
     websocket: { protocols: [...parts.websocket.protocols], messages: [...parts.websocket.messages] },
     transport: { ...parts.transport },
+    variables: [...parts.variables],
   };
 }
 
@@ -336,11 +343,17 @@ export function toSettings(settings: ContainerSettings): ContainerSettingsDraft 
     auth: settings.auth ?? { kind: 'inherit' },
     headers: (settings.headers ?? []).map(toRow),
     transport: settings.transport ?? {},
+    variables: (settings.variables ?? []).map(toVariableRow),
   };
 }
 
 export function fromSettings(settings: ContainerSettingsDraft): ContainerSettings {
-  return { auth: settings.auth, headers: [...settings.headers], transport: { ...settings.transport } };
+  return {
+    auth: settings.auth,
+    headers: [...settings.headers],
+    transport: { ...settings.transport },
+    variables: [...settings.variables],
+  };
 }
 
 export function toInherited(inherited: Inherited): InheritedParts {

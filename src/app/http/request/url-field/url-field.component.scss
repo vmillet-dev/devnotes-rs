@@ -37,10 +37,40 @@
   pointer-events: none;
 }
 
+// The chips' hues under the URL: where each resolves from, red when nothing sets it.
 .variable {
+  --variable-hue: var(--amber-text);
+  --variable-rgb: var(--amber-rgb);
   border-radius: 4px;
-  background: rgba(var(--amber-rgb), 0.16);
-  color: var(--amber-text);
+  background: rgba(var(--variable-rgb), 0.16);
+  color: var(--variable-hue);
+
+  &[data-scope='request'] {
+    --variable-hue: var(--green);
+    --variable-rgb: var(--green-rgb);
+  }
+
+  &[data-scope='folder'] {
+    --variable-hue: var(--teal);
+    --variable-rgb: var(--teal-rgb);
+  }
+
+  &[data-scope='collection'] {
+    --variable-hue: var(--blue);
+    --variable-rgb: var(--blue-rgb);
+  }
+
+  &[data-scope='globals'] {
+    --variable-hue: var(--pink);
+    --variable-rgb: var(--pink-rgb);
+  }
+
+  &[data-scope='none'] {
+    --variable-hue: var(--red);
+    --variable-rgb: var(--red-rgb);
+    text-decoration: underline wavy rgba(var(--red-rgb), 0.8);
+    text-underline-offset: 3px;
+  }
 }
 
 // ⚠️ After `text-field`, whose `all: unset` would otherwise take the padding back to 0 and

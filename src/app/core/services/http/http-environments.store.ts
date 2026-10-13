@@ -179,6 +179,19 @@ export class HttpEnvironmentsStore {
     return true;
   }
 
+  /**
+   * A name nothing sets, given a row in the active environment — the globals with none — and
+   * the page opened on it, its value to type.
+   */
+  define(name: string): void {
+    const active = this.active();
+    this.select(active === null ? { kind: 'globals' } : { kind: 'environment', id: active.id });
+    if (!this.rows().some((row) => row.name === name)) {
+      this.editVariables([...this.rows(), { enabled: true, name, value: '', kind: 'text' }]);
+    }
+    this.open();
+  }
+
   /** The rows as typed are shown at once and written once the keys rest. */
   editVariables(rows: readonly VariableRow[]): void {
     const target = this._target();

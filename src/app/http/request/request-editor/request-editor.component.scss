@@ -107,6 +107,15 @@
   }
 }
 
+.used {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: -4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
 // Under the line it stops, as the rail asks before a deletion: the one red is the button.
 .protected {
   display: flex;

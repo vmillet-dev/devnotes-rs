@@ -64,7 +64,13 @@ export class HttpSocketsStore {
       log: current?.log ?? [],
     });
     try {
-      await this.repository.connectWebsocket(socketId, tab.draft.parts, tab.place);
+      await this.environments.flush();
+      await this.repository.connectWebsocket(
+        socketId,
+        tab.draft.parts,
+        tab.place,
+        this.environments.active()?.id ?? null,
+      );
     } catch (error) {
       if (!(error instanceof IpcError)) console.error(error);
       this.update(socketId, (state) => ({
