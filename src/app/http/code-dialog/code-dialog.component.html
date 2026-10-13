@@ -159,7 +159,7 @@
           }
           @if (generated.notice; as notice) {
             <p class="note missing" data-testid="http-code-notice">
-              {{ 'http.code.notices.' + notice | transloco }}
+              {{ 'http.code.notices.' + notice | transloco: { target: entry().name } }}
             </p>
           }
         }

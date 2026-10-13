@@ -1,0 +1,28 @@
+package main
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+)
+
+func main() {
+	request, err := http.NewRequest("GET", "https://api.exemple.fr/customers/cus_42/invoices?page=1&limit=50", nil)
+	if err != nil {
+		panic(err)
+	}
+	request.Header.Set("Accept", "application/json")
+	request.Header.Set("Authorization", "Bearer {{accessToken}}")
+	client := &http.Client{
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	response, err := client.Do(request)
+	if err != nil {
+		panic(err)
+	}
+	defer response.Body.Close()
+	answer, _ := io.ReadAll(response.Body)
+	fmt.Println(response.StatusCode, string(answer))
+}

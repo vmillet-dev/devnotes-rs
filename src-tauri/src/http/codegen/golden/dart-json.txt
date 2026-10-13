@@ -1,0 +1,12 @@
+import 'package:http/http.dart' as http;
+
+Future<void> main() async {
+  final request = http.Request('POST', Uri.parse('https://api.exemple.fr/customers'));
+  request.headers.addAll({
+    'Content-Type': 'application/json',
+  });
+  request.body = '{\n  "name": "O\'Brien",\n  "plan": "pro"\n}';
+  request.followRedirects = true;
+  final response = await http.Response.fromStream(await request.send());
+  print('${response.statusCode} ${response.body}');
+}

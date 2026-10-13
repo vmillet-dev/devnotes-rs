@@ -1,0 +1,33 @@
+package main
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+)
+
+func main() {
+	file, err := os.Open("/tmp/archive.zip")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	request, err := http.NewRequest("POST", "https://api.exemple.fr/upload", file)
+	if err != nil {
+		panic(err)
+	}
+	request.Header.Set("Content-Type", "application/octet-stream")
+	client := &http.Client{
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	response, err := client.Do(request)
+	if err != nil {
+		panic(err)
+	}
+	defer response.Body.Close()
+	answer, _ := io.ReadAll(response.Body)
+	fmt.Println(response.StatusCode, string(answer))
+}

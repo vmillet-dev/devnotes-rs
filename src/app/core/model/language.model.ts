@@ -25,6 +25,11 @@ export const LANGUAGE_LABELS: Record<LanguageTag, string> = {
   scss: 'SCSS',
   sh: 'SH',
   ps1: 'PS1',
+  kt: 'KT',
+  rb: 'RB',
+  swift: 'SWIFT',
+  dart: 'DART',
+  ex: 'EX',
   md: 'MD',
   txt: 'TXT',
 };

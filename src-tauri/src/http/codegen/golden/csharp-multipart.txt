@@ -1,0 +1,12 @@
+using System.Net.Http.Headers;
+using System.Text;
+
+using var handler = new HttpClientHandler { AllowAutoRedirect = false };
+using var client = new HttpClient(handler);
+using var request = new HttpRequestMessage(HttpMethod.Put, "https://api.exemple.fr/documents/7");
+var form = new MultipartFormDataContent();
+form.Add(new StringContent("Facture"), "title");
+form.Add(new StreamContent(File.OpenRead("C:/Users/ada/facture.pdf")), "scan", "facture.pdf");
+request.Content = form;
+using var response = await client.SendAsync(request);
+Console.WriteLine($"{(int)response.StatusCode} {await response.Content.ReadAsStringAsync()}");

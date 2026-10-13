@@ -1,0 +1,18 @@
+<?php
+
+require 'vendor/autoload.php';
+
+$client = new GuzzleHttp\Client();
+$response = $client->request('POST', 'https://auth.exemple.fr/token', [
+    'headers' => [
+        'Content-Type' => 'application/x-www-form-urlencoded',
+    ],
+    'auth' => ['billing-web', '{{clientSecret}}'],
+    'form_params' => [
+        'grant_type' => 'client_credentials',
+        'scope' => 'invoices read',
+    ],
+    'allow_redirects' => false,
+    'http_errors' => false,
+]);
+echo $response->getStatusCode(), ' ', $response->getBody();

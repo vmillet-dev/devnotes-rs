@@ -1,0 +1,9 @@
+using System.Net.Http.Headers;
+using System.Text;
+
+using var handler = new HttpClientHandler { AllowAutoRedirect = true };
+using var client = new HttpClient(handler);
+using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.exemple.fr/customers");
+request.Content = new StringContent("{\n  \"name\": \"O'Brien\",\n  \"plan\": \"pro\"\n}", Encoding.UTF8, "application/json");
+using var response = await client.SendAsync(request);
+Console.WriteLine($"{(int)response.StatusCode} {await response.Content.ReadAsStringAsync()}");

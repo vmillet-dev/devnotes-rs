@@ -3478,7 +3478,7 @@
       "secretsClear": "Les secrets sont écrits en clair dans ce code.",
       "unresolved": "{count, plural, one {1 variable sans valeur, écrite telle quelle :} other {# variables sans valeur, écrites telles quelles :}}",
       "notices": {
-        "multipartUnsupported": "wget n’envoie pas de formulaire multipart : le corps est laissé de côté."
+        "multipartUnsupported": "{{target}} n’envoie pas de formulaire multipart ici : le corps est laissé de côté."
       },
       "where": "Enregistré comme snippet, dans le langage de la cible, avec le tag #http.",
       "save": "Enregistrer comme snippet",

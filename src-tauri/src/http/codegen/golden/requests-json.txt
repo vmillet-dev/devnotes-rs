@@ -1,0 +1,12 @@
+import requests
+
+response = requests.request(
+    "POST",
+    "https://api.exemple.fr/customers",
+    headers={
+        "Content-Type": "application/json",
+    },
+    data="{\n  \"name\": \"O'Brien\",\n  \"plan\": \"pro\"\n}",
+    allow_redirects=True,
+)
+print(response.status_code, response.text)

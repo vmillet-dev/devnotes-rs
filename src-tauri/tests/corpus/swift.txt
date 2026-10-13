@@ -1,0 +1,9 @@
+import Foundation
+
+func invoices() async throws -> Data {
+    guard let url = URL(string: "https://api.exemple.fr/invoices") else {
+        throw URLError(.badURL)
+    }
+    let (data, _) = try await URLSession.shared.data(from: url)
+    return data
+}

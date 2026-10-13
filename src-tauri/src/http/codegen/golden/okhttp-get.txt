@@ -1,0 +1,15 @@
+import okhttp3.OkHttpClient
+import okhttp3.Request
+
+val client = OkHttpClient.Builder()
+    .followRedirects(false)
+    .build()
+val request = Request.Builder()
+    .url("https://api.exemple.fr/customers/cus_42/invoices?page=1&limit=50")
+    .header("Accept", "application/json")
+    .header("Authorization", "Bearer {{accessToken}}")
+    .method("GET", null)
+    .build()
+client.newCall(request).execute().use { response ->
+    println("${response.code} ${response.body?.string()}")
+}

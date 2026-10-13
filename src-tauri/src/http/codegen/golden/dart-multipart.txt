@@ -1,0 +1,10 @@
+import 'package:http/http.dart' as http;
+
+Future<void> main() async {
+  final request = http.MultipartRequest('PUT', Uri.parse('https://api.exemple.fr/documents/7'));
+  request.fields['title'] = 'Facture';
+  request.files.add(await http.MultipartFile.fromPath('scan', 'C:/Users/ada/facture.pdf'));
+  request.followRedirects = false;
+  final response = await http.Response.fromStream(await request.send());
+  print('${response.statusCode} ${response.body}');
+}

@@ -26,6 +26,18 @@ const ENTRIES: Record<CodeTarget, Omit<CodeTargetEntry, 'id'>> = {
   axios: { name: 'JavaScript', library: 'axios', group: 'javascript' },
   undici: { name: 'Node.js', library: 'undici', group: 'javascript' },
   angular: { name: 'TypeScript', library: 'Angular HttpClient', group: 'javascript' },
+  requests: { name: 'Python', library: 'requests', group: 'other' },
+  httpx: { name: 'Python', library: 'httpx', group: 'other' },
+  go: { name: 'Go', library: 'net/http', group: 'other' },
+  reqwest: { name: 'Rust', library: 'reqwest', group: 'other' },
+  java: { name: 'Java', library: 'HttpClient', group: 'other' },
+  okhttp: { name: 'Kotlin', library: 'OkHttp', group: 'other' },
+  csharp: { name: 'C#', library: 'HttpClient', group: 'other' },
+  guzzle: { name: 'PHP', library: 'Guzzle', group: 'other' },
+  ruby: { name: 'Ruby', library: 'Net::HTTP', group: 'other' },
+  swift: { name: 'Swift', library: 'URLSession', group: 'other' },
+  dart: { name: 'Dart', library: 'http', group: 'other' },
+  elixir: { name: 'Elixir', library: 'Req', group: 'other' },
 };
 
 export const CODE_TARGETS: readonly CodeTargetEntry[] = (Object.keys(ENTRIES) as CodeTarget[]).map((id) => ({

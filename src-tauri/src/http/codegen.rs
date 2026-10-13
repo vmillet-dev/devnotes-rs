@@ -4,11 +4,23 @@
 
 pub mod angular;
 pub mod axios;
+pub mod csharp;
 pub mod curl;
+pub mod dart;
 pub mod fetch;
+pub mod go;
+pub mod guzzle;
 pub mod httpie;
+pub mod java;
 pub mod javascript;
+pub mod okhttp;
 pub mod powershell;
+pub mod python;
+pub mod req;
+pub mod reqwest;
+pub mod ruby;
+pub mod source;
+pub mod swift;
 pub mod undici;
 pub mod wget;
 
@@ -36,6 +48,18 @@ closed_enum! {
         Axios = "axios",
         Undici = "undici",
         Angular = "angular",
+        Requests = "requests",
+        Httpx = "httpx",
+        Go = "go",
+        Reqwest = "reqwest",
+        Java = "java",
+        Okhttp = "okhttp",
+        Csharp = "csharp",
+        Guzzle = "guzzle",
+        Ruby = "ruby",
+        Swift = "swift",
+        Dart = "dart",
+        Elixir = "elixir",
     }
 }
 
@@ -48,7 +72,24 @@ impl CodeTarget {
             Self::Powershell => Language::Ps1,
             Self::Fetch | Self::Axios | Self::Undici => Language::Js,
             Self::Angular => Language::Ts,
+            Self::Requests | Self::Httpx => Language::Py,
+            Self::Go => Language::Go,
+            Self::Reqwest => Language::Rs,
+            Self::Java => Language::Java,
+            Self::Okhttp => Language::Kt,
+            Self::Csharp => Language::Cs,
+            Self::Guzzle => Language::Php,
+            Self::Ruby => Language::Rb,
+            Self::Swift => Language::Swift,
+            Self::Dart => Language::Dart,
+            Self::Elixir => Language::Ex,
         }
+    }
+
+    /// wget, Java's client and `URLSession` build no multipart body: the code leaves it out.
+    #[must_use]
+    pub fn sends_multipart(self) -> bool {
+        !matches!(self, Self::Wget | Self::Java | Self::Swift)
     }
 }
 
@@ -66,7 +107,8 @@ pub struct CodeOptions {
     pub follow_redirects: bool,
 }
 
-/// What a target could not write, said by the front: wget sends no multipart form.
+/// What a target could not write, said by the front: wget, Java's client and `URLSession`
+/// build no multipart body.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub enum CodeNotice {
@@ -295,7 +337,7 @@ pub fn generate(
         &inherited,
         options.follow_redirects,
     );
-    let notice = (target == CodeTarget::Wget && matches!(request.body, CodeBody::Multipart(_)))
+    let notice = (!target.sends_multipart() && matches!(request.body, CodeBody::Multipart(_)))
         .then_some(CodeNotice::MultipartUnsupported);
     let code = match target {
         CodeTarget::Curl => curl::write(&request, options.multiline),
@@ -306,6 +348,18 @@ pub fn generate(
         CodeTarget::Axios => axios::write(&request),
         CodeTarget::Undici => undici::write(&request),
         CodeTarget::Angular => angular::write(&request),
+        CodeTarget::Requests => python::requests(&request),
+        CodeTarget::Httpx => python::httpx(&request),
+        CodeTarget::Go => go::write(&request),
+        CodeTarget::Reqwest => reqwest::write(&request),
+        CodeTarget::Java => java::write(&request),
+        CodeTarget::Okhttp => okhttp::write(&request),
+        CodeTarget::Csharp => csharp::write(&request),
+        CodeTarget::Guzzle => guzzle::write(&request),
+        CodeTarget::Ruby => ruby::write(&request),
+        CodeTarget::Swift => swift::write(&request),
+        CodeTarget::Dart => dart::write(&request),
+        CodeTarget::Elixir => req::write(&request),
     };
     GeneratedCode {
         code,

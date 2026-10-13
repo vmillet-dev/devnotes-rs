@@ -1,0 +1,41 @@
+package main
+
+import (
+	"bytes"
+	"fmt"
+	"io"
+	"mime/multipart"
+	"net/http"
+	"os"
+)
+
+func main() {
+	var form bytes.Buffer
+	writer := multipart.NewWriter(&form)
+	writer.WriteField("title", "Facture")
+	file1, err := os.Open("C:/Users/ada/facture.pdf")
+	if err != nil {
+		panic(err)
+	}
+	part1, _ := writer.CreateFormFile("scan", "facture.pdf")
+	io.Copy(part1, file1)
+	file1.Close()
+	writer.Close()
+	request, err := http.NewRequest("PUT", "https://api.exemple.fr/documents/7", &form)
+	if err != nil {
+		panic(err)
+	}
+	request.Header.Set("Content-Type", writer.FormDataContentType())
+	client := &http.Client{
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	response, err := client.Do(request)
+	if err != nil {
+		panic(err)
+	}
+	defer response.Body.Close()
+	answer, _ := io.ReadAll(response.Body)
+	fmt.Println(response.StatusCode, string(answer))
+}

@@ -1,0 +1,12 @@
+use reqwest::blocking::Client;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Client::new();
+    let response = client
+        .request(reqwest::Method::POST, "https://api.exemple.fr/customers")
+        .header("Content-Type", "application/json")
+        .body("{\n  \"name\": \"O'Brien\",\n  \"plan\": \"pro\"\n}")
+        .send()?;
+    println!("{} {}", response.status(), response.text()?);
+    Ok(())
+}
