@@ -1,11 +1,16 @@
 version: 2
 
-# Grouped and monthly on purpose. A stream of one-crate pull requests is a stream
-# nobody reviews; the security workflow is what catches anything urgent in between.
+# Weekly, grouped by kind: one pull request per family a week, so a break points at one
+# family rather than at a month of updates.
 #
 # ⚠️ A group listed by name loses its members to a group listed by update type: Dependabot
 # ranks `update-types` as the more specific rule, which is how `tauri-plugin-*` and
-# `@angular/*` ended up in `rust-minor` and `npm-minor`. Hence the `exclude-patterns`.
+# `@angular/*` ended up in `rust-minor` and `npm-minor`. Hence the `exclude-patterns`, which
+# must name every pattern of every group above them.
+#
+# Families released in lockstep (Angular, Tauri, TipTap, WebdriverIO) take their majors as a
+# group, since half of a major does not install. Every other group takes minors and patches,
+# and a major comes alone.
 #
 # The default versioning strategy stays: a lockfile-only bump says the declared range already
 # allows the new version, and raising every floor would only add manifest churn.
@@ -13,8 +18,9 @@ updates:
   - package-ecosystem: cargo
     directory: /src-tauri
     schedule:
-      interval: monthly
-    open-pull-requests-limit: 5
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
     # `tauri build` refuses a crate and its npm twin on different minors, and Dependabot opens
     # the two halves as two pull requests in two ecosystems, each red without the other. A
     # Tauri minor is bumped by hand, both halves in one pull request; patches come here.
@@ -28,19 +34,86 @@ updates:
         patterns:
           - 'tauri'
           - 'tauri-*'
-      rust-minor:
-        update-types:
-          - minor
-          - patch
+      storage:
+        update-types: [minor, patch]
+        patterns:
+          - 'diesel'
+          - 'diesel_*'
+          - 'libsqlite3-sys'
+      crypto:
+        update-types: [minor, patch]
+        patterns:
+          - 'aes-gcm'
+          - 'argon2'
+          - 'zeroize'
+          - 'getrandom'
+          - 'md-5'
+          - 'sha1'
+          - 'sha2'
+          - 'sha3'
+          - 'hmac'
+      network:
+        update-types: [minor, patch]
+        patterns:
+          - 'reqwest'
+          - 'rustls'
+          - 'rustls-*'
+          - 'tokio'
+          - 'tokio-*'
+          - 'futures-util'
+          - 'url'
+          - 'percent-encoding'
+          - 'psl'
+      serialisation:
+        update-types: [minor, patch]
+        patterns:
+          - 'serde'
+          - 'serde_*'
+          - 'specta'
+          - 'specta-*'
+          - 'toml'
+          - 'quick-xml'
+          - 'yaml-rust2'
+      rust-other:
+        update-types: [minor, patch]
         exclude-patterns:
           - 'tauri'
           - 'tauri-*'
+          - 'diesel'
+          - 'diesel_*'
+          - 'libsqlite3-sys'
+          - 'aes-gcm'
+          - 'argon2'
+          - 'zeroize'
+          - 'getrandom'
+          - 'md-5'
+          - 'sha1'
+          - 'sha2'
+          - 'sha3'
+          - 'hmac'
+          - 'reqwest'
+          - 'rustls'
+          - 'rustls-*'
+          - 'tokio'
+          - 'tokio-*'
+          - 'futures-util'
+          - 'url'
+          - 'percent-encoding'
+          - 'psl'
+          - 'serde'
+          - 'serde_*'
+          - 'specta'
+          - 'specta-*'
+          - 'toml'
+          - 'quick-xml'
+          - 'yaml-rust2'
 
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: monthly
-    open-pull-requests-limit: 5
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
     ignore:
       # The npm half of the Tauri rule above.
       - dependency-name: '@tauri-apps/*'
@@ -64,22 +137,51 @@ updates:
       tauri:
         patterns:
           - '@tauri-apps/*'
-      npm-minor:
-        update-types:
-          - minor
-          - patch
+      rich-editor:
+        patterns:
+          - '@tiptap/*'
+      e2e:
+        patterns:
+          - '@wdio/*'
+          - 'webdriverio'
+      unit-tests:
+        update-types: [minor, patch]
+        patterns:
+          - 'vitest'
+          - '@vitest/*'
+          - 'jsdom'
+      lint-and-format:
+        update-types: [minor, patch]
+        patterns:
+          - 'eslint'
+          - '@eslint/*'
+          - 'typescript-eslint'
+          - 'prettier'
+      npm-other:
+        update-types: [minor, patch]
         exclude-patterns:
           - '@angular/*'
           - '@angular-*/*'
           - 'angular-eslint'
           - '@tauri-apps/*'
+          - '@tiptap/*'
+          - '@wdio/*'
+          - 'webdriverio'
+          - 'vitest'
+          - '@vitest/*'
+          - 'jsdom'
+          - 'eslint'
+          - '@eslint/*'
+          - 'typescript-eslint'
+          - 'prettier'
 
   # Pinned action versions go stale silently: nothing in a green run says an action
   # is two majors behind.
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: monthly
+      interval: weekly
+      day: monday
     groups:
       actions:
         patterns:
