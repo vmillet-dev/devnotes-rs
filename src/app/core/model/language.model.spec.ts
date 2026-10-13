@@ -5,7 +5,7 @@ describe('language model', () => {
   it('labels every language it offers, and offers the twenty-six it highlights', () => {
     const tags = Object.keys(LANGUAGE_LABELS) as LanguageTag[];
 
-    expect(tags.length).toBe(27);
+    expect(tags).toHaveLength(27);
     expect(tags.every((tag) => LANGUAGE_LABELS[tag].length > 0)).toBe(true);
   });
 
