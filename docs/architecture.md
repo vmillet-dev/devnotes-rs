@@ -1959,9 +1959,9 @@ method in its colour (`http-method-hues`), `GQL` for GraphQL and `WS` for a WebS
   pointing at a glyph; and the tab bar ends with « + Nouvelle requête ».
 - **A row's menu keeps the three kinds of request behind one entry**, « Nouvelle requête › »,
   and a submenu beside the panel — the idiom of a card's « Priorité › »: a sibling panel, so
-  the first one's arrows do not walk into it, opened by a click or `→`, folded by `←` and
-  first on Escape (`MenuTriggerDirective.handleEscape`). Listed flat they made eight entries
-  of a menu opened to rename something.
+  the first one's arrows do not walk into it, opened by the pointer resting on its entry, a
+  click or `→`, folded by `←` and first on Escape (`MenuTriggerDirective.handleEscape`).
+  Listed flat they made eight entries of a menu opened to rename something.
 - **Moving is pointer events and `Alt` with the arrows**, never HTML5 drag and drop. `↑`/`↓`
   within the parent, `→` into the folder above, `←` out of the folder; a drag lands before or
   after a row, or inside a folder or a collection when it is let go mid-row. Both turn into one
@@ -3035,7 +3035,12 @@ note goes through `NotesStore.setPriority`, a batch of one with its undo, like f
 takes a level the way it takes a pin — it becomes worth keeping. The card menu's **submenu is
 the first** in the application: a sibling of the panel and not a child, or the panel's arrows
 would walk into it; → opens it, ← and Escape fold it back onto its entry before Escape closes
-the menu, and it opens on the current level (`MenuPanelDirective.opensOnChecked`).
+the menu, and it opens on the current level (`MenuPanelDirective.opensOnChecked`). The pointer
+opens it as a desktop menu's (`SubmenuHoverDirective`, shared with the rail's « Nouvelle
+requête › »): resting 150 ms on the entry opens it, so crossing it opens nothing; another entry
+hovered folds it after 300 ms, onto that entry, unless the pointer reaches the submenu first —
+the way to « Urgente » crosses the entries below. A click on the entry opens and never folds: it
+usually follows the hover. A touch has no hover; the tap stays the way in.
 
 ### `{{fields}}` in a snippet
 

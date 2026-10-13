@@ -17,10 +17,11 @@ import { PRIORITIES } from '@core/model/priority.model';
 import { Space } from '@core/model/space.model';
 import { MenuPanelDirective } from '@shared/directives/menu-panel.directive';
 import { MenuTriggerDirective } from '@shared/directives/menu-trigger.directive';
+import { SubmenuHoverDirective } from '@shared/directives/submenu-hover.directive';
 
 @Component({
   selector: 'app-note-card-menu',
-  imports: [TranslocoPipe, MenuPanelDirective],
+  imports: [TranslocoPipe, MenuPanelDirective, SubmenuHoverDirective],
   hostDirectives: [MenuTriggerDirective],
   templateUrl: './note-card-menu.component.html',
   styleUrl: './note-card-menu.component.scss',
@@ -122,23 +123,16 @@ export class NoteCardMenuComponent {
     });
   }
 
-  protected toggleSubmenu(): void {
-    if (this.submenuOpen()) {
-      this.closeSubmenu();
-      return;
-    }
-    this.openSubmenu();
-  }
-
+  /** A click opens and never folds: it often follows the hover that already opened it. */
   protected openSubmenu(event?: Event): void {
     event?.preventDefault();
     this.placeSubmenu();
     this.submenuOpen.set(true);
   }
 
-  protected closeSubmenu(): void {
+  protected closeSubmenu(focus = this.priorityItem()?.nativeElement): void {
     this.submenuOpen.set(false);
-    this.priorityItem()?.nativeElement.focus();
+    focus?.focus();
   }
 
   protected choosePriority(priority: Priority): void {

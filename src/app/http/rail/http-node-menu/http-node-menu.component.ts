@@ -15,6 +15,7 @@ import { REQUEST_KINDS, RequestKind } from '@core/model/http.model';
 import { RailRow } from '@core/services/http/http-tree';
 import { MenuPanelDirective } from '@shared/directives/menu-panel.directive';
 import { MenuTriggerDirective } from '@shared/directives/menu-trigger.directive';
+import { SubmenuHoverDirective } from '@shared/directives/submenu-hover.directive';
 
 /** A request is begun as one of its three kinds: there is no « Nouvelle requête » to turn into one later. */
 export type HttpNodeAction =
@@ -42,7 +43,7 @@ const NEW_ACTIONS: Readonly<Record<RequestKind, HttpNodeAction>> = {
  */
 @Component({
   selector: 'app-http-node-menu',
-  imports: [MenuPanelDirective, TranslocoPipe],
+  imports: [MenuPanelDirective, SubmenuHoverDirective, TranslocoPipe],
   templateUrl: './http-node-menu.component.html',
   styleUrl: './http-node-menu.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -86,20 +87,15 @@ export class HttpNodeMenuComponent {
     this.chosen.emit(action);
   }
 
-  protected toggleSubmenu(): void {
-    if (this.submenuOpen()) this.closeSubmenu();
-    else this.openSubmenu();
-  }
-
   protected openSubmenu(event?: Event): void {
     event?.preventDefault();
     this.placeSubmenu();
     this.submenuOpen.set(true);
   }
 
-  protected closeSubmenu(): void {
+  protected closeSubmenu(focus = this.parent()?.nativeElement): void {
     this.submenuOpen.set(false);
-    this.parent()?.nativeElement.focus();
+    focus?.focus();
   }
 
   private place(): void {

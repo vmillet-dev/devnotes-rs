@@ -14,7 +14,16 @@
 </button>
 
 @if (menu.open()) {
-  <div appMenuPanel class="panel" data-testid="http-node-menu-panel" [style]="panelStyle()">
+  <div
+    appMenuPanel
+    #hover="appSubmenuHover"
+    [appSubmenuHover]="submenuOpen()"
+    class="panel"
+    data-testid="http-node-menu-panel"
+    [style]="panelStyle()"
+    (submenuOpened)="openSubmenu()"
+    (submenuClosed)="closeSubmenu($event)"
+  >
     @for (entry of entries(); track entry) {
       @if (entry === 'newRequest') {
         <button
@@ -26,7 +35,7 @@
           data-testid="http-node-new"
           aria-haspopup="menu"
           [attr.aria-expanded]="submenuOpen()"
-          (click)="toggleSubmenu()"
+          (click)="openSubmenu()"
           (keydown.arrowright)="openSubmenu($event)"
         >
           <span class="option-label">{{ 'http.rail.actions.newRequest' | transloco }}</span>
@@ -57,6 +66,7 @@
       data-testid="http-node-new-menu"
       [attr.aria-label]="'http.rail.actions.newRequest' | transloco"
       [style]="submenuStyle()"
+      (pointerenter)="hover.reached()"
     >
       @for (entry of kinds; track entry.kind) {
         <button

@@ -14,7 +14,16 @@
 
 @if (menu.open()) {
   <!-- The complete one: every property of a note, from the card it is drawn on. -->
-  <div appMenuPanel class="card-menu" data-testid="note-card-menu-panel" [style]="panelStyle()">
+  <div
+    appMenuPanel
+    #hover="appSubmenuHover"
+    [appSubmenuHover]="submenuOpen()"
+    class="card-menu"
+    data-testid="note-card-menu-panel"
+    [style]="panelStyle()"
+    (submenuOpened)="openSubmenu()"
+    (submenuClosed)="closeSubmenu($event)"
+  >
     <button
       appMenuItem
       type="button"
@@ -46,7 +55,7 @@
       data-testid="note-card-priority"
       aria-haspopup="menu"
       [attr.aria-expanded]="submenuOpen()"
-      (click)="toggleSubmenu()"
+      (click)="openSubmenu()"
       (keydown.arrowright)="openSubmenu($event)"
     >
       <span aria-hidden="true">⚑</span>
@@ -151,6 +160,7 @@
       data-testid="note-card-priority-menu"
       [attr.aria-label]="'notes.priorityLabel' | transloco"
       [style]="submenuStyle()"
+      (pointerenter)="hover.reached()"
     >
       @for (level of levels; track level; let key = $index) {
         <button

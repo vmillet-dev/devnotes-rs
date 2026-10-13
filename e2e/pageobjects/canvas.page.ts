@@ -1,7 +1,7 @@
 import { $, $$, browser } from '@wdio/globals';
 import type { ChainablePromiseElement } from 'webdriverio';
 
-import { readEach, setField, testid, toggleAndWait, waitForCanvas } from '../support/app.js';
+import { hover, readEach, setField, testid, toggleAndWait, waitForCanvas } from '../support/app.js';
 
 /** Every selector the scenarios use lives here, so a renamed `data-testid` is one edit. */
 export const canvas = {
@@ -496,11 +496,13 @@ export const canvas = {
     await card.$(testid('note-card-duplicate')).click();
   },
 
-  /** Through the menu's first submenu: its entry, then the level. */
+  /** Through the menu's first submenu: the pointer rests on its entry, no click, then the level. */
   async prioritiseFromCardMenu(title: string, level: string): Promise<void> {
     const card = await canvas.openCardMenu(title);
-    await card.$(testid('note-card-priority')).click();
-    await card.$(`${testid('note-card-priority-level')}[data-priority="${level}"]`).click();
+    await hover(testid('note-card-priority'));
+    const entry = card.$(`${testid('note-card-priority-level')}[data-priority="${level}"]`);
+    await entry.waitForDisplayed({ timeout: 10_000 });
+    await entry.click();
   },
 
   async pinFromCardMenu(title: string): Promise<void> {

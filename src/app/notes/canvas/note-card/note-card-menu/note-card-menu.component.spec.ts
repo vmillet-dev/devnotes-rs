@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Folder } from '@core/model/folder.model';
 import { Space } from '@core/model/space.model';
 import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
@@ -240,6 +240,33 @@ describe('NoteCardMenuComponent', () => {
       await fixture.whenStable();
 
       expect(chosen).toEqual(['urgent']);
+    });
+
+    function hover(entry: HTMLElement): void {
+      entry.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' }));
+    }
+
+    it('opens under a pointer resting on its entry, and a click after that does not fold it', async () => {
+      await open();
+
+      hover(parent());
+      await vi.waitFor(() => expect(levels()).toHaveLength(5));
+
+      parent().click();
+      await fixture.whenStable();
+      expect(levels()).toHaveLength(5);
+      expect(parent().getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('folds for another entry hovered, which takes the focus', async () => {
+      await openLevels();
+      const copy: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="note-card-copy"]');
+
+      hover(copy);
+      await vi.waitFor(() => expect(levels()).toHaveLength(0));
+
+      expect(document.activeElement).toBe(copy);
+      expect(items().length).toBeGreaterThan(0);
     });
 
     /** → opens it, ← or Escape fold it back onto its entry, and only then does Escape close. */
