@@ -1,0 +1,6 @@
+Invoke-RestMethod `
+  -Uri 'https://api.exemple.fr/upload' `
+  -Method Post `
+  -ContentType 'application/octet-stream' `
+  -InFile '/tmp/archive.zip' `
+  -MaximumRedirection 0

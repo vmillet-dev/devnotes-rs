@@ -45,6 +45,7 @@ import { KeyValueTableComponent } from '@http/ui/key-value-table/key-value-table
 import { TransportEditorComponent } from '@http/ui/transport-editor/transport-editor.component';
 import { UrlFieldComponent } from '../url-field/url-field.component';
 import { VariableChipComponent } from '@http/ui/variable-chip/variable-chip.component';
+import { CodeDialogComponent } from '@http/code-dialog/code-dialog.component';
 import { VariablesTableComponent } from '@http/ui/variables-table/variables-table.component';
 
 type Section =
@@ -67,6 +68,7 @@ const sameFields = <T extends object>(a: T, b: T) =>
     AuthEditorComponent,
     BodyEditorComponent,
     ChoiceMenuComponent,
+    CodeDialogComponent,
     GraphqlEditorComponent,
     KeyValueTableComponent,
     SpinnerComponent,
@@ -94,6 +96,7 @@ export class RequestEditorComponent {
   protected readonly environments = inject(HttpEnvironmentsStore);
 
   private readonly chosen = signal<Section>('params');
+  protected readonly codeOpen = signal(false);
   protected readonly sections = computed<readonly Section[]>(
     () =>
       ({

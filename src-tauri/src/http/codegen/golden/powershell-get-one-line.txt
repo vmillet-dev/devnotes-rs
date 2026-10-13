@@ -1,0 +1,2 @@
+$headers = @{ 'Accept' = 'application/json'; 'Authorization' = 'Bearer {{accessToken}}' }
+Invoke-RestMethod -Uri 'https://api.exemple.fr/customers/cus_42/invoices?page=1&limit=50' -Method Get -Headers $headers -MaximumRedirection 0

@@ -24,6 +24,7 @@ export const LANGUAGE_LABELS: Record<LanguageTag, string> = {
   css: 'CSS',
   scss: 'SCSS',
   sh: 'SH',
+  ps1: 'PS1',
   md: 'MD',
   txt: 'TXT',
 };

@@ -1,0 +1,7 @@
+wget --method GET \
+  --quiet \
+  --max-redirect 0 \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer {{accessToken}}' \
+  --output-document - \
+  'https://api.exemple.fr/customers/cus_42/invoices?page=1&limit=50'

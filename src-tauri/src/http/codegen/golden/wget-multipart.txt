@@ -1,0 +1,5 @@
+wget --method PUT \
+  --quiet \
+  --max-redirect 0 \
+  --output-document - \
+  'https://api.exemple.fr/documents/7'

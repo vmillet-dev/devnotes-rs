@@ -251,6 +251,11 @@ export const commands = {
 	 */
 	httpVariables: (request: VariablesRequest) => typedError<UsedVariable[], AppError>(__TAURI_INVOKE("http_variables", { request })),
 	/**
+	 *  The request written as code for another tool, from what a send would write: its variables
+	 *  resolved as asked, a secret left as its `{{name}}` unless it is asked for in clear.
+	 */
+	generateHttpCode: (request: CodeRequestOf) => typedError<GeneratedCode, AppError>(__TAURI_INVOKE("generate_http_code", { request })),
+	/**
 	 *  The second way to look at a space: folders as zones, their notes inside, the loose ones
 	 *  beside them. It reads the whole space and marks what matches rather than narrowing, and
 	 *  draws no folder chips — a chip naming the zone a card sits in is noise.
@@ -791,6 +796,33 @@ export type ClassRights = {
 	/**  Setuid for the owner, setgid for the group, the sticky bit for the others. */
 	special: boolean,
 };
+
+/**  What a target could not write, said by the front: wget sends no multipart form. */
+export type CodeNotice = "multipartUnsupported";
+
+/**  The dialog's four switches, each its own. */
+export type CodeOptions = {
+	/**  Off, every `{{name}}` is written as typed. */
+	resolveVariables: boolean,
+	/**  A secret written in clear: the front asks first, every time. */
+	includeSecrets: boolean,
+	multiline: boolean,
+	followRedirects: boolean,
+};
+
+export type CodeRequestOf = {
+	target: CodeTarget,
+	options: CodeOptions,
+	kind: RequestKind,
+	method: HttpMethod,
+	document: RequestDocument,
+	collectionId: string | null,
+	folderId: string | null,
+	environmentId: string | null,
+};
+
+/**  What the code is written for; the front lists them and names them. */
+export type CodeTarget = "curl" | "httpie" | "wget" | "powershell";
 
 export type CodecDirection = "encode" | "decode";
 
@@ -1333,6 +1365,16 @@ export type GenerateRequest = {
 	count: number,
 	/**  The same seed and the same source draw the same documents; none draws one, and says which. */
 	seed: number | null,
+};
+
+export type GeneratedCode = {
+	code: string,
+	language: Language,
+	/**  The secrets left as their `{{name}}`, in the order the request names them. */
+	secrets: string[],
+	/**  The names nothing sets, written as typed. */
+	unresolved: string[],
+	notice: CodeNotice | null,
 };
 
 /**
@@ -1991,7 +2033,9 @@ export type KeyValue = {
  *  Closed: the front receives a generated union, so an unknown value stops compiling
  *  there instead of being refused at runtime.
  */
-export type Language = "json" | "js" | "ts" | "py" | "rs" | "go" | "java" | "cs" | "php" | "c" | "sql" | "graphql" | "yml" | "toml" | "xml" | "html" | "css" | "scss" | "sh" | "md" | 
+export type Language = "json" | "js" | "ts" | "py" | "rs" | "go" | "java" | "cs" | "php" | "c" | "sql" | "graphql" | "yml" | "toml" | "xml" | "html" | "css" | "scss" | "sh" | 
+/**  PowerShell: chosen, never detected — what generated code is saved as. */
+"ps1" | "md" | 
 /**  Default, and the signal that the front end chose nothing. */
 "txt";
 

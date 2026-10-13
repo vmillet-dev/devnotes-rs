@@ -1,0 +1,288 @@
+@use 'mixins' as *;
+
+:host {
+  --dialog-width: 1040px;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: min(640px, 80vh);
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.title {
+  margin: 0 6px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-0);
+}
+
+.pill {
+  @include surface(var(--bg-2), 7px);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 280px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--text-1);
+}
+
+.pill-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.method {
+  @include http-method-hues;
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.dot {
+  @include folder-hues;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--folder-hue);
+
+  &.none {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px var(--text-2);
+  }
+}
+
+.main {
+  display: flex;
+  flex: 1;
+  gap: 16px;
+  min-height: 0;
+}
+
+.targets {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 240px;
+  flex-shrink: 0;
+  min-height: 0;
+}
+
+.filter {
+  @include surface(var(--bg-2), 8px, var(--line));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  color: var(--text-2);
+
+  &:focus-within {
+    border-color: var(--amber-edge);
+  }
+}
+
+.filter-field {
+  @include text-field;
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  font-size: 12.5px;
+  color: var(--text-0);
+
+  &::placeholder {
+    color: var(--text-2);
+  }
+}
+
+.target-list {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.group {
+  margin: 10px 10px 3px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.target {
+  @include unstyled-control;
+  @include hit-target(26px);
+  @include focus-ring(-2px);
+  gap: 6px;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: var(--text-0);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--bg-2);
+  }
+
+  &[aria-selected='true'] {
+    background: rgba(var(--amber-rgb), 0.12);
+    font-weight: 600;
+    color: var(--amber-text);
+  }
+}
+
+.library {
+  font-weight: 400;
+  color: var(--text-2);
+}
+
+.none {
+  margin: 8px 10px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.output {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.switches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+}
+
+.switch-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12.5px;
+  color: var(--text-1);
+  cursor: pointer;
+}
+
+.switch {
+  @include setting-switch;
+}
+
+.secrets {
+  position: relative;
+}
+
+// Under the switch it answers for: the one red is the yes.
+.ask {
+  @include surface(var(--bg-2), 10px, rgba(var(--red-rgb), 0.5));
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 300px;
+  padding: 12px 14px;
+  box-shadow: var(--shadow-dropdown);
+  font-size: 12.5px;
+  color: var(--text-0);
+}
+
+.ask-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.code {
+  @include surface(var(--bg-0), 10px);
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.note {
+  @include surface(rgba(var(--purple-rgb), 0.06), 8px, rgba(var(--purple-rgb), 0.35));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 9px 12px;
+  font-size: 12px;
+  color: var(--text-1);
+
+  app-icon {
+    flex-shrink: 0;
+    color: var(--purple);
+  }
+
+  &.clear,
+  &.missing {
+    border-color: rgba(var(--red-rgb), 0.45);
+    background: rgba(var(--red-rgb), 0.06);
+  }
+}
+
+.name {
+  margin-left: 4px;
+  font-family: var(--font-mono), monospace;
+  color: var(--text-0);
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.where {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.action {
+  @include unstyled-control;
+  @include surface(var(--bg-2), 8px, var(--line));
+  @include focus-ring;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  font-size: 12.5px;
+  color: var(--text-0);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    @include accent-state;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  &.primary {
+    border-color: var(--amber-fill);
+    background: var(--amber-fill);
+    font-weight: 600;
+    color: var(--amber-ink);
+  }
+
+  &.danger {
+    @include destructive;
+  }
+}

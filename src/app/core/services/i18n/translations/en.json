@@ -3454,6 +3454,38 @@
       "empty": "No cookies: those the answers set will show here.",
       "close": "Close",
       "failed": "The cookies could not be read or deleted."
+    },
+    "code": {
+      "open": "</> Code",
+      "openLabel": "Generate the code of this request",
+      "title": "Generate code",
+      "filter": "Filter languages",
+      "filterHint": "Languages and tools",
+      "targets": "Language or tool",
+      "groups": {
+        "shell": "Shell",
+        "javascript": "JavaScript",
+        "other": "Other languages"
+      },
+      "noTarget": "No language matches.",
+      "resolve": "Resolve variables",
+      "secrets": "Include secrets",
+      "multiline": "On several lines",
+      "follow": "Follow redirects",
+      "askSecrets": "Write the secrets in clear in the code? Copied or saved, it leaves the library.",
+      "include": "Include",
+      "secretsLeft": "{count, plural, one {1 secret left as a variable:} other {# secrets left as variables:}}",
+      "secretsClear": "The secrets are written in clear in this code.",
+      "unresolved": "{count, plural, one {1 variable with no value, written as typed:} other {# variables with no value, written as typed:}}",
+      "notices": {
+        "multipartUnsupported": "wget sends no multipart form: the body is left out."
+      },
+      "where": "Saved as a snippet, in the target’s language, tagged #http.",
+      "save": "Save as snippet",
+      "copy": "Copy",
+      "copied": "Code copied.",
+      "noteTitle": "{{name}} · {{target}}",
+      "noteWhat": "The request’s code, for another tool."
     }
   }
 }

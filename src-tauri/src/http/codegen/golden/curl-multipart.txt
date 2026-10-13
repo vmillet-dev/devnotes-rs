@@ -1,0 +1,4 @@
+curl --request PUT \
+  --url 'https://api.exemple.fr/documents/7' \
+  --form 'title=Facture' \
+  --form 'scan=@C:/Users/ada/facture.pdf'

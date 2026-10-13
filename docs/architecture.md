@@ -2421,6 +2421,33 @@ is left out; a value naming another is filled again, eight times at most.
 - A send first writes what an environment's table still holds (`HttpEnvironmentsStore.flush`):
   it resolves from what Rust has.
 
+### Generating code from a request
+
+**« </> Code » writes the request for another tool, and Rust writes it** (#488,
+`http/codegen.rs`, `generate_http_code`): the same layers a send resolves from, then one
+shape every target reads — `CodeRequest`, built by `request_of` from what a send would write
+(`send::written_for_code`: the headers `compose` writes, but the application's own
+`User-Agent` and `Accept` — the program names itself —, a Basic auth kept apart for each
+target to write its own way, and a multipart form's type, whose boundary the tool chooses) —
+and one module a target, each held by golden files (`codegen/golden/<target>-<case>.txt`,
+written again with `GOLDEN_WRITE=1`, then read before they are kept).
+
+- **The four switches**: « Résoudre les variables » (off, every `{{name}}` is written as typed),
+  « Inclure les secrets » — off, a secret is resolved by none of the layers and stays its
+  `{{name}}`; on, it is written in clear, and the dialog asks every time it is switched on —,
+  « Sur plusieurs lignes » and « Suivre les redirections ». Rust answers the code, its language,
+  the secrets left as variables and the names nothing sets: the dialog says them, each name as
+  a parameter, never inside a translated sentence (Transloco would empty it).
+- **A target Rust cannot fully write says so by a code** (`CodeNotice`): wget sends no multipart
+  form.
+- **The list is the front's** (`CODE_TARGETS`, a `Record` on the generated `CodeTarget`, so a
+  target added in Rust breaks the build until it is named), grouped and filtered on its name and
+  library — the tools' catalogue's exception. Names like cURL or PowerShell are proper names and
+  are not translated.
+- **« Enregistrer comme snippet »** opens the save-as-note dialog with the code, its language
+  (`sh`, `ps1` — PowerShell joined the languages for it, chosen and never detected) and `http`
+  proposed as its tag.
+
 ### Managing spaces from the switcher
 
 The space switcher's dropdown has three mutually exclusive states: the menu, the creation

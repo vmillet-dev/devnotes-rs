@@ -1,0 +1,7 @@
+http POST 'https://api.exemple.fr/customers' \
+  --follow \
+  --raw '{
+  "name": "O'\''Brien",
+  "plan": "pro"
+}' \
+  'Content-Type:application/json'
