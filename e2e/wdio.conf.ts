@@ -57,6 +57,9 @@ const serviceOptions = {
   driverProvider,
   appBinaryPath: appBinary,
   captureBackendLogs: true,
+  // From spawn to a listening WebDriver server. A fresh Windows runner took 18 s on average,
+  // 34 s once, and past the default 60 s once: the first launch of a downloaded binary.
+  startTimeout: 180_000,
 } as const;
 
 /** `E2E_LOG_LEVEL=trace` when a session refuses to open; the default keeps runs readable. */
