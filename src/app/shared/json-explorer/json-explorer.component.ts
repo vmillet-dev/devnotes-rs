@@ -21,6 +21,8 @@ import {
   NodeMove,
   NodeOffset,
   Span,
+  StructureFormat,
+  FORMAT_NAMES,
   findSelection,
   lineage,
   preview,
@@ -68,6 +70,8 @@ export class JsonExplorerComponent {
   readonly locale = input('fr');
   /** `false` where no code is beside the explorer to show a span in: an HTTP response. */
   readonly withCode = input(true);
+  /** What the text is written in: the messages name it, and a YAML document says what it drops. */
+  readonly format = input<StructureFormat>('json');
   /** Where the graph's nodes were moved to, by path. */
   readonly offsets = input<ReadonlyMap<string, NodeOffset>>(new Map());
 
@@ -125,6 +129,8 @@ export class JsonExplorerComponent {
     if (bytes < 1024 * 1024) return { key: 'json.kilobytes', value: format(bytes / 1024) };
     return { key: 'json.megabytes', value: format(bytes / 1024 / 1024) };
   });
+
+  protected readonly formatName = computed(() => FORMAT_NAMES[this.format()]);
 
   protected readonly matchLabel = computed(() => {
     const count = this.view().matchCount;

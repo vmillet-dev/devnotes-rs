@@ -578,9 +578,11 @@ Prettier is JavaScript. `core/services/format/` holds all of it.
 
 ### Exploring a JSON snippet
 
-A JSON snippet's editor has a band of its own: **Code / Graphe / Arbre**, and "JSON valide"
-or where the draft stops parsing. The model is Rust's — see [The JSON visualiser's
-model](#the-json-visualisers-model); the front draws it.
+A snippet whose language Rust has a reader for — JSON, YAML — has a band of its own: **Code /
+Graphe / Arbre**, and « YAML valide » or where the draft stops parsing. The model is Rust's —
+see [The JSON visualiser's model](#the-json-visualisers-model); the front draws it. Which
+languages have a reader is one table, `explorableFormat` in `core/model/json.model.ts`; the
+explorer takes the format as an input for its messages, and nothing else in it is per format.
 
 - **The explorer takes inputs only** (`shared/json-explorer/`: the explorer, its graph and its
   tree), so an HTTP response can show one too. Its state is `JsonExplorerStore`, provided by
@@ -4776,6 +4778,19 @@ with a search and an _opening_, and answers what to draw: `json/` decides it all
 front draws. It takes no lock, but runs on the blocking pool: a document of a few megabytes
 is not the WebView's thread's to parse.
 
+- **One model, a reader per format** (`json/read.rs`): a reader turns its text into the same
+  tree of values with spans, and everything below — entries, opening, caps, layout, search — is
+  the same for every format. A new format is a reader and a line in `StructureFormat`.
+  `json/position.rs` turns a reader's bytes, or lines and columns of characters, into UTF-16
+  offsets and an error's line and column. A reader's own refusals are words, which never cross:
+  it answers `malformed` and where.
+- **YAML** (`json/yaml.rs`, on `yaml-rust2`'s events): the first document of a stream, said
+  with a notice; an alias read as what it names, placed where its anchor was written; a merge
+  key `<<` kept as read; scalars typed by the core schema, quoted ones staying strings.
+  ⚠️ The parser marks only where a node starts, and a block mapping after its first key: a
+  collection ends on its last value (a comment after it stays out), a flow one on its bracket,
+  and a scalar's end is read from the text by its style. ⚠️ Aliases are copies, so the values
+  read are counted and a document of aliases to aliases stops (`tooLarge`).
 - **Its own parser** (`json/parse.rs`), because `serde_json` forgets where a value sits and
   "Voir dans le code" needs it. Offsets are in **UTF-16 units**, the front's; an invalid
   document answers a reason, a one-based line and column, and the offset. ⚠️ The nesting is

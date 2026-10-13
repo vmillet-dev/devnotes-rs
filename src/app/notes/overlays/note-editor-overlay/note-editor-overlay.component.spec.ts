@@ -747,8 +747,8 @@ describe('NoteEditorOverlayComponent', () => {
       await fixture.whenStable();
     }
 
-    it('has no tabs for another language', async () => {
-      fixture.componentRef.setInput('note', createNote({ language: 'yml' }));
+    it('has no tabs for a language no reader reads', async () => {
+      fixture.componentRef.setInput('note', createNote({ language: 'sh' }));
       await fixture.whenStable();
 
       expect(tab('graph')).toBeNull();
@@ -760,7 +760,12 @@ describe('NoteEditorOverlayComponent', () => {
 
       expect(tab('code').getAttribute('aria-selected')).toBe('true');
       expect(text('[data-testid="editor-json-validity"]')).toBe('✓ JSON valide');
-      expect(repository.queries[0]).toEqual({ text: JSON_TEXT, search: '', opening: { kind: 'initial' } });
+      expect(repository.queries[0]).toEqual({
+        text: JSON_TEXT,
+        format: 'json',
+        search: '',
+        opening: { kind: 'initial' },
+      });
     });
 
     it('says where the draft stops parsing', async () => {
@@ -832,11 +837,32 @@ describe('NoteEditorOverlayComponent', () => {
       expect(tab('tree').getAttribute('aria-selected')).toBe('true');
     });
 
-    it('forgets the document once the language is no longer JSON', async () => {
+    it('explores a YAML snippet the same way, as YAML, and a change of format as another document', async () => {
+      fixture.componentRef.setInput('note', createNote({ content: 'a: 1', language: 'yml' }));
+      await fixture.whenStable();
+
+      expect(tab('graph')).not.toBeNull();
+      expect(repository.queries.at(-1)).toEqual({
+        text: 'a: 1',
+        format: 'yaml',
+        search: '',
+        opening: { kind: 'initial' },
+      });
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="editor-json-validity"]').textContent,
+      ).toContain('YAML valide');
+
+      fixture.componentRef.setInput('note', createNote({ content: 'a: 1', language: 'json' }));
+      await fixture.whenStable();
+
+      expect(repository.queries.at(-1)?.format).toBe('json');
+    });
+
+    it('forgets the document once the language has no reader', async () => {
       await openJson();
       await show('graph');
 
-      fixture.componentRef.setInput('note', createNote({ content: 'a: 1', language: 'yml' }));
+      fixture.componentRef.setInput('note', createNote({ content: 'a: 1', language: 'sh' }));
       await fixture.whenStable();
 
       expect(tab('code')).toBeNull();

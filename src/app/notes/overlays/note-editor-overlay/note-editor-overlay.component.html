@@ -222,7 +222,7 @@
          draft underneath, the <textarea> takes the typing on top with transparent text.
          The textarea carries the accessible text; the viewer is hidden from screen
          readers, which would otherwise read the content twice. -->
-    @if (isJson()) {
+    @if (explorable()) {
       <div class="json-band">
         <div class="view-tabs" role="tablist" [attr.aria-label]="'json.views' | transloco">
           @for (tab of jsonTabs; track tab) {
@@ -242,7 +242,10 @@
         @if (jsonValidity(); as validity) {
           <span class="json-validity" data-testid="editor-json-validity" [class.invalid]="!validity.valid">
             <span aria-hidden="true">{{ validity.valid ? '✓' : '✕' }}</span>
-            {{ (validity.valid ? 'json.valid' : 'json.invalid') | transloco: { line: validity.line } }}
+            {{
+              (validity.valid ? 'json.valid' : 'json.invalid')
+                | transloco: { line: validity.line, format: validity.format }
+            }}
           </span>
         }
       </div>

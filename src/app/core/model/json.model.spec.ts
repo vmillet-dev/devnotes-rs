@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { JSON_NODES, collapsedJsonView, jsonView } from '@testing/json-view.fixture';
-import { findSelection, lineage, preview, shows, trailOf } from './json.model';
+import { explorableFormat, findSelection, lineage, preview, shows, trailOf } from './json.model';
 
 describe('json model', () => {
   const graph = jsonView().graph;
@@ -57,6 +57,12 @@ describe('json model', () => {
     expect(shows(folded, '$.data')).toBe(true);
     expect(shows(folded, '$.data.lines')).toBe(false);
     expect(shows({ ...folded, graph: { ...folded.graph, nodes: [] } }, '$.id')).toBe(true);
+  });
+
+  it('knows which languages have a reader', () => {
+    expect(explorableFormat('json')).toBe('json');
+    expect(explorableFormat('yml')).toBe('yaml');
+    expect(explorableFormat('sh')).toBeNull();
   });
 
   it('previews one level, its containers folded', () => {

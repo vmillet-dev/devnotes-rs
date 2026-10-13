@@ -70,7 +70,7 @@
     </p>
     @if (said?.variablesProblem; as problem) {
       <p class="invalid" role="status" data-testid="http-graphql-problem">
-        {{ 'json.invalidAt' | transloco: { line: problem.line, column: problem.column } }}
+        {{ 'json.invalidAt' | transloco: { line: problem.line, column: problem.column, format: 'JSON' } }}
         {{ 'json.reasons.' + problem.reason | transloco }}
       </p>
     }

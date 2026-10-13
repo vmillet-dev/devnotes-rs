@@ -40,7 +40,9 @@ describe('JsonExplorerStore', () => {
     store.load(JSON_TEXT);
     await settle();
 
-    expect(repository.queries).toEqual([{ text: JSON_TEXT, search: '', opening: { kind: 'initial' } }]);
+    expect(repository.queries).toEqual([
+      { text: JSON_TEXT, format: 'json', search: '', opening: { kind: 'initial' } },
+    ]);
     expect(store.view()?.graph.nodes).toHaveLength(4);
     expect(store.text()).toBe(JSON_TEXT);
   });

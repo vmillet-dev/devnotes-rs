@@ -49,7 +49,7 @@ import { applyEdit, indent, indentUnit, outdent, rewrite } from './indentation';
 import { countWords } from './word-count';
 import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
 import { TagPillComponent } from '@notes/ui/tag-pill/tag-pill.component';
-import { Span } from '@core/model/json.model';
+import { FORMAT_NAMES, Span, explorableFormat } from '@core/model/json.model';
 import { JsonExplorerStore } from '@core/state/json-explorer.store';
 import type { JsonExplorerMode } from '@shared/json-explorer/json-explorer.component';
 // On a line of its own: the visualiser is its own chunk, loaded by a first Graphe or Arbre.
@@ -208,7 +208,12 @@ export class NoteEditorOverlayComponent {
   protected readonly isRichText = computed(() => this.note()?.kind === 'note');
   /** Only a snippet's body is code: a format picker anywhere else would do nothing. */
   protected readonly hasLanguage = computed(() => this.note()?.kind === 'snippet');
-  protected readonly isJson = computed(() => this.hasLanguage() && this.note()?.language === 'json');
+  /** Which reader the snippet's language has, if any: only those get the Graphe / Arbre tabs. */
+  protected readonly structureFormat = computed(() => {
+    const note = this.note();
+    return this.hasLanguage() && note ? explorableFormat(note.language) : null;
+  });
+  protected readonly explorable = computed(() => this.structureFormat() !== null);
   protected readonly jsonTabs: readonly BodyView[] = ['code', 'graph', 'tree'];
   protected readonly bodyView = linkedSignal<number, BodyView>({
     source: this.session,
@@ -217,12 +222,13 @@ export class NoteEditorOverlayComponent {
   /** The visualiser, when it has the body: only a JSON snippet has the tabs. */
   protected readonly jsonMode = computed<JsonExplorerMode | null>(() => {
     const view = this.bodyView();
-    return this.isJson() && view !== 'code' ? view : null;
+    return this.explorable() && view !== 'code' ? view : null;
   });
   protected readonly jsonValidity = computed(() => {
     const view = this.explorer.view();
-    if (!this.isJson() || !view) return null;
-    return view.error ? { valid: false, line: view.error.line } : { valid: true, line: 0 };
+    if (!this.explorable() || !view) return null;
+    const format = FORMAT_NAMES[this.explorer.format()];
+    return view.error ? { valid: false, line: view.error.line, format } : { valid: true, line: 0, format };
   });
   protected readonly checklistStats = computed(() => checklistProgress(this.note()?.items ?? []));
 
@@ -275,16 +281,18 @@ export class NoteEditorOverlayComponent {
 
     // The draft, explored while it is typed: the header's "JSON valide" is about what is on
     // screen. A note just opened is explored at once, from its first level.
-    let explored = -1;
+    let explored = '';
     effect(() => {
       const session = this.session();
-      const text = this.isJson() ? this.draftContent() : null;
+      const format = this.structureFormat();
+      const text = format === null ? null : this.draftContent();
       untracked(() => {
-        if (text === null) {
+        const document = `${session}:${format}`;
+        if (text === null || format === null) {
           this.explorer.clear();
-        } else if (session !== explored) {
-          explored = session;
-          this.explorer.load(text);
+        } else if (document !== explored) {
+          explored = document;
+          this.explorer.load(text, format);
         } else {
           this.explorer.setText(text);
         }

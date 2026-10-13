@@ -37,11 +37,13 @@
       <div class="status">
         @if (said?.problem; as problem) {
           <p class="invalid" role="status" data-testid="http-body-problem">
-            {{ 'json.invalidAt' | transloco: { line: problem.line, column: problem.column } }}
+            {{ 'json.invalidAt' | transloco: { line: problem.line, column: problem.column, format: 'JSON' } }}
             {{ 'json.reasons.' + problem.reason | transloco }}
           </p>
         } @else if (current.text.trim() !== '') {
-          <p class="valid" data-testid="http-body-valid">{{ 'json.valid' | transloco }}</p>
+          <p class="valid" data-testid="http-body-valid">
+            {{ 'json.valid' | transloco: { format: 'JSON' } }}
+          </p>
         }
         <button
           type="button"

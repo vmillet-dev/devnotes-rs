@@ -21,7 +21,12 @@ describe('Exploring a JSON document', () => {
   });
 
   it('answers the nodes, their rows and where each one sits', async () => {
-    const view = await bridge.exploreJson({ text: EVENT, search: '', opening: { kind: 'initial' } });
+    const view = await bridge.exploreJson({
+      text: EVENT,
+      format: 'json',
+      search: '',
+      opening: { kind: 'initial' },
+    });
 
     expect(view.error).toBeNull();
     expect(view.graph.nodes.map((node) => node.path)).toEqual([
@@ -39,13 +44,23 @@ describe('Exploring a JSON document', () => {
   });
 
   it('finds a key or a value, folded like every search', async () => {
-    const view = await bridge.exploreJson({ text: EVENT, search: 'MENSUEL', opening: { kind: 'initial' } });
+    const view = await bridge.exploreJson({
+      text: EVENT,
+      format: 'json',
+      search: 'MENSUEL',
+      opening: { kind: 'initial' },
+    });
 
     expect(view.matches).toEqual(['$.data.object.lines[0].description']);
   });
 
   it('says where a broken document breaks', async () => {
-    const view = await bridge.exploreJson({ text: '{\n  "a": 1,,\n}', search: '', opening: { kind: 'all' } });
+    const view = await bridge.exploreJson({
+      text: '{\n  "a": 1,,\n}',
+      format: 'json',
+      search: '',
+      opening: { kind: 'all' },
+    });
 
     expect(view.error).toEqual({ reason: 'unexpectedCharacter', line: 2, column: 10, offset: 11 });
     expect(view.graph.nodes).toEqual([]);
@@ -244,6 +259,85 @@ describe('Exploring a JSON document', () => {
       );
       await $(testid('editor-view-graph')).click();
       await $(testid('json-invalid')).waitForExist({ timeout: 10_000 });
+      await editor.close();
+    });
+  });
+
+  describe('a YAML snippet', () => {
+    const TITLE = 'Compose services';
+    // A wide character before what is asserted, and a second document after it.
+    const YAML = [
+      'services:',
+      '  api:',
+      '    image: "api:1.4"',
+      '    ports: [80, 443]',
+      '  🦀: &db',
+      '    image: postgres',
+      '  replica: *db',
+      '---',
+      'second: document',
+      '',
+    ].join('\n');
+    let id = '';
+
+    before(async () => {
+      const spaceId = (await bridge.createSpace({ name: 'YAML' })).id;
+      id = (await bridge.createNote(draft({ spaceId, title: TITLE, content: YAML, language: 'yml' }))).id;
+      await reloadCanvas();
+      await canvas.waitForCard(TITLE);
+    });
+
+    after(async () => {
+      await bridge.deleteNotes([id]);
+      await bridge.purgeNotes([id]);
+      await reloadCanvas();
+    });
+
+    it('is read into the same model, its offsets pointing into the YAML itself', async () => {
+      const view = await bridge.exploreJson({
+        text: YAML,
+        format: 'yaml',
+        search: '',
+        opening: { kind: 'all' },
+      });
+
+      expect(view.error).toBeNull();
+      expect(view.notices).toEqual(['firstDocumentOnly']);
+      const api = view.graph.nodes.find((node) => node.path === '$.services.api')!;
+      const image = api.rows.find((row) => row.key === 'image')!;
+      expect(YAML.slice(image.span.start, image.span.end)).toBe('"api:1.4"');
+      // The alias reads as what it names: the same rows as its anchor.
+      const replica = view.graph.nodes.find((node) => node.label === 'replica')!;
+      expect(replica.rows.map((row) => row.value)).toEqual(['"postgres"']);
+
+      const broken = await bridge.exploreJson({
+        text: 'a: 1\nb: [1, 2\n',
+        format: 'yaml',
+        search: '',
+        opening: { kind: 'initial' },
+      });
+      expect(broken.error?.reason).toBe('malformed');
+      expect(broken.error?.line).toBeGreaterThanOrEqual(2);
+    });
+
+    it('opens on the same tabs, valid, saying what it left out, and shows a value in its code', async () => {
+      await canvas.openNote(TITLE);
+      await $(testid('editor-json-validity')).waitForExist({ timeout: 10_000 });
+      expect(await $(testid('editor-json-validity')).getAttribute('class')).not.toContain('invalid');
+
+      await $(testid('editor-view-graph')).click();
+      await $(`${testid('json-node')}[data-path="$.services.api"]`).waitForExist({ timeout: 10_000 });
+      expect(await $(`${testid('json-notice')}[data-notice="firstDocumentOnly"]`).isExisting()).toBe(true);
+      expect(await $(testid('json-format-note')).isExisting()).toBe(true);
+
+      await $(`${testid('json-row')}[data-path="$.services.api.image"]`).click();
+      await $(testid('json-show-in-code')).click();
+      await $(testid('editor-body')).waitForExist({ timeout: 10_000 });
+      const selection = await browser.execute(() => {
+        const field = document.querySelector<HTMLTextAreaElement>('[data-testid="editor-body"]')!;
+        return field.value.slice(field.selectionStart, field.selectionEnd);
+      });
+      expect(selection).toBe('"api:1.4"');
       await editor.close();
     });
   });
