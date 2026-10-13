@@ -254,13 +254,20 @@ describe('Folders', () => {
   /** The card's menu and the editor: each is complete about one note. */
   describe('the two surfaces about one note', () => {
     let folderId = '';
+    let elsewhereId = '';
     const title = 'Sauvegarde nocturne';
 
     before(async () => {
       folderId = (await bridge.createFolder({ spaceId: homeId, name: 'Exploitation' })).id;
+      // A space to move to: the menu names none while the home space is the only one.
+      elsewhereId = (await bridge.createSpace({ name: 'Archives' })).id;
       await bridge.createNote(draft({ spaceId: homeId, title }));
       await reloadInHomeSpace();
       await canvas.waitForCard(title);
+    });
+
+    after(async () => {
+      await bridge.deleteSpace(elsewhereId, homeId);
     });
 
     it('offers everything a note can be told to do, from the card', async () => {

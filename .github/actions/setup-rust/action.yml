@@ -6,7 +6,7 @@ inputs:
     description: Cargo cache key. One per job that compiles — a job reading another's finds none of its own artifacts.
     required: true
   save-if:
-    description: "'true' for the job that owns the key. Never honoured on a pull request."
+    description: "'true' for the job that owns the key. Honoured on main alone."
     required: false
     default: 'false'
 
@@ -38,14 +38,23 @@ runs:
         toolchain: ${{ steps.toolchain.outputs.channel }}
         components: clippy, rustfmt
 
+    # Line tables, not full debug info: a backtrace still names its files and lines, and the
+    # dependencies' artifacts — what the cache holds — come to a third less (the e2e build:
+    # 3.6 GB down to 2.4). Before the cache step, whose key hashes the `CARGO_*` variables.
+    # The release profile carries no debug info either way.
+    - name: Debug info
+      shell: bash
+      run: echo "CARGO_PROFILE_DEV_DEBUG=line-tables-only" >> "$GITHUB_ENV"
+
     # `workspaces` is mandatory: the Cargo project lives in src-tauri/, not at the root.
     # Without it the action finds nothing and the cache stays empty without saying so.
     #
-    # ⚠️ Nothing is saved from a pull request: an entry written there is readable by that pull
-    # request alone, and one that moves Cargo.lock would put a gigabyte per job in a quota of
-    # ten. It reads its base branch's and main's, which is where a new entry gets written.
+    # ⚠️ Saved from main alone, in a quota of ten gigabytes at about one per key: a version
+    # branch saving its own copy of every key had GitHub evict main's Windows E2E entry, and
+    # every pull request then built it from nothing. A pull request or a `dev/**` push reads
+    # main's entry instead — whole when Cargo.lock matches, by prefix when it moved.
     - uses: Swatinem/rust-cache@v2
       with:
         workspaces: src-tauri
         shared-key: ${{ inputs.shared-key }}
-        save-if: ${{ inputs.save-if == 'true' && github.event_name != 'pull_request' }}
+        save-if: ${{ inputs.save-if == 'true' && github.ref == 'refs/heads/main' }}

@@ -1,26 +1,35 @@
 import { $, browser, expect } from '@wdio/globals';
 
-import { eventually, testid } from '../support/app.js';
+import { eventually, testid, waitForCanvas } from '../support/app.js';
+import { bridge } from '../support/bridge.js';
 
 /**
  * The way out of a library whose phrase is forgotten.
  *
- * Runs after `23-backups` and depends on it: that one ends by restoring a copy, which closes
- * the library and leaves the gate on screen — the only way to meet a locked gate inside one
- * run, since the unlocked state outlives every page reload. Nothing may run after this one:
- * it archives the library and leaves the profile with none.
+ * It archives the library and leaves the profile with none, so nothing may run after it in
+ * the same application.
  */
 describe('A forgotten passphrase', () => {
   const panel = () => $(testid('vault-archive'));
 
+  /**
+   * A gate asking for the phrase of a library that has one: the unlocked state outlives
+   * every page reload, so the library is closed the way switching to it would, and the
+   * front end reloaded onto the gate.
+   */
   before(async () => {
-    // The precondition, said out loud rather than assumed: a green run of 22 is what
-    // puts it there, and a failure here should read as "the gate never came" and not as
-    // a mystery about a missing button.
+    await waitForCanvas();
+    const { open } = await bridge.listLibraries();
+    if (!open) throw new Error('the registry names no open library');
+    await bridge.openLibrary(open);
+    await browser.refresh();
+
     await eventually(
-      () => $(testid('vault-passphrase')).isExisting(),
-      (showing) => showing,
-      'the locked gate left by the restore in 22-backups',
+      async () =>
+        (await $(testid('vault-passphrase')).isExisting()) &&
+        !(await $(testid('vault-confirmation')).isExisting()),
+      (locked) => locked,
+      'the gate to ask for the phrase of the library it closed',
     );
   });
 

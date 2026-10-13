@@ -94,6 +94,8 @@ async function invoke<T>(command: string, args: Record<string, unknown> = {}): P
 export const bridge = {
   /** Answers while locked: the registry is beside the libraries, not inside one. */
   listLibraries: () => invoke<Registry>('list_libraries'),
+  /** Closes the open library and points the registry at this one: the front end then reloads. */
+  openLibrary: (id: string) => invoke<null>('open_library', { id }),
   exploreJson: (query: JsonQuery) => invoke<JsonView>('explore_json', { query }),
   fixLineBreaks: (request: LineBreaksRequest) => invoke<LineBreaksAnswer>('fix_line_breaks', { request }),
   diffJson: (request: JsonDiffRequest) => invoke<JsonDiffAnswer>('diff_json', { request }),
@@ -212,39 +214,32 @@ export function query(overrides: Partial<NotesQuery> = {}): NotesQuery {
 }
 
 /**
- * The space the install seeded, by id, for the whole run.
+ * The space a first launch seeded, by id.
  *
  * Not `listSpaces()[0]`: spaces come back ordered by name, so a spec file that created `Ops`
- * would pick that one. Resolved once while a virgin profile holds exactly one space, then read
- * back from a file: each spec file runs in its own worker, where a module cache starts empty.
+ * would pick that one. `passTheGate()` records it the moment the samples land, while it is the
+ * only space, in a file: each spec file runs in its own worker, where a module cache starts
+ * empty.
  */
-function readHomeSpaceId(): string | null {
-  try {
-    return readFileSync(homeSpaceMarker(), 'utf8').trim() || null;
-  } catch {
-    return null;
-  }
-}
-
-export async function homeSpaceId(): Promise<string> {
-  const remembered = readHomeSpaceId();
-  if (remembered) {
-    return remembered;
-  }
-
+export async function rememberHomeSpace(): Promise<void> {
   const spaces = await bridge.listSpaces();
-  const first = spaces[0];
-  if (!first) {
-    throw new Error('a fresh profile should have seeded one space');
-  }
-  if (spaces.length > 1) {
+  const [only] = spaces;
+  if (!only || spaces.length > 1) {
     throw new Error(
-      `the seeded space is asked for with ${spaces.length} spaces present, so "the first one" is a ` +
-        `guess. It has to be resolved while the profile is still virgin, in 01-first-launch. ` +
-        `Found ${JSON.stringify(spaces.map((space) => space.name))}`,
+      `a first launch should seed one space, found ${JSON.stringify(spaces.map((space) => space.name))}`,
     );
   }
 
-  writeFileSync(homeSpaceMarker(), first.id, 'utf8');
-  return first.id;
+  writeFileSync(homeSpaceMarker(), only.id, 'utf8');
+}
+
+export async function homeSpaceId(): Promise<string> {
+  try {
+    const remembered = readFileSync(homeSpaceMarker(), 'utf8').trim();
+    if (remembered) return remembered;
+  } catch {
+    // Not written yet: said below.
+  }
+
+  throw new Error('no first launch recorded its space in this run: open the canvas before asking for it');
 }

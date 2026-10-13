@@ -7,22 +7,24 @@ import { bridge, query } from '../support/bridge.js';
 import { vaultPath } from '../support/profile.js';
 
 /**
- * Last on purpose: it leaves the profile behind a phrase nothing else in the run
- * knows. Nothing after it unlocks — the process stays open for the whole suite — but a
- * scenario inserted after this one would be the first to find out the hard way.
- *
  * What it proves is the shape of the change: the key file is rewritten, the notes are
  * not, and the session carries on. Read from Node, against the file rather than against
  * what the application says about it.
  */
 describe('Changing the passphrase', () => {
   const NEXT = 'a second end-to-end passphrase';
+  let changed = false;
 
   function keyFile(): { kdf: { salt: string }; key: string } {
     return JSON.parse(readFileSync(vaultPath(), 'utf8')) as { kdf: { salt: string }; key: string };
   }
 
   before(canvas.open);
+
+  // The phrase every gate of the run types, back on the key file and on the copies.
+  after(async () => {
+    if (changed) await bridge.changePassphrase(NEXT, PASSPHRASE);
+  });
 
   it('refuses a change that cannot name the current phrase, and rewrites nothing', async () => {
     const before = keyFile();
@@ -42,6 +44,7 @@ describe('Changing the passphrase', () => {
     expect(corpus).toBeGreaterThan(0);
 
     await bridge.changePassphrase(PASSPHRASE, NEXT);
+    changed = true;
 
     const after = keyFile();
     // A fresh salt and a fresh wrapping, so neither phrase says anything about the other.

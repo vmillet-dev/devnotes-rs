@@ -4,6 +4,7 @@ import { board } from '../pageobjects/board.page.js';
 import { spaces } from '../pageobjects/sidebar.page.js';
 import {
   PASSPHRASE,
+  RELOAD_TIMEOUT,
   eventually,
   pickChoice,
   press,
@@ -16,10 +17,9 @@ import { bridge, draft } from '../support/bridge.js';
 /**
  * Several libraries, and switching between them.
  *
- * **Last on purpose, and after `24-forgotten-passphrase`.** That one archives the
- * library and leaves the gate asking for a phrase on a fresh one, which is exactly the
- * state this file needs: it creates that first library, then a second, and ends on a gate
- * again. Nothing may be filed after it.
+ * It needs the gate of a library that has no key file yet — what a first launch shows, and
+ * what `24-forgotten-passphrase` leaves behind it — and creates that first library, then a
+ * second.
  */
 describe('Several libraries', () => {
   const OTHER = 'Boulot';
@@ -49,11 +49,10 @@ describe('Several libraries', () => {
   }
 
   before(async () => {
-    // The gate `24-forgotten-passphrase` left: a library with no key file yet.
     await eventually(
-      () => $(testid('vault-passphrase')).isExisting(),
+      () => $(testid('vault-confirmation')).isExisting(),
       (showing) => showing,
-      'the gate left by the archive in 24-forgotten-passphrase',
+      'the gate of a library with no key file yet',
     );
     await passTheGate();
 
@@ -87,6 +86,7 @@ describe('Several libraries', () => {
         () => $(testid('vault-passphrase')).isExisting(),
         (showing) => showing,
         'the gate to ask for the new library passphrase',
+        RELOAD_TIMEOUT,
       ),
     ).toBe(true);
     // A library with no key file yet asks twice, like a first launch.
@@ -149,6 +149,7 @@ describe('Several libraries', () => {
         () => $(testid('vault-passphrase')).isExisting(),
         (showing) => showing,
         'the gate to ask for the other library passphrase',
+        RELOAD_TIMEOUT,
       ),
     ).toBe(true);
   });
@@ -166,12 +167,22 @@ describe('Several libraries', () => {
 
     await pickChoice('vault-library', other?.id ?? '');
     expect(
-      await eventually(gateLibrary, (text) => text.includes(OTHER), 'the gate to ask for the other library'),
+      await eventually(
+        gateLibrary,
+        (text) => text.includes(OTHER),
+        'the gate to ask for the other library',
+        RELOAD_TIMEOUT,
+      ),
     ).toContain(OTHER);
 
     await pickChoice('vault-library', first?.id ?? '');
     expect(
-      await eventually(gateLibrary, (text) => !text.includes(OTHER), 'the gate to come back to the first'),
+      await eventually(
+        gateLibrary,
+        (text) => !text.includes(OTHER),
+        'the gate to come back to the first',
+        RELOAD_TIMEOUT,
+      ),
     ).not.toContain(OTHER);
   });
 

@@ -2,6 +2,7 @@ import { $, $$, browser } from '@wdio/globals';
 
 import type { GlobalAction } from '@core/ipc/bindings';
 
+import { bridge, query, rememberHomeSpace } from './bridge.js';
 import { storedPreferences } from './profile.js';
 
 /** `[data-testid="…"]`, in one place, so a spec never spells the attribute. */
@@ -27,18 +28,30 @@ export const PASSPHRASE = 'an end-to-end passphrase';
 /**
  * Passes the unlock screen when it is there, and says nothing when it is not.
  *
- * Only `01-first-launch` ever meets it. The unlocked state lives in Rust and the
- * process outlives every page reload — `before()` and `reopenSession` both rebuild the
- * front end over a library that is already open — so a later file finds no gate at all.
+ * Every run starts on a virgin profile, so the first spec file of a run meets a first
+ * launch here. The unlocked state lives in Rust and the process outlives every page reload
+ * — `before()` and `reopenSession` both rebuild the front end over a library that is
+ * already open — so a later call finds no gate at all.
  */
 export async function passTheGate(): Promise<void> {
   const field = $(testid('vault-passphrase'));
+
+  // Neither is drawn until the vault's state has crossed the bridge: a look taken before
+  // that finds no gate, and the canvas then waits behind one.
+  await browser.waitUntil(
+    async () => (await field.isExisting()) || (await $(testid('canvas')).isExisting()),
+    {
+      timeout: 30_000,
+      timeoutMsg: 'neither the gate nor the canvas came up',
+    },
+  );
   if (!(await field.isExisting())) return;
 
   await setField(testid('vault-passphrase'), PASSPHRASE);
 
   // Two entries on a library that has never been encrypted, one on a locked one.
-  if (await $(testid('vault-confirmation')).isExisting()) {
+  const firstLaunch = await $(testid('vault-confirmation')).isExisting();
+  if (firstLaunch) {
     await setField(testid('vault-confirmation'), PASSPHRASE);
   }
 
@@ -46,6 +59,30 @@ export async function passTheGate(): Promise<void> {
   // Generous: deriving the key is deliberately slow, and a first launch seals whatever
   // was already there on top of it.
   await field.waitForExist({ reverse: true, timeout: 60_000 });
+
+  if (firstLaunch) {
+    await samplesLanded();
+  }
+}
+
+/**
+ * ⚠️ The samples are written after the first view has arrived and settled — empty — so
+ * `waitForCanvas` cannot see them coming, and a scenario that wrote a space before them
+ * would find the seeding skipped. This waits for notes to exist, never for how many:
+ * `01-first-launch` asserts the count. The seeded space is recorded while it is the only one.
+ */
+async function samplesLanded(): Promise<void> {
+  await browser.waitUntil(async () => (await bridge.queryNotes(query())).matched > 0, {
+    timeout: 30_000,
+    timeoutMsg: 'the first launch seeded no note',
+  });
+
+  await browser.waitUntil(async () => (await $$(testid('note-card')).length) > 0, {
+    timeout: 30_000,
+    timeoutMsg: 'the seeded notes never reached the canvas',
+  });
+
+  await rememberHomeSpace();
 }
 
 export async function waitForCanvas(): Promise<void> {
@@ -145,6 +182,12 @@ export async function clickToAddRow(button: string, row: string) {
 }
 
 /**
+ * A library opened or switched reloads the whole front end. On a fresh CI runner the gate that
+ * follows has come back after the default ten seconds, while the page was rebuilding.
+ */
+export const RELOAD_TIMEOUT = 30_000;
+
+/**
  * Waits for a read to answer something, and hands the answer back so the assertion reads what
  * was waited for.
  *
@@ -152,11 +195,14 @@ export async function clickToAddRow(button: string, row: string) {
  * trip on a runner sharing a CPU with a WebView. ⚠️ A negative assertion is the one case a
  * duration fits — nothing arriving is not a condition — and those keep their `pause`, with a
  * line saying so.
+ *
+ * `timeout` is for what crosses a page reload, `RELOAD_TIMEOUT`.
  */
 export async function eventually<T>(
   read: () => Promise<T>,
   matches: (value: T) => boolean,
   what: string,
+  timeout = 10_000,
 ): Promise<T> {
   let seen: T | undefined;
 
@@ -166,7 +212,7 @@ export async function eventually<T>(
         seen = await read();
         return matches(seen);
       },
-      { timeout: 10_000 },
+      { timeout },
     );
   } catch (cause) {
     // Written once the wait is over: a `timeoutMsg` is built before it starts, and only ever
