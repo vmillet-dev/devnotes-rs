@@ -2338,6 +2338,35 @@ host it was typed for. The manager
 (`CookieJarDialogComponent`, from the rail's foot) lists by domain and deletes one, a domain's
 or all, the count asked of Rust first.
 
+### Environments and the globals
+
+**A request is sent with one environment, picked for the whole area** (#485): the globals,
+shared by every collection, and the environments — Local, Staging, Production — each a set of
+variables with a name, one of the folders' five colours and a protection. They are the
+library's, beside the collections (`http_environments`, migration 18, `http/environments.rs`
+and its `store.rs`): one row a set, the document sealed whole, the globals the one row of
+their kind. Names are compared in Rust, case aside (`duplicateEnvironmentName`); a copy is
+named by the front and sits right after its original, secrets included.
+
+- **A variable is a name, a value and a type** — Text, Number, Secret. A table keeps its rows
+  as typed; `check_http_variables` answers each row's fault (a name a `{{…}}` cannot hold,
+  one set twice in the table, a number that does not read), the table marks it and says why,
+  as the headers' table does. A secret's value is a password field, shown one row at a time.
+- **The page is the workspace's, as the history is** (`HttpWorkspaceStore.page`: requests,
+  history or environments, one at a time; a request opened from the tree leaves either). The
+  globals first, then each environment with its counts; the one shown on the right, its name
+  written on leaving the field. ⚠️ Its table is written once the keys rest
+  (`VARIABLES_SAVE_MS`) and on every way out (`HttpEnvironmentsStore.flush`): the rows as
+  typed are a draft keyed by the set, shown until Rust has written them.
+- **The active one is the library's preference** (`devnotes.notes.http.environment`), picked
+  at the end of the tab bar (`EnvironmentPickerComponent`), « Aucun » meaning the globals alone
+  — and the answer for one deleted since.
+- ⚠️ **A protected environment asks before anything but a `GET`, a `HEAD` or an `OPTIONS`
+  leaves, and before a WebSocket opens** (`asksBeforeSending`, the front's alone: Rust sends
+  what it is given). `HttpSendStore.send` and `HttpSocketsStore.connect` both ask
+  `HttpEnvironmentsStore.mayLeave`, so `Ctrl+Enter` cannot go round it; the question is a line
+  under the request's, the rail's idiom for a deletion, its one red the button.
+
 ### Managing spaces from the switcher
 
 The space switcher's dropdown has three mutually exclusive states: the menu, the creation
@@ -4151,6 +4180,7 @@ column of `db/schema.rs`, read one by one: a column added there is added here.
 | `http_requests`       | `name`, `document` (URL, parameters, headers, body, auth, and the rest) | `id`, `collection_id`, `folder_id`, `position`, `created_at`, `updated_at`, and ⚠️ `kind`, `method`                                                         |
 | `http_history`        | `summary` (name, URL, method, status, time, size, failure), `record`    | `id`, `sent_at`, `request_id`                                                                                                                               |
 | `http_cookies`        | `cookie` (name, value, domain, path, flags)                             | `id`, `expires_at`                                                                                                                                          |
+| `http_environments`   | `document` (name, colour, protection, variables and their values)       | `id`, `kind` (`globals` or `environment`), `position`, `created_at`                                                                                         |
 
 ⚠️ **What a reader of the raw file learns, with no key.** Of the notes: their number and the
 shape of the spaces and folders they hang in, every instant, each note's language, kind, pin
@@ -4158,7 +4188,8 @@ and item states, every tag and `{{field}}` name, each attachment's type and size
 side: how many collections, folders and requests there are, how they nest and in which order,
 when each was created and each request last saved, and each request's kind and method; when
 each send was made and from which request — not to where, nor how it ended; how many cookies
-the jar holds and when each expires — not for which site. And everywhere the **length** of
+the jar holds and when each expires — not for which site; how many environments there are
+and when each was made — not their names nor what they hold. And everywhere the **length** of
 every sealed value: AES-GCM hides no length. The README lists it for the people deciding what
 to keep here.
 

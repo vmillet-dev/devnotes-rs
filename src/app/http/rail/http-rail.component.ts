@@ -14,7 +14,9 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { HttpContents, HttpItem, RequestKind, shortBadge } from '@core/model/http.model';
 import { AreaStore } from '@core/services/areas/area.store';
 import { HttpCollectionsStore } from '@core/services/http/http-collections.store';
+import { HttpEnvironmentsStore } from '@core/services/http/http-environments.store';
 import { HttpHistoryStore } from '@core/services/http/http-history.store';
+import { HttpWorkspaceStore } from '@core/services/http/http-workspace.store';
 import { HttpTabsStore } from '@core/services/http/http-tabs.store';
 import {
   DropZone,
@@ -133,6 +135,8 @@ export class HttpRailComponent {
   protected readonly store = inject(HttpCollectionsStore);
   protected readonly tabs = inject(HttpTabsStore);
   protected readonly history = inject(HttpHistoryStore);
+  protected readonly environments = inject(HttpEnvironmentsStore);
+  private readonly workspace = inject(HttpWorkspaceStore);
   private readonly transloco = inject(TranslocoService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
@@ -191,7 +195,7 @@ export class HttpRailComponent {
       return;
     }
     if (row.kind === 'request') {
-      this.history.close();
+      this.workspace.show('requests');
       void this.tabs.open(row.id);
     } else {
       this.store.toggle(row.id);
@@ -411,7 +415,7 @@ export class HttpRailComponent {
         creating.requestKind ?? 'http',
       );
       if (id !== null) {
-        this.history.close();
+        this.workspace.show('requests');
         await this.tabs.open(id);
       }
     }

@@ -4,6 +4,7 @@
 //! like the notes. A collection travels in a file of its own, never in the library export.
 
 pub mod cookies;
+pub mod environments;
 pub mod graphql;
 pub mod history;
 pub mod model;
@@ -834,4 +835,128 @@ pub async fn clear_http_cookies<R: Runtime>(app: AppHandle<R>) -> Result<u32, Ap
         Ok(cookies::store::clear(&mut connection)?)
     })
     .await
+}
+
+/// The globals and every environment, in their order.
+#[tauri::command]
+#[specta::specta]
+pub async fn http_environments<R: Runtime>(
+    app: AppHandle<R>,
+) -> Result<environments::HttpEnvironments, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(environments::store::list(&mut connection)?)
+    })
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn create_http_environment<R: Runtime>(
+    name: String,
+    app: AppHandle<R>,
+) -> Result<environments::Environment, AppError> {
+    blocking(app, move |_, db| {
+        let name = environments::validated_name(&name)?;
+
+        let mut connection = lock(db)?;
+
+        Ok(environments::store::create(
+            &mut connection,
+            &name,
+            Utc::now(),
+        )?)
+    })
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn save_http_environment<R: Runtime>(
+    id: String,
+    patch: environments::EnvironmentPatch,
+    app: AppHandle<R>,
+) -> Result<environments::Environment, AppError> {
+    blocking(app, move |_, db| {
+        let name = patch
+            .name
+            .as_deref()
+            .map(environments::validated_name)
+            .transpose()?;
+
+        let mut connection = lock(db)?;
+
+        Ok(environments::store::save(
+            &mut connection,
+            &id,
+            &patch,
+            name.as_deref(),
+        )?)
+    })
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn save_http_globals<R: Runtime>(
+    variables: Vec<environments::Variable>,
+    app: AppHandle<R>,
+) -> Result<Vec<environments::Variable>, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(environments::store::save_globals(
+            &mut connection,
+            &variables,
+            Utc::now(),
+        )?)
+    })
+    .await
+}
+
+/// The copy's name comes from the front: no user-visible word is Rust's.
+#[tauri::command]
+#[specta::specta]
+pub async fn duplicate_http_environment<R: Runtime>(
+    id: String,
+    name: String,
+    app: AppHandle<R>,
+) -> Result<environments::Environment, AppError> {
+    blocking(app, move |_, db| {
+        let name = environments::validated_name(&name)?;
+
+        let mut connection = lock(db)?;
+
+        Ok(environments::store::duplicate(
+            &mut connection,
+            &id,
+            &name,
+            Utc::now(),
+        )?)
+    })
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn delete_http_environment<R: Runtime>(
+    id: String,
+    app: AppHandle<R>,
+) -> Result<(), AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(environments::store::delete(&mut connection, &id)?)
+    })
+    .await
+}
+
+/// Each variable's fault by its rank, or none: the table marks the row, the rule is the model's.
+#[tauri::command]
+#[specta::specta]
+pub async fn check_http_variables(
+    variables: Vec<environments::Variable>,
+) -> Result<Vec<Option<environments::VariableFault>>, AppError> {
+    off_thread(move || environments::variable_faults(&variables)).await
 }

@@ -28,6 +28,7 @@ import {
   WebsocketParts,
 } from '@core/model/http.model';
 import { HttpCollectionsStore } from '@core/services/http/http-collections.store';
+import { HttpEnvironmentsStore } from '@core/services/http/http-environments.store';
 import { HttpSendStore } from '@core/services/http/http-send.store';
 import { HttpSocketsStore } from '@core/services/http/http-sockets.store';
 import { HttpTabsStore, RequestTab } from '@core/services/http/http-tabs.store';
@@ -84,6 +85,7 @@ export class RequestEditorComponent {
   private readonly sockets = inject(HttpSocketsStore);
   private readonly repository = inject(HttpRepository);
   private readonly collections = inject(HttpCollectionsStore);
+  protected readonly environments = inject(HttpEnvironmentsStore);
 
   private readonly chosen = signal<Section>('params');
   protected readonly sections = computed<readonly Section[]>(
@@ -227,6 +229,12 @@ export class RequestEditorComponent {
 
   protected onBodyKind(kind: BodyKind): void {
     this.tabs.chooseBodyKind(this.tab().key, kind);
+  }
+
+  /** The yes a protected environment asked for, from the question under the line. */
+  protected sendAnyway(): void {
+    if (this.tab().draft.kind === 'websocket') void this.sockets.connect(this.tab(), true);
+    else void this.sending.send(this.tab(), true);
   }
 
   protected send(): void {

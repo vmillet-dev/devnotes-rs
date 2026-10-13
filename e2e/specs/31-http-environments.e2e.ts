@@ -1,0 +1,152 @@
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
+
+import { $, expect } from '@wdio/globals';
+
+import { canvas } from '../pageobjects/canvas.page.js';
+import { eventually, press, readEach, setField, testid } from '../support/app.js';
+import { bridge } from '../support/bridge.js';
+
+/** The HTTP area, its rail shown: the environments are at its foot. */
+async function openHttp(): Promise<void> {
+  await press('3', ['Control']);
+  await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+  if (!(await $(testid('http-rail')).isExisting())) await press('b', ['Control']);
+}
+
+async function pick(id: string): Promise<void> {
+  await $(testid('http-environment-picker')).click();
+  await $(`${testid('http-environment-option')}[data-id="${id}"]`).click();
+  await eventually(
+    () => $(testid('http-environment-picker')).getAttribute('data-active'),
+    (active) => active === id,
+    `the environment ${id} active`,
+  );
+}
+
+describe('HTTP environments', () => {
+  before(async () => {
+    await canvas.open();
+  });
+
+  after(async () => {
+    await press('1', ['Control']);
+    await $(testid('http-page')).waitForExist({ reverse: true, timeout: 10_000 });
+  });
+
+  /**
+   * #485: Local, Staging, Production, each with its variables and a secret masked; the one a
+   * request is sent with is picked in the tab bar, and a protected one asks before a POST.
+   */
+  it('keeps an environment and its secret, then asks before a POST leaves under it once protected', async () => {
+    const heard: string[] = [];
+    const server = createServer((request, response) => {
+      heard.push(`${request.method} ${request.url}`);
+      response.writeHead(200, { 'Content-Type': 'application/json' });
+      response.end('{}');
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address() as AddressInfo;
+    const api = await bridge.createHttpCollection('Environnements');
+    const created = await bridge.createHttpRequest({
+      collectionId: api.id,
+      folderId: null,
+      name: 'Créer un client',
+      kind: 'http',
+      method: 'POST',
+      document: { url: `http://127.0.0.1:${port}/customers`, description: '' },
+    });
+    try {
+      await openHttp();
+      await $(testid('http-environments-open')).click();
+      await $(testid('http-environments')).waitForDisplayed({ timeout: 10_000 });
+
+      await $(testid('http-environment-create-open')).click();
+      await setField(testid('http-environment-create-input'), 'Recette e2e');
+      await $(testid('http-environment-create-submit')).click();
+      await eventually(
+        () => $(testid('http-environment-name')).getValue(),
+        (name) => name === 'Recette e2e',
+        'the new environment shown',
+      );
+
+      const rows = `${testid('http-environment-variables')} ${testid('http-variable-row')}`;
+      await setField(`${rows}:last-child ${testid('http-variable-name')}`, 'apiToken');
+      await setField(`${rows}:first-child ${testid('http-variable-value')}`, 'zq-e2e-token');
+      await $(`${rows}:first-child ${testid('http-variable-kind')}`).click();
+      await $(`${testid('choice-option')}[data-option-id="secret"]`).click();
+      await eventually(
+        () => $(`${rows}:first-child ${testid('http-variable-value')}`).getAttribute('type'),
+        (type) => type === 'password',
+        'the secret masked',
+      );
+      await $(`${rows}:first-child ${testid('http-variable-reveal')}`).click();
+      expect(await $(`${rows}:first-child ${testid('http-variable-value')}`).getAttribute('type')).toBe(
+        'text',
+      );
+
+      await $(testid('http-environment-protected')).click();
+      const stored = await eventually(
+        async () =>
+          (await bridge.httpEnvironments()).environments.find((held) => held.name === 'Recette e2e'),
+        (held) =>
+          held?.protected === true &&
+          held.variables.some(
+            (row) => row.name === 'apiToken' && row.kind === 'secret' && row.value === 'zq-e2e-token',
+          ),
+        'the environment written, protected, with its secret',
+      );
+      expect(await $(testid('http-environment-protected-note')).isDisplayed()).toBe(true);
+
+      // Back to the request, sent with it.
+      await $(testid('http-environments-open')).click();
+      await $(testid('http-environments')).waitForExist({ reverse: true, timeout: 10_000 });
+      await $(`${testid('http-node')}[data-id="${created.id}"] ${testid('http-node-name')}`).click();
+      await $(testid('http-request-editor')).waitForDisplayed({ timeout: 10_000 });
+      await pick(stored!.id);
+
+      await press('Enter', ['Control']);
+      await $(testid('http-protected-confirm')).waitForDisplayed({ timeout: 10_000 });
+      expect(await $(testid('http-protected-confirm')).getText()).toContain('Recette e2e');
+      expect(heard).toEqual([]);
+      await $(testid('http-protected-cancel')).click();
+      await $(testid('http-protected-confirm')).waitForExist({ reverse: true, timeout: 10_000 });
+
+      await $(testid('http-send')).click();
+      await $(testid('http-protected-send')).click();
+      await eventually(
+        () => Promise.resolve(heard.join()),
+        (said) => said === 'POST /customers',
+        'the POST sent once the yes was given',
+      );
+      await $(testid('http-protected-confirm')).waitForExist({ reverse: true, timeout: 10_000 });
+
+      // Deleted from its page: the tab bar sends with none.
+      await $(testid('http-environment-picker')).click();
+      await $(testid('http-environment-manage')).click();
+      await $(testid('http-environments')).waitForDisplayed({ timeout: 10_000 });
+      await $(`${testid('http-environment-entry')}[data-id="${stored!.id}"]`).click();
+      await $(testid('http-environment-delete')).click();
+      await $(testid('http-environment-delete-confirm')).click();
+      await eventually(
+        () => readEach(testid('http-environment-entry'), '@data-id'),
+        (ids) => !ids.includes(stored!.id),
+        'the environment gone from the list',
+      );
+      await $(testid('http-environments-open')).click();
+      await eventually(
+        () => $(testid('http-environment-picker')).getAttribute('data-active'),
+        (active) => active === 'none',
+        'no environment active',
+      );
+
+      const tab = `${testid('http-tab')}[data-key="${created.id}"]`;
+      await $(`${tab} ${testid('http-tab-close')}`).click();
+      await $(tab).waitForExist({ reverse: true, timeout: 10_000 });
+      expect(await $(testid('error-banner')).isExisting()).toBe(false);
+    } finally {
+      server.close();
+      await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+    }
+  });
+});

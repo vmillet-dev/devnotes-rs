@@ -143,6 +143,7 @@ What SQL filters, sorts and joins on is not sealed — sealing it would mean loa
 - the length of every sealed value: AES-GCM hides what a title says, not how long it is;
 - how many HTTP collections, folders and requests there are and how they nest, each request's kind and method, and when each was saved;
 - when each request was sent and from which saved request — not to where, nor what was answered — and how many cookies are kept and when each expires, not for which site;
+- how many HTTP environments there are and when each was made — not their names nor their variables;
 - each attachment's type and size, the names of your libraries, and your preferences.
 
 Keep that in mind before a tag or a field name carries the secret itself.

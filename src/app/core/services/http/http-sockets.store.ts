@@ -5,6 +5,7 @@ import { WEBSOCKET_SUBSCRIBER } from '@core/ipc/websocket-events';
 import { RequestParts, SocketEvent, WebsocketEvent } from '@core/model/http.model';
 import { AppNotice, ipcNotice } from '@core/services/errors/error-notifier.service';
 import { subscribeCancellable } from '@core/utils/subscription.util';
+import { HttpEnvironmentsStore } from './http-environments.store';
 
 /** What a log keeps: past it, the oldest go. */
 export const LOG_KEPT = 500;
@@ -37,6 +38,7 @@ export interface Connectable {
 @Injectable({ providedIn: 'root' })
 export class HttpSocketsStore {
   private readonly repository = inject(HttpRepository);
+  private readonly environments = inject(HttpEnvironmentsStore);
 
   private readonly _states = signal<ReadonlyMap<string, SocketState>>(new Map());
   readonly states = this._states.asReadonly();
@@ -48,9 +50,11 @@ export class HttpSocketsStore {
     subscribeCancellable(inject(WEBSOCKET_SUBSCRIBER), (event: WebsocketEvent) => this.receive(event));
   }
 
-  async connect(tab: Connectable): Promise<void> {
+  /** `confirmed`: the yes a protected environment asked for. */
+  async connect(tab: Connectable, confirmed = false): Promise<void> {
     const current = this._states().get(tab.key);
     if (current && current.phase !== 'closed') return;
+    if (!this.environments.mayLeave(tab.key, 'websocket', 'GET', confirmed)) return;
     const socketId = `${tab.key}#${++this.connections}`;
     this.set(tab.key, {
       socketId,

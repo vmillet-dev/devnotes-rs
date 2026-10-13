@@ -1,0 +1,80 @@
+@let active = store.active();
+<button
+  appMenuAnchor
+  type="button"
+  class="trigger"
+  data-testid="http-environment-picker"
+  aria-haspopup="menu"
+  [attr.data-active]="active?.id ?? 'none'"
+  [attr.aria-expanded]="menu.open()"
+  [attr.aria-label]="
+    'http.environments.pickerLabel'
+      | transloco: { name: active?.name ?? ('http.environments.none' | transloco) }
+  "
+  (click)="toggle()"
+>
+  @if (active) {
+    <i [class]="'dot is-' + active.colour" aria-hidden="true"></i>
+    <span class="name">{{ active.name }}</span>
+  } @else {
+    <i class="dot none" aria-hidden="true"></i>
+    <span class="name">{{ 'http.environments.none' | transloco }}</span>
+  }
+  <span class="caret" aria-hidden="true">▾</span>
+</button>
+
+@if (menu.open()) {
+  <div
+    appMenuPanel
+    class="panel"
+    data-testid="http-environment-panel"
+    aria-labelledby="http-environment-panel-title"
+    [style]="panelStyle()"
+  >
+    <p id="http-environment-panel-title" class="panel-title">
+      {{ 'http.environments.activeTitle' | transloco }}
+    </p>
+    <button
+      appMenuItem
+      type="button"
+      class="option"
+      data-testid="http-environment-option"
+      data-id="none"
+      [class.on]="active === null"
+      (click)="choose(null)"
+    >
+      <span class="tick" aria-hidden="true">{{ active === null ? '✓' : '' }}</span>
+      <i class="dot none" aria-hidden="true"></i>
+      <span class="option-name">{{ 'http.environments.none' | transloco }}</span>
+      <span class="meta">{{ 'http.environments.noneMeta' | transloco }}</span>
+    </button>
+    @for (environment of store.environments(); track environment.id) {
+      @let on = active?.id === environment.id;
+      <button
+        appMenuItem
+        type="button"
+        class="option"
+        data-testid="http-environment-option"
+        [attr.data-id]="environment.id"
+        [class.on]="on"
+        (click)="choose(environment.id)"
+      >
+        <span class="tick" aria-hidden="true">{{ on ? '✓' : '' }}</span>
+        <i [class]="'dot is-' + environment.colour" aria-hidden="true"></i>
+        <span class="option-name">{{ environment.name }}</span>
+        @if (environment.protected) {
+          <span class="meta protected">{{ 'http.environments.protectedBadge' | transloco }}</span>
+        } @else {
+          <span class="meta">{{
+            'http.environments.count' | transloco: { count: count(environment.id) }
+          }}</span>
+        }
+      </button>
+    }
+    <span class="separator" aria-hidden="true"></span>
+    <button appMenuItem type="button" class="option" data-testid="http-environment-manage" (click)="manage()">
+      <span class="tick" aria-hidden="true"></span>
+      <span class="option-name">{{ 'http.environments.manage' | transloco }}</span>
+    </button>
+  </div>
+}

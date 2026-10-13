@@ -591,6 +591,33 @@ fn marked_cookie(library: &mut Library) {
     assert_eq!(jar::count(library).unwrap(), 1);
 }
 
+fn marked_environments(library: &mut Library) {
+    use devnotes_lib::http::environments::{
+        EnvironmentPatch, Variable, VariableKind, store as sets,
+    };
+
+    let variable = |kind: VariableKind| Variable {
+        name: "zq-variable-name".to_string(),
+        value: "zq-variable-value".to_string(),
+        kind,
+        ..Variable::default()
+    };
+    let staging = sets::create(library, "zq-environment", t0()).unwrap();
+    sets::save(
+        library,
+        &staging.id,
+        &EnvironmentPatch {
+            protected: Some(true),
+            variables: Some(vec![variable(VariableKind::Secret)]),
+            ..EnvironmentPatch::default()
+        },
+        None,
+    )
+    .unwrap();
+    sets::save_globals(library, &[variable(VariableKind::Text)], t0()).unwrap();
+    assert_eq!(sets::list(library).unwrap().environments.len(), 1);
+}
+
 /// The notes' twin: what a reader of the file alone learns of the HTTP side. Every string typed
 /// or answered carries `zq-`, so one that leaks is named by the assertion that finds it.
 #[test]
@@ -604,6 +631,7 @@ fn nothing_typed_or_answered_is_readable_in_the_file_it_was_written_to() {
         let last = marked_tree(&mut library);
         marked_send(&mut library, &last);
         marked_cookie(&mut library);
+        marked_environments(&mut library);
     }
 
     let raw = std::fs::read(&path).unwrap();

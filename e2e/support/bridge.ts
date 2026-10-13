@@ -24,6 +24,7 @@ import type {
   HttpPlace,
   HttpRequest,
   HttpRequestDraft,
+  HttpEnvironments,
   HttpTree,
   NoteFiling,
   ExportReport,
@@ -124,6 +125,8 @@ export const bridge = {
   /** Answers how many entries went. */
   clearHttpHistory: () => invoke<number>('clear_http_history'),
   clearHttpCookies: () => invoke<number>('clear_http_cookies'),
+  httpEnvironments: () => invoke<HttpEnvironments>('http_environments'),
+  deleteHttpEnvironment: (id: string) => invoke<null>('delete_http_environment', { id }),
   countHttpContents: (item: HttpItem) => invoke<HttpContents>('count_http_contents', { item }),
   deleteHttpItem: (item: HttpItem) => invoke<null>('delete_http_item', { item }),
   listSpaces: () => invoke<Space[]>('list_spaces'),

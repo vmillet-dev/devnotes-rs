@@ -251,6 +251,16 @@
       <button
         type="button"
         class="rail-foot-item"
+        data-testid="http-environments-open"
+        [class.on]="environments.isOpen()"
+        [attr.aria-pressed]="environments.isOpen()"
+        (click)="environments.toggle()"
+      >
+        {{ 'http.environments.title' | transloco }}
+      </button>
+      <button
+        type="button"
+        class="rail-foot-item"
         data-testid="http-cookies-open"
         aria-haspopup="dialog"
         (click)="cookiesOpen.set(true)"
