@@ -1,6 +1,8 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { EMBEDDED_PORT } from './support/leftovers.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = resolve(here, '..');
@@ -8,24 +10,54 @@ const repo = resolve(here, '..');
 /**
  * Built by `npm run e2e:build`, which links the `e2e` Cargo feature and merges
  * `tauri.e2e.conf.json`. A release binary carries neither and cannot be driven.
+ * `CARGO_TARGET_DIR` is read as cargo reads it under the Tauri CLI, from `src-tauri/`.
  */
 const appBinary = resolve(
   repo,
-  'src-tauri/target/debug',
+  'src-tauri',
+  process.env['CARGO_TARGET_DIR'] ?? 'target',
+  'debug',
   process.platform === 'win32' ? 'devnotes.exe' : 'devnotes',
 );
+
+/**
+ * `E2E_SPEC=05-spaces` runs that file alone, which is how CI gives each scenario a job of its
+ * own. A name that matches no file fails here: a matrix entry that ran nothing would pass.
+ */
+function specs(): string[] {
+  const name = process.env['E2E_SPEC'];
+  if (!name) return ['./specs/**/*.e2e.ts'];
+
+  const file = join(here, 'specs', name.endsWith('.e2e.ts') ? name : `${name}.e2e.ts`);
+  if (!existsSync(file)) {
+    throw new Error(`E2E_SPEC=${name} names no scenario: ${file} does not exist`);
+  }
+  return [file];
+}
 
 /**
  * The WebDriver server runs inside the application, so there is no `tauri-driver`, no
  * msedgedriver and no Chrome DevTools protocol — nor anything those need from their host.
  *
  * ⚠️ The cost shapes every spec file: this provider spawns the application once, from its
- * own `onPrepare`. Every spec file drives the same process, the same SQLite file and the
- * same `preferences.json`, and bumping `maxInstances` does not change it. So the profile
- * is wiped before the runner starts, `before()` buys a fresh front end and nothing more,
- * and a spec file establishes its own preconditions. See `docs/architecture.md`.
+ * own `onPrepare`. Every spec file of a run drives the same process, the same SQLite file
+ * and the same `preferences.json`, and bumping `maxInstances` does not change it. So the
+ * profile is wiped before the runner starts, `before()` buys a fresh front end and nothing
+ * more, and a spec file establishes its own preconditions. See `docs/architecture.md`.
  */
 const driverProvider = 'embedded';
+
+/**
+ * The application's stdout, into a file under `outputDir`: Rust logs through the log plugin's
+ * stdout target. ⚠️ Not the WebView's console: the polyfill hands it to `window.__TAURI__.log`
+ * first, and allowing that plugin command fed its own failures back into the console, hundreds
+ * of lines a file. `beforeTest` records the console in the page instead.
+ */
+const serviceOptions = {
+  driverProvider,
+  appBinaryPath: appBinary,
+  captureBackendLogs: true,
+} as const;
 
 /** `E2E_LOG_LEVEL=trace` when a session refuses to open; the default keeps runs readable. */
 const logLevel = (process.env['E2E_LOG_LEVEL'] ?? 'warn') as NonNullable<WebdriverIO.Config['logLevel']>;
@@ -35,12 +67,12 @@ let aFileHasRun = false;
 
 export const config: WebdriverIO.Config = {
   runner: 'local',
-  specs: ['./specs/**/*.e2e.ts'],
+  specs: specs(),
 
   /**
-   * ⚠️ The numeric prefix on each spec file is the run order, and it is load-bearing:
-   * `01-first-launch` is the only file that meets a virgin profile, and the only one
-   * that can resolve the seeded space for the rest.
+   * One worker: the files of a run share the application, and the run order is the
+   * numeric prefix. Only `01-first-launch` needs a place in it — first, on a virgin
+   * profile; every other file runs alone too, as it does on CI.
    */
   maxInstances: 1,
 
@@ -49,12 +81,12 @@ export const config: WebdriverIO.Config = {
       browserName: 'tauri',
       'wdio:enforceWebDriverClassic': true,
       'tauri:options': { application: appBinary },
-      'wdio:tauriServiceOptions': { appBinaryPath: appBinary, driverProvider },
+      'wdio:tauriServiceOptions': serviceOptions,
     },
   ] as unknown as WebdriverIO.Capabilities[],
 
   // `embeddedPort` is the base — each worker gets it plus its index.
-  services: [['@wdio/tauri-service', { driverProvider, appBinaryPath: appBinary, embeddedPort: 4445 }]],
+  services: [['@wdio/tauri-service', { ...serviceOptions, embeddedPort: EMBEDDED_PORT }]],
 
   framework: 'mocha',
   reporters: ['spec'],
@@ -85,6 +117,43 @@ export const config: WebdriverIO.Config = {
     }
 
     await browser.refresh();
+  },
+
+  /**
+   * The page's warnings and errors, kept for `afterTest`. A reload empties them, and the next
+   * test installs the recorder again. A page caught mid-reload goes without: a diagnostic never
+   * fails a test.
+   */
+  async beforeTest() {
+    const { browser } = await import('@wdio/globals');
+
+    await browser
+      .execute(() => {
+        const page = window as unknown as { __e2eConsole?: string[] };
+        if (page.__e2eConsole) return;
+
+        const seen: string[] = [];
+        page.__e2eConsole = seen;
+        const text = (value: unknown): string => {
+          if (typeof value === 'string') return value;
+          if (value instanceof Error) return value.stack ?? value.message;
+          try {
+            return JSON.stringify(value);
+          } catch {
+            return String(value);
+          }
+        };
+
+        for (const level of ['warn', 'error'] as const) {
+          const original = console[level].bind(console);
+          console[level] = (...args: unknown[]) => {
+            seen.push(`${level}: ${args.map(text).join(' ')}`.slice(0, 2_000));
+            if (seen.length > 200) seen.shift();
+            original(...args);
+          };
+        }
+      })
+      .catch(() => undefined);
   },
 
   /**

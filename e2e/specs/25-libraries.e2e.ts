@@ -16,10 +16,9 @@ import { bridge, draft } from '../support/bridge.js';
 /**
  * Several libraries, and switching between them.
  *
- * **Last on purpose, and after `24-forgotten-passphrase`.** That one archives the
- * library and leaves the gate asking for a phrase on a fresh one, which is exactly the
- * state this file needs: it creates that first library, then a second, and ends on a gate
- * again. Nothing may be filed after it.
+ * It needs the gate of a library that has no key file yet — what a first launch shows, and
+ * what `24-forgotten-passphrase` leaves behind it — and creates that first library, then a
+ * second.
  */
 describe('Several libraries', () => {
   const OTHER = 'Boulot';
@@ -49,11 +48,10 @@ describe('Several libraries', () => {
   }
 
   before(async () => {
-    // The gate `24-forgotten-passphrase` left: a library with no key file yet.
     await eventually(
-      () => $(testid('vault-passphrase')).isExisting(),
+      () => $(testid('vault-confirmation')).isExisting(),
       (showing) => showing,
-      'the gate left by the archive in 24-forgotten-passphrase',
+      'the gate of a library with no key file yet',
     );
     await passTheGate();
 

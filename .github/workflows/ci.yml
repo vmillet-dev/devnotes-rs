@@ -270,16 +270,39 @@ jobs:
             -Dsonar.rust.lcov.reportPaths=coverage/lcov.info
             -Dsonar.qualitygate.wait=true
 
-  # The only job that launches the assembled application: real binary, real WebView, real
-  # SQLite file on disk. Both platforms of the release matrix are covered, and they do not
-  # break the same way: the WebView is WebView2 on Windows and WebKitGTK on Linux, and above
-  # all Windows conflates `data_dir()` and `config_dir()` (both `%APPDATA%\<id>`) where Linux
-  # keeps them apart. It is the only runner able to disprove a path — it has already caught a
-  # `preferences.json` looked for in the wrong place.
-  test-e2e:
-    name: Test E2E (${{ matrix.os }})
+  # The end-to-end suite is the only one that launches the assembled application: real binary,
+  # real WebView, real SQLite file on disk. Both platforms of the release matrix are covered, and
+  # they do not break the same way: the WebView is WebView2 on Windows and WebKitGTK on Linux,
+  # and above all Windows conflates `data_dir()` and `config_dir()` (both `%APPDATA%\<id>`)
+  # where Linux keeps them apart. It is the only runner able to disprove a path — it has already
+  # caught a `preferences.json` looked for in the wrong place.
+  #
+  # Three steps: the scenarios are listed, the binary is built once per platform, and each
+  # scenario then runs alone on a runner of its own, against that binary and a virgin profile.
+
+  # The files themselves, so a new scenario joins the matrix without a second list to edit.
+  e2e-scenarios:
+    name: E2E scenarios
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    outputs:
+      specs: ${{ steps.list.outputs.specs }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: e2e/specs
+
+      # Names without `.e2e.ts`: what `E2E_SPEC` takes and what each job is called.
+      - id: list
+        run: |
+          specs=$(find e2e/specs -name '*.e2e.ts' -printf '%f\n' | sed 's/\.e2e\.ts$//' | sort | jq -Rnc '[inputs]')
+          echo "specs=$specs" >> "$GITHUB_OUTPUT"
+          echo "$specs" | jq -r '"\(length) scenarios: \(join(", "))"'
+
+  build-e2e:
+    name: Build E2E (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 45
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -302,26 +325,86 @@ jobs:
           shared-key: e2e-${{ matrix.os }}
           save-if: 'true'
 
-      # WebKitGTK needs an X server: without one the window never opens and the embedded
-      # WebDriver server never listens.
-      - name: Virtual X server
-        if: runner.os == 'Linux'
-        run: sudo apt-get install -y --no-install-recommends xvfb
-
       - run: npm ci
 
-      # `tauri build` chains `beforeBuildCommand` (the e2e front-end build) then cargo. The
-      # binary it produces carries the `com.devnotes.app.e2e` identifier, so its profile is its
-      # own: it cannot overwrite an existing library.
+      # `tauri build` chains `beforeBuildCommand` (the e2e front-end build) then cargo, and the
+      # front end is embedded in the binary. It carries the `com.devnotes.app.e2e` identifier,
+      # so its profile is its own: it cannot overwrite an existing library.
       - name: Build the e2e binary
         run: |
           start=$(date +%s)
           npm run e2e:build
           echo "\`build-e2e\` (${{ matrix.os }}) — $(($(date +%s) - start)) s" >> "$GITHUB_STEP_SUMMARY"
 
-      # `xvfb-run` wraps the runner, not the binary: the wdio service is what launches the
-      # application, from its own `onPrepare`, so DISPLAY has to exist for the whole process.
-      - name: Run the scenarios
+      # What the binary needs beside it, laid out as cargo left it. `identity/` is the identity
+      # tool's resource, copied there by `tauri-build`. ⚠️ On Linux, Tauri reads resources next
+      # to the executable only in a `target/<profile>` holding `.cargo-lock`; anywhere else it
+      # looks in `/usr/lib/devnotes`, and the identity tool answers that its lists are missing.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: e2e-app-${{ matrix.os }}
+          path: |
+            src-tauri/target/debug/${{ runner.os == 'Windows' && 'devnotes.exe' || 'devnotes' }}
+            src-tauri/target/debug/identity/
+            src-tauri/target/debug/.cargo-lock
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  # No cargo here: the binary comes from `build-e2e`. Each job is its own runner, so its own
+  # process, its own profile and its own logs, and nothing in it depends on another job.
+  test-e2e:
+    name: E2E ${{ matrix.spec }} (${{ matrix.os }})
+    needs: [e2e-scenarios, build-e2e]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      # One runner per job, whatever WebdriverIO's own `maxInstances` says.
+      max-parallel: 4
+      matrix:
+        os: [windows-latest, ubuntu-22.04]
+        spec: ${{ fromJSON(needs.e2e-scenarios.outputs.specs) }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # What the binary loads, not what builds it. WebKitGTK needs an X server: without one the
+      # window never opens and the embedded WebDriver server never listens.
+      - name: WebView and X server
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libayatana-appindicator3-1 libwebkit2gtk-4.1-0 libxdo3 xvfb
+
+      # WebdriverIO and the harness.
+      - run: npm ci
+
+      # Where `e2e/wdio.conf.ts` looks for it. An artifact keeps no file mode.
+      - uses: actions/download-artifact@v8
+        with:
+          name: e2e-app-${{ matrix.os }}
+          path: src-tauri/target/debug
+
+      - name: Executable bit
+        if: runner.os == 'Linux'
+        run: chmod +x src-tauri/target/debug/devnotes
+
+      # `npm run test:e2e` wipes the profile first, so a re-run of the job starts as virgin as
+      # the first. `xvfb-run` wraps the runner, not the binary: the wdio service is what
+      # launches the application, from its own `onPrepare`, so DISPLAY has to exist for the
+      # whole process.
+      - name: Run ${{ matrix.spec }}
+        env:
+          E2E_SPEC: ${{ matrix.spec }}
         run: |
           start=$(date +%s)
           if [ "$RUNNER_OS" = "Linux" ]; then
@@ -329,13 +412,15 @@ jobs:
           else
             npm run test:e2e
           fi
-          echo "\`test-e2e\` (${{ matrix.os }}) — $(($(date +%s) - start)) s" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`$E2E_SPEC\` (${{ matrix.os }}) — $(($(date +%s) - start)) s" >> "$GITHUB_STEP_SUMMARY"
 
-      # `E2E_LOG_LEVEL=trace` by hand on a failing run: by default the logs stay readable, and
-      # a session that refuses to open is diagnosed by re-running the job with the variable.
+      # The runner's log, the application's Rust log, and for each failed test a screenshot plus
+      # what was on screen, the page's console included — never the profile, whose library is
+      # the run's. `E2E_LOG_LEVEL=trace` by hand when a session refuses to open.
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: e2e-logs-${{ matrix.os }}
+          name: e2e-logs-${{ matrix.os }}-${{ matrix.spec }}
           path: e2e/logs
+          if-no-files-found: ignore
           retention-days: 7

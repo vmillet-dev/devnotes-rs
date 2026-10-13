@@ -19,7 +19,7 @@ Principles:
 - `npm test` (Vitest, jsdom; `test:watch`, `test:coverage` 80 %) · `npm run lint` (ESLint, Prettier check, `tsc` over `e2e/`; `lint:fix`, `format`) · `npm run test:scripts` (⚠️ test files are named one by one in `package.json`; add new ones there).
 - From `src-tauri/`: `cargo check|build|test`, `cargo clippy --all-targets --all-features -- -D warnings` (⚠️ `--all-features` is what compiles the `e2e` feature), `cargo fmt --check`, `cargo bench` (not in CI; `autobenches = false` is load-bearing; → "Benchmarks"). Toolchain pinned in `rust-toolchain.toml`; `unsafe_code` forbidden, `clippy::pedantic` denied.
 - `npm run bindings` regenerates `src/app/core/ipc/bindings.ts` from Rust signatures. `npm run icons` regenerates icons (⚠️ small `.ico` sizes come from `icons/source/`).
-- E2E: `npm run e2e:build` then `npm run test:e2e` (WebdriverIO, its server inside the `e2e` build; specs in `e2e/specs/`, against the assembled app: rebuild after any change).
+- E2E: `npm run e2e:build` then `npm run test:e2e` (WebdriverIO, its server inside the `e2e` build; specs in `e2e/specs/`, against the assembled app: rebuild after any change); `E2E_SPEC=05-spaces` runs one file.
 - Release is a `workflow_dispatch` after a version bump (`Cargo.toml`, `package.json`, both lockfiles). ⚠️ A version branch (`dev/x.y.z`) reaches `main` by a merge commit, never a squash: the release notes read what the merge brings. → "Releasing", `docs/releasing.md`.
 
 ## Things that will bite you
@@ -100,7 +100,7 @@ Principles:
 ### Tests
 
 - Specs substitute repositories by class through `provideAppTesting()`; fakes use `implements Pick<…, keyof …>` and reimplement no Rust rule; `AppWindowService` and `FileDialogService` are always faked. → "Testing".
-- ⚠️ E2E runs share one process, DB and preferences file; the numeric prefix is the run order; each spec seeds its own state; `reopenSession()` is not a restart. The harness is a build flavour (`tauri.e2e.conf.json`, `e2e` feature). ⚠️ Wait on conditions (`eventually`), never durations; address controls by `data-testid`. → "One application, every spec file".
+- ⚠️ CI runs each spec file alone (`E2E_SPEC`, one job per file and OS) on a virgin profile; it must pass alone and seed its own state, and the files of one local run share one process, DB and preferences file; `reopenSession()` is not a restart. The harness is a build flavour (`tauri.e2e.conf.json`, `e2e` feature). ⚠️ Wait on conditions (`eventually`), never durations; address controls by `data-testid`. → "One application per run, one run per scenario".
 
 ## Security and verification
 

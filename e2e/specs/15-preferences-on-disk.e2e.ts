@@ -51,6 +51,13 @@ describe('Preferences reach the disk', () => {
   });
 
   it('writes one key per setting, never one serialised object', async () => {
+    // From compact, established rather than assumed: comfortable is the default, and an
+    // earlier file may have left compact. Choosing what is already stored writes nothing.
+    await fileMenu.openPreferences();
+    await settings.setDensity('compact');
+    await settings.close();
+    await settled('devnotes.density', 'compact');
+
     await fileMenu.openPreferences();
     await settings.setDensity('comfortable');
     await settings.close();

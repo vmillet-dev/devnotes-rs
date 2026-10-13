@@ -7,9 +7,8 @@ import { eventually, testid } from '../support/app.js';
 /**
  * The copies, and the one gesture that puts one back.
  *
- * **Last on purpose.** The final scenario really replaces the library and leaves it
- * locked, which every other file would then meet as a gate it was not written for. The
- * numeric prefix is the run order, and nothing may be filed after this one.
+ * The final scenario really replaces the library and leaves it locked: a file run after it
+ * in the same application meets the gate, which `waitForCanvas` passes.
  */
 describe('The backup copies', () => {
   before(canvas.open);
@@ -62,8 +61,7 @@ describe('The backup copies', () => {
   /**
    * The library is closed by the time the command answers, so the shell goes back to
    * the gate: the restored copy needs a passphrase, and asking for it is the only proof
-   * the right file is in place. Nothing is unlocked afterwards — this file is last, and
-   * the profile is wiped before the next run.
+   * the right file is in place. Nothing is unlocked afterwards.
    */
   it('replaces the library and sends the window back to the gate', async () => {
     await restore().click();
