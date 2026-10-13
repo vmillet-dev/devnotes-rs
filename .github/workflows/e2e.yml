@@ -79,7 +79,8 @@ jobs:
     runs-on: ${{ inputs.os }}
     timeout-minutes: 20
     strategy:
-      fail-fast: false
+      # The first failure cancels this platform's other scenarios: the run's result is known.
+      fail-fast: true
       # Per platform, and the account's concurrency caps both together: the platform built first
       # takes every runner until the other's binary is ready. One runner per job, whatever
       # WebdriverIO's own `maxInstances` says.
