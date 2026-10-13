@@ -1045,7 +1045,8 @@
     },
     "formatNotes": {
       "yaml": "Comments do not appear, and an alias shows what it names.",
-      "toml": "Comments do not appear; dates and times are shown as written."
+      "toml": "Comments do not appear; dates and times are shown as written.",
+      "xml": "Comments, processing instructions and the DOCTYPE do not appear; an attribute reads @name, and the text beside children #text, as the converter writes them."
     },
     "hiddenRows": "{count, plural, one {+ # more} other {+ # more}}",
     "tree": "Document tree",

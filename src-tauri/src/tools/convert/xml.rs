@@ -1,168 +1,22 @@
 //! XML through the usual convention: `@name` for an attribute, `#text` for the text beside
 //! children, a repeated element as a list. XML has no types, so everything it gives is text.
+//! Read by the visualiser's reader (`json::xml`), so both read one document the same way.
 
 use std::fmt::Write;
 
-use quick_xml::escape::resolve_predefined_entity;
-use quick_xml::events::{BytesRef, BytesStart, Event};
-use quick_xml::{Reader, XmlVersion};
-use serde_json::{Map, Value};
+use serde_json::Value;
+
+use crate::json::xml;
 
 use super::{Blocked, Crossing, child};
 
 const INDENT: &str = "  ";
 
-/// An element being read: its attributes, its children by name in order of first appearance,
-/// and its text.
-#[derive(Default)]
-struct Element {
-    name: String,
-    fields: Map<String, Value>,
-    text: String,
-    empty: bool,
-}
-
-impl Element {
-    fn open(start: &BytesStart<'_>) -> Result<Self, ()> {
-        let mut element = Self {
-            name: start.name().as_ref().to_owned(),
-            ..Self::default()
-        };
-        for attribute in start.attributes() {
-            let attribute = attribute.map_err(|_| ())?;
-            let value = attribute
-                .normalized_value(XmlVersion::Implicit1_0)
-                .map_err(|_| ())?
-                .into_owned();
-            let key = format!("@{}", attribute.key.as_ref());
-            element.fields.insert(key, Value::String(value));
-        }
-        Ok(element)
-    }
-
-    fn add(&mut self, name: String, value: Value) {
-        match self.fields.get_mut(&name) {
-            Some(Value::Array(items)) => items.push(value),
-            Some(existing) => {
-                let first = existing.take();
-                *existing = Value::Array(vec![first, value]);
-            }
-            None => {
-                self.fields.insert(name, value);
-            }
-        }
-    }
-
-    /// Nothing at all is `null`; text alone is a string; anything more, an object.
-    fn close(mut self) -> (String, Value) {
-        let text = self.text.trim().to_owned();
-        let value = if self.fields.is_empty() {
-            if text.is_empty() && self.empty {
-                Value::Null
-            } else {
-                Value::String(text)
-            }
-        } else {
-            if !text.is_empty() {
-                self.fields.insert("#text".to_owned(), Value::String(text));
-            }
-            Value::Object(self.fields)
-        };
-        (self.name, value)
-    }
-}
-
-/// Text between tags, which only an element may hold.
-fn push_text(open: &mut [Element], text: &str) -> Result<(), ()> {
-    match open.last_mut() {
-        Some(element) => {
-            if !text.trim().is_empty() {
-                element.empty = false;
-            }
-            element.text.push_str(text);
-            Ok(())
-        }
-        None if text.trim().is_empty() => Ok(()),
-        None => Err(()),
-    }
-}
-
-/// A character reference, or one of XML's five entities: without a DTD, no other is defined.
-fn resolve(reference: &BytesRef<'_>) -> Option<String> {
-    if reference.is_char_ref() {
-        return reference
-            .resolve_char_ref()
-            .ok()
-            .flatten()
-            .map(String::from);
-    }
-    resolve_predefined_entity(reference).map(str::to_owned)
-}
-
 /// The document's one root, as an object of one key; a byte offset where it stops parsing.
 pub(super) fn read(text: &str) -> Result<Value, usize> {
-    let mut reader = Reader::from_str(text);
-    let mut open: Vec<Element> = Vec::new();
-    let mut root: Option<(String, Value)> = None;
-    let at = |reader: &Reader<&[u8]>| usize::try_from(reader.buffer_position()).unwrap_or(0);
-
-    loop {
-        let event = reader.read_event().map_err(|_| at(&reader))?;
-        match event {
-            Event::Start(start) => {
-                let mut element = Element::open(&start).map_err(|()| at(&reader))?;
-                element.empty = true;
-                open.push(element);
-            }
-            Event::Empty(start) => {
-                let mut element = Element::open(&start).map_err(|()| at(&reader))?;
-                element.empty = true;
-                let (name, value) = element.close();
-                match open.last_mut() {
-                    Some(parent) => {
-                        parent.empty = false;
-                        parent.add(name, value);
-                    }
-                    None if root.is_none() => root = Some((name, value)),
-                    None => return Err(at(&reader)),
-                }
-            }
-            Event::End(_) => {
-                let element = open.pop().ok_or_else(|| at(&reader))?;
-                let (name, value) = element.close();
-                match open.last_mut() {
-                    Some(parent) => {
-                        parent.empty = false;
-                        parent.add(name, value);
-                    }
-                    None if root.is_none() => root = Some((name, value)),
-                    None => return Err(at(&reader)),
-                }
-            }
-            Event::Text(text) => {
-                let text = text.xml10_content();
-                push_text(&mut open, &text).map_err(|()| at(&reader))?;
-            }
-            Event::GeneralRef(reference) => {
-                let text = resolve(&reference).ok_or_else(|| at(&reader))?;
-                push_text(&mut open, &text).map_err(|()| at(&reader))?;
-            }
-            Event::CData(data) => {
-                if let Some(element) = open.last_mut() {
-                    element.empty = false;
-                    element.text.push_str(data.as_ref());
-                }
-            }
-            Event::Eof => break,
-            Event::Decl(_) | Event::Comment(_) | Event::PI(_) | Event::DocType(_) => {}
-        }
-    }
-
-    if !open.is_empty() {
-        return Err(text.len());
-    }
-    let (name, value) = root.ok_or(0usize)?;
-    Ok(Value::Object(Map::from_iter([(name, value)])))
+    xml::document(text)
+        .map(|root| xml::to_value(&root))
+        .map_err(|refusal| refusal.at)
 }
 
 /// A name XML takes: a letter or `_` first, then letters, digits, `-`, `_`, `.` or `:`.

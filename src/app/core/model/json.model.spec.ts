@@ -63,6 +63,8 @@ describe('json model', () => {
     expect(explorableFormat('json')).toBe('json');
     expect(explorableFormat('yml')).toBe('yaml');
     expect(explorableFormat('toml')).toBe('toml');
+    expect(explorableFormat('xml')).toBe('xml');
+    expect(explorableFormat('html')).toBeNull();
     expect(explorableFormat('sh')).toBeNull();
   });
 
