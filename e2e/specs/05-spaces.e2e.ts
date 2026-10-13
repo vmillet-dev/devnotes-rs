@@ -150,8 +150,12 @@ describe('Spaces', () => {
 
     await spaces.open();
     await spaces.option(target.id).click();
-    await canvas.waitForCard('Only in Lectures');
-    expect(await canvas.titles()).toEqual(['Only in Lectures']);
+    // The card is on the unfiltered canvas too: what says the filter landed is the others leaving.
+    await eventually(
+      () => canvas.titles(),
+      (titles) => titles.length === 1 && titles[0] === 'Only in Lectures',
+      'the canvas narrowed to the active space',
+    );
 
     // The only thing on screen saying the canvas is not showing everything.
     expect(await spaces.label()).toContain('Lectures');
