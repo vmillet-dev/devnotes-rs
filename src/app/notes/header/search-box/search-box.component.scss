@@ -2,16 +2,18 @@
 
 // The host is the topbar's flex item: without this the box sat at its content's width,
 // neither growing into the free space nor giving any back.
+// Its floor is the header's to set, `min-width` on the host: lower in two rows than in one.
 :host {
   display: flex;
   flex: 1;
   max-width: 520px;
+  container-type: inline-size;
 }
 
 .search-bar {
   flex: 1;
-  // Lets it give ground before the row wraps: without it the input floors the shrink.
-  min-width: 220px;
+  // Without it the input floors the shrink.
+  min-width: 0;
   max-width: 520px;
   display: flex;
   align-items: center;
@@ -89,4 +91,12 @@
 
 .clear-text:hover {
   color: var(--amber-text);
+}
+
+// At the two-row floor the placeholder keeps the room; the shortcut hint and the count step aside.
+@container (width < 190px) {
+  .kbd,
+  .count {
+    display: none;
+  }
 }

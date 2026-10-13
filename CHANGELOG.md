@@ -12,6 +12,26 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [0.10.2] - 2026-10-13
+
+### 🔧 Changed
+
+- Open a submenu as the pointer rests on its entry (#810)
+- Drop the tools home's offline band (#809)
+- Fictitious identity: no watermark and no note under the card, two facts kept on their rows (#800)
+
+### 🐛 Fixed
+
+- Keep every header control on one line, and take two rows when one does not hold (#811)
+- Float the « Nouvelle requête » menu in the top layer (#799)
+- Read a keydown with no key as no keystroke (#798)
+- Read what a version branch brings into the release notes (#709)
+
+### 🧰 Under the hood
+
+- Give each CI job a cargo cache that holds what it compiles (#790)
+- Write the 0.10.1 section of the changelog with what the version branch brought (#786)
+
 ## [0.10.1] - 2026-10-12
 
 ### ✨ Added

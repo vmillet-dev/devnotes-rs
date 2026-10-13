@@ -16,6 +16,44 @@ import {
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
+ * The header's controls as drawn: each one's box, which row it sits on, and whether any runs
+ * past the header. Rows are told apart by their middles, as the controls differ in height.
+ */
+async function headerLayout() {
+  return browser.execute(() => {
+    const topbar = document.querySelector('.topbar') as HTMLElement | null;
+    if (!topbar) return null;
+    const controls = [
+      ...topbar.querySelectorAll<HTMLElement>(':scope > [data-group] > *, :scope > app-new-note-button'),
+    ];
+    const bar = topbar.getBoundingClientRect();
+    const boxes = controls.map((control) => {
+      const box = control.getBoundingClientRect();
+      return {
+        tag: control.tagName.toLowerCase(),
+        middle: Math.round(box.top + box.height / 2),
+        height: Math.round(box.height),
+        inside: box.left >= bar.left - 1 && box.right <= bar.right + 1,
+      };
+    });
+    const middles = boxes.map((box) => box.middle).sort((a, b) => a - b);
+    const starts = middles.filter((middle, at) => at === 0 || middle - middles[at - 1]! > 12);
+    const rowOf = (tag: string) =>
+      starts.filter((start) => start <= boxes.find((box) => box.tag === tag)!.middle + 12).length;
+    return {
+      railShowing: document.querySelector('app-library-tree') !== null,
+      rows: starts.length,
+      tallest: Math.max(...boxes.map((box) => box.height)),
+      overflowing:
+        Math.round(topbar.scrollWidth) > Math.round(topbar.clientWidth) || boxes.some((box) => !box.inside),
+      newNoteRow: rowOf('app-new-note-button'),
+      railToggleRow: rowOf('app-rail-toggle'),
+      searchRow: rowOf('app-search-box'),
+    };
+  });
+}
+
+/**
  * Filtering, grouping and facet aggregation all run in Rust. What crosses the bridge here
  * is the query itself — the debounce, the local-day offset, and an exhaustive section set.
  */
@@ -71,7 +109,7 @@ describe('Search, filters and facets', () => {
 
   /** At the floor, which is the width a wrapping toolbar leaves it most of the time. */
   it('says what it searches without being cut off', async () => {
-    expect(await placeholderFitsAtItsFloor(testid('search-input'), '.search-bar')).toBe(true);
+    expect(await placeholderFitsAtItsFloor(testid('search-input'), 'app-search-box')).toBe(true);
   });
 
   it('matches on the title, past the debounce', async () => {
@@ -422,22 +460,11 @@ describe('Search, filters and facets', () => {
     });
 
     it('fits on one row, with the library rail open', async () => {
-      const rows = await browser.execute(() => {
-        const topbar = document.querySelector('.topbar');
-        const rail = document.querySelector('app-library-tree');
-        if (!topbar) return null;
-        const tops = [...topbar.children].map((child) => Math.round(child.getBoundingClientRect().top));
-        return {
-          railShowing: rail !== null,
-          spread: tops.length > 0 ? Math.max(...tops) - Math.min(...tops) : 0,
-          overflowing: Math.round(topbar.scrollWidth) > Math.round(topbar.clientWidth),
-        };
-      });
+      const header = await headerLayout();
 
-      expect(rows?.railShowing).toBe(true);
-      // One row: every control shares a baseline, give or take its own height.
-      expect(rows?.spread).toBeLessThan(12);
-      expect(rows?.overflowing).toBe(false);
+      expect(header?.railShowing).toBe(true);
+      expect(header?.rows).toBe(1);
+      expect(header?.overflowing).toBe(false);
     });
 
     it('puts the first card in the top half of the window', async () => {
@@ -459,6 +486,76 @@ describe('Search, filters and facets', () => {
       const after = await canvas.firstCardTop();
       expect(Math.abs(after - before)).toBeLessThanOrEqual(2);
       await selectionBar.clear();
+    });
+  });
+
+  /**
+   * The rail hidden hands the header the space and folder switchers. Squeezed, they broke
+   * their labels and the quick filter stood as a column of three: now the search gives way,
+   * then the switchers' names, then the header takes two rows on purpose.
+   */
+  describe('the header, the library rail hidden', () => {
+    let restore = { width: 1100, height: 720 };
+
+    const at = async (width: number) => {
+      await browser.setWindowSize(width, 720);
+      await reloadCanvas();
+      await waitForCanvas();
+      if (await $('app-library-tree').isExisting()) await $(testid('library-rail-toggle')).click();
+      await $('app-library-tree').waitForExist({ reverse: true, timeout: 10_000 });
+      await $(testid('space-switcher')).waitForDisplayed({ timeout: 10_000 });
+      return headerLayout();
+    };
+
+    before(async () => {
+      restore = await browser.getWindowSize();
+    });
+
+    after(async () => {
+      await browser.setWindowSize(restore.width, restore.height);
+      await reloadCanvas();
+      await waitForCanvas();
+      if (!(await $('app-library-tree').isExisting())) await $(testid('library-rail-toggle')).click();
+      await $('app-library-tree').waitForExist({ timeout: 10_000 });
+    });
+
+    it('holds one row in a wide window, no control broken onto two lines', async () => {
+      const header = await at(1330);
+
+      expect(header?.rows).toBe(1);
+      expect(header?.tallest).toBeLessThan(40);
+      expect(header?.overflowing).toBe(false);
+    });
+
+    it('overflows nothing at the window the application ships with', async () => {
+      const header = await at(1100);
+
+      expect(header?.tallest).toBeLessThan(40);
+      expect(header?.overflowing).toBe(false);
+    });
+
+    it('takes two rows at the narrowest window, « Nouvelle note » ending the first', async () => {
+      const header = await at(640);
+
+      expect(header?.rows).toBe(2);
+      expect(header?.newNoteRow).toBe(header?.railToggleRow);
+      expect(header?.searchRow).toBe(2);
+      expect(header?.tallest).toBeLessThan(40);
+      expect(header?.overflowing).toBe(false);
+      // Cut, the names are whole in their titles.
+      expect(await $(testid('space-switcher')).getAttribute('title')).not.toBe('');
+    });
+
+    it('overflows nothing at the narrowest window with the rail open either', async () => {
+      await at(640);
+      await $(testid('library-rail-toggle')).click();
+      await $('app-library-tree').waitForExist({ timeout: 10_000 });
+      const header = await headerLayout();
+
+      expect(header?.rows).toBe(2);
+      expect(header?.tallest).toBeLessThan(40);
+      expect(header?.overflowing).toBe(false);
+      expect(await placeholderFitsAtItsFloor(testid('search-input'), 'app-search-box')).toBe(true);
     });
   });
 });

@@ -1066,10 +1066,7 @@
       "more": "{count, plural, one {# autre} other {# autres}} dans {{name}}"
     },
     "clear": "Vider",
-    "promise": {
-      "title": "Tout reste sur cette machine",
-      "offline": "Aucun outil n’appelle le réseau. Ce que vous collez ne quitte pas l’application."
-    },
+    "offline": "Aucun outil n’appelle le réseau. Ce que vous collez ne quitte pas l’application.",
     "categories": {
       "text": "Texte",
       "crypto": "Crypto",
@@ -1543,7 +1540,6 @@
       "jsonCopied": "Personne copiée en JSON.",
       "again": "Régénérer",
       "noteTitle": "Identité fictive de {{name}}",
-      "specimen": "Spécimen",
       "cardKind": "Identité fictive",
       "aged": "({count, plural, one {# an} other {# ans}})",
       "fields": {
@@ -1561,6 +1557,12 @@
         "iban": "IBAN",
         "bic": "BIC",
         "company": "Raison sociale"
+      },
+      "marks": {
+        "mayRing": "peut sonner",
+        "mayRingTitle": "Ce pays ne réserve aucune tranche de numéros à la fiction : ce numéro peut sonner chez quelqu’un.",
+        "unkeyed": "sans clé",
+        "unkeyedTitle": "Un format seulement : ce numéro n’a aucune clé qui permette de le vérifier."
       },
       "identifiers": {
         "nir": "N° de sécurité sociale",
@@ -1604,15 +1606,7 @@
         "bank": "Banque",
         "company": "Entreprise"
       },
-      "warning": "Données de test : ne les utilisez pas pour vous faire passer pour quelqu’un.",
-      "harmless": "L’e-mail est en example.com, .org ou .net : il n’atteint personne.",
-      "phonesFiction": "Les téléphones sont dans une tranche que ce pays réserve à la fiction.",
-      "phonesMayRing": "Ce pays ne réserve aucune tranche à la fiction : ces numéros de téléphone peuvent sonner chez quelqu’un.",
-      "valid": "Valide veut dire calculé : chaque numéro porte la clé que son pays lui calcule, et celui qui encode la personne — naissance, sexe, nom, commune — est lu sur elle. Un numéro qui passe sa clé peut appartenir à quelqu’un.",
-      "unkeyed": "Sans clé à vérifier :",
-      "countriesListed": "Pays :",
       "noFirmNumber": "Aucun identifiant d’entreprise à clé dans ce pays.",
-      "jsonFields": "Champs du JSON et de l’export : country, sex, surname, givenNames, birth (date, city, region), document, address (street, postcode, city, region, formatted), phone, mobile, email, bank (name, iban, bic, local), identifiers et company (name, identifiers).",
       "lists": {
         "missing": "Liste introuvable : {{file}}.",
         "damaged": "Liste illisible : {{file}}.",

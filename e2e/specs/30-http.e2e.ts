@@ -9,6 +9,7 @@ import { canvas } from '../pageobjects/canvas.page.js';
 import {
   blurField,
   eventually,
+  hover,
   preferenceWritten,
   press,
   readEach,
@@ -189,7 +190,8 @@ describe('HTTP collections', () => {
       expect(
         await readEach(`${testid('http-node-menu-panel')} ${testid('http-node-action')}`, '@data-action'),
       ).toEqual(['newFolder', 'settings', 'rename', 'duplicate', 'delete']);
-      await $(testid('http-node-new')).click();
+      // The pointer resting on its entry opens it, with no click.
+      await hover(testid('http-node-new'));
       await $(testid('http-node-new-menu')).waitForDisplayed({ timeout: 10_000 });
       expect(
         await readEach(`${testid('http-node-new-menu')} ${testid('http-node-action')}`, '@data-action'),
@@ -207,7 +209,13 @@ describe('HTTP collections', () => {
           testid('http-node-new-menu'),
         ),
       ).toBe(true);
-      // Escape folds the submenu first, the menu next.
+      // Another entry hovered folds it, and the menu stays.
+      await hover(`${testid('http-node-menu-panel')} ${testid('http-node-action')}[data-action="rename"]`);
+      await $(testid('http-node-new-menu')).waitForExist({ reverse: true, timeout: 10_000 });
+      expect(await $(testid('http-node-menu-panel')).isExisting()).toBe(true);
+      // A click opens it too; Escape folds the submenu first, the menu next.
+      await $(testid('http-node-new')).click();
+      await $(testid('http-node-new-menu')).waitForDisplayed({ timeout: 10_000 });
       await press('Escape');
       await $(testid('http-node-new-menu')).waitForExist({ reverse: true, timeout: 10_000 });
       expect(await $(testid('http-node-menu-panel')).isExisting()).toBe(true);

@@ -32,25 +32,13 @@ describe('ToolsHomeComponent', () => {
   const panels = () => all('[data-testid="tools-panel"]').map((panel) => panel.dataset['category']);
   const entries = () => all('[data-testid="tools-entry"]').map((entry) => entry.dataset['tool']);
 
-  it('counts the tools, and says none of them reaches the network', () => {
-    expect(fixture.nativeElement.querySelector('[data-testid="tools-count"]').textContent.trim()).toBe(
-      '3 utilitaires, tous hors ligne',
-    );
-    expect(fixture.nativeElement.querySelector('[data-testid="tools-promise"]').textContent).toContain(
-      'réseau',
-    );
-  });
+  /** The subtitle says it: a band of its own above the panels only took their room. */
+  it('counts the tools, and says in their title that none of them reaches the network', () => {
+    const count: HTMLElement = fixture.nativeElement.querySelector('[data-testid="tools-count"]');
 
-  /** A promise about every tool: above them all, not a block at the end that reads as one more. */
-  it('makes the promise a note above the panels, and leaves no block among them', () => {
-    const promise: HTMLElement = fixture.nativeElement.querySelector('[data-testid="tools-promise"]');
-    const panels: HTMLElement = fixture.nativeElement.querySelector('.panels');
-
-    expect(promise.getAttribute('role')).toBe('note');
-    expect(promise.textContent).toContain('Tout reste sur cette machine');
-    expect(panels.contains(promise)).toBe(false);
-    expect(promise.compareDocumentPosition(panels) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(fixture.nativeElement.querySelectorAll('[data-testid="tools-promise"]')).toHaveLength(1);
+    expect(count.textContent!.trim()).toBe('3 utilitaires, tous hors ligne');
+    expect(count.title).toContain('réseau');
+    expect(fixture.nativeElement.querySelector('[role="note"]')).toBeNull();
   });
 
   it('lays the tools out in their category panels, in the categories order', () => {
@@ -368,7 +356,7 @@ describe('ToolsHomeComponent, searching', () => {
     tool.focus();
     expect((await press('Escape')).defaultPrevented).toBe(false);
     // And a key pressed on what is no result is left alone.
-    expect((await press('ArrowDown', one('tools-promise'))).defaultPrevented).toBe(false);
+    expect((await press('ArrowDown', one('tools-count'))).defaultPrevented).toBe(false);
   });
 
   it('shows the five tools opened last, though more are kept for the rail', async () => {

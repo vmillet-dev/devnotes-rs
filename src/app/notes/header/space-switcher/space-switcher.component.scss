@@ -4,11 +4,14 @@
   position: relative;
 }
 
+// The header narrows it before taking two rows: the name is cut, never wrapped, and whole in
+// the title.
 .space-switch {
   @include unstyled-control;
   display: flex;
   align-items: center;
   gap: 8px;
+  max-width: 100%;
   @include surface;
   padding: 7px 12px;
   cursor: pointer;
@@ -17,12 +20,21 @@
   color: var(--text-0);
 }
 
+.space-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .chev {
+  flex-shrink: 0;
   color: var(--text-2);
   font-size: 11px;
 }
 
 .space-dot {
+  flex-shrink: 0;
   width: 8px;
   height: 8px;
   border-radius: 50%;

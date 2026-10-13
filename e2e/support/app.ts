@@ -360,6 +360,16 @@ export async function blur(): Promise<void> {
  * been told to re-query: `NotesRevision` is a front-end signal, and the back end does
  * not push.
  */
+/** The pointer brought onto an element, as a mouse: the embedded driver drops WebDriver actions. */
+export async function hover(selector: string): Promise<void> {
+  await browser.execute((sel: string) => {
+    const target = document.querySelector(sel);
+    if (!target) throw new Error(`nothing to hover at ${sel}`);
+    target.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' }));
+    target.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse' }));
+  }, selector);
+}
+
 /** The canvas keyboard ignores a keystroke aimed at a text field, by design. */
 export async function blurField(): Promise<void> {
   await browser.execute(() => (document.activeElement as HTMLElement | null)?.blur());

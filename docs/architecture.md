@@ -1116,8 +1116,8 @@ is corrected or a list completed without building the application again.
   organisationsnummer, the Canadian SIN.
 - ⚠️ **What has no key is said, not dressed up** (`papers::UNKEYED`,
   `IdentityAnswer::unkeyed`): a National Insurance number, a company number, a KvK-nummer, a
-  sort code and an account number are formats, and the tool's note names those the card
-  shows. A country whose firms have no number with a key — the United States, Canada —
+  sort code and an account number are formats, and each the card shows carries « sans clé »
+  on its row, its title saying why. A country whose firms have no number with a key — the United States, Canada —
   answers none, and the block says so rather than show a field made up.
 - **Harmless where a range is kept for it**: `example.com`, `.org`, `.net` everywhere; a
   phone number in the block the regulator keeps for fiction in **France** (ARCEP's blocks, one
@@ -1126,14 +1126,18 @@ is corrected or a list completed without building the application again.
   (`555-01xx` in the place's area code); the ten social security numbers the United States
   keeps for advertisements (`987-65-4320` to `4329`), and a Canadian number starting with a
   `0`, which Canada gives nobody. ⚠️ Elsewhere a phone number of the right shape may ring at
-  someone's (`Profile::fiction_phones`, said in the note), and no range exists for an IBAN or
-  a tax number: one that passes its key may be someone's.
+  someone's (`Profile::fiction_phones`): the phone and the mobile carry « peut sonner » on their
+  rows. No range exists for an IBAN or a tax number: one that passes its key may be someone's.
+- **Said where it changes something, not in a note under the card**: the tool is for
+  developers, and a band of warnings — the data is for tests, what « valide » means, the
+  countries, the JSON's fields — said what the card, the country menu and the JSON already
+  say. Two facts change what is done with a value, and they are marks on its row.
 - ⚠️ **Written from memory, not from a register**: the towns' codes — INSEE, the Italian land
   registry —, the area codes and the banks' codes were not checked against their official
   tables, which would mean fetching them. A wrong one leaves a number that still passes its
   key, and names another town.
 - ⚠️ **The card evokes one and imitates none**: a monogram where a photo would be, no emblem,
-  no flag bar, no machine-readable zone, and « Spécimen » printed across it. A number that
+  no flag bar, no machine-readable zone, and nothing printed across it. A number that
   is the person's own is on the card, **under the name its country gives it** — « Codice
   fiscale », « BSN », « Sort code » are names, written the same in both languages; the rest
   is three blocks — contact, bank, company — each value copied with a click.
@@ -1402,9 +1406,9 @@ A to Z). The choice is the library's (`devnotes.notes.arrangement` in
 `LibraryPreferencesService`), read when the notes page opens — the library's preferences are
 open by then — and written on every change; `readArrangement` trusts the file no further
 than it reads, a value it cannot name staying default. The button leaves the topbar while
-the board shows, which orders nothing. ⚠️ At the size the application ships with, the topbar
-holds one row with a few pixels to spare (`06-search-and-filters` measures it): below
-1280 px the button is a glyph, the order in its tooltip.
+the board shows, which orders nothing. ⚠️ At the size the application ships with and the
+rail open, the topbar holds one row with a few pixels to spare (`06-search-and-filters`
+measures it): below 1280 px the button is a glyph, the order in its tooltip.
 
 **A priority is filtered the same way** (`NotesQuery.priorities`, `priority_counts`), both
 counted by one helper, `view::counted`; its rail reads the levels from the most pressing
@@ -1711,9 +1715,31 @@ itself. Four changes got it there:
   where it was, it hung against the window and covered the search field.
 
 ⚠️ **The measurement is the spec**, in `06-search-and-filters`: at 1100x720 with the rail
-open, every topbar child shares a row, the row does not overflow, the first card is in the
+open, every topbar control shares a row, the row does not overflow, the first card is in the
 top half, and ticking one moves nothing. That is the thing that will regress, and the only
 way to catch it is to measure the assembled application.
+
+**The rail hidden, the row holds more, and two rows are a choice.** Hiding the rail hands the
+topbar the space and folder switchers. Squeezed, they broke their labels onto two lines and
+the quick filter stood as a column of three; the row grew to the tallest of them. Now **no
+control breaks its label** (every one is `flex-shrink: 0`, the quick filter included). Three
+give way, in order:
+
+1. the search, which only grows into what is left, down to its floor;
+2. the two switchers, whose names are cut with an ellipsis and whole in their title. Each of
+   these three has a floor of its own (`data-floor`, `FLOORS` in `notes-header`);
+3. past that, the topbar is **two rows on purpose** (`TwoRowsDirective`, `shared/directives/`).
+   Above is where one is: the rail, the trash, the space, the view and the folder, and
+   « Nouvelle note » ending the row. Below is how one looks: the search, the quick filter,
+   the order and the filters.
+
+The two groups are `display: contents` in one row and the two lines of a grid in two. The
+directive decides from the floors, not from the widths drawn. Those widths differ between one
+row and two, so an answer read off them would flip back and forth. In two rows the floors
+drop (the search to 140 px, its shortcut hint and count hidden by a container query), so that
+the window's 640 px floor holds with the rail open too. `06-search-and-filters` measures the
+rail hidden at 1330 px (one row), 1100 px and 640 px (two rows, « Nouvelle note » on the
+first), and at 640 px with the rail open: no overflow, and no control taller than one line.
 
 ### Nothing wears the operating system's chrome, except one popup
 
@@ -1955,9 +1981,9 @@ method in its colour (`http-method-hues`), `GQL` for GraphQL and `WS` for a WebS
   pointing at a glyph; and the tab bar ends with « + Nouvelle requête ».
 - **A row's menu keeps the three kinds of request behind one entry**, « Nouvelle requête › »,
   and a submenu beside the panel — the idiom of a card's « Priorité › »: a sibling panel, so
-  the first one's arrows do not walk into it, opened by a click or `→`, folded by `←` and
-  first on Escape (`MenuTriggerDirective.handleEscape`). Listed flat they made eight entries
-  of a menu opened to rename something.
+  the first one's arrows do not walk into it, opened by the pointer resting on its entry, a
+  click or `→`, folded by `←` and first on Escape (`MenuTriggerDirective.handleEscape`).
+  Listed flat they made eight entries of a menu opened to rename something.
 - **Moving is pointer events and `Alt` with the arrows**, never HTML5 drag and drop. `↑`/`↓`
   within the parent, `→` into the folder above, `←` out of the folder; a drag lands before or
   after a row, or inside a folder or a collection when it is let go mid-row. Both turn into one
@@ -5585,7 +5611,12 @@ note goes through `NotesStore.setPriority`, a batch of one with its undo, like f
 takes a level the way it takes a pin — it becomes worth keeping. The card menu's **submenu is
 the first** in the application: a sibling of the panel and not a child, or the panel's arrows
 would walk into it; → opens it, ← and Escape fold it back onto its entry before Escape closes
-the menu, and it opens on the current level (`MenuPanelDirective.opensOnChecked`).
+the menu, and it opens on the current level (`MenuPanelDirective.opensOnChecked`). The pointer
+opens it as a desktop menu's (`SubmenuHoverDirective`, shared with the rail's « Nouvelle
+requête › »): resting 150 ms on the entry opens it, so crossing it opens nothing; another entry
+hovered folds it after 300 ms, onto that entry, unless the pointer reaches the submenu first —
+the way to « Urgente » crosses the entries below. A click on the entry opens and never folds: it
+usually follows the hover. A touch has no hover; the tap stays the way in.
 
 ### `{{fields}}` in a snippet
 

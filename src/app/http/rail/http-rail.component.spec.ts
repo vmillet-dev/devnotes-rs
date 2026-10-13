@@ -335,6 +335,21 @@ describe('HttpRailComponent', () => {
     ]);
   });
 
+  it('opens the kinds of request under a resting pointer, and folds them for another entry hovered', async () => {
+    const hover = (entry: Element) =>
+      entry.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' }));
+    el<HTMLButtonElement>('[data-testid="http-node"][data-id="Auth"] [data-testid="http-node-menu"]').click();
+    await fixture.whenStable();
+
+    hover(el('[data-testid="http-node-new"]'));
+    await vi.waitFor(() => expect(el('[data-testid="http-node-new-menu"]')).not.toBeNull());
+
+    const rename = el<HTMLButtonElement>('[data-testid="http-node-action"][data-action="rename"]');
+    hover(rename);
+    await vi.waitFor(() => expect(el('[data-testid="http-node-new-menu"]')).toBeNull());
+    expect(document.activeElement).toBe(rename);
+  });
+
   it('opens a collection’s settings, and has open tabs read what they inherit again once saved', async () => {
     const store = TestBed.inject(HttpCollectionsStore);
     const revision = store.settingsRevision();
