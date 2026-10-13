@@ -15,7 +15,7 @@
       {{ 'tools.all' | transloco }}
     </button>
   } @else {
-    <span class="subtitle" data-testid="tools-count">{{
+    <span class="subtitle" data-testid="tools-count" [title]="'tools.offline' | transloco">{{
       'tools.count' | transloco: { count: catalogue.length }
     }}</span>
   }
@@ -35,13 +35,6 @@
     <kbd class="key-hint">{{ 'tools.searchKeys' | transloco }}</kbd>
   </label>
 </header>
-
-<!-- A promise about every tool, so above them all and not one more block among them. -->
-<p class="promise" role="note" data-testid="tools-promise">
-  <app-icon name="lock" />
-  <strong class="promise-title">{{ 'tools.promise.title' | transloco }}</strong>
-  <span class="promise-line">{{ 'tools.promise.offline' | transloco }}</span>
-</p>
 
 <div class="body">
   @if (favourites().length > 0 && !searching()) {

@@ -1064,10 +1064,7 @@
       "more": "{count, plural, one {# autre} other {# autres}} dans {{name}}"
     },
     "clear": "Vider",
-    "promise": {
-      "title": "Tout reste sur cette machine",
-      "offline": "Aucun outil n’appelle le réseau. Ce que vous collez ne quitte pas l’application."
-    },
+    "offline": "Aucun outil n’appelle le réseau. Ce que vous collez ne quitte pas l’application.",
     "categories": {
       "text": "Texte",
       "crypto": "Crypto",
