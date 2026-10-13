@@ -80,9 +80,10 @@ jobs:
     timeout-minutes: 20
     strategy:
       fail-fast: false
-      # Per platform, so twenty at once across both. One runner per job, whatever WebdriverIO's
-      # own `maxInstances` says.
-      max-parallel: 10
+      # Per platform, and the account's concurrency caps both together: the platform built first
+      # takes every runner until the other's binary is ready. One runner per job, whatever
+      # WebdriverIO's own `maxInstances` says.
+      max-parallel: 20
       matrix:
         spec: ${{ fromJSON(inputs.specs) }}
     defaults:
