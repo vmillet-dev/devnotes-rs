@@ -44,7 +44,7 @@ npm run e2e:build && npm run test:e2e
 
 That binary carries an identifier of its own, so running the suite never touches the library
 you use day to day. `E2E_SPEC=05-spaces npm run test:e2e` runs one scenario alone, on a fresh
-profile, as each CI job does.
+profile, the way each CI job does.
 
 ## The scripts
 
