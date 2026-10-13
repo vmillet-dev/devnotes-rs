@@ -12,6 +12,26 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [0.11.0] - 2026-10-13
+
+### ✨ Added
+
+- Generate a request's code for twelve more languages (#806)
+- Generate a request's code for fetch, axios, undici and Angular's HttpClient (#805)
+- Generate a request's code for cURL, HTTPie, wget and PowerShell (#804)
+- Show a secret variable by its name once the request left, in the timeline and the history (#803)
+- Resolve variables at every level, and show where each resolves from (#802)
+- Define environments and global variables, pick the active one in the tab bar, and ask before a protected one sends (#801)
+
+### 🐛 Fixed
+
+- Bring the cookie jar closer to a browser's (#807)
+
+### 🧰 Under the hood
+
+- Remove the copy of the architecture doc pasted inside its own code generation section (#816)
+- Run each E2E scenario in a job of its own, on a binary built once per platform (#813)
+
 ## [0.10.2] - 2026-10-13
 
 ### 🔧 Changed
