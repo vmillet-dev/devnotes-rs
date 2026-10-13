@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { JSON_NODES, collapsedJsonView, jsonView } from '@testing/json-view.fixture';
-import { explorableFormat, findSelection, lineage, preview, shows, trailOf } from './json.model';
+import {
+  entryAt,
+  explorableFormat,
+  findSelection,
+  lineage,
+  preview,
+  shows,
+  spanOf,
+  trailOf,
+} from './json.model';
 
 describe('json model', () => {
   const graph = jsonView().graph;
@@ -57,6 +66,25 @@ describe('json model', () => {
     expect(shows(folded, '$.data')).toBe(true);
     expect(shows(folded, '$.data.lines')).toBe(false);
     expect(shows({ ...folded, graph: { ...folded.graph, nodes: [] } }, '$.id')).toBe(true);
+  });
+
+  it('finds where an entry was written, as a node, a row or a line', () => {
+    expect(spanOf(jsonView(), '$.data')).toEqual({ start: 19, end: 38 });
+    expect(spanOf(jsonView(), '$.id')).toEqual({ start: 6, end: 11 });
+    expect(spanOf(jsonView({ graph: { nodes: [], width: 0, height: 0, folded: false } }), '$.data')).toEqual({
+      start: 0,
+      end: 0,
+    });
+    expect(spanOf(jsonView(), '$.gone')).toBeNull();
+  });
+
+  it('finds the innermost entry around an offset, from the spans alone', () => {
+    expect(entryAt(jsonView(), 34)).toBe('$.data.lines[0].a');
+    expect(entryAt(jsonView(), 30)).toBe('$.data.lines[0]');
+    expect(entryAt(jsonView(), 8)).toBe('$.id');
+    expect(
+      entryAt(jsonView({ graph: { nodes: [], width: 0, height: 0, folded: false }, tree: [] }), 8),
+    ).toBeNull();
   });
 
   it('knows which languages have a reader', () => {

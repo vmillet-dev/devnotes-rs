@@ -1,0 +1,23 @@
+:host {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+
+// The code scrolls in its pane; the visualiser pans and scrolls inside itself.
+.code-pane {
+  flex: 0 0 auto;
+  min-width: 0;
+  overflow: auto;
+  border-right: 1px solid var(--line-soft);
+}
+
+// ⚠️ A grid of one cell: it stretches what is projected into it to its full height, which a
+// rule on the projected element could not do — it carries the editor's styles, not these.
+.explorer-pane {
+  display: grid;
+  flex: 1 1 0;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  min-width: 0;
+  overflow: hidden;
+}

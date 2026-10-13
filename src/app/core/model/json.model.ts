@@ -142,3 +142,26 @@ export function preview(node: JsonNode): string {
   const [open, close] = object ? ['{', '}'] : ['[', ']'];
   return entries.length === 0 ? `${open}${close}` : `${open}\n${entries.join(',\n')}\n${close}`;
 }
+
+/** Where the entry was written: a node, a row of one, or a line of the tree. */
+export function spanOf(view: JsonView, path: string): Span | null {
+  const found = findSelection(view.graph, path);
+  if (found) return found.kind === 'row' ? found.row.span : found.node.span;
+  return view.tree.find((line) => line.path === path)?.span ?? null;
+}
+
+/**
+ * The innermost entry the view draws around an offset of the text: what the caret is in. Read
+ * from the spans Rust answered, never from the text.
+ */
+export function entryAt(view: JsonView, offset: number): string | null {
+  const entries: { path: string; span: Span }[] = [...view.tree];
+  for (const node of view.graph.nodes) entries.push(node, ...node.rows);
+  let best: { path: string; span: Span } | null = null;
+  for (const entry of entries) {
+    const { start, end } = entry.span;
+    if (start > offset || offset > end) continue;
+    if (!best || end - start < best.span.end - best.span.start) best = entry;
+  }
+  return best?.path ?? null;
+}

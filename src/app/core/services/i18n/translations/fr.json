@@ -991,6 +991,14 @@
       "graph": "Graphe",
       "tree": "Arbre"
     },
+    "sideBySide": {
+      "toggle": "Côte à côte",
+      "hint": "Le code d’un côté, le graphe ou l’arbre de l’autre",
+      "narrow": "Trop étroit pour le côte à côte",
+      "hideCode": "Masquer le code",
+      "handle": "Largeur du code",
+      "share": "Le code occupe {{share}} %"
+    },
     "valid": "{{format}} valide",
     "invalid": "{{format}} invalide · ligne {{line}}",
     "invalidAt": "{{format}} invalide ligne {{line}}, colonne {{column}} :",

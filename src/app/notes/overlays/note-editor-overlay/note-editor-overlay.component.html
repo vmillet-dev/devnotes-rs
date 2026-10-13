@@ -239,6 +239,37 @@
             </button>
           }
         </div>
+        <div class="view-tabs layout-tools">
+          <button
+            type="button"
+            class="view-tab"
+            data-testid="editor-side-by-side"
+            [class.on]="layout.sideBySide()"
+            [attr.aria-pressed]="layout.sideBySide()"
+            [disabled]="!sideBySideFits()"
+            [attr.title]="(sideBySideFits() ? 'json.sideBySide.hint' : 'json.sideBySide.narrow') | transloco"
+            (click)="toggleSideBySide()"
+          >
+            {{ 'json.sideBySide.toggle' | transloco }}
+          </button>
+          @if (layout.sideBySide() && sideBySideFits() && jsonMode() !== null) {
+            <button
+              type="button"
+              class="view-tab"
+              data-testid="editor-hide-code"
+              [class.on]="layout.codeHidden()"
+              [attr.aria-pressed]="layout.codeHidden()"
+              (click)="layout.toggleCode()"
+            >
+              {{ 'json.sideBySide.hideCode' | transloco }}
+            </button>
+          }
+        </div>
+        @if (layout.sideBySide() && !sideBySideFits()) {
+          <span class="layout-narrow" role="status" data-testid="editor-side-by-side-narrow">
+            {{ 'json.sideBySide.narrow' | transloco }}
+          </span>
+        }
         @if (jsonValidity(); as validity) {
           <span class="json-validity" data-testid="editor-json-validity" [class.invalid]="!validity.valid">
             <span aria-hidden="true">{{ validity.valid ? '✓' : '✕' }}</span>
@@ -251,17 +282,21 @@
       </div>
     }
 
-    <div class="overlay-body-frame">
+    <div #bodyFrame class="overlay-body-frame">
       <div class="overlay-body" [class.previewing]="showingPreview()" [class.exploring]="jsonMode() !== null">
         @if (jsonMode(); as mode) {
-          @defer (on immediate) {
-            <app-json-view
-              [mode]="mode"
-              (shownInCode)="showInCode($event)"
-              (modeChanged)="showBody($event)"
-            />
-          } @placeholder {
-            <div class="rich-text-loading" aria-hidden="true"></div>
+          @if (sideBySideShown()) {
+            <app-side-by-side [share]="layout.codeShare()" (shareChanged)="layout.setCodeShare($event)">
+              <div code><ng-container [ngTemplateOutlet]="codeField" /></div>
+              <div explorer>
+                <ng-container
+                  [ngTemplateOutlet]="explorerView"
+                  [ngTemplateOutletContext]="{ $implicit: mode }"
+                />
+              </div>
+            </app-side-by-side>
+          } @else {
+            <ng-container [ngTemplateOutlet]="explorerView" [ngTemplateOutletContext]="{ $implicit: mode }" />
           }
         } @else if (showingPreview()) {
           <!-- The filled body, read-only: the input is absent rather than hidden, or
@@ -293,29 +328,45 @@
             <div class="rich-text-loading" aria-hidden="true"></div>
           }
         } @else {
-          <div class="editor-stack">
-            <app-code-viewer
-              aria-hidden="true"
-              [content]="draftContent()"
-              [language]="note.language"
-              [markedLines]="markedLines()"
-            />
-            <textarea
-              #bodyEditor
-              class="overlay-body-editor"
-              data-testid="editor-body"
-              spellcheck="false"
-              [attr.aria-label]="'editor.contentLabel' | transloco"
-              [placeholder]="'editor.emptyBody' | transloco"
-              [value]="draftContent()"
-              (input)="onBodyInput(bodyEditor.value)"
-              (keydown)="onBodyKeydown($event, bodyEditor)"
-              (paste)="onPaste($event)"
-              (blur)="commitBodyOnBlur()"
-            ></textarea>
-          </div>
+          <ng-container [ngTemplateOutlet]="codeField" />
         }
       </div>
+
+      <!-- Stamped alone, or side by side: one field, one visualiser, whichever the layout. -->
+      <ng-template #codeField>
+        <div class="editor-stack">
+          <app-code-viewer
+            aria-hidden="true"
+            [content]="draftContent()"
+            [language]="note.language"
+            [markedLines]="markedLines()"
+            [focusedLines]="focusedLines()"
+          />
+          <textarea
+            #bodyEditor
+            class="overlay-body-editor"
+            data-testid="editor-body"
+            spellcheck="false"
+            [attr.aria-label]="'editor.contentLabel' | transloco"
+            [placeholder]="'editor.emptyBody' | transloco"
+            [value]="draftContent()"
+            (input)="onBodyInput(bodyEditor.value)"
+            (keydown)="onBodyKeydown($event, bodyEditor)"
+            (keyup)="onCaret(bodyEditor)"
+            (click)="onCaret(bodyEditor)"
+            (paste)="onPaste($event)"
+            (blur)="commitBodyOnBlur()"
+          ></textarea>
+        </div>
+      </ng-template>
+
+      <ng-template #explorerView let-mode>
+        @defer (on immediate) {
+          <app-json-view [mode]="mode" (shownInCode)="showInCode($event)" (modeChanged)="showBody($event)" />
+        } @placeholder {
+          <div class="rich-text-loading" aria-hidden="true"></div>
+        }
+      </ng-template>
 
       @if (formatNotice(); as notice) {
         <div

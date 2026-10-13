@@ -248,6 +248,66 @@ describe('Exploring a JSON document', () => {
       );
     });
 
+    it('puts the code beside the graph, each selecting in the other, and hides the code', async () => {
+      const field = () =>
+        browser.execute(() => {
+          const area = document.querySelector<HTMLTextAreaElement>('[data-testid="editor-body"]')!;
+          return {
+            selected: area.value.slice(area.selectionStart, area.selectionEnd),
+            start: area.selectionStart,
+          };
+        });
+      await $(testid('editor-view-graph')).click();
+      await $(testid('json-open-all')).click();
+      await $(testid('editor-side-by-side')).click();
+      await $(testid('side-by-side')).waitForDisplayed({ timeout: 10_000 });
+      expect(await $(`${testid('side-by-side-code')} ${testid('editor-body')}`).isExisting()).toBe(true);
+
+      // From the graph to the code: the object's text is selected beside it.
+      await $(`${testid('json-node')}[data-path="$.data.object"] ${testid('json-node-head')}`).click();
+      await eventually(
+        field,
+        (now) => now.selected.startsWith('{') && now.selected.includes('amount_paid'),
+        'the object selected in the code',
+      );
+
+      // From the code to the graph: the value the caret is in is selected.
+      await browser.execute(
+        (offset: number) => {
+          const area = document.querySelector<HTMLTextAreaElement>('[data-testid="editor-body"]')!;
+          area.setSelectionRange(offset, offset);
+          area.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true }));
+        },
+        PRETTY.indexOf('Pro · mensuel') + 2,
+      );
+      await eventually(
+        selectedPath,
+        (path) => path === '$.data.object.lines[0].description',
+        'the value under the caret',
+      );
+
+      await $(testid('editor-hide-code')).click();
+      await $(testid('side-by-side')).waitForExist({ reverse: true, timeout: 10_000 });
+      expect(await $(testid('json-graph')).isDisplayed()).toBe(true);
+      await $(testid('editor-hide-code')).click();
+      await $(testid('side-by-side')).waitForDisplayed({ timeout: 10_000 });
+
+      // Too narrow, it is not squeezed: it says so, and comes back with the room.
+      const restore = await browser.getWindowSize();
+      try {
+        await browser.setWindowSize(720, 700);
+        await $(testid('editor-side-by-side-narrow')).waitForDisplayed({ timeout: 10_000 });
+        expect(await $(testid('side-by-side')).isExisting()).toBe(false);
+      } finally {
+        await browser.setWindowSize(restore.width, restore.height);
+      }
+      await $(testid('side-by-side')).waitForDisplayed({ timeout: 10_000 });
+
+      // The layout is the session's: put back as the next scenarios expect it.
+      await $(testid('editor-side-by-side')).click();
+      await $(testid('side-by-side')).waitForExist({ reverse: true, timeout: 10_000 });
+    });
+
     it('says where a broken draft breaks', async () => {
       await $(testid('editor-view-code')).click();
       await editor.setBody('{"a": 1,,}');

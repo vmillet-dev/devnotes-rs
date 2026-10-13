@@ -22,6 +22,7 @@ import { PRETTIER_ADAPTER } from '@core/services/format/formatter.service';
 import { FakePrettier } from '@testing/fake-prettier';
 import { PrettierSettingsStore } from '@core/services/format/prettier-settings.store';
 import { JsonRepository } from '@core/data/json.repository';
+import { JsonExplorerStore } from '@core/state/json-explorer.store';
 import { ClipboardService } from '@core/services/clipboard/clipboard.service';
 import { FakeJsonRepository } from '@testing/fake-json-repository';
 import { JSON_TEXT, jsonView } from '@testing/json-view.fixture';
@@ -746,6 +747,120 @@ describe('NoteEditorOverlayComponent', () => {
       tab(view).click();
       await fixture.whenStable();
     }
+
+    describe('side by side', () => {
+      // Only the editor's own frame: the visualiser and the band observe themselves too.
+      let frame: ((width: number) => void) | null = null;
+      const resize = (width: number) => frame?.(width);
+
+      class FakeResizeObserver {
+        constructor(private readonly callback: ResizeObserverCallback) {}
+        observe(target: Element): void {
+          if (!target.classList.contains('overlay-body-frame')) return;
+          frame = (width) =>
+            this.callback(
+              [{ contentRect: { width } } as ResizeObserverEntry],
+              this as unknown as ResizeObserver,
+            );
+        }
+        disconnect(): void {
+          frame = null;
+        }
+      }
+
+      const find = (testid: string) =>
+        fixture.nativeElement.querySelector(`[data-testid="${testid}"]`) as HTMLButtonElement | null;
+      const explorer = () => fixture.debugElement.injector.get(JsonExplorerStore);
+
+      beforeEach(async () => {
+        vi.stubGlobal('ResizeObserver', FakeResizeObserver);
+        recreateOverlay();
+        await openJson();
+        resize(1200);
+        await fixture.whenStable();
+      });
+
+      afterEach(() => vi.unstubAllGlobals());
+
+      async function sideBySide(): Promise<void> {
+        find('editor-side-by-side')!.click();
+        await fixture.whenStable();
+      }
+
+      it('puts the code beside the graph, opening on the graph from the code tab', async () => {
+        expect(find('side-by-side')).toBeNull();
+        await sideBySide();
+
+        expect(find('editor-side-by-side')!.getAttribute('aria-pressed')).toBe('true');
+        expect(tab('graph').getAttribute('aria-selected')).toBe('true');
+        expect(find('side-by-side-code')!.contains(bodyEditor())).toBe(true);
+        expect(find('side-by-side-handle')!.getAttribute('aria-orientation')).toBe('vertical');
+        expect(fixture.nativeElement.querySelector('app-json-view')).not.toBeNull();
+      });
+
+      it('hides the code for the whole width, and brings it back', async () => {
+        await sideBySide();
+        find('editor-hide-code')!.click();
+        await fixture.whenStable();
+
+        expect(find('side-by-side')).toBeNull();
+        expect(find('editor-hide-code')!.getAttribute('aria-pressed')).toBe('true');
+        expect(fixture.nativeElement.querySelector('app-json-view')).not.toBeNull();
+
+        find('editor-hide-code')!.click();
+        await fixture.whenStable();
+        expect(find('side-by-side')).not.toBeNull();
+      });
+
+      it('is not squeezed into a dialog too narrow, and says so', async () => {
+        await sideBySide();
+        resize(600);
+        await fixture.whenStable();
+
+        expect(find('side-by-side')).toBeNull();
+        expect(find('editor-side-by-side')!.disabled).toBe(true);
+        expect(find('editor-side-by-side-narrow')!.getAttribute('role')).toBe('status');
+
+        resize(1000);
+        await fixture.whenStable();
+        expect(find('side-by-side')).not.toBeNull();
+      });
+
+      it('selects in the code what is chosen in the visualiser, and lights its lines', async () => {
+        await sideBySide();
+        explorer().select('$.data');
+        await fixture.whenStable();
+
+        // `"data":{"lines":[{"a":1}]}`'s value, 19 to 38: on one line, the only one lit.
+        expect([bodyEditor().selectionStart, bodyEditor().selectionEnd]).toEqual([19, 38]);
+        expect(fixture.nativeElement.querySelectorAll('.code-line.focused')).toHaveLength(1);
+        expect(document.activeElement).not.toBe(bodyEditor());
+      });
+
+      it('selects in the visualiser what the caret is in, without moving the caret', async () => {
+        await sideBySide();
+        bodyEditor().setSelectionRange(34, 34);
+        bodyEditor().dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight' }));
+        await fixture.whenStable();
+
+        expect(explorer().selectedPath()).toBe('$.data.lines[0].a');
+        expect([bodyEditor().selectionStart, bodyEditor().selectionEnd]).toEqual([34, 34]);
+
+        bodyEditor().setSelectionRange(20, 20);
+        bodyEditor().click();
+        await fixture.whenStable();
+        expect(explorer().selectedPath()).toBe('$.data');
+      });
+
+      it('leaves the caret alone one at a time', async () => {
+        await show('graph');
+        expect(find('side-by-side')).toBeNull();
+        explorer().select('$.data');
+        await fixture.whenStable();
+
+        expect(fixture.nativeElement.querySelectorAll('.code-line.focused')).toHaveLength(0);
+      });
+    });
 
     it('has no tabs for a language no reader reads', async () => {
       fixture.componentRef.setInput('note', createNote({ language: 'sh' }));

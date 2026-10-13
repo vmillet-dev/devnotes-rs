@@ -9,6 +9,12 @@
   touch-action: none;
 }
 
+// Standing between panes side by side: as wide as the other is tall.
+:host(.vertical) {
+  margin: 0 -4px 0 -3px;
+  cursor: col-resize;
+}
+
 :host(:hover),
 :host(:focus-visible) {
   background: var(--amber-dim);

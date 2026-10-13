@@ -20,6 +20,8 @@ export class CodeViewerComponent {
 
   /** Zero-based: the lines a format just changed, until the next keystroke. */
   readonly markedLines = input<ReadonlySet<number>>(new Set());
+  /** Zero-based: the lines of what the visualiser beside the code has selected. */
+  readonly focusedLines = input<ReadonlySet<number>>(new Set());
 
   protected readonly lines = computed<readonly string[]>(() =>
     highlightLines(this.content(), this.language()),

@@ -4,9 +4,10 @@ import { ChangeDetectionStrategy, Component, ElementRef, inject, input, output }
 const STEP = 4;
 
 /**
- * The line between two panes stacked in one box, dragged to share its height between them.
- * It sits between the two in the template: it measures its parent and the element before it,
- * takes the share that is stored and emits the new one; whoever holds it stores it.
+ * The line between two panes in one box, dragged to share it between them: stacked, their
+ * height; side by side (`orientation: 'vertical'`, the line standing up), their width. It sits
+ * between the two in the template: it measures its parent and the element before it, takes the
+ * share that is stored and emits the new one; whoever holds it stores it.
  *
  * Pointer events, like every other drag in this application — HTML5 drag and drop does not
  * reach this WebView — and a separator that takes the focus, so the arrows move it too.
@@ -21,7 +22,8 @@ const STEP = 4;
   host: {
     role: 'separator',
     tabindex: '0',
-    'aria-orientation': 'horizontal',
+    '[attr.aria-orientation]': 'orientation()',
+    '[class.vertical]': "orientation() === 'vertical'",
     'aria-valuemin': '0',
     'aria-valuemax': '100',
     '[attr.aria-valuenow]': 'share() > 0 ? share() : null',
@@ -39,9 +41,11 @@ const STEP = 4;
   },
 })
 export class SplitHandleComponent {
-  /** The upper pane's share of the box, in percent; `0` while it is left to its content. */
+  /** The line's own direction: `vertical` stands between panes side by side. */
+  readonly orientation = input<'horizontal' | 'vertical'>('horizontal');
+  /** The upper (or left) pane's share of the box, in percent; `0` while it is left to its content. */
   readonly share = input.required<number>();
-  /** What neither pane may go under, in pixels: neither is dragged out of reach. */
+  /** What neither pane may go under, in pixels: neither is dragged out of reach. Upper is left. */
   readonly upperFloor = input.required<number>();
   readonly lowerFloor = input.required<number>();
   readonly label = input.required<string>();
@@ -63,8 +67,9 @@ export class SplitHandleComponent {
     if (!this.host.nativeElement.hasPointerCapture?.(event.pointerId)) return;
     const box = this.box();
     if (box === null) return;
-    // Measured from the box's own top, so a window that is not at y=0 is no trap.
-    this.emit(((event.clientY - box.top) / box.height) * 100, box);
+    // Measured from the box's own edge, so a window that is not at 0 is no trap.
+    const along = this.vertical() ? event.clientX - box.left : event.clientY - box.top;
+    this.emit((along / this.size(box)) * 100, box);
   }
 
   protected end(event: PointerEvent): void {
@@ -79,10 +84,11 @@ export class SplitHandleComponent {
     const box = this.box();
     if (box === null) return;
     const { min, max } = this.bounds(box);
+    const [back, forth] = this.vertical() ? ['ArrowLeft', 'ArrowRight'] : ['ArrowUp', 'ArrowDown'];
     const to =
-      event.key === 'ArrowUp'
+      event.key === back
         ? this.current(box) - STEP
-        : event.key === 'ArrowDown'
+        : event.key === forth
           ? this.current(box) + STEP
           : event.key === 'Home'
             ? min
@@ -101,14 +107,16 @@ export class SplitHandleComponent {
   /** Where the line stands now: stored, or measured while the upper pane is left to its content. */
   private current(box: DOMRect): number {
     if (this.share() > 0) return this.share();
-    const upper = this.host.nativeElement.previousElementSibling?.getBoundingClientRect().height ?? 0;
-    return (upper / box.height) * 100;
+    const before = this.host.nativeElement.previousElementSibling?.getBoundingClientRect();
+    const upper = (this.vertical() ? before?.width : before?.height) ?? 0;
+    return (upper / this.size(box)) * 100;
   }
 
   private bounds(box: DOMRect): { min: number; max: number } {
     // The line itself takes no height from either pane: it is drawn over their border.
-    const min = (this.upperFloor() / box.height) * 100;
-    const max = ((box.height - this.lowerFloor()) / box.height) * 100;
+    const size = this.size(box);
+    const min = (this.upperFloor() / size) * 100;
+    const max = ((size - this.lowerFloor()) / size) * 100;
     // A box too short for both floors: the upper one wins, the lower pane scrolls.
     return { min, max: Math.max(min, max) };
   }
@@ -119,8 +127,16 @@ export class SplitHandleComponent {
     if (clamped !== this.share()) this.shareChanged.emit(clamped);
   }
 
+  private vertical(): boolean {
+    return this.orientation() === 'vertical';
+  }
+
+  private size(box: DOMRect): number {
+    return this.vertical() ? box.width : box.height;
+  }
+
   private box(): DOMRect | null {
     const box = this.host.nativeElement.parentElement?.getBoundingClientRect();
-    return box && box.height > 0 ? box : null;
+    return box && this.size(box) > 0 ? box : null;
   }
 }
