@@ -119,6 +119,13 @@ describe('IdentityToolComponent', () => {
     harness
       .all(`[data-testid="identity-block"][data-block="${block}"] [data-testid="output-row"]`)
       .map((row) => [row.dataset['name'], row.querySelector('[data-testid="output-value"]')?.textContent]);
+  /** Each marked row, its field — or the kind of its number, on the card — and its mark. */
+  const marks = (harness: ToolHarness<IdentityToolComponent>) =>
+    harness.all('[data-testid="identity-mark"]').map((mark) => {
+      const row = mark.closest<HTMLElement>('[data-field], .fact');
+      const field = row?.dataset['field'] ?? row?.querySelector<HTMLElement>('[data-kind]')?.dataset['kind'];
+      return [field, mark.dataset['mark']];
+    });
   const drawn = async (answer: IdentityAnswer = ADA) => {
     const harness = await renderTool(IdentityToolComponent, (tools) => {
       answering(tools);
@@ -174,7 +181,7 @@ describe('IdentityToolComponent', () => {
    * Their own names in their own country — « Sort code », « National Insurance number » are
    * not translated — and the address in the order the country writes it.
    */
-  it('adds what a country writes beside its IBAN, under its own names, and says which carry no key', async () => {
+  it('adds what a country writes beside its IBAN, under its own names, and marks those that carry no key', async () => {
     const harness = await drawn(GRACE);
 
     expect(harness.element('[data-testid="identity-card"]').dataset['country']).toBe('GB');
@@ -195,8 +202,17 @@ describe('IdentityToolComponent', () => {
       ['VAT number', 'GB 123 4567 82'],
     ]);
     expect(harness.all('[data-testid="identity-no-firm-number"]')).toEqual([]);
-    expect(text(harness, 'identity-unkeyed')).toBe(
-      'Sans clé à vérifier : National Insurance number, Sort code, Account number, Company number',
+    // Rust names them; each is marked on its own row, and no other row is.
+    expect(marks(harness)).toEqual([
+      ['nino', 'unkeyed'],
+      ['sortCode', 'unkeyed'],
+      ['accountNumber', 'unkeyed'],
+      ['crn', 'unkeyed'],
+    ]);
+    const mark = harness.element('[data-field="crn"] [data-testid="identity-mark"]');
+    expect(mark.textContent?.trim()).toBe('sans clé');
+    expect(mark.getAttribute('title')).toBe(
+      'Un format seulement : ce numéro n’a aucune clé qui permette de le vérifier.',
     );
   });
 
@@ -217,11 +233,8 @@ describe('IdentityToolComponent', () => {
     expect(text(harness, 'identity-personal')).toContain('987-65-4321');
   });
 
-  /**
-   * ⚠️ It evokes a card and imitates none: a monogram where a photo would be, and « Spécimen »
-   * printed across — test data, not a document to pass off.
-   */
-  it('draws the person as a card: a monogram, the names large, and « Spécimen » across it', async () => {
+  /** ⚠️ It evokes a card and imitates none: a monogram where a photo would be. */
+  it('draws the person as a card: a monogram, the names large, nothing printed across', async () => {
     const harness = await drawn();
     const card = harness.element('[data-testid="identity-card"]');
 
@@ -245,10 +258,7 @@ describe('IdentityToolComponent', () => {
     expect(personal.dataset['kind']).toBe('nir');
     expect(personal.textContent).toContain('2 87 03 69 123 456 07');
 
-    const specimen = harness.element('[data-testid="identity-specimen"]');
-    expect(specimen.textContent?.trim()).toBe('Spécimen');
-    expect(specimen.getAttribute('aria-hidden')).toBe('true');
-    expect(card.contains(specimen)).toBe(true);
+    expect(card.textContent).not.toContain('Spécimen');
     // Nothing of a state's document: no image at all, a monogram alone.
     expect(card.querySelector('img, svg image')).toBeNull();
   });
@@ -294,20 +304,13 @@ describe('IdentityToolComponent', () => {
     await expect.poll(() => harness.clipboard.content).toBe('1987-03-12');
   });
 
-  it('says what the data is for, and what in it could be someone’s', async () => {
+  /** For developers: no note under the blocks, a fact said on the row it changes something for. */
+  it('writes no note under the blocks, and marks nothing in a country with a fiction range and keys', async () => {
     const harness = await drawn();
-    const warning = harness.element('[data-testid="identity-warning"]');
 
-    expect(warning.getAttribute('role')).toBe('note');
-    expect(warning.textContent).toContain('ne les utilisez pas pour vous faire passer pour quelqu’un');
-    expect(warning.textContent).toContain('peut appartenir à quelqu’un');
-    expect(warning.textContent).toContain('givenNames');
-    // France keeps a range for fiction, has a key on every number, and is one of thirteen.
-    expect(harness.element('[data-testid="identity-phones"]').dataset['fiction']).toBe('true');
-    expect(text(harness, 'identity-phones')).toContain('réserve à la fiction');
-    expect(harness.all('[data-testid="identity-unkeyed"]')).toEqual([]);
-    expect(harness.all('[data-testid="identity-countries"] .listed')).toHaveLength(13);
-    expect(text(harness, 'identity-countries')).toContain('Pays : France, Belgique, Allemagne');
+    expect(harness.all('[data-testid="identity-warning"]')).toEqual([]);
+    expect(harness.fixture.nativeElement.textContent).not.toContain('ne les utilisez pas');
+    expect(marks(harness)).toEqual([]);
   });
 
   /**
@@ -327,7 +330,6 @@ describe('IdentityToolComponent', () => {
     expect(said.textContent).toContain('Liste introuvable : places/it.txt.');
     expect(said.textContent).toContain('Les listes sont lues dans C:/app/identity');
     expect(harness.all('[data-testid="identity-card"]')).toEqual([]);
-    expect(harness.all('[data-testid="identity-warning"]')).toEqual([]);
     expect(harness.element<HTMLButtonElement>('[data-testid="identity-copy-json"]').disabled).toBe(true);
     expect(harness.tool.result()).toBeNull();
   });
@@ -354,11 +356,18 @@ describe('IdentityToolComponent', () => {
     );
   });
 
-  it('says a phone number may ring where no range is kept for fiction', async () => {
+  it('marks the phones that may ring, where no range is kept for fiction', async () => {
     const harness = await drawn({ ...ADA, fictionPhones: false });
 
-    expect(harness.element('[data-testid="identity-phones"]').dataset['fiction']).toBe('false');
-    expect(text(harness, 'identity-phones')).toContain('peuvent sonner chez quelqu’un');
+    expect(marks(harness)).toEqual([
+      ['phone', 'mayRing'],
+      ['mobile', 'mayRing'],
+    ]);
+    const mark = harness.element('[data-field="mobile"] [data-testid="identity-mark"]');
+    expect(mark.textContent?.trim()).toBe('peut sonner');
+    expect(mark.getAttribute('title')).toBe(
+      'Ce pays ne réserve aucune tranche de numéros à la fiction : ce numéro peut sonner chez quelqu’un.',
+    );
   });
 
   it('asks for the sex and the ages chosen, held to what a person lives', async () => {
