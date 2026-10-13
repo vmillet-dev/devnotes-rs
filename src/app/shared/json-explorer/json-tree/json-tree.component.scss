@@ -70,6 +70,10 @@
   color: var(--purple);
 }
 
+.line[data-kind='datetime'] .line-value {
+  color: var(--blue);
+}
+
 .truncated {
   margin: 8px 16px;
   font-family: var(--font-sans), serif;

@@ -578,7 +578,7 @@ Prettier is JavaScript. `core/services/format/` holds all of it.
 
 ### Exploring a JSON snippet
 
-A snippet whose language Rust has a reader for — JSON, YAML — has a band of its own: **Code /
+A snippet whose language Rust has a reader for — JSON, YAML, TOML — has a band of its own: **Code /
 Graphe / Arbre**, and « YAML valide » or where the draft stops parsing. The model is Rust's —
 see [The JSON visualiser's model](#the-json-visualisers-model); the front draws it. Which
 languages have a reader is one table, `explorableFormat` in `core/model/json.model.ts`; the
@@ -4791,6 +4791,11 @@ is not the WebView's thread's to parse.
   collection ends on its last value (a comment after it stays out), a flow one on its bracket,
   and a scalar's end is read from the text by its style. ⚠️ Aliases are copies, so the values
   read are counted and a document of aliases to aliases stops (`tooLarge`).
+- **TOML** (`json/toml.rs`, on the `toml` crate's spanned values): tables, arrays of tables,
+  dotted keys and inline tables land where they were written — a `[table]` on its header, an
+  implicit one on its key. ⚠️ The crate's map is sorted, so members are put back in the text's
+  order by their key's span. Numbers and datetimes are shown as written (`8_080`, a `datetime`
+  kind of its own).
 - **Its own parser** (`json/parse.rs`), because `serde_json` forgets where a value sits and
   "Voir dans le code" needs it. Offsets are in **UTF-16 units**, the front's; an invalid
   document answers a reason, a one-based line and column, and the offset. ⚠️ The nesting is

@@ -5,13 +5,14 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 
 use super::parse::{JsonError, Node, parse};
-use super::yaml;
+use super::{toml, yaml};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub enum StructureFormat {
     Json,
     Yaml,
+    Toml,
 }
 
 /// What the tree leaves out of the text, said rather than hidden.
@@ -35,5 +36,6 @@ pub(crate) fn read(text: &str, format: StructureFormat) -> Result<Read, JsonErro
             notices: Vec::new(),
         }),
         StructureFormat::Yaml => yaml::read(text),
+        StructureFormat::Toml => toml::read(text),
     }
 }

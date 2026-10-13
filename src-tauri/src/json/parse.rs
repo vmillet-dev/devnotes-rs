@@ -20,6 +20,8 @@ pub(crate) enum Value {
     Number(String),
     Bool(bool),
     Null,
+    /// A TOML date or time, as written.
+    Datetime(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]

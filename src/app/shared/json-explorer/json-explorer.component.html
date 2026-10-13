@@ -181,8 +181,10 @@
         {{ 'json.notices.' + notice | transloco }}
       </p>
     }
-    @if (format() === 'yaml') {
-      <p class="aside-note" data-testid="json-format-note">{{ 'json.formatNotes.yaml' | transloco }}</p>
+    @if (format() !== 'json') {
+      <p class="aside-note" data-testid="json-format-note">
+        {{ 'json.formatNotes.' + format() | transloco }}
+      </p>
     }
     <p class="aside-note">{{ 'json.limitNote' | transloco }}</p>
   </aside>

@@ -62,6 +62,7 @@ describe('json model', () => {
   it('knows which languages have a reader', () => {
     expect(explorableFormat('json')).toBe('json');
     expect(explorableFormat('yml')).toBe('yaml');
+    expect(explorableFormat('toml')).toBe('toml');
     expect(explorableFormat('sh')).toBeNull();
   });
 

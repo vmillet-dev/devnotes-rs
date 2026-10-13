@@ -176,6 +176,10 @@
   color: var(--purple);
 }
 
+.row[data-kind='datetime'] .row-value {
+  color: var(--blue);
+}
+
 .row-opens {
   color: var(--text-2);
 }
