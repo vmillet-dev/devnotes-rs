@@ -50,6 +50,8 @@ export class SaveAsNoteDialogComponent {
   readonly source = input.required<string>();
   /** The line under the title, which says what is kept: a tool's result, a response's body. */
   readonly whatKey = input('tools.saveAsNote.what');
+  /** Proposed in the tags' field: generated code is filed under `http`. */
+  readonly initialTags = input('');
 
   readonly closed = output<void>();
 
@@ -73,7 +75,7 @@ export class SaveAsNoteDialogComponent {
     },
   });
 
-  protected readonly tags = signal('');
+  protected readonly tags = linkedSignal(() => this.initialTags());
   protected readonly saving = signal(false);
 
   protected readonly spaces = computed<readonly ChoiceOption[]>(() =>

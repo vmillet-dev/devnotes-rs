@@ -33,6 +33,7 @@ import {
   toParts,
 } from '@core/model/http.model';
 import { UsedVariable } from '@core/model/http-environment.model';
+import { CodeOptions, CodeTarget, GeneratedCode } from '@core/model/http-code.model';
 
 export interface HttpCall {
   readonly command: string;
@@ -67,6 +68,8 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
   /** The jar by domain; the deletes take from it as Rust would. */
   jar: CookieDomain[] = [];
   bodyAnswer: BodyAnswer = { contentType: null, problem: null, unusual: false };
+  /** What `generateCode` answers, the target written before it so a spec can tell which. */
+  codeAnswer: GeneratedCode = { code: 'GET', language: 'sh', secrets: [], unresolved: [], notice: null };
   /** What `variables` answers: Rust resolves, the spec says what it would. */
   usedAnswer: UsedVariable[] = [];
   /** The environment each send and each connection named, in order. */
@@ -236,6 +239,19 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
   ): Promise<ImpliedHeader[]> {
     const answer = await this.record('impliedHeaders', [draft, place], () => this.impliedAnswer);
     return this.pendingImplied ?? answer;
+  }
+
+  generateCode(
+    target: CodeTarget,
+    options: CodeOptions,
+    draft: RequestDraft,
+    place: { collectionId: string; folderId: string | null } | null,
+    environmentId: string | null,
+  ): Promise<GeneratedCode> {
+    return this.record('generateCode', [target, options, draft, place, environmentId], () => ({
+      ...this.codeAnswer,
+      code: `${target} ${this.codeAnswer.code}`,
+    }));
   }
 
   variables(

@@ -64,6 +64,18 @@
         }
       </button>
     }
+    @if (draft.kind !== 'websocket') {
+      <button
+        type="button"
+        class="save"
+        data-testid="http-code-open"
+        aria-haspopup="dialog"
+        [attr.title]="'http.code.openLabel' | transloco"
+        (click)="codeOpen.set(true)"
+      >
+        {{ 'http.code.open' | transloco }}
+      </button>
+    }
     <button
       type="button"
       class="save"
@@ -251,3 +263,7 @@
     }
   </div>
 </div>
+
+@if (codeOpen()) {
+  <app-code-dialog [tab]="tab()" (closed)="codeOpen.set(false)" />
+}

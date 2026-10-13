@@ -1,0 +1,4 @@
+curl --request POST \
+  --url 'https://api.exemple.fr/upload' \
+  --header 'Content-Type: application/octet-stream' \
+  --data-binary '@/tmp/archive.zip'

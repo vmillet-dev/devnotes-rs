@@ -751,6 +751,21 @@ describe('HttpPageComponent', () => {
     ).toEqual(['baseUrl', '']);
   });
 
+  it('opens « Générer le code » from an HTTP request, never from a socket', async () => {
+    await tabs().open('Login');
+    await fixture.whenStable();
+
+    el('[data-testid="http-code-open"]').click();
+    await fixture.whenStable();
+    expect(document.querySelector('[data-testid="http-code-dialog"]')).not.toBeNull();
+    await vi.waitFor(() => expect(http.callsOf('generateCode')).toHaveLength(1));
+
+    http.seed('Live', { kind: 'websocket' }, 'Flux');
+    await tabs().open('Live');
+    await fixture.whenStable();
+    expect(el('[data-testid="http-code-open"]')).toBeNull();
+  });
+
   it('closes an unmodified tab at once', async () => {
     await tabs().open('Login');
     await fixture.whenStable();

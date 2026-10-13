@@ -393,7 +393,27 @@ fn written(
     headers
 }
 
-fn auth_of<'a>(document: &'a RequestDocument, inherited: &'a Inherited) -> &'a RequestAuth {
+/// The headers a generated program writes: what a send writes, but the application's own —
+/// the program names itself —, a Basic auth, which each target writes its own way, and a
+/// multipart form's type, which carries a boundary the tool alone chooses.
+pub fn written_for_code(
+    kind: RequestKind,
+    document: &RequestDocument,
+    inherited: &Inherited,
+) -> Vec<(String, String)> {
+    let basic = matches!(auth_of(document, inherited), RequestAuth::Basic { .. });
+    let multipart =
+        kind == RequestKind::Http && matches!(document.body, RequestBody::Multipart { .. });
+    written(document, inherited, content_type(kind, document))
+        .into_iter()
+        .filter(|header| header.by != Wrote::Default)
+        .filter(|header| !(basic && header.by == Wrote::Auth))
+        .filter(|header| !(multipart && header.by == Wrote::Body))
+        .map(|header| (header.name, header.value))
+        .collect()
+}
+
+pub fn auth_of<'a>(document: &'a RequestDocument, inherited: &'a Inherited) -> &'a RequestAuth {
     match &document.auth {
         RequestAuth::Inherit => &inherited.auth,
         own => own,

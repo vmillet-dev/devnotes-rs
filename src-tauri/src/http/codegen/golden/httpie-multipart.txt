@@ -1,0 +1,4 @@
+http PUT 'https://api.exemple.fr/documents/7' \
+  --multipart \
+  'title=Facture' \
+  'scan@C:/Users/ada/facture.pdf'

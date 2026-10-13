@@ -386,6 +386,54 @@ fn a_secret_variable_shows_by_its_name_once_the_request_left() {
     assert!(kept.contains("{{token}}"));
 }
 
+/// #488: the code a request writes resolves as a send does, a secret left as its name until it
+/// is asked for in clear, and is saved as its target's language.
+#[test]
+fn a_request_is_written_as_code_from_the_levels_a_send_resolves_from() {
+    use devnotes_lib::http::codegen::{CodeOptions, CodeTarget};
+    use devnotes_lib::http::{CodeRequestOf, generate_http_code};
+
+    let session = Session::open();
+    let sent = layered(&session, 8080);
+    let asked = |target: CodeTarget, include_secrets: bool| CodeRequestOf {
+        target,
+        options: CodeOptions {
+            resolve_variables: true,
+            include_secrets,
+            multiline: false,
+            follow_redirects: false,
+        },
+        kind: sent.kind,
+        method: sent.method,
+        document: sent.document.clone(),
+        collection_id: sent.collection_id.clone(),
+        folder_id: sent.folder_id.clone(),
+        environment_id: sent.environment_id.clone(),
+    };
+
+    let kept = session
+        .call(|app| generate_http_code(asked(CodeTarget::Curl, false), app))
+        .unwrap();
+    assert!(
+        kept.code.starts_with(
+            "curl --request POST --url 'http://127.0.0.1:8080/invoices?page=3&size=50'"
+        ),
+        "{}",
+        kept.code
+    );
+    assert!(kept.code.contains("'Authorization: Bearer {{token}}'"));
+    assert!(kept.code.contains("'X-Tenant: acme'"));
+    assert_eq!(kept.secrets, ["token"]);
+    assert_eq!(kept.language, Language::Sh);
+
+    let clear = session
+        .call(|app| generate_http_code(asked(CodeTarget::Powershell, true), app))
+        .unwrap();
+    assert!(clear.code.contains("'Bearer t0k3n'"), "{}", clear.code);
+    assert!(clear.secrets.is_empty());
+    assert_eq!(clear.language, Language::Ps1);
+}
+
 /// Fork C: a name no level sets is refused by name, and nothing leaves.
 #[test]
 fn a_variable_set_nowhere_stops_the_send_by_its_name() {

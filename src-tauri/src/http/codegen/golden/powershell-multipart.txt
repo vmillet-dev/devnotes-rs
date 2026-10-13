@@ -1,0 +1,9 @@
+$form = @{
+  'title' = 'Facture'
+  'scan' = (Get-Item -Path 'C:/Users/ada/facture.pdf')
+}
+Invoke-RestMethod `
+  -Uri 'https://api.exemple.fr/documents/7' `
+  -Method Put `
+  -Form $form `
+  -MaximumRedirection 0

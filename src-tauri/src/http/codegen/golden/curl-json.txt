@@ -1,0 +1,8 @@
+curl --request POST \
+  --url 'https://api.exemple.fr/customers' \
+  --location \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "name": "O'\''Brien",
+  "plan": "pro"
+}'

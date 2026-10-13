@@ -11,6 +11,7 @@ import javascript from 'highlight.js/lib/languages/javascript';
 import json from 'highlight.js/lib/languages/json';
 import markdown from 'highlight.js/lib/languages/markdown';
 import php from 'highlight.js/lib/languages/php';
+import powershell from 'highlight.js/lib/languages/powershell';
 import python from 'highlight.js/lib/languages/python';
 import rust from 'highlight.js/lib/languages/rust';
 import scss from 'highlight.js/lib/languages/scss';
@@ -51,6 +52,7 @@ const GRAMMARS: Readonly<Record<LanguageTag, string | null>> = {
   css: 'css',
   scss: 'scss',
   sh: 'bash',
+  ps1: 'powershell',
   md: 'markdown',
   txt: null,
 };
@@ -68,6 +70,7 @@ for (const [name, grammar] of Object.entries({
   json,
   markdown,
   php,
+  powershell,
   python,
   rust,
   scss,

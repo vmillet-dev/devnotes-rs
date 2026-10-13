@@ -25,6 +25,8 @@ closed_enum! {
         Css = "css",
         Scss = "scss",
         Sh = "sh",
+        /// PowerShell: what generated code is saved as, and what a pasted cmdlet reads as.
+        Ps1 = "ps1",
         Md = "md",
         /// Default, and the signal that the front end chose nothing.
         #[default]
@@ -110,7 +112,7 @@ type Scorer = fn(&Sample<'_>) -> u32;
 
 /// Every language that can be guessed at, each scoring itself. The order means nothing: a
 /// language added here needs markers with honest weights, not a slot.
-const SCORERS: [(Language, Scorer); 20] = [
+const SCORERS: [(Language, Scorer); 21] = [
     (Language::Json, score_json),
     (Language::Php, score_php),
     (Language::Xml, score_xml),
@@ -131,6 +133,7 @@ const SCORERS: [(Language, Scorer); 20] = [
     (Language::Yml, score_yaml),
     (Language::Md, score_markdown),
     (Language::Sh, score_shell),
+    (Language::Ps1, score_powershell),
 ];
 
 /// The best-scoring language, or `txt` when nothing proved itself. Weights settle what an
@@ -500,6 +503,27 @@ fn score_shell(sample: &Sample<'_>) -> u32 {
             sample.any_line(|line| line.starts_with('$') || line.starts_with("./")),
         )
         + worth(WEAK, sample.has(" | ") || sample.has(" && "))
+}
+
+/// A cmdlet's `Verb-Noun`, a variable assigned, a hashtable: a shell line has none of the three.
+fn score_powershell(sample: &Sample<'_>) -> u32 {
+    const CMDLETS: [&str; 8] = [
+        "Invoke-RestMethod",
+        "Invoke-WebRequest",
+        "Get-ChildItem",
+        "Get-Item",
+        "Set-Location",
+        "Write-Host",
+        "Write-Output",
+        "New-Item",
+    ];
+
+    worth(STRONG, CMDLETS.iter().any(|cmdlet| sample.has(cmdlet)))
+        + worth(
+            WEAK,
+            sample.any_line(|line| line.starts_with('$') && line.contains(" = ")),
+        )
+        + worth(WEAK, sample.has("@{"))
 }
 
 #[cfg(test)]

@@ -1,0 +1,6 @@
+curl --request POST \
+  --url 'https://auth.exemple.fr/token' \
+  --header 'Content-Type: application/x-www-form-urlencoded' \
+  --user 'billing-web:{{clientSecret}}' \
+  --data-urlencode 'grant_type=client_credentials' \
+  --data-urlencode 'scope=invoices read'

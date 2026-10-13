@@ -42,6 +42,7 @@ import {
   toSynced,
 } from '@core/model/http.model';
 import { UsedVariable } from '@core/model/http-environment.model';
+import { CodeOptions, CodeTarget, GeneratedCode } from '@core/model/http-code.model';
 
 function opened({ document, ...request }: HttpRequest): OpenedRequest {
   return { ...request, parts: toParts(document) };
@@ -149,6 +150,29 @@ export class HttpRepository {
       'http_variables',
       await commands.httpVariables({
         kind: draft.kind,
+        document: toDocument(draft.parts),
+        collectionId: place?.collectionId ?? null,
+        folderId: place?.folderId ?? null,
+        environmentId,
+      }),
+    );
+  }
+
+  /** The request written as code for `target`, resolved as a send would be: Rust's. */
+  async generateCode(
+    target: CodeTarget,
+    options: CodeOptions,
+    draft: RequestDraft,
+    place: { collectionId: string; folderId: string | null } | null,
+    environmentId: string | null,
+  ): Promise<GeneratedCode> {
+    return unwrap(
+      'generate_http_code',
+      await commands.generateHttpCode({
+        target,
+        options,
+        kind: draft.kind,
+        method: draft.method,
         document: toDocument(draft.parts),
         collectionId: place?.collectionId ?? null,
         folderId: place?.folderId ?? null,

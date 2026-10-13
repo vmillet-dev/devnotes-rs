@@ -45,13 +45,13 @@ use http::{
     create_http_environment, create_http_folder, create_http_request, create_http_request_in,
     delete_http_cookie, delete_http_cookie_domain, delete_http_environment,
     delete_http_history_entry, delete_http_item, describe_graphql, describe_http_body,
-    duplicate_http_environment, duplicate_http_item, forget_http_response, get_http_request,
-    http_cookies, http_environments, http_history, http_history_draft, http_history_entry,
-    http_history_onto_request, http_response_image, http_settings, http_tree, http_variables,
-    implied_http_headers, inherited_http_settings, move_http_item, read_http_headers,
-    rename_http_item, reorder_http_collection, restore_http_history_entry, save_http_environment,
-    save_http_globals, save_http_request, save_http_response, save_http_settings,
-    send_http_request, send_websocket, sync_http_query,
+    duplicate_http_environment, duplicate_http_item, forget_http_response, generate_http_code,
+    get_http_request, http_cookies, http_environments, http_history, http_history_draft,
+    http_history_entry, http_history_onto_request, http_response_image, http_settings, http_tree,
+    http_variables, implied_http_headers, inherited_http_settings, move_http_item,
+    read_http_headers, rename_http_item, reorder_http_collection, restore_http_history_entry,
+    save_http_environment, save_http_globals, save_http_request, save_http_response,
+    save_http_settings, send_http_request, send_websocket, sync_http_query,
 };
 use json::explore_json;
 use libraries::{create_library, delete_library, list_libraries, open_library, rename_library};
@@ -219,6 +219,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             delete_http_environment::<tauri::Wry>,
             check_http_variables,
             http_variables::<tauri::Wry>,
+            generate_http_code::<tauri::Wry>,
             board_view::<tauri::Wry>,
             save_board_layout::<tauri::Wry>,
             arrange_board::<tauri::Wry>,

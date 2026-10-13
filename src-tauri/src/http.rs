@@ -3,6 +3,7 @@
 //! The HTTP client's collections: they belong to the library, not to a space, and are sealed
 //! like the notes. A collection travels in a file of its own, never in the library export.
 
+pub mod codegen;
 pub mod cookies;
 pub mod environments;
 pub mod graphql;
@@ -513,6 +514,20 @@ fn resolver_for(
     inherited: &settings::Inherited,
     environment_id: Option<&str>,
 ) -> Result<variables::Resolver, crate::error::StorageError> {
+    Ok(variables::Resolver::new(&layers_for(
+        connection,
+        own,
+        inherited,
+        environment_id,
+    )?))
+}
+
+fn layers_for(
+    connection: &mut crate::db::Library,
+    own: &[environments::Variable],
+    inherited: &settings::Inherited,
+    environment_id: Option<&str>,
+) -> Result<Vec<variables::VariableLayer>, crate::error::StorageError> {
     use variables::{VariableLayer, VariableScope};
 
     let sets = environments::store::list(connection)?;
@@ -538,7 +553,59 @@ fn resolver_for(
         from: String::new(),
         variables: sets.globals,
     });
-    Ok(variables::Resolver::new(&layers))
+    Ok(layers)
+}
+
+/// The request written as code for another tool, from what a send would write: its variables
+/// resolved as asked, a secret left as its `{{name}}` unless it is asked for in clear.
+#[tauri::command]
+#[specta::specta]
+pub async fn generate_http_code<R: Runtime>(
+    request: CodeRequestOf,
+    app: AppHandle<R>,
+) -> Result<codegen::GeneratedCode, AppError> {
+    blocking(app, move |_, db| {
+        let CodeRequestOf {
+            target,
+            options,
+            kind,
+            method,
+            document,
+            collection_id,
+            folder_id,
+            environment_id,
+        } = request;
+        let mut connection = lock(db)?;
+        let inherited = match collection_id {
+            Some(collection_id) => {
+                store::inherited(&mut connection, &collection_id, folder_id.as_deref())?
+            }
+            None => settings::inherit(&[]),
+        };
+        let layers = layers_for(
+            &mut connection,
+            &document.variables,
+            &inherited,
+            environment_id.as_deref(),
+        )?;
+        Ok(codegen::generate(
+            target, options, kind, method, &document, &inherited, &layers,
+        ))
+    })
+    .await
+}
+
+#[derive(Debug, Clone, serde::Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct CodeRequestOf {
+    pub target: codegen::CodeTarget,
+    pub options: codegen::CodeOptions,
+    pub kind: model::RequestKind,
+    pub method: model::HttpMethod,
+    pub document: model::RequestDocument,
+    pub collection_id: Option<String>,
+    pub folder_id: Option<String>,
+    pub environment_id: Option<String>,
 }
 
 /// The `{{variables}}` a request holds, each with what it resolves to and from where: the
