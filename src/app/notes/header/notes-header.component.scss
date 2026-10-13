@@ -4,9 +4,10 @@
   display: contents;
 }
 
-// One row, and it does not wrap: at the shipped 1100px window with the rail open a wrap
-// pushed the primary action onto a second line. The search gives way instead — the only thing
-// here that can be narrow and still be itself — and an e2e scenario measures the row.
+// One row while it holds, and it never wraps a control: the search gives way first, then the
+// switchers' names, each to its floor (`data-floor`); past that, `TwoRowsDirective` makes it two
+// rows on purpose. A wrap had pushed the primary action down, and a squeezed quick filter
+// stood as a column of three.
 .topbar {
   display: flex;
   flex-wrap: nowrap;
@@ -17,6 +18,53 @@
   flex-shrink: 0;
   // Without this a flex child's content width wins and the row overflows anyway.
   min-width: 0;
+}
+
+.where,
+.how {
+  display: contents;
+}
+
+// No control changes size: only the three that narrow do, down to their floor.
+.where > *,
+.how > *,
+app-new-note-button {
+  flex-shrink: 0;
+}
+
+.where > .narrows,
+.how > .narrows {
+  flex-shrink: 1;
+}
+
+.topbar.two-rows {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'where new'
+    'how how';
+  row-gap: 8px;
+  column-gap: 10px;
+
+  .where,
+  .how {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .where {
+    grid-area: where;
+  }
+
+  .how {
+    grid-area: how;
+  }
+
+  app-new-note-button {
+    grid-area: new;
+  }
 }
 
 // First in the row: the rail it toggles is what changes space.

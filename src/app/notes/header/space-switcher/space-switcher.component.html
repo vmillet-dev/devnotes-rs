@@ -1,3 +1,4 @@
+@let name = activeSpace()?.name ?? ('notes.allSpaces' | transloco);
 <div class="space-switch-wrapper">
   <button
     appMenuAnchor
@@ -7,10 +8,11 @@
     aria-haspopup="menu"
     [attr.aria-expanded]="menu.open()"
     [attr.aria-label]="'notes.spaceSwitcherLabel' | transloco"
+    [attr.title]="name"
     (click)="toggle()"
   >
     <span class="space-dot" aria-hidden="true"></span>
-    {{ activeSpace()?.name ?? ('notes.allSpaces' | transloco) }}
+    <span class="space-name" data-testid="space-switcher-name">{{ name }}</span>
     <span class="chev" aria-hidden="true">▾</span>
   </button>
   @if (menu.open()) {
