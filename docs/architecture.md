@@ -1,7 +1,7 @@
 # Architecture
 
 How DevNotes is put together, and the conventions to follow when extending it.
-For build/run instructions see the [README](../README.md).
+For build/run instructions see [CONTRIBUTING](../CONTRIBUTING.md).
 
 ## Overview
 
@@ -4316,8 +4316,8 @@ when each was created and each request last saved, and each request's kind and m
 each send was made and from which request — not to where, nor how it ended; how many cookies
 the jar holds and when each expires — not for which site; how many environments there are
 and when each was made — not their names nor what they hold. And everywhere the **length** of
-every sealed value: AES-GCM hides no length. The README lists it for the people deciding what
-to keep here.
+every sealed value: AES-GCM hides no length. `docs/security.md` lists it for the people deciding
+what to keep here.
 
 ⚠️ **`http_requests.kind` and `.method` are plain for no query**: the tree is read whole and
 ordered in Rust. Sealing them is moving them into `document`, and the rows already written
