@@ -14,6 +14,7 @@ pub mod send;
 pub mod settings;
 pub mod store;
 pub mod transport;
+pub mod variables;
 pub mod websocket;
 
 use std::path::Path;
@@ -440,6 +441,7 @@ pub async fn send_http_request<R: Runtime>(
         folder_id,
         name,
         request_id,
+        environment_id,
     } = request;
     let outgoing = blocking(app.clone(), move |_, db| {
         let mut connection = lock(db)?;
@@ -449,6 +451,13 @@ pub async fn send_http_request<R: Runtime>(
             }
             None => settings::inherit(&[]),
         };
+        let resolver = resolver_for(
+            &mut connection,
+            &document.variables,
+            &inherited,
+            environment_id.as_deref(),
+        )?;
+        let (document, inherited) = variables::resolve(&document, &inherited, &resolver);
         let mut outgoing = send::compose(kind, method, &document, &inherited)?;
         if outgoing.transport.use_cookies {
             outgoing.jar = Some(cookies::store::jar(&mut connection, Utc::now())?);
@@ -479,6 +488,86 @@ pub async fn send_http_request<R: Runtime>(
     keep(app, sent, cookies_set).await;
 
     Ok(answer?)
+}
+
+/// What a request resolves its `{{variables}}` from, the nearest first: its own, its folders
+/// and collection, the environment chosen — none when it is gone — and the globals.
+fn resolver_for(
+    connection: &mut crate::db::Library,
+    own: &[environments::Variable],
+    inherited: &settings::Inherited,
+    environment_id: Option<&str>,
+) -> Result<variables::Resolver, crate::error::StorageError> {
+    use variables::{VariableLayer, VariableScope};
+
+    let sets = environments::store::list(connection)?;
+    let mut layers = vec![VariableLayer {
+        scope: VariableScope::Request,
+        from: String::new(),
+        variables: own.to_vec(),
+    }];
+    layers.extend(inherited.variables.iter().cloned());
+    if let Some(environment) = sets
+        .environments
+        .into_iter()
+        .find(|environment| Some(environment.id.as_str()) == environment_id)
+    {
+        layers.push(VariableLayer {
+            scope: VariableScope::Environment,
+            from: environment.name,
+            variables: environment.variables,
+        });
+    }
+    layers.push(VariableLayer {
+        scope: VariableScope::Globals,
+        from: String::new(),
+        variables: sets.globals,
+    });
+    Ok(variables::Resolver::new(&layers))
+}
+
+/// The `{{variables}}` a request holds, each with what it resolves to and from where: the
+/// editor colours them by it, and names the ones nothing sets before a send does.
+#[tauri::command]
+#[specta::specta]
+pub async fn http_variables<R: Runtime>(
+    request: VariablesRequest,
+    app: AppHandle<R>,
+) -> Result<Vec<variables::UsedVariable>, AppError> {
+    blocking(app, move |_, db| {
+        let VariablesRequest {
+            kind,
+            document,
+            collection_id,
+            folder_id,
+            environment_id,
+        } = request;
+        let mut connection = lock(db)?;
+        let inherited = match collection_id {
+            Some(collection_id) => {
+                store::inherited(&mut connection, &collection_id, folder_id.as_deref())?
+            }
+            None => settings::inherit(&[]),
+        };
+        let resolver = resolver_for(
+            &mut connection,
+            &document.variables,
+            &inherited,
+            environment_id.as_deref(),
+        )?;
+        Ok(resolver.used(&variables::texts(kind, &document, &inherited)))
+    })
+    .await
+}
+
+#[derive(Debug, Clone, serde::Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct VariablesRequest {
+    pub kind: model::RequestKind,
+    pub document: model::RequestDocument,
+    pub collection_id: Option<String>,
+    pub folder_id: Option<String>,
+    pub environment_id: Option<String>,
 }
 
 /// The history and the jar, written under the lock again, and never at the answer's expense.
@@ -712,6 +801,7 @@ pub struct WebsocketRequest {
     pub document: model::RequestDocument,
     pub collection_id: Option<String>,
     pub folder_id: Option<String>,
+    pub environment_id: Option<String>,
 }
 
 /// Its headers and auth composed like a request's, under the lock for what it inherits; the
@@ -727,17 +817,25 @@ pub async fn connect_websocket<R: Runtime>(
         mut document,
         collection_id,
         folder_id,
+        environment_id,
     } = request;
-    document.url = websocket::socket_url(&document.url)?;
     document.body = model::RequestBody::None;
     let outgoing = blocking(app.clone(), move |_, db| {
+        let mut connection = lock(db)?;
         let inherited = match collection_id {
             Some(collection_id) => {
-                let mut connection = lock(db)?;
                 store::inherited(&mut connection, &collection_id, folder_id.as_deref())?
             }
             None => settings::inherit(&[]),
         };
+        let resolver = resolver_for(
+            &mut connection,
+            &document.variables,
+            &inherited,
+            environment_id.as_deref(),
+        )?;
+        let (mut document, inherited) = variables::resolve(&document, &inherited, &resolver);
+        document.url = websocket::socket_url(&document.url)?;
         Ok(send::compose(
             model::RequestKind::Http,
             model::HttpMethod::Get,

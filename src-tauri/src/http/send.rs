@@ -1,7 +1,7 @@
 //! A request sent by Rust: the `WebView` reaches no network, and will not. What it inherits is read
 //! under the lock; the request is composed and sent without it, so a slow server stalls nothing.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, Once};
@@ -24,9 +24,8 @@ use super::model::{
 use super::response::{self, Cookie};
 use super::settings::{HttpOrigin, Inherited, implied_content_type, switches_off};
 use super::transport::{Limit, Limits, SetBy, Transport};
-use super::websocket;
+use super::{variables, websocket};
 use crate::notes::language::Language;
-use crate::notes::placeholder;
 
 /// What a request says it comes from when it says nothing: many APIs refuse one that is silent.
 pub const USER_AGENT: &str = concat!("DevNotes/", env!("CARGO_PKG_VERSION"));
@@ -58,6 +57,9 @@ pub struct SendRequest {
     /// For the history: what the request is called, and which one it is once saved.
     pub name: String,
     pub request_id: Option<String>,
+    /// The environment its `{{variables}}` resolve from, over the globals; `None` for the
+    /// globals alone.
+    pub environment_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -275,62 +277,15 @@ fn read(path: &str) -> Result<Vec<u8>, SendError> {
     std::fs::read(path).map_err(|_| SendError::FileUnreadable(path.to_string()))
 }
 
-/// The first `{{variable}}` of what will be sent, in reading order.
+/// The first `{{variable}}` left in what will be sent, in reading order: one no level sets.
 fn first_variable(
     kind: RequestKind,
     document: &RequestDocument,
     inherited: &Inherited,
 ) -> Option<String> {
-    let none = BTreeMap::new();
-    let mut texts: Vec<&str> = vec![&document.url];
-    for row in inherited
-        .headers
-        .iter()
-        .map(|known| &known.header)
-        .chain(sent(&document.headers))
-    {
-        texts.extend([row.key.as_str(), row.value.as_str()]);
-    }
-    let auth = match &document.auth {
-        RequestAuth::Inherit => &inherited.auth,
-        own => own,
-    };
-    match auth {
-        RequestAuth::Basic { username, password } => {
-            texts.extend([username.as_str(), password.as_str()]);
-        }
-        RequestAuth::Bearer { token } => texts.push(token),
-        RequestAuth::ApiKey { name, value, .. } => texts.extend([name.as_str(), value.as_str()]),
-        RequestAuth::Inherit | RequestAuth::None => {}
-    }
-    if kind == RequestKind::Graphql {
-        texts.extend([
-            document.graphql.query.as_str(),
-            document.graphql.variables.as_str(),
-        ]);
-        return texts
-            .into_iter()
-            .find_map(|text| placeholder::parse(text, &none).into_iter().next())
-            .map(|found| found.name);
-    }
-    match &document.body {
-        RequestBody::Json { text } | RequestBody::Text { text } => texts.push(text),
-        RequestBody::Form { fields } => {
-            for row in sent(fields) {
-                texts.extend([row.key.as_str(), row.value.as_str()]);
-            }
-        }
-        RequestBody::Multipart { parts } => {
-            for part in parts.iter().filter(|part| part.enabled) {
-                texts.extend([part.key.as_str(), part.value.as_str()]);
-            }
-        }
-        RequestBody::None | RequestBody::Binary { .. } => {}
-    }
-    texts
+    variables::texts(kind, document, inherited)
         .into_iter()
-        .find_map(|text| placeholder::parse(text, &none).into_iter().next())
-        .map(|found| found.name)
+        .find_map(|text| variables::names_in(text).into_iter().next())
 }
 
 /// `api.example.com/users` is sent as `http://api.example.com/users`, as a browser would.
@@ -447,11 +402,7 @@ fn auth_of<'a>(document: &'a RequestDocument, inherited: &'a Inherited) -> &'a R
 /// reads as a host name, and is not one until it is filled.
 fn host_of(url: &Url) -> Option<String> {
     let host = url.host_str()?;
-    if placeholder::parse(host, &BTreeMap::new())
-        .into_iter()
-        .next()
-        .is_some()
-    {
+    if !variables::names_in(host).is_empty() {
         return None;
     }
     Some(
@@ -1294,6 +1245,7 @@ mod tests {
             transport: crate::http::transport::Transport::default(),
             limits: Limits::default(),
             user_agent_off: false,
+            variables: Vec::new(),
         }
     }
 
