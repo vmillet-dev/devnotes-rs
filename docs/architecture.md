@@ -5766,21 +5766,24 @@ case the control is asserted on — it exists, it is labelled — and never clic
 
 #### In CI
 
-The suite runs on `windows-latest` and `ubuntu-22.04`, in three jobs of `ci.yml`:
+The suite runs on `windows-latest` and `ubuntu-22.04`. `ci.yml` lists the scenarios —
+`e2e-scenarios` reads `e2e/specs/*.e2e.ts`, so a new file joins the matrix without a second list
+to edit — then calls `e2e.yml` once per platform. ⚠️ A workflow per platform and not a matrix of
+builds: a job that `needs` a matrix waits for every leg of it, and the Linux scenarios sat
+behind the Windows build. `e2e.yml` holds two jobs:
 
-- **`e2e-scenarios`** lists `e2e/specs/*.e2e.ts`, so a new file joins the matrix without a second
-  list to edit.
-- **`build-e2e`** builds the binary once per platform and uploads it with what it needs beside
-  it: `identity/`, the identity tool's resource, which `tauri-build` copies next to the
-  executable, and `.cargo-lock`. ⚠️ On Linux, Tauri reads resources next to the executable only
-  in a `target/<profile>` directory holding that file; anywhere else it looks in
+- **`build`** builds the binary and uploads it with what it needs beside it: `identity/`, the
+  identity tool's resource, which `tauri-build` copies next to the executable, and
+  `.cargo-lock`. ⚠️ On Linux, Tauri reads resources next to the executable only in a
+  `target/<profile>` directory holding that file; anywhere else it looks in
   `/usr/lib/devnotes`, and the identity tool answers that its lists are missing. The front end
   is embedded in the binary; Windows needs no DLL beside it.
-- **`test-e2e`** is one job per platform and scenario: it installs what the binary loads —
-  WebKitGTK and an X server on Linux, never the toolchain — runs `npm ci`, downloads its
-  platform's binary into `src-tauri/target/debug`, where `wdio.conf.ts` looks, and runs
+- **`scenario`** is one job per scenario: it installs what the binary loads — WebKitGTK and an
+  X server on Linux, never the toolchain — runs `npm ci`, downloads the binary into
+  `src-tauri/target/debug`, where `wdio.conf.ts` looks, and runs
   `E2E_SPEC=<name> npm run test:e2e`. No cargo runs there. `fail-fast: false`, so one red
-  scenario does not hide the others, and `max-parallel: 4`.
+  scenario does not hide the others, and `max-parallel: 2` per platform, four at once across
+  both.
 
 Each job is a runner of its own, so its process, its profile, its WebDriver port and the
 home-space marker under `tmpdir()` are its own too: that is the isolation, and the harness
