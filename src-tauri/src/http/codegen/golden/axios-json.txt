@@ -1,0 +1,15 @@
+import axios from 'axios';
+
+const response = await axios.request({
+  method: 'POST',
+  url: 'https://api.exemple.fr/customers',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  data: `{
+  "name": "O'Brien",
+  "plan": "pro"
+}`,
+  validateStatus: () => true,
+});
+console.log(response.status, response.data);

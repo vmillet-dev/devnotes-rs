@@ -56,6 +56,10 @@ describe('CodeDialogComponent', () => {
       'httpie',
       'wget',
       'powershell',
+      'fetch',
+      'axios',
+      'undici',
+      'angular',
     ]);
     expect(lastOptions()).toEqual({
       resolveVariables: true,
@@ -68,6 +72,19 @@ describe('CodeDialogComponent', () => {
     await vi.waitFor(() => expect(http.callsOf('generateCode').at(-1)?.[0]).toBe('powershell'));
     await fixture.whenStable();
     expect(el('[data-testid="http-code-output"]').textContent).toContain('powershell --url');
+  });
+
+  it('cuts a command line, and lays a program out whatever the switch says', async () => {
+    expect(el<HTMLInputElement>('[data-testid="http-code-multiline"]').disabled).toBe(false);
+
+    el('[data-testid="http-code-target"][data-target="angular"]').click();
+    await vi.waitFor(() => expect(http.callsOf('generateCode').at(-1)?.[0]).toBe('angular'));
+    await fixture.whenStable();
+
+    expect(el<HTMLInputElement>('[data-testid="http-code-multiline"]').disabled).toBe(true);
+    expect(el('[data-testid="http-code-target"][data-target="angular"]').textContent).toContain(
+      'Angular HttpClient',
+    );
   });
 
   it('filters the targets by their name or their library', async () => {

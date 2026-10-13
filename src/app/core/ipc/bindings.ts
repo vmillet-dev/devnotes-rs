@@ -806,6 +806,7 @@ export type CodeOptions = {
 	resolveVariables: boolean,
 	/**  A secret written in clear: the front asks first, every time. */
 	includeSecrets: boolean,
+	/**  A command line's arguments one a line: a program is laid out whatever it says. */
 	multiline: boolean,
 	followRedirects: boolean,
 };
@@ -822,7 +823,7 @@ export type CodeRequestOf = {
 };
 
 /**  What the code is written for; the front lists them and names them. */
-export type CodeTarget = "curl" | "httpie" | "wget" | "powershell";
+export type CodeTarget = "curl" | "httpie" | "wget" | "powershell" | "fetch" | "axios" | "undici" | "angular";
 
 export type CodecDirection = "encode" | "decode";
 
@@ -2034,7 +2035,7 @@ export type KeyValue = {
  *  there instead of being refused at runtime.
  */
 export type Language = "json" | "js" | "ts" | "py" | "rs" | "go" | "java" | "cs" | "php" | "c" | "sql" | "graphql" | "yml" | "toml" | "xml" | "html" | "css" | "scss" | "sh" | 
-/**  PowerShell: chosen, never detected — what generated code is saved as. */
+/**  PowerShell: what generated code is saved as, and what a pasted cmdlet reads as. */
 "ps1" | "md" | 
 /**  Default, and the signal that the front end chose nothing. */
 "txt";

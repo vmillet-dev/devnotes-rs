@@ -3485,7 +3485,8 @@
       "copy": "Copy",
       "copied": "Code copied.",
       "noteTitle": "{{name}} · {{target}}",
-      "noteWhat": "The request’s code, for another tool."
+      "noteWhat": "The request’s code, for another tool.",
+      "multilineShell": "A program is laid out on its own: only a command line is cut."
     }
   }
 }

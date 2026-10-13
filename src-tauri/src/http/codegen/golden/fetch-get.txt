@@ -1,0 +1,9 @@
+const response = await fetch('https://api.exemple.fr/customers/cus_42/invoices?page=1&limit=50', {
+  method: 'GET',
+  headers: {
+    Accept: 'application/json',
+    Authorization: 'Bearer {{accessToken}}',
+  },
+  redirect: 'manual',
+});
+console.log(response.status, await response.text());

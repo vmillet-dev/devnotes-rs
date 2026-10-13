@@ -1,0 +1,14 @@
+import axios from 'axios';
+import { openAsBlob } from 'node:fs';
+
+const form = new FormData();
+form.append('title', 'Facture');
+form.append('scan', await openAsBlob('C:/Users/ada/facture.pdf'), 'facture.pdf');
+const response = await axios.request({
+  method: 'PUT',
+  url: 'https://api.exemple.fr/documents/7',
+  data: form,
+  maxRedirects: 0,
+  validateStatus: () => true,
+});
+console.log(response.status, response.data);

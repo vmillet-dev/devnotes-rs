@@ -1,0 +1,13 @@
+import { HttpHeaders } from '@angular/common/http';
+
+declare const file: File;
+
+this.http
+  .request('POST', 'https://api.exemple.fr/upload', {
+    headers: new HttpHeaders({
+      'Content-Type': 'application/octet-stream',
+    }),
+    body: file,
+    responseType: 'text',
+  })
+  .subscribe((response) => console.log(response));

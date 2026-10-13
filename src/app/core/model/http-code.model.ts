@@ -22,6 +22,10 @@ const ENTRIES: Record<CodeTarget, Omit<CodeTargetEntry, 'id'>> = {
   httpie: { name: 'HTTPie', library: null, group: 'shell' },
   wget: { name: 'wget', library: null, group: 'shell' },
   powershell: { name: 'PowerShell', library: 'Invoke-RestMethod', group: 'shell' },
+  fetch: { name: 'JavaScript', library: 'fetch', group: 'javascript' },
+  axios: { name: 'JavaScript', library: 'axios', group: 'javascript' },
+  undici: { name: 'Node.js', library: 'undici', group: 'javascript' },
+  angular: { name: 'TypeScript', library: 'Angular HttpClient', group: 'javascript' },
 };
 
 export const CODE_TARGETS: readonly CodeTargetEntry[] = (Object.keys(ENTRIES) as CodeTarget[]).map((id) => ({

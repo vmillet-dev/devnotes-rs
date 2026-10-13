@@ -1,0 +1,11 @@
+import { request } from 'undici';
+import { openAsBlob } from 'node:fs';
+
+const { statusCode, body } = await request('https://api.exemple.fr/upload', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/octet-stream',
+  },
+  body: await openAsBlob('/tmp/archive.zip'),
+});
+console.log(statusCode, await body.text());

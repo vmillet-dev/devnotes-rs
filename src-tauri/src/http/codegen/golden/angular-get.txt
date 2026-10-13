@@ -1,0 +1,11 @@
+import { HttpHeaders } from '@angular/common/http';
+
+this.http
+  .request('GET', 'https://api.exemple.fr/customers/cus_42/invoices?page=1&limit=50', {
+    headers: new HttpHeaders({
+      Accept: 'application/json',
+      Authorization: 'Bearer {{accessToken}}',
+    }),
+    responseType: 'text',
+  })
+  .subscribe((response) => console.log(response));
