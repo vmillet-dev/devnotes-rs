@@ -107,6 +107,7 @@ iban_validate = "5.0.1"
 unicode-segmentation = "1.13.3"
 qrcode = { version = "0.14.1", default-features = false }
 ipnet = "2.12.2"
+psl = "2.1.241"
 
 [dev-dependencies]
 # The mock runtime `tests/commands` calls the commands through.

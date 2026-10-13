@@ -2343,7 +2343,24 @@ sealed with the rest — which sites one talks to is not for the file to say —
 stays clear for the purge. The jar is read under the lock before the send, handed to it as a
 copy the hops read and fill (→ "Sending a request, and its answer"), and what they did to it is
 written with the history after it; a `Cookie` header typed by hand wins over the jar, for the
-host it was typed for. The manager
+host it was typed for.
+
+- **A `Domain` is refused where a browser refuses it** (#705): another site's, a public suffix
+  (`co.uk`, `github.io`, a bare top-level domain — the `psl` crate, its list compiled in, about
+  0.7 MB of the binary), and any domain above an IP address, which has none. The host itself,
+  named, is a host-only cookie, as without the attribute.
+- **Of two paths of one length, the older cookie is sent first** (RFC 6265, 5.4): `JarCookie::created`,
+  sealed with the rest — nothing in SQL orders on it —, set by an answer a microsecond apart a
+  line, and kept by a cookie that replaces it. The jar is read in id order, a random UUID, which
+  decided it before.
+- **`Expires` is read as RFC 6265, 5.1.1 reads it** (`cookie_date`): tokens, the first time, day,
+  month and year found, a two-digit year taken to 1970–2069 — RFC 1123, RFC 850, asctime and
+  what servers write between. One that does not read lasts the session.
+- **Reading the whole jar under the lock was measured, not optimised**: 0.48 ms at 500 cookies
+  (`cookie jar` in `benches/commands.rs`), a third of an `update_note`. A keyed hash of the domain
+  in the clear, to read only the candidates, waits for a jar that makes it show.
+
+The manager
 (`CookieJarDialogComponent`, from the rail's foot) lists by domain and deletes one, a domain's
 or all, the count asked of Rust first.
 
@@ -5426,6 +5443,7 @@ in the corpus or worse.
 | `move_notes` / `tag_notes`, 100 notes          | 5.1 ms / 4.2 ms | ×1.9 / ×1.8   |
 | `list_trash`                                   | 4.5 ms          | ×10.5         |
 | `update_note`                                  | 1.5 ms          | ×1.0          |
+| the cookie jar read and unsealed, 500 cookies  | 0.48 ms         | —             |
 | `list_global_placeholders`                     | 1.5 µs          | ×1.0          |
 
 One row does not belong to that shape and is measured for a different reason:
