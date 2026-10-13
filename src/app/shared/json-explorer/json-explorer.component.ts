@@ -1,4 +1,16 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  Injector,
+  afterNextRender,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  untracked,
+  viewChild,
+} from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import {
   JsonEntry,
@@ -60,11 +72,16 @@ export class JsonExplorerComponent {
   readonly toggled = output<JsonEntry>();
   readonly selected = output<string>();
   readonly openedAll = output<void>();
+  readonly collapsedAll = output<void>();
   readonly copied = output<string>();
   readonly shownInCode = output<Span>();
   readonly treeProposed = output<void>();
 
   private readonly graphView = viewChild(JsonGraphComponent);
+  private readonly treeView = viewChild(JsonTreeComponent);
+  private readonly injector = inject(Injector);
+  /** Set by the keys: the entry that had the focus is redrawn by the answer, and the focus goes with it. */
+  private refocusOnAnswer = false;
 
   protected readonly selection = computed<Selected | null>(() => {
     const view = this.view();
@@ -79,7 +96,7 @@ export class JsonExplorerComponent {
     return {
       path: entry.path,
       kind: entry.kind,
-      size: 'size' in entry ? entry.size : 0,
+      size: entry.size,
       preview: entry.value,
       span: entry.span,
     };
@@ -108,6 +125,29 @@ export class JsonExplorerComponent {
     const index = this.matchIndex();
     return index < 0 ? `${count}` : `${index + 1} / ${count}`;
   });
+
+  constructor() {
+    effect(() => {
+      this.view();
+      if (!this.refocusOnAnswer) return;
+      this.refocusOnAnswer = false;
+      untracked(() =>
+        afterNextRender(() => (this.graphView() ?? this.treeView())?.focusCursor(), {
+          injector: this.injector,
+        }),
+      );
+    });
+  }
+
+  /** Shift with an arrow, on the graph or the tree: everything opens, or folds to the root. */
+  protected onSurfaceKeydown(event: KeyboardEvent): void {
+    if (!event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) return;
+    if (event.key === 'ArrowRight') this.openedAll.emit();
+    else if (event.key === 'ArrowLeft') this.collapsedAll.emit();
+    else return;
+    event.preventDefault();
+    this.refocusOnAnswer = true;
+  }
 
   protected isContainer(kind: JsonKind): boolean {
     return CONTAINERS.includes(kind);

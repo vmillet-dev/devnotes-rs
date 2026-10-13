@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { JSON_NODES, jsonView } from '@testing/json-view.fixture';
-import { findSelection, lineage, preview } from './json.model';
+import { JSON_NODES, collapsedJsonView, jsonView } from '@testing/json-view.fixture';
+import { findSelection, lineage, preview, shows, trailOf } from './json.model';
 
 describe('json model', () => {
   const graph = jsonView().graph;
@@ -24,6 +24,39 @@ describe('json model', () => {
 
   it('walks from the root down to a node', () => {
     expect(lineage(graph, JSON_NODES[3]!).map((node) => node.label)).toEqual(['$', 'data', 'lines', '[0]']);
+  });
+
+  it('traces an entry back to the root through the graph, a row included', () => {
+    expect(trailOf(jsonView(), '$.data.lines[0].a')).toEqual([
+      '$',
+      '$.data',
+      '$.data.lines',
+      '$.data.lines[0]',
+      '$.data.lines[0].a',
+    ]);
+    expect(trailOf(jsonView(), '$.data')).toEqual(['$', '$.data']);
+  });
+
+  it('traces it through the depths of the tree where the graph does not draw it', () => {
+    const treeOnly = jsonView({ graph: { nodes: [], width: 0, height: 0, folded: true } });
+
+    expect(trailOf(treeOnly, '$.data.lines[0].a')).toEqual([
+      '$',
+      '$.data',
+      '$.data.lines',
+      '$.data.lines[0]',
+      '$.data.lines[0].a',
+    ]);
+    expect(trailOf(treeOnly, '$.gone')).toEqual(['$.gone']);
+  });
+
+  it('says whether a view draws an entry, as a node, a row or a line', () => {
+    const folded = collapsedJsonView();
+
+    expect(shows(folded, '$')).toBe(true);
+    expect(shows(folded, '$.data')).toBe(true);
+    expect(shows(folded, '$.data.lines')).toBe(false);
+    expect(shows({ ...folded, graph: { ...folded.graph, nodes: [] } }, '$.id')).toBe(true);
   });
 
   it('previews one level, its containers folded', () => {

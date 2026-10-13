@@ -62,6 +62,35 @@ export function lineage(graph: JsonGraph, node: JsonNode): readonly JsonNode[] {
   return chain;
 }
 
+/** Whether the view draws the entry: as a node or a row of the graph, or a line of the tree. */
+export function shows(view: JsonView, path: string): boolean {
+  return findSelection(view.graph, path) !== null || view.tree.some((line) => line.path === path);
+}
+
+/**
+ * The entry and what holds it, outermost first, read from the view's own structure — the
+ * graph's parents, or the tree's depths — so that no path is ever taken apart here.
+ */
+export function trailOf(view: JsonView, path: string): readonly string[] {
+  const found = findSelection(view.graph, path);
+  if (found) {
+    const chain = lineage(view.graph, found.node).map((node) => node.path);
+    return found.kind === 'row' ? [...chain, found.row.path] : chain;
+  }
+  const at = view.tree.findIndex((line) => line.path === path);
+  if (at < 0) return [path];
+  const trail = [path];
+  let depth = view.tree[at]!.depth;
+  for (let index = at - 1; index >= 0 && depth > 0; index--) {
+    const line = view.tree[index]!;
+    if (line.depth < depth) {
+      trail.unshift(line.path);
+      depth = line.depth;
+    }
+  }
+  return trail;
+}
+
 /** One level of the value, its containers folded: what the selection panel previews. */
 export function preview(node: JsonNode): string {
   const object = node.kind === 'object';

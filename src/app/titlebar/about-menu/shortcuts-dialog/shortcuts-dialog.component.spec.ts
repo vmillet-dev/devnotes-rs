@@ -48,7 +48,7 @@ describe('ShortcutsDialogComponent', () => {
     expect(keysFor('palette de collage rapide')).toEqual(['Ctrl', 'Shift', 'K']);
   });
 
-  it('lists the areas, then the groups of the notes and of HTTP, after the global one', async () => {
+  it('lists the areas, then the groups of the notes, of HTTP and of the JSON explorer, after the global one', async () => {
     expect(groupTitles()).toEqual([
       'Globaux (même fenêtre fermée)',
       'Zones',
@@ -56,6 +56,7 @@ describe('ShortcutsDialogComponent', () => {
       'Éditeur',
       'Collage rapide',
       'HTTP',
+      'Visualiseur JSON',
     ]);
     // A row of the rail is moved with the keys too, and nothing on screen said so.
     expect(keysFor('Déplacer une ligne du rail parmi ses voisines')).toEqual(['Alt', '↑ ↓']);
@@ -63,6 +64,7 @@ describe('ShortcutsDialogComponent', () => {
     expect(keysFor('Sortir la ligne de son dossier')).toEqual(['Alt', '←']);
     expect(keysFor('Aller aux outils')).toEqual(['Ctrl', '2']);
     expect(keysFor('champ de recherche')).toEqual(['Ctrl', 'K']);
+    expect(keysFor('Tout replier jusqu’à la racine')).toEqual(['Shift', '←']);
   });
 
   it('draws the separator between two caps rather than writing it', async () => {

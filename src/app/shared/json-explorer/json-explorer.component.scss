@@ -41,11 +41,14 @@
   pointer-events: auto;
 }
 
+// ⚠️ A wrapping row wraps before it shrinks: the field starts small and grows into the room
+// the buttons leave, or they went to a second line, over the graph.
 .search {
   display: flex;
+  flex: 1 1 150px;
   align-items: center;
   gap: 8px;
-  width: 280px;
+  max-width: 280px;
   height: 32px;
   padding: 0 10px;
   @include surface(var(--bg-2), 8px, var(--line));

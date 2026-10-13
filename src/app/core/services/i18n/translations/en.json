@@ -673,7 +673,8 @@
       "editor": "Editor",
       "palette": "Quick paste",
       "areas": "Areas",
-      "http": "HTTP"
+      "http": "HTTP",
+      "json": "JSON explorer"
     },
     "http": {
       "send": "Send the request, or connect the WebSocket",
@@ -719,6 +720,14 @@
       "paste": "Copy the note and close",
       "open": "Open the note",
       "close": "Close the palette"
+    },
+    "json": {
+      "navigate": "Move through the graph or the tree",
+      "toggle": "Open or close the entry",
+      "openAll": "Expand everything",
+      "collapseAll": "Collapse to the root",
+      "nextMatch": "Next match, in the search field",
+      "previousMatch": "Previous match, in the search field"
     }
   },
   "settings": {
@@ -999,6 +1008,9 @@
     "previousMatch": "Previous match (Shift+Enter)",
     "nextMatch": "Next match (Enter)",
     "openAll": "Expand all",
+    "collapseAll": "Collapse all",
+    "openAllKeys": "Expand all (Shift+→)",
+    "collapseAllKeys": "Collapse all (Shift+←)",
     "fit": "Fit to screen",
     "folded": "More than 2,000 nodes: arrays stay folded.",
     "showTree": "Show the tree",

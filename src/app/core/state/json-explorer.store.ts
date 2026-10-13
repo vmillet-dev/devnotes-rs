@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, resource, signal } from '@angular/core';
 import { JsonRepository } from '@core/data/json.repository';
-import { JsonEntry, JsonOpening, JsonQuery, JsonView } from '@core/model/json.model';
+import { JsonEntry, JsonOpening, JsonQuery, JsonView, shows, trailOf } from '@core/model/json.model';
 import { SEARCH_DEBOUNCE_MS, debounced } from '@core/services/time/debounce';
 import { retained } from '@core/utils/retained.util';
 
@@ -31,6 +31,8 @@ export class JsonExplorerStore {
   private readonly _debouncedSearch = signal('');
   private readonly _opening = signal<JsonOpening>({ kind: 'initial' }, { equal: sameOpening });
   private readonly _selectedPath = signal<string | null>(null);
+  /** The selection and what held it when the view last folded: where it falls back to. */
+  private readonly _trail = signal<readonly string[]>([]);
   private readonly _matchIndex = signal(-1);
 
   private readonly commitText = debounced((text: string) => this._text.set(text), TEXT_DEBOUNCE_MS);
@@ -55,7 +57,13 @@ export class JsonExplorerStore {
 
   readonly view = retained<JsonView>(this.viewResource);
   readonly search = this._search.asReadonly();
-  readonly selectedPath = this._selectedPath.asReadonly();
+  /** The selection while the view draws it; folded away, the nearest of its ancestors still drawn. */
+  readonly selectedPath = computed(() => {
+    const path = this._selectedPath();
+    const view = this.view();
+    if (path === null || !view || shows(view, path)) return path;
+    return [...this._trail()].reverse().find((each) => shows(view, each)) ?? path;
+  });
   /** What the view was asked of, for the spans it answers into. */
   readonly text = this._text.asReadonly();
   /** Zero-based among the matches, or -1 before the first step. */
@@ -72,6 +80,7 @@ export class JsonExplorerStore {
     this._debouncedSearch.set('');
     this._opening.set({ kind: 'initial' });
     this._selectedPath.set(null);
+    this._trail.set([]);
     this._matchIndex.set(-1);
   }
 
@@ -96,11 +105,13 @@ export class JsonExplorerStore {
 
   select(path: string): void {
     this._selectedPath.set(path);
+    this._trail.set([]);
   }
 
   /** A container opens, or closes; a value is selected. Either way the entry is the selection. */
   toggle(entry: JsonEntry): void {
     this._selectedPath.set(entry.path);
+    this._trail.set([]);
     if (!entry.opens) return;
 
     const open = this.openPaths();
@@ -112,6 +123,14 @@ export class JsonExplorerStore {
 
   openAll(): void {
     this._opening.set({ kind: 'all' });
+  }
+
+  /** Only the root open — Rust keeps it open whatever is asked. */
+  collapseAll(): void {
+    const view = this.view();
+    const path = this.selectedPath();
+    this._trail.set(view && path !== null ? trailOf(view, path) : []);
+    this._opening.set({ kind: 'paths', paths: [] });
   }
 
   /** To the next match or the previous one, opening what it sits in. */
@@ -129,6 +148,7 @@ export class JsonExplorerStore {
     const path = matches[index]!;
     this._matchIndex.set(index);
     this._selectedPath.set(path);
+    this._trail.set([]);
     this._opening.set({ kind: 'paths', paths: this.openPaths(), reveal: path });
   }
 }

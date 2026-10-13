@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { JsonEntry, Span } from '@core/model/json.model';
 import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
-import { JSON_LINES, JSON_TEXT, jsonView } from '@testing/json-view.fixture';
+import { JSON_LINES, JSON_TEXT, collapsedJsonView, jsonView } from '@testing/json-view.fixture';
 import { JsonExplorerComponent } from './json-explorer.component';
 
 describe('JsonExplorerComponent', () => {
@@ -13,6 +13,7 @@ describe('JsonExplorerComponent', () => {
     toggled: JsonEntry[];
     selected: string[];
     openedAll: number;
+    collapsedAll: number;
     copied: string[];
     shown: Span[];
     treeProposed: number;
@@ -33,6 +34,7 @@ describe('JsonExplorerComponent', () => {
       toggled: [],
       selected: [],
       openedAll: 0,
+      collapsedAll: 0,
       copied: [],
       shown: [],
       treeProposed: 0,
@@ -43,6 +45,7 @@ describe('JsonExplorerComponent', () => {
     explorer.toggled.subscribe((entry) => events.toggled.push(entry));
     explorer.selected.subscribe((path) => events.selected.push(path));
     explorer.openedAll.subscribe(() => events.openedAll++);
+    explorer.collapsedAll.subscribe(() => events.collapsedAll++);
     explorer.copied.subscribe((text) => events.copied.push(text));
     explorer.shownInCode.subscribe((span) => events.shown.push(span));
     explorer.treeProposed.subscribe(() => events.treeProposed++);
@@ -180,11 +183,38 @@ describe('JsonExplorerComponent', () => {
     });
   });
 
-  it('opens everything on asking, and fits the graph', () => {
+  it('opens everything on asking, folds everything back, and fits the graph', () => {
     query('json-open-all').click();
+    query('json-collapse-all').click();
     query('json-fit').click();
 
     expect(events.openedAll).toBe(1);
+    expect(events.collapsedAll).toBe(1);
+    expect(query('json-collapse-all').getAttribute('title')).toContain('Maj+←');
+  });
+
+  it('opens or folds everything with Shift and an arrow, on the graph and on the tree', async () => {
+    const press = (surface: string, key: string, shiftKey = true) =>
+      query(surface).dispatchEvent(
+        new KeyboardEvent('keydown', { key, shiftKey, bubbles: true, cancelable: true }),
+      );
+
+    press('json-graph', 'ArrowLeft');
+    press('json-graph', 'ArrowRight');
+    press('json-graph', 'ArrowUp');
+    await set('mode', 'tree');
+    press('json-tree', 'ArrowLeft');
+    press('json-tree', 'ArrowRight', false);
+
+    expect(events.collapsedAll).toBe(2);
+    expect(events.openedAll).toBe(1);
+  });
+
+  it('counts what a folded container holds, from its row', async () => {
+    await set('view', collapsedJsonView());
+    await set('selectedPath', '$.data');
+
+    expect(text('json-selected-kind')).toBe('Objet · 1 clé');
   });
 
   it('turns a row into an entry to open or close', () => {

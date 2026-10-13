@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { JsonRepository } from '@core/data/json.repository';
 import { FakeJsonRepository } from '@testing/fake-json-repository';
-import { JSON_TEXT, jsonView } from '@testing/json-view.fixture';
+import { JSON_TEXT, collapsedJsonView, jsonView } from '@testing/json-view.fixture';
 import { JsonExplorerStore } from './json-explorer.store';
 
 describe('JsonExplorerStore', () => {
@@ -144,6 +144,52 @@ describe('JsonExplorerStore', () => {
 
     store.step(1);
 
+    expect(store.selectedPath()).toBeNull();
+  });
+
+  it('folds to the root on asking, the selection falling back to the nearest entry still drawn', async () => {
+    store.load(JSON_TEXT);
+    await settle();
+    store.select('$.data.lines[0].a');
+
+    repository.view = collapsedJsonView();
+    store.collapseAll();
+    await settle();
+
+    expect(lastOpening()).toEqual({ kind: 'paths', paths: [] });
+    expect(store.selectedPath()).toBe('$.data');
+
+    // Opened again, the selection is where it was before the fold.
+    repository.view = jsonView();
+    store.openAll();
+    await settle();
+
+    expect(lastOpening()).toEqual({ kind: 'all' });
+    expect(store.selectedPath()).toBe('$.data.lines[0].a');
+  });
+
+  it('keeps a selection the folded view still draws, and forgets the fallback on the next one', async () => {
+    store.load(JSON_TEXT);
+    await settle();
+    store.select('$.id');
+    repository.view = collapsedJsonView();
+    store.collapseAll();
+    await settle();
+    expect(store.selectedPath()).toBe('$.id');
+
+    store.select('$.data.lines');
+
+    expect(store.selectedPath()).toBe('$.data.lines');
+  });
+
+  it('folds with nothing selected, and before any view', async () => {
+    store.collapseAll();
+    store.load(JSON_TEXT);
+    await settle();
+    store.collapseAll();
+    await settle();
+
+    expect(lastOpening()).toEqual({ kind: 'paths', paths: [] });
     expect(store.selectedPath()).toBeNull();
   });
 
