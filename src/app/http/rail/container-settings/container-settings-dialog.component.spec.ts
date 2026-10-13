@@ -32,6 +32,7 @@ describe('ContainerSettingsDialogComponent', () => {
       auth: { kind: 'inherit' },
       headers: [{ enabled: true, key: 'Accept', value: 'text/csv', description: '' }],
       transport: {},
+      variables: [{ enabled: true, name: 'tenant', value: 'acme', kind: 'text' }],
     };
     http.inheritedAnswer = {
       auth: { kind: 'bearer', token: '{{accessToken}}' },
@@ -82,6 +83,7 @@ describe('ContainerSettingsDialogComponent', () => {
           auth: { kind: 'inherit' },
           headers: [{ enabled: true, key: 'Accept', value: 'application/json', description: '' }],
           transport: { timeoutMs: 8000 },
+          variables: [{ enabled: true, name: 'tenant', value: 'acme', kind: 'text' }],
         },
       ],
     ]);

@@ -246,6 +246,11 @@ export const commands = {
 	/**  Each variable's fault by its rank, or none: the table marks the row, the rule is the model's. */
 	checkHttpVariables: (variables: Variable[]) => typedError<(VariableFault | null)[], AppError>(__TAURI_INVOKE("check_http_variables", { variables })),
 	/**
+	 *  The `{{variables}}` a request holds, each with what it resolves to and from where: the
+	 *  editor colours them by it, and names the ones nothing sets before a send does.
+	 */
+	httpVariables: (request: VariablesRequest) => typedError<UsedVariable[], AppError>(__TAURI_INVOKE("http_variables", { request })),
+	/**
 	 *  The second way to look at a space: folders as zones, their notes inside, the loose ones
 	 *  beside them. It reads the whole space and marks what matches rather than narrowing, and
 	 *  draws no folder chips — a chip naming the zone a card sits in is noise.
@@ -832,6 +837,8 @@ export type ContainerSettings = {
 	auth?: RequestAuth,
 	headers?: KeyValue[],
 	transport?: TransportSettings,
+	/**  Over the environment's and the globals', under a folder's and a request's own. */
+	variables?: Variable[],
 };
 
 export type Contrast = {
@@ -2528,6 +2535,8 @@ export type RequestDocument = {
 	websocket?: WebsocketDocument,
 	/**  Over what the folders and the collection set. */
 	transport?: TransportSettings,
+	/**  The nearest level a `{{name}}` resolves from. */
+	variables?: Variable[],
 };
 
 /**
@@ -2596,6 +2605,21 @@ export type SavedMessage = {
 };
 
 /**
+ *  A variable as a request resolves it: the value the nearest level gives it, and the
+ *  levels further away it hides.
+ */
+export type ScopedVariable = {
+	name: string,
+	/**  With every `{{name}}` it holds filled, as it is sent. */
+	value: string,
+	kind: VariableKind,
+	scope: VariableScope,
+	/**  The folder, collection or environment that sets it. */
+	from: string | null,
+	shadows: VariableScope[],
+};
+
+/**
  *  No `Title` variant: a note found by its own title needs no excerpt, which would repeat the
  *  biggest thing on the card. That case is `SearchMatch::Title`.
  */
@@ -2627,6 +2651,11 @@ export type SendRequest = {
 	/**  For the history: what the request is called, and which one it is once saved. */
 	name: string,
 	requestId: string | null,
+	/**
+	 *  The environment its `{{variables}}` resolve from, over the globals; `None` for the
+	 *  globals alone.
+	 */
+	environmentId: string | null,
 };
 
 export type SentBody = { kind: "none" } | 
@@ -2998,6 +3027,12 @@ export type UrlScope =
 /**  A URL as a whole, whose structure stays readable. */
 "whole";
 
+/**  A `{{name}}` a request holds, and what it resolves to — nothing, when no level sets it. */
+export type UsedVariable = {
+	name: string,
+	resolved: ScopedVariable | null,
+};
+
 export type UuidVariant = "ncs" | 
 /**  RFC 9562, which every UUID made today follows. */
 "rfc" | "microsoft" | "future";
@@ -3023,6 +3058,17 @@ export type VariableFault =
 
 /**  A number is checked to be one; a secret is masked wherever it shows. */
 export type VariableKind = "text" | "number" | "secret";
+
+/**  Where a variable resolves from, the nearest first. */
+export type VariableScope = "request" | "folder" | "collection" | "environment" | "globals";
+
+export type VariablesRequest = {
+	kind: RequestKind,
+	document: RequestDocument,
+	collectionId: string | null,
+	folderId: string | null,
+	environmentId: string | null,
+};
 
 /**  What the front end renders before it renders anything else. */
 export type VaultState = 
@@ -3078,6 +3124,7 @@ export type WebsocketRequest = {
 	document: RequestDocument,
 	collectionId: string | null,
 	folderId: string | null,
+	environmentId: string | null,
 };
 
 /**  The first character UTF-8 writes in more than one byte: « é » takes 2. */

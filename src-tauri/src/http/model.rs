@@ -1,6 +1,7 @@
 //! The HTTP collections as the interface sees them: a tree of collections, folders and
 //! requests, a request's sealed document, and where an item can be moved to.
 
+use super::environments::Variable;
 use super::graphql::GraphqlDocument;
 use super::transport::TransportSettings;
 use super::websocket::WebsocketDocument;
@@ -8,11 +9,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-use std::collections::BTreeMap;
-
 use crate::closed_enum::closed_enum;
 use crate::error::ValidationError;
-use crate::notes::placeholder;
 
 closed_enum! {
     pub enum HttpMethod {
@@ -71,6 +69,8 @@ pub struct ContainerSettings {
     pub auth: RequestAuth,
     pub headers: Vec<KeyValue>,
     pub transport: TransportSettings,
+    /// Over the environment's and the globals', under a folder's and a request's own.
+    pub variables: Vec<Variable>,
 }
 
 /// What a request sends as its body. A file is a path, read by Rust when the request is sent:
@@ -202,6 +202,8 @@ pub struct RequestDocument {
     pub websocket: WebsocketDocument,
     /// Over what the folders and the collection set.
     pub transport: TransportSettings,
+    /// The nearest level a `{{name}}` resolves from.
+    pub variables: Vec<Variable>,
 }
 
 /// A row of a request's parameters or headers.
@@ -237,21 +239,13 @@ pub enum HeaderFault {
 /// What an HTTP token holds beside letters and digits (RFC 9110, 5.6.2).
 const TOKEN_MARKS: &[u8] = b"!#$%&'*+-.^_`|~";
 
-/// A `{{variable}}` stands for a letter: what it resolves to is the send's to judge.
-fn with_variables_filled(text: &str) -> String {
-    let stand_ins = placeholder::parse(text, &BTreeMap::new())
-        .into_iter()
-        .map(|found| (found.name, "x".to_string()))
-        .collect();
-    placeholder::fill(text, &stand_ins)
-}
-
 /// What stops a header from being sent, if anything: its name is an HTTP token — no space, no
 /// colon, no accent —, its value holds no line break nor any other control character. Nothing
 /// checked a name, and one typed with its value in it failed every request under its folder.
 #[must_use]
 pub fn header_fault(name: &str, value: &str) -> Option<HeaderFault> {
-    let name = with_variables_filled(name.trim());
+    // A `{{variable}}` stands for a letter: what it resolves to is the send's to judge.
+    let name = super::variables::as_letters(name.trim());
     if name.is_empty()
         || !name
             .bytes()

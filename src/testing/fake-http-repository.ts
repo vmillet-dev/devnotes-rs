@@ -32,6 +32,7 @@ import {
   RequestParts,
   toParts,
 } from '@core/model/http.model';
+import { UsedVariable } from '@core/model/http-environment.model';
 
 export interface HttpCall {
   readonly command: string;
@@ -51,7 +52,12 @@ interface Synced {
 export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpRepository> {
   tree$: HttpTree = { collections: [] };
   contentsAnswer: HttpContents = { folders: 0, requests: 0 };
-  settingsAnswer: ContainerSettingsDraft = { auth: { kind: 'inherit' }, headers: [], transport: {} };
+  settingsAnswer: ContainerSettingsDraft = {
+    auth: { kind: 'inherit' },
+    headers: [],
+    transport: {},
+    variables: [],
+  };
   inheritedAnswer: InheritedParts = {
     auth: { kind: 'none' },
     authFrom: null,
@@ -61,6 +67,10 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
   /** The jar by domain; the deletes take from it as Rust would. */
   jar: CookieDomain[] = [];
   bodyAnswer: BodyAnswer = { contentType: null, problem: null, unusual: false };
+  /** What `variables` answers: Rust resolves, the spec says what it would. */
+  usedAnswer: UsedVariable[] = [];
+  /** The environment each send and each connection named, in order. */
+  readonly sentWith: (string | null)[] = [];
   /** What `checkHeaders` answers, by rank; and the rows `readHeaders` reads from a text. */
   headerFaults: (HeaderFault | null)[] = [];
   headersRead: KeyValueRow[] = [];
@@ -228,12 +238,22 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
     return this.pendingImplied ?? answer;
   }
 
+  variables(
+    draft: RequestDraft,
+    place: { collectionId: string; folderId: string | null } | null,
+    environmentId: string | null,
+  ): Promise<UsedVariable[]> {
+    return this.record('variables', [draft, place, environmentId], () => this.usedAnswer);
+  }
+
   send(
     id: string,
     draft: RequestDraft,
     place: { collectionId: string; folderId: string | null } | null,
     requestId: string | null = null,
+    environmentId: string | null = null,
   ): Promise<SentResponse> {
+    this.sentWith.push(environmentId);
     const pending = this.pendingSend;
     this.pendingSend = null;
     return this.record('send', [id, draft, place, requestId], () => this.response).then(
@@ -352,7 +372,9 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
     id: string,
     parts: RequestParts,
     place: { collectionId: string; folderId: string | null } | null,
+    environmentId: string | null = null,
   ): Promise<void> {
+    this.sentWith.push(environmentId);
     return this.record('connectWebsocket', [id, parts, place], () => undefined);
   }
 

@@ -2,7 +2,9 @@
   <div #mirror class="mirror" aria-hidden="true" data-testid="http-url-mirror">
     @for (piece of pieces(); track $index) {
       @if (piece.variable) {
-        <span class="variable" data-testid="http-url-variable">{{ piece.text }}</span>
+        <span class="variable" data-testid="http-url-variable" [attr.data-scope]="piece.scope">{{
+          piece.text
+        }}</span>
       } @else {
         <span>{{ piece.text }}</span>
       }

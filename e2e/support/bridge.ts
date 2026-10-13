@@ -25,6 +25,8 @@ import type {
   HttpRequest,
   HttpRequestDraft,
   HttpEnvironments,
+  Environment,
+  EnvironmentPatch,
   HttpTree,
   NoteFiling,
   ExportReport,
@@ -126,6 +128,9 @@ export const bridge = {
   clearHttpHistory: () => invoke<number>('clear_http_history'),
   clearHttpCookies: () => invoke<number>('clear_http_cookies'),
   httpEnvironments: () => invoke<HttpEnvironments>('http_environments'),
+  createHttpEnvironment: (name: string) => invoke<Environment>('create_http_environment', { name }),
+  saveHttpEnvironment: (id: string, patch: EnvironmentPatch) =>
+    invoke<Environment>('save_http_environment', { id, patch }),
   deleteHttpEnvironment: (id: string) => invoke<null>('delete_http_environment', { id }),
   countHttpContents: (item: HttpItem) => invoke<HttpContents>('count_http_contents', { item }),
   deleteHttpItem: (item: HttpItem) => invoke<null>('delete_http_item', { item }),

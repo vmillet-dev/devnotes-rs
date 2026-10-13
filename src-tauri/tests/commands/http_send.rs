@@ -116,6 +116,7 @@ fn request(url: &str) -> SendRequest {
         folder_id: None,
         name: "Ping".to_string(),
         request_id: None,
+        environment_id: None,
     }
 }
 
@@ -202,6 +203,165 @@ fn a_request_leaves_with_what_its_collection_hands_down_and_its_answer_comes_bac
     assert!(head.contains("accept: application/json\r\n"));
     assert!(head.contains("content-type: application/json\r\n"));
     assert_eq!(seen.body, b"{\"name\":\"Ada\"}");
+}
+
+fn variable(name: &str, value: &str) -> devnotes_lib::http::environments::Variable {
+    devnotes_lib::http::environments::Variable {
+        name: name.to_string(),
+        value: value.to_string(),
+        ..Default::default()
+    }
+}
+
+/// A request in a folder of a collection, each level setting variables, sent with Staging
+/// over globals that would send it nowhere.
+fn layered(session: &Session, port: u16) -> SendRequest {
+    use devnotes_lib::http::environments::{EnvironmentPatch, VariableKind};
+    use devnotes_lib::http::{
+        create_http_environment, create_http_folder, save_http_environment, save_http_globals,
+    };
+
+    let api = session
+        .call(|app| create_http_collection("API".to_string(), app))
+        .unwrap();
+    let invoices = session
+        .call(|app| create_http_folder(api.id.clone(), None, "Factures".to_string(), app))
+        .unwrap();
+    for (kind, id, variables) in [
+        (
+            HttpItemKind::Collection,
+            &api.id,
+            vec![variable("tenant", "acme"), variable("page", "9")],
+        ),
+        (
+            HttpItemKind::Folder,
+            &invoices.id,
+            vec![variable("page", "3")],
+        ),
+    ] {
+        let item = HttpItem {
+            kind,
+            id: id.clone(),
+        };
+        let settings = ContainerSettings {
+            variables,
+            ..ContainerSettings::default()
+        };
+        session
+            .call(|app| save_http_settings(item, settings, app))
+            .unwrap();
+    }
+    let staging = session
+        .call(|app| create_http_environment("Staging".to_string(), app))
+        .unwrap();
+    let mut token = variable("token", "t0k3n");
+    token.kind = VariableKind::Secret;
+    let patch = EnvironmentPatch {
+        variables: Some(vec![
+            variable("baseUrl", &format!("http://127.0.0.1:{port}")),
+            token,
+            variable("tenant", "staging-tenant"),
+        ]),
+        ..EnvironmentPatch::default()
+    };
+    session
+        .call(|app| save_http_environment(staging.id.clone(), patch, app))
+        .unwrap();
+    session
+        .call(|app| save_http_globals(vec![variable("baseUrl", "http://nowhere.invalid")], app))
+        .unwrap();
+
+    let mut sent = request("{{baseUrl}}/invoices?page={{page}}&size={{size}}");
+    sent.method = HttpMethod::Post;
+    sent.collection_id = Some(api.id);
+    sent.folder_id = Some(invoices.id);
+    sent.environment_id = Some(staging.id);
+    sent.document.variables = vec![variable("size", "50")];
+    sent.document.headers = vec![KeyValue {
+        key: "X-Tenant".to_string(),
+        value: "{{tenant}}".to_string(),
+        ..KeyValue::default()
+    }];
+    sent.document.auth = RequestAuth::Bearer {
+        token: "{{token}}".to_string(),
+    };
+    sent.document.body = RequestBody::Json {
+        text: r#"{"tenant":"{{tenant}}"}"#.to_string(),
+    };
+    sent
+}
+
+/// #486: the nearest level wins — the request's own, a folder's, the collection's, the
+/// environment chosen, the globals — in the URL, a header, the body and the auth.
+#[test]
+fn a_variable_is_sent_as_the_nearest_level_sets_it() {
+    use devnotes_lib::http::variables::VariableScope;
+    use devnotes_lib::http::{VariablesRequest, http_variables};
+
+    let session = Session::open();
+    let (port, seen) = serve(1, |_, _| response("200 OK", &[], b"ok"));
+    let sent = layered(&session, port);
+
+    let asked = VariablesRequest {
+        kind: RequestKind::Http,
+        document: sent.document.clone(),
+        collection_id: sent.collection_id.clone(),
+        folder_id: sent.folder_id.clone(),
+        environment_id: sent.environment_id.clone(),
+    };
+    let used = session.call(|app| http_variables(asked, app)).unwrap();
+    let scopes: Vec<(&str, Option<VariableScope>)> = used
+        .iter()
+        .map(|known| {
+            (
+                known.name.as_str(),
+                known.resolved.as_ref().map(|found| found.scope),
+            )
+        })
+        .collect();
+    assert_eq!(
+        scopes,
+        [
+            ("baseUrl", Some(VariableScope::Environment)),
+            ("page", Some(VariableScope::Folder)),
+            ("size", Some(VariableScope::Request)),
+            // The collection is nearer than the environment.
+            ("tenant", Some(VariableScope::Collection)),
+            ("token", Some(VariableScope::Environment)),
+        ]
+    );
+
+    session.call(|app| send_http_request(sent, app)).unwrap();
+    let seen = seen.recv().unwrap();
+    assert!(
+        seen.head
+            .starts_with("POST /invoices?page=3&size=50 HTTP/1.1\r\n"),
+        "{}",
+        seen.head
+    );
+    assert_eq!(header_of(&seen, "x-tenant").as_deref(), Some("acme"));
+    assert_eq!(
+        header_of(&seen, "authorization").as_deref(),
+        Some("Bearer t0k3n")
+    );
+    assert_eq!(seen.body, br#"{"tenant":"acme"}"#);
+}
+
+/// Fork C: a name no level sets is refused by name, and nothing leaves.
+#[test]
+fn a_variable_set_nowhere_stops_the_send_by_its_name() {
+    let session = Session::open();
+    let mut sent = request("http://127.0.0.1:9/tenants/{{tenantId}}");
+    sent.document.variables = vec![variable("other", "1")];
+
+    let answer = session.call(|app| send_http_request(sent, app));
+
+    let name = answer
+        .as_ref()
+        .err()
+        .and_then(|error| error.params.get("name").cloned());
+    assert_eq!(code(answer), ErrorCode::HttpVariable);
+    assert_eq!(name.as_deref(), Some("tenantId"));
 }
 
 /// `api.github.com` answers 403 to a request that names no agent: none was sent.

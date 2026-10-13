@@ -82,7 +82,15 @@ export class HttpSendStore {
     const previous = this._states().get(tab.key);
     const sendId = `${tab.key}#${++this.sends}`;
     this.set(tab.key, { phase: 'sending', sendId, startedAt: Date.now() });
-    const sent = this.repository.send(sendId, tab.draft, tab.place, tab.requestId);
+    // A table still being typed in is written first: the send resolves from what Rust holds.
+    await this.environments.flush();
+    const sent = this.repository.send(
+      sendId,
+      tab.draft,
+      tab.place,
+      tab.requestId,
+      this.environments.active()?.id ?? null,
+    );
     if (previous) void this.release(previous.sendId);
     try {
       const response = await sent;

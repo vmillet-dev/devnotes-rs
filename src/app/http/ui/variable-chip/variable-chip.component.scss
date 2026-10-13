@@ -1,0 +1,148 @@
+@use 'mixins' as *;
+
+:host {
+  display: inline-flex;
+}
+
+// The hue of where it resolves from: the URL's copy wears the same one.
+.chip {
+  --variable-hue: var(--amber-text);
+  --variable-rgb: var(--amber-rgb);
+  position: relative;
+  display: inline-flex;
+
+  &[data-scope='request'] {
+    --variable-hue: var(--green);
+    --variable-rgb: var(--green-rgb);
+  }
+
+  &[data-scope='folder'] {
+    --variable-hue: var(--teal);
+    --variable-rgb: var(--teal-rgb);
+  }
+
+  &[data-scope='collection'] {
+    --variable-hue: var(--blue);
+    --variable-rgb: var(--blue-rgb);
+  }
+
+  &[data-scope='globals'] {
+    --variable-hue: var(--pink);
+    --variable-rgb: var(--pink-rgb);
+  }
+
+  &[data-scope='none'] {
+    --variable-hue: var(--red);
+    --variable-rgb: var(--red-rgb);
+  }
+}
+
+.name {
+  @include unstyled-control;
+  @include hit-target;
+  @include focus-ring;
+  padding: 0 7px;
+  border-radius: 6px;
+  background: rgba(var(--variable-rgb), 0.14);
+  font-family: var(--font-mono), monospace;
+  font-size: 11.5px;
+  color: var(--variable-hue);
+  cursor: default;
+
+  [data-scope='none'] & {
+    text-decoration: underline wavy rgba(var(--red-rgb), 0.8);
+    text-underline-offset: 3px;
+  }
+}
+
+// Shown while the chip is pointed at or holds the focus, so its button can be reached.
+.tip {
+  @include surface(var(--bg-2), 9px, var(--line));
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  width: max-content;
+  max-width: 320px;
+  padding: 10px 12px;
+  box-shadow: var(--shadow-dropdown);
+  font-size: 12px;
+  color: var(--text-1);
+
+  .chip:hover &,
+  .chip:focus-within & {
+    display: flex;
+  }
+}
+
+.tip-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.tip-name {
+  font-family: var(--font-mono), monospace;
+  font-weight: 600;
+  color: var(--variable-hue);
+}
+
+.tip-from {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-2);
+
+  &.missing {
+    color: var(--red);
+  }
+}
+
+.tip-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--bg-0);
+
+  app-icon {
+    flex-shrink: 0;
+    color: var(--purple);
+  }
+}
+
+.value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono), monospace;
+  color: var(--text-0);
+}
+
+.tip-action {
+  @include unstyled-control;
+  @include focus-ring;
+  flex-shrink: 0;
+  margin-left: auto;
+  font-size: 11.5px;
+  color: var(--amber-text);
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.tip-shadows {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+.shadow {
+  text-decoration: line-through;
+}

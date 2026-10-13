@@ -1,0 +1,71 @@
+@let used = variable();
+@let found = used.resolved;
+<span
+  class="chip"
+  data-testid="http-used-variable"
+  [attr.data-name]="used.name"
+  [attr.data-scope]="found?.scope ?? 'none'"
+  (focusout)="leave($event)"
+  (pointerleave)="leave($event)"
+>
+  <button type="button" class="name" [attr.aria-describedby]="tipId()">
+    {{ written() }}
+  </button>
+  <span class="tip" role="tooltip" data-testid="http-used-variable-tip" [id]="tipId()">
+    @if (found) {
+      <span class="tip-head">
+        <code class="tip-name">{{ used.name }}</code>
+        <span class="tip-from">
+          {{ 'http.variables.used.from.' + found.scope | transloco: { name: found.from ?? '' } }}
+          @if (secret()) {
+            · {{ 'http.variables.used.secret' | transloco }}
+          }
+        </span>
+      </span>
+      <span class="tip-value">
+        @if (secret()) {
+          <app-icon name="lock" />
+        }
+        <code class="value" data-testid="http-used-variable-value">{{
+          secret() && !revealed() ? '••••••••' : found.value
+        }}</code>
+        @if (secret()) {
+          <button
+            type="button"
+            class="tip-action"
+            data-testid="http-used-variable-reveal"
+            [attr.aria-pressed]="revealed()"
+            (click)="toggleReveal()"
+          >
+            {{ (revealed() ? 'http.variables.used.hide' : 'http.variables.used.reveal') | transloco }}
+          </button>
+        }
+      </span>
+      @if (found.shadows.length > 0) {
+        <span class="tip-shadows">
+          {{ 'http.variables.used.shadows' | transloco }}
+          @for (scope of found.shadows; track $index) {
+            <span class="shadow">{{ 'http.variables.used.scopes.' + scope | transloco }}</span>
+          }
+        </span>
+      }
+    } @else {
+      <span class="tip-head">
+        <code class="tip-name">{{ used.name }}</code>
+        <span class="tip-from missing">{{ 'http.variables.used.none' | transloco }}</span>
+      </span>
+      <button
+        type="button"
+        class="tip-action"
+        data-testid="http-used-variable-define"
+        (click)="defined.emit(used.name)"
+      >
+        {{
+          defineIn() === null
+            ? ('http.variables.used.defineGlobals' | transloco)
+            : ('http.variables.used.define' | transloco: { name: defineIn() })
+        }}
+      </button>
+    }
+  </span>
+</span>
