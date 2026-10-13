@@ -586,6 +586,7 @@ fn marked_cookie(library: &mut Library) {
         secure: true,
         http_only: true,
         same_site: None,
+        created: None,
     };
     jar::apply(library, &[Change::Set(cookie)], t1()).unwrap();
     assert_eq!(jar::count(library).unwrap(), 1);

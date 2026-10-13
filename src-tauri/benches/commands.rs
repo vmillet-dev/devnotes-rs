@@ -364,9 +364,54 @@ fn unlock(c: &mut Criterion) {
     group.finish();
 }
 
+/// #705: the jar is sealed whole and read entire under the lock before every send. At 500
+/// cookies — tens is the usual —, what a send waits on before it leaves.
+fn cookie_jar(c: &mut Criterion) {
+    use devnotes_lib::http::cookies::{self, Change, JarCookie};
+
+    let scratch = tempfile::tempdir().expect("a temporary directory");
+    let mut library = devnotes_lib::db::open(
+        &scratch.path().join("jar.sqlite3"),
+        devnotes_lib::db::test_vault().expect("a key"),
+    )
+    .expect("a library");
+    let changes: Vec<Change> = (0..500)
+        .map(|at| {
+            Change::Set(JarCookie {
+                name: format!("cookie-{at}"),
+                value: "v".repeat(64),
+                domain: format!("site-{}.exemple.fr", at % 50),
+                host_only: false,
+                path: "/".to_string(),
+                expires: None,
+                secure: false,
+                http_only: true,
+                same_site: None,
+                created: Some(now()),
+            })
+        })
+        .collect();
+    cookies::store::apply(&mut library, &changes, now()).expect("a filled jar");
+    let url = url::Url::parse("https://site-7.exemple.fr/invoices").expect("a URL");
+
+    let mut group = c.benchmark_group("cookie jar, 500 cookies");
+    group.bench_function("jar, read and unsealed", |b| {
+        b.iter(|| black_box(cookies::store::jar(&mut library, now()).expect("the jar")));
+    });
+    group.bench_function("jar, then the line one request carries", |b| {
+        b.iter(|| {
+            let jar = cookies::store::jar(&mut library, now()).expect("the jar");
+            black_box(cookies::header_for(&jar, &url, now()))
+        });
+    });
+    group.finish();
+    drop(library);
+}
+
 criterion_group!(
     benches,
     whole_corpus_read,
+    cookie_jar,
     single_write,
     body_writes,
     bulk,

@@ -1671,6 +1671,7 @@ mod tests {
             secure: false,
             http_only: false,
             same_site: None,
+            created: None,
         }];
         let get = |url: &str, headers: &[(&str, &str)]| hop(reqwest::Method::GET, url, headers);
 

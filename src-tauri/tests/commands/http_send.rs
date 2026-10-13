@@ -1010,8 +1010,11 @@ fn an_answer_fills_the_jar_the_next_request_carries_it_and_the_manager_empties_i
     let heads: Vec<String> = seen.iter().take(3).map(|seen| seen.head).collect();
     assert!(!heads[0].to_ascii_lowercase().contains("cookie:"));
     let carried = heads[1].to_ascii_lowercase();
-    assert!(carried.contains("cookie: "), "{carried}");
-    assert!(carried.contains("session=abc") && carried.contains("theme=dark"));
+    // Two of one path length go back in the order they were set (#705).
+    assert!(
+        carried.contains("cookie: session=abc; theme=dark\r\n"),
+        "{carried}"
+    );
     assert!(!heads[2].to_ascii_lowercase().contains("cookie:"));
 
     let domains = session.call(http_cookies).unwrap();
