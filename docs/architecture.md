@@ -1406,9 +1406,9 @@ A to Z). The choice is the library's (`devnotes.notes.arrangement` in
 `LibraryPreferencesService`), read when the notes page opens — the library's preferences are
 open by then — and written on every change; `readArrangement` trusts the file no further
 than it reads, a value it cannot name staying default. The button leaves the topbar while
-the board shows, which orders nothing. ⚠️ At the size the application ships with, the topbar
-holds one row with a few pixels to spare (`06-search-and-filters` measures it): below
-1280 px the button is a glyph, the order in its tooltip.
+the board shows, which orders nothing. ⚠️ At the size the application ships with and the
+rail open, the topbar holds one row with a few pixels to spare (`06-search-and-filters`
+measures it): below 1280 px the button is a glyph, the order in its tooltip.
 
 **A priority is filtered the same way** (`NotesQuery.priorities`, `priority_counts`), both
 counted by one helper, `view::counted`; its rail reads the levels from the most pressing
@@ -1715,9 +1715,31 @@ itself. Four changes got it there:
   where it was, it hung against the window and covered the search field.
 
 ⚠️ **The measurement is the spec**, in `06-search-and-filters`: at 1100x720 with the rail
-open, every topbar child shares a row, the row does not overflow, the first card is in the
+open, every topbar control shares a row, the row does not overflow, the first card is in the
 top half, and ticking one moves nothing. That is the thing that will regress, and the only
 way to catch it is to measure the assembled application.
+
+**The rail hidden, the row holds more, and two rows are a choice.** Hiding the rail hands the
+topbar the space and folder switchers. Squeezed, they broke their labels onto two lines and
+the quick filter stood as a column of three; the row grew to the tallest of them. Now **no
+control breaks its label** (every one is `flex-shrink: 0`, the quick filter included). Three
+give way, in order:
+
+1. the search, which only grows into what is left, down to its floor;
+2. the two switchers, whose names are cut with an ellipsis and whole in their title. Each of
+   these three has a floor of its own (`data-floor`, `FLOORS` in `notes-header`);
+3. past that, the topbar is **two rows on purpose** (`TwoRowsDirective`, `shared/directives/`).
+   Above is where one is: the rail, the trash, the space, the view and the folder, and
+   « Nouvelle note » ending the row. Below is how one looks: the search, the quick filter,
+   the order and the filters.
+
+The two groups are `display: contents` in one row and the two lines of a grid in two. The
+directive decides from the floors, not from the widths drawn. Those widths differ between one
+row and two, so an answer read off them would flip back and forth. In two rows the floors
+drop (the search to 140 px, its shortcut hint and count hidden by a container query), so that
+the window's 640 px floor holds with the rail open too. `06-search-and-filters` measures the
+rail hidden at 1330 px (one row), 1100 px and 640 px (two rows, « Nouvelle note » on the
+first), and at 640 px with the rail open: no overflow, and no control taller than one line.
 
 ### Nothing wears the operating system's chrome, except one popup
 

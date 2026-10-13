@@ -11,6 +11,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  // Narrowed by the header as the space switcher is: the name cut, whole in the title.
+  max-width: 100%;
   padding: 6px 12px;
   cursor: pointer;
   font-size: 12px;
@@ -21,13 +23,21 @@
   @include accent-state;
 }
 
-.chev {
-  color: var(--text-2);
-  font-size: 11px;
+.folder-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+.chev,
 .folder-icon {
+  flex-shrink: 0;
   color: var(--text-2);
+}
+
+.chev {
+  font-size: 11px;
 }
 
 // The square is the whole point: a round, tinted pill is what a tag is.

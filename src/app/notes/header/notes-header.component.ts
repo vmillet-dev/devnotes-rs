@@ -18,6 +18,7 @@ import {
   SegmentedChoiceComponent,
 } from '@shared/controls/segmented-choice/segmented-choice.component';
 import { IconComponent } from '@shared/icon/icon.component';
+import { TwoRowsDirective } from '@shared/directives/two-rows.directive';
 import { FacetsPanelComponent } from './facets-panel/facets-panel.component';
 import { SortMenuComponent } from './sort-menu/sort-menu.component';
 import { FolderBreadcrumbComponent } from './folder-breadcrumb/folder-breadcrumb.component';
@@ -35,6 +36,15 @@ const QUICK_FILTERS: readonly Segment[] = (['all', 'pinned', 'untriaged'] as con
   labelKey: `filters.${key}`,
 }));
 
+/**
+ * How narrow the search and the two switchers get: in one row, before the header takes two;
+ * in two, before it would overflow at the window's floor with the rail open.
+ */
+const FLOORS = {
+  search: { oneRow: 220, twoRows: 140 },
+  switcher: { oneRow: 110, twoRows: 72 },
+} as const;
+
 /** Above the canvas: the topbar, and the facets it discloses. */
 @Component({
   selector: 'app-notes-header',
@@ -50,6 +60,7 @@ const QUICK_FILTERS: readonly Segment[] = (['all', 'pinned', 'untriaged'] as con
     ViewSwitchComponent,
     NewNoteButtonComponent,
     RailToggleComponent,
+    TwoRowsDirective,
     TranslocoPipe,
   ],
   templateUrl: './notes-header.component.html',
@@ -71,6 +82,7 @@ export class NotesHeaderComponent {
   private readonly bindings = inject(ShortcutBindingsStore);
 
   protected readonly quickFilters = QUICK_FILTERS;
+  protected readonly floors = FLOORS;
 
   /**
    * The disclosure is the header's and not the panel's: the trigger lives in the topbar

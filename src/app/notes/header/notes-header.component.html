@@ -1,99 +1,114 @@
-<div class="topbar">
-  <app-rail-toggle
-    testId="library-rail-toggle"
-    [shown]="settings.showLibraryRail()"
-    (toggled)="settings.toggleLibraryRail()"
-  />
-  <!-- Away from the filters and from the primary action: it is a view on the notes, not a
-       filter. -->
-  <button
-    type="button"
-    class="trash-btn"
-    data-testid="trash-open"
-    [attr.aria-label]="'notes.trash' | transloco"
-    [attr.title]="'notes.trash' | transloco"
-    (click)="trash.open()"
-  >
-    <app-icon name="trash" />
-  </button>
-  @if (folders.activeFolder(); as openFolder) {
-    <app-folder-breadcrumb
-      [folder]="openFolder"
-      [spaceName]="spaces.activeSpace()?.name ?? null"
-      [selectableCount]="canvas.visibleNotes().length"
-      (closed)="folders.selectFolder(null)"
-      (selectRequested)="selection.checkFolder($event)"
+<!-- Where one is, then how one looks: when one row does not hold, they are its two rows,
+     « Nouvelle note » ending the first. -->
+<div class="topbar" appTwoRows #rows="appTwoRows">
+  <div class="where" data-group>
+    <app-rail-toggle
+      testId="library-rail-toggle"
+      [shown]="settings.showLibraryRail()"
+      (toggled)="settings.toggleLibraryRail()"
     />
-  } @else {
-    <!-- Not while the rail is showing: two places to change space is how a tree and a
-     dropdown drift apart. -->
-    @if (!settings.showLibraryRail()) {
-      <app-space-switcher
-        [spaces]="spaces.spaces()"
-        [activeSpace]="spaces.activeSpace()"
-        (spaceChanged)="spaces.selectSpace($event)"
-        (spaceCreated)="spaces.createSpace($event)"
+    <!-- Away from the filters and from the primary action: it is a view on the notes, not a
+         filter. -->
+    <button
+      type="button"
+      class="trash-btn"
+      data-testid="trash-open"
+      [attr.aria-label]="'notes.trash' | transloco"
+      [attr.title]="'notes.trash' | transloco"
+      (click)="trash.open()"
+    >
+      <app-icon name="trash" />
+    </button>
+    @if (folders.activeFolder(); as openFolder) {
+      <app-folder-breadcrumb
+        [folder]="openFolder"
+        [spaceName]="spaces.activeSpace()?.name ?? null"
+        [selectableCount]="canvas.visibleNotes().length"
+        (closed)="folders.selectFolder(null)"
+        (selectRequested)="selection.checkFolder($event)"
+      />
+    } @else {
+      <!-- Not while the rail is showing: two places to change space is how a tree and a
+           dropdown drift apart. -->
+      @if (!settings.showLibraryRail()) {
+        <app-space-switcher
+          class="narrows"
+          [attr.data-floor]="floors.switcher.oneRow"
+          [style.min-width.px]="rows.twoRows() ? floors.switcher.twoRows : floors.switcher.oneRow"
+          [spaces]="spaces.spaces()"
+          [activeSpace]="spaces.activeSpace()"
+          (spaceChanged)="spaces.selectSpace($event)"
+          (spaceCreated)="spaces.createSpace($event)"
+        />
+      }
+      <app-view-switch
+        [mode]="board.mode()"
+        [boardAvailable]="board.canShowBoard()"
+        (modeChanged)="board.setMode($event)"
+      />
+      @if (!settings.showLibraryRail()) {
+        <app-folder-switcher
+          class="narrows"
+          [attr.data-floor]="floors.switcher.oneRow"
+          [style.min-width.px]="rows.twoRows() ? floors.switcher.twoRows : floors.switcher.oneRow"
+          [folders]="folders.folders()"
+          [activeFolder]="folders.activeFolder()"
+          [canCreate]="spaces.activeSpaceId() !== null"
+          (folderChanged)="folders.selectFolder($event)"
+          (folderCreated)="folders.createFolder($event)"
+        />
+      }
+    }
+  </div>
+  <div class="how" data-group>
+    <app-search-box
+      class="narrows"
+      [attr.data-floor]="floors.search.oneRow"
+      [style.min-width.px]="rows.twoRows() ? floors.search.twoRows : floors.search.oneRow"
+      [query]="canvas.searchQuery()"
+      [shortcutEnabled]="searchShortcutEnabled()"
+      [matched]="board.isBoard() ? board.matched() : canvas.matched()"
+      (textCleared)="canvas.setSearchQuery('')"
+      (queryChange)="canvas.setSearchQuery($event)"
+    />
+    <!-- Three states of one thing, so one control: four chips read as four filters
+         that could be combined, and took the width of four. -->
+    <app-segmented-choice
+      [kind]="'quick-filter'"
+      [label]="'filters.groupLabel' | transloco"
+      [segments]="quickFilters"
+      [currentId]="canvas.activeFilter()"
+      (chosen)="onQuickFilter($event)"
+    />
+    <!-- It orders nothing on the board, which keeps the places its cards were given. -->
+    @if (!board.isShowing()) {
+      <app-sort-menu
+        [arrangement]="canvas.arrangement()"
+        (orderChosen)="canvas.setOrder($event)"
+        (groupingChosen)="canvas.setGrouping($event)"
+        (pinnedFirstChosen)="canvas.setPinnedFirst($event)"
       />
     }
-    <app-view-switch
-      [mode]="board.mode()"
-      [boardAvailable]="board.canShowBoard()"
-      (modeChanged)="board.setMode($event)"
-    />
-  }
-  <app-search-box
-    [query]="canvas.searchQuery()"
-    [shortcutEnabled]="searchShortcutEnabled()"
-    [matched]="board.isBoard() ? board.matched() : canvas.matched()"
-    (textCleared)="canvas.setSearchQuery('')"
-    (queryChange)="canvas.setSearchQuery($event)"
-  />
-  <!-- Three states of one thing, so one control: four chips read as four filters
-       that could be combined, and took the width of four. -->
-  <app-segmented-choice
-    [kind]="'quick-filter'"
-    [label]="'filters.groupLabel' | transloco"
-    [segments]="quickFilters"
-    [currentId]="canvas.activeFilter()"
-    (chosen)="onQuickFilter($event)"
-  />
-  <!-- It orders nothing on the board, which keeps the places its cards were given. -->
-  @if (!board.isShowing()) {
-    <app-sort-menu
-      [arrangement]="canvas.arrangement()"
-      (orderChosen)="canvas.setOrder($event)"
-      (groupingChosen)="canvas.setGrouping($event)"
-      (pinnedFirstChosen)="canvas.setPinnedFirst($event)"
-    />
-  }
-  <!-- Forced open by a selection, and it refuses to fold while one is on: a filter
-       nobody can see is a filter nobody can undo. -->
-  <button
-    type="button"
-    class="facets-toggle"
-    data-testid="facets-toggle"
-    [class.on]="facetsOpen()"
-    [disabled]="facetsOpen() && facetCount() > 0"
-    [attr.aria-expanded]="facetsOpen()"
-    aria-controls="facets-panel"
-    [attr.aria-label]="'filters.facetsLabel' | transloco"
-    [attr.title]="'filters.facetsLabel' | transloco"
-    (click)="facetsExpanded.set(!facetsExpanded())"
-  >
-    <app-icon name="filter" />
-    @if (facetCount(); as count) {
-      <span class="facets-count" data-testid="facets-count">{{ count }}</span>
-    }
-  </button>
-  @if (folders.activeFolder() === null && !settings.showLibraryRail()) {
-    <app-folder-switcher
-      [folders]="folders.folders()"
-      [activeFolder]="folders.activeFolder()"
-      [canCreate]="spaces.activeSpaceId() !== null"
-      (folderChanged)="folders.selectFolder($event)"
-      (folderCreated)="folders.createFolder($event)"
-    />
-  }
+    <!-- Forced open by a selection, and it refuses to fold while one is on: a filter
+         nobody can see is a filter nobody can undo. -->
+    <button
+      type="button"
+      class="facets-toggle"
+      data-testid="facets-toggle"
+      [class.on]="facetsOpen()"
+      [disabled]="facetsOpen() && facetCount() > 0"
+      [attr.aria-expanded]="facetsOpen()"
+      aria-controls="facets-panel"
+      [attr.aria-label]="'filters.facetsLabel' | transloco"
+      [attr.title]="'filters.facetsLabel' | transloco"
+      (click)="facetsExpanded.set(!facetsExpanded())"
+    >
+      <app-icon name="filter" />
+      @if (facetCount(); as count) {
+        <span class="facets-count" data-testid="facets-count">{{ count }}</span>
+      }
+    </button>
+  </div>
   <app-new-note-button
     [shortcuts]="createShortcuts()"
     [noteIsNew]="!settings.noteKindTried()"

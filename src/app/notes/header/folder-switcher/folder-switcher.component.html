@@ -1,3 +1,4 @@
+@let name = activeFolder()?.name ?? ('folders.allFolders' | transloco);
 <div class="folder-switch-wrapper">
   <button
     appMenuAnchor
@@ -8,6 +9,7 @@
     [class.narrowed]="activeFolder() !== null"
     [attr.aria-expanded]="menu.open()"
     [attr.aria-label]="'folders.switcherLabel' | transloco"
+    [attr.title]="name"
     (click)="toggle()"
   >
     @if (activeFolder(); as folder) {
@@ -15,7 +17,7 @@
     } @else {
       <span class="folder-icon" aria-hidden="true">▭</span>
     }
-    {{ activeFolder()?.name ?? ('folders.allFolders' | transloco) }}
+    <span class="folder-name" data-testid="folder-switcher-name">{{ name }}</span>
     <span class="chev" aria-hidden="true">▾</span>
   </button>
   @if (menu.open()) {
