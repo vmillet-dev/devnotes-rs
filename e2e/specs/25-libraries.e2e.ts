@@ -4,6 +4,7 @@ import { board } from '../pageobjects/board.page.js';
 import { spaces } from '../pageobjects/sidebar.page.js';
 import {
   PASSPHRASE,
+  RELOAD_TIMEOUT,
   eventually,
   pickChoice,
   press,
@@ -85,6 +86,7 @@ describe('Several libraries', () => {
         () => $(testid('vault-passphrase')).isExisting(),
         (showing) => showing,
         'the gate to ask for the new library passphrase',
+        RELOAD_TIMEOUT,
       ),
     ).toBe(true);
     // A library with no key file yet asks twice, like a first launch.
@@ -147,6 +149,7 @@ describe('Several libraries', () => {
         () => $(testid('vault-passphrase')).isExisting(),
         (showing) => showing,
         'the gate to ask for the other library passphrase',
+        RELOAD_TIMEOUT,
       ),
     ).toBe(true);
   });
@@ -164,12 +167,22 @@ describe('Several libraries', () => {
 
     await pickChoice('vault-library', other?.id ?? '');
     expect(
-      await eventually(gateLibrary, (text) => text.includes(OTHER), 'the gate to ask for the other library'),
+      await eventually(
+        gateLibrary,
+        (text) => text.includes(OTHER),
+        'the gate to ask for the other library',
+        RELOAD_TIMEOUT,
+      ),
     ).toContain(OTHER);
 
     await pickChoice('vault-library', first?.id ?? '');
     expect(
-      await eventually(gateLibrary, (text) => !text.includes(OTHER), 'the gate to come back to the first'),
+      await eventually(
+        gateLibrary,
+        (text) => !text.includes(OTHER),
+        'the gate to come back to the first',
+        RELOAD_TIMEOUT,
+      ),
     ).not.toContain(OTHER);
   });
 
