@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { JsonRow } from '@core/model/json.model';
+import { JsonRow, NodeMove } from '@core/model/json.model';
 import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
 import { jsonView } from '@testing/json-view.fixture';
 import { JsonGraphComponent } from './json-graph.component';
@@ -9,6 +9,8 @@ describe('JsonGraphComponent', () => {
   let fixture: ComponentFixture<JsonGraphComponent>;
   let selected: string[];
   let activated: JsonRow[];
+  let moved: NodeMove[];
+  let resets: number;
 
   beforeEach(async () => {
     TestBed.configureTestingModule({ imports: [JsonGraphComponent], providers: [provideTranslocoTesting()] });
@@ -16,8 +18,12 @@ describe('JsonGraphComponent', () => {
     fixture.componentRef.setInput('graph', jsonView().graph);
     selected = [];
     activated = [];
+    moved = [];
+    resets = 0;
     fixture.componentInstance.selected.subscribe((path) => selected.push(path));
     fixture.componentInstance.rowActivated.subscribe((row) => activated.push(row));
+    fixture.componentInstance.moved.subscribe((move) => moved.push(move));
+    fixture.componentInstance.layoutReset.subscribe(() => resets++);
     document.body.appendChild(fixture.nativeElement);
     fixture.autoDetectChanges();
     await fixture.whenStable();
@@ -206,6 +212,121 @@ describe('JsonGraphComponent', () => {
       fixture.componentInstance.fit();
 
       expect(plane().style.transform).toContain('scale(1)');
+    });
+  });
+  describe('moving a node', () => {
+    const pointer = (type: string, x: number, y: number) =>
+      new PointerEvent(type, { button: 0, clientX: x, clientY: y, bubbles: true });
+    const head = (path: string) =>
+      node(path).querySelector<HTMLButtonElement>('[data-testid="json-node-head"]')!;
+
+    it('drags a node from its header, lets it go where it was dropped, and keeps the click from choosing', async () => {
+      head('$.data').dispatchEvent(pointer('pointerdown', 100, 100));
+      ground().dispatchEvent(pointer('pointermove', 114, 148));
+      fixture.detectChanges();
+
+      // Followed while it travels, the store told only on release: 14 px is two 7 px columns.
+      expect(node('$.data').style.left).toBe('24ch');
+      expect(node('$.data').style.top).toBe('120px');
+      expect(node('$.data').classList).toContain('dragged');
+      expect(moved).toEqual([]);
+
+      ground().dispatchEvent(pointer('pointerup', 114, 148));
+      head('$.data').click();
+      await fixture.whenStable();
+
+      expect(moved).toEqual([{ path: '$.data', offset: { x: 2, y: 2 } }]);
+      expect(selected).toEqual([]);
+      await new Promise((resolve) => setTimeout(resolve));
+      head('$.data').click();
+      expect(selected).toEqual(['$.data']);
+    });
+
+    it('takes a press that barely moves for a click, and pans from anywhere but a node', () => {
+      row('$.id').dispatchEvent(pointer('pointerdown', 10, 10));
+      ground().dispatchEvent(pointer('pointermove', 12, 11));
+      ground().dispatchEvent(pointer('pointerup', 12, 11));
+      row('$.id').click();
+
+      expect(moved).toEqual([]);
+      expect(activated.map((each) => each.path)).toEqual(['$.id']);
+    });
+
+    it('draws the node where the store says, its edges following', async () => {
+      const edges = () =>
+        Array.from(fixture.nativeElement.querySelectorAll('.edges path'), (path: Element) =>
+          path.getAttribute('d'),
+        );
+      const before = edges();
+      fixture.componentRef.setInput('offsets', new Map([['$.data', { x: 10, y: -2 }]]));
+      await fixture.whenStable();
+
+      expect(node('$.data').style.left).toBe('32ch');
+      expect(node('$.data').style.top).toBe('24px');
+      // Into it from the root, and out of it to its child: two edges of three moved.
+      expect(edges().filter((d, index) => d !== before[index])).toHaveLength(2);
+    });
+
+    it('nudges the node the cursor is in with Alt and an arrow, from where it already was', async () => {
+      fixture.componentRef.setInput('offsets', new Map([['$.data', { x: 2, y: 0 }]]));
+      // The cursor on the row $.data.lines: the node it sits in moves, not the node it opens.
+      row('$.data.lines').click();
+      await fixture.whenStable();
+      row('$.data.lines').focus();
+
+      const event = new KeyboardEvent('keydown', {
+        key: 'ArrowDown',
+        altKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      row('$.data.lines').dispatchEvent(event);
+      row('$.data.lines').dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowLeft', altKey: true, bubbles: true }),
+      );
+      row('$.data.lines').dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Home', altKey: true, bubbles: true }),
+      );
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(moved).toEqual([
+        { path: '$.data', offset: { x: 2, y: 1 } },
+        { path: '$.data', offset: { x: 0, y: 0 } },
+      ]);
+      expect(selected).toEqual([]);
+      expect(activated.map((each) => each.path)).toEqual(['$.data.lines']);
+    });
+
+    it('offers to put everything back only once something moved', async () => {
+      const reset = () => fixture.nativeElement.querySelector('[data-testid="json-reset-layout"]');
+      expect(reset()).toBeNull();
+
+      fixture.componentRef.setInput('offsets', new Map([['$', { x: 1, y: 1 }]]));
+      await fixture.whenStable();
+      reset().click();
+
+      expect(resets).toBe(1);
+    });
+
+    it('fits the moved nodes too', async () => {
+      fixture.componentRef.setInput('offsets', new Map([['$.data.lines[0]', { x: 100, y: 40 }]]));
+      await fixture.whenStable();
+      const box = {
+        width: 800,
+        height: 400,
+        top: 0,
+        left: 0,
+        right: 800,
+        bottom: 400,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      };
+      ground().getBoundingClientRect = () => box as DOMRect;
+      fixture.componentInstance.fit();
+      fixture.detectChanges();
+
+      expect(plane().style.transform).toMatch(/scale\(0\.\d+\)/);
     });
   });
 });

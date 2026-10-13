@@ -193,6 +193,30 @@ describe('JsonExplorerStore', () => {
     expect(store.selectedPath()).toBeNull();
   });
 
+  it('keeps where nodes were moved, by path, across an edit of the text, until another document', async () => {
+    store.load(JSON_TEXT);
+    await settle();
+    store.moveNode({ path: '$.data', offset: { x: 4, y: 1 } });
+    store.moveNode({ path: '$', offset: { x: 1, y: 0 } });
+    store.moveNode({ path: '$', offset: { x: 0, y: 0 } });
+
+    expect([...store.offsets()]).toEqual([['$.data', { x: 4, y: 1 }]]);
+
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    store.setText('{"data":{}}');
+    vi.advanceTimersByTime(250);
+    vi.useRealTimers();
+    await settle();
+    expect(store.offsets().get('$.data')).toEqual({ x: 4, y: 1 });
+
+    store.resetLayout();
+    expect(store.offsets().size).toBe(0);
+
+    store.moveNode({ path: '$.id', offset: { x: 2, y: 2 } });
+    store.load('[]');
+    expect(store.offsets().size).toBe(0);
+  });
+
   it('selects what it is told to', () => {
     store.select('$.data');
 

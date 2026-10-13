@@ -210,6 +210,27 @@ describe('JsonExplorerComponent', () => {
     expect(events.openedAll).toBe(1);
   });
 
+  it('hands the graph where its nodes were moved, and passes on a move and a reset', async () => {
+    const moves: unknown[] = [];
+    let resets = 0;
+    fixture.componentInstance.nodeMoved.subscribe((move) => moves.push(move));
+    fixture.componentInstance.layoutReset.subscribe(() => resets++);
+    await set('offsets', new Map([['$', { x: 3, y: 0 }]]));
+
+    expect(fixture.nativeElement.querySelector('[data-testid="json-node"][data-path="$"]').style.left).toBe(
+      '3ch',
+    );
+    query('json-reset-layout').click();
+    const head = fixture.nativeElement.querySelector('[data-path="$.data"] [data-testid="json-node-head"]');
+    head.click();
+    await fixture.whenStable();
+    head.focus();
+    head.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', altKey: true, bubbles: true }));
+
+    expect(resets).toBe(1);
+    expect(moves).toEqual([{ path: '$.data', offset: { x: 2, y: 0 } }]);
+  });
+
   it('counts what a folded container holds, from its row', async () => {
     await set('view', collapsedJsonView());
     await set('selectedPath', '$.data');

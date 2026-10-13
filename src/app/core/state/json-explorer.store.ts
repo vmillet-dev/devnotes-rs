@@ -1,6 +1,15 @@
 import { Injectable, computed, inject, resource, signal } from '@angular/core';
 import { JsonRepository } from '@core/data/json.repository';
-import { JsonEntry, JsonOpening, JsonQuery, JsonView, shows, trailOf } from '@core/model/json.model';
+import {
+  JsonEntry,
+  JsonOpening,
+  JsonQuery,
+  JsonView,
+  NodeMove,
+  NodeOffset,
+  shows,
+  trailOf,
+} from '@core/model/json.model';
 import { SEARCH_DEBOUNCE_MS, debounced } from '@core/services/time/debounce';
 import { retained } from '@core/utils/retained.util';
 
@@ -34,6 +43,8 @@ export class JsonExplorerStore {
   /** The selection and what held it when the view last folded: where it falls back to. */
   private readonly _trail = signal<readonly string[]>([]);
   private readonly _matchIndex = signal(-1);
+  /** By path, so an edited document keeps the place of every node whose path survives. */
+  private readonly _offsets = signal<ReadonlyMap<string, NodeOffset>>(new Map());
 
   private readonly commitText = debounced((text: string) => this._text.set(text), TEXT_DEBOUNCE_MS);
   private readonly commitSearch = debounced((query: string) => {
@@ -68,6 +79,7 @@ export class JsonExplorerStore {
   readonly text = this._text.asReadonly();
   /** Zero-based among the matches, or -1 before the first step. */
   readonly matchIndex = this._matchIndex.asReadonly();
+  readonly offsets = this._offsets.asReadonly();
 
   private readonly openPaths = computed(() => this.view()?.graph.nodes.map((node) => node.path) ?? []);
 
@@ -82,6 +94,7 @@ export class JsonExplorerStore {
     this._selectedPath.set(null);
     this._trail.set([]);
     this._matchIndex.set(-1);
+    this._offsets.set(new Map());
   }
 
   /** The draft typed into: what is open stays open, as far as the new text still has it. */
@@ -123,6 +136,18 @@ export class JsonExplorerStore {
 
   openAll(): void {
     this._opening.set({ kind: 'all' });
+  }
+
+  moveNode(move: NodeMove): void {
+    const offsets = new Map(this._offsets());
+    if (move.offset.x === 0 && move.offset.y === 0) offsets.delete(move.path);
+    else offsets.set(move.path, move.offset);
+    this._offsets.set(offsets);
+  }
+
+  /** Every node back where Rust placed it. */
+  resetLayout(): void {
+    this._offsets.set(new Map());
   }
 
   /** Only the root open — Rust keeps it open whatever is asked. */

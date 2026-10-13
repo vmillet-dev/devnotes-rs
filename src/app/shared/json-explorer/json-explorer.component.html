@@ -24,8 +24,11 @@
           class="surface"
           [graph]="view.graph"
           [selectedPath]="selectedPath()"
+          [offsets]="offsets()"
           (selected)="selected.emit($event)"
           (rowActivated)="onRow($event)"
+          (moved)="nodeMoved.emit($event)"
+          (layoutReset)="layoutReset.emit()"
           (keydown)="onSurfaceKeydown($event)"
         />
       } @else {

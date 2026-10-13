@@ -18,6 +18,8 @@ import {
   JsonLine,
   JsonRow,
   JsonView,
+  NodeMove,
+  NodeOffset,
   Span,
   findSelection,
   lineage,
@@ -66,6 +68,8 @@ export class JsonExplorerComponent {
   readonly locale = input('fr');
   /** `false` where no code is beside the explorer to show a span in: an HTTP response. */
   readonly withCode = input(true);
+  /** Where the graph's nodes were moved to, by path. */
+  readonly offsets = input<ReadonlyMap<string, NodeOffset>>(new Map());
 
   readonly searchChanged = output<string>();
   readonly stepped = output<1 | -1>();
@@ -76,6 +80,8 @@ export class JsonExplorerComponent {
   readonly copied = output<string>();
   readonly shownInCode = output<Span>();
   readonly treeProposed = output<void>();
+  readonly nodeMoved = output<NodeMove>();
+  readonly layoutReset = output<void>();
 
   private readonly graphView = viewChild(JsonGraphComponent);
   private readonly treeView = viewChild(JsonTreeComponent);

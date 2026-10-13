@@ -4800,6 +4800,12 @@ is not the WebView's thread's to parse.
   node, and a child level with the row that opens it whenever the nodes above leave room.
 - **The matches cover the whole document**, open or not, in its order: stepping to one opens
   its ancestors.
+- **A node can be moved; the layout stays Rust's.** An offset per node, in the layout's own
+  units, kept by path in `JsonExplorerStore` — never in the note — so an edited document keeps
+  the place of every node whose path survives, and opening another note starts afresh. A
+  gesture that starts on a node moves it, anywhere else it pans; it commits on `pointerup`, and
+  the pointer is captured only once the press has travelled 4 px, or the click would land on the
+  ground. Alt with an arrow is its keyboard twin. « Réinitialiser la disposition » drops them all.
 
 ### HTTP collections in the library
 

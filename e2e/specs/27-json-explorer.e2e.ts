@@ -136,6 +136,67 @@ describe('Exploring a JSON document', () => {
       await eventually(nodes, (count) => count === 5, 'every node again, from the keys');
     });
 
+    it('moves a node with the pointer and with the keys, its edges following, and puts it back', async () => {
+      const object = `${testid('json-node')}[data-path="$.data.object"]`;
+      // In the layout's own units, which neither the pan nor the zoom changes.
+      const place = () =>
+        browser.execute((selector: string) => {
+          const node = document.querySelector<HTMLElement>(selector)!;
+          const edges = Array.from(document.querySelectorAll('.edges path'), (path) =>
+            path.getAttribute('d'),
+          );
+          return {
+            left: parseFloat(node.style.left),
+            top: parseFloat(node.style.top),
+            edges: edges.join('|'),
+          };
+        }, object);
+      const start = await place();
+
+      // Synthetic pointer events: the embedded WebDriver dispatches no pointer actions. Id 1 is
+      // the mouse, the pointer `setPointerCapture` accepts.
+      await browser.execute((selector: string) => {
+        const head = document.querySelector(`${selector} [data-testid="json-node-head"]`)!;
+        const ground = document.querySelector('[data-testid="json-graph"]')!;
+        const box = head.getBoundingClientRect();
+        const send = (target: Element, type: string, dx: number, dy: number) =>
+          target.dispatchEvent(
+            new PointerEvent(type, {
+              bubbles: true,
+              cancelable: true,
+              button: 0,
+              pointerId: 1,
+              clientX: box.left + 10 + dx,
+              clientY: box.top + 10 + dy,
+            }),
+          );
+        send(head, 'pointerdown', 0, 0);
+        send(ground, 'pointermove', 60, 24);
+        send(ground, 'pointermove', 120, 48);
+        send(ground, 'pointerup', 120, 48);
+      }, object);
+      const dropped = await eventually(
+        place,
+        (now) => now.left > start.left,
+        'the node dropped further right',
+      );
+      expect(dropped.top).toBeGreaterThan(start.top);
+      expect(dropped.edges).not.toBe(start.edges);
+
+      await $(`${object} ${testid('json-node-head')}`).click();
+      expect(await selectedPath()).toBe('$.data.object');
+      await press('ArrowDown', ['Alt']);
+      await eventually(place, (now) => now.top === dropped.top + 24, 'the node a line lower, from the keys');
+
+      await $(testid('json-reset-layout')).click();
+      await eventually(
+        place,
+        (now) => now.left === start.left && now.top === start.top && now.edges === start.edges,
+        'the node back where Rust placed it',
+      );
+      expect(await $(testid('json-reset-layout')).isExisting()).toBe(false);
+    });
+
     it('finds a value, and goes back to it in the code', async () => {
       await $(testid('json-search')).setValue('mensuel');
       await eventually(
