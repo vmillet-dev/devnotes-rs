@@ -1472,6 +1472,8 @@ export type HistorySummary = {
 	 */
 	method?: HttpMethod,
 	status?: number | null,
+	/**  The environment it was sent with, as it was named then. */
+	environment?: SentEnvironment | null,
 };
 
 export type HttpCollection = {
@@ -2661,6 +2663,11 @@ export type SendRequest = {
 export type SentBody = { kind: "none" } | 
 /**  Up to `SHOWN_LIMIT`. */
 { kind: "text"; text: string } | { kind: "bytes"; size: number } | { kind: "multipart"; fields: string[] };
+
+export type SentEnvironment = {
+	name: string,
+	colour: FolderColour,
+};
 
 export type SentResponse = {
 	status: number,

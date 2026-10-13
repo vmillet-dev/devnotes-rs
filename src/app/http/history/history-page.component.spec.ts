@@ -36,7 +36,23 @@ describe('HistoryPageComponent', () => {
       },
     });
     http.historyAnswer = [
-      { day: '2026-10-07', items: [historyItem('Login'), failed, slow] },
+      {
+        day: '2026-10-07',
+        items: [
+          historyItem('Login', {
+            summary: {
+              name: 'Login',
+              url: 'https://api.exemple.fr/Login',
+              millis: 142,
+              size: 3277,
+              failure: null,
+              environment: { name: 'Staging', colour: 'amber' },
+            },
+          }),
+          failed,
+          slow,
+        ],
+      },
       { day: '2026-10-06', items: [historyItem('Health', { status: 404 })] },
       { day: '2026-10-01', items: [historyItem('Old')] },
     ];
@@ -77,6 +93,13 @@ describe('HistoryPageComponent', () => {
       ['404', '4'],
       ['200', '2'],
     ]);
+  });
+
+  it('says which environment a send left with, and none for one sent without', () => {
+    expect(all('http-history-environment').map((environment) => environment.textContent?.trim())).toEqual([
+      'Staging',
+    ]);
+    expect(item('Login').querySelector('[data-testid="http-history-environment"]')).not.toBeNull();
   });
 
   it('reads an entry like a response, or says why there was none', async () => {

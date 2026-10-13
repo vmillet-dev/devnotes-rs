@@ -2221,6 +2221,15 @@ is logged.
   came from, a `Location`, each hop of the redirects — is masked like the one sent. What an
   answer sets is what the next request sends: kept whole, it was the `Cookie` the other side
   masks. The live timeline shows what really left; only the history masks.
+- **A secret variable shows by its name once the request left** (#487): `Outgoing.secret_values`
+  holds the values of the secrets in force (`Resolver::secrets`), and `send::exchange` — the
+  live timeline — writes each as its `{{name}}`, as typed and as a query encodes it
+  (`variables::hide`). `history::record_of` does it again over the request and over the whole
+  answer — its URL, headers, body, layout, redirects and GraphQL errors — so a server echoing a
+  token keeps none in the history. A value under three characters is not looked for. The entry
+  also keeps the environment it left with, its name and colour then (`HistorySummary::environment`,
+  sealed with the rest), shown on its row. « Rouvrir » puts the `{{name}}` back, which resolves
+  again.
 - ⚠️ **The limit of the mask**: it knows the secrets a request _declares_. A token typed by
   hand as a parameter or in a body, or one a server answers in its body, is kept as it is —
   sealed like the rest of the record, and shown to whoever opens the entry. A test a secret
@@ -4191,24 +4200,24 @@ CI build. On a realistic library (~2 MB) the sealing costs well under a millisec
 Sealing the second would move every query into Rust over the whole corpus. The table is every
 column of `db/schema.rs`, read one by one: a column added there is added here.
 
-| Table                 | Sealed                                                                  | Plain                                                                                                                                                       |
-| --------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `spaces`              | `name`                                                                  | `id`, `pinned`                                                                                                                                              |
-| `folders`             | `name`                                                                  | `id`, `space_id`, `colour`, `created_at`, the board's `x`, `y`, `w`, `h`                                                                                    |
-| `notes`               | `title`, `content`, `source`                                            | `id`, `space_id`, `folder_id`, `kind`, `language`, `priority`, `pinned`, `created_at`, `updated_at`, `deleted_at`, `lifecycle_kind`, `lifecycle_expires_at` |
-| `note_positions`      | —                                                                       | `note_id`, `x`, `y`                                                                                                                                         |
-| `note_tags`           | —                                                                       | `note_id`, `tag`                                                                                                                                            |
-| `note_items`          | `text`                                                                  | `note_id`, `position`, `done`                                                                                                                               |
-| `note_revisions`      | `content`                                                               | `id`, `note_id`, `taken_at`                                                                                                                                 |
-| `note_placeholders`   | `value`                                                                 | `note_id`, `name`                                                                                                                                           |
-| `global_placeholders` | `value`                                                                 | `name`                                                                                                                                                      |
-| `attachments`         | `file_name`, and the file itself, bytes and all                         | `id`, `note_id`, `mime_type`, `byte_size`, `created_at`                                                                                                     |
-| `http_collections`    | `name`, `settings` (auth, headers, transport)                           | `id`, `position`, `created_at`                                                                                                                              |
-| `http_folders`        | `name`, `settings`                                                      | `id`, `collection_id`, `parent_id`, `position`, `created_at`                                                                                                |
-| `http_requests`       | `name`, `document` (URL, parameters, headers, body, auth, and the rest) | `id`, `collection_id`, `folder_id`, `position`, `created_at`, `updated_at`, and ⚠️ `kind`, `method`                                                         |
-| `http_history`        | `summary` (name, URL, method, status, time, size, failure), `record`    | `id`, `sent_at`, `request_id`                                                                                                                               |
-| `http_cookies`        | `cookie` (name, value, domain, path, flags)                             | `id`, `expires_at`                                                                                                                                          |
-| `http_environments`   | `document` (name, colour, protection, variables and their values)       | `id`, `kind` (`globals` or `environment`), `position`, `created_at`                                                                                         |
+| Table                 | Sealed                                                                            | Plain                                                                                                                                                       |
+| --------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `spaces`              | `name`                                                                            | `id`, `pinned`                                                                                                                                              |
+| `folders`             | `name`                                                                            | `id`, `space_id`, `colour`, `created_at`, the board's `x`, `y`, `w`, `h`                                                                                    |
+| `notes`               | `title`, `content`, `source`                                                      | `id`, `space_id`, `folder_id`, `kind`, `language`, `priority`, `pinned`, `created_at`, `updated_at`, `deleted_at`, `lifecycle_kind`, `lifecycle_expires_at` |
+| `note_positions`      | —                                                                                 | `note_id`, `x`, `y`                                                                                                                                         |
+| `note_tags`           | —                                                                                 | `note_id`, `tag`                                                                                                                                            |
+| `note_items`          | `text`                                                                            | `note_id`, `position`, `done`                                                                                                                               |
+| `note_revisions`      | `content`                                                                         | `id`, `note_id`, `taken_at`                                                                                                                                 |
+| `note_placeholders`   | `value`                                                                           | `note_id`, `name`                                                                                                                                           |
+| `global_placeholders` | `value`                                                                           | `name`                                                                                                                                                      |
+| `attachments`         | `file_name`, and the file itself, bytes and all                                   | `id`, `note_id`, `mime_type`, `byte_size`, `created_at`                                                                                                     |
+| `http_collections`    | `name`, `settings` (auth, headers, transport)                                     | `id`, `position`, `created_at`                                                                                                                              |
+| `http_folders`        | `name`, `settings`                                                                | `id`, `collection_id`, `parent_id`, `position`, `created_at`                                                                                                |
+| `http_requests`       | `name`, `document` (URL, parameters, headers, body, auth, and the rest)           | `id`, `collection_id`, `folder_id`, `position`, `created_at`, `updated_at`, and ⚠️ `kind`, `method`                                                         |
+| `http_history`        | `summary` (name, URL, method, status, time, size, failure, environment), `record` | `id`, `sent_at`, `request_id`                                                                                                                               |
+| `http_cookies`        | `cookie` (name, value, domain, path, flags)                                       | `id`, `expires_at`                                                                                                                                          |
+| `http_environments`   | `document` (name, colour, protection, variables and their values)                 | `id`, `kind` (`globals` or `environment`), `position`, `created_at`                                                                                         |
 
 ⚠️ **What a reader of the raw file learns, with no key.** Of the notes: their number and the
 shape of the spaces and folders they hang in, every instant, each note's language, kind, pin

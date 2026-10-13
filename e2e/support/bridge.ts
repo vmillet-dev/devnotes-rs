@@ -25,6 +25,8 @@ import type {
   HttpRequest,
   HttpRequestDraft,
   HttpEnvironments,
+  HistoryDay,
+  HistoryEntry,
   Environment,
   EnvironmentPatch,
   HttpTree,
@@ -126,6 +128,8 @@ export const bridge = {
   moveHttpItem: (item: HttpItem, place: HttpPlace) => invoke<null>('move_http_item', { item, place }),
   /** Answers how many entries went. */
   clearHttpHistory: () => invoke<number>('clear_http_history'),
+  httpHistory: (tzOffsetMinutes: number) => invoke<HistoryDay[]>('http_history', { tzOffsetMinutes }),
+  httpHistoryEntry: (id: string) => invoke<HistoryEntry>('http_history_entry', { id }),
   clearHttpCookies: () => invoke<number>('clear_http_cookies'),
   httpEnvironments: () => invoke<HttpEnvironments>('http_environments'),
   createHttpEnvironment: (name: string) => invoke<Environment>('create_http_environment', { name }),

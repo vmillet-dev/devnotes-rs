@@ -228,6 +228,8 @@ pub struct Outgoing {
     pub body: OutgoingBody,
     /// The API key's name, lowercased: a header or a query pair the history masks.
     pub secrets: Vec<String>,
+    /// The secret variables in force, by name and value: the exchange shows their names.
+    pub secret_values: Vec<(String, String)>,
     /// Its answer is read as GraphQL.
     pub graphql: bool,
     /// Its timeout, redirects and TLS: the defaults until the command sets what is inherited.
@@ -529,6 +531,7 @@ pub fn compose(
         headers,
         body,
         secrets,
+        secret_values: Vec::new(),
         graphql: graphql.is_some(),
         jar: None,
         transport: inherited.transport.over(&document.transport),
@@ -747,12 +750,14 @@ struct Kept {
     bytes: Vec<u8>,
 }
 
+/// The request as it left, a secret variable's value written as its `{{name}}`.
 pub fn exchange(outgoing: &Outgoing) -> Exchange {
+    let hide = |text: &str| variables::hide(text, &outgoing.secret_values);
     let body = match &outgoing.body {
         OutgoingBody::None => SentBody::None,
         OutgoingBody::Bytes(bytes) => match std::str::from_utf8(bytes) {
             Ok(text) => SentBody::Text {
-                text: text.chars().take(SHOWN_LIMIT).collect(),
+                text: hide(&text.chars().take(SHOWN_LIMIT).collect::<String>()),
             },
             Err(_) => SentBody::Bytes {
                 size: u32::try_from(bytes.len()).unwrap_or(u32::MAX),
@@ -764,13 +769,13 @@ pub fn exchange(outgoing: &Outgoing) -> Exchange {
     };
     Exchange {
         method: outgoing.method,
-        url: outgoing.url.to_string(),
+        url: hide(outgoing.url.as_str()),
         headers: outgoing
             .headers
             .iter()
             .map(|(key, value)| KeyValue {
                 key: key.clone(),
-                value: value.clone(),
+                value: hide(value),
                 ..KeyValue::default()
             })
             .collect(),

@@ -545,6 +545,11 @@ fn marked_send(library: &mut Library, request_id: &str) {
         request_id: Some(request_id.to_string()),
         exchange: exchange.clone(),
         secrets: Vec::new(),
+        secret_values: vec![("token".to_string(), "zq-secret-value".to_string())],
+        environment: Some(devnotes_lib::http::history::SentEnvironment {
+            name: "zq-sent-environment".to_string(),
+            colour: devnotes_lib::folders::model::FolderColour::Red,
+        }),
         outcome: Ok(SentResponse {
             status: 418,
             reason: "zq-reason".to_string(),
