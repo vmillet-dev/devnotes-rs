@@ -54,6 +54,7 @@ import { JsonExplorerStore } from '@core/state/json-explorer.store';
 import type { JsonExplorerMode } from '@shared/json-explorer/json-explorer.component';
 // On a line of its own: the visualiser is its own chunk, loaded by a first Graphe or Arbre.
 import { JsonViewComponent } from './json-view/json-view.component';
+import { LANGUAGE_CHOICES } from './language-choices';
 
 const TEXT_ENCODER = new TextEncoder();
 
@@ -83,11 +84,6 @@ function offsetOf(text: string, line: number, column: number): number {
   const before = lines.slice(0, line - 1).reduce((sum, each) => sum + each.length + 1, 0);
   return Math.min(text.length, before + column - 1);
 }
-
-const LANGUAGE_CHOICES: readonly ChoiceOption[] = Object.entries(LANGUAGE_LABELS).map(([id, name]) => ({
-  id,
-  name,
-}));
 
 /** "None" is the menu's own entry, and what the trigger says while no level is set. */
 const PRIORITY_CHOICES: readonly ChoiceOption[] = PRIORITIES.filter((level) => level !== 'none').map(

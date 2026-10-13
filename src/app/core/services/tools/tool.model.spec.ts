@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ToolDefinition, favouritesAmong, foldForSearch, isRecentTool, toolMatches } from './tool.model';
+import { foldForSearch } from '@core/utils/fold.util';
+import { ToolDefinition, favouritesAmong, isRecentTool, toolMatches } from './tool.model';
 
 describe('the tools model', () => {
   it('folds case and accents out of what is searched', () => {

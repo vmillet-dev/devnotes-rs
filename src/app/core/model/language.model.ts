@@ -34,6 +34,22 @@ export const LANGUAGE_LABELS: Record<LanguageTag, string> = {
   txt: 'TXT',
 };
 
+/** What a format is called in full, where its label is an abbreviation: what a filter also matches. */
+export const LANGUAGE_NAMES: Partial<Record<LanguageTag, string>> = {
+  js: 'JavaScript',
+  ts: 'TypeScript',
+  py: 'Python',
+  rs: 'Rust',
+  cs: 'C#',
+  yml: 'YAML',
+  sh: 'Shell',
+  ps1: 'PowerShell',
+  kt: 'Kotlin',
+  rb: 'Ruby',
+  ex: 'Elixir',
+  md: 'Markdown',
+};
+
 /** Kept when the value received is not (or no longer) recognised. */
 export const FALLBACK_LANGUAGE: LanguageTag = 'txt';
 

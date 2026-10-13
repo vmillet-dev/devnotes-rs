@@ -326,7 +326,7 @@ describe('RichTextEditorComponent', () => {
       await fixture.whenStable();
 
       expect(fixture.nativeElement.querySelector('select')).toBeNull();
-      expect(languagePicker()?.getAttribute('aria-haspopup')).toBe('menu');
+      expect(languagePicker()?.getAttribute('aria-haspopup')).toBe('listbox');
       const press = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
       languagePicker()!.dispatchEvent(press);
       expect(press.defaultPrevented).toBe(true);

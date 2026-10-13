@@ -2,6 +2,7 @@ import { InjectionToken, Signal, Type } from '@angular/core';
 import { LanguageTag } from '@core/model/language.model';
 import { NoteKind } from '@core/model/note.model';
 import { TranslationRef } from '@core/services/i18n/translation-ref.model';
+import { foldForSearch } from '@core/utils/fold.util';
 import type { ReferenceRow, ReferenceSource } from './reference.model';
 
 /** In the home's order, which the rail follows. */
@@ -92,11 +93,6 @@ export function favouritesAmong(
 export function isRecentTool(value: unknown): value is RecentTool {
   const candidate = value as Partial<RecentTool> | null;
   return typeof candidate?.id === 'string' && typeof candidate.at === 'string';
-}
-
-/** Case and accents aside, as the notes' search does in Rust: "hachage" finds "Hachage". */
-export function foldForSearch(text: string): string {
-  return text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 }
 
 export function toolMatches(query: string, texts: readonly string[]): boolean {

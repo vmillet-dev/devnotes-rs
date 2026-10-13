@@ -190,4 +190,162 @@ describe('ChoiceMenuComponent', () => {
       expect(fixture.nativeElement.querySelector('[data-testid="choice-none"]')).toBeNull();
     });
   });
+  describe('with a filter field, once the list is long', () => {
+    const LANGUAGES: readonly ChoiceOption[] = [
+      { id: 'json', name: 'JSON' },
+      { id: 'js', name: 'JavaScript' },
+      { id: 'ts', name: 'TypeScript' },
+      { id: 'py', name: 'PY', hint: 'Python' },
+      { id: 'rs', name: 'Rust' },
+      { id: 'go', name: 'Go' },
+      { id: 'java', name: 'Java' },
+      { id: 'ex', name: 'Élixir' },
+      { id: 'out', name: 'selection.unfile', nameIsKey: true },
+    ];
+
+    function field(): HTMLInputElement | null {
+      return fixture.nativeElement.querySelector('[data-testid="choice-filter"]');
+    }
+
+    function shownIds(): (string | null)[] {
+      return options().map((option) => option.getAttribute('data-option-id'));
+    }
+
+    function activeId(): string | null {
+      const id = field()?.getAttribute('aria-activedescendant');
+      return id ? (document.getElementById(id)?.getAttribute('data-option-id') ?? null) : null;
+    }
+
+    async function type(text: string): Promise<void> {
+      const input = field()!;
+      input.value = text;
+      input.dispatchEvent(new Event('input'));
+      await fixture.whenStable();
+    }
+
+    async function press(key: string): Promise<void> {
+      field()!.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+      await fixture.whenStable();
+    }
+
+    beforeEach(async () => {
+      fixture.componentRef.setInput('options', LANGUAGES);
+      fixture.componentRef.setInput('currentId', 'ts');
+      await open();
+    });
+
+    it('opens on the field, focused, as a combobox over a listbox', () => {
+      expect(document.activeElement).toBe(field());
+      expect(field()?.getAttribute('role')).toBe('combobox');
+      expect(trigger().getAttribute('aria-haspopup')).toBe('listbox');
+      expect(shownIds()).toHaveLength(9);
+      expect(activeId()).toBe('ts');
+    });
+
+    it('filters without regard to case or accents, translated names and hints included', async () => {
+      await type('ELIX');
+      expect(shownIds()).toEqual(['ex']);
+
+      await type('java');
+      expect(shownIds()).toEqual(['js', 'java']);
+
+      await type('dossier');
+      expect(shownIds()).toEqual(['out']);
+
+      await type('pyth');
+      expect(shownIds()).toEqual(['py']);
+    });
+
+    it('walks the filtered list with the arrows and takes the walked entry on Enter', async () => {
+      const chosen: (string | null)[] = [];
+      fixture.componentInstance.chosen.subscribe((id: string | null) => chosen.push(id));
+      await type('s');
+      expect(shownIds()).toEqual(['json', 'js', 'ts', 'rs', 'out']);
+      expect(activeId()).toBe('json');
+
+      await press('ArrowDown');
+      await press('ArrowDown');
+      expect(activeId()).toBe('ts');
+      await press('ArrowUp');
+      await press('ArrowUp');
+      await press('ArrowUp');
+      expect(activeId()).toBe('out');
+
+      await press('ArrowUp');
+      await press('Enter');
+
+      expect(chosen).toEqual(['rs']);
+      expect(field()).toBeNull();
+    });
+
+    it('clears the filter on the first Escape and closes on the second', async () => {
+      const reachedTheDialog: string[] = [];
+      const parent = fixture.nativeElement.parentElement as HTMLElement;
+      const listen = (event: Event) => reachedTheDialog.push((event as KeyboardEvent).key);
+      parent.addEventListener('keydown', listen);
+
+      await type('rust');
+      await press('Escape');
+      expect(field()?.value).toBe('');
+      expect(shownIds()).toHaveLength(9);
+
+      await press('Escape');
+      parent.removeEventListener('keydown', listen);
+
+      expect(field()).toBeNull();
+      expect(reachedTheDialog).toEqual([]);
+    });
+
+    it('says when nothing matches, and Enter then picks nothing', async () => {
+      const chosen: (string | null)[] = [];
+      fixture.componentInstance.chosen.subscribe((id: string | null) => chosen.push(id));
+      await type('cobol');
+
+      expect(shownIds()).toEqual([]);
+      expect(fixture.nativeElement.querySelector('[data-testid="choice-empty"]')?.textContent).toContain(
+        'Aucun résultat',
+      );
+
+      await press('Enter');
+      expect(chosen).toEqual([]);
+      expect(field()).not.toBeNull();
+    });
+
+    it('filters its way out too, and picks it on a click', async () => {
+      fixture.componentRef.setInput('noneLabel', 'Aucun dossier');
+      await fixture.whenStable();
+      const chosen: (string | null)[] = [];
+      fixture.componentInstance.chosen.subscribe((id: string | null) => chosen.push(id));
+
+      await type('aucun');
+      expect(shownIds()).toEqual([]);
+      fixture.nativeElement.querySelector('[data-testid="choice-none"]').click();
+      await fixture.whenStable();
+
+      expect(chosen).toEqual([null]);
+    });
+
+    it('starts afresh at the next opening', async () => {
+      await type('py');
+      trigger().click();
+      await fixture.whenStable();
+      await open();
+
+      expect(field()?.value).toBe('');
+      expect(shownIds()).toHaveLength(9);
+    });
+  });
+
+  it('keeps a short list a plain menu, unless it is asked for a filter', async () => {
+    await open();
+    expect(fixture.nativeElement.querySelector('[data-testid="choice-filter"]')).toBeNull();
+    expect(options()[0].getAttribute('role')).toBe('menuitem');
+    trigger().click();
+    await fixture.whenStable();
+
+    fixture.componentRef.setInput('filterable', true);
+    await open();
+
+    expect(fixture.nativeElement.querySelector('[data-testid="choice-filter"]')).not.toBeNull();
+  });
 });
