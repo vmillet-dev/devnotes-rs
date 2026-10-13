@@ -5782,7 +5782,7 @@ behind the Windows build. `e2e.yml` holds two jobs:
   X server on Linux, never the toolchain — runs `npm ci`, downloads the binary into
   `src-tauri/target/debug`, where `wdio.conf.ts` looks, and runs
   `E2E_SPEC=<name> npm run test:e2e`. No cargo runs there. `fail-fast: false`, so one red
-  scenario does not hide the others, and `max-parallel: 2` per platform, four at once across
+  scenario does not hide the others, and `max-parallel: 10` per platform, twenty at once across
   both.
 
 Each job is a runner of its own, so its process, its profile, its WebDriver port and the
