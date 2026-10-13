@@ -1,0 +1,24 @@
+package main
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
+)
+
+func main() {
+	request, err := http.NewRequest("POST", "https://api.exemple.fr/customers", strings.NewReader("{\n  \"name\": \"O'Brien\",\n  \"plan\": \"pro\"\n}"))
+	if err != nil {
+		panic(err)
+	}
+	request.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+	response, err := client.Do(request)
+	if err != nil {
+		panic(err)
+	}
+	defer response.Body.Close()
+	answer, _ := io.ReadAll(response.Body)
+	fmt.Println(response.StatusCode, string(answer))
+}

@@ -1,0 +1,10 @@
+response =
+  Req.request!(
+    method: :put,
+    url: "https://api.exemple.fr/documents/7",
+    form_multipart: [{"title", "Facture"}, {"scan", File.stream!("C:/Users/ada/facture.pdf")}],
+    redirect: false,
+    retry: false
+  )
+
+IO.puts("#{response.status} #{inspect(response.body)}")

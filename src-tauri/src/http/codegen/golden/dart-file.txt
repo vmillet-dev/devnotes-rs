@@ -1,0 +1,13 @@
+import 'dart:io';
+import 'package:http/http.dart' as http;
+
+Future<void> main() async {
+  final request = http.Request('POST', Uri.parse('https://api.exemple.fr/upload'));
+  request.headers.addAll({
+    'Content-Type': 'application/octet-stream',
+  });
+  request.bodyBytes = await File('/tmp/archive.zip').readAsBytes();
+  request.followRedirects = false;
+  final response = await http.Response.fromStream(await request.send());
+  print('${response.statusCode} ${response.body}');
+}

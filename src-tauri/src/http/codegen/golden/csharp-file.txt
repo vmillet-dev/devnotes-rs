@@ -1,0 +1,10 @@
+using System.Net.Http.Headers;
+using System.Text;
+
+using var handler = new HttpClientHandler { AllowAutoRedirect = false };
+using var client = new HttpClient(handler);
+using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.exemple.fr/upload");
+request.Content = new StreamContent(File.OpenRead("/tmp/archive.zip"));
+request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+using var response = await client.SendAsync(request);
+Console.WriteLine($"{(int)response.StatusCode} {await response.Content.ReadAsStringAsync()}");

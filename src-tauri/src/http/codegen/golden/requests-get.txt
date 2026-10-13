@@ -1,0 +1,12 @@
+import requests
+
+response = requests.request(
+    "GET",
+    "https://api.exemple.fr/customers/cus_42/invoices?page=1&limit=50",
+    headers={
+        "Accept": "application/json",
+        "Authorization": "Bearer {{accessToken}}",
+    },
+    allow_redirects=False,
+)
+print(response.status_code, response.text)

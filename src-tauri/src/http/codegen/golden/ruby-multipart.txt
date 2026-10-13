@@ -1,0 +1,10 @@
+require 'net/http'
+require 'uri'
+
+uri = URI('https://api.exemple.fr/documents/7')
+request = Net::HTTP::Put.new(uri)
+request.set_form([['title', 'Facture'], ['scan', File.open('C:/Users/ada/facture.pdf')]], 'multipart/form-data')
+response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: uri.scheme == 'https') do |http|
+  http.request(request)
+end
+puts "#{response.code} #{response.body}"

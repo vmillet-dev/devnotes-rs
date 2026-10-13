@@ -1,0 +1,10 @@
+import okhttp3.OkHttpClient
+import okhttp3.Request
+
+fun main() {
+    val client = OkHttpClient()
+    val request = Request.Builder().url("https://api.exemple.fr/invoices").build()
+    client.newCall(request).execute().use { response ->
+        println(response.body?.string())
+    }
+}

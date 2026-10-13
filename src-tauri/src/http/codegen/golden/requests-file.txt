@@ -1,0 +1,12 @@
+import requests
+
+response = requests.request(
+    "POST",
+    "https://api.exemple.fr/upload",
+    headers={
+        "Content-Type": "application/octet-stream",
+    },
+    data=open("/tmp/archive.zip", "rb"),
+    allow_redirects=False,
+)
+print(response.status_code, response.text)

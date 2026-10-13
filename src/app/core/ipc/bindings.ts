@@ -797,7 +797,10 @@ export type ClassRights = {
 	special: boolean,
 };
 
-/**  What a target could not write, said by the front: wget sends no multipart form. */
+/**
+ *  What a target could not write, said by the front: wget, Java's client and `URLSession`
+ *  build no multipart body.
+ */
 export type CodeNotice = "multipartUnsupported";
 
 /**  The dialog's four switches, each its own. */
@@ -823,7 +826,7 @@ export type CodeRequestOf = {
 };
 
 /**  What the code is written for; the front lists them and names them. */
-export type CodeTarget = "curl" | "httpie" | "wget" | "powershell" | "fetch" | "axios" | "undici" | "angular";
+export type CodeTarget = "curl" | "httpie" | "wget" | "powershell" | "fetch" | "axios" | "undici" | "angular" | "requests" | "httpx" | "go" | "reqwest" | "java" | "okhttp" | "csharp" | "guzzle" | "ruby" | "swift" | "dart" | "elixir";
 
 export type CodecDirection = "encode" | "decode";
 
@@ -2036,7 +2039,7 @@ export type KeyValue = {
  */
 export type Language = "json" | "js" | "ts" | "py" | "rs" | "go" | "java" | "cs" | "php" | "c" | "sql" | "graphql" | "yml" | "toml" | "xml" | "html" | "css" | "scss" | "sh" | 
 /**  PowerShell: what generated code is saved as, and what a pasted cmdlet reads as. */
-"ps1" | "md" | 
+"ps1" | "kt" | "rb" | "swift" | "dart" | "ex" | "md" | 
 /**  Default, and the signal that the front end chose nothing. */
 "txt";
 

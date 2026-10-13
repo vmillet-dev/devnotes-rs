@@ -1,0 +1,7 @@
+defmodule Invoices do
+  def list do
+    Req.get!("https://api.exemple.fr/invoices")
+    |> Map.get(:body)
+    |> IO.inspect()
+  end
+end

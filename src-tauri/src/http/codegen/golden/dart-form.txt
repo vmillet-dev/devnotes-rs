@@ -1,0 +1,17 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
+Future<void> main() async {
+  final request = http.Request('POST', Uri.parse('https://auth.exemple.fr/token'));
+  request.headers.addAll({
+    'Content-Type': 'application/x-www-form-urlencoded',
+  });
+  request.headers['Authorization'] = 'Basic ${base64Encode(utf8.encode('billing-web:{{clientSecret}}'))}';
+  request.bodyFields = {
+    'grant_type': 'client_credentials',
+    'scope': 'invoices read',
+  };
+  request.followRedirects = false;
+  final response = await http.Response.fromStream(await request.send());
+  print('${response.statusCode} ${response.body}');
+}

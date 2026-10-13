@@ -1,0 +1,15 @@
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+
+val client = OkHttpClient.Builder()
+    .followRedirects(true)
+    .build()
+val request = Request.Builder()
+    .url("https://api.exemple.fr/customers")
+    .method("POST", "{\n  \"name\": \"O'Brien\",\n  \"plan\": \"pro\"\n}".toRequestBody("application/json".toMediaType()))
+    .build()
+client.newCall(request).execute().use { response ->
+    println("${response.code} ${response.body?.string()}")
+}

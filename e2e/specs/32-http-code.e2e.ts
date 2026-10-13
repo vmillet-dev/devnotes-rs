@@ -96,6 +96,15 @@ describe('HTTP code generation', () => {
       await $(`${testid('http-code-target')}[data-target="angular"]`).click();
       await eventually(code, (text) => text.includes('this.http'), 'the HttpClient call');
 
+      // #490: the other languages, Python's requests and Elixir's Req among them.
+      await $(`${testid('http-code-target')}[data-target="requests"]`).click();
+      await eventually(code, (text) => text.includes('requests.request('), 'the requests call');
+      expect(await code()).toContain('"Bearer {{token}}"');
+      await $(testid('http-code-filter')).setValue('elixir');
+      await $(`${testid('http-code-target')}[data-target="elixir"]`).click();
+      await eventually(code, (text) => text.includes('Req.request!('), 'the Req call');
+      await $(testid('http-code-filter')).clearValue();
+
       await $(`${testid('http-code-target')}[data-target="powershell"]`).click();
       await eventually(code, (text) => text.includes('Invoke-RestMethod'), 'the PowerShell call');
 

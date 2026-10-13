@@ -1,0 +1,6 @@
+import Foundation
+
+var request = URLRequest(url: URL(string: "https://api.exemple.fr/documents/7")!)
+request.httpMethod = "PUT"
+let (data, response) = try await URLSession.shared.data(for: request)
+print((response as! HTTPURLResponse).statusCode, String(decoding: data, as: UTF8.self))

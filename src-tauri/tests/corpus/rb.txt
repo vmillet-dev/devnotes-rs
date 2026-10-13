@@ -1,0 +1,7 @@
+require 'net/http'
+
+uri = URI('https://api.exemple.fr/invoices')
+Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
+  response = http.get(uri.path)
+  puts response.body
+end

@@ -3478,7 +3478,7 @@
       "secretsClear": "The secrets are written in clear in this code.",
       "unresolved": "{count, plural, one {1 variable with no value, written as typed:} other {# variables with no value, written as typed:}}",
       "notices": {
-        "multipartUnsupported": "wget sends no multipart form: the body is left out."
+        "multipartUnsupported": "{{target}} sends no multipart form here: the body is left out."
       },
       "where": "Saved as a snippet, in the target’s language, tagged #http.",
       "save": "Save as snippet",

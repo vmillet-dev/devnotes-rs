@@ -1,0 +1,14 @@
+<?php
+
+require 'vendor/autoload.php';
+
+$client = new GuzzleHttp\Client();
+$response = $client->request('PUT', 'https://api.exemple.fr/documents/7', [
+    'multipart' => [
+        ['name' => 'title', 'contents' => 'Facture'],
+        ['name' => 'scan', 'contents' => fopen('C:/Users/ada/facture.pdf', 'r')],
+    ],
+    'allow_redirects' => false,
+    'http_errors' => false,
+]);
+echo $response->getStatusCode(), ' ', $response->getBody();

@@ -1,0 +1,14 @@
+use reqwest::blocking::Client;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .build()?;
+    let response = client
+        .request(reqwest::Method::POST, "https://api.exemple.fr/upload")
+        .header("Content-Type", "application/octet-stream")
+        .body(std::fs::File::open("/tmp/archive.zip")?)
+        .send()?;
+    println!("{} {}", response.status(), response.text()?);
+    Ok(())
+}

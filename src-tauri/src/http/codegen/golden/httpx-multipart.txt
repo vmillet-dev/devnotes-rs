@@ -1,0 +1,14 @@
+import httpx
+
+response = httpx.request(
+    "PUT",
+    "https://api.exemple.fr/documents/7",
+    data={
+        "title": "Facture",
+    },
+    files={
+        "scan": open("C:/Users/ada/facture.pdf", "rb"),
+    },
+    follow_redirects=False,
+)
+print(response.status_code, response.text)

@@ -1,0 +1,11 @@
+response =
+  Req.request!(
+    method: :post,
+    url: "https://api.exemple.fr/customers",
+    headers: [{"content-type", "application/json"}],
+    body: "{\n  \"name\": \"O'Brien\",\n  \"plan\": \"pro\"\n}",
+    redirect: true,
+    retry: false
+  )
+
+IO.puts("#{response.status} #{inspect(response.body)}")

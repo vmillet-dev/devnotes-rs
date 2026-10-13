@@ -1,0 +1,12 @@
+response =
+  Req.request!(
+    method: :post,
+    url: "https://auth.exemple.fr/token",
+    headers: [{"content-type", "application/x-www-form-urlencoded"}],
+    auth: {:basic, "billing-web:{{clientSecret}}"},
+    form: [{"grant_type", "client_credentials"}, {"scope", "invoices read"}],
+    redirect: false,
+    retry: false
+  )
+
+IO.puts("#{response.status} #{inspect(response.body)}")

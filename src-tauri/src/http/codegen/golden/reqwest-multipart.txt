@@ -1,0 +1,16 @@
+use reqwest::blocking::{Client, multipart};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .build()?;
+    let form = multipart::Form::new()
+        .text("title", "Facture")
+        .file("scan", "C:/Users/ada/facture.pdf")?;
+    let response = client
+        .request(reqwest::Method::PUT, "https://api.exemple.fr/documents/7")
+        .multipart(form)
+        .send()?;
+    println!("{} {}", response.status(), response.text()?);
+    Ok(())
+}

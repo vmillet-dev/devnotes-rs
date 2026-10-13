@@ -1,0 +1,8 @@
+import Foundation
+
+var request = URLRequest(url: URL(string: "https://api.exemple.fr/customers/cus_42/invoices?page=1&limit=50")!)
+request.httpMethod = "GET"
+request.setValue("application/json", forHTTPHeaderField: "Accept")
+request.setValue("Bearer {{accessToken}}", forHTTPHeaderField: "Authorization")
+let (data, response) = try await URLSession.shared.data(for: request)
+print((response as! HTTPURLResponse).statusCode, String(decoding: data, as: UTF8.self))

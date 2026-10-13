@@ -60,6 +60,18 @@ describe('CodeDialogComponent', () => {
       'axios',
       'undici',
       'angular',
+      'requests',
+      'httpx',
+      'go',
+      'reqwest',
+      'java',
+      'okhttp',
+      'csharp',
+      'guzzle',
+      'ruby',
+      'swift',
+      'dart',
+      'elixir',
     ]);
     expect(lastOptions()).toEqual({
       resolveVariables: true,
@@ -85,6 +97,11 @@ describe('CodeDialogComponent', () => {
     expect(el('[data-testid="http-code-target"][data-target="angular"]').textContent).toContain(
       'Angular HttpClient',
     );
+  });
+
+  it('files the other languages under their own group', () => {
+    const groups = all('.group').map((group) => group.textContent?.trim());
+    expect(groups).toEqual(['Shell', 'JavaScript', 'Autres langages']);
   });
 
   it('filters the targets by their name or their library', async () => {
@@ -146,7 +163,9 @@ describe('CodeDialogComponent', () => {
     await vi.waitFor(() => expect(el('[data-testid="http-code-unresolved"]')).not.toBeNull());
 
     expect(el('[data-testid="http-code-unresolved"]').textContent).toContain('{{tenant}}');
-    expect(el('[data-testid="http-code-notice"]').textContent).toContain('multipart');
+    expect(el('[data-testid="http-code-notice"]').textContent).toContain(
+      'wget n’envoie pas de formulaire multipart',
+    );
   });
 
   it('copies the code, and saves it as a snippet in its language, tagged http', async () => {
