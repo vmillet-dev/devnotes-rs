@@ -59,7 +59,7 @@ describe('Exploring a JSON document', () => {
     const selectedPath = () => $(testid('json-selected-path')).getText();
 
     before(async () => {
-      // A space of its own: the first launch's went with the library 24-forgotten-passphrase set aside.
+      // A space of its own, so what it asserts reads only what this file wrote.
       const spaceId = (await bridge.createSpace({ name: 'JSON' })).id;
       id = (await bridge.createNote(draft({ spaceId, title: TITLE, content: PRETTY, language: 'json' }))).id;
       await reloadCanvas();

@@ -270,72 +270,45 @@ jobs:
             -Dsonar.rust.lcov.reportPaths=coverage/lcov.info
             -Dsonar.qualitygate.wait=true
 
-  # The only job that launches the assembled application: real binary, real WebView, real
-  # SQLite file on disk. Both platforms of the release matrix are covered, and they do not
-  # break the same way: the WebView is WebView2 on Windows and WebKitGTK on Linux, and above
-  # all Windows conflates `data_dir()` and `config_dir()` (both `%APPDATA%\<id>`) where Linux
-  # keeps them apart. It is the only runner able to disprove a path — it has already caught a
-  # `preferences.json` looked for in the wrong place.
-  test-e2e:
-    name: Test E2E (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 45
+  # The end-to-end suite is the only one that launches the assembled application: real binary,
+  # real WebView, real SQLite file on disk. Both platforms of the release matrix are covered, and
+  # they do not break the same way: the WebView is WebView2 on Windows and WebKitGTK on Linux,
+  # and above all Windows conflates `data_dir()` and `config_dir()` (both `%APPDATA%\<id>`)
+  # where Linux keeps them apart. It is the only runner able to disprove a path — it has already
+  # caught a `preferences.json` looked for in the wrong place.
+  #
+  # Three steps: the scenarios are listed here; then `e2e.yml`, once per platform, builds the
+  # binary and runs each scenario alone on a runner of its own, against that binary and a
+  # virgin profile.
+
+  # The files themselves, so a new scenario joins the matrix without a second list to edit.
+  e2e-scenarios:
+    name: E2E scenarios
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    outputs:
+      specs: ${{ steps.list.outputs.specs }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: e2e/specs
+
+      # Names without `.e2e.ts`: what `E2E_SPEC` takes and what each job is called.
+      - id: list
+        run: |
+          specs=$(find e2e/specs -name '*.e2e.ts' -printf '%f\n' | sed 's/\.e2e\.ts$//' | sort | jq -Rnc '[inputs]')
+          echo "specs=$specs" >> "$GITHUB_OUTPUT"
+          echo "$specs" | jq -r '"\(length) scenarios: \(join(", "))"'
+
+  # `e2e.yml` once per platform: its build, then its scenarios. Neither waits for the other.
+  e2e:
+    name: E2E (${{ matrix.os }})
+    needs: e2e-scenarios
     strategy:
       fail-fast: false
       matrix:
         os: [windows-latest, ubuntu-22.04]
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-
-      # The action's apt step installs the Tauri dependencies on Linux; on Windows it only
-      # lays down the toolchain and the cargo cache.
-      - uses: ./.github/actions/setup-rust
-        with:
-          shared-key: e2e-${{ matrix.os }}
-          save-if: 'true'
-
-      # WebKitGTK needs an X server: without one the window never opens and the embedded
-      # WebDriver server never listens.
-      - name: Virtual X server
-        if: runner.os == 'Linux'
-        run: sudo apt-get install -y --no-install-recommends xvfb
-
-      - run: npm ci
-
-      # `tauri build` chains `beforeBuildCommand` (the e2e front-end build) then cargo. The
-      # binary it produces carries the `com.devnotes.app.e2e` identifier, so its profile is its
-      # own: it cannot overwrite an existing library.
-      - name: Build the e2e binary
-        run: |
-          start=$(date +%s)
-          npm run e2e:build
-          echo "\`build-e2e\` (${{ matrix.os }}) — $(($(date +%s) - start)) s" >> "$GITHUB_STEP_SUMMARY"
-
-      # `xvfb-run` wraps the runner, not the binary: the wdio service is what launches the
-      # application, from its own `onPrepare`, so DISPLAY has to exist for the whole process.
-      - name: Run the scenarios
-        run: |
-          start=$(date +%s)
-          if [ "$RUNNER_OS" = "Linux" ]; then
-            xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" npm run test:e2e
-          else
-            npm run test:e2e
-          fi
-          echo "\`test-e2e\` (${{ matrix.os }}) — $(($(date +%s) - start)) s" >> "$GITHUB_STEP_SUMMARY"
-
-      # `E2E_LOG_LEVEL=trace` by hand on a failing run: by default the logs stay readable, and
-      # a session that refuses to open is diagnosed by re-running the job with the variable.
-      - uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: e2e-logs-${{ matrix.os }}
-          path: e2e/logs
-          retention-days: 7
+    uses: ./.github/workflows/e2e.yml
+    with:
+      os: ${{ matrix.os }}
+      specs: ${{ needs.e2e-scenarios.outputs.specs }}

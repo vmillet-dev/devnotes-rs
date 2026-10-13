@@ -3,45 +3,23 @@ import { browser, expect } from '@wdio/globals';
 import { canvas } from '../pageobjects/canvas.page.js';
 import { board } from '../pageobjects/board.page.js';
 import { banners, fileMenu, titlebar } from '../pageobjects/titlebar.page.js';
-import { passTheGate } from '../support/app.js';
-import { bridge, homeSpaceId, query } from '../support/bridge.js';
+import { bridge, homeSpaceId } from '../support/bridge.js';
 
 /**
  * A database file that does not exist yet: migrations against a real path, the seeding
  * guards, and a front end that boots far enough to render what came back.
  *
- * The only file that meets a virgin profile, and the rest of the run depends on it:
- * `homeSpaceId()` resolves the seeded space here, while there is still exactly one.
+ * Every spec file starts on such a profile; this one asserts what the others build on.
  */
 describe('First launch', () => {
-  /**
-   * `waitForCanvas` cannot see this one: seeding happens after the first view has
-   * already arrived and settled — empty — so the settle loop reports a settled, empty
-   * canvas. It waits for notes to exist and never for how many, or the assertion below
-   * would be its own witness.
-   */
   /** A scenario that throws on the board would leave every later one reading it. */
   afterEach(async () => {
     await board.show('list');
   });
 
-  before(async () => {
-    // Before anything is asked of the library: this is the only file that meets the
-    // gate, and no command is answered — not even a read — until it has been passed.
-    await passTheGate();
-
-    await browser.waitUntil(async () => (await bridge.queryNotes(query())).matched > 0, {
-      timeout: 30_000,
-      timeoutMsg: 'the first launch seeded no note',
-    });
-
-    await browser.waitUntil(async () => (await canvas.cards().length) > 0, {
-      timeout: 30_000,
-      timeoutMsg: 'the seeded notes never reached the canvas',
-    });
-
-    await canvas.open();
-  });
+  // The gate first: no command is answered — not even a read — until it has been passed,
+  // and it waits for the samples to land.
+  before(canvas.open);
 
   it('opens on a window wearing the application name', async () => {
     // From `Cargo.toml` through `APP_METADATA`, not `tauri.conf.json`'s lowercase name.
@@ -54,7 +32,7 @@ describe('First launch', () => {
 
     expect(await canvas.cards().length).toBe(4);
 
-    // Resolved while the guarantee above still holds; every later file reads it back.
+    // Recorded by the gate while the guarantee above held; every spec file reads it back.
     expect(await homeSpaceId()).toBe(spaces[0]?.id);
   });
 

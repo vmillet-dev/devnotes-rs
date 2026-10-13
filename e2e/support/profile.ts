@@ -31,6 +31,14 @@ function e2eConfigDir(): string {
 }
 
 /**
+ * A third on Windows: `%LOCALAPPDATA%`, which holds the WebView2 profile and the log plugin's
+ * file. On Linux it is the data directory again.
+ */
+function e2eLocalDataDir(): string {
+  return process.platform === 'win32' ? join(process.env['LOCALAPPDATA'] ?? '', IDENTIFIER) : e2eDataDir();
+}
+
+/**
  * Under the data directory, not the config one: `tauri-plugin-store` resolves a
  * relative path against `BaseDirectory::AppData`. Worth spelling out because a test
  * looking in the wrong one still passes on Windows, where the two are the same path.
@@ -76,7 +84,7 @@ export function vaultPath(): string {
 }
 
 /**
- * Where `homeSpaceId()` records the seeded space. Outside the profile on purpose: it is
+ * Where `passTheGate()` records the seeded space. Outside the profile on purpose: it is
  * the harness's own note, not the application's state.
  */
 export function homeSpaceMarker(): string {
@@ -89,11 +97,12 @@ export function homeSpaceMarker(): string {
  * that against the config's hooks: a wipe from inside wdio meets a locked database.
  */
 export function resetProfile(): void {
-  // Both, and `new Set` because on Windows they are the same path.
-  const directories = [...new Set([e2eDataDir(), e2eConfigDir()])];
+  // `new Set` because on Windows the data and config directories are the same path.
+  const directories = [...new Set([e2eDataDir(), e2eConfigDir(), e2eLocalDataDir()])];
 
+  // Retried: on Windows a scanner can hold one of the WebView2 profile's files for a moment.
   for (const directory of directories) {
-    rmSync(directory, { recursive: true, force: true });
+    rmSync(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   }
   rmSync(homeSpaceMarker(), { force: true });
 

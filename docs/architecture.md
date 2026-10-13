@@ -4739,9 +4739,9 @@ what writes. The trigger is replaced by that sentence and the confirm sits somew
 strip scrolls itself into view, because it replaces a trigger further down a panel that
 scrolls and would otherwise appear below the fold.
 
-⚠️ `23-backups.e2e.ts` runs **second to last**: its final scenario really replaces the
-library and leaves it locked, which every other file would meet as a gate it was not
-written for. The numeric prefix is the run order, and nothing may be filed after it.
+`23-backups.e2e.ts` ends on that gate for real: its final scenario replaces the library and
+leaves it locked, so a file run after it in the same application meets the gate, which
+`waitForCanvas` passes.
 
 ### Attachments, and the one plaintext copy
 
@@ -5758,7 +5758,7 @@ never sees `window.wdioTauri` and hangs before opening a session; with the polyf
 crates the front end invokes `plugin:wdio|…` commands nothing answers, and the error banner
 comes up on launch.
 
-#### One application, every spec file
+#### One application per run, one run per scenario
 
 **⚠️ `driverProvider: 'embedded'`, and that decides the shape of every scenario.** The
 WebDriver server lives _inside_ the application, reached through
@@ -5774,31 +5774,50 @@ never again. Reading `@wdio/tauri-service`: `startEmbeddedDriver` is called ther
 change it either, because the service skips its per-worker spawn for this provider
 (`if (this.perWorkerMode && !instanceId && !this.isEmbeddedMode)`).
 
-So **every spec file shares one process, one SQLite file and one `preferences.json`**. Three
-consequences, and they are rules rather than observations:
+So **every spec file of a run shares one process, one SQLite file and one `preferences.json`**.
+That is why CI gives each file a run of its own, on a runner of its own (see "In CI"):
+`E2E_SPEC=05-spaces npm run test:e2e` runs that file alone, and `e2e/wdio.conf.ts` refuses a
+name that matches no file, since a run that ran nothing would pass. Without it, the run takes
+every file in one application, in the order of their numeric prefix — a local convenience over
+the same files. The rules:
 
-- **The profile is wiped once per run, before the runner starts** — `npm run test:e2e` is
+- **The profile is wiped before each run, before the runner starts** — `npm run test:e2e` is
   `tsx e2e/reset-profile.ts && wdio run …`. Not from a hook: nothing orders a wdio hook against
   the service's own `onPrepare`, and a wipe from inside meets a living process, a locked
   database and an open WAL. A separate process beforehand has no ordering to get wrong.
-  ⚠️ The profile is **two** directories, not one: `tauri-plugin-window-state` writes
+  A run that ends, green or red, leaves nothing running: the service stops what it spawned.
+  One cut short might, so the script first stops an application a previous run left behind —
+  the `devnotes` process listening on the embedded port, `EMBEDDED_PORT` in
+  `e2e/support/leftovers.ts`, with its WebView2 tree. ⚠️ Never by executable: `tauri dev` runs
+  the same `target/debug/devnotes`, and only an e2e build listens on that port.
+  ⚠️ The profile is several directories, not one: `tauri-plugin-window-state` writes
   `.window-state.json` under `app_config_dir()` while everything else the application
-  writes lives under `app_data_dir()`. Windows cannot tell them apart, so wiping only the
+  writes lives under `app_data_dir()`. Windows cannot tell those two apart, so wiping only the
   data directory passed there and left the window geometry behind on Linux — where a run
-  then opened on the window the previous one closed with.
-- **`before()` buys each file a fresh front end and nothing more.** `browser.refresh()` reboots
-  Angular and every store over the same database; it resets no data.
-- **A spec file establishes its own preconditions.** It seeds what it needs, and it does not
-  assume a clean corpus. `05-spaces` deletes the spaces an earlier file left before asserting
-  on "the only space there is", and puts the canvas back on "all spaces" in its `after`.
+  then opened on the window the previous one closed with. On Windows `%LOCALAPPDATA%\<id>`
+  goes too: it holds the WebView2 profile and the log plugin's file.
+- **Every file passes alone, on a first launch.** `passTheGate()`, behind `waitForCanvas`,
+  waits for the gate or the canvas — neither is drawn before the vault's state has crossed
+  the bridge — and on a first launch it creates the vault, then waits for the samples. They
+  are written after the first view has arrived and settled, empty, so the settle loop cannot
+  see them coming, and a file that created a space before them would find the seeding
+  skipped. It then records the seeded space while it is the only one: `homeSpaceId()` reads
+  it back from a marker file, because WebdriverIO gives each spec file its own worker process
+  and a module-level cache would be empty again in the next one. ⚠️ It cannot be
+  `listSpaces()[0]`: `list_spaces` orders pinned first and then by name, case aside — in
+  Rust, the names being sealed — so after another file creates `Ops` — or pins anything — the
+  first row is no longer the seeded space.
+- **A spec file establishes its own preconditions, and does not assume a clean corpus
+  either.** In a run of several it inherits what the files before it left. `05-spaces` deletes
+  the spaces an earlier file left before asserting on "the only space there is", and puts the
+  canvas back on "all spaces" in its `after`. `24-forgotten-passphrase` makes the locked gate it
+  needs — `open_library` on the open library, then a reload — rather than counting on the one
+  `23-backups` leaves; `16-passphrase-change` puts the phrase every gate types back.
+- **`before()` buys each later file of a run a fresh front end and nothing more.**
+  `browser.refresh()` reboots Angular and every store over the same database; it resets no data.
 
-The numeric prefix on each file is therefore load-bearing: it is the run order.
-`01-first-launch` is the only file that meets a virgin profile, which is why it is also the one
-that resolves the seeded space — `homeSpaceId()` records it while exactly one exists and writes
-it to a marker file, because WebdriverIO gives each spec file its own worker process and a
-module-level cache would be empty again in the next one. ⚠️ It cannot be `listSpaces()[0]`:
-`list_spaces` orders pinned first and then by name, case aside — in Rust, the names being sealed — so after another file
-creates `Ops` — or pins anything — the first row is no longer the seeded space.
+The numeric prefix is the order of a run of several files, and only `01-first-launch` needs its
+place in it: it asserts on the virgin profile itself.
 
 **⚠️ There is no restart, and no spec may claim one.** `reopenSession()` is a
 `browser.reloadSession()`: it tears the session down and opens a new one against the same
@@ -5874,8 +5893,38 @@ case the control is asserted on — it exists, it is labelled — and never clic
 
 #### In CI
 
-The suite is a job of its own, on a matrix of `windows-latest` and `ubuntu-22.04`, and it
-**blocks**. It did not always: `continue-on-error: true` stood on it while it earned its
+The suite runs on `windows-latest` and `ubuntu-22.04`. `ci.yml` lists the scenarios —
+`e2e-scenarios` reads `e2e/specs/*.e2e.ts`, so a new file joins the matrix without a second list
+to edit — then calls `e2e.yml` once per platform. ⚠️ A workflow per platform and not a matrix of
+builds: a job that `needs` a matrix waits for every leg of it, and the Linux scenarios sat
+behind the Windows build. `e2e.yml` holds two jobs:
+
+- **`build`** builds the binary and uploads it with what it needs beside it: `identity/`, the
+  identity tool's resource, which `tauri-build` copies next to the executable, and
+  `.cargo-lock`. ⚠️ On Linux, Tauri reads resources next to the executable only in a
+  `target/<profile>` directory holding that file; anywhere else it looks in
+  `/usr/lib/devnotes`, and the identity tool answers that its lists are missing. The front end
+  is embedded in the binary; Windows needs no DLL beside it.
+- **`scenario`** is one job per scenario: it installs what the binary loads — WebKitGTK and an
+  X server on Linux, never the toolchain — runs `npm ci`, downloads the binary into
+  `src-tauri/target/debug`, where `wdio.conf.ts` looks, and runs
+  `E2E_SPEC=<name> npm run test:e2e`. No cargo runs there. `fail-fast: false`, so one red
+  scenario does not hide the others, and `max-parallel: 20` per platform: the account's
+  concurrency caps both together, so the platform built first takes every runner until the
+  other's binary is ready.
+
+Each job is a runner of its own, so its process, its profile, its WebDriver port and the
+home-space marker under `tmpdir()` are its own too: that is the isolation, and the harness
+redirects no data directory. It could not on Windows anyway, where `dirs` asks the known-folder
+API rather than reading `%APPDATA%`. A job uploads `e2e-logs-<os>-<scenario>`, even when it
+fails: the runner's log, the application's stdout (`captureBackendLogs`: Rust, through the log
+plugin's stdout target) and, for each failed test, a screenshot and what was on screen — the
+page's console warnings and errors with it, recorded in the page by `beforeTest`. Never the
+profile: its library is the run's. ⚠️ Not the service's `captureFrontendLogs`: the polyfill
+hands the console to `window.__TAURI__.log` first, which the application does not allow, and
+allowing it fed the command's own failures back into the console — hundreds of lines a file.
+
+The suite **blocks**. It did not always: `continue-on-error: true` stood on it while it earned its
 keep, on the reasoning that a flaky E2E job everybody ignores is worse than no job. That
 reasoning turned out to have a worse failure mode than the one it was avoiding. On `main`
 at `e4ed5d9` the Ubuntu leg failed on a real bug — a note keeping its title and losing the
