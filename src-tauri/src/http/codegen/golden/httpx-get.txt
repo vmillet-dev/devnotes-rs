@@ -1,0 +1,12 @@
+import httpx
+
+response = httpx.request(
+    "GET",
+    "https://api.exemple.fr/customers/cus_42/invoices?page=1&limit=50",
+    headers={
+        "Accept": "application/json",
+        "Authorization": "Bearer {{accessToken}}",
+    },
+    follow_redirects=False,
+)
+print(response.status_code, response.text)

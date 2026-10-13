@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpTabsStore } from '@core/services/http/http-tabs.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { DEFAULT_TRANSPORT, EMPTY_PARTS, ImpliedHeader, SentResponse } from '@core/model/http.model';
+import { FakeHttpEnvironmentsRepository, environment } from '@testing/fake-http-environments-repository';
 import { FakeHttpRepository, sentResponse } from '@testing/fake-http-repository';
 import { sampleTree } from '@testing/http-tree.fixture';
 import { provideAppTesting } from '@testing/testing.providers';
@@ -11,6 +12,7 @@ import { HttpPageComponent } from './http-page.component';
 describe('HttpPageComponent', () => {
   let fixture: ComponentFixture<HttpPageComponent>;
   let http: FakeHttpRepository;
+  let environments: FakeHttpEnvironmentsRepository;
 
   beforeEach(async () => {
     TestBed.resetTestingModule();
@@ -26,9 +28,15 @@ describe('HttpPageComponent', () => {
       'API',
       'Auth',
     );
+    environments = new FakeHttpEnvironmentsRepository({
+      environments: [
+        environment('Local', { colour: 'green' }),
+        environment('Production', { colour: 'red', protected: true }),
+      ],
+    });
     TestBed.configureTestingModule({
       imports: [HttpPageComponent],
-      providers: [provideAppTesting({ httpRepository: http })],
+      providers: [provideAppTesting({ httpRepository: http, httpEnvironmentsRepository: environments })],
     });
     fixture = TestBed.createComponent(HttpPageComponent);
     fixture.autoDetectChanges();
@@ -505,6 +513,7 @@ describe('HttpPageComponent', () => {
       'query',
       'headers',
       'auth',
+      'variables',
       'settings',
     ]);
     expect(el('[data-testid="http-graphql"]')).not.toBeNull();
@@ -526,6 +535,7 @@ describe('HttpPageComponent', () => {
       'message',
       'headers',
       'auth',
+      'variables',
       'protocols',
     ]);
     expect(el('[data-testid="http-send"]')).toBeNull();
@@ -597,6 +607,163 @@ describe('HttpPageComponent', () => {
     el<HTMLButtonElement>('[data-testid="http-close-discard"]').click();
     await vi.waitFor(() => expect(tabs().tabs()).toEqual([]));
     expect(http.callsOf('closeWebsocket')).toHaveLength(1);
+  });
+
+  it('sends with the environment picked at the end of the tab bar, none at first', async () => {
+    await tabs().open('Login');
+    await fixture.whenStable();
+    expect(el('[data-testid="http-environment-picker"]').dataset['active']).toBe('none');
+
+    el('[data-testid="http-environment-picker"]').click();
+    await fixture.whenStable();
+    all('[data-testid="http-environment-option"]')
+      .find((option) => option.dataset['id'] === 'env-local')
+      ?.click();
+    await fixture.whenStable();
+
+    expect(el('[data-testid="http-environment-picker"]').dataset['active']).toBe('env-local');
+    expect(el('[data-testid="http-environment-picker"]').textContent).toContain('Local');
+  });
+
+  it('opens the environments in place of the requests, from the picker and from the rail', async () => {
+    await tabs().open('Login');
+    await fixture.whenStable();
+
+    el('[data-testid="http-environment-picker"]').click();
+    await fixture.whenStable();
+    el('[data-testid="http-environment-manage"]').click();
+    await fixture.whenStable();
+    expect(el('[data-testid="http-environments"]')).not.toBeNull();
+    expect(el('[data-testid="http-request-editor"]')).toBeNull();
+    expect(el('[data-testid="http-environments-open"]').getAttribute('aria-pressed')).toBe('true');
+
+    el('[data-testid="http-environments-open"]').click();
+    await fixture.whenStable();
+    expect(el('[data-testid="http-environments"]')).toBeNull();
+    expect(el('[data-testid="http-request-editor"]')).not.toBeNull();
+  });
+
+  it('asks under the line before a POST leaves under a protected environment, Ctrl+Enter too', async () => {
+    await tabs().open('Login');
+    await fixture.whenStable();
+    el('[data-testid="http-environment-picker"]').click();
+    await fixture.whenStable();
+    all('[data-testid="http-environment-option"]')
+      .find((option) => option.dataset['id'] === 'env-production')
+      ?.click();
+    await fixture.whenStable();
+
+    key({ key: 'Enter' });
+    await fixture.whenStable();
+    expect(http.callsOf('send')).toEqual([]);
+    expect(el('[data-testid="http-protected-confirm"]').textContent).toContain('Production');
+
+    el('[data-testid="http-protected-cancel"]').click();
+    await fixture.whenStable();
+    expect(el('[data-testid="http-protected-confirm"]')).toBeNull();
+
+    el('[data-testid="http-send"]').click();
+    await fixture.whenStable();
+    el('[data-testid="http-protected-send"]').click();
+    await vi.waitFor(() => expect(http.callsOf('send')).toHaveLength(1));
+    await fixture.whenStable();
+    expect(el('[data-testid="http-protected-confirm"]')).toBeNull();
+  });
+
+  it('lists the variables a request holds, coloured by where they resolve from, and sends with the environment', async () => {
+    http.usedAnswer = [
+      {
+        name: 'baseUrl',
+        resolved: {
+          name: 'baseUrl',
+          value: 'https://api',
+          kind: 'text',
+          scope: 'environment',
+          from: 'Local',
+          shadows: [],
+        },
+      },
+    ];
+    await tabs().open('Login');
+    await fixture.whenStable();
+    el('[data-testid="http-environment-picker"]').click();
+    await fixture.whenStable();
+    all('[data-testid="http-environment-option"]')
+      .find((option) => option.dataset['id'] === 'env-local')
+      ?.click();
+
+    await vi.waitFor(() => expect(http.callsOf('variables').at(-1)?.[2]).toBe('env-local'));
+    await fixture.whenStable();
+    expect(all('[data-testid="http-used-variable"]').map((chip) => chip.dataset['scope'])).toEqual([
+      'environment',
+    ]);
+    expect(el('[data-testid="http-url-variable"]').dataset['scope']).toBe('environment');
+
+    el('[data-testid="http-send"]').click();
+    await vi.waitFor(() => expect(http.sentWith).toEqual(['env-local']));
+  });
+
+  it('keeps a request’s own variables in its section, and asks again what they resolve to', async () => {
+    await tabs().open('Login');
+    await fixture.whenStable();
+    el<HTMLButtonElement>('[data-testid="http-section"][data-section="variables"]').click();
+    await fixture.whenStable();
+    const asked = http.callsOf('variables').length;
+
+    const name = el<HTMLInputElement>(
+      '[data-testid="http-request-variables"] [data-testid="http-variable-name"]',
+    );
+    name.value = 'page';
+    name.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+
+    expect(tabs().active()?.draft.parts.variables).toEqual([
+      { enabled: true, name: 'page', value: '', kind: 'text' },
+    ]);
+    expect(
+      el(
+        '[data-testid="http-section"][data-section="variables"] [data-testid="http-section-count"]',
+      ).textContent?.trim(),
+    ).toBe('1');
+    await vi.waitFor(() => expect(http.callsOf('variables').length).toBeGreaterThan(asked));
+  });
+
+  it('offers to set a variable nothing sets, in the environment the request is sent with', async () => {
+    http.usedAnswer = [{ name: 'baseUrl', resolved: null }];
+    await tabs().open('Login');
+    el('[data-testid="http-environment-picker"]').click();
+    await fixture.whenStable();
+    all('[data-testid="http-environment-option"]')
+      .find((option) => option.dataset['id'] === 'env-local')
+      ?.click();
+    await vi.waitFor(() => expect(all('[data-testid="http-used-variable"]')).toHaveLength(1));
+    await fixture.whenStable();
+
+    el('[data-testid="http-used-variable-define"]').click();
+    await fixture.whenStable();
+
+    expect(el('[data-testid="http-environments"]')).not.toBeNull();
+    expect(el<HTMLInputElement>('[data-testid="http-environment-name"]').value).toBe('Local');
+    expect(
+      all('[data-testid="http-environment-variables"] [data-testid="http-variable-name"]').map(
+        (field) => (field as HTMLInputElement).value,
+      ),
+    ).toEqual(['baseUrl', '']);
+  });
+
+  it('opens « Générer le code » from an HTTP request, never from a socket', async () => {
+    await tabs().open('Login');
+    await fixture.whenStable();
+
+    el('[data-testid="http-code-open"]').click();
+    await fixture.whenStable();
+    expect(document.querySelector('[data-testid="http-code-dialog"]')).not.toBeNull();
+    await vi.waitFor(() => expect(http.callsOf('generateCode')).toHaveLength(1));
+
+    http.seed('Live', { kind: 'websocket' }, 'Flux');
+    await tabs().open('Live');
+    await fixture.whenStable();
+    expect(el('[data-testid="http-code-open"]')).toBeNull();
   });
 
   it('closes an unmodified tab at once', async () => {

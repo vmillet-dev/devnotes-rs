@@ -1,0 +1,14 @@
+import { request } from 'undici';
+
+const { statusCode, body } = await request('https://auth.exemple.fr/token', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/x-www-form-urlencoded',
+    Authorization: `Basic ${btoa('billing-web:{{clientSecret}}')}`,
+  },
+  body: new URLSearchParams({
+    grant_type: 'client_credentials',
+    scope: 'invoices read',
+  }),
+});
+console.log(statusCode, await body.text());

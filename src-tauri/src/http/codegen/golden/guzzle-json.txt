@@ -1,0 +1,17 @@
+<?php
+
+require 'vendor/autoload.php';
+
+$client = new GuzzleHttp\Client();
+$response = $client->request('POST', 'https://api.exemple.fr/customers', [
+    'headers' => [
+        'Content-Type' => 'application/json',
+    ],
+    'body' => '{
+  "name": "O\'Brien",
+  "plan": "pro"
+}',
+    'allow_redirects' => true,
+    'http_errors' => false,
+]);
+echo $response->getStatusCode(), ' ', $response->getBody();

@@ -436,6 +436,8 @@
     "libraryActionFailed": "L'opération sur la bibliothèque a échoué.",
     "toolFailed": "L’outil n’a pas pu calculer son résultat.",
     "httpItemGone": "Cet élément de collection n'existe plus.",
+    "httpEnvironmentGone": "Cet environnement n'existe plus.",
+    "environmentNameTaken": "Un environnement « {{name}} » existe déjà.",
     "httpVariable": "La variable « {{name}} » n'a pas de valeur : la requête ne peut pas partir.",
     "httpInvalidUrl": "Cette URL ne peut pas être envoyée : il lui faut http:// ou https:// et un hôte.",
     "httpUnresolved": "Le nom d'hôte ne se résout pas.",
@@ -3063,7 +3065,8 @@
         "query": "Requête",
         "message": "Messages",
         "protocols": "Protocoles",
-        "settings": "Réglages"
+        "settings": "Réglages",
+        "variables": "Variables"
       }
     },
     "table": {
@@ -3188,7 +3191,9 @@
         "collection": "Réglages de la collection {{name}}",
         "folder": "Réglages du dossier {{name}}"
       },
-      "hint": "Ses requêtes en héritent : une requête dont l'auth est « Héritée » prend celle-ci, et ses en-têtes s'ajoutent aux leurs."
+      "hint": "Ses requêtes en héritent : une requête dont l'auth est « Héritée » prend celle-ci, et ses en-têtes s'ajoutent aux leurs.",
+      "variables": "Variables",
+      "variablesHint": "au-dessus de l'environnement, sous un dossier et la requête"
     },
     "send": {
       "send": "Envoyer",
@@ -3342,6 +3347,86 @@
       "off": "Non",
       "insecure": "Les certificats ne sont pas vérifiés : n'importe quel serveur peut se faire passer pour celui-ci. À réserver au développement."
     },
+    "environments": {
+      "title": "Environnements",
+      "order": "La plus proche gagne : requête › dossier › collection › environnement › globales",
+      "new": "＋ Nouvel environnement",
+      "newName": "Nom de l'environnement",
+      "create": "Créer",
+      "globals": "Globales",
+      "globalsMeta": "{count, plural, =0 {Aucune variable} one {# variable} other {# variables}} · toutes les collections",
+      "globalsHint": "Valent pour toutes les collections, sous l'environnement actif.",
+      "listTitle": "Environnements",
+      "empty": "Aucun environnement. Créez Local, Staging, Production…",
+      "active": "actif",
+      "protectedBadge": "protégé",
+      "count": "{count, plural, =0 {Aucune variable} one {# variable} other {# variables}}",
+      "secrets": "{count, plural, one {# secrète} other {# secrètes}}",
+      "nameLabel": "Nom de l'environnement",
+      "use": "Utiliser",
+      "colour": "Couleur de l'environnement",
+      "protected": "Protégé",
+      "protectedNote": "Demande avant d'envoyer autre chose qu'un GET, un HEAD ou un OPTIONS, et avant d'ouvrir un WebSocket.",
+      "duplicate": "Dupliquer",
+      "copyName": "{{name}} (copie)",
+      "delete": "Supprimer",
+      "confirmDelete": "Supprimer « {{name}} » ?",
+      "variables": "Variables",
+      "secretsCaption": "Secrets scellés dans la bibliothèque et masqués à l'écran.",
+      "failed": "Les environnements n'ont pas pu être lus ou enregistrés.",
+      "pickerLabel": "Environnement actif : {{name}}",
+      "activeTitle": "Environnement actif",
+      "none": "Aucun",
+      "noneMeta": "globales seules",
+      "manage": "Gérer les environnements…",
+      "askSend": "{{name}} est protégé. Envoyer ce {{method}} ?",
+      "askConnect": "{{name}} est protégé. Ouvrir ce WebSocket ?",
+      "sendAnyway": "Envoyer quand même",
+      "connectAnyway": "Connecter quand même"
+    },
+    "variables": {
+      "name": "Nom",
+      "value": "Valeur",
+      "kind": "Type",
+      "newName": "Nouvelle variable",
+      "kindOf": "Type de {{name}}",
+      "reveal": "Afficher {{name}}",
+      "hide": "Masquer {{name}}",
+      "kinds": {
+        "text": "Texte",
+        "number": "Nombre",
+        "secret": "Secret"
+      },
+      "faults": {
+        "name": "Un nom de variable ne tient que des lettres sans accent, des chiffres, « _ » et « - ».",
+        "duplicate": "Ce nom est déjà défini plus haut : seule la première ligne compte.",
+        "number": "Une variable de type Nombre attend un nombre."
+      },
+      "used": {
+        "label": "Variables de la requête",
+        "none": "introuvable",
+        "define": "Définir dans {{name}}",
+        "defineGlobals": "Définir dans les globales",
+        "shadows": "Masque aussi :",
+        "reveal": "Afficher",
+        "hide": "Masquer",
+        "secret": "secret",
+        "scopes": {
+          "request": "requête",
+          "folder": "dossier",
+          "collection": "collection",
+          "environment": "environnement",
+          "globals": "globales"
+        },
+        "from": {
+          "request": "cette requête",
+          "folder": "dossier {{name}}",
+          "collection": "collection {{name}}",
+          "environment": "{{name}}",
+          "globals": "globales"
+        }
+      }
+    },
     "cookies": {
       "open": "Cookies",
       "title": "Cookies",
@@ -3363,6 +3448,39 @@
       "empty": "Aucun cookie : ceux que les réponses déposent apparaîtront ici.",
       "close": "Fermer",
       "failed": "Les cookies n'ont pas pu être lus ou supprimés."
+    },
+    "code": {
+      "open": "</> Code",
+      "openLabel": "Générer le code de cette requête",
+      "title": "Générer le code",
+      "filter": "Filtrer les langages",
+      "filterHint": "Langages et outils",
+      "targets": "Langage ou outil",
+      "groups": {
+        "shell": "Shell",
+        "javascript": "JavaScript",
+        "other": "Autres langages"
+      },
+      "noTarget": "Aucun langage ne correspond.",
+      "resolve": "Résoudre les variables",
+      "secrets": "Inclure les secrets",
+      "multiline": "Sur plusieurs lignes",
+      "follow": "Suivre les redirections",
+      "askSecrets": "Écrire les secrets en clair dans le code ? Copié ou enregistré, il quitte la bibliothèque.",
+      "include": "Inclure",
+      "secretsLeft": "{count, plural, one {1 secret laissé en variable :} other {# secrets laissés en variables :}}",
+      "secretsClear": "Les secrets sont écrits en clair dans ce code.",
+      "unresolved": "{count, plural, one {1 variable sans valeur, écrite telle quelle :} other {# variables sans valeur, écrites telles quelles :}}",
+      "notices": {
+        "multipartUnsupported": "{{target}} n’envoie pas de formulaire multipart ici : le corps est laissé de côté."
+      },
+      "where": "Enregistré comme snippet, dans le langage de la cible, avec le tag #http.",
+      "save": "Enregistrer comme snippet",
+      "copy": "Copier",
+      "copied": "Code copié.",
+      "noteTitle": "{{name}} · {{target}}",
+      "noteWhat": "Le code de la requête, pour un autre outil.",
+      "multilineShell": "Un programme est mis en forme de lui-même : seule une ligne de commande se coupe."
     }
   }
 }

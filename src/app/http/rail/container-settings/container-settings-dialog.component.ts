@@ -15,8 +15,10 @@ import { DialogComponent } from '@shared/layout/dialog/dialog.component';
 import { AuthEditorComponent } from '@http/ui/auth-editor/auth-editor.component';
 import { KeyValueTableComponent } from '@http/ui/key-value-table/key-value-table.component';
 import { TransportEditorComponent } from '@http/ui/transport-editor/transport-editor.component';
+import { VariablesTableComponent } from '@http/ui/variables-table/variables-table.component';
+import { VariableRow } from '@core/model/http-environment.model';
 
-/** A collection's or a folder's auth and headers: what every request under it inherits. */
+/** A collection's or a folder's variables, auth and headers: what every request under it inherits. */
 @Component({
   selector: 'app-container-settings-dialog',
   imports: [
@@ -25,6 +27,7 @@ import { TransportEditorComponent } from '@http/ui/transport-editor/transport-ed
     KeyValueTableComponent,
     TranslocoPipe,
     TransportEditorComponent,
+    VariablesTableComponent,
   ],
   templateUrl: './container-settings-dialog.component.html',
   styleUrl: './container-settings-dialog.component.scss',
@@ -57,6 +60,10 @@ export class ContainerSettingsDialogComponent implements OnInit {
         ),
       );
     }
+  }
+
+  protected onVariables(variables: readonly VariableRow[]): void {
+    this.settings.update((settings) => settings && { ...settings, variables });
   }
 
   protected onAuth(auth: RequestAuth): void {

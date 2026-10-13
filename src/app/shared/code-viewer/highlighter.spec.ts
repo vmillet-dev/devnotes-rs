@@ -23,6 +23,12 @@ const SAMPLES: Readonly<Record<LanguageTag, string>> = {
   css: 'a { color: red; }',
   scss: '$gap: 8px; a { &:hover { margin: $gap; } }',
   sh: 'echo hi',
+  ps1: "Invoke-RestMethod -Uri 'https://x' -Method Get",
+  kt: 'val answer = client.newCall(request).execute()',
+  rb: "puts 'hello'",
+  swift: 'let url = URL(string: "https://x")!',
+  dart: "final uri = Uri.parse('https://x');",
+  ex: 'IO.puts("hello")',
   md: '# Title',
   txt: 'plain text',
 };

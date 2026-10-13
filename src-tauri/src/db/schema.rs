@@ -168,6 +168,16 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    http_environments (id) {
+        id -> Text,
+        kind -> Text,
+        position -> Integer,
+        created_at -> Text,
+        document -> Text,
+    }
+}
+
 diesel::joinable!(folders -> spaces (space_id));
 diesel::joinable!(notes -> spaces (space_id));
 diesel::joinable!(note_positions -> notes (note_id));
@@ -196,5 +206,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     http_folders,
     http_requests,
     http_history,
-    http_cookies
+    http_cookies,
+    http_environments
 );

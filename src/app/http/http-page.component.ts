@@ -2,12 +2,14 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } 
 import { TranslocoPipe } from '@jsverse/transloco';
 import { REQUEST_KINDS } from '@core/model/http.model';
 import { HttpCollectionsStore } from '@core/services/http/http-collections.store';
-import { HttpHistoryStore } from '@core/services/http/http-history.store';
+import { HttpEnvironmentsStore } from '@core/services/http/http-environments.store';
+import { HttpWorkspaceStore } from '@core/services/http/http-workspace.store';
 import { HttpSendStore } from '@core/services/http/http-send.store';
 import { HttpSocketsStore } from '@core/services/http/http-sockets.store';
 import { HttpTabsStore, RequestTab } from '@core/services/http/http-tabs.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { CloseChoice, CloseRequestDialogComponent } from './close-request/close-request-dialog.component';
+import { EnvironmentsPageComponent } from './environments/environments-page.component';
 import { HistoryPageComponent } from './history/history-page.component';
 import { HttpRailComponent } from './rail/http-rail.component';
 import { RequestEditorComponent } from './request/request-editor/request-editor.component';
@@ -25,6 +27,7 @@ import { SaveAnswer, SaveRequestDialogComponent } from './save-request/save-requ
   selector: 'app-http-page',
   imports: [
     CloseRequestDialogComponent,
+    EnvironmentsPageComponent,
     HistoryPageComponent,
     HttpRailComponent,
     RequestEditorComponent,
@@ -44,8 +47,9 @@ export class HttpPageComponent implements OnInit {
   protected readonly collections = inject(HttpCollectionsStore);
   protected readonly tabs = inject(HttpTabsStore);
   protected readonly settings = inject(SettingsStore);
-  protected readonly history = inject(HttpHistoryStore);
+  protected readonly workspace = inject(HttpWorkspaceStore);
   private readonly sending = inject(HttpSendStore);
+  private readonly environments = inject(HttpEnvironmentsStore);
   private readonly sockets = inject(HttpSocketsStore);
 
   /** The tab a never-saved request is being placed for, and whether it closes once saved. */
@@ -72,7 +76,7 @@ export class HttpPageComponent implements OnInit {
 
   /** The tabs follow the tree once it is read: one whose request went while the page was away closes. */
   private async open(): Promise<void> {
-    await Promise.all([this.collections.load(), this.tabs.restore()]);
+    await Promise.all([this.collections.load(), this.tabs.restore(), this.environments.load()]);
   }
 
   protected askSave(tab: RequestTab, thenClose = false): void {
@@ -105,7 +109,7 @@ export class HttpPageComponent implements OnInit {
   protected onKeydown(event: KeyboardEvent): void {
     if (event.defaultPrevented || event.altKey || event.shiftKey || !(event.ctrlKey || event.metaKey)) return;
     const key = event.key.toLowerCase();
-    if (this.history.isOpen()) {
+    if (this.workspace.page() !== 'requests') {
       return;
     } else if (key === 'enter') {
       event.preventDefault();

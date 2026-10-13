@@ -1,0 +1,10 @@
+wget --method POST \
+  --quiet \
+  --max-redirect 0 \
+  --header 'Content-Type: application/x-www-form-urlencoded' \
+  --auth-no-challenge \
+  --user 'billing-web' \
+  --password '{{clientSecret}}' \
+  --body-data 'grant_type=client_credentials&scope=invoices+read' \
+  --output-document - \
+  'https://auth.exemple.fr/token'

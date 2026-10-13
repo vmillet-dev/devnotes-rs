@@ -1,0 +1,9 @@
+$body = '{
+  "name": "O''Brien",
+  "plan": "pro"
+}'
+Invoke-RestMethod `
+  -Uri 'https://api.exemple.fr/customers' `
+  -Method Post `
+  -ContentType 'application/json' `
+  -Body $body

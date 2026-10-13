@@ -1,0 +1,202 @@
+<app-dialog [layer]="'app'" labelledBy="http-code-title" (closed)="closed.emit()">
+  <div class="body" data-testid="http-code-dialog">
+    <header class="head">
+      <h2 id="http-code-title" class="title">{{ 'http.code.title' | transloco }}</h2>
+      <span class="pill">
+        <span class="method" [attr.data-method]="badge()">{{ badge() }}</span>
+        <span class="pill-name">{{ tab().draft.name }}</span>
+      </span>
+      <span class="pill" data-testid="http-code-environment">
+        @if (environments.active(); as active) {
+          <i [class]="'dot is-' + active.colour" aria-hidden="true"></i>
+          {{ active.name }}
+        } @else {
+          <i class="dot none" aria-hidden="true"></i>
+          {{ 'http.environments.none' | transloco }}
+        }
+      </span>
+    </header>
+
+    <div class="main">
+      <div class="targets">
+        <label class="filter">
+          <app-icon name="search" />
+          <input
+            type="search"
+            class="filter-field"
+            data-testid="http-code-filter"
+            [attr.aria-label]="'http.code.filter' | transloco"
+            [placeholder]="'http.code.filterHint' | transloco"
+            [value]="filter()"
+            (input)="onFilter($event)"
+          />
+        </label>
+        <div class="target-list" role="listbox" [attr.aria-label]="'http.code.targets' | transloco">
+          @for (group of groups(); track group.group) {
+            <p class="group">{{ groupKey(group.group) | transloco }}</p>
+            @for (entry of group.targets; track entry.id) {
+              <button
+                type="button"
+                role="option"
+                class="target"
+                data-testid="http-code-target"
+                [attr.data-target]="entry.id"
+                [attr.aria-selected]="entry.id === target()"
+                (click)="choose(entry.id)"
+              >
+                {{ entry.name }}
+                @if (entry.library) {
+                  <span class="library">· {{ entry.library }}</span>
+                }
+              </button>
+            }
+          } @empty {
+            <p class="none">{{ 'http.code.noTarget' | transloco }}</p>
+          }
+        </div>
+      </div>
+
+      <div class="output">
+        <div class="switches">
+          <label class="switch-row">
+            <input
+              type="checkbox"
+              class="switch"
+              data-testid="http-code-resolve"
+              [checked]="options().resolveVariables"
+              (change)="toggle('resolveVariables')"
+            />
+            {{ 'http.code.resolve' | transloco }}
+          </label>
+          <span class="secrets">
+            <label class="switch-row">
+              <input
+                type="checkbox"
+                class="switch"
+                data-testid="http-code-secrets"
+                [checked]="options().includeSecrets"
+                (change)="onSecrets($event)"
+              />
+              {{ 'http.code.secrets' | transloco }}
+            </label>
+            @if (askingSecrets()) {
+              <span
+                class="ask"
+                role="alertdialog"
+                data-testid="http-code-secrets-ask"
+                aria-labelledby="http-code-ask"
+              >
+                <span id="http-code-ask" class="ask-question">{{ 'http.code.askSecrets' | transloco }}</span>
+                <span class="ask-actions">
+                  <button
+                    type="button"
+                    class="action danger"
+                    data-testid="http-code-secrets-yes"
+                    (click)="includeSecrets()"
+                  >
+                    {{ 'http.code.include' | transloco }}
+                  </button>
+                  <button type="button" class="action" (click)="askingSecrets.set(false)">
+                    {{ 'http.rail.cancel' | transloco }}
+                  </button>
+                </span>
+              </span>
+            }
+          </span>
+          <label class="switch-row">
+            <input
+              type="checkbox"
+              class="switch"
+              data-testid="http-code-multiline"
+              [disabled]="entry().group !== 'shell'"
+              [attr.title]="entry().group === 'shell' ? null : ('http.code.multilineShell' | transloco)"
+              [checked]="options().multiline"
+              (change)="toggle('multiline')"
+            />
+            {{ 'http.code.multiline' | transloco }}
+          </label>
+          <label class="switch-row">
+            <input
+              type="checkbox"
+              class="switch"
+              data-testid="http-code-follow"
+              [checked]="options().followRedirects"
+              (change)="toggle('followRedirects')"
+            />
+            {{ 'http.code.follow' | transloco }}
+          </label>
+        </div>
+
+        <div class="code" data-testid="http-code-output" [attr.data-target]="target()">
+          @if (code(); as generated) {
+            <app-code-viewer [content]="generated.code" [language]="generated.language" />
+          }
+        </div>
+
+        @if (code(); as generated) {
+          @if (options().includeSecrets) {
+            <p class="note clear" data-testid="http-code-note" data-note="clear">
+              {{ 'http.code.secretsClear' | transloco }}
+            </p>
+          } @else if (generated.secrets.length > 0) {
+            <p class="note" data-testid="http-code-note" data-note="secrets">
+              <app-icon name="lock" />
+              <span>
+                {{ 'http.code.secretsLeft' | transloco: { count: generated.secrets.length } }}
+                @for (name of generated.secrets; track name) {
+                  <code class="name">{{ written(name) }}</code>
+                }
+              </span>
+            </p>
+          }
+          @if (generated.unresolved.length > 0) {
+            <p class="note missing" data-testid="http-code-unresolved">
+              {{ 'http.code.unresolved' | transloco: { count: generated.unresolved.length } }}
+              @for (name of generated.unresolved; track name) {
+                <code class="name">{{ written(name) }}</code>
+              }
+            </p>
+          }
+          @if (generated.notice; as notice) {
+            <p class="note missing" data-testid="http-code-notice">
+              {{ 'http.code.notices.' + notice | transloco: { target: entry().name } }}
+            </p>
+          }
+        }
+      </div>
+    </div>
+
+    <footer class="foot">
+      <span class="where">{{ 'http.code.where' | transloco }}</span>
+      <button
+        type="button"
+        class="action"
+        data-testid="http-code-save"
+        [disabled]="code() === null"
+        (click)="saveAsSnippet()"
+      >
+        {{ 'http.code.save' | transloco }}
+      </button>
+      <button
+        type="button"
+        class="action primary"
+        data-testid="http-code-copy"
+        [disabled]="code() === null"
+        (click)="copy()"
+      >
+        <app-icon name="copy" />
+        {{ 'http.code.copy' | transloco }}
+      </button>
+    </footer>
+  </div>
+</app-dialog>
+
+@if (saving(); as result) {
+  <app-save-as-note-dialog
+    [result]="result"
+    [source]="noteSource()"
+    [initialTags]="'http'"
+    whatKey="http.code.noteWhat"
+    (closed)="saving.set(null)"
+  />
+}

@@ -1,0 +1,29 @@
+package main
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
+)
+
+func main() {
+	request, err := http.NewRequest("POST", "https://auth.exemple.fr/token", strings.NewReader("grant_type=client_credentials&scope=invoices+read"))
+	if err != nil {
+		panic(err)
+	}
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	request.SetBasicAuth("billing-web", "{{clientSecret}}")
+	client := &http.Client{
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	response, err := client.Do(request)
+	if err != nil {
+		panic(err)
+	}
+	defer response.Body.Close()
+	answer, _ := io.ReadAll(response.Body)
+	fmt.Println(response.StatusCode, string(answer))
+}

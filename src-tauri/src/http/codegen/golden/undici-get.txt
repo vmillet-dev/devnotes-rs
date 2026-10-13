@@ -1,0 +1,10 @@
+import { request } from 'undici';
+
+const { statusCode, body } = await request('https://api.exemple.fr/customers/cus_42/invoices?page=1&limit=50', {
+  method: 'GET',
+  headers: {
+    Accept: 'application/json',
+    Authorization: 'Bearer {{accessToken}}',
+  },
+});
+console.log(statusCode, await body.text());

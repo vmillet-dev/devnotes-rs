@@ -5,6 +5,7 @@ import { RequestDraft, SentResponse } from '@core/model/http.model';
 import { AppNotice, ErrorNotifier, ipcNotice } from '@core/services/errors/error-notifier.service';
 import { FileDialogService } from '@core/services/dialogs/file-dialog.service';
 import { StatusNotifier } from '@core/services/notifications/status.service';
+import { HttpEnvironmentsStore } from './http-environments.store';
 
 /**
  * Where a tab's send stands. `sendId` is the name Rust keeps the body under, fixed at the send:
@@ -60,6 +61,7 @@ export class HttpSendStore {
   private readonly errors = inject(ErrorNotifier);
   private readonly dialogs = inject(FileDialogService);
   private readonly status = inject(StatusNotifier);
+  private readonly environments = inject(HttpEnvironmentsStore);
 
   private readonly _states = signal<ReadonlyMap<string, SendState>>(new Map());
   readonly states = this._states.asReadonly();
@@ -73,12 +75,22 @@ export class HttpSendStore {
     return this._states().get(key)?.phase === 'sending';
   }
 
-  async send(tab: Sendable): Promise<void> {
+  /** `confirmed`: the yes a protected environment asked for. */
+  async send(tab: Sendable, confirmed = false): Promise<void> {
     if (this.isSending(tab.key)) return;
+    if (!this.environments.mayLeave(tab.key, tab.draft.kind, tab.draft.method, confirmed)) return;
     const previous = this._states().get(tab.key);
     const sendId = `${tab.key}#${++this.sends}`;
     this.set(tab.key, { phase: 'sending', sendId, startedAt: Date.now() });
-    const sent = this.repository.send(sendId, tab.draft, tab.place, tab.requestId);
+    // A table still being typed in is written first: the send resolves from what Rust holds.
+    await this.environments.flush();
+    const sent = this.repository.send(
+      sendId,
+      tab.draft,
+      tab.place,
+      tab.requestId,
+      this.environments.active()?.id ?? null,
+    );
     if (previous) void this.release(previous.sendId);
     try {
       const response = await sent;

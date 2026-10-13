@@ -25,6 +25,13 @@ closed_enum! {
         Css = "css",
         Scss = "scss",
         Sh = "sh",
+        /// PowerShell: what generated code is saved as, and what a pasted cmdlet reads as.
+        Ps1 = "ps1",
+        Kt = "kt",
+        Rb = "rb",
+        Swift = "swift",
+        Dart = "dart",
+        Ex = "ex",
         Md = "md",
         /// Default, and the signal that the front end chose nothing.
         #[default]
@@ -110,7 +117,7 @@ type Scorer = fn(&Sample<'_>) -> u32;
 
 /// Every language that can be guessed at, each scoring itself. The order means nothing: a
 /// language added here needs markers with honest weights, not a slot.
-const SCORERS: [(Language, Scorer); 20] = [
+const SCORERS: [(Language, Scorer); 26] = [
     (Language::Json, score_json),
     (Language::Php, score_php),
     (Language::Xml, score_xml),
@@ -131,6 +138,12 @@ const SCORERS: [(Language, Scorer); 20] = [
     (Language::Yml, score_yaml),
     (Language::Md, score_markdown),
     (Language::Sh, score_shell),
+    (Language::Ps1, score_powershell),
+    (Language::Kt, score_kotlin),
+    (Language::Rb, score_ruby),
+    (Language::Swift, score_swift),
+    (Language::Dart, score_dart),
+    (Language::Ex, score_elixir),
 ];
 
 /// The best-scoring language, or `txt` when nothing proved itself. Weights settle what an
@@ -500,6 +513,75 @@ fn score_shell(sample: &Sample<'_>) -> u32 {
             sample.any_line(|line| line.starts_with('$') || line.starts_with("./")),
         )
         + worth(WEAK, sample.has(" | ") || sample.has(" && "))
+}
+
+/// A cmdlet's `Verb-Noun`, a variable assigned, a hashtable: a shell line has none of the three.
+fn score_powershell(sample: &Sample<'_>) -> u32 {
+    const CMDLETS: [&str; 8] = [
+        "Invoke-RestMethod",
+        "Invoke-WebRequest",
+        "Get-ChildItem",
+        "Get-Item",
+        "Set-Location",
+        "Write-Host",
+        "Write-Output",
+        "New-Item",
+    ];
+
+    worth(STRONG, CMDLETS.iter().any(|cmdlet| sample.has(cmdlet)))
+        + worth(
+            WEAK,
+            sample.any_line(|line| line.starts_with('$') && line.contains(" = ")),
+        )
+        + worth(WEAK, sample.has("@{"))
+}
+
+/// `fun` and `val` begin a line in Kotlin alone: Swift writes `func`, Scala is not offered.
+fn score_kotlin(sample: &Sample<'_>) -> u32 {
+    worth(SIGNATURE, sample.has("fun main("))
+        + worth(
+            STRONG,
+            sample.line_starts_with_any(&["fun ", "val ", "data class ", "object "]),
+        )
+        + worth(WEAK, sample.has("?.") && sample.has("val "))
+}
+
+/// A line that is only `end` is Ruby's or Elixir's: worth little, and the same to both.
+fn score_ruby(sample: &Sample<'_>) -> u32 {
+    worth(
+        SIGNATURE,
+        sample.line_starts_with_any(&["require '", "require \""]),
+    ) + worth(
+        STRONG,
+        sample.line_starts_with_any(&["puts ", "attr_accessor "]),
+    ) + worth(STRONG, sample.has(" do |"))
+        + worth(WEAK, sample.any_line(|line| line == "end"))
+}
+
+fn score_swift(sample: &Sample<'_>) -> u32 {
+    worth(
+        SIGNATURE,
+        sample.line_starts_with_any(&["import Foundation", "import SwiftUI", "import UIKit"]),
+    ) + worth(STRONG, sample.has("guard let ") || sample.has("if let "))
+        + worth(WEAK, sample.has("func ") && sample.has(" -> "))
+}
+
+fn score_dart(sample: &Sample<'_>) -> u32 {
+    worth(
+        SIGNATURE,
+        sample.line_starts_with_any(&["import 'package:", "import \"package:"]),
+    ) + worth(
+        STRONG,
+        sample.line_starts_with_any(&["Future<void> main(", "void main() {"]),
+    ) + worth(WEAK, sample.line_starts_with_any(&["final "]))
+}
+
+fn score_elixir(sample: &Sample<'_>) -> u32 {
+    worth(
+        SIGNATURE,
+        sample.line_starts_with_any(&["defmodule "]) || sample.has("|>"),
+    ) + worth(STRONG, sample.has("IO.puts") || sample.has("IO.inspect"))
+        + worth(WEAK, sample.any_line(|line| line == "end"))
 }
 
 #[cfg(test)]

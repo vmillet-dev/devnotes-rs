@@ -21,6 +21,7 @@ mod common;
 mod attachments;
 mod folders;
 mod http;
+mod http_environments;
 mod http_send;
 mod notes;
 mod spaces;

@@ -1,0 +1,16 @@
+import java.io.File
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.asRequestBody
+
+val client = OkHttpClient.Builder()
+    .followRedirects(false)
+    .build()
+val request = Request.Builder()
+    .url("https://api.exemple.fr/upload")
+    .method("POST", File("/tmp/archive.zip").asRequestBody("application/octet-stream".toMediaType()))
+    .build()
+client.newCall(request).execute().use { response ->
+    println("${response.code} ${response.body?.string()}")
+}

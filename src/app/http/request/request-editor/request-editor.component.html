@@ -28,6 +28,7 @@
     }
     <app-url-field
       [value]="draft.parts.url"
+      [scopes]="scopes()"
       [label]="'http.editor.url' | transloco"
       [placeholder]="
         (draft.kind === 'websocket' ? 'http.editor.socketPlaceholder' : 'http.editor.urlPlaceholder')
@@ -63,6 +64,18 @@
         }
       </button>
     }
+    @if (draft.kind !== 'websocket') {
+      <button
+        type="button"
+        class="save"
+        data-testid="http-code-open"
+        aria-haspopup="dialog"
+        [attr.title]="'http.code.openLabel' | transloco"
+        (click)="codeOpen.set(true)"
+      >
+        {{ 'http.code.open' | transloco }}
+      </button>
+    }
     <button
       type="button"
       class="save"
@@ -74,6 +87,58 @@
       {{ 'http.editor.save' | transloco }}
     </button>
   </div>
+
+  @if (used().length > 0) {
+    <ul
+      class="used"
+      data-testid="http-used-variables"
+      [attr.aria-label]="'http.variables.used.label' | transloco"
+    >
+      @for (known of used(); track known.name) {
+        <li>
+          <app-variable-chip
+            [variable]="known"
+            [defineIn]="environments.active()?.name ?? null"
+            (defined)="define($event)"
+          />
+        </li>
+      }
+    </ul>
+  }
+
+  @if (environments.asking() === tab().key) {
+    @let protectedOne = environments.active();
+    <div
+      class="protected"
+      role="alertdialog"
+      data-testid="http-protected-confirm"
+      aria-labelledby="http-protected-question"
+    >
+      <p id="http-protected-question" class="protected-question">
+        <i [class]="'protected-dot is-' + (protectedOne?.colour ?? 'red')" aria-hidden="true"></i>
+        {{
+          (draft.kind === 'websocket' ? 'http.environments.askConnect' : 'http.environments.askSend')
+            | transloco: { name: protectedOne?.name ?? '', method: draft.method }
+        }}
+      </p>
+      <div class="protected-actions">
+        <button type="button" class="protected-go" data-testid="http-protected-send" (click)="sendAnyway()">
+          {{
+            (draft.kind === 'websocket' ? 'http.environments.connectAnyway' : 'http.environments.sendAnyway')
+              | transloco
+          }}
+        </button>
+        <button
+          type="button"
+          class="protected-cancel"
+          data-testid="http-protected-cancel"
+          (click)="environments.stopAsking()"
+        >
+          {{ 'http.rail.cancel' | transloco }}
+        </button>
+      </div>
+    </div>
+  }
 
   <div class="sections" role="tablist" [attr.aria-label]="'http.editor.parts' | transloco">
     @for (id of sections(); track id) {
@@ -171,6 +236,13 @@
         />
         <span class="protocols-hint">{{ 'http.socket.protocolsHint' | transloco }}</span>
       </label>
+    } @else if (section() === 'variables') {
+      <app-variables-table
+        kind="request"
+        [label]="'http.editor.sections.variables' | transloco"
+        [rows]="draft.parts.variables"
+        (rowsChange)="onVariables($event)"
+      />
     } @else if (section() === 'settings') {
       <app-transport-editor
         [settings]="draft.parts.transport"
@@ -191,3 +263,7 @@
     }
   </div>
 </div>
+
+@if (codeOpen()) {
+  <app-code-dialog [tab]="tab()" (closed)="codeOpen.set(false)" />
+}

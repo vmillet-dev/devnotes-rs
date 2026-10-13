@@ -1,0 +1,3 @@
+http GET 'https://api.exemple.fr/customers/cus_42/invoices?page=1&limit=50' \
+  'Accept:application/json' \
+  'Authorization:Bearer {{accessToken}}'

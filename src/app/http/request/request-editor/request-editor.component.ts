@@ -27,7 +27,9 @@ import {
   TransportSettings,
   WebsocketParts,
 } from '@core/model/http.model';
+import { UsedVariable, VariableRow } from '@core/model/http-environment.model';
 import { HttpCollectionsStore } from '@core/services/http/http-collections.store';
+import { HttpEnvironmentsStore } from '@core/services/http/http-environments.store';
 import { HttpSendStore } from '@core/services/http/http-send.store';
 import { HttpSocketsStore } from '@core/services/http/http-sockets.store';
 import { HttpTabsStore, RequestTab } from '@core/services/http/http-tabs.store';
@@ -42,8 +44,12 @@ import { WebsocketComposerComponent } from '../websocket-composer/websocket-comp
 import { KeyValueTableComponent } from '@http/ui/key-value-table/key-value-table.component';
 import { TransportEditorComponent } from '@http/ui/transport-editor/transport-editor.component';
 import { UrlFieldComponent } from '../url-field/url-field.component';
+import { VariableChipComponent } from '@http/ui/variable-chip/variable-chip.component';
+import { CodeDialogComponent } from '@http/code-dialog/code-dialog.component';
+import { VariablesTableComponent } from '@http/ui/variables-table/variables-table.component';
 
-type Section = 'params' | 'headers' | 'auth' | 'body' | 'query' | 'message' | 'protocols' | 'settings';
+type Section =
+  'params' | 'headers' | 'auth' | 'body' | 'query' | 'message' | 'protocols' | 'variables' | 'settings';
 
 /** A header a request may send: the reference's own list, those a server alone writes left out. */
 const REQUEST_HEADERS = HTTP_HEADERS.filter((header) => header.direction !== 'response').map(
@@ -62,12 +68,15 @@ const sameFields = <T extends object>(a: T, b: T) =>
     AuthEditorComponent,
     BodyEditorComponent,
     ChoiceMenuComponent,
+    CodeDialogComponent,
     GraphqlEditorComponent,
     KeyValueTableComponent,
     SpinnerComponent,
     TranslocoPipe,
     TransportEditorComponent,
     UrlFieldComponent,
+    VariableChipComponent,
+    VariablesTableComponent,
     WebsocketComposerComponent,
   ],
   templateUrl: './request-editor.component.html',
@@ -84,14 +93,16 @@ export class RequestEditorComponent {
   private readonly sockets = inject(HttpSocketsStore);
   private readonly repository = inject(HttpRepository);
   private readonly collections = inject(HttpCollectionsStore);
+  protected readonly environments = inject(HttpEnvironmentsStore);
 
   private readonly chosen = signal<Section>('params');
+  protected readonly codeOpen = signal(false);
   protected readonly sections = computed<readonly Section[]>(
     () =>
       ({
-        http: ['params', 'headers', 'auth', 'body', 'settings'] as const,
-        graphql: ['query', 'headers', 'auth', 'settings'] as const,
-        websocket: ['message', 'headers', 'auth', 'protocols'] as const,
+        http: ['params', 'headers', 'auth', 'body', 'variables', 'settings'] as const,
+        graphql: ['query', 'headers', 'auth', 'variables', 'settings'] as const,
+        websocket: ['message', 'headers', 'auth', 'variables', 'protocols'] as const,
       })[this.tab().draft.kind],
   );
   /** The section chosen, or the first when the kind left it behind. */
@@ -155,6 +166,32 @@ export class RequestEditorComponent {
     loader: () => this.repository.impliedHeaders(this.tab().draft, this.tab().place),
   });
   protected readonly implied = this.lastOf<readonly ImpliedHeader[]>(this.impliedResource, []);
+
+  /** What the variables resolve from: the request, its place, the environment and the sets. */
+  private readonly variablesQuestion = computed(
+    () => {
+      const { draft, place } = this.tab();
+      return {
+        kind: draft.kind,
+        parts: draft.parts,
+        place,
+        environmentId: this.environments.active()?.id ?? null,
+        environments: this.environments.environments(),
+        globals: this.environments.globals(),
+        revision: this.collections.settingsRevision(),
+      };
+    },
+    { equal: (a, b) => JSON.stringify(a) === JSON.stringify(b) },
+  );
+  private readonly usedResource = resource({
+    params: () => this.variablesQuestion(),
+    loader: ({ params }) => this.repository.variables(this.tab().draft, params.place, params.environmentId),
+  });
+  /** Each `{{name}}` the request holds, with where it resolves from: Rust's answer. */
+  protected readonly used = this.lastOf<readonly UsedVariable[]>(this.usedResource, []);
+  protected readonly scopes = computed(
+    () => new Map(this.used().map((known) => [known.name, known.resolved?.scope ?? ('none' as const)])),
+  );
   protected readonly dirty = computed(() => this.tabs.isDirty(this.tab()));
   protected readonly inFlight = computed(
     () => this.sending.states().get(this.tab().key)?.phase === 'sending',
@@ -173,6 +210,7 @@ export class RequestEditorComponent {
     query: 0,
     message: this.tab().draft.parts.websocket.messages.length,
     protocols: this.tab().draft.parts.websocket.protocols.length,
+    variables: this.tab().draft.parts.variables.filter((row) => row.enabled && row.name !== '').length,
     settings: Object.values(this.tab().draft.parts.transport).filter(
       (value) => value !== null && value !== undefined,
     ).length,
@@ -217,6 +255,15 @@ export class RequestEditorComponent {
     this.tabs.editParts(this.tab().key, { auth });
   }
 
+  protected onVariables(variables: readonly VariableRow[]): void {
+    this.tabs.editParts(this.tab().key, { variables });
+  }
+
+  /** A name nothing sets, written into the active environment — or the globals — to be filled. */
+  protected define(name: string): void {
+    this.environments.define(name);
+  }
+
   protected onTransport(transport: TransportSettings): void {
     this.tabs.editParts(this.tab().key, { transport });
   }
@@ -227,6 +274,12 @@ export class RequestEditorComponent {
 
   protected onBodyKind(kind: BodyKind): void {
     this.tabs.chooseBodyKind(this.tab().key, kind);
+  }
+
+  /** The yes a protected environment asked for, from the question under the line. */
+  protected sendAnyway(): void {
+    if (this.tab().draft.kind === 'websocket') void this.sockets.connect(this.tab(), true);
+    else void this.sending.send(this.tab(), true);
   }
 
   protected send(): void {

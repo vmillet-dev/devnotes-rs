@@ -1,0 +1,1 @@
+curl --request GET --url 'https://api.exemple.fr/customers/cus_42/invoices?page=1&limit=50' --header 'Accept: application/json' --header 'Authorization: Bearer {{accessToken}}'

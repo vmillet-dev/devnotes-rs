@@ -1,0 +1,10 @@
+response =
+  Req.request!(
+    method: :get,
+    url: "https://api.exemple.fr/customers/cus_42/invoices?page=1&limit=50",
+    headers: [{"accept", "application/json"}, {"authorization", "Bearer {{accessToken}}"}],
+    redirect: false,
+    retry: false
+  )
+
+IO.puts("#{response.status} #{inspect(response.body)}")

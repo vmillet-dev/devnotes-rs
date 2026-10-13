@@ -24,6 +24,12 @@ export const PRETTIER_PARSERS: Readonly<Record<LanguageTag, PrettierParser | nul
   css: 'css',
   scss: 'scss',
   sh: null,
+  ps1: null,
+  kt: null,
+  rb: null,
+  swift: null,
+  dart: null,
+  ex: null,
   md: 'markdown',
   txt: null,
 };

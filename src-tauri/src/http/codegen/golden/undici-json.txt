@@ -1,0 +1,14 @@
+import { request } from 'undici';
+
+const { statusCode, body } = await request('https://api.exemple.fr/customers', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: `{
+  "name": "O'Brien",
+  "plan": "pro"
+}`,
+  maxRedirections: 10,
+});
+console.log(statusCode, await body.text());

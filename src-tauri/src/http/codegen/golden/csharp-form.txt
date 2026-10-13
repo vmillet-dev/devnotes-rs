@@ -1,0 +1,14 @@
+using System.Net.Http.Headers;
+using System.Text;
+
+using var handler = new HttpClientHandler { AllowAutoRedirect = false };
+using var client = new HttpClient(handler);
+using var request = new HttpRequestMessage(HttpMethod.Post, "https://auth.exemple.fr/token");
+request.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes("billing-web:{{clientSecret}}")));
+request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
+{
+    ["grant_type"] = "client_credentials",
+    ["scope"] = "invoices read",
+});
+using var response = await client.SendAsync(request);
+Console.WriteLine($"{(int)response.StatusCode} {await response.Content.ReadAsStringAsync()}");

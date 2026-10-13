@@ -1,0 +1,9 @@
+wget --method POST \
+  --quiet \
+  --header 'Content-Type: application/json' \
+  --body-data '{
+  "name": "O'\''Brien",
+  "plan": "pro"
+}' \
+  --output-document - \
+  'https://api.exemple.fr/customers'

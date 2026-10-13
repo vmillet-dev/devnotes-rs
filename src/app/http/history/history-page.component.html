@@ -71,7 +71,16 @@
                 >
                   <span class="method" [attr.data-method]="item.method">{{ item.method }}</span>
                   <span class="what">
-                    <span class="name">{{ item.summary.name }}</span>
+                    <span class="name-line">
+                      <span class="name">{{ item.summary.name }}</span>
+                      @if (item.summary.environment; as environment) {
+                        <!-- Which environment it left with, as it was named then. -->
+                        <span class="environment" data-testid="http-history-environment">
+                          <i [class]="'environment-dot is-' + environment.colour" aria-hidden="true"></i>
+                          {{ environment.name }}
+                        </span>
+                      }
+                    </span>
                     <!-- Cut in what repeats, not at its end: the host gives way, the path and the query stay. -->
                     <span class="url" data-testid="http-history-item-url">
                       <span class="url-head">{{ item.urlHead }}</span

@@ -67,6 +67,7 @@ fn echo() -> (u16, mpsc::Receiver<Option<String>>) {
 
 fn request(url: &str) -> WebsocketRequest {
     WebsocketRequest {
+        environment_id: None,
         id: "socket-1".to_string(),
         document: RequestDocument {
             url: url.to_string(),

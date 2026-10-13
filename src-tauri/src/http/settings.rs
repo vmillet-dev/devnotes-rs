@@ -5,6 +5,7 @@ use serde::Serialize;
 use specta::Type;
 
 use super::model::{ContainerSettings, HttpItemKind, KeyValue, RequestAuth, RequestBody};
+use super::variables::{VariableLayer, VariableScope};
 
 /// Where an inherited value was set: what the request says it comes from.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
@@ -39,6 +40,10 @@ pub struct Inherited {
     /// its place.
     #[serde(skip)]
     pub user_agent_off: bool,
+    /// The folders' variables, the nearest first, then the collection's: the front asks for
+    /// them resolved, never as layers.
+    #[serde(skip)]
+    pub variables: Vec<VariableLayer>,
 }
 
 /// `levels` from the collection down to the request's own folder: the nearest auth set wins.
@@ -92,6 +97,18 @@ pub fn inherit(levels: &[(HttpOrigin, ContainerSettings)]) -> Inherited {
         user_agent_off: levels
             .iter()
             .any(|(_, settings)| switches_off(&settings.headers, "user-agent")),
+        variables: levels
+            .iter()
+            .rev()
+            .map(|(origin, settings)| VariableLayer {
+                scope: match origin.kind {
+                    HttpItemKind::Collection => VariableScope::Collection,
+                    HttpItemKind::Folder | HttpItemKind::Request => VariableScope::Folder,
+                },
+                from: origin.name.clone(),
+                variables: settings.variables.clone(),
+            })
+            .collect(),
     }
 }
 

@@ -1,0 +1,14 @@
+$headers = @{
+  'Authorization' = 'Basic ' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('billing-web:{{clientSecret}}'))
+}
+$body = @{
+  'grant_type' = 'client_credentials'
+  'scope' = 'invoices read'
+}
+Invoke-RestMethod `
+  -Uri 'https://auth.exemple.fr/token' `
+  -Method Post `
+  -Headers $headers `
+  -ContentType 'application/x-www-form-urlencoded' `
+  -Body $body `
+  -MaximumRedirection 0

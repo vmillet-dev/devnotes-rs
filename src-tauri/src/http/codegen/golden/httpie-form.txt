@@ -1,0 +1,6 @@
+http POST 'https://auth.exemple.fr/token' \
+  --auth 'billing-web:{{clientSecret}}' \
+  --form \
+  'Content-Type:application/x-www-form-urlencoded' \
+  'grant_type=client_credentials' \
+  'scope=invoices read'

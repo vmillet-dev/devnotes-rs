@@ -3,18 +3,24 @@ import bash from 'highlight.js/lib/languages/bash';
 import c from 'highlight.js/lib/languages/c';
 import csharp from 'highlight.js/lib/languages/csharp';
 import css from 'highlight.js/lib/languages/css';
+import dart from 'highlight.js/lib/languages/dart';
+import elixir from 'highlight.js/lib/languages/elixir';
 import go from 'highlight.js/lib/languages/go';
 import graphql from 'highlight.js/lib/languages/graphql';
 import ini from 'highlight.js/lib/languages/ini';
 import java from 'highlight.js/lib/languages/java';
+import kotlin from 'highlight.js/lib/languages/kotlin';
 import javascript from 'highlight.js/lib/languages/javascript';
 import json from 'highlight.js/lib/languages/json';
 import markdown from 'highlight.js/lib/languages/markdown';
 import php from 'highlight.js/lib/languages/php';
+import powershell from 'highlight.js/lib/languages/powershell';
 import python from 'highlight.js/lib/languages/python';
+import ruby from 'highlight.js/lib/languages/ruby';
 import rust from 'highlight.js/lib/languages/rust';
 import scss from 'highlight.js/lib/languages/scss';
 import sql from 'highlight.js/lib/languages/sql';
+import swift from 'highlight.js/lib/languages/swift';
 import typescript from 'highlight.js/lib/languages/typescript';
 import xml from 'highlight.js/lib/languages/xml';
 import yaml from 'highlight.js/lib/languages/yaml';
@@ -32,27 +38,33 @@ import { LanguageTag } from '@core/model/language.model';
  * this build, or it comes back uncoloured with nothing to say so.
  */
 const GRAMMARS: Readonly<Record<LanguageTag, string | null>> = {
-  json: 'json',
-  js: 'javascript',
-  ts: 'typescript',
-  py: 'python',
-  rs: 'rust',
-  go: 'go',
-  java: 'java',
-  cs: 'csharp',
-  php: 'php',
   c: 'c',
-  sql: 'sql',
-  graphql: 'graphql',
-  yml: 'yaml',
-  toml: 'ini',
-  xml: 'xml',
-  html: 'xml',
+  cs: 'csharp',
   css: 'css',
+  dart: 'dart',
+  ex: 'elixir',
+  go: 'go',
+  graphql: 'graphql',
+  html: 'xml',
+  java: 'java',
+  js: 'javascript',
+  json: 'json',
+  kt: 'kotlin',
+  md: 'markdown',
+  php: 'php',
+  ps1: 'powershell',
+  py: 'python',
+  rb: 'ruby',
+  rs: 'rust',
   scss: 'scss',
   sh: 'bash',
-  md: 'markdown',
+  sql: 'sql',
+  swift: 'swift',
+  toml: 'ini',
+  ts: 'typescript',
   txt: null,
+  xml: 'xml',
+  yml: 'yaml',
 };
 
 for (const [name, grammar] of Object.entries({
@@ -60,18 +72,24 @@ for (const [name, grammar] of Object.entries({
   c,
   csharp,
   css,
+  dart,
+  elixir,
   go,
   graphql,
   ini,
   java,
   javascript,
+  kotlin,
   json,
   markdown,
   php,
+  powershell,
   python,
+  ruby,
   rust,
   scss,
   sql,
+  swift,
   typescript,
   xml,
   yaml,

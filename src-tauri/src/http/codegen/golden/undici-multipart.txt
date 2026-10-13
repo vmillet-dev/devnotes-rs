@@ -1,0 +1,11 @@
+import { request } from 'undici';
+import { openAsBlob } from 'node:fs';
+
+const form = new FormData();
+form.append('title', 'Facture');
+form.append('scan', await openAsBlob('C:/Users/ada/facture.pdf'), 'facture.pdf');
+const { statusCode, body } = await request('https://api.exemple.fr/documents/7', {
+  method: 'PUT',
+  body: form,
+});
+console.log(statusCode, await body.text());

@@ -1,0 +1,11 @@
+require 'net/http'
+require 'uri'
+
+uri = URI('https://api.exemple.fr/customers/cus_42/invoices?page=1&limit=50')
+request = Net::HTTP::Get.new(uri)
+request['Accept'] = 'application/json'
+request['Authorization'] = 'Bearer {{accessToken}}'
+response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: uri.scheme == 'https') do |http|
+  http.request(request)
+end
+puts "#{response.code} #{response.body}"

@@ -235,6 +235,26 @@ export const commands = {
 	/**  What « Vider le bocal » says it removes. */
 	countHttpCookies: () => typedError<number, AppError>(__TAURI_INVOKE("count_http_cookies")),
 	clearHttpCookies: () => typedError<number, AppError>(__TAURI_INVOKE("clear_http_cookies")),
+	/**  The globals and every environment, in their order. */
+	httpEnvironments: () => typedError<HttpEnvironments, AppError>(__TAURI_INVOKE("http_environments")),
+	createHttpEnvironment: (name: string) => typedError<Environment, AppError>(__TAURI_INVOKE("create_http_environment", { name })),
+	saveHttpEnvironment: (id: string, patch: EnvironmentPatch) => typedError<Environment, AppError>(__TAURI_INVOKE("save_http_environment", { id, patch })),
+	saveHttpGlobals: (variables: Variable[]) => typedError<Variable[], AppError>(__TAURI_INVOKE("save_http_globals", { variables })),
+	/**  The copy's name comes from the front: no user-visible word is Rust's. */
+	duplicateHttpEnvironment: (id: string, name: string) => typedError<Environment, AppError>(__TAURI_INVOKE("duplicate_http_environment", { id, name })),
+	deleteHttpEnvironment: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("delete_http_environment", { id })),
+	/**  Each variable's fault by its rank, or none: the table marks the row, the rule is the model's. */
+	checkHttpVariables: (variables: Variable[]) => typedError<(VariableFault | null)[], AppError>(__TAURI_INVOKE("check_http_variables", { variables })),
+	/**
+	 *  The `{{variables}}` a request holds, each with what it resolves to and from where: the
+	 *  editor colours them by it, and names the ones nothing sets before a send does.
+	 */
+	httpVariables: (request: VariablesRequest) => typedError<UsedVariable[], AppError>(__TAURI_INVOKE("http_variables", { request })),
+	/**
+	 *  The request written as code for another tool, from what a send would write: its variables
+	 *  resolved as asked, a secret left as its `{{name}}` unless it is asked for in clear.
+	 */
+	generateHttpCode: (request: CodeRequestOf) => typedError<GeneratedCode, AppError>(__TAURI_INVOKE("generate_http_code", { request })),
 	/**
 	 *  The second way to look at a space: folders as zones, their notes inside, the loose ones
 	 *  beside them. It reads the whole space and marks what matches rather than narrowing, and
@@ -777,6 +797,37 @@ export type ClassRights = {
 	special: boolean,
 };
 
+/**
+ *  What a target could not write, said by the front: wget, Java's client and `URLSession`
+ *  build no multipart body.
+ */
+export type CodeNotice = "multipartUnsupported";
+
+/**  The dialog's four switches, each its own. */
+export type CodeOptions = {
+	/**  Off, every `{{name}}` is written as typed. */
+	resolveVariables: boolean,
+	/**  A secret written in clear: the front asks first, every time. */
+	includeSecrets: boolean,
+	/**  A command line's arguments one a line: a program is laid out whatever it says. */
+	multiline: boolean,
+	followRedirects: boolean,
+};
+
+export type CodeRequestOf = {
+	target: CodeTarget,
+	options: CodeOptions,
+	kind: RequestKind,
+	method: HttpMethod,
+	document: RequestDocument,
+	collectionId: string | null,
+	folderId: string | null,
+	environmentId: string | null,
+};
+
+/**  What the code is written for; the front lists them and names them. */
+export type CodeTarget = "curl" | "httpie" | "wget" | "powershell" | "fetch" | "axios" | "undici" | "angular" | "requests" | "httpx" | "go" | "reqwest" | "java" | "okhttp" | "csharp" | "guzzle" | "ruby" | "swift" | "dart" | "elixir";
+
 export type CodecDirection = "encode" | "decode";
 
 export type ColourAnswer = {
@@ -822,6 +873,8 @@ export type ContainerSettings = {
 	auth?: RequestAuth,
 	headers?: KeyValue[],
 	transport?: TransportSettings,
+	/**  Over the environment's and the globals', under a folder's and a request's own. */
+	variables?: Variable[],
 };
 
 export type Contrast = {
@@ -1143,11 +1196,30 @@ export type EndingCounts = {
 	cr: number,
 };
 
+export type Environment = {
+	id: string,
+	name: string,
+	/**  One of the folders' five: a mark to tell Production from Staging at a glance. */
+	colour: FolderColour,
+	/**  Asks before sending anything that could change something. */
+	protected: boolean,
+	variables: Variable[],
+	position: number,
+};
+
+/**  A field left out is untouched. */
+export type EnvironmentPatch = {
+	name?: string | null,
+	colour?: FolderColour | null,
+	protected?: boolean | null,
+	variables?: Variable[] | null,
+};
+
 /**
  *  ⚠️ A new variant breaks the front-end build until `CODE_KEYS`
  *  (`core/services/errors/error-notifier.service.ts`) and both locales have its key.
  */
-export type ErrorCode = "noteNotFound" | "spaceNotFound" | "duplicateSpaceName" | "folderNotFound" | "duplicateFolderName" | "attachmentNotFound" | "httpItemNotFound" | "revisionNotFound" | "libraryNotFound" | "libraryOpen" | "lastLibrary" | "nothingToSetAside" | "backupNotFound" | "backupUnopenable" | "fileAccess" | "importFormat" | 
+export type ErrorCode = "noteNotFound" | "spaceNotFound" | "duplicateSpaceName" | "folderNotFound" | "duplicateFolderName" | "attachmentNotFound" | "httpItemNotFound" | "httpEnvironmentNotFound" | "duplicateEnvironmentName" | "revisionNotFound" | "libraryNotFound" | "libraryOpen" | "lastLibrary" | "nothingToSetAside" | "backupNotFound" | "backupUnopenable" | "fileAccess" | "importFormat" | 
 /**  The `field` parameter names the offending field. */
 "invalidInput" | 
 /**  Poisoned mutex: a command panicked while holding the connection. */
@@ -1299,6 +1371,16 @@ export type GenerateRequest = {
 	seed: number | null,
 };
 
+export type GeneratedCode = {
+	code: string,
+	language: Language,
+	/**  The secrets left as their `{{name}}`, in the order the request names them. */
+	secrets: string[],
+	/**  The names nothing sets, written as typed. */
+	unresolved: string[],
+	notice: CodeNotice | null,
+};
+
 /**
  *  One event carrying a closed value rather than a topic per action: a mistyped topic is
  *  a silently inert subscription, and a new variant here stops the front compiling.
@@ -1436,6 +1518,8 @@ export type HistorySummary = {
 	 */
 	method?: HttpMethod,
 	status?: number | null,
+	/**  The environment it was sent with, as it was named then. */
+	environment?: SentEnvironment | null,
 };
 
 export type HttpCollection = {
@@ -1454,6 +1538,11 @@ export type HttpCollectionNode = {
 export type HttpContents = {
 	folders: number,
 	requests: number,
+};
+
+export type HttpEnvironments = {
+	globals: Variable[],
+	environments: Environment[],
 };
 
 export type HttpFolder = {
@@ -1948,7 +2037,9 @@ export type KeyValue = {
  *  Closed: the front receives a generated union, so an unknown value stops compiling
  *  there instead of being refused at runtime.
  */
-export type Language = "json" | "js" | "ts" | "py" | "rs" | "go" | "java" | "cs" | "php" | "c" | "sql" | "graphql" | "yml" | "toml" | "xml" | "html" | "css" | "scss" | "sh" | "md" | 
+export type Language = "json" | "js" | "ts" | "py" | "rs" | "go" | "java" | "cs" | "php" | "c" | "sql" | "graphql" | "yml" | "toml" | "xml" | "html" | "css" | "scss" | "sh" | 
+/**  PowerShell: what generated code is saved as, and what a pasted cmdlet reads as. */
+"ps1" | "kt" | "rb" | "swift" | "dart" | "ex" | "md" | 
 /**  Default, and the signal that the front end chose nothing. */
 "txt";
 
@@ -2494,6 +2585,8 @@ export type RequestDocument = {
 	websocket?: WebsocketDocument,
 	/**  Over what the folders and the collection set. */
 	transport?: TransportSettings,
+	/**  The nearest level a `{{name}}` resolves from. */
+	variables?: Variable[],
 };
 
 /**
@@ -2562,6 +2655,21 @@ export type SavedMessage = {
 };
 
 /**
+ *  A variable as a request resolves it: the value the nearest level gives it, and the
+ *  levels further away it hides.
+ */
+export type ScopedVariable = {
+	name: string,
+	/**  With every `{{name}}` it holds filled, as it is sent. */
+	value: string,
+	kind: VariableKind,
+	scope: VariableScope,
+	/**  The folder, collection or environment that sets it. */
+	from: string | null,
+	shadows: VariableScope[],
+};
+
+/**
  *  No `Title` variant: a note found by its own title needs no excerpt, which would repeat the
  *  biggest thing on the card. That case is `SearchMatch::Title`.
  */
@@ -2593,11 +2701,21 @@ export type SendRequest = {
 	/**  For the history: what the request is called, and which one it is once saved. */
 	name: string,
 	requestId: string | null,
+	/**
+	 *  The environment its `{{variables}}` resolve from, over the globals; `None` for the
+	 *  globals alone.
+	 */
+	environmentId: string | null,
 };
 
 export type SentBody = { kind: "none" } | 
 /**  Up to `SHOWN_LIMIT`. */
 { kind: "text"; text: string } | { kind: "bytes"; size: number } | { kind: "multipart"; fields: string[] };
+
+export type SentEnvironment = {
+	name: string,
+	colour: FolderColour,
+};
 
 export type SentResponse = {
 	status: number,
@@ -2964,12 +3082,48 @@ export type UrlScope =
 /**  A URL as a whole, whose structure stays readable. */
 "whole";
 
+/**  A `{{name}}` a request holds, and what it resolves to — nothing, when no level sets it. */
+export type UsedVariable = {
+	name: string,
+	resolved: ScopedVariable | null,
+};
+
 export type UuidVariant = "ncs" | 
 /**  RFC 9562, which every UUID made today follows. */
 "rfc" | "microsoft" | "future";
 
 /**  What a value was, as the list of changes shows it: itself when short, its size otherwise. */
 export type ValueSummary = { kind: "scalar"; text: string } | { kind: "object"; keys: number } | { kind: "array"; items: number };
+
+export type Variable = {
+	enabled?: boolean,
+	name?: string,
+	value?: string,
+	kind?: VariableKind,
+};
+
+/**  What a set's table marks on a row: it is kept as typed, and left out when resolving. */
+export type VariableFault = 
+/**  Not a name a `{{…}}` can hold. */
+"name" | 
+/**  A number that does not read as one. */
+"number" | 
+/**  A name already set above it in the same table: the first one is the one used. */
+"duplicate";
+
+/**  A number is checked to be one; a secret is masked wherever it shows. */
+export type VariableKind = "text" | "number" | "secret";
+
+/**  Where a variable resolves from, the nearest first. */
+export type VariableScope = "request" | "folder" | "collection" | "environment" | "globals";
+
+export type VariablesRequest = {
+	kind: RequestKind,
+	document: RequestDocument,
+	collectionId: string | null,
+	folderId: string | null,
+	environmentId: string | null,
+};
 
 /**  What the front end renders before it renders anything else. */
 export type VaultState = 
@@ -3025,6 +3179,7 @@ export type WebsocketRequest = {
 	document: RequestDocument,
 	collectionId: string | null,
 	folderId: string | null,
+	environmentId: string | null,
 };
 
 /**  The first character UTF-8 writes in more than one byte: « é » takes 2. */

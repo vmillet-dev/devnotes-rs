@@ -1,0 +1,7 @@
+$headers = @{
+  'Accept' = 'application/json'
+}
+$invoices = Invoke-RestMethod -Uri 'https://api.exemple.fr/invoices' -Method Get -Headers $headers
+foreach ($invoice in $invoices) {
+  Write-Host $invoice.number
+}

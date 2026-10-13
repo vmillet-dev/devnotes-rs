@@ -1,0 +1,14 @@
+import requests
+
+response = requests.request(
+    "PUT",
+    "https://api.exemple.fr/documents/7",
+    data={
+        "title": "Facture",
+    },
+    files={
+        "scan": open("C:/Users/ada/facture.pdf", "rb"),
+    },
+    allow_redirects=False,
+)
+print(response.status_code, response.text)

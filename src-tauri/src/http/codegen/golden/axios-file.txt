@@ -1,0 +1,14 @@
+import axios from 'axios';
+import { openAsBlob } from 'node:fs';
+
+const response = await axios.request({
+  method: 'POST',
+  url: 'https://api.exemple.fr/upload',
+  headers: {
+    'Content-Type': 'application/octet-stream',
+  },
+  data: await openAsBlob('/tmp/archive.zip'),
+  maxRedirects: 0,
+  validateStatus: () => true,
+});
+console.log(response.status, response.data);

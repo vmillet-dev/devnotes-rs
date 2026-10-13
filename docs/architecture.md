@@ -2131,8 +2131,8 @@ or a 30-second request would stall every command.
 - **What leaves is composed first** (`compose`, tested without a network): the inherited headers,
   its own over them by name, the auth — Basic, Bearer, a key in a header or the query — unless an
   `Authorization` is typed, the body and the `Content-Type` it implies. A URL without a scheme is
-  sent over `http://`. A `{{variable}}` left anywhere stops it, by name, until environments give
-  one a value.
+  sent over `http://`. A `{{variable}}` no level sets stops it, by name (→ "Variables, and where
+  each resolves from").
 - **A request names the application**: `User-Agent: DevNotes/<version>` (`send::USER_AGENT`, the
   version read from `Cargo.toml`) unless a `User-Agent` row is written — `reqwest` adds none, and
   many APIs answer 403 to a request without. An enabled row, the request's own or one handed
@@ -2247,6 +2247,15 @@ is logged.
   came from, a `Location`, each hop of the redirects — is masked like the one sent. What an
   answer sets is what the next request sends: kept whole, it was the `Cookie` the other side
   masks. The live timeline shows what really left; only the history masks.
+- **A secret variable shows by its name once the request left** (#487): `Outgoing.secret_values`
+  holds the values of the secrets in force (`Resolver::secrets`), and `send::exchange` — the
+  live timeline — writes each as its `{{name}}`, as typed and as a query encodes it
+  (`variables::hide`). `history::record_of` does it again over the request and over the whole
+  answer — its URL, headers, body, layout, redirects and GraphQL errors — so a server echoing a
+  token keeps none in the history. A value under three characters is not looked for. The entry
+  also keeps the environment it left with, its name and colour then (`HistorySummary::environment`,
+  sealed with the rest), shown on its row. « Rouvrir » puts the `{{name}}` back, which resolves
+  again.
 - ⚠️ **The limit of the mask**: it knows the secrets a request _declares_. A token typed by
   hand as a parameter or in a body, or one a server answers in its body, is kept as it is —
   sealed like the rest of the record, and shown to whoever opens the entry. A test a secret
@@ -2298,8 +2307,8 @@ patch, chosen from the method menu (« GraphQL » beside the methods).
 - **The answer is read apart** (`SentResponse::graphql`): **Corps** lays out `data`, an
   **Erreurs** tab lists the errors with their path and location; **Brut** keeps the whole
   answer.
-- `{{variables}}` in the query and the variables stop the send like anywhere else, until
-  environments resolve them. Introspection and completion from the schema are out of scope.
+- `{{variables}}` in the query and the variables resolve like anywhere else, and stop the send
+  when nothing sets them. Introspection and completion from the schema are out of scope.
 
 ### A WebSocket
 
@@ -2360,9 +2369,124 @@ sealed with the rest — which sites one talks to is not for the file to say —
 stays clear for the purge. The jar is read under the lock before the send, handed to it as a
 copy the hops read and fill (→ "Sending a request, and its answer"), and what they did to it is
 written with the history after it; a `Cookie` header typed by hand wins over the jar, for the
-host it was typed for. The manager
+host it was typed for.
+
+- **A `Domain` is refused where a browser refuses it** (#705): another site's, a public suffix
+  (`co.uk`, `github.io`, a bare top-level domain — the `psl` crate, its list compiled in, about
+  0.7 MB of the binary), and any domain above an IP address, which has none. The host itself,
+  named, is a host-only cookie, as without the attribute.
+- **Of two paths of one length, the older cookie is sent first** (RFC 6265, 5.4): `JarCookie::created`,
+  sealed with the rest — nothing in SQL orders on it —, set by an answer a microsecond apart a
+  line, and kept by a cookie that replaces it. The jar is read in id order, a random UUID, which
+  decided it before.
+- **`Expires` is read as RFC 6265, 5.1.1 reads it** (`cookie_date`): tokens, the first time, day,
+  month and year found, a two-digit year taken to 1970–2069 — RFC 1123, RFC 850, asctime and
+  what servers write between. One that does not read lasts the session.
+- **Reading the whole jar under the lock was measured, not optimised**: 0.48 ms at 500 cookies
+  (`cookie jar` in `benches/commands.rs`), a third of an `update_note`. A keyed hash of the domain
+  in the clear, to read only the candidates, waits for a jar that makes it show.
+
+The manager
 (`CookieJarDialogComponent`, from the rail's foot) lists by domain and deletes one, a domain's
 or all, the count asked of Rust first.
+
+### Environments and the globals
+
+**A request is sent with one environment, picked for the whole area** (#485): the globals,
+shared by every collection, and the environments — Local, Staging, Production — each a set of
+variables with a name, one of the folders' five colours and a protection. They are the
+library's, beside the collections (`http_environments`, migration 18, `http/environments.rs`
+and its `store.rs`): one row a set, the document sealed whole, the globals the one row of
+their kind. Names are compared in Rust, case aside (`duplicateEnvironmentName`); a copy is
+named by the front and sits right after its original, secrets included.
+
+- **A variable is a name, a value and a type** — Text, Number, Secret. A table keeps its rows
+  as typed; `check_http_variables` answers each row's fault (a name a `{{…}}` cannot hold,
+  one set twice in the table, a number that does not read), the table marks it and says why,
+  as the headers' table does. A secret's value is a password field, shown one row at a time.
+- **The page is the workspace's, as the history is** (`HttpWorkspaceStore.page`: requests,
+  history or environments, one at a time; a request opened from the tree leaves either). The
+  globals first, then each environment with its counts; the one shown on the right, its name
+  written on leaving the field. ⚠️ Its table is written once the keys rest
+  (`VARIABLES_SAVE_MS`) and on every way out (`HttpEnvironmentsStore.flush`): the rows as
+  typed are a draft keyed by the set, shown until Rust has written them.
+- **The active one is the library's preference** (`devnotes.notes.http.environment`), picked
+  at the end of the tab bar (`EnvironmentPickerComponent`), « Aucun » meaning the globals alone
+  — and the answer for one deleted since.
+- ⚠️ **A protected environment asks before anything but a `GET`, a `HEAD` or an `OPTIONS`
+  leaves, and before a WebSocket opens** (`asksBeforeSending`, the front's alone: Rust sends
+  what it is given). `HttpSendStore.send` and `HttpSocketsStore.connect` both ask
+  `HttpEnvironmentsStore.mayLeave`, so `Ctrl+Enter` cannot go round it; the question is a line
+  under the request's, the rail's idiom for a deletion, its one red the button.
+
+### Variables, and where each resolves from
+
+**A `{{name}}` is resolved by Rust when the request is sent, and nowhere else** (#486,
+`http/variables.rs`): `send_http_request` and `connect_websocket` read, under the lock, the
+levels in force — the request's own variables (`RequestDocument.variables`), its folders' and
+its collection's (`ContainerSettings.variables`, laid nearest first in `Inherited.variables`),
+the environment the front names (`environmentId`; one gone since counts as none), the globals
+— and fill the URL, the parameters, the headers, the body, the auth and the GraphQL query and
+variables before `compose`. The nearest level wins; a row switched off or one its table marks
+is left out; a value naming another is filled again, eight times at most.
+
+- ⚠️ **Not `notes::placeholder`.** A snippet's `{{field}}` looks alike; the two resolvers never
+  meet. The grammar is the same — `[A-Za-z0-9_-]` — and `http::variables::names_in` is the
+  HTTP side's only reader, header names judged by `as_letters` included.
+- **A name nothing sets refuses the send** (fork C): `compose` finds the first `{{name}}` left
+  in what `variables::texts` lists — what leaves, nothing that does not — and answers
+  `httpVariable` with it. Nothing is sent as typed.
+- **The editor asks Rust what each name resolves to** (`http_variables`, the same layers and
+  texts as a send): a chip a name under the URL, in the colour of its level — the request
+  green, a folder teal, the collection blue, the environment amber, the globals pink, red when
+  nothing sets it — and the URL's copy in the same hues. Pointed at or focused, a chip says
+  from where, the value (a secret's masked until « Afficher », masked again once left) and the
+  levels it hides; a name nothing sets offers « Définir dans … », which opens the environment
+  — the globals with none — on a row of that name. The answer is asked again when the request,
+  its place, the environment or a set changes, the last one kept while the next is read.
+- A send first writes what an environment's table still holds (`HttpEnvironmentsStore.flush`):
+  it resolves from what Rust has.
+
+### Generating code from a request
+
+**« </> Code » writes the request for another tool, and Rust writes it** (#488,
+`http/codegen.rs`, `generate_http_code`): the same layers a send resolves from, then one
+shape every target reads — `CodeRequest`, built by `request_of` from what a send would write
+(`send::written_for_code`: the headers `compose` writes, but the application's own
+`User-Agent` and `Accept` — the program names itself —, a Basic auth kept apart for each
+target to write its own way, and a multipart form's type, whose boundary the tool chooses) —
+and one module a target, each held by golden files (`codegen/golden/<target>-<case>.txt`,
+written again with `GOLDEN_WRITE=1`, then read before they are kept).
+
+- **The four switches**: « Résoudre les variables » (off, every `{{name}}` is written as typed),
+  « Inclure les secrets » — off, a secret is resolved by none of the layers and stays its
+  `{{name}}`; on, it is written in clear, and the dialog asks every time it is switched on —,
+  « Sur plusieurs lignes » and « Suivre les redirections ». Rust answers the code, its language,
+  the secrets left as variables and the names nothing sets: the dialog says them, each name as
+  a parameter, never inside a translated sentence (Transloco would empty it).
+- **A target Rust cannot fully write says so by a code** (`CodeNotice`): wget sends no multipart
+  form.
+- **The JavaScript and TypeScript targets** (#489) share `codegen/javascript.rs` — strings (a
+  template literal for a text of several lines, so a JSON body stays laid out), bare or quoted
+  keys, object literals. `fetch`, axios and undici run under Node and read a file with
+  `openAsBlob`; Angular's `HttpClient` runs in a browser, which reads no path: a file part is a
+  `File` the code declares. A program is laid out whatever « Sur plusieurs lignes » says — the
+  switch only cuts a command line, and is greyed for the others.
+- **The twelve others** (#490) — Python's requests and httpx, Go's net/http, Rust's reqwest, Java's
+  `HttpClient`, Kotlin's OkHttp, C#'s `HttpClient`, PHP's Guzzle, Ruby's `Net::HTTP`, Swift's
+  `URLSession`, Dart's http, Elixir's Req — each write their own literals (`codegen/source.rs`:
+  Kotlin escapes `$`, Elixir `#{`, PHP and Ruby take single quotes). Java's client and
+  `URLSession` build no multipart body, as wget does not (`CodeTarget::sends_multipart`), and
+  Ruby's `Net::HTTP` and `URLSession` follow redirects as they do whatever is asked. Kotlin, Ruby,
+  Swift, Dart and Elixir joined the snippet languages (fork E), each with a scorer and a corpus
+  snippet, so the code is saved in its language.
+- **The list is the front's** (`CODE_TARGETS`, a `Record` on the generated `CodeTarget`, so a
+  target added in Rust breaks the build until it is named), grouped and filtered on its name and
+  library — the tools' catalogue's exception. Names like cURL or PowerShell are proper names and
+  are not translated.
+- **« Enregistrer comme snippet »** opens the save-as-note dialog with the code, its language
+  (`sh`, `ps1` — PowerShell joined the languages for it, chosen and never detected) and `http`
+  proposed as its tag.
 
 ### Managing spaces from the switcher
 
@@ -4165,23 +4289,24 @@ CI build. On a realistic library (~2 MB) the sealing costs well under a millisec
 Sealing the second would move every query into Rust over the whole corpus. The table is every
 column of `db/schema.rs`, read one by one: a column added there is added here.
 
-| Table                 | Sealed                                                                  | Plain                                                                                                                                                       |
-| --------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `spaces`              | `name`                                                                  | `id`, `pinned`                                                                                                                                              |
-| `folders`             | `name`                                                                  | `id`, `space_id`, `colour`, `created_at`, the board's `x`, `y`, `w`, `h`                                                                                    |
-| `notes`               | `title`, `content`, `source`                                            | `id`, `space_id`, `folder_id`, `kind`, `language`, `priority`, `pinned`, `created_at`, `updated_at`, `deleted_at`, `lifecycle_kind`, `lifecycle_expires_at` |
-| `note_positions`      | —                                                                       | `note_id`, `x`, `y`                                                                                                                                         |
-| `note_tags`           | —                                                                       | `note_id`, `tag`                                                                                                                                            |
-| `note_items`          | `text`                                                                  | `note_id`, `position`, `done`                                                                                                                               |
-| `note_revisions`      | `content`                                                               | `id`, `note_id`, `taken_at`                                                                                                                                 |
-| `note_placeholders`   | `value`                                                                 | `note_id`, `name`                                                                                                                                           |
-| `global_placeholders` | `value`                                                                 | `name`                                                                                                                                                      |
-| `attachments`         | `file_name`, and the file itself, bytes and all                         | `id`, `note_id`, `mime_type`, `byte_size`, `created_at`                                                                                                     |
-| `http_collections`    | `name`, `settings` (auth, headers, transport)                           | `id`, `position`, `created_at`                                                                                                                              |
-| `http_folders`        | `name`, `settings`                                                      | `id`, `collection_id`, `parent_id`, `position`, `created_at`                                                                                                |
-| `http_requests`       | `name`, `document` (URL, parameters, headers, body, auth, and the rest) | `id`, `collection_id`, `folder_id`, `position`, `created_at`, `updated_at`, and ⚠️ `kind`, `method`                                                         |
-| `http_history`        | `summary` (name, URL, method, status, time, size, failure), `record`    | `id`, `sent_at`, `request_id`                                                                                                                               |
-| `http_cookies`        | `cookie` (name, value, domain, path, flags)                             | `id`, `expires_at`                                                                                                                                          |
+| Table                 | Sealed                                                                            | Plain                                                                                                                                                       |
+| --------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `spaces`              | `name`                                                                            | `id`, `pinned`                                                                                                                                              |
+| `folders`             | `name`                                                                            | `id`, `space_id`, `colour`, `created_at`, the board's `x`, `y`, `w`, `h`                                                                                    |
+| `notes`               | `title`, `content`, `source`                                                      | `id`, `space_id`, `folder_id`, `kind`, `language`, `priority`, `pinned`, `created_at`, `updated_at`, `deleted_at`, `lifecycle_kind`, `lifecycle_expires_at` |
+| `note_positions`      | —                                                                                 | `note_id`, `x`, `y`                                                                                                                                         |
+| `note_tags`           | —                                                                                 | `note_id`, `tag`                                                                                                                                            |
+| `note_items`          | `text`                                                                            | `note_id`, `position`, `done`                                                                                                                               |
+| `note_revisions`      | `content`                                                                         | `id`, `note_id`, `taken_at`                                                                                                                                 |
+| `note_placeholders`   | `value`                                                                           | `note_id`, `name`                                                                                                                                           |
+| `global_placeholders` | `value`                                                                           | `name`                                                                                                                                                      |
+| `attachments`         | `file_name`, and the file itself, bytes and all                                   | `id`, `note_id`, `mime_type`, `byte_size`, `created_at`                                                                                                     |
+| `http_collections`    | `name`, `settings` (auth, headers, transport)                                     | `id`, `position`, `created_at`                                                                                                                              |
+| `http_folders`        | `name`, `settings`                                                                | `id`, `collection_id`, `parent_id`, `position`, `created_at`                                                                                                |
+| `http_requests`       | `name`, `document` (URL, parameters, headers, body, auth, and the rest)           | `id`, `collection_id`, `folder_id`, `position`, `created_at`, `updated_at`, and ⚠️ `kind`, `method`                                                         |
+| `http_history`        | `summary` (name, URL, method, status, time, size, failure, environment), `record` | `id`, `sent_at`, `request_id`                                                                                                                               |
+| `http_cookies`        | `cookie` (name, value, domain, path, flags)                                       | `id`, `expires_at`                                                                                                                                          |
+| `http_environments`   | `document` (name, colour, protection, variables and their values)                 | `id`, `kind` (`globals` or `environment`), `position`, `created_at`                                                                                         |
 
 ⚠️ **What a reader of the raw file learns, with no key.** Of the notes: their number and the
 shape of the spaces and folders they hang in, every instant, each note's language, kind, pin
@@ -4189,7 +4314,8 @@ and item states, every tag and `{{field}}` name, each attachment's type and size
 side: how many collections, folders and requests there are, how they nest and in which order,
 when each was created and each request last saved, and each request's kind and method; when
 each send was made and from which request — not to where, nor how it ended; how many cookies
-the jar holds and when each expires — not for which site. And everywhere the **length** of
+the jar holds and when each expires — not for which site; how many environments there are
+and when each was made — not their names nor what they hold. And everywhere the **length** of
 every sealed value: AES-GCM hides no length. The README lists it for the people deciding what
 to keep here.
 
@@ -5389,6 +5515,7 @@ in the corpus or worse.
 | `move_notes` / `tag_notes`, 100 notes          | 5.1 ms / 4.2 ms | ×1.9 / ×1.8   |
 | `list_trash`                                   | 4.5 ms          | ×10.5         |
 | `update_note`                                  | 1.5 ms          | ×1.0          |
+| the cookie jar read and unsealed, 500 cookies  | 0.48 ms         | —             |
 | `list_global_placeholders`                     | 1.5 µs          | ×1.0          |
 
 One row does not belong to that shape and is measured for a different reason:

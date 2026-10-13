@@ -74,7 +74,10 @@
 }
 
 // At the end of the bar and held there: the tabs scroll under it, as many as they are.
-.new-request {
+.strip-end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   position: sticky;
   right: 0;
   margin-left: auto;

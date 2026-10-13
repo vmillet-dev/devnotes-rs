@@ -3,7 +3,9 @@
 //! The HTTP client's collections: they belong to the library, not to a space, and are sealed
 //! like the notes. A collection travels in a file of its own, never in the library export.
 
+pub mod codegen;
 pub mod cookies;
+pub mod environments;
 pub mod graphql;
 pub mod history;
 pub mod model;
@@ -13,6 +15,7 @@ pub mod send;
 pub mod settings;
 pub mod store;
 pub mod transport;
+pub mod variables;
 pub mod websocket;
 
 use std::path::Path;
@@ -439,6 +442,7 @@ pub async fn send_http_request<R: Runtime>(
         folder_id,
         name,
         request_id,
+        environment_id,
     } = request;
     let outgoing = blocking(app.clone(), move |_, db| {
         let mut connection = lock(db)?;
@@ -448,16 +452,36 @@ pub async fn send_http_request<R: Runtime>(
             }
             None => settings::inherit(&[]),
         };
+        let resolver = resolver_for(
+            &mut connection,
+            &document.variables,
+            &inherited,
+            environment_id.as_deref(),
+        )?;
+        let (document, inherited) = variables::resolve(&document, &inherited, &resolver);
         let mut outgoing = send::compose(kind, method, &document, &inherited)?;
+        outgoing.secret_values = resolver.secrets();
         if outgoing.transport.use_cookies {
             outgoing.jar = Some(cookies::store::jar(&mut connection, Utc::now())?);
         }
-        Ok(outgoing)
+        let environment = environment_id
+            .as_deref()
+            .map(|id| environments::store::get(&mut connection, id))
+            .transpose()
+            .ok()
+            .flatten()
+            .map(|environment| history::SentEnvironment {
+                name: environment.name,
+                colour: environment.colour,
+            });
+        Ok((outgoing, environment))
     })
     .await?;
+    let (outgoing, environment) = outgoing;
 
     let exchange = send::exchange(&outgoing);
     let secrets = outgoing.secrets.clone();
+    let secret_values = outgoing.secret_values.clone();
     let (answer, cookies_set) = app.state::<send::Sending>().run(&id, outgoing).await;
     let outcome = match &answer {
         Ok(response) => Ok(response.clone()),
@@ -473,11 +497,159 @@ pub async fn send_http_request<R: Runtime>(
         request_id,
         exchange,
         secrets,
+        secret_values,
+        environment,
         outcome,
     };
     keep(app, sent, cookies_set).await;
 
     Ok(answer?)
+}
+
+/// What a request resolves its `{{variables}}` from, the nearest first: its own, its folders
+/// and collection, the environment chosen — none when it is gone — and the globals.
+fn resolver_for(
+    connection: &mut crate::db::Library,
+    own: &[environments::Variable],
+    inherited: &settings::Inherited,
+    environment_id: Option<&str>,
+) -> Result<variables::Resolver, crate::error::StorageError> {
+    Ok(variables::Resolver::new(&layers_for(
+        connection,
+        own,
+        inherited,
+        environment_id,
+    )?))
+}
+
+fn layers_for(
+    connection: &mut crate::db::Library,
+    own: &[environments::Variable],
+    inherited: &settings::Inherited,
+    environment_id: Option<&str>,
+) -> Result<Vec<variables::VariableLayer>, crate::error::StorageError> {
+    use variables::{VariableLayer, VariableScope};
+
+    let sets = environments::store::list(connection)?;
+    let mut layers = vec![VariableLayer {
+        scope: VariableScope::Request,
+        from: String::new(),
+        variables: own.to_vec(),
+    }];
+    layers.extend(inherited.variables.iter().cloned());
+    if let Some(environment) = sets
+        .environments
+        .into_iter()
+        .find(|environment| Some(environment.id.as_str()) == environment_id)
+    {
+        layers.push(VariableLayer {
+            scope: VariableScope::Environment,
+            from: environment.name,
+            variables: environment.variables,
+        });
+    }
+    layers.push(VariableLayer {
+        scope: VariableScope::Globals,
+        from: String::new(),
+        variables: sets.globals,
+    });
+    Ok(layers)
+}
+
+/// The request written as code for another tool, from what a send would write: its variables
+/// resolved as asked, a secret left as its `{{name}}` unless it is asked for in clear.
+#[tauri::command]
+#[specta::specta]
+pub async fn generate_http_code<R: Runtime>(
+    request: CodeRequestOf,
+    app: AppHandle<R>,
+) -> Result<codegen::GeneratedCode, AppError> {
+    blocking(app, move |_, db| {
+        let CodeRequestOf {
+            target,
+            options,
+            kind,
+            method,
+            document,
+            collection_id,
+            folder_id,
+            environment_id,
+        } = request;
+        let mut connection = lock(db)?;
+        let inherited = match collection_id {
+            Some(collection_id) => {
+                store::inherited(&mut connection, &collection_id, folder_id.as_deref())?
+            }
+            None => settings::inherit(&[]),
+        };
+        let layers = layers_for(
+            &mut connection,
+            &document.variables,
+            &inherited,
+            environment_id.as_deref(),
+        )?;
+        Ok(codegen::generate(
+            target, options, kind, method, &document, &inherited, &layers,
+        ))
+    })
+    .await
+}
+
+#[derive(Debug, Clone, serde::Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct CodeRequestOf {
+    pub target: codegen::CodeTarget,
+    pub options: codegen::CodeOptions,
+    pub kind: model::RequestKind,
+    pub method: model::HttpMethod,
+    pub document: model::RequestDocument,
+    pub collection_id: Option<String>,
+    pub folder_id: Option<String>,
+    pub environment_id: Option<String>,
+}
+
+/// The `{{variables}}` a request holds, each with what it resolves to and from where: the
+/// editor colours them by it, and names the ones nothing sets before a send does.
+#[tauri::command]
+#[specta::specta]
+pub async fn http_variables<R: Runtime>(
+    request: VariablesRequest,
+    app: AppHandle<R>,
+) -> Result<Vec<variables::UsedVariable>, AppError> {
+    blocking(app, move |_, db| {
+        let VariablesRequest {
+            kind,
+            document,
+            collection_id,
+            folder_id,
+            environment_id,
+        } = request;
+        let mut connection = lock(db)?;
+        let inherited = match collection_id {
+            Some(collection_id) => {
+                store::inherited(&mut connection, &collection_id, folder_id.as_deref())?
+            }
+            None => settings::inherit(&[]),
+        };
+        let resolver = resolver_for(
+            &mut connection,
+            &document.variables,
+            &inherited,
+            environment_id.as_deref(),
+        )?;
+        Ok(resolver.used(&variables::texts(kind, &document, &inherited)))
+    })
+    .await
+}
+
+#[derive(Debug, Clone, serde::Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct VariablesRequest {
+    pub kind: model::RequestKind,
+    pub document: model::RequestDocument,
+    pub collection_id: Option<String>,
+    pub folder_id: Option<String>,
+    pub environment_id: Option<String>,
 }
 
 /// The history and the jar, written under the lock again, and never at the answer's expense.
@@ -711,6 +883,7 @@ pub struct WebsocketRequest {
     pub document: model::RequestDocument,
     pub collection_id: Option<String>,
     pub folder_id: Option<String>,
+    pub environment_id: Option<String>,
 }
 
 /// Its headers and auth composed like a request's, under the lock for what it inherits; the
@@ -726,17 +899,25 @@ pub async fn connect_websocket<R: Runtime>(
         mut document,
         collection_id,
         folder_id,
+        environment_id,
     } = request;
-    document.url = websocket::socket_url(&document.url)?;
     document.body = model::RequestBody::None;
     let outgoing = blocking(app.clone(), move |_, db| {
+        let mut connection = lock(db)?;
         let inherited = match collection_id {
             Some(collection_id) => {
-                let mut connection = lock(db)?;
                 store::inherited(&mut connection, &collection_id, folder_id.as_deref())?
             }
             None => settings::inherit(&[]),
         };
+        let resolver = resolver_for(
+            &mut connection,
+            &document.variables,
+            &inherited,
+            environment_id.as_deref(),
+        )?;
+        let (mut document, inherited) = variables::resolve(&document, &inherited, &resolver);
+        document.url = websocket::socket_url(&document.url)?;
         Ok(send::compose(
             model::RequestKind::Http,
             model::HttpMethod::Get,
@@ -834,4 +1015,128 @@ pub async fn clear_http_cookies<R: Runtime>(app: AppHandle<R>) -> Result<u32, Ap
         Ok(cookies::store::clear(&mut connection)?)
     })
     .await
+}
+
+/// The globals and every environment, in their order.
+#[tauri::command]
+#[specta::specta]
+pub async fn http_environments<R: Runtime>(
+    app: AppHandle<R>,
+) -> Result<environments::HttpEnvironments, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(environments::store::list(&mut connection)?)
+    })
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn create_http_environment<R: Runtime>(
+    name: String,
+    app: AppHandle<R>,
+) -> Result<environments::Environment, AppError> {
+    blocking(app, move |_, db| {
+        let name = environments::validated_name(&name)?;
+
+        let mut connection = lock(db)?;
+
+        Ok(environments::store::create(
+            &mut connection,
+            &name,
+            Utc::now(),
+        )?)
+    })
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn save_http_environment<R: Runtime>(
+    id: String,
+    patch: environments::EnvironmentPatch,
+    app: AppHandle<R>,
+) -> Result<environments::Environment, AppError> {
+    blocking(app, move |_, db| {
+        let name = patch
+            .name
+            .as_deref()
+            .map(environments::validated_name)
+            .transpose()?;
+
+        let mut connection = lock(db)?;
+
+        Ok(environments::store::save(
+            &mut connection,
+            &id,
+            &patch,
+            name.as_deref(),
+        )?)
+    })
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn save_http_globals<R: Runtime>(
+    variables: Vec<environments::Variable>,
+    app: AppHandle<R>,
+) -> Result<Vec<environments::Variable>, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(environments::store::save_globals(
+            &mut connection,
+            &variables,
+            Utc::now(),
+        )?)
+    })
+    .await
+}
+
+/// The copy's name comes from the front: no user-visible word is Rust's.
+#[tauri::command]
+#[specta::specta]
+pub async fn duplicate_http_environment<R: Runtime>(
+    id: String,
+    name: String,
+    app: AppHandle<R>,
+) -> Result<environments::Environment, AppError> {
+    blocking(app, move |_, db| {
+        let name = environments::validated_name(&name)?;
+
+        let mut connection = lock(db)?;
+
+        Ok(environments::store::duplicate(
+            &mut connection,
+            &id,
+            &name,
+            Utc::now(),
+        )?)
+    })
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn delete_http_environment<R: Runtime>(
+    id: String,
+    app: AppHandle<R>,
+) -> Result<(), AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(environments::store::delete(&mut connection, &id)?)
+    })
+    .await
+}
+
+/// Each variable's fault by its rank, or none: the table marks the row, the rule is the model's.
+#[tauri::command]
+#[specta::specta]
+pub async fn check_http_variables(
+    variables: Vec<environments::Variable>,
+) -> Result<Vec<Option<environments::VariableFault>>, AppError> {
+    off_thread(move || environments::variable_faults(&variables)).await
 }

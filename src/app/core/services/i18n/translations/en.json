@@ -436,6 +436,8 @@
     "libraryActionFailed": "That library operation failed.",
     "toolFailed": "The tool could not compute its result.",
     "httpItemGone": "This collection item no longer exists.",
+    "httpEnvironmentGone": "This environment no longer exists.",
+    "environmentNameTaken": "An environment named “{{name}}” already exists.",
     "httpVariable": "The variable “{{name}}” has no value: the request cannot leave.",
     "httpInvalidUrl": "This URL cannot be sent: it needs http:// or https:// and a host.",
     "httpUnresolved": "The host name does not resolve.",
@@ -3063,7 +3065,8 @@
         "query": "Query",
         "message": "Messages",
         "protocols": "Protocols",
-        "settings": "Settings"
+        "settings": "Settings",
+        "variables": "Variables"
       }
     },
     "table": {
@@ -3188,7 +3191,9 @@
         "collection": "Settings of the collection {{name}}",
         "folder": "Settings of the folder {{name}}"
       },
-      "hint": "Its requests inherit them: a request whose auth is “Inherited” takes this one, and these headers add to theirs."
+      "hint": "Its requests inherit them: a request whose auth is “Inherited” takes this one, and these headers add to theirs.",
+      "variables": "Variables",
+      "variablesHint": "over the environment, under a folder and the request"
     },
     "send": {
       "send": "Send",
@@ -3342,6 +3347,86 @@
       "off": "No",
       "insecure": "Certificates are not verified: any server can pass itself off as this one. Keep it for development."
     },
+    "environments": {
+      "title": "Environments",
+      "order": "The nearest wins: request › folder › collection › environment › globals",
+      "new": "＋ New environment",
+      "newName": "Environment name",
+      "create": "Create",
+      "globals": "Globals",
+      "globalsMeta": "{count, plural, =0 {No variable} one {# variable} other {# variables}} · every collection",
+      "globalsHint": "Apply to every collection, under the active environment.",
+      "listTitle": "Environments",
+      "empty": "No environment yet. Create Local, Staging, Production…",
+      "active": "active",
+      "protectedBadge": "protected",
+      "count": "{count, plural, =0 {No variable} one {# variable} other {# variables}}",
+      "secrets": "{count, plural, one {# secret} other {# secrets}}",
+      "nameLabel": "Environment name",
+      "use": "Use",
+      "colour": "Environment colour",
+      "protected": "Protected",
+      "protectedNote": "Asks before sending anything but a GET, a HEAD or an OPTIONS, and before opening a WebSocket.",
+      "duplicate": "Duplicate",
+      "copyName": "{{name}} (copy)",
+      "delete": "Delete",
+      "confirmDelete": "Delete “{{name}}”?",
+      "variables": "Variables",
+      "secretsCaption": "Secrets are sealed in the library and masked on screen.",
+      "failed": "The environments could not be read or saved.",
+      "pickerLabel": "Active environment: {{name}}",
+      "activeTitle": "Active environment",
+      "none": "None",
+      "noneMeta": "globals only",
+      "manage": "Manage environments…",
+      "askSend": "{{name}} is protected. Send this {{method}}?",
+      "askConnect": "{{name}} is protected. Open this WebSocket?",
+      "sendAnyway": "Send anyway",
+      "connectAnyway": "Connect anyway"
+    },
+    "variables": {
+      "name": "Name",
+      "value": "Value",
+      "kind": "Type",
+      "newName": "New variable",
+      "kindOf": "Type of {{name}}",
+      "reveal": "Show {{name}}",
+      "hide": "Hide {{name}}",
+      "kinds": {
+        "text": "Text",
+        "number": "Number",
+        "secret": "Secret"
+      },
+      "faults": {
+        "name": "A variable name holds only unaccented letters, digits, “_” and “-”.",
+        "duplicate": "This name is already set above: only the first row counts.",
+        "number": "A Number variable expects a number."
+      },
+      "used": {
+        "label": "Variables of the request",
+        "none": "not found",
+        "define": "Set in {{name}}",
+        "defineGlobals": "Set in the globals",
+        "shadows": "Also hides:",
+        "reveal": "Show",
+        "hide": "Hide",
+        "secret": "secret",
+        "scopes": {
+          "request": "request",
+          "folder": "folder",
+          "collection": "collection",
+          "environment": "environment",
+          "globals": "globals"
+        },
+        "from": {
+          "request": "this request",
+          "folder": "folder {{name}}",
+          "collection": "collection {{name}}",
+          "environment": "{{name}}",
+          "globals": "globals"
+        }
+      }
+    },
     "cookies": {
       "open": "Cookies",
       "title": "Cookies",
@@ -3363,6 +3448,39 @@
       "empty": "No cookies: those the answers set will show here.",
       "close": "Close",
       "failed": "The cookies could not be read or deleted."
+    },
+    "code": {
+      "open": "</> Code",
+      "openLabel": "Generate the code of this request",
+      "title": "Generate code",
+      "filter": "Filter languages",
+      "filterHint": "Languages and tools",
+      "targets": "Language or tool",
+      "groups": {
+        "shell": "Shell",
+        "javascript": "JavaScript",
+        "other": "Other languages"
+      },
+      "noTarget": "No language matches.",
+      "resolve": "Resolve variables",
+      "secrets": "Include secrets",
+      "multiline": "On several lines",
+      "follow": "Follow redirects",
+      "askSecrets": "Write the secrets in clear in the code? Copied or saved, it leaves the library.",
+      "include": "Include",
+      "secretsLeft": "{count, plural, one {1 secret left as a variable:} other {# secrets left as variables:}}",
+      "secretsClear": "The secrets are written in clear in this code.",
+      "unresolved": "{count, plural, one {1 variable with no value, written as typed:} other {# variables with no value, written as typed:}}",
+      "notices": {
+        "multipartUnsupported": "{{target}} sends no multipart form here: the body is left out."
+      },
+      "where": "Saved as a snippet, in the target’s language, tagged #http.",
+      "save": "Save as snippet",
+      "copy": "Copy",
+      "copied": "Code copied.",
+      "noteTitle": "{{name}} · {{target}}",
+      "noteWhat": "The request’s code, for another tool.",
+      "multilineShell": "A program is laid out on its own: only a command line is cut."
     }
   }
 }

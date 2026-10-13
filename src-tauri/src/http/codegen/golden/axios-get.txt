@@ -1,0 +1,13 @@
+import axios from 'axios';
+
+const response = await axios.request({
+  method: 'GET',
+  url: 'https://api.exemple.fr/customers/cus_42/invoices?page=1&limit=50',
+  headers: {
+    Accept: 'application/json',
+    Authorization: 'Bearer {{accessToken}}',
+  },
+  maxRedirects: 0,
+  validateStatus: () => true,
+});
+console.log(response.status, response.data);

@@ -1,0 +1,21 @@
+import java.io.File
+import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.asRequestBody
+
+val client = OkHttpClient.Builder()
+    .followRedirects(false)
+    .build()
+val body = MultipartBody.Builder()
+    .setType(MultipartBody.FORM)
+    .addFormDataPart("title", "Facture")
+    .addFormDataPart("scan", "facture.pdf", File("C:/Users/ada/facture.pdf").asRequestBody())
+    .build()
+val request = Request.Builder()
+    .url("https://api.exemple.fr/documents/7")
+    .method("PUT", body)
+    .build()
+client.newCall(request).execute().use { response ->
+    println("${response.code} ${response.body?.string()}")
+}

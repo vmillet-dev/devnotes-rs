@@ -1,0 +1,12 @@
+import httpx
+
+response = httpx.request(
+    "POST",
+    "https://api.exemple.fr/customers",
+    headers={
+        "Content-Type": "application/json",
+    },
+    content="{\n  \"name\": \"O'Brien\",\n  \"plan\": \"pro\"\n}",
+    follow_redirects=True,
+)
+print(response.status_code, response.text)

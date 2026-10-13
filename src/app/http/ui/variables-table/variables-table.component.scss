@@ -1,0 +1,57 @@
+@use 'mixins' as *;
+
+:host {
+  display: block;
+  @include http-rows-table;
+}
+
+.name-column {
+  width: 26%;
+}
+
+.kind-column {
+  width: 120px;
+}
+
+.kind {
+  display: block;
+  padding: 0 6px;
+}
+
+// A secret is told from a text by its tint before its type is read.
+.secret td {
+  background: rgba(var(--purple-rgb), 0.05);
+}
+
+.value {
+  display: flex;
+  align-items: center;
+}
+
+.reveal {
+  @include unstyled-control;
+  @include hit-target;
+  @include focus-ring(-2px);
+  flex-shrink: 0;
+  justify-content: center;
+  width: 30px;
+  color: var(--text-2);
+  cursor: pointer;
+
+  &:hover,
+  &[aria-pressed='true'] {
+    color: var(--amber-text);
+  }
+}
+
+.cell.faulty {
+  color: var(--red);
+  box-shadow: inset 0 0 0 1px var(--red);
+}
+
+.fault {
+  @include reading-measure;
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: var(--red);
+}

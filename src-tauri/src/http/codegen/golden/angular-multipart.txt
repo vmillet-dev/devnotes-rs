@@ -1,0 +1,11 @@
+declare const scan: File;
+const form = new FormData();
+form.append('title', 'Facture');
+form.append('scan', scan);
+
+this.http
+  .request('PUT', 'https://api.exemple.fr/documents/7', {
+    body: form,
+    responseType: 'text',
+  })
+  .subscribe((response) => console.log(response));

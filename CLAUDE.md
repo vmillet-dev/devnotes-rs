@@ -47,6 +47,7 @@ Principles:
 - Side tables read by bound ids up to `BIND_AT_MOST` (500), by subquery past it. Revisions: last 20 bodies, never for checklists, never exported. → "Revisions: the body before the edit".
 - **Fresh install seeds samples in one transaction.** → "The first launch". **Input is validated in the model**, before locking. → "Input validation".
 - **`{{field}}`** is decided in `notes::placeholder` alone (`[A-Za-z0-9_-]`); values in `note_placeholders`; global variable = proposed default, never copied. → "`{{fields}}` in a snippet".
+- ⚠️ An HTTP request's `{{name}}` is `http::variables`, never `notes::placeholder`: resolved in Rust at send from request › folder › collection › environment › globals; a name set nowhere refuses the send. → "Variables, and where each resolves from".
 - **Kinds**: a todo list has items, not a body; only a snippet has a language; a Note is Markdown (`notes::markdown::plain` for list previews). → "The three kinds of note", "A Note is written formatted, and stored as Markdown".
 - **Folders** cut one space; deleting leaves notes unfiled; board geometry is separate from `Note`/`Folder`. Pinning is the only space order. → "Folders inside a space", "A folder travels; its coordinates do not", "Managing spaces from the switcher".
 - **Tools**: a pure Rust function plus a component implementing `Tool`; catalogue in `tools/catalogue/catalogue.ts`; one command per tool via `off_thread`; `result` is an output, never an input; secrets are plain signals. → "The tools: one contract…".

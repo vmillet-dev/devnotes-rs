@@ -1,0 +1,16 @@
+import requests
+
+response = requests.request(
+    "POST",
+    "https://auth.exemple.fr/token",
+    headers={
+        "Content-Type": "application/x-www-form-urlencoded",
+    },
+    auth=("billing-web", "{{clientSecret}}"),
+    data={
+        "grant_type": "client_credentials",
+        "scope": "invoices read",
+    },
+    allow_redirects=False,
+)
+print(response.status_code, response.text)

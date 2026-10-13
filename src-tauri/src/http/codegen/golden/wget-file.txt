@@ -1,0 +1,7 @@
+wget --method POST \
+  --quiet \
+  --max-redirect 0 \
+  --header 'Content-Type: application/octet-stream' \
+  --body-file '/tmp/archive.zip' \
+  --output-document - \
+  'https://api.exemple.fr/upload'

@@ -1,0 +1,14 @@
+<?php
+
+require 'vendor/autoload.php';
+
+$client = new GuzzleHttp\Client();
+$response = $client->request('POST', 'https://api.exemple.fr/upload', [
+    'headers' => [
+        'Content-Type' => 'application/octet-stream',
+    ],
+    'body' => fopen('/tmp/archive.zip', 'r'),
+    'allow_redirects' => false,
+    'http_errors' => false,
+]);
+echo $response->getStatusCode(), ' ', $response->getBody();

@@ -7,13 +7,15 @@ import {
   output,
   viewChild,
 } from '@angular/core';
+import { VariableScope } from '@core/model/http-environment.model';
 
 interface Piece {
   readonly text: string;
   readonly variable: boolean;
+  /** Where it resolves from, `none` when nothing sets it; `null` while Rust has not said. */
+  readonly scope: VariableScope | 'none' | null;
 }
 
-/** `{{name}}`, which v0.11.0's environments resolve; until then only drawn apart. */
 const VARIABLE = /(\{\{[^{}]*\}\})/;
 
 /**
@@ -30,6 +32,8 @@ export class UrlFieldComponent {
   readonly value = input.required<string>();
   readonly label = input.required<string>();
   readonly placeholder = input('');
+  /** By name, where each variable resolves from, as Rust answered it. */
+  readonly scopes = input<ReadonlyMap<string, VariableScope | 'none'>>(new Map());
 
   readonly valueChange = output<string>();
 
@@ -39,7 +43,10 @@ export class UrlFieldComponent {
     this.value()
       .split(VARIABLE)
       .filter((text) => text !== '')
-      .map((text) => ({ text, variable: VARIABLE.test(text) })),
+      .map((text) => {
+        const variable = VARIABLE.test(text);
+        return { text, variable, scope: variable ? (this.scopes().get(text.slice(2, -2)) ?? null) : null };
+      }),
   );
 
   protected onInput(event: Event): void {

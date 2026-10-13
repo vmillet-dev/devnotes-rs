@@ -6,6 +6,17 @@
     <p class="hint">{{ 'http.settings.hint' | transloco }}</p>
 
     @if (settings(); as current) {
+      <h3 class="section">
+        {{ 'http.settings.variables' | transloco }}
+        <span class="section-hint">· {{ 'http.settings.variablesHint' | transloco }}</span>
+      </h3>
+      <app-variables-table
+        kind="settings"
+        [label]="'http.settings.variables' | transloco"
+        [rows]="current.variables"
+        (rowsChange)="onVariables($event)"
+      />
+
       <h3 class="section">{{ 'http.editor.sections.auth' | transloco }}</h3>
       <app-auth-editor
         [auth]="current.auth"
