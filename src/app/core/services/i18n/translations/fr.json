@@ -3482,5 +3482,10 @@
       "noteWhat": "Le code de la requête, pour un autre outil.",
       "multilineShell": "Un programme est mis en forme de lui-même : seule une ligne de commande se coupe."
     }
+  },
+  "choiceMenu": {
+    "filterLabel": "Filtrer {{menu}}",
+    "filterPlaceholder": "Filtrer…",
+    "noResults": "Aucun résultat"
   }
 }

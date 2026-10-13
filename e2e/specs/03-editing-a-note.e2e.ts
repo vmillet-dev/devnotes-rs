@@ -111,6 +111,59 @@ describe('Editing a note', () => {
     expect((await reread())?.language).toBe('rs');
   });
 
+  it('picks a format by typing its name, Escape clearing the filter before the menu', async () => {
+    const shown = () =>
+      browser.execute(
+        (selector: string) => {
+          const entries = document.querySelectorAll<HTMLElement>(selector);
+          return Array.from(entries, (entry) => entry.dataset['optionId'] ?? '').join(',');
+        },
+        `${testid('choice-panel-language')} ${testid('choice-option')}`,
+      );
+    const focused = () => browser.execute(() => document.activeElement?.getAttribute('data-testid') ?? '');
+
+    await canvas.openNote(title);
+    await $(testid('choice-language')).click();
+    await $(testid('choice-filter')).waitForDisplayed({ timeout: 5_000 });
+    await eventually(focused, (id) => id === 'choice-filter', 'the filter field to take the focus');
+
+    await $(testid('choice-filter')).setValue('pyth');
+    await eventually(shown, (ids) => ids === 'py', 'Python alone, found by its full name');
+
+    await $(testid('choice-filter')).setValue('cobol');
+    await $(testid('choice-empty')).waitForDisplayed({ timeout: 5_000 });
+
+    await press('Escape');
+    await eventually(
+      shown,
+      (ids) => ids.split(',').length > 20,
+      'every format back once the filter is cleared',
+    );
+    expect(await $(testid('choice-filter')).getValue()).toBe('');
+
+    await $(testid('choice-filter')).setValue('ELIX');
+    await eventually(shown, (ids) => ids === 'ex', 'Elixir, case aside');
+    await $(testid('choice-filter')).setValue('rust');
+    await eventually(shown, (ids) => ids === 'rs', 'Rust alone');
+    await press('Enter');
+    await $(testid('choice-panel-language')).waitForExist({ reverse: true, timeout: 5_000 });
+    await editor.close();
+
+    expect((await reread())?.language).toBe('rs');
+
+    // Closed after a filter was cleared: the first Escape empties it, the second closes the menu.
+    await canvas.openNote(title);
+    await $(testid('choice-language')).click();
+    await $(testid('choice-filter')).waitForDisplayed({ timeout: 5_000 });
+    await eventually(focused, (id) => id === 'choice-filter', 'the filter field to take the focus');
+    await $(testid('choice-filter')).setValue('sql');
+    await press('Escape');
+    await press('Escape');
+    await $(testid('choice-panel-language')).waitForExist({ reverse: true, timeout: 5_000 });
+    expect(await $(testid('editor-body')).isExisting()).toBe(true);
+    await editor.close();
+  });
+
   it('adds and removes a tag, normalised by Rust', async () => {
     await canvas.openNote(title);
     // `notes::model::normalize_tags` and nowhere else.

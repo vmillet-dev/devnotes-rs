@@ -1761,6 +1761,15 @@ crosses areas of the screen — the notes, the preferences and the unlock screen
 nothing but its own host directive. It is the one menu that **swallows Escape**: it is used
 inside dialogs, where the next listener up is the dialog's own.
 
+**A long list opens on a filter field** (from `FILTER_FROM`, nine entries, or `filterable`):
+the panel becomes the ARIA select-only combobox with a filter — the focus stays in the field,
+the arrows walk the entries through `aria-activedescendant`, Enter takes the walked one, and
+Escape clears the filter before it closes the menu. Matching folds case and accents
+(`core/utils/fold.util.ts`) and reads an option's `hint` too: the formats show « PY » and match
+« python ». ⚠️ What the list shows is read back from the rendered entries: an entry named by a
+key matches on its translation, which only the template's pipe knows, and `shared/` injects no
+service to translate it.
+
 **Three options get a segmented control instead** (`shared/controls/segmented-choice/`):
 Thème and Densité. Hiding two of three choices behind a click buys nothing, and
 `role="radiogroup"` is what says exactly one of them is chosen at all times.

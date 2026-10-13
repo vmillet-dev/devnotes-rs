@@ -17,12 +17,13 @@ import {
 import { TranslocoPipe } from '@jsverse/transloco';
 import type { ChainedCommands, Editor } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';
-import { LANGUAGE_LABELS, LanguageTag, isLanguageTag } from '@core/model/language.model';
+import { LanguageTag, isLanguageTag } from '@core/model/language.model';
 import type { IndentChoice } from '@core/services/settings/app-settings.model';
 import { IconComponent, IconName } from '@shared/icon/icon.component';
-import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
+import { ChoiceMenuComponent } from '@shared/controls/choice-menu/choice-menu.component';
 import { indentUnit } from '../indentation';
 import { createRichEditor, focusFirst, languageOf } from './rich-text.engine';
+import { LANGUAGE_CHOICES } from '../language-choices';
 
 type Action =
   | 'h1'
@@ -85,11 +86,6 @@ const TOOLS: readonly (readonly Tool[])[] = [
   ],
 ];
 
-const CODE_LANGUAGES: readonly ChoiceOption[] = Object.entries(LANGUAGE_LABELS).map(([id, name]) => ({
-  id,
-  name,
-}));
-
 /** Shown while the caret is in a table, and only then. */
 const TABLE_TOOLS: readonly Tool[] = [
   { action: 'rowAfter', labelKey: 'editor.rich.addRow' },
@@ -140,7 +136,7 @@ export class RichTextEditorComponent {
 
   protected readonly tools = TOOLS;
   protected readonly tableTools = TABLE_TOOLS;
-  protected readonly codeLanguages = CODE_LANGUAGES;
+  protected readonly codeLanguages = LANGUAGE_CHOICES;
 
   /** The words and the address being typed, while the link form is open. */
   protected readonly linkForm = signal<LinkForm | null>(null);

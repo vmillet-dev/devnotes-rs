@@ -3482,5 +3482,10 @@
       "noteWhat": "The request’s code, for another tool.",
       "multilineShell": "A program is laid out on its own: only a command line is cut."
     }
+  },
+  "choiceMenu": {
+    "filterLabel": "Filter {{menu}}",
+    "filterPlaceholder": "Filter…",
+    "noResults": "No results"
   }
 }
