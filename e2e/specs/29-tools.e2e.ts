@@ -112,8 +112,17 @@ describe('The tools', () => {
       await eventually(activeTestId, (id) => id === 'tools-search', 'the search field to take the focus');
     });
 
-    it('says what it holds reaches no network', async () => {
-      expect(await $(testid('tools-promise')).isDisplayed()).toBe(true);
+    it('says what it holds reaches no network in its subtitle, with no band above the panels', async () => {
+      expect(await $(testid('tools-count')).getAttribute('title')).not.toBe('');
+      expect(await $(testid('tools-promise')).isExisting()).toBe(false);
+      // The panels come right under the header.
+      expect(
+        await browser.execute(() => {
+          const header = document.querySelector('app-tools-home .topbar')!.getBoundingClientRect();
+          const body = document.querySelector('app-tools-home .body')!.getBoundingClientRect();
+          return Math.round(body.top - header.bottom);
+        }),
+      ).toBe(0);
     });
 
     it('finds a tool by one of its keywords, in any case', async () => {

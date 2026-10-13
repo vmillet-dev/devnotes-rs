@@ -1064,10 +1064,7 @@
       "more": "{count, plural, one {# more} other {# more}} in {{name}}"
     },
     "clear": "Clear",
-    "promise": {
-      "title": "Everything stays on this machine",
-      "offline": "No tool reaches the network. What you paste never leaves the application."
-    },
+    "offline": "No tool reaches the network. What you paste never leaves the application.",
     "categories": {
       "text": "Text",
       "crypto": "Crypto",
