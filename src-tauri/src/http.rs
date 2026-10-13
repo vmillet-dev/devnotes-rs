@@ -459,15 +459,28 @@ pub async fn send_http_request<R: Runtime>(
         )?;
         let (document, inherited) = variables::resolve(&document, &inherited, &resolver);
         let mut outgoing = send::compose(kind, method, &document, &inherited)?;
+        outgoing.secret_values = resolver.secrets();
         if outgoing.transport.use_cookies {
             outgoing.jar = Some(cookies::store::jar(&mut connection, Utc::now())?);
         }
-        Ok(outgoing)
+        let environment = environment_id
+            .as_deref()
+            .map(|id| environments::store::get(&mut connection, id))
+            .transpose()
+            .ok()
+            .flatten()
+            .map(|environment| history::SentEnvironment {
+                name: environment.name,
+                colour: environment.colour,
+            });
+        Ok((outgoing, environment))
     })
     .await?;
+    let (outgoing, environment) = outgoing;
 
     let exchange = send::exchange(&outgoing);
     let secrets = outgoing.secrets.clone();
+    let secret_values = outgoing.secret_values.clone();
     let (answer, cookies_set) = app.state::<send::Sending>().run(&id, outgoing).await;
     let outcome = match &answer {
         Ok(response) => Ok(response.clone()),
@@ -483,6 +496,8 @@ pub async fn send_http_request<R: Runtime>(
         request_id,
         exchange,
         secrets,
+        secret_values,
+        environment,
         outcome,
     };
     keep(app, sent, cookies_set).await;

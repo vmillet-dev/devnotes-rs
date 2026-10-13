@@ -205,6 +205,7 @@ mod tests {
             failure_params: std::collections::BTreeMap::new(),
             method: HttpMethod::Delete,
             status: Some(401),
+            environment: None,
         }
     }
 

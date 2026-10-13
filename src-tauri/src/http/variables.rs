@@ -213,6 +213,31 @@ impl Resolver {
     }
 }
 
+/// Shorter than this, a secret's value is not looked for: it would be found inside every word.
+const HIDDEN_FROM: usize = 3;
+
+/// Each secret's value written back as its `{{name}}`, as typed and as a query encodes it: what
+/// shows a request once it left — the timeline, the history — never shows the value. The longest
+/// first, so a value inside another is not cut out of it.
+#[must_use]
+pub fn hide(text: &str, secrets: &[(String, String)]) -> String {
+    let mut found: Vec<&(String, String)> = secrets
+        .iter()
+        .filter(|(_, value)| value.chars().count() >= HIDDEN_FROM)
+        .collect();
+    found.sort_by_key(|(_, value)| std::cmp::Reverse(value.len()));
+    let mut text = text.to_string();
+    for (name, value) in found {
+        let written = format!("{{{{{name}}}}}");
+        text = text.replace(value.as_str(), &written);
+        let encoded: String = url::form_urlencoded::byte_serialize(value.as_bytes()).collect();
+        if encoded != *value {
+            text = text.replace(&encoded, &written);
+        }
+    }
+    text
+}
+
 fn fill_rows(rows: &mut [KeyValue], resolver: &Resolver) {
     for row in rows {
         row.key = resolver.fill(&row.key);
@@ -552,6 +577,27 @@ mod tests {
             }
         );
         assert_eq!(inherited.headers[0].header.value, "api.exemple.fr");
+    }
+
+    #[test]
+    fn a_secret_value_is_written_back_as_its_name_wherever_it_shows() {
+        let secrets = vec![
+            ("token".to_string(), "t0k3n".to_string()),
+            ("long".to_string(), "t0k3n-and-more".to_string()),
+            ("spaced".to_string(), "a b&c".to_string()),
+            ("short".to_string(), "ab".to_string()),
+        ];
+
+        assert_eq!(
+            hide("Bearer t0k3n, again t0k3n-and-more", &secrets),
+            "Bearer {{token}}, again {{long}}"
+        );
+        assert_eq!(
+            hide("https://x/?q=a+b%26c", &secrets),
+            "https://x/?q={{spaced}}"
+        );
+        assert_eq!(hide("ab cd", &secrets), "ab cd");
+        assert_eq!(hide("nothing here", &[]), "nothing here");
     }
 
     #[test]

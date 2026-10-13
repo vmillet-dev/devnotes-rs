@@ -238,4 +238,73 @@ describe('HTTP environments', () => {
       await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
     }
   });
+
+  /** #487: once the request left, a secret shows by its name — the timeline, the history. */
+  it('shows a secret by its name in the timeline and the history, and the environment it left with', async () => {
+    const heard: string[] = [];
+    const server = createServer((request, response) => {
+      heard.push(String(request.headers['x-token']));
+      response.writeHead(200, { 'Content-Type': 'application/json' });
+      response.end('{}');
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address() as AddressInfo;
+    await bridge.clearHttpHistory();
+    const api = await bridge.createHttpCollection('Secrets');
+    const staging = await bridge.createHttpEnvironment('Staging e2e');
+    await bridge.saveHttpEnvironment(staging.id, {
+      variables: [{ name: 'token', value: 'zq-e2e-secret', kind: 'secret' }],
+    });
+    const created = await bridge.createHttpRequest({
+      collectionId: api.id,
+      folderId: null,
+      name: 'Profil',
+      kind: 'http',
+      method: 'GET',
+      document: {
+        url: `http://127.0.0.1:${port}/me`,
+        description: '',
+        headers: [{ key: 'X-Token', value: '{{token}}' }],
+      },
+    });
+    try {
+      await openHttp();
+      await $(`${testid('http-node')}[data-id="${created.id}"] ${testid('http-node-name')}`).click();
+      await $(testid('http-request-editor')).waitForDisplayed({ timeout: 10_000 });
+      await pick(staging.id);
+
+      await $(testid('http-send')).click();
+      await eventually(
+        () => Promise.resolve(heard.join()),
+        (said) => said === 'zq-e2e-secret',
+        'the secret sent to the server',
+      );
+      await $(`${testid('http-response-section')}[data-section="timeline"]`).click();
+      const sent = await $(testid('http-response-sent')).getText();
+      expect(sent).toContain('X-Token: {{token}}');
+      expect(sent).not.toContain('zq-e2e-secret');
+
+      await $(testid('http-history-open')).click();
+      await eventually(
+        () => readEach(testid('http-history-environment'), 'text'),
+        (names) => names.join() === 'Staging e2e',
+        'the environment the send left with',
+      );
+      const entry = (await bridge.httpHistory(0))[0]?.items[0];
+      const kept = JSON.stringify(await bridge.httpHistoryEntry(entry!.id));
+      expect(kept).toContain('{{token}}');
+      expect(kept).not.toContain('zq-e2e-secret');
+      await $(testid('http-history-open')).click();
+      await $(testid('http-history')).waitForExist({ reverse: true, timeout: 10_000 });
+
+      const tab = `${testid('http-tab')}[data-key="${created.id}"]`;
+      await $(`${tab} ${testid('http-tab-close')}`).click();
+      await $(tab).waitForExist({ reverse: true, timeout: 10_000 });
+      await pick('none');
+    } finally {
+      server.close();
+      await bridge.deleteHttpEnvironment(staging.id);
+      await bridge.deleteHttpItem({ kind: 'collection', id: api.id });
+    }
+  });
 });

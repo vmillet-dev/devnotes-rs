@@ -347,6 +347,45 @@ fn a_variable_is_sent_as_the_nearest_level_sets_it() {
     assert_eq!(seen.body, br#"{"tenant":"acme"}"#);
 }
 
+/// #487: the timeline and the history show a secret variable by its name — the server that
+/// echoes the token included — and the history says which environment the send left with.
+#[test]
+fn a_secret_variable_shows_by_its_name_once_the_request_left() {
+    use devnotes_lib::http::{http_history, http_history_entry};
+
+    let session = Session::open();
+    let (port, seen) = serve(1, |request, _| {
+        response("200 OK", &[], request.head.as_bytes())
+    });
+    let sent = layered(&session, port);
+
+    let answer = session.call(|app| send_http_request(sent, app)).unwrap();
+    assert!(seen.recv().unwrap().head.contains("t0k3n"));
+    assert!(
+        answer
+            .exchange
+            .headers
+            .iter()
+            .any(|header| header.key == "Authorization" && header.value == "Bearer {{token}}")
+    );
+
+    let days = session.call(|app| http_history(0, app)).unwrap();
+    let item = &days[0].items[0];
+    assert_eq!(
+        item.summary
+            .environment
+            .as_ref()
+            .map(|sent| sent.name.as_str()),
+        Some("Staging")
+    );
+    let entry = session
+        .call(|app| http_history_entry(item.id.clone(), app))
+        .unwrap();
+    let kept = serde_json::to_string(&entry).unwrap();
+    assert!(!kept.contains("t0k3n"), "{kept}");
+    assert!(kept.contains("{{token}}"));
+}
+
 /// Fork C: a name no level sets is refused by name, and nothing leaves.
 #[test]
 fn a_variable_set_nowhere_stops_the_send_by_its_name() {

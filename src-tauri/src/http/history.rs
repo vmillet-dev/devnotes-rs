@@ -13,12 +13,13 @@ use specta::Type;
 use serde_json::value::RawValue;
 use url::Url;
 
-use super::graphql::GraphqlDocument;
+use super::graphql::{GraphqlDocument, GraphqlError, GraphqlResult};
 use super::model::{HttpMethod, HttpRequest, KeyValue, RequestBody, RequestDocument, RequestKind};
 use super::query::{self, QuerySide};
 use super::response::{Cookie, pretty_json};
 use super::send::{self, Exchange, Redirect, SentBody, SentResponse};
 use super::settings::InheritedHeader;
+use super::variables;
 use crate::error::ErrorCode;
 use crate::notes::view::offset_from_minutes;
 
@@ -48,6 +49,16 @@ pub struct HistorySummary {
     pub method: HttpMethod,
     #[serde(default)]
     pub status: Option<u16>,
+    /// The environment it was sent with, as it was named then.
+    #[serde(default)]
+    pub environment: Option<SentEnvironment>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct SentEnvironment {
+    pub name: String,
+    pub colour: crate::folders::model::FolderColour,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -115,6 +126,9 @@ pub struct Sent {
     pub exchange: Exchange,
     /// The API key's name, as `Outgoing::secrets` holds it.
     pub secrets: Vec<String>,
+    /// The secret variables in force, by name and value: kept as their names, never in clear.
+    pub secret_values: Vec<(String, String)>,
+    pub environment: Option<SentEnvironment>,
     /// A failure as its code and the values its sentence states.
     pub outcome: Result<SentResponse, (ErrorCode, BTreeMap<String, String>)>,
 }
@@ -275,13 +289,82 @@ fn cut(text: &str) -> (String, bool) {
     (text[..end].to_string(), true)
 }
 
+/// A secret variable's value, wherever the answer repeats it — a server echoing a token in its
+/// body, a URL that carried it —, written as its `{{name}}`.
+fn hidden_answer(response: &SentResponse, secrets: &[(String, String)]) -> SentResponse {
+    if secrets.is_empty() {
+        return response.clone();
+    }
+    let hide = |text: &str| variables::hide(text, secrets);
+    SentResponse {
+        url: hide(&response.url),
+        headers: response
+            .headers
+            .iter()
+            .map(|header| KeyValue {
+                value: hide(&header.value),
+                ..header.clone()
+            })
+            .collect(),
+        body: hide(&response.body),
+        pretty: response.pretty.as_deref().map(hide),
+        redirects: response
+            .redirects
+            .iter()
+            .map(|hop| Redirect {
+                url: hide(&hop.url),
+                from: hide(&hop.from),
+                ..hop.clone()
+            })
+            .collect(),
+        graphql: response.graphql.as_ref().map(|graphql| GraphqlResult {
+            data: graphql.data.as_deref().map(hide),
+            errors: graphql
+                .errors
+                .iter()
+                .map(|error| GraphqlError {
+                    message: hide(&error.message),
+                    ..error.clone()
+                })
+                .collect(),
+        }),
+        ..response.clone()
+    }
+}
+
+/// The request with a secret variable's value written as its name: `send::exchange` already
+/// does so, and what is sealed does not count on it.
+fn hidden_exchange(exchange: &Exchange, secrets: &[(String, String)]) -> Exchange {
+    let hide = |text: &str| variables::hide(text, secrets);
+    Exchange {
+        url: hide(&exchange.url),
+        headers: exchange
+            .headers
+            .iter()
+            .map(|header| KeyValue {
+                value: hide(&header.value),
+                ..header.clone()
+            })
+            .collect(),
+        body: match &exchange.body {
+            SentBody::Text { text } => SentBody::Text { text: hide(text) },
+            other => other.clone(),
+        },
+        ..exchange.clone()
+    }
+}
+
 /// What is sealed: the request masked, its body and the answer's cut to `BODY_KEPT`.
 pub fn record_of(sent: &Sent) -> (HistorySummary, HistoryRecord) {
-    let mut exchange = mask(&sent.exchange, &sent.secrets);
+    let mut exchange = mask(
+        &hidden_exchange(&sent.exchange, &sent.secret_values),
+        &sent.secrets,
+    );
     if let SentBody::Text { text } = &exchange.body {
         exchange.body = SentBody::Text { text: cut(text).0 };
     }
     let response = sent.outcome.as_ref().ok().map(|response| {
+        let response = &hidden_answer(response, &sent.secret_values);
         let (body, shortened) = cut(&response.body);
         SentResponse {
             pretty: if shortened {
@@ -303,6 +386,7 @@ pub fn record_of(sent: &Sent) -> (HistorySummary, HistoryRecord) {
         url: exchange.url.clone(),
         millis: response.as_ref().map(|response| response.millis),
         size: response.as_ref().map(|response| response.size),
+        environment: sent.environment.clone(),
         failure: sent.outcome.as_ref().err().map(|(code, _)| *code),
         failure_params: sent
             .outcome
@@ -630,6 +714,8 @@ mod tests {
             request_id: None,
             exchange,
             secrets: secrets.iter().map(ToString::to_string).collect(),
+            secret_values: Vec::new(),
+            environment: None,
             outcome: Ok(response),
         }
     }
@@ -653,6 +739,52 @@ mod tests {
             exchange: exchange("https://api.exemple.fr", Vec::new(), SentBody::None),
             graphql: None,
         }
+    }
+
+    /// #487: a secret variable is kept as its name — in the request, the answer that echoes
+    /// it, the URL it went to —, never in clear; and the entry says which environment it left with.
+    #[test]
+    fn a_secret_variable_is_kept_as_its_name_wherever_it_shows() {
+        let mut sent = answered(
+            exchange(
+                "https://api.exemple.fr/v1?key=t0k3n-value",
+                vec![header("X-Token", "t0k3n-value")],
+                SentBody::Text {
+                    text: "{\"token\":\"t0k3n-value\"}".to_string(),
+                },
+            ),
+            &[],
+            SentResponse {
+                url: "https://api.exemple.fr/v1?key=t0k3n-value".to_string(),
+                body: "{\"echo\":\"t0k3n-value\"}".to_string(),
+                pretty: Some("{\n  \"echo\": \"t0k3n-value\"\n}".to_string()),
+                headers: vec![header("X-Echo", "t0k3n-value")],
+                ..answer()
+            },
+        );
+        sent.secret_values = vec![("token".to_string(), "t0k3n-value".to_string())];
+        sent.environment = Some(SentEnvironment {
+            name: "Staging".to_string(),
+            colour: crate::folders::model::FolderColour::Amber,
+        });
+
+        let (summary, record) = record_of(&sent);
+
+        let kept = serde_json::to_string(&(&summary, &record)).unwrap();
+        assert!(!kept.contains("t0k3n-value"), "{kept}");
+        assert_eq!(record.exchange.headers[0].value, "{{token}}");
+        assert_eq!(summary.url, "https://api.exemple.fr/v1?key={{token}}");
+        assert_eq!(
+            record
+                .response
+                .as_ref()
+                .map(|response| response.body.as_str()),
+            Some("{\"echo\":\"{{token}}\"}")
+        );
+        assert_eq!(
+            summary.environment.map(|sent| sent.name),
+            Some("Staging".to_string())
+        );
     }
 
     /// One auth a line: whatever kind left, its secret is not in what is kept.
@@ -834,6 +966,8 @@ mod tests {
                 SentBody::Text { text: long.clone() },
             ),
             secrets: Vec::new(),
+            secret_values: Vec::new(),
+            environment: None,
             outcome: Err((
                 ErrorCode::HttpTimeout,
                 BTreeMap::from([("amount".to_string(), "2".to_string())]),
@@ -872,6 +1006,7 @@ mod tests {
                     failure_params: BTreeMap::new(),
                     method: HttpMethod::Post,
                     status: None,
+                    environment: None,
                 },
                 url_head: String::new(),
                 url_tail: String::new(),
@@ -961,6 +1096,7 @@ mod tests {
                     failure_params: BTreeMap::new(),
                     method: HttpMethod::Post,
                     status: None,
+                    environment: None,
                 },
                 url_head: String::new(),
                 url_tail: String::new(),
@@ -1191,6 +1327,7 @@ mod tests {
                 failure_params: BTreeMap::new(),
                 method: HttpMethod::Get,
                 status: None,
+                environment: None,
             },
             url_head: String::new(),
             url_tail: String::new(),
