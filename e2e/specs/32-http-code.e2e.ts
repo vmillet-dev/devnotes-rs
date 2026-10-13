@@ -84,6 +84,18 @@ describe('HTTP code generation', () => {
       await $(testid('http-code-secrets')).click();
       await eventually(code, (text) => text.includes('Bearer {{token}}'), 'the secret a variable again');
 
+      // #489: JavaScript's fetch and Angular's HttpClient, from the same request.
+      await $(`${testid('http-code-target')}[data-target="fetch"]`).click();
+      await eventually(
+        code,
+        (text) => text.includes("await fetch('https://api.exemple.fr/invoices?page=1'"),
+        'the fetch call',
+      );
+      expect(await code()).toContain("Authorization: 'Bearer {{token}}'");
+      expect(await $(testid('http-code-multiline')).isEnabled()).toBe(false);
+      await $(`${testid('http-code-target')}[data-target="angular"]`).click();
+      await eventually(code, (text) => text.includes('this.http'), 'the HttpClient call');
+
       await $(`${testid('http-code-target')}[data-target="powershell"]`).click();
       await eventually(code, (text) => text.includes('Invoke-RestMethod'), 'the PowerShell call');
 

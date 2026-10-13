@@ -2,9 +2,14 @@
 //! built from what a send would write, and one module a target. The variables are resolved
 //! here, a secret left as its `{{name}}` unless it is asked for in clear.
 
+pub mod angular;
+pub mod axios;
 pub mod curl;
+pub mod fetch;
 pub mod httpie;
+pub mod javascript;
 pub mod powershell;
+pub mod undici;
 pub mod wget;
 
 use serde::{Deserialize, Serialize};
@@ -27,6 +32,10 @@ closed_enum! {
         Httpie = "httpie",
         Wget = "wget",
         Powershell = "powershell",
+        Fetch = "fetch",
+        Axios = "axios",
+        Undici = "undici",
+        Angular = "angular",
     }
 }
 
@@ -37,6 +46,8 @@ impl CodeTarget {
         match self {
             Self::Curl | Self::Httpie | Self::Wget => Language::Sh,
             Self::Powershell => Language::Ps1,
+            Self::Fetch | Self::Axios | Self::Undici => Language::Js,
+            Self::Angular => Language::Ts,
         }
     }
 }
@@ -50,6 +61,7 @@ pub struct CodeOptions {
     pub resolve_variables: bool,
     /// A secret written in clear: the front asks first, every time.
     pub include_secrets: bool,
+    /// A command line's arguments one a line: a program is laid out whatever it says.
     pub multiline: bool,
     pub follow_redirects: bool,
 }
@@ -290,6 +302,10 @@ pub fn generate(
         CodeTarget::Httpie => httpie::write(&request, options.multiline),
         CodeTarget::Wget => wget::write(&request, options.multiline),
         CodeTarget::Powershell => powershell::write(&request, options.multiline),
+        CodeTarget::Fetch => fetch::write(&request),
+        CodeTarget::Axios => axios::write(&request),
+        CodeTarget::Undici => undici::write(&request),
+        CodeTarget::Angular => angular::write(&request),
     };
     GeneratedCode {
         code,

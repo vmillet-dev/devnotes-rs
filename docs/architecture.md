@@ -2440,6 +2440,12 @@ written again with `GOLDEN_WRITE=1`, then read before they are kept).
   a parameter, never inside a translated sentence (Transloco would empty it).
 - **A target Rust cannot fully write says so by a code** (`CodeNotice`): wget sends no multipart
   form.
+- **The JavaScript and TypeScript targets** (#489) share `codegen/javascript.rs` — strings (a
+  template literal for a text of several lines, so a JSON body stays laid out), bare or quoted
+  keys, object literals. `fetch`, axios and undici run under Node and read a file with
+  `openAsBlob`; Angular's `HttpClient` runs in a browser, which reads no path: a file part is a
+  `File` the code declares. A program is laid out whatever « Sur plusieurs lignes » says — the
+  switch only cuts a command line, and is greyed for the others.
 - **The list is the front's** (`CODE_TARGETS`, a `Record` on the generated `CodeTarget`, so a
   target added in Rust breaks the build until it is named), grouped and filtered on its name and
   library — the tools' catalogue's exception. Names like cURL or PowerShell are proper names and

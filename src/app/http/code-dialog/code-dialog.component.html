@@ -108,6 +108,8 @@
               type="checkbox"
               class="switch"
               data-testid="http-code-multiline"
+              [disabled]="entry().group !== 'shell'"
+              [attr.title]="entry().group === 'shell' ? null : ('http.code.multilineShell' | transloco)"
               [checked]="options().multiline"
               (change)="toggle('multiline')"
             />

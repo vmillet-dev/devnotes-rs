@@ -3485,7 +3485,8 @@
       "copy": "Copier",
       "copied": "Code copié.",
       "noteTitle": "{{name}} · {{target}}",
-      "noteWhat": "Le code de la requête, pour un autre outil."
+      "noteWhat": "Le code de la requête, pour un autre outil.",
+      "multilineShell": "Un programme est mis en forme de lui-même : seule une ligne de commande se coupe."
     }
   }
 }

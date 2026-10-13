@@ -1,0 +1,11 @@
+const response = await fetch('https://api.exemple.fr/customers', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: `{
+  "name": "O'Brien",
+  "plan": "pro"
+}`,
+});
+console.log(response.status, await response.text());

@@ -1,0 +1,15 @@
+import { HttpHeaders } from '@angular/common/http';
+
+this.http
+  .request('POST', 'https://auth.exemple.fr/token', {
+    headers: new HttpHeaders({
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization: `Basic ${btoa('billing-web:{{clientSecret}}')}`,
+    }),
+    body: new URLSearchParams({
+      grant_type: 'client_credentials',
+      scope: 'invoices read',
+    }).toString(),
+    responseType: 'text',
+  })
+  .subscribe((response) => console.log(response));
