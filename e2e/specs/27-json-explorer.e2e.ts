@@ -341,4 +341,70 @@ describe('Exploring a JSON document', () => {
       await editor.close();
     });
   });
+
+  describe('a TOML snippet', () => {
+    const TITLE = 'Cargo manifest';
+    const TOML = [
+      'title = "Réglages"',
+      'when = 1979-05-27T07:32:00Z',
+      'site.name = "api"',
+      '[server]',
+      'port = 8_080 # comment',
+      '[[products]]',
+      'name = "hammer"',
+      '[[products]]',
+      'name = "nail"',
+      '',
+    ].join('\n');
+    let id = '';
+
+    before(async () => {
+      const spaceId = (await bridge.createSpace({ name: 'TOML' })).id;
+      id = (await bridge.createNote(draft({ spaceId, title: TITLE, content: TOML, language: 'toml' }))).id;
+      await reloadCanvas();
+      await canvas.waitForCard(TITLE);
+    });
+
+    after(async () => {
+      await bridge.deleteNotes([id]);
+      await bridge.purgeNotes([id]);
+      await reloadCanvas();
+    });
+
+    it('reads tables, arrays of tables and dotted keys where they were written, dates as written', async () => {
+      const view = await bridge.exploreJson({
+        text: TOML,
+        format: 'toml',
+        search: '',
+        opening: { kind: 'all' },
+      });
+
+      expect(view.error).toBeNull();
+      const root = view.graph.nodes[0]!;
+      expect(root.rows.map((row) => row.key)).toEqual(['title', 'when', 'site', 'server', 'products']);
+      const when = root.rows[1]!;
+      expect([when.kind, when.value]).toEqual(['datetime', '1979-05-27T07:32:00Z']);
+      const port = view.graph.nodes.find((node) => node.path === '$.server')!.rows[0]!;
+      expect(TOML.slice(port.span.start, port.span.end)).toBe('8_080');
+      expect(view.graph.nodes.some((node) => node.path === '$.products[1]')).toBe(true);
+    });
+
+    it('opens on the same tabs and shows a value in its code', async () => {
+      await canvas.openNote(TITLE);
+      await $(testid('editor-json-validity')).waitForExist({ timeout: 10_000 });
+      expect(await $(testid('editor-json-validity')).getAttribute('class')).not.toContain('invalid');
+
+      await $(testid('editor-view-graph')).click();
+      await $(`${testid('json-node')}[data-path="$.server"]`).waitForExist({ timeout: 10_000 });
+      await $(`${testid('json-row')}[data-path="$.server.port"]`).click();
+      await $(testid('json-show-in-code')).click();
+      await $(testid('editor-body')).waitForExist({ timeout: 10_000 });
+      const selection = await browser.execute(() => {
+        const field = document.querySelector<HTMLTextAreaElement>('[data-testid="editor-body"]')!;
+        return field.value.slice(field.selectionStart, field.selectionEnd);
+      });
+      expect(selection).toBe('8_080');
+      await editor.close();
+    });
+  });
 });

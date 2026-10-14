@@ -1029,7 +1029,8 @@
       "string": "Chaîne",
       "number": "Nombre",
       "boolean": "Booléen",
-      "null": "Null"
+      "null": "Null",
+      "datetime": "Date ou heure"
     },
     "document": "Document",
     "keys": "Clés",
@@ -1043,7 +1044,8 @@
       "firstDocumentOnly": "Plusieurs documents : seul le premier est exploré."
     },
     "formatNotes": {
-      "yaml": "Les commentaires n’apparaissent pas, et un alias montre ce qu’il désigne."
+      "yaml": "Les commentaires n’apparaissent pas, et un alias montre ce qu’il désigne.",
+      "toml": "Les commentaires n’apparaissent pas ; dates et heures sont montrées telles qu’écrites."
     },
     "hiddenRows": "{count, plural, one {+ # autre} other {+ # autres}}",
     "tree": "Arbre du document",

@@ -63,6 +63,7 @@ pub enum JsonKind {
     Number,
     Boolean,
     Null,
+    Datetime,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Type)]
@@ -333,6 +334,7 @@ fn describe(value: &Value) -> (JsonKind, String, u32, Option<&str>) {
         Value::Bool(true) => (JsonKind::Boolean, "true".to_string(), 0, Some("true")),
         Value::Bool(false) => (JsonKind::Boolean, "false".to_string(), 0, Some("false")),
         Value::Null => (JsonKind::Null, "null".to_string(), 0, Some("null")),
+        Value::Datetime(raw) => (JsonKind::Datetime, cut(raw), 0, Some(raw)),
     }
 }
 

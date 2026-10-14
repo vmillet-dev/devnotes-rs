@@ -1925,7 +1925,7 @@ export type JsonGraph = {
 	folded: boolean,
 };
 
-export type JsonKind = "object" | "array" | "string" | "number" | "boolean" | "null";
+export type JsonKind = "object" | "array" | "string" | "number" | "boolean" | "null" | "datetime";
 
 export type JsonLine = {
 	depth: number,
@@ -2867,7 +2867,7 @@ export type StoredCookie = {
 
 export type Strength = "veryWeak" | "weak" | "fair" | "strong" | "veryStrong";
 
-export type StructureFormat = "json" | "yaml";
+export type StructureFormat = "json" | "yaml" | "toml";
 
 export type Subnet = {
 	cidr: string,

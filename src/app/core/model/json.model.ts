@@ -36,12 +36,14 @@ export type {
 const EXPLORABLE: Partial<Record<LanguageTag, StructureFormat>> = {
   json: 'json',
   yml: 'yaml',
+  toml: 'toml',
 };
 
 /** How a format names itself in a sentence: « YAML valide ». */
 export const FORMAT_NAMES: Record<StructureFormat, string> = {
   json: 'JSON',
   yaml: 'YAML',
+  toml: 'TOML',
 };
 
 export function explorableFormat(language: LanguageTag): StructureFormat | null {

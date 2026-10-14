@@ -1029,7 +1029,8 @@
       "string": "String",
       "number": "Number",
       "boolean": "Boolean",
-      "null": "Null"
+      "null": "Null",
+      "datetime": "Date or time"
     },
     "document": "Document",
     "keys": "Keys",
@@ -1043,7 +1044,8 @@
       "firstDocumentOnly": "Several documents: only the first one is explored."
     },
     "formatNotes": {
-      "yaml": "Comments do not appear, and an alias shows what it names."
+      "yaml": "Comments do not appear, and an alias shows what it names.",
+      "toml": "Comments do not appear; dates and times are shown as written."
     },
     "hiddenRows": "{count, plural, one {+ # more} other {+ # more}}",
     "tree": "Document tree",
