@@ -26,6 +26,7 @@
           [selectedPath]="selectedPath()"
           (selected)="selected.emit($event)"
           (rowActivated)="onRow($event)"
+          (keydown)="onSurfaceKeydown($event)"
         />
       } @else {
         <app-json-tree
@@ -35,6 +36,7 @@
           [selectedPath]="selectedPath()"
           (selected)="selected.emit($event)"
           (toggled)="onLine($event)"
+          (keydown)="onSurfaceKeydown($event)"
         />
       }
 
@@ -80,8 +82,23 @@
             ↓
           </button>
         }
-        <button type="button" class="tool" data-testid="json-open-all" (click)="openedAll.emit()">
+        <button
+          type="button"
+          class="tool"
+          data-testid="json-open-all"
+          [attr.title]="'json.openAllKeys' | transloco"
+          (click)="openedAll.emit()"
+        >
           {{ 'json.openAll' | transloco }}
+        </button>
+        <button
+          type="button"
+          class="tool"
+          data-testid="json-collapse-all"
+          [attr.title]="'json.collapseAllKeys' | transloco"
+          (click)="collapsedAll.emit()"
+        >
+          {{ 'json.collapseAll' | transloco }}
         </button>
         @if (mode() === 'graph') {
           <button type="button" class="tool" data-testid="json-fit" (click)="fit()">

@@ -72,6 +72,8 @@ pub struct JsonRow {
     pub kind: JsonKind,
     /// `"paid"`, `4900`, `{ … }`, `[ 3 ]`: cut to one line.
     pub value: String,
+    /// Keys or items of a container, open or not; 0 for a scalar.
+    pub size: u32,
     pub span: Span,
     /// The node drawn for this value, when it is a container and open.
     pub child: Option<u32>,
@@ -477,6 +479,7 @@ fn graph(entries: &[Entry], open: &BTreeSet<usize>, folded: bool) -> JsonGraph {
                         path: row.path.clone(),
                         kind: row.kind,
                         value: row.value.clone(),
+                        size: row.size,
                         span: row.span,
                         child: id_of(child),
                         opens: row.container(),
@@ -719,6 +722,24 @@ mod tests {
 
         assert_eq!(paths, ["$", "$.data"]);
         assert_eq!(node(&view, "$.data").rows[0].child, None);
+    }
+
+    #[test]
+    fn no_path_asked_opens_the_root_alone_its_rows_counting_what_they_hold() {
+        let opening = JsonOpening::Paths {
+            paths: Vec::new(),
+            reveal: None,
+        };
+        let view = explore(&query(INVOICE, "", opening));
+
+        assert_eq!(view.graph.nodes.len(), 1);
+        let data = &node(&view, "$").rows[3];
+        assert_eq!(
+            (data.path.as_str(), data.child, data.size),
+            ("$.data", None, 1)
+        );
+        assert_eq!(node(&view, "$").rows[0].size, 0);
+        assert_eq!(view.tree.len(), 5);
     }
 
     #[test]

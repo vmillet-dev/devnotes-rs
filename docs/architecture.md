@@ -4787,6 +4787,10 @@ is not the WebView's thread's to parse.
 - **The opening is one set for both views**: `initial` (the whole document up to 64
   containers, its first level past that), `all`, or the paths the front holds open. A
   container opens only under an open parent.
+- **« Tout replier » is a request too**: the paths opening with no path, the root being always
+  open. A selection the folded view no longer draws falls back to the nearest entry that holds
+  it, read from the previous view's own parents (`trailOf`), never by taking a path apart;
+  opened again, it is where it was. Shift with → or ← does the same from the graph or the tree.
 - ⚠️ **Nothing is sent the WebView cannot draw.** At most 2,000 nodes and 20,000 rows, filled
   breadth-first so a cap keeps the levels nearest the root; past it, `all` folds arrays and
   says so (`folded`), and the front proposes the tree. A node shows its first 200 rows and

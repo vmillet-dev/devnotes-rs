@@ -54,6 +54,8 @@ export class JsonTreeComponent {
   }
 
   protected onKeydown(event: KeyboardEvent): void {
+    // Shift with an arrow opens or folds everything: the explorer's, not a move.
+    if (event.shiftKey && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) return;
     const lines = this.lines();
     const index = this.cursor();
     const line = lines[index];
@@ -96,6 +98,11 @@ export class JsonTreeComponent {
   private toggle(line: JsonLine, event: KeyboardEvent): void {
     event.preventDefault();
     this.toggled.emit(line);
+    this.refocus();
+  }
+
+  /** The focus back on the cursor's line, once the lines are redrawn. */
+  focusCursor(): void {
     this.refocus();
   }
 

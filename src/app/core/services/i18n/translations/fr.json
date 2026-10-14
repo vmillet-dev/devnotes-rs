@@ -673,7 +673,8 @@
       "editor": "Éditeur",
       "palette": "Collage rapide",
       "areas": "Zones",
-      "http": "HTTP"
+      "http": "HTTP",
+      "json": "Visualiseur JSON"
     },
     "http": {
       "send": "Envoyer la requête, ou connecter le WebSocket",
@@ -719,6 +720,14 @@
       "paste": "Copier la note et fermer",
       "open": "Ouvrir la note",
       "close": "Fermer la palette"
+    },
+    "json": {
+      "navigate": "Se déplacer dans le graphe ou l’arbre",
+      "toggle": "Ouvrir ou fermer l’entrée",
+      "openAll": "Tout déplier",
+      "collapseAll": "Tout replier jusqu’à la racine",
+      "nextMatch": "Résultat suivant, dans la recherche",
+      "previousMatch": "Résultat précédent, dans la recherche"
     }
   },
   "settings": {
@@ -999,6 +1008,9 @@
     "previousMatch": "Résultat précédent (Maj+Entrée)",
     "nextMatch": "Résultat suivant (Entrée)",
     "openAll": "Tout déplier",
+    "collapseAll": "Tout replier",
+    "openAllKeys": "Tout déplier (Maj+→)",
+    "collapseAllKeys": "Tout replier (Maj+←)",
     "fit": "Ajuster à l’écran",
     "folded": "Plus de 2 000 nœuds : les tableaux restent repliés.",
     "showTree": "Voir l’arbre",

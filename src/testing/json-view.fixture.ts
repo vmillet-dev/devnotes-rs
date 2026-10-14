@@ -12,12 +12,14 @@ function row(
   start: number,
   end: number,
   child: number | null,
+  size = 0,
 ): JsonRow {
   return {
     key,
     path,
     kind,
     value,
+    size,
     span: { start, end },
     child,
     opens: kind === 'object' || kind === 'array',
@@ -62,7 +64,10 @@ export const JSON_NODES: readonly JsonNode[] = [
     '$',
     '$',
     'object',
-    [row('id', '$.id', 'string', '"evt"', 6, 11, null), row('data', '$.data', 'object', '{ … }', 19, 38, 1)],
+    [
+      row('id', '$.id', 'string', '"evt"', 6, 11, null),
+      row('data', '$.data', 'object', '{ … }', 19, 38, 1, 1),
+    ],
     0,
     0,
     0,
@@ -74,7 +79,7 @@ export const JSON_NODES: readonly JsonNode[] = [
     '$.data',
     'data',
     'object',
-    [row('lines', '$.data.lines', 'array', '[ 1 ]', 28, 37, 2)],
+    [row('lines', '$.data.lines', 'array', '[ 1 ]', 28, 37, 2, 1)],
     22,
     3,
     19,
@@ -86,7 +91,7 @@ export const JSON_NODES: readonly JsonNode[] = [
     '$.data.lines',
     'lines',
     'array',
-    [row('[0]', '$.data.lines[0]', 'object', '{ … }', 29, 36, 3)],
+    [row('[0]', '$.data.lines[0]', 'object', '{ … }', 29, 36, 3, 1)],
     44,
     4,
     28,
@@ -138,6 +143,20 @@ export const JSON_LINES: readonly JsonLine[] = [
   line(3, '[0]', '$.data.lines[0]', 'object', '{ … }', 1, true),
   line(4, 'a', '$.data.lines[0].a', 'number', '1', 0, false),
 ];
+
+/** The same document folded to its root, as Rust answers an opening of no paths. */
+export function collapsedJsonView(): JsonView {
+  const root = JSON_NODES[0]!;
+  return jsonView({
+    graph: {
+      nodes: [{ ...root, rows: root.rows.map((each) => ({ ...each, child: null })) }],
+      width: 16,
+      height: 3,
+      folded: false,
+    },
+    tree: [JSON_LINES[0]!, JSON_LINES[1]!, { ...JSON_LINES[2]!, open: false }],
+  });
+}
 
 export function jsonView(overrides: Partial<JsonView> = {}): JsonView {
   return emptyJsonView({

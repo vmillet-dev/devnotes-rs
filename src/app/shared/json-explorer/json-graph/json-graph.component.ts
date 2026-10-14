@@ -197,6 +197,8 @@ export class JsonGraphComponent {
   }
 
   protected onKeydown(event: KeyboardEvent): void {
+    // Shift with an arrow opens or folds everything: the explorer's, not a move.
+    if (event.shiftKey && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) return;
     const node = this.cursorNode();
     const cursor = this.cursor();
     if (!node || !cursor) {
@@ -260,7 +262,7 @@ export class JsonGraphComponent {
     afterNextRender(() => this.focusCursor(), { injector: this.injector });
   }
 
-  private focusCursor(): void {
+  focusCursor(): void {
     this.ground()
       .nativeElement.querySelector<HTMLElement>('[data-cursor="true"]')
       ?.focus({ preventScroll: true });

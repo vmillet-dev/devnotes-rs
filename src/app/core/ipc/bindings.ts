@@ -1836,6 +1836,11 @@ export type JarCookie = {
 	secure: boolean,
 	httpOnly: boolean,
 	sameSite: string | null,
+	/**
+	 *  When it was first set, kept by a cookie that replaces it: of two paths of one length,
+	 *  the older is sent first (RFC 6265, 5.4). Sealed with the rest: nothing in SQL orders on it.
+	 */
+	created?: string | null,
 };
 
 export type JsonChange = {
@@ -1975,6 +1980,8 @@ export type JsonRow = {
 	kind: JsonKind,
 	/**  `"paid"`, `4900`, `{ … }`, `[ 3 ]`: cut to one line. */
 	value: string,
+	/**  Keys or items of a container, open or not; 0 for a scalar. */
+	size: number,
 	span: Span,
 	/**  The node drawn for this value, when it is a container and open. */
 	child: number | null,

@@ -115,6 +115,27 @@ describe('Exploring a JSON document', () => {
       expect(await selectedPath()).toBe('$.id');
     });
 
+    it('folds everything to the root and back, the selection falling back to its nearest ancestor', async () => {
+      const nodes = () => $$(testid('json-node')).length;
+      await $(`${testid('json-node')}[data-path="$.data.object"] ${testid('json-node-head')}`).click();
+      expect(await selectedPath()).toBe('$.data.object');
+
+      await $(testid('json-collapse-all')).click();
+      await eventually(nodes, (count) => count === 1, 'the root alone');
+      await eventually(selectedPath, (path) => path === '$.data', 'the selection on the row still drawn');
+
+      await $(testid('json-open-all')).click();
+      await eventually(nodes, (count) => count === 5, 'every node again');
+      await eventually(selectedPath, (path) => path === '$.data.object', 'the selection back where it was');
+
+      // The same pair from the keys, the focus staying on the graph from one answer to the next.
+      await $(`${testid('json-node')}[data-path="$"] ${testid('json-node-head')}`).click();
+      await press('ArrowLeft', ['Shift']);
+      await eventually(nodes, (count) => count === 1, 'the root alone, from the keys');
+      await press('ArrowRight', ['Shift']);
+      await eventually(nodes, (count) => count === 5, 'every node again, from the keys');
+    });
+
     it('finds a value, and goes back to it in the code', async () => {
       await $(testid('json-search')).setValue('mensuel');
       await eventually(
