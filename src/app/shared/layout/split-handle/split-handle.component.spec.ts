@@ -11,6 +11,7 @@ import { SplitHandleComponent } from './split-handle.component';
       <app-split-handle
         testId="line"
         label="Hauteur de la requête"
+        [orientation]="orientation()"
         [share]="share()"
         [upperFloor]="150"
         [lowerFloor]="160"
@@ -24,6 +25,7 @@ import { SplitHandleComponent } from './split-handle.component';
 })
 class HostComponent {
   readonly share = signal(0);
+  readonly orientation = signal<'horizontal' | 'vertical'>('horizontal');
   readonly emitted: number[] = [];
 }
 
@@ -162,5 +164,25 @@ describe('SplitHandleComponent', () => {
     await key('ArrowDown');
 
     expect(emitted()).toEqual([]);
+  });
+  it('stands between panes side by side, sharing their width, the left and right arrows moving it', async () => {
+    fixture.componentInstance.orientation.set('vertical');
+    await fixture.whenStable();
+    const side = (left: number, width: number) => ({ left, width, top: 0, height: 10 }) as DOMRect;
+    root().querySelector<HTMLElement>('.box')!.getBoundingClientRect = () => side(100, 1000);
+    root().querySelector<HTMLElement>('.upper')!.getBoundingClientRect = () => side(100, 400);
+    let held = false;
+    line().setPointerCapture = () => (held = true);
+    line().hasPointerCapture = () => held;
+
+    expect(line().getAttribute('aria-orientation')).toBe('vertical');
+    expect(line().classList).toContain('vertical');
+    await key('ArrowRight');
+    await key('ArrowDown');
+    expect(emitted()).toEqual([44]);
+
+    pointer('pointerdown');
+    pointer('pointermove', { clientX: 600, clientY: 9999 });
+    expect(emitted()).toEqual([44, 50]);
   });
 });

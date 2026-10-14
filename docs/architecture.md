@@ -591,6 +591,17 @@ explorer takes the format as an input for its messages, and nothing else in it i
   of its own: the visualiser loads with a first Graphe or Arbre.
 - **The draft is explored as it is typed**, debounced, so the band answers for what is on
   screen; a note just opened is explored at once, from its first level.
+- **Côte à côte**: the code on the left, the visualiser on the right, the line between them
+  `app-split-handle` standing up (`orientation: vertical`, ← → as its keyboard twin). The
+  layout, the code hidden or not and the share are `ExplorerLayoutStore`'s: the session's,
+  written nowhere. Under `SIDE_BY_SIDE_FROM` the body is not squeezed — the toggle is disabled
+  and says so — measured by a `ResizeObserver` on the body's frame once it exists. The two
+  select in step through `CodeSelection` (`code-selection.ts`, the textarea today): a node
+  chosen selects its span in the code without taking the focus and lights its lines
+  (`focusedLines`); the caret, on a key or a click, selects `entryAt` its offset — never on
+  `select`, which the code's own selection fires too. ⚠️ The explorer is projected into
+  `app-side-by-side`, whose CSS cannot reach it: its pane is a one-cell grid that stretches it.
+  Narrower than 600 px, the explorer drops its selection panel (a container query).
 - **What is open is read back from each answer.** The front keeps no set of its own: it sends
   the paths of the nodes it was given, plus or minus the one clicked, and Rust decides what
   that opens, caps included. Opening a container opens one level. Stepping to a match sends

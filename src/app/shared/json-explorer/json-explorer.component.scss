@@ -4,6 +4,7 @@
   display: block;
   height: 100%;
   min-height: 0;
+  container-type: inline-size;
 }
 
 .explorer {
@@ -187,6 +188,14 @@
   border-left: 1px solid var(--line-soft);
   background: var(--bg-1);
   font-size: 12.5px;
+}
+
+// Narrow — beside the code, where the selection is lit in the code already — the graph keeps
+// the room and the panel goes.
+@container (width < 600px) {
+  .aside {
+    display: none;
+  }
 }
 
 .aside-title {

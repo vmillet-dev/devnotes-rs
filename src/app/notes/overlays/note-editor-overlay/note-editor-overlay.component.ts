@@ -14,6 +14,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { FALLBACK_LANGUAGE, LANGUAGE_LABELS, isLanguageTag } from '@core/model/language.model';
 import { checklistProgress } from '@core/model/checklist.model';
@@ -49,8 +50,11 @@ import { applyEdit, indent, indentUnit, outdent, rewrite } from './indentation';
 import { countWords } from './word-count';
 import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
 import { TagPillComponent } from '@notes/ui/tag-pill/tag-pill.component';
-import { FORMAT_NAMES, Span, explorableFormat } from '@core/model/json.model';
+import { FORMAT_NAMES, Span, entryAt, explorableFormat, spanOf } from '@core/model/json.model';
+import { ExplorerLayoutStore } from '@core/state/explorer-layout.store';
 import { JsonExplorerStore } from '@core/state/json-explorer.store';
+import { CodeSelection, textareaSelection } from './code-selection';
+import { SIDE_BY_SIDE_FROM, SideBySideComponent } from './side-by-side/side-by-side.component';
 import type { JsonExplorerMode } from '@shared/json-explorer/json-explorer.component';
 // On a line of its own: the visualiser is its own chunk, loaded by a first Graphe or Arbre.
 import { JsonViewComponent } from './json-view/json-view.component';
@@ -112,6 +116,8 @@ const PRIORITY_CHOICES: readonly ChoiceOption[] = PRIORITIES.filter((level) => l
     ChoiceMenuComponent,
     CodeViewerComponent,
     RichTextEditorComponent,
+    SideBySideComponent,
+    NgTemplateOutlet,
     TranslocoPipe,
   ],
   templateUrl: './note-editor-overlay.component.html',
@@ -230,6 +236,31 @@ export class NoteEditorOverlayComponent {
     const format = FORMAT_NAMES[this.explorer.format()];
     return view.error ? { valid: false, line: view.error.line, format } : { valid: true, line: 0, format };
   });
+  protected readonly layout = inject(ExplorerLayoutStore);
+  private readonly bodyFrame = viewChild<ElementRef<HTMLElement>>('bodyFrame');
+  private readonly bodyWidth = signal(Number.POSITIVE_INFINITY);
+  protected readonly sideBySideFits = computed(() => this.bodyWidth() >= SIDE_BY_SIDE_FROM);
+  /** Code and visualiser together: asked for, wide enough, and the code not hidden. */
+  protected readonly sideBySideShown = computed(
+    () =>
+      this.jsonMode() !== null &&
+      this.layout.sideBySide() &&
+      this.sideBySideFits() &&
+      !this.layout.codeHidden(),
+  );
+  /** Zero-based: the lines of the visualiser's selection, lit in the code beside it. */
+  protected readonly focusedLines = computed<ReadonlySet<number>>(() => {
+    const view = this.explorer.view();
+    const path = this.explorer.selectedPath();
+    const span = this.sideBySideShown() && view && path !== null ? spanOf(view, path) : null;
+    if (!span) return NO_LINES;
+    const text = this.draftContent();
+    const first = text.slice(0, span.start).split('\n').length - 1;
+    const count = text.slice(span.start, span.end).split('\n').length;
+    return new Set(Array.from({ length: count }, (_, index) => first + index));
+  });
+  /** What the caret selected: revealed again, it would move the selection under the typing. */
+  private caretPath: string | null = null;
   protected readonly checklistStats = computed(() => checklistProgress(this.note()?.items ?? []));
 
   /** The draft, so copying before leaving the field yields what is on screen. */
@@ -278,6 +309,30 @@ export class NoteEditorOverlayComponent {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => clearTimeout(this.noticeTimer));
+
+    // Side by side, a node chosen in the visualiser is selected in the code beside it.
+    effect(() => {
+      const path = this.explorer.selectedPath();
+      untracked(() => {
+        const view = this.explorer.view();
+        if (!this.sideBySideShown() || !view || path === null || path === this.caretPath) return;
+        this.caretPath = null;
+        const span = spanOf(view, path);
+        if (span) this.codeSelection()?.reveal(span, false);
+      });
+    });
+
+    // How wide the body is decides whether code and visualiser fit side by side. Observed once
+    // it exists: the frame is drawn only with a note.
+    effect((onCleanup) => {
+      const frame = this.bodyFrame()?.nativeElement;
+      if (!frame || typeof ResizeObserver === 'undefined') return;
+      const observer = new ResizeObserver(([entry]) => {
+        if (entry) this.bodyWidth.set(entry.contentRect.width);
+      });
+      observer.observe(frame);
+      onCleanup(() => observer.disconnect());
+    });
 
     // The draft, explored while it is typed: the header's "JSON valide" is about what is on
     // screen. A note just opened is explored at once, from its first level.
@@ -377,21 +432,32 @@ export class NoteEditorOverlayComponent {
   }
 
   /** Back to the code with the value selected, scrolled to a third of the way down. */
+  /** Side by side the code is already there; otherwise its tab is opened first. */
   protected showInCode(span: Span): void {
-    this.bodyView.set('code');
-    afterNextRender(
-      () => {
-        const field = this.bodyEditor()?.nativeElement;
-        if (!field) return;
-        field.focus({ preventScroll: true });
-        field.setSelectionRange(span.start, span.end);
-        const line = this.draftContent().slice(0, span.start).split('\n').length - 1;
-        const height = Number.parseFloat(getComputedStyle(field).lineHeight) || 22;
-        const body = field.closest('.overlay-body');
-        if (body) body.scrollTop = Math.max(0, line * height - body.clientHeight / 3);
-      },
-      { injector: this.injector },
-    );
+    if (!this.sideBySideShown()) this.bodyView.set('code');
+    afterNextRender(() => this.codeSelection()?.reveal(span, true), { injector: this.injector });
+  }
+
+  private codeSelection(): CodeSelection | null {
+    const field = this.bodyEditor()?.nativeElement;
+    return field ? textareaSelection(field) : null;
+  }
+
+  /** On from the code tab, it opens on the graph: side by side has nothing to show beside code alone. */
+  protected toggleSideBySide(): void {
+    this.layout.toggleSideBySide();
+    if (this.layout.sideBySide() && this.bodyView() === 'code') this.bodyView.set('graph');
+  }
+
+  /** Side by side, the node the caret is in is selected in the visualiser. Keys and clicks only:
+   * a selection set from the visualiser fires `select` too. */
+  protected onCaret(field: HTMLTextAreaElement): void {
+    const view = this.explorer.view();
+    if (!this.sideBySideShown() || !view) return;
+    const path = entryAt(view, field.selectionStart);
+    if (path === null || path === this.explorer.selectedPath()) return;
+    this.caretPath = path;
+    this.explorer.select(path);
   }
 
   protected onBodyInput(value: string): void {
