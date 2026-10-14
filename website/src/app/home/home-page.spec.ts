@@ -29,7 +29,7 @@ describe('HomePage', () => {
     const page = await renderPage(HomePage);
     const steps = [...page.querySelectorAll('.steps button')];
 
-    expect(steps).toHaveLength(18);
+    expect(steps).toHaveLength(22);
     for (const step of steps) expect(accessibleName(step)).not.toBe('');
   });
 

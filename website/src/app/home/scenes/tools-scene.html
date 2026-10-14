@@ -1,0 +1,128 @@
+<div class="window app tools">
+  <div class="app-side">
+    <span class="areas"><span>Notes</span><span class="on">Outils</span><span>HTTP</span></span>
+    <span class="row"><span class="star">★</span>Favoris<b>2</b></span>
+    <span class="row" [class.on]="step() === 0">Tous les outils<b>33</b></span>
+    @if (family(); as open) {
+      <span class="h">{{ open.name }}</span>
+      @for (tool of open.tools; track tool) {
+        <span class="row" [class.on]="tool === open.open">{{ tool }}</span>
+      }
+      <span class="h">Récents</span>
+      <span class="row">Base64 et autres bases</span>
+    }
+  </div>
+  <div class="tools-main">
+    @if (step() === 0) {
+      <div class="top">
+        <span class="title">Outils</span>
+        <span class="sub">33 utilitaires, tous hors ligne</span>
+        <span class="search" [class.typing]="searching()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" />
+          </svg>
+          @if (query()) {
+            <span class="q" [class.caret]="searching()">{{ query() }}</span>
+          } @else {
+            <span class="ph">Rechercher un outil…</span>
+          }
+          <kbd>Ctrl Maj T</kbd>
+        </span>
+      </div>
+      <div class="body">
+        <div class="panels" [class.dim]="query()">
+          @for (panel of panels(); track panel.id) {
+            <div class="panel" [class.found]="panel.found" [style.--h]="panel.hue">
+              <span class="panel-h"
+                ><span class="tile"></span>{{ panel.name }}<b>{{ panel.tools.length }}</b></span
+              >
+              @for (tool of panel.tools; track $index) {
+                <span class="tr" [class.match]="tool.match">
+                  <span class="tn"
+                    ><span>{{ tool.name.before }}</span
+                    ><mark>{{ tool.name.match }}</mark
+                    ><span>{{ tool.name.after }}</span>
+                    @if (tool.opens) {
+                      <kbd>↵</kbd>
+                    }
+                  </span>
+                  <span class="d"
+                    ><span>{{ tool.line.before }}</span
+                    ><mark>{{ tool.line.match }}</mark
+                    ><span>{{ tool.line.after }}</span></span
+                  >
+                </span>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    } @else {
+      <div class="top">
+        <span class="crumb">Outils ›</span>
+        <span class="title">{{ step() === 1 ? 'Cron' : 'JWT' }}</span>
+        <span class="star-off">☆</span>
+        <span class="spacer"></span>
+        <span class="act minor">Exemple</span>
+        <span class="act minor">Vider</span>
+        <span class="act primary">Enregistrer comme note</span>
+      </div>
+      @if (step() === 1) {
+        <div class="body tool" [style.--h]="hues.time">
+          <span class="label">Expression</span>
+          <span class="field" [class.typing]="!cronRead()">{{ cronTyped() }}</span>
+          @if (cronRead()) {
+            <div class="result">
+              <span class="label">Lue à voix haute</span>
+              <p class="said">Toutes les 15 minutes, de 9 h à 18 h 45, du lundi au vendredi</p>
+            </div>
+          }
+          <span class="label">Prochaines exécutions</span>
+          <span class="runs">
+            @for (run of runs; track run) {
+              <span [class.on]="$index < runsShown()">{{ run }}</span>
+            }
+          </span>
+        </div>
+      } @else {
+        <div class="body tool" [style.--h]="hues.crypto">
+          <span class="label">Jeton</span>
+          <span class="field">{{ pasted() ? token : '' }}</span>
+          @if (decoded()) {
+            <div class="cols">
+              <pre class="json">&#123;
+  <span class="f">"alg"</span>: <span class="s">"HS256"</span>,
+  <span class="f">"typ"</span>: <span class="s">"JWT"</span>
+&#125;</pre>
+              <pre class="json">&#123;
+  <span class="f">"sub"</span>: <span class="s">"42"</span>,
+  <span class="f">"name"</span>: <span class="s">"Ada"</span>,
+  <span class="f">"iat"</span>: <span class="n">1764547200</span>,
+  <span class="f">"exp"</span>: <span class="n">1767225600</span>
+&#125;</pre>
+            </div>
+            <div class="facts">
+              <span><span>Émis</span><span>1 décembre 2025, 00:00 UTC</span></span>
+              <span><span>Expire</span><span class="bad">1 janvier 2026, expiré</span></span>
+              <span><span>Signature HS256</span><span class="ok">vérifiée avec le secret</span></span>
+            </div>
+          }
+        </div>
+      }
+    }
+    <div class="scrim"></div>
+    <div class="dialog">
+      <span class="dialog-h">Enregistrer comme note</span>
+      <span class="what">Un snippet JSON, avec ce que l'outil a calculé, jamais ce qui y a été tapé.</span>
+      <span class="line"
+        ><span>Titre</span><span class="in">{{ noteTitle() }}</span></span
+      >
+      <span class="line"><span>Espace</span><span class="in">Plateforme</span></span>
+      <span class="line"><span>Dossier</span><span class="in">Aucun dossier</span></span>
+      <span class="line"><span>Tags</span><span class="in">jwt, test</span></span>
+      <span class="go">Enregistrer</span>
+    </div>
+    <div class="toast">Note « Charge utile du jeton de test » enregistrée dans Plateforme.</div>
+  </div>
+</div>

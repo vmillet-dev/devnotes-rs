@@ -75,14 +75,32 @@
   <app-code-scene />
 </app-feature>
 
-<app-tools-section />
+<app-feature
+  anchor="outils"
+  tone="teal"
+  label="Outils"
+  heading="Une trentaine d’outils, sans réseau."
+  flip
+  [steps]="[
+    'Chercher un outil, Ctrl Maj T',
+    'Une expression cron, lue à voix haute',
+    'Un JWT décodé, ses dates lues',
+    'Le résultat gardé comme une note',
+  ]"
+  [durations]="[1300, 1800, 1700, 1700]"
+>
+  <p lede>
+    Encoder, hacher, convertir, lire une date ou une expression cron. Chaque outil tourne sur votre machine et
+    n'appelle rien. Un résultat se garde comme une note.
+  </p>
+  <app-tools-scene />
+</app-feature>
 
 <app-feature
   anchor="client-api"
   tone="olive"
   label="Client API"
   heading="Testez vos API à côté de vos notes."
-  flip
   [steps]="[
     'Une variable prise dans l’environnement',
     'Envoyer, lire la réponse',
@@ -103,6 +121,7 @@
   tone="pink"
   label="Chiffrement"
   heading="Rien ne quitte votre machine."
+  flip
   [steps]="[
     'Sur le disque, la note est chiffrée',
     'Votre phrase de passe la déverrouille',

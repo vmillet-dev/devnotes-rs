@@ -21,8 +21,8 @@ import { ApiScene } from './scenes/api-scene';
 import { CodeScene } from './scenes/code-scene';
 import { OrganiseScene } from './scenes/organise-scene';
 import { SnippetsScene } from './scenes/snippets-scene';
+import { ToolsScene } from './scenes/tools-scene';
 import { VaultScene } from './scenes/vault-scene';
-import { ToolsSection } from './tools-section';
 
 /** The sections the line under the header follows, in page order. */
 const SECTIONS: readonly ProgressSegment[] = [
@@ -46,7 +46,7 @@ const SECTIONS: readonly ProgressSegment[] = [
     CodeScene,
     ApiScene,
     VaultScene,
-    ToolsSection,
+    ToolsScene,
     MoreSection,
   ],
   templateUrl: './home-page.html',
