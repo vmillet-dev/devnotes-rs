@@ -5,7 +5,8 @@ use std::collections::{BTreeSet, VecDeque};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-use super::parse::{JsonError, Node, Span, Value, parse};
+use super::parse::{JsonError, Node, Span, Value};
+use super::read::{JsonNotice, StructureFormat, read};
 use crate::notes::view::fold;
 
 /// Past this, arrays are folded and the tree is proposed: every node sent is one drawn.
@@ -48,6 +49,7 @@ pub enum JsonOpening {
 #[serde(rename_all = "camelCase")]
 pub struct JsonQuery {
     pub text: String,
+    pub format: StructureFormat,
     pub search: String,
     pub opening: JsonOpening,
 }
@@ -151,12 +153,14 @@ pub struct JsonView {
     /// Every entry the search found, in the document's order, open or not.
     pub matches: Vec<String>,
     pub match_count: u32,
+    /// What the reader read differently from the text: only the first document of a stream.
+    pub notices: Vec<JsonNotice>,
 }
 
 pub fn explore(query: &JsonQuery) -> JsonView {
     let bytes = count(query.text.len());
-    let root = match parse(&query.text) {
-        Ok(root) => root,
+    let (root, notices) = match read(&query.text, query.format) {
+        Ok(read) => (read.root, read.notices),
         Err(error) => return JsonView::invalid(error, bytes),
     };
 
@@ -178,6 +182,7 @@ pub fn explore(query: &JsonQuery) -> JsonView {
             .map(|entry| entry.path.clone())
             .collect(),
         match_count: count(hits.len()),
+        notices,
     }
 }
 
@@ -200,6 +205,7 @@ impl JsonView {
             tree_truncated: false,
             matches: Vec::new(),
             match_count: 0,
+            notices: Vec::new(),
         }
     }
 }
@@ -588,6 +594,7 @@ mod tests {
     fn query(text: &str, search: &str, opening: JsonOpening) -> JsonQuery {
         JsonQuery {
             text: text.to_string(),
+            format: StructureFormat::Json,
             search: search.to_string(),
             opening,
         }
@@ -761,6 +768,45 @@ mod tests {
                 .rows
                 .iter()
                 .all(|row| row.opens && row.child.is_none())
+        );
+    }
+
+    #[test]
+    fn explores_a_yaml_document_in_the_same_model_under_the_same_caps() {
+        let items = (0..150)
+            .map(|i| format!("  - i: {i}\n"))
+            .collect::<Vec<_>>()
+            .concat();
+        let lists = (0..20)
+            .map(|i| format!("a{i}:\n{items}"))
+            .collect::<Vec<_>>()
+            .concat();
+        let yaml = |text: &str, opening| {
+            explore(&JsonQuery {
+                format: StructureFormat::Yaml,
+                ..query(text, "", opening)
+            })
+        };
+
+        let view = yaml(&lists, JsonOpening::All);
+        assert!(view.graph.folded);
+        assert_eq!(view.graph.nodes.len(), 21);
+        assert_eq!(view.graph.nodes[1].path, "$.a0");
+
+        let view = yaml("name: api\nports: [80, 443]\n", JsonOpening::Initial);
+        assert_eq!(
+            view.tree
+                .iter()
+                .map(|line| line.path.as_str())
+                .collect::<Vec<_>>(),
+            ["$", "$.name", "$.ports", "$.ports[0]", "$.ports[1]"]
+        );
+        assert_eq!(view.notices, []);
+        assert_eq!(
+            yaml("a: [1\n", JsonOpening::Initial)
+                .error
+                .map(|error| error.reason),
+            Some(super::super::parse::JsonErrorReason::Malformed)
         );
     }
 

@@ -4,13 +4,16 @@ import type {
   JsonKind,
   JsonLine,
   JsonNode,
+  JsonNotice,
   JsonOpening,
   JsonQuery,
   JsonRow,
   JsonStats,
   JsonView,
   Span,
+  StructureFormat,
 } from '@core/ipc/bindings';
+import type { LanguageTag } from '@core/model/language.model';
 
 /** No conversion: the wire shape carries no date and nothing the front reads otherwise. */
 export type {
@@ -19,13 +22,31 @@ export type {
   JsonKind,
   JsonLine,
   JsonNode,
+  JsonNotice,
   JsonOpening,
   JsonQuery,
   JsonRow,
   JsonStats,
   JsonView,
   Span,
+  StructureFormat,
 };
+
+/** The snippets whose language Rust has a reader for: one line per format. */
+const EXPLORABLE: Partial<Record<LanguageTag, StructureFormat>> = {
+  json: 'json',
+  yml: 'yaml',
+};
+
+/** How a format names itself in a sentence: « YAML valide ». */
+export const FORMAT_NAMES: Record<StructureFormat, string> = {
+  json: 'JSON',
+  yaml: 'YAML',
+};
+
+export function explorableFormat(language: LanguageTag): StructureFormat | null {
+  return EXPLORABLE[language] ?? null;
+}
 
 /**
  * How far a node was moved from where Rust placed it, in the layout's own units: columns

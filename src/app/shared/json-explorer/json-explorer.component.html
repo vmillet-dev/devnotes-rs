@@ -4,7 +4,7 @@
     @if (view.error; as error) {
       <div class="invalid" role="status" data-testid="json-invalid">
         <p>
-          {{ 'json.invalidAt' | transloco: { line: error.line, column: error.column } }}
+          {{ 'json.invalidAt' | transloco: { line: error.line, column: error.column, format: formatName() } }}
           {{ 'json.reasons.' + error.reason | transloco }}
         </p>
         @if (withCode()) {
@@ -176,6 +176,14 @@
       <dt>{{ 'json.size' | transloco }}</dt>
       <dd>{{ size().key | transloco: { value: size().value } }}</dd>
     </dl>
+    @for (notice of view.notices; track notice) {
+      <p class="aside-note notice" role="status" data-testid="json-notice" [attr.data-notice]="notice">
+        {{ 'json.notices.' + notice | transloco }}
+      </p>
+    }
+    @if (format() === 'yaml') {
+      <p class="aside-note" data-testid="json-format-note">{{ 'json.formatNotes.yaml' | transloco }}</p>
+    }
     <p class="aside-note">{{ 'json.limitNote' | transloco }}</p>
   </aside>
 </div>

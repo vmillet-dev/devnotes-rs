@@ -1911,7 +1911,11 @@ export type JsonError = {
 	offset: number,
 };
 
-export type JsonErrorReason = "unexpectedEnd" | "unexpectedCharacter" | "invalidNumber" | "invalidEscape" | "controlCharacter" | "trailingCharacters" | "tooDeep";
+export type JsonErrorReason = "unexpectedEnd" | "unexpectedCharacter" | "invalidNumber" | "invalidEscape" | "controlCharacter" | "trailingCharacters" | "tooDeep" | 
+/**  What a YAML, TOML or XML reader refused: its own reasons are words, and no word crosses. */
+"malformed" | 
+/**  Aliases are copies: past what can be read, a document of aliases to aliases stops. */
+"tooLarge";
 
 export type JsonGraph = {
 	nodes: JsonNode[],
@@ -1957,6 +1961,11 @@ export type JsonNode = {
 	hit: boolean,
 };
 
+/**  What the tree leaves out of the text, said rather than hidden. */
+export type JsonNotice = 
+/**  A stream of several YAML documents: the first one is explored. */
+"firstDocumentOnly";
+
 export type JsonOpening = 
 /**  Whole when small, its first level otherwise. */
 { kind: "initial" } | { kind: "all" } | 
@@ -1969,6 +1978,7 @@ export type JsonOpening =
 
 export type JsonQuery = {
 	text: string,
+	format: StructureFormat,
 	search: string,
 	opening: JsonOpening,
 };
@@ -2009,6 +2019,8 @@ export type JsonView = {
 	/**  Every entry the search found, in the document's order, open or not. */
 	matches: string[],
 	matchCount: number,
+	/**  What the reader read differently from the text: only the first document of a stream. */
+	notices: JsonNotice[],
 };
 
 export type JwtAnswer = { kind: "decoded"; header: string; payload: string; 
@@ -2854,6 +2866,8 @@ export type StoredCookie = {
 };
 
 export type Strength = "veryWeak" | "weak" | "fair" | "strong" | "veryStrong";
+
+export type StructureFormat = "json" | "yaml";
 
 export type Subnet = {
 	cidr: string,

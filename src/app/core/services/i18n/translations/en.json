@@ -991,9 +991,9 @@
       "graph": "Graph",
       "tree": "Tree"
     },
-    "valid": "Valid JSON",
-    "invalid": "Invalid JSON · line {{line}}",
-    "invalidAt": "Invalid JSON at line {{line}}, column {{column}}:",
+    "valid": "Valid {{format}}",
+    "invalid": "Invalid {{format}} · line {{line}}",
+    "invalidAt": "Invalid {{format}} at line {{line}}, column {{column}}:",
     "reasons": {
       "unexpectedEnd": "the document ends too early.",
       "unexpectedCharacter": "an unexpected character.",
@@ -1001,7 +1001,9 @@
       "invalidEscape": "an unknown escape.",
       "controlCharacter": "a control character inside a string.",
       "trailingCharacters": "text follows the document.",
-      "tooDeep": "nesting too deep."
+      "tooDeep": "nesting too deep.",
+      "malformed": "the document is malformed.",
+      "tooLarge": "its aliases make it larger than the explorer reads."
     },
     "showInCode": "Show in code",
     "search": "Search the JSON",
@@ -1037,6 +1039,12 @@
     "kilobytes": "{{value}} KB",
     "megabytes": "{{value}} MB",
     "limitNote": "Past 2,000 nodes, the graph folds arrays and offers the tree.",
+    "notices": {
+      "firstDocumentOnly": "Several documents: only the first one is explored."
+    },
+    "formatNotes": {
+      "yaml": "Comments do not appear, and an alias shows what it names."
+    },
     "hiddenRows": "{count, plural, one {+ # more} other {+ # more}}",
     "tree": "Document tree",
     "treeTruncated": "The tree stops at 5,000 lines: fold what you do not need.",

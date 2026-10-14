@@ -21,6 +21,7 @@ export function emptyJsonView(overrides: Partial<JsonView> = {}): JsonView {
     treeTruncated: false,
     matches: [],
     matchCount: 0,
+    notices: [],
     ...overrides,
   };
 }

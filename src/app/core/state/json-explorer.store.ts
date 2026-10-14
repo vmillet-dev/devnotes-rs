@@ -7,6 +7,7 @@ import {
   JsonView,
   NodeMove,
   NodeOffset,
+  StructureFormat,
   shows,
   trailOf,
 } from '@core/model/json.model';
@@ -22,7 +23,13 @@ function sameOpening(a: JsonOpening, b: JsonOpening): boolean {
 
 function sameQuery(a: JsonQuery | undefined, b: JsonQuery | undefined): boolean {
   return (
-    a === b || (!!a && !!b && a.text === b.text && a.search === b.search && sameOpening(a.opening, b.opening))
+    a === b ||
+    (!!a &&
+      !!b &&
+      a.text === b.text &&
+      a.format === b.format &&
+      a.search === b.search &&
+      sameOpening(a.opening, b.opening))
   );
 }
 
@@ -36,6 +43,7 @@ export class JsonExplorerStore {
   private readonly repository = inject(JsonRepository);
 
   private readonly _text = signal<string | null>(null);
+  private readonly _format = signal<StructureFormat>('json');
   private readonly _search = signal('');
   private readonly _debouncedSearch = signal('');
   private readonly _opening = signal<JsonOpening>({ kind: 'initial' }, { equal: sameOpening });
@@ -56,7 +64,12 @@ export class JsonExplorerStore {
     () => {
       const text = this._text();
       if (text === null) return undefined;
-      return { text, search: this._debouncedSearch().trim(), opening: this._opening() };
+      return {
+        text,
+        format: this._format(),
+        search: this._debouncedSearch().trim(),
+        opening: this._opening(),
+      };
     },
     { equal: sameQuery },
   );
@@ -77,6 +90,7 @@ export class JsonExplorerStore {
   });
   /** What the view was asked of, for the spans it answers into. */
   readonly text = this._text.asReadonly();
+  readonly format = this._format.asReadonly();
   /** Zero-based among the matches, or -1 before the first step. */
   readonly matchIndex = this._matchIndex.asReadonly();
   readonly offsets = this._offsets.asReadonly();
@@ -84,7 +98,8 @@ export class JsonExplorerStore {
   private readonly openPaths = computed(() => this.view()?.graph.nodes.map((node) => node.path) ?? []);
 
   /** At once: a document just opened is explored whole, from its first level. */
-  load(text: string): void {
+  load(text: string, format: StructureFormat = 'json'): void {
+    this._format.set(format);
     this.commitText.cancel();
     this.commitSearch.cancel();
     this._text.set(text);

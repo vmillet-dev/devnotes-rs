@@ -38,6 +38,10 @@ pub enum JsonErrorReason {
     ControlCharacter,
     TrailingCharacters,
     TooDeep,
+    /// What a YAML, TOML or XML reader refused: its own reasons are words, and no word crosses.
+    Malformed,
+    /// Aliases are copies: past what can be read, a document of aliases to aliases stops.
+    TooLarge,
 }
 
 /// One-based line and column, the column in UTF-16 units like the offset.
@@ -51,7 +55,7 @@ pub struct JsonError {
 
 /// Recursion is bounded here rather than by the stack: a text of ten thousand `[` would
 /// otherwise take the process down.
-const MAX_DEPTH: usize = 256;
+pub(crate) const MAX_DEPTH: usize = 256;
 
 pub(crate) fn parse(text: &str) -> Result<Node, JsonError> {
     let mut parser = Parser {

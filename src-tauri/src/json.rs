@@ -1,9 +1,13 @@
 //! The JSON visualiser's model: a text in, what to draw out. It takes a text and not a note,
-//! so an HTTP response is explored the same way.
+//! so an HTTP response is explored the same way. YAML is read into the same model, through a
+//! reader of its own (`read`).
 
 pub(crate) mod layout;
 pub mod model;
 pub mod parse;
+mod position;
+pub mod read;
+mod yaml;
 
 use crate::error::{AppError, StorageError};
 use model::{JsonQuery, JsonView};

@@ -280,6 +280,29 @@ describe('JsonExplorerComponent', () => {
     expect(query('json-error-show')).toBeNull();
   });
 
+  it('names the format it explores, and says what its reader left out', async () => {
+    await set('format', 'yaml');
+    await set('view', jsonView({ notices: ['firstDocumentOnly'] }));
+
+    expect(query('json-notice').dataset['notice']).toBe('firstDocumentOnly');
+    expect(text('json-notice')).toBe('Plusieurs documents : seul le premier est exploré.');
+    expect(query('json-format-note')).not.toBeNull();
+
+    await set(
+      'view',
+      jsonView({
+        error: { reason: 'malformed', line: 3, column: 1, offset: 20 },
+        graph: { nodes: [], width: 0, height: 0, folded: false },
+      }),
+    );
+    expect(text('json-invalid')).toContain('YAML invalide ligne 3, colonne 1 : le document est mal formé.');
+
+    await set('format', 'json');
+    await set('view', jsonView());
+    expect(query('json-notice')).toBeNull();
+    expect(query('json-format-note')).toBeNull();
+  });
+
   it('offers no way to the code where there is none beside it', async () => {
     await set('withCode', false);
     await set('selectedPath', '$.data');

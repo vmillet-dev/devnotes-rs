@@ -10,6 +10,7 @@ use devnotes_lib::error::StorageError;
 use devnotes_lib::error::ValidationError;
 use devnotes_lib::error::{AppError, ErrorCode};
 use devnotes_lib::json::model::{JsonOpening, JsonQuery, explore};
+use devnotes_lib::json::read::StructureFormat;
 use devnotes_lib::notes::checklist::ChecklistItem;
 use devnotes_lib::notes::kind::NoteKind;
 use devnotes_lib::notes::language::Language;
@@ -656,6 +657,7 @@ fn every_error_code_crosses_as_a_camel_case_string() {
 fn a_json_query_is_read_from_the_tagged_opening_the_front_sends() {
     let query: JsonQuery = serde_json::from_value(serde_json::json!({
         "text": "{}",
+        "format": "yaml",
         "search": "id",
         "opening": { "kind": "paths", "paths": ["$.data"] },
     }))
@@ -664,6 +666,7 @@ fn a_json_query_is_read_from_the_tagged_opening_the_front_sends() {
     assert!(
         matches!(query.opening, JsonOpening::Paths { ref paths, reveal: None } if paths == &["$.data"])
     );
+    assert_eq!(query.format, StructureFormat::Yaml);
 
     let initial: JsonOpening =
         serde_json::from_value(serde_json::json!({ "kind": "initial" })).unwrap();
@@ -674,12 +677,14 @@ fn a_json_query_is_read_from_the_tagged_opening_the_front_sends() {
 fn a_json_view_serializes_with_camel_case_keys() {
     let view = explore(&JsonQuery {
         text: r#"{"a": [1]}"#.to_string(),
+        format: StructureFormat::Json,
         search: String::new(),
         opening: JsonOpening::Initial,
     });
     let json = serde_json::to_value(&view).unwrap();
 
     assert!(json["error"].is_null());
+    assert_eq!(json["notices"], serde_json::json!([]));
     assert_eq!(json["matchCount"], 0);
     assert_eq!(json["treeTruncated"], false);
     assert_eq!(json["graph"]["nodes"][0]["hiddenRows"], 0);
@@ -691,6 +696,7 @@ fn a_json_view_serializes_with_camel_case_keys() {
 
     let broken = explore(&JsonQuery {
         text: "[".to_string(),
+        format: StructureFormat::Json,
         search: String::new(),
         opening: JsonOpening::All,
     });
