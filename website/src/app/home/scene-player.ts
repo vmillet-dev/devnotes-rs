@@ -3,7 +3,7 @@ import { Injectable, signal } from '@angular/core';
 import { sleep } from '../core/browser';
 
 /** The pause between two steps, so the eye can read the one that ended. */
-const BETWEEN_STEPS_MS = 500;
+const BETWEEN_STEPS_MS = 350;
 
 /**
  * The clock of one feature's scene: which step it is on, and how far into it (`t`, 0…1).
