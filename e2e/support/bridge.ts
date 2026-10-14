@@ -2,6 +2,7 @@ import { browser } from '@wdio/globals';
 import { readFileSync, writeFileSync } from 'node:fs';
 
 import { homeSpaceMarker } from './profile.js';
+import { SCRIPT_TIMEOUT, SLOW_SCRIPT_TIMEOUT } from './timeouts.js';
 
 import type {
   Attachment,
@@ -96,6 +97,16 @@ async function invoke<T>(command: string, args: Record<string, unknown> = {}): P
   return outcome.ok as T;
 }
 
+/** What derives a key: past `SCRIPT_TIMEOUT` on a slow runner. */
+async function invokeSlowly<T>(command: string, args: Record<string, unknown>): Promise<T> {
+  await browser.setTimeout({ script: SLOW_SCRIPT_TIMEOUT });
+  try {
+    return await invoke<T>(command, args);
+  } finally {
+    await browser.setTimeout({ script: SCRIPT_TIMEOUT });
+  }
+}
+
 export const bridge = {
   /** Answers while locked: the registry is beside the libraries, not inside one. */
   listLibraries: () => invoke<Registry>('list_libraries'),
@@ -182,16 +193,17 @@ export const bridge = {
     invoke<Record<string, string>>('set_global_placeholders', { values }),
 
   exportNotes: (path: string, spaceId: string | null = null, passphrase: string | null = null) =>
-    invoke<ExportReport>('export_notes', {
+    invokeSlowly<ExportReport>('export_notes', {
       path,
       scope: spaceId === null ? { kind: 'library' } : { kind: 'space', spaceId },
       passphrase,
     }),
   importNotes: (path: string, passphrase: string | null = null) =>
-    invoke<ImportReport>('import_notes', { path, passphrase }),
+    invokeSlowly<ImportReport>('import_notes', { path, passphrase }),
   exportIsProtected: (path: string) => invoke<boolean>('export_is_protected', { path }),
 
-  changePassphrase: (current: string, next: string) => invoke<null>('change_passphrase', { current, next }),
+  changePassphrase: (current: string, next: string) =>
+    invokeSlowly<null>('change_passphrase', { current, next }),
 } as const;
 
 /** A `NoteDraft` is exhaustive on the wire; a scenario cares about two or three fields. */

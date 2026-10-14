@@ -4,6 +4,7 @@ import type { GlobalAction } from '@core/ipc/bindings';
 
 import { bridge, query, rememberHomeSpace } from './bridge.js';
 import { storedPreferences } from './profile.js';
+import { SCRIPT_TIMEOUT } from './timeouts.js';
 
 /** `[data-testid="…"]`, in one place, so a spec never spells the attribute. */
 export function testid(name: string): string {
@@ -182,8 +183,8 @@ export async function clickToAddRow(button: string, row: string) {
 }
 
 /**
- * A library opened or switched reloads the whole front end. On a fresh CI runner the gate that
- * follows has come back after the default ten seconds, while the page was rebuilding.
+ * A library opened or switched reloads the whole front end: room for a read lost to the unload
+ * (`SCRIPT_TIMEOUT`), and the page after it.
  */
 export const RELOAD_TIMEOUT = 30_000;
 
@@ -526,6 +527,7 @@ export async function reloadCanvas(): Promise<void> {
  */
 export async function reopenSession(): Promise<void> {
   await browser.reloadSession();
+  await browser.setTimeout({ script: SCRIPT_TIMEOUT });
   await waitForCanvas();
 }
 
