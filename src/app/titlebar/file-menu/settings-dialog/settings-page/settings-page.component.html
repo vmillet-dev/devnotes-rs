@@ -63,6 +63,20 @@
         (chosen)="onIndent($event)"
       />
     </div>
+
+    <div class="setting-row">
+      <label class="setting-label" for="setting-code-wrap">
+        {{ 'settings.editor.wrap' | transloco }}
+      </label>
+      <input
+        id="setting-code-wrap"
+        class="setting-switch"
+        type="checkbox"
+        data-testid="setting-code-wrap"
+        [checked]="draft.value('codeWrap')"
+        (change)="onToggle('codeWrap', $event)"
+      />
+    </div>
   </section>
 
   <section class="setting-group">

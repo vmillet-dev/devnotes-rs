@@ -1,4 +1,4 @@
-import { $, browser, expect } from '@wdio/globals';
+import { $, $$, browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
@@ -359,7 +359,7 @@ describe('Editing a note', () => {
     });
   });
 
-  /** Through the WebView's own editing, which is what keeps it in the field's undo. */
+  /** CodeMirror's own key handling, which keeps it in the editor's undo. */
   it('indents with Tab rather than leaving the code', async () => {
     const indented = 'Indented with Tab';
     const { id } = await bridge.createNote(
@@ -367,18 +367,18 @@ describe('Editing a note', () => {
     );
     await reloadCanvas();
     await canvas.openNote(indented);
-    await browser.execute((selector: string) => {
-      const field = document.querySelector(selector) as HTMLTextAreaElement;
-      field.focus();
-      field.setSelectionRange(0, 0);
-    }, testid('editor-body'));
+    await editor.focusCode();
 
     await press('Tab');
 
-    expect(await editor.body()).toBe('  echo hi');
-    expect(await browser.execute(() => document.activeElement?.getAttribute('data-testid'))).toBe(
-      'editor-body',
-    );
+    expect(
+      await eventually(
+        () => editor.body(),
+        (body) => body === '  echo hi',
+        'the line indented',
+      ),
+    ).toBe('  echo hi');
+    expect(await editor.codeHasFocus()).toBe(true);
     await editor.close();
     const stored = await eventually(
       async () => (await bridge.getNote(id)).content,
@@ -419,13 +419,78 @@ describe('Editing a note', () => {
       // A language with no `.lang-*` rule still draws its label, on no fill at all.
       expect((await badge.getCSSProperty('background-color')).value).not.toBe('rgba(0,0,0,0)');
 
+      // Coloured by its grammar, a chunk loaded with the first snippet in that language.
       await canvas.openNote(sample.title);
-      expect(await $('.editor-stack .line-content span[class^="hljs-"]').isExisting()).toBe(true);
+      await $(`${testid('editor-body')} .cm-line span[class]`).waitForExist({ timeout: 10_000 });
       await editor.close();
     }
 
     await bridge.deleteNotes(ids);
     await bridge.purgeNotes(ids);
+    await reloadCanvas();
+  });
+
+  /**
+   * A package-lock pasted into a snippet once took seconds to open and a second per key: the
+   * editor now draws what is on screen, and a key lands at once. Built and stored in the page:
+   * WebDriver refuses a request body of two megabytes.
+   */
+  it('opens a snippet of two megabytes, drawing only what is on screen, and types into it', async () => {
+    const big = 'Lockfile of two megabytes';
+    const id = await browser.executeAsync(
+      (base: Record<string, unknown>, done: (id: string) => void) => {
+        const packages: Record<string, unknown> = {};
+        for (let i = 0; i < 4200; i++) {
+          const version = `${i % 9}.${i % 13}.${i % 7}`;
+          packages[`node_modules/package-${i}`] = {
+            version,
+            resolved: `https://registry.npmjs.org/package-${i}/-/package-${i}-${version}.tgz`,
+            integrity: `sha512-${'x'.repeat(86)}==`,
+            dev: i % 2 === 0,
+            license: 'MIT',
+            dependencies: { [`package-${i + 1}`]: `^${i % 9}.0.0`, [`package-${i + 2}`]: `~${i % 5}.1.0` },
+            engines: { node: '>=18' },
+          };
+        }
+        const content = JSON.stringify({ name: 'app', lockfileVersion: 3, packages }, null, 2);
+        const tauri = (window as unknown as Record<string, any>)['__TAURI__'];
+        tauri.core
+          .invoke('create_note', { draft: { ...base, content } })
+          .then((note: { id: string }) => done(note.id));
+      },
+      draft({ spaceId, title: big, language: 'json' }) as unknown as Record<string, unknown>,
+    );
+    await reloadCanvas();
+
+    await canvas.openNote(big);
+    const lines = () => $$(`${testid('editor-body')} .cm-line`).length;
+    await eventually(lines, (count) => count > 0, 'the first lines drawn');
+    // Of some fifty thousand lines, what a window shows and a margin around it.
+    expect(await lines()).toBeLessThan(500);
+
+    await editor.focusCode();
+    await browser.execute(() => document.execCommand('insertText', false, 'x'));
+    await eventually(
+      () => $(`${testid('editor-body')} .cm-line`).getText(),
+      (first) => first.startsWith('x{'),
+      'the key in the first line',
+    );
+    await editor.close();
+
+    const stored = await eventually(
+      () =>
+        browser.executeAsync((noteId: string, done: (head: string) => void) => {
+          const tauri = (window as unknown as Record<string, any>)['__TAURI__'];
+          tauri.core
+            .invoke('get_note', { id: noteId })
+            .then((note: { content: string }) => done(`${note.content.slice(0, 2)} ${note.content.length}`));
+        }, id),
+      (head) => head.startsWith('x{'),
+      'the edited lockfile saved whole',
+    );
+    expect(Number(stored.split(' ')[1])).toBeGreaterThan(1_500_000);
+    await bridge.deleteNotes([id]);
+    await bridge.purgeNotes([id]);
     await reloadCanvas();
   });
 

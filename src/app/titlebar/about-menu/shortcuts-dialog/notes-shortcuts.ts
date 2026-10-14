@@ -16,6 +16,7 @@ export const NOTES_SHORTCUT_GROUPS: readonly ShortcutGroup[] = [
       { keys: ['Backspace'], labelKey: 'shortcuts.editor.removeItem' },
       { keys: ['Alt', '↑ ↓'], labelKey: 'shortcuts.editor.moveItem' },
       { keys: ['Shift', 'Alt', 'F'], labelKey: 'shortcuts.editor.format' },
+      { keys: ['Ctrl', 'F'], labelKey: 'shortcuts.editor.find' },
     ],
   },
   {

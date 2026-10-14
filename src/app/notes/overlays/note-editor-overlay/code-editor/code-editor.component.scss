@@ -1,0 +1,11 @@
+// The editor scrolls in itself, which is what lets it draw only the lines on screen: it needs a
+// height to scroll within, never its content's.
+:host {
+  display: block;
+  height: 100%;
+  min-height: 0;
+}
+
+.code-editor {
+  height: 100%;
+}

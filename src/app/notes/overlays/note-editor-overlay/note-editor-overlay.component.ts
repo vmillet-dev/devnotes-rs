@@ -46,19 +46,21 @@ import { LifecycleBadgeComponent } from './lifecycle-badge/lifecycle-badge.compo
 import { PlaceholderPanelComponent } from './placeholder-panel/placeholder-panel.component';
 import { RevisionPanelComponent } from './revision-panel/revision-panel.component';
 import { RichTextEditorComponent } from './rich-text-editor/rich-text-editor.component';
-import { applyEdit, indent, indentUnit, outdent, rewrite } from './indentation';
+import { indentUnit } from './indentation';
 import { countWords } from './word-count';
 import { ChoiceMenuComponent, ChoiceOption } from '@shared/controls/choice-menu/choice-menu.component';
 import { TagPillComponent } from '@notes/ui/tag-pill/tag-pill.component';
 import { FORMAT_NAMES, Span, entryAt, explorableFormat, spanOf } from '@core/model/json.model';
 import { ExplorerLayoutStore } from '@core/state/explorer-layout.store';
 import { JsonExplorerStore } from '@core/state/json-explorer.store';
-import { CodeSelection, textareaSelection } from './code-selection';
+import type { CodeSelection } from './code-selection';
 import { SIDE_BY_SIDE_FROM, SideBySideComponent } from './side-by-side/side-by-side.component';
 import type { JsonExplorerMode } from '@shared/json-explorer/json-explorer.component';
 // On a line of its own: the visualiser is its own chunk, loaded by a first Graphe or Arbre.
 import { JsonViewComponent } from './json-view/json-view.component';
 import { LANGUAGE_CHOICES } from './language-choices';
+// On a line of its own: CodeMirror is its own chunk, loaded by the first snippet opened.
+import { CodeEditorComponent } from './code-editor/code-editor.component';
 
 const TEXT_ENCODER = new TextEncoder();
 
@@ -115,6 +117,7 @@ const PRIORITY_CHOICES: readonly ChoiceOption[] = PRIORITIES.filter((level) => l
     RevisionPanelComponent,
     ChoiceMenuComponent,
     CodeViewerComponent,
+    CodeEditorComponent,
     RichTextEditorComponent,
     SideBySideComponent,
     NgTemplateOutlet,
@@ -203,8 +206,8 @@ export class NoteEditorOverlayComponent {
     computation: () => false,
   });
 
-  private readonly bodyEditor = viewChild<ElementRef<HTMLTextAreaElement>>('bodyEditor');
-  /** By its template name: a class query would pull TipTap out of its deferred chunk. */
+  /** By their template names: a class query would pull CodeMirror and TipTap out of their chunks. */
+  private readonly codeEditor = viewChild<CodeEditorComponent>('codeEditor');
   private readonly richEditor = viewChild<RichTextEditorComponent>('richEditor');
   private readonly checklistEditor = viewChild(ChecklistEditorComponent);
   private readonly fieldsPanel = viewChild(PlaceholderPanelComponent);
@@ -272,6 +275,10 @@ export class NoteEditorOverlayComponent {
   protected readonly hasPlaceholders = computed(() => this.placeholders().length > 0);
 
   protected readonly showingPreview = computed(() => this.previewingFilled() && this.fill.preview() !== null);
+  /** The code editor alone in the body, which it scrolls itself. */
+  protected readonly showsCode = computed(
+    () => this.jsonMode() === null && !this.showingPreview() && !this.isChecklist() && !this.isRichText(),
+  );
 
   protected readonly languageLabel = computed(
     () => LANGUAGE_LABELS[this.note()?.language ?? FALLBACK_LANGUAGE],
@@ -279,6 +286,10 @@ export class NoteEditorOverlayComponent {
   protected readonly lineCount = computed(() => (this.note() ? this.draftContent().split('\n').length : 0));
   protected readonly wordCount = computed(() => countWords(this.draftContent()));
   protected readonly codeIndent = computed(() => this.settings.codeIndent());
+  protected readonly codeIndentUnit = computed(() =>
+    indentUnit(this.settings.codeIndent(), this.note()?.language ?? FALLBACK_LANGUAGE),
+  );
+  protected readonly codeWrap = computed(() => this.settings.codeWrap());
   protected readonly byteSize = computed(() => TEXT_ENCODER.encode(this.draftContent()).length);
   protected readonly lineEnding = computed(() => (this.draftContent().includes('\r\n') ? 'CRLF' : 'LF'));
 
@@ -439,8 +450,7 @@ export class NoteEditorOverlayComponent {
   }
 
   private codeSelection(): CodeSelection | null {
-    const field = this.bodyEditor()?.nativeElement;
-    return field ? textareaSelection(field) : null;
+    return this.codeEditor() ?? null;
   }
 
   /** On from the code tab, it opens on the graph: side by side has nothing to show beside code alone. */
@@ -449,12 +459,11 @@ export class NoteEditorOverlayComponent {
     if (this.layout.sideBySide() && this.bodyView() === 'code') this.bodyView.set('graph');
   }
 
-  /** Side by side, the node the caret is in is selected in the visualiser. Keys and clicks only:
-   * a selection set from the visualiser fires `select` too. */
-  protected onCaret(field: HTMLTextAreaElement): void {
+  /** Side by side, the node the caret is in is selected in the visualiser: keys and clicks only. */
+  protected onCaret(offset: number): void {
     const view = this.explorer.view();
     if (!this.sideBySideShown() || !view) return;
-    const path = entryAt(view, field.selectionStart);
+    const path = entryAt(view, offset);
     if (path === null || path === this.explorer.selectedPath()) return;
     this.caretPath = path;
     this.explorer.select(path);
@@ -472,41 +481,38 @@ export class NoteEditorOverlayComponent {
   }
 
   /**
-   * Through the field's own editing, like indentation: Ctrl+Z undoes a format like a
-   * keystroke. The worker answers asynchronously, so the text is compared before applying.
+   * Through the editor's own history: Ctrl+Z undoes a format in one step. The worker answers
+   * asynchronously, so the text is compared before applying.
    */
   protected async formatBody(): Promise<void> {
-    const field = this.bodyEditor()?.nativeElement;
+    const editor = this.codeEditor();
     const note = this.note();
-    if (!field || !note || !this.canFormat() || this.formatting()) return;
+    if (!editor || !note || !this.canFormat() || this.formatting()) return;
 
-    const before = field.value;
-    const indentation = indentUnit(this.settings.codeIndent(), note.language);
+    const before = this.draftContent();
     this.formatting.set(true);
-    const answer = await this.formatter.format(before, note.language, field.selectionStart, indentation);
+    const answer = await this.formatter.format(
+      before,
+      note.language,
+      editor.caretAt(),
+      this.codeIndentUnit(),
+    );
     this.formatting.set(false);
-    if (field.value !== before || this.bodyEditor()?.nativeElement !== field) return;
+    if (this.draftContent() !== before || this.codeEditor() !== editor) return;
 
-    field.focus();
     if (answer.kind === 'formatted') {
-      applyEdit(field, rewrite(before, answer.text, answer.cursor));
+      editor.applyFormat(answer.text, answer.cursor);
       this.markedLines.set(new Set(answer.changedLines));
       this.showFormatNotice({ kind: 'formatted', changed: answer.changedLines.length });
       return;
     }
-    if (answer.kind === 'syntax') {
-      const at = offsetOf(before, answer.line, answer.column);
-      field.setSelectionRange(at, at);
-    }
+    if (answer.kind === 'syntax') editor.select(offsetOf(before, answer.line, answer.column));
     this.showFormatNotice(answer);
   }
 
-  /** The field's own undo, so the notice's button and Ctrl+Z are one and the same step. */
+  /** The editor's own undo, so the notice's button and Ctrl+Z are one and the same step. */
   protected undoFormat(): void {
-    const field = this.bodyEditor()?.nativeElement;
-    if (!field) return;
-    field.focus();
-    document.execCommand('undo');
+    this.codeEditor()?.undo();
     this.clearFormat();
   }
 
@@ -522,22 +528,9 @@ export class NoteEditorOverlayComponent {
     this.markedLines.set(NO_LINES);
   }
 
-  /** Tab stays in the code: Escape is how the keyboard leaves the field. */
-  protected onBodyKeydown(event: KeyboardEvent, field: HTMLTextAreaElement): void {
-    if (event.key !== 'Tab' || event.ctrlKey || event.altKey || event.metaKey || event.isComposing) return;
-
-    event.preventDefault();
-    const unit = indentUnit(this.settings.codeIndent(), this.note()?.language ?? FALLBACK_LANGUAGE);
-    const { value, selectionStart, selectionEnd } = field;
-    const edit = event.shiftKey
-      ? outdent(value, selectionStart, selectionEnd, unit)
-      : indent(value, selectionStart, selectionEnd, unit);
-    if (edit) applyEdit(field, edit);
-  }
-
   /**
-   * A pasted image becomes an attachment: the body is a `<textarea>`. Only the content
-   * type is read here — the bytes are re-read natively and never cross the bridge.
+   * A pasted image becomes an attachment: the body holds text. Only the content type is read
+   * here — the bytes are re-read natively and never cross the bridge.
    */
   protected onPaste(event: ClipboardEvent): void {
     const data = event.clipboardData;
@@ -714,9 +707,9 @@ export class NoteEditorOverlayComponent {
    * for the field makes the whole editor disappear. The `blur` commits on the way.
    */
   protected onDismiss(): void {
-    const editor = this.bodyEditor()?.nativeElement;
-    if (editor && document.activeElement === editor) {
-      editor.blur();
+    const code = this.codeEditor();
+    if (code?.hasFocus()) {
+      code.blur();
       return;
     }
     const rich = this.richEditor();

@@ -26,6 +26,8 @@ import { JsonExplorerStore } from '@core/state/json-explorer.store';
 import { ClipboardService } from '@core/services/clipboard/clipboard.service';
 import { FakeJsonRepository } from '@testing/fake-json-repository';
 import { JSON_TEXT, jsonView } from '@testing/json-view.fixture';
+import { EditorView } from '@codemirror/view';
+import { CodeEditorComponent } from './code-editor/code-editor.component';
 import { NoteEditorOverlayComponent } from './note-editor-overlay.component';
 import { RichTextEditorComponent } from './rich-text-editor/rich-text-editor.component';
 
@@ -90,8 +92,50 @@ describe('NoteEditorOverlayComponent', () => {
     return fixture.nativeElement.querySelector('.overlay-title-input');
   }
 
-  function bodyEditor(): HTMLTextAreaElement {
-    return fixture.nativeElement.querySelector('.overlay-body-editor');
+  /** The code field: CodeMirror, which runs on jsdom as it does in the WebView. */
+  function codeField(): HTMLElement | null {
+    return fixture.nativeElement.querySelector('[data-testid="editor-body"]');
+  }
+
+  function codeView(): EditorView {
+    return EditorView.findFromDOM(codeField()!.querySelector<HTMLElement>('.cm-editor')!)!;
+  }
+
+  function codeEditor(): CodeEditorComponent {
+    return fixture.debugElement.query(By.directive(CodeEditorComponent))
+      .componentInstance as CodeEditorComponent;
+  }
+
+  function bodyText(): string {
+    return codeView().state.doc.toString();
+  }
+
+  function bodySelection(): [number, number] {
+    const { from, to } = codeView().state.selection.main;
+    return [from, to];
+  }
+
+  /** A keystroke's worth of editing: the whole body replaced, as CodeMirror's input sends it. */
+  async function typeBody(value: string): Promise<void> {
+    const view = codeView();
+    view.dispatch({
+      changes: { from: 0, to: view.state.doc.length, insert: value },
+      selection: { anchor: value.length },
+      userEvent: 'input.type',
+    });
+    await fixture.whenStable();
+  }
+
+  /** The caret put somewhere by a key or a click. */
+  function moveCaret(at: number): void {
+    codeView().dispatch({ selection: { anchor: at }, userEvent: 'select' });
+  }
+
+  /** The focus leaving the code, as a click elsewhere does. */
+  async function leaveBody(): Promise<void> {
+    codeView().focus();
+    codeView().contentDOM.blur();
+    await fixture.whenStable();
   }
 
   function codeViewer(): CodeViewerComponent {
@@ -121,7 +165,7 @@ describe('NoteEditorOverlayComponent', () => {
     return values;
   }
 
-  async function type(element: HTMLInputElement | HTMLTextAreaElement, value: string): Promise<void> {
+  async function type(element: HTMLInputElement, value: string): Promise<void> {
     element.value = value;
     element.dispatchEvent(new Event('input'));
     await fixture.whenStable();
@@ -189,17 +233,15 @@ describe('NoteEditorOverlayComponent', () => {
       .componentInstance as LifecycleBadgeComponent;
     expect(badge.lifecycle()).toEqual({ kind: 'permanent' });
 
-    const viewer = fixture.debugElement.query(By.directive(CodeViewerComponent))
-      .componentInstance as CodeViewerComponent;
-    expect(viewer.content()).toBe('{"x":1}');
-    expect(viewer.language()).toBe('json');
+    expect(bodyText()).toBe('{"x":1}');
+    expect(codeEditor().language()).toBe('json');
   });
 
   it('invites the user to write when the note is empty', async () => {
     fixture.componentRef.setInput('note', createNote({ content: '' }));
     await fixture.whenStable();
 
-    expect(bodyEditor().placeholder).toBe('Commencer à écrire…');
+    expect(codeField()!.querySelector('.cm-placeholder')?.textContent).toBe('Commencer à écrire…');
   });
 
   it('computes the language label, line count and byte size in the footer', async () => {
@@ -231,7 +273,7 @@ describe('NoteEditorOverlayComponent', () => {
 
     it('labels the title field, the body and the close button', () => {
       expect(titleInput().getAttribute('aria-label')).toBe('Titre de la note');
-      expect(bodyEditor().getAttribute('aria-label')).toBe('Contenu de la note');
+      expect(codeView().contentDOM.getAttribute('aria-label')).toBe('Contenu de la note');
       expect(fixture.nativeElement.querySelector('.close-btn').getAttribute('aria-label')).toBe(
         "Fermer l'éditeur",
       );
@@ -285,25 +327,18 @@ describe('NoteEditorOverlayComponent', () => {
       fixture.componentRef.setInput('note', createNote({ content: 'before' }));
       await fixture.whenStable();
 
-      expect(bodyEditor().value).toBe('before');
+      expect(bodyText()).toBe('before');
+      expect(codeView().contentDOM.getAttribute('contenteditable')).toBe('true');
     });
 
-    it('keeps the highlighted layer in sync with the draft as the user types', async () => {
+    it('hands the editor the note language, and follows it when it changes', async () => {
       fixture.componentRef.setInput('note', createNote({ content: '{"a":1}', language: 'json' }));
       await fixture.whenStable();
+      expect(codeEditor().language()).toBe('json');
 
-      await type(bodyEditor(), '{"a":2}');
-
-      expect(codeViewer().content()).toBe('{"a":2}');
-      expect(codeViewer().language()).toBe('json');
-    });
-
-    it('hides the highlighted layer from screen readers, which already read the textarea', async () => {
-      fixture.componentRef.setInput('note', createNote({ content: 'x' }));
+      fixture.componentRef.setInput('note', createNote({ content: '{"a":1}', language: 'yml' }));
       await fixture.whenStable();
-
-      const viewer = fixture.debugElement.query(By.directive(CodeViewerComponent));
-      expect(viewer.nativeElement.getAttribute('aria-hidden')).toBe('true');
+      expect(codeEditor().language()).toBe('yml');
     });
 
     it('emits the new content on blur', async () => {
@@ -311,11 +346,10 @@ describe('NoteEditorOverlayComponent', () => {
       await fixture.whenStable();
       const emitted = patched('content');
 
-      await type(bodyEditor(), 'after');
+      await typeBody('after');
       expect(emitted).toEqual([]);
 
-      bodyEditor().dispatchEvent(new Event('blur'));
-      await fixture.whenStable();
+      await leaveBody();
 
       expect(emitted).toEqual(['after']);
     });
@@ -324,7 +358,7 @@ describe('NoteEditorOverlayComponent', () => {
       fixture.componentRef.setInput('note', createNote({ content: 'a' }));
       await fixture.whenStable();
 
-      await type(bodyEditor(), 'one\ntwo');
+      await typeBody('one\ntwo');
 
       expect(text('.overlay-footer span')).toBe('SH · 2 lignes · 7 octets · UTF-8 · LF');
     });
@@ -334,9 +368,7 @@ describe('NoteEditorOverlayComponent', () => {
       await fixture.whenStable();
       const emitted = patched('content');
 
-      bodyEditor().value = 'a';
-      bodyEditor().dispatchEvent(new InputEvent('input', { inputType: 'insertText' }));
-      await fixture.whenStable();
+      await typeBody('a');
 
       expect(emitted).toEqual([]);
     });
@@ -346,40 +378,28 @@ describe('NoteEditorOverlayComponent', () => {
       await fixture.whenStable();
       const emitted = patched('content');
 
-      bodyEditor().focus();
-      await type(bodyEditor(), 'after');
+      codeView().focus();
+      await typeBody('after');
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
       await fixture.whenStable();
 
       expect(emitted).toEqual(['after']);
       expect(asked.closes).toBe(0);
-      expect(document.activeElement).not.toBe(bodyEditor());
+      expect(codeView().hasFocus).toBe(false);
+    });
+
+    it('wraps long lines when Preferences ask for it', async () => {
+      fixture.componentRef.setInput('note', createNote({ content: 'a long line' }));
+      await fixture.whenStable();
+      expect(codeEditor().wrap()).toBe(false);
+
+      TestBed.inject(SettingsStore).codeWrap.write(true);
+      await fixture.whenStable();
+      expect(codeEditor().wrap()).toBe(true);
     });
   });
 
   describe('Tab in the code field', () => {
-    /** jsdom has no editing commands: this one does what the WebView's `insertText` does. */
-    beforeEach(() => {
-      Object.defineProperty(document, 'execCommand', {
-        configurable: true,
-        value: (command: string, _ui: boolean, text: string) => {
-          const field = bodyEditor();
-          field.setRangeText(
-            command === 'delete' ? '' : text,
-            field.selectionStart,
-            field.selectionEnd,
-            'end',
-          );
-          field.dispatchEvent(new InputEvent('input', { inputType: 'insertText' }));
-          return true;
-        },
-      });
-    });
-
-    afterEach(() => {
-      Reflect.deleteProperty(document, 'execCommand');
-    });
-
     async function openCode(content: string, language: Note['language']): Promise<void> {
       fixture.componentRef.setInput('note', createNote({ content, language }));
       await fixture.whenStable();
@@ -387,39 +407,39 @@ describe('NoteEditorOverlayComponent', () => {
 
     function press(init: KeyboardEventInit): KeyboardEvent {
       const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true, ...init });
-      bodyEditor().dispatchEvent(event);
+      codeView().contentDOM.dispatchEvent(event);
       return event;
     }
 
     it('indents by the note language, and keeps the focus in the field', async () => {
       await openCode('if ready:\nstart()', 'py');
-      bodyEditor().setSelectionRange(10, 10);
+      codeView().dispatch({ selection: { anchor: 10 } });
 
       const tab = press({});
       await fixture.whenStable();
 
       expect(tab.defaultPrevented).toBe(true);
-      expect(bodyEditor().value).toBe('if ready:\n    start()');
+      expect(bodyText()).toBe('if ready:\n    start()');
       expect(text('.overlay-footer span')).toContain('21 octets');
     });
 
     it('indents with what Preferences chose over the language', async () => {
       TestBed.inject(SettingsStore).codeIndent.write('tab');
       await openCode('start()', 'py');
-      bodyEditor().setSelectionRange(0, 0);
+      codeView().dispatch({ selection: { anchor: 0 } });
 
       press({});
 
-      expect(bodyEditor().value).toBe('\tstart()');
+      expect(bodyText()).toBe('\tstart()');
     });
 
     it('takes a level back with Shift+Tab, on every line selected', async () => {
       await openCode('  a\n  b', 'sh');
-      bodyEditor().setSelectionRange(0, 6);
+      codeView().dispatch({ selection: { anchor: 0, head: 6 } });
 
       press({ shiftKey: true });
 
-      expect(bodyEditor().value).toBe('a\nb');
+      expect(bodyText()).toBe('a\nb');
     });
 
     it('leaves Ctrl+Tab to the window', async () => {
@@ -431,40 +451,19 @@ describe('NoteEditorOverlayComponent', () => {
 
   describe('formatting with Prettier', () => {
     let prettier: FakePrettier;
-    /** What the field held before each edit, for the fake `undo`. */
-    let history: string[];
-    let commands: string[];
 
-    /** jsdom has no editing commands: these do what the WebView's do, undo included. */
     beforeEach(() => {
       prettier = TestBed.inject(PRETTIER_ADAPTER) as FakePrettier;
-      history = [];
-      commands = [];
-      Object.defineProperty(document, 'execCommand', {
-        configurable: true,
-        value: (command: string, _ui: boolean, text: string) => {
-          commands.push(command);
-          const field = bodyEditor();
-          if (command === 'undo') {
-            field.value = history.pop() ?? field.value;
-          } else {
-            history.push(field.value);
-            field.setRangeText(
-              command === 'delete' ? '' : text,
-              field.selectionStart,
-              field.selectionEnd,
-              'end',
-            );
-          }
-          field.dispatchEvent(new InputEvent('input'));
-          return true;
-        },
-      });
     });
 
-    afterEach(() => {
-      Reflect.deleteProperty(document, 'execCommand');
-    });
+    /** Typing as CodeMirror's input would, from inside a step that does not wait. */
+    function typeNow(value: string): void {
+      const view = codeView();
+      view.dispatch({
+        changes: { from: 0, to: view.state.doc.length, insert: value },
+        userEvent: 'input.type',
+      });
+    }
 
     async function openCode(content: string, language: Note['language'] = 'ts'): Promise<void> {
       fixture.componentRef.setInput('note', createNote({ content, language }));
@@ -503,7 +502,7 @@ describe('NoteEditorOverlayComponent', () => {
     it('sends the draft, the caret and the indentation the Tab key uses', async () => {
       TestBed.inject(SettingsStore).codeIndent.write('tab');
       await openCode('f(a,b)');
-      bodyEditor().setSelectionRange(2, 2);
+      codeView().dispatch({ selection: { anchor: 2 } });
 
       await format();
 
@@ -517,7 +516,7 @@ describe('NoteEditorOverlayComponent', () => {
       ]);
     });
 
-    it('writes the result through the field, marks the lines and says how many', async () => {
+    it('writes the result through the editor, marks the lines and says how many', async () => {
       prettier.answer = {
         kind: 'formatted',
         text: 'f(\n  a,\n  b,\n);',
@@ -528,10 +527,9 @@ describe('NoteEditorOverlayComponent', () => {
 
       await format();
 
-      expect(bodyEditor().value).toBe('f(\n  a,\n  b,\n);');
-      expect(commands).toEqual(['insertText']);
-      expect(bodyEditor().selectionStart).toBe(3);
-      expect([...codeViewer().markedLines()]).toEqual([0, 1, 2, 3]);
+      expect(bodyText()).toBe('f(\n  a,\n  b,\n);');
+      expect(bodySelection()).toEqual([3, 3]);
+      expect([...codeEditor().markedLines()]).toEqual([0, 1, 2, 3]);
       expect(notice()).toBe('✓ Formaté avec Prettier · 4 lignes modifiées Annuler Ctrl Z');
     });
 
@@ -540,22 +538,21 @@ describe('NoteEditorOverlayComponent', () => {
       await openCode('a');
       await format();
 
-      await type(bodyEditor(), 'bc');
+      await typeBody('bc');
 
-      expect(codeViewer().markedLines().size).toBe(0);
+      expect(codeEditor().markedLines().size).toBe(0);
       expect(notice()).toBeNull();
     });
 
-    it("undoes through the field's own undo", async () => {
-      prettier.answer = { kind: 'formatted', text: 'b', cursor: 1, changedLines: [0] };
-      await openCode('a');
+    it("undoes through the editor's own history, in one step", async () => {
+      prettier.answer = { kind: 'formatted', text: 'f(\n  a,\n);', cursor: 1, changedLines: [0, 1, 2] };
+      await openCode('f(a)');
       await format();
 
       fixture.nativeElement.querySelector('[data-testid="editor-format-undo"]').click();
       await fixture.whenStable();
 
-      expect(commands).toEqual(['insertText', 'undo']);
-      expect(bodyEditor().value).toBe('a');
+      expect(bodyText()).toBe('f(a)');
       expect(notice()).toBeNull();
     });
 
@@ -579,10 +576,12 @@ describe('NoteEditorOverlayComponent', () => {
     it('answers by position when Alt prints another character', async () => {
       await openCode('a');
 
-      bodyEditor().dispatchEvent(
+      codeView().contentDOM.dispatchEvent(
         new KeyboardEvent('keydown', { key: 'Ï', code: 'KeyF', shiftKey: true, altKey: true, bubbles: true }),
       );
-      bodyEditor().dispatchEvent(new KeyboardEvent('keydown', { key: 'F', shiftKey: true, bubbles: true }));
+      codeView().contentDOM.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'F', shiftKey: true, bubbles: true }),
+      );
       await fixture.whenStable();
 
       expect(prettier.requests).toHaveLength(1);
@@ -594,8 +593,8 @@ describe('NoteEditorOverlayComponent', () => {
 
       await format();
 
-      expect(bodyEditor().value).toBe('const a = {\n  b: 1,,\n}');
-      expect(bodyEditor().selectionStart).toBe(19);
+      expect(bodyText()).toBe('const a = {\n  b: 1,,\n}');
+      expect(bodySelection()).toEqual([19, 19]);
       expect(notice()).toBe("Erreur de syntaxe ligne 2, colonne 8 : le texte n'a pas changé.");
     });
 
@@ -609,21 +608,20 @@ describe('NoteEditorOverlayComponent', () => {
       prettier.answer = { kind: 'unchanged' };
       await format();
       expect(notice()).toBe('Déjà formaté : rien à changer.');
-      expect(commands).toEqual([]);
+      expect(bodyText()).toBe('{{a}}');
     });
 
     it('drops an answer about a text typed over while Prettier ran', async () => {
       prettier.answer = { kind: 'formatted', text: 'formatted', cursor: 0, changedLines: [0] };
       await openCode('a');
       vi.spyOn(prettier, 'run').mockImplementation(async () => {
-        bodyEditor().value = 'typed meanwhile';
+        typeNow('typed meanwhile');
         return prettier.answer;
       });
 
       await format();
 
-      expect(bodyEditor().value).toBe('typed meanwhile');
-      expect(commands).toEqual([]);
+      expect(bodyText()).toBe('typed meanwhile');
     });
 
     it('puts the notice away after a few seconds, and leaves the marks', async () => {
@@ -636,7 +634,7 @@ describe('NoteEditorOverlayComponent', () => {
       fixture.detectChanges();
 
       expect(notice()).toBeNull();
-      expect(codeViewer().markedLines().size).toBe(1);
+      expect(codeEditor().markedLines().size).toBe(1);
     });
 
     it('names the line endings in the footer', async () => {
@@ -662,20 +660,19 @@ describe('NoteEditorOverlayComponent', () => {
         prettier.answer = { kind: 'formatted', text: 'f(a, b);', cursor: 0, changedLines: [0] };
         const committed = patched('content');
         await openCode('f(a)');
-        await type(bodyEditor(), 'f(a,b)');
+        await typeBody('f(a,b)');
 
-        bodyEditor().dispatchEvent(new Event('blur'));
-        await fixture.whenStable();
+        await leaveBody();
 
         expect(committed).toEqual(['f(a, b);']);
-        expect(bodyEditor().value).toBe('f(a, b);');
+        expect(bodyText()).toBe('f(a, b);');
       });
 
       it('holds the close until Prettier answers, then commits what it wrote', async () => {
         prettier.answer = { kind: 'formatted', text: 'f(a, b);', cursor: 0, changedLines: [0] };
         const committed = patched('content');
         await openCode('f(a)');
-        await type(bodyEditor(), 'f(a,b)');
+        await typeBody('f(a,b)');
 
         toolbarButton('.close-btn').click();
         toolbarButton('.close-btn').click();
@@ -689,10 +686,9 @@ describe('NoteEditorOverlayComponent', () => {
         prettier.answer = { kind: 'syntax', line: 1, column: 1 };
         const committed = patched('content');
         await openCode('f(a)');
-        await type(bodyEditor(), 'f(a,,b)');
+        await typeBody('f(a,,b)');
 
-        bodyEditor().dispatchEvent(new Event('blur'));
-        await fixture.whenStable();
+        await leaveBody();
 
         expect(committed).toEqual(['f(a,,b)']);
       });
@@ -701,18 +697,16 @@ describe('NoteEditorOverlayComponent', () => {
         prettier.answer = { kind: 'formatted', text: 'f(a, b);', cursor: 0, changedLines: [0] };
         const committed = patched('content');
         await openCode('f(a)');
-        await type(bodyEditor(), 'f(a,b)');
+        await typeBody('f(a,b)');
         vi.spyOn(prettier, 'run').mockImplementation(async () => {
-          bodyEditor().value = 'f(a,b,c)';
-          bodyEditor().dispatchEvent(new Event('input'));
+          typeNow('f(a,b,c)');
           return prettier.answer;
         });
 
-        bodyEditor().dispatchEvent(new Event('blur'));
-        await fixture.whenStable();
+        await leaveBody();
 
         expect(committed).toEqual([]);
-        expect(bodyEditor().value).toBe('f(a,b,c)');
+        expect(bodyText()).toBe('f(a,b,c)');
       });
 
       it('leaves a body nobody changed alone, and closes at once', async () => {
@@ -749,22 +743,28 @@ describe('NoteEditorOverlayComponent', () => {
     }
 
     describe('side by side', () => {
-      // Only the editor's own frame: the visualiser and the band observe themselves too.
+      // Only the editor's own frame: the visualiser, the band and CodeMirror observe themselves too,
+      // and one of theirs letting go must not let go of the frame.
       let frame: ((width: number) => void) | null = null;
+      let watching: unknown = null;
       const resize = (width: number) => frame?.(width);
 
       class FakeResizeObserver {
         constructor(private readonly callback: ResizeObserverCallback) {}
         observe(target: Element): void {
           if (!target.classList.contains('overlay-body-frame')) return;
+          watching = this.callback;
           frame = (width) =>
             this.callback(
               [{ contentRect: { width } } as ResizeObserverEntry],
               this as unknown as ResizeObserver,
             );
         }
+        unobserve(): void {
+          // Nothing: only `disconnect` lets the frame go.
+        }
         disconnect(): void {
-          frame = null;
+          if (watching === this.callback) frame = null;
         }
       }
 
@@ -793,7 +793,7 @@ describe('NoteEditorOverlayComponent', () => {
 
         expect(find('editor-side-by-side')!.getAttribute('aria-pressed')).toBe('true');
         expect(tab('graph').getAttribute('aria-selected')).toBe('true');
-        expect(find('side-by-side-code')!.contains(bodyEditor())).toBe(true);
+        expect(find('side-by-side-code')!.contains(codeField())).toBe(true);
         expect(find('side-by-side-handle')!.getAttribute('aria-orientation')).toBe('vertical');
         expect(fixture.nativeElement.querySelector('app-json-view')).not.toBeNull();
       });
@@ -832,22 +832,20 @@ describe('NoteEditorOverlayComponent', () => {
         await fixture.whenStable();
 
         // `"data":{"lines":[{"a":1}]}`'s value, 19 to 38: on one line, the only one lit.
-        expect([bodyEditor().selectionStart, bodyEditor().selectionEnd]).toEqual([19, 38]);
-        expect(fixture.nativeElement.querySelectorAll('.code-line.focused')).toHaveLength(1);
-        expect(document.activeElement).not.toBe(bodyEditor());
+        expect(bodySelection()).toEqual([19, 38]);
+        expect(fixture.nativeElement.querySelectorAll('.cm-focused-line')).toHaveLength(1);
+        expect(codeView().hasFocus).toBe(false);
       });
 
       it('selects in the visualiser what the caret is in, without moving the caret', async () => {
         await sideBySide();
-        bodyEditor().setSelectionRange(34, 34);
-        bodyEditor().dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight' }));
+        moveCaret(34);
         await fixture.whenStable();
 
         expect(explorer().selectedPath()).toBe('$.data.lines[0].a');
-        expect([bodyEditor().selectionStart, bodyEditor().selectionEnd]).toEqual([34, 34]);
+        expect(bodySelection()).toEqual([34, 34]);
 
-        bodyEditor().setSelectionRange(20, 20);
-        bodyEditor().click();
+        moveCaret(20);
         await fixture.whenStable();
         expect(explorer().selectedPath()).toBe('$.data');
       });
@@ -858,7 +856,7 @@ describe('NoteEditorOverlayComponent', () => {
         explorer().select('$.data');
         await fixture.whenStable();
 
-        expect(fixture.nativeElement.querySelectorAll('.code-line.focused')).toHaveLength(0);
+        expect(fixture.nativeElement.querySelectorAll('.cm-focused-line')).toHaveLength(0);
       });
     });
 
@@ -894,7 +892,7 @@ describe('NoteEditorOverlayComponent', () => {
       await openJson();
       vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
 
-      await type(bodyEditor(), '[1]');
+      await typeBody('[1]');
       vi.advanceTimersByTime(250);
       vi.useFakeTimers({ toFake: ['Date'] });
       await fixture.whenStable();
@@ -907,7 +905,7 @@ describe('NoteEditorOverlayComponent', () => {
 
       await show('graph');
       expect(fixture.nativeElement.querySelector('[data-testid="json-graph"]')).not.toBeNull();
-      expect(bodyEditor()).toBeNull();
+      expect(codeField()).toBeNull();
       expect(
         fixture.nativeElement.querySelector('[data-testid="editor-format"]').getAttribute('aria-disabled'),
       ).toBe('true');
@@ -926,8 +924,8 @@ describe('NoteEditorOverlayComponent', () => {
       await fixture.whenStable();
 
       expect(tab('code').getAttribute('aria-selected')).toBe('true');
-      expect([bodyEditor().selectionStart, bodyEditor().selectionEnd]).toEqual([19, 38]);
-      expect(document.activeElement).toBe(bodyEditor());
+      expect(bodySelection()).toEqual([19, 38]);
+      expect(codeView().hasFocus).toBe(true);
     });
 
     it('copies through the clipboard', async () => {
@@ -981,7 +979,7 @@ describe('NoteEditorOverlayComponent', () => {
       await fixture.whenStable();
 
       expect(tab('code')).toBeNull();
-      expect(bodyEditor()).not.toBeNull();
+      expect(codeField()).not.toBeNull();
     });
   });
 
@@ -1002,7 +1000,7 @@ describe('NoteEditorOverlayComponent', () => {
     it('is written in the rich editor, and no code field is drawn', async () => {
       await openText('**bold**');
 
-      expect(bodyEditor()).toBeNull();
+      expect(codeField()).toBeNull();
       expect(rich().content()).toBe('**bold**');
     });
 
@@ -1098,9 +1096,10 @@ describe('NoteEditorOverlayComponent', () => {
   });
 
   describe('pasting an image', () => {
-    function pasteEvent(types: string[], files: File[] = []): Event {
+    function pasteEvent(types: string[], files: File[] = [], plain = ''): Event {
       const event = new Event('paste', { bubbles: true, cancelable: true });
-      Object.defineProperty(event, 'clipboardData', { value: { types, files } });
+      const getData = (type: string): string => (type === 'text/plain' ? plain : '');
+      Object.defineProperty(event, 'clipboardData', { value: { types, files, getData } });
       return event;
     }
 
@@ -1113,11 +1112,11 @@ describe('NoteEditorOverlayComponent', () => {
       return pasted;
     }
 
-    it('turns an image into an attachment request, since a textarea cannot hold one', async () => {
+    it('turns an image into an attachment request, since the code cannot hold one', async () => {
       const pasted = await openNote();
       const event = pasteEvent(['Files'], [new File([], 'shot.png', { type: 'image/png' })]);
 
-      bodyEditor().dispatchEvent(event);
+      codeView().contentDOM.dispatchEvent(event);
       await fixture.whenStable();
 
       expect(pasted).toHaveBeenCalledOnce();
@@ -1127,27 +1126,26 @@ describe('NoteEditorOverlayComponent', () => {
     it('recognises an image announced by type alone', async () => {
       const pasted = await openNote();
 
-      bodyEditor().dispatchEvent(pasteEvent(['image/png']));
+      codeView().contentDOM.dispatchEvent(pasteEvent(['image/png']));
       await fixture.whenStable();
 
       expect(pasted).toHaveBeenCalledOnce();
     });
 
-    it('leaves a paste carrying text to the field, which handles it natively', async () => {
+    it('leaves a paste carrying text to the editor, which writes the text', async () => {
       const pasted = await openNote();
-      const event = pasteEvent(['text/plain', 'image/png']);
 
-      bodyEditor().dispatchEvent(event);
+      codeView().contentDOM.dispatchEvent(pasteEvent(['text/plain', 'image/png'], [], 'echo hi'));
       await fixture.whenStable();
 
       expect(pasted).not.toHaveBeenCalled();
-      expect(event.defaultPrevented).toBe(false);
+      expect(bodyText()).toBe('echo hi');
     });
 
     it('ignores a paste that carries neither text nor an image', async () => {
       const pasted = await openNote();
 
-      bodyEditor().dispatchEvent(pasteEvent(['application/pdf']));
+      codeView().contentDOM.dispatchEvent(pasteEvent(['application/pdf']));
       await fixture.whenStable();
 
       expect(pasted).not.toHaveBeenCalled();
@@ -1216,7 +1214,7 @@ describe('NoteEditorOverlayComponent', () => {
       await fixture.whenStable();
       const contents = patched('content');
 
-      await type(bodyEditor(), 'after');
+      await typeBody('after');
       fixture.debugElement.query(By.css('.close-btn')).triggerEventHandler('click');
 
       expect(contents).toEqual(['after']);
@@ -1697,7 +1695,7 @@ describe('NoteEditorOverlayComponent', () => {
         .mockResolvedValue(undefined);
 
       await type(fieldInputs()[1], '6543');
-      await type(bodyEditor(), 'psql -h {{host}} -p {{port}} -d app');
+      await typeBody('psql -h {{host}} -p {{port}} -d app');
       const copyButton = [...fixture.nativeElement.querySelectorAll('.toolbar-btn')].find((button) =>
         (button as HTMLElement).textContent?.includes('Copier rempli'),
       ) as HTMLButtonElement;
@@ -1734,7 +1732,7 @@ describe('NoteEditorOverlayComponent', () => {
       await type(fieldInputs()[1], '5432');
 
       panelAction('Aperçu')?.click();
-      await vi.waitFor(() => expect(bodyEditor()).toBeNull());
+      await vi.waitFor(() => expect(codeField()).toBeNull());
 
       expect(codeViewer().content()).toBe('psql -h db.internal -p 5432');
     });
@@ -1749,18 +1747,18 @@ describe('NoteEditorOverlayComponent', () => {
       panelAction('Aperçu')?.click();
       await fixture.whenStable();
 
-      expect(bodyEditor()).not.toBeNull();
+      expect(codeField()).not.toBeNull();
     });
 
     it('closes the preview when the panel is folded', async () => {
       await openTemplated();
       panelAction('Aperçu')?.click();
-      await vi.waitFor(() => expect(bodyEditor()).toBeNull());
+      await vi.waitFor(() => expect(codeField()).toBeNull());
 
       fixture.nativeElement.querySelector('.panel-toggle').click();
       await fixture.whenStable();
 
-      expect(bodyEditor()).not.toBeNull();
+      expect(codeField()).not.toBeNull();
     });
   });
 
@@ -1799,7 +1797,7 @@ describe('NoteEditorOverlayComponent', () => {
       fixture.componentRef.setInput('note', createNote({ id: 'b', content: 'second' }));
       await fixture.whenStable();
 
-      expect(fixture.nativeElement.querySelector('[data-testid="editor-body"]').value).toBe('second');
+      expect(bodyText()).toBe('second');
     });
   });
 });

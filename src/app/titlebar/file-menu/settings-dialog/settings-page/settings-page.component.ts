@@ -21,7 +21,7 @@ import {
 
 /** The switches, which differ only by the key they write. */
 type BooleanSetting =
-  'startWithSystem' | 'minimizeToTray' | 'closeToTray' | 'showPinnedFirst' | 'copyConfirmation';
+  'codeWrap' | 'startWithSystem' | 'minimizeToTray' | 'closeToTray' | 'showPinnedFirst' | 'copyConfirmation';
 
 function checkedValue(event: Event): boolean {
   return (event.target as HTMLInputElement).checked;

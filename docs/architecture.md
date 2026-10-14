@@ -449,8 +449,9 @@ therefore goes **below** that line, never above it.
 
 ### Syntax highlighting
 
-`CodeViewerComponent` renders read-only coloured code — a card excerpt, or the layer under the
-editor's textarea. It delegates to `shared/code-viewer/highlighter.ts`, the **only** module
+`CodeViewerComponent` renders read-only coloured code — a card excerpt, or the filled preview;
+the editor's code field is CodeMirror, coloured in the same palette (see "Editing a note"). It
+delegates to `shared/code-viewer/highlighter.ts`, the **only** module
 that imports highlight.js.
 
 - **Grammars are imported one by one** from `highlight.js/lib/`, never the default bundle,
@@ -561,17 +562,17 @@ Prettier is JavaScript. `core/services/format/` holds all of it.
   field or not — Angular's `{{ user.name }}` is shielded too.
 - **The snippet keeps its own shape:** `endOfLine: 'auto'` (Prettier's `lf` would rewrite a
   CRLF snippet), and no final newline added where there was none.
-- **Through the field's own editing**, like indentation: `rewrite` turns the answer into one
-  edit of only what differs, applied by `execCommand('insertText')`, so Ctrl+Z undoes a format
-  like a keystroke and the notice's "Annuler" is `execCommand('undo')`. An answer about a text
-  typed over meanwhile is dropped.
+- **Through the editor's own history**: `rewrite` turns the answer into one edit of only what
+  differs, one CodeMirror transaction kept apart from the typing either side (`isolateHistory`),
+  so Ctrl+Z undoes a format in one step and the notice's "Annuler" is the same undo. An answer
+  about a text typed over meanwhile is dropped.
 - **The style is the library's** (`PrettierSettingsStore`, under `devnotes.notes.prettier`),
   set from the button's chevron and applied as it is chosen, like the arrangement: every
   snippet of a library formats alike. Its indentation is by default "Éditeur", the Tab key's
   own level (`indentUnit`), so the two agree until the panel forces 2, 4 or Tab.
 - **Formatting on save** (off by default) runs on the body's blur and on close, through the
-  same service — but not the field's undo: the field has lost the focus its editing commands
-  need. Only a body that changed is formatted, a text Prettier refuses is saved as it is, and a
+  same service; its text comes back into the editor as a change from outside, still one step
+  of its history. Only a body that changed is formatted, a text Prettier refuses is saved as it is, and a
   close waits for the answer only then: with the option off, nothing waits.
 - The button is `aria-disabled` rather than `disabled` on a language Prettier does not format:
   a disabled button shows no tooltip, and this one says why.
@@ -596,10 +597,10 @@ explorer takes the format as an input for its messages, and nothing else in it i
   layout, the code hidden or not and the share are `ExplorerLayoutStore`'s: the session's,
   written nowhere. Under `SIDE_BY_SIDE_FROM` the body is not squeezed — the toggle is disabled
   and says so — measured by a `ResizeObserver` on the body's frame once it exists. The two
-  select in step through `CodeSelection` (`code-selection.ts`, the textarea today): a node
-  chosen selects its span in the code without taking the focus and lights its lines
-  (`focusedLines`); the caret, on a key or a click, selects `entryAt` its offset — never on
-  `select`, which the code's own selection fires too. ⚠️ The explorer is projected into
+  select in step through `CodeSelection` (`code-selection.ts`, which the code editor
+  implements): a node chosen selects its span in the code without taking the focus and lights
+  its lines (`focusedLines`); the caret, moved by a key or a click, selects `entryAt` its
+  offset — never a selection the visualiser set, which carries no user event. ⚠️ The explorer is projected into
   `app-side-by-side`, whose CSS cannot reach it: its pane is a one-cell grid that stretches it.
   Narrower than 600 px, the explorer drops its selection panel (a container query).
 - **What is open is read back from each answer.** The front keeps no set of its own: it sends
@@ -614,7 +615,7 @@ explorer takes the format as an input for its messages, and nothing else in it i
   into a child and back up, Enter opens or closes, and Escape goes up — at the root it lets
   go, and the editor closes.
 - "Voir dans le code" goes back to Code with the value **selected** — its span is in UTF-16
-  units, the textarea's own — and the body scrolled to it.
+  units, CodeMirror's own positions — and the body scrolled to it.
 
 ### The tools: one contract, and the rest written once
 
@@ -1647,8 +1648,7 @@ it is asking: a copy button and a ⋯ beside that question are noise, and `:focu
 keeps the keyboard's way in. ⚠️ `.zone-body` scrolls, so it clips — its bottom padding is
 what keeps the last row of cards from losing their pill on the board.
 
-It is the same trick the editor uses for its body, where the code viewer sits under the
-textarea; the card had it already, for its items alone.
+The card had the trick already, for its items alone.
 
 Ticking from the card matters more than it looks: crossing tasks off is the gesture a todo
 list exists for, and routing it through the editor would put a modal between the user and a
@@ -3013,39 +3013,43 @@ Those drafts are `linkedSignal`s keyed on the note **id**, not on the note objec
 refreshes `updatedAt` and produces a new object, which would otherwise wipe the in-flight
 edit.
 
-The body is **two stacked layers**, not a preview/edit toggle: `CodeViewerComponent` colours
-the draft underneath, and a textarea sits on top with `color: transparent` and a visible
-`caret-color`. The note stays highlighted while it is being typed, and there is no mode to
-enter. Consequences worth knowing:
+The code field is **CodeMirror 6** (`note-editor-overlay/code-editor/`), a `@defer` chunk imported on
+a line of its own, like TipTap. It draws only the lines on screen and parses as it goes, so a
+2 MB snippet opens and types like a short one: the textarea it replaced, over a highlighted
+viewer, took six seconds to open one and a second to echo a key (#604). Consequences worth
+knowing:
 
-- The textarea's metrics must match the viewer's **exactly** or the caret drifts off the
-  coloured text: same font, size and `line-height`, same `white-space: pre-wrap` /
-  `word-break: break-word`, and a `padding-left` that adds the viewer's line-number gutter to
-  its 24px padding — hence `padding: 20px 24px 20px 56px`. The gutter is **32px, not 48px**:
-  `.line-no` is `width: 32px; padding-right: 16px`, and the global `* { box-sizing:
-border-box }` folds that padding into the width. Getting this wrong shifts typing by two
-  characters while looking perfectly aligned, because the caret is drawn by the textarea at
-  its own — wrong — position.
-- The **scroller is the wrapping `.overlay-body`**, never the textarea. The viewer, in normal
-  flow, gives `.editor-stack` its height; the textarea is `position: absolute; inset: 0` over
-  it and so never overflows internally. Both layers therefore scroll together with no
-  `scrollTop` synchronisation to maintain. `.editor-stack` is `min-height: 100%` so a click in
-  the empty space below a short note still reaches the field.
-- The viewer is `aria-hidden` and `pointer-events: none`: the textarea carries the accessible
-  text and every interaction, otherwise a screen reader reads the body twice.
-- Escape leaves the body before closing the overlay (`onDismiss` blurs the textarea when it
-  holds focus), so a keystroke aimed at the field does not dismiss the whole modal. Escape
-  itself comes from the dialog shell, which only gives it to the modal in front — the editor
-  no longer has to know whether the lightbox is open.
-- **Tab stays in the code**, and Escape is how the keyboard leaves. At a caret it inserts one
-  level (spaces up to the next stop, or a tab); a selection gains a level on every line it
-  touches, and Shift+Tab takes one back (`indentation.ts`, pure). What a level is comes from
+- **The draft stays the overlay's.** The editor hands every edit out (`changed`) and is handed
+  the draft back; a text changed from outside — a revision restored, a format on save — is
+  applied as one step of its history, and not handed out again. A new session is a new
+  `EditorState`: Ctrl+Z never reaches into the note before.
+- ⚠️ **It scrolls itself**, which is what lets it draw only the visible lines: it needs a
+  height, never its content's. `.overlay-body.coding` stops scrolling, and side by side the
+  code pane is a one-cell grid that stretches it.
+- ⚠️ **CodeMirror joins lines with `\n`**: a CRLF draft reads back as LF, and is not an edit
+  until the user makes one — as the textarea's value already did.
+- **Tab stays in the code.** At a caret it inserts one level (spaces up to the next stop, or a
+  tab); a selection gains a level on every line it touches, and Shift+Tab takes one back
+  (`indentation.ts`, pure, bound in `code-editor/editing.ts`). What a level is comes from
   Preferences → Editor (`codeIndent`), by the note's language unless the user forced one: a tab
-  for Go, four spaces for Python, Rust, Java, C#, PHP and C, two elsewhere. The edit goes
-  through `document.execCommand('insertText')`, deprecated but the only way into the
-  textarea's own undo: `setRangeText` would make Ctrl+Z skip it. The handler
-  `preventDefault`s, which is what `FocusTrapDirective` reads to leave the key alone. Both
-  layers carry `tab-size: 4`, since a tab drawn at another width drifts the caret.
+  for Go, four spaces for Python, Rust, Java, C#, PHP and C, two elsewhere.
+- **Escape leaves the code before closing the overlay** (`onDismiss` blurs the editor when it
+  holds the focus), so a keystroke aimed at the field does not dismiss the modal; it is the
+  keyboard's way out of a field that keeps Tab. An Escape CodeMirror used — closing its search
+  panel, folding a selection to a caret — stops at the editor. Escape itself comes from the
+  dialog shell, which only gives it to the modal in front.
+- **Long lines scroll sideways**; Preferences → Editor wraps them (`codeWrap`).
+- **The colours are the cards'**: `code-editor/theme.ts` maps Lezer's tags onto the variables
+  `_code-theme.scss` gives highlight.js. Each language's grammar is a chunk of its own
+  (`code-editor/languages.ts`), loaded the first time a snippet in it opens: the official
+  Lezer packages, `@codemirror/legacy-modes` for TOML, the shells, C#, Kotlin, Ruby, Swift and
+  Dart, and community packages for GraphQL (`cm6-graphql`, its grammar alone: its completion
+  and lint want a schema) and Elixir (`codemirror-lang-elixir`).
+- The search panel (Ctrl+F) speaks the application's language: CodeMirror's words are
+  `EditorState.phrases`, read from `editor.code` in the translations.
+- The specs run the real editor on jsdom, which has no rectangles for text ranges
+  (`src/testing/text-ranges.setup.ts`); the scenarios type through `execCommand('insertText')`
+  into `.cm-content`, which CodeMirror reads from the DOM as it reads a keyboard.
 
 Deletion is a two-step confirm in the toolbar rather than a native `confirm()`, which would
 freeze the whole WebView. The fullscreen toggle expands the panel to fill the backdrop and
@@ -3405,7 +3409,7 @@ The pasted image is the one worth explaining: the editor's `paste` handler reads
 **type** of what was pasted and, for an image, calls `attach_clipboard_image`. The bytes never
 cross the bridge — the native side reads the system clipboard, which hands it raw RGBA, and
 encodes a PNG (`model::encode_png`). Sending them up to send them back down would cost two
-conversions and several megabytes of JSON, and the body is a `<textarea>` that could not
+conversions and several megabytes of JSON, and the code field holds text, which could not
 display the image anyway.
 
 The strip's inline preview is capped at 220 px so it cannot push the editor off screen, which

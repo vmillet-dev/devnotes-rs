@@ -51,6 +51,8 @@ export interface AppSettings {
   readonly theme: ThemeChoice;
   readonly density: Density;
   readonly codeIndent: IndentChoice;
+  /** Long lines scroll sideways unless asked to wrap. */
+  readonly codeWrap: boolean;
   readonly defaultNoteKind: NoteKind;
   readonly startWithSystem: boolean;
   readonly minimizeToTray: boolean;
@@ -105,6 +107,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   theme: 'system',
   density: 'comfortable',
   codeIndent: 'language',
+  codeWrap: false,
   defaultNoteKind: 'snippet',
   startWithSystem: false,
   minimizeToTray: false,

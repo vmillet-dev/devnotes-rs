@@ -237,6 +237,27 @@
     "contentLabel": "Note content",
     "emptyBody": "Start writing…",
     "emptyRich": "Write, or paste a snippet: code keeps its language.",
+    "code": {
+      "find": "Find",
+      "replace": "Replace",
+      "next": "next",
+      "previous": "previous",
+      "all": "all",
+      "matchCase": "match case",
+      "regexp": "regexp",
+      "byWord": "by word",
+      "replaceOne": "replace",
+      "replaceAll": "replace all",
+      "close": "close",
+      "currentMatch": "current match",
+      "onLine": "on line",
+      "replacedMatches": "replaced $ matches",
+      "replacedOnLine": "replaced match on line $",
+      "goToLine": "Go to line",
+      "go": "go",
+      "controlCharacter": "Control character",
+      "selectionDeleted": "Selection deleted"
+    },
     "rich": {
       "toolbar": "Formatting",
       "heading1": "Heading 1 (Ctrl+Alt+1)",
@@ -709,11 +730,12 @@
       "align": "Align the loose cards (board)"
     },
     "editor": {
-      "close": "Close the editor, saving",
+      "close": "Leave the code, then close the editor, saving",
       "newItem": "Add an item below this one",
       "removeItem": "Remove an empty item",
       "moveItem": "Move the item within the list",
-      "format": "Format the snippet with Prettier"
+      "format": "Format the snippet with Prettier",
+      "find": "Find and replace in the code"
     },
     "palette": {
       "navigate": "Walk the results",
@@ -761,7 +783,8 @@
     "editor": {
       "title": "Editor",
       "defaultKind": "Default note type",
-      "indent": "Indent with Tab"
+      "indent": "Indent with Tab",
+      "wrap": "Wrap long lines of code"
     },
     "indent": {
       "language": "By the note's language",

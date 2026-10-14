@@ -8,7 +8,7 @@ import { bridge, draft } from '../support/bridge.js';
 
 /**
  * Prettier runs in a worker the assembled application loads under its CSP, and writes through
- * the field's own editing: the two things no unit spec reaches.
+ * the editor's own history: the two things no unit spec reaches.
  */
 describe('Formatting a snippet with Prettier', () => {
   const TITLE = 'Invoices client';
@@ -63,10 +63,10 @@ describe('Formatting a snippet with Prettier', () => {
     expect(await bodyBecomes(TIDY, 'the formatted text in the field')).toBe(TIDY);
     await notice().waitForExist({ timeout: 5_000 });
     expect(await notice().getAttribute('data-kind')).toBe('formatted');
-    expect((await $$('.editor-stack .code-line.marked').getElements()).length).toBeGreaterThan(0);
+    expect((await $$(`${testid('editor-body')} .cm-marked`).getElements()).length).toBeGreaterThan(0);
   });
 
-  /** The field's own undo: a format is one step of it, like a keystroke. */
+  /** The editor's own undo: a format is one step of it. */
   it('takes the format back from its notice', async () => {
     await $(testid('editor-format-undo')).click();
 

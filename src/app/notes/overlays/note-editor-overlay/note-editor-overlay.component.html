@@ -283,7 +283,12 @@
     }
 
     <div #bodyFrame class="overlay-body-frame">
-      <div class="overlay-body" [class.previewing]="showingPreview()" [class.exploring]="jsonMode() !== null">
+      <div
+        class="overlay-body"
+        [class.previewing]="showingPreview()"
+        [class.exploring]="jsonMode() !== null"
+        [class.coding]="showsCode()"
+      >
         @if (jsonMode(); as mode) {
           @if (sideBySideShown()) {
             <app-side-by-side [share]="layout.codeShare()" (shareChanged)="layout.setCodeShare($event)">
@@ -334,30 +339,27 @@
 
       <!-- Stamped alone, or side by side: one field, one visualiser, whichever the layout. -->
       <ng-template #codeField>
-        <div class="editor-stack">
-          <app-code-viewer
-            aria-hidden="true"
+        <!-- Deferred: CodeMirror is loaded the first time a snippet opens, not at startup. -->
+        @defer (on immediate) {
+          <app-code-editor
+            #codeEditor
+            [session]="session()"
             [content]="draftContent()"
             [language]="note.language"
+            [indentUnit]="codeIndentUnit()"
+            [wrap]="codeWrap()"
             [markedLines]="markedLines()"
             [focusedLines]="focusedLines()"
-          />
-          <textarea
-            #bodyEditor
-            class="overlay-body-editor"
-            data-testid="editor-body"
-            spellcheck="false"
-            [attr.aria-label]="'editor.contentLabel' | transloco"
+            [label]="'editor.contentLabel' | transloco"
             [placeholder]="'editor.emptyBody' | transloco"
-            [value]="draftContent()"
-            (input)="onBodyInput(bodyEditor.value)"
-            (keydown)="onBodyKeydown($event, bodyEditor)"
-            (keyup)="onCaret(bodyEditor)"
-            (click)="onCaret(bodyEditor)"
-            (paste)="onPaste($event)"
-            (blur)="commitBodyOnBlur()"
-          ></textarea>
-        </div>
+            (changed)="onBodyInput($event)"
+            (caret)="onCaret($event)"
+            (pasted)="onPaste($event)"
+            (blurred)="commitBodyOnBlur()"
+          />
+        } @placeholder {
+          <div class="rich-text-loading" aria-hidden="true"></div>
+        }
       </ng-template>
 
       <ng-template #explorerView let-mode>

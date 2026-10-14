@@ -237,6 +237,27 @@
     "contentLabel": "Contenu de la note",
     "emptyBody": "Commencer à écrire…",
     "emptyRich": "Écrivez, ou collez un snippet : le code garde son langage.",
+    "code": {
+      "find": "Rechercher",
+      "replace": "Remplacer",
+      "next": "suivant",
+      "previous": "précédent",
+      "all": "tout",
+      "matchCase": "respecter la casse",
+      "regexp": "expression régulière",
+      "byWord": "mot entier",
+      "replaceOne": "remplacer",
+      "replaceAll": "tout remplacer",
+      "close": "fermer",
+      "currentMatch": "résultat courant",
+      "onLine": "ligne",
+      "replacedMatches": "$ résultats remplacés",
+      "replacedOnLine": "résultat remplacé ligne $",
+      "goToLine": "Aller à la ligne",
+      "go": "aller",
+      "controlCharacter": "Caractère de contrôle",
+      "selectionDeleted": "Sélection supprimée"
+    },
     "rich": {
       "toolbar": "Mise en forme",
       "heading1": "Titre 1 (Ctrl+Alt+1)",
@@ -709,11 +730,12 @@
       "align": "Aligner les cartes libres (tableau)"
     },
     "editor": {
-      "close": "Fermer l'éditeur en enregistrant",
+      "close": "Quitter le code, puis fermer l'éditeur en enregistrant",
       "newItem": "Ajouter un item sous celui-ci",
       "removeItem": "Retirer un item vide",
       "moveItem": "Déplacer l'item dans la liste",
-      "format": "Formater le snippet avec Prettier"
+      "format": "Formater le snippet avec Prettier",
+      "find": "Chercher et remplacer dans le code"
     },
     "palette": {
       "navigate": "Parcourir les résultats",
@@ -761,7 +783,8 @@
     "editor": {
       "title": "Éditeur",
       "defaultKind": "Type de note par défaut",
-      "indent": "Indenter avec Tab"
+      "indent": "Indenter avec Tab",
+      "wrap": "Retour à la ligne dans le code"
     },
     "indent": {
       "language": "Selon le langage de la note",
