@@ -1,12 +1,12 @@
 <div class="window app api">
   <div class="app-side">
     <span class="h">Collections</span>
-    <span class="row">Facturation</span>
-    <span class="row sub http-on"><b class="m get">GET</b>Factures payées</span>
-    <span class="row sub"><b class="m post">POST</b>Créer une facture</span>
-    <span class="row">Temps réel</span>
-    <span class="row sub ws-on"><b class="m ws">WS</b>Flux d'événements</span>
-    <span class="foot">Environnements</span>
+    <span class="row">{{ text().billing }}</span>
+    <span class="row sub http-on"><b class="m get">GET</b>{{ text().paid }}</span>
+    <span class="row sub"><b class="m post">POST</b>{{ text().create }}</span>
+    <span class="row">{{ text().realtime }}</span>
+    <span class="row sub ws-on"><b class="m ws">WS</b>{{ text().stream }}</span>
+    <span class="foot">{{ text().environments }}</span>
   </div>
   <div class="api-main">
     <div class="api-http">
@@ -15,15 +15,17 @@
         ><span class="url"
           ><span class="fld">{{ field('base_url') }}</span
           >/v1/invoices</span
-        ><span class="send">Envoyer</span>
+        ><span class="send">{{ text().send }}</span>
       </div>
       <div class="env-row">
-        <span>Environnement</span
+        <span>{{ text().environment }}</span
         ><span class="env-chip" [class.staging]="staging()">{{ staging() ? 'Staging' : 'Local' }}</span>
         <span class="resolve">base_url = https://api.staging.internal</span>
       </div>
       <div class="req-tabs">
-        <span class="t-params">Paramètres 2</span><span>En-têtes 1</span><span>Corps</span
+        <span class="t-params">{{ text().params }}</span
+        ><span>{{ text().headers }}</span
+        ><span>{{ text().body }}</span
         ><span class="t-code">Code</span>
       </div>
       <div class="pane-params params">
@@ -38,9 +40,10 @@
         <pre class="gen">{{ generated() }}</pre>
       </div>
       <div class="resp">
-        <span class="spin">Envoi en cours</span>
+        <span class="spin">{{ text().sending }}</span>
         <div class="resp-head">
-          <span class="ok">200 OK</span><span>142 ms</span><span>3,1 Ko</span><span class="env">Staging</span>
+          <span class="ok">200 OK</span><span>142 ms</span><span>{{ text().size }}</span
+          ><span class="env">Staging</span>
         </div>
         <app-code class="body" [lines]="answer" [shown]="lines()" />
       </div>
@@ -48,7 +51,7 @@
     <div class="api-ws">
       <div class="req">
         <span class="method ws">WS</span><span class="url">wss://api.staging.internal/events</span
-        ><span class="send">Déconnecter</span>
+        ><span class="send">{{ text().disconnect }}</span>
       </div>
       <ul class="ws-log">
         @for (message of messages; track $index) {

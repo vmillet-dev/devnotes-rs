@@ -1,8 +1,46 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 
 import { field, part } from '../../core/browser';
+import { Lang } from '../../core/lang';
+import { Language } from '../../core/language';
 import { CodeView, Line } from '../code-view';
 import { ScenePlayer } from '../scene-player';
+
+const FR = {
+  billing: 'Facturation',
+  paid: 'Factures payées',
+  create: 'Créer une facture',
+  realtime: 'Temps réel',
+  stream: "Flux d'événements",
+  environments: 'Environnements',
+  send: 'Envoyer',
+  environment: 'Environnement',
+  params: 'Paramètres 2',
+  headers: 'En-têtes 1',
+  body: 'Corps',
+  sending: 'Envoi en cours',
+  size: '3,1 Ko',
+  disconnect: 'Déconnecter',
+};
+
+const EN: typeof FR = {
+  billing: 'Billing',
+  paid: 'Paid invoices',
+  create: 'Create an invoice',
+  realtime: 'Real time',
+  stream: 'Event stream',
+  environments: 'Environments',
+  send: 'Send',
+  environment: 'Environment',
+  params: 'Params 2',
+  headers: 'Headers 1',
+  body: 'Body',
+  sending: 'Sending',
+  size: '3.1 kB',
+  disconnect: 'Disconnect',
+};
+
+const TEXT: Readonly<Record<Lang, typeof FR>> = { fr: FR, en: EN };
 
 const ENDPOINT = 'https://api.staging.internal/v1/invoices';
 
@@ -63,6 +101,8 @@ export class ApiScene {
   protected readonly targets = TARGETS;
   protected readonly answer = ANSWER;
   protected readonly messages = MESSAGES;
+  private readonly lang = inject(Language).lang;
+  protected readonly text = computed(() => TEXT[this.lang()]);
 
   protected readonly staging = computed(() => this.step() > 0 || this.t() > 0.3);
   protected readonly resolving = computed(() => this.step() === 0 && this.t() > 0.45);

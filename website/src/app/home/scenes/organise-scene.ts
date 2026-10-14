@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 
 import { field, part, typed } from '../../core/browser';
+import { Language } from '../../core/language';
+import { BOARD_WORDS } from '../board-words';
 import { ScenePlayer } from '../scene-player';
 
 const SEARCH = 'pg_stat';
@@ -24,6 +26,8 @@ export class OrganiseScene {
   private readonly t = this.player.t;
   protected readonly field = field;
   protected readonly searched = SEARCH;
+  private readonly lang = inject(Language).lang;
+  protected readonly w = computed(() => BOARD_WORDS[this.lang()]);
 
   /** How much wider the database folder is than its neighbours. */
   protected readonly growth = computed(() => {

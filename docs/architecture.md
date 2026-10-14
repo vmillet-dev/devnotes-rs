@@ -6039,16 +6039,25 @@ Angular version. `npm run website:start` serves it on port 4300, `website:build`
   ESLint block refuses the app's aliases and paths, so the site never ships the app.
 - **Every page is prerendered** (`outputMode: "static"`, `app.routes.server.ts` →
   `RenderMode.Prerender`): one `index.html` per route, at the root of the output for `/`, and
-  hydrated in the browser. The routes are the home page, one per documentation page
-  (`docs/doc-index.ts`, kept apart from the text so the first download does not carry it) and
-  `404`. Anything that measures or animates runs in `afterNextRender` and asks
+  hydrated in the browser. The routes are the home page, the download page, one per
+  documentation page (`docs/doc-index.ts`, kept apart from the text so the first download does
+  not carry it), in each language (`core/pages.ts`), and `404`. Anything that measures or animates runs in `afterNextRender` and asks
   `core/browser.ts` first: neither the build's Node nor jsdom has `matchMedia` or
   `IntersectionObserver`.
+- **Two languages, French at `/` and English under `/en/`.** The language is the address's
+  (`core/language.ts`), read at `ResolveEnd` so a page's constructor already writes its title in
+  it; each component holds its words as a typed `FR` and an `EN: typeof FR`, so a missing
+  string fails the build. `Seo` sets `<html lang>` and the `hreflang` pair (`x-default` is
+  French); the globe in the header leads to the same page in the other language
+  (`translatedPath`). The documentation is two sets of pages under one index of ids.
 - **The download page links straight to the files of the version in `package.json`**
   (`core/release.ts`, named as `release.yml` writes them), so the site is rebuilt and published
-  after every release (`docs/releasing.md`, step 4). The post-build check asks GitHub for every
-  one of those links and stops on anything but a 200: a site built before its release is
-  published would offer files that do not exist yet.
+  after every release (`docs/releasing.md`, step 4). `website:build` first runs
+  `website/scripts/fetch-release.mjs`, which reads each file's size and SHA-256 from that
+  release (its assets and `SHA256SUMS.txt`) into `core/release-files.json`, shown beside the
+  links. The post-build check asks GitHub for every one of those links and stops on anything
+  but a 200: a site built before its release is published would offer files that do not exist
+  yet.
 - **The address is one build setting**, `SITE_URL` (`define` in `angular.json`,
   `https://devnotes.fr`; `--define` overrides it): the canonical links and the social tags are
   built from it. `website/scripts/finish-build.mjs` runs after the build, reads the address
@@ -6060,10 +6069,10 @@ Angular version. `npm run website:start` serves it on port 4300, `website:build`
   feature (`home/feature.ts`) is a section whose scene is a pure function of a step and its
   progress `t` (`ScenePlayer`): it plays once well in view, rests when it leaves the
   screen, and a step clicked shows that step. The scroll is never held, except by the hero
-  board, which stays centred while its cards are filed and is cropped to one folder on a
-  phone. Code inside a scene is data (`home/code-view.ts`): the template compiler drops the
+  board, which stays centred while its cards are filed; a phone gets a window drawn for its
+  width, one folder and the note filed into it, at a size that reads. Code inside a scene is data (`home/code-view.ts`): the template compiler drops the
   whitespace between two elements, and a formatter would reflow it.
-- **The documentation is typed data** (`docs/content/*.ts`, written with the helpers of
+- **The documentation is typed data** (`docs/content/{fr,en}/*.ts`, written with the helpers of
   `docs/doc.model.ts`), rendered by `DocBlocks` without `innerHTML`, grouped in the sidebar
   (`docs/doc-index.ts`) and searched in the browser section by section, accents aside
   (`docs/doc-search.ts`). `CHECKED_ON` names the

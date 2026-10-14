@@ -1,21 +1,25 @@
-import { Routes } from '@angular/router';
+import { Route, Routes } from '@angular/router';
 
-import { DOC_INDEX } from './docs/doc-index';
+import { Lang } from './core/lang';
+import { SITE_PAGES, SitePage } from './core/pages';
 
-const docs = () => import('./docs/docs-page').then((m) => m.DocsPage);
+const LOADERS: Readonly<Record<SitePage['kind'], NonNullable<Route['loadComponent']>>> = {
+  home: () => import('./home/home-page').then((m) => m.HomePage),
+  download: () => import('./download/download-page').then((m) => m.DownloadPage),
+  docs: () => import('./docs/docs-page').then((m) => m.DocsPage),
+};
 
-/** One route per page, each written to its own `index.html` at build time. */
+const notFound = () => import('./not-found/not-found-page').then((m) => m.NotFoundPage);
+
+/** One route per page and per language, each written to its own `index.html` at build time. */
 export const routes: Routes = [
-  { path: '', loadComponent: () => import('./home/home-page').then((m) => m.HomePage) },
-  ...DOC_INDEX.map(({ slug }) => ({
-    path: slug ? `docs/${slug}` : 'docs',
-    loadComponent: docs,
-    data: { slug },
-  })),
-  {
-    path: 'telecharger',
-    loadComponent: () => import('./download/download-page').then((m) => m.DownloadPage),
-  },
-  { path: '404', loadComponent: () => import('./not-found/not-found-page').then((m) => m.NotFoundPage) },
-  { path: '**', loadComponent: () => import('./not-found/not-found-page').then((m) => m.NotFoundPage) },
+  ...(['fr', 'en'] as const satisfies readonly Lang[]).flatMap((lang) =>
+    SITE_PAGES.map((page) => ({
+      path: page.paths[lang].slice(1),
+      loadComponent: LOADERS[page.kind],
+      data: { doc: page.doc },
+    })),
+  ),
+  { path: '404', loadComponent: notFound },
+  { path: '**', loadComponent: notFound },
 ];

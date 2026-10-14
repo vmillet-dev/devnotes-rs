@@ -1,50 +1,59 @@
 <div class="wrap track" #track>
   <div class="pin" #pin>
     <div class="scroller" #scroller>
-      <div
-        class="app-window"
-        #frame
-        role="img"
-        aria-label="La fenêtre de DevNotes : l'espace Plateforme affiché en tableau, ses dossiers Déploiement, Base de données et Frontend, et des notes restées en bas que le curseur glisse une à une dans leur dossier."
-      >
+      <div class="app-window" #frame role="img" [attr.aria-label]="w().window">
         <div class="titlebar">
-          <span class="menus"><span>Fichier</span><span>À propos</span></span>
-          <span class="areas"><span class="on">Notes</span><span>Outils</span><span>HTTP</span></span>
+          <span class="menus"
+            ><span>{{ w().file }}</span
+            ><span>{{ w().about }}</span></span
+          >
+          <span class="areas"
+            ><span class="on">{{ w().notes }}</span
+            ><span>{{ w().tools }}</span
+            ><span>HTTP</span></span
+          >
           <span class="controls"><i></i><i></i><i></i></span>
         </div>
         <div class="rail">
-          <span class="rail-h">Espaces</span>
-          <span class="row">Tous les espaces</span>
-          <span class="row">Personnel</span>
-          <span class="row on">Plateforme</span>
+          <span class="rail-h">{{ w().spaces }}</span>
+          <span class="row">{{ w().allSpaces }}</span>
+          <span class="row">{{ w().personal }}</span>
+          <span class="row on">{{ w().platform }}</span>
           <span class="row sub" style="--c: var(--blue-rgb)"
-            ><i class="sw"></i>Déploiement<b>{{ placed().cards.dep.filed ? 3 : 2 }}</b></span
+            ><i class="sw"></i>{{ w().deploy }}<b>{{ placed().cards.dep.filed ? 3 : 2 }}</b></span
           >
           <span class="row sub" style="--c: var(--amber-rgb)"
-            ><i class="sw"></i>Base de données<b>{{ placed().cards.db.filed ? 3 : 2 }}</b></span
+            ><i class="sw"></i>{{ w().db }}<b>{{ placed().cards.db.filed ? 3 : 2 }}</b></span
           >
           <span class="row sub" style="--c: var(--purple-rgb)"
-            ><i class="sw"></i>Frontend<b>{{ placed().cards.front.filed ? 3 : 2 }}</b></span
+            ><i class="sw"></i>{{ w().front }}<b>{{ placed().cards.front.filed ? 3 : 2 }}</b></span
           >
-          <span class="row">Projet perso</span>
-          <span class="row">Client Atlas</span>
-          <span class="rail-foot">Corbeille</span>
+          <span class="row">{{ w().project }}</span>
+          <span class="row">{{ w().client }}</span>
+          <span class="rail-foot">{{ w().trash }}</span>
         </div>
         <div class="toolbar">
-          <span class="views"><span>Liste</span><span class="on">Tableau</span></span>
-          <span class="search">Rechercher…<kbd>Ctrl</kbd><kbd>K</kbd></span>
-          <span class="filters"><span class="on">Tout</span><span>Épinglées</span><span>À trier</span></span>
-          <span class="new">+ Nouvelle note</span>
+          <span class="views"
+            ><span>{{ w().list }}</span
+            ><span class="on">{{ w().board }}</span></span
+          >
+          <span class="search">{{ w().search }}<kbd>Ctrl</kbd><kbd>K</kbd></span>
+          <span class="filters"
+            ><span class="on">{{ w().all }}</span
+            ><span>{{ w().pinned }}</span
+            ><span>{{ w().untriaged }}</span></span
+          >
+          <span class="new">{{ w().newNote }}</span>
         </div>
-        <div class="board" #board>
-          <span class="untriaged">3 notes à ranger</span>
+        <div class="board">
+          <span class="untriaged">{{ w().toFile(6 - placed().filed) }}</span>
           <div
             class="zone"
             style="--c: var(--blue-rgb); left: 24px"
             [class.drop-target]="placed().cards.dep.dropping"
           >
             <div class="zone-head">
-              <span class="sw"></span>Déploiement
+              <span class="sw"></span>{{ w().deploy }}
               <span class="count">{{ placed().cards.dep.filed ? 3 : 2 }}</span>
             </div>
           </div>
@@ -54,7 +63,7 @@
             [class.drop-target]="placed().cards.db.dropping"
           >
             <div class="zone-head">
-              <span class="sw"></span>Base de données
+              <span class="sw"></span>{{ w().db }}
               <span class="count">{{ placed().cards.db.filed ? 3 : 2 }}</span>
             </div>
           </div>
@@ -64,71 +73,95 @@
             [class.drop-target]="placed().cards.front.dropping"
           >
             <div class="zone-head">
-              <span class="sw"></span>Frontend
+              <span class="sw"></span>{{ w().front }}
               <span class="count">{{ placed().cards.front.filed ? 3 : 2 }}</span>
             </div>
           </div>
 
           <div class="card" style="left: 36px; top: 98px">
-            <div class="card-top"><span class="tick"></span><strong>Liste de mise en production</strong></div>
+            <div class="card-top">
+              <span class="tick"></span><strong>{{ w().release }}</strong>
+            </div>
             <div class="bar"><span></span></div>
-            <div class="items"><span>Timeout CI à 30 min</span><span>Dry run de la release</span></div>
-            <div class="card-foot"><span>à l'instant</span><span>#ci</span></div>
+            <div class="items">
+              @for (item of w().releaseItems; track item) {
+                <span>{{ item }}</span>
+              }
+            </div>
+            <div class="card-foot">
+              <span>{{ w().now }}</span
+              ><span>#ci</span>
+            </div>
           </div>
           <div class="card" style="left: 204px; top: 98px">
             <div class="card-top">
-              <span class="tick"></span><strong>Postgres en local</strong
+              <span class="tick"></span><strong>{{ w().postgres }}</strong
               ><span class="chip-lang l-sh">SH</span>
             </div>
             <pre><span class="k">docker</span> run --rm \
   -p <span class="n">5432</span>:<span class="n">5432</span> \
   -e PW=<span class="fld">{{ field('password') }}</span></pre>
-            <div class="card-foot"><span>à l'instant</span><span>#docker</span></div>
+            <div class="card-foot">
+              <span>{{ w().now }}</span
+              ><span>#docker</span>
+            </div>
           </div>
           <div class="card" style="left: 400px; top: 98px">
             <div class="card-top">
-              <span class="tick"></span><strong>Quelles requêtes sont lentes</strong
+              <span class="tick"></span><strong>{{ w().slow }}</strong
               ><span class="chip-lang l-sql">SQL</span>
             </div>
             <pre><span class="k">SELECT</span> calls,
   mean_exec_time
 <span class="k">FROM</span> pg_stat_st…</pre>
-            <div class="card-foot"><span>à l'instant</span><span>#sql</span></div>
+            <div class="card-foot">
+              <span>{{ w().now }}</span
+              ><span>#sql</span>
+            </div>
           </div>
           <div class="card" style="left: 568px; top: 98px">
             <div class="card-top">
-              <span class="tick"></span><strong>Transaction Diesel annulée sur erreur</strong
+              <span class="tick"></span><strong>{{ w().diesel }}</strong
               ><span class="chip-lang l-rs">RS</span>
             </div>
             <pre>conn.<span class="f">transaction</span>(|tx| &#123;
   <span class="k">let</span> id = <span class="f">insert</span>(
     tx, &amp;note)?;</pre>
-            <div class="card-foot"><span>à l'instant</span><span>#rust</span></div>
+            <div class="card-foot">
+              <span>{{ w().now }}</span
+              ><span>#rust</span>
+            </div>
           </div>
           <div class="card" style="left: 764px; top: 98px">
             <div class="card-top">
-              <span class="tick"></span><strong>Debounce sans bibliothèque</strong
+              <span class="tick"></span><strong>{{ w().debounce }}</strong
               ><span class="chip-lang l-js">JS</span>
             </div>
             <pre><span class="k">const</span> <span class="f">debounce</span> =
   (fn, ms) =&gt; &#123;
   <span class="k">let</span> at;</pre>
-            <div class="card-foot"><span>à l'instant</span><span>#js</span></div>
+            <div class="card-foot">
+              <span>{{ w().now }}</span
+              ><span>#js</span>
+            </div>
           </div>
           <div class="card" style="left: 932px; top: 98px">
             <div class="card-top">
-              <span class="tick"></span><strong>Un store à signaux, en bref</strong
+              <span class="tick"></span><strong>{{ w().store }}</strong
               ><span class="chip-lang l-ts">TS</span>
             </div>
             <pre><span class="k">export class</span>
   <span class="f">CounterStore</span> &#123;
   count = <span class="f">signal</span>(<span class="n">0</span>);</pre>
-            <div class="card-foot"><span>à l'instant</span><span>#angular</span></div>
+            <div class="card-foot">
+              <span>{{ w().now }}</span
+              ><span>#angular</span>
+            </div>
           </div>
 
           <div class="card loose" style="left: 24px; top: 400px">
             <div class="card-top">
-              <span class="tick"></span><strong>SSH vers un hôte</strong
+              <span class="tick"></span><strong>{{ w().ssh }}</strong
               ><span class="chip-lang l-sh">SH</span>
             </div>
             <pre><span class="k">ssh</span> -p <span class="fld">{{ field('port=22') }}</span>
@@ -142,13 +175,16 @@
             [class.lifted]="placed().cards.dep.lifted"
           >
             <div class="card-top">
-              <span class="tick"></span><strong>Cache du registre cargo en CI</strong
+              <span class="tick"></span><strong>{{ w().cargo }}</strong
               ><span class="chip-lang l-yml">YML</span>
             </div>
             <pre>- <span class="f">uses</span>: <span class="s">actions/cache&#64;v4</span>
   <span class="f">with</span>:
     <span class="f">path</span>: <span class="s">~/.cargo</span></pre>
-            <div class="card-foot"><span>à l'instant</span><span>#ci #rust</span></div>
+            <div class="card-foot">
+              <span>{{ w().now }}</span
+              ><span>#ci #rust</span>
+            </div>
           </div>
           <div
             class="card loose mover"
@@ -157,13 +193,16 @@
             [class.lifted]="placed().cards.db.lifted"
           >
             <div class="card-top">
-              <span class="tick"></span><strong>Tunnel vers la base de staging</strong
+              <span class="tick"></span><strong>{{ w().tunnel }}</strong
               ><span class="chip-lang l-sh">SH</span>
             </div>
             <pre><span class="k">ssh</span> -N -L <span class="n">5433</span>:
 <span class="fld">{{ field('db_host') }}</span>:<span class="n">5432</span>
 <span class="fld">{{ field('user') }}</span>&#64;bastion</pre>
-            <div class="card-foot"><span>à l'instant</span><span>#ops #sql</span></div>
+            <div class="card-foot">
+              <span>{{ w().now }}</span
+              ><span>#ops #sql</span>
+            </div>
           </div>
           <div
             class="card loose mover"
@@ -172,23 +211,127 @@
             [class.lifted]="placed().cards.front.lifted"
           >
             <div class="card-top">
-              <span class="tick"></span><strong>Un focus ring que le thème déplace</strong
+              <span class="tick"></span><strong>{{ w().focus }}</strong
               ><span class="chip-lang l-css">CSS</span>
             </div>
             <pre>:<span class="f">focus-visible</span> &#123;
   outline: <span class="n">2px</span>
     solid <span class="f">var</span>(…);</pre>
-            <div class="card-foot"><span>à l'instant</span><span>#a11y</span></div>
+            <div class="card-foot">
+              <span>{{ w().now }}</span
+              ><span>#a11y</span>
+            </div>
           </div>
           <div class="card loose" style="left: 696px; top: 400px">
             <div class="card-top">
-              <span class="tick"></span><strong>Annuler le dernier commit</strong
+              <span class="tick"></span><strong>{{ w().undo }}</strong
               ><span class="chip-lang l-sh">SH</span>
             </div>
             <pre><span class="k">git</span> reset --soft
   HEAD~<span class="n">1</span>
 <span class="k">git</span> restore --staged</pre>
-            <div class="card-foot"><span>à l'instant</span><span>#git</span></div>
+            <div class="card-foot">
+              <span>{{ w().now }}</span
+              ><span>#git</span>
+            </div>
+          </div>
+
+          <svg
+            class="cursor"
+            [class.on]="placed().cursor"
+            [style.transform]="placed().cursor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              d="M5 2.5 19 11l-6.3 1.7L9.6 19z"
+              fill="#f4f5f8"
+              stroke="#15171c"
+              stroke-width="1.6"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </div>
+      </div>
+
+      <div class="phone-window" role="img" [attr.aria-label]="w().phone">
+        <div class="titlebar">
+          <span class="areas"
+            ><span class="on">{{ w().notes }}</span
+            ><span>{{ w().tools }}</span
+            ><span>HTTP</span></span
+          >
+          <span class="controls"><i></i><i></i><i></i></span>
+        </div>
+        <div class="toolbar">
+          <span class="space">{{ w().platform }}</span>
+          <span class="views"
+            ><span>{{ w().list }}</span
+            ><span class="on">{{ w().board }}</span></span
+          >
+        </div>
+        <div class="phone-board" #phoneBoard>
+          <div class="zone" style="--c: var(--amber-rgb)" [class.drop-target]="placed().cards.db.dropping">
+            <div class="zone-head">
+              <span class="sw"></span>{{ w().db }}
+              <span class="count">{{ placed().cards.db.filed ? 3 : 2 }}</span>
+            </div>
+            <div class="slots">
+              <div class="card">
+                <div class="card-top">
+                  <span class="tick"></span><strong>{{ w().slow }}</strong
+                  ><span class="chip-lang l-sql">SQL</span>
+                </div>
+                <pre><span class="k">SELECT</span> calls,
+  mean_exec_time</pre>
+                <div class="card-foot">
+                  <span>{{ w().now }}</span
+                  ><span>#sql</span>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-top">
+                  <span class="tick"></span><strong>{{ w().diesel }}</strong
+                  ><span class="chip-lang l-rs">RS</span>
+                </div>
+                <pre>conn.<span class="f">transaction</span>(
+  |tx| <span class="f">insert</span>(tx))?;</pre>
+                <div class="card-foot">
+                  <span>{{ w().now }}</span
+                  ><span>#rust</span>
+                </div>
+              </div>
+              <div class="slot" #phoneSlot></div>
+            </div>
+          </div>
+          <span class="untriaged">{{ w().toFile(placed().cards.db.filed ? 1 : 2) }}</span>
+          <div class="slots loose-row">
+            <div
+              class="card loose mover"
+              #phoneCard
+              [style.transform]="placed().cards.db.transform"
+              [class.lifted]="placed().cards.db.lifted"
+            >
+              <div class="card-top">
+                <span class="tick"></span><strong>{{ w().tunnel }}</strong
+                ><span class="chip-lang l-sh">SH</span>
+              </div>
+              <pre><span class="k">ssh</span> -N -L <span class="n">5433</span>:
+<span class="fld">{{ field('db_host') }}</span>:<span class="n">5432</span></pre>
+              <div class="card-foot">
+                <span>{{ w().now }}</span
+                ><span>#ops</span>
+              </div>
+            </div>
+            <div class="card loose">
+              <div class="card-top">
+                <span class="tick"></span><strong>{{ w().ssh }}</strong
+                ><span class="chip-lang l-sh">SH</span>
+              </div>
+              <pre><span class="k">ssh</span> -p <span class="fld">{{ field('port=22') }}</span>
+<span class="fld">{{ field('user') }}</span>&#64;<span class="fld">{{ field('host') }}</span></pre>
+              <div class="card-foot"><span>OpenSSH</span><span>#ops</span></div>
+            </div>
           </div>
 
           <svg

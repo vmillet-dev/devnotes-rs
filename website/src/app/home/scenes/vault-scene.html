@@ -1,6 +1,7 @@
 <div class="disk">
   <div class="disk-label">
-    <span class="chip-plain">Sur le disque</span><span class="algo">AES-256-GCM</span>
+    <span class="chip-plain">{{ text().disk }}</span
+    ><span class="algo">AES-256-GCM</span>
   </div>
   <div class="window note">
     <div class="win-head">
@@ -11,23 +12,23 @@
 </div>
 <div class="window lock">
   <app-logo />
-  <p class="lib">Bibliothèque Travail</p>
-  <span class="lbl">Phrase de passe</span>
+  <p class="lib">{{ text().library }}</p>
+  <span class="lbl">{{ text().passphrase }}</span>
   <span class="pass">{{ passphrase() }}</span>
-  <span class="btn-unlock">Déverrouiller</span>
-  <p class="warn">Elle n'est enregistrée nulle part.</p>
+  <span class="btn-unlock">{{ text().unlock }}</span>
+  <p class="warn">{{ text().nowhere }}</p>
 </div>
 <div class="window libs">
-  <div class="win-head"><span class="win-title">Bibliothèques</span></div>
+  <div class="win-head">
+    <span class="win-title">{{ text().libraries }}</span>
+  </div>
   <ul>
-    <li>
-      <b>Travail</b><span class="st open">ouverte</span><span class="bk">Sauvegardée ce matin à 08:12</span>
-    </li>
-    <li>
-      <b>Personnel</b><span class="st">verrouillée</span><span class="bk">Sauvegardée hier à 19:40</span>
-    </li>
-    <li>
-      <b>Client Atlas</b><span class="st">verrouillée</span><span class="bk">Sauvegardée lundi à 09:05</span>
-    </li>
+    @for (library of text().list; track library.name; let first = $first) {
+      <li>
+        <b>{{ library.name }}</b
+        ><span class="st" [class.open]="first">{{ library.state }}</span
+        ><span class="bk">{{ library.backup }}</span>
+      </li>
+    }
   </ul>
 </div>

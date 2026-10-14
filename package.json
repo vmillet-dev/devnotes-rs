@@ -27,7 +27,7 @@
     "bindings": "cargo run --manifest-path src-tauri/Cargo.toml --features bindings --bin export-bindings",
     "icons": "node scripts/icons.mjs",
     "website:start": "ng serve website",
-    "website:build": "ng build website && node website/scripts/finish-build.mjs",
+    "website:build": "node website/scripts/fetch-release.mjs && ng build website && node website/scripts/finish-build.mjs",
     "website:test": "ng test website"
   },
   "private": true,

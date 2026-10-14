@@ -37,7 +37,8 @@ export type Block =
   | { readonly kind: 'guides' };
 
 export interface DocPage {
-  readonly slug: string;
+  /** Its entry in `DOC_INDEX`, the same in every language. */
+  readonly id: string;
   /** The page's `<h1>`, and the start of its `<title>`. */
   readonly title: string;
   /** One sentence: the lede under the title, and the meta description. */

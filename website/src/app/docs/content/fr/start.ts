@@ -1,7 +1,7 @@
-import { DocPage, b, code, h2, keys, link, ol, p, snippet, table, tip, ui, ul, warn } from '../doc.model';
+import { DocPage, b, code, h2, keys, link, ol, p, snippet, table, tip, ui, ul, warn } from '../../doc.model';
 
 export const OVERVIEW: DocPage = {
-  slug: '',
+  id: 'overview',
   title: 'Documentation',
   summary:
     'Comment se servir de DevNotes au quotidien : écrire et ranger ses notes, coller un snippet depuis n’importe où, les outils, le client API et la sécurité de vos données.',
@@ -30,7 +30,7 @@ export const OVERVIEW: DocPage = {
 };
 
 export const GETTING_STARTED: DocPage = {
-  slug: 'prise-en-main',
+  id: 'start',
   title: 'Prise en main',
   summary:
     'Installer DevNotes, choisir la phrase de passe de votre bibliothèque, et faire le tour des notes d’exemple du premier lancement.',

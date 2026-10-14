@@ -11,7 +11,9 @@ import {
 } from '@angular/core';
 
 import { clamp, ease, field, matches, part, prefersReducedMotion } from '../core/browser';
+import { Language } from '../core/language';
 import { ScrollFrame } from '../core/scroll-frame';
+import { BOARD_WORDS } from './board-words';
 
 type Folder = 'dep' | 'db' | 'front';
 
@@ -29,14 +31,11 @@ const AIR = 140;
 const TABLET = '(max-width: 1099px)';
 const PHONE = '(max-width: 720px)';
 
-/**
- * A phone sees one folder of the board and the one note filed there, never a board to pan.
- * The same crop as the stylesheet's default, in board pixels.
- */
-const CROP = { left: 350, width: 392 } as const;
-
 /** Where the cursor takes a card: a little inside its top left corner. */
 const GRIP: readonly [number, number] = [92, 30];
+
+/** Where the cursor comes from before it takes the first card, from that card's grip. */
+const APPROACH = { window: [220, -150], phone: [70, -120] } as const;
 
 interface Move {
   readonly folder: Folder;
@@ -76,17 +75,23 @@ export class HeroBoard {
   protected readonly field = field;
   /** 0 with every note loose, 1 with all of them filed. */
   private readonly sorted = signal(0);
-  /** A phone sees one folder: only the note filed into it moves. */
-  private readonly cropped = signal(false);
+  private readonly lang = inject(Language).lang;
+  protected readonly w = computed(() => BOARD_WORDS[this.lang()]);
+  /** A phone sees one folder drawn for it, and the one note filed there, measured where it lies. */
+  private readonly phone = signal<Move | null>(null);
 
   private readonly track = viewChild.required<ElementRef<HTMLElement>>('track');
   private readonly pin = viewChild.required<ElementRef<HTMLElement>>('pin');
   private readonly scroller = viewChild.required<ElementRef<HTMLElement>>('scroller');
   private readonly frame = viewChild.required<ElementRef<HTMLElement>>('frame');
+  private readonly phoneCard = viewChild.required<ElementRef<HTMLElement>>('phoneCard');
+  private readonly phoneSlot = viewChild.required<ElementRef<HTMLElement>>('phoneSlot');
 
   protected readonly placed = computed(() => {
     const p = this.sorted();
-    const moves = this.cropped() ? MOVES.slice(0, 1) : MOVES;
+    const phone = this.phone();
+    const moves = phone ? [phone] : MOVES;
+    const approach = phone ? APPROACH.phone : APPROACH.window;
     const placed: Record<Folder, Placed> = { dep: AT_REST, db: AT_REST, front: AT_REST };
     let pointer: readonly [number, number] | null = null;
 
@@ -110,7 +115,7 @@ export class HeroBoard {
         const previous = moves[i - 1];
         const before: readonly [number, number] = previous
           ? [previous.to[0] + GRIP[0], previous.to[1] + GRIP[1]]
-          : [grab[0] + 220, grab[1] - 150];
+          : [grab[0] + approach[0], grab[1] + approach[1]];
         const t = ease(local / 0.25);
         pointer = [before[0] + (grab[0] - before[0]) * t, before[1] + (grab[1] - before[1]) * t];
       } else {
@@ -118,7 +123,11 @@ export class HeroBoard {
       }
     }
 
-    return { cards: placed, cursor: pointer ? `translate(${pointer[0]}px, ${pointer[1]}px)` : null };
+    return {
+      cards: placed,
+      filed: Object.values(placed).filter((card) => card.filed).length,
+      cursor: pointer ? `translate(${pointer[0]}px, ${pointer[1]}px)` : null,
+    };
   });
 
   constructor() {
@@ -127,17 +136,15 @@ export class HeroBoard {
 
     afterNextRender(() => {
       const fit = () => {
-        const frame = this.frame().nativeElement;
-        const width = this.scroller().nativeElement.clientWidth;
-        const phone = matches(PHONE);
-        const drawn = matches(TABLET) ? BOARD_ONLY : WINDOW.width;
-        const zoom = phone
-          ? width / CROP.width
-          : Math.min(LARGEST, width / drawn, (innerHeight - AIR) / WINDOW.height);
-        // The zoom applies to the window's own margin too: the crop is written in board pixels.
-        frame.style.setProperty('zoom', zoom.toFixed(3));
-        frame.style.setProperty('margin-left', phone ? `-${CROP.left}px` : 'auto');
-        this.cropped.set(phone);
+        if (matches(PHONE)) {
+          this.phone.set(this.measurePhone());
+        } else {
+          const width = this.scroller().nativeElement.clientWidth;
+          const drawn = matches(TABLET) ? BOARD_ONLY : WINDOW.width;
+          const zoom = Math.min(LARGEST, width / drawn, (innerHeight - AIR) / WINDOW.height);
+          this.frame().nativeElement.style.setProperty('zoom', zoom.toFixed(3));
+          this.phone.set(null);
+        }
         this.track().nativeElement.style.setProperty('--bh', `${this.pin().nativeElement.offsetHeight}px`);
       };
       fit();
@@ -150,6 +157,14 @@ export class HeroBoard {
       }
       destroyRef.onDestroy(frame.watch(() => this.sorted.set(this.progress())));
     });
+  }
+
+  /** The phone's note, from where it lies to the free place in its folder, in board pixels. */
+  private measurePhone(): Move {
+    // Offsets rather than rectangles: the card may be carried, and a transform moves its rectangle.
+    const card = this.phoneCard().nativeElement;
+    const slot = this.phoneSlot().nativeElement;
+    return { folder: 'db', from: [card.offsetLeft, card.offsetTop], to: [slot.offsetLeft, slot.offsetTop] };
   }
 
   /** How far the cards have moved: only while the board is held in the middle of the screen. */

@@ -66,10 +66,32 @@
   white-space: normal;
 }
 
+.file {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+}
+
 .file code {
   font-size: 13px;
   color: var(--text-1);
   overflow-wrap: anywhere;
+}
+
+.size {
+  color: var(--text-2);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+// What the first launch will ask, said beside the button rather than found later.
+.heads-up {
+  padding-left: 12px;
+  border-left: 2px solid var(--amber-edge);
+  color: var(--text-1);
+  font-size: 14px;
+  line-height: 1.55;
 }
 
 .who {
@@ -114,7 +136,27 @@
   font-size: 14px;
 }
 
+.beside {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+  align-items: baseline;
+  margin-top: 20px;
+}
+
+.notes {
+  color: var(--amber-text);
+  font-weight: 620;
+  text-underline-offset: 3px;
+}
+
+.mac {
+  color: var(--text-2);
+  font-size: 14.5px;
+}
+
 .install,
+.verify,
 .after {
   display: grid;
   gap: 24px;
@@ -145,6 +187,59 @@
   font-weight: 620;
 }
 
+.verify-lede {
+  color: var(--text-1);
+}
+
+.verify-lede a {
+  color: var(--amber-text);
+  text-underline-offset: 3px;
+}
+
+.sums {
+  overflow-x: auto;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+}
+
+.sums table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.sums th,
+.sums td {
+  padding: 10px 14px;
+  text-align: left;
+  vertical-align: baseline;
+  border-top: 1px solid var(--line-soft);
+}
+
+.sums thead th {
+  border-top: 0;
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 650;
+}
+
+.sums tbody th {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.sums td {
+  color: var(--text-1);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.hash {
+  font-size: 12px;
+  color: var(--text-2);
+  user-select: all;
+}
+
 .facts {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -169,6 +264,51 @@
   .columns,
   .facts {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+// A phone: each file on two lines, its fingerprint wrapped under its name rather than off-screen.
+@media (max-width: 640px) {
+  .sums table,
+  .sums tbody {
+    display: block;
+  }
+
+  .sums thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .sums tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .sums tr + tr {
+    border-top: 1px solid var(--line-soft);
+  }
+
+  .sums th,
+  .sums td {
+    border-top: 0;
+  }
+
+  .sums tbody th {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .sums td:last-child {
+    grid-column: 1 / -1;
+    padding-top: 0;
+    white-space: normal;
+  }
+
+  .hash {
+    overflow-wrap: anywhere;
   }
 }
 

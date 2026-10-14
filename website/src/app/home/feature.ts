@@ -41,6 +41,8 @@ export class Feature {
   readonly durations = input.required<readonly number[]>();
   /** The scene on the left, the words on the right. */
   readonly flip = input(false, { transform: booleanAttribute });
+  /** The words centred above, the steps in a row, the scene across the page: a change of pace. */
+  readonly wide = input(false, { transform: booleanAttribute });
 
   protected readonly player = inject(ScenePlayer);
   protected readonly rgb = computed(() => `var(--${this.tone()}-rgb)`);

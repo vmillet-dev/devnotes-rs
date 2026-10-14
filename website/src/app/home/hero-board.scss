@@ -10,8 +10,7 @@
   top: max(calc(var(--head-h) + 12px), calc((100vh + var(--head-h) - var(--bh, 640px)) / 2));
 }
 
-// Clipped rather than scrolled: a narrow screen is shown a part of the board, never asked to pan
-// it. The margin keeps the window's shadow.
+// Clipped rather than scrolled: the window is never panned. The margin keeps its shadow.
 .scroller {
   overflow: clip;
   overflow-clip-margin: 64px;
@@ -240,11 +239,14 @@
   background-size: 16px 16px;
 }
 
-.zone {
+.board .zone {
   position: absolute;
   top: 48px;
   width: 344px;
   height: 330px;
+}
+
+.zone {
   transition:
     background-color var(--motion),
     border-color var(--motion);
@@ -256,8 +258,11 @@
 }
 
 .card {
-  position: absolute;
   box-shadow: var(--shadow-soft);
+}
+
+.board .card {
+  position: absolute;
 }
 
 .card.loose {
@@ -274,10 +279,13 @@
   border-color: var(--line);
 }
 
-.untriaged {
+.board .untriaged {
   position: absolute;
   left: 24px;
   top: 12px;
+}
+
+.untriaged {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -348,31 +356,105 @@
   }
 }
 
-// A phone: no window at all, the database folder and the note filed into it.
+.phone-window {
+  display: none;
+}
+
+// A phone: a window drawn for its width, one folder and the note filed into it, at a size
+// that reads.
 @media (max-width: 720px) {
   .track {
-    height: calc(var(--bh, 520px) + 110vh);
-  }
-
-  .scroller {
-    overflow: hidden;
-    border: 1px solid var(--line-soft);
-    border-radius: 14px;
+    height: calc(var(--bh, 540px) + 90vh);
   }
 
   .app-window {
-    grid-template-rows: 552px;
-    grid-template-areas: 'board';
-    margin-left: -350px;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
-    zoom: 0.9;
+    display: none;
   }
 
-  .titlebar,
-  .toolbar {
-    display: none;
+  .phone-window {
+    display: block;
+    max-width: 440px;
+    margin-inline: auto;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--bg-1);
+    box-shadow: var(--shadow);
+  }
+
+  .phone-window .titlebar {
+    height: 34px;
+  }
+
+  .phone-window .areas {
+    margin-left: 0;
+  }
+
+  .phone-window .toolbar {
+    justify-content: space-between;
+    height: 44px;
+  }
+
+  .space {
+    font-weight: 650;
+    color: var(--text-0);
+  }
+
+  .phone-board {
+    position: relative;
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+    background-color: var(--bg-0);
+    background-image: radial-gradient(var(--dot) 1.1px, transparent 1.4px);
+    background-size: 16px 16px;
+  }
+
+  .slots {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .zone .slots {
+    padding: 0 10px 10px;
+  }
+
+  // Under the folder's own columns: the note filed rises straight into its place.
+  .loose-row {
+    padding-inline: 11px;
+  }
+
+  .phone-board .card,
+  .slot {
+    width: auto;
+    height: 112px;
+  }
+
+  .phone-board .card {
+    font-size: 12px;
+  }
+
+  .phone-board .card-top strong {
+    font-size: 12.5px;
+  }
+
+  .phone-board .card-top .chip-lang {
+    font-size: 9.5px;
+  }
+
+  .phone-board .card pre {
+    font-size: 11px;
+    line-height: 1.55;
+  }
+
+  .phone-board .card-foot {
+    font-size: 10.5px;
+  }
+
+  .phone-board .untriaged {
+    justify-self: start;
+    height: 26px;
   }
 }
 

@@ -1,11 +1,41 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 
 import { part, typed } from '../../core/browser';
+import { Lang } from '../../core/lang';
+import { Language } from '../../core/language';
 import { CodeView, Line } from '../code-view';
 import { ScenePlayer } from '../scene-player';
 
+const FR = {
+  title: 'Petit utilitaire',
+  plain: 'Texte brut',
+  filter: 'Filtrer les langages',
+  format: 'Formater',
+  formatted: 'Formaté avec Prettier · 4 lignes modifiées',
+  undo: 'Annuler',
+  root: 'racine',
+  keys4: '4 clés',
+  key1: '1 clé',
+  item1: '1 élément',
+};
+
+const EN: typeof FR = {
+  title: 'Small helper',
+  plain: 'Plain text',
+  filter: 'Filter languages',
+  format: 'Format',
+  formatted: 'Formatted with Prettier · 4 lines changed',
+  undo: 'Undo',
+  root: 'root',
+  keys4: '4 keys',
+  key1: '1 key',
+  item1: '1 item',
+};
+
+const TEXT: Readonly<Record<Lang, typeof FR>> = { fr: FR, en: EN };
+
+/** The language menu's names after the first, the same in both languages. */
 const LANGUAGES = [
-  'Texte brut',
   'Bash',
   'C#',
   'CSS',
@@ -111,6 +141,8 @@ export class CodeScene {
   protected readonly messy = MESSY;
   protected readonly pretty = PRETTY;
   protected readonly json = JSON_LINES;
+  private readonly lang = inject(Language).lang;
+  protected readonly text = computed(() => TEXT[this.lang()]);
 
   protected readonly menuOpen = computed(() => this.step() === 0 && this.t() > 0.12 && this.t() < 0.8);
   protected readonly filter = computed(() =>
@@ -118,7 +150,7 @@ export class CodeScene {
   );
   protected readonly languages = computed(() => {
     const filter = this.filter().toLowerCase();
-    return LANGUAGES.filter((name) => name.toLowerCase().includes(filter));
+    return [this.text().plain, ...LANGUAGES].filter((name) => name.toLowerCase().includes(filter));
   });
   protected readonly chosen = computed(() => this.step() > 0 || this.t() >= 0.8);
   protected readonly formatted = computed(() => this.step() > 1 || (this.step() === 1 && this.t() > 0.2));

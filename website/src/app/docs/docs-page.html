@@ -2,7 +2,7 @@
 <div class="wrap docs">
   <div class="side">
     <div class="find" role="search">
-      <label class="visually-hidden" for="docs-search">Rechercher dans la documentation</label>
+      <label class="visually-hidden" for="docs-search">{{ text().search }}</label>
       <svg
         viewBox="0 0 24 24"
         fill="none"
@@ -17,7 +17,7 @@
       <input
         id="docs-search"
         type="search"
-        placeholder="Rechercher dans la doc"
+        [placeholder]="text().placeholder"
         autocomplete="off"
         [value]="query()"
         (input)="onQuery($event)"
@@ -33,7 +33,7 @@
             <li>
               <a
                 class="hit"
-                [routerLink]="path(result.entry.slug)"
+                [routerLink]="path(result.entry.id)"
                 [fragment]="result.entry.anchor || undefined"
                 (click)="clear()"
               >
@@ -53,7 +53,7 @@
         </ul>
       </div>
     } @else {
-      <nav aria-label="Documentation">
+      <nav [attr.aria-label]="text().docs">
         <button
           type="button"
           class="side-toggle"
@@ -61,23 +61,23 @@
           [attr.aria-expanded]="navOpen()"
           (click)="toggleNav()"
         >
-          <span class="sw" [style.--c]="rgb(entry().tone)"></span>
-          <span>{{ entry().nav }}</span>
+          <span class="sw" [style.--c]="rgb(entry()?.tone ?? 'grey')"></span>
+          <span>{{ entry()?.nav?.[lang()] }}</span>
           <span class="chev" aria-hidden="true"></span>
         </button>
         <div class="side-list" id="docs-pages" [class.open]="navOpen()">
-          @for (group of groups; track group.name) {
+          @for (group of groups(); track group.name) {
             <p class="side-h">{{ group.name }}</p>
             <ul>
-              @for (each of group.entries; track each.slug) {
+              @for (each of group.entries; track each.id) {
                 <li>
                   <a
                     class="row"
-                    [class.on]="each.slug === slug()"
-                    [routerLink]="path(each.slug)"
-                    [attr.aria-current]="each.slug === slug() ? 'page' : null"
+                    [class.on]="each.id === doc()"
+                    [routerLink]="path(each.id)"
+                    [attr.aria-current]="each.id === doc() ? 'page' : null"
                     [style.--c]="rgb(each.tone)"
-                    ><span class="sw"></span>{{ each.nav }}</a
+                    ><span class="sw"></span>{{ each.nav[lang()] }}</a
                   >
                 </li>
               }
@@ -90,12 +90,18 @@
 
   @if (current) {
     <article class="article" #article>
-      <nav class="crumbs" aria-label="Fil d’Ariane">
+      <nav class="crumbs" [attr.aria-label]="text().crumbs">
         <ol>
-          <li><a routerLink="/docs" [attr.aria-current]="current.slug ? null : 'page'">Documentation</a></li>
-          @if (current.slug) {
+          <li>
+            <a
+              [routerLink]="path('overview')"
+              [attr.aria-current]="current.id === 'overview' ? 'page' : null"
+              >{{ text().docs }}</a
+            >
+          </li>
+          @if (current.id !== 'overview') {
             <li>
-              <a [routerLink]="path(current.slug)" aria-current="page">{{ current.title }}</a>
+              <a [routerLink]="path(current.id)" aria-current="page">{{ current.title }}</a>
             </li>
           }
         </ol>
@@ -103,18 +109,20 @@
       <header class="head">
         <h1>{{ current.title }}</h1>
         <p class="lede">{{ current.summary }}</p>
-        <p class="checked">Vérifié sur DevNotes {{ checkedOn }}</p>
+        <p class="checked">{{ text().checked }} {{ checkedOn }}</p>
       </header>
-      <app-doc-blocks [blocks]="current.body" [summaries]="summaries" />
-      <nav class="pager" aria-label="Pages voisines">
+      <app-doc-blocks [blocks]="current.body" [summaries]="summaries()" />
+      <nav class="pager" [attr.aria-label]="text().pager">
         @if (previous(); as before) {
-          <a class="prev" [routerLink]="path(before.slug)" rel="prev"
-            ><span class="dir">Précédent</span><span class="name">{{ before.nav }}</span></a
+          <a class="prev" [routerLink]="path(before.id)" rel="prev"
+            ><span class="dir">{{ text().previous }}</span
+            ><span class="name">{{ before.nav[lang()] }}</span></a
           >
         }
         @if (next(); as after) {
-          <a class="next" [routerLink]="path(after.slug)" rel="next"
-            ><span class="dir">Suivant</span><span class="name">{{ after.nav }}</span></a
+          <a class="next" [routerLink]="path(after.id)" rel="next"
+            ><span class="dir">{{ text().next }}</span
+            ><span class="name">{{ after.nav[lang()] }}</span></a
           >
         }
       </nav>
@@ -122,8 +130,8 @@
   }
 
   @if (sections().length) {
-    <nav class="toc" aria-label="Sur cette page">
-      <p class="side-h">Sur cette page</p>
+    <nav class="toc" [attr.aria-label]="text().toc">
+      <p class="side-h">{{ text().toc }}</p>
       <ul>
         @for (section of sections(); track section.id) {
           <li>

@@ -1,14 +1,14 @@
 <div class="window editor">
   <div class="win-head">
-    <span class="win-title">Petit utilitaire</span>
+    <span class="win-title">{{ text().title }}</span>
     <span class="lang-wrap">
-      <span class="lang-btn">{{ chosen() ? 'TypeScript' : 'Texte brut' }}</span>
+      <span class="lang-btn">{{ chosen() ? 'TypeScript' : text().plain }}</span>
       <span class="lang-menu">
         <span class="lang-filter">
           @if (filter()) {
             <span>{{ filter() }}</span>
           } @else {
-            <span class="ph">Filtrer les langages</span>
+            <span class="ph">{{ text().filter }}</span>
           }
         </span>
         <span class="lang-list">
@@ -18,7 +18,7 @@
         </span>
       </span>
     </span>
-    <span class="btn-small fmt">Formater</span>
+    <span class="btn-small fmt">{{ text().format }}</span>
   </div>
   @if (formatted()) {
     <app-code [lines]="pretty" [marked]="true" />
@@ -26,7 +26,8 @@
     <app-code [lines]="chosen() ? messy : plain" />
   }
   <p class="fmt-notice">
-    <span>Formaté avec Prettier · 4 lignes modifiées</span><span class="undo">Annuler</span>
+    <span>{{ text().formatted }}</span
+    ><span class="undo">{{ text().undo }}</span>
   </p>
 </div>
 <div class="json-pane">
@@ -41,7 +42,8 @@
       <path d="M78 62 L 78 72" />
     </svg>
     <div class="node" style="left: 3%; top: 40%; width: 22%; height: 15%">
-      <b>racine</b><span>4 clés</span>
+      <b>{{ text().root }}</b
+      ><span>{{ text().keys4 }}</span>
     </div>
     <div class="node" [class.sel]="selected() === 'type'" style="left: 31%; top: 8%; width: 36%; height: 15%">
       <b>type</b><span class="leaf">"invoice.paid"</span>
@@ -51,7 +53,7 @@
       [class.sel]="selected() === 'data'"
       style="left: 31%; top: 40%; width: 22%; height: 15%"
     >
-      <b>data</b><span>1 clé</span>
+      <b>data</b><span>{{ text().key1 }}</span>
     </div>
     <div
       class="node"
@@ -65,7 +67,7 @@
       [class.sel]="selected() === 'lines'"
       style="left: 58%; top: 72%; width: 40%; height: 15%"
     >
-      <b>lines</b><span>1 élément</span>
+      <b>lines</b><span>{{ text().item1 }}</span>
     </div>
   </div>
 </div>

@@ -1,7 +1,7 @@
-import { DocPage, b, field, h2, keys, link, ol, p, shortcuts, table, tip, ui, ul } from '../doc.model';
+import { DocPage, b, field, h2, keys, link, ol, p, shortcuts, table, tip, ui, ul } from '../../doc.model';
 
 export const QUICK_PASTE: DocPage = {
-  slug: 'collage-rapide',
+  id: 'paste',
   title: 'Collage rapide et raccourcis',
   summary:
     'Retrouver un snippet et le coller sans quitter ce que vous faites, capturer le presse-papiers dans une note, et régler les raccourcis.',

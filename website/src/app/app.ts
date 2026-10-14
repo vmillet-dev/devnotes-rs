@@ -1,8 +1,7 @@
 import { ChangeDetectionStrategy, Component, afterNextRender, inject } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
-import { filter, map } from 'rxjs';
+import { RouterOutlet } from '@angular/router';
 
+import { Language } from './core/language';
 import { ThemeStore } from './core/theme.store';
 import { SiteFooter } from './shell/site-footer';
 import { SiteHeader } from './shell/site-header';
@@ -11,7 +10,9 @@ import { SiteHeader } from './shell/site-header';
   selector: 'app-root',
   imports: [RouterOutlet, SiteHeader, SiteFooter],
   template: `
-    <a class="skip-link" [href]="here() + '#contenu'">Aller au contenu</a>
+    <a class="skip-link" [href]="language.path() + '#contenu'">{{
+      language.lang() === 'fr' ? 'Aller au contenu' : 'Skip to the content'
+    }}</a>
     <app-site-header />
     <main id="contenu" tabindex="-1">
       <router-outlet />
@@ -43,19 +44,11 @@ import { SiteHeader } from './shell/site-header';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class App {
-  private readonly router = inject(Router);
-
   /**
    * The page's own path: under `<base href="/">` a bare `#contenu` would lead to the home
    * page's anchor from every other page.
    */
-  protected readonly here = toSignal(
-    this.router.events.pipe(
-      filter((event) => event instanceof NavigationEnd),
-      map((event) => event.urlAfterRedirects.split('#')[0] ?? '/'),
-    ),
-    { initialValue: '/' },
-  );
+  protected readonly language = inject(Language);
 
   constructor() {
     const theme = inject(ThemeStore);

@@ -105,6 +105,17 @@
   height: 18px;
 }
 
+// The language switch says which language it leads to.
+.icon-btn.lang {
+  width: auto;
+  gap: 6px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  font: 650 12.5px/1 var(--font-sans);
+  text-decoration: none;
+}
+
 .menu-btn {
   display: none;
 }
@@ -164,8 +175,17 @@
   }
 }
 
-@media (max-width: 380px) {
-  .brand span {
+// A phone keeps the name; the section being read gives way first, then GitHub, still in the menu.
+@media (max-width: 560px) {
+  .here {
+    display: none;
+  }
+
+  .brand {
+    margin-right: auto;
+  }
+
+  .icon-btn.source {
     display: none;
   }
 }

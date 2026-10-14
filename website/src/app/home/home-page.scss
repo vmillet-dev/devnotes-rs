@@ -38,7 +38,52 @@
   padding-top: clamp(110px, 16vh, 190px);
 }
 
-.platforms {
-  color: var(--text-2);
-  font-size: 14.5px;
+.get {
+  gap: 10px;
+}
+
+.ver {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(var(--black-rgb), 0.14);
+  font: 600 12px var(--font-mono);
+}
+
+// What makes it worth a try, said where the eye already is.
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.facts li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text-1);
+  font-size: 14px;
+  font-weight: 560;
+}
+
+.facts li:not(.more)::before {
+  content: '';
+  width: 9px;
+  height: 5px;
+  margin-top: -3px;
+  border-left: 2px solid var(--green);
+  border-bottom: 2px solid var(--green);
+  transform: rotate(-45deg);
+}
+
+.facts a {
+  color: var(--text-0);
+  text-underline-offset: 3px;
+}
+
+.facts .more {
+  border-style: dashed;
 }

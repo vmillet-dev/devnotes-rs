@@ -2,7 +2,7 @@ import { Block, DocPage, Inline, Text } from './doc.model';
 
 /** One section of a page: what the search reads, and where a result leads. */
 export interface SearchEntry {
-  readonly slug: string;
+  readonly id: string;
   readonly page: string;
   /** The section's heading id, empty for the top of the page. */
   readonly anchor: string;
@@ -72,7 +72,7 @@ export function searchIndex(pages: readonly DocPage[]): readonly SearchEntry[] {
     }
     return entries.map(({ anchor, heading, parts }) => {
       const text = parts.join(' ').replace(/\s+/g, ' ').trim();
-      return { slug: page.slug, page: page.title, anchor, heading, text, folded: fold(`${heading} ${text}`) };
+      return { id: page.id, page: page.title, anchor, heading, text, folded: fold(`${heading} ${text}`) };
     });
   });
 }

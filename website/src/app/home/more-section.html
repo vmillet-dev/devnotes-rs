@@ -1,75 +1,91 @@
 <section class="wrap plain" id="et-aussi" aria-labelledby="et-aussi-h" style="--c: var(--grey-rgb)">
   <div class="plain-head">
-    <span class="zone-title"><span class="sw"></span>Et aussi</span>
-    <h2 id="et-aussi-h">Et tout ce qui va autour.</h2>
+    <span class="zone-title"><span class="sw"></span>{{ text().label }}</span>
+    <h2 id="et-aussi-h">{{ text().heading }}</h2>
   </div>
   <ul class="more-grid">
     <li class="tile">
-      <h3>Des notes</h3>
-      <p>Écrites mises en forme, enregistrées en Markdown.</p>
+      <h3>{{ text().notes.title }}</h3>
+      <p>{{ text().notes.line }}</p>
       <div class="mini" aria-hidden="true">
-        <span class="md-h">Rotation du certificat</span><span class="md-li">Émettre depuis l'ACME</span
-        ><span class="md-li">Recharger nginx</span><code>nginx -s reload</code>
+        <span class="md-h">{{ text().notes.heading }}</span>
+        @for (item of text().notes.items; track item) {
+          <span class="md-li">{{ item }}</span>
+        }
+        <code>nginx -s reload</code>
       </div>
     </li>
     <li class="tile" #list>
-      <h3>Des listes</h3>
-      <p>À cocher, avec leur avancement sur la carte.</p>
+      <h3>{{ text().lists.title }}</h3>
+      <p>{{ text().lists.line }}</p>
       <div class="mini" aria-hidden="true">
-        <span class="bar" [style.--w]="(ticked() / checklist.length) * 100 + '%'"><span></span></span>
-        @for (item of checklist; track item) {
+        <span class="bar" [style.--w]="(ticked() / text().lists.items.length) * 100 + '%'"
+          ><span></span
+        ></span>
+        @for (item of text().lists.items; track item) {
           <span class="ck" [class.on]="$index < ticked()">{{ item }}</span>
         }
       </div>
     </li>
     <li class="tile" #trash>
-      <h3>Une corbeille</h3>
+      <h3>{{ text().trash.title }}</h3>
       <p>
-        Trente jours pour changer d'avis, et <span class="keys"><kbd>Ctrl</kbd><kbd>Z</kbd></span> juste après
-        une suppression.
+        {{ text().trash.before }} <span class="keys"><kbd>Ctrl</kbd><kbd>Z</kbd></span>
+        {{ text().trash.after }}
       </p>
       <div class="mini" aria-hidden="true">
-        <span class="undo-bar"><span>Note mise à la corbeille</span><b>Annuler</b></span>
+        <span class="undo-bar"
+          ><span>{{ text().trash.toast }}</span
+          ><b>{{ text().trash.undo }}</b></span
+        >
         <span class="bar countdown" [class.running]="countingDown()"><span></span></span>
       </div>
     </li>
     <li class="tile">
-      <h3>Des versions</h3>
-      <p>Les vingt dernières versions d'un snippet, à relire et à rétablir.</p>
+      <h3>{{ text().versions.title }}</h3>
+      <p>{{ text().versions.line }}</p>
       <div class="mini" aria-hidden="true">
-        <span class="ver cur"><span>Version actuelle</span><span>à l'instant</span></span>
-        <span class="ver"><span>Avant le formatage</span><span>il y a 2 min</span></span>
-        <span class="ver"><span>Port changé</span><span>hier</span></span>
+        @for (version of text().versions.items; track version[0]; let first = $first) {
+          <span class="ver" [class.cur]="first"
+            ><span>{{ version[0] }}</span
+            ><span>{{ version[1] }}</span></span
+          >
+        }
       </div>
     </li>
     <li class="tile">
-      <h3>Des pièces jointes</h3>
-      <p>Des fichiers et des images collées, chiffrés avec la note.</p>
+      <h3>{{ text().attachments.title }}</h3>
+      <p>{{ text().attachments.line }}</p>
       <div class="mini" aria-hidden="true">
-        <span class="file"><i></i>schema-factures.png</span><span class="file"><i></i>contrat-api.pdf</span>
+        @for (file of text().attachments.items; track file) {
+          <span class="file"><i></i>{{ file }}</span>
+        }
       </div>
     </li>
     <li class="tile">
-      <h3>La sélection multiple</h3>
-      <p>Déplacez, étiquetez ou supprimez vingt notes d'un coup.</p>
+      <h3>{{ text().selection.title }}</h3>
+      <p>{{ text().selection.line }}</p>
       <div class="mini" aria-hidden="true">
-        <span class="sel">20 sélectionnées</span>
-        <span class="acts"><span>Déplacer vers</span><span>Priorité</span><span>+ tag</span></span>
+        <span class="sel">{{ text().selection.count }}</span>
+        <span class="acts">
+          @for (action of text().selection.actions; track action) {
+            <span>{{ action }}</span>
+          }
+        </span>
       </div>
     </li>
     <li class="tile">
-      <h3>Import et export</h3>
-      <p>
-        Une archive <code>.devnotes</code>, protégée si vous le voulez, ou la sélection copiée en Markdown.
-      </p>
+      <h3>{{ text().transfer.title }}</h3>
+      <p>{{ text().transfer.before }} <code>.devnotes</code>{{ text().transfer.after }}</p>
       <div class="mini" aria-hidden="true">
-        <span class="file"><i></i>travail-2026-10-14.devnotes</span>
-        <span class="file"><i></i>Copier la sélection en Markdown</span>
+        @for (file of text().transfer.items; track file) {
+          <span class="file"><i></i>{{ file }}</span>
+        }
       </div>
     </li>
     <li class="tile">
-      <h3>Deux thèmes, deux langues</h3>
-      <p>Clair ou sombre, français ou anglais.</p>
+      <h3>{{ text().themes.title }}</h3>
+      <p>{{ text().themes.line }}</p>
       <div class="mini" aria-hidden="true">
         <span class="themes"
           ><span class="th dark"><i></i><i></i><i></i></span

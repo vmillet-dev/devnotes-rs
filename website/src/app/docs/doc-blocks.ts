@@ -1,6 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { Lang } from '../core/lang';
+import { Language } from '../core/language';
 import { DOC_INDEX, docPath } from './doc-index';
 import { Block, ShortcutRow, Text } from './doc.model';
 import { DocText } from './doc-text';
@@ -64,6 +66,11 @@ function view(block: Block): View {
 /** The colour a code block's language chip takes, as on a card. */
 const CHIPS: Record<string, string> = { sh: 'l-sh', sql: 'l-sql', json: 'l-json', ts: 'l-ts', yml: 'l-yml' };
 
+const WORDS = {
+  fr: { copy: 'Copier', copied: 'Copié', code: 'Code : ', keys: 'Touches', action: 'Action' },
+  en: { copy: 'Copy', copied: 'Copied', code: 'Code: ', keys: 'Keys', action: 'Action' },
+} as const satisfies Record<Lang, object>;
+
 /** A page's body, block by block. No `innerHTML` anywhere: every word is bound as text. */
 @Component({
   selector: 'app-doc-blocks',
@@ -78,10 +85,15 @@ export class DocBlocks {
   readonly summaries = input<Readonly<Record<string, string>>>({});
 
   protected readonly views = computed(() => this.blocks().map(view));
-  protected readonly guides = DOC_INDEX.filter(({ slug }) => slug);
-  protected readonly path = docPath;
+  protected readonly lang = inject(Language).lang;
+  protected readonly words = computed(() => WORDS[this.lang()]);
+  protected readonly guides = DOC_INDEX.filter(({ id }) => id !== 'overview');
   /** The code block whose copy was just taken, by position. */
   protected readonly copied = signal<number | null>(null);
+
+  protected path(id: string): string {
+    return docPath(id, this.lang());
+  }
 
   protected chip(lang: string): string {
     return CHIPS[lang] ?? '';

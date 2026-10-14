@@ -1,22 +1,25 @@
 <div class="window app tools">
   <div class="app-side">
-    <span class="areas"><span>Notes</span><span class="on">Outils</span><span>HTTP</span></span>
-    <span class="row"><span class="star">★</span>Favoris<b>2</b></span>
-    <span class="row" [class.on]="step() === 0">Tous les outils<b>33</b></span>
+    <span class="areas"
+      ><span>Notes</span><span class="on">{{ text().tools }}</span
+      ><span>HTTP</span></span
+    >
+    <span class="row"><span class="star">★</span>{{ text().favourites }}<b>2</b></span>
+    <span class="row" [class.on]="step() === 0">{{ text().all }}<b>33</b></span>
     @if (family(); as open) {
       <span class="h">{{ open.name }}</span>
       @for (tool of open.tools; track tool) {
         <span class="row" [class.on]="tool === open.open">{{ tool }}</span>
       }
-      <span class="h">Récents</span>
-      <span class="row">Base64 et autres bases</span>
+      <span class="h">{{ text().recent }}</span>
+      <span class="row">{{ text().recentTool }}</span>
     }
   </div>
   <div class="tools-main">
     @if (step() === 0) {
       <div class="top">
-        <span class="title">Outils</span>
-        <span class="sub">33 utilitaires, tous hors ligne</span>
+        <span class="title">{{ text().tools }}</span>
+        <span class="sub">{{ text().count }}</span>
         <span class="search" [class.typing]="searching()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <circle cx="11" cy="11" r="7" />
@@ -25,9 +28,9 @@
           @if (query()) {
             <span class="q" [class.caret]="searching()">{{ query() }}</span>
           } @else {
-            <span class="ph">Rechercher un outil…</span>
+            <span class="ph">{{ text().search }}</span>
           }
-          <kbd>Ctrl Maj T</kbd>
+          <kbd>{{ text().searchKeys }}</kbd>
         </span>
       </div>
       <div class="body">
@@ -60,34 +63,34 @@
       </div>
     } @else {
       <div class="top">
-        <span class="crumb">Outils ›</span>
+        <span class="crumb">{{ text().tools }} ›</span>
         <span class="title">{{ step() === 1 ? 'Cron' : 'JWT' }}</span>
         <span class="star-off">☆</span>
         <span class="spacer"></span>
-        <span class="act minor">Exemple</span>
-        <span class="act minor">Vider</span>
-        <span class="act primary">Enregistrer comme note</span>
+        <span class="act minor">{{ text().example }}</span>
+        <span class="act minor">{{ text().clear }}</span>
+        <span class="act primary">{{ text().save }}</span>
       </div>
       @if (step() === 1) {
         <div class="body tool" [style.--h]="hues.time">
-          <span class="label">Expression</span>
+          <span class="label">{{ text().expression }}</span>
           <span class="field" [class.typing]="!cronRead()">{{ cronTyped() }}</span>
           @if (cronRead()) {
             <div class="result">
-              <span class="label">Lue à voix haute</span>
-              <p class="said">Toutes les 15 minutes, de 9 h à 18 h 45, du lundi au vendredi</p>
+              <span class="label">{{ text().readAloud }}</span>
+              <p class="said">{{ text().said }}</p>
             </div>
           }
-          <span class="label">Prochaines exécutions</span>
+          <span class="label">{{ text().nextRuns }}</span>
           <span class="runs">
-            @for (run of runs; track run) {
+            @for (run of text().runs; track run) {
               <span [class.on]="$index < runsShown()">{{ run }}</span>
             }
           </span>
         </div>
       } @else {
         <div class="body tool" [style.--h]="hues.crypto">
-          <span class="label">Jeton</span>
+          <span class="label">{{ text().token }}</span>
           <span class="field">{{ pasted() ? token : '' }}</span>
           @if (decoded()) {
             <div class="cols">
@@ -103,9 +106,18 @@
 &#125;</pre>
             </div>
             <div class="facts">
-              <span><span>Émis</span><span>1 décembre 2025, 00:00 UTC</span></span>
-              <span><span>Expire</span><span class="bad">1 janvier 2026, expiré</span></span>
-              <span><span>Signature HS256</span><span class="ok">vérifiée avec le secret</span></span>
+              <span
+                ><span>{{ text().issued }}</span
+                ><span>{{ text().issuedAt }}</span></span
+              >
+              <span
+                ><span>{{ text().expires }}</span
+                ><span class="bad">{{ text().expired }}</span></span
+              >
+              <span
+                ><span>{{ text().signature }}</span
+                ><span class="ok">{{ text().verified }}</span></span
+              >
             </div>
           }
         </div>
@@ -113,16 +125,26 @@
     }
     <div class="scrim"></div>
     <div class="dialog">
-      <span class="dialog-h">Enregistrer comme note</span>
-      <span class="what">Un snippet JSON, avec ce que l'outil a calculé, jamais ce qui y a été tapé.</span>
+      <span class="dialog-h">{{ text().saveTitle }}</span>
+      <span class="what">{{ text().what }}</span>
       <span class="line"
-        ><span>Titre</span><span class="in">{{ noteTitle() }}</span></span
+        ><span>{{ text().noteTitle }}</span
+        ><span class="in">{{ noteTitle() }}</span></span
       >
-      <span class="line"><span>Espace</span><span class="in">Plateforme</span></span>
-      <span class="line"><span>Dossier</span><span class="in">Aucun dossier</span></span>
-      <span class="line"><span>Tags</span><span class="in">jwt, test</span></span>
-      <span class="go">Enregistrer</span>
+      <span class="line"
+        ><span>{{ text().space }}</span
+        ><span class="in">{{ text().platform }}</span></span
+      >
+      <span class="line"
+        ><span>{{ text().folder }}</span
+        ><span class="in">{{ text().noFolder }}</span></span
+      >
+      <span class="line"
+        ><span>{{ text().tags }}</span
+        ><span class="in">jwt, test</span></span
+      >
+      <span class="go">{{ text().submit }}</span>
     </div>
-    <div class="toast">Note « Charge utile du jeton de test » enregistrée dans Plateforme.</div>
+    <div class="toast">{{ text().saved }}</div>
   </div>
 </div>

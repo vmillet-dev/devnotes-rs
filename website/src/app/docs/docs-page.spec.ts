@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { renderPage } from '../../testing/render-page';
+import { Lang, downloadPath, homePath } from '../core/lang';
 import { DOC_PAGES } from './content/pages';
 import { Block, Inline } from './doc.model';
 import { DOC_INDEX, docPath } from './doc-index';
@@ -24,36 +25,46 @@ function inlines(block: Block): readonly Inline[] {
   }
 }
 
+const LANGS: readonly Lang[] = ['fr', 'en'];
+
 describe('the documentation', () => {
-  it('has a text for every page of the index, and no page outside it', () => {
-    expect(DOC_PAGES.map(({ slug }) => slug).sort()).toEqual(DOC_INDEX.map(({ slug }) => slug).sort());
-  });
+  for (const lang of LANGS) {
+    describe(lang, () => {
+      it('has a text for every page of the index, in its order', () => {
+        expect(DOC_PAGES[lang].map(({ id }) => id)).toEqual(DOC_INDEX.map(({ id }) => id));
+      });
 
-  it('links only to pages that exist', () => {
-    const paths = new Set(['/', '/telecharger', ...DOC_INDEX.map(({ slug }) => docPath(slug))]);
-    for (const page of DOC_PAGES) {
-      for (const inline of page.body.flatMap(inlines)) {
-        if (typeof inline === 'object' && 'link' in inline && inline.to.startsWith('/')) {
-          expect(paths, `${page.slug}: ${inline.to}`).toContain(inline.to);
+      it('links only to pages that exist in its own language', () => {
+        const paths = new Set([
+          homePath(lang),
+          downloadPath(lang),
+          ...DOC_INDEX.map(({ id }) => docPath(id, lang)),
+        ]);
+        for (const page of DOC_PAGES[lang]) {
+          for (const inline of page.body.flatMap(inlines)) {
+            if (typeof inline === 'object' && 'link' in inline && inline.to.startsWith('/')) {
+              expect(paths, `${page.id}: ${inline.to}`).toContain(inline.to);
+            }
+          }
         }
-      }
-    }
-  });
+      });
 
-  it('gives every heading of a page its own anchor', () => {
-    for (const page of DOC_PAGES) {
-      const ids = page.body.flatMap((block) =>
-        block.kind === 'h2' || block.kind === 'h3' ? [block.id] : [],
-      );
-      expect(new Set(ids).size, page.slug).toBe(ids.length);
-    }
-  });
+      it('gives every heading of a page its own anchor', () => {
+        for (const page of DOC_PAGES[lang]) {
+          const ids = page.body.flatMap((block) =>
+            block.kind === 'h2' || block.kind === 'h3' ? [block.id] : [],
+          );
+          expect(new Set(ids).size, page.id).toBe(ids.length);
+        }
+      });
+    });
+  }
 
   for (const [index, entry] of DOC_INDEX.entries()) {
-    describe(docPath(entry.slug), () => {
+    describe(docPath(entry.id, 'fr'), () => {
       it('has one h1, its title, and the contents beside it match its sections', async () => {
-        const page = await renderPage(DocsPage, { slug: entry.slug });
-        const text = DOC_PAGES.find(({ slug }) => slug === entry.slug);
+        const page = await renderPage(DocsPage, { doc: entry.id });
+        const text = DOC_PAGES.fr.find(({ id }) => id === entry.id);
 
         expect(page.querySelectorAll('h1')).toHaveLength(1);
         expect(page.querySelector('h1')?.textContent?.trim()).toBe(text?.title);
@@ -65,25 +76,25 @@ describe('the documentation', () => {
       });
 
       it('marks itself in the sidebar and chains to its neighbours', async () => {
-        const page = await renderPage(DocsPage, { slug: entry.slug });
+        const page = await renderPage(DocsPage, { doc: entry.id });
 
         expect(page.querySelector('.side [aria-current="page"]')?.getAttribute('href')).toBe(
-          docPath(entry.slug),
+          docPath(entry.id, 'fr'),
         );
         const previous = DOC_INDEX[index - 1];
         const next = DOC_INDEX[index + 1];
         expect(page.querySelector('a[rel="prev"]')?.getAttribute('href') ?? null).toBe(
-          previous ? docPath(previous.slug) : null,
+          previous ? docPath(previous.id, 'fr') : null,
         );
         expect(page.querySelector('a[rel="next"]')?.getAttribute('href') ?? null).toBe(
-          next ? docPath(next.slug) : null,
+          next ? docPath(next.id, 'fr') : null,
         );
       });
     });
   }
 
   it('names every code block and makes it reachable by keyboard', async () => {
-    const page = await renderPage(DocsPage, { slug: 'prise-en-main' });
+    const page = await renderPage(DocsPage, { doc: 'start' });
     const blocks = [...page.querySelectorAll('pre')];
 
     expect(blocks.length).toBeGreaterThan(0);

@@ -1,7 +1,7 @@
-import { DocPage, b, h2, keys, p, table, tip, ui, ul } from '../doc.model';
+import { DocPage, b, h2, keys, p, table, tip, ui, ul } from '../../doc.model';
 
 export const TOOLS: DocPage = {
-  slug: 'outils',
+  id: 'tools',
   title: 'Les outils',
   summary:
     'Une trentaine d’utilitaires qui tournent sur votre machine sans rien appeler : encoder, hacher, convertir, générer, lire une date, calculer, et des références.',

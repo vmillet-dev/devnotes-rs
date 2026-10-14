@@ -1,19 +1,20 @@
 <div class="window app">
   <div class="app-side">
-    <span class="h">Espaces</span>
-    <span class="row">Tous les espaces</span>
-    <span class="row">Personnel</span>
-    <span class="row on">Plateforme</span>
-    <span class="row sub"><i class="sw" style="--c: var(--blue-rgb)"></i>Déploiement</span>
-    <span class="row sub"><i class="sw" style="--c: var(--amber-rgb)"></i>Base de données</span>
-    <span class="row sub"><i class="sw" style="--c: var(--purple-rgb)"></i>Frontend</span>
-    <span class="row">Projet perso</span>
-    <span class="foot">Corbeille</span>
+    <span class="h">{{ w().spaces }}</span>
+    <span class="row">{{ w().allSpaces }}</span>
+    <span class="row">{{ w().personal }}</span>
+    <span class="row on">{{ w().platform }}</span>
+    <span class="row sub"><i class="sw" style="--c: var(--blue-rgb)"></i>{{ w().deploy }}</span>
+    <span class="row sub"><i class="sw" style="--c: var(--amber-rgb)"></i>{{ w().db }}</span>
+    <span class="row sub"><i class="sw" style="--c: var(--purple-rgb)"></i>{{ w().front }}</span>
+    <span class="row">{{ w().project }}</span>
+    <span class="foot">{{ w().trash }}</span>
   </div>
   <div class="app-main">
     <div class="app-bar">
       <span class="mini-seg"
-        ><span [class.on]="listed()">Liste</span><span [class.on]="!listed()">Tableau</span></span
+        ><span [class.on]="listed()">{{ w().list }}</span
+        ><span [class.on]="!listed()">{{ w().board }}</span></span
       >
       <span class="app-search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -23,121 +24,152 @@
         @if (search()) {
           <span class="q">{{ search() }}</span>
         } @else {
-          <span class="ph">Rechercher…</span>
+          <span class="ph">{{ w().search }}</span>
         }
       </span>
     </div>
     <div class="view view-board">
       <div class="zone" style="--c: var(--blue-rgb)">
-        <div class="zone-head"><span class="sw"></span>Déploiement <span class="count">2</span></div>
+        <div class="zone-head"><span class="sw"></span>{{ w().deploy }} <span class="count">2</span></div>
         <div class="card">
           <div class="card-top">
-            <span class="tick"></span><strong>Cache du registre cargo en CI</strong
+            <span class="tick"></span><strong>{{ w().cargo }}</strong
             ><span class="chip-lang l-yml">YML</span>
           </div>
           <pre>- <span class="f">uses</span>: <span class="s">actions/cache&#64;v4</span>
   <span class="f">with</span>:</pre>
-          <div class="card-foot"><span>à l'instant</span><span>#ci</span></div>
+          <div class="card-foot">
+            <span>{{ w().now }}</span
+            ><span>#ci</span>
+          </div>
         </div>
         <div class="card">
           <div class="card-top">
-            <span class="tick"></span><strong>Postgres en local</strong><span class="chip-lang l-sh">SH</span>
+            <span class="tick"></span><strong>{{ w().postgres }}</strong
+            ><span class="chip-lang l-sh">SH</span>
           </div>
           <pre><span class="k">docker</span> run --rm \
   -p <span class="n">5432</span>:<span class="n">5432</span></pre>
-          <div class="card-foot"><span>lundi</span><span>#docker</span></div>
+          <div class="card-foot">
+            <span>{{ w().monday }}</span
+            ><span>#docker</span>
+          </div>
         </div>
       </div>
       <div class="zone db" style="--c: var(--amber-rgb)" [style.flex-grow]="growth()">
-        <div class="zone-head"><span class="sw"></span>Base de données <span class="count">2</span></div>
+        <div class="zone-head"><span class="sw"></span>{{ w().db }} <span class="count">2</span></div>
         <div class="card">
           <div class="card-top">
-            <span class="tick"></span><strong>Tunnel vers la base de staging</strong
+            <span class="tick"></span><strong>{{ w().tunnel }}</strong
             ><span class="chip-lang l-sh">SH</span>
           </div>
           <pre><span class="k">ssh</span> -N -L <span class="n">5433</span>:
 <span class="fld">{{ field('db_host') }}</span>:<span class="n">5432</span></pre>
-          <div class="card-foot"><span>à l'instant</span><span>#ops</span></div>
+          <div class="card-foot">
+            <span>{{ w().now }}</span
+            ><span>#ops</span>
+          </div>
         </div>
         <div class="card match">
           <div class="card-top">
-            <span class="tick"></span><strong>Quelles requêtes sont lentes</strong
+            <span class="tick"></span><strong>{{ w().slow }}</strong
             ><span class="chip-lang l-sql">SQL</span>
           </div>
           <pre><span class="k">SELECT</span> calls,
   mean_exec_time</pre>
           <p class="quote">… <span class="k">FROM </span><mark>pg_stat</mark>_statements</p>
-          <div class="card-foot"><span>à l'instant</span><span>#sql</span></div>
+          <div class="card-foot">
+            <span>{{ w().now }}</span
+            ><span>#sql</span>
+          </div>
         </div>
       </div>
       <div class="zone front" style="--c: var(--purple-rgb)">
-        <div class="zone-head"><span class="sw"></span>Frontend <span class="count">1</span></div>
+        <div class="zone-head"><span class="sw"></span>{{ w().front }} <span class="count">1</span></div>
         <div class="card">
           <div class="card-top">
-            <span class="tick"></span><strong>Un store à signaux, en bref</strong
+            <span class="tick"></span><strong>{{ w().store }}</strong
             ><span class="chip-lang l-ts">TS</span>
           </div>
           <pre><span class="k">export class</span>
   <span class="f">CounterStore</span> &#123;</pre>
-          <div class="card-foot"><span>lundi</span><span>#angular</span></div>
+          <div class="card-foot">
+            <span>{{ w().monday }}</span
+            ><span>#angular</span>
+          </div>
         </div>
       </div>
     </div>
     <div class="view view-list">
       <section class="list-section">
-        <h4 class="list-title">Aujourd'hui <span class="n">· 3</span></h4>
+        <h4 class="list-title">{{ w().today }} <span class="n">· 3</span></h4>
         <div class="list-grid">
           <div class="card">
             <div class="card-top">
-              <span class="tick"></span><strong>Quelles requêtes sont lentes</strong
+              <span class="tick"></span><strong>{{ w().slow }}</strong
               ><span class="chip-lang l-sql">SQL</span>
             </div>
             <pre><span class="k">SELECT</span> calls,
   mean_exec_time</pre>
-            <div class="card-foot"><span>à l'instant</span><span>#sql</span></div>
+            <div class="card-foot">
+              <span>{{ w().now }}</span
+              ><span>#sql</span>
+            </div>
           </div>
           <div class="card">
             <div class="card-top">
-              <span class="tick"></span><strong>Tunnel vers la base de staging</strong
+              <span class="tick"></span><strong>{{ w().tunnel }}</strong
               ><span class="chip-lang l-sh">SH</span>
             </div>
             <pre><span class="k">ssh</span> -N -L <span class="n">5433</span>:
 <span class="fld">{{ field('db_host') }}</span>:<span class="n">5432</span></pre>
-            <div class="card-foot"><span>à l'instant</span><span>#ops</span></div>
+            <div class="card-foot">
+              <span>{{ w().now }}</span
+              ><span>#ops</span>
+            </div>
           </div>
           <div class="card">
             <div class="card-top">
-              <span class="tick"></span><strong>Cache du registre cargo en CI</strong
+              <span class="tick"></span><strong>{{ w().cargo }}</strong
               ><span class="chip-lang l-yml">YML</span>
             </div>
             <pre>- <span class="f">uses</span>: <span class="s">actions/cache&#64;v4</span>
   <span class="f">with</span>:</pre>
-            <div class="card-foot"><span>à l'instant</span><span>#ci</span></div>
+            <div class="card-foot">
+              <span>{{ w().now }}</span
+              ><span>#ci</span>
+            </div>
           </div>
         </div>
       </section>
       <section class="list-section">
-        <h4 class="list-title">Cette semaine <span class="n">· 2</span></h4>
+        <h4 class="list-title">{{ w().week }} <span class="n">· 2</span></h4>
         <div class="list-grid">
           <div class="card">
             <div class="card-top">
-              <span class="tick"></span><strong>Un store à signaux, en bref</strong
+              <span class="tick"></span><strong>{{ w().store }}</strong
               ><span class="chip-lang l-ts">TS</span>
             </div>
             <pre><span class="k">export class</span>
   <span class="f">CounterStore</span> &#123;</pre>
-            <div class="card-foot"><span>lundi</span><span>#angular</span></div>
+            <div class="card-foot">
+              <span>{{ w().monday }}</span
+              ><span>#angular</span>
+            </div>
           </div>
           <div class="card">
             <div class="card-top">
-              <span class="tick"></span><strong>Postgres en local</strong
+              <span class="tick"></span><strong>{{ w().postgres }}</strong
               ><span class="chip-lang l-sh">SH</span>
             </div>
             <pre><span class="k">docker</span> run --rm \
   -p <span class="n">5432</span>:<span class="n">5432</span></pre>
-            <div class="card-foot"><span>lundi</span><span>#docker</span></div>
+            <div class="card-foot">
+              <span>{{ w().monday }}</span
+              ><span>#docker</span>
+            </div>
           </div>
-          <div class="card ghost"><span class="plus">+</span>Coller ou créer</div>
+          <div class="card ghost"><span class="plus">+</span>{{ w().pasteOrCreate }}</div>
         </div>
       </section>
     </div>

@@ -1,19 +1,14 @@
 <section class="wrap head" aria-labelledby="download-h" style="--c: var(--amber-rgb)">
-  <span class="zone-title"><span class="sw"></span>Télécharger</span>
-  <h1 id="download-h">Télécharger DevNotes</h1>
-  <p class="lede">
-    La version {{ version }}, pour Windows et Linux. Gratuite et libre, sans compte : tout reste sur votre
-    machine.
-  </p>
+  <span class="zone-title"><span class="sw"></span>{{ text().label }}</span>
+  <h1 id="download-h">{{ text().heading }}</h1>
+  <p class="lede">{{ text().lede }}</p>
   @if (onPhone()) {
-    <p class="phone">
-      DevNotes s'installe sur un ordinateur. Ouvrez cette page depuis votre poste pour le télécharger.
-    </p>
+    <p class="phone">{{ text().phone }}</p>
   }
 </section>
 
-<section class="wrap systems" aria-label="Les fichiers, par système">
-  @for (offer of offers; track offer.system) {
+<section class="wrap systems" [attr.aria-label]="text().systems">
+  @for (offer of offers(); track offer.system) {
     <article
       class="window system"
       [class.yours]="yours() === offer.system"
@@ -22,19 +17,21 @@
       <header class="win-head">
         <h2 class="win-title" [id]="'system-' + offer.system">{{ offer.label }}</h2>
         @if (yours() === offer.system) {
-          <span class="mine">Votre système</span>
+          <span class="mine">{{ text().yours }}</span>
         }
-        <span class="arch">64 bits</span>
+        <span class="arch">{{ text().arch }}</span>
       </header>
       <div class="body">
-        <a class="btn btn-primary" [href]="offer.primary.url">
-          Télécharger {{ offer.system === 'windows' ? "l'installateur" : "l'AppImage" }}
-        </a>
+        <a class="btn btn-primary" [href]="offer.primary.url">{{ offer.action }}</a>
         <p class="file">
           <code>{{ offer.primary.file }}</code>
+          @if (offer.primary.size) {
+            <span class="size">{{ offer.primary.size }}</span>
+          }
         </p>
         <p class="who">{{ offer.primary.who }}</p>
-        <h3>Autres formats</h3>
+        <p class="heads-up">{{ offer.system === 'windows' ? text().unsigned : text().executable }}</p>
+        <h3>{{ text().others }}</h3>
         <ul class="others">
           @for (other of offer.others; track other.file) {
             <li>
@@ -49,59 +46,70 @@
   }
 </section>
 
+<div class="wrap beside">
+  <a class="notes" [href]="releasePage">{{ text().notes }}</a>
+  <p class="mac">{{ text().mac }}</p>
+</div>
+
 <section class="wrap install" aria-labelledby="install-h">
-  <h2 id="install-h">Installer</h2>
+  <h2 id="install-h">{{ text().install }}</h2>
   <div class="columns">
     <div class="column">
-      <h3>Sous Windows</h3>
-      <p>
-        Lancez l'installateur : il s'installe pour votre compte et n'a pas besoin des droits d'administrateur.
-        Au premier lancement, Windows peut afficher un avertissement SmartScreen : choisissez
-        <b>Informations complémentaires</b>, puis <b>Exécuter quand même</b>. Il porte sur l'identité de
-        l'éditeur, DevNotes n'ayant pas de certificat de signature de code, pas sur le fichier.
-      </p>
+      <h3>{{ text().onWindows }}</h3>
+      <p>{{ text().windows }}</p>
     </div>
     <div class="column">
-      <h3>Sous Linux</h3>
-      <p>
-        Une AppImage se rend exécutable puis se lance ; un paquet s'installe avec le gestionnaire de la
-        distribution.
-      </p>
-      <app-doc-blocks [blocks]="linuxInstall" />
+      <h3>{{ text().onLinux }}</h3>
+      <p>{{ text().linux }}</p>
+      <app-doc-blocks [blocks]="linuxInstall()" />
     </div>
   </div>
 </section>
 
+<section class="wrap verify" aria-labelledby="verify-h">
+  <h2 id="verify-h">{{ text().verify }}</h2>
+  <p class="verify-lede">{{ text().verifyLede }} <a [href]="checksums">SHA256SUMS.txt</a>.</p>
+  <div class="sums">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">{{ text().file }}</th>
+          <th scope="col">{{ text().size }}</th>
+          <th scope="col">SHA-256</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (file of files(); track file.file) {
+          <tr>
+            <th scope="row">
+              <code>{{ file.file }}</code>
+            </th>
+            <td>{{ file.size }}</td>
+            <td>
+              <code class="hash">{{ file.sha256 }}</code>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <app-doc-blocks [blocks]="check()" />
+</section>
+
 <section class="wrap after" aria-labelledby="after-h">
-  <h2 id="after-h">Et ensuite</h2>
+  <h2 id="after-h">{{ text().after }}</h2>
   <ul class="facts">
     <li>
-      <h3>Les mises à jour</h3>
-      <p>
-        DevNotes vérifie lui-même s'il existe une version plus récente et la propose, avec ses notes. Elles
-        sont signées et vérifiées avant d'être installées.
-      </p>
+      <h3>{{ text().updates }}</h3>
+      <p>{{ text().updatesText }}</p>
     </li>
     <li>
-      <h3>Vérifier un fichier</h3>
+      <h3>{{ text().changed }}</h3>
       <p>
-        Chaque version publie <a [href]="checksums">SHA256SUMS.txt</a>, l'empreinte de chacun de ses fichiers.
-      </p>
-      <app-doc-blocks [blocks]="check" />
-    </li>
-    <li>
-      <h3>Ce qui a changé</h3>
-      <p>
-        Les <a [href]="releasePage">notes de la version {{ version }}</a> et le
-        <a [href]="changelog">journal des modifications</a> complet. Pour bien démarrer, la
-        <a routerLink="/docs/prise-en-main">prise en main</a>.
-      </p>
-    </li>
-    <li>
-      <h3>Et macOS ?</h3>
-      <p>
-        Pas de version pour l'instant : elle ne peut pas être testée ici, et Gatekeeper réclame un compte
-        Apple Developer payant.
+        <a [href]="releasePage">{{ text().notes }}</a
+        >. {{ text().changedBefore }} <a [href]="changelog">{{ text().changelog }}</a>
+        {{ text().changedMiddle }} <a [routerLink]="startPath()">{{ text().start }}</a
+        >.
       </p>
     </li>
   </ul>

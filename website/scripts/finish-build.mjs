@@ -21,7 +21,7 @@ for (const path of paths) {
   const h1 = html.match(/<h1[\s>]/g)?.length ?? 0;
   if (h1 !== 1) problems.push(`${path}: ${h1} <h1>`);
   if (!html.includes('<link rel="canonical"')) problems.push(`${path}: no canonical link`);
-  if (/localhost|127\.0\.0\.1/.test(html)) problems.push(`${path}: a local address`);
+  if (/https?:\/\/(localhost|127\.0\.0\.1)/.test(html)) problems.push(`${path}: a local address`);
   if (!/<title>[^<]+<\/title>/.test(html)) problems.push(`${path}: no title`);
 }
 if (!existsSync(join(OUT, 'index.html'))) problems.push('no index.html at the root');

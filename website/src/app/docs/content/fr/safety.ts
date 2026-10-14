@@ -1,7 +1,7 @@
-import { DocPage, b, code, h2, h3, keys, link, ol, p, table, tip, ui, ul, warn } from '../doc.model';
+import { DocPage, b, code, h2, h3, keys, link, ol, p, table, tip, ui, ul, warn } from '../../doc.model';
 
 export const SAFETY: DocPage = {
-  slug: 'securite',
+  id: 'safety',
   title: 'Sécurité et sauvegardes',
   summary:
     'Ce qui est chiffré et comment, la phrase de passe, plusieurs bibliothèques, les copies de sauvegarde, la corbeille, les versions et l’annulation.',

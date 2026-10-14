@@ -110,6 +110,34 @@
   opacity: 1;
 }
 
+// The wide form: one column, the words centred, the steps side by side, the scene full width.
+.wide .feature-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(28px, 3vw, 48px);
+}
+
+.wide .feature-copy {
+  justify-items: center;
+  max-width: 52rem;
+  margin-inline: auto;
+  text-align: center;
+}
+
+.wide .feature-lede {
+  max-width: 40em;
+}
+
+.wide .steps {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 6px;
+  width: min(100%, 64rem);
+  text-align: left;
+}
+
+.wide .story-stage {
+  height: 540px;
+}
+
 // Tied to the scroll but never holding it: the window settles as it comes up the screen.
 .story-stage {
   position: relative;

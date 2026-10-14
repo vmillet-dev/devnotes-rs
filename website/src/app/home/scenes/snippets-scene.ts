@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 
 import { field, part, typed } from '../../core/browser';
+import { Lang } from '../../core/lang';
+import { Language } from '../../core/language';
 import { CodeView, Line } from '../code-view';
 import { ScenePlayer } from '../scene-player';
 
@@ -8,14 +10,56 @@ const HOST = 'db-1.staging.internal';
 const USER = 'deploy';
 const QUERY = 'tunnel';
 
-/** What the palette finds: every space at once, the canvas filters ignored. */
-const SNIPPETS = [
-  { title: 'Tunnel vers la base de staging', lang: 'sh' },
-  { title: 'Tunnel SSH vers Redis', lang: 'sh' },
-  { title: 'Postgres en local', lang: 'sh' },
-  { title: 'Quelles requêtes sont lentes', lang: 'sql' },
-  { title: 'Appeler une API avec un jeton', lang: 'sh' },
-] as const;
+const FR = {
+  title: 'Tunnel vers la base de staging',
+  copyFilled: 'Copier rempli',
+  fields: 'Champs',
+  goes: 'Ce qui part dans le presse-papiers',
+  search: 'Rechercher un snippet…',
+  esc: 'Échap',
+  enter: 'Entrée',
+  move: 'choisir',
+  open: 'ouvrir',
+  copy: 'copier',
+  close: 'fermer',
+  copied: 'Copié dans le presse-papiers',
+  space: 'Plateforme',
+  /** What the palette finds: every space at once, the canvas filters ignored. */
+  snippets: [
+    'Tunnel vers la base de staging',
+    'Tunnel SSH vers Redis',
+    'Postgres en local',
+    'Quelles requêtes sont lentes',
+    'Appeler une API avec un jeton',
+  ],
+};
+
+const EN: typeof FR = {
+  title: 'Tunnel to the staging database',
+  copyFilled: 'Copy filled',
+  fields: 'Fields',
+  goes: 'What goes to the clipboard',
+  search: 'Search a snippet…',
+  esc: 'Esc',
+  enter: 'Enter',
+  move: 'move',
+  open: 'open',
+  copy: 'copy',
+  close: 'close',
+  copied: 'Copied to the clipboard',
+  space: 'Platform',
+  snippets: [
+    'Tunnel to the staging database',
+    'SSH tunnel to Redis',
+    'Postgres on localhost',
+    'Which queries are slow',
+    'Call an API with a token',
+  ],
+};
+
+const TEXT: Readonly<Record<Lang, typeof FR>> = { fr: FR, en: EN };
+
+const LANGUAGES = ['sh', 'sh', 'sh', 'sql', 'sh'];
 
 const SNIPPET: readonly Line[] = [
   [['k', 'ssh'], ' -N -L ', ['n', '5433'], ':', ['fld', field('db_host')], ':', ['n', '5432'], ' \\'],
@@ -42,6 +86,8 @@ export class SnippetsScene {
   protected readonly field = field;
   protected readonly keys = ['Ctrl', 'Alt', 'P'];
   protected readonly snippet = SNIPPET;
+  private readonly lang = inject(Language).lang;
+  protected readonly text = computed(() => TEXT[this.lang()]);
 
   protected readonly host = computed(() => this.typedIn(HOST, 0.05, 0.5));
   protected readonly user = computed(() => this.typedIn(USER, 0.55, 0.9));
@@ -60,7 +106,8 @@ export class SnippetsScene {
   });
   protected readonly results = computed(() => {
     const query = this.query().toLowerCase();
-    return SNIPPETS.flatMap(({ title, lang }) => {
+    return this.text().snippets.flatMap((title, i) => {
+      const lang = LANGUAGES[i] ?? 'sh';
       const at = title.toLowerCase().indexOf(query);
       if (query && at < 0) return [];
       const end = at + query.length;

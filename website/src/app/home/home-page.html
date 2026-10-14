@@ -1,16 +1,31 @@
 <section class="hero" aria-labelledby="hero-h">
   <div class="wrap hero-text">
-    <h1 id="hero-h">Le board où vivent vos snippets.</h1>
+    <h1 id="hero-h">{{ t().headline }}</h1>
     <div class="hero-side">
-      <p class="lede">
-        Commandes, requêtes, bouts de code, notes et listes, rangés en espaces et en dossiers. Une trentaine
-        d'outils et un client API à côté, le tout chiffré sur votre machine.
-      </p>
-      <div class="cta-row">
-        <a class="btn btn-primary" routerLink="/telecharger">Télécharger</a>
-        <a class="btn btn-ghost" routerLink="/docs">Lire la documentation</a>
-      </div>
-      <p class="platforms">Gratuit et libre, pour Windows et Linux.</p>
+      <p class="lede">{{ t().lede }}</p>
+      @if (offer(); as get) {
+        <div class="cta-row">
+          <a class="btn btn-primary get" [href]="get.primary.url"
+            ><span>{{ t().downloadFor }} {{ get.label }}</span
+            ><span class="ver">v{{ version }}</span></a
+          >
+          <a class="btn btn-ghost" [routerLink]="links().docs">{{ t().docs }}</a>
+        </div>
+      }
+      <ul class="facts">
+        @for (fact of t().facts; track fact; let i = $index) {
+          <li>
+            @if (i === t().sourceFact) {
+              <a [href]="repository">{{ fact }}</a>
+            } @else {
+              <span>{{ fact }}</span>
+            }
+          </li>
+        }
+        <li class="more">
+          <a [routerLink]="links().download">{{ t().others }}</a>
+        </li>
+      </ul>
     </div>
   </div>
   <app-hero-board />
@@ -19,132 +34,151 @@
 <app-feature
   anchor="snippets"
   tone="green"
-  label="Snippets à champs"
-  heading="Vos commandes, prêtes à coller."
-  [steps]="[
-    'Un snippet avec deux champs',
-    'DevNotes demande leurs valeurs',
-    'Ctrl Alt P depuis votre terminal',
-    'La commande remplie est copiée',
-  ]"
+  [label]="t().snippets.label"
+  [heading]="t().snippets.heading"
+  [steps]="t().snippets.steps"
   [durations]="[1150, 1550, 1700, 1200]"
 >
-  <p lede>
-    Un snippet peut contenir des champs comme <code>{{ field('host') }}</code> ou
-    <code>{{ field('port=22') }}</code
-    >. DevNotes vous demande leurs valeurs, puis copie la commande complète. Depuis n'importe quelle
-    application, avec <span class="keys"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>P</kbd></span
-    >.
-  </p>
+  @if (lang() === 'fr') {
+    <p lede>
+      Un snippet peut contenir des champs comme <code>{{ field('host') }}</code> ou
+      <code>{{ field('port=22') }}</code
+      >. DevNotes vous demande leurs valeurs, puis copie la commande complète. Depuis n'importe quelle
+      application, avec <span class="keys"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>P</kbd></span
+      >.
+    </p>
+  } @else {
+    <p lede>
+      A snippet can hold fields like <code>{{ field('host') }}</code> or <code>{{ field('port=22') }}</code
+      >. DevNotes asks for their values, then copies the whole command. From any application, with
+      <span class="keys"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>P</kbd></span
+      >.
+    </p>
+  }
   <app-snippets-scene />
 </app-feature>
 
 <app-feature
   anchor="ranger"
   tone="blue"
-  label="Ranger et retrouver"
-  heading="Tout est rangé, tout se retrouve."
-  flip
-  [steps]="[
-    'Un espace et ses dossiers, en tableau',
-    'Un dossier s’agrandit à la souris',
-    'La recherche cite la ligne trouvée',
-    'Les mêmes notes, en liste par date',
-  ]"
+  wide
+  [label]="t().organise.label"
+  [heading]="t().organise.heading"
+  [steps]="t().organise.steps"
   [durations]="[1100, 1350, 1450, 1200]"
 >
-  <p lede>
-    Un espace par contexte, des dossiers dedans, et une vue Tableau où chaque dossier est une zone. La
-    recherche lit les titres, le code, les listes et les tags.
-  </p>
+  @if (lang() === 'fr') {
+    <p lede>
+      Un espace par contexte, des dossiers dedans, et une vue Tableau où chaque dossier est une zone. La
+      recherche lit les titres, le code, les listes et les tags.
+    </p>
+  } @else {
+    <p lede>
+      A space for each context, folders inside it, and a Board view where each folder is a zone. The search
+      reads titles, code, lists and tags.
+    </p>
+  }
   <app-organise-scene />
 </app-feature>
 
 <app-feature
   anchor="code"
   tone="purple"
-  label="Le code"
-  heading="Un vrai éditeur pour vos snippets."
-  [steps]="['Choisir le langage au clavier', 'Formater avec Prettier', 'Lire un JSON en graphe']"
+  flip
+  [label]="t().code.label"
+  [heading]="t().code.heading"
+  [steps]="t().code.steps"
   [durations]="[1700, 1350, 1950]"
 >
-  <p lede>
-    Vingt-six langages colorés, Prettier en un clic, et vos JSON, YAML, TOML ou XML lisibles en graphe à côté
-    du code.
-  </p>
+  @if (lang() === 'fr') {
+    <p lede>
+      Vingt-six langages colorés, Prettier en un clic, et vos JSON, YAML, TOML ou XML lisibles en graphe à
+      côté du code.
+    </p>
+  } @else {
+    <p lede>
+      Twenty-six highlighted languages, Prettier in one click, and your JSON, YAML, TOML or XML readable as a
+      graph beside the code.
+    </p>
+  }
   <app-code-scene />
 </app-feature>
 
 <app-feature
   anchor="outils"
   tone="teal"
-  label="Outils"
-  heading="Une trentaine d’outils, sans réseau."
-  flip
-  [steps]="[
-    'Chercher un outil, Ctrl Maj T',
-    'Une expression cron, lue à voix haute',
-    'Un JWT décodé, ses dates lues',
-    'Le résultat gardé comme une note',
-  ]"
+  [label]="t().tools.label"
+  [heading]="t().tools.heading"
+  [steps]="t().tools.steps"
   [durations]="[1300, 1800, 1700, 1700]"
 >
-  <p lede>
-    Encoder, hacher, convertir, lire une date ou une expression cron. Chaque outil tourne sur votre machine et
-    n'appelle rien. Un résultat se garde comme une note.
-  </p>
+  @if (lang() === 'fr') {
+    <p lede>
+      Encoder, hacher, convertir, lire une date ou une expression cron. Chaque outil tourne sur votre machine
+      et n'appelle rien. Un résultat se garde comme une note.
+    </p>
+  } @else {
+    <p lede>
+      Encode, hash, convert, read a date or a cron expression. Every tool runs on your machine and calls
+      nothing. A result can be kept as a note.
+    </p>
+  }
   <app-tools-scene />
 </app-feature>
 
 <app-feature
   anchor="client-api"
   tone="olive"
-  label="Client API"
-  heading="Testez vos API à côté de vos notes."
-  [steps]="[
-    'Une variable prise dans l’environnement',
-    'Envoyer, lire la réponse',
-    'Le code pour vingt cibles',
-    'Un WebSocket et son journal',
-  ]"
+  wide
+  [label]="t().api.label"
+  [heading]="t().api.heading"
+  [steps]="t().api.steps"
   [durations]="[1350, 1600, 1700, 1600]"
 >
-  <p lede>
-    HTTP, GraphQL et WebSocket, avec des collections, des environnements et des variables. L'historique est
-    chiffré comme le reste.
-  </p>
+  @if (lang() === 'fr') {
+    <p lede>
+      HTTP, GraphQL et WebSocket, avec des collections, des environnements et des variables. L'historique est
+      chiffré comme le reste.
+    </p>
+  } @else {
+    <p lede>
+      HTTP, GraphQL and WebSocket, with collections, environments and variables. The history is encrypted like
+      everything else.
+    </p>
+  }
   <app-api-scene />
 </app-feature>
 
 <app-feature
   anchor="chiffrement"
   tone="pink"
-  label="Chiffrement"
-  heading="Rien ne quitte votre machine."
   flip
-  [steps]="[
-    'Sur le disque, la note est chiffrée',
-    'Votre phrase de passe la déverrouille',
-    'Plusieurs bibliothèques, sauvegardées chaque jour',
-  ]"
+  [label]="t().vault.label"
+  [heading]="t().vault.heading"
+  [steps]="t().vault.steps"
   [durations]="[1450, 1700, 1350]"
 >
-  <p lede>
-    Vos notes sont chiffrées sur le disque, derrière une phrase de passe que DevNotes n'enregistre nulle part.
-    Pas de compte, pas de cloud. Perdue, elle ne se récupère pas : gardez un export.
-  </p>
+  @if (lang() === 'fr') {
+    <p lede>
+      Vos notes sont chiffrées sur le disque, derrière une phrase de passe que DevNotes n'enregistre nulle
+      part. Pas de compte, pas de cloud. Perdue, elle ne se récupère pas : gardez un export.
+    </p>
+  } @else {
+    <p lede>
+      Your notes are encrypted on disk, behind a passphrase DevNotes stores nowhere. No account, no cloud.
+      Lost, it cannot be recovered: keep an export.
+    </p>
+  }
   <app-vault-scene />
 </app-feature>
 
 <app-more-section />
 
 <section class="wrap closing" aria-labelledby="closing-h">
-  <h2 id="closing-h">Vos snippets, rangés et à portée de raccourci.</h2>
-  <p class="lede">
-    DevNotes {{ version }}, pour Windows et Linux. Gratuit, libre, et rien ne quitte votre machine.
-  </p>
+  <h2 id="closing-h">{{ t().closing }}</h2>
+  <p class="lede">{{ t().closingLede(version) }}</p>
   <div class="cta-row">
-    <a class="btn btn-primary" routerLink="/telecharger">Télécharger DevNotes</a>
-    <a class="btn btn-ghost" routerLink="/docs">Lire la documentation</a>
+    <a class="btn btn-primary" [routerLink]="links().download">{{ t().closingDownload }}</a>
+    <a class="btn btn-ghost" [routerLink]="links().docs">{{ t().docs }}</a>
   </div>
 </section>

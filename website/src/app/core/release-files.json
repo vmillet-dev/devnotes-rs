@@ -1,0 +1,33 @@
+{
+  "version": "0.12.0",
+  "files": {
+    "devnotes-0.12.0-1.x86_64.rpm": {
+      "size": 14490193,
+      "sha256": "399a2ccba70cc07e57f0cbf9d5f08940d39d2b1b1b88cf542d655e9b6bae2e80"
+    },
+    "devnotes-0.12.0-linux": {
+      "size": 33285888,
+      "sha256": "316ba62c43fddb5421cb9027dbd1f90253cef3d70ed92debcdee9c65148083ac"
+    },
+    "devnotes-0.12.0-windows.exe": {
+      "size": 36552192,
+      "sha256": "ae0896700c7d135ab7c6c5e5a3c7e140985271ef4b267126cf141ce3e4570ee0"
+    },
+    "devnotes_0.12.0_amd64.AppImage": {
+      "size": 91736568,
+      "sha256": "1459e2de1966464013017663def41e27c73f359fc1e33c5d434c5a7326e073b5"
+    },
+    "devnotes_0.12.0_amd64.deb": {
+      "size": 14488644,
+      "sha256": "fb9fd96549ee535d666e55defac775d03aed4ce1f880d0f530873890c18550d7"
+    },
+    "devnotes_0.12.0_x64-setup.exe": {
+      "size": 10291997,
+      "sha256": "00861aa41e7dffc56e4403a9cce36046292719bb353f0feb86fbd1299d3c9b45"
+    },
+    "devnotes_0.12.0_x64_en-US.msi": {
+      "size": 14270464,
+      "sha256": "58381794dc323fa540f8e7a2f0935db8b1197b6cb90601898bb2ccad10379964"
+    }
+  }
+}

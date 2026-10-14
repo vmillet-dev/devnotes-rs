@@ -36,10 +36,10 @@
             <span class="chip-lang" [class]="chip(block.lang)">{{ block.lang.toUpperCase() }}</span>
           }
           <button type="button" class="copy" (click)="copy(i, block.code, source)">
-            {{ copied() === i ? 'Copié' : 'Copier' }}
+            {{ copied() === i ? words().copied : words().copy }}
           </button>
         </figcaption>
-        <pre #source tabindex="0" [attr.aria-label]="'Code : ' + block.title">{{ block.code }}</pre>
+        <pre #source tabindex="0" [attr.aria-label]="words().code + block.title">{{ block.code }}</pre>
       </figure>
     }
     @case ('note') {
@@ -62,8 +62,8 @@
           </caption>
           <thead>
             <tr>
-              <th scope="col">Touches</th>
-              <th scope="col">Action</th>
+              <th scope="col">{{ words().keys }}</th>
+              <th scope="col">{{ words().action }}</th>
             </tr>
           </thead>
           <tbody>
@@ -112,11 +112,11 @@
     }
     @case ('guides') {
       <ul class="guides">
-        @for (guide of guides; track guide.slug) {
+        @for (guide of guides; track guide.id) {
           <li [style.--c]="rgb(guide.tone)">
-            <a [routerLink]="path(guide.slug)">
-              <span class="sw"></span><span class="name">{{ guide.nav }}</span>
-              <span class="about">{{ summaries()[guide.slug] }}</span>
+            <a [routerLink]="path(guide.id)">
+              <span class="sw"></span><span class="name">{{ guide.nav[lang()] }}</span>
+              <span class="about">{{ summaries()[guide.id] }}</span>
             </a>
           </li>
         }

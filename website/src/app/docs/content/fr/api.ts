@@ -1,7 +1,22 @@
-import { DocPage, b, field, h2, h3, keys, ol, p, shortcuts, snippet, tip, ui, ul, warn } from '../doc.model';
+import {
+  DocPage,
+  b,
+  field,
+  h2,
+  h3,
+  keys,
+  ol,
+  p,
+  shortcuts,
+  snippet,
+  tip,
+  ui,
+  ul,
+  warn,
+} from '../../doc.model';
 
 export const API_CLIENT: DocPage = {
-  slug: 'client-api',
+  id: 'api',
   title: 'Le client API',
   summary:
     'Envoyer des requêtes HTTP et GraphQL, ouvrir des WebSockets, les ranger en collections, et les faire varier d’un environnement à l’autre.',

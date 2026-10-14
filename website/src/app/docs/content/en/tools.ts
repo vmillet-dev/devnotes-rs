@@ -1,0 +1,96 @@
+import { DocPage, b, h2, keys, p, table, tip, ui, ul } from '../../doc.model';
+
+export const TOOLS: DocPage = {
+  id: 'tools',
+  title: 'The tools',
+  summary:
+    'Some thirty utilities that run on your machine and call nothing: encoding, hashing, converting, generating, reading a date, calculating, and references.',
+  body: [
+    p(
+      'The ',
+      ui('Tools'),
+      ' area (',
+      keys('Ctrl 2'),
+      ') sorts them by category. None of them calls the network: what you paste does not leave the application.',
+    ),
+    h2('find', 'Finding a tool'),
+    ul(
+      [keys('Ctrl Shift T'), ' searches for a tool from any area, and searches the references too.'],
+      ['A star puts a tool in the ', ui('Favourites'), '; the last ones opened are in ', ui('Recent'), '.'],
+      ['A tool’s ', ui('Example'), ' button fills it in, to see what it does.'],
+    ),
+    h2('keep', 'Keeping a result'),
+    p(
+      ui('Save as note'),
+      ' files what the tool computed in a snippet, with a title, a space, a folder and tags. Never what was typed into it: a secret pasted into a tool does not land in your notes by mistake.',
+    ),
+    h2('list', 'Every tool'),
+    table(
+      'Text',
+      ['Tool', 'What it does'],
+      [b('Case converter'), 'camelCase, snake_case, dot.case, Train-Case… and the slug'],
+      [b('Line breaks'), 'CRLF ↔ LF, trailing spaces'],
+      [b('Text statistics'), 'characters, words, lines, bytes, frequencies'],
+      [
+        b('Diff'),
+        'two texts line by line, or two JSON, YAML, TOML or XML documents compared by their values',
+      ],
+    ),
+    table(
+      'Crypto',
+      ['Tool', 'What it does'],
+      [b('Hash / HMAC'), 'MD5, SHA-1, SHA-2, SHA-3'],
+      [b('Passwords'), 'length, character sets, entropy'],
+      [b('Identifiers'), 'UUID, ULID, NanoID, CUID2, ObjectId, KSUID, drawn and read back'],
+      [b('JWT'), 'decoded, its dates read, its HS* signature verified'],
+    ),
+    table(
+      'Encoders',
+      ['Tool', 'What it does'],
+      [b('URL'), 'encode, decode, take apart an address and its parameters'],
+      [b('Base64 and other bases'), 'Base64, Base32, hexadecimal, binary, bytes; an image’s preview'],
+      [b('JSON ↔ YAML ↔ TOML ↔ XML'), 'from one format to another, every way round'],
+      [b('Colours'), 'HEX, RGB, HSL, OKLCH, and the contrast between two colours'],
+    ),
+    table(
+      'Generators',
+      ['Tool', 'What it does'],
+      [b('JSON'), 'test data, from a schema or a template document'],
+      [b('Fictitious identity'), 'a test person whose every number passes its check digit'],
+      [b('Lorem ipsum'), 'words, sentences, paragraphs'],
+      [b('QR code'), 'text, URL, Wi-Fi, email or contact, as SVG or PNG'],
+    ),
+    table(
+      'Time',
+      ['Tool', 'What it does'],
+      [b('Dates and durations'), 'Unix ↔ ISO 8601, gaps and ISO durations'],
+      [b('Time zones'), 'one time, in every zone chosen'],
+      [b('Cron'), 'read aloud, its next runs, and those between two moments'],
+    ),
+    table(
+      'Calculate',
+      ['Tool', 'What it does'],
+      [b('Sizes and transfer'), 'B, kB, MB, GB ↔ KiB, MiB, GiB, bits, and how long a transfer takes'],
+      [b('Percentages'), 'x % of y, share, change, rise and fall'],
+      [b('Unix permissions'), 'chmod: 755 ↔ rwxr-xr-x, special bits, umask'],
+      [b('Luhn and IBAN'), 'bank card, IBAN: valid or not, and the right check digits'],
+      [b('CIDR subnets'), 'masks, hosts, splitting, address plan, IPv4 and IPv6'],
+    ),
+    table(
+      'References',
+      ['Reference', 'What it holds'],
+      [b('HTTP status codes'), '404, 429, 503: what they mean, and when to send them'],
+      [b('HTTP headers'), 'Content-Type, Cache-Control, CORS, CSP: what they are for'],
+      [b('MIME types'), 'the type of an extension, and the extensions of a type'],
+      [b('Common ports'), '22, 443, 5432, 6379: which service listens where'],
+      [b('Unix signals'), 'SIGTERM, SIGKILL, SIGHUP: numbers, action and use'],
+      [b('ASCII table'), 'the 128 characters, in decimal, hexadecimal, octal and binary'],
+      [b('Regex cheat sheet'), 'the syntax, in JavaScript and PCRE'],
+      [b('Markdown cheat sheet'), 'headings, lists, links, tables, in CommonMark and on GitHub'],
+      [b('Mustache cheat sheet'), 'variables, sections, partials, with what they render'],
+    ),
+    tip(
+      'A tool that opens a file reads it up to 10 MB. Beyond that, it says so rather than cutting it silently.',
+    ),
+  ],
+};

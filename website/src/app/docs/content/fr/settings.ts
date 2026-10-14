@@ -1,8 +1,8 @@
-import { REPOSITORY } from '../../core/site';
-import { DocPage, b, code, field, h2, h3, keys, link, p, table, tip, ui, ul } from '../doc.model';
+import { REPOSITORY } from '../../../core/site';
+import { DocPage, b, code, field, h2, h3, keys, link, p, table, tip, ui, ul } from '../../doc.model';
 
 export const TRANSFER: DocPage = {
-  slug: 'import-export',
+  id: 'transfer',
   title: 'Importer et exporter',
   summary:
     'Exporter tout, un espace ou une sélection dans une archive .devnotes, protégée ou non, la réimporter sans doublon, et copier des notes en Markdown.',
@@ -57,7 +57,7 @@ export const TRANSFER: DocPage = {
 };
 
 export const SETTINGS: DocPage = {
-  slug: 'preferences',
+  id: 'settings',
   title: 'Préférences',
   summary:
     'Le thème, la langue et la densité, l’éditeur, le comportement de la fenêtre, les variables globales, les raccourcis et la sécurité.',
@@ -120,7 +120,7 @@ export const SETTINGS: DocPage = {
 };
 
 export const FAQ: DocPage = {
-  slug: 'faq',
+  id: 'faq',
   title: 'Questions fréquentes',
   summary:
     'Le prix, macOS, la synchronisation, une phrase de passe oubliée, l’avertissement de Windows, et où vont vos données.',

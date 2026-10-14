@@ -1,10 +1,11 @@
 <div class="window snip-ed">
   <div class="win-head">
-    <span class="win-title">Tunnel vers la base de staging</span><span class="chip-lang l-sh">SH</span>
-    <span class="btn-small copy">Copier rempli</span>
+    <span class="win-title">{{ text().title }}</span
+    ><span class="chip-lang l-sh">SH</span>
+    <span class="btn-small copy">{{ text().copyFilled }}</span>
   </div>
   <div class="fields-head">
-    Champs <span class="count">{{ filled() }}</span>
+    {{ text().fields }} <span class="count">{{ filled() }}</span>
   </div>
   <div class="fields">
     <span class="lbl">{{ field('db_host') }}</span
@@ -14,7 +15,7 @@
   </div>
   <app-code [lines]="snippet" />
   <div class="preview">
-    <span class="pv-label">Ce qui part dans le presse-papiers</span>
+    <span class="pv-label">{{ text().goes }}</span>
     <output>{{ command() }}</output>
   </div>
 </div>
@@ -41,10 +42,10 @@
       @if (query()) {
         <span class="pal-query">{{ query() }}</span>
       } @else {
-        <span class="pal-placeholder">Rechercher un snippet…</span>
+        <span class="pal-placeholder">{{ text().search }}</span>
       }
       <span class="pal-caret"></span>
-      <kbd class="esc">Échap</kbd>
+      <kbd class="esc">{{ text().esc }}</kbd>
     </div>
     <ul class="pal-results">
       @for (result of results(); track result.title; let first = $first) {
@@ -54,16 +55,22 @@
             >{{ result.before }}<mark>{{ result.match }}</mark
             >{{ result.after }}</span
           >
-          <span class="where">Plateforme</span>
+          <span class="where">{{ text().space }}</span>
         </li>
       }
     </ul>
     <div class="pal-foot">
-      <span><kbd>↑</kbd><kbd>↓</kbd>choisir</span>
-      <span><kbd>Entrée</kbd>ouvrir</span>
-      <span [class.lit]="copying()"><kbd>Ctrl</kbd><kbd>C</kbd>copier</span>
-      <span><kbd>Échap</kbd>fermer</span>
+      <span><kbd>↑</kbd><kbd>↓</kbd>{{ text().move }}</span>
+      <span
+        ><kbd>{{ text().enter }}</kbd
+        >{{ text().open }}</span
+      >
+      <span [class.lit]="copying()"><kbd>Ctrl</kbd><kbd>C</kbd>{{ text().copy }}</span>
+      <span
+        ><kbd>{{ text().esc }}</kbd
+        >{{ text().close }}</span
+      >
     </div>
   </div>
-  <div class="snip-toast">Copié dans le presse-papiers</div>
+  <div class="snip-toast">{{ text().copied }}</div>
 </div>

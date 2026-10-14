@@ -1,8 +1,37 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { Lang, downloadPath } from '../core/lang';
+import { Language } from '../core/language';
 import { CHANGELOG, LICENSE, REPOSITORY } from '../core/site';
+import { docPath } from '../docs/doc-index';
 import { Logo } from './logo';
+
+const FR = {
+  about:
+    'Logiciel libre et gratuit, sous licence GPL-3.0. Aucun compte, aucune télémétrie : vos notes ne quittent pas votre machine.',
+  nav: 'Pied de page',
+  download: 'Télécharger',
+  docs: 'Documentation',
+  source: 'Code source',
+  changelog: 'Journal des modifications',
+  license: 'Licence',
+  privacy: 'Confidentialité',
+};
+
+const EN: typeof FR = {
+  about:
+    'Free software, released under the GPL-3.0. No account, no telemetry: your notes never leave your machine.',
+  nav: 'Footer',
+  download: 'Download',
+  docs: 'Documentation',
+  source: 'Source code',
+  changelog: 'Changelog',
+  license: 'License',
+  privacy: 'Privacy',
+};
+
+const TEXT: Readonly<Record<Lang, typeof FR>> = { fr: FR, en: EN };
 
 @Component({
   selector: 'app-site-footer',
@@ -12,18 +41,15 @@ import { Logo } from './logo';
       <div class="wrap">
         <div class="foot-brand">
           <span class="brand"><app-logo />DevNotes</span>
-          <p>
-            Logiciel libre et gratuit, sous licence GPL-3.0. Aucun compte, aucune télémétrie : vos notes ne
-            quittent pas votre machine.
-          </p>
+          <p>{{ t().about }}</p>
         </div>
-        <nav class="foot-links" aria-label="Pied de page">
-          <a routerLink="/telecharger">Télécharger</a>
-          <a routerLink="/docs">Documentation</a>
-          <a [href]="repository">Code source</a>
-          <a [href]="changelog">Journal des modifications</a>
-          <a [href]="license">Licence</a>
-          <a routerLink="/docs/securite">Confidentialité</a>
+        <nav class="foot-links" [attr.aria-label]="t().nav">
+          <a [routerLink]="links().download">{{ t().download }}</a>
+          <a [routerLink]="links().docs">{{ t().docs }}</a>
+          <a [href]="repository">{{ t().source }}</a>
+          <a [href]="changelog">{{ t().changelog }}</a>
+          <a [href]="license">{{ t().license }}</a>
+          <a [routerLink]="links().privacy">{{ t().privacy }}</a>
         </nav>
       </div>
     </footer>
@@ -79,7 +105,17 @@ import { Logo } from './logo';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SiteFooter {
+  private readonly language = inject(Language);
   protected readonly repository = REPOSITORY;
   protected readonly changelog = CHANGELOG;
   protected readonly license = LICENSE;
+  protected readonly t = computed(() => TEXT[this.language.lang()]);
+  protected readonly links = computed(() => {
+    const lang = this.language.lang();
+    return {
+      download: downloadPath(lang),
+      docs: docPath('overview', lang),
+      privacy: docPath('safety', lang),
+    };
+  });
 }

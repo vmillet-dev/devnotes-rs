@@ -15,10 +15,10 @@ import {
   tip,
   ui,
   ul,
-} from '../doc.model';
+} from '../../doc.model';
 
 export const WRITING: DocPage = {
-  slug: 'ecrire',
+  id: 'writing',
   title: 'Écrire',
   summary:
     'Les trois sortes de notes, les champs à remplir d’un snippet, l’éditeur de code et Prettier, les notes mises en forme, les listes à cocher et les pièces jointes.',
@@ -205,7 +205,7 @@ export const WRITING: DocPage = {
 };
 
 export const ORGANISING: DocPage = {
-  slug: 'ranger',
+  id: 'organising',
   title: 'Ranger et retrouver',
   summary:
     'Les espaces et leurs dossiers, la vue Tableau, les tags, la recherche, les filtres, le tri et la sélection multiple.',

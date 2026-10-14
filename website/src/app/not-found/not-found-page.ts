@@ -1,7 +1,30 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { Lang, homePath } from '../core/lang';
+import { Language } from '../core/language';
 import { Seo } from '../core/seo';
+import { docPath } from '../docs/doc-index';
+
+const FR = {
+  title: 'Page introuvable · DevNotes',
+  description: "Cette page n'existe pas. La documentation et le téléchargement de DevNotes sont toujours là.",
+  heading: "Cette page n'existe pas.",
+  lede: "L'adresse a peut-être changé. La documentation et le téléchargement sont toujours là.",
+  home: "Revenir à l'accueil",
+  docs: 'Lire la documentation',
+};
+
+const EN: typeof FR = {
+  title: 'Page not found · DevNotes',
+  description: 'This page does not exist. The DevNotes documentation and download are still there.',
+  heading: 'This page does not exist.',
+  lede: 'The address may have changed. The documentation and the download are still there.',
+  home: 'Back to the home page',
+  docs: 'Read the documentation',
+};
+
+const TEXT: Readonly<Record<Lang, typeof FR>> = { fr: FR, en: EN };
 
 @Component({
   selector: 'app-not-found-page',
@@ -9,13 +32,11 @@ import { Seo } from '../core/seo';
   template: `
     <section class="wrap lost" aria-labelledby="lost-h">
       <span class="chip">404</span>
-      <h1 id="lost-h">Cette page n'existe pas.</h1>
-      <p class="lede">
-        L'adresse a peut-être changé. La documentation et le téléchargement sont toujours là.
-      </p>
+      <h1 id="lost-h">{{ text().heading }}</h1>
+      <p class="lede">{{ text().lede }}</p>
       <div class="cta-row">
-        <a class="btn btn-primary" routerLink="/">Revenir à l'accueil</a>
-        <a class="btn btn-ghost" routerLink="/docs">Lire la documentation</a>
+        <a class="btn btn-primary" [routerLink]="home()">{{ text().home }}</a>
+        <a class="btn btn-ghost" [routerLink]="docs()">{{ text().docs }}</a>
       </div>
     </section>
   `,
@@ -38,12 +59,14 @@ import { Seo } from '../core/seo';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NotFoundPage {
+  private readonly lang = inject(Language).lang;
+  protected readonly text = computed(() => TEXT[this.lang()]);
+  protected readonly home = computed(() => homePath(this.lang()));
+  protected readonly docs = computed(() => docPath('overview', this.lang()));
+
   constructor() {
-    inject(Seo).describe({
-      title: 'Page introuvable · DevNotes',
-      description:
-        "Cette page n'existe pas. La documentation et le téléchargement de DevNotes sont toujours là.",
-      path: '/404',
-    });
+    const lang = this.lang();
+    const { title, description } = TEXT[lang];
+    inject(Seo).describe({ title, description, path: '/404', lang, translated: false });
   }
 }
