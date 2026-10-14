@@ -5928,6 +5928,20 @@ keep their pause, with a comment above it saying the wait is `deliberately` one.
 `scripts/e2e-waits.test.mjs` holds that: it fails on a `browser.pause` followed within four
 lines by a read or an assertion, unless that comment is there.
 
+⚠️ **A read sent while the page unloads is never answered on WebKitGTK.** The embedded server
+runs every lookup as a script and waits for its answer up to the session's script timeout,
+30 s; a library opened or switched reloads the page, and the read caught by the unload held a
+wait to its end — `25-libraries` failed twice so on Linux, the gate drawn on the failure's
+screenshot, and `24-forgotten-passphrase` once, right after a `browser.refresh()`. Every session
+the run opens takes a script timeout of `SCRIPT_TIMEOUT` (5 s, `e2e/support/timeouts.ts`): the
+lost read fails, and the wait's next one reaches the page that replaced the old one. The few
+commands that derive a key run under `SLOW_SCRIPT_TIMEOUT` (`invokeSlowly` in the bridge).
+
+**The first failure ends the run.** `mochaOpts.bail` stops a file at its first failed test, and
+`bail: 1` the run after its first failed file: what follows a failure fails in cascade and
+buries the one error worth reading. On CI the other scenarios are cancelled with it (see
+"In CI").
+
 **What the suite deliberately does not cover**, because a WebView cannot reach it. In each
 case the control is asserted on — it exists, it is labelled — and never clicked:
 

@@ -3,6 +3,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { EMBEDDED_PORT } from './support/leftovers.js';
+import { SCRIPT_TIMEOUT } from './support/timeouts.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = resolve(here, '..');
@@ -79,6 +80,10 @@ export const config: WebdriverIO.Config = {
    */
   maxInstances: 1,
 
+  // The first failure ends the file and the run (`mochaOpts.bail` the file): what follows it
+  // fails in cascade, and buries the one error worth reading.
+  bail: 1,
+
   capabilities: [
     {
       browserName: 'tauri',
@@ -93,7 +98,7 @@ export const config: WebdriverIO.Config = {
 
   framework: 'mocha',
   reporters: ['spec'],
-  mochaOpts: { ui: 'bdd', timeout: 120_000 },
+  mochaOpts: { ui: 'bdd', timeout: 120_000, bail: true },
 
   logLevel,
   outputDir: join(here, 'logs'),
@@ -109,6 +114,7 @@ export const config: WebdriverIO.Config = {
    */
   async before() {
     const { browser } = await import('@wdio/globals');
+    await browser.setTimeout({ script: SCRIPT_TIMEOUT });
 
     // Never before the first file: there is nothing to clear, and the application is
     // still seeding its samples. `SampleNotesService` writes its marker before the notes,
