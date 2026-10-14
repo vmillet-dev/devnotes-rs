@@ -27,6 +27,6 @@ describe('App', () => {
     const page = await renderPage(App);
     const links = [...page.querySelectorAll<HTMLAnchorElement>('nav[aria-label="Principale"] a')];
 
-    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/#snippets', '/docs', '/#telecharger']);
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/#snippets', '/docs', '/telecharger']);
   });
 });

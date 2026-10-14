@@ -9,7 +9,7 @@
       <a class="link" routerLink="/docs" routerLinkActive="is-current" ariaCurrentWhenActive="page"
         >Documentation</a
       >
-      <a class="btn btn-primary" routerLink="/" fragment="telecharger">Télécharger</a>
+      <a class="btn btn-primary" routerLink="/telecharger">Télécharger</a>
     </nav>
     <button
       type="button"
@@ -68,7 +68,7 @@
   <nav class="wrap menu-panel" id="site-menu" aria-label="Menu" [hidden]="!menuOpen()">
     <a routerLink="/" fragment="snippets">Fonctionnalités</a>
     <a routerLink="/docs" routerLinkActive="is-current" ariaCurrentWhenActive="page">Documentation</a>
-    <a routerLink="/" fragment="telecharger">Télécharger</a>
+    <a routerLink="/telecharger" routerLinkActive="is-current" ariaCurrentWhenActive="page">Télécharger</a>
   </nav>
   @if (progress.segments().length) {
     <div class="progress" aria-hidden="true">

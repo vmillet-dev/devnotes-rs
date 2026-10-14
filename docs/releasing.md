@@ -4,7 +4,7 @@ A release is a `workflow_dispatch`. One run writes the changelog, commits it, ta
 every bundle and publishes — there is no step to do by hand between them, and no partial
 state to clean up if it stops.
 
-## The three steps
+## The steps
 
 1. **Bump the version.** `npm version <x.y.z> --no-git-tag-version` covers `package.json`
    and its lockfile; `src-tauri/Cargo.toml` is edited by hand, then `cargo update -p devnotes`
@@ -22,6 +22,11 @@ state to clean up if it stops.
 3. **Run it again unchecked.** It writes the `CHANGELOG.md` section, commits it, tags,
    builds the bundles and publishes the release.
 
+4. **Publish the website again.** Its download links lead straight to this version's files,
+   named from `package.json`'s version at build time: `npm run website:build`, then push
+   `dist/website/` to `vmillet-dev/devnotes-website`'s `main`. Built before the release is
+   published, the build stops on links that answer 404.
+
 ## A version on a branch of its own
 
 A version that takes weeks lives on `dev/x.y.z`, while `main` goes on releasing.
@@ -33,7 +38,7 @@ A version that takes weeks lives on `dev/x.y.z`, while `main` goes on releasing.
 - The branch reaches `main` by **a merge commit, never a squash**:
   `git merge --no-ff dev/x.y.z`. The notes read what that merge brings. Squashed, the version
   is one commit and one line, and the dry run says so.
-- Then the three steps above, from `main`.
+- Then the steps above, from `main`.
 
 To read what a version holds so far, run this from its branch — it prints the section and
 writes nothing:

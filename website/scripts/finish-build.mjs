@@ -25,6 +25,26 @@ for (const path of paths) {
   if (!/<title>[^<]+<\/title>/.test(html)) problems.push(`${path}: no title`);
 }
 if (!existsSync(join(OUT, 'index.html'))) problems.push('no index.html at the root');
+
+// The download links name the version's own files: built before that release is published,
+// the site would offer files that do not exist yet.
+const files = new Set(
+  paths.flatMap((path) =>
+    [
+      ...readFileSync(page(path), 'utf8').matchAll(
+        /href="(https:\/\/github\.com\/[^"]+\/releases\/download\/[^"]+)"/g,
+      ),
+    ].map((match) => match[1]),
+  ),
+);
+for (const file of files) {
+  const answer = await fetch(file, { method: 'HEAD', redirect: 'follow' }).catch((error) => ({
+    status: error.message,
+  }));
+  if (answer.status !== 200) problems.push(`${file}: ${answer.status}`);
+}
+if (!files.size) problems.push('no download link to a release file');
+
 if (problems.length) {
   console.error(problems.join('\n'));
   process.exit(1);

@@ -11,17 +11,18 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 import { ScrollFrame } from '../core/scroll-frame';
 import { Seo } from '../core/seo';
 import { absolute } from '../core/site';
 import { CHECKED_ON, DOC_PAGES } from './content/pages';
-import { DOC_INDEX, DocEntry, docPath } from './doc-index';
+import { DOC_GROUPS, DOC_INDEX, DocEntry, docPath } from './doc-index';
+import { search, searchIndex } from './doc-search';
 import { DocBlocks } from './doc-blocks';
 
 /** What an unknown slug falls back to: the overview. */
-const OVERVIEW: DocEntry = { slug: '', nav: 'Documentation', tone: 'grey' };
+const OVERVIEW: DocEntry = { slug: '', nav: 'Documentation', tone: 'grey', group: 'Démarrer' };
 
 /** A heading counts as read once it has passed this far below the header. */
 const READ_LINE = 140;
@@ -38,7 +39,8 @@ export class DocsPage implements OnInit {
   readonly slug = input('');
 
   private readonly seo = inject(Seo);
-  protected readonly entries = DOC_INDEX;
+  private readonly router = inject(Router);
+  protected readonly groups = DOC_GROUPS;
   protected readonly checkedOn = CHECKED_ON;
   protected readonly path = docPath;
   protected readonly summaries = Object.fromEntries(DOC_PAGES.map((page) => [page.slug, page.summary]));
@@ -60,6 +62,18 @@ export class DocsPage implements OnInit {
       block.kind === 'h2' ? [{ id: block.id, text: block.text }] : [],
     ),
   );
+
+  /** What the visitor looks for, across every page; empty shows the sidebar. */
+  protected readonly query = signal('');
+  private readonly index = searchIndex(DOC_PAGES);
+  protected readonly results = computed(() => search(this.index, this.query()));
+  protected readonly status = computed(() => {
+    const query = this.query().trim();
+    if (!query) return '';
+    const found = this.results().length;
+    if (!found) return `Aucune section ne parle de « ${query} ».`;
+    return found === 1 ? 'Une section' : `${found} sections`;
+  });
 
   /** The sidebar, folded on a narrow screen. */
   protected readonly navOpen = signal(false);
@@ -98,6 +112,28 @@ export class DocsPage implements OnInit {
         ],
       },
     });
+  }
+
+  protected onQuery(event: Event): void {
+    this.query.set((event.target as HTMLInputElement).value);
+  }
+
+  /** Enter opens the first result, Escape empties the field. */
+  protected onKey(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      this.clear();
+      return;
+    }
+    const first = this.results()[0];
+    if (event.key !== 'Enter' || !first) return;
+    event.preventDefault();
+    const { slug, anchor } = first.entry;
+    void this.router.navigate([docPath(slug)], anchor ? { fragment: anchor } : {});
+    this.clear();
+  }
+
+  protected clear(): void {
+    this.query.set('');
   }
 
   protected toggleNav(): void {

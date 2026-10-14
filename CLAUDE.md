@@ -21,7 +21,7 @@ Principles:
 - `npm run website:start|build|test`: the showcase site in `website/`, prerendered to `dist/website/` (→ "The website").
 - `npm run bindings` regenerates `src/app/core/ipc/bindings.ts` from Rust signatures. `npm run icons` regenerates icons (⚠️ small `.ico` sizes come from `icons/source/`).
 - E2E: `npm run e2e:build` then `npm run test:e2e` (WebdriverIO, its server inside the `e2e` build; specs in `e2e/specs/`, against the assembled app: rebuild after any change); `E2E_SPEC=05-spaces` runs one file.
-- Release is a `workflow_dispatch` after a version bump (`Cargo.toml`, `package.json`, both lockfiles). ⚠️ A version branch (`dev/x.y.z`) reaches `main` by a merge commit, never a squash: the release notes read what the merge brings. → "Releasing", `docs/releasing.md`.
+- Release is a `workflow_dispatch` after a version bump (`Cargo.toml`, `package.json`, both lockfiles). ⚠️ A version branch (`dev/x.y.z`) reaches `main` by a merge commit, never a squash: the release notes read what the merge brings. Once the release is published, rebuild and push the website: its download links name that version's files. → "Releasing", `docs/releasing.md`.
 
 ## Things that will bite you
 

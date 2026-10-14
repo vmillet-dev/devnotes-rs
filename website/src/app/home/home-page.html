@@ -7,7 +7,7 @@
         d'outils et un client API à côté, le tout chiffré sur votre machine.
       </p>
       <div class="cta-row">
-        <a class="btn btn-primary" routerLink="/" fragment="telecharger">Télécharger</a>
+        <a class="btn btn-primary" routerLink="/telecharger">Télécharger</a>
         <a class="btn btn-ghost" routerLink="/docs">Lire la documentation</a>
       </div>
       <p class="platforms">Gratuit et libre, pour Windows et Linux.</p>
@@ -27,7 +27,7 @@
     'Ctrl Alt P depuis votre terminal',
     'La commande remplie est copiée',
   ]"
-  [durations]="[1400, 1900, 2100, 1500]"
+  [durations]="[1150, 1550, 1700, 1200]"
 >
   <p lede>
     Un snippet peut contenir des champs comme <code>{{ field('host') }}</code> ou
@@ -51,7 +51,7 @@
     'La recherche cite la ligne trouvée',
     'Les mêmes notes, en liste par date',
   ]"
-  [durations]="[1350, 1650, 1800, 1500]"
+  [durations]="[1100, 1350, 1450, 1200]"
 >
   <p lede>
     Un espace par contexte, des dossiers dedans, et une vue Tableau où chaque dossier est une zone. La
@@ -66,7 +66,7 @@
   label="Le code"
   heading="Un vrai éditeur pour vos snippets."
   [steps]="['Choisir le langage au clavier', 'Formater avec Prettier', 'Lire un JSON en graphe']"
-  [durations]="[2100, 1650, 2400]"
+  [durations]="[1700, 1350, 1950]"
 >
   <p lede>
     Vingt-six langages colorés, Prettier en un clic, et vos JSON, YAML, TOML ou XML lisibles en graphe à côté
@@ -89,7 +89,7 @@
     'Le code pour vingt cibles',
     'Un WebSocket et son journal',
   ]"
-  [durations]="[1650, 1950, 2100, 1950]"
+  [durations]="[1350, 1600, 1700, 1600]"
 >
   <p lede>
     HTTP, GraphQL et WebSocket, avec des collections, des environnements et des variables. L'historique est
@@ -108,7 +108,7 @@
     'Votre phrase de passe la déverrouille',
     'Plusieurs bibliothèques, sauvegardées chaque jour',
   ]"
-  [durations]="[1800, 2100, 1650]"
+  [durations]="[1450, 1700, 1350]"
 >
   <p lede>
     Vos notes sont chiffrées sur le disque, derrière une phrase de passe que DevNotes n'enregistre nulle part.
@@ -119,4 +119,13 @@
 
 <app-more-section />
 
-<app-download-section />
+<section class="wrap closing" aria-labelledby="closing-h">
+  <h2 id="closing-h">Vos snippets, rangés et à portée de raccourci.</h2>
+  <p class="lede">
+    DevNotes {{ version }}, pour Windows et Linux. Gratuit, libre, et rien ne quitte votre machine.
+  </p>
+  <div class="cta-row">
+    <a class="btn btn-primary" routerLink="/telecharger">Télécharger DevNotes</a>
+    <a class="btn btn-ghost" routerLink="/docs">Lire la documentation</a>
+  </div>
+</section>

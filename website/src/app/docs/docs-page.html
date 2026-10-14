@@ -1,35 +1,92 @@
 @let current = page();
 <div class="wrap docs">
-  <nav class="side" aria-label="Documentation">
-    <button
-      type="button"
-      class="side-toggle"
-      aria-controls="docs-pages"
-      [attr.aria-expanded]="navOpen()"
-      (click)="toggleNav()"
-    >
-      <span class="sw" [style.--c]="rgb(entry().tone)"></span>
-      <span>{{ entry().nav }}</span>
-      <span class="chev" aria-hidden="true"></span>
-    </button>
-    <div class="side-list" id="docs-pages" [class.open]="navOpen()">
-      <p class="side-h">Documentation</p>
-      <ul>
-        @for (each of entries; track each.slug) {
-          <li>
-            <a
-              class="row"
-              [class.on]="each.slug === slug()"
-              [routerLink]="path(each.slug)"
-              [attr.aria-current]="each.slug === slug() ? 'page' : null"
-              [style.--c]="rgb(each.tone)"
-              ><span class="sw"></span>{{ each.nav }}</a
-            >
-          </li>
-        }
-      </ul>
+  <div class="side">
+    <div class="find" role="search">
+      <label class="visually-hidden" for="docs-search">Rechercher dans la documentation</label>
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        aria-hidden="true"
+      >
+        <circle cx="11" cy="11" r="7" />
+        <path d="m20 20-3.5-3.5" />
+      </svg>
+      <input
+        id="docs-search"
+        type="search"
+        placeholder="Rechercher dans la doc"
+        autocomplete="off"
+        [value]="query()"
+        (input)="onQuery($event)"
+        (keydown)="onKey($event)"
+      />
     </div>
-  </nav>
+    <p class="visually-hidden" aria-live="polite">{{ status() }}</p>
+    @if (query().trim()) {
+      <div class="results">
+        <p class="side-h">{{ status() }}</p>
+        <ul>
+          @for (result of results(); track $index) {
+            <li>
+              <a
+                class="hit"
+                [routerLink]="path(result.entry.slug)"
+                [fragment]="result.entry.anchor || undefined"
+                (click)="clear()"
+              >
+                <span class="where"
+                  >{{ result.entry.page }}
+                  @if (result.entry.anchor) {
+                    <span class="sep"> › </span>{{ result.entry.heading }}
+                  }
+                </span>
+                <span class="excerpt"
+                  >{{ result.before }}<mark>{{ result.match }}</mark
+                  >{{ result.after }}</span
+                >
+              </a>
+            </li>
+          }
+        </ul>
+      </div>
+    } @else {
+      <nav aria-label="Documentation">
+        <button
+          type="button"
+          class="side-toggle"
+          aria-controls="docs-pages"
+          [attr.aria-expanded]="navOpen()"
+          (click)="toggleNav()"
+        >
+          <span class="sw" [style.--c]="rgb(entry().tone)"></span>
+          <span>{{ entry().nav }}</span>
+          <span class="chev" aria-hidden="true"></span>
+        </button>
+        <div class="side-list" id="docs-pages" [class.open]="navOpen()">
+          @for (group of groups; track group.name) {
+            <p class="side-h">{{ group.name }}</p>
+            <ul>
+              @for (each of group.entries; track each.slug) {
+                <li>
+                  <a
+                    class="row"
+                    [class.on]="each.slug === slug()"
+                    [routerLink]="path(each.slug)"
+                    [attr.aria-current]="each.slug === slug() ? 'page' : null"
+                    [style.--c]="rgb(each.tone)"
+                    ><span class="sw"></span>{{ each.nav }}</a
+                  >
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </nav>
+    }
+  </div>
 
   @if (current) {
     <article class="article" #article>

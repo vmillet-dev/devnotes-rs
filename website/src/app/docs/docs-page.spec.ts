@@ -30,7 +30,7 @@ describe('the documentation', () => {
   });
 
   it('links only to pages that exist', () => {
-    const paths = new Set(['/', ...DOC_INDEX.map(({ slug }) => docPath(slug))]);
+    const paths = new Set(['/', '/telecharger', ...DOC_INDEX.map(({ slug }) => docPath(slug))]);
     for (const page of DOC_PAGES) {
       for (const inline of page.body.flatMap(inlines)) {
         if (typeof inline === 'object' && 'link' in inline && inline.to.startsWith('/')) {

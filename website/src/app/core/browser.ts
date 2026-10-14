@@ -4,7 +4,11 @@
  * `afterNextRender`, and asks these first — jsdom, under the tests, lacks them too.
  */
 export function prefersReducedMotion(): boolean {
-  return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  return matches('(prefers-reduced-motion: reduce)');
+}
+
+export function matches(query: string): boolean {
+  return typeof matchMedia === 'function' && matchMedia(query).matches;
 }
 
 export function canObserve(): boolean {

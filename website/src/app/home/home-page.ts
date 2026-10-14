@@ -12,8 +12,8 @@ import { clamp, field } from '../core/browser';
 import { PageProgress, ProgressSegment } from '../core/page-progress';
 import { ScrollFrame } from '../core/scroll-frame';
 import { Seo } from '../core/seo';
-import { LATEST_RELEASE, REPOSITORY, absolute } from '../core/site';
-import { DownloadSection } from './download-section';
+import { VERSION } from '../core/release';
+import { REPOSITORY, absolute } from '../core/site';
 import { Feature } from './feature';
 import { HeroBoard } from './hero-board';
 import { MoreSection } from './more-section';
@@ -33,7 +33,6 @@ const SECTIONS: readonly ProgressSegment[] = [
   { anchor: 'client-api', name: 'Client API', tone: 'olive' },
   { anchor: 'chiffrement', name: 'Chiffrement', tone: 'pink' },
   { anchor: 'et-aussi', name: 'Et aussi', tone: 'grey' },
-  { anchor: 'telecharger', name: 'Télécharger', tone: 'amber' },
 ];
 
 @Component({
@@ -49,7 +48,6 @@ const SECTIONS: readonly ProgressSegment[] = [
     VaultScene,
     ToolsSection,
     MoreSection,
-    DownloadSection,
   ],
   templateUrl: './home-page.html',
   styleUrl: './home-page.scss',
@@ -57,6 +55,7 @@ const SECTIONS: readonly ProgressSegment[] = [
 })
 export class HomePage {
   protected readonly field = field;
+  protected readonly version = VERSION;
 
   constructor() {
     const progress = inject(PageProgress);
@@ -75,7 +74,8 @@ export class HomePage {
         applicationCategory: 'DeveloperApplication',
         operatingSystem: 'Windows, Linux',
         url: absolute('/'),
-        downloadUrl: LATEST_RELEASE,
+        softwareVersion: VERSION,
+        downloadUrl: absolute('/telecharger'),
         license: 'https://www.gnu.org/licenses/gpl-3.0.html',
         codeRepository: REPOSITORY,
         offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },

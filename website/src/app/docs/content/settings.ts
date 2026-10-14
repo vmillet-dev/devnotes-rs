@@ -1,4 +1,4 @@
-import { LATEST_RELEASE, REPOSITORY } from '../../core/site';
+import { REPOSITORY } from '../../core/site';
 import { DocPage, b, code, field, h2, h3, keys, link, p, table, tip, ui, ul } from '../doc.model';
 
 export const TRANSFER: DocPage = {
@@ -162,7 +162,7 @@ export const FAQ: DocPage = {
     h2('mises-a-jour', 'Comment mettre à jour ?'),
     p(
       'DevNotes propose lui-même les nouvelles versions, avec leurs notes. Vous pouvez aussi télécharger ',
-      link('la dernière version', LATEST_RELEASE),
+      link('la dernière version', '/telecharger'),
       ' et l’installer par-dessus : vos bibliothèques ne sont pas touchées.',
     ),
     h2('donnees', 'Où sont mes notes ?'),

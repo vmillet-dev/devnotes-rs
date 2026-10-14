@@ -10,7 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 
-import { clamp, ease, field, part, prefersReducedMotion } from '../core/browser';
+import { clamp, ease, field, matches, part, prefersReducedMotion } from '../core/browser';
 import { ScrollFrame } from '../core/scroll-frame';
 
 type Folder = 'dep' | 'db' | 'front';
@@ -129,8 +129,8 @@ export class HeroBoard {
       const fit = () => {
         const frame = this.frame().nativeElement;
         const width = this.scroller().nativeElement.clientWidth;
-        const phone = matchMedia(PHONE).matches;
-        const drawn = matchMedia(TABLET).matches ? BOARD_ONLY : WINDOW.width;
+        const phone = matches(PHONE);
+        const drawn = matches(TABLET) ? BOARD_ONLY : WINDOW.width;
         const zoom = phone
           ? width / CROP.width
           : Math.min(LARGEST, width / drawn, (innerHeight - AIR) / WINDOW.height);

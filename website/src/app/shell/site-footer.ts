@@ -18,6 +18,7 @@ import { Logo } from './logo';
           </p>
         </div>
         <nav class="foot-links" aria-label="Pied de page">
+          <a routerLink="/telecharger">Télécharger</a>
           <a routerLink="/docs">Documentation</a>
           <a [href]="repository">Code source</a>
           <a [href]="changelog">Journal des modifications</a>

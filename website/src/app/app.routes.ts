@@ -12,6 +12,10 @@ export const routes: Routes = [
     loadComponent: docs,
     data: { slug },
   })),
+  {
+    path: 'telecharger',
+    loadComponent: () => import('./download/download-page').then((m) => m.DownloadPage),
+  },
   { path: '404', loadComponent: () => import('./not-found/not-found-page').then((m) => m.NotFoundPage) },
   { path: '**', loadComponent: () => import('./not-found/not-found-page').then((m) => m.NotFoundPage) },
 ];

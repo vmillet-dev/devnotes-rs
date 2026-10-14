@@ -6044,11 +6044,16 @@ Angular version. `npm run website:start` serves it on port 4300, `website:build`
   `404`. Anything that measures or animates runs in `afterNextRender` and asks
   `core/browser.ts` first: neither the build's Node nor jsdom has `matchMedia` or
   `IntersectionObserver`.
+- **The download page links straight to the files of the version in `package.json`**
+  (`core/release.ts`, named as `release.yml` writes them), so the site is rebuilt and published
+  after every release (`docs/releasing.md`, step 4). The post-build check asks GitHub for every
+  one of those links and stops on anything but a 200: a site built before its release is
+  published would offer files that do not exist yet.
 - **The address is one build setting**, `SITE_URL` (`define` in `angular.json`,
   `https://devnotes.fr`; `--define` overrides it): the canonical links and the social tags are
   built from it. `website/scripts/finish-build.mjs` runs after the build, reads the address
   back from the home page's canonical link, checks every page (one `h1`, a title, a
-  canonical, no local address), and writes `sitemap.xml`, `robots.txt` and `404.html`.
+  canonical, no local address, download links that answer), and writes `sitemap.xml`, `robots.txt` and `404.html`.
   `website/public/.htaccess` serves `/docs/x` from `docs/x/index.html` without a redirect on
   the Apache host.
 - **The home page redraws the application in HTML** rather than showing screenshots. Each
@@ -6059,7 +6064,9 @@ Angular version. `npm run website:start` serves it on port 4300, `website:build`
   phone. Code inside a scene is data (`home/code-view.ts`): the template compiler drops the
   whitespace between two elements, and a formatter would reflow it.
 - **The documentation is typed data** (`docs/content/*.ts`, written with the helpers of
-  `docs/doc.model.ts`) rendered by `DocBlocks` without `innerHTML`. `CHECKED_ON` names the
+  `docs/doc.model.ts`), rendered by `DocBlocks` without `innerHTML`, grouped in the sidebar
+  (`docs/doc-index.ts`) and searched in the browser section by section, accents aside
+  (`docs/doc-search.ts`). `CHECKED_ON` names the
   version the pages were last checked against in the application, by hand.
 - **The theme** is applied before the first paint by an inline script in
   `website/src/index.html` (a stored choice, else the system's), then followed by `ThemeStore`.

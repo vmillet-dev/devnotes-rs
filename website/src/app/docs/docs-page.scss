@@ -1,9 +1,12 @@
 // The sidebar is drawn as the application's rail of spaces; the page, as a note opened beside it.
+// Three columns kept together and centred: on a large screen the page grows wider and its text
+// larger, rather than drifting apart.
 .docs {
   display: grid;
-  grid-template-columns: 236px minmax(0, 1fr) 200px;
-  gap: clamp(28px, 4vw, 56px);
-  max-width: clamp(86rem, 90vw, 110rem);
+  grid-template-columns: minmax(220px, 264px) minmax(0, 62rem) minmax(180px, 220px);
+  justify-content: center;
+  gap: clamp(28px, 3.5vw, 64px);
+  max-width: clamp(86rem, 92vw, 120rem);
   padding-top: clamp(28px, 4vw, 48px);
 }
 
@@ -18,6 +21,88 @@
 
 .side-toggle {
   display: none;
+}
+
+.find {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  margin-bottom: 14px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-1);
+  color: var(--text-2);
+}
+
+.find:focus-within {
+  border-color: var(--amber-edge);
+}
+
+.find svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+.find input {
+  flex: 1;
+  min-width: 0;
+  min-height: 38px;
+  border: 0;
+  background: transparent;
+  color: var(--text-0);
+  font: inherit;
+  font-size: 14.5px;
+}
+
+.find input:focus-visible {
+  outline: none;
+}
+
+.results ul {
+  display: grid;
+  gap: 4px;
+}
+
+.hit {
+  display: grid;
+  gap: 4px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  text-decoration: none;
+}
+
+.hit:hover,
+.hit:focus-visible {
+  background: var(--bg-2);
+}
+
+.where {
+  font-size: 13.5px;
+  font-weight: 620;
+  color: var(--text-0);
+}
+
+.sep {
+  color: var(--text-2);
+}
+
+.excerpt {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-1);
+}
+
+.excerpt mark {
+  background: rgba(var(--amber-rgb), 0.28);
+  color: var(--text-0);
+  border-radius: 2px;
+}
+
+.side-list ul + .side-h {
+  margin-top: 14px;
 }
 
 .side-h {
@@ -65,7 +150,7 @@
 
 .article {
   min-width: 0;
-  max-width: clamp(46rem, 38vw, 54rem);
+  font-size: clamp(16px, 0.3vw + 11px, 18px);
   display: grid;
   gap: 22px;
   align-content: start;
@@ -177,6 +262,7 @@
 @media (max-width: 1200px) {
   .docs {
     grid-template-columns: 220px minmax(0, 1fr);
+    justify-content: stretch;
   }
 
   .toc {

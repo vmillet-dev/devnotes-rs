@@ -1,4 +1,3 @@
-import { LATEST_RELEASE } from '../../core/site';
 import { DocPage, b, code, h2, keys, link, ol, p, snippet, table, tip, ui, ul, warn } from '../doc.model';
 
 export const OVERVIEW: DocPage = {
@@ -39,8 +38,8 @@ export const GETTING_STARTED: DocPage = {
     h2('installer', 'Installer'),
     p(
       'DevNotes fonctionne sous Windows et sous Linux. Tous les fichiers sont sur ',
-      link('la page de la dernière version', LATEST_RELEASE),
-      ' : prenez celui qui correspond à votre système.',
+      link('la page de téléchargement', '/telecharger'),
+      ', chacun en lien direct : prenez celui qui correspond à votre système.',
     ),
     table(
       'Les fichiers de chaque version',

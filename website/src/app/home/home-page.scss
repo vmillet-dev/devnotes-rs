@@ -30,6 +30,14 @@
   }
 }
 
+// The end of the page: no frame, the two ways on.
+.closing {
+  display: grid;
+  gap: 20px;
+  justify-items: start;
+  padding-top: clamp(110px, 16vh, 190px);
+}
+
 .platforms {
   color: var(--text-2);
   font-size: 14.5px;
