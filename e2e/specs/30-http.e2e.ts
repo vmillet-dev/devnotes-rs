@@ -167,6 +167,14 @@ describe('HTTP collections', () => {
       // From a collection's menu: the kind first, then the name; Rust holds it as that kind.
       const collection = `${testid('http-node')}[data-id="${api.id}"]`;
       await $(collection).waitForDisplayed({ timeout: 10_000 });
+      // On Linux the rail once ran 6px wider than itself: the click scrolled it, and the scroll
+      // closed the menu it had just opened.
+      expect(
+        await browser.execute((rail: string) => {
+          const box = document.querySelector<HTMLElement>(rail)!;
+          return box.scrollWidth - box.clientWidth;
+        }, testid('http-rail')),
+      ).toBe(0);
       // Its menu opens under its `⋯`, whole: it once opened a row's width away, cut by the rail.
       await $(`${collection} ${testid('http-node-menu')}`).click();
       await $(testid('http-node-menu-panel')).waitForDisplayed({ timeout: 10_000 });
