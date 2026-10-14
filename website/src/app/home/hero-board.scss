@@ -1,0 +1,132 @@
+// The one place the page holds a moment: the board stays centred while its cards are filed.
+.track {
+  position: relative;
+  height: calc(var(--bh, 580px) + 160vh);
+  margin-top: clamp(32px, 5vw, 56px);
+}
+
+.pin {
+  position: sticky;
+  top: max(calc(var(--head-h) + 12px), calc((100vh + var(--head-h) - var(--bh, 580px)) / 2));
+}
+
+// Never scrolled sideways: a narrow screen is shown a part of the board, not asked to pan it.
+.scroller {
+  overflow: hidden;
+  border-radius: 14px;
+}
+
+.board {
+  position: relative;
+  width: 1120px;
+  height: 552px;
+  margin-inline: auto;
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  background-color: var(--bg-0);
+  background-image: radial-gradient(var(--dot) 1.1px, transparent 1.4px);
+  background-size: 16px 16px;
+}
+
+.zone {
+  position: absolute;
+  top: 48px;
+  width: 344px;
+  height: 330px;
+  transition:
+    background-color var(--motion),
+    border-color var(--motion);
+}
+
+.zone.drop-target {
+  background: rgba(var(--c), 0.15);
+  border-color: rgb(var(--c));
+}
+
+.card {
+  position: absolute;
+  box-shadow: var(--shadow-soft);
+}
+
+.card.loose {
+  box-shadow: none;
+}
+
+.card.mover {
+  z-index: 2;
+}
+
+.card.lifted {
+  z-index: 3;
+  box-shadow: var(--shadow);
+  border-color: var(--line);
+}
+
+.untriaged {
+  position: absolute;
+  left: 24px;
+  top: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.untriaged::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--amber-fill);
+}
+
+.cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 5;
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+  opacity: 0;
+  filter: drop-shadow(0 2px 3px rgba(var(--black-rgb), 0.45));
+}
+
+.cursor.on {
+  opacity: 1;
+}
+
+// What a phone shows before the script measures it: the database folder and the note filed
+// into it, at about a phone's scale. `HeroBoard` refines both to the column's real width.
+@media (max-width: 720px) {
+  .track {
+    height: calc(var(--bh, 520px) + 110vh);
+  }
+
+  // The frame is the crop's, not the board's, whose sides fall outside it.
+  .scroller {
+    border: 1px solid var(--line-soft);
+  }
+
+  .board {
+    zoom: 0.9;
+    margin-left: -350px;
+    border-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track {
+    height: auto;
+  }
+
+  .pin {
+    position: static;
+  }
+}

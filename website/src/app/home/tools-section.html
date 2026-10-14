@@ -1,0 +1,26 @@
+<section class="wrap plain" id="outils" aria-labelledby="outils-h" style="--c: var(--teal-rgb)">
+  <div class="plain-head">
+    <span class="zone-title"><span class="sw"></span>Outils</span>
+    <h2 id="outils-h">Une trentaine d'outils, sans réseau.</h2>
+    <p>
+      Encoder, hacher, convertir, lire une date ou une expression cron. Chaque outil tourne sur votre machine
+      et n'appelle rien. Un résultat se garde comme une note.
+    </p>
+  </div>
+  <ul class="tools-grid">
+    @for (tool of tools; track tool.name; let i = $index) {
+      @let state = shown()[i];
+      <li class="tool" #tile>
+        <div class="tool-head">
+          <h3>{{ tool.name }}</h3>
+          <span>{{ tool.category }}</span>
+        </div>
+        <p class="tool-in" [class.typing]="state?.typing">{{ state?.input }}</p>
+        <p class="tool-out" [class.wait]="state?.waiting">{{ state?.output }}</p>
+      </li>
+    }
+  </ul>
+  <p class="note">
+    Ces exemples calculent dans votre navigateur. Dans DevNotes, chaque outil tourne sur votre machine.
+  </p>
+</section>

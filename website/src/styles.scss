@@ -1,0 +1,6 @@
+// The palette, motion and fonts are the application's own (`src/styles/_tokens.scss`); the
+// rest is the site's.
+@use 'tokens';
+@use 'styles/site-tokens';
+@use 'styles/base';
+@use 'styles/surfaces';

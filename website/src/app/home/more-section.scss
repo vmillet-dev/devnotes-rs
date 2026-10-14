@@ -1,0 +1,249 @@
+.plain {
+  padding-top: clamp(120px, 20vh, 220px);
+}
+
+.plain-head {
+  display: grid;
+  gap: 16px;
+  max-width: 44rem;
+}
+
+.more-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 32px;
+}
+
+.tile {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: 8px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  background: var(--bg-1);
+}
+
+.tile h3 {
+  font-size: 15px;
+}
+
+.tile > p {
+  color: var(--text-1);
+  font-size: 14px;
+}
+
+.mini {
+  align-self: end;
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  min-height: 96px;
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--bg-0);
+  border: 1px solid var(--line-soft);
+  font-size: 12px;
+}
+
+.md-h {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.md-li::before {
+  content: '•';
+  margin-right: 6px;
+  color: var(--amber-text);
+}
+
+.mini code {
+  font-size: 11px;
+  color: var(--green);
+}
+
+.ck {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-1);
+  transition: color var(--motion);
+}
+
+.ck::before {
+  content: '';
+  flex: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  border: 1.5px solid var(--text-2);
+  transition:
+    background-color var(--motion),
+    border-color var(--motion);
+}
+
+.ck.on {
+  color: var(--text-2);
+  text-decoration: line-through;
+}
+
+.ck.on::before {
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bg-3);
+  overflow: hidden;
+}
+
+.bar span {
+  display: block;
+  height: 100%;
+  width: var(--w, 25%);
+  background: var(--amber-fill);
+  transition: width 300ms;
+}
+
+.undo-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+}
+
+.undo-bar b {
+  color: var(--amber-text);
+}
+
+// The banner's own countdown, before the deletion can no longer be taken back from it.
+.countdown span {
+  width: 100%;
+}
+
+.countdown.running span {
+  width: 0;
+  transition: width 5s linear;
+}
+
+.ver {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-1);
+}
+
+.ver.cur {
+  color: var(--text-0);
+  font-weight: 600;
+}
+
+.file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--text-1);
+  overflow-wrap: anywhere;
+}
+
+.file i {
+  flex: none;
+  width: 22px;
+  height: 26px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+}
+
+.sel {
+  padding: 6px 10px;
+  border-radius: 7px;
+  background: rgba(var(--amber-rgb), 0.13);
+  border: 1px solid rgba(var(--amber-rgb), 0.5);
+  font-weight: 600;
+}
+
+.acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  color: var(--text-1);
+}
+
+.acts span {
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+}
+
+// The two themes, drawn in their own colours whatever the page's.
+.themes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.th {
+  height: 60px;
+  padding: 7px;
+  display: grid;
+  gap: 5px;
+  align-content: start;
+  border-radius: 6px;
+  border: 1px solid;
+}
+
+.th i {
+  display: block;
+  height: 5px;
+  border-radius: 3px;
+}
+
+.th.dark {
+  background: #1b1e25;
+  border-color: #333947;
+}
+
+.th.dark i {
+  background: #3f4454;
+}
+
+.th.dark i:nth-child(2) {
+  width: 60%;
+  background: #e8a33d;
+}
+
+.th.light {
+  background: #ffffff;
+  border-color: #cdd2dc;
+}
+
+.th.light i {
+  background: #e1e5ec;
+}
+
+.th.light i:nth-child(2) {
+  width: 60%;
+  background: #cf6a08;
+}
+
+@media (max-width: 1100px) {
+  .more-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .more-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

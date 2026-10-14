@@ -1,0 +1,85 @@
+@let current = page();
+<div class="wrap docs">
+  <nav class="side" aria-label="Documentation">
+    <button
+      type="button"
+      class="side-toggle"
+      aria-controls="docs-pages"
+      [attr.aria-expanded]="navOpen()"
+      (click)="toggleNav()"
+    >
+      <span class="sw" [style.--c]="rgb(entry().tone)"></span>
+      <span>{{ entry().nav }}</span>
+      <span class="chev" aria-hidden="true"></span>
+    </button>
+    <div class="side-list" id="docs-pages" [class.open]="navOpen()">
+      <p class="side-h">Documentation</p>
+      <ul>
+        @for (each of entries; track each.slug) {
+          <li>
+            <a
+              class="row"
+              [class.on]="each.slug === slug()"
+              [routerLink]="path(each.slug)"
+              [attr.aria-current]="each.slug === slug() ? 'page' : null"
+              [style.--c]="rgb(each.tone)"
+              ><span class="sw"></span>{{ each.nav }}</a
+            >
+          </li>
+        }
+      </ul>
+    </div>
+  </nav>
+
+  @if (current) {
+    <article class="article" #article>
+      <nav class="crumbs" aria-label="Fil d’Ariane">
+        <ol>
+          <li><a routerLink="/docs" [attr.aria-current]="current.slug ? null : 'page'">Documentation</a></li>
+          @if (current.slug) {
+            <li>
+              <a [routerLink]="path(current.slug)" aria-current="page">{{ current.title }}</a>
+            </li>
+          }
+        </ol>
+      </nav>
+      <header class="head">
+        <h1>{{ current.title }}</h1>
+        <p class="lede">{{ current.summary }}</p>
+        <p class="checked">Vérifié sur DevNotes {{ checkedOn }}</p>
+      </header>
+      <app-doc-blocks [blocks]="current.body" [summaries]="summaries" />
+      <nav class="pager" aria-label="Pages voisines">
+        @if (previous(); as before) {
+          <a class="prev" [routerLink]="path(before.slug)" rel="prev"
+            ><span class="dir">Précédent</span><span class="name">{{ before.nav }}</span></a
+          >
+        }
+        @if (next(); as after) {
+          <a class="next" [routerLink]="path(after.slug)" rel="next"
+            ><span class="dir">Suivant</span><span class="name">{{ after.nav }}</span></a
+          >
+        }
+      </nav>
+    </article>
+  }
+
+  @if (sections().length) {
+    <nav class="toc" aria-label="Sur cette page">
+      <p class="side-h">Sur cette page</p>
+      <ul>
+        @for (section of sections(); track section.id) {
+          <li>
+            <a
+              [routerLink]="[]"
+              [fragment]="section.id"
+              [class.on]="reading() === section.id"
+              [attr.aria-current]="reading() === section.id ? 'location' : null"
+              >{{ section.text }}</a
+            >
+          </li>
+        }
+      </ul>
+    </nav>
+  }
+</div>

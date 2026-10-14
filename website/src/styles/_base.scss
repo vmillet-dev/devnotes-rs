@@ -1,0 +1,213 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-padding-top: calc(var(--head-h) + 16px);
+  -webkit-text-size-adjust: 100%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--bg-0);
+  color: var(--text-0);
+  font: 400 16px/1.6 var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+ol,
+dl,
+dd,
+figure,
+pre,
+blockquote {
+  margin: 0;
+  padding: 0;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+code,
+kbd,
+pre {
+  font-family: var(--font-mono);
+}
+
+:focus-visible {
+  outline: 2px solid var(--amber-edge);
+  outline-offset: 2px;
+}
+
+// A component that sets its own `display` would otherwise outrank the attribute.
+[hidden] {
+  display: none !important;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.wrap {
+  max-width: 76rem;
+  margin-inline: auto;
+  padding-inline: clamp(16px, 4vw, 40px);
+}
+
+h1 {
+  font-size: clamp(2.3rem, 5vw, 4.1rem);
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  font-weight: 760;
+  text-wrap: balance;
+}
+
+h2 {
+  font-size: clamp(1.7rem, 3.1vw, 2.55rem);
+  line-height: 1.1;
+  letter-spacing: -0.028em;
+  font-weight: 720;
+  text-wrap: balance;
+}
+
+h3 {
+  font-size: 1.12rem;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  font-weight: 650;
+}
+
+.lede {
+  font-size: clamp(1.06rem, 1.5vw, 1.22rem);
+  line-height: 1.55;
+  color: var(--text-1);
+  max-width: 36em;
+}
+
+p code,
+li code,
+h2 code {
+  font-size: 0.88em;
+  color: var(--amber-text);
+}
+
+kbd:not(.cap) {
+  display: inline-block;
+  min-width: 1.7em;
+  padding: 0.1em 0.45em;
+  text-align: center;
+  font: 600 0.78em/1.5 var(--font-mono);
+  color: var(--text-0);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: 46px;
+  padding: 0 1.2rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font: 650 15px/1 var(--font-sans);
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color var(--motion-fast),
+    border-color var(--motion-fast);
+}
+
+.btn-primary {
+  background: var(--amber-fill);
+  color: var(--amber-ink);
+}
+
+.btn-primary:hover {
+  background: color-mix(in srgb, var(--amber-fill) 86%, #ffffff);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-0);
+  border-color: var(--line);
+}
+
+.btn-ghost:hover {
+  background: var(--bg-2);
+}
+
+.cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+// Keys pressed together: the template compiler drops the spaces between two elements.
+.keys {
+  display: inline-flex;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// One block for the whole site, as in the application: every transition and animation
+// above and in the components is reduced here without being named.
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

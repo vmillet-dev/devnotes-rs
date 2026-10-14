@@ -1,0 +1,126 @@
+@for (block of views(); track $index; let i = $index) {
+  @switch (block.kind) {
+    @case ('h2') {
+      <h2 [id]="block.id">
+        <a class="self" [routerLink]="[]" [fragment]="block.id">{{ block.heading }}</a>
+      </h2>
+    }
+    @case ('h3') {
+      <h3 [id]="block.id">
+        <a class="self" [routerLink]="[]" [fragment]="block.id">{{ block.heading }}</a>
+      </h3>
+    }
+    @case ('p') {
+      <p><app-doc-text [text]="block.text" /></p>
+    }
+    @case ('list') {
+      @if (block.ordered) {
+        <ol class="list ordered">
+          @for (item of block.items; track $index) {
+            <li><app-doc-text [text]="item" /></li>
+          }
+        </ol>
+      } @else {
+        <ul class="list">
+          @for (item of block.items; track $index) {
+            <li><app-doc-text [text]="item" /></li>
+          }
+        </ul>
+      }
+    }
+    @case ('code') {
+      <figure class="window snippet">
+        <figcaption class="win-head">
+          <span class="win-title">{{ block.title }}</span>
+          @if (block.lang) {
+            <span class="chip-lang" [class]="chip(block.lang)">{{ block.lang.toUpperCase() }}</span>
+          }
+          <button type="button" class="copy" (click)="copy(i, block.code, source)">
+            {{ copied() === i ? 'Copié' : 'Copier' }}
+          </button>
+        </figcaption>
+        <pre #source tabindex="0" [attr.aria-label]="'Code : ' + block.title">{{ block.code }}</pre>
+      </figure>
+    }
+    @case ('note') {
+      <div
+        class="note"
+        [class.warn]="block.tone === 'warn'"
+        [attr.role]="block.tone === 'warn' ? 'note' : null"
+      >
+        <span class="note-mark" aria-hidden="true"></span>
+        <p><app-doc-text [text]="block.text" /></p>
+      </div>
+    }
+    @case ('keys') {
+      <div class="scroll" tabindex="0" [attr.aria-label]="block.caption">
+        <table class="keys">
+          <caption>
+            {{
+              block.caption
+            }}
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Touches</th>
+              <th scope="col">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of block.shortcuts; track $index) {
+              <tr>
+                <td>
+                  <span class="combo">
+                    @for (key of row.keys; track $index) {
+                      <kbd>{{ key }}</kbd>
+                    }
+                  </span>
+                </td>
+                <td>{{ row.does }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @case ('table') {
+      <div class="scroll" tabindex="0" [attr.aria-label]="block.caption">
+        <table class="grid">
+          <caption>
+            {{
+              block.caption
+            }}
+          </caption>
+          <thead>
+            <tr>
+              @for (cell of block.head; track $index) {
+                <th scope="col">{{ cell }}</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of block.rows; track $index) {
+              <tr>
+                @for (cell of row; track $index) {
+                  <td><app-doc-text [text]="cell" /></td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @case ('guides') {
+      <ul class="guides">
+        @for (guide of guides; track guide.slug) {
+          <li [style.--c]="rgb(guide.tone)">
+            <a [routerLink]="path(guide.slug)">
+              <span class="sw"></span><span class="name">{{ guide.nav }}</span>
+              <span class="about">{{ summaries()[guide.slug] }}</span>
+            </a>
+          </li>
+        }
+      </ul>
+    }
+  }
+}

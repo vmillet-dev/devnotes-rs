@@ -25,7 +25,10 @@
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "bindings": "cargo run --manifest-path src-tauri/Cargo.toml --features bindings --bin export-bindings",
-    "icons": "node scripts/icons.mjs"
+    "icons": "node scripts/icons.mjs",
+    "website:start": "ng serve website",
+    "website:build": "ng build website && node website/scripts/finish-build.mjs",
+    "website:test": "ng test website"
   },
   "private": true,
   "dependencies": {
@@ -33,6 +36,9 @@
     "@angular/compiler": "^22.2.1",
     "@angular/core": "^22.2.1",
     "@angular/platform-browser": "^22.2.1",
+    "@angular/platform-server": "^22.2.1",
+    "@angular/router": "^22.2.1",
+    "@angular/ssr": "^22.2.1",
     "@codemirror/autocomplete": "^6.20.3",
     "@codemirror/commands": "^6.11.1",
     "@codemirror/lang-cpp": "^6.0.3",

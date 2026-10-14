@@ -102,9 +102,43 @@ export default tseslint.config(
     },
   },
   {
+    // The website ships on its own: importing the application would put the application in
+    // its bundle. The design tokens are shared through the stylesheet, never through code.
+    files: ['website/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '@core/*',
+                '@shared/*',
+                '@notes/*',
+                '@titlebar/*',
+                '@banners/*',
+                '@tools/*',
+                '@http/*',
+                '@app/*',
+                '@testing/*',
+              ],
+              message:
+                'The website does not import the application: nothing under website/ reaches src/app/.',
+            },
+            {
+              group: ['**/src/app/**', '**/src/testing/**'],
+              message:
+                'The website does not import the application: nothing under website/ reaches src/app/.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // The release scripts are neither Angular nor TypeScript: plain Node ESM, so the base
     // rules and the globals they reach for. Without this block a `.mjs` is linted with none.
-    files: ['scripts/**/*.mjs'],
+    files: ['scripts/**/*.mjs', 'website/scripts/**/*.mjs'],
     extends: [eslint.configs.recommended],
     languageOptions: {
       globals: { console: 'readonly', process: 'readonly', URL: 'readonly' },

@@ -1,0 +1,71 @@
+<div class="window editor">
+  <div class="win-head">
+    <span class="win-title">Petit utilitaire</span>
+    <span class="lang-wrap">
+      <span class="lang-btn">{{ chosen() ? 'TypeScript' : 'Texte brut' }}</span>
+      <span class="lang-menu">
+        <span class="lang-filter">
+          @if (filter()) {
+            <span>{{ filter() }}</span>
+          } @else {
+            <span class="ph">Filtrer les langages</span>
+          }
+        </span>
+        <span class="lang-list">
+          @for (language of languages(); track language) {
+            <span [class.on]="filter() && $first">{{ language }}</span>
+          }
+        </span>
+      </span>
+    </span>
+    <span class="btn-small fmt">Formater</span>
+  </div>
+  @if (formatted()) {
+    <app-code [lines]="pretty" [marked]="true" />
+  } @else {
+    <app-code [lines]="chosen() ? messy : plain" />
+  }
+  <p class="fmt-notice">
+    <span>Formaté avec Prettier · 4 lignes modifiées</span><span class="undo">Annuler</span>
+  </p>
+</div>
+<div class="json-pane">
+  <div class="json-code">
+    <app-code [lines]="json" [lit]="litLines()" />
+  </div>
+  <div class="graph">
+    <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M25 47 C 28 47, 28 15, 31 15" />
+      <path d="M25 47 L 31 47" />
+      <path d="M53 47 C 56 47, 55 51, 58 51" />
+      <path d="M78 62 L 78 72" />
+    </svg>
+    <div class="node" style="left: 3%; top: 40%; width: 22%; height: 15%">
+      <b>racine</b><span>4 clés</span>
+    </div>
+    <div class="node" [class.sel]="selected() === 'type'" style="left: 31%; top: 8%; width: 36%; height: 15%">
+      <b>type</b><span class="leaf">"invoice.paid"</span>
+    </div>
+    <div
+      class="node"
+      [class.sel]="selected() === 'data'"
+      style="left: 31%; top: 40%; width: 22%; height: 15%"
+    >
+      <b>data</b><span>1 clé</span>
+    </div>
+    <div
+      class="node"
+      [class.sel]="selected() === 'object'"
+      style="left: 58%; top: 40%; width: 40%; height: 22%"
+    >
+      <b>object</b><span class="leaf">amount_paid 4900</span><span class="leaf">currency "eur"</span>
+    </div>
+    <div
+      class="node"
+      [class.sel]="selected() === 'lines'"
+      style="left: 58%; top: 72%; width: 40%; height: 15%"
+    >
+      <b>lines</b><span>1 élément</span>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,157 @@
+.download {
+  padding-top: clamp(120px, 20vh, 220px);
+}
+
+.zone {
+  --c: var(--amber-rgb);
+  padding-bottom: 24px;
+}
+
+.zone-head {
+  height: 52px;
+  padding: 0 20px;
+  font-size: 15px;
+}
+
+.body {
+  display: grid;
+  gap: 22px;
+  max-width: 46rem;
+  padding: 8px 24px 0;
+}
+
+.body h2 {
+  font-size: clamp(1.6rem, 2.6vw, 2.2rem);
+}
+
+.phone {
+  color: var(--amber-text);
+  font-size: 14.5px;
+}
+
+.tabs {
+  display: inline-flex;
+  gap: 4px;
+  justify-self: start;
+  border-bottom: 1px solid var(--line);
+}
+
+[role='tab'] {
+  min-height: 44px;
+  margin-bottom: -1px;
+  padding: 0 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-1);
+  font-weight: 620;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+[role='tab'][aria-selected='true'] {
+  color: var(--text-0);
+  border-bottom-color: var(--amber-edge);
+}
+
+.panel {
+  display: grid;
+  gap: 14px;
+  justify-items: start;
+}
+
+.panel .btn {
+  min-height: 52px;
+  padding: 0 1.4rem;
+  font-size: 16px;
+  white-space: normal;
+  text-align: center;
+}
+
+.meta {
+  color: var(--text-1);
+  font-size: 14.5px;
+}
+
+.others {
+  width: 100%;
+}
+
+.others summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  color: var(--text-1);
+  font-weight: 560;
+  cursor: pointer;
+  list-style: none;
+}
+
+.others summary::-webkit-details-marker {
+  display: none;
+}
+
+.others summary::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform var(--motion-fast);
+}
+
+.others[open] summary::before {
+  transform: rotate(45deg);
+}
+
+.others li {
+  display: grid;
+  grid-template-columns: minmax(8rem, max-content) minmax(8rem, max-content) minmax(0, 1fr);
+  gap: 4px 16px;
+  align-items: baseline;
+  padding: 11px 0;
+  border-top: 1px solid var(--line-soft);
+}
+
+.others a {
+  font-weight: 620;
+  text-underline-offset: 3px;
+}
+
+.others code {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.who {
+  color: var(--text-1);
+  font-size: 14px;
+}
+
+.notes {
+  margin-top: 18px;
+  padding: 0 24px;
+  color: var(--text-2);
+  font-size: 14px;
+}
+
+@media (max-width: 640px) {
+  .body {
+    padding-inline: 16px;
+  }
+
+  .notes {
+    padding-inline: 16px;
+  }
+
+  .others li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .who {
+    grid-column: 1 / -1;
+  }
+}

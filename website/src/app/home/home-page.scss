@@ -1,0 +1,17 @@
+.hero {
+  padding-top: clamp(40px, 7vw, 88px);
+}
+
+.hero-text {
+  display: grid;
+  gap: 22px;
+}
+
+.hero-text h1 {
+  max-width: 13em;
+}
+
+.platforms {
+  color: var(--text-2);
+  font-size: 14.5px;
+}

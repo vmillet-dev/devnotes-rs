@@ -1,0 +1,135 @@
+// The design tokens, shared by the application and the website (`website/`): the palette in
+// both themes, the motion, the spacing and the fonts. Each stylesheet `@use`s it once.
+
+/*
+ * ⚠️ These variables must live here, in a global unscoped file, and never in a
+ * *.component.scss: Angular's emulated encapsulation rewrites a `:root` selector into a
+ * form that never matches the real <html>, silently invalidating every one of them.
+ */
+:root {
+  --bg-0: #15171c;
+  --bg-1: #1b1e25;
+  --bg-2: #22252e;
+  --bg-3: #2a2e39;
+  --line: #333947;
+  --line-soft: #282c37;
+  --text-0: #eef0f4;
+  --text-1: #aab0c0;
+  --text-2: #9298ac;
+  // The accent, in the three jobs it does. On a dark surface one colour does all
+  // three, which is why the other two are declared as itself here — the light theme is
+  // where they part company, and it is the only block that redefines them.
+  --amber-fill: #e8a33d; // a surface: a solid button, a tick, a tint
+  --amber-edge: var(--amber-fill); // a hairline or a focus ring
+  --amber-text: var(--amber-fill); // a label
+  --amber-dim: #8a662a; // the softer hairline, for a hover
+  --amber-ink: #1a1508; // text on solid amber (the "new note" button, say)
+  --green: #6fbf8b;
+  --blue: #6f9bd1;
+  --red: #dc8281;
+  --purple: #a98fd1;
+  --teal: #5fbcbc;
+  --pink: #d68bbd;
+  --olive: #b4bd62;
+
+  // RGB triplets of the colours above, so no hex is duplicated behind an opacity.
+  // The **fill**: a tint is a wash of the surface colour, never of the label one.
+  --text-1-rgb: 170, 176, 192;
+  --amber-rgb: 232, 163, 61;
+  --green-rgb: 111, 191, 139;
+  --blue-rgb: 111, 155, 209;
+  --red-rgb: 220, 130, 129;
+  --purple-rgb: 169, 143, 209;
+  --teal-rgb: 95, 188, 188;
+  --pink-rgb: 214, 139, 189;
+  --olive-rgb: 180, 189, 98;
+  --black-rgb: 0, 0, 0;
+  --backdrop-rgb: 10, 11, 14;
+
+  // Deliberately dimmer than --text-2: readable without drawing the eye.
+  --line-no: #3f4454;
+
+  --shadow-dropdown: 0 10px 30px rgba(var(--black-rgb), 0.35);
+  --shadow-overlay: 0 30px 60px rgba(var(--black-rgb), 0.5);
+
+  /* Two durations and nothing else. `--motion-fast` is what follows the pointer —
+     hover fills, chip states, a control appearing under the cursor. `--motion` is what
+     *enters*: a menu, a dialog, a transient bar. Anything slower reads as lag on a tool
+     that is used in bursts. */
+  --motion-fast: 120ms;
+  --motion: 160ms;
+  /* The one motion that lasts: a spinner's turn, while something is waited for. */
+  --motion-turn: 800ms;
+  /* Not a motion: how long a mark left by an action takes to fade, so the eye can find it. */
+  --motion-mark: 2000ms;
+
+  // A full-screen editor starts under it, so the titlebar stays in reach.
+  --titlebar-height: 38px;
+
+  // The four gaps density tightens; everything else stays fixed.
+  --space-card: 14px;
+  --space-grid: 12px;
+  --space-section: 28px;
+  --space-canvas: 24px;
+
+  // Shipped with the binary through @fontsource: Google Fonts would mean degraded type
+  // offline and a CSP that could not be locked down. Variable: one file per script.
+  --font-sans: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Tells the browser — WebView2 on Windows — that this application is dark by
+     design, so the OS theme does not repaint the native <input>s, <select>s,
+     scrollbars or autofill behind our backs. */
+  color-scheme: dark;
+}
+
+/*
+ * ⚠️ The `:root` block above stays the dark base, which avoids a white flash at launch:
+ * the preference lives in a file nothing can read before Angular starts.
+ *
+ * `--amber-fill` is **not** redefined here, deliberately: #e8a33d is the accent in both
+ * themes, and a light surface is where it works — dark text on it reads at 7.8:1. What it
+ * cannot be on a light background is a *line* or a *word*: on white it falls to 2.16:1,
+ * where a hairline asks 3 and a label asks 4.5. So those two step down, and only those
+ * two. Drawing the whole accent at the label's darkness is what read as mustard.
+ */
+:root[data-theme='light'] {
+  --bg-0: #eceef2;
+  --bg-1: #f7f8fa;
+  --bg-2: #ffffff;
+  --bg-3: #e9ecf2;
+  --line: #cdd2dc;
+  --line-soft: #e1e5ec;
+  --text-0: #1a1d24;
+  --text-1: #4a5163;
+  --text-2: #636a7c;
+  --amber-edge: #cf6a08; // 3.10:1 on white — a focus ring has to be findable
+  --amber-text: #a8500f; // 4.65:1 on white, which is the ceiling for a warm hue
+  --amber-dim: #dda882;
+  --green: #297044;
+  --blue: #2a5d99;
+  --red: #b03a39;
+  --purple: #6a4aa6;
+  --teal: #1d6b6e;
+  --pink: #9c3a78;
+  --olive: #5a6114;
+
+  --text-1-rgb: 74, 81, 99;
+  --green-rgb: 41, 112, 68;
+  --blue-rgb: 42, 93, 153;
+  --red-rgb: 176, 58, 57;
+  --purple-rgb: 106, 74, 166;
+  --teal-rgb: 29, 107, 110;
+  --pink-rgb: 156, 58, 120;
+  --olive-rgb: 90, 97, 20;
+  // A modal's scrim stays dark: that is what puts the panel in front.
+  --backdrop-rgb: 64, 70, 86;
+
+  --line-no: #b7bdca;
+
+  --shadow-dropdown: 0 10px 26px rgba(var(--black-rgb), 0.14);
+  --shadow-overlay: 0 24px 52px rgba(var(--black-rgb), 0.2);
+
+  // What repaints the native <select>s, scrollbars and autocomplete.
+  color-scheme: light;
+}

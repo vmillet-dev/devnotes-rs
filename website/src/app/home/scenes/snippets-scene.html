@@ -1,0 +1,69 @@
+<div class="window snip-ed">
+  <div class="win-head">
+    <span class="win-title">Tunnel vers la base de staging</span><span class="chip-lang l-sh">SH</span>
+    <span class="btn-small copy">Copier rempli</span>
+  </div>
+  <div class="fields-head">
+    Champs <span class="count">{{ filled() }}</span>
+  </div>
+  <div class="fields">
+    <span class="lbl">{{ field('db_host') }}</span
+    ><span class="fake-in" [class.typing]="hostTyping()">{{ host() }}</span>
+    <span class="lbl">{{ field('user') }}</span
+    ><span class="fake-in" [class.typing]="userTyping()">{{ user() }}</span>
+  </div>
+  <app-code [lines]="snippet" />
+  <div class="preview">
+    <span class="pv-label">Ce qui part dans le presse-papiers</span>
+    <output>{{ command() }}</output>
+  </div>
+</div>
+<div class="snip-desk">
+  <div class="snip-keys">
+    @for (key of keys; track key) {
+      <kbd class="cap" [class.pressed]="pressed($index)">{{ key }}</kbd>
+    }
+  </div>
+  <div class="term">
+    <div class="term-head"><span class="tab">~/api</span><span>bash</span></div>
+    <div class="term-body">
+      <div><span class="ok">~/api</span> $ git pull</div>
+      <div class="dim">Already up to date.</div>
+      <div><span class="ok">~/api</span> $ {{ pasted() }}<span class="term-caret"></span></div>
+    </div>
+  </div>
+  <div class="palette">
+    <div class="pal-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="11" cy="11" r="7" />
+        <path d="m20 20-3.5-3.5" />
+      </svg>
+      @if (query()) {
+        <span class="pal-query">{{ query() }}</span>
+      } @else {
+        <span class="pal-placeholder">Rechercher un snippet…</span>
+      }
+      <span class="pal-caret"></span>
+      <kbd class="esc">Échap</kbd>
+    </div>
+    <ul class="pal-results">
+      @for (result of results(); track result.title; let first = $first) {
+        <li [class.is-sel]="first" [class.copying]="first && copying()">
+          <span class="chip-lang" [class]="'l-' + result.lang">{{ result.lang.toUpperCase() }}</span>
+          <span class="t"
+            >{{ result.before }}<mark>{{ result.match }}</mark
+            >{{ result.after }}</span
+          >
+          <span class="where">Plateforme</span>
+        </li>
+      }
+    </ul>
+    <div class="pal-foot">
+      <span><kbd>↑</kbd><kbd>↓</kbd>choisir</span>
+      <span><kbd>Entrée</kbd>ouvrir</span>
+      <span [class.lit]="copying()"><kbd>Ctrl</kbd><kbd>C</kbd>copier</span>
+      <span><kbd>Échap</kbd>fermer</span>
+    </div>
+  </div>
+  <div class="snip-toast">Copié dans le presse-papiers</div>
+</div>

@@ -5260,7 +5260,8 @@ Treated as part of the definition of done, and partly enforced by
 ## Theming
 
 All colors, fonts and shadows are CSS custom properties defined on `:root` in the global
-`src/styles/styles.scss`; components only consume them via `var(…)`.
+`src/styles/_tokens.scss`, which `src/styles/styles.scss` and the website's stylesheet both
+`@use`; components only consume them via `var(…)`.
 
 Those variables **must** stay in the global stylesheet. Angular's emulated encapsulation
 rewrites a `:root` selector written inside a `*.component.scss` into a form that never
@@ -6024,3 +6025,41 @@ On Linux the runner is wrapped in `xvfb-run`: WebKitGTK needs an X server, and i
 service that spawns the application, so the `DISPLAY` has to exist for the whole process rather
 than for one command. `logLevel` defaults to `warn`; a session that refuses to open is
 diagnosed by re-running the job with `E2E_LOG_LEVEL=trace`.
+
+## The website
+
+The showcase site, devnotes.fr, is a second project of the same Angular workspace:
+`website/` (`angular.json` → `projects.website`), on the root `package.json` and the app's
+Angular version. `npm run website:start` serves it on port 4300, `website:build` writes it to
+`dist/website/`, `website:test` runs its specs.
+
+- **It shares the tokens and nothing else.** `website/src/styles.scss` `@use`s
+  `src/styles/_tokens.scss` (palette, both themes, motion, fonts) and adds the few tokens the
+  site draws alone (`_site-tokens.scss`). Nothing under `website/` imports `src/app/`: an
+  ESLint block refuses the app's aliases and paths, so the site never ships the app.
+- **Every page is prerendered** (`outputMode: "static"`, `app.routes.server.ts` →
+  `RenderMode.Prerender`): one `index.html` per route, at the root of the output for `/`, and
+  hydrated in the browser. The routes are the home page, one per documentation page
+  (`docs/doc-index.ts`, kept apart from the text so the first download does not carry it) and
+  `404`. Anything that measures or animates runs in `afterNextRender` and asks
+  `core/browser.ts` first: neither the build's Node nor jsdom has `matchMedia` or
+  `IntersectionObserver`.
+- **The address is one build setting**, `SITE_URL` (`define` in `angular.json`,
+  `https://devnotes.fr`; `--define` overrides it): the canonical links and the social tags are
+  built from it. `website/scripts/finish-build.mjs` runs after the build, reads the address
+  back from the home page's canonical link, checks every page (one `h1`, a title, a
+  canonical, no local address), and writes `sitemap.xml`, `robots.txt` and `404.html`.
+  `website/public/.htaccess` serves `/docs/x` from `docs/x/index.html` without a redirect on
+  the Apache host.
+- **The home page redraws the application in HTML** rather than showing screenshots. Each
+  feature (`home/feature.ts`) is a section whose scene is a pure function of a step and its
+  progress `t` (`ScenePlayer`): it plays once well in view, rests when it leaves the
+  screen, and a step clicked shows that step. The scroll is never held, except by the hero
+  board, which stays centred while its cards are filed and is cropped to one folder on a
+  phone. Code inside a scene is data (`home/code-view.ts`): the template compiler drops the
+  whitespace between two elements, and a formatter would reflow it.
+- **The documentation is typed data** (`docs/content/*.ts`, written with the helpers of
+  `docs/doc.model.ts`) rendered by `DocBlocks` without `innerHTML`. `CHECKED_ON` names the
+  version the pages were last checked against in the application, by hand.
+- **The theme** is applied before the first paint by an inline script in
+  `website/src/index.html` (a stored choice, else the system's), then followed by `ThemeStore`.

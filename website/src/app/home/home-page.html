@@ -1,0 +1,120 @@
+<section class="hero" aria-labelledby="hero-h">
+  <div class="wrap hero-text">
+    <h1 id="hero-h">Le board où vivent vos snippets.</h1>
+    <p class="lede">
+      Commandes, requêtes, bouts de code, notes et listes, rangés en espaces et en dossiers. Une trentaine
+      d'outils et un client API à côté, le tout chiffré sur votre machine.
+    </p>
+    <div class="cta-row">
+      <a class="btn btn-primary" routerLink="/" fragment="telecharger">Télécharger</a>
+      <a class="btn btn-ghost" routerLink="/docs">Lire la documentation</a>
+    </div>
+    <p class="platforms">Gratuit et libre, pour Windows et Linux.</p>
+  </div>
+  <app-hero-board />
+</section>
+
+<app-feature
+  anchor="snippets"
+  tone="green"
+  label="Snippets à champs"
+  heading="Vos commandes, prêtes à coller."
+  [steps]="[
+    'Un snippet avec deux champs',
+    'DevNotes demande leurs valeurs',
+    'Ctrl Alt P depuis votre terminal',
+    'La commande remplie est copiée',
+  ]"
+  [durations]="[1800, 2600, 2800, 2000]"
+>
+  <p lede>
+    Un snippet peut contenir des champs comme <code>{{ field('host') }}</code> ou
+    <code>{{ field('port=22') }}</code
+    >. DevNotes vous demande leurs valeurs, puis copie la commande complète. Depuis n'importe quelle
+    application, avec <span class="keys"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>P</kbd></span
+    >.
+  </p>
+  <app-snippets-scene />
+</app-feature>
+
+<app-feature
+  anchor="ranger"
+  tone="blue"
+  label="Ranger et retrouver"
+  heading="Tout est rangé, tout se retrouve."
+  flip
+  [steps]="[
+    'Un espace et ses dossiers, en tableau',
+    'Un dossier s’agrandit à la souris',
+    'La recherche cite la ligne trouvée',
+    'Les mêmes notes, en liste par date',
+  ]"
+  [durations]="[1800, 2200, 2400, 2000]"
+>
+  <p lede>
+    Un espace par contexte, des dossiers dedans, et une vue Tableau où chaque dossier est une zone. La
+    recherche lit les titres, le code, les listes et les tags.
+  </p>
+  <app-organise-scene />
+</app-feature>
+
+<app-feature
+  anchor="code"
+  tone="purple"
+  label="Le code"
+  heading="Un vrai éditeur pour vos snippets."
+  [steps]="['Choisir le langage au clavier', 'Formater avec Prettier', 'Lire un JSON en graphe']"
+  [durations]="[2800, 2200, 3200]"
+>
+  <p lede>
+    Vingt-six langages colorés, Prettier en un clic, et vos JSON, YAML, TOML ou XML lisibles en graphe à côté
+    du code.
+  </p>
+  <app-code-scene />
+</app-feature>
+
+<app-tools-section />
+
+<app-feature
+  anchor="client-api"
+  tone="olive"
+  label="Client API"
+  heading="Testez vos API à côté de vos notes."
+  flip
+  [steps]="[
+    'Une variable prise dans l’environnement',
+    'Envoyer, lire la réponse',
+    'Le code pour vingt cibles',
+    'Un WebSocket et son journal',
+  ]"
+  [durations]="[2200, 2600, 2800, 2600]"
+>
+  <p lede>
+    HTTP, GraphQL et WebSocket, avec des collections, des environnements et des variables. L'historique est
+    chiffré comme le reste.
+  </p>
+  <app-api-scene />
+</app-feature>
+
+<app-feature
+  anchor="chiffrement"
+  tone="pink"
+  label="Chiffrement"
+  heading="Rien ne quitte votre machine."
+  [steps]="[
+    'Sur le disque, la note est chiffrée',
+    'Votre phrase de passe la déverrouille',
+    'Plusieurs bibliothèques, sauvegardées chaque jour',
+  ]"
+  [durations]="[2400, 2800, 2200]"
+>
+  <p lede>
+    Vos notes sont chiffrées sur le disque, derrière une phrase de passe que DevNotes n'enregistre nulle part.
+    Pas de compte, pas de cloud. Perdue, elle ne se récupère pas : gardez un export.
+  </p>
+  <app-vault-scene />
+</app-feature>
+
+<app-more-section />
+
+<app-download-section />

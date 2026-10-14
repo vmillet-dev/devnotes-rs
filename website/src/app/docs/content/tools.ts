@@ -1,0 +1,105 @@
+import { DocPage, b, h2, keys, p, table, tip, ui, ul } from '../doc.model';
+
+export const TOOLS: DocPage = {
+  slug: 'outils',
+  title: 'Les outils',
+  summary:
+    'Une trentaine d’utilitaires qui tournent sur votre machine sans rien appeler : encoder, hacher, convertir, générer, lire une date, calculer, et des références.',
+  body: [
+    p(
+      'La zone ',
+      ui('Outils'),
+      ' (',
+      keys('Ctrl 2'),
+      ') les range par catégorie. Aucun n’appelle le réseau : ce que vous collez ne quitte pas l’application.',
+    ),
+    h2('trouver', 'Trouver un outil'),
+    ul(
+      [
+        keys('Ctrl Shift T'),
+        ' cherche un outil depuis n’importe quelle zone, et fouille aussi les références.',
+      ],
+      [
+        'Une étoile met un outil dans les ',
+        ui('Favoris'),
+        ' ; les derniers ouverts sont dans les ',
+        ui('Récents'),
+        '.',
+      ],
+      ['Le bouton ', ui('Exemple'), ' d’un outil le remplit pour voir ce qu’il fait.'],
+    ),
+    h2('garder', 'Garder un résultat'),
+    p(
+      ui('Enregistrer comme note'),
+      ' range ce que l’outil a calculé dans un snippet, avec un titre, un espace, un dossier et des tags. Jamais ce qui y a été tapé : un secret collé dans un outil n’atterrit pas dans vos notes par mégarde.',
+    ),
+    h2('liste', 'Tous les outils'),
+    table(
+      'Texte',
+      ['Outil', 'Ce qu’il fait'],
+      [b('Convertisseur de casse'), 'camelCase, snake_case, dot.case, Train-Case… et le slug'],
+      [b('Sauts de ligne'), 'CRLF ↔ LF, espaces en fin de ligne'],
+      [b('Statistiques du texte'), 'caractères, mots, lignes, octets, fréquences'],
+      [
+        b('Diff'),
+        'deux textes ligne à ligne, ou deux documents JSON, YAML, TOML ou XML comparés par leurs valeurs',
+      ],
+    ),
+    table(
+      'Crypto',
+      ['Outil', 'Ce qu’il fait'],
+      [b('Hash / HMAC'), 'MD5, SHA-1, SHA-2, SHA-3'],
+      [b('Mots de passe'), 'longueur, jeux de caractères, entropie'],
+      [b('Identifiants'), 'UUID, ULID, NanoID, CUID2, ObjectId, KSUID, tirés et relus'],
+      [b('JWT'), 'décodé, ses dates lues, sa signature HS* vérifiée'],
+    ),
+    table(
+      'Encodeurs',
+      ['Outil', 'Ce qu’il fait'],
+      [b('URL'), 'encoder, décoder, analyser une adresse et ses paramètres'],
+      [b('Base64 et autres bases'), 'Base64, Base32, hexadécimal, binaire, octets ; l’aperçu d’une image'],
+      [b('JSON ↔ YAML ↔ TOML ↔ XML'), 'd’un format à l’autre, dans tous les sens'],
+      [b('Couleurs'), 'HEX, RGB, HSL, OKLCH, et le contraste entre deux couleurs'],
+    ),
+    table(
+      'Générateurs',
+      ['Outil', 'Ce qu’il fait'],
+      [b('JSON'), 'des données de test, à partir d’un schéma ou d’un document modèle'],
+      [b('Identité fictive'), 'une personne de test dont chaque numéro passe sa clé'],
+      [b('Lorem ipsum'), 'mots, phrases, paragraphes'],
+      [b('QR code'), 'texte, URL, Wi-Fi, e-mail ou contact, en SVG ou PNG'],
+    ),
+    table(
+      'Temps',
+      ['Outil', 'Ce qu’il fait'],
+      [b('Dates et durées'), 'Unix ↔ ISO 8601, écarts et durées ISO'],
+      [b('Fuseaux horaires'), 'une heure, dans chaque fuseau choisi'],
+      [b('Cron'), 'lu à voix haute, ses prochaines exécutions, et celles entre deux moments'],
+    ),
+    table(
+      'Calcul',
+      ['Outil', 'Ce qu’il fait'],
+      [b('Tailles et transfert'), 'o, ko, Mo, Go ↔ Kio, Mio, Gio, les bits, et le temps d’un transfert'],
+      [b('Pourcentages'), 'x % de y, part, évolution, hausse et baisse'],
+      [b('Permissions Unix'), 'chmod : 755 ↔ rwxr-xr-x, bits spéciaux, umask'],
+      [b('Luhn et IBAN'), 'carte bancaire, IBAN : valide ou non, et la bonne clé'],
+      [b('Sous-réseaux CIDR'), 'masques, hôtes, découpage, plan d’adressage, IPv4 et IPv6'],
+    ),
+    table(
+      'Références',
+      ['Référence', 'Ce qu’elle contient'],
+      [b('Codes de statut HTTP'), '404, 429, 503 : ce qu’ils veulent dire, et quand les renvoyer'],
+      [b('En-têtes HTTP'), 'Content-Type, Cache-Control, CORS, CSP : à quoi ils servent'],
+      [b('Types MIME'), 'le type d’une extension, et les extensions d’un type'],
+      [b('Ports courants'), '22, 443, 5432, 6379 : quel service écoute où'],
+      [b('Signaux Unix'), 'SIGTERM, SIGKILL, SIGHUP : numéros, action et usage'],
+      [b('Table ASCII'), 'les 128 caractères, en décimal, hexadécimal, octal et binaire'],
+      [b('Aide-mémoire regex'), 'la syntaxe, en JavaScript et en PCRE'],
+      [b('Aide-mémoire Markdown'), 'titres, listes, liens, tableaux, en CommonMark et sur GitHub'],
+      [b('Aide-mémoire Mustache'), 'variables, sections, partiels, avec ce qu’ils rendent'],
+    ),
+    tip(
+      'Un outil qui ouvre un fichier le lit jusqu’à 10 Mo. Au-delà, il le dit plutôt que de le tronquer en silence.',
+    ),
+  ],
+};

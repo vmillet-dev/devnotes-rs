@@ -1,0 +1,66 @@
+<div class="window app api">
+  <div class="app-side">
+    <span class="h">Collections</span>
+    <span class="row">Facturation</span>
+    <span class="row sub http-on"><b class="m get">GET</b>Factures payées</span>
+    <span class="row sub"><b class="m post">POST</b>Créer une facture</span>
+    <span class="row">Temps réel</span>
+    <span class="row sub ws-on"><b class="m ws">WS</b>Flux d'événements</span>
+    <span class="foot">Environnements</span>
+  </div>
+  <div class="api-main">
+    <div class="api-http">
+      <div class="req">
+        <span class="method">GET</span
+        ><span class="url"
+          ><span class="fld">{{ field('base_url') }}</span
+          >/v1/invoices</span
+        ><span class="send">Envoyer</span>
+      </div>
+      <div class="env-row">
+        <span>Environnement</span
+        ><span class="env-chip" [class.staging]="staging()">{{ staging() ? 'Staging' : 'Local' }}</span>
+        <span class="resolve">base_url = https://api.staging.internal</span>
+      </div>
+      <div class="req-tabs">
+        <span class="t-params">Paramètres 2</span><span>En-têtes 1</span><span>Corps</span
+        ><span class="t-code">Code</span>
+      </div>
+      <div class="pane-params params">
+        <span>status</span><span>paid</span><span>limit</span><span>20</span>
+      </div>
+      <div class="pane-code">
+        <div class="targets">
+          @for (each of targets; track each.name) {
+            <span [class.on]="$index === target()">{{ each.name }}</span>
+          }
+        </div>
+        <pre class="gen">{{ generated() }}</pre>
+      </div>
+      <div class="resp">
+        <span class="spin">Envoi en cours</span>
+        <div class="resp-head">
+          <span class="ok">200 OK</span><span>142 ms</span><span>3,1 Ko</span><span class="env">Staging</span>
+        </div>
+        <app-code class="body" [lines]="answer" [shown]="lines()" />
+      </div>
+    </div>
+    <div class="api-ws">
+      <div class="req">
+        <span class="method ws">WS</span><span class="url">wss://api.staging.internal/events</span
+        ><span class="send">Déconnecter</span>
+      </div>
+      <ul class="ws-log">
+        @for (message of messages; track $index) {
+          <li [class.on]="$index < received()">
+            <span class="dir" [class.up]="message.up" [class.down]="!message.up">{{
+              message.up ? '↑' : '↓'
+            }}</span>
+            <span class="tm">{{ message.at }}</span
+            ><span class="pl">{{ message.text }}</span>
+          </li>
+        }
+      </ul>
+    </div>
+  </div>
+</div>

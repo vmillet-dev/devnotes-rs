@@ -40,5 +40,10 @@
     "typeCheckHostBindings": true,
     "strictTemplates": true
   },
-  "references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.spec.json" }]
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.spec.json" },
+    { "path": "./website/tsconfig.app.json" },
+    { "path": "./website/tsconfig.spec.json" }
+  ]
 }

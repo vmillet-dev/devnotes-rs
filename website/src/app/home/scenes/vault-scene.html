@@ -1,0 +1,33 @@
+<div class="disk">
+  <div class="disk-label">
+    <span class="chip-plain">Sur le disque</span><span class="algo">AES-256-GCM</span>
+  </div>
+  <div class="window note">
+    <div class="win-head">
+      <span class="win-title">{{ title() }}</span>
+    </div>
+    <pre>{{ body() }}</pre>
+  </div>
+</div>
+<div class="window lock">
+  <app-logo />
+  <p class="lib">Bibliothèque Travail</p>
+  <span class="lbl">Phrase de passe</span>
+  <span class="pass">{{ passphrase() }}</span>
+  <span class="btn-unlock">Déverrouiller</span>
+  <p class="warn">Elle n'est enregistrée nulle part.</p>
+</div>
+<div class="window libs">
+  <div class="win-head"><span class="win-title">Bibliothèques</span></div>
+  <ul>
+    <li>
+      <b>Travail</b><span class="st open">ouverte</span><span class="bk">Sauvegardée ce matin à 08:12</span>
+    </li>
+    <li>
+      <b>Personnel</b><span class="st">verrouillée</span><span class="bk">Sauvegardée hier à 19:40</span>
+    </li>
+    <li>
+      <b>Client Atlas</b><span class="st">verrouillée</span><span class="bk">Sauvegardée lundi à 09:05</span>
+    </li>
+  </ul>
+</div>

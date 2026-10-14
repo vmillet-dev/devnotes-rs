@@ -1,0 +1,36 @@
+<section
+  class="feature"
+  [class.flip]="flip()"
+  [id]="anchor()"
+  [attr.aria-labelledby]="anchor() + '-h'"
+  [style.--c]="rgb()"
+>
+  <div class="wrap feature-grid">
+    <div class="feature-copy">
+      <span class="zone-title"><span class="sw"></span>{{ label() }}</span>
+      <h2 [id]="anchor() + '-h'">{{ heading() }}</h2>
+      <div class="feature-lede"><ng-content select="[lede]" /></div>
+      <ol class="steps" [attr.aria-label]="'Les étapes : ' + label()">
+        @for (step of steps(); track $index) {
+          <li>
+            <button
+              type="button"
+              [class.is-on]="state($index) === 'on'"
+              [class.is-done]="state($index) === 'done' || (state($index) === 'on' && player.t() >= 1)"
+              [attr.aria-pressed]="state($index) === 'on'"
+              [style.--t]="fill($index)"
+              (click)="player.show($index)"
+            >
+              <span class="num">{{ $index + 1 }}</span
+              ><span>{{ step }}</span
+              ><span class="fill"></span>
+            </button>
+          </li>
+        }
+      </ol>
+    </div>
+    <div class="story-stage" #stage aria-hidden="true">
+      <ng-content />
+    </div>
+  </div>
+</section>

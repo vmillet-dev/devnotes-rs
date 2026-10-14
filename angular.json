@@ -97,6 +97,98 @@
           }
         }
       }
+    },
+    "website": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "scss",
+          "changeDetection": "OnPush"
+        }
+      },
+      "root": "website",
+      "sourceRoot": "website/src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "outputPath": {
+              "base": "dist/website",
+              "browser": ""
+            },
+            "index": "website/src/index.html",
+            "browser": "website/src/main.ts",
+            "server": "website/src/main.server.ts",
+            "outputMode": "static",
+            "tsConfig": "website/tsconfig.app.json",
+            "inlineStyleLanguage": "scss",
+            "stylePreprocessorOptions": {
+              "includePaths": ["src/styles"]
+            },
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "website/public"
+              }
+            ],
+            "styles": [
+              "@fontsource-variable/inter/wght.css",
+              "@fontsource-variable/jetbrains-mono/wght.css",
+              "website/src/styles.scss"
+            ],
+            "define": {
+              "SITE_URL": "'https://devnotes.fr'"
+            }
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "350kB",
+                  "maximumError": "500kB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "8kB",
+                  "maximumError": "12kB"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular/build:dev-server",
+          "options": {
+            "port": 4300
+          },
+          "configurations": {
+            "production": {
+              "buildTarget": "website:build:production"
+            },
+            "development": {
+              "buildTarget": "website:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "runner": "vitest",
+            "buildTarget": "::development",
+            "tsConfig": "website/tsconfig.spec.json"
+          }
+        }
+      }
     }
   }
 }

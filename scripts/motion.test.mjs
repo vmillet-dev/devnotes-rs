@@ -15,6 +15,7 @@ import { describe, it } from 'node:test';
  */
 const ROOT = 'src';
 const GLOBAL = 'src/styles/styles.scss';
+const TOKENS = 'src/styles/_tokens.scss';
 
 /** Separators normalised: `join` answers backslashes on Windows and CI runs on Linux. */
 function stylesheets(directory) {
@@ -40,10 +41,10 @@ function declarations(source) {
 
 describe('motion', () => {
   it('declares its two durations once, as variables', () => {
-    const global = readFileSync(GLOBAL, 'utf8');
+    const tokens = readFileSync(TOKENS, 'utf8');
 
-    assert.match(global, /--motion-fast:\s*\d+ms;/);
-    assert.match(global, /--motion:\s*\d+ms;/);
+    assert.match(tokens, /--motion-fast:\s*\d+ms;/);
+    assert.match(tokens, /--motion:\s*\d+ms;/);
   });
 
   /** A duration written out is one nobody can retune, and the three that existed had

@@ -1,0 +1,265 @@
+:host {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.editor,
+.json-pane {
+  transition:
+    opacity var(--motion-scene),
+    transform var(--motion-scene);
+}
+
+.editor {
+  position: absolute;
+  inset: 0 0 auto 0;
+  overflow: visible;
+}
+
+.editor .win-head {
+  position: relative;
+  z-index: 2;
+}
+
+:host([data-step='2']) .editor {
+  opacity: 0;
+  transform: translateY(-14px) scale(0.98);
+}
+
+.lang-wrap {
+  position: relative;
+  flex: none;
+}
+
+.lang-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg-2);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.lang-btn::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translateY(-2px);
+}
+
+:host(.chosen) .lang-btn {
+  color: var(--blue);
+  border-color: rgba(var(--blue-rgb), 0.6);
+}
+
+.lang-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 210px;
+  padding: 6px;
+  display: grid;
+  gap: 4px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  transform: translateY(-4px);
+  transition:
+    opacity var(--motion),
+    transform var(--motion);
+}
+
+:host(.menu) .lang-menu {
+  opacity: 1;
+  transform: none;
+}
+
+.lang-filter {
+  display: flex;
+  gap: 4px;
+  padding: 7px 9px;
+  border: 1px solid var(--amber-edge);
+  border-radius: 6px;
+  background: var(--bg-0);
+  font: 12.5px var(--font-mono);
+}
+
+.lang-filter .ph {
+  color: var(--text-2);
+  font-family: var(--font-sans);
+}
+
+.lang-list {
+  display: grid;
+  max-height: 184px;
+  overflow: hidden;
+}
+
+.lang-list span {
+  padding: 5px 9px;
+  border-radius: 5px;
+  font-size: 12.5px;
+  color: var(--text-1);
+}
+
+.lang-list span.on {
+  background: rgba(var(--amber-rgb), 0.15);
+  color: var(--text-0);
+}
+
+.fmt {
+  margin-left: auto;
+}
+
+.editor .code {
+  min-height: 150px;
+  align-content: start;
+}
+
+.fmt-notice {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 16px 16px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(var(--amber-rgb), 0.5);
+  background: rgba(var(--amber-rgb), 0.08);
+  font-size: 13px;
+  opacity: 0;
+  transition: opacity var(--motion);
+}
+
+.fmt-notice .undo {
+  color: var(--amber-text);
+  font-weight: 650;
+}
+
+:host(.formatted[data-step='1']) .fmt-notice {
+  opacity: 1;
+}
+
+// The JSON beside its graph.
+.json-pane {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  align-content: start;
+  opacity: 0;
+  transform: translateY(14px);
+}
+
+:host([data-step='2']) .json-pane {
+  opacity: 1;
+  transform: none;
+}
+
+.json-code {
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-1);
+}
+
+.json-code .code {
+  font-size: 11.5px;
+  padding-block: 8px;
+  grid-template-columns: 30px minmax(0, 1fr);
+}
+
+.graph {
+  position: relative;
+  height: 300px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background-image: radial-gradient(var(--dot) 1.1px, transparent 1.4px);
+  background-size: 14px 14px;
+}
+
+.graph svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.graph path {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.node {
+  position: absolute;
+  padding: 6px 9px;
+  border-radius: 7px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  font-size: 11px;
+  line-height: 1.35;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  transition:
+    border-color var(--motion),
+    box-shadow var(--motion);
+}
+
+.node b {
+  display: block;
+  font: 600 11px var(--font-mono);
+}
+
+.node span {
+  color: var(--text-2);
+  font-size: 10.5px;
+}
+
+.node .leaf {
+  display: block;
+  font-family: var(--font-mono);
+  color: var(--text-1);
+  font-size: 10px;
+}
+
+.node.sel {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(var(--blue-rgb), 0.2);
+}
+
+@container (max-width: 520px) {
+  .json-pane {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .graph {
+    height: 240px;
+  }
+
+  .node {
+    padding: 4px 7px;
+    line-height: 1.25;
+    font-size: 10px;
+  }
+
+  .node b,
+  .node .leaf {
+    font-size: 10px;
+  }
+
+  .json-code .code {
+    font-size: 10.5px;
+  }
+}

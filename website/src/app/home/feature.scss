@@ -1,0 +1,138 @@
+.feature {
+  padding-top: clamp(120px, 20vh, 220px);
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: clamp(32px, 5vw, 88px);
+  align-items: center;
+}
+
+// The scene keeps the wide column on whichever side it sits.
+.flip .feature-grid {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+}
+
+.flip .feature-copy {
+  order: 2;
+}
+
+.feature-copy {
+  display: grid;
+  gap: 20px;
+  align-content: center;
+}
+
+.feature-copy h2 {
+  font-size: clamp(1.7rem, 3vw, 2.5rem);
+}
+
+// Inherited by the paragraph the page projects here.
+.feature-lede {
+  color: var(--text-1);
+  font-size: 1.06rem;
+  line-height: 1.6;
+  max-width: 32em;
+}
+
+.steps {
+  display: grid;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.steps button {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  min-height: 44px;
+  padding: 7px 10px;
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-1);
+  font: 500 15px/1.35 var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+}
+
+.steps button:hover {
+  background: var(--bg-2);
+  color: var(--text-0);
+}
+
+.steps .num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--line);
+  font: 650 12px var(--font-mono);
+  color: var(--text-2);
+}
+
+.steps button.is-done .num {
+  background: rgba(var(--c), 0.18);
+  border-color: rgba(var(--c), 0.6);
+  color: var(--text-0);
+}
+
+.steps button.is-on {
+  background: rgba(var(--c), 0.1);
+  color: var(--text-0);
+}
+
+.steps button.is-on .num {
+  background: rgb(var(--c));
+  border-color: rgb(var(--c));
+  color: var(--bg-0);
+}
+
+.steps .fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: rgb(var(--c));
+  transform-origin: left;
+  transform: scaleX(var(--t, 0));
+  opacity: 0;
+}
+
+.steps button.is-on .fill {
+  opacity: 1;
+}
+
+// Tied to the scroll but never holding it: the window settles as it comes up the screen.
+.story-stage {
+  position: relative;
+  height: 480px;
+  container-type: inline-size;
+  transform-origin: 50% 100%;
+  transform: perspective(1400px) translateY(calc((1 - var(--q, 1)) * 48px))
+    rotateX(calc((1 - var(--q, 1)) * 9deg)) scale(calc(0.94 + 0.06 * var(--q, 1)));
+  opacity: calc(0.4 + 0.6 * var(--q, 1));
+}
+
+@media (max-width: 900px) {
+  .feature-grid,
+  .flip .feature-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+
+  .flip .feature-copy {
+    order: 0;
+  }
+
+  .story-stage {
+    height: 440px;
+  }
+}

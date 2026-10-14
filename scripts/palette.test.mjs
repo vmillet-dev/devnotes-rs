@@ -7,7 +7,7 @@ import { describe, it } from 'node:test';
  * here: this reads a shipped file off disk, and the Angular builder compiles its specs for
  * a browser, where `node:fs` does not exist and `?raw` has no loader. Both were tried.
  */
-const STYLESHEET = readFileSync('src/styles/styles.scss', 'utf8');
+const STYLESHEET = readFileSync('src/styles/_tokens.scss', 'utf8');
 
 /** WCAG 2.2 AA for text below 18.66px, which is what every one of these is drawn at. */
 const AA = 4.5;
@@ -61,7 +61,7 @@ const NOT_TEXT = ['--line', '--line-soft', '--line-no', '--amber-fill', '--amber
 function block(theme) {
   const opening = theme === 'dark' ? ':root {' : ":root[data-theme='light'] {";
   const start = STYLESHEET.indexOf(opening);
-  assert.ok(start >= 0, `no ${theme} block in styles.scss`);
+  assert.ok(start >= 0, `no ${theme} block in _tokens.scss`);
 
   const body = STYLESHEET.slice(start + opening.length, STYLESHEET.indexOf('\n}', start));
   const declared = Object.fromEntries(

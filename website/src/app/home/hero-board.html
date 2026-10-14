@@ -1,0 +1,180 @@
+<div class="wrap track" #track>
+  <div class="pin" #pin>
+    <div class="scroller" #scroller>
+      <div
+        class="board"
+        #board
+        role="img"
+        aria-label="Un tableau DevNotes : des dossiers, Déploiement, Base de données et Frontend, et des notes restées en bas que le curseur glisse une à une dans leur dossier."
+      >
+        <span class="untriaged">3 notes à ranger</span>
+        <div
+          class="zone"
+          style="--c: var(--blue-rgb); left: 24px"
+          [class.drop-target]="placed().cards.dep.dropping"
+        >
+          <div class="zone-head">
+            <span class="sw"></span>Déploiement
+            <span class="count">{{ placed().cards.dep.filed ? 3 : 2 }}</span>
+          </div>
+        </div>
+        <div
+          class="zone"
+          style="--c: var(--amber-rgb); left: 388px"
+          [class.drop-target]="placed().cards.db.dropping"
+        >
+          <div class="zone-head">
+            <span class="sw"></span>Base de données
+            <span class="count">{{ placed().cards.db.filed ? 3 : 2 }}</span>
+          </div>
+        </div>
+        <div
+          class="zone"
+          style="--c: var(--purple-rgb); left: 752px"
+          [class.drop-target]="placed().cards.front.dropping"
+        >
+          <div class="zone-head">
+            <span class="sw"></span>Frontend
+            <span class="count">{{ placed().cards.front.filed ? 3 : 2 }}</span>
+          </div>
+        </div>
+
+        <div class="card" style="left: 36px; top: 98px">
+          <div class="card-top"><span class="tick"></span><strong>Liste de mise en production</strong></div>
+          <div class="bar"><span></span></div>
+          <div class="items"><span>Timeout CI à 30 min</span><span>Dry run de la release</span></div>
+          <div class="card-foot"><span>à l'instant</span><span>#ci</span></div>
+        </div>
+        <div class="card" style="left: 204px; top: 98px">
+          <div class="card-top">
+            <span class="tick"></span><strong>Postgres en local</strong><span class="chip-lang l-sh">SH</span>
+          </div>
+          <pre><span class="k">docker</span> run --rm \
+  -p <span class="n">5432</span>:<span class="n">5432</span> \
+  -e PW=<span class="fld">{{ field('password') }}</span></pre>
+          <div class="card-foot"><span>à l'instant</span><span>#docker</span></div>
+        </div>
+        <div class="card" style="left: 400px; top: 98px">
+          <div class="card-top">
+            <span class="tick"></span><strong>Quelles requêtes sont lentes</strong
+            ><span class="chip-lang l-sql">SQL</span>
+          </div>
+          <pre><span class="k">SELECT</span> calls,
+  mean_exec_time
+<span class="k">FROM</span> pg_stat_st…</pre>
+          <div class="card-foot"><span>à l'instant</span><span>#sql</span></div>
+        </div>
+        <div class="card" style="left: 568px; top: 98px">
+          <div class="card-top">
+            <span class="tick"></span><strong>Transaction Diesel annulée sur erreur</strong
+            ><span class="chip-lang l-rs">RS</span>
+          </div>
+          <pre>conn.<span class="f">transaction</span>(|tx| &#123;
+  <span class="k">let</span> id = <span class="f">insert</span>(
+    tx, &amp;note)?;</pre>
+          <div class="card-foot"><span>à l'instant</span><span>#rust</span></div>
+        </div>
+        <div class="card" style="left: 764px; top: 98px">
+          <div class="card-top">
+            <span class="tick"></span><strong>Debounce sans bibliothèque</strong
+            ><span class="chip-lang l-js">JS</span>
+          </div>
+          <pre><span class="k">const</span> <span class="f">debounce</span> =
+  (fn, ms) =&gt; &#123;
+  <span class="k">let</span> at;</pre>
+          <div class="card-foot"><span>à l'instant</span><span>#js</span></div>
+        </div>
+        <div class="card" style="left: 932px; top: 98px">
+          <div class="card-top">
+            <span class="tick"></span><strong>Un store à signaux, en bref</strong
+            ><span class="chip-lang l-ts">TS</span>
+          </div>
+          <pre><span class="k">export class</span>
+  <span class="f">CounterStore</span> &#123;
+  count = <span class="f">signal</span>(<span class="n">0</span>);</pre>
+          <div class="card-foot"><span>à l'instant</span><span>#angular</span></div>
+        </div>
+
+        <div class="card loose" style="left: 24px; top: 400px">
+          <div class="card-top">
+            <span class="tick"></span><strong>SSH vers un hôte</strong><span class="chip-lang l-sh">SH</span>
+          </div>
+          <pre><span class="k">ssh</span> -p <span class="fld">{{ field('port=22') }}</span>
+<span class="fld">{{ field('user') }}</span>&#64;<span class="fld">{{ field('host') }}</span></pre>
+          <div class="card-foot"><span>OpenSSH</span><span>#ops</span></div>
+        </div>
+        <div
+          class="card loose mover"
+          style="left: 192px; top: 400px"
+          [style.transform]="placed().cards.dep.transform"
+          [class.lifted]="placed().cards.dep.lifted"
+        >
+          <div class="card-top">
+            <span class="tick"></span><strong>Cache du registre cargo en CI</strong
+            ><span class="chip-lang l-yml">YML</span>
+          </div>
+          <pre>- <span class="f">uses</span>: <span class="s">actions/cache&#64;v4</span>
+  <span class="f">with</span>:
+    <span class="f">path</span>: <span class="s">~/.cargo</span></pre>
+          <div class="card-foot"><span>à l'instant</span><span>#ci #rust</span></div>
+        </div>
+        <div
+          class="card loose mover"
+          style="left: 360px; top: 400px"
+          [style.transform]="placed().cards.db.transform"
+          [class.lifted]="placed().cards.db.lifted"
+        >
+          <div class="card-top">
+            <span class="tick"></span><strong>Tunnel vers la base de staging</strong
+            ><span class="chip-lang l-sh">SH</span>
+          </div>
+          <pre><span class="k">ssh</span> -N -L <span class="n">5433</span>:
+<span class="fld">{{ field('db_host') }}</span>:<span class="n">5432</span>
+<span class="fld">{{ field('user') }}</span>&#64;bastion</pre>
+          <div class="card-foot"><span>à l'instant</span><span>#ops #sql</span></div>
+        </div>
+        <div
+          class="card loose mover"
+          style="left: 528px; top: 400px"
+          [style.transform]="placed().cards.front.transform"
+          [class.lifted]="placed().cards.front.lifted"
+        >
+          <div class="card-top">
+            <span class="tick"></span><strong>Un focus ring que le thème déplace</strong
+            ><span class="chip-lang l-css">CSS</span>
+          </div>
+          <pre>:<span class="f">focus-visible</span> &#123;
+  outline: <span class="n">2px</span>
+    solid <span class="f">var</span>(…);</pre>
+          <div class="card-foot"><span>à l'instant</span><span>#a11y</span></div>
+        </div>
+        <div class="card loose" style="left: 696px; top: 400px">
+          <div class="card-top">
+            <span class="tick"></span><strong>Annuler le dernier commit</strong
+            ><span class="chip-lang l-sh">SH</span>
+          </div>
+          <pre><span class="k">git</span> reset --soft
+  HEAD~<span class="n">1</span>
+<span class="k">git</span> restore --staged</pre>
+          <div class="card-foot"><span>à l'instant</span><span>#git</span></div>
+        </div>
+
+        <svg
+          class="cursor"
+          [class.on]="placed().cursor"
+          [style.transform]="placed().cursor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            d="M5 2.5 19 11l-6.3 1.7L9.6 19z"
+            fill="#f4f5f8"
+            stroke="#15171c"
+            stroke-width="1.6"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>

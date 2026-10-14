@@ -1,0 +1,31 @@
+// What the site draws and the application does not: the board's dotted paper, the header's
+// glass, a window raised off the page, a terminal. Same shape as the shared tokens: the dark
+// base on `:root`, the light theme on the attribute the inline script in index.html sets.
+:root {
+  --card: var(--bg-1);
+  --dot: rgba(var(--text-1-rgb), 0.1);
+  --head-bg: rgba(21, 23, 28, 0.86);
+  --shadow: 0 30px 60px rgba(var(--black-rgb), 0.45);
+  --shadow-soft: 0 10px 30px rgba(var(--black-rgb), 0.35);
+  --grey-rgb: 146, 152, 172;
+  --head-h: 68px;
+  --motion-scene: 240ms;
+
+  // A terminal stays dark in both themes.
+  --term-bg: #0f1115;
+  --term-head: #181b21;
+  --term-tab: #22262e;
+  --term-edge: #2a2e39;
+  --term-fg: #d6d9e0;
+  --term-dim: #8a90a0;
+  --term-green: #6fbf8b;
+}
+
+:root[data-theme='light'] {
+  --card: var(--bg-2);
+  --dot: rgba(var(--text-1-rgb), 0.16);
+  --head-bg: rgba(236, 238, 242, 0.88);
+  --shadow: 0 24px 52px rgba(26, 29, 36, 0.16);
+  --shadow-soft: 0 10px 26px rgba(26, 29, 36, 0.12);
+  --grey-rgb: 99, 106, 124;
+}

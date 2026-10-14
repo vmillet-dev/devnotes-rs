@@ -1,0 +1,65 @@
+<section class="download" id="telecharger" aria-labelledby="telecharger-h">
+  <div class="wrap">
+    <div class="zone">
+      <div class="zone-head"><span class="sw"></span>Télécharger</div>
+      <div class="body">
+        <h2 id="telecharger-h">DevNotes pour votre ordinateur</h2>
+        @if (onPhone()) {
+          <p class="phone">
+            DevNotes s'installe sur un ordinateur. Ouvrez cette page depuis votre poste pour le télécharger.
+          </p>
+        }
+        <div class="tabs" role="tablist" aria-label="Système">
+          @for (offer of offers; track offer.system; let i = $index) {
+            <button
+              #tab
+              type="button"
+              role="tab"
+              [id]="'tab-' + offer.system"
+              [attr.aria-controls]="'panel-' + offer.system"
+              [attr.aria-selected]="selected() === offer.system"
+              [attr.tabindex]="selected() === offer.system ? 0 : -1"
+              (click)="select(offer.system)"
+              (keydown)="step($event, i)"
+            >
+              {{ offer.label }}
+            </button>
+          }
+        </div>
+        @for (offer of offers; track offer.system) {
+          <div
+            class="panel"
+            role="tabpanel"
+            [id]="'panel-' + offer.system"
+            [attr.aria-labelledby]="'tab-' + offer.system"
+            [hidden]="selected() !== offer.system"
+          >
+            <a class="btn btn-primary" [href]="release">{{ offer.action }}</a>
+            <p class="meta">
+              Sur la page de la version, prenez le fichier qui finit par
+              <code>{{ offer.primary.ending }}</code
+              >.
+              {{ offer.primary.who }}
+            </p>
+            <details class="others">
+              <summary>Autres formats</summary>
+              <ul>
+                @for (format of offer.others; track format.name) {
+                  <li>
+                    <a [href]="release">{{ format.name }}</a
+                    ><code>{{ format.ending }}</code
+                    ><span class="who">{{ format.who }}</span>
+                  </li>
+                }
+              </ul>
+            </details>
+          </div>
+        }
+      </div>
+      <p class="notes">
+        Les mises à jour arrivent ensuite dans l'application, qui les vérifie avant de les installer. Pas de
+        version macOS pour l'instant.
+      </p>
+    </div>
+  </div>
+</section>
