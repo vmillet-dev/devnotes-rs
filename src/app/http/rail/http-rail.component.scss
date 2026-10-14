@@ -7,6 +7,9 @@
 
 .rail {
   @include rail-body;
+  // ⚠️ 4px on the right, the tree's last 6 being inside it: WebKitGTK counts a row drawn into the
+  // padding as overflow, and the rail scrolled sideways on Linux — closing the menu a click opened.
+  padding-right: 4px;
   // What a level of the tree is set in by. 8px, so that a request two folders deep still
   // shows a dozen characters of its name at the rail's floor of 160px.
   --indent: 8px;
@@ -132,8 +135,12 @@
 
 // Wider than the head and the foot by what the rail's padding can spare: the rows are what
 // run out of room.
+.rail > :not(.tree) {
+  margin-right: 6px;
+}
+
 .tree {
-  margin: 0 -6px;
+  margin: 0 0 0 -6px;
   padding: 0;
   list-style: none;
 }
