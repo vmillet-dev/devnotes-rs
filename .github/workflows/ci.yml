@@ -21,6 +21,37 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
+  # A pull request that touches documentation alone builds and runs nothing: a README cannot
+  # break the application, and a flaky scenario must not block it. Lint front still runs, as
+  # Prettier checks the Markdown. A push, to main or a milestone branch, checks everything.
+  changes:
+    name: Changes
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+        if: github.event_name == 'pull_request'
+        with:
+          fetch-depth: 0
+
+      - id: diff
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ -z "$BASE" ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          code=$(git diff --name-only "$BASE" HEAD | grep -vE '\.md$|^docs/|^LICENSE$' || true)
+          if [ -n "$code" ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Documentation only: the build, the tests and the scenarios are skipped."
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          fi
+
   lint-front:
     name: Lint front
     runs-on: ubuntu-22.04
@@ -45,6 +76,8 @@ jobs:
 
   lint-rust:
     name: Lint Rust
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-22.04
     timeout-minutes: 15
     steps:
@@ -72,6 +105,8 @@ jobs:
 
   build-front:
     name: Build front
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     steps:
@@ -164,6 +199,8 @@ jobs:
 
   test-rust:
     name: Test Rust (${{ matrix.os }})
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
 
@@ -284,6 +321,8 @@ jobs:
   # The files themselves, so a new scenario joins the matrix without a second list to edit.
   e2e-scenarios:
     name: E2E scenarios
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-22.04
     timeout-minutes: 5
     outputs:
