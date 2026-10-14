@@ -154,10 +154,11 @@
   display: block;
 }
 
+// The list view, as the canvas draws it: the same cards, in a grid, under their date.
 .view-list {
   display: none;
   align-content: start;
-  gap: 6px;
+  gap: 14px;
 }
 
 :host(.listed) .view-board {
@@ -168,42 +169,54 @@
   display: grid;
 }
 
-.dh {
-  font-size: 12px;
-  font-weight: 650;
-  color: var(--text-2);
-  padding: 6px 2px 2px;
-}
-
-.drow {
+.list-section {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
-  gap: 10px;
-  align-items: center;
-  padding: 9px 10px;
-  border-radius: 7px;
-  background: var(--card);
-  border: 1px solid var(--line-soft);
-  font-size: 12.5px;
+  gap: 8px;
 }
 
-.drow .t {
-  font-weight: 600;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.drow .w,
-.drow .d {
+.list-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
   color: var(--text-2);
-  font-size: 11.5px;
-  white-space: nowrap;
+}
+
+.list-title .n {
+  font: 400 10px var(--font-mono);
+  color: var(--text-2);
+  letter-spacing: normal;
+}
+
+.list-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.list-grid .card {
+  width: auto;
+  height: 104px;
+}
+
+.card.ghost {
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-style: dashed;
+  border-color: var(--line);
+  background: transparent;
+  color: var(--text-2);
+  font-size: 11px;
+}
+
+.ghost .plus {
+  font-size: 18px;
+  line-height: 1;
 }
 
 @container (max-width: 560px) {
-  .view-board .zone.front,
-  .drow .w {
+  .view-board .zone.front {
     display: none;
   }
 

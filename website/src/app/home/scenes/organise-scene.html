@@ -84,28 +84,62 @@
       </div>
     </div>
     <div class="view view-list">
-      <p class="dh">Aujourd'hui</p>
-      <div class="drow">
-        <span class="chip-lang l-sql">SQL</span><span class="t">Quelles requêtes sont lentes</span
-        ><span class="w">Base de données</span><span class="d">10:42</span>
-      </div>
-      <div class="drow">
-        <span class="chip-lang l-sh">SH</span><span class="t">Tunnel vers la base de staging</span
-        ><span class="w">Base de données</span><span class="d">09:15</span>
-      </div>
-      <div class="drow">
-        <span class="chip-lang l-yml">YML</span><span class="t">Cache du registre cargo en CI</span
-        ><span class="w">Déploiement</span><span class="d">08:30</span>
-      </div>
-      <p class="dh">Cette semaine</p>
-      <div class="drow">
-        <span class="chip-lang l-ts">TS</span><span class="t">Un store à signaux, en bref</span
-        ><span class="w">Frontend</span><span class="d">lundi</span>
-      </div>
-      <div class="drow">
-        <span class="chip-lang l-sh">SH</span><span class="t">Postgres en local</span
-        ><span class="w">Déploiement</span><span class="d">lundi</span>
-      </div>
+      <section class="list-section">
+        <h4 class="list-title">Aujourd'hui <span class="n">· 3</span></h4>
+        <div class="list-grid">
+          <div class="card">
+            <div class="card-top">
+              <span class="tick"></span><strong>Quelles requêtes sont lentes</strong
+              ><span class="chip-lang l-sql">SQL</span>
+            </div>
+            <pre><span class="k">SELECT</span> calls,
+  mean_exec_time</pre>
+            <div class="card-foot"><span>à l'instant</span><span>#sql</span></div>
+          </div>
+          <div class="card">
+            <div class="card-top">
+              <span class="tick"></span><strong>Tunnel vers la base de staging</strong
+              ><span class="chip-lang l-sh">SH</span>
+            </div>
+            <pre><span class="k">ssh</span> -N -L <span class="n">5433</span>:
+<span class="fld">{{ field('db_host') }}</span>:<span class="n">5432</span></pre>
+            <div class="card-foot"><span>à l'instant</span><span>#ops</span></div>
+          </div>
+          <div class="card">
+            <div class="card-top">
+              <span class="tick"></span><strong>Cache du registre cargo en CI</strong
+              ><span class="chip-lang l-yml">YML</span>
+            </div>
+            <pre>- <span class="f">uses</span>: <span class="s">actions/cache&#64;v4</span>
+  <span class="f">with</span>:</pre>
+            <div class="card-foot"><span>à l'instant</span><span>#ci</span></div>
+          </div>
+        </div>
+      </section>
+      <section class="list-section">
+        <h4 class="list-title">Cette semaine <span class="n">· 2</span></h4>
+        <div class="list-grid">
+          <div class="card">
+            <div class="card-top">
+              <span class="tick"></span><strong>Un store à signaux, en bref</strong
+              ><span class="chip-lang l-ts">TS</span>
+            </div>
+            <pre><span class="k">export class</span>
+  <span class="f">CounterStore</span> &#123;</pre>
+            <div class="card-foot"><span>lundi</span><span>#angular</span></div>
+          </div>
+          <div class="card">
+            <div class="card-top">
+              <span class="tick"></span><strong>Postgres en local</strong
+              ><span class="chip-lang l-sh">SH</span>
+            </div>
+            <pre><span class="k">docker</span> run --rm \
+  -p <span class="n">5432</span>:<span class="n">5432</span></pre>
+            <div class="card-foot"><span>lundi</span><span>#docker</span></div>
+          </div>
+          <div class="card ghost"><span class="plus">+</span>Coller ou créer</div>
+        </div>
+      </section>
     </div>
   </div>
 </div>
