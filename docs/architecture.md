@@ -5929,8 +5929,8 @@ behind the Windows build. `e2e.yml` holds two jobs:
 Each job is a runner of its own, so its process, its profile, its WebDriver port and the
 home-space marker under `tmpdir()` are its own too: that is the isolation, and the harness
 redirects no data directory. It could not on Windows anyway, where `dirs` asks the known-folder
-API rather than reading `%APPDATA%`. A job uploads `e2e-logs-<os>-<scenario>`, even when it
-fails: the runner's log, the application's stdout (`captureBackendLogs`: Rust, through the log
+API rather than reading `%APPDATA%`. A job uploads `e2e-logs-<os>-<scenario>-<attempt>`, even when
+it fails — per attempt, so a re-run that passes keeps the failed attempt's logs beside its own: the runner's log, the application's stdout (`captureBackendLogs`: Rust, through the log
 plugin's stdout target) and, for each failed test, a screenshot and what was on screen — the
 page's console warnings and errors with it, recorded in the page by `beforeTest`. Never the
 profile: its library is the run's. ⚠️ Not the service's `captureFrontendLogs`: the polyfill
