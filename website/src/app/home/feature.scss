@@ -1,5 +1,5 @@
 .feature {
-  padding-top: clamp(120px, 20vh, 220px);
+  padding-top: clamp(110px, 16vh, 190px);
 }
 
 .feature-grid {
@@ -25,13 +25,13 @@
 }
 
 .feature-copy h2 {
-  font-size: clamp(1.7rem, 3vw, 2.5rem);
+  font-size: clamp(1.7rem, 2.8vw, 3.2rem);
 }
 
 // Inherited by the paragraph the page projects here.
 .feature-lede {
   color: var(--text-1);
-  font-size: 1.06rem;
+  font-size: clamp(1.06rem, 0.45vw + 0.7rem, 1.3rem);
   line-height: 1.6;
   max-width: 32em;
 }
@@ -56,7 +56,7 @@
   border-radius: 8px;
   background: transparent;
   color: var(--text-1);
-  font: 500 15px/1.35 var(--font-sans);
+  font: 500 clamp(15px, 0.4vw + 9px, 18px) / 1.35 var(--font-sans);
   text-align: left;
   cursor: pointer;
 }
@@ -119,6 +119,25 @@
   transform: perspective(1400px) translateY(calc((1 - var(--q, 1)) * 48px))
     rotateX(calc((1 - var(--q, 1)) * 9deg)) scale(calc(0.94 + 0.06 * var(--q, 1)));
   opacity: calc(0.4 + 0.6 * var(--q, 1));
+}
+
+// On a large screen the scene is drawn larger, as the application would be on it.
+@media (min-width: 1700px) {
+  .story-stage {
+    zoom: 1.12;
+  }
+}
+
+@media (min-width: 2000px) {
+  .story-stage {
+    zoom: 1.25;
+  }
+}
+
+@media (min-width: 2400px) {
+  .story-stage {
+    zoom: 1.4;
+  }
 }
 
 @media (max-width: 900px) {

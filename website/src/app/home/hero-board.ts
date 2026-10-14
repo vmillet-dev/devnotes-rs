@@ -15,13 +15,23 @@ import { ScrollFrame } from '../core/scroll-frame';
 
 type Folder = 'dep' | 'db' | 'front';
 
-/** The board is drawn at this width and scaled to its column, never below 60 %. */
-const BOARD_WIDTH = 1122;
-const SMALLEST = 0.6;
+/** The window as drawn: its rail and board side by side, then the board alone on a tablet. */
+const WINDOW = { width: 1332, height: 638 } as const;
+const BOARD_ONLY = 1122;
+
+/** As large as the column allows and the screen can show at once while it is held, within reason. */
+const LARGEST = 1.6;
+
+/** Kept clear around the window while it is held: the header, and a little air. */
+const AIR = 140;
+
+/** The stylesheet's own breakpoints: the rail goes first, then the whole window. */
+const TABLET = '(max-width: 1099px)';
+const PHONE = '(max-width: 720px)';
 
 /**
- * Below that, the board is not shrunk any further nor scrolled sideways: the screen shows
- * one folder of it and the one note filed there. The same crop as the stylesheet's default.
+ * A phone sees one folder of the board and the one note filed there, never a board to pan.
+ * The same crop as the stylesheet's default, in board pixels.
  */
 const CROP = { left: 350, width: 392 } as const;
 
@@ -72,7 +82,7 @@ export class HeroBoard {
   private readonly track = viewChild.required<ElementRef<HTMLElement>>('track');
   private readonly pin = viewChild.required<ElementRef<HTMLElement>>('pin');
   private readonly scroller = viewChild.required<ElementRef<HTMLElement>>('scroller');
-  private readonly board = viewChild.required<ElementRef<HTMLElement>>('board');
+  private readonly frame = viewChild.required<ElementRef<HTMLElement>>('frame');
 
   protected readonly placed = computed(() => {
     const p = this.sorted();
@@ -117,16 +127,17 @@ export class HeroBoard {
 
     afterNextRender(() => {
       const fit = () => {
-        const board = this.board().nativeElement;
+        const frame = this.frame().nativeElement;
         const width = this.scroller().nativeElement.clientWidth;
-        const cropped = width / BOARD_WIDTH < SMALLEST;
-        // The zoom applies to the board's own margin too: the crop is written in board pixels.
-        board.style.setProperty(
-          'zoom',
-          String(cropped ? width / CROP.width : Math.min(1, width / BOARD_WIDTH)),
-        );
-        board.style.setProperty('margin-left', cropped ? `-${CROP.left}px` : 'auto');
-        this.cropped.set(cropped);
+        const phone = matchMedia(PHONE).matches;
+        const drawn = matchMedia(TABLET).matches ? BOARD_ONLY : WINDOW.width;
+        const zoom = phone
+          ? width / CROP.width
+          : Math.min(LARGEST, width / drawn, (innerHeight - AIR) / WINDOW.height);
+        // The zoom applies to the window's own margin too: the crop is written in board pixels.
+        frame.style.setProperty('zoom', zoom.toFixed(3));
+        frame.style.setProperty('margin-left', phone ? `-${CROP.left}px` : 'auto');
+        this.cropped.set(phone);
         this.track().nativeElement.style.setProperty('--bh', `${this.pin().nativeElement.offsetHeight}px`);
       };
       fit();

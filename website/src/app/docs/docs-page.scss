@@ -3,7 +3,7 @@
   display: grid;
   grid-template-columns: 236px minmax(0, 1fr) 200px;
   gap: clamp(28px, 4vw, 56px);
-  max-width: 86rem;
+  max-width: clamp(86rem, 90vw, 110rem);
   padding-top: clamp(28px, 4vw, 48px);
 }
 
@@ -65,7 +65,7 @@
 
 .article {
   min-width: 0;
-  max-width: 46rem;
+  max-width: clamp(46rem, 38vw, 54rem);
   display: grid;
   gap: 22px;
   align-content: start;

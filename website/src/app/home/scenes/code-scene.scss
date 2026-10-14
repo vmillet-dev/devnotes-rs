@@ -154,8 +154,9 @@
   inset: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-content: center;
+  align-items: center;
   gap: 14px;
-  align-content: start;
   opacity: 0;
   transform: translateY(14px);
 }
@@ -178,9 +179,10 @@
   grid-template-columns: 30px minmax(0, 1fr);
 }
 
+// Its nodes are placed in percent: the graph keeps its proportions, whatever its width.
 .graph {
   position: relative;
-  height: 300px;
+  aspect-ratio: 7 / 6;
   border: 1px solid var(--line-soft);
   border-radius: 8px;
   background-image: radial-gradient(var(--dot) 1.1px, transparent 1.4px);
@@ -242,10 +244,12 @@
 @container (max-width: 520px) {
   .json-pane {
     grid-template-columns: minmax(0, 1fr);
+    align-content: start;
   }
 
   .graph {
-    height: 240px;
+    aspect-ratio: auto;
+    height: 220px;
   }
 
   .node {

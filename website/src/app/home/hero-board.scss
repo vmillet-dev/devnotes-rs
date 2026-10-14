@@ -1,28 +1,240 @@
-// The one place the page holds a moment: the board stays centred while its cards are filed.
+// The one place the page holds a moment: the window stays centred while its cards are filed.
 .track {
   position: relative;
-  height: calc(var(--bh, 580px) + 160vh);
+  height: calc(var(--bh, 640px) + 160vh);
   margin-top: clamp(32px, 5vw, 56px);
 }
 
 .pin {
   position: sticky;
-  top: max(calc(var(--head-h) + 12px), calc((100vh + var(--head-h) - var(--bh, 580px)) / 2));
+  top: max(calc(var(--head-h) + 12px), calc((100vh + var(--head-h) - var(--bh, 640px)) / 2));
 }
 
-// Never scrolled sideways: a narrow screen is shown a part of the board, not asked to pan it.
+// Clipped rather than scrolled: a narrow screen is shown a part of the board, never asked to pan
+// it. The margin keeps the window's shadow.
 .scroller {
-  overflow: hidden;
-  border-radius: 14px;
+  overflow: clip;
+  overflow-clip-margin: 64px;
 }
 
+// The application's window, drawn at its own size and scaled to the column by `HeroBoard`; the
+// steps below are its defaults before the script has measured anything.
+.app-window {
+  display: grid;
+  grid-template-columns: 210px 1120px;
+  grid-template-rows: 34px 50px 552px;
+  grid-template-areas:
+    'title title'
+    'rail tools'
+    'rail board';
+  width: max-content;
+  margin-inline: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-1);
+  box-shadow: var(--shadow);
+  zoom: 0.85;
+}
+
+.titlebar {
+  grid-area: title;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.menus {
+  display: flex;
+  gap: 14px;
+}
+
+.areas,
+.views,
+.filters {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+
+.areas {
+  margin-left: auto;
+}
+
+.areas span,
+.views span,
+.filters span {
+  padding: 3px 10px;
+  border-radius: 5px;
+}
+
+.areas .on,
+.filters .on {
+  background: var(--bg-3);
+  color: var(--text-0);
+}
+
+.controls {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.controls i {
+  position: relative;
+  width: 10px;
+  height: 10px;
+}
+
+// Minimise, maximise, close: a line, a square, a cross.
+.controls i:nth-child(1)::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 5px;
+  border-top: 1.4px solid currentColor;
+}
+
+.controls i:nth-child(2) {
+  border: 1.4px solid currentColor;
+  border-radius: 2px;
+}
+
+.controls i:nth-child(3)::before,
+.controls i:nth-child(3)::after {
+  content: '';
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  top: 4px;
+  border-top: 1.4px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.controls i:nth-child(3)::after {
+  transform: rotate(-45deg);
+}
+
+.rail {
+  grid-area: rail;
+  display: grid;
+  gap: 2px;
+  align-content: start;
+  padding: 12px 8px;
+  border-right: 1px solid var(--line-soft);
+  font-size: 13px;
+}
+
+.rail-h {
+  padding: 2px 8px 6px;
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--text-2);
+}
+
+.rail .row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  color: var(--text-1);
+  white-space: nowrap;
+}
+
+.rail .row.sub {
+  padding-left: 22px;
+}
+
+.rail .row.on {
+  background: rgba(var(--amber-rgb), 0.13);
+  color: var(--amber-text);
+  font-weight: 600;
+}
+
+.rail .sw {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: rgb(var(--c));
+}
+
+.rail b {
+  margin-left: auto;
+  font-weight: 500;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.rail-foot {
+  margin-top: 12px;
+  padding: 10px 8px 0;
+  border-top: 1px solid var(--line-soft);
+  color: var(--text-2);
+}
+
+.toolbar {
+  grid-area: tools;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 12.5px;
+  color: var(--text-1);
+}
+
+.views .on {
+  background: var(--amber-fill);
+  color: var(--amber-ink);
+  font-weight: 600;
+}
+
+.search {
+  flex: 0 1 300px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  padding: 0 8px 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--bg-0);
+  color: var(--text-2);
+}
+
+.search kbd:first-of-type {
+  margin-left: auto;
+}
+
+.search kbd {
+  font-size: 10px;
+}
+
+.new {
+  margin-left: auto;
+  padding: 6px 12px;
+  border-radius: 7px;
+  background: var(--amber-fill);
+  color: var(--amber-ink);
+  font-weight: 650;
+}
+
+// The canvas the folders are drawn on.
 .board {
+  grid-area: board;
   position: relative;
   width: 1120px;
   height: 552px;
-  margin-inline: auto;
-  border: 1px solid var(--line-soft);
-  border-radius: 14px;
   background-color: var(--bg-0);
   background-image: radial-gradient(var(--dot) 1.1px, transparent 1.4px);
   background-size: 16px 16px;
@@ -102,22 +314,65 @@
   opacity: 1;
 }
 
-// What a phone shows before the script measures it: the database folder and the note filed
-// into it, at about a phone's scale. `HeroBoard` refines both to the column's real width.
+@media (min-width: 1500px) {
+  .app-window {
+    zoom: 1;
+  }
+}
+
+@media (min-width: 1800px) {
+  .app-window {
+    zoom: 1.12;
+  }
+}
+
+@media (min-width: 2100px) {
+  .app-window {
+    zoom: 1.25;
+  }
+}
+
+// A tablet: the window without its rail, the board taking the room.
+@media (max-width: 1099px) {
+  .app-window {
+    grid-template-columns: 1120px;
+    grid-template-areas:
+      'title'
+      'tools'
+      'board';
+    zoom: 0.75;
+  }
+
+  .rail {
+    display: none;
+  }
+}
+
+// A phone: no window at all, the database folder and the note filed into it.
 @media (max-width: 720px) {
   .track {
     height: calc(var(--bh, 520px) + 110vh);
   }
 
-  // The frame is the crop's, not the board's, whose sides fall outside it.
   .scroller {
+    overflow: hidden;
     border: 1px solid var(--line-soft);
+    border-radius: 14px;
   }
 
-  .board {
-    zoom: 0.9;
+  .app-window {
+    grid-template-rows: 552px;
+    grid-template-areas: 'board';
     margin-left: -350px;
-    border-color: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    zoom: 0.9;
+  }
+
+  .titlebar,
+  .toolbar {
+    display: none;
   }
 }
 

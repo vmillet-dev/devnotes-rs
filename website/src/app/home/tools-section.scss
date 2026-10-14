@@ -1,5 +1,5 @@
 .plain {
-  padding-top: clamp(120px, 20vh, 220px);
+  padding-top: clamp(110px, 16vh, 190px);
 }
 
 .plain-head {
@@ -10,6 +10,24 @@
 
 .plain-head p {
   color: var(--text-1);
+}
+
+// The headline on the left, what it means on the right, on a screen wide enough for both.
+@media (min-width: 1200px) {
+  .plain-head {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: clamp(48px, 5vw, 112px);
+    align-items: end;
+    max-width: none;
+  }
+
+  .plain-head .zone-title {
+    grid-column: 1 / -1;
+  }
+
+  .plain-head p {
+    font-size: clamp(1rem, 0.4vw + 0.7rem, 1.2rem);
+  }
 }
 
 .tools-grid {
