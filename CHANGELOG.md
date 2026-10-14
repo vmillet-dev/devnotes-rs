@@ -12,6 +12,30 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [0.12.0] - 2026-10-14
+
+### ✨ Added
+
+- Edit snippets in CodeMirror (#848)
+- Show the code and the graph or the tree side by side (#842)
+- Explore XML snippets like JSON (#840)
+- Explore TOML snippets like JSON (#838)
+- Explore YAML snippets like JSON (#837)
+- Move the JSON graph's nodes (#835)
+- Collapse the JSON explorer to its root (#834)
+- Filter long choice menus, the formats first (#832)
+
+### 🧰 Under the hood
+
+- Keep the HTTP tree inside the rail's box (#847)
+- Bound each WebDriver command, and stop the e2e run at its first failure (#845)
+- Keep the e2e logs of every attempt (#844)
+- Stop the CI run when an e2e scenario fails (#841)
+- Skip the build, tests and scenarios for a documentation-only pull request (#836)
+- Wait for the canvas to narrow before reading it in 05-spaces (#833)
+- Rewrite the README as an overview of the three areas (#821)
+- Check dependencies weekly, grouped by kind (#820)
+
 ## [0.11.0] - 2026-10-13
 
 ### ✨ Added
