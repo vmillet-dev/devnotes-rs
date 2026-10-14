@@ -50,6 +50,7 @@
             [selectedPath]="explorer.selectedPath()"
             [search]="explorer.search()"
             [matchIndex]="explorer.matchIndex()"
+            [offsets]="explorer.offsets()"
             [locale]="locale()"
             [withCode]="false"
             (searchChanged)="explorer.setSearch($event)"
@@ -58,6 +59,8 @@
             (selected)="explorer.select($event)"
             (openedAll)="explorer.openAll()"
             (collapsedAll)="explorer.collapseAll()"
+            (nodeMoved)="explorer.moveNode($event)"
+            (layoutReset)="explorer.resetLayout()"
             (copied)="copy($event)"
             (treeProposed)="choose('tree')"
           />

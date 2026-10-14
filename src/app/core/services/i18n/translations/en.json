@@ -726,6 +726,7 @@
       "toggle": "Open or close the entry",
       "openAll": "Expand everything",
       "collapseAll": "Collapse to the root",
+      "moveNode": "Move the node the cursor is in",
       "nextMatch": "Next match, in the search field",
       "previousMatch": "Previous match, in the search field"
     }
@@ -1012,6 +1013,7 @@
     "openAllKeys": "Expand all (Shift+→)",
     "collapseAllKeys": "Collapse all (Shift+←)",
     "fit": "Fit to screen",
+    "resetLayout": "Reset the layout",
     "folded": "More than 2,000 nodes: arrays stay folded.",
     "showTree": "Show the tree",
     "crumbs": "Path",

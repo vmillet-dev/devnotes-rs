@@ -40,8 +40,9 @@
         [class.lit]="lit().has(node.id)"
         [class.current]="isCursor(node, -1)"
         [class.hit]="node.hit"
-        [style.left.ch]="node.x"
-        [style.top.px]="node.y * rowPx"
+        [class.dragged]="dragged()?.path === node.path"
+        [style.left.ch]="placed().get(node.path)!.x"
+        [style.top.px]="placed().get(node.path)!.y * rowPx"
         [style.width.ch]="node.width"
       >
         <button
@@ -82,6 +83,12 @@
       </div>
     }
   </div>
+
+  @if (moves()) {
+    <button type="button" class="reset-layout" data-testid="json-reset-layout" (click)="layoutReset.emit()">
+      {{ 'json.resetLayout' | transloco }}
+    </button>
+  }
 
   <div class="zoom" role="group" [attr.aria-label]="'json.zoom' | transloco">
     <button

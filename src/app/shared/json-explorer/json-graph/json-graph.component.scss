@@ -64,6 +64,12 @@
   overflow: hidden;
 }
 
+// Above its neighbours while it travels, as a card is on the board.
+.node.dragged {
+  z-index: 1;
+  box-shadow: var(--shadow-dropdown);
+}
+
 .node.lit {
   border-color: var(--amber-dim);
 }
@@ -178,6 +184,24 @@
   color: var(--text-2);
   cursor: default;
   font-style: italic;
+}
+
+.reset-layout {
+  @include unstyled-control;
+  @include focus-ring;
+  @include surface(var(--bg-2), 8px, var(--line));
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  height: 32px;
+  padding: 0 11px;
+  font-size: 12px;
+  color: var(--text-1);
+  cursor: pointer;
+
+  &:hover {
+    @include accent-state(var(--text-0), var(--amber-dim));
+  }
 }
 
 .zoom {

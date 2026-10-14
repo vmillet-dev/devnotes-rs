@@ -27,6 +27,20 @@ export type {
   Span,
 };
 
+/**
+ * How far a node was moved from where Rust placed it, in the layout's own units: columns
+ * across, lines down. The front's alone, kept by path and never written to the note.
+ */
+export interface NodeOffset {
+  readonly x: number;
+  readonly y: number;
+}
+
+export interface NodeMove {
+  readonly path: string;
+  readonly offset: NodeOffset;
+}
+
 /** A row of the graph or a line of the tree, as far as opening it goes. */
 export interface JsonEntry {
   readonly path: string;

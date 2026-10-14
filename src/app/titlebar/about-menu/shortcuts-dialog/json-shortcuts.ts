@@ -9,6 +9,7 @@ export const JSON_SHORTCUT_GROUP: ShortcutGroup = {
     { keys: ['Enter'], labelKey: 'shortcuts.json.toggle' },
     { keys: ['Shift', '→'], labelKey: 'shortcuts.json.openAll' },
     { keys: ['Shift', '←'], labelKey: 'shortcuts.json.collapseAll' },
+    { keys: ['Alt', '↑ ↓ ← →'], labelKey: 'shortcuts.json.moveNode' },
     { keys: ['Enter'], labelKey: 'shortcuts.json.nextMatch' },
     { keys: ['Shift', 'Enter'], labelKey: 'shortcuts.json.previousMatch' },
   ],
