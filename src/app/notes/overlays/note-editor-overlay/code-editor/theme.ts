@@ -52,8 +52,11 @@ export const CODE_THEME = EditorView.theme({
   '.cm-content': { padding: '20px 24px 20px 0', caretColor: 'var(--text-0)' },
   '.cm-line': { padding: '0' },
   '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--text-0)' },
-  '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection':
-    { backgroundColor: 'rgba(var(--amber-rgb), 0.3)' },
+  '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-content ::selection': {
+    backgroundColor: 'rgba(var(--amber-rgb), 0.3)',
+  },
+  // Unfocused, a selection is the visualiser's, already lit in blue: a veil, not a second band.
+  '.cm-selectionBackground': { backgroundColor: 'rgba(var(--amber-rgb), 0.1)' },
   '.cm-gutters': {
     paddingLeft: '24px',
     border: 'none',
