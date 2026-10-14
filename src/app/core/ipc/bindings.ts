@@ -2867,7 +2867,7 @@ export type StoredCookie = {
 
 export type Strength = "veryWeak" | "weak" | "fair" | "strong" | "veryStrong";
 
-export type StructureFormat = "json" | "yaml" | "toml";
+export type StructureFormat = "json" | "yaml" | "toml" | "xml";
 
 export type Subnet = {
 	cidr: string,

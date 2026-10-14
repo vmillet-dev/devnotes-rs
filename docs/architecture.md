@@ -578,7 +578,7 @@ Prettier is JavaScript. `core/services/format/` holds all of it.
 
 ### Exploring a JSON snippet
 
-A snippet whose language Rust has a reader for — JSON, YAML, TOML — has a band of its own: **Code /
+A snippet whose language Rust has a reader for — JSON, YAML, TOML, XML (not HTML) — has a band of its own: **Code /
 Graphe / Arbre**, and « YAML valide » or where the draft stops parsing. The model is Rust's —
 see [The JSON visualiser's model](#the-json-visualisers-model); the front draws it. Which
 languages have a reader is one table, `explorableFormat` in `core/model/json.model.ts`; the
@@ -4796,6 +4796,13 @@ is not the WebView's thread's to parse.
   implicit one on its key. ⚠️ The crate's map is sorted, so members are put back in the text's
   order by their key's span. Numbers and datetimes are shown as written (`8_080`, a `datetime`
   kind of its own).
+- **XML** (`json/xml.rs`, on `quick-xml`), read the converter's way — `@name` for an
+  attribute, `#text` for the text beside children, a repeated element as a list placed where it
+  first appears, the document as an object of its one root; namespaces keep their prefix, and
+  comments, processing instructions and the DOCTYPE are not values. **The converter and the
+  diff read XML through this same reader** (`xml::to_value`): one convention, read once, so the
+  visualiser shows what they read. A text-only element is placed on its text, an attribute on its
+  value (its bytes are borrowed from the text being read).
 - **Its own parser** (`json/parse.rs`), because `serde_json` forgets where a value sits and
   "Voir dans le code" needs it. Offsets are in **UTF-16 units**, the front's; an invalid
   document answers a reason, a one-based line and column, and the offset. ⚠️ The nesting is

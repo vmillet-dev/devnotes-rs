@@ -1045,7 +1045,8 @@
     },
     "formatNotes": {
       "yaml": "Les commentaires n’apparaissent pas, et un alias montre ce qu’il désigne.",
-      "toml": "Les commentaires n’apparaissent pas ; dates et heures sont montrées telles qu’écrites."
+      "toml": "Les commentaires n’apparaissent pas ; dates et heures sont montrées telles qu’écrites.",
+      "xml": "Les commentaires, instructions et le DOCTYPE n’apparaissent pas ; un attribut se lit @nom et le texte à côté des enfants #text, comme les écrit le convertisseur."
     },
     "hiddenRows": "{count, plural, one {+ # autre} other {+ # autres}}",
     "tree": "Arbre du document",

@@ -407,4 +407,68 @@ describe('Exploring a JSON document', () => {
       await editor.close();
     });
   });
+
+  describe('an XML snippet', () => {
+    const TITLE = 'Order feed';
+    const XML = [
+      '<?xml version="1.0"?>',
+      '<!-- a comment, not a value -->',
+      '<shop:order xmlns:shop="urn:shop" id="42">',
+      '  <line sku="A">Pro · mensuel</line>',
+      '  <line sku="B">Stockage</line>',
+      '  <note><![CDATA[a < b]]></note>',
+      '</shop:order>',
+      '',
+    ].join('\n');
+    let id = '';
+
+    before(async () => {
+      const spaceId = (await bridge.createSpace({ name: 'XML' })).id;
+      id = (await bridge.createNote(draft({ spaceId, title: TITLE, content: XML, language: 'xml' }))).id;
+      await reloadCanvas();
+      await canvas.waitForCard(TITLE);
+    });
+
+    after(async () => {
+      await bridge.deleteNotes([id]);
+      await bridge.purgeNotes([id]);
+      await reloadCanvas();
+    });
+
+    it('reads it the way the converter does, each value placed in the XML', async () => {
+      const view = await bridge.exploreJson({
+        text: XML,
+        format: 'xml',
+        search: '',
+        opening: { kind: 'all' },
+      });
+
+      expect(view.error).toBeNull();
+      expect(view.graph.nodes[0]!.rows.map((row) => row.key)).toEqual(['shop:order']);
+      const order = view.graph.nodes.find((node) => node.label === 'shop:order')!;
+      expect(order.rows.map((row) => row.key)).toEqual(['@xmlns:shop', '@id', 'line', 'note']);
+      const id = order.rows[1]!;
+      expect(XML.slice(id.span.start, id.span.end)).toBe('42');
+      expect(order.rows[2]!.kind).toBe('array');
+      expect(order.rows[3]!.value).toBe('"a < b"');
+    });
+
+    it('opens on the same tabs and shows an attribute in its code', async () => {
+      await canvas.openNote(TITLE);
+      await $(testid('editor-json-validity')).waitForExist({ timeout: 10_000 });
+      expect(await $(testid('editor-json-validity')).getAttribute('class')).not.toContain('invalid');
+
+      await $(testid('editor-view-graph')).click();
+      await $(testid('json-format-note')).waitForExist({ timeout: 10_000 });
+      await $(`${testid('json-row')}[data-path="$['shop:order']['@id']"]`).click();
+      await $(testid('json-show-in-code')).click();
+      await $(testid('editor-body')).waitForExist({ timeout: 10_000 });
+      const selection = await browser.execute(() => {
+        const field = document.querySelector<HTMLTextAreaElement>('[data-testid="editor-body"]')!;
+        return field.value.slice(field.selectionStart, field.selectionEnd);
+      });
+      expect(selection).toBe('42');
+      await editor.close();
+    });
+  });
 });

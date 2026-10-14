@@ -37,6 +37,8 @@ const EXPLORABLE: Partial<Record<LanguageTag, StructureFormat>> = {
   json: 'json',
   yml: 'yaml',
   toml: 'toml',
+  // HTML is not XML: it gets none.
+  xml: 'xml',
 };
 
 /** How a format names itself in a sentence: « YAML valide ». */
@@ -44,6 +46,7 @@ export const FORMAT_NAMES: Record<StructureFormat, string> = {
   json: 'JSON',
   yaml: 'YAML',
   toml: 'TOML',
+  xml: 'XML',
 };
 
 export function explorableFormat(language: LanguageTag): StructureFormat | null {
