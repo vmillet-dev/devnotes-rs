@@ -60,6 +60,36 @@ async function typeRich(text: string): Promise<void> {
   await blur();
 }
 
+/** CodeMirror's editable surface: a contenteditable too, which `setValue` cannot reach. */
+const CODE_CONTENT = `${testid('editor-body')} .cm-content`;
+
+/** What the code editor holds, as it draws its lines — all of them, for a body this short. */
+function codeText(): Promise<string> {
+  return browser.execute(
+    (selector: string) =>
+      [...document.querySelectorAll(`${selector} .cm-line`)]
+        .map((line) => (line.querySelector('.cm-placeholder') ? '' : (line.textContent ?? '')))
+        .join('\n'),
+    testid('editor-body'),
+  );
+}
+
+/** Through the page's own editing, which CodeMirror reads from the DOM as it reads a keyboard. */
+async function typeCode(text: string): Promise<void> {
+  await browser.execute(
+    (selector: string, value: string) => {
+      (document.querySelector(selector) as HTMLElement).focus();
+      document.execCommand('selectAll');
+      if (value) document.execCommand('insertText', false, value);
+      else document.execCommand('delete');
+    },
+    CODE_CONTENT,
+    text,
+  );
+  await eventually(codeText, (shown) => shown === text, 'the code editor to hold what was typed');
+  await blur();
+}
+
 async function rowAt(selector: string, index: number) {
   const rows = await $$(selector).getElements();
   const row = rows[index];
@@ -84,17 +114,62 @@ export const editor = {
     if ((await bodyField()) === 'rich') {
       await typeRich(text);
     } else {
-      await typeAndCommit(testid('editor-body'), text);
+      await typeCode(text);
     }
   },
   setSource: (text: string) => typeAndCommit(testid('editor-source'), text),
 
   title: () => $(testid('editor-title')).getValue(),
   async body(): Promise<string> {
-    return (await bodyField()) === 'rich'
-      ? $(testid('editor-rich')).getText()
-      : $(testid('editor-body')).getValue();
+    return (await bodyField()) === 'rich' ? $(testid('editor-rich')).getText() : codeText();
   },
+
+  /** The code the selection covers, while the editor has the focus that draws it in the page. */
+  codeSelection: () => browser.execute(() => getSelection()?.toString() ?? ''),
+
+  /** The lines lit for what the visualiser beside the code has selected. */
+  codeLitLines: () =>
+    browser.execute(() =>
+      [...document.querySelectorAll('.cm-focused-line')].map((line) => line.textContent ?? ''),
+    ),
+
+  /** The caret put `offset` characters into the first line holding `text`, as a click would. */
+  async placeCaret(text: string, offset: number): Promise<void> {
+    await browser.execute(
+      (selector: string, wanted: string, into: number) => {
+        const content = document.querySelector<HTMLElement>(selector)!;
+        const line = [...content.querySelectorAll('.cm-line')].find((each) =>
+          each.textContent?.includes(wanted),
+        )!;
+        let remaining = line.textContent!.indexOf(wanted) + into;
+        const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT);
+        let node = walker.nextNode();
+        while (node && remaining > (node.textContent ?? '').length) {
+          remaining -= (node.textContent ?? '').length;
+          node = walker.nextNode();
+        }
+        content.focus();
+        getSelection()!.collapse(node, remaining);
+      },
+      CODE_CONTENT,
+      text,
+      offset,
+    );
+  },
+
+  /** Focused, the caret where CodeMirror left it: at the start of a note just opened. */
+  focusCode: () =>
+    browser.execute(
+      (selector: string) => (document.querySelector(selector) as HTMLElement).focus(),
+      CODE_CONTENT,
+    ),
+
+  /** Whether the keyboard is in the code editor. */
+  codeHasFocus: () =>
+    browser.execute(
+      (selector: string) => document.activeElement?.closest(selector) !== null,
+      testid('editor-body'),
+    ),
 
   setLanguage: (language: string) => pickChoice('language', language),
 

@@ -282,53 +282,11 @@ app-dialog {
   background: rgba(var(--amber-rgb), 0.02);
 }
 
-// The viewer, in the flow, gives the stack its height; the <textarea> sits over it
-// absolutely. `min-height: 100%` so a click below the text still reaches the field.
-.editor-stack {
-  position: relative;
-  min-height: 100%;
-}
-
-.editor-stack app-code-viewer {
-  overflow: visible;
-  pointer-events: none;
-}
-
-// Metrics copied exactly from the viewer's, or the caret drifts away from the
-// coloured text: same font, same line height, same wrapping, and a left inset that adds
-// the line-number gutter to the padding — 32px in total, not 32 + 16, the global
-// `box-sizing: border-box` keeping `.line-no`'s `padding-right` inside its `width`.
-.overlay-body-editor {
-  @include text-field;
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  resize: none;
+// The code editor scrolls itself: that is what lets it draw only the lines on screen.
+.overlay-body.coding {
   overflow: hidden;
-  padding: 20px 24px 20px 56px;
-  font-family: var(--font-mono), serif;
-  font-size: 13px;
-  line-height: 1.7;
-  white-space: pre-wrap;
-  word-break: break-word;
-  tab-size: 4;
-  background: transparent;
-  color: transparent;
-  caret-color: var(--text-0);
 }
 
-// Transparent text: the selection shows through its background alone, so the
-// placeholder needs an explicit colour back.
-.overlay-body-editor::selection {
-  background: rgba(var(--amber-rgb), 0.3);
-}
-
-.overlay-body-editor::placeholder {
-  color: var(--text-2);
-  font-style: italic;
-}
-
-.overlay-body-editor:focus-visible,
 .overlay-language-select:focus-visible,
 .overlay-source-input:focus-visible,
 .tag-add-input:focus-visible,

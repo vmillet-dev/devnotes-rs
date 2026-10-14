@@ -8,9 +8,9 @@ version: 2
 # `@angular/*` ended up in `rust-minor` and `npm-minor`. Hence the `exclude-patterns`, which
 # must name every pattern of every group above them.
 #
-# Families released in lockstep (Angular, Tauri, TipTap, WebdriverIO) take their majors as a
-# group, since half of a major does not install. Every other group takes minors and patches,
-# and a major comes alone.
+# Families released in lockstep (Angular, Tauri, TipTap, CodeMirror, WebdriverIO) take their
+# majors as a group, since half of a major does not install. Every other group takes minors and
+# patches, and a major comes alone.
 #
 # The default versioning strategy stays: a lockfile-only bump says the declared range already
 # allows the new version, and raising every floor would only add manifest churn.
@@ -140,6 +140,14 @@ updates:
       rich-editor:
         patterns:
           - '@tiptap/*'
+      # The snippet editor: CodeMirror, its grammars, and the community ones beside them.
+      code-editor:
+        patterns:
+          - '@codemirror/*'
+          - '@lezer/*'
+          - 'cm6-graphql'
+          - 'codemirror-lang-*'
+          - 'graphql'
       e2e:
         patterns:
           - '@wdio/*'
@@ -165,6 +173,11 @@ updates:
           - 'angular-eslint'
           - '@tauri-apps/*'
           - '@tiptap/*'
+          - '@codemirror/*'
+          - '@lezer/*'
+          - 'cm6-graphql'
+          - 'codemirror-lang-*'
+          - 'graphql'
           - '@wdio/*'
           - 'webdriverio'
           - 'vitest'

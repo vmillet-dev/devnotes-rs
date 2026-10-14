@@ -152,6 +152,7 @@ export class SettingsStore {
   readonly theme = this.setting('theme', asOneOf(THEME_CHOICES));
   readonly density = this.setting('density', asOneOf(DENSITIES));
   readonly codeIndent = this.setting('codeIndent', asOneOf(INDENT_CHOICES));
+  readonly codeWrap = this.setting('codeWrap', asBoolean);
   readonly defaultNoteKind = this.setting('defaultNoteKind', asOneOf(NOTE_KIND_CHOICES));
   readonly startWithSystem = this.setting('startWithSystem', asBoolean);
   readonly minimizeToTray = this.setting('minimizeToTray', asBoolean);

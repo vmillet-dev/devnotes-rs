@@ -23,6 +23,7 @@
           "options": {
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
+            "allowedCommonJsDependencies": ["nullthrows"],
             "inlineStyleLanguage": "scss",
             "stylePreprocessorOptions": {
               "includePaths": ["src/styles"]
@@ -92,7 +93,7 @@
             "runner": "vitest",
             "buildTarget": "::development",
             "runnerConfig": true,
-            "setupFiles": ["src/testing/local-storage.setup.ts"]
+            "setupFiles": ["src/testing/local-storage.setup.ts", "src/testing/text-ranges.setup.ts"]
           }
         }
       }

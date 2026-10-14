@@ -228,11 +228,13 @@ describe('Exploring a JSON document', () => {
 
       await $(testid('json-show-in-code')).click();
       await $(testid('editor-body')).waitForExist({ timeout: 10_000 });
-      const selection = await browser.execute(() => {
-        const field = document.querySelector<HTMLTextAreaElement>('[data-testid="editor-body"]')!;
-        return field.value.slice(field.selectionStart, field.selectionEnd);
-      });
-      expect(selection).toBe('"Pro · mensuel"');
+      expect(
+        await eventually(
+          editor.codeSelection,
+          (selected) => selected === '"Pro · mensuel"',
+          'the value selected in the code',
+        ),
+      ).toBe('"Pro · mensuel"');
     });
 
     it('lists the same document as a tree that folds', async () => {
@@ -249,14 +251,6 @@ describe('Exploring a JSON document', () => {
     });
 
     it('puts the code beside the graph, each selecting in the other, and hides the code', async () => {
-      const field = () =>
-        browser.execute(() => {
-          const area = document.querySelector<HTMLTextAreaElement>('[data-testid="editor-body"]')!;
-          return {
-            selected: area.value.slice(area.selectionStart, area.selectionEnd),
-            start: area.selectionStart,
-          };
-        });
       await $(testid('editor-view-graph')).click();
       await $(testid('json-open-all')).click();
       await $(testid('editor-side-by-side')).click();
@@ -266,20 +260,14 @@ describe('Exploring a JSON document', () => {
       // From the graph to the code: the object's text is selected beside it.
       await $(`${testid('json-node')}[data-path="$.data.object"] ${testid('json-node-head')}`).click();
       await eventually(
-        field,
-        (now) => now.selected.startsWith('{') && now.selected.includes('amount_paid'),
-        'the object selected in the code',
+        editor.codeLitLines,
+        (lines) =>
+          lines[0]?.includes('"object": {') === true && lines.some((line) => line.includes('amount_paid')),
+        'the object lit in the code',
       );
 
       // From the code to the graph: the value the caret is in is selected.
-      await browser.execute(
-        (offset: number) => {
-          const area = document.querySelector<HTMLTextAreaElement>('[data-testid="editor-body"]')!;
-          area.setSelectionRange(offset, offset);
-          area.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true }));
-        },
-        PRETTY.indexOf('Pro · mensuel') + 2,
-      );
+      await editor.placeCaret('Pro · mensuel', 2);
       await eventually(
         selectedPath,
         (path) => path === '$.data.object.lines[0].description',
@@ -393,11 +381,13 @@ describe('Exploring a JSON document', () => {
       await $(`${testid('json-row')}[data-path="$.services.api.image"]`).click();
       await $(testid('json-show-in-code')).click();
       await $(testid('editor-body')).waitForExist({ timeout: 10_000 });
-      const selection = await browser.execute(() => {
-        const field = document.querySelector<HTMLTextAreaElement>('[data-testid="editor-body"]')!;
-        return field.value.slice(field.selectionStart, field.selectionEnd);
-      });
-      expect(selection).toBe('"api:1.4"');
+      expect(
+        await eventually(
+          editor.codeSelection,
+          (selected) => selected === '"api:1.4"',
+          'the value selected in the code',
+        ),
+      ).toBe('"api:1.4"');
       await editor.close();
     });
   });
@@ -459,11 +449,13 @@ describe('Exploring a JSON document', () => {
       await $(`${testid('json-row')}[data-path="$.server.port"]`).click();
       await $(testid('json-show-in-code')).click();
       await $(testid('editor-body')).waitForExist({ timeout: 10_000 });
-      const selection = await browser.execute(() => {
-        const field = document.querySelector<HTMLTextAreaElement>('[data-testid="editor-body"]')!;
-        return field.value.slice(field.selectionStart, field.selectionEnd);
-      });
-      expect(selection).toBe('8_080');
+      expect(
+        await eventually(
+          editor.codeSelection,
+          (selected) => selected === '8_080',
+          'the value selected in the code',
+        ),
+      ).toBe('8_080');
       await editor.close();
     });
   });
@@ -523,11 +515,13 @@ describe('Exploring a JSON document', () => {
       await $(`${testid('json-row')}[data-path="$['shop:order']['@id']"]`).click();
       await $(testid('json-show-in-code')).click();
       await $(testid('editor-body')).waitForExist({ timeout: 10_000 });
-      const selection = await browser.execute(() => {
-        const field = document.querySelector<HTMLTextAreaElement>('[data-testid="editor-body"]')!;
-        return field.value.slice(field.selectionStart, field.selectionEnd);
-      });
-      expect(selection).toBe('42');
+      expect(
+        await eventually(
+          editor.codeSelection,
+          (selected) => selected === '42',
+          'the value selected in the code',
+        ),
+      ).toBe('42');
       await editor.close();
     });
   });

@@ -21,7 +21,7 @@ export function indentUnit(choice: IndentChoice, language: LanguageTag): string 
   }
 }
 
-/** One replacement, so the field's undo takes it back in one step. */
+/** One replacement, so the editor's undo takes it back in one step. */
 export interface TextEdit {
   readonly from: number;
   readonly to: number;
@@ -80,13 +80,6 @@ export function rewrite(before: string, after: string, cursor: number): TextEdit
     selectionStart: cursor,
     selectionEnd: cursor,
   };
-}
-
-/** Through the editing commands, which is what keeps the indentation in the field's undo. */
-export function applyEdit(field: HTMLTextAreaElement, edit: TextEdit): void {
-  field.setSelectionRange(edit.from, edit.to);
-  document.execCommand(edit.insert ? 'insertText' : 'delete', false, edit.insert);
-  field.setSelectionRange(edit.selectionStart, edit.selectionEnd);
 }
 
 interface LineChange {
