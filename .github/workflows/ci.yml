@@ -340,14 +340,32 @@ jobs:
           echo "$specs" | jq -r '"\(length) scenarios: \(join(", "))"'
 
   # `e2e.yml` once per platform: its build, then its scenarios. Neither waits for the other.
+  # One failing scenario decides the run: the other platform is cancelled with it.
   e2e:
     name: E2E (${{ matrix.os }})
     needs: e2e-scenarios
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         os: [windows-latest, ubuntu-22.04]
     uses: ./.github/workflows/e2e.yml
     with:
       os: ${{ matrix.os }}
       specs: ${{ needs.e2e-scenarios.outputs.specs }}
+
+  # Then everything else still running — Rust tests, Sonar — is cancelled too, freeing the
+  # runners other pull requests are queued behind. A job of its own rather than a step of the
+  # failing scenario: cancelled from inside, that job would end « cancelled » and hide which
+  # scenario failed. « Re-run failed jobs » re-runs the failed and the cancelled alike.
+  stop-on-e2e-failure:
+    name: Stop the run
+    needs: e2e
+    if: failure()
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run cancel "${{ github.run_id }}" --repo "${{ github.repository }}"
