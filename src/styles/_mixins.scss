@@ -93,6 +93,9 @@
   padding: var(--space-card) 10px var(--space-canvas);
   border-right: 1px solid var(--line-soft);
   overflow-y: auto;
+  // ⚠️ WebKitGTK counts a row drawn into the padding as overflow, and the HTTP tree's is 6px:
+  // the rail scrolled sideways on Linux, and a scroll closes the menu its anchor holds.
+  overflow-x: hidden;
 }
 
 // The switch between areas at the head of a rail: at the same place in the three.
