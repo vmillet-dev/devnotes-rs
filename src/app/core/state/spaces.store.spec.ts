@@ -261,6 +261,23 @@ describe('SpacesStore', () => {
     });
   });
 
+  describe('contentsOf', () => {
+    it('answers what deleting the space would move and take', async () => {
+      const { store, repository } = await createStore();
+      repository.contents.set('work', { notes: 12, folders: 2 });
+
+      expect(await store.contentsOf('work')).toEqual({ notes: 12, folders: 2 });
+    });
+
+    it('answers null and says so when the count fails', async () => {
+      const { store, repository } = await createStore();
+      repository.failNext = new Error('locked');
+
+      expect(await store.contentsOf('work')).toBeNull();
+      expect(TestBed.inject(ErrorNotifier).notice()?.ref.key).toBe('errors.spacesLoadFailed');
+    });
+  });
+
   describe('deleteSpace', () => {
     it('drops the space and activates the one that took its notes', async () => {
       const { store } = await createStore();

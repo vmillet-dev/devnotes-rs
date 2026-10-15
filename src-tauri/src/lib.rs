@@ -64,7 +64,9 @@ use notes::{
     update_note,
 };
 use recovery::{archive_locked_library, set_aside_damaged_library};
-use spaces::{create_space, delete_space, list_spaces, pin_space, rename_space};
+use spaces::{
+    count_space_contents, create_space, delete_space, list_spaces, pin_space, rename_space,
+};
 use tools::{
     answer_percentages, check_digits, convert_case, convert_data, convert_size, copy_qr_code,
     current_instant, decode_bytes, decode_jwt, describe_cidr, describe_colour, describe_cron,
@@ -230,6 +232,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             file_notes::<tauri::Wry>,
             file_notes_back::<tauri::Wry>,
             list_spaces::<tauri::Wry>,
+            count_space_contents::<tauri::Wry>,
             create_space::<tauri::Wry>,
             rename_space::<tauri::Wry>,
             pin_space::<tauri::Wry>,

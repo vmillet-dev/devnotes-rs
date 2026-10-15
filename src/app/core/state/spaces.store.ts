@@ -1,7 +1,7 @@
 import { Injectable, Signal, computed, effect, inject, resource, signal } from '@angular/core';
 import { SpacesRepository } from '@core/data/spaces.repository';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
-import { Space } from '@core/model/space.model';
+import { Space, SpaceContents } from '@core/model/space.model';
 import { NotesRevision } from './notes-revision';
 
 /**
@@ -104,6 +104,11 @@ export class SpacesStore {
 
     this.spacesResource.reload();
     return true;
+  }
+
+  /** What a deletion would move and take; `null` when it could not be counted, which is said. */
+  contentsOf(id: string): Promise<SpaceContents | null> {
+    return this.notifier.attempt('errors.spacesLoadFailed', () => this.repository.countContents(id));
   }
 
   /** `targetSpaceId` becomes active: the notes have just landed there. */

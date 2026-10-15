@@ -4,7 +4,8 @@ use diesel::prelude::*;
 use devnotes_lib::db::open_in_memory;
 use devnotes_lib::db::schema::notes;
 use devnotes_lib::error::StorageError;
-use devnotes_lib::spaces::store::{create, delete, exists, list, rename, set_pinned};
+use devnotes_lib::spaces::model::SpaceContents;
+use devnotes_lib::spaces::store::{contents, create, delete, exists, list, rename, set_pinned};
 
 const T0: &str = "2026-07-25T09:00:00.000Z";
 
@@ -268,4 +269,47 @@ fn deleting_into_an_unknown_space_changes_nothing() {
             .unwrap(),
         1
     );
+}
+
+/// What the confirmation names before a deletion: the live notes and the folders.
+#[test]
+fn a_space_counts_its_notes_and_its_folders_for_the_confirmation() {
+    let mut connection = open_in_memory().unwrap();
+    let doomed = create(&mut connection, "Perso").unwrap();
+    let other = create(&mut connection, "Boulot").unwrap();
+    note_in(&mut connection, &doomed.id);
+    devnotes_lib::folders::store::create(&mut connection, &doomed.id, "Perf", T0.parse().unwrap())
+        .unwrap();
+    devnotes_lib::folders::store::create(
+        &mut connection,
+        &other.id,
+        "Ailleurs",
+        T0.parse().unwrap(),
+    )
+    .unwrap();
+
+    assert_eq!(
+        contents(&mut connection, &doomed.id).unwrap(),
+        SpaceContents {
+            notes: 1,
+            folders: 1
+        }
+    );
+    assert_eq!(
+        contents(&mut connection, &other.id).unwrap(),
+        SpaceContents {
+            notes: 0,
+            folders: 1
+        }
+    );
+}
+
+#[test]
+fn counting_a_space_that_is_gone_says_which_one() {
+    let mut connection = open_in_memory().unwrap();
+
+    assert!(matches!(
+        contents(&mut connection, "ghost"),
+        Err(StorageError::SpaceNotFound(id)) if id == "ghost"
+    ));
 }

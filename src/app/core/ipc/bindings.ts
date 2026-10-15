@@ -288,6 +288,8 @@ export const commands = {
 	/**  The undo of [`file_notes`]: each note goes back to the folder it left, or to loose. */
 	fileNotesBack: (filings: NoteFiling[]) => typedError<number, AppError>(__TAURI_INVOKE("file_notes_back", { filings })),
 	listSpaces: () => typedError<Space[], AppError>(__TAURI_INVOKE("list_spaces")),
+	/**  What deleting the space would move and take, for the confirmation that comes first. */
+	countSpaceContents: (id: string) => typedError<SpaceContents, AppError>(__TAURI_INVOKE("count_space_contents", { id })),
 	createSpace: (draft: SpaceDraft) => typedError<Space, AppError>(__TAURI_INVOKE("create_space", { draft })),
 	renameSpace: (id: string, draft: SpaceDraft) => typedError<Space, AppError>(__TAURI_INVOKE("rename_space", { id, draft })),
 	pinSpace: (id: string, pinned: boolean) => typedError<Space, AppError>(__TAURI_INVOKE("pin_space", { id, pinned })),
@@ -2838,6 +2840,16 @@ export type Space = {
 	name: string,
 	/**  Hoisted to the head of the list, the way a pinned note is on the canvas. */
 	pinned?: boolean,
+};
+
+/**
+ *  What deleting a space takes or moves: its notes, the trashed ones included, go to the refuge
+ *  and leave their folder; its folders go with it.
+ */
+export type SpaceContents = {
+	/**  The live notes, which the confirmation names; the trashed ones move along silently. */
+	notes: number,
+	folders: number,
 };
 
 export type SpaceDraft = {
