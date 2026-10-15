@@ -268,8 +268,6 @@ describe('SearchBarComponent', () => {
     expect(count()).toBe('…');
     expect(part('search-count')!.classList.contains('none')).toBe(false);
 
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    await fixture.whenStable();
-    expect(count()).toBe('1/1');
+    await expect.poll(count, { timeout: 5_000 }).toBe('1/1');
   });
 });
