@@ -96,6 +96,77 @@ describe('Editing a note', () => {
     await editor.close();
   });
 
+  it('folds the header for the code, from note to note and in full screen', async () => {
+    const other = 'Folded header, next note';
+    const { id } = await bridge.createNote(draft({ spaceId, title: other, content: 'echo next' }));
+    await reloadCanvas();
+
+    await canvas.openNote(title);
+    const unfolded = await editor.codeHeight();
+    await editor.toggleHeader();
+    expect(await editor.isHeaderFolded()).toBe(true);
+    // Context, placement and attachments give way to one line: some 90 px back.
+    const folded = await eventually(
+      () => editor.codeHeight(),
+      (height) => height > unfolded + 60,
+      'the code to take the height back',
+    );
+    await editor.close();
+
+    await canvas.openNote(other);
+    expect(await editor.isHeaderFolded()).toBe(true);
+    await editor.toggleFullscreen();
+    await eventually(
+      () => editor.codeHeight(),
+      (height) => height > folded,
+      'the code to grow with the full screen',
+    );
+    expect(await editor.isHeaderFolded()).toBe(true);
+    await editor.toggleFullscreen();
+
+    await editor.headerSummary().click();
+    await $(testid('editor-placement')).waitForExist({ timeout: 5_000 });
+    expect(await editor.isHeaderFolded()).toBe(false);
+    await editor.close();
+
+    await bridge.deleteNotes([id]);
+    await bridge.purgeNotes([id]);
+    await reloadCanvas();
+  });
+
+  /** Its labels give way first: the bar of a note with fields once pushed its close button out. */
+  it('keeps the title bar whole down to the smallest window', async () => {
+    const fields = 'Title bar of a note with fields';
+    const { id } = await bridge.createNote(
+      draft({ spaceId, title: fields, content: 'psql -h {{host}} -p {{port}}', language: 'sh' }),
+    );
+    const restore = await browser.getWindowSize();
+    await reloadCanvas();
+    await canvas.openNote(fields);
+
+    for (const width of [1100, 900, 640]) {
+      await browser.setWindowSize(width, 720);
+      const fits = await eventually(
+        () =>
+          browser.execute(() => {
+            const toolbar = document.querySelector('.overlay-toolbar')!;
+            const close = document.querySelector('[data-testid="editor-close"]')!.getBoundingClientRect();
+            const box = toolbar.getBoundingClientRect();
+            return close.right <= box.right - 8 && toolbar.scrollWidth <= toolbar.clientWidth;
+          }),
+        (inside) => inside,
+        `the close button inside the title bar at ${width} px`,
+      );
+      expect(fits).toBe(true);
+    }
+
+    await browser.setWindowSize(restore.width, restore.height);
+    await editor.close();
+    await bridge.deleteNotes([id]);
+    await bridge.purgeNotes([id]);
+    await reloadCanvas();
+  });
+
   it('changes the language through the generated union', async () => {
     await canvas.openNote(title);
     await editor.setLanguage('sh');

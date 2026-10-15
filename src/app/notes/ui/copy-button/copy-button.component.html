@@ -9,7 +9,7 @@
 >
   <span aria-hidden="true">{{ copied() ? '✓' : '⧉' }}</span>
   @if (showLabel()) {
-    <span aria-hidden="true">{{ (copied() ? 'notes.copied' : label()) | transloco }}</span>
+    <span class="copy-label" aria-hidden="true">{{ (copied() ? 'notes.copied' : label()) | transloco }}</span>
   }
   <!-- Without this announced twin, a screen reader would not know the copy happened. -->
   <span class="visually-hidden" role="status">

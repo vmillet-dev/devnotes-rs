@@ -265,6 +265,13 @@ export const editor = {
   toggleFullscreen: () => toggleAndWait(testid('editor-fullscreen')),
   isFullscreen: async () => (await $(testid('editor-fullscreen')).getAttribute('aria-pressed')) === 'true',
 
+  toggleHeader: () => toggleAndWait(testid('editor-fold-header'), 'aria-expanded'),
+  isHeaderFolded: async () =>
+    (await $(testid('editor-fold-header')).getAttribute('aria-expanded')) === 'false',
+  /** The line the folded header leaves, which unfolds it. */
+  headerSummary: () => $(testid('editor-header-summary')),
+  codeHeight: () => $(testid('editor-body')).getSize('height'),
+
   /** Measured: `aria-pressed` says the button was pressed, not that the panel grew. */
   panelSize: () => $('[role="dialog"]').getSize(),
 

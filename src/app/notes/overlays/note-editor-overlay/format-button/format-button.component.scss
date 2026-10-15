@@ -55,6 +55,13 @@
   cursor: default;
 }
 
+// Neutral beside it, so the pair reads as one control; amber again under the pointer.
+.format-btn[aria-disabled='true'] + .format-chevron:not(:hover, [aria-expanded='true']) {
+  background: none;
+  border-color: var(--line-soft);
+  color: var(--text-2);
+}
+
 .format-icon,
 .chevron-icon {
   width: 14px;
@@ -82,6 +89,12 @@
 // The tooltip says the same: the hint is what goes when the toolbar runs short.
 @container (max-width: 960px) {
   .format-keys {
+    display: none;
+  }
+}
+
+@container (max-width: 819px) {
+  .format-label {
     display: none;
   }
 }

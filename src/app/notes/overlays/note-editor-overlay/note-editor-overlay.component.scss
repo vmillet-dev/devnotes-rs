@@ -49,6 +49,37 @@ app-dialog {
   border-color: var(--amber-dim);
 }
 
+// The bar gives way in two steps as it narrows, so that the close button never leaves it: the
+// pin's label first — its tint says it is on — then every label but a pending confirmation.
+// Each button keeps its name in its `title`.
+@container (max-width: 879px) {
+  .pin-btn .btn-label {
+    display: none;
+  }
+}
+
+@container (max-width: 819px) {
+  .btn-label {
+    display: none;
+  }
+
+  app-copy-button {
+    --copy-button-label: none;
+  }
+
+  .toolbar-btn {
+    padding-inline: 8px;
+  }
+
+  app-choice-menu {
+    --choice-trigger-max: 72px;
+  }
+
+  .overlay-title-input {
+    min-width: 64px;
+  }
+}
+
 .icon-btn {
   @include unstyled-control;
   color: var(--text-2);
@@ -59,6 +90,10 @@ app-dialog {
 
 .icon-btn:hover {
   color: var(--text-0);
+}
+
+.fold-btn {
+  @include hit-target;
 }
 
 .overlay-meta-row {
@@ -286,7 +321,6 @@ app-dialog {
   overflow: hidden;
 }
 
-.overlay-language-select:focus-visible,
 .overlay-source-input:focus-visible,
 .tag-add-input:focus-visible,
 .tag-remove:focus-visible,

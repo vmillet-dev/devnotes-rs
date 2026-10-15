@@ -148,7 +148,7 @@ describe('NoteEditorOverlayComponent', () => {
   }
 
   function fullscreenButton(): HTMLButtonElement {
-    return fixture.nativeElement.querySelector('.icon-btn:not(.close-btn)');
+    return fixture.nativeElement.querySelector('[data-testid="editor-fullscreen"]');
   }
 
   function text(selector: string): string {
@@ -1421,7 +1421,7 @@ describe('NoteEditorOverlayComponent', () => {
       const emitted = patched('pinned');
 
       const pinButton = fixture.debugElement.query(By.css('[data-testid="editor-pin"]'));
-      expect(text('[data-testid="editor-pin"]')).toBe('📌 Épingler');
+      expect(text('[data-testid="editor-pin"] span:last-child')).toBe('Épingler');
       expect(pinButton.classes['pinned']).toBeFalsy();
 
       pinButton.triggerEventHandler('click');
@@ -1433,7 +1433,7 @@ describe('NoteEditorOverlayComponent', () => {
       fixture.componentRef.setInput('note', createNote({ pinned: true }));
       await fixture.whenStable();
 
-      expect(text('[data-testid="editor-pin"]')).toBe('📌 Épinglée');
+      expect(text('[data-testid="editor-pin"] span:last-child')).toBe('Épinglée');
       expect(fixture.debugElement.query(By.css('[data-testid="editor-pin"]')).classes['pinned']).toBe(true);
     });
 
@@ -1445,7 +1445,7 @@ describe('NoteEditorOverlayComponent', () => {
       await fixture.whenStable();
 
       expect(asked.deletions).toBe(0);
-      expect(text('.delete-btn')).toBe('🗑 Confirmer ?');
+      expect(text('.delete-btn span:last-child')).toBe('Confirmer ?');
 
       toolbarButton('.delete-btn').click();
 
@@ -1463,7 +1463,7 @@ describe('NoteEditorOverlayComponent', () => {
       fixture.componentRef.setInput('note', createNote({ id: 'b' }));
       await fixture.whenStable();
 
-      expect(text('.delete-btn')).toBe('🗑 Supprimer');
+      expect(text('.delete-btn span:last-child')).toBe('Supprimer');
     });
   });
 
@@ -1614,6 +1614,191 @@ describe('NoteEditorOverlayComponent', () => {
       expect(panel().classList.contains('fullscreen')).toBe(false);
     });
   });
+  describe('folding the header', () => {
+    function foldButton(): HTMLButtonElement {
+      return fixture.nativeElement.querySelector('[data-testid="editor-fold-header"]');
+    }
+
+    function summaryLine(): HTMLButtonElement | null {
+      return fixture.nativeElement.querySelector('[data-testid="editor-header-summary"]');
+    }
+
+    /** Part by part: the dots between them are drawn by the stylesheet. */
+    function summary(): string[] {
+      return [...fixture.nativeElement.querySelectorAll('.header-part')].map((part: Element) =>
+        (part.textContent ?? '').replace(/\s+/g, ' ').trim(),
+      );
+    }
+
+    function bands(): Element[] {
+      const root = fixture.nativeElement as HTMLElement;
+      return [
+        root.querySelector('.overlay-meta-row'),
+        root.querySelector('[data-testid="editor-placement"]'),
+        root.querySelector('app-attachment-strip'),
+      ].filter((band): band is Element => band !== null);
+    }
+
+    async function open(overrides: Partial<Note> = {}): Promise<void> {
+      fixture.componentRef.setInput('note', createNote(overrides));
+      await fixture.whenStable();
+    }
+
+    async function fold(): Promise<void> {
+      foldButton().click();
+      await fixture.whenStable();
+    }
+
+    it('shows the bands, and a button in the title bar saying it folds them', async () => {
+      await open();
+
+      expect(bands()).toHaveLength(3);
+      expect(summaryLine()).toBeNull();
+      expect(foldButton().getAttribute('aria-expanded')).toBe('true');
+      expect(foldButton().getAttribute('aria-controls')).toBe('editor-header');
+      expect(foldButton().getAttribute('aria-label')).toBe("Replier l'en-tête");
+      expect(fixture.nativeElement.querySelector('#editor-header')).not.toBeNull();
+    });
+
+    it('gives the three bands one summary line, the title bar staying', async () => {
+      await open();
+      await fold();
+
+      expect(bands()).toEqual([]);
+      expect(summaryLine()?.getAttribute('aria-expanded')).toBe('false');
+      expect(titleInput()).not.toBeNull();
+      expect(foldButton().getAttribute('aria-expanded')).toBe('false');
+      expect(foldButton().getAttribute('aria-label')).toBe("Déplier l'en-tête");
+    });
+
+    it('reads what the bands hold, and keeps an expiry in sight', async () => {
+      await open({
+        source: 'Atlas',
+        spaceId: 'space-1',
+        folderId: 'perf',
+        tags: ['api', 'billing'],
+        lifecycle: { kind: 'expires', at: new Date('2026-01-15T22:59:59Z') },
+      });
+      await fold();
+
+      expect(summary()).toEqual(['Atlas', 'Perso › Perf', '2 tags']);
+      expect(summaryLine()!.querySelector('app-lifecycle-badge')).not.toBeNull();
+    });
+
+    it('leaves out what is empty, and a note that never expires says nothing of it', async () => {
+      await open({
+        source: '  ',
+        spaceId: 'work',
+        folderId: null,
+        tags: [],
+        lifecycle: { kind: 'permanent' },
+      });
+      await fold();
+
+      expect(summary()).toEqual(['Work › Aucun dossier']);
+      expect(summaryLine()!.querySelector('app-lifecycle-badge')).toBeNull();
+    });
+
+    it('counts one tag in the singular', async () => {
+      await open({ tags: ['api'] });
+      await fold();
+
+      expect(summary()).toContain('1 tag');
+    });
+
+    /** The strip follows the note `NotesStore` has open, as a paste or a drop does. */
+    it('counts an attachment added while it is folded', async () => {
+      const stored = await TestBed.inject(NotesRepository).create(createNote());
+      await TestBed.inject(NotesStore).openNote(stored.id);
+      fixture.componentRef.setInput('note', stored);
+      await fixture.whenStable();
+      await fold();
+
+      await TestBed.inject(AttachmentsStore).attachPath('C:/shots/capture.png');
+      await fixture.whenStable();
+
+      expect(summary()).toContain('1 pièce jointe');
+    });
+
+    it('unfolds from the summary line, and hands its focus to the button', async () => {
+      await open();
+      await fold();
+
+      summaryLine()!.focus();
+      summaryLine()!.click();
+      await fixture.whenStable();
+
+      expect(bands()).toHaveLength(3);
+      expect(document.activeElement).toBe(foldButton());
+    });
+
+    it('moves a focus inside the bands to the button', async () => {
+      await open();
+      (fixture.nativeElement.querySelector('.tag-add-input') as HTMLInputElement).focus();
+
+      await fold();
+
+      expect(document.activeElement).toBe(foldButton());
+    });
+
+    it('commits a context and a tag still being typed', async () => {
+      await open({ tags: ['keep'] });
+      const sources = patched('source');
+      const tags = patched('tags');
+      await type(fixture.nativeElement.querySelector('.overlay-source-input'), 'runbooks/api.md');
+      await type(fixture.nativeElement.querySelector('.tag-add-input'), 'urgent');
+
+      await fold();
+
+      expect(sources).toContain('runbooks/api.md');
+      expect(tags).toEqual([['keep', 'urgent']]);
+    });
+
+    it('stays folded from note to note, and across launches', async () => {
+      await open();
+      await fold();
+      expect(preferences().read('devnotes.editorHeaderFolded')).toBe('true');
+
+      await open({ id: 'next' });
+      expect(summaryLine()).not.toBeNull();
+
+      recreateOverlay();
+      await open();
+      expect(summaryLine()).not.toBeNull();
+
+      await fold();
+      expect(preferences().read('devnotes.editorHeaderFolded')).toBe('false');
+    });
+
+    it('folds a checklist the same way', async () => {
+      await open({ kind: 'checklist', content: '', items: [] });
+      await fold();
+
+      expect(bands()).toEqual([]);
+      expect(summaryLine()).not.toBeNull();
+    });
+
+    it('leaves the fields panel to fold on its own', async () => {
+      await open({
+        content: 'psql -h {{host}}',
+        placeholders: [{ name: 'host', defaultValue: '', value: '' }],
+      });
+      const fieldsBody = () => fixture.nativeElement.querySelector('.panel-body');
+
+      await fold();
+      expect(fieldsBody()).not.toBeNull();
+
+      fixture.nativeElement.querySelector('.panel-toggle').click();
+      await fixture.whenStable();
+      expect(fieldsBody()).toBeNull();
+      expect(summaryLine()).not.toBeNull();
+
+      await fold();
+      expect(bands()).toHaveLength(3);
+      expect(fieldsBody()).toBeNull();
+    });
+  });
+
   describe('placeholder fields', () => {
     const FIELDS = [
       { name: 'host', defaultValue: '', value: 'db.internal' },

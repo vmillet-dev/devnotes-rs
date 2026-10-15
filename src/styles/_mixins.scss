@@ -121,6 +121,79 @@
   margin-block: -$room;
 }
 
+// --- A drawer's head row ---
+//
+// The fields panel and the editor's folded header. The whole row is the button: one that lights
+// up on hover reads as a control, where a bare label reads as a section heading. `$name`
+// prefixes the classes, so each stylesheet keeps its own.
+@mixin drawer-head($name) {
+  .#{$name}-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 20px;
+  }
+
+  .#{$name}-toggle {
+    @include unstyled-control;
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    border-radius: 7px;
+    cursor: pointer;
+    color: var(--text-1);
+  }
+
+  .#{$name}-toggle:hover {
+    background: var(--bg-2);
+  }
+
+  .#{$name}-toggle:hover .#{$name}-title,
+  .#{$name}-toggle:hover .#{$name}-caret {
+    color: var(--text-0);
+  }
+
+  .#{$name}-toggle:hover .#{$name}-verb {
+    color: var(--amber-text);
+  }
+
+  .#{$name}-caret {
+    display: inline-block;
+    width: 10px;
+    font-size: 13px;
+    line-height: 1;
+    color: var(--text-2);
+    transition: transform var(--motion-fast) ease;
+  }
+
+  .#{$name}-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-1);
+    white-space: nowrap;
+  }
+
+  .#{$name}-summary {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 11px;
+    color: var(--text-2);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .#{$name}-verb {
+    margin-left: auto;
+    padding-left: 8px;
+    font-size: 11px;
+    color: var(--text-2);
+    white-space: nowrap;
+  }
+}
+
 // --- Preferences panel ---
 //
 // Shared rather than written inside the dialog: a component's SCSS is out of reach of its

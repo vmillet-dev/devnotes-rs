@@ -296,6 +296,14 @@
     "delete": "Delete",
     "deleteConfirm": "Confirm?",
     "close": "Close editor",
+    "header": {
+      "title": "Header",
+      "fold": "Fold the header",
+      "unfold": "Unfold the header",
+      "show": "Show",
+      "tags": "{count, plural, one {# tag} other {# tags}}",
+      "attachments": "{count, plural, one {# attachment} other {# attachments}}"
+    },
     "fullscreen": "Enter fullscreen",
     "exitFullscreen": "Exit fullscreen",
     "pin": "Pin",

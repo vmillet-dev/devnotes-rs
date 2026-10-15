@@ -5,68 +5,14 @@
   border-bottom: 1px solid var(--line-soft);
 }
 
-.panel-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 20px;
-}
-
-// The whole band is the target: a row-sized one tells a control from a caption.
-.panel-toggle {
-  @include unstyled-control;
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
-  border-radius: 7px;
-  cursor: pointer;
-  color: var(--text-1);
-}
-
-.panel-toggle:hover {
-  background: var(--bg-2);
-}
-
-.panel-toggle:hover .panel-title,
-.panel-toggle:hover .panel-caret {
-  color: var(--text-0);
-}
-
-.panel-toggle:hover .panel-verb {
-  color: var(--amber-text);
-}
-
-.panel-caret {
-  display: inline-block;
-  width: 10px;
-  font-size: 13px;
-  line-height: 1;
-  color: var(--text-2);
-  transition: transform var(--motion-fast) ease;
-}
+@include drawer-head('panel');
 
 .panel.open .panel-caret {
   transform: rotate(90deg);
 }
 
-.panel-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-1);
-  white-space: nowrap;
-}
-
 .panel-summary {
-  min-width: 0;
-  overflow: hidden;
   font-family: var(--font-mono), serif;
-  font-size: 11px;
-  color: var(--text-2);
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
 .panel-pair + .panel-pair::before {
@@ -76,14 +22,6 @@
 
 .panel-pair-name {
   color: var(--amber-dim);
-}
-
-.panel-verb {
-  margin-left: auto;
-  padding-left: 8px;
-  font-size: 11px;
-  color: var(--text-2);
-  white-space: nowrap;
 }
 
 // Amber once every field carries a value: that is when the copy becomes usable.

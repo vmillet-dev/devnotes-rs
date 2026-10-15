@@ -1,0 +1,32 @@
+<div class="header-head">
+  <button
+    type="button"
+    class="header-toggle"
+    data-testid="editor-header-summary"
+    aria-expanded="false"
+    aria-controls="editor-header"
+    (click)="unfold.emit()"
+  >
+    <span class="header-caret" aria-hidden="true">▸</span>
+    <span class="header-title">{{ 'editor.header.title' | transloco }}</span>
+    <span class="header-summary" data-testid="editor-header-summary-text">
+      @if (source().trim()) {
+        <span class="header-part source">{{ source() }}</span>
+      }
+      <span class="header-part">{{ space() }} › {{ folder() ?? ('notes.noFolder' | transloco) }}</span>
+      @if (tagCount() > 0) {
+        <span class="header-part">{{ 'editor.header.tags' | transloco: { count: tagCount() } }}</span>
+      }
+      @if (attachmentCount() > 0) {
+        <span class="header-part">{{
+          'editor.header.attachments' | transloco: { count: attachmentCount() }
+        }}</span>
+      }
+    </span>
+    <!-- A date is a warning: it stays in sight. -->
+    @if (lifecycle().kind === 'expires') {
+      <app-lifecycle-badge [lifecycle]="lifecycle()" [expiringSoon]="expiringSoon()" />
+    }
+    <span class="header-verb">{{ 'editor.header.show' | transloco }}</span>
+  </button>
+</div>
