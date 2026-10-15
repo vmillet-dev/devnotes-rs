@@ -401,6 +401,7 @@
     "noteDuplicateFailed": "Impossible de dupliquer la note.",
     "noteReadFailed": "Impossible de lire la note.",
     "noteDeleteFailed": "Impossible de supprimer la note. Elle est toujours là.",
+    "noteMoveFailed": "La note n’a pas pu être déplacée.",
     "spacesLoadFailed": "Impossible de charger les espaces.",
     "spaceCreateFailed": "Impossible de créer l'espace.",
     "spaceRenameFailed": "Impossible de renommer l'espace.",

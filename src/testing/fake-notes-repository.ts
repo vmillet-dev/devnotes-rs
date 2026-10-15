@@ -338,9 +338,11 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
       // Only the ones that actually change space, like `notes::store::move_many`.
       const previous = this.notes
         .filter((note) => ids.includes(note.id) && note.spaceId !== spaceId)
-        .map((note) => ({ noteId: note.id, spaceId: note.spaceId }));
+        .map((note) => ({ noteId: note.id, spaceId: note.spaceId, folderId: note.folderId }));
 
-      this.notes = this.notes.map((note) => (ids.includes(note.id) ? { ...note, spaceId } : note));
+      this.notes = this.notes.map((note) =>
+        ids.includes(note.id) && note.spaceId !== spaceId ? { ...note, spaceId, folderId: null } : note,
+      );
 
       return previous;
     });
@@ -348,11 +350,13 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
 
   moveBack(placements: readonly NotePlacement[]): Promise<number> {
     return guard(this, () => {
-      const home = new Map(placements.map((placement) => [placement.noteId, placement.spaceId]));
+      const home = new Map(placements.map((placement) => [placement.noteId, placement]));
       this.notes = this.notes.map((note) => {
-        const spaceId = home.get(note.id);
+        const placement = home.get(note.id);
 
-        return spaceId === undefined ? note : { ...note, spaceId };
+        return placement === undefined
+          ? note
+          : { ...note, spaceId: placement.spaceId, folderId: placement.folderId ?? null };
       });
 
       return placements.length;

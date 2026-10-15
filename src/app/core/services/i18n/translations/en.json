@@ -401,6 +401,7 @@
     "noteDuplicateFailed": "Could not duplicate the note.",
     "noteReadFailed": "Could not read the note.",
     "noteDeleteFailed": "Could not delete the note. It is still there.",
+    "noteMoveFailed": "The note could not be moved.",
     "spacesLoadFailed": "Could not load spaces.",
     "spaceCreateFailed": "Could not create the space.",
     "spaceRenameFailed": "Could not rename the space.",

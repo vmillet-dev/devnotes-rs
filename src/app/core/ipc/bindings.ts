@@ -2304,6 +2304,8 @@ export type NotePatch = {
 export type NotePlacement = {
 	noteId: string,
 	spaceId: string,
+	/**  The folder the move took it out of, which the undo puts it back into while it exists. */
+	folderId?: string | null,
 };
 
 /**  A note's priority before a batch moved it: its undo puts back each note's own. */

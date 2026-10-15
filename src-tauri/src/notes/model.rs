@@ -526,6 +526,10 @@ fn expires_soon(note: &Note, now: DateTime<Utc>) -> bool {
 pub struct NotePlacement {
     pub note_id: String,
     pub space_id: String,
+    /// The folder the move took it out of, which the undo puts it back into while it exists.
+    #[serde(default)]
+    #[specta(optional)]
+    pub folder_id: Option<String>,
 }
 
 /// A note's priority before a batch moved it: its undo puts back each note's own.

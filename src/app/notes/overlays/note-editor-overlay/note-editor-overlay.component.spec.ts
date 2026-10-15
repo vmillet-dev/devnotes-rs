@@ -61,12 +61,13 @@ describe('NoteEditorOverlayComponent', () => {
     closes: number;
     deletions: number;
     filings: (string | null)[];
+    moves: string[];
     values: Record<string, string>[];
     priorities: string[];
   };
 
   function listenToTheStore(): void {
-    asked = { patches: [], closes: 0, deletions: 0, filings: [], values: [], priorities: [] };
+    asked = { patches: [], closes: 0, deletions: 0, filings: [], moves: [], values: [], priorities: [] };
     const store = TestBed.inject(NotesStore);
     vi.spyOn(store, 'applyPatch').mockImplementation(async (_id, patch) => {
       for (const listener of asked.patches) listener(patch);
@@ -79,6 +80,9 @@ describe('NoteEditorOverlayComponent', () => {
     });
     vi.spyOn(store, 'fileNote').mockImplementation(async (_id, folderId) => {
       asked.filings.push(folderId);
+    });
+    vi.spyOn(store, 'moveNote').mockImplementation(async (_id, spaceId) => {
+      asked.moves.push(spaceId);
     });
     vi.spyOn(store, 'setPlaceholderValues').mockImplementation(async (_id, values) => {
       asked.values.push(values);
@@ -1329,14 +1333,14 @@ describe('NoteEditorOverlayComponent', () => {
       await fixture.whenStable();
     }
 
+    /** Not a patch: one note moves as a selection does, its folder left behind and undoable. */
     it('moves the note to the space picked', async () => {
       fixture.componentRef.setInput('note', createNote());
       await fixture.whenStable();
-      const emitted = patched('spaceId');
 
       await pick('space', 'work');
 
-      expect(emitted).toEqual(['work']);
+      expect(asked.moves).toEqual(['work']);
     });
 
     /** Not a patch either: `set_priority` leaves the modification date alone. */

@@ -404,7 +404,8 @@ export class NoteEditorOverlayComponent {
    *  belongs to a space of its own, and another one's folders would file it nowhere. */
   protected onSpaceChosen(spaceId: string | null): void {
     // A note always has a space: the menu carries no "none" entry, so this cannot be null.
-    if (spaceId !== null) this.requestPatch({ spaceId });
+    const note = this.note();
+    if (spaceId !== null && note && spaceId !== note.spaceId) void this.store.moveNote(note.id, spaceId);
   }
 
   /** Folding closes the preview: a read-only body without the button that caused it is a trap. */
