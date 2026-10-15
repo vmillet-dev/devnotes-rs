@@ -3,16 +3,14 @@ import { phrasesFrom } from './phrases';
 
 describe('phrasesFrom', () => {
   it("puts each translation under CodeMirror's own word for it", () => {
-    expect(
-      phrasesFrom({ find: 'Rechercher', replaceOne: 'remplacer', replaceAll: 'tout remplacer' }),
-    ).toEqual({
-      Find: 'Rechercher',
-      replace: 'remplacer',
-      'replace all': 'tout remplacer',
+    expect(phrasesFrom({ goToLine: 'Aller à la ligne', go: 'aller', close: 'fermer' })).toEqual({
+      'Go to line': 'Aller à la ligne',
+      go: 'aller',
+      close: 'fermer',
     });
   });
 
   it('leaves a word missing or empty to its English', () => {
-    expect(phrasesFrom({ next: '', previous: 42 })).toEqual({});
+    expect(phrasesFrom({ go: '', close: 42 })).toEqual({});
   });
 });
