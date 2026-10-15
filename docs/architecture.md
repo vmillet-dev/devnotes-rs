@@ -1619,9 +1619,11 @@ belongs to one space, so `NotePatch::apply` clears `folder_id` whenever `space_i
 A folder control without the space control beside it would go on naming a folder the space
 switcher can no longer reach.
 
-⚠️ **Filing is not a `NotePatch` field.** `NotesStore.fileNote` is a **batch of one**
-through `file_notes`, the same command the selection bar takes, because that command
-answers the placements it actually changed and that answer is what the undo puts back. It
+⚠️ **Filing and moving are not `NotePatch` fields there.** `NotesStore.fileNote` and
+`NotesStore.moveNote` are **batches of one** through `file_notes` and `move_notes`, the
+commands the selection bar takes, because they answer the placements they actually changed and
+that answer is what the undo puts back — for a move, the space **and** the folder the note left,
+filed back into while it still exists there. It
 is also the one write with no note to adopt — `adoptFiling` refreshes the open note from
 the filing that was accepted and the folder list the control offered, or the editor's own
 control goes on naming the folder the note just left until it is closed and reopened.
@@ -1875,8 +1877,8 @@ so the filter, the badge and the section hint were all reachable but permanently
 
 ### The card actions menu
 
-`NoteCardMenuComponent` is the `⋯` menu on a card: move the note to another space, or delete
-it. It is a separate component from `NoteCardComponent` because it brings what the card has
+`NoteCardMenuComponent` is the `⋯` menu on a card: open, pin, priority, copy, duplicate, file
+into a folder, move to another space, delete. It is a separate component from `NoteCardComponent` because it brings what the card has
 none of — open/closed state, a document-click listener, focus management — leaving the card
 purely derived from its note.
 
@@ -3125,7 +3127,7 @@ On the front, a reversible action records what it changed and shows `UndoBarComp
 `UNDO_WINDOW_MS` (8 s).
 
 `Reversible` is a union — a deletion, a move, a tagging, a filing, an arrangement — and
-`UndoStore.reverse` switches over it exhaustively, so a fourth kind of undoable action stops the front compiling
+`UndoStore.reverse` switches over it exhaustively, so a new kind of undoable action stops the front compiling
 until it says how to put itself back. ⚠️ Each branch carries **what the back end answered**,
 never what the front end guessed: `move_notes` returns the placements it actually changed and
 `tag_notes` the `(note, tag)` pairs it actually added. Recomputing either from the selection
@@ -3917,8 +3919,8 @@ the note list it assembled never leaves Rust.
 
 `SpacesRepository.delete` takes a refuge (`delete(id, targetSpaceId)`) rather than an id
 alone: a one-argument signature would have made data loss the default, since the schema
-cascades. Moving a single note needs no dedicated method — `spaceId` is part of `NotePatch`,
-and `NotesStore.moveNote` is a thin wrapper over the ordinary update path.
+cascades. Moving a single note goes through `move_notes` like a selection, so the card menu and the editor
+offer the same undo; `spaceId` stays in `NotePatch` for a draft, which has no row to batch.
 
 `SpacesStore.deleteSpace` returns a boolean and does **not** reload the notes: it does not
 know `NotesStore` (the reverse dependency already exists, and closing the loop would be an

@@ -583,10 +583,14 @@ pub fn move_many(
             .filter(notes::id.eq_any(ids))
             .filter(notes::deleted_at.is_null())
             .filter(notes::space_id.ne(space_id))
-            .select((notes::id, notes::space_id))
-            .load::<(String, String)>(connection)?
+            .select((notes::id, notes::space_id, notes::folder_id))
+            .load::<(String, String, Option<String>)>(connection)?
             .into_iter()
-            .map(|(note_id, space_id)| NotePlacement { note_id, space_id })
+            .map(|(note_id, space_id, folder_id)| NotePlacement {
+                note_id,
+                space_id,
+                folder_id,
+            })
             .collect();
 
         let touched: Vec<&String> = moved.iter().map(|placement| &placement.note_id).collect();
@@ -603,7 +607,8 @@ pub fn move_many(
     })
 }
 
-/// Puts moved notes back where they were, leaving `updated_at` alone: undoing is not editing.
+/// Puts moved notes back where they were, their folder included while it still exists in that
+/// space, leaving `updated_at` alone: undoing is not editing.
 pub fn restore_placements(
     connection: &mut Library,
     placements: &[NotePlacement],
@@ -613,19 +618,28 @@ pub fn restore_placements(
     }
 
     connection.transaction(|connection, _vault| {
-        let mut by_space: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
+        let mut by_place: BTreeMap<(&str, Option<&str>), Vec<String>> = BTreeMap::new();
         for placement in placements {
-            by_space
-                .entry(placement.space_id.as_str())
+            by_place
+                .entry((placement.space_id.as_str(), placement.folder_id.as_deref()))
                 .or_default()
-                .push(placement.note_id.as_str());
+                .push(placement.note_id.clone());
         }
 
         let mut restored = 0;
-        for (space_id, ids) in by_space {
+        for ((space_id, folder_id), ids) in by_place {
             // A space dropped since the move is not an error: the rest still goes back.
             if !spaces::exists(connection, space_id)? {
                 continue;
+            }
+            // A folder deleted since leaves the note loose in its space, as deleting it would have.
+            let folder_id = match folder_id {
+                Some(folder) if folders::belongs_to(connection, folder, space_id)? => Some(folder),
+                _ => None,
+            };
+            if folder_id.is_some() {
+                // A position row means « loose »: a filed card flows inside its zone.
+                folders::board::forget_positions(connection, &ids)?;
             }
 
             restored += diesel::update(
@@ -633,7 +647,7 @@ pub fn restore_placements(
                     .filter(notes::id.eq_any(&ids))
                     .filter(notes::deleted_at.is_null()),
             )
-            .set(notes::space_id.eq(space_id))
+            .set((notes::space_id.eq(space_id), notes::folder_id.eq(folder_id)))
             .execute(connection)?;
         }
 

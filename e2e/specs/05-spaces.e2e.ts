@@ -161,6 +161,39 @@ describe('Spaces', () => {
     expect(await spaces.label()).toContain('Lectures');
   });
 
+  it('moves one filed note from its card, and Ctrl+Z files it back where it was', async () => {
+    const archive = await bridge.createSpace({ name: 'Archives' });
+    const folder = await bridge.createFolder({ spaceId: homeId, name: 'Runbooks' });
+    const note = await bridge.createNote(draft({ spaceId: homeId, title: 'Filed, then moved' }));
+    await bridge.fileNotes([note.id], folder.id);
+    await spaces.open();
+    await spaces.allOption().click();
+    await reloadCanvas();
+    await canvas.waitForCard('Filed, then moved');
+    const reread = () => bridge.getNote(note.id);
+
+    await canvas.moveNote('Filed, then moved', archive.id);
+    await eventually(
+      reread,
+      (moved) => moved.spaceId === archive.id && !moved.folderId,
+      'the note in the other space, out of its folder',
+    );
+
+    await browser.$(testid('undo-bar')).waitForExist({ timeout: 10_000 });
+    await press('z', ['Control']);
+    await eventually(
+      reread,
+      (back) => back.spaceId === homeId && back.folderId === folder.id,
+      'the note back in its space and in its folder',
+    );
+
+    await bridge.deleteNotes([note.id]);
+    await bridge.purgeNotes([note.id]);
+    await bridge.deleteFolder(folder.id);
+    await bridge.deleteSpace(archive.id, homeId);
+    await reloadCanvas();
+  });
+
   it('moves the notes out before dropping the space', async () => {
     const target = (await bridge.listSpaces()).find((space) => space.name === 'Lectures')!;
     await spaces.open();

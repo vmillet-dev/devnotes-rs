@@ -112,6 +112,21 @@ pub fn exists(connection: &mut SqliteConnection, id: &str) -> Result<bool, Stora
         .is_some())
 }
 
+/// Whether the folder still exists, in that space: what an undo checks before filing back into it.
+pub fn belongs_to(
+    connection: &mut SqliteConnection,
+    id: &str,
+    space_id: &str,
+) -> Result<bool, StorageError> {
+    Ok(folders::table
+        .find(id)
+        .filter(folders::space_id.eq(space_id))
+        .select(folders::id)
+        .first::<String>(connection)
+        .optional()?
+        .is_some())
+}
+
 /// Unique within its space: two spaces may each hold a "Perf".
 fn ensure_unique_name(
     connection: &mut SqliteConnection,

@@ -9,7 +9,7 @@ import { HARNESS_SPACES, awaitQuery, createNotesHarness, visibleIds } from '@tes
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { NotesRevision } from './notes-revision';
 import { DRAFT_ID } from './notes.store';
-import { UNDO_WINDOW_MS } from './undo.store';
+import { UNDO_WINDOW_MS, UndoStore } from './undo.store';
 
 describe('NotesStore', () => {
   beforeEach(() => {
@@ -328,28 +328,45 @@ describe('NotesStore', () => {
   });
 
   describe('moveNote', () => {
-    it('files the note in another space', async () => {
-      const { store, repository } = await createNotesHarness([createNote({ id: 'a', spaceId: 'space-1' })]);
-      const update = vi.spyOn(repository, 'update');
+    it('moves one note as a selection is moved, and offers to put it back with its folder', async () => {
+      const { store, repository } = await createNotesHarness([
+        createNote({ id: 'a', spaceId: 'space-1', folderId: 'folder-1' }),
+      ]);
+      const moveMany = vi.spyOn(repository, 'moveMany');
 
       await store.moveNote('a', 'space-2');
 
-      expect(update).toHaveBeenCalledWith('a', { spaceId: 'space-2' });
+      expect(moveMany).toHaveBeenCalledWith(['a'], 'space-2');
+      expect(TestBed.inject(UndoStore).last()).toEqual({
+        kind: 'move',
+        previous: [{ noteId: 'a', spaceId: 'space-1', folderId: 'folder-1' }],
+        count: 1,
+      });
     });
 
-    it('does not write when the note is already in that space', async () => {
-      const { store, repository } = await createNotesHarness([createNote({ id: 'a', spaceId: 'space-1' })]);
-      const update = vi.spyOn(repository, 'update');
+    it('takes the open note out of its folder, into the space it went to', async () => {
+      const { store } = await createNotesHarness([
+        createNote({ id: 'a', spaceId: 'space-1', folderId: 'folder-1' }),
+      ]);
+      await store.openNote('a');
+
+      await store.moveNote('a', 'space-2');
+
+      expect(store.selectedNote()).toMatchObject({ spaceId: 'space-2', folderId: null, folder: null });
+    });
+
+    it('offers nothing to undo when the note is already in that space', async () => {
+      const { store } = await createNotesHarness([createNote({ id: 'a', spaceId: 'space-1' })]);
 
       await store.moveNote('a', 'space-1');
 
-      expect(update).not.toHaveBeenCalled();
+      expect(TestBed.inject(UndoStore).last()).toBeNull();
     });
 
     it('reports a space that no longer exists', async () => {
       const { store, repository } = await createNotesHarness([createNote({ id: 'a', spaceId: 'space-1' })]);
       const notifier = TestBed.inject(ErrorNotifier);
-      repository.failNext = new IpcError('update_note', {
+      repository.failNext = new IpcError('move_notes', {
         code: 'spaceNotFound',
         params: { id: 'space-2' },
         detail: 'Espace introuvable : space-2',

@@ -236,8 +236,28 @@ export class NotesStore {
     return this.edit(id, (note) => ({ pinned: !note.pinned }));
   }
 
-  moveNote(id: string, spaceId: string): Promise<void> {
-    return this.applyPatch(id, { spaceId });
+  /**
+   * One note moves as a selection does: a batch of one through `move_notes`, whose answer — the
+   * space and the folder it left — the undo puts back. A draft has no row: it changes locally.
+   */
+  async moveNote(id: string, spaceId: string): Promise<void> {
+    const resolved = await this.resolve(id);
+    if (resolved === DRAFT_ID) {
+      await this.applyPatch(id, { spaceId });
+      return;
+    }
+
+    const previous = await this.notifier.attempt('errors.noteMoveFailed', () =>
+      this.repository.moveMany([resolved], spaceId),
+    );
+    if (previous === null) return;
+
+    const open = this._selectedNote();
+    if (open?.id === resolved && previous.length > 0) {
+      this._selectedNote.set({ ...open, spaceId, folderId: null, folder: null });
+    }
+    this.revision.bump();
+    this.undo.record({ kind: 'move', previous, count: previous.length });
   }
 
   /**

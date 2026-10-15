@@ -273,3 +273,71 @@ fn a_space_gone_since_the_move_does_not_take_the_rest_of_the_undo_with_it() {
         kept
     );
 }
+
+/// A note taken out of its folder by a move goes back into it with the undo.
+#[test]
+fn putting_a_move_back_files_the_note_into_its_folder_again() {
+    use devnotes_lib::folders::store as folders;
+
+    let mut connection = open_in_memory().unwrap();
+    let source = space(&mut connection, "Personal");
+    let target = space(&mut connection, "Boulot");
+    let folder = folders::create(&mut connection, &source, "Perf", t0()).unwrap();
+    let note = create(&mut connection, draft(&source), t0()).unwrap();
+    folders::file_many(
+        &mut connection,
+        std::slice::from_ref(&note.id),
+        Some(&folder.id),
+        t0(),
+    )
+    .unwrap();
+
+    let previous = move_many(
+        &mut connection,
+        std::slice::from_ref(&note.id),
+        &target,
+        t1(),
+    )
+    .unwrap();
+    assert_eq!(previous[0].folder_id.as_deref(), Some(folder.id.as_str()));
+    assert_eq!(list(&mut connection).unwrap()[0].folder_id, None);
+
+    restore_placements(&mut connection, &previous).unwrap();
+
+    let back = &list(&mut connection).unwrap()[0];
+    assert_eq!(back.space_id, source);
+    assert_eq!(back.folder_id.as_deref(), Some(folder.id.as_str()));
+}
+
+/// A folder deleted between the move and the undo leaves the note loose in its space.
+#[test]
+fn a_folder_gone_since_the_move_leaves_the_note_loose() {
+    use devnotes_lib::folders::store as folders;
+
+    let mut connection = open_in_memory().unwrap();
+    let source = space(&mut connection, "Personal");
+    let target = space(&mut connection, "Boulot");
+    let folder = folders::create(&mut connection, &source, "Perf", t0()).unwrap();
+    let note = create(&mut connection, draft(&source), t0()).unwrap();
+    folders::file_many(
+        &mut connection,
+        std::slice::from_ref(&note.id),
+        Some(&folder.id),
+        t0(),
+    )
+    .unwrap();
+    let previous = move_many(
+        &mut connection,
+        std::slice::from_ref(&note.id),
+        &target,
+        t1(),
+    )
+    .unwrap();
+    folders::delete(&mut connection, &folder.id).unwrap();
+
+    assert_eq!(restore_placements(&mut connection, &previous).unwrap(), 1);
+
+    let back = &list(&mut connection).unwrap()[0];
+    assert_eq!(back.space_id, source);
+    assert_eq!(back.folder_id, None);
+}
