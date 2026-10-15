@@ -4323,7 +4323,11 @@ error code serialises to `"noteNotFound"`. A serde attribute deleted by accident
 The back validates what the front already constrains, because a rule held only by a form is
 not held at all. `error.rs` defines a `ValidationError` carrying the offending
 `field`; commands call `draft.validate()` / `draft.validated_name()` before touching the
-connection, and `AppError` turns the refusal into `invalidInput` with `{{field}}`.
+connection, and `AppError` turns the refusal into `invalidInput` with `{{field}}`. ⚠️ That field
+is a name of the code: the front never shows it, and an `invalidInput` falls back on the action's
+own message. What a person can actually run into gets a code of its own — a file past what an
+attachment may weigh is `fileTooLarge`, with its name and the limit in megabytes
+(`ATTACHMENT_MAX_MEGABYTES`, which the attachment strip also says).
 
 What is checked: `language` against the known list (an arbitrary value would be unreadable by
 any front build), a space name trimmed and non-empty (`COLLATE NOCASE` folds case but not

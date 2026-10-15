@@ -408,6 +408,8 @@ export const commands = {
 /* Constants */
 export const APP_METADATA = {"name":"DevNotes","repository":"https://github.com/vmillet-dev/devnotes-rs","author":"Valentin MILLET","authorHandle":"@vmillet-dev","rustVersion":"1.97.1"} as const;
 
+export const ATTACHMENT_MAX_MEGABYTES = 10 as const;
+
 export const AUTOMATIC_BACKUPS_KEY = "devnotes.automaticBackups" as const;
 
 export const DEFAULT_SHORTCUTS = {"capture":"Ctrl+Alt+V","newNote":"Ctrl+Alt+N","palette":"Ctrl+Alt+P"} as const;
@@ -1219,7 +1221,9 @@ export type EnvironmentPatch = {
  *  ⚠️ A new variant breaks the front-end build until `CODE_KEYS`
  *  (`core/services/errors/error-notifier.service.ts`) and both locales have its key.
  */
-export type ErrorCode = "noteNotFound" | "spaceNotFound" | "duplicateSpaceName" | "folderNotFound" | "duplicateFolderName" | "attachmentNotFound" | "httpItemNotFound" | "httpEnvironmentNotFound" | "duplicateEnvironmentName" | "revisionNotFound" | "libraryNotFound" | "libraryOpen" | "lastLibrary" | "nothingToSetAside" | "backupNotFound" | "backupUnopenable" | "fileAccess" | "importFormat" | 
+export type ErrorCode = "noteNotFound" | "spaceNotFound" | "duplicateSpaceName" | "folderNotFound" | "duplicateFolderName" | "attachmentNotFound" | "httpItemNotFound" | "httpEnvironmentNotFound" | "duplicateEnvironmentName" | "revisionNotFound" | "libraryNotFound" | "libraryOpen" | "lastLibrary" | "nothingToSetAside" | "backupNotFound" | "backupUnopenable" | "fileAccess" | 
+/**  `name` is the file refused, `limit` the most an attachment may weigh, in megabytes. */
+"fileTooLarge" | "importFormat" | 
 /**  The `field` parameter names the offending field. */
 "invalidInput" | 
 /**  Poisoned mutex: a command panicked while holding the connection. */

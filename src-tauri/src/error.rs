@@ -73,6 +73,9 @@ pub enum StorageError {
     BackupUnopenable(String),
     #[error("File error: {0}")]
     File(String),
+    /// Past what an attachment may weigh: the person is told the file and the limit.
+    #[error("\"{name}\" is larger than {limit_mb} MB")]
+    TooLarge { name: String, limit_mb: u32 },
     #[error("Unreadable export file: {0}")]
     ImportFormat(String),
     #[error("Note \"{id}\" unreadable: field \"{field}\" is out of format")]
@@ -138,6 +141,8 @@ pub enum ErrorCode {
     BackupNotFound,
     BackupUnopenable,
     FileAccess,
+    /// `name` is the file refused, `limit` the most an attachment may weigh, in megabytes.
+    FileTooLarge,
     ImportFormat,
     /// The `field` parameter names the offending field.
     InvalidInput,
@@ -352,6 +357,10 @@ impl From<StorageError> for AppError {
             StorageError::Locked => Self::new(ErrorCode::Locked, detail),
             StorageError::Damaged(_) => Self::new(ErrorCode::LibraryDamaged, detail),
             StorageError::File(_) => Self::new(ErrorCode::FileAccess, detail),
+            StorageError::TooLarge { name, limit_mb } => {
+                Self::with(ErrorCode::FileTooLarge, detail, "name", &name)
+                    .and("limit", &limit_mb.to_string())
+            }
             StorageError::ImportFormat(_) => Self::new(ErrorCode::ImportFormat, detail),
             // Nothing here gives the front anything to do beyond reporting the failure.
             StorageError::SchemaTooRecent(_)

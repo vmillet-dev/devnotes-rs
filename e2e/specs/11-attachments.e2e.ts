@@ -63,6 +63,28 @@ describe('Attachments', () => {
     expect(listed.map((item) => item.fileName)).toEqual(['runbook.txt']);
   });
 
+  /** A code with the file and the limit, never « Valeur refusée par le moteur : byteSize ». */
+  it('refuses a file over the limit by its name and the limit', async () => {
+    const huge = join(directory, 'capture.mov');
+    writeFileSync(huge, Buffer.alloc(10 * 1024 * 1024 + 1));
+
+    const refusal = (await browser.executeAsync(
+      (id: string, file: string, done: (value: unknown) => void) => {
+        const tauri = (window as unknown as Record<string, any>)['__TAURI__'];
+        tauri.core
+          .invoke('attach_file', { noteId: id, path: file })
+          .then(() => done(null))
+          .catch((error: unknown) => done(error));
+      },
+      noteId,
+      huge.replaceAll('\\', '/'),
+    )) as { code: string; params: Record<string, string> } | null;
+
+    expect(refusal?.code).toBe('fileTooLarge');
+    expect(refusal?.params).toEqual({ name: 'capture.mov', limit: '10' });
+    expect((await bridge.listAttachments(noteId)).map((item) => item.fileName)).toEqual(['runbook.txt']);
+  });
+
   it('counts on the card without opening the note', async () => {
     await reloadCanvas();
     const card = await canvas.cardWithTitle(title);

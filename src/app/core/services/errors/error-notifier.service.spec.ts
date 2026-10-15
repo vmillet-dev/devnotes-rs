@@ -117,6 +117,18 @@ describe('ipcNotice', () => {
     expect(notice.ref.key).toBe('errors.noteSaveFailed');
   });
 
+  it('never shows a field of the code: a refused value says what the action was', () => {
+    const notice = ipcNotice(failure('invalidInput', { field: 'byteSize' }), FALLBACK);
+
+    expect(notice.ref.key).toBe('errors.noteSaveFailed');
+  });
+
+  it('names a file too large to attach, and the limit', () => {
+    const notice = ipcNotice(failure('fileTooLarge', { name: 'capture.mov', limit: '10' }), FALLBACK);
+
+    expect(notice.ref).toEqual({ key: 'errors.fileTooLarge', params: { name: 'capture.mov', limit: '10' } });
+  });
+
   it('falls back when Tauri itself rejected, which carries no code', () => {
     const notice = ipcNotice(new IpcError('update_note', 'command not found'), FALLBACK);
 

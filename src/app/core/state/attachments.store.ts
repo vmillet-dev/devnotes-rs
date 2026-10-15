@@ -214,7 +214,9 @@ export class AttachmentsStore {
   }
 
   private async load(noteId: string): Promise<void> {
-    const loaded = await this.notifier.attempt('errors.attachFailed', () => this.repository.loadFor(noteId));
+    const loaded = await this.notifier.attempt('errors.attachmentsLoadFailed', () =>
+      this.repository.loadFor(noteId),
+    );
     if (loaded) this._attachments.set(loaded);
   }
 }
