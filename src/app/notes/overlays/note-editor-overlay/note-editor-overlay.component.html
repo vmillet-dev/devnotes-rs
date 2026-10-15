@@ -218,10 +218,6 @@
       />
     }
 
-    <!-- Two stacked layers rather than a preview/edit toggle: the viewer colours the
-         draft underneath, the <textarea> takes the typing on top with transparent text.
-         The textarea carries the accessible text; the viewer is hidden from screen
-         readers, which would otherwise read the content twice. -->
     @if (explorable()) {
       <div class="json-band">
         <div class="view-tabs" role="tablist" [attr.aria-label]="'json.views' | transloco">

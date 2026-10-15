@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { language } from '@codemirror/language';
 import { openSearchPanel } from '@codemirror/search';
+import { EditorState, StateEffect } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
 import { CodeEditorComponent } from './code-editor.component';
@@ -238,6 +239,65 @@ describe('CodeEditorComponent', () => {
 
     await set('wrap', true);
     expect(view().contentDOM.classList.contains('cm-lineWrapping')).toBe(true);
+  });
+
+  describe('a wrapped line', () => {
+    /** Each drawn line's hanging indent, `null` where it has none. */
+    function hangs(): (string | null)[] {
+      return [...fixture.nativeElement.querySelectorAll('.cm-line')].map((line: HTMLElement) =>
+        line.classList.contains('cm-hang') ? line.style.getPropertyValue('--hang') : null,
+      );
+    }
+
+    const frame = () => new Promise<void>((done) => requestAnimationFrame(() => done()));
+
+    beforeEach(async () => {
+      await open(2, '    indented\nflat\n\tafter a tab\n');
+    });
+
+    it('continues two columns past its indentation, a tab counted at the tab size', async () => {
+      await set('wrap', true);
+
+      expect(hangs()).toEqual(['6ch', '2ch', '6ch', null]);
+    });
+
+    it('hangs nothing while lines scroll sideways, and comes back with wrapping', async () => {
+      expect(hangs()).toEqual([null, null, null, null]);
+
+      await set('wrap', true);
+      await set('wrap', false);
+      expect(hangs()).toEqual([null, null, null, null]);
+
+      await set('wrap', true);
+      expect(hangs()[0]).toBe('6ch');
+    });
+
+    it('measures a tab again when the tab size changes', async () => {
+      await set('wrap', true);
+      view().dispatch({ effects: StateEffect.appendConfig.of(EditorState.tabSize.of(2)) });
+      await fixture.whenStable();
+
+      expect(hangs()[2]).toBe('4ch');
+    });
+
+    it('follows a line re-indented', async () => {
+      await set('wrap', true);
+      type('  ', 0);
+      await fixture.whenStable();
+
+      expect(hangs()[0]).toBe('8ch');
+    });
+
+    it('stops growing at half the width of the text', async () => {
+      Object.defineProperty(view().contentDOM, 'clientWidth', { configurable: true, value: 401 });
+      await set('wrap', true);
+      await frame();
+
+      expect(view().dom.style.getPropertyValue('--hang-cap')).toBe('200px');
+
+      await set('wrap', false);
+      expect(view().dom.style.getPropertyValue('--hang-cap')).toBe('');
+    });
   });
 
   it("loads the grammar of the snippet's language, and another when it changes", async () => {

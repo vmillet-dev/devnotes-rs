@@ -3038,7 +3038,12 @@ knowing:
   keyboard's way out of a field that keeps Tab. An Escape CodeMirror used — closing its search
   panel, folding a selection to a caret — stops at the editor. Escape itself comes from the
   dialog shell, which only gives it to the modal in front.
-- **Long lines scroll sideways**; Preferences → Editor wraps them (`codeWrap`).
+- **Long lines scroll sideways**; Preferences → Editor wraps them (`codeWrap`). Wrapped, a row
+  continues two columns past its line's indentation (`code-editor/hanging-indent.ts`): a line
+  decoration on the visible lines only, `padding-left` and a negative `text-indent` of the same
+  width, so the first row stays put. The width stops at half the text's, measured in pixels on
+  the editor (`--hang-cap`): the two properties read a percentage against two different widths.
+  Wrapping off, the plugin is not there at all.
 - **The colours are the cards'**: `code-editor/theme.ts` maps Lezer's tags onto the variables
   `_code-theme.scss` gives highlight.js. Each language's grammar is a chunk of its own
   (`code-editor/languages.ts`), loaded the first time a snippet in it opens: the official

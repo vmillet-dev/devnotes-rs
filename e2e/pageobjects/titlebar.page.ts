@@ -100,6 +100,15 @@ export const settings = {
     await browser.pause(200);
   },
 
+  /** « Wrap long lines », written with OK. */
+  async setCodeWrap(on: boolean): Promise<void> {
+    await fileMenu.openPreferences();
+    await settings.open('general');
+    const toggle = $(testid('setting-code-wrap'));
+    if ((await toggle.isSelected()) !== on) await toggle.click();
+    await settings.close();
+  },
+
   theme: () => checkedSegment(SEGMENTED.theme),
   density: () => checkedSegment(SEGMENTED.density),
 };

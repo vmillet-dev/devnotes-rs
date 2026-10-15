@@ -38,12 +38,15 @@ import type { LanguageTag } from '@core/model/language.model';
 import type { CodeSelection } from '../code-selection';
 import { rewrite } from '../indentation';
 import { TAB_KEYS, applyEdit } from './editing';
+import { hangingIndent } from './hanging-indent';
 import { languageOf } from './languages';
 import { lineMarks, setLineMarks } from './line-marks';
 import { phrasesFrom } from './phrases';
 import { CODE_COLOURS, CODE_THEME } from './theme';
 
 const NO_LINES: ReadonlySet<number> = new Set();
+
+const WRAPPED: Extension = [EditorView.lineWrapping, hangingIndent];
 
 /** What came in through `content`: the overlay holds it already, it is not handed back. */
 const FROM_OUTSIDE = Annotation.define<boolean>();
@@ -120,7 +123,7 @@ export class CodeEditorComponent implements CodeSelection {
     });
 
     this.reconfigureOn(this.unit, () => indentUnit.of(this.indentUnit()));
-    this.reconfigureOn(this.wrapping, () => (this.wrap() ? EditorView.lineWrapping : []));
+    this.reconfigureOn(this.wrapping, () => (this.wrap() ? WRAPPED : []));
     this.reconfigureOn(this.phrases, () => EditorState.phrases.of(phrasesFrom(this.words())));
     this.reconfigureOn(this.attributes, () =>
       EditorView.contentAttributes.of({ 'aria-label': this.label() }),
@@ -235,7 +238,7 @@ export class CodeEditorComponent implements CodeSelection {
         untracked(() => [
           this.grammar.of(this.loadedGrammar),
           this.unit.of(indentUnit.of(this.indentUnit())),
-          this.wrapping.of(this.wrap() ? EditorView.lineWrapping : []),
+          this.wrapping.of(this.wrap() ? WRAPPED : []),
           this.phrases.of(EditorState.phrases.of(phrasesFrom(this.words()))),
           this.attributes.of(EditorView.contentAttributes.of({ 'aria-label': this.label() })),
           this.hint.of(placeholder(this.placeholder())),

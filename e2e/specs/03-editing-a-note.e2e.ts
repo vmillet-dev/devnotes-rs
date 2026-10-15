@@ -3,6 +3,7 @@ import { $, $$, browser, expect } from '@wdio/globals';
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
 import { spaces } from '../pageobjects/sidebar.page.js';
+import { settings } from '../pageobjects/titlebar.page.js';
 import { eventually, isInFront, press, reloadCanvas, testid, viewportSize } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
@@ -387,6 +388,40 @@ describe('Editing a note', () => {
     );
     expect(stored).toBe('  echo hi');
     // In every later file's canvas otherwise.
+    await bridge.deleteNotes([id]);
+    await bridge.purgeNotes([id]);
+    await reloadCanvas();
+  });
+
+  it('continues a wrapped line under its indentation, and scrolls it sideways unwrapped', async () => {
+    const wrapped = 'Wrapped under its indentation';
+    const query = 'https://api.example.com/v2/invoices?status=paid&customer=c_1042&page=';
+    const content = `class Invoices {\n    readonly url = '${query.repeat(5)}';\n}`;
+    const { id } = await bridge.createNote(draft({ spaceId, title: wrapped, content, language: 'ts' }));
+    await settings.setCodeWrap(true);
+    await reloadCanvas();
+
+    await canvas.openNote(wrapped);
+    const rows = await eventually(
+      () => editor.wrappedRows('readonly url'),
+      (measured) => measured.rowStarts.length > 1,
+      'the long line on several rows',
+    );
+    // The first row keeps its indentation; the next start two characters right of its text.
+    expect(rows.rowStarts[0]).toBeLessThan(rows.textLeft);
+    expect((rows.rowStarts[1]! - rows.textLeft) / rows.charWidth).toBeCloseTo(2, 0);
+    await editor.close();
+
+    await settings.setCodeWrap(false);
+    await canvas.openNote(wrapped);
+    await eventually(
+      () => editor.wrappedRows('readonly url'),
+      (measured) => measured.rowStarts.length === 1,
+      'the long line on one row',
+    );
+    expect(await editor.codeScrollsSideways()).toBe(true);
+    await editor.close();
+
     await bridge.deleteNotes([id]);
     await bridge.purgeNotes([id]);
     await reloadCanvas();

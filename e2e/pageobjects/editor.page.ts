@@ -17,6 +17,12 @@ import {
   testid,
 } from '../support/app.js';
 
+export interface WrappedRows {
+  readonly rowStarts: number[];
+  readonly textLeft: number;
+  readonly charWidth: number;
+}
+
 /**
  * Title, body and source commit on blur, so every setter here blurs before returning:
  * a spec asserting right after typing would be asserting on a draft nothing has saved.
@@ -156,6 +162,52 @@ export const editor = {
       offset,
     );
   },
+
+  /**
+   * Where each row of the first line holding `text` starts on screen, top to bottom, and where
+   * its first character that is not indentation sits — measured glyph by glyph.
+   */
+  wrappedRows: (text: string): Promise<WrappedRows> =>
+    browser.execute(
+      (selector: string, wanted: string) => {
+        const line = [...document.querySelectorAll(`${selector} .cm-line`)].find((each) =>
+          each.textContent?.includes(wanted),
+        );
+        const starts = new Map<number, number>();
+        let textLeft = Number.NaN;
+        let charWidth = Number.NaN;
+        if (!line) return { rowStarts: [], textLeft, charWidth };
+
+        const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT);
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          const chars = node.textContent ?? '';
+          for (let at = 0; at < chars.length; at++) {
+            const range = document.createRange();
+            range.setStart(node, at);
+            range.setEnd(node, at + 1);
+            const box = range.getBoundingClientRect();
+            if (box.width === 0) continue;
+            const row = Math.round(box.top);
+            starts.set(row, Math.min(starts.get(row) ?? Infinity, box.left));
+            if (Number.isNaN(textLeft) && !/\s/.test(chars[at]!)) {
+              textLeft = box.left;
+              charWidth = box.width;
+            }
+          }
+        }
+        const rowStarts = [...starts.entries()].sort(([a], [b]) => a - b).map(([, left]) => left);
+        return { rowStarts, textLeft, charWidth };
+      },
+      CODE_CONTENT,
+      text,
+    ),
+
+  /** Whether the code is wider than the editor, so that it scrolls sideways. */
+  codeScrollsSideways: () =>
+    browser.execute((selector: string) => {
+      const scroller = document.querySelector(`${selector} .cm-scroller`)!;
+      return scroller.scrollWidth > scroller.clientWidth;
+    }, testid('editor-body')),
 
   /** Focused, the caret where CodeMirror left it: at the start of a note just opened. */
   focusCode: () =>
