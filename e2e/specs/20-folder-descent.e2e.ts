@@ -62,6 +62,17 @@ describe('Opening a folder', () => {
     expect(await canvas.titles()).toEqual(['EXPLAIN lent sur join']);
   });
 
+  /** Nothing was searched: the list is named after the folder, not « Résultats ». */
+  it('names its list after the folder until something is searched in it', async () => {
+    const heading = () => browser.$('.canvas-section-title').getText();
+    expect(await heading()).toContain('Perf');
+
+    await canvas.search('EXPLAIN');
+    expect(await heading()).not.toContain('Perf');
+
+    await canvas.clearSearch();
+  });
+
   /** There is one place to go from here, so the switchers give way to the breadcrumb. */
   it('puts the space switcher and the view switch away while it is open', async () => {
     expect(await browser.$(testid('space-switcher')).isExisting()).toBe(false);

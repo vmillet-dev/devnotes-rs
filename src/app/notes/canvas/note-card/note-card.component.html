@@ -104,7 +104,7 @@
         [compact]="true"
       />
     } @else {
-      <!-- A tag or a checklist item put this note in the results, and neither is code. -->
+      <!-- A tag, a checklist item or a Note's line put this note in the results: none is code. -->
       <span class="card-snippet card-hit" data-testid="note-card-hit">
         @if (searchHit()?.field === 'tag') {
           <span class="hit-mark" aria-hidden="true">#</span>

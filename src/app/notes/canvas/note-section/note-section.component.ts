@@ -2,6 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output } f
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LANGUAGE_LABELS } from '@core/model/language.model';
 import { NoteSection } from '@core/model/note.model';
+import { FoldersStore } from '@core/state/folders.store';
+import { NotesQueryStore } from '@core/state/notes-query.store';
 import { NotesStore } from '@core/state/notes.store';
 import { NoteActivation, NoteCardComponent } from '../note-card/note-card.component';
 
@@ -14,6 +16,8 @@ import { NoteActivation, NoteCardComponent } from '../note-card/note-card.compon
 })
 export class NoteSectionComponent {
   private readonly notes = inject(NotesStore);
+  private readonly folders = inject(FoldersStore);
+  private readonly canvas = inject(NotesQueryStore);
 
   readonly section = input.required<NoteSection>();
 
@@ -23,21 +27,23 @@ export class NoteSectionComponent {
    * A translation key, or a language's own label: no label kept in two places. A dated section
    * is named by its key, a gathered one by what it gathers.
    */
-  protected readonly title = computed<{ key: string } | { text: string }>(() => {
-    const { key, group } = this.section();
-    if (group === null) return { key: `sections.${key}` };
+  protected readonly title = computed<{ key: string; params?: Record<string, string> } | { text: string }>(
+    () => {
+      const { key, group } = this.section();
+      if (group === null) return this.ungrouped(key);
 
-    switch (group.group) {
-      case 'priority':
-        return {
-          key: group.priority === 'none' ? 'sections.noPriority' : `notes.priority.${group.priority}`,
-        };
-      case 'kind':
-        return { key: `notes.kindPlural.${group.kind}` };
-      case 'language':
-        return { text: LANGUAGE_LABELS[group.language] };
-    }
-  });
+      switch (group.group) {
+        case 'priority':
+          return {
+            key: group.priority === 'none' ? 'sections.noPriority' : `notes.priority.${group.priority}`,
+          };
+        case 'kind':
+          return { key: `notes.kindPlural.${group.kind}` };
+        case 'language':
+          return { text: LANGUAGE_LABELS[group.language] };
+      }
+    },
+  );
 
   /** The hue of a priority section's dot. */
   protected readonly priority = computed(() => {
@@ -50,5 +56,19 @@ export class NoteSectionComponent {
 
   protected createNote(): void {
     this.notes.createNote();
+  }
+
+  /**
+   * An open folder answers one flat `results` section, which nothing searched: named after the
+   * folder until a search or a filter makes it results again.
+   */
+  private ungrouped(key: string): { key: string; params?: Record<string, string> } {
+    const folder = this.folders.activeFolder();
+    const searched = this.canvas.hasUserFilters() || this.canvas.activeFilter() !== 'all';
+    if (key === 'results' && folder && !searched) {
+      return { key: 'sections.inFolder', params: { name: folder.name } };
+    }
+
+    return { key: `sections.${key}` };
   }
 }
