@@ -133,6 +133,12 @@ export class PaletteStore {
     );
   }
 
+  /** « Copier tel quel » from the fields form: the whole body, the result holding a preview. */
+  async copyRaw(note: Note): Promise<void> {
+    const whole = await this.notifier.attempt('errors.noteReadFailed', () => this.repository.whole(note));
+    if (whole) await this.copyAndDismiss(whole.content, whole.title);
+  }
+
   cancelFill(): void {
     this._pendingFill.set(null);
   }
