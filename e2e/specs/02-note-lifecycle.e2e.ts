@@ -1,9 +1,9 @@
-import { $, expect } from '@wdio/globals';
+import { $, browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
-import { bottomGapOf, press, reopenSession, testid } from '../support/app.js';
-import { bridge, query } from '../support/bridge.js';
+import { bottomGapOf, press, reloadCanvas, reopenSession, testid } from '../support/app.js';
+import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
  * Creating a note writes nothing until it is worth saving, and the editor commits on the
@@ -51,6 +51,42 @@ describe('Creating a note, and finding it again', () => {
     expect(layout!.snippetTop).toBeLessThanOrEqual(10);
     // …because the copy and ⋯ buttons hang under the card's bottom edge, clear of the marks.
     expect(layout!.actionsBelowBottom).toBe(true);
+  });
+
+  /** The date is what a footer is for: the tags and the folder chip give way before it does. */
+  it('keeps the deadline whole in a footer full of a folder and tags', async () => {
+    const crowded = 'Renew the wildcard certificate';
+    const spaceId = await homeSpaceId();
+    const folder = await bridge.createFolder({ spaceId, name: 'Infrastructure et réseau' });
+    const { id } = await bridge.createNote(
+      draft({
+        spaceId,
+        title: crowded,
+        content: 'certbot renew',
+        tags: ['certificates', 'kubernetes', 'production'],
+        lifecycle: { kind: 'expires', at: new Date(Date.now() + 2 * 86_400_000).toISOString() },
+      }),
+    );
+    await bridge.fileNotes([id], folder.id);
+    await reloadCanvas();
+    await canvas.waitForCard(crowded);
+
+    const when = await browser.execute((wanted: string) => {
+      const shell = [...document.querySelectorAll('[data-testid="note-card"]')].find(
+        (each) =>
+          (each.querySelector('[data-testid="note-card-title"]')?.textContent ?? '').trim() === wanted,
+      );
+      const label = shell?.querySelector('.card-when');
+      return label
+        ? { whole: label.scrollWidth <= label.clientWidth, text: label.textContent?.trim() }
+        : null;
+    }, crowded);
+    expect(when?.whole).toBe(true);
+
+    await bridge.deleteNotes([id]);
+    await bridge.purgeNotes([id]);
+    await bridge.deleteFolder(folder.id);
+    await reloadCanvas();
   });
 
   it('materialises the draft exactly once, not once per committed field', async () => {
