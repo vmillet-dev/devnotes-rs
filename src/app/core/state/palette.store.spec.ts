@@ -155,6 +155,17 @@ describe('PaletteStore', () => {
     expect(harness.window.hidden).toBe(1);
   });
 
+  it('copies nothing and stays open when the whole body cannot be read', async () => {
+    harness.repository.failNext = new Error('bridge down');
+
+    await harness.store.copyRaw(
+      createNote({ id: 'note-2', title: 'Templated', content: 'psql', truncated: true }),
+    );
+
+    expect(harness.clipboard.content).toBe('');
+    expect(harness.store.isOpen()).toBe(true);
+  });
+
   it('drops the pending fill when the palette closes', async () => {
     harness.store.highlight(1);
     await harness.store.chooseHighlighted();
