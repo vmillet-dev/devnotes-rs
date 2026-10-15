@@ -210,6 +210,47 @@ describe('Todo lists', () => {
     }
   });
 
+  it('shows its two rows whole under a title that takes two lines', async () => {
+    const long = 'Before the billing service goes to production, every step of the release';
+    const spaceId = await homeSpaceId();
+    const { id } = await bridge.createNote(
+      draft({
+        spaceId,
+        title: long,
+        kind: 'checklist',
+        items: [
+          { text: 'Freeze the merges', done: true },
+          { text: 'Back the database up', done: false },
+          { text: 'Tell support', done: false },
+        ],
+      }),
+    );
+    await reloadCanvas();
+    await canvas.waitForCard(long);
+
+    // Read on the boxes: a row with no room was drawn above its list and cut.
+    const rows = await browser.execute(
+      (selector: string, wanted: string) => {
+        const shell = [...document.querySelectorAll(selector)].find((each) =>
+          (each.querySelector('[data-testid="note-card-title"]')?.textContent ?? '').includes(wanted),
+        );
+        const list = shell?.querySelector('.card-items')?.getBoundingClientRect();
+        if (!shell || !list) return null;
+        return [...shell.querySelectorAll('[data-testid="note-card-item"]')].map((row) => {
+          const box = row.getBoundingClientRect();
+          return box.top >= list.top - 1 && box.bottom <= list.bottom + 1 && box.right <= list.right + 1;
+        });
+      },
+      testid('note-card'),
+      long.slice(0, 20),
+    );
+    expect(rows).toEqual([true, true]);
+
+    await bridge.deleteNotes([id]);
+    await bridge.purgeNotes([id]);
+    await reloadCanvas();
+  });
+
   it('shows progress on the card', async () => {
     const card = await canvas.cardWithTitle(title);
     const progress = await card.$('[data-testid="note-card-progress"]').getText();

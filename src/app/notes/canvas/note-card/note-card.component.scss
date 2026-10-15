@@ -242,7 +242,8 @@ app-copy-button {
   color: var(--text-2);
 }
 
-// The marks never shrink; the folder chip gives way long before the date or the tags do.
+// The marks never shrink, and the date is what the footer is for: the folder chip and the tags
+// give way first.
 .card-footer {
   display: flex;
   align-items: center;
@@ -253,8 +254,11 @@ app-copy-button {
   color: var(--text-2);
 }
 
+// Kept whole while the chip and the tags can give way, which shrink weights alone did not
+// ensure; the cap leaves the rest a share in the rare footer that holds every mark.
 .card-when {
-  flex-shrink: 1;
+  flex-shrink: 0;
+  max-width: 70%;
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
@@ -318,7 +322,18 @@ app-copy-button {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
+  line-height: 1;
+}
+
+// Two rows of 24 px under a title on two lines leave a 150 px card short: the list's spacing
+// tightens, and a row with no room left wraps into a clipped column rather than being cut.
+.card-shell.checklist .card-title-row {
+  margin-bottom: 6px;
+}
+
+.card-shell.checklist .card-footer {
+  margin-top: 4px;
 }
 
 .progress-track {
@@ -346,13 +361,19 @@ app-copy-button {
 // In the flow: the card is not a button, so the items need no layer of their own.
 .card-items {
   flex: 1;
+  min-height: 0;
   margin: 0;
   padding: 0;
   list-style: none;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  flex-wrap: wrap;
+  align-content: flex-start;
   overflow: hidden;
+}
+
+.card-items li {
+  width: 100%;
 }
 
 .card-item {
