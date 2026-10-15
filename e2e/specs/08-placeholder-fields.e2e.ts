@@ -1,4 +1,4 @@
-import { expect } from '@wdio/globals';
+import { browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
@@ -51,6 +51,12 @@ describe('{{fields}} in a snippet', () => {
     await press('c');
 
     await fieldsForm.form().waitForExist({ timeout: 10_000 });
+    // In the first field, never on « Copier tel quel », where Enter copied the tokens unfilled.
+    await eventually(
+      () => browser.execute(() => document.activeElement?.getAttribute('data-field') ?? null),
+      (field) => field === 'host',
+      'the focus in the first field of the form',
+    );
     await fieldsForm.cancel();
   });
 

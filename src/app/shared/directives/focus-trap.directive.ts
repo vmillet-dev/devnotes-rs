@@ -1,4 +1,12 @@
-import { AfterViewInit, Directive, ElementRef, OnDestroy, inject } from '@angular/core';
+import {
+  AfterViewInit,
+  Directive,
+  ElementRef,
+  Injector,
+  OnDestroy,
+  afterNextRender,
+  inject,
+} from '@angular/core';
 
 /**
  * ⚠️ `:not([tabindex="-1"])` on every candidate, not only the last: a `<button tabindex="-1">`
@@ -25,11 +33,23 @@ const FOCUSABLE_SELECTOR = [
 })
 export class FocusTrapDirective implements AfterViewInit, OnDestroy {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
   private previouslyFocused: HTMLElement | null = null;
 
+  /**
+   * ⚠️ After the render, not in this hook: a dialog's content is drawn by its own components one
+   * pass later, and the first focusable here was a button below fields not yet there. A focus
+   * the content already placed inside is left where it is.
+   */
   ngAfterViewInit(): void {
     this.previouslyFocused = document.activeElement as HTMLElement | null;
-    this.focusableElements()[0]?.focus();
+    afterNextRender(
+      () => {
+        if (this.host.nativeElement.contains(document.activeElement)) return;
+        this.focusableElements()[0]?.focus();
+      },
+      { injector: this.injector },
+    );
   }
 
   ngOnDestroy(): void {

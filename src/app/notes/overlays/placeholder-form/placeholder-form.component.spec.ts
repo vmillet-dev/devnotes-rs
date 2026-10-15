@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
 import { Placeholder } from '@core/model/note.model';
 import { PlaceholderFormComponent } from './placeholder-form.component';
@@ -100,5 +100,33 @@ describe('PlaceholderFormComponent', () => {
 
   it('says how many values the snippet expects', () => {
     expect(fixture.nativeElement.querySelector('.fields-hint').textContent).toContain('2');
+  });
+
+  describe('opening', () => {
+    // jsdom only tracks `document.activeElement` for attached elements.
+    async function openAttached(placeholders: readonly Placeholder[]): Promise<void> {
+      fixture = TestBed.createComponent(PlaceholderFormComponent);
+      fixture.componentRef.setInput('placeholders', placeholders);
+      document.body.appendChild(fixture.nativeElement);
+      fixture.autoDetectChanges();
+      await fixture.whenStable();
+    }
+
+    afterEach(() => fixture.nativeElement.remove());
+
+    it('puts the focus in the first field, never on a button', async () => {
+      await openAttached(FIELDS);
+
+      expect(document.activeElement).toBe(inputs()[0]);
+    });
+
+    it('puts it in the first field still empty', async () => {
+      await openAttached([
+        { name: 'host', defaultValue: '', value: 'db.internal' },
+        { name: 'port', defaultValue: '5432', value: '' },
+      ]);
+
+      expect(document.activeElement).toBe(inputs()[1]);
+    });
   });
 });
