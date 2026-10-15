@@ -117,8 +117,8 @@ describe('KeyValueTableComponent', () => {
     expect(values.map((cell) => cell.getAttribute('aria-invalid'))).toEqual([null, null, 'true', null]);
     const said = all('[data-testid="http-kv-fault"]');
     expect(said.map((line) => line.textContent?.trim())).toEqual([
-      "Un nom d'en-tête ne contient ni espace, ni deux-points, ni accent : la ligne marquée ne peut pas être envoyée.",
-      "Une valeur d'en-tête tient sur une ligne, sans caractère de contrôle : la ligne marquée ne peut pas être envoyée.",
+      'Un nom d’en-tête ne contient ni espace, ni deux-points, ni accent : la ligne marquée ne peut pas être envoyée.',
+      'Une valeur d’en-tête tient sur une ligne, sans caractère de contrôle : la ligne marquée ne peut pas être envoyée.',
     ]);
     // The cell names the sentence that explains it.
     expect(names[1]!.getAttribute('aria-describedby')).toBe(said[0]!.id);

@@ -81,7 +81,7 @@ app-dialog {
   line-height: 1.4;
   color: var(--text-2);
   white-space: pre-wrap;
-  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 .trash-row-meta {

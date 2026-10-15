@@ -347,11 +347,11 @@
       "trailingCommas": "Trailing commas",
       "formatOnSave": "Format on save",
       "formattedTitle": "Formatted:",
-      "formattedList": "JavaScript, TypeScript, JSON, CSS, SCSS, HTML, Markdown, YAML, GraphQL.",
+      "formattedList": "{{list}}.",
       "notFormattedTitle": "Not by Prettier:",
-      "notFormattedList": "SQL, Python, Rust, Go, Java, C#, PHP, C, Shell, TOML, XML. The button is disabled there and says why."
+      "notFormattedList": "{{list}}. The button is disabled there and says why."
     },
-    "modifiedPrefix": "Updated",
+    "modifiedPrefix": "Modified",
     "noteKind": "Note",
     "noteStats": "Note · {count, plural, =0 {no words} one {# word} other {# words}} · saved as Markdown",
     "checklistStats": "{{done}}/{total, plural, one {# task} other {# tasks}}",
@@ -1004,7 +1004,7 @@
     "consequence": "{count, plural, =0 {The current text will be replaced, and not kept.} one {The current text and the newer version will be erased.} other {The current text and the # newer versions will be erased.}}",
     "back": "Back to the list",
     "restore": "Go back to this version",
-    "note": "Choose a version to see what would change. Only a snippet’s body is kept, the last twenty, and it does not travel with an export."
+    "note": "Choose a version to see what would change. The body of a snippet or a Note is kept, the last twenty — a todo list keeps none — and it does not travel with an export."
   },
   "libraries": {
     "title": "Libraries",

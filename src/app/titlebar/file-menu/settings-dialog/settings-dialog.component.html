@@ -62,7 +62,12 @@
     </div>
   } @else {
     <div class="settings-actions">
-      <p class="settings-hint">{{ 'settings.previewHint' | transloco }}</p>
+      <!-- Only where something previews: theme and density, on the general page. -->
+      <p class="settings-hint">
+        @if (activePage().id === 'general') {
+          {{ 'settings.previewHint' | transloco }}
+        }
+      </p>
       <div class="settings-buttons">
         <button type="button" class="settings-btn" data-testid="settings-cancel" (click)="discardAndClose()">
           {{ 'settings.cancel' | transloco }}

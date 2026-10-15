@@ -101,7 +101,7 @@ describe('ContainerSettingsDialogComponent', () => {
     name.dispatchEvent(new Event('input'));
     await vi.waitFor(() => expect(el('[data-testid="http-kv-row"]').dataset['fault']).toBe('name'));
     expect(el('[data-testid="http-kv-fault"]').textContent).toContain(
-      "Un nom d'en-tête ne contient ni espace",
+      'Un nom d’en-tête ne contient ni espace',
     );
     await fixture.whenStable();
 

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { LANGUAGE_LABELS } from '@core/model/language.model';
 import {
   DEFAULT_PRETTIER_SETTINGS,
   clampPrintWidth,
+  prettierLanguages,
   prettierOptions,
   readPrettierSettings,
 } from './format.model';
@@ -64,5 +66,24 @@ describe('prettierOptions', () => {
       semi: false,
       trailingComma: 'none',
     });
+  });
+});
+
+describe('prettierLanguages', () => {
+  it('names every language Prettier formats, in the format menu order', () => {
+    expect(prettierLanguages(true)).toBe(
+      'JSON, JavaScript, TypeScript, GraphQL, YAML, HTML, CSS, SCSS, Markdown',
+    );
+  });
+
+  it('names every other one but text, so a language added in Rust is listed without a word written', () => {
+    const others = prettierLanguages(false).split(', ');
+
+    expect(others).toContain('PowerShell');
+    expect(others).toContain('Elixir');
+    expect(others).not.toContain('Text');
+    expect(others.length + prettierLanguages(true).split(', ').length).toBe(
+      Object.keys(LANGUAGE_LABELS).length - 1,
+    );
   });
 });

@@ -101,7 +101,7 @@ describe('FileMenuComponent', () => {
     expect(options().map((option) => option.textContent?.trim())).toEqual([
       'Importer…',
       'Exporter tout…',
-      "Exporter l'espace actif…",
+      'Exporter l’espace actif…',
       'Exporter la sélection…',
       'Copier la sélection en Markdown',
       'Bibliothèques…',
@@ -150,15 +150,15 @@ describe('FileMenuComponent', () => {
   it('keeps "export this space" unavailable until a space is active', async () => {
     fileDialog.savePath = 'C:\\out\\space.json';
     await openMenu();
-    expect(optionLabelled("Exporter l'espace").getAttribute('aria-disabled')).toBe('true');
+    expect(optionLabelled('Exporter l’espace').getAttribute('aria-disabled')).toBe('true');
 
-    optionLabelled("Exporter l'espace").click();
+    optionLabelled('Exporter l’espace').click();
     await fixture.whenStable();
     expect(transferRepository.exportedTo).toBeNull();
 
     spaces.selectSpace('work');
     await fixture.whenStable();
-    optionLabelled("Exporter l'espace").click();
+    optionLabelled('Exporter l’espace').click();
     await declineProtection();
 
     await vi.waitFor(() => expect(transferRepository.exportedTo?.spaceId).toBe('work'));

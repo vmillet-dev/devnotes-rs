@@ -91,7 +91,7 @@ describe('GraphqlEditorComponent', () => {
 
     const problem = el('http-graphql-query-problem');
     expect(problem.textContent?.replace(/\s+/g, ' ').trim()).toBe(
-      "Ligne 1, colonne 7 : cette accolade n'est pas refermée.",
+      'Ligne 1, colonne 7 : cette accolade n’est pas refermée.',
     );
     expect(problem.dataset['fault']).toBe('unclosedBrace');
     // It warns: nothing but « Formater », which could not lay it out, is held back.

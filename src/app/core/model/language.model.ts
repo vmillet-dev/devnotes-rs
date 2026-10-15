@@ -34,21 +34,46 @@ export const LANGUAGE_LABELS: Record<LanguageTag, string> = {
   txt: 'TXT',
 };
 
-/** What a format is called in full, where its label is an abbreviation: what a filter also matches. */
-export const LANGUAGE_NAMES: Partial<Record<LanguageTag, string>> = {
+/** What each format is called in full, in a sentence: the one place a language is named. */
+export const LANGUAGE_FULL_NAMES: Record<LanguageTag, string> = {
+  json: 'JSON',
   js: 'JavaScript',
   ts: 'TypeScript',
   py: 'Python',
   rs: 'Rust',
+  go: 'Go',
+  java: 'Java',
   cs: 'C#',
+  php: 'PHP',
+  c: 'C',
+  sql: 'SQL',
+  graphql: 'GraphQL',
   yml: 'YAML',
+  toml: 'TOML',
+  xml: 'XML',
+  html: 'HTML',
+  css: 'CSS',
+  scss: 'SCSS',
   sh: 'Shell',
   ps1: 'PowerShell',
   kt: 'Kotlin',
   rb: 'Ruby',
+  swift: 'Swift',
+  dart: 'Dart',
   ex: 'Elixir',
   md: 'Markdown',
+  txt: 'Text',
 };
+
+/**
+ * The full name where the label is an abbreviation of something else — « YML », YAML — which a
+ * menu shows as a hint and a filter also matches. « TXT » keeps its label alone.
+ */
+export const LANGUAGE_NAMES: Partial<Record<LanguageTag, string>> = Object.fromEntries(
+  (Object.entries(LANGUAGE_FULL_NAMES) as [LanguageTag, string][]).filter(
+    ([id, name]) => id !== 'txt' && name.toUpperCase() !== LANGUAGE_LABELS[id],
+  ),
+);
 
 /** Kept when the value received is not (or no longer) recognised. */
 export const FALLBACK_LANGUAGE: LanguageTag = 'txt';

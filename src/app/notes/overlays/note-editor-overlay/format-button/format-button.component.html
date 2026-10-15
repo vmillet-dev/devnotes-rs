@@ -104,11 +104,11 @@
 
     <p class="panel-note">
       <strong>{{ 'editor.format.formattedTitle' | transloco }}</strong>
-      {{ 'editor.format.formattedList' | transloco }}
+      {{ 'editor.format.formattedList' | transloco: { list: formattedList } }}
     </p>
     <p class="panel-note">
       <strong>{{ 'editor.format.notFormattedTitle' | transloco }}</strong>
-      {{ 'editor.format.notFormattedList' | transloco }}
+      {{ 'editor.format.notFormattedList' | transloco: { list: notFormattedList } }}
     </p>
   </div>
 }

@@ -4,17 +4,17 @@
     "searchLabel": "Rechercher dans les notes",
     "searchPlaceholder": "Rechercher…",
     "searchHint": "Rechercher une note, un tag, du code",
-    "spaceSwitcherLabel": "Changer d'espace",
+    "spaceSwitcherLabel": "Changer d’espace",
     "allSpaces": "Tous les espaces",
     "newSpace": "Nouvel espace",
     "newSpaceLabel": "Nom du nouvel espace",
     "newSpacePlaceholder": "Nom de l'espace",
     "newSpaceSubmit": "Créer",
-    "spaceOptionsLabel": "Options de l'espace {{name}}",
+    "spaceOptionsLabel": "Options de l’espace {{name}}",
     "pinSpace": "Épingler cet espace",
     "unpinSpace": "Ne plus épingler",
     "pinnedSpace": "Espace épinglé",
-    "renameSpaceLabel": "Nouveau nom de l'espace",
+    "renameSpaceLabel": "Nouveau nom de l’espace",
     "renameSpaceSubmit": "Renommer",
     "moveNotesTo": "Déplacer les notes vers",
     "deleteSpace": "Supprimer",
@@ -81,7 +81,7 @@
     "kindLines": {
       "snippet": "Un bloc de code, son langage et ses champs à remplir.",
       "note": "Du texte mis en forme : titres, listes, liens, tableaux, blocs de code.",
-      "checklist": "Des étapes à cocher, dans l'ordre."
+      "checklist": "Des étapes à cocher, dans l’ordre."
     },
     "checklistProgress": "{{done}}/{{total}}",
     "checklistToggle": "Cocher la tâche {{text}}",
@@ -163,8 +163,8 @@
   "sidebar": {
     "library": "Espaces",
     "toggle": "Afficher ou masquer la barre latérale",
-    "expand": "Ouvrir l'espace {{name}}",
-    "collapse": "Replier l'espace {{name}}",
+    "expand": "Ouvrir l’espace {{name}}",
+    "collapse": "Replier l’espace {{name}}",
     "noFolders": "Aucun dossier",
     "resize": "Largeur de la barre latérale"
   },
@@ -224,7 +224,7 @@
   },
   "sections": {
     "pinned": "Épinglées",
-    "today": "Aujourd'hui",
+    "today": "Aujourd’hui",
     "week": "Cette semaine",
     "older": "Plus anciennes",
     "results": "Résultats",
@@ -300,11 +300,11 @@
     "removeTag": "Retirer le tag {{tag}}",
     "delete": "Supprimer",
     "deleteConfirm": "Confirmer ?",
-    "close": "Fermer l'éditeur",
+    "close": "Fermer l’éditeur",
     "header": {
       "title": "En-tête",
-      "fold": "Replier l'en-tête",
-      "unfold": "Déplier l'en-tête",
+      "fold": "Replier l’en-tête",
+      "unfold": "Déplier l’en-tête",
       "show": "Afficher",
       "tags": "{count, plural, one {# tag} other {# tags}}",
       "attachments": "{count, plural, one {# pièce jointe} other {# pièces jointes}}"
@@ -326,9 +326,9 @@
       "undo": "Annuler",
       "undoKeys": "Ctrl Z",
       "unchanged": "Déjà formaté : rien à changer.",
-      "syntax": "Erreur de syntaxe ligne {{line}}, colonne {{column}} : le texte n'a pas changé.",
-      "fields": "Un champ n'aurait pas survécu au formatage : le texte n'a pas changé.",
-      "failed": "Prettier n'a pas pu formater ce texte.",
+      "syntax": "Erreur de syntaxe ligne {{line}}, colonne {{column}} : le texte n’a pas changé.",
+      "fields": "Un champ n’aurait pas survécu au formatage : le texte n’a pas changé.",
+      "failed": "Prettier n’a pas pu formater ce texte.",
       "footer": "Prettier 3 · réglages de la bibliothèque",
       "settings": "Réglages du formatage",
       "scope": "pour toute la bibliothèque",
@@ -345,11 +345,11 @@
       "quotesDouble": "Doubles",
       "semicolons": "Points-virgules",
       "trailingCommas": "Virgules finales",
-      "formatOnSave": "Formater à l'enregistrement",
+      "formatOnSave": "Formater à l’enregistrement",
       "formattedTitle": "Formatés :",
-      "formattedList": "JavaScript, TypeScript, JSON, CSS, SCSS, HTML, Markdown, YAML, GraphQL.",
+      "formattedList": "{{list}}.",
       "notFormattedTitle": "Pas par Prettier :",
-      "notFormattedList": "SQL, Python, Rust, Go, Java, C#, PHP, C, Shell, TOML, XML. Le bouton y est désactivé et dit pourquoi."
+      "notFormattedList": "{{list}}. Le bouton y est désactivé et dit pourquoi."
     },
     "modifiedPrefix": "Modifiée",
     "noteKind": "Note",
@@ -363,10 +363,10 @@
     "toggleItem": "Cocher la tâche {{text}}"
   },
   "lifecycle": {
-    "neverExpires": "N'expire jamais"
+    "neverExpires": "N’expire jamais"
   },
   "time": {
-    "justNow": "à l'instant",
+    "justNow": "à l’instant",
     "minutesAgo": "il y a {{count}} min",
     "hoursAgo": "il y a {{count}}h",
     "daysAgo": "il y a {{count}}j",
@@ -396,31 +396,31 @@
     "unexpected": "Une erreur inattendue est survenue.",
     "ipcFailed": "La communication avec le moteur natif a échoué ({{command}}).",
     "notesLoadFailed": "Impossible de charger les notes.",
-    "noteSaveFailed": "Impossible d'enregistrer la note. Votre texte est toujours à l'écran.",
+    "noteSaveFailed": "Impossible d’enregistrer la note. Votre texte est toujours à l’écran.",
     "noteCreateFailed": "Impossible de créer la note.",
     "noteDuplicateFailed": "Impossible de dupliquer la note.",
     "noteReadFailed": "Impossible de lire la note.",
     "noteDeleteFailed": "Impossible de supprimer la note. Elle est toujours là.",
     "noteMoveFailed": "La note n’a pas pu être déplacée.",
     "spacesLoadFailed": "Impossible de charger les espaces.",
-    "spaceCreateFailed": "Impossible de créer l'espace.",
-    "spaceRenameFailed": "Impossible de renommer l'espace.",
+    "spaceCreateFailed": "Impossible de créer l’espace.",
+    "spaceRenameFailed": "Impossible de renommer l’espace.",
     "spacePinFailed": "Impossible d’épingler cet espace.",
-    "spaceDeleteFailed": "Impossible de supprimer l'espace. Ses notes n'ont pas bougé.",
+    "spaceDeleteFailed": "Impossible de supprimer l’espace. Ses notes n’ont pas bougé.",
     "spaceNameTaken": "Un espace nommé « {{name}} » existe déjà.",
-    "spaceRequired": "Créez d'abord un espace pour y ranger vos notes.",
-    "noteGone": "Cette note n'existe plus.",
-    "spaceGone": "Cet espace n'existe plus.",
+    "spaceRequired": "Créez d’abord un espace pour y ranger vos notes.",
+    "noteGone": "Cette note n’existe plus.",
+    "spaceGone": "Cet espace n’existe plus.",
     "invalidInput": "Valeur refusée par le moteur : {{field}}.",
     "storageUnavailable": "Le stockage est indisponible. Redémarrez {{app}}.",
     "wrongPassphrase": "Phrase de passe incorrecte.",
     "locked": "La bibliothèque est verrouillée.",
     "libraryDamaged": "Cette bibliothèque est endommagée et ne peut pas être ouverte.",
-    "setAsideFailed": "La bibliothèque n'a pas pu être mise de côté. Rien n'a été déplacé.",
+    "setAsideFailed": "La bibliothèque n’a pas pu être mise de côté. Rien n’a été déplacé.",
     "passphraseRequired": "Ce fichier est protégé par une phrase de passe.",
     "updateFailed": "La mise à jour a échoué. {{app}} reste utilisable dans sa version actuelle.",
     "updateCheckFailed": "La recherche de mise à jour a échoué. Réessayez plus tard.",
-    "attachmentGone": "Cette pièce jointe n'existe plus.",
+    "attachmentGone": "Cette pièce jointe n’existe plus.",
     "revisionGone": "Cette version n’existe plus.",
     "libraryGone": "Cette bibliothèque n’existe plus.",
     "libraryOpen": "Impossible tant que la bibliothèque est ouverte.",
@@ -429,27 +429,27 @@
     "backupGone": "Cette copie n’existe plus.",
     "backupUnopenable": "Cette copie ne peut pas être ouverte : sa clé n’a pas été copiée avec elle.",
     "fileAccess": "Le fichier est inaccessible.",
-    "importFormat": "Ce fichier n'est pas un export {{app}} lisible par cette version.",
+    "importFormat": "Ce fichier n’est pas un export {{app}} lisible par cette version.",
     "trashLoadFailed": "Impossible de charger la corbeille.",
-    "trashActionFailed": "L'opération sur la corbeille a échoué.",
+    "trashActionFailed": "L’opération sur la corbeille a échoué.",
     "tagsLoadFailed": "Impossible de charger les tags.",
-    "tagActionFailed": "L'opération sur les tags a échoué.",
-    "bulkActionFailed": "L'action sur la sélection a échoué.",
-    "exportFailed": "L'export a échoué. Rien n'a été écrit.",
-    "importFailed": "L'import a échoué.",
+    "tagActionFailed": "L’opération sur les tags a échoué.",
+    "bulkActionFailed": "L’action sur la sélection a échoué.",
+    "exportFailed": "L’export a échoué. Rien n’a été écrit.",
+    "importFailed": "L’import a échoué.",
     "shareFailed": "Impossible de préparer le partage.",
-    "attachFailed": "Impossible d'ajouter la pièce jointe.",
+    "attachFailed": "Impossible d’ajouter la pièce jointe.",
     "attachmentReadFailed": "Impossible de lire la pièce jointe.",
     "attachmentDeleteFailed": "Impossible de retirer la pièce jointe.",
     "copyFailed": "La copie dans le presse-papier a échoué.",
-    "attachmentOpenFailed": "Impossible d'ouvrir la pièce jointe avec une application.",
-    "attachmentSaveFailed": "Impossible d'enregistrer la pièce jointe à cet emplacement.",
+    "attachmentOpenFailed": "Impossible d’ouvrir la pièce jointe avec une application.",
+    "attachmentSaveFailed": "Impossible d’enregistrer la pièce jointe à cet emplacement.",
     "variablesLoadFailed": "Impossible de charger les variables.",
-    "variablesSaveFailed": "Impossible d'enregistrer les variables.",
-    "passphraseChangeFailed": "Impossible de changer la phrase de passe. L'ancienne ouvre toujours la bibliothèque.",
+    "variablesSaveFailed": "Impossible d’enregistrer les variables.",
+    "passphraseChangeFailed": "Impossible de changer la phrase de passe. L’ancienne ouvre toujours la bibliothèque.",
     "unlockFailed": "Le déverrouillage a échoué.",
     "vaultStateFailed": "Impossible de savoir si la bibliothèque est chiffrée.",
-    "undoFailed": "L'annulation a échoué. Rien n'a été remis en place.",
+    "undoFailed": "L’annulation a échoué. Rien n’a été remis en place.",
     "foldersLoadFailed": "Les dossiers n’ont pas pu être chargés.",
     "folderCreateFailed": "Le dossier « {{name}} » n’a pas pu être créé.",
     "folderRenameFailed": "Le dossier n’a pas pu être renommé.",
@@ -464,19 +464,19 @@
     "boardArrangeFailed": "Le tableau n’a pas pu être rangé.",
     "backupsListFailed": "Impossible de lire les copies de sauvegarde.",
     "backupRestoreFailed": "Impossible de restaurer cette copie. La bibliothèque est restée en place.",
-    "revisionsListFailed": "Impossible de lire l'historique de cette note.",
+    "revisionsListFailed": "Impossible de lire l’historique de cette note.",
     "revisionRestoreFailed": "Impossible de rétablir cette version.",
     "revisionDiffFailed": "Impossible de comparer cette version au texte actuel.",
     "librariesListFailed": "Impossible de lire la liste des bibliothèques.",
-    "libraryActionFailed": "L'opération sur la bibliothèque a échoué.",
+    "libraryActionFailed": "L’opération sur la bibliothèque a échoué.",
     "toolFailed": "L’outil n’a pas pu calculer son résultat.",
-    "httpItemGone": "Cet élément de collection n'existe plus.",
-    "httpEnvironmentGone": "Cet environnement n'existe plus.",
+    "httpItemGone": "Cet élément de collection n’existe plus.",
+    "httpEnvironmentGone": "Cet environnement n’existe plus.",
     "environmentNameTaken": "Un environnement « {{name}} » existe déjà.",
-    "httpVariable": "La variable « {{name}} » n'a pas de valeur : la requête ne peut pas partir.",
+    "httpVariable": "La variable « {{name}} » n’a pas de valeur : la requête ne peut pas partir.",
     "httpInvalidUrl": "Cette URL ne peut pas être envoyée : il lui faut http:// ou https:// et un hôte.",
-    "httpUnresolved": "Le nom d'hôte ne se résout pas.",
-    "httpRefused": "La connexion a été refusée : rien n'écoute à cette adresse.",
+    "httpUnresolved": "Le nom d’hôte ne se résout pas.",
+    "httpRefused": "La connexion a été refusée : rien n’écoute à cette adresse.",
     "httpTls": "La connexion sécurisée a échoué : certificat refusé ou protocole inattendu.",
     "httpTimeout": {
       "request": "Pas de réponse au bout de {{amount}} {{unit}}.",
@@ -485,24 +485,24 @@
       "default": "Pas de réponse au bout de {{amount}} {{unit}} (réglage par défaut)."
     },
     "httpTooManyRedirects": {
-      "request": "{count, plural, =0 {Redirection refusée : le réglage n'en permet aucune.} one {Trop de redirections : plus d'une.} other {Trop de redirections : plus de #.}}",
-      "folder": "{count, plural, =0 {Redirection refusée : le réglage n'en permet aucune (réglage hérité du dossier « {{name}} »).} one {Trop de redirections : plus d'une (réglage hérité du dossier « {{name}} »).} other {Trop de redirections : plus de # (réglage hérité du dossier « {{name}} »).}}",
-      "collection": "{count, plural, =0 {Redirection refusée : le réglage n'en permet aucune (réglage hérité de la collection « {{name}} »).} one {Trop de redirections : plus d'une (réglage hérité de la collection « {{name}} »).} other {Trop de redirections : plus de # (réglage hérité de la collection « {{name}} »).}}",
-      "default": "{count, plural, =0 {Redirection refusée : le réglage n'en permet aucune (réglage par défaut).} one {Trop de redirections : plus d'une (réglage par défaut).} other {Trop de redirections : plus de # (réglage par défaut).}}"
+      "request": "{count, plural, =0 {Redirection refusée : le réglage n’en permet aucune.} one {Trop de redirections : plus d’une.} other {Trop de redirections : plus de #.}}",
+      "folder": "{count, plural, =0 {Redirection refusée : le réglage n’en permet aucune (réglage hérité du dossier « {{name}} »).} one {Trop de redirections : plus d’une (réglage hérité du dossier « {{name}} »).} other {Trop de redirections : plus de # (réglage hérité du dossier « {{name}} »).}}",
+      "collection": "{count, plural, =0 {Redirection refusée : le réglage n’en permet aucune (réglage hérité de la collection « {{name}} »).} one {Trop de redirections : plus d’une (réglage hérité de la collection « {{name}} »).} other {Trop de redirections : plus de # (réglage hérité de la collection « {{name}} »).}}",
+      "default": "{count, plural, =0 {Redirection refusée : le réglage n’en permet aucune (réglage par défaut).} one {Trop de redirections : plus d’une (réglage par défaut).} other {Trop de redirections : plus de # (réglage par défaut).}}"
     },
     "httpFileUnreadable": "Le fichier {{path}} ne peut pas être lu.",
     "httpCancelled": "Envoi annulé.",
     "httpNetwork": "Erreur réseau.",
-    "httpWebsocketScheme": "Un WebSocket s'ouvre sur ws:// ou wss://.",
+    "httpWebsocketScheme": "Un WebSocket s’ouvre sur ws:// ou wss://.",
     "httpHeaderName": {
-      "request": "L'en-tête « {{header}} » ne peut pas être envoyé : son nom n'est pas valide.",
-      "folder": "L'en-tête « {{header}} », hérité du dossier « {{name}} », ne peut pas être envoyé : son nom n'est pas valide.",
-      "collection": "L'en-tête « {{header}} », hérité de la collection « {{name}} », ne peut pas être envoyé : son nom n'est pas valide."
+      "request": "L’en-tête « {{header}} » ne peut pas être envoyé : son nom n’est pas valide.",
+      "folder": "L’en-tête « {{header}} », hérité du dossier « {{name}} », ne peut pas être envoyé : son nom n’est pas valide.",
+      "collection": "L’en-tête « {{header}} », hérité de la collection « {{name}} », ne peut pas être envoyé : son nom n’est pas valide."
     },
     "httpHeaderValue": {
-      "request": "L'en-tête « {{header}} » ne peut pas être envoyé : sa valeur n'est pas valide.",
-      "folder": "L'en-tête « {{header}} », hérité du dossier « {{name}} », ne peut pas être envoyé : sa valeur n'est pas valide.",
-      "collection": "L'en-tête « {{header}} », hérité de la collection « {{name}} », ne peut pas être envoyé : sa valeur n'est pas valide."
+      "request": "L’en-tête « {{header}} » ne peut pas être envoyé : sa valeur n’est pas valide.",
+      "folder": "L’en-tête « {{header}} », hérité du dossier « {{name}} », ne peut pas être envoyé : sa valeur n’est pas valide.",
+      "collection": "L’en-tête « {{header}} », hérité de la collection « {{name}} », ne peut pas être envoyé : sa valeur n’est pas valide."
     },
     "httpGraphqlVariables": "Les variables GraphQL ne sont pas un objet JSON.",
     "httpWebsocketRefused": "Le serveur a refusé la connexion WebSocket (statut {{status}})."
@@ -564,7 +564,7 @@
     "emptyTrashConfirm": "Effacer définitivement",
     "deletedAt": "supprimée {{when}}",
     "purgesIn": "effacée dans {{count}} j",
-    "purgesToday": "effacée aujourd'hui",
+    "purgesToday": "effacée aujourd’hui",
     "untitled": "Sans titre",
     "checklistNote": "Liste de tâches",
     "emptyTrashCancel": "Annuler",
@@ -641,15 +641,15 @@
     "preview": "Aperçu de {{name}}",
     "size": "{{size}} Ko",
     "openPreview": "Afficher {{name}}",
-    "closePreview": "Fermer l'aperçu",
+    "closePreview": "Fermer l’aperçu",
     "open": "Ouvrir {{name}}",
     "save": "Enregistrer {{name}} sous…",
     "saved": "Pièce jointe enregistrée dans {{path}}.",
     "added": "« {{name}} » jointe à la note.",
     "dropHint": "Déposez un fichier ou collez une image (Ctrl+V) pour la joindre.",
-    "pasteEmpty": "Le presse-papier ne contient pas d'image.",
+    "pasteEmpty": "Le presse-papier ne contient pas d’image.",
     "zoom": "Agrandir {{name}}",
-    "closeZoom": "Fermer l'image"
+    "closeZoom": "Fermer l’image"
   },
   "undo": {
     "deleted": "{count, plural, one {# note mise} other {# notes mises}} à la corbeille",
@@ -666,7 +666,7 @@
     "menuLabel": "Fichier",
     "import": "Importer…",
     "exportAll": "Exporter tout…",
-    "exportSpace": "Exporter l'espace actif…",
+    "exportSpace": "Exporter l’espace actif…",
     "exportSelection": "Exporter la sélection…",
     "copyMarkdown": "Copier la sélection en Markdown",
     "quit": "Quitter {{app}}",
@@ -692,14 +692,14 @@
     "working": "En cours…",
     "copied": "{notes, plural, one {# note copiée} other {# notes copiées}} en Markdown dans le presse-papier.",
     "needsSelection": "Sélectionnez au moins une note.",
-    "emptyLibrary": "Rien à exporter : cette bibliothèque n'a aucune note.",
+    "emptyLibrary": "Rien à exporter : cette bibliothèque n’a aucune note.",
     "preferences": "Préférences…",
     "importedIntoFolders": "{notes, plural, =0 {Aucune note importée} one {# note importée} other {# notes importées}} depuis {{path}} dans {folders, plural, one {# nouveau dossier} other {# nouveaux dossiers}}, {skipped, plural, one {# ignorée} other {# ignorées}}."
   },
   "shortcuts": {
     "unavailable": "{count, plural, one {Raccourci global indisponible} other {Raccourcis globaux indisponibles}} : {{list}}. Une autre application {count, plural, one {l’utilise} other {les utilise}} déjà.",
     "title": "Raccourcis clavier",
-    "subtitle": "Les touches actives selon l'endroit où vous êtes. Les lettres nues n'agissent que sur le canevas, jamais pendant une saisie.",
+    "subtitle": "Les touches actives selon l’endroit où vous êtes. Les lettres nues n’agissent que sur le canevas, jamais pendant une saisie.",
     "editHint": "Les raccourcis se règlent dans Fichier → Préférences → Raccourcis.",
     "close": "Fermer",
     "groups": {
@@ -744,10 +744,10 @@
       "align": "Aligner les cartes libres (tableau)"
     },
     "editor": {
-      "close": "Quitter le code, puis fermer l'éditeur en enregistrant",
+      "close": "Quitter le code, puis fermer l’éditeur en enregistrant",
       "newItem": "Ajouter un item sous celui-ci",
       "removeItem": "Retirer un item vide",
-      "moveItem": "Déplacer l'item dans la liste",
+      "moveItem": "Déplacer l’item dans la liste",
       "format": "Formater le snippet avec Prettier",
       "find": "Chercher dans le code",
       "replace": "Remplacer dans le code",
@@ -828,18 +828,18 @@
       "passphrase": "Phrase de passe",
       "change": "Changer…",
       "changing": "Changement…",
-      "note": "Elle ouvre la bibliothèque à chaque lancement. La changer ne rechiffre rien : les notes restent scellées avec la même clé, d'où une seconde plutôt qu'une réécriture.",
+      "note": "Elle ouvre la bibliothèque à chaque lancement. La changer ne rechiffre rien : les notes restent scellées avec la même clé, d’où une seconde plutôt qu’une réécriture.",
       "dialogTitle": "Changer la phrase de passe",
-      "dialogLead": "La nouvelle s'applique au prochain lancement. Cette session continue telle quelle.",
+      "dialogLead": "La nouvelle s’applique au prochain lancement. Cette session continue telle quelle.",
       "current": "Phrase actuelle",
       "next": "Nouvelle phrase",
       "cancel": "Annuler",
-      "changed": "Phrase de passe changée. L'ancienne n'ouvre plus la bibliothèque ni les copies gardées à côté.",
+      "changed": "Phrase de passe changée. L’ancienne n’ouvre plus la bibliothèque ni les copies gardées à côté.",
       "automaticBackups": "Copier la bibliothèque au lancement",
       "backupsNote": "Au plus une copie par jour, les trois dernières gardées à côté de la bibliothèque — de quoi couvrir une corbeille vidée ou une mise à jour ratée. Pas une protection contre un disque mort : pour ça, exportez ailleurs.",
-      "changedOneLeft": "Phrase de passe changée, mais une copie n'a pas pu être réenveloppée : elle s'ouvre encore avec l'ancienne phrase.",
-      "changedSomeLeft": "Phrase de passe changée, mais {{count}} copies n'ont pas pu être réenveloppées : elles s'ouvrent encore avec l'ancienne phrase.",
-      "copiesNote": "Les copies gardées à côté de la bibliothèque sont réenveloppées avec elle. Un fichier de clé que vous auriez copié ailleurs, lui, s'ouvrira toujours avec l'ancienne phrase.",
+      "changedOneLeft": "Phrase de passe changée, mais une copie n’a pas pu être réenveloppée : elle s’ouvre encore avec l’ancienne phrase.",
+      "changedSomeLeft": "Phrase de passe changée, mais {{count}} copies n’ont pas pu être réenveloppées : elles s’ouvrent encore avec l’ancienne phrase.",
+      "copiesNote": "Les copies gardées à côté de la bibliothèque sont réenveloppées avec elle. Un fichier de clé que vous auriez copié ailleurs, lui, s’ouvrira toujours avec l’ancienne phrase.",
       "backups": "Copies de sauvegarde",
       "access": "Accès",
       "backupsLimit": "Une copie emporte les notes, la clé qui les ouvre et les pièces jointes. Celles-ci sont liées plutôt que dupliquées, partagées avec la bibliothèque : une copie ne coûte guère plus que ses notes."
@@ -859,16 +859,16 @@
       "valuePlaceholder": "db.internal",
       "add": "Ajouter une variable",
       "remove": "Retirer {{name}}",
-      "empty": "Aucune variable pour l'instant.",
+      "empty": "Aucune variable pour l’instant.",
       "duplicate": "Nom en double : {{names}}. Seule la dernière ligne sera gardée.",
       "nameRule": "Un nom se limite aux lettres, chiffres, tirets et soulignés."
     },
     "shortcuts": {
       "reset": "Rétablir",
       "globalNote": "Ces trois-là agissent partout, fenêtre fermée comprise : ils demandent donc au moins un modificateur, sans quoi la touche serait avalée dans toutes vos applications. Un raccourci déjà pris par une autre application est signalé au démarrage.",
-      "canvasNote": "Ceux-ci n'agissent que sur le canevas, jamais pendant une saisie : une lettre nue suffit. Cliquez dans le champ puis composez la combinaison.",
+      "canvasNote": "Ceux-ci n’agissent que sur le canevas, jamais pendant une saisie : une lettre nue suffit. Cliquez dans le champ puis composez la combinaison.",
       "areasNote": "Celui-ci agit dans les trois zones — Notes, Outils et HTTP — et, avec Ctrl ou Alt, pendant une saisie aussi.",
-      "fixedNote": "Les flèches, Échap, Tab et les clics avec Ctrl ou Maj ne se déplacent pas : ce sont la navigation, la sortie et la sélection, et une bibliothèque où l'on ne peut plus reculer serait pire qu'une touche mal placée.",
+      "fixedNote": "Les flèches, Échap, Tab et les clics avec Ctrl ou Maj ne se déplacent pas : ce sont la navigation, la sortie et la sélection, et une bibliothèque où l’on ne peut plus reculer serait pire qu’une touche mal placée.",
       "taken": "{{accelerator}} est déjà pris par « {{action}} ».",
       "needsModifier": "Un raccourci global demande au moins Ctrl, Alt, Maj ou Super.",
       "reserved": "Cette touche est réservée à la navigation.",
@@ -884,12 +884,12 @@
   },
   "gettingStarted": {
     "title": "Prise en main",
-    "subtitle": "Ce que {{app}} sait faire, dans l'ordre où on le rencontre.",
+    "subtitle": "Ce que {{app}} sait faire, dans l’ordre où on le rencontre.",
     "close": "Fermer",
     "chapters": {
       "notes": {
         "title": "Des notes et des snippets",
-        "body": "Une note porte un titre, un corps coloré selon son langage, une source et des tags. Cliquez une carte pour l'ouvrir — ou copiez-la sans l'ouvrir, depuis son propre bouton."
+        "body": "Une note porte un titre, un corps coloré selon son langage, une source et des tags. Cliquez une carte pour l’ouvrir — ou copiez-la sans l’ouvrir, depuis son propre bouton."
       },
       "spaces": {
         "title": "Des espaces pour ranger",
@@ -897,7 +897,7 @@
       },
       "folders": {
         "title": "Des dossiers, et un tableau",
-        "body": "Un dossier découpe un espace en régions nommées et colorées, et la vue « Tableau » les montre comme telles : on y range une carte en la glissant, on l'en sort en la lâchant sur le fond. Sans souris : {{check}} pour cocher, puis « Ranger dans »."
+        "body": "Un dossier découpe un espace en régions nommées et colorées, et la vue « Tableau » les montre comme telles : on y range une carte en la glissant, on l’en sort en la lâchant sur le fond. Sans souris : {{check}} pour cocher, puis « Ranger dans »."
       },
       "organise": {
         "title": "Retrouver : recherche, tags, filtres",
@@ -909,15 +909,15 @@
       },
       "checklists": {
         "title": "Des listes à cocher",
-        "body": "Une note est un snippet, une note mise en forme ou une liste à cocher — et une liste se coche depuis la carte, sans l'ouvrir. Dans l'éditeur, Entrée ajoute un item et Alt avec une flèche le déplace."
+        "body": "Une note est un snippet, une note mise en forme ou une liste à cocher — et une liste se coche depuis la carte, sans l’ouvrir. Dans l’éditeur, Entrée ajoute un item et Alt avec une flèche le déplace."
       },
       "palette": {
         "title": "Coller sans quitter ce que vous faites",
-        "body": "{{palette}} ouvre la palette de collage par-dessus n'importe quelle application : tapez, choisissez, c'est dans le presse-papier. {{capture}} fait l'inverse et {{newNote}} ouvre une note vide, fenêtre fermée comprise."
+        "body": "{{palette}} ouvre la palette de collage par-dessus n’importe quelle application : tapez, choisissez, c’est dans le presse-papier. {{capture}} fait l’inverse et {{newNote}} ouvre une note vide, fenêtre fermée comprise."
       },
       "attachments": {
         "title": "Des pièces jointes",
-        "body": "Déposez un fichier sur la fenêtre pendant qu'une note est ouverte, ou collez une image : elle est copiée à côté de la base et rattachée à la note. La carte en affiche le compte, et l'aperçu s'agrandit au clic."
+        "body": "Déposez un fichier sur la fenêtre pendant qu’une note est ouverte, ou collez une image : elle est copiée à côté de la base et rattachée à la note. La carte en affiche le compte, et l’aperçu s’agrandit au clic."
       },
       "trash": {
         "title": "Une corbeille, et Ctrl+Z",
@@ -929,7 +929,7 @@
       },
       "http": {
         "title": "Des requêtes : HTTP, GraphQL, WebSocket",
-        "body": "La zone HTTP garde vos requêtes en collections, scellées comme vos notes. On choisit ce qu'on commence au moment de le créer — une requête HTTP, une requête GraphQL ou un WebSocket — depuis « Nouvelle requête », au bout des onglets, ou le menu d'une collection."
+        "body": "La zone HTTP garde vos requêtes en collections, scellées comme vos notes. On choisit ce qu’on commence au moment de le créer — une requête HTTP, une requête GraphQL ou un WebSocket — depuis « Nouvelle requête », au bout des onglets, ou le menu d’une collection."
       }
     },
     "chaptersLabel": "Chapitres du guide",
@@ -939,10 +939,10 @@
   },
   "whatsNew": {
     "title": "Nouveautés",
-    "subtitle": "Le journal des versions livré avec l'application. Volontairement non traduit.",
+    "subtitle": "Le journal des versions livré avec l’application. Volontairement non traduit.",
     "loading": "Lecture du journal…",
     "unavailable": "Journal des versions indisponible.",
-    "empty": "Aucune version décrite pour l'instant.",
+    "empty": "Aucune version décrite pour l’instant.",
     "installed": "installée",
     "close": "Fermer"
   },
@@ -963,17 +963,17 @@
     "unlockAction": "Déverrouiller",
     "working": "Déverrouillage…",
     "damagedTitle": "Cette bibliothèque est endommagée",
-    "damagedLead": "SQLite refuse de lire la base de {{app}}. Une phrase de passe n'y changera rien — c'est le fichier qui est abîmé, et y écrire maintenant l'abîmerait davantage.",
+    "damagedLead": "SQLite refuse de lire la base de {{app}}. Une phrase de passe n’y changera rien — c’est le fichier qui est abîmé, et y écrire maintenant l’abîmerait davantage.",
     "damagedAction": "La mettre de côté et repartir à neuf",
     "keyMissingTitle": "Cette bibliothèque a perdu son fichier de clé",
-    "keyMissingLead": "La base est là, mais pas vault.json, le fichier que votre phrase de passe ouvre. Sans lui, aucune phrase ne peut lire les notes, et une nouvelle n'ouvrirait rien de ce qu'elles contiennent.",
+    "keyMissingLead": "La base est là, mais pas vault.json, le fichier que votre phrase de passe ouvre. Sans lui, aucune phrase ne peut lire les notes, et une nouvelle n’ouvrirait rien de ce qu’elles contiennent.",
     "keyMissingNote": "⚠️ Si vous avez encore une copie de vault.json, dans une sauvegarde ou sur une autre machine, remettez-la à côté de la base et relancez {{app}}. Sinon, mettez la bibliothèque de côté : elle est déplacée, toujours scellée, dans un dossier à part, et {{app}} ouvre une bibliothèque vide.",
     "damagedNote": "⚠️ La base endommagée et ses pièces jointes sont déplacées dans un dossier à part, et ce qui reste lisible est récupéré à côté. Votre phrase de passe ne change pas. {{app}} ouvre ensuite une bibliothèque vide.",
     "setAside": "Bibliothèque mise de côté dans {{path}}. Saisissez votre phrase de passe pour repartir à neuf.",
     "creating": "Protection de la bibliothèque…",
     "forgottenLink": "Phrase de passe oubliée ?",
     "forgottenTitle": "Phrase de passe oubliée",
-    "forgottenLead": "Il n'y a pas de récupération : la phrase enveloppe la clé qui scelle les notes, et rien d'autre ne l'ouvre. Ce que {{app}} peut faire, c'est archiver la bibliothèque telle quelle et vous en ouvrir une neuve.",
+    "forgottenLead": "Il n’y a pas de récupération : la phrase enveloppe la clé qui scelle les notes, et rien d’autre ne l’ouvre. Ce que {{app}} peut faire, c’est archiver la bibliothèque telle quelle et vous en ouvrir une neuve.",
     "forgottenNote": "Vos notes ne sont pas récupérées : elles partent scellées et illisibles, dans un dossier daté à côté de la bibliothèque. Le fichier de clé part avec elles — si la phrase vous revient un jour, la copie sera toujours là. La nouvelle bibliothèque démarre vide, avec une phrase de votre choix.",
     "forgottenBack": "Réessayer la phrase",
     "forgottenAction": "Archiver et recommencer",
@@ -981,7 +981,7 @@
   },
   "backups": {
     "loading": "Lecture des copies…",
-    "none": "Aucune copie pour l'instant. La première est prise au prochain lancement.",
+    "none": "Aucune copie pour l’instant. La première est prise au prochain lancement.",
     "restore": "Restaurer…",
     "unopenable": "Sans clé : illisible",
     "confirm": "Remplacer la bibliothèque entière par la copie du {{when}}. Tout ce qui a été écrit depuis quitte la bibliothèque — rien n’est supprimé, l’actuelle est mise de côté dans « replaced ». Il faudra ressaisir la phrase de passe.",
@@ -1004,11 +1004,11 @@
     "consequence": "{count, plural, =0 {Le texte actuel sera remplacé, sans être gardé.} one {Le texte actuel et la version plus récente seront effacés.} other {Le texte actuel et les # versions plus récentes seront effacés.}}",
     "back": "Retour à la liste",
     "restore": "Revenir à cette version",
-    "note": "Choisissez une version pour voir ce qui changerait. Seul le corps des snippets est gardé, les vingt derniers, et il ne part pas dans les exports."
+    "note": "Choisissez une version pour voir ce qui changerait. Le corps des snippets et des Notes est gardé, les vingt derniers — une liste de tâches n’en garde pas — et il ne part pas dans les exports."
   },
   "libraries": {
     "title": "Bibliothèques",
-    "lead": "Chaque bibliothèque a sa propre base, ses pièces jointes, ses copies de sauvegarde et sa propre phrase de passe. Rien ne passe de l'une à l'autre.",
+    "lead": "Chaque bibliothèque a sa propre base, ses pièces jointes, ses copies de sauvegarde et sa propre phrase de passe. Rien ne passe de l’une à l’autre.",
     "open": "Ouverte",
     "unnamed": "Bibliothèque",
     "switch": "Ouvrir",
@@ -3041,7 +3041,7 @@
     }
   },
   "http": {
-    "failed": "L'opération sur les collections a échoué.",
+    "failed": "L’opération sur les collections a échoué.",
     "rail": {
       "title": "Collections",
       "newCollection": "Nouvelle collection",
@@ -3059,7 +3059,7 @@
           "collection": "Une collection ne se range pas dans une autre."
         }
       },
-      "empty": "Aucune collection pour l'instant.",
+      "empty": "Aucune collection pour l’instant.",
       "placeholders": {
         "collection": "Nom de la collection",
         "folder": "Nom du dossier",
@@ -3151,8 +3151,8 @@
       "remove": "Retirer",
       "removeRow": "Retirer {{key}}",
       "faults": {
-        "name": "Un nom d'en-tête ne contient ni espace, ni deux-points, ni accent : la ligne marquée ne peut pas être envoyée.",
-        "value": "Une valeur d'en-tête tient sur une ligne, sans caractère de contrôle : la ligne marquée ne peut pas être envoyée."
+        "name": "Un nom d’en-tête ne contient ni espace, ni deux-points, ni accent : la ligne marquée ne peut pas être envoyée.",
+        "value": "Une valeur d’en-tête tient sur une ligne, sans caractère de contrôle : la ligne marquée ne peut pas être envoyée."
       }
     },
     "save": {
@@ -3192,15 +3192,15 @@
       "hint": "Elles ne sont pas encore enregistrées.",
       "discard": "Fermer sans enregistrer",
       "connectedTitle": "Fermer « {{name}} » ?",
-      "connected": "Le WebSocket est connecté : fermer l'onglet coupe la connexion.",
+      "connected": "Le WebSocket est connecté : fermer l’onglet coupe la connexion.",
       "close": "Fermer"
     },
     "headers": {
       "implied": "Envoyés sans avoir été saisis",
       "from": {
-        "body": "d'après le corps",
+        "body": "d’après le corps",
         "default": "par défaut",
-        "url": "d'après l'URL"
+        "url": "d’après l’URL"
       }
     },
     "auth": {
@@ -3210,16 +3210,16 @@
         "none": "Aucune",
         "basic": "Basic",
         "bearer": "Bearer",
-        "apiKey": "Clé d'API"
+        "apiKey": "Clé d’API"
       },
       "inheritsShort": "héritée",
       "from": {
         "collection": "héritée de la collection {{name}}",
         "folder": "héritée du dossier {{name}}"
       },
-      "nothingAbove": "Rien au-dessus ne fixe d'authentification : aucune n'est envoyée.",
-      "placeFirst": "Une fois la requête enregistrée, elle prendra l'authentification de sa collection ou de son dossier.",
-      "noneHint": "Aucune authentification n'est envoyée.",
+      "nothingAbove": "Rien au-dessus ne fixe d’authentification : aucune n’est envoyée.",
+      "placeFirst": "Une fois la requête enregistrée, elle prendra l’authentification de sa collection ou de son dossier.",
+      "noneHint": "Aucune authentification n’est envoyée.",
       "username": "Utilisateur",
       "keyName": "Nom",
       "secrets": {
@@ -3248,7 +3248,7 @@
       "sentAs": "Envoyé en {{type}}",
       "format": "Formater",
       "noneHint": "La requête part sans corps.",
-      "unusual": "Un {{method}} avec un corps : beaucoup de serveurs l'ignorent ou le refusent.",
+      "unusual": "Un {{method}} avec un corps : beaucoup de serveurs l’ignorent ou le refusent.",
       "unusualShort": "sur un {{method}}",
       "toNone": "Passer à Aucun",
       "partKind": "Type",
@@ -3256,25 +3256,25 @@
       "partFile": "Fichier",
       "chooseFile": "Choisir un fichier…",
       "noFile": "Aucun fichier choisi",
-      "fileHint": "Le fichier est lu au moment de l'envoi : ses octets ne sont jamais gardés dans la bibliothèque."
+      "fileHint": "Le fichier est lu au moment de l’envoi : ses octets ne sont jamais gardés dans la bibliothèque."
     },
     "settings": {
       "title": {
         "collection": "Réglages de la collection {{name}}",
         "folder": "Réglages du dossier {{name}}"
       },
-      "hint": "Ses requêtes en héritent : une requête dont l'auth est « Héritée » prend celle-ci, et ses en-têtes s'ajoutent aux leurs.",
+      "hint": "Ses requêtes en héritent : une requête dont l’auth est « Héritée » prend celle-ci, et ses en-têtes s’ajoutent aux leurs.",
       "variables": "Variables",
-      "variablesHint": "au-dessus de l'environnement, sous un dossier et la requête"
+      "variablesHint": "au-dessus de l’environnement, sous un dossier et la requête"
     },
     "send": {
       "send": "Envoyer",
       "sendHint": "Envoyer (Ctrl+Entrée)",
       "cancel": "Annuler",
-      "failed": "La requête n'a pas pu être envoyée."
+      "failed": "La requête n’a pas pu être envoyée."
     },
     "split": {
-      "label": "Hauteur de la requête — flèches pour la changer, double-clic ou Entrée pour l'automatique",
+      "label": "Hauteur de la requête — flèches pour la changer, double-clic ou Entrée pour l’automatique",
       "auto": "automatique",
       "value": "{{share}} % pour la requête"
     },
@@ -3289,12 +3289,12 @@
       "kilobytes": "{{value}} Ko",
       "megabytes": "{{value}} Mo",
       "empty": "Réponse sans corps.",
-      "binary": "Corps binaire ({{type}}) : il n'est pas affiché.",
+      "binary": "Corps binaire ({{type}}) : il n’est pas affiché.",
       "cut": "Seul le premier Mo est affiché.",
-      "incomplete": "La lecture s'est arrêtée à 64 Mo : le fichier n'aura que ceux-là.",
+      "incomplete": "La lecture s’est arrêtée à 64 Mo : le fichier n’aura que ceux-là.",
       "saveFile": "Enregistrer dans un fichier…",
       "saved": "Réponse enregistrée dans {{path}}.",
-      "saveFailed": "La réponse n'a pas pu être enregistrée.",
+      "saveFailed": "La réponse n’a pas pu être enregistrée.",
       "redirects": "{count, plural, one {après # redirection} other {après # redirections}}",
       "graphqlErrors": "{count, plural, one {# erreur} other {# erreurs}}",
       "parts": "Parties de la réponse",
@@ -3339,22 +3339,22 @@
     "history": {
       "title": "Historique",
       "kept": "30 jours, 500 envois au plus",
-      "clear": "Vider l'historique",
-      "confirm": "{count, plural, one {Effacer l'entrée ?} other {Effacer les # entrées ?}}",
-      "cleared": "{count, plural, =0 {L'historique était déjà vide.} one {Une entrée effacée de l'historique.} other {# entrées effacées de l'historique.}}",
-      "today": "Aujourd'hui",
+      "clear": "Vider l’historique",
+      "confirm": "{count, plural, one {Effacer l’entrée ?} other {Effacer les # entrées ?}}",
+      "cleared": "{count, plural, =0 {L’historique était déjà vide.} one {Une entrée effacée de l’historique.} other {# entrées effacées de l’historique.}}",
+      "today": "Aujourd’hui",
       "yesterday": "Hier",
       "noAnswer": "échec",
-      "empty": "Rien d'envoyé pour l'instant : chaque envoi s'inscrit ici.",
+      "empty": "Rien d’envoyé pour l’instant : chaque envoi s’inscrit ici.",
       "choose": "Choisissez un envoi pour le relire.",
       "reopenInto": "Rouvrir dans {{name}}",
       "reopenDraft": "Rouvrir en brouillon",
       "replace": "« {{name}} » a des modifications : les remplacer par cet envoi ?",
       "replaceConfirm": "Remplacer",
-      "delete": "Supprimer l'envoi {{name}}",
-      "deleted": "Envoi « {{name}} » supprimé de l'historique.",
+      "delete": "Supprimer l’envoi {{name}}",
+      "deleted": "Envoi « {{name}} » supprimé de l’historique.",
       "resize": "Largeur de la liste des envois",
-      "failed": "L'historique n'a pas pu être lu."
+      "failed": "L’historique n’a pas pu être lu."
     },
     "graphql": {
       "query": "Requête",
@@ -3367,9 +3367,9 @@
       "variablesHint": "Un objet JSON : une valeur pour chaque $variable de la requête.",
       "problemAt": "Ligne {{line}}, colonne {{column}} :",
       "problems": {
-        "unclosedBrace": "cette accolade n'est pas refermée.",
-        "unclosedParenthesis": "cette parenthèse n'est pas refermée.",
-        "unclosedString": "cette chaîne n'est pas refermée.",
+        "unclosedBrace": "cette accolade n’est pas refermée.",
+        "unclosedParenthesis": "cette parenthèse n’est pas refermée.",
+        "unclosedString": "cette chaîne n’est pas refermée.",
         "strayBrace": "cette accolade ne ferme rien.",
         "strayParenthesis": "cette parenthèse ne ferme rien."
       },
@@ -3380,7 +3380,7 @@
     "socket": {
       "connect": "Connecter",
       "disconnect": "Déconnecter",
-      "failed": "Le WebSocket n'a pas pu s'ouvrir.",
+      "failed": "Le WebSocket n’a pas pu s’ouvrir.",
       "message": "Message à envoyer",
       "messagePlaceholder": "Texte ou JSON",
       "send": "Envoyer",
@@ -3388,10 +3388,10 @@
       "useTwin": "Utiliser {{url}}",
       "keep": "Garder",
       "saved": "Messages gardés",
-      "noneSaved": "Gardez un message pour le renvoyer d'un clic.",
+      "noneSaved": "Gardez un message pour le renvoyer d’un clic.",
       "remove": "Retirer {{name}}",
       "protocols": "Sous-protocoles demandés",
-      "protocolsHint": "Séparés par des virgules, dans l'ordre de préférence : Sec-WebSocket-Protocol.",
+      "protocolsHint": "Séparés par des virgules, dans l’ordre de préférence : Sec-WebSocket-Protocol.",
       "log": "Journal du WebSocket",
       "filter": "Filtrer les messages",
       "clear": "Effacer",
@@ -3399,7 +3399,7 @@
       "opened": "Connecté à {{url}}",
       "closed": "Fermé",
       "binary": "Message binaire",
-      "empty": "Connectez le WebSocket : ses messages s'inscrivent ici.",
+      "empty": "Connectez le WebSocket : ses messages s’inscrivent ici.",
       "phases": {
         "connecting": "Connexion…",
         "open": "Connecté",
@@ -3408,7 +3408,7 @@
       }
     },
     "transport": {
-      "timeoutMs": "Délai d'attente",
+      "timeoutMs": "Délai d’attente",
       "followRedirects": "Suivre les redirections",
       "maxRedirects": "Redirections au plus",
       "verifyTls": "Vérifier les certificats TLS",
@@ -3417,35 +3417,35 @@
       "byDefault": "Par défaut",
       "on": "Oui",
       "off": "Non",
-      "insecure": "Les certificats ne sont pas vérifiés : n'importe quel serveur peut se faire passer pour celui-ci. À réserver au développement."
+      "insecure": "Les certificats ne sont pas vérifiés : n’importe quel serveur peut se faire passer pour celui-ci. À réserver au développement."
     },
     "environments": {
       "title": "Environnements",
       "order": "La plus proche gagne : requête › dossier › collection › environnement › globales",
       "new": "＋ Nouvel environnement",
-      "newName": "Nom de l'environnement",
+      "newName": "Nom de l’environnement",
       "create": "Créer",
       "globals": "Globales",
       "globalsMeta": "{count, plural, =0 {Aucune variable} one {# variable} other {# variables}} · toutes les collections",
-      "globalsHint": "Valent pour toutes les collections, sous l'environnement actif.",
+      "globalsHint": "Valent pour toutes les collections, sous l’environnement actif.",
       "listTitle": "Environnements",
       "empty": "Aucun environnement. Créez Local, Staging, Production…",
       "active": "actif",
       "protectedBadge": "protégé",
       "count": "{count, plural, =0 {Aucune variable} one {# variable} other {# variables}}",
       "secrets": "{count, plural, one {# secrète} other {# secrètes}}",
-      "nameLabel": "Nom de l'environnement",
+      "nameLabel": "Nom de l’environnement",
       "use": "Utiliser",
-      "colour": "Couleur de l'environnement",
+      "colour": "Couleur de l’environnement",
       "protected": "Protégé",
-      "protectedNote": "Demande avant d'envoyer autre chose qu'un GET, un HEAD ou un OPTIONS, et avant d'ouvrir un WebSocket.",
+      "protectedNote": "Demande avant d’envoyer autre chose qu’un GET, un HEAD ou un OPTIONS, et avant d’ouvrir un WebSocket.",
       "duplicate": "Dupliquer",
       "copyName": "{{name}} (copie)",
       "delete": "Supprimer",
       "confirmDelete": "Supprimer « {{name}} » ?",
       "variables": "Variables",
-      "secretsCaption": "Secrets scellés dans la bibliothèque et masqués à l'écran.",
-      "failed": "Les environnements n'ont pas pu être lus ou enregistrés.",
+      "secretsCaption": "Secrets scellés dans la bibliothèque et masqués à l’écran.",
+      "failed": "Les environnements n’ont pas pu être lus ou enregistrés.",
       "pickerLabel": "Environnement actif : {{name}}",
       "activeTitle": "Environnement actif",
       "none": "Aucun",
@@ -3519,7 +3519,7 @@
       "hostOnly": "Hôte seul",
       "empty": "Aucun cookie : ceux que les réponses déposent apparaîtront ici.",
       "close": "Fermer",
-      "failed": "Les cookies n'ont pas pu être lus ou supprimés."
+      "failed": "Les cookies n’ont pas pu être lus ou supprimés."
     },
     "code": {
       "open": "</> Code",
