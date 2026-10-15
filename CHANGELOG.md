@@ -12,6 +12,14 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [0.12.1] - 2026-10-15
+
+### 🔧 Changed
+
+- Search the code through a bar of our own (#854)
+- Fold the editor's header, apart from the fields (#853)
+- Continue a wrapped line under its own indentation (#852)
+
 ## [0.12.0] - 2026-10-14
 
 ### ✨ Added
