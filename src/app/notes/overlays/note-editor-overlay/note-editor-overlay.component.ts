@@ -480,8 +480,7 @@ export class NoteEditorOverlayComponent {
     this.bodyView.set(view);
   }
 
-  /** Back to the code with the value selected, scrolled to a third of the way down. */
-  /** Side by side the code is already there; otherwise its tab is opened first. */
+  /** Back to the code with the value selected; side by side it is already there, otherwise its tab opens first. */
   protected showInCode(span: Span): void {
     if (!this.sideBySideShown()) this.bodyView.set('code');
     afterNextRender(() => this.codeSelection()?.reveal(span, true), { injector: this.injector });
@@ -725,7 +724,8 @@ export class NoteEditorOverlayComponent {
     this.addTypedTag();
   }
 
-  private addTypedTag(): void {
+  /** On Enter, on leaving the field, on folding and on every closing path: a typed tag is never dropped. */
+  protected addTypedTag(): void {
     const value = this.tagInputValue();
     this.tagInputValue.set('');
 
@@ -787,6 +787,7 @@ export class NoteEditorOverlayComponent {
     this.commitTitle();
     this.commitSource();
     this.commitContent();
+    this.addTypedTag();
     this.checklistEditor()?.commit();
     this.fieldsPanel()?.commit();
     this.store.closeOverlay();

@@ -1400,6 +1400,46 @@ describe('NoteEditorOverlayComponent', () => {
       expect(input.value).toBe('');
     });
 
+    it('adds the typed tag when the field is left', async () => {
+      fixture.componentRef.setInput('note', createNote({ tags: ['keep'] }));
+      await fixture.whenStable();
+      const emitted = patched('tags');
+
+      const input = fixture.nativeElement.querySelector('.tag-add-input') as HTMLInputElement;
+      await type(input, 'urgent');
+      input.dispatchEvent(new Event('blur'));
+      await fixture.whenStable();
+
+      expect(emitted).toEqual([['keep', 'urgent']]);
+    });
+
+    it('adds the typed tag when the editor closes, and only once after Enter', async () => {
+      fixture.componentRef.setInput('note', createNote({ tags: ['keep'] }));
+      await fixture.whenStable();
+      const emitted = patched('tags');
+
+      const input = fixture.nativeElement.querySelector('.tag-add-input') as HTMLInputElement;
+      await type(input, 'urgent');
+      fixture.debugElement.query(By.css('.close-btn')).triggerEventHandler('click');
+      await fixture.whenStable();
+
+      expect(emitted).toEqual([['keep', 'urgent']]);
+    });
+
+    it('does not add a tag twice when Enter came before the field was left', async () => {
+      fixture.componentRef.setInput('note', createNote({ tags: [] }));
+      await fixture.whenStable();
+      const emitted = patched('tags');
+
+      const input = fixture.nativeElement.querySelector('.tag-add-input') as HTMLInputElement;
+      await type(input, 'urgent');
+      input.form?.dispatchEvent(new Event('submit', { cancelable: true }));
+      input.dispatchEvent(new Event('blur'));
+      await fixture.whenStable();
+
+      expect(emitted).toEqual([['urgent']]);
+    });
+
     it('ignores a blank tag submission', async () => {
       fixture.componentRef.setInput('note', createNote({ tags: [] }));
       await fixture.whenStable();

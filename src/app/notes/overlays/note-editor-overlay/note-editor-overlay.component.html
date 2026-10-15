@@ -182,6 +182,7 @@
                 [placeholder]="'editor.addTagPlaceholder' | transloco"
                 [value]="tagInputValue()"
                 (input)="tagInputValue.set(tagInput.value)"
+                (blur)="addTypedTag()"
               />
             </form>
           </div>
