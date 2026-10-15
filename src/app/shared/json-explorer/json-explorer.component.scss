@@ -188,6 +188,11 @@
   border-left: 1px solid var(--line-soft);
   background: var(--bg-1);
   font-size: 12.5px;
+
+  // The panel scrolls as a whole: a shrinking child was the value preview, crushed to a line.
+  > * {
+    flex-shrink: 0;
+  }
 }
 
 // Narrow — beside the code, where the selection is lit in the code already — the graph keeps
