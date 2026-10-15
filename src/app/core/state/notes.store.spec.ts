@@ -355,6 +355,17 @@ describe('NotesStore', () => {
       expect(store.selectedNote()).toMatchObject({ spaceId: 'space-2', folderId: null, folder: null });
     });
 
+    it('moves a draft without a write: it has no row to batch', async () => {
+      const { store, repository } = await createNotesHarness([]);
+      const moveMany = vi.spyOn(repository, 'moveMany');
+      store.createNote('snippet');
+
+      await store.moveNote(DRAFT_ID, 'space-2');
+
+      expect(moveMany).not.toHaveBeenCalled();
+      expect(store.selectedNote()?.spaceId).toBe('space-2');
+    });
+
     it('offers nothing to undo when the note is already in that space', async () => {
       const { store } = await createNotesHarness([createNote({ id: 'a', spaceId: 'space-1' })]);
 

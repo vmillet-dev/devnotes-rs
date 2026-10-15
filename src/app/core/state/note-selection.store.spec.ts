@@ -190,8 +190,8 @@ describe('NoteSelectionStore', () => {
       expect(undo.banner()).toEqual({
         kind: 'move',
         previous: [
-          { noteId: 'a', spaceId: 'space-1' },
-          { noteId: 'b', spaceId: 'space-2' },
+          { noteId: 'a', spaceId: 'space-1', folderId: null },
+          { noteId: 'b', spaceId: 'space-2', folderId: null },
         ],
         count: 2,
       });
