@@ -9,10 +9,13 @@ app-dialog {
   container-type: inline-size;
   padding: 14px 20px;
   border-bottom: 1px solid var(--line-soft);
+  flex-shrink: 0;
+}
+
+.toolbar-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-shrink: 0;
 }
 
 .overlay-title-input {
@@ -21,7 +24,6 @@ app-dialog {
   font-weight: 600;
   color: var(--text-0);
   flex: 1;
-  // The title gives way first, down to a floor: the buttons were pushing the close button out.
   width: 0;
   min-width: 120px;
   font-family: var(--font-sans), serif;
@@ -49,16 +51,10 @@ app-dialog {
   border-color: var(--amber-dim);
 }
 
-// The bar gives way in two steps as it narrows, so that the close button never leaves it: the
-// pin's label first — its tint says it is on — then every label but a pending confirmation.
-// Each button keeps its name in its `title`.
-@container (max-width: 879px) {
-  .pin-btn .btn-label {
-    display: none;
-  }
-}
-
-@container (max-width: 819px) {
+// The title is what the bar is for: under the width of full screen the buttons keep their
+// icons alone (and their name in `title`), but a pending « Confirmer ? », so a long French
+// label never takes the title's room. Narrower, the menus cap their names.
+@container (max-width: 999px) {
   .btn-label {
     display: none;
   }
@@ -70,13 +66,19 @@ app-dialog {
   .toolbar-btn {
     padding-inline: 8px;
   }
+}
 
-  app-choice-menu {
-    --choice-trigger-max: 72px;
+@container (max-width: 699px) {
+  .toolbar-row {
+    gap: 6px;
   }
 
-  .overlay-title-input {
-    min-width: 64px;
+  .toolbar-btn {
+    padding-inline: 6px;
+  }
+
+  app-choice-menu {
+    --choice-trigger-max: 56px;
   }
 }
 
@@ -96,11 +98,13 @@ app-dialog {
   @include hit-target;
 }
 
+// It wraps rather than overflowing: on a narrow popup the deadline goes under the context.
 .overlay-meta-row {
   padding: 9px 20px;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 6px 12px;
   border-bottom: 1px solid var(--line-soft);
   font-size: 11.5px;
   color: var(--text-2);

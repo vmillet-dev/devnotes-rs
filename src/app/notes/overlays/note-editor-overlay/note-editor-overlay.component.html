@@ -6,123 +6,126 @@
     labelledBy="overlay-title-input"
     (closed)="onDismiss()"
   >
+    <!-- The bar is the container its queries measure; the row inside it is what they lay out. -->
     <div class="overlay-toolbar">
-      <!-- The title commits on blur and on close: a note saved per character is one IPC
-           round trip per character. -->
-      <input
-        #titleInput
-        id="overlay-title-input"
-        class="overlay-title-input"
-        data-testid="editor-title"
-        [attr.aria-label]="'editor.titleLabel' | transloco"
-        [placeholder]="'notes.untitled' | transloco"
-        [value]="draftTitle()"
-        (input)="draftTitle.set(titleInput.value)"
-        (blur)="commitTitle()"
-      />
-
-      @if (hasLanguage()) {
-        <app-choice-menu
-          [kind]="'language'"
-          [label]="'editor.languageLabel' | transloco"
-          [options]="languageChoices"
-          [currentId]="note.language"
-          (chosen)="onLanguageChange($event ?? note.language)"
+      <div class="toolbar-row">
+        <!-- The title commits on blur and on close: a note saved per character is one IPC
+             round trip per character. -->
+        <input
+          #titleInput
+          id="overlay-title-input"
+          class="overlay-title-input"
+          data-testid="editor-title"
+          [attr.aria-label]="'editor.titleLabel' | transloco"
+          [placeholder]="'notes.untitled' | transloco"
+          [value]="draftTitle()"
+          (input)="draftTitle.set(titleInput.value)"
+          (blur)="commitTitle()"
         />
-        <app-format-button
-          [formattable]="canFormat()"
-          [busy]="showingPreview() || formatting() || jsonMode() !== null"
-          [language]="languageLabel()"
-          [settings]="prettierSettings.settings()"
-          (formatRequested)="formatBody()"
-          (settingsChanged)="prettierSettings.update($event)"
-        />
-      } @else if (isRichText()) {
-        <span class="kind-badge" data-testid="editor-kind">{{ 'editor.noteKind' | transloco }}</span>
-      }
 
-      <button
-        type="button"
-        class="toolbar-btn pin-btn"
-        data-testid="editor-pin"
-        [class.pinned]="note.pinned"
-        [attr.aria-pressed]="note.pinned"
-        [attr.title]="(note.pinned ? 'editor.pinned' : 'editor.pin') | transloco"
-        (click)="togglePin()"
-      >
-        <span aria-hidden="true">📌</span>
-        <span class="btn-label">{{ (note.pinned ? 'editor.pinned' : 'editor.pin') | transloco }}</span>
-      </button>
-      <app-choice-menu
-        [kind]="'priority'"
-        [label]="'notes.priorityLabel' | transloco"
-        [options]="priorityChoices"
-        [currentId]="note.priority === 'none' ? null : note.priority"
-        [noneLabel]="'editor.noPriority' | transloco"
-        (chosen)="choosePriority($event)"
-      />
-      <!-- A note with fields copies filled; "Copy as is" stays within reach in the panel. -->
-      @if (hasPlaceholders()) {
+        @if (hasLanguage()) {
+          <app-choice-menu
+            [kind]="'language'"
+            [label]="'editor.languageLabel' | transloco"
+            [options]="languageChoices"
+            [currentId]="note.language"
+            (chosen)="onLanguageChange($event ?? note.language)"
+          />
+          <app-format-button
+            [formattable]="canFormat()"
+            [busy]="showingPreview() || formatting() || jsonMode() !== null"
+            [language]="languageLabel()"
+            [settings]="prettierSettings.settings()"
+            (formatRequested)="formatBody()"
+            (settingsChanged)="prettierSettings.update($event)"
+          />
+        } @else if (isRichText()) {
+          <span class="kind-badge" data-testid="editor-kind">{{ 'editor.noteKind' | transloco }}</span>
+        }
+
         <button
           type="button"
-          class="toolbar-btn copy-filled"
-          data-testid="editor-copy-filled"
-          [attr.title]="'placeholders.copy' | transloco"
-          (click)="requestFilledCopy()"
+          class="toolbar-btn pin-btn"
+          data-testid="editor-pin"
+          [class.pinned]="note.pinned"
+          [attr.aria-pressed]="note.pinned"
+          [attr.title]="(note.pinned ? 'editor.pinned' : 'editor.pin') | transloco"
+          (click)="togglePin()"
         >
-          <span aria-hidden="true">⚡</span>
-          <span class="btn-label">{{ 'placeholders.copy' | transloco }}</span>
+          <span aria-hidden="true">📌</span>
+          <span class="btn-label">{{ (note.pinned ? 'editor.pinned' : 'editor.pin') | transloco }}</span>
         </button>
-      } @else {
-        <app-copy-button [value]="copyText()" [showLabel]="true" />
-      }
-      <button
-        type="button"
-        class="toolbar-btn delete-btn"
-        data-testid="editor-delete"
-        [class.confirming]="confirmingDelete()"
-        [attr.title]="'editor.delete' | transloco"
-        (click)="onDeleteClick()"
-      >
-        <span aria-hidden="true">🗑</span>
-        <span [class.btn-label]="!confirmingDelete()">{{
-          (confirmingDelete() ? 'editor.deleteConfirm' : 'editor.delete') | transloco
-        }}</span>
-      </button>
-      <button
-        #foldButton
-        type="button"
-        class="icon-btn fold-btn"
-        data-testid="editor-fold-header"
-        aria-controls="editor-header"
-        [attr.aria-expanded]="!headerFolded()"
-        [attr.aria-label]="(headerFolded() ? 'editor.header.unfold' : 'editor.header.fold') | transloco"
-        [attr.title]="(headerFolded() ? 'editor.header.unfold' : 'editor.header.fold') | transloco"
-        (click)="toggleHeader()"
-      >
-        <app-icon [name]="headerFolded() ? 'unfold' : 'fold'" />
-      </button>
-      <button
-        type="button"
-        class="icon-btn"
-        data-testid="editor-fullscreen"
-        [attr.aria-pressed]="fullscreen()"
-        [attr.aria-label]="(fullscreen() ? 'editor.exitFullscreen' : 'editor.fullscreen') | transloco"
-        [attr.title]="(fullscreen() ? 'editor.exitFullscreen' : 'editor.fullscreen') | transloco"
-        (click)="toggleFullscreen()"
-      >
-        <span aria-hidden="true">{{ fullscreen() ? '⤡' : '⤢' }}</span>
-      </button>
-      <button
-        type="button"
-        class="icon-btn close-btn"
-        data-testid="editor-close"
-        [attr.aria-label]="'editor.close' | transloco"
-        [attr.title]="'editor.close' | transloco"
-        (click)="requestClose()"
-      >
-        <span aria-hidden="true">✕</span>
-      </button>
+        <app-choice-menu
+          [kind]="'priority'"
+          [label]="'notes.priorityLabel' | transloco"
+          [options]="priorityChoices"
+          [currentId]="note.priority === 'none' ? null : note.priority"
+          [noneLabel]="'editor.noPriority' | transloco"
+          (chosen)="choosePriority($event)"
+        />
+        <!-- A note with fields copies filled; "Copy as is" stays within reach in the panel. -->
+        @if (hasPlaceholders()) {
+          <button
+            type="button"
+            class="toolbar-btn copy-filled"
+            data-testid="editor-copy-filled"
+            [attr.title]="'placeholders.copy' | transloco"
+            (click)="requestFilledCopy()"
+          >
+            <span aria-hidden="true">⚡</span>
+            <span class="btn-label">{{ 'placeholders.copy' | transloco }}</span>
+          </button>
+        } @else {
+          <app-copy-button [value]="copyText()" [showLabel]="true" />
+        }
+        <button
+          type="button"
+          class="toolbar-btn delete-btn"
+          data-testid="editor-delete"
+          [class.confirming]="confirmingDelete()"
+          [attr.title]="'editor.delete' | transloco"
+          (click)="onDeleteClick()"
+        >
+          <span aria-hidden="true">🗑</span>
+          <span [class.btn-label]="!confirmingDelete()">{{
+            (confirmingDelete() ? 'editor.deleteConfirm' : 'editor.delete') | transloco
+          }}</span>
+        </button>
+        <button
+          #foldButton
+          type="button"
+          class="icon-btn fold-btn"
+          data-testid="editor-fold-header"
+          aria-controls="editor-header"
+          [attr.aria-expanded]="!headerFolded()"
+          [attr.aria-label]="(headerFolded() ? 'editor.header.unfold' : 'editor.header.fold') | transloco"
+          [attr.title]="(headerFolded() ? 'editor.header.unfold' : 'editor.header.fold') | transloco"
+          (click)="toggleHeader()"
+        >
+          <app-icon [name]="headerFolded() ? 'unfold' : 'fold'" />
+        </button>
+        <button
+          type="button"
+          class="icon-btn"
+          data-testid="editor-fullscreen"
+          [attr.aria-pressed]="fullscreen()"
+          [attr.aria-label]="(fullscreen() ? 'editor.exitFullscreen' : 'editor.fullscreen') | transloco"
+          [attr.title]="(fullscreen() ? 'editor.exitFullscreen' : 'editor.fullscreen') | transloco"
+          (click)="toggleFullscreen()"
+        >
+          <span aria-hidden="true">{{ fullscreen() ? '⤡' : '⤢' }}</span>
+        </button>
+        <button
+          type="button"
+          class="icon-btn close-btn"
+          data-testid="editor-close"
+          [attr.aria-label]="'editor.close' | transloco"
+          [attr.title]="'editor.close' | transloco"
+          (click)="requestClose()"
+        >
+          <span aria-hidden="true">✕</span>
+        </button>
+      </div>
     </div>
 
     <!-- Folded, the bands give way to what they hold; the fields panel folds on its own. -->

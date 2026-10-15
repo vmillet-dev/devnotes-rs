@@ -152,20 +152,40 @@ describe('Editing a note', () => {
     await reloadCanvas();
     await canvas.openNote(fields);
 
-    for (const width of [1100, 900, 640]) {
+    for (const width of [1280, 1100, 900, 640]) {
       await browser.setWindowSize(width, 720);
-      const fits = await eventually(
+      // A resize lands a few frames later: measured before, the old size passed for the new one.
+      let last = -1;
+      await eventually(
+        () => browser.execute(() => window.innerWidth),
+        (now) => {
+          const settled = now === last;
+          last = now;
+          return settled && now <= width;
+        },
+        `the window at ${width} px`,
+      );
+      const layout = await eventually(
         () =>
           browser.execute(() => {
-            const toolbar = document.querySelector('.overlay-toolbar')!;
+            const row = document.querySelector('.toolbar-row')!;
+            const bar = document.querySelector('.overlay-toolbar')!.getBoundingClientRect();
             const close = document.querySelector('[data-testid="editor-close"]')!.getBoundingClientRect();
-            const box = toolbar.getBoundingClientRect();
-            return close.right <= box.right - 8 && toolbar.scrollWidth <= toolbar.clientWidth;
+            const title = document.querySelector('[data-testid="editor-title"]')!.getBoundingClientRect();
+            const meta = document.querySelector('.overlay-meta-row')!;
+            return {
+              closeInside: close.right <= bar.right - 8 && row.scrollWidth <= row.clientWidth + 1,
+              title: Math.round(title.width),
+              metaInside: meta.scrollWidth <= meta.clientWidth + 1,
+            };
           }),
-        (inside) => inside,
-        `the close button inside the title bar at ${width} px`,
+        (seen) => seen.closeInside && seen.metaInside && seen.title >= 120,
+        `the title bar and the row under it whole at ${width} px`,
       );
-      expect(fits).toBe(true);
+      expect(layout.closeInside).toBe(true);
+      expect(layout.metaInside).toBe(true);
+      // Readable, not merely present: « Déployer la factur » was what the labels left at 1280.
+      expect(layout.title).toBeGreaterThanOrEqual(width >= 900 ? 240 : 120);
     }
 
     await browser.setWindowSize(restore.width, restore.height);
