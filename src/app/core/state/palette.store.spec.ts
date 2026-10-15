@@ -139,6 +139,22 @@ describe('PaletteStore', () => {
     expect(harness.store.isOpen()).toBe(true);
   });
 
+  it('copies a templated snippet as it is from its whole body, not from the list', async () => {
+    const preview = createNote({
+      id: 'note-2',
+      title: 'Templated',
+      content: 'psql',
+      truncated: true,
+      placeholders: [{ name: 'host', defaultValue: '', value: '' }],
+    });
+
+    await harness.store.copyRaw(preview);
+
+    expect(harness.clipboard.content).toBe('psql -h {{host}}');
+    expect(harness.store.isOpen()).toBe(false);
+    expect(harness.window.hidden).toBe(1);
+  });
+
   it('drops the pending fill when the palette closes', async () => {
     harness.store.highlight(1);
     await harness.store.chooseHighlighted();
