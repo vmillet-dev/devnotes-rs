@@ -3050,8 +3050,21 @@ knowing:
   Lezer packages, `@codemirror/legacy-modes` for TOML, the shells, C#, Kotlin, Ruby, Swift and
   Dart, and community packages for GraphQL (`cm6-graphql`, its grammar alone: its completion
   and lint want a schema) and Elixir (`codemirror-lang-elixir`).
-- The search panel (Ctrl+F) speaks the application's language: CodeMirror's words are
-  `EditorState.phrases`, read from `editor.code` in the translations.
+- **The search bar (Ctrl+F) is ours, the engine CodeMirror's.** `search({ createPanel })` hands
+  the panel to `code-editor/search-bar/`, an Angular component created into it and attached to
+  the application (`search-panel.ts`): its markup sits under our lint and our translations
+  (`editor.search`). The query, the highlighting, `findNext` and `replaceAll` stay
+  `@codemirror/search`'s; the bar keeps the count, capped at 1 000 (`search-query.ts`). Typing
+  selects the first match from where the search began, as a browser does. Replacing folds
+  behind a chevron, unfolded by Ctrl+H too (`openReplace`, scoped to the editor and the bar, which
+  reaches the keymap through `runScopeHandlers` as CodeMirror's own panel did). Case, whole word
+  and expression are remembered for the application (`devnotes.editorSearchOptions`), handed to
+  `search()` when a note's state is made. Past 200 000 characters, finding and counting wait for
+  a 120 ms pause — a word found nowhere costs a whole read of 2 MB, some 150 ms a key — and the
+  count reads « … » meanwhile. Go to line (Ctrl+Alt+G) stays CodeMirror's dialog, given the bar's
+  field and button by `theme.ts`.
+- CodeMirror's words still on screen or spoken (go to line, the screen reader's announcements)
+  are `EditorState.phrases`, read from `editor.code` in the translations.
 - The specs run the real editor on jsdom, which has no rectangles for text ranges
   (`src/testing/text-ranges.setup.ts`); the scenarios type through `execCommand('insertText')`
   into `.cm-content`, which CodeMirror reads from the DOM as it reads a keyboard.

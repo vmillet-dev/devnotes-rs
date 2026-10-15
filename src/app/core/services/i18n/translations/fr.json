@@ -238,25 +238,30 @@
     "emptyBody": "Commencer à écrire…",
     "emptyRich": "Écrivez, ou collez un snippet : le code garde son langage.",
     "code": {
-      "find": "Rechercher",
-      "replace": "Remplacer",
-      "next": "suivant",
-      "previous": "précédent",
-      "all": "tout",
-      "matchCase": "respecter la casse",
-      "regexp": "expression régulière",
-      "byWord": "mot entier",
-      "replaceOne": "remplacer",
-      "replaceAll": "tout remplacer",
       "close": "fermer",
       "currentMatch": "résultat courant",
       "onLine": "ligne",
       "replacedMatches": "$ résultats remplacés",
       "replacedOnLine": "résultat remplacé ligne $",
       "goToLine": "Aller à la ligne",
-      "go": "aller",
+      "go": "Aller",
       "controlCharacter": "Caractère de contrôle",
       "selectionDeleted": "Sélection supprimée"
+    },
+    "search": {
+      "find": "Rechercher",
+      "replaceWith": "Remplacer par",
+      "matchCase": "Respecter la casse",
+      "wholeWord": "Mot entier",
+      "regexp": "Expression régulière",
+      "previous": "Résultat précédent (Maj+Entrée)",
+      "next": "Résultat suivant (Entrée)",
+      "close": "Fermer la recherche (Échap)",
+      "showReplace": "Remplacer (Ctrl+H)",
+      "hideReplace": "Masquer le remplacement",
+      "replaceOne": "Remplacer",
+      "replaceAll": "Tout remplacer",
+      "matches": "{count, plural, =0 {Aucun résultat} one {# résultat} other {# résultats}}"
     },
     "rich": {
       "toolbar": "Mise en forme",
@@ -743,7 +748,9 @@
       "removeItem": "Retirer un item vide",
       "moveItem": "Déplacer l'item dans la liste",
       "format": "Formater le snippet avec Prettier",
-      "find": "Chercher et remplacer dans le code"
+      "find": "Chercher dans le code",
+      "replace": "Remplacer dans le code",
+      "goToLine": "Aller à une ligne du code"
     },
     "palette": {
       "navigate": "Parcourir les résultats",

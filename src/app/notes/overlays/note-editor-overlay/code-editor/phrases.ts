@@ -1,15 +1,8 @@
-/** CodeMirror's own words — the search panel's, mostly — and the key each is translated under. */
+/**
+ * CodeMirror's own words still on screen or spoken — the search bar is ours and has its own — and
+ * the key each is translated under.
+ */
 const PHRASE_KEYS: Readonly<Record<string, string>> = {
-  Find: 'find',
-  Replace: 'replace',
-  next: 'next',
-  previous: 'previous',
-  all: 'all',
-  'match case': 'matchCase',
-  regexp: 'regexp',
-  'by word': 'byWord',
-  replace: 'replaceOne',
-  'replace all': 'replaceAll',
   close: 'close',
   'current match': 'currentMatch',
   'on line': 'onLine',

@@ -355,7 +355,7 @@ describe('CodeEditorComponent', () => {
 
       openSearchPanel(view());
       const field = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
-        '.cm-search input[name=search]',
+        '[data-testid="search-field"]',
       )!;
       field.focus();
       expect(blurs).toBe(0);
@@ -373,15 +373,16 @@ describe('CodeEditorComponent', () => {
     });
   });
 
-  it('speaks French in its search panel', () => {
+  it('speaks French in its search bar, which is ours', () => {
     openSearchPanel(view());
+    const root = fixture.nativeElement as HTMLElement;
 
-    const field = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
-      '.cm-search input[name=search]',
-    )!;
-    expect(field.placeholder).toBe('Rechercher');
-    expect(fixture.nativeElement.querySelector('.cm-search button[name=replaceAll]')?.textContent).toBe(
-      'tout remplacer',
+    expect(root.querySelector('.cm-search')).toBeNull();
+    expect(root.querySelector<HTMLInputElement>('[data-testid="search-field"]')?.placeholder).toBe(
+      'Rechercher',
+    );
+    expect(root.querySelector('[data-testid="search-case"]')?.getAttribute('title')).toBe(
+      'Respecter la casse',
     );
   });
 });

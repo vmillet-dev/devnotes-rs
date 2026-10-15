@@ -3,6 +3,7 @@ import {
   Component,
   DestroyRef,
   ElementRef,
+  Injector,
   afterNextRender,
   effect,
   inject,
@@ -26,6 +27,7 @@ import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/sea
 import { Annotation, Compartment, EditorState, Extension, Transaction } from '@codemirror/state';
 import {
   EditorView,
+  KeyBinding,
   ViewUpdate,
   drawSelection,
   highlightSpecialChars,
@@ -35,6 +37,7 @@ import {
 } from '@codemirror/view';
 import type { Span } from '@core/model/json.model';
 import type { LanguageTag } from '@core/model/language.model';
+import { PreferencesService } from '@core/services/preferences/preferences.service';
 import type { CodeSelection } from '../code-selection';
 import { rewrite } from '../indentation';
 import { TAB_KEYS, applyEdit } from './editing';
@@ -42,9 +45,16 @@ import { hangingIndent } from './hanging-indent';
 import { languageOf } from './languages';
 import { lineMarks, setLineMarks } from './line-marks';
 import { phrasesFrom } from './phrases';
+import { searchPanel } from './search-panel';
+import { openReplace, readSearchOptions } from './search-query';
 import { CODE_COLOURS, CODE_THEME } from './theme';
 
 const NO_LINES: ReadonlySet<number> = new Set();
+
+/** Ctrl+H, as VS Code binds it; from the bar too, which reaches the keymap by its scope. */
+const REPLACE_KEYS: readonly KeyBinding[] = [
+  { key: 'Mod-h', run: openReplace, scope: 'editor search-panel', preventDefault: true },
+];
 
 const WRAPPED: Extension = [EditorView.lineWrapping, hangingIndent];
 
@@ -83,6 +93,8 @@ export class CodeEditorComponent implements CodeSelection {
   readonly pasted = output<ClipboardEvent>();
 
   private readonly host = viewChild.required<ElementRef<HTMLElement>>('host');
+  private readonly injector = inject(Injector);
+  private readonly preferences = inject(PreferencesService);
   private readonly view = signal<EditorView | null>(null);
   private readonly words = toSignal(
     inject(TranslocoService).selectTranslateObject<Record<string, unknown>>('editor.code'),
@@ -223,11 +235,15 @@ export class CodeEditorComponent implements CodeSelection {
         drawSelection(),
         bracketMatching(),
         highlightSelectionMatches(),
-        search({ top: true }),
+        search({
+          top: true,
+          createPanel: searchPanel(this.injector),
+          ...readSearchOptions(this.preferences),
+        }),
         syntaxHighlighting(CODE_COLOURS),
         CODE_THEME,
         lineMarks,
-        keymap.of([...TAB_KEYS, ...searchKeymap, ...historyKeymap, ...defaultKeymap]),
+        keymap.of([...TAB_KEYS, ...REPLACE_KEYS, ...searchKeymap, ...historyKeymap, ...defaultKeymap]),
         EditorView.updateListener.of((update) => this.onUpdate(update)),
         EditorView.domEventHandlers({
           paste: (event) => {

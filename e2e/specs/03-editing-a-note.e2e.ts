@@ -4,7 +4,15 @@ import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
 import { spaces } from '../pageobjects/sidebar.page.js';
 import { settings } from '../pageobjects/titlebar.page.js';
-import { eventually, isInFront, press, reloadCanvas, testid, viewportSize } from '../support/app.js';
+import {
+  eventually,
+  isInFront,
+  press,
+  reloadCanvas,
+  setField,
+  testid,
+  viewportSize,
+} from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
@@ -595,6 +603,53 @@ describe('Editing a note', () => {
       'the edited lockfile saved whole',
     );
     expect(Number(stored.split(' ')[1])).toBeGreaterThan(1_500_000);
+    await bridge.deleteNotes([id]);
+    await bridge.purgeNotes([id]);
+    await reloadCanvas();
+  });
+
+  it('finds and replaces in a snippet through a bar of its own', async () => {
+    const searched = 'Searched through its own bar';
+    const code = 'const total = 1;\nconst totalTax = total * 0.2;\nreturn total;';
+    const { id } = await bridge.createNote(
+      draft({ spaceId, title: searched, content: code, language: 'ts' }),
+    );
+    await reloadCanvas();
+    await canvas.openNote(searched);
+    await editor.focusCode();
+    const count = () => $(testid('search-count')).getText();
+
+    await press('f', ['Control']);
+    await setField(testid('search-field'), 'total');
+    await eventually(count, (text) => text === '1/4', 'four matches, the first selected');
+    await $(testid('search-next')).click();
+    await eventually(count, (text) => text === '2/4', 'the second match selected');
+
+    const close = await $(testid('search-close')).getSize();
+    expect(close.width).toBeGreaterThanOrEqual(24);
+    expect(close.height).toBeGreaterThanOrEqual(24);
+
+    await $(testid('search-replace-toggle')).click();
+    await setField(testid('search-replace-field'), 'sum');
+    await $(testid('search-replace-all')).click();
+    await eventually(
+      () => editor.body(),
+      (body) => body === 'const sum = 1;\nconst sumTax = sum * 0.2;\nreturn sum;',
+      'every match replaced',
+    );
+
+    // Escape closes the bar and hands the caret back; one undo takes the whole replace back.
+    await press('Escape');
+    await $(testid('search-field')).waitForExist({ reverse: true, timeout: 5_000 });
+    expect(await editor.codeHasFocus()).toBe(true);
+    await press('z', ['Control']);
+    await eventually(
+      () => editor.body(),
+      (body) => body === code,
+      'the replace undone in one step',
+    );
+    await editor.close();
+
     await bridge.deleteNotes([id]);
     await bridge.purgeNotes([id]);
     await reloadCanvas();

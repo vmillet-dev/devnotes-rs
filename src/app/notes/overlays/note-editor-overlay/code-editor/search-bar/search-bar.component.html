@@ -1,0 +1,132 @@
+<div class="row">
+  <button
+    type="button"
+    class="icon-btn fold"
+    data-testid="search-replace-toggle"
+    aria-controls="code-search-replace"
+    [class.open]="replaceOpen()"
+    [attr.aria-expanded]="replaceOpen()"
+    [attr.aria-label]="
+      (replaceOpen() ? 'editor.search.hideReplace' : 'editor.search.showReplace') | transloco
+    "
+    [attr.title]="(replaceOpen() ? 'editor.search.hideReplace' : 'editor.search.showReplace') | transloco"
+    (click)="toggleReplace()"
+  >
+    <app-icon name="chevron-right" />
+  </button>
+
+  <div class="field" [class.none]="nothingFound()">
+    <input
+      #findField
+      main-field="true"
+      type="text"
+      class="field-input"
+      data-testid="search-field"
+      autocomplete="off"
+      spellcheck="false"
+      [attr.aria-label]="'editor.search.find' | transloco"
+      [placeholder]="'editor.search.find' | transloco"
+      [value]="text()"
+      (input)="onFind(findField.value)"
+    />
+    <button
+      type="button"
+      class="option"
+      data-testid="search-case"
+      [attr.aria-pressed]="options().caseSensitive"
+      [attr.aria-label]="'editor.search.matchCase' | transloco"
+      [attr.title]="'editor.search.matchCase' | transloco"
+      (click)="toggle('caseSensitive')"
+    >
+      <span aria-hidden="true">Aa</span>
+    </button>
+    <button
+      type="button"
+      class="option"
+      data-testid="search-word"
+      [attr.aria-pressed]="options().wholeWord"
+      [attr.aria-label]="'editor.search.wholeWord' | transloco"
+      [attr.title]="'editor.search.wholeWord' | transloco"
+      (click)="toggle('wholeWord')"
+    >
+      <span class="whole-word" aria-hidden="true">ab</span>
+    </button>
+    <button
+      type="button"
+      class="option"
+      data-testid="search-regexp"
+      [attr.aria-pressed]="options().regexp"
+      [attr.aria-label]="'editor.search.regexp' | transloco"
+      [attr.title]="'editor.search.regexp' | transloco"
+      (click)="toggle('regexp')"
+    >
+      <span aria-hidden="true">.*</span>
+    </button>
+  </div>
+
+  <span class="count" data-testid="search-count" aria-hidden="true" [class.none]="nothingFound()">{{
+    countText()
+  }}</span>
+  <span class="visually-hidden" role="status">
+    @if (text() !== '' && !counting()) {
+      {{ 'editor.search.matches' | transloco: { count: count().total } }}
+    }
+  </span>
+
+  <button
+    type="button"
+    class="icon-btn"
+    data-testid="search-previous"
+    [attr.aria-label]="'editor.search.previous' | transloco"
+    [attr.title]="'editor.search.previous' | transloco"
+    (click)="previous()"
+  >
+    <app-icon name="arrow-up" />
+  </button>
+  <button
+    type="button"
+    class="icon-btn"
+    data-testid="search-next"
+    [attr.aria-label]="'editor.search.next' | transloco"
+    [attr.title]="'editor.search.next' | transloco"
+    (click)="next()"
+  >
+    <app-icon name="arrow-down" />
+  </button>
+  <button
+    type="button"
+    class="icon-btn close"
+    data-testid="search-close"
+    [attr.aria-label]="'editor.search.close' | transloco"
+    [attr.title]="'editor.search.close' | transloco"
+    (click)="close()"
+  >
+    <app-icon name="x" />
+  </button>
+</div>
+
+@if (replaceOpen()) {
+  <div id="code-search-replace" class="row">
+    <span class="indent" aria-hidden="true"></span>
+    <div class="field">
+      <input
+        #replaceField
+        type="text"
+        class="field-input"
+        data-testid="search-replace-field"
+        autocomplete="off"
+        spellcheck="false"
+        [attr.aria-label]="'editor.search.replaceWith' | transloco"
+        [placeholder]="'editor.search.replaceWith' | transloco"
+        [value]="replaceText()"
+        (input)="onReplaceInput(replaceField.value)"
+      />
+    </div>
+    <button type="button" class="text-btn" data-testid="search-replace-one" (click)="replaceOne()">
+      {{ 'editor.search.replaceOne' | transloco }}
+    </button>
+    <button type="button" class="text-btn" data-testid="search-replace-all" (click)="replaceEvery()">
+      {{ 'editor.search.replaceAll' | transloco }}
+    </button>
+  </div>
+}
