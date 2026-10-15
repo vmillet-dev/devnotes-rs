@@ -191,7 +191,6 @@ app-dialog {
   font-family: var(--font-mono), serif;
 }
 
-// The only thing that scrolls, so both layers move together with no `scrollTop` to sync.
 // A JSON snippet's band: what the body shows, and whether the draft parses.
 .json-band {
   display: flex;
