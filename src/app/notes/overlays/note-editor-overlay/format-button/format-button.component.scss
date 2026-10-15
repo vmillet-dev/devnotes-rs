@@ -86,14 +86,9 @@
   color: var(--text-2);
 }
 
-// The tooltip says the same: the hint is what goes when the toolbar runs short.
-@container (max-width: 960px) {
-  .format-keys {
-    display: none;
-  }
-}
-
-@container (max-width: 819px) {
+// The tooltip says the same: under full-screen width the button keeps its icon, as the bar's do.
+@container (max-width: 999px) {
+  .format-keys,
   .format-label {
     display: none;
   }

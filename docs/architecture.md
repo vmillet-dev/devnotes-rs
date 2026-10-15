@@ -3083,13 +3083,16 @@ remembered states, so a note with `{{fields}}` can give the code its height and 
 in sight. Never folded by the
 editor itself: folding at the first keystroke would move the line being read by some 230 px.
 Folding commits what the bands hold in hand — the context, the tag being typed, which has no
-blur of its own — and a focus inside them goes to the button.
+blur of its own — and a focus inside them goes to the button. The tag field also commits when
+it is left, and on every closing path.
 
-The title bar never folds, and **gives way in two steps** as it narrows (container queries on
-`.overlay-toolbar`): under 880 px the pin keeps its icon alone, its tint saying whether it is
-on; under 820 px every label goes but a pending delete's « Confirmer ? », the menus cap their
-names, and the title its floor. Each button keeps its name in its `title`. Without it, a note
-with fields pushed the close button out of the default 1100 px window.
+The title bar never folds, and **keeps the title readable** (container queries on
+`.overlay-toolbar`): under 1000 px of bar — everything but full screen on a large window — the
+buttons keep their icons alone, but a pending delete's « Confirmer ? », each with its name in its
+`title`; under 700 px the menus cap their names. The labels used to stay down to 820 px, and in
+French « Formater », « Copier rempli » and « Supprimer » left the title « Déployer la factur ».
+The meta row under it wraps rather than overflowing: on a narrow popup the deadline goes under
+the context.
 
 Where the note lives — its space, then its folder — is a **band of its own** under the meta
 row, labelled like the attachments below it. It used to sit inside the meta row, between the
