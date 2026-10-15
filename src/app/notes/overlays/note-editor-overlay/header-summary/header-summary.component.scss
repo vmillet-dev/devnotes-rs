@@ -1,0 +1,26 @@
+@use 'mixins' as *;
+
+:host {
+  display: block;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+@include drawer-head('header');
+
+.header-toggle {
+  @include focus-ring(-2px);
+}
+
+.header-part + .header-part::before {
+  content: ' · ';
+  color: var(--line);
+}
+
+.header-part.source {
+  color: var(--text-1);
+}
+
+app-lifecycle-badge {
+  flex-shrink: 0;
+  white-space: nowrap;
+}

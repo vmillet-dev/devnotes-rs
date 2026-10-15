@@ -11,7 +11,7 @@
   @include surface(var(--bg-2), 7px);
   @include focus-ring;
   gap: 5px;
-  max-width: 190px;
+  max-width: var(--choice-trigger-max, 190px);
   padding: 4px 8px;
   font-size: 11.5px;
   color: var(--text-1);

@@ -33,3 +33,8 @@
   padding: 5px 10px;
   font-size: 11.5px;
 }
+
+// Its parent's to hide, where a toolbar runs short: the button keeps its `aria-label`.
+.copy-label {
+  display: var(--copy-button-label, inline);
+}

@@ -3061,6 +3061,23 @@ freeze the whole WebView. The fullscreen toggle expands the panel to fill the ba
 persists through `PreferencesService`; the backdrop starts under the titlebar
 (`--titlebar-height`), which stays usable over the note.
 
+**The header folds, the fields fold apart.** A button in the title bar, beside full screen, folds
+the bands between the title bar and the fields — context, tags and expiry, placement,
+attachments — into one line in the fields drawer's idiom (`header-summary/`, the shared
+`drawer-head` mixin): what they hold, minus what is empty, the expiry badge kept since a date is
+a warning; the whole line unfolds. The fields drawer keeps its own fold: two drawers, two
+remembered states, so a note with `{{fields}}` can give the code its height and keep its values
+in sight. Never folded by the
+editor itself: folding at the first keystroke would move the line being read by some 230 px.
+Folding commits what the bands hold in hand — the context, the tag being typed, which has no
+blur of its own — and a focus inside them goes to the button.
+
+The title bar never folds, and **gives way in two steps** as it narrows (container queries on
+`.overlay-toolbar`): under 880 px the pin keeps its icon alone, its tint saying whether it is
+on; under 820 px every label goes but a pending delete's « Confirmer ? », the menus cap their
+names, and the title its floor. Each button keeps its name in its `title`. Without it, a note
+with fields pushed the close button out of the default 1100 px window.
+
 Where the note lives — its space, then its folder — is a **band of its own** under the meta
 row, labelled like the attachments below it. It used to sit inside the meta row, between the
 tags and the deadline, with the two choices stacked on two lines: neither metadata nor
@@ -5116,9 +5133,10 @@ colour, created_at)` and `notes.folder_id` points into it. ⚠️ The column was
   resolves against `BaseDirectory::AppData`; ⚠️ that is indistinguishable from `app_config_dir()`
   on Windows, where both are `%APPDATA%\<identifier>`), readable from Rust and
   immune to a WebView cache wipe — unlike the `localStorage` it replaced. Two consumers:
-  `LocaleService`, and the editor overlay's two display toggles — fullscreen
-  (`devnotes.editorFullscreen`) and the fields drawer (`devnotes.editorFieldsPanel`, open by
-  default: a drawer folded on first sight hides the feature from whoever does not know it yet).
+  `LocaleService`, and the editor overlay's three display toggles — fullscreen
+  (`devnotes.editorFullscreen`), the folded header (`devnotes.editorHeaderFolded`) and the fields
+  drawer (`devnotes.editorFieldsPanel`, open by default: a drawer folded on first sight hides the
+  feature from whoever does not know it yet).
   - **The API stays synchronous** although the plugin's is not: both consumers read at
     construction time, and an async read would show the interface in one state then the
     other. The file is loaded **once** by `hydrate()` from an app initializer, into an

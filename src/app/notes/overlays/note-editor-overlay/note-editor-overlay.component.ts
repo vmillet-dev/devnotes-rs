@@ -37,10 +37,12 @@ import { ClockService } from '@core/services/time/clock.service';
 import { endOfLocalDay, toDateInputValue } from '@core/utils/local-day.util';
 import { relativeTimeRef } from '@core/utils/relative-time.util';
 import { DialogComponent } from '@shared/layout/dialog/dialog.component';
+import { IconComponent } from '@shared/icon/icon.component';
 import { CodeViewerComponent } from '@shared/code-viewer/code-viewer.component';
 import { AttachmentStripComponent } from './attachment-strip/attachment-strip.component';
 import { ChecklistEditorComponent } from './checklist-editor/checklist-editor.component';
 import { FormatButtonComponent } from './format-button/format-button.component';
+import { HeaderSummaryComponent } from './header-summary/header-summary.component';
 import { CopyButtonComponent } from '@notes/ui/copy-button/copy-button.component';
 import { LifecycleBadgeComponent } from './lifecycle-badge/lifecycle-badge.component';
 import { PlaceholderPanelComponent } from './placeholder-panel/placeholder-panel.component';
@@ -67,6 +69,8 @@ const TEXT_ENCODER = new TextEncoder();
 const FULLSCREEN_STORAGE_KEY = 'devnotes.editorFullscreen';
 
 const FIELDS_PANEL_STORAGE_KEY = 'devnotes.editorFieldsPanel';
+
+const HEADER_FOLDED_STORAGE_KEY = 'devnotes.editorHeaderFolded';
 
 /** How long a format's notice stays; the marked lines stay until the next keystroke. */
 const FORMAT_NOTICE_MS = 6000;
@@ -106,10 +110,12 @@ const PRIORITY_CHOICES: readonly ChoiceOption[] = PRIORITIES.filter((level) => l
   selector: 'app-note-editor-overlay',
   imports: [
     DialogComponent,
+    IconComponent,
     AttachmentStripComponent,
     ChecklistEditorComponent,
     CopyButtonComponent,
     FormatButtonComponent,
+    HeaderSummaryComponent,
     JsonViewComponent,
     TagPillComponent,
     LifecycleBadgeComponent,
@@ -171,6 +177,15 @@ export class NoteEditorOverlayComponent {
       .map((folder) => ({ id: folder.id, name: folder.name, colour: folder.colour }));
   });
 
+  protected readonly spaceName = computed(
+    () => this.spaces.spaces().find((space) => space.id === this.note()?.spaceId)?.name ?? '',
+  );
+
+  protected readonly folderName = computed(() => {
+    const folderId = this.note()?.folderId;
+    return this.folders.allFolders().find((folder) => folder.id === folderId)?.name ?? null;
+  });
+
   protected readonly draftTitle = linkedSignal({
     source: this.session,
     computation: () => untracked(() => this.note()?.title ?? ''),
@@ -201,6 +216,9 @@ export class NoteEditorOverlayComponent {
   /** Open by default: folded away, it hides the feature from anyone who does not know it. */
   protected readonly fieldsPanelOpen = signal(this.preferences.read(FIELDS_PANEL_STORAGE_KEY) !== 'false');
 
+  /** Never folded by the editor itself: the line being read would jump at the first keystroke. */
+  protected readonly headerFolded = signal(this.preferences.read(HEADER_FOLDED_STORAGE_KEY) === 'true');
+
   protected readonly previewingFilled = linkedSignal({
     source: this.session,
     computation: () => false,
@@ -211,6 +229,8 @@ export class NoteEditorOverlayComponent {
   private readonly richEditor = viewChild<RichTextEditorComponent>('richEditor');
   private readonly checklistEditor = viewChild(ChecklistEditorComponent);
   private readonly fieldsPanel = viewChild(PlaceholderPanelComponent);
+  private readonly headerBand = viewChild<ElementRef<HTMLElement>>('headerBand');
+  private readonly foldButton = viewChild<ElementRef<HTMLElement>>('foldButton');
 
   protected readonly isChecklist = computed(() => this.note()?.kind === 'checklist');
   /** A Note is written in the rich editor; a snippet keeps the code field. */
@@ -395,6 +415,24 @@ export class NoteEditorOverlayComponent {
 
     if (!next) {
       this.previewingFilled.set(false);
+    }
+  }
+
+  /**
+   * What the folding bands hold in hand is committed first, as a blur would — the tag being
+   * typed included, which has no blur of its own — and a focus inside them goes to the button.
+   */
+  protected toggleHeader(): void {
+    const folding = !this.headerFolded();
+    const focusInside = this.headerBand()?.nativeElement.contains(document.activeElement) ?? false;
+    if (folding) {
+      this.commitSource();
+      this.addTypedTag();
+    }
+    this.headerFolded.set(folding);
+    this.preferences.write(HEADER_FOLDED_STORAGE_KEY, String(folding));
+    if (focusInside) {
+      afterNextRender(() => this.foldButton()?.nativeElement.focus(), { injector: this.injector });
     }
   }
 
@@ -684,6 +722,10 @@ export class NoteEditorOverlayComponent {
 
   protected submitTag(event: Event): void {
     event.preventDefault();
+    this.addTypedTag();
+  }
+
+  private addTypedTag(): void {
     const value = this.tagInputValue();
     this.tagInputValue.set('');
 

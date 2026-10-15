@@ -296,6 +296,14 @@
     "delete": "Supprimer",
     "deleteConfirm": "Confirmer ?",
     "close": "Fermer l'éditeur",
+    "header": {
+      "title": "En-tête",
+      "fold": "Replier l'en-tête",
+      "unfold": "Déplier l'en-tête",
+      "show": "Afficher",
+      "tags": "{count, plural, one {# tag} other {# tags}}",
+      "attachments": "{count, plural, one {# pièce jointe} other {# pièces jointes}}"
+    },
     "fullscreen": "Passer en plein écran",
     "exitFullscreen": "Quitter le plein écran",
     "pin": "Épingler",

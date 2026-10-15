@@ -43,14 +43,15 @@
 
       <button
         type="button"
-        class="toolbar-btn"
+        class="toolbar-btn pin-btn"
         data-testid="editor-pin"
         [class.pinned]="note.pinned"
         [attr.aria-pressed]="note.pinned"
+        [attr.title]="(note.pinned ? 'editor.pinned' : 'editor.pin') | transloco"
         (click)="togglePin()"
       >
         <span aria-hidden="true">📌</span>
-        {{ (note.pinned ? 'editor.pinned' : 'editor.pin') | transloco }}
+        <span class="btn-label">{{ (note.pinned ? 'editor.pinned' : 'editor.pin') | transloco }}</span>
       </button>
       <app-choice-menu
         [kind]="'priority'"
@@ -64,12 +65,13 @@
       @if (hasPlaceholders()) {
         <button
           type="button"
-          class="toolbar-btn"
+          class="toolbar-btn copy-filled"
           data-testid="editor-copy-filled"
+          [attr.title]="'placeholders.copy' | transloco"
           (click)="requestFilledCopy()"
         >
           <span aria-hidden="true">⚡</span>
-          {{ 'placeholders.copy' | transloco }}
+          <span class="btn-label">{{ 'placeholders.copy' | transloco }}</span>
         </button>
       } @else {
         <app-copy-button [value]="copyText()" [showLabel]="true" />
@@ -79,10 +81,26 @@
         class="toolbar-btn delete-btn"
         data-testid="editor-delete"
         [class.confirming]="confirmingDelete()"
+        [attr.title]="'editor.delete' | transloco"
         (click)="onDeleteClick()"
       >
         <span aria-hidden="true">🗑</span>
-        {{ (confirmingDelete() ? 'editor.deleteConfirm' : 'editor.delete') | transloco }}
+        <span [class.btn-label]="!confirmingDelete()">{{
+          (confirmingDelete() ? 'editor.deleteConfirm' : 'editor.delete') | transloco
+        }}</span>
+      </button>
+      <button
+        #foldButton
+        type="button"
+        class="icon-btn fold-btn"
+        data-testid="editor-fold-header"
+        aria-controls="editor-header"
+        [attr.aria-expanded]="!headerFolded()"
+        [attr.aria-label]="(headerFolded() ? 'editor.header.unfold' : 'editor.header.fold') | transloco"
+        [attr.title]="(headerFolded() ? 'editor.header.unfold' : 'editor.header.fold') | transloco"
+        (click)="toggleHeader()"
+      >
+        <app-icon [name]="headerFolded() ? 'unfold' : 'fold'" />
       </button>
       <button
         type="button"
@@ -107,100 +125,116 @@
       </button>
     </div>
 
-    <div class="overlay-meta-row">
-      <!-- A free-form breadcrumb, which a pinned card's footer shows instead of its age. -->
-      <input
-        #sourceInput
-        class="overlay-source-input"
-        data-testid="editor-source"
-        [attr.aria-label]="'editor.sourceLabel' | transloco"
-        [placeholder]="'editor.sourcePlaceholder' | transloco"
-        [value]="draftSource()"
-        (input)="draftSource.set(sourceInput.value)"
-        (blur)="commitSource()"
-      />
-      <span aria-hidden="true">·</span>
-      <div class="overlay-tags">
-        @for (tag of note.tags; track tag) {
-          <span class="editable-tag">
-            <app-tag-pill [label]="tag" [active]="true" [interactive]="false" />
-            <button
-              type="button"
-              class="tag-remove"
-              data-testid="editor-tag-remove"
-              [attr.data-tag]="tag"
-              [attr.aria-label]="'editor.removeTag' | transloco: { tag: tag }"
-              [attr.title]="'editor.removeTag' | transloco: { tag: tag }"
-              (click)="removeTag(tag)"
-            >
-              <span aria-hidden="true">✕</span>
-            </button>
-          </span>
-        }
-        <form class="tag-add-form" (submit)="submitTag($event)">
-          <input
-            #tagInput
-            type="text"
-            class="tag-add-input"
-            data-testid="editor-tag-add"
-            [attr.aria-label]="'editor.addTagLabel' | transloco"
-            [placeholder]="'editor.addTagPlaceholder' | transloco"
-            [value]="tagInputValue()"
-            (input)="tagInputValue.set(tagInput.value)"
-          />
-        </form>
-      </div>
-      <!-- Clearing the field makes the note permanent; a date puts it in "untriaged". -->
-      <span class="overlay-expiry">
-        <app-lifecycle-badge [lifecycle]="note.lifecycle" [expiringSoon]="note.expiringSoon" />
-        <input
-          #expiryInput
-          type="date"
-          class="overlay-expiry-input"
-          data-testid="editor-deadline"
-          [attr.aria-label]="'editor.expiryLabel' | transloco"
-          [value]="expiryInputValue()"
-          (change)="onExpiryChange(expiryInput.value)"
+    <!-- Folded, the bands give way to what they hold; the fields panel folds on its own. -->
+    <div #headerBand id="editor-header">
+      @if (headerFolded()) {
+        <app-header-summary
+          [source]="draftSource()"
+          [space]="spaceName()"
+          [folder]="folderName()"
+          [tagCount]="note.tags.length"
+          [attachmentCount]="attachments.attachments().length"
+          [lifecycle]="note.lifecycle"
+          [expiringSoon]="note.expiringSoon"
+          (unfold)="toggleHeader()"
         />
-      </span>
-    </div>
+      } @else {
+        <div class="overlay-meta-row">
+          <!-- A free-form breadcrumb, which a pinned card's footer shows instead of its age. -->
+          <input
+            #sourceInput
+            class="overlay-source-input"
+            data-testid="editor-source"
+            [attr.aria-label]="'editor.sourceLabel' | transloco"
+            [placeholder]="'editor.sourcePlaceholder' | transloco"
+            [value]="draftSource()"
+            (input)="draftSource.set(sourceInput.value)"
+            (blur)="commitSource()"
+          />
+          <span aria-hidden="true">·</span>
+          <div class="overlay-tags">
+            @for (tag of note.tags; track tag) {
+              <span class="editable-tag">
+                <app-tag-pill [label]="tag" [active]="true" [interactive]="false" />
+                <button
+                  type="button"
+                  class="tag-remove"
+                  data-testid="editor-tag-remove"
+                  [attr.data-tag]="tag"
+                  [attr.aria-label]="'editor.removeTag' | transloco: { tag: tag }"
+                  [attr.title]="'editor.removeTag' | transloco: { tag: tag }"
+                  (click)="removeTag(tag)"
+                >
+                  <span aria-hidden="true">✕</span>
+                </button>
+              </span>
+            }
+            <form class="tag-add-form" (submit)="submitTag($event)">
+              <input
+                #tagInput
+                type="text"
+                class="tag-add-input"
+                data-testid="editor-tag-add"
+                [attr.aria-label]="'editor.addTagLabel' | transloco"
+                [placeholder]="'editor.addTagPlaceholder' | transloco"
+                [value]="tagInputValue()"
+                (input)="tagInputValue.set(tagInput.value)"
+              />
+            </form>
+          </div>
+          <!-- Clearing the field makes the note permanent; a date puts it in "untriaged". -->
+          <span class="overlay-expiry">
+            <app-lifecycle-badge [lifecycle]="note.lifecycle" [expiringSoon]="note.expiringSoon" />
+            <input
+              #expiryInput
+              type="date"
+              class="overlay-expiry-input"
+              data-testid="editor-deadline"
+              [attr.aria-label]="'editor.expiryLabel' | transloco"
+              [value]="expiryInputValue()"
+              (change)="onExpiryChange(expiryInput.value)"
+            />
+          </span>
+        </div>
 
-    <!-- A band of its own, like the attachments below it: where a note lives is neither
-         a tag nor a date, and wedged between the two it read as neither. Shown **together**:
-         a folder belongs to one space, so moving the space clears the folder
-         (`NotePatch::apply`), and a folder control on its own would lie about that. -->
-    <div class="overlay-placement" data-testid="editor-placement">
-      <span class="placement-label">{{ 'editor.placementLabel' | transloco }}</span>
-      <app-choice-menu
-        [kind]="'space'"
-        [label]="'notes.moveToSpace' | transloco"
-        [options]="spaceOptions()"
-        [currentId]="note.spaceId"
-        (chosen)="onSpaceChosen($event)"
-      />
-      <span class="placement-separator" aria-hidden="true">›</span>
-      <app-choice-menu
-        [kind]="'folder'"
-        [label]="'notes.fileInto' | transloco"
-        [options]="folderOptions()"
-        [currentId]="note.folderId"
-        [noneLabel]="'notes.noFolder' | transloco"
-        (chosen)="fileInto($event)"
-      />
-    </div>
+        <!-- A band of its own, like the attachments below it: where a note lives is neither
+             a tag nor a date, and wedged between the two it read as neither. Shown **together**:
+             a folder belongs to one space, so moving the space clears the folder
+             (`NotePatch::apply`), and a folder control on its own would lie about that. -->
+        <div class="overlay-placement" data-testid="editor-placement">
+          <span class="placement-label">{{ 'editor.placementLabel' | transloco }}</span>
+          <app-choice-menu
+            [kind]="'space'"
+            [label]="'notes.moveToSpace' | transloco"
+            [options]="spaceOptions()"
+            [currentId]="note.spaceId"
+            (chosen)="onSpaceChosen($event)"
+          />
+          <span class="placement-separator" aria-hidden="true">›</span>
+          <app-choice-menu
+            [kind]="'folder'"
+            [label]="'notes.fileInto' | transloco"
+            [options]="folderOptions()"
+            [currentId]="note.folderId"
+            [noneLabel]="'notes.noFolder' | transloco"
+            (chosen)="fileInto($event)"
+          />
+        </div>
 
-    <app-attachment-strip
-      [attachments]="attachments.attachments()"
-      [isBusy]="attachments.isBusy()"
-      [previewId]="attachments.previewId()"
-      [previewData]="attachments.previewData()"
-      (addRequested)="attachments.addFromPicker()"
-      (removeRequested)="attachments.remove($event)"
-      (previewToggled)="attachments.togglePreview($event)"
-      (openRequested)="attachments.open($event)"
-      (saveRequested)="attachments.saveToDisk($event)"
-      (zoomRequested)="attachments.zoom()"
-    />
+        <app-attachment-strip
+          [attachments]="attachments.attachments()"
+          [isBusy]="attachments.isBusy()"
+          [previewId]="attachments.previewId()"
+          [previewData]="attachments.previewData()"
+          (addRequested)="attachments.addFromPicker()"
+          (removeRequested)="attachments.remove($event)"
+          (previewToggled)="attachments.togglePreview($event)"
+          (openRequested)="attachments.open($event)"
+          (saveRequested)="attachments.saveToDisk($event)"
+          (zoomRequested)="attachments.zoom()"
+        />
+      }
+    </div>
 
     <!-- Nothing for a note with no token: a header always present and always empty
          would be a feature nobody uses. -->
