@@ -279,6 +279,23 @@ describe('Editing a note', () => {
     expect((await reread())?.tags).toEqual([]);
   });
 
+  it('keeps a tag typed without Enter when Escape closes the editor', async () => {
+    await canvas.openNote(title);
+    await setField(testid('editor-tag-add'), 'urgent');
+    await browser.keys(['Escape']);
+    await $(testid('editor-title')).waitForExist({ reverse: true, timeout: 10_000 });
+
+    await eventually(
+      async () => (await reread())?.tags ?? [],
+      (tags) => tags.includes('urgent'),
+      'the tag typed into the field to be written on the way out',
+    );
+
+    await canvas.openNote(title);
+    await editor.removeTag('urgent');
+    await editor.close();
+  });
+
   it('pins the note, and the card says so', async () => {
     await canvas.openNote(title);
     await editor.togglePin();
