@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { AppEventsService, GlobalAction } from '@core/ipc/app-events.service';
 import { AreaStore } from '@core/services/areas/area.store';
+import { FoldersStore } from '@core/state/folders.store';
 import { NotesRevision } from '@core/state/notes-revision';
 import { NotesStore } from '@core/state/notes.store';
 import { PaletteStore } from '@core/state/palette.store';
@@ -29,6 +30,7 @@ export class NotesPageComponent implements OnInit {
   private readonly store = inject(NotesStore);
   private readonly palette = inject(PaletteStore);
   private readonly spaces = inject(SpacesStore);
+  private readonly folders = inject(FoldersStore);
   private readonly samples = inject(SampleNotesService);
   private readonly revision = inject(NotesRevision);
   private readonly areas = inject(AreaStore);
@@ -38,8 +40,13 @@ export class NotesPageComponent implements OnInit {
     inject(DestroyRef).onDestroy(events.on((action) => this.runGlobalAction(action)));
   }
 
-  /** A fresh installation has no space, so not even a creatable note. */
+  /**
+   * Where the library was left, then the samples a fresh installation needs: it has no space,
+   * so not even a creatable note.
+   */
   ngOnInit(): void {
+    this.spaces.restoreRemembered();
+    this.folders.restoreRemembered();
     void this.seedSamples();
   }
 
@@ -78,7 +85,8 @@ export class NotesPageComponent implements OnInit {
     if (!seeded) return;
 
     this.spaces.reload();
-    this.spaces.selectSpace(seeded.id);
+    // Shown, not remembered: the person has chosen nothing yet.
+    this.spaces.selectSpace(seeded.id, false);
     this.revision.bump();
   }
 }

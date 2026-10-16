@@ -4720,12 +4720,18 @@ prefix: ⚠️ **`devnotes.notes.*` is the library's, everything else is the app
 |                             | file                                        | holds                                                                                   |
 | --------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------- |
 | `PreferencesService`        | `preferences.json`, at the profile root     | theme, language, density, the keys, the tray, autostart, the window, `automaticBackups` |
-| `LibraryPreferencesService` | `preferences.json`, inside the open library | the samples marker, and which view each space was left on                               |
+| `LibraryPreferencesService` | `preferences.json`, inside the open library | the samples marker, the space and folder it was left on, and each space's view          |
 
 Both extend `KeyValueStore`, which holds the synchronous cache and the plugin's own
 loading — the API stays synchronous where the plugin's is not, because a preference is read
 when a component is constructed and an async read would show the interface in one state
 then the other.
+
+**The space and the folder a library was left on** (`devnotes.notes.activeSpace`,
+`devnotes.notes.activeFolder`) are written on every choice and read when the notes page opens —
+before, the library's file is not open, and the title bar has already built `SpacesStore`. A
+space or a folder gone since falls back on « Tous les espaces » or every note by itself. The
+first launch's own pick of the seeded space is shown, not remembered: nothing was chosen yet.
 
 ⚠️ `automaticBackups` stays with the application deliberately: "copy my libraries at
 launch" is a habit rather than a property of one corpus, and it is the one key Rust reads
