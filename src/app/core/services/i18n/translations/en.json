@@ -694,6 +694,7 @@
     "copied": "{notes, plural, one {# note} other {# notes}} copied as Markdown to the clipboard.",
     "needsSelection": "Select at least one note.",
     "emptyLibrary": "Nothing to export: this library has no notes.",
+    "emptySpace": "Nothing to export: this space has no notes.",
     "preferences": "Preferences…",
     "importedIntoFolders": "{notes, plural, =0 {No notes} one {# note} other {# notes}} imported from {{path}} into {folders, plural, one {# new folder} other {# new folders}}, {skipped, plural, one {# skipped} other {# skipped}}."
   },

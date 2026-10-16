@@ -31,6 +31,10 @@ pub async fn export_notes<R: Runtime>(
 
         let mut connection = lock(db)?;
         let exported = bundle::of(&mut connection, &scope)?;
+        // Nothing to export writes nothing: an empty file would read as an export of something.
+        if exported.notes.is_empty() {
+            return Ok(ExportReport::nothing(passphrase.is_some()));
+        }
 
         Ok(file::write(
             &path,
@@ -39,6 +43,21 @@ pub async fn export_notes<R: Runtime>(
             connection.vault(),
             passphrase.as_deref(),
         )?)
+    })
+    .await
+}
+
+/// How many notes an export would carry, asked before the save dialog: none is said at once.
+#[tauri::command]
+#[specta::specta]
+pub async fn count_export<R: Runtime>(
+    scope: ExportScope,
+    app: AppHandle<R>,
+) -> Result<u32, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(bundle::count(&mut connection, &scope)?)
     })
     .await
 }
