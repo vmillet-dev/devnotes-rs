@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LanguageTag } from '@core/model/language.model';
-import { LanguageBadgeComponent } from '@notes/ui/language-badge/language-badge.component';
+import { LanguageBadgeComponent } from '@shared/badges/language-badge/language-badge.component';
 
 /** The languages come from the back end: a facet that would filter nothing is noise. */
 @Component({

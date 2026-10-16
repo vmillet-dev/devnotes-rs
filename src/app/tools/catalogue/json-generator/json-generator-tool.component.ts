@@ -11,6 +11,7 @@ import {
 } from '@shared/controls/segmented-choice/segmented-choice.component';
 import { IconComponent } from '@shared/icon/icon.component';
 import { CopyValueComponent } from '@tools/ui/copy-value/copy-value.component';
+import { NoteImportComponent } from '@tools/ui/note-import/note-import.component';
 
 const SOURCES: readonly Segment[] = (['schema', 'example'] as const).map((id) => ({
   id,
@@ -54,7 +55,7 @@ const SAMPLES: Record<JsonSource, string> = {
  */
 @Component({
   selector: 'app-json-generator-tool',
-  imports: [CopyValueComponent, IconComponent, SegmentedChoiceComponent, TranslocoPipe],
+  imports: [CopyValueComponent, IconComponent, NoteImportComponent, SegmentedChoiceComponent, TranslocoPipe],
   templateUrl: './json-generator-tool.component.html',
   styleUrl: './json-generator-tool.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

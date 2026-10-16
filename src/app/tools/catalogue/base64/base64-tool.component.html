@@ -18,6 +18,10 @@
           (chosen)="choose('source', $event)"
         />
       }
+      @if (direction() === 'decode' || source() === 'text') {
+        <span class="spacer"></span>
+        <app-note-import field="text" (imported)="text.set($event.content)" />
+      }
     </div>
 
     @if (direction() === 'encode' && source() === 'file') {

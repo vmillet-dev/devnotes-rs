@@ -12,7 +12,7 @@ import { describe, it } from 'node:test';
  * were in that state, and nothing anywhere said so.
  */
 const ENUM = readFileSync('src-tauri/src/notes/language.rs', 'utf8');
-const STYLESHEET = readFileSync('src/app/notes/ui/language-badge/language-badge.component.scss', 'utf8');
+const STYLESHEET = readFileSync('src/app/shared/badges/language-badge/language-badge.component.scss', 'utf8');
 
 /**
  * The spelling each variant carries in `closed_enum!`, which is the single one: serde, the

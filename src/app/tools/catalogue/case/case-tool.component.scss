@@ -19,6 +19,10 @@
   overflow: visible;
 }
 
+.section-head {
+  @include tool-section-head;
+}
+
 .section-title {
   @include tool-section-title;
 }

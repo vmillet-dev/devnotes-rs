@@ -159,3 +159,9 @@
 .note {
   @include tool-note;
 }
+
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

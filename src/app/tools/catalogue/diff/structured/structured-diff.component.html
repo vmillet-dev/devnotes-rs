@@ -20,14 +20,12 @@
           [currentId]="formatOf(side === 'a' ? 'a' : 'b')"
           (chosen)="onFormat(side === 'a' ? 'a' : 'b', $event)"
         />
-        <button
-          type="button"
-          class="open"
-          [attr.data-testid]="'structured-diff-open-' + side"
-          (click)="picking.set(side === 'a' ? 'a' : 'b')"
-        >
-          {{ 'tools.diff.structured.openNote' | transloco }}
-        </button>
+        <app-note-import
+          field="structured"
+          [testId]="'structured-diff-open-' + side"
+          [label]="'tools.fromNote.openSide' | transloco: { side: side.toUpperCase() }"
+          (imported)="onPicked(side === 'a' ? 'a' : 'b', $event)"
+        />
       </div>
       <textarea
         class="text"
@@ -215,8 +213,4 @@
   }
 } @else if (!unreadable() && notStructured().length === 0) {
   <p class="note" data-testid="structured-diff-empty">{{ 'tools.diff.structured.empty' | transloco }}</p>
-}
-
-@if (picking()) {
-  <app-json-note-picker (picked)="onPicked($event)" (closed)="picking.set(null)" />
 }

@@ -1,0 +1,16 @@
+@if (accepts(); as accepts) {
+  <button
+    type="button"
+    class="import"
+    [attr.data-testid]="testId() ?? 'note-import-' + field()"
+    [attr.aria-label]="label()"
+    (click)="picking.set(true)"
+  >
+    <app-icon name="file-text" />
+    {{ 'tools.fromNote.open' | transloco }}
+  </button>
+
+  @if (picking()) {
+    <app-note-picker [accepts]="accepts" (picked)="onPicked($event)" (closed)="picking.set(false)" />
+  }
+}

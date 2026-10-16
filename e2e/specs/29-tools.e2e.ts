@@ -977,6 +977,35 @@ describe('The tools', () => {
       );
       expect(await $(testid('convert-convention-xml')).isDisplayed()).toBe(true);
     });
+
+    it('fills its input from a YAML snippet, read as YAML, and lists no snippet it cannot read', async () => {
+      const deploy = await bridge.createNote(
+        draft({ spaceId, title: 'deploy.yml', content: 'service: billing\nreplicas: 2\n', language: 'yml' }),
+      );
+      const query = await bridge.createNote(
+        draft({ spaceId, title: 'replicas.sql', content: 'select 1;', language: 'sql' }),
+      );
+
+      await $(testid('note-import-text')).click();
+      await $(`${testid('note-picker-option')}[data-note-id="${deploy.id}"]`).waitForExist({
+        timeout: 10_000,
+      });
+      expect(await readEach(testid('note-picker-option'), '@data-note-id')).not.toContain(query.id);
+      await setField(testid('note-picker-search'), 'deploy');
+      await $(`${testid('note-picker-option')}[data-note-id="${deploy.id}"]`).click();
+
+      await eventually(
+        () => $(`${testid('segmented-convert-from')} [aria-checked="true"]`).getAttribute('data-segment-id'),
+        (format) => format === 'yaml',
+        'the format of the snippet',
+      );
+      await eventually(
+        () => $(testid('convert-output')).getText(),
+        (json) => JSON.stringify(JSON.parse(json)) === JSON.stringify({ service: 'billing', replicas: 2 }),
+        'the snippet converted',
+      );
+      expect(await $(testid('note-picker')).isExisting()).toBe(false);
+    });
   });
 
   describe('the crypto tools', () => {
@@ -2380,7 +2409,7 @@ describe('The tools', () => {
       await $(testid('structured-diff-ignore-order')).click();
     });
 
-    it('opens a JSON snippet into A, under its title', async () => {
+    it('imports a JSON snippet into A, under its title', async () => {
       noteId = (
         await bridge.createNote(
           draft({ spaceId, title: 'config.staging.json', content: STAGING, language: 'json' }),
@@ -2388,8 +2417,8 @@ describe('The tools', () => {
       ).id;
 
       await $(testid('structured-diff-open-a')).click();
-      await setField(testid('json-note-search'), 'config.staging');
-      await $(`${testid('json-note-option')}[data-note-id="${noteId}"]`).click();
+      await setField(testid('note-picker-search'), 'config.staging');
+      await $(`${testid('note-picker-option')}[data-note-id="${noteId}"]`).click();
 
       await eventually(
         () => readEach(testid('structured-diff-name-a'), 'text'),

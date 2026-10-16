@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { LanguageTag } from '@core/model/language.model';
-import { LanguageBadgeComponent } from '@notes/ui/language-badge/language-badge.component';
+import { LanguageBadgeComponent } from '@shared/badges/language-badge/language-badge.component';
 import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
 import { LanguageRailComponent } from './language-rail.component';
 

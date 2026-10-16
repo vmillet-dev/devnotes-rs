@@ -5,6 +5,13 @@
       <div class="input-head">
         <span class="side" [id]="'text-diff-input-' + side">{{ side.toUpperCase() }}</span>
         <span class="name">{{ name ?? ('tools.diff.pasted' | transloco) }}</span>
+        <span class="spacer"></span>
+        <app-note-import
+          field="text"
+          [testId]="'text-diff-import-' + side"
+          [label]="'tools.fromNote.openSide' | transloco: { side: side.toUpperCase() }"
+          (imported)="onImported(side === 'a' ? 'a' : 'b', $event)"
+        />
       </div>
       <textarea
         class="text"

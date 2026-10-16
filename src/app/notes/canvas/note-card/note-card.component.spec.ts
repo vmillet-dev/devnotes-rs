@@ -3,7 +3,7 @@ import { By } from '@angular/platform-browser';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NotesRepository } from '@core/data/notes.repository';
 import { Space } from '@core/model/space.model';
-import { LanguageBadgeComponent } from '@notes/ui/language-badge/language-badge.component';
+import { LanguageBadgeComponent } from '@shared/badges/language-badge/language-badge.component';
 import { NoteSelectionStore } from '@core/state/note-selection.store';
 import { NotesQueryStore } from '@core/state/notes-query.store';
 import { NotesStore } from '@core/state/notes.store';

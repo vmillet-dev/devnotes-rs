@@ -2659,9 +2659,8 @@
         "noteTitle": "Diff from {{a}} to {{b}}"
       },
       "structured": {
-        "openNote": "Open a note",
         "inputLabel": "Document {{side}}",
-        "placeholder": "Paste a JSON, YAML, TOML or XML document, or open a snippet",
+        "placeholder": "Paste a JSON, YAML, TOML or XML document, or import one from a note",
         "notStructured": "This text is no structured JSON, YAML, TOML or XML.",
         "asText": "Compare as text",
         "unreadable": "This {{format}} does not read: line {{line}}, column {{column}}.",
@@ -2686,9 +2685,6 @@
         "copyPatch": "Copy the JSON patch (RFC 6902)",
         "empty": "Paste two documents: their differences show here.",
         "noteTitle": "JSON patch from {{a}} to {{b}}",
-        "pickTitle": "Open a snippet",
-        "pickSearch": "Search a JSON, YAML, TOML or XML snippet",
-        "pickNone": "No JSON, YAML, TOML or XML snippet.",
         "format": "Format of {{side}}",
         "formats": {
           "auto": "Detect"
@@ -2701,6 +2697,19 @@
     },
     "sample": "Example",
     "sampleLoaded": "Example loaded",
+    "fromNote": {
+      "open": "Import from a note",
+      "openSide": "Import {{side}} from a note",
+      "title": "Import from a note",
+      "search": "Search a note",
+      "anyNote": "Every note",
+      "snippets": "{{languages}} snippets",
+      "none": "No compatible note.",
+      "noneFound": "No compatible note matches.",
+      "hint": "Copied once: editing the note afterwards leaves the tool as it is.",
+      "done": "“{{title}}” imported",
+      "doneUntitled": "Note imported"
+    },
     "copyAll": "Copy all",
     "reference": {
       "searchLabel": "Search: {{what}}",

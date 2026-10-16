@@ -1,6 +1,10 @@
 import { Type } from '@angular/core';
+import { Note } from '@core/model/note.model';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
+import { TOOL_CATALOGUE } from '@core/services/tools/tool.model';
+import { ToolsStore } from '@core/services/tools/tools.store';
+import { TOOLS } from '@tools/catalogue/catalogue';
 import { FakeClipboard } from './fake-clipboard';
 import { FakeToolsRepository } from './fake-tools-repository';
 import { provideAppTesting } from './testing.providers';
@@ -17,10 +21,14 @@ export interface ToolHarness<T> {
   settle(): Promise<void>;
 }
 
-/** A tool on its own, its Rust answers set on `tools` before the first request. */
+/**
+ * A tool on its own, its Rust answers set on `tools` before the first request. Opened by its id,
+ * it reads the real catalogue, as the frame would: what it declares there is drawn.
+ */
 export async function renderTool<T>(
   component: Type<T>,
   prepare: (tools: FakeToolsRepository) => void = () => undefined,
+  { open, notes }: { readonly open?: string; readonly notes?: readonly Note[] } = {},
 ): Promise<ToolHarness<T>> {
   TestBed.resetTestingModule();
   const tools = new FakeToolsRepository();
@@ -28,8 +36,12 @@ export async function renderTool<T>(
   prepare(tools);
   TestBed.configureTestingModule({
     imports: [component],
-    providers: [provideAppTesting({ toolsRepository: tools, clipboard })],
+    providers: [
+      provideAppTesting({ toolsRepository: tools, clipboard, notes: notes ?? [] }),
+      { provide: TOOL_CATALOGUE, useValue: TOOLS },
+    ],
   });
+  if (open !== undefined) TestBed.inject(ToolsStore).open(open);
   const fixture = TestBed.createComponent(component);
   fixture.autoDetectChanges();
   await fixture.whenStable();

@@ -1,4 +1,4 @@
-import { ToolDefinition } from '@core/services/tools/tool.model';
+import { ANY_NOTE, JSON_SNIPPET, STRUCTURED_SNIPPET, ToolDefinition } from '@core/services/tools/tool.model';
 
 /**
  * Every tool, in its panel's order, each in a folder beside this one. Adding one is an entry
@@ -25,12 +25,14 @@ export const TOOLS: readonly ToolDefinition[] = [
       'permalink',
       'ascii',
     ],
+    fromNote: { text: ANY_NOTE },
     load: () => import('./case/case-tool.component').then((m) => m.CaseToolComponent),
   },
   {
     id: 'line-breaks',
     category: 'text',
     keywords: ['crlf', 'lf', 'eol', 'newline', 'whitespace'],
+    fromNote: { text: ANY_NOTE },
     load: () => import('./line-breaks/line-breaks-tool.component').then((m) => m.LineBreaksToolComponent),
   },
   {
@@ -47,18 +49,21 @@ export const TOOLS: readonly ToolDefinition[] = [
       'caractères',
       'mots',
     ],
+    fromNote: { text: ANY_NOTE },
     load: () => import('./text-stats/text-stats-tool.component').then((m) => m.TextStatsToolComponent),
   },
   {
     id: 'diff',
     category: 'text',
     keywords: ['diff', 'compare', 'patch', 'diff -u', 'unified', 'json', 'rfc 6902'],
+    fromNote: { text: ANY_NOTE, structured: STRUCTURED_SNIPPET },
     load: () => import('./diff/diff-tool.component').then((m) => m.DiffToolComponent),
   },
   {
     id: 'hash',
     category: 'crypto',
     keywords: ['md5', 'sha1', 'sha256', 'sha512', 'sha3', 'hmac', 'digest', 'checksum', 'webhook'],
+    fromNote: { text: ANY_NOTE },
     load: () => import('./hash/hash-tool.component').then((m) => m.HashToolComponent),
   },
   {
@@ -95,6 +100,7 @@ export const TOOLS: readonly ToolDefinition[] = [
     id: 'url-codec',
     category: 'encode',
     keywords: ['url', 'uri', 'query', 'querystring', 'percent', 'encodeURIComponent', 'escape', 'parse'],
+    fromNote: { text: ANY_NOTE },
     load: () => import('./url-codec/url-codec-tool.component').then((m) => m.UrlCodecToolComponent),
   },
   {
@@ -112,12 +118,14 @@ export const TOOLS: readonly ToolDefinition[] = [
       'jwt',
       'data uri',
     ],
+    fromNote: { text: ANY_NOTE },
     load: () => import('./base64/base64-tool.component').then((m) => m.Base64ToolComponent),
   },
   {
     id: 'convert',
     category: 'encode',
     keywords: ['json', 'toml', 'xml', 'yaml', 'yml', 'convert'],
+    fromNote: { text: STRUCTURED_SNIPPET },
     load: () => import('./convert/convert-tool.component').then((m) => m.ConvertToolComponent),
   },
   {
@@ -130,6 +138,7 @@ export const TOOLS: readonly ToolDefinition[] = [
     id: 'json-generator',
     category: 'generate',
     keywords: ['json', 'schema', 'mock', 'fixture', 'fake', 'faker'],
+    fromNote: { text: JSON_SNIPPET },
     load: () =>
       import('./json-generator/json-generator-tool.component').then((m) => m.JsonGeneratorToolComponent),
   },
@@ -161,6 +170,7 @@ export const TOOLS: readonly ToolDefinition[] = [
     id: 'qr',
     category: 'generate',
     keywords: ['qr', 'qr code', 'qrcode', 'wifi', 'vcard', 'mailto', 'svg', 'png', 'barcode'],
+    fromNote: { text: ANY_NOTE },
     load: () => import('./qr/qr-tool.component').then((m) => m.QrToolComponent),
   },
   {

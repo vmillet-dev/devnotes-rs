@@ -227,4 +227,15 @@ describe('HashToolComponent', () => {
 
     expect(text(harness, 'hash-problem')).toBe('Ce fichier est introuvable.');
   });
+
+  it('offers a note for the text it hashes, never for the HMAC key', async () => {
+    const harness = await renderTool(HashToolComponent, undefined, { open: 'hash' });
+    harness.element<HTMLInputElement>('[data-testid="hash-hmac"]').click();
+    await harness.settle();
+
+    expect(harness.element('[data-testid="hash-key"]')).not.toBeNull();
+    expect(harness.all('[data-testid^="note-import"]').map((button) => button.dataset['testid'])).toEqual([
+      'note-import-text',
+    ]);
+  });
 });

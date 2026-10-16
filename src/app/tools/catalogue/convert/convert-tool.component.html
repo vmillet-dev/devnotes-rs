@@ -10,6 +10,8 @@
         [disabledIds]="[to()]"
         (chosen)="onFrom($event)"
       />
+      <span class="spacer"></span>
+      <app-note-import field="text" (imported)="onImported($event)" />
     </div>
     <label class="field">
       <span class="visually-hidden">{{ 'tools.convert.inputLabel' | transloco }}</span>

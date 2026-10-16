@@ -10,6 +10,7 @@ import {
   SegmentedChoiceComponent,
 } from '@shared/controls/segmented-choice/segmented-choice.component';
 import { CopyValueComponent } from '@tools/ui/copy-value/copy-value.component';
+import { NoteImportComponent } from '@tools/ui/note-import/note-import.component';
 
 type Side = 'decoded' | 'encoded';
 type Tab = 'codec' | 'parse';
@@ -54,7 +55,7 @@ function rows(parts: UrlParts): PartRow[] {
  */
 @Component({
   selector: 'app-url-codec-tool',
-  imports: [CopyValueComponent, SegmentedChoiceComponent, TranslocoPipe],
+  imports: [CopyValueComponent, NoteImportComponent, SegmentedChoiceComponent, TranslocoPipe],
   templateUrl: './url-codec-tool.component.html',
   styleUrl: './url-codec-tool.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -143,6 +144,12 @@ export class UrlCodecToolComponent implements Tool {
 
   protected onTab(id: string): void {
     this.tab.set(id as Tab);
+  }
+
+  /** Into the decoded side, which is where a text is typed. */
+  protected onImported(text: string): void {
+    this.side.set('decoded');
+    this.text.set(text);
   }
 
   protected onInput(side: Side, event: Event): void {

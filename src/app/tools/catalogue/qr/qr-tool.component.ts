@@ -14,6 +14,7 @@ import {
 } from '@shared/controls/segmented-choice/segmented-choice.component';
 import { IconComponent } from '@shared/icon/icon.component';
 import { ResultRowComponent } from '@tools/ui/result-row/result-row.component';
+import { NoteImportComponent } from '@tools/ui/note-import/note-import.component';
 
 type ContentKind = QrContent['kind'];
 
@@ -65,7 +66,7 @@ const segments = (ids: readonly string[], prefix: string): readonly Segment[] =>
  */
 @Component({
   selector: 'app-qr-tool',
-  imports: [IconComponent, ResultRowComponent, SegmentedChoiceComponent, TranslocoPipe],
+  imports: [IconComponent, NoteImportComponent, ResultRowComponent, SegmentedChoiceComponent, TranslocoPipe],
   templateUrl: './qr-tool.component.html',
   styleUrl: './qr-tool.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -163,6 +164,10 @@ export class QrToolComponent implements Tool {
 
   protected value(field: QrField | 'password'): string {
     return field === 'password' ? this.password() : this.forms()[field];
+  }
+
+  protected onImported(text: string): void {
+    this.forms.update((forms) => ({ ...forms, text }));
   }
 
   protected onField(field: QrField | 'password', event: Event): void {
