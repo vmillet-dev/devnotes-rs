@@ -64,13 +64,26 @@ describe('NoteEditorOverlayComponent', () => {
     moves: string[];
     values: Record<string, string>[];
     priorities: string[];
+    conversions: { into: string; pending: NotePatch }[];
   };
 
   function listenToTheStore(): void {
-    asked = { patches: [], closes: 0, deletions: 0, filings: [], moves: [], values: [], priorities: [] };
+    asked = {
+      patches: [],
+      closes: 0,
+      deletions: 0,
+      filings: [],
+      moves: [],
+      values: [],
+      priorities: [],
+      conversions: [],
+    };
     const store = TestBed.inject(NotesStore);
     vi.spyOn(store, 'applyPatch').mockImplementation(async (_id, patch) => {
       for (const listener of asked.patches) listener(patch);
+    });
+    vi.spyOn(store, 'convertNote').mockImplementation(async (_id, into, pending = {}) => {
+      asked.conversions.push({ into, pending });
     });
     vi.spyOn(store, 'closeOverlay').mockImplementation(() => {
       asked.closes += 1;
@@ -1011,9 +1024,30 @@ describe('NoteEditorOverlayComponent', () => {
     it('says what it is where a snippet names its format', async () => {
       await openText();
 
-      expect(fixture.nativeElement.querySelector('[data-testid="editor-kind"]').textContent.trim()).toBe(
-        'Note',
+      expect(fixture.nativeElement.querySelector('[data-testid="editor-kind"]').textContent.trim()).toMatch(
+        /^Note/,
       );
+    });
+
+    /** What is still being typed goes with it: Rust converts the text on screen. */
+    it('offers the two other kinds, and converts with what is being typed', async () => {
+      await openText('Freeze the merges');
+      const panel = '[data-testid="choice-panel-note-kind"]';
+      fixture.nativeElement.querySelector('[data-testid="editor-kind"]').click();
+      await fixture.whenStable();
+
+      expect(
+        [...fixture.nativeElement.querySelectorAll(panel + ' [data-option-id]')].map(
+          (entry) => (entry as HTMLElement).dataset['optionId'],
+        ),
+      ).toEqual(['snippet', 'checklist']);
+
+      fixture.nativeElement.querySelector(panel + ' [data-option-id="checklist"]').click();
+      await fixture.whenStable();
+
+      expect(asked.conversions).toEqual([
+        { into: 'checklist', pending: expect.objectContaining({ content: 'Freeze the merges' }) },
+      ]);
     });
 
     /** The draft's words, not its Markdown: they follow the typing before anything is saved. */

@@ -4,7 +4,9 @@ import { LanguageTag } from '@core/model/language.model';
 import { DiffLine, Revision } from '@core/model/revision.model';
 import {
   Note,
+  NoteBody,
   NoteDraft,
+  NoteKind,
   NotePatch,
   NotePlacement,
   NotePriority,
@@ -183,6 +185,25 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
         void this.create({ ...note.draft, spaceId, folderId });
       }
       return { id: spaceId, name: spaceName, pinned: false };
+    });
+  }
+
+  /** The kind alone: what the text becomes is Rust's, and no spec here asks it of a fake. */
+  convert(id: string, into: NoteKind): Promise<{ note: Note; previous: NoteBody }> {
+    return guard(this, () => {
+      const existing = this.notes.find((note) => note.id === id);
+      if (!existing) throw new Error(`Unknown note: ${id}`);
+
+      const previous: NoteBody = {
+        kind: existing.kind,
+        language: existing.language,
+        content: existing.content,
+        items: [...existing.items],
+      };
+      const note: Note = { ...existing, kind: into };
+      this.notes = this.notes.map((each) => (each.id === id ? note : each));
+
+      return { note, previous };
     });
   }
 

@@ -32,6 +32,7 @@ import { PrettierSettingsStore } from '@core/services/format/prettier-settings.s
 import { HelpStore } from '@core/services/help/help.store';
 import { ExternalLinksService } from '@core/services/links/external-links.service';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
+import { NOTE_KIND_CHOICES } from '@core/services/settings/app-settings.model';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { ClockService } from '@core/services/time/clock.service';
 import { endOfLocalDay, toDateInputValue } from '@core/utils/local-day.util';
@@ -164,6 +165,15 @@ export class NoteEditorOverlayComponent {
 
   protected readonly languageChoices = LANGUAGE_CHOICES;
   protected readonly priorityChoices = PRIORITY_CHOICES;
+
+  /** The two other kinds, as « Convertir en… »: the menu names the kind the note is. */
+  protected readonly kindChoices = computed<readonly ChoiceOption[]>(() =>
+    NOTE_KIND_CHOICES.filter((kind) => kind !== this.note()?.kind).map((kind) => ({
+      id: kind,
+      name: `editor.kind.convertTo.${kind}`,
+      nameIsKey: true,
+    })),
+  );
 
   protected readonly spaceOptions = computed<readonly ChoiceOption[]>(() =>
     this.spaces.spaces().map((space) => ({ id: space.id, name: space.name })),
@@ -593,7 +603,8 @@ export class NoteEditorOverlayComponent {
     if (language === 'txt') {
       this.commitContent();
     } else {
-      this.requestPatch({ content: text, language, kind: 'snippet' });
+      const note = this.note();
+      if (note) void this.store.takeCodePaste(note.id, text, language);
     }
   }
 
@@ -684,6 +695,17 @@ export class NoteEditorOverlayComponent {
 
   protected commitSource(): void {
     this.requestPatch({ source: this.draftSource() });
+  }
+
+  /** What is still being typed goes with the conversion: Rust converts the text the editor shows. */
+  protected convertTo(chosen: string | null): void {
+    const note = this.note();
+    const into = NOTE_KIND_CHOICES.find((kind) => kind === chosen);
+    if (!note || !into || into === note.kind) return;
+
+    this.addTypedTag();
+    this.fieldsPanel()?.commit();
+    void this.store.convertNote(note.id, into, this.pendingBody(note));
   }
 
   protected togglePin(): void {
@@ -782,6 +804,13 @@ export class NoteEditorOverlayComponent {
       this.closing = false;
       this.close();
     });
+  }
+
+  private pendingBody(note: Note): NotePatch {
+    const fields = { title: this.draftTitle(), source: this.draftSource() };
+    return note.kind === 'checklist'
+      ? { ...fields, items: this.checklistEditor()?.current() ?? note.items }
+      : { ...fields, content: this.draftContent() };
   }
 
   private close(): void {

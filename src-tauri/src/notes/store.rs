@@ -9,6 +9,7 @@ use uuid::Uuid;
 
 use chrono::{DateTime, TimeDelta, Utc};
 
+use super::convert::{self, NoteBody};
 use super::kind::NoteKind;
 use super::model::{
     Note, NoteDraft, NoteLifecycle, NotePatch, NotePlacement, NotePriority, NoteTag, SampleNote,
@@ -512,6 +513,45 @@ pub fn update(
         }
 
         Ok(note)
+    })
+}
+
+/// Rewrites the note as `into`, in one transaction, and answers it with the body it had. The
+/// body a conversion replaces goes into the history like any edit's: a todo list keeps none, so
+/// converting into one keeps the text it was made from.
+pub fn convert(
+    connection: &mut Library,
+    id: &str,
+    into: NoteKind,
+    now: DateTime<Utc>,
+) -> Result<(Note, NoteBody), StorageError> {
+    connection.transaction(|connection, vault| {
+        let Some(mut note) = find(connection, vault, id)? else {
+            return Err(StorageError::NoteNotFound(id.to_string()));
+        };
+
+        let before = note.clone();
+        if into == note.kind {
+            return Ok((note, NoteBody::of(&before)));
+        }
+
+        let body = convert::convert(&note, into);
+        note.kind = body.kind;
+        note.language = body.language;
+        note.content = body.content;
+        note.items = body.items;
+        note.updated_at = now;
+
+        if revision::worth_keeping(&before, &note) {
+            revisions::record(connection, vault, &note.id, &before.content, now)?;
+        }
+
+        diesel::update(notes::table.find(&note.id))
+            .set(NoteChanges::between(&before, &note, vault)?)
+            .execute(connection)?;
+        related::replace_items(connection, vault, &note.id, &note.items)?;
+
+        Ok((note, NoteBody::of(&before)))
     })
 }
 

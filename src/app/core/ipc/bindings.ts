@@ -75,6 +75,8 @@ export const commands = {
 	 */
 	seedSamples: (spaceName: string, folders: string[], notes: SampleNote[]) => typedError<Space, AppError>(__TAURI_INVOKE("seed_samples", { spaceName, folders, notes })),
 	updateNote: (id: string, patch: NotePatch) => typedError<DisplayNote, AppError>(__TAURI_INVOKE("update_note", { id, patch })),
+	/**  The note rewritten as `into`, with the body it had: its undo is that body written back. */
+	convertNote: (id: string, into: NoteKind) => typedError<NoteConversion, AppError>(__TAURI_INVOKE("convert_note", { id, into })),
 	/**
 	 *  The bodies kept beside a note, newest first.
 	 * 
@@ -2230,6 +2232,26 @@ export type Note = {
 	items?: ChecklistItem[],
 	/**  Written by `set_placeholder_values` alone, which leaves `updated_at` alone. */
 	placeholderValues?: { [key in string]: string },
+};
+
+/**
+ *  What a note holds that a change of kind rewrites: the answer a conversion gives, so its undo
+ *  puts back exactly that.
+ */
+export type NoteBody = {
+	kind: NoteKind,
+	language: Language,
+	content: string,
+	items: ChecklistItem[],
+};
+
+/**
+ *  What a conversion answers: the note as it now is, and the body it had, which its undo puts
+ *  back.
+ */
+export type NoteConversion = {
+	note: DisplayNote,
+	previous: NoteBody,
 };
 
 export type NoteDraft = {

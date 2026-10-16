@@ -356,7 +356,17 @@
       "notFormattedList": "{{list}}. Le bouton y est désactivé et dit pourquoi."
     },
     "modifiedPrefix": "Modifiée",
-    "noteKind": "Note",
+    "kind": {
+      "label": "Type",
+      "snippet": "Snippet",
+      "note": "Note",
+      "checklist": "Tâches",
+      "convertTo": {
+        "snippet": "Convertir en snippet",
+        "note": "Convertir en Note",
+        "checklist": "Convertir en liste de tâches"
+      }
+    },
     "noteStats": "Note · {count, plural, =0 {aucun mot} one {# mot} other {# mots}} · enregistrée en Markdown",
     "checklistStats": "{{done}}/{total, plural, one {# tâche} other {# tâches}}",
     "addItem": "Ajouter une tâche",
@@ -466,6 +476,7 @@
     "boardSaveFailed": "La disposition du tableau n’a pas pu être enregistrée.",
     "fileFailed": "La note n’a pas pu être rangée.",
     "priorityFailed": "La priorité n’a pas pu être changée.",
+    "convertFailed": "La note n’a pas pu être convertie.",
     "boardArrangeFailed": "Le tableau n’a pas pu être rangé.",
     "backupsListFailed": "Impossible de lire les copies de sauvegarde.",
     "backupRestoreFailed": "Impossible de restaurer cette copie. La bibliothèque est restée en place.",
@@ -670,7 +681,12 @@
     "prioritised": "{count, plural, one {Priorité changée sur # note} other {Priorité changée sur # notes}}",
     "filed": "{count, plural, one {# note rangée} other {# notes rangées}}",
     "restoreKey": "Échap",
-    "arranged": "Tableau réorganisé"
+    "arranged": "Tableau réorganisé",
+    "convertedInto": {
+      "note": "Convertie en Note",
+      "snippet": "Convertie en snippet",
+      "checklist": "Convertie en liste de tâches"
+    }
   },
   "file": {
     "menuLabel": "Fichier",

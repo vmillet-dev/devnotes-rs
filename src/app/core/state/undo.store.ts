@@ -5,7 +5,7 @@ import { FoldersRepository } from '@core/data/folders.repository';
 import { NotesRepository } from '@core/data/notes.repository';
 import { BoardLayout } from '@core/model/board.model';
 import { NoteFiling } from '@core/model/folder.model';
-import { NotePlacement, NotePriority, NoteTag } from '@core/model/note.model';
+import { NoteBody, NoteKind, NotePlacement, NotePriority, NoteTag } from '@core/model/note.model';
 import { BoardStore } from './board.store';
 import { NotesRevision } from './notes-revision';
 
@@ -22,7 +22,14 @@ export type Reversible =
   | { readonly kind: 'tag'; readonly added: readonly NoteTag[]; readonly count: number }
   | { readonly kind: 'priority'; readonly previous: readonly NotePriority[]; readonly count: number }
   | { readonly kind: 'file'; readonly previous: readonly NoteFiling[]; readonly count: number }
-  | { readonly kind: 'arrange'; readonly layout: BoardLayout; readonly count: number };
+  | { readonly kind: 'arrange'; readonly layout: BoardLayout; readonly count: number }
+  | {
+      readonly kind: 'convert';
+      readonly id: string;
+      readonly into: NoteKind;
+      readonly previous: NoteBody;
+      readonly count: number;
+    };
 
 /**
  * The last write that can be put back, and the bar offering it. The banner is what the timer
@@ -69,7 +76,7 @@ export class UndoStore {
   }
 
   /** Exhaustive by construction: a new kind of undo stops this compiling. */
-  private reverse(action: Reversible): Promise<number> {
+  private async reverse(action: Reversible): Promise<number> {
     switch (action.kind) {
       case 'deletion':
         return this.notes.restore(action.ids);
@@ -83,6 +90,11 @@ export class UndoStore {
         return this.folders.fileBack(action.previous);
       case 'arrange':
         return this.board.restoreLayout(action.layout);
+      case 'convert': {
+        const { kind, language, content, items } = action.previous;
+        await this.notes.update(action.id, { kind, language, content, items });
+        return 1;
+      }
     }
   }
 }

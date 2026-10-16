@@ -32,6 +32,21 @@ describe('UndoBarComponent', () => {
     expect(fixture.nativeElement.querySelector('.undo-text').textContent).toContain('déplacée');
   });
 
+  it('names the kind a note was converted into', async () => {
+    fixture.componentRef.setInput('action', {
+      kind: 'convert',
+      id: 'a',
+      into: 'checklist',
+      previous: { kind: 'note', language: 'txt', content: '', items: [] },
+      count: 1,
+    });
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.undo-text').textContent.trim()).toBe(
+      'Convertie en liste de tâches',
+    );
+  });
+
   it('announces itself as a status, not an alert', () => {
     expect(fixture.nativeElement.querySelector('.undo-bar').getAttribute('role')).toBe('status');
   });

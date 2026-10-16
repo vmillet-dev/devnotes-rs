@@ -273,6 +273,17 @@ describe('ChecklistEditorComponent', () => {
     });
   });
 
+  it('hands over the rows as typed, for a write that cannot wait for the blur', async () => {
+    type(rows()[0], 'Relire encore');
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.current()).toEqual([
+      { text: 'Relire encore', done: true },
+      { text: 'Déployer', done: false },
+    ]);
+    expect(emitted).toEqual([]);
+  });
+
   it('commits on demand, for the closing paths that produce no blur', async () => {
     type(rows()[0], 'Modifié');
     await fixture.whenStable();

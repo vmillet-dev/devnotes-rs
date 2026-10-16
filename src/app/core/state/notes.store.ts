@@ -7,6 +7,7 @@ import { FALLBACK_LANGUAGE, LanguageTag } from '@core/model/language.model';
 import {
   ChecklistItem,
   Note,
+  NoteBody,
   NoteDraft,
   NoteKind,
   NoteLifecycle,
@@ -230,6 +231,51 @@ export class NotesStore {
       const changes = changedFields(note, patch);
       return Object.keys(changes).length === 0 ? null : changes;
     });
+  }
+
+  /**
+   * A change of kind is Rust's (`convert_note`), after what the editor still holds: one patch,
+   * awaited, or the conversion could land under a write of the old body. The answer's previous
+   * body is what the undo writes back, and the editor re-seeds its drafts from the converted
+   * note. A draft with nothing worth keeping just changes kind.
+   */
+  async convertNote(id: string, into: NoteKind, pending: NotePatch = {}): Promise<void> {
+    await this.applyPatch(id, pending);
+    const resolved = await this.resolve(id);
+    if (resolved === DRAFT_ID) {
+      const draft = this.find(DRAFT_ID);
+      if (!draft || isWorthSaving(draft)) return;
+
+      this._draftNote.set({ ...draft, kind: into, language: FALLBACK_LANGUAGE, items: [] });
+      this._editorSession.update((session) => session + 1);
+      return;
+    }
+
+    const converted = await this.notifier.attempt('errors.convertFailed', () =>
+      this.repository.convert(resolved, into),
+    );
+    if (converted === null || converted.previous.kind === into) return;
+
+    if (this.persistedNoteId() === resolved) {
+      this._selectedNote.set(converted.note);
+      this._editorSession.update((session) => session + 1);
+    }
+    if (this.materialisedNote?.id === resolved) this.materialisedNote = converted.note;
+    this.revision.bump();
+    this.undo.record({ kind: 'convert', id: resolved, into, previous: converted.previous, count: 1 });
+  }
+
+  /**
+   * Code pasted into an empty Note makes it a snippet, which offers the way back a conversion
+   * does: to the Note, the pasted text kept.
+   */
+  async takeCodePaste(id: string, content: string, language: LanguageTag): Promise<void> {
+    await this.applyPatch(id, { content, language, kind: 'snippet' });
+    const resolved = await this.resolve(id);
+    if (resolved === DRAFT_ID || this.find(resolved)?.kind !== 'snippet') return;
+
+    const previous: NoteBody = { kind: 'note', language: FALLBACK_LANGUAGE, content, items: [] };
+    this.undo.record({ kind: 'convert', id: resolved, into: 'snippet', previous, count: 1 });
   }
 
   togglePinned(id: string): Promise<void> {

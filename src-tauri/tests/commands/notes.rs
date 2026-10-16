@@ -2,18 +2,20 @@ use std::collections::BTreeMap;
 
 use chrono::Utc;
 use devnotes_lib::error::ErrorCode;
+use devnotes_lib::notes::checklist::ChecklistItem;
+use devnotes_lib::notes::kind::NoteKind;
 use devnotes_lib::notes::model::{NoteDraft, NotePatch, SampleNote};
 use devnotes_lib::notes::priority::Priority;
 use devnotes_lib::notes::revision::DiffLine;
 use devnotes_lib::notes::trash::TrashedNote;
 use devnotes_lib::notes::view::{Grouping, NoteFilter, NoteOrder, NotesQuery};
 use devnotes_lib::notes::{
-    count_notes_tagged, create_note, delete_note, delete_notes, delete_tags, duplicate_note,
-    empty_trash, fill_placeholders, get_note, list_global_placeholders, list_revisions, list_tags,
-    list_trash, move_notes, move_notes_back, purge_notes, query_notes, rename_tags, restore_notes,
-    restore_priorities, restore_revision, restore_trash, revision_diff, seed_samples,
-    set_global_placeholders, set_placeholder_values, set_priority, tag_notes, untag_notes,
-    update_note,
+    convert_note, count_notes_tagged, create_note, delete_note, delete_notes, delete_tags,
+    duplicate_note, empty_trash, fill_placeholders, get_note, list_global_placeholders,
+    list_revisions, list_tags, list_trash, move_notes, move_notes_back, purge_notes, query_notes,
+    rename_tags, restore_notes, restore_priorities, restore_revision, restore_trash, revision_diff,
+    seed_samples, set_global_placeholders, set_placeholder_values, set_priority, tag_notes,
+    untag_notes, update_note,
 };
 
 use super::common::snippet;
@@ -303,6 +305,65 @@ fn a_priority_is_set_and_put_back_without_touching_the_modification_date() {
     assert_eq!(set.note.updated_at, before.note.updated_at);
     assert_eq!(restored, 1);
     assert_eq!(back.note.priority, Priority::None);
+}
+
+/// The body before a conversion is in the history; writing that body back is the undo.
+#[test]
+fn a_note_changes_kind_keeps_its_body_in_the_history_and_comes_back() {
+    let session = Session::open();
+    let space = session.space("Personal");
+    let mut draft = snippet(&space);
+    draft.content = "- [x] Freeze the merges
+Deploy"
+        .to_string();
+    let original = draft.content.clone();
+    let id = note(&session, draft);
+
+    let converted = session
+        .call(|app| convert_note(id.clone(), NoteKind::Checklist, app))
+        .unwrap();
+    let history = session.call(|app| list_revisions(id.clone(), app)).unwrap();
+    let previous = converted.previous.clone();
+    let back = session
+        .call(|app| {
+            update_note(
+                id.clone(),
+                NotePatch {
+                    kind: Some(previous.kind),
+                    language: Some(previous.language),
+                    content: Some(previous.content.clone()),
+                    items: Some(previous.items.clone()),
+                    ..NotePatch::default()
+                },
+                app,
+            )
+        })
+        .unwrap();
+    let unchanged = session
+        .call(|app| convert_note(id.clone(), NoteKind::Snippet, app))
+        .unwrap();
+
+    assert_eq!(converted.note.note.kind, NoteKind::Checklist);
+    assert_eq!(converted.note.note.content, "");
+    assert_eq!(
+        converted.note.note.items,
+        [
+            ChecklistItem {
+                text: "Freeze the merges".to_string(),
+                done: true
+            },
+            ChecklistItem {
+                text: "Deploy".to_string(),
+                done: false
+            },
+        ]
+    );
+    assert_eq!(history.len(), 1);
+    assert_eq!(previous.kind, NoteKind::Snippet);
+    assert_eq!(back.note.kind, NoteKind::Snippet);
+    assert_eq!(back.note.content, original);
+    assert!(back.note.items.is_empty());
+    assert_eq!(unchanged.previous.content, original);
 }
 
 /// A typed `#urgent` joins `urgent`: the command normalises before the store sees it.

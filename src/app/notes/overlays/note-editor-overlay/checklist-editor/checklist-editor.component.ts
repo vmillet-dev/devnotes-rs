@@ -215,6 +215,11 @@ export class ChecklistEditorComponent {
    * Called on `blur` and by the editor before it closes: Escape, the backdrop and
    * the close button produce no `blur`, so the last line typed would be lost.
    */
+  /** The rows as typed, for a write that cannot wait for the blur. */
+  current(): readonly ChecklistItem[] {
+    return this.draft().map((item) => ({ ...item }));
+  }
+
   commit(): void {
     this.itemsChanged.emit(this.draft().map((item) => ({ ...item })));
     this.applyPendingFocus();

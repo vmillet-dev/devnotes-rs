@@ -39,8 +39,6 @@
             (formatRequested)="formatBody()"
             (settingsChanged)="prettierSettings.update($event)"
           />
-        } @else if (isRichText()) {
-          <span class="kind-badge" data-testid="editor-kind">{{ 'editor.noteKind' | transloco }}</span>
         }
 
         <button
@@ -201,12 +199,22 @@
           </span>
         </div>
 
-        <!-- A band of its own, like the attachments below it: where a note lives is neither
+        <!-- What the note is, then where it lives; the title bar keeps its room for the title.
+             A band of its own, like the attachments below it: where a note lives is neither
              a tag nor a date, and wedged between the two it read as neither. Shown **together**:
              a folder belongs to one space, so moving the space clears the folder
              (`NotePatch::apply`), and a folder control on its own would lie about that. -->
         <div class="overlay-placement" data-testid="editor-placement">
-          <span class="placement-label">{{ 'editor.placementLabel' | transloco }}</span>
+          <span class="placement-label">{{ 'editor.kind.label' | transloco }}</span>
+          <app-choice-menu
+            [kind]="'note-kind'"
+            [naming]="'label'"
+            [triggerTestId]="'editor-kind'"
+            [label]="'editor.kind.' + note.kind | transloco"
+            [options]="kindChoices()"
+            (chosen)="convertTo($event)"
+          />
+          <span class="placement-label next">{{ 'editor.placementLabel' | transloco }}</span>
           <app-choice-menu
             [kind]="'space'"
             [label]="'notes.moveToSpace' | transloco"

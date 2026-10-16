@@ -289,6 +289,13 @@ export const editor = {
     await waitForCanvas();
   },
 
+  /** The kind menu offers the two other kinds; Rust rewrites the text. */
+  async convertTo(kind: 'snippet' | 'note' | 'checklist'): Promise<void> {
+    await $(testid('editor-kind')).click();
+    await $(testid('choice-panel-note-kind')).waitForExist({ timeout: 5_000 });
+    await $(`${testid('choice-panel-note-kind')} [data-option-id="${kind}"]`).click();
+  },
+
   async deleteNote(): Promise<void> {
     await confirmTwice($(testid('editor-delete')));
     await $(testid('editor-title')).waitForExist({ reverse: true, timeout: 10_000 });
