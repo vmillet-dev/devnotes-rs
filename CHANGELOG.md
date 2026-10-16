@@ -16,9 +16,9 @@ the release notes the updater hands over.
 
 ### 🔧 Changed
 
-- Search the code through a bar of our own (#854)
-- Fold the editor's header, apart from the fields (#853)
-- Continue a wrapped line under its own indentation (#852)
+- Code editor: new find-and-replace bar with match count and options (#854)
+- Editor: fold the header with one button, the fields panel separately (#853)
+- Code editor: indent a wrapped line like the line it continues (#852)
 
 ## [0.12.0] - 2026-10-14
 

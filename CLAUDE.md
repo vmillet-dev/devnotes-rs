@@ -103,6 +103,12 @@ Principles:
 - Specs substitute repositories by class through `provideAppTesting()`; fakes use `implements Pick<…, keyof …>` and reimplement no Rust rule; `AppWindowService` and `FileDialogService` are always faked. → "Testing".
 - ⚠️ CI runs each spec file alone (`E2E_SPEC`, one job per file and OS) on a virgin profile; it must pass alone and seed its own state, and the files of one local run share one process, DB and preferences file; `reopenSession()` is not a restart. The harness is a build flavour (`tauri.e2e.conf.json`, `e2e` feature). ⚠️ Wait on conditions (`eventually`), never durations; address controls by `data-testid`. → "One application per run, one run per scenario".
 
+## Tickets and pull requests
+
+- **A pull request's title is its changelog entry** (`scripts/release-notes.mjs`), and a ticket's title is where it comes from: both say **what changes, factually and briefly** — `<Area>: <what now happens>`, the area in one or two words (a head of three words or more before `: ` is all the notes keep), then the control, the action, the result; ≤ 70 characters. No figure of speech, no implementation detail, no « of our own ». ✗ « Search the code through a bar of our own » → ✓ « Code editor: new find-and-replace bar with match count and options ».
+- **A ticket's body opens on its context, then its change**: `**Context** —` what the application does today and where it was seen or who asked; `**Change** —` what will be different, in a sentence or two; then `**To do**` and `**Tests**` (naming the e2e scenario). A milestone's description lists what it changes, plainly.
+- **No other software in a title, a description or a milestone**, unless the feature reads, writes or plugs into it (an import format, an extension's host): never a comparison with another product.
+
 ## Security and verification
 
 - Never rewrite cryptography, key derivation or file formats unasked. Never log or commit passphrases, keys or note content. Add Tauri permissions narrowest-first (`src-tauri/capabilities/default.json`). `.claude/rules/security.md` holds the agent limits.

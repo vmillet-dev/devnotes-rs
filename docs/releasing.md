@@ -49,6 +49,12 @@ not — merged into `main`, or into a version branch merged since — and what s
 **labels**. A pull request an older section already lists is left out: nothing is released
 twice.
 
+An entry is the pull request's **title**, as it reads on GitHub when the release runs — so a
+title says what changed for the person using the application (`Code editor: new
+find-and-replace bar with match count and options`), never how it was built. A title can still
+be edited after the merge, up to the release. The rule is in `CLAUDE.md`, « Tickets and pull
+requests ».
+
 GitHub propagates nothing on its own, so a pull request inherits the labels of the issue it
 closes — which only works if the body says `Closes #42`. GitHub does not always record that
 link for a pull request aimed at a version branch, so the description is read when it is
