@@ -5,6 +5,7 @@ import {
   AREA_SHORTCUT_GROUP,
   RAIL_ACTION,
   areaForKey,
+  isSearchKey,
   isToolSearchKey,
 } from './area.model';
 
@@ -33,9 +34,10 @@ describe('areaForKey', () => {
     expect(key('KeyA')).toBeNull();
   });
 
-  it('documents one key per area, in the switch order, then the tools search and the rail', () => {
+  it('documents one key per area, in the switch order, then the searches and the rail', () => {
     expect(AREA_SHORTCUT_GROUP.shortcuts.map((entry) => entry.keys)).toEqual([
       ...AREAS.map((_, index) => ['Ctrl', String(index + 1)]),
+      ['Ctrl', 'K'],
       ['Ctrl', 'Shift', 'T'],
       ['Ctrl', 'B'],
     ]);
@@ -53,5 +55,16 @@ describe('areaForKey', () => {
     expect(chord({ key: 'T', ctrlKey: true, shiftKey: true })).toBe(true);
     expect(chord({ key: 't', ctrlKey: true })).toBe(false);
     expect(chord({ key: 'T', ctrlKey: true, shiftKey: true, altKey: true })).toBe(false);
+  });
+});
+
+describe('isSearchKey', () => {
+  it('reads Ctrl+K, and nothing that carries Shift or Alt as well', () => {
+    const chord = (init: KeyboardEventInit) => isSearchKey(new KeyboardEvent('keydown', init));
+
+    expect(chord({ key: 'k', ctrlKey: true })).toBe(true);
+    expect(chord({ key: 'K', metaKey: true })).toBe(true);
+    expect(chord({ key: 'k', ctrlKey: true, shiftKey: true })).toBe(false);
+    expect(chord({ key: 'k' })).toBe(false);
   });
 });

@@ -112,6 +112,21 @@ describe('The tools', () => {
       await eventually(activeTestId, (id) => id === 'tools-search', 'the search field to take the focus');
     });
 
+    it('takes Ctrl+K to its search too, from the page as from an open tool', async () => {
+      await $(testid('tools-count')).click();
+      await press('k', ['Control']);
+      await eventually(activeTestId, (id) => id === 'tools-search', 'the search field to take Ctrl+K');
+
+      await $(`${testid('tools-entry')}[data-tool="case"]`).click();
+      await $(testid('tool-back')).waitForExist({ timeout: 10_000 });
+      await press('k', ['Control']);
+      await eventually(
+        activeTestId,
+        (id) => id === 'tools-search',
+        'the home and its search, from an open tool',
+      );
+    });
+
     it('says what it holds reaches no network in its subtitle, with no band above the panels', async () => {
       expect(await $(testid('tools-count')).getAttribute('title')).not.toBe('');
       expect(await $(testid('tools-promise')).isExisting()).toBe(false);

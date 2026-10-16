@@ -731,7 +731,7 @@
       "newNote": "Create a note"
     },
     "canvas": {
-      "search": "Jump to the search field",
+      "search": "Jump to the search field: the notes’, or the tools’",
       "newSnippet": "New code snippet",
       "newNote": "New formatted note",
       "newChecklist": "New to-do list",

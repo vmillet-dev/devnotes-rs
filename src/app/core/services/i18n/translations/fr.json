@@ -731,7 +731,7 @@
       "newNote": "Créer une note"
     },
     "canvas": {
-      "search": "Aller au champ de recherche",
+      "search": "Aller au champ de recherche : celui des notes, ou celui des outils",
       "newSnippet": "Nouveau snippet de code",
       "newNote": "Nouvelle note mise en forme",
       "newChecklist": "Nouvelle liste de tâches",

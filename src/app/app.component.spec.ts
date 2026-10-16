@@ -220,6 +220,32 @@ describe('AppComponent', () => {
       expect(TestBed.inject(ToolsStore).searchWanted()).toBe(false);
     });
 
+    it('takes Ctrl+K to the tools search from an open tool, and leaves it to the notes elsewhere', async () => {
+      await withVault('unlocked');
+      const ctrlK = () =>
+        document.dispatchEvent(
+          new KeyboardEvent('keydown', {
+            key: 'k',
+            code: 'KeyK',
+            ctrlKey: true,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      const tools = TestBed.inject(ToolsStore);
+      const requested = vi.spyOn(tools, 'requestSearch');
+
+      ctrlK();
+      expect(requested).not.toHaveBeenCalled();
+
+      TestBed.inject(AreaStore).show('tools');
+      await fixture.whenStable();
+      ctrlK();
+      await fixture.whenStable();
+
+      expect(requested).toHaveBeenCalledTimes(1);
+    });
+
     /** Picking a header's name from its `<datalist>` threw « reading 'length' » from here. */
     it('leaves alone the keyless keydown a suggestion picked from a list fires', async () => {
       await withVault('unlocked');

@@ -19,6 +19,13 @@ export function isToolSearchKey(event: KeyboardEvent): boolean {
   );
 }
 
+/** Ctrl+K, the search of the area on screen: the notes' field, or the tools'. */
+export function isSearchKey(event: KeyboardEvent): boolean {
+  return (
+    (event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'k'
+  );
+}
+
 /**
  * Hides and shows the rail of whichever area is on screen. It was the canvas's key, and HTTP
  * had a copy of it; the tools had none.
@@ -33,6 +40,7 @@ export const AREA_SHORTCUT_GROUP: ShortcutGroup = {
   labelKey: 'shortcuts.groups.areas',
   shortcuts: [
     ...AREAS.map((area, index) => ({ keys: ['Ctrl', String(index + 1)], labelKey: `areas.go.${area}` })),
+    { keys: ['Ctrl', 'K'], labelKey: 'shortcuts.canvas.search' },
     { keys: ['Ctrl', 'Shift', 'T'], labelKey: 'tools.searchShortcut' },
     { keys: acceleratorKeys(RAIL_ACTION.fallback), labelKey: RAIL_ACTION.labelKey, action: RAIL_ACTION },
   ],
