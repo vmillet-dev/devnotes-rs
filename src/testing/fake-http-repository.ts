@@ -9,6 +9,7 @@ import {
   HttpPlace,
   HttpRequestDraft,
   HttpTree,
+  RequestHit,
   NewPlace,
   GraphqlAnswer,
   GraphqlParts,
@@ -52,6 +53,8 @@ interface Synced {
  */
 export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpRepository> {
   tree$: HttpTree = { collections: [] };
+  /** What Rust ranked, as a spec sets it: the double does not rank. */
+  hits: readonly RequestHit[] = [];
   contentsAnswer: HttpContents = { folders: 0, requests: 0 };
   settingsAnswer: ContainerSettingsDraft = {
     auth: { kind: 'inherit' },
@@ -136,6 +139,10 @@ export class FakeHttpRepository implements Pick<HttpRepository, keyof HttpReposi
 
   tree(): Promise<HttpTree> {
     return this.record('tree', [], () => this.tree$);
+  }
+
+  search(search: string): Promise<readonly RequestHit[]> {
+    return this.record('search', [search], () => this.hits);
   }
 
   createCollection(name: string): Promise<HttpCollection> {

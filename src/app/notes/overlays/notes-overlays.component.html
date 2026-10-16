@@ -10,30 +10,6 @@
   }
 }
 
-@if (palette.isOpen()) {
-  <!-- The fields form sits **in front of** the palette, which stays underneath. -->
-  @if (palette.pendingFill(); as note) {
-    <app-placeholder-form
-      [placeholders]="note.placeholders"
-      (submitted)="fill.submitForPalette($event)"
-      (rawRequested)="palette.copyRaw(note)"
-      (cancelled)="palette.cancelFill()"
-    />
-  }
-  <app-quick-palette
-    [query]="palette.query()"
-    [results]="palette.results()"
-    [highlighted]="palette.highlighted()"
-    (queryChanged)="palette.setQuery($event)"
-    (highlightMoved)="palette.moveHighlight($event)"
-    (highlightSet)="palette.highlight($event)"
-    [canCreate]="palette.canCreate()"
-    (chosen)="onPaletteChosen()"
-    (openRequested)="onPaletteOpen($event)"
-    (closed)="palette.close()"
-  />
-}
-
 @if (fill.target()) {
   <app-placeholder-form
     [placeholders]="fill.placeholders()"
@@ -74,6 +50,8 @@
 
 @if (board.pendingZone()) {
   <app-folder-name-prompt (submitted)="board.namePendingZone($event)" (cancelled)="board.dismissZone()" />
+} @else if (folders.naming()) {
+  <app-folder-name-prompt (submitted)="folders.createNamed($event)" (cancelled)="folders.dismissNaming()" />
 }
 
 @if (undo.banner(); as action) {

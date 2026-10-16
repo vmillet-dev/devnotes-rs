@@ -4,7 +4,6 @@ import { AreaStore } from '@core/services/areas/area.store';
 import { FoldersStore } from '@core/state/folders.store';
 import { NotesRevision } from '@core/state/notes-revision';
 import { NotesStore } from '@core/state/notes.store';
-import { PaletteStore } from '@core/state/palette.store';
 import { SampleNotesService } from '@core/services/samples/sample-notes.service';
 import { SpacesStore } from '@core/state/spaces.store';
 import { CanvasKeyboardDirective } from '@notes/canvas-keyboard.directive';
@@ -28,7 +27,6 @@ import { NotesSidebarComponent } from './sidebar/notes-sidebar.component';
 })
 export class NotesPageComponent implements OnInit {
   private readonly store = inject(NotesStore);
-  private readonly palette = inject(PaletteStore);
   private readonly spaces = inject(SpacesStore);
   private readonly folders = inject(FoldersStore);
   private readonly samples = inject(SampleNotesService);
@@ -56,8 +54,9 @@ export class NotesPageComponent implements OnInit {
    * this compiling until it is handled.
    */
   private runGlobalAction(action: GlobalAction): void {
-    // Not this page's: a quit is answered by `HttpLeaveStore`, whatever area is on screen.
-    if (action === 'quit') return;
+    // Not this page's: a quit is answered by `HttpLeaveStore`, and the palette is drawn over
+    // whatever area is on screen.
+    if (action === 'quit' || action === 'palette' || action === 'palette-here') return;
     // Each one opens something drawn by this page, which another area hides.
     this.areas.show('notes');
     switch (action) {
@@ -66,9 +65,6 @@ export class NotesPageComponent implements OnInit {
         break;
       case 'new-note':
         this.store.createNote();
-        break;
-      case 'palette':
-        void this.palette.open();
         break;
     }
   }

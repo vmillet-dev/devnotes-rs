@@ -185,9 +185,8 @@ describe('PlaceholderFillStore', () => {
     /** The palette is what copies, because copying is what dismisses it. */
     it('copies through the palette and keeps the values', async () => {
       const palette = TestBed.inject(PaletteStore);
-      await palette.open();
-      palette.highlight(0);
-      await palette.chooseHighlighted();
+      await palette.open(true);
+      await palette.copy(palette.notes()[0]!);
       expect(palette.pendingFill()?.id).toBe('note-1');
 
       await fill.submitForPalette({ host: 'prod.internal', user: 'admin' });

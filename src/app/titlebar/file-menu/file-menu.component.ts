@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, Signal, computed, inject, signal } 
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ClockService } from '@core/services/time/clock.service';
 import { HttpLeaveStore } from '@core/services/http/http-leave.store';
+import { PreferencesDialogStore } from '@core/services/settings/preferences-dialog.store';
 import { AppWindowService } from '@core/services/window/app-window.service';
 import { TransferStore } from '@core/state/transfer.store';
 import { NoteSelectionStore } from '@core/state/note-selection.store';
@@ -44,7 +45,8 @@ export class FileMenuComponent {
   /** Quitting closes the application for good: a second click confirms it. */
   protected readonly confirmingQuit = signal(false);
 
-  protected readonly settingsOpen = signal(false);
+  private readonly preferences = inject(PreferencesDialogStore);
+  protected readonly settingsOpen = this.preferences.isOpen;
   protected readonly librariesOpen = signal(false);
 
   private readonly nothingChecked = computed(() => !this.selection.hasSelection());
@@ -101,14 +103,14 @@ export class FileMenuComponent {
   }
 
   protected openSettings(): void {
-    this.settingsOpen.set(true);
+    this.preferences.open();
     // No focus restored: the modal opening takes it itself.
     this.menu.close(false);
   }
 
   /** The modal's focus trap would hand back to the menu entry, destroyed since. */
   protected closeSettings(): void {
-    this.settingsOpen.set(false);
+    this.preferences.close();
     this.menu.focusAnchor();
   }
 

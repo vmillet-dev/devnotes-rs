@@ -2,34 +2,38 @@ import { TestBed } from '@angular/core/testing';
 import { TranslocoService } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { StatusNotifier } from '@core/services/notifications/status.service';
 import { FakeAppWindow } from '@testing/fake-app-window';
 import { FakeClipboard } from '@testing/fake-clipboard';
 import { FakeDesktopNotifications } from '@testing/fake-desktop-notifications';
+import { FakeHttpRepository } from '@testing/fake-http-repository';
 import { FakeNotesRepository } from '@testing/fake-notes-repository';
 import { createNote } from '@testing/note.fixture';
 import { provideAppTesting } from '@testing/testing.providers';
 import { SEARCH_DEBOUNCE_MS } from './notes-query.store';
-import { PaletteStore } from './palette.store';
+import { PaletteStore, paletteMode } from './palette.store';
 
 interface Harness {
   readonly store: PaletteStore;
   readonly repository: FakeNotesRepository;
+  readonly http: FakeHttpRepository;
   readonly clipboard: FakeClipboard;
   readonly window: FakeAppWindow;
   readonly desktop: FakeDesktopNotifications;
 }
 
+const PLAIN = createNote({ id: 'note-1', title: 'First', content: 'plain body' });
+const TEMPLATED = createNote({
+  id: 'note-2',
+  title: 'Templated',
+  content: 'psql -h {{host}}',
+  placeholders: [{ name: 'host', defaultValue: '', value: '' }],
+});
+
 function createStore(): Harness {
   TestBed.resetTestingModule();
-  const repository = new FakeNotesRepository([
-    createNote({ id: 'note-1', title: 'First', content: 'plain body' }),
-    createNote({
-      id: 'note-2',
-      title: 'Templated',
-      content: 'psql -h {{host}}',
-      placeholders: [{ name: 'host', defaultValue: '', value: '' }],
-    }),
-  ]);
+  const repository = new FakeNotesRepository([PLAIN, TEMPLATED]);
+  const http = new FakeHttpRepository();
   const clipboard = new FakeClipboard();
   const appWindow = new FakeAppWindow();
   const desktop = new FakeDesktopNotifications();
@@ -37,6 +41,7 @@ function createStore(): Harness {
     providers: [
       provideAppTesting({
         notesRepository: repository,
+        httpRepository: http,
         clipboard,
         appWindow,
         desktopNotifications: desktop,
@@ -44,14 +49,18 @@ function createStore(): Harness {
     ],
   });
 
-  return {
-    store: TestBed.inject(PaletteStore),
-    repository,
-    clipboard,
-    window: appWindow,
-    desktop,
-  };
+  return { store: TestBed.inject(PaletteStore), repository, http, clipboard, window: appWindow, desktop };
 }
+
+describe('paletteMode', () => {
+  it('reads @ and # where the word being typed starts, > only at the head', () => {
+    expect(paletteMode('json @ou')).toEqual({ kind: 'scopes', word: 'ou' });
+    expect(paletteMode('#post')).toEqual({ kind: 'tags', word: 'post' });
+    expect(paletteMode(' > nouv ')).toEqual({ kind: 'commands', term: 'nouv' });
+    expect(paletteMode('a > b')).toEqual({ kind: 'search', term: 'a > b' });
+    expect(paletteMode('mail@exemple.fr')).toEqual({ kind: 'search', term: 'mail@exemple.fr' });
+  });
+});
 
 describe('PaletteStore', () => {
   let harness: Harness;
@@ -64,211 +73,187 @@ describe('PaletteStore', () => {
     // Loaded, not merely configured: the desktop toast is a **translated string**,
     // and `translate` hands back the key itself until the language is in.
     await firstValueFrom(TestBed.inject(TranslocoService).load('fr'));
-    await harness.store.open();
+    await harness.store.open(true);
   });
 
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it('searches every space, ignoring the canvas filters', async () => {
+  it('searches every space, ignoring the canvas filters', () => {
     expect(harness.repository.lastQuery?.spaceId).toBeNull();
     expect(harness.repository.lastQuery?.filter).toBe('all');
     expect(harness.repository.lastQuery?.tags).toEqual([]);
   });
 
-  it('opens on the most recent notes rather than an empty list', () => {
-    expect(harness.store.results()).toHaveLength(2);
-    expect(harness.store.highlightedNote()?.id).toBe('note-1');
+  it('opens on the recent notes and requests rather than an empty list', () => {
+    expect(harness.store.recent()).toBe(true);
+    expect(harness.store.notes().map((note) => note.id)).toEqual(['note-1', 'note-2']);
+    expect(harness.http.calls).toContainEqual({ command: 'search', args: [''] });
   });
 
-  it('defers the query while typing', async () => {
+  it('defers the search while typing', async () => {
     const before = harness.repository.queryCount;
 
-    harness.store.setQuery('psql');
+    harness.store.setText('psql');
     expect(harness.repository.queryCount).toBe(before);
 
     await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
     expect(harness.repository.lastQuery?.search).toBe('psql');
+    expect(harness.http.calls.at(-1)).toEqual({ command: 'search', args: ['psql'] });
   });
 
-  it('stops at the ends of the list instead of wrapping', () => {
-    harness.store.moveHighlight(-1);
-    expect(harness.store.highlighted()).toBe(0);
+  it('asks nothing of Rust while @, # or > lists something to choose', async () => {
+    const before = harness.repository.queryCount;
 
-    harness.store.moveHighlight(1);
-    harness.store.moveHighlight(1);
-    expect(harness.store.highlighted()).toBe(1);
+    harness.store.setText('@ou');
+    await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
+
+    expect(harness.repository.queryCount).toBe(before);
+    expect(harness.store.notes()).toEqual([]);
   });
 
-  it('copies the chosen snippet and gets out of the way', async () => {
-    await harness.store.chooseHighlighted();
+  describe('chips', () => {
+    it('takes the word that asked for one out of the field', () => {
+      harness.store.setText('json @ou');
 
-    expect(harness.clipboard.content).toBe('plain body');
-    expect(harness.store.isOpen()).toBe(false);
-    expect(harness.window.hidden).toBe(1);
-  });
+      harness.store.addChip({ kind: 'scope', scope: 'tools' });
 
-  it('copies the whole body of a result the list cut', async () => {
-    harness.repository.setView({
-      sections: [
-        {
-          key: 'results',
-          id: 'results',
-          group: null,
-          notes: [createNote({ id: 'note-1', title: 'First', content: 'plain', truncated: true })],
-          hasExpiringNotes: false,
-          showCreateGhost: false,
-        },
-      ],
-    });
-    await harness.store.open();
-
-    await harness.store.chooseHighlighted();
-
-    expect(harness.clipboard.content).toBe('plain body');
-  });
-
-  it('asks for the fields before copying a templated snippet', async () => {
-    harness.store.highlight(1);
-
-    await harness.store.chooseHighlighted();
-
-    expect(harness.store.pendingFill()?.id).toBe('note-2');
-    expect(harness.clipboard.content).toBe('');
-    expect(harness.store.isOpen()).toBe(true);
-  });
-
-  it('copies a templated snippet as it is from its whole body, not from the list', async () => {
-    const preview = createNote({
-      id: 'note-2',
-      title: 'Templated',
-      content: 'psql',
-      truncated: true,
-      placeholders: [{ name: 'host', defaultValue: '', value: '' }],
+      expect(harness.store.text()).toBe('json');
+      expect(harness.store.chips()).toEqual([{ kind: 'scope', scope: 'tools' }]);
+      expect([...harness.store.searched()]).toEqual(['tools']);
     });
 
-    await harness.store.copyRaw(preview);
+    it('adds kinds up, and a space or a tag narrows to notes', () => {
+      harness.store.addChip({ kind: 'scope', scope: 'requests' });
+      harness.store.addChip({ kind: 'tag', tag: 'postgres' });
 
-    expect(harness.clipboard.content).toBe('psql -h {{host}}');
-    expect(harness.store.isOpen()).toBe(false);
-    expect(harness.window.hidden).toBe(1);
-  });
-
-  it('copies nothing and stays open when the whole body cannot be read', async () => {
-    harness.repository.failNext = new Error('bridge down');
-
-    await harness.store.copyRaw(
-      createNote({ id: 'note-2', title: 'Templated', content: 'psql', truncated: true }),
-    );
-
-    expect(harness.clipboard.content).toBe('');
-    expect(harness.store.isOpen()).toBe(true);
-  });
-
-  it('drops the pending fill when the palette closes', async () => {
-    harness.store.highlight(1);
-    await harness.store.chooseHighlighted();
-
-    harness.store.close();
-
-    expect(harness.store.pendingFill()).toBeNull();
-  });
-
-  it('keeps the window in place when the clipboard refuses', async () => {
-    harness.clipboard.failNext = new Error('no clipboard');
-
-    await harness.store.chooseHighlighted();
-
-    expect(harness.store.isOpen()).toBe(true);
-    expect(harness.window.hidden).toBe(0);
-  });
-
-  /** The window is gone, so the desktop is the only place left to say the copy happened. */
-  it('says on the desktop which note it took, once the window has gone', async () => {
-    await harness.store.chooseHighlighted();
-
-    expect(harness.desktop.sent).toHaveLength(1);
-    expect(harness.desktop.sent[0]?.body).toContain('First');
-  });
-
-  it('says nothing when the copy did not happen', async () => {
-    harness.clipboard.failNext = new Error('no clipboard');
-
-    await harness.store.chooseHighlighted();
-
-    expect(harness.desktop.sent).toEqual([]);
-  });
-
-  /** A desktop that will not show it is not a copy that failed. */
-  it('copies and hides all the same when the toast is refused', async () => {
-    harness.desktop.permission = 'denied';
-
-    await harness.store.chooseHighlighted();
-
-    expect(harness.clipboard.content).toBe('plain body');
-    expect(harness.window.hidden).toBe(1);
-    expect(harness.desktop.sent).toEqual([]);
-  });
-  describe('creating from what was typed', () => {
-    it('offers nothing to create on an empty query', () => {
-      expect(harness.store.canCreate()).toBe(false);
-      expect(harness.store.optionCount()).toBe(2);
+      expect([...harness.store.searched()].sort()).toEqual(['notes', 'requests']);
     });
 
-    it('appends the create row after the results', async () => {
-      harness.store.setQuery('psql');
+    it('asks Rust for the space and the tags chosen, and no requests without their chip', async () => {
+      harness.store.addChip({ kind: 'space', id: 'space-9', name: 'Recette' });
+      harness.store.addChip({ kind: 'tag', tag: 'postgres' });
+      const asked = harness.http.calls.length;
       await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
 
-      expect(harness.store.canCreate()).toBe(true);
-      expect(harness.store.optionCount()).toBe(harness.store.results().length + 1);
-      expect(harness.store.isCreateHighlighted()).toBe(false);
+      expect(harness.repository.lastQuery?.spaceId).toBe('space-9');
+      expect(harness.repository.lastQuery?.tags).toEqual(['postgres']);
+      expect(harness.http.calls).toHaveLength(asked);
     });
 
-    it('walks onto the create row and stops there', async () => {
-      harness.store.setQuery('psql');
-      await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
+    it('lets a second space take the place of the first, and the same chip in only once', () => {
+      harness.store.addChip({ kind: 'space', id: 'a', name: 'Travail' });
+      harness.store.addChip({ kind: 'space', id: 'b', name: 'Perso' });
+      harness.store.addChip({ kind: 'scope', scope: 'notes' });
+      harness.store.addChip({ kind: 'scope', scope: 'notes' });
 
-      harness.store.moveHighlight(1);
-      harness.store.moveHighlight(1);
-      harness.store.moveHighlight(1);
-
-      expect(harness.store.isCreateHighlighted()).toBe(true);
-      expect(harness.store.highlighted()).toBe(harness.store.results().length);
+      expect(harness.store.chips()).toEqual([
+        { kind: 'space', id: 'b', name: 'Perso' },
+        { kind: 'scope', scope: 'notes' },
+      ]);
     });
 
-    it('highlights the create row first when nothing matches', async () => {
-      harness.repository.setView({ sections: [] });
-      harness.store.setQuery('rien ne correspond');
-      await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
+    it('widens again once a chip is removed', () => {
+      harness.store.addChip({ kind: 'scope', scope: 'tools' });
 
-      expect(harness.store.isCreateHighlighted()).toBe(true);
+      harness.store.removeChip(0);
+
+      expect(harness.store.chips()).toEqual([]);
+      expect(harness.store.searched().size).toBe(4);
     });
+  });
 
-    it('hands the typed text over and closes', async () => {
-      harness.repository.setView({ sections: [] });
-      harness.store.setQuery('  penser à migrer la base  ');
-      await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
+  describe('copying a note', () => {
+    it('copies it and puts the window away, over another application', async () => {
+      await harness.store.copy(PLAIN);
 
-      expect(harness.store.takeNewNoteTitle()).toBe('penser à migrer la base');
+      expect(harness.clipboard.content).toBe('plain body');
       expect(harness.store.isOpen()).toBe(false);
+      expect(harness.window.hidden).toBe(1);
     });
 
-    it('hands nothing over while a snippet is highlighted', async () => {
-      harness.store.setQuery('psql');
-      await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
+    it('only closes with DevNotes already in front, and says so in the window', async () => {
+      await harness.store.open(false);
 
-      expect(harness.store.takeNewNoteTitle()).toBeNull();
+      await harness.store.copy(PLAIN);
+
+      expect(harness.clipboard.content).toBe('plain body');
+      expect(harness.window.hidden).toBe(0);
+      expect(harness.desktop.sent).toEqual([]);
+      expect(TestBed.inject(StatusNotifier).status()).toEqual({
+        key: 'palette.copiedNote',
+        params: { title: 'First' },
+      });
+    });
+
+    it('copies the whole body of a result the list cut', async () => {
+      await harness.store.copy(
+        createNote({ id: 'note-1', title: 'First', content: 'plain', truncated: true }),
+      );
+
+      expect(harness.clipboard.content).toBe('plain body');
+    });
+
+    it('asks for the fields before copying a templated snippet', async () => {
+      await harness.store.copy(TEMPLATED);
+
+      expect(harness.store.pendingFill()?.id).toBe('note-2');
+      expect(harness.clipboard.content).toBe('');
       expect(harness.store.isOpen()).toBe(true);
     });
 
-    it('copies rather than creating when a snippet is chosen', async () => {
-      harness.store.setQuery('plain');
-      await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
+    it('copies a templated snippet as it is from its whole body, not from the list', async () => {
+      await harness.store.copyRaw({ ...TEMPLATED, content: 'psql', truncated: true });
 
-      await harness.store.chooseHighlighted();
+      expect(harness.clipboard.content).toBe('psql -h {{host}}');
+      expect(harness.store.isOpen()).toBe(false);
+    });
+
+    it('copies nothing and stays open when the whole body cannot be read', async () => {
+      harness.repository.failNext = new Error('bridge down');
+
+      await harness.store.copyRaw({ ...TEMPLATED, content: 'psql', truncated: true });
+
+      expect(harness.clipboard.content).toBe('');
+      expect(harness.store.isOpen()).toBe(true);
+    });
+
+    it('drops the pending fill when the palette closes', async () => {
+      await harness.store.copy(TEMPLATED);
+
+      harness.store.close();
+
+      expect(harness.store.pendingFill()).toBeNull();
+    });
+
+    it('keeps the window in place when the clipboard refuses', async () => {
+      harness.clipboard.failNext = new Error('no clipboard');
+
+      await harness.store.copy(PLAIN);
+
+      expect(harness.store.isOpen()).toBe(true);
+      expect(harness.window.hidden).toBe(0);
+      expect(harness.desktop.sent).toEqual([]);
+    });
+
+    /** The window is gone, so the desktop is the only place left to say the copy happened. */
+    it('says on the desktop which note it took, once the window has gone', async () => {
+      await harness.store.copy(PLAIN);
+
+      expect(harness.desktop.sent).toHaveLength(1);
+      expect(harness.desktop.sent[0]?.body).toContain('First');
+    });
+
+    /** A desktop that will not show it is not a copy that failed. */
+    it('copies and hides all the same when the toast is refused', async () => {
+      harness.desktop.permission = 'denied';
+
+      await harness.store.copy(PLAIN);
 
       expect(harness.clipboard.content).toBe('plain body');
+      expect(harness.window.hidden).toBe(1);
+      expect(harness.desktop.sent).toEqual([]);
     });
   });
 });

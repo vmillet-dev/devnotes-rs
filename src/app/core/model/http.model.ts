@@ -38,6 +38,7 @@ import type {
   NewPlace,
   QuerySide,
   RequestDocument,
+  RequestHit,
   RequestKind,
   SentResponse,
   SyncedQuery,
@@ -88,6 +89,7 @@ export type {
   NewPlace,
   QuerySide,
   RequestDocument,
+  RequestHit,
   RequestKind,
   SentResponse,
 };

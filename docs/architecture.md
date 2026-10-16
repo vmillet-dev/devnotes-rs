@@ -12,7 +12,7 @@ The two halves talk only through Tauri's `invoke()` bridge.
 Notes and spaces are complete end to end: the front-end has no in-memory dataset left, every
 read and write goes through `invoke()`, and the Rust commands persist to an embedded SQLite
 database. Built on top of that: a 30-day trash with undo, multiple selection and bulk actions,
-corpus-wide tag management, `{{fields}}` in snippets, a quick-paste palette on a global
+corpus-wide tag management, `{{fields}}` in snippets, one palette on a global
 shortcut, attachments, and import / export / share.
 
 **Where the work happens.** Data processing belongs to Rust. Filtering (space, full-text,
@@ -1288,7 +1288,7 @@ Smaller stores sit beside them, each for a screen or a job that is not the canva
 | `TagsStore`             | global tag management: list with counts, selection, rename/merge              |
 | `TransferStore`         | import, export and copy-out, each reporting through `StatusNotifier`          |
 | `PassphrasePromptStore` | the phrase an export or an import waits for, and the prompt that asks it      |
-| `PaletteStore`          | the quick-paste palette: its own search, highlight and copy                   |
+| `PaletteStore`          | the palette: its own search, its chips, the copy                              |
 | `AttachmentsStore`      | the open note's attachments, the preview, and the three ways of adding one    |
 | `PlaceholderFillStore`  | filling a snippet's `{{fields}}` before copying, from card, palette or editor |
 | `NoteCopyService`       | putting text on the clipboard, and saying so when that failed                 |
@@ -2946,7 +2946,7 @@ and the list view's own sections are untouched, because nothing sends a `folder_
 a folder has actually been opened.
 
 **A note created here arrives already filed.** That and a drop on the board are the only two
-places that file a new note. ⚠️ The quick-paste palette deliberately does not: it is used
+places that file a new note. ⚠️ The palette deliberately does not: it is used
 mid-task from another application, and a decision there would sit in the fastest path in the
 product.
 
@@ -3388,73 +3388,93 @@ button's tick, which would claim success before the bridge answered. "Copy as is
 click away in the panel, for the note that only looks templated — the heuristic is careful,
 not infallible.
 
-### The quick-paste palette
+### The palette
 
-`Ctrl+Alt+P` reveals the window and emits `devnotes:palette`; `PaletteStore` opens,
-searches, and on `Enter` copies the highlighted snippet and **hides the window** so the user
-lands back where they were pasting.
+`Ctrl+Alt+P` — the one shortcut — reveals the window and emits an action; `PaletteComponent`
+(`palette/`, at the root of the page, so over whichever area is on screen) opens `PaletteStore`.
+It finds **notes, HTTP requests, tools and spaces**, and runs commands. Rust says which action
+it was: `palette` when the window was not in front (another application had the keyboard, or the
+tray asked), `palette-here` when it was. Only over another application does copying a note put
+the window away again; in front, the palette just closes and `StatusNotifier` says what was
+copied.
 
-It searches **every space and ignores the canvas filters**: when you recall a snippet you do
-not remember which space you filed it in. It also keeps its own state rather than reusing
-`NotesStore`, whose search would otherwise change what the canvas shows behind it.
+It searches **every space and ignores the canvas filters**: when you recall a snippet you do not
+remember which space you filed it in. It keeps its own state rather than reusing `NotesStore`,
+whose search would otherwise change what the canvas shows behind it.
+
+**What Rust answers, and what the front reads.** The notes come from `query_notes`; the
+requests from `search_http_requests`, which ranks them in Rust (`http::search`): a name starting
+with what is typed, then a word of the name, then the name, the URL as typed — read from each
+sealed document — and the collection › folders; nothing typed lists the requests edited last.
+The tools, the spaces and the commands are matched on the front, as the tools' home matches
+its catalogue: their words are translations, which Rust does not know. The groups come in a
+fixed order — notes, requests, tools, spaces — each with its heading and count when more than
+one answers, and share the screen (`palette-options.ts`: five notes and three of the others,
+eight for a kind alone). An empty field lists a few recent things of each kind and a line naming
+the prefixes.
+
+**Prefixes become chips.** `@` lists where to search — `@notes`, `@outils`, `@requêtes`,
+`@espaces`, in either language whatever the one on screen, and `@<space>` for a space's notes —
+and Tab or Enter turns the choice into a chip in the field. Kinds add up; a space or a tag
+narrows to notes; a second space takes the place of the first; ⌫ in an empty field removes the
+last chip. `#` lists the tags with how many notes carry each. `>` lists the commands
+(`palette-commands.ts`): a new snippet, Note or todo list (their keys read from
+`CREATE_ACTIONS`, so a rebound key shows as bound), a new request, a new folder in the space open
+(asked by `FolderNamePromptComponent` through `FoldersStore.naming`), an area (its keys from
+`areaKeys`), the preferences (`PreferencesDialogStore`, which the File menu reads too) and the
+shortcut sheet.
+
+**Each kind has its mark**, in one column so that the titles align: a note's kind badge, a
+request's method in its hue (`http-method-hues`), a tool's category icon in its hue
+(`tool-hues`, `TOOL_CATEGORY_ICONS`), a space's dot — the switcher's: a space has no colour of
+its own — and `>`. The highlighted row says what Enter does in place of its context, and so
+does the line under the list.
+
+**Enter opens**: the note in the notes, the request in its tab (the tabs left open last time
+restored first, so it is the one in front), the tool, the space; it runs a command and creates
+the note named after what was typed from the « créer une note » row, which comes **after** the
+results while notes are searched. The component decides what each kind does: the stores it
+reaches would make a cycle of `PaletteStore`.
 
 A snippet with fields goes through the fill form first — copying `psql -h {{host}}` verbatim
-gives an unusable command. `Tab` opens the note instead of copying it, which is what makes the
-palette double as a "find that note" shortcut.
+gives an unusable command. The form is drawn by the palette (`placeholder-form/`, at the root
+beside it, since the notes' own copy uses it too), **in front of** the palette.
 
-⚠️ **A click on a row opens the note; it does not copy it.** Copying hides the window, and a
-window that disappears on a click with nothing on screen saying why reads as the application
-crashing. Nobody clicked their way here from another application — the window is already in
-front — so the mouse gets the gesture a click on a note means everywhere else in the product,
-and the paste path gets a control of its own beside the row (⧉, which copies and hides, like
-`Enter`). The keyboard is untouched: it is the fast path and the muscle memory is the feature.
+⚠️ **A click on a row opens; it does not copy.** Copying may hide the window, and a window that
+disappears on a click reads as the application crashing. The paste path has a control of its
+own beside a note's row (which copies, like `Ctrl+C`). The keyboard is untouched: it is the fast
+path and the muscle memory is the feature.
 
-**It captures as much as it retrieves.** As soon as the query is non-empty, a "créer une note"
-row is appended **after** the results — retrieving a snippet is the more frequent gesture and
-keeps the first place, but a query that matches nothing highlights the create row by default,
-which is exactly the quick-capture case. Choosing it makes a note **named** after what was
-typed — what someone types while looking for a note is its name, not its body — of the kind the
-preferences name, saved and opened straight away (no draft: its title is worth keeping).
-
-`PaletteStore` does not create the note itself — it does not know `NotesStore`, and the
-reverse would be a cycle. `takeNewNoteTitle()` hands the text over and closes; the page chains
-`NotesStore.createTitled`. The clipboard capture (`captureFromClipboard`) is read like a paste
-into an empty Note: `detect_language` decides, code becomes a snippet in its language, prose a Note.
-
-The palette is an overlay in the main window rather than a second Tauri window: the window is
-already warm behind the global shortcut, and a second one would mean a second Angular
-bootstrap, its own CSP and its own lifecycle for the same result.
-
-⚠️ **A copy from the palette is acknowledged on the desktop, not in the window**, because
-the window is what the gesture takes away: `copyAndDismiss` copies, closes, hides, and only
-then asks `DesktopNotifier` to say which note it took. Every other copy path in the
-application answers through `StatusNotifier`, which draws under the titlebar — correct and
-invisible here. Without a word from the desktop the window simply vanished, and it read as
-the application crashing on a copy that had in fact worked (#285).
+⚠️ **A copy over another application is acknowledged on the desktop, not in the window**, because
+the window is what the gesture takes away: `copyAndDismiss` copies, closes, hides, and only then
+asks `DesktopNotifier` to say which note it took. Without a word from the desktop the window
+simply vanished, and it read as the application crashing on a copy that had in fact worked (#285).
 
 `DesktopNotifier` (`core/services/notifications/`) wraps `tauri-plugin-notification` behind a
 token and an adapter, like `ClipboardService` and for the same reasons. ⚠️ It is **never
 load-bearing**: whatever it is asked to say has already happened, so a refused permission, a
 plugin that is not there and a desktop that drops the toast all come to the same thing —
 `false`, and nothing thrown. It is also the one place that **translates imperatively**:
-everywhere else code hands a `TranslationRef` to the `transloco` pipe, and there is no
-template on the other side of this one. Permission is asked for **once** and remembered; a
-prompt on every copy would be worse than no acknowledgement at all.
+everywhere else code hands a `TranslationRef` to the `transloco` pipe, and there is no template
+on the other side of this one. Permission is asked for **once** and remembered.
+
+The palette is an overlay in the main window rather than a second Tauri window: the window is
+already warm behind the global shortcut, and a second one would mean a second Angular
+bootstrap, its own CSP and its own lifecycle for the same result.
 
 The field keeps the focus from start to finish and the list is walked with
-`aria-activedescendant`; moving the real focus onto an option would lose the query being
-typed. ⚠️ **Tab is an arrow here**, and every row button carries `tabindex="-1"` so that
-the field is the only stop in the panel. Released to the DOM it walked a list of stops
-nothing drew a ring on while the highlight stayed where the arrows had left it — two notions
-of "the current row", one of them invisible (#283). The copy control is then out of reach of
-the keyboard, and that is the accepted cost: `Ctrl+C` copies the current row.
+`aria-activedescendant`; moving the real focus onto an option would lose the query being typed.
+⚠️ **Tab is an arrow here** — except on a chip `@` or `#` offers, which it chooses — and every
+row button carries `tabindex="-1"` so that the field is the only stop in the panel. Released to
+the DOM it walked a list of stops nothing drew a ring on while the highlight stayed where the
+arrows had left it — two notions of "the current row", one of them invisible (#283).
 
-⚠️ Taking the rows out of the order was not enough on its own. `FocusTrapDirective`'s
-selector excluded `tabindex="-1"` on the bare `[tabindex]` clause only, so a
-`<button tabindex="-1">` was still focusable as far as the trap was concerned and Shift+Tab
-in the field wrapped onto the last row's copy control. The exclusion is on every candidate
-now, and the trap leaves alone a Tab whose default a descendant has already prevented — the
-same `defaultPrevented` guard `CanvasKeyboardDirective` carries, for the same reason.
+⚠️ Taking the rows out of the order was not enough on its own. `FocusTrapDirective`'s selector
+excluded `tabindex="-1"` on the bare `[tabindex]` clause only, so a `<button tabindex="-1">` was
+still focusable as far as the trap was concerned and Shift+Tab in the field wrapped onto the last
+row's copy control. The exclusion is on every candidate now, and the trap leaves alone a Tab
+whose default a descendant has already prevented — the same `defaultPrevented` guard
+`CanvasKeyboardDirective` carries, for the same reason.
 
 ### Global tag management
 

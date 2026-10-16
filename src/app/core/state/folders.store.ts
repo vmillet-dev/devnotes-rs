@@ -60,6 +60,10 @@ export class FoldersStore {
   readonly loadError: Signal<Error | undefined> = this.foldersResource.error;
 
   private readonly _activeFolderId = signal<string | null>(null);
+  private readonly _naming = signal(false);
+
+  /** « Nouveau dossier » from the palette: the name is asked over the canvas, in the space open. */
+  readonly naming = this._naming.asReadonly();
 
   /** An id the current space does not hold falls back to "every folder". */
   readonly activeFolderId = computed<string | null>(() => this.activeFolder()?.id ?? null);
@@ -96,6 +100,19 @@ export class FoldersStore {
   selectFolder(id: string | null): void {
     this._activeFolderId.set(id);
     this.preferences.write(ACTIVE_FOLDER_KEY, id ?? '');
+  }
+
+  askName(): void {
+    this._naming.set(this.spaces.activeSpaceId() !== null);
+  }
+
+  async createNamed(name: string): Promise<void> {
+    this._naming.set(false);
+    await this.createFolder(name);
+  }
+
+  dismissNaming(): void {
+    this._naming.set(false);
   }
 
   /** Uniqueness is not checked here: only storage sees the real state of the database. */

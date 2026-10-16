@@ -1,9 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { Note } from '@core/model/note.model';
 import { AttachmentsStore } from '@core/state/attachments.store';
 import { BoardStore } from '@core/state/board.store';
 import { NotesStore } from '@core/state/notes.store';
-import { PaletteStore } from '@core/state/palette.store';
+import { FoldersStore } from '@core/state/folders.store';
 import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
 import { TagsStore } from '@core/state/tags.store';
 import { TrashStore } from '@core/state/trash.store';
@@ -11,8 +10,7 @@ import { UndoStore } from '@core/state/undo.store';
 import { FolderNamePromptComponent } from './folder-name-prompt/folder-name-prompt.component';
 import { ImageLightboxComponent } from './image-lightbox/image-lightbox.component';
 import { NoteEditorOverlayComponent } from './note-editor-overlay/note-editor-overlay.component';
-import { PlaceholderFormComponent } from './placeholder-form/placeholder-form.component';
-import { QuickPaletteComponent } from './quick-palette/quick-palette.component';
+import { PlaceholderFormComponent } from '@app/placeholder-form/placeholder-form.component';
 import { TagManagerComponent } from './tag-manager/tag-manager.component';
 import { TrashPanelComponent } from './trash-panel/trash-panel.component';
 import { UndoBarComponent } from './undo-bar/undo-bar.component';
@@ -24,7 +22,6 @@ import { UndoBarComponent } from './undo-bar/undo-bar.component';
     NoteEditorOverlayComponent,
     ImageLightboxComponent,
     PlaceholderFormComponent,
-    QuickPaletteComponent,
     TrashPanelComponent,
     TagManagerComponent,
     FolderNamePromptComponent,
@@ -37,7 +34,7 @@ import { UndoBarComponent } from './undo-bar/undo-bar.component';
 export class NotesOverlaysComponent {
   protected readonly store = inject(NotesStore);
   protected readonly attachments = inject(AttachmentsStore);
-  protected readonly palette = inject(PaletteStore);
+  protected readonly folders = inject(FoldersStore);
   protected readonly fill = inject(PlaceholderFillStore);
   protected readonly trash = inject(TrashStore);
   protected readonly tags = inject(TagsStore);
@@ -54,21 +51,5 @@ export class NotesOverlaysComponent {
 
   protected onDeleteTags(): void {
     void this.tags.proposeDelete();
-  }
-
-  protected onPaletteOpen(note: Note): void {
-    this.palette.close();
-    void this.store.openNote(note.id);
-  }
-
-  /** `PaletteStore` does not know `NotesStore`; the other way round would be a cycle. */
-  protected async onPaletteChosen(): Promise<void> {
-    const title = this.palette.takeNewNoteTitle();
-    if (title !== null) {
-      await this.store.createTitled(title);
-      return;
-    }
-
-    await this.palette.chooseHighlighted();
   }
 }

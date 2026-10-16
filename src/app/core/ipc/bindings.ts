@@ -152,6 +152,8 @@ export const commands = {
 	/**  `None` = every space, like [`crate::notes::view::NotesQuery::space_id`]. */
 	listFolders: (spaceId: string | null) => typedError<Folder[], AppError>(__TAURI_INVOKE("list_folders", { spaceId })),
 	httpTree: () => typedError<HttpTree, AppError>(__TAURI_INVOKE("http_tree")),
+	/**  The palette's requests, ranked here: the URL is read from each sealed document. */
+	searchHttpRequests: (search: string) => typedError<RequestHit[], AppError>(__TAURI_INVOKE("search_http_requests", { search })),
 	createHttpCollection: (name: string) => typedError<HttpCollection, AppError>(__TAURI_INVOKE("create_http_collection", { name })),
 	/**  `parent_id` `None` puts it at the collection's root. */
 	createHttpFolder: (collectionId: string, parentId: string | null, name: string) => typedError<HttpFolder, AppError>(__TAURI_INVOKE("create_http_folder", { collectionId, parentId, name })),
@@ -1417,7 +1419,11 @@ export type GeneratedCode = {
  *  One event carrying a closed value rather than a topic per action: a mistyped topic is
  *  a silently inert subscription, and a new variant here stops the front compiling.
  */
-export type GlobalAction = "capture" | "new-note" | "palette" | 
+export type GlobalAction = "capture" | "new-note" | 
+/**  Asked from another application: a note copied from it puts the window away again. */
+"palette" | 
+/**  Asked with the window already in front: it only opens. */
+"palette-here" | 
 /**  Not something to do but something to answer: a quit asked from outside the page. */
 "quit";
 
@@ -2660,6 +2666,17 @@ export type RequestDocument = {
 	transport?: TransportSettings,
 	/**  The nearest level a `{{name}}` resolves from. */
 	variables?: Variable[],
+};
+
+/**  A request as the palette shows it: its URL as typed, `{{baseUrl}}` and all. */
+export type RequestHit = {
+	id: string,
+	name: string,
+	kind: RequestKind,
+	method: HttpMethod,
+	url: string,
+	/**  The collection, then each folder down to the request's. */
+	place: string[],
 };
 
 /**

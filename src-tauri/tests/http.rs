@@ -7,7 +7,7 @@ use devnotes_lib::http::model::{
     HttpItem, HttpItemKind, HttpMethod, HttpNode, HttpPlace, HttpRequestDraft, HttpRequestPatch,
     HttpTree, RequestDocument, RequestKind,
 };
-use devnotes_lib::http::store;
+use devnotes_lib::http::{search, store};
 
 mod common;
 use common::{t0, t1};
@@ -660,4 +660,26 @@ fn nothing_typed_or_answered_is_readable_in_the_file_it_was_written_to() {
     // decision rather than an accident.
     assert!(haystack.contains("PATCH"));
     assert!(haystack.contains("graphql"));
+}
+
+#[test]
+fn the_palette_finds_a_request_by_its_sealed_url_and_says_where_it_is_filed() {
+    let mut connection = open_in_memory().unwrap();
+    let api = collection(&mut connection, "API Paiements");
+    let factures = folder(&mut connection, &api, None, "Factures");
+    let archives = folder(&mut connection, &api, Some(&factures), "Archives");
+    request(&mut connection, &api, Some(&archives), "Ancienne facture");
+    request(&mut connection, &api, None, "Santé");
+
+    let hits = search::rank(
+        store::search_candidates(&mut connection).unwrap(),
+        "exemple.fr/ancienne",
+    );
+
+    assert_eq!(hits.len(), 1);
+    assert_eq!(hits[0].name, "Ancienne facture");
+    assert_eq!(hits[0].url, "https://api.exemple.fr/Ancienne facture");
+    assert_eq!(hits[0].place, ["API Paiements", "Factures", "Archives"]);
+    let everything = search::rank(store::search_candidates(&mut connection).unwrap(), "");
+    assert_eq!(everything.len(), 2);
 }

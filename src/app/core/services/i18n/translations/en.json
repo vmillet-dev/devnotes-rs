@@ -541,7 +541,7 @@
     "newNote": "New note",
     "capture": "Paste from clipboard",
     "quit": "Quit {{app}}",
-    "palette": "Quick paste"
+    "palette": "Palette"
   },
   "locale": {
     "system": "System",
@@ -642,17 +642,80 @@
     "unfile": "Take out of folder"
   },
   "palette": {
-    "title": "Quick paste",
-    "placeholder": "Search a note…",
-    "searchLabel": "Search a note to paste",
-    "resultsLabel": "Matching notes",
-    "empty": "No note matches.",
-    "hint": "↑↓ or Tab to move · Enter or click to open · Ctrl+C copy · Esc close",
+    "title": "Palette",
+    "placeholder": "A note, a request, a tool, a space…",
+    "placeholderNarrowed": "Search…",
+    "searchLabel": "Search everything: notes, requests, tools, spaces",
+    "resultsLabel": "Results",
+    "removeChip": "Remove {{chip}}",
     "copyLabel": "Copy “{{title}}”",
     "createNote": "+ Create a note “{{query}}”",
     "copiedTitle": "Copied",
     "copiedNote": "“{{title}}” is on the clipboard",
-    "copiedUntitled": "The note is on the clipboard"
+    "copiedUntitled": "The note is on the clipboard",
+    "groups": {
+      "notes": "Notes",
+      "requests": "Requests",
+      "tools": "Tools",
+      "spaces": "Spaces",
+      "commands": "Commands",
+      "recent": "Recent",
+      "scopes": "Search in",
+      "spaceNotes": "The notes of a space",
+      "tags": "The notes tagged"
+    },
+    "scopes": {
+      "notes": "notes",
+      "requests": "requests",
+      "tools": "tools",
+      "spaces": "spaces"
+    },
+    "scopeLines": {
+      "notes": "snippets, Notes and lists",
+      "requests": "HTTP, GraphQL, WebSocket",
+      "tools": "the tools catalogue",
+      "spaces": "move from one to another",
+      "space": "its notes"
+    },
+    "tagCount": "{count, plural, one {# note} other {# notes}}",
+    "act": {
+      "note": "↵ open",
+      "request": "↵ open the request",
+      "tool": "↵ open the tool",
+      "space": "↵ switch to this space",
+      "command": "↵ run",
+      "chip": "Tab choose",
+      "create": "↵ create"
+    },
+    "keys": {
+      "navigate": "move",
+      "open": "open",
+      "copy": "copy",
+      "copyBack": "copy and go back",
+      "choose": "choose",
+      "run": "run",
+      "create": "create",
+      "unchip": "remove the chip",
+      "close": "close"
+    },
+    "prefixes": {
+      "at": "choose where to search",
+      "hash": "a tag",
+      "command": "a command"
+    },
+    "empty": {
+      "search": "Nothing matches “{{term}}”.",
+      "nothing": "Nothing to show here.",
+      "scopes": "Nothing is called “@{{word}}”.",
+      "tags": "No tag starts with “{{word}}”.",
+      "commands": "No command contains “{{term}}”."
+    },
+    "commands": {
+      "newRequest": "New request",
+      "newFolder": "New folder",
+      "preferences": "Preferences",
+      "shortcuts": "Shortcut sheet"
+    }
   },
   "placeholders": {
     "title": "Fill the fields",
@@ -752,7 +815,7 @@
       "global": "Global (even with the window closed)",
       "canvas": "Canvas",
       "editor": "Editor",
-      "palette": "Quick paste",
+      "palette": "Palette",
       "note": "Formatted Note",
       "areas": "Areas",
       "http": "HTTP",
@@ -768,7 +831,7 @@
       "delete": "Delete the row of the rail, once confirmed"
     },
     "global": {
-      "palette": "Open the quick-paste palette",
+      "palette": "Open the palette",
       "capture": "Capture the clipboard into a note",
       "newNote": "Create a note"
     },
@@ -819,9 +882,14 @@
     },
     "palette": {
       "navigate": "Walk the results",
-      "paste": "Copy the note and close",
-      "open": "Open the note",
-      "close": "Close the palette"
+      "paste": "Copy the note: over another application, the window steps away",
+      "open": "Open the note, the request, the tool or the space",
+      "close": "Close the palette",
+      "scope": "Search the notes, the requests, the tools, the spaces or one space",
+      "tag": "Search the notes of a tag",
+      "command": "Run a command",
+      "chip": "Choose what @ or # offers",
+      "unchip": "Remove the last chip, the field empty"
     },
     "json": {
       "navigate": "Move through the graph or the tree",
@@ -885,7 +953,7 @@
       "trayNote": "Without a system tray the window minimizes and closes as usual: {{app}} refuses to hide where nothing could call it back."
     },
     "quickPaste": {
-      "title": "Quick paste",
+      "title": "Palette",
       "showPinnedFirst": "Show pinned first"
     },
     "security": {

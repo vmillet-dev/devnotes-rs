@@ -1,0 +1,375 @@
+@use 'mixins' as *;
+
+// Near the top of the window rather than centred: the list grows downwards, and a centred
+// panel would slide under the cursor as it fills.
+app-dialog {
+  --dialog-width: 640px;
+  --dialog-align: flex-start;
+  --dialog-offset: 10vh;
+  --dialog-padding: 12px;
+  --dialog-gap: 8px;
+}
+
+.field {
+  @include surface($radius: 8px);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+
+  &:focus-within {
+    @include accent-state(var(--text-0), var(--amber-edge));
+  }
+}
+
+.input {
+  @include text-field;
+  flex: 1;
+  min-width: 140px;
+  height: 32px;
+  border: 0;
+  background: transparent;
+  font-size: 13.5px;
+  color: var(--text-0);
+
+  &:focus-visible {
+    outline: none;
+  }
+}
+
+// Each chip in the hue its kind is drawn in elsewhere: a tool's teal, a request's amber.
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 24px;
+  padding: 0 4px 0 8px;
+  border-radius: 6px;
+  background: var(--bg-3);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-0);
+  white-space: nowrap;
+
+  &[data-kind='scope'] {
+    color: var(--teal);
+  }
+
+  &[data-kind='space'] {
+    color: var(--blue);
+  }
+
+  &[data-kind='tag'] {
+    color: var(--pink);
+  }
+
+  .mark & {
+    padding-right: 8px;
+  }
+}
+
+.chip-remove {
+  @include unstyled-control;
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--text-2);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text-0);
+  }
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 52vh;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.group {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 10px 10px 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.count {
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+// The row is the open surface; a note's copy sits beside it rather than over it, so neither
+// gesture is aimed at the other.
+.option {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  border-radius: 8px;
+
+  &.on {
+    background: var(--bg-3);
+  }
+
+  &.create {
+    margin-top: 2px;
+    border-top: 1px solid var(--line-soft);
+    border-radius: 0 0 8px 8px;
+  }
+}
+
+.open {
+  @include unstyled-control;
+  display: grid;
+  // One column for every kind's mark, so that the titles align.
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+
+  .compact & {
+    min-height: 34px;
+  }
+}
+
+.mark {
+  display: flex;
+  align-items: center;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.title {
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--text-0);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+
+  .create & {
+    color: var(--amber-text);
+  }
+}
+
+.scope {
+  font-weight: 600;
+  color: var(--teal);
+}
+
+.hit {
+  font-weight: 650;
+  color: var(--amber-text);
+}
+
+.fields {
+  margin-left: 8px;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--amber-text);
+}
+
+.sub {
+  overflow: hidden;
+  font-size: 11.5px;
+  color: var(--text-2);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+
+  &.mono {
+    font-family: var(--font-mono), monospace;
+    font-size: 11px;
+  }
+}
+
+.variable {
+  color: var(--amber-text);
+}
+
+.side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 220px;
+  font-size: 11.5px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.context {
+  display: flex;
+  gap: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tag {
+  color: var(--text-2);
+}
+
+.act {
+  color: var(--text-1);
+}
+
+.method {
+  @include http-method-hues;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.tile {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--bg-3);
+  --icon-size: 14px;
+
+  &.tool {
+    @include tool-hues;
+    background: rgba(var(--tool-hue-rgb), 0.15);
+    color: var(--tool-hue);
+  }
+
+  &.space {
+    border: 1px solid var(--line);
+    background: transparent;
+  }
+
+  // What a chip after `@` or `#` is offered by, in the hue its chip takes in the field.
+  &.prefix {
+    font-family: var(--font-mono), monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--teal);
+
+    &[data-kind='tag'] {
+      color: var(--pink);
+    }
+  }
+
+  &.command {
+    font-family: var(--font-mono), monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-1);
+  }
+}
+
+// The space switcher's dot: a space has no colour of its own.
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--amber-fill);
+}
+
+.copy {
+  @include unstyled-control;
+  flex-shrink: 0;
+  min-width: 32px;
+  padding: 0 9px;
+  border-radius: 7px;
+  color: var(--text-2);
+  cursor: pointer;
+  --icon-size: 14px;
+  // Quiet at rest but never hidden: `display: none` would take it out of the tab order.
+  opacity: 0;
+
+  .option:hover &,
+  .option.on &,
+  &:focus-visible {
+    opacity: 1;
+  }
+
+  &:hover {
+    background: var(--bg-2);
+    color: var(--amber-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--amber-edge);
+    outline-offset: -2px;
+  }
+}
+
+kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-family: var(--font-mono), monospace;
+  font-size: 10.5px;
+  color: var(--text-1);
+}
+
+.keys {
+  display: flex;
+  gap: 3px;
+}
+
+.empty {
+  padding: 12px 10px;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+
+.prefixes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  padding: 8px 10px 4px;
+  font-size: 11.5px;
+  color: var(--text-2);
+
+  code {
+    font-family: var(--font-mono), monospace;
+    color: var(--text-0);
+  }
+}
+
+.hint {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 8px 10px 0;
+  border-top: 1px solid var(--line-soft);
+  font-size: 11px;
+  color: var(--text-2);
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+}

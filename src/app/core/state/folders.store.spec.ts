@@ -132,6 +132,25 @@ describe('FoldersStore', () => {
     expect(harness.revision.current()).toBeGreaterThan(before);
   });
 
+  /** « Nouveau dossier » from the palette: the name is asked, then the folder made where the notes are. */
+  it('asks a name in the space open, creates the folder named, and asks nothing across every space', async () => {
+    const harness = await createStore([]);
+    harness.store.askName();
+    expect(harness.store.naming()).toBe(false);
+
+    await inSpace(harness, 'sql');
+    harness.store.askName();
+    expect(harness.store.naming()).toBe(true);
+    await harness.store.createNamed('Perf');
+
+    expect(harness.store.naming()).toBe(false);
+    expect(harness.store.folders().map((folder) => folder.name)).toEqual(['Perf']);
+
+    harness.store.askName();
+    harness.store.dismissNaming();
+    expect(harness.store.naming()).toBe(false);
+  });
+
   /** A folder belongs to a space, so there is nothing to create it in. */
   it('refuses to create a folder while no space is chosen', async () => {
     const { store } = await createStore([]);

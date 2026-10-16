@@ -7,6 +7,7 @@ import { LeaveRequestsDialogComponent } from '@http/leave-requests/leave-request
 import { StatusToastComponent } from '@banners/status-toast/status-toast.component';
 import { TitlebarComponent } from '@titlebar/titlebar.component';
 import { UpdatePromptComponent } from '@banners/update-prompt/update-prompt.component';
+import { PaletteComponent } from './palette/palette.component';
 import { PassphrasePromptComponent } from './passphrase-prompt/passphrase-prompt.component';
 import { VaultGateComponent } from './vault-gate/vault-gate.component';
 import { AreaStore } from '@core/services/areas/area.store';
@@ -26,6 +27,7 @@ import { AreaKeysDirective } from './area-keys.directive';
     UpdatePromptComponent,
     VaultGateComponent,
     PassphrasePromptComponent,
+    PaletteComponent,
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',

@@ -18,7 +18,6 @@ import { NotesQueryStore } from '@core/state/notes-query.store';
 import { NotesStore } from '@core/state/notes.store';
 import { HelpStore } from '@core/services/help/help.store';
 import { UndoStore } from '@core/state/undo.store';
-import { PaletteStore } from '@core/state/palette.store';
 import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
 import { FoldersStore } from '@core/state/folders.store';
 import { SpacesStore } from '@core/state/spaces.store';
@@ -40,8 +39,7 @@ import { FolderSwitcherComponent } from './header/folder-switcher/folder-switche
 import { ImageLightboxComponent } from './overlays/image-lightbox/image-lightbox.component';
 import { NoteEditorOverlayComponent } from './overlays/note-editor-overlay/note-editor-overlay.component';
 import { NoteSectionComponent } from './canvas/note-section/note-section.component';
-import { PlaceholderFormComponent } from './overlays/placeholder-form/placeholder-form.component';
-import { QuickPaletteComponent } from './overlays/quick-palette/quick-palette.component';
+import { PlaceholderFormComponent } from '@app/placeholder-form/placeholder-form.component';
 import { SearchBoxComponent } from './header/search-box/search-box.component';
 import { SegmentedChoiceComponent } from '@shared/controls/segmented-choice/segmented-choice.component';
 import { AreaSwitchComponent } from '@shared/controls/area-switch/area-switch.component';
@@ -713,10 +711,16 @@ describe('NotesPageComponent', () => {
       expect(store.selectedNote()).toBeNull();
     });
 
-    it('opens the quick palette when the palette event fires', async () => {
-      fireAction('palette');
+    /** The palette is drawn over whatever area is on screen: it is no reason to come here. */
+    it('leaves the palette to the root, and stays on the area it was on', async () => {
+      const areas = TestBed.inject(AreaStore);
+      areas.show('tools');
 
-      await vi.waitFor(() => expect(maybeChild(QuickPaletteComponent)).not.toBeNull());
+      fireAction('palette');
+      fireAction('palette-here');
+      await fixture.whenStable();
+
+      expect(areas.current()).toBe('tools');
     });
   });
 
@@ -1210,78 +1214,6 @@ describe('NotesPageComponent', () => {
 
       expect(clipboard.content).toBe('');
       expect(maybeChild(PlaceholderFormComponent)).toBeNull();
-    });
-  });
-
-  describe('quick palette', () => {
-    let palette: PaletteStore;
-
-    beforeEach(async () => {
-      palette = TestBed.inject(PaletteStore);
-      await palette.open();
-      await fixture.whenStable();
-    });
-
-    it('turns what was typed on the create row into a saved note of that name', async () => {
-      palette.setQuery('rotation des certificats');
-      palette.highlight(palette.results().length);
-      await fixture.whenStable();
-
-      child(QuickPaletteComponent).chosen.emit();
-
-      await vi.waitFor(() => expect(store.selectedNote()?.title).toBe('rotation des certificats'));
-      expect(store.selectedNote()?.content).toBe('');
-      expect(palette.isOpen()).toBe(false);
-    });
-
-    it('copies the highlighted snippet and steps out of the way', async () => {
-      child(QuickPaletteComponent).chosen.emit();
-
-      await vi.waitFor(() => expect(clipboard.content).toBe('line one\nline two'));
-      await vi.waitFor(() => expect(appWindow.hidden).toBe(1));
-      expect(palette.isOpen()).toBe(false);
-    });
-
-    it('opens the highlighted note in the editor instead, closing the palette', async () => {
-      const note = canvas.visibleNotes()[0];
-
-      child(QuickPaletteComponent).openRequested.emit(note);
-      await fixture.whenStable();
-
-      expect(palette.isOpen()).toBe(false);
-      expect(store.selectedNoteId()).toBe(note.id);
-    });
-
-    /** The palette ignores the canvas filters, so its results often name a note no view holds. */
-    it('opens one no view is holding, which is what a filter makes of a result', async () => {
-      const hidden = createNote({ id: 'hidden-note', title: 'Hidden by a filter' });
-      expect(canvas.visibleNotes().map((note) => note.id)).not.toContain('hidden-note');
-      vi.spyOn(repository, 'get').mockResolvedValue(hidden);
-
-      child(QuickPaletteComponent).openRequested.emit(hidden);
-
-      await vi.waitFor(() => expect(store.selectedNoteId()).toBe('hidden-note'));
-      expect(store.selectedNote()?.title).toBe('Hidden by a filter');
-    });
-
-    it('sends a snippet with fields through the form before copying it', async () => {
-      await setUp([
-        createNote({
-          id: 'snippet',
-          content: 'ssh {{user}}@host',
-          placeholders: [{ name: 'user', defaultValue: '', value: '' }],
-        }),
-      ]);
-      palette = TestBed.inject(PaletteStore);
-      await palette.open();
-      await vi.waitFor(() => expect(palette.results()).toHaveLength(1));
-      await fixture.whenStable();
-
-      child(QuickPaletteComponent).chosen.emit();
-      await vi.waitFor(() => expect(maybeChild(PlaceholderFormComponent)).not.toBeNull());
-      child(PlaceholderFormComponent).submitted.emit({ user: 'root' });
-
-      await vi.waitFor(() => expect(clipboard.content).toBe('ssh root@host'));
     });
   });
 

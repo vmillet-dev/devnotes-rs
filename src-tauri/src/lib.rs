@@ -51,7 +51,7 @@ use http::{
     http_variables, implied_http_headers, inherited_http_settings, move_http_item,
     read_http_headers, rename_http_item, reorder_http_collection, restore_http_history_entry,
     save_http_environment, save_http_globals, save_http_request, save_http_response,
-    save_http_settings, send_http_request, send_websocket, sync_http_query,
+    save_http_settings, search_http_requests, send_http_request, send_websocket, sync_http_query,
 };
 use json::explore_json;
 use libraries::{create_library, delete_library, list_libraries, open_library, rename_library};
@@ -177,6 +177,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             set_global_placeholders::<tauri::Wry>,
             list_folders::<tauri::Wry>,
             http_tree::<tauri::Wry>,
+            search_http_requests::<tauri::Wry>,
             create_http_collection::<tauri::Wry>,
             create_http_folder::<tauri::Wry>,
             create_http_request::<tauri::Wry>,

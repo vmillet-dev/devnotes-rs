@@ -4,7 +4,7 @@ Guidance for Claude Code in this repository. `docs/architecture.md` is the detai
 
 ## Project
 
-DevNotes — desktop notes app for developers. **Angular 22** (standalone, signals, zoneless), **Rust / Tauri v2**, SQLite via Diesel. Notes are snippets (body + language + `{{fields}}`), Notes (Markdown, written formatted) or todo lists; they live in spaces and folders, with search, tags, a canvas and a board, trash with undo, revisions, bulk actions, attachments, import/export, a quick-paste palette, and tools (JSON, HTTP, WebSocket…). Libraries are **encrypted**, several, each behind its own passphrase.
+DevNotes — desktop notes app for developers. **Angular 22** (standalone, signals, zoneless), **Rust / Tauri v2**, SQLite via Diesel. Notes are snippets (body + language + `{{fields}}`), Notes (Markdown, written formatted) or todo lists; they live in spaces and folders, with search, tags, a canvas and a board, trash with undo, revisions, bulk actions, attachments, import/export, a palette over notes, requests, tools and spaces, and tools (JSON, HTTP, WebSocket…). Libraries are **encrypted**, several, each behind its own passphrase.
 
 Principles:
 

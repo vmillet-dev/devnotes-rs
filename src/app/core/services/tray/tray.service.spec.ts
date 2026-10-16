@@ -31,7 +31,7 @@ describe('TrayService', () => {
       open: 'Ouvrir DevNotes',
       newNote: 'Nouvelle note',
       capture: 'Coller le presse-papier',
-      palette: 'Collage rapide',
+      palette: 'Palette',
       quit: 'Quitter DevNotes',
     });
   });
