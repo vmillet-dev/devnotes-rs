@@ -566,15 +566,20 @@
   color: var(--text-2);
 }
 
-// One card of results: rows under small group titles, hairlines between them. It scrolls
-// inside itself, never the page.
-@mixin tool-result-card {
+// One card of results: rows under small group titles, hairlines between them, two rows abreast
+// once the card holds two of `$row-min`. It scrolls inside itself, never the page.
+@mixin tool-result-card($row-min: 440px) {
   @include surface(var(--bg-1), 10px);
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, $row-min), 1fr));
+  align-content: start;
   min-height: 0;
   overflow-y: auto;
   padding-bottom: 4px;
+
+  > :not(app-result-row) {
+    grid-column: 1 / -1;
+  }
 }
 
 // "Pour le code", "Pour le texte": a label over the rows of a results card.

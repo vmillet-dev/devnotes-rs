@@ -1182,7 +1182,14 @@ page with its copy icon at mid-height: past `LONG_RESULT` characters a value tak
 width **under** its name, held to eight lines it scrolls in — focusable, so the keyboard
 scrolls it — and its icon stays at its top; `app-output-row` holds its value to a height the
 same way. A tool whose results are long takes the width it is given (`tool-columns`) rather
-than a width of its own.
+than a width of its own, and a results card (`tool-result-card($row-min)`) puts its rows two
+abreast once it holds two of `$row-min` — the hash tool asks for more, a digest reading on one line.
+
+The home's panels are stacks in columns: as many as `columnCount` fits at 260 px, the panels
+cut into consecutive stacks by `stackInColumns` (`core/utils/columns.util.ts`), the tallest as
+short as it can be. CSS `columns` found that height and filled from the left, so one tall panel
+(the references) left the last columns of a large screen empty; a grid left holes under short
+panels. A panel's height is counted in rows, near enough to share the columns out.
 
 ⚠️ **The line breaks tool has no `<textarea>`**: a textarea's value turns every CRLF and CR
 into LF, the very thing it is asked about. A paste is read raw from its `clipboardData`, Coller

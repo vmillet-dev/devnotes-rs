@@ -250,8 +250,9 @@
   }
 }
 
+// A digest reads on one line: two abreast only where a SHA-256 still does.
 .results {
-  @include tool-result-card;
+  @include tool-result-card(760px);
   flex-shrink: 1;
 
   > app-result-row:first-child {

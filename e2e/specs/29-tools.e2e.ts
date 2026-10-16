@@ -402,6 +402,20 @@ describe('The tools', () => {
           .filter((space) => Math.abs(space - GAP) > 1),
       );
 
+    /** The home's columns follow a measured width a render later: as many as fit at 260 px. */
+    const columnsFollowTheWidth = (): Promise<boolean> =>
+      browser.execute(
+        (selector: string, gap: number) => {
+          const area = document.querySelector<HTMLElement>(selector);
+          // An open tool hides the home: no columns to wait for.
+          if (!area) return true;
+          const declared = Number(area.style.getPropertyValue('--columns'));
+          return declared === Math.max(1, Math.floor((area.clientWidth + gap) / (260 + gap)));
+        },
+        testid('tools-panels'),
+        GAP,
+      );
+
     async function resizeTo(width: number): Promise<PanelBox[]> {
       await browser.setWindowSize(width, 800);
       await eventually(
@@ -409,6 +423,7 @@ describe('The tools', () => {
         (size) => size.width <= width && size.width > width - 60,
         `the window to be ${width}px wide`,
       );
+      await eventually(columnsFollowTheWidth, (follows) => follows, `the columns to follow ${width}px`);
       return boxes();
     }
 
@@ -463,6 +478,60 @@ describe('The tools', () => {
       expect(holes(panels)).toEqual([]);
       expect(panels.filter((panel) => panel.pieces !== 1)).toEqual([]);
       await setField(testid('tools-search'), '');
+    });
+
+    /** Asked on a 2000 px screen: CSS columns filled the left half and left the right one empty. */
+    it('spreads its panels over a large screen, and overflows nothing on a laptop', async () => {
+      const span = () =>
+        browser.execute(
+          (home: string, panel: string) => {
+            const area = document.querySelector(home)!.getBoundingClientRect();
+            const boxes = [...document.querySelectorAll(panel)].map((each) => each.getBoundingClientRect());
+            const right = Math.max(...boxes.map((box) => box.right));
+            return {
+              share: (right - Math.min(...boxes.map((box) => box.left))) / area.width,
+              overflow: right - area.right,
+              scrolls: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+            };
+          },
+          testid('tools-panels'),
+          testid('tools-panel'),
+        );
+
+      await resizeTo(1900);
+      const wide = await eventually(
+        span,
+        (measured) => measured.share >= 0.8,
+        'the panels to fill the width',
+      );
+      expect(wide.overflow).toBeLessThanOrEqual(1);
+
+      await resizeTo(1100);
+      const laptop = await span();
+      expect(laptop.overflow).toBeLessThanOrEqual(1);
+      expect(laptop.scrolls).toBe(false);
+    });
+
+    it('puts an open tool’s results two abreast when its card has the room', async () => {
+      const lefts = () =>
+        browser.execute(
+          (row: string) =>
+            new Set(
+              [...document.querySelectorAll(row)].map((each) =>
+                Math.round(each.getBoundingClientRect().left),
+              ),
+            ).size,
+          `${testid('case-results')} app-result-row`,
+        );
+
+      await resizeTo(2000);
+      await entry('case').click();
+      await setField(testid('case-input'), 'Hello world');
+      expect(await eventually(lefts, (count) => count === 2, 'the results two abreast')).toBe(2);
+
+      await resizeTo(1100);
+      expect(await eventually(lefts, (count) => count === 1, 'the results one under another')).toBe(1);
+      await $(testid('tools-rail-all')).click();
     });
 
     it('keeps one category to a column, not stretched over the page', async () => {

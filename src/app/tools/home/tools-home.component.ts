@@ -1,12 +1,14 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
   Injector,
   afterNextRender,
   computed,
   effect,
   inject,
+  signal,
   untracked,
   viewChild,
 } from '@angular/core';
@@ -29,6 +31,7 @@ import {
 } from '@core/services/tools/tool.model';
 import { ToolSessions } from '@core/services/tools/tool-sessions';
 import { ToolsStore } from '@core/services/tools/tools.store';
+import { columnCount, stackInColumns } from '@core/utils/columns.util';
 import { relativeTimeRef } from '@core/utils/relative-time.util';
 import { RailToggleComponent } from '@shared/controls/rail-toggle/rail-toggle.component';
 import { IconComponent, IconName } from '@shared/icon/icon.component';
@@ -42,6 +45,9 @@ const CATEGORY_ICONS: Record<ToolCategory, IconName> = {
   calc: 'calculator',
   reference: 'book-open',
 };
+
+const PANEL_MIN_WIDTH = 260;
+const PANEL_GAP = 14;
 
 /**
  * The catalogue in its panels, the recent tools above it, and a search over the tools — their
@@ -64,8 +70,16 @@ export class ToolsHomeComponent {
   private readonly injector = inject(Injector);
   private readonly sessions = inject(ToolSessions);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly destroyRef = inject(DestroyRef);
 
   private readonly searchField = viewChild.required<ElementRef<HTMLInputElement>>('searchField');
+  private readonly panelsBox = viewChild.required<ElementRef<HTMLElement>>('panelsBox');
+
+  protected readonly panelGap = PANEL_GAP;
+  private readonly panelsWidth = signal(0);
+  protected readonly columnCount = computed(() =>
+    columnCount(this.panelsWidth(), PANEL_MIN_WIDTH, PANEL_GAP),
+  );
 
   /** The names are searched in the language on screen: its file loaded, the search runs again. */
   private readonly translation = toSignal(this.transloco.selectTranslation());
@@ -106,6 +120,11 @@ export class ToolsHomeComponent {
       }))
       .filter((panel) => panel.tools.length > 0);
   });
+
+  /** A panel's height counted in rows, its head one of them: near enough to share the columns out. */
+  protected readonly columns = computed(() =>
+    stackInColumns(this.panels(), (panel) => panel.tools.length + 1, this.columnCount()),
+  );
 
   /**
    * More are kept than shown, for the rail: here, the five opened last — a favourite aside,
@@ -148,6 +167,16 @@ export class ToolsHomeComponent {
   });
 
   constructor() {
+    afterNextRender(() => {
+      if (typeof ResizeObserver === 'undefined') return;
+      // A hidden page measures nothing: it keeps the columns it had when last shown.
+      const observer = new ResizeObserver(([entry]) => {
+        if (entry && entry.contentRect.width > 0) this.panelsWidth.set(entry.contentRect.width);
+      });
+      observer.observe(this.panelsBox().nativeElement);
+      this.destroyRef.onDestroy(() => observer.disconnect());
+    });
+
     // Ctrl+Shift+T may arrive before this home exists — from the notes — or while it shows.
     effect(() => {
       if (!this.store.searchWanted()) return;
