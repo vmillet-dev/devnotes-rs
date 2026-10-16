@@ -1212,14 +1212,15 @@ describe('NotesPageComponent', () => {
       await fixture.whenStable();
     });
 
-    it('turns what was typed on the create row into a saved note', async () => {
-      palette.setQuery('kubectl get pods -A');
+    it('turns what was typed on the create row into a saved note of that name', async () => {
+      palette.setQuery('rotation des certificats');
       palette.highlight(palette.results().length);
       await fixture.whenStable();
 
       child(QuickPaletteComponent).chosen.emit();
 
-      await vi.waitFor(() => expect(store.selectedNote()?.content).toBe('kubectl get pods -A'));
+      await vi.waitFor(() => expect(store.selectedNote()?.title).toBe('rotation des certificats'));
+      expect(store.selectedNote()?.content).toBe('');
       expect(palette.isOpen()).toBe(false);
     });
 
