@@ -1390,9 +1390,9 @@ previously lived only on the front (`isExpiringSoon`, 3 days) while the back sep
 computed `has_expiring_notes` — two definitions of "soon" behind a hint that reads "to triage
 soon". The section flag now derives from the same per-note value.
 
-### The three kinds of note
+### The four kinds of note
 
-A note is a `snippet`, a `note` or a `checklist`, and `notes::kind::NoteKind` is a closed
+A note is a `snippet`, a `note`, a `checklist` or a `calc` — a sheet, below — and `notes::kind::NoteKind` is a closed
 enum for the same reason `Language` is: the front receives a generated union, so an unhandled
 variant stops compiling rather than surfacing at runtime.
 
@@ -1516,6 +1516,63 @@ todo list keeps the text it was made from. The command answers the body the note
 writes what the editor still holds, awaited — a conversion landing under a write of the old body
 would lose it — then bumps the editor session so its drafts re-seed. Code pasted into an empty
 Note makes it a snippet with that same undo, back to the Note with the pasted text.
+
+### A Calcul note: one result a line
+
+A `calc` note is a sheet: its body is text, as a snippet's is — sealed, searched, its last 20
+revisions kept, exported in a bare fence — with no language. Each line is computed as it is
+typed, and **the results are never stored**: they are computed when the sheet is read.
+
+**Rust computes, the front writes** (`notes::calc`). `evaluate_calc(sheet, today)` answers the
+whole sheet — one `CalcRow` a line, with its spans for the colours and, after `en` or `à`, the
+kind being converted — and `query_notes` gives a card its last four lines that gave something
+(`DisplayNote.calc`, read from the whole body before it is cut). Values cross as exact decimals
+in text, units as `UnitId`s, errors as codes: `CalcFormatter` (`core/services/calc/`) writes them
+in the language on screen — its decimal mark, `Go` or `GB`, `j` or `d`, the date — and says `≈`
+when the display rounds. `today` is the local day of the window (`CalcSheets.today`); the board,
+which knows no time zone, gives its cards the UTC day.
+
+**The grammar** is a recursive descent over a lexer counting UTF-16 units, as the editor does
+(`calc/lexer.rs`, `calc/eval.rs`):
+
+- **Numbers** take a comma or a point before the decimals; arithmetic is `rust_decimal`, exact —
+  a factor such as `€/h` is kept as a fraction, multiplied before it is divided, or `0,045 €/h`
+  would read back as `0,04499…`.
+- **Units** (`calc/units.rs`, one table) are lengths, masses, durations, data sizes (the sizes
+  tool's factors), temperatures, and euros and dollars, which are units like the others: added,
+  multiplied, never converted into each other — ⚠️ no rate is fetched, so `100 € en $` is
+  refused on its line. A quantity carries its dimensions, so `€/h × h` is euros and a size `à` a
+  rate is a duration. A temperature is converted by formula, never by factor. Quantities of one
+  kind written side by side add up: `3 h 20 min`. Lowercase `to` and `mo` are left to English and
+  to the month.
+- **Words** are read in French and in English whatever the language on screen — `en`/`in`/`to`,
+  `de`/`of`, `sur`, `hors`, `de … à`/`from … to`, `total`/`somme`, `moyenne`, `aujourd'hui`/`today`
+  — so a sheet keeps its meaning for everyone. A word is a unit only after a number or a
+  conversion, a name anywhere else.
+- **The percentages tool's five questions** are lines: `20 % de 340`, `30 sur 120 en %`,
+  `de 80 à 100`, `250 + 20 %`, `300 hors 20 %`. A percentage added to a quantity is a share of it.
+- **Dates** move by whole days, and by calendar months for months and years; two dates subtract
+  into days. A duration converted into weeks keeps the days left (`6 sem 3 j`).
+- **Blocks** run from a `# heading` or a blank line to the next: `total` and `moyenne` read the
+  quantities above in theirs. `name = …` names a result from that line down; `//` starts a
+  comment, which is what a copied sheet carries its results in.
+- **An error stays on its line** and says why; the others go on. A line with no number and no
+  name is a sentence, not a mistake.
+
+**The editor** (`calc-editor/`) is CodeMirror with the results laid over the right edge of each
+line (`sheet-marks.ts`, widgets at the line's end, mapped through each edit until the next
+answer), its theme its own (`calc-theme.ts`). A result is picked by a click, Shift for a range,
+Ctrl for one more, or by selecting lines of the text; the footer adds them up and averages them
+— in exact decimals, on the strings Rust sent (`decimalSum`) — and says when they are of
+different units. « Décimales » is an application preference (`calcDecimals`): it changes the
+display, never the computation. After `en` or `à`, the completion proposes the units of the kind
+Rust read on that line (`CALC_UNITS`), written in the language on screen. A name hovered says
+its exact value, the line it was given on and the lines that read it.
+
+**Copying** — `C` on the card, « Copier » in the editor or the palette — gives the text with each
+result after its line as a comment (`CalcFormatter.copyText`): pasted into another sheet, the
+comments are read past and the same lines compute again. The front writes it, since Rust knows no
+word on screen; `DisplayNote.copy_text` stays `None`.
 
 ### A Note is written formatted, and stored as Markdown
 

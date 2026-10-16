@@ -63,6 +63,12 @@ const FROM_OUTSIDE = Annotation.define<boolean>();
 /** `en`, `in`, `à`… then the start of a unit: what the units of the line's kind complete. */
 const CONVERSION = /(?:^|\s)(?:en|in|to|as|vers|à|at)\s+([^\s]*)$/i;
 
+/** A result's copy icon or its value, under a press or a click. */
+function control(event: MouseEvent): HTMLElement | null {
+  const target = event.target instanceof Element ? event.target : null;
+  return target?.closest<HTMLElement>('[data-copy], [data-pick]') ?? null;
+}
+
 /** A caret moving inside one line selects no line, and draws nothing again. */
 function sameLines(a: ReadonlySet<number>, b: ReadonlySet<number>): boolean {
   return a.size === b.size && [...a].every((line) => b.has(line));
@@ -327,6 +333,7 @@ export class CalcEditorComponent {
         EditorView.updateListener.of((update) => this.onUpdate(update)),
         EditorView.domEventHandlers({
           mousedown: (event) => this.onMouseDown(event),
+          click: (event) => this.onClick(event),
         }),
         EditorView.contentAttributes.of({ 'aria-label': untracked(this.label) }),
         placeholder(untracked(this.placeholder)),
@@ -336,20 +343,19 @@ export class CalcEditorComponent {
 
   /** The icons and the results are no text to put the caret in: their clicks stop here. */
   private onMouseDown(event: MouseEvent): boolean {
-    const target = event.target instanceof Element ? event.target : null;
-    const copy = target?.closest<HTMLElement>('[data-copy]');
-    if (copy) {
-      event.preventDefault();
-      void this.copy(Number(copy.dataset['copy']));
-      return true;
-    }
-    const pick = target?.closest<HTMLElement>('[data-pick]');
-    if (pick) {
-      event.preventDefault();
-      this.pick(Number(pick.dataset['pick']), event);
-      return true;
-    }
-    return false;
+    if (!control(event)) return false;
+    event.preventDefault();
+    return true;
+  }
+
+  /** The click acts, the press before it only kept the caret where it was. */
+  private onClick(event: MouseEvent): boolean {
+    const target = control(event);
+    if (!target) return false;
+    event.preventDefault();
+    if (target.dataset['copy'] !== undefined) void this.copy(Number(target.dataset['copy']));
+    else this.pick(Number(target.dataset['pick']), event);
+    return true;
   }
 
   /** After `en` or `à`, only the units of the line's kind, as Rust read it a moment ago. */

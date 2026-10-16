@@ -52,10 +52,14 @@ describe('CalcEditorComponent', () => {
     ...fixture.nativeElement.querySelectorAll('[data-testid="calc-result"]'),
   ];
   const text = (selector: string): string =>
-    (fixture.nativeElement.querySelector(selector)?.textContent ?? '').replace(/[\s\u00a0\u202f]+/g, ' ').trim();
+    (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+      .replace(/[\s\u00a0\u202f]+/g, ' ')
+      .trim();
 
+  /** A press, then the click that acts, as a pointer gives them. */
   function mouse(target: Element, init: MouseEventInit = {}): void {
     target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, ...init }));
+    target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ...init }));
   }
 
   beforeEach(async () => {

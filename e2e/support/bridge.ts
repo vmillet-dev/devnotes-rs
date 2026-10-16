@@ -7,6 +7,7 @@ import { SCRIPT_TIMEOUT, SLOW_SCRIPT_TIMEOUT } from './timeouts.js';
 import type {
   Attachment,
   Base64FileAnswer,
+  CalcSheet,
   DisplayNote,
   BoardQuery,
   BoardView,
@@ -121,6 +122,7 @@ export const bridge = {
   describePermissions: (request: PermissionsRequest) =>
     invoke<PermissionsAnswer>('describe_permissions', { request }),
   checkDigits: (request: CheckRequest) => invoke<CheckAnswer>('check_digits', { request }),
+  evaluateCalc: (sheet: string, today: string) => invoke<CalcSheet>('evaluate_calc', { sheet, today }),
   decodeJwt: (request: JwtRequest) => invoke<JwtAnswer>('decode_jwt', { request }),
   textStats: (request: StatsRequest) => invoke<TextStats>('text_stats', { request }),
   searchTimeZones: (query: string) => invoke<ZoneEntry[]>('search_time_zones', { query }),

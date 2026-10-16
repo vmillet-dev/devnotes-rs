@@ -73,7 +73,7 @@ class ResultWidget extends WidgetType {
 
   /** A press reaches the editor's handler, which picks or copies and keeps the caret where it was. */
   override ignoreEvent(event: Event): boolean {
-    return event.type !== 'mousedown';
+    return event.type !== 'mousedown' && event.type !== 'click';
   }
 }
 

@@ -479,7 +479,7 @@
         } @else if (isRichText()) {
           {{ 'editor.noteStats' | transloco: { count: wordCount() } }}
         } @else {
-          {{ languageLabel() }} ·
+          {{ isCalc() ? ('notes.kindTag.calc' | transloco) : languageLabel() }} ·
           {{ 'editor.footerStats' | transloco: { lines: lineCount(), bytes: byteSize(), eol: lineEnding() } }}
         }
       </span>
