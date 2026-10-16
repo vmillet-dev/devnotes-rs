@@ -1485,6 +1485,19 @@ a task list reads `- [x] …` is a rule, and it now has exactly one home —
 `notes::checklist::to_markdown`, which sharing and exporting already used. The front end held
 a second copy of that syntax, and one of the two was going to drift.
 
+**A note changes kind in Rust alone** (`notes::convert`, `convert_note`), from the editor's
+« Type » menu, at the head of the band holding the space and the folder — the title bar keeps
+its room for the title. A snippet and a Note keep their text as it is (a snippet reads it for a
+language); a todo list gives its items to a Note as a task list and to a snippet as lines; a
+text becomes one item
+per line that is not blank, its list markers dropped and its `[x]` read as done. One
+transaction; the body it replaces goes into the history like any edit's, so converting into a
+todo list keeps the text it was made from. The command answers the body the note had
+(`NoteBody`), which the undo writes back through `update_note`. `NotesStore.convertNote` first
+writes what the editor still holds, awaited — a conversion landing under a write of the old body
+would lose it — then bumps the editor session so its drafts re-seed. Code pasted into an empty
+Note makes it a snippet with that same undo, back to the Note with the pasted text.
+
 ### A Note is written formatted, and stored as Markdown
 
 A Note is a kind of its own (`NoteKind::Note`), edited in the rich editor instead of the code

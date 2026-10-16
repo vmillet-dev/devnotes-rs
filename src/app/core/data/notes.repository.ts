@@ -6,7 +6,9 @@ import { DiffLine, Revision } from '@core/model/revision.model';
 import { Space } from '@core/model/space.model';
 import {
   Note,
+  NoteBody,
   NoteDraft,
+  NoteKind,
   NotePatch,
   NotePlacement,
   NotePriority,
@@ -103,6 +105,12 @@ export class NotesRepository {
    */
   async restoreRevision(id: string, revisionId: string): Promise<Note> {
     return toNote(unwrap('restore_revision', await commands.restoreRevision(id, revisionId)));
+  }
+
+  /** The note rewritten as `into`, with the body it had: the undo writes that body back. */
+  async convert(id: string, into: NoteKind): Promise<{ note: Note; previous: NoteBody }> {
+    const { note, previous } = unwrap('convert_note', await commands.convertNote(id, into));
+    return { note: toNote(note), previous };
   }
 
   /** Moves to the trash: the note is recoverable for 30 days. */

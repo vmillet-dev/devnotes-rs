@@ -2,6 +2,7 @@ import { $, $$, browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
+import { undoBar } from '../pageobjects/overlays.page.js';
 import { spaces } from '../pageobjects/sidebar.page.js';
 import { settings } from '../pageobjects/titlebar.page.js';
 import {
@@ -400,6 +401,37 @@ describe('Editing a note', () => {
         'the ticked box to reach the database',
       );
       expect(stored).toContain('**Ship** it and `tag`');
+    });
+
+    /** A todo list read as a Note's tasks, and back: its boxes go round unchanged. */
+    it('converts a todo list into a Note whose tasks it holds, and back again', async () => {
+      const title = 'Release steps';
+      const items = [
+        { text: 'Freeze the merges', done: true },
+        { text: 'Ship the build', done: false },
+      ];
+      const id = (await bridge.createNote(draft({ spaceId, title, kind: 'checklist', items }))).id;
+      await reloadCanvas();
+      await canvas.openNote(title);
+
+      await editor.convertTo('note');
+      const tasks = () => $$(`${testid('editor-rich')} input[type="checkbox"]`).length;
+      await eventually(tasks, (count) => count === 2, 'the items to become the Note’s tasks');
+      expect(await $(testid('editor-rich')).getText()).toContain('Freeze the merges');
+      expect((await bridge.getNote(id)).content).toBe(
+        ['- [x] Freeze the merges', '- [ ] Ship the build'].join('\n'),
+      );
+      await undoBar.bar().waitForDisplayed({ timeout: 10_000 });
+
+      await editor.convertTo('checklist');
+      await eventually(
+        () => editor.itemTexts(),
+        (texts) => texts.join('|') === 'Freeze the merges|Ship the build',
+        'the tasks to be items again',
+      );
+      expect(await editor.itemChecks()).toEqual([true, false]);
+      await editor.close();
+      expect((await bridge.getNote(id)).items).toEqual(items);
     });
 
     /** Coloured by the code field's grammars, stored as the fence it was given, and changed from a menu. */

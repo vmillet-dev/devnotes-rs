@@ -19,7 +19,7 @@ export { type ChecklistItem, type NoteKind } from './checklist.model';
 export type { FacetCount, OutlineLine, SearchField, SearchHit } from '@core/ipc/bindings';
 
 /** They cross as themselves: a batch answers what it changed, and the undo hands it back. */
-export type { NotePlacement, NotePriority, NoteTag } from '@core/ipc/bindings';
+export type { NoteBody, NotePlacement, NotePriority, NoteTag } from '@core/ipc/bindings';
 
 /** The most an attachment may weigh, decided in Rust and said where a file is attached. */
 export { ATTACHMENT_MAX_MEGABYTES } from '@core/ipc/bindings';

@@ -1,6 +1,7 @@
 #![allow(clippy::needless_pass_by_value)]
 
 pub mod checklist;
+pub mod convert;
 pub(crate) mod duplicate;
 pub mod kind;
 pub mod language;
@@ -156,6 +157,26 @@ pub async fn update_note<R: Runtime>(
         let note = store::update(&mut connection, &id, &patch, Utc::now())?;
 
         Ok(display(&mut connection, note)?)
+    })
+    .await
+}
+
+/// The note rewritten as `into`, with the body it had: its undo is that body written back.
+#[tauri::command]
+#[specta::specta]
+pub async fn convert_note<R: Runtime>(
+    id: String,
+    into: kind::NoteKind,
+    app: AppHandle<R>,
+) -> Result<convert::NoteConversion, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+        let (note, previous) = store::convert(&mut connection, &id, into, Utc::now())?;
+
+        Ok(convert::NoteConversion {
+            note: display(&mut connection, note)?,
+            previous,
+        })
     })
     .await
 }

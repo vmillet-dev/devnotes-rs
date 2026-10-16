@@ -4,6 +4,7 @@ import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { IpcError } from '@core/ipc/ipc.error';
 import { FakeClipboard } from '@testing/fake-clipboard';
 import { FakeNotesRepository } from '@testing/fake-notes-repository';
+import { Note } from '@core/model/note.model';
 import { createNote } from '@testing/note.fixture';
 import { HARNESS_SPACES, awaitQuery, createNotesHarness, visibleIds } from '@testing/notes-harness';
 import { SettingsStore } from '@core/services/settings/settings.store';
@@ -1134,5 +1135,100 @@ describe('NotesStore filing one note', () => {
 
     expect(harness.store.selectedNote()?.folderId).toBeNull();
     expect(harness.store.selectedNote()?.folder).toBeNull();
+  });
+});
+
+describe('NotesStore converting a note', () => {
+  beforeEach(() => {
+    TestBed.resetTestingModule();
+    vi.restoreAllMocks();
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  });
+
+  /** One patch first, awaited: a conversion landing under a write of the old body loses it. */
+  it('writes what was being typed, converts, re-seeds the editor and offers the old body back', async () => {
+    const harness = await createNotesHarness([createNote({ id: 'a', kind: 'note', content: 'Old' })]);
+    await harness.store.openNote('a');
+    await vi.waitFor(() => expect(harness.store.selectedNote()?.id).toBe('a'));
+    const order: string[] = [];
+    vi.spyOn(harness.repository, 'update').mockImplementationOnce(async (id, patch) => {
+      order.push('update');
+      return { ...createNote({ id, kind: 'note' }), ...patch } as Note;
+    });
+    const convert = vi.spyOn(harness.repository, 'convert');
+    convert.mockImplementation(async (id, into) => {
+      order.push('convert');
+      return {
+        note: createNote({ id, kind: into }),
+        previous: { kind: 'note', language: 'txt', content: 'Typed', items: [] },
+      };
+    });
+    const session = harness.store.editorSession();
+
+    await harness.store.convertNote('a', 'checklist', { content: 'Typed' });
+
+    expect(order).toEqual(['update', 'convert']);
+    expect(harness.store.selectedNote()?.kind).toBe('checklist');
+    expect(harness.store.editorSession()).toBe(session + 1);
+    expect(harness.undo.banner()).toEqual({
+      kind: 'convert',
+      id: 'a',
+      into: 'checklist',
+      previous: { kind: 'note', language: 'txt', content: 'Typed', items: [] },
+      count: 1,
+    });
+  });
+
+  it('writes the old body back on undo', async () => {
+    const harness = await createNotesHarness([createNote({ id: 'a', kind: 'snippet', content: 'echo hi' })]);
+    await harness.store.convertNote('a', 'note');
+    const update = vi.spyOn(harness.repository, 'update');
+
+    await harness.undo.revert();
+
+    expect(update).toHaveBeenCalledWith('a', {
+      kind: 'snippet',
+      language: 'txt',
+      content: 'echo hi',
+      items: [],
+    });
+  });
+
+  it('turns an empty draft into the other kind without writing anything', async () => {
+    const { store, repository } = await createNotesHarness([]);
+    const convert = vi.spyOn(repository, 'convert');
+    const create = vi.spyOn(repository, 'create');
+    store.createNote('snippet');
+
+    await store.convertNote(DRAFT_ID, 'checklist');
+
+    expect(store.selectedNote()?.kind).toBe('checklist');
+    expect(convert).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('says so when the conversion fails, and offers nothing back', async () => {
+    const harness = await createNotesHarness([createNote({ id: 'a' })]);
+    harness.repository.failNext = new IpcError('convert_note', 'locked');
+
+    await harness.store.convertNote('a', 'note');
+
+    expect(TestBed.inject(ErrorNotifier).notice()?.ref.key).toBe('errors.convertFailed');
+    expect(harness.undo.last()).toBeNull();
+  });
+
+  /** The paste made it a snippet: the way back is to the Note, the pasted text kept. */
+  it('offers a Note that a paste of code made a snippet its way back', async () => {
+    const { store, undo } = await createNotesHarness([]);
+    store.createNote('note');
+
+    await store.takeCodePaste(DRAFT_ID, '#!/bin/sh\necho hi', 'sh');
+
+    expect(store.selectedNote()?.kind).toBe('snippet');
+    expect(undo.banner()).toMatchObject({
+      kind: 'convert',
+      into: 'snippet',
+      previous: { kind: 'note', content: '#!/bin/sh\necho hi', items: [] },
+    });
   });
 });

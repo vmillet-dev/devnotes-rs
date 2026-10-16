@@ -356,7 +356,17 @@
       "notFormattedList": "{{list}}. The button is disabled there and says why."
     },
     "modifiedPrefix": "Modified",
-    "noteKind": "Note",
+    "kind": {
+      "label": "Kind",
+      "snippet": "Snippet",
+      "note": "Note",
+      "checklist": "Todo list",
+      "convertTo": {
+        "snippet": "Convert to a snippet",
+        "note": "Convert to a Note",
+        "checklist": "Convert to a todo list"
+      }
+    },
     "noteStats": "Note · {count, plural, =0 {no words} one {# word} other {# words}} · saved as Markdown",
     "checklistStats": "{{done}}/{total, plural, one {# task} other {# tasks}}",
     "addItem": "Add a task",
@@ -466,6 +476,7 @@
     "boardSaveFailed": "The board layout could not be saved.",
     "fileFailed": "The note could not be filed.",
     "priorityFailed": "The priority could not be changed.",
+    "convertFailed": "The note could not be converted.",
     "boardArrangeFailed": "The board could not be tidied up.",
     "backupsListFailed": "The backup copies could not be read.",
     "backupRestoreFailed": "That copy could not be restored. The library was left in place.",
@@ -670,7 +681,12 @@
     "prioritised": "Priority changed on {count, plural, one {# note} other {# notes}}",
     "filed": "{count, plural, one {# note} other {# notes}} filed",
     "restoreKey": "Esc",
-    "arranged": "Board reorganised"
+    "arranged": "Board reorganised",
+    "convertedInto": {
+      "note": "Converted to a Note",
+      "snippet": "Converted to a snippet",
+      "checklist": "Converted to a todo list"
+    }
   },
   "file": {
     "menuLabel": "File",
