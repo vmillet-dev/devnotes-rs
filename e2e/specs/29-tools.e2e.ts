@@ -465,6 +465,60 @@ describe('The tools', () => {
       await setField(testid('tools-search'), '');
     });
 
+    /** Asked on a 2000 px screen: CSS columns filled the left half and left the right one empty. */
+    it('spreads its panels over a large screen, and overflows nothing on a laptop', async () => {
+      const span = () =>
+        browser.execute(
+          (home: string, panel: string) => {
+            const area = document.querySelector(home)!.getBoundingClientRect();
+            const boxes = [...document.querySelectorAll(panel)].map((each) => each.getBoundingClientRect());
+            const right = Math.max(...boxes.map((box) => box.right));
+            return {
+              share: (right - Math.min(...boxes.map((box) => box.left))) / area.width,
+              overflow: right - area.right,
+              scrolls: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+            };
+          },
+          testid('tools-panels'),
+          testid('tools-panel'),
+        );
+
+      await resizeTo(1900);
+      const wide = await eventually(
+        span,
+        (measured) => measured.share >= 0.8,
+        'the panels to fill the width',
+      );
+      expect(wide.overflow).toBeLessThanOrEqual(1);
+
+      await resizeTo(1100);
+      const laptop = await span();
+      expect(laptop.overflow).toBeLessThanOrEqual(1);
+      expect(laptop.scrolls).toBe(false);
+    });
+
+    it('puts an open tool’s results two abreast when its card has the room', async () => {
+      const lefts = () =>
+        browser.execute(
+          (row: string) =>
+            new Set(
+              [...document.querySelectorAll(row)].map((each) =>
+                Math.round(each.getBoundingClientRect().left),
+              ),
+            ).size,
+          `${testid('case-results')} app-result-row`,
+        );
+
+      await resizeTo(2000);
+      await entry('case').click();
+      await setField(testid('case-input'), 'Hello world');
+      expect(await eventually(lefts, (count) => count === 2, 'the results two abreast')).toBe(2);
+
+      await resizeTo(1100);
+      expect(await eventually(lefts, (count) => count === 1, 'the results one under another')).toBe(1);
+      await $(testid('tools-rail-all')).click();
+    });
+
     it('keeps one category to a column, not stretched over the page', async () => {
       const whole = await resizeTo(1280);
       const columnWidth = whole[0]!.width;

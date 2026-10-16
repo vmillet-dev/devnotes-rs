@@ -158,19 +158,26 @@
   background: var(--tool-hue);
 }
 
-// Columns, not a grid: a grid row is as tall as its tallest panel, and they go from three
-// tools to nine, which left holes under the short ones. Read down each column.
+// Stacks in columns, cut by `stackInColumns`: a grid row is as tall as its tallest panel,
+// which left holes under the short ones, and CSS `columns` left the last columns of a wide
+// screen empty. Read down each column.
 .panels {
-  --panel-gap: 14px;
-  columns: 260px;
-  column-gap: var(--panel-gap);
+  display: grid;
+  grid-template-columns: repeat(var(--columns, 1), minmax(0, 1fr));
+  gap: var(--panel-gap);
+  align-items: start;
+}
+
+.panel-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--panel-gap);
+  min-width: 0;
 }
 
 .panel {
   @include surface(var(--bg-1), 12px);
   @include tool-hues;
-  break-inside: avoid;
-  margin-bottom: var(--panel-gap);
   overflow: hidden;
 }
 

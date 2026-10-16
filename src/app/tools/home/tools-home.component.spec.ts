@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TranslocoService } from '@jsverse/transloco';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { ReferenceRow, ReferenceSource, referenceQueryKey } from '@core/services/tools/reference.model';
 import { MAX_RECENT_TOOLS, TOOL_CATALOGUE, ToolDefinition } from '@core/services/tools/tool.model';
@@ -515,5 +515,59 @@ describe('ToolsHomeComponent, the favourites', () => {
     // The catalogue's order, and no section of chips over the results.
     expect(tools('tools-entry')).toEqual(['case', 'line-breaks', 'hash']);
     expect(tools('tools-favourite')).toEqual([]);
+  });
+
+  describe('in columns as wide as the home', () => {
+    let resized: (width: number) => void = () => undefined;
+
+    class FakeResizeObserver {
+      readonly observe = vi.fn();
+      readonly disconnect = vi.fn();
+
+      constructor(callback: (entries: { contentRect: { width: number } }[]) => void) {
+        resized = (width) => callback([{ contentRect: { width } }]);
+      }
+    }
+
+    const columns = (): string[][] =>
+      all('.panel-column').map((column) =>
+        [...column.querySelectorAll<HTMLElement>('[data-testid="tools-panel"]')].map(
+          (panel) => panel.dataset['category']!,
+        ),
+      );
+    const declared = (): string =>
+      (
+        fixture.nativeElement.querySelector('[data-testid="tools-panels"]') as HTMLElement
+      ).style.getPropertyValue('--columns');
+
+    beforeEach(async () => {
+      vi.stubGlobal('ResizeObserver', FakeResizeObserver);
+      fixture.destroy();
+      fixture = TestBed.createComponent(ToolsHomeComponent);
+      fixture.autoDetectChanges();
+      await fixture.whenStable();
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('gives each panel a column once the width holds them', async () => {
+      resized(1200);
+      await fixture.whenStable();
+
+      expect(declared()).toBe('4');
+      expect(columns()).toEqual([['text'], ['crypto']]);
+    });
+
+    it('stacks them in one column on a narrow home, and keeps it while the page is hidden', async () => {
+      resized(400);
+      await fixture.whenStable();
+      resized(0);
+      await fixture.whenStable();
+
+      expect(declared()).toBe('1');
+      expect(columns()).toEqual([['text', 'crypto']]);
+    });
   });
 });
