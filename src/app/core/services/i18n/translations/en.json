@@ -574,7 +574,12 @@
     "checklistNote": "To-do list",
     "emptyTrashCancel": "Cancel",
     "emptyTrashWarning": "Erase {{count}} notes for good? Nothing puts them back.",
-    "emptyTrashWarningOne": "Erase this note for good? Nothing puts it back."
+    "emptyTrashWarningOne": "Erase this note for good? Nothing puts it back.",
+    "searchLabel": "Search the trash",
+    "searchPlaceholder": "Search a deleted note…",
+    "noMatch": "No note in the trash matches.",
+    "restoreAll": "{count, plural, one {Restore the note} other {Restore all (#)}}",
+    "restoreFound": "{count, plural, one {Restore the note found} other {Restore the # notes found}}"
   },
   "tagManager": {
     "title": "Manage tags",

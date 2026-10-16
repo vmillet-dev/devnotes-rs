@@ -164,6 +164,37 @@ describe('Deleting a note, and taking it back', () => {
     expect((await bridge.listTrash()).map((row) => row.title)).not.toContain('Purge me');
   });
 
+  it('finds deleted notes by a word, and puts every one of them back at once', async () => {
+    const titles = ['Rollout checklist', 'Rollout script', 'Rollout notes'];
+    for (const title of [...titles, 'Unrelated leftover']) {
+      await seed(title);
+      await canvas.deleteNote(title);
+      await canvas.waitForNoCard(title);
+      await undoBar.dismiss();
+    }
+
+    await trash.open();
+    await trash.search('rollout');
+    await eventually(
+      () => trash.titles(),
+      (shown) => shown.length === titles.length && titles.every((title) => shown.includes(title)),
+      'the search never narrowed the trash to the three rollout notes',
+    );
+
+    await trash.restoreAll();
+    await eventually(
+      () => trash.emptyState().isExisting(),
+      (showing) => showing,
+      'the restored notes never left the searched trash',
+    );
+    await trash.close();
+
+    for (const title of titles) {
+      await canvas.waitForCard(title);
+    }
+    expect((await bridge.listTrash()).map((row) => row.title)).toContain('Unrelated leftover');
+  });
+
   it('empties the whole trash, and says so once it is empty', async () => {
     await seed('Swept away');
     await seed('Swept away too');

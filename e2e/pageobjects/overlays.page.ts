@@ -56,6 +56,12 @@ export const trash = {
     return $(`${testid('trash-row')}[data-note-id="${id}"]`);
   },
 
+  async search(text: string): Promise<void> {
+    await $(testid('trash-search')).setValue(text);
+  },
+
+  restoreAll: () => $(testid('trash-restore-all')).click(),
+
   close: () => $(testid('trash-close')).click(),
   emptyState: () => $(testid('trash-empty-state')),
 };

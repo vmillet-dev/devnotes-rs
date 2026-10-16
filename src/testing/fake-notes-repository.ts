@@ -58,6 +58,8 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
   /** Query the store sent last, for asserting how it assembles its parameters. */
   lastQuery: NotesQuery | null = null;
   queryCount = 0;
+  /** The search a spec can assert was sent; matched loosely, the folding being Rust's. */
+  lastTrashSearch = '';
 
   movedTo: { ids: readonly string[]; spaceId: string } | null = null;
   taggedWith: { ids: readonly string[]; tags: readonly string[] } | null = null;
@@ -295,8 +297,15 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
     });
   }
 
-  loadTrash(): Promise<readonly TrashedNote[]> {
-    return guard(this, () => this.trashed);
+  loadTrash(search = ''): Promise<readonly TrashedNote[]> {
+    return guard(this, () => {
+      this.lastTrashSearch = search;
+      return this.trashMatching(search);
+    });
+  }
+
+  restoreTrash(search = ''): Promise<number> {
+    return this.restore(this.trashMatching(search).map((note) => note.id));
   }
 
   purge(ids: readonly string[]): Promise<number> {
@@ -538,6 +547,12 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
     ];
 
     return removed.length;
+  }
+
+  /** A title match stands in for Rust's folded search: only that the search is passed matters. */
+  private trashMatching(search: string): readonly TrashedNote[] {
+    const wanted = search.trim().toLowerCase();
+    return wanted ? this.trashed.filter((note) => note.title.toLowerCase().includes(wanted)) : this.trashed;
   }
 
   /**

@@ -574,7 +574,12 @@
     "checklistNote": "Liste de tâches",
     "emptyTrashCancel": "Annuler",
     "emptyTrashWarning": "Effacer {{count}} notes pour de bon ? Rien ne les remettra.",
-    "emptyTrashWarningOne": "Effacer cette note pour de bon ? Rien ne la remettra."
+    "emptyTrashWarningOne": "Effacer cette note pour de bon ? Rien ne la remettra.",
+    "searchLabel": "Chercher dans la corbeille",
+    "searchPlaceholder": "Chercher une note supprimée…",
+    "noMatch": "Aucune note de la corbeille ne correspond.",
+    "restoreAll": "{count, plural, one {Restaurer la note} other {Tout restaurer (#)}}",
+    "restoreFound": "{count, plural, one {Restaurer la note trouvée} other {Restaurer les # notes trouvées}}"
   },
   "tagManager": {
     "title": "Gérer les tags",

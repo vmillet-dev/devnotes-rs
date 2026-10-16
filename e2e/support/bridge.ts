@@ -184,7 +184,7 @@ export const bridge = {
   purgeNotes: (ids: string[]) => invoke<number>('purge_notes', { ids }),
   emptyTrash: () => invoke<number>('empty_trash'),
 
-  listTrash: () => invoke<TrashedNote[]>('list_trash'),
+  listTrash: (search = '') => invoke<TrashedNote[]>('list_trash', { search }),
   listTags: () => invoke<TagUsage[]>('list_tags'),
   renameTags: (tags: string[], into: string) => invoke<number>('rename_tags', { tags, into }),
   listAttachments: (noteId: string) => invoke<Attachment[]>('list_attachments', { noteId }),

@@ -113,6 +113,66 @@ describe('TrashPanelComponent', () => {
     expect(fixture.nativeElement.querySelector('.trash-footer')).toBeNull();
   });
 
+  describe('searched', () => {
+    it('hands what is typed over', async () => {
+      const typed: string[] = [];
+      fixture.componentInstance.searchChanged.subscribe((query) => typed.push(query));
+      const field = fixture.nativeElement.querySelector('[data-testid="trash-search"]') as HTMLInputElement;
+
+      field.value = 'deploy';
+      field.dispatchEvent(new Event('input'));
+
+      expect(typed).toEqual(['deploy']);
+    });
+
+    it('says nothing matches rather than that the trash is empty', async () => {
+      fixture.componentRef.setInput('search', 'zzz');
+      fixture.componentRef.setInput('notes', []);
+      await fixture.whenStable();
+
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="trash-empty-state"]').textContent.trim(),
+      ).toBe('Aucune note de la corbeille ne correspond.');
+      expect(fixture.nativeElement.querySelector('[data-testid="trash-search"]')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="trash-restore-all"]')).toBeNull();
+    });
+
+    it('offers to restore what it found, and puts emptying aside', async () => {
+      fixture.componentRef.setInput('search', 'deploy');
+      fixture.componentRef.setInput('notes', [trashed(), trashed({ id: 'note-2' })]);
+      await fixture.whenStable();
+
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="trash-restore-all"]').textContent.trim(),
+      ).toBe('Restaurer les 2 notes trouvées');
+      expect(fixture.nativeElement.querySelector('[data-testid="trash-empty"]')).toBeNull();
+    });
+
+    it('withdraws an armed emptying when a search starts', async () => {
+      fixture.nativeElement.querySelector('[data-testid="trash-empty"]').click();
+      await fixture.whenStable();
+
+      fixture.componentRef.setInput('search', 'deploy');
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.querySelector('[data-testid="trash-empty-warning"]')).toBeNull();
+    });
+  });
+
+  it('offers to restore everything, with the count', async () => {
+    let asked = 0;
+    fixture.componentInstance.restoreAllRequested.subscribe(() => (asked += 1));
+    fixture.componentRef.setInput('notes', [trashed(), trashed({ id: 'note-2' })]);
+    await fixture.whenStable();
+    const button = fixture.nativeElement.querySelector(
+      '[data-testid="trash-restore-all"]',
+    ) as HTMLButtonElement;
+
+    expect(button.textContent.trim()).toBe('Tout restaurer (2)');
+    button.click();
+    expect(asked).toBe(1);
+  });
+
   it('restores in one click', async () => {
     let emitted: string | undefined;
     fixture.componentInstance.restoreRequested.subscribe((id) => (emitted = id));
@@ -149,7 +209,7 @@ describe('TrashPanelComponent', () => {
 
   describe('emptying the whole trash', () => {
     function emptyButton(): HTMLButtonElement {
-      return fixture.nativeElement.querySelector('.trash-footer .trash-action');
+      return fixture.nativeElement.querySelector('[data-testid="trash-empty"]');
     }
 
     const find = (testId: string): HTMLButtonElement | null =>

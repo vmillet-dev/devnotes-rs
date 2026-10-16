@@ -15,10 +15,25 @@
 
   <p class="trash-hint">{{ 'trash.retentionHint' | transloco }}</p>
 
-  @if (isLoading()) {
+  @if (rows().length > 0 || searching()) {
+    <input
+      #searchField
+      type="search"
+      class="trash-search"
+      data-testid="trash-search"
+      [attr.aria-label]="'trash.searchLabel' | transloco"
+      [placeholder]="'trash.searchPlaceholder' | transloco"
+      [value]="search()"
+      (input)="searchChanged.emit(searchField.value)"
+    />
+  }
+
+  @if (isLoading() && rows().length === 0) {
     <p class="trash-state">{{ 'trash.loading' | transloco }}</p>
   } @else if (rows().length === 0) {
-    <p class="trash-state" data-testid="trash-empty-state">{{ 'trash.empty' | transloco }}</p>
+    <p class="trash-state" data-testid="trash-empty-state">
+      {{ (searching() ? 'trash.noMatch' : 'trash.empty') | transloco }}
+    </p>
   } @else {
     <ul class="trash-list">
       @for (row of rows(); track row.note.id) {
@@ -65,7 +80,8 @@
 
     <!-- The one action here that nothing puts back, so it is the one that says what it
          would erase before it runs, and confirms somewhere other than on the button that
-         fired it — the same shape the tag manager already uses for a merge. -->
+         fired it — the same shape the tag manager already uses for a merge. It stands aside
+         while the trash is searched: it would erase notes not shown. -->
     <div class="trash-footer" [class.confirming]="confirmingEmpty()">
       @if (confirmingEmpty()) {
         @let warning = emptyWarning();
@@ -91,12 +107,24 @@
       } @else {
         <button
           type="button"
-          class="trash-action danger"
-          data-testid="trash-empty"
-          (click)="confirmingEmpty.set(true)"
+          class="trash-action"
+          data-testid="trash-restore-all"
+          (click)="restoreAllRequested.emit()"
         >
-          {{ 'trash.emptyTrash' | transloco }}
+          {{
+            (searching() ? 'trash.restoreFound' : 'trash.restoreAll') | transloco: { count: rows().length }
+          }}
         </button>
+        @if (!searching()) {
+          <button
+            type="button"
+            class="trash-action danger"
+            data-testid="trash-empty"
+            (click)="confirmingEmpty.set(true)"
+          >
+            {{ 'trash.emptyTrash' | transloco }}
+          </button>
+        }
       }
     </div>
   }

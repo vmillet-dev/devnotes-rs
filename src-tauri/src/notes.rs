@@ -266,21 +266,53 @@ pub async fn restore_notes<R: Runtime>(
     .await
 }
 
-/// Purges first: the trash must never show a note a restart would erase.
+/// Purges first: the trash must never show a note a restart would erase. `search` narrows it
+/// the way the canvas search does, folded; empty lists everything.
 #[tauri::command]
 #[specta::specta]
-pub async fn list_trash<R: Runtime>(app: AppHandle<R>) -> Result<Vec<TrashedNote>, AppError> {
+pub async fn list_trash<R: Runtime>(
+    search: String,
+    app: AppHandle<R>,
+) -> Result<Vec<TrashedNote>, AppError> {
     blocking(app, move |_, db| {
         trash::purge_expired(db)?;
 
         let mut connection = lock(db)?;
 
-        Ok(store::trash::list_trashed(&mut connection)?
+        Ok(trash_matching(&mut connection, &search)?
             .into_iter()
             .map(|(note, deleted_at)| trash::trashed(note, deleted_at))
             .collect())
     })
     .await
+}
+
+/// What the trash lists for `search` back where it was: the way out of a mistaken bulk deletion.
+#[tauri::command]
+#[specta::specta]
+pub async fn restore_trash<R: Runtime>(search: String, app: AppHandle<R>) -> Result<u32, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+        let ids: Vec<String> = trash_matching(&mut connection, &search)?
+            .into_iter()
+            .map(|(note, _)| note.id)
+            .collect();
+
+        Ok(count(store::trash::restore_many(&mut connection, &ids)?))
+    })
+    .await
+}
+
+fn trash_matching(
+    connection: &mut Library,
+    search: &str,
+) -> Result<Vec<(model::Note, chrono::DateTime<Utc>)>, AppError> {
+    let needle = view::fold(search.trim());
+
+    Ok(store::trash::list_trashed(connection)?
+        .into_iter()
+        .filter(|(note, _)| needle.is_empty() || view::matches_search(note, &needle))
+        .collect())
 }
 
 #[tauri::command]

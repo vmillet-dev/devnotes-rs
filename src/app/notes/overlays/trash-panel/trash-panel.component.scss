@@ -33,6 +33,15 @@ app-dialog {
   color: var(--text-0);
 }
 
+.trash-search {
+  @include text-field;
+  @include surface($radius: 7px);
+  @include focus-ring;
+  padding: 7px 10px;
+  font-size: 12px;
+  color: var(--text-0);
+}
+
 .trash-hint,
 .trash-state {
   margin: 0;
