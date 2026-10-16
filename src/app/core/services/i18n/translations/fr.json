@@ -777,8 +777,8 @@
       "removeItem": "Retirer un item vide",
       "moveItem": "Déplacer l’item dans la liste",
       "format": "Formater le snippet avec Prettier",
-      "find": "Chercher dans le code",
-      "replace": "Remplacer dans le code",
+      "find": "Chercher dans le texte, d’un snippet comme d’une Note",
+      "replace": "Remplacer dans le texte",
       "goToLine": "Aller à une ligne du code",
       "indent": "Indenter, selon le réglage « Indenter avec Tab »",
       "outdent": "Désindenter"
