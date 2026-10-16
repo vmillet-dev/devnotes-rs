@@ -234,6 +234,30 @@ describe('CodeEditorComponent', () => {
     });
   });
 
+  describe('its fields', () => {
+    const marked = (selector: string): string[] =>
+      [...fixture.nativeElement.querySelectorAll(selector)].map((mark: Element) => mark.textContent ?? '');
+
+    /** Where Rust found them, the default dimmed inside: the front reads no braces itself. */
+    it('marks the fields Rust found, and only on the text they were found in', async () => {
+      await mount('psql -h {{host}} -p {{port=5432}}');
+      const spans = [
+        { from: 8, to: 16, default: null },
+        { from: 20, to: 33, default: [27, 31] as [number, number] },
+      ];
+
+      await set('fields', { text: 'psql -h {{host}}', spans });
+      expect(marked('.cm-field')).toEqual([]);
+
+      await set('fields', { text: 'psql -h {{host}} -p {{port=5432}}', spans });
+      expect(marked('.cm-field').join('')).toBe('{{host}}{{port=5432}}');
+      expect(marked('.cm-field-default')).toEqual(['5432']);
+
+      await set('fields', null);
+      expect(marked('.cm-field')).toEqual([]);
+    });
+  });
+
   it('wraps long lines only when asked', async () => {
     expect(view().contentDOM.classList.contains('cm-lineWrapping')).toBe(false);
 

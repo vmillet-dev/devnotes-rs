@@ -4,7 +4,7 @@ import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
 import { fieldsForm } from '../pageobjects/overlays.page.js';
 import { settings, variables } from '../pageobjects/titlebar.page.js';
-import { clipboardText, eventually, press, reloadCanvas } from '../support/app.js';
+import { clipboardText, eventually, press, reloadCanvas, testid } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
@@ -219,5 +219,26 @@ describe('{{fields}} in a snippet', () => {
     // Back to the default written in the text: the note never stored the proposal.
     expect(port?.defaultValue).toBe('5432');
     expect(await bridge.listGlobalPlaceholders()).toEqual({});
+  });
+
+  /** Where they are written: the code marks what Rust calls a field, its default dimmed. */
+  it('marks a field typed into the code, its default dimmed', async () => {
+    const marks = (selector: string): Promise<string> =>
+      browser.execute(
+        (within: string) => [...document.querySelectorAll(within)].map((mark) => mark.textContent).join(''),
+        testid('editor-body') + ' ' + selector,
+      );
+    await canvas.openNote(title);
+
+    await editor.setBody(body + ' -d {{database}}');
+
+    await eventually(
+      () => marks('.cm-field'),
+      (found) => found.includes('{{database}}'),
+      'the field typed in to be marked',
+    );
+    expect(await marks('.cm-field')).toBe('{{host}}{{port=5432}}{{user}}{{database}}');
+    expect(await marks('.cm-field-default')).toBe('5432');
+    await editor.close();
   });
 });

@@ -5,6 +5,7 @@ import { LanguageTag } from '@core/model/language.model';
 import { DiffLine, Revision } from '@core/model/revision.model';
 import { Space } from '@core/model/space.model';
 import {
+  FieldSpan,
   Note,
   NoteBody,
   NoteDraft,
@@ -56,6 +57,11 @@ export class NotesRepository {
   /** Rust's reading of a paste; answers `txt` for prose. */
   detectLanguage(content: string): Promise<LanguageTag> {
     return commands.detectLanguage(content);
+  }
+
+  /** Where the fields of a text lie, in the code field's offsets. */
+  fieldSpans(content: string): Promise<readonly FieldSpan[]> {
+    return commands.fieldSpans(content);
   }
 
   /** Everything the note carries but its history; `title` arrives with its translated suffix. */

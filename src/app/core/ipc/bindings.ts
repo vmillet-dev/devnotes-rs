@@ -22,6 +22,8 @@ export const commands = {
 	 *  a Note prose, and only a paste of code turns it into a snippet with a language.
 	 */
 	detectLanguage: (content: string) => __TAURI_INVOKE<Language>("detect_language", { content }),
+	/**  Where the fields of a text lie, for the code field to mark them: what a field is stays here. */
+	fieldSpans: (content: string) => __TAURI_INVOKE<FieldSpan[]>("field_spans", { content }),
 	/**  No lock, but off the window's thread: a document of a few megabytes takes a while. */
 	exploreJson: (query: JsonQuery) => typedError<JsonView, AppError>(__TAURI_INVOKE("explore_json", { query })),
 	convertCase: (request: CaseRequest) => typedError<CaseAnswer, AppError>(__TAURI_INVOKE("convert_case", { request })),
@@ -1310,6 +1312,15 @@ export type FieldReading = {
 	start: number,
 	end: number,
 	pieces: Piece[],
+};
+
+/**  Where a field lies in a text, in UTF-16 code units — the editor's offsets. */
+export type FieldSpan = {
+	/**  The whole token, braces included. */
+	from: number,
+	to: number,
+	/**  What follows its `=`, trimmed; `None` without a default. */
+	default: [number, number] | null,
 };
 
 export type FileProblem = "notFound" | "tooLarge" | "unreadable" | "unwritable";

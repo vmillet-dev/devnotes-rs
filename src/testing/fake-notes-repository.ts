@@ -3,6 +3,7 @@ import { NotesRepository } from '@core/data/notes.repository';
 import { LanguageTag } from '@core/model/language.model';
 import { DiffLine, Revision } from '@core/model/revision.model';
 import {
+  FieldSpan,
   Note,
   NoteBody,
   NoteDraft,
@@ -56,6 +57,7 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
 
   /** What a spec sets: a paste reads as prose unless told otherwise. */
   detectedLanguage: LanguageTag = 'txt';
+  spans: readonly FieldSpan[] = [];
 
   /** Query the store sent last, for asserting how it assembles its parameters. */
   lastQuery: NotesQuery | null = null;
@@ -149,6 +151,11 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
       this.notes = [note, ...this.notes];
       return note;
     });
+  }
+
+  /** Answered as set: where a field lies is Rust's to say. */
+  fieldSpans(_content: string): Promise<readonly FieldSpan[]> {
+    return guard(this, () => this.spans);
   }
 
   detectLanguage(): Promise<LanguageTag> {

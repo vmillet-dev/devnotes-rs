@@ -11,11 +11,12 @@ use devnotes_lib::notes::trash::TrashedNote;
 use devnotes_lib::notes::view::{Grouping, NoteFilter, NoteOrder, NotesQuery};
 use devnotes_lib::notes::{
     convert_note, count_notes_tagged, create_note, delete_note, delete_notes, delete_tags,
-    duplicate_note, empty_trash, fill_placeholders, get_note, list_global_placeholders,
-    list_revisions, list_tags, list_trash, move_notes, move_notes_back, purge_notes, query_notes,
-    remove_tag, rename_tags, restore_notes, restore_priorities, restore_revision, restore_tags,
-    restore_trash, revision_diff, seed_samples, set_global_placeholders, set_pinned,
-    set_placeholder_values, set_priority, tag_notes, untag_notes, update_note,
+    duplicate_note, empty_trash, field_spans, fill_placeholders, get_note,
+    list_global_placeholders, list_revisions, list_tags, list_trash, move_notes, move_notes_back,
+    purge_notes, query_notes, remove_tag, rename_tags, restore_notes, restore_priorities,
+    restore_revision, restore_tags, restore_trash, revision_diff, seed_samples,
+    set_global_placeholders, set_pinned, set_placeholder_values, set_priority, tag_notes,
+    untag_notes, update_note,
 };
 
 use super::common::snippet;
@@ -458,6 +459,15 @@ fn notes_are_pinned_together_and_unpinned_back_without_touching_the_modification
     assert_eq!(undone, std::slice::from_ref(&loose));
     assert!(!pinned_after(&loose));
     assert!(pinned_after(&held));
+}
+
+/// The editor marks what Rust calls a field, and nothing it does not.
+#[test]
+fn the_fields_of_a_text_are_found_for_the_editor() {
+    let spans = field_spans("{{host}} {{ user.name }}".to_string());
+
+    assert_eq!(spans.len(), 1);
+    assert_eq!((spans[0].from, spans[0].to), (0, 8));
 }
 
 /// A typed `#urgent` joins `urgent`: the command normalises before the store sees it.

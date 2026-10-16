@@ -70,6 +70,16 @@ export const CODE_THEME = EditorView.theme({
   '.cm-searchMatch': { backgroundColor: 'rgba(var(--amber-rgb), 0.18)' },
   '.cm-searchMatch.cm-searchMatch-selected': { backgroundColor: 'rgba(var(--amber-rgb), 0.4)' },
   '.cm-selectionMatch': { backgroundColor: 'rgba(var(--text-1-rgb), 0.12)' },
+  // A `{{field}}` where it is written, in the fields panel's amber, its default dimmed: the
+  // language's colours give way inside, whichever of the two marks is drawn outside.
+  '.cm-field': {
+    color: 'var(--amber-text)',
+    backgroundColor: 'rgba(var(--amber-rgb), 0.1)',
+    borderRadius: '3px',
+  },
+  '.cm-field span': { color: 'inherit' },
+  '.cm-field .cm-field-default': { color: 'var(--text-2)' },
+  '.cm-field .cm-field-default span': { color: 'inherit' },
   // What the format just changed, and what the visualiser beside the code has selected.
   '.cm-line.cm-marked': {
     backgroundColor: 'rgba(var(--amber-rgb), 0.07)',

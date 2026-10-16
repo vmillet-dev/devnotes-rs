@@ -25,6 +25,7 @@ import { FoldersStore } from '@core/state/folders.store';
 import { NotesStore } from '@core/state/notes.store';
 import { SpacesStore } from '@core/state/spaces.store';
 import { NoteRevisionsStore } from '@core/state/note-revisions.store';
+import { FieldMarksStore } from '@core/state/field-marks.store';
 import { PlaceholderFillStore } from '@core/state/placeholder-fill.store';
 import { FormatAnswer } from '@core/services/format/format.model';
 import { FormatterService } from '@core/services/format/formatter.service';
@@ -146,6 +147,7 @@ export class NoteEditorOverlayComponent {
   private readonly spaces = inject(SpacesStore);
   private readonly folders = inject(FoldersStore);
   protected readonly fill = inject(PlaceholderFillStore);
+  protected readonly fieldMarks = inject(FieldMarksStore);
   private readonly help = inject(HelpStore);
   private readonly links = inject(ExternalLinksService);
   private readonly settings = inject(SettingsStore);
@@ -374,6 +376,9 @@ export class NoteEditorOverlayComponent {
       observer.observe(frame);
       onCleanup(() => observer.disconnect());
     });
+
+    // A snippet's fields, marked where they are written as the body is typed.
+    effect(() => this.fieldMarks.follow(this.hasLanguage() ? this.draftContent() : null));
 
     // The draft, explored while it is typed: the header's "JSON valide" is about what is on
     // screen. A note just opened is explored at once, from its first level.
