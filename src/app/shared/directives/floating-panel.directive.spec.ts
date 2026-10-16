@@ -30,6 +30,9 @@ class FloatingPanelHostComponent {
 /** jsdom lays nothing out: the anchor's rectangle and the panel's size are told to it. */
 const PANEL = { width: 180, height: 200 };
 
+/** `src/testing/popover.setup.ts`'s stand-in, which the spy below calls through. */
+const showPopover = HTMLElement.prototype.showPopover;
+
 /** On the document's own window: the test's global one is a stand-in for it. */
 function resizeWindow(width: number, height: number): void {
   const view = document.defaultView!;
@@ -66,6 +69,7 @@ describe('FloatingPanelDirective', () => {
     });
     HTMLElement.prototype.showPopover = function (this: HTMLElement) {
       shown.push(this);
+      showPopover.call(this);
     };
     resizeWindow(1024, 768);
 
@@ -77,7 +81,7 @@ describe('FloatingPanelDirective', () => {
   });
 
   afterEach(() => {
-    delete (HTMLElement.prototype as Partial<HTMLElement>).showPopover;
+    HTMLElement.prototype.showPopover = showPopover;
     resizeWindow(1024, 768);
     vi.restoreAllMocks();
   });

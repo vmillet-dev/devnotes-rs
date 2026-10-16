@@ -93,7 +93,11 @@
             "runner": "vitest",
             "buildTarget": "::development",
             "runnerConfig": true,
-            "setupFiles": ["src/testing/local-storage.setup.ts", "src/testing/text-ranges.setup.ts"]
+            "setupFiles": [
+              "src/testing/local-storage.setup.ts",
+              "src/testing/text-ranges.setup.ts",
+              "src/testing/popover.setup.ts"
+            ]
           }
         }
       }
