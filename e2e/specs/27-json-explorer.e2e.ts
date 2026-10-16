@@ -103,6 +103,19 @@ describe('Exploring a JSON document', () => {
       await $(`${testid('json-node')}[data-path="$.data.object"] ${testid('json-node-head')}`).click();
       expect(await selectedPath()).toBe('$.data.object');
       expect(await $(testid('json-crumbs')).getText()).toContain('object');
+
+      // At the size the application opens with, the value is read, not squeezed into a line.
+      const restore = await browser.getWindowSize();
+      await browser.setWindowSize(1280, 800);
+      try {
+        await eventually(
+          () => $(testid('json-selected-preview')).getSize('height'),
+          (height) => height > 40,
+          'the selected value shown on more than two lines',
+        );
+      } finally {
+        await browser.setWindowSize(restore.width, restore.height);
+      }
     });
 
     it('closes and opens a container from its row', async () => {

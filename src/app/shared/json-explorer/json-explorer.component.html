@@ -149,7 +149,7 @@
       <p class="selected-kind" data-testid="json-selected-kind">
         {{ 'json.kinds.' + selected.kind | transloco: { count: selected.size } }}
       </p>
-      <pre class="selected-preview">{{ selected.preview }}</pre>
+      <pre class="selected-preview" data-testid="json-selected-preview">{{ selected.preview }}</pre>
       <div class="actions">
         <button type="button" class="action" data-testid="json-copy-value" (click)="copyValue(selected.span)">
           {{ 'json.copyValue' | transloco }}
