@@ -402,6 +402,20 @@ describe('The tools', () => {
           .filter((space) => Math.abs(space - GAP) > 1),
       );
 
+    /** The home's columns follow a measured width a render later: as many as fit at 260 px. */
+    const columnsFollowTheWidth = (): Promise<boolean> =>
+      browser.execute(
+        (selector: string, gap: number) => {
+          const area = document.querySelector<HTMLElement>(selector);
+          // An open tool hides the home: no columns to wait for.
+          if (!area) return true;
+          const declared = Number(area.style.getPropertyValue('--columns'));
+          return declared === Math.max(1, Math.floor((area.clientWidth + gap) / (260 + gap)));
+        },
+        testid('tools-panels'),
+        GAP,
+      );
+
     async function resizeTo(width: number): Promise<PanelBox[]> {
       await browser.setWindowSize(width, 800);
       await eventually(
@@ -409,6 +423,7 @@ describe('The tools', () => {
         (size) => size.width <= width && size.width > width - 60,
         `the window to be ${width}px wide`,
       );
+      await eventually(columnsFollowTheWidth, (follows) => follows, `the columns to follow ${width}px`);
       return boxes();
     }
 
