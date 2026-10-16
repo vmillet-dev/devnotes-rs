@@ -1,3 +1,4 @@
+import { CalcDecimals } from '@core/model/calc.model';
 import type { NoteKind } from '@core/model/checklist.model';
 import { AREAS, Area } from '@core/services/areas/area.model';
 import { APP_LOCALES } from '@core/services/i18n/locale.model';
@@ -26,7 +27,12 @@ export const INDENT_CHOICES = ['language', 'two-spaces', 'four-spaces', 'tab'] a
 export type IndentChoice = (typeof INDENT_CHOICES)[number];
 
 /** What « Nouvelle note », the « + » card and the global shortcut open; the menu still picks any. */
-export const NOTE_KIND_CHOICES = ['note', 'snippet', 'checklist'] as const satisfies readonly NoteKind[];
+export const NOTE_KIND_CHOICES = [
+  'note',
+  'snippet',
+  'checklist',
+  'calc',
+] as const satisfies readonly NoteKind[];
 
 /**
  * The floor is the tree's own, not the panels': `--editor-min-width` is what lets
@@ -96,6 +102,8 @@ export interface AppSettings {
    * list of zones is a preference, not something typed.
    */
   readonly timeZones: readonly string[];
+  /** « Décimales » under a Calcul note: how its results are shown, never how they are computed. */
+  readonly calcDecimals: CalcDecimals;
 }
 
 /** Zones beyond the machine's, read back from a file nobody checks. */
@@ -129,6 +137,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   skippedUpdate: '',
   noteKindTried: false,
   timeZones: ['UTC', 'America/New_York', 'Asia/Tokyo'],
+  calcDecimals: 'auto',
 };
 
 /** Derived rather than hand-written: the key is the field name, prefixed. */

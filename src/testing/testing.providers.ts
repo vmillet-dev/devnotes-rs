@@ -12,6 +12,7 @@ import { FoldersRepository } from '@core/data/folders.repository';
 import { HttpEnvironmentsRepository } from '@core/data/http-environments.repository';
 import { HttpRepository } from '@core/data/http.repository';
 import { JsonRepository } from '@core/data/json.repository';
+import { CalcRepository } from '@core/data/calc.repository';
 import { ToolsRepository } from '@core/data/tools.repository';
 import { NotesRepository } from '@core/data/notes.repository';
 import { SpacesRepository } from '@core/data/spaces.repository';
@@ -37,6 +38,7 @@ import { FakeHttpRepository } from './fake-http-repository';
 import { FakeJsonRepository } from './fake-json-repository';
 import { FakeToolsRepository } from './fake-tools-repository';
 import { FakeNotesRepository } from './fake-notes-repository';
+import { FakeCalcRepository } from './fake-calc-repository';
 import { FakePrettier } from './fake-prettier';
 import { FakeSpacesRepository } from './fake-spaces-repository';
 import { FakeTransferRepository } from './fake-transfer-repository';
@@ -57,6 +59,7 @@ interface DataDoubles {
   readonly transferRepository?: FakeTransferRepository;
   readonly jsonRepository?: FakeJsonRepository;
   readonly toolsRepository?: FakeToolsRepository;
+  readonly calcRepository?: FakeCalcRepository;
   readonly httpRepository?: FakeHttpRepository;
   readonly httpEnvironmentsRepository?: FakeHttpEnvironmentsRepository;
   readonly vaultRepository?: FakeVaultRepository;
@@ -112,6 +115,7 @@ export function provideAppTesting(doubles: DataDoubles = {}): Provider[] {
     },
     { provide: JsonRepository, useValue: doubles.jsonRepository ?? new FakeJsonRepository() },
     { provide: ToolsRepository, useValue: doubles.toolsRepository ?? new FakeToolsRepository() },
+    { provide: CalcRepository, useValue: doubles.calcRepository ?? new FakeCalcRepository() },
     { provide: HttpRepository, useValue: doubles.httpRepository ?? new FakeHttpRepository() },
     {
       provide: HttpEnvironmentsRepository,

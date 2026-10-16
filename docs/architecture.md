@@ -957,9 +957,7 @@ ten instead (`formatScientific`). An all-lowercase `gb` is read as bytes, `Gb` a
 transfer is the same bits over a rate (`tools/transfer.rs`), slowed by an efficiency held
 between 50 and 100 %, answered to the second as typed parts and in days past a year; the common
 connections it is also given for are Rust constants, their names translation keys. The
-percentages are five questions answered at once, each on its own two fields
-(`tools/percentages.rs`): a division by zero, or a change from zero, is said rather than
-answered with `∞`, and the formula beside each result is the page's, from translation keys.
+percentages are lines of a Calcul note now (`notes::calc`), not a tool.
 
 **A Unix mode has three ways in** (`tools/permissions.rs`): the octal digits, the letters `ls -l`
 prints (its file-type letter read and named, `s`/`S` and `t`/`T` telling a special bit with and

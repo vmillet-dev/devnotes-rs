@@ -31,6 +31,7 @@ const BASE_DTO: WireNote = {
   searchHit: null,
   truncated: false,
   outline: [],
+  calc: [],
 };
 
 describe('toNote', () => {

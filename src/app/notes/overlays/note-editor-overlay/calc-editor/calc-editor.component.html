@@ -1,0 +1,33 @@
+<div class="sheet">
+  <div #host class="calc-editor" data-testid="editor-body" data-kind="calc"></div>
+</div>
+
+<footer class="footer" data-testid="calc-footer">
+  <span class="counts">
+    {{ 'calc.editor.lines' | transloco: { count: lineCount() } }} ·
+    {{ 'calc.editor.variables' | transloco: { count: variableCount() } }}
+  </span>
+
+  <span class="summary" data-testid="calc-summary" aria-live="polite">
+    @if (said(); as said) {
+      {{ said }}
+    } @else if (summary(); as summary) {
+      {{ 'calc.editor.selected' | transloco: { count: summary.count } }} ·
+      @if (summary.problem; as problem) {
+        {{ 'calc.editor.' + problem | transloco }}
+      } @else {
+        {{ 'calc.editor.sum' | transloco }} <b data-testid="calc-sum">{{ summary.sum }}</b> ·
+        {{ 'calc.editor.mean' | transloco }} <b>{{ summary.mean }}</b>
+      }
+    }
+  </span>
+
+  <label class="decimals">
+    {{ 'calc.editor.decimals' | transloco }}
+    <select data-testid="calc-decimals" [value]="decimals()" (change)="onDecimals($event)">
+      @for (choice of decimalChoices; track choice) {
+        <option [value]="choice" [selected]="choice === decimals()">{{ decimalsLabel(choice) }}</option>
+      }
+    </select>
+  </label>
+</footer>

@@ -216,12 +216,6 @@ export const TOOLS: readonly ToolDefinition[] = [
     load: () => import('./sizes/sizes-tool.component').then((m) => m.SizesToolComponent),
   },
   {
-    id: 'percentages',
-    category: 'calc',
-    keywords: ['percent', 'percentage', '%', 'pourcent', 'ratio', 'discount', 'vat', 'tva'],
-    load: () => import('./percentages/percentages-tool.component').then((m) => m.PercentagesToolComponent),
-  },
-  {
     id: 'permissions',
     category: 'calc',
     keywords: ['chmod', 'umask', 'rwx', 'octal', 'setuid', 'setgid', 'sticky', 'ls -l'],

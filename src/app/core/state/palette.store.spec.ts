@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { TranslocoService } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { CalcSheets } from '@core/services/calc/calc-sheets.service';
 import { StatusNotifier } from '@core/services/notifications/status.service';
 import { FakeAppWindow } from '@testing/fake-app-window';
 import { FakeClipboard } from '@testing/fake-clipboard';
@@ -193,6 +194,14 @@ describe('PaletteStore', () => {
       );
 
       expect(harness.clipboard.content).toBe('plain body');
+    });
+
+    it('copies a Calcul note with its results as comments', async () => {
+      vi.spyOn(TestBed.inject(CalcSheets), 'copyText').mockResolvedValue('2 + 2 // 4');
+
+      await harness.store.copy(createNote({ id: 'sheet', kind: 'calc', title: 'Budget', content: '2 + 2' }));
+
+      expect(harness.clipboard.content).toBe('2 + 2 // 4');
     });
 
     it('asks for the fields before copying a templated snippet', async () => {

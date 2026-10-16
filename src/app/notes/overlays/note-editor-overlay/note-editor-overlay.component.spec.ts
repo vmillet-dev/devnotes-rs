@@ -1035,7 +1035,7 @@ describe('NoteEditorOverlayComponent', () => {
     });
 
     /** What is still being typed goes with it: Rust converts the text on screen. */
-    it('offers the two other kinds, and converts with what is being typed', async () => {
+    it('offers the three other kinds, and converts with what is being typed', async () => {
       await openText('Freeze the merges');
       const panel = '[data-testid="choice-panel-note-kind"]';
       fixture.nativeElement.querySelector('[data-testid="editor-kind"]').click();
@@ -1045,7 +1045,7 @@ describe('NoteEditorOverlayComponent', () => {
         [...fixture.nativeElement.querySelectorAll(panel + ' [data-option-id]')].map(
           (entry) => (entry as HTMLElement).dataset['optionId'],
         ),
-      ).toEqual(['snippet', 'checklist']);
+      ).toEqual(['snippet', 'checklist', 'calc']);
 
       fixture.nativeElement.querySelector(panel + ' [data-option-id="checklist"]').click();
       await fixture.whenStable();

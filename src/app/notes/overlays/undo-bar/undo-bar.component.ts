@@ -19,6 +19,7 @@ const CONVERTED: Record<NoteKind, string> = {
   note: 'undo.convertedInto.note',
   snippet: 'undo.convertedInto.snippet',
   checklist: 'undo.convertedInto.checklist',
+  calc: 'undo.convertedInto.calc',
 };
 
 /** `role="status"` and not `alert`: a screen reader must not interrupt for this. */

@@ -166,6 +166,28 @@ mod tests {
     }
 
     #[test]
+    fn a_sheet_keeps_its_text_both_ways_and_reads_for_no_language() {
+        let sheet = "prix = 120 €\nprix × 3";
+
+        let as_calc = convert(&note_of(NoteKind::Snippet, sheet), NoteKind::Calc);
+        let back = convert(&note_of(NoteKind::Calc, sheet), NoteKind::Note);
+        let lines = convert(
+            &checklist(&[ChecklistItem {
+                text: "2 + 2".into(),
+                done: false,
+            }]),
+            NoteKind::Calc,
+        );
+
+        assert_eq!(
+            (as_calc.content.as_str(), as_calc.language),
+            (sheet, Language::default())
+        );
+        assert_eq!(back.content, sheet);
+        assert_eq!(lines.content, "2 + 2");
+    }
+
+    #[test]
     fn a_snippet_and_a_note_keep_their_text_as_it_is() {
         let code = "fn main() {\n    println!(\"hi\");\n}";
 

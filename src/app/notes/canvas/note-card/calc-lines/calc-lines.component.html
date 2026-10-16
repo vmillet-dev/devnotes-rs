@@ -1,0 +1,13 @@
+<span class="lines" data-testid="note-card-calc">
+  @for (line of shown(); track $index) {
+    <span
+      class="line"
+      data-testid="note-card-calc-line"
+      [class.total]="line.total"
+      [attr.title]="line.expression"
+    >
+      <span class="expression">{{ line.expression }}</span>
+      <span class="result">{{ line.result }}</span>
+    </span>
+  }
+</span>

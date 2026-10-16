@@ -12,7 +12,7 @@ describe('KindBadgeComponent', () => {
     fixture.componentRef.setInput('language', 'sql');
   });
 
-  async function text(kind: 'snippet' | 'note' | 'checklist'): Promise<string> {
+  async function text(kind: 'snippet' | 'note' | 'checklist' | 'calc'): Promise<string> {
     fixture.componentRef.setInput('kind', kind);
     await fixture.whenStable();
     return (fixture.nativeElement as HTMLElement).textContent?.trim() ?? '';
@@ -25,5 +25,6 @@ describe('KindBadgeComponent', () => {
   it('names a Note and a list by what they are, whatever their stored language', async () => {
     expect(await text('note')).toBe('Note');
     expect(await text('checklist')).toBe('✓ Tâches');
+    expect(await text('calc')).toBe('Calcul');
   });
 });

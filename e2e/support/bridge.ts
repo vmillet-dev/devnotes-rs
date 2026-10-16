@@ -49,8 +49,6 @@ import type {
   NotePriority,
   NotesQuery,
   NotesView,
-  PercentagesAnswer,
-  PercentagesRequest,
   PermissionsAnswer,
   PermissionsRequest,
   Priority,
@@ -120,8 +118,6 @@ export const bridge = {
   placeInZones: (request: ZonesRequest) => invoke<ZonesAnswer>('place_in_zones', { request }),
   describeCron: (request: CronRequest) => invoke<CronAnswer>('describe_cron', { request }),
   convertSize: (request: SizesRequest) => invoke<SizesAnswer>('convert_size', { request }),
-  answerPercentages: (request: PercentagesRequest) =>
-    invoke<PercentagesAnswer>('answer_percentages', { request }),
   describePermissions: (request: PermissionsRequest) =>
     invoke<PermissionsAnswer>('describe_permissions', { request }),
   checkDigits: (request: CheckRequest) => invoke<CheckAnswer>('check_digits', { request }),

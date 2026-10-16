@@ -1,6 +1,7 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { StatusNotifier } from '@core/services/notifications/status.service';
 import { noteCopyText } from '@core/model/checklist.model';
+import { CalcSheets } from '@core/services/calc/calc-sheets.service';
 import { Note } from '@core/model/note.model';
 import { NoteCopyService } from '@core/services/clipboard/note-copy.service';
 import { NotesQueryStore } from './notes-query.store';
@@ -21,6 +22,7 @@ export class PlaceholderFillStore {
   private readonly palette = inject(PaletteStore);
   private readonly copier = inject(NoteCopyService);
   private readonly status = inject(StatusNotifier);
+  private readonly calc = inject(CalcSheets);
 
   private readonly _target = signal<Note | null>(null);
   private readonly _preview = signal<string | null>(null);
@@ -72,9 +74,10 @@ export class PlaceholderFillStore {
     );
   }
 
-  /** `null` when the body could not be read, which has been said. */
+  /** `null` when the body could not be read, which has been said. A sheet comes with its results. */
   async textToCopy(note: Note): Promise<string | null> {
     const whole = await this.notes.whole(note);
+    if (whole?.kind === 'calc') return this.calc.copyText(whole.content);
     return whole && noteCopyText(whole);
   }
 

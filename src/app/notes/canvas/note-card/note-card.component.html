@@ -93,6 +93,8 @@
           </li>
         }
       </ul>
+    } @else if (calcLines().length > 0 && !searchHit()) {
+      <app-calc-lines [lines]="calcLines()" />
     } @else if (isNote() && !searchHit()) {
       <app-note-outline data-testid="note-card-outline" [lines]="note().outline" />
     } @else if (snippetIsCode()) {

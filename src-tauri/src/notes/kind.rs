@@ -10,6 +10,8 @@ closed_enum! {
         /// Prose, written in the rich editor and stored as Markdown.
         Note = "note",
         Checklist = "checklist",
+        /// A sheet: one result a line, computed when it is read and never stored.
+        Calc = "calc",
     }
 }
 

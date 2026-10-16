@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { type MockInstance, beforeEach, describe, expect, it, vi } from 'vitest';
+import { CalcSheets } from '@core/services/calc/calc-sheets.service';
 import { StatusNotifier } from '@core/services/notifications/status.service';
 import { FakeNotesRepository } from '@testing/fake-notes-repository';
 import { createNote } from '@testing/note.fixture';
@@ -172,6 +173,16 @@ describe('PlaceholderFillStore', () => {
 
       expect(status.status()).toBeNull();
     });
+  });
+
+  /** A card's C, its copy button: a sheet goes out with its results, written on the front. */
+  it('copies a Calcul note with its results', async () => {
+    const sheets = vi.spyOn(TestBed.inject(CalcSheets), 'copyText').mockResolvedValue('2 + 2 // 4');
+
+    const text = await fill.textToCopy(createNote({ id: 'sheet', kind: 'calc', content: '2 + 2' }));
+
+    expect(sheets).toHaveBeenCalledWith('2 + 2');
+    expect(text).toBe('2 + 2 // 4');
   });
 
   describe('filling from the palette', () => {

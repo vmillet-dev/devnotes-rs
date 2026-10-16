@@ -461,7 +461,8 @@ pub fn build(mut notes: Vec<Note>, facets: Facets, request: &NotesQuery) -> Note
     if request.order.key == SortKey::Created {
         view.notes_mut().for_each(DisplayNote::dated_by_creation);
     }
-    view.notes_mut().for_each(DisplayNote::cut_to_preview);
+    let today = request.now.with_timezone(&offset).date_naive();
+    view.notes_mut().for_each(|note| note.cut_to_preview(today));
     view
 }
 
@@ -1070,7 +1071,8 @@ mod tests {
             [
                 (NoteKind::Snippet, 5),
                 (NoteKind::Note, 0),
-                (NoteKind::Checklist, 3)
+                (NoteKind::Checklist, 3),
+                (NoteKind::Calc, 0)
             ]
         );
     }
