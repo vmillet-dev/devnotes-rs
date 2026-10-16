@@ -11,6 +11,7 @@
 
 .column {
   @include tool-column;
+  @include ring-room;
   overflow-y: auto;
 }
 

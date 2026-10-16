@@ -19,8 +19,9 @@
         />
       }
       @if (direction() === 'decode' || source() === 'text') {
-        <span class="spacer"></span>
-        <app-note-import field="text" (imported)="text.set($event.content)" />
+        <span class="from-note">
+          <app-note-import field="text" (imported)="text.set($event.content)" />
+        </span>
       }
     </div>
 
