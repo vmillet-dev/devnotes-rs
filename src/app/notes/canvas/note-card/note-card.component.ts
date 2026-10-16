@@ -112,10 +112,10 @@ export class NoteCardComponent {
     return this.note().content;
   });
 
-  /** A tag or an item is not code: the highlighter would paint its words as keywords. */
+  /** Only a snippet's body is code: a tag, an item or a Note's line would be painted as keywords. */
   protected readonly snippetIsCode = computed(() => {
     const hit = this.searchHit();
-    return !hit || hit.field === 'body';
+    return this.note().kind === 'snippet' && (!hit || hit.field === 'body');
   });
 
   private readonly tagWindowStart = computed(() => {

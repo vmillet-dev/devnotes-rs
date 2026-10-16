@@ -228,6 +228,7 @@
     "week": "This week",
     "older": "Older",
     "results": "Results",
+    "inFolder": "In “{{name}}”",
     "all": "All notes",
     "noPriority": "No priority",
     "expiringHint": "to triage soon"

@@ -2,6 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SettingsStore } from '@core/services/settings/settings.store';
+import { FoldersStore } from '@core/state/folders.store';
+import { NotesQueryStore } from '@core/state/notes-query.store';
 import { NotesStore } from '@core/state/notes.store';
 import { SpacesStore } from '@core/state/spaces.store';
 import { createNote } from '@testing/note.fixture';
@@ -34,6 +36,48 @@ describe('NoteSectionComponent', () => {
 
     expect(text('.canvas-section-title')).toContain("Aujourd'hui");
     expect(text('.n')).toBe('· 2');
+  });
+
+  describe('inside an open folder', () => {
+    beforeEach(async () => {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [NoteSectionComponent],
+        providers: [
+          provideAppTesting({
+            spaces: [{ id: 'space-1', name: 'Space one', pinned: false }],
+            folders: [
+              {
+                id: 'folder-1',
+                spaceId: 'space-1',
+                name: 'Ops',
+                colour: 'amber',
+                createdAt: new Date('2026-10-01T00:00:00.000Z'),
+              },
+            ],
+          }),
+        ],
+      });
+      fixture = TestBed.createComponent(NoteSectionComponent);
+      fixture.componentRef.setInput('section', createSection('results', [createNote()]));
+      fixture.autoDetectChanges();
+      await vi.waitFor(() => {
+        if (TestBed.inject(FoldersStore).allFolders().length === 0) throw new Error('folders not loaded yet');
+      });
+      TestBed.inject(FoldersStore).selectFolder('folder-1');
+      await fixture.whenStable();
+    });
+
+    it('names its list after the folder, nothing having been searched', () => {
+      expect(text('.canvas-section-title')).toContain('Dans « Ops »');
+    });
+
+    it('says « Résultats » again once something is searched in it', async () => {
+      TestBed.inject(NotesQueryStore).setSearchQuery('deploy');
+      await fixture.whenStable();
+
+      expect(text('.canvas-section-title')).toContain('Résultats');
+    });
   });
 
   it('translates every section key it can be given', async () => {

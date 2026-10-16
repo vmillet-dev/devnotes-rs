@@ -161,6 +161,29 @@ describe('Search, filters and facets', () => {
     expect(await canvas.sectionKeys()).toEqual(['results']);
   });
 
+  /** A Note is prose: the line that found it is quoted in the card's text, not as code. */
+  it('quotes a Note found by its text as prose', async () => {
+    const { id } = await bridge.createNote(
+      draft({
+        spaceId: await homeSpaceId(),
+        title: 'Rollout notes',
+        kind: 'note',
+        content: '## Before\n\nAsk the on-call before the zebra migration.',
+      }),
+    );
+    await reloadCanvas();
+    await canvas.search('zebra');
+
+    const card = await canvas.cardWithTitle('Rollout notes');
+    expect(await card.$(testid('note-card-hit')).isExisting()).toBe(true);
+    expect(await card.$('.card-snippet .line-content').isExisting()).toBe(false);
+
+    await canvas.clearSearch();
+    await bridge.deleteNotes([id]);
+    await bridge.purgeNotes([id]);
+    await reloadCanvas();
+  });
+
   it('says so when nothing matches', async () => {
     await canvas.search('nothing matches this');
     expect(await canvas.noResults().isExisting()).toBe(true);

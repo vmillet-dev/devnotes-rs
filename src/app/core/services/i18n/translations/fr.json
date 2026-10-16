@@ -228,6 +228,7 @@
     "week": "Cette semaine",
     "older": "Plus anciennes",
     "results": "Résultats",
+    "inFolder": "Dans « {{name}} »",
     "all": "Toutes les notes",
     "noPriority": "Sans priorité",
     "expiringHint": "à trier bientôt"

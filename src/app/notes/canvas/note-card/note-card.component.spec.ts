@@ -237,6 +237,20 @@ describe('NoteCardComponent', () => {
       expect(lines.map((line) => line.nativeElement.textContent)).toEqual(['kubectl rollout restart']);
     });
 
+    it('quotes a Note found by its text as prose, not as code', async () => {
+      fixture.componentRef.setInput(
+        'note',
+        createNote({
+          kind: 'note',
+          searchHit: { field: 'body', excerpt: 'Revue d’architecture — facturation' },
+        }),
+      );
+      await fixture.whenStable();
+
+      expect(fixture.debugElement.query(By.css('.card-snippet .line-content'))).toBeNull();
+      expect(text('[data-testid="note-card-hit"]')).toBe('Revue d’architecture — facturation');
+    });
+
     it('renders a tag or an item as prose, which is what they are', async () => {
       fixture.componentRef.setInput('note', createNote({ searchHit: { field: 'tag', excerpt: 'urgent' } }));
       await fixture.whenStable();
