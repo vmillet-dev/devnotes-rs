@@ -392,6 +392,7 @@
             [wrap]="codeWrap()"
             [markedLines]="markedLines()"
             [focusedLines]="focusedLines()"
+            [fields]="fieldMarks.marks()"
             [label]="'editor.contentLabel' | transloco"
             [placeholder]="'editor.emptyBody' | transloco"
             (changed)="onBodyInput($event)"

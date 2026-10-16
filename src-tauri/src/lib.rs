@@ -57,7 +57,7 @@ use json::explore_json;
 use libraries::{create_library, delete_library, list_libraries, open_library, rename_library};
 use notes::{
     convert_note, count_notes_tagged, create_note, delete_note, delete_notes, delete_tags,
-    detect_language, duplicate_note, empty_trash, fill_placeholders, get_note,
+    detect_language, duplicate_note, empty_trash, field_spans, fill_placeholders, get_note,
     list_global_placeholders, list_revisions, list_tags, list_trash, move_notes, move_notes_back,
     purge_notes, query_notes, remove_tag, rename_tags, restore_notes, restore_priorities,
     restore_revision, restore_tags, restore_trash, revision_diff, seed_samples,
@@ -105,6 +105,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             create_note::<tauri::Wry>,
             duplicate_note::<tauri::Wry>,
             detect_language,
+            field_spans,
             explore_json,
             convert_case,
             fix_line_breaks,

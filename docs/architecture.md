@@ -3313,6 +3313,13 @@ as a field is decided in `notes::placeholder` and nowhere else: the name is rest
 into a form on every copy. Values arrive parsed on `DisplayNote.placeholders`, and
 `fill_placeholders` — a pure command, no database — does the substitution.
 
+**The code marks them where they are written**, from Rust too: `field_spans` answers each
+token's range and its default's, in UTF-16 units — the editor's offsets — from the same `scan`
+that `parse` and `fill` walk. `FieldMarksStore` asks 250 ms after the typing pauses and keeps
+the text an answer was found in; the code field (`code-editor/field-marks.ts`) marks only that
+text, so a late answer places nothing on newer code. Amber for the token, the default dimmed;
+nothing past 200 000 characters, where the incremental search also waits.
+
 **The values are the note's, and they are kept.** `note_placeholders` stores them per note
 (`(note_id, name)`, case-sensitive — `notes::placeholder::fill` tells `{{Host}}` from
 `{{host}}`, where `note_tags` folds case), `set_placeholder_values` writes them, and

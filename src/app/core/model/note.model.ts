@@ -16,7 +16,7 @@ import type { NoteFolder } from './folder.model';
 
 export { type ChecklistItem, type NoteKind } from './checklist.model';
 
-export type { FacetCount, OutlineLine, SearchField, SearchHit } from '@core/ipc/bindings';
+export type { FacetCount, FieldSpan, OutlineLine, SearchField, SearchHit } from '@core/ipc/bindings';
 
 /** They cross as themselves: a batch answers what it changed, and the undo hands it back. */
 export type { NoteBody, NotePlacement, NotePriority, NoteTag } from '@core/ipc/bindings';

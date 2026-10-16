@@ -96,6 +96,14 @@ pub fn detect_language(content: String) -> Language {
     language::from_content(&content)
 }
 
+/// Where the fields of a text lie, for the code field to mark them: what a field is stays here.
+#[tauri::command]
+#[specta::specta]
+#[allow(clippy::needless_pass_by_value)]
+pub fn field_spans(content: String) -> Vec<placeholder::FieldSpan> {
+    placeholder::spans(&content)
+}
+
 /// A copy to start another note from, attachments included and history left behind. The
 /// title is the front end's: its suffix is a translation.
 #[tauri::command]

@@ -37,12 +37,14 @@ import {
 } from '@codemirror/view';
 import type { Span } from '@core/model/json.model';
 import type { LanguageTag } from '@core/model/language.model';
+import type { FieldMarks } from '@core/state/field-marks.store';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
 import type { CodeSelection } from '../code-selection';
 import { rewrite } from '../indentation';
 import { TAB_KEYS, applyEdit } from './editing';
 import { hangingIndent } from './hanging-indent';
 import { languageOf } from './languages';
+import { fieldMarks, setFieldMarks } from './field-marks';
 import { lineMarks, setLineMarks } from './line-marks';
 import { phrasesFrom } from './phrases';
 import { searchPanel } from './search-panel';
@@ -83,6 +85,8 @@ export class CodeEditorComponent implements CodeSelection {
   readonly wrap = input(false);
   readonly markedLines = input<ReadonlySet<number>>(NO_LINES);
   readonly focusedLines = input<ReadonlySet<number>>(NO_LINES);
+  /** Where Rust found the fields, and in which text: marked only on that text. */
+  readonly fields = input<FieldMarks | null>(null);
   readonly label = input('');
   readonly placeholder = input('');
 
@@ -147,6 +151,15 @@ export class CodeEditorComponent implements CodeSelection {
       const view = this.view();
       const marks = { marked: this.markedLines(), focused: this.focusedLines() };
       if (view) view.dispatch({ effects: setLineMarks.of(marks) });
+    });
+
+    effect(() => {
+      const view = this.view();
+      const marks = this.fields();
+      if (!view) return;
+      if (marks === null) view.dispatch({ effects: setFieldMarks.of([]) });
+      else if (view.state.sliceDoc() === marks.text)
+        view.dispatch({ effects: setFieldMarks.of(marks.spans) });
     });
   }
 
@@ -244,6 +257,7 @@ export class CodeEditorComponent implements CodeSelection {
         syntaxHighlighting(CODE_COLOURS),
         CODE_THEME,
         lineMarks,
+        fieldMarks,
         keymap.of([...TAB_KEYS, ...REPLACE_KEYS, ...searchKeymap, ...historyKeymap, ...defaultKeymap]),
         EditorView.updateListener.of((update) => this.onUpdate(update)),
         EditorView.domEventHandlers({

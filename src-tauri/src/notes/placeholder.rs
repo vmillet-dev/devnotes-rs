@@ -52,6 +52,8 @@ fn parse_token(inner: &str) -> Option<Placeholder> {
 enum Fragment<'a> {
     Literal(&'a str),
     Token {
+        /// Where its `{{` stands in the content, in bytes.
+        start: usize,
         inner: &'a str,
         /// `None` when it is not a field: part of the text, not of the form.
         placeholder: Option<Placeholder>,
@@ -73,6 +75,7 @@ fn scan(content: &str, mut on_fragment: impl FnMut(Fragment<'_>)) {
 
         let inner = &after_open[..end];
         on_fragment(Fragment::Token {
+            start: content.len() - rest.len() + start,
             inner,
             placeholder: parse_token(inner),
         });
@@ -151,6 +154,7 @@ pub fn fill(content: &str, values: &BTreeMap<String, String>) -> String {
         Fragment::Token {
             inner,
             placeholder: None,
+            ..
         } => {
             filled.push_str(OPEN);
             filled.push_str(inner);
@@ -159,6 +163,80 @@ pub fn fill(content: &str, values: &BTreeMap<String, String>) -> String {
     });
 
     filled
+}
+
+/// Where a field lies in a text, in UTF-16 code units — the editor's offsets.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct FieldSpan {
+    /// The whole token, braces included.
+    pub from: u32,
+    pub to: u32,
+    /// What follows its `=`, trimmed; `None` without a default.
+    pub default: Option<(u32, u32)>,
+}
+
+/// Every field token, in the order of the text: a token that is not a field is text.
+pub fn spans(content: &str) -> Vec<FieldSpan> {
+    let mut found = Vec::new();
+    let mut units = Utf16Cursor::new(content);
+
+    scan(content, |fragment| {
+        let Fragment::Token {
+            start,
+            inner,
+            placeholder: Some(placeholder),
+        } = fragment
+        else {
+            return;
+        };
+
+        let inner_start = start + OPEN.len();
+        let end = inner_start + inner.len() + CLOSE.len();
+        let default = (!placeholder.default_value.is_empty()).then(|| {
+            let equals = inner.find('=').unwrap_or(inner.len());
+            let after = &inner[equals + 1..];
+            let at = inner_start + equals + 1 + (after.len() - after.trim_start().len());
+            (at, at + placeholder.default_value.len())
+        });
+
+        let from = units.at(start);
+        let default = default.map(|(at, until)| (units.at(at), units.at(until)));
+        found.push(FieldSpan {
+            from,
+            to: units.at(end),
+            default,
+        });
+    });
+
+    found
+}
+
+/// Byte offsets turned into UTF-16 ones in one pass: asked in increasing order, each answer
+/// counts only the text since the last.
+struct Utf16Cursor<'a> {
+    content: &'a str,
+    byte: usize,
+    unit: u32,
+}
+
+impl<'a> Utf16Cursor<'a> {
+    fn new(content: &'a str) -> Self {
+        Self {
+            content,
+            byte: 0,
+            unit: 0,
+        }
+    }
+
+    fn at(&mut self, byte: usize) -> u32 {
+        let counted = self.content[self.byte..byte].encode_utf16().count();
+        self.unit = self
+            .unit
+            .saturating_add(u32::try_from(counted).unwrap_or(u32::MAX));
+        self.byte = byte;
+        self.unit
+    }
 }
 
 #[cfg(test)]
@@ -365,5 +443,47 @@ mod tests {
         let template = "<p>{{ user.name }}</p>";
 
         assert_eq!(fill(template, &values(&[("user", "x")])), template);
+    }
+
+    /// In the editor's units: `é`, `→` and `😀` are two, three and four bytes, and one, one and
+    /// two UTF-16 units.
+    #[test]
+    fn spans_lie_where_the_editor_counts_them() {
+        let spans = super::spans("é {{host}} → {{port = 5432}} 😀{{x}}");
+
+        assert_eq!(
+            spans,
+            [
+                super::FieldSpan {
+                    from: 2,
+                    to: 10,
+                    default: None
+                },
+                super::FieldSpan {
+                    from: 13,
+                    to: 28,
+                    default: Some((22, 26))
+                },
+                super::FieldSpan {
+                    from: 31,
+                    to: 36,
+                    default: None
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn spans_skip_what_is_not_a_field() {
+        let text = "{{ user.name }} {{=x}} {{name=}} {{open";
+
+        assert_eq!(
+            super::spans(text),
+            [super::FieldSpan {
+                from: 23,
+                to: 32,
+                default: None
+            }]
+        );
     }
 }
