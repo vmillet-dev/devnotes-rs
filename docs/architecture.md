@@ -6107,6 +6107,19 @@ behind the Windows build. `e2e.yml` holds two jobs:
   `E2E_SPEC=<name> npm run test:e2e` for each of its scenarios in turn, stopping at the first
   that fails. No cargo runs there. `fail-fast: true`: the first red group cancels the others.
 
+**The first job that fails stops everything**, whichever it is: lint, a Rust leg, Sonar, an e2e
+group, an advisory. Its last step, `if: failure()`, dispatches `stop.yml` with the run's id, and
+that workflow cancels every unfinished run of the commit — the CI run and the `Security` one.
+⚠️ Not `gh run cancel` from the failing job itself: cancelled from inside, the job ends
+« cancelled » and hides what failed; dispatched, the job has ended « failure » by the time the
+cancel lands. No job waits for a failure, so a green run pays nothing. A run Dependabot started
+has a read-only token and cannot dispatch: it runs to the end. The jobs share the step through
+a YAML anchor (`&stop-the-run`), one per file.
+
+Windows WebView2 processes outlive the application by a few seconds and hold its profile under
+`%LOCALAPPDATA%`, so `stopLeftoverApplication` also stops those running on the e2e profile —
+found by the profile in their command line — before the next scenario of a group wipes it.
+
 Each scenario is a run of its own: `npm run test:e2e` stops an application left running and
 wipes the profile and the home-space marker under `tmpdir()` before it starts, so its process,
 its profile and its library are its own, and the scenario before it leaves nothing behind. The harness redirects no data directory — it
