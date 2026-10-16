@@ -17,12 +17,8 @@ const FOLDERS = [
 describe('SelectionBarComponent', () => {
   let fixture: ComponentFixture<SelectionBarComponent>;
 
-  function actions(): HTMLButtonElement[] {
-    return [...fixture.nativeElement.querySelectorAll('.selection-action')];
-  }
-
   function deleteButton(): HTMLButtonElement {
-    return actions()[1];
+    return fixture.nativeElement.querySelector('[data-testid="selection-delete"]');
   }
 
   beforeEach(() => {
@@ -145,6 +141,38 @@ describe('SelectionBarComponent', () => {
     await fixture.whenStable();
 
     expect(emitted).toBe('urgent');
+  });
+
+  describe('taking a tag off', () => {
+    it('offers the tags the selection carries and emits the one picked', async () => {
+      let emitted: string | undefined;
+      fixture.componentInstance.untagRequested.subscribe((tag) => (emitted = tag));
+      fixture.componentRef.setInput('tags', ['billing', 'ops']);
+      await fixture.whenStable();
+
+      await pick('selection-untag', 'ops');
+
+      expect(emitted).toBe('ops');
+    });
+
+    it('is not offered when no ticked note carries a tag', () => {
+      expect(fixture.nativeElement.querySelector('[data-testid="choice-selection-untag"]')).toBeNull();
+    });
+  });
+
+  it('pins the selection, or unpins it once all of it is pinned', async () => {
+    const asked: boolean[] = [];
+    fixture.componentInstance.pinRequested.subscribe((pinned) => asked.push(pinned));
+    const pin = (): HTMLButtonElement => fixture.nativeElement.querySelector('[data-testid="selection-pin"]');
+
+    expect(pin().textContent?.trim()).toBe('Épingler');
+    pin().click();
+    fixture.componentRef.setInput('allPinned', true);
+    await fixture.whenStable();
+    expect(pin().textContent?.trim()).toBe('Désépingler');
+    pin().click();
+
+    expect(asked).toEqual([true, false]);
   });
 
   it('emits the typed tag and clears the field', async () => {

@@ -48,6 +48,20 @@ export class NoteBatchStore {
     this.undo.record({ kind: 'tag', added, count: added.length });
   }
 
+  async untagSelection(tag: string): Promise<void> {
+    const removed = await this.runOnSelection((ids) => this.notes.removeTag(ids, tag));
+    if (removed === null) return;
+
+    this.undo.record({ kind: 'untag', removed, count: removed.length });
+  }
+
+  async pinSelection(pinned: boolean): Promise<void> {
+    const ids = await this.runOnSelection((checked) => this.notes.setPinned(checked, pinned));
+    if (ids === null) return;
+
+    this.undo.record({ kind: 'pin', ids, pinned, count: ids.length });
+  }
+
   async prioritiseSelection(priority: Priority): Promise<void> {
     const previous = await this.runOnSelection((ids) => this.notes.setPriority(ids, priority));
     if (previous === null) return;

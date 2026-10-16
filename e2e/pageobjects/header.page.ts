@@ -56,6 +56,11 @@ export const selectionBar = {
     await submitFormOf(testid('selection-tag'));
   },
 
+  /** Pins what is ticked, or unpins it once all of it is pinned: one button, its label says which. */
+  pin: () => $(testid('selection-pin')).click(),
+
+  untag: (tag: string) => pickChoice('selection-untag', tag),
+
   async prioritise(level: string): Promise<void> {
     await $(testid('choice-selection-priority')).click();
     await $(`${testid('choice-panel-selection-priority')} [data-option-id="${level}"]`).click();

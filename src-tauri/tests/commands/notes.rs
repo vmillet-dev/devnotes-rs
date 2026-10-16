@@ -13,9 +13,9 @@ use devnotes_lib::notes::{
     convert_note, count_notes_tagged, create_note, delete_note, delete_notes, delete_tags,
     duplicate_note, empty_trash, fill_placeholders, get_note, list_global_placeholders,
     list_revisions, list_tags, list_trash, move_notes, move_notes_back, purge_notes, query_notes,
-    rename_tags, restore_notes, restore_priorities, restore_revision, restore_trash, revision_diff,
-    seed_samples, set_global_placeholders, set_placeholder_values, set_priority, tag_notes,
-    untag_notes, update_note,
+    remove_tag, rename_tags, restore_notes, restore_priorities, restore_revision, restore_tags,
+    restore_trash, revision_diff, seed_samples, set_global_placeholders, set_pinned,
+    set_placeholder_values, set_priority, tag_notes, untag_notes, update_note,
 };
 
 use super::common::snippet;
@@ -313,9 +313,7 @@ fn a_note_changes_kind_keeps_its_body_in_the_history_and_comes_back() {
     let session = Session::open();
     let space = session.space("Personal");
     let mut draft = snippet(&space);
-    draft.content = "- [x] Freeze the merges
-Deploy"
-        .to_string();
+    draft.content = "- [x] Freeze the merges\nDeploy".to_string();
     let original = draft.content.clone();
     let id = note(&session, draft);
 
@@ -364,6 +362,102 @@ Deploy"
     assert_eq!(back.note.content, original);
     assert!(back.note.items.is_empty());
     assert_eq!(unchanged.previous.content, original);
+}
+
+/// Taken off the live notes that carry it, found as typed; put back pair by pair.
+#[test]
+fn a_tag_is_taken_off_a_selection_and_put_back_exactly() {
+    let session = Session::open();
+    let space = session.space("Personal");
+    let tagged = |tags: &[&str]| {
+        let mut draft = snippet(&space);
+        draft.tags = tags.iter().map(ToString::to_string).collect();
+        note(&session, draft)
+    };
+    let both = tagged(&["ops", "urgent"]);
+    let ops = tagged(&["ops"]);
+    let bare = tagged(&[]);
+    let trashed = tagged(&["ops"]);
+    session
+        .call(|app| delete_note(trashed.clone(), app))
+        .unwrap();
+    let tags_of = |id: &String| {
+        session
+            .call(|app| get_note(id.clone(), app))
+            .unwrap()
+            .note
+            .tags
+    };
+
+    let mut removed = session
+        .call(|app| {
+            remove_tag(
+                vec![both.clone(), ops.clone(), bare.clone(), trashed.clone()],
+                " #OPS ".to_string(),
+                app,
+            )
+        })
+        .unwrap();
+    removed.sort_by(|a, b| a.note_id.cmp(&b.note_id));
+    let after = (tags_of(&both), tags_of(&ops), tags_of(&bare));
+    let restored = session
+        .call(|app| restore_tags(removed.clone(), app))
+        .unwrap();
+
+    let mut expected = vec![both.clone(), ops.clone()];
+    expected.sort();
+    assert_eq!(
+        removed
+            .iter()
+            .map(|pair| pair.note_id.clone())
+            .collect::<Vec<_>>(),
+        expected
+    );
+    assert!(removed.iter().all(|pair| pair.tag == "ops"));
+    assert_eq!(after, (vec!["urgent".to_string()], vec![], vec![]));
+    assert_eq!(restored, 2);
+    assert_eq!(tags_of(&both), ["ops", "urgent"]);
+    assert_eq!(tags_of(&ops), ["ops"]);
+    assert!(
+        session
+            .call(|app| remove_tag(ids(&both), "#".to_string(), app))
+            .unwrap()
+            .is_empty()
+    );
+}
+
+/// Triage, like the priority: the modification date stays, and the undo is the other way round.
+#[test]
+fn notes_are_pinned_together_and_unpinned_back_without_touching_the_modification_date() {
+    let session = Session::open();
+    let space = session.space("Personal");
+    let loose = note(&session, snippet(&space));
+    let mut held = snippet(&space);
+    held.pinned = true;
+    let held = note(&session, held);
+    let before = session.call(|app| get_note(loose.clone(), app)).unwrap();
+
+    let changed = session
+        .call(|app| set_pinned(vec![loose.clone(), held.clone()], true, app))
+        .unwrap();
+    let pinned = session.call(|app| get_note(loose.clone(), app)).unwrap();
+    let undone = session
+        .call(|app| set_pinned(changed.clone(), false, app))
+        .unwrap();
+    let pinned_after = |id: &String| {
+        session
+            .call(|app| get_note(id.clone(), app))
+            .unwrap()
+            .note
+            .pinned
+    };
+
+    assert_eq!(changed, std::slice::from_ref(&loose));
+    assert!(pinned.note.pinned);
+    assert_eq!(pinned.note.updated_at, before.note.updated_at);
+    assert_eq!(undone, std::slice::from_ref(&loose));
+    assert!(!pinned_after(&loose));
+    assert!(pinned_after(&held));
 }
 
 /// A typed `#urgent` joins `urgent`: the command normalises before the store sees it.

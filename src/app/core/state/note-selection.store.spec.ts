@@ -267,6 +267,62 @@ describe('NoteSelectionStore', () => {
       expect(repository.priorityOf('b')).toBe('urgent');
     });
 
+    it('offers the tags the ticked notes carry, once each, in order', async () => {
+      const { selection } = await createNotesHarness([
+        createNote({ id: 'a', tags: ['ops', 'urgent'] }),
+        createNote({ id: 'b', tags: ['billing', 'ops'] }),
+        createNote({ id: 'c', tags: ['ignored'] }),
+      ]);
+      selection.toggleChecked('a');
+      selection.toggleChecked('b');
+
+      expect(selection.checkedTags()).toEqual(['billing', 'ops', 'urgent']);
+    });
+
+    /** The pairs the back end took off are what come back: `b` never had the tag. */
+    it('takes a tag off the selection, and puts back exactly what it took', async () => {
+      const { selection, repository, batch, undo } = await createNotesHarness([
+        createNote({ id: 'a', tags: ['ops', 'urgent'] }),
+        createNote({ id: 'b', tags: ['urgent'] }),
+      ]);
+      selection.toggleChecked('a');
+      selection.toggleChecked('b');
+
+      await batch.untagSelection('ops');
+
+      expect(repository.tagsOf('a')).toEqual(['urgent']);
+      expect(undo.banner()).toEqual({ kind: 'untag', removed: [{ noteId: 'a', tag: 'ops' }], count: 1 });
+
+      const queries = repository.queryCount;
+      await undo.revert();
+      await awaitQuery(repository, queries);
+
+      expect(repository.tagsOf('a')).toEqual(['urgent', 'ops']);
+      expect(repository.tagsOf('b')).toEqual(['urgent']);
+    });
+
+    it('pins the selection, says whether all of it is pinned, and unpins only what it pinned', async () => {
+      const { selection, repository, batch, undo } = await createNotesHarness([
+        createNote({ id: 'a', pinned: true }),
+        createNote({ id: 'b', pinned: false }),
+      ]);
+      selection.toggleChecked('a');
+      selection.toggleChecked('b');
+      expect(selection.allCheckedPinned()).toBe(false);
+
+      await batch.pinSelection(true);
+
+      expect(repository.pinnedOf('b')).toBe(true);
+      expect(undo.banner()).toEqual({ kind: 'pin', ids: ['b'], pinned: true, count: 1 });
+
+      const queries = repository.queryCount;
+      await undo.revert();
+      await awaitQuery(repository, queries);
+
+      expect(repository.pinnedOf('a')).toBe(true);
+      expect(repository.pinnedOf('b')).toBe(false);
+    });
+
     /** A bar offering to undo nothing is noise, not a safety net. */
     it('offers no undo when the batch changed nothing', async () => {
       const { selection, batch, undo } = await createNotesHarness([

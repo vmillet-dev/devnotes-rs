@@ -162,6 +162,20 @@ export class NotesRepository {
     return unwrap('untag_notes', await commands.untagNotes([...pairs]));
   }
 
+  /** Answers the pairs it took off; a tag no note carried answers none. */
+  async removeTag(ids: readonly string[], tag: string): Promise<readonly NoteTag[]> {
+    return unwrap('remove_tag', await commands.removeTag([...ids], tag));
+  }
+
+  async restoreTags(pairs: readonly NoteTag[]): Promise<number> {
+    return unwrap('restore_tags', await commands.restoreTags([...pairs]));
+  }
+
+  /** Answers the notes whose pin changed: the undo sets the other value over those. */
+  async setPinned(ids: readonly string[], pinned: boolean): Promise<readonly string[]> {
+    return unwrap('set_pinned', await commands.setPinned([...ids], pinned));
+  }
+
   /** Answers each note whose priority moved, with the one it had. */
   async setPriority(ids: readonly string[], priority: Priority): Promise<readonly NotePriority[]> {
     return unwrap('set_priority', await commands.setPriority([...ids], priority));

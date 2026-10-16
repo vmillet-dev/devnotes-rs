@@ -20,11 +20,17 @@ export class SelectionBarComponent {
   readonly count = input.required<number>();
   readonly spaces = input<readonly Space[]>([]);
   readonly folders = input<readonly Folder[]>([]);
+  /** The tags the ticked notes carry, any one of them: what « Retirer un tag » offers. */
+  readonly tags = input<readonly string[]>([]);
+  /** Every ticked note pinned already: the button unpins, otherwise it pins the rest. */
+  readonly allPinned = input(false);
 
   readonly moveRequested = output<string>();
   /** `null` takes the selection out of its folder; the two directions are one control. */
   readonly fileRequested = output<string | null>();
   readonly tagRequested = output<string>();
+  readonly untagRequested = output<string>();
+  readonly pinRequested = output<boolean>();
   readonly priorityRequested = output<Priority>();
   /** The label announces the format: Markdown must not be a surprise. */
   readonly copyRequested = output<void>();
@@ -49,6 +55,10 @@ export class SelectionBarComponent {
     })),
     { id: UNFILE, name: 'selection.unfile', nameIsKey: true },
   ]);
+
+  protected readonly tagChoices = computed<readonly ChoiceOption[]>(() =>
+    this.tags().map((tag) => ({ id: tag, name: tag })),
+  );
 
   /** "None" included: taking the priority off a batch is a choice like the others. */
   protected readonly priorityChoices: readonly ChoiceOption[] = PRIORITIES.map((level) => ({
@@ -78,6 +88,12 @@ export class SelectionBarComponent {
     const priority = PRIORITIES.find((each) => each === level);
     if (priority) {
       this.priorityRequested.emit(priority);
+    }
+  }
+
+  protected onUntag(tag: string | null): void {
+    if (tag) {
+      this.untagRequested.emit(tag);
     }
   }
 

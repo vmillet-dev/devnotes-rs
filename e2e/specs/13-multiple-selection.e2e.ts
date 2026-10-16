@@ -128,6 +128,45 @@ describe('Selecting several notes at once', () => {
     );
   });
 
+  /** Pinning is triage like the priority; `Ctrl+Z` takes back the last batch, here the tag. */
+  it('pins and unpins two notes, takes a tag off them, and gives the tag back on Ctrl+Z', async () => {
+    const before = await reread(first);
+    await selectionBar.pin();
+    const pinned = await eventually(
+      () => reread(first),
+      (note) => note?.pinned === true,
+      'the selection to be pinned',
+    );
+    expect(pinned?.updatedAt).toBe(before?.updatedAt);
+    expect((await reread(second))?.pinned).toBe(true);
+
+    await selectionBar.pin();
+    await eventually(
+      () => reread(second),
+      (note) => note?.pinned === false,
+      'the selection to be unpinned',
+    );
+    expect((await reread(first))?.pinned).toBe(false);
+
+    await selectionBar.untag('batch');
+    await eventually(
+      () => reread(second),
+      (note) => note?.tags.length === 0,
+      'the tag to leave the selection',
+    );
+    expect((await reread(first))?.tags).toEqual([]);
+
+    await undoBar.bar().waitForDisplayed({ timeout: 10_000 });
+    await press('z', ['Control']);
+    await eventually(
+      () => reread(first),
+      (note) => note?.tags.includes('batch') === true,
+      'Ctrl+Z to give the tag back',
+    );
+    expect((await reread(second))?.tags).toEqual(['batch']);
+    expect((await reread(first))?.pinned).toBe(false);
+  });
+
   it('sets one from the card menu, and the card says it', async () => {
     await canvas.prioritiseFromCardMenu(untouched, 'high');
 

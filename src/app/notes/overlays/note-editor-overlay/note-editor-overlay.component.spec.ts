@@ -65,6 +65,7 @@ describe('NoteEditorOverlayComponent', () => {
     values: Record<string, string>[];
     priorities: string[];
     conversions: { into: string; pending: NotePatch }[];
+    pins: boolean[];
   };
 
   function listenToTheStore(): void {
@@ -77,6 +78,7 @@ describe('NoteEditorOverlayComponent', () => {
       values: [],
       priorities: [],
       conversions: [],
+      pins: [],
     };
     const store = TestBed.inject(NotesStore);
     vi.spyOn(store, 'applyPatch').mockImplementation(async (_id, patch) => {
@@ -102,6 +104,9 @@ describe('NoteEditorOverlayComponent', () => {
     });
     vi.spyOn(store, 'setPriority').mockImplementation(async (_id, priority) => {
       asked.priorities.push(priority);
+    });
+    vi.spyOn(store, 'setPinned').mockImplementation(async (_id, pinned) => {
+      asked.pins.push(pinned);
     });
   }
 
@@ -1493,10 +1498,10 @@ describe('NoteEditorOverlayComponent', () => {
   });
 
   describe('pinning and deletion', () => {
+    /** Through the batch of one the card and the `P` key take: never a patch, which moves the date. */
     it('asks for the opposite pin state, and reflects the current one', async () => {
       fixture.componentRef.setInput('note', createNote({ pinned: false }));
       await fixture.whenStable();
-      const emitted = patched('pinned');
 
       const pinButton = fixture.debugElement.query(By.css('[data-testid="editor-pin"]'));
       expect(text('[data-testid="editor-pin"] span:last-child')).toBe('Épingler');
@@ -1504,7 +1509,7 @@ describe('NoteEditorOverlayComponent', () => {
 
       pinButton.triggerEventHandler('click');
 
-      expect(emitted).toEqual([true]);
+      expect(asked.pins).toEqual([true]);
     });
 
     it('shows the pinned label and class when the note is pinned', async () => {

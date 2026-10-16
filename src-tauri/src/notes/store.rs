@@ -792,6 +792,109 @@ pub fn untag_many(connection: &mut Library, pairs: &[NoteTag]) -> Result<usize, 
     })
 }
 
+/// Takes `tag` off every live note of `ids` carrying it, answering those pairs as stored. An
+/// edit like [`tag_many`]: what lost something moves up the canvas.
+pub fn remove_tag(
+    connection: &mut Library,
+    ids: &[String],
+    tag: &str,
+    now: DateTime<Utc>,
+) -> Result<Vec<NoteTag>, StorageError> {
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    connection.transaction(|connection, _vault| {
+        // `note_tags.tag` is `NOCASE`: the pairs carry the spelling the note had.
+        let removed: Vec<NoteTag> = note_tags::table
+            .inner_join(notes::table)
+            .filter(note_tags::note_id.eq_any(ids))
+            .filter(note_tags::tag.eq(tag))
+            .filter(notes::deleted_at.is_null())
+            .select((note_tags::note_id, note_tags::tag))
+            .load::<(String, String)>(connection)?
+            .into_iter()
+            .map(|(note_id, tag)| NoteTag { note_id, tag })
+            .collect();
+
+        let touched: Vec<&String> = removed.iter().map(|pair| &pair.note_id).collect();
+        diesel::delete(
+            note_tags::table
+                .filter(note_tags::tag.eq(tag))
+                .filter(note_tags::note_id.eq_any(&touched)),
+        )
+        .execute(connection)?;
+        diesel::update(notes::table.filter(notes::id.eq_any(&touched)))
+            .set(notes::updated_at.eq(iso8601::format(now)))
+            .execute(connection)?;
+
+        Ok(removed)
+    })
+}
+
+/// Puts back exactly these pairs, the undo of [`remove_tag`], leaving `updated_at` alone.
+pub fn restore_tags(connection: &mut Library, pairs: &[NoteTag]) -> Result<usize, StorageError> {
+    if pairs.is_empty() {
+        return Ok(0);
+    }
+
+    connection.transaction(|connection, _vault| {
+        let note_ids: Vec<&String> = pairs.iter().map(|pair| &pair.note_id).collect();
+        let live: HashSet<String> = notes::table
+            .filter(notes::id.eq_any(note_ids))
+            .filter(notes::deleted_at.is_null())
+            .select(notes::id)
+            .load::<String>(connection)?
+            .into_iter()
+            .collect();
+
+        let rows: Vec<_> = pairs
+            .iter()
+            .filter(|pair| live.contains(&pair.note_id))
+            .map(|pair| {
+                (
+                    note_tags::note_id.eq(&pair.note_id),
+                    note_tags::tag.eq(&pair.tag),
+                )
+            })
+            .collect();
+        if rows.is_empty() {
+            return Ok(0);
+        }
+
+        Ok(diesel::insert_or_ignore_into(note_tags::table)
+            .values(rows)
+            .execute(connection)?)
+    })
+}
+
+/// Answers the live notes of `ids` whose pin changed. Triage like the priority: `updated_at`
+/// stays, and the undo is the same call with the other value over those ids.
+pub fn set_pinned_many(
+    connection: &mut Library,
+    ids: &[String],
+    pinned: bool,
+) -> Result<Vec<String>, StorageError> {
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    connection.transaction(|connection, _vault| {
+        let changed = notes::table
+            .filter(notes::id.eq_any(ids))
+            .filter(notes::deleted_at.is_null())
+            .filter(notes::pinned.ne(pinned))
+            .select(notes::id)
+            .load::<String>(connection)?;
+
+        diesel::update(notes::table.filter(notes::id.eq_any(&changed)))
+            .set(notes::pinned.eq(pinned))
+            .execute(connection)?;
+
+        Ok(changed)
+    })
+}
+
 /// Answers each note whose priority moved, with the one it had. `updated_at` stays where it
 /// is: triaging is not editing, and a list sorted by modification would reshuffle.
 pub fn set_priority_many(

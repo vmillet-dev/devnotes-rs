@@ -47,6 +47,13 @@ export class NoteSelectionStore {
 
   readonly checkedNoteIds = computed<readonly string[]>(() => this.checkedNotes().map((note) => note.id));
 
+  /** Every tag a ticked note carries, once each: what can be taken off the selection. */
+  readonly checkedTags = computed<readonly string[]>(() =>
+    [...new Set(this.checkedNotes().flatMap((note) => note.tags))].sort((a, b) => a.localeCompare(b)),
+  );
+
+  readonly allCheckedPinned = computed(() => this.checkedNotes().every((note) => note.pinned));
+
   /** The note a card on screen is showing, in whichever view is drawing it. */
   noteOnScreen(id: string): Note | null {
     return this.onScreen().find((note) => note.id === id) ?? null;

@@ -3246,7 +3246,7 @@ otherwise the arrows would move an outline while the keyboard stayed behind.
 `Ctrl`-click checks a card, `Shift`-click extends the range from the focused one, `X` toggles
 it from the keyboard — the conventions of a file list, which is what the canvas becomes once
 several notes are selected. `SelectionBarComponent` appears only when something is checked and
-offers: move to a space, add a tag, share, move to trash.
+offers: move to a space, file, give a priority, add or remove a tag, pin, copy, move to trash.
 
 Each action is **one command for the whole batch** (`move_notes`, `tag_notes`,
 `delete_notes`), not a loop of single writes: a stale id in the selection produces a partial
@@ -3272,6 +3272,14 @@ moved, with the one it had, and `restore_priorities` gives each note its own bac
 level for the whole batch. ⚠️ Neither moves `updated_at`: triaging is not editing, and a note
 given a priority would jump to the head of a list sorted by modification. That is why the
 priority never travels in a `NotePatch`, whose `apply` moves `updated_at` for every field.
+
+**A pin is triage too**: `set_pinned(ids, pinned)` answers the notes whose pin changed and moves
+no date; its undo is the same call the other way over those. The selection bar, the card menu,
+the `P` key and the editor all go through it (`NotesStore.setPinned`, a batch of one with its
+undo); only a draft takes its pin as a field. The bar's one button pins what is ticked, or unpins
+it once all of it is pinned. **A tag is taken off** by `remove_tag(ids, tag)`, which answers the
+pairs as stored and moves `updated_at` like tagging; `restore_tags` puts back exactly those.
+The bar offers the tags the ticked notes carry (`NoteSelectionStore.checkedTags`).
 
 **On screen, a priority is said three ways**: a pill on the card (`PriorityPillComponent`, in
 `notes/ui/`) with three bars and the level's name, in a hue that only repeats them — none at

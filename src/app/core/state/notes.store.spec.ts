@@ -193,15 +193,42 @@ describe('NotesStore', () => {
   });
 
   describe('mutations', () => {
-    it('persists a pin toggle and adopts the stored note', async () => {
-      const { store, repository } = await createNotesHarness([createNote({ id: 'a', pinned: false })]);
-      const update = vi.spyOn(repository, 'update');
-      await store.openNote('a');
+    /** Triage like the priority: a batch of one, never `update_note`, which moves the date. */
+    it('pins through the batch command, adopts it on the open note and offers it back', async () => {
+      const harness = await createNotesHarness([createNote({ id: 'a', pinned: false })]);
+      const update = vi.spyOn(harness.repository, 'update');
+      await harness.store.openNote('a');
+      await vi.waitFor(() => expect(harness.store.selectedNote()?.id).toBe('a'));
 
-      await store.togglePinned('a');
+      await harness.store.setPinned('a', true);
 
-      expect(update).toHaveBeenCalledWith('a', { pinned: true });
-      expect(store.selectedNote()?.pinned).toBe(true);
+      expect(update).not.toHaveBeenCalled();
+      expect(harness.store.selectedNote()?.pinned).toBe(true);
+      expect(harness.undo.banner()).toEqual({ kind: 'pin', ids: ['a'], pinned: true, count: 1 });
+    });
+
+    it('keeps a draft local until a pin makes it worth keeping, then writes it pinned', async () => {
+      const { store, repository } = await createNotesHarness([]);
+      const create = vi.spyOn(repository, 'create');
+      const pin = vi.spyOn(repository, 'setPinned');
+      store.createNote('snippet');
+
+      await store.setPinned(DRAFT_ID, false);
+      expect(create).not.toHaveBeenCalled();
+
+      await store.setPinned(DRAFT_ID, true);
+      expect(create).toHaveBeenCalledWith(expect.objectContaining({ pinned: true }));
+      expect(pin).not.toHaveBeenCalled();
+    });
+
+    it('says so when the pin fails, and offers nothing back', async () => {
+      const harness = await createNotesHarness([createNote({ id: 'a' })]);
+      harness.repository.failNext = new IpcError('set_pinned', 'locked');
+
+      await harness.store.setPinned('a', true);
+
+      expect(TestBed.inject(ErrorNotifier).notice()?.ref.key).toBe('errors.pinFailed');
+      expect(harness.undo.last()).toBeNull();
     });
 
     it('re-queries the backend after a successful write', async () => {
@@ -259,7 +286,7 @@ describe('NotesStore', () => {
       const update = vi.spyOn(repository, 'update');
       const remove = vi.spyOn(repository, 'delete');
 
-      await store.togglePinned('missing');
+      await store.setPinned('missing', true);
       await store.deleteNote('missing');
 
       expect(update).not.toHaveBeenCalled();

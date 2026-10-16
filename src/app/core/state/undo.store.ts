@@ -20,6 +20,13 @@ export type Reversible =
   | { readonly kind: 'deletion'; readonly ids: readonly string[]; readonly count: number }
   | { readonly kind: 'move'; readonly previous: readonly NotePlacement[]; readonly count: number }
   | { readonly kind: 'tag'; readonly added: readonly NoteTag[]; readonly count: number }
+  | { readonly kind: 'untag'; readonly removed: readonly NoteTag[]; readonly count: number }
+  | {
+      readonly kind: 'pin';
+      readonly ids: readonly string[];
+      readonly pinned: boolean;
+      readonly count: number;
+    }
   | { readonly kind: 'priority'; readonly previous: readonly NotePriority[]; readonly count: number }
   | { readonly kind: 'file'; readonly previous: readonly NoteFiling[]; readonly count: number }
   | { readonly kind: 'arrange'; readonly layout: BoardLayout; readonly count: number }
@@ -84,6 +91,10 @@ export class UndoStore {
         return this.notes.moveBack(action.previous);
       case 'tag':
         return this.notes.untagMany(action.added);
+      case 'untag':
+        return this.notes.restoreTags(action.removed);
+      case 'pin':
+        return (await this.notes.setPinned(action.ids, !action.pinned)).length;
       case 'priority':
         return this.notes.restorePriorities(action.previous);
       case 'file':
