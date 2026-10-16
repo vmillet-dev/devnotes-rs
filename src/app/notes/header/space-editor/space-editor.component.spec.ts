@@ -65,6 +65,40 @@ describe('SpaceEditorComponent', () => {
     expect(finished).toBe(1);
   });
 
+  describe('before deleting', () => {
+    async function open(contents: { notes: number; folders: number } | null): Promise<string> {
+      actions.contents = contents;
+      fixture = TestBed.createComponent(SpaceEditorComponent);
+      fixture.componentRef.setInput('space', WORK);
+      fixture.componentRef.setInput('moveTargets', [PERSONAL]);
+      fixture.autoDetectChanges();
+      await fixture.whenStable();
+      return root().querySelector('[data-testid="space-delete-consequence"]')?.textContent?.trim() ?? '';
+    }
+
+    it('says how many notes go where, and that the folders go with the space', async () => {
+      const said = (await open({ notes: 12, folders: 2 })).replace(/\s+/g, ' ');
+
+      expect(said).toBe(
+        'Ses 12 notes iront dans « Personal », hors de tout dossier. Ses 2 dossiers partent avec lui.',
+      );
+    });
+
+    it('says it in the singular, and leaves the folders out when there are none', async () => {
+      expect((await open({ notes: 1, folders: 0 })).replace(/\s+/g, ' ')).toBe(
+        'Sa note ira dans « Personal », hors de tout dossier.',
+      );
+    });
+
+    it('says a space with no note holds none', async () => {
+      expect(await open({ notes: 0, folders: 0 })).toBe('Il ne contient aucune note.');
+    });
+
+    it('says nothing it could not count', async () => {
+      expect(await open(null)).toBe('');
+    });
+  });
+
   it('offers no deletion at all without another space to take the notes', async () => {
     fixture.componentRef.setInput('moveTargets', []);
     await fixture.whenStable();

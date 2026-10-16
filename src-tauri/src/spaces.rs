@@ -7,7 +7,7 @@ use tauri::{AppHandle, Runtime};
 
 use crate::db::{blocking, lock};
 use crate::error::AppError;
-use model::{Space, SpaceDraft};
+use model::{Space, SpaceContents, SpaceDraft};
 
 #[tauri::command]
 #[specta::specta]
@@ -64,6 +64,21 @@ pub async fn pin_space<R: Runtime>(
         let mut connection = lock(db)?;
 
         Ok(store::set_pinned(&mut connection, &id, pinned)?)
+    })
+    .await
+}
+
+/// What deleting the space would move and take, for the confirmation that comes first.
+#[tauri::command]
+#[specta::specta]
+pub async fn count_space_contents<R: Runtime>(
+    id: String,
+    app: AppHandle<R>,
+) -> Result<SpaceContents, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(store::contents(&mut connection, &id)?)
     })
     .await
 }

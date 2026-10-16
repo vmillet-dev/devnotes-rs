@@ -1,7 +1,12 @@
 use devnotes_lib::error::ErrorCode;
+use devnotes_lib::folders::create_folder;
+use devnotes_lib::folders::model::FolderDraft;
 use devnotes_lib::notes::{create_note, get_note};
+use devnotes_lib::spaces::model::SpaceContents;
 use devnotes_lib::spaces::model::SpaceDraft;
-use devnotes_lib::spaces::{create_space, delete_space, list_spaces, pin_space, rename_space};
+use devnotes_lib::spaces::{
+    count_space_contents, create_space, delete_space, list_spaces, pin_space, rename_space,
+};
 
 use super::common::snippet;
 use super::{Session, code};
@@ -84,4 +89,37 @@ fn a_space_cannot_be_its_own_refuge() {
         ErrorCode::InvalidInput
     ));
     assert_eq!(session.spaces(), ["Personal"]);
+}
+
+/// What the confirmation names before a deletion, counted under the lock.
+#[test]
+fn a_space_counts_what_its_deletion_would_move_and_take() {
+    let session = Session::open();
+    let id = session.space("Personal");
+    session.call(|app| create_note(snippet(&id), app)).unwrap();
+    session
+        .call(|app| {
+            create_folder(
+                FolderDraft {
+                    space_id: id.clone(),
+                    name: "Perf".to_string(),
+                },
+                app,
+            )
+        })
+        .unwrap();
+
+    assert_eq!(
+        session
+            .call(|app| count_space_contents(id.clone(), app))
+            .unwrap(),
+        SpaceContents {
+            notes: 1,
+            folders: 1
+        }
+    );
+    assert!(matches!(
+        code(session.call(|app| count_space_contents("ghost".to_string(), app))),
+        ErrorCode::SpaceNotFound
+    ));
 }

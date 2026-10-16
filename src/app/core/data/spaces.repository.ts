@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { commands } from '@core/ipc/bindings';
 import { unwrap } from '@core/ipc/ipc.error';
 import type { Space as WireSpace } from '@core/ipc/bindings';
-import { Space, SpaceDraft } from '@core/model/space.model';
+import { Space, SpaceContents, SpaceDraft } from '@core/model/space.model';
 
 /**
  * The one thing a space needs converting for: `pinned` carries `#[serde(default)]` so
@@ -29,6 +29,11 @@ export class SpacesRepository {
 
   async rename(id: string, draft: SpaceDraft): Promise<Space> {
     return toSpace(unwrap('rename_space', await commands.renameSpace(id, draft)));
+  }
+
+  /** What deleting the space would move and take, for the confirmation that comes first. */
+  async countContents(id: string): Promise<SpaceContents> {
+    return unwrap('count_space_contents', await commands.countSpaceContents(id));
   }
 
   async setPinned(id: string, pinned: boolean): Promise<Space> {

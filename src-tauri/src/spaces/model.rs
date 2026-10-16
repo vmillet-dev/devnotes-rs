@@ -18,6 +18,16 @@ pub struct Space {
     pub pinned: bool,
 }
 
+/// What deleting a space takes or moves: its notes, the trashed ones included, go to the refuge
+/// and leave their folder; its folders go with it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct SpaceContents {
+    /// The live notes, which the confirmation names; the trashed ones move along silently.
+    pub notes: u32,
+    pub folders: u32,
+}
+
 #[derive(Debug, Clone, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct SpaceDraft {

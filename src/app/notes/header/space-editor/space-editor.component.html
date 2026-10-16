@@ -50,6 +50,14 @@
           {{ (confirmingDelete() ? 'notes.deleteSpaceConfirm' : 'notes.deleteSpace') | transloco }}
         </button>
       </div>
+      <!-- Before the first click, counted by Rust: nothing corpus-wide runs before saying what it touches. -->
+      @if (consequences().length > 0) {
+        <p class="editor-note" data-testid="space-delete-consequence">
+          @for (sentence of consequences(); track sentence.key) {
+            {{ sentence.key | transloco: sentence.params }}
+          }
+        </p>
+      }
     </div>
   } @else {
     <p class="editor-note editor-blocked" data-testid="space-delete-blocked">

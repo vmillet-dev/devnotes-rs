@@ -1,6 +1,6 @@
 import { guard } from './fail-next';
 import { SpacesRepository } from '@core/data/spaces.repository';
-import { Space, SpaceDraft } from '@core/model/space.model';
+import { Space, SpaceContents, SpaceDraft } from '@core/model/space.model';
 
 export class FakeSpacesRepository implements Pick<SpacesRepository, keyof SpacesRepository> {
   private spaces: readonly Space[];
@@ -8,6 +8,9 @@ export class FakeSpacesRepository implements Pick<SpacesRepository, keyof Spaces
 
   /** When set, the next call to any method rejects with this error, then clears. */
   failNext: Error | null = null;
+
+  /** What a spec says each space holds: this double owns no notes to count. */
+  readonly contents = new Map<string, SpaceContents>();
 
   constructor(spaces: readonly Space[] = []) {
     this.spaces = spaces;
@@ -48,6 +51,10 @@ export class FakeSpacesRepository implements Pick<SpacesRepository, keyof Spaces
       }
       return found;
     });
+  }
+
+  countContents(id: string): Promise<SpaceContents> {
+    return guard(this, () => this.contents.get(id) ?? { notes: 0, folders: 0 });
   }
 
   /** The target is accepted without checking it holds the notes: this double owns none. */

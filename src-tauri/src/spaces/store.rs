@@ -7,9 +7,10 @@
 
 use diesel::prelude::*;
 
-use super::model::Space;
+use super::model::{Space, SpaceContents};
+use crate::count::saturating_u32 as count;
 use crate::db::Library;
-use crate::db::schema::{notes, spaces};
+use crate::db::schema::{folders, notes, spaces};
 use crate::error::StorageError;
 use crate::name;
 use crate::vault::key::Vault;
@@ -167,6 +168,29 @@ pub fn rename(connection: &mut Library, id: &str, name: &str) -> Result<Space, S
 /// ⚠️ Same transaction and this order: `notes.space_id` has an `ON DELETE CASCADE`, so
 /// deleting first — or failing between the two — sweeps away the notes instead of moving
 /// them. `updated_at` is not refreshed, or the absorbed space floats to the top.
+/// What a deletion would move and take, for the confirmation that comes first.
+pub fn contents(connection: &mut Library, id: &str) -> Result<SpaceContents, StorageError> {
+    let (connection, _vault) = connection.split();
+    if !exists(connection, id)? {
+        return Err(StorageError::SpaceNotFound(id.to_string()));
+    }
+
+    let notes = notes::table
+        .filter(notes::space_id.eq(id))
+        .filter(notes::deleted_at.is_null())
+        .count()
+        .get_result::<i64>(connection)?;
+    let folders = folders::table
+        .filter(folders::space_id.eq(id))
+        .count()
+        .get_result::<i64>(connection)?;
+
+    Ok(SpaceContents {
+        notes: count(notes),
+        folders: count(folders),
+    })
+}
+
 pub fn delete(connection: &mut Library, id: &str, target_id: &str) -> Result<(), StorageError> {
     connection.transaction(|connection, _vault| {
         if !exists(connection, target_id)? {

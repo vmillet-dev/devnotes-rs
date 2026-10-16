@@ -1,4 +1,5 @@
 import { FolderColour } from '@core/model/folder.model';
+import { SpaceContents } from '@core/model/space.model';
 import { FoldersStore } from '@core/state/folders.store';
 import { SpacesStore } from '@core/state/spaces.store';
 
@@ -30,8 +31,10 @@ export class RecordingFolderActions implements Pick<
 /** The same for a space editor. */
 export class RecordingSpaceActions implements Pick<
   SpacesStore,
-  'renameSpace' | 'togglePinned' | 'deleteSpace'
+  'renameSpace' | 'togglePinned' | 'deleteSpace' | 'contentsOf'
 > {
+  /** What each space holds, as Rust would count it; `null` for a count that failed. */
+  contents: SpaceContents | null = { notes: 0, folders: 0 };
   readonly renamed: { id: string; name: string }[] = [];
   readonly pinned: string[] = [];
   readonly deleted: { id: string; targetSpaceId: string }[] = [];
@@ -49,5 +52,9 @@ export class RecordingSpaceActions implements Pick<
   deleteSpace(id: string, targetSpaceId: string): Promise<boolean> {
     this.deleted.push({ id, targetSpaceId });
     return Promise.resolve(true);
+  }
+
+  contentsOf(_id: string): Promise<SpaceContents | null> {
+    return Promise.resolve(this.contents);
   }
 }

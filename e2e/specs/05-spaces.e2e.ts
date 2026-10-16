@@ -195,8 +195,26 @@ describe('Spaces', () => {
   });
 
   it('moves the notes out before dropping the space', async () => {
-    const target = (await bridge.listSpaces()).find((space) => space.name === 'Lectures')!;
+    const listed = await bridge.listSpaces();
+    const target = listed.find((space) => space.name === 'Lectures')!;
+    const home = listed.find((space) => space.id === homeId)!;
+    await bridge.createFolder({ spaceId: target.id, name: 'Lus' });
     await spaces.open();
+
+    // Before the first click: where the notes go, counted by Rust, and the folder that goes too.
+    await browser.$(`${testid('space-edit')}[data-space-id="${target.id}"]`).click();
+    await eventually(
+      () =>
+        browser
+          .$(testid('space-delete-consequence'))
+          .getText()
+          .catch(() => ''),
+      (text) => text.includes(home.name),
+      'the deletion to say where its note goes',
+    );
+    await spaces.close();
+    await spaces.open();
+
     await spaces.remove(target.id, homeId);
 
     await eventually(
