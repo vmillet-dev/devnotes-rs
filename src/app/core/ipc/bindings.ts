@@ -321,6 +321,8 @@ export const commands = {
 	 *  on this machine, never what leaves it.
 	 */
 	exportNotes: (path: string, scope: ExportScope, passphrase: string | null) => typedError<ExportReport, AppError>(__TAURI_INVOKE("export_notes", { path, scope, passphrase })),
+	/**  How many notes an export would carry, asked before the save dialog: none is said at once. */
+	countExport: (scope: ExportScope) => typedError<number, AppError>(__TAURI_INVOKE("count_export", { scope })),
 	/**
 	 *  The file is read before the lock is taken: parsing a large export while holding the
 	 *  connection would block every other command for the length of it.

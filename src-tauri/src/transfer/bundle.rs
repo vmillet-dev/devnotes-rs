@@ -23,6 +23,35 @@ use crate::spaces::model::Space;
 use crate::spaces::store as spaces;
 use crate::vault::key::Vault;
 
+/// How many live notes a scope covers, without opening one: asked before any dialog, so an
+/// export of nothing is said before a place and a phrase are.
+pub fn count(connection: &mut Library, scope: &ExportScope) -> Result<u32, StorageError> {
+    use crate::db::schema::notes as table;
+    use diesel::prelude::*;
+
+    let live = table::table.filter(table::deleted_at.is_null());
+    let counted = match scope {
+        ExportScope::Library => live.count().get_result::<i64>(connection.db())?,
+        ExportScope::Space { space_id } => live
+            .filter(table::space_id.eq(space_id))
+            .count()
+            .get_result::<i64>(connection.db())?,
+        // A selection can be the whole corpus: bound a few hundred at a time.
+        ExportScope::Notes { ids } => {
+            let mut total = 0;
+            for chunk in ids.chunks(500) {
+                total += live
+                    .filter(table::id.eq_any(chunk))
+                    .count()
+                    .get_result::<i64>(connection.db())?;
+            }
+            total
+        }
+    };
+
+    Ok(saturating_u32(counted))
+}
+
 /// The live notes a scope covers, then the bundle that carries them.
 pub fn of(connection: &mut Library, scope: &ExportScope) -> Result<Bundle, StorageError> {
     let exported = match scope {

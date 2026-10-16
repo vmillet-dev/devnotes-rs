@@ -121,6 +121,38 @@ fn an_export_scope_takes_the_library_a_space_or_a_selection() {
     assert_eq!(count(&mut source, ExportScope::Notes { ids: vec![one] }), 1);
 }
 
+/// Counted without opening a note, and the same answer the bundle would give.
+#[test]
+fn an_export_scope_is_counted_before_anything_is_asked() {
+    let mut source = library();
+    let personal = spaces::list(&mut source).unwrap()[1].id.clone();
+    let empty = spaces::create(&mut source, "Vide").unwrap().id;
+    let one = notes::all(&mut source, None).unwrap()[0].id.clone();
+
+    assert_eq!(
+        bundle::count(&mut source, &ExportScope::Library).unwrap(),
+        2
+    );
+    assert_eq!(
+        bundle::count(&mut source, &ExportScope::Space { space_id: personal }).unwrap(),
+        1
+    );
+    assert_eq!(
+        bundle::count(&mut source, &ExportScope::Space { space_id: empty }).unwrap(),
+        0
+    );
+    assert_eq!(
+        bundle::count(
+            &mut source,
+            &ExportScope::Notes {
+                ids: vec![one, "ghost".to_string()]
+            }
+        )
+        .unwrap(),
+        1
+    );
+}
+
 /// The shape the front end sends, `kind` and camelCase included.
 #[test]
 fn an_export_scope_reads_the_way_the_bindings_write_it() {

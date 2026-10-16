@@ -1,7 +1,9 @@
 use devnotes_lib::error::ErrorCode;
 use devnotes_lib::notes::create_note;
 use devnotes_lib::transfer::model::ExportScope;
-use devnotes_lib::transfer::{export_is_protected, export_notes, import_notes, share_notes};
+use devnotes_lib::transfer::{
+    count_export, export_is_protected, export_notes, import_notes, share_notes,
+};
 
 use super::common::snippet;
 use super::{Session, code};
@@ -67,4 +69,48 @@ fn a_shared_selection_reads_as_markdown() {
 
     assert!(markdown.contains("Titre"));
     assert!(markdown.contains("Contenu"));
+}
+
+/// Counted before any dialog, and an export of nothing leaves no file behind.
+#[test]
+fn an_empty_scope_is_counted_as_such_and_exports_no_file() {
+    let scratch = tempfile::tempdir().unwrap();
+    let session = Session::on_disk(&scratch.path().join("library"));
+    let full = session.space("Personal");
+    let empty = session.space("Vide");
+    session
+        .call(|app| create_note(snippet(&full), app))
+        .unwrap();
+    let path = scratch.path().join("empty.devnotes");
+
+    let counted = session
+        .call(|app| {
+            count_export(
+                ExportScope::Space {
+                    space_id: empty.clone(),
+                },
+                app,
+            )
+        })
+        .unwrap();
+    let report = session
+        .call(|app| {
+            export_notes(
+                path.to_string_lossy().to_string(),
+                ExportScope::Space { space_id: empty },
+                None,
+                app,
+            )
+        })
+        .unwrap();
+
+    assert_eq!(counted, 0);
+    assert_eq!(report.notes, 0);
+    assert!(!path.exists());
+    assert_eq!(
+        session
+            .call(|app| count_export(ExportScope::Library, app))
+            .unwrap(),
+        1
+    );
 }

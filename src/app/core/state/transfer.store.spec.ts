@@ -356,13 +356,43 @@ describe('TransferStore', () => {
       });
     });
 
-    it('does not pretend to have exported an empty library', async () => {
+    it('says an empty library holds nothing to export before asking where or how', async () => {
       harness.dialog.savePath = 'C:/out.json';
-      harness.repository.exportReport = { notes: 0, spaces: 0, folders: 0, attachments: 0, protected: false };
+      harness.repository.notesInScope = 0;
 
-      await exportEverything(harness);
+      await harness.store.export(null, NOW);
 
       expect(harness.status.status()?.key).toBe('file.emptyLibrary');
+      expect(harness.prompt.request()).toBeNull();
+      expect(harness.repository.exportedTo).toBeNull();
+    });
+
+    it('says it of the space when the space is what was asked for', async () => {
+      harness.repository.notesInScope = 0;
+
+      await harness.store.export('space-1', NOW);
+
+      expect(harness.status.status()?.key).toBe('file.emptySpace');
+      expect(harness.repository.exportedTo).toBeNull();
+    });
+
+    it('asks nothing when the count itself fails, and says so', async () => {
+      harness.repository.failCount = new Error('locked');
+
+      await harness.store.export(null, NOW);
+
+      expect(harness.notifier.notice()?.ref.key).toBe('errors.exportFailed');
+      expect(harness.prompt.request()).toBeNull();
+    });
+
+    it('does not pretend to have exported notes deleted between the count and the write', async () => {
+      harness.dialog.savePath = 'C:/out.json';
+      harness.repository.exportReport = { notes: 0, spaces: 0, folders: 0, attachments: 0, protected: false };
+      harness.repository.notesInScope = 2;
+
+      await exportEverything(harness, 'space-1');
+
+      expect(harness.status.status()?.key).toBe('file.emptySpace');
     });
 
     it('restricts the file to the selection when asked', async () => {

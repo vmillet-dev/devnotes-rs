@@ -50,6 +50,11 @@ function exportedKey(report: ExportReport): string {
   return report.attachments > 0 ? 'file.exportedWithAttachments' : 'file.exported';
 }
 
+/** What an export of nothing says, about the scope it was asked for. */
+function emptyKey(scope: ExportScope): string {
+  return scope.kind === 'space' ? 'file.emptySpace' : 'file.emptyLibrary';
+}
+
 function fileNameOf(path: string): string {
   return path.split(/[/\\]/).pop() ?? path;
 }
@@ -103,14 +108,13 @@ export class TransferStore {
   /** A `null` `spaceId` exports the whole corpus. */
   async export(spaceId: string | null, now: Date): Promise<void> {
     const scope: ExportScope = spaceId === null ? { kind: 'library' } : { kind: 'space', spaceId };
-    await this.write((path, passphrase) => this.repository.export(path, scope, passphrase), now);
+    await this.write(scope, now);
   }
 
   async exportSelection(ids: readonly string[], now: Date): Promise<void> {
     if (!this.requireSelection(ids)) return;
 
-    const scope: ExportScope = { kind: 'notes', ids: [...ids] };
-    await this.write((path, passphrase) => this.repository.export(path, scope, passphrase), now);
+    await this.write({ kind: 'notes', ids: [...ids] }, now);
   }
 
   /** Sharing stops at the clipboard: nothing is sent anywhere. */
@@ -175,10 +179,11 @@ export class TransferStore {
    * The phrase is asked for once the destination is known, and never kept: it goes
    * straight to the command, which derives a key of its own for that one file.
    */
-  private async write(
-    action: (path: string, passphrase: string | null) => Promise<ExportReport>,
-    now: Date,
-  ): Promise<void> {
+  private async write(scope: ExportScope, now: Date): Promise<void> {
+    if (!(await this.holdsNotes(scope))) return;
+
+    const action = (path: string, passphrase: string | null) =>
+      this.repository.export(path, scope, passphrase);
     const path = await this.dialog.chooseBundleDestination(defaultFileName(now));
     if (path === null) return;
 
@@ -187,22 +192,36 @@ export class TransferStore {
 
     await this.run(async () => {
       try {
-        return await this.writeWith(action, path, answer);
+        return await this.writeWith(action, path, answer, scope);
       } finally {
         this.prompt.close();
       }
     }, 'errors.exportFailed');
   }
 
+  /** Counted before any dialog: an export of nothing is said before a place and a phrase are asked. */
+  private async holdsNotes(scope: ExportScope): Promise<boolean> {
+    const count = await this.notifier.attempt('errors.exportFailed', () =>
+      this.repository.countExport(scope),
+    );
+    if (count === null) return false;
+    if (count > 0) return true;
+
+    this.status.notify({ key: emptyKey(scope) });
+    return false;
+  }
+
   private async writeWith(
     action: (path: string, passphrase: string | null) => Promise<ExportReport>,
     path: string,
     answer: PassphraseAnswer,
+    scope: ExportScope,
   ): Promise<boolean> {
     const report = await action(path, answer.kind === 'phrase' ? answer.value : null);
 
+    // Emptied between the count and the write: Rust wrote no file, and says so the same way.
     if (report.notes === 0) {
-      this.status.notify({ key: 'file.emptyLibrary' });
+      this.status.notify({ key: emptyKey(scope) });
       return false;
     }
 

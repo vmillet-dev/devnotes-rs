@@ -21,6 +21,11 @@ export class FakeTransferRepository implements Pick<TransferRepository, keyof Tr
   /** When set, an import with anything else is refused the way the engine refuses it. */
   expectedPassphrase: string | null = null;
 
+  /** What `count_export` answers; by default, what the export would report. */
+  notesInScope: number | null = null;
+  /** Refuses the count alone, leaving `failNext` to the export itself. */
+  failCount: Error | null = null;
+
   exportReport: ExportReport = { notes: 3, spaces: 1, folders: 0, attachments: 0, protected: false };
   importReport: ImportReport = {
     foldersCreated: 0,
@@ -42,6 +47,16 @@ export class FakeTransferRepository implements Pick<TransferRepository, keyof Tr
       this.exportedIds = scope.ids;
       return { ...this.exportReport, notes: scope.ids.length, protected: protectedFile };
     });
+  }
+
+  countExport(scope: ExportScope): Promise<number> {
+    const failure = this.failCount;
+    this.failCount = null;
+    if (failure) return Promise.reject(failure);
+
+    return Promise.resolve(
+      this.notesInScope ?? (scope.kind === 'notes' ? scope.ids.length : this.exportReport.notes),
+    );
   }
 
   import(path: string, passphrase: string | null): Promise<ImportReport> {

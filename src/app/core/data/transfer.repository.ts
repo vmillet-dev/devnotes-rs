@@ -14,6 +14,11 @@ export class TransferRepository {
     return unwrap('export_notes', await commands.exportNotes(path, scope, passphrase));
   }
 
+  /** How many notes the scope would carry, asked before any dialog. */
+  async countExport(scope: ExportScope): Promise<number> {
+    return unwrap('count_export', await commands.countExport(scope));
+  }
+
   async import(path: string, passphrase: string | null): Promise<ImportReport> {
     return unwrap('import_notes', await commands.importNotes(path, passphrase));
   }

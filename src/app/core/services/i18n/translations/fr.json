@@ -697,6 +697,7 @@
     "copied": "{notes, plural, one {# note copiée} other {# notes copiées}} en Markdown dans le presse-papier.",
     "needsSelection": "Sélectionnez au moins une note.",
     "emptyLibrary": "Rien à exporter : cette bibliothèque n’a aucune note.",
+    "emptySpace": "Rien à exporter : cet espace n’a aucune note.",
     "preferences": "Préférences…",
     "importedIntoFolders": "{notes, plural, =0 {Aucune note importée} one {# note importée} other {# notes importées}} depuis {{path}} dans {folders, plural, one {# nouveau dossier} other {# nouveaux dossiers}}, {skipped, plural, one {# ignorée} other {# ignorées}}."
   },

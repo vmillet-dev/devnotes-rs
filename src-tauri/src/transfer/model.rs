@@ -69,6 +69,19 @@ pub struct ExportReport {
     pub protected: bool,
 }
 
+impl ExportReport {
+    /// What an export of no note answers: nothing written, and nothing to say it protected.
+    pub fn nothing(protected: bool) -> Self {
+        Self {
+            notes: 0,
+            spaces: 0,
+            folders: 0,
+            attachments: 0,
+            protected,
+        }
+    }
+}
+
 /// `skipped`: notes already present or whose space is missing, so an import can be replayed.
 #[derive(Debug, Clone, Copy, Default, Serialize, Type)]
 #[serde(rename_all = "camelCase")]

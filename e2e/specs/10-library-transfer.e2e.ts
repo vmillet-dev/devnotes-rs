@@ -4,8 +4,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { canvas } from '../pageobjects/canvas.page.js';
+import { spaces } from '../pageobjects/sidebar.page.js';
 import { fileMenu } from '../pageobjects/titlebar.page.js';
-import { press, reloadCanvas } from '../support/app.js';
+import { press, reloadCanvas, testid } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
@@ -172,5 +173,28 @@ describe('Import, export and share', () => {
     // until a human answers it.
     expect(await fileMenu.entry('exportAll').isExisting()).toBe(true);
     await press('Escape');
+  });
+
+  /** An export of nothing asks no place and no phrase, and leaves no empty file behind. */
+  it('says an empty space has nothing to export, before any dialog and without a file', async () => {
+    const empty = await bridge.createSpace({ name: 'Rien dedans' });
+    const emptyPath = join(directory, 'empty.devnotes').replaceAll('\\', '/');
+
+    const report = await bridge.exportNotes(emptyPath, empty.id);
+    expect(report.notes).toBe(0);
+    expect(existsSync(emptyPath)).toBe(false);
+
+    // Clicked this time: the count comes first, so no picker opens for nothing.
+    await reloadCanvas();
+    await spaces.open();
+    await spaces.option(empty.id).click();
+    await fileMenu.open();
+    await fileMenu.entry('exportSpace').click();
+    await browser.$(testid('status-toast')).waitForExist({ timeout: 10_000 });
+
+    await spaces.open();
+    await spaces.allOption().click();
+    await bridge.deleteSpace(empty.id, homeId);
+    await reloadCanvas();
   });
 });

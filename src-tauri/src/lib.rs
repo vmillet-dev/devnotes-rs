@@ -76,7 +76,7 @@ use tools::{
     inspect_identifier, lorem_ipsum, measure_durations, parse_url, place_in_zones, save_bytes,
     save_qr_code, search_time_zones, text_stats, time_in_zone, url_codec,
 };
-use transfer::{export_is_protected, export_notes, import_notes, share_notes};
+use transfer::{count_export, export_is_protected, export_notes, import_notes, share_notes};
 use vault::{change_passphrase, create_vault, unlock_vault, vault_state};
 
 /// From the manifest: a relative path would follow the current directory.
@@ -245,6 +245,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             save_attachment::<tauri::Wry>,
             delete_attachment::<tauri::Wry>,
             export_notes::<tauri::Wry>,
+            count_export::<tauri::Wry>,
             import_notes::<tauri::Wry>,
             share_notes::<tauri::Wry>,
             export_is_protected,
