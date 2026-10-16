@@ -86,13 +86,13 @@ export class PaletteStore {
   }
 
   /** It does not know `NotesStore`, and the other way round would be a cycle. */
-  takeNewNoteContent(): string | null {
+  takeNewNoteTitle(): string | null {
     if (!this.isCreateHighlighted()) return null;
 
-    const content = this._query().trim();
+    const title = this._query().trim();
     this.close();
 
-    return content;
+    return title;
   }
 
   /** A snippet with fields goes through the form first, or the copy is unusable. */

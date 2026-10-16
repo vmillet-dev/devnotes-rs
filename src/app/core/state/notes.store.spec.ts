@@ -521,17 +521,32 @@ describe('NotesStore', () => {
       expect(store.selectedNote()).toMatchObject({ id: 'fake-1', content: 'SELECT 1' });
     });
 
-    it('leaves the language for the backend to detect', async () => {
+    it('makes code a snippet in the language Rust read in it', async () => {
       const { store, repository } = await createNotesHarness(
         [],
         HARNESS_SPACES,
         new FakeClipboard('{"a": 1}'),
       );
+      repository.detectedLanguage = 'json';
       const create = vi.spyOn(repository, 'create');
 
       await store.captureFromClipboard();
 
-      expect(create).toHaveBeenCalledWith(expect.objectContaining({ language: 'txt' }));
+      expect(create).toHaveBeenCalledWith(expect.objectContaining({ kind: 'snippet', language: 'json' }));
+    });
+
+    it('makes prose a Note, as a paste into an empty Note does', async () => {
+      const { store, repository } = await createNotesHarness(
+        [],
+        HARNESS_SPACES,
+        new FakeClipboard('Penser à relancer Marc au sujet du certificat'),
+      );
+      repository.detectedLanguage = 'txt';
+      const create = vi.spyOn(repository, 'create');
+
+      await store.captureFromClipboard();
+
+      expect(create).toHaveBeenCalledWith(expect.objectContaining({ kind: 'note' }));
     });
 
     it('creates nothing from an empty or blank clipboard', async () => {
@@ -561,6 +576,30 @@ describe('NotesStore', () => {
       await store.captureFromClipboard();
 
       expect(store.selectedNoteId()).toBe('fake-1');
+    });
+  });
+
+  describe('createTitled', () => {
+    it('writes a note named after what was typed, of the kind the preferences name', async () => {
+      const { store, repository } = await createNotesHarness([]);
+      TestBed.inject(SettingsStore).defaultNoteKind.write('checklist');
+      const create = vi.spyOn(repository, 'create');
+
+      await store.createTitled('  déployer la facturation ');
+
+      expect(create).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'déployer la facturation', kind: 'checklist', content: '' }),
+      );
+      expect(store.selectedNoteId()).toBe('fake-1');
+    });
+
+    it('creates nothing from blank words', async () => {
+      const { store, repository } = await createNotesHarness([]);
+      const create = vi.spyOn(repository, 'create');
+
+      await store.createTitled('   ');
+
+      expect(create).not.toHaveBeenCalled();
     });
   });
 

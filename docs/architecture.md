@@ -3344,12 +3344,14 @@ and the paste path gets a control of its own beside the row (⧉, which copies a
 **It captures as much as it retrieves.** As soon as the query is non-empty, a "créer une note"
 row is appended **after** the results — retrieving a snippet is the more frequent gesture and
 keeps the first place, but a query that matches nothing highlights the create row by default,
-which is exactly the quick-capture case. Choosing it turns what was typed into the note's
-content, saved and opened straight away (no draft: there is nothing to wait for).
+which is exactly the quick-capture case. Choosing it makes a note **named** after what was
+typed — what someone types while looking for a note is its name, not its body — of the kind the
+preferences name, saved and opened straight away (no draft: its title is worth keeping).
 
 `PaletteStore` does not create the note itself — it does not know `NotesStore`, and the
-reverse would be a cycle. `takeNewNoteContent()` hands the text over and closes; the page
-chains `NotesStore.createWithContent`, the same path the clipboard capture uses.
+reverse would be a cycle. `takeNewNoteTitle()` hands the text over and closes; the page chains
+`NotesStore.createTitled`. The clipboard capture (`captureFromClipboard`) is read like a paste
+into an empty Note: `detect_language` decides, code becomes a snippet in its language, prose a Note.
 
 The palette is an overlay in the main window rather than a second Tauri window: the window is
 already warm behind the global shortcut, and a second one would mean a second Angular

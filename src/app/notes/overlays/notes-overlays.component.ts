@@ -63,9 +63,9 @@ export class NotesOverlaysComponent {
 
   /** `PaletteStore` does not know `NotesStore`; the other way round would be a cycle. */
   protected async onPaletteChosen(): Promise<void> {
-    const content = this.palette.takeNewNoteContent();
-    if (content !== null) {
-      await this.store.createWithContent(content);
+    const title = this.palette.takeNewNoteTitle();
+    if (title !== null) {
+      await this.store.createTitled(title);
       return;
     }
 

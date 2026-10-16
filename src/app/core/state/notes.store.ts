@@ -348,8 +348,33 @@ export class NotesStore {
     if (kind === 'note') this.settings.noteKindTried.write(true);
   }
 
+  /**
+   * Read like a paste into an empty Note: code becomes a snippet in the language Rust reads in
+   * it, prose a Note. Already carrying its content, it is written at once and opens saved.
+   */
   async captureFromClipboard(): Promise<void> {
-    await this.createWithContent(await this.clipboard.paste());
+    const content = await this.clipboard.paste();
+    if (!content.trim()) return;
+
+    const spaceId = this.spaceForNewNote();
+    if (!spaceId) return;
+
+    const language = await this.detectLanguage(content);
+    const kind: NoteKind = language === 'txt' ? 'note' : 'snippet';
+    await this.persistNew({ ...emptyDraft(spaceId, kind), content, language });
+  }
+
+  /**
+   * What the palette's create row makes: a note named after what was typed while looking for
+   * one, of the kind the preferences name, written at once since its title is worth keeping.
+   */
+  async createTitled(title: string): Promise<void> {
+    if (!title.trim()) return;
+
+    const spaceId = this.spaceForNewNote();
+    if (!spaceId) return;
+
+    await this.persistNew({ ...emptyDraft(spaceId, this.settings.defaultNoteKind()), title: title.trim() });
   }
 
   /** A paste Rust cannot read is prose: the note stays Text rather than failing the paste. */
@@ -370,16 +395,6 @@ export class NotesStore {
 
     this.revision.bump();
     await this.openNote(copy.id);
-  }
-
-  /** Already carries its content, so no draft: the editor opens on a saved note. */
-  async createWithContent(content: string): Promise<void> {
-    if (!content.trim()) return;
-
-    const spaceId = this.spaceForNewNote();
-    if (!spaceId) return;
-
-    await this.persistNew({ ...emptyDraft(spaceId, 'snippet'), content });
   }
 
   async materialiseDraft(): Promise<string | null> {

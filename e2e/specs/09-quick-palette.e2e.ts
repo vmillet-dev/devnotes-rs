@@ -5,7 +5,7 @@ import { editor } from '../pageobjects/editor.page.js';
 import { fieldsForm, palette } from '../pageobjects/overlays.page.js';
 import { aboutMenu } from '../pageobjects/titlebar.page.js';
 import { emitGlobalAction, isInFront, press, reloadCanvas, testid } from '../support/app.js';
-import { bridge, draft, homeSpaceId } from '../support/bridge.js';
+import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
  * The OS-level `Ctrl+Alt+P` is out of scope: WebDriver types into the WebView, not into
@@ -53,6 +53,24 @@ describe('The quick-paste palette', () => {
     expect(await palette.createRow().isExisting()).toBe(true);
     // The offer replaces the list rather than sitting under an empty one.
     expect(await palette.options().length).toBe(0);
+  });
+
+  /** What was typed while looking for a note is its name: the note opens titled, already saved. */
+  it('creates a note named after the query from its create row', async () => {
+    const wanted = 'Rotation des certificats wildcard';
+    await palette.type(wanted);
+    await palette.createRow().$('button').click();
+
+    await editor.waitOpen();
+    expect(await editor.title()).toBe(wanted);
+    await editor.close();
+
+    const created = (await bridge.queryNotes(query({ search: wanted }))).sections[0]?.notes[0];
+    expect(created?.title).toBe(wanted);
+    await bridge.deleteNotes([created!.id]);
+    await bridge.purgeNotes([created!.id]);
+    await emitGlobalAction('palette');
+    await palette.input().waitForExist({ timeout: 10_000 });
   });
 
   it('says the corpus is empty rather than showing a bare list', async () => {

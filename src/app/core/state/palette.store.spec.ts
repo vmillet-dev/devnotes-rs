@@ -250,7 +250,7 @@ describe('PaletteStore', () => {
       harness.store.setQuery('  penser à migrer la base  ');
       await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
 
-      expect(harness.store.takeNewNoteContent()).toBe('penser à migrer la base');
+      expect(harness.store.takeNewNoteTitle()).toBe('penser à migrer la base');
       expect(harness.store.isOpen()).toBe(false);
     });
 
@@ -258,7 +258,7 @@ describe('PaletteStore', () => {
       harness.store.setQuery('psql');
       await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
 
-      expect(harness.store.takeNewNoteContent()).toBeNull();
+      expect(harness.store.takeNewNoteTitle()).toBeNull();
       expect(harness.store.isOpen()).toBe(true);
     });
 
