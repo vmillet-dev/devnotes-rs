@@ -12,16 +12,15 @@ version: 2
 # majors as a group, since half of a major does not install. Every other group takes minors and
 # patches, and a major comes alone.
 #
-# A bump raises the manifest with the lockfile. Cargo's default changes `Cargo.lock` alone while
-# the declared range allows the new version, so `Cargo.toml` named versions no build used, hence
-# `increase` there. npm's default already means `increase` for an application.
+# ⚠️ Cargo takes `versioning-strategy: auto` or `lockfile-only` only; `increase` makes the whole
+# file invalid. So a bump the declared range allows changes `Cargo.lock` alone, and `Cargo.toml`
+# falls behind it until raised by hand. npm's default already raises `package.json`.
 updates:
   - package-ecosystem: cargo
     directory: /src-tauri
     schedule:
       interval: weekly
       day: monday
-    versioning-strategy: increase
     open-pull-requests-limit: 10
     # `tauri build` refuses a crate and its npm twin on different minors, and Dependabot opens
     # the two halves as two pull requests in two ecosystems, each red without the other. A
