@@ -1,4 +1,14 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  afterNextRender,
+  computed,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { DialogComponent } from '@shared/layout/dialog/dialog.component';
 import { Placeholder } from '@core/model/note.model';
@@ -36,6 +46,15 @@ export class PlaceholderFormComponent {
       this.typed() ??
       Object.fromEntries(this.placeholders().map((placeholder) => [placeholder.name, placeholder.value])),
   );
+
+  constructor() {
+    // The first field still empty is where typing goes: Enter then copies what was typed.
+    const host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+    afterNextRender(() => {
+      const fields = [...host.querySelectorAll<HTMLInputElement>('.field-input')];
+      (fields.find((field) => field.value === '') ?? fields[0])?.focus();
+    });
+  }
 
   protected setValue({ name, value }: PlaceholderValue): void {
     this.typed.set({ ...this.values(), [name]: value });
