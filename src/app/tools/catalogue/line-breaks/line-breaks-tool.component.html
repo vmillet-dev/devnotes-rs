@@ -2,9 +2,12 @@
   <section class="column" aria-labelledby="line-breaks-input-title">
     <div class="section-head">
       <h2 id="line-breaks-input-title" class="section-title">{{ 'tools.input' | transloco }}</h2>
-      <button type="button" class="paste" data-testid="line-breaks-paste" (click)="pasteFromClipboard()">
-        {{ 'tools.line-breaks.paste' | transloco }}
-      </button>
+      <span class="head-actions">
+        <app-note-import field="text" (imported)="text.set($event.content)" />
+        <button type="button" class="paste" data-testid="line-breaks-paste" (click)="pasteFromClipboard()">
+          {{ 'tools.line-breaks.paste' | transloco }}
+        </button>
+      </span>
     </div>
     <div
       class="paste-zone"

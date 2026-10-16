@@ -25,7 +25,26 @@ export interface ToolDefinition {
    * its own: nothing of it is loaded before something is typed.
    */
   readonly reference?: () => Promise<ReferenceSource<unknown, ReferenceRow>>;
+  /**
+   * The inputs a note can fill, by the name the tool gives them, and which notes can. ⚠️ A key,
+   * a password, a token or a card number is never one: its field offers no import.
+   */
+  readonly fromNote?: Readonly<Record<string, NoteInput>>;
 }
+
+/** No kind listed is every kind; a language narrows to the snippets written in it. */
+export interface NoteInput {
+  readonly kinds: readonly NoteKind[];
+  readonly languages: readonly LanguageTag[];
+}
+
+/** A todo list gives its Markdown, as copying it does. */
+export const ANY_NOTE: NoteInput = { kinds: [], languages: [] };
+export const JSON_SNIPPET: NoteInput = { kinds: ['snippet'], languages: ['json'] };
+export const STRUCTURED_SNIPPET: NoteInput = {
+  kinds: ['snippet'],
+  languages: ['json', 'yml', 'toml', 'xml'],
+};
 
 /** What "Enregistrer comme note" keeps: the tool decides, so the dialog asks nothing it could infer. */
 export interface ToolResult {

@@ -1,6 +1,9 @@
 <div class="columns">
   <section class="column" aria-labelledby="case-input-title">
-    <h2 id="case-input-title" class="section-title">{{ 'tools.case.text' | transloco }}</h2>
+    <div class="section-head">
+      <h2 id="case-input-title" class="section-title">{{ 'tools.case.text' | transloco }}</h2>
+      <app-note-import field="text" (imported)="text.set($event.content)" />
+    </div>
     <label class="field">
       <span class="visually-hidden">{{ 'tools.case.inputLabel' | transloco }}</span>
       <textarea

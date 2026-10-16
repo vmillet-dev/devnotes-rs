@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { FakeToolsRepository } from '@testing/fake-tools-repository';
+import { createNote } from '@testing/note.fixture';
 import { ToolHarness, renderTool } from '@testing/tool-harness';
 import { ConvertToolComponent } from './convert-tool.component';
 
@@ -114,5 +115,22 @@ describe('ConvertToolComponent', () => {
     );
     expect(harness.element('[data-testid="convert-convention-toml"]')).not.toBeNull();
     expect(harness.element('[data-testid="convert-convention-xml"]')).toBeNull();
+  });
+
+  it('takes a snippet from a note, read in its own format', async () => {
+    const deploy = createNote({ id: 'deploy', title: 'deploy.yml', language: 'yml', content: 'replicas: 2' });
+    const harness = await renderTool(ConvertToolComponent, answer, { open: 'convert', notes: [deploy] });
+
+    harness.element<HTMLButtonElement>('[data-testid="note-import-text"]').click();
+    await vi.waitFor(() => expect(document.querySelector('[data-note-id="deploy"]')).not.toBeNull());
+    document.querySelector<HTMLButtonElement>('[data-note-id="deploy"]')!.click();
+
+    await vi.waitFor(() =>
+      expect(harness.tools.requestsOf('convert_data').at(-1)).toEqual({
+        text: 'replicas: 2',
+        from: 'yaml',
+        to: 'json',
+      }),
+    );
   });
 });

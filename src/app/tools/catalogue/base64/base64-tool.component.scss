@@ -207,3 +207,8 @@
   line-height: 1.6;
   color: var(--text-1);
 }
+
+// On a line of its own once the bar wraps, still at its end.
+.from-note {
+  margin-left: auto;
+}

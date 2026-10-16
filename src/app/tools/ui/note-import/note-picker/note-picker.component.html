@@ -1,0 +1,51 @@
+<app-dialog [layer]="'app'" labelledBy="note-picker-title" (closed)="closed.emit()">
+  <div class="picker" data-testid="note-picker">
+    <div class="head">
+      <h2 id="note-picker-title" class="title">{{ 'tools.fromNote.title' | transloco }}</h2>
+      <p class="accepted" data-testid="note-picker-accepted">
+        {{ accepted().key | transloco: accepted().params }}
+      </p>
+    </div>
+    <input
+      #searchField
+      type="search"
+      class="search"
+      data-testid="note-picker-search"
+      [attr.aria-label]="'tools.fromNote.search' | transloco"
+      [placeholder]="'tools.fromNote.search' | transloco"
+      [value]="search()"
+      (input)="onSearch($event)"
+      (keydown)="onSearchKeydown($event)"
+    />
+    <ul #list class="list">
+      @for (note of found(); track note.id; let index = $index) {
+        <li>
+          <button
+            type="button"
+            class="note"
+            data-testid="note-picker-option"
+            [attr.data-note-id]="note.id"
+            (click)="pick(note)"
+            (keydown)="onRowKeydown($event, index)"
+          >
+            <app-kind-badge [kind]="note.kind" [language]="note.language" />
+            <span class="note-title">{{ note.title || ('notes.untitled' | transloco) }}</span>
+            <span class="note-where">{{ whereOf(note) }}</span>
+          </button>
+        </li>
+      } @empty {
+        @if (!pending()) {
+          <li class="none" data-testid="note-picker-none">
+            {{ (search().trim() ? 'tools.fromNote.noneFound' : 'tools.fromNote.none') | transloco }}
+          </li>
+        }
+      }
+    </ul>
+    <div class="actions">
+      <span class="hint">{{ 'tools.fromNote.hint' | transloco }}</span>
+      <button type="button" class="action" (click)="closed.emit()">
+        {{ 'placeholders.cancel' | transloco }}
+      </button>
+    </div>
+  </div>
+</app-dialog>

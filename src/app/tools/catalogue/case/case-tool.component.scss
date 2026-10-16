@@ -11,12 +11,17 @@
 
 .column {
   @include tool-column;
+  @include ring-room;
   gap: 10px;
   overflow-y: auto;
 }
 
 .results {
   overflow: visible;
+}
+
+.section-head {
+  @include tool-section-head;
 }
 
 .section-title {

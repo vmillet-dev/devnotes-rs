@@ -10,6 +10,7 @@ import {
   SegmentedChoiceComponent,
 } from '@shared/controls/segmented-choice/segmented-choice.component';
 import { ResultRowComponent } from '@tools/ui/result-row/result-row.component';
+import { NoteImportComponent } from '@tools/ui/note-import/note-import.component';
 
 /** Each case spelled in itself: a note keeps them in no one language. */
 const CASE_NAMES: Record<TextCase, string> = {
@@ -46,7 +47,7 @@ const LANGUAGES: readonly Segment[] = (['english', 'french'] as const).map((id) 
 
 @Component({
   selector: 'app-case-tool',
-  imports: [ResultRowComponent, SegmentedChoiceComponent, TranslocoPipe],
+  imports: [NoteImportComponent, ResultRowComponent, SegmentedChoiceComponent, TranslocoPipe],
   templateUrl: './case-tool.component.html',
   styleUrl: './case-tool.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

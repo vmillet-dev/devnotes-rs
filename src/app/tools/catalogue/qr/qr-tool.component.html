@@ -21,6 +21,9 @@
           [value]="value('text')"
           (input)="onField('text', $event)"
         ></textarea>
+        <div class="from-note">
+          <app-note-import field="text" (imported)="onImported($event.content)" />
+        </div>
       }
       @case ('url') {
         <input

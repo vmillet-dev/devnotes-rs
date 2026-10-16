@@ -14,6 +14,7 @@ import {
 } from '@shared/controls/segmented-choice/segmented-choice.component';
 import { CopyValueComponent } from '@tools/ui/copy-value/copy-value.component';
 import { ResultRowComponent } from '@tools/ui/result-row/result-row.component';
+import { NoteImportComponent } from '@tools/ui/note-import/note-import.component';
 
 type Direction = 'encode' | 'decode';
 type Source = 'text' | 'file';
@@ -56,7 +57,13 @@ const shown = (text: string): string =>
 /** A text in six encodings at once, and back from whichever one Rust recognises. */
 @Component({
   selector: 'app-base64-tool',
-  imports: [CopyValueComponent, ResultRowComponent, SegmentedChoiceComponent, TranslocoPipe],
+  imports: [
+    CopyValueComponent,
+    NoteImportComponent,
+    ResultRowComponent,
+    SegmentedChoiceComponent,
+    TranslocoPipe,
+  ],
   templateUrl: './base64-tool.component.html',
   styleUrl: './base64-tool.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -726,6 +726,20 @@ creates the note through `NotesRepository` like any other, with the source its c
 "Outils / <tool>", "HTTP / <request>" — bumps `NotesRevision` for the canvas behind, and
 `StatusNotifier` says where it went.
 
+**An input can be filled from a note** (`ToolDefinition.fromNote`, in the catalogue): the tool
+names its inputs a note may fill and which notes may — kinds, and for a snippet its languages
+(`NoteInput`: `ANY_NOTE`, `JSON_SNIPPET`, `STRUCTURED_SNIPPET`). The tool places
+`<app-note-import field="…">` beside such an input (`tools/ui/note-import/`), and the button
+reads the open tool's declaration through `ToolsStore.openId`: an input declared nowhere has no
+button, so a key, a password, a token or a card number never takes a note.
+
+- **The picker asks Rust** for the kinds and languages declared (`query_notes`, every space) and
+  says what it lists (« Snippets JSON, YAML, TOML ou XML »). The note chosen is read whole by id,
+  and a todo list gives the Markdown copying it gives (`noteCopyText`).
+- **A copy, taken once**: the tool's input is set as typing would set it, and nothing ties the
+  tool to the note afterwards — editing or deleting the note leaves the tool as it was. The
+  converter reads a snippet in its own format; the diffs show the note's title over the side.
+
 **In Rust, a tool is a module of `tools/`** (`text`, `url_parts`, …): pure functions and
 their types, tested in place, no Tauri. `tools.rs` holds the commands, three lines each
 through `off_thread` — no lock, but never on the window's thread. One command per tool rather

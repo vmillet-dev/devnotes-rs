@@ -6,6 +6,7 @@ import { TextStats } from '@core/model/tool-answers.model';
 import { liveResult } from '@core/services/tools/live-result';
 import { Tool, ToolResult } from '@core/services/tools/tool.model';
 import { toolState } from '@core/services/tools/tool-sessions';
+import { NoteImportComponent } from '@tools/ui/note-import/note-import.component';
 
 type Count = keyof Pick<
   TextStats,
@@ -35,7 +36,7 @@ const COUNTS: readonly Count[] = [
 /** What a reader counts and what a program does, both Rust's; the page draws the bars. */
 @Component({
   selector: 'app-text-stats-tool',
-  imports: [TranslocoPipe],
+  imports: [NoteImportComponent, TranslocoPipe],
   templateUrl: './text-stats-tool.component.html',
   styleUrl: './text-stats-tool.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

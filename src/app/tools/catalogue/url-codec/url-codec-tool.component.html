@@ -28,7 +28,10 @@
         <h2 id="url-codec-decoded-title" class="section-title">
           {{ 'tools.url-codec.decoded' | transloco }}
         </h2>
-        <app-copy-value [value]="decoded()" [what]="'tools.url-codec.decoded' | transloco" />
+        <span class="head-actions">
+          <app-note-import field="text" (imported)="onImported($event.content)" />
+          <app-copy-value [value]="decoded()" [what]="'tools.url-codec.decoded' | transloco" />
+        </span>
       </div>
       <label class="field">
         <span class="visually-hidden">{{ 'tools.url-codec.decoded' | transloco }}</span>

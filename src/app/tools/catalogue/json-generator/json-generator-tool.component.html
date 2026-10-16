@@ -4,13 +4,16 @@
       <h2 id="json-generator-source-title" class="section-title">
         {{ 'tools.json-generator.source' | transloco }}
       </h2>
-      <app-segmented-choice
-        kind="json-generator-source"
-        [label]="'tools.json-generator.source' | transloco"
-        [segments]="sources"
-        [currentId]="source()"
-        (chosen)="onSource($event)"
-      />
+      <span class="head-actions">
+        <app-note-import field="text" (imported)="text.set($event.content)" />
+        <app-segmented-choice
+          kind="json-generator-source"
+          [label]="'tools.json-generator.source' | transloco"
+          [segments]="sources"
+          [currentId]="source()"
+          (chosen)="onSource($event)"
+        />
+      </span>
     </div>
     <!-- What the switch above expects: a schema read as an example, or the reverse, is nonsense. -->
     <p class="expects" data-testid="json-generator-expects" [attr.data-source]="source()">

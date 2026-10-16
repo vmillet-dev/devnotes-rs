@@ -10,6 +10,8 @@ import {
   Segment,
   SegmentedChoiceComponent,
 } from '@shared/controls/segmented-choice/segmented-choice.component';
+import { NoteImportComponent } from '@tools/ui/note-import/note-import.component';
+import type { PickedNote } from '@tools/ui/note-import/note-picker/note-picker.component';
 
 type Layout = 'split' | 'unified';
 type Option = 'trailing' | 'whitespace' | 'case' | 'endings';
@@ -58,7 +60,7 @@ function kindOf(line: string): 'file' | 'hunk' | 'added' | 'removed' | 'same' {
 /** Shares its two texts with the structured mode: switching mode compares the same documents. */
 @Component({
   selector: 'app-text-diff',
-  imports: [SegmentedChoiceComponent, TranslocoPipe],
+  imports: [NoteImportComponent, SegmentedChoiceComponent, TranslocoPipe],
   templateUrl: './text-diff.component.html',
   styleUrl: './text-diff.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -162,6 +164,11 @@ export class TextDiffComponent implements Tool {
     if ((event.target as HTMLInputElement).checked) next.add(option);
     else next.delete(option);
     this.ignored.set(next);
+  }
+
+  protected onImported(side: 'a' | 'b', note: PickedNote): void {
+    (side === 'a' ? this.a : this.b).set(note.content);
+    (side === 'a' ? this.aName : this.bName).set(note.title);
   }
 
   protected onInput(side: 'a' | 'b', event: Event): void {

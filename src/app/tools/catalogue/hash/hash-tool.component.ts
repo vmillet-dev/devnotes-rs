@@ -12,6 +12,7 @@ import {
 } from '@shared/controls/segmented-choice/segmented-choice.component';
 import { IconComponent } from '@shared/icon/icon.component';
 import { ResultRowComponent } from '@tools/ui/result-row/result-row.component';
+import { NoteImportComponent } from '@tools/ui/note-import/note-import.component';
 
 type Source = 'text' | 'file';
 
@@ -80,7 +81,7 @@ const SAMPLE = {
  */
 @Component({
   selector: 'app-hash-tool',
-  imports: [IconComponent, ResultRowComponent, SegmentedChoiceComponent, TranslocoPipe],
+  imports: [IconComponent, NoteImportComponent, ResultRowComponent, SegmentedChoiceComponent, TranslocoPipe],
   templateUrl: './hash-tool.component.html',
   styleUrl: './hash-tool.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

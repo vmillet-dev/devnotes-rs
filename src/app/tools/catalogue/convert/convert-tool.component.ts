@@ -11,6 +11,8 @@ import {
   SegmentedChoiceComponent,
 } from '@shared/controls/segmented-choice/segmented-choice.component';
 import { CopyValueComponent } from '@tools/ui/copy-value/copy-value.component';
+import { NoteImportComponent } from '@tools/ui/note-import/note-import.component';
+import type { PickedNote } from '@tools/ui/note-import/note-picker/note-picker.component';
 
 const FORMATS: readonly DataFormat[] = ['json', 'toml', 'xml', 'yaml'];
 
@@ -18,6 +20,13 @@ const SEGMENTS: readonly Segment[] = FORMATS.map((id) => ({ id, labelKey: `tools
 
 /** What a note keeps the result as, so it is highlighted in its own language. */
 const LANGUAGES: Record<DataFormat, LanguageTag> = { json: 'json', toml: 'toml', xml: 'xml', yaml: 'yml' };
+
+const FORMAT_OF: Partial<Record<LanguageTag, DataFormat>> = {
+  json: 'json',
+  toml: 'toml',
+  xml: 'xml',
+  yml: 'yaml',
+};
 
 /** The mockup's document: its `null` is what TOML leaves out and names. */
 const SAMPLE = `{
@@ -39,7 +48,7 @@ const NAMED = 3;
 /** Any format to any other, through one value in Rust; the conventions are said beside the result. */
 @Component({
   selector: 'app-convert-tool',
-  imports: [CopyValueComponent, SegmentedChoiceComponent, TranslocoPipe],
+  imports: [CopyValueComponent, NoteImportComponent, SegmentedChoiceComponent, TranslocoPipe],
   templateUrl: './convert-tool.component.html',
   styleUrl: './convert-tool.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -120,6 +129,15 @@ export class ConvertToolComponent implements Tool {
     if (converted !== null) {
       this.text.set(converted);
     }
+  }
+
+  /** A snippet is read in its own format; the other side gives way if it held that one. */
+  protected onImported(note: PickedNote): void {
+    this.text.set(note.content);
+    const format = note.language === null ? undefined : FORMAT_OF[note.language];
+    if (format === undefined || format === this.from()) return;
+    if (format === this.to()) this.to.set(this.from());
+    this.from.set(format);
   }
 
   protected onInput(event: Event): void {

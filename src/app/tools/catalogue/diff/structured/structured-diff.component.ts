@@ -27,7 +27,8 @@ import {
   Segment,
   SegmentedChoiceComponent,
 } from '@shared/controls/segmented-choice/segmented-choice.component';
-import { JsonNotePickerComponent, PickedNote } from './note-picker/json-note-picker.component';
+import { NoteImportComponent } from '@tools/ui/note-import/note-import.component';
+import type { PickedNote } from '@tools/ui/note-import/note-picker/note-picker.component';
 
 type Layout = 'split' | 'unified';
 
@@ -95,7 +96,7 @@ const forced = (choice: FormatChoice): DataFormat | null => (choice === 'auto' ?
 
 @Component({
   selector: 'app-structured-diff',
-  imports: [ChoiceMenuComponent, JsonNotePickerComponent, SegmentedChoiceComponent, TranslocoPipe],
+  imports: [ChoiceMenuComponent, NoteImportComponent, SegmentedChoiceComponent, TranslocoPipe],
   templateUrl: './structured-diff.component.html',
   styleUrl: './structured-diff.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -117,7 +118,6 @@ export class StructuredDiffComponent implements Tool {
   protected readonly ignoreWhitespace = toolState('diff.ignoreWhitespace', true);
   protected readonly layout = toolState<Layout>('diff.structuredLayout', 'split');
 
-  protected readonly picking = signal<JsonDiffSide | null>(null);
   protected readonly selectedPath = signal<string | null>(null);
 
   private readonly rowsBox = viewChild<ElementRef<HTMLElement>>('rowsBox');
@@ -244,15 +244,9 @@ export class StructuredDiffComponent implements Tool {
     }
   }
 
-  protected onPicked(note: PickedNote): void {
-    if (this.picking() === 'a') {
-      this.a.set(note.content);
-      this.aName.set(note.title);
-    } else {
-      this.b.set(note.content);
-      this.bName.set(note.title);
-    }
-    this.picking.set(null);
+  protected onPicked(side: JsonDiffSide, note: PickedNote): void {
+    (side === 'a' ? this.a : this.b).set(note.content);
+    (side === 'a' ? this.aName : this.bName).set(note.title);
   }
 
   protected onOption(which: 'order' | 'spaces', event: Event): void {

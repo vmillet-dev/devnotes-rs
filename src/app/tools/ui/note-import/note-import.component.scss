@@ -1,0 +1,28 @@
+@use 'mixins' as *;
+
+:host {
+  display: contents;
+}
+
+.import {
+  @include unstyled-control;
+  @include focus-ring;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 5px;
+  min-height: 24px;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--text-1);
+  white-space: nowrap;
+  cursor: pointer;
+  --icon-size: 13px;
+
+  &:hover {
+    border-color: var(--amber-dim);
+    color: var(--text-0);
+  }
+}

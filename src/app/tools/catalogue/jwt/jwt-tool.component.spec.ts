@@ -196,4 +196,10 @@ describe('JwtToolComponent', () => {
     expect(harness.element<HTMLTextAreaElement>('[data-testid="jwt-token"]').value).toBe('');
     expect(harness.element<HTMLInputElement>('[data-testid="jwt-secret"]').type).toBe('password');
   });
+
+  it('offers no note for the token nor the secret', async () => {
+    const harness = await renderTool(JwtToolComponent, undefined, { open: 'jwt' });
+
+    expect(harness.all('[data-testid^="note-import"]')).toEqual([]);
+  });
 });

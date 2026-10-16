@@ -12,6 +12,7 @@ import {
 } from '@shared/controls/segmented-choice/segmented-choice.component';
 import { CopyValueComponent } from '@tools/ui/copy-value/copy-value.component';
 import { LineViewComponent } from './line-view.component';
+import { NoteImportComponent } from '@tools/ui/note-import/note-import.component';
 
 type EndingChoice = LineEnding | 'keep';
 
@@ -34,7 +35,13 @@ const SAMPLE = 'first line\r\nsecond line\nthird line   \r\nlast line  \n';
  */
 @Component({
   selector: 'app-line-breaks-tool',
-  imports: [CopyValueComponent, LineViewComponent, SegmentedChoiceComponent, TranslocoPipe],
+  imports: [
+    CopyValueComponent,
+    LineViewComponent,
+    NoteImportComponent,
+    SegmentedChoiceComponent,
+    TranslocoPipe,
+  ],
   templateUrl: './line-breaks-tool.component.html',
   styleUrl: './line-breaks-tool.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
