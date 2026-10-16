@@ -55,7 +55,8 @@ describe('CanvasKeyboardDirective', () => {
   /** Documenting a key and binding it are the same act: the sheet is derived here. */
   it('documents exactly the keys it declares, in reading order', () => {
     expect(CANVAS_SHORTCUT_GROUP.id).toBe('notes.canvas');
-    expect(CANVAS_SHORTCUT_GROUP.shortcuts[0].keys).toEqual(['Ctrl', 'K']);
+    // Ctrl+K went to the area keys, since the tools answer it too.
+    expect(CANVAS_SHORTCUT_GROUP.shortcuts[0].keys).toEqual(['Ctrl', 'N']);
     expect(CANVAS_SHORTCUT_GROUP.shortcuts.every((shortcut) => shortcut.labelKey.length > 0)).toBe(true);
   });
 

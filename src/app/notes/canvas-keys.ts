@@ -108,7 +108,6 @@ function creating(kind: NoteKind): CanvasKey {
 
 /** In reading order, which is also the order the sheet lists them in. */
 export const CANVAS_KEYS: readonly CanvasKey[] = [
-  { keys: ['Ctrl', 'K'], labelKey: 'shortcuts.canvas.search' },
   creating('snippet'),
   creating('note'),
   creating('checklist'),

@@ -1,5 +1,5 @@
 import { Directive, inject } from '@angular/core';
-import { RAIL_ACTION, areaForKey, isToolSearchKey } from '@core/services/areas/area.model';
+import { RAIL_ACTION, areaForKey, isSearchKey, isToolSearchKey } from '@core/services/areas/area.model';
 import { AreaStore } from '@core/services/areas/area.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { ShortcutBindingsStore } from '@core/services/shortcuts/shortcut-bindings.store';
@@ -34,6 +34,13 @@ export class AreaKeysDirective {
     if (isToolSearchKey(event)) {
       event.preventDefault();
       this.areas.show('tools');
+      this.tools.requestSearch();
+      return;
+    }
+
+    // The notes' field takes Ctrl+K itself; the tools' is reached from here, an open tool included.
+    if (isSearchKey(event) && this.areas.current() === 'tools') {
+      event.preventDefault();
       this.tools.requestSearch();
       return;
     }
