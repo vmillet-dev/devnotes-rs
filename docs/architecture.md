@@ -3081,16 +3081,24 @@ knowing:
   Lezer packages, `@codemirror/legacy-modes` for TOML, the shells, C#, Kotlin, Ruby, Swift and
   Dart, and community packages for GraphQL (`cm6-graphql`, its grammar alone: its completion
   and lint want a schema) and Elixir (`codemirror-lang-elixir`).
-- **The search bar (Ctrl+F) is ours, the engine CodeMirror's.** `search({ createPanel })` hands
-  the panel to `code-editor/search-bar/`, an Angular component created into it and attached to
-  the application (`search-panel.ts`): its markup sits under our lint and our translations
-  (`editor.search`). The query, the highlighting, `findNext` and `replaceAll` stay
-  `@codemirror/search`'s; the bar keeps the count, capped at 1 000 (`search-query.ts`). Typing
+- **The search bar (Ctrl+F) is ours, the engines the editors'.** `search/search-bar/` speaks to a
+  `SearchTarget` (`search/search-target.ts`): the query, the count, seek, next and previous,
+  replace one or all, the editor's own keys. In a snippet, `search({ createPanel })` hands the
+  panel to the bar, created into it and attached to the application (`code-editor/search-panel.ts`,
+  whose `codeMirrorSearch` is the target): the query, the highlighting, `findNext` and
+  `replaceAll` stay `@codemirror/search`'s. In a Note, `rich-text-editor/rich-text-search.ts`
+  is the target: a ProseMirror plugin finds in each block's characters, its marks unseen —
+  `**Ship** it` holds « Ship it » — a line break or an image a separator no match crosses
+  (`search/text-search.ts` builds the pattern); matches are decorations, a replace is
+  `insertText` (the marks at its start kept), and Replace all one transaction, so one Ctrl+Z.
+  Its markup sits under our lint and our translations (`editor.search`); the bar keeps the
+  count, capped at 1 000. Typing
   selects the first match from where the search began, as a browser does. Replacing folds
   behind a chevron, unfolded by Ctrl+H too (`openReplace`, scoped to the editor and the bar, which
   reaches the keymap through `runScopeHandlers` as CodeMirror's own panel did). Case, whole word
-  and expression are remembered for the application (`devnotes.editorSearchOptions`), handed to
-  `search()` when a note's state is made. Past 200 000 characters, finding and counting wait for
+  and expression are remembered for the application, both editors alike
+  (`devnotes.editorSearchOptions`, `search/search-options.ts`), handed to `search()` when a
+  snippet's state is made. Past 200 000 characters, finding and counting wait for
   a 120 ms pause — a word found nowhere costs a whole read of 2 MB, some 150 ms a key — and the
   count reads « … » meanwhile. Go to line (Ctrl+Alt+G) stays CodeMirror's dialog, given the bar's
   field and button by `theme.ts`.

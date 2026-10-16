@@ -18,11 +18,16 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import type { ChainedCommands, Editor } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';
 import { LanguageTag, isLanguageTag } from '@core/model/language.model';
+import { PreferencesService } from '@core/services/preferences/preferences.service';
 import type { IndentChoice } from '@core/services/settings/app-settings.model';
 import { IconComponent, IconName } from '@shared/icon/icon.component';
 import { ChoiceMenuComponent } from '@shared/controls/choice-menu/choice-menu.component';
 import { indentUnit } from '../indentation';
+import { SearchBarComponent } from '../search/search-bar/search-bar.component';
+import { readSearchOptions } from '../search/search-options';
+import { SearchSpec, SearchTarget } from '../search/search-target';
 import { createRichEditor, focusFirst, languageOf } from './rich-text.engine';
+import { richTextSearch, searchKeyOf, searchSpecOf, setSearchSpec } from './rich-text-search';
 import { LANGUAGE_CHOICES } from '../language-choices';
 
 type Action =
@@ -104,7 +109,7 @@ const TABLE_TOOLS: readonly Tool[] = [
  */
 @Component({
   selector: 'app-rich-text-editor',
-  imports: [TranslocoPipe, IconComponent, ChoiceMenuComponent],
+  imports: [TranslocoPipe, IconComponent, ChoiceMenuComponent, SearchBarComponent],
   templateUrl: './rich-text-editor.component.html',
   styleUrl: './rich-text-editor.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -144,11 +149,19 @@ export class RichTextEditorComponent {
   protected readonly linksLive = signal(false);
   protected readonly overLink = signal(false);
 
+  /** Ctrl+F and Ctrl+H open the code field's bar over the text. */
+  protected readonly searchOpen = signal(false);
+  protected search: SearchTarget | null = null;
+
   /** Bumped on every transaction, which is what makes the toolbar's state follow the caret. */
   private readonly revision = signal(0);
   private readonly surface = viewChild.required<ElementRef<HTMLElement>>('surface');
   private readonly linkTextField = viewChild<ElementRef<HTMLInputElement>>('linkTextField');
   private readonly linkAddressField = viewChild<ElementRef<HTMLInputElement>>('linkAddressField');
+  private readonly searchBar = viewChild(SearchBarComponent);
+  private readonly preferences = inject(PreferencesService);
+  /** The query the bar had when it closed: reopened, it shows it again, as the code field does. */
+  private lastSearch: SearchSpec | null = null;
   private readonly injector = inject(Injector);
   private editor: Editor | null = null;
   /** What the form replaces, taken when it opened: the caret leaves for its fields. */
@@ -179,11 +192,19 @@ export class RichTextEditorComponent {
           this.changed.emit(markdown);
         },
         blur: () => this.blurred.emit(),
-        transaction: () => this.revision.update((count) => count + 1),
+        transaction: () => {
+          this.revision.update((count) => count + 1);
+          this.searchBar()?.follow({ edited: true });
+        },
         paste: (event) => this.onPaste(event),
         click: (event, href) => this.onClick(event, href),
         keydown: (event) => this.onKeydown(event),
         indent: (language) => indentUnit(this.codeIndent(), language),
+      });
+      this.search = richTextSearch(this.editor, {
+        find: () => this.openSearch(false),
+        replace: () => this.searchBar()?.follow({ replace: true }),
+        close: () => this.closeSearch(),
       });
       this.revision.update((count) => count + 1);
     });
@@ -408,6 +429,44 @@ export class RichTextEditorComponent {
       return true;
     }
 
-    return false;
+    const key = searchKeyOf(event);
+    if (key === 'find' || key === 'replace') {
+      this.openSearch(key === 'replace');
+      return true;
+    }
+
+    return key !== null && this.searchOpen() && (this.search?.handleKey(event) ?? false);
+  }
+
+  /** On the selected words when there are some on one line, as the code field opens. */
+  private openSearch(replace: boolean): void {
+    const editor = this.editor;
+    if (!editor) return;
+
+    const { from, to } = editor.state.selection;
+    const words = editor.state.doc.textBetween(from, to, '\n');
+    const previous = searchSpecOf(editor) ??
+      this.lastSearch ?? { search: '', replace: '', ...readSearchOptions(this.preferences) };
+    setSearchSpec(editor, { ...previous, search: words && !words.includes('\n') ? words : previous.search });
+    this.searchOpen.set(true);
+    afterNextRender(
+      () => {
+        const bar = this.searchBar();
+        bar?.mounted();
+        if (replace) bar?.follow({ replace: true });
+      },
+      { injector: this.injector },
+    );
+  }
+
+  private closeSearch(): void {
+    this.searchOpen.set(false);
+    const editor = this.editor;
+    if (!editor) return;
+
+    this.lastSearch = searchSpecOf(editor);
+    setSearchSpec(editor, null);
+    // Once the bar has left: focused before, the caret went to the page with the bar's field.
+    afterNextRender(() => focusFirst(editor), { injector: this.injector });
   }
 }

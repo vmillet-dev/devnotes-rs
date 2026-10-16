@@ -12,28 +12,10 @@ import {
   viewChild,
 } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import {
-  SearchQuery,
-  closeSearchPanel,
-  findNext,
-  findPrevious,
-  getSearchQuery,
-  replaceAll,
-  replaceNext,
-  setSearchQuery,
-} from '@codemirror/search';
-import { EditorView, ViewUpdate, runScopeHandlers } from '@codemirror/view';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
 import { IconComponent } from '@shared/icon/icon.component';
-import {
-  MatchCount,
-  SearchOption,
-  countMatches,
-  firstMatchFrom,
-  readSearchOptions,
-  showReplace,
-  writeSearchOptions,
-} from '../search-query';
+import { SearchOption, readSearchOptions, writeSearchOptions } from '../search-options';
+import { MatchCount, SearchChange, SearchSpec, SearchTarget } from '../search-target';
 
 /**
  * Past this length, finding and counting wait for a pause in the typing: on 2 MB, a word found
@@ -45,9 +27,9 @@ const PAUSE_MS = 120;
 const NONE: MatchCount = { total: 0, current: null, capped: false };
 
 /**
- * Our search bar over CodeMirror's engine: the query, the highlighting and the replacing stay
- * `@codemirror/search`'s; this draws them and keeps the count. Typing selects the first match
- * from where the search started, as a browser does.
+ * One search bar over either editor: it draws the query and keeps the count, the editor behind
+ * `SearchTarget` finds, highlights and replaces. Typing selects the first match from where the
+ * search started, as a browser does.
  */
 @Component({
   selector: 'app-search-bar',
@@ -58,7 +40,7 @@ const NONE: MatchCount = { total: 0, current: null, capped: false };
   host: { role: 'search', '(keydown)': 'onKeydown($event)' },
 })
 export class SearchBarComponent {
-  readonly view = input.required<EditorView>();
+  readonly target = input.required<SearchTarget>();
 
   private readonly preferences = inject(PreferencesService);
   private readonly transloco = inject(TranslocoService);
@@ -96,30 +78,22 @@ export class SearchBarComponent {
     inject(DestroyRef).onDestroy(() => this.timers.forEach((timer) => clearTimeout(timer)));
   }
 
-  /** CodeMirror opened the bar, the query already taken from the selection. */
+  /** The editor opened the bar, the query already taken from the selection. */
   mounted(): void {
-    const view = this.view();
-    this.origin = view.state.selection.main.from;
-    this.adopt(getSearchQuery(view.state));
-    this.recount(view);
+    const target = this.target();
+    this.origin = target.caret();
+    this.adopt(target.query());
+    this.recount();
     const field = this.findField().nativeElement;
     field.focus();
     field.select();
   }
 
   /** Every editor update: a query set from outside (Ctrl+F on a selection), an edit, a move. */
-  follow(update: ViewUpdate): void {
-    let queried = false;
-    for (const transaction of update.transactions) {
-      for (const effect of transaction.effects) {
-        if (effect.is(setSearchQuery)) {
-          queried = true;
-          this.adopt(effect.value);
-        }
-        if (effect.is(showReplace)) this.unfoldReplace();
-      }
-    }
-    if (queried || update.docChanged || update.selectionSet) this.recount(update.view);
+  follow(change: SearchChange): void {
+    if (change.query) this.adopt(change.query);
+    if (change.replace) this.unfoldReplace();
+    if (change.query || change.edited) this.recount();
   }
 
   protected onFind(value: string): void {
@@ -129,7 +103,7 @@ export class SearchBarComponent {
 
   protected onReplaceInput(value: string): void {
     this.replaceText.set(value);
-    this.view().dispatch({ effects: setSearchQuery.of(this.query()) });
+    this.target().setQuery(this.query());
   }
 
   protected toggle(option: SearchOption): void {
@@ -148,71 +122,58 @@ export class SearchBarComponent {
   }
 
   protected next(): void {
-    findNext(this.view());
+    this.target().next();
   }
 
   protected previous(): void {
-    findPrevious(this.view());
+    this.target().previous();
   }
 
   protected replaceOne(): void {
-    replaceNext(this.view());
+    this.target().replaceOne();
   }
 
   protected replaceEvery(): void {
-    replaceAll(this.view());
+    this.target().replaceAll();
   }
 
   protected close(): void {
-    closeSearchPanel(this.view());
+    this.target().close();
   }
 
   /**
    * Enter and Shift+Enter move between matches, in the replace field Enter replaces; F3, Ctrl+G
-   * Ctrl+H and Escape are the editor's keymap, reached from here as from CodeMirror's own panel:
-   * Escape closes the bar and hands the caret back, prevented so that the editor stops it there.
+   * Ctrl+H and Escape are the editor's, reached from here as from inside it: Escape closes the
+   * bar and hands the caret back, prevented so that the editor stops it there.
    */
   protected onKeydown(event: KeyboardEvent): void {
-    const view = this.view();
-    if (runScopeHandlers(view, event, 'search-panel')) {
+    const target = this.target();
+    if (target.handleKey(event)) {
       event.preventDefault();
       return;
     }
     if (event.key !== 'Enter') return;
     event.preventDefault();
     if (event.target === this.replaceField()?.nativeElement) {
-      replaceNext(view);
+      target.replaceOne();
     } else if (event.shiftKey) {
-      findPrevious(view);
+      target.previous();
     } else {
-      findNext(view);
+      target.next();
     }
   }
 
-  private query(): SearchQuery {
-    return new SearchQuery({ search: this.text(), replace: this.replaceText(), ...this.options() });
+  private query(): SearchSpec {
+    return { search: this.text(), replace: this.replaceText(), ...this.options() };
   }
 
   private search(): void {
-    const view = this.view();
     const query = this.query();
-    view.dispatch({ effects: setSearchQuery.of(query) });
-    this.afterPause(view, 'seek', () => this.seek(query));
+    this.target().setQuery(query);
+    this.afterPause('seek', () => this.target().seek(query, this.origin));
   }
 
-  /** The first match from the origin, selected and brought into sight. */
-  private seek(query: SearchQuery): void {
-    const view = this.view();
-    const match = firstMatchFrom(query, view.state, this.origin);
-    if (!match) return;
-    view.dispatch({
-      selection: { anchor: match.from, head: match.to },
-      effects: EditorView.scrollIntoView(match.from, { y: 'center' }),
-      userEvent: 'select.search',
-    });
-  }
-
-  private adopt(query: SearchQuery): void {
+  private adopt(query: SearchSpec): void {
     this.text.set(query.search);
     this.replaceText.set(query.replace);
     this.options.set({
@@ -227,17 +188,17 @@ export class SearchBarComponent {
     afterNextRender(() => this.replaceField()?.nativeElement.focus(), { injector: this.injector });
   }
 
-  private recount(view: EditorView): void {
-    this.counting.set(view.state.doc.length > LARGE);
-    this.afterPause(view, 'count', () => {
-      this.count.set(countMatches(getSearchQuery(view.state), view.state));
+  private recount(): void {
+    this.counting.set(this.target().size() > LARGE);
+    this.afterPause('count', () => {
+      this.count.set(this.target().count());
       this.counting.set(false);
     });
   }
 
-  private afterPause(view: EditorView, job: 'seek' | 'count', run: () => void): void {
+  private afterPause(job: 'seek' | 'count', run: () => void): void {
     clearTimeout(this.timers.get(job));
-    if (view.state.doc.length > LARGE) {
+    if (this.target().size() > LARGE) {
       this.timers.set(job, setTimeout(run, PAUSE_MS));
     } else {
       run();

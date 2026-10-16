@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { SearchQuery } from '@codemirror/search';
 import { EditorState } from '@codemirror/state';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
-import { countMatches, firstMatchFrom, readSearchOptions, writeSearchOptions } from './search-query';
+import { readSearchOptions, writeSearchOptions } from '../search/search-options';
+import { countMatches, firstMatchFrom } from './search-query';
 
 const state = (doc: string, anchor = 0, head = anchor) =>
   EditorState.create({ doc, selection: { anchor, head } });

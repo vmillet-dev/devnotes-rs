@@ -1,23 +1,31 @@
 @use 'mixins' as *;
 
-// The editor's column: the toolbar stays while the text scrolls under it.
+// The editor's column: the toolbar, and the search bar under it, stay while the text scrolls.
 :host {
   display: flex;
   flex-direction: column;
   min-height: 100%;
 }
 
-.rich-toolbar {
+.rich-head {
   position: sticky;
   top: 0;
   z-index: 1;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.rich-search {
+  border-top: 1px solid var(--line-soft);
+  padding-inline: 18px;
+}
+
+.rich-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 10px;
   padding: 8px 24px;
-  background: var(--bg-1);
-  border-bottom: 1px solid var(--line-soft);
 }
 
 .rich-group {

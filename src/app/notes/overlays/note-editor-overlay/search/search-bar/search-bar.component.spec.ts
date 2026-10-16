@@ -5,7 +5,7 @@ import { openSearchPanel } from '@codemirror/search';
 import { EditorView } from '@codemirror/view';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
 import { provideTranslocoTesting } from '@testing/provide-transloco-testing';
-import { CodeEditorComponent } from '../code-editor.component';
+import { CodeEditorComponent } from '@notes/overlays/note-editor-overlay/code-editor/code-editor.component';
 
 /** The bar as CodeMirror opens it: over a real editor, as in the overlay. */
 describe('SearchBarComponent', () => {
