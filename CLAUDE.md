@@ -101,7 +101,7 @@ Principles:
 ### Tests
 
 - Specs substitute repositories by class through `provideAppTesting()`; fakes use `implements Pick<…, keyof …>` and reimplement no Rust rule; `AppWindowService` and `FileDialogService` are always faked. → "Testing".
-- ⚠️ CI runs each spec file alone (`E2E_SPEC`, one job per file and OS) on a virgin profile; it must pass alone and seed its own state, and the files of one local run share one process, DB and preferences file; `reopenSession()` is not a restart. The harness is a build flavour (`tauri.e2e.conf.json`, `e2e` feature). ⚠️ Wait on conditions (`eventually`), never durations; address controls by `data-testid`. → "One application per run, one run per scenario".
+- ⚠️ CI runs each spec file alone (`E2E_SPEC`, one after the other in the three groups of `e2e/groups.json` per OS; a new file joins the group with the shortest run) on a virgin profile; it must pass alone and seed its own state, and the files of one local run share one process, DB and preferences file; `reopenSession()` is not a restart. The harness is a build flavour (`tauri.e2e.conf.json`, `e2e` feature). ⚠️ Wait on conditions (`eventually`), never durations; address controls by `data-testid`. → "One application per run, one run per scenario".
 
 ## Tickets and pull requests
 

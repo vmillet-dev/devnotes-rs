@@ -6,7 +6,7 @@ description: Use when writing, running or debugging end-to-end specs for the ass
 # Desktop e2e
 
 - Build first, every time `src/` or `src-tauri/` changed: `npm run build`, `npm run e2e:build`, then `npm run test:e2e` (resets the profile, runs `wdio`). The WebDriver server is inside the `e2e` build: no `tauri-driver`, no msedgedriver to install.
-- CI runs each file alone on a virgin profile (one job per file and OS): `E2E_SPEC=NN-name npm run test:e2e` does the same locally, and every file must pass that way. The files of one run share one process, one DB, one preferences file, in the order of their prefix; each file seeds its own preconditions and assumes no clean corpus. New spec = next number, `e2e/specs/NN-name.e2e.ts`; reuse `e2e/support/`.
+- CI runs each file alone on a virgin profile (in turn, in one of the three groups of `e2e/groups.json` per OS — a new file goes to the group with the shortest run, or `e2e-scenarios` fails): `E2E_SPEC=NN-name npm run test:e2e` does the same locally, and every file must pass that way. The files of one run share one process, one DB, one preferences file, in the order of their prefix; each file seeds its own preconditions and assumes no clean corpus. New spec = next number, `e2e/specs/NN-name.e2e.ts`; reuse `e2e/support/`.
 - Wait on conditions with `eventually` (`support/app.ts`), never a duration; a `browser.pause` is only for "nothing happened" and marked `deliberately` (`scripts/e2e-waits.test.mjs` enforces it).
 - Select by `data-testid`, never by text: the suite switches language. Add the test id in the template if missing.
 - `reopenSession()` is not a restart. Never point the suite at a real library.

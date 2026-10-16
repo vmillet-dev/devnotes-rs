@@ -22,8 +22,8 @@ const appBinary = resolve(
 );
 
 /**
- * `E2E_SPEC=05-spaces` runs that file alone, which is how CI gives each scenario a job of its
- * own. A name that matches no file fails here: a matrix entry that ran nothing would pass.
+ * `E2E_SPEC=05-spaces` runs that file alone, which is how CI runs each scenario of a group in
+ * turn. A name that matches no file fails here: a run that ran nothing would pass.
  */
 function specs(): string[] {
   const name = process.env['E2E_SPEC'];

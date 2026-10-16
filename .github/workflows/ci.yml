@@ -314,11 +314,13 @@ jobs:
   # where Linux keeps them apart. It is the only runner able to disprove a path — it has already
   # caught a `preferences.json` looked for in the wrong place.
   #
-  # Three steps: the scenarios are listed here; then `e2e.yml`, once per platform, builds the
-  # binary and runs each scenario alone on a runner of its own, against that binary and a
-  # virgin profile.
+  # Three steps: the groups are read here; then `e2e.yml`, once per platform, builds the binary
+  # and runs three groups on three runners, each scenario alone in turn, against that binary and
+  # a virgin profile. Three per platform rather than a runner per scenario: a pull request takes
+  # six runners, so several open at once do not queue behind one another.
 
-  # The files themselves, so a new scenario joins the matrix without a second list to edit.
+  # `e2e/groups.json`, checked against the spec files: a scenario in no group, in two, or with
+  # no file fails here rather than going unrun.
   e2e-scenarios:
     name: E2E scenarios
     needs: changes
@@ -326,20 +328,21 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 5
     outputs:
-      specs: ${{ steps.list.outputs.specs }}
+      groups: ${{ steps.list.outputs.groups }}
     steps:
       - uses: actions/checkout@v7
         with:
-          sparse-checkout: e2e/specs
+          sparse-checkout: |
+            e2e
+            scripts
 
-      # Names without `.e2e.ts`: what `E2E_SPEC` takes and what each job is called.
       - id: list
         run: |
-          specs=$(find e2e/specs -name '*.e2e.ts' -printf '%f\n' | sed 's/\.e2e\.ts$//' | sort | jq -Rnc '[inputs]')
-          echo "specs=$specs" >> "$GITHUB_OUTPUT"
-          echo "$specs" | jq -r '"\(length) scenarios: \(join(", "))"'
+          groups=$(node scripts/e2e-groups.mjs)
+          echo "groups=$groups" >> "$GITHUB_OUTPUT"
+          echo "$groups" | jq -r '.[] | "group \(.name): \(.specs | length) scenarios, \(.specs | join(", "))"'
 
-  # `e2e.yml` once per platform: its build, then its scenarios. Neither waits for the other.
+  # `e2e.yml` once per platform: its build, then its groups. Neither waits for the other.
   # One failing scenario decides the run: the other platform is cancelled with it.
   e2e:
     name: E2E (${{ matrix.os }})
@@ -351,7 +354,7 @@ jobs:
     uses: ./.github/workflows/e2e.yml
     with:
       os: ${{ matrix.os }}
-      specs: ${{ needs.e2e-scenarios.outputs.specs }}
+      groups: ${{ needs.e2e-scenarios.outputs.groups }}
 
   # Then everything else still running — Rust tests, Sonar — is cancelled too, freeing the
   # runners other pull requests are queued behind. A job of its own rather than a step of the

@@ -1,7 +1,7 @@
 name: E2E
 
-# One platform's end-to-end run: its binary, then each scenario against it. `ci.yml` calls it
-# once per platform, so the scenarios of one start as soon as its own binary is ready — a
+# One platform's end-to-end run: its binary, then its groups of scenarios against it. `ci.yml`
+# calls it once per platform, so the groups of one start as soon as its own binary is ready — a
 # matrix of builds would hold them until the slower platform had built too.
 on:
   workflow_call:
@@ -10,8 +10,8 @@ on:
         description: The runner image, `windows-latest` or `ubuntu-22.04`.
         required: true
         type: string
-      specs:
-        description: The scenario names, as a JSON array.
+      groups:
+        description: The groups of `e2e/groups.json`, as a JSON array of name and specs.
         required: true
         type: string
 
@@ -71,22 +71,22 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  # No cargo here: the binary comes from `build`. Each job is its own runner, so its own
-  # process, its own profile and its own logs, and nothing in it depends on another job.
-  scenario:
-    name: ${{ matrix.spec }}
+  # No cargo here: the binary comes from `build`. A group is a runner that sets up once and runs
+  # its scenarios one after the other, each its own process, profile and logs: nothing in one
+  # scenario depends on the one before it.
+  group:
+    name: group ${{ matrix.group.name }}
     needs: build
     runs-on: ${{ inputs.os }}
-    timeout-minutes: 20
+    timeout-minutes: 40
     strategy:
-      # The first failure cancels this platform's other scenarios: the run's result is known.
+      # The first failure cancels this platform's other groups: the run's result is known.
       fail-fast: true
-      # Per platform, and the account's concurrency caps both together: the platform built first
-      # takes every runner until the other's binary is ready. One runner per job, whatever
-      # WebdriverIO's own `maxInstances` says.
-      max-parallel: 20
+      # Three runners per platform and pull request, whatever the account could give: several
+      # pull requests open at once then share the runners instead of queuing behind one.
+      max-parallel: 3
       matrix:
-        spec: ${{ fromJSON(inputs.specs) }}
+        group: ${{ fromJSON(inputs.groups) }}
     defaults:
       run:
         shell: bash
@@ -120,30 +120,48 @@ jobs:
         if: runner.os == 'Linux'
         run: chmod +x src-tauri/target/debug/devnotes
 
-      # `npm run test:e2e` wipes the profile first, so a re-run of the job starts as virgin as
-      # the first. `xvfb-run` wraps the runner, not the binary: the wdio service is what
-      # launches the application, from its own `onPrepare`, so DISPLAY has to exist for the
-      # whole process.
-      - name: Run ${{ matrix.spec }}
+      # One `npm run test:e2e` per scenario, which stops any application left running and wipes
+      # the profile first: each starts as virgin as it would on a runner of its own. The group
+      # stops at its first failure. `xvfb-run` wraps the runner, not the binary: the wdio service
+      # is what launches the application, from its own `onPrepare`, so DISPLAY has to exist for
+      # the whole process.
+      - name: Run group ${{ matrix.group.name }}
         env:
-          E2E_SPEC: ${{ matrix.spec }}
+          SPECS: ${{ join(matrix.group.specs, ' ') }}
         run: |
-          start=$(date +%s)
-          if [ "$RUNNER_OS" = "Linux" ]; then
-            xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" npm run test:e2e
-          else
-            npm run test:e2e
-          fi
-          echo "\`$E2E_SPEC\` (${{ inputs.os }}) — $(($(date +%s) - start)) s" >> "$GITHUB_STEP_SUMMARY"
+          for spec in $SPECS; do
+            echo "::group::$spec"
+            start=$(date +%s)
+            status=0
+            if [ "$RUNNER_OS" = "Linux" ]; then
+              E2E_SPEC=$spec xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" npm run test:e2e || status=$?
+            else
+              E2E_SPEC=$spec npm run test:e2e || status=$?
+            fi
+            echo "::endgroup::"
+            if [ -d e2e/logs ]; then
+              mkdir -p e2e/logs-of
+              mv e2e/logs "e2e/logs-of/$spec"
+            fi
+            if [ "$status" -ne 0 ]; then
+              echo "::error title=E2E::$spec failed (${{ inputs.os }}, group ${{ matrix.group.name }})"
+              echo "\`$spec\` (${{ inputs.os }}) — failed after $(($(date +%s) - start)) s" >> "$GITHUB_STEP_SUMMARY"
+              exit "$status"
+            fi
+            echo "\`$spec\` (${{ inputs.os }}) — $(($(date +%s) - start)) s" >> "$GITHUB_STEP_SUMMARY"
+          done
 
       # The runner's log, the application's Rust log, and for each failed test a screenshot plus
       # what was on screen, the page's console included — never the profile, whose library is
-      # the run's. `E2E_LOG_LEVEL=trace` by hand when a session refuses to open. Named per attempt:
-      # a re-run that passes would otherwise replace the logs of the attempt that failed.
+      # the run's. One folder per scenario under `logs-of/`; `logs/` is the scenario a timeout cut
+      # short. `E2E_LOG_LEVEL=trace` by hand when a session refuses to open. Named per attempt: a
+      # re-run that passes would otherwise replace the logs of the attempt that failed.
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: e2e-logs-${{ inputs.os }}-${{ matrix.spec }}-${{ github.run_attempt }}
-          path: e2e/logs
+          name: e2e-logs-${{ inputs.os }}-group-${{ matrix.group.name }}-${{ github.run_attempt }}
+          path: |
+            e2e/logs-of
+            e2e/logs
           if-no-files-found: ignore
           retention-days: 7

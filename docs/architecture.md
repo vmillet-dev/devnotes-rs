@@ -5951,7 +5951,7 @@ change it either, because the service skips its per-worker spawn for this provid
 (`if (this.perWorkerMode && !instanceId && !this.isEmbeddedMode)`).
 
 So **every spec file of a run shares one process, one SQLite file and one `preferences.json`**.
-That is why CI gives each file a run of its own, on a runner of its own (see "In CI"):
+That is why CI gives each file a run of its own, one after the other on its group's runner (see "In CI"):
 `E2E_SPEC=05-spaces npm run test:e2e` runs that file alone, and `e2e/wdio.conf.ts` refuses a
 name that matches no file, since a run that ran nothing would pass. Without it, the run takes
 every file in one application, in the order of their numeric prefix — a local convenience over
@@ -6083,9 +6083,15 @@ case the control is asserted on — it exists, it is labelled — and never clic
 
 #### In CI
 
-The suite runs on `windows-latest` and `ubuntu-22.04`. `ci.yml` lists the scenarios —
-`e2e-scenarios` reads `e2e/specs/*.e2e.ts`, so a new file joins the matrix without a second list
-to edit — then calls `e2e.yml` once per platform. ⚠️ A workflow per platform and not a matrix of
+The suite runs on `windows-latest` and `ubuntu-22.04`, in the three groups of `e2e/groups.json`.
+`e2e-scenarios` in `ci.yml` runs `scripts/e2e-groups.mjs`, which fails when a file of
+`e2e/specs/` is in no group, is in two, or a group names a file that does not exist — a new
+scenario cannot go unrun — then `ci.yml` calls `e2e.yml` once per platform. ⚠️ Three groups and
+not a runner per scenario: 32 scenario jobs per platform took every runner the account has, and
+the pull requests open at the same time queued behind one another; a pull request now takes six.
+The groups are balanced by the measured duration of each scenario (the step summary prints it),
+so the three of a platform end within a minute of each other; a new scenario goes to the group
+with the shortest run. ⚠️ A workflow per platform and not a matrix of
 builds: a job that `needs` a matrix waits for every leg of it, and the Linux scenarios sat
 behind the Windows build. `e2e.yml` holds two jobs:
 
@@ -6095,19 +6101,19 @@ behind the Windows build. `e2e.yml` holds two jobs:
   `target/<profile>` directory holding that file; anywhere else it looks in
   `/usr/lib/devnotes`, and the identity tool answers that its lists are missing. The front end
   is embedded in the binary; Windows needs no DLL beside it.
-- **`scenario`** is one job per scenario: it installs what the binary loads — WebKitGTK and an
-  X server on Linux, never the toolchain — runs `npm ci`, downloads the binary into
-  `src-tauri/target/debug`, where `wdio.conf.ts` looks, and runs
-  `E2E_SPEC=<name> npm run test:e2e`. No cargo runs there. `fail-fast: false`, so one red
-  scenario does not hide the others, and `max-parallel: 20` per platform: the account's
-  concurrency caps both together, so the platform built first takes every runner until the
-  other's binary is ready.
+- **`group`** is one job per group, `max-parallel: 3` per platform: it installs what the binary
+  loads — WebKitGTK and an X server on Linux, never the toolchain — runs `npm ci` and downloads
+  the binary into `src-tauri/target/debug`, where `wdio.conf.ts` looks, once; then runs
+  `E2E_SPEC=<name> npm run test:e2e` for each of its scenarios in turn, stopping at the first
+  that fails. No cargo runs there. `fail-fast: true`: the first red group cancels the others.
 
-Each job is a runner of its own, so its process, its profile, its WebDriver port and the
-home-space marker under `tmpdir()` are its own too: that is the isolation, and the harness
-redirects no data directory. It could not on Windows anyway, where `dirs` asks the known-folder
-API rather than reading `%APPDATA%`. A job uploads `e2e-logs-<os>-<scenario>-<attempt>`, even when
-it fails — per attempt, so a re-run that passes keeps the failed attempt's logs beside its own: the runner's log, the application's stdout (`captureBackendLogs`: Rust, through the log
+Each scenario is a run of its own: `npm run test:e2e` stops an application left running and
+wipes the profile and the home-space marker under `tmpdir()` before it starts, so its process,
+its profile and its library are its own, and the scenario before it leaves nothing behind. The harness redirects no data directory — it
+could not on Windows anyway, where `dirs` asks the known-folder API rather than reading
+`%APPDATA%`. A group uploads `e2e-logs-<os>-group-<name>-<attempt>`, even when it fails, a
+folder per scenario under `logs-of/` — per attempt, so a re-run that passes keeps the failed
+attempt's logs beside its own: the runner's log, the application's stdout (`captureBackendLogs`: Rust, through the log
 plugin's stdout target) and, for each failed test, a screenshot and what was on screen — the
 page's console warnings and errors with it, recorded in the page by `beforeTest`. Never the
 profile: its library is the run's. ⚠️ Not the service's `captureFrontendLogs`: the polyfill
