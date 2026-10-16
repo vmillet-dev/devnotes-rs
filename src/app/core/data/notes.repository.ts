@@ -118,8 +118,14 @@ export class NotesRepository {
     return unwrap('restore_notes', await commands.restoreNotes([...ids]));
   }
 
-  async loadTrash(): Promise<readonly TrashedNote[]> {
-    return unwrap('list_trash', await commands.listTrash()).map(toTrashedNote);
+  /** `search` narrows the trash the way the canvas search does; empty lists everything. */
+  async loadTrash(search = ''): Promise<readonly TrashedNote[]> {
+    return unwrap('list_trash', await commands.listTrash(search)).map(toTrashedNote);
+  }
+
+  /** What the trash lists for `search`, every note when it is empty. */
+  async restoreTrash(search = ''): Promise<number> {
+    return unwrap('restore_trash', await commands.restoreTrash(search));
   }
 
   async purge(ids: readonly string[]): Promise<number> {

@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { SEARCH_DEBOUNCE_MS } from '@core/services/time/debounce';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { FakeNotesRepository } from '@testing/fake-notes-repository';
 import { createNote } from '@testing/note.fixture';
@@ -47,6 +48,50 @@ describe('TrashStore', () => {
     await harness.store.open();
 
     expect(harness.store.isOpen()).toBe(true);
+    expect(harness.store.notes().map((note) => note.id)).toEqual(['note-1']);
+  });
+
+  it('asks Rust for what is typed, after the search pause, and opens on everything', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      await harness.repository.delete('note-1');
+      await harness.repository.delete('note-2');
+      await harness.store.open();
+
+      harness.store.setSearch('sec');
+      expect(harness.repository.lastTrashSearch).toBe('');
+      await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
+
+      expect(harness.repository.lastTrashSearch).toBe('sec');
+      expect(harness.store.notes().map((note) => note.id)).toEqual(['note-2']);
+
+      harness.store.close();
+      await harness.store.open();
+      expect(harness.store.search()).toBe('');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('restores everything at once, and says the canvas must reload', async () => {
+    await harness.repository.delete('note-1');
+    await harness.repository.delete('note-2');
+    await harness.store.open();
+
+    expect(await harness.store.restoreAll()).toBe(true);
+    expect(harness.store.notes()).toEqual([]);
+  });
+
+  it('restores what the search found, and leaves the rest in the trash', async () => {
+    await harness.repository.delete('note-1');
+    await harness.repository.delete('note-2');
+    await harness.store.open();
+    harness.store.setSearch('sec');
+
+    expect(await harness.store.restoreAll()).toBe(true);
+    harness.store.setSearch('');
+    await harness.store.open();
+
     expect(harness.store.notes().map((note) => note.id)).toEqual(['note-1']);
   });
 

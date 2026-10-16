@@ -96,8 +96,13 @@ export const commands = {
 	deleteNote: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("delete_note", { id })),
 	deleteNotes: (ids: string[]) => typedError<number, AppError>(__TAURI_INVOKE("delete_notes", { ids })),
 	restoreNotes: (ids: string[]) => typedError<number, AppError>(__TAURI_INVOKE("restore_notes", { ids })),
-	/**  Purges first: the trash must never show a note a restart would erase. */
-	listTrash: () => typedError<TrashedNote[], AppError>(__TAURI_INVOKE("list_trash")),
+	/**
+	 *  Purges first: the trash must never show a note a restart would erase. `search` narrows it
+	 *  the way the canvas search does, folded; empty lists everything.
+	 */
+	listTrash: (search: string) => typedError<TrashedNote[], AppError>(__TAURI_INVOKE("list_trash", { search })),
+	/**  What the trash lists for `search` back where it was: the way out of a mistaken bulk deletion. */
+	restoreTrash: (search: string) => typedError<number, AppError>(__TAURI_INVOKE("restore_trash", { search })),
 	purgeNotes: (ids: string[]) => typedError<number, AppError>(__TAURI_INVOKE("purge_notes", { ids })),
 	emptyTrash: () => typedError<number, AppError>(__TAURI_INVOKE("empty_trash")),
 	moveNotes: (ids: string[], spaceId: string) => typedError<NotePlacement[], AppError>(__TAURI_INVOKE("move_notes", { ids, spaceId })),

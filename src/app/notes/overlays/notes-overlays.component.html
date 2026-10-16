@@ -47,6 +47,9 @@
   <app-trash-panel
     [notes]="trash.notes()"
     [isLoading]="trash.isLoading()"
+    [search]="trash.search()"
+    (searchChanged)="trash.setSearch($event)"
+    (restoreAllRequested)="trash.restoreAll()"
     (closed)="trash.close()"
     (restoreRequested)="onRestore($event)"
     (purgeRequested)="trash.purge($event)"

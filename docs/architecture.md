@@ -3135,6 +3135,12 @@ consequences:
 `purgeAt` is **derived**, never stored: the retention can change between versions and a
 deadline frozen in the database would not follow.
 
+The panel is searched like the canvas: `list_trash(search)` folds case and accents with
+`view::fold` and matches with `view::matches_search`. `restore_trash(search)` takes the same
+search, so "restore" puts back exactly what the list shows, the whole trash when nothing is
+typed: the way out of a mistaken bulk deletion. Emptying the trash stands aside while it is
+searched — it would erase notes the user cannot see.
+
 On the front, a reversible action records what it changed and shows `UndoBarComponent` for
 `UNDO_WINDOW_MS` (8 s).
 

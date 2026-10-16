@@ -5,13 +5,15 @@ use devnotes_lib::error::ErrorCode;
 use devnotes_lib::notes::model::{NoteDraft, NotePatch, SampleNote};
 use devnotes_lib::notes::priority::Priority;
 use devnotes_lib::notes::revision::DiffLine;
+use devnotes_lib::notes::trash::TrashedNote;
 use devnotes_lib::notes::view::{Grouping, NoteFilter, NoteOrder, NotesQuery};
 use devnotes_lib::notes::{
     count_notes_tagged, create_note, delete_note, delete_notes, delete_tags, duplicate_note,
     empty_trash, fill_placeholders, get_note, list_global_placeholders, list_revisions, list_tags,
     list_trash, move_notes, move_notes_back, purge_notes, query_notes, rename_tags, restore_notes,
-    restore_priorities, restore_revision, revision_diff, seed_samples, set_global_placeholders,
-    set_placeholder_values, set_priority, tag_notes, untag_notes, update_note,
+    restore_priorities, restore_revision, restore_trash, revision_diff, seed_samples,
+    set_global_placeholders, set_placeholder_values, set_priority, tag_notes, untag_notes,
+    update_note,
 };
 
 use super::common::snippet;
@@ -203,7 +205,7 @@ fn the_trash_takes_notes_gives_them_back_and_forgets_them() {
     let second = note(&session, snippet(&space));
 
     session.call(|app| delete_note(first.clone(), app)).unwrap();
-    let trashed = session.call(list_trash).unwrap();
+    let trashed = session.call(|app| list_trash(String::new(), app)).unwrap();
     let restored = session.call(|app| restore_notes(ids(&first), app)).unwrap();
 
     let deleted = session
@@ -215,7 +217,48 @@ fn the_trash_takes_notes_gives_them_back_and_forgets_them() {
     assert_eq!(trashed.len(), 1);
     assert_eq!(trashed[0].note.id, first);
     assert_eq!((restored, deleted, purged, emptied), (1, 2, 1, 1));
-    assert!(session.call(list_trash).unwrap().is_empty());
+    assert!(
+        session
+            .call(|app| list_trash(String::new(), app))
+            .unwrap()
+            .is_empty()
+    );
+}
+
+/// Found by a word the canvas search would find, folded; what was found is what comes back.
+#[test]
+fn the_trash_is_searched_and_what_it_found_restored() {
+    let session = Session::open();
+    let space = session.space("Personal");
+    let mut titled = snippet(&space);
+    titled.title = "Rotation du certificat".to_string();
+    let found = note(&session, titled);
+    let other = note(&session, snippet(&space));
+    session
+        .call(|app| delete_notes(vec![found.clone(), other.clone()], app))
+        .unwrap();
+
+    let narrowed = session
+        .call(|app| list_trash(" CERTIFICAT ".to_string(), app))
+        .unwrap();
+    let restored = session
+        .call(|app| restore_trash("certificat".to_string(), app))
+        .unwrap();
+    let left = session.call(|app| list_trash(String::new(), app)).unwrap();
+    let rest = session
+        .call(|app| restore_trash(String::new(), app))
+        .unwrap();
+
+    let ids = |notes: &[TrashedNote]| {
+        notes
+            .iter()
+            .map(|note| note.note.id.clone())
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(ids(&narrowed), [found]);
+    assert_eq!(restored, 1);
+    assert_eq!(ids(&left), [other]);
+    assert_eq!(rest, 1);
 }
 
 #[test]

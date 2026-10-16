@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  linkedSignal,
+  output,
+  signal,
+} from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { TranslationRef } from '@core/services/i18n/translation-ref.model';
 import { ClockService } from '@core/services/time/clock.service';
@@ -31,15 +40,22 @@ export class TrashPanelComponent {
 
   readonly notes = input.required<readonly TrashedNote[]>();
   readonly isLoading = input(false);
+  /** What the trash is searched for: restoring reaches what it found, and emptying stands aside. */
+  readonly search = input('');
 
   readonly closed = output<void>();
   readonly restoreRequested = output<string>();
   readonly purgeRequested = output<string>();
   readonly emptyRequested = output<void>();
+  readonly restoreAllRequested = output<void>();
+  readonly searchChanged = output<string>();
+
+  protected readonly searching = computed(() => this.search().trim() !== '');
 
   /** One confirmation per row: the id awaiting it, or `null`. */
   protected readonly confirmingPurge = signal<string | null>(null);
-  protected readonly confirmingEmpty = signal(false);
+  /** Withdrawn when a search starts or ends: the count it announced no longer holds. */
+  protected readonly confirmingEmpty = linkedSignal({ source: this.searching, computation: () => false });
 
   protected readonly rows = computed<readonly TrashRow[]>(() => {
     const now = this.clock.now();

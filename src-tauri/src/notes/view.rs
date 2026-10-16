@@ -577,7 +577,7 @@ fn clip(text: &str) -> String {
 /// through here. Only what a canonical decomposition separates is folded: `ø` and `ß` stay.
 /// Decomposed per character rather than through `nfd()` over the string, whose lookahead
 /// buffering buys nothing when every mark is dropped; the ASCII branches are the common case.
-pub(crate) fn fold(text: &str) -> String {
+pub fn fold(text: &str) -> String {
     if text.is_ascii() {
         return text.to_ascii_lowercase();
     }
