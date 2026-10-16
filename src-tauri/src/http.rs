@@ -11,6 +11,7 @@ pub mod history;
 pub mod model;
 pub mod query;
 pub mod response;
+pub mod search;
 pub mod send;
 pub mod settings;
 pub mod store;
@@ -38,6 +39,24 @@ pub async fn http_tree<R: Runtime>(app: AppHandle<R>) -> Result<HttpTree, AppErr
         let mut connection = lock(db)?;
 
         Ok(store::tree(&mut connection)?)
+    })
+    .await
+}
+
+/// The palette's requests, ranked here: the URL is read from each sealed document.
+#[tauri::command]
+#[specta::specta]
+pub async fn search_http_requests<R: Runtime>(
+    search: String,
+    app: AppHandle<R>,
+) -> Result<Vec<search::RequestHit>, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(search::rank(
+            store::search_candidates(&mut connection)?,
+            &search,
+        ))
     })
     .await
 }

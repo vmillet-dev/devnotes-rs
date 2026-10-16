@@ -21,7 +21,10 @@ closed_enum! {
         #[default]
         Capture = "capture",
         NewNote = "new-note",
+        /// Asked from another application: a note copied from it puts the window away again.
         Palette = "palette",
+        /// Asked with the window already in front: it only opens.
+        PaletteHere = "palette-here",
         /// Not something to do but something to answer: a quit asked from outside the page.
         Quit = "quit",
     }
@@ -40,10 +43,24 @@ pub(crate) fn reveal(app: &AppHandle) {
 }
 
 /// Shows the window then asks the front end for the action: the note itself is the front's to
-/// create, language detection included.
+/// create, language detection included. Whether the window was in front is read before it is
+/// shown: afterwards it always is.
 fn reveal_and_emit(app: &AppHandle, action: GlobalAction) {
+    let action = if action == GlobalAction::Palette && in_front(app) {
+        GlobalAction::PaletteHere
+    } else {
+        action
+    };
     reveal(app);
     let _ = app.emit(ACTION_EVENT, action);
+}
+
+fn in_front(app: &AppHandle) -> bool {
+    app.get_webview_window("main").is_some_and(|window| {
+        window.is_visible().unwrap_or(false)
+            && !window.is_minimized().unwrap_or(true)
+            && window.is_focused().unwrap_or(false)
+    })
 }
 
 /// How long a quit asked from outside the page waits for the page to take it. Long enough

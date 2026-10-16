@@ -541,7 +541,7 @@
     "newNote": "Nouvelle note",
     "capture": "Coller le presse-papier",
     "quit": "Quitter {{app}}",
-    "palette": "Collage rapide"
+    "palette": "Palette"
   },
   "locale": {
     "system": "Système",
@@ -642,17 +642,80 @@
     "unfile": "Sortir du dossier"
   },
   "palette": {
-    "title": "Collage rapide",
-    "placeholder": "Rechercher une note…",
-    "searchLabel": "Rechercher une note à coller",
-    "resultsLabel": "Notes trouvées",
-    "empty": "Aucune note ne correspond.",
-    "hint": "↑↓ ou Tab naviguer · Entrée ou clic ouvrir · Ctrl+C copier · Échap fermer",
+    "title": "Palette",
+    "placeholder": "Une note, une requête, un outil, un espace…",
+    "placeholderNarrowed": "Rechercher…",
+    "searchLabel": "Tout rechercher : notes, requêtes, outils, espaces",
+    "resultsLabel": "Résultats",
+    "removeChip": "Retirer {{chip}}",
     "copyLabel": "Copier « {{title}} »",
     "createNote": "+ Créer une note « {{query}} »",
     "copiedTitle": "Copié",
     "copiedNote": "« {{title}} » est dans le presse-papiers",
-    "copiedUntitled": "La note est dans le presse-papiers"
+    "copiedUntitled": "La note est dans le presse-papiers",
+    "groups": {
+      "notes": "Notes",
+      "requests": "Requêtes",
+      "tools": "Outils",
+      "spaces": "Espaces",
+      "commands": "Commandes",
+      "recent": "Récents",
+      "scopes": "Chercher dans",
+      "spaceNotes": "Les notes d’un espace",
+      "tags": "Les notes qui portent"
+    },
+    "scopes": {
+      "notes": "notes",
+      "requests": "requêtes",
+      "tools": "outils",
+      "spaces": "espaces"
+    },
+    "scopeLines": {
+      "notes": "snippets, Notes et listes",
+      "requests": "HTTP, GraphQL, WebSocket",
+      "tools": "le catalogue des outils",
+      "spaces": "passer de l’un à l’autre",
+      "space": "ses notes"
+    },
+    "tagCount": "{count, plural, one {# note} other {# notes}}",
+    "act": {
+      "note": "↵ ouvrir",
+      "request": "↵ ouvrir la requête",
+      "tool": "↵ ouvrir l’outil",
+      "space": "↵ passer à cet espace",
+      "command": "↵ lancer",
+      "chip": "Tab choisir",
+      "create": "↵ créer"
+    },
+    "keys": {
+      "navigate": "naviguer",
+      "open": "ouvrir",
+      "copy": "copier",
+      "copyBack": "copier et revenir",
+      "choose": "choisir",
+      "run": "lancer",
+      "create": "créer",
+      "unchip": "retirer l’étiquette",
+      "close": "fermer"
+    },
+    "prefixes": {
+      "at": "choisir où chercher",
+      "hash": "un tag",
+      "command": "une commande"
+    },
+    "empty": {
+      "search": "Rien ne correspond à « {{term}} ».",
+      "nothing": "Rien à montrer ici.",
+      "scopes": "Rien ne s’appelle « @{{word}} ».",
+      "tags": "Aucun tag ne commence par « {{word}} ».",
+      "commands": "Aucune commande ne contient « {{term}} »."
+    },
+    "commands": {
+      "newRequest": "Nouvelle requête",
+      "newFolder": "Nouveau dossier",
+      "preferences": "Préférences",
+      "shortcuts": "Feuille des raccourcis"
+    }
   },
   "placeholders": {
     "title": "Remplir les champs",
@@ -752,7 +815,7 @@
       "global": "Globaux (même fenêtre fermée)",
       "canvas": "Canevas",
       "editor": "Éditeur",
-      "palette": "Collage rapide",
+      "palette": "Palette",
       "note": "Note mise en forme",
       "areas": "Zones",
       "http": "HTTP",
@@ -768,7 +831,7 @@
       "delete": "Supprimer la ligne du rail, après confirmation"
     },
     "global": {
-      "palette": "Ouvrir la palette de collage rapide",
+      "palette": "Ouvrir la palette",
       "capture": "Capturer le presse-papier dans une note",
       "newNote": "Créer une note"
     },
@@ -819,9 +882,14 @@
     },
     "palette": {
       "navigate": "Parcourir les résultats",
-      "paste": "Copier la note et fermer",
-      "open": "Ouvrir la note",
-      "close": "Fermer la palette"
+      "paste": "Copier la note : sur une autre application, la fenêtre se retire",
+      "open": "Ouvrir la note, la requête, l’outil ou l’espace",
+      "close": "Fermer la palette",
+      "scope": "Chercher dans les notes, les requêtes, les outils, les espaces ou un espace",
+      "tag": "Chercher dans les notes d’un tag",
+      "command": "Lancer une commande",
+      "chip": "Choisir ce que @ ou # propose",
+      "unchip": "Retirer la dernière étiquette, le champ vide"
     },
     "json": {
       "navigate": "Se déplacer dans le graphe ou l’arbre",
@@ -885,7 +953,7 @@
       "trayNote": "Sans barre système, la fenêtre se réduit et se ferme normalement : {{app}} refuse de se cacher là où plus rien ne pourrait la rappeler."
     },
     "quickPaste": {
-      "title": "Collage rapide",
+      "title": "Palette",
       "showPinnedFirst": "Épinglées en premier"
     },
     "security": {

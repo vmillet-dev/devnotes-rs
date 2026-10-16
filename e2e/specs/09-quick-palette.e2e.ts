@@ -1,10 +1,10 @@
-import { browser, expect } from '@wdio/globals';
+import { $, browser, expect } from '@wdio/globals';
 
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
 import { fieldsForm, palette } from '../pageobjects/overlays.page.js';
 import { aboutMenu } from '../pageobjects/titlebar.page.js';
-import { emitGlobalAction, isInFront, press, reloadCanvas, testid } from '../support/app.js';
+import { emitGlobalAction, isInFront, press, readEach, reloadCanvas, testid } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
@@ -201,6 +201,74 @@ describe('The quick-paste palette', () => {
     await palette.input().waitForExist({ timeout: 10_000 });
     await press('Escape');
     await palette.input().waitForExist({ reverse: true, timeout: 10_000 });
+  });
+
+  describe('beyond the notes', () => {
+    let requestId = '';
+    const row = (attribute: string, value: string) =>
+      $(`${testid('palette-option')}[${attribute}="${value}"]`);
+
+    before(async () => {
+      const collection = await bridge.createHttpCollection('Palette API');
+      requestId = (
+        await bridge.createHttpRequest({
+          collectionId: collection.id,
+          folderId: null,
+          name: 'Rotate the signing keys',
+          kind: 'http',
+          method: 'POST',
+          document: { url: '{{baseUrl}}/keys/rotate', description: '' },
+        })
+      ).id;
+    });
+
+    it('finds a request by its URL and a tool by a keyword, each with its own mark', async () => {
+      await emitGlobalAction('palette');
+      await palette.input().waitForExist({ timeout: 10_000 });
+
+      await palette.type('keys/rot');
+      await row('data-request-id', requestId).waitForExist({ timeout: 10_000 });
+      expect(await row('data-request-id', requestId).$('.method').getAttribute('data-method')).toBe('POST');
+
+      await palette.type('crontab');
+      await row('data-tool', 'cron').waitForExist({ timeout: 10_000 });
+    });
+
+    it('narrows to the tools with @tools, a chip in the field', async () => {
+      await palette.type('@tools');
+      await press('Tab');
+      await $(testid('palette-chip')).waitForExist({ timeout: 10_000 });
+      await palette.type('json');
+
+      const kinds = await readEach(testid('palette-option'), '@data-kind');
+      expect(kinds.length).toBeGreaterThan(0);
+      expect(new Set(kinds)).toEqual(new Set(['tool']));
+
+      await palette.type('');
+      await press('Backspace');
+      await $(testid('palette-chip')).waitForExist({ reverse: true, timeout: 10_000 });
+    });
+
+    it('opens the request it found in its tab, in the HTTP area', async () => {
+      await palette.type('signing keys');
+      await row('data-request-id', requestId).$(testid('palette-open')).click();
+
+      await $(testid('http-page')).waitForDisplayed({ timeout: 10_000 });
+      await $(`${testid('http-tab')}[data-key="${requestId}"]`).waitForExist({ timeout: 10_000 });
+      expect(await palette.input().isExisting()).toBe(false);
+    });
+
+    it('runs a command chosen after >', async () => {
+      await emitGlobalAction('palette-here');
+      await palette.input().waitForExist({ timeout: 10_000 });
+      await palette.type('>');
+
+      await row('data-command', 'area-tools').$(testid('palette-open')).click();
+
+      await $(testid('tools-page')).waitForDisplayed({ timeout: 10_000 });
+      await press('1', ['Control']);
+      await $(testid('tools-page')).waitForExist({ reverse: true, timeout: 10_000 });
+    });
   });
 
   it('re-registers the three accelerators and names the ones it lost', async () => {

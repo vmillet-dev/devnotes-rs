@@ -23,7 +23,6 @@ import {
   MAX_RECENT_TOOLS,
   TOOL_CATALOGUE,
   TOOL_CATEGORIES,
-  ToolCategory,
   ToolDefinition,
   ToolFilter,
   favouritesAmong,
@@ -34,17 +33,8 @@ import { ToolsStore } from '@core/services/tools/tools.store';
 import { columnCount, stackInColumns } from '@core/utils/columns.util';
 import { relativeTimeRef } from '@core/utils/relative-time.util';
 import { RailToggleComponent } from '@shared/controls/rail-toggle/rail-toggle.component';
-import { IconComponent, IconName } from '@shared/icon/icon.component';
-
-const CATEGORY_ICONS: Record<ToolCategory, IconName> = {
-  text: 'type',
-  crypto: 'lock',
-  encode: 'code',
-  generate: 'sparkle',
-  time: 'clock',
-  calc: 'calculator',
-  reference: 'book-open',
-};
+import { IconComponent } from '@shared/icon/icon.component';
+import { TOOL_CATEGORY_ICONS } from '@tools/catalogue/catalogue';
 
 const PANEL_MIN_WIDTH = 260;
 const PANEL_GAP = 14;
@@ -110,7 +100,7 @@ export class ToolsHomeComponent {
     return TOOL_CATEGORIES.filter((category) => only === null || only === FAVOURITES || category === only)
       .map((category) => ({
         category,
-        icon: CATEGORY_ICONS[category],
+        icon: TOOL_CATEGORY_ICONS[category],
         tools: this.catalogue.filter(
           (tool) =>
             tool.category === category &&

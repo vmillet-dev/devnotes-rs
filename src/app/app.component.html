@@ -29,6 +29,9 @@
   @if (!vault.isUnlocked() && vault.state() !== null) {
     <app-vault-gate />
   }
+  @if (vault.isUnlocked()) {
+    <app-palette />
+  }
   <app-update-prompt />
   <app-passphrase-prompt />
   <!-- Here and not in the HTTP page: the question is asked whatever area is on screen. -->

@@ -35,6 +35,7 @@ import {
   OpenedRequest,
   QuerySide,
   RequestDraft,
+  RequestHit,
   RequestParts,
   toDocument,
   toParts,
@@ -53,6 +54,11 @@ function opened({ document, ...request }: HttpRequest): OpenedRequest {
 export class HttpRepository {
   async tree(): Promise<HttpTree> {
     return unwrap('http_tree', await commands.httpTree());
+  }
+
+  /** Ranked by Rust; nothing typed answers the requests edited last. */
+  async search(search: string): Promise<readonly RequestHit[]> {
+    return unwrap('search_http_requests', await commands.searchHttpRequests(search));
   }
 
   async createCollection(name: string): Promise<HttpCollection> {

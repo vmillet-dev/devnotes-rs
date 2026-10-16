@@ -11,8 +11,9 @@ use uuid::Uuid;
 use super::model::{
     ContainerSettings, HttpCollection, HttpCollectionNode, HttpContents, HttpFolder, HttpItem,
     HttpItemKind, HttpNode, HttpPlace, HttpRequest, HttpRequestDraft, HttpRequestPatch,
-    HttpRequestSummary, HttpTree,
+    HttpRequestSummary, HttpTree, RequestDocument,
 };
+use super::search::{Candidate, RequestHit};
 use super::settings::{HttpOrigin, Inherited};
 use crate::db::schema::{http_collections, http_folders, http_requests};
 use crate::db::{Library, iso8601};
@@ -240,6 +241,72 @@ pub fn tree(connection: &mut Library) -> Result<HttpTree, StorageError> {
         .collect::<Result<_, StorageError>>()?;
 
     Ok(HttpTree { collections })
+}
+
+/// Every request with what the palette finds it by. A document that does not open costs the
+/// request its URL, not the search.
+pub fn search_candidates(connection: &mut Library) -> Result<Vec<Candidate>, StorageError> {
+    let (connection, vault) = connection.split();
+
+    let collections = http_collections::table
+        .select(CollectionRow::as_select())
+        .load(connection)?
+        .into_iter()
+        .map(|row| Ok((row.id.clone(), vault.open(&row.name)?)))
+        .collect::<Result<HashMap<_, _>, StorageError>>()?;
+    let folders = http_folders::table
+        .select(FolderRow::as_select())
+        .load(connection)?
+        .into_iter()
+        .map(|row| {
+            let folder = row.open(vault)?;
+            Ok((folder.id.clone(), (folder.parent_id, folder.name)))
+        })
+        .collect::<Result<HashMap<_, _>, StorageError>>()?;
+    let requests = http_requests::table
+        .select(RequestRow::as_select())
+        .load(connection)?;
+
+    requests
+        .iter()
+        .map(|row| {
+            let summary = row.summary(vault)?;
+            let url = vault
+                .open(&row.document)
+                .ok()
+                .and_then(|json| serde_json::from_str::<RequestDocument>(&json).ok())
+                .map(|document| document.url)
+                .unwrap_or_default();
+
+            let mut chain = Vec::new();
+            let mut folder = summary.folder_id.clone();
+            // Bounded by the folders there are: a loop in the parents cannot hang the search.
+            while let Some((parent, name)) = folder.as_ref().and_then(|id| folders.get(id)) {
+                if chain.len() == folders.len() {
+                    break;
+                }
+                chain.push(name.clone());
+                folder.clone_from(parent);
+            }
+            let collection = collections.get(&summary.collection_id).cloned();
+            let place = collection
+                .into_iter()
+                .chain(chain.into_iter().rev())
+                .collect();
+
+            Ok(Candidate {
+                updated_at: instant(&row.id, "updatedAt", &row.updated_at)?,
+                hit: RequestHit {
+                    id: summary.id,
+                    name: summary.name,
+                    kind: summary.kind,
+                    method: summary.method,
+                    url,
+                    place,
+                },
+            })
+        })
+        .collect()
 }
 
 /// Under one parent, keyed by collection and folder, with what orders them.

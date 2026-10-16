@@ -37,7 +37,7 @@ describe('ShortcutsDialogComponent', () => {
 
   it('opens on the global shortcuts, which work with the window closed', async () => {
     expect(groupTitles()[0]).toBe('Globaux (même fenêtre fermée)');
-    expect(keysFor('palette de collage rapide')).toEqual(['Ctrl', 'Alt', 'P']);
+    expect(keysFor('Ouvrir la palette')).toEqual(['Ctrl', 'Alt', 'P']);
     expect(keysFor('Capturer le presse-papier')).toEqual(['Ctrl', 'Alt', 'V']);
   });
 
@@ -45,7 +45,7 @@ describe('ShortcutsDialogComponent', () => {
     settings.setPaletteShortcut('Ctrl+Shift+K');
     await fixture.whenStable();
 
-    expect(keysFor('palette de collage rapide')).toEqual(['Ctrl', 'Shift', 'K']);
+    expect(keysFor('Ouvrir la palette')).toEqual(['Ctrl', 'Shift', 'K']);
   });
 
   it('lists the areas, then the groups of the notes, of HTTP and of the JSON explorer, after the global one', async () => {
@@ -55,7 +55,7 @@ describe('ShortcutsDialogComponent', () => {
       'Canevas',
       'Éditeur',
       'Note mise en forme',
-      'Collage rapide',
+      'Palette',
       'HTTP',
       'Visualiseur JSON',
     ]);

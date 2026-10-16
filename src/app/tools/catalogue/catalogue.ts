@@ -1,4 +1,22 @@
-import { ANY_NOTE, JSON_SNIPPET, STRUCTURED_SNIPPET, ToolDefinition } from '@core/services/tools/tool.model';
+import {
+  ANY_NOTE,
+  JSON_SNIPPET,
+  STRUCTURED_SNIPPET,
+  ToolCategory,
+  ToolDefinition,
+} from '@core/services/tools/tool.model';
+import type { IconName } from '@shared/icon/icon.component';
+
+/** A category's mark, on the home's panels and on a tool's row in the palette. */
+export const TOOL_CATEGORY_ICONS: Readonly<Record<ToolCategory, IconName>> = {
+  text: 'type',
+  crypto: 'lock',
+  encode: 'code',
+  generate: 'sparkle',
+  time: 'clock',
+  calc: 'calculator',
+  reference: 'book-open',
+};
 
 /**
  * Every tool, in its panel's order, each in a folder beside this one. Adding one is an entry

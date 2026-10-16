@@ -47,6 +47,11 @@ export const NOTES_SHORTCUT_GROUPS: readonly ShortcutGroup[] = [
     id: 'notes.palette',
     labelKey: 'shortcuts.groups.palette',
     shortcuts: [
+      { keys: ['@'], labelKey: 'shortcuts.palette.scope' },
+      { keys: ['#'], labelKey: 'shortcuts.palette.tag' },
+      { keys: ['>'], labelKey: 'shortcuts.palette.command' },
+      { keys: ['Tab'], labelKey: 'shortcuts.palette.chip' },
+      { keys: ['Backspace'], labelKey: 'shortcuts.palette.unchip' },
       { keys: ['↑ ↓'], labelKey: 'shortcuts.palette.navigate' },
       { keys: ['Enter'], labelKey: 'shortcuts.palette.open' },
       { keys: ['Ctrl', 'C'], labelKey: 'shortcuts.palette.paste' },

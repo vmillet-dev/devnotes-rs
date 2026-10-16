@@ -33,7 +33,7 @@ describe('SettingsPageComponent', () => {
       (title: HTMLElement) => title.textContent?.trim(),
     );
 
-    expect(titles).toEqual(['Apparence', 'Éditeur', 'Comportement', 'Collage rapide', 'Notifications']);
+    expect(titles).toEqual(['Apparence', 'Éditeur', 'Comportement', 'Palette', 'Notifications']);
   });
 
   /**

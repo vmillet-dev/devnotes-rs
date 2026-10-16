@@ -4,6 +4,11 @@ import { Rebindable, ShortcutGroup, acceleratorKeys } from '@core/services/short
 export const AREAS = ['notes', 'tools', 'http'] as const;
 export type Area = (typeof AREAS)[number];
 
+/** Ctrl and the area's rank: the sheet and the palette both name it from here. */
+export function areaKeys(area: Area): readonly string[] {
+  return ['Ctrl', String(AREAS.indexOf(area) + 1)];
+}
+
 /** Read by position, not by character: on AZERTY, the digit row types `&é"` unshifted. */
 export function areaForKey(event: KeyboardEvent): Area | null {
   if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return null;
@@ -39,7 +44,7 @@ export const AREA_SHORTCUT_GROUP: ShortcutGroup = {
   id: 'areas',
   labelKey: 'shortcuts.groups.areas',
   shortcuts: [
-    ...AREAS.map((area, index) => ({ keys: ['Ctrl', String(index + 1)], labelKey: `areas.go.${area}` })),
+    ...AREAS.map((area) => ({ keys: areaKeys(area), labelKey: `areas.go.${area}` })),
     { keys: ['Ctrl', 'K'], labelKey: 'shortcuts.canvas.search' },
     { keys: ['Ctrl', 'Shift', 'T'], labelKey: 'tools.searchShortcut' },
     { keys: acceleratorKeys(RAIL_ACTION.fallback), labelKey: RAIL_ACTION.labelKey, action: RAIL_ACTION },

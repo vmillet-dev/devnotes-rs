@@ -1,0 +1,308 @@
+@if (store.isOpen()) {
+  <!-- The fields form sits **in front of** the palette, which stays underneath. -->
+  @if (store.pendingFill(); as note) {
+    <app-placeholder-form
+      [placeholders]="note.placeholders"
+      (submitted)="fill.submitForPalette($event)"
+      (rawRequested)="store.copyRaw(note)"
+      (cancelled)="store.cancelFill()"
+    />
+  }
+
+  <app-dialog [layer]="'palette'" labelledBy="palette-title" (closed)="store.close()">
+    <h2 id="palette-title" class="visually-hidden">{{ 'palette.title' | transloco }}</h2>
+
+    <div class="field">
+      @for (chip of store.chips(); track $index) {
+        <span class="chip" data-testid="palette-chip" [attr.data-kind]="chip.kind">
+          {{ chipLabel(chip) }}
+          <button
+            type="button"
+            class="chip-remove"
+            data-testid="palette-chip-remove"
+            tabindex="-1"
+            [attr.aria-label]="'palette.removeChip' | transloco: { chip: chipLabel(chip) }"
+            (click)="store.removeChip($index)"
+          >
+            ×
+          </button>
+        </span>
+      }
+      <input
+        #searchInput
+        type="text"
+        class="input"
+        data-testid="palette-input"
+        role="combobox"
+        aria-expanded="true"
+        aria-controls="palette-results"
+        autocomplete="off"
+        spellcheck="false"
+        [attr.aria-activedescendant]="options().length ? optionId(highlighted()) : null"
+        [attr.aria-label]="'palette.searchLabel' | transloco"
+        [placeholder]="
+          (store.chips().length ? 'palette.placeholderNarrowed' : 'palette.placeholder') | transloco
+        "
+        [value]="store.text()"
+        (input)="onText($event)"
+        (keydown)="onKeydown($event)"
+      />
+    </div>
+
+    <ul
+      id="palette-results"
+      class="results"
+      role="listbox"
+      [attr.aria-label]="'palette.resultsLabel' | transloco"
+    >
+      @for (group of groups(); track $index) {
+        @if (group.heading) {
+          <li
+            class="group"
+            role="presentation"
+            data-testid="palette-group"
+            [attr.data-heading]="group.heading"
+          >
+            {{ 'palette.groups.' + group.heading | transloco }}
+            @if (group.count !== null) {
+              <span class="count">{{ group.count }}</span>
+            }
+          </li>
+        }
+        @for (option of group.options; track option.key) {
+          @let index = indexOf(option);
+          @let on = index === highlighted();
+          <li
+            role="option"
+            class="option"
+            [id]="optionId(index)"
+            [class.on]="on"
+            [class.compact]="option.kind === 'command' || option.kind === 'chip' || option.kind === 'create'"
+            [class.create]="option.kind === 'create'"
+            [attr.data-testid]="option.kind === 'create' ? 'palette-create' : 'palette-option'"
+            [attr.data-kind]="option.kind"
+            [attr.data-note-id]="option.kind === 'note' ? option.note.id : null"
+            [attr.data-request-id]="option.kind === 'request' ? option.request.id : null"
+            [attr.data-tool]="option.kind === 'tool' ? option.tool.id : null"
+            [attr.data-space-id]="option.kind === 'space' ? option.space.id : null"
+            [attr.data-command]="option.kind === 'command' ? commandId(option.command) : null"
+            [attr.aria-selected]="on"
+            (mousemove)="on || highlight(index)"
+          >
+            <!-- A click **opens**, and so does Enter: that is what both mean everywhere else in
+                 the application. A note's copy has its own control beside it, and Ctrl+C. -->
+            <button
+              type="button"
+              class="open"
+              data-testid="palette-open"
+              tabindex="-1"
+              (click)="highlight(index); choose(option)"
+            >
+              <span class="mark">
+                @switch (option.kind) {
+                  @case ('note') {
+                    <app-kind-badge [kind]="option.note.kind" [language]="option.note.language" />
+                  }
+                  @case ('request') {
+                    <span class="method" [attr.data-method]="badgeOf(option.request)">{{
+                      badgeOf(option.request)
+                    }}</span>
+                  }
+                  @case ('tool') {
+                    <span class="tile tool" [attr.data-category]="option.tool.category">
+                      <app-icon [name]="categoryIcons[option.tool.category]" />
+                    </span>
+                  }
+                  @case ('space') {
+                    <span class="tile space"><span class="dot"></span></span>
+                  }
+                  @case ('command') {
+                    <span class="tile command">&gt;</span>
+                  }
+                  @case ('chip') {
+                    @if (option.chip.kind === 'space') {
+                      <span class="tile space"><span class="dot"></span></span>
+                    } @else {
+                      <span class="tile prefix" [attr.data-kind]="option.chip.kind">{{
+                        option.chip.kind === 'tag' ? '#' : '@'
+                      }}</span>
+                    }
+                  }
+                }
+              </span>
+
+              <span class="main">
+                <span class="title">
+                  @switch (option.kind) {
+                    @case ('note') {
+                      @for (
+                        part of titleParts(option.note.title || ('notes.untitled' | transloco));
+                        track $index
+                      ) {
+                        <span [class.hit]="part.hit">{{ part.text }}</span>
+                      }
+                      @if (option.note.placeholders.length > 0) {
+                        <span class="fields">{{
+                          'notes.placeholdersCount' | transloco: { count: option.note.placeholders.length }
+                        }}</span>
+                      }
+                    }
+                    @case ('request') {
+                      @for (part of titleParts(option.request.name); track $index) {
+                        <span [class.hit]="part.hit">{{ part.text }}</span>
+                      }
+                    }
+                    @case ('tool') {
+                      @for (
+                        part of titleParts('tools.' + option.tool.id + '.name' | transloco);
+                        track $index
+                      ) {
+                        <span [class.hit]="part.hit">{{ part.text }}</span>
+                      }
+                    }
+                    @case ('space') {
+                      @for (part of titleParts(option.space.name); track $index) {
+                        <span [class.hit]="part.hit">{{ part.text }}</span>
+                      }
+                    }
+                    @case ('command') {
+                      @for (part of titleParts(option.command.labelKey | transloco); track $index) {
+                        <span [class.hit]="part.hit">{{ part.text }}</span>
+                      }
+                    }
+                    @case ('chip') {
+                      @switch (option.chip.kind) {
+                        @case ('scope') {
+                          <span class="scope">{{ chipLabel(option.chip) }}</span>
+                        }
+                        @case ('space') {
+                          {{ option.chip.name }}
+                        }
+                        @case ('tag') {
+                          {{ option.chip.tag }}
+                        }
+                      }
+                    }
+                    @case ('create') {
+                      {{ 'palette.createNote' | transloco: { query: option.title } }}
+                    }
+                  }
+                </span>
+                @switch (option.kind) {
+                  @case ('note') {
+                    @if (lineOf(option.note); as line) {
+                      <span class="sub" [class.mono]="option.note.kind === 'snippet'">{{ line }}</span>
+                    }
+                  }
+                  @case ('request') {
+                    @if (option.request.url) {
+                      <span class="sub mono">
+                        @for (part of urlParts(option.request.url); track $index) {
+                          <span [class.variable]="part.hit">{{ part.text }}</span>
+                        }
+                      </span>
+                    }
+                  }
+                  @case ('tool') {
+                    <span class="sub">{{ 'tools.' + option.tool.id + '.description' | transloco }}</span>
+                  }
+                }
+              </span>
+
+              <span class="side">
+                @if (on) {
+                  <span class="act">{{ 'palette.act.' + option.kind | transloco }}</span>
+                } @else {
+                  @switch (option.kind) {
+                    @case ('note') {
+                      <span class="context">
+                        {{ spaceOf(option.note) }}
+                        @for (tag of option.note.tags.slice(0, 2); track tag) {
+                          <span class="tag">#{{ tag }}</span>
+                        }
+                      </span>
+                    }
+                    @case ('request') {
+                      <span class="context">{{ option.request.place.join(' › ') }}</span>
+                    }
+                    @case ('tool') {
+                      <span class="context">{{
+                        'tools.categories.' + option.tool.category | transloco
+                      }}</span>
+                    }
+                    @case ('command') {
+                      <span class="keys">
+                        @for (key of keysOf(option.command); track $index) {
+                          <kbd>{{ key }}</kbd>
+                        }
+                      </span>
+                    }
+                    @case ('chip') {
+                      <span class="context">
+                        @switch (option.chip.kind) {
+                          @case ('scope') {
+                            {{ 'palette.scopeLines.' + option.chip.scope | transloco }}
+                          }
+                          @case ('space') {
+                            {{ 'palette.scopeLines.space' | transloco }}
+                          }
+                          @case ('tag') {
+                            {{ 'palette.tagCount' | transloco: { count: option.count ?? 0 } }}
+                          }
+                        }
+                      </span>
+                    }
+                  }
+                }
+              </span>
+            </button>
+
+            @if (option.kind === 'note') {
+              <!-- The paste path with a mouse: copies, and over another application puts the
+                   window away, which is what Ctrl+C does. -->
+              <button
+                type="button"
+                class="copy"
+                data-testid="palette-copy"
+                tabindex="-1"
+                [attr.aria-label]="
+                  'palette.copyLabel'
+                    | transloco: { title: option.note.title || ('notes.untitled' | transloco) }
+                "
+                [attr.title]="
+                  'palette.copyLabel'
+                    | transloco: { title: option.note.title || ('notes.untitled' | transloco) }
+                "
+                (click)="highlight(index); copy(option.note)"
+              >
+                <app-icon name="copy" />
+              </button>
+            }
+          </li>
+        }
+      }
+
+      @if (empty(); as empty) {
+        <li class="empty" data-testid="palette-empty">{{ empty.key | transloco: empty.params }}</li>
+      }
+      @if (store.recent()) {
+        <li class="prefixes" role="presentation" data-testid="palette-prefixes">
+          <span><code>&#64;</code> {{ 'palette.prefixes.at' | transloco }}</span>
+          <span><code>#</code> {{ 'palette.prefixes.hash' | transloco }}</span>
+          <span><code>&gt;</code> {{ 'palette.prefixes.command' | transloco }}</span>
+        </li>
+      }
+    </ul>
+
+    <p class="hint" data-testid="palette-hint">
+      @for (hint of hints(); track hint.labelKey) {
+        <span>
+          @for (key of hint.keys; track $index) {
+            <kbd>{{ key }}</kbd>
+          }
+          {{ hint.labelKey | transloco }}
+        </span>
+      }
+    </p>
+  </app-dialog>
+}
