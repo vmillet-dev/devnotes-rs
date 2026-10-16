@@ -394,7 +394,7 @@ describe('SpaceSwitcherComponent', () => {
       await pressKey('Escape');
       await edit(0);
 
-      expect(deleteButton()!.textContent?.trim()).toBe('Supprimer');
+      expect(deleteButton()!.textContent?.trim()).toBe('Supprimer l’espace');
     });
 
     it('moves focus to the rename field so the panel is reachable by keyboard', async () => {
