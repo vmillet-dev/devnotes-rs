@@ -47,6 +47,22 @@ describe('UndoBarComponent', () => {
     );
   });
 
+  it('says whether the notes were pinned or unpinned, and what lost a tag', async () => {
+    const text = (): string => fixture.nativeElement.querySelector('.undo-text').textContent.trim();
+
+    fixture.componentRef.setInput('action', { kind: 'pin', ids: ['a', 'b'], pinned: true, count: 2 });
+    await fixture.whenStable();
+    expect(text()).toBe('2 notes épinglées');
+
+    fixture.componentRef.setInput('action', { kind: 'pin', ids: ['a'], pinned: false, count: 1 });
+    await fixture.whenStable();
+    expect(text()).toBe('1 note désépinglée');
+
+    fixture.componentRef.setInput('action', { kind: 'untag', removed: [], count: 2 });
+    await fixture.whenStable();
+    expect(text()).toBe('Tag retiré de 2 notes');
+  });
+
   it('announces itself as a status, not an alert', () => {
     expect(fixture.nativeElement.querySelector('.undo-bar').getAttribute('role')).toBe('status');
   });

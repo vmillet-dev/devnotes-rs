@@ -710,9 +710,7 @@ export class NoteEditorOverlayComponent {
 
   protected togglePin(): void {
     const note = this.note();
-    if (note) {
-      this.requestPatch({ pinned: !note.pinned });
-    }
+    if (note) void this.store.setPinned(note.id, !note.pinned);
   }
 
   protected removeTag(tag: string): void {

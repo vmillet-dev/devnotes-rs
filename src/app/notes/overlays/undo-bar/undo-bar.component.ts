@@ -8,6 +8,8 @@ const MESSAGES: Record<Exclude<Reversible['kind'], 'convert'>, string> = {
   deletion: 'undo.deleted',
   move: 'undo.moved',
   tag: 'undo.tagged',
+  untag: 'undo.untagged',
+  pin: 'undo.pinned',
   priority: 'undo.prioritised',
   file: 'undo.filed',
   arrange: 'undo.arranged',
@@ -35,6 +37,7 @@ export class UndoBarComponent {
 
   protected readonly message = computed(() => {
     const action = this.action();
-    return action.kind === 'convert' ? CONVERTED[action.into] : MESSAGES[action.kind];
+    if (action.kind === 'convert') return CONVERTED[action.into];
+    return action.kind === 'pin' && !action.pinned ? 'undo.unpinned' : MESSAGES[action.kind];
   });
 }

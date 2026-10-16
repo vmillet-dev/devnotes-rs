@@ -278,8 +278,31 @@ export class NotesStore {
     this.undo.record({ kind: 'convert', id: resolved, into: 'snippet', previous, count: 1 });
   }
 
-  togglePinned(id: string): Promise<void> {
-    return this.edit(id, (note) => ({ pinned: !note.pinned }));
+  /**
+   * Pinning is triage, as the priority is: a batch of one through `set_pinned`, the modification
+   * date left alone and the undo offered. A draft changes locally, saved once worth it.
+   */
+  async setPinned(id: string, pinned: boolean): Promise<void> {
+    const resolved = await this.resolve(id);
+    if (resolved === DRAFT_ID) {
+      const draft = this.find(DRAFT_ID);
+      if (!draft) return;
+
+      const updated: Note = { ...draft, pinned };
+      if (isWorthSaving(updated)) await this.saveDraft(updated);
+      else this._draftNote.set(updated);
+      return;
+    }
+
+    const ids = await this.notifier.attempt('errors.pinFailed', () =>
+      this.repository.setPinned([resolved], pinned),
+    );
+    if (ids === null) return;
+
+    const open = this._selectedNote();
+    if (open?.id === resolved) this._selectedNote.set({ ...open, pinned });
+    this.revision.bump();
+    this.undo.record({ kind: 'pin', ids, pinned, count: ids.length });
   }
 
   /**

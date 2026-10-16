@@ -53,6 +53,26 @@
     />
   </form>
 
+  @if (tags().length > 0) {
+    <app-choice-menu
+      [kind]="'selection-untag'"
+      [naming]="'label'"
+      [label]="'selection.removeTag' | transloco"
+      [options]="tagChoices()"
+      (chosen)="onUntag($event)"
+    />
+  }
+
+  <button
+    type="button"
+    class="selection-action"
+    data-testid="selection-pin"
+    [attr.aria-pressed]="allPinned()"
+    (click)="pinRequested.emit(!allPinned())"
+  >
+    {{ (allPinned() ? 'selection.unpin' : 'selection.pin') | transloco }}
+  </button>
+
   <button type="button" class="selection-action" data-testid="selection-copy" (click)="copyRequested.emit()">
     {{ 'file.copyMarkdown' | transloco }}
   </button>

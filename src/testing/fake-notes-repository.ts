@@ -362,6 +362,10 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
     return this.notes.find((note) => note.id === id)?.priority;
   }
 
+  pinnedOf(id: string): boolean | undefined {
+    return this.notes.find((note) => note.id === id)?.pinned;
+  }
+
   moveMany(ids: readonly string[], spaceId: string): Promise<readonly NotePlacement[]> {
     return guard(this, () => {
       this.movedTo = { ids, spaceId };
@@ -436,6 +440,43 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
       });
 
       return added;
+    });
+  }
+
+  removeTag(ids: readonly string[], tag: string): Promise<readonly NoteTag[]> {
+    return guard(this, () => {
+      const removed: NoteTag[] = [];
+      this.notes = this.notes.map((note) => {
+        const held = ids.includes(note.id) ? note.tags.find((each) => sameTag(each, tag)) : undefined;
+        if (held === undefined) return note;
+
+        removed.push({ noteId: note.id, tag: held });
+        return { ...note, tags: note.tags.filter((each) => each !== held) };
+      });
+
+      return removed;
+    });
+  }
+
+  restoreTags(pairs: readonly NoteTag[]): Promise<number> {
+    return guard(this, () => {
+      this.notes = this.notes.map((note) => {
+        const back = pairs.filter((pair) => pair.noteId === note.id).map((pair) => pair.tag);
+        return back.length === 0 ? note : { ...note, tags: [...note.tags, ...back] };
+      });
+
+      return pairs.length;
+    });
+  }
+
+  setPinned(ids: readonly string[], pinned: boolean): Promise<readonly string[]> {
+    return guard(this, () => {
+      const changed = this.notes
+        .filter((note) => ids.includes(note.id) && note.pinned !== pinned)
+        .map((note) => note.id);
+      this.notes = this.notes.map((note) => (changed.includes(note.id) ? { ...note, pinned } : note));
+
+      return changed;
     });
   }
 

@@ -114,6 +114,12 @@ export const commands = {
 	tagNotes: (ids: string[], tags: string[]) => typedError<NoteTag[], AppError>(__TAURI_INVOKE("tag_notes", { ids, tags })),
 	/**  The undo of [`tag_notes`]: exactly the pairs it added, and nothing wider. */
 	untagNotes: (pairs: NoteTag[]) => typedError<number, AppError>(__TAURI_INVOKE("untag_notes", { pairs })),
+	/**  Answers the pairs it took off: normalized like every tag, so `#Urgent` finds `urgent`. */
+	removeTag: (ids: string[], tag: string) => typedError<NoteTag[], AppError>(__TAURI_INVOKE("remove_tag", { ids, tag })),
+	/**  The undo of [`remove_tag`]: exactly the pairs it took off. */
+	restoreTags: (pairs: NoteTag[]) => typedError<number, AppError>(__TAURI_INVOKE("restore_tags", { pairs })),
+	/**  Answers the notes whose pin changed; undone by the same call, the other way, over those. */
+	setPinned: (ids: string[], pinned: boolean) => typedError<string[], AppError>(__TAURI_INVOKE("set_pinned", { ids, pinned })),
 	/**  Answers each note whose priority moved, with the one it had; `updated_at` stays. */
 	setPriority: (ids: string[], priority: Priority) => typedError<NotePriority[], AppError>(__TAURI_INVOKE("set_priority", { ids, priority })),
 	/**  The undo of [`set_priority`]: each note gets back the priority it had. */

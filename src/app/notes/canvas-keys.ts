@@ -133,7 +133,7 @@ export const CANVAS_KEYS: readonly CanvasKey[] = [
     id: 'canvas.pin',
     accelerator: 'P',
     labelKey: 'shortcuts.canvas.pin',
-    run: ({ focused, notes }) => given(focused, (note) => void notes.togglePinned(note.id)),
+    run: ({ focused, notes }) => given(focused, (note) => void notes.setPinned(note.id, !note.pinned)),
   },
   {
     // Fixed, like the arrows: each digit is a level, in the order the menus list them.

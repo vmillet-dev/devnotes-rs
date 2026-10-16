@@ -432,6 +432,57 @@ pub async fn untag_notes<R: Runtime>(
     .await
 }
 
+/// Answers the pairs it took off: normalized like every tag, so `#Urgent` finds `urgent`.
+#[tauri::command]
+#[specta::specta]
+pub async fn remove_tag<R: Runtime>(
+    ids: Vec<String>,
+    tag: String,
+    app: AppHandle<R>,
+) -> Result<Vec<model::NoteTag>, AppError> {
+    blocking(app, move |_, db| {
+        let Some(tag) = model::normalize_tags(&[tag]).into_iter().next() else {
+            return Ok(Vec::new());
+        };
+
+        let mut connection = lock(db)?;
+
+        Ok(store::remove_tag(&mut connection, &ids, &tag, Utc::now())?)
+    })
+    .await
+}
+
+/// The undo of [`remove_tag`]: exactly the pairs it took off.
+#[tauri::command]
+#[specta::specta]
+pub async fn restore_tags<R: Runtime>(
+    pairs: Vec<model::NoteTag>,
+    app: AppHandle<R>,
+) -> Result<u32, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(count(store::restore_tags(&mut connection, &pairs)?))
+    })
+    .await
+}
+
+/// Answers the notes whose pin changed; undone by the same call, the other way, over those.
+#[tauri::command]
+#[specta::specta]
+pub async fn set_pinned<R: Runtime>(
+    ids: Vec<String>,
+    pinned: bool,
+    app: AppHandle<R>,
+) -> Result<Vec<String>, AppError> {
+    blocking(app, move |_, db| {
+        let mut connection = lock(db)?;
+
+        Ok(store::set_pinned_many(&mut connection, &ids, pinned)?)
+    })
+    .await
+}
+
 /// Answers each note whose priority moved, with the one it had; `updated_at` stays.
 #[tauri::command]
 #[specta::specta]

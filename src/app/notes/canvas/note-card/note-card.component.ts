@@ -264,7 +264,7 @@ export class NoteCardComponent {
   }
 
   protected onTogglePin(): void {
-    void this.notes.togglePinned(this.note().id);
+    void this.notes.setPinned(this.note().id, !this.note().pinned);
   }
 
   protected onPriority(priority: Priority): void {
