@@ -34,8 +34,10 @@ const CODE_KEYS: Record<IpcErrorCode, string | null> = {
   backupNotFound: 'errors.backupGone',
   backupUnopenable: 'errors.backupUnopenable',
   fileAccess: 'errors.fileAccess',
+  fileTooLarge: 'errors.fileTooLarge',
   importFormat: 'errors.importFormat',
-  invalidInput: 'errors.invalidInput',
+  // A field of the code is no sentence: the action's own message says it better.
+  invalidInput: null,
   storageUnavailable: 'errors.storageUnavailable',
   wrongPassphrase: 'errors.wrongPassphrase',
   locked: 'errors.locked',

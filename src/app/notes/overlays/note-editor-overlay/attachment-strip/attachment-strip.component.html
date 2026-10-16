@@ -60,7 +60,9 @@
       </button>
     </span>
   } @empty {
-    <span class="strip-empty" data-testid="attachment-empty">{{ 'attachments.dropHint' | transloco }}</span>
+    <span class="strip-empty" data-testid="attachment-empty">{{
+      'attachments.dropHint' | transloco: { limit: maxMegabytes }
+    }}</span>
   }
 
   <button

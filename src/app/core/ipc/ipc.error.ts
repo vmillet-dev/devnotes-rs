@@ -32,6 +32,7 @@ const IPC_ERROR_CODES: Record<IpcErrorCode, true> = {
   backupNotFound: true,
   backupUnopenable: true,
   fileAccess: true,
+  fileTooLarge: true,
   importFormat: true,
   invalidInput: true,
   storageUnavailable: true,

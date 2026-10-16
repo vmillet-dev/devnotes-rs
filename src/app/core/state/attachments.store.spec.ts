@@ -156,6 +156,14 @@ describe('AttachmentsStore', () => {
     expect(harness.notifier.notice()?.ref.key).toBe('errors.attachmentReadFailed');
   });
 
+  it('says a failed read of the list as a read, not as an attach', async () => {
+    harness.repository.failNext = new Error('boom');
+
+    await harness.store.openFor('note-1');
+
+    expect(harness.notifier.notice()?.ref.key).toBe('errors.attachmentsLoadFailed');
+  });
+
   it('surfaces a failed attach', async () => {
     await harness.store.openFor('note-1');
     harness.dialog.openPath = 'C:/shots/error.png';

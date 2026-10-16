@@ -33,7 +33,7 @@ pub async fn attach_file<R: Runtime>(
     blocking(app, move |_, db| {
         let file_name = model::display_name(&path)?;
         let bytes = read_within_limit(&path)?;
-        model::validate_size(bytes.len() as u64)?;
+        model::validate_size(bytes.len() as u64, &file_name)?;
         Ok(store_new(note_id, file_name, &bytes, db)?)
     })
     .await
@@ -123,7 +123,7 @@ pub async fn attach_clipboard_image<R: Runtime>(
             .context("clipboard image")?;
 
         let png = model::encode_png(image.width(), image.height(), image.rgba())?;
-        model::validate_size(png.len() as u64)?;
+        model::validate_size(png.len() as u64, &model::png_name(&file_name))?;
         Ok(store_new(note_id, model::png_name(&file_name), &png, db)?)
     })
     .await

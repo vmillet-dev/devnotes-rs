@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { Attachment } from '@core/model/note.model';
+import { ATTACHMENT_MAX_MEGABYTES, Attachment } from '@core/model/note.model';
 
 const BYTES_PER_KB = 1024;
 
@@ -26,6 +26,7 @@ export class AttachmentStripComponent {
   readonly zoomRequested = output<void>();
 
   protected readonly confirmingRemove = signal<string | null>(null);
+  protected readonly maxMegabytes = ATTACHMENT_MAX_MEGABYTES;
 
   protected readonly previewed = computed<Attachment | null>(() => {
     const id = this.previewId();

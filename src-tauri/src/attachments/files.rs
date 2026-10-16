@@ -306,10 +306,10 @@ pub(crate) mod tests {
         let bytes = read_within_limit(&source.to_string_lossy()).unwrap();
 
         assert_eq!(bytes.len(), limit + 1);
-        assert_eq!(
-            model::validate_size(bytes.len() as u64).unwrap_err().field,
-            "byteSize"
-        );
+        assert!(matches!(
+            model::validate_size(bytes.len() as u64, "huge.bin"),
+            Err(StorageError::TooLarge { .. })
+        ));
     }
 
     #[test]

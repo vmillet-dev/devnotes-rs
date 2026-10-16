@@ -150,12 +150,17 @@ pub fn encode_png(width: u32, height: u32, rgba: &[u8]) -> Result<Vec<u8>, Stora
     Ok(png)
 }
 
-pub fn validate_size(byte_size: u64) -> Result<u32, ValidationError> {
+/// The limit is said in megabytes, the unit a person reads it in.
+pub const MAX_MEGABYTES: u32 = 10;
+
+const _: () = assert!(MAX_BYTES == MAX_MEGABYTES as u64 * 1024 * 1024);
+
+pub fn validate_size(byte_size: u64, name: &str) -> Result<u32, StorageError> {
     if byte_size > MAX_BYTES {
-        return Err(ValidationError::new(
-            "byteSize",
-            format!("attachment of {byte_size} bytes, limit is {MAX_BYTES}"),
-        ));
+        return Err(StorageError::TooLarge {
+            name: name.to_string(),
+            limit_mb: MAX_MEGABYTES,
+        });
     }
 
     Ok(saturating_u32(byte_size))
@@ -241,8 +246,11 @@ mod tests {
 
     #[test]
     fn a_file_over_the_limit_is_refused_before_being_copied() {
-        assert!(validate_size(MAX_BYTES).is_ok());
-        assert_eq!(validate_size(MAX_BYTES + 1).unwrap_err().field, "byteSize");
+        assert!(validate_size(MAX_BYTES, "capture.png").is_ok());
+        assert!(matches!(
+            validate_size(MAX_BYTES + 1, "capture.mov"),
+            Err(StorageError::TooLarge { name, limit_mb: 10 }) if name == "capture.mov"
+        ));
     }
 
     #[test]
