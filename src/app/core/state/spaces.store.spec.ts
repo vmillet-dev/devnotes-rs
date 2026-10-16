@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { IpcError } from '@core/ipc/ipc.error';
+import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
 import { Space } from '@core/model/space.model';
 import { FakeSpacesRepository } from '@testing/fake-spaces-repository';
 import { provideAppTesting } from '@testing/testing.providers';
@@ -275,6 +276,41 @@ describe('SpacesStore', () => {
 
       expect(await store.contentsOf('work')).toBeNull();
       expect(TestBed.inject(ErrorNotifier).notice()?.ref.key).toBe('errors.spacesLoadFailed');
+    });
+  });
+
+  describe('the space the library was left on', () => {
+    it('remembers a space chosen, and "all spaces" too', async () => {
+      const { store } = await createStore();
+      const preferences = TestBed.inject(LibraryPreferencesService);
+
+      store.selectSpace('personal');
+      expect(preferences.read('devnotes.notes.activeSpace')).toBe('personal');
+
+      store.selectSpace(null);
+      expect(preferences.read('devnotes.notes.activeSpace')).toBe('');
+    });
+
+    it('does not remember a space shown on the person’s behalf', async () => {
+      const { store } = await createStore();
+
+      store.selectSpace('work', false);
+
+      expect(store.activeSpaceId()).toBe('work');
+      expect(TestBed.inject(LibraryPreferencesService).read('devnotes.notes.activeSpace')).toBeNull();
+    });
+
+    it('opens on the space remembered, and on all spaces when it is gone', async () => {
+      const { store } = await createStore();
+      const preferences = TestBed.inject(LibraryPreferencesService);
+
+      preferences.write('devnotes.notes.activeSpace', 'personal');
+      store.restoreRemembered();
+      expect(store.activeSpaceId()).toBe('personal');
+
+      preferences.write('devnotes.notes.activeSpace', 'deleted-since');
+      store.restoreRemembered();
+      expect(store.activeSpaceId()).toBeNull();
     });
   });
 

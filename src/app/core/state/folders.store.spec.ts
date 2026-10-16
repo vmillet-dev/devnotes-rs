@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Folder } from '@core/model/folder.model';
 import { Space } from '@core/model/space.model';
+import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
 import { FakeFoldersRepository } from '@testing/fake-folders-repository';
 import { FakeSpacesRepository } from '@testing/fake-spaces-repository';
 import { provideAppTesting } from '@testing/testing.providers';
@@ -213,5 +214,30 @@ describe('FoldersStore', () => {
 
     expect(await harness.store.createFolder('Perf')).toBeNull();
     expect(harness.store.folders()).toHaveLength(0);
+  });
+  describe('the folder the library was left in', () => {
+    it('remembers the folder opened, and its closing', async () => {
+      const { store, spaces } = await createStore();
+      const preferences = TestBed.inject(LibraryPreferencesService);
+      spaces.selectSpace('sql');
+
+      store.selectFolder('perf');
+      expect(preferences.read('devnotes.notes.activeFolder')).toBe('perf');
+
+      store.selectFolder(null);
+      expect(preferences.read('devnotes.notes.activeFolder')).toBe('');
+    });
+
+    it('opens it again with its space, and not in another space', async () => {
+      const { store, spaces } = await createStore();
+      TestBed.inject(LibraryPreferencesService).write('devnotes.notes.activeFolder', 'perf');
+
+      spaces.selectSpace('sql');
+      store.restoreRemembered();
+      expect(store.activeFolderId()).toBe('perf');
+
+      spaces.selectSpace('veille');
+      expect(store.activeFolderId()).toBeNull();
+    });
   });
 });

@@ -1,9 +1,13 @@
 import { Injectable, Signal, computed, effect, inject, linkedSignal, resource, signal } from '@angular/core';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
+import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
 import { FoldersRepository } from '@core/data/folders.repository';
 import { Folder, FolderColour } from '@core/model/folder.model';
 import { NotesRevision } from './notes-revision';
 import { SpacesStore } from './spaces.store';
+
+/** Kept with the space it belongs to: a folder of another space falls back on every note. */
+const ACTIVE_FOLDER_KEY = 'devnotes.notes.activeFolder';
 
 /**
  * The folders of the active space, and which one narrows the canvas.
@@ -17,6 +21,7 @@ export class FoldersStore {
   private readonly notifier = inject(ErrorNotifier);
   private readonly revision = inject(NotesRevision);
   private readonly spaces = inject(SpacesStore);
+  private readonly preferences = inject(LibraryPreferencesService);
 
   /**
    * ⚠️ Every space's folders and not the active space's: the rail draws the whole library
@@ -82,8 +87,15 @@ export class FoldersStore {
     this.foldersResource.reload();
   }
 
+  /** The folder the library was left in, read with the space when the notes page opens. */
+  restoreRemembered(): void {
+    const id = this.preferences.read(ACTIVE_FOLDER_KEY);
+    if (id) this._activeFolderId.set(id);
+  }
+
   selectFolder(id: string | null): void {
     this._activeFolderId.set(id);
+    this.preferences.write(ACTIVE_FOLDER_KEY, id ?? '');
   }
 
   /** Uniqueness is not checked here: only storage sees the real state of the database. */

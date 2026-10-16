@@ -1,8 +1,12 @@
 import { Injectable, Signal, computed, effect, inject, resource, signal } from '@angular/core';
 import { SpacesRepository } from '@core/data/spaces.repository';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
+import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
 import { Space, SpaceContents } from '@core/model/space.model';
 import { NotesRevision } from './notes-revision';
+
+/** The library's, like the view each space was left on: a space id means nothing elsewhere. */
+const ACTIVE_SPACE_KEY = 'devnotes.notes.activeSpace';
 
 /**
  * `null` is not a waiting state but a choice — "all spaces". No "All" entry exists on
@@ -13,6 +17,7 @@ export class SpacesStore {
   private readonly repository = inject(SpacesRepository);
   private readonly notifier = inject(ErrorNotifier);
   private readonly revision = inject(NotesRevision);
+  private readonly preferences = inject(LibraryPreferencesService);
 
   private readonly spacesResource = resource({
     loader: () => this.repository.loadAll(),
@@ -50,8 +55,22 @@ export class SpacesStore {
     this.spacesResource.reload();
   }
 
-  selectSpace(id: string | null): void {
+  /**
+   * `remembered` is the person's choice, kept for the next launch; the first launch's own pick
+   * of the seeded space is not one.
+   */
+  selectSpace(id: string | null, remembered = true): void {
     this._activeSpaceId.set(id);
+    if (remembered) this.preferences.write(ACTIVE_SPACE_KEY, id ?? '');
+  }
+
+  /**
+   * The space the library was left on, read when the notes page opens: before, the library's
+   * preferences are not open. One deleted since falls back on "all spaces" by itself.
+   */
+  restoreRemembered(): void {
+    const id = this.preferences.read(ACTIVE_SPACE_KEY);
+    if (id) this._activeSpaceId.set(id);
   }
 
   /** Uniqueness is not checked here: only storage sees the real state of the database. */

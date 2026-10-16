@@ -3,7 +3,7 @@ import { browser, expect } from '@wdio/globals';
 import { RAIL_WIDTH } from '@core/services/settings/app-settings.model';
 import { canvas } from '../pageobjects/canvas.page.js';
 import { rail, spaces } from '../pageobjects/sidebar.page.js';
-import { eventually, press, reloadCanvas, testid } from '../support/app.js';
+import { eventually, press, reloadCanvas, reopenSession, testid } from '../support/app.js';
 import { bridge, draft, homeSpaceId, query } from '../support/bridge.js';
 
 /**
@@ -158,6 +158,18 @@ describe('Spaces', () => {
     );
 
     // The only thing on screen saying the canvas is not showing everything.
+    expect(await spaces.label()).toContain('Lectures');
+  });
+
+  /** The library's: the space chosen is the one a new front end opens on. */
+  it('opens again on the space it was left on', async () => {
+    await reopenSession();
+
+    await eventually(
+      () => canvas.titles(),
+      (titles) => titles.length === 1 && titles[0] === 'Only in Lectures',
+      'the canvas still narrowed to the space chosen before',
+    );
     expect(await spaces.label()).toContain('Lectures');
   });
 

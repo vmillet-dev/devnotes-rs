@@ -4,6 +4,7 @@ import { By } from '@angular/platform-browser';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EVENT_SUBSCRIBER, EventSubscriber, GlobalAction } from '@core/ipc/app-events.service';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
+import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
 import { AreaStore } from '@core/services/areas/area.store';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { StatusNotifier } from '@core/services/notifications/status.service';
@@ -192,6 +193,15 @@ describe('NotesPageComponent', () => {
     await fixture.whenStable();
 
     expect(child(LibraryTreeComponent).activeSpaceId()).toBeNull();
+  });
+
+  it('opens on the space the library was left on', async () => {
+    TestBed.inject(LibraryPreferencesService).write('devnotes.notes.activeSpace', 'work');
+
+    fixture.componentInstance.ngOnInit();
+    await fixture.whenStable();
+
+    expect(child(LibraryTreeComponent).activeSpaceId()).toBe('work');
   });
 
   it('updates the active space when the rail reports a space change', async () => {

@@ -341,6 +341,16 @@ describe('Editing a note', () => {
     await canvas.waitForCard(title);
   });
 
+  /** Right after: the space chosen is remembered, and every later scenario reads all of them. */
+  it('shows every space again through the "all spaces" row', async () => {
+    await spaces.open();
+    await spaces.allOption().click();
+    // `null` is a choice, not a loading state: the note filed in `Ops` is still listed.
+    await canvas.waitForCard(title);
+
+    expect(await spaces.allOption().getAttribute('aria-current')).toBe('true');
+  });
+
   /** Written in the rich editor, stored as Markdown, shown on a card as words. */
   describe('a Note', () => {
     const richTitle = 'Standup, formatted';
@@ -690,14 +700,5 @@ describe('Editing a note', () => {
     await bridge.deleteNotes([id]);
     await bridge.purgeNotes([id]);
     await reloadCanvas();
-  });
-
-  it('shows every space again through the "all spaces" row', async () => {
-    await spaces.open();
-    await spaces.allOption().click();
-    // `null` is a choice, not a loading state: the note filed in `Ops` is still listed.
-    await canvas.waitForCard(title);
-
-    expect(await spaces.allOption().getAttribute('aria-current')).toBe('true');
   });
 });
