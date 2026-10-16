@@ -11,10 +11,13 @@ export const GUIDE_CHAPTERS = [
   'organise',
   'fields',
   'checklists',
+  'explorer',
+  'history',
   'palette',
   'attachments',
   'trash',
   'transfer',
+  'tools',
   'http',
 ] as const;
 

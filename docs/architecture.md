@@ -3813,24 +3813,26 @@ A brand-new installation opens on **sample notes**, in a space of their own
 no space, and creating a note with nowhere to file it is refused on purpose — so without them
 the first screen is empty, silent, and offers a "+ Nouvelle note" button that does nothing.
 
-Four notes, one feature each: a pinned welcome note (so the first screen is not an empty
-"pinned" heading), a shell snippet carrying `{{fields}}`, a checklist, and a code snippet with a
-deadline — which is what lights the ⏳ badge and gives the "à trier" filter something to find.
-They are ordinary notes: editing or trashing them is the point, and the written guide behind
+Six notes, one feature each, none longer than a screen: a pinned welcome Note (the three
+areas and the keys that matter, as a table), a shell snippet carrying `{{fields}}`, a JSON
+snippet to open as a graph, a Note with tasks, a table and a code block, a todo list with a
+deadline and a priority — which lights the ⏳ badge and gives the "à trier" filter something to
+find, and is left loose on purpose — and a TypeScript line for Prettier to lay out. They are
+ordinary notes: editing or trashing them is the point, and the written guide behind
 "Prise en main" is what survives the day they go.
 
 **The content comes from the front end**, not from a seed in Rust, for the reason no
 user-facing string ever comes out of the back end: it would ship French into an English
 interface. It also means the samples arrive in the language the application starts in. The two
-snippet bodies are the exception and are hard-coded in the service — they are _code_, so they
-are not translated, and they could not be: Transloco reads `{{name}}` as an interpolation and
-would replace a snippet's fields with empty strings on the way out.
+snippet bodies are the exception and are hard-coded in the service — they are _code_ and
+_data_, so they are not translated, and the fields could not be: Transloco reads `{{name}}` as
+an interpolation and would replace a snippet's fields with empty strings on the way out.
 
 ⚠️ **Two guards decide a first launch, not one.** A preference marker
 (`devnotes.notes.samplesSeeded`) alone would re-seed anyone whose preferences file went missing;
 "no space at all" alone would re-seed the day the last space disappears. Together they only ever
 match a database that has never been written to. The marker is written **after** the seeding,
-because the seeding is one write: `seed_samples` creates the space and the four notes in a
+because the seeding is one write: `seed_samples` creates the space and its notes in a
 single transaction, so there is no halfway. ⚠️ It used to be six round trips, and a process
 killed between any two left a space standing with nothing in it — which both guards then read
 as "already seeded", leaving that install with an empty canvas for good. An installation that

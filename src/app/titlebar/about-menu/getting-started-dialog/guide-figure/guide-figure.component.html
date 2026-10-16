@@ -119,6 +119,48 @@
       <rect class="ink" x="92" y="97" width="120" height="4" rx="2" />
     }
 
+    @case ('explorer') {
+      <!-- The code on the left, the same document as a graph beside it, one node chosen. -->
+      <rect class="panel" x="14" y="14" width="118" height="92" rx="6" />
+      <rect class="line" x="14" y="14" width="118" height="92" rx="6" />
+      <rect class="ink" x="24" y="26" width="10" height="3" rx="1.5" />
+      <rect class="ink" x="32" y="37" width="62" height="3" rx="1.5" opacity="0.6" />
+      <rect class="accent" x="32" y="48" width="54" height="3" rx="1.5" />
+      <rect class="ink" x="32" y="59" width="70" height="3" rx="1.5" opacity="0.6" />
+      <rect class="ink" x="32" y="70" width="46" height="3" rx="1.5" opacity="0.6" />
+      <rect class="ink" x="24" y="81" width="10" height="3" rx="1.5" />
+
+      <line class="line" x1="190" y1="60" x2="232" y2="30" />
+      <line class="line" x1="190" y1="60" x2="232" y2="60" />
+      <line class="line" x1="190" y1="60" x2="232" y2="90" />
+      <rect class="panel" x="148" y="50" width="42" height="20" rx="4" />
+      <rect class="line" x="148" y="50" width="42" height="20" rx="4" />
+      <rect class="panel" x="232" y="20" width="74" height="20" rx="4" />
+      <rect class="line" x="232" y="20" width="74" height="20" rx="4" />
+      <rect class="panel" x="232" y="50" width="74" height="20" rx="4" />
+      <rect class="accent-line" x="232" y="50" width="74" height="20" rx="4" />
+      <rect class="panel" x="232" y="80" width="74" height="20" rx="4" />
+      <rect class="line" x="232" y="80" width="74" height="20" rx="4" />
+      <rect class="ink" x="240" y="58" width="40" height="4" rx="2" />
+    }
+
+    @case ('history') {
+      <!-- The body, and at its foot the versions kept, one opened beside its dates. -->
+      <rect class="panel" x="14" y="14" width="292" height="44" rx="6" />
+      <rect class="line" x="14" y="14" width="292" height="44" rx="6" />
+      <rect class="ink" x="26" y="26" width="120" height="3" rx="1.5" opacity="0.6" />
+      <rect class="ink" x="26" y="36" width="168" height="3" rx="1.5" opacity="0.6" />
+      <rect class="ink" x="26" y="46" width="96" height="3" rx="1.5" opacity="0.6" />
+
+      <rect class="ink" x="14" y="68" width="64" height="4" rx="2" />
+      <rect class="accent" x="14" y="82" width="8" height="8" rx="2" />
+      <rect class="ink" x="30" y="84" width="96" height="4" rx="2" />
+      <rect class="ink" x="250" y="84" width="56" height="4" rx="2" opacity="0.55" />
+      <rect class="panel" x="14" y="96" width="8" height="8" rx="2" />
+      <rect class="ink" x="30" y="98" width="80" height="4" rx="2" opacity="0.55" />
+      <rect class="ink" x="250" y="98" width="56" height="4" rx="2" opacity="0.55" />
+    }
+
     @case ('palette') {
       <!-- The window dimmed, the palette over it, one result highlighted. -->
       <rect class="panel" x="8" y="10" width="304" height="100" rx="6" opacity="0.3" />
@@ -183,6 +225,21 @@
       <rect class="accent" x="214" y="44" width="28" height="8" rx="3" />
       <rect class="ink" x="214" y="62" width="76" height="4" rx="2" opacity="0.5" />
       <rect class="ink" x="214" y="74" width="58" height="4" rx="2" opacity="0.5" />
+    }
+
+    @case ('tools') {
+      <!-- The catalogue in columns, its search above them. -->
+      <rect class="line" x="196" y="12" width="110" height="14" rx="7" />
+      <rect class="ink" x="206" y="17" width="48" height="4" rx="2" opacity="0.55" />
+      @for (x of [14, 88, 162, 236]; track x) {
+        <rect class="panel" [attr.x]="x" y="34" width="70" height="72" rx="6" />
+        <rect class="line" [attr.x]="x" y="34" width="70" height="72" rx="6" />
+        <rect class="accent" [attr.x]="x + 8" y="42" width="10" height="10" rx="3" />
+        <rect class="ink" [attr.x]="x + 24" y="45" width="34" height="4" rx="2" />
+        <rect class="ink" [attr.x]="x + 8" y="62" width="50" height="3" rx="1.5" opacity="0.6" />
+        <rect class="ink" [attr.x]="x + 8" y="76" width="42" height="3" rx="1.5" opacity="0.6" />
+        <rect class="ink" [attr.x]="x + 8" y="90" width="46" height="3" rx="1.5" opacity="0.6" />
+      }
     }
 
     @case ('http') {

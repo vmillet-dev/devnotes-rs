@@ -94,30 +94,42 @@
       "welcome": {
         "title": "Welcome to {{app}}",
         "source": "{{app}} / Getting started",
-        "content": "{{app}} keeps your notes, your snippets and your lists within reach of a shortcut.\n\n- Cards file themselves: pinned, today, this week, older.\n- The square chip on a card says which folder it lives in. Try the \"Board\" view at the top: folders are regions there, and notes are dropped into them with the mouse.\n- Everything is local: the database lives in your user folder, nothing goes over the network.\n\nThese four notes are samples. Edit them, or send them to the trash: the \"About → Getting started\" menu tells the same story and does not go away."
+        "content": "{{app}} keeps your snippets, your notes and your lists within reach of the keyboard. Everything stays on this machine, encrypted; nothing goes over the network.\n\n## Where things are\n- **Notes**, **Tools** and **HTTP**: the three areas, at the side (Ctrl+1, Ctrl+2, Ctrl+3).\n- Cards file themselves: pinned, today, this week, older. The **Board** view, at the top, shows folders as zones.\n- The **About** menu holds the getting-started guide and every shortcut.\n\n## The keys that matter\n| Keys | For |\n| --- | --- |\n| Ctrl+K | Search the notes, or the tools |\n| Ctrl+N · Ctrl+Shift+N | A snippet · a Note |\n| Enter · C · P | Open · copy · pin the card |\n| Ctrl+Alt+P | Paste a note from any application |\n\nThese samples are made to be edited, or sent to the trash."
       },
       "snippet": {
         "title": "psql connection",
         "source": "PostgreSQL"
       },
+      "json": {
+        "title": "API response — open it as a graph",
+        "source": "API / Billing"
+      },
+      "release": {
+        "title": "Release day",
+        "content": "A Note is written formatted and stored as Markdown: headings, tasks, tables, code blocks.\n\n## Before\n- [x] Freeze the merges on `main`\n- [ ] Warn the support team\n- [ ] Back the database up\n\n## Where\n| Environment | Address | Who |\n| --- | --- | --- |\n| Staging | staging.example.com | API team |\n| Production | app.example.com | On call |\n\n## Check\n```bash\nkubectl rollout status deploy/billing --timeout=120s\ncurl -fsS https://app.example.com/health\n```"
+      },
       "checklist": {
         "title": "Things to try",
         "open": "Open a note by clicking its card",
-        "copy": "Copy a note without opening it, from the card's button",
         "fields": "Copy \"psql connection\" and fill in its fields",
-        "palette": "Open the quick-paste palette with Ctrl+Alt+P",
-        "space": "Create a space of your own and move a note into it",
-        "board": "Switch to the Board view and drag a note into a zone"
+        "graph": "Open the API response as a graph",
+        "search": "Find a word in \"Release day\" with Ctrl+F",
+        "format": "Format the code to format with Shift+Alt+F",
+        "tools": "Open the tools (Ctrl+2) and save a result as a note",
+        "palette": "Paste a note from another application with Ctrl+Alt+P",
+        "board": "Switch to the Board view and drag a note into a zone",
+        "kind": "Turn this list into a Note, from the editor's \"Kind\" menu"
       },
-      "code": {
-        "title": "Angular signals",
-        "source": "Angular / Signals"
+      "format": {
+        "title": "Code to format (Shift+Alt+F)",
+        "source": "TypeScript / Prettier"
       },
       "tags": {
         "devnotes": "devnotes",
         "example": "example",
         "database": "sql",
-        "angular": "angular"
+        "json": "json",
+        "typescript": "typescript"
       },
       "folders": {
         "snippets": "Snippets",
@@ -940,8 +952,8 @@
     "close": "Close",
     "chapters": {
       "notes": {
-        "title": "Notes and snippets",
-        "body": "A note carries a title, a body coloured by its language, a source and tags. Click a card to open it — or copy it without opening, from its own button."
+        "title": "Snippets, Notes and lists",
+        "body": "A note is a snippet — code, coloured by its language —, a Note — formatted text, stored as Markdown — or a todo list; the editor's \"Kind\" menu turns one into another. Click a card to open it, or copy it without opening, from its own button."
       },
       "spaces": {
         "title": "Spaces to file things in",
@@ -963,6 +975,14 @@
         "title": "Lists to tick",
         "body": "A note is a snippet, a formatted note or a todo list — and a list is ticked from the card, without opening it. In the editor, Enter adds an item and Alt with an arrow moves it."
       },
+      "explorer": {
+        "title": "A JSON seen as a tree or a graph",
+        "body": "A JSON, YAML, TOML or XML snippet is explored without leaving the editor: the tabs above the code show it as a tree or a graph, side by side with the text when the window allows. Clicking a node selects its lines in the code, and the other way round."
+      },
+      "history": {
+        "title": "The history, and searching the text",
+        "body": "Every edit keeps the body as it was: the last twenty versions open under \"History\", at the foot of the editor, compared with the current text before they are restored. In a snippet as in a Note, Ctrl+F finds and Ctrl+H replaces."
+      },
       "palette": {
         "title": "Pasting without leaving what you are doing",
         "body": "{{palette}} opens the paste palette over any application: type, choose, it is on the clipboard. {{capture}} does the reverse and {{newNote}} opens an empty note, closed window included."
@@ -978,6 +998,10 @@
       "transfer": {
         "title": "In and out",
         "body": "The File menu exports everything, one space or the selection to a file it can read back, and re-imports it without ever making a duplicate. “Copy as Markdown” puts the selection on the clipboard."
+      },
+      "tools": {
+        "title": "Tools, offline",
+        "body": "The Tools area gathers some thirty utilities — encode, hash, convert dates or sizes, generate identifiers, read a JWT — without sending anything over the network. Ctrl+Shift+T opens their search, and \"Save as note\" keeps a result among your notes."
       },
       "http": {
         "title": "Requests: HTTP, GraphQL, WebSocket",
