@@ -44,6 +44,37 @@ describe('Todo lists', () => {
     ]);
   });
 
+  /** A list copied from elsewhere arrives as items, its markers and boxes read. */
+  it('turns several lines pasted into a row into as many items', async () => {
+    const pasted = 'Pasted list';
+    await canvas.createChecklist();
+    await editor.setTitle(pasted);
+    await editor.addItem('');
+
+    // A synthetic paste, as the clipboard would hand it: the runner's own clipboard is shared.
+    await browser.execute((text: string) => {
+      const row = document.querySelector<HTMLInputElement>('[data-testid="checklist-text"]')!;
+      row.focus();
+      const data = new DataTransfer();
+      data.setData('text/plain', text);
+      row.dispatchEvent(
+        new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }),
+      );
+    }, '- Freeze the merges\n- [x] Back the database up\n3. Watch the graphs');
+    await editor.close();
+
+    const view = await bridge.queryNotes(query({ search: pasted }));
+    const items = view.sections[0]?.notes[0]?.items ?? [];
+    expect(items).toEqual([
+      { text: 'Freeze the merges', done: false },
+      { text: 'Back the database up', done: true },
+      { text: 'Watch the graphs', done: false },
+    ]);
+
+    await bridge.deleteNotes([view.sections[0]!.notes[0]!.id]);
+    await bridge.purgeNotes([view.sections[0]!.notes[0]!.id]);
+  });
+
   it('ticks an item from the editor', async () => {
     await canvas.openNote(title);
     await editor.toggleItem(0);
