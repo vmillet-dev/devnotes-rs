@@ -22,12 +22,23 @@ const DEADLINE_DAYS = 7;
  */
 const PSQL_SNIPPET = 'psql -h {{host}} -p {{port=5432}} -U {{user}} -d {{database}}';
 
-const SIGNAL_SNIPPET = `readonly count = signal(0);
-readonly doubled = computed(() => this.count() * 2);
-
-increment(): void {
-  this.count.update((value) => value + 1);
+/** A document to open as a graph: data reads the same in every language. */
+const API_RESPONSE = `{
+  "service": "billing",
+  "version": "1.4.2",
+  "healthy": true,
+  "replicas": 3,
+  "endpoints": [
+    { "path": "/invoices", "method": "GET", "p95Ms": 42 },
+    { "path": "/invoices", "method": "POST", "p95Ms": 118 },
+    { "path": "/health", "method": "GET", "p95Ms": 3 }
+  ],
+  "owner": { "team": "payments", "onCall": "@oncall" }
 }`;
+
+/** Written on one line on purpose: Shift+Alt+F is what lays it out. */
+const UNFORMATTED =
+  'const retries={max:3,delayMs:250};export async function withRetry<T>(task:()=>Promise<T>,left=retries.max):Promise<T>{try{return await task()}catch(error){if(left<=0)throw error;await new Promise(r=>setTimeout(r,retries.delayMs));return withRetry(task,left-1)}}';
 
 /**
  * Indexes into the folders below, not ids: they do not exist until the command that
@@ -40,24 +51,32 @@ const KEYS = {
   spaceName: 'notes.samples.space',
   snippetsFolder: 'notes.samples.folders.snippets',
   startHereFolder: 'notes.samples.folders.startHere',
-  checklistBoard: 'notes.samples.checklist.board',
   welcomeTitle: 'notes.samples.welcome.title',
   welcomeContent: 'notes.samples.welcome.content',
   welcomeSource: 'notes.samples.welcome.source',
   snippetTitle: 'notes.samples.snippet.title',
   snippetSource: 'notes.samples.snippet.source',
+  jsonTitle: 'notes.samples.json.title',
+  jsonSource: 'notes.samples.json.source',
+  releaseTitle: 'notes.samples.release.title',
+  releaseContent: 'notes.samples.release.content',
   checklistTitle: 'notes.samples.checklist.title',
   checklistOpen: 'notes.samples.checklist.open',
-  checklistCopy: 'notes.samples.checklist.copy',
   checklistFields: 'notes.samples.checklist.fields',
+  checklistGraph: 'notes.samples.checklist.graph',
+  checklistSearch: 'notes.samples.checklist.search',
+  checklistFormat: 'notes.samples.checklist.format',
+  checklistTools: 'notes.samples.checklist.tools',
   checklistPalette: 'notes.samples.checklist.palette',
-  checklistSpace: 'notes.samples.checklist.space',
-  codeTitle: 'notes.samples.code.title',
-  codeSource: 'notes.samples.code.source',
+  checklistBoard: 'notes.samples.checklist.board',
+  checklistKind: 'notes.samples.checklist.kind',
+  formatTitle: 'notes.samples.format.title',
+  formatSource: 'notes.samples.format.source',
   devnotesTag: 'notes.samples.tags.devnotes',
   exampleTag: 'notes.samples.tags.example',
   databaseTag: 'notes.samples.tags.database',
-  angularTag: 'notes.samples.tags.angular',
+  jsonTag: 'notes.samples.tags.json',
+  typescriptTag: 'notes.samples.tags.typescript',
 } as const;
 
 type SampleTexts = Record<keyof typeof KEYS, string>;
@@ -104,81 +123,86 @@ export class SampleNotesService {
 
   private async seed(): Promise<Space> {
     const text = await this.texts();
+    const sample = (draft: Partial<NoteDraft> & Pick<NoteDraft, 'title' | 'kind'>): NoteDraft => ({
+      spaceId: UNFILED,
+      folderId: null,
+      language: 'txt',
+      content: '',
+      source: '',
+      tags: [],
+      pinned: false,
+      lifecycle: { kind: 'permanent' },
+      priority: 'none',
+      items: [],
+      ...draft,
+    });
 
-    // No space of their own: one command writes the space, its folders and these four
-    // notes in a single transaction, and it is the one that decides where they land.
-    //
-    // One note is deliberately left loose. "No folder" is a legitimate state, and a
-    // first launch where everything is filed would teach the opposite.
+    // No space of their own: one command writes the space, its folders and these notes in
+    // a single transaction, and it is the one that decides where they land. Each shows one
+    // thing, short enough to read without scrolling.
     const drafts: NoteDraft[] = [
-      {
-        spaceId: UNFILED,
-        folderId: null,
+      sample({
         title: text.welcomeTitle,
-        language: 'txt',
+        kind: 'note',
         content: text.welcomeContent,
         source: text.welcomeSource,
         tags: [text.devnotesTag],
         pinned: true,
-        lifecycle: { kind: 'permanent' },
-        kind: 'note',
-        priority: 'none',
-        items: [],
-      },
-      {
-        spaceId: UNFILED,
-        folderId: null,
+      }),
+      sample({
         title: text.snippetTitle,
+        kind: 'snippet',
         language: 'sh',
         content: PSQL_SNIPPET,
         source: text.snippetSource,
         tags: [text.databaseTag, text.exampleTag],
-        pinned: false,
-        lifecycle: { kind: 'permanent' },
+      }),
+      sample({
+        title: text.jsonTitle,
         kind: 'snippet',
-        priority: 'none',
-        items: [],
-      },
-      {
-        spaceId: UNFILED,
-        folderId: null,
-        title: text.checklistTitle,
-        language: 'txt',
-        content: '',
-        source: '',
+        language: 'json',
+        content: API_RESPONSE,
+        source: text.jsonSource,
+        tags: [text.jsonTag, text.exampleTag],
+      }),
+      sample({
+        title: text.releaseTitle,
+        kind: 'note',
+        content: text.releaseContent,
         tags: [text.devnotesTag],
-        pinned: false,
-        lifecycle: { kind: 'permanent' },
+      }),
+      sample({
+        title: text.checklistTitle,
         kind: 'checklist',
-        priority: 'none',
+        tags: [text.devnotesTag],
+        lifecycle: { kind: 'expires', at: this.deadline() },
+        priority: 'high',
         items: [
           text.checklistOpen,
-          text.checklistCopy,
           text.checklistFields,
+          text.checklistGraph,
+          text.checklistSearch,
+          text.checklistFormat,
+          text.checklistTools,
           text.checklistPalette,
           text.checklistBoard,
-          text.checklistSpace,
+          text.checklistKind,
         ].map((label) => ({ text: label, done: false })),
-      },
-      {
-        spaceId: UNFILED,
-        folderId: null,
-        title: text.codeTitle,
-        language: 'ts',
-        content: SIGNAL_SNIPPET,
-        source: text.codeSource,
-        tags: [text.angularTag, text.exampleTag],
-        pinned: false,
-        lifecycle: { kind: 'expires', at: this.deadline() },
+      }),
+      sample({
+        title: text.formatTitle,
         kind: 'snippet',
-        priority: 'none',
-        items: [],
-      },
+        language: 'ts',
+        content: UNFORMATTED,
+        source: text.formatSource,
+        tags: [text.typescriptTag, text.exampleTag],
+      }),
     ];
 
     const folders = [text.snippetsFolder, text.startHereFolder];
-    // The welcome note and the checklist open the board; the two snippets fill a zone.
-    const filing: (number | undefined)[] = [START_HERE, SNIPPETS, undefined, SNIPPETS];
+    // The two Notes open the board; the snippets fill a zone. The todo list is left loose on
+    // purpose: "no folder" is a legitimate state, and the first launch shows it.
+    const filing: (number | undefined)[] = [START_HERE, SNIPPETS, SNIPPETS, START_HERE, undefined, SNIPPETS];
     const notes: SampleNote[] = drafts.map((draft, index) => ({
       folder: filing[index],
       draft,

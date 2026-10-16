@@ -39,7 +39,7 @@ describe('GettingStartedDialogComponent', () => {
   /** One chapter at a time. */
   it('shows one chapter, and walks to the next', async () => {
     expect(fixture.nativeElement.querySelectorAll('[data-testid="guide-chapter"]')).toHaveLength(1);
-    expect(title()).toContain('notes');
+    expect(title()).toContain('Notes');
 
     await press('guide-next');
 
@@ -57,15 +57,15 @@ describe('GettingStartedDialogComponent', () => {
 
   /** A reader who knows which chapter they want must still be able to land on it. */
   it('jumps straight to a chapter from its dot', async () => {
-    expect(dots()).toHaveLength(11);
+    expect(dots()).toHaveLength(14);
 
-    dots()[9].click();
+    dots()[11].click();
     await fixture.whenStable();
 
     expect(title()).toContain('Entrer et sortir');
 
     // The last one says what the HTTP area begins: its three kinds of request.
-    dots()[10].click();
+    dots()[13].click();
     await fixture.whenStable();
     expect(title()).toContain('HTTP, GraphQL, WebSocket');
     expect(fixture.nativeElement.querySelector('[data-chapter="http"]')).not.toBeNull();

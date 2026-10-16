@@ -94,30 +94,42 @@
       "welcome": {
         "title": "Bienvenue dans {{app}}",
         "source": "{{app}} / Prise en main",
-        "content": "{{app}} garde vos notes, vos snippets et vos listes à portée de raccourci.\n\n- Les cartes se rangent seules : épinglées, aujourd'hui, cette semaine, plus ancien.\n- La pastille carrée sur une carte dit dans quel dossier elle vit. Essayez la vue « Tableau » en haut : les dossiers y sont des régions où l'on dépose les notes à la souris.\n- Tout est local : la base vit dans votre dossier utilisateur, rien ne part sur le réseau.\n\nCes quatre notes sont des exemples. Modifiez-les, ou mettez-les à la corbeille : le menu « À propos → Prise en main » raconte la même chose et ne s'efface pas."
+        "content": "{{app}} garde vos snippets, vos notes et vos listes à portée de clavier. Tout reste sur cette machine, chiffré ; rien ne part sur le réseau.\n\n## Où sont les choses\n- **Notes**, **Outils** et **HTTP** : les trois zones, sur le côté (Ctrl+1, Ctrl+2, Ctrl+3).\n- Les cartes se rangent seules : épinglées, aujourd’hui, cette semaine, plus ancien. La vue **Tableau**, en haut, montre les dossiers comme des zones.\n- Le menu **À propos** tient la prise en main et tous les raccourcis.\n\n## Les touches qui comptent\n| Touches | Pour |\n| --- | --- |\n| Ctrl+K | Chercher dans les notes, ou dans les outils |\n| Ctrl+N · Ctrl+Maj+N | Un snippet · une Note |\n| Entrée · C · P | Ouvrir · copier · épingler la carte |\n| Ctrl+Alt+P | Coller une note depuis n’importe quelle application |\n\nCes exemples sont faits pour être modifiés, ou mis à la corbeille."
       },
       "snippet": {
         "title": "Connexion psql",
         "source": "PostgreSQL"
       },
+      "json": {
+        "title": "Réponse d’API — à ouvrir en graphe",
+        "source": "API / Facturation"
+      },
+      "release": {
+        "title": "Mise en production",
+        "content": "Une Note s’écrit mise en forme et s’enregistre en Markdown : titres, tâches, tableaux, blocs de code.\n\n## Avant\n- [x] Geler les merges sur `main`\n- [ ] Prévenir le support\n- [ ] Sauvegarder la base\n\n## Où\n| Environnement | Adresse | Qui |\n| --- | --- | --- |\n| Préproduction | staging.exemple.fr | Équipe API |\n| Production | app.exemple.fr | Astreinte |\n\n## Vérifier\n```bash\nkubectl rollout status deploy/billing --timeout=120s\ncurl -fsS https://app.exemple.fr/health\n```"
+      },
       "checklist": {
         "title": "À essayer",
         "open": "Ouvrir une note en cliquant sa carte",
-        "copy": "Copier une note sans l'ouvrir, depuis le bouton de la carte",
         "fields": "Copier « Connexion psql » et remplir ses champs",
-        "palette": "Ouvrir la palette de collage rapide avec Ctrl+Alt+P",
-        "space": "Créer un espace à soi et y déplacer une note",
-        "board": "Passer en vue Tableau et glisser une note dans une zone"
+        "graph": "Ouvrir la réponse d’API en graphe",
+        "search": "Chercher un mot dans « Mise en production » avec Ctrl+F",
+        "format": "Formater le code à formater avec Maj+Alt+F",
+        "tools": "Ouvrir les outils (Ctrl+2) et enregistrer un résultat comme note",
+        "palette": "Coller une note depuis une autre application avec Ctrl+Alt+P",
+        "board": "Passer en vue Tableau et glisser une note dans une zone",
+        "kind": "Convertir cette liste en Note, depuis le menu « Type » de l’éditeur"
       },
-      "code": {
-        "title": "Signaux Angular",
-        "source": "Angular / Signals"
+      "format": {
+        "title": "Code à formater (Maj+Alt+F)",
+        "source": "TypeScript / Prettier"
       },
       "tags": {
         "devnotes": "devnotes",
         "example": "exemple",
         "database": "sql",
-        "angular": "angular"
+        "json": "json",
+        "typescript": "typescript"
       },
       "folders": {
         "snippets": "Snippets",
@@ -933,8 +945,8 @@
     "close": "Fermer",
     "chapters": {
       "notes": {
-        "title": "Des notes et des snippets",
-        "body": "Une note porte un titre, un corps coloré selon son langage, une source et des tags. Cliquez une carte pour l’ouvrir — ou copiez-la sans l’ouvrir, depuis son propre bouton."
+        "title": "Des snippets, des Notes, des listes",
+        "body": "Une note est un snippet — du code, coloré selon son langage —, une Note — du texte mis en forme, enregistré en Markdown — ou une liste de tâches ; le menu « Type » de l’éditeur passe de l’une à l’autre. Cliquez une carte pour l’ouvrir, ou copiez-la sans l’ouvrir depuis son propre bouton."
       },
       "spaces": {
         "title": "Des espaces pour ranger",
@@ -956,6 +968,14 @@
         "title": "Des listes à cocher",
         "body": "Une note est un snippet, une note mise en forme ou une liste à cocher — et une liste se coche depuis la carte, sans l’ouvrir. Dans l’éditeur, Entrée ajoute un item et Alt avec une flèche le déplace."
       },
+      "explorer": {
+        "title": "Un JSON vu en arbre ou en graphe",
+        "body": "Un snippet JSON, YAML, TOML ou XML s’explore sans quitter l’éditeur : les onglets au-dessus du code l’affichent en arbre ou en graphe, côte à côte avec le texte si la fenêtre le permet. Un clic sur un nœud sélectionne ses lignes dans le code, et inversement."
+      },
+      "history": {
+        "title": "L’historique, et chercher dans le texte",
+        "body": "Chaque modification garde le corps d’avant : les vingt dernières versions s’ouvrent dans « Historique », au pied de l’éditeur, comparées au texte actuel avant d’être restaurées. Dans un snippet comme dans une Note, Ctrl+F cherche et Ctrl+H remplace."
+      },
       "palette": {
         "title": "Coller sans quitter ce que vous faites",
         "body": "{{palette}} ouvre la palette de collage par-dessus n’importe quelle application : tapez, choisissez, c’est dans le presse-papier. {{capture}} fait l’inverse et {{newNote}} ouvre une note vide, fenêtre fermée comprise."
@@ -971,6 +991,10 @@
       "transfer": {
         "title": "Entrer et sortir",
         "body": "Le menu Fichier exporte tout, un espace ou la sélection dans un fichier relisible, et le réimporte sans jamais créer de doublon. « Copier en Markdown » met la sélection dans le presse-papier."
+      },
+      "tools": {
+        "title": "Des outils, hors ligne",
+        "body": "La zone Outils réunit une trentaine d’utilitaires — encoder, hacher, convertir des dates ou des tailles, générer des identifiants, lire un JWT — sans rien envoyer sur le réseau. Ctrl+Maj+T ouvre leur recherche, et « Enregistrer comme note » garde un résultat parmi vos notes."
       },
       "http": {
         "title": "Des requêtes : HTTP, GraphQL, WebSocket",

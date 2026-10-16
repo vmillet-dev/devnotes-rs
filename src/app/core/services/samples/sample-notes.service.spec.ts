@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { type MockInstance, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { TranslocoService } from '@jsverse/transloco';
 import { LibraryPreferencesService } from '@core/services/preferences/library-preferences.service';
 import { NotesRepository } from '@core/data/notes.repository';
 import { SpacesRepository } from '@core/data/spaces.repository';
@@ -51,7 +52,7 @@ describe('SampleNotesService', () => {
     expect(await service.seedIfFirstRun()).not.toBeNull();
 
     expect(notes.seededSamples?.spaceName).toBe('Découverte');
-    expect(drafts()).toHaveLength(4);
+    expect(drafts()).toHaveLength(6);
     // The drafts carry no space: it does not exist when they are composed, and the
     // command that creates it is the one that files them into it.
     expect(notes.seededSamples?.notes.every(({ draft }) => draft.spaceId === '')).toBe(true);
@@ -66,7 +67,7 @@ describe('SampleNotesService', () => {
 
     expect(notes.seededSamples?.folders).toEqual(['Snippets', 'Prise en main']);
     // Indexes, not ids: the folders do not exist when these are composed.
-    expect(notes.seededSamples?.notes.map((note) => note.folder)).toEqual([1, 0, undefined, 0]);
+    expect(notes.seededSamples?.notes.map((note) => note.folder)).toEqual([1, 0, 0, 1, undefined, 0]);
   });
 
   /** "No folder" is a legitimate state, and the first launch shows it rather than
@@ -79,23 +80,41 @@ describe('SampleNotesService', () => {
     expect(loose[0]?.draft.kind).toBe('checklist');
   });
 
+  /** Each sample shows something DevNotes does today, none longer than a screen. */
   it('carries one feature per sample', async () => {
     await service.seedIfFirstRun();
-    const [welcome, snippet, checklist, code] = drafts();
+    const [welcome, snippet, json, release, checklist, unformatted] = drafts();
 
     expect(welcome.pinned).toBe(true);
+    expect(welcome.content).toContain('| Ctrl+K |');
     expect(snippet.content).toContain('{{host}}');
     expect(snippet.content).toContain('{{port=5432}}');
-    expect(checklist.kind).toBe('checklist');
-    expect(checklist.items).toHaveLength(6);
+    expect(JSON.parse(json.content).endpoints).toHaveLength(3);
+    expect(release.content).toContain('- [ ] ');
+    expect(release.content).toContain('| --- |');
+    expect(release.content).toContain('```bash');
+    expect(checklist.items).toHaveLength(9);
     expect(checklist.items.every((item) => !item.done)).toBe(true);
-    expect(code.lifecycle.kind).toBe('expires');
+    expect(checklist.priority).toBe('high');
+    expect(checklist.lifecycle.kind).toBe('expires');
+    expect(unformatted.content).not.toContain('\n');
+    expect(drafts().every((draft) => draft.content.split('\n').length <= 20)).toBe(true);
+  });
+
+  it('writes them in the language on screen', async () => {
+    TestBed.inject(TranslocoService).setActiveLang('en');
+    await service.seedIfFirstRun();
+
+    expect(notes.seededSamples?.spaceName).toBe('Getting started');
+    expect(notes.seededSamples?.folders).toEqual(['Snippets', 'Start here']);
+    expect(drafts().map((draft) => draft.title)).toContain('Release day');
+    expect(drafts().every((draft) => draft.title !== '')).toBe(true);
   });
 
   it('dates the deadline to the end of a local day', async () => {
     // Midnight would make a note dated today expired on the spot.
     await service.seedIfFirstRun();
-    const lifecycle = drafts()[3].lifecycle;
+    const lifecycle = drafts()[4].lifecycle;
 
     expect(lifecycle.kind).toBe('expires');
     if (lifecycle.kind !== 'expires') return;
@@ -107,15 +126,22 @@ describe('SampleNotesService', () => {
   it('spells out the kinds and the languages rather than leaving detection to guess', async () => {
     await service.seedIfFirstRun();
 
-    expect(drafts().map((draft) => draft.kind)).toEqual(['note', 'snippet', 'checklist', 'snippet']);
-    expect(drafts().map((draft) => draft.language)).toEqual(['txt', 'sh', 'txt', 'ts']);
+    expect(drafts().map((draft) => draft.kind)).toEqual([
+      'note',
+      'snippet',
+      'snippet',
+      'note',
+      'checklist',
+      'snippet',
+    ]);
+    expect(drafts().map((draft) => draft.language)).toEqual(['txt', 'sh', 'json', 'txt', 'txt', 'ts']);
   });
 
   it('never offers the samples twice', async () => {
     await service.seedIfFirstRun();
 
     expect(await service.seedIfFirstRun()).toBeNull();
-    expect(drafts()).toHaveLength(4);
+    expect(drafts()).toHaveLength(6);
   });
 
   it('leaves an existing installation alone, and stops looking', async () => {
@@ -147,6 +173,6 @@ describe('SampleNotesService', () => {
     expect(preferences.read('devnotes.notes.samplesSeeded')).toBeNull();
 
     expect(await service.seedIfFirstRun()).not.toBeNull();
-    expect(notes.seededSamples?.notes).toHaveLength(4);
+    expect(notes.seededSamples?.notes).toHaveLength(6);
   });
 });
