@@ -54,6 +54,7 @@ describe('ShortcutsDialogComponent', () => {
       'Zones',
       'Canevas',
       'Éditeur',
+      'Note mise en forme',
       'Collage rapide',
       'HTTP',
       'Visualiseur JSON',
@@ -65,6 +66,12 @@ describe('ShortcutsDialogComponent', () => {
     expect(keysFor('Aller aux outils')).toEqual(['Ctrl', '2']);
     expect(keysFor('champ de recherche')).toEqual(['Ctrl', 'K']);
     expect(keysFor('Tout replier jusqu’à la racine')).toEqual(['Shift', '←']);
+  });
+
+  it('says the keys of a Note and the Tab of the code', async () => {
+    expect(keysFor('Lien, sur la sélection ou le mot')).toEqual(['Ctrl', 'K']);
+    expect(keysFor('Liste de tâches')).toEqual(['Ctrl', 'Shift', '9']);
+    expect(keysFor('Désindenter')).toEqual(['Shift', 'Tab']);
   });
 
   it('draws the separator between two caps rather than writing it', async () => {
