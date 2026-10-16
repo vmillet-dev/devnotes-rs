@@ -61,8 +61,9 @@
           [value]="item.text"
           (input)="setText($index, row.value)"
           (blur)="commit()"
-          (keydown.enter)="insertAfter($index)"
+          (keydown.enter)="splitAt($event, $index)"
           (keydown.backspace)="onBackspace($event, $index)"
+          (paste)="onPaste($event, $index)"
           (keydown.alt.arrowup)="move($index, $index - 1)"
           (keydown.alt.arrowdown)="move($index, $index + 1)"
         />

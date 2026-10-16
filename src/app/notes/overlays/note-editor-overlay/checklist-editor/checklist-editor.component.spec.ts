@@ -82,6 +82,69 @@ describe('ChecklistEditorComponent', () => {
     expect(last().map((item) => item.text)).toEqual(['Relire', '', 'Déployer']);
   });
 
+  it('cuts a row at the caret on Enter, what follows starting the next', async () => {
+    rows()[1].focus();
+    rows()[1].setSelectionRange(3, 3);
+    key(rows()[1], { key: 'Enter' });
+    await fixture.whenStable();
+
+    expect(last()).toEqual([
+      { text: 'Relire', done: true },
+      { text: 'Dép', done: false },
+      { text: 'loyer', done: false },
+    ]);
+  });
+
+  it('joins a row to the one above on Backspace at its very start', async () => {
+    rows()[1].focus();
+    rows()[1].setSelectionRange(0, 0);
+    key(rows()[1], { key: 'Backspace' });
+    await fixture.whenStable();
+
+    expect(last()).toEqual([{ text: 'RelireDéployer', done: true }]);
+  });
+
+  describe('pasting several lines', () => {
+    function paste(input: HTMLInputElement, text: string): ClipboardEvent {
+      const event = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent;
+      Object.defineProperty(event, 'clipboardData', { value: { getData: () => text } });
+      input.dispatchEvent(event);
+      return event;
+    }
+
+    it('makes one item a line, list markers dropped and boxes read', async () => {
+      type(rows()[1], '');
+      rows()[1].focus();
+      const event = paste(rows()[1], '- Geler les merges\n\n- [x] Sauvegarder la base\r\n3. Surveiller');
+      await fixture.whenStable();
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(last()).toEqual([
+        { text: 'Relire', done: true },
+        { text: 'Geler les merges', done: false },
+        { text: 'Sauvegarder la base', done: true },
+        { text: 'Surveiller', done: false },
+      ]);
+    });
+
+    it('keeps what stood around the caret, at the head of the first and the end of the last', async () => {
+      rows()[1].focus();
+      rows()[1].setSelectionRange(3, 3);
+      paste(rows()[1], 'A\nB');
+      await fixture.whenStable();
+
+      expect(last().map((item) => item.text)).toEqual(['Relire', 'DépA', 'Bloyer']);
+    });
+
+    it('lets a single line paste as it always did', async () => {
+      const event = paste(rows()[0], 'one line');
+      await fixture.whenStable();
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(emitted).toEqual([]);
+    });
+  });
+
   it('deletes an empty row on Backspace rather than doing nothing', async () => {
     type(rows()[1], '');
     key(rows()[1], { key: 'Backspace' });

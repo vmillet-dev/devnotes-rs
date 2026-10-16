@@ -1435,6 +1435,11 @@ the way `note_tags` does. Nothing addresses a single item, and nothing generates
 one. Reordering is therefore an ordinary write, not a shuffle of rows under a primary key
 that forbids duplicates halfway through.
 
+**The editor writes a list the way a text field would.** Enter cuts the item at the caret,
+Backspace at the very start of one joins it to the item above, and several lines pasted into a
+row become as many items — a list marker dropped, a `[x]` read as done — what stood around the
+caret heading the first and ending the last. Each gesture is one write of the whole list.
+
 Three behaviours would go quietly wrong without a thought for the kind, and each is handled
 where its rule already lived:
 

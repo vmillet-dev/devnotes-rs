@@ -52,8 +52,9 @@ export class ChecklistEditorComponent {
 
   protected readonly dragging = signal<Drag | null>(null);
 
-  /** The row to focus on the next render, set by add and remove. */
+  /** The row to focus on the next render, set by add and remove, and where its caret goes. */
   private pendingFocus: number | null = null;
+  private pendingCaret: number | null = null;
 
   protected toggle(index: number): void {
     this.draft.update((items) =>
@@ -66,13 +67,51 @@ export class ChecklistEditorComponent {
     this.draft.update((items) => items.map((item, at) => (at === index ? { ...item, text } : item)));
   }
 
-  protected insertAfter(index: number): void {
+  /** Enter cuts the item at the caret: what follows it starts the next one, at its start. */
+  protected splitAt(event: Event, index: number): void {
+    event.preventDefault();
+    const input = event.target as HTMLInputElement;
+    const at = input.selectionStart ?? input.value.length;
+    const text = input.value;
+
     this.draft.update((items) => [
-      ...items.slice(0, index + 1),
-      { text: '', done: false },
+      ...items.slice(0, index),
+      { ...(items[index] ?? { done: false }), text: text.slice(0, at) },
+      { text: text.slice(at), done: false },
       ...items.slice(index + 1),
     ]);
-    this.pendingFocus = index + 1;
+    this.focusNext(index + 1, 0);
+    this.commit();
+  }
+
+  /**
+   * Several lines pasted are several items, from this one on: what stood before the caret
+   * heads the first, what stood after it ends the last. One line pastes as it always did.
+   */
+  protected onPaste(event: ClipboardEvent, index: number): void {
+    const lines = (event.clipboardData?.getData('text/plain') ?? '')
+      .split(/\r?\n/)
+      .filter((line) => line.trim() !== '');
+    if (lines.length < 2) return;
+
+    event.preventDefault();
+    const input = event.target as HTMLInputElement;
+    const before = input.value.slice(0, input.selectionStart ?? input.value.length);
+    const after = input.value.slice(input.selectionEnd ?? input.value.length);
+    const current = this.draft()[index];
+    const [first, ...rest] = lines.map(pastedItem);
+    if (!first) return;
+
+    const pasted: ChecklistItem[] = [
+      { text: before + first.text, done: before.trim() ? (current?.done ?? false) : first.done },
+      ...rest,
+    ];
+    const end = pasted.length - 1;
+    const caret = pasted[end]?.text.length ?? 0;
+    pasted[end] = { text: `${pasted[end]?.text ?? ''}${after}`, done: pasted[end]?.done ?? false };
+
+    this.draft.update((items) => [...items.slice(0, index), ...pasted, ...items.slice(index + 1)]);
+    this.focusNext(index + end, caret);
     this.commit();
   }
 
@@ -89,13 +128,30 @@ export class ChecklistEditorComponent {
     this.commit();
   }
 
-  /** `Event` and not `KeyboardEvent`: a modifier binding is typed `Event` by the template compiler. */
+  /**
+   * An empty item goes; at the very start of one with text, it joins the item above, the caret
+   * where the two meet. `Event` and not `KeyboardEvent`: a modifier binding is typed `Event`.
+   */
   protected onBackspace(event: Event, index: number): void {
     const input = event.target as HTMLInputElement;
-    if (input.value !== '' || this.draft().length === 0) return;
+    if (input.value === '') {
+      if (this.draft().length === 0) return;
+      event.preventDefault();
+      this.remove(index);
+      return;
+    }
+
+    const above = this.draft()[index - 1];
+    if (!above || input.selectionStart !== 0 || input.selectionEnd !== 0) return;
 
     event.preventDefault();
-    this.remove(index);
+    this.draft.update((items) => [
+      ...items.slice(0, index - 1),
+      { ...above, text: above.text + input.value },
+      ...items.slice(index + 1),
+    ]);
+    this.focusNext(index - 1, above.text.length);
+    this.commit();
   }
 
   protected move(from: number, to: number): void {
@@ -174,12 +230,31 @@ export class ChecklistEditorComponent {
     return rows.length > 0 ? rows.length - 1 : null;
   }
 
+  private focusNext(index: number, caret: number): void {
+    this.pendingFocus = index;
+    this.pendingCaret = caret;
+  }
+
   private applyPendingFocus(): void {
     const index = this.pendingFocus;
+    const caret = this.pendingCaret;
     this.pendingFocus = null;
+    this.pendingCaret = null;
     if (index === null) return;
 
     // After the created or moved row renders: the signal has just triggered it.
-    queueMicrotask(() => this.rows()[index]?.nativeElement.focus());
+    queueMicrotask(() => {
+      const row = this.rows()[index]?.nativeElement;
+      row?.focus();
+      if (row && caret !== null) row.setSelectionRange(caret, caret);
+    });
   }
+}
+
+/** A pasted line read as an item: a list marker dropped, a task box read as done or not. */
+function pastedItem(line: string): ChecklistItem {
+  const task = /^\s*(?:[-*+]|\d+[.)])?\s*\[([ xX])\]\s+/.exec(line);
+  if (task) return { text: line.slice(task[0].length).trimEnd(), done: task[1] !== ' ' };
+
+  return { text: line.replace(/^\s*(?:[-*+]|\d+[.)])\s+/, '').trimEnd(), done: false };
 }
