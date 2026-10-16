@@ -25,6 +25,7 @@ concurrency:
 
 permissions:
   contents: read
+  actions: write
 
 jobs:
   cargo-deny:
@@ -45,6 +46,19 @@ jobs:
         with:
           manifest-path: src-tauri/Cargo.toml
           command: check advisories
+
+      # A failed job hands its run to `stop.yml`, which cancels it, and every other run of its
+      # commit, seconds later. ⚠️ Not `gh run cancel` here: cancelled from inside, the job would
+      # end « cancelled » and hide what failed. A Dependabot run is read-only and says so.
+      - &stop-the-run
+        name: Stop the run
+        if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh workflow run stop.yml --repo "$GITHUB_REPOSITORY" --ref "${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          -f run="$GITHUB_RUN_ID" || echo "::notice::This token cannot stop the run"
 
   npm-audit:
     name: npm advisories
@@ -143,3 +157,5 @@ jobs:
           }
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
           EOF
+
+      - *stop-the-run

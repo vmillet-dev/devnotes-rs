@@ -15,6 +15,7 @@ concurrency:
 
 permissions:
   contents: read
+  actions: write
 
 env:
   CARGO_TERM_COLOR: always
@@ -52,6 +53,19 @@ jobs:
             echo "code=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # A failed job hands its run to `stop.yml`, which cancels it, and every other run of its
+      # commit, seconds later. ⚠️ Not `gh run cancel` here: cancelled from inside, the job would
+      # end « cancelled » and hide what failed. A Dependabot run is read-only and says so.
+      - &stop-the-run
+        name: Stop the run
+        if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh workflow run stop.yml --repo "$GITHUB_REPOSITORY" --ref "${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          -f run="$GITHUB_RUN_ID" || echo "::notice::This token cannot stop the run"
+
   lint-front:
     name: Lint front
     runs-on: ubuntu-22.04
@@ -73,6 +87,8 @@ jobs:
       # The release-notes generator is neither Angular nor Rust: its runner is Node's own,
       # with no dependency to install.
       - run: npm run test:scripts
+
+      - *stop-the-run
 
   lint-rust:
     name: Lint Rust
@@ -102,6 +118,8 @@ jobs:
       # `--all-features` is what type-checks the `e2e` feature. Without it a break in
       # the end-to-end harness only surfaces at the next `npm run e2e:build`.
       - run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features --locked -- -D warnings
+
+      - *stop-the-run
 
   build-front:
     name: Build front
@@ -133,6 +151,8 @@ jobs:
           path: dist/devnotes/browser
           retention-days: 1
 
+      - *stop-the-run
+
   test-front:
     name: Test front
     needs: build-front
@@ -161,6 +181,8 @@ jobs:
           name: front-coverage
           path: coverage
           retention-days: 7
+
+      - *stop-the-run
 
   sonar-front:
     name: Sonar Front
@@ -197,6 +219,8 @@ jobs:
             -Dsonar.issue.ignore.multicriteria.mixins.resourceKey=src/styles/_mixins.scss
             -Dsonar.qualitygate.wait=true
 
+      - *stop-the-run
+
   test-rust:
     name: Test Rust (${{ matrix.os }})
     needs: changes
@@ -209,7 +233,7 @@ jobs:
         shell: bash
 
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         os: [ubuntu-22.04, windows-latest]
 
@@ -266,6 +290,8 @@ jobs:
           path: coverage/lcov.info
           retention-days: 7
 
+      - *stop-the-run
+
   sonar-rust:
     name: Sonar Rust
     needs: test-rust
@@ -307,6 +333,8 @@ jobs:
             -Dsonar.rust.lcov.reportPaths=coverage/lcov.info
             -Dsonar.qualitygate.wait=true
 
+      - *stop-the-run
+
   # The end-to-end suite is the only one that launches the assembled application: real binary,
   # real WebView, real SQLite file on disk. Both platforms of the release matrix are covered, and
   # they do not break the same way: the WebView is WebView2 on Windows and WebKitGTK on Linux,
@@ -342,6 +370,8 @@ jobs:
           echo "groups=$groups" >> "$GITHUB_OUTPUT"
           echo "$groups" | jq -r '.[] | "group \(.name): \(.specs | length) scenarios, \(.specs | join(", "))"'
 
+      - *stop-the-run
+
   # `e2e.yml` once per platform: its build, then its groups. Neither waits for the other.
   # One failing scenario decides the run: the other platform is cancelled with it.
   e2e:
@@ -355,20 +385,3 @@ jobs:
     with:
       os: ${{ matrix.os }}
       groups: ${{ needs.e2e-scenarios.outputs.groups }}
-
-  # Then everything else still running — Rust tests, Sonar — is cancelled too, freeing the
-  # runners other pull requests are queued behind. A job of its own rather than a step of the
-  # failing scenario: cancelled from inside, that job would end « cancelled » and hide which
-  # scenario failed. « Re-run failed jobs » re-runs the failed and the cancelled alike.
-  stop-on-e2e-failure:
-    name: Stop the run
-    needs: e2e
-    if: failure()
-    runs-on: ubuntu-22.04
-    timeout-minutes: 5
-    permissions:
-      actions: write
-    steps:
-      - env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh run cancel "${{ github.run_id }}" --repo "${{ github.repository }}"

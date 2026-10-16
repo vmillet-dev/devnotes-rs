@@ -17,6 +17,7 @@ on:
 
 permissions:
   contents: read
+  actions: write
 
 env:
   CARGO_TERM_COLOR: always
@@ -70,6 +71,19 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 1
+
+      # A failed job hands its run to `stop.yml`, which cancels it, and every other run of its
+      # commit, seconds later. ⚠️ Not `gh run cancel` here: cancelled from inside, the job would
+      # end « cancelled » and hide what failed. A Dependabot run is read-only and says so.
+      - &stop-the-run
+        name: Stop the run
+        if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh workflow run stop.yml --repo "$GITHUB_REPOSITORY" --ref "${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          -f run="$GITHUB_RUN_ID" || echo "::notice::This token cannot stop the run"
 
   # No cargo here: the binary comes from `build`. A group is a runner that sets up once and runs
   # its scenarios one after the other, each its own process, profile and logs: nothing in one
@@ -165,3 +179,5 @@ jobs:
             e2e/logs
           if-no-files-found: ignore
           retention-days: 7
+
+      - *stop-the-run

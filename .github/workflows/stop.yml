@@ -1,0 +1,32 @@
+name: Stop
+
+# Dispatched by the last step of any job that fails, in `ci.yml`, `e2e.yml` or `security.yml`:
+# it cancels that run and every other unfinished run of its commit, so the runners go to the
+# pull requests queued behind. Seconds after the dispatch, the failed job has ended « failure ».
+on:
+  workflow_dispatch:
+    inputs:
+      run:
+        description: The id of the run that failed.
+        required: true
+        type: string
+
+permissions:
+  actions: write
+
+jobs:
+  stop:
+    name: Stop run ${{ inputs.run }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          RUN: ${{ inputs.run }}
+        run: |
+          commit=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN" --jq .head_sha)
+          runs=$(gh run list --repo "$GITHUB_REPOSITORY" --commit "$commit" --json databaseId,status \
+            --jq ".[] | select(.status != \"completed\" and .databaseId != $GITHUB_RUN_ID) | .databaseId")
+          for id in $runs; do
+            if gh run cancel "$id" --repo "$GITHUB_REPOSITORY"; then echo "Cancelled run $id of $commit"; fi
+          done
