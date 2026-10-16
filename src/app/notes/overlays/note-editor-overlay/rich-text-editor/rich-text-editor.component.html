@@ -1,64 +1,71 @@
-<!-- mousedown is kept from the buttons: taking focus would move the caret out of the text
+<!-- The bar under the tools, both staying while the text scrolls. -->
+<div class="rich-head">
+  <!-- mousedown is kept from the buttons: taking focus would move the caret out of the text
      before the command reaches it. -->
-<div
-  class="rich-toolbar"
-  role="toolbar"
-  [attr.aria-label]="'editor.rich.toolbar' | transloco"
-  data-testid="rich-toolbar"
->
-  @for (group of tools; track $index) {
-    <div class="rich-group">
-      @for (tool of group; track tool.action) {
-        <button
-          type="button"
-          class="rich-tool"
-          [attr.data-testid]="'rich-' + tool.action"
-          [attr.aria-pressed]="isActive(tool)"
-          [attr.aria-label]="tool.labelKey | transloco"
-          [attr.title]="tool.labelKey | transloco"
-          (mousedown)="$event.preventDefault()"
-          (click)="run(tool.action)"
-        >
-          @if (tool.icon) {
-            <app-icon [name]="tool.icon" />
-          } @else {
-            <span class="rich-tool-text">{{ tool.text }}</span>
-          }
-        </button>
-      }
-    </div>
-  }
+  <div
+    class="rich-toolbar"
+    role="toolbar"
+    [attr.aria-label]="'editor.rich.toolbar' | transloco"
+    data-testid="rich-toolbar"
+  >
+    @for (group of tools; track $index) {
+      <div class="rich-group">
+        @for (tool of group; track tool.action) {
+          <button
+            type="button"
+            class="rich-tool"
+            [attr.data-testid]="'rich-' + tool.action"
+            [attr.aria-pressed]="isActive(tool)"
+            [attr.aria-label]="tool.labelKey | transloco"
+            [attr.title]="tool.labelKey | transloco"
+            (mousedown)="$event.preventDefault()"
+            (click)="run(tool.action)"
+          >
+            @if (tool.icon) {
+              <app-icon [name]="tool.icon" />
+            } @else {
+              <span class="rich-tool-text">{{ tool.text }}</span>
+            }
+          </button>
+        }
+      </div>
+    }
 
-  @if (codeLanguage(); as language) {
-    <div class="rich-group">
-      <!-- The press is kept from the trigger and the entries, as from the buttons: the caret
+    @if (codeLanguage(); as language) {
+      <div class="rich-group">
+        <!-- The press is kept from the trigger and the entries, as from the buttons: the caret
            stays in the block, and the choice writes there. -->
-      <app-choice-menu
-        kind="rich-code-language"
-        triggerTestId="rich-code-language"
-        [label]="'editor.rich.codeLanguage' | transloco"
-        [options]="codeLanguages"
-        [currentId]="language"
-        (mousedown)="$event.preventDefault()"
-        (chosen)="setCodeLanguage($event)"
-      />
-    </div>
-  }
-
-  @if (inTable()) {
-    <div class="rich-group rich-table-tools">
-      @for (tool of tableTools; track tool.action) {
-        <button
-          type="button"
-          class="rich-tool rich-tool-wide"
-          [attr.data-testid]="'rich-' + tool.action"
+        <app-choice-menu
+          kind="rich-code-language"
+          triggerTestId="rich-code-language"
+          [label]="'editor.rich.codeLanguage' | transloco"
+          [options]="codeLanguages"
+          [currentId]="language"
           (mousedown)="$event.preventDefault()"
-          (click)="run(tool.action)"
-        >
-          {{ tool.labelKey | transloco }}
-        </button>
-      }
-    </div>
+          (chosen)="setCodeLanguage($event)"
+        />
+      </div>
+    }
+
+    @if (inTable()) {
+      <div class="rich-group rich-table-tools">
+        @for (tool of tableTools; track tool.action) {
+          <button
+            type="button"
+            class="rich-tool rich-tool-wide"
+            [attr.data-testid]="'rich-' + tool.action"
+            (mousedown)="$event.preventDefault()"
+            (click)="run(tool.action)"
+          >
+            {{ tool.labelKey | transloco }}
+          </button>
+        }
+      </div>
+    }
+  </div>
+
+  @if (searchOpen() && search; as target) {
+    <app-search-bar class="rich-search" data-testid="rich-search" [target]="target" />
   }
 </div>
 

@@ -796,8 +796,8 @@
       "removeItem": "Remove an empty item",
       "moveItem": "Move the item within the list",
       "format": "Format the snippet with Prettier",
-      "find": "Find in the code",
-      "replace": "Replace in the code",
+      "find": "Find in the text, of a snippet as of a Note",
+      "replace": "Replace in the text",
       "goToLine": "Go to a line of the code",
       "indent": "Indent, as the “Indent with Tab” setting says",
       "outdent": "Outdent"

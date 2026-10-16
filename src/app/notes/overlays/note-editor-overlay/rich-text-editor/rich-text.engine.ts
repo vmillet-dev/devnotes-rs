@@ -10,6 +10,7 @@ import StarterKit from '@tiptap/starter-kit';
 import { LANGUAGE_LABELS, LanguageTag, isLanguageTag } from '@core/model/language.model';
 import { highlightRanges } from '@shared/code-viewer/highlighter';
 import { escapeMarkdownText } from './markdown-text';
+import { TextSearch } from './rich-text-search';
 
 export interface RichEditorHooks {
   readonly label: string;
@@ -167,6 +168,7 @@ export function createRichEditor(element: HTMLElement, markdown: string, hooks: 
       TaskItem.configure({ nested: true }),
       tabCharacter((language) => hooks.indent(language)),
       CodeHighlight,
+      TextSearch,
     ],
     content: markdown,
     contentType: 'markdown',

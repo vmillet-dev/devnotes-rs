@@ -434,6 +434,43 @@ describe('Editing a note', () => {
       expect((await bridge.getNote(id)).items).toEqual(items);
     });
 
+    /** The code field's bar over the text: one replace for every « deploy », one Ctrl+Z for all. */
+    it('replaces a word everywhere from Ctrl+H, and Ctrl+Z puts every one back', async () => {
+      const title = 'Replaced everywhere';
+      const content = '**Deploy** on Monday, deploy again on Friday.';
+      const id = (await bridge.createNote(draft({ spaceId, title, content, kind: 'note' }))).id;
+      await reloadCanvas();
+      await canvas.openNote(title);
+      const text = () => $(testid('editor-rich')).getText();
+
+      await $(testid('editor-rich')).click();
+      await press('h', ['Control']);
+      await $(testid('search-replace-field')).waitForDisplayed({ timeout: 5_000 });
+      await setField(testid('search-field'), 'deploy');
+      await eventually(
+        () => $(testid('search-count')).getText(),
+        (count) => count.endsWith('2'),
+        'both words found, the bold one too',
+      );
+      await setField(testid('search-replace-field'), 'ship');
+      await $(testid('search-replace-all')).click();
+      await eventually(text, (now) => !/deploy/i.test(now), 'every word replaced');
+      expect(await $(`${testid('editor-rich')} strong`).getText()).toBe('ship');
+
+      await $(testid('search-close')).click();
+      await press('z', ['Control']);
+      await eventually(
+        text,
+        (now) => now.includes('Deploy on Monday, deploy again'),
+        'one Ctrl+Z to put them back',
+      );
+      await editor.close();
+
+      expect((await bridge.getNote(id)).content).toBe(content);
+      await bridge.deleteNotes([id]);
+      await bridge.purgeNotes([id]);
+    });
+
     /** Coloured by the code field's grammars, stored as the fence it was given, and changed from a menu. */
     it('holds a code block in its language', async () => {
       const title = 'Checks after the switch';

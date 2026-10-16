@@ -202,3 +202,14 @@
 .rich-text ::selection {
   background: rgba(var(--amber-rgb), 0.3);
 }
+
+// What the search bar finds, as the code field draws it; the selected match stronger, the
+// selection itself unseen while the focus is in the bar.
+.rich-text .search-match {
+  border-radius: 2px;
+  background: rgba(var(--amber-rgb), 0.18);
+
+  &.current {
+    background: rgba(var(--amber-rgb), 0.4);
+  }
+}

@@ -46,7 +46,8 @@ import { languageOf } from './languages';
 import { lineMarks, setLineMarks } from './line-marks';
 import { phrasesFrom } from './phrases';
 import { searchPanel } from './search-panel';
-import { openReplace, readSearchOptions } from './search-query';
+import { readSearchOptions } from '../search/search-options';
+import { openReplace } from './search-query';
 import { CODE_COLOURS, CODE_THEME } from './theme';
 
 const NO_LINES: ReadonlySet<number> = new Set();

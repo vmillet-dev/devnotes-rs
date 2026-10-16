@@ -540,4 +540,55 @@ describe('RichTextEditorComponent', () => {
       expect(images).toBe(1);
     });
   });
+
+  describe('searched', () => {
+    const bar = (): HTMLElement | null => fixture.nativeElement.querySelector('[data-testid="rich-search"]');
+    const findField = (): HTMLInputElement =>
+      fixture.nativeElement.querySelector('[data-testid="search-field"]');
+
+    /** The code field's bar, over the text: Ctrl+F on what is selected, Escape back to the text. */
+    it('opens on Ctrl+F with the selected words, counts as it is typed, and closes on Escape', async () => {
+      await mount('deploy the build, then deploy again');
+      const editor = (fixture.componentInstance as unknown as { editor: Editor }).editor;
+      editor.commands.setTextSelection({ from: 1, to: 7 });
+
+      await press('f', { ctrlKey: true });
+      await vi.waitFor(() => expect(document.activeElement).toBe(findField()));
+      expect(findField().value).toBe('deploy');
+      expect(fixture.nativeElement.querySelector('[data-testid="search-count"]').textContent.trim()).toBe(
+        '1/2',
+      );
+
+      const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+      const dialog = vi.fn();
+      document.addEventListener('keydown', dialog);
+      findField().dispatchEvent(escape);
+      await fixture.whenStable();
+      document.removeEventListener('keydown', dialog);
+
+      expect(bar()).toBeNull();
+      expect(dialog).not.toHaveBeenCalled();
+      expect(fixture.nativeElement.querySelector('.search-match')).toBeNull();
+    });
+
+    it('opens with its replace row on Ctrl+H, and writes what it replaced', async () => {
+      await mount('deploy the build, then deploy again');
+
+      await press('h', { ctrlKey: true });
+      const replaceField = (): HTMLInputElement | null =>
+        fixture.nativeElement.querySelector('[data-testid="search-replace-field"]');
+      await vi.waitFor(() => expect(replaceField()).not.toBeNull());
+      for (const [input, value] of [
+        [findField(), 'deploy'],
+        [replaceField()!, 'ship'],
+      ] as const) {
+        input.value = value;
+        input.dispatchEvent(new Event('input'));
+      }
+      button('search-replace-all').click();
+      await fixture.whenStable();
+
+      expect(emitted.at(-1)).toBe('ship the build, then ship again');
+    });
+  });
 });
