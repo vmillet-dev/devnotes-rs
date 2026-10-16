@@ -12,6 +12,67 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [0.12.2] - 2026-10-16
+
+### ✨ Added
+
+- Code editor: highlight {{fields}} where they are written (#903)
+- Note editor: find and replace with Ctrl+F and Ctrl+H (#902)
+- First launch: new sample notes and guide chapters (#904)
+- Selection: remove a tag, pin and unpin, each with undo (#900)
+- Editor: convert a note between snippet, Note and todo list (#901)
+- Tools home: more columns on wide screens, results in two columns (#899)
+- Notes: reopen a library on the space and folder it was left on (#895)
+- Trash: search deleted notes and restore all results at once (#898)
+- Todo lists: paste lines as items, split and join items at the caret (#897)
+- Shortcut sheet: add the Note editor's keys and Tab in code (#893)
+- Ctrl+K: focus the tools search when the tools are on screen (#894)
+
+### 🔧 Changed
+
+- Capture: save prose as a Note, and the palette query as a title (#896)
+- Delete space: say how many notes move and that its folders go (#890)
+- UI texts: fix outdated labels in history, Prettier, trash, preferences (#889)
+- Canvas: Note excerpts in the text font, folder list named after it (#888)
+
+### 🐛 Fixed
+
+- Attachments: name the file and the 10 MB limit when it is too large (#891)
+- Export: say there is nothing to export before any dialog (#892)
+- JSON explorer: show the selected value at full height in the panel (#884)
+- Fields form: open with the focus in the first empty field (#882)
+- Editor: keep a tag typed without Enter when the field or editor closes (#881)
+- Cards: show a todo list's two rows whole, keep the date in the footer (#887)
+- Notes: undo moving one note to another space, its folder too (#885)
+- Title bar: keep the note title readable, wrap the row below it (#886)
+- Quick palette: copy the whole snippet as is, not its first lines (#883)
+
+### 🔒 Security
+
+- TLS: update rustls to 0.23.46, fixing four RustSec advisories (#938)
+
+### 🧰 Under the hood
+
+- Keep commit kinds out of the area of a title
+- Open popovers in the unit tests
+- Pipeline: stop every job as soon as one fails (#942)
+- Stop the e2e profile's leftover WebView2 before wiping it, so the next scenario of a group starts on Windows
+- Drop versioning-strategy from Dependabot's Cargo entry
+- Dependabot: raise Cargo.toml with Cargo.lock in Rust updates (#936)
+- Pipeline: e2e scenarios in three groups per OS, not one job each (#937)
+- Tickets: titles say what changed, and name no other software (#935)
+
+### 📦 Dependencies
+
+- Bump the rich-editor group with 7 updates (#940)
+- Bump the crypto group across 1 directory with 2 updates (#939)
+- Bump the angular group across 1 directory with 8 updates (#855)
+- Bump the lint-and-format group across 1 directory with 2 updates (#828)
+- Bump uuid from 1.27.0 to 1.28.0 in /src-tauri in the rust-other group across 1 directory (#829)
+- Bump jsdom from 30.1.1 to 30.1.2 in the unit-tests group across 1 directory (#831)
+- Bump diesel from 2.3.13 to 2.3.14 in /src-tauri in the storage group across 1 directory (#822)
+- Bump the network group across 1 directory with 4 updates (#825)
+
 ## [0.12.1] - 2026-10-15
 
 ### 🔧 Changed
