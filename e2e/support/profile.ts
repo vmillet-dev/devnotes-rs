@@ -2,7 +2,7 @@ import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const IDENTIFIER = 'com.devnotes.app.e2e';
+export const IDENTIFIER = 'com.devnotes.app.e2e';
 
 /**
  * ⚠️ `app_data_dir()` is `data_dir()/identifier`, and the e2e build carries an identifier
@@ -100,9 +100,10 @@ export function resetProfile(): void {
   // `new Set` because on Windows the data and config directories are the same path.
   const directories = [...new Set([e2eDataDir(), e2eConfigDir(), e2eLocalDataDir()])];
 
-  // Retried: on Windows a scanner can hold one of the WebView2 profile's files for a moment.
+  // Retried, about 11 s in all: on Windows a scanner or a WebView2 still exiting can hold one
+  // of the profile's files for a moment.
   for (const directory of directories) {
-    rmSync(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+    rmSync(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
   }
   rmSync(homeSpaceMarker(), { force: true });
 

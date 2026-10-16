@@ -1,5 +1,7 @@
 import { execFileSync } from 'node:child_process';
 
+import { IDENTIFIER } from './profile.js';
+
 /** The embedded WebDriver server's port: only an e2e build listens on it. */
 export const EMBEDDED_PORT = 4445;
 
@@ -23,6 +25,18 @@ function windowsListeners(): number[] {
     `Get-NetTCPConnection -State Listen -LocalPort ${EMBEDDED_PORT} -ErrorAction SilentlyContinue | ` +
     `Select-Object -ExpandProperty OwningProcess -Unique | ` +
     `Where-Object { (Get-Process -Id $_ -ErrorAction SilentlyContinue).ProcessName -eq 'devnotes' }`;
+  const out = execFileSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', script], {
+    encoding: 'utf8',
+  });
+  return out.split(/\s+/).filter(Boolean).map(Number);
+}
+
+/** Windows: the WebView2 processes still running on the e2e profile, and on no other. */
+function windowsWebViews(): number[] {
+  const script =
+    `Get-CimInstance Win32_Process -Filter "Name='msedgewebview2.exe'" | ` +
+    `Where-Object { $_.CommandLine -like '*${IDENTIFIER}*' } | ` +
+    `Select-Object -ExpandProperty ProcessId`;
   const out = execFileSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', script], {
     encoding: 'utf8',
   });
@@ -59,6 +73,27 @@ export function stopLeftoverApplication(): void {
   for (const pid of pids) {
     for (let waited = 0; alive(pid) && waited < 5_000; waited += 100) pause(100);
     if (alive(pid)) signal(pid, 'SIGKILL');
+  }
+
+  if (process.platform === 'win32') stopLeftoverWebViews();
+}
+
+/**
+ * ⚠️ A WebView2 outlives the application that the service stopped by a few seconds, holding
+ * its profile under `%LOCALAPPDATA%`: the next scenario on the same runner met `EPERM` wiping it.
+ * Found by the profile in its command line, never by the executable: the user's own
+ * applications run WebView2 too.
+ */
+function stopLeftoverWebViews(): void {
+  let pids: number[];
+  try {
+    pids = windowsWebViews();
+  } catch {
+    return;
+  }
+  for (const pid of pids) signal(pid, 'SIGKILL');
+  for (const pid of pids) {
+    for (let waited = 0; alive(pid) && waited < 5_000; waited += 100) pause(100);
   }
 }
 
