@@ -20,7 +20,8 @@ export class LifecycleBadgeComponent {
   /** As the back end decided it: a threshold recomputed here would be free to drift. */
   readonly expiringSoon = input(false);
 
-  protected readonly icon = computed(() => (this.lifecycle().kind === 'permanent' ? '📌' : '⏳'));
+  /** Not the pin's 📌, which the « Épingler » button beside it wears. */
+  protected readonly icon = computed(() => (this.lifecycle().kind === 'permanent' ? '∞' : '⏳'));
 
   protected readonly label = computed<TranslationRef>(() => {
     const lifecycle = this.lifecycle();

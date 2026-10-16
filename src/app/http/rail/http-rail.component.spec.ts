@@ -716,7 +716,7 @@ describe('HttpRailComponent', () => {
     await TestBed.inject(HttpCollectionsStore).load();
     await fixture.whenStable();
 
-    expect(el('[data-testid="http-rail-empty"]').textContent).toContain("Aucune collection pour l'instant.");
+    expect(el('[data-testid="http-rail-empty"]').textContent).toContain('Aucune collection pour l’instant.');
     const create = el<HTMLButtonElement>('[data-testid="http-rail-empty-create"]');
     expect(create.textContent?.trim()).toBe('Nouvelle collection');
 

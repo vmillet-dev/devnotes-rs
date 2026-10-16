@@ -67,7 +67,7 @@ describe('BodyEditorComponent', () => {
 
     await render({ kind: 'json', text: '{"a":1}' }, said({ unusual: true }), 'GET');
     expect(el('[data-testid="http-body-unusual"]').textContent).toContain(
-      "Un GET avec un corps : beaucoup de serveurs l'ignorent ou le refusent.",
+      'Un GET avec un corps : beaucoup de serveurs l’ignorent ou le refusent.',
     );
 
     el<HTMLButtonElement>('[data-testid="http-body-to-none"]').click();

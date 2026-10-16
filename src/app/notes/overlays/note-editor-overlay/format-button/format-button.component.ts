@@ -10,7 +10,12 @@ import {
   viewChild,
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { PRETTIER_INDENTATIONS, PrettierSettings, clampPrintWidth } from '@core/services/format/format.model';
+import {
+  PRETTIER_INDENTATIONS,
+  PrettierSettings,
+  clampPrintWidth,
+  prettierLanguages,
+} from '@core/services/format/format.model';
 import { MenuTriggerDirective } from '@shared/directives/menu-trigger.directive';
 import {
   Segment,
@@ -57,6 +62,8 @@ export class FormatButtonComponent {
   protected readonly indentations = INDENTATION_SEGMENTS;
   protected readonly quotes = QUOTE_SEGMENTS;
   protected readonly switches: readonly Switch[] = ['semicolons', 'trailingCommas', 'formatOnSave'];
+  protected readonly formattedList = prettierLanguages(true);
+  protected readonly notFormattedList = prettierLanguages(false);
 
   private readonly widthField = viewChild<ElementRef<HTMLInputElement>>('widthField');
 

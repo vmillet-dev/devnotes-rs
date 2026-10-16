@@ -29,7 +29,7 @@ describe('ErrorBannerComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelector('.error-text').textContent).toContain(
-      "Impossible d'enregistrer la note",
+      'Impossible d’enregistrer la note',
     );
     expect(fixture.nativeElement.querySelector('.error-detail').textContent).toBe('disk full');
   });

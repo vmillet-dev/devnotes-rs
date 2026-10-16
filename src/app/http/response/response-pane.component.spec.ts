@@ -355,6 +355,6 @@ describe('ResponsePaneComponent', () => {
     http.failNext = new IpcError('send_http_request', { code: 'httpRefused', params: {}, detail: 'refused' });
     await answer(sentResponse());
 
-    expect(text('http-response-failure')).toBe("La connexion a été refusée : rien n'écoute à cette adresse.");
+    expect(text('http-response-failure')).toBe('La connexion a été refusée : rien n’écoute à cette adresse.');
   });
 });

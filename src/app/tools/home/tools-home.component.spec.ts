@@ -119,7 +119,7 @@ describe('ToolsHomeComponent', () => {
 
     const recent = fixture.nativeElement.querySelector('[data-testid="tools-recent"]') as HTMLButtonElement;
     expect(recent.dataset['tool']).toBe('hash');
-    expect(recent.textContent).toContain("à l'instant");
+    expect(recent.textContent).toContain('à l’instant');
   });
 
   it('opens a tool from its panel', () => {

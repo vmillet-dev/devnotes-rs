@@ -107,7 +107,7 @@ describe('SocketLogComponent', () => {
     });
     await fixture.whenStable();
 
-    expect(el('http-socket-failure')?.textContent).toContain("Un WebSocket s'ouvre sur ws:// ou wss://.");
+    expect(el('http-socket-failure')?.textContent).toContain('Un WebSocket s’ouvre sur ws:// ou wss://.');
     expect(el('http-socket-twin')?.textContent?.trim()).toBe('Utiliser wss://echo.exemple.fr/live');
 
     el('http-socket-twin')!.click();

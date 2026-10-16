@@ -1,4 +1,4 @@
-import { LanguageTag } from '@core/model/language.model';
+import { LANGUAGE_FULL_NAMES, LANGUAGE_LABELS, LanguageTag } from '@core/model/language.model';
 
 export type PrettierParser =
   'babel' | 'typescript' | 'json' | 'css' | 'scss' | 'html' | 'markdown' | 'yaml' | 'graphql';
@@ -77,6 +77,14 @@ export interface PrettierSettings {
   readonly semicolons: boolean;
   readonly trailingCommas: boolean;
   readonly formatOnSave: boolean;
+}
+
+/** The languages Prettier formats, or the others, by name in the format menu's order: never a list written by hand. */
+export function prettierLanguages(formatted: boolean): string {
+  return (Object.keys(LANGUAGE_LABELS) as LanguageTag[])
+    .filter((id) => id !== 'txt' && (PRETTIER_PARSERS[id] !== null) === formatted)
+    .map((id) => LANGUAGE_FULL_NAMES[id])
+    .join(', ');
 }
 
 export const PRETTIER_INDENTATIONS: readonly PrettierIndentation[] = ['editor', 'two', 'four', 'tab'];

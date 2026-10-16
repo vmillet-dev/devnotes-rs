@@ -314,7 +314,7 @@ describe('SpaceSwitcherComponent', () => {
       await open();
 
       expect(editTriggers()).toHaveLength(SPACES.length);
-      expect(editTriggers()[0].getAttribute('aria-label')).toBe("Options de l'espace Work");
+      expect(editTriggers()[0].getAttribute('aria-label')).toBe('Options de l’espace Work');
     });
 
     it('replaces the menu with the edit panel rather than nesting inside it', async () => {

@@ -95,7 +95,7 @@ describe('TrashPanelComponent', () => {
     fixture.componentRef.setInput('notes', [trashed({ purgeAt: new Date('2026-08-27T08:59:00Z') })]);
     await fixture.whenStable();
 
-    expect(rows()[0].querySelector('.trash-row-meta')?.textContent).toContain("aujourd'hui");
+    expect(rows()[0].querySelector('.trash-row-meta')?.textContent).toContain('aujourd’hui');
   });
 
   it('falls back to a label for an untitled note', async () => {

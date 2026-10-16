@@ -279,7 +279,7 @@ describe('NoteEditorOverlayComponent', () => {
       expect(titleInput().getAttribute('aria-label')).toBe('Titre de la note');
       expect(codeView().contentDOM.getAttribute('aria-label')).toBe('Contenu de la note');
       expect(fixture.nativeElement.querySelector('.close-btn').getAttribute('aria-label')).toBe(
-        "Fermer l'éditeur",
+        'Fermer l’éditeur',
       );
     });
 
@@ -599,7 +599,7 @@ describe('NoteEditorOverlayComponent', () => {
 
       expect(bodyText()).toBe('const a = {\n  b: 1,,\n}');
       expect(bodySelection()).toEqual([19, 19]);
-      expect(notice()).toBe("Erreur de syntaxe ligne 2, colonne 8 : le texte n'a pas changé.");
+      expect(notice()).toBe('Erreur de syntaxe ligne 2, colonne 8 : le texte n’a pas changé.');
     });
 
     it('says so when a field would not have survived, or nothing needed doing', async () => {
@@ -607,7 +607,7 @@ describe('NoteEditorOverlayComponent', () => {
 
       prettier.answer = { kind: 'fields' };
       await format();
-      expect(notice()).toBe("Un champ n'aurait pas survécu au formatage : le texte n'a pas changé.");
+      expect(notice()).toBe('Un champ n’aurait pas survécu au formatage : le texte n’a pas changé.');
 
       prettier.answer = { kind: 'unchanged' };
       await format();
@@ -1700,7 +1700,7 @@ describe('NoteEditorOverlayComponent', () => {
       expect(summaryLine()).toBeNull();
       expect(foldButton().getAttribute('aria-expanded')).toBe('true');
       expect(foldButton().getAttribute('aria-controls')).toBe('editor-header');
-      expect(foldButton().getAttribute('aria-label')).toBe("Replier l'en-tête");
+      expect(foldButton().getAttribute('aria-label')).toBe('Replier l’en-tête');
       expect(fixture.nativeElement.querySelector('#editor-header')).not.toBeNull();
     });
 
@@ -1712,7 +1712,7 @@ describe('NoteEditorOverlayComponent', () => {
       expect(summaryLine()?.getAttribute('aria-expanded')).toBe('false');
       expect(titleInput()).not.toBeNull();
       expect(foldButton().getAttribute('aria-expanded')).toBe('false');
-      expect(foldButton().getAttribute('aria-label')).toBe("Déplier l'en-tête");
+      expect(foldButton().getAttribute('aria-label')).toBe('Déplier l’en-tête');
     });
 
     it('reads what the bands hold, and keeps an expiry in sight', async () => {

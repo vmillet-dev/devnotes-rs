@@ -215,11 +215,11 @@ describe('HttpPageComponent', () => {
     el<HTMLButtonElement>('[data-testid="http-section"][data-section="headers"]').click();
     await vi.waitFor(() => expect(all('[data-testid="http-implied-header"]')).toHaveLength(5));
     expect(impliedRows()).toEqual([
-      "Content-Type · application/json · d'après le corps",
+      'Content-Type · application/json · d’après le corps',
       'Accept · application/json · héritée de la collection API Paiements',
       'X-Trace · 1 · héritée du dossier Auth',
       'User-Agent · DevNotes/0.10.1 · par défaut',
-      "Host · api.exemple.fr · d'après l'URL",
+      'Host · api.exemple.fr · d’après l’URL',
     ]);
     expect(all('[data-testid="http-implied-header"]').map((row) => row.dataset['source'])).toEqual([
       'body',
@@ -584,7 +584,7 @@ describe('HttpPageComponent', () => {
     close();
     await fixture.whenStable();
     expect(el('[data-testid="http-close-connected"]').textContent?.trim()).toBe(
-      "Le WebSocket est connecté : fermer l'onglet coupe la connexion.",
+      'Le WebSocket est connecté : fermer l’onglet coupe la connexion.',
     );
     expect(el('[data-testid="http-close-modified"]')).toBeNull();
     expect(el('[data-testid="http-close-save"]')).toBeNull();

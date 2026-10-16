@@ -30,11 +30,11 @@ describe('LifecycleBadgeComponent', () => {
   });
 
   it('shows the "never expires" label for a permanent note', () => {
-    expect(text()).toBe("📌 N'expire jamais");
+    expect(text()).toBe('∞ N’expire jamais');
   });
 
   it('hides the decorative pictogram from assistive tech', () => {
-    expect(fixture.nativeElement.querySelector('[aria-hidden="true"]').textContent).toBe('📌');
+    expect(fixture.nativeElement.querySelector('[aria-hidden="true"]').textContent).toBe('∞');
   });
 
   it('is never stale for a permanent note', () => {

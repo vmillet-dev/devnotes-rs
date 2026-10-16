@@ -82,7 +82,7 @@ describe('HistoryPageComponent', () => {
 
   it('lists the sends by day, today and yesterday by name, each with its status', () => {
     const days = all('http-history-day').map((day) => day.textContent?.trim());
-    expect(days.slice(0, 2)).toEqual(["Aujourd'hui", 'Hier']);
+    expect(days.slice(0, 2)).toEqual(['Aujourd’hui', 'Hier']);
     expect(days[2]).toMatch(/1 octobre/);
     expect(
       all('http-history-status').map((status) => [status.textContent?.trim(), status.dataset['class']]),
@@ -111,7 +111,7 @@ describe('HistoryPageComponent', () => {
     item('Payer').click();
     await vi.waitFor(() =>
       expect(el('http-history-failure')?.textContent?.trim()).toBe(
-        "La connexion a été refusée : rien n'écoute à cette adresse.",
+        'La connexion a été refusée : rien n’écoute à cette adresse.',
       ),
     );
   });
@@ -157,7 +157,7 @@ describe('HistoryPageComponent', () => {
 
     row('Login').querySelector<HTMLButtonElement>('[data-testid="http-history-delete"]')!.click();
     await vi.waitFor(() => expect(rows()).toEqual(['Payer', 'Lent', 'Health', 'Old']));
-    expect(el('http-history-undo')?.textContent).toContain("Envoi « Login » supprimé de l'historique.");
+    expect(el('http-history-undo')?.textContent).toContain('Envoi « Login » supprimé de l’historique.');
 
     el('http-history-undo-restore')!.click();
     await vi.waitFor(() => expect(http.callsOf('restoreHistoryEntry')).toHaveLength(1));

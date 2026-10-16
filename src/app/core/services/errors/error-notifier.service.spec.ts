@@ -50,13 +50,13 @@ describe('a limit a send ran into', () => {
   });
 
   it.each([
-    [{ count: '1', source: 'request' }, "Trop de redirections : plus d'une."],
+    [{ count: '1', source: 'request' }, 'Trop de redirections : plus d’une.'],
     [{ count: '4', source: 'request' }, 'Trop de redirections : plus de 4.'],
-    [{ count: '0', source: 'request' }, "Redirection refusée : le réglage n'en permet aucune."],
+    [{ count: '0', source: 'request' }, 'Redirection refusée : le réglage n’en permet aucune.'],
     [{ count: '10', source: 'default' }, 'Trop de redirections : plus de 10 (réglage par défaut).'],
     [
       { count: '1', source: 'collection', name: 'API' },
-      "Trop de redirections : plus d'une (réglage hérité de la collection « API »).",
+      'Trop de redirections : plus d’une (réglage hérité de la collection « API »).',
     ],
     [
       { count: '3', source: 'folder', name: 'Auth' },
@@ -87,10 +87,10 @@ describe('a limit a send ran into', () => {
   /** It used to be blamed on the URL, whoever had written the header. */
   it('names a header that cannot be sent, and the folder or the collection it comes from', () => {
     expect(said('httpHeaderName', { header: 'X-Recette: 1', source: 'folder', name: 'Recette' })).toBe(
-      "L'en-tête « X-Recette: 1 », hérité du dossier « Recette », ne peut pas être envoyé : son nom n'est pas valide.",
+      'L’en-tête « X-Recette: 1 », hérité du dossier « Recette », ne peut pas être envoyé : son nom n’est pas valide.',
     );
     expect(said('httpHeaderName', { header: 'X Recette', source: 'request' })).toBe(
-      "L'en-tête « X Recette » ne peut pas être envoyé : son nom n'est pas valide.",
+      'L’en-tête « X Recette » ne peut pas être envoyé : son nom n’est pas valide.',
     );
     expect(said('httpHeaderValue', { header: 'X-Trace', source: 'collection', name: 'API' }, 'en')).toBe(
       'The header “X-Trace”, inherited from the collection “API”, cannot be sent: its value is not valid.',

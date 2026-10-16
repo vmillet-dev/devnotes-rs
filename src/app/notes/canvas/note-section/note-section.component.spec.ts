@@ -34,7 +34,7 @@ describe('NoteSectionComponent', () => {
     fixture.componentRef.setInput('section', createSection('today', [createNote(), createNote({ id: '2' })]));
     await fixture.whenStable();
 
-    expect(text('.canvas-section-title')).toContain("Aujourd'hui");
+    expect(text('.canvas-section-title')).toContain('Aujourd’hui');
     expect(text('.n')).toBe('· 2');
   });
 
