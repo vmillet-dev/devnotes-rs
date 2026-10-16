@@ -713,6 +713,7 @@
       "canvas": "Canvas",
       "editor": "Editor",
       "palette": "Quick paste",
+      "note": "Formatted Note",
       "areas": "Areas",
       "http": "HTTP",
       "json": "JSON explorer"
@@ -757,7 +758,24 @@
       "format": "Format the snippet with Prettier",
       "find": "Find in the code",
       "replace": "Replace in the code",
-      "goToLine": "Go to a line of the code"
+      "goToLine": "Go to a line of the code",
+      "indent": "Indent, as the “Indent with Tab” setting says",
+      "outdent": "Outdent"
+    },
+    "note": {
+      "bold": "Bold",
+      "italic": "Italic",
+      "strike": "Strikethrough",
+      "code": "Inline code",
+      "link": "Link, on the selection or the word",
+      "openLink": "Open a link in one click, without editing it",
+      "heading": "Heading of level 1, 2 or 3",
+      "bulletList": "Bulleted list",
+      "orderedList": "Numbered list",
+      "taskList": "Task list",
+      "quote": "Quote",
+      "codeBlock": "Code block",
+      "markdown": "Typed at the start of a line, then a space: heading, list, numbered list, task, quote, code block"
     },
     "palette": {
       "navigate": "Walk the results",

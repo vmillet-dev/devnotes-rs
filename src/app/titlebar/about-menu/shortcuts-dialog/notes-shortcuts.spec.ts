@@ -17,14 +17,15 @@ describe('NOTES_SHORTCUT_GROUPS', () => {
 
   /**
    * The canvas group is not written here: it is derived from the table that *binds*
-   * the keys, so a key cannot be documented in the sheet without being bound. The two
-   * other groups are documentation only, handled by the editor and the palette.
+   * the keys, so a key cannot be documented in the sheet without being bound. The other
+   * groups are documentation only, handled by the editors and the palette.
    */
   it('takes its canvas group from the table that binds the keys', () => {
     expect(groups[0]).toBe(CANVAS_SHORTCUT_GROUP);
     expect(groups.map((group) => group.id)).toEqual([
       'notes.canvas',
       'notes.editor',
+      'notes.note',
       'notes.palette',
       'http',
     ]);

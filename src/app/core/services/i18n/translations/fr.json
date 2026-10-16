@@ -713,6 +713,7 @@
       "canvas": "Canevas",
       "editor": "Éditeur",
       "palette": "Collage rapide",
+      "note": "Note mise en forme",
       "areas": "Zones",
       "http": "HTTP",
       "json": "Visualiseur JSON"
@@ -757,7 +758,24 @@
       "format": "Formater le snippet avec Prettier",
       "find": "Chercher dans le code",
       "replace": "Remplacer dans le code",
-      "goToLine": "Aller à une ligne du code"
+      "goToLine": "Aller à une ligne du code",
+      "indent": "Indenter, selon le réglage « Indenter avec Tab »",
+      "outdent": "Désindenter"
+    },
+    "note": {
+      "bold": "Gras",
+      "italic": "Italique",
+      "strike": "Barré",
+      "code": "Code dans la ligne",
+      "link": "Lien, sur la sélection ou le mot",
+      "openLink": "Ouvrir un lien d’un clic, sans le modifier",
+      "heading": "Titre de niveau 1, 2 ou 3",
+      "bulletList": "Liste à puces",
+      "orderedList": "Liste numérotée",
+      "taskList": "Liste de tâches",
+      "quote": "Citation",
+      "codeBlock": "Bloc de code",
+      "markdown": "Tapés en début de ligne, suivis d’une espace : titre, liste, liste numérotée, tâche, citation, bloc de code"
     },
     "palette": {
       "navigate": "Parcourir les résultats",
