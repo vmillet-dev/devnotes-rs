@@ -1,0 +1,40 @@
+{
+  "a": [
+    "04-trash-and-undo",
+    "05-spaces",
+    "09-quick-palette",
+    "11-attachments",
+    "15-preferences-on-disk",
+    "16-passphrase-change",
+    "19-board-gesture",
+    "20-folder-descent",
+    "28-areas",
+    "29-tools"
+  ],
+  "b": [
+    "03-editing-a-note",
+    "06-search-and-filters",
+    "12-preferences",
+    "13-multiple-selection",
+    "17-folders",
+    "21-folders-travel",
+    "22-note-history",
+    "25-libraries",
+    "31-http-environments",
+    "32-http-code"
+  ],
+  "c": [
+    "01-first-launch",
+    "02-note-lifecycle",
+    "07-checklists",
+    "08-placeholder-fields",
+    "10-library-transfer",
+    "14-tag-manager",
+    "18-board",
+    "23-backups",
+    "24-forgotten-passphrase",
+    "26-formatting",
+    "27-json-explorer",
+    "30-http"
+  ]
+}
