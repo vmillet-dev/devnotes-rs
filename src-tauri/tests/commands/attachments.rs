@@ -78,3 +78,24 @@ fn a_file_that_cannot_be_read_is_named_as_such() {
         ErrorCode::FileAccess
     ));
 }
+
+/// Past the limit: its own code, with the file and the limit for the sentence.
+#[test]
+fn a_file_past_the_limit_is_refused_by_its_name_and_the_limit() {
+    let scratch = tempfile::tempdir().unwrap();
+    let session = Session::on_disk(scratch.path());
+    let huge = scratch.path().join("capture.mov");
+    let limit = usize::try_from(devnotes_lib::attachments::model::MAX_BYTES).unwrap();
+    std::fs::write(&huge, vec![0u8; limit + 1]).unwrap();
+
+    let refused = session
+        .call(|app| attach_file("n-1".to_string(), huge.to_string_lossy().to_string(), app))
+        .unwrap_err();
+
+    assert!(matches!(refused.code, ErrorCode::FileTooLarge));
+    assert_eq!(
+        refused.params.get("name").map(String::as_str),
+        Some("capture.mov")
+    );
+    assert_eq!(refused.params.get("limit").map(String::as_str), Some("10"));
+}
