@@ -101,19 +101,27 @@ describe('A Calcul note', () => {
     expect(digits(await lines[1]!.getText())).toContain('126613');
   });
 
-  it('copies with its results as comments, which read back as the same sheet', async () => {
+  it('copies with its results as comments, which read back as the same sheet', async function () {
     const card = await canvas.cardWithTitle('Budget de recette');
     await card.moveTo();
     await card.$(testid('copy-button')).click();
 
-    const copied = await clipboardText();
-    // A runner with no clipboard to read: Rust's answer to the text is asserted instead.
-    const sheet = copied ?? SHEET;
-    if (copied !== null) expect(copied.split('\n')[1]).toMatch(/^hébergement = 100,521 € \/\/ ≈ /);
+    // An unreadable clipboard answers null at once, so only the readable case waits.
+    const copied = await eventually(
+      () => clipboardText(),
+      (text) => text === null || text.includes('hébergement = 100,521 € //'),
+      'the copy to reach the clipboard',
+    );
+    if (copied === null) {
+      // No readable clipboard on this runner; see `clipboardText`.
+      this.skip();
+      return;
+    }
+    expect(copied.split(/\r?\n/)[1]).toMatch(/^hébergement = 100,521 € \/\/ ≈ /);
 
     const today = new Date().toISOString().slice(0, 10);
     const [again, original] = await Promise.all([
-      bridge.evaluateCalc(sheet, today),
+      bridge.evaluateCalc(copied, today),
       bridge.evaluateCalc(SHEET, today),
     ]);
     expect(again.rows.map((row) => row.line)).toEqual(original.rows.map((row) => row.line));
