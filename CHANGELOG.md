@@ -12,6 +12,17 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [0.13.0] - 2026-10-17
+
+### ✨ Added
+
+- Tools: fill a tool's input from a note, a snippet or a todo list (#943)
+
+### 🧰 Under the hood
+
+- Notes: a fourth kind, Calcul, that computes each line as typed (#945)
+- Palette: one search over notes, requests, tools, spaces and commands (#944)
+
 ## [0.12.2] - 2026-10-16
 
 ### ✨ Added
