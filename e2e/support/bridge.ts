@@ -7,6 +7,7 @@ import { SCRIPT_TIMEOUT, SLOW_SCRIPT_TIMEOUT } from './timeouts.js';
 import type {
   Attachment,
   Base64FileAnswer,
+  CalcSheet,
   DisplayNote,
   BoardQuery,
   BoardView,
@@ -49,8 +50,6 @@ import type {
   NotePriority,
   NotesQuery,
   NotesView,
-  PercentagesAnswer,
-  PercentagesRequest,
   PermissionsAnswer,
   PermissionsRequest,
   Priority,
@@ -120,11 +119,10 @@ export const bridge = {
   placeInZones: (request: ZonesRequest) => invoke<ZonesAnswer>('place_in_zones', { request }),
   describeCron: (request: CronRequest) => invoke<CronAnswer>('describe_cron', { request }),
   convertSize: (request: SizesRequest) => invoke<SizesAnswer>('convert_size', { request }),
-  answerPercentages: (request: PercentagesRequest) =>
-    invoke<PercentagesAnswer>('answer_percentages', { request }),
   describePermissions: (request: PermissionsRequest) =>
     invoke<PermissionsAnswer>('describe_permissions', { request }),
   checkDigits: (request: CheckRequest) => invoke<CheckAnswer>('check_digits', { request }),
+  evaluateCalc: (sheet: string, today: string) => invoke<CalcSheet>('evaluate_calc', { sheet, today }),
   decodeJwt: (request: JwtRequest) => invoke<JwtAnswer>('decode_jwt', { request }),
   textStats: (request: StatsRequest) => invoke<TextStats>('text_stats', { request }),
   searchTimeZones: (query: string) => invoke<ZoneEntry[]>('search_time_zones', { query }),

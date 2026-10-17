@@ -1,5 +1,6 @@
 #![allow(clippy::needless_pass_by_value)]
 
+pub mod calc;
 pub mod checklist;
 pub mod convert;
 pub(crate) mod duplicate;
@@ -94,6 +95,17 @@ pub async fn create_note<R: Runtime>(
 #[allow(clippy::needless_pass_by_value)]
 pub fn detect_language(content: String) -> Language {
     language::from_content(&content)
+}
+
+/// A Calcul note's sheet, every line computed, as it is typed: no lock, and nothing stored.
+/// `today` is the local day of the window, as the notes' sections reckon it.
+#[tauri::command]
+#[specta::specta]
+pub async fn evaluate_calc(
+    sheet: String,
+    today: chrono::NaiveDate,
+) -> Result<calc::CalcSheet, AppError> {
+    crate::tools::off_thread(move || calc::evaluate(&sheet, today)).await
 }
 
 /// Where the fields of a text lie, for the code field to mark them: what a field is stays here.

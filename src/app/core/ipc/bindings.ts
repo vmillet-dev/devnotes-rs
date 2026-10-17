@@ -22,6 +22,11 @@ export const commands = {
 	 *  a Note prose, and only a paste of code turns it into a snippet with a language.
 	 */
 	detectLanguage: (content: string) => __TAURI_INVOKE<Language>("detect_language", { content }),
+	/**
+	 *  A Calcul note's sheet, every line computed, as it is typed: no lock, and nothing stored.
+	 *  `today` is the local day of the window, as the notes' sections reckon it.
+	 */
+	evaluateCalc: (sheet: string, today: string) => typedError<CalcSheet, AppError>(__TAURI_INVOKE("evaluate_calc", { sheet, today })),
 	/**  Where the fields of a text lie, for the code field to mark them: what a field is stays here. */
 	fieldSpans: (content: string) => __TAURI_INVOKE<FieldSpan[]>("field_spans", { content }),
 	/**  No lock, but off the window's thread: a document of a few megabytes takes a while. */
@@ -65,7 +70,6 @@ export const commands = {
 	describeCron: (request: CronRequest) => typedError<CronAnswer, AppError>(__TAURI_INVOKE("describe_cron", { request })),
 	convertSize: (request: SizesRequest) => typedError<SizesAnswer, AppError>(__TAURI_INVOKE("convert_size", { request })),
 	estimateTransfer: (request: TransferRequest) => typedError<TransferAnswer, AppError>(__TAURI_INVOKE("estimate_transfer", { request })),
-	answerPercentages: (request: PercentagesRequest) => typedError<PercentagesAnswer, AppError>(__TAURI_INVOKE("answer_percentages", { request })),
 	describePermissions: (request: PermissionsRequest) => typedError<PermissionsAnswer, AppError>(__TAURI_INVOKE("describe_permissions", { request })),
 	checkDigits: (request: CheckRequest) => typedError<CheckAnswer, AppError>(__TAURI_INVOKE("check_digits", { request })),
 	/**  The token and the secret are zeroed once the answer is made. */
@@ -433,6 +437,8 @@ export const ATTACHMENT_MAX_MEGABYTES = 10 as const;
 
 export const AUTOMATIC_BACKUPS_KEY = "devnotes.automaticBackups" as const;
 
+export const CALC_UNITS = [{"id":"millimetre","dimension":"length"},{"id":"centimetre","dimension":"length"},{"id":"metre","dimension":"length"},{"id":"kilometre","dimension":"length"},{"id":"inch","dimension":"length"},{"id":"foot","dimension":"length"},{"id":"yard","dimension":"length"},{"id":"mile","dimension":"length"},{"id":"milligram","dimension":"mass"},{"id":"gram","dimension":"mass"},{"id":"kilogram","dimension":"mass"},{"id":"tonne","dimension":"mass"},{"id":"pound","dimension":"mass"},{"id":"ounce","dimension":"mass"},{"id":"millisecond","dimension":"time"},{"id":"second","dimension":"time"},{"id":"minute","dimension":"time"},{"id":"hour","dimension":"time"},{"id":"day","dimension":"time"},{"id":"week","dimension":"time"},{"id":"month","dimension":"time"},{"id":"year","dimension":"time"},{"id":"bit","dimension":"data"},{"id":"kilobit","dimension":"data"},{"id":"megabit","dimension":"data"},{"id":"gigabit","dimension":"data"},{"id":"terabit","dimension":"data"},{"id":"byte","dimension":"data"},{"id":"kilobyte","dimension":"data"},{"id":"megabyte","dimension":"data"},{"id":"gigabyte","dimension":"data"},{"id":"terabyte","dimension":"data"},{"id":"petabyte","dimension":"data"},{"id":"kibibyte","dimension":"data"},{"id":"mebibyte","dimension":"data"},{"id":"gibibyte","dimension":"data"},{"id":"tebibyte","dimension":"data"},{"id":"pebibyte","dimension":"data"},{"id":"celsius","dimension":"temperature"},{"id":"fahrenheit","dimension":"temperature"},{"id":"kelvin","dimension":"temperature"},{"id":"euro","dimension":"euro"},{"id":"dollar","dimension":"dollar"}] as const;
+
 export const DEFAULT_SHORTCUTS = {"capture":"Ctrl+Alt+V","newNote":"Ctrl+Alt+N","palette":"Ctrl+Alt+P"} as const;
 
 export const DEFAULT_TRANSPORT = {"timeoutMs":30000,"followRedirects":true,"maxRedirects":10,"verifyTls":true,"useCookies":true} as const;
@@ -616,6 +622,79 @@ export type BodyAnswer = {
 export type ByteEncoding = "base64" | 
 /**  `-` and `_` for `+` and `/`, without padding: what a URL or a JWT carries. */
 "base64Url" | "base32" | "hex" | "binary" | "decimal";
+
+/**  One of the last lines a card shows: what was written, and what it gave. */
+export type CalcCardLine = {
+	expression: string,
+	value: CalcValue,
+	aggregate: boolean,
+};
+
+/**  Why a line has no result. It stays on its line: the others go on computing. */
+export type CalcError = 
+/**  In UTF-16 units from the start of the line. */
+{ kind: "unreadable"; at: number } | { kind: "unknownName"; name: string } | 
+/**  `distance + 3 Go`: a data size is no length. */
+{ kind: "mismatch"; expected: Dimension; found: Dimension; unit: CalcUnit | null } | 
+/**  ⚠️ No rate is fetched: the sheet works offline, and euros stay euros. */
+{ kind: "currency" } | { kind: "notConvertible"; from: Dimension; to: CalcUnit | null } | { kind: "divisionByZero" } | 
+/**  `total` with nothing to add up above it in the block. */
+{ kind: "nothingAbove" } | 
+/**  A date moved by something other than whole days, months or years. */
+{ kind: "dateShift" } | { kind: "overflow" } | { kind: "unsupported" };
+
+export type CalcLine = 
+/**  Ends a block, as a heading does. */
+{ kind: "blank" } | { kind: "heading"; title: string } | { kind: "comment" } | 
+/**  Words with no number in them: a sentence, not a mistake. */
+{ kind: "text" } | { kind: "value"; value: CalcValue; 
+/**  The variable the line names, `prix` in `prix = 120 €`. */
+name: string | null; 
+/**  `total` or `moyenne`: drawn with a rule above, a ledger's own convention. */
+aggregate: boolean; dimension: Dimension } | { kind: "error"; error: CalcError };
+
+export type CalcRow = {
+	line: CalcLine,
+	spans: CalcSpan[],
+	/**  What `en` or `à` was asked to convert: the editor proposes the units of that kind. */
+	converting: Dimension | null,
+};
+
+export type CalcSheet = {
+	rows: CalcRow[],
+	variables: CalcVariable[],
+};
+
+/**  What the editor colours, in UTF-16 units from the start of the line. */
+export type CalcSpan = {
+	start: number,
+	end: number,
+	kind: TokenKind,
+};
+
+/**  One unit, or one over another: `€/h`. */
+export type CalcUnit = {
+	unit: UnitId,
+	per: UnitId | null,
+};
+
+/**  Exact decimals as text: a float would round them before the front decides how to. */
+export type CalcValue = { kind: "number"; value: string; unit: CalcUnit | null } | 
+/**  `value` in percent: `25` for 25 %. `signed` for a change, written `+25 %`. */
+{ kind: "percent"; value: string; signed: boolean } | { kind: "date"; date: string } | 
+/**  A duration in a unit and the next one down: `6 sem 3 j`. */
+{ kind: "span"; parts: SpanPart[] };
+
+/**
+ *  A name, the line it was given on, its value there and the lines that read it before it
+ *  was given another. Zero-based lines.
+ */
+export type CalcVariable = {
+	name: string,
+	line: number,
+	value: CalcValue,
+	uses: number[],
+};
 
 /**  What a calendar counts: whole months first, each of its own length, then the wall clock. */
 export type CalendarGap = {
@@ -1100,6 +1179,8 @@ export type DigestValue = {
 
 export type DigestVerdict = { kind: "matches"; algorithm: HashAlgorithm; encoding: DigestEncoding } | { kind: "noMatch"; shape: DigestShape };
 
+export type Dimension = "number" | "length" | "mass" | "time" | "data" | "temperature" | "euro" | "dollar" | "rate" | "date";
+
 /**  `flatten`: the front end has a single note type. */
 export type DisplayNote = {
 	footer: NoteFooter,
@@ -1130,6 +1211,11 @@ export type DisplayNote = {
 	 *  and outside a list.
 	 */
 	outline: OutlineLine[],
+	/**
+	 *  A Calcul note's last lines that gave something, read from the whole sheet before it is
+	 *  cut; empty for the other kinds and outside a list.
+	 */
+	calc: CalcCardLine[],
 } & Note;
 
 export type DurationAnswer = { kind: "read"; negative: boolean; parts: DurationParts; iso: string; 
@@ -2330,7 +2416,9 @@ export type NoteKind =
 /**  Default, and what every note written before todo lists reads back as. */
 "snippet" | 
 /**  Prose, written in the rich editor and stored as Markdown. */
-"note" | "checklist";
+"note" | "checklist" | 
+/**  A sheet: one result a line, computed when it is read and never stored. */
+"calc";
 
 export type NoteLifecycle = { kind: "permanent" } | { kind: "expires"; at: string };
 
@@ -2438,8 +2526,6 @@ export type NotesView = {
 	matched: number,
 };
 
-export type Operand = "x" | "y";
-
 /**  One line of a Note as a card draws it, read from its Markdown by `notes::markdown`. */
 export type OutlineLine = { kind: "heading"; text: string } | { kind: "text"; text: string } | 
 /**  `marker` is `•` or the item's number. */
@@ -2481,47 +2567,6 @@ export type PeopleExport = { kind: "written"; people: number } | { kind: "failed
 { kind: "unreadable"; list: UnreadableList };
 
 export type PeopleFormat = "json" | "csv";
-
-/**  The two numbers of one question, as typed. */
-export type PercentPair = {
-	x: string,
-	y: string,
-};
-
-export type PercentResult = 
-/**  A field is empty: nothing to answer yet. */
-{ kind: "empty" } | { kind: "answered"; 
-/**  The numbers as read, for the formula written beside the result. */
-x: string; y: string; exact: string; rounded: string } | 
-/**  One-based, in characters of the field. */
-{ kind: "unreadable"; field: Operand; at: number } | 
-/**  A division by zero: a share of 0, or a percentage that brings a value to nothing. */
-{ kind: "divisionByZero" } | 
-/**  An evolution from 0 is no percentage. */
-{ kind: "fromZero" } | { kind: "tooLarge" };
-
-export type PercentagesAnswer = {
-	of: PercentResult,
-	share: PercentResult,
-	change: PercentResult,
-	apply: PercentResult,
-	before: PercentResult,
-};
-
-export type PercentagesRequest = {
-	/**  x % of y. */
-	of: PercentPair,
-	/**  x is what percentage of y. */
-	share: PercentPair,
-	/**  From x to y, by what percentage. */
-	change: PercentPair,
-	/**  y raised, or lowered, by x %. */
-	apply: PercentPair,
-	lower: boolean,
-	/**  What y was before it moved by x %. */
-	before: PercentPair,
-	decimals: number,
-};
 
 export type PermissionsAnswer = {
 	mode: ModeReading,
@@ -2934,6 +2979,11 @@ export type Span = {
 
 export type SpanKind = "plain" | "strong" | "code";
 
+export type SpanPart = {
+	value: string,
+	unit: UnitId,
+};
+
 export type StatsRequest = {
 	text: string,
 	/**  `A` and `a` counted as one. */
@@ -3040,6 +3090,8 @@ export type TitleLanguage =
 /**  The small words stay in lower case, but at the start. */
 "french";
 
+export type TokenKind = "number" | "unit" | "operator" | "keyword" | "name" | "date" | "comment" | "heading" | "error";
+
 export type TokenState = "valid" | "expired" | "notYetValid" | 
 /**  Neither `exp` nor `nbf`: nothing to be valid against. */
 "undated";
@@ -3130,6 +3182,9 @@ export type TrayLabels = {
 };
 
 export type UmaskReading = { kind: "empty" } | { kind: "read"; file: Mode; directory: Mode } | { kind: "refused"; problem: ModeProblem; at: number };
+
+/**  Named, never spelled: the front writes each in the language on screen, `Go` or `GB`. */
+export type UnitId = "millimetre" | "centimetre" | "metre" | "kilometre" | "inch" | "foot" | "yard" | "mile" | "milligram" | "gram" | "kilogram" | "tonne" | "pound" | "ounce" | "millisecond" | "second" | "minute" | "hour" | "day" | "week" | "month" | "year" | "bit" | "kilobit" | "megabit" | "gigabit" | "terabit" | "byte" | "kilobyte" | "megabyte" | "gigabyte" | "terabyte" | "petabyte" | "kibibyte" | "mebibyte" | "gibibyte" | "tebibyte" | "pebibyte" | "celsius" | "fahrenheit" | "kelvin" | "euro" | "dollar";
 
 /**  A list that could not be used: which one, and where it was looked for. */
 export type UnreadableList = {

@@ -21,3 +21,7 @@
 .is-checklist {
   @include hue-badge(var(--text-1));
 }
+
+.is-calc {
+  @include hue-badge(var(--pink));
+}

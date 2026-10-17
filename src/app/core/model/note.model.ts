@@ -1,3 +1,4 @@
+import type { CalcCardLine } from '@core/model/calc.model';
 import type {
   ExportReport,
   ExportScope,
@@ -72,6 +73,8 @@ export interface Note {
   readonly truncated: boolean;
   /** A Note's lines as its card draws them; empty for the other kinds and outside a list. */
   readonly outline: readonly OutlineLine[];
+  /** A Calcul note's last lines that gave something, as its card draws them; empty otherwise. */
+  readonly calc: readonly CalcCardLine[];
 }
 
 /**
@@ -97,6 +100,7 @@ export type NoteDraft = Omit<
   | 'searchHit'
   | 'truncated'
   | 'outline'
+  | 'calc'
 >;
 
 /**

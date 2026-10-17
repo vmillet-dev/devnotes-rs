@@ -1,4 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { CalcSheets } from '@core/services/calc/calc-sheets.service';
 import { ClipboardService } from '@core/services/clipboard/clipboard.service';
 import { DesktopNotifier } from '@core/services/notifications/desktop-notifier.service';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
@@ -64,6 +65,7 @@ export class PaletteStore {
   private readonly desktop = inject(DesktopNotifier);
   private readonly status = inject(StatusNotifier);
   private readonly settings = inject(SettingsStore);
+  private readonly calc = inject(CalcSheets);
 
   private readonly _isOpen = signal(false);
   private readonly _fromElsewhere = signal(false);
@@ -154,8 +156,10 @@ export class PaletteStore {
     const whole = await this.notifier.attempt('errors.noteReadFailed', () =>
       this.notesRepository.whole(note),
     );
-    // A todo list has no content: without this the palette would copy an empty string.
-    if (whole) await this.copyAndDismiss(noteCopyText(whole), note.title);
+    if (!whole) return;
+    // A todo list has no content, and a sheet copies with its results.
+    const text = whole.kind === 'calc' ? await this.calc.copyText(whole.content) : noteCopyText(whole);
+    if (text !== null) await this.copyAndDismiss(text, note.title);
   }
 
   /**

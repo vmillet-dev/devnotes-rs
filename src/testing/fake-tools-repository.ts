@@ -39,8 +39,6 @@ import {
   LoremAnswer,
   LoremRequest,
   PasswordAnswer,
-  PercentagesAnswer,
-  PercentagesRequest,
   PermissionsAnswer,
   QrAnswer,
   QrFormat,
@@ -205,13 +203,6 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
   qr: QrAnswer = { kind: 'empty' };
   savedCode: SavedCode = { kind: 'saved', bytes: 0 };
   copiedCode = true;
-  percentages: PercentagesAnswer = {
-    of: { kind: 'empty' },
-    share: { kind: 'empty' },
-    change: { kind: 'empty' },
-    apply: { kind: 'empty' },
-    before: { kind: 'empty' },
-  };
 
   convertCase(request: CaseRequest): Promise<CaseAnswer> {
     return this.answer('convert_case', request, this.caseAnswer);
@@ -333,10 +324,6 @@ export class FakeToolsRepository implements Pick<ToolsRepository, keyof ToolsRep
 
   convertSize(request: SizesRequest): Promise<SizesAnswer> {
     return this.answer('convert_size', request, this.sizes);
-  }
-
-  answerPercentages(request: PercentagesRequest): Promise<PercentagesAnswer> {
-    return this.answer('answer_percentages', request, this.percentages);
   }
 
   describePermissions(request: PermissionsRequest): Promise<PermissionsAnswer> {

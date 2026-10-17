@@ -15,6 +15,7 @@ const KINDS: readonly KindEntry[] = [
   { id: 'snippet', glyph: '</>', nameKey: 'notes.newSnippet', lineKey: 'notes.kindLines.snippet' },
   { id: 'note', glyph: 'Aa', nameKey: 'notes.newRichNote', lineKey: 'notes.kindLines.note' },
   { id: 'checklist', glyph: '✓', nameKey: 'notes.newChecklist', lineKey: 'notes.kindLines.checklist' },
+  { id: 'calc', glyph: '∑', nameKey: 'notes.newCalc', lineKey: 'notes.kindLines.calc' },
 ];
 
 /** A split button: creating a note keeps one click, picking a kind takes two. */

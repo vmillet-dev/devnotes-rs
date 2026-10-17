@@ -4,10 +4,11 @@
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 
-use chrono::{DateTime, TimeDelta, Utc};
+use chrono::{DateTime, NaiveDate, TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
+use super::calc::{self, CalcCardLine};
 use super::checklist::{self, ChecklistItem};
 use super::kind::NoteKind;
 use super::language::{self, Language};
@@ -262,6 +263,9 @@ pub struct DisplayNote {
     /// A Note's lines as its card draws them, cut like `content`; empty for the other kinds
     /// and outside a list.
     pub outline: Vec<OutlineLine>,
+    /// A Calcul note's last lines that gave something, read from the whole sheet before it is
+    /// cut; empty for the other kinds and outside a list.
+    pub calc: Vec<CalcCardLine>,
 }
 
 /// One line of a Note as a card draws it, read from its Markdown by `notes::markdown`.
@@ -345,7 +349,10 @@ impl DisplayNote {
 
     /// ⚠️ After everything that reads the body — the fields, the search excerpt — and only
     /// on what goes into a list: a note cut here must never reach the editor.
-    pub fn cut_to_preview(&mut self) {
+    pub fn cut_to_preview(&mut self, today: NaiveDate) {
+        if self.note.kind == NoteKind::Calc {
+            self.calc = calc::card_lines(&self.note.content, today);
+        }
         if self.note.is_rich_text() {
             // One parse for both: the words a copy must not mistake for the Markdown, and the
             // lines the card draws.
@@ -465,9 +472,11 @@ pub fn decorate(note: Note, now: DateTime<Utc>) -> DisplayNote {
         folder: None,
         search_hit: None,
         outline: Vec::new(),
+        calc: Vec::new(),
         copy_text: match note.kind {
             NoteKind::Checklist => Some(checklist::to_markdown(&note.items)),
-            NoteKind::Snippet | NoteKind::Note => None,
+            // A sheet's results are written in the language on screen: the front copies it.
+            NoteKind::Snippet | NoteKind::Note | NoteKind::Calc => None,
         },
         truncated: false,
         note,
@@ -827,7 +836,7 @@ mod tests {
             now(),
         );
 
-        note.cut_to_preview();
+        note.cut_to_preview(chrono::NaiveDate::MIN);
 
         assert_eq!(note.content, "☑ ship it");
         assert!(note.truncated);
@@ -852,7 +861,7 @@ mod tests {
             now(),
         );
 
-        note.cut_to_preview();
+        note.cut_to_preview(chrono::NaiveDate::MIN);
 
         let item = |text: &str| OutlineLine::Item {
             text: text.to_string(),
@@ -884,7 +893,7 @@ mod tests {
             now(),
         );
 
-        note.cut_to_preview();
+        note.cut_to_preview(chrono::NaiveDate::MIN);
 
         assert_eq!(note.outline.len(), 2);
         let OutlineLine::Code { text } = &note.outline[1] else {
@@ -904,7 +913,7 @@ mod tests {
             now(),
         );
 
-        note.cut_to_preview();
+        note.cut_to_preview(chrono::NaiveDate::MIN);
 
         assert!(note.outline.is_empty());
     }
@@ -920,7 +929,7 @@ mod tests {
             now(),
         );
 
-        note.cut_to_preview();
+        note.cut_to_preview(chrono::NaiveDate::MIN);
 
         assert_eq!(note.content, "- [x] **ship** it");
         assert!(!note.truncated);
@@ -937,7 +946,7 @@ mod tests {
             now(),
         );
 
-        note.cut_to_preview();
+        note.cut_to_preview(chrono::NaiveDate::MIN);
 
         assert_eq!(note.content, "echo **not bold**");
         assert!(!note.truncated);
@@ -1100,7 +1109,7 @@ mod tests {
             },
             now(),
         );
-        note.cut_to_preview();
+        note.cut_to_preview(chrono::NaiveDate::MIN);
 
         note
     }

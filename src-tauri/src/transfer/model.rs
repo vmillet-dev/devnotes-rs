@@ -236,6 +236,11 @@ pub fn to_markdown(notes: &[Note], space_names: &BTreeMap<String, String>) -> St
             NoteKind::Note => {
                 let _ = writeln!(out, "{}", note.content.trim_end());
             }
+            // The sheet alone: its results are computed where it is read.
+            NoteKind::Calc => {
+                let fence = fence_for(&note.content);
+                let _ = writeln!(out, "{fence}\n{}\n{fence}", note.content.trim_end());
+            }
             NoteKind::Snippet => {
                 let fence = fence_for(&note.content);
                 let _ = writeln!(

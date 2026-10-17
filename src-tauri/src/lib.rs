@@ -57,10 +57,10 @@ use json::explore_json;
 use libraries::{create_library, delete_library, list_libraries, open_library, rename_library};
 use notes::{
     convert_note, count_notes_tagged, create_note, delete_note, delete_notes, delete_tags,
-    detect_language, duplicate_note, empty_trash, field_spans, fill_placeholders, get_note,
-    list_global_placeholders, list_revisions, list_tags, list_trash, move_notes, move_notes_back,
-    purge_notes, query_notes, remove_tag, rename_tags, restore_notes, restore_priorities,
-    restore_revision, restore_tags, restore_trash, revision_diff, seed_samples,
+    detect_language, duplicate_note, empty_trash, evaluate_calc, field_spans, fill_placeholders,
+    get_note, list_global_placeholders, list_revisions, list_tags, list_trash, move_notes,
+    move_notes_back, purge_notes, query_notes, remove_tag, rename_tags, restore_notes,
+    restore_priorities, restore_revision, restore_tags, restore_trash, revision_diff, seed_samples,
     set_global_placeholders, set_pinned, set_placeholder_values, set_priority, tag_notes,
     untag_notes, update_note,
 };
@@ -69,13 +69,13 @@ use spaces::{
     count_space_contents, create_space, delete_space, list_spaces, pin_space, rename_space,
 };
 use tools::{
-    answer_percentages, check_digits, convert_case, convert_data, convert_size, copy_qr_code,
-    current_instant, decode_bytes, decode_jwt, describe_cidr, describe_colour, describe_cron,
-    describe_instant, describe_permissions, describe_qr_code, diff_json, diff_text,
-    encode_base64_file, encode_bytes, estimate_transfer, export_identities, fix_line_breaks,
-    generate_identifiers, generate_identity, generate_json, generate_passwords, hash_input,
-    inspect_identifier, lorem_ipsum, measure_durations, parse_url, place_in_zones, save_bytes,
-    save_qr_code, search_time_zones, text_stats, time_in_zone, url_codec,
+    check_digits, convert_case, convert_data, convert_size, copy_qr_code, current_instant,
+    decode_bytes, decode_jwt, describe_cidr, describe_colour, describe_cron, describe_instant,
+    describe_permissions, describe_qr_code, diff_json, diff_text, encode_base64_file, encode_bytes,
+    estimate_transfer, export_identities, fix_line_breaks, generate_identifiers, generate_identity,
+    generate_json, generate_passwords, hash_input, inspect_identifier, lorem_ipsum,
+    measure_durations, parse_url, place_in_zones, save_bytes, save_qr_code, search_time_zones,
+    text_stats, time_in_zone, url_codec,
 };
 use transfer::{count_export, export_is_protected, export_notes, import_notes, share_notes};
 use vault::{change_passphrase, create_vault, unlock_vault, vault_state};
@@ -105,6 +105,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             create_note::<tauri::Wry>,
             duplicate_note::<tauri::Wry>,
             detect_language,
+            evaluate_calc,
             field_spans,
             explore_json,
             convert_case,
@@ -141,7 +142,6 @@ fn ipc_builder() -> Builder<tauri::Wry> {
             describe_cron,
             convert_size,
             estimate_transfer,
-            answer_percentages,
             describe_permissions,
             check_digits,
             decode_jwt,
@@ -287,6 +287,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
         // The native side registers them before the front end exists; the front reads them.
         .constant("DEFAULT_SHORTCUTS", desktop::ShortcutBindings::defaults())
         .constant("FIELD_NAME_PATTERN", notes::placeholder::FIELD_NAME_PATTERN)
+        .constant("CALC_UNITS", notes::calc::units::catalogue())
         .constant("MINIMUM_PASSPHRASE_LENGTH", vault::MINIMUM_LENGTH)
         .constant(
             "ATTACHMENT_MAX_MEGABYTES",

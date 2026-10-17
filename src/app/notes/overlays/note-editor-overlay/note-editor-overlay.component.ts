@@ -35,6 +35,7 @@ import { ExternalLinksService } from '@core/services/links/external-links.servic
 import { PreferencesService } from '@core/services/preferences/preferences.service';
 import { NOTE_KIND_CHOICES } from '@core/services/settings/app-settings.model';
 import { SettingsStore } from '@core/services/settings/settings.store';
+import { CalcSheets } from '@core/services/calc/calc-sheets.service';
 import { ClockService } from '@core/services/time/clock.service';
 import { endOfLocalDay, toDateInputValue } from '@core/utils/local-day.util';
 import { relativeTimeRef } from '@core/utils/relative-time.util';
@@ -64,6 +65,7 @@ import type { JsonExplorerMode } from '@shared/json-explorer/json-explorer.compo
 import { JsonViewComponent } from './json-view/json-view.component';
 import { LANGUAGE_CHOICES } from './language-choices';
 // On a line of its own: CodeMirror is its own chunk, loaded by the first snippet opened.
+import { CalcEditorComponent } from './calc-editor/calc-editor.component';
 import { CodeEditorComponent } from './code-editor/code-editor.component';
 
 const TEXT_ENCODER = new TextEncoder();
@@ -126,6 +128,7 @@ const PRIORITY_CHOICES: readonly ChoiceOption[] = PRIORITIES.filter((level) => l
     ChoiceMenuComponent,
     CodeViewerComponent,
     CodeEditorComponent,
+    CalcEditorComponent,
     RichTextEditorComponent,
     SideBySideComponent,
     NgTemplateOutlet,
@@ -140,6 +143,7 @@ const PRIORITY_CHOICES: readonly ChoiceOption[] = PRIORITIES.filter((level) => l
 })
 export class NoteEditorOverlayComponent {
   private readonly clock = inject(ClockService);
+  private readonly calcSheets = inject(CalcSheets);
   private readonly preferences = inject(PreferencesService);
   private readonly store = inject(NotesStore);
   protected readonly attachments = inject(AttachmentsStore);
@@ -247,6 +251,8 @@ export class NoteEditorOverlayComponent {
   protected readonly isChecklist = computed(() => this.note()?.kind === 'checklist');
   /** A Note is written in the rich editor; a snippet keeps the code field. */
   protected readonly isRichText = computed(() => this.note()?.kind === 'note');
+  /** A Calcul note: the sheet beside its results, in an editor of its own. */
+  protected readonly isCalc = computed(() => this.note()?.kind === 'calc');
   /** Only a snippet's body is code: a format picker anywhere else would do nothing. */
   protected readonly hasLanguage = computed(() => this.note()?.kind === 'snippet');
   /** Which reader the snippet's language has, if any: only those get the Graphe / Arbre tabs. */
@@ -298,10 +304,17 @@ export class NoteEditorOverlayComponent {
   private caretPath: string | null = null;
   protected readonly checklistStats = computed(() => checklistProgress(this.note()?.items ?? []));
 
-  /** The draft, so copying before leaving the field yields what is on screen. */
-  protected readonly copyText = computed(() =>
-    this.isChecklist() ? (this.note()?.copyText ?? '') : this.draftContent(),
-  );
+  /**
+   * The draft, so copying before leaving the field yields what is on screen; a sheet gives its
+   * text with each result after its line, computed at the click.
+   */
+  protected readonly copyText = computed<string | (() => Promise<string | null>)>(() => {
+    if (this.isCalc()) {
+      const sheet = this.draftContent();
+      return () => this.calcSheets.copyText(sheet);
+    }
+    return this.isChecklist() ? (this.note()?.copyText ?? '') : this.draftContent();
+  });
 
   protected readonly placeholders = computed(() => this.note()?.placeholders ?? []);
   protected readonly hasPlaceholders = computed(() => this.placeholders().length > 0);

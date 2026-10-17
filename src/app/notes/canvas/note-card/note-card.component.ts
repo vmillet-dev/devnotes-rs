@@ -24,6 +24,7 @@ import { CodeViewerComponent } from '@shared/code-viewer/code-viewer.component';
 import { KindBadgeComponent } from '@shared/badges/kind-badge/kind-badge.component';
 import { PriorityPillComponent } from '@notes/ui/priority-pill/priority-pill.component';
 import { CopyButtonComponent } from '@notes/ui/copy-button/copy-button.component';
+import { CalcLinesComponent } from './calc-lines/calc-lines.component';
 import { NoteCardMenuComponent } from './note-card-menu/note-card-menu.component';
 import { NoteOutlineComponent } from './note-outline/note-outline.component';
 
@@ -60,6 +61,7 @@ function canTakeFocus(card: HTMLElement): boolean {
 @Component({
   selector: 'app-note-card',
   imports: [
+    CalcLinesComponent,
     CodeViewerComponent,
     CopyButtonComponent,
     KindBadgeComponent,
@@ -133,6 +135,8 @@ export class NoteCardComponent {
 
   protected readonly isChecklist = computed(() => this.note().kind === 'checklist');
   protected readonly isNote = computed(() => this.note().kind === 'note');
+  /** A sheet that gave something shows its last results; an empty one, its text like any other. */
+  protected readonly calcLines = computed(() => (this.note().kind === 'calc' ? this.note().calc : []));
   protected readonly progress = computed(() => checklistProgress(this.note().items));
   /**
    * The excerpt cannot replace the layer: these are real checkboxes a card can be

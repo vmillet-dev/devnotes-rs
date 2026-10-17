@@ -1,0 +1,56 @@
+@use 'mixins' as *;
+
+// The editor scrolls in itself: it needs a height to scroll within, and the footer stays below.
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.sheet {
+  flex: 1;
+  min-height: 0;
+}
+
+.calc-editor {
+  height: 100%;
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  padding: 8px 24px;
+  border-top: 1px solid var(--line-soft);
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.summary {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-1);
+
+  b {
+    font-variant-numeric: tabular-nums;
+    color: var(--text-0);
+  }
+}
+
+.decimals {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  select {
+    @include focus-ring;
+    padding: 3px 6px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--bg-2);
+    font: inherit;
+    color: var(--text-0);
+  }
+}

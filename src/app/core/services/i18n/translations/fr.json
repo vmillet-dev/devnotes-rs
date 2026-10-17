@@ -38,7 +38,8 @@
     "kindPlural": {
       "snippet": "Snippets",
       "note": "Notes",
-      "checklist": "Tâches"
+      "checklist": "Tâches",
+      "calc": "Calculs"
     },
     "createOrPaste": "Coller ou créer",
     "copyContent": "Copier",
@@ -62,7 +63,8 @@
     "newNoteKindLabel": "Choisir le type de note",
     "kindTag": {
       "note": "Note",
-      "checklist": "Tâches"
+      "checklist": "Tâches",
+      "calc": "Calcul"
     },
     "priorityLabel": "Priorité",
     "footer": {
@@ -84,7 +86,8 @@
     "kindLines": {
       "snippet": "Un bloc de code, son langage et ses champs à remplir.",
       "note": "Du texte mis en forme : titres, listes, liens, tableaux, blocs de code.",
-      "checklist": "Des étapes à cocher, dans l’ordre."
+      "checklist": "Des étapes à cocher, dans l’ordre.",
+      "calc": "Une ligne, un résultat : unités, dates, totaux."
     },
     "checklistProgress": "{{done}}/{{total}}",
     "checklistToggle": "Cocher la tâche {{text}}",
@@ -141,7 +144,8 @@
     "duplicate": "Dupliquer",
     "copyTitle": "{{title}} (copie)",
     "fileInto": "Ranger dans",
-    "noFolder": "Aucun dossier"
+    "noFolder": "Aucun dossier",
+    "newCalc": "Calcul"
   },
   "filters": {
     "groupLabel": "Filtrer les notes",
@@ -376,8 +380,10 @@
       "convertTo": {
         "snippet": "Convertir en snippet",
         "note": "Convertir en Note",
-        "checklist": "Convertir en liste de tâches"
-      }
+        "checklist": "Convertir en liste de tâches",
+        "calc": "Convertir en calcul"
+      },
+      "calc": "Calcul"
     },
     "noteStats": "Note · {count, plural, =0 {aucun mot} one {# mot} other {# mots}} · enregistrée en Markdown",
     "checklistStats": "{{done}}/{total, plural, one {# tâche} other {# tâches}}",
@@ -534,7 +540,8 @@
       "collection": "L’en-tête « {{header}} », hérité de la collection « {{name}} », ne peut pas être envoyé : sa valeur n’est pas valide."
     },
     "httpGraphqlVariables": "Les variables GraphQL ne sont pas un objet JSON.",
-    "httpWebsocketRefused": "Le serveur a refusé la connexion WebSocket (statut {{status}})."
+    "httpWebsocketRefused": "Le serveur a refusé la connexion WebSocket (statut {{status}}).",
+    "calcFailed": "La feuille n’a pas pu être calculée."
   },
   "tray": {
     "open": "Ouvrir {{app}}",
@@ -767,7 +774,8 @@
     "convertedInto": {
       "note": "Convertie en Note",
       "snippet": "Convertie en snippet",
-      "checklist": "Convertie en liste de tâches"
+      "checklist": "Convertie en liste de tâches",
+      "calc": "Convertie en calcul"
     }
   },
   "file": {
@@ -851,7 +859,8 @@
       "priority": "Donner une priorité : 0 aucune, 1 basse… 4 urgente",
       "undo": "Annuler la dernière suppression",
       "stepBack": "Reprendre la note, annuler la suppression en attente, la sélection, les filtres, puis sortir du dossier",
-      "align": "Aligner les cartes libres (tableau)"
+      "align": "Aligner les cartes libres (tableau)",
+      "newCalc": "Nouveau calcul"
     },
     "editor": {
       "close": "Quitter le code, puis fermer l’éditeur en enregistrant",
@@ -943,7 +952,8 @@
     "noteKind": {
       "note": "Note",
       "snippet": "Snippet",
-      "checklist": "Liste de tâches"
+      "checklist": "Liste de tâches",
+      "calc": "Calcul"
     },
     "behavior": {
       "title": "Comportement",
@@ -2306,57 +2316,6 @@
       "transferEmpty": "Tapez une taille et un débit : la durée s’affiche ici, et selon la connexion.",
       "noteTransfer": "{{size}} à {{rate}}, rendement {{efficiency}} %"
     },
-    "percentages": {
-      "name": "Pourcentages",
-      "description": "x % de y, part, évolution, hausse et baisse",
-      "decimals": "Décimales",
-      "raise": "augmenté",
-      "lower": "diminué",
-      "direction": "Sens",
-      "of": {
-        "title": "Pourcentage d’une valeur",
-        "x": "Pourcentage",
-        "y": "Valeur",
-        "middle": "% de",
-        "formula": "{{x}} ÷ 100 × {{y}} = {{result}}"
-      },
-      "share": {
-        "title": "Part en pourcentage",
-        "x": "Part",
-        "y": "Total",
-        "middle": "est quel % de",
-        "formula": "{{x}} ÷ {{y}} × 100 = {{result}} %"
-      },
-      "change": {
-        "title": "Évolution",
-        "x": "Valeur de départ",
-        "y": "Valeur d’arrivée",
-        "before": "de",
-        "middle": "à",
-        "formula": "({{y}} − {{x}}) ÷ |{{x}}| × 100 = {{result}} %"
-      },
-      "apply": {
-        "title": "Hausse ou baisse",
-        "x": "Pourcentage",
-        "y": "Valeur",
-        "middle": "de",
-        "raiseFormula": "{{y}} × (1 + {{x}} ÷ 100) = {{result}}",
-        "lowerFormula": "{{y}} × (1 − {{x}} ÷ 100) = {{result}}"
-      },
-      "before": {
-        "title": "Valeur avant une évolution",
-        "x": "Évolution en %",
-        "y": "Valeur après",
-        "middle": "après une évolution de",
-        "formula": "{{y}} ÷ (1 + {{x}} ÷ 100) = {{result}}"
-      },
-      "unreadable": "{{field}} : illisible à partir du caractère {{at}}.",
-      "divisionByZero": "Division par zéro : pas de réponse.",
-      "fromZero": "Une évolution depuis 0 n’est pas un pourcentage.",
-      "tooLarge": "Trop grand pour être calculé exactement : 28 chiffres au plus.",
-      "rounded": "≈ : résultat arrondi. Copier donne la valeur exacte.",
-      "noteTitle": "Pourcentages"
-    },
     "permissions": {
       "name": "Permissions Unix",
       "description": "chmod : 755 ↔ rwxr-xr-x, bits spéciaux, umask",
@@ -3712,5 +3671,144 @@
     "filterLabel": "Filtrer {{menu}}",
     "filterPlaceholder": "Filtrer…",
     "noResults": "Aucun résultat"
+  },
+  "calc": {
+    "percent": "{{value}} %",
+    "units": {
+      "millimetre": "mm",
+      "centimetre": "cm",
+      "metre": "m",
+      "kilometre": "km",
+      "inch": "po",
+      "foot": "ft",
+      "yard": "yd",
+      "mile": "mi",
+      "milligram": "mg",
+      "gram": "g",
+      "kilogram": "kg",
+      "tonne": "t",
+      "pound": "lb",
+      "ounce": "oz",
+      "millisecond": "ms",
+      "second": "s",
+      "minute": "min",
+      "hour": "h",
+      "day": "j",
+      "week": "sem",
+      "month": "mois",
+      "year": "an",
+      "bit": "bit",
+      "kilobit": "kbit",
+      "megabit": "Mbit",
+      "gigabit": "Gbit",
+      "terabit": "Tbit",
+      "byte": "o",
+      "kilobyte": "Ko",
+      "megabyte": "Mo",
+      "gigabyte": "Go",
+      "terabyte": "To",
+      "petabyte": "Po",
+      "kibibyte": "Kio",
+      "mebibyte": "Mio",
+      "gibibyte": "Gio",
+      "tebibyte": "Tio",
+      "pebibyte": "Pio",
+      "celsius": "°C",
+      "fahrenheit": "°F",
+      "kelvin": "K",
+      "euro": "€",
+      "dollar": "$"
+    },
+    "unitNames": {
+      "millimetre": "millimètres",
+      "centimetre": "centimètres",
+      "metre": "mètres",
+      "kilometre": "kilomètres",
+      "inch": "pouces",
+      "foot": "pieds",
+      "yard": "yards",
+      "mile": "miles",
+      "milligram": "milligrammes",
+      "gram": "grammes",
+      "kilogram": "kilogrammes",
+      "tonne": "tonnes",
+      "pound": "livres",
+      "ounce": "onces",
+      "millisecond": "millisecondes",
+      "second": "secondes",
+      "minute": "minutes",
+      "hour": "heures",
+      "day": "jours",
+      "week": "semaines",
+      "month": "mois",
+      "year": "années",
+      "bit": "bits",
+      "kilobit": "kilobits",
+      "megabit": "mégabits",
+      "gigabit": "gigabits",
+      "terabit": "térabits",
+      "byte": "octets",
+      "kilobyte": "kilooctets",
+      "megabyte": "mégaoctets",
+      "gigabyte": "gigaoctets",
+      "terabyte": "téraoctets",
+      "petabyte": "pétaoctets",
+      "kibibyte": "kibioctets",
+      "mebibyte": "mébioctets",
+      "gibibyte": "gibioctets",
+      "tebibyte": "tébioctets",
+      "pebibyte": "pébioctets",
+      "celsius": "degrés Celsius",
+      "fahrenheit": "degrés Fahrenheit",
+      "kelvin": "kelvins",
+      "euro": "euros",
+      "dollar": "dollars"
+    },
+    "dimensions": {
+      "number": "un nombre",
+      "length": "une longueur",
+      "mass": "une masse",
+      "time": "une durée",
+      "data": "une taille de données",
+      "temperature": "une température",
+      "euro": "un montant en euros",
+      "dollar": "un montant en dollars",
+      "rate": "un débit",
+      "date": "une date"
+    },
+    "errors": {
+      "unreadable": "cette ligne ne se lit pas",
+      "unknownName": "« {{name}} » n’est défini nulle part au-dessus",
+      "mismatchUnit": "{{unit}} n’est pas {{expected}}",
+      "mismatch": "{{found}} ne va pas avec {{expected}}",
+      "currency": "hors ligne : pas de taux de change",
+      "notConvertible": "{{from}} ne se convertit pas en {{to}}",
+      "divisionByZero": "division par zéro",
+      "nothingAbove": "rien à additionner au-dessus dans ce bloc",
+      "dateShift": "une date avance de jours, de mois ou d’années entiers",
+      "overflow": "nombre trop grand",
+      "unsupported": "ce calcul ne se fait pas ici"
+    },
+    "editor": {
+      "label": "Feuille de calcul",
+      "placeholder": "Une ligne, un résultat : prix = 120 €, 3 h 20 min en min, 20 % de 340…",
+      "results": "Résultats",
+      "lines": "{count, plural, one {# ligne} other {# lignes}}",
+      "variables": "{count, plural, one {# variable} other {# variables}}",
+      "decimals": "Décimales",
+      "decimalsAuto": "Auto",
+      "selected": "{count, plural, one {# ligne sélectionnée} other {# lignes sélectionnées}}",
+      "sum": "somme",
+      "mean": "moyenne",
+      "nothingToAdd": "rien à additionner",
+      "mixedUnits": "unités différentes",
+      "copyResult": "Copier {{value}}",
+      "copied": "Copié : {{value}}",
+      "pick": "Sélectionner ce résultat, Maj ou Ctrl pour en ajouter",
+      "defined": "définie ligne {{line}}",
+      "usedOnce": "utilisée ligne {{line}}",
+      "usedMany": "utilisée lignes {{lines}}",
+      "unused": "jamais utilisée"
+    }
   }
 }

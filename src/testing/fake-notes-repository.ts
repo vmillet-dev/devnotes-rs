@@ -147,6 +147,7 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
         searchHit: null,
         truncated: false,
         outline: [],
+        calc: [],
       };
       this.notes = [note, ...this.notes];
       return note;
@@ -315,6 +316,7 @@ export class FakeNotesRepository implements Pick<NotesRepository, keyof NotesRep
           searchHit: null,
           truncated: false,
           outline: [],
+          calc: [],
           priority: 'none' as const,
           // The trash shape drops the items; a spec needing them restored uses `setView`.
           items: [],

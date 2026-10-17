@@ -28,6 +28,7 @@ export function createNote(overrides: Partial<Note> = {}): Note {
     searchHit: null,
     truncated: false,
     outline: [],
+    calc: [],
     ...overrides,
   };
 

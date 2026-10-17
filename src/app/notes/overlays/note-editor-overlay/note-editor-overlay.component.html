@@ -374,6 +374,20 @@
           } @placeholder {
             <div class="rich-text-loading" aria-hidden="true"></div>
           }
+        } @else if (isCalc()) {
+          <!-- Deferred: CodeMirror is loaded the first time a sheet opens, not at startup. -->
+          @defer (on immediate) {
+            <app-calc-editor
+              [session]="session()"
+              [content]="draftContent()"
+              [label]="'calc.editor.label' | transloco"
+              [placeholder]="'calc.editor.placeholder' | transloco"
+              (changed)="onBodyInput($event)"
+              (blurred)="commitContent()"
+            />
+          } @placeholder {
+            <div class="rich-text-loading" aria-hidden="true"></div>
+          }
         } @else {
           <ng-container [ngTemplateOutlet]="codeField" />
         }
@@ -465,7 +479,7 @@
         } @else if (isRichText()) {
           {{ 'editor.noteStats' | transloco: { count: wordCount() } }}
         } @else {
-          {{ languageLabel() }} ·
+          {{ isCalc() ? ('notes.kindTag.calc' | transloco) : languageLabel() }} ·
           {{ 'editor.footerStats' | transloco: { lines: lineCount(), bytes: byteSize(), eol: lineEnding() } }}
         }
       </span>

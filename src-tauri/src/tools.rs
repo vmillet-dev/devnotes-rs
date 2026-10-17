@@ -22,7 +22,6 @@ pub mod identity;
 pub mod image;
 pub mod jwt;
 pub(crate) mod numbers;
-pub mod percentages;
 pub mod permissions;
 pub mod qr;
 pub mod random;
@@ -291,14 +290,6 @@ pub async fn estimate_transfer(
 #[specta::specta]
 pub async fn convert_size(request: sizes::SizesRequest) -> Result<sizes::SizesAnswer, AppError> {
     off_thread(move || sizes::convert(&request)).await
-}
-
-#[tauri::command]
-#[specta::specta]
-pub async fn answer_percentages(
-    request: percentages::PercentagesRequest,
-) -> Result<percentages::PercentagesAnswer, AppError> {
-    off_thread(move || percentages::answer_all(&request)).await
 }
 
 #[tauri::command]

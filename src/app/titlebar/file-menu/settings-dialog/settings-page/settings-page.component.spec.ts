@@ -134,6 +134,7 @@ describe('SettingsPageComponent', () => {
       'note',
       'snippet',
       'checklist',
+      'calc',
     ]);
     expect(draft.value('defaultNoteKind')).toBe('snippet');
 

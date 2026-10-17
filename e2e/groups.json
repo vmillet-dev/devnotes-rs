@@ -35,6 +35,7 @@
     "24-forgotten-passphrase",
     "26-formatting",
     "27-json-explorer",
-    "30-http"
+    "30-http",
+    "33-calc"
   ]
 }

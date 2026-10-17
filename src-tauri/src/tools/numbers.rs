@@ -103,7 +103,9 @@ pub(crate) fn leading_number(text: &str) -> Result<(Decimal, usize), NumberProbl
     Ok((value.normalize(), at))
 }
 
-/// A whole field that must be one number and nothing else.
+/// A whole field that must be one number and nothing else: read by the tests alone, since
+/// the percentages left the tools for the Calcul notes.
+#[cfg(test)]
 pub(crate) fn number(text: &str) -> Result<Decimal, NumberProblem> {
     let (value, end) = leading_number(text)?;
     let rest = text.chars().skip(end);

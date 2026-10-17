@@ -1,0 +1,48 @@
+:host {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+// Four lines in the room a card gives three of code: a sheet's lines are short.
+.lines {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.line {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+
+  // A ledger's own convention: a rule above a total.
+  &.total {
+    margin-top: 1px;
+    padding-top: 1px;
+    border-top: 1px solid var(--line);
+
+    .result {
+      font-weight: 700;
+    }
+  }
+}
+
+.expression {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-2);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.result {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-0);
+  white-space: nowrap;
+}

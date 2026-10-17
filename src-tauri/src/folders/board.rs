@@ -505,7 +505,9 @@ pub fn build<S: std::hash::BuildHasher>(
         width,
         height,
     };
-    view.notes_mut().for_each(DisplayNote::cut_to_preview);
+    // The board knows no time zone: a sheet's `aujourd'hui` is the UTC day on its cards.
+    let today = request.now.date_naive();
+    view.notes_mut().for_each(|note| note.cut_to_preview(today));
 
     view
 }

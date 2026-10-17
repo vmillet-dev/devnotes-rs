@@ -4,7 +4,7 @@ Guidance for Claude Code in this repository. `docs/architecture.md` is the detai
 
 ## Project
 
-DevNotes — desktop notes app for developers. **Angular 22** (standalone, signals, zoneless), **Rust / Tauri v2**, SQLite via Diesel. Notes are snippets (body + language + `{{fields}}`), Notes (Markdown, written formatted) or todo lists; they live in spaces and folders, with search, tags, a canvas and a board, trash with undo, revisions, bulk actions, attachments, import/export, a palette over notes, requests, tools and spaces, and tools (JSON, HTTP, WebSocket…). Libraries are **encrypted**, several, each behind its own passphrase.
+DevNotes — desktop notes app for developers. **Angular 22** (standalone, signals, zoneless), **Rust / Tauri v2**, SQLite via Diesel. Notes are snippets (body + language + `{{fields}}`), Notes (Markdown, written formatted), todo lists or Calcul sheets (one result a line); they live in spaces and folders, with search, tags, a canvas and a board, trash with undo, revisions, bulk actions, attachments, import/export, a palette over notes, requests, tools and spaces, and tools (JSON, HTTP, WebSocket…). Libraries are **encrypted**, several, each behind its own passphrase.
 
 Principles:
 
@@ -48,7 +48,7 @@ Principles:
 - **Fresh install seeds samples in one transaction.** → "The first launch". **Input is validated in the model**, before locking. → "Input validation".
 - **`{{field}}`** is decided in `notes::placeholder` alone (`[A-Za-z0-9_-]`); values in `note_placeholders`; global variable = proposed default, never copied. → "`{{fields}}` in a snippet".
 - ⚠️ An HTTP request's `{{name}}` is `http::variables`, never `notes::placeholder`: resolved in Rust at send from request › folder › collection › environment › globals; a name set nowhere refuses the send. → "Variables, and where each resolves from".
-- **Kinds**: a todo list has items, not a body; only a snippet has a language; a Note is Markdown (`notes::markdown::plain` for list previews). → "The three kinds of note", "A Note is written formatted, and stored as Markdown".
+- **Kinds**: a todo list has items, not a body; only a snippet has a language; a Note is Markdown (`notes::markdown::plain` for list previews); a Calcul sheet is computed by Rust (`notes::calc`) and written by the front (`CalcFormatter`), its results never stored. → "The four kinds of note", "A Calcul note: one result a line", "A Note is written formatted, and stored as Markdown".
 - **Folders** cut one space; deleting leaves notes unfiled; board geometry is separate from `Note`/`Folder`. Pinning is the only space order. → "Folders inside a space", "A folder travels; its coordinates do not", "Managing spaces from the switcher".
 - **Tools**: a pure Rust function plus a component implementing `Tool`; catalogue in `tools/catalogue/catalogue.ts`; one command per tool via `off_thread`; `result` is an output, never an input; secrets are plain signals. → "The tools: one contract…".
 - ⚠️ **The identity tool's lists are files, not constants**: `src-tauri/resources/identity/` is a Tauri resource (`bundle.resources`), read through `resource_dir()` and checked when read (`tools/identity/data.rs`); a missing or damaged list is an answer, never a crash. ⚠️ The names are **one list** (`names.txt`): never sort people's names by origin or by country — not in data, file names, order, code or tests. A new country is a file of places there, named in `data.rs`. → "The identity tool is that design…".
