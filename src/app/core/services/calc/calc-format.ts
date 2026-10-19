@@ -146,6 +146,15 @@ export class CalcFormatter {
         const shown = this.number(value.mantissa, digitsFor(value.mantissa, this.decimals, false));
         return { text: scientific(shown.text, value.exponent), approx: shown.approx };
       }
+      case 'fraction': {
+        const sign = value.negative ? '-' : '';
+        const whole = value.denominator === '1';
+        return { text: `${sign}${value.numerator}${whole ? '' : `/${value.denominator}`}`, approx: false };
+      }
+      case 'multiplier': {
+        const shown = this.number(value.value, digitsFor(value.value, this.decimals, false));
+        return { text: `×${shown.text}`, approx: shown.approx };
+      }
     }
   }
 
@@ -157,6 +166,10 @@ export class CalcFormatter {
         this.number(value.mantissa, { min: 0, max: Math.min(length, 20) }).text,
         value.exponent,
       );
+    }
+    if (value.kind === 'multiplier') {
+      const length = parts(value.value).fraction.length;
+      return `×${this.number(value.value, { min: 0, max: Math.min(length, 20) }).text}`;
     }
     if (value.kind !== 'number' && value.kind !== 'percent') return this.value(value).text;
     const length = parts(value.value).fraction.length;

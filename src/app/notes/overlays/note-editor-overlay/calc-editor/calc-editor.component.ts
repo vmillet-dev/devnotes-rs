@@ -62,7 +62,7 @@ const SAID_FOR_MS = 1800;
 const FROM_OUTSIDE = Annotation.define<boolean>();
 
 /** What a plain number can be written as after `en`, beside `%`: concepts of the table. */
-const NOTATIONS = ['hex', 'bin', 'oct', 'sci'] as const;
+const NOTATIONS = ['fraction', 'multiple', 'asDecimal', 'hex', 'bin', 'oct', 'sci'] as const;
 
 /** The word being typed, which the table's words complete. */
 const TYPED_WORD = /[\p{L}'’]+$/u;

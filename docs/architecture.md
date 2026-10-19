@@ -1594,6 +1594,15 @@ which knows no time zone, gives its cards the UTC day.
   or a conversion word it is first a scale or a unit: `5 m` is metres even where `m` is a name.
 - **The percentages tool's five questions** are lines: `20 % de 340`, `30 sur 120 en %`,
   `de 80 à 100`, `250 + 20 %`, `300 hors 20 %`. A percentage added to a quantity is a share of it.
+- **Every percentage form** turns on what a share is taken against (`Share`: `de`/`of`,
+  `de plus sur`/`on`, `de moins sur`/`off`, the longest read first): `5 % de plus sur 200`
+  applies it; `5 % de combien font 6`/`5% of what is 6` solves for the whole; `50 en % de 100`,
+  `70 as a % on 20` and `180 c'est combien de % de moins que 200` give a value as a share of
+  another; `50 à 75 c'est combien de %` and `40 to 90 as %` a signed change, `is what x` a
+  multiplier. After `en`: `fraction` (the simplest within 10⁻²⁰: `1/3`), `multiple`/`x` (`×4`,
+  `en multiple de 5`), `décimal`/`dec`. A proportion solves for its unknown, its ratio taken
+  first so the unit is kept: `6 est à 60 ce que 8 est à combien`. `x`, `a` and `multiple` are
+  values, not syntax: they stay free names.
 - **Dates** move by whole days, and by calendar months for months and years; two dates subtract
   into days. A duration converted into weeks keeps the days left (`6 sem 3 j`).
 - **Blocks** run from a `# heading` or a blank line to the next: `total` and `moyenne` read the

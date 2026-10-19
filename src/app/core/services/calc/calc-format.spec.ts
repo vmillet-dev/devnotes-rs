@@ -100,6 +100,18 @@ describe('CalcFormatter', () => {
     expect(english.exact({ kind: 'scientific', mantissa: '1.41421356', exponent: 0 })).toBe('1.41421356e+0');
   });
 
+  it('writes a fraction and a multiplier in both languages', () => {
+    const fifth: CalcValue = { kind: 'fraction', numerator: '1', denominator: '5', negative: false };
+    expect(french.value(fifth).text).toBe('1/5');
+    expect(english.value({ ...fifth, negative: true }).text).toBe('-1/5');
+    expect(french.value({ kind: 'fraction', numerator: '3', denominator: '1', negative: false }).text).toBe(
+      '3',
+    );
+    expect(french.value({ kind: 'multiplier', value: '1.5' }).text).toBe('×1,5');
+    expect(english.value({ kind: 'multiplier', value: '1.5' }).text).toBe('×1.5');
+    expect(english.exact({ kind: 'multiplier', value: '4' })).toBe('×4');
+  });
+
   it('says why a function or a setting has no result, in both languages', () => {
     expect(french.error({ kind: 'negativeRoot' })).toBe('Pas de racine paire d’un nombre négatif');
     expect(english.error({ kind: 'logDomain' })).toBe('A logarithm is taken of a number above zero');
