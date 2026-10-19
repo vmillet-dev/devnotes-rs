@@ -12,6 +12,22 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [0.13.1] - 2026-10-19
+
+### 🧰 Under the hood
+
+- Calcul: fixes to totals, finance forms, long roots and copied results (#978)
+- Calcul: compound interest, returns, present value and loans (#976)
+- Calcul: every percentage form, fractions, multipliers and proportions (#975)
+- Calcul: rounding, functions, bases and bits, CSS units and frequencies (#974)
+- Calcul: up to 14 decimals, a number format and a date format (#973)
+- Calcul: operators in words, labels, scales and the previous result (#972)
+- Calcul: one table of words, and a rule when a name collides (#971)
+
+### 📦 Dependencies
+
+- Dependencies: zip moves to 9.0.5, past three security advisories (#970)
+
 ## [0.13.0] - 2026-10-17
 
 ### ✨ Added
