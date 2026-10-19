@@ -18,7 +18,11 @@ import { bridge } from '../support/bridge.js';
  * controls, so there is no value to assign. Addressed by `data-testid` and never by
  * their translated label — the suite switches the interface language partway through.
  */
-const SEGMENTED = { theme: 'setting-theme', density: 'setting-density' } as const;
+const SEGMENTED = {
+  theme: 'setting-theme',
+  density: 'setting-density',
+  calcDateFormat: 'setting-calc-date-format',
+} as const;
 
 export const titlebar = {
   title: () => $(testid('titlebar-title')).getText(),
@@ -106,6 +110,14 @@ export const settings = {
     await settings.open('general');
     const toggle = $(testid('setting-code-wrap'));
     if ((await toggle.isSelected()) !== on) await toggle.click();
+    await settings.close();
+  },
+
+  /** « Format de date » of a Calcul sheet, written with OK. */
+  async setCalcDateFormat(format: 'numeric' | 'short' | 'long'): Promise<void> {
+    await fileMenu.openPreferences();
+    await settings.open('general');
+    await pickSegment(SEGMENTED.calcDateFormat, format);
     await settings.close();
   },
 

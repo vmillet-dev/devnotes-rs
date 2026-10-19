@@ -1,4 +1,4 @@
-import { CalcDecimals } from '@core/model/calc.model';
+import { CalcDateFormat, CalcDecimals, CalcNumberFormat } from '@core/model/calc.model';
 import type { NoteKind } from '@core/model/checklist.model';
 import { AREAS, Area } from '@core/services/areas/area.model';
 import { APP_LOCALES } from '@core/services/i18n/locale.model';
@@ -104,6 +104,9 @@ export interface AppSettings {
   readonly timeZones: readonly string[];
   /** « Décimales » under a Calcul note: how its results are shown, never how they are computed. */
   readonly calcDecimals: CalcDecimals;
+  /** The locale a sheet writes its numbers and dates in; `language` follows the one on screen. */
+  readonly calcNumberFormat: CalcNumberFormat;
+  readonly calcDateFormat: CalcDateFormat;
 }
 
 /** Zones beyond the machine's, read back from a file nobody checks. */
@@ -138,6 +141,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   noteKindTried: false,
   timeZones: ['UTC', 'America/New_York', 'Asia/Tokyo'],
   calcDecimals: 'auto',
+  calcNumberFormat: 'language',
+  calcDateFormat: 'short',
 };
 
 /** Derived rather than hand-written: the key is the field name, prefixed. */

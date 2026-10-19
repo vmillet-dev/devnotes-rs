@@ -1,5 +1,5 @@
 import { Injectable, Signal, computed, effect, inject, signal } from '@angular/core';
-import { CALC_DECIMALS } from '@core/model/calc.model';
+import { CALC_DATE_FORMATS, CALC_DECIMALS, CALC_NUMBER_FORMATS } from '@core/model/calc.model';
 import { AREAS } from '@core/services/areas/area.model';
 import { PreferencesService } from '@core/services/preferences/preferences.service';
 import {
@@ -176,6 +176,8 @@ export class SettingsStore {
   readonly noteKindTried = this.setting('noteKindTried', asBoolean);
   readonly timeZones = this.setting('timeZones', asTimeZones);
   readonly calcDecimals = this.setting('calcDecimals', asOneOf(CALC_DECIMALS));
+  readonly calcNumberFormat = this.setting('calcNumberFormat', asOneOf(CALC_NUMBER_FORMATS));
+  readonly calcDateFormat = this.setting('calcDateFormat', asOneOf(CALC_DATE_FORMATS));
 
   /** Followed live: a "system" theme must switch without a restart. */
   private readonly systemPrefersDark = signal(false);

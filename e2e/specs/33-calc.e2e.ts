@@ -3,6 +3,7 @@ import { $, $$, browser, expect } from '@wdio/globals';
 import { canvas } from '../pageobjects/canvas.page.js';
 import { editor } from '../pageobjects/editor.page.js';
 import { spaces } from '../pageobjects/sidebar.page.js';
+import { settings } from '../pageobjects/titlebar.page.js';
 import { clipboardText, eventually, readEach, reloadCanvas, testid } from '../support/app.js';
 import { bridge } from '../support/bridge.js';
 
@@ -136,5 +137,30 @@ describe('A Calcul note', () => {
       bridge.evaluateCalc(SHEET, today),
     ]);
     expect(again.rows.map((row) => row.line)).toEqual(original.rows.map((row) => row.line));
+  });
+
+  it('writes a date in the format the preferences chose, once applied', async () => {
+    await settings.setCalcDateFormat('long');
+    await canvas.openNote('Budget de recette');
+    await editor.waitOpen();
+    await typeSheet('16/10/2026');
+
+    // The same `Intl` the sheet writes with, in the language on screen: no word read here.
+    const long = await browser.execute(() =>
+      new Intl.DateTimeFormat(document.documentElement.lang, {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      }).format(new Date(2026, 9, 16)),
+    );
+    await eventually(
+      async () => readEach(testid('calc-result'), 'text'),
+      (results) => results.length === 1 && results[0] === long,
+      'the date written long',
+    );
+
+    await editor.close();
+    await settings.setCalcDateFormat('short');
   });
 });

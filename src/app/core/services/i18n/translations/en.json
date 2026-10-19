@@ -943,6 +943,35 @@
       "indent": "Indent with Tab",
       "wrap": "Wrap long lines of code"
     },
+    "calc": {
+      "title": "Calculation",
+      "decimals": "Decimals",
+      "decimalsAuto": "Auto",
+      "numberFormat": "Number and date format",
+      "language": "Interface language",
+      "dateFormat": "Date format",
+      "dates": {
+        "numeric": "Numeric",
+        "short": "Short",
+        "long": "Long"
+      },
+      "locales": {
+        "fr-FR": "français (France)",
+        "fr-CH": "français (Suisse)",
+        "en-US": "English (US)",
+        "en-GB": "English (UK)",
+        "de-DE": "Deutsch",
+        "es-ES": "Español",
+        "it-IT": "Italiano",
+        "pt-BR": "Português (Brasil)",
+        "nl-NL": "Nederlands",
+        "pl-PL": "Polski",
+        "sv-SE": "Svenska",
+        "ru-RU": "Русский",
+        "ja-JP": "日本語",
+        "zh-CN": "中文 (简体)"
+      }
+    },
     "indent": {
       "language": "By the note's language",
       "two-spaces": "2 spaces",

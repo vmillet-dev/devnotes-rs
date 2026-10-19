@@ -1,4 +1,5 @@
 import type {
+  CalcDateFormat,
   CalcDecimals,
   CalcError,
   CalcSheet,
@@ -14,6 +15,26 @@ export interface CalcText {
 }
 
 type Translate = (key: string, params?: Record<string, unknown>) => string;
+
+/**
+ * `Intl` reads a decimal string as the exact decimal it is (ES2023), where a float invents figures
+ * past the fifteenth; the ES2022 types the build reads know only numbers.
+ */
+const exactly = (value: string): number => value as unknown as number;
+
+/** How a sheet writes what it computed; never how it computes it. */
+export interface CalcFormat {
+  readonly decimals: CalcDecimals;
+  /** The locale of its numbers and dates; `null` follows the language on screen. */
+  readonly locale: string | null;
+  readonly date: CalcDateFormat;
+}
+
+const DATE_STYLES: Readonly<Record<CalcDateFormat, Intl.DateTimeFormatOptions>> = {
+  numeric: { day: '2-digit', month: '2-digit', year: 'numeric' },
+  short: { day: 'numeric', month: 'short', year: 'numeric' },
+  long: { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' },
+};
 
 const NBSP = ' ';
 
@@ -71,15 +92,24 @@ export function decimalMean(values: readonly string[]): string {
 }
 
 /**
- * Writes what Rust computed in the language on screen: its decimal mark, its unit symbols
- * (`Go` or `GB`), its dates and its messages. Rust sends exact values and codes, never words.
+ * Writes what Rust computed: its unit symbols (`Go` or `GB`) and its messages in the language on
+ * screen, its numbers and dates in the locale chosen, that language unless one is. Rust sends
+ * exact values and codes, never words.
  */
 export class CalcFormatter {
+  private readonly decimals: CalcDecimals;
+  private readonly locale: string;
+  private readonly dateFormat: CalcDateFormat;
+
   constructor(
-    private readonly lang: string,
+    lang: string,
     private readonly translate: Translate,
-    private readonly decimals: CalcDecimals = 'auto',
-  ) {}
+    format: Partial<CalcFormat> = {},
+  ) {
+    this.decimals = format.decimals ?? 'auto';
+    this.locale = format.locale ?? lang;
+    this.dateFormat = format.date ?? 'short';
+  }
 
   value(value: CalcValue): CalcText {
     switch (value.kind) {
@@ -194,25 +224,22 @@ export class CalcFormatter {
   }
 
   private number(value: string, digits: { min: number; max: number }, signed = false): CalcText {
-    const format = new Intl.NumberFormat(this.lang, {
+    const format = new Intl.NumberFormat(this.locale, {
       minimumFractionDigits: digits.min,
       maximumFractionDigits: digits.max,
       signDisplay: signed ? 'exceptZero' : 'auto',
     });
     return {
-      text: format.format(Number(value)),
+      text: format.format(exactly(value)),
       approx: parts(value).fraction.length > digits.max,
     };
   }
 
   private date(iso: string): string {
     const [year, month, day] = iso.split('-').map(Number);
-    return new Intl.DateTimeFormat(this.lang, {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    }).format(new Date(year ?? 1970, (month ?? 1) - 1, day ?? 1));
+    return new Intl.DateTimeFormat(this.locale, DATE_STYLES[this.dateFormat]).format(
+      new Date(year ?? 1970, (month ?? 1) - 1, day ?? 1),
+    );
   }
 }
 

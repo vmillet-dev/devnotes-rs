@@ -27,11 +27,13 @@ export class CalcSheets {
     return this.repository.evaluate(sheet, this.today());
   }
 
+  /** Read inside a `computed`, it follows the three preferences that say how a sheet writes. */
   formatter(decimals: CalcDecimals = this.settings.calcDecimals()): CalcFormatter {
+    const locale = this.settings.calcNumberFormat();
     return new CalcFormatter(
       this.transloco.getActiveLang(),
       (key, params) => this.transloco.translate(key, params),
-      decimals,
+      { decimals, locale: locale === 'language' ? null : locale, date: this.settings.calcDateFormat() },
     );
   }
 
