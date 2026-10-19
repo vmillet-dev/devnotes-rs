@@ -79,6 +79,8 @@ describe('CalcFormatter', () => {
     ).toBe('Go n’est pas une longueur');
     expect(english.error({ kind: 'unknownName', name: 'ttc' })).toBe('“ttc” is not defined anywhere above');
     expect(french.error({ kind: 'reserved', word: 'en' })).toBe('« en » est un mot réservé, pas un nom');
+    expect(french.error({ kind: 'noPrevious' })).toBe('Aucune ligne au-dessus n’a de résultat');
+    expect(english.error({ kind: 'noPrevious' })).toBe('No line above has a result');
     expect(english.error({ kind: 'reserved', word: 'de' })).toBe('“de” is a reserved word, not a name');
     expect(french.error({ kind: 'notConvertible', from: 'mass', to: null })).toBe(
       'Une masse ne se convertit pas en %',

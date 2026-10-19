@@ -165,6 +165,7 @@ export class CalcFormatter {
         break;
       case 'divisionByZero':
       case 'nothingAbove':
+      case 'noPrevious':
       case 'dateShift':
       case 'overflow':
       case 'unsupported':

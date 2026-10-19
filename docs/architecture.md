@@ -1535,9 +1535,22 @@ which knows no time zone, gives its cards the UTC day.
 **The grammar** is a recursive descent over a lexer counting UTF-16 units, as the editor does
 (`calc/lexer.rs`, `calc/eval.rs`):
 
-- **Numbers** take a comma or a point before the decimals; arithmetic is `rust_decimal`, exact —
-  a factor such as `€/h` is kept as a fraction, multiplied before it is divided, or `0,045 €/h`
-  would read back as `0,04499…`.
+- **Numbers** take a comma or a point before the decimals, and thousands grouped by a space —
+  a plain, no-break or narrow one, so `1 578,13 €` as the front writes it reads back; a group is
+  three digits after at most three. Arithmetic is `rust_decimal`, exact — a factor such as `€/h`
+  is kept as a fraction, multiplied before it is divided, or `0,045 €/h` would read back as
+  `0,04499…`. A scale after a number multiplies it: `k`, `M`, `Md`/`bn`, `T`/`tn` in their case
+  (`m` stays a metre), `mille`/`thousand`, `million`, `milliard`/`billion`, `trillion` in any —
+  `billion` is 10⁹ for everyone, the French one is `mille milliards`.
+- **Operators** are symbols or words: `plus`, `et`/`and`, `avec`/`with`; `moins`/`minus`,
+  `subtract`, `sans`/`without` (a subtraction: `hors` alone takes a percentage back off);
+  `fois`/`times`, `multiplié par`/`multiplied by`, `mul`; `divisé par`/`divided by`; `mod`, whose
+  remainder takes the divisor's sign. A parenthesis right after a value multiplies it: `6 (3)`.
+  `préc`/`prev` is the result of the last line above that gave one.
+- **Text left out**: a label before a colon (`Prix : 11 € + 34,45 €`), a quoted text and the words
+  after a result that lead up to it (`275 € pour le "Modèle 227"`), parentheses after a value
+  holding words and no name (`999 € (pour l'iPhone)`). Words alone after a result are an error,
+  not prose: `5 jours ouvrés` says it is not read rather than give 5 days.
 - **Units** (`calc/units.rs`, one table) are lengths, masses, durations, data sizes (the sizes
   tool's factors), temperatures, and euros and dollars, which are units like the others: added,
   multiplied, never converted into each other — ⚠️ no rate is fetched, so `100 € en $` is
@@ -1555,7 +1568,7 @@ which knows no time zone, gives its cards the UTC day.
   down, so a word added later never breaks a sheet that already uses it as a name.
 - **A bare word** is read, where a value is expected, as a name defined above, then a value of
   the table, then a syntax word opening a form (`de … à`), else an unknown name. After a number
-  or a conversion word it is first a unit: `5 m` is metres even where `m` is a name.
+  or a conversion word it is first a scale or a unit: `5 m` is metres even where `m` is a name.
 - **The percentages tool's five questions** are lines: `20 % de 340`, `30 sur 120 en %`,
   `de 80 à 100`, `250 + 20 %`, `300 hors 20 %`. A percentage added to a quantity is a share of it.
 - **Dates** move by whole days, and by calendar months for months and years; two dates subtract

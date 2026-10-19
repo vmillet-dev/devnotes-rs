@@ -41,11 +41,13 @@ export class CalcWords {
     const start = typed.toLowerCase().replace(/’/g, "'");
     if (start.length < (explicit ? 1 : PROPOSED_FROM)) return [];
     const language = lang.startsWith('fr') ? 'fr' : 'en';
-    const found = this.table
-      .flatMap((entry) =>
-        entry[language].filter((spelling) => entry.class === 'value' || spelling.includes(' ')),
-      )
-      .filter((spelling) => spelling.startsWith(start) && spelling !== start);
+    // One spelling a concept, the first that fits: `mil` is `million`, not `millions` too.
+    const found = this.table.flatMap((entry) => {
+      const fits = entry[language].filter(
+        (spelling) => (entry.class === 'value' || spelling.includes(' ')) && spelling.startsWith(start),
+      );
+      return fits.includes(start) || fits.length === 0 ? [] : [fits[0]!];
+    });
     return [...new Set(found)];
   }
 }
