@@ -3862,6 +3862,7 @@
       "logDomain": "un logarithme se prend d’un nombre au-dessus de zéro",
       "notWhole": "un nombre entier est attendu",
       "notPositive": "un réglage est au-dessus de zéro",
+      "rateExpected": "un taux en % est attendu",
       "overflow": "nombre trop grand",
       "unsupported": "ce calcul ne se fait pas ici"
     },

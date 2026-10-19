@@ -117,6 +117,8 @@ describe('CalcFormatter', () => {
     expect(english.error({ kind: 'logDomain' })).toBe('A logarithm is taken of a number above zero');
     expect(french.error({ kind: 'notWhole' })).toBe('Un nombre entier est attendu');
     expect(english.error({ kind: 'notPositive' })).toBe('A setting is above zero');
+    expect(french.error({ kind: 'rateExpected' })).toBe('Un taux en % est attendu');
+    expect(english.error({ kind: 'rateExpected' })).toBe('A rate in % is expected');
     const frequency: CalcValue = { kind: 'number', value: '2.4', unit: { unit: 'gigahertz', per: null } };
     expect(plain(french.value(frequency).text)).toBe('2,4 GHz');
     const size: CalcValue = { kind: 'number', value: '1', unit: { unit: 'exabyte', per: null } };

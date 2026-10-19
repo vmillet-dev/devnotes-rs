@@ -97,6 +97,24 @@ closed_enum! {
         /// `6 est à 60 ce que 8 est à combien`.
         IsTo = "isTo",
         Like = "like",
+        /// `1 000 € après 3 ans à 7 %`.
+        After = "after",
+        During = "during",
+        /// `dans 20 ans`.
+        Within = "within",
+        Compounded = "compounded",
+        Monthly = "monthly",
+        Quarterly = "quarterly",
+        Yearly = "yearly",
+        Daily = "daily",
+        InterestOn = "interestOn",
+        Invested = "invested",
+        Returned = "returned",
+        AnnualReturn = "annualReturn",
+        PresentValue = "presentValue",
+        Repayment = "repayment",
+        TotalRepayment = "totalRepayment",
+        TotalInterest = "totalInterest",
     }
 }
 
@@ -127,7 +145,7 @@ impl CalcWord {
         use WordClass::{Setting, Syntax, Value};
         let (class, fr, en): (WordClass, &[&str], &[&str]) = match self {
             Self::Convert => (Syntax, &["en", "vers"], &["in", "to", "as"]),
-            Self::At => (Syntax, &["à"], &["at"]),
+            Self::At => (Syntax, &["à"], &["at", "@"]),
             Self::Of => (Syntax, &["de", "du", "des"], &["of"]),
             Self::From => (Syntax, &["de"], &["from"]),
             Self::To => (Syntax, &["à"], &["to"]),
@@ -235,6 +253,51 @@ impl CalcWord {
             Self::Article => (Value, &[], &["a"]),
             Self::IsTo => (Syntax, &["est à"], &["is to"]),
             Self::Like => (Syntax, &["ce que"], &["as"]),
+            Self::After => (Syntax, &["après"], &["after"]),
+            Self::During => (Syntax, &["pendant"], &["for"]),
+            Self::Within => (Syntax, &["dans"], &[]),
+            Self::Compounded => (
+                Syntax,
+                &["composés", "composé", "composées", "composée"],
+                &["compounding", "compounded"],
+            ),
+            Self::Monthly => (Syntax, &["mensuellement"], &["monthly"]),
+            Self::Quarterly => (Syntax, &["trimestriellement"], &["quarterly"]),
+            Self::Yearly => (Syntax, &["annuellement"], &["annually", "yearly"]),
+            Self::Daily => (Syntax, &["quotidiennement"], &["daily"]),
+            Self::InterestOn => (
+                Syntax,
+                &["intérêts sur", "intérêts de"],
+                &["interest on", "interest of"],
+            ),
+            Self::Invested => (Syntax, &["investis", "investi"], &["invested"]),
+            Self::Returned => (Syntax, &["récupérés", "récupéré"], &["returned"]),
+            Self::AnnualReturn => (
+                Syntax,
+                &["rendement annuel sur", "rendement annuel de"],
+                &["annual return on", "annual return of"],
+            ),
+            Self::PresentValue => (Syntax, &["valeur actuelle de"], &["present value of"]),
+            Self::Repayment => (
+                Syntax,
+                &["mensualité de", "mensualité sur"],
+                &[
+                    "monthly repayment on",
+                    "monthly repayment of",
+                    "monthly payment on",
+                    "monthly payment of",
+                ],
+            ),
+            Self::TotalRepayment => (
+                Syntax,
+                &["coût total de", "coût total sur"],
+                &["total repayment on", "total repayment of", "total cost of"],
+            ),
+            Self::TotalInterest => (
+                Syntax,
+                &["intérêts totaux de", "intérêts totaux sur"],
+                &["total interest on", "total interest of"],
+            ),
         };
         Spellings { class, fr, en }
     }
