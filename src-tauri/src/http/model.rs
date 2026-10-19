@@ -32,6 +32,12 @@ impl HttpMethod {
     pub fn seldom_carries_a_body(self) -> bool {
         matches!(self, Self::Get | Self::Head)
     }
+
+    /// What a protected environment lets leave without asking.
+    #[must_use]
+    pub fn changes_nothing(self) -> bool {
+        matches!(self, Self::Get | Self::Head | Self::Options)
+    }
 }
 
 closed_enum! {

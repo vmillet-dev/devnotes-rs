@@ -3624,19 +3624,22 @@
         "reveal": "Show",
         "hide": "Hide",
         "secret": "secret",
+        "made": "A new value at each send",
         "scopes": {
           "request": "request",
           "folder": "folder",
           "collection": "collection",
           "environment": "environment",
-          "globals": "globals"
+          "globals": "globals",
+          "dynamic": "dynamic"
         },
         "from": {
           "request": "this request",
           "folder": "folder {{name}}",
           "collection": "collection {{name}}",
           "environment": "{{name}}",
-          "globals": "globals"
+          "globals": "globals",
+          "dynamic": "made at the send"
         }
       }
     },

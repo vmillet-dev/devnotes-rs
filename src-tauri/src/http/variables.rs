@@ -23,6 +23,8 @@ closed_enum! {
         Collection = "collection",
         Environment = "environment",
         Globals = "globals",
+        /// `{{$guid}}` and its kind: a value made at the send, which no level holds.
+        Dynamic = "dynamic",
     }
 }
 
@@ -62,6 +64,36 @@ pub struct UsedVariable {
 /// names itself stays as typed and the send names it.
 const NESTING: usize = 8;
 
+/// Postman's names for a value made when the request leaves, a new one each time it is written:
+/// `{{$guid}}`. No level can set one, `$` being no letter of a name.
+const DYNAMIC: &[&str] = &[
+    "$guid",
+    "$randomUUID",
+    "$timestamp",
+    "$isoTimestamp",
+    "$randomInt",
+];
+
+#[must_use]
+pub fn is_dynamic(name: &str) -> bool {
+    DYNAMIC.contains(&name)
+}
+
+fn dynamic(name: &str) -> Option<String> {
+    let now = chrono::Utc::now();
+    match name {
+        "$guid" | "$randomUUID" => Some(uuid::Uuid::new_v4().to_string()),
+        "$timestamp" => Some(now.timestamp().to_string()),
+        "$isoTimestamp" => Some(now.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)),
+        "$randomInt" => {
+            let mut bytes = [0_u8; 2];
+            let _ = getrandom::fill(&mut bytes);
+            Some((u16::from_le_bytes(bytes) % 1001).to_string())
+        }
+        _ => None,
+    }
+}
+
 /// Each `{{name}}` of a text, by its byte range and its name, in order.
 fn occurrences(text: &str) -> Vec<(std::ops::Range<usize>, &str)> {
     let mut found = Vec::new();
@@ -72,7 +104,7 @@ fn occurrences(text: &str) -> Vec<(std::ops::Range<usize>, &str)> {
             break;
         };
         let name = &text[start..close];
-        if is_variable_name(name) {
+        if is_variable_name(name) || is_dynamic(name) {
             found.push((open..close + 2, name));
             from = close + 2;
         } else {
@@ -111,9 +143,9 @@ fn fill_once(text: &str, values: &HashMap<String, String>) -> String {
     let mut filled = String::with_capacity(text.len());
     let mut last = 0;
     for (range, name) in occurrences(text) {
-        if let Some(value) = values.get(name) {
+        if let Some(value) = values.get(name).cloned().or_else(|| dynamic(name)) {
             filled.push_str(&text[last..range.start]);
-            filled.push_str(value);
+            filled.push_str(&value);
             last = range.end;
         }
     }
@@ -202,10 +234,17 @@ impl Resolver {
         for text in texts {
             for name in names_in(text) {
                 if !used.iter().any(|known| known.name == name) {
-                    used.push(UsedVariable {
-                        resolved: self.get(&name).cloned(),
-                        name,
+                    let resolved = self.get(&name).cloned().or_else(|| {
+                        is_dynamic(&name).then(|| ScopedVariable {
+                            name: name.clone(),
+                            value: String::new(),
+                            kind: VariableKind::Text,
+                            scope: VariableScope::Dynamic,
+                            from: None,
+                            shadows: Vec::new(),
+                        })
                     });
+                    used.push(UsedVariable { name, resolved });
                 }
             }
         }
@@ -390,6 +429,27 @@ mod tests {
         for scope in VariableScope::ALL {
             assert_eq!(scope.as_str().parse::<VariableScope>(), Ok(scope));
         }
+    }
+
+    #[test]
+    fn a_dynamic_variable_is_made_at_each_place_it_is_written_and_named_as_such() {
+        let resolver = Resolver::new(&[]);
+        let filled = resolver
+            .fill("{{$guid}}|{{$guid}}|{{$timestamp}}|{{$isoTimestamp}}|{{$randomInt}}|{{$nope}}");
+        let parts: Vec<&str> = filled.split('|').collect();
+        assert_eq!(parts[0].len(), 36);
+        assert_ne!(parts[0], parts[1]);
+        assert!(parts[2].parse::<i64>().is_ok());
+        assert!(chrono::DateTime::parse_from_rfc3339(parts[3]).is_ok());
+        assert!(parts[4].parse::<u16>().is_ok_and(|n| n <= 1000));
+        assert_eq!(parts[5], "{{$nope}}");
+
+        let used = resolver.used(&["{{$timestamp}} {{missing}}"]);
+        assert_eq!(
+            used[0].resolved.as_ref().map(|known| known.scope),
+            Some(VariableScope::Dynamic)
+        );
+        assert_eq!(used[1].resolved, None);
     }
 
     #[test]

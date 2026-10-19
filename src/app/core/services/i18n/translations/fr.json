@@ -3624,19 +3624,22 @@
         "reveal": "Afficher",
         "hide": "Masquer",
         "secret": "secret",
+        "made": "Une valeur nouvelle à chaque envoi",
         "scopes": {
           "request": "requête",
           "folder": "dossier",
           "collection": "collection",
           "environment": "environnement",
-          "globals": "globales"
+          "globals": "globales",
+          "dynamic": "dynamique"
         },
         "from": {
           "request": "cette requête",
           "folder": "dossier {{name}}",
           "collection": "collection {{name}}",
           "environment": "{{name}}",
-          "globals": "globales"
+          "globals": "globales",
+          "dynamic": "faite à l’envoi"
         }
       }
     },

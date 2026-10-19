@@ -251,10 +251,12 @@ pub fn apply(jar: &mut Vec<JarCookie>, changes: &[Change]) {
     }
 }
 
-/// The `Cookie` header a request to `url` carries, the longest paths first and, of two paths
-/// of one length, the older cookie first; `None` for none.
-pub fn header_for(jar: &[JarCookie], url: &Url, now: DateTime<Utc>) -> Option<String> {
-    let host = url.host_str()?.to_ascii_lowercase();
+/// What a request to `url` is sent, in the order it is sent: the longest paths first and, of two
+/// paths of one length, the older cookie first.
+pub fn matching<'a>(jar: &'a [JarCookie], url: &Url, now: DateTime<Utc>) -> Vec<&'a JarCookie> {
+    let Some(host) = url.host_str().map(str::to_ascii_lowercase) else {
+        return Vec::new();
+    };
     let secure = is_secure(url);
     let mut sent: Vec<&JarCookie> = jar
         .iter()
@@ -270,6 +272,12 @@ pub fn header_for(jar: &[JarCookie], url: &Url, now: DateTime<Utc>) -> Option<St
         .filter(|cookie| secure || !cookie.secure)
         .collect();
     sent.sort_by_key(|cookie| (std::cmp::Reverse(cookie.path.len()), cookie.created));
+    sent
+}
+
+/// The `Cookie` header a request to `url` carries; `None` for none.
+pub fn header_for(jar: &[JarCookie], url: &Url, now: DateTime<Utc>) -> Option<String> {
+    let sent = matching(jar, url, now);
     (!sent.is_empty()).then(|| {
         sent.iter()
             .map(|cookie| format!("{}={}", cookie.name, cookie.value))

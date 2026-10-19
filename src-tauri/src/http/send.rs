@@ -1139,6 +1139,20 @@ async fn send(
     })
 }
 
+/// A send with no id and nothing kept: a script's `pm.sendRequest`. Beside the answer, what the
+/// hops did to the jar.
+pub(crate) async fn alone(outgoing: Outgoing) -> (Result<SentResponse, SendError>, Vec<Change>) {
+    let changes: Arc<Mutex<Vec<Change>>> = Arc::default();
+    let answer = send(outgoing, Arc::clone(&changes))
+        .await
+        .map(|received| received.response);
+    let changes = changes
+        .lock()
+        .map(|mut set| std::mem::take(&mut *set))
+        .unwrap_or_default();
+    (answer, changes)
+}
+
 /// The sends under way and the last body of each, by the id the front gave: what « Annuler »
 /// aborts, and what « Enregistrer dans un fichier » writes.
 #[derive(Default)]

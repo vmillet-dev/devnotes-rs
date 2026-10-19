@@ -1,0 +1,34 @@
+{
+  "name": "devnotes-script-libraries",
+  "private": true,
+  "description": "What a request script can require, bundled once into dist/ and compiled into the application.",
+  "license": "GPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "ajv": "8.20.0",
+    "assert": "2.1.0",
+    "buffer": "6.0.3",
+    "chai": "4.5.0",
+    "cheerio": "1.2.0",
+    "crypto-js": "4.2.0",
+    "csv-parse": "7.0.3",
+    "esbuild": "0.28.2",
+    "events": "3.3.0",
+    "lodash": "4.18.1",
+    "moment": "2.31.0",
+    "path-browserify": "1.0.1",
+    "punycode": "2.3.1",
+    "querystring-es3": "0.2.1",
+    "stream-browserify": "3.0.0",
+    "string_decoder": "1.3.0",
+    "timers-browserify": "2.0.12",
+    "tv4": "1.3.0",
+    "url": "0.11.4",
+    "util": "0.12.5",
+    "uuid": "11.1.1",
+    "xml2js": "0.6.2"
+  }
+}
