@@ -6,6 +6,7 @@ import type {
   CalcUnit,
   CalcUnitId,
   CalcValue,
+  SpanPart,
 } from '@core/model/calc.model';
 
 /** What a result reads on screen, and whether the display rounded it: `≈ 100,52 €`. */
@@ -129,14 +130,7 @@ export class CalcFormatter {
       case 'date':
         return { text: this.date(value.date), approx: false };
       case 'span':
-        return {
-          text: value.parts
-            .map(
-              (part) => `${this.number(part.value, { min: 0, max: 0 }).text}${NBSP}${this.symbol(part.unit)}`,
-            )
-            .join(' '),
-          approx: false,
-        };
+        return { text: this.span(value.parts, true), approx: false };
       case 'base':
         return {
           text: `${value.negative ? '-' : ''}${BASE_PREFIXES[value.radix] ?? ''}${value.digits}`,
@@ -158,28 +152,20 @@ export class CalcFormatter {
     }
   }
 
-  /** Every decimal kept, as the copy of one result and the variable's tooltip give it. */
+  /**
+   * Every decimal kept, as the copy of one result and the variable's tooltip give it: its
+   * thousands never grouped, since a sheet reads `1.578` (de-DE) and `1,578` (en-US) as decimals.
+   */
   exact(value: CalcValue): string {
-    if (value.kind === 'scientific') {
-      const length = parts(value.mantissa).fraction.length;
-      return scientific(
-        this.number(value.mantissa, { min: 0, max: Math.min(length, 20) }).text,
-        value.exponent,
-      );
-    }
-    if (value.kind === 'multiplier') {
-      const length = parts(value.value).fraction.length;
-      return `×${this.number(value.value, { min: 0, max: Math.min(length, 20) }).text}`;
-    }
+    const every = (figures: string, signed = false): string =>
+      this.number(figures, { min: 0, max: Math.min(parts(figures).fraction.length, 20) }, signed, false).text;
+    if (value.kind === 'scientific') return scientific(every(value.mantissa), value.exponent);
+    if (value.kind === 'multiplier') return `×${every(value.value)}`;
+    if (value.kind === 'span') return this.span(value.parts, false);
     if (value.kind !== 'number' && value.kind !== 'percent') return this.value(value).text;
-    const length = parts(value.value).fraction.length;
-    const shown = this.number(
-      value.value,
-      { min: 0, max: Math.min(length, 20) },
-      value.kind === 'percent' && value.signed,
-    );
-    if (value.kind === 'percent') return this.translate('calc.percent', { value: shown.text });
-    return value.unit === null ? shown.text : `${shown.text}${NBSP}${this.unit(value.unit)}`;
+    const text = every(value.value, value.kind === 'percent' && value.signed);
+    if (value.kind === 'percent') return this.translate('calc.percent', { value: text });
+    return value.unit === null ? text : `${text}${NBSP}${this.unit(value.unit)}`;
   }
 
   unit(unit: CalcUnit): string {
@@ -260,11 +246,28 @@ export class CalcFormatter {
       .join('\n');
   }
 
-  private number(value: string, digits: { min: number; max: number }, signed = false): CalcText {
+  /** `6 sem 3 j`: whole parts, each with its unit. */
+  private span(pieces: readonly SpanPart[], grouped: boolean): string {
+    return pieces
+      .map(
+        (part) =>
+          `${this.number(part.value, { min: 0, max: 0 }, false, grouped).text}${NBSP}${this.symbol(part.unit)}`,
+      )
+      .join(' ');
+  }
+
+  /** `grouped` false drops the thousands separator; true leaves the locale its own rule. */
+  private number(
+    value: string,
+    digits: { min: number; max: number },
+    signed = false,
+    grouped = true,
+  ): CalcText {
     const format = new Intl.NumberFormat(this.locale, {
       minimumFractionDigits: digits.min,
       maximumFractionDigits: digits.max,
       signDisplay: signed ? 'exceptZero' : 'auto',
+      ...(grouped ? {} : { useGrouping: false }),
     });
     return {
       text: format.format(exactly(value)),

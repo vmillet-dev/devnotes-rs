@@ -722,7 +722,20 @@ impl Walk {
         shown: CalcValue,
         aggregate: bool,
     ) -> CalcLine {
-        if let Some(name) = name.as_ref().filter(|name| words::setting(name).is_none()) {
+        let dimension = value.dimension();
+        // `ppi = 326` sets the sheet: no name, nothing for `total` or `préc` to read.
+        if name
+            .as_deref()
+            .is_some_and(|name| words::setting(name).is_some())
+        {
+            return CalcLine::Value {
+                value: shown,
+                name,
+                aggregate,
+                dimension,
+            };
+        }
+        if let Some(name) = &name {
             self.current.insert(name.clone(), self.definitions.len());
             self.definitions.push(CalcVariable {
                 name: name.clone(),
@@ -732,7 +745,6 @@ impl Walk {
             });
             self.variables.insert(name.clone(), value.clone());
         }
-        let dimension = value.dimension();
         self.previous = Some(value.clone());
         if !aggregate && let Value::Quantity(quantity) = value {
             self.block.push(quantity);
@@ -1148,6 +1160,26 @@ mod tests {
     }
 
     #[test]
+    fn a_form_of_several_words_wins_over_a_name_of_one() {
+        assert_eq!(
+            cents("mensualité = 100 €\nmensualité de 10 000 € sur 6 ans à 6 %"),
+            number("165.73", Some(UnitId::Euro))
+        );
+        assert_eq!(
+            value("mensualité = 100 €\nmensualité + 1 €"),
+            number("101", Some(UnitId::Euro))
+        );
+        assert_eq!(
+            cents("total = $2\ntotal cost of $10,000 over 6 years at 6%"),
+            number("11932.48", Some(UnitId::Dollar))
+        );
+        assert_eq!(
+            value("racine = 5\nracine carrée(16) + racine"),
+            number("9", None)
+        );
+    }
+
+    #[test]
     fn each_concept_reads_in_french_and_in_english() {
         let date = |days: u64| CalcValue::Date {
             date: today().checked_add_days(chrono::Days::new(days)).unwrap(),
@@ -1455,6 +1487,27 @@ mod tests {
     }
 
     #[test]
+    fn a_root_of_any_degree_is_computed_within_a_moment() {
+        let started = std::time::Instant::now();
+        starts("racine 4000000000 (2)", "1.000000000173286795");
+        starts("racine 10000000000 (2)", "1.000000000069314");
+        assert_eq!(value("racine 4000000000 (1)"), number("1", None));
+        assert_eq!(value("racine 64 (18446744073709551616)"), number("2", None));
+        assert_eq!(error("racine 10000000000 (-2)"), CalcError::NegativeRoot);
+        assert_eq!(value("racine 10000000001 (-1)"), number("-1", None));
+        assert_eq!(value("racine 10000000000 (0)"), number("0", None));
+        assert_eq!(error("racine 2,5 (8)"), CalcError::Unsupported);
+        starts("log 1,0000001 (2)", "6931472.15");
+        match value("rendement annuel sur 1 € investis 2 € récupérés en 4000000000 ans") {
+            CalcValue::Percent { value, .. } => {
+                assert!(value.starts_with("0.0000000173286795"), "{value}");
+            }
+            other => panic!("{other:?}"),
+        }
+        assert!(started.elapsed() < std::time::Duration::from_secs(1));
+    }
+
+    #[test]
     fn numbers_are_read_and_written_in_other_bases() {
         assert_eq!(value("255 en hex"), based("FF", 16));
         assert_eq!(value("255 in hex"), based("FF", 16));
@@ -1559,6 +1612,19 @@ mod tests {
         assert!(evaluate("ppi = 326\nem = 20", today()).variables.is_empty());
         assert_eq!(error("ppi = 0"), CalcError::NotPositive);
         assert!(matches!(error("ppi = 5 kg"), CalcError::Mismatch { .. }));
+    }
+
+    #[test]
+    fn a_setting_line_is_no_figure_for_total_or_previous() {
+        starts("ppi = 326\n1 cm en px\ntotal", "128.346456692913385");
+        assert_eq!(
+            value("10 €\n20 €\nem = 20 px\ntotal"),
+            number("30", Some(UnitId::Euro))
+        );
+        assert_eq!(
+            value("10 €\nppi = 326\npréc + 5 €"),
+            number("15", Some(UnitId::Euro))
+        );
     }
 
     #[test]
@@ -1777,6 +1843,28 @@ mod tests {
             error("1 000 € après 3 km à 7 %"),
             CalcError::Mismatch { .. }
         ));
+    }
+
+    #[test]
+    fn a_length_named_above_is_read_after_apres_as_a_number_is() {
+        let euros = |value: &str| number(value, Some(UnitId::Euro));
+        let named = "capital = 1 000 €\ndurée = 3 ans\ntaux = 7 %\n";
+        assert_eq!(
+            cents(&format!("{named}capital après durée à taux")),
+            euros("1225.04")
+        );
+        assert_eq!(
+            cents(&format!("{named}capital pendant durée à taux")),
+            euros("1225.04")
+        );
+        assert_eq!(
+            cents("principal = $1,000\nterm = 3 years\nprincipal after term @ 7%"),
+            number("1225.04", Some(UnitId::Dollar))
+        );
+        assert_eq!(
+            value("prix = 275 €\nprix for the \"Model 227\""),
+            number("275", Some(UnitId::Euro))
+        );
     }
 
     #[test]

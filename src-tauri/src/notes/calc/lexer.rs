@@ -105,8 +105,6 @@ fn group_at(characters: &[char], at: usize) -> bool {
         && !characters.get(at + 4).is_some_and(char::is_ascii_digit)
 }
 
-/// Digits, grouped by thousands or not, then a point or a comma and more digits: `0,045` and
-/// `1.5` are both read.
 /// `0xFF`, `0b1010`, `0o377`: a whole number in another base.
 fn based_at(characters: &[char], at: usize) -> Option<(Decimal, usize)> {
     if characters.get(at) != Some(&'0') {
@@ -184,6 +182,8 @@ fn comma_groups(characters: &[char], end: usize, after_currency: bool) -> Option
     (groups > 0 && (after_currency || groups > 1 || point)).then_some(probe)
 }
 
+/// Digits, grouped by thousands or not, then a point or a comma and more digits: `0,045` and
+/// `1.5` are both read.
 fn number_at(characters: &[char], at: usize, after_currency: bool) -> Option<(Decimal, usize)> {
     if let Some(based) = based_at(characters, at) {
         return Some(based);

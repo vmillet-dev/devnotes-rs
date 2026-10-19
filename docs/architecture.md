@@ -1562,14 +1562,15 @@ which knows no time zone, gives its cards the UTC day.
   units of the table. **Screen units**: `pt` is the 72nd of an inch, `px` an inch over the
   sheet's `ppi`, `em` and `rem` its sizes in pixels — 96 and 16 until a line `ppi = 326`,
   `em = 20 px` or `rem = 18` sets them, from that line down (`Css`, carried by the walk). Those
-  three are settings, not names (`WordClass::Setting`). `in` is the inch after a number, but the
-  conversion word before a notation or `%` (`255 in hex`).
+  three are settings, not names (`WordClass::Setting`), nor figures `total` or `préc` reads. `in`
+  is the inch after a number, but the conversion word before a notation or `%` (`255 in hex`).
 - **Functions and constants** (`calc/maths.rs`): `racine`/`sqrt` (`racine 2 (8)`, a degree
   before parentheses), `cbrt`, `log` (`log 2 (8)`, a base), `ln`, `abs`, `arrondi`/`round`,
   `plafond`/`ceil`, `plancher`/`floor`, with or without parentheses; `pi`/`π`, `e`, `tau`/`τ`,
   `phi`/`φ`, which a name hides. A root or a logarithm is exact where one exists (`sqrt 16` is 4),
   through `rust_decimal`'s `maths`; an even root of a negative number, a logarithm of zero or
-  less are errors of their own. `le plus grand de 100 et 200`/`larger of`, `le plus petit de`
+  less are errors of their own. A degree is computed whatever its size, in a moment: powers go
+  by squaring, and past a `u32` a root is a fractional power. `le plus grand de 100 et 200`/`larger of`, `le plus petit de`
   take numbers of one kind, `et` separating them there rather than adding.
 - **Rounding** is the line's own value, so the lines below read it rounded:
   `à 2 décimales`/`to 2 dp`, `à 5 chiffres`/`to 5 digits` (places too), `arrondi`/`rounded`
@@ -1590,8 +1591,10 @@ which knows no time zone, gives its cards the UTC day.
   `moyenne`, `aujourd'hui`…) is a name of the sheet: one defined above hides it from its line
   down, so a word added later never breaks a sheet that already uses it as a name.
 - **A bare word** is read, where a value is expected, as a name defined above, then a value of
-  the table, then a syntax word opening a form (`de … à`), else an unknown name. After a number
-  or a conversion word it is first a scale or a unit: `5 m` is metres even where `m` is a name.
+  the table, then a syntax word opening a form (`de … à`), else an unknown name — but a form
+  spelled in several words wins over a name, which is one: `mensualité de …` is the loan even
+  where `mensualité` names a value (`phrase_ahead`). After a number or a conversion word it is
+  first a scale or a unit: `5 m` is metres even where `m` is a name.
 - **The percentages tool's five questions** are lines: `20 % de 340`, `30 sur 120 en %`,
   `de 80 à 100`, `250 + 20 %`, `300 hors 20 %`. A percentage added to a quantity is a share of it.
 - **Every percentage form** turns on what a share is taken against (`Share`: `de`/`of`,
@@ -1610,9 +1613,9 @@ which knows no time zone, gives its cards the UTC day.
   `valeur actuelle de … dans 20 ans à 10 %`, and a loan `sur 6 ans à 6 %`: `mensualité de`,
   `coût total de`, `intérêts totaux de`. Its amount is read up to the words of the form
   (`sur 6 ans` is no ratio there); `après`, `pendant`, `after`, `for` are a length only before
-  a number (`for the` is prose); a rate is a percentage (`rateExpected`). English writes
-  `$1,000` and `@ 7%`: commas group thousands after `$`, in `1,000,000` and in `1,578.13`,
-  never in a lone French `1,000`.
+  a number or a name holding a duration (`for the` is prose); a rate is a percentage
+  (`rateExpected`). English writes `$1,000` and `@ 7%`: commas group thousands after `$`, in
+  `1,000,000` and in `1,578.13`, never in a lone French `1,000`.
 - **Dates** move by whole days, and by calendar months for months and years; two dates subtract
   into days. A duration converted into weeks keeps the days left (`6 sem 3 j`).
 - **Blocks** run from a `# heading` or a blank line to the next: `total` and `moyenne` read the
@@ -1642,7 +1645,10 @@ its exact value, the line it was given on and the lines that read it.
 **Copying** — `C` on the card, « Copier » in the editor or the palette — gives the text with each
 result after its line as a comment (`CalcFormatter.copyText`): pasted into another sheet, the
 comments are read past and the same lines compute again. The front writes it, since Rust knows no
-word on screen; `DisplayNote.copy_text` stays `None`.
+word on screen; `DisplayNote.copy_text` stays `None`. **One result** copied
+(`CalcFormatter.exact`) is pasted back into a sheet, so its thousands are never grouped, whatever
+the number format: `1.578` (de-DE) and `1,578` (en-US) would read back as decimals, so every
+format copies `1578,13 €` or `1578.13 €`; the result column keeps the format chosen.
 
 ### A Note is written formatted, and stored as Markdown
 

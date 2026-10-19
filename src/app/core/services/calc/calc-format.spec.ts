@@ -154,6 +154,30 @@ describe('CalcFormatter', () => {
     expect(plain(french.exact(euros('100.521')))).toBe('100,521 €');
   });
 
+  /** A sheet takes `1.578`, `1,578` and `1'578` for decimals or stops: a copy groups nothing. */
+  it('copies one result in a form the sheet reads back, whatever the number format', () => {
+    const formatter = (locale: string) => new CalcFormatter('fr', translator(fr), { locale });
+    const copied = (locale: string, value: CalcValue): string => plain(formatter(locale).exact(value));
+
+    for (const locale of CALC_LOCALES) {
+      expect(copied(locale, euros('1578')), locale).toMatch(/^1578 €$/);
+      expect(copied(locale, euros('15780.5')), locale).toMatch(/^15780[.,]5 €$/);
+    }
+    expect(plain(french.exact(euros('1578.13')))).toBe('1578,13 €');
+    expect(copied('en-US', euros('15780.5'))).toBe('15780.5 €');
+    expect(copied('de-DE', { kind: 'multiplier', value: '1578' })).toBe('×1578');
+    expect(
+      copied('pt-BR', {
+        kind: 'span',
+        parts: [
+          { value: '1234', unit: 'day' },
+          { value: '5', unit: 'hour' },
+        ],
+      }),
+    ).toBe('1234 j 5 h');
+    expect(plain(formatter('de-DE').value(euros('1578')).text)).toBe('1.578,00 €');
+  });
+
   it('says why a line has no result, a capital first', () => {
     expect(french.error({ kind: 'currency' })).toBe('Hors ligne : pas de taux de change');
     expect(

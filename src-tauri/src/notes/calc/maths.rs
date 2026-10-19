@@ -42,9 +42,20 @@ pub(super) fn round_places(amount: Decimal, places: u32) -> Decimal {
     amount.round_dp_with_strategy(places.min(28), RoundingStrategy::MidpointAwayFromZero)
 }
 
-/// Integer powers only, so `2 ^ 10` stays exact.
+/// Integer powers only, so `2 ^ 10` stays exact; by squaring, so `racine 4000000000 (2)` is
+/// some thirty products, not four billion.
 fn power(base: Decimal, exponent: u32) -> Option<Decimal> {
-    (0..exponent).try_fold(Decimal::ONE, |product, _| product.checked_mul(base))
+    let (mut product, mut square, mut left) = (Decimal::ONE, base, exponent);
+    while left > 0 {
+        if left & 1 == 1 {
+            product = product.checked_mul(square)?;
+        }
+        left >>= 1;
+        if left > 0 {
+            square = square.checked_mul(square)?;
+        }
+    }
+    Some(product)
 }
 
 /// The root a decimal holds exactly, when one does: twelve places past the point is past what a
@@ -93,6 +104,28 @@ pub(super) fn root(x: Decimal, degree: u32) -> Result<Decimal, CalcError> {
     }
     let found = exact_root(size, guess, degree);
     Ok(if x.is_sign_negative() { -found } else { found })
+}
+
+/// A degree written on the line, computed whatever its size: past what Newton's steps take, a
+/// fractional power, whose last figures alone differ.
+pub(super) fn root_of(x: Decimal, degree: Decimal) -> Result<Decimal, CalcError> {
+    if !degree.fract().is_zero() || degree <= Decimal::ZERO {
+        return Err(CalcError::Unsupported);
+    }
+    if let Some(degree) = degree.to_u32() {
+        return root(x, degree);
+    }
+    if x.is_sign_negative() && !x.is_zero() && (degree % Decimal::TWO).is_zero() {
+        return Err(CalcError::NegativeRoot);
+    }
+    if x.is_zero() {
+        return Ok(x);
+    }
+    let size = power_of(
+        x.abs(),
+        Decimal::ONE.checked_div(degree).ok_or_else(overflow)?,
+    )?;
+    Ok(if x.is_sign_negative() { -size } else { size })
 }
 
 /// A whole result a decimal logarithm only comes near: `ln(e)` is 1.
