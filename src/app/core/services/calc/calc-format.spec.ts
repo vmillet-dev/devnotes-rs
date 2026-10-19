@@ -84,6 +84,34 @@ describe('CalcFormatter', () => {
     });
   });
 
+  it('writes a number in another base after its prefix, and in scientific notation that reads back', () => {
+    expect(french.value({ kind: 'base', digits: 'FF', radix: 16, negative: false }).text).toBe('0xFF');
+    expect(english.value({ kind: 'base', digits: '1010', radix: 2, negative: true }).text).toBe('-0b1010');
+    expect(french.exact({ kind: 'base', digits: '377', radix: 8, negative: false })).toBe('0o377');
+    expect(french.value({ kind: 'scientific', mantissa: '5.3', exponent: 3 })).toEqual({
+      text: '5,3e+3',
+      approx: false,
+    });
+    expect(english.value({ kind: 'scientific', mantissa: '1.23', exponent: -4 }).text).toBe('1.23e-4');
+    expect(english.value({ kind: 'scientific', mantissa: '1.41421356', exponent: 0 })).toEqual({
+      text: '1.41e+0',
+      approx: true,
+    });
+    expect(english.exact({ kind: 'scientific', mantissa: '1.41421356', exponent: 0 })).toBe('1.41421356e+0');
+  });
+
+  it('says why a function or a setting has no result, in both languages', () => {
+    expect(french.error({ kind: 'negativeRoot' })).toBe('Pas de racine paire d’un nombre négatif');
+    expect(english.error({ kind: 'logDomain' })).toBe('A logarithm is taken of a number above zero');
+    expect(french.error({ kind: 'notWhole' })).toBe('Un nombre entier est attendu');
+    expect(english.error({ kind: 'notPositive' })).toBe('A setting is above zero');
+    const frequency: CalcValue = { kind: 'number', value: '2.4', unit: { unit: 'gigahertz', per: null } };
+    expect(plain(french.value(frequency).text)).toBe('2,4 GHz');
+    const size: CalcValue = { kind: 'number', value: '1', unit: { unit: 'exabyte', per: null } };
+    expect(plain(french.value(size).text)).toBe('1 Eo');
+    expect(plain(english.value(size).text)).toBe('1 EB');
+  });
+
   it('keeps the first figures of a small value and forces what « Décimales » asks', () => {
     const rate: CalcValue = { kind: 'number', value: '0.045', unit: { unit: 'euro', per: 'hour' } };
     expect(plain(french.value(rate).text)).toBe('0,045 €/h');

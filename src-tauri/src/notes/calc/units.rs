@@ -1,5 +1,6 @@
-//! What a quantity is measured in: lengths, masses, durations, data sizes, temperatures, and
-//! euros and dollars, which are units like the others and are never converted into each other.
+//! What a quantity is measured in: lengths (screen ones included), masses, durations,
+//! frequencies, data sizes, temperatures, and euros and dollars, which are units like the others
+//! and are never converted into each other.
 
 use rust_decimal::Decimal;
 use serde::Serialize;
@@ -37,6 +38,8 @@ impl Dim {
     pub const TEMPERATURE: Self = Self::base(TEMPERATURE);
     pub const EURO: Self = Self::base(EURO);
     pub const DOLLAR: Self = Self::base(DOLLAR);
+    /// Once a second: a hertz is a second to the power of minus one.
+    pub const FREQUENCY: Self = Self::NONE.over(Self::TIME);
 
     #[must_use]
     pub fn times(self, other: Self) -> Self {
@@ -48,10 +51,12 @@ impl Dim {
     }
 
     #[must_use]
-    pub fn over(self, other: Self) -> Self {
+    pub const fn over(self, other: Self) -> Self {
         let mut exponents = self.0;
-        for (exponent, taken) in exponents.iter_mut().zip(other.0) {
-            *exponent = exponent.saturating_sub(taken);
+        let mut index = 0;
+        while index < BASES {
+            exponents[index] = exponents[index].saturating_sub(other.0[index]);
+            index += 1;
         }
         Self(exponents)
     }
@@ -79,6 +84,7 @@ impl Dim {
             d if d == Self::TEMPERATURE => Dimension::Temperature,
             d if d == Self::EURO => Dimension::Euro,
             d if d == Self::DOLLAR => Dimension::Dollar,
+            d if d == Self::FREQUENCY => Dimension::Frequency,
             _ => Dimension::Rate,
         }
     }
@@ -110,6 +116,7 @@ pub enum Dimension {
     Temperature,
     Euro,
     Dollar,
+    Frequency,
     Rate,
     Date,
 }
@@ -118,6 +125,8 @@ pub enum Dimension {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub enum UnitId {
+    Nanometre,
+    Micrometre,
     Millimetre,
     Centimetre,
     Metre,
@@ -126,12 +135,21 @@ pub enum UnitId {
     Foot,
     Yard,
     Mile,
+    /// A CSS pixel: an inch over the sheet's `ppi`.
+    Pixel,
+    /// A typographic point, the 72nd of an inch.
+    Point,
+    /// The sheet's `em` in pixels, and its `rem`.
+    Em,
+    Rem,
     Milligram,
     Gram,
     Kilogram,
     Tonne,
     Pound,
     Ounce,
+    Nanosecond,
+    Microsecond,
     Millisecond,
     Second,
     Minute,
@@ -145,20 +163,32 @@ pub enum UnitId {
     Megabit,
     Gigabit,
     Terabit,
+    Petabit,
     Byte,
     Kilobyte,
     Megabyte,
     Gigabyte,
     Terabyte,
     Petabyte,
+    Exabyte,
+    Zettabyte,
+    Yottabyte,
     Kibibyte,
     Mebibyte,
     Gibibyte,
     Tebibyte,
     Pebibyte,
+    Exbibyte,
+    Zebibyte,
+    Yobibyte,
     Celsius,
     Fahrenheit,
     Kelvin,
+    Hertz,
+    Kilohertz,
+    Megahertz,
+    Gigahertz,
+    Terahertz,
     Euro,
     Dollar,
 }
@@ -173,19 +203,28 @@ pub struct UnitDef {
     pub symbols: &'static [&'static str],
 }
 
-/// A unit's size in base units: exact decimals, or the sizes tool's own for data.
+/// A unit's size in base units: exact decimals, one over another, or the sizes tool's own for
+/// data. A pixel's and an `em`'s follow the sheet's settings: theirs here are the defaults.
 #[derive(Clone, Copy)]
 enum Size {
     Exact(&'static str),
+    Over(&'static str, &'static str),
     Data(SizeUnit),
 }
 
-use Size::{Data, Exact};
+use Size::{Data, Exact, Over};
 use UnitId as U;
 
 /// ⚠️ Lowercase `to` and `mo` are left out of the data sizes the sizes tool reads: in a sheet
 /// they are the English `to` and a month.
 const UNITS: &[(UnitId, Dim, Size, &[&str])] = &[
+    (U::Nanometre, Dim::LENGTH, Exact("0.000000001"), &["nm"]),
+    (
+        U::Micrometre,
+        Dim::LENGTH,
+        Exact("0.000001"),
+        &["µm", "μm", "um"],
+    ),
     (U::Millimetre, Dim::LENGTH, Exact("0.001"), &["mm"]),
     (U::Centimetre, Dim::LENGTH, Exact("0.01"), &["cm"]),
     (
@@ -219,6 +258,10 @@ const UNITS: &[(UnitId, Dim, Size, &[&str])] = &[
         Exact("1609.344"),
         &["mi", "mile", "miles"],
     ),
+    (U::Pixel, Dim::LENGTH, Over("0.0254", "96"), &["px"]),
+    (U::Point, Dim::LENGTH, Over("0.0254", "72"), &["pt"]),
+    (U::Em, Dim::LENGTH, Over("0.4064", "96"), &["em"]),
+    (U::Rem, Dim::LENGTH, Over("0.4064", "96"), &["rem"]),
     (U::Milligram, Dim::MASS, Exact("0.000001"), &["mg"]),
     (
         U::Gram,
@@ -244,6 +287,13 @@ const UNITS: &[(UnitId, Dim, Size, &[&str])] = &[
         Dim::MASS,
         Exact("0.028349523125"),
         &["oz", "once", "onces", "ounce", "ounces"],
+    ),
+    (U::Nanosecond, Dim::TIME, Exact("0.000000001"), &["ns"]),
+    (
+        U::Microsecond,
+        Dim::TIME,
+        Exact("0.000001"),
+        &["µs", "μs", "us"],
     ),
     (U::Millisecond, Dim::TIME, Exact("0.001"), &["ms"]),
     (
@@ -320,6 +370,12 @@ const UNITS: &[(UnitId, Dim, Size, &[&str])] = &[
         &["Tb", "Tbit", "tbit"],
     ),
     (
+        U::Petabit,
+        Dim::DATA,
+        Exact("1000000000000000"),
+        &["Pb", "Pbit", "pbit"],
+    ),
+    (
         U::Byte,
         Dim::DATA,
         Data(SizeUnit::Byte),
@@ -356,6 +412,24 @@ const UNITS: &[(UnitId, Dim, Size, &[&str])] = &[
         &["Po", "PB"],
     ),
     (
+        U::Exabyte,
+        Dim::DATA,
+        Exact("8000000000000000000"),
+        &["Eo", "EB"],
+    ),
+    (
+        U::Zettabyte,
+        Dim::DATA,
+        Exact("8000000000000000000000"),
+        &["Zo", "ZB"],
+    ),
+    (
+        U::Yottabyte,
+        Dim::DATA,
+        Exact("8000000000000000000000000"),
+        &["Yo", "YB"],
+    ),
+    (
         U::Kibibyte,
         Dim::DATA,
         Data(SizeUnit::Kibibyte),
@@ -386,6 +460,24 @@ const UNITS: &[(UnitId, Dim, Size, &[&str])] = &[
         &["Pio", "pio", "PiB"],
     ),
     (
+        U::Exbibyte,
+        Dim::DATA,
+        Exact("9223372036854775808"),
+        &["Eio", "EiB"],
+    ),
+    (
+        U::Zebibyte,
+        Dim::DATA,
+        Exact("9444732965739290427392"),
+        &["Zio", "ZiB"],
+    ),
+    (
+        U::Yobibyte,
+        Dim::DATA,
+        Exact("9671406556917033397649408"),
+        &["Yio", "YiB"],
+    ),
+    (
         U::Celsius,
         Dim::TEMPERATURE,
         Exact("1"),
@@ -402,6 +494,21 @@ const UNITS: &[(UnitId, Dim, Size, &[&str])] = &[
         Dim::TEMPERATURE,
         Exact("1"),
         &["K", "kelvin", "kelvins"],
+    ),
+    (U::Hertz, Dim::FREQUENCY, Exact("1"), &["Hz", "hz", "hertz"]),
+    (U::Kilohertz, Dim::FREQUENCY, Exact("1000"), &["kHz", "khz"]),
+    (U::Megahertz, Dim::FREQUENCY, Exact("1000000"), &["MHz"]),
+    (
+        U::Gigahertz,
+        Dim::FREQUENCY,
+        Exact("1000000000"),
+        &["GHz", "ghz"],
+    ),
+    (
+        U::Terahertz,
+        Dim::FREQUENCY,
+        Exact("1000000000000"),
+        &["THz", "thz"],
     ),
     (
         U::Euro,
@@ -425,6 +532,10 @@ pub fn table() -> Vec<UnitDef> {
             dim,
             factor: match size {
                 Exact(text) => text.parse().unwrap_or(Decimal::ONE),
+                Over(above, below) => {
+                    let parse = |text: &str| text.parse().unwrap_or(Decimal::ONE);
+                    parse(above) / parse(below)
+                }
                 Data(unit) => unit.bits(),
             },
             symbols,
@@ -451,6 +562,38 @@ pub fn catalogue() -> Vec<UnitEntry> {
         .collect()
 }
 
+/// A sheet's screen settings, from the line that gives them down: `ppi = 326`, `em = 20 px`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Css {
+    pub ppi: Decimal,
+    /// In pixels, as `rem`.
+    pub em: Decimal,
+    pub rem: Decimal,
+}
+
+impl Default for Css {
+    fn default() -> Self {
+        Self {
+            ppi: Decimal::from(96),
+            em: Decimal::from(16),
+            rem: Decimal::from(16),
+        }
+    }
+}
+
+impl Css {
+    /// Metres in one pixel, `em` or `rem`; `None` for a unit the settings do not size.
+    pub fn factor(&self, unit: UnitId) -> Option<Decimal> {
+        let pixel = Decimal::new(254, 4).checked_div(self.ppi)?;
+        match unit {
+            UnitId::Pixel => Some(pixel),
+            UnitId::Em => self.em.checked_mul(pixel),
+            UnitId::Rem => self.rem.checked_mul(pixel),
+            _ => None,
+        }
+    }
+}
+
 /// The one a quantity of a bare dimension is shown in when nothing chose another.
 pub fn base_unit(dim: Dim) -> Option<UnitId> {
     Some(match dim {
@@ -461,6 +604,7 @@ pub fn base_unit(dim: Dim) -> Option<UnitId> {
         d if d == Dim::TEMPERATURE => UnitId::Celsius,
         d if d == Dim::EURO => UnitId::Euro,
         d if d == Dim::DOLLAR => UnitId::Dollar,
+        d if d == Dim::FREQUENCY => UnitId::Hertz,
         _ => return None,
     })
 }

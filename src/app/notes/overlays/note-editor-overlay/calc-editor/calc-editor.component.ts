@@ -61,6 +61,9 @@ const SAID_FOR_MS = 1800;
 /** What came in through `content`: the overlay holds it already, it is not handed back. */
 const FROM_OUTSIDE = Annotation.define<boolean>();
 
+/** What a plain number can be written as after `en`, beside `%`: concepts of the table. */
+const NOTATIONS = ['hex', 'bin', 'oct', 'sci'] as const;
+
 /** The word being typed, which the table's words complete. */
 const TYPED_WORD = /[\p{L}'’]+$/u;
 
@@ -380,7 +383,12 @@ export class CalcEditorComponent {
       detail: this.transloco.translate(`calc.unitNames.${unit}`),
       type: 'unit',
     }));
-    if (dimension === 'number') options.push({ label: '%', detail: '', type: 'unit' });
+    if (dimension === 'number') {
+      options.push({ label: '%', detail: '', type: 'unit' });
+      for (const label of this.words.preferred(NOTATIONS, this.lang())) {
+        options.push({ label, detail: '', type: 'keyword' });
+      }
+    }
     return { from: context.pos - (match[1]?.length ?? 0), options, validFor: /^[^\s]*$/ };
   }
 

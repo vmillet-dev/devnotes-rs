@@ -8,7 +8,8 @@ use rust_decimal::Decimal;
 use rust_decimal::prelude::ToPrimitive;
 
 use super::lexer::{Tok, Token};
-use super::units::{Dim, Dimension, UnitDef, UnitId, base_unit, from_celsius, to_celsius};
+use super::maths::{self, Bits, Rounding};
+use super::units::{Css, Dim, Dimension, UnitDef, UnitId, base_unit, from_celsius, to_celsius};
 use super::words::{self, CalcWord};
 use super::{CalcError, CalcUnit, TokenKind};
 
@@ -98,6 +99,7 @@ pub(super) struct Context<'a> {
     pub(super) block: &'a [Quantity],
     /// What the last line above that gave a result gave, for `préc`.
     pub(super) previous: Option<&'a Value>,
+    pub(super) css: Css,
 }
 
 #[derive(Clone, Copy)]
@@ -105,6 +107,65 @@ enum Product {
     Times,
     Over,
     Modulo,
+}
+
+/// How a plain number is written: `en hex`, `en sci`, `int(…)` back to decimal.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum Notation {
+    Base(u32),
+    Scientific,
+    Decimal,
+}
+
+#[derive(Clone, Copy)]
+enum Function {
+    Root,
+    Cbrt,
+    Log,
+    Ln,
+    Abs,
+    Round,
+    Ceil,
+    Floor,
+    Written(Notation),
+}
+
+/// Longest spelling first: `racine cubique` before `racine`.
+const FUNCTIONS: [(CalcWord, Function); 12] = [
+    (CalcWord::Cbrt, Function::Cbrt),
+    (CalcWord::Root, Function::Root),
+    (CalcWord::Log, Function::Log),
+    (CalcWord::Ln, Function::Ln),
+    (CalcWord::Abs, Function::Abs),
+    (CalcWord::Round, Function::Round),
+    (CalcWord::Ceil, Function::Ceil),
+    (CalcWord::Floor, Function::Floor),
+    (CalcWord::Hex, Function::Written(Notation::Base(16))),
+    (CalcWord::Bin, Function::Written(Notation::Base(2))),
+    (CalcWord::Oct, Function::Written(Notation::Base(8))),
+    (CalcWord::Int, Function::Written(Notation::Decimal)),
+];
+
+const NOTATIONS: [(CalcWord, Notation); 5] = [
+    (CalcWord::Hex, Notation::Base(16)),
+    (CalcWord::Bin, Notation::Base(2)),
+    (CalcWord::Oct, Notation::Base(8)),
+    (CalcWord::Sci, Notation::Scientific),
+    (CalcWord::Int, Notation::Decimal),
+];
+
+fn plain(value: &Value) -> Result<Decimal, CalcError> {
+    match value {
+        Value::Quantity(quantity) if quantity.dim.is_none() => Ok(quantity.amount),
+        other => Err(CalcError::Mismatch {
+            expected: Dimension::Number,
+            found: other.dimension(),
+            unit: match other {
+                Value::Quantity(quantity) => quantity.unit.map(Shown::calc_unit),
+                _ => None,
+            },
+        }),
+    }
 }
 
 pub(super) struct Parser<'a> {
@@ -118,6 +179,10 @@ pub(super) struct Parser<'a> {
     pub(super) converting: Option<Dimension>,
     /// `total` or `moyenne` read: the line is drawn with a rule above it.
     pub(super) aggregate: bool,
+    /// `en hex`, `en sci`: how the line's number is written.
+    pub(super) notation: Option<Notation>,
+    /// Inside `le plus grand de 3 et 5`, where `et` separates rather than adds.
+    listing: bool,
     /// Where the line ends, for a value missing there.
     end: u32,
 }
@@ -138,6 +203,8 @@ impl<'a> Parser<'a> {
             used: Vec::new(),
             converting: None,
             aggregate: false,
+            notation: None,
+            listing: false,
             end,
         };
         parser.skip_quoted();
@@ -267,6 +334,30 @@ impl<'a> Parser<'a> {
         }
     }
 
+    fn notation_at(&self, index: usize) -> bool {
+        self.tokens
+            .get(index)
+            .is_some_and(|token| token.tok == Tok::Symbol('%'))
+            || NOTATIONS
+                .iter()
+                .map(|(word, _)| *word)
+                .chain([CalcWord::Base])
+                .any(|word| words::spelled(word, self.tokens, index).is_some())
+    }
+
+    /// A screen unit's size follows the sheet's `ppi`, `em` and `rem`.
+    fn factor_of(&self, unit: &UnitDef) -> Decimal {
+        self.context.css.factor(unit.id).unwrap_or(unit.factor)
+    }
+
+    fn unit_factor(&self, unit: UnitId) -> Decimal {
+        self.context
+            .units
+            .iter()
+            .find(|def| def.id == unit)
+            .map_or(Decimal::ONE, |def| self.factor_of(def))
+    }
+
     fn unit_at(&self, index: usize) -> Option<&'a UnitDef> {
         let text = self.text_at(index)?;
         self.context
@@ -291,8 +382,8 @@ impl<'a> Parser<'a> {
             self.take(TokenKind::Unit);
             self.take(TokenKind::Unit);
             let factor = Factor {
-                above: first.factor,
-                below: second.factor,
+                above: self.factor_of(first),
+                below: self.factor_of(second),
             };
             return Some((
                 Shown::Per(first.id, second.id),
@@ -301,16 +392,18 @@ impl<'a> Parser<'a> {
             ));
         }
         let factor = Factor {
-            above: first.factor,
+            above: self.factor_of(first),
             below: Decimal::ONE,
         };
         Some((Shown::One(first.id), first.dim, factor))
     }
 
     fn conversion(&mut self) -> Answer {
-        let mut value = self.additive()?;
+        let mut value = self.bits_or()?;
         loop {
-            if self.eat(CalcWord::Convert) {
+            if let Some(rounded) = self.rounding(&value)? {
+                value = rounded;
+            } else if self.eat(CalcWord::Convert) {
                 self.converting = Some(value.dimension());
                 value = self.convert(value)?;
             } else if self.eat(CalcWord::At) {
@@ -336,7 +429,150 @@ impl<'a> Parser<'a> {
         Ok(value)
     }
 
+    /// `arrondi`, `arrondi supérieur au 5 près`, `au millier près`, `à 2 décimales`: the
+    /// value itself is rounded, so the lines below read it rounded.
+    fn rounding(&mut self, value: &Value) -> Result<Option<Value>, CalcError> {
+        let direction = if self.eat(CalcWord::RoundedUp) {
+            Some(Rounding::Up)
+        } else if self.eat(CalcWord::RoundedDown) {
+            Some(Rounding::Down)
+        } else if self.eat(CalcWord::Rounded) {
+            Some(Rounding::Nearest)
+        } else {
+            None
+        };
+        let step = self.nearest()?;
+        if direction.is_some() || step.is_some() {
+            let (direction, step) = (
+                direction.unwrap_or(Rounding::Nearest),
+                step.unwrap_or(Decimal::ONE),
+            );
+            let rounded = self.in_its_unit(value.clone(), |amount| {
+                maths::round_to(amount, step, direction)
+            });
+            return rounded.map(Some).map_err(|error| self.blame(error));
+        }
+        let Some(places) = self.places() else {
+            return Ok(None);
+        };
+        Ok(Some(self.in_its_unit(value.clone(), |amount| {
+            Ok(maths::round_places(amount, places))
+        })?))
+    }
+
+    /// `au 10 près`, `au millier près`, `to nearest 10`: the step to round to.
+    fn nearest(&mut self) -> Result<Option<Decimal>, CalcError> {
+        if !self.eat(CalcWord::Nearest) {
+            return Ok(None);
+        }
+        let mut step = None;
+        if let Some(Tok::Number(number)) = self.peek().cloned() {
+            self.take(TokenKind::Number);
+            step = Some(number);
+        }
+        while let Some((scale, taken)) = words::scale_at(self.tokens, self.at) {
+            for _ in 0..taken {
+                self.take(TokenKind::Number);
+            }
+            step = Some(step.unwrap_or(Decimal::ONE) * Decimal::from(scale));
+        }
+        let Some(step) = step else {
+            return Err(self.unreadable());
+        };
+        self.eat(CalcWord::Near);
+        Ok(Some(step))
+    }
+
+    /// `à 2 décimales`, `to 2 dp`, `à 5 chiffres`: how many places, read only when the whole
+    /// form is there — `à 100 Mo/s` stays a rate.
+    fn places(&mut self) -> Option<u32> {
+        let opener = [CalcWord::At, CalcWord::Convert, CalcWord::To]
+            .into_iter()
+            .find_map(|word| self.sees(word))?;
+        let Some(Tok::Number(places)) = self.tokens.get(self.at + opener).map(|token| &token.tok)
+        else {
+            return None;
+        };
+        let places = places.to_u32().filter(|_| places.fract().is_zero())?;
+        let after = self.at + opener + 1;
+        let closer = words::spelled(CalcWord::Decimals, self.tokens, after)
+            .or_else(|| words::spelled(CalcWord::Digits, self.tokens, after))?;
+        for _ in 0..opener {
+            self.take(TokenKind::Keyword);
+        }
+        self.take(TokenKind::Number);
+        for _ in 0..closer {
+            self.take(TokenKind::Keyword);
+        }
+        Some(places)
+    }
+
+    /// Rounded in the unit it is shown in: `1,236 km à 2 décimales` is 1,24 km, not 1 236 m.
+    fn in_its_unit(
+        &self,
+        value: Value,
+        round: impl Fn(Decimal) -> Result<Decimal, CalcError>,
+    ) -> Answer {
+        match value {
+            Value::Quantity(quantity) => {
+                let (above, below) = match quantity.unit {
+                    _ if quantity.dim.has_temperature() => (Decimal::ONE, Decimal::ONE),
+                    Some(Shown::One(unit)) => (self.unit_factor(unit), Decimal::ONE),
+                    Some(Shown::Per(top, bottom)) => {
+                        (self.unit_factor(top), self.unit_factor(bottom))
+                    }
+                    None => (Decimal::ONE, Decimal::ONE),
+                };
+                let shown = quantity
+                    .amount
+                    .checked_mul(below)
+                    .and_then(|product| product.checked_div(above))
+                    .ok_or_else(overflow)?;
+                let amount = round(shown)?
+                    .checked_mul(above)
+                    .and_then(|product| product.checked_div(below))
+                    .ok_or_else(overflow)?;
+                Ok(Value::Quantity(Quantity { amount, ..quantity }))
+            }
+            Value::Percent { ratio, signed } => {
+                let percent = round(ratio * Decimal::ONE_HUNDRED)?;
+                Ok(Value::Percent {
+                    ratio: percent / Decimal::ONE_HUNDRED,
+                    signed,
+                })
+            }
+            Value::Date(_) => Err(CalcError::Unsupported),
+        }
+    }
+
+    /// `255 en hex`: a plain number, whole for a base, written another way.
+    fn written(&mut self, value: Value, notation: Notation) -> Answer {
+        let amount = plain(&value).map_err(|error| self.blame(error))?;
+        if let Notation::Base(_) = notation {
+            maths::whole(amount).map_err(|error| self.blame(error))?;
+        }
+        self.notation = Some(notation);
+        Ok(value)
+    }
+
     fn convert(&mut self, value: Value) -> Answer {
+        for (word, notation) in NOTATIONS {
+            if self.eat(word) {
+                return self.written(value, notation);
+            }
+        }
+        if self.eat(CalcWord::Base) {
+            let Some(Tok::Number(radix)) = self.peek().cloned() else {
+                return Err(self.unreadable());
+            };
+            self.take(TokenKind::Number);
+            let notation = match radix.to_u32().filter(|_| radix.fract().is_zero()) {
+                Some(radix @ (2 | 8 | 16)) => Notation::Base(radix),
+                Some(10) => Notation::Decimal,
+                _ => return Err(self.blame(CalcError::Unsupported)),
+            };
+            return self.written(value, notation);
+        }
         if self.peek_symbol(&['%']).is_some() {
             self.take(TokenKind::Unit);
             return match value {
@@ -357,6 +593,65 @@ impl<'a> Parser<'a> {
         convert(value, shown, dim).map_err(|error| self.blame(error))
     }
 
+    fn bits(&mut self, left: Value, right: Value, operation: Bits) -> Answer {
+        let both = plain(&left).and_then(|a| Ok((a, plain(&right)?)));
+        both.and_then(|(a, b)| maths::bits(a, b, operation))
+            .map(Value::number)
+            .map_err(|error| self.blame(error))
+    }
+
+    /// `5 | 3`, below `xor`, below `&`, below the shifts, below the sums: as C orders them.
+    fn bits_or(&mut self) -> Answer {
+        let mut left = self.bits_xor()?;
+        while self.peek_symbol(&['|']).is_some() {
+            self.take(TokenKind::Operator);
+            let right = self.bits_xor()?;
+            left = self.bits(left, right, Bits::Or)?;
+        }
+        Ok(left)
+    }
+
+    fn bits_xor(&mut self) -> Answer {
+        let mut left = self.bits_and()?;
+        while self.eat_as(CalcWord::Xor, TokenKind::Operator) {
+            let right = self.bits_and()?;
+            left = self.bits(left, right, Bits::Xor)?;
+        }
+        Ok(left)
+    }
+
+    fn bits_and(&mut self) -> Answer {
+        let mut left = self.shift()?;
+        while self.peek_symbol(&['&']).is_some() {
+            self.take(TokenKind::Operator);
+            let right = self.shift()?;
+            left = self.bits(left, right, Bits::And)?;
+        }
+        Ok(left)
+    }
+
+    /// `<<` or `>>`, its two signs side by side.
+    fn shift_ahead(&self) -> Option<Bits> {
+        let symbol = self.peek_symbol(&['<', '>'])?;
+        let second = self.tokens.get(self.at + 1)?;
+        (second.tok == Tok::Symbol(symbol) && !second.spaced).then_some(if symbol == '<' {
+            Bits::Left
+        } else {
+            Bits::Right
+        })
+    }
+
+    fn shift(&mut self) -> Answer {
+        let mut left = self.additive()?;
+        while let Some(operation) = self.shift_ahead() {
+            self.take(TokenKind::Operator);
+            self.take(TokenKind::Operator);
+            let right = self.additive()?;
+            left = self.bits(left, right, operation)?;
+        }
+        Ok(left)
+    }
+
     fn additive(&mut self) -> Answer {
         let mut left = self.term()?;
         loop {
@@ -364,7 +659,7 @@ impl<'a> Parser<'a> {
                 self.take(TokenKind::Operator);
                 symbol == '+'
             } else if self.eat_as(CalcWord::Plus, TokenKind::Operator)
-                || self.eat_as(CalcWord::And, TokenKind::Operator)
+                || (!self.listing && self.eat_as(CalcWord::And, TokenKind::Operator))
             {
                 true
             } else if self.eat_as(CalcWord::Minus, TokenKind::Operator) {
@@ -493,6 +788,10 @@ impl<'a> Parser<'a> {
                 signed: false,
             });
         }
+        // `255 in hex`, `0,35 in %`: `in` before what a number is written as converts it, inches aside.
+        if self.sees(CalcWord::Convert) == Some(1) && self.notation_at(self.at + 1) {
+            return Ok(Value::number(number));
+        }
         let Some((shown, dim, factor)) = self.read_unit() else {
             return Ok(Value::number(number));
         };
@@ -559,6 +858,32 @@ impl<'a> Parser<'a> {
             if self.eat(block) {
                 self.aggregate = true;
                 return aggregate(self.context.block, mean);
+            }
+        }
+        let phi = "1.6180339887498948482045868344"
+            .parse()
+            .unwrap_or(Decimal::ONE);
+        for (constant, value) in [
+            (CalcWord::Pi, Decimal::PI),
+            (CalcWord::E, Decimal::E),
+            (CalcWord::Tau, Decimal::TWO_PI),
+            (CalcWord::Phi, phi),
+        ] {
+            if self.eat(constant) {
+                return Ok(Value::number(value));
+            }
+        }
+        for (word, function) in FUNCTIONS {
+            if self.eat(word) {
+                return self.call(function);
+            }
+        }
+        for (word, largest) in [(CalcWord::Largest, true), (CalcWord::Smallest, false)] {
+            if self.eat(word) {
+                let listing = std::mem::replace(&mut self.listing, true);
+                let found = self.extreme(largest);
+                self.listing = listing;
+                return found;
             }
         }
         if self.eat(CalcWord::From) {
@@ -794,6 +1119,114 @@ fn divide(left: Value, right: Value) -> Answer {
             Ok(Value::number(by(a, b)?))
         }
         (left, right) => Err(mismatch(&left, &right)),
+    }
+}
+
+impl Parser<'_> {
+    /// `sqrt(16)`, `sqrt 16`, `racine 2 (8)`, `log 2 (8)`: the argument in parentheses, or the
+    /// value after the word; a bare number before parentheses is a degree or a base.
+    fn call(&mut self, function: Function) -> Answer {
+        let degree = match self.peek().cloned() {
+            Some(Tok::Number(number))
+                if matches!(function, Function::Root | Function::Log)
+                    && self
+                        .tokens
+                        .get(self.at + 1)
+                        .is_some_and(|token| token.tok == Tok::Symbol('(')) =>
+            {
+                self.take(TokenKind::Number);
+                Some(number)
+            }
+            _ => None,
+        };
+        let argument = if self.peek_symbol(&['(']).is_some() {
+            self.primary()?
+        } else {
+            self.power()?
+        };
+        let number = |value: &Value| plain(value);
+        let result = match function {
+            Function::Root => {
+                let degree = match degree {
+                    None => 2,
+                    Some(degree) => degree
+                        .to_u32()
+                        .filter(|_| degree.fract().is_zero())
+                        .ok_or(CalcError::Unsupported)
+                        .map_err(|error| self.blame(error))?,
+                };
+                number(&argument)
+                    .and_then(|x| maths::root(x, degree))
+                    .map(Value::number)
+            }
+            Function::Cbrt => number(&argument)
+                .and_then(|x| maths::root(x, 3))
+                .map(Value::number),
+            Function::Log => number(&argument)
+                .and_then(|x| maths::log(x, degree))
+                .map(Value::number),
+            Function::Ln => number(&argument).and_then(maths::ln).map(Value::number),
+            Function::Abs => match argument {
+                Value::Quantity(quantity) if !quantity.dim.has_temperature() => {
+                    Ok(Value::Quantity(Quantity {
+                        amount: quantity.amount.abs(),
+                        ..quantity
+                    }))
+                }
+                Value::Percent { ratio, signed } => Ok(Value::Percent {
+                    ratio: ratio.abs(),
+                    signed,
+                }),
+                _ => Err(CalcError::Unsupported),
+            },
+            Function::Round | Function::Ceil | Function::Floor => {
+                let direction = match function {
+                    Function::Ceil => Rounding::Up,
+                    Function::Floor => Rounding::Down,
+                    _ => Rounding::Nearest,
+                };
+                self.in_its_unit(argument, |amount| {
+                    maths::round_to(amount, Decimal::ONE, direction)
+                })
+            }
+            Function::Written(notation) => return self.written(argument, notation),
+        };
+        result.map_err(|error| self.blame(error))
+    }
+
+    /// `le plus grand de 100 et 200`, `smaller of 5 and 10`: of one kind, the unit kept.
+    fn extreme(&mut self, largest: bool) -> Answer {
+        let mut found = self.additive()?;
+        loop {
+            let comma = self.peek() == Some(&Tok::Other(','));
+            if comma {
+                self.take(TokenKind::Operator);
+            } else if !self.eat_as(CalcWord::And, TokenKind::Operator) {
+                return Ok(found);
+            }
+            let next = self.additive()?;
+            let order = match (&found, &next) {
+                (Value::Quantity(a), Value::Quantity(b)) if a.dim == b.dim => {
+                    let b_amount = if a.dim.has_temperature() {
+                        in_degrees_of(b, a)
+                    } else {
+                        b.amount
+                    };
+                    a.amount.cmp(&b_amount)
+                }
+                (Value::Percent { ratio: a, .. }, Value::Percent { ratio: b, .. }) => a.cmp(b),
+                (Value::Date(a), Value::Date(b)) => a.cmp(b),
+                _ => return Err(self.blame(mismatch(&found, &next))),
+            };
+            let keep_next = if largest {
+                order.is_lt()
+            } else {
+                order.is_gt()
+            };
+            if keep_next {
+                found = next;
+            }
+        }
     }
 }
 

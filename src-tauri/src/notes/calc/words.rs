@@ -41,6 +41,45 @@ closed_enum! {
         Million = "million",
         Billion = "billion",
         Trillion = "trillion",
+        Ten = "ten",
+        Hundred = "hundred",
+        Xor = "xor",
+        /// `à 2 décimales`, `to 2 dp`.
+        Decimals = "decimals",
+        /// `à 5 chiffres`, `to 5 digits`: decimal places too.
+        Digits = "digits",
+        Rounded = "rounded",
+        RoundedUp = "roundedUp",
+        RoundedDown = "roundedDown",
+        /// Opens `au 10 près`, `to nearest 10`.
+        Nearest = "nearest",
+        /// Closes `au 10 près`.
+        Near = "near",
+        Largest = "largest",
+        Smallest = "smallest",
+        Root = "root",
+        Cbrt = "cbrt",
+        Log = "log",
+        Ln = "ln",
+        Abs = "abs",
+        Round = "round",
+        Ceil = "ceil",
+        Floor = "floor",
+        Hex = "hex",
+        Bin = "bin",
+        Oct = "oct",
+        Int = "int",
+        Sci = "sci",
+        Base = "base",
+        Pi = "pi",
+        E = "e",
+        Tau = "tau",
+        Phi = "phi",
+        /// The screen's pixels to an inch, 96 unless a line sets it.
+        Ppi = "ppi",
+        /// A font size in pixels, 16 unless a line sets it.
+        Em = "em",
+        Rem = "rem",
     }
 }
 
@@ -51,6 +90,8 @@ pub enum WordClass {
     Syntax,
     /// A name of the sheet: one defined above hides it from its line down.
     Value,
+    /// `ppi = 326`: the sheet's setting from its line down, no name.
+    Setting,
 }
 
 pub struct Spellings {
@@ -62,7 +103,7 @@ pub struct Spellings {
 
 impl CalcWord {
     pub const fn spellings(self) -> Spellings {
-        use WordClass::{Syntax, Value};
+        use WordClass::{Setting, Syntax, Value};
         let (class, fr, en): (WordClass, &[&str], &[&str]) = match self {
             Self::Convert => (Syntax, &["en", "vers"], &["in", "to", "as"]),
             Self::At => (Syntax, &["à"], &["at"]),
@@ -95,10 +136,59 @@ impl CalcWord {
             Self::Mega => (Value, &["M"], &["M"]),
             Self::Giga => (Value, &["Md"], &["bn"]),
             Self::Tera => (Value, &["T"], &["T", "tn"]),
-            Self::Thousand => (Value, &["mille"], &["thousand", "thousands"]),
+            Self::Thousand => (
+                Value,
+                &["mille", "millier", "milliers"],
+                &["thousand", "thousands"],
+            ),
             Self::Million => (Value, &["million", "millions"], &["million", "millions"]),
             Self::Billion => (Value, &["milliard", "milliards"], &["billion", "billions"]),
             Self::Trillion => (Value, &["mille milliards"], &["trillion", "trillions"]),
+            Self::Ten => (Value, &["dizaine", "dizaines"], &["ten", "tens"]),
+            Self::Hundred => (Value, &["centaine", "centaines"], &["hundred", "hundreds"]),
+            Self::Xor => (Syntax, &["xor"], &["xor"]),
+            Self::Decimals => (
+                Syntax,
+                &["décimales", "décimale"],
+                &["dp", "decimals", "decimal"],
+            ),
+            Self::Digits => (Syntax, &["chiffres", "chiffre"], &["digits", "digit"]),
+            Self::Rounded => (Syntax, &["arrondi"], &["rounded"]),
+            Self::RoundedUp => (Syntax, &["arrondi supérieur"], &["rounded up"]),
+            Self::RoundedDown => (Syntax, &["arrondi inférieur"], &["rounded down"]),
+            Self::Nearest => (Syntax, &["au", "à la"], &["to nearest", "to the nearest"]),
+            Self::Near => (Syntax, &["près"], &[]),
+            Self::Largest => (
+                Syntax,
+                &["le plus grand de", "plus grand de"],
+                &["larger of", "the larger of", "largest of"],
+            ),
+            Self::Smallest => (
+                Syntax,
+                &["le plus petit de", "plus petit de"],
+                &["smaller of", "the smaller of", "smallest of"],
+            ),
+            Self::Root => (Value, &["racine", "racine carrée"], &["sqrt", "root"]),
+            Self::Cbrt => (Value, &["racine cubique", "cbrt"], &["cbrt"]),
+            Self::Log => (Value, &["log"], &["log"]),
+            Self::Ln => (Value, &["ln"], &["ln"]),
+            Self::Abs => (Value, &["abs", "valeur absolue"], &["abs"]),
+            Self::Round => (Value, &["arrondi"], &["round"]),
+            Self::Ceil => (Value, &["plafond"], &["ceil"]),
+            Self::Floor => (Value, &["plancher"], &["floor"]),
+            Self::Hex => (Value, &["hex"], &["hex"]),
+            Self::Bin => (Value, &["bin"], &["bin"]),
+            Self::Oct => (Value, &["oct"], &["oct"]),
+            Self::Int => (Value, &["int"], &["int"]),
+            Self::Sci => (Value, &["sci"], &["sci"]),
+            Self::Base => (Syntax, &["base"], &["base"]),
+            Self::Pi => (Value, &["pi", "π"], &["pi", "π"]),
+            Self::E => (Value, &["e"], &["e"]),
+            Self::Tau => (Value, &["tau", "τ"], &["tau", "τ"]),
+            Self::Phi => (Value, &["phi", "φ"], &["phi", "φ"]),
+            Self::Ppi => (Setting, &["ppi"], &["ppi"]),
+            Self::Em => (Setting, &["em"], &["em"]),
+            Self::Rem => (Setting, &["rem"], &["rem"]),
         };
         Spellings { class, fr, en }
     }
@@ -115,6 +205,8 @@ impl CalcWord {
             Self::Mega | Self::Million => 1_000_000,
             Self::Giga | Self::Billion => 1_000_000_000,
             Self::Tera | Self::Trillion => 1_000_000_000_000,
+            Self::Ten => 10,
+            Self::Hundred => 100,
             _ => return None,
         })
     }
@@ -130,6 +222,8 @@ pub const SHARED: &[(&str, &[CalcWord])] = &[
     ("de", &[CalcWord::Of, CalcWord::From]),
     ("à", &[CalcWord::At, CalcWord::To]),
     ("to", &[CalcWord::Convert, CalcWord::To]),
+    // A line ends `arrondi` and a function opens it.
+    ("arrondi", &[CalcWord::Rounded, CalcWord::Round]),
 ];
 
 /// `’` is the apostrophe a keyboard often types: `aujourd’hui` is `aujourd'hui`.
@@ -159,6 +253,15 @@ pub(super) fn spelled(word: CalcWord, tokens: &[Token], at: usize) -> Option<usi
                 .then_some(parts.len())
         })
         .max()
+}
+
+/// The setting `ppi`, `em` or `rem` a word names, which a line `ppi = …` gives.
+pub(super) fn setting(word: &str) -> Option<CalcWord> {
+    let folded = fold(word);
+    CalcWord::ALL.into_iter().find(|concept| {
+        concept.spellings().class == WordClass::Setting
+            && concept.every_spelling().any(|spelling| spelling == folded)
+    })
 }
 
 /// A syntax word, which no name can take.
@@ -286,12 +389,12 @@ mod tests {
             .iter()
             .flat_map(|unit| unit.symbols.iter().copied())
             .collect();
-        let both: Vec<&str> = CalcWord::ALL
+        let both: BTreeSet<&str> = CalcWord::ALL
             .iter()
             .flat_map(|word| word.every_spelling())
             .filter(|spelling| symbols.contains(spelling))
             .collect();
-        assert_eq!(both, ["in"]);
+        assert_eq!(both, BTreeSet::from(["in", "em", "rem"]));
     }
 
     #[test]

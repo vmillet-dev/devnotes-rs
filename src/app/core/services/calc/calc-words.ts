@@ -26,6 +26,14 @@ export class CalcWords {
       .flatMap((entry) => [...entry.fr, ...entry.en]);
   }
 
+  /** The spelling the language on screen proposes for each of these concepts, in their order. */
+  preferred(words: readonly CalcWord[], lang: string): string[] {
+    const language = lang.startsWith('fr') ? 'fr' : 'en';
+    return words.flatMap(
+      (word) => this.table.find((entry) => entry.word === word)?.[language].slice(0, 1) ?? [],
+    );
+  }
+
   /** A conversion word, then the start of a unit: what the units of the line's kind complete. */
   conversion(): RegExp {
     const words = this.spellings('convert', 'at').map(escaped).join('|');

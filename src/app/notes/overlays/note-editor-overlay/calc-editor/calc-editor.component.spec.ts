@@ -26,6 +26,7 @@ function value(of: CalcValue, name: string | null = null, aggregate = false): Ca
 const WORDS: readonly CalcWordEntry[] = [
   { word: 'convert', class: 'syntax', fr: ['en'], en: ['in'] },
   { word: 'tomorrow', class: 'value', fr: ['demain'], en: ['tomorrow'] },
+  { word: 'hex', class: 'value', fr: ['hex'], en: ['hex'] },
 ];
 
 const TEXT = '# Budget\nhébergement = 100,521 €\ndomaines = 4,99 €\nmensuel = total\ndistance + 3 Go';
@@ -179,6 +180,27 @@ describe('CalcEditorComponent', () => {
     const labels = [...document.querySelectorAll('.cm-completionLabel')].map((label) => label.textContent);
     expect(labels).toContain('Mio');
     expect(labels).not.toContain('min');
+  });
+
+  it('proposes after « en » on a plain number a percentage and the bases of the table', async () => {
+    calc.sheet = {
+      rows: [
+        { line: { kind: 'error', error: { kind: 'unreadable', at: 7 } }, spans: [], converting: 'number' },
+      ],
+      variables: [],
+    };
+    const typed = '255 en ';
+    view().dispatch({
+      changes: { from: 0, to: view().state.doc.length, insert: typed },
+      selection: { anchor: typed.length },
+    });
+    startCompletion(view());
+
+    await vi.waitFor(() =>
+      expect([...document.querySelectorAll('.cm-completionLabel')].map((label) => label.textContent)).toEqual(
+        ['%', 'hex'],
+      ),
+    );
   });
 
   it('proposes a word of the table in the spelling of the language on screen', async () => {
