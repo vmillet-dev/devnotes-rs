@@ -148,8 +148,8 @@ export class CalcFormatter {
       }
       case 'fraction': {
         const sign = value.negative ? '-' : '';
-        const whole = value.denominator === '1';
-        return { text: `${sign}${value.numerator}${whole ? '' : `/${value.denominator}`}`, approx: false };
+        const denominator = value.denominator === '1' ? '' : '/' + value.denominator;
+        return { text: `${sign}${value.numerator}${denominator}`, approx: false };
       }
       case 'multiplier': {
         const shown = this.number(value.value, digitsFor(value.value, this.decimals, false));
