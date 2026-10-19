@@ -115,6 +115,18 @@ pub(super) enum Notation {
     Base(u32),
     Scientific,
     Decimal,
+    /// `2/10 en fraction`: `1/5`.
+    Fraction,
+    /// `20/5 en multiple`: `×4`.
+    Multiplier,
+}
+
+/// What a share is taken against: `de`/`of`, `de plus sur`/`on`, `de moins sur`/`off`.
+#[derive(Clone, Copy)]
+enum Share {
+    Of,
+    On,
+    Off,
 }
 
 #[derive(Clone, Copy)]
@@ -146,12 +158,14 @@ const FUNCTIONS: [(CalcWord, Function); 12] = [
     (CalcWord::Int, Function::Written(Notation::Decimal)),
 ];
 
-const NOTATIONS: [(CalcWord, Notation); 5] = [
+const NOTATIONS: [(CalcWord, Notation); 7] = [
     (CalcWord::Hex, Notation::Base(16)),
     (CalcWord::Bin, Notation::Base(2)),
     (CalcWord::Oct, Notation::Base(8)),
     (CalcWord::Sci, Notation::Scientific),
     (CalcWord::Int, Notation::Decimal),
+    (CalcWord::AsDecimal, Notation::Decimal),
+    (CalcWord::Fraction, Notation::Fraction),
 ];
 
 fn plain(value: &Value) -> Result<Decimal, CalcError> {
@@ -403,6 +417,15 @@ impl<'a> Parser<'a> {
         loop {
             if let Some(rounded) = self.rounding(&value)? {
                 value = rounded;
+            } else if self.eat(CalcWord::WhatPercent) {
+                // `20 c'est combien de % de 200`, `180 is what % off 200`.
+                let Some(share) = self.share() else {
+                    return Err(self.unreadable());
+                };
+                let whole = self.additive()?;
+                value = share_of(value, whole, share).map_err(|error| self.blame(error))?;
+            } else if self.eat(CalcWord::IsTo) {
+                value = self.proportion(value)?;
             } else if self.eat(CalcWord::Convert) {
                 self.converting = Some(value.dimension());
                 value = self.convert(value)?;
@@ -413,6 +436,10 @@ impl<'a> Parser<'a> {
                     value = self.convert(value)?;
                 } else {
                     let rate = self.additive()?;
+                    if let Some(changed) = self.change_asked(&value, &rate)? {
+                        value = changed;
+                        continue;
+                    }
                     value = divide(value, rate).map_err(|error| self.blame(error))?;
                     if value.dimension() != Dimension::Time {
                         return Err(self.blame(CalcError::Mismatch {
@@ -546,7 +573,95 @@ impl<'a> Parser<'a> {
     }
 
     /// `255 en hex`: a plain number, whole for a base, written another way.
+    /// `50 en % de 100`, `70 as a % on 20`: the `%` taken, then what the share is taken against.
+    fn share_after_percent(&mut self) -> Option<Share> {
+        let next = self.at + 1;
+        let ahead = [CalcWord::PercentOn, CalcWord::PercentOff, CalcWord::Of]
+            .into_iter()
+            .any(|word| words::spelled(word, self.tokens, next).is_some());
+        if !ahead {
+            return None;
+        }
+        self.take(TokenKind::Unit);
+        self.share()
+    }
+
+    /// `de plus sur`, `de moins sur`, `de` — the longest first, `de` being the start of the others.
+    fn share(&mut self) -> Option<Share> {
+        if self.eat(CalcWord::PercentOn) {
+            Some(Share::On)
+        } else if self.eat(CalcWord::PercentOff) {
+            Some(Share::Off)
+        } else if self.eat(CalcWord::Of) {
+            Some(Share::Of)
+        } else {
+            None
+        }
+    }
+
+    /// `50 à 75 c'est combien de %`, `40 to 90 as %`, `50 to 75 is what x`: a change asked
+    /// after two values.
+    fn change_asked(&mut self, from: &Value, to: &Value) -> Result<Option<Value>, CalcError> {
+        let percent = self.eat(CalcWord::WhatPercent)
+            || (self.sees(CalcWord::Convert).is_some_and(|taken| {
+                self.tokens
+                    .get(self.at + taken)
+                    .is_some_and(|token| token.tok == Tok::Symbol('%'))
+            }) && {
+                self.eat(CalcWord::Convert);
+                self.take(TokenKind::Unit);
+                true
+            });
+        if percent {
+            return change(from.clone(), to.clone())
+                .map(Some)
+                .map_err(|error| self.blame(error));
+        }
+        if self.eat(CalcWord::WhatTimes) {
+            let times = divide(to.clone(), from.clone()).map_err(|error| self.blame(error))?;
+            return self.written(times, Notation::Multiplier).map(Some);
+        }
+        Ok(None)
+    }
+
+    /// `6 est à 60 ce que 8 est à combien`, `5 is to 10 as what is to 80`: the unknown of a
+    /// proportion, its third or its fourth.
+    fn proportion(&mut self, first: Value) -> Answer {
+        let second = self.additive()?;
+        if !self.eat(CalcWord::Like) {
+            return Err(self.unreadable());
+        }
+        let third = if self.eat(CalcWord::What) {
+            None
+        } else {
+            Some(self.additive()?)
+        };
+        if !self.eat(CalcWord::IsTo) {
+            return Err(self.unreadable());
+        }
+        let fourth = if self.eat(CalcWord::What) {
+            None
+        } else {
+            Some(self.additive()?)
+        };
+        let found = match (third, fourth) {
+            // The ratio first, so the unknown keeps the unit of the value it scales.
+            (Some(third), None) => divide(third, first).and_then(|ratio| multiply(ratio, second)),
+            (None, Some(fourth)) => divide(fourth, second).and_then(|ratio| multiply(ratio, first)),
+            _ => return Err(self.unreadable()),
+        };
+        found.map_err(|error| self.blame(error))
+    }
+
     fn written(&mut self, value: Value, notation: Notation) -> Answer {
+        // `50 % en fraction` is 1/2: a percentage written as the number it is.
+        let value = match (value, notation) {
+            (
+                Value::Percent { ratio, .. },
+                Notation::Fraction | Notation::Multiplier | Notation::Decimal,
+            ) => Value::number(ratio),
+            (value, _) => value,
+        };
         let amount = plain(&value).map_err(|error| self.blame(error))?;
         if let Notation::Base(_) = notation {
             maths::whole(amount).map_err(|error| self.blame(error))?;
@@ -556,6 +671,37 @@ impl<'a> Parser<'a> {
     }
 
     fn convert(&mut self, value: Value) -> Answer {
+        // `50 to 75 is what %`: `to` there is the second value, not where to convert.
+        if let Some(Tok::Number(_)) = self.peek() {
+            let to = self.additive()?;
+            return match self.change_asked(&value, &to)? {
+                Some(changed) => Ok(changed),
+                None => Err(self.unreadable()),
+            };
+        }
+        if self.eat(CalcWord::Multiple) {
+            let times = if self.eat(CalcWord::Of) {
+                let unit = self.additive()?;
+                divide(value, unit).map_err(|error| self.blame(error))?
+            } else {
+                value
+            };
+            return self.written(times, Notation::Multiplier);
+        }
+        let article = self.sees(CalcWord::Article).filter(|taken| {
+            self.tokens
+                .get(self.at + taken)
+                .is_some_and(|token| token.tok == Tok::Symbol('%'))
+        });
+        if article.is_some() {
+            self.eat(CalcWord::Article);
+        }
+        if self.peek_symbol(&['%']).is_some()
+            && let Some(share) = self.share_after_percent()
+        {
+            let whole = self.additive()?;
+            return share_of(value, whole, share).map_err(|error| self.blame(error));
+        }
         for (word, notation) in NOTATIONS {
             if self.eat(word) {
                 return self.written(value, notation);
@@ -708,9 +854,21 @@ impl<'a> Parser<'a> {
             } else if self.eat(CalcWord::Excluding) {
                 let right = self.power()?;
                 left = excluding(left, right).map_err(|error| self.blame(error))?;
-            } else if matches!(left, Value::Percent { .. }) && self.eat(CalcWord::Of) {
+            } else if let Value::Percent { ratio, .. } = left
+                && let Some(share) = self.share()
+            {
+                // `5 % de combien font 6` solves for the whole; `5 % de plus sur 200` applies.
+                let solving = self.eat(CalcWord::What);
+                if solving && !self.eat(CalcWord::Is) {
+                    return Err(self.unreadable());
+                }
                 let right = self.power()?;
-                left = multiply(left, right).map_err(|error| self.blame(error))?;
+                left = if solving {
+                    solve(ratio, share, right)
+                } else {
+                    applied(ratio, share, right)
+                }
+                .map_err(|error| self.blame(error))?;
             } else if self.eat(CalcWord::Over) {
                 let right = self.power()?;
                 left = ratio(left, right).map_err(|error| self.blame(error))?;
@@ -1227,6 +1385,34 @@ impl Parser<'_> {
                 found = next;
             }
         }
+    }
+}
+
+/// What a share multiplies: the ratio, one plus it, or one less it.
+fn share_factor(ratio: Decimal, share: Share) -> Value {
+    Value::number(match share {
+        Share::Of => ratio,
+        Share::On => Decimal::ONE + ratio,
+        Share::Off => Decimal::ONE - ratio,
+    })
+}
+
+/// `5 % de plus sur 200` is 210, `5% off 200` 190.
+fn applied(ratio: Decimal, share: Share, whole: Value) -> Answer {
+    multiply(whole, share_factor(ratio, share))
+}
+
+/// `5 % de combien font 6` is 120, `5% on what is 6` 5,71.
+fn solve(ratio: Decimal, share: Share, result: Value) -> Answer {
+    divide(result, share_factor(ratio, share))
+}
+
+/// `50 en % de 100` is 50 %; `70 en % de plus que 20` 250 %; `20 en % de moins que 70` 71,43 %.
+fn share_of(part: Value, whole: Value, share: Share) -> Answer {
+    match share {
+        Share::Of => ratio(part, whole),
+        Share::On => ratio(add(part, whole.clone(), false)?, whole),
+        Share::Off => ratio(add(whole.clone(), part, false)?, whole),
     }
 }
 

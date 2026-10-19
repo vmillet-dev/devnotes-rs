@@ -190,6 +190,72 @@ pub(super) fn digits(value: Decimal, radix: u32) -> Result<(bool, String), CalcE
     Ok((number < 0, digits))
 }
 
+fn reduced(numerator: u128, denominator: u128) -> (u128, u128) {
+    let (mut a, mut b) = (numerator, denominator);
+    while b != 0 {
+        (a, b) = (b, a % b);
+    }
+    match (numerator.checked_div(a), denominator.checked_div(a)) {
+        (Some(above), Some(below)) => (above, below),
+        _ => (0, 1),
+    }
+}
+
+/// The denominators a fraction is looked for under: past them, the decimal is its own fraction.
+const SIMPLE_BELOW: u128 = 1_000_000;
+
+/// `0,25` is 1/4, exactly; a quotient cut at its last figure, `1/3`, is the simplest fraction
+/// that close to it — its continued fraction's first convergent within 10⁻²⁰.
+pub(super) fn fraction(value: Decimal) -> (bool, u128, u128) {
+    let negative = value.is_sign_negative() && !value.is_zero();
+    let size = value.abs().normalize();
+    let exact = reduced(size.mantissa().unsigned_abs(), 10_u128.pow(size.scale()));
+    if exact.1 <= SIMPLE_BELOW {
+        return (negative, exact.0, exact.1);
+    }
+    let close = Decimal::new(1, 20);
+    let (mut before, mut last) = ((0_u128, 1_u128), (1_u128, 0_u128));
+    let mut rest = size;
+    for _ in 0..64 {
+        let whole = rest.trunc();
+        let Some(step) = whole.to_u128() else { break };
+        let numerator = step
+            .checked_mul(last.0)
+            .and_then(|product| product.checked_add(before.0));
+        let denominator = step
+            .checked_mul(last.1)
+            .and_then(|product| product.checked_add(before.1));
+        let (Some(numerator), Some(denominator)) = (numerator, denominator) else {
+            break;
+        };
+        if denominator > SIMPLE_BELOW {
+            break;
+        }
+        (before, last) = (last, (numerator, denominator));
+        let near = i128::try_from(numerator)
+            .ok()
+            .and_then(|above| Decimal::try_from_i128_with_scale(above, 0).ok())
+            .zip(
+                i128::try_from(denominator)
+                    .ok()
+                    .and_then(|below| Decimal::try_from_i128_with_scale(below, 0).ok()),
+            )
+            .and_then(|(above, below)| above.checked_div(below));
+        if near.is_some_and(|near| (near - size).abs() < close) {
+            return (negative, numerator, denominator);
+        }
+        let left = rest - whole;
+        let Some(next) = (!left.is_zero())
+            .then(|| Decimal::ONE.checked_div(left))
+            .flatten()
+        else {
+            break;
+        };
+        rest = next;
+    }
+    (negative, exact.0, exact.1)
+}
+
 /// `5300` is `5.3` times ten to the 3: the mantissa between 1 and 10, its exponent.
 pub(super) fn scientific(value: Decimal) -> (String, i32) {
     let value = value.normalize();
@@ -267,6 +333,17 @@ mod tests {
         assert_eq!(digits(d("-10"), 2), Ok((true, "1010".into())));
         assert_eq!(digits(d("255"), 8), Ok((false, "377".into())));
         assert_eq!(digits(d("2.5"), 16), Err(CalcError::NotWhole));
+    }
+
+    #[test]
+    fn a_decimal_is_written_as_its_simplest_fraction() {
+        assert_eq!(fraction(d("0.2")), (false, 1, 5));
+        assert_eq!(fraction(d("0.25")), (false, 1, 4));
+        assert_eq!(fraction(d("-1.5")), (true, 3, 2));
+        assert_eq!(fraction(d("3")), (false, 3, 1));
+        assert_eq!(fraction(d("1") / d("3")), (false, 1, 3));
+        assert_eq!(fraction(d("22") / d("7")), (false, 22, 7));
+        assert_eq!(fraction(d("0")), (false, 0, 1));
     }
 
     #[test]

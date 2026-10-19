@@ -63,6 +63,16 @@ pub enum CalcValue {
         mantissa: String,
         exponent: i32,
     },
+    /// `2/10 en fraction`: `1/5`, reduced.
+    Fraction {
+        numerator: String,
+        denominator: String,
+        negative: bool,
+    },
+    /// `20/5 en multiple`: `×4`.
+    Multiplier {
+        value: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
@@ -456,6 +466,17 @@ fn notated(
             let (mantissa, exponent) = maths::scientific(tidy(quantity.amount));
             CalcValue::Scientific { mantissa, exponent }
         }
+        Notation::Fraction => {
+            let (negative, numerator, denominator) = maths::fraction(tidy(quantity.amount));
+            CalcValue::Fraction {
+                numerator: numerator.to_string(),
+                denominator: denominator.to_string(),
+                negative,
+            }
+        }
+        Notation::Multiplier => CalcValue::Multiplier {
+            value: text(quantity.amount),
+        },
         Notation::Decimal => shown,
     })
 }
@@ -1569,6 +1590,148 @@ mod tests {
             number("1000", Some(UnitId::Terabit))
         );
         assert!(matches!(error("2 MHz + 3 s"), CalcError::Mismatch { .. }));
+    }
+
+    fn rounded(line: &str, places: u32) -> CalcValue {
+        match value(line) {
+            CalcValue::Number { value, unit } => CalcValue::Number {
+                value: value
+                    .parse::<Decimal>()
+                    .unwrap()
+                    .round_dp(places)
+                    .normalize()
+                    .to_string(),
+                unit,
+            },
+            CalcValue::Percent { value, signed } => CalcValue::Percent {
+                value: value
+                    .parse::<Decimal>()
+                    .unwrap()
+                    .round_dp(places)
+                    .normalize()
+                    .to_string(),
+                signed,
+            },
+            other => other,
+        }
+    }
+
+    #[test]
+    fn a_share_is_added_or_taken_off_and_the_whole_solved_for() {
+        assert_eq!(value("5 % de plus sur 200"), number("210", None));
+        assert_eq!(value("5% on 200"), number("210", None));
+        assert_eq!(value("5 % de moins sur 200"), number("190", None));
+        assert_eq!(value("5% off 200"), number("190", None));
+        assert_eq!(value("5 % de combien font 6"), number("120", None));
+        assert_eq!(value("5% of what is 6"), number("120", None));
+        assert_eq!(
+            rounded("5 % de plus sur combien font 6", 2),
+            number("5.71", None)
+        );
+        assert_eq!(rounded("5% on what is 6", 2), number("5.71", None));
+        assert_eq!(
+            rounded("5 % de moins sur combien font 6", 2),
+            number("6.32", None)
+        );
+        assert_eq!(rounded("5% off what is 6", 2), number("6.32", None));
+        assert_eq!(
+            value("5 % de combien font 6 €"),
+            number("120", Some(UnitId::Euro))
+        );
+        assert_eq!(error("0 % de combien font 6"), CalcError::DivisionByZero);
+    }
+
+    #[test]
+    fn a_value_as_a_share_of_another_and_a_change_between_two() {
+        assert_eq!(value("50 en % de 100"), percent("50", false));
+        assert_eq!(value("50 as a % of 100"), percent("50", false));
+        assert_eq!(value("70 en % de plus que 20"), percent("250", false));
+        assert_eq!(value("70 as a % on 20"), percent("250", false));
+        assert_eq!(
+            rounded("20 en % de moins que 70", 2),
+            percent("71.43", false)
+        );
+        assert_eq!(rounded("20 as a % off 70", 2), percent("71.43", false));
+        assert_eq!(value("50 à 75 c'est combien de %"), percent("50", true));
+        assert_eq!(value("50 to 75 is what %"), percent("50", true));
+        assert_eq!(value("40 à 90 en %"), percent("125", true));
+        assert_eq!(value("40 to 90 as %"), percent("125", true));
+        assert_eq!(
+            value("180 c'est combien de % de moins que 200"),
+            percent("10", false)
+        );
+        assert_eq!(value("180 is what % off 200"), percent("10", false));
+        assert_eq!(
+            value("180 c'est combien de % de plus que 150"),
+            percent("20", false)
+        );
+        assert_eq!(value("180 is what % on 150"), percent("20", false));
+        assert_eq!(value("20 c'est combien de % de 200"), percent("10", false));
+        assert_eq!(value("20 is what % of 200"), percent("10", false));
+        assert_eq!(value("1,44 To à 100 Mo/s"), number("4", Some(UnitId::Hour)));
+    }
+
+    #[test]
+    fn fractions_multipliers_and_decimals() {
+        let fraction = |numerator: &str, denominator: &str| CalcValue::Fraction {
+            numerator: numerator.into(),
+            denominator: denominator.into(),
+            negative: false,
+        };
+        let times = |value: &str| CalcValue::Multiplier {
+            value: value.into(),
+        };
+        assert_eq!(value("2/10 en fraction"), fraction("1", "5"));
+        assert_eq!(value("2/10 as fraction"), fraction("1", "5"));
+        assert_eq!(value("50 % en fraction"), fraction("1", "2"));
+        assert_eq!(value("0,25 en fraction"), fraction("1", "4"));
+        assert_eq!(value("1/3 en fraction"), fraction("1", "3"));
+        assert_eq!(value("20/5 en multiple"), times("4"));
+        assert_eq!(value("20/5 as multiplier"), times("4"));
+        assert_eq!(value("50 en multiple de 5"), times("10"));
+        assert_eq!(value("50 as x of 5"), times("10"));
+        assert_eq!(value("50 à 75 c'est combien de fois"), times("1.5"));
+        assert_eq!(value("50 to 75 is what x"), times("1.5"));
+        assert_eq!(value("0,35 en %"), percent("35", false));
+        assert_eq!(value("20/200 en %"), percent("10", false));
+        assert_eq!(value("20 % en décimal"), number("0.2", None));
+        assert_eq!(value("20 % as dec"), number("0.2", None));
+        assert_eq!(value("50 % to decimal"), number("0.5", None));
+        assert_eq!(value("1/3 to 2 decimal"), number("0.33", None));
+        assert_eq!(value("x = 4\nx × 2"), number("8", None));
+        assert_eq!(value("a = 50\na as a % of 100"), percent("50", false));
+    }
+
+    #[test]
+    fn a_proportion_solves_for_its_unknown() {
+        assert_eq!(
+            value("6 est à 60 ce que 8 est à combien"),
+            number("80", None)
+        );
+        assert_eq!(value("6 is to 60 as 8 is to what"), number("80", None));
+        assert_eq!(
+            value("5 est à 10 ce que combien est à 80"),
+            number("40", None)
+        );
+        assert_eq!(value("5 is to 10 as what is to 80"), number("40", None));
+        assert_eq!(
+            value("2 h est à 120 km ce que 3 h est à combien"),
+            number("180", Some(UnitId::Kilometre))
+        );
+        assert!(matches!(
+            error("6 est à 60 ce que 8"),
+            CalcError::Unreadable { .. }
+        ));
+    }
+
+    #[test]
+    fn the_five_questions_of_the_percentages_tool_read_as_before() {
+        assert_eq!(value("20 % de 340"), number("68", None));
+        assert_eq!(value("30 sur 120 en %"), percent("25", false));
+        assert_eq!(value("de 80 à 100"), percent("25", true));
+        assert_eq!(value("250 + 20 %"), number("300", None));
+        assert_eq!(value("300 hors 20 %"), number("250", None));
+        assert_eq!(value("20 % of 340"), number("68", None));
     }
 
     #[test]

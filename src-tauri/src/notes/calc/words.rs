@@ -80,6 +80,23 @@ closed_enum! {
         /// A font size in pixels, 16 unless a line sets it.
         Em = "em",
         Rem = "rem",
+        /// `5 % de plus sur 200`, `70 en % de plus que 20`, `5% on 200`.
+        PercentOn = "percentOn",
+        PercentOff = "percentOff",
+        /// The unknown a line solves: `5 % de combien font 6`.
+        What = "what",
+        Is = "is",
+        WhatPercent = "whatPercent",
+        WhatTimes = "whatTimes",
+        Fraction = "fraction",
+        Multiple = "multiple",
+        /// `20 % en décimal`: a percentage as the number it is.
+        AsDecimal = "asDecimal",
+        /// `50 as a % of 100`.
+        Article = "article",
+        /// `6 est à 60 ce que 8 est à combien`.
+        IsTo = "isTo",
+        Like = "like",
     }
 }
 
@@ -102,6 +119,10 @@ pub struct Spellings {
 }
 
 impl CalcWord {
+    #[allow(
+        clippy::too_many_lines,
+        reason = "one line per concept: the table is the point"
+    )]
     pub const fn spellings(self) -> Spellings {
         use WordClass::{Setting, Syntax, Value};
         let (class, fr, en): (WordClass, &[&str], &[&str]) = match self {
@@ -189,6 +210,31 @@ impl CalcWord {
             Self::Ppi => (Setting, &["ppi"], &["ppi"]),
             Self::Em => (Setting, &["em"], &["em"]),
             Self::Rem => (Setting, &["rem"], &["rem"]),
+            Self::PercentOn => (Syntax, &["de plus sur", "de plus que"], &["on"]),
+            Self::PercentOff => (Syntax, &["de moins sur", "de moins que"], &["off"]),
+            Self::What => (Syntax, &["combien"], &["what"]),
+            Self::Is => (Syntax, &["font", "fait"], &["is"]),
+            Self::WhatPercent => (
+                Syntax,
+                &["c'est combien de %", "combien de %"],
+                &["is what %"],
+            ),
+            Self::WhatTimes => (
+                Syntax,
+                &["c'est combien de fois", "combien de fois"],
+                &["is what x", "is what times"],
+            ),
+            // Values, not syntax: `x` and `a` are names a sheet gives often.
+            Self::Fraction => (Value, &["fraction"], &["fraction"]),
+            Self::Multiple => (
+                Value,
+                &["multiple", "multiplicateur"],
+                &["multiplier", "multiple", "x"],
+            ),
+            Self::AsDecimal => (Value, &["décimal"], &["decimal", "dec"]),
+            Self::Article => (Value, &[], &["a"]),
+            Self::IsTo => (Syntax, &["est à"], &["is to"]),
+            Self::Like => (Syntax, &["ce que"], &["as"]),
         };
         Spellings { class, fr, en }
     }
@@ -224,6 +270,10 @@ pub const SHARED: &[(&str, &[CalcWord])] = &[
     ("to", &[CalcWord::Convert, CalcWord::To]),
     // A line ends `arrondi` and a function opens it.
     ("arrondi", &[CalcWord::Rounded, CalcWord::Round]),
+    // `5 km as m`, but `6 is to 60 as 8 is to what`.
+    ("as", &[CalcWord::Convert, CalcWord::Like]),
+    // `to 2 decimal` places, `to decimal` a percentage.
+    ("decimal", &[CalcWord::Decimals, CalcWord::AsDecimal]),
 ];
 
 /// `’` is the apostrophe a keyboard often types: `aujourd’hui` is `aujourd'hui`.
