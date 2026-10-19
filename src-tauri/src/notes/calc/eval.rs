@@ -1030,9 +1030,21 @@ impl<'a> Parser<'a> {
         }))
     }
 
+    /// A form spelled in several words, which no name of one word can hide: `mensualité de …` is
+    /// the loan even where `mensualité` names a value.
+    fn phrase_ahead(&self) -> bool {
+        FINANCE
+            .into_iter()
+            .chain([CalcWord::Largest, CalcWord::Smallest])
+            .chain(FUNCTIONS.map(|(word, _)| word))
+            .any(|word| self.sees(word).is_some_and(|taken| taken > 1))
+    }
+
     /// A name defined above first, then a value the sheet knows, then a word opening a form.
     fn word(&mut self, word: &str) -> Answer {
-        if let Some(value) = self.context.variables.get(word) {
+        if let Some(value) = self.context.variables.get(word)
+            && !self.phrase_ahead()
+        {
             self.used.push(word.to_string());
             self.take(TokenKind::Name);
             return Ok(value.clone());
@@ -1359,16 +1371,9 @@ impl Parser<'_> {
         let number = |value: &Value| plain(value);
         let result = match function {
             Function::Root => {
-                let degree = match degree {
-                    None => 2,
-                    Some(degree) => degree
-                        .to_u32()
-                        .filter(|_| degree.fract().is_zero())
-                        .ok_or(CalcError::Unsupported)
-                        .map_err(|error| self.blame(error))?,
-                };
+                let degree = degree.unwrap_or(Decimal::TWO);
                 number(&argument)
-                    .and_then(|x| maths::root(x, degree))
+                    .and_then(|x| maths::root_of(x, degree))
                     .map(Value::number)
             }
             Function::Cbrt => number(&argument)
@@ -1445,15 +1450,31 @@ impl Parser<'_> {
 /// The calendar's mean year, as the duration units have it.
 const YEAR_SECONDS: i64 = 31_556_952;
 
+/// The forms `finance` opens on, each in words of its own.
+const FINANCE: [CalcWord; 6] = [
+    CalcWord::InterestOn,
+    CalcWord::AnnualReturn,
+    CalcWord::PresentValue,
+    CalcWord::Repayment,
+    CalcWord::TotalRepayment,
+    CalcWord::TotalInterest,
+];
+
 impl Parser<'_> {
-    /// `après 3 ans`, `for 3 years`: the word taken only before a number, `for the` being prose.
+    /// `après 3 ans`, `for 3 years`, `après durée`: the word taken only before a number or a
+    /// name holding a duration, `for the` being prose.
     fn duration_after(&mut self, word: CalcWord) -> bool {
-        let number = self.sees(word).is_some_and(|taken| {
-            self.tokens
-                .get(self.at + taken)
-                .is_some_and(|token| matches!(token.tok, Tok::Number(_)))
+        let length = self.sees(word).is_some_and(|taken| {
+            match self.tokens.get(self.at + taken).map(|token| &token.tok) {
+                Some(Tok::Number(_)) => true,
+                Some(Tok::Word(name)) => matches!(
+                    self.context.variables.get(name),
+                    Some(Value::Quantity(quantity)) if quantity.dim == Dim::TIME
+                ),
+                _ => false,
+            }
         });
-        number && self.eat(word)
+        length && self.eat(word)
     }
 
     /// An amount read up to the words of a form: `sur 6 ans` is a loan's length there.
