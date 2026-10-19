@@ -11,6 +11,7 @@ pub mod history;
 pub mod model;
 pub mod query;
 pub mod response;
+pub mod scripts;
 pub mod search;
 pub mod send;
 pub mod settings;

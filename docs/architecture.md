@@ -2640,6 +2640,11 @@ is left out; a value naming another is filled again, eight times at most.
   its place, the environment or a set changes, the last one kept while the next is read.
 - A send first writes what an environment's table still holds (`HttpEnvironmentsStore.flush`):
   it resolves from what Rust has.
+- **`{{$guid}}`, `{{$randomUUID}}`, `{{$timestamp}}`, `{{$isoTimestamp}}` and `{{$randomInt}}` are
+  made at the send** (`variables::is_dynamic`), a new value each place one is written; no level
+  can set one, `$` being no letter of a name. The editor's chip says so in the purple of
+  `VariableScope::Dynamic`. The `$random…` names that invent people, places or words are not
+  among them: each would be a list to compile in.
 
 ### Generating code from a request
 
@@ -2681,6 +2686,62 @@ written again with `GOLDEN_WRITE=1`, then read before they are kept).
 - **« Enregistrer comme snippet »** opens the save-as-note dialog with the code, its language
   (`sh`, `ps1` — PowerShell joined the languages for it, chosen and never detected) and `http`
   proposed as its tag.
+
+### Request scripts, in a process of their own
+
+**A script is JavaScript run by QuickJS in a script host: the application started again**
+(#492, `http/scripts/`). The WebView cannot run it — its CSP forbids `eval`, and should — and the
+application's own process holds the library's key and every note: an engine bug there reaches
+them. So `ScriptProcess::start` (`process.rs`) launches `current_exe()` with
+`--devnotes-script-host`, which `main` reads **before Tauri** (no window, no single instance, no
+library), its environment cleared but for what loads the executable (`SystemRoot`,
+`LD_LIBRARY_PATH`). The host (`child.rs`) reads one JSON message a line on its standard input and
+answers on its standard output.
+
+- **One host for one request**, given a phase at a time (`Job`, `model.rs`): before the send,
+  then after it — the second reads what the first left in `pm.variables`. A phase has
+  `PHASE_TIME` (30 s), its sends included: past it QuickJS's interrupt handler stops the script
+  (an endless loop ends as `FailureKind::Timeout`, never as a frozen window), and 2 s later the
+  application kills the host, which is never given another phase. 128 MB of heap; QuickJS's
+  stack limit is 8 MB on a 16 MB thread — Ajv's schema compiler needs more than the default
+  megabyte.
+- **The engine** (`engine.rs`) compiles each script as the body of an async function under its
+  own name (`script-3`), so a stack names the script and the user's line, and an `await` reads at
+  its top level. It then drives the phase: the promises' jobs, then the prelude's timers
+  (`nextTimer`, `fireTimers`), until the phase's promise settles; a wait nothing can end — no job,
+  no timer — is said rather than waited for.
+- **The API is the prelude's** (`prelude.js`, JavaScript over four natives: `call`, `log`,
+  `random`, `module`): `req`, `res`, `env`, `test`, `expect`, `console`, the timers, and
+  Postman's `pm` (request, response, environment, globals, collection variables, variables,
+  iteration data, cookies and their jar, `sendRequest`, `execution`) with its older names
+  (`tests[…]`, `postman.*`, `responseBody`, `xml2Json`…). `pm.visualizer` draws nothing and says
+  so; `pm.require` and `pm.vault` have nothing behind them.
+- **`expect` is chai's, with Jest's words on the same object** (`toBe`, `toEqual`, `toContain`,
+  `toMatch`, `toHaveProperty`…, `.not` included) and Postman's response assertions
+  (`pm.response.to.have.status(200)`, `.be.ok` for a response only). A failure carries what was
+  expected and what came, written by the prelude (a text quoted, the rest as JSON).
+- **`env.set` and `env.secret` write the active environment, the globals with « Aucun »**; a
+  phase answers what it wrote (`VariableWrite`), the request as changed (`ScriptRequest`, Postman's
+  shape — `ScriptRequest::onto` writes it back, a method Rust does not send refused by name), its
+  tests and its failure.
+- **`require` is a list compiled in** (`libraries.rs`): lodash, moment, chai, crypto-js, uuid,
+  Ajv, tv4, xml2js, cheerio (its slim build), csv-parse, and Node's assert, buffer, events, path,
+  punycode, querystring, stream, string_decoder, timers, url, util as their browser polyfills —
+  about 1 MB, each evaluated on its first `require`. They are bundled by
+  `src-tauri/sandbox/build.mjs` from its own `package.json` (not the application's: none of it
+  reaches the WebView) into `sandbox/dist/`, which is committed with a manifest and the
+  libraries' licences; `libraries::tests` holds the table to the manifest. Node's modules are
+  left out of the other bundles, so one copy serves them all. Nothing else is found: `fs`,
+  `child_process`, `net` answer `MODULE_NOT_FOUND`.
+- ⚠️ **The network is this process's, not the script's** (`network.rs`): `pm.sendRequest` and
+  `pm.cookies.jar()` are calls the host makes and waits for. A send is composed by `compose`
+  with nothing inherited, sent by `send::alone` with the transport of the request carrying the
+  script, on the copy of the jar that request's send works on; what it did to the jar joins the
+  changes merged under the lock afterwards, and it is not written in the history. On a protected
+  environment nobody confirmed, a send that is not a `GET`, `HEAD` or `OPTIONS` is refused
+  (`httpScriptProtected`), and the script's `Error` says so.
+- ⚠️ **An imported script runs with the user's secrets and the network**: the import review
+  (#618) lists the scripts a collection carries before anything is written.
 
 ### Managing spaces from the switcher
 

@@ -65,6 +65,11 @@
     --variable-rgb: var(--pink-rgb);
   }
 
+  &[data-scope='dynamic'] {
+    --variable-hue: var(--purple);
+    --variable-rgb: var(--purple-rgb);
+  }
+
   &[data-scope='none'] {
     --variable-hue: var(--red);
     --variable-rgb: var(--red-rgb);

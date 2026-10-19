@@ -26,9 +26,15 @@
         @if (secret()) {
           <app-icon name="lock" />
         }
-        <code class="value" data-testid="http-used-variable-value">{{
-          secret() && !revealed() ? '••••••••' : found.value
-        }}</code>
+        @if (found.scope === 'dynamic') {
+          <span class="made" data-testid="http-used-variable-value">{{
+            'http.variables.used.made' | transloco
+          }}</span>
+        } @else {
+          <code class="value" data-testid="http-used-variable-value">{{
+            secret() && !revealed() ? '••••••••' : found.value
+          }}</code>
+        }
         @if (secret()) {
           <button
             type="button"

@@ -438,6 +438,15 @@ fn on_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
     }
 }
 
+/// Started with this first argument, the application is a script host and nothing else: no
+/// window, no library (`http::scripts::child`).
+pub use http::scripts::child::ARG as SCRIPT_HOST_ARG;
+
+/// The script host's `main`: its exit code.
+pub fn serve_scripts() -> i32 {
+    http::scripts::child::serve()
+}
+
 pub fn run() {
     let builder = ipc_builder();
 

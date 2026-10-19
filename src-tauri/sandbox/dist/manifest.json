@@ -1,0 +1,134 @@
+[
+  {
+    "name": "assert",
+    "file": "assert.js",
+    "bytes": 51420,
+    "sha256": "4b5a3a93cdf7bbaac484196782548ba2840813af99db02cf84667c503785c95c"
+  },
+  {
+    "name": "buffer",
+    "file": "buffer.js",
+    "bytes": 27560,
+    "sha256": "2f430afce33a66f9155d5eb0853c375179202aeeb7681db32c27e33b6ff27693"
+  },
+  {
+    "name": "events",
+    "file": "events.js",
+    "bytes": 6180,
+    "sha256": "eb908d6baf8f0dea18c4dbed7d9c4393981d631e2eeeaf4feb77885f44470838"
+  },
+  {
+    "name": "path",
+    "file": "path.js",
+    "bytes": 4302,
+    "sha256": "69e5b76fec68d8d8beb922dcca797b027208c50ff99fdffdf7349324761ed812"
+  },
+  {
+    "name": "punycode",
+    "file": "punycode.js",
+    "bytes": 2472,
+    "sha256": "ad8e77dc2d1fe04a62db01f21f4435054fa45df2a8a9fff42e3f6dc6030c5aab"
+  },
+  {
+    "name": "querystring",
+    "file": "querystring.js",
+    "bytes": 1633,
+    "sha256": "b57687b187433e82f1f4c22ff6c33dd6e9ecddc893baf153d5542b68c3902d3b"
+  },
+  {
+    "name": "stream",
+    "file": "stream.js",
+    "bytes": 37499,
+    "sha256": "4116c50a45862e4a8b5fb4dd47675ce6f32f3f131e6a87702cd94e9ea9768d97"
+  },
+  {
+    "name": "string_decoder",
+    "file": "string-decoder.js",
+    "bytes": 4495,
+    "sha256": "7cbdbe16d416ead0a978f1801ff87bb27dafaf690bbe2fc5028ad786358f872b"
+  },
+  {
+    "name": "timers",
+    "file": "timers.js",
+    "bytes": 2912,
+    "sha256": "9b9e808b4ea459a4ed06cdb9df61473f2c624ded5afa9dfeea2db8c331161e56"
+  },
+  {
+    "name": "url",
+    "file": "url.js",
+    "bytes": 53071,
+    "sha256": "8fade620894d52f28393b2afe9bbf24e7b0dab378e6b31c6c9093c56e4269bba"
+  },
+  {
+    "name": "util",
+    "file": "util.js",
+    "bytes": 33362,
+    "sha256": "785778530d60cbb8a851c8739e81ea682f7f99380c383f855aafb808f22f7f99"
+  },
+  {
+    "name": "ajv",
+    "file": "ajv.js",
+    "bytes": 123105,
+    "sha256": "14451869b89e2a331c20066a20c31cb3a949978612803bfec57a610b098c5bbd"
+  },
+  {
+    "name": "chai",
+    "file": "chai.js",
+    "bytes": 68321,
+    "sha256": "98b8f47ac16835ff22575bde07228701f2fb61e12486f12b1a27413a6872b696"
+  },
+  {
+    "name": "cheerio",
+    "file": "cheerio.js",
+    "bytes": 200101,
+    "sha256": "8538ea552ee4c4132e8539bc43c7fe132ca25de1faf857fd29dff3e04dffa2e8"
+  },
+  {
+    "name": "crypto-js",
+    "file": "crypto-js.js",
+    "bytes": 70438,
+    "sha256": "b758bd4a6e6755470dcdb10609b1a42b8f4302ee93246a7821b17ecdc768ffbb"
+  },
+  {
+    "name": "csv-parse",
+    "file": "csv-parse.js",
+    "bytes": 31879,
+    "sha256": "d8b5498997b3d608fe5f3a0e1ba89f5a1cb68f80ed214c7418b7c9c91c4f2e48"
+  },
+  {
+    "name": "csv-parse/sync",
+    "file": "csv-parse-sync.js",
+    "bytes": 30717,
+    "sha256": "b6a8e21e259e5186b40281a5b97d68891bd94f98c12b91b30570ec72d9fbc578"
+  },
+  {
+    "name": "lodash",
+    "file": "lodash.js",
+    "bytes": 72895,
+    "sha256": "8b887efa3ea61476e7586b422a0c1c65562f7ade2d6ab116f2350a9abef21dc8"
+  },
+  {
+    "name": "moment",
+    "file": "moment.js",
+    "bytes": 62983,
+    "sha256": "7d301f9ccca36bde9a9e0999dfe123adcd4518e42831c74e45a004af07898a7d"
+  },
+  {
+    "name": "tv4",
+    "file": "tv4.js",
+    "bytes": 28881,
+    "sha256": "6a2d99c5de58c4231b6bfd8577c9fb67f14509240ef0d58de4d43bede266e12a"
+  },
+  {
+    "name": "uuid",
+    "file": "uuid.js",
+    "bytes": 14670,
+    "sha256": "538421b32ea4286f197c11f28b58af56fbe0c5bd1711ac8624c063897a60c073"
+  },
+  {
+    "name": "xml2js",
+    "file": "xml2js.js",
+    "bytes": 100705,
+    "sha256": "b960a903bf97684b6d701889c992325e674b11cf03f891eacc0ef9f74795af19"
+  }
+]

@@ -3302,7 +3302,9 @@ export type VariableFault =
 export type VariableKind = "text" | "number" | "secret";
 
 /**  Where a variable resolves from, the nearest first. */
-export type VariableScope = "request" | "folder" | "collection" | "environment" | "globals";
+export type VariableScope = "request" | "folder" | "collection" | "environment" | "globals" | 
+/**  `{{$guid}}` and its kind: a value made at the send, which no level holds. */
+"dynamic";
 
 export type VariablesRequest = {
 	kind: RequestKind,

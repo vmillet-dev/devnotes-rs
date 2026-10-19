@@ -329,6 +329,8 @@ jobs:
             -Dsonar.sources=src-tauri
             -Dsonar.tests=src-tauri
             -Dsonar.test.inclusions=src-tauri/tests/**,src-tauri/benches/**
+            -Dsonar.exclusions=src-tauri/sandbox/dist/**,src-tauri/sandbox/node_modules/**
+            -Dsonar.coverage.exclusions=src-tauri/src/**/*.js,src-tauri/sandbox/*.mjs
             -Dsonar.rust.cargo.manifestPaths=src-tauri/Cargo.toml
             -Dsonar.rust.lcov.reportPaths=coverage/lcov.info
             -Dsonar.qualitygate.wait=true

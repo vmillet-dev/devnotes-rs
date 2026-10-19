@@ -47,6 +47,18 @@ describe('VariableChipComponent', () => {
     expect(tip).toContain('globales');
   });
 
+  it('says a dynamic variable is made at each send, with no value to show', async () => {
+    await render({
+      name: '$guid',
+      resolved: { name: '$guid', value: '', kind: 'text', scope: 'dynamic', from: null, shadows: [] },
+    });
+    expect(el('[data-testid="http-used-variable"]').dataset['scope']).toBe('dynamic');
+    expect(el('[data-testid="http-used-variable-value"]').textContent?.trim()).toBe(
+      'Une valeur nouvelle à chaque envoi',
+    );
+    expect(el('[data-testid="http-used-variable-reveal"]')).toBeNull();
+  });
+
   it('masks a secret until asked, and masks it again once left', async () => {
     const value = () => el('[data-testid="http-used-variable-value"]').textContent?.trim();
     expect(value()).toBe('••••••••');
