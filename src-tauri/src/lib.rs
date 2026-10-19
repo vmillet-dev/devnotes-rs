@@ -288,6 +288,7 @@ fn ipc_builder() -> Builder<tauri::Wry> {
         .constant("DEFAULT_SHORTCUTS", desktop::ShortcutBindings::defaults())
         .constant("FIELD_NAME_PATTERN", notes::placeholder::FIELD_NAME_PATTERN)
         .constant("CALC_UNITS", notes::calc::units::catalogue())
+        .constant("CALC_WORDS", notes::calc::words::catalogue())
         .constant("MINIMUM_PASSPHRASE_LENGTH", vault::MINIMUM_LENGTH)
         .constant(
             "ATTACHMENT_MAX_MEGABYTES",

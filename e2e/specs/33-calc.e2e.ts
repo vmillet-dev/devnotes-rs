@@ -7,8 +7,8 @@ import { clipboardText, eventually, readEach, reloadCanvas, testid } from '../su
 import { bridge } from '../support/bridge.js';
 
 /**
- * A variable, a total of its block, a conversion, a percentage and a refused currency: what
- * a sheet is for, in the words of both languages. The results are read by their figures and
+ * A variable, a total of its block, a conversion, a percentage, a refused currency and a word
+ * of the grammar refused as a name: what a sheet is for, in the words of both languages. The results are read by their figures and
  * classes alone — the language on screen writes the decimal mark and the units.
  */
 const SHEET = [
@@ -20,6 +20,7 @@ const SHEET = [
   '3 h 20 min en min',
   '20 % of 340',
   '100 € en $',
+  'en = 5',
 ].join('\n');
 
 const digits = (text: string): string => text.replace(/\D/g, '');
@@ -64,7 +65,7 @@ describe('A Calcul note', () => {
 
     await eventually(
       async () => (await readEach(testid('calc-result'), 'text')).map(digits),
-      (results) => results.join(' ') === '10052 499 10551 126613 200 68 ',
+      (results) => results.join(' ') === '10052 499 10551 126613 200 68  ',
       'one result a line, the heading without one',
     );
     const failed = await readEach(testid('calc-result'), '@class');
@@ -76,8 +77,13 @@ describe('A Calcul note', () => {
       false,
       false,
       true,
+      true,
     ]);
-    expect(digits(await $(`${testid('calc-footer')} .counts`).getText())).toBe('83');
+    expect((await readEach(testid('calc-result'), '@data-error')).slice(-2)).toEqual([
+      'currency',
+      'reserved',
+    ]);
+    expect(digits(await $(`${testid('calc-footer')} .counts`).getText())).toBe('93');
   });
 
   it('adds up the result picked in its footer', async () => {

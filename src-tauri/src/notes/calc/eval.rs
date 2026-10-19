@@ -9,6 +9,7 @@ use rust_decimal::prelude::ToPrimitive;
 
 use super::lexer::{Tok, Token};
 use super::units::{Dim, Dimension, UnitDef, UnitId, base_unit, from_celsius, to_celsius};
+use super::words::{self, CalcWord};
 use super::{CalcError, CalcUnit, TokenKind};
 
 /// How a quantity is shown: in one unit, one over another, or in a unit and the next one
@@ -85,28 +86,6 @@ impl Value {
             spans: false,
         })
     }
-}
-
-/// The words a sheet reads, in French and in English alike.
-const CONVERT: &[&str] = &["en", "in", "to", "as", "vers"];
-const AT: &[&str] = &["à", "at"];
-const OF: &[&str] = &["de", "of", "du", "des"];
-const FROM: &[&str] = &["de", "from"];
-const OVER: &[&str] = &["sur", "over"];
-const EXCLUDING: &[&str] = &["hors", "ex", "excl", "excluding", "without"];
-const TOTAL: &[&str] = &["total", "somme", "sum"];
-const MEAN: &[&str] = &["moyenne", "average", "avg", "mean"];
-const TODAY: &[&str] = &["aujourd'hui", "aujourd’hui", "today"];
-const TOMORROW: &[&str] = &["demain", "tomorrow"];
-const YESTERDAY: &[&str] = &["hier", "yesterday"];
-
-pub(super) fn is_keyword(word: &str) -> bool {
-    let word = word.to_lowercase();
-    [
-        CONVERT, AT, OF, FROM, OVER, EXCLUDING, TOTAL, MEAN, TODAY, TOMORROW, YESTERDAY,
-    ]
-    .iter()
-    .any(|words| words.contains(&word.as_str()))
 }
 
 /// What the lines above hand to this one.
@@ -196,19 +175,18 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn is_word(&self, offset: usize, words: &[&str]) -> bool {
-        matches!(
-            self.tokens.get(self.at + offset).map(|token| &token.tok),
-            Some(Tok::Word(word)) if words.contains(&word.to_lowercase().as_str())
-        )
+    fn sees(&self, word: CalcWord) -> Option<usize> {
+        words::spelled(word, self.tokens, self.at)
     }
 
-    fn eat_word(&mut self, words: &[&str]) -> bool {
-        let found = self.is_word(0, words);
-        if found {
+    fn eat(&mut self, word: CalcWord) -> bool {
+        let Some(count) = self.sees(word) else {
+            return false;
+        };
+        for _ in 0..count {
             self.take(TokenKind::Keyword);
         }
-        found
+        true
     }
 
     fn text_at(&self, index: usize) -> Option<String> {
@@ -262,11 +240,10 @@ impl<'a> Parser<'a> {
     fn conversion(&mut self) -> Answer {
         let mut value = self.additive()?;
         loop {
-            if self.eat_word(CONVERT) {
+            if self.eat(CalcWord::Convert) {
                 self.converting = Some(value.dimension());
                 value = self.convert(value)?;
-            } else if self.is_word(0, AT) {
-                self.take(TokenKind::Keyword);
+            } else if self.eat(CalcWord::At) {
                 self.converting = Some(value.dimension());
                 // A unit alone is where to convert to; a quantity, the rate to divide by.
                 if self.peek_symbol(&['%']).is_some() || self.unit_at(self.at).is_some() {
@@ -332,13 +309,13 @@ impl<'a> Parser<'a> {
                     divide(left, right)
                 }
                 .map_err(|error| self.blame(error))?;
-            } else if self.eat_word(EXCLUDING) {
+            } else if self.eat(CalcWord::Excluding) {
                 let right = self.power()?;
                 left = excluding(left, right).map_err(|error| self.blame(error))?;
-            } else if matches!(left, Value::Percent { .. }) && self.eat_word(OF) {
+            } else if matches!(left, Value::Percent { .. }) && self.eat(CalcWord::Of) {
                 let right = self.power()?;
                 left = multiply(left, right).map_err(|error| self.blame(error))?;
-            } else if self.eat_word(OVER) {
+            } else if self.eat(CalcWord::Over) {
                 let right = self.power()?;
                 left = ratio(left, right).map_err(|error| self.blame(error))?;
             } else {
@@ -436,8 +413,13 @@ impl<'a> Parser<'a> {
         }))
     }
 
+    /// A name defined above first, then a value the sheet knows, then a word opening a form.
     fn word(&mut self, word: &str) -> Answer {
-        let folded = word.to_lowercase();
+        if let Some(value) = self.context.variables.get(word) {
+            self.used.push(word.to_string());
+            self.take(TokenKind::Name);
+            return Ok(value.clone());
+        }
         let shifted = |days: i64, today: NaiveDate| {
             let shift = Days::new(days.unsigned_abs());
             if days < 0 {
@@ -446,36 +428,34 @@ impl<'a> Parser<'a> {
                 today.checked_add_days(shift)
             }
         };
-        for (words, days) in [(TODAY, 0), (TOMORROW, 1), (YESTERDAY, -1)] {
-            if words.contains(&folded.as_str()) {
-                self.take(TokenKind::Keyword);
+        for (day, days) in [
+            (CalcWord::Today, 0),
+            (CalcWord::Tomorrow, 1),
+            (CalcWord::Yesterday, -1),
+        ] {
+            if self.eat(day) {
                 return shifted(days, self.context.today)
                     .map(Value::Date)
                     .ok_or_else(overflow);
             }
         }
-        if TOTAL.contains(&folded.as_str()) || MEAN.contains(&folded.as_str()) {
-            self.take(TokenKind::Keyword);
-            self.aggregate = true;
-            return aggregate(self.context.block, MEAN.contains(&folded.as_str()));
+        for (block, mean) in [(CalcWord::Total, false), (CalcWord::Mean, true)] {
+            if self.eat(block) {
+                self.aggregate = true;
+                return aggregate(self.context.block, mean);
+            }
         }
-        if FROM.contains(&folded.as_str()) {
-            self.take(TokenKind::Keyword);
+        if self.eat(CalcWord::From) {
             let from = self.additive()?;
-            if !self.eat_word(&["à", "to"]) {
+            if !self.eat(CalcWord::To) {
                 return Err(self.unreadable());
             }
             let to = self.additive()?;
             return change(from, to).map_err(|error| self.blame(error));
         }
-        if let Some(value) = self.context.variables.get(word) {
-            self.used.push(word.to_string());
-            self.take(TokenKind::Name);
-            return Ok(value.clone());
-        }
         let at = self.tokens[self.at].start;
         self.kinds[self.at] = Some(TokenKind::Error);
-        if is_keyword(word) {
+        if words::reserved(word) {
             return Err(CalcError::Unreadable { at });
         }
         Err(CalcError::UnknownName {

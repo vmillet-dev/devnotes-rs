@@ -439,6 +439,8 @@ export const AUTOMATIC_BACKUPS_KEY = "devnotes.automaticBackups" as const;
 
 export const CALC_UNITS = [{"id":"millimetre","dimension":"length"},{"id":"centimetre","dimension":"length"},{"id":"metre","dimension":"length"},{"id":"kilometre","dimension":"length"},{"id":"inch","dimension":"length"},{"id":"foot","dimension":"length"},{"id":"yard","dimension":"length"},{"id":"mile","dimension":"length"},{"id":"milligram","dimension":"mass"},{"id":"gram","dimension":"mass"},{"id":"kilogram","dimension":"mass"},{"id":"tonne","dimension":"mass"},{"id":"pound","dimension":"mass"},{"id":"ounce","dimension":"mass"},{"id":"millisecond","dimension":"time"},{"id":"second","dimension":"time"},{"id":"minute","dimension":"time"},{"id":"hour","dimension":"time"},{"id":"day","dimension":"time"},{"id":"week","dimension":"time"},{"id":"month","dimension":"time"},{"id":"year","dimension":"time"},{"id":"bit","dimension":"data"},{"id":"kilobit","dimension":"data"},{"id":"megabit","dimension":"data"},{"id":"gigabit","dimension":"data"},{"id":"terabit","dimension":"data"},{"id":"byte","dimension":"data"},{"id":"kilobyte","dimension":"data"},{"id":"megabyte","dimension":"data"},{"id":"gigabyte","dimension":"data"},{"id":"terabyte","dimension":"data"},{"id":"petabyte","dimension":"data"},{"id":"kibibyte","dimension":"data"},{"id":"mebibyte","dimension":"data"},{"id":"gibibyte","dimension":"data"},{"id":"tebibyte","dimension":"data"},{"id":"pebibyte","dimension":"data"},{"id":"celsius","dimension":"temperature"},{"id":"fahrenheit","dimension":"temperature"},{"id":"kelvin","dimension":"temperature"},{"id":"euro","dimension":"euro"},{"id":"dollar","dimension":"dollar"}] as const;
 
+export const CALC_WORDS = [{"word":"convert","class":"syntax","fr":["en","vers"],"en":["in","to","as"]},{"word":"at","class":"syntax","fr":["à"],"en":["at"]},{"word":"of","class":"syntax","fr":["de","du","des"],"en":["of"]},{"word":"from","class":"syntax","fr":["de"],"en":["from"]},{"word":"to","class":"syntax","fr":["à"],"en":["to"]},{"word":"over","class":"syntax","fr":["sur"],"en":["over"]},{"word":"excluding","class":"syntax","fr":["hors","ex"],"en":["excluding","excl","ex","without"]},{"word":"total","class":"value","fr":["total","somme"],"en":["total","sum"]},{"word":"mean","class":"value","fr":["moyenne"],"en":["average","avg","mean"]},{"word":"today","class":"value","fr":["aujourd'hui"],"en":["today"]},{"word":"tomorrow","class":"value","fr":["demain"],"en":["tomorrow"]},{"word":"yesterday","class":"value","fr":["hier"],"en":["yesterday"]}] as const;
+
 export const DEFAULT_SHORTCUTS = {"capture":"Ctrl+Alt+V","newNote":"Ctrl+Alt+N","palette":"Ctrl+Alt+P"} as const;
 
 export const DEFAULT_TRANSPORT = {"timeoutMs":30000,"followRedirects":true,"maxRedirects":10,"verifyTls":true,"useCookies":true} as const;
@@ -634,6 +636,8 @@ export type CalcCardLine = {
 export type CalcError = 
 /**  In UTF-16 units from the start of the line. */
 { kind: "unreadable"; at: number } | { kind: "unknownName"; name: string } | 
+/**  `en = 5`: a word of the grammar is no name. */
+{ kind: "reserved"; word: string } | 
 /**  `distance + 3 Go`: a data size is no length. */
 { kind: "mismatch"; expected: Dimension; found: Dimension; unit: CalcUnit | null } | 
 /**  ⚠️ No rate is fetched: the sheet works offline, and euros stay euros. */

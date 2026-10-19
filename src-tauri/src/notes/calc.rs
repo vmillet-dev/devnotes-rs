@@ -5,6 +5,7 @@
 mod eval;
 mod lexer;
 pub mod units;
+pub mod words;
 
 use std::collections::HashMap;
 
@@ -13,7 +14,7 @@ use rust_decimal::Decimal;
 use serde::Serialize;
 use specta::Type;
 
-use eval::{Context, Parser, Quantity, Shown, Value, is_keyword};
+use eval::{Context, Parser, Quantity, Shown, Value};
 use lexer::{Tok, Token};
 use units::{Dim, Dimension, UnitId};
 
@@ -72,6 +73,10 @@ pub enum CalcError {
     },
     UnknownName {
         name: String,
+    },
+    /// `en = 5`: a word of the grammar is no name.
+    Reserved {
+        word: String,
     },
     /// `distance + 3 Go`: a data size is no length.
     Mismatch {
@@ -418,6 +423,8 @@ impl Walk {
             [
                 Token {
                     tok: Tok::Word(word),
+                    start,
+                    end,
                     ..
                 },
                 Token {
@@ -425,7 +432,18 @@ impl Walk {
                     ..
                 },
                 ..,
-            ] if !is_keyword(word) => (Some(word.clone()), &tokens[2..]),
+            ] => {
+                if words::reserved(word) {
+                    let span = CalcSpan {
+                        start: *start,
+                        end: *end,
+                        kind: TokenKind::Error,
+                    };
+                    let error = CalcError::Reserved { word: word.clone() };
+                    return row(CalcLine::Error { error }, vec![span]);
+                }
+                (Some(word.clone()), &tokens[2..])
+            }
             _ => (None, tokens),
         };
 
@@ -864,6 +882,116 @@ mod tests {
         let card = card_lines(sheet, today());
         let expressions: Vec<_> = card.iter().map(|line| line.expression.as_str()).collect();
         assert_eq!(expressions, ["b = 2", "c = 3", "d = 4", "e = 5"]);
+    }
+
+    #[test]
+    fn a_syntax_word_is_no_name_and_says_so_on_its_line_alone() {
+        let found = lines("a = 2\nen = 5\nDe = 1\na × 3");
+        assert_eq!(
+            found[1],
+            CalcLine::Error {
+                error: CalcError::Reserved { word: "en".into() }
+            }
+        );
+        assert_eq!(
+            found[2],
+            CalcLine::Error {
+                error: CalcError::Reserved { word: "De".into() }
+            }
+        );
+        assert!(matches!(&found[3], CalcLine::Value { value, .. } if *value == number("6", None)));
+        let row = &evaluate("en = 5", today()).rows[0];
+        assert_eq!(
+            row.spans,
+            [CalcSpan {
+                start: 0,
+                end: 2,
+                kind: TokenKind::Error
+            }]
+        );
+    }
+
+    #[test]
+    fn a_name_hides_a_value_word_from_its_line_down() {
+        let found =
+            lines("a = 2\nb = 3\ntotal\ntotal = 10\ntotal + 1\naujourd'hui = 4\naujourd'hui × 2");
+        assert!(
+            matches!(&found[2], CalcLine::Value { value, aggregate: true, .. } if *value == number("5", None))
+        );
+        assert!(matches!(
+            &found[3],
+            CalcLine::Value { name: Some(name), aggregate: false, .. } if name == "total"
+        ));
+        assert!(
+            matches!(&found[4], CalcLine::Value { value, aggregate: false, .. } if *value == number("11", None))
+        );
+        assert!(matches!(&found[6], CalcLine::Value { value, .. } if *value == number("8", None)));
+
+        let found = lines("a = 2\ntotal = total\ntotal");
+        assert!(matches!(
+            &found[1],
+            CalcLine::Value {
+                aggregate: true,
+                ..
+            }
+        ));
+        assert!(
+            matches!(&found[2], CalcLine::Value { value, aggregate: false, .. } if *value == number("2", None))
+        );
+    }
+
+    #[test]
+    fn each_concept_reads_in_french_and_in_english() {
+        let date = |days: u64| CalcValue::Date {
+            date: today().checked_add_days(chrono::Days::new(days)).unwrap(),
+        };
+        let pairs = [
+            ("5 km en m", "5 km in m"),
+            ("5 km vers m", "5 km as m"),
+            ("1,44 To à 100 Mo/s", "1,44 To at 100 Mo/s"),
+            ("20 % de 340", "20 % of 340"),
+            ("de 80 à 100", "from 80 to 100"),
+            ("30 sur 120 en %", "30 over 120 as %"),
+            ("300 hors 20 %", "300 excluding 20 %"),
+            ("300 ex 20 %", "300 excl 20 %"),
+            ("a = 1\nb = 3\nsomme", "a = 1\nb = 3\nsum"),
+            ("a = 1\nb = 3\nmoyenne", "a = 1\nb = 3\navg"),
+            ("demain", "tomorrow"),
+        ];
+        for (french, english) in pairs {
+            assert_eq!(value(french), value(english), "{french} / {english}");
+        }
+        assert_eq!(value("demain"), date(1));
+        assert_eq!(value("Aujourd'hui"), date(0));
+    }
+
+    #[test]
+    fn a_sheet_written_before_the_table_reads_the_same() {
+        let sheet = "# Budget\nhébergement = 100,521 €\ndomaines = 4,99 €\nmensuel = total\nmensuel × 12\n3 h 20 min en min\n20 % of 340\n100 € en $";
+        let found = lines(sheet);
+        assert_eq!(found.len(), 8);
+        assert_eq!(
+            found[0],
+            CalcLine::Heading {
+                title: "Budget".into()
+            }
+        );
+        assert!(
+            matches!(&found[3], CalcLine::Value { value, aggregate: true, .. } if *value == number("105.511", Some(UnitId::Euro)))
+        );
+        assert!(
+            matches!(&found[4], CalcLine::Value { value, .. } if *value == number("1266.132", Some(UnitId::Euro)))
+        );
+        assert!(
+            matches!(&found[5], CalcLine::Value { value, .. } if *value == number("200", Some(UnitId::Minute)))
+        );
+        assert!(matches!(&found[6], CalcLine::Value { value, .. } if *value == number("68", None)));
+        assert_eq!(
+            found[7],
+            CalcLine::Error {
+                error: CalcError::Currency
+            }
+        );
     }
 
     #[test]

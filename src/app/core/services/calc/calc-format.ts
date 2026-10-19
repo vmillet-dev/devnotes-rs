@@ -139,6 +139,9 @@ export class CalcFormatter {
       case 'unknownName':
         text = this.translate('calc.errors.unknownName', { name: error.name });
         break;
+      case 'reserved':
+        text = this.translate('calc.errors.reserved', { word: error.word });
+        break;
       case 'mismatch':
         text =
           error.unit === null

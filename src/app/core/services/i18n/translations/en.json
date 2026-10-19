@@ -3779,6 +3779,7 @@
     "errors": {
       "unreadable": "this line cannot be read",
       "unknownName": "“{{name}}” is not defined anywhere above",
+      "reserved": "“{{word}}” is a reserved word, not a name",
       "mismatchUnit": "{{unit}} is not {{expected}}",
       "mismatch": "{{found}} does not go with {{expected}}",
       "currency": "offline: no exchange rates",
