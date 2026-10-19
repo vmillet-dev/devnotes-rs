@@ -449,7 +449,9 @@ fn marked(key: &str, value: &str) -> devnotes_lib::http::model::KeyValue {
 /// A collection and a folder with settings of their own, then a request for each kind of
 /// auth and both places a key goes. Answers the last request.
 fn marked_tree(library: &mut Library) -> String {
-    use devnotes_lib::http::model::{ContainerSettings, KeyPlace, RequestAuth, RequestBody};
+    use devnotes_lib::http::model::{
+        ContainerSettings, KeyPlace, RequestAuth, RequestBody, RequestScripts,
+    };
 
     let api = collection(library, "zq-collection");
     let payments = folder(library, &api, None, "zq-folder");
@@ -472,6 +474,10 @@ fn marked_tree(library: &mut Library) -> String {
         let own = ContainerSettings {
             auth,
             headers: vec![marked("X-Zq-Container", "zq-container-header")],
+            scripts: RequestScripts {
+                before: "zq-container-before()".to_string(),
+                after: "zq-container-after()".to_string(),
+            },
             ..ContainerSettings::default()
         };
         store::save_settings(library, &container, &own).unwrap();
@@ -514,6 +520,10 @@ fn marked_tree(library: &mut Library) -> String {
                 },
                 auth,
                 description: "zq-description".to_string(),
+                scripts: RequestScripts {
+                    before: "zq-request-before()".to_string(),
+                    after: "zq-request-after()".to_string(),
+                },
                 ..RequestDocument::default()
             },
         };
@@ -528,6 +538,7 @@ fn marked_tree(library: &mut Library) -> String {
 /// strings it lets through — a parameter typed by hand, a body, what was answered.
 fn marked_send(library: &mut Library, request_id: &str) {
     use devnotes_lib::http::history::{self, Sent};
+    use devnotes_lib::http::scripts::model::{LogEntry, ScriptStop, ScriptsAnswer};
     use devnotes_lib::http::send::{Exchange, SentBody, SentResponse};
     use devnotes_lib::notes::language::Language;
 
@@ -567,6 +578,19 @@ fn marked_send(library: &mut Library, request_id: &str) {
             cookies: Vec::new(),
             exchange,
             graphql: None,
+            // The logs never reach the disk; the failure is sealed with the rest.
+            scripts: ScriptsAnswer {
+                failure: Some(ScriptStop {
+                    name: Some("zq-script-holder".to_string()),
+                    message: "zq-script-message".to_string(),
+                    ..ScriptStop::default()
+                }),
+                logs: vec![LogEntry {
+                    text: "zq-log-text".to_string(),
+                    ..LogEntry::default()
+                }],
+                wrote: true,
+            },
         }),
     };
     let (summary, record) = history::record_of(&sent);

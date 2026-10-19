@@ -49,6 +49,8 @@ pub struct Script {
     pub kind: ScriptKind,
     /// The request, folder or collection that holds it.
     pub name: String,
+    /// The folder's or the collection's id; `None` for the request's own.
+    pub owner: Option<String>,
     pub source: String,
 }
 
@@ -447,6 +449,8 @@ pub struct Outcome {
     pub failure: Option<ScriptFailure>,
     pub skip: bool,
     pub next: NextRequest,
+    /// `pm.variables` as the phase left them: the nearest level the request resolves from.
+    pub locals: BTreeMap<String, String>,
 }
 
 impl Outcome {
@@ -476,6 +480,68 @@ pub struct LogEntry {
     pub level: LogLevel,
     pub text: String,
     pub script: Option<String>,
+}
+
+/// A script that stopped, as the front names it: what failed, where, and whose script it was.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase", default)]
+pub struct ScriptStop {
+    pub kind: FailureKind,
+    pub level: Option<ScriptLevel>,
+    pub script: Option<ScriptKind>,
+    /// The request, folder or collection that holds it.
+    pub name: Option<String>,
+    /// The folder's or the collection's id, for « Ouvrir le script ».
+    pub owner: Option<String>,
+    pub line: Option<u32>,
+    pub message: String,
+}
+
+impl ScriptStop {
+    /// `scripts` the phase's, which the failure names by id.
+    #[must_use]
+    pub fn of(failure: &ScriptFailure, scripts: &[Script]) -> Self {
+        let script = failure
+            .script
+            .as_deref()
+            .and_then(|id| scripts.iter().find(|script| script.id == id))
+            .or_else(|| (scripts.len() == 1).then(|| &scripts[0]));
+        Self {
+            kind: failure.kind,
+            level: script.map(|script| script.level),
+            script: script.map(|script| script.kind),
+            name: script.map(|script| script.name.clone()),
+            owner: script.and_then(|script| script.owner.clone()),
+            line: failure.line,
+            message: failure.message.clone(),
+        }
+    }
+}
+
+/// Why the scripts kept a request from leaving.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum ScriptError {
+    #[error("A script before the send stopped: {}", .0.message)]
+    Stopped(ScriptStop),
+    #[error("A script skipped the request")]
+    Skipped,
+    #[error("A script set the method {0}, which no request is sent with")]
+    Method(String),
+    #[error("The scripts made the request a {method} on {environment}, which is protected")]
+    Protected {
+        method: HttpMethod,
+        environment: String,
+    },
+}
+
+/// What the scripts after the answer left beside it. The logs cross once and are never kept.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase", default)]
+pub struct ScriptsAnswer {
+    pub failure: Option<ScriptStop>,
+    pub logs: Vec<LogEntry>,
+    /// A script wrote a variable: the environments and the settings are read again.
+    pub wrote: bool,
 }
 
 #[cfg(test)]

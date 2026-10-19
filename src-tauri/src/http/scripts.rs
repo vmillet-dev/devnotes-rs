@@ -3,12 +3,14 @@
 //! its deadline. A script reaches the network only by asking this process, which sends it with
 //! Rust's client.
 
+pub mod around;
 pub mod child;
 pub mod engine;
 pub(crate) mod libraries;
 pub mod model;
 pub mod network;
 pub mod process;
+pub mod session;
 
 /// How long one phase of one request may take, its `pm.sendRequest`s included.
 pub const PHASE_TIME: std::time::Duration = std::time::Duration::from_secs(30);

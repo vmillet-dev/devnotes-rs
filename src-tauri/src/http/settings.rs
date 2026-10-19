@@ -4,7 +4,9 @@ use super::transport::{self, Limits, SetBy, Transport, TransportSettings};
 use serde::Serialize;
 use specta::Type;
 
-use super::model::{ContainerSettings, HttpItemKind, KeyValue, RequestAuth, RequestBody};
+use super::model::{
+    ContainerSettings, HttpItemKind, KeyValue, RequestAuth, RequestBody, RequestScripts,
+};
 use super::variables::{VariableLayer, VariableScope};
 
 /// Where an inherited value was set: what the request says it comes from.
@@ -21,6 +23,14 @@ pub struct HttpOrigin {
 pub struct InheritedHeader {
     pub header: KeyValue,
     pub from: HttpOrigin,
+}
+
+/// A folder's or the collection's scripts, and whose they are.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct InheritedScripts {
+    pub from: HttpOrigin,
+    pub scripts: RequestScripts,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
@@ -44,6 +54,9 @@ pub struct Inherited {
     /// them resolved, never as layers.
     #[serde(skip)]
     pub variables: Vec<VariableLayer>,
+    /// The collection's, then each folder's down to the request's: the order they run in
+    /// before the send, the other way after it.
+    pub scripts: Vec<InheritedScripts>,
 }
 
 /// `levels` from the collection down to the request's own folder: the nearest auth set wins.
@@ -107,6 +120,13 @@ pub fn inherit(levels: &[(HttpOrigin, ContainerSettings)]) -> Inherited {
                 },
                 from: origin.name.clone(),
                 variables: settings.variables.clone(),
+            })
+            .collect(),
+        scripts: levels
+            .iter()
+            .map(|(origin, settings)| InheritedScripts {
+                from: origin.clone(),
+                scripts: settings.scripts.clone(),
             })
             .collect(),
     }

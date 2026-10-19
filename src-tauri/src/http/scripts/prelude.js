@@ -1577,6 +1577,7 @@
       tests: state.tests,
       failure,
       skip: state.skip,
+      locals: Object.fromEntries(state.local),
       next: state.next === undefined ? { set: false, name: null } : { set: true, name: state.next },
     });
   }

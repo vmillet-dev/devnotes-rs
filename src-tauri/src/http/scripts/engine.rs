@@ -357,6 +357,7 @@ mod tests {
             level: ScriptLevel::Request,
             kind,
             name: "Payer".to_string(),
+            owner: None,
             source: source.to_string(),
         }
     }
