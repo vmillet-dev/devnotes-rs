@@ -1545,10 +1545,17 @@ which knows no time zone, gives its cards the UTC day.
   rate is a duration. A temperature is converted by formula, never by factor. Quantities of one
   kind written side by side add up: `3 h 20 min`. Lowercase `to` and `mo` are left to English and
   to the month.
-- **Words** are read in French and in English whatever the language on screen — `en`/`in`/`to`,
-  `de`/`of`, `sur`, `hors`, `de … à`/`from … to`, `total`/`somme`, `moyenne`, `aujourd'hui`/`today`
-  — so a sheet keeps its meaning for everyone. A word is a unit only after a number or a
-  conversion, a name anywhere else.
+- **Words** are one table (`calc/words.rs`): each concept a `CalcWord` with its spellings in
+  French and in English, read in both whatever the language on screen, so a sheet keeps its
+  meaning for everyone. The evaluator matches concepts, a spelling of several words included; a
+  spelling names one concept, except the ones `SHARED` declares, where the position decides
+  (`de` is `Of` after a percentage, `From` opening `de … à`). A **syntax** word (`en`, `de`,
+  `sur`, `hors`…) is reserved: `en = 5` is an error on its line. A **value** (`total`,
+  `moyenne`, `aujourd'hui`…) is a name of the sheet: one defined above hides it from its line
+  down, so a word added later never breaks a sheet that already uses it as a name.
+- **A bare word** is read, where a value is expected, as a name defined above, then a value of
+  the table, then a syntax word opening a form (`de … à`), else an unknown name. After a number
+  or a conversion word it is first a unit: `5 m` is metres even where `m` is a name.
 - **The percentages tool's five questions** are lines: `20 % de 340`, `30 sur 120 en %`,
   `de 80 à 100`, `250 + 20 %`, `300 hors 20 %`. A percentage added to a quantity is a share of it.
 - **Dates** move by whole days, and by calendar months for months and years; two dates subtract
@@ -1566,7 +1573,9 @@ Ctrl for one more, or by selecting lines of the text; the footer adds them up an
 — in exact decimals, on the strings Rust sent (`decimalSum`) — and says when they are of
 different units. « Décimales » is an application preference (`calcDecimals`): it changes the
 display, never the computation. After `en` or `à`, the completion proposes the units of the kind
-Rust read on that line (`CALC_UNITS`), written in the language on screen. A name hovered says
+Rust read on that line (`CALC_UNITS`), written in the language on screen; elsewhere, from the
+third letter, the values and the phrases of the table (`CALC_WORDS`) in the spelling of the
+language on screen — the front writes no Calcul word of its own (`CalcWords`). A name hovered says
 its exact value, the line it was given on and the lines that read it.
 
 **Copying** — `C` on the card, « Copier » in the editor or the palette — gives the text with each

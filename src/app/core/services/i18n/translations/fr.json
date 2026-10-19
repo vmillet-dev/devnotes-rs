@@ -3779,6 +3779,7 @@
     "errors": {
       "unreadable": "cette ligne ne se lit pas",
       "unknownName": "« {{name}} » n’est défini nulle part au-dessus",
+      "reserved": "« {{word}} » est un mot réservé, pas un nom",
       "mismatchUnit": "{{unit}} n’est pas {{expected}}",
       "mismatch": "{{found}} ne va pas avec {{expected}}",
       "currency": "hors ligne : pas de taux de change",

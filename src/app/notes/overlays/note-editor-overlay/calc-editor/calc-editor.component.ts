@@ -43,6 +43,7 @@ import {
 } from '@core/model/calc.model';
 import { CalcSheets } from '@core/services/calc/calc-sheets.service';
 import { decimalMean, decimalSum } from '@core/services/calc/calc-format';
+import { CALC_WORD_TABLE, CalcWords } from '@core/services/calc/calc-words';
 import { ClipboardService } from '@core/services/clipboard/clipboard.service';
 import { ErrorNotifier } from '@core/services/errors/error-notifier.service';
 import { SettingsStore } from '@core/services/settings/settings.store';
@@ -60,8 +61,8 @@ const SAID_FOR_MS = 1800;
 /** What came in through `content`: the overlay holds it already, it is not handed back. */
 const FROM_OUTSIDE = Annotation.define<boolean>();
 
-/** `en`, `in`, `à`… then the start of a unit: what the units of the line's kind complete. */
-const CONVERSION = /(?:^|\s)(?:en|in|to|as|vers|à|at)\s+([^\s]*)$/i;
+/** The word being typed, which the table's words complete. */
+const TYPED_WORD = /[\p{L}'’]+$/u;
 
 /** A result's copy icon or its value, under a press or a click. */
 function control(event: MouseEvent): HTMLElement | null {
@@ -113,6 +114,8 @@ export class CalcEditorComponent {
   private readonly clipboard = inject(ClipboardService);
   private readonly notifier = inject(ErrorNotifier);
   private readonly transloco = inject(TranslocoService);
+  private readonly words = new CalcWords(inject(CALC_WORD_TABLE));
+  private readonly conversion = this.words.conversion();
   private readonly lang = toSignal(this.transloco.langChanges$, {
     initialValue: this.transloco.getActiveLang(),
   });
@@ -226,7 +229,7 @@ export class CalcEditorComponent {
             line,
             text: shown.text,
             approx: shown.approx,
-            error: false,
+            failure: null,
             named: row.line.name !== null,
             selected: picked.has(line),
             copyLabel: this.transloco.translate('calc.editor.copyResult', { value: exact }),
@@ -240,7 +243,7 @@ export class CalcEditorComponent {
             line,
             text: formatter.error(row.line.error),
             approx: false,
-            error: true,
+            failure: row.line.error.kind,
             named: false,
             selected: false,
             copyLabel: '',
@@ -358,12 +361,16 @@ export class CalcEditorComponent {
     return true;
   }
 
-  /** After `en` or `à`, only the units of the line's kind, as Rust read it a moment ago. */
+  /**
+   * After `en` or `à`, only the units of the line's kind, as Rust read it a moment ago;
+   * elsewhere, the words of the table in the language on screen.
+   */
   private async complete(context: CompletionContext): Promise<CompletionResult | null> {
     const line = context.state.doc.lineAt(context.pos);
     const before = line.text.slice(0, context.pos - line.from);
-    const match = CONVERSION.exec(before);
-    if (!match) return null;
+    if (/^\s*#/.test(before) || before.includes('//')) return null;
+    const match = this.conversion.exec(before);
+    if (!match) return this.completeWord(context, before);
     const sheet = await this.sheets.evaluate(context.state.doc.toString());
     const dimension = sheet.rows[line.number - 1]?.converting;
     if (!dimension) return null;
@@ -375,6 +382,17 @@ export class CalcEditorComponent {
     }));
     if (dimension === 'number') options.push({ label: '%', detail: '', type: 'unit' });
     return { from: context.pos - (match[1]?.length ?? 0), options, validFor: /^[^\s]*$/ };
+  }
+
+  private completeWord(context: CompletionContext, before: string): CompletionResult | null {
+    const typed = TYPED_WORD.exec(before)?.[0] ?? '';
+    const labels = this.words.complete(typed, this.lang(), context.explicit);
+    if (labels.length === 0) return null;
+    return {
+      from: context.pos - typed.length,
+      options: labels.map((label) => ({ label, type: 'keyword' })),
+      validFor: /^[\p{L}'’]*$/u,
+    };
   }
 
   /** A name hovered says its exact value, where it was given and where it is read. */

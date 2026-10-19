@@ -4,7 +4,8 @@ import { firstValueFrom } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { startCompletion } from '@codemirror/autocomplete';
 import { EditorView } from '@codemirror/view';
-import type { CalcRow, CalcSheet, CalcValue } from '@core/model/calc.model';
+import type { CalcRow, CalcSheet, CalcValue, CalcWordEntry } from '@core/model/calc.model';
+import { CALC_WORD_TABLE } from '@core/services/calc/calc-words';
 import { SettingsStore } from '@core/services/settings/settings.store';
 import { FakeCalcRepository } from '@testing/fake-calc-repository';
 import { FakeClipboard } from '@testing/fake-clipboard';
@@ -20,6 +21,12 @@ function value(of: CalcValue, name: string | null = null, aggregate = false): Ca
     converting: null,
   };
 }
+
+/** The editor knows the words a sheet reads from this table alone. */
+const WORDS: readonly CalcWordEntry[] = [
+  { word: 'convert', class: 'syntax', fr: ['en'], en: ['in'] },
+  { word: 'tomorrow', class: 'value', fr: ['demain'], en: ['tomorrow'] },
+];
 
 const TEXT = '# Budget\nhébergement = 100,521 €\ndomaines = 4,99 €\nmensuel = total\ndistance + 3 Go';
 const SHEET: CalcSheet = {
@@ -69,7 +76,10 @@ describe('CalcEditorComponent', () => {
     clipboard = new FakeClipboard();
     TestBed.configureTestingModule({
       imports: [CalcEditorComponent],
-      providers: [provideAppTesting({ calcRepository: calc, clipboard })],
+      providers: [
+        provideAppTesting({ calcRepository: calc, clipboard }),
+        { provide: CALC_WORD_TABLE, useValue: WORDS },
+      ],
     });
     await firstValueFrom(TestBed.inject(TranslocoService).load('fr'));
     fixture = TestBed.createComponent(CalcEditorComponent);
@@ -169,6 +179,32 @@ describe('CalcEditorComponent', () => {
     const labels = [...document.querySelectorAll('.cm-completionLabel')].map((label) => label.textContent);
     expect(labels).toContain('Mio');
     expect(labels).not.toContain('min');
+  });
+
+  it('proposes a word of the table in the spelling of the language on screen', async () => {
+    const labels = (): (string | null)[] =>
+      [...document.querySelectorAll('.cm-completionLabel')].map((label) => label.textContent);
+    const type = (typed: string): void => {
+      view().dispatch({
+        changes: { from: 0, to: view().state.doc.length, insert: typed },
+        selection: { anchor: typed.length },
+      });
+      startCompletion(view());
+    };
+
+    type('dem');
+    await vi.waitFor(() => expect(labels()).toEqual(['demain']));
+
+    type('tom');
+    await vi.waitFor(() => expect(labels()).toEqual([]));
+    type('// dem');
+    await fixture.whenStable();
+    expect(labels()).toEqual([]);
+  });
+
+  it('marks a failed line with the reason Rust gave, its message in its place', () => {
+    expect(results()[3]!.dataset['error']).toBe('unknownName');
+    expect(results()[0]!.dataset['error']).toBeUndefined();
   });
 
   it('hands every edit out and asks Rust again once the typing pauses', async () => {

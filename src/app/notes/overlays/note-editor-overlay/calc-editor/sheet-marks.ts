@@ -1,13 +1,14 @@
 import { RangeSetBuilder, StateEffect, StateField, Text } from '@codemirror/state';
 import { Decoration, DecorationSet, EditorView, WidgetType } from '@codemirror/view';
-import type { CalcSheet } from '@core/model/calc.model';
+import type { CalcError, CalcSheet } from '@core/model/calc.model';
 
 /** A line's result as the column on the right draws it, already written in the language on screen. */
 export interface ShownResult {
   readonly line: number;
   readonly text: string;
   readonly approx: boolean;
-  readonly error: boolean;
+  /** Why the line has no result, said in `text`. */
+  readonly failure: CalcError['kind'] | null;
   /** A line that names a variable: quieter than the lines it leads to. */
   readonly named: boolean;
   readonly selected: boolean;
@@ -35,7 +36,7 @@ class ResultWidget extends WidgetType {
       a.line === b.line &&
       a.text === b.text &&
       a.approx === b.approx &&
-      a.error === b.error &&
+      a.failure === b.failure &&
       a.named === b.named &&
       a.selected === b.selected &&
       a.copyLabel === b.copyLabel
@@ -46,12 +47,13 @@ class ResultWidget extends WidgetType {
     const { result } = this;
     const box = document.createElement('span');
     box.className = 'calc-result';
-    box.classList.toggle('calc-failed', result.error);
+    box.classList.toggle('calc-failed', result.failure !== null);
+    if (result.failure) box.dataset['error'] = result.failure;
     box.classList.toggle('calc-named', result.named);
     box.classList.toggle('calc-selected', result.selected);
     box.dataset['testid'] = 'calc-result';
     box.dataset['line'] = String(result.line);
-    if (!result.error) {
+    if (result.failure === null) {
       const copy = document.createElement('button');
       copy.type = 'button';
       copy.className = 'calc-copy';
@@ -64,8 +66,8 @@ class ResultWidget extends WidgetType {
     }
     const value = document.createElement('span');
     value.className = 'calc-value';
-    value.title = result.error ? result.text : result.pickLabel;
-    if (!result.error) value.dataset['pick'] = String(result.line);
+    value.title = result.failure ? result.text : result.pickLabel;
+    if (result.failure === null) value.dataset['pick'] = String(result.line);
     value.textContent = `${result.approx ? '≈ ' : ''}${result.text}`;
     box.append(value);
     return box;
