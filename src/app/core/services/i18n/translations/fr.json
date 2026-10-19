@@ -3786,6 +3786,7 @@
       "notConvertible": "{{from}} ne se convertit pas en {{to}}",
       "divisionByZero": "division par zéro",
       "nothingAbove": "rien à additionner au-dessus dans ce bloc",
+      "noPrevious": "aucune ligne au-dessus n’a de résultat",
       "dateShift": "une date avance de jours, de mois ou d’années entiers",
       "overflow": "nombre trop grand",
       "unsupported": "ce calcul ne se fait pas ici"

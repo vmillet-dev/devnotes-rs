@@ -9,6 +9,7 @@ const TABLE: readonly CalcWordEntry[] = [
   { word: 'of', class: 'syntax', fr: ['de'], en: ['of', 'out of'] },
   { word: 'today', class: 'value', fr: ["aujourd'hui"], en: ['today'] },
   { word: 'total', class: 'value', fr: ['total', 'somme'], en: ['total', 'sum'] },
+  { word: 'million', class: 'value', fr: ['million', 'millions'], en: ['million', 'millions'] },
 ];
 
 describe('CalcWords', () => {
@@ -29,6 +30,8 @@ describe('CalcWords', () => {
     expect(words.complete('tod', 'en')).toEqual(['today']);
     expect(words.complete('som', 'fr')).toEqual(['somme']);
     expect(words.complete('out', 'en')).toEqual(['out of']);
+    expect(words.complete('millio', 'fr')).toEqual(['million']);
+    expect(words.complete('million', 'fr')).toEqual([]);
   });
 
   it('proposes nothing for a word already whole, a syntax word or a start too short to mean much', () => {

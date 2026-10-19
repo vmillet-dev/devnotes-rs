@@ -19,11 +19,28 @@ closed_enum! {
         To = "to",
         Over = "over",
         Excluding = "excluding",
+        Plus = "plus",
+        /// An addition between two numbers, a separator in a list of them.
+        And = "and",
+        Minus = "minus",
+        Times = "times",
+        Divide = "divide",
+        Modulo = "modulo",
         Total = "total",
         Mean = "mean",
+        /// The result of the last line above that gave one.
+        Previous = "previous",
         Today = "today",
         Tomorrow = "tomorrow",
         Yesterday = "yesterday",
+        Kilo = "kilo",
+        Mega = "mega",
+        Giga = "giga",
+        Tera = "tera",
+        Thousand = "thousand",
+        Million = "million",
+        Billion = "billion",
+        Trillion = "trillion",
     }
 }
 
@@ -53,18 +70,53 @@ impl CalcWord {
             Self::From => (Syntax, &["de"], &["from"]),
             Self::To => (Syntax, &["à"], &["to"]),
             Self::Over => (Syntax, &["sur"], &["over"]),
-            Self::Excluding => (
+            Self::Excluding => (Syntax, &["hors", "ex"], &["excluding", "excl", "ex"]),
+            Self::Plus => (Syntax, &["plus", "avec"], &["plus", "with"]),
+            Self::And => (Syntax, &["et"], &["and"]),
+            Self::Minus => (
                 Syntax,
-                &["hors", "ex"],
-                &["excluding", "excl", "ex", "without"],
+                &["moins", "sans"],
+                &["minus", "without", "subtract"],
             ),
+            Self::Times => (
+                Syntax,
+                &["fois", "multiplié par", "mul"],
+                &["times", "multiplied by", "mul"],
+            ),
+            Self::Divide => (Syntax, &["divisé par"], &["divided by", "divide by"]),
+            Self::Modulo => (Syntax, &["mod", "modulo"], &["mod", "modulo"]),
             Self::Total => (Value, &["total", "somme"], &["total", "sum"]),
             Self::Mean => (Value, &["moyenne"], &["average", "avg", "mean"]),
+            Self::Previous => (Value, &["préc", "précédent"], &["prev", "previous"]),
             Self::Today => (Value, &["aujourd'hui"], &["today"]),
             Self::Tomorrow => (Value, &["demain"], &["tomorrow"]),
             Self::Yesterday => (Value, &["hier"], &["yesterday"]),
+            Self::Kilo => (Value, &["k"], &["k"]),
+            Self::Mega => (Value, &["M"], &["M"]),
+            Self::Giga => (Value, &["Md"], &["bn"]),
+            Self::Tera => (Value, &["T"], &["T", "tn"]),
+            Self::Thousand => (Value, &["mille"], &["thousand", "thousands"]),
+            Self::Million => (Value, &["million", "millions"], &["million", "millions"]),
+            Self::Billion => (Value, &["milliard", "milliards"], &["billion", "billions"]),
+            Self::Trillion => (Value, &["mille milliards"], &["trillion", "trillions"]),
         };
         Spellings { class, fr, en }
+    }
+
+    /// `M` is a million and `m` a metre: a scale's letters are read in their case.
+    pub const fn exact(self) -> bool {
+        matches!(self, Self::Kilo | Self::Mega | Self::Giga | Self::Tera)
+    }
+
+    /// What a scale multiplies by.
+    pub fn scale(self) -> Option<u64> {
+        Some(match self {
+            Self::Kilo | Self::Thousand => 1_000,
+            Self::Mega | Self::Million => 1_000_000,
+            Self::Giga | Self::Billion => 1_000_000_000,
+            Self::Tera | Self::Trillion => 1_000_000_000_000,
+            _ => return None,
+        })
     }
 
     fn every_spelling(self) -> impl Iterator<Item = &'static str> {
@@ -85,8 +137,9 @@ fn fold(word: &str) -> String {
     word.to_lowercase().replace('’', "'")
 }
 
-fn part_matches(part: &str, token: &Token) -> bool {
+fn part_matches(part: &str, token: &Token, exact: bool) -> bool {
     match &token.tok {
+        Tok::Word(word) if exact => word == part,
         Tok::Word(word) => fold(word) == part,
         Tok::Symbol(symbol) => part.chars().eq([*symbol]),
         _ => false,
@@ -102,7 +155,7 @@ pub(super) fn spelled(word: CalcWord, tokens: &[Token], at: usize) -> Option<usi
             parts
                 .iter()
                 .zip(found)
-                .all(|(part, token)| part_matches(part, token))
+                .all(|(part, token)| part_matches(part, token, word.exact()))
                 .then_some(parts.len())
         })
         .max()
@@ -115,6 +168,14 @@ pub(super) fn reserved(word: &str) -> bool {
         concept.spellings().class == WordClass::Syntax
             && concept.every_spelling().any(|spelling| spelling == folded)
     })
+}
+
+/// The scale written at `at`, `k` or `milliard`, and how many tokens it takes.
+pub(super) fn scale_at(tokens: &[Token], at: usize) -> Option<(u64, usize)> {
+    CalcWord::ALL
+        .iter()
+        .filter_map(|word| Some((word.scale()?, spelled(*word, tokens, at)?)))
+        .max_by_key(|(_, taken)| *taken)
 }
 
 /// A concept and its spellings, as the front's completion reads them.
@@ -154,12 +215,15 @@ mod tests {
     fn every_spelling_of_every_concept_is_read_in_each_language() {
         for word in CalcWord::ALL {
             for spelling in word.every_spelling() {
-                let line = tokens(spelling).unwrap();
+                let line = tokens(spelling);
                 assert_eq!(
                     spelled(word, &line, 0),
                     Some(line.len()),
                     "{spelling} is not read as {word}"
                 );
+                if word.exact() {
+                    continue;
+                }
                 let mut letters = spelling.chars();
                 let capital: String = letters
                     .next()
@@ -167,10 +231,10 @@ mod tests {
                     .flat_map(char::to_uppercase)
                     .chain(letters)
                     .collect();
-                assert!(spelled(word, &tokens(&capital).unwrap(), 0).is_some());
+                assert!(spelled(word, &tokens(&capital), 0).is_some());
             }
         }
-        let typed = tokens("aujourd’hui").unwrap();
+        let typed = tokens("aujourd’hui");
         assert_eq!(spelled(CalcWord::Today, &typed, 0), Some(1));
     }
 
@@ -194,10 +258,23 @@ mod tests {
     }
 
     #[test]
+    fn a_scale_is_read_in_its_case_and_a_word_in_any() {
+        assert_eq!(spelled(CalcWord::Mega, &tokens("m"), 0), None);
+        assert_eq!(spelled(CalcWord::Kilo, &tokens("K"), 0), None);
+        assert_eq!(scale_at(&tokens("Md"), 0), Some((1_000_000_000, 1)));
+        assert_eq!(
+            scale_at(&tokens("Mille milliards"), 0),
+            Some((1_000_000_000_000, 2))
+        );
+    }
+
+    #[test]
     fn a_spelling_is_written_folded_and_one_space_apart() {
         for word in CalcWord::ALL {
             for spelling in word.every_spelling() {
-                assert_eq!(fold(spelling), spelling, "{spelling}");
+                if !word.exact() {
+                    assert_eq!(fold(spelling), spelling, "{spelling}");
+                }
                 assert!(!spelling.contains("  ") && spelling.trim() == spelling);
             }
         }

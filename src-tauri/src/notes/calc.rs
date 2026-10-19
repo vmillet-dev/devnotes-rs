@@ -93,6 +93,8 @@ pub enum CalcError {
     DivisionByZero,
     /// `total` with nothing to add up above it in the block.
     NothingAbove,
+    /// `préc` with no line above that gave a result.
+    NoPrevious,
     /// A date moved by something other than whole days, months or years.
     DateShift,
     Overflow,
@@ -382,6 +384,21 @@ struct Walk {
     /// The definition of each name in effect: the one its uses are counted on.
     current: HashMap<String, usize>,
     block: Vec<Quantity>,
+    previous: Option<Value>,
+}
+
+/// `Prix : 11 € + 34,45 €`: the words before a colon name the line, and are read past.
+fn label_end(tokens: &[Token]) -> Option<usize> {
+    if !matches!(tokens.first()?.tok, Tok::Word(_)) {
+        return None;
+    }
+    let colon = tokens
+        .iter()
+        .position(|token| token.tok == Tok::Other(':'))?;
+    tokens[..colon]
+        .iter()
+        .all(|token| token.tok != Tok::Symbol('='))
+        .then_some(colon + 1)
 }
 
 impl Walk {
@@ -406,19 +423,22 @@ impl Walk {
         if trimmed.starts_with("//") {
             return row(CalcLine::Comment, whole(TokenKind::Comment));
         }
-        match lexer::tokens(line) {
-            Ok(tokens) => self.expression(index, line, &tokens),
-            Err(unreadable) if line.chars().any(|c| c.is_ascii_digit()) => row(
-                CalcLine::Error {
-                    error: CalcError::Unreadable { at: unreadable.at },
-                },
-                Vec::new(),
-            ),
-            Err(_) => row(CalcLine::Text, Vec::new()),
-        }
+        self.expression(index, line, &lexer::tokens(line))
     }
 
     fn expression(&mut self, index: u32, line: &str, tokens: &[Token]) -> CalcRow {
+        let mut spans = Vec::new();
+        let tokens = match label_end(tokens) {
+            Some(end) => {
+                spans.push(CalcSpan {
+                    start: tokens[0].start,
+                    end: tokens[end - 1].end,
+                    kind: TokenKind::Comment,
+                });
+                &tokens[end..]
+            }
+            None => tokens,
+        };
         let (name, body) = match tokens {
             [
                 Token {
@@ -440,7 +460,8 @@ impl Walk {
                         kind: TokenKind::Error,
                     };
                     let error = CalcError::Reserved { word: word.clone() };
-                    return row(CalcLine::Error { error }, vec![span]);
+                    spans.push(span);
+                    return row(CalcLine::Error { error }, spans);
                 }
                 (Some(word.clone()), &tokens[2..])
             }
@@ -453,11 +474,11 @@ impl Walk {
             symbols: &self.units.symbols,
             variables: &self.variables,
             block: &self.block,
+            previous: self.previous.as_ref(),
         };
         let end = utf16(lexer::without_comment(line).trim_end());
         let mut parser = Parser::new(&context, body, end);
         let result = parser.whole();
-        let mut spans = Vec::new();
         if name.is_some() {
             spans.push(CalcSpan {
                 start: tokens[0].start,
@@ -529,6 +550,7 @@ impl Walk {
             self.variables.insert(name.clone(), value.clone());
         }
         let dimension = value.dimension();
+        self.previous = Some(value.clone());
         if !aggregate && let Value::Quantity(quantity) = value {
             self.block.push(quantity);
         }
@@ -551,6 +573,7 @@ pub fn evaluate(sheet: &str, today: NaiveDate) -> CalcSheet {
         definitions: Vec::new(),
         current: HashMap::new(),
         block: Vec::new(),
+        previous: None,
     };
     let rows = sheet
         .split('\n')
@@ -991,6 +1014,162 @@ mod tests {
             CalcLine::Error {
                 error: CalcError::Currency
             }
+        );
+    }
+
+    #[test]
+    fn operators_are_written_in_words_in_both_languages() {
+        let cases = [
+            ("10 plus 5", "15"),
+            ("10 et 5", "15"),
+            ("10 and 5", "15"),
+            ("10 avec 5", "15"),
+            ("10 with 5", "15"),
+            ("10 moins 4", "6"),
+            ("10 minus 4", "6"),
+            ("10 subtract 4", "6"),
+            ("200 sans 30", "170"),
+            ("200 without 30", "170"),
+            ("8 fois 9", "72"),
+            ("8 times 9", "72"),
+            ("6 multiplié par 7", "42"),
+            ("6 multiplied by 7", "42"),
+            ("6 mul 7", "42"),
+            ("42 divisé par 6", "7"),
+            ("42 divided by 6", "7"),
+            ("42 divide by 6", "7"),
+            ("17 mod 5", "2"),
+            ("17 modulo 5", "2"),
+            ("-7 mod 3", "2"),
+            ("2 + 3 fois 4", "14"),
+        ];
+        for (line, result) in cases {
+            assert_eq!(value(line), number(result, None), "{line}");
+        }
+        assert_eq!(
+            value("17 km mod 5 km"),
+            number("2", Some(UnitId::Kilometre))
+        );
+        assert_eq!(error("5 mod 0"), CalcError::DivisionByZero);
+        assert!(matches!(error("17 km mod 5"), CalcError::Mismatch { .. }));
+        assert_eq!(
+            error("fois = 3"),
+            CalcError::Reserved {
+                word: "fois".into()
+            }
+        );
+    }
+
+    #[test]
+    fn without_subtracts_and_hors_still_takes_a_share_back_off() {
+        assert_eq!(value("300 sans 20 %"), number("240", None));
+        assert_eq!(value("300 without 20 %"), number("240", None));
+        assert_eq!(value("300 hors 20 %"), number("250", None));
+        assert_eq!(value("300 excluding 20 %"), number("250", None));
+    }
+
+    #[test]
+    fn a_parenthesis_after_a_value_multiplies_it() {
+        assert_eq!(value("6 (3)"), number("18", None));
+        assert_eq!(value("2 (3 + 4)"), number("14", None));
+        assert_eq!(value("(1 + 2)(3 + 1)"), number("12", None));
+        assert_eq!(value("a = 4\n3 (a)"), number("12", None));
+    }
+
+    #[test]
+    fn the_previous_result_is_the_last_line_above_that_gave_one() {
+        assert_eq!(value("10 + 5\npréc × 2"), number("30", None));
+        assert_eq!(value("10 + 5\n// double\n\nprev × 2"), number("30", None));
+        assert_eq!(
+            value("a = 3 €\nx +\nprécédent + 1 €"),
+            number("4", Some(UnitId::Euro))
+        );
+        assert_eq!(error("préc + 1"), CalcError::NoPrevious);
+        assert_eq!(value("préc = 2\npréc × 3"), number("6", None));
+    }
+
+    #[test]
+    fn a_label_a_quote_and_a_remark_are_left_out_of_the_computation() {
+        assert_eq!(
+            value("Prix : 11 € + 34,45 €"),
+            number("45.45", Some(UnitId::Euro))
+        );
+        assert_eq!(value("Mensuel : 1200 / 12"), number("100", None));
+        assert_eq!(value("Price HT : ht = 100\nht × 2"), number("200", None));
+        assert_eq!(
+            value("275 € pour le \"Modèle 227\""),
+            number("275", Some(UnitId::Euro))
+        );
+        assert_eq!(value("275 for the « Model 227 »"), number("275", None));
+        assert_eq!(
+            value("\"Loyer\" 800 € + 50 €"),
+            number("850", Some(UnitId::Euro))
+        );
+        assert_eq!(
+            value("999 € (pour l'iPhone, en promo)"),
+            number("999", Some(UnitId::Euro))
+        );
+        assert_eq!(
+            value("999 € (for iPhone) + 1 €"),
+            number("1000", Some(UnitId::Euro))
+        );
+        assert_eq!(value("2 × (3 + 4)"), number("14", None));
+        assert!(matches!(
+            error("5 jours ouvrés"),
+            CalcError::Unreadable { .. }
+        ));
+
+        let row = &evaluate("Prix : 11 € \"x\"", today()).rows[0];
+        let kinds: Vec<_> = row.spans.iter().map(|span| span.kind).collect();
+        assert_eq!(
+            kinds,
+            [
+                TokenKind::Comment,
+                TokenKind::Number,
+                TokenKind::Unit,
+                TokenKind::Comment
+            ]
+        );
+        assert_eq!((row.spans[0].start, row.spans[0].end), (0, 6));
+        assert_eq!(lines("Prix :"), [CalcLine::Text]);
+    }
+
+    #[test]
+    fn large_numbers_are_written_with_their_scale() {
+        let cases = [
+            ("2k", "2000"),
+            ("3M", "3000000"),
+            ("1,5 milliard", "1500000000"),
+            ("2 Md", "2000000000"),
+            ("2 bn", "2000000000"),
+            ("1 T", "1000000000000"),
+            ("1 tn", "1000000000000"),
+            ("10 mille", "10000"),
+            ("10 thousand", "10000"),
+            ("2 millions", "2000000"),
+            ("1 billion", "1000000000"),
+            ("1 trillion", "1000000000000"),
+            ("1 mille milliards", "1000000000000"),
+        ];
+        for (line, result) in cases {
+            assert_eq!(value(line), number(result, None), "{line}");
+        }
+        assert_eq!(value("2k €"), number("2000", Some(UnitId::Euro)));
+        assert_eq!(value("3 m"), number("3", Some(UnitId::Metre)));
+        assert_eq!(value("2 K"), number("2", Some(UnitId::Kelvin)));
+        assert_eq!(value("k = 5\n2k"), number("2000", None));
+    }
+
+    #[test]
+    fn thousands_grouped_by_a_space_read_back_as_the_front_writes_them() {
+        assert_eq!(value("5 300"), number("5300", None));
+        assert_eq!(
+            value("1\u{202f}578,13 € + 1 €"),
+            number("1579.13", Some(UnitId::Euro))
+        );
+        assert_eq!(
+            value("1\u{a0}578,13 €"),
+            number("1578.13", Some(UnitId::Euro))
         );
     }
 

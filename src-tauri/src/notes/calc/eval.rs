@@ -96,6 +96,15 @@ pub(super) struct Context<'a> {
     pub(super) variables: &'a HashMap<String, Value>,
     /// The quantities of the block so far, for `total` and `moyenne`.
     pub(super) block: &'a [Quantity],
+    /// What the last line above that gave a result gave, for `préc`.
+    pub(super) previous: Option<&'a Value>,
+}
+
+#[derive(Clone, Copy)]
+enum Product {
+    Times,
+    Over,
+    Modulo,
 }
 
 pub(super) struct Parser<'a> {
@@ -121,7 +130,7 @@ fn overflow() -> CalcError {
 
 impl<'a> Parser<'a> {
     pub(super) fn new(context: &'a Context<'a>, tokens: &'a [Token], end: u32) -> Self {
-        Self {
+        let mut parser = Self {
             context,
             tokens,
             at: 0,
@@ -130,15 +139,71 @@ impl<'a> Parser<'a> {
             converting: None,
             aggregate: false,
             end,
-        }
+        };
+        parser.skip_quoted();
+        parser
     }
 
     pub(super) fn whole(&mut self) -> Answer {
         let value = self.conversion()?;
+        self.skip_remarks();
         if self.at < self.tokens.len() {
-            return Err(self.unreadable());
+            if !self.prose() {
+                return Err(self.unreadable());
+            }
+            while self.at < self.tokens.len() {
+                self.take(TokenKind::Comment);
+            }
         }
         Ok(value)
+    }
+
+    /// `275 € pour le "Modèle 227"`: the words after a result, up to a quoted text, are left
+    /// out. Words alone are not: `5 jours ouvrés` says it is not read rather than give 5 days.
+    fn prose(&self) -> bool {
+        let rest = &self.tokens[self.at..];
+        rest.iter().any(|token| token.tok == Tok::Quoted)
+            && rest
+                .iter()
+                .all(|token| matches!(token.tok, Tok::Word(_) | Tok::Other(_) | Tok::Quoted))
+    }
+
+    fn skip_quoted(&mut self) {
+        while self
+            .tokens
+            .get(self.at)
+            .is_some_and(|token| token.tok == Tok::Quoted)
+        {
+            self.kinds[self.at] = Some(TokenKind::Comment);
+            self.at += 1;
+        }
+    }
+
+    /// `999 € (pour l'iPhone)`: parentheses after a value holding words and no name defined
+    /// above are a remark, read past; holding an expression, they multiply.
+    fn remark_end(&self) -> Option<usize> {
+        self.peek_symbol(&['('])?;
+        let inside = self.at + 1;
+        let close = inside
+            + self.tokens[inside..]
+                .iter()
+                .position(|token| token.tok == Tok::Symbol(')'))?;
+        let words = self.tokens[inside..close]
+            .iter()
+            .all(|token| match &token.tok {
+                Tok::Word(word) => !self.context.variables.contains_key(word),
+                Tok::Other(_) | Tok::Quoted => true,
+                _ => false,
+            });
+        (close > inside && words).then_some(close + 1)
+    }
+
+    fn skip_remarks(&mut self) {
+        while let Some(end) = self.remark_end() {
+            while self.at < end {
+                self.take(TokenKind::Comment);
+            }
+        }
     }
 
     fn unreadable(&mut self) -> CalcError {
@@ -166,6 +231,7 @@ impl<'a> Parser<'a> {
     fn take(&mut self, kind: TokenKind) {
         self.kinds[self.at] = Some(kind);
         self.at += 1;
+        self.skip_quoted();
     }
 
     fn peek_symbol(&self, symbols: &[char]) -> Option<char> {
@@ -180,11 +246,15 @@ impl<'a> Parser<'a> {
     }
 
     fn eat(&mut self, word: CalcWord) -> bool {
+        self.eat_as(word, TokenKind::Keyword)
+    }
+
+    fn eat_as(&mut self, word: CalcWord, kind: TokenKind) -> bool {
         let Some(count) = self.sees(word) else {
             return false;
         };
         for _ in 0..count {
-            self.take(TokenKind::Keyword);
+            self.take(kind);
         }
         true
     }
@@ -289,24 +359,55 @@ impl<'a> Parser<'a> {
 
     fn additive(&mut self) -> Answer {
         let mut left = self.term()?;
-        while let Some(symbol) = self.peek_symbol(&['+', '-', '−']) {
-            self.take(TokenKind::Operator);
+        loop {
+            let plus = if let Some(symbol) = self.peek_symbol(&['+', '-', '−']) {
+                self.take(TokenKind::Operator);
+                symbol == '+'
+            } else if self.eat_as(CalcWord::Plus, TokenKind::Operator)
+                || self.eat_as(CalcWord::And, TokenKind::Operator)
+            {
+                true
+            } else if self.eat_as(CalcWord::Minus, TokenKind::Operator) {
+                false
+            } else {
+                return Ok(left);
+            };
             let right = self.term()?;
-            left = add(left, right, symbol == '+').map_err(|error| self.blame(error))?;
+            left = add(left, right, plus).map_err(|error| self.blame(error))?;
         }
-        Ok(left)
+    }
+
+    fn product(&mut self) -> Option<Product> {
+        if let Some(symbol) = self.peek_symbol(&['×', '*', '/', '÷']) {
+            self.take(TokenKind::Operator);
+            return Some(if matches!(symbol, '×' | '*') {
+                Product::Times
+            } else {
+                Product::Over
+            });
+        }
+        if self.eat_as(CalcWord::Times, TokenKind::Operator) {
+            Some(Product::Times)
+        } else if self.eat_as(CalcWord::Divide, TokenKind::Operator) {
+            Some(Product::Over)
+        } else if self.eat_as(CalcWord::Modulo, TokenKind::Operator) {
+            Some(Product::Modulo)
+        } else {
+            // `6 (3)` is 18: a parenthesis right after a value multiplies it.
+            self.peek_symbol(&['(']).map(|_| Product::Times)
+        }
     }
 
     fn term(&mut self) -> Answer {
         let mut left = self.power()?;
         loop {
-            if let Some(symbol) = self.peek_symbol(&['×', '*', '/', '÷']) {
-                self.take(TokenKind::Operator);
+            self.skip_remarks();
+            if let Some(product) = self.product() {
                 let right = self.power()?;
-                left = if matches!(symbol, '×' | '*') {
-                    multiply(left, right)
-                } else {
-                    divide(left, right)
+                left = match product {
+                    Product::Times => multiply(left, right),
+                    Product::Over => divide(left, right),
+                    Product::Modulo => modulo(left, right),
                 }
                 .map_err(|error| self.blame(error))?;
             } else if self.eat(CalcWord::Excluding) {
@@ -370,12 +471,21 @@ impl<'a> Parser<'a> {
                 Ok(value)
             }
             Tok::Word(word) => self.word(&word),
-            Tok::Symbol(_) => Err(self.unreadable()),
+            Tok::Symbol(_) | Tok::Other(_) | Tok::Quoted => Err(self.unreadable()),
         }
     }
 
     /// A number, its unit, and the quantities of the same kind written after it: `3 h 20 min`.
     fn quantity(&mut self, number: Decimal) -> Answer {
+        let mut number = number;
+        while let Some((scale, taken)) = words::scale_at(self.tokens, self.at) {
+            for _ in 0..taken {
+                self.take(TokenKind::Number);
+            }
+            number = number
+                .checked_mul(Decimal::from(scale))
+                .ok_or_else(overflow)?;
+        }
         if self.peek_symbol(&['%']).is_some() {
             self.take(TokenKind::Unit);
             return Ok(Value::Percent {
@@ -419,6 +529,12 @@ impl<'a> Parser<'a> {
             self.used.push(word.to_string());
             self.take(TokenKind::Name);
             return Ok(value.clone());
+        }
+        if self.eat(CalcWord::Previous) {
+            return match self.context.previous {
+                Some(value) => Ok(value.clone()),
+                None => Err(self.blame(CalcError::NoPrevious)),
+            };
         }
         let shifted = |days: i64, today: NaiveDate| {
             let shift = Days::new(days.unsigned_abs());
@@ -676,6 +792,27 @@ fn divide(left: Value, right: Value) -> Answer {
         })),
         (Value::Percent { ratio: a, .. }, Value::Percent { ratio: b, .. }) => {
             Ok(Value::number(by(a, b)?))
+        }
+        (left, right) => Err(mismatch(&left, &right)),
+    }
+}
+
+/// `17 mod 5` is 2, and `-7 mod 3` is 2: the remainder takes the sign of the divisor.
+fn modulo(left: Value, right: Value) -> Answer {
+    match (left, right) {
+        (Value::Quantity(a), Value::Quantity(b)) if a.dim == b.dim && !a.dim.has_temperature() => {
+            if b.amount.is_zero() {
+                return Err(CalcError::DivisionByZero);
+            }
+            let mut rest = a.amount.checked_rem(b.amount).ok_or_else(overflow)?;
+            if !rest.is_zero() && rest.is_sign_negative() != b.amount.is_sign_negative() {
+                rest += b.amount;
+            }
+            Ok(Value::Quantity(Quantity {
+                amount: rest,
+                spans: false,
+                ..a
+            }))
         }
         (left, right) => Err(mismatch(&left, &right)),
     }
