@@ -586,7 +586,6 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// `255 en hex`: a plain number, whole for a base, written another way.
     /// `50 en % de 100`, `70 as a % on 20`: the `%` taken, then what the share is taken against.
     fn share_after_percent(&mut self) -> Option<Share> {
         let next = self.at + 1;
@@ -667,6 +666,7 @@ impl<'a> Parser<'a> {
         found.map_err(|error| self.blame(error))
     }
 
+    /// `255 en hex`: a plain number, whole for a base, written another way.
     fn written(&mut self, value: Value, notation: Notation) -> Answer {
         // `50 % en fraction` is 1/2: a percentage written as the number it is.
         let value = match (value, notation) {
