@@ -104,7 +104,7 @@ yaml-rust2 = "0.13.0"
 chrono-tz = "0.10.4"
 iana-time-zone = "0.1.65"
 croner = "4.0.1"
-rust_decimal = { version = "1.43.0", default-features = false, features = ["std"] }
+rust_decimal = { version = "1.43.0", default-features = false, features = ["std", "maths"] }
 iban_validate = "5.0.1"
 unicode-segmentation = "1.13.3"
 qrcode = { version = "0.14.1", default-features = false }

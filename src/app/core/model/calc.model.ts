@@ -82,7 +82,7 @@ export type CalcDateFormat = (typeof CALC_DATE_FORMATS)[number];
 /** A concept of the grammar and its spellings in each language, as Rust's table gives them. */
 export interface CalcWordEntry {
   readonly word: (typeof CALC_WORDS)[number]['word'];
-  readonly class: 'syntax' | 'value';
+  readonly class: 'syntax' | 'value' | 'setting';
   readonly fr: readonly string[];
   readonly en: readonly string[];
 }

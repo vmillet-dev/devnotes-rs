@@ -28,7 +28,7 @@ pub(super) struct Token {
 }
 
 const SYMBOLS: &[char] = &[
-    '+', '-', '−', '×', '*', '/', '÷', '^', '(', ')', '=', '%', '€', '$',
+    '+', '-', '−', '×', '*', '/', '÷', '^', '(', ')', '=', '%', '€', '$', '&', '|', '<', '>',
 ];
 
 fn is_word_start(character: char) -> bool {
@@ -107,7 +107,66 @@ fn group_at(characters: &[char], at: usize) -> bool {
 
 /// Digits, grouped by thousands or not, then a point or a comma and more digits: `0,045` and
 /// `1.5` are both read.
+/// `0xFF`, `0b1010`, `0o377`: a whole number in another base.
+fn based_at(characters: &[char], at: usize) -> Option<(Decimal, usize)> {
+    if characters.get(at) != Some(&'0') {
+        return None;
+    }
+    let radix = match characters.get(at + 1)? {
+        'x' | 'X' => 16,
+        'b' | 'B' => 2,
+        'o' | 'O' => 8,
+        _ => return None,
+    };
+    let digits: String = characters[at + 2..]
+        .iter()
+        .take_while(|c| c.is_digit(radix))
+        .collect();
+    if digits.is_empty()
+        || characters
+            .get(at + 2 + digits.len())
+            .is_some_and(|c| c.is_alphanumeric())
+    {
+        return None;
+    }
+    let value = i128::from_str_radix(&digits, radix).ok()?;
+    let value = Decimal::try_from_i128_with_scale(value, 0).ok()?;
+    Some((value, digits.len() + 2))
+}
+
+/// `5,3e+3`, `1e-9`: written by `en sci`, and read back.
+fn exponent_at(characters: &[char], at: usize) -> Option<(i64, usize)> {
+    if !matches!(characters.get(at), Some('e' | 'E')) {
+        return None;
+    }
+    let mut end = at + 1;
+    let negative = match characters.get(end) {
+        Some('+') => {
+            end += 1;
+            false
+        }
+        Some('-' | '−') => {
+            end += 1;
+            true
+        }
+        _ => false,
+    };
+    let start = end;
+    while characters.get(end).is_some_and(char::is_ascii_digit) {
+        end += 1;
+    }
+    if end == start || characters.get(end).is_some_and(|c| c.is_alphanumeric()) {
+        return None;
+    }
+    let digits: String = characters[start..end].iter().collect();
+    let exponent: i64 = digits.parse().ok()?;
+    Some((if negative { -exponent } else { exponent }, end - at))
+}
+
 fn number_at(characters: &[char], at: usize) -> Option<(Decimal, usize)> {
+    if let Some(based) = based_at(characters, at) {
+        return Some(based);
+    }
     let mut end = at;
     while characters.get(end).is_some_and(char::is_ascii_digit) {
         end += 1;
@@ -133,6 +192,11 @@ fn number_at(characters: &[char], at: usize) -> Option<(Decimal, usize)> {
         .filter(|c| !c.is_whitespace())
         .map(|c| if *c == ',' { '.' } else { *c })
         .collect();
+    if let Some((exponent, length)) = exponent_at(characters, end)
+        && let Ok(value) = Decimal::from_scientific(&format!("{text}e{exponent}"))
+    {
+        return Some((value, end + length - at));
+    }
     text.parse().ok().map(|value| (value, end - at))
 }
 
@@ -252,6 +316,22 @@ mod tests {
                 number("20"),
                 Tok::Word("min".into())
             ]
+        );
+    }
+
+    #[test]
+    fn a_number_is_read_in_another_base_and_in_scientific_notation() {
+        let number = |text: &str| Tok::Number(text.parse().unwrap());
+        assert_eq!(toks("0xFF"), [number("255")]);
+        assert_eq!(toks("0b1010"), [number("10")]);
+        assert_eq!(toks("0o377"), [number("255")]);
+        assert_eq!(toks("0b"), [number("0"), Tok::Word("b".into())]);
+        assert_eq!(toks("5,3e+3"), [number("5300")]);
+        assert_eq!(toks("1e-9"), [number("0.000000001")]);
+        assert_eq!(toks("2e"), [number("2"), Tok::Word("e".into())]);
+        assert_eq!(
+            toks("1 << 4"),
+            [number("1"), Tok::Symbol('<'), Tok::Symbol('<'), number("4")]
         );
     }
 

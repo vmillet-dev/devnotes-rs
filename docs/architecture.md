@@ -1557,7 +1557,30 @@ which knows no time zone, gives its cards the UTC day.
   refused on its line. A quantity carries its dimensions, so `€/h × h` is euros and a size `à` a
   rate is a duration. A temperature is converted by formula, never by factor. Quantities of one
   kind written side by side add up: `3 h 20 min`. Lowercase `to` and `mo` are left to English and
-  to the month.
+  to the month. Frequencies are a second to the power of minus one (`1 / 2 s` is 0,5 Hz,
+  `60 Hz × 2 s` a number); `ns`, `µs`, `nm`, `µm` and the data sizes up to `YB`/`YiB` are
+  units of the table. **Screen units**: `pt` is the 72nd of an inch, `px` an inch over the
+  sheet's `ppi`, `em` and `rem` its sizes in pixels — 96 and 16 until a line `ppi = 326`,
+  `em = 20 px` or `rem = 18` sets them, from that line down (`Css`, carried by the walk). Those
+  three are settings, not names (`WordClass::Setting`). `in` is the inch after a number, but the
+  conversion word before a notation or `%` (`255 in hex`).
+- **Functions and constants** (`calc/maths.rs`): `racine`/`sqrt` (`racine 2 (8)`, a degree
+  before parentheses), `cbrt`, `log` (`log 2 (8)`, a base), `ln`, `abs`, `arrondi`/`round`,
+  `plafond`/`ceil`, `plancher`/`floor`, with or without parentheses; `pi`/`π`, `e`, `tau`/`τ`,
+  `phi`/`φ`, which a name hides. A root or a logarithm is exact where one exists (`sqrt 16` is 4),
+  through `rust_decimal`'s `maths`; an even root of a negative number, a logarithm of zero or
+  less are errors of their own. `le plus grand de 100 et 200`/`larger of`, `le plus petit de`
+  take numbers of one kind, `et` separating them there rather than adding.
+- **Rounding** is the line's own value, so the lines below read it rounded:
+  `à 2 décimales`/`to 2 dp`, `à 5 chiffres`/`to 5 digits` (places too), `arrondi`/`rounded`
+  (a half away from zero), `arrondi supérieur`/`inférieur`, `au 10 près`/`to nearest 10`,
+  `au millier près`, `à la centaine près`, combined (`arrondi supérieur au 5 près`). A quantity
+  rounds in the unit it is shown in.
+- **Bases and bits**: `0xFF`, `0b1010`, `0o377` and `5,3e+3` are numbers; `en hex`/`bin`/`oct`/
+  `sci`, `en base 2|8|16`, `hex(…)`, `bin(…)`, `int(…)` say how the line's plain number is written
+  (`CalcValue::Base`, `Scientific`, the front putting `0x` before the digits Rust sends).
+  `&`, `|`, `xor`, `<<`, `>>` take whole numbers, below the sums as in C. A result is tidied to
+  25 figures before it is sent, so a quotient carried on is not `15,999…` (`tidy`).
 - **Words** are one table (`calc/words.rs`): each concept a `CalcWord` with its spellings in
   French and in English, read in both whatever the language on screen, so a sheet keeps its
   meaning for everyone. The evaluator matches concepts, a spelling of several words included; a

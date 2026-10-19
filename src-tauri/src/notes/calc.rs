@@ -4,6 +4,7 @@
 
 mod eval;
 mod lexer;
+mod maths;
 pub mod units;
 pub mod words;
 
@@ -14,9 +15,10 @@ use rust_decimal::Decimal;
 use serde::Serialize;
 use specta::Type;
 
-use eval::{Context, Parser, Quantity, Shown, Value};
+use eval::{Context, Notation, Parser, Quantity, Shown, Value};
 use lexer::{Tok, Token};
-use units::{Dim, Dimension, UnitId};
+use units::{Css, Dim, Dimension, UnitId};
+use words::CalcWord;
 
 /// One unit, or one over another: `€/h`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
@@ -49,6 +51,17 @@ pub enum CalcValue {
     /// A duration in a unit and the next one down: `6 sem 3 j`.
     Span {
         parts: Vec<SpanPart>,
+    },
+    /// `255 en hex`: the digits `FF` in base 16, the front writing `0x` before them.
+    Base {
+        digits: String,
+        radix: u32,
+        negative: bool,
+    },
+    /// `5300 en sci`: `5.3` times ten to the 3.
+    Scientific {
+        mantissa: String,
+        exponent: i32,
     },
 }
 
@@ -97,6 +110,14 @@ pub enum CalcError {
     NoPrevious,
     /// A date moved by something other than whole days, months or years.
     DateShift,
+    /// An even root of a negative number.
+    NegativeRoot,
+    /// A logarithm of zero or less, or in a base of one or less.
+    LogDomain,
+    /// A base or a bitwise operation on a fraction.
+    NotWhole,
+    /// `ppi = 0`: a setting is above zero.
+    NotPositive,
     Overflow,
     Unsupported,
 }
@@ -191,8 +212,25 @@ pub struct CalcCardLine {
 /// How many a card shows: often the conclusion of the sheet.
 pub const CARD_LINES: usize = 4;
 
+/// The last figures of a quotient carried through more operations are noise: `12 pt en px` is
+/// 16, not 15,999…. Twenty-five figures stay, past what any display shows.
+fn tidy(decimal: Decimal) -> Decimal {
+    let whole = decimal.trunc().abs();
+    let figures = if whole.is_zero() {
+        0
+    } else {
+        u32::try_from(whole.to_string().len()).unwrap_or(28)
+    };
+    let places = 25_u32.saturating_sub(figures);
+    if decimal.scale() > places {
+        decimal.round_dp(places)
+    } else {
+        decimal
+    }
+}
+
 fn text(decimal: Decimal) -> String {
-    decimal.normalize().to_string()
+    tidy(decimal).normalize().to_string()
 }
 
 fn utf16(text: &str) -> u32 {
@@ -224,17 +262,22 @@ impl Units {
         }
     }
 
+    /// A pixel's and an `em`'s size follow the sheet's settings.
+    fn unit(&self, unit: UnitId, css: &Css) -> Option<(Decimal, Dim)> {
+        let &(factor, dim) = self.factors.get(&unit)?;
+        Some((css.factor(unit).unwrap_or(factor), dim))
+    }
+
     /// Base units in one, as above over below, and what it measures.
-    fn factor(&self, shown: Shown) -> Option<(Decimal, Decimal, Dim)> {
+    fn factor(&self, shown: Shown, css: &Css) -> Option<(Decimal, Decimal, Dim)> {
         match shown {
             Shown::One(unit) => self
-                .factors
-                .get(&unit)
-                .map(|&(factor, dim)| (factor, Decimal::ONE, dim)),
+                .unit(unit, css)
+                .map(|(factor, dim)| (factor, Decimal::ONE, dim)),
             Shown::Per(above, below) => {
-                let (top, top_dim) = self.factors.get(&above)?;
-                let (bottom, bottom_dim) = self.factors.get(&below)?;
-                Some((*top, *bottom, top_dim.over(*bottom_dim)))
+                let (top, top_dim) = self.unit(above, css)?;
+                let (bottom, bottom_dim) = self.unit(below, css)?;
+                Some((top, bottom, top_dim.over(bottom_dim)))
             }
         }
     }
@@ -256,7 +299,7 @@ impl Units {
         Some(Shown::One(unit))
     }
 
-    fn show(&self, value: &Value) -> Result<CalcValue, CalcError> {
+    fn show(&self, value: &Value, css: &Css) -> Result<CalcValue, CalcError> {
         let quantity = match value {
             Value::Percent { ratio, signed } => {
                 return Ok(CalcValue::Percent {
@@ -274,7 +317,7 @@ impl Units {
             });
         }
         let fits = |shown: &Shown| {
-            self.factor(*shown)
+            self.factor(*shown, css)
                 .is_some_and(|(_, _, dim)| dim == quantity.dim)
         };
         let shown = quantity
@@ -288,7 +331,7 @@ impl Units {
                 unit: Some(shown.calc_unit()),
             });
         }
-        let (above, below, _) = self.factor(shown).ok_or(CalcError::Unsupported)?;
+        let (above, below, _) = self.factor(shown, css).ok_or(CalcError::Unsupported)?;
         let value = quantity
             .amount
             .checked_mul(below)
@@ -385,6 +428,36 @@ struct Walk {
     current: HashMap<String, usize>,
     block: Vec<Quantity>,
     previous: Option<Value>,
+    css: Css,
+}
+
+/// `255 en hex`, `5300 en sci`: a plain number written as the line asked.
+fn notated(
+    value: &Value,
+    shown: CalcValue,
+    notation: Option<Notation>,
+) -> Result<CalcValue, CalcError> {
+    let (Some(notation), Value::Quantity(quantity)) = (notation, value) else {
+        return Ok(shown);
+    };
+    if !quantity.dim.is_none() {
+        return Ok(shown);
+    }
+    Ok(match notation {
+        Notation::Base(radix) => {
+            let (negative, digits) = maths::digits(quantity.amount, radix)?;
+            CalcValue::Base {
+                digits,
+                radix,
+                negative,
+            }
+        }
+        Notation::Scientific => {
+            let (mantissa, exponent) = maths::scientific(tidy(quantity.amount));
+            CalcValue::Scientific { mantissa, exponent }
+        }
+        Notation::Decimal => shown,
+    })
 }
 
 /// `Prix : 11 € + 34,45 €`: the words before a colon name the line, and are read past.
@@ -399,6 +472,64 @@ fn label_end(tokens: &[Token]) -> Option<usize> {
         .iter()
         .all(|token| token.tok != Tok::Symbol('='))
         .then_some(colon + 1)
+}
+
+/// The line after its label, the name it gives and the expression.
+struct Head<'t> {
+    tokens: &'t [Token],
+    name: Option<String>,
+    body: &'t [Token],
+}
+
+/// What a line opens on: a label read past, then a name and its `=`; a reserved word as the
+/// name is the line's error.
+fn head<'t>(tokens: &'t [Token], spans: &mut Vec<CalcSpan>) -> Result<Head<'t>, CalcRow> {
+    let tokens = match label_end(tokens) {
+        Some(end) => {
+            spans.push(CalcSpan {
+                start: tokens[0].start,
+                end: tokens[end - 1].end,
+                kind: TokenKind::Comment,
+            });
+            &tokens[end..]
+        }
+        None => tokens,
+    };
+    match tokens {
+        [
+            Token {
+                tok: Tok::Word(word),
+                start,
+                end,
+                ..
+            },
+            Token {
+                tok: Tok::Symbol('='),
+                ..
+            },
+            ..,
+        ] => {
+            if words::reserved(word) {
+                spans.push(CalcSpan {
+                    start: *start,
+                    end: *end,
+                    kind: TokenKind::Error,
+                });
+                let error = CalcError::Reserved { word: word.clone() };
+                return Err(row(CalcLine::Error { error }, std::mem::take(spans)));
+            }
+            Ok(Head {
+                tokens,
+                name: Some(word.clone()),
+                body: &tokens[2..],
+            })
+        }
+        _ => Ok(Head {
+            tokens,
+            name: None,
+            body: tokens,
+        }),
+    }
 }
 
 impl Walk {
@@ -428,44 +559,9 @@ impl Walk {
 
     fn expression(&mut self, index: u32, line: &str, tokens: &[Token]) -> CalcRow {
         let mut spans = Vec::new();
-        let tokens = match label_end(tokens) {
-            Some(end) => {
-                spans.push(CalcSpan {
-                    start: tokens[0].start,
-                    end: tokens[end - 1].end,
-                    kind: TokenKind::Comment,
-                });
-                &tokens[end..]
-            }
-            None => tokens,
-        };
-        let (name, body) = match tokens {
-            [
-                Token {
-                    tok: Tok::Word(word),
-                    start,
-                    end,
-                    ..
-                },
-                Token {
-                    tok: Tok::Symbol('='),
-                    ..
-                },
-                ..,
-            ] => {
-                if words::reserved(word) {
-                    let span = CalcSpan {
-                        start: *start,
-                        end: *end,
-                        kind: TokenKind::Error,
-                    };
-                    let error = CalcError::Reserved { word: word.clone() };
-                    spans.push(span);
-                    return row(CalcLine::Error { error }, spans);
-                }
-                (Some(word.clone()), &tokens[2..])
-            }
-            _ => (None, tokens),
+        let Head { tokens, name, body } = match head(tokens, &mut spans) {
+            Ok(head) => head,
+            Err(row) => return row,
         };
 
         let context = Context {
@@ -475,15 +571,21 @@ impl Walk {
             variables: &self.variables,
             block: &self.block,
             previous: self.previous.as_ref(),
+            css: self.css,
         };
         let end = utf16(lexer::without_comment(line).trim_end());
         let mut parser = Parser::new(&context, body, end);
-        let result = parser.whole();
+        let mut result = parser.whole();
+        let setting = name.as_deref().and_then(words::setting);
         if name.is_some() {
             spans.push(CalcSpan {
                 start: tokens[0].start,
                 end: tokens[0].end,
-                kind: TokenKind::Name,
+                kind: if setting.is_some() {
+                    TokenKind::Keyword
+                } else {
+                    TokenKind::Name
+                },
             });
             spans.push(CalcSpan {
                 start: tokens[1].start,
@@ -493,7 +595,15 @@ impl Walk {
         }
         spans.extend(spans_of(body, &parser.kinds));
         spans.extend(trailing_comment(line));
-        let (used, converting, aggregate) = (parser.used, parser.converting, parser.aggregate);
+        let (used, converting, aggregate, notation) = (
+            parser.used,
+            parser.converting,
+            parser.aggregate,
+            parser.notation,
+        );
+        if let (Some(setting), Ok(value)) = (setting, &result) {
+            result = self.set(setting, value);
+        }
 
         for used_name in &used {
             if let Some(&definition) = self.current.get(used_name)
@@ -503,32 +613,82 @@ impl Walk {
             }
         }
 
-        let line =
-            match result.and_then(|value| self.units.show(&value).map(|shown| (value, shown))) {
-                Ok((value, shown)) => self.value(index, name, value, shown, aggregate),
-                Err(error) => {
-                    let sentence = name.is_none()
-                        && used.is_empty()
-                        && !tokens
-                            .iter()
-                            .any(|token| matches!(token.tok, Tok::Number(_) | Tok::Date(_)))
-                        && matches!(
-                            error,
-                            CalcError::Unreadable { .. } | CalcError::UnknownName { .. }
-                        );
-                    if sentence {
-                        spans.retain(|span| span.kind == TokenKind::Comment);
-                        CalcLine::Text
-                    } else {
-                        CalcLine::Error { error }
-                    }
+        let css = self.css;
+        let line = match result.and_then(|value| {
+            let shown = self.units.show(&value, &css)?;
+            notated(&value, shown, notation).map(|shown| (value, shown))
+        }) {
+            Ok((value, shown)) => self.value(index, name, value, shown, aggregate),
+            Err(error) => {
+                let sentence = name.is_none()
+                    && used.is_empty()
+                    && !tokens
+                        .iter()
+                        .any(|token| matches!(token.tok, Tok::Number(_) | Tok::Date(_)))
+                    && matches!(
+                        error,
+                        CalcError::Unreadable { .. } | CalcError::UnknownName { .. }
+                    );
+                if sentence {
+                    spans.retain(|span| span.kind == TokenKind::Comment);
+                    CalcLine::Text
+                } else {
+                    CalcLine::Error { error }
                 }
-            };
+            }
+        };
         CalcRow {
             line,
             spans,
             converting,
         }
+    }
+
+    /// `ppi = 326`, `em = 20 px`: the sheet's setting from this line down. A size in pixels
+    /// may be written bare.
+    fn set(&mut self, setting: CalcWord, value: &Value) -> Result<Value, CalcError> {
+        let pixel = self.css.factor(UnitId::Pixel).ok_or(CalcError::Overflow)?;
+        let pixels = match value {
+            Value::Quantity(quantity) if quantity.dim.is_none() => quantity.amount,
+            Value::Quantity(quantity)
+                if quantity.dim == Dim::LENGTH && setting != CalcWord::Ppi =>
+            {
+                quantity
+                    .amount
+                    .checked_div(pixel)
+                    .ok_or(CalcError::Overflow)?
+            }
+            other => {
+                return Err(CalcError::Mismatch {
+                    expected: Dimension::Number,
+                    found: other.dimension(),
+                    unit: None,
+                });
+            }
+        };
+        if pixels <= Decimal::ZERO {
+            return Err(CalcError::NotPositive);
+        }
+        let pixels = tidy(pixels);
+        match setting {
+            CalcWord::Ppi => {
+                self.css.ppi = pixels;
+                return Ok(Value::Quantity(Quantity {
+                    amount: pixels,
+                    dim: Dim::NONE,
+                    unit: None,
+                    spans: false,
+                }));
+            }
+            CalcWord::Em => self.css.em = pixels,
+            _ => self.css.rem = pixels,
+        }
+        Ok(Value::Quantity(Quantity {
+            amount: pixels.checked_mul(pixel).ok_or(CalcError::Overflow)?,
+            dim: Dim::LENGTH,
+            unit: Some(Shown::One(UnitId::Pixel)),
+            spans: false,
+        }))
     }
 
     fn value(
@@ -539,7 +699,7 @@ impl Walk {
         shown: CalcValue,
         aggregate: bool,
     ) -> CalcLine {
-        if let Some(name) = &name {
+        if let Some(name) = name.as_ref().filter(|name| words::setting(name).is_none()) {
             self.current.insert(name.clone(), self.definitions.len());
             self.definitions.push(CalcVariable {
                 name: name.clone(),
@@ -574,6 +734,7 @@ pub fn evaluate(sheet: &str, today: NaiveDate) -> CalcSheet {
         current: HashMap::new(),
         block: Vec::new(),
         previous: None,
+        css: Css::default(),
     };
     let rows = sheet
         .split('\n')
@@ -1171,6 +1332,243 @@ mod tests {
             value("1\u{a0}578,13 €"),
             number("1578.13", Some(UnitId::Euro))
         );
+    }
+
+    fn starts(line: &str, figures: &str) {
+        match value(line) {
+            CalcValue::Number { value, .. } => {
+                assert!(value.starts_with(figures), "{line}: {value}");
+            }
+            other => panic!("{line}: {other:?}"),
+        }
+    }
+
+    fn based(digits: &str, radix: u32) -> CalcValue {
+        CalcValue::Base {
+            digits: digits.into(),
+            radix,
+            negative: false,
+        }
+    }
+
+    #[test]
+    fn a_line_rounds_its_own_value_in_both_languages() {
+        let cases = [
+            ("1/3 à 2 décimales", "0.33"),
+            ("1/3 to 2 dp", "0.33"),
+            ("2/3 à 1 décimale", "0.7"),
+            ("pi à 5 chiffres", "3.14159"),
+            ("pi to 5 digits", "3.14159"),
+            ("5,5 arrondi", "6"),
+            ("5,5 rounded", "6"),
+            ("-5,5 arrondi", "-6"),
+            ("5,5 arrondi inférieur", "5"),
+            ("5,5 rounded down", "5"),
+            ("5,2 arrondi supérieur", "6"),
+            ("5,2 rounded up", "6"),
+            ("37 au 10 près", "40"),
+            ("37 to nearest 10", "40"),
+            ("2100 au millier près", "2000"),
+            ("2100 to nearest thousand", "2000"),
+            ("490 à la centaine près", "500"),
+            ("490 to the nearest hundred", "500"),
+            ("21 arrondi supérieur au 5 près", "25"),
+            ("21 rounded up to nearest 5", "25"),
+        ];
+        for (line, result) in cases {
+            assert_eq!(value(line), number(result, None), "{line}");
+        }
+        assert_eq!(value("x = 1/3 à 2 décimales\nx × 3"), number("0.99", None));
+        assert_eq!(
+            value("1,236 km à 2 décimales"),
+            number("1.24", Some(UnitId::Kilometre))
+        );
+        assert_eq!(value("33,333 % à 1 décimale"), percent("33.3", false));
+        assert_eq!(value("1,44 To à 100 Mo/s"), number("4", Some(UnitId::Hour)));
+    }
+
+    #[test]
+    fn functions_read_with_or_without_parentheses() {
+        let cases = [
+            ("sqrt(16)", "4"),
+            ("sqrt 16", "4"),
+            ("racine 16", "4"),
+            ("racine carrée(16) + 1", "5"),
+            ("cbrt 8", "2"),
+            ("racine cubique(27)", "3"),
+            ("log(100)", "2"),
+            ("log 2 (8)", "3"),
+            ("ln(e)", "1"),
+            ("abs(-42)", "42"),
+            ("valeur absolue(-42)", "42"),
+            ("round(3.7)", "4"),
+            ("round 3.45", "3"),
+            ("arrondi(3,7)", "4"),
+            ("ceil(3.2)", "4"),
+            ("plafond(3,2)", "4"),
+            ("floor(3.9)", "3"),
+            ("plancher(3,9)", "3"),
+        ];
+        for (line, result) in cases {
+            assert_eq!(value(line), number(result, None), "{line}");
+        }
+        starts("racine 2 (8)", "2.82842712474619");
+        starts("root 2 (8)", "2.82842712474619");
+        starts("sqrt 2", "1.41421356237309504880168");
+        starts("pi", "3.14159265358979");
+        starts("π × 2", "6.28318530717958");
+        starts("tau", "6.28318530717958");
+        starts("τ", "6.28318530717958");
+        starts("e", "2.71828182845904");
+        starts("phi", "1.61803398874989");
+        assert_eq!(value("e = 5\ne × 2"), number("10", None));
+        assert_eq!(value("abs(-3 km)"), number("3", Some(UnitId::Kilometre)));
+        assert_eq!(error("sqrt(-4)"), CalcError::NegativeRoot);
+        assert_eq!(error("log(0)"), CalcError::LogDomain);
+        assert_eq!(error("ln(-1)"), CalcError::LogDomain);
+        assert_eq!(value("cbrt -8"), number("-2", None));
+        let found = lines("a = 2\nsqrt(-4)\na × 2");
+        assert!(matches!(&found[2], CalcLine::Value { value, .. } if *value == number("4", None)));
+    }
+
+    #[test]
+    fn numbers_are_read_and_written_in_other_bases() {
+        assert_eq!(value("255 en hex"), based("FF", 16));
+        assert_eq!(value("255 in hex"), based("FF", 16));
+        assert_eq!(value("10 en bin"), based("1010", 2));
+        assert_eq!(value("255 en oct"), based("377", 8));
+        assert_eq!(value("0xFF"), number("255", None));
+        assert_eq!(value("0b1010"), number("10", None));
+        assert_eq!(value("0o377"), number("255", None));
+        assert_eq!(value("0b101101 en base 8"), based("55", 8));
+        assert_eq!(value("0xFF as base 2"), based("11111111", 2));
+        assert_eq!(value("0xFF en base 10"), number("255", None));
+        assert_eq!(value("hex(99)"), based("63", 16));
+        assert_eq!(value("bin(0x73)"), based("1110011", 2));
+        assert_eq!(value("int(0o55)"), number("45", None));
+        assert_eq!(
+            value("-10 en bin"),
+            CalcValue::Base {
+                digits: "1010".into(),
+                radix: 2,
+                negative: true
+            }
+        );
+        assert_eq!(
+            value("5300 en sci"),
+            CalcValue::Scientific {
+                mantissa: "5.3".into(),
+                exponent: 3
+            }
+        );
+        assert_eq!(value("5,3e+3"), number("5300", None));
+        assert_eq!(error("2,5 en hex"), CalcError::NotWhole);
+        assert!(matches!(error("5 km en hex"), CalcError::Mismatch { .. }));
+        assert_eq!(error("255 en base 3"), CalcError::Unsupported);
+    }
+
+    #[test]
+    fn bits_combine_whole_numbers_only() {
+        let cases = [
+            ("5 & 3", "1"),
+            ("5 | 3", "7"),
+            ("5 xor 3", "6"),
+            ("1 << 4", "16"),
+            ("16 >> 2", "4"),
+            ("2 + 3 << 1", "10"),
+            ("0xF0 | 0x0F", "255"),
+        ];
+        for (line, result) in cases {
+            assert_eq!(value(line), number(result, None), "{line}");
+        }
+        assert_eq!(error("1,5 & 1"), CalcError::NotWhole);
+        assert!(matches!(error("1 < 4"), CalcError::Unreadable { .. }));
+    }
+
+    #[test]
+    fn the_larger_or_the_smaller_of_numbers_named_on_a_line() {
+        assert_eq!(value("le plus grand de 100 et 200"), number("200", None));
+        assert_eq!(value("larger of 100 and 200"), number("200", None));
+        assert_eq!(value("le plus petit de 5 et 10"), number("5", None));
+        assert_eq!(value("smaller of 5 and 10"), number("5", None));
+        assert_eq!(value("le plus grand de 1, 5 et 3"), number("5", None));
+        assert_eq!(
+            value("le plus grand de 3 km et 500 m"),
+            number("3", Some(UnitId::Kilometre))
+        );
+        assert!(matches!(
+            error("larger of 3 km and 2 kg"),
+            CalcError::Mismatch { .. }
+        ));
+        assert_eq!(value("le plus grand de 1 et 2 + 3"), number("5", None));
+    }
+
+    #[test]
+    fn screen_units_follow_the_sheet_settings_from_their_line_down() {
+        assert_eq!(value("12 pt en px"), number("16", Some(UnitId::Pixel)));
+        assert_eq!(value("1 rem en px"), number("16", Some(UnitId::Pixel)));
+        assert_eq!(
+            value("em = 20 px\n1,2 em en px"),
+            number("24", Some(UnitId::Pixel))
+        );
+        assert_eq!(
+            value("em = 20\n1,2 em en px"),
+            number("24", Some(UnitId::Pixel))
+        );
+        assert_eq!(
+            value("rem = 18 px\n2 rem en px"),
+            number("36", Some(UnitId::Pixel))
+        );
+        let found = lines("1 cm en px\nppi = 326\n1 cm en px");
+        let figures = |line: &CalcLine| match line {
+            CalcLine::Value {
+                value: CalcValue::Number { value, .. },
+                ..
+            } => value.clone(),
+            other => panic!("{other:?}"),
+        };
+        assert!(figures(&found[0]).starts_with("37.795275590551181"));
+        assert!(figures(&found[2]).starts_with("128.346456692913385"));
+        assert!(matches!(
+            &found[1],
+            CalcLine::Value { name: Some(name), value, .. } if name == "ppi" && *value == number("326", None)
+        ));
+        assert!(evaluate("ppi = 326\nem = 20", today()).variables.is_empty());
+        assert_eq!(error("ppi = 0"), CalcError::NotPositive);
+        assert!(matches!(error("ppi = 5 kg"), CalcError::Mismatch { .. }));
+    }
+
+    #[test]
+    fn frequencies_and_the_prefixes_a_developer_reads() {
+        assert_eq!(value("2 MHz en Hz"), number("2000000", Some(UnitId::Hertz)));
+        assert_eq!(
+            value("1 GHz en MHz"),
+            number("1000", Some(UnitId::Megahertz))
+        );
+        assert_eq!(value("1 / 2 s"), number("0.5", Some(UnitId::Hertz)));
+        assert_eq!(value("60 Hz × 2 s"), number("120", None));
+        assert_eq!(
+            value("1 µs en ns"),
+            number("1000", Some(UnitId::Nanosecond))
+        );
+        assert_eq!(
+            value("1 us en ns"),
+            number("1000", Some(UnitId::Nanosecond))
+        );
+        assert_eq!(
+            value("5 nm en µm"),
+            number("0.005", Some(UnitId::Micrometre))
+        );
+        assert_eq!(value("1 EB en PB"), number("1000", Some(UnitId::Petabyte)));
+        assert_eq!(
+            value("1 YiB en ZiB"),
+            number("1024", Some(UnitId::Zebibyte))
+        );
+        assert_eq!(
+            value("1 Pbit en Tbit"),
+            number("1000", Some(UnitId::Terabit))
+        );
+        assert!(matches!(error("2 MHz + 3 s"), CalcError::Mismatch { .. }));
     }
 
     #[test]

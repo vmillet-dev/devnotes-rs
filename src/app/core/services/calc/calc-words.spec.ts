@@ -42,11 +42,15 @@ describe('CalcWords', () => {
     expect(words.complete('to', 'en', true)).toEqual(['today', 'total']);
   });
 
-  it('reads the table Rust generated, every concept in both languages', () => {
+  it('gives the spelling of the language on screen for the concepts asked, in their order', () => {
+    expect(words.preferred(['total', 'today', 'divide'], 'fr')).toEqual(['total', "aujourd'hui"]);
+    expect(words.preferred(['today', 'total'], 'en')).toEqual(['today', 'total']);
+  });
+
+  it('reads the table Rust generated, every concept spelled at least once', () => {
     expect(CALC_WORDS.length).toBeGreaterThan(0);
     for (const entry of CALC_WORDS) {
-      expect(entry.fr.length).toBeGreaterThan(0);
-      expect(entry.en.length).toBeGreaterThan(0);
+      expect(entry.fr.length + entry.en.length).toBeGreaterThan(0);
     }
   });
 });

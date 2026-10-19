@@ -38,6 +38,9 @@ const DATE_STYLES: Readonly<Record<CalcDateFormat, Intl.DateTimeFormatOptions>> 
 
 const NBSP = ' ';
 
+/** What a number in another base is written after: `0xFF`, `0b1010`, `0o377`. */
+const BASE_PREFIXES: Readonly<Record<number, string>> = { 2: '0b', 8: '0o', 16: '0x' };
+
 /** `-12.5` as its sign, its whole part and its decimals: an exact value never goes through a float. */
 function parts(value: string): { negative: boolean; whole: string; fraction: string } {
   const negative = value.startsWith('-');
@@ -134,11 +137,27 @@ export class CalcFormatter {
             .join(' '),
           approx: false,
         };
+      case 'base':
+        return {
+          text: `${value.negative ? '-' : ''}${BASE_PREFIXES[value.radix] ?? ''}${value.digits}`,
+          approx: false,
+        };
+      case 'scientific': {
+        const shown = this.number(value.mantissa, digitsFor(value.mantissa, this.decimals, false));
+        return { text: scientific(shown.text, value.exponent), approx: shown.approx };
+      }
     }
   }
 
   /** Every decimal kept, as the copy of one result and the variable's tooltip give it. */
   exact(value: CalcValue): string {
+    if (value.kind === 'scientific') {
+      const length = parts(value.mantissa).fraction.length;
+      return scientific(
+        this.number(value.mantissa, { min: 0, max: Math.min(length, 20) }).text,
+        value.exponent,
+      );
+    }
     if (value.kind !== 'number' && value.kind !== 'percent') return this.value(value).text;
     const length = parts(value.value).fraction.length;
     const shown = this.number(
@@ -197,6 +216,10 @@ export class CalcFormatter {
       case 'nothingAbove':
       case 'noPrevious':
       case 'dateShift':
+      case 'negativeRoot':
+      case 'logDomain':
+      case 'notWhole':
+      case 'notPositive':
       case 'overflow':
       case 'unsupported':
         text = this.translate(`calc.errors.${error.kind}`);
@@ -241,6 +264,11 @@ export class CalcFormatter {
       new Date(year ?? 1970, (month ?? 1) - 1, day ?? 1),
     );
   }
+}
+
+/** `5,3e+3`: the mantissa in the language's decimal mark, which reads back. */
+function scientific(mantissa: string, exponent: number): string {
+  return `${mantissa}e${exponent < 0 ? '-' : '+'}${Math.abs(exponent)}`;
 }
 
 function isMoney(unit: CalcUnitId): boolean {
