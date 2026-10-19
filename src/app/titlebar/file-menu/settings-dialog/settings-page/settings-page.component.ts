@@ -1,5 +1,14 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import {
+  CALC_DATE_FORMATS,
+  CALC_DECIMALS,
+  CALC_NUMBER_FORMATS,
+  CalcDateFormat,
+  CalcDecimals,
+  CalcNumberFormat,
+} from '@core/model/calc.model';
 import type { NoteKind } from '@core/model/checklist.model';
 import {
   DENSITIES,
@@ -27,6 +36,9 @@ function checkedValue(event: Event): boolean {
   return (event.target as HTMLInputElement).checked;
 }
 
+/** What each locale makes of one figure, beside its name: the choice is seen, not guessed. */
+const SAMPLE = 1578.13;
+
 /**
  * What is left once the keys and the library's own protection have pages of their own:
  * how the application looks, how it behaves, and what it says.
@@ -40,6 +52,10 @@ function checkedValue(event: Event): boolean {
 })
 export class SettingsPageComponent {
   protected readonly draft = inject(SettingsDraftStore);
+  private readonly transloco = inject(TranslocoService);
+  private readonly lang = toSignal(this.transloco.langChanges$, {
+    initialValue: this.transloco.getActiveLang(),
+  });
 
   protected readonly localeChoices: readonly ChoiceOption[] = LOCALE_CHOICES.map((choice) => ({
     id: choice,
@@ -67,6 +83,40 @@ export class SettingsPageComponent {
     name: `settings.indent.${choice}`,
     nameIsKey: true,
   }));
+
+  protected readonly calcDecimalChoices: readonly ChoiceOption[] = CALC_DECIMALS.map((choice) =>
+    choice === 'auto'
+      ? { id: choice, name: 'settings.calc.decimalsAuto', nameIsKey: true }
+      : { id: choice, name: choice },
+  );
+
+  protected readonly calcNumberFormats = computed<readonly ChoiceOption[]>(() => {
+    const lang = this.lang();
+    return CALC_NUMBER_FORMATS.map((choice) => {
+      const locale = choice === 'language' ? lang : choice;
+      const hint = new Intl.NumberFormat(locale, { minimumFractionDigits: 2 }).format(SAMPLE);
+      return choice === 'language'
+        ? { id: choice, name: 'settings.calc.language', nameIsKey: true, hint }
+        : { id: choice, name: `settings.calc.locales.${choice}`, nameIsKey: true, hint };
+    });
+  });
+
+  protected readonly calcDateSegments: readonly Segment[] = CALC_DATE_FORMATS.map((choice) => ({
+    id: choice,
+    labelKey: `settings.calc.dates.${choice}`,
+  }));
+
+  protected onCalcDecimals(choice: string | null): void {
+    if (choice) this.draft.set('calcDecimals', choice as CalcDecimals);
+  }
+
+  protected onCalcNumberFormat(choice: string | null): void {
+    if (choice) this.draft.set('calcNumberFormat', choice as CalcNumberFormat);
+  }
+
+  protected onCalcDateFormat(choice: string): void {
+    this.draft.set('calcDateFormat', choice as CalcDateFormat);
+  }
 
   protected onUpdateNotifications(event: Event): void {
     const wanted = checkedValue(event);

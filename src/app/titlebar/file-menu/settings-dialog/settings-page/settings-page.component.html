@@ -80,6 +80,44 @@
   </section>
 
   <section class="setting-group">
+    <h4 class="setting-group-title">{{ 'settings.calc.title' | transloco }}</h4>
+
+    <div class="setting-row">
+      <span class="setting-label">{{ 'settings.calc.decimals' | transloco }}</span>
+      <app-choice-menu
+        [kind]="'setting-calc-decimals'"
+        [label]="'settings.calc.decimals' | transloco"
+        [options]="calcDecimalChoices"
+        [currentId]="draft.value('calcDecimals')"
+        [filterable]="false"
+        (chosen)="onCalcDecimals($event)"
+      />
+    </div>
+
+    <div class="setting-row">
+      <span class="setting-label">{{ 'settings.calc.numberFormat' | transloco }}</span>
+      <app-choice-menu
+        [kind]="'setting-calc-number-format'"
+        [label]="'settings.calc.numberFormat' | transloco"
+        [options]="calcNumberFormats()"
+        [currentId]="draft.value('calcNumberFormat')"
+        (chosen)="onCalcNumberFormat($event)"
+      />
+    </div>
+
+    <div class="setting-row">
+      <span class="setting-label">{{ 'settings.calc.dateFormat' | transloco }}</span>
+      <app-segmented-choice
+        [kind]="'setting-calc-date-format'"
+        [label]="'settings.calc.dateFormat' | transloco"
+        [segments]="calcDateSegments"
+        [currentId]="draft.value('calcDateFormat')"
+        (chosen)="onCalcDateFormat($event)"
+      />
+    </div>
+  </section>
+
+  <section class="setting-group">
     <h4 class="setting-group-title">{{ 'settings.behavior.title' | transloco }}</h4>
 
     <div class="setting-row">

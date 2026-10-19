@@ -1584,11 +1584,17 @@ line (`sheet-marks.ts`, widgets at the line's end, mapped through each edit unti
 answer), its theme its own (`calc-theme.ts`). A result is picked by a click, Shift for a range,
 Ctrl for one more, or by selecting lines of the text; the footer adds them up and averages them
 — in exact decimals, on the strings Rust sent (`decimalSum`) — and says when they are of
-different units. « Décimales » is an application preference (`calcDecimals`): it changes the
-display, never the computation. After `en` or `à`, the completion proposes the units of the kind
-Rust read on that line (`CALC_UNITS`), written in the language on screen; elsewhere, from the
-third letter, the values and the phrases of the table (`CALC_WORDS`) in the spelling of the
-language on screen — the front writes no Calcul word of its own (`CalcWords`). A name hovered says
+different units. Three application preferences change the display, never the computation:
+« Décimales » (`calcDecimals`, Auto or 0 to 14, in the footer and in the preferences), « Format
+des nombres et des dates » (`calcNumberFormat`: the language on screen or one of
+`CALC_LOCALES`, written by `Intl` — a locale carries no data of ours) and « Format de date »
+(`calcDateFormat`: numeric, short, long). They are the application's, not the sheet's: a sheet
+shared or imported reads the same everywhere. The units and the messages stay in the language
+on screen. A number is handed to `Intl` as the decimal text Rust sent, never as a float, which
+would invent figures past the fifteenth. After `en` or `à`, the completion proposes the units of
+the kind Rust read on that line (`CALC_UNITS`), written in the language on screen; elsewhere,
+from the third letter, the values and the phrases of the table (`CALC_WORDS`) in the spelling of
+the language on screen — the front writes no Calcul word of its own (`CalcWords`). A name hovered says
 its exact value, the line it was given on and the lines that read it.
 
 **Copying** — `C` on the card, « Copier » in the editor or the palette — gives the text with each

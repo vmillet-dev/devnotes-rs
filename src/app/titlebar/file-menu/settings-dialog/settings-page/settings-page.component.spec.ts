@@ -33,7 +33,7 @@ describe('SettingsPageComponent', () => {
       (title: HTMLElement) => title.textContent?.trim(),
     );
 
-    expect(titles).toEqual(['Apparence', 'Éditeur', 'Comportement', 'Palette', 'Notifications']);
+    expect(titles).toEqual(['Apparence', 'Éditeur', 'Calcul', 'Comportement', 'Palette', 'Notifications']);
   });
 
   /**
@@ -146,6 +146,64 @@ describe('SettingsPageComponent', () => {
 
     draft.apply();
     expect(settings.defaultNoteKind()).toBe('checklist');
+  });
+
+  async function openMenu(kind: string): Promise<HTMLElement[]> {
+    fixture.nativeElement.querySelector(`[data-testid="choice-${kind}"]`).click();
+    await fixture.whenStable();
+    return [
+      ...fixture.nativeElement.querySelectorAll(`[data-testid="choice-panel-${kind}"] [data-option-id]`),
+    ];
+  }
+
+  it('stages the decimals of a Calcul sheet, from Auto to fourteen', async () => {
+    const options = await openMenu('setting-calc-decimals');
+    expect(options.map((option) => option.getAttribute('data-option-id'))).toEqual([
+      'auto',
+      ...Array.from({ length: 15 }, (_, index) => String(index)),
+    ]);
+
+    options.find((option) => option.getAttribute('data-option-id') === '14')!.click();
+    await fixture.whenStable();
+
+    expect(draft.value('calcDecimals')).toBe('14');
+    expect(settings.calcDecimals()).toBe('auto');
+  });
+
+  /** Each locale beside what it makes of one figure: its digits and its decimal mark, whatever its spaces. */
+  it('offers the language on screen and fourteen locales, and applies one on the button', async () => {
+    const options = await openMenu('setting-calc-number-format');
+    expect(options).toHaveLength(15);
+    expect(options[0]!.getAttribute('data-option-id')).toBe('language');
+    const german = options.find((option) => option.getAttribute('data-option-id') === 'de-DE')!;
+    expect(german.textContent).toContain('Deutsch');
+    expect(german.querySelector('.choice-hint')?.textContent).toMatch(/^1\D?578,13$/);
+    const american = options.find((option) => option.getAttribute('data-option-id') === 'en-US')!;
+    expect(american.querySelector('.choice-hint')?.textContent).toMatch(/^1\D?578\.13$/);
+
+    german.click();
+    await fixture.whenStable();
+    expect(draft.value('calcNumberFormat')).toBe('de-DE');
+    expect(settings.calcNumberFormat()).toBe('language');
+
+    draft.apply();
+    expect(settings.calcNumberFormat()).toBe('de-DE');
+  });
+
+  it('stages the date format, short until another is chosen', async () => {
+    const dates = segments('setting-calc-date-format');
+    expect(dates.map((segment) => segment.getAttribute('data-segment-id'))).toEqual([
+      'numeric',
+      'short',
+      'long',
+    ]);
+    expect(draft.value('calcDateFormat')).toBe('short');
+
+    dates.find((segment) => segment.getAttribute('data-segment-id') === 'long')!.click();
+    await fixture.whenStable();
+
+    expect(draft.value('calcDateFormat')).toBe('long');
+    expect(settings.calcDateFormat()).toBe('short');
   });
 
   it('stages a chosen density the same way', async () => {
